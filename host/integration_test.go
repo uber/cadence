@@ -50,7 +50,7 @@ var (
 
 const (
 	testNumberOfHistoryShards = 4
-	testNumberOfHistoryHosts  = 2
+	testNumberOfHistoryHosts  = 1
 )
 
 type (

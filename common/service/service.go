@@ -105,7 +105,6 @@ func (h *serviceImpl) Start(thriftServices []thrift.TChanServer) {
 	if err != nil {
 		h.logger.WithFields(bark.Fields{logging.TagErr: err}).Fatal("Ringpop creation failed")
 	}
-	h.logger = h.logger.WithField("hostname", h.hostPort)
 
 	err = h.bootstrapRingpop(h.rp, h.rpSeedHosts)
 	if err != nil {
