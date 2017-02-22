@@ -105,6 +105,7 @@ func (h *serviceImpl) Start(thriftServices []thrift.TChanServer) {
 	if err != nil {
 		h.logger.WithFields(bark.Fields{logging.TagErr: err}).Fatal("Ringpop creation failed")
 	}
+	h.logger = h.logger.WithField("hostname", h.hostPort)
 
 	err = h.bootstrapRingpop(h.rp, h.rpSeedHosts)
 	if err != nil {
@@ -136,7 +137,7 @@ func (h *serviceImpl) Start(thriftServices []thrift.TChanServer) {
 	h.clientFactory = client.NewTChannelClientFactory(h.ch, h.membershipMonitor, metricsClient, h.numberOfHistoryShards)
 
 	// The service is now started up
-	log.Info("service started")
+	h.logger.Info("service started")
 
 	// seed the random generator once for this service
 	rand.Seed(time.Now().UTC().UnixNano())
