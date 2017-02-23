@@ -240,11 +240,14 @@ func acquireShard(shardID int, shardManager persistence.ShardManager, executionM
 		shardInfo:        updatedShardInfo,
 		rangeSize:        defaultRangeSize,
 		closeCh:          closeCh,
-		metricsClient:    reporter,
 	}
 	context.logger = logger.WithFields(bark.Fields{
 		tagHistoryShardID: shardID,
 	})
+	tags := map[string]string{
+		metrics.ShardTagName: string(shardID),
+	}
+	context.metricsClient = reporter.Tagged(tags)
 
 	err1 := context.renewRangeLocked(true)
 	if err1 != nil {

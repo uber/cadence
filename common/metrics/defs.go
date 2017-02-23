@@ -33,7 +33,7 @@ const (
 
 // Service names for all services that emit metrics.
 const (
-	Common = iota
+	Common      = iota
 	Frontend
 	History
 	Matching
@@ -44,6 +44,7 @@ const (
 const (
 	HostnameTagName  = "hostname"
 	OperationTagName = "operation"
+	ShardTagName     = "shard"
 )
 
 // This package should hold all the metrics and tags for cadence
