@@ -3,7 +3,6 @@ package persistence
 import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/tchannel-go/typed"
 )
 
 type (
