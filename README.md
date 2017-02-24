@@ -24,4 +24,4 @@ Interested in learning more about Cadence? TODO:
 
 License
 -------
-MIT License, please see [LICENSE](https://github.com/uber/cherami-thrift/blob/master/LICENSE) for details.
+MIT License, please see [LICENSE](https://github.com/uber/cadence/blob/master/LICENSE) for details.
