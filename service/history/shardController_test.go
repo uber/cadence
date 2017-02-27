@@ -14,11 +14,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/uber-go/tally"
 	"github.com/uber/cadence/common/membership"
+	"github.com/uber/cadence/common/metrics"
 	mmocks "github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/metrics"
-	"github.com/uber-go/tally"
 )
 
 type (
@@ -68,7 +68,7 @@ func (s *shardControllerSuite) TestAcquireShardSuccess() {
 		if hostID == 0 {
 			myShards = append(myShards, shardID)
 			mockExecutionMgr := &mmocks.ExecutionManager{}
-			s.mockExecutionMgrFactory.On("CreateExecutionManager", mock.Anything).Return(mockExecutionMgr, nil).Once()
+			s.mockExecutionMgrFactory.On("CreateExecutionManager", mock.Anything, mock.Anything).Return(mockExecutionMgr, nil).Once()
 			mockEngine := &MockHistoryEngine{}
 			mockEngine.On("Start").Return().Once()
 			s.mockServiceResolver.On("Lookup", string(shardID)).Return(s.hostInfo, nil).Twice()
@@ -125,7 +125,7 @@ func (s *shardControllerSuite) TestAcquireShardRenewSuccess() {
 	s.controller.numberOfShards = numShards
 	for shardID := 0; shardID < numShards; shardID++ {
 		mockExecutionMgr := &mmocks.ExecutionManager{}
-		s.mockExecutionMgrFactory.On("CreateExecutionManager", mock.Anything).Return(mockExecutionMgr, nil).Once()
+		s.mockExecutionMgrFactory.On("CreateExecutionManager", mock.Anything, mock.Anything).Return(mockExecutionMgr, nil).Once()
 		mockEngine := &MockHistoryEngine{}
 		mockEngine.On("Start").Return().Once()
 		s.mockServiceResolver.On("Lookup", string(shardID)).Return(s.hostInfo, nil).Twice()
@@ -167,7 +167,7 @@ func (s *shardControllerSuite) TestAcquireShardRenewLookupFailed() {
 	s.controller.numberOfShards = numShards
 	for shardID := 0; shardID < numShards; shardID++ {
 		mockExecutionMgr := &mmocks.ExecutionManager{}
-		s.mockExecutionMgrFactory.On("CreateExecutionManager", mock.Anything).Return(mockExecutionMgr, nil).Once()
+		s.mockExecutionMgrFactory.On("CreateExecutionManager", mock.Anything, mock.Anything).Return(mockExecutionMgr, nil).Once()
 		mockEngine := &MockHistoryEngine{}
 		mockEngine.On("Start").Return().Once()
 		s.mockServiceResolver.On("Lookup", string(shardID)).Return(s.hostInfo, nil).Twice()
@@ -402,7 +402,7 @@ func (s *shardControllerSuite) TestShardControllerClosed() {
 func (s *shardControllerSuite) setupMocksForAcquireShard(shardID int, mockEngine *MockHistoryEngine, currentRangeID,
 	newRangeID int64) {
 	mockExecutionMgr := &mmocks.ExecutionManager{}
-	s.mockExecutionMgrFactory.On("CreateExecutionManager", shardID).Return(mockExecutionMgr, nil).Once()
+	s.mockExecutionMgrFactory.On("CreateExecutionManager", shardID, mock.Anything).Return(mockExecutionMgr, nil).Once()
 	mockEngine.On("Start").Return().Once()
 	s.mockServiceResolver.On("Lookup", string(shardID)).Return(s.hostInfo, nil).Twice()
 	s.mockEngineFactory.On("CreateEngine", mock.Anything).Return(mockEngine).Once()

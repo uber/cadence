@@ -278,7 +278,7 @@ func (i *historyShardsItem) getOrCreateEngine(shardClosedCh chan<- int) (Engine,
 
 	logShardEngineCreatingEvent(i.logger, i.host.Identity(), i.shardID)
 	defer logShardEngineCreatedEvent(i.logger, i.host.Identity(), i.shardID)
-	executionMgr, err := i.executionMgrFactory.CreateExecutionManager(i.shardID)
+	executionMgr, err := i.executionMgrFactory.CreateExecutionManager(i.shardID, i.metricsClient)
 	if err != nil {
 		return nil, err
 	}
