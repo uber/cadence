@@ -10,6 +10,7 @@ import (
 	"github.com/uber/tchannel-go/thrift"
 
 	"github.com/uber/cadence/.gen/go/shared"
+	"go.uber.org/thriftrw/gen"
 )
 
 var _ = shared.GoUnusedProtection__
@@ -179,15 +180,14 @@ func (c *tchanHistoryServiceClient) RespondActivityTaskCompleted(ctx thrift.Cont
 	}
 	success, err := c.client.Call(ctx, c.thriftService, "RespondActivityTaskCompleted", &args, &resp)
 	if err == nil && !success {
-		switch {
-		case resp.BadRequestError != nil:
-			err = resp.BadRequestError
-		case resp.InternalServiceError != nil:
-			err = resp.InternalServiceError
-		case resp.EntityNotExistError != nil:
-			err = resp.EntityNotExistError
-		default:
-			err = fmt.Errorf("received no result or unknown exception for RespondActivityTaskCompleted")
+		if e := resp.BadRequestError; e != nil {
+			err = e
+		}
+		if e := resp.InternalServiceError; e != nil {
+			err = e
+		}
+		if e := resp.EntityNotExistError; e != nil {
+			err = e
 		}
 	}
 
