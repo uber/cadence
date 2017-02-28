@@ -177,7 +177,9 @@ func (wh *WorkflowHandler) getLoggerForTask(taskToken []byte) bark.Logger {
 
 func wrapError(err error) error {
 	if err != nil && isInternalServiceError(err) {
-		return &gen.InternalServiceError{Message: err.Error()}
+		if _, ok := err.(*gen.InternalServiceError); !ok {
+			return &gen.InternalServiceError{Message: err.Error()}
+		}
 	}
 	return err
 }
