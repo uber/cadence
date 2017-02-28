@@ -469,11 +469,10 @@ Update_History_Loop:
 			clearTimerTask = &persistence.DecisionTimeoutTask{TaskID: timerTask.TaskID}
 
 			scheduleID := timerTask.EventID
-			isRunning, startedEvent := builder.isDecisionTaskRunning(scheduleID)
-			if isRunning && startedEvent != nil {
+			isRunning, di := msBuilder.GetDecision(scheduleID)
+			if isRunning {
 				// Add a decision task timeout event.
-				startedID := startedEvent.GetEventId()
-				builder.AddDecisionTaskTimedOutEvent(scheduleID, startedID)
+				t.historyService.timeoutDecisionTask(builder, msBuilder,scheduleID, di.StartedID)
 				scheduleNewDecision = true
 			}
 		}
@@ -489,7 +488,7 @@ Update_History_Loop:
 				return err
 			}
 			defer t.historyService.tracker.completeTask(id)
-			newDecisionEvent := builder.ScheduleDecisionTask()
+			newDecisionEvent := t.historyService.scheduleDecisionTask(builder, msBuilder)
 			transferTasks = []persistence.Task{&persistence.DecisionTask{
 				TaskID:     id,
 				TaskList:   newDecisionEvent.GetDecisionTaskScheduledEventAttributes().GetTaskList().GetName(),

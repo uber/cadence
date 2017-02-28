@@ -212,14 +212,14 @@ func (e *historyEngineImpl) RecordDecisionTaskStarted(
 
 Update_History_Loop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
-		builder, err1 := context.loadWorkflowExecution()
-		if err1 != nil {
-			return nil, err1
+		msBuilder, err0 := context.loadWorkflowMutableState()
+		if err0 != nil {
+			return nil, err0
 		}
 
 		// Check execution state to make sure task is in the list of outstanding tasks and it is not yet started.  If
 		// task is not outstanding than it is most probably a duplicate and complete the task.
-		isRunning, startedEvent := builder.isDecisionTaskRunning(scheduleID)
+		isRunning, di := msBuilder.GetDecision(scheduleID)
 
 		if !isRunning {
 			// Looks like DecisionTask already completed as a result of another call.
@@ -230,18 +230,23 @@ Update_History_Loop:
 			return nil, &workflow.EntityNotExistsError{Message: "Decision task not found."}
 		}
 
-		if startedEvent != nil {
+		if di.StartedID != emptyEventID {
 			// If decision is started as part of the current request scope then return a positive response
-			if startedEvent.GetDecisionTaskStartedEventAttributes().GetRequestId() == requestID {
-				return e.createRecordDecisionTaskStartedResponse(context, startedEvent), nil
+			if di.RequestID == requestID {
+				return e.createRecordDecisionTaskStartedResponse(context, di.StartedID), nil
 			}
 
 			// Looks like DecisionTask already started as a result of another call.
 			// It is OK to drop the task at this point.
 			logDuplicateTaskEvent(context.logger, persistence.TaskListTypeDecision, request.GetTaskId(), requestID,
-				scheduleID, startedEvent.GetEventId(), isRunning)
+				scheduleID, di.StartedID, isRunning)
 
 			return nil, &workflow.EntityNotExistsError{Message: "Decision task already started."}
+		}
+
+		builder, err1 := context.loadWorkflowExecution()
+		if err1 != nil {
+			return nil, err1
 		}
 
 		event := builder.AddDecisionTaskStartedEvent(scheduleID, requestID, request.PollRequest)
@@ -250,8 +255,13 @@ Update_History_Loop:
 			continue Update_History_Loop
 		}
 
+		// Update mutable decision state
+		di.StartedID = event.GetEventId()
+		di.RequestID = requestID
+		msBuilder.UpdateDecision(scheduleID, di)
+
 		// Start a timer for the decision task.
-		timeOutTask := context.tBuilder.AddDecisionTimoutTask(scheduleID, builder)
+		timeOutTask := context.tBuilder.AddDecisionTimoutTask(scheduleID, di.StartToCloseTimeout)
 		timerTasks := []persistence.Task{timeOutTask}
 		defer e.timerProcessor.NotifyNewTimer(timeOutTask.GetTaskID())
 
@@ -265,7 +275,7 @@ Update_History_Loop:
 			return nil, err2
 		}
 
-		return e.createRecordDecisionTaskStartedResponse(context, event), nil
+		return e.createRecordDecisionTaskStartedResponse(context, event.GetEventId()), nil
 	}
 
 	return nil, ErrMaxAttemptsExceeded
@@ -381,25 +391,24 @@ func (e *historyEngineImpl) RespondDecisionTaskCompleted(request *workflow.Respo
 
 Update_History_Loop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
-		builder, err1 := context.loadWorkflowExecution()
-		if err1 != nil {
-			return err1
-		}
-
 		msBuilder, err1 := context.loadWorkflowMutableState()
 		if err1 != nil {
 			return err1
 		}
 
 		scheduleID := token.ScheduleID
-		isRunning, startedEvent := builder.isDecisionTaskRunning(scheduleID)
-		if !isRunning || startedEvent == nil {
+		isRunning, di := msBuilder.GetDecision(scheduleID)
+		if !isRunning || di.StartedID == emptyEventID {
 			return &workflow.EntityNotExistsError{Message: "Decision task not found."}
 		}
 
-		startedID := startedEvent.GetEventId()
-		completedEvent := builder.AddDecisionTaskCompletedEvent(scheduleID, startedID, request)
-		completedID := completedEvent.GetEventId()
+		builder, err1 := context.loadWorkflowExecution()
+		if err1 != nil {
+			return err1
+		}
+
+		startedID := di.StartedID
+		completedID := e.completeDecisionTask(builder, msBuilder, scheduleID, startedID, request)
 		isComplete := false
 		transferTasks := []persistence.Task{}
 		timerTasks := []persistence.Task{}
@@ -508,7 +517,7 @@ Update_History_Loop:
 
 		// Schedule another decision task if new events came in during this decision
 		if (completedID - startedID) > 1 {
-			newDecisionEvent := builder.ScheduleDecisionTask()
+			newDecisionEvent := e.scheduleDecisionTask(builder, msBuilder)
 			id, err2 := e.tracker.getNextTaskID()
 			if err2 != nil {
 				return err2
@@ -585,7 +594,7 @@ Update_History_Loop:
 
 		var transferTasks []persistence.Task
 		if !builder.hasPendingDecisionTask() {
-			newDecisionEvent := builder.ScheduleDecisionTask()
+			newDecisionEvent := e.scheduleDecisionTask(builder, msBuilder)
 			id, err2 := e.tracker.getNextTaskID()
 			if err2 != nil {
 				return err2
@@ -656,10 +665,7 @@ Update_History_Loop:
 
 		var transferTasks []persistence.Task
 		if !builder.hasPendingDecisionTask() {
-			startWorkflowExecutionEvent := builder.GetEvent(firstEventID)
-			startAttributes := startWorkflowExecutionEvent.GetWorkflowExecutionStartedEventAttributes()
-			newDecisionEvent := builder.AddDecisionTaskScheduledEvent(startAttributes.GetTaskList().GetName(),
-				startAttributes.GetTaskStartToCloseTimeoutSeconds())
+			newDecisionEvent := e.scheduleDecisionTask(builder, msBuilder)
 			id, err2 := e.tracker.getNextTaskID()
 			if err2 != nil {
 				return err2
@@ -667,7 +673,7 @@ Update_History_Loop:
 			defer e.tracker.completeTask(id)
 			transferTasks = []persistence.Task{&persistence.DecisionTask{
 				TaskID:     id,
-				TaskList:   startAttributes.GetTaskList().GetName(),
+				TaskList:   newDecisionEvent.GetDecisionTaskScheduledEventAttributes().GetTaskList().GetName(),
 				ScheduleID: newDecisionEvent.GetEventId(),
 			}}
 		}
@@ -731,10 +737,7 @@ Update_History_Loop:
 
 		var transferTasks []persistence.Task
 		if !builder.hasPendingDecisionTask() {
-			startWorkflowExecutionEvent := builder.GetEvent(firstEventID)
-			startAttributes := startWorkflowExecutionEvent.GetWorkflowExecutionStartedEventAttributes()
-			newDecisionEvent := builder.AddDecisionTaskScheduledEvent(startAttributes.GetTaskList().GetName(),
-				startAttributes.GetTaskStartToCloseTimeoutSeconds())
+			newDecisionEvent := e.scheduleDecisionTask(builder, msBuilder)
 			id, err2 := e.tracker.getNextTaskID()
 			if err2 != nil {
 				return err2
@@ -743,7 +746,7 @@ Update_History_Loop:
 			defer e.tracker.completeTask(id)
 			transferTasks = []persistence.Task{&persistence.DecisionTask{
 				TaskID:     id,
-				TaskList:   startAttributes.GetTaskList().GetName(),
+				TaskList:   newDecisionEvent.GetDecisionTaskScheduledEventAttributes().GetTaskList().GetName(),
 				ScheduleID: newDecisionEvent.GetEventId(),
 			}}
 		}
@@ -893,7 +896,7 @@ func (e *historyEngineImpl) getWorkflowMutableStateWithRetry(
 }
 
 func (e *historyEngineImpl) createRecordDecisionTaskStartedResponse(context *workflowExecutionContext,
-	startedEvent *workflow.HistoryEvent) *h.RecordDecisionTaskStartedResponse {
+	startedEventID int64) *h.RecordDecisionTaskStartedResponse {
 	builder := context.builder
 
 	response := h.NewRecordDecisionTaskStartedResponse()
@@ -901,10 +904,36 @@ func (e *historyEngineImpl) createRecordDecisionTaskStartedResponse(context *wor
 	if builder.previousDecisionStartedEvent() != emptyEventID {
 		response.PreviousStartedEventId = common.Int64Ptr(builder.previousDecisionStartedEvent())
 	}
-	response.StartedEventId = common.Int64Ptr(startedEvent.GetEventId())
+	response.StartedEventId = common.Int64Ptr(startedEventID)
 	response.History = builder.getHistory()
 
 	return response
+}
+
+func (e *historyEngineImpl) scheduleDecisionTask(builder *historyBuilder,
+	msBuilder *mutableStateBuilder) *workflow.HistoryEvent {
+	newDecisionEvent := builder.ScheduleDecisionTask()
+	msBuilder.UpdateDecision(newDecisionEvent.GetEventId(),
+		&decisionInfo{
+			ScheduleID:          newDecisionEvent.GetEventId(),
+			StartedID:           emptyEventID,
+			StartToCloseTimeout: newDecisionEvent.GetDecisionTaskScheduledEventAttributes().GetStartToCloseTimeoutSeconds(),
+		})
+	return newDecisionEvent
+}
+
+func (e *historyEngineImpl) completeDecisionTask(builder *historyBuilder, msBuilder *mutableStateBuilder,
+	scheduleID, startedID int64, request *workflow.RespondDecisionTaskCompletedRequest) int64 {
+	completedEvent := builder.AddDecisionTaskCompletedEvent(scheduleID, startedID, request)
+	msBuilder.DeleteDecision(scheduleID)
+	return completedEvent.GetEventId()
+}
+
+func (e *historyEngineImpl) timeoutDecisionTask(builder *historyBuilder, msBuilder *mutableStateBuilder,
+	scheduleID, startedID int64) int64 {
+	timeoutEvent := builder.AddDecisionTaskTimedOutEvent(scheduleID, startedID)
+	msBuilder.DeleteDecision(scheduleID)
+	return timeoutEvent.GetEventId()
 }
 
 func newWorkflowExecutionContext(historyService *historyEngineImpl,
