@@ -3,6 +3,7 @@ package history
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -18,7 +19,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
-	"fmt"
 )
 
 type (
@@ -251,7 +251,6 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedIfTaskNotStarted() {
 
 	err := s.mockHistoryEngine.RespondDecisionTaskCompleted(&workflow.RespondDecisionTaskCompletedRequest{
 		TaskToken: taskToken,
-		Identity:  &identity,
 	})
 	s.NotNil(err)
 	s.IsType(&workflow.EntityNotExistsError{}, err)
@@ -639,7 +638,6 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledDec
 			HeartbeatTimeoutSeconds:       common.Int32Ptr(5),
 		},
 	}}
-
 
 	ms := &persistence.WorkflowMutableState{}
 	addDecisionToMutableState(ms, scheduleEvent.GetEventId(), startedEvent.GetEventId(), uuid.New(), 1)
@@ -2322,11 +2320,10 @@ func addDecisionToMutableState(msBuilder *persistence.WorkflowMutableState, sche
 		msBuilder.ActivitInfos = make(map[int64]*persistence.ActivityInfo)
 	}
 	msBuilder.ActivitInfos[scheduleID] = &persistence.ActivityInfo{
-		ScheduleID: scheduleID,
-		StartedID:  startedID,
-		RequestID:  requestID,
+		ScheduleID:          scheduleID,
+		StartedID:           startedID,
+		RequestID:           requestID,
 		StartToCloseTimeout: startToCloseTimeout,
-		ActivityID: fmt.Sprintf("Test-DecisionTask-%d", scheduleID),
+		ActivityID:          fmt.Sprintf("Test-DecisionTask-%d", scheduleID),
 	}
 }
-
