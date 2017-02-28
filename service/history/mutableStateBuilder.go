@@ -2,6 +2,7 @@ package history
 
 import (
 	"fmt"
+
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
@@ -99,9 +100,9 @@ func (e *mutableStateBuilder) GetDecision(scheduleEventID int64) (bool, *decisio
 	isRunning, ai := e.GetActivity(scheduleEventID)
 	if isRunning {
 		di := &decisionInfo{
-			ScheduleID: ai.ScheduleID,
-			StartedID:  ai.StartedID,
-			RequestID:  ai.RequestID,
+			ScheduleID:          ai.ScheduleID,
+			StartedID:           ai.StartedID,
+			RequestID:           ai.RequestID,
 			StartToCloseTimeout: ai.StartToCloseTimeout,
 		}
 		return isRunning, di
@@ -113,11 +114,11 @@ func (e *mutableStateBuilder) GetDecision(scheduleEventID int64) (bool, *decisio
 func (e *mutableStateBuilder) UpdateDecision(scheduleEventID int64, di *decisionInfo) {
 	decisionTaskName := fmt.Sprintf("DecisionTask-%d", scheduleEventID)
 	e.UpdateActivity(scheduleEventID, &persistence.ActivityInfo{
-		ScheduleID: di.ScheduleID,
-		StartedID:  di.StartedID,
-		RequestID:  di.RequestID,
+		ScheduleID:          di.ScheduleID,
+		StartedID:           di.StartedID,
+		RequestID:           di.RequestID,
 		StartToCloseTimeout: di.StartToCloseTimeout,
-		ActivityID: decisionTaskName,
+		ActivityID:          decisionTaskName,
 	})
 }
 
