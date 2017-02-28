@@ -193,15 +193,16 @@ type (
 
 	// CreateWorkflowExecutionRequest is used to write a new workflow execution
 	CreateWorkflowExecutionRequest struct {
-		Execution          workflow.WorkflowExecution
-		TaskList           string
-		History            []byte
-		ExecutionContext   []byte
-		NextEventID        int64
-		LastProcessedEvent int64
-		TransferTasks      []Task
-		TimerTasks         []Task
-		RangeID            int64
+		Execution           workflow.WorkflowExecution
+		TaskList            string
+		History             []byte
+		ExecutionContext    []byte
+		NextEventID         int64
+		LastProcessedEvent  int64
+		TransferTasks       []Task
+		TimerTasks          []Task
+		RangeID             int64
+		CreateActivityInfos []*ActivityInfo
 	}
 
 	// CreateWorkflowExecutionResponse is the response to CreateWorkflowExecutionRequest

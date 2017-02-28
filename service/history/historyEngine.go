@@ -139,7 +139,15 @@ func (e *historyEngineImpl) StartWorkflowExecution(request *workflow.StartWorkfl
 	taskList := request.GetTaskList().GetName()
 	builder := newHistoryBuilder(e.logger)
 	builder.AddWorkflowExecutionStartedEvent(request)
+
 	dt := builder.AddDecisionTaskScheduledEvent(taskList, request.GetTaskStartToCloseTimeoutSeconds())
+	msBuilder := newMutableStateBuilder(e.logger)
+	msBuilder.UpdateDecision(dt.GetEventId(),
+		&decisionInfo{
+			ScheduleID:          dt.GetEventId(),
+			StartedID:           emptyEventID,
+			StartToCloseTimeout: dt.GetDecisionTaskScheduledEventAttributes().GetStartToCloseTimeoutSeconds(),
+		})
 
 	// Serialize the history
 	h, serializedError := builder.Serialize()
@@ -165,6 +173,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(request *workflow.StartWorkfl
 			TaskID:   id,
 			TaskList: taskList, ScheduleID: dt.GetEventId(),
 		}},
+		CreateActivityInfos: msBuilder.updateActivityInfos,
 	})
 
 	if err != nil {
