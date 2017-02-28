@@ -128,10 +128,8 @@ func (tb *timerBuilder) UserTimer(taskID SequenceID) (bool, *persistence.TimerIn
 
 // AddDecisionTimoutTask - Add a decision timeout task.
 func (tb *timerBuilder) AddDecisionTimoutTask(scheduleID int64,
-	builder *historyBuilder) *persistence.DecisionTimeoutTask {
-	startWorkflowExecutionEvent := builder.GetEvent(firstEventID)
-	startAttributes := startWorkflowExecutionEvent.GetWorkflowExecutionStartedEventAttributes()
-	timeOutTask := tb.createDecisionTimeoutTask(startAttributes.GetTaskStartToCloseTimeoutSeconds(), scheduleID)
+	startToCloseTimeout int32) *persistence.DecisionTimeoutTask {
+	timeOutTask := tb.createDecisionTimeoutTask(startToCloseTimeout, scheduleID)
 	return timeOutTask
 }
 
