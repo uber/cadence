@@ -1,6 +1,7 @@
 package history
 
 import (
+	"fmt"
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
@@ -16,6 +17,14 @@ type (
 		updateTimerInfos                []*persistence.TimerInfo
 		deleteTimerInfos                []string
 		logger                          bark.Logger
+	}
+
+	// Represents a decision Info in the mutable state.
+	decisionInfo struct {
+		ScheduleID          int64
+		StartedID           int64
+		RequestID           string
+		StartToCloseTimeout int32
 	}
 )
 
@@ -83,4 +92,36 @@ func (e *mutableStateBuilder) UpdateUserTimer(timerID string, ti *persistence.Ti
 // DeleteUserTimer deletes an user timer.
 func (e *mutableStateBuilder) DeleteUserTimer(timerID string) {
 	e.deleteTimerInfos = append(e.deleteTimerInfos, timerID)
+}
+
+// GetDecision returns details about the in-progress decision task
+func (e *mutableStateBuilder) GetDecision(scheduleEventID int64) (bool, *decisionInfo) {
+	isRunning, ai := e.GetActivity(scheduleEventID)
+	if isRunning {
+		di := &decisionInfo{
+			ScheduleID: ai.ScheduleID,
+			StartedID:  ai.StartedID,
+			RequestID:  ai.RequestID,
+			StartToCloseTimeout: ai.StartToCloseTimeout,
+		}
+		return isRunning, di
+	}
+	return isRunning, nil
+}
+
+// UpdateDecision updates a decision task.
+func (e *mutableStateBuilder) UpdateDecision(scheduleEventID int64, di *decisionInfo) {
+	decisionTaskName := fmt.Sprintf("DecisionTask-%d", scheduleEventID)
+	e.UpdateActivity(scheduleEventID, &persistence.ActivityInfo{
+		ScheduleID: di.ScheduleID,
+		StartedID:  di.StartedID,
+		RequestID:  di.RequestID,
+		StartToCloseTimeout: di.StartToCloseTimeout,
+		ActivityID: decisionTaskName,
+	})
+}
+
+// DeleteDecision deletes a decision task.
+func (e *mutableStateBuilder) DeleteDecision(scheduleEventID int64) {
+	e.DeleteActivity(scheduleEventID)
 }
