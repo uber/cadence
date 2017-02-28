@@ -559,23 +559,23 @@ func (e *historyEngineImpl) RespondActivityTaskCompleted(request *workflow.Respo
 
 Update_History_Loop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
-		builder, err1 := context.loadWorkflowExecution()
-		if err1 != nil {
-			return err1
-		}
-
 		msBuilder, err1 := context.loadWorkflowMutableState()
 		if err1 != nil {
 			return err1
 		}
 
 		scheduleID := token.ScheduleID
-		isRunning, startedEvent := builder.isActivityTaskRunning(scheduleID)
-		if !isRunning || startedEvent == nil {
+		isRunning, ai := msBuilder.isActivityRunning(scheduleID)
+		if !isRunning || ai.StartedID == emptyEventID {
 			return &workflow.EntityNotExistsError{Message: "Activity task not found."}
 		}
 
-		startedID := startedEvent.GetEventId()
+		builder, err1 := context.loadWorkflowExecution()
+		if err1 != nil {
+			return err1
+		}
+
+		startedID := ai.StartedID
 		if builder.AddActivityTaskCompletedEvent(scheduleID, startedID, request) == nil {
 			// Let's retry and see if the activity still exist.
 			continue Update_History_Loop
@@ -630,23 +630,23 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(request *workflow.RespondA
 
 Update_History_Loop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
-		builder, err1 := context.loadWorkflowExecution()
-		if err1 != nil {
-			return err1
-		}
-
 		msBuilder, err1 := context.loadWorkflowMutableState()
 		if err1 != nil {
 			return err1
 		}
 
 		scheduleID := token.ScheduleID
-		isRunning, startedEvent := builder.isActivityTaskRunning(scheduleID)
-		if !isRunning || startedEvent == nil {
+		isRunning, ai := msBuilder.isActivityRunning(scheduleID)
+		if !isRunning || ai.StartedID == emptyEventID {
 			return &workflow.EntityNotExistsError{Message: "Activity task not found."}
 		}
 
-		startedID := startedEvent.GetEventId()
+		builder, err1 := context.loadWorkflowExecution()
+		if err1 != nil {
+			return err1
+		}
+
+		startedID := ai.StartedID
 		if builder.AddActivityTaskFailedEvent(scheduleID, startedID, request) == nil {
 			// Let's retry and see if the activity still exist.
 			continue Update_History_Loop
