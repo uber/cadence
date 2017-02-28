@@ -189,6 +189,14 @@ const (
 		`and task_id = ? ` +
 		`IF next_event_id = ? and range_id = ?`
 
+	templateCreateActivityInfoQuery = `UPDATE executions ` +
+		`SET activity_map[ ? ] =` + templateActivityInfoType + ` ` +
+		`WHERE shard_id = ? ` +
+		`and type = ? ` +
+		`and workflow_id = ? ` +
+		`and run_id = ? ` +
+		`and task_id = ?`
+
 	templateUpdateActivityInfoQuery = `UPDATE executions ` +
 		`SET activity_map[ ? ] =` + templateActivityInfoType + ` ` +
 		`WHERE shard_id = ? ` +
@@ -523,6 +531,8 @@ func (d *cassandraPersistence) CreateWorkflowExecution(request *CreateWorkflowEx
 	d.createTransferTasks(batch, request.TransferTasks, request.Execution.GetWorkflowId(), request.Execution.GetRunId(),
 		cqlNowTimestamp)
 	d.createTimerTasks(batch, request.TimerTasks, nil, request.Execution.GetWorkflowId(), request.Execution.GetRunId(), cqlNowTimestamp)
+
+	d.createActivityInfos(batch, request.CreateActivityInfos, nil, request.Execution.GetWorkflowId(), request.Execution.GetRunId())
 
 	batch.Query(templateUpdateLeaseQuery,
 		request.RangeID,
@@ -1202,6 +1212,31 @@ func (d *cassandraPersistence) createTimerTasks(batch *gocql.Batch, timerTasks [
 			rowTypeTimerWorkflowID,
 			rowTypeTimerRunID,
 			deleteTimerTask.GetTaskID())
+	}
+}
+
+func (d *cassandraPersistence) createActivityInfos(batch *gocql.Batch, activityInfos []*ActivityInfo, deleteInfo *int64,
+	workflowID string, runID string) {
+
+	for _, a := range activityInfos {
+		batch.Query(templateCreateActivityInfoQuery,
+			a.ScheduleID,
+			a.ScheduleID,
+			a.StartedID,
+			a.ActivityID,
+			a.RequestID,
+			a.Details,
+			a.ScheduleToStartTimeout,
+			a.ScheduleToCloseTimeout,
+			a.StartToCloseTimeout,
+			a.HeartbeatTimeout,
+			a.CancelRequested,
+			a.CancelRequestID,
+			d.shardID,
+			rowTypeExecution,
+			workflowID,
+			runID,
+			rowTypeExecutionTaskID)
 	}
 }
 
