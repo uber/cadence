@@ -257,7 +257,7 @@ func (s *timerQueueProcessorSuite) checkTimedOutEventFor(workflowExecution workf
 	s.Nil(err1)
 	msBuilder := newMutableStateBuilder(s.logger)
 	msBuilder.Load(minfo.ActivitInfos, minfo.TimerInfos)
-	isRunningFromMutableState, _ := msBuilder.isActivityRunning(scheduleID)
+	isRunningFromMutableState, _ := msBuilder.GetActivity(scheduleID)
 
 	return isRunning, isRunningFromMutableState, builder
 }
@@ -274,7 +274,7 @@ func (s *timerQueueProcessorSuite) checkTimedOutEventForUserTimer(workflowExecut
 	s.Nil(err1)
 	msBuilder := newMutableStateBuilder(s.logger)
 	msBuilder.Load(minfo.ActivitInfos, minfo.TimerInfos)
-	isRunning, _ := msBuilder.isTimerRunning(startedEvent.GetTimerStartedEventAttributes().GetTimerId())
+	isRunning, _ := msBuilder.GetUserTimer(startedEvent.GetTimerStartedEventAttributes().GetTimerId())
 	return isRunning, builder
 }
 
@@ -371,7 +371,7 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTask() {
 	aste = b.AddActivityTaskStartedEvent(ase.GetEventId(), uuid.New(), &workflow.PollForActivityTaskRequest{})
 
 	msBuilder = newMutableStateBuilder(s.logger)
-	msBuilder.UpdatePendingActivity(ase.GetEventId(), &persistence.ActivityInfo{
+	msBuilder.UpdateActivity(ase.GetEventId(), &persistence.ActivityInfo{
 		ScheduleID: ase.GetEventId(), StartedID: aste.GetEventId(), StartToCloseTimeout: 1})
 	t, err = tBuilder.AddStartToCloseActivityTimeout(ase.GetEventId(), msBuilder)
 	s.Nil(err)
@@ -401,7 +401,7 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTask() {
 	aste = b.AddActivityTaskStartedEvent(ase.GetEventId(), uuid.New(), &workflow.PollForActivityTaskRequest{})
 
 	msBuilder = newMutableStateBuilder(s.logger)
-	msBuilder.UpdatePendingActivity(ase.GetEventId(), &persistence.ActivityInfo{StartToCloseTimeout: 1})
+	msBuilder.UpdateActivity(ase.GetEventId(), &persistence.ActivityInfo{StartToCloseTimeout: 1})
 	t, err = tBuilder.AddStartToCloseActivityTimeout(ase.GetEventId(), msBuilder)
 	s.Nil(err)
 	s.NotNil(t)
@@ -434,7 +434,7 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTask() {
 		})
 
 	msBuilder = newMutableStateBuilder(s.logger)
-	msBuilder.UpdatePendingActivity(ase.GetEventId(), &persistence.ActivityInfo{
+	msBuilder.UpdateActivity(ase.GetEventId(), &persistence.ActivityInfo{
 		ScheduleID: ase.GetEventId(), StartedID: emptyEventID, ScheduleToCloseTimeout: 1})
 	t, err = tBuilder.AddScheduleToCloseActivityTimeout(ase.GetEventId(), msBuilder)
 	s.Nil(err)
@@ -464,7 +464,7 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTask() {
 	aste = b.AddActivityTaskStartedEvent(ase.GetEventId(), uuid.New(), &workflow.PollForActivityTaskRequest{})
 
 	msBuilder = newMutableStateBuilder(s.logger)
-	msBuilder.UpdatePendingActivity(ase.GetEventId(), &persistence.ActivityInfo{
+	msBuilder.UpdateActivity(ase.GetEventId(), &persistence.ActivityInfo{
 		ScheduleID: ase.GetEventId(), StartedID: aste.GetEventId(), ScheduleToCloseTimeout: 1})
 	t, err = tBuilder.AddScheduleToCloseActivityTimeout(ase.GetEventId(), msBuilder)
 	s.Nil(err)
@@ -494,7 +494,7 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTask() {
 	aste = b.AddActivityTaskStartedEvent(ase.GetEventId(), uuid.New(), &workflow.PollForActivityTaskRequest{})
 
 	msBuilder = newMutableStateBuilder(s.logger)
-	msBuilder.UpdatePendingActivity(ase.GetEventId(), &persistence.ActivityInfo{ScheduleToCloseTimeout: 1})
+	msBuilder.UpdateActivity(ase.GetEventId(), &persistence.ActivityInfo{ScheduleToCloseTimeout: 1})
 	t, err = tBuilder.AddScheduleToCloseActivityTimeout(ase.GetEventId(), msBuilder)
 	s.Nil(err)
 	s.NotNil(t)
@@ -528,7 +528,7 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTask() {
 	aste = b.AddActivityTaskStartedEvent(ase.GetEventId(), uuid.New(), &workflow.PollForActivityTaskRequest{})
 
 	msBuilder = newMutableStateBuilder(s.logger)
-	msBuilder.UpdatePendingActivity(ase.GetEventId(), &persistence.ActivityInfo{
+	msBuilder.UpdateActivity(ase.GetEventId(), &persistence.ActivityInfo{
 		ScheduleID: ase.GetEventId(), StartedID: aste.GetEventId(), HeartbeatTimeout: 1})
 
 	t, err = tBuilder.AddHeartBeatActivityTimeout(ase.GetEventId(), msBuilder)
