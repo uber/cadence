@@ -297,7 +297,7 @@ Update_History_Loop:
 
 		// Check execution state to make sure task is in the list of outstanding tasks and it is not yet started.  If
 		// task is not outstanding than it is most probably a duplicate and complete the task.
-		isRunning, ai := msBuilder.isActivityRunning(scheduleID)
+		isRunning, ai := msBuilder.GetActivity(scheduleID)
 		if !isRunning {
 			// Looks like ActivityTask already completed as a result of another call.
 			// It is OK to drop the task at this point.
@@ -364,7 +364,7 @@ Update_History_Loop:
 
 		ai.StartedID = event.GetEventId()
 		ai.RequestID = requestID
-		msBuilder.UpdatePendingActivity(scheduleID, ai)
+		msBuilder.UpdateActivity(scheduleID, ai)
 
 		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 		// the history and try the operationi again.
@@ -507,7 +507,7 @@ Update_History_Loop:
 			case workflow.DecisionType_RequestCancelActivityTask:
 				attributes := d.GetRequestCancelActivityTaskDecisionAttributes()
 				actCancelReqEvent := builder.AddActivityTaskCancelRequestedEvent(completedID, attributes.GetActivityId())
-				isRunning, ai := msBuilder.isActivityRunningByActivityID(attributes.GetActivityId())
+				isRunning, ai := msBuilder.GetActivityByActivityID(attributes.GetActivityId())
 				if !isRunning {
 					builder.AddRequestCancelActivityTaskFailedEvent(
 						completedID, attributes.GetActivityId(), activityCancelationMsgActivityIDUnknown)
@@ -518,14 +518,14 @@ Update_History_Loop:
 					// We haven't started the activity yet, we can cancel the activity right away.
 					builder.AddActivityTaskCanceledEvent(
 						ai.ScheduleID, ai.StartedID, actCancelReqEvent.GetEventId(), []byte(activityCancelationMsgActivityNotStarted), request.GetIdentity())
-					msBuilder.DeletePendingActivity(ai.ScheduleID)
+					msBuilder.DeleteActivity(ai.ScheduleID)
 				} else {
 					// - We have the activity dispatched to worker.
 					// - The activity might not be heartbeat'ing, but the activity can still call RecordActivityHeartBeat()
 					//   to see cancellation while reporting progress of the activity.
 					ai.CancelRequested = true
 					ai.CancelRequestID = actCancelReqEvent.GetEventId()
-					msBuilder.UpdatePendingActivity(ai.ScheduleID, ai)
+					msBuilder.UpdateActivity(ai.ScheduleID, ai)
 				}
 
 			case workflow.DecisionType_CancelTimer:
@@ -609,7 +609,7 @@ Update_History_Loop:
 		}
 
 		scheduleID := token.ScheduleID
-		isRunning, ai := msBuilder.isActivityRunning(scheduleID)
+		isRunning, ai := msBuilder.GetActivity(scheduleID)
 		if !isRunning || ai.StartedID == emptyEventID {
 			return &workflow.EntityNotExistsError{Message: "Activity task not found."}
 		}
@@ -625,7 +625,7 @@ Update_History_Loop:
 			return &workflow.InternalServiceError{Message: "Unable to add ActivityTaskCompleted event to history."}
 		}
 
-		msBuilder.DeletePendingActivity(scheduleID)
+		msBuilder.DeleteActivity(scheduleID)
 
 		var transferTasks []persistence.Task
 		if !builder.hasPendingDecisionTask() {
@@ -686,7 +686,7 @@ Update_History_Loop:
 		}
 
 		scheduleID := token.ScheduleID
-		isRunning, ai := msBuilder.isActivityRunning(scheduleID)
+		isRunning, ai := msBuilder.GetActivity(scheduleID)
 		if !isRunning || ai.StartedID == emptyEventID {
 			return &workflow.EntityNotExistsError{Message: "Activity task not found."}
 		}
@@ -702,7 +702,7 @@ Update_History_Loop:
 			return &workflow.InternalServiceError{Message: "Unable to add ActivityTaskFailed event to history."}
 		}
 
-		msBuilder.DeletePendingActivity(scheduleID)
+		msBuilder.DeleteActivity(scheduleID)
 
 		var transferTasks []persistence.Task
 		if !builder.hasPendingDecisionTask() {
@@ -768,7 +768,7 @@ Update_History_Loop:
 		scheduleID := token.ScheduleID
 		// Check execution state to make sure task is in the list of outstanding tasks and it is not yet started.  If
 		// task is not outstanding than it is most probably a duplicate and complete the task.
-		isRunning, ai := msBuilder.isActivityRunning(scheduleID)
+		isRunning, ai := msBuilder.GetActivity(scheduleID)
 		if !isRunning || ai.StartedID == emptyEventID {
 			return &workflow.EntityNotExistsError{Message: "Activity task not found."}
 		}
@@ -783,7 +783,7 @@ Update_History_Loop:
 			return &workflow.InternalServiceError{Message: "Unable to add ActivityTaskCanceled event to history."}
 		}
 
-		msBuilder.DeletePendingActivity(scheduleID)
+		msBuilder.DeleteActivity(scheduleID)
 
 		var transferTasks []persistence.Task
 		if !builder.hasPendingDecisionTask() {
@@ -852,7 +852,7 @@ Update_History_Loop:
 		}
 
 		scheduleID := token.ScheduleID
-		isRunning, ai := msBuilder.isActivityRunning(scheduleID)
+		isRunning, ai := msBuilder.GetActivity(scheduleID)
 		if !isRunning || ai.StartedID == emptyEventID {
 			e.logger.Debugf("Activity HeartBeat: scheduleEventID: %v, ActivityInfo: %+v, Exist: %v",
 				scheduleID, ai, isRunning)
@@ -881,7 +881,7 @@ Update_History_Loop:
 
 		// Save progress reported.
 		ai.Details = request.GetDetails()
-		msBuilder.UpdatePendingActivity(scheduleID, ai)
+		msBuilder.UpdateActivity(scheduleID, ai)
 
 		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 		// the history and try the operation again.

@@ -30,7 +30,8 @@ func newMutableStateBuilder(logger bark.Logger) *mutableStateBuilder {
 		logger:                          logger}
 }
 
-func (e *mutableStateBuilder) Load(activityInfos map[int64]*persistence.ActivityInfo,
+func (e *mutableStateBuilder) Load(
+	activityInfos map[int64]*persistence.ActivityInfo,
 	timerInfos map[string]*persistence.TimerInfo) {
 	e.pendingActivityInfoIDs = activityInfos
 	e.pendingTimerInfoIDs = timerInfos
@@ -39,12 +40,14 @@ func (e *mutableStateBuilder) Load(activityInfos map[int64]*persistence.Activity
 	}
 }
 
-func (e *mutableStateBuilder) isActivityRunning(scheduleEventID int64) (bool, *persistence.ActivityInfo) {
+// GetActivity gives details about an activity that is currently in progress.
+func (e *mutableStateBuilder) GetActivity(scheduleEventID int64) (bool, *persistence.ActivityInfo) {
 	a, ok := e.pendingActivityInfoIDs[scheduleEventID]
 	return ok, a
 }
 
-func (e *mutableStateBuilder) isActivityRunningByActivityID(activityID string) (bool, *persistence.ActivityInfo) {
+// GetActivityByActivityID gives details about an activity that is currently in progress.
+func (e *mutableStateBuilder) GetActivityByActivityID(activityID string) (bool, *persistence.ActivityInfo) {
 	eventID, ok := e.pendingActivityInfoByActivityID[activityID]
 	if !ok {
 		return ok, nil
@@ -53,26 +56,31 @@ func (e *mutableStateBuilder) isActivityRunningByActivityID(activityID string) (
 	return ok, a
 }
 
-func (e *mutableStateBuilder) UpdatePendingActivity(scheduleEventID int64, ai *persistence.ActivityInfo) {
+// UpdateActivity updates details about an activity that is in progress.
+func (e *mutableStateBuilder) UpdateActivity(scheduleEventID int64, ai *persistence.ActivityInfo) {
 	e.pendingActivityInfoIDs[scheduleEventID] = ai
 	e.pendingActivityInfoByActivityID[ai.ActivityID] = scheduleEventID
 	e.updateActivityInfos = append(e.updateActivityInfos, ai)
 }
 
-func (e *mutableStateBuilder) DeletePendingActivity(scheduleEventID int64) {
+// DeleteActivity deletes details about an activity.
+func (e *mutableStateBuilder) DeleteActivity(scheduleEventID int64) {
 	e.deleteActivityInfo = common.Int64Ptr(scheduleEventID)
 }
 
-func (e *mutableStateBuilder) isTimerRunning(timerID string) (bool, *persistence.TimerInfo) {
+// GetUserTimer gives details about a user timer.
+func (e *mutableStateBuilder) GetUserTimer(timerID string) (bool, *persistence.TimerInfo) {
 	a, ok := e.pendingTimerInfoIDs[timerID]
 	return ok, a
 }
 
-func (e *mutableStateBuilder) UpdatePendingTimers(timerID string, ti *persistence.TimerInfo) {
+// UpdateUserTimer updates the user timer in progress.
+func (e *mutableStateBuilder) UpdateUserTimer(timerID string, ti *persistence.TimerInfo) {
 	e.pendingTimerInfoIDs[timerID] = ti
 	e.updateTimerInfos = append(e.updateTimerInfos, ti)
 }
 
-func (e *mutableStateBuilder) DeletePendingTimer(timerID string) {
+// DeleteUserTimer deletes an user timer.
+func (e *mutableStateBuilder) DeleteUserTimer(timerID string) {
 	e.deleteTimerInfos = append(e.deleteTimerInfos, timerID)
 }

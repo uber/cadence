@@ -413,7 +413,7 @@ Update_History_Loop:
 					builder.AddTimerFiredEvent(ti.StartedID, ti.TimerID)
 
 					// Remove timer from mutable state.
-					msBuilder.DeletePendingTimer(ti.TimerID)
+					msBuilder.DeleteUserTimer(ti.TimerID)
 					scheduleNewDecision = !builder.hasPendingDecisionTask()
 				} else {
 					// See if we have next timer in list to be created.
@@ -423,7 +423,7 @@ Update_History_Loop:
 
 						// Update the task ID tracking the corresponding timer task.
 						ti.TaskID = nextTask.GetTaskID()
-						msBuilder.UpdatePendingTimers(ti.TimerID, ti)
+						msBuilder.UpdateUserTimer(ti.TimerID, ti)
 					}
 
 					// Done!
@@ -442,7 +442,7 @@ Update_History_Loop:
 				continue Update_History_Loop
 			}
 
-			if isRunning, ai := msBuilder.isActivityRunning(scheduleID); isRunning {
+			if isRunning, ai := msBuilder.GetActivity(scheduleID); isRunning {
 				timeoutType := workflow.TimeoutType(timerTask.TimeoutType)
 				t.logger.Debugf("Activity TimeoutType: %v, scheduledID: %v, startedId: %v. \n",
 					timeoutType, scheduleID, ai.StartedID)
@@ -450,24 +450,24 @@ Update_History_Loop:
 				switch timeoutType {
 				case workflow.TimeoutType_SCHEDULE_TO_CLOSE:
 					builder.AddActivityTaskTimedOutEvent(scheduleID, ai.StartedID, timeoutType, nil)
-					msBuilder.DeletePendingActivity(scheduleID)
+					msBuilder.DeleteActivity(scheduleID)
 					scheduleNewDecision = !builder.hasPendingDecisionTask()
 
 				case workflow.TimeoutType_START_TO_CLOSE:
 					if ai.StartedID != emptyEventID {
 						builder.AddActivityTaskTimedOutEvent(scheduleID, ai.StartedID, timeoutType, nil)
-						msBuilder.DeletePendingActivity(scheduleID)
+						msBuilder.DeleteActivity(scheduleID)
 						scheduleNewDecision = !builder.hasPendingDecisionTask()
 					}
 
 				case workflow.TimeoutType_HEARTBEAT:
 					if ai.StartedID != emptyEventID {
-						isTimerRunning, ai := msBuilder.isActivityRunning(scheduleID)
+						isTimerRunning, ai := msBuilder.GetActivity(scheduleID)
 						if isTimerRunning {
 							t.logger.Debugf("Activity Heartbeat expired: %+v", *ai)
 							// The current heart beat expired.
 							builder.AddActivityTaskTimedOutEvent(scheduleID, ai.StartedID, timeoutType, ai.Details)
-							msBuilder.DeletePendingActivity(scheduleID)
+							msBuilder.DeleteActivity(scheduleID)
 							scheduleNewDecision = !builder.hasPendingDecisionTask()
 						}
 					}
@@ -475,7 +475,7 @@ Update_History_Loop:
 				case workflow.TimeoutType_SCHEDULE_TO_START:
 					if ai.StartedID == emptyEventID {
 						builder.AddActivityTaskTimedOutEvent(scheduleID, ai.StartedID, timeoutType, nil)
-						msBuilder.DeletePendingActivity(scheduleID)
+						msBuilder.DeleteActivity(scheduleID)
 						scheduleNewDecision = !builder.hasPendingDecisionTask()
 					}
 				}
