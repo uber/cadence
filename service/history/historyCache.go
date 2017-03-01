@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	historyCacheInitialSize               = 1024
-	historyCacheMaxSize                   = 10 * 1024
+	historyCacheInitialSize               = 256
+	historyCacheMaxSize                   = 1 * 1024
 	historyCacheTTL         time.Duration = time.Hour
 )
 
