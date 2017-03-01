@@ -11,11 +11,11 @@ import (
 	"github.com/gocql/gocql"
 	"github.com/uber-common/bark"
 
+	"github.com/uber-go/tally"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber-go/tally"
 )
 
 const (
@@ -138,7 +138,7 @@ func newTestExecutionMgrFactory(options TestBaseOptions, cassandra CassandraTest
 	}
 }
 
-func (f *testExecutionMgrFactory) CreateExecutionManager(shardID int) (ExecutionManager, error) {
+func (f *testExecutionMgrFactory) CreateExecutionManager(shardID int, metricsClient metrics.Client) (ExecutionManager, error) {
 	return NewCassandraWorkflowExecutionPersistence(f.options.ClusterHost, f.cassandra.keyspace, shardID, f.logger)
 }
 
@@ -155,7 +155,7 @@ func (s *TestBase) SetupWorkflowStoreWithOptions(options TestBaseOptions) {
 	}
 	s.ExecutionMgrFactory = newTestExecutionMgrFactory(options, s.CassandraTestCluster, log)
 	// Create an ExecutionManager for the shard for use in unit tests
-	s.WorkflowMgr, err = s.ExecutionMgrFactory.CreateExecutionManager(shardID)
+	s.WorkflowMgr, err = s.ExecutionMgrFactory.CreateExecutionManager(shardID, nil)
 	if err != nil {
 		log.Fatal(err)
 	}

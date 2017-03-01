@@ -4,6 +4,7 @@ import (
 	"time"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/metrics"
 )
 
 // Workflow execution states
@@ -359,7 +360,7 @@ type (
 
 	// ExecutionManagerFactory creates an instance of ExecutionManager for a given shard
 	ExecutionManagerFactory interface {
-		CreateExecutionManager(shardID int) (ExecutionManager, error)
+		CreateExecutionManager(shardID int, metricsClient metrics.Client) (ExecutionManager, error)
 	}
 
 	// TaskManager is used to manage tasks
