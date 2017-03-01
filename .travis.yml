@@ -16,7 +16,7 @@ addons:
       - python
       - python-dev
       - python-pip
-      - thrift_compiler
+      - thrift-compiler
 
 before_install:
   - pip install --user ccm
