@@ -7,7 +7,7 @@ import (
 	"github.com/uber/tchannel-go/thrift"
 )
 
-var _ m.TChanMatchingService = (*metricClient)(nil)
+var _ Client = (*metricClient)(nil)
 
 type metricClient struct {
 	client        Client
