@@ -306,11 +306,11 @@ func (b *historyBuilder) AddActivityTaskCanceledEvent(scheduleEventID, startedEv
 }
 
 func (b *historyBuilder) AddTimerCanceledEvent(startedEventID int64,
-	decisionTaskCompletedEventId int64, timerID string, identity string) *workflow.HistoryEvent {
+	decisionTaskCompletedEventID int64, timerID string, identity string) *workflow.HistoryEvent {
 
 	attributes := workflow.NewTimerCanceledEventAttributes()
 	attributes.StartedEventId = common.Int64Ptr(startedEventID)
-	attributes.DecisionTaskCompletedEventId = common.Int64Ptr(decisionTaskCompletedEventId)
+	attributes.DecisionTaskCompletedEventId = common.Int64Ptr(decisionTaskCompletedEventID)
 	attributes.TimerId = common.StringPtr(timerID)
 	attributes.Identity = common.StringPtr(identity)
 
@@ -320,12 +320,12 @@ func (b *historyBuilder) AddTimerCanceledEvent(startedEventID int64,
 	return b.addEventToHistory(event)
 }
 
-func (b *historyBuilder) AddCancelTimerFailedEvent(timerID string, decisionTaskCompletedEventId int64,
+func (b *historyBuilder) AddCancelTimerFailedEvent(timerID string, decisionTaskCompletedEventID int64,
 	cause string, identity string) *workflow.HistoryEvent {
 
 	attributes := workflow.NewCancelTimerFailedEventAttributes()
 	attributes.TimerId = common.StringPtr(timerID)
-	attributes.DecisionTaskCompletedEventId = common.Int64Ptr(decisionTaskCompletedEventId)
+	attributes.DecisionTaskCompletedEventId = common.Int64Ptr(decisionTaskCompletedEventID)
 	attributes.Cause = common.StringPtr(cause)
 	attributes.Identity = common.StringPtr(identity)
 
@@ -334,7 +334,6 @@ func (b *historyBuilder) AddCancelTimerFailedEvent(timerID string, decisionTaskC
 
 	return b.addEventToHistory(event)
 }
-
 
 func (b *historyBuilder) addEventToHistory(event *workflow.HistoryEvent) *workflow.HistoryEvent {
 	//b.logger.Debugf("Adding EventId: %v, Event: %+v", event.GetEventId(), *event)

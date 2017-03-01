@@ -101,7 +101,12 @@ func (s *integrationSuite) SetupSuite() {
 	s.logger = bark.NewLoggerFromLogrus(logger)
 
 	s.ch, _ = tchannel.NewChannel("cadence-integration-test", nil)
+}
 
+func (s *integrationSuite) TearDownSuite() {
+}
+
+func (s *integrationSuite) SetupTest() {
 	options := persistence.TestBaseOptions{}
 	options.ClusterHost = "127.0.0.1"
 	options.DropKeySpace = true
@@ -116,16 +121,10 @@ func (s *integrationSuite) SetupSuite() {
 	s.engine, _ = frontend.NewClient(s.ch, s.host.FrontendAddress())
 }
 
-func (s *integrationSuite) TearDownSuite() {
+func (s *integrationSuite) TearDownTest() {
 	s.host.Stop()
 	s.host = nil
 	s.TearDownWorkflowStore()
-}
-
-func (s *integrationSuite) SetupTest() {
-}
-
-func (s *integrationSuite) TearDownTest() {
 }
 
 func (s *integrationSuite) TestIntegrationStartWorkflowExecution() {

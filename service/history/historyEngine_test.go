@@ -2142,7 +2142,6 @@ func (s *engineSuite) TestCancelTimer_RespondDecisionTaskCompleted_NoStartTimer(
 	s.Equal(timerCancelationMsgTimerIDUnknown, updatedEvent.GetCancelTimerFailedEventAttributes().GetCause())
 }
 
-
 func addWorkflowExecutionStartedEvent(builder *historyBuilder, workflowID, workflowType, taskList string, input []byte,
 	executionStartToCloseTimeout, taskStartToCloseTimeout int32, identity string) *workflow.HistoryEvent {
 	e := builder.AddWorkflowExecutionStartedEvent(&workflow.StartWorkflowExecutionRequest{
@@ -2239,8 +2238,8 @@ func addActivityTaskFailedEvent(builder *historyBuilder, scheduleID, startedID i
 func addTimerStartedEvent(builder *historyBuilder, decisionCompletedEventID int64, timerID string, timeOut int64) *workflow.HistoryEvent {
 	e := builder.AddTimerStartedEvent(decisionCompletedEventID,
 		&workflow.StartTimerDecisionAttributes{
-			TimerId: common.StringPtr(timerID),
-			StartToFireTimeoutSeconds:  common.Int64Ptr(timeOut),
+			TimerId:                   common.StringPtr(timerID),
+			StartToFireTimeoutSeconds: common.Int64Ptr(timeOut),
 		})
 
 	return e

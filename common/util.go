@@ -105,7 +105,7 @@ func PrettyPrintHistory(history *workflow.History, logger bark.Logger) {
 		logger.Errorf("Error serializing history: %v\n", err)
 	}
 
-	logger.Debug("******************************************")
-	logger.Debugf("History: %v", string(data))
-	logger.Debug("******************************************")
+	logger.Info("******************************************")
+	logger.Infof("History: %v", string(data))
+	logger.Info("******************************************")
 }
