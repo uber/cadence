@@ -3,6 +3,7 @@ import:
 - package: github.com/uber/tchannel-go
   subpackages:
   - thrift
+  - thrift/thrift-gen
 - package: github.com/gocql/gocql
   subpackages:
   - internal/lru

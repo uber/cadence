@@ -46,10 +46,12 @@ ALL_SRC := $(shell find . -name "*.go" | grep -v -e Godeps -e vendor \
 # all directories with *_test.go files in them
 TEST_DIRS := $(sort $(dir $(filter %_test.go,$(ALL_SRC))))
 
-thriftc: $(THRIFT_GEN_SRC)
+glide:
+	glide install
+
+thriftc: glide $(THRIFT_GEN_SRC)
 
 bins: thriftc
-	glide install
 	go build -i -o cadence main.go
 
 test: bins

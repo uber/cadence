@@ -1,5 +1,5 @@
-hash: 03a6149da591233e84233f672cb3163106eab3411dcba15f5dad60d8102b0593
-updated: 2017-03-02T10:25:33.326765304-08:00
+hash: c38fdef9e213c113d3fc1f62056459a7547db7ca8e17bc6885321c2b9647c134
+updated: 2017-03-02T10:57:09.383624392-08:00
 imports:
 - name: github.com/apache/thrift
   version: c89e172289129a0a700a20f11f4a157b7da789d2
@@ -98,6 +98,7 @@ imports:
   - relay
   - thrift
   - thrift/gen-go/meta
+  - thrift/thrift-gen
   - tnet
   - trand
   - typed
