@@ -49,7 +49,10 @@ TEST_DIRS := $(sort $(dir $(filter %_test.go,$(ALL_SRC))))
 glide:
 	glide install
 
-thriftc: glide $(THRIFT_GEN_SRC)
+clean_thrift:
+	rm -rf .gen
+
+thriftc: clean_thrift glide $(THRIFT_GEN_SRC)
 
 bins: thriftc
 	go build -i -o cadence main.go
@@ -82,5 +85,4 @@ cover_ci: cover_profile
 	done
 
 clean:
-	rm -rf .gen
 	rm -rf cadence
