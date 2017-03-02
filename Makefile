@@ -54,6 +54,9 @@ thriftc: glide $(THRIFT_GEN_SRC)
 bins: thriftc
 	go build -i -o cadence main.go
 
+bins_nothrift:
+	go build -i -o cadence main.go
+
 test: bins
 	@rm -f test
 	@rm -f test.log
@@ -61,7 +64,7 @@ test: bins
 		go test -coverprofile=$@ "$$dir" | tee -a test.log; \
 	done;
 
-cover_profile: clean bins
+cover_profile: clean bins_nothrift
 	@echo Testing packages:
 	@for dir in $(TEST_DIRS); do \
 		mkdir -p $(BUILD)/"$$dir"; \
