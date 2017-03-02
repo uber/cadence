@@ -19,7 +19,7 @@ addons:
 
 before_install:
   - pip install --user ccm
-  - pip install --user cqlsh
+  - pip install --user cqlsh==5.0.1
 
 install:
   - go get -u github.com/Masterminds/glide
