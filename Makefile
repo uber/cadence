@@ -57,7 +57,7 @@ thriftc: clean_thrift glide $(THRIFT_GEN_SRC)
 bins: thriftc
 	go build -i -o cadence main.go
 
-bins_nothrift:
+bins_nothrift: glide
 	go build -i -o cadence main.go
 
 test: bins
