@@ -212,6 +212,12 @@ Update_History_Loop:
 			return nil, err1
 		}
 
+		if scheduleID >= builder.nextEventID {
+			// Reload workflow execution history
+			context.clear()
+			continue Update_History_Loop
+		}
+
 		// Check execution state to make sure task is in the list of outstanding tasks and it is not yet started.  If
 		// task is not outstanding than it is most probably a duplicate and complete the task.
 		isRunning, startedEvent := builder.isDecisionTaskRunning(scheduleID)
@@ -241,8 +247,8 @@ Update_History_Loop:
 
 		event := builder.AddDecisionTaskStartedEvent(scheduleID, requestID, request.PollRequest)
 		if event == nil {
-			// Let's retry and see if the decision still exist.
-			continue Update_History_Loop
+			// Unable to add DecisionTaskStarted event to history
+			return nil, &workflow.InternalServiceError{Message: "Unable to add DecisionTaskStarted event to history."}
 		}
 
 		// Start a timer for the decision task.
@@ -321,10 +327,16 @@ Update_History_Loop:
 			return nil, err1
 		}
 
+		if scheduleID >= builder.nextEventID {
+			// Reload workflow execution history
+			context.clear()
+			continue Update_History_Loop
+		}
+
 		event := builder.AddActivityTaskStartedEvent(scheduleID, requestID, request.PollRequest)
 		if event == nil {
-			// Let's retry and see if the activity still exist.
-			continue Update_History_Loop
+			// Unable to add ActivityTaskStarted event to history
+			return nil, &workflow.InternalServiceError{Message: "Unable to add ActivityTaskStarted event to history."}
 		}
 
 		// Start a timer for the activity task.
@@ -601,8 +613,8 @@ Update_History_Loop:
 
 		startedID := startedEvent.GetEventId()
 		if builder.AddActivityTaskCompletedEvent(scheduleID, startedID, request) == nil {
-			// Let's retry and see if the activity still exist.
-			continue Update_History_Loop
+			// Unable to add ActivityTaskCompleted event to history
+			return &workflow.InternalServiceError{Message: "Unable to add ActivityTaskCompleted event to history."}
 		}
 
 		msBuilder.DeletePendingActivity(scheduleID)
@@ -678,8 +690,8 @@ Update_History_Loop:
 
 		startedID := startedEvent.GetEventId()
 		if builder.AddActivityTaskFailedEvent(scheduleID, startedID, request) == nil {
-			// Let's retry and see if the activity still exist.
-			continue Update_History_Loop
+			// Unable to add ActivityTaskFailed event to history
+			return &workflow.InternalServiceError{Message: "Unable to add ActivityTaskFailed event to history."}
 		}
 
 		msBuilder.DeletePendingActivity(scheduleID)
@@ -759,8 +771,8 @@ Update_History_Loop:
 		}
 
 		if builder.AddActivityTaskCanceledEvent(scheduleID, ai.StartedID, ai.CancelRequestID, request.GetDetails(), request.GetIdentity()) == nil {
-			// Let's retry and see if the activity still exist.
-			continue Update_History_Loop
+			// Unable to add ActivityTaskCanceled event to history
+			return &workflow.InternalServiceError{Message: "Unable to add ActivityTaskCanceled event to history."}
 		}
 
 		msBuilder.DeletePendingActivity(scheduleID)
