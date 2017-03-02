@@ -212,6 +212,8 @@ Update_History_Loop:
 			return nil, err1
 		}
 
+		// First check to see if cache needs to be refreshed as we could potentially have stale workflow execution in
+		// some extreme cassandra failure cases.
 		if scheduleID >= builder.nextEventID {
 			// Reload workflow execution history
 			context.clear()
@@ -327,6 +329,8 @@ Update_History_Loop:
 			return nil, err1
 		}
 
+		// First check to see if cache needs to be refreshed as we could potentially have stale workflow execution in
+		// some extreme cassandra failure cases.
 		if scheduleID >= builder.nextEventID {
 			// Reload workflow execution history
 			context.clear()

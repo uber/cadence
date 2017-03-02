@@ -145,10 +145,11 @@ func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persi
 		UpserTimerInfos:     upsertTimerInfos,
 		DeleteTimerInfos:    deleteTimerInfos,
 	}); err1 != nil {
+		// Clear all cached state in case of error
+		c.clear()
+
 		switch err1.(type) {
 		case *persistence.ConditionFailedError:
-			// Clear all cached state
-			c.clear()
 			return ErrConflict
 		}
 
