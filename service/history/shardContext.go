@@ -17,6 +17,7 @@ const (
 type (
 	// ShardContext represents a history engine shard
 	ShardContext interface {
+		GetShardID() int
 		GetExecutionManager() persistence.ExecutionManager
 		GetNextTransferTaskID() (int64, error)
 		GetTransferSequenceNumber() int64
@@ -49,6 +50,10 @@ type (
 )
 
 var _ ShardContext = (*shardContextImpl)(nil)
+
+func (s *shardContextImpl) GetShardID() int {
+	return s.shardInfo.ShardID
+}
 
 func (s *shardContextImpl) GetExecutionManager() persistence.ExecutionManager {
 	return s.executionManager

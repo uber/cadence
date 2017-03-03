@@ -78,6 +78,10 @@ func newTestShardContext(shardInfo *ShardInfo, transferSequenceNumber int64, exe
 	}
 }
 
+func (s *testShardContext) GetShardID() int {
+	return s.shardInfo.ShardID
+}
+
 func (s *testShardContext) GetExecutionManager() ExecutionManager {
 	return s.executionMgr
 }

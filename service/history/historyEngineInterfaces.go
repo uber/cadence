@@ -10,6 +10,7 @@ type (
 	// Engine represents an interface for managing workflow execution history.
 	Engine interface {
 		common.Daemon
+		GetShardContext() ShardContext
 		// TODO: Convert workflow.WorkflowExecution to pointer all over the place
 		StartWorkflowExecution(request *workflow.StartWorkflowExecutionRequest) (*workflow.StartWorkflowExecutionResponse, error)
 		GetWorkflowExecutionHistory(
