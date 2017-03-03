@@ -100,7 +100,7 @@ func (h *Handler) RecordActivityTaskHeartbeat(ctx thrift.Context,
 
 	response, err2 := engine.RecordActivityTaskHeartbeat(heartbeatRequest)
 	if err2 != nil {
-		return nil, h.convertError(engine.GetShardContext().GetShardID(), err2)
+		return nil, h.convertError(err2)
 	}
 
 	return response, nil
@@ -118,7 +118,7 @@ func (h *Handler) RecordActivityTaskStarted(ctx thrift.Context,
 
 	response, err2 := engine.RecordActivityTaskStarted(recordRequest)
 	if err2 != nil {
-		return nil, h.convertError(engine.GetShardContext().GetShardID(), err2)
+		return nil, h.convertError(err2)
 	}
 
 	return response, nil
@@ -145,7 +145,7 @@ func (h *Handler) RecordDecisionTaskStarted(ctx thrift.Context,
 
 	response, err2 := engine.RecordDecisionTaskStarted(recordRequest)
 	if err2 != nil {
-		return nil, h.convertError(engine.GetShardContext().GetShardID(), err2)
+		return nil, h.convertError(err2)
 	}
 
 	return response, nil
@@ -167,7 +167,7 @@ func (h *Handler) RespondActivityTaskCompleted(ctx thrift.Context,
 
 	err2 := engine.RespondActivityTaskCompleted(completeRequest)
 	if err2 != nil {
-		return h.convertError(engine.GetShardContext().GetShardID(), err2)
+		return h.convertError(err2)
 	}
 
 	return nil
@@ -189,7 +189,7 @@ func (h *Handler) RespondActivityTaskFailed(ctx thrift.Context,
 
 	err2 := engine.RespondActivityTaskFailed(failRequest)
 	if err2 != nil {
-		return h.convertError(engine.GetShardContext().GetShardID(), err2)
+		return h.convertError(err2)
 	}
 
 	return nil
@@ -211,7 +211,7 @@ func (h *Handler) RespondActivityTaskCanceled(ctx thrift.Context,
 
 	err2 := engine.RespondActivityTaskCanceled(cancelRequest)
 	if err2 != nil {
-		return h.convertError(engine.GetShardContext().GetShardID(), err2)
+		return h.convertError(err2)
 	}
 
 	return nil
@@ -238,7 +238,7 @@ func (h *Handler) RespondDecisionTaskCompleted(ctx thrift.Context,
 
 	err2 := engine.RespondDecisionTaskCompleted(completeRequest)
 	if err2 != nil {
-		return h.convertError(engine.GetShardContext().GetShardID(), err2)
+		return h.convertError(err2)
 	}
 
 	return nil
@@ -255,7 +255,7 @@ func (h *Handler) StartWorkflowExecution(ctx thrift.Context,
 
 	response, err2 := engine.StartWorkflowExecution(startRequest)
 	if err2 != nil {
-		return nil, h.convertError(engine.GetShardContext().GetShardID(), err2)
+		return nil, h.convertError(err2)
 	}
 
 	return response, nil
@@ -277,9 +277,10 @@ func (h *Handler) GetWorkflowExecutionHistory(ctx thrift.Context,
 // convertError is a helper method to convert ShardOwnershipLostError from persistence layer returned by various
 // HistoryEngine API calls to ShardOwnershipLost error return by HistoryService for client to be redirected to the
 // correct shard.
-func (h *Handler) convertError(shardID int, err error) error {
+func (h *Handler) convertError(err error) error {
 	switch err.(type) {
 	case *persistence.ShardOwnershipLostError:
+		shardID := err.(*persistence.ShardOwnershipLostError).ShardID
 		info, err := h.hServiceResolver.Lookup(string(shardID))
 		if err != nil {
 			return createShardOwnershipLostError(h.GetHostInfo().GetAddress(), info.GetAddress())

@@ -19,22 +19,6 @@ func (_m *MockHistoryEngine) Stop() {
 	_m.Called()
 }
 
-// GetShardContext returns the context used by History Engine instance
-func (_m *MockHistoryEngine) GetShardContext() ShardContext {
-	ret := _m.Called()
-
-	var r0 ShardContext
-	if rf, ok := ret.Get(0).(func() ShardContext); ok {
-		r0 = rf()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(ShardContext)
-		}
-	}
-
-	return r0
-}
-
 // StartWorkflowExecution is mock implementation for StartWorkflowExecution of HistoryEngine
 func (_m *MockHistoryEngine) StartWorkflowExecution(request *shared.StartWorkflowExecutionRequest) (*shared.StartWorkflowExecutionResponse, error) {
 	ret := _m.Called(request)

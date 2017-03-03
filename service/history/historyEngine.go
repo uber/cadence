@@ -114,10 +114,6 @@ func (e *historyEngineImpl) Stop() {
 	e.timerProcessor.Stop()
 }
 
-func (e *historyEngineImpl) GetShardContext() ShardContext {
-	return e.shard
-}
-
 // StartWorkflowExecution starts a workflow execution
 func (e *historyEngineImpl) StartWorkflowExecution(request *workflow.StartWorkflowExecutionRequest) (
 	*workflow.StartWorkflowExecutionResponse, error) {
