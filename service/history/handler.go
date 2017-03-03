@@ -1,6 +1,7 @@
 package history
 
 import (
+	"fmt"
 	"log"
 	"sync"
 
@@ -12,7 +13,6 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/tchannel-go/thrift"
-	"fmt"
 )
 
 // Handler - Thrift handler inteface for history service
