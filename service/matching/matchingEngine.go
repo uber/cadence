@@ -17,6 +17,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/tchannel-go/thrift"
 )
 
 // Implements matching.Engine
@@ -191,12 +192,18 @@ func (e *matchingEngineImpl) AddActivityTask(addRequest *m.AddActivityTaskReques
 }
 
 // PollForDecisionTask tries to get the decision task using exponential backoff.
-func (e *matchingEngineImpl) PollForDecisionTask(request *workflow.PollForDecisionTaskRequest) (
+func (e *matchingEngineImpl) PollForDecisionTask(ctx thrift.Context, request *workflow.PollForDecisionTaskRequest) (
 	*workflow.PollForDecisionTaskResponse, error) {
 	taskListName := request.GetTaskList().GetName()
 	e.logger.Debugf("Received PollForDecisionTask for taskList=%v", taskListName)
 pollLoop:
 	for {
+		// Check that the ctx is not closed or expired
+		err := isOpenContext(ctx)
+		if err != nil {
+			return nil, err
+		}
+
 		taskList := newTaskListID(taskListName, persistence.TaskListTypeDecision)
 		tCtx, err := e.getTask(taskList)
 		if err != nil {
@@ -245,12 +252,18 @@ pollLoop:
 // pollForActivityTaskOperation takes one task from the task manager, update workflow execution history, mark task as
 // completed and return it to user. If a task from task manager is already started, return an empty response, without
 // error. Timeouts handled by the timer queue.
-func (e *matchingEngineImpl) PollForActivityTask(request *workflow.PollForActivityTaskRequest) (
+func (e *matchingEngineImpl) PollForActivityTask(ctx thrift.Context, request *workflow.PollForActivityTaskRequest) (
 	*workflow.PollForActivityTaskResponse, error) {
 	taskListName := request.GetTaskList().GetName()
 	e.logger.Debugf("Received PollForActivityTask for taskList=%v", taskListName)
 pollLoop:
 	for {
+		// Check that the ctx is not closed or expired
+		err := isOpenContext(ctx)
+		if err != nil {
+			return nil, err
+		}
+
 		taskList := newTaskListID(taskListName, persistence.TaskListTypeActivity)
 		tCtx, err := e.getTask(taskList)
 		if err != nil {
@@ -395,6 +408,19 @@ func isLongPollRetryableError(err error) bool {
 	}
 
 	return false
+}
+
+func isOpenContext(ctx thrift.Context) error {
+	ch := ctx.Done()
+	if ch != nil {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			return nil
+		}
+	}
+	return nil
 }
 
 func workflowExecutionPtr(execution workflow.WorkflowExecution) *workflow.WorkflowExecution {
