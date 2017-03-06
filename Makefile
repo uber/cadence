@@ -1,4 +1,4 @@
-.PHONY: test bins clean
+.PHONY: test bins clean cover cover_ci
 PROJECT_ROOT = github.com/uber/cadence
 
 export PATH := $(GOPATH)/bin:$(PATH)
@@ -46,10 +46,18 @@ ALL_SRC := $(shell find . -name "*.go" | grep -v -e Godeps -e vendor \
 # all directories with *_test.go files in them
 TEST_DIRS := $(sort $(dir $(filter %_test.go,$(ALL_SRC))))
 
-thriftc: $(THRIFT_GEN_SRC)
+glide:
+	glide install
+
+clean_thrift:
+	rm -rf .gen
+
+thriftc: clean_thrift glide $(THRIFT_GEN_SRC)
 
 bins: thriftc
-	glide install
+	go build -i -o cadence main.go
+
+bins_nothrift: glide
 	go build -i -o cadence main.go
 
 test: bins
@@ -59,6 +67,22 @@ test: bins
 		go test -coverprofile=$@ "$$dir" | tee -a test.log; \
 	done;
 
+cover_profile: clean bins_nothrift
+	@echo Testing packages:
+	@for dir in $(TEST_DIRS); do \
+		mkdir -p $(BUILD)/"$$dir"; \
+		go test "$$dir" $(TEST_ARG) -coverprofile=$(BUILD)/"$$dir"/coverage.out || exit 1; \
+	done;
+
+cover: cover_profile
+	@for dir in $(TEST_DIRS); do \
+		go tool cover -html=$(BUILD)/"$$dir"/coverage.out; \
+	done
+
+cover_ci: cover_profile
+	@for dir in $(TEST_DIRS); do \
+		goveralls -coverprofile=$(BUILD)/"$$dir"/coverage.out -service=travis-ci || echo -e "\x1b[31mCoveralls failed\x1b[m"; \
+	done
+
 clean:
-	rm -rf .gen
 	rm -rf cadence

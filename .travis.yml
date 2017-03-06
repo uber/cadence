@@ -1,0 +1,36 @@
+dist: trusty
+sudo: required
+
+language: go
+directories:
+    - $HOME/.glide/cache
+go:
+  - 1.8
+
+addons:
+  apt:
+    packages:
+      - gettext-base
+      - libyaml-dev
+      - openjdk-8-jre
+      - python
+      - python-dev
+      - python-pip
+
+before_install:
+  - pip install --user ccm
+  - pip install --user cqlsh==5.0.3
+
+install:
+  - go get -u github.com/Masterminds/glide
+  - go get github.com/axw/gocov/gocov
+  - go get github.com/mattn/goveralls
+  - go get golang.org/x/tools/cmd/cover
+  - ccm create test -v 2.2.8 -n 1 -s
+  - sudo ln -sf /home/travis/.local/bin/cqlsh /usr/local/bin/cqlsh
+
+script:
+  - make cover_ci
+
+after_success:
+  - export BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH; else echo $TRAVIS_PULL_REQUEST_BRANCH; fi)

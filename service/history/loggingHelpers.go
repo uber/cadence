@@ -63,6 +63,7 @@ const (
 	// tagWorkflowComponent Values
 	tagValueHistoryBuilderComponent = "history-builder"
 	tagValueHistoryEngineComponent  = "history-engine"
+	tagValueHistoryCacheComponent   = "history-cache"
 	tagValueTransferQueueComponent  = "transfer-queue-processor"
 	tagValueTimerQueueComponent     = "timer-queue-processor"
 	tagValueShardController         = "shard-controller"
@@ -86,6 +87,7 @@ const (
 	tagValueActionUnknownEvent                    = "add-unknown-event"
 	tagValueActionTimerStarted                    = "add-timer-started-event"
 	tagValueActionTimerFired                      = "add-timer-fired-event"
+	tagValueActionTimerCanceled                   = "add-timer-Canceled-event"
 
 	// tagStoreOperation values
 	tagValueStoreOperationGetTasks                = "get-tasks"
