@@ -148,10 +148,11 @@ type (
 		EventID int64
 	}
 
-	// WorkflowMutableState indicates worklow realted state
+	// WorkflowMutableState indicates workflow related state
 	WorkflowMutableState struct {
 		ActivitInfos map[int64]*ActivityInfo
 		TimerInfos   map[string]*TimerInfo
+		Decision     *DecisionInfo
 	}
 
 	// ActivityInfo details.
@@ -167,6 +168,14 @@ type (
 		HeartbeatTimeout       int32
 		CancelRequested        bool
 		CancelRequestID        int64
+	}
+
+	// DecisionInfo details.
+	DecisionInfo struct {
+		ScheduleID          int64
+		StartedID           int64
+		RequestID           string
+		StartToCloseTimeout int32
 	}
 
 	// TimerInfo details - metadata about user timer info.
@@ -200,16 +209,16 @@ type (
 
 	// CreateWorkflowExecutionRequest is used to write a new workflow execution
 	CreateWorkflowExecutionRequest struct {
-		Execution           workflow.WorkflowExecution
-		TaskList            string
-		History             []byte
-		ExecutionContext    []byte
-		NextEventID         int64
-		LastProcessedEvent  int64
-		TransferTasks       []Task
-		TimerTasks          []Task
-		RangeID             int64
-		CreateActivityInfos []*ActivityInfo
+		Execution          workflow.WorkflowExecution
+		TaskList           string
+		History            []byte
+		ExecutionContext   []byte
+		NextEventID        int64
+		LastProcessedEvent int64
+		TransferTasks      []Task
+		TimerTasks         []Task
+		RangeID            int64
+		Decision           *DecisionInfo
 	}
 
 	// CreateWorkflowExecutionResponse is the response to CreateWorkflowExecutionRequest
@@ -229,16 +238,19 @@ type (
 
 	// UpdateWorkflowExecutionRequest is used to update a workflow execution
 	UpdateWorkflowExecutionRequest struct {
-		ExecutionInfo       *WorkflowExecutionInfo
-		TransferTasks       []Task
-		TimerTasks          []Task
-		DeleteTimerTask     Task
-		Condition           int64
-		RangeID             int64
+		ExecutionInfo   *WorkflowExecutionInfo
+		TransferTasks   []Task
+		TimerTasks      []Task
+		DeleteTimerTask Task
+		Condition       int64
+		RangeID         int64
+
+		// Mutable state
 		UpsertActivityInfos []*ActivityInfo
 		DeleteActivityInfo  *int64
 		UpserTimerInfos     []*TimerInfo
 		DeleteTimerInfos    []string
+		UpdateDecision      *DecisionInfo
 	}
 
 	// DeleteWorkflowExecutionRequest is used to delete a workflow execution
