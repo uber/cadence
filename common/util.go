@@ -116,7 +116,7 @@ func IsValidContext(ctx thrift.Context) error {
 	ch := ctx.Done()
 	if ch != nil {
 		select {
-		case <-ctx.Done():
+		case <-ch:
 			return ctx.Err()
 		default:
 			return nil

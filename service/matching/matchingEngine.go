@@ -204,7 +204,7 @@ pollLoop:
 		}
 
 		taskList := newTaskListID(taskListName, persistence.TaskListTypeDecision)
-		tCtx, err := e.getTask(taskList)
+		tCtx, err := e.getTask(ctx, taskList)
 		if err != nil {
 			// TODO: Is empty poll the best reply for errPumpClosed?
 			if err == ErrNoTasks || err == errPumpClosed {
@@ -263,7 +263,7 @@ pollLoop:
 		}
 
 		taskList := newTaskListID(taskListName, persistence.TaskListTypeActivity)
-		tCtx, err := e.getTask(taskList)
+		tCtx, err := e.getTask(ctx, taskList)
 		if err != nil {
 			// TODO: Is empty poll the best reply for errPumpClosed?
 			if err == ErrNoTasks || err == errPumpClosed {
@@ -307,12 +307,12 @@ pollLoop:
 }
 
 // Loads a task from persistence and wraps it in a task context
-func (e *matchingEngineImpl) getTask(taskList *taskListID) (*taskContext, error) {
+func (e *matchingEngineImpl) getTask(ctx thrift.Context, taskList *taskListID) (*taskContext, error) {
 	tlMgr, err := e.getTaskListManager(taskList)
 	if err != nil {
 		return nil, err
 	}
-	return tlMgr.GetTaskContext()
+	return tlMgr.GetTaskContext(ctx)
 }
 
 func (e *matchingEngineImpl) unloadTaskList(id *taskListID) {
