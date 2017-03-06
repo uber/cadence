@@ -12,6 +12,7 @@ import (
 
 	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/pborman/uuid"
 )
 
 type (
@@ -71,7 +72,13 @@ func (s *cassandraPersistenceSuite) TestPersistenceStartWorkflow() {
 		TransferTasks: []Task{
 			&DecisionTask{TaskID: s.GetNextSequenceNumber(), TaskList: "queue1", ScheduleID: int64(2)},
 		},
-		TimerTasks: nil})
+		TimerTasks: nil,
+		Decision: &DecisionInfo{
+			ScheduleID: int64(2),
+			StartedID: common.EmptyEventID,
+			RequestID: uuid.New(),
+			StartToCloseTimeout: 1,
+		}})
 
 	s.NotNil(err2, "Expected workflow creation to fail.")
 	s.Nil(response)

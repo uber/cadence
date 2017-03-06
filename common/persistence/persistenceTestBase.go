@@ -16,6 +16,7 @@ import (
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber-go/tally"
+	"github.com/pborman/uuid"
 )
 
 const (
@@ -229,7 +230,14 @@ func (s *TestBase) CreateWorkflowExecution(workflowExecution workflow.WorkflowEx
 		TransferTasks: []Task{
 			&DecisionTask{TaskID: s.GetNextSequenceNumber(), TaskList: taskList, ScheduleID: decisionScheduleID},
 		},
-		TimerTasks: timerTasks})
+		TimerTasks: timerTasks,
+		Decision: &DecisionInfo{
+			ScheduleID: decisionScheduleID,
+			StartedID: common.EmptyEventID,
+			RequestID: uuid.New(),
+			StartToCloseTimeout: 1,
+		},
+	})
 
 	if err != nil {
 		return "", err
