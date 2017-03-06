@@ -112,6 +112,8 @@ func PrettyPrintHistory(history *workflow.History, logger bark.Logger) {
 }
 
 // IsValidContext checks that the thrift context is not expired on cancelled.
+// Returns nil if the context is still valid. Otherwise, returns the result of
+// ctx.Err()
 func IsValidContext(ctx thrift.Context) error {
 	ch := ctx.Done()
 	if ch != nil {
