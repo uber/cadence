@@ -19,7 +19,7 @@ const (
 	getTasksBatchSize = 100
 	// To perform one db operation if there are no pollers
 	taskBufferSize                  = getTasksBatchSize - 1
-	outstandingTaskAppendsThreshold = 100
+	outstandingTaskAppendsThreshold = 250
 
 	done time.Duration = -1
 )
