@@ -669,19 +669,27 @@ func (s *matchingEngineSuite) TestConcurrentPublishConsumeDecisions() {
 	s.True(expectedRange <= s.taskManager.getTaskListManager(tlID).rangeID)
 }
 
-func (s *matchingEngineSuite) TestPollWithCancelledContext() {
-	ctx, cancel := thrift.NewContext(time.Second)
-	cancel()
+func (s *matchingEngineSuite) TestPollWithExpiredContext() {
 	identity := "nobody"
 	tl := "makeToast"
 
 	taskList := workflow.NewTaskList()
 	taskList.Name = &tl
 
+	// Try with cancelled context
+	ctx, cancel := thrift.NewContext(time.Second)
+	cancel()
 	_, err := s.matchingEngine.PollForActivityTask(ctx, &workflow.PollForActivityTaskRequest{
 		TaskList: taskList,
 		Identity: &identity})
 
+	s.Equal(err, ctx.Err())
+
+	// Try with expired context
+	ctx, cancel = thrift.NewContext(time.Second)
+	_, err = s.matchingEngine.PollForActivityTask(ctx, &workflow.PollForActivityTaskRequest{
+		TaskList: taskList,
+		Identity: &identity})
 	s.Equal(err, ctx.Err())
 }
 
