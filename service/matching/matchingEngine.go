@@ -198,8 +198,7 @@ func (e *matchingEngineImpl) PollForDecisionTask(ctx thrift.Context, request *wo
 	e.logger.Debugf("Received PollForDecisionTask for taskList=%v", taskListName)
 pollLoop:
 	for {
-		// Check that the ctx is not closed or expired
-		err := isOpenContext(ctx)
+		err := common.IsValidContext(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -258,8 +257,7 @@ func (e *matchingEngineImpl) PollForActivityTask(ctx thrift.Context, request *wo
 	e.logger.Debugf("Received PollForActivityTask for taskList=%v", taskListName)
 pollLoop:
 	for {
-		// Check that the ctx is not closed or expired
-		err := isOpenContext(ctx)
+		err := common.IsValidContext(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -408,19 +406,6 @@ func isLongPollRetryableError(err error) bool {
 	}
 
 	return false
-}
-
-func isOpenContext(ctx thrift.Context) error {
-	ch := ctx.Done()
-	if ch != nil {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-			return nil
-		}
-	}
-	return nil
 }
 
 func workflowExecutionPtr(execution workflow.WorkflowExecution) *workflow.WorkflowExecution {
