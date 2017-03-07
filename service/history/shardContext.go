@@ -133,6 +133,8 @@ Create_Loop:
 				}
 			case *gocql.RequestErrWriteTimeout:
 				{
+					s.logger.Errorf("Request to create workflow execution timed out. WorkflowID: %v, RunID: %v",
+						request.Execution.WorkflowId, request.Execution.RunId)
 					// write may have made it, but we don't know.
 					// Check here to avoid giving an error to client if possible
 					if s.checkIfCreateSucceeded(request) != nil {
