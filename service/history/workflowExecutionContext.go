@@ -123,15 +123,19 @@ func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persi
 	c.executionInfo.History = updatedHistory
 	c.executionInfo.DecisionPending = c.builder.hasPendingDecisionTask()
 	c.executionInfo.State = c.builder.getWorklowState()
+
 	var upsertActivityInfos []*persistence.ActivityInfo
 	var deleteActivityInfo *int64
 	var upsertTimerInfos []*persistence.TimerInfo
 	var deleteTimerInfos []string
+	var decisionInfo *persistence.DecisionInfo
+
 	if c.msBuilder != nil {
 		upsertActivityInfos = c.msBuilder.updateActivityInfos
 		deleteActivityInfo = c.msBuilder.deleteActivityInfo
 		upsertTimerInfos = c.msBuilder.updateTimerInfos
 		deleteTimerInfos = c.msBuilder.deleteTimerInfos
+		decisionInfo = c.msBuilder.updatedDecision
 	}
 
 	if err1 := c.updateWorkflowExecutionWithRetry(&persistence.UpdateWorkflowExecutionRequest{
@@ -144,6 +148,7 @@ func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persi
 		DeleteActivityInfo:  deleteActivityInfo,
 		UpserTimerInfos:     upsertTimerInfos,
 		DeleteTimerInfos:    deleteTimerInfos,
+		UpdateDecision: decisionInfo,
 	}); err1 != nil {
 		// Clear all cached state in case of error
 		c.clear()
