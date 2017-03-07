@@ -11,12 +11,12 @@ import (
 	"github.com/gocql/gocql"
 	"github.com/uber-common/bark"
 
+	"github.com/pborman/uuid"
+	"github.com/uber-go/tally"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber-go/tally"
-	"github.com/pborman/uuid"
 )
 
 const (
@@ -232,9 +232,9 @@ func (s *TestBase) CreateWorkflowExecution(workflowExecution workflow.WorkflowEx
 		},
 		TimerTasks: timerTasks,
 		Decision: &DecisionInfo{
-			ScheduleID: decisionScheduleID,
-			StartedID: common.EmptyEventID,
-			RequestID: uuid.New(),
+			ScheduleID:          decisionScheduleID,
+			StartedID:           common.EmptyEventID,
+			RequestID:           uuid.New(),
 			StartToCloseTimeout: 1,
 		},
 	})
@@ -270,7 +270,13 @@ func (s *TestBase) CreateWorkflowExecutionManyTasks(workflowExecution workflow.W
 		NextEventID:        nextEventID,
 		LastProcessedEvent: lastProcessedEventID,
 		TransferTasks:      transferTasks,
-		RangeID:            s.ShardContext.GetRangeID()})
+		RangeID:            s.ShardContext.GetRangeID(),
+		Decision: &DecisionInfo{
+			ScheduleID:          common.EmptyEventID,
+			StartedID:           common.EmptyEventID,
+			RequestID:           uuid.New(),
+			StartToCloseTimeout: 1,
+		}})
 
 	if err != nil {
 		return "", err
@@ -310,17 +316,17 @@ func (s *TestBase) GetWorkflowMutableState(workflowExecution workflow.WorkflowEx
 func (s *TestBase) UpdateWorkflowExecution(updatedInfo *WorkflowExecutionInfo, decisionScheduleIDs []int64,
 	activityScheduleIDs []int64, condition int64, timerTasks []Task, deleteTimerTask Task,
 	upsertActivityInfos []*ActivityInfo, deleteActivityInfo *int64,
-	upsertTimerInfos []*TimerInfo, deleteTimerInfos []string) error {
+	upsertTimerInfos []*TimerInfo, deleteTimerInfos []string, updateDecision *DecisionInfo) error {
 	return s.UpdateWorkflowExecutionWithRangeID(updatedInfo, decisionScheduleIDs, activityScheduleIDs,
 		s.ShardContext.GetRangeID(), condition, timerTasks, deleteTimerTask, upsertActivityInfos, deleteActivityInfo,
-		upsertTimerInfos, deleteTimerInfos)
+		upsertTimerInfos, deleteTimerInfos, updateDecision)
 }
 
 // UpdateWorkflowExecutionWithRangeID is a utility method to update workflow execution
 func (s *TestBase) UpdateWorkflowExecutionWithRangeID(updatedInfo *WorkflowExecutionInfo, decisionScheduleIDs []int64,
 	activityScheduleIDs []int64, rangeID, condition int64, timerTasks []Task, deleteTimerTask Task,
 	upsertActivityInfos []*ActivityInfo, deleteActivityInfo *int64,
-	upsertTimerInfos []*TimerInfo, deleteTimerInfos []string) error {
+	upsertTimerInfos []*TimerInfo, deleteTimerInfos []string, updatedDecision *DecisionInfo) error {
 	transferTasks := []Task{}
 	for _, decisionScheduleID := range decisionScheduleIDs {
 		transferTasks = append(transferTasks, &DecisionTask{TaskList: updatedInfo.TaskList,
@@ -343,6 +349,7 @@ func (s *TestBase) UpdateWorkflowExecutionWithRangeID(updatedInfo *WorkflowExecu
 		DeleteActivityInfo:  deleteActivityInfo,
 		UpserTimerInfos:     upsertTimerInfos,
 		DeleteTimerInfos:    deleteTimerInfos,
+		UpdateDecision:      updatedDecision,
 	})
 }
 
