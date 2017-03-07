@@ -300,6 +300,7 @@ struct StartWorkflowExecutionRequest {
   50: optional i32 executionStartToCloseTimeoutSeconds
   60: optional i32 taskStartToCloseTimeoutSeconds
   70: optional string identity
+  80: optional string requestId
 }
 
 struct StartWorkflowExecutionResponse {

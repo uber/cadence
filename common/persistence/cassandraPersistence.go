@@ -536,7 +536,8 @@ func (d *cassandraPersistence) CreateWorkflowExecution(request *CreateWorkflowEx
 		if _, ok := err.(*gocql.RequestErrWriteTimeout); ok {
 			// Write may have succeeded, but we don't know
 			// return this info to the caller so they have the option of trying to find out by executing a read
-			return &CreateWorkflowExecutionResponse{TaskID: transferTaskID}, err
+			resp := &CreateWorkflowExecutionResponse{TaskID: transferTaskID}
+			return resp, &TimeoutError{Msg: fmt.Sprintf("Create workflow execution timed out.")}
 		}
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("CreateWorkflowExecution operation failed. Error: %v", err),

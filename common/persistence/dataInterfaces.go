@@ -43,6 +43,11 @@ type (
 		Msg     string
 	}
 
+	// TimeoutError is returned when a write operation fails due to a timeout
+	TimeoutError struct {
+		Msg string
+	}
+
 	// ShardInfo describes a shard
 	ShardInfo struct {
 		ShardID          int
@@ -384,6 +389,10 @@ func (e *ShardAlreadyExistError) Error() string {
 }
 
 func (e *ShardOwnershipLostError) Error() string {
+	return e.Msg
+}
+
+func (e *TimeoutError) Error() string {
 	return e.Msg
 }
 
