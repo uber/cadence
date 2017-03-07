@@ -337,6 +337,7 @@ func NewCassandraShardPersistence(hosts string, dc string, keyspace string, logg
 	cluster.Keyspace = keyspace
 	cluster.ProtoVersion = cassandraProtoVersion
 	cluster.Consistency = gocql.LocalQuorum
+	cluster.SerialConsistency = gocql.LocalSerial
 	cluster.Timeout = defaultSessionTimeout
 
 	session, err := cluster.CreateSession()
@@ -353,6 +354,7 @@ func NewCassandraWorkflowExecutionPersistence(hosts string, dc string, keyspace 
 	cluster.Keyspace = keyspace
 	cluster.ProtoVersion = cassandraProtoVersion
 	cluster.Consistency = gocql.LocalQuorum
+	cluster.SerialConsistency = gocql.LocalSerial
 	cluster.Timeout = defaultSessionTimeout
 
 	session, err := cluster.CreateSession()
@@ -369,6 +371,7 @@ func NewCassandraTaskPersistence(hosts string, dc string, keyspace string, logge
 	cluster.Keyspace = keyspace
 	cluster.ProtoVersion = cassandraProtoVersion
 	cluster.Consistency = gocql.LocalQuorum
+	cluster.SerialConsistency = gocql.LocalSerial
 	cluster.Timeout = defaultSessionTimeout
 
 	session, err := cluster.CreateSession()
@@ -580,7 +583,7 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *GetWorkflowExecutio
 		rowTypeExecution,
 		execution.GetWorkflowId(),
 		execution.GetRunId(),
-		rowTypeExecutionTaskID).SerialConsistency(gocql.Serial)
+		rowTypeExecutionTaskID)
 
 	result := make(map[string]interface{})
 	if err := query.MapScan(result); err != nil {
