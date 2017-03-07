@@ -1,11 +1,13 @@
 package history
 
 import (
-	"fmt"
-
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
+)
+
+const (
+	emptyUuid = "emptyUuid"
 )
 
 type (
@@ -17,15 +19,9 @@ type (
 		pendingTimerInfoIDs             map[string]*persistence.TimerInfo // User Timer ID -> Timer Info.
 		updateTimerInfos                []*persistence.TimerInfo
 		deleteTimerInfos                []string
+		pendingDecision                 *persistence.DecisionInfo // The decision info.
+		updatedDecision                 *persistence.DecisionInfo // The decision info.
 		logger                          bark.Logger
-	}
-
-	// Represents a decision Info in the mutable state.
-	decisionInfo struct {
-		ScheduleID          int64
-		StartedID           int64
-		RequestID           string
-		StartToCloseTimeout int32
 	}
 )
 
@@ -42,9 +38,11 @@ func newMutableStateBuilder(logger bark.Logger) *mutableStateBuilder {
 
 func (e *mutableStateBuilder) Load(
 	activityInfos map[int64]*persistence.ActivityInfo,
-	timerInfos map[string]*persistence.TimerInfo) {
+	timerInfos map[string]*persistence.TimerInfo,
+	decision *persistence.DecisionInfo) {
 	e.pendingActivityInfoIDs = activityInfos
 	e.pendingTimerInfoIDs = timerInfos
+	e.pendingDecision = decision
 	for _, ai := range activityInfos {
 		e.pendingActivityInfoByActivityID[ai.ActivityID] = ai.ScheduleID
 	}
@@ -96,33 +94,30 @@ func (e *mutableStateBuilder) DeleteUserTimer(timerID string) {
 }
 
 // GetDecision returns details about the in-progress decision task
-func (e *mutableStateBuilder) GetDecision(scheduleEventID int64) (bool, *decisionInfo) {
-	isRunning, ai := e.GetActivity(scheduleEventID)
-	if isRunning {
-		di := &decisionInfo{
-			ScheduleID:          ai.ScheduleID,
-			StartedID:           ai.StartedID,
-			RequestID:           ai.RequestID,
-			StartToCloseTimeout: ai.StartToCloseTimeout,
-		}
-		return isRunning, di
+func (e *mutableStateBuilder) GetDecision(scheduleEventID int64) (bool, *persistence.DecisionInfo) {
+	if e.updatedDecision != nil {
+		return e.updatedDecision.ScheduleID == scheduleEventID, e.updatedDecision
 	}
-	return isRunning, nil
+	if e.pendingDecision != nil {
+		return e.pendingDecision.ScheduleID == scheduleEventID, e.pendingDecision
+	}
+	return false, nil
 }
 
 // UpdateDecision updates a decision task.
-func (e *mutableStateBuilder) UpdateDecision(scheduleEventID int64, di *decisionInfo) {
-	decisionTaskName := fmt.Sprintf("DecisionTask-%d", scheduleEventID)
-	e.UpdateActivity(scheduleEventID, &persistence.ActivityInfo{
-		ScheduleID:          di.ScheduleID,
-		StartedID:           di.StartedID,
-		RequestID:           di.RequestID,
-		StartToCloseTimeout: di.StartToCloseTimeout,
-		ActivityID:          decisionTaskName,
-	})
+func (e *mutableStateBuilder) UpdateDecision(di *persistence.DecisionInfo) {
+	e.updatedDecision = di
+	e.pendingDecision = di
 }
 
 // DeleteDecision deletes a decision task.
-func (e *mutableStateBuilder) DeleteDecision(scheduleEventID int64) {
-	e.DeleteActivity(scheduleEventID)
+func (e *mutableStateBuilder) DeleteDecision() {
+	emptyDecisionInfo := &persistence.DecisionInfo{
+		ScheduleID:          emptyEventID,
+		StartedID:           emptyEventID,
+		RequestID:           emptyUuid,
+		StartToCloseTimeout: 0,
+	}
+	e.updatedDecision = emptyDecisionInfo
+	e.pendingDecision = emptyDecisionInfo
 }
