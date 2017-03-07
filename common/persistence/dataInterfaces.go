@@ -8,7 +8,7 @@ import (
 
 // Workflow execution states
 const (
-	WorkflowStateCreated   = iota
+	WorkflowStateCreated = iota
 	WorkflowStateRunning
 	WorkflowStateCompleted
 )
@@ -65,6 +65,7 @@ type (
 		LastProcessedEvent   int64
 		LastUpdatedTimestamp time.Time
 		DecisionPending      bool
+		CreateRequestID      string
 	}
 
 	// TransferTaskInfo describes a transfer task
@@ -194,6 +195,7 @@ type (
 
 	// CreateWorkflowExecutionRequest is used to write a new workflow execution
 	CreateWorkflowExecutionRequest struct {
+		RequestID          string
 		Execution          workflow.WorkflowExecution
 		TaskList           string
 		History            []byte

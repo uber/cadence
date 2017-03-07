@@ -67,7 +67,8 @@ const (
 		`next_event_id: ?, ` +
 		`last_processed_event: ?, ` +
 		`last_updated_time: ?, ` +
-		`decision_pending: ?` +
+		`decision_pending: ?,` +
+		`create_request_id: ?` +
 		`}`
 
 	templateTransferTaskType = `{` +
@@ -512,6 +513,7 @@ func (d *cassandraPersistence) CreateWorkflowExecution(request *CreateWorkflowEx
 		request.LastProcessedEvent,
 		cqlNowTimestamp,
 		true,
+		request.RequestID,
 		request.NextEventID,
 		rowTypeExecutionTaskID)
 
@@ -528,6 +530,11 @@ func (d *cassandraPersistence) CreateWorkflowExecution(request *CreateWorkflowEx
 	previous := make(map[string]interface{})
 	applied, _, err := d.session.MapExecuteBatchCAS(batch, previous)
 	if err != nil {
+		if _, ok := err.(*gocql.RequestErrWriteTimeout); ok {
+			// Write may have succeeded, but we don't know
+			// return this info to the caller so they have the option of trying to find out by executing a read
+			return &CreateWorkflowExecutionResponse{TaskID: transferTaskID}, err
+		}
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("CreateWorkflowExecution operation failed. Error: %v", err),
 		}
@@ -573,7 +580,7 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *GetWorkflowExecutio
 		rowTypeExecution,
 		execution.GetWorkflowId(),
 		execution.GetRunId(),
-		rowTypeExecutionTaskID).Consistency(d.lowConslevel)
+		rowTypeExecutionTaskID).SerialConsistency(gocql.Serial)
 
 	result := make(map[string]interface{})
 	if err := query.MapScan(result); err != nil {
@@ -610,6 +617,7 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 		executionInfo.LastProcessedEvent,
 		cqlNowTimestamp,
 		executionInfo.DecisionPending,
+		executionInfo.CreateRequestID,
 		executionInfo.NextEventID,
 		d.shardID,
 		rowTypeExecution,
@@ -696,6 +704,7 @@ func (d *cassandraPersistence) DeleteWorkflowExecution(request *DeleteWorkflowEx
 		info.LastProcessedEvent,
 		cqlNowTimestamp,
 		info.DecisionPending,
+		info.CreateRequestID,
 		info.NextEventID,
 		rowTypeExecutionTaskID,
 		defaultDeleteTTLSeconds)
@@ -1303,6 +1312,8 @@ func createWorkflowExecutionInfo(result map[string]interface{}) *WorkflowExecuti
 			info.LastUpdatedTimestamp = v.(time.Time)
 		case "decision_pending":
 			info.DecisionPending = v.(bool)
+		case "create_request_id":
+			info.CreateRequestID = v.(gocql.UUID).String()
 		}
 	}
 
