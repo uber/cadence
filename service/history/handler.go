@@ -10,6 +10,7 @@ import (
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/membership"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/tchannel-go/thrift"
@@ -25,6 +26,7 @@ type Handler struct {
 	controller            *shardController
 	tokenSerializer       common.TaskTokenSerializer
 	startWG               sync.WaitGroup
+	metricsClient         metrics.Client
 	service.Service
 }
 
@@ -63,6 +65,7 @@ func (h *Handler) Start(thriftService []thrift.TChanServer) error {
 	h.controller = newShardController(h.numberOfShards, h.GetHostInfo(), hServiceResolver, h.shardManager,
 		h.executionMgrFactory, h, h.GetLogger(), h.GetMetricsClient())
 	h.controller.Start()
+	h.metricsClient = h.GetMetricsClient()
 	h.startWG.Done()
 	return nil
 }
@@ -88,6 +91,11 @@ func (h *Handler) IsHealthy(ctx thrift.Context) (bool, error) {
 func (h *Handler) RecordActivityTaskHeartbeat(ctx thrift.Context,
 	heartbeatRequest *gen.RecordActivityTaskHeartbeatRequest) (*gen.RecordActivityTaskHeartbeatResponse, error) {
 	h.startWG.Wait()
+
+	h.metricsClient.IncCounter(metrics.HistoryRecordActivityTaskHeartbeatScope, metrics.WorkflowRequests)
+	sw := h.metricsClient.StartTimer(metrics.HistoryRecordActivityTaskHeartbeatScope, metrics.WorkflowLatency)
+	defer sw.Stop()
+
 	token, err0 := h.tokenSerializer.Deserialize(heartbeatRequest.GetTaskToken())
 	if err0 != nil {
 		return nil, &gen.BadRequestError{Message: "Error deserializing task token."}
@@ -95,11 +103,13 @@ func (h *Handler) RecordActivityTaskHeartbeat(ctx thrift.Context,
 
 	engine, err1 := h.controller.GetEngine(token.WorkflowID)
 	if err1 != nil {
+		h.metricsClient.IncCounter(metrics.HistoryRecordActivityTaskHeartbeatScope, metrics.WorkflowFailures)
 		return nil, err1
 	}
 
 	response, err2 := engine.RecordActivityTaskHeartbeat(heartbeatRequest)
 	if err2 != nil {
+		h.metricsClient.IncCounter(metrics.HistoryRecordActivityTaskHeartbeatScope, metrics.WorkflowFailures)
 		return nil, h.convertError(err2)
 	}
 
@@ -110,14 +120,21 @@ func (h *Handler) RecordActivityTaskHeartbeat(ctx thrift.Context,
 func (h *Handler) RecordActivityTaskStarted(ctx thrift.Context,
 	recordRequest *hist.RecordActivityTaskStartedRequest) (*hist.RecordActivityTaskStartedResponse, error) {
 	h.startWG.Wait()
+
+	h.metricsClient.IncCounter(metrics.HistoryRecordActivityTaskStartedScope, metrics.WorkflowRequests)
+	sw := h.metricsClient.StartTimer(metrics.HistoryRecordActivityTaskStartedScope, metrics.WorkflowLatency)
+	defer sw.Stop()
+
 	workflowExecution := recordRequest.GetWorkflowExecution()
 	engine, err1 := h.controller.GetEngine(workflowExecution.GetWorkflowId())
 	if err1 != nil {
+		h.metricsClient.IncCounter(metrics.HistoryRecordActivityTaskStartedScope, metrics.WorkflowFailures)
 		return nil, err1
 	}
 
 	response, err2 := engine.RecordActivityTaskStarted(recordRequest)
 	if err2 != nil {
+		h.metricsClient.IncCounter(metrics.HistoryRecordActivityTaskStartedScope, metrics.WorkflowFailures)
 		return nil, h.convertError(err2)
 	}
 
@@ -132,6 +149,11 @@ func (h *Handler) RecordDecisionTaskStarted(ctx thrift.Context,
 		recordRequest.GetWorkflowExecution().GetWorkflowId(),
 		recordRequest.GetWorkflowExecution().GetRunId(),
 		recordRequest.GetScheduleId())
+
+	h.metricsClient.IncCounter(metrics.HistoryRecordDecisionTaskStartedScope, metrics.WorkflowRequests)
+	sw := h.metricsClient.StartTimer(metrics.HistoryRecordDecisionTaskStartedScope, metrics.WorkflowLatency)
+	defer sw.Stop()
+
 	workflowExecution := recordRequest.GetWorkflowExecution()
 	engine, err1 := h.controller.GetEngine(workflowExecution.GetWorkflowId())
 	if err1 != nil {
@@ -140,11 +162,13 @@ func (h *Handler) RecordDecisionTaskStarted(ctx thrift.Context,
 			recordRequest.GetWorkflowExecution().GetWorkflowId(),
 			recordRequest.GetWorkflowExecution().GetRunId(),
 			recordRequest.GetScheduleId())
+		h.metricsClient.IncCounter(metrics.HistoryRecordDecisionTaskStartedScope, metrics.WorkflowFailures)
 		return nil, err1
 	}
 
 	response, err2 := engine.RecordDecisionTaskStarted(recordRequest)
 	if err2 != nil {
+		h.metricsClient.IncCounter(metrics.HistoryRecordDecisionTaskStartedScope, metrics.WorkflowFailures)
 		return nil, h.convertError(err2)
 	}
 
@@ -155,6 +179,11 @@ func (h *Handler) RecordDecisionTaskStarted(ctx thrift.Context,
 func (h *Handler) RespondActivityTaskCompleted(ctx thrift.Context,
 	completeRequest *gen.RespondActivityTaskCompletedRequest) error {
 	h.startWG.Wait()
+
+	h.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskCompletedScope, metrics.WorkflowRequests)
+	sw := h.metricsClient.StartTimer(metrics.HistoryRespondActivityTaskCompletedScope, metrics.WorkflowLatency)
+	defer sw.Stop()
+
 	token, err0 := h.tokenSerializer.Deserialize(completeRequest.GetTaskToken())
 	if err0 != nil {
 		return &gen.BadRequestError{Message: "Error deserializing task token."}
@@ -162,11 +191,13 @@ func (h *Handler) RespondActivityTaskCompleted(ctx thrift.Context,
 
 	engine, err1 := h.controller.GetEngine(token.WorkflowID)
 	if err1 != nil {
+		h.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskCompletedScope, metrics.WorkflowFailures)
 		return err1
 	}
 
 	err2 := engine.RespondActivityTaskCompleted(completeRequest)
 	if err2 != nil {
+		h.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskCompletedScope, metrics.WorkflowFailures)
 		return h.convertError(err2)
 	}
 
@@ -177,6 +208,11 @@ func (h *Handler) RespondActivityTaskCompleted(ctx thrift.Context,
 func (h *Handler) RespondActivityTaskFailed(ctx thrift.Context,
 	failRequest *gen.RespondActivityTaskFailedRequest) error {
 	h.startWG.Wait()
+
+	h.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskFailedScope, metrics.WorkflowRequests)
+	sw := h.metricsClient.StartTimer(metrics.HistoryRespondActivityTaskFailedScope, metrics.WorkflowLatency)
+	defer sw.Stop()
+
 	token, err0 := h.tokenSerializer.Deserialize(failRequest.GetTaskToken())
 	if err0 != nil {
 		return &gen.BadRequestError{Message: "Error deserializing task token."}
@@ -184,11 +220,13 @@ func (h *Handler) RespondActivityTaskFailed(ctx thrift.Context,
 
 	engine, err1 := h.controller.GetEngine(token.WorkflowID)
 	if err1 != nil {
+		h.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskFailedScope, metrics.WorkflowFailures)
 		return err1
 	}
 
 	err2 := engine.RespondActivityTaskFailed(failRequest)
 	if err2 != nil {
+		h.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskFailedScope, metrics.WorkflowFailures)
 		return h.convertError(err2)
 	}
 
@@ -199,6 +237,11 @@ func (h *Handler) RespondActivityTaskFailed(ctx thrift.Context,
 func (h *Handler) RespondActivityTaskCanceled(ctx thrift.Context,
 	cancelRequest *gen.RespondActivityTaskCanceledRequest) error {
 	h.startWG.Wait()
+
+	h.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskCanceledScope, metrics.WorkflowRequests)
+	sw := h.metricsClient.StartTimer(metrics.HistoryRespondActivityTaskCanceledScope, metrics.WorkflowLatency)
+	defer sw.Stop()
+
 	token, err0 := h.tokenSerializer.Deserialize(cancelRequest.GetTaskToken())
 	if err0 != nil {
 		return &gen.BadRequestError{Message: "Error deserializing task token."}
@@ -206,11 +249,13 @@ func (h *Handler) RespondActivityTaskCanceled(ctx thrift.Context,
 
 	engine, err1 := h.controller.GetEngine(token.WorkflowID)
 	if err1 != nil {
+		h.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskCanceledScope, metrics.WorkflowFailures)
 		return err1
 	}
 
 	err2 := engine.RespondActivityTaskCanceled(cancelRequest)
 	if err2 != nil {
+		h.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskCanceledScope, metrics.WorkflowFailures)
 		return h.convertError(err2)
 	}
 
@@ -221,8 +266,14 @@ func (h *Handler) RespondActivityTaskCanceled(ctx thrift.Context,
 func (h *Handler) RespondDecisionTaskCompleted(ctx thrift.Context,
 	completeRequest *gen.RespondDecisionTaskCompletedRequest) error {
 	h.startWG.Wait()
+
+	h.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.WorkflowRequests)
+	sw := h.metricsClient.StartTimer(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.WorkflowLatency)
+	defer sw.Stop()
+
 	token, err0 := h.tokenSerializer.Deserialize(completeRequest.GetTaskToken())
 	if err0 != nil {
+		h.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.WorkflowFailures)
 		return &gen.BadRequestError{Message: "Error deserializing task token."}
 	}
 
@@ -233,11 +284,13 @@ func (h *Handler) RespondDecisionTaskCompleted(ctx thrift.Context,
 
 	engine, err1 := h.controller.GetEngine(token.WorkflowID)
 	if err1 != nil {
+		h.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.WorkflowFailures)
 		return err1
 	}
 
 	err2 := engine.RespondDecisionTaskCompleted(completeRequest)
 	if err2 != nil {
+		h.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.WorkflowFailures)
 		return h.convertError(err2)
 	}
 
@@ -248,13 +301,20 @@ func (h *Handler) RespondDecisionTaskCompleted(ctx thrift.Context,
 func (h *Handler) StartWorkflowExecution(ctx thrift.Context,
 	startRequest *gen.StartWorkflowExecutionRequest) (*gen.StartWorkflowExecutionResponse, error) {
 	h.startWG.Wait()
+
+	h.metricsClient.IncCounter(metrics.HistoryStartWorkflowExecutionScope, metrics.WorkflowRequests)
+	sw := h.metricsClient.StartTimer(metrics.HistoryStartWorkflowExecutionScope, metrics.WorkflowLatency)
+	defer sw.Stop()
+
 	engine, err1 := h.controller.GetEngine(startRequest.GetWorkflowId())
 	if err1 != nil {
+		h.metricsClient.IncCounter(metrics.HistoryStartWorkflowExecutionScope, metrics.WorkflowFailures)
 		return nil, err1
 	}
 
 	response, err2 := engine.StartWorkflowExecution(startRequest)
 	if err2 != nil {
+		h.metricsClient.IncCounter(metrics.HistoryStartWorkflowExecutionScope, metrics.WorkflowFailures)
 		return nil, h.convertError(err2)
 	}
 
@@ -265,13 +325,24 @@ func (h *Handler) StartWorkflowExecution(ctx thrift.Context,
 func (h *Handler) GetWorkflowExecutionHistory(ctx thrift.Context,
 	getRequest *gen.GetWorkflowExecutionHistoryRequest) (*gen.GetWorkflowExecutionHistoryResponse, error) {
 	h.startWG.Wait()
+
+	h.metricsClient.IncCounter(metrics.HistoryGetWorkflowExecutionHistoryScope, metrics.WorkflowRequests)
+	sw := h.metricsClient.StartTimer(metrics.HistoryGetWorkflowExecutionHistoryScope, metrics.WorkflowLatency)
+	defer sw.Stop()
+
 	workflowExecution := getRequest.GetExecution()
 	engine, err1 := h.controller.GetEngine(workflowExecution.GetWorkflowId())
 	if err1 != nil {
+		h.metricsClient.IncCounter(metrics.HistoryGetWorkflowExecutionHistoryScope, metrics.WorkflowFailures)
 		return nil, err1
 	}
 
-	return engine.GetWorkflowExecutionHistory(getRequest)
+	resp, err2 := engine.GetWorkflowExecutionHistory(getRequest)
+	if err2 != nil {
+		h.metricsClient.IncCounter(metrics.HistoryGetWorkflowExecutionHistoryScope, metrics.WorkflowFailures)
+		return nil, h.convertError(err2)
+	}
+	return resp, nil
 }
 
 // convertError is a helper method to convert ShardOwnershipLostError from persistence layer returned by various

@@ -186,6 +186,8 @@ const (
 	HistoryRespondActivityTaskCompletedScope
 	// HistoryRespondActivityTaskFailedScope tracks RespondActivityTaskFailed API calls received by service
 	HistoryRespondActivityTaskFailedScope
+	// HistoryRespondActivityTaskCanceledScope tracks RespondActivityTaskCanceled API calls received by service
+	HistoryRespondActivityTaskCanceledScope
 	// HistoryGetWorkflowExecutionHistoryScope tracks GetWorkflowExecutionHistory API calls received by service
 	HistoryGetWorkflowExecutionHistoryScope
 	// HistoryRecordDecisionTaskStartedScope tracks RecordDecisionTaskStarted API calls received by service
@@ -265,6 +267,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryRespondDecisionTaskCompletedScope: {operation: "RespondDecisionTaskCompleted"},
 		HistoryRespondActivityTaskCompletedScope: {operation: "RespondActivityTaskCompleted"},
 		HistoryRespondActivityTaskFailedScope:    {operation: "RespondActivityTaskFailed"},
+		HistoryRespondActivityTaskCanceledScope:  {operation: "RespondActivityTaskCanceled"},
 		HistoryGetWorkflowExecutionHistoryScope:  {operation: "GetWorkflowExecutionHistory"},
 		HistoryRecordDecisionTaskStartedScope:    {operation: "RecordDecisionTaskStarted"},
 		HistoryRecordActivityTaskStartedScope:    {operation: "RecordActivityTaskStarted"},
