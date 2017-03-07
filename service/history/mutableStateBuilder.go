@@ -1,6 +1,9 @@
 package history
 
 import (
+	"fmt"
+	"errors"
+
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
@@ -14,13 +17,16 @@ type (
 	mutableStateBuilder struct {
 		pendingActivityInfoIDs          map[int64]*persistence.ActivityInfo // Schedule Event ID -> Activity Info.
 		pendingActivityInfoByActivityID map[string]int64                    // Activity ID -> Schedule Event ID of the activity.
-		updateActivityInfos             []*persistence.ActivityInfo
-		deleteActivityInfo              *int64
-		pendingTimerInfoIDs             map[string]*persistence.TimerInfo // User Timer ID -> Timer Info.
-		updateTimerInfos                []*persistence.TimerInfo
-		deleteTimerInfos                []string
-		pendingDecision                 *persistence.DecisionInfo // The decision info.
-		updatedDecision                 *persistence.DecisionInfo // The decision info.
+		updateActivityInfos             []*persistence.ActivityInfo         // Modified activities from last update.
+		deleteActivityInfo              *int64                              // Deleted activities from last update.
+
+		pendingTimerInfoIDs             map[string]*persistence.TimerInfo   // User Timer ID -> Timer Info.
+		updateTimerInfos                []*persistence.TimerInfo            // Modified timers from last update.
+		deleteTimerInfos                []string                            // Deleted timers from last update.
+
+		pendingDecision                 *persistence.DecisionInfo           // The pending decision info.
+		updatedDecision                 *persistence.DecisionInfo           // Modified decision from last update.
+
 		logger                          bark.Logger
 	}
 )
@@ -72,8 +78,25 @@ func (e *mutableStateBuilder) UpdateActivity(scheduleEventID int64, ai *persiste
 }
 
 // DeleteActivity deletes details about an activity.
-func (e *mutableStateBuilder) DeleteActivity(scheduleEventID int64) {
+func (e *mutableStateBuilder) DeleteActivity(scheduleEventID int64) error {
+	a, ok := e.pendingActivityInfoIDs[scheduleEventID]
+	if !ok {
+		errorMsg := fmt.Sprintf("Unable to find activity with schedule event id: %v in mutable state", scheduleEventID)
+		logMutableStateInvalidAction(e.logger, errorMsg)
+		return errors.New(errorMsg)
+	}
+	delete(e.pendingActivityInfoIDs, scheduleEventID)
+
+	_, ok = e.pendingActivityInfoByActivityID[a.ActivityID]
+	if !ok {
+		errorMsg := fmt.Sprintf("Unable to find activity: %v in mutable state", a.ActivityID)
+		logMutableStateInvalidAction(e.logger, errorMsg)
+		return errors.New(errorMsg)
+	}
+	delete(e.pendingActivityInfoByActivityID, a.ActivityID)
+
 	e.deleteActivityInfo = common.Int64Ptr(scheduleEventID)
+	return nil
 }
 
 // GetUserTimer gives details about a user timer.
@@ -89,8 +112,17 @@ func (e *mutableStateBuilder) UpdateUserTimer(timerID string, ti *persistence.Ti
 }
 
 // DeleteUserTimer deletes an user timer.
-func (e *mutableStateBuilder) DeleteUserTimer(timerID string) {
+func (e *mutableStateBuilder) DeleteUserTimer(timerID string) error {
+	_, ok := e.pendingTimerInfoIDs[timerID]
+	if !ok {
+		errorMsg := fmt.Sprintf("Unable to find pending timer: %v", timerID)
+		logMutableStateInvalidAction(e.logger, errorMsg)
+		return errors.New(errorMsg)
+	}
+	delete(e.pendingTimerInfoIDs, timerID)
+
 	e.deleteTimerInfos = append(e.deleteTimerInfos, timerID)
+	return nil
 }
 
 // GetDecision returns details about the in-progress decision task

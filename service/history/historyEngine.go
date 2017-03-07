@@ -536,7 +536,10 @@ Update_History_Loop:
 					// We haven't started the activity yet, we can cancel the activity right away.
 					builder.AddActivityTaskCanceledEvent(
 						ai.ScheduleID, ai.StartedID, actCancelReqEvent.GetEventId(), []byte(activityCancelationMsgActivityNotStarted), request.GetIdentity())
-					msBuilder.DeleteActivity(ai.ScheduleID)
+					err := msBuilder.DeleteActivity(ai.ScheduleID)
+					if err != nil {
+						return err
+					}
 				} else {
 					// - We have the activity dispatched to worker.
 					// - The activity might not be heartbeat'ing, but the activity can still call RecordActivityHeartBeat()
@@ -554,7 +557,10 @@ Update_History_Loop:
 				} else {
 					// Timer is running.
 					builder.AddTimerCanceledEvent(ti.StartedID, completedID, attributes.GetTimerId(), request.GetIdentity())
-					msBuilder.DeleteUserTimer(attributes.GetTimerId())
+					err := msBuilder.DeleteUserTimer(attributes.GetTimerId())
+					if err != nil {
+						return err
+					}
 				}
 
 			default:
@@ -643,7 +649,10 @@ Update_History_Loop:
 			return &workflow.InternalServiceError{Message: "Unable to add ActivityTaskCompleted event to history."}
 		}
 
-		msBuilder.DeleteActivity(scheduleID)
+		err := msBuilder.DeleteActivity(scheduleID)
+		if err != nil {
+			return err
+		}
 
 		var transferTasks []persistence.Task
 		if !builder.hasPendingDecisionTask() {
@@ -720,7 +729,10 @@ Update_History_Loop:
 			return &workflow.InternalServiceError{Message: "Unable to add ActivityTaskFailed event to history."}
 		}
 
-		msBuilder.DeleteActivity(scheduleID)
+		err := msBuilder.DeleteActivity(scheduleID)
+		if err != nil {
+			return err
+		}
 
 		var transferTasks []persistence.Task
 		if !builder.hasPendingDecisionTask() {
@@ -798,7 +810,10 @@ Update_History_Loop:
 			return &workflow.InternalServiceError{Message: "Unable to add ActivityTaskCanceled event to history."}
 		}
 
-		msBuilder.DeleteActivity(scheduleID)
+		err := msBuilder.DeleteActivity(scheduleID)
+		if err != nil {
+			return err
+		}
 
 		var transferTasks []persistence.Task
 		if !builder.hasPendingDecisionTask() {

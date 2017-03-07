@@ -413,7 +413,10 @@ Update_History_Loop:
 					builder.AddTimerFiredEvent(ti.StartedID, ti.TimerID)
 
 					// Remove timer from mutable state.
-					msBuilder.DeleteUserTimer(ti.TimerID)
+					err := msBuilder.DeleteUserTimer(ti.TimerID)
+					if err != nil {
+						return err
+					}
 					scheduleNewDecision = !builder.hasPendingDecisionTask()
 				} else {
 					// See if we have next timer in list to be created.
@@ -450,13 +453,19 @@ Update_History_Loop:
 				switch timeoutType {
 				case workflow.TimeoutType_SCHEDULE_TO_CLOSE:
 					builder.AddActivityTaskTimedOutEvent(scheduleID, ai.StartedID, timeoutType, nil)
-					msBuilder.DeleteActivity(scheduleID)
+					err := msBuilder.DeleteActivity(scheduleID)
+					if err != nil {
+						return err
+					}
 					scheduleNewDecision = !builder.hasPendingDecisionTask()
 
 				case workflow.TimeoutType_START_TO_CLOSE:
 					if ai.StartedID != emptyEventID {
 						builder.AddActivityTaskTimedOutEvent(scheduleID, ai.StartedID, timeoutType, nil)
-						msBuilder.DeleteActivity(scheduleID)
+						err := msBuilder.DeleteActivity(scheduleID)
+						if err != nil {
+							return err
+						}
 						scheduleNewDecision = !builder.hasPendingDecisionTask()
 					}
 
@@ -467,7 +476,10 @@ Update_History_Loop:
 							t.logger.Debugf("Activity Heartbeat expired: %+v", *ai)
 							// The current heart beat expired.
 							builder.AddActivityTaskTimedOutEvent(scheduleID, ai.StartedID, timeoutType, ai.Details)
-							msBuilder.DeleteActivity(scheduleID)
+							err := msBuilder.DeleteActivity(scheduleID)
+							if err != nil {
+								return err
+							}
 							scheduleNewDecision = !builder.hasPendingDecisionTask()
 						}
 					}
@@ -475,7 +487,10 @@ Update_History_Loop:
 				case workflow.TimeoutType_SCHEDULE_TO_START:
 					if ai.StartedID == emptyEventID {
 						builder.AddActivityTaskTimedOutEvent(scheduleID, ai.StartedID, timeoutType, nil)
-						msBuilder.DeleteActivity(scheduleID)
+						err := msBuilder.DeleteActivity(scheduleID)
+						if err != nil {
+							return err
+						}
 						scheduleNewDecision = !builder.hasPendingDecisionTask()
 					}
 				}
