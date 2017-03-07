@@ -5,7 +5,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/gocql/gocql"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
@@ -131,7 +130,7 @@ Create_Loop:
 						s.close()
 					}
 				}
-			case *gocql.RequestErrWriteTimeout:
+			case *persistence.TimeoutError:
 				{
 					s.logger.Errorf("Request to create workflow execution timed out. WorkflowID: %v, RunID: %v",
 						request.Execution.WorkflowId, request.Execution.RunId)
