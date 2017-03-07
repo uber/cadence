@@ -1939,7 +1939,6 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_NoHeartBeat
 	s.Equal(workflow.EventType_ActivityTaskCancelRequested, updatedEvent.GetEventType())
 
 	// Try recording activity heartbeat
-	s.mockExecutionMgr.On("GetWorkflowMutableState", mock.Anything).Return(gwmsResponse, nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(nil).Once()
 
 	activityTaskToken, _ := json.Marshal(&common.TaskToken{
@@ -1958,7 +1957,6 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_NoHeartBeat
 	s.True(hbResponse.GetCancelRequested())
 
 	// Try cancelling the request.
-	s.mockExecutionMgr.On("GetWorkflowMutableState", mock.Anything).Return(gwmsResponse, nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(nil).Once()
 
 	err = s.mockHistoryEngine.RespondActivityTaskCanceled(&workflow.RespondActivityTaskCanceledRequest{
@@ -2048,7 +2046,6 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Success() {
 	s.Equal(int64(9), updatedEvent.GetActivityTaskCancelRequestedEventAttributes().GetDecisionTaskCompletedEventId())
 
 	// Try recording activity heartbeat
-	s.mockExecutionMgr.On("GetWorkflowMutableState", mock.Anything).Return(gwmsResponse, nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(nil).Once()
 
 	activityTaskToken, _ := json.Marshal(&common.TaskToken{
@@ -2067,7 +2064,6 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Success() {
 	s.True(hbResponse.GetCancelRequested())
 
 	// Try cancelling the request.
-	s.mockExecutionMgr.On("GetWorkflowMutableState", mock.Anything).Return(gwmsResponse, nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(nil).Once()
 
 	err = s.mockHistoryEngine.RespondActivityTaskCanceled(&workflow.RespondActivityTaskCanceledRequest{
