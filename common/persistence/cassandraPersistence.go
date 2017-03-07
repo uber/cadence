@@ -536,7 +536,7 @@ func (d *cassandraPersistence) CreateWorkflowExecution(request *CreateWorkflowEx
 		if _, ok := err.(*gocql.RequestErrWriteTimeout); ok {
 			// Write may have succeeded, but we don't know
 			// return this info to the caller so they have the option of trying to find out by executing a read
-			return nil, &TimeoutError{Msg: fmt.Sprintf("Create workflow execution timed out.")}
+			return nil, &TimeoutError{Msg: fmt.Sprintf("CreateWorkflowExecution timed out. Error: %v", err)}
 		}
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("CreateWorkflowExecution operation failed. Error: %v", err),
@@ -562,10 +562,9 @@ func (d *cassandraPersistence) CreateWorkflowExecution(request *CreateWorkflowEx
 			// CreateWorkflowExecution failed because it already exists
 			msg := fmt.Sprintf("Workflow execution already running. WorkflowId: %v, RunId: %v, rangeID: %v, columns: (%v)",
 				execution["workflow_id"], execution["run_id"], request.RangeID, strings.Join(columns, ","))
-			starterRequest := fmt.Sprintf("%v", execution["create_request_id"])
 			return nil, &workflow.WorkflowExecutionAlreadyStartedError{
-				Message:        &msg,
-				StartRequestId: &starterRequest,
+				Message:        common.StringPtr(msg),
+				StartRequestId: common.StringPtr(fmt.Sprintf("%v", execution["create_request_id"])),
 			}
 		}
 
