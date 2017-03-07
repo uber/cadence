@@ -3,7 +3,6 @@ package history
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -2291,6 +2290,45 @@ func addActivityTaskFailedEvent(builder *historyBuilder, scheduleID, startedID i
 	return e
 }
 
+func addActivityToMutableState(wms *persistence.WorkflowMutableState, scheduleID, startedID int64, activityID string,
+	scheduleToStartTimeout, scheduleToCloseTimeout, startToCloseTimeout, heartBeatTimeout int32, cancelRequestedID int64) {
+	if wms.ActivitInfos == nil {
+		wms.ActivitInfos = make(map[int64]*persistence.ActivityInfo)
+	}
+	cancelRequested := cancelRequestedID != emptyEventID
+	wms.ActivitInfos[scheduleID] = &persistence.ActivityInfo{
+		ScheduleID: scheduleID, StartedID: startedID, ActivityID: activityID,
+		ScheduleToStartTimeout: scheduleToStartTimeout, ScheduleToCloseTimeout: scheduleToCloseTimeout, StartToCloseTimeout: startToCloseTimeout,
+		HeartbeatTimeout: heartBeatTimeout, Details: []byte("details-old"),
+		CancelRequested: cancelRequested, CancelRequestID: cancelRequestedID}
+}
+
+func addDecisionToMutableState(wms *persistence.WorkflowMutableState, scheduleID, startedID int64,
+	requestID string, startToCloseTimeout int32) {
+	if wms.ActivitInfos == nil {
+		wms.ActivitInfos = make(map[int64]*persistence.ActivityInfo)
+	}
+	wms.Decision = &persistence.DecisionInfo{
+		ScheduleID: scheduleID,
+		StartedID: startedID,
+		RequestID: requestID,
+		StartToCloseTimeout: startToCloseTimeout,
+	}
+}
+
+func addUserTimerToMutableState(wms *persistence.WorkflowMutableState, timerID string, startedID int64,
+	delayInSec int32) {
+	if wms.TimerInfos == nil {
+		wms.TimerInfos = make(map[string]*persistence.TimerInfo)
+	}
+	expiryTime := time.Now().Add(time.Duration(delayInSec) * time.Second)
+	wms.TimerInfos[timerID] = &persistence.TimerInfo{
+		TimerID:    timerID,
+		StartedID:  startedID,
+		ExpiryTime: expiryTime,
+		TaskID:     emptyTimerID}
+}
+
 func addTimerStartedEvent(builder *historyBuilder, decisionCompletedEventID int64, timerID string, timeOut int64) *workflow.HistoryEvent {
 	e := builder.AddTimerStartedEvent(decisionCompletedEventID,
 		&workflow.StartTimerDecisionAttributes{
@@ -2299,31 +2337,4 @@ func addTimerStartedEvent(builder *historyBuilder, decisionCompletedEventID int6
 		})
 
 	return e
-}
-
-func addActivityToMutableState(msBuilder *persistence.WorkflowMutableState, scheduleID, startedID int64, activityID string,
-	scheduleToStartTimeout, scheduleToCloseTimeout, startToCloseTimeout, heartBeatTimeout int32, cancelRequestedID int64) {
-	if msBuilder.ActivitInfos == nil {
-		msBuilder.ActivitInfos = make(map[int64]*persistence.ActivityInfo)
-	}
-	cancelRequested := cancelRequestedID != emptyEventID
-	msBuilder.ActivitInfos[scheduleID] = &persistence.ActivityInfo{
-		ScheduleID: scheduleID, StartedID: startedID, ActivityID: activityID,
-		ScheduleToStartTimeout: scheduleToStartTimeout, ScheduleToCloseTimeout: scheduleToCloseTimeout, StartToCloseTimeout: startToCloseTimeout,
-		HeartbeatTimeout: heartBeatTimeout, Details: []byte("details-old"),
-		CancelRequested: cancelRequested, CancelRequestID: cancelRequestedID}
-}
-
-func addDecisionToMutableState(msBuilder *persistence.WorkflowMutableState, scheduleID, startedID int64,
-	requestID string, startToCloseTimeout int32) {
-	if msBuilder.ActivitInfos == nil {
-		msBuilder.ActivitInfos = make(map[int64]*persistence.ActivityInfo)
-	}
-	msBuilder.ActivitInfos[scheduleID] = &persistence.ActivityInfo{
-		ScheduleID:          scheduleID,
-		StartedID:           startedID,
-		RequestID:           requestID,
-		StartToCloseTimeout: startToCloseTimeout,
-		ActivityID:          fmt.Sprintf("Test-DecisionTask-%d", scheduleID),
-	}
 }

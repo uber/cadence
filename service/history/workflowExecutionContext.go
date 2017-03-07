@@ -89,7 +89,7 @@ func (c *workflowExecutionContext) loadWorkflowMutableState() (*mutableStateBuil
 
 	msBuilder := newMutableStateBuilder(c.logger)
 	if response != nil && response.State != nil {
-		msBuilder.Load(response.State.ActivitInfos, response.State.TimerInfos)
+		msBuilder.Load(response.State.ActivitInfos, response.State.TimerInfos, response.State.Decision)
 	}
 
 	c.msBuilder = msBuilder

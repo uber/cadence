@@ -131,10 +131,10 @@ func (e *historyEngineImpl) StartWorkflowExecution(request *workflow.StartWorkfl
 
 	dt := builder.AddDecisionTaskScheduledEvent(taskList, request.GetTaskStartToCloseTimeoutSeconds())
 	msBuilder := newMutableStateBuilder(e.logger)
-	msBuilder.UpdateDecision(dt.GetEventId(),
-		&decisionInfo{
+	msBuilder.UpdateDecision(&persistence.DecisionInfo{
 			ScheduleID:          dt.GetEventId(),
 			StartedID:           emptyEventID,
+			RequestID:           uuid.New(),
 			StartToCloseTimeout: dt.GetDecisionTaskScheduledEventAttributes().GetStartToCloseTimeoutSeconds(),
 		})
 
@@ -163,7 +163,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(request *workflow.StartWorkfl
 			TaskID:   id,
 			TaskList: taskList, ScheduleID: dt.GetEventId(),
 		}},
-		CreateActivityInfos: msBuilder.updateActivityInfos,
+		Decision: msBuilder.updatedDecision,
 	})
 
 	if err != nil {
@@ -271,7 +271,7 @@ Update_History_Loop:
 		// Update mutable decision state
 		di.StartedID = event.GetEventId()
 		di.RequestID = requestID
-		msBuilder.UpdateDecision(scheduleID, di)
+		msBuilder.UpdateDecision(di)
 
 		// Start a timer for the decision task.
 		timeOutTask := context.tBuilder.AddDecisionTimoutTask(scheduleID, di.StartToCloseTimeout)
@@ -929,10 +929,10 @@ func (e *historyEngineImpl) createRecordDecisionTaskStartedResponse(context *wor
 func (e *historyEngineImpl) scheduleDecisionTask(builder *historyBuilder,
 	msBuilder *mutableStateBuilder) *workflow.HistoryEvent {
 	newDecisionEvent := builder.ScheduleDecisionTask()
-	msBuilder.UpdateDecision(newDecisionEvent.GetEventId(),
-		&decisionInfo{
+	msBuilder.UpdateDecision(&persistence.DecisionInfo{
 			ScheduleID:          newDecisionEvent.GetEventId(),
 			StartedID:           emptyEventID,
+			RequestID:	     emptyUuid,
 			StartToCloseTimeout: newDecisionEvent.GetDecisionTaskScheduledEventAttributes().GetStartToCloseTimeoutSeconds(),
 		})
 	return newDecisionEvent
@@ -941,14 +941,14 @@ func (e *historyEngineImpl) scheduleDecisionTask(builder *historyBuilder,
 func (e *historyEngineImpl) completeDecisionTask(builder *historyBuilder, msBuilder *mutableStateBuilder,
 	scheduleID, startedID int64, request *workflow.RespondDecisionTaskCompletedRequest) int64 {
 	completedEvent := builder.AddDecisionTaskCompletedEvent(scheduleID, startedID, request)
-	msBuilder.DeleteDecision(scheduleID)
+	msBuilder.DeleteDecision()
 	return completedEvent.GetEventId()
 }
 
 func (e *historyEngineImpl) timeoutDecisionTask(builder *historyBuilder, msBuilder *mutableStateBuilder,
 	scheduleID, startedID int64) int64 {
 	timeoutEvent := builder.AddDecisionTaskTimedOutEvent(scheduleID, startedID)
-	msBuilder.DeleteDecision(scheduleID)
+	msBuilder.DeleteDecision()
 	return timeoutEvent.GetEventId()
 }
 

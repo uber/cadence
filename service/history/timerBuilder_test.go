@@ -69,7 +69,7 @@ func (s *timerBuilderProcessorSuite) TestTimerBuilderMulitpleUserTimer() {
 	tp := &persistence.TimerInfo{TimerID: "tid1", StartedID: 201, TaskID: 101, ExpiryTime: time.Now().Add(10 * time.Second)}
 	timerInfos := map[string]*persistence.TimerInfo{"tid1": tp}
 	msb := newMutableStateBuilder(s.logger)
-	msb.Load(nil, timerInfos)
+	msb.Load(nil, timerInfos, nil)
 	t1, err := tb.AddUserTimer("tid-before", 1, 202, msb)
 	s.Nil(err)
 	s.NotNil(t1)
@@ -77,7 +77,7 @@ func (s *timerBuilderProcessorSuite) TestTimerBuilderMulitpleUserTimer() {
 
 	timerInfos = map[string]*persistence.TimerInfo{"tid1": tp}
 	msb = newMutableStateBuilder(s.logger)
-	msb.Load(nil, timerInfos)
+	msb.Load(nil, timerInfos, nil)
 	t1, err = tb.AddUserTimer("tid-after", 15, 203, msb)
 	s.Nil(err)
 	s.Nil(t1) // we don't get any timer since there is one in progress.
@@ -86,7 +86,7 @@ func (s *timerBuilderProcessorSuite) TestTimerBuilderMulitpleUserTimer() {
 	tp2 := &persistence.TimerInfo{TimerID: "tid1", StartedID: 201, TaskID: emptyTimerID, ExpiryTime: time.Now().Add(10 * time.Second)}
 	timerInfos = map[string]*persistence.TimerInfo{"tid1": tp2}
 	msb = newMutableStateBuilder(s.logger)
-	msb.Load(nil, timerInfos)
+	msb.Load(nil, timerInfos, nil)
 	t1, err = tb.AddUserTimer("tid-after", 15, 203, msb)
 	s.Nil(err)
 	s.NotNil(t1)
@@ -105,7 +105,7 @@ func (s *timerBuilderProcessorSuite) TestTimerBuilderDuplicateTimerID() {
 	tp := &persistence.TimerInfo{TimerID: "tid-exist", StartedID: 201, TaskID: 101, ExpiryTime: time.Now().Add(10 * time.Second)}
 	timerInfos := map[string]*persistence.TimerInfo{"tid-exist": tp}
 	msb := newMutableStateBuilder(s.logger)
-	msb.Load(nil, timerInfos)
+	msb.Load(nil, timerInfos, nil)
 	t1, err := tb.AddUserTimer("tid-exist", 1, 202, msb)
 	s.NotNil(err)
 	s.Nil(t1)
