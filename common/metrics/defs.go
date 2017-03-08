@@ -287,6 +287,7 @@ const (
 	WorkflowRequests = iota
 	WorkflowFailures
 	WorkflowLatency
+	CadenceErrBadRequestCounter
 	CadenceErrEntityNotExistsCounter
 	CadenceErrExecutionAlreadyStartedCounter
 	PersistenceErrShardExistsCounter
@@ -300,6 +301,8 @@ const (
 // History Metrics enum
 const (
 	TransferTasksProcessedCounter = iota + NumCommonMetrics
+	CadenceErrEventAlreadyStartedCounter
+	CadenceErrShardOwnershipLostCounter
 )
 
 // MetricDefs record the metrics for all services
@@ -308,6 +311,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		WorkflowRequests:                         {metricName: "requests", metricType: Counter},
 		WorkflowFailures:                         {metricName: "errors", metricType: Counter},
 		WorkflowLatency:                          {metricName: "latency", metricType: Timer},
+		CadenceErrBadRequestCounter:              {metricName: "cadence.errors.bad-request", metricType: Counter},
 		CadenceErrEntityNotExistsCounter:         {metricName: "cadence.errors.entity-not-exists", metricType: Counter},
 		CadenceErrExecutionAlreadyStartedCounter: {metricName: "cadence.errors.execution-already-started", metricType: Counter},
 		PersistenceErrShardExistsCounter:         {metricName: "persistence.errors.shard-exists", metricType: Counter},
@@ -317,7 +321,9 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 	},
 	Frontend: {},
 	History: {
-		TransferTasksProcessedCounter: {metricName: "transfer-tasks-processed", metricType: Counter},
+		TransferTasksProcessedCounter:        {metricName: "transfer-tasks-processed", metricType: Counter},
+		CadenceErrShardOwnershipLostCounter:  {metricName: "cadence.errors.shard-ownership-lost", metricType: Counter},
+		CadenceErrEventAlreadyStartedCounter: {metricName: "cadence.errors.event-already-started", metricType: Counter},
 	},
 	Matching: {},
 }
