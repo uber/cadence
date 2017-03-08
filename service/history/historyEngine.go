@@ -13,6 +13,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"time"
 )
 
 const (
@@ -866,26 +867,17 @@ Update_History_Loop:
 			return nil, err1
 		}
 
-		var timerTasks []persistence.Task
-		var transferTasks []persistence.Task
-
 		e.logger.Debugf("Activity HeartBeat: scheduleEventID: %v, ActivityInfo: %+v, CancelRequested: %v",
 			scheduleID, ai, cancelRequested)
 
-		// Re-schedule next heartbeat.
-		start2HeartBeatTimeoutTask, _ := context.tBuilder.AddHeartBeatActivityTimeout(scheduleID, msBuilder)
-		if start2HeartBeatTimeoutTask != nil {
-			timerTasks = append(timerTasks, start2HeartBeatTimeoutTask)
-			defer e.timerProcessor.NotifyNewTimer(start2HeartBeatTimeoutTask.GetTaskID())
-		}
-
-		// Save progress reported.
+		// Save progress and last HB reported time.
+		ai.LastHearBeatUpdatedTime = time.Now()
 		ai.Details = request.GetDetails()
 		msBuilder.UpdatePendingActivity(scheduleID, ai)
 
 		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 		// the history and try the operation again.
-		if err := context.updateWorkflowExecution(transferTasks, timerTasks); err != nil {
+		if err := context.updateWorkflowExecution(nil, nil); err != nil {
 			if err == ErrConflict {
 				continue Update_History_Loop
 			}

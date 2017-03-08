@@ -163,6 +163,7 @@ func (tb *timerBuilder) AddScheduleToStartActivityTimeout(scheduleID int64, sche
 		HeartbeatTimeout:       heartbeatTimeout,
 		CancelRequested:        false,
 		CancelRequestID:        emptyEventID,
+		LastHearBeatUpdatedTime: time.Time{},
 	})
 
 	return t

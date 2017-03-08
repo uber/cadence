@@ -166,7 +166,7 @@ func (t *timerQueueProcessorImpl) NotifyNewTimer(taskID int64) {
 	// Notified about new timer.
 
 	default:
-	// Channel "full" -> drop and move on, since we are using it as an event.
+		// Channel "full" -> drop and move on, since we are using it as an event.
 	}
 }
 
@@ -393,11 +393,11 @@ Update_History_Loop:
 		var timerTasks []persistence.Task
 		var clearTimerTask persistence.Task
 		scheduleNewDecision := false
+		timerTaskExpiryTime, _ := DeconstructTimerKey(SequenceID(timerTask.TaskID))
 
 		switch timerTask.TaskType {
 
 		case persistence.TaskTypeUserTimer:
-			referenceExpiryTime, _ := DeconstructTimerKey(SequenceID(timerTask.TaskID))
 			context.tBuilder.LoadUserTimers(msBuilder)
 
 		ExpireUserTimers:
@@ -408,7 +408,7 @@ Update_History_Loop:
 					return fmt.Errorf("failed to find user timer")
 				}
 
-				if isExpired := context.tBuilder.IsTimerExpired(td, referenceExpiryTime); isExpired {
+				if isExpired := context.tBuilder.IsTimerExpired(td, timerTaskExpiryTime); isExpired {
 					// Add TimerFired event to history.
 					builder.AddTimerFiredEvent(ti.StartedID, ti.TimerID)
 
@@ -461,15 +461,23 @@ Update_History_Loop:
 					}
 
 				case workflow.TimeoutType_HEARTBEAT:
-					if ai.StartedID != emptyEventID {
-						isTimerRunning, ai := msBuilder.isActivityRunning(scheduleID)
-						if isTimerRunning {
-							t.logger.Debugf("Activity Heartbeat expired: %+v", *ai)
-							// The current heart beat expired.
-							builder.AddActivityTaskTimedOutEvent(scheduleID, ai.StartedID, timeoutType, ai.Details)
-							msBuilder.DeletePendingActivity(scheduleID)
-							scheduleNewDecision = !builder.hasPendingDecisionTask()
+					l := common.AddSecondsToBaseTime(
+						ai.LastHearBeatUpdatedTime.UnixNano(), int64(ai.HeartbeatTimeout))
+
+					if timerTaskExpiryTime > l {
+						// The current heart beat expired.
+						t.logger.Debugf("Activity Heartbeat expired: %+v", *ai)
+						builder.AddActivityTaskTimedOutEvent(scheduleID, ai.StartedID, timeoutType, ai.Details)
+						msBuilder.DeletePendingActivity(scheduleID)
+						scheduleNewDecision = !builder.hasPendingDecisionTask()
+					} else {
+						// Re-Schedule next heartbeat.
+						hbTimeoutTask, err := context.tBuilder.AddHeartBeatActivityTimeout(scheduleID, msBuilder)
+						if err != nil {
+							return err
 						}
+						timerTasks = []persistence.Task{hbTimeoutTask}
+						defer t.NotifyNewTimer(hbTimeoutTask.GetTaskID())
 					}
 
 				case workflow.TimeoutType_SCHEDULE_TO_START:
