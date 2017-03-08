@@ -209,6 +209,7 @@ type (
 
 	// CreateWorkflowExecutionRequest is used to write a new workflow execution
 	CreateWorkflowExecutionRequest struct {
+		RequestID          string
 		Execution          workflow.WorkflowExecution
 		TaskList           string
 		History            []byte

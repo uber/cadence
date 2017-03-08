@@ -10,7 +10,6 @@ import (
 	"github.com/uber/tchannel-go/thrift"
 
 	"github.com/uber/cadence/.gen/go/shared"
-	"go.uber.org/thriftrw/gen"
 )
 
 var _ = shared.GoUnusedProtection__
@@ -51,15 +50,14 @@ func (c *tchanMatchingServiceClient) AddActivityTask(ctx thrift.Context, addRequ
 	}
 	success, err := c.client.Call(ctx, c.thriftService, "AddActivityTask", &args, &resp)
 	if err == nil && !success {
-		switch {
-		case resp.BadRequestError != nil:
-			err = resp.BadRequestError
-		case resp.InternalServiceError != nil:
-			err = resp.InternalServiceError
-		case resp.ServiceBusyError != nil:
-			err = resp.ServiceBusyError
-		default:
-			err = fmt.Errorf("received no result or unknown exception for AddActivityTask")
+		if e := resp.BadRequestError; e != nil {
+			err = e
+		}
+		if e := resp.InternalServiceError; e != nil {
+			err = e
+		}
+		if e := resp.ServiceBusyError; e != nil {
+			err = e
 		}
 	}
 
@@ -73,15 +71,14 @@ func (c *tchanMatchingServiceClient) AddDecisionTask(ctx thrift.Context, addRequ
 	}
 	success, err := c.client.Call(ctx, c.thriftService, "AddDecisionTask", &args, &resp)
 	if err == nil && !success {
-		switch {
-		case resp.BadRequestError != nil:
-			err = resp.BadRequestError
-		case resp.InternalServiceError != nil:
-			err = resp.InternalServiceError
-		case resp.ServiceBusyError != nil:
-			err = resp.ServiceBusyError
-		default:
-			err = fmt.Errorf("received no result or unknown exception for AddDecisionTask")
+		if e := resp.BadRequestError; e != nil {
+			err = e
+		}
+		if e := resp.InternalServiceError; e != nil {
+			err = e
+		}
+		if e := resp.ServiceBusyError; e != nil {
+			err = e
 		}
 	}
 

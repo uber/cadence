@@ -13,7 +13,6 @@ import (
 
 	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/pborman/uuid"
 )
 
 type (
@@ -76,9 +75,9 @@ func (s *cassandraPersistenceSuite) TestPersistenceStartWorkflow() {
 		},
 		TimerTasks: nil,
 		Decision: &DecisionInfo{
-			ScheduleID: int64(2),
-			StartedID: common.EmptyEventID,
-			RequestID: uuid.New(),
+			ScheduleID:          int64(2),
+			StartedID:           common.EmptyEventID,
+			RequestID:           uuid.New(),
 			StartToCloseTimeout: 1,
 		}})
 

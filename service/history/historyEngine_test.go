@@ -2106,7 +2106,7 @@ func (s *engineSuite) TestUserTimer_RespondDecisionTaskCompleted() {
 		decisionStartedEvent.GetEventId(), nil, identity)
 	timerStartedEvent := addTimerStartedEvent(builder, decisionCompletedEvent.GetEventId(), timerID, 10)
 	decision2ScheduledEvent := addDecisionTaskScheduledEvent(builder, tl, 30)
-	addDecisionTaskStartedEvent(builder, decision2ScheduledEvent.GetEventId(), tl, identity)
+	decision2StartedEvent := addDecisionTaskStartedEvent(builder, decision2ScheduledEvent.GetEventId(), tl, identity)
 
 	history, _ := builder.Serialize()
 	info := &persistence.WorkflowExecutionInfo{WorkflowID: "wId", RunID: "rId", TaskList: tl, History: history, ExecutionContext: nil, State: persistence.WorkflowStateRunning, NextEventID: builder.nextEventID,
@@ -2115,9 +2115,10 @@ func (s *engineSuite) TestUserTimer_RespondDecisionTaskCompleted() {
 		ExecutionInfo: info,
 	}
 
-	timerInfos := make(map[string]*persistence.TimerInfo)
-	timerInfos[timerID] = &persistence.TimerInfo{TimerID: timerID, StartedID: timerStartedEvent.GetEventId()}
-	gwmsResponse := &persistence.GetWorkflowMutableStateResponse{State: &persistence.WorkflowMutableState{TimerInfos: timerInfos}}
+	ms := &persistence.WorkflowMutableState{}
+	addDecisionToMutableState(ms, decision2ScheduledEvent.GetEventId(), decision2StartedEvent.GetEventId(), uuid.New(), 1)
+	addUserTimerToMutableState(ms, timerID, timerStartedEvent.GetEventId(), 1)
+	gwmsResponse := &persistence.GetWorkflowMutableStateResponse{State: ms}
 
 	decisions := []*workflow.Decision{{
 		DecisionType: workflow.DecisionTypePtr(workflow.DecisionType_CancelTimer),
@@ -2163,7 +2164,7 @@ func (s *engineSuite) TestCancelTimer_RespondDecisionTaskCompleted_NoStartTimer(
 	// Verify cancel timer with a start event.
 	addWorkflowExecutionStartedEvent(builder, "wId", "wType", tl, []byte("input"), 100, 200, identity)
 	decisionScheduledEvent := addDecisionTaskScheduledEvent(builder, tl, 30)
-	addDecisionTaskStartedEvent(builder, decisionScheduledEvent.GetEventId(), tl, identity)
+	decisionStartedEvent := addDecisionTaskStartedEvent(builder, decisionScheduledEvent.GetEventId(), tl, identity)
 
 	history, _ := builder.Serialize()
 	info := &persistence.WorkflowExecutionInfo{WorkflowID: "wId", RunID: "rId", TaskList: tl, History: history, ExecutionContext: nil, State: persistence.WorkflowStateRunning, NextEventID: builder.nextEventID,
@@ -2172,8 +2173,10 @@ func (s *engineSuite) TestCancelTimer_RespondDecisionTaskCompleted_NoStartTimer(
 		ExecutionInfo: info,
 	}
 
-	timerInfos := make(map[string]*persistence.TimerInfo)
-	gwmsResponse := &persistence.GetWorkflowMutableStateResponse{State: &persistence.WorkflowMutableState{TimerInfos: timerInfos}}
+	ms := &persistence.WorkflowMutableState{}
+	addDecisionToMutableState(ms, decisionScheduledEvent.GetEventId(), decisionStartedEvent.GetEventId(), uuid.New(), 1)
+	addUserTimerToMutableState(ms, "t1-diff", emptyEventID, 1)
+	gwmsResponse := &persistence.GetWorkflowMutableStateResponse{State: ms}
 
 	decisions := []*workflow.Decision{{
 		DecisionType: workflow.DecisionTypePtr(workflow.DecisionType_CancelTimer),
