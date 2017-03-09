@@ -111,7 +111,7 @@ func (s *timerQueueProcessorSuite) getHistoryAndTimers(timeOuts []int32) ([]byte
 
 func (s *timerQueueProcessorSuite) TestSingleTimerTask() {
 	workflowExecution := workflow.WorkflowExecution{WorkflowId: common.StringPtr("single-timer-test"),
-		RunId:                                                    common.StringPtr("0d00698f-08e1-4d36-a3e2-3bf109f5d2d6")}
+		RunId: common.StringPtr("0d00698f-08e1-4d36-a3e2-3bf109f5d2d6")}
 
 	taskList := "single-timer-queue"
 	h, tt := s.getHistoryAndTimers([]int32{1})
@@ -144,7 +144,7 @@ func (s *timerQueueProcessorSuite) TestSingleTimerTask() {
 
 func (s *timerQueueProcessorSuite) TestManyTimerTasks() {
 	workflowExecution := workflow.WorkflowExecution{WorkflowId: common.StringPtr("multiple-timer-test"),
-		RunId:                                                    common.StringPtr("0d00698f-08e1-4d36-a3e2-3bf109f5d2d6")}
+		RunId: common.StringPtr("0d00698f-08e1-4d36-a3e2-3bf109f5d2d6")}
 
 	taskList := "multiple-timer-queue"
 	h, tt := s.getHistoryAndTimers([]int32{1, 2, 3})
@@ -180,7 +180,7 @@ func (s *timerQueueProcessorSuite) TestManyTimerTasks() {
 
 func (s *timerQueueProcessorSuite) TestTimerTaskAfterProcessorStart() {
 	workflowExecution := workflow.WorkflowExecution{WorkflowId: common.StringPtr("After-timer-test"),
-		RunId:                                                    common.StringPtr("0d00698f-08e1-4d36-a3e2-3bf109f5d2d6")}
+		RunId: common.StringPtr("0d00698f-08e1-4d36-a3e2-3bf109f5d2d6")}
 
 	taskList := "After-timer-queue"
 
@@ -190,8 +190,8 @@ func (s *timerQueueProcessorSuite) TestTimerTaskAfterProcessorStart() {
 		TaskList:                       common.TaskListPtr(workflow.TaskList{Name: common.StringPtr(taskList)}),
 		TaskStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 	})
-	scheduledEvent := builder.AddDecisionTaskScheduledEvent(taskList, 1)
-	builder.AddDecisionTaskStartedEvent(scheduledEvent.GetEventId(), uuid.New(),
+	decisionScheduledEvent := builder.AddDecisionTaskScheduledEvent(taskList, 1)
+	decisionStartedEvent := builder.AddDecisionTaskStartedEvent(decisionScheduledEvent.GetEventId(), uuid.New(),
 		&workflow.PollForDecisionTaskRequest{Identity: common.StringPtr("test-ID")})
 	h, serializedError := builder.Serialize()
 	s.Nil(serializedError)
@@ -207,12 +207,17 @@ func (s *timerQueueProcessorSuite) TestTimerTaskAfterProcessorStart() {
 	processor := newTimerQueueProcessor(s.engineImpl, s.WorkflowMgr, s.logger).(*timerQueueProcessorImpl)
 	processor.Start()
 
-	timeOutTask := tBuilder.createDecisionTimeoutTask(1, scheduledEvent.GetEventId())
+	timeOutTask := tBuilder.createDecisionTimeoutTask(1, decisionScheduledEvent.GetEventId())
 	timerTasks := []persistence.Task{timeOutTask}
 
+	di := &persistence.DecisionInfo{
+		ScheduleID:  decisionScheduledEvent.GetEventId(),
+		StartedID:   decisionStartedEvent.GetEventId(),
+		RequestID:   uuid.New(),
+	StartToCloseTimeout: 1}
 	info, err1 := s.GetWorkflowExecutionInfo(workflowExecution)
 	s.Nil(err1)
-	err2 := s.UpdateWorkflowExecution(info, nil, nil, int64(3), timerTasks, nil, nil, nil, nil, nil)
+	err2 := s.UpdateWorkflowExecution(info, nil, nil, int64(3), timerTasks, nil, nil, nil, nil, nil, di)
 	s.Nil(err2, "No error expected.")
 
 	processor.NotifyNewTimer(timeOutTask.GetTaskID())
@@ -259,8 +264,8 @@ func (s *timerQueueProcessorSuite) checkTimedOutEventFor(workflowExecution workf
 	minfo, err1 := s.GetWorkflowMutableState(workflowExecution)
 	s.Nil(err1)
 	msBuilder := newMutableStateBuilder(s.logger)
-	msBuilder.Load(minfo.ActivitInfos, minfo.TimerInfos)
-	isRunningFromMutableState, _ := msBuilder.isActivityRunning(scheduleID)
+	msBuilder.Load(minfo.ActivitInfos, minfo.TimerInfos, nil)
+	isRunningFromMutableState, _ := msBuilder.GetActivity(scheduleID)
 
 	return isRunning, isRunningFromMutableState, builder
 }
@@ -276,8 +281,8 @@ func (s *timerQueueProcessorSuite) checkTimedOutEventForUserTimer(workflowExecut
 	minfo, err1 := s.GetWorkflowMutableState(workflowExecution)
 	s.Nil(err1)
 	msBuilder := newMutableStateBuilder(s.logger)
-	msBuilder.Load(minfo.ActivitInfos, minfo.TimerInfos)
-	isRunning, _ := msBuilder.isTimerRunning(startedEvent.GetTimerStartedEventAttributes().GetTimerId())
+	msBuilder.Load(minfo.ActivitInfos, minfo.TimerInfos, nil)
+	isRunning, _ := msBuilder.GetUserTimer(startedEvent.GetTimerStartedEventAttributes().GetTimerId())
 	return isRunning, builder
 }
 
@@ -286,13 +291,13 @@ func (s *timerQueueProcessorSuite) updateHistoryAndTimers(workflowExecution work
 	info, err1 := s.GetWorkflowExecutionInfo(workflowExecution)
 	s.Nil(err1)
 	info.History = history
-	err2 := s.UpdateWorkflowExecution(info, nil, nil, info.NextEventID, timerTasks, nil, activityInfos, nil, timerInfos, nil)
+	err2 := s.UpdateWorkflowExecution(info, nil, nil, info.NextEventID, timerTasks, nil, activityInfos, nil, timerInfos, nil, nil)
 	s.Nil(err2, "No error expected.")
 }
 
 func (s *timerQueueProcessorSuite) TestTimerActivityTask() {
 	workflowExecution := workflow.WorkflowExecution{WorkflowId: common.StringPtr("activity-timer-test"),
-		RunId:                                                    common.StringPtr("0d00698f-08e1-4d36-a3e2-3bf109f5d2d6")}
+		RunId: common.StringPtr("0d00698f-08e1-4d36-a3e2-3bf109f5d2d6")}
 
 	taskList := "activity-timer-queue"
 	tBuilder := newTimerBuilder(&localSeqNumGenerator{counter: 1}, s.logger)
@@ -384,7 +389,7 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTask() {
 	aste = b.AddActivityTaskStartedEvent(ase.GetEventId(), uuid.New(), &workflow.PollForActivityTaskRequest{})
 
 	msBuilder = newMutableStateBuilder(s.logger)
-	msBuilder.UpdatePendingActivity(ase.GetEventId(), &persistence.ActivityInfo{
+	msBuilder.UpdateActivity(ase.GetEventId(), &persistence.ActivityInfo{
 		ScheduleID: ase.GetEventId(), StartedID: aste.GetEventId(), StartToCloseTimeout: 1})
 	t, err = tBuilder.AddStartToCloseActivityTimeout(ase.GetEventId(), msBuilder)
 	s.Nil(err)
@@ -414,7 +419,7 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTask() {
 	aste = b.AddActivityTaskStartedEvent(ase.GetEventId(), uuid.New(), &workflow.PollForActivityTaskRequest{})
 
 	msBuilder = newMutableStateBuilder(s.logger)
-	msBuilder.UpdatePendingActivity(ase.GetEventId(), &persistence.ActivityInfo{StartToCloseTimeout: 1})
+	msBuilder.UpdateActivity(ase.GetEventId(), &persistence.ActivityInfo{StartToCloseTimeout: 1})
 	t, err = tBuilder.AddStartToCloseActivityTimeout(ase.GetEventId(), msBuilder)
 	s.Nil(err)
 	s.NotNil(t)
@@ -428,7 +433,7 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTask() {
 	history, err = b.Serialize()
 	s.Nil(err)
 
-	s.updateHistoryAndTimers(workflowExecution, history, timerTasks, nil /* since activity is completed */ , nil)
+	s.updateHistoryAndTimers(workflowExecution, history, timerTasks, nil /* since activity is completed */, nil)
 	p.NotifyNewTimer(t.GetTaskID())
 
 	s.waitForTimerTasksToProcess(p)
@@ -447,7 +452,7 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTask() {
 		})
 
 	msBuilder = newMutableStateBuilder(s.logger)
-	msBuilder.UpdatePendingActivity(ase.GetEventId(), &persistence.ActivityInfo{
+	msBuilder.UpdateActivity(ase.GetEventId(), &persistence.ActivityInfo{
 		ScheduleID: ase.GetEventId(), StartedID: emptyEventID, ScheduleToCloseTimeout: 1})
 	t, err = tBuilder.AddScheduleToCloseActivityTimeout(ase.GetEventId(), msBuilder)
 	s.Nil(err)
@@ -477,7 +482,7 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTask() {
 	aste = b.AddActivityTaskStartedEvent(ase.GetEventId(), uuid.New(), &workflow.PollForActivityTaskRequest{})
 
 	msBuilder = newMutableStateBuilder(s.logger)
-	msBuilder.UpdatePendingActivity(ase.GetEventId(), &persistence.ActivityInfo{
+	msBuilder.UpdateActivity(ase.GetEventId(), &persistence.ActivityInfo{
 		ScheduleID: ase.GetEventId(), StartedID: aste.GetEventId(), ScheduleToCloseTimeout: 1})
 	t, err = tBuilder.AddScheduleToCloseActivityTimeout(ase.GetEventId(), msBuilder)
 	s.Nil(err)
@@ -507,7 +512,7 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTask() {
 	aste = b.AddActivityTaskStartedEvent(ase.GetEventId(), uuid.New(), &workflow.PollForActivityTaskRequest{})
 
 	msBuilder = newMutableStateBuilder(s.logger)
-	msBuilder.UpdatePendingActivity(ase.GetEventId(), &persistence.ActivityInfo{ScheduleToCloseTimeout: 1})
+	msBuilder.UpdateActivity(ase.GetEventId(), &persistence.ActivityInfo{ScheduleToCloseTimeout: 1})
 	t, err = tBuilder.AddScheduleToCloseActivityTimeout(ase.GetEventId(), msBuilder)
 	s.Nil(err)
 	s.NotNil(t)
@@ -521,7 +526,7 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTask() {
 	history, err = b.Serialize()
 	s.Nil(err)
 
-	s.updateHistoryAndTimers(workflowExecution, history, timerTasks, nil /* since it is completed */ , nil)
+	s.updateHistoryAndTimers(workflowExecution, history, timerTasks, nil /* since it is completed */, nil)
 	p.NotifyNewTimer(t.GetTaskID())
 
 	s.waitForTimerTasksToProcess(p)
@@ -541,7 +546,7 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTask() {
 	aste = b.AddActivityTaskStartedEvent(ase.GetEventId(), uuid.New(), &workflow.PollForActivityTaskRequest{})
 
 	msBuilder = newMutableStateBuilder(s.logger)
-	msBuilder.UpdatePendingActivity(ase.GetEventId(), &persistence.ActivityInfo{
+	msBuilder.UpdateActivity(ase.GetEventId(), &persistence.ActivityInfo{
 		ScheduleID: ase.GetEventId(), StartedID: aste.GetEventId(), HeartbeatTimeout: 1})
 
 	t, err = tBuilder.AddHeartBeatActivityTimeout(ase.GetEventId(), msBuilder)
@@ -564,7 +569,7 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTask() {
 
 func (s *timerQueueProcessorSuite) TestTimerUserTimers() {
 	workflowExecution := workflow.WorkflowExecution{WorkflowId: common.StringPtr("user-timer-test"),
-		RunId:                                                    common.StringPtr("0d00698f-08e1-4d36-a3e2-3bf109f5d2d6")}
+		RunId: common.StringPtr("0d00698f-08e1-4d36-a3e2-3bf109f5d2d6")}
 
 	taskList := "user-timer-queue"
 	tBuilder := newTimerBuilder(&localSeqNumGenerator{counter: 1}, s.logger)
@@ -609,7 +614,7 @@ func (s *timerQueueProcessorSuite) TestTimerUserTimers() {
 
 func (s *timerQueueProcessorSuite) TestTimerUserTimersSameExpiry() {
 	workflowExecution := workflow.WorkflowExecution{WorkflowId: common.StringPtr("user-timer-same-expiry-test"),
-		RunId:                                                    common.StringPtr("0d00698f-08e1-4d36-a3e2-3bf109f5d2d6")}
+		RunId: common.StringPtr("0d00698f-08e1-4d36-a3e2-3bf109f5d2d6")}
 
 	taskList := "user-timer-same-expiry-queue"
 	tBuilder := newTimerBuilder(&localSeqNumGenerator{counter: 1}, s.logger)

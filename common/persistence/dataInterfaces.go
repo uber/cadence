@@ -148,10 +148,11 @@ type (
 		EventID int64
 	}
 
-	// WorkflowMutableState indicates worklow realted state
+	// WorkflowMutableState indicates workflow related state
 	WorkflowMutableState struct {
 		ActivitInfos map[int64]*ActivityInfo
 		TimerInfos   map[string]*TimerInfo
+		Decision     *DecisionInfo
 	}
 
 	// ActivityInfo details.
@@ -168,6 +169,14 @@ type (
 		CancelRequested         bool
 		CancelRequestID         int64
 		LastHearBeatUpdatedTime time.Time
+	}
+
+	// DecisionInfo details.
+	DecisionInfo struct {
+		ScheduleID          int64
+		StartedID           int64
+		RequestID           string
+		StartToCloseTimeout int32
 	}
 
 	// TimerInfo details - metadata about user timer info.
@@ -211,6 +220,7 @@ type (
 		TransferTasks      []Task
 		TimerTasks         []Task
 		RangeID            int64
+		Decision           *DecisionInfo
 	}
 
 	// CreateWorkflowExecutionResponse is the response to CreateWorkflowExecutionRequest
@@ -230,16 +240,19 @@ type (
 
 	// UpdateWorkflowExecutionRequest is used to update a workflow execution
 	UpdateWorkflowExecutionRequest struct {
-		ExecutionInfo       *WorkflowExecutionInfo
-		TransferTasks       []Task
-		TimerTasks          []Task
-		DeleteTimerTask     Task
-		Condition           int64
-		RangeID             int64
+		ExecutionInfo   *WorkflowExecutionInfo
+		TransferTasks   []Task
+		TimerTasks      []Task
+		DeleteTimerTask Task
+		Condition       int64
+		RangeID         int64
+
+		// Mutable state
 		UpsertActivityInfos []*ActivityInfo
 		DeleteActivityInfo  *int64
 		UpserTimerInfos     []*TimerInfo
 		DeleteTimerInfos    []string
+		UpdateDecision      *DecisionInfo
 	}
 
 	// DeleteWorkflowExecutionRequest is used to delete a workflow execution
@@ -261,8 +274,12 @@ type (
 
 	// CompleteTransferTaskRequest is used to complete a task in the transfer task queue
 	CompleteTransferTaskRequest struct {
-		Execution workflow.WorkflowExecution
-		TaskID    int64
+		TaskID int64
+	}
+
+	// CompleteTimerTaskRequest is used to complete a task in the timer task queue
+	CompleteTimerTaskRequest struct {
+		TaskID int64
 	}
 
 	// LeaseTaskListRequest is used to request lease of a task list
@@ -361,6 +378,7 @@ type (
 
 		// Timer related methods.
 		GetTimerIndexTasks(request *GetTimerIndexTasksRequest) (*GetTimerIndexTasksResponse, error)
+		CompleteTimerTask(request *CompleteTimerTaskRequest) error
 
 		// Workflow mutable state operations.
 		GetWorkflowMutableState(request *GetWorkflowMutableStateRequest) (*GetWorkflowMutableStateResponse, error)
