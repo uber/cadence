@@ -334,12 +334,12 @@ func (s *TestBase) UpdateWorkflowExecutionWithRangeID(updatedInfo *WorkflowExecu
 	transferTasks := []Task{}
 	for _, decisionScheduleID := range decisionScheduleIDs {
 		transferTasks = append(transferTasks, &DecisionTask{TaskList: updatedInfo.TaskList,
-			ScheduleID: int64(decisionScheduleID)})
+			ScheduleID:                                                 int64(decisionScheduleID)})
 	}
 
 	for _, activityScheduleID := range activityScheduleIDs {
 		transferTasks = append(transferTasks, &ActivityTask{TaskList: updatedInfo.TaskList,
-			ScheduleID: int64(activityScheduleID)})
+			ScheduleID:                                                 int64(activityScheduleID)})
 	}
 
 	return s.WorkflowMgr.UpdateWorkflowExecution(&UpdateWorkflowExecutionRequest{
@@ -406,18 +406,21 @@ func (s *TestBase) GetTimerIndexTasks(minKey int64, maxKey int64) ([]*TimerTaskI
 // CreateDecisionTask is a utility method to create a task
 func (s *TestBase) CreateDecisionTask(workflowExecution workflow.WorkflowExecution, taskList string,
 	decisionScheduleID int64) (int64, error) {
-	leaseResponse, err := s.TaskMgr.LeaseTaskList(&LeaseTaskListRequest{TaskList: taskList, TaskType: TaskListTypeDecision})
+	leaseResponse, err := s.TaskMgr.LeaseTaskList(&LeaseTaskListRequest{TaskList: taskList, TaskType: TransferTaskTypeDecisionTask})
 	if err != nil {
 		return 0, err
 	}
 
 	taskID := s.GetNextSequenceNumber()
 	_, err = s.TaskMgr.CreateTask(&CreateTaskRequest{
-		TaskID:    taskID,
-		Execution: workflowExecution,
-		Data: &DecisionTask{
+		TaskID:       taskID,
+		Execution:    workflowExecution,
+		TaskList:     taskList,
+		TaskListType: TaskListTypeDecision,
+		Data: &TaskInfo{
+			WorkflowID: workflowExecution.GetWorkflowId(),
+			RunID:      workflowExecution.GetRunId(),
 			TaskID:     taskID,
-			TaskList:   taskList,
 			ScheduleID: decisionScheduleID,
 		},
 		RangeID: leaseResponse.TaskListInfo.RangeID,
@@ -440,18 +443,21 @@ func (s *TestBase) CreateActivityTasks(workflowExecution workflow.WorkflowExecut
 	for activityScheduleID, taskList := range activities {
 
 		leaseResponse, err = s.TaskMgr.LeaseTaskList(
-			&LeaseTaskListRequest{TaskList: taskList, TaskType: TaskListTypeActivity})
+			&LeaseTaskListRequest{TaskList: taskList, TaskType: TransferTaskTypeActivityTask})
 		if err != nil {
 			return []int64{}, err
 		}
 		taskID := s.GetNextSequenceNumber()
 
 		_, err := s.TaskMgr.CreateTask(&CreateTaskRequest{
-			TaskID:    taskID,
-			Execution: workflowExecution,
-			Data: &ActivityTask{
+			TaskID:       taskID,
+			Execution:    workflowExecution,
+			TaskList:     taskList,
+			TaskListType: TaskListTypeActivity,
+			Data: &TaskInfo{
+				WorkflowID: workflowExecution.GetWorkflowId(),
+				RunID:      workflowExecution.GetRunId(),
 				TaskID:     s.GetNextSequenceNumber(),
-				TaskList:   taskList,
 				ScheduleID: activityScheduleID,
 			},
 			RangeID: leaseResponse.TaskListInfo.RangeID,

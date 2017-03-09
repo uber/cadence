@@ -15,6 +15,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber-common/bark"
 )
 
 type (
@@ -23,6 +24,7 @@ type (
 		persistence.TestBase
 		processor    *transferQueueProcessorImpl
 		mockMatching *mocks.MatchingClient
+		logger       bark.Logger
 	}
 )
 
@@ -36,9 +38,14 @@ func (s *transferQueueProcessorSuite) SetupSuite() {
 		log.SetOutput(os.Stdout)
 	}
 
+	logger := log.New()
+	logger.Level = log.DebugLevel
+	s.logger = bark.NewLoggerFromLogrus(logger)
+
 	s.SetupWorkflowStore()
 	s.mockMatching = &mocks.MatchingClient{}
-	s.processor = newTransferQueueProcessor(s.ShardContext, s.mockMatching).(*transferQueueProcessorImpl)
+	cache := newHistoryCache(s.ShardContext, s.logger)
+	s.processor = newTransferQueueProcessor(s.ShardContext, s.mockMatching, cache).(*transferQueueProcessorImpl)
 }
 
 func (s *transferQueueProcessorSuite) TearDownSuite() {
@@ -59,7 +66,7 @@ func (s *transferQueueProcessorSuite) TestNoTransferTask() {
 
 func (s *transferQueueProcessorSuite) TestSingleDecisionTask() {
 	workflowExecution := workflow.WorkflowExecution{WorkflowId: common.StringPtr("single-decisiontask-test"),
-		RunId: common.StringPtr("0d00698f-08e1-4d36-a3e2-3bf109f5d2d6")}
+		RunId:                                                    common.StringPtr("0d00698f-08e1-4d36-a3e2-3bf109f5d2d6")}
 	taskList := "single-decisiontask-queue"
 	task0, err0 := s.CreateWorkflowExecution(workflowExecution, taskList, "decisiontask-scheduled", nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
@@ -84,7 +91,7 @@ workerPump:
 
 func (s *transferQueueProcessorSuite) TestManyTransferTasks() {
 	workflowExecution := workflow.WorkflowExecution{WorkflowId: common.StringPtr("many-transfertasks-test"),
-		RunId: common.StringPtr("57d5f005-bdaa-42a5-a1c5-b9c45d8699a9")}
+		RunId:                                                    common.StringPtr("57d5f005-bdaa-42a5-a1c5-b9c45d8699a9")}
 	taskList := "many-transfertasks-queue"
 	activityTaskScheduleIds := []int64{2, 3, 4, 5, 6}
 	task0, err0 := s.CreateWorkflowExecutionManyTasks(workflowExecution, taskList, "t1;t2;t3;t4;t5", nil, 7, 0, nil,
@@ -112,11 +119,11 @@ workerPump:
 func createAddRequestFromTask(task *persistence.TransferTaskInfo) interface{} {
 	var res interface{}
 	execution := workflow.WorkflowExecution{WorkflowId: common.StringPtr(task.WorkflowID),
-		RunId: common.StringPtr(task.RunID)}
+		RunId:                                            common.StringPtr(task.RunID)}
 	taskList := &workflow.TaskList{
 		Name: &task.TaskList,
 	}
-	if task.TaskType == persistence.TaskListTypeActivity {
+	if task.TaskType == persistence.TransferTaskTypeActivityTask {
 		res = &m.AddActivityTaskRequest{
 			Execution:  &execution,
 			TaskList:   taskList,

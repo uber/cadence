@@ -265,7 +265,7 @@ func (s *cassandraPersistenceSuite) TestTransferTasks() {
 	s.Equal(workflowExecution.GetWorkflowId(), task1.WorkflowID)
 	s.Equal(workflowExecution.GetRunId(), task1.RunID)
 	s.Equal("queue1", task1.TaskList)
-	s.Equal(TaskListTypeDecision, task1.TaskType)
+	s.Equal(TransferTaskTypeDecisionTask, task1.TaskType)
 	s.Equal(int64(2), task1.ScheduleID)
 
 	err3 := s.CompleteTransferTask(workflowExecution, task1.TaskID)
@@ -314,7 +314,7 @@ func (s *cassandraPersistenceSuite) TestGetDecisionTasks() {
 	s.Nil(err0, "No error expected.")
 	s.NotEmpty(task0, "Expected non empty task identifier.")
 
-	tasks1Response, err1 := s.GetTasks(taskList, TaskListTypeDecision, 1)
+	tasks1Response, err1 := s.GetTasks(taskList, TransferTaskTypeDecisionTask, 1)
 	s.Nil(err1, "No error expected.")
 	s.NotNil(tasks1Response.Tasks, "expected valid list of tasks.")
 	s.Equal(1, len(tasks1Response.Tasks), "Expected 1 decision task.")
@@ -338,7 +338,7 @@ func (s *cassandraPersistenceSuite) TestCompleteDecisionTask() {
 		s.NotEmpty(t, "Expected non empty task identifier.")
 	}
 
-	tasksWithID1Response, err1 := s.GetTasks(taskList, TaskListTypeActivity, 5)
+	tasksWithID1Response, err1 := s.GetTasks(taskList, TransferTaskTypeActivityTask, 5)
 
 	s.Nil(err1, "No error expected.")
 	tasksWithID1 := tasksWithID1Response.Tasks
@@ -350,7 +350,7 @@ func (s *cassandraPersistenceSuite) TestCompleteDecisionTask() {
 		s.Equal(workflowExecution.GetRunId(), t.RunID)
 		s.True(t.TaskID > 0)
 
-		err2 := s.CompleteTask(taskList, TaskListTypeActivity, t.TaskID, 100)
+		err2 := s.CompleteTask(taskList, TransferTaskTypeActivityTask, t.TaskID, 100)
 		s.Nil(err2)
 	}
 }
@@ -358,16 +358,16 @@ func (s *cassandraPersistenceSuite) TestCompleteDecisionTask() {
 func (s *cassandraPersistenceSuite) TestLeaseTaskList() {
 
 	taskList := "aaaaaaa"
-	response, err := s.TaskMgr.LeaseTaskList(&LeaseTaskListRequest{TaskList: taskList, TaskType: TaskListTypeActivity})
+	response, err := s.TaskMgr.LeaseTaskList(&LeaseTaskListRequest{TaskList: taskList, TaskType: TransferTaskTypeActivityTask})
 	s.NoError(err)
 	tli := response.TaskListInfo
 	s.EqualValues(1, tli.RangeID)
 	s.EqualValues(0, tli.AckLevel)
 	err = s.TaskMgr.CompleteTask(
-		&CompleteTaskRequest{TaskID: 110, TaskList: &TaskListInfo{Name: taskList, TaskType: TaskListTypeActivity, AckLevel: 100, RangeID: tli.RangeID}})
+		&CompleteTaskRequest{TaskID: 110, TaskList: &TaskListInfo{Name: taskList, TaskType: TransferTaskTypeActivityTask, AckLevel: 100, RangeID: tli.RangeID}})
 	s.NoError(err)
 
-	response, err = s.TaskMgr.LeaseTaskList(&LeaseTaskListRequest{TaskList: taskList, TaskType: TaskListTypeActivity})
+	response, err = s.TaskMgr.LeaseTaskList(&LeaseTaskListRequest{TaskList: taskList, TaskType: TransferTaskTypeActivityTask})
 	s.NoError(err)
 	tli = response.TaskListInfo
 	s.EqualValues(2, tli.RangeID)
