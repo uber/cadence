@@ -387,8 +387,7 @@ func (s *TestBase) GetTransferTasks(batchSize int) ([]*TransferTaskInfo, error) 
 func (s *TestBase) CompleteTransferTask(workflowExecution workflow.WorkflowExecution, taskID int64) error {
 
 	return s.WorkflowMgr.CompleteTransferTask(&CompleteTransferTaskRequest{
-		Execution: workflowExecution,
-		TaskID:    taskID,
+		TaskID: taskID,
 	})
 }
 
