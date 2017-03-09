@@ -92,8 +92,8 @@ func (h *Handler) RecordActivityTaskHeartbeat(ctx thrift.Context,
 	heartbeatRequest *gen.RecordActivityTaskHeartbeatRequest) (*gen.RecordActivityTaskHeartbeatResponse, error) {
 	h.startWG.Wait()
 
-	h.metricsClient.IncCounter(metrics.HistoryRecordActivityTaskHeartbeatScope, metrics.WorkflowRequests)
-	sw := h.metricsClient.StartTimer(metrics.HistoryRecordActivityTaskHeartbeatScope, metrics.WorkflowLatency)
+	h.metricsClient.IncCounter(metrics.HistoryRecordActivityTaskHeartbeatScope, metrics.CadenceRequests)
+	sw := h.metricsClient.StartTimer(metrics.HistoryRecordActivityTaskHeartbeatScope, metrics.CadenceLatency)
 	defer sw.Stop()
 
 	token, err0 := h.tokenSerializer.Deserialize(heartbeatRequest.GetTaskToken())
@@ -123,8 +123,8 @@ func (h *Handler) RecordActivityTaskStarted(ctx thrift.Context,
 	recordRequest *hist.RecordActivityTaskStartedRequest) (*hist.RecordActivityTaskStartedResponse, error) {
 	h.startWG.Wait()
 
-	h.metricsClient.IncCounter(metrics.HistoryRecordActivityTaskStartedScope, metrics.WorkflowRequests)
-	sw := h.metricsClient.StartTimer(metrics.HistoryRecordActivityTaskStartedScope, metrics.WorkflowLatency)
+	h.metricsClient.IncCounter(metrics.HistoryRecordActivityTaskStartedScope, metrics.CadenceRequests)
+	sw := h.metricsClient.StartTimer(metrics.HistoryRecordActivityTaskStartedScope, metrics.CadenceLatency)
 	defer sw.Stop()
 
 	workflowExecution := recordRequest.GetWorkflowExecution()
@@ -152,8 +152,8 @@ func (h *Handler) RecordDecisionTaskStarted(ctx thrift.Context,
 		recordRequest.GetWorkflowExecution().GetRunId(),
 		recordRequest.GetScheduleId())
 
-	h.metricsClient.IncCounter(metrics.HistoryRecordDecisionTaskStartedScope, metrics.WorkflowRequests)
-	sw := h.metricsClient.StartTimer(metrics.HistoryRecordDecisionTaskStartedScope, metrics.WorkflowLatency)
+	h.metricsClient.IncCounter(metrics.HistoryRecordDecisionTaskStartedScope, metrics.CadenceRequests)
+	sw := h.metricsClient.StartTimer(metrics.HistoryRecordDecisionTaskStartedScope, metrics.CadenceLatency)
 	defer sw.Stop()
 
 	workflowExecution := recordRequest.GetWorkflowExecution()
@@ -182,8 +182,8 @@ func (h *Handler) RespondActivityTaskCompleted(ctx thrift.Context,
 	completeRequest *gen.RespondActivityTaskCompletedRequest) error {
 	h.startWG.Wait()
 
-	h.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskCompletedScope, metrics.WorkflowRequests)
-	sw := h.metricsClient.StartTimer(metrics.HistoryRespondActivityTaskCompletedScope, metrics.WorkflowLatency)
+	h.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskCompletedScope, metrics.CadenceRequests)
+	sw := h.metricsClient.StartTimer(metrics.HistoryRespondActivityTaskCompletedScope, metrics.CadenceLatency)
 	defer sw.Stop()
 
 	token, err0 := h.tokenSerializer.Deserialize(completeRequest.GetTaskToken())
@@ -213,8 +213,8 @@ func (h *Handler) RespondActivityTaskFailed(ctx thrift.Context,
 	failRequest *gen.RespondActivityTaskFailedRequest) error {
 	h.startWG.Wait()
 
-	h.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskFailedScope, metrics.WorkflowRequests)
-	sw := h.metricsClient.StartTimer(metrics.HistoryRespondActivityTaskFailedScope, metrics.WorkflowLatency)
+	h.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskFailedScope, metrics.CadenceRequests)
+	sw := h.metricsClient.StartTimer(metrics.HistoryRespondActivityTaskFailedScope, metrics.CadenceLatency)
 	defer sw.Stop()
 
 	token, err0 := h.tokenSerializer.Deserialize(failRequest.GetTaskToken())
@@ -244,8 +244,8 @@ func (h *Handler) RespondActivityTaskCanceled(ctx thrift.Context,
 	cancelRequest *gen.RespondActivityTaskCanceledRequest) error {
 	h.startWG.Wait()
 
-	h.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskCanceledScope, metrics.WorkflowRequests)
-	sw := h.metricsClient.StartTimer(metrics.HistoryRespondActivityTaskCanceledScope, metrics.WorkflowLatency)
+	h.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskCanceledScope, metrics.CadenceRequests)
+	sw := h.metricsClient.StartTimer(metrics.HistoryRespondActivityTaskCanceledScope, metrics.CadenceLatency)
 	defer sw.Stop()
 
 	token, err0 := h.tokenSerializer.Deserialize(cancelRequest.GetTaskToken())
@@ -275,8 +275,8 @@ func (h *Handler) RespondDecisionTaskCompleted(ctx thrift.Context,
 	completeRequest *gen.RespondDecisionTaskCompletedRequest) error {
 	h.startWG.Wait()
 
-	h.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.WorkflowRequests)
-	sw := h.metricsClient.StartTimer(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.WorkflowLatency)
+	h.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.CadenceRequests)
+	sw := h.metricsClient.StartTimer(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.CadenceLatency)
 	defer sw.Stop()
 
 	token, err0 := h.tokenSerializer.Deserialize(completeRequest.GetTaskToken())
@@ -311,8 +311,8 @@ func (h *Handler) StartWorkflowExecution(ctx thrift.Context,
 	startRequest *gen.StartWorkflowExecutionRequest) (*gen.StartWorkflowExecutionResponse, error) {
 	h.startWG.Wait()
 
-	h.metricsClient.IncCounter(metrics.HistoryStartWorkflowExecutionScope, metrics.WorkflowRequests)
-	sw := h.metricsClient.StartTimer(metrics.HistoryStartWorkflowExecutionScope, metrics.WorkflowLatency)
+	h.metricsClient.IncCounter(metrics.HistoryStartWorkflowExecutionScope, metrics.CadenceRequests)
+	sw := h.metricsClient.StartTimer(metrics.HistoryStartWorkflowExecutionScope, metrics.CadenceLatency)
 	defer sw.Stop()
 
 	engine, err1 := h.controller.GetEngine(startRequest.GetWorkflowId())
@@ -335,8 +335,8 @@ func (h *Handler) GetWorkflowExecutionHistory(ctx thrift.Context,
 	getRequest *gen.GetWorkflowExecutionHistoryRequest) (*gen.GetWorkflowExecutionHistoryResponse, error) {
 	h.startWG.Wait()
 
-	h.metricsClient.IncCounter(metrics.HistoryGetWorkflowExecutionHistoryScope, metrics.WorkflowRequests)
-	sw := h.metricsClient.StartTimer(metrics.HistoryGetWorkflowExecutionHistoryScope, metrics.WorkflowLatency)
+	h.metricsClient.IncCounter(metrics.HistoryGetWorkflowExecutionHistoryScope, metrics.CadenceRequests)
+	sw := h.metricsClient.StartTimer(metrics.HistoryGetWorkflowExecutionHistoryScope, metrics.CadenceLatency)
 	defer sw.Stop()
 
 	workflowExecution := getRequest.GetExecution()
@@ -382,7 +382,7 @@ func (h *Handler) updateErrorMetric(scope int, err error) {
 	case *gen.EntityNotExistsError:
 		h.metricsClient.IncCounter(scope, metrics.CadenceErrEntityNotExistsCounter)
 	default:
-		h.metricsClient.IncCounter(scope, metrics.WorkflowFailures)
+		h.metricsClient.IncCounter(scope, metrics.CadenceFailures)
 	}
 }
 

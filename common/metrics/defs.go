@@ -284,12 +284,15 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 
 // Common Metrics enum
 const (
-	WorkflowRequests = iota
-	WorkflowFailures
-	WorkflowLatency
+	CadenceRequests = iota
+	CadenceFailures
+	CadenceLatency
 	CadenceErrBadRequestCounter
 	CadenceErrEntityNotExistsCounter
 	CadenceErrExecutionAlreadyStartedCounter
+	PersistenceRequests
+	PersistenceFailures
+	PersistenceLatency
 	PersistenceErrShardExistsCounter
 	PersistenceErrShardOwnershipLostCounter
 	PersistenceErrConditionFailedCounter
@@ -308,12 +311,15 @@ const (
 // MetricDefs record the metrics for all services
 var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 	Common: {
-		WorkflowRequests:                         {metricName: "requests", metricType: Counter},
-		WorkflowFailures:                         {metricName: "errors", metricType: Counter},
-		WorkflowLatency:                          {metricName: "latency", metricType: Timer},
+		CadenceRequests:                          {metricName: "cadence.requests", metricType: Counter},
+		CadenceFailures:                          {metricName: "cadence.errors", metricType: Counter},
+		CadenceLatency:                           {metricName: "cadence.latency", metricType: Timer},
 		CadenceErrBadRequestCounter:              {metricName: "cadence.errors.bad-request", metricType: Counter},
 		CadenceErrEntityNotExistsCounter:         {metricName: "cadence.errors.entity-not-exists", metricType: Counter},
 		CadenceErrExecutionAlreadyStartedCounter: {metricName: "cadence.errors.execution-already-started", metricType: Counter},
+		PersistenceRequests:                      {metricName: "persistence.requests", metricType: Counter},
+		PersistenceFailures:                      {metricName: "persistence.errors", metricType: Counter},
+		PersistenceLatency:                       {metricName: "persistence.latency", metricType: Timer},
 		PersistenceErrShardExistsCounter:         {metricName: "persistence.errors.shard-exists", metricType: Counter},
 		PersistenceErrShardOwnershipLostCounter:  {metricName: "persistence.errors.shard-ownership-lost", metricType: Counter},
 		PersistenceErrConditionFailedCounter:     {metricName: "persistence.errors.condition-failed", metricType: Counter},
