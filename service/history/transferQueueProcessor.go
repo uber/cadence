@@ -192,7 +192,7 @@ func (t *transferQueueProcessorImpl) taskWorker(tasksCh <-chan *persistence.Tran
 }
 
 func (t *transferQueueProcessorImpl) processTransferTask(task *persistence.TransferTaskInfo) {
-	t.logger.Infof("Processing transfer task: %v, type: %v", task.TaskID, task.TaskType)
+	t.logger.Debugf("Processing transfer task: %v, type: %v", task.TaskID, task.TaskType)
 	t.metricsClient.AddCounter(metrics.HistoryProcessTransferTasksScope, metrics.TransferTasksProcessedCounter, 1)
 ProcessRetryLoop:
 	for retryCount := 1; retryCount <= 100; retryCount++ {
@@ -228,20 +228,14 @@ ProcessRetryLoop:
 				}
 			case persistence.TransferTaskTypeDeleteExecution:
 				{
-					t.logger.Info("Starting to delete transfer task.")
 					context, _ := t.cache.getOrCreateWorkflowExecution(execution)
 
 					// TODO: We need to keep completed executions for auditing purpose.  Need a design for keeping them around
 					// for visibility purpose.
-					t.logger.Info("Locking Workflow Execution")
 					context.Lock()
-					t.logger.Info("Workflow execution locked.")
 					_, err = context.loadWorkflowExecution()
-					t.logger.Info("Workflow execution loaded.")
-					if err != nil {
-						t.logger.Info("Deleting workflow execution.")
+					if err == nil {
 						err = context.deleteWorkflowExecution()
-						t.logger.Infof("Delete workflow execution. Error: %v", err)
 					}
 					context.Unlock()
 				}
