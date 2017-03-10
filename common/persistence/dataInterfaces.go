@@ -122,21 +122,21 @@ type (
 		GetTaskID() int64
 	}
 
-	// ActivityTask identifies an activity task
+	// ActivityTask identifies a transfer task for activity
 	ActivityTask struct {
 		TaskID     int64
 		TaskList   string
 		ScheduleID int64
 	}
 
-	// DecisionTask identifies a decision task
+	// DecisionTask identifies a transfer task for decision
 	DecisionTask struct {
 		TaskID     int64
 		TaskList   string
 		ScheduleID int64
 	}
 
-	// ActivityTask identifies an activity task
+	// DeleteExecutionTask identifies a transfer task for deletion of execution
 	DeleteExecutionTask struct {
 		TaskID int64
 	}

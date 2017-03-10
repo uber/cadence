@@ -428,7 +428,7 @@ func (s *TestBase) GetTimerIndexTasks(minKey int64, maxKey int64) ([]*TimerTaskI
 // CreateDecisionTask is a utility method to create a task
 func (s *TestBase) CreateDecisionTask(workflowExecution workflow.WorkflowExecution, taskList string,
 	decisionScheduleID int64) (int64, error) {
-	leaseResponse, err := s.TaskMgr.LeaseTaskList(&LeaseTaskListRequest{TaskList: taskList, TaskType: TransferTaskTypeDecisionTask})
+	leaseResponse, err := s.TaskMgr.LeaseTaskList(&LeaseTaskListRequest{TaskList: taskList, TaskType: TaskListTypeDecision})
 	if err != nil {
 		return 0, err
 	}
@@ -465,7 +465,7 @@ func (s *TestBase) CreateActivityTasks(workflowExecution workflow.WorkflowExecut
 	for activityScheduleID, taskList := range activities {
 
 		leaseResponse, err = s.TaskMgr.LeaseTaskList(
-			&LeaseTaskListRequest{TaskList: taskList, TaskType: TransferTaskTypeActivityTask})
+			&LeaseTaskListRequest{TaskList: taskList, TaskType: TaskListTypeActivity})
 		if err != nil {
 			return []int64{}, err
 		}
