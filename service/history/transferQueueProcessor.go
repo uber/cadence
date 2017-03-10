@@ -228,14 +228,20 @@ ProcessRetryLoop:
 				}
 			case persistence.TransferTaskTypeDeleteExecution:
 				{
+					t.logger.Info("Starting to delete transfer task.")
 					context, _ := t.cache.getOrCreateWorkflowExecution(execution)
 
 					// TODO: We need to keep completed executions for auditing purpose.  Need a design for keeping them around
 					// for visibility purpose.
+					t.logger.Info("Locking Workflow Execution")
 					context.Lock()
+					t.logger.Info("Workflow execution locked.")
 					_, err = context.loadWorkflowExecution()
+					t.logger.Info("Workflow execution loaded.")
 					if err != nil {
+						t.logger.Info("Deleting workflow execution.")
 						err = context.deleteWorkflowExecution()
+						t.logger.Infof("Delete workflow execution. Error: %v", err)
 					}
 					context.Unlock()
 				}
