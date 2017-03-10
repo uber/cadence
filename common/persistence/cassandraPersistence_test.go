@@ -303,7 +303,7 @@ func (s *cassandraPersistenceSuite) TestTransferTasksThroughUpdate() {
 	updatedInfo.History = []byte(`event2`)
 	updatedInfo.NextEventID = int64(5)
 	updatedInfo.LastProcessedEvent = int64(2)
-	err2 := s.UpdateWorkflowExecution(updatedInfo, nil, []int64{int64(4)}, int64(3), nil, nil, nil, nil, nil, nil)
+	err2 := s.UpdateWorkflowExecution(updatedInfo, nil, []int64{int64(4)}, int64(3), nil, nil, nil, nil, nil, nil, nil)
 	s.Nil(err2, "No error expected.")
 
 	tasks2, err1 := s.GetTransferTasks(1)
