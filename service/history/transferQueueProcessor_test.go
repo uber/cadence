@@ -116,6 +116,50 @@ workerPump:
 	s.mockMatching.AssertExpectations(s.T())
 }
 
+func (s *transferQueueProcessorSuite) TestDeleteExecutionTransferTasks() {
+	workflowExecution := workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr("delete-execution-transfertasks-test"),
+		RunId:      common.StringPtr("79fc8984-f78f-41cf-8fa1-4d383edb2cfd"),
+	}
+	taskList := "delete-execution-transfertasks-queue"
+	task0, err0 := s.CreateWorkflowExecution(workflowExecution, taskList, "event1", nil, 3, 0, 2, nil)
+	s.Nil(err0, "No error expected.")
+	s.NotEmpty(task0, "Expected non empty task identifier.")
+
+	info1, _ := s.GetWorkflowExecutionInfo(workflowExecution)
+	updatedInfo1 := copyWorkflowExecutionInfo(info1)
+	updatedInfo1.History = []byte(`event3`)
+	updatedInfo1.NextEventID = int64(6)
+	updatedInfo1.LastProcessedEvent = int64(2)
+	err1 := s.UpdateWorkflowExecutionAndDelete(updatedInfo1, int64(3))
+	s.Nil(err1, "No error expected.")
+
+	newExecution := workflow.WorkflowExecution{WorkflowId: common.StringPtr("delete-execution-transfertasks-test"),
+		RunId: common.StringPtr("d3ac892e-9fc1-4def-84fa-bfc44b9128cc")}
+	_, err2 := s.CreateWorkflowExecution(newExecution, "queue1", "event1", nil, 3, 0, 2, nil)
+	s.NotNil(err2, "Entity exist error expected.")
+
+	tasksCh := make(chan *persistence.TransferTaskInfo, 10)
+	newPollInterval := s.processor.processTransferTasks(tasksCh, time.Second)
+	s.Equal(transferProcessorMinPollInterval, newPollInterval)
+workerPump:
+	for {
+		select {
+		case task := <-tasksCh:
+			if task.TaskType == persistence.TransferTaskTypeDecisionTask {
+				s.mockMatching.On("AddDecisionTask", mock.Anything, createAddRequestFromTask(task)).Once().Return(nil)
+			}
+			s.processor.processTransferTask(task)
+		default:
+			break workerPump
+		}
+	}
+
+	_, err3 := s.CreateWorkflowExecution(newExecution, "queue1", "event1", nil, 3, 0, 2, nil)
+	s.Nil(err3, "No error expected.")
+	s.mockMatching.AssertExpectations(s.T())
+}
+
 func createAddRequestFromTask(task *persistence.TransferTaskInfo) interface{} {
 	var res interface{}
 	execution := workflow.WorkflowExecution{WorkflowId: common.StringPtr(task.WorkflowID),
@@ -129,7 +173,7 @@ func createAddRequestFromTask(task *persistence.TransferTaskInfo) interface{} {
 			TaskList:   taskList,
 			ScheduleId: &task.ScheduleID,
 		}
-	} else {
+	} else if task.TaskType == persistence.TransferTaskTypeDecisionTask {
 		res = &m.AddDecisionTaskRequest{
 			Execution:  &execution,
 			TaskList:   taskList,
@@ -147,4 +191,20 @@ func containsID(list []int64, scheduleID int64) bool {
 	}
 
 	return false
+}
+
+func copyWorkflowExecutionInfo(sourceInfo *persistence.WorkflowExecutionInfo) *persistence.WorkflowExecutionInfo {
+	return &persistence.WorkflowExecutionInfo{
+		WorkflowID:           sourceInfo.WorkflowID,
+		RunID:                sourceInfo.RunID,
+		TaskList:             sourceInfo.TaskList,
+		History:              sourceInfo.History,
+		ExecutionContext:     sourceInfo.ExecutionContext,
+		State:                sourceInfo.State,
+		NextEventID:          sourceInfo.NextEventID,
+		LastProcessedEvent:   sourceInfo.LastProcessedEvent,
+		LastUpdatedTimestamp: sourceInfo.LastUpdatedTimestamp,
+		DecisionPending:      sourceInfo.DecisionPending,
+		CreateRequestID:      sourceInfo.CreateRequestID,
+	}
 }

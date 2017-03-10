@@ -232,7 +232,12 @@ ProcessRetryLoop:
 
 					// TODO: We need to keep completed executions for auditing purpose.  Need a design for keeping them around
 					// for visibility purpose.
-					context.deleteWorkflowExecution()
+					context.Lock()
+					_, err = context.loadWorkflowExecution()
+					if err != nil {
+						err = context.deleteWorkflowExecution()
+					}
+					context.Unlock()
 				}
 			}
 

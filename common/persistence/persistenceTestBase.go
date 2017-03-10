@@ -326,6 +326,24 @@ func (s *TestBase) UpdateWorkflowExecution(updatedInfo *WorkflowExecutionInfo, d
 		upsertTimerInfos, deleteTimerInfos, updateDecision)
 }
 
+// UpdateWorkflowExecutionAndDelete is a utility method to update workflow execution
+func (s *TestBase) UpdateWorkflowExecutionAndDelete(updatedInfo *WorkflowExecutionInfo, condition int64) error {
+	transferTasks := []Task{}
+	transferTasks = append(transferTasks, &DeleteExecutionTask{TaskID: s.GetNextSequenceNumber()})
+	return s.WorkflowMgr.UpdateWorkflowExecution(&UpdateWorkflowExecutionRequest{
+		ExecutionInfo:       updatedInfo,
+		TransferTasks:       transferTasks,
+		TimerTasks:          nil,
+		Condition:           condition,
+		DeleteTimerTask:     nil,
+		RangeID:             s.ShardContext.GetRangeID(),
+		UpsertActivityInfos: nil,
+		DeleteActivityInfo:  nil,
+		UpserTimerInfos:     nil,
+		DeleteTimerInfos:    nil,
+	})
+}
+
 // UpdateWorkflowExecutionWithRangeID is a utility method to update workflow execution
 func (s *TestBase) UpdateWorkflowExecutionWithRangeID(updatedInfo *WorkflowExecutionInfo, decisionScheduleIDs []int64,
 	activityScheduleIDs []int64, rangeID, condition int64, timerTasks []Task, deleteTimerTask Task,
@@ -333,13 +351,17 @@ func (s *TestBase) UpdateWorkflowExecutionWithRangeID(updatedInfo *WorkflowExecu
 	upsertTimerInfos []*TimerInfo, deleteTimerInfos []string, updatedDecision *DecisionInfo) error {
 	transferTasks := []Task{}
 	for _, decisionScheduleID := range decisionScheduleIDs {
-		transferTasks = append(transferTasks, &DecisionTask{TaskList: updatedInfo.TaskList,
-			ScheduleID:                                                 int64(decisionScheduleID)})
+		transferTasks = append(transferTasks, &DecisionTask{
+			TaskID:     s.GetNextSequenceNumber(),
+			TaskList:   updatedInfo.TaskList,
+			ScheduleID: int64(decisionScheduleID)})
 	}
 
 	for _, activityScheduleID := range activityScheduleIDs {
-		transferTasks = append(transferTasks, &ActivityTask{TaskList: updatedInfo.TaskList,
-			ScheduleID:                                                 int64(activityScheduleID)})
+		transferTasks = append(transferTasks, &ActivityTask{
+			TaskID:     s.GetNextSequenceNumber(),
+			TaskList:   updatedInfo.TaskList,
+			ScheduleID: int64(activityScheduleID)})
 	}
 
 	return s.WorkflowMgr.UpdateWorkflowExecution(&UpdateWorkflowExecutionRequest{
