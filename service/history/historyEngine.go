@@ -132,11 +132,11 @@ func (e *historyEngineImpl) StartWorkflowExecution(request *workflow.StartWorkfl
 	dt := builder.AddDecisionTaskScheduledEvent(taskList, request.GetTaskStartToCloseTimeoutSeconds())
 	msBuilder := newMutableStateBuilder(e.logger)
 	msBuilder.UpdateDecision(&persistence.DecisionInfo{
-			ScheduleID:          dt.GetEventId(),
-			StartedID:           emptyEventID,
-			RequestID:           uuid.New(),
-			StartToCloseTimeout: dt.GetDecisionTaskScheduledEventAttributes().GetStartToCloseTimeoutSeconds(),
-		})
+		ScheduleID:          dt.GetEventId(),
+		StartedID:           emptyEventID,
+		RequestID:           uuid.New(),
+		StartToCloseTimeout: dt.GetDecisionTaskScheduledEventAttributes().GetStartToCloseTimeoutSeconds(),
+	})
 
 	// Serialize the history
 	h, serializedError := builder.Serialize()
@@ -231,34 +231,13 @@ Update_History_Loop:
 
 		// Check execution state to make sure task is in the list of outstanding tasks and it is not yet started.  If
 		// task is not outstanding than it is most probably a duplicate and complete the task.
-		isRunning, di := msBuilder.GetDecision(scheduleID)
+		_, di := msBuilder.GetDecision(scheduleID)
 
-		if !isRunning {
-			// Looks like DecisionTask already completed as a result of another call.
-			// It is OK to drop the task at this point.
-			logDuplicateTaskEvent(context.logger, persistence.TransferTaskTypeDecisionTask, request.GetTaskId(), requestID,
-				scheduleID, emptyEventID, isRunning)
-
-			return nil, &workflow.EntityNotExistsError{Message: "Decision task not found."}
-		}
-
+		// We cannot rely on mutable state at this point since it might get out of sync with the actual history,
+		// so load history.
 		builder, err1 := context.loadWorkflowExecution()
 		if err1 != nil {
 			return nil, err1
-		}
-
-		if di.StartedID != emptyEventID {
-			// If decision is started as part of the current request scope then return a positive response
-			if di.RequestID == requestID {
-				return e.createRecordDecisionTaskStartedResponse(context, di.StartedID), nil
-			}
-
-			// Looks like DecisionTask already started as a result of another call.
-			// It is OK to drop the task at this point.
-			logDuplicateTaskEvent(context.logger, persistence.TransferTaskTypeDecisionTask, request.GetTaskId(), requestID,
-				scheduleID, di.StartedID, isRunning)
-
-			return nil, &workflow.EntityNotExistsError{Message: "Decision task already started."}
 		}
 
 		// First check to see if cache needs to be refreshed as we could potentially have stale workflow execution in
@@ -267,6 +246,33 @@ Update_History_Loop:
 			// Reload workflow execution history
 			context.clear()
 			continue Update_History_Loop
+		}
+
+		// Check execution state to make sure task is in the list of outstanding tasks and it is not yet started.  If
+		// task is not outstanding than it is most probably a duplicate and complete the task.
+		isRunning, startedEvent := builder.isDecisionTaskRunning(scheduleID)
+
+		if !isRunning {
+			// Looks like DecisionTask already completed as a result of another call.
+			// It is OK to drop the task at this point.
+			logDuplicateTaskEvent(context.logger, persistence.TaskListTypeDecision, request.GetTaskId(), requestID,
+				scheduleID, emptyEventID, isRunning)
+
+			return nil, &workflow.EntityNotExistsError{Message: "Decision task not found."}
+		}
+
+		if startedEvent != nil {
+			// If decision is started as part of the current request scope then return a positive response
+			if startedEvent.GetDecisionTaskStartedEventAttributes().GetRequestId() == requestID {
+				return e.createRecordDecisionTaskStartedResponse(context, startedEvent.GetEventId()), nil
+			}
+
+			// Looks like DecisionTask already started as a result of another call.
+			// It is OK to drop the task at this point.
+			logDuplicateTaskEvent(context.logger, persistence.TaskListTypeDecision, request.GetTaskId(), requestID,
+				scheduleID, startedEvent.GetEventId(), isRunning)
+
+			return nil, &workflow.EntityNotExistsError{Message: "Decision task already started."}
 		}
 
 		event := builder.AddDecisionTaskStartedEvent(scheduleID, requestID, request.PollRequest)
@@ -316,6 +322,20 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 	var builder *historyBuilder
 Update_History_Loop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
+		var err1 error
+		builder, err1 = context.loadWorkflowExecution()
+		if err1 != nil {
+			return nil, err1
+		}
+
+		// First check to see if cache needs to be refreshed as we could potentially have stale workflow execution in
+		// some extreme cassandra failure cases.
+		if scheduleID >= builder.nextEventID {
+			// Reload workflow execution history
+			context.clear()
+			continue Update_History_Loop
+		}
+
 		msBuilder, err0 := context.loadWorkflowMutableState()
 		if err0 != nil {
 			return nil, err0
@@ -348,20 +368,6 @@ Update_History_Loop:
 				scheduleID, ai.StartedID, isRunning)
 
 			return nil, &workflow.EntityNotExistsError{Message: "Activity task already started."}
-		}
-
-		var err1 error
-		builder, err1 = context.loadWorkflowExecution()
-		if err1 != nil {
-			return nil, err1
-		}
-
-		// First check to see if cache needs to be refreshed as we could potentially have stale workflow execution in
-		// some extreme cassandra failure cases.
-		if scheduleID >= builder.nextEventID {
-			// Reload workflow execution history
-			context.clear()
-			continue Update_History_Loop
 		}
 
 		event := builder.AddActivityTaskStartedEvent(scheduleID, requestID, request.PollRequest)
@@ -452,6 +458,9 @@ Update_History_Loop:
 		startedID := di.StartedID
 		completedID, err1 := e.completeDecisionTask(builder, msBuilder, scheduleID, startedID, request)
 		if err1 != nil {
+			// Somehow the mutable state got out of sync with the history
+			// clear the cache to reload
+			context.clear()
 			return err1
 		}
 		isComplete := false
@@ -601,7 +610,7 @@ Update_History_Loop:
 			}
 			defer e.tracker.completeTask(id)
 			transferTasks = append(transferTasks, &persistence.DeleteExecutionTask{
-				TaskID:     id,
+				TaskID: id,
 			})
 		}
 
@@ -661,6 +670,9 @@ Update_History_Loop:
 
 		startedID := ai.StartedID
 		if builder.AddActivityTaskCompletedEvent(scheduleID, startedID, request) == nil {
+			// Somehow the mutable state got out of sync with the history
+			// clear the cache to reload
+			context.clear()
 			// Unable to add ActivityTaskCompleted event to history
 			return &workflow.InternalServiceError{Message: "Unable to add ActivityTaskCompleted event to history."}
 		}
@@ -961,11 +973,11 @@ func (e *historyEngineImpl) scheduleDecisionTask(builder *historyBuilder,
 	msBuilder *mutableStateBuilder) *workflow.HistoryEvent {
 	newDecisionEvent := builder.ScheduleDecisionTask()
 	msBuilder.UpdateDecision(&persistence.DecisionInfo{
-			ScheduleID:          newDecisionEvent.GetEventId(),
-			StartedID:           emptyEventID,
-			RequestID:	     emptyUuid,
-			StartToCloseTimeout: newDecisionEvent.GetDecisionTaskScheduledEventAttributes().GetStartToCloseTimeoutSeconds(),
-		})
+		ScheduleID:          newDecisionEvent.GetEventId(),
+		StartedID:           emptyEventID,
+		RequestID:           emptyUuid,
+		StartToCloseTimeout: newDecisionEvent.GetDecisionTaskScheduledEventAttributes().GetStartToCloseTimeoutSeconds(),
+	})
 	return newDecisionEvent
 }
 
