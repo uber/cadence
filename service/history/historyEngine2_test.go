@@ -611,7 +611,7 @@ func (s *engine2Suite) TestRecordActivityTaskStartedIfNoExecution() {
 	identity := "testIdentity"
 	tl := "testTaskList"
 
-	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(nil, &workflow.EntityNotExistsError{}).Once()
+	s.mockExecutionMgr.On("GetWorkflowMutableState", mock.Anything).Return(nil, &workflow.EntityNotExistsError{}).Once()
 
 	response, err := s.historyEngine.RecordActivityTaskStarted(&h.RecordActivityTaskStartedRequest{
 		WorkflowExecution: workflowExecution,

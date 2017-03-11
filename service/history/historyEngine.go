@@ -322,6 +322,11 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 	var builder *historyBuilder
 Update_History_Loop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
+		msBuilder, err0 := context.loadWorkflowMutableState()
+		if err0 != nil {
+			return nil, err0
+		}
+
 		var err1 error
 		builder, err1 = context.loadWorkflowExecution()
 		if err1 != nil {
@@ -334,11 +339,6 @@ Update_History_Loop:
 			// Reload workflow execution history
 			context.clear()
 			continue Update_History_Loop
-		}
-
-		msBuilder, err0 := context.loadWorkflowMutableState()
-		if err0 != nil {
-			return nil, err0
 		}
 
 		// Check execution state to make sure task is in the list of outstanding tasks and it is not yet started.  If
