@@ -353,6 +353,14 @@ Update_History_Loop:
 			return nil, &workflow.EntityNotExistsError{Message: "Activity task not found."}
 		}
 
+		// Check to see if cache needs to be refreshed as we could potentially have stale workflow execution in
+		// some extreme cassandra failure cases.
+		if ai.StartedID >= builder.nextEventID {
+			// Reload workflow execution history
+			context.clear()
+			continue Update_History_Loop
+		}
+
 		if ai.StartedID != emptyEventID {
 			// If activity is started as part of the current request scope then return a positive response
 			if builder != nil && ai.RequestID == requestID {
