@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 	"time"
+	"errors"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/mocks"
@@ -14,6 +15,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/stretchr/testify/mock"
 )
 
 type (
@@ -24,6 +26,10 @@ type (
 		mockShardManager *mocks.ShardManager
 		shardClosedCh    chan int
 		logger           bark.Logger
+
+		mockHistoryEngine  *historyEngineImpl
+		mockMatchingClient *mocks.MatchingClient
+		mockExecutionMgr   *mocks.ExecutionManager
 	}
 )
 
@@ -75,12 +81,48 @@ func (s *timerQueueProcessorSuite) SetupSuite() {
 	}
 }
 
+func (s *timerQueueProcessorSuite) SetupTest() {
+	shardID := 0
+	s.mockMatchingClient = &mocks.MatchingClient{}
+	s.mockExecutionMgr = &mocks.ExecutionManager{}
+	s.mockShardManager = &mocks.ShardManager{}
+	s.shardClosedCh = make(chan int, 100)
+
+	mockShard := &shardContextImpl{
+		shardInfo:                 &persistence.ShardInfo{ShardID: shardID, RangeID: 1, TransferAckLevel: 0},
+		transferSequenceNumber:    1,
+		executionManager:          s.mockExecutionMgr,
+		shardManager:              s.mockShardManager,
+		rangeSize:                 defaultRangeSize,
+		maxTransferSequenceNumber: 100000,
+		closeCh:                   s.shardClosedCh,
+		logger:                    s.logger,
+	}
+
+	cache := newHistoryCache(mockShard, s.logger)
+	txProcessor := newTransferQueueProcessor(mockShard, s.mockMatchingClient, cache)
+	tracker := newPendingTaskTracker(mockShard, txProcessor, s.logger)
+	h := &historyEngineImpl{
+		shard:            mockShard,
+		executionManager: s.mockExecutionMgr,
+		txProcessor:      txProcessor,
+		tracker:          tracker,
+		cache:            cache,
+		logger:           s.logger,
+		tokenSerializer:  common.NewJSONTaskTokenSerializer(),
+	}
+	h.timerProcessor = newTimerQueueProcessor(h, s.mockExecutionMgr, s.logger)
+	s.mockHistoryEngine = h
+}
+
 func (s *timerQueueProcessorSuite) TearDownSuite() {
 	s.TearDownWorkflowStore()
 }
 
 func (s *timerQueueProcessorSuite) TearDownTest() {
 	s.mockShardManager.AssertExpectations(s.T())
+	s.mockMatchingClient.AssertExpectations(s.T())
+	s.mockExecutionMgr.AssertExpectations(s.T())
 }
 
 func (s *timerQueueProcessorSuite) getHistoryAndTimers(timeOuts []int32) ([]byte, []persistence.Task) {
@@ -665,3 +707,91 @@ func (s *timerQueueProcessorSuite) TestTimerUserTimersSameExpiry() {
 	running, _ = s.checkTimedOutEventForUserTimer(workflowExecution, startTimerEvent2.GetEventId())
 	s.False(running)
 }
+
+func (s *timerQueueProcessorSuite) TestTimerUpdateTimesOut() {
+	taskList := "user-timer-update-times-out"
+	builder := newHistoryBuilder(s.logger)
+	builder.AddWorkflowExecutionStartedEvent(&workflow.StartWorkflowExecutionRequest{
+		TaskList:                       common.TaskListPtr(workflow.TaskList{Name: common.StringPtr(taskList)}),
+		TaskStartToCloseTimeoutSeconds: common.Int32Ptr(1),
+	})
+
+	decisionScheduledEvent := addDecisionTaskScheduledEvent(builder, taskList, 1)
+	decisionStartedEvent := addDecisionTaskStartedEvent(builder, decisionScheduledEvent.GetEventId(), taskList, uuid.New())
+
+	h, serializedError := builder.Serialize()
+	s.Nil(serializedError)
+
+	wfResponse := &persistence.GetWorkflowExecutionResponse{
+		ExecutionInfo: &persistence.WorkflowExecutionInfo{
+			WorkflowID:           "wId",
+			RunID:                "rId",
+			TaskList:             taskList,
+			History:              h,
+			ExecutionContext:     nil,
+			State:                persistence.WorkflowStateRunning,
+			NextEventID:          builder.nextEventID,
+			LastProcessedEvent:   emptyEventID,
+			LastUpdatedTimestamp: time.Time{},
+			DecisionPending:      true},
+	}
+
+	wfResponse2 := &persistence.GetWorkflowExecutionResponse{
+		ExecutionInfo: &persistence.WorkflowExecutionInfo{
+			WorkflowID:           "wId",
+			RunID:                "rId",
+			TaskList:             taskList,
+			History:              h,
+			ExecutionContext:     nil,
+			State:                persistence.WorkflowStateRunning,
+			NextEventID:          builder.nextEventID,
+			LastProcessedEvent:   emptyEventID,
+			LastUpdatedTimestamp: time.Time{},
+			DecisionPending:      true},
+	}
+
+
+	taskID := int64(100)
+
+	timerTask := &persistence.TimerTaskInfo{WorkflowID: "wid", RunID: "rid", TaskID: taskID,
+		TaskType: persistence.TaskTypeDecisionTimeout, TimeoutType: int(workflow.TimeoutType_START_TO_CLOSE),
+		EventID: decisionScheduledEvent.GetEventId()}
+	timerIndexResponse := &persistence.GetTimerIndexTasksResponse{Timers: []*persistence.TimerTaskInfo{timerTask}}
+
+	ms := &persistence.WorkflowMutableState{}
+	addDecisionToMutableState(ms, decisionScheduledEvent.GetEventId(), decisionStartedEvent.GetEventId(), uuid.New(), 1)
+	gwmsResponse := &persistence.GetWorkflowMutableStateResponse{State: ms}
+
+	s.mockExecutionMgr.On("GetTimerIndexTasks", mock.Anything).Return(timerIndexResponse, nil).Once()
+	s.mockExecutionMgr.On("GetTimerIndexTasks",
+		&persistence.GetTimerIndexTasksRequest{MinKey:100, MaxKey:101, BatchSize:1}).Return(timerIndexResponse, nil).Twice()
+	s.mockExecutionMgr.On("GetTimerIndexTasks", mock.Anything).Return(
+		&persistence.GetTimerIndexTasksResponse{Timers: []*persistence.TimerTaskInfo{}}, nil)
+
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(wfResponse, nil).Once()
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(wfResponse2, nil).Once()
+	s.mockExecutionMgr.On("GetWorkflowMutableState", mock.Anything).Return(gwmsResponse, nil).Twice()
+	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(errors.New("FAILED")).Once()
+	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(nil).Once()
+
+	processor := newTimerQueueProcessor(s.mockHistoryEngine, s.mockExecutionMgr, s.logger).(*timerQueueProcessorImpl)
+	processor.NotifyNewTimer(taskID)
+
+	go func() {
+		for {
+			count := processor.timerFiredCount
+			s.logger.Infof("TimerFiredCount: %v", count)
+			if count == 1 {
+
+				processor.Stop()
+				return
+			}
+			time.Sleep(time.Second)
+		}
+	}()
+
+	// Start timer Processor.
+	processor.startInSync(1)
+}
+
+

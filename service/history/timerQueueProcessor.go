@@ -12,11 +12,17 @@ import (
 	"github.com/uber/cadence/common/persistence"
 
 	"github.com/uber-common/bark"
+	"errors"
 )
 
 const (
 	timerTaskBatchSize          = 10
 	processTimerTaskWorkerCount = 5
+	updateFailureRetryCount = 5
+)
+
+var (
+	errTimerTaskNotFound = errors.New("Timer task not found")
 )
 
 type (
@@ -124,13 +130,23 @@ func newTimerQueueProcessor(historyService *historyEngineImpl, executionManager 
 	}
 }
 
+func (t *timerQueueProcessorImpl) startInSync(taskWorkerCount int) {
+	if !atomic.CompareAndSwapInt32(&t.isStarted, 0, 1) {
+		return
+	}
+
+	t.logger.Info("Timer queue processor started in sync mode.")
+	t.shutdownWG.Add(1)
+	t.processorPump(taskWorkerCount)
+}
+
 func (t *timerQueueProcessorImpl) Start() {
 	if !atomic.CompareAndSwapInt32(&t.isStarted, 0, 1) {
 		return
 	}
 
 	t.shutdownWG.Add(1)
-	go t.processorPump()
+	go t.processorPump(processTimerTaskWorkerCount)
 
 	t.logger.Info("Timer queue processor started.")
 }
@@ -170,13 +186,13 @@ func (t *timerQueueProcessorImpl) NotifyNewTimer(taskID int64) {
 	}
 }
 
-func (t *timerQueueProcessorImpl) processorPump() {
+func (t *timerQueueProcessorImpl) processorPump(taskWorkerCount int) {
 	defer t.shutdownWG.Done()
 
 	// Workers to process timer tasks that are expired.
 	tasksCh := make(chan SequenceID, timerTaskBatchSize)
 	var workerWG sync.WaitGroup
-	for i := 0; i < processTimerTaskWorkerCount; i++ {
+	for i := 0; i < taskWorkerCount; i++ {
 		workerWG.Add(1)
 		go t.processTaskWorker(tasksCh, &workerWG)
 	}
@@ -214,7 +230,7 @@ func (t *timerQueueProcessorImpl) internalProcessor(tasksCh chan<- SequenceID) e
 		gate.setNext(nextKey)
 	}
 
-	t.logger.Debugf("InitialSeed Key: %s", nextKey)
+	t.logger.Infof("InitialSeed Key: %s", nextKey)
 
 	for {
 		isWokeByNewTimer := false
@@ -333,16 +349,33 @@ func (t *timerQueueProcessorImpl) processTaskWorker(tasksCh <-chan SequenceID, w
 				return
 			}
 
-			err := t.processTimerTask(key)
-			if err != nil {
-				t.logger.Errorf("Failed to process timer with SequenceID: %s with error: %v", key, err)
+			var err error
+
+		UpdateFailureLoop:
+			for attempt := 0; attempt < updateFailureRetryCount; attempt++ {
+				err = t.processTimerTask(key)
+				if err != nil {
+					t.logger.Infof("Failed to process timer with SequenceID: %s with error: %v", key, err)
+
+					// We will retry until we don't find the timer task any more.
+					if err != errTimerTaskNotFound {
+						continue UpdateFailureLoop
+					}
+				}
+				t.logger.Infof("Completed processing timer task: %s", key)
+				break UpdateFailureLoop
+			}
+
+			if err != nil && err != errTimerTaskNotFound {
+				// We need to retry for this timer task ID
+				t.NotifyNewTimer(int64(key))
 			}
 		}
 	}
 }
 
 func (t *timerQueueProcessorImpl) processTimerTask(key SequenceID) error {
-	t.logger.Debugf("Processing timer with SequenceID: %s", key)
+	t.logger.Infof("Processing timer with SequenceID: %s", key)
 
 	tasks, err := t.getTimerTasks(key, key+1, 1)
 	if err != nil {
@@ -350,16 +383,18 @@ func (t *timerQueueProcessorImpl) processTimerTask(key SequenceID) error {
 	}
 
 	if len(tasks) != 1 {
-		return fmt.Errorf("Unable to find exact task for - SequenceID: %d, found task count: %d", key, len(tasks))
+		t.logger.Infof("Unable to find exact task for - SequenceID: %d, found task count: %d", key, len(tasks))
+		return errTimerTaskNotFound
 	}
 
 	timerTask := tasks[0]
 
 	if timerTask.TaskID != int64(key) {
-		return fmt.Errorf("The key didn't match - SequenceID: %d, found task: %v", key, timerTask)
+		t.logger.Infof("The key didn't match - SequenceID: %d, found task: %v", key, timerTask)
+		return errTimerTaskNotFound
 	}
 
-	t.logger.Debugf("Processing found timer: %s, for WorkflowID: %v, RunID: %v, Type: %v, TimeoutTupe: %v, EventID: %v",
+	t.logger.Infof("Processing found timer: %s, for WorkflowID: %v, RunID: %v, Type: %v, TimeoutTupe: %v, EventID: %v",
 		SequenceID(timerTask.TaskID), timerTask.WorkflowID, timerTask.RunID, timerTask.TaskType,
 		workflow.TimeoutType(timerTask.TimeoutType).String(), timerTask.EventID)
 
@@ -375,7 +410,6 @@ func (t *timerQueueProcessorImpl) processTimerTask(key SequenceID) error {
 
 	context.Lock()
 	defer context.Unlock()
-	atomic.AddUint64(&t.timerFiredCount, 1)
 
 	switch timerTask.TaskType {
 	case persistence.TaskTypeUserTimer:
@@ -384,6 +418,11 @@ func (t *timerQueueProcessorImpl) processTimerTask(key SequenceID) error {
 		err = t.processActivityTimeout(context, timerTask)
 	case persistence.TaskTypeDecisionTimeout:
 		err = t.processDecisionTimeout(context, timerTask)
+	}
+
+	if err == nil {
+		// Tracking only successful ones.
+		atomic.AddUint64(&t.timerFiredCount, 1)
 	}
 
 	return err
