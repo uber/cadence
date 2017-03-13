@@ -110,6 +110,11 @@ const (
 		`start_to_close_timeout: ?` +
 		`}`
 
+	templateMutableStateInfoType = `{` +
+		`next_event_id: ?, ` +
+		`state: ?` +
+		`}`
+
 	templateTimerInfoType = `{` +
 		`timer_id: ?, ` +
 		`started_id: ?, ` +
@@ -155,8 +160,9 @@ const (
 		`VALUES(?, ?, ?, ?, ?, ?) IF NOT EXISTS`
 
 	templateCreateWorkflowExecutionQuery2 = `INSERT INTO executions (` +
-		`shard_id, workflow_id, run_id, type, execution, next_event_id, task_id, decision) ` +
-		`VALUES(?, ?, ?, ?, ` + templateWorkflowExecutionType + `, ?, ?, ` + templateDecisionInfoType + `) IF NOT EXISTS`
+		`shard_id, workflow_id, run_id, type, execution, next_event_id, task_id, decision, mutable_info) ` +
+		`VALUES(?, ?, ?, ?, ` + templateWorkflowExecutionType + `, ?, ?, `+
+		templateDecisionInfoType + `, ` + templateMutableStateInfoType + `) IF NOT EXISTS`
 
 	templateCreateTransferTaskQuery = `INSERT INTO executions (` +
 		`shard_id, type, workflow_id, run_id, transfer, task_id) ` +
@@ -179,7 +185,7 @@ const (
 		`and run_id = ? ` +
 		`and task_id = ?`
 
-	templateGetWorkflowMutableStateQuery = `SELECT activity_map, timer_map, decision ` +
+	templateGetWorkflowMutableStateQuery = `SELECT activity_map, timer_map, decision, mutable_info ` +
 		`FROM executions ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
@@ -207,6 +213,15 @@ const (
 
 	templateUpdateDecisionInfoQuery = `UPDATE executions ` +
 		`SET decision =` + templateDecisionInfoType + ` ` +
+		`WHERE shard_id = ? ` +
+		`and type = ? ` +
+		`and workflow_id = ? ` +
+		`and run_id = ? ` +
+		`and task_id = ? ` +
+		`IF next_event_id = ? and range_id = ?`
+
+	templateUpdateWorkflowMutableStateInfoQuery = `UPDATE executions ` +
+		`SET mutable_info =` + templateMutableStateInfoType + ` ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
 		`and workflow_id = ? ` +
@@ -537,7 +552,9 @@ func (d *cassandraPersistence) CreateWorkflowExecution(request *CreateWorkflowEx
 		request.Decision.ScheduleID,
 		request.Decision.StartedID,
 		request.Decision.RequestID,
-		request.Decision.StartToCloseTimeout)
+		request.Decision.StartToCloseTimeout,
+		request.NextEventID,
+		WorkflowStateCreated)
 
 	d.createTransferTasks(batch, request.TransferTasks, request.Execution.GetWorkflowId(), request.Execution.GetRunId(),
 		cqlNowTimestamp)
@@ -663,8 +680,7 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 	d.updateTimerInfos(batch, request.UpserTimerInfos, request.DeleteTimerInfos,
 		executionInfo.WorkflowID, executionInfo.RunID, request.Condition, request.RangeID)
 
-	d.updateDecisionInfo(batch, request.UpdateDecision, executionInfo.WorkflowID,
-		executionInfo.RunID, request.Condition, request.RangeID)
+	d.updateDecisionAndMutableStateInfo(batch, request.UpdateDecision, executionInfo, request.Condition, request.RangeID)
 
 	previous := make(map[string]interface{})
 	applied, _, err := d.session.MapExecuteBatchCAS(batch, previous)
@@ -1153,6 +1169,9 @@ func (d *cassandraPersistence) GetWorkflowMutableState(request *GetWorkflowMutab
 	di := result["decision"].(map[string]interface{})
 	state.Decision = createDecisionInfo(di)
 
+	msi := result["mutable_info"].(map[string]interface{})
+	state.MutableState = createWorkflowMutableStateInfo(msi)
+
 	return &GetWorkflowMutableStateResponse{State: state}, nil
 }
 
@@ -1231,8 +1250,8 @@ func (d *cassandraPersistence) createTimerTasks(batch *gocql.Batch, timerTasks [
 	}
 }
 
-func (d *cassandraPersistence) updateDecisionInfo(batch *gocql.Batch, di *DecisionInfo,
-	workflowID string, runID string, condition int64, rangeID int64) {
+func (d *cassandraPersistence) updateDecisionAndMutableStateInfo(batch *gocql.Batch, di *DecisionInfo, e *WorkflowExecutionInfo,
+	condition int64, rangeID int64) {
 
 	if di != nil {
 		batch.Query(templateUpdateDecisionInfoQuery,
@@ -1242,12 +1261,23 @@ func (d *cassandraPersistence) updateDecisionInfo(batch *gocql.Batch, di *Decisi
 			di.StartToCloseTimeout,
 			d.shardID,
 			rowTypeExecution,
-			workflowID,
-			runID,
+			e.WorkflowID,
+			e.RunID,
 			rowTypeExecutionTaskID,
 			condition,
 			rangeID)
 	}
+
+	batch.Query(templateUpdateWorkflowMutableStateInfoQuery,
+		e.NextEventID,
+		e.State,
+		d.shardID,
+		rowTypeExecution,
+		e.WorkflowID,
+		e.RunID,
+		rowTypeExecutionTaskID,
+		condition,
+		rangeID)
 }
 
 func (d *cassandraPersistence) updateActivityInfos(batch *gocql.Batch, activityInfos []*ActivityInfo, deleteInfo *int64,
@@ -1496,6 +1526,20 @@ func createDecisionInfo(result map[string]interface{}) *DecisionInfo {
 			info.RequestID = v.(string)
 		case "start_to_close_timeout":
 			info.StartToCloseTimeout = int32(v.(int))
+		}
+	}
+
+	return info
+}
+
+func createWorkflowMutableStateInfo(result map[string]interface{}) *WorkflowMutableStateInfo {
+	info := &WorkflowMutableStateInfo{}
+	for k, v := range result {
+		switch k {
+		case "next_event_id":
+			info.NextEventID = v.(int64)
+		case "state":
+			info.State = v.(int)
 		}
 	}
 

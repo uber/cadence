@@ -8,7 +8,7 @@ import (
 
 // Workflow execution states
 const (
-	WorkflowStateCreated   = iota
+	WorkflowStateCreated = iota
 	WorkflowStateRunning
 	WorkflowStateCompleted
 )
@@ -21,7 +21,7 @@ const (
 
 // Transfer task types
 const (
-	TransferTaskTypeDecisionTask    = iota
+	TransferTaskTypeDecisionTask = iota
 	TransferTaskTypeActivityTask
 	TransferTaskTypeDeleteExecution
 )
@@ -160,11 +160,17 @@ type (
 		EventID int64
 	}
 
+	WorkflowMutableStateInfo struct {
+		NextEventID int64
+		State       int
+	}
+
 	// WorkflowMutableState indicates workflow related state
 	WorkflowMutableState struct {
 		ActivitInfos map[int64]*ActivityInfo
 		TimerInfos   map[string]*TimerInfo
 		Decision     *DecisionInfo
+		MutableState *WorkflowMutableStateInfo
 	}
 
 	// ActivityInfo details.

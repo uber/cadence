@@ -559,6 +559,34 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_Timers() {
 	s.Equal(0, len(state.TimerInfos))
 }
 
+func (s *cassandraPersistenceSuite) TestWorkflowMutableStateInfo() {
+	workflowExecution := gen.WorkflowExecution{WorkflowId: common.StringPtr("test-workflow-mutable-state-test"),
+		RunId: common.StringPtr("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")}
+
+	task0, err0 := s.CreateWorkflowExecution(workflowExecution, "taskList", []byte("event1"), nil, 3, 0, 2, nil)
+	s.Nil(err0, "No error expected.")
+	s.NotEmpty(task0, "Expected non empty task identifier.")
+
+	info0, err1 := s.GetWorkflowExecutionInfo(workflowExecution)
+	s.Nil(err1, "No error expected.")
+	s.NotNil(info0, "Valid Workflow info expected.")
+
+	updatedInfo := copyWorkflowExecutionInfo(info0)
+	updatedInfo.History = []byte(`event2`)
+	updatedInfo.NextEventID = int64(5)
+	updatedInfo.LastProcessedEvent = int64(2)
+
+	err2 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(4)}, nil, int64(3), nil, nil, nil, nil, nil, nil, nil)
+	s.Nil(err2, "No error expected.")
+
+	state, err1 := s.GetWorkflowMutableState(workflowExecution)
+	s.Nil(err1, "No error expected.")
+	s.NotNil(state, "expected valid state.")
+	s.NotNil(state.MutableState, "expected valid MS Info state.")
+	s.Equal(updatedInfo.NextEventID, state.MutableState.NextEventID)
+	s.Equal(updatedInfo.State, state.MutableState.State)
+}
+
 func copyWorkflowExecutionInfo(sourceInfo *WorkflowExecutionInfo) *WorkflowExecutionInfo {
 	return &WorkflowExecutionInfo{
 		WorkflowID:           sourceInfo.WorkflowID,

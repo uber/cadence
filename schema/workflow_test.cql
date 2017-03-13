@@ -15,6 +15,7 @@ CREATE TYPE shard (
   transfer_ack_level  bigint,
 );
 
+--- Workflow execution state ---
 CREATE TYPE workflow_execution (
   workflow_id           text,
   run_id                uuid,
@@ -29,7 +30,13 @@ CREATE TYPE workflow_execution (
   create_request_id     uuid,
 );
 
--- TODO: Remove fields that are left over from activitiy and workflow tasks.
+--- Workflow execution mutable state ---
+CREATE TYPE workflow_execution_mutable_info (
+    next_event_id         bigint,
+    state                 int,
+);
+
+-- TODO: Remove fields that are left over from activity and workflow tasks.
 CREATE TYPE transfer_task (
   workflow_id      text,
   run_id           uuid,
@@ -95,6 +102,7 @@ CREATE TABLE executions (
   activity_map       map<bigint, frozen<activity_info>>,
   timer_map          map<text, frozen<timer_info>>,
   decision           frozen<decision_info>,
+  mutable_info       frozen<workflow_execution_mutable_info>,
   PRIMARY KEY  (shard_id, type, workflow_id, run_id, task_id)
 );
 
