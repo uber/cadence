@@ -130,7 +130,8 @@ func newTimerQueueProcessor(historyService *historyEngineImpl, executionManager 
 	}
 }
 
-func (t *timerQueueProcessorImpl) startInSync(taskWorkerCount int) {
+//  Test hook to start the processor in sync mode.
+func (t *timerQueueProcessorImpl) testStartInSync(taskWorkerCount int) {
 	if !atomic.CompareAndSwapInt32(&t.isStarted, 0, 1) {
 		return
 	}
