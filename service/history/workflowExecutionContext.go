@@ -88,7 +88,8 @@ func (c *workflowExecutionContext) loadWorkflowMutableState() (*mutableStateBuil
 
 	msBuilder := newMutableStateBuilder(c.logger)
 	if response != nil && response.State != nil {
-		msBuilder.Load(response.State.ActivitInfos, response.State.TimerInfos, response.State.Decision)
+		msBuilder.Load(
+			response.State.ActivitInfos, response.State.TimerInfos, response.State.Decision, response.State.MutableState)
 	}
 
 	c.msBuilder = msBuilder
@@ -130,13 +131,13 @@ func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persi
 	var deleteActivityInfo *int64
 	var decisionInfo *persistence.DecisionInfo
 
-	if c.msBuilder != nil {
-		upsertActivityInfos, c.msBuilder.updateActivityInfos = c.msBuilder.updateActivityInfos, upsertActivityInfos
-		deleteActivityInfo, c.msBuilder.deleteActivityInfo = c.msBuilder.deleteActivityInfo, deleteActivityInfo
-		upsertTimerInfos, c.msBuilder.updateTimerInfos = c.msBuilder.updateTimerInfos, upsertTimerInfos
-		deleteTimerInfos, c.msBuilder.deleteTimerInfos = c.msBuilder.deleteTimerInfos, deleteTimerInfos
-		decisionInfo, c.msBuilder.updatedDecision = c.msBuilder.updatedDecision, decisionInfo
-	}
+	upsertActivityInfos, c.msBuilder.updateActivityInfos = c.msBuilder.updateActivityInfos, upsertActivityInfos
+	deleteActivityInfo, c.msBuilder.deleteActivityInfo = c.msBuilder.deleteActivityInfo, deleteActivityInfo
+	upsertTimerInfos, c.msBuilder.updateTimerInfos = c.msBuilder.updateTimerInfos, upsertTimerInfos
+	deleteTimerInfos, c.msBuilder.deleteTimerInfos = c.msBuilder.deleteTimerInfos, deleteTimerInfos
+	decisionInfo, c.msBuilder.updatedDecision = c.msBuilder.updatedDecision, decisionInfo
+
+	c.msBuilder.UpdateWorkflowMutableStateInfo(c.executionInfo.NextEventID, c.executionInfo.State)
 
 	if err1 := c.updateWorkflowExecutionWithRetry(&persistence.UpdateWorkflowExecutionRequest{
 		ExecutionInfo:       c.executionInfo,
