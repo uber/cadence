@@ -1,8 +1,8 @@
 package history
 
 import (
-	"fmt"
 	"errors"
+	"fmt"
 
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/common"
@@ -20,14 +20,15 @@ type (
 		updateActivityInfos             []*persistence.ActivityInfo         // Modified activities from last update.
 		deleteActivityInfo              *int64                              // Deleted activities from last update.
 
-		pendingTimerInfoIDs             map[string]*persistence.TimerInfo   // User Timer ID -> Timer Info.
-		updateTimerInfos                []*persistence.TimerInfo            // Modified timers from last update.
-		deleteTimerInfos                []string                            // Deleted timers from last update.
+		pendingTimerInfoIDs map[string]*persistence.TimerInfo // User Timer ID -> Timer Info.
+		updateTimerInfos    []*persistence.TimerInfo          // Modified timers from last update.
+		deleteTimerInfos    []string                          // Deleted timers from last update.
 
-		pendingDecision                 *persistence.DecisionInfo           // The pending decision info.
-		updatedDecision                 *persistence.DecisionInfo           // Modified decision from last update.
+		pendingDecision *persistence.DecisionInfo // The pending decision info.
+		updatedDecision *persistence.DecisionInfo // Modified decision from last update.
 
-		logger                          bark.Logger
+		wmsi   *persistence.WorkflowMutableStateInfo // Workflow mutable state info.
+		logger bark.Logger
 	}
 )
 
@@ -45,10 +46,12 @@ func newMutableStateBuilder(logger bark.Logger) *mutableStateBuilder {
 func (e *mutableStateBuilder) Load(
 	activityInfos map[int64]*persistence.ActivityInfo,
 	timerInfos map[string]*persistence.TimerInfo,
-	decision *persistence.DecisionInfo) {
+	decision *persistence.DecisionInfo,
+	wmsi *persistence.WorkflowMutableStateInfo) {
 	e.pendingActivityInfoIDs = activityInfos
 	e.pendingTimerInfoIDs = timerInfos
 	e.pendingDecision = decision
+	e.wmsi = wmsi
 	for _, ai := range activityInfos {
 		e.pendingActivityInfoByActivityID[ai.ActivityID] = ai.ScheduleID
 	}
@@ -127,9 +130,6 @@ func (e *mutableStateBuilder) DeleteUserTimer(timerID string) error {
 
 // GetDecision returns details about the in-progress decision task
 func (e *mutableStateBuilder) GetDecision(scheduleEventID int64) (bool, *persistence.DecisionInfo) {
-	if e.updatedDecision != nil {
-		return e.updatedDecision.ScheduleID == scheduleEventID, e.updatedDecision
-	}
 	if e.pendingDecision != nil {
 		return e.pendingDecision.ScheduleID == scheduleEventID, e.pendingDecision
 	}
@@ -152,4 +152,17 @@ func (e *mutableStateBuilder) DeleteDecision() {
 	}
 	e.updatedDecision = emptyDecisionInfo
 	e.pendingDecision = emptyDecisionInfo
+}
+
+// GetNextEventID returns next event ID
+func (e *mutableStateBuilder) GetNextEventID() int64 {
+	return e.wmsi.NextEventID
+}
+
+// UpdateWorkflowMutableStateInfo updates mutable state info.
+func (e *mutableStateBuilder) UpdateWorkflowMutableStateInfo(nextEventID int64, state int) {
+	e.wmsi = &persistence.WorkflowMutableStateInfo{
+		NextEventID: nextEventID,
+		State:       state,
+	}
 }
