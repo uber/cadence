@@ -230,6 +230,23 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedIfTaskAlreadyCompleted() {
 	scheduleEvent := addDecisionTaskScheduledEvent(builder, tl, 100)
 	startedEvent := addDecisionTaskStartedEvent(builder, scheduleEvent.GetEventId(), tl, identity)
 	addDecisionTaskCompletedEvent(builder, scheduleEvent.GetEventId(), startedEvent.GetEventId(), nil, identity)
+	history, _ := builder.Serialize()
+
+	wfResponse := &persistence.GetWorkflowExecutionResponse{
+		ExecutionInfo: &persistence.WorkflowExecutionInfo{
+			WorkflowID:           "wId",
+			RunID:                "rId",
+			TaskList:             tl,
+			History:              history,
+			ExecutionContext:     nil,
+			State:                persistence.WorkflowStateRunning,
+			NextEventID:          builder.nextEventID,
+			LastProcessedEvent:   emptyEventID,
+			LastUpdatedTimestamp: time.Time{},
+			DecisionPending:      true},
+	}
+
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(wfResponse, nil).Once()
 
 	ms := &persistence.WorkflowMutableState{ActivitInfos: make(map[int64]*persistence.ActivityInfo)}
 	gwmsResponse := &persistence.GetWorkflowMutableStateResponse{State: ms}
@@ -413,7 +430,7 @@ func (s *engine2Suite) TestRecordDecisionTaskRetryDifferentRequest() {
 	ms := &persistence.WorkflowMutableState{}
 	addDecisionToMutableState(ms, scheduleEvent.GetEventId(), emptyEventID, requestID, 1)
 	gwmsResponse := &persistence.GetWorkflowMutableStateResponse{State: ms}
-	s.mockExecutionMgr.On("GetWorkflowMutableState", mock.Anything).Return(gwmsResponse, nil).Once()
+	s.mockExecutionMgr.On("GetWorkflowMutableState", mock.Anything).Return(gwmsResponse, nil).Twice()
 
 	history1, _ := builder.Serialize()
 	wfResponse1 := &persistence.GetWorkflowExecutionResponse{
@@ -429,16 +446,27 @@ func (s *engine2Suite) TestRecordDecisionTaskRetryDifferentRequest() {
 			LastUpdatedTimestamp: time.Time{},
 			DecisionPending:      true},
 	}
-	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(wfResponse1, nil).Twice()
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(wfResponse1, nil).Once()
+
+	addDecisionTaskStartedEventWithRequestID(builder, scheduleEvent.GetEventId(), "some_other_req", tl, identity)
+
+	history2, _ := builder.Serialize()
+	wfResponse2 := &persistence.GetWorkflowExecutionResponse{
+		ExecutionInfo: &persistence.WorkflowExecutionInfo{
+			WorkflowID:           "wId",
+			RunID:                "rId",
+			TaskList:             tl,
+			History:              history2,
+			ExecutionContext:     nil,
+			State:                persistence.WorkflowStateRunning,
+			NextEventID:          builder.nextEventID,
+			LastProcessedEvent:   emptyEventID,
+			LastUpdatedTimestamp: time.Time{},
+			DecisionPending:      true},
+	}
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(wfResponse2, nil).Once()
 
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(&persistence.ConditionFailedError{}).Once()
-
-	startedEvent := addDecisionTaskStartedEventWithRequestID(builder, scheduleEvent.GetEventId(), "some_other_req", tl, identity)
-
-	ms2 := &persistence.WorkflowMutableState{}
-	addDecisionToMutableState(ms2, scheduleEvent.GetEventId(), startedEvent.GetEventId(), "some_other_req", 1)
-	gwmsResponse2 := &persistence.GetWorkflowMutableStateResponse{State: ms2}
-	s.mockExecutionMgr.On("GetWorkflowMutableState", mock.Anything).Return(gwmsResponse2, nil).Once()
 
 	response, err := s.historyEngine.RecordDecisionTaskStarted(&h.RecordDecisionTaskStartedRequest{
 		WorkflowExecution: workflowExecution,
