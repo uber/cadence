@@ -19,10 +19,11 @@ const (
 type (
 	historyCache struct {
 		cache.Cache
-		shard                 ShardContext
-		executionManager      persistence.ExecutionManager
-		disabled              bool
-		logger                bark.Logger
+		shard            ShardContext
+		executionManager persistence.ExecutionManager
+		lockManager      *executionLockManager
+		disabled         bool
+		logger           bark.Logger
 	}
 )
 
@@ -38,9 +39,10 @@ func newHistoryCache(shard ShardContext, logger bark.Logger) *historyCache {
 	opts.TTL = historyCacheTTL
 
 	return &historyCache{
-		Cache:                 cache.New(historyCacheMaxSize, opts),
-		shard:                 shard,
-		executionManager:      shard.GetExecutionManager(),
+		Cache:            cache.New(historyCacheMaxSize, opts),
+		shard:            shard,
+		executionManager: shard.GetExecutionManager(),
+		lockManager:      newExecutionLockManager(),
 		logger: logger.WithFields(bark.Fields{
 			tagWorkflowComponent: tagValueHistoryCacheComponent,
 		}),
@@ -51,7 +53,7 @@ func (c *historyCache) getOrCreateWorkflowExecution(domainID string,
 	execution workflow.WorkflowExecution) (*workflowExecutionContext, error) {
 	// Test hook for disabling the cache
 	if c.disabled {
-		return newWorkflowExecutionContext(domainID, execution, c.shard, c.executionManager, c.logger), nil
+		return newWorkflowExecutionContext(domainID, execution, c.shard, c.executionManager, c.lockManager, c.logger), nil
 	}
 
 	key := execution.GetRunId()
@@ -61,7 +63,7 @@ func (c *historyCache) getOrCreateWorkflowExecution(domainID string,
 	}
 
 	// Let's create the workflow execution context
-	context = newWorkflowExecutionContext(domainID, execution, c.shard, c.executionManager, c.logger)
+	context = newWorkflowExecutionContext(domainID, execution, c.shard, c.executionManager, c.lockManager, c.logger)
 	context = c.PutIfNotExist(key, context).(*workflowExecutionContext)
 
 	return context, nil

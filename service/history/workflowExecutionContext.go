@@ -18,6 +18,7 @@ type (
 		workflowExecution workflow.WorkflowExecution
 		shard             ShardContext
 		executionManager  persistence.ExecutionManager
+		lockManager       *executionLockManager
 		logger            bark.Logger
 
 		sync.Mutex
@@ -33,7 +34,7 @@ var (
 )
 
 func newWorkflowExecutionContext(domainID string, execution workflow.WorkflowExecution, shard ShardContext,
-	executionManager persistence.ExecutionManager, logger bark.Logger) *workflowExecutionContext {
+	executionManager persistence.ExecutionManager, lockManager *executionLockManager, logger bark.Logger) *workflowExecutionContext {
 	lg := logger.WithFields(bark.Fields{
 		tagWorkflowExecutionID: execution.GetWorkflowId(),
 		tagWorkflowRunID:       execution.GetRunId(),
@@ -45,9 +46,18 @@ func newWorkflowExecutionContext(domainID string, execution workflow.WorkflowExe
 		workflowExecution: execution,
 		shard:             shard,
 		executionManager:  executionManager,
+		lockManager:       lockManager,
 		tBuilder:          tBuilder,
 		logger:            lg,
 	}
+}
+
+func (c *workflowExecutionContext) Lock() {
+	c.lockManager.lockExecution(c.workflowExecution.GetRunId())
+}
+
+func (c *workflowExecutionContext) Unlock() {
+	c.lockManager.unlockExecution(c.workflowExecution.GetRunId())
 }
 
 func (c *workflowExecutionContext) loadWorkflowExecution() (*mutableStateBuilder, error) {
