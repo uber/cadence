@@ -375,7 +375,7 @@ func (t *timerQueueProcessorImpl) processTaskWorker(tasksCh <-chan SequenceID, w
 }
 
 func (t *timerQueueProcessorImpl) processTimerTask(key SequenceID) error {
-	t.logger.Infof("Processing timer with SequenceID: %s", key)
+	t.logger.Debugf("Processing timer with SequenceID: %s", key)
 
 	tasks, err := t.getTimerTasks(key, key+1, 1)
 	if err != nil {
@@ -394,7 +394,7 @@ func (t *timerQueueProcessorImpl) processTimerTask(key SequenceID) error {
 		return errTimerTaskNotFound
 	}
 
-	t.logger.Infof("Processing found timer: %s, for WorkflowID: %v, RunID: %v, Type: %v, TimeoutTupe: %v, EventID: %v",
+	t.logger.Debugf("Processing found timer: %s, for WorkflowID: %v, RunID: %v, Type: %v, TimeoutTupe: %v, EventID: %v",
 		SequenceID(timerTask.TaskID), timerTask.WorkflowID, timerTask.RunID, timerTask.TaskType,
 		workflow.TimeoutType(timerTask.TimeoutType).String(), timerTask.EventID)
 
