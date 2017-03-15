@@ -114,7 +114,7 @@ func (p *workflowExecutionPersistenceClient) CreateWorkflowExecution(request *Cr
 	sw.Stop()
 
 	if err != nil {
-
+		p.updateErrorMetric(metrics.CreateWorkflowExecutionScope, err)
 	}
 
 	return response, err
@@ -128,12 +128,7 @@ func (p *workflowExecutionPersistenceClient) GetWorkflowExecution(request *GetWo
 	sw.Stop()
 
 	if err != nil {
-		switch err.(type) {
-		case *workflow.EntityNotExistsError:
-			p.m3Client.IncCounter(metrics.GetWorkflowExecutionScope, metrics.CadenceErrEntityNotExistsCounter)
-		default:
-			p.m3Client.IncCounter(metrics.GetWorkflowExecutionScope, metrics.PersistenceFailures)
-		}
+		p.updateErrorMetric(metrics.GetWorkflowExecutionScope, err)
 	}
 
 	return response, err
