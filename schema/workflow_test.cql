@@ -15,25 +15,22 @@ CREATE TYPE shard (
   transfer_ack_level  bigint,
 );
 
---- Workflow execution state ---
+--- Workflow execution and mutable state ---
 CREATE TYPE workflow_execution (
-  workflow_id           text,
-  run_id                uuid,
-  task_list             text,
-  history               blob,
-  execution_context     blob,
-  state                 int,  -- enum WorkflowState {Created, Running, Completed}
-  next_event_id         bigint,
-  last_processed_event  bigint,
-  last_updated_time     timestamp,
-  decision_pending      boolean,
-  create_request_id     uuid,
-);
-
---- Workflow execution mutable state ---
-CREATE TYPE workflow_execution_mutable_info (
-    next_event_id         bigint,
-    state                 int,
+  workflow_id                       text,
+  run_id                            uuid,
+  task_list                         text,
+  history                           blob,
+  execution_context                 blob,
+  state                             int,  -- enum WorkflowState {Created, Running, Completed}
+  next_event_id                     bigint,
+  last_processed_event              bigint,
+  last_updated_time                 timestamp,
+  create_request_id                 uuid,
+  last_decision_schedule_id         bigint,
+  last_decision_started_id          bigint,
+  last_decision_request_id          text,    -- Identifier used by matching engine for retrying history service calls for recording task is started
+  decision_start_to_close_timeout   int,
 );
 
 -- TODO: Remove fields that are left over from activity and workflow tasks.
@@ -101,8 +98,6 @@ CREATE TABLE executions (
   range_id           bigint static, -- Increasing sequence identifier for transfer queue, checkpointed into shard info
   activity_map       map<bigint, frozen<activity_info>>,
   timer_map          map<text, frozen<timer_info>>,
-  decision           frozen<decision_info>,
-  mutable_info       frozen<workflow_execution_mutable_info>,
   PRIMARY KEY  (shard_id, type, workflow_id, run_id, task_id)
 );
 
