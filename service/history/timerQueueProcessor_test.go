@@ -1,10 +1,10 @@
 package history
 
 import (
+	"errors"
 	"os"
 	"testing"
 	"time"
-	"errors"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/mocks"
@@ -12,10 +12,10 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
-	"github.com/stretchr/testify/mock"
 )
 
 type (
@@ -252,14 +252,11 @@ func (s *timerQueueProcessorSuite) TestTimerTaskAfterProcessorStart() {
 	timeOutTask := tBuilder.createDecisionTimeoutTask(1, decisionScheduledEvent.GetEventId())
 	timerTasks := []persistence.Task{timeOutTask}
 
-	di := &persistence.DecisionInfo{
-		ScheduleID:  decisionScheduledEvent.GetEventId(),
-		StartedID:   decisionStartedEvent.GetEventId(),
-		RequestID:   uuid.New(),
-	StartToCloseTimeout: 1}
 	info, err1 := s.GetWorkflowExecutionInfo(workflowExecution)
 	s.Nil(err1)
-	err2 := s.UpdateWorkflowExecution(info, nil, nil, int64(4), timerTasks, nil, nil, nil, nil, nil, di)
+	info.LastDecisionScheduleID = decisionScheduledEvent.GetEventId()
+	info.LastDecisionStartedID = decisionStartedEvent.GetEventId()
+	err2 := s.UpdateWorkflowExecution(info, nil, nil, int64(4), timerTasks, nil, nil, nil, nil, nil)
 	s.Nil(err2, "No error expected.")
 
 	processor.NotifyNewTimer(timeOutTask.GetTaskID())
@@ -306,7 +303,7 @@ func (s *timerQueueProcessorSuite) checkTimedOutEventFor(workflowExecution workf
 	minfo, err1 := s.GetWorkflowMutableState(workflowExecution)
 	s.Nil(err1)
 	msBuilder := newMutableStateBuilder(s.logger)
-	msBuilder.Load(minfo.ActivitInfos, minfo.TimerInfos, nil, minfo.MutableState)
+	msBuilder.Load(minfo.ActivitInfos, minfo.TimerInfos, minfo.ExecutionInfo)
 	isRunningFromMutableState, _ := msBuilder.GetActivity(scheduleID)
 
 	return isRunning, isRunningFromMutableState, builder
@@ -323,7 +320,7 @@ func (s *timerQueueProcessorSuite) checkTimedOutEventForUserTimer(workflowExecut
 	minfo, err1 := s.GetWorkflowMutableState(workflowExecution)
 	s.Nil(err1)
 	msBuilder := newMutableStateBuilder(s.logger)
-	msBuilder.Load(minfo.ActivitInfos, minfo.TimerInfos, nil, minfo.MutableState)
+	msBuilder.Load(minfo.ActivitInfos, minfo.TimerInfos, minfo.ExecutionInfo)
 	isRunning, _ := msBuilder.GetUserTimer(startedEvent.GetTimerStartedEventAttributes().GetTimerId())
 	return isRunning, builder
 }
@@ -335,13 +332,13 @@ func (s *timerQueueProcessorSuite) updateHistoryAndTimers(workflowExecution work
 	condition := info.NextEventID
 	info.History = history
 	info.NextEventID = nextEventID
-	err2 := s.UpdateWorkflowExecution(info, nil, nil, condition, timerTasks, nil, activityInfos, nil, timerInfos, nil, nil)
+	err2 := s.UpdateWorkflowExecution(info, nil, nil, condition, timerTasks, nil, activityInfos, nil, timerInfos, nil)
 	s.Nil(err2, "No error expected.")
 }
 
 func (s *timerQueueProcessorSuite) TestTimerActivityTaskScheduleToStart_WithOutStart() {
 	workflowExecution := workflow.WorkflowExecution{WorkflowId: common.StringPtr("activity-timer-SCHEDULE_TO_START-test"),
-		RunId:                                              common.StringPtr("0d00698f-08e1-4d36-a3e2-3bf109f5d2d6")}
+		RunId: common.StringPtr("0d00698f-08e1-4d36-a3e2-3bf109f5d2d6")}
 
 	taskList := "activity-timer-queue"
 	tBuilder := newTimerBuilder(&localSeqNumGenerator{counter: 1}, s.logger)
@@ -878,77 +875,56 @@ func (s *timerQueueProcessorSuite) TestTimerUpdateTimesOut() {
 	h, serializedError := builder.Serialize()
 	s.Nil(serializedError)
 
-	wfResponse := &persistence.GetWorkflowExecutionResponse{
-		ExecutionInfo: &persistence.WorkflowExecutionInfo{
-			WorkflowID:           "wId",
-			RunID:                "rId",
-			TaskList:             taskList,
-			History:              h,
-			ExecutionContext:     nil,
-			State:                persistence.WorkflowStateRunning,
-			NextEventID:          builder.nextEventID,
-			LastProcessedEvent:   emptyEventID,
-			LastUpdatedTimestamp: time.Time{},
-			DecisionPending:      true},
-	}
-
-	wfResponse2 := &persistence.GetWorkflowExecutionResponse{
-		ExecutionInfo: &persistence.WorkflowExecutionInfo{
-			WorkflowID:           "wId",
-			RunID:                "rId",
-			TaskList:             taskList,
-			History:              h,
-			ExecutionContext:     nil,
-			State:                persistence.WorkflowStateRunning,
-			NextEventID:          builder.nextEventID,
-			LastProcessedEvent:   emptyEventID,
-			LastUpdatedTimestamp: time.Time{},
-			DecisionPending:      true},
-	}
-
+	waitCh := make(chan struct{})
 
 	taskID := int64(100)
-
 	timerTask := &persistence.TimerTaskInfo{WorkflowID: "wid", RunID: "rid", TaskID: taskID,
 		TaskType: persistence.TaskTypeDecisionTimeout, TimeoutType: int(workflow.TimeoutType_START_TO_CLOSE),
 		EventID: decisionScheduledEvent.GetEventId()}
 	timerIndexResponse := &persistence.GetTimerIndexTasksResponse{Timers: []*persistence.TimerTaskInfo{timerTask}}
 
-	ms := &persistence.WorkflowMutableState{
-		MutableState: &persistence.WorkflowMutableStateInfo{NextEventID: builder.nextEventID, State: persistence.WorkflowStateRunning}}
-	addDecisionToMutableState(ms, decisionScheduledEvent.GetEventId(), decisionStartedEvent.GetEventId(), uuid.New(), 1)
-	gwmsResponse := &persistence.GetWorkflowMutableStateResponse{State: ms}
+	s.mockExecutionMgr.On("GetTimerIndexTasks", mock.Anything).Return(timerIndexResponse, nil).Once() // initial
 
-	s.mockExecutionMgr.On("GetTimerIndexTasks", mock.Anything).Return(timerIndexResponse, nil).Once()
-	s.mockExecutionMgr.On("GetTimerIndexTasks",
-		&persistence.GetTimerIndexTasksRequest{MinKey:100, MaxKey:101, BatchSize:1}).Return(timerIndexResponse, nil).Twice()
+	for i := 0; i < 2; i++ {
+		s.mockExecutionMgr.On("GetTimerIndexTasks",
+			&persistence.GetTimerIndexTasksRequest{MinKey: 100, MaxKey: 101, BatchSize: 1}).Return(timerIndexResponse, nil).Once()
+		wfResponse := &persistence.GetWorkflowExecutionResponse{
+			ExecutionInfo: &persistence.WorkflowExecutionInfo{
+				WorkflowID:           "wId",
+				RunID:                "rId",
+				TaskList:             taskList,
+				History:              h,
+				ExecutionContext:     nil,
+				State:                persistence.WorkflowStateRunning,
+				NextEventID:          builder.nextEventID,
+				LastProcessedEvent:   emptyEventID,
+				LastUpdatedTimestamp: time.Time{}},
+		}
+		s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(wfResponse, nil).Once()
+
+		ms := createMutableState(builder.nextEventID)
+		addDecisionToMutableState(ms, decisionScheduledEvent.GetEventId(), decisionStartedEvent.GetEventId(), uuid.New(), 1)
+		gwmsResponse := &persistence.GetWorkflowMutableStateResponse{State: ms}
+
+		s.mockExecutionMgr.On("GetWorkflowMutableState", mock.Anything).Return(gwmsResponse, nil).Run(func(args mock.Arguments) {
+			s.logger.Infof("GetWorkflowMutableState Count: EventID: %v ", builder.nextEventID)
+		}).Once()
+	}
+
 	s.mockExecutionMgr.On("GetTimerIndexTasks", mock.Anything).Return(
 		&persistence.GetTimerIndexTasksResponse{Timers: []*persistence.TimerTaskInfo{}}, nil)
 
-	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(wfResponse, nil).Once()
-	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(wfResponse2, nil).Once()
-	s.mockExecutionMgr.On("GetWorkflowMutableState", mock.Anything).Return(gwmsResponse, nil).Twice()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(errors.New("FAILED")).Once()
-	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(nil).Once()
+	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(nil).Run(func(arguments mock.Arguments) {
+		// Done.
+		waitCh <- struct{}{}
+	}).Once()
 
 	processor := newTimerQueueProcessor(s.mockHistoryEngine, s.mockExecutionMgr, s.logger).(*timerQueueProcessorImpl)
 	processor.NotifyNewTimer(taskID)
 
-	go func() {
-		for {
-			count := processor.timerFiredCount
-			s.logger.Infof("TimerFiredCount: %v", count)
-			if count == 1 {
-
-				processor.Stop()
-				return
-			}
-			time.Sleep(time.Second)
-		}
-	}()
-
 	// Start timer Processor.
-	processor.testStartInSync(1)
+	processor.Start()
+	<-waitCh
+	processor.Stop()
 }
-
-

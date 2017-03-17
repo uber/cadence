@@ -11,14 +11,14 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 
-	"github.com/uber-common/bark"
 	"errors"
+	"github.com/uber-common/bark"
 )
 
 const (
 	timerTaskBatchSize          = 10
 	processTimerTaskWorkerCount = 5
-	updateFailureRetryCount = 5
+	updateFailureRetryCount     = 5
 )
 
 var (
@@ -128,17 +128,6 @@ func newTimerQueueProcessor(historyService *historyEngineImpl, executionManager 
 			tagWorkflowComponent: tagValueTimerQueueComponent,
 		}),
 	}
-}
-
-//  Test hook to start the processor in sync mode.
-func (t *timerQueueProcessorImpl) testStartInSync(taskWorkerCount int) {
-	if !atomic.CompareAndSwapInt32(&t.isStarted, 0, 1) {
-		return
-	}
-
-	t.logger.Info("Timer queue processor started in sync mode.")
-	t.shutdownWG.Add(1)
-	t.processorPump(taskWorkerCount)
 }
 
 func (t *timerQueueProcessorImpl) Start() {
@@ -447,7 +436,7 @@ Update_History_Loop:
 		// some extreme cassandra failure cases.
 		if msBuilder.GetNextEventID() != builder.nextEventID {
 			t.logger.Debugf("processExpiredUserTimer: NextEventID mismatch. MS NextEventID: %v, builder NextEventID: %v",
-			msBuilder.GetNextEventID(), builder.nextEventID)
+				msBuilder.GetNextEventID(), builder.nextEventID)
 			// Reload workflow execution history
 			context.clear()
 			continue Update_History_Loop
