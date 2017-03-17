@@ -520,7 +520,7 @@ func (d *cassandraPersistence) CreateWorkflowExecution(request *CreateWorkflowEx
 		request.RequestID,
 		request.DecisionScheduleID,
 		request.DecisionStartedID,
-		request.RequestID,
+		"", // Decision Start Request ID
 		request.DecisionStartToCloseTimeout,
 		request.NextEventID,
 		rowTypeExecutionTaskID)
@@ -1462,4 +1462,3 @@ func createTimerTaskInfo(result map[string]interface{}) *TimerTaskInfo {
 
 	return info
 }
-
