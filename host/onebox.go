@@ -47,7 +47,7 @@ type (
 		shutdownWG            sync.WaitGroup
 	}
 
-	ringpopProviderImpl struct {
+	ringpopFactoryImpl struct {
 		service string
 		rpHosts []string
 	}
@@ -121,8 +121,8 @@ func (c *cadenceImpl) startFrontend(logger bark.Logger, rpHosts []string, startW
 		return c.createTChannel(sName, c.FrontendAddress(), thriftServices)
 	}
 	scope := tally.NewTestScope(common.FrontendServiceName, make(map[string]string))
-	rpProvider := newRingpopProvider(common.FrontendServiceName, rpHosts)
-	service := service.New(common.FrontendServiceName, logger, scope, tchanFactory, rpProvider, c.numberOfHistoryShards)
+	rpFactory := newRingpopFactory(common.FrontendServiceName, rpHosts)
+	service := service.New(common.FrontendServiceName, logger, scope, tchanFactory, rpFactory, c.numberOfHistoryShards)
 	var thriftServices []thrift.TChanServer
 	c.frontendHandler, thriftServices = frontend.NewWorkflowHandler(service)
 	err := c.frontendHandler.Start(thriftServices)
@@ -141,8 +141,8 @@ func (c *cadenceImpl) startHistory(logger bark.Logger, shardMgr persistence.Shar
 			return c.createTChannel(sName, hostport, thriftServices)
 		}
 		scope := tally.NewTestScope(common.HistoryServiceName, make(map[string]string))
-		rpProvider := newRingpopProvider(common.FrontendServiceName, rpHosts)
-		service := service.New(common.HistoryServiceName, logger, scope, tchanFactory, rpProvider, c.numberOfHistoryShards)
+		rpFactory := newRingpopFactory(common.FrontendServiceName, rpHosts)
+		service := service.New(common.HistoryServiceName, logger, scope, tchanFactory, rpFactory, c.numberOfHistoryShards)
 		var thriftServices []thrift.TChanServer
 		var handler *history.Handler
 		handler, thriftServices = history.NewHandler(service, shardMgr, executionMgrFactory, c.numberOfHistoryShards)
@@ -160,8 +160,8 @@ func (c *cadenceImpl) startMatching(logger bark.Logger, taskMgr persistence.Task
 		return c.createTChannel(sName, c.MatchingServiceAddress(), thriftServices)
 	}
 	scope := tally.NewTestScope(common.MatchingServiceName, make(map[string]string))
-	rpProvider := newRingpopProvider(common.FrontendServiceName, rpHosts)
-	service := service.New(common.MatchingServiceName, logger, scope, tchanFactory, rpProvider, c.numberOfHistoryShards)
+	rpFactory := newRingpopFactory(common.FrontendServiceName, rpHosts)
+	service := service.New(common.MatchingServiceName, logger, scope, tchanFactory, rpFactory, c.numberOfHistoryShards)
 	var thriftServices []thrift.TChanServer
 	c.matchingHandler, thriftServices = matching.NewHandler(taskMgr, service)
 	c.matchingHandler.Start(thriftServices)
@@ -188,15 +188,15 @@ func (c *cadenceImpl) createTChannel(sName string, hostPort string,
 	return ch, server
 }
 
-func newRingpopProvider(service string, rpHosts []string) service.RingpopProvider {
-	return &ringpopProviderImpl{
+func newRingpopFactory(service string, rpHosts []string) service.RingpopFactory {
+	return &ringpopFactoryImpl{
 		service: service,
 		rpHosts: rpHosts,
 	}
 }
 
-func (p *ringpopProviderImpl) Ringpop(ch *tchannel.Channel) (*ringpop.Ringpop, error) {
-	rp, err := p.createRingpop(p.service, ch)
+func (p *ringpopFactoryImpl) Ringpop(ch *tchannel.Channel) (*ringpop.Ringpop, error) {
+	rp, err := ringpop.New(fmt.Sprintf("%s", rpAppNamePrefix), ringpop.Channel(ch))
 	if err != nil {
 		return nil, err
 	}
@@ -207,15 +207,8 @@ func (p *ringpopProviderImpl) Ringpop(ch *tchannel.Channel) (*ringpop.Ringpop, e
 	return rp, nil
 }
 
-// createRingpop instantiates the ringpop for the provided channel and host,
-func (p *ringpopProviderImpl) createRingpop(service string, ch *tchannel.Channel) (*ringpop.Ringpop, error) {
-	rp, err := ringpop.New(fmt.Sprintf("%s", rpAppNamePrefix), ringpop.Channel(ch))
-
-	return rp, err
-}
-
 // bootstrapRingpop tries to bootstrap the given ringpop instance using the hosts list
-func (p *ringpopProviderImpl) bootstrapRingpop(rp *ringpop.Ringpop, rpHosts []string) error {
+func (p *ringpopFactoryImpl) bootstrapRingpop(rp *ringpop.Ringpop, rpHosts []string) error {
 	// TODO: log ring hosts
 
 	bOptions := new(swim.BootstrapOptions)

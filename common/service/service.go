@@ -33,7 +33,7 @@ type serviceImpl struct {
 	server                 *thrift.Server
 	ch                     *tchannel.Channel
 	rp                     *ringpop.Ringpop
-	rpProvider             RingpopProvider
+	rpFactory              RingpopFactory
 	membershipMonitor      membership.Monitor
 	tchannelFactory        TChannelFactory
 	clientFactory          client.Factory
@@ -50,12 +50,12 @@ type serviceImpl struct {
 // this is the object which holds all the common stuff
 // shared by all the services.
 func New(serviceName string, logger bark.Logger, scope tally.Scope, tchanFactory TChannelFactory,
-	rpProvider RingpopProvider, numberOfHistoryShards int) Service {
+	rpFactory RingpopFactory, numberOfHistoryShards int) Service {
 	sVice := &serviceImpl{
 		sName:                 serviceName,
 		logger:                logger.WithField("Service", serviceName),
 		tchannelFactory:       tchanFactory,
-		rpProvider:            rpProvider,
+		rpFactory:             rpFactory,
 		metricsScope:          scope,
 		numberOfHistoryShards: numberOfHistoryShards,
 	}
@@ -97,7 +97,7 @@ func (h *serviceImpl) Start(thriftServices []thrift.TChanServer) {
 
 	// use actual listen port (in case service is bound to :0 or 0.0.0.0:0)
 	h.hostPort = h.ch.PeerInfo().HostPort
-	h.rp, err = h.rpProvider.Ringpop(h.ch)
+	h.rp, err = h.rpFactory.Ringpop(h.ch)
 	if err != nil {
 		h.logger.WithFields(bark.Fields{logging.TagErr: err}).Fatal("Ringpop creation failed")
 	}

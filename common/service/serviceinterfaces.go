@@ -34,8 +34,8 @@ type (
 		GetHostInfo() *membership.HostInfo
 	}
 
-	// RingpopProvider provides a bootstrapped ringpop
-	RingpopProvider interface {
+	// RingpopFactory provides a bootstrapped ringpop
+	RingpopFactory interface {
 		Ringpop(ch *tchannel.Channel) (*ringpop.Ringpop, error)
 	}
 )
