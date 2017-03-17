@@ -2,8 +2,6 @@ package service
 
 import (
 	"github.com/uber-common/bark"
-	ringpop "github.com/uber/ringpop-go"
-	tchannel "github.com/uber/tchannel-go"
 	"github.com/uber/tchannel-go/thrift"
 
 	"github.com/uber/cadence/client"
@@ -32,10 +30,5 @@ type (
 		GetMembershipMonitor() membership.Monitor
 
 		GetHostInfo() *membership.HostInfo
-	}
-
-	// RingpopFactory provides a bootstrapped ringpop
-	RingpopFactory interface {
-		Ringpop(ch *tchannel.Channel) (*ringpop.Ringpop, error)
 	}
 )

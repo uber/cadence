@@ -195,7 +195,7 @@ func newRingpopFactory(service string, rpHosts []string) service.RingpopFactory 
 	}
 }
 
-func (p *ringpopFactoryImpl) Ringpop(ch *tchannel.Channel) (*ringpop.Ringpop, error) {
+func (p *ringpopFactoryImpl) CreateRingpop(ch *tchannel.Channel) (*ringpop.Ringpop, error) {
 	rp, err := ringpop.New(fmt.Sprintf("%s", rpAppNamePrefix), ringpop.Channel(ch))
 	if err != nil {
 		return nil, err

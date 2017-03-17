@@ -24,6 +24,11 @@ var cadenceServices = []string{common.FrontendServiceName, common.HistoryService
 // TChannelFactory creates a TChannel and Thrift server
 type TChannelFactory func(sName string, thriftServices []thrift.TChanServer) (*tchannel.Channel, *thrift.Server)
 
+// RingpopFactory provides a bootstrapped ringpop
+type RingpopFactory interface {
+	CreateRingpop(ch *tchannel.Channel) (*ringpop.Ringpop, error)
+}
+
 // Service contains the objects specific to this service
 type serviceImpl struct {
 	sName                  string
@@ -97,7 +102,7 @@ func (h *serviceImpl) Start(thriftServices []thrift.TChanServer) {
 
 	// use actual listen port (in case service is bound to :0 or 0.0.0.0:0)
 	h.hostPort = h.ch.PeerInfo().HostPort
-	h.rp, err = h.rpFactory.Ringpop(h.ch)
+	h.rp, err = h.rpFactory.CreateRingpop(h.ch)
 	if err != nil {
 		h.logger.WithFields(bark.Fields{logging.TagErr: err}).Fatal("Ringpop creation failed")
 	}
