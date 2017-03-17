@@ -27,10 +27,10 @@ CREATE TYPE workflow_execution (
   last_processed_event              bigint,
   last_updated_time                 timestamp,
   create_request_id                 uuid,
-  last_decision_schedule_id         bigint,
-  last_decision_started_id          bigint,
-  last_decision_request_id          text,    -- Identifier used by matching engine for retrying history service calls for recording task is started
-  decision_start_to_close_timeout   int,
+  decision_schedule_id              bigint,
+  decision_started_id               bigint,
+  decision_request_id               text,    -- Identifier used by matching engine for retrying history service calls for recording task is started
+  decision_timeout                  int,
 );
 
 -- TODO: Remove fields that are left over from activity and workflow tasks.

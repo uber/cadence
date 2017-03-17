@@ -2324,10 +2324,10 @@ func addDecisionToMutableState(wms *persistence.WorkflowMutableState, scheduleID
 	if wms.ActivitInfos == nil {
 		wms.ActivitInfos = make(map[int64]*persistence.ActivityInfo)
 	}
-	wms.ExecutionInfo.LastDecisionScheduleID = scheduleID
-	wms.ExecutionInfo.LastDecisionStartedID = startedID
-	wms.ExecutionInfo.LastDecisionRequestID = requestID
-	wms.ExecutionInfo.DecisionStartToCloseTimeout = startToCloseTimeout
+	wms.ExecutionInfo.DecisionScheduleID = scheduleID
+	wms.ExecutionInfo.DecisionStartedID = startedID
+	wms.ExecutionInfo.DecisionRequestID = requestID
+	wms.ExecutionInfo.DecisionTimeout = startToCloseTimeout
 }
 
 func addUserTimerToMutableState(wms *persistence.WorkflowMutableState, timerID string, startedID int64,

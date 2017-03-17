@@ -68,10 +68,10 @@ const (
 		`last_processed_event: ?, ` +
 		`last_updated_time: ?, ` +
 		`create_request_id: ?, ` +
-		`last_decision_schedule_id: ?, ` +
-		`last_decision_started_id: ?, ` +
-		`last_decision_request_id: ?, ` +
-		`decision_start_to_close_timeout: ?` +
+		`decision_schedule_id: ?, ` +
+		`decision_started_id: ?, ` +
+		`decision_request_id: ?, ` +
+		`decision_timeout: ?` +
 		`}`
 
 	templateTransferTaskType = `{` +
@@ -628,10 +628,10 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 		executionInfo.LastProcessedEvent,
 		cqlNowTimestamp,
 		executionInfo.CreateRequestID,
-		executionInfo.LastDecisionScheduleID,
-		executionInfo.LastDecisionStartedID,
-		executionInfo.LastDecisionRequestID,
-		executionInfo.DecisionStartToCloseTimeout,
+		executionInfo.DecisionScheduleID,
+		executionInfo.DecisionStartedID,
+		executionInfo.DecisionRequestID,
+		executionInfo.DecisionTimeout,
 		executionInfo.NextEventID,
 		d.shardID,
 		rowTypeExecution,
@@ -723,10 +723,10 @@ func (d *cassandraPersistence) DeleteWorkflowExecution(request *DeleteWorkflowEx
 		info.LastProcessedEvent,
 		cqlNowTimestamp,
 		info.CreateRequestID,
-		info.LastDecisionScheduleID,
-		info.LastDecisionStartedID,
-		info.LastDecisionRequestID,
-		info.DecisionStartToCloseTimeout,
+		info.DecisionScheduleID,
+		info.DecisionStartedID,
+		info.DecisionRequestID,
+		info.DecisionTimeout,
 		info.NextEventID,
 		rowTypeExecutionTaskID,
 		defaultDeleteTTLSeconds)
@@ -1340,14 +1340,14 @@ func createWorkflowExecutionInfo(result map[string]interface{}) *WorkflowExecuti
 			info.LastUpdatedTimestamp = v.(time.Time)
 		case "create_request_id":
 			info.CreateRequestID = v.(gocql.UUID).String()
-		case "last_decision_schedule_id":
-			info.LastDecisionScheduleID = v.(int64)
-		case "last_decision_started_id":
-			info.LastDecisionStartedID = v.(int64)
-		case "last_decision_request_id":
-			info.LastDecisionRequestID = v.(string)
-		case "decision_start_to_close_timeout":
-			info.DecisionStartToCloseTimeout = int32(v.(int))
+		case "decision_schedule_id":
+			info.DecisionScheduleID = v.(int64)
+		case "decision_started_id":
+			info.DecisionStartedID = v.(int64)
+		case "decision_request_id":
+			info.DecisionRequestID = v.(string)
+		case "decision_timeout":
+			info.DecisionTimeout = int32(v.(int))
 		}
 	}
 

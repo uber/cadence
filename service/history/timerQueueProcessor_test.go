@@ -254,8 +254,8 @@ func (s *timerQueueProcessorSuite) TestTimerTaskAfterProcessorStart() {
 
 	info, err1 := s.GetWorkflowExecutionInfo(workflowExecution)
 	s.Nil(err1)
-	info.LastDecisionScheduleID = decisionScheduledEvent.GetEventId()
-	info.LastDecisionStartedID = decisionStartedEvent.GetEventId()
+	info.DecisionScheduleID = decisionScheduledEvent.GetEventId()
+	info.DecisionStartedID = decisionStartedEvent.GetEventId()
 	err2 := s.UpdateWorkflowExecution(info, nil, nil, int64(4), timerTasks, nil, nil, nil, nil, nil)
 	s.Nil(err2, "No error expected.")
 

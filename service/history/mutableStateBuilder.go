@@ -29,10 +29,10 @@ type (
 	}
 
 	decisionInfo struct {
-		ScheduleID          int64
-		StartedID           int64
-		RequestID           string
-		StartToCloseTimeout int32
+		ScheduleID      int64
+		StartedID       int64
+		RequestID       string
+		DecisionTimeout int32
 	}
 )
 
@@ -133,10 +133,10 @@ func (e *mutableStateBuilder) DeleteUserTimer(timerID string) error {
 // GetDecision returns details about the in-progress decision task
 func (e *mutableStateBuilder) GetDecision(scheduleEventID int64) (bool, *decisionInfo) {
 	di := &decisionInfo{
-		ScheduleID: e.execution.LastDecisionScheduleID,
-		StartedID: e.execution.LastDecisionStartedID,
-		RequestID: e.execution.LastDecisionRequestID,
-		StartToCloseTimeout: e.execution.DecisionStartToCloseTimeout,
+		ScheduleID:      e.execution.DecisionScheduleID,
+		StartedID:       e.execution.DecisionStartedID,
+		RequestID:       e.execution.DecisionRequestID,
+		DecisionTimeout: e.execution.DecisionTimeout,
 	}
 	if scheduleEventID == di.ScheduleID {
 		return true, di
@@ -146,19 +146,19 @@ func (e *mutableStateBuilder) GetDecision(scheduleEventID int64) (bool, *decisio
 
 // UpdateDecision updates a decision task.
 func (e *mutableStateBuilder) UpdateDecision(di *decisionInfo) {
-	e.execution.LastDecisionScheduleID = di.ScheduleID
-	e.execution.LastDecisionStartedID = di.StartedID
-	e.execution.LastDecisionRequestID = di.RequestID
-	e.execution.DecisionStartToCloseTimeout = di.StartToCloseTimeout
+	e.execution.DecisionScheduleID = di.ScheduleID
+	e.execution.DecisionStartedID = di.StartedID
+	e.execution.DecisionRequestID = di.RequestID
+	e.execution.DecisionTimeout = di.DecisionTimeout
 }
 
 // DeleteDecision deletes a decision task.
 func (e *mutableStateBuilder) DeleteDecision() {
 	emptyDecisionInfo := &decisionInfo{
-		ScheduleID:          emptyEventID,
-		StartedID:           emptyEventID,
-		RequestID:           emptyUuid,
-		StartToCloseTimeout: 0,
+		ScheduleID:      emptyEventID,
+		StartedID:       emptyEventID,
+		RequestID:       emptyUuid,
+		DecisionTimeout: 0,
 	}
 	e.UpdateDecision(emptyDecisionInfo)
 }

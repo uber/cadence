@@ -67,20 +67,20 @@ type (
 
 	// WorkflowExecutionInfo describes a workflow execution
 	WorkflowExecutionInfo struct {
-		WorkflowID                  string
-		RunID                       string
-		TaskList                    string
-		History                     []byte
-		ExecutionContext            []byte
-		State                       int
-		NextEventID                 int64
-		LastProcessedEvent          int64
-		LastUpdatedTimestamp        time.Time
-		CreateRequestID             string
-		LastDecisionScheduleID      int64
-		LastDecisionStartedID       int64
-		LastDecisionRequestID       string
-		DecisionStartToCloseTimeout int32
+		WorkflowID           string
+		RunID                string
+		TaskList             string
+		History              []byte
+		ExecutionContext     []byte
+		State                int
+		NextEventID          int64
+		LastProcessedEvent   int64
+		LastUpdatedTimestamp time.Time
+		CreateRequestID      string
+		DecisionScheduleID   int64
+		DecisionStartedID    int64
+		DecisionRequestID    string
+		DecisionTimeout      int32
 	}
 
 	// TransferTaskInfo describes a transfer task

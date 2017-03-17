@@ -135,10 +135,10 @@ func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persi
 	deleteTimerInfos, c.msBuilder.deleteTimerInfos = c.msBuilder.deleteTimerInfos, deleteTimerInfos
 
 	// We get decision info from the mutable state builder.
-	c.executionInfo.LastDecisionScheduleID = c.msBuilder.execution.LastDecisionScheduleID
-	c.executionInfo.LastDecisionStartedID = c.msBuilder.execution.LastDecisionStartedID
-	c.executionInfo.LastDecisionRequestID = c.msBuilder.execution.LastDecisionRequestID
-	c.executionInfo.DecisionStartToCloseTimeout = c.msBuilder.execution.DecisionStartToCloseTimeout
+	c.executionInfo.DecisionScheduleID = c.msBuilder.execution.DecisionScheduleID
+	c.executionInfo.DecisionStartedID = c.msBuilder.execution.DecisionStartedID
+	c.executionInfo.DecisionRequestID = c.msBuilder.execution.DecisionRequestID
+	c.executionInfo.DecisionTimeout = c.msBuilder.execution.DecisionTimeout
 
 	c.msBuilder.UpdateExecutionInfo(c.executionInfo)
 

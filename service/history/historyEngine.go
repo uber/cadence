@@ -284,7 +284,7 @@ Update_History_Loop:
 		msBuilder.UpdateDecision(di)
 
 		// Start a timer for the decision task.
-		timeOutTask := context.tBuilder.AddDecisionTimoutTask(scheduleID, di.StartToCloseTimeout)
+		timeOutTask := context.tBuilder.AddDecisionTimoutTask(scheduleID, di.DecisionTimeout)
 		timerTasks := []persistence.Task{timeOutTask}
 		defer e.timerProcessor.NotifyNewTimer(timeOutTask.GetTaskID())
 
@@ -1054,10 +1054,10 @@ func (e *historyEngineImpl) scheduleDecisionTask(builder *historyBuilder,
 	msBuilder *mutableStateBuilder) *workflow.HistoryEvent {
 	newDecisionEvent := builder.ScheduleDecisionTask()
 	msBuilder.UpdateDecision(&decisionInfo{
-		ScheduleID:          newDecisionEvent.GetEventId(),
-		StartedID:           emptyEventID,
-		RequestID:           emptyUuid,
-		StartToCloseTimeout: newDecisionEvent.GetDecisionTaskScheduledEventAttributes().GetStartToCloseTimeoutSeconds(),
+		ScheduleID:      newDecisionEvent.GetEventId(),
+		StartedID:       emptyEventID,
+		RequestID:       emptyUuid,
+		DecisionTimeout: newDecisionEvent.GetDecisionTaskScheduledEventAttributes().GetStartToCloseTimeoutSeconds(),
 	})
 	return newDecisionEvent
 }
