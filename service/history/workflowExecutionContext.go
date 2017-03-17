@@ -89,7 +89,7 @@ func (c *workflowExecutionContext) loadWorkflowMutableState() (*mutableStateBuil
 	msBuilder := newMutableStateBuilder(c.logger)
 	if response != nil && response.State != nil {
 		msBuilder.Load(
-			response.State.ActivitInfos, response.State.TimerInfos, response.State.Decision, response.State.MutableState)
+			response.State.ActivitInfos, response.State.TimerInfos, response.State.ExecutionInfo)
 	}
 
 	c.msBuilder = msBuilder
@@ -121,7 +121,6 @@ func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persi
 	c.executionInfo.NextEventID = c.builder.nextEventID
 	c.executionInfo.LastProcessedEvent = c.builder.previousDecisionStartedEvent()
 	c.executionInfo.History = updatedHistory
-	c.executionInfo.DecisionPending = c.builder.hasPendingDecisionTask()
 	c.executionInfo.State = c.builder.getWorklowState()
 
 	upsertActivityInfos := []*persistence.ActivityInfo{}
@@ -129,15 +128,19 @@ func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persi
 	deleteTimerInfos := []string{}
 
 	var deleteActivityInfo *int64
-	var decisionInfo *persistence.DecisionInfo
 
 	upsertActivityInfos, c.msBuilder.updateActivityInfos = c.msBuilder.updateActivityInfos, upsertActivityInfos
 	deleteActivityInfo, c.msBuilder.deleteActivityInfo = c.msBuilder.deleteActivityInfo, deleteActivityInfo
 	upsertTimerInfos, c.msBuilder.updateTimerInfos = c.msBuilder.updateTimerInfos, upsertTimerInfos
 	deleteTimerInfos, c.msBuilder.deleteTimerInfos = c.msBuilder.deleteTimerInfos, deleteTimerInfos
-	decisionInfo, c.msBuilder.updatedDecision = c.msBuilder.updatedDecision, decisionInfo
 
-	c.msBuilder.UpdateWorkflowMutableStateInfo(c.executionInfo.NextEventID, c.executionInfo.State)
+	// We get decision info from the mutable state builder.
+	c.executionInfo.LastDecisionScheduleID = c.msBuilder.execution.LastDecisionScheduleID
+	c.executionInfo.LastDecisionStartedID = c.msBuilder.execution.LastDecisionStartedID
+	c.executionInfo.LastDecisionRequestID = c.msBuilder.execution.LastDecisionRequestID
+	c.executionInfo.DecisionStartToCloseTimeout = c.msBuilder.execution.DecisionStartToCloseTimeout
+
+	c.msBuilder.UpdateExecutionInfo(c.executionInfo)
 
 	if err1 := c.updateWorkflowExecutionWithRetry(&persistence.UpdateWorkflowExecutionRequest{
 		ExecutionInfo:       c.executionInfo,
@@ -149,7 +152,6 @@ func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persi
 		DeleteActivityInfo:  deleteActivityInfo,
 		UpserTimerInfos:     upsertTimerInfos,
 		DeleteTimerInfos:    deleteTimerInfos,
-		UpdateDecision:      decisionInfo,
 	}); err1 != nil {
 		// Clear all cached state in case of error
 		c.clear()
