@@ -41,6 +41,7 @@ type (
 		ExecutionMgrFactory ExecutionManagerFactory
 		WorkflowMgr         ExecutionManager
 		TaskMgr             TaskManager
+		HistoryMgr          HistoryManager
 		ShardInfo           *ShardInfo
 		ShardContext        *testShardContext
 		readLevel           int64
@@ -163,6 +164,11 @@ func (s *TestBase) SetupWorkflowStoreWithOptions(options TestBaseOptions) {
 		log.Fatal(err)
 	}
 	s.TaskMgr, err = NewCassandraTaskPersistence(options.ClusterHost, options.Datacenter, s.CassandraTestCluster.keyspace, log)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	s.HistoryMgr, err = NewCassandraHistoryPersistence(options.ClusterHost, options.Datacenter, s.CassandraTestCluster.keyspace, log)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -369,6 +369,35 @@ type (
 		State *WorkflowMutableState
 	}
 
+	// AppendHistoryEventsRequest is used to append new events to workflow execution history
+	AppendHistoryEventsRequest struct {
+		Execution     workflow.WorkflowExecution
+		FirstEventID  int64
+		RangeID       int64
+		TransactionID int64
+		Events        []byte
+		Overwrite     bool
+	}
+
+	// GetWorkflowExecutionHistoryRequest is used to retrieve history of a workflow execution
+	GetWorkflowExecutionHistoryRequest struct {
+		Execution     workflow.WorkflowExecution
+		NextEventID   int64
+		PageSize      int
+		NextPageToken []byte
+	}
+
+	// GetWorkflowExecutionHistoryResponse is the response to GetWorkflowExecutionHistoryRequest
+	GetWorkflowExecutionHistoryResponse struct {
+		Events        [][]byte
+		NextPageToken []byte
+	}
+
+	// DeleteWorkflowExecutionHistoryRequest is used to delete workflow execution history
+	DeleteWorkflowExecutionHistoryRequest struct {
+		Execution workflow.WorkflowExecution
+	}
+
 	// ShardManager is used to manage all shards
 	ShardManager interface {
 		CreateShard(request *CreateShardRequest) error
@@ -405,6 +434,14 @@ type (
 		CreateTask(request *CreateTaskRequest) (*CreateTaskResponse, error)
 		GetTasks(request *GetTasksRequest) (*GetTasksResponse, error)
 		CompleteTask(request *CompleteTaskRequest) error
+	}
+
+	// HistoryManager is used to manage Workflow Execution History
+	HistoryManager interface {
+		AppendHistoryEvents(request *AppendHistoryEventsRequest) error
+		GetWorkflowExecutionHistory(request *GetWorkflowExecutionHistoryRequest) (*GetWorkflowExecutionHistoryResponse,
+			error)
+		DeleteWorkflowExecutionHistory(request *DeleteWorkflowExecutionHistoryRequest) error
 	}
 )
 

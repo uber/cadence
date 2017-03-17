@@ -101,6 +101,16 @@ CREATE TABLE executions (
   PRIMARY KEY  (shard_id, type, workflow_id, run_id, task_id)
 );
 
+CREATE TABLE events (
+  workflow_id    text,
+  run_id         uuid,
+  first_event_id bigint,
+  range_id       bigint,
+  tx_id          bigint,
+  data           blob,
+  PRIMARY KEY ((workflow_id, run_id), first_event_id)
+);
+
 -- Activity or workflow task in a task list
 CREATE TYPE task (
   workflow_id      text,
