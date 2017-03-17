@@ -70,7 +70,6 @@ type (
 		WorkflowID           string
 		RunID                string
 		TaskList             string
-		History              []byte
 		ExecutionContext     []byte
 		State                int
 		NextEventID          int64
@@ -219,7 +218,6 @@ type (
 		RequestID                   string
 		Execution                   workflow.WorkflowExecution
 		TaskList                    string
-		History                     []byte
 		ExecutionContext            []byte
 		NextEventID                 int64
 		LastProcessedEvent          int64
@@ -243,7 +241,7 @@ type (
 
 	// GetWorkflowExecutionResponse is the response to GetworkflowExecutionRequest
 	GetWorkflowExecutionResponse struct {
-		ExecutionInfo *WorkflowExecutionInfo
+		State *WorkflowMutableState
 	}
 
 	// UpdateWorkflowExecutionRequest is used to update a workflow execution
@@ -357,18 +355,6 @@ type (
 		Timers []*TimerTaskInfo
 	}
 
-	// GetWorkflowMutableStateRequest is used to retrieve the info of a workflow execution
-	GetWorkflowMutableStateRequest struct {
-		WorkflowID     string
-		RunID          string
-		IncludeDetails bool
-	}
-
-	// GetWorkflowMutableStateResponse is the response to GetWorkflowMutableStateRequest
-	GetWorkflowMutableStateResponse struct {
-		State *WorkflowMutableState
-	}
-
 	// AppendHistoryEventsRequest is used to append new events to workflow execution history
 	AppendHistoryEventsRequest struct {
 		Execution     workflow.WorkflowExecution
@@ -417,9 +403,6 @@ type (
 		// Timer related methods.
 		GetTimerIndexTasks(request *GetTimerIndexTasksRequest) (*GetTimerIndexTasksResponse, error)
 		CompleteTimerTask(request *CompleteTimerTaskRequest) error
-
-		// Workflow mutable state operations.
-		GetWorkflowMutableState(request *GetWorkflowMutableStateRequest) (*GetWorkflowMutableStateResponse, error)
 	}
 
 	// ExecutionManagerFactory creates an instance of ExecutionManager for a given shard

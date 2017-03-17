@@ -67,14 +67,6 @@ CREATE TYPE activity_info (
   cancel_request_id         bigint,  -- Event ID that identifies the cancel request.
 );
 
--- Workflow decision in progress in mutable state
-CREATE TYPE decision_info (
-  schedule_id               bigint,
-  started_id                bigint,
-  request_id                text,    -- Identifier used by matching engine for retrying history service calls for recording task is started
-  start_to_close_timeout    int,
-);
-
 -- User timer details
 CREATE TYPE timer_info (
   timer_id      text,      -- User defined timer ID
