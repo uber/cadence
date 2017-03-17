@@ -1347,7 +1347,7 @@ func createWorkflowExecutionInfo(result map[string]interface{}) *WorkflowExecuti
 		case "last_decision_request_id":
 			info.LastDecisionRequestID = v.(string)
 		case "decision_start_to_close_timeout":
-			info.DecisionStartToCloseTimeout = v.(int)
+			info.DecisionStartToCloseTimeout = int32(v.(int))
 		}
 	}
 

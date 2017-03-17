@@ -80,7 +80,7 @@ type (
 		LastDecisionScheduleID      int64
 		LastDecisionStartedID       int64
 		LastDecisionRequestID       string
-		DecisionStartToCloseTimeout int
+		DecisionStartToCloseTimeout int32
 	}
 
 	// TransferTaskInfo describes a transfer task
@@ -185,14 +185,6 @@ type (
 		CancelRequestID        int64
 	}
 
-	// DecisionInfo details.
-	DecisionInfo struct {
-		ScheduleID          int64
-		StartedID           int64
-		RequestID           string
-		StartToCloseTimeout int32
-	}
-
 	// TimerInfo details - metadata about user timer info.
 	TimerInfo struct {
 		TimerID    string
@@ -236,7 +228,7 @@ type (
 		RangeID                     int64
 		DecisionScheduleID          int64
 		DecisionStartedID           int64
-		DecisionStartToCloseTimeout int
+		DecisionStartToCloseTimeout int32
 	}
 
 	// CreateWorkflowExecutionResponse is the response to CreateWorkflowExecutionRequest

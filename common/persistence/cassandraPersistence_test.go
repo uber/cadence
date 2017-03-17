@@ -109,7 +109,7 @@ func (s *cassandraPersistenceSuite) TestGetWorkflow() {
 	s.Equal(true, validateTimeRange(info.LastUpdatedTimestamp, time.Hour))
 	s.Equal(int64(2), info.LastDecisionScheduleID)
 	s.Equal(common.EmptyEventID, info.LastDecisionStartedID)
-	s.Equal(1, info.DecisionStartToCloseTimeout)
+	s.Equal(int32(1), info.DecisionStartToCloseTimeout)
 	log.Infof("Workflow execution last updated: %v", info.LastUpdatedTimestamp)
 }
 
@@ -134,7 +134,7 @@ func (s *cassandraPersistenceSuite) TestUpdateWorkflow() {
 	s.Equal(true, validateTimeRange(info0.LastUpdatedTimestamp, time.Hour))
 	s.Equal(int64(2), info0.LastDecisionScheduleID)
 	s.Equal(common.EmptyEventID, info0.LastDecisionStartedID)
-	s.Equal(1, info0.DecisionStartToCloseTimeout)
+	s.Equal(int32(1), info0.DecisionStartToCloseTimeout)
 
 	log.Infof("Workflow execution last updated: %v", info0.LastUpdatedTimestamp)
 
@@ -159,7 +159,7 @@ func (s *cassandraPersistenceSuite) TestUpdateWorkflow() {
 	s.Equal(true, validateTimeRange(info1.LastUpdatedTimestamp, time.Hour))
 	s.Equal(int64(2), info1.LastDecisionScheduleID)
 	s.Equal(common.EmptyEventID, info1.LastDecisionStartedID)
-	s.Equal(1, info1.DecisionStartToCloseTimeout)
+	s.Equal(int32(1), info1.DecisionStartToCloseTimeout)
 
 	log.Infof("Workflow execution last updated: %v", info1.LastUpdatedTimestamp)
 
@@ -186,7 +186,7 @@ func (s *cassandraPersistenceSuite) TestUpdateWorkflow() {
 	s.Equal(true, validateTimeRange(info2.LastUpdatedTimestamp, time.Hour))
 	s.Equal(int64(2), info2.LastDecisionScheduleID)
 	s.Equal(common.EmptyEventID, info2.LastDecisionStartedID)
-	s.Equal(1, info2.DecisionStartToCloseTimeout)
+	s.Equal(int32(1), info2.DecisionStartToCloseTimeout)
 
 	log.Infof("Workflow execution last updated: %v", info2.LastUpdatedTimestamp)
 
@@ -213,7 +213,7 @@ func (s *cassandraPersistenceSuite) TestUpdateWorkflow() {
 	s.Equal(true, validateTimeRange(info3.LastUpdatedTimestamp, time.Hour))
 	s.Equal(int64(2), info3.LastDecisionScheduleID)
 	s.Equal(common.EmptyEventID, info3.LastDecisionStartedID)
-	s.Equal(1, info1.DecisionStartToCloseTimeout)
+	s.Equal(int32(1), info1.DecisionStartToCloseTimeout)
 
 	log.Infof("Workflow execution last updated: %v", info3.LastUpdatedTimestamp)
 }
@@ -240,7 +240,7 @@ func (s *cassandraPersistenceSuite) TestDeleteWorkflow() {
 	s.Equal(true, validateTimeRange(info0.LastUpdatedTimestamp, time.Hour))
 	s.Equal(int64(2), info0.LastDecisionScheduleID)
 	s.Equal(common.EmptyEventID, info0.LastDecisionStartedID)
-	s.Equal(1, info0.DecisionStartToCloseTimeout)
+	s.Equal(int32(1), info0.DecisionStartToCloseTimeout)
 
 	log.Infof("Workflow execution last updated: %v", info0.LastUpdatedTimestamp)
 
@@ -261,7 +261,7 @@ func (s *cassandraPersistenceSuite) TestDeleteWorkflow() {
 	s.Equal(true, validateTimeRange(info1.LastUpdatedTimestamp, time.Hour))
 	s.Equal(int64(2), info1.LastDecisionScheduleID)
 	s.Equal(common.EmptyEventID, info1.LastDecisionStartedID)
-	s.Equal(1, info1.DecisionStartToCloseTimeout)
+	s.Equal(int32(1), info1.DecisionStartToCloseTimeout)
 	log.Infof("Workflow execution last updated: %v", info1.LastUpdatedTimestamp)
 
 	err5 := s.DeleteWorkflowExecution(info1)
