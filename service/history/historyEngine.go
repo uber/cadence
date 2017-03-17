@@ -130,13 +130,6 @@ func (e *historyEngineImpl) StartWorkflowExecution(request *workflow.StartWorkfl
 	builder.AddWorkflowExecutionStartedEvent(request)
 
 	dt := builder.AddDecisionTaskScheduledEvent(taskList, request.GetTaskStartToCloseTimeoutSeconds())
-	msBuilder := newMutableStateBuilder(e.logger)
-	msBuilder.UpdateDecision(&persistence.DecisionInfo{
-		ScheduleID:          dt.GetEventId(),
-		StartedID:           emptyEventID,
-		RequestID:           uuid.New(),
-		StartToCloseTimeout: dt.GetDecisionTaskScheduledEventAttributes().GetStartToCloseTimeoutSeconds(),
-	})
 
 	// Serialize the history
 	h, serializedError := builder.Serialize()
@@ -163,7 +156,9 @@ func (e *historyEngineImpl) StartWorkflowExecution(request *workflow.StartWorkfl
 			TaskID:   id,
 			TaskList: taskList, ScheduleID: dt.GetEventId(),
 		}},
-		Decision: msBuilder.updatedDecision,
+		DecisionScheduleID: dt.GetEventId(),
+		DecisionStartedID: emptyEventID,
+		DecisionStartToCloseTimeout: dt.GetDecisionTaskScheduledEventAttributes().GetStartToCloseTimeoutSeconds(),
 	})
 
 	if err != nil {
@@ -1058,7 +1053,7 @@ func (e *historyEngineImpl) createRecordDecisionTaskStartedResponse(context *wor
 func (e *historyEngineImpl) scheduleDecisionTask(builder *historyBuilder,
 	msBuilder *mutableStateBuilder) *workflow.HistoryEvent {
 	newDecisionEvent := builder.ScheduleDecisionTask()
-	msBuilder.UpdateDecision(&persistence.DecisionInfo{
+	msBuilder.UpdateDecision(&decisionInfo{
 		ScheduleID:          newDecisionEvent.GetEventId(),
 		StartedID:           emptyEventID,
 		RequestID:           emptyUuid,
