@@ -575,7 +575,7 @@ Update_History_Loop:
 
 				case workflow.TimeoutType_HEARTBEAT:
 					l := common.AddSecondsToBaseTime(
-						ai.LastHearBeatUpdatedTime.UnixNano(), int64(ai.HeartbeatTimeout))
+						ai.LastHeartBeatUpdatedTime.UnixNano(), int64(ai.HeartbeatTimeout))
 
 					if timerTaskExpiryTime > l {
 						// The current heart beat expired.

@@ -172,18 +172,18 @@ type (
 
 	// ActivityInfo details.
 	ActivityInfo struct {
-		ScheduleID              int64
-		StartedID               int64
-		ActivityID              string
-		RequestID               string
-		Details                 []byte
-		ScheduleToStartTimeout  int32
-		ScheduleToCloseTimeout  int32
-		StartToCloseTimeout     int32
-		HeartbeatTimeout        int32
-		CancelRequested         bool
-		CancelRequestID         int64
-		LastHearBeatUpdatedTime time.Time
+		ScheduleID               int64
+		StartedID                int64
+		ActivityID               string
+		RequestID                string
+		Details                  []byte
+		ScheduleToStartTimeout   int32
+		ScheduleToCloseTimeout   int32
+		StartToCloseTimeout      int32
+		HeartbeatTimeout         int32
+		CancelRequested          bool
+		CancelRequestID          int64
+		LastHeartBeatUpdatedTime time.Time
 	}
 
 	// TimerInfo details - metadata about user timer info.

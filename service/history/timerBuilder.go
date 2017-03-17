@@ -152,16 +152,16 @@ func (tb *timerBuilder) AddScheduleToStartActivityTimeout(scheduleID int64, sche
 	t := tb.AddActivityTimeoutTask(scheduleID, w.TimeoutType_SCHEDULE_TO_START, scheduleToStartTimeout)
 
 	msBuilder.UpdateActivity(scheduleID, &persistence.ActivityInfo{
-		ScheduleID:             scheduleID,
-		StartedID:              emptyEventID,
-		ActivityID:             scheduleEvent.GetActivityTaskScheduledEventAttributes().GetActivityId(),
-		ScheduleToStartTimeout: scheduleToStartTimeout,
-		ScheduleToCloseTimeout: scheduleToCloseTimeout,
-		StartToCloseTimeout:    startToCloseTimeout,
-		HeartbeatTimeout:       heartbeatTimeout,
-		CancelRequested:        false,
-		CancelRequestID:        emptyEventID,
-		LastHearBeatUpdatedTime: time.Time{},
+		ScheduleID:               scheduleID,
+		StartedID:                emptyEventID,
+		ActivityID:               scheduleEvent.GetActivityTaskScheduledEventAttributes().GetActivityId(),
+		ScheduleToStartTimeout:   scheduleToStartTimeout,
+		ScheduleToCloseTimeout:   scheduleToCloseTimeout,
+		StartToCloseTimeout:      startToCloseTimeout,
+		HeartbeatTimeout:         heartbeatTimeout,
+		CancelRequested:          false,
+		CancelRequestID:          emptyEventID,
+		LastHeartBeatUpdatedTime: time.Time{},
 	})
 
 	return t

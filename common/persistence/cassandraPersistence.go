@@ -1241,7 +1241,7 @@ func (d *cassandraPersistence) updateActivityInfos(batch *gocql.Batch, activityI
 			a.HeartbeatTimeout,
 			a.CancelRequested,
 			a.CancelRequestID,
-			a.LastHearBeatUpdatedTime,
+			a.LastHeartBeatUpdatedTime,
 			d.shardID,
 			rowTypeExecution,
 			workflowID,
@@ -1405,7 +1405,7 @@ func createActivityInfo(result map[string]interface{}) *ActivityInfo {
 		case "cancel_request_id":
 			info.CancelRequestID = v.(int64)
 		case "last_hb_updated_time":
-			info.LastHearBeatUpdatedTime = v.(time.Time)
+			info.LastHeartBeatUpdatedTime = v.(time.Time)
 		}
 	}
 

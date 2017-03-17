@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/pborman/uuid"
 	"github.com/uber-common/bark"
@@ -13,7 +14,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"time"
 )
 
 const (
@@ -157,8 +157,8 @@ func (e *historyEngineImpl) StartWorkflowExecution(request *workflow.StartWorkfl
 			TaskID:   id,
 			TaskList: taskList, ScheduleID: dt.GetEventId(),
 		}},
-		DecisionScheduleID: dt.GetEventId(),
-		DecisionStartedID: emptyEventID,
+		DecisionScheduleID:          dt.GetEventId(),
+		DecisionStartedID:           emptyEventID,
 		DecisionStartToCloseTimeout: dt.GetDecisionTaskScheduledEventAttributes().GetStartToCloseTimeoutSeconds(),
 	})
 
@@ -1008,7 +1008,7 @@ Update_History_Loop:
 			scheduleID, ai, cancelRequested)
 
 		// Save progress and last HB reported time.
-		ai.LastHearBeatUpdatedTime = time.Now()
+		ai.LastHeartBeatUpdatedTime = time.Now()
 		ai.Details = request.GetDetails()
 		msBuilder.UpdateActivity(scheduleID, ai)
 
