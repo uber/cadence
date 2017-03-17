@@ -1,11 +1,9 @@
 package history
 
 import (
-	"fmt"
 	"sync"
 	"sync/atomic"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 
@@ -86,10 +84,10 @@ func (s *shardContextImpl) GetTransferAckLevel() int64 {
 
 func (s *shardContextImpl) UpdateAckLevel(ackLevel int64) error {
 	s.Lock()
+	defer s.Unlock()
 	s.shardInfo.TransferAckLevel = ackLevel
 	s.shardInfo.StolenSinceRenew = 0
 	updatedShardInfo := copyShardInfo(s.shardInfo)
-	s.Unlock()
 
 	err := s.shardManager.UpdateShard(&persistence.UpdateShardRequest{
 		ShardInfo:       updatedShardInfo,
@@ -112,6 +110,8 @@ func (s *shardContextImpl) GetTimerSequenceNumber() int64 {
 
 func (s *shardContextImpl) CreateWorkflowExecution(request *persistence.CreateWorkflowExecutionRequest) (
 	*persistence.CreateWorkflowExecutionResponse, error) {
+	s.Lock()
+	defer s.Unlock()
 Create_Loop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
 		currentRangeID := s.getRangeID()
@@ -130,20 +130,6 @@ Create_Loop:
 						s.close()
 					}
 				}
-			case *persistence.TimeoutError:
-				{
-					s.logger.Errorf("Request to create workflow execution timed out. WorkflowID: %v, RunID: %v",
-						request.Execution.WorkflowId, request.Execution.RunId)
-					// write may have made it, but we don't know.
-					// Check here to avoid giving an error to client if possible
-					if s.checkIfCreateSucceeded(request) != nil {
-						err = &shared.InternalServiceError{
-							Message: fmt.Sprintf("CreateWorkflowExecution operation failed. Error: %v", err),
-						}
-					} else {
-						err = nil
-					}
-				}
 			}
 		}
 
@@ -154,6 +140,8 @@ Create_Loop:
 }
 
 func (s *shardContextImpl) UpdateWorkflowExecution(request *persistence.UpdateWorkflowExecutionRequest) error {
+	s.Lock()
+	defer s.Unlock()
 Update_Loop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
 		currentRangeID := s.getRangeID()
@@ -187,9 +175,6 @@ func (s *shardContextImpl) GetMetricsClient() metrics.Client {
 }
 
 func (s *shardContextImpl) getRangeID() int64 {
-	s.RLock()
-	defer s.RUnlock()
-
 	return s.shardInfo.RangeID
 }
 
@@ -240,21 +225,6 @@ func (s *shardContextImpl) renewRangeLocked(isStealing bool) error {
 		s.maxTransferSequenceNumber)
 
 	return nil
-}
-
-// checkIfCreateSucceeded checks if the execution was successfully created by the request
-func (s *shardContextImpl) checkIfCreateSucceeded(request *persistence.CreateWorkflowExecutionRequest) error {
-	resp, err := s.executionManager.GetWorkflowExecution(
-		&persistence.GetWorkflowExecutionRequest{Execution: request.Execution})
-	if err != nil {
-		return err
-	}
-	if resp.ExecutionInfo.CreateRequestID == request.RequestID {
-		return nil
-	}
-	return &shared.InternalServiceError{
-		Message: fmt.Sprintf("Workflow was created by a different request"),
-	}
 }
 
 func acquireShard(shardID int, shardManager persistence.ShardManager, executionMgr persistence.ExecutionManager,

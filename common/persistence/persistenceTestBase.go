@@ -218,14 +218,14 @@ func (s *TestBase) UpdateShard(updatedInfo *ShardInfo, previousRangeID int64) er
 
 // CreateWorkflowExecution is a utility method to create workflow executions
 func (s *TestBase) CreateWorkflowExecution(workflowExecution workflow.WorkflowExecution, taskList string,
-	history string, executionContext []byte, nextEventID int64, lastProcessedEventID int64, decisionScheduleID int64,
+	history []byte, executionContext []byte, nextEventID int64, lastProcessedEventID int64, decisionScheduleID int64,
 	timerTasks []Task) (
 	string, error) {
 	response, err := s.WorkflowMgr.CreateWorkflowExecution(&CreateWorkflowExecutionRequest{
 		RequestID:          uuid.New(),
 		Execution:          workflowExecution,
 		TaskList:           taskList,
-		History:            []byte(history),
+		History:            history,
 		ExecutionContext:   executionContext,
 		NextEventID:        nextEventID,
 		LastProcessedEvent: lastProcessedEventID,
@@ -233,13 +233,10 @@ func (s *TestBase) CreateWorkflowExecution(workflowExecution workflow.WorkflowEx
 		TransferTasks: []Task{
 			&DecisionTask{TaskID: s.GetNextSequenceNumber(), TaskList: taskList, ScheduleID: decisionScheduleID},
 		},
-		TimerTasks: timerTasks,
-		Decision: &DecisionInfo{
-			ScheduleID:          decisionScheduleID,
-			StartedID:           common.EmptyEventID,
-			RequestID:           uuid.New(),
-			StartToCloseTimeout: 1,
-		},
+		TimerTasks:                  timerTasks,
+		DecisionScheduleID:          decisionScheduleID,
+		DecisionStartedID:           common.EmptyEventID,
+		DecisionStartToCloseTimeout: 1,
 	})
 
 	if err != nil {
@@ -266,21 +263,19 @@ func (s *TestBase) CreateWorkflowExecutionManyTasks(workflowExecution workflow.W
 	}
 
 	response, err := s.WorkflowMgr.CreateWorkflowExecution(&CreateWorkflowExecutionRequest{
-		RequestID:          uuid.New(),
-		Execution:          workflowExecution,
-		TaskList:           taskList,
-		History:            []byte(history),
-		ExecutionContext:   executionContext,
-		NextEventID:        nextEventID,
-		LastProcessedEvent: lastProcessedEventID,
-		TransferTasks:      transferTasks,
-		RangeID:            s.ShardContext.GetRangeID(),
-		Decision: &DecisionInfo{
-			ScheduleID:          common.EmptyEventID,
-			StartedID:           common.EmptyEventID,
-			RequestID:           uuid.New(),
-			StartToCloseTimeout: 1,
-		}})
+		RequestID:                   uuid.New(),
+		Execution:                   workflowExecution,
+		TaskList:                    taskList,
+		History:                     []byte(history),
+		ExecutionContext:            executionContext,
+		NextEventID:                 nextEventID,
+		LastProcessedEvent:          lastProcessedEventID,
+		TransferTasks:               transferTasks,
+		RangeID:                     s.ShardContext.GetRangeID(),
+		DecisionScheduleID:          common.EmptyEventID,
+		DecisionStartedID:           common.EmptyEventID,
+		DecisionStartToCloseTimeout: 1,
+	})
 
 	if err != nil {
 		return "", err
@@ -320,25 +315,47 @@ func (s *TestBase) GetWorkflowMutableState(workflowExecution workflow.WorkflowEx
 func (s *TestBase) UpdateWorkflowExecution(updatedInfo *WorkflowExecutionInfo, decisionScheduleIDs []int64,
 	activityScheduleIDs []int64, condition int64, timerTasks []Task, deleteTimerTask Task,
 	upsertActivityInfos []*ActivityInfo, deleteActivityInfo *int64,
-	upsertTimerInfos []*TimerInfo, deleteTimerInfos []string, updateDecision *DecisionInfo) error {
+	upsertTimerInfos []*TimerInfo, deleteTimerInfos []string) error {
 	return s.UpdateWorkflowExecutionWithRangeID(updatedInfo, decisionScheduleIDs, activityScheduleIDs,
 		s.ShardContext.GetRangeID(), condition, timerTasks, deleteTimerTask, upsertActivityInfos, deleteActivityInfo,
-		upsertTimerInfos, deleteTimerInfos, updateDecision)
+		upsertTimerInfos, deleteTimerInfos)
+}
+
+// UpdateWorkflowExecutionAndDelete is a utility method to update workflow execution
+func (s *TestBase) UpdateWorkflowExecutionAndDelete(updatedInfo *WorkflowExecutionInfo, condition int64) error {
+	transferTasks := []Task{}
+	transferTasks = append(transferTasks, &DeleteExecutionTask{TaskID: s.GetNextSequenceNumber()})
+	return s.WorkflowMgr.UpdateWorkflowExecution(&UpdateWorkflowExecutionRequest{
+		ExecutionInfo:       updatedInfo,
+		TransferTasks:       transferTasks,
+		TimerTasks:          nil,
+		Condition:           condition,
+		DeleteTimerTask:     nil,
+		RangeID:             s.ShardContext.GetRangeID(),
+		UpsertActivityInfos: nil,
+		DeleteActivityInfo:  nil,
+		UpserTimerInfos:     nil,
+		DeleteTimerInfos:    nil,
+	})
 }
 
 // UpdateWorkflowExecutionWithRangeID is a utility method to update workflow execution
 func (s *TestBase) UpdateWorkflowExecutionWithRangeID(updatedInfo *WorkflowExecutionInfo, decisionScheduleIDs []int64,
 	activityScheduleIDs []int64, rangeID, condition int64, timerTasks []Task, deleteTimerTask Task,
 	upsertActivityInfos []*ActivityInfo, deleteActivityInfo *int64,
-	upsertTimerInfos []*TimerInfo, deleteTimerInfos []string, updatedDecision *DecisionInfo) error {
+	upsertTimerInfos []*TimerInfo, deleteTimerInfos []string) error {
 	transferTasks := []Task{}
 	for _, decisionScheduleID := range decisionScheduleIDs {
-		transferTasks = append(transferTasks, &DecisionTask{TaskList: updatedInfo.TaskList,
+		transferTasks = append(transferTasks, &DecisionTask{
+			TaskID:     s.GetNextSequenceNumber(),
+			TaskList:   updatedInfo.TaskList,
 			ScheduleID: int64(decisionScheduleID)})
 	}
 
 	for _, activityScheduleID := range activityScheduleIDs {
-		transferTasks = append(transferTasks, &ActivityTask{TaskList: updatedInfo.TaskList,
+		transferTasks = append(transferTasks, &ActivityTask{
+			TaskID:     s.GetNextSequenceNumber(),
+			TaskList:   updatedInfo.TaskList,
 			ScheduleID: int64(activityScheduleID)})
 	}
 
@@ -353,7 +370,6 @@ func (s *TestBase) UpdateWorkflowExecutionWithRangeID(updatedInfo *WorkflowExecu
 		DeleteActivityInfo:  deleteActivityInfo,
 		UpserTimerInfos:     upsertTimerInfos,
 		DeleteTimerInfos:    deleteTimerInfos,
-		UpdateDecision:      updatedDecision,
 	})
 }
 
@@ -413,11 +429,14 @@ func (s *TestBase) CreateDecisionTask(workflowExecution workflow.WorkflowExecuti
 
 	taskID := s.GetNextSequenceNumber()
 	_, err = s.TaskMgr.CreateTask(&CreateTaskRequest{
-		TaskID:    taskID,
-		Execution: workflowExecution,
-		Data: &DecisionTask{
+		TaskID:       taskID,
+		Execution:    workflowExecution,
+		TaskList:     taskList,
+		TaskListType: TaskListTypeDecision,
+		Data: &TaskInfo{
+			WorkflowID: workflowExecution.GetWorkflowId(),
+			RunID:      workflowExecution.GetRunId(),
 			TaskID:     taskID,
-			TaskList:   taskList,
 			ScheduleID: decisionScheduleID,
 		},
 		RangeID: leaseResponse.TaskListInfo.RangeID,
@@ -447,11 +466,14 @@ func (s *TestBase) CreateActivityTasks(workflowExecution workflow.WorkflowExecut
 		taskID := s.GetNextSequenceNumber()
 
 		_, err := s.TaskMgr.CreateTask(&CreateTaskRequest{
-			TaskID:    taskID,
-			Execution: workflowExecution,
-			Data: &ActivityTask{
+			TaskID:       taskID,
+			Execution:    workflowExecution,
+			TaskList:     taskList,
+			TaskListType: TaskListTypeActivity,
+			Data: &TaskInfo{
+				WorkflowID: workflowExecution.GetWorkflowId(),
+				RunID:      workflowExecution.GetRunId(),
 				TaskID:     s.GetNextSequenceNumber(),
-				TaskList:   taskList,
 				ScheduleID: activityScheduleID,
 			},
 			RangeID: leaseResponse.TaskListInfo.RangeID,

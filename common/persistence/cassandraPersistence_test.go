@@ -51,14 +51,16 @@ func (s *cassandraPersistenceSuite) SetupTest() {
 func (s *cassandraPersistenceSuite) TestPersistenceStartWorkflow() {
 	workflowExecution := gen.WorkflowExecution{WorkflowId: common.StringPtr("start-workflow-test"),
 		RunId: common.StringPtr("7f9fe8a0-9237-11e6-ae22-56b6b6499611")}
-	task0, err0 := s.CreateWorkflowExecution(workflowExecution, "queue1", "event1", nil, 3, 0, 2, nil)
+	task0, err0 := s.CreateWorkflowExecution(workflowExecution, "queue1", []byte("event1"), nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
 	s.NotEmpty(task0, "Expected non empty task identifier.")
 
-	task1, err1 := s.CreateWorkflowExecution(workflowExecution, "queue1", "event1", nil, 3, 0, 2, nil)
+	task1, err1 := s.CreateWorkflowExecution(workflowExecution, "queue1", []byte("event1"), nil, 3, 0, 2, nil)
 	s.NotNil(err1, "Expected workflow creation to fail.")
 	log.Infof("Unable to start workflow execution: %v", err1)
-	s.IsType(&gen.WorkflowExecutionAlreadyStartedError{}, err1)
+	startedErr, ok := err1.(*gen.WorkflowExecutionAlreadyStartedError)
+	s.True(ok)
+	s.Equal(workflowExecution.GetRunId(), startedErr.GetRunId())
 	s.Empty(task1, "Expected empty task identifier.")
 
 	response, err2 := s.WorkflowMgr.CreateWorkflowExecution(&CreateWorkflowExecutionRequest{
@@ -73,13 +75,11 @@ func (s *cassandraPersistenceSuite) TestPersistenceStartWorkflow() {
 		TransferTasks: []Task{
 			&DecisionTask{TaskID: s.GetNextSequenceNumber(), TaskList: "queue1", ScheduleID: int64(2)},
 		},
-		TimerTasks: nil,
-		Decision: &DecisionInfo{
-			ScheduleID:          int64(2),
-			StartedID:           common.EmptyEventID,
-			RequestID:           uuid.New(),
-			StartToCloseTimeout: 1,
-		}})
+		TimerTasks:                  nil,
+		DecisionScheduleID:          int64(2),
+		DecisionStartedID:           common.EmptyEventID,
+		DecisionStartToCloseTimeout: 1,
+	})
 
 	s.NotNil(err2, "Expected workflow creation to fail.")
 	s.Nil(response)
@@ -90,7 +90,7 @@ func (s *cassandraPersistenceSuite) TestPersistenceStartWorkflow() {
 func (s *cassandraPersistenceSuite) TestGetWorkflow() {
 	workflowExecution := gen.WorkflowExecution{WorkflowId: common.StringPtr("get-workflow-test"),
 		RunId: common.StringPtr("918e7b1d-bfa4-4fe0-86cb-604858f90ce4")}
-	task0, err0 := s.CreateWorkflowExecution(workflowExecution, "queue1", "event1", nil, 3, 0, 2, nil)
+	task0, err0 := s.CreateWorkflowExecution(workflowExecution, "queue1", []byte("event1"), nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
 	s.NotEmpty(task0, "Expected non empty task identifier.")
 
@@ -106,15 +106,17 @@ func (s *cassandraPersistenceSuite) TestGetWorkflow() {
 	s.Equal(WorkflowStateCreated, info.State)
 	s.Equal(int64(3), info.NextEventID)
 	s.Equal(int64(0), info.LastProcessedEvent)
-	s.Equal(true, info.DecisionPending)
 	s.Equal(true, validateTimeRange(info.LastUpdatedTimestamp, time.Hour))
+	s.Equal(int64(2), info.DecisionScheduleID)
+	s.Equal(common.EmptyEventID, info.DecisionStartedID)
+	s.Equal(int32(1), info.DecisionTimeout)
 	log.Infof("Workflow execution last updated: %v", info.LastUpdatedTimestamp)
 }
 
 func (s *cassandraPersistenceSuite) TestUpdateWorkflow() {
 	workflowExecution := gen.WorkflowExecution{WorkflowId: common.StringPtr("update-workflow-test"),
 		RunId: common.StringPtr("5ba5e531-e46b-48d9-b4b3-859919839553")}
-	task0, err0 := s.CreateWorkflowExecution(workflowExecution, "queue1", "event1", nil, 3, 0, 2, nil)
+	task0, err0 := s.CreateWorkflowExecution(workflowExecution, "queue1", []byte("event1"), nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
 	s.NotEmpty(task0, "Expected non empty task identifier.")
 
@@ -129,15 +131,18 @@ func (s *cassandraPersistenceSuite) TestUpdateWorkflow() {
 	s.Equal(WorkflowStateCreated, info0.State)
 	s.Equal(int64(3), info0.NextEventID)
 	s.Equal(int64(0), info0.LastProcessedEvent)
-	s.Equal(true, info0.DecisionPending)
 	s.Equal(true, validateTimeRange(info0.LastUpdatedTimestamp, time.Hour))
+	s.Equal(int64(2), info0.DecisionScheduleID)
+	s.Equal(common.EmptyEventID, info0.DecisionStartedID)
+	s.Equal(int32(1), info0.DecisionTimeout)
+
 	log.Infof("Workflow execution last updated: %v", info0.LastUpdatedTimestamp)
 
 	updatedInfo := copyWorkflowExecutionInfo(info0)
 	updatedInfo.History = []byte(`event2`)
 	updatedInfo.NextEventID = int64(5)
 	updatedInfo.LastProcessedEvent = int64(2)
-	err2 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(4)}, nil, int64(3), nil, nil, nil, nil, nil, nil, nil)
+	err2 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(4)}, nil, int64(3), nil, nil, nil, nil, nil, nil)
 	s.Nil(err2, "No error expected.")
 
 	info1, err3 := s.GetWorkflowExecutionInfo(workflowExecution)
@@ -151,15 +156,18 @@ func (s *cassandraPersistenceSuite) TestUpdateWorkflow() {
 	s.Equal(WorkflowStateCreated, info1.State)
 	s.Equal(int64(5), info1.NextEventID)
 	s.Equal(int64(2), info1.LastProcessedEvent)
-	s.Equal(true, info1.DecisionPending)
 	s.Equal(true, validateTimeRange(info1.LastUpdatedTimestamp, time.Hour))
+	s.Equal(int64(2), info1.DecisionScheduleID)
+	s.Equal(common.EmptyEventID, info1.DecisionStartedID)
+	s.Equal(int32(1), info1.DecisionTimeout)
+
 	log.Infof("Workflow execution last updated: %v", info1.LastUpdatedTimestamp)
 
 	failedUpdatedInfo := copyWorkflowExecutionInfo(info0)
 	failedUpdatedInfo.History = []byte(`event3`)
 	failedUpdatedInfo.NextEventID = int64(6)
 	failedUpdatedInfo.LastProcessedEvent = int64(3)
-	err4 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(5)}, nil, int64(3), nil, nil, nil, nil, nil, nil, nil)
+	err4 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(5)}, nil, int64(3), nil, nil, nil, nil, nil, nil)
 	s.NotNil(err4, "expected non nil error.")
 	s.IsType(&ConditionFailedError{}, err4)
 	log.Errorf("Conditional update failed with error: %v", err4)
@@ -175,15 +183,18 @@ func (s *cassandraPersistenceSuite) TestUpdateWorkflow() {
 	s.Equal(WorkflowStateCreated, info2.State)
 	s.Equal(int64(5), info2.NextEventID)
 	s.Equal(int64(2), info2.LastProcessedEvent)
-	s.Equal(true, info2.DecisionPending)
 	s.Equal(true, validateTimeRange(info2.LastUpdatedTimestamp, time.Hour))
+	s.Equal(int64(2), info2.DecisionScheduleID)
+	s.Equal(common.EmptyEventID, info2.DecisionStartedID)
+	s.Equal(int32(1), info2.DecisionTimeout)
+
 	log.Infof("Workflow execution last updated: %v", info2.LastUpdatedTimestamp)
 
 	failedUpdatedInfo2 := copyWorkflowExecutionInfo(info1)
 	failedUpdatedInfo2.History = []byte(`event4`)
 	failedUpdatedInfo2.NextEventID = int64(6)
 	failedUpdatedInfo2.LastProcessedEvent = int64(3)
-	err5 := s.UpdateWorkflowExecutionWithRangeID(updatedInfo, []int64{int64(5)}, nil, int64(12345), int64(5), nil, nil, nil, nil, nil, nil, nil)
+	err5 := s.UpdateWorkflowExecutionWithRangeID(updatedInfo, []int64{int64(5)}, nil, int64(12345), int64(5), nil, nil, nil, nil, nil, nil)
 	s.NotNil(err5, "expected non nil error.")
 	s.IsType(&ShardOwnershipLostError{}, err5)
 	log.Errorf("Conditional update failed with error: %v", err5)
@@ -199,8 +210,11 @@ func (s *cassandraPersistenceSuite) TestUpdateWorkflow() {
 	s.Equal(WorkflowStateCreated, info3.State)
 	s.Equal(int64(5), info3.NextEventID)
 	s.Equal(int64(2), info3.LastProcessedEvent)
-	s.Equal(true, info3.DecisionPending)
 	s.Equal(true, validateTimeRange(info3.LastUpdatedTimestamp, time.Hour))
+	s.Equal(int64(2), info3.DecisionScheduleID)
+	s.Equal(common.EmptyEventID, info3.DecisionStartedID)
+	s.Equal(int32(1), info1.DecisionTimeout)
+
 	log.Infof("Workflow execution last updated: %v", info3.LastUpdatedTimestamp)
 }
 
@@ -208,7 +222,7 @@ func (s *cassandraPersistenceSuite) TestDeleteWorkflow() {
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("delete-workflow-test"),
 		RunId:      common.StringPtr("4e0917f2-9361-4a14-b16f-1fafe09b287a")}
-	task0, err0 := s.CreateWorkflowExecution(workflowExecution, "queue1", "event1", nil, 3, 0, 2, nil)
+	task0, err0 := s.CreateWorkflowExecution(workflowExecution, "queue1", []byte("event1"), nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
 	s.NotNil(task0, "Expected non empty task identifier.")
 
@@ -223,8 +237,11 @@ func (s *cassandraPersistenceSuite) TestDeleteWorkflow() {
 	s.Equal(WorkflowStateCreated, info0.State)
 	s.Equal(int64(3), info0.NextEventID)
 	s.Equal(int64(0), info0.LastProcessedEvent)
-	s.Equal(true, info0.DecisionPending)
 	s.Equal(true, validateTimeRange(info0.LastUpdatedTimestamp, time.Hour))
+	s.Equal(int64(2), info0.DecisionScheduleID)
+	s.Equal(common.EmptyEventID, info0.DecisionStartedID)
+	s.Equal(int32(1), info0.DecisionTimeout)
+
 	log.Infof("Workflow execution last updated: %v", info0.LastUpdatedTimestamp)
 
 	err4 := s.DeleteWorkflowExecution(info0)
@@ -241,8 +258,10 @@ func (s *cassandraPersistenceSuite) TestDeleteWorkflow() {
 	s.Equal(WorkflowStateCreated, info1.State)
 	s.Equal(int64(3), info1.NextEventID)
 	s.Equal(int64(0), info1.LastProcessedEvent)
-	s.Equal(true, info1.DecisionPending)
 	s.Equal(true, validateTimeRange(info1.LastUpdatedTimestamp, time.Hour))
+	s.Equal(int64(2), info1.DecisionScheduleID)
+	s.Equal(common.EmptyEventID, info1.DecisionStartedID)
+	s.Equal(int32(1), info1.DecisionTimeout)
 	log.Infof("Workflow execution last updated: %v", info1.LastUpdatedTimestamp)
 
 	err5 := s.DeleteWorkflowExecution(info1)
@@ -253,7 +272,7 @@ func (s *cassandraPersistenceSuite) TestTransferTasks() {
 	workflowExecution := gen.WorkflowExecution{WorkflowId: common.StringPtr("get-transfer-tasks-test"),
 		RunId: common.StringPtr("93c87aff-ed89-4ecb-b0fd-d5d1e25dc46d")}
 
-	task0, err0 := s.CreateWorkflowExecution(workflowExecution, "queue1", "event1", nil, 3, 0, 2, nil)
+	task0, err0 := s.CreateWorkflowExecution(workflowExecution, "queue1", []byte("event1"), nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
 	s.NotEmpty(task0, "Expected non empty task identifier.")
 
@@ -265,7 +284,7 @@ func (s *cassandraPersistenceSuite) TestTransferTasks() {
 	s.Equal(workflowExecution.GetWorkflowId(), task1.WorkflowID)
 	s.Equal(workflowExecution.GetRunId(), task1.RunID)
 	s.Equal("queue1", task1.TaskList)
-	s.Equal(TaskListTypeDecision, task1.TaskType)
+	s.Equal(TransferTaskTypeDecisionTask, task1.TaskType)
 	s.Equal(int64(2), task1.ScheduleID)
 
 	err3 := s.CompleteTransferTask(workflowExecution, task1.TaskID)
@@ -274,6 +293,82 @@ func (s *cassandraPersistenceSuite) TestTransferTasks() {
 	// no-op to complete the task again
 	err4 := s.CompleteTransferTask(workflowExecution, task1.TaskID)
 	s.Nil(err4)
+}
+
+func (s *cassandraPersistenceSuite) TestTransferTasksThroughUpdate() {
+	workflowExecution := gen.WorkflowExecution{WorkflowId: common.StringPtr("get-transfer-tasks-through-update-test"),
+		RunId: common.StringPtr("30a9fa1f-0db1-4d7a-8c34-aa82c5dad3aa")}
+
+	task0, err0 := s.CreateWorkflowExecution(workflowExecution, "queue1", []byte("event1"), nil, 3, 0, 2, nil)
+	s.Nil(err0, "No error expected.")
+	s.NotEmpty(task0, "Expected non empty task identifier.")
+
+	tasks1, err1 := s.GetTransferTasks(1)
+	s.Nil(err1, "No error expected.")
+	s.NotNil(tasks1, "expected valid list of tasks.")
+	s.Equal(1, len(tasks1), "Expected 1 decision task.")
+	task1 := tasks1[0]
+	s.Equal(workflowExecution.GetWorkflowId(), task1.WorkflowID)
+	s.Equal(workflowExecution.GetRunId(), task1.RunID)
+	s.Equal("queue1", task1.TaskList)
+	s.Equal(TransferTaskTypeDecisionTask, task1.TaskType)
+	s.Equal(int64(2), task1.ScheduleID)
+
+	err3 := s.CompleteTransferTask(workflowExecution, task1.TaskID)
+	s.Nil(err3)
+
+	info0, err1 := s.GetWorkflowExecutionInfo(workflowExecution)
+	updatedInfo := copyWorkflowExecutionInfo(info0)
+	updatedInfo.History = []byte(`event2`)
+	updatedInfo.NextEventID = int64(5)
+	updatedInfo.LastProcessedEvent = int64(2)
+	err2 := s.UpdateWorkflowExecution(updatedInfo, nil, []int64{int64(4)}, int64(3), nil, nil, nil, nil, nil, nil)
+	s.Nil(err2, "No error expected.")
+
+	tasks2, err1 := s.GetTransferTasks(1)
+	s.Nil(err1, "No error expected.")
+	s.NotNil(tasks2, "expected valid list of tasks.")
+	s.Equal(1, len(tasks2), "Expected 1 decision task.")
+	task2 := tasks2[0]
+	s.Equal(workflowExecution.GetWorkflowId(), task2.WorkflowID)
+	s.Equal(workflowExecution.GetRunId(), task2.RunID)
+	s.Equal("queue1", task2.TaskList)
+	s.Equal(TransferTaskTypeActivityTask, task2.TaskType)
+	s.Equal(int64(4), task2.ScheduleID)
+
+	err4 := s.CompleteTransferTask(workflowExecution, task2.TaskID)
+	s.Nil(err4)
+
+	info1, _ := s.GetWorkflowExecutionInfo(workflowExecution)
+	updatedInfo1 := copyWorkflowExecutionInfo(info1)
+	updatedInfo1.History = []byte(`event3`)
+	updatedInfo1.NextEventID = int64(6)
+	updatedInfo1.LastProcessedEvent = int64(2)
+	err5 := s.UpdateWorkflowExecutionAndDelete(updatedInfo1, int64(5))
+	s.Nil(err5, "No error expected.")
+
+	newExecution := gen.WorkflowExecution{WorkflowId: common.StringPtr("get-transfer-tasks-through-update-test"),
+		RunId: common.StringPtr("2a038c8f-b575-4151-8d2c-d443e999ab5a")}
+	_, err6 := s.CreateWorkflowExecution(newExecution, "queue1", []byte("event1"), nil, 3, 0, 2, nil)
+	s.NotNil(err6, "Entity exist error expected.")
+
+	tasks3, err7 := s.GetTransferTasks(1)
+	s.Nil(err7, "No error expected.")
+	s.NotNil(tasks3, "expected valid list of tasks.")
+	s.Equal(1, len(tasks3), "Expected 1 decision task.")
+	task3 := tasks3[0]
+	s.Equal(workflowExecution.GetWorkflowId(), task3.WorkflowID)
+	s.Equal(workflowExecution.GetRunId(), task3.RunID)
+	s.Equal(TransferTaskTypeDeleteExecution, task3.TaskType)
+
+	err8 := s.DeleteWorkflowExecution(info1)
+	s.Nil(err8)
+
+	err9 := s.CompleteTransferTask(workflowExecution, task3.TaskID)
+	s.Nil(err9)
+
+	_, err10 := s.CreateWorkflowExecution(newExecution, "queue1", []byte("event1"), nil, 3, 0, 2, nil)
+	s.Nil(err10, "No error expected.")
 }
 
 func (s *cassandraPersistenceSuite) TestCreateTask() {
@@ -378,7 +473,7 @@ func (s *cassandraPersistenceSuite) TestTimerTasks() {
 	workflowExecution := gen.WorkflowExecution{WorkflowId: common.StringPtr("get-timer-tasks-test"),
 		RunId: common.StringPtr("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")}
 
-	task0, err0 := s.CreateWorkflowExecution(workflowExecution, "taskList", "history", nil, 3, 0, 2, nil)
+	task0, err0 := s.CreateWorkflowExecution(workflowExecution, "taskList", []byte("event1"), nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
 	s.NotEmpty(task0, "Expected non empty task identifier.")
 
@@ -391,14 +486,14 @@ func (s *cassandraPersistenceSuite) TestTimerTasks() {
 	updatedInfo.NextEventID = int64(5)
 	updatedInfo.LastProcessedEvent = int64(2)
 	tasks := []Task{&DecisionTimeoutTask{1, 2}}
-	err2 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(4)}, nil, int64(3), tasks, nil, nil, nil, nil, nil, nil)
+	err2 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(4)}, nil, int64(3), tasks, nil, nil, nil, nil, nil)
 	s.Nil(err2, "No error expected.")
 
 	timerTasks, err1 := s.GetTimerIndexTasks(-1, math.MaxInt64)
 	s.Nil(err1, "No error expected.")
 	s.NotNil(timerTasks, "expected valid list of tasks.")
 
-	err2 = s.UpdateWorkflowExecution(updatedInfo, nil, nil, int64(5), nil, &DecisionTimeoutTask{TaskID: timerTasks[0].TaskID}, nil, nil, nil, nil, nil)
+	err2 = s.UpdateWorkflowExecution(updatedInfo, nil, nil, int64(5), nil, &DecisionTimeoutTask{TaskID: timerTasks[0].TaskID}, nil, nil, nil, nil)
 	s.Nil(err2, "No error expected.")
 
 	timerTasks2, err2 := s.GetTimerIndexTasks(-1, math.MaxInt64)
@@ -410,7 +505,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_Activities() {
 	workflowExecution := gen.WorkflowExecution{WorkflowId: common.StringPtr("test-workflow-mutable-test"),
 		RunId: common.StringPtr("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")}
 
-	task0, err0 := s.CreateWorkflowExecution(workflowExecution, "taskList", "history", nil, 3, 0, 2, nil)
+	task0, err0 := s.CreateWorkflowExecution(workflowExecution, "taskList", []byte("event1"), nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
 	s.NotEmpty(task0, "Expected non empty task identifier.")
 
@@ -424,7 +519,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_Activities() {
 	updatedInfo.LastProcessedEvent = int64(2)
 	activityInfos := []*ActivityInfo{{
 		ScheduleID: 1, ScheduleToCloseTimeout: 1, ScheduleToStartTimeout: 2, StartToCloseTimeout: 3, HeartbeatTimeout: 4}}
-	err2 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(4)}, nil, int64(3), nil, nil, activityInfos, nil, nil, nil, nil)
+	err2 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(4)}, nil, int64(3), nil, nil, activityInfos, nil, nil, nil)
 	s.Nil(err2, "No error expected.")
 
 	state, err1 := s.GetWorkflowMutableState(workflowExecution)
@@ -432,7 +527,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_Activities() {
 	s.NotNil(state, "expected valid state.")
 	s.Equal(1, len(state.ActivitInfos))
 
-	err2 = s.UpdateWorkflowExecution(updatedInfo, nil, nil, int64(5), nil, nil, nil, common.Int64Ptr(1), nil, nil, nil)
+	err2 = s.UpdateWorkflowExecution(updatedInfo, nil, nil, int64(5), nil, nil, nil, common.Int64Ptr(1), nil, nil)
 	s.Nil(err2, "No error expected.")
 
 	state, err1 = s.GetWorkflowMutableState(workflowExecution)
@@ -445,7 +540,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_Timers() {
 	workflowExecution := gen.WorkflowExecution{WorkflowId: common.StringPtr("test-workflow-mutable-timers-test"),
 		RunId: common.StringPtr("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")}
 
-	task0, err0 := s.CreateWorkflowExecution(workflowExecution, "taskList", "history", nil, 3, 0, 2, nil)
+	task0, err0 := s.CreateWorkflowExecution(workflowExecution, "taskList", []byte("event1"), nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
 	s.NotEmpty(task0, "Expected non empty task identifier.")
 
@@ -460,7 +555,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_Timers() {
 	currentTime := time.Now().UTC()
 	timerID := "id_1"
 	timerInfos := []*TimerInfo{{TimerID: timerID, ExpiryTime: currentTime, TaskID: 2, StartedID: 5}}
-	err2 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(4)}, nil, int64(3), nil, nil, nil, nil, timerInfos, nil, nil)
+	err2 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(4)}, nil, int64(3), nil, nil, nil, nil, timerInfos, nil)
 	s.Nil(err2, "No error expected.")
 
 	state, err1 := s.GetWorkflowMutableState(workflowExecution)
@@ -472,7 +567,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_Timers() {
 	s.Equal(int64(2), state.TimerInfos[timerID].TaskID)
 	s.Equal(int64(5), state.TimerInfos[timerID].StartedID)
 
-	err2 = s.UpdateWorkflowExecution(updatedInfo, nil, nil, int64(5), nil, nil, nil, nil, nil, []string{timerID}, nil)
+	err2 = s.UpdateWorkflowExecution(updatedInfo, nil, nil, int64(5), nil, nil, nil, nil, nil, []string{timerID})
 	s.Nil(err2, "No error expected.")
 
 	state, err1 = s.GetWorkflowMutableState(workflowExecution)
@@ -481,18 +576,49 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_Timers() {
 	s.Equal(0, len(state.TimerInfos))
 }
 
+func (s *cassandraPersistenceSuite) TestWorkflowMutableStateInfo() {
+	workflowExecution := gen.WorkflowExecution{WorkflowId: common.StringPtr("test-workflow-mutable-state-test"),
+		RunId: common.StringPtr("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")}
+
+	task0, err0 := s.CreateWorkflowExecution(workflowExecution, "taskList", []byte("event1"), nil, 3, 0, 2, nil)
+	s.Nil(err0, "No error expected.")
+	s.NotEmpty(task0, "Expected non empty task identifier.")
+
+	info0, err1 := s.GetWorkflowExecutionInfo(workflowExecution)
+	s.Nil(err1, "No error expected.")
+	s.NotNil(info0, "Valid Workflow info expected.")
+
+	updatedInfo := copyWorkflowExecutionInfo(info0)
+	updatedInfo.History = []byte(`event2`)
+	updatedInfo.NextEventID = int64(5)
+	updatedInfo.LastProcessedEvent = int64(2)
+
+	err2 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(4)}, nil, int64(3), nil, nil, nil, nil, nil, nil)
+	s.Nil(err2, "No error expected.")
+
+	state, err1 := s.GetWorkflowMutableState(workflowExecution)
+	s.Nil(err1, "No error expected.")
+	s.NotNil(state, "expected valid state.")
+	s.NotNil(state.ExecutionInfo, "expected valid MS Info state.")
+	s.Equal(updatedInfo.NextEventID, state.ExecutionInfo.NextEventID)
+	s.Equal(updatedInfo.State, state.ExecutionInfo.State)
+}
+
 func copyWorkflowExecutionInfo(sourceInfo *WorkflowExecutionInfo) *WorkflowExecutionInfo {
 	return &WorkflowExecutionInfo{
-		WorkflowID:           sourceInfo.WorkflowID,
-		RunID:                sourceInfo.RunID,
-		TaskList:             sourceInfo.TaskList,
-		History:              sourceInfo.History,
+		WorkflowID:                  sourceInfo.WorkflowID,
+		RunID:                       sourceInfo.RunID,
+		TaskList:                    sourceInfo.TaskList,
+		History:                     sourceInfo.History,
 		ExecutionContext:     sourceInfo.ExecutionContext,
 		State:                sourceInfo.State,
 		NextEventID:          sourceInfo.NextEventID,
 		LastProcessedEvent:   sourceInfo.LastProcessedEvent,
 		LastUpdatedTimestamp: sourceInfo.LastUpdatedTimestamp,
-		DecisionPending:      sourceInfo.DecisionPending,
 		CreateRequestID:      sourceInfo.CreateRequestID,
+		DecisionScheduleID:   sourceInfo.DecisionScheduleID,
+		DecisionStartedID:    sourceInfo.DecisionStartedID,
+		DecisionRequestID:    sourceInfo.DecisionRequestID,
+		DecisionTimeout:      sourceInfo.DecisionTimeout,
 	}
 }

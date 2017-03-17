@@ -19,6 +19,13 @@ const (
 	TaskListTypeActivity
 )
 
+// Transfer task types
+const (
+	TransferTaskTypeDecisionTask = iota
+	TransferTaskTypeActivityTask
+	TransferTaskTypeDeleteExecution
+)
+
 // Types of timers
 const (
 	TaskTypeDecisionTimeout = iota
@@ -69,8 +76,11 @@ type (
 		NextEventID          int64
 		LastProcessedEvent   int64
 		LastUpdatedTimestamp time.Time
-		DecisionPending      bool
 		CreateRequestID      string
+		DecisionScheduleID   int64
+		DecisionStartedID    int64
+		DecisionRequestID    string
+		DecisionTimeout      int32
 	}
 
 	// TransferTaskInfo describes a transfer task
@@ -115,18 +125,23 @@ type (
 		GetTaskID() int64
 	}
 
-	// ActivityTask identifies an activity task
+	// ActivityTask identifies a transfer task for activity
 	ActivityTask struct {
 		TaskID     int64
 		TaskList   string
 		ScheduleID int64
 	}
 
-	// DecisionTask identifies a decision task
+	// DecisionTask identifies a transfer task for decision
 	DecisionTask struct {
 		TaskID     int64
 		TaskList   string
 		ScheduleID int64
+	}
+
+	// DeleteExecutionTask identifies a transfer task for deletion of execution
+	DeleteExecutionTask struct {
+		TaskID int64
 	}
 
 	// DecisionTimeoutTask identifies a timeout task.
@@ -150,9 +165,9 @@ type (
 
 	// WorkflowMutableState indicates workflow related state
 	WorkflowMutableState struct {
-		ActivitInfos map[int64]*ActivityInfo
-		TimerInfos   map[string]*TimerInfo
-		Decision     *DecisionInfo
+		ActivitInfos  map[int64]*ActivityInfo
+		TimerInfos    map[string]*TimerInfo
+		ExecutionInfo *WorkflowExecutionInfo
 	}
 
 	// ActivityInfo details.
@@ -169,14 +184,6 @@ type (
 		CancelRequested         bool
 		CancelRequestID         int64
 		LastHearBeatUpdatedTime time.Time
-	}
-
-	// DecisionInfo details.
-	DecisionInfo struct {
-		ScheduleID          int64
-		StartedID           int64
-		RequestID           string
-		StartToCloseTimeout int32
 	}
 
 	// TimerInfo details - metadata about user timer info.
@@ -210,17 +217,19 @@ type (
 
 	// CreateWorkflowExecutionRequest is used to write a new workflow execution
 	CreateWorkflowExecutionRequest struct {
-		RequestID          string
-		Execution          workflow.WorkflowExecution
-		TaskList           string
-		History            []byte
-		ExecutionContext   []byte
-		NextEventID        int64
-		LastProcessedEvent int64
-		TransferTasks      []Task
-		TimerTasks         []Task
-		RangeID            int64
-		Decision           *DecisionInfo
+		RequestID                   string
+		Execution                   workflow.WorkflowExecution
+		TaskList                    string
+		History                     []byte
+		ExecutionContext            []byte
+		NextEventID                 int64
+		LastProcessedEvent          int64
+		TransferTasks               []Task
+		TimerTasks                  []Task
+		RangeID                     int64
+		DecisionScheduleID          int64
+		DecisionStartedID           int64
+		DecisionStartToCloseTimeout int32
 	}
 
 	// CreateWorkflowExecutionResponse is the response to CreateWorkflowExecutionRequest
@@ -252,7 +261,6 @@ type (
 		DeleteActivityInfo  *int64
 		UpserTimerInfos     []*TimerInfo
 		DeleteTimerInfos    []string
-		UpdateDecision      *DecisionInfo
 	}
 
 	// DeleteWorkflowExecutionRequest is used to delete a workflow execution
@@ -304,10 +312,12 @@ type (
 
 	// CreateTaskRequest is used to create a new task for a workflow exectution
 	CreateTaskRequest struct {
-		Execution workflow.WorkflowExecution
-		Data      Task
-		TaskID    int64
-		RangeID   int64
+		Execution    workflow.WorkflowExecution
+		TaskList     string
+		TaskListType int
+		Data         *TaskInfo
+		TaskID       int64
+		RangeID      int64
 	}
 
 	// CreateTaskResponse is the response to CreateTaskRequest
@@ -417,7 +427,7 @@ func (e *TimeoutError) Error() string {
 
 // GetType returns the type of the activity task
 func (a *ActivityTask) GetType() int {
-	return TaskListTypeActivity
+	return TransferTaskTypeActivityTask
 }
 
 // GetTaskID returns the sequence ID of the activity task
@@ -427,12 +437,22 @@ func (a *ActivityTask) GetTaskID() int64 {
 
 // GetType returns the type of the decision task
 func (d *DecisionTask) GetType() int {
-	return TaskListTypeDecision
+	return TransferTaskTypeDecisionTask
 }
 
 // GetTaskID returns the sequence ID of the decision task.
 func (d *DecisionTask) GetTaskID() int64 {
 	return d.TaskID
+}
+
+// GetType returns the type of the delete execution task
+func (a *DeleteExecutionTask) GetType() int {
+	return TransferTaskTypeDeleteExecution
+}
+
+// GetTaskID returns the sequence ID of the delete execution task
+func (a *DeleteExecutionTask) GetTaskID() int64 {
+	return a.TaskID
 }
 
 // GetType returns the type of the timer task
