@@ -22,6 +22,7 @@ type TChanWorkflowService interface {
 	PollForActivityTask(ctx thrift.Context, pollRequest *shared.PollForActivityTaskRequest) (*shared.PollForActivityTaskResponse, error)
 	PollForDecisionTask(ctx thrift.Context, pollRequest *shared.PollForDecisionTaskRequest) (*shared.PollForDecisionTaskResponse, error)
 	RecordActivityTaskHeartbeat(ctx thrift.Context, heartbeatRequest *shared.RecordActivityTaskHeartbeatRequest) (*shared.RecordActivityTaskHeartbeatResponse, error)
+	RequestCancelWorkflowExecution(ctx thrift.Context, cancelRequest *shared.RequestCancelWorkflowExecutionRequest) error
 	RespondActivityTaskCanceled(ctx thrift.Context, canceledRequest *shared.RespondActivityTaskCanceledRequest) error
 	RespondActivityTaskCompleted(ctx thrift.Context, completeRequest *shared.RespondActivityTaskCompletedRequest) error
 	RespondActivityTaskFailed(ctx thrift.Context, failRequest *shared.RespondActivityTaskFailedRequest) error
@@ -124,6 +125,27 @@ func (c *tchanWorkflowServiceClient) RecordActivityTaskHeartbeat(ctx thrift.Cont
 	}
 
 	return resp.GetSuccess(), err
+}
+
+func (c *tchanWorkflowServiceClient) RequestCancelWorkflowExecution(ctx thrift.Context, cancelRequest *shared.RequestCancelWorkflowExecutionRequest) error {
+	var resp WorkflowServiceRequestCancelWorkflowExecutionResult
+	args := WorkflowServiceRequestCancelWorkflowExecutionArgs{
+		CancelRequest: cancelRequest,
+	}
+	success, err := c.client.Call(ctx, c.thriftService, "RequestCancelWorkflowExecution", &args, &resp)
+	if err == nil && !success {
+		if e := resp.BadRequestError; e != nil {
+			err = e
+		}
+		if e := resp.InternalServiceError; e != nil {
+			err = e
+		}
+		if e := resp.EntityNotExistError; e != nil {
+			err = e
+		}
+	}
+
+	return err
 }
 
 func (c *tchanWorkflowServiceClient) RespondActivityTaskCanceled(ctx thrift.Context, canceledRequest *shared.RespondActivityTaskCanceledRequest) error {
@@ -253,6 +275,7 @@ func (s *tchanWorkflowServiceServer) Methods() []string {
 		"PollForActivityTask",
 		"PollForDecisionTask",
 		"RecordActivityTaskHeartbeat",
+		"RequestCancelWorkflowExecution",
 		"RespondActivityTaskCanceled",
 		"RespondActivityTaskCompleted",
 		"RespondActivityTaskFailed",
@@ -271,6 +294,8 @@ func (s *tchanWorkflowServiceServer) Handle(ctx thrift.Context, methodName strin
 		return s.handlePollForDecisionTask(ctx, protocol)
 	case "RecordActivityTaskHeartbeat":
 		return s.handleRecordActivityTaskHeartbeat(ctx, protocol)
+	case "RequestCancelWorkflowExecution":
+		return s.handleRequestCancelWorkflowExecution(ctx, protocol)
 	case "RespondActivityTaskCanceled":
 		return s.handleRespondActivityTaskCanceled(ctx, protocol)
 	case "RespondActivityTaskCompleted":
@@ -424,6 +449,43 @@ func (s *tchanWorkflowServiceServer) handleRecordActivityTaskHeartbeat(ctx thrif
 		}
 	} else {
 		res.Success = r
+	}
+
+	return err == nil, &res, nil
+}
+
+func (s *tchanWorkflowServiceServer) handleRequestCancelWorkflowExecution(ctx thrift.Context, protocol athrift.TProtocol) (bool, athrift.TStruct, error) {
+	var req WorkflowServiceRequestCancelWorkflowExecutionArgs
+	var res WorkflowServiceRequestCancelWorkflowExecutionResult
+
+	if err := req.Read(protocol); err != nil {
+		return false, nil, err
+	}
+
+	err :=
+		s.handler.RequestCancelWorkflowExecution(ctx, req.CancelRequest)
+
+	if err != nil {
+		switch v := err.(type) {
+		case *shared.BadRequestError:
+			if v == nil {
+				return false, nil, fmt.Errorf("Handler for badRequestError returned non-nil error type *shared.BadRequestError but nil value")
+			}
+			res.BadRequestError = v
+		case *shared.InternalServiceError:
+			if v == nil {
+				return false, nil, fmt.Errorf("Handler for internalServiceError returned non-nil error type *shared.InternalServiceError but nil value")
+			}
+			res.InternalServiceError = v
+		case *shared.EntityNotExistsError:
+			if v == nil {
+				return false, nil, fmt.Errorf("Handler for entityNotExistError returned non-nil error type *shared.EntityNotExistsError but nil value")
+			}
+			res.EntityNotExistError = v
+		default:
+			return false, nil, err
+		}
+	} else {
 	}
 
 	return err == nil, &res, nil

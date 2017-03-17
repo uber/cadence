@@ -35,6 +35,8 @@ enum DecisionType {
   CompleteWorkflowExecution,
   FailWorkflowExecution,
   CancelTimer,
+  CancelWorkflowExecution,
+  RequestCancelExternalWorkflowExecution,
 }
 
 enum EventType {
@@ -59,6 +61,11 @@ enum EventType {
   CompleteWorkflowExecutionFailed,
   CancelTimerFailed,
   TimerCanceled,
+  WorkflowExecutionCancelRequested,
+  CancelWorkflowExecutionFailed,
+  WorkflowExecutionCanceled,
+  RequestCancelExternalWorkflowExecutionInitiated,
+  RequestCancelExternalWorkflowExecutionFailed,
 }
 
 enum WorkflowCompleteFailedCause {
@@ -115,6 +122,15 @@ struct CancelTimerDecisionAttributes {
   10: optional string timerId
 }
 
+struct CancelWorkflowExecutionDecisionAttributes {
+  10: optional binary details
+}
+
+struct RequestCancelExternalWorkflowExecutionDecisionAttributes {
+    10: optional string workflowId
+    20: optional string runId
+}
+
 struct Decision {
   10: optional DecisionType decisionType
   20: optional ScheduleActivityTaskDecisionAttributes scheduleActivityTaskDecisionAttributes
@@ -123,6 +139,8 @@ struct Decision {
   35: optional FailWorkflowExecutionDecisionAttributes failWorkflowExecutionDecisionAttributes
   40: optional RequestCancelActivityTaskDecisionAttributes requestCancelActivityTaskDecisionAttributes
   50: optional CancelTimerDecisionAttributes cancelTimerDecisionAttributes
+  60: optional CancelWorkflowExecutionDecisionAttributes cancelWorkflowExecutionDecisionAttributes
+  70: optional RequestCancelExternalWorkflowExecutionDecisionAttributes requestCancelExternalWorkflowExecutionDecisionAttributes
 }
 
 struct WorkflowExecutionStartedEventAttributes {
@@ -262,6 +280,39 @@ struct CancelTimerFailedEventAttributes {
   40: optional string identity
 }
 
+struct WorkflowExecutionCancelRequestedEventAttributes {
+  10: optional string cause
+  20: optional WorkflowExecution externalWorkflowExecution
+  30: optional string identity
+}
+
+struct CancelWorkflowExecutionFailedEventAttributes {
+  10: optional string cause
+  20: optional i64 (js.type = "Long") decisionTaskCompletedEventId
+  30: optional string identity
+}
+
+struct WorkflowExecutionCanceledEventAttributes {
+  10: optional i64 (js.type = "Long") decisionTaskCompletedEventId
+  20: optional binary details
+  30: optional string identity
+}
+
+struct RequestCancelExternalWorkflowExecutionInitiatedEventAttributes {
+  10: optional i64 (js.type = "Long") decisionTaskCompletedEventId
+  20: optional string workflowId
+  30: optional string runId
+  40: optional string identity
+}
+
+struct RequestCancelExternalWorkflowExecutionFailedEventAttributes {
+  10: optional string cause
+  20: optional i64 (js.type = "Long") decisionTaskCompletedEventId
+  30: optional string workflowId
+  40: optional string runId
+  50: optional i64 (js.type = "Long") initiatedEventId
+}
+
 struct HistoryEvent {
   10:  optional i64 (js.type = "Long") eventId
   20:  optional i64 (js.type = "Long") timestamp
@@ -287,6 +338,11 @@ struct HistoryEvent {
   130: optional ActivityTaskCanceledEventAttributes activityTaskCanceledEventAttributes
   140: optional TimerCanceledEventAttributes timerCanceledEventAttributes
   150: optional CancelTimerFailedEventAttributes cancelTimerFailedEventAttributes
+  160: optional WorkflowExecutionCancelRequestedEventAttributes workflowExecutionCancelRequestedEventAttributes
+  170: optional CancelWorkflowExecutionFailedEventAttributes cancelWorkflowExecutionFailedEventAttributes
+  180: optional WorkflowExecutionCanceledEventAttributes workflowExecutionCanceledEventAttributes
+  190: optional RequestCancelExternalWorkflowExecutionInitiatedEventAttributes requestCancelExternalWorkflowExecutionInitiatedEventAttributes
+  200: optional RequestCancelExternalWorkflowExecutionFailedEventAttributes requestCancelExternalWorkflowExecutionFailedEventAttributes
 }
 
 struct History {
@@ -369,6 +425,12 @@ struct RespondActivityTaskFailedRequest {
 struct RespondActivityTaskCanceledRequest {
   10: optional binary taskToken
   20: optional binary details
+  30: optional string identity
+}
+
+struct RequestCancelWorkflowExecutionRequest {
+  10: optional string workflowId
+  20: optional string runId
   30: optional string identity
 }
 
