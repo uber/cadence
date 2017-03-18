@@ -19,7 +19,7 @@ const (
 	transferTaskBatchSize              = 10
 	transferProcessorMinPollInterval   = 10 * time.Millisecond
 	transferProcessorMaxPollInterval   = 10 * time.Second
-	transferProcessorUpdateAckInterval = time.Second
+	transferProcessorUpdateAckInterval = 10 * time.Second
 	taskWorkerCount                    = 10
 )
 
@@ -28,6 +28,7 @@ type (
 		ackMgr           *ackManager
 		executionManager persistence.ExecutionManager
 		matchingClient   matching.Client
+		cache            *historyCache
 		isStarted        int32
 		isStopped        int32
 		shutdownWG       sync.WaitGroup
@@ -52,19 +53,16 @@ type (
 		ackLevel            int64
 		maxAllowedReadLevel int64
 	}
-
-	taskInfoWithLevel struct {
-		readLevel int64
-		taskInfo  *persistence.TaskInfo
-	}
 )
 
-func newTransferQueueProcessor(shard ShardContext, matching matching.Client) transferQueueProcessor {
+func newTransferQueueProcessor(shard ShardContext, matching matching.Client,
+	cache *historyCache) transferQueueProcessor {
 	executionManager := shard.GetExecutionManager()
 	logger := shard.GetLogger()
 	processor := &transferQueueProcessorImpl{
 		executionManager: executionManager,
 		matchingClient:   matching,
+		cache:            cache,
 		shutdownCh:       make(chan struct{}),
 		logger: logger.WithFields(bark.Fields{
 			tagWorkflowComponent: tagValueTransferQueueComponent,
@@ -194,7 +192,7 @@ func (t *transferQueueProcessorImpl) taskWorker(tasksCh <-chan *persistence.Tran
 }
 
 func (t *transferQueueProcessorImpl) processTransferTask(task *persistence.TransferTaskInfo) {
-	t.logger.Debugf("Processing transfer task: %v", task.TaskID)
+	t.logger.Debugf("Processing transfer task: %v, type: %v", task.TaskID, task.TaskType)
 	t.metricsClient.AddCounter(metrics.HistoryProcessTransferTasksScope, metrics.TransferTasksProcessedCounter, 1)
 ProcessRetryLoop:
 	for retryCount := 1; retryCount <= 100; retryCount++ {
@@ -206,7 +204,7 @@ ProcessRetryLoop:
 			execution := workflow.WorkflowExecution{WorkflowId: common.StringPtr(task.WorkflowID),
 				RunId: common.StringPtr(task.RunID)}
 			switch task.TaskType {
-			case persistence.TaskListTypeActivity:
+			case persistence.TransferTaskTypeActivityTask:
 				{
 					taskList := &workflow.TaskList{
 						Name: &task.TaskList,
@@ -217,7 +215,7 @@ ProcessRetryLoop:
 						ScheduleId: &task.ScheduleID,
 					})
 				}
-			case persistence.TaskListTypeDecision:
+			case persistence.TransferTaskTypeDecisionTask:
 				{
 					taskList := &workflow.TaskList{
 						Name: &task.TaskList,
@@ -227,6 +225,19 @@ ProcessRetryLoop:
 						TaskList:   taskList,
 						ScheduleId: &task.ScheduleID,
 					})
+				}
+			case persistence.TransferTaskTypeDeleteExecution:
+				{
+					context, _ := t.cache.getOrCreateWorkflowExecution(execution)
+
+					// TODO: We need to keep completed executions for auditing purpose.  Need a design for keeping them around
+					// for visibility purpose.
+					context.Lock()
+					_, err = context.loadWorkflowExecution()
+					if err == nil {
+						err = context.deleteWorkflowExecution()
+					}
+					context.Unlock()
 				}
 			}
 

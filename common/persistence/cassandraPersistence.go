@@ -67,8 +67,11 @@ const (
 		`next_event_id: ?, ` +
 		`last_processed_event: ?, ` +
 		`last_updated_time: ?, ` +
-		`decision_pending: ?,` +
-		`create_request_id: ?` +
+		`create_request_id: ?, ` +
+		`decision_schedule_id: ?, ` +
+		`decision_started_id: ?, ` +
+		`decision_request_id: ?, ` +
+		`decision_timeout: ?` +
 		`}`
 
 	templateTransferTaskType = `{` +
@@ -101,13 +104,6 @@ const (
 		`heart_beat_timeout: ?, ` +
 		`cancel_requested: ?, ` +
 		`cancel_request_id: ?` +
-		`}`
-
-	templateDecisionInfoType = `{` +
-		`schedule_id: ?, ` +
-		`started_id: ?, ` +
-		`request_id: ?, ` +
-		`start_to_close_timeout: ?` +
 		`}`
 
 	templateTimerInfoType = `{` +
@@ -155,8 +151,8 @@ const (
 		`VALUES(?, ?, ?, ?, ?, ?) IF NOT EXISTS`
 
 	templateCreateWorkflowExecutionQuery2 = `INSERT INTO executions (` +
-		`shard_id, workflow_id, run_id, type, execution, next_event_id, task_id, decision) ` +
-		`VALUES(?, ?, ?, ?, ` + templateWorkflowExecutionType + `, ?, ?, ` + templateDecisionInfoType + `) IF NOT EXISTS`
+		`shard_id, workflow_id, run_id, type, execution, next_event_id, task_id) ` +
+		`VALUES(?, ?, ?, ?, ` + templateWorkflowExecutionType + `, ?, ?) IF NOT EXISTS`
 
 	templateCreateTransferTaskQuery = `INSERT INTO executions (` +
 		`shard_id, type, workflow_id, run_id, transfer, task_id) ` +
@@ -179,7 +175,7 @@ const (
 		`and run_id = ? ` +
 		`and task_id = ?`
 
-	templateGetWorkflowMutableStateQuery = `SELECT activity_map, timer_map, decision ` +
+	templateGetWorkflowMutableStateQuery = `SELECT execution, activity_map, timer_map ` +
 		`FROM executions ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
@@ -198,15 +194,6 @@ const (
 
 	templateUpdateActivityInfoQuery = `UPDATE executions ` +
 		`SET activity_map[ ? ] =` + templateActivityInfoType + ` ` +
-		`WHERE shard_id = ? ` +
-		`and type = ? ` +
-		`and workflow_id = ? ` +
-		`and run_id = ? ` +
-		`and task_id = ? ` +
-		`IF next_event_id = ? and range_id = ?`
-
-	templateUpdateDecisionInfoQuery = `UPDATE executions ` +
-		`SET decision =` + templateDecisionInfoType + ` ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
 		`and workflow_id = ? ` +
@@ -530,14 +517,13 @@ func (d *cassandraPersistence) CreateWorkflowExecution(request *CreateWorkflowEx
 		request.NextEventID,
 		request.LastProcessedEvent,
 		cqlNowTimestamp,
-		true,
 		request.RequestID,
+		request.DecisionScheduleID,
+		request.DecisionStartedID,
+		"", // Decision Start Request ID
+		request.DecisionStartToCloseTimeout,
 		request.NextEventID,
-		rowTypeExecutionTaskID,
-		request.Decision.ScheduleID,
-		request.Decision.StartedID,
-		request.Decision.RequestID,
-		request.Decision.StartToCloseTimeout)
+		rowTypeExecutionTaskID)
 
 	d.createTransferTasks(batch, request.TransferTasks, request.Execution.GetWorkflowId(), request.Execution.GetRunId(),
 		cqlNowTimestamp)
@@ -584,6 +570,7 @@ func (d *cassandraPersistence) CreateWorkflowExecution(request *CreateWorkflowEx
 			return nil, &workflow.WorkflowExecutionAlreadyStartedError{
 				Message:        common.StringPtr(msg),
 				StartRequestId: common.StringPtr(fmt.Sprintf("%v", execution["create_request_id"])),
+				RunId:          common.StringPtr(fmt.Sprintf("%v", execution["run_id"])),
 			}
 		}
 
@@ -640,8 +627,11 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 		executionInfo.NextEventID,
 		executionInfo.LastProcessedEvent,
 		cqlNowTimestamp,
-		executionInfo.DecisionPending,
 		executionInfo.CreateRequestID,
+		executionInfo.DecisionScheduleID,
+		executionInfo.DecisionStartedID,
+		executionInfo.DecisionRequestID,
+		executionInfo.DecisionTimeout,
 		executionInfo.NextEventID,
 		d.shardID,
 		rowTypeExecution,
@@ -661,9 +651,6 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 
 	d.updateTimerInfos(batch, request.UpserTimerInfos, request.DeleteTimerInfos,
 		executionInfo.WorkflowID, executionInfo.RunID, request.Condition, request.RangeID)
-
-	d.updateDecisionInfo(batch, request.UpdateDecision, executionInfo.WorkflowID,
-		executionInfo.RunID, request.Condition, request.RangeID)
 
 	previous := make(map[string]interface{})
 	applied, _, err := d.session.MapExecuteBatchCAS(batch, previous)
@@ -735,8 +722,11 @@ func (d *cassandraPersistence) DeleteWorkflowExecution(request *DeleteWorkflowEx
 		info.NextEventID,
 		info.LastProcessedEvent,
 		cqlNowTimestamp,
-		info.DecisionPending,
 		info.CreateRequestID,
+		info.DecisionScheduleID,
+		info.DecisionStartedID,
+		info.DecisionRequestID,
+		info.DecisionTimeout,
 		info.NextEventID,
 		rowTypeExecutionTaskID,
 		defaultDeleteTTLSeconds)
@@ -930,25 +920,16 @@ func (d *cassandraPersistence) UpdateTaskList(request *UpdateTaskListRequest) (*
 
 // From TaskManager interface
 func (d *cassandraPersistence) CreateTask(request *CreateTaskRequest) (*CreateTaskResponse, error) {
-	var taskList string
-	var scheduleID int64
-	taskType := request.Data.GetType()
-	switch taskType {
-	case TaskListTypeActivity:
-		taskList = request.Data.(*ActivityTask).TaskList
-		scheduleID = request.Data.(*ActivityTask).ScheduleID
-
-	case TaskListTypeDecision:
-		taskList = request.Data.(*DecisionTask).TaskList
-		scheduleID = request.Data.(*DecisionTask).ScheduleID
-	}
+	taskList := request.TaskList
+	scheduleID := request.Data.ScheduleID
+	taskListType := request.TaskListType
 
 	// Batch is used to include conditional update on range_id
 	batch := d.session.NewBatch(gocql.LoggedBatch)
 
 	batch.Query(templateCreateTaskQuery,
 		taskList,
-		request.Data.GetType(),
+		taskListType,
 		rowTypeTask,
 		request.TaskID,
 		request.Execution.GetWorkflowId(),
@@ -959,7 +940,7 @@ func (d *cassandraPersistence) CreateTask(request *CreateTaskRequest) (*CreateTa
 	batch.Query(templateUpdateTaskListRangeOnlyQuery,
 		request.RangeID,
 		taskList,
-		taskType,
+		taskListType,
 		request.RangeID,
 	)
 	previous := make(map[string]interface{})
@@ -972,8 +953,8 @@ func (d *cassandraPersistence) CreateTask(request *CreateTaskRequest) (*CreateTa
 	if !applied {
 		rangeID := previous["range_id"]
 		return nil, &ConditionFailedError{
-			Msg: fmt.Sprintf("Failed to create task. TaskList: %v, taskType: %v, rangeID: %v, db rangeID: %v",
-				taskList, taskType, request.RangeID, rangeID),
+			Msg: fmt.Sprintf("Failed to create task. TaskList: %v, taskListType: %v, rangeID: %v, db rangeID: %v",
+				taskList, taskListType, request.RangeID, rangeID),
 		}
 	}
 	return &CreateTaskResponse{}, nil
@@ -1124,7 +1105,7 @@ func (d *cassandraPersistence) GetWorkflowMutableState(request *GetWorkflowMutab
 		rowTypeExecution,
 		request.WorkflowID,
 		request.RunID,
-		rowTypeExecutionTaskID).Consistency(d.lowConslevel)
+		rowTypeExecutionTaskID)
 
 	result := make(map[string]interface{})
 	if err := query.MapScan(result); err != nil {
@@ -1142,6 +1123,12 @@ func (d *cassandraPersistence) GetWorkflowMutableState(request *GetWorkflowMutab
 
 	state := &WorkflowMutableState{}
 
+	ei := createWorkflowExecutionInfo(result["execution"].(map[string]interface{}))
+	// TODO: Removing this piece of code when history is moved out of execution info.
+	// This is just a safe way upstream mutable state doesn't hold on to it.
+	ei.History = nil
+	state.ExecutionInfo = ei
+
 	activityInfos := make(map[int64]*ActivityInfo)
 	aMap := result["activity_map"].(map[int64]map[string]interface{})
 	for key, value := range aMap {
@@ -1158,9 +1145,6 @@ func (d *cassandraPersistence) GetWorkflowMutableState(request *GetWorkflowMutab
 	}
 	state.TimerInfos = timerInfos
 
-	di := result["decision"].(map[string]interface{})
-	state.Decision = createDecisionInfo(di)
-
 	return &GetWorkflowMutableStateResponse{State: state}, nil
 }
 
@@ -1171,11 +1155,11 @@ func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferT
 		var scheduleID int64
 
 		switch task.GetType() {
-		case TaskListTypeActivity:
+		case TransferTaskTypeActivityTask:
 			taskList = task.(*ActivityTask).TaskList
 			scheduleID = task.(*ActivityTask).ScheduleID
 
-		case TaskListTypeDecision:
+		case TransferTaskTypeDecisionTask:
 			taskList = task.(*DecisionTask).TaskList
 			scheduleID = task.(*DecisionTask).ScheduleID
 		}
@@ -1236,25 +1220,6 @@ func (d *cassandraPersistence) createTimerTasks(batch *gocql.Batch, timerTasks [
 			rowTypeTimerWorkflowID,
 			rowTypeTimerRunID,
 			deleteTimerTask.GetTaskID())
-	}
-}
-
-func (d *cassandraPersistence) updateDecisionInfo(batch *gocql.Batch, di *DecisionInfo,
-	workflowID string, runID string, condition int64, rangeID int64) {
-
-	if di != nil {
-		batch.Query(templateUpdateDecisionInfoQuery,
-			di.ScheduleID,
-			di.StartedID,
-			di.RequestID,
-			di.StartToCloseTimeout,
-			d.shardID,
-			rowTypeExecution,
-			workflowID,
-			runID,
-			rowTypeExecutionTaskID,
-			condition,
-			rangeID)
 	}
 }
 
@@ -1373,10 +1338,16 @@ func createWorkflowExecutionInfo(result map[string]interface{}) *WorkflowExecuti
 			info.LastProcessedEvent = v.(int64)
 		case "last_updated_time":
 			info.LastUpdatedTimestamp = v.(time.Time)
-		case "decision_pending":
-			info.DecisionPending = v.(bool)
 		case "create_request_id":
 			info.CreateRequestID = v.(gocql.UUID).String()
+		case "decision_schedule_id":
+			info.DecisionScheduleID = v.(int64)
+		case "decision_started_id":
+			info.DecisionStartedID = v.(int64)
+		case "decision_request_id":
+			info.DecisionRequestID = v.(string)
+		case "decision_timeout":
+			info.DecisionTimeout = int32(v.(int))
 		}
 	}
 
@@ -1462,8 +1433,6 @@ func createTaskInfo(result map[string]interface{}) *TaskInfo {
 			info.WorkflowID = v.(string)
 		case "run_id":
 			info.RunID = v.(gocql.UUID).String()
-		case "task_id":
-			info.TaskID = v.(int64)
 		case "schedule_id":
 			info.ScheduleID = v.(int64)
 		}
@@ -1493,22 +1462,3 @@ func createTimerTaskInfo(result map[string]interface{}) *TimerTaskInfo {
 
 	return info
 }
-
-func createDecisionInfo(result map[string]interface{}) *DecisionInfo {
-	info := &DecisionInfo{}
-	for k, v := range result {
-		switch k {
-		case "schedule_id":
-			info.ScheduleID = v.(int64)
-		case "started_id":
-			info.StartedID = v.(int64)
-		case "request_id":
-			info.RequestID = v.(string)
-		case "start_to_close_timeout":
-			info.StartToCloseTimeout = int32(v.(int))
-		}
-	}
-
-	return info
-}
-
