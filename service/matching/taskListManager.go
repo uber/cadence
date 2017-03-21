@@ -444,7 +444,7 @@ func (c *taskContext) RecordActivityTaskStartedWithRetry(
 // If poll received task from persistence then task is deleted from it if no error was reported.
 func (c *taskContext) completeTask(err error) {
 	tlMgr := c.tlMgr
-	c.tlMgr.logger.Debugf("completeTask task taskList=%v, taskID=%v, err=%v",
+	tlMgr.logger.Debugf("completeTask task taskList=%v, taskID=%v, err=%v",
 		tlMgr.taskListID.taskListName, c.info.TaskID, err)
 	if c.syncResponseCh != nil {
 		// It is OK to succeed task creation as it was already completed
@@ -454,23 +454,37 @@ func (c *taskContext) completeTask(err error) {
 	}
 
 	if err != nil {
-		return
-	}
-	ackLevel := tlMgr.completeTaskPoll(c.info.TaskID)
-
-	_, err = tlMgr.executeWithRetry(func(rangeID int64) (interface{}, error) {
-		return nil, tlMgr.engine.taskManager.CompleteTask(&persistence.CompleteTaskRequest{
-			TaskList: &persistence.TaskListInfo{
-				Name:     tlMgr.taskListID.taskListName,
-				TaskType: tlMgr.taskListID.taskType,
-				AckLevel: ackLevel,
-				RangeID:  rangeID,
-			},
-			TaskID: c.info.TaskID,
+		// failed to start the task.
+		// We cannot just remove it from persistence because then it will be lost,
+		// which is criticial for decision tasks since there have no ScheduleToStart timeout.
+		// We handle this by writing the task back to persistence with a higher taskID.
+		// This will allow subsequent tasks to make progress, and hopefully by the time this task is picked-up
+		// again the underlying reason for failing to start will be resolved.
+		_, err = tlMgr.executeWithRetry(func(rangeID int64) (interface{}, error) {
+			return tlMgr.taskWriter.appendTask(&c.workflowExecution, c.info, rangeID)
 		})
+
+		if err != nil {
+			// OK, we also failed to write to persistence.
+			// This should only happen in very extreme cases where persistence is completely down.
+			// We still can't lose the old task so we just unload the entire task list
+			tlMgr.Stop()
+			return
+		}
+	}
+
+	tlMgr.completeTaskPoll(c.info.TaskID)
+
+	err2 := tlMgr.engine.taskManager.CompleteTask(&persistence.CompleteTaskRequest{
+		TaskList: &persistence.TaskListInfo{
+			Name:     tlMgr.taskListID.taskListName,
+			TaskType: tlMgr.taskListID.taskType,
+		},
+		TaskID: c.info.TaskID,
 	})
-	if err != nil {
-		logPersistantStoreErrorEvent(tlMgr.logger, tagValueStoreOperationCompleteTask, err,
+
+	if err2 != nil {
+		logPersistantStoreErrorEvent(tlMgr.logger, tagValueStoreOperationCompleteTask, err2,
 			fmt.Sprintf("{taskID: %v, taskType: %v, taskList: %v}",
 				c.info.TaskID, tlMgr.taskListID.taskType, tlMgr.taskListID.taskListName))
 	}
