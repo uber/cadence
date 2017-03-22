@@ -171,4 +171,5 @@ func (e *mutableStateBuilder) GetNextEventID() int64 {
 // UpdateExecutionInfo updates mutable state info.
 func (e *mutableStateBuilder) UpdateExecutionInfo(execution *persistence.WorkflowExecutionInfo) {
 	e.execution.NextEventID = execution.NextEventID
+	e.execution.State = execution.State
 }

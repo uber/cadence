@@ -156,8 +156,8 @@ func (e *historyEngineImpl) StartWorkflowExecution(request *workflow.StartWorkfl
 			TaskID:   id,
 			TaskList: taskList, ScheduleID: dt.GetEventId(),
 		}},
-		DecisionScheduleID: dt.GetEventId(),
-		DecisionStartedID: emptyEventID,
+		DecisionScheduleID:          dt.GetEventId(),
+		DecisionStartedID:           emptyEventID,
 		DecisionStartToCloseTimeout: dt.GetDecisionTaskScheduledEventAttributes().GetStartToCloseTimeoutSeconds(),
 	})
 
@@ -1034,6 +1034,76 @@ Update_History_Loop:
 	}
 
 	return &workflow.RecordActivityTaskHeartbeatResponse{}, ErrMaxAttemptsExceeded
+}
+
+func (e *historyEngineImpl) RequestCancelWorkflowExecution(request *workflow.RequestCancelWorkflowExecutionRequest) error {
+	workflowExecution := workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr(request.GetWorkflowId()),
+		RunId:      common.StringPtr(request.GetRunId()),
+	}
+
+	context, err := e.cache.getOrCreateWorkflowExecution(workflowExecution)
+	if err != nil {
+		return err
+	}
+
+	context.Lock()
+	defer context.Unlock()
+
+Update_History_Loop:
+	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
+		msBuilder, err := context.loadWorkflowMutableState()
+		if err != nil {
+			return err
+		}
+
+		if msBuilder.execution.State != persistence.WorkflowStateCreated &&
+			msBuilder.execution.State != persistence.WorkflowStateRunning {
+			return &workflow.EntityNotExistsError{Message: "Workflow not found."}
+		}
+
+		builder, err := context.loadWorkflowExecution()
+		if err != nil {
+			return err
+		}
+
+		// First check to see if cache needs to be refreshed as we could potentially have stale workflow execution in
+		// some extreme cassandra failure cases.
+		if msBuilder.GetNextEventID() != builder.nextEventID {
+			// Reload workflow execution history
+			context.clear()
+			continue Update_History_Loop
+		}
+
+		builder.AddWorkflowExecutionCancelRequestedEvent("", request.GetWorkflowId(), request.GetRunId(), request.GetIdentity())
+
+		var transferTasks []persistence.Task
+		if !builder.hasPendingDecisionTask() {
+			newDecisionEvent := e.scheduleDecisionTask(builder, msBuilder)
+			id, err2 := e.tracker.getNextTaskID()
+			if err2 != nil {
+				return err2
+			}
+
+			defer e.tracker.completeTask(id)
+			transferTasks = []persistence.Task{&persistence.DecisionTask{
+				TaskID:     id,
+				TaskList:   newDecisionEvent.GetDecisionTaskScheduledEventAttributes().GetTaskList().GetName(),
+				ScheduleID: newDecisionEvent.GetEventId(),
+			}}
+		}
+
+		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
+		// the history and try the operation again.
+		if err := context.updateWorkflowExecution(transferTasks, nil); err != nil {
+			if err == ErrConflict {
+				continue Update_History_Loop
+			}
+			return err
+		}
+		return nil
+	}
+	return ErrMaxAttemptsExceeded
 }
 
 func (e *historyEngineImpl) createRecordDecisionTaskStartedResponse(context *workflowExecutionContext,

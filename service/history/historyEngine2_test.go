@@ -691,3 +691,85 @@ func (s *engine2Suite) TestRecordActivityTaskStartedSuccess() {
 	s.Equal(scheduledEvent.GetEventId()+1, response.GetStartedEvent().GetEventId())
 	s.Equal("reqId", response.GetStartedEvent().GetActivityTaskStartedEventAttributes().GetRequestId())
 }
+
+func (s *engine2Suite) TestRequestCancelWorkflowExecutionSuccess() {
+	workflowExecution := &workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr("wId"),
+		RunId:      common.StringPtr("rId"),
+	}
+
+	identity := "testIdentity"
+	tl := "testTaskList"
+
+	builder := newHistoryBuilder(bark.NewLoggerFromLogrus(log.New()))
+	addWorkflowExecutionStartedEvent(builder, "wId", "wType", tl, []byte("input"), 100, 200, identity)
+	addDecisionTaskScheduledEvent(builder, tl, 30)
+
+	history, _ := builder.Serialize()
+	info := &persistence.WorkflowExecutionInfo{
+		WorkflowID:           "wId",
+		RunID:                "rId",
+		TaskList:             tl,
+		History:              history,
+		ExecutionContext:     nil,
+		State:                persistence.WorkflowStateRunning,
+		NextEventID:          builder.nextEventID,
+		LastProcessedEvent:   emptyEventID,
+		LastUpdatedTimestamp: time.Time{},
+	}
+	wfResponse := &persistence.GetWorkflowExecutionResponse{ExecutionInfo: info}
+
+	ms := createMutableState(3)
+	gwmsResponse := &persistence.GetWorkflowMutableStateResponse{State: ms}
+
+	s.mockExecutionMgr.On("GetWorkflowMutableState", mock.Anything).Return(gwmsResponse, nil).Once()
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(wfResponse, nil).Once()
+	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(nil).Once()
+
+	err := s.historyEngine.RequestCancelWorkflowExecution(&workflow.RequestCancelWorkflowExecutionRequest{
+		WorkflowId: workflowExecution.WorkflowId,
+		RunId:      workflowExecution.RunId,
+		Identity:   common.StringPtr("identity"),
+	})
+	s.Nil(err)
+
+	updatedBuilder := newHistoryBuilder(bark.NewLoggerFromLogrus(log.New()))
+	updatedBuilder.loadExecutionInfo(info)
+	s.Equal(int64(4), info.NextEventID)
+
+	updatedEvent := updatedBuilder.GetEvent(3)
+	s.Equal(workflow.EventType_WorkflowExecutionCancelRequested, updatedEvent.GetEventType())
+	s.Equal(workflowExecution.GetWorkflowId(),
+		updatedEvent.GetWorkflowExecutionCancelRequestedEventAttributes().GetExternalWorkflowExecution().GetWorkflowId())
+	s.Equal(workflowExecution.GetRunId(),
+		updatedEvent.GetWorkflowExecutionCancelRequestedEventAttributes().GetExternalWorkflowExecution().GetRunId())
+	s.Equal("identity", updatedEvent.GetWorkflowExecutionCancelRequestedEventAttributes().GetIdentity())
+}
+
+func (s *engine2Suite) TestRequestCancelWorkflowExecutionFail() {
+	workflowExecution := &workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr("wId"),
+		RunId:      common.StringPtr("rId"),
+	}
+
+	identity := "testIdentity"
+	tl := "testTaskList"
+
+	builder := newHistoryBuilder(bark.NewLoggerFromLogrus(log.New()))
+	addWorkflowExecutionStartedEvent(builder, "wId", "wType", tl, []byte("input"), 100, 200, identity)
+	addDecisionTaskScheduledEvent(builder, tl, 30)
+
+	ms := createMutableState(3)
+	ms.ExecutionInfo.State = persistence.WorkflowStateCompleted
+	gwmsResponse := &persistence.GetWorkflowMutableStateResponse{State: ms}
+
+	s.mockExecutionMgr.On("GetWorkflowMutableState", mock.Anything).Return(gwmsResponse, nil).Once()
+
+	err := s.historyEngine.RequestCancelWorkflowExecution(&workflow.RequestCancelWorkflowExecutionRequest{
+		WorkflowId: workflowExecution.WorkflowId,
+		RunId:      workflowExecution.RunId,
+		Identity:   common.StringPtr("identity"),
+	})
+	s.NotNil(err)
+	s.IsType(&workflow.EntityNotExistsError{}, err)
+}
