@@ -22,31 +22,31 @@ var (
 
 type (
 	historyBuilder struct {
-		serializer                       historySerializer
-		history                          []*workflow.HistoryEvent
-		outstandingActivities            map[int64]int64
-		outstandingDecisionTask          map[int64]int64
-		outstandingTimerTask             map[int64]string // Timer started event ID -> Timer User ID.
-		outstandingActivityCancels       map[string]int64
-		previousDecisionTaskStartedEvent int64
-		nextEventID                      int64
-		state                            int
-		logger                           bark.Logger
+		serializer                                    historySerializer
+		history                                       []*workflow.HistoryEvent
+		outstandingActivities                         map[int64]int64
+		outstandingDecisionTask                       map[int64]int64
+		outstandingTimerTask                          map[int64]string // Timer started event ID -> Timer User ID.
+		outstandingActivityCancels                    map[string]int64
+		previousDecisionTaskStartedEvent              int64
+		nextEventID                                   int64
+		state                                         int
+		logger                                        bark.Logger
 	}
 )
 
 func newHistoryBuilder(logger bark.Logger) *historyBuilder {
 	return &historyBuilder{
-		serializer:                       newJSONHistorySerializer(),
-		history:                          []*workflow.HistoryEvent{},
-		outstandingActivities:            make(map[int64]int64),
-		outstandingDecisionTask:          make(map[int64]int64),
-		outstandingTimerTask:             make(map[int64]string),
-		outstandingActivityCancels:       make(map[string]int64),
-		previousDecisionTaskStartedEvent: emptyEventID,
-		nextEventID:                      firstEventID,
-		state:                            persistence.WorkflowStateCreated,
-		logger:                           logger.WithField(tagWorkflowComponent, tagValueHistoryBuilderComponent),
+		serializer:                                    newJSONHistorySerializer(),
+		history:                                       []*workflow.HistoryEvent{},
+		outstandingActivities:                         make(map[int64]int64),
+		outstandingDecisionTask:                       make(map[int64]int64),
+		outstandingTimerTask:                          make(map[int64]string),
+		outstandingActivityCancels:                    make(map[string]int64),
+		previousDecisionTaskStartedEvent:              emptyEventID,
+		nextEventID:                                   firstEventID,
+		state:                                         persistence.WorkflowStateCreated,
+		logger:                                        logger.WithField(tagWorkflowComponent, tagValueHistoryBuilderComponent),
 	}
 }
 
@@ -335,6 +335,81 @@ func (b *historyBuilder) AddCancelTimerFailedEvent(timerID string, decisionTaskC
 	return b.addEventToHistory(event)
 }
 
+func (b *historyBuilder) AddWorkflowExecutionCancelRequestedEvent(cause string, workflowID, runID string,
+	identity string) *workflow.HistoryEvent {
+
+	attributes := workflow.NewWorkflowExecutionCancelRequestedEventAttributes()
+	attributes.Cause = common.StringPtr(cause)
+	attributes.Identity = common.StringPtr(identity)
+	attributes.ExternalWorkflowExecution = &workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr(workflowID),
+		RunId:      common.StringPtr(runID)}
+
+	event := newHistoryEvent(b.nextEventID, workflow.EventType_WorkflowExecutionCancelRequested)
+	event.WorkflowExecutionCancelRequestedEventAttributes = attributes
+
+	return b.addEventToHistory(event)
+}
+
+func (b *historyBuilder) AddCancelWorkflowExecutionFailedEvent(decisionTaskCompletedEventID int64,
+	cause string, identity string) *workflow.HistoryEvent {
+
+	attributes := workflow.NewCancelWorkflowExecutionFailedEventAttributes()
+	attributes.Cause = common.StringPtr(cause)
+	attributes.Identity = common.StringPtr(identity)
+	attributes.DecisionTaskCompletedEventId = common.Int64Ptr(decisionTaskCompletedEventID)
+
+	event := newHistoryEvent(b.nextEventID, workflow.EventType_CancelWorkflowExecutionFailed)
+	event.CancelWorkflowExecutionFailedEventAttributes = attributes
+
+	return b.addEventToHistory(event)
+}
+
+func (b *historyBuilder) AddWorkflowExecutionCanceledEvent(decisionTaskCompletedEventID int64,
+	details []byte, identity string) *workflow.HistoryEvent {
+
+	attributes := workflow.NewWorkflowExecutionCanceledEventAttributes()
+	attributes.DecisionTaskCompletedEventId = common.Int64Ptr(decisionTaskCompletedEventID)
+	attributes.Identity = common.StringPtr(identity)
+	attributes.Details = details
+
+	event := newHistoryEvent(b.nextEventID, workflow.EventType_WorkflowExecutionCanceled)
+	event.WorkflowExecutionCanceledEventAttributes = attributes
+
+	return b.addEventToHistory(event)
+}
+
+func (b *historyBuilder) AddRequestCancelExternalWorkflowExecutionInitiatedEvent(decisionTaskCompletedEventID int64,
+	workflowID, runID string, identity string) *workflow.HistoryEvent {
+
+	attributes := workflow.NewRequestCancelExternalWorkflowExecutionInitiatedEventAttributes()
+	attributes.DecisionTaskCompletedEventId = common.Int64Ptr(decisionTaskCompletedEventID)
+	attributes.Identity = common.StringPtr(identity)
+	attributes.WorkflowId = common.StringPtr(workflowID)
+	attributes.RunId = common.StringPtr(runID)
+
+	event := newHistoryEvent(b.nextEventID, workflow.EventType_RequestCancelExternalWorkflowExecutionInitiated)
+	event.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes = attributes
+
+	return b.addEventToHistory(event)
+}
+
+func (b *historyBuilder) AddRequestCancelExternalWorkflowExecutionFailedEvent(decisionTaskCompletedEventID, initiatedEventID int64,
+	workflowID, runID string, cause string) *workflow.HistoryEvent {
+
+	attributes := workflow.NewRequestCancelExternalWorkflowExecutionFailedEventAttributes()
+	attributes.DecisionTaskCompletedEventId = common.Int64Ptr(decisionTaskCompletedEventID)
+	attributes.InitiatedEventId = common.Int64Ptr(initiatedEventID)
+	attributes.WorkflowId = common.StringPtr(workflowID)
+	attributes.RunId = common.StringPtr(runID)
+	attributes.Cause = common.StringPtr(cause)
+
+	event := newHistoryEvent(b.nextEventID, workflow.EventType_RequestCancelExternalWorkflowExecutionFailed)
+	event.RequestCancelExternalWorkflowExecutionFailedEventAttributes = attributes
+
+	return b.addEventToHistory(event)
+}
+
 func (b *historyBuilder) addEventToHistory(event *workflow.HistoryEvent) *workflow.HistoryEvent {
 	//b.logger.Debugf("Adding EventId: %v, Event: %+v", event.GetEventId(), *event)
 	eventID := event.GetEventId()
@@ -497,7 +572,24 @@ func (b *historyBuilder) addEventToHistory(event *workflow.HistoryEvent) *workfl
 				len(b.outstandingDecisionTask)))
 		}
 		b.state = persistence.WorkflowStateCompleted
+
 	case workflow.EventType_CompleteWorkflowExecutionFailed:
+		// No Operation:
+
+	case workflow.EventType_WorkflowExecutionCanceled:
+		if b.hasPendingTasks() || b.hasPendingDecisionTask() {
+			logInvalidHistoryActionEvent(b.logger, tagValueActionCancelWorkflow, eventID, fmt.Sprintf(
+				"{OutStandingActivityTasks: %v, OutStandingDecisionTasks: %v}",
+				len(b.outstandingActivities), len(b.outstandingDecisionTask)))
+		}
+		b.state = persistence.WorkflowStateCompleted
+
+	case workflow.EventType_WorkflowExecutionCancelRequested:
+		// No Operation:
+
+	case workflow.EventType_CancelWorkflowExecutionFailed:
+		// No Operation:
+
 	case workflow.EventType_TimerStarted:
 		e, ok := b.outstandingTimerTask[eventID]
 		if ok {
@@ -529,6 +621,11 @@ func (b *historyBuilder) addEventToHistory(event *workflow.HistoryEvent) *workfl
 
 	case workflow.EventType_CancelTimerFailed:
 		// No Operation: We couldn't cancel it probably TIMER_ID_UNKNOWN
+
+	case workflow.EventType_RequestCancelExternalWorkflowExecutionInitiated:
+		// No Operation:
+	case workflow.EventType_RequestCancelExternalWorkflowExecutionFailed:
+		// No Operation:
 
 	default:
 		logInvalidHistoryActionEvent(b.logger, tagValueActionUnknownEvent, eventID, fmt.Sprintf(
