@@ -15,4 +15,5 @@ type Client interface {
 	RespondActivityTaskCanceled(cancelRequest *shared.RespondActivityTaskCanceledRequest) error
 	RespondDecisionTaskCompleted(completeRequest *shared.RespondDecisionTaskCompletedRequest) error
 	StartWorkflowExecution(startRequest *shared.StartWorkflowExecutionRequest) (*shared.StartWorkflowExecutionResponse, error)
+	RequestCancelWorkflowExecution(cancelRequest *shared.RequestCancelWorkflowExecutionRequest) error
 }

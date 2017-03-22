@@ -228,6 +228,23 @@ func (c *clientImpl) RecordActivityTaskHeartbeat(context thrift.Context,
 	return response, nil
 }
 
+func (c *clientImpl) RequestCancelWorkflowExecution(context thrift.Context,
+	request *workflow.RequestCancelWorkflowExecutionRequest) error {
+	client, err := c.getHostForRequest(request.GetWorkflowId())
+	if err != nil {
+		return err
+	}
+	op := func(context thrift.Context, client h.TChanHistoryService) error {
+		var err error
+		ctx, cancel := c.createContext(context)
+		defer cancel()
+		err = client.RequestCancelWorkflowExecution(ctx, request)
+		return err
+	}
+	return c.executeWithRedirect(context, client, op)
+}
+
+
 func (c *clientImpl) getHostForRequest(workflowID string) (h.TChanHistoryService, error) {
 	key := common.WorkflowIDToHistoryShard(workflowID, c.numberOfShards)
 	host, err := c.resolver.Lookup(string(key))

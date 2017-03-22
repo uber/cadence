@@ -185,4 +185,19 @@ func (_m *HistoryClient) StartWorkflowExecution(ctx thrift.Context, startRequest
 	return r0, r1
 }
 
+// RequestCancelWorkflowExecution is mock implementation for RequestCancelWorkflowExecution of HistoryEngine
+func (_m *HistoryClient) RequestCancelWorkflowExecution(ctx thrift.Context, request *shared.RequestCancelWorkflowExecutionRequest) error {
+	ret := _m.Called(request)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*shared.RequestCancelWorkflowExecutionRequest) error); ok {
+		r0 = rf(request)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+
 var _ history.Client = (*HistoryClient)(nil)

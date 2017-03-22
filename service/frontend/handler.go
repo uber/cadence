@@ -162,6 +162,18 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	return wh.history.GetWorkflowExecutionHistory(ctx, getRequest)
 }
 
+// RequestCancelWorkflowExecution - requests to cancel a workflow execution
+func (wh *WorkflowHandler) RequestCancelWorkflowExecution(
+	ctx thrift.Context,
+	cancelRequest *gen.RequestCancelWorkflowExecutionRequest) error {
+	err := wh.history.RequestCancelWorkflowExecution(ctx, cancelRequest)
+	if err != nil {
+		wh.Service.GetLogger().Errorf("RequestCancelWorkflowExecution failed. WorkflowID: %v. Error: %v",
+			cancelRequest.GetWorkflowId(), err)
+	}
+	return err
+}
+
 func (wh *WorkflowHandler) getLoggerForTask(taskToken []byte) bark.Logger {
 	logger := wh.Service.GetLogger()
 	task, err := wh.tokenSerializer.Deserialize(taskToken)

@@ -354,6 +354,35 @@ func (h *Handler) GetWorkflowExecutionHistory(ctx thrift.Context,
 	return resp, nil
 }
 
+// RequestCancelWorkflowExecution - requests cancellation of a workflow
+func (h *Handler) RequestCancelWorkflowExecution(ctx thrift.Context,
+	request *gen.RequestCancelWorkflowExecutionRequest) error {
+	h.startWG.Wait()
+
+	h.metricsClient.IncCounter(metrics.HistoryRequestCancelWorkflowExecutionScope, metrics.CadenceRequests)
+	sw := h.metricsClient.StartTimer(metrics.HistoryRequestCancelWorkflowExecutionScope, metrics.CadenceLatency)
+	defer sw.Stop()
+
+	h.Service.GetLogger().Debugf("RequestCancelWorkflowExecution. WorkflowID: %v, RunID: %v.",
+		request.GetWorkflowId(),
+		request.GetRunId())
+
+	engine, err1 := h.controller.GetEngine(request.GetWorkflowId())
+	if err1 != nil {
+		h.updateErrorMetric(metrics.HistoryRequestCancelWorkflowExecutionScope, err1)
+		return err1
+	}
+
+	err2 := engine.RequestCancelWorkflowExecution(request)
+	if err2 != nil {
+		h.updateErrorMetric(metrics.HistoryRequestCancelWorkflowExecutionScope, h.convertError(err2))
+		return h.convertError(err2)
+	}
+
+	return nil
+}
+
+
 // convertError is a helper method to convert ShardOwnershipLostError from persistence layer returned by various
 // HistoryEngine API calls to ShardOwnershipLost error return by HistoryService for client to be redirected to the
 // correct shard.

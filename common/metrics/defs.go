@@ -140,6 +140,8 @@ const (
 	HistoryClientRecordDecisionTaskStartedScope
 	// HistoryClientRecordActivityTaskStartedScope tracks RPC calls to history service
 	HistoryClientRecordActivityTaskStartedScope
+	// HistoryClientRequestCancelWorkflowExecutionScope tracks RPC calls to history service
+	HistoryClientRequestCancelWorkflowExecutionScope
 	// MatchingClientPollForDecisionTaskScope tracks RPC calls to matching service
 	MatchingClientPollForDecisionTaskScope
 	// MatchingClientPollForActivityTaskScope tracks RPC calls to matching service
@@ -196,6 +198,8 @@ const (
 	HistoryRecordActivityTaskStartedScope
 	// HistoryProcessTransferTasksScope tracks number of transfer tasks processed
 	HistoryProcessTransferTasksScope
+	// HistoryRequestCancelWorkflowExecutionScope tracks RequestCancelWorkflowExecution API calls received by service
+	HistoryRequestCancelWorkflowExecutionScope
 
 	NumHistoryScopes
 )
