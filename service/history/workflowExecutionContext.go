@@ -20,10 +20,8 @@ type (
 		logger            bark.Logger
 
 		sync.Mutex
-		builder         *historyBuilder
 		msBuilder       *mutableStateBuilder
 		tBuilder        *timerBuilder
-		executionInfo   *persistence.WorkflowExecutionInfo
 		updateCondition int64
 		deleteTimerTask persistence.Task
 	}
@@ -50,9 +48,9 @@ func newWorkflowExecutionContext(execution workflow.WorkflowExecution, shard Sha
 	}
 }
 
-func (c *workflowExecutionContext) loadWorkflowExecution() (*historyBuilder, error) {
-	if c.builder != nil {
-		return c.builder, nil
+func (c *workflowExecutionContext) loadWorkflowExecution() (*mutableStateBuilder, error) {
+	if c.msBuilder != nil {
+		return c.msBuilder, nil
 	}
 
 	response, err := c.getWorkflowExecutionWithRetry(&persistence.GetWorkflowExecutionRequest{
@@ -62,34 +60,12 @@ func (c *workflowExecutionContext) loadWorkflowExecution() (*historyBuilder, err
 		return nil, err
 	}
 
-	c.executionInfo = response.ExecutionInfo
-	c.updateCondition = response.ExecutionInfo.NextEventID
-	builder := newHistoryBuilder(c.logger)
-	if err := builder.loadExecutionInfo(response.ExecutionInfo); err != nil {
-		return nil, err
-	}
-	c.builder = builder
-
-	return builder, nil
-}
-
-func (c *workflowExecutionContext) loadWorkflowMutableState() (*mutableStateBuilder, error) {
-	if c.msBuilder != nil {
-		return c.msBuilder, nil
-	}
-	response, err := c.getWorkflowMutableStateWithRetry(&persistence.GetWorkflowMutableStateRequest{
-		WorkflowID: c.workflowExecution.GetWorkflowId(),
-		RunID:      c.workflowExecution.GetRunId()})
-
-	if err != nil {
-		logPersistantStoreErrorEvent(c.logger, tagValueStoreOperationGetWorkflowMutableState, err, "")
-		return nil, err
-	}
-
 	msBuilder := newMutableStateBuilder(c.logger)
 	if response != nil && response.State != nil {
-		msBuilder.Load(
-			response.State.ActivitInfos, response.State.TimerInfos, response.State.ExecutionInfo)
+		state := response.State
+		msBuilder.Load(state)
+		info := state.ExecutionInfo
+		c.updateCondition = info.NextEventID
 	}
 
 	c.msBuilder = msBuilder
@@ -98,7 +74,7 @@ func (c *workflowExecutionContext) loadWorkflowMutableState() (*mutableStateBuil
 
 func (c *workflowExecutionContext) updateWorkflowExecutionWithContext(context []byte, transferTasks []persistence.Task,
 	timerTasks []persistence.Task) error {
-	c.executionInfo.ExecutionContext = context
+	c.msBuilder.executionInfo.ExecutionContext = context
 
 	return c.updateWorkflowExecution(transferTasks, timerTasks)
 }
@@ -112,46 +88,45 @@ func (c *workflowExecutionContext) updateWorkflowExecutionWithDeleteTask(transfe
 
 func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persistence.Task,
 	timerTasks []persistence.Task) error {
-	updatedHistory, err := c.builder.Serialize()
+	// Take a snapshot of all updates we have accumulated for this execution
+	updates := c.msBuilder.CloseUpdateSession()
+
+	builder := updates.newEventsBuilder
+	firstEvent := builder.history[0]
+	newEvents, err := builder.Serialize()
 	if err != nil {
 		logHistorySerializationErrorEvent(c.logger, err, "Unable to serialize execution history for update.")
 		return err
 	}
 
-	c.executionInfo.NextEventID = c.builder.nextEventID
-	c.executionInfo.LastProcessedEvent = c.builder.previousDecisionStartedEvent()
-	c.executionInfo.History = updatedHistory
-	c.executionInfo.State = c.builder.getWorklowState()
+	if err0 := c.appendHistoryEventsWithRetry(&persistence.AppendHistoryEventsRequest{
+		Execution:    c.workflowExecution,
+		FirstEventID: firstEvent.GetEventId(),
+		Events:       newEvents,
+	}); err0 != nil {
+		// Clear all cached state in case of error
+		c.clear()
 
-	upsertActivityInfos := []*persistence.ActivityInfo{}
-	upsertTimerInfos := []*persistence.TimerInfo{}
-	deleteTimerInfos := []string{}
+		switch err0.(type) {
+		case *persistence.ConditionFailedError:
+			return ErrConflict
+		}
 
-	var deleteActivityInfo *int64
-
-	upsertActivityInfos, c.msBuilder.updateActivityInfos = c.msBuilder.updateActivityInfos, upsertActivityInfos
-	deleteActivityInfo, c.msBuilder.deleteActivityInfo = c.msBuilder.deleteActivityInfo, deleteActivityInfo
-	upsertTimerInfos, c.msBuilder.updateTimerInfos = c.msBuilder.updateTimerInfos, upsertTimerInfos
-	deleteTimerInfos, c.msBuilder.deleteTimerInfos = c.msBuilder.deleteTimerInfos, deleteTimerInfos
-
-	// We get decision info from the mutable state builder.
-	c.executionInfo.DecisionScheduleID = c.msBuilder.execution.DecisionScheduleID
-	c.executionInfo.DecisionStartedID = c.msBuilder.execution.DecisionStartedID
-	c.executionInfo.DecisionRequestID = c.msBuilder.execution.DecisionRequestID
-	c.executionInfo.DecisionTimeout = c.msBuilder.execution.DecisionTimeout
-
-	c.msBuilder.UpdateExecutionInfo(c.executionInfo)
+		logPersistantStoreErrorEvent(c.logger, tagValueStoreOperationUpdateWorkflowExecution, err0,
+			fmt.Sprintf("{updateCondition: %v}", c.updateCondition))
+		return err0
+	}
 
 	if err1 := c.updateWorkflowExecutionWithRetry(&persistence.UpdateWorkflowExecutionRequest{
-		ExecutionInfo:       c.executionInfo,
+		ExecutionInfo:       c.msBuilder.executionInfo,
 		TransferTasks:       transferTasks,
 		TimerTasks:          timerTasks,
 		Condition:           c.updateCondition,
 		DeleteTimerTask:     c.deleteTimerTask,
-		UpsertActivityInfos: upsertActivityInfos,
-		DeleteActivityInfo:  deleteActivityInfo,
-		UpserTimerInfos:     upsertTimerInfos,
-		DeleteTimerInfos:    deleteTimerInfos,
+		UpsertActivityInfos: updates.updateActivityInfos,
+		DeleteActivityInfo:  updates.deleteActivityInfo,
+		UpserTimerInfos:     updates.updateTimerInfos,
+		DeleteTimerInfos:    updates.deleteTimerInfos,
 	}); err1 != nil {
 		// Clear all cached state in case of error
 		c.clear()
@@ -167,13 +142,13 @@ func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persi
 	}
 
 	// Update went through so update the condition for new updates
-	c.updateCondition = c.builder.nextEventID
+	c.updateCondition = c.msBuilder.GetNextEventID()
 	return nil
 }
 
 func (c *workflowExecutionContext) deleteWorkflowExecution() error {
 	err := c.deleteWorkflowExecutionWithRetry(&persistence.DeleteWorkflowExecutionRequest{
-		ExecutionInfo: c.executionInfo,
+		ExecutionInfo: c.msBuilder.executionInfo,
 	})
 	if err != nil {
 		// TODO: We will be needing a background job to delete all leaking workflow executions due to failed delete
@@ -203,22 +178,12 @@ func (c *workflowExecutionContext) getWorkflowExecutionWithRetry(
 	return response, nil
 }
 
-func (c *workflowExecutionContext) getWorkflowMutableStateWithRetry(
-	request *persistence.GetWorkflowMutableStateRequest) (*persistence.GetWorkflowMutableStateResponse, error) {
-	var response *persistence.GetWorkflowMutableStateResponse
+func (c *workflowExecutionContext) appendHistoryEventsWithRetry(request *persistence.AppendHistoryEventsRequest) error {
 	op := func() error {
-		var err error
-		response, err = c.executionManager.GetWorkflowMutableState(request)
-
-		return err
+		return c.shard.AppendHistoryEvents(request)
 	}
 
-	err := backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
-	if err != nil {
-		return nil, err
-	}
-
-	return response, nil
+	return backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
 }
 
 func (c *workflowExecutionContext) updateWorkflowExecutionWithRetry(
@@ -241,7 +206,6 @@ func (c *workflowExecutionContext) deleteWorkflowExecutionWithRetry(
 }
 
 func (c *workflowExecutionContext) clear() {
-	c.builder = nil
 	c.msBuilder = nil
 	c.tBuilder = newTimerBuilder(&shardSeqNumGenerator{context: c.shard}, c.logger)
 }

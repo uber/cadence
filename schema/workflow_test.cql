@@ -20,7 +20,8 @@ CREATE TYPE workflow_execution (
   workflow_id                       text,
   run_id                            uuid,
   task_list                         text,
-  history                           blob,
+  workflow_type_name                text,
+  decision_task_timeout             int,
   execution_context                 blob,
   state                             int,  -- enum WorkflowState {Created, Running, Completed}
   next_event_id                     bigint,
@@ -55,7 +56,9 @@ CREATE TYPE timer_task (
 -- Workflow activity in progress mutable state
 CREATE TYPE activity_info (
   schedule_id               bigint,
+  scheduled_event           blob,
   started_id                bigint,
+  started_event             blob,
   activity_id               text,    -- Client generated unique ID for the activity.
   request_id                text,    -- Identifier used by matching engine for retrying history service calls for recording task is started
   details                   blob,

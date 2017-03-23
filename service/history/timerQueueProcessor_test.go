@@ -304,7 +304,7 @@ func (s *timerQueueProcessorSuite) checkTimedOutEventFor(workflowExecution workf
 	s.Nil(err1)
 	msBuilder := newMutableStateBuilder(s.logger)
 	msBuilder.Load(minfo.ActivitInfos, minfo.TimerInfos, minfo.ExecutionInfo)
-	isRunningFromMutableState, _ := msBuilder.GetActivity(scheduleID)
+	_, isRunningFromMutableState := msBuilder.GetActivityInfo(scheduleID)
 
 	return isRunning, isRunningFromMutableState, builder
 }

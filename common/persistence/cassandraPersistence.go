@@ -61,6 +61,8 @@ const (
 		`workflow_id: ?, ` +
 		`run_id: ?, ` +
 		`task_list: ?, ` +
+		`workflow_type_name: ?, ` +
+	  `decision_task_timeout: ?, ` +
 		`execution_context: ?, ` +
 		`state: ?, ` +
 		`next_event_id: ?, ` +
@@ -93,7 +95,9 @@ const (
 
 	templateActivityInfoType = `{` +
 		`schedule_id: ?, ` +
+		`scheduled_event: ?, ` +
 		`started_id: ?, ` +
+		`started_event: ?, ` +
 		`activity_id: ?, ` +
 		`request_id: ?, ` +
 		`details: ?, ` +
@@ -502,6 +506,8 @@ func (d *cassandraPersistence) CreateWorkflowExecution(request *CreateWorkflowEx
 		request.Execution.GetWorkflowId(),
 		request.Execution.GetRunId(),
 		request.TaskList,
+		request.WorkflowTypeName,
+		request.DecisionTimeoutValue,
 		request.ExecutionContext,
 		WorkflowStateCreated,
 		request.NextEventID,
@@ -629,6 +635,8 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 		executionInfo.WorkflowID,
 		executionInfo.RunID,
 		executionInfo.TaskList,
+		executionInfo.WorkflowTypeName,
+		executionInfo.DecisionTimeoutValue,
 		executionInfo.ExecutionContext,
 		executionInfo.State,
 		executionInfo.NextEventID,
@@ -723,6 +731,8 @@ func (d *cassandraPersistence) DeleteWorkflowExecution(request *DeleteWorkflowEx
 		info.WorkflowID,
 		info.RunID,
 		info.TaskList,
+		info.WorkflowTypeName,
+		info.DecisionTimeoutValue,
 		info.ExecutionContext,
 		info.State,
 		info.NextEventID,
@@ -1162,7 +1172,9 @@ func (d *cassandraPersistence) updateActivityInfos(batch *gocql.Batch, activityI
 		batch.Query(templateUpdateActivityInfoQuery,
 			a.ScheduleID,
 			a.ScheduleID,
+			a.ScheduledEvent,
 			a.StartedID,
+			a.StartedEvent,
 			a.ActivityID,
 			a.RequestID,
 			a.Details,
@@ -1258,6 +1270,10 @@ func createWorkflowExecutionInfo(result map[string]interface{}) *WorkflowExecuti
 			info.RunID = v.(gocql.UUID).String()
 		case "task_list":
 			info.TaskList = v.(string)
+		case "workflow_type_name":
+			info.WorkflowTypeName = v.(string)
+		case "decision_task_timeout":
+			info.DecisionTimeoutValue = int32(v.(int))
 		case "execution_context":
 			info.ExecutionContext = v.([]byte)
 		case "state":

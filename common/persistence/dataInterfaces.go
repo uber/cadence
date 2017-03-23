@@ -70,6 +70,8 @@ type (
 		WorkflowID           string
 		RunID                string
 		TaskList             string
+		WorkflowTypeName     string
+		DecisionTimeoutValue int32
 		ExecutionContext     []byte
 		State                int
 		NextEventID          int64
@@ -172,7 +174,9 @@ type (
 	// ActivityInfo details.
 	ActivityInfo struct {
 		ScheduleID             int64
+		ScheduledEvent         []byte
 		StartedID              int64
+		StartedEvent           []byte
 		ActivityID             string
 		RequestID              string
 		Details                []byte
@@ -218,6 +222,8 @@ type (
 		RequestID                   string
 		Execution                   workflow.WorkflowExecution
 		TaskList                    string
+		WorkflowTypeName            string
+		DecisionTimeoutValue        int32
 		ExecutionContext            []byte
 		NextEventID                 int64
 		LastProcessedEvent          int64

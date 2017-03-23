@@ -59,6 +59,7 @@ type (
 		shardInfo              *ShardInfo
 		transferSequenceNumber int64
 		timerSequeceNumber     int64
+		historyMgr             HistoryManager
 		executionMgr           ExecutionManager
 		logger                 bark.Logger
 		metricsClient          metrics.Client
@@ -71,11 +72,12 @@ type (
 	}
 )
 
-func newTestShardContext(shardInfo *ShardInfo, transferSequenceNumber int64, executionMgr ExecutionManager,
-	logger bark.Logger) *testShardContext {
+func newTestShardContext(shardInfo *ShardInfo, transferSequenceNumber int64, historyMgr HistoryManager,
+	executionMgr ExecutionManager, logger bark.Logger) *testShardContext {
 	return &testShardContext{
 		shardInfo:              shardInfo,
 		transferSequenceNumber: transferSequenceNumber,
+		historyMgr:             historyMgr,
 		executionMgr:           executionMgr,
 		logger:                 logger,
 		metricsClient:          metrics.NewClient(tally.NoopScope, metrics.History),
@@ -84,6 +86,10 @@ func newTestShardContext(shardInfo *ShardInfo, transferSequenceNumber int64, exe
 
 func (s *testShardContext) GetExecutionManager() ExecutionManager {
 	return s.executionMgr
+}
+
+func (s *testShardContext) GetHistoryManager() HistoryManager {
+	return s.historyMgr
 }
 
 func (s *testShardContext) GetNextTransferTaskID() (int64, error) {
@@ -179,7 +185,7 @@ func (s *TestBase) SetupWorkflowStoreWithOptions(options TestBaseOptions) {
 		RangeID:          0,
 		TransferAckLevel: 0,
 	}
-	s.ShardContext = newTestShardContext(s.ShardInfo, 0, s.WorkflowMgr, log)
+	s.ShardContext = newTestShardContext(s.ShardInfo, 0, s.HistoryMgr, s.WorkflowMgr, log)
 	err1 := s.ShardMgr.CreateShard(&CreateShardRequest{
 		ShardInfo: s.ShardInfo,
 	})

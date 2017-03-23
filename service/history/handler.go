@@ -14,12 +14,14 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/tchannel-go/thrift"
+	"errors"
 )
 
 // Handler - Thrift handler inteface for history service
 type Handler struct {
 	numberOfShards        int
 	shardManager          persistence.ShardManager
+	historyMgr            persistence.HistoryManager
 	executionMgrFactory   persistence.ExecutionManagerFactory
 	matchingServiceClient matching.Client
 	hServiceResolver      membership.ServiceResolver
@@ -34,11 +36,12 @@ var _ hist.TChanHistoryService = (*Handler)(nil)
 var _ EngineFactory = (*Handler)(nil)
 
 // NewHandler creates a thrift handler for the history service
-func NewHandler(sVice service.Service, shardManager persistence.ShardManager,
+func NewHandler(sVice service.Service, shardManager persistence.ShardManager, historyMgr persistence.HistoryManager,
 	executionMgrFactory persistence.ExecutionManagerFactory, numberOfShards int) (*Handler, []thrift.TChanServer) {
 	handler := &Handler{
 		Service:             sVice,
 		shardManager:        shardManager,
+		historyMgr:          historyMgr,
 		executionMgrFactory: executionMgrFactory,
 		numberOfShards:      numberOfShards,
 		tokenSerializer:     common.NewJSONTaskTokenSerializer(),
@@ -62,7 +65,7 @@ func (h *Handler) Start(thriftService []thrift.TChanServer) error {
 		h.Service.GetLogger().Fatalf("Unable to get history service resolver.")
 	}
 	h.hServiceResolver = hServiceResolver
-	h.controller = newShardController(h.numberOfShards, h.GetHostInfo(), hServiceResolver, h.shardManager,
+	h.controller = newShardController(h.numberOfShards, h.GetHostInfo(), hServiceResolver, h.shardManager, h.historyMgr,
 		h.executionMgrFactory, h, h.GetLogger(), h.GetMetricsClient())
 	h.controller.Start()
 	h.metricsClient = h.GetMetricsClient()
@@ -333,7 +336,8 @@ func (h *Handler) StartWorkflowExecution(ctx thrift.Context,
 // GetWorkflowExecutionHistory - returns the complete history of a workflow execution
 func (h *Handler) GetWorkflowExecutionHistory(ctx thrift.Context,
 	getRequest *gen.GetWorkflowExecutionHistoryRequest) (*gen.GetWorkflowExecutionHistoryResponse, error) {
-	h.startWG.Wait()
+	return nil, errors.New("Not Implemented.")
+	/*h.startWG.Wait()
 
 	h.metricsClient.IncCounter(metrics.HistoryGetWorkflowExecutionHistoryScope, metrics.CadenceRequests)
 	sw := h.metricsClient.StartTimer(metrics.HistoryGetWorkflowExecutionHistoryScope, metrics.CadenceLatency)
@@ -352,6 +356,7 @@ func (h *Handler) GetWorkflowExecutionHistory(ctx thrift.Context,
 		return nil, h.convertError(err2)
 	}
 	return resp, nil
+	*/
 }
 
 // convertError is a helper method to convert ShardOwnershipLostError from persistence layer returned by various
