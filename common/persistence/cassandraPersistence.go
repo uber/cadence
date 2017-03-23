@@ -30,7 +30,7 @@ const (
 
 const (
 	// Row types for table executions
-	rowTypeShard = iota
+	rowTypeShard        = iota
 	rowTypeExecution
 	rowTypeTransferTask
 	rowTypeTimerTask
@@ -38,7 +38,7 @@ const (
 
 const (
 	// Row types for table tasks
-	rowTypeTask = iota
+	rowTypeTask     = iota
 	rowTypeTaskList
 )
 
@@ -62,7 +62,7 @@ const (
 		`run_id: ?, ` +
 		`task_list: ?, ` +
 		`workflow_type_name: ?, ` +
-	  `decision_task_timeout: ?, ` +
+		`decision_task_timeout: ?, ` +
 		`execution_context: ?, ` +
 		`state: ?, ` +
 		`next_event_id: ?, ` +
@@ -1328,8 +1328,12 @@ func createActivityInfo(result map[string]interface{}) *ActivityInfo {
 		switch k {
 		case "schedule_id":
 			info.ScheduleID = v.(int64)
+		case "scheduled_event":
+			info.ScheduledEvent = v.([]byte)
 		case "started_id":
 			info.StartedID = v.(int64)
+		case "started_event":
+			info.StartedEvent = v.([]byte)
 		case "activity_id":
 			info.ActivityID = v.(string)
 		case "request_id":

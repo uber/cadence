@@ -543,8 +543,17 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_Activities() {
 	updatedInfo := copyWorkflowExecutionInfo(info0)
 	updatedInfo.NextEventID = int64(5)
 	updatedInfo.LastProcessedEvent = int64(2)
-	activityInfos := []*ActivityInfo{{
-		ScheduleID: 1, ScheduleToCloseTimeout: 1, ScheduleToStartTimeout: 2, StartToCloseTimeout: 3, HeartbeatTimeout: 4}}
+	activityInfos := []*ActivityInfo{
+		{
+			ScheduleID: 1,
+			ScheduledEvent: []byte("scheduled_event_1"),
+			StartedID: 2,
+			StartedEvent: []byte("started_event_1"),
+			ScheduleToCloseTimeout: 1,
+			ScheduleToStartTimeout: 2,
+			StartToCloseTimeout: 3,
+			HeartbeatTimeout: 4,
+		}}
 	err2 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(4)}, nil, int64(3), nil, nil, activityInfos, nil, nil, nil)
 	s.Nil(err2, "No error expected.")
 
@@ -552,6 +561,17 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_Activities() {
 	s.Nil(err1, "No error expected.")
 	s.NotNil(state, "expected valid state.")
 	s.Equal(1, len(state.ActivitInfos))
+	ai, ok := state.ActivitInfos[1]
+	s.True(ok)
+	s.NotNil(ai)
+	s.Equal(int64(1), ai.ScheduleID)
+	s.Equal([]byte("scheduled_event_1"), ai.ScheduledEvent)
+	s.Equal(int64(2), ai.StartedID)
+	s.Equal([]byte("started_event_1"), ai.StartedEvent)
+	s.Equal(int32(1), ai.ScheduleToCloseTimeout)
+	s.Equal(int32(2), ai.ScheduleToStartTimeout)
+	s.Equal(int32(3), ai.StartToCloseTimeout)
+	s.Equal(int32(4), ai.HeartbeatTimeout)
 
 	err2 = s.UpdateWorkflowExecution(updatedInfo, nil, nil, int64(5), nil, nil, nil, common.Int64Ptr(1), nil, nil)
 	s.Nil(err2, "No error expected.")
