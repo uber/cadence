@@ -460,6 +460,8 @@ func (c *taskContext) completeTask(err error) {
 		// We handle this by writing the task back to persistence with a higher taskID.
 		// This will allow subsequent tasks to make progress, and hopefully by the time this task is picked-up
 		// again the underlying reason for failing to start will be resolved.
+		// Note that RecordTaskStarted only fails after retrying for a long time, so a single task will not be
+		// re-written to persistence frequently.
 		_, err = tlMgr.executeWithRetry(func(rangeID int64) (interface{}, error) {
 			return tlMgr.taskWriter.appendTask(&c.workflowExecution, c.info, rangeID)
 		})
@@ -468,6 +470,9 @@ func (c *taskContext) completeTask(err error) {
 			// OK, we also failed to write to persistence.
 			// This should only happen in very extreme cases where persistence is completely down.
 			// We still can't lose the old task so we just unload the entire task list
+			logPersistantStoreErrorEvent(tlMgr.logger, tagValueStoreOperationStopTaskList, err,
+				fmt.Sprintf("task writer failed to write task. Unloading TaskList{taskType: %v, taskList: %v}",
+					tlMgr.taskListID.taskType, tlMgr.taskListID.taskListName))
 			tlMgr.Stop()
 			return
 		}
@@ -475,6 +480,8 @@ func (c *taskContext) completeTask(err error) {
 
 	tlMgr.completeTaskPoll(c.info.TaskID)
 
+	// TODO: use range deletes to complete all tasks below ack level instead of completing
+	// tasks one by one.
 	err2 := tlMgr.engine.taskManager.CompleteTask(&persistence.CompleteTaskRequest{
 		TaskList: &persistence.TaskListInfo{
 			Name:     tlMgr.taskListID.taskListName,
