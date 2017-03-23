@@ -78,7 +78,7 @@ func (r *ringpopServiceResolver) Start() error {
 	return nil
 }
 
-// Stop stops the oracle
+// Stop stops the resolver
 func (r *ringpopServiceResolver) Stop() error {
 	r.ringLock.Lock()
 	defer r.ringLock.Unlock()
