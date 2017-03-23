@@ -14,7 +14,6 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/tchannel-go/thrift"
-	"errors"
 )
 
 // Handler - Thrift handler inteface for history service
@@ -336,8 +335,7 @@ func (h *Handler) StartWorkflowExecution(ctx thrift.Context,
 // GetWorkflowExecutionHistory - returns the complete history of a workflow execution
 func (h *Handler) GetWorkflowExecutionHistory(ctx thrift.Context,
 	getRequest *gen.GetWorkflowExecutionHistoryRequest) (*gen.GetWorkflowExecutionHistoryResponse, error) {
-	return nil, errors.New("Not Implemented.")
-	/*h.startWG.Wait()
+	h.startWG.Wait()
 
 	h.metricsClient.IncCounter(metrics.HistoryGetWorkflowExecutionHistoryScope, metrics.CadenceRequests)
 	sw := h.metricsClient.StartTimer(metrics.HistoryGetWorkflowExecutionHistoryScope, metrics.CadenceLatency)
@@ -356,7 +354,6 @@ func (h *Handler) GetWorkflowExecutionHistory(ctx thrift.Context,
 		return nil, h.convertError(err2)
 	}
 	return resp, nil
-	*/
 }
 
 // convertError is a helper method to convert ShardOwnershipLostError from persistence layer returned by various
