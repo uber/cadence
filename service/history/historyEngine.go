@@ -30,6 +30,7 @@ type (
 		txProcessor      transferQueueProcessor
 		timerProcessor   timerQueueProcessor
 		tokenSerializer  common.TaskTokenSerializer
+		hSerializer      historySerializer
 		tracker          *pendingTaskTracker
 		metricsReporter  metrics.Client
 		cache            *historyCache
@@ -199,6 +200,57 @@ func (e *historyEngineImpl) StartWorkflowExecution(request *workflow.StartWorkfl
 	return &workflow.StartWorkflowExecutionResponse{
 		RunId: workflowExecution.RunId,
 	}, nil
+}
+
+// GetWorkflowExecutionHistory retrieves the history for given workflow execution
+func (e *historyEngineImpl) GetWorkflowExecutionHistory(
+	request *workflow.GetWorkflowExecutionHistoryRequest) (*workflow.GetWorkflowExecutionHistoryResponse, error) {
+	execution := workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr(request.GetExecution().GetWorkflowId()),
+		RunId:      common.StringPtr(request.GetExecution().GetRunId()),
+	}
+
+	context, err0 := e.cache.getOrCreateWorkflowExecution(execution)
+	if err0 != nil {
+		return nil, err0
+	}
+
+	context.Lock()
+	defer context.Unlock()
+	msBuilder, err1 := context.loadWorkflowExecution()
+	if err1 != nil {
+		return nil, err1
+	}
+
+	nextPageToken := []byte{}
+	historyEvents := []*workflow.HistoryEvent{}
+Pagination_Loop:
+	for {
+		response, _ := e.historyMgr.GetWorkflowExecutionHistory(&persistence.GetWorkflowExecutionHistoryRequest{
+			Execution:     execution,
+			NextEventID:   msBuilder.GetNextEventID(),
+			PageSize:      100,
+			NextPageToken: nextPageToken,
+		})
+
+		for _, data := range response.Events {
+			events, _ := e.hSerializer.Deserialize(data)
+			historyEvents = append(historyEvents, events...)
+		}
+
+		if len(response.NextPageToken) == 0 {
+			break Pagination_Loop
+		}
+
+		nextPageToken = response.NextPageToken
+	}
+
+	history := workflow.NewHistory()
+	history.Events = historyEvents
+	result := workflow.NewGetWorkflowExecutionHistoryResponse()
+	result.History = history
+
+	return result, nil
 }
 
 func (e *historyEngineImpl) RecordDecisionTaskStarted(

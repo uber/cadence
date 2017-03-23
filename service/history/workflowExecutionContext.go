@@ -92,29 +92,32 @@ func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persi
 	updates := c.msBuilder.CloseUpdateSession()
 
 	builder := updates.newEventsBuilder
-	firstEvent := builder.history[0]
-	newEvents, err := builder.Serialize()
-	if err != nil {
-		logHistorySerializationErrorEvent(c.logger, err, "Unable to serialize execution history for update.")
-		return err
-	}
-
-	if err0 := c.appendHistoryEventsWithRetry(&persistence.AppendHistoryEventsRequest{
-		Execution:    c.workflowExecution,
-		FirstEventID: firstEvent.GetEventId(),
-		Events:       newEvents,
-	}); err0 != nil {
-		// Clear all cached state in case of error
-		c.clear()
-
-		switch err0.(type) {
-		case *persistence.ConditionFailedError:
-			return ErrConflict
+	if builder.history != nil && len(builder.history) > 0 {
+		// Some operations only update the mutable state. For example RecordActivityTaskHeartbeat.
+		firstEvent := builder.history[0]
+		newEvents, err := builder.Serialize()
+		if err != nil {
+			logHistorySerializationErrorEvent(c.logger, err, "Unable to serialize execution history for update.")
+			return err
 		}
 
-		logPersistantStoreErrorEvent(c.logger, tagValueStoreOperationUpdateWorkflowExecution, err0,
-			fmt.Sprintf("{updateCondition: %v}", c.updateCondition))
-		return err0
+		if err0 := c.appendHistoryEventsWithRetry(&persistence.AppendHistoryEventsRequest{
+			Execution:    c.workflowExecution,
+			FirstEventID: firstEvent.GetEventId(),
+			Events:       newEvents,
+		}); err0 != nil {
+			// Clear all cached state in case of error
+			c.clear()
+
+			switch err0.(type) {
+			case *persistence.ConditionFailedError:
+				return ErrConflict
+			}
+
+			logPersistantStoreErrorEvent(c.logger, tagValueStoreOperationUpdateWorkflowExecution, err0,
+				fmt.Sprintf("{updateCondition: %v}", c.updateCondition))
+			return err0
+		}
 	}
 
 	if err1 := c.updateWorkflowExecutionWithRetry(&persistence.UpdateWorkflowExecutionRequest{
