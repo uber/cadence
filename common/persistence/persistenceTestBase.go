@@ -122,6 +122,10 @@ func (s *testShardContext) UpdateWorkflowExecution(request *UpdateWorkflowExecut
 	return s.executionMgr.UpdateWorkflowExecution(request)
 }
 
+func (s *testShardContext) AppendHistoryEvents(request *AppendHistoryEventsRequest) error {
+	return s.historyMgr.AppendHistoryEvents(request)
+}
+
 func (s *testShardContext) GetLogger() bark.Logger {
 	return s.logger
 }
