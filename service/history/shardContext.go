@@ -39,7 +39,6 @@ type (
 		historyMgr          persistence.HistoryManager
 		executionManager    persistence.ExecutionManager
 		timerSequenceNumber int64
-		txSequenceNumber    int64
 		rangeSize           uint
 		closeCh             chan<- int
 		isClosed            int32
@@ -176,31 +175,19 @@ Update_Loop:
 }
 
 func (s *shardContextImpl) AppendHistoryEvents(request *persistence.AppendHistoryEventsRequest) error {
-Append_Loop:
-	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
-		currentRangeID := atomic.LoadInt64(&s.rangeID)
-		request.RangeID = currentRangeID
-		request.TransactionID = atomic.AddInt64(&s.txSequenceNumber, 1)
-		err0 := s.historyMgr.AppendHistoryEvents(request)
-		if err0 != nil {
-			if _, ok := err0.(*persistence.ConditionFailedError); ok {
-				// Inserting a new event failed, lets try to overwrite the tail
-				request.Overwrite = true
-				err1 := s.historyMgr.AppendHistoryEvents(request)
-				if _, ok := err1.(*persistence.ConditionFailedError); ok {
-					if currentRangeID != atomic.LoadInt64(&s.rangeID) {
-						continue Append_Loop
-					}
-				}
-
-				return err1
-			}
+	// No need to lock context here, as we can write concurrently to append history events
+	currentRangeID := atomic.LoadInt64(&s.rangeID)
+	request.RangeID = currentRangeID
+	err0 := s.historyMgr.AppendHistoryEvents(request)
+	if err0 != nil {
+		if _, ok := err0.(*persistence.ConditionFailedError); ok {
+			// Inserting a new event failed, lets try to overwrite the tail
+			request.Overwrite = true
+			return s.historyMgr.AppendHistoryEvents(request)
 		}
-
-		return err0
 	}
 
-	return ErrMaxAttemptsExceeded
+	return nil
 }
 
 func (s *shardContextImpl) GetLogger() bark.Logger {

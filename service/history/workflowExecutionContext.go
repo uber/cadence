@@ -73,21 +73,21 @@ func (c *workflowExecutionContext) loadWorkflowExecution() (*mutableStateBuilder
 }
 
 func (c *workflowExecutionContext) updateWorkflowExecutionWithContext(context []byte, transferTasks []persistence.Task,
-	timerTasks []persistence.Task) error {
+	timerTasks []persistence.Task, transactionID int64) error {
 	c.msBuilder.executionInfo.ExecutionContext = context
 
-	return c.updateWorkflowExecution(transferTasks, timerTasks)
+	return c.updateWorkflowExecution(transferTasks, timerTasks, transactionID)
 }
 
 func (c *workflowExecutionContext) updateWorkflowExecutionWithDeleteTask(transferTasks []persistence.Task,
-	timerTasks []persistence.Task, deleteTimerTask persistence.Task) error {
+	timerTasks []persistence.Task, deleteTimerTask persistence.Task, transactionID int64) error {
 	c.deleteTimerTask = deleteTimerTask
 
-	return c.updateWorkflowExecution(transferTasks, timerTasks)
+	return c.updateWorkflowExecution(transferTasks, timerTasks, transactionID)
 }
 
 func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persistence.Task,
-	timerTasks []persistence.Task) error {
+	timerTasks []persistence.Task, transactionID int64) error {
 	// Take a snapshot of all updates we have accumulated for this execution
 	updates := c.msBuilder.CloseUpdateSession()
 
@@ -101,10 +101,11 @@ func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persi
 			return err
 		}
 
-		if err0 := c.appendHistoryEventsWithRetry(&persistence.AppendHistoryEventsRequest{
-			Execution:    c.workflowExecution,
-			FirstEventID: firstEvent.GetEventId(),
-			Events:       newEvents,
+		if err0 := c.shard.AppendHistoryEvents(&persistence.AppendHistoryEventsRequest{
+			Execution:     c.workflowExecution,
+			TransactionID: transactionID,
+			FirstEventID:  firstEvent.GetEventId(),
+			Events:        newEvents,
 		}); err0 != nil {
 			// Clear all cached state in case of error
 			c.clear()
@@ -179,14 +180,6 @@ func (c *workflowExecutionContext) getWorkflowExecutionWithRetry(
 	}
 
 	return response, nil
-}
-
-func (c *workflowExecutionContext) appendHistoryEventsWithRetry(request *persistence.AppendHistoryEventsRequest) error {
-	op := func() error {
-		return c.shard.AppendHistoryEvents(request)
-	}
-
-	return backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
 }
 
 func (c *workflowExecutionContext) updateWorkflowExecutionWithRetry(

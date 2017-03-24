@@ -659,5 +659,12 @@ func (t *timerQueueProcessorImpl) updateWorkflowExecution(context *workflowExecu
 		}}
 	}
 
-	return context.updateWorkflowExecutionWithDeleteTask(transferTasks, timerTasks, clearTimerTask)
+	// Generate a transaction ID for appending events to history
+	transactionID, err1 := t.historyService.tracker.getNextTaskID()
+	if err1 != nil {
+		return err1
+	}
+	defer t.historyService.tracker.completeTask(transactionID)
+
+	return context.updateWorkflowExecutionWithDeleteTask(transferTasks, timerTasks, clearTimerTask, transactionID)
 }
