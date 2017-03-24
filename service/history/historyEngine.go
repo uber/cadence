@@ -165,6 +165,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(request *workflow.StartWorkfl
 		RequestID:            request.GetRequestId(),
 		Execution:            workflowExecution,
 		TaskList:             request.GetTaskList().GetName(),
+		WorkflowTypeName:     request.GetWorkflowType().GetName(),
 		DecisionTimeoutValue: request.GetTaskStartToCloseTimeoutSeconds(),
 		ExecutionContext:     nil,
 		NextEventID:          msBuilder.GetNextEventID(),
