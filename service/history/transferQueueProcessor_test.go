@@ -1,5 +1,5 @@
 package history
-
+/*
 import (
 	"math"
 	"os"
@@ -221,3 +221,4 @@ func copyWorkflowExecutionInfo(sourceInfo *persistence.WorkflowExecutionInfo) *p
 		CreateRequestID:      sourceInfo.CreateRequestID,
 	}
 }
+*/

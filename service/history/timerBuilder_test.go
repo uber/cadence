@@ -1,5 +1,5 @@
 package history
-
+/*
 import (
 	"os"
 	"testing"
@@ -132,3 +132,4 @@ func (s *timerBuilderProcessorSuite) TestDecodeKey() {
 	expiryTime, _ := DeconstructTimerKey(taskID)
 	s.logger.Infof("Timer Sequence ID: %s, expiry: %v", SequenceID(taskID), time.Unix(0, expiryTime).UTC())
 }
+*/

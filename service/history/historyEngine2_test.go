@@ -1,5 +1,5 @@
 package history
-
+/*
 import (
 	"errors"
 	"os"
@@ -30,6 +30,7 @@ type (
 		historyEngine      *historyEngineImpl
 		mockMatchingClient *mocks.MatchingClient
 		mockExecutionMgr   *mocks.ExecutionManager
+		mockHistoryMgr     *mocks.HistoryManager
 		mockShardManager   *mocks.ShardManager
 		shardClosedCh      chan int
 		logger             bark.Logger
@@ -61,6 +62,7 @@ func (s *engine2Suite) SetupTest() {
 	shardID := 0
 	s.mockMatchingClient = &mocks.MatchingClient{}
 	s.mockExecutionMgr = &mocks.ExecutionManager{}
+	s.mockHistoryMgr = &mocks.HistoryManager{}
 	s.mockShardManager = &mocks.ShardManager{}
 	s.shardClosedCh = make(chan int, 100)
 
@@ -81,6 +83,7 @@ func (s *engine2Suite) SetupTest() {
 	h := &historyEngineImpl{
 		shard:            mockShard,
 		executionManager: s.mockExecutionMgr,
+		historyMgr:       s.mockHistoryMgr,
 		txProcessor:      txProcessor,
 		tracker:          tracker,
 		cache:            cache,
@@ -94,6 +97,7 @@ func (s *engine2Suite) SetupTest() {
 func (s *engine2Suite) TearDownTest() {
 	s.mockMatchingClient.AssertExpectations(s.T())
 	s.mockExecutionMgr.AssertExpectations(s.T())
+	s.mockHistoryMgr.AssertExpectations(s.T())
 	s.mockShardManager.AssertExpectations(s.T())
 }
 
@@ -691,3 +695,4 @@ func (s *engine2Suite) TestRecordActivityTaskStartedSuccess() {
 	s.Equal(scheduledEvent.GetEventId()+1, response.GetStartedEvent().GetEventId())
 	s.Equal("reqId", response.GetStartedEvent().GetActivityTaskStartedEventAttributes().GetRequestId())
 }
+*/
