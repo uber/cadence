@@ -84,7 +84,7 @@ writerLoop:
 				reqs = w.getWriteBatch(reqs)
 				batchSize := len(reqs)
 
-				taskID, err := w.tlMgr.newTaskIDs(batchSize)
+				taskIDs, err := w.tlMgr.newTaskIDs(batchSize)
 				if err != nil {
 					w.sendWriteResponse(reqs, err, nil)
 					continue writerLoop
@@ -94,7 +94,7 @@ writerLoop:
 				rangeID := int64(0)
 				for i, req := range reqs {
 					tasks = append(tasks, &persistence.CreateTaskInfo{
-						TaskID:    taskID[i],
+						TaskID:    taskIDs[i],
 						Execution: *req.execution,
 						Data:      req.taskInfo,
 					})
@@ -115,7 +115,7 @@ writerLoop:
 				if err != nil {
 					logPersistantStoreErrorEvent(w.logger, tagValueStoreOperationCreateTask, err,
 						fmt.Sprintf("{taskID: [%v, %v], taskType: %v, taskList: %v}",
-							taskID[0], taskID[batchSize-1], w.taskListID.taskType, w.taskListID.taskListName))
+							taskIDs[0], taskIDs[batchSize-1], w.taskListID.taskType, w.taskListID.taskListName))
 				}
 
 				w.sendWriteResponse(reqs, err, r)
