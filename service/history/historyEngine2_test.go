@@ -89,6 +89,7 @@ func (s *engine2Suite) SetupTest() {
 		cache:            cache,
 		logger:           s.logger,
 		tokenSerializer:  common.NewJSONTaskTokenSerializer(),
+		hSerializer:      newJSONHistorySerializer(),
 	}
 	h.timerProcessor = newTimerQueueProcessor(h, s.mockExecutionMgr, s.logger)
 	s.historyEngine = h

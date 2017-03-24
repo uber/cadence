@@ -285,6 +285,17 @@ retry:
 			continue retry
 		}
 
+		history := response.GetHistory()
+		if history == nil {
+			p.logger.Fatal("History is nil")
+		}
+
+		events := history.GetEvents()
+		if events == nil || len(events) == 0 {
+			p.logger.Fatalf("History Events are empty: %v", events)
+		}
+
+
 		if dropTask {
 			p.logger.Info("Dropping Decision task: ")
 			return nil

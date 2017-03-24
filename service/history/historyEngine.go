@@ -85,6 +85,7 @@ func NewEngineWithShardContext(shard ShardContext, matching matching.Client) Eng
 		executionManager: executionManager,
 		txProcessor:      txProcessor,
 		tokenSerializer:  common.NewJSONTaskTokenSerializer(),
+		hSerializer:      newJSONHistorySerializer(),
 		tracker:          tracker,
 		cache:            cache,
 		logger: logger.WithFields(bark.Fields{
@@ -222,33 +223,13 @@ func (e *historyEngineImpl) GetWorkflowExecutionHistory(
 		return nil, err1
 	}
 
-	nextPageToken := []byte{}
-	historyEvents := []*workflow.HistoryEvent{}
-Pagination_Loop:
-	for {
-		response, _ := e.historyMgr.GetWorkflowExecutionHistory(&persistence.GetWorkflowExecutionHistoryRequest{
-			Execution:     execution,
-			NextEventID:   msBuilder.GetNextEventID(),
-			PageSize:      100,
-			NextPageToken: nextPageToken,
-		})
-
-		for _, data := range response.Events {
-			events, _ := e.hSerializer.Deserialize(data)
-			historyEvents = append(historyEvents, events...)
-		}
-
-		if len(response.NextPageToken) == 0 {
-			break Pagination_Loop
-		}
-
-		nextPageToken = response.NextPageToken
+	executionHistory, err2 := e.getHistory(msBuilder)
+	if err2 != nil {
+		return nil, err2
 	}
 
-	history := workflow.NewHistory()
-	history.Events = historyEvents
 	result := workflow.NewGetWorkflowExecutionHistoryResponse()
-	result.History = history
+	result.History = executionHistory
 
 	return result, nil
 }
@@ -957,14 +938,53 @@ Update_History_Loop:
 
 func (e *historyEngineImpl) createRecordDecisionTaskStartedResponse(msBuilder *mutableStateBuilder,
 	startedEventID int64) *h.RecordDecisionTaskStartedResponse {
+	executionHistory, _ := e.getHistory(msBuilder)
 	response := h.NewRecordDecisionTaskStartedResponse()
 	response.WorkflowType = msBuilder.getWorkflowType()
 	if msBuilder.previousDecisionStartedEvent() != emptyEventID {
 		response.PreviousStartedEventId = common.Int64Ptr(msBuilder.previousDecisionStartedEvent())
 	}
 	response.StartedEventId = common.Int64Ptr(startedEventID)
+	response.History = executionHistory
 
 	return response
+}
+
+func (e *historyEngineImpl) getHistory(msBuilder *mutableStateBuilder) (*workflow.History, error) {
+	execution := workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr(msBuilder.executionInfo.WorkflowID),
+		RunId: common.StringPtr(msBuilder.executionInfo.RunID),
+	}
+	nextPageToken := []byte{}
+	historyEvents := []*workflow.HistoryEvent{}
+Pagination_Loop:
+	for {
+		response, err := e.historyMgr.GetWorkflowExecutionHistory(&persistence.GetWorkflowExecutionHistoryRequest{
+			Execution:     execution,
+			NextEventID:   msBuilder.GetNextEventID(),
+			PageSize:      100,
+			NextPageToken: nextPageToken,
+		})
+
+		if err != nil {
+			return nil, err
+		}
+
+		for _, data := range response.Events {
+			events, _ := e.hSerializer.Deserialize(data)
+			historyEvents = append(historyEvents, events...)
+		}
+
+		if len(response.NextPageToken) == 0 {
+			break Pagination_Loop
+		}
+
+		nextPageToken = response.NextPageToken
+	}
+
+	executionHistory := workflow.NewHistory()
+	executionHistory.Events = historyEvents
+	return executionHistory, nil
 }
 
 func (t *pendingTaskTracker) getNextTaskID() (int64, error) {

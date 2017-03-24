@@ -78,6 +78,7 @@ func (s *timerQueueProcessorSuite) SetupSuite() {
 		logger:           s.logger,
 		tracker:          tracker,
 		tokenSerializer:  common.NewJSONTaskTokenSerializer(),
+		hSerializer:      newJSONHistorySerializer(),
 	}
 }
 
@@ -110,6 +111,7 @@ func (s *timerQueueProcessorSuite) SetupTest() {
 		cache:            cache,
 		logger:           s.logger,
 		tokenSerializer:  common.NewJSONTaskTokenSerializer(),
+		hSerializer:      newJSONHistorySerializer(),
 	}
 	h.timerProcessor = newTimerQueueProcessor(h, s.mockExecutionMgr, s.logger)
 	s.mockHistoryEngine = h
