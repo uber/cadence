@@ -611,7 +611,7 @@ func (e *mutableStateBuilder) AddTimerCanceledEvent(decisionCompletedEventID int
 	isTimerRunning, ti := e.GetUserTimer(timerID)
 	if !isTimerRunning {
 		logInvalidHistoryActionEvent(e.logger, tagValueActionTimerCanceled, e.GetNextEventID(), fmt.Sprintf(
-			"{startedEventID: %v, IsTimerRunning: %v, timerID: %v}", ti.StartedID, isTimerRunning, timerID))
+			"{IsTimerRunning: %v, timerID: %v}", isTimerRunning, timerID))
 		return nil
 	}
 
