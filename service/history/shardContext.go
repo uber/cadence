@@ -252,6 +252,7 @@ func (s *shardContextImpl) renewRangeLocked(isStealing bool) error {
 	return nil
 }
 
+// TODO: This method has too many parameters.  Clean it up.  Maybe create a struct to pass in as parameter.
 func acquireShard(shardID int, shardManager persistence.ShardManager, historyMgr persistence.HistoryManager,
 	executionMgr persistence.ExecutionManager, owner string, closeCh chan<- int, logger bark.Logger,
 	reporter metrics.Client) (ShardContext, error) {

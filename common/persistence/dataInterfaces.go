@@ -374,14 +374,20 @@ type (
 	// GetWorkflowExecutionHistoryRequest is used to retrieve history of a workflow execution
 	GetWorkflowExecutionHistoryRequest struct {
 		Execution     workflow.WorkflowExecution
+		// Get the history events upto NextEventID.  Not Inclusive.
 		NextEventID   int64
+		// Maximum number of history append transactions per page
 		PageSize      int
+		// Token to continue reading next page of history append transactions.  Pass in empty slice for first page
 		NextPageToken []byte
 	}
 
 	// GetWorkflowExecutionHistoryResponse is the response to GetWorkflowExecutionHistoryRequest
 	GetWorkflowExecutionHistoryResponse struct {
+		// Slice of history append transactioin payload
 		Events        [][]byte
+		// Token to read next page if there are more events beyond page size.
+		// Use this to set NextPageToken on GetworkflowExecutionHistoryRequest to read the next page.
 		NextPageToken []byte
 	}
 
@@ -428,6 +434,7 @@ type (
 	// HistoryManager is used to manage Workflow Execution History
 	HistoryManager interface {
 		AppendHistoryEvents(request *AppendHistoryEventsRequest) error
+		// GetWorkflowExecutionHistory retrieves the paginated list of history events for given execution
 		GetWorkflowExecutionHistory(request *GetWorkflowExecutionHistoryRequest) (*GetWorkflowExecutionHistoryResponse,
 			error)
 		DeleteWorkflowExecutionHistory(request *DeleteWorkflowExecutionHistoryRequest) error

@@ -187,20 +187,29 @@ func (e *historyEngineImpl) StartWorkflowExecution(request *workflow.StartWorkfl
 	})
 
 	if err != nil {
-		// We created the history events but failed to create workflow execution, so cleanup the history which could cause
-		// us to leak history events which are never cleaned up
-		// TODO: Handle error on deletion of execution history
-		e.historyMgr.DeleteWorkflowExecutionHistory(&persistence.DeleteWorkflowExecutionHistoryRequest{
-			Execution: workflowExecution,
-		})
+		switch t := err.(type) {
+		case *workflow.WorkflowExecutionAlreadyStartedError:
+			// We created the history events but failed to create workflow execution, so cleanup the history which could cause
+			// us to leak history events which are never cleaned up
+			// TODO: Handle error on deletion of execution history
+			e.historyMgr.DeleteWorkflowExecutionHistory(&persistence.DeleteWorkflowExecutionHistoryRequest{
+				Execution: workflowExecution,
+			})
 
-		if t, ok := err.(*workflow.WorkflowExecutionAlreadyStartedError); ok {
 			if t.GetStartRequestId() == request.GetRequestId() {
 				return &workflow.StartWorkflowExecutionResponse{
 					RunId: t.RunId,
 				}, nil
 			}
+		case *persistence.ShardOwnershipLostError:
+			// We created the history events but failed to create workflow execution, so cleanup the history which could cause
+			// us to leak history events which are never cleaned up
+			// TODO: Handle error on deletion of execution history
+			e.historyMgr.DeleteWorkflowExecutionHistory(&persistence.DeleteWorkflowExecutionHistoryRequest{
+				Execution: workflowExecution,
+			})
 		}
+
 		logPersistantStoreErrorEvent(e.logger, tagValueStoreOperationCreateWorkflowExecution, err,
 			fmt.Sprintf("{WorkflowID: %v, RunID: %v}", executionID, runID))
 		return nil, err
