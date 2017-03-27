@@ -482,14 +482,14 @@ func (e *mutableStateBuilder) AddActivityTaskTimedOutEvent(scheduleEventID, star
 
 func (e *mutableStateBuilder) AddActivityTaskCancelRequestedEvent(decisionCompletedEventID int64,
 	activityID, identity string) (*workflow.HistoryEvent, *persistence.ActivityInfo, bool) {
+	actCancelReqEvent := e.hBuilder.AddActivityTaskCancelRequestedEvent(decisionCompletedEventID, activityID)
+
 	ai, isRunning := e.GetActivityByActivityID(activityID)
 	if !isRunning || ai.CancelRequested {
 		logInvalidHistoryActionEvent(e.logger, tagValueActionActivityTaskCancelRequest, e.GetNextEventID(), fmt.Sprintf(
 			"{isRunning: %v, ActivityID: %v}", isRunning, activityID))
 		return nil, nil, false
 	}
-
-	actCancelReqEvent := e.hBuilder.AddActivityTaskCancelRequestedEvent(decisionCompletedEventID, activityID)
 
 	// - We have the activity dispatched to worker.
 	// - The activity might not be heartbeat'ing, but the activity can still call RecordActivityHeartBeat()

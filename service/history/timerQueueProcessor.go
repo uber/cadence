@@ -428,7 +428,6 @@ Update_History_Loop:
 			return err1
 		}
 
-
 		referenceExpiryTime, _ := DeconstructTimerKey(SequenceID(task.TaskID))
 		context.tBuilder.LoadUserTimers(msBuilder)
 
@@ -459,6 +458,7 @@ Update_History_Loop:
 					// Update the task ID tracking the corresponding timer task.
 					ti.TaskID = nextTask.GetTaskID()
 					msBuilder.UpdateUserTimer(ti.TimerID, ti)
+					defer t.NotifyNewTimer(ti.TaskID)
 				}
 
 				// Done!

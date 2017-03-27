@@ -120,6 +120,8 @@ func (e *historyEngineImpl) Stop() {
 func (e *historyEngineImpl) StartWorkflowExecution(request *workflow.StartWorkflowExecutionRequest) (
 	*workflow.StartWorkflowExecutionResponse, error) {
 	executionID := request.GetWorkflowId()
+	// We generate a new workflow execution run_id on each StartWorkflowExecution call.  This generated run_id is
+	// returned back to the caller as the response to StartWorkflowExecution.
 	runID := uuid.New()
 	workflowExecution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr(executionID),
@@ -190,7 +192,8 @@ func (e *historyEngineImpl) StartWorkflowExecution(request *workflow.StartWorkfl
 		switch t := err.(type) {
 		case *workflow.WorkflowExecutionAlreadyStartedError:
 			// We created the history events but failed to create workflow execution, so cleanup the history which could cause
-			// us to leak history events which are never cleaned up
+			// us to leak history events which are never cleaned up.  Cleaning up the events is absolutely safe here as they
+			// are always created for a unique run_id which is not visible beyond this call yet.
 			// TODO: Handle error on deletion of execution history
 			e.historyMgr.DeleteWorkflowExecutionHistory(&persistence.DeleteWorkflowExecutionHistoryRequest{
 				Execution: workflowExecution,
@@ -203,7 +206,8 @@ func (e *historyEngineImpl) StartWorkflowExecution(request *workflow.StartWorkfl
 			}
 		case *persistence.ShardOwnershipLostError:
 			// We created the history events but failed to create workflow execution, so cleanup the history which could cause
-			// us to leak history events which are never cleaned up
+			// us to leak history events which are never cleaned up. Cleaning up the events is absolutely safe here as they
+			// are always created for a unique run_id which is not visible beyond this call yet.
 			// TODO: Handle error on deletion of execution history
 			e.historyMgr.DeleteWorkflowExecutionHistory(&persistence.DeleteWorkflowExecutionHistoryRequest{
 				Execution: workflowExecution,

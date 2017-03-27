@@ -5,7 +5,6 @@ import (
 	"errors"
 	"os"
 	"testing"
-	//"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/pborman/uuid"
@@ -1395,7 +1394,6 @@ func (s *engineSuite) TestRespondActivityTaskFailedSuccess() {
 	s.Equal(emptyEventID, di.StartedID)
 }
 
-/*
 func (s *engineSuite) TestRecordActivityTaskHeartBeatSuccess_NoTimer() {
 	we := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),
@@ -1435,9 +1433,8 @@ func (s *engineSuite) TestRecordActivityTaskHeartBeatSuccess_NoTimer() {
 		Identity:  &identity,
 		Details:   detais,
 	})
-	s.NotNil(err)
+	s.Nil(err)
 }
-*/
 
 func (s *engineSuite) TestRecordActivityTaskHeartBeatSuccess_TimerRunning() {
 	we := workflow.WorkflowExecution{
@@ -1487,7 +1484,6 @@ func (s *engineSuite) TestRecordActivityTaskHeartBeatSuccess_TimerRunning() {
 	s.False(executionBuilder.HasPendingDecisionTask())
 }
 
-/*
 func (s *engineSuite) TestRespondActivityTaskCanceled_Scheduled() {
 	we := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),
@@ -1526,7 +1522,6 @@ func (s *engineSuite) TestRespondActivityTaskCanceled_Scheduled() {
 	s.NotNil(err)
 	s.IsType(&workflow.EntityNotExistsError{}, err)
 }
-*/
 
 func (s *engineSuite) TestRespondActivityTaskCanceled_Started() {
 	we := workflow.WorkflowExecution{
@@ -1581,7 +1576,6 @@ func (s *engineSuite) TestRespondActivityTaskCanceled_Started() {
 	s.Equal(emptyEventID, di.StartedID)
 }
 
-/*
 func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_NotScheduled() {
 	we := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),
@@ -1628,7 +1622,6 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_NotSchedule
 	s.Equal(persistence.WorkflowStateRunning, executionBuilder.executionInfo.State)
 	s.False(executionBuilder.HasPendingDecisionTask())
 }
-*/
 
 func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Scheduled() {
 	we := workflow.WorkflowExecution{
