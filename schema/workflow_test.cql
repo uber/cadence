@@ -89,7 +89,7 @@ CREATE TABLE executions (
   execution          frozen<workflow_execution>,
   transfer           frozen<transfer_task>,
   timer              frozen<timer_task>,
-  next_event_id      bigint,  -- This is needed to make conditional updates on session history
+  lock_id            bigint,  -- This is needed to make conditional updates on session history, to ensure cache consistency
   range_id           bigint static, -- Increasing sequence identifier for transfer queue, checkpointed into shard info
   activity_map       map<bigint, frozen<activity_info>>,
   timer_map          map<text, frozen<timer_info>>,

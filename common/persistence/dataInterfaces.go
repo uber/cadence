@@ -244,6 +244,10 @@ type (
 	// GetWorkflowExecutionRequest is used to retrieve the info of a workflow execution
 	GetWorkflowExecutionRequest struct {
 		Execution workflow.WorkflowExecution
+		// Can be 0 for non-serial reads.
+		// Otherwise, if it is less than the existing LockID the request will fail with
+		// ConditionFailedError.
+		LockID int64
 	}
 
 	// GetWorkflowExecutionResponse is the response to GetworkflowExecutionRequest

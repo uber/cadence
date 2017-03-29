@@ -53,8 +53,18 @@ func (c *workflowExecutionContext) loadWorkflowExecution() (*mutableStateBuilder
 		return c.msBuilder, nil
 	}
 
+	// use monotonically increasing task ID as a lock ID
+	// This is used to guarantee that any older updates to the execution are either applied or
+	// failed at the point we perform the read, so we know that we have read the latest state.
+	lockID, err := c.shard.GetNextTransferTaskID()
+	if err != nil {
+		return nil, err
+	}
+
 	response, err := c.getWorkflowExecutionWithRetry(&persistence.GetWorkflowExecutionRequest{
-		Execution: c.workflowExecution})
+		Execution: c.workflowExecution,
+		LockID:    lockID,
+	})
 	if err != nil {
 		logPersistantStoreErrorEvent(c.logger, tagValueStoreOperationGetWorkflowExecution, err, "")
 		return nil, err
@@ -64,30 +74,29 @@ func (c *workflowExecutionContext) loadWorkflowExecution() (*mutableStateBuilder
 	if response != nil && response.State != nil {
 		state := response.State
 		msBuilder.Load(state)
-		info := state.ExecutionInfo
-		c.updateCondition = info.NextEventID
+		c.updateCondition = lockID
 	}
 
 	c.msBuilder = msBuilder
 	return msBuilder, nil
 }
 
-func (c *workflowExecutionContext) updateWorkflowExecutionWithContext(context []byte, transferTasks []persistence.Task,
-	timerTasks []persistence.Task, transactionID int64) error {
+func (c *workflowExecutionContext) updateWorkflowExecutionWithContext(
+	context []byte, transferTasks []persistence.Task, timerTasks []persistence.Task) error {
 	c.msBuilder.executionInfo.ExecutionContext = context
 
-	return c.updateWorkflowExecution(transferTasks, timerTasks, transactionID)
+	return c.updateWorkflowExecution(transferTasks, timerTasks)
 }
 
 func (c *workflowExecutionContext) updateWorkflowExecutionWithDeleteTask(transferTasks []persistence.Task,
-	timerTasks []persistence.Task, deleteTimerTask persistence.Task, transactionID int64) error {
+	timerTasks []persistence.Task, deleteTimerTask persistence.Task) error {
 	c.deleteTimerTask = deleteTimerTask
 
-	return c.updateWorkflowExecution(transferTasks, timerTasks, transactionID)
+	return c.updateWorkflowExecution(transferTasks, timerTasks)
 }
 
 func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persistence.Task,
-	timerTasks []persistence.Task, transactionID int64) error {
+	timerTasks []persistence.Task) error {
 	// Take a snapshot of all updates we have accumulated for this execution
 	updates := c.msBuilder.CloseUpdateSession()
 
@@ -103,7 +112,7 @@ func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persi
 
 		if err0 := c.shard.AppendHistoryEvents(&persistence.AppendHistoryEventsRequest{
 			Execution:     c.workflowExecution,
-			TransactionID: transactionID,
+			TransactionID: c.updateCondition,
 			FirstEventID:  firstEvent.GetEventId(),
 			Events:        newEvents,
 		}); err0 != nil {
@@ -145,8 +154,6 @@ func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persi
 		return err1
 	}
 
-	// Update went through so update the condition for new updates
-	c.updateCondition = c.msBuilder.GetNextEventID()
 	return nil
 }
 

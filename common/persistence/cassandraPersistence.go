@@ -154,7 +154,7 @@ const (
 		`VALUES(?, ?, ?, ?, ?, ?) IF NOT EXISTS`
 
 	templateCreateWorkflowExecutionQuery2 = `INSERT INTO executions (` +
-		`shard_id, workflow_id, run_id, type, execution, next_event_id, task_id) ` +
+		`shard_id, workflow_id, run_id, type, execution, lock_id, task_id) ` +
 		`VALUES(?, ?, ?, ?, ` + templateWorkflowExecutionType + `, ?, ?) IF NOT EXISTS`
 
 	templateCreateTransferTaskQuery = `INSERT INTO executions (` +
@@ -170,7 +170,7 @@ const (
 		`WHERE shard_id = ? ` +
 		`IF range_id = ?`
 
-	templateGetWorkflowExecutionQuery = `SELECT execution, activity_map, timer_map ` +
+	templateGetWorkflowExecutionQuery = `SELECT execution, activity_map, timer_map, lock_id ` +
 		`FROM executions ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
@@ -179,13 +179,22 @@ const (
 		`and task_id = ?`
 
 	templateUpdateWorkflowExecutionQuery = `UPDATE executions ` +
-		`SET execution = ` + templateWorkflowExecutionType + `, next_event_id = ? ` +
+		`SET execution = ` + templateWorkflowExecutionType +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
 		`and task_id = ? ` +
-		`IF next_event_id = ? and range_id = ?`
+		`IF lock_id = ? and range_id = ?`
+
+	templateLockWorkflowExecutionQuery = `UPDATE executions ` +
+		`SET lock_id = ?` +
+		`WHERE shard_id = ? ` +
+		`and type = ? ` +
+		`and workflow_id = ? ` +
+		`and run_id = ? ` +
+		`and task_id = ? ` +
+		`IF lock_id = ?`
 
 	templateUpdateActivityInfoQuery = `UPDATE executions ` +
 		`SET activity_map[ ? ] =` + templateActivityInfoType + ` ` +
@@ -194,7 +203,7 @@ const (
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
 		`and task_id = ? ` +
-		`IF next_event_id = ? and range_id = ?`
+		`IF lock_id = ? and range_id = ?`
 
 	templateUpdateTimerInfoQuery = `UPDATE executions ` +
 		`SET timer_map[ ? ] =` + templateTimerInfoType + ` ` +
@@ -203,7 +212,7 @@ const (
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
 		`and task_id = ? ` +
-		`IF next_event_id = ? and range_id = ?`
+		`IF lock_id = ? and range_id = ?`
 
 	templateDeleteActivityInfoQuery = `DELETE activity_map[ ? ] ` +
 		`FROM executions ` +
@@ -212,7 +221,7 @@ const (
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
 		`and task_id = ? ` +
-		`IF next_event_id = ? and range_id = ?`
+		`IF lock_id = ? and range_id = ?`
 
 	templateDeleteTimerInfoQuery = `DELETE timer_map[ ? ] ` +
 		`FROM executions ` +
@@ -221,7 +230,7 @@ const (
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
 		`and task_id = ? ` +
-		`IF next_event_id = ? and range_id = ?`
+		`IF lock_id = ? and range_id = ?`
 
 	templateDeleteWorkflowExecutionQuery = `DELETE FROM executions ` +
 		`WHERE shard_id = ? ` +
@@ -231,7 +240,7 @@ const (
 		`and task_id = ? `
 
 	templateDeleteWorkflowExecutionTTLQuery = `INSERT INTO executions (` +
-		`shard_id, workflow_id, run_id, type, execution, next_event_id, task_id) ` +
+		`shard_id, workflow_id, run_id, type, execution, lock_id, task_id) ` +
 		`VALUES(?, ?, ?, ?, ` + templateWorkflowExecutionType + `, ?, ?) USING TTL ?`
 
 	templateGetTransferTasksQuery = `SELECT transfer ` +
@@ -517,7 +526,7 @@ func (d *cassandraPersistence) CreateWorkflowExecution(request *CreateWorkflowEx
 		request.DecisionStartedID,
 		"", // Decision Start Request ID
 		request.DecisionStartToCloseTimeout,
-		request.NextEventID,
+		0, // Initial Lock
 		rowTypeExecutionTaskID)
 
 	d.createTransferTasks(batch, request.TransferTasks, request.Execution.GetWorkflowId(), request.Execution.GetRunId(),
@@ -602,6 +611,40 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *GetWorkflowExecutio
 		}
 	}
 
+	if request.LockID > 0 {
+		currentLock := result["lock_id"].(int64)
+		if currentLock > request.LockID {
+			return nil, &ConditionFailedError{
+				Msg: fmt.Sprintf("GetWorkflowExecution failed to apply. db LockID %v", currentLock),
+			}
+		}
+
+		// attempt to conditonally update the lock_id
+		query = d.session.Query(templateLockWorkflowExecutionQuery,
+			request.LockID,
+			d.shardID,
+			rowTypeExecution,
+			execution.GetWorkflowId(),
+			execution.GetRunId(),
+			rowTypeExecutionTaskID,
+			currentLock,
+		)
+
+		previous := make(map[string]interface{})
+		applied, err := query.MapScanCAS(previous)
+		if err != nil {
+			return nil, &workflow.InternalServiceError{
+				Message: fmt.Sprintf("GetWorkflowExecution operation failed. Error : %v", err),
+			}
+		}
+		if !applied {
+			previousLockID := previous["lock_id"]
+			return nil, &ConditionFailedError{
+				Msg: fmt.Sprintf("GetWorkflowExecution failed to apply. db LockID %v", previousLockID),
+			}
+		}
+	}
+
 	state := &WorkflowMutableState{}
 	info := createWorkflowExecutionInfo(result["execution"].(map[string]interface{}))
 	state.ExecutionInfo = info
@@ -646,7 +689,6 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 		executionInfo.DecisionStartedID,
 		executionInfo.DecisionRequestID,
 		executionInfo.DecisionTimeout,
-		executionInfo.NextEventID,
 		d.shardID,
 		rowTypeExecution,
 		executionInfo.WorkflowID,
@@ -689,11 +731,11 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 			}
 		}
 
-		if nextEventID, ok := previous["next_event_id"].(int64); ok && nextEventID != request.Condition {
-			// CreateWorkflowExecution failed because next event ID is unexpected
+		if lockID, ok := previous["lock_id"].(int64); ok && lockID != request.Condition {
+			// CreateWorkflowExecution failed because lock ID is unexpected
 			return &ConditionFailedError{
 				Msg: fmt.Sprintf("Failed to update workflow execution.  Request Condition: %v, Actual Value: %v",
-					request.Condition, nextEventID),
+					request.Condition, lockID),
 			}
 		}
 
