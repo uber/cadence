@@ -108,6 +108,32 @@ CREATE TABLE events (
   PRIMARY KEY ((workflow_id, run_id), first_event_id)
 );
 
+CREATE TYPE domain (
+  id          uuid,
+  name        text,
+  status      int, -- enum DomainStatus {Active, Deprecated, Deleted}
+  description text,
+);
+
+CREATE TYPE domain_config (
+  retention int,
+  emitMetric boolean
+);
+
+CREATE TABLE domains (
+  id     uuid,
+  domain frozen<domain>,
+  config frozen<domain_config>,
+  PRIMARY KEY (id)
+);
+
+CREATE TABLE domains_by_name (
+  name   text,
+  domain frozen<domain>,
+  config frozen<domain_config>,
+  PRIMARY KEY (name)
+)
+
 -- Activity or workflow task in a task list
 CREATE TYPE task (
   workflow_id      text,
