@@ -118,6 +118,18 @@ func (s *cassandraPersistenceSuite) TestGetWorkflow() {
 	s.Equal(common.EmptyEventID, info.DecisionStartedID)
 	s.Equal(int32(1), info.DecisionTimeout)
 	log.Infof("Workflow execution last updated: %v", info.LastUpdatedTimestamp)
+
+	_, err2 := s.GetWorkflowExecutionInfoWithLockID(workflowExecution, 5)
+	s.Nil(err2, "No error expected.")
+
+	// Try with a smaller lock ID, it should fail with ConditionFailedError.
+	_, err3 := s.GetWorkflowExecutionInfoWithLockID(workflowExecution, 4)
+	s.NotNil(err3, "expected non nil error.")
+	s.IsType(&ConditionFailedError{}, err3)
+
+	// Reading with LockID 0 should always succeed.
+	_, err4 := s.GetWorkflowExecutionInfoWithLockID(workflowExecution, 0)
+	s.Nil(err4, "No error expected.")
 }
 
 func (s *cassandraPersistenceSuite) TestUpdateWorkflow() {
@@ -155,7 +167,7 @@ func (s *cassandraPersistenceSuite) TestUpdateWorkflow() {
 	err2 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(4)}, nil, int64(0), nil, nil, nil, nil, nil, nil)
 	s.Nil(err2, "No error expected.")
 
-	state1, err3 := s.GetWorkflowExecutionInfo(workflowExecution)
+	state1, err3 := s.GetWorkflowExecutionInfoWithLockID(workflowExecution, 5)
 	s.Nil(err3, "No error expected.")
 	info1 := state1.ExecutionInfo
 	s.NotNil(info1, "Valid Workflow info expected.")
@@ -175,9 +187,6 @@ func (s *cassandraPersistenceSuite) TestUpdateWorkflow() {
 
 	log.Infof("Workflow execution last updated: %v", info1.LastUpdatedTimestamp)
 
-	failedUpdatedInfo := copyWorkflowExecutionInfo(info0)
-	failedUpdatedInfo.NextEventID = int64(6)
-	failedUpdatedInfo.LastProcessedEvent = int64(3)
 	err4 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(5)}, nil, int64(3), nil, nil, nil, nil, nil, nil)
 	s.NotNil(err4, "expected non nil error.")
 	s.IsType(&ConditionFailedError{}, err4)
@@ -206,7 +215,7 @@ func (s *cassandraPersistenceSuite) TestUpdateWorkflow() {
 	failedUpdatedInfo2 := copyWorkflowExecutionInfo(info1)
 	failedUpdatedInfo2.NextEventID = int64(6)
 	failedUpdatedInfo2.LastProcessedEvent = int64(3)
-	err5 := s.UpdateWorkflowExecutionWithRangeID(updatedInfo, []int64{int64(5)}, nil, int64(12345), int64(5), nil, nil, nil, nil, nil, nil)
+	err5 := s.UpdateWorkflowExecutionWithRangeID(updatedInfo, []int64{int64(5)}, nil, int64(12345), int64(0), nil, nil, nil, nil, nil, nil)
 	s.NotNil(err5, "expected non nil error.")
 	s.IsType(&ShardOwnershipLostError{}, err5)
 	log.Errorf("Conditional update failed with error: %v", err5)
