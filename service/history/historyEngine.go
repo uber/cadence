@@ -124,7 +124,9 @@ func (e *historyEngineImpl) StartWorkflowExecution(request *workflow.StartWorkfl
 	}
 
 	err1 := e.shard.AppendHistoryEvents(&persistence.AppendHistoryEventsRequest{
-		Execution:     workflowExecution,
+		Execution: workflowExecution,
+		// It is ok to use 0 for TransactionID because RunID is unique so there are
+		// no potential duplicates to override.
 		TransactionID: 0,
 		FirstEventID:  startedEvent.GetEventId(),
 		Events:        events,
