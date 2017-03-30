@@ -3,12 +3,14 @@ include "shared.thrift"
 namespace java com.uber.cadence
 
 struct AddDecisionTaskRequest {
+  5:  optional string domain
   10: optional shared.WorkflowExecution execution
   20: optional shared.TaskList taskList
   30: optional i64 (js.type = "Long") scheduleId
 }
 
 struct AddActivityTaskRequest {
+  5:  optional string domain
   10: optional shared.WorkflowExecution execution
   20: optional shared.TaskList taskList
   30: optional i64 (js.type = "Long") scheduleId

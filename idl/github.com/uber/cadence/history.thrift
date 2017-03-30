@@ -12,6 +12,7 @@ exception ShardOwnershipLostError {
 }
 
 struct RecordActivityTaskStartedRequest {
+  5:  optional string domain
   10: optional shared.WorkflowExecution workflowExecution
   20: optional i64 (js.type = "Long") scheduleId
   30: optional i64 (js.type = "Long") taskId
@@ -25,6 +26,7 @@ struct RecordActivityTaskStartedResponse {
 }
 
 struct RecordDecisionTaskStartedRequest {
+  5:  optional string domain
   10: optional shared.WorkflowExecution workflowExecution
   20: optional i64 (js.type = "Long") scheduleId
   30: optional i64 (js.type = "Long") taskId
