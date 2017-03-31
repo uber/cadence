@@ -13,17 +13,17 @@ struct PollForActivityTaskRequest {
 }
 
 struct AddDecisionTaskRequest {
-  5:  optional string domainUUID
-  10: optional shared.WorkflowExecution execution
-  20: optional shared.TaskList taskList
-  30: optional i64 (js.type = "Long") scheduleId
+  10: optional string domainUUID
+  20: optional shared.WorkflowExecution execution
+  30: optional shared.TaskList taskList
+  40: optional i64 (js.type = "Long") scheduleId
 }
 
 struct AddActivityTaskRequest {
-  5:  optional string domainUUID
-  10: optional shared.WorkflowExecution execution
-  20: optional shared.TaskList taskList
-  30: optional i64 (js.type = "Long") scheduleId
+  10: optional string domainUUID
+  20: optional shared.WorkflowExecution execution
+  30: optional shared.TaskList taskList
+  40: optional i64 (js.type = "Long") scheduleId
 }
 
 /**

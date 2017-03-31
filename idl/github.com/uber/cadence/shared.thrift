@@ -353,15 +353,15 @@ struct DeprecateDomainRequest {
 }
 
 struct StartWorkflowExecutionRequest {
-  5:  optional string domain
-  10: optional string workflowId
-  20: optional WorkflowType workflowType
-  30: optional TaskList taskList
-  40: optional binary input
-  50: optional i32 executionStartToCloseTimeoutSeconds
-  60: optional i32 taskStartToCloseTimeoutSeconds
-  70: optional string identity
-  80: optional string requestId
+  10: optional string domain
+  20: optional string workflowId
+  30: optional WorkflowType workflowType
+  40: optional TaskList taskList
+  50: optional binary input
+  60: optional i32 executionStartToCloseTimeoutSeconds
+  70: optional i32 taskStartToCloseTimeoutSeconds
+  80: optional string identity
+  90: optional string requestId
 }
 
 struct StartWorkflowExecutionResponse {
@@ -369,9 +369,9 @@ struct StartWorkflowExecutionResponse {
 }
 
 struct PollForDecisionTaskRequest {
-  5:  optional string domain
-  10: optional TaskList taskList
-  20: optional string identity
+  10: optional string domain
+  20: optional TaskList taskList
+  30: optional string identity
 }
 
 struct PollForDecisionTaskResponse {
@@ -391,9 +391,9 @@ struct RespondDecisionTaskCompletedRequest {
 }
 
 struct PollForActivityTaskRequest {
-  5:  optional string domain
-  10: optional TaskList taskList
-  20: optional string identity
+  10: optional string domain
+  20: optional TaskList taskList
+  30: optional string identity
 }
 
 struct PollForActivityTaskResponse {
@@ -435,8 +435,8 @@ struct RespondActivityTaskCanceledRequest {
 }
 
 struct GetWorkflowExecutionHistoryRequest {
-  5:  optional string domain
-  10: optional WorkflowExecution execution
+  10: optional string domain
+  20: optional WorkflowExecution execution
 }
 
 struct GetWorkflowExecutionHistoryResponse {

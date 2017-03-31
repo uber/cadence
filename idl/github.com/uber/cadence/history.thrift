@@ -47,12 +47,12 @@ struct RespondActivityTaskCanceledRequest {
 }
 
 struct RecordActivityTaskStartedRequest {
-  5:  optional string domainUUID
-  10: optional shared.WorkflowExecution workflowExecution
-  20: optional i64 (js.type = "Long") scheduleId
-  30: optional i64 (js.type = "Long") taskId
-  35: optional string requestId // Unique id of each poll request. Used to ensure at most once delivery of tasks.
-  40: optional shared.PollForActivityTaskRequest pollRequest
+  10: optional string domainUUID
+  20: optional shared.WorkflowExecution workflowExecution
+  30: optional i64 (js.type = "Long") scheduleId
+  40: optional i64 (js.type = "Long") taskId
+  45: optional string requestId // Unique id of each poll request. Used to ensure at most once delivery of tasks.
+  50: optional shared.PollForActivityTaskRequest pollRequest
 }
 
 struct RecordActivityTaskStartedResponse {
@@ -61,12 +61,12 @@ struct RecordActivityTaskStartedResponse {
 }
 
 struct RecordDecisionTaskStartedRequest {
-  5:  optional string domainUUID
-  10: optional shared.WorkflowExecution workflowExecution
-  20: optional i64 (js.type = "Long") scheduleId
-  30: optional i64 (js.type = "Long") taskId
-  35: optional string requestId // Unique id of each poll request. Used to ensure at most once delivery of tasks.
-  40: optional shared.PollForDecisionTaskRequest pollRequest
+  10: optional string domainUUID
+  20: optional shared.WorkflowExecution workflowExecution
+  30: optional i64 (js.type = "Long") scheduleId
+  40: optional i64 (js.type = "Long") taskId
+  45: optional string requestId // Unique id of each poll request. Used to ensure at most once delivery of tasks.
+  50: optional shared.PollForDecisionTaskRequest pollRequest
 }
 
 struct RecordDecisionTaskStartedResponse {

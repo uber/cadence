@@ -293,14 +293,14 @@ func (p *PollForActivityTaskRequest) String() string {
 //  - TaskList
 //  - ScheduleId
 type AddDecisionTaskRequest struct {
-  // unused fields # 1 to 4
-  DomainUUID *string `thrift:"domainUUID,5" db:"domainUUID" json:"domainUUID,omitempty"`
-  // unused fields # 6 to 9
-  Execution *shared.WorkflowExecution `thrift:"execution,10" db:"execution" json:"execution,omitempty"`
+  // unused fields # 1 to 9
+  DomainUUID *string `thrift:"domainUUID,10" db:"domainUUID" json:"domainUUID,omitempty"`
   // unused fields # 11 to 19
-  TaskList *shared.TaskList `thrift:"taskList,20" db:"taskList" json:"taskList,omitempty"`
+  Execution *shared.WorkflowExecution `thrift:"execution,20" db:"execution" json:"execution,omitempty"`
   // unused fields # 21 to 29
-  ScheduleId *int64 `thrift:"scheduleId,30" db:"scheduleId" json:"scheduleId,omitempty"`
+  TaskList *shared.TaskList `thrift:"taskList,30" db:"taskList" json:"taskList,omitempty"`
+  // unused fields # 31 to 39
+  ScheduleId *int64 `thrift:"scheduleId,40" db:"scheduleId" json:"scheduleId,omitempty"`
 }
 
 func NewAddDecisionTaskRequest() *AddDecisionTaskRequest {
@@ -364,10 +364,6 @@ func (p *AddDecisionTaskRequest) Read(iprot thrift.TProtocol) error {
     }
     if fieldTypeId == thrift.STOP { break; }
     switch fieldId {
-    case 5:
-      if err := p.ReadField5(iprot); err != nil {
-        return err
-      }
     case 10:
       if err := p.ReadField10(iprot); err != nil {
         return err
@@ -378,6 +374,10 @@ func (p *AddDecisionTaskRequest) Read(iprot thrift.TProtocol) error {
       }
     case 30:
       if err := p.ReadField30(iprot); err != nil {
+        return err
+      }
+    case 40:
+      if err := p.ReadField40(iprot); err != nil {
         return err
       }
     default:
@@ -395,16 +395,16 @@ func (p *AddDecisionTaskRequest) Read(iprot thrift.TProtocol) error {
   return nil
 }
 
-func (p *AddDecisionTaskRequest)  ReadField5(iprot thrift.TProtocol) error {
+func (p *AddDecisionTaskRequest)  ReadField10(iprot thrift.TProtocol) error {
   if v, err := iprot.ReadString(); err != nil {
-  return thrift.PrependError("error reading field 5: ", err)
+  return thrift.PrependError("error reading field 10: ", err)
 } else {
   p.DomainUUID = &v
 }
   return nil
 }
 
-func (p *AddDecisionTaskRequest)  ReadField10(iprot thrift.TProtocol) error {
+func (p *AddDecisionTaskRequest)  ReadField20(iprot thrift.TProtocol) error {
   p.Execution = &shared.WorkflowExecution{}
   if err := p.Execution.Read(iprot); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Execution), err)
@@ -412,7 +412,7 @@ func (p *AddDecisionTaskRequest)  ReadField10(iprot thrift.TProtocol) error {
   return nil
 }
 
-func (p *AddDecisionTaskRequest)  ReadField20(iprot thrift.TProtocol) error {
+func (p *AddDecisionTaskRequest)  ReadField30(iprot thrift.TProtocol) error {
   p.TaskList = &shared.TaskList{}
   if err := p.TaskList.Read(iprot); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.TaskList), err)
@@ -420,9 +420,9 @@ func (p *AddDecisionTaskRequest)  ReadField20(iprot thrift.TProtocol) error {
   return nil
 }
 
-func (p *AddDecisionTaskRequest)  ReadField30(iprot thrift.TProtocol) error {
+func (p *AddDecisionTaskRequest)  ReadField40(iprot thrift.TProtocol) error {
   if v, err := iprot.ReadI64(); err != nil {
-  return thrift.PrependError("error reading field 30: ", err)
+  return thrift.PrependError("error reading field 40: ", err)
 } else {
   p.ScheduleId = &v
 }
@@ -433,10 +433,10 @@ func (p *AddDecisionTaskRequest) Write(oprot thrift.TProtocol) error {
   if err := oprot.WriteStructBegin("AddDecisionTaskRequest"); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
   if p != nil {
-    if err := p.writeField5(oprot); err != nil { return err }
     if err := p.writeField10(oprot); err != nil { return err }
     if err := p.writeField20(oprot); err != nil { return err }
     if err := p.writeField30(oprot); err != nil { return err }
+    if err := p.writeField40(oprot); err != nil { return err }
   }
   if err := oprot.WriteFieldStop(); err != nil {
     return thrift.PrependError("write field stop error: ", err) }
@@ -445,52 +445,52 @@ func (p *AddDecisionTaskRequest) Write(oprot thrift.TProtocol) error {
   return nil
 }
 
-func (p *AddDecisionTaskRequest) writeField5(oprot thrift.TProtocol) (err error) {
-  if p.IsSetDomainUUID() {
-    if err := oprot.WriteFieldBegin("domainUUID", thrift.STRING, 5); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field begin error 5:domainUUID: ", p), err) }
-    if err := oprot.WriteString(string(*p.DomainUUID)); err != nil {
-    return thrift.PrependError(fmt.Sprintf("%T.domainUUID (5) field write error: ", p), err) }
-    if err := oprot.WriteFieldEnd(); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field end error 5:domainUUID: ", p), err) }
-  }
-  return err
-}
-
 func (p *AddDecisionTaskRequest) writeField10(oprot thrift.TProtocol) (err error) {
-  if p.IsSetExecution() {
-    if err := oprot.WriteFieldBegin("execution", thrift.STRUCT, 10); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:execution: ", p), err) }
-    if err := p.Execution.Write(oprot); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Execution), err)
-    }
+  if p.IsSetDomainUUID() {
+    if err := oprot.WriteFieldBegin("domainUUID", thrift.STRING, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:domainUUID: ", p), err) }
+    if err := oprot.WriteString(string(*p.DomainUUID)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.domainUUID (10) field write error: ", p), err) }
     if err := oprot.WriteFieldEnd(); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:execution: ", p), err) }
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:domainUUID: ", p), err) }
   }
   return err
 }
 
 func (p *AddDecisionTaskRequest) writeField20(oprot thrift.TProtocol) (err error) {
-  if p.IsSetTaskList() {
-    if err := oprot.WriteFieldBegin("taskList", thrift.STRUCT, 20); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:taskList: ", p), err) }
-    if err := p.TaskList.Write(oprot); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.TaskList), err)
+  if p.IsSetExecution() {
+    if err := oprot.WriteFieldBegin("execution", thrift.STRUCT, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:execution: ", p), err) }
+    if err := p.Execution.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Execution), err)
     }
     if err := oprot.WriteFieldEnd(); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:taskList: ", p), err) }
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:execution: ", p), err) }
   }
   return err
 }
 
 func (p *AddDecisionTaskRequest) writeField30(oprot thrift.TProtocol) (err error) {
-  if p.IsSetScheduleId() {
-    if err := oprot.WriteFieldBegin("scheduleId", thrift.I64, 30); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field begin error 30:scheduleId: ", p), err) }
-    if err := oprot.WriteI64(int64(*p.ScheduleId)); err != nil {
-    return thrift.PrependError(fmt.Sprintf("%T.scheduleId (30) field write error: ", p), err) }
+  if p.IsSetTaskList() {
+    if err := oprot.WriteFieldBegin("taskList", thrift.STRUCT, 30); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 30:taskList: ", p), err) }
+    if err := p.TaskList.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.TaskList), err)
+    }
     if err := oprot.WriteFieldEnd(); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field end error 30:scheduleId: ", p), err) }
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 30:taskList: ", p), err) }
+  }
+  return err
+}
+
+func (p *AddDecisionTaskRequest) writeField40(oprot thrift.TProtocol) (err error) {
+  if p.IsSetScheduleId() {
+    if err := oprot.WriteFieldBegin("scheduleId", thrift.I64, 40); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 40:scheduleId: ", p), err) }
+    if err := oprot.WriteI64(int64(*p.ScheduleId)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.scheduleId (40) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 40:scheduleId: ", p), err) }
   }
   return err
 }
@@ -508,14 +508,14 @@ func (p *AddDecisionTaskRequest) String() string {
 //  - TaskList
 //  - ScheduleId
 type AddActivityTaskRequest struct {
-  // unused fields # 1 to 4
-  DomainUUID *string `thrift:"domainUUID,5" db:"domainUUID" json:"domainUUID,omitempty"`
-  // unused fields # 6 to 9
-  Execution *shared.WorkflowExecution `thrift:"execution,10" db:"execution" json:"execution,omitempty"`
+  // unused fields # 1 to 9
+  DomainUUID *string `thrift:"domainUUID,10" db:"domainUUID" json:"domainUUID,omitempty"`
   // unused fields # 11 to 19
-  TaskList *shared.TaskList `thrift:"taskList,20" db:"taskList" json:"taskList,omitempty"`
+  Execution *shared.WorkflowExecution `thrift:"execution,20" db:"execution" json:"execution,omitempty"`
   // unused fields # 21 to 29
-  ScheduleId *int64 `thrift:"scheduleId,30" db:"scheduleId" json:"scheduleId,omitempty"`
+  TaskList *shared.TaskList `thrift:"taskList,30" db:"taskList" json:"taskList,omitempty"`
+  // unused fields # 31 to 39
+  ScheduleId *int64 `thrift:"scheduleId,40" db:"scheduleId" json:"scheduleId,omitempty"`
 }
 
 func NewAddActivityTaskRequest() *AddActivityTaskRequest {
@@ -579,10 +579,6 @@ func (p *AddActivityTaskRequest) Read(iprot thrift.TProtocol) error {
     }
     if fieldTypeId == thrift.STOP { break; }
     switch fieldId {
-    case 5:
-      if err := p.ReadField5(iprot); err != nil {
-        return err
-      }
     case 10:
       if err := p.ReadField10(iprot); err != nil {
         return err
@@ -593,6 +589,10 @@ func (p *AddActivityTaskRequest) Read(iprot thrift.TProtocol) error {
       }
     case 30:
       if err := p.ReadField30(iprot); err != nil {
+        return err
+      }
+    case 40:
+      if err := p.ReadField40(iprot); err != nil {
         return err
       }
     default:
@@ -610,16 +610,16 @@ func (p *AddActivityTaskRequest) Read(iprot thrift.TProtocol) error {
   return nil
 }
 
-func (p *AddActivityTaskRequest)  ReadField5(iprot thrift.TProtocol) error {
+func (p *AddActivityTaskRequest)  ReadField10(iprot thrift.TProtocol) error {
   if v, err := iprot.ReadString(); err != nil {
-  return thrift.PrependError("error reading field 5: ", err)
+  return thrift.PrependError("error reading field 10: ", err)
 } else {
   p.DomainUUID = &v
 }
   return nil
 }
 
-func (p *AddActivityTaskRequest)  ReadField10(iprot thrift.TProtocol) error {
+func (p *AddActivityTaskRequest)  ReadField20(iprot thrift.TProtocol) error {
   p.Execution = &shared.WorkflowExecution{}
   if err := p.Execution.Read(iprot); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Execution), err)
@@ -627,7 +627,7 @@ func (p *AddActivityTaskRequest)  ReadField10(iprot thrift.TProtocol) error {
   return nil
 }
 
-func (p *AddActivityTaskRequest)  ReadField20(iprot thrift.TProtocol) error {
+func (p *AddActivityTaskRequest)  ReadField30(iprot thrift.TProtocol) error {
   p.TaskList = &shared.TaskList{}
   if err := p.TaskList.Read(iprot); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.TaskList), err)
@@ -635,9 +635,9 @@ func (p *AddActivityTaskRequest)  ReadField20(iprot thrift.TProtocol) error {
   return nil
 }
 
-func (p *AddActivityTaskRequest)  ReadField30(iprot thrift.TProtocol) error {
+func (p *AddActivityTaskRequest)  ReadField40(iprot thrift.TProtocol) error {
   if v, err := iprot.ReadI64(); err != nil {
-  return thrift.PrependError("error reading field 30: ", err)
+  return thrift.PrependError("error reading field 40: ", err)
 } else {
   p.ScheduleId = &v
 }
@@ -648,10 +648,10 @@ func (p *AddActivityTaskRequest) Write(oprot thrift.TProtocol) error {
   if err := oprot.WriteStructBegin("AddActivityTaskRequest"); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
   if p != nil {
-    if err := p.writeField5(oprot); err != nil { return err }
     if err := p.writeField10(oprot); err != nil { return err }
     if err := p.writeField20(oprot); err != nil { return err }
     if err := p.writeField30(oprot); err != nil { return err }
+    if err := p.writeField40(oprot); err != nil { return err }
   }
   if err := oprot.WriteFieldStop(); err != nil {
     return thrift.PrependError("write field stop error: ", err) }
@@ -660,52 +660,52 @@ func (p *AddActivityTaskRequest) Write(oprot thrift.TProtocol) error {
   return nil
 }
 
-func (p *AddActivityTaskRequest) writeField5(oprot thrift.TProtocol) (err error) {
-  if p.IsSetDomainUUID() {
-    if err := oprot.WriteFieldBegin("domainUUID", thrift.STRING, 5); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field begin error 5:domainUUID: ", p), err) }
-    if err := oprot.WriteString(string(*p.DomainUUID)); err != nil {
-    return thrift.PrependError(fmt.Sprintf("%T.domainUUID (5) field write error: ", p), err) }
-    if err := oprot.WriteFieldEnd(); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field end error 5:domainUUID: ", p), err) }
-  }
-  return err
-}
-
 func (p *AddActivityTaskRequest) writeField10(oprot thrift.TProtocol) (err error) {
-  if p.IsSetExecution() {
-    if err := oprot.WriteFieldBegin("execution", thrift.STRUCT, 10); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:execution: ", p), err) }
-    if err := p.Execution.Write(oprot); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Execution), err)
-    }
+  if p.IsSetDomainUUID() {
+    if err := oprot.WriteFieldBegin("domainUUID", thrift.STRING, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:domainUUID: ", p), err) }
+    if err := oprot.WriteString(string(*p.DomainUUID)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.domainUUID (10) field write error: ", p), err) }
     if err := oprot.WriteFieldEnd(); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:execution: ", p), err) }
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:domainUUID: ", p), err) }
   }
   return err
 }
 
 func (p *AddActivityTaskRequest) writeField20(oprot thrift.TProtocol) (err error) {
-  if p.IsSetTaskList() {
-    if err := oprot.WriteFieldBegin("taskList", thrift.STRUCT, 20); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:taskList: ", p), err) }
-    if err := p.TaskList.Write(oprot); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.TaskList), err)
+  if p.IsSetExecution() {
+    if err := oprot.WriteFieldBegin("execution", thrift.STRUCT, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:execution: ", p), err) }
+    if err := p.Execution.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Execution), err)
     }
     if err := oprot.WriteFieldEnd(); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:taskList: ", p), err) }
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:execution: ", p), err) }
   }
   return err
 }
 
 func (p *AddActivityTaskRequest) writeField30(oprot thrift.TProtocol) (err error) {
-  if p.IsSetScheduleId() {
-    if err := oprot.WriteFieldBegin("scheduleId", thrift.I64, 30); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field begin error 30:scheduleId: ", p), err) }
-    if err := oprot.WriteI64(int64(*p.ScheduleId)); err != nil {
-    return thrift.PrependError(fmt.Sprintf("%T.scheduleId (30) field write error: ", p), err) }
+  if p.IsSetTaskList() {
+    if err := oprot.WriteFieldBegin("taskList", thrift.STRUCT, 30); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 30:taskList: ", p), err) }
+    if err := p.TaskList.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.TaskList), err)
+    }
     if err := oprot.WriteFieldEnd(); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field end error 30:scheduleId: ", p), err) }
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 30:taskList: ", p), err) }
+  }
+  return err
+}
+
+func (p *AddActivityTaskRequest) writeField40(oprot thrift.TProtocol) (err error) {
+  if p.IsSetScheduleId() {
+    if err := oprot.WriteFieldBegin("scheduleId", thrift.I64, 40); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 40:scheduleId: ", p), err) }
+    if err := oprot.WriteI64(int64(*p.ScheduleId)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.scheduleId (40) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 40:scheduleId: ", p), err) }
   }
   return err
 }
