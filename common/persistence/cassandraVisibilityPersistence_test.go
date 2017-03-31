@@ -45,43 +45,94 @@ func (s *visibilityPersistenceSuite) TearDownSuite() {
 	s.TearDownWorkflowStore()
 }
 
-func (s *visibilityPersistenceSuite) TestRecordWorkflowExecutionStarted() {
+func (s *visibilityPersistenceSuite) TestBasicVisibility() {
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("visibility-workflow-test"),
 		RunId:      common.StringPtr("fb15e4b5-356f-466d-8c6d-a29223e5c536"),
 	}
 
-	err := s.VisibilityMgr.RecordWorkflowExecutionStarted(&RecordWorkflowExecutionStartedRequest{
-		Execution:        workflowExecution,
-		WorkflowTypeName: "visibility-workflow",
-		StartTimestamp:   time.Now(),
-	})
-	s.Nil(err)
-
-	// TODO: validate by reading when List is implemented
-}
-
-func (s *visibilityPersistenceSuite) TestRecordWorkflowExecutionClosed() {
-	workflowExecution := gen.WorkflowExecution{
-		WorkflowId: common.StringPtr("visibility-workflow-test"),
-		RunId:      common.StringPtr("cf555273-4443-456b-ad12-076625c50c23"),
-	}
-	startTimestamp := time.Now().Add(time.Second * -5)
-
+	startTime := time.Now().Add(time.Second * -5)
 	err0 := s.VisibilityMgr.RecordWorkflowExecutionStarted(&RecordWorkflowExecutionStartedRequest{
 		Execution:        workflowExecution,
 		WorkflowTypeName: "visibility-workflow",
-		StartTimestamp:   startTimestamp,
+		StartTime:        startTime,
 	})
 	s.Nil(err0)
 
-	err1 := s.VisibilityMgr.RecordWorkflowExecutionClosed(&RecordWorkflowExecutionClosedRequest{
+	resp, err1 := s.VisibilityMgr.ListOpenWorkflowExecutions(&ListWorkflowExecutionsRequest{
+		PageSize: 1,
+	})
+	s.Nil(err1)
+	s.Equal(1, len(resp.Executions))
+	s.Equal(workflowExecution.GetWorkflowId(), resp.Executions[0].WorkflowID)
+
+	err2 := s.VisibilityMgr.RecordWorkflowExecutionClosed(&RecordWorkflowExecutionClosedRequest{
 		Execution:        workflowExecution,
 		WorkflowTypeName: "visibility-workflow",
-		StartTimestamp:   startTimestamp,
-		CloseTimestamp:   time.Now(),
+		StartTime:        startTime,
+		CloseTime:        time.Now(),
+	})
+	s.Nil(err2)
+
+	resp, err3 := s.VisibilityMgr.ListOpenWorkflowExecutions(&ListWorkflowExecutionsRequest{
+		PageSize: 1,
+	})
+	s.Nil(err3)
+	s.Equal(0, len(resp.Executions))
+
+	resp, err4 := s.VisibilityMgr.ListClosedWorkflowExecutions(&ListWorkflowExecutionsRequest{
+		PageSize: 1,
+	})
+	s.Nil(err4)
+	s.Equal(1, len(resp.Executions))
+}
+
+func (s *visibilityPersistenceSuite) TestVisibilityPagination() {
+	// Create 2 executions
+	workflowExecution1 := gen.WorkflowExecution{
+		WorkflowId: common.StringPtr("visibility-pagination-test1"),
+		RunId:      common.StringPtr("fb15e4b5-356f-466d-8c6d-a29223e5c536"),
+	}
+	err0 := s.VisibilityMgr.RecordWorkflowExecutionStarted(&RecordWorkflowExecutionStartedRequest{
+		Execution:        workflowExecution1,
+		WorkflowTypeName: "visibility-workflow",
+		StartTime:        time.Now(),
+	})
+	s.Nil(err0)
+
+	workflowExecution2 := gen.WorkflowExecution{
+		WorkflowId: common.StringPtr("visibility-pagination-test2"),
+		RunId:      common.StringPtr("fb15e4b5-356f-466d-8c6d-a29223e5c536"),
+	}
+	err1 := s.VisibilityMgr.RecordWorkflowExecutionStarted(&RecordWorkflowExecutionStartedRequest{
+		Execution:        workflowExecution2,
+		WorkflowTypeName: "visibility-workflow",
+		StartTime:        time.Now(),
 	})
 	s.Nil(err1)
 
-	// TODO: validate by reading when List is implemented
+	// Get the first one
+	resp, err2 := s.VisibilityMgr.ListOpenWorkflowExecutions(&ListWorkflowExecutionsRequest{
+		PageSize: 1,
+	})
+	s.Nil(err2)
+	s.Equal(1, len(resp.Executions))
+	s.Equal(workflowExecution1.GetWorkflowId(), resp.Executions[0].WorkflowID)
+
+	// Use token to get the second one
+	resp, err3 := s.VisibilityMgr.ListOpenWorkflowExecutions(&ListWorkflowExecutionsRequest{
+		PageSize:      1,
+		NextPageToken: resp.NextPageToken,
+	})
+	s.Nil(err3)
+	s.Equal(1, len(resp.Executions))
+	s.Equal(workflowExecution2.GetWorkflowId(), resp.Executions[0].WorkflowID)
+
+	// Now should get empty result by using token
+	resp, err4 := s.VisibilityMgr.ListOpenWorkflowExecutions(&ListWorkflowExecutionsRequest{
+		PageSize:      1,
+		NextPageToken: resp.NextPageToken,
+	})
+	s.Nil(err4)
+	s.Equal(0, len(resp.Executions))
 }

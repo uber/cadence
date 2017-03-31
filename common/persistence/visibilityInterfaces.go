@@ -12,13 +12,24 @@ import (
 // purposes.
 
 type (
+
+	// WorkflowExecutionRecord contains info about workflow execution
+	// TODO: move to Thrift
+	WorkflowExecutionRecord struct {
+		WorkflowID       string
+		RunID            string
+		WorkflowTypeName string
+		StartTime        time.Time
+		CloseTime        time.Time
+	}
+
 	// RecordWorkflowExecutionStartedRequest is used to add a record of a newly
 	// started execution
 	RecordWorkflowExecutionStartedRequest struct {
 		// TODO: add domain info
 		Execution        s.WorkflowExecution
 		WorkflowTypeName string
-		StartTimestamp   time.Time
+		StartTime        time.Time
 	}
 
 	// RecordWorkflowExecutionClosedRequest is used to add a record of a newly
@@ -27,14 +38,33 @@ type (
 		// TODO: add domain info
 		Execution        s.WorkflowExecution
 		WorkflowTypeName string
-		StartTimestamp   time.Time
-		CloseTimestamp   time.Time
+		StartTime        time.Time
+		CloseTime        time.Time
+	}
+
+	// ListWorkflowExecutionsRequest is used to list executions in a domain
+	ListWorkflowExecutionsRequest struct {
+		// TODO: add domain info
+		// Maximum number of workflow executions per page
+		PageSize int
+		// Token to continue reading next page of workflow executions.
+		// Pass in empty slice for first page.
+		NextPageToken []byte
+	}
+
+	// ListWorkflowExecutionsResponse is the response to ListWorkflowExecutionsRequest
+	ListWorkflowExecutionsResponse struct {
+		Executions []*WorkflowExecutionRecord
+		// Token to read next page if there are more workflow executions beyond page size.
+		// Use this to set NextPageToken on ListWorkflowExecutionsRequest to read the next page.
+		NextPageToken []byte
 	}
 
 	// VisibilityManager is used to manage the visibility store
 	VisibilityManager interface {
 		RecordWorkflowExecutionStarted(request *RecordWorkflowExecutionStartedRequest) error
 		RecordWorkflowExecutionClosed(request *RecordWorkflowExecutionClosedRequest) error
-		// TODO: List APIs
+		ListOpenWorkflowExecutions(request *ListWorkflowExecutionsRequest) (*ListWorkflowExecutionsResponse, error)
+		ListClosedWorkflowExecutions(request *ListWorkflowExecutionsRequest) (*ListWorkflowExecutionsResponse, error)
 	}
 )

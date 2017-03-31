@@ -2,6 +2,7 @@ package persistence
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/gocql/gocql"
 	"github.com/uber-common/bark"
@@ -10,8 +11,8 @@ import (
 	"github.com/uber/cadence/common"
 )
 
+// Fixed domain values for now
 const (
-	// Fixed domain values for now
 	domainID        = "73278331-596f-4033-9ce2-ac6451989400"
 	domainPartition = 0
 )
@@ -30,6 +31,16 @@ const (
 	templateCreateWorkflowExecutionClosed = `INSERT INTO closed_executions (` +
 		`domain_id, domain_partition, workflow_id, run_id, start_time, close_time, workflow_type_name) ` +
 		`VALUES (?, ?, ?, ?, ?, ?, ?) using TTL ?`
+
+	templateGetOpenWorkflowExecutions = `SELECT workflow_id, run_id, start_time, workflow_type_name ` +
+		`FROM open_executions ` +
+		`WHERE domain_id = ? ` +
+		`AND domain_partition IN (?) `
+
+	templateGetClosedWorkflowExecutions = `SELECT workflow_id, run_id, start_time, close_time, workflow_type_name ` +
+		`FROM closed_executions ` +
+		`WHERE domain_id = ? ` +
+		`AND domain_partition IN (?) `
 )
 
 type (
@@ -65,7 +76,7 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionStarted(
 		domainPartition,
 		request.Execution.GetWorkflowId(),
 		request.Execution.GetRunId(),
-		request.StartTimestamp,
+		request.StartTime,
 		request.WorkflowTypeName,
 	)
 	err := query.Exec()
@@ -100,8 +111,8 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 		domainPartition,
 		request.Execution.GetWorkflowId(),
 		request.Execution.GetRunId(),
-		request.StartTimestamp,
-		request.CloseTimestamp,
+		request.StartTime,
+		request.CloseTime,
 		request.WorkflowTypeName,
 		defaultDeleteTTLSeconds,
 	)
@@ -112,4 +123,88 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 		}
 	}
 	return nil
+}
+
+func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutions(
+	request *ListWorkflowExecutionsRequest) (*ListWorkflowExecutionsResponse, error) {
+	query := v.session.Query(templateGetOpenWorkflowExecutions, domainID, domainPartition)
+	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
+	if iter == nil {
+		// TODO: should return a bad request error if the token is invalid
+		return nil, &workflow.InternalServiceError{
+			Message: "ListOpenWorkflowExecutions operation failed.  Not able to create query iterator.",
+		}
+	}
+
+	response := &ListWorkflowExecutionsResponse{}
+	response.Executions = make([]*WorkflowExecutionRecord, 0)
+	rec := make(map[string]interface{})
+	for iter.MapScan(rec) {
+		wfexecution := createWorkflowExecutionRecord(rec)
+		response.Executions = append(response.Executions, wfexecution)
+	}
+
+	nextPageToken := iter.PageState()
+	response.NextPageToken = make([]byte, len(nextPageToken))
+	copy(response.NextPageToken, nextPageToken)
+	if err := iter.Close(); err != nil {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("ListOpenWorkflowExecutions operation failed. Error: %v", err),
+		}
+	}
+
+	return response, nil
+}
+
+func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutions(
+	request *ListWorkflowExecutionsRequest) (*ListWorkflowExecutionsResponse, error) {
+	query := v.session.Query(templateGetClosedWorkflowExecutions, domainID, domainPartition)
+	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
+	if iter == nil {
+		// TODO: should return a bad request error if the token is invalid
+		return nil, &workflow.InternalServiceError{
+			Message: "ListOpenWorkflowExecutions operation failed.  Not able to create query iterator.",
+		}
+	}
+
+	response := &ListWorkflowExecutionsResponse{}
+	response.Executions = make([]*WorkflowExecutionRecord, 0)
+	rec := make(map[string]interface{})
+	for iter.MapScan(rec) {
+		wfexecution := createWorkflowExecutionRecord(rec)
+		response.Executions = append(response.Executions, wfexecution)
+	}
+
+	nextPageToken := iter.PageState()
+	response.NextPageToken = make([]byte, len(nextPageToken))
+	copy(response.NextPageToken, nextPageToken)
+	if err := iter.Close(); err != nil {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("ListOpenWorkflowExecutions operation failed. Error: %v", err),
+		}
+	}
+
+	return response, nil
+}
+
+func createWorkflowExecutionRecord(result map[string]interface{}) *WorkflowExecutionRecord {
+	record := &WorkflowExecutionRecord{}
+	for k, v := range result {
+		switch k {
+		case "workflow_id":
+			record.WorkflowID = v.(string)
+		case "run_id":
+			record.RunID = v.(gocql.UUID).String()
+		case "workflow_type_name":
+			record.WorkflowTypeName = v.(string)
+		case "start_time":
+			record.StartTime = v.(time.Time)
+		case "close_time":
+			record.CloseTime = v.(time.Time)
+		default:
+			// Unknown field, could happen due to schema update
+		}
+	}
+
+	return record
 }
