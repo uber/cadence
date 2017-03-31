@@ -26,7 +26,7 @@ type (
 	// RecordWorkflowExecutionStartedRequest is used to add a record of a newly
 	// started execution
 	RecordWorkflowExecutionStartedRequest struct {
-		// TODO: add domain info
+		DomainUUID       string
 		Execution        s.WorkflowExecution
 		WorkflowTypeName string
 		StartTime        time.Time
@@ -35,7 +35,7 @@ type (
 	// RecordWorkflowExecutionClosedRequest is used to add a record of a newly
 	// closed execution
 	RecordWorkflowExecutionClosedRequest struct {
-		// TODO: add domain info
+		DomainUUID       string
 		Execution        s.WorkflowExecution
 		WorkflowTypeName string
 		StartTime        time.Time
@@ -44,7 +44,7 @@ type (
 
 	// ListWorkflowExecutionsRequest is used to list executions in a domain
 	ListWorkflowExecutionsRequest struct {
-		// TODO: add domain info
+		DomainUUID string
 		// Maximum number of workflow executions per page
 		PageSize int
 		// Token to continue reading next page of workflow executions.

@@ -13,7 +13,6 @@ import (
 
 // Fixed domain values for now
 const (
-	domainID        = "73278331-596f-4033-9ce2-ac6451989400"
 	domainPartition = 0
 )
 
@@ -72,7 +71,7 @@ func NewCassandraVisibilityPersistence(
 func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionStarted(
 	request *RecordWorkflowExecutionStartedRequest) error {
 	query := v.session.Query(templateCreateWorkflowExecutionStarted,
-		domainID,
+		request.DomainUUID,
 		domainPartition,
 		request.Execution.GetWorkflowId(),
 		request.Execution.GetRunId(),
@@ -93,7 +92,7 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 	request *RecordWorkflowExecutionClosedRequest) error {
 	// First, remove execution from the open table
 	query := v.session.Query(templateDeleteWorkflowExecutionStarted,
-		domainID,
+		request.DomainUUID,
 		domainPartition,
 		request.Execution.GetWorkflowId(),
 		request.Execution.GetRunId(),
@@ -107,7 +106,7 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 
 	// Next, add a row in the closed table. This row is kepy for defaultDeleteTTLSeconds
 	query = v.session.Query(templateCreateWorkflowExecutionClosed,
-		domainID,
+		request.DomainUUID,
 		domainPartition,
 		request.Execution.GetWorkflowId(),
 		request.Execution.GetRunId(),
@@ -127,7 +126,7 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 
 func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutions(
 	request *ListWorkflowExecutionsRequest) (*ListWorkflowExecutionsResponse, error) {
-	query := v.session.Query(templateGetOpenWorkflowExecutions, domainID, domainPartition)
+	query := v.session.Query(templateGetOpenWorkflowExecutions, request.DomainUUID, domainPartition)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
 		// TODO: should return a bad request error if the token is invalid
@@ -158,7 +157,7 @@ func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutions(
 
 func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutions(
 	request *ListWorkflowExecutionsRequest) (*ListWorkflowExecutionsResponse, error) {
-	query := v.session.Query(templateGetClosedWorkflowExecutions, domainID, domainPartition)
+	query := v.session.Query(templateGetClosedWorkflowExecutions, request.DomainUUID, domainPartition)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
 		// TODO: should return a bad request error if the token is invalid
