@@ -1,13 +1,13 @@
 include "shared.thrift"
 
-namespace java com.uber.cadence
+namespace java com.uber.cadence.matching
 
-struct PollForDecisionTaskWrappedRequest {
+struct PollForDecisionTaskRequest {
   10: optional string domainUUID
   20: optional shared.PollForDecisionTaskRequest pollRequest
 }
 
-struct PollForActivityTaskWrappedRequest {
+struct PollForActivityTaskRequest {
   10: optional string domainUUID
   20: optional shared.PollForActivityTaskRequest pollRequest
 }
@@ -38,7 +38,7 @@ service MatchingService {
   * PollForDecisionTask is called by frontend to process DecisionTask from a specific taskList.  A
   * DecisionTask is dispatched to callers for active workflow executions, with pending decisions.
   **/
-  shared.PollForDecisionTaskResponse PollForDecisionTask(1: PollForDecisionTaskWrappedRequest pollRequest)
+  shared.PollForDecisionTaskResponse PollForDecisionTask(1: PollForDecisionTaskRequest pollRequest)
     throws (
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,
@@ -48,7 +48,7 @@ service MatchingService {
   * PollForActivityTask is called by frontend to process ActivityTask from a specific taskList.  ActivityTask
   * is dispatched to callers whenever a ScheduleTask decision is made for a workflow execution.
   **/
-  shared.PollForActivityTaskResponse PollForActivityTask(1: PollForActivityTaskWrappedRequest pollRequest)
+  shared.PollForActivityTaskResponse PollForActivityTask(1: PollForActivityTaskRequest pollRequest)
     throws (
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,

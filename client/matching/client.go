@@ -61,7 +61,7 @@ func (c *clientImpl) AddDecisionTask(context thrift.Context,
 }
 
 func (c *clientImpl) PollForActivityTask(context thrift.Context,
-	pollRequest *m.PollForActivityTaskWrappedRequest) (*workflow.PollForActivityTaskResponse, error) {
+	pollRequest *m.PollForActivityTaskRequest) (*workflow.PollForActivityTaskResponse, error) {
 	client, err := c.getHostForRequest(pollRequest.GetPollRequest().GetTaskList().GetName())
 	if err != nil {
 		return nil, err
@@ -72,7 +72,7 @@ func (c *clientImpl) PollForActivityTask(context thrift.Context,
 }
 
 func (c *clientImpl) PollForDecisionTask(context thrift.Context,
-	pollRequest *m.PollForDecisionTaskWrappedRequest) (*workflow.PollForDecisionTaskResponse, error) {
+	pollRequest *m.PollForDecisionTaskRequest) (*workflow.PollForDecisionTaskResponse, error) {
 	client, err := c.getHostForRequest(pollRequest.GetPollRequest().GetTaskList().GetName())
 	if err != nil {
 		return nil, err

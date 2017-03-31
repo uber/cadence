@@ -20,40 +20,40 @@ var _ = shared.GoUnusedProtection__
 // Attributes:
 //  - DomainUUID
 //  - PollRequest
-type PollForDecisionTaskWrappedRequest struct {
+type PollForDecisionTaskRequest struct {
   // unused fields # 1 to 9
   DomainUUID *string `thrift:"domainUUID,10" db:"domainUUID" json:"domainUUID,omitempty"`
   // unused fields # 11 to 19
   PollRequest *shared.PollForDecisionTaskRequest `thrift:"pollRequest,20" db:"pollRequest" json:"pollRequest,omitempty"`
 }
 
-func NewPollForDecisionTaskWrappedRequest() *PollForDecisionTaskWrappedRequest {
-  return &PollForDecisionTaskWrappedRequest{}
+func NewPollForDecisionTaskRequest() *PollForDecisionTaskRequest {
+  return &PollForDecisionTaskRequest{}
 }
 
-var PollForDecisionTaskWrappedRequest_DomainUUID_DEFAULT string
-func (p *PollForDecisionTaskWrappedRequest) GetDomainUUID() string {
+var PollForDecisionTaskRequest_DomainUUID_DEFAULT string
+func (p *PollForDecisionTaskRequest) GetDomainUUID() string {
   if !p.IsSetDomainUUID() {
-    return PollForDecisionTaskWrappedRequest_DomainUUID_DEFAULT
+    return PollForDecisionTaskRequest_DomainUUID_DEFAULT
   }
 return *p.DomainUUID
 }
-var PollForDecisionTaskWrappedRequest_PollRequest_DEFAULT *shared.PollForDecisionTaskRequest
-func (p *PollForDecisionTaskWrappedRequest) GetPollRequest() *shared.PollForDecisionTaskRequest {
+var PollForDecisionTaskRequest_PollRequest_DEFAULT *shared.PollForDecisionTaskRequest
+func (p *PollForDecisionTaskRequest) GetPollRequest() *shared.PollForDecisionTaskRequest {
   if !p.IsSetPollRequest() {
-    return PollForDecisionTaskWrappedRequest_PollRequest_DEFAULT
+    return PollForDecisionTaskRequest_PollRequest_DEFAULT
   }
 return p.PollRequest
 }
-func (p *PollForDecisionTaskWrappedRequest) IsSetDomainUUID() bool {
+func (p *PollForDecisionTaskRequest) IsSetDomainUUID() bool {
   return p.DomainUUID != nil
 }
 
-func (p *PollForDecisionTaskWrappedRequest) IsSetPollRequest() bool {
+func (p *PollForDecisionTaskRequest) IsSetPollRequest() bool {
   return p.PollRequest != nil
 }
 
-func (p *PollForDecisionTaskWrappedRequest) Read(iprot thrift.TProtocol) error {
+func (p *PollForDecisionTaskRequest) Read(iprot thrift.TProtocol) error {
   if _, err := iprot.ReadStructBegin(); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
   }
@@ -89,7 +89,7 @@ func (p *PollForDecisionTaskWrappedRequest) Read(iprot thrift.TProtocol) error {
   return nil
 }
 
-func (p *PollForDecisionTaskWrappedRequest)  ReadField10(iprot thrift.TProtocol) error {
+func (p *PollForDecisionTaskRequest)  ReadField10(iprot thrift.TProtocol) error {
   if v, err := iprot.ReadString(); err != nil {
   return thrift.PrependError("error reading field 10: ", err)
 } else {
@@ -98,7 +98,7 @@ func (p *PollForDecisionTaskWrappedRequest)  ReadField10(iprot thrift.TProtocol)
   return nil
 }
 
-func (p *PollForDecisionTaskWrappedRequest)  ReadField20(iprot thrift.TProtocol) error {
+func (p *PollForDecisionTaskRequest)  ReadField20(iprot thrift.TProtocol) error {
   p.PollRequest = &shared.PollForDecisionTaskRequest{}
   if err := p.PollRequest.Read(iprot); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.PollRequest), err)
@@ -106,8 +106,8 @@ func (p *PollForDecisionTaskWrappedRequest)  ReadField20(iprot thrift.TProtocol)
   return nil
 }
 
-func (p *PollForDecisionTaskWrappedRequest) Write(oprot thrift.TProtocol) error {
-  if err := oprot.WriteStructBegin("PollForDecisionTaskWrappedRequest"); err != nil {
+func (p *PollForDecisionTaskRequest) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("PollForDecisionTaskRequest"); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
   if p != nil {
     if err := p.writeField10(oprot); err != nil { return err }
@@ -120,7 +120,7 @@ func (p *PollForDecisionTaskWrappedRequest) Write(oprot thrift.TProtocol) error 
   return nil
 }
 
-func (p *PollForDecisionTaskWrappedRequest) writeField10(oprot thrift.TProtocol) (err error) {
+func (p *PollForDecisionTaskRequest) writeField10(oprot thrift.TProtocol) (err error) {
   if p.IsSetDomainUUID() {
     if err := oprot.WriteFieldBegin("domainUUID", thrift.STRING, 10); err != nil {
       return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:domainUUID: ", p), err) }
@@ -132,7 +132,7 @@ func (p *PollForDecisionTaskWrappedRequest) writeField10(oprot thrift.TProtocol)
   return err
 }
 
-func (p *PollForDecisionTaskWrappedRequest) writeField20(oprot thrift.TProtocol) (err error) {
+func (p *PollForDecisionTaskRequest) writeField20(oprot thrift.TProtocol) (err error) {
   if p.IsSetPollRequest() {
     if err := oprot.WriteFieldBegin("pollRequest", thrift.STRUCT, 20); err != nil {
       return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:pollRequest: ", p), err) }
@@ -145,50 +145,50 @@ func (p *PollForDecisionTaskWrappedRequest) writeField20(oprot thrift.TProtocol)
   return err
 }
 
-func (p *PollForDecisionTaskWrappedRequest) String() string {
+func (p *PollForDecisionTaskRequest) String() string {
   if p == nil {
     return "<nil>"
   }
-  return fmt.Sprintf("PollForDecisionTaskWrappedRequest(%+v)", *p)
+  return fmt.Sprintf("PollForDecisionTaskRequest(%+v)", *p)
 }
 
 // Attributes:
 //  - DomainUUID
 //  - PollRequest
-type PollForActivityTaskWrappedRequest struct {
+type PollForActivityTaskRequest struct {
   // unused fields # 1 to 9
   DomainUUID *string `thrift:"domainUUID,10" db:"domainUUID" json:"domainUUID,omitempty"`
   // unused fields # 11 to 19
   PollRequest *shared.PollForActivityTaskRequest `thrift:"pollRequest,20" db:"pollRequest" json:"pollRequest,omitempty"`
 }
 
-func NewPollForActivityTaskWrappedRequest() *PollForActivityTaskWrappedRequest {
-  return &PollForActivityTaskWrappedRequest{}
+func NewPollForActivityTaskRequest() *PollForActivityTaskRequest {
+  return &PollForActivityTaskRequest{}
 }
 
-var PollForActivityTaskWrappedRequest_DomainUUID_DEFAULT string
-func (p *PollForActivityTaskWrappedRequest) GetDomainUUID() string {
+var PollForActivityTaskRequest_DomainUUID_DEFAULT string
+func (p *PollForActivityTaskRequest) GetDomainUUID() string {
   if !p.IsSetDomainUUID() {
-    return PollForActivityTaskWrappedRequest_DomainUUID_DEFAULT
+    return PollForActivityTaskRequest_DomainUUID_DEFAULT
   }
 return *p.DomainUUID
 }
-var PollForActivityTaskWrappedRequest_PollRequest_DEFAULT *shared.PollForActivityTaskRequest
-func (p *PollForActivityTaskWrappedRequest) GetPollRequest() *shared.PollForActivityTaskRequest {
+var PollForActivityTaskRequest_PollRequest_DEFAULT *shared.PollForActivityTaskRequest
+func (p *PollForActivityTaskRequest) GetPollRequest() *shared.PollForActivityTaskRequest {
   if !p.IsSetPollRequest() {
-    return PollForActivityTaskWrappedRequest_PollRequest_DEFAULT
+    return PollForActivityTaskRequest_PollRequest_DEFAULT
   }
 return p.PollRequest
 }
-func (p *PollForActivityTaskWrappedRequest) IsSetDomainUUID() bool {
+func (p *PollForActivityTaskRequest) IsSetDomainUUID() bool {
   return p.DomainUUID != nil
 }
 
-func (p *PollForActivityTaskWrappedRequest) IsSetPollRequest() bool {
+func (p *PollForActivityTaskRequest) IsSetPollRequest() bool {
   return p.PollRequest != nil
 }
 
-func (p *PollForActivityTaskWrappedRequest) Read(iprot thrift.TProtocol) error {
+func (p *PollForActivityTaskRequest) Read(iprot thrift.TProtocol) error {
   if _, err := iprot.ReadStructBegin(); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
   }
@@ -224,7 +224,7 @@ func (p *PollForActivityTaskWrappedRequest) Read(iprot thrift.TProtocol) error {
   return nil
 }
 
-func (p *PollForActivityTaskWrappedRequest)  ReadField10(iprot thrift.TProtocol) error {
+func (p *PollForActivityTaskRequest)  ReadField10(iprot thrift.TProtocol) error {
   if v, err := iprot.ReadString(); err != nil {
   return thrift.PrependError("error reading field 10: ", err)
 } else {
@@ -233,7 +233,7 @@ func (p *PollForActivityTaskWrappedRequest)  ReadField10(iprot thrift.TProtocol)
   return nil
 }
 
-func (p *PollForActivityTaskWrappedRequest)  ReadField20(iprot thrift.TProtocol) error {
+func (p *PollForActivityTaskRequest)  ReadField20(iprot thrift.TProtocol) error {
   p.PollRequest = &shared.PollForActivityTaskRequest{}
   if err := p.PollRequest.Read(iprot); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.PollRequest), err)
@@ -241,8 +241,8 @@ func (p *PollForActivityTaskWrappedRequest)  ReadField20(iprot thrift.TProtocol)
   return nil
 }
 
-func (p *PollForActivityTaskWrappedRequest) Write(oprot thrift.TProtocol) error {
-  if err := oprot.WriteStructBegin("PollForActivityTaskWrappedRequest"); err != nil {
+func (p *PollForActivityTaskRequest) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("PollForActivityTaskRequest"); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
   if p != nil {
     if err := p.writeField10(oprot); err != nil { return err }
@@ -255,7 +255,7 @@ func (p *PollForActivityTaskWrappedRequest) Write(oprot thrift.TProtocol) error 
   return nil
 }
 
-func (p *PollForActivityTaskWrappedRequest) writeField10(oprot thrift.TProtocol) (err error) {
+func (p *PollForActivityTaskRequest) writeField10(oprot thrift.TProtocol) (err error) {
   if p.IsSetDomainUUID() {
     if err := oprot.WriteFieldBegin("domainUUID", thrift.STRING, 10); err != nil {
       return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:domainUUID: ", p), err) }
@@ -267,7 +267,7 @@ func (p *PollForActivityTaskWrappedRequest) writeField10(oprot thrift.TProtocol)
   return err
 }
 
-func (p *PollForActivityTaskWrappedRequest) writeField20(oprot thrift.TProtocol) (err error) {
+func (p *PollForActivityTaskRequest) writeField20(oprot thrift.TProtocol) (err error) {
   if p.IsSetPollRequest() {
     if err := oprot.WriteFieldBegin("pollRequest", thrift.STRUCT, 20); err != nil {
       return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:pollRequest: ", p), err) }
@@ -280,11 +280,11 @@ func (p *PollForActivityTaskWrappedRequest) writeField20(oprot thrift.TProtocol)
   return err
 }
 
-func (p *PollForActivityTaskWrappedRequest) String() string {
+func (p *PollForActivityTaskRequest) String() string {
   if p == nil {
     return "<nil>"
   }
-  return fmt.Sprintf("PollForActivityTaskWrappedRequest(%+v)", *p)
+  return fmt.Sprintf("PollForActivityTaskRequest(%+v)", *p)
 }
 
 // Attributes:
@@ -730,14 +730,14 @@ type MatchingService interface {  //MatchingService API is exposed to provide su
   // 
   // Parameters:
   //  - PollRequest
-  PollForDecisionTask(pollRequest *PollForDecisionTaskWrappedRequest) (r *shared.PollForDecisionTaskResponse, err error)
+  PollForDecisionTask(pollRequest *PollForDecisionTaskRequest) (r *shared.PollForDecisionTaskResponse, err error)
   // PollForActivityTask is called by frontend to process ActivityTask from a specific taskList.  ActivityTask
   // is dispatched to callers whenever a ScheduleTask decision is made for a workflow execution.
   // 
   // 
   // Parameters:
   //  - PollRequest
-  PollForActivityTask(pollRequest *PollForActivityTaskWrappedRequest) (r *shared.PollForActivityTaskResponse, err error)
+  PollForActivityTask(pollRequest *PollForActivityTaskRequest) (r *shared.PollForActivityTaskResponse, err error)
   // AddDecisionTask is called by the history service when a decision task is scheduled, so that it can be dispatched
   // by the MatchingEngine.
   // 
@@ -792,12 +792,12 @@ func NewMatchingServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtoco
 // 
 // Parameters:
 //  - PollRequest
-func (p *MatchingServiceClient) PollForDecisionTask(pollRequest *PollForDecisionTaskWrappedRequest) (r *shared.PollForDecisionTaskResponse, err error) {
+func (p *MatchingServiceClient) PollForDecisionTask(pollRequest *PollForDecisionTaskRequest) (r *shared.PollForDecisionTaskResponse, err error) {
   if err = p.sendPollForDecisionTask(pollRequest); err != nil { return }
   return p.recvPollForDecisionTask()
 }
 
-func (p *MatchingServiceClient) sendPollForDecisionTask(pollRequest *PollForDecisionTaskWrappedRequest)(err error) {
+func (p *MatchingServiceClient) sendPollForDecisionTask(pollRequest *PollForDecisionTaskRequest)(err error) {
   oprot := p.OutputProtocol
   if oprot == nil {
     oprot = p.ProtocolFactory.GetProtocol(p.Transport)
@@ -879,12 +879,12 @@ func (p *MatchingServiceClient) recvPollForDecisionTask() (value *shared.PollFor
 // 
 // Parameters:
 //  - PollRequest
-func (p *MatchingServiceClient) PollForActivityTask(pollRequest *PollForActivityTaskWrappedRequest) (r *shared.PollForActivityTaskResponse, err error) {
+func (p *MatchingServiceClient) PollForActivityTask(pollRequest *PollForActivityTaskRequest) (r *shared.PollForActivityTaskResponse, err error) {
   if err = p.sendPollForActivityTask(pollRequest); err != nil { return }
   return p.recvPollForActivityTask()
 }
 
-func (p *MatchingServiceClient) sendPollForActivityTask(pollRequest *PollForActivityTaskWrappedRequest)(err error) {
+func (p *MatchingServiceClient) sendPollForActivityTask(pollRequest *PollForActivityTaskRequest)(err error) {
   oprot := p.OutputProtocol
   if oprot == nil {
     oprot = p.ProtocolFactory.GetProtocol(p.Transport)
@@ -1408,15 +1408,15 @@ func (p *matchingServiceProcessorAddActivityTask) Process(seqId int32, iprot, op
 // Attributes:
 //  - PollRequest
 type MatchingServicePollForDecisionTaskArgs struct {
-  PollRequest *PollForDecisionTaskWrappedRequest `thrift:"pollRequest,1" db:"pollRequest" json:"pollRequest"`
+  PollRequest *PollForDecisionTaskRequest `thrift:"pollRequest,1" db:"pollRequest" json:"pollRequest"`
 }
 
 func NewMatchingServicePollForDecisionTaskArgs() *MatchingServicePollForDecisionTaskArgs {
   return &MatchingServicePollForDecisionTaskArgs{}
 }
 
-var MatchingServicePollForDecisionTaskArgs_PollRequest_DEFAULT *PollForDecisionTaskWrappedRequest
-func (p *MatchingServicePollForDecisionTaskArgs) GetPollRequest() *PollForDecisionTaskWrappedRequest {
+var MatchingServicePollForDecisionTaskArgs_PollRequest_DEFAULT *PollForDecisionTaskRequest
+func (p *MatchingServicePollForDecisionTaskArgs) GetPollRequest() *PollForDecisionTaskRequest {
   if !p.IsSetPollRequest() {
     return MatchingServicePollForDecisionTaskArgs_PollRequest_DEFAULT
   }
@@ -1459,7 +1459,7 @@ func (p *MatchingServicePollForDecisionTaskArgs) Read(iprot thrift.TProtocol) er
 }
 
 func (p *MatchingServicePollForDecisionTaskArgs)  ReadField1(iprot thrift.TProtocol) error {
-  p.PollRequest = &PollForDecisionTaskWrappedRequest{}
+  p.PollRequest = &PollForDecisionTaskRequest{}
   if err := p.PollRequest.Read(iprot); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.PollRequest), err)
   }
@@ -1672,15 +1672,15 @@ func (p *MatchingServicePollForDecisionTaskResult) String() string {
 // Attributes:
 //  - PollRequest
 type MatchingServicePollForActivityTaskArgs struct {
-  PollRequest *PollForActivityTaskWrappedRequest `thrift:"pollRequest,1" db:"pollRequest" json:"pollRequest"`
+  PollRequest *PollForActivityTaskRequest `thrift:"pollRequest,1" db:"pollRequest" json:"pollRequest"`
 }
 
 func NewMatchingServicePollForActivityTaskArgs() *MatchingServicePollForActivityTaskArgs {
   return &MatchingServicePollForActivityTaskArgs{}
 }
 
-var MatchingServicePollForActivityTaskArgs_PollRequest_DEFAULT *PollForActivityTaskWrappedRequest
-func (p *MatchingServicePollForActivityTaskArgs) GetPollRequest() *PollForActivityTaskWrappedRequest {
+var MatchingServicePollForActivityTaskArgs_PollRequest_DEFAULT *PollForActivityTaskRequest
+func (p *MatchingServicePollForActivityTaskArgs) GetPollRequest() *PollForActivityTaskRequest {
   if !p.IsSetPollRequest() {
     return MatchingServicePollForActivityTaskArgs_PollRequest_DEFAULT
   }
@@ -1723,7 +1723,7 @@ func (p *MatchingServicePollForActivityTaskArgs) Read(iprot thrift.TProtocol) er
 }
 
 func (p *MatchingServicePollForActivityTaskArgs)  ReadField1(iprot thrift.TProtocol) error {
-  p.PollRequest = &PollForActivityTaskWrappedRequest{}
+  p.PollRequest = &PollForActivityTaskRequest{}
   if err := p.PollRequest.Read(iprot); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.PollRequest), err)
   }

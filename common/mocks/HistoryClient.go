@@ -15,13 +15,13 @@ type HistoryClient struct {
 
 // GetWorkflowExecutionHistory provides a mock function with given fields: ctx, getRequest
 func (_m *HistoryClient) GetWorkflowExecutionHistory(ctx thrift.Context,
-	getRequest *gohistory.GetWorkflowExecutionHistoryWrappedRequest) (*shared.GetWorkflowExecutionHistoryResponse,
+	getRequest *gohistory.GetWorkflowExecutionHistoryRequest) (*shared.GetWorkflowExecutionHistoryResponse,
 	error) {
 	ret := _m.Called(ctx, getRequest)
 
 	var r0 *shared.GetWorkflowExecutionHistoryResponse
 	if rf, ok := ret.Get(0).(func(thrift.Context,
-		*gohistory.GetWorkflowExecutionHistoryWrappedRequest) *shared.GetWorkflowExecutionHistoryResponse); ok {
+		*gohistory.GetWorkflowExecutionHistoryRequest) *shared.GetWorkflowExecutionHistoryResponse); ok {
 		r0 = rf(ctx, getRequest)
 	} else {
 		if ret.Get(0) != nil {
@@ -30,7 +30,7 @@ func (_m *HistoryClient) GetWorkflowExecutionHistory(ctx thrift.Context,
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(thrift.Context, *gohistory.GetWorkflowExecutionHistoryWrappedRequest) error); ok {
+	if rf, ok := ret.Get(1).(func(thrift.Context, *gohistory.GetWorkflowExecutionHistoryRequest) error); ok {
 		r1 = rf(ctx, getRequest)
 	} else {
 		r1 = ret.Error(1)
@@ -41,13 +41,13 @@ func (_m *HistoryClient) GetWorkflowExecutionHistory(ctx thrift.Context,
 
 // RecordActivityTaskHeartbeat provides a mock function with given fields: ctx, heartbeatRequest
 func (_m *HistoryClient) RecordActivityTaskHeartbeat(ctx thrift.Context,
-	heartbeatRequest *gohistory.RecordActivityTaskHeartbeatWrappedRequest) (*shared.RecordActivityTaskHeartbeatResponse,
+	heartbeatRequest *gohistory.RecordActivityTaskHeartbeatRequest) (*shared.RecordActivityTaskHeartbeatResponse,
 	error) {
 	ret := _m.Called(ctx, heartbeatRequest)
 
 	var r0 *shared.RecordActivityTaskHeartbeatResponse
 	if rf, ok := ret.Get(0).(func(thrift.Context,
-		*gohistory.RecordActivityTaskHeartbeatWrappedRequest) *shared.RecordActivityTaskHeartbeatResponse); ok {
+		*gohistory.RecordActivityTaskHeartbeatRequest) *shared.RecordActivityTaskHeartbeatResponse); ok {
 		r0 = rf(ctx, heartbeatRequest)
 	} else {
 		if ret.Get(0) != nil {
@@ -56,7 +56,7 @@ func (_m *HistoryClient) RecordActivityTaskHeartbeat(ctx thrift.Context,
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(thrift.Context, *gohistory.RecordActivityTaskHeartbeatWrappedRequest) error); ok {
+	if rf, ok := ret.Get(1).(func(thrift.Context, *gohistory.RecordActivityTaskHeartbeatRequest) error); ok {
 		r1 = rf(ctx, heartbeatRequest)
 	} else {
 		r1 = ret.Error(1)
@@ -115,11 +115,11 @@ func (_m *HistoryClient) RecordDecisionTaskStarted(ctx thrift.Context,
 
 // RespondActivityTaskCanceled provides a mock function with given fields: ctx, canceledRequest
 func (_m *HistoryClient) RespondActivityTaskCanceled(ctx thrift.Context,
-	canceledRequest *gohistory.RespondActivityTaskCanceledWrappedRequest) error {
+	canceledRequest *gohistory.RespondActivityTaskCanceledRequest) error {
 	ret := _m.Called(ctx, canceledRequest)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(thrift.Context, *gohistory.RespondActivityTaskCanceledWrappedRequest) error); ok {
+	if rf, ok := ret.Get(0).(func(thrift.Context, *gohistory.RespondActivityTaskCanceledRequest) error); ok {
 		r0 = rf(ctx, canceledRequest)
 	} else {
 		r0 = ret.Error(0)
@@ -130,12 +130,12 @@ func (_m *HistoryClient) RespondActivityTaskCanceled(ctx thrift.Context,
 
 // RespondActivityTaskCompleted provides a mock function with given fields: ctx, completeRequest
 func (_m *HistoryClient) RespondActivityTaskCompleted(ctx thrift.Context,
-	completeRequest *gohistory.RespondActivityTaskCompletedWrappedRequest) error {
+	completeRequest *gohistory.RespondActivityTaskCompletedRequest) error {
 	ret := _m.Called(ctx, completeRequest)
 
 	var r0 error
 	if rf, ok := ret.Get(0).(func(thrift.Context,
-		*gohistory.RespondActivityTaskCompletedWrappedRequest) error); ok {
+		*gohistory.RespondActivityTaskCompletedRequest) error); ok {
 		r0 = rf(ctx, completeRequest)
 	} else {
 		r0 = ret.Error(0)
@@ -146,11 +146,11 @@ func (_m *HistoryClient) RespondActivityTaskCompleted(ctx thrift.Context,
 
 // RespondActivityTaskFailed provides a mock function with given fields: ctx, failRequest
 func (_m *HistoryClient) RespondActivityTaskFailed(ctx thrift.Context,
-	failRequest *gohistory.RespondActivityTaskFailedWrappedRequest) error {
+	failRequest *gohistory.RespondActivityTaskFailedRequest) error {
 	ret := _m.Called(ctx, failRequest)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(thrift.Context, *gohistory.RespondActivityTaskFailedWrappedRequest) error); ok {
+	if rf, ok := ret.Get(0).(func(thrift.Context, *gohistory.RespondActivityTaskFailedRequest) error); ok {
 		r0 = rf(ctx, failRequest)
 	} else {
 		r0 = ret.Error(0)
@@ -161,12 +161,12 @@ func (_m *HistoryClient) RespondActivityTaskFailed(ctx thrift.Context,
 
 // RespondDecisionTaskCompleted provides a mock function with given fields: ctx, completeRequest
 func (_m *HistoryClient) RespondDecisionTaskCompleted(ctx thrift.Context,
-	completeRequest *gohistory.RespondDecisionTaskCompletedWrappedRequest) error {
+	completeRequest *gohistory.RespondDecisionTaskCompletedRequest) error {
 	ret := _m.Called(ctx, completeRequest)
 
 	var r0 error
 	if rf, ok := ret.Get(0).(func(thrift.Context,
-		*gohistory.RespondDecisionTaskCompletedWrappedRequest) error); ok {
+		*gohistory.RespondDecisionTaskCompletedRequest) error); ok {
 		r0 = rf(ctx, completeRequest)
 	} else {
 		r0 = ret.Error(0)
@@ -177,12 +177,12 @@ func (_m *HistoryClient) RespondDecisionTaskCompleted(ctx thrift.Context,
 
 // StartWorkflowExecution provides a mock function with given fields: ctx, startRequest
 func (_m *HistoryClient) StartWorkflowExecution(ctx thrift.Context,
-	startRequest *gohistory.StartWorkflowExecutionWrappedRequest) (*shared.StartWorkflowExecutionResponse, error) {
+	startRequest *gohistory.StartWorkflowExecutionRequest) (*shared.StartWorkflowExecutionResponse, error) {
 	ret := _m.Called(ctx, startRequest)
 
 	var r0 *shared.StartWorkflowExecutionResponse
 	if rf, ok := ret.Get(0).(func(thrift.Context,
-		*gohistory.StartWorkflowExecutionWrappedRequest) *shared.StartWorkflowExecutionResponse); ok {
+		*gohistory.StartWorkflowExecutionRequest) *shared.StartWorkflowExecutionResponse); ok {
 		r0 = rf(ctx, startRequest)
 	} else {
 		if ret.Get(0) != nil {
@@ -191,7 +191,7 @@ func (_m *HistoryClient) StartWorkflowExecution(ctx thrift.Context,
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(thrift.Context, *gohistory.StartWorkflowExecutionWrappedRequest) error); ok {
+	if rf, ok := ret.Get(1).(func(thrift.Context, *gohistory.StartWorkflowExecutionRequest) error); ok {
 		r1 = rf(ctx, startRequest)
 	} else {
 		r1 = ret.Error(1)

@@ -70,7 +70,7 @@ func (h *Handler) AddDecisionTask(ctx thrift.Context, addRequest *m.AddDecisionT
 
 // PollForActivityTask - long poll for an activity task.
 func (h *Handler) PollForActivityTask(ctx thrift.Context,
-	pollRequest *m.PollForActivityTaskWrappedRequest) (*gen.PollForActivityTaskResponse, error) {
+	pollRequest *m.PollForActivityTaskRequest) (*gen.PollForActivityTaskResponse, error) {
 	h.Service.GetLogger().Debug("Engine Received PollForActivityTask")
 	h.startWG.Wait()
 	response, error := h.engine.PollForActivityTask(ctx, pollRequest.GetPollRequest())
@@ -81,7 +81,7 @@ func (h *Handler) PollForActivityTask(ctx thrift.Context,
 
 // PollForDecisionTask - long poll for a decision task.
 func (h *Handler) PollForDecisionTask(ctx thrift.Context,
-	pollRequest *m.PollForDecisionTaskWrappedRequest) (*gen.PollForDecisionTaskResponse, error) {
+	pollRequest *m.PollForDecisionTaskRequest) (*gen.PollForDecisionTaskResponse, error) {
 	h.Service.GetLogger().Debug("Engine Received PollForDecisionTask")
 	h.startWG.Wait()
 	response, error := h.engine.PollForDecisionTask(ctx, pollRequest.GetPollRequest())

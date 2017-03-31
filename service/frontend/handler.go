@@ -91,7 +91,7 @@ func (wh *WorkflowHandler) PollForActivityTask(
 	wh.startWG.Wait()
 
 	wh.Service.GetLogger().Debug("Received PollForActivityTask")
-	resp, err := wh.matching.PollForActivityTask(ctx, &m.PollForActivityTaskWrappedRequest{
+	resp, err := wh.matching.PollForActivityTask(ctx, &m.PollForActivityTaskRequest{
 		PollRequest: pollRequest,
 	})
 	if err != nil {
@@ -108,7 +108,7 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	wh.startWG.Wait()
 
 	wh.Service.GetLogger().Debug("Received PollForDecisionTask")
-	resp, err := wh.matching.PollForDecisionTask(ctx, &m.PollForDecisionTaskWrappedRequest{
+	resp, err := wh.matching.PollForDecisionTask(ctx, &m.PollForDecisionTaskRequest{
 		PollRequest: pollRequest,
 	})
 	if err != nil {
@@ -125,7 +125,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeat(
 	wh.startWG.Wait()
 
 	wh.Service.GetLogger().Debug("Received RecordActivityTaskHeartbeat")
-	resp, err := wh.history.RecordActivityTaskHeartbeat(ctx, &h.RecordActivityTaskHeartbeatWrappedRequest{
+	resp, err := wh.history.RecordActivityTaskHeartbeat(ctx, &h.RecordActivityTaskHeartbeatRequest{
 		HeartbeatRequest: heartbeatRequest,
 	})
 	return resp, wrapError(err)
@@ -137,7 +137,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 	completeRequest *gen.RespondActivityTaskCompletedRequest) error {
 	wh.startWG.Wait()
 
-	err := wh.history.RespondActivityTaskCompleted(ctx, &h.RespondActivityTaskCompletedWrappedRequest{
+	err := wh.history.RespondActivityTaskCompleted(ctx, &h.RespondActivityTaskCompletedRequest{
 		CompleteRequest: completeRequest,
 	})
 	if err != nil {
@@ -153,7 +153,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailed(
 	failedRequest *gen.RespondActivityTaskFailedRequest) error {
 	wh.startWG.Wait()
 
-	err := wh.history.RespondActivityTaskFailed(ctx, &h.RespondActivityTaskFailedWrappedRequest{
+	err := wh.history.RespondActivityTaskFailed(ctx, &h.RespondActivityTaskFailedRequest{
 		FailedRequest: failedRequest,
 	})
 	if err != nil {
@@ -170,7 +170,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 	cancelRequest *gen.RespondActivityTaskCanceledRequest) error {
 	wh.startWG.Wait()
 
-	err := wh.history.RespondActivityTaskCanceled(ctx, &h.RespondActivityTaskCanceledWrappedRequest{
+	err := wh.history.RespondActivityTaskCanceled(ctx, &h.RespondActivityTaskCanceledRequest{
 		CancelRequest: cancelRequest,
 	})
 	if err != nil {
@@ -187,7 +187,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 	completeRequest *gen.RespondDecisionTaskCompletedRequest) error {
 	wh.startWG.Wait()
 
-	err := wh.history.RespondDecisionTaskCompleted(ctx, &h.RespondDecisionTaskCompletedWrappedRequest{
+	err := wh.history.RespondDecisionTaskCompleted(ctx, &h.RespondDecisionTaskCompletedRequest{
 		CompleteRequest: completeRequest,
 	})
 	if err != nil {
@@ -204,7 +204,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 	wh.startWG.Wait()
 
 	wh.Service.GetLogger().Debugf("Received StartWorkflowExecution. WorkflowID: %v", startRequest.GetWorkflowId())
-	resp, err := wh.history.StartWorkflowExecution(ctx, &h.StartWorkflowExecutionWrappedRequest{
+	resp, err := wh.history.StartWorkflowExecution(ctx, &h.StartWorkflowExecutionRequest{
 		StartRequest: startRequest,
 	})
 	if err != nil {
@@ -219,7 +219,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	getRequest *gen.GetWorkflowExecutionHistoryRequest) (*gen.GetWorkflowExecutionHistoryResponse, error) {
 	wh.startWG.Wait()
 
-	return wh.history.GetWorkflowExecutionHistory(ctx, &h.GetWorkflowExecutionHistoryWrappedRequest{
+	return wh.history.GetWorkflowExecutionHistory(ctx, &h.GetWorkflowExecutionHistoryRequest{
 		GetRequest: getRequest,
 	})
 }

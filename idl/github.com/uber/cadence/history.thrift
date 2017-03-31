@@ -1,6 +1,6 @@
 include "shared.thrift"
 
-namespace java com.uber.cadence
+namespace java com.uber.cadence.history
 
 exception EventAlreadyStartedError {
   1: required string message
@@ -11,37 +11,37 @@ exception ShardOwnershipLostError {
   20: optional string owner
 }
 
-struct StartWorkflowExecutionWrappedRequest {
+struct StartWorkflowExecutionRequest {
   10: optional string domainUUID
   20: optional shared.StartWorkflowExecutionRequest startRequest
 }
 
-struct GetWorkflowExecutionHistoryWrappedRequest {
+struct GetWorkflowExecutionHistoryRequest {
   10: optional string domainUUID
   20: optional shared.GetWorkflowExecutionHistoryRequest getRequest
 }
 
-struct RespondDecisionTaskCompletedWrappedRequest {
+struct RespondDecisionTaskCompletedRequest {
   10: optional string domainUUID
   20: optional shared.RespondDecisionTaskCompletedRequest completeRequest
 }
 
-struct RecordActivityTaskHeartbeatWrappedRequest {
+struct RecordActivityTaskHeartbeatRequest {
   10: optional string domainUUID
   20: optional shared.RecordActivityTaskHeartbeatRequest heartbeatRequest
 }
 
-struct RespondActivityTaskCompletedWrappedRequest {
+struct RespondActivityTaskCompletedRequest {
   10: optional string domainUUID
   20: optional shared.RespondActivityTaskCompletedRequest completeRequest
 }
 
-struct RespondActivityTaskFailedWrappedRequest {
+struct RespondActivityTaskFailedRequest {
   10: optional string domainUUID
   20: optional shared.RespondActivityTaskFailedRequest failedRequest
 }
 
-struct RespondActivityTaskCanceledWrappedRequest {
+struct RespondActivityTaskCanceledRequest {
   10: optional string domainUUID
   20: optional shared.RespondActivityTaskCanceledRequest cancelRequest
 }
@@ -87,7 +87,7 @@ service HistoryService {
   * first decision for this instance.  It will return 'WorkflowExecutionAlreadyStartedError', if an instance already
   * exists with same workflowId.
   **/
-  shared.StartWorkflowExecutionResponse StartWorkflowExecution(1: StartWorkflowExecutionWrappedRequest startRequest)
+  shared.StartWorkflowExecutionResponse StartWorkflowExecution(1: StartWorkflowExecutionRequest startRequest)
     throws (
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,
@@ -99,7 +99,7 @@ service HistoryService {
   * Returns the history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow
   * execution in unknown to the service.
   **/
-  shared.GetWorkflowExecutionHistoryResponse GetWorkflowExecutionHistory(1: GetWorkflowExecutionHistoryWrappedRequest getRequest)
+  shared.GetWorkflowExecutionHistoryResponse GetWorkflowExecutionHistory(1: GetWorkflowExecutionHistoryRequest getRequest)
     throws (
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,
@@ -142,7 +142,7 @@ service HistoryService {
   * event in the history for that session.  Use the 'taskToken' provided as response of PollForDecisionTask API call
   * for completing the DecisionTask.
   **/
-  void RespondDecisionTaskCompleted(1: RespondDecisionTaskCompletedWrappedRequest completeRequest)
+  void RespondDecisionTaskCompleted(1: RespondDecisionTaskCompletedRequest completeRequest)
     throws (
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,
@@ -157,7 +157,7 @@ service HistoryService {
   * fail with 'EntityNotExistsError' in such situations.  Use the 'taskToken' provided as response of
   * PollForActivityTask API call for heartbeating.
   **/
-  shared.RecordActivityTaskHeartbeatResponse RecordActivityTaskHeartbeat(1: RecordActivityTaskHeartbeatWrappedRequest heartbeatRequest)
+  shared.RecordActivityTaskHeartbeatResponse RecordActivityTaskHeartbeat(1: RecordActivityTaskHeartbeatRequest heartbeatRequest)
     throws (
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,
@@ -172,7 +172,7 @@ service HistoryService {
   * PollForActivityTask API call for completion. It fails with 'EntityNotExistsError' if the taskToken is not valid
   * anymore due to activity timeout.
   **/
-  void  RespondActivityTaskCompleted(1: RespondActivityTaskCompletedWrappedRequest completeRequest)
+  void  RespondActivityTaskCompleted(1: RespondActivityTaskCompletedRequest completeRequest)
     throws (
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,
@@ -186,7 +186,7 @@ service HistoryService {
   * PollForActivityTask API call for completion. It fails with 'EntityNotExistsError' if the taskToken is not valid
   * anymore due to activity timeout.
   **/
-  void RespondActivityTaskFailed(1: RespondActivityTaskFailedWrappedRequest failRequest)
+  void RespondActivityTaskFailed(1: RespondActivityTaskFailedRequest failRequest)
     throws (
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,
@@ -201,7 +201,7 @@ service HistoryService {
   * PollForActivityTask API call for completion. It fails with 'EntityNotExistsError' if the taskToken is not valid
   * anymore due to activity timeout.
   **/
-  void RespondActivityTaskCanceled(1: RespondActivityTaskCanceledWrappedRequest canceledRequest)
+  void RespondActivityTaskCanceled(1: RespondActivityTaskCanceledRequest canceledRequest)
     throws (
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,

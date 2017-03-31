@@ -91,7 +91,7 @@ func (h *Handler) IsHealthy(ctx thrift.Context) (bool, error) {
 
 // RecordActivityTaskHeartbeat - Record Activity Task Heart beat.
 func (h *Handler) RecordActivityTaskHeartbeat(ctx thrift.Context,
-	wrappedRequest *hist.RecordActivityTaskHeartbeatWrappedRequest) (*gen.RecordActivityTaskHeartbeatResponse, error) {
+	wrappedRequest *hist.RecordActivityTaskHeartbeatRequest) (*gen.RecordActivityTaskHeartbeatResponse, error) {
 	h.startWG.Wait()
 
 	h.metricsClient.IncCounter(metrics.HistoryRecordActivityTaskHeartbeatScope, metrics.CadenceRequests)
@@ -182,7 +182,7 @@ func (h *Handler) RecordDecisionTaskStarted(ctx thrift.Context,
 
 // RespondActivityTaskCompleted - records completion of an activity task
 func (h *Handler) RespondActivityTaskCompleted(ctx thrift.Context,
-	wrappedRequest *hist.RespondActivityTaskCompletedWrappedRequest) error {
+	wrappedRequest *hist.RespondActivityTaskCompletedRequest) error {
 	h.startWG.Wait()
 
 	h.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskCompletedScope, metrics.CadenceRequests)
@@ -214,7 +214,7 @@ func (h *Handler) RespondActivityTaskCompleted(ctx thrift.Context,
 
 // RespondActivityTaskFailed - records failure of an activity task
 func (h *Handler) RespondActivityTaskFailed(ctx thrift.Context,
-	wrappedRequest *hist.RespondActivityTaskFailedWrappedRequest) error {
+	wrappedRequest *hist.RespondActivityTaskFailedRequest) error {
 	h.startWG.Wait()
 
 	h.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskFailedScope, metrics.CadenceRequests)
@@ -246,7 +246,7 @@ func (h *Handler) RespondActivityTaskFailed(ctx thrift.Context,
 
 // RespondActivityTaskCanceled - records failure of an activity task
 func (h *Handler) RespondActivityTaskCanceled(ctx thrift.Context,
-	wrappedRequest *hist.RespondActivityTaskCanceledWrappedRequest) error {
+	wrappedRequest *hist.RespondActivityTaskCanceledRequest) error {
 	h.startWG.Wait()
 
 	h.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskCanceledScope, metrics.CadenceRequests)
@@ -278,7 +278,7 @@ func (h *Handler) RespondActivityTaskCanceled(ctx thrift.Context,
 
 // RespondDecisionTaskCompleted - records completion of a decision task
 func (h *Handler) RespondDecisionTaskCompleted(ctx thrift.Context,
-	wrappedRequest *hist.RespondDecisionTaskCompletedWrappedRequest) error {
+	wrappedRequest *hist.RespondDecisionTaskCompletedRequest) error {
 	h.startWG.Wait()
 
 	h.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.CadenceRequests)
@@ -315,7 +315,7 @@ func (h *Handler) RespondDecisionTaskCompleted(ctx thrift.Context,
 
 // StartWorkflowExecution - creates a new workflow execution
 func (h *Handler) StartWorkflowExecution(ctx thrift.Context,
-	wrappedRequest *hist.StartWorkflowExecutionWrappedRequest) (*gen.StartWorkflowExecutionResponse, error) {
+	wrappedRequest *hist.StartWorkflowExecutionRequest) (*gen.StartWorkflowExecutionResponse, error) {
 	h.startWG.Wait()
 
 	h.metricsClient.IncCounter(metrics.HistoryStartWorkflowExecutionScope, metrics.CadenceRequests)
@@ -340,7 +340,7 @@ func (h *Handler) StartWorkflowExecution(ctx thrift.Context,
 
 // GetWorkflowExecutionHistory - returns the complete history of a workflow execution
 func (h *Handler) GetWorkflowExecutionHistory(ctx thrift.Context,
-	wrappedRequest *hist.GetWorkflowExecutionHistoryWrappedRequest) (*gen.GetWorkflowExecutionHistoryResponse, error) {
+	wrappedRequest *hist.GetWorkflowExecutionHistoryRequest) (*gen.GetWorkflowExecutionHistoryResponse, error) {
 	h.startWG.Wait()
 
 	h.metricsClient.IncCounter(metrics.HistoryGetWorkflowExecutionHistoryScope, metrics.CadenceRequests)
