@@ -251,13 +251,961 @@ func (p *ShardOwnershipLostError) Error() string {
 }
 
 // Attributes:
+//  - DomainUUID
+//  - StartRequest
+type StartWorkflowExecutionWrappedRequest struct {
+  // unused fields # 1 to 9
+  DomainUUID *string `thrift:"domainUUID,10" db:"domainUUID" json:"domainUUID,omitempty"`
+  // unused fields # 11 to 19
+  StartRequest *shared.StartWorkflowExecutionRequest `thrift:"startRequest,20" db:"startRequest" json:"startRequest,omitempty"`
+}
+
+func NewStartWorkflowExecutionWrappedRequest() *StartWorkflowExecutionWrappedRequest {
+  return &StartWorkflowExecutionWrappedRequest{}
+}
+
+var StartWorkflowExecutionWrappedRequest_DomainUUID_DEFAULT string
+func (p *StartWorkflowExecutionWrappedRequest) GetDomainUUID() string {
+  if !p.IsSetDomainUUID() {
+    return StartWorkflowExecutionWrappedRequest_DomainUUID_DEFAULT
+  }
+return *p.DomainUUID
+}
+var StartWorkflowExecutionWrappedRequest_StartRequest_DEFAULT *shared.StartWorkflowExecutionRequest
+func (p *StartWorkflowExecutionWrappedRequest) GetStartRequest() *shared.StartWorkflowExecutionRequest {
+  if !p.IsSetStartRequest() {
+    return StartWorkflowExecutionWrappedRequest_StartRequest_DEFAULT
+  }
+return p.StartRequest
+}
+func (p *StartWorkflowExecutionWrappedRequest) IsSetDomainUUID() bool {
+  return p.DomainUUID != nil
+}
+
+func (p *StartWorkflowExecutionWrappedRequest) IsSetStartRequest() bool {
+  return p.StartRequest != nil
+}
+
+func (p *StartWorkflowExecutionWrappedRequest) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 10:
+      if err := p.ReadField10(iprot); err != nil {
+        return err
+      }
+    case 20:
+      if err := p.ReadField20(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *StartWorkflowExecutionWrappedRequest)  ReadField10(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 10: ", err)
+} else {
+  p.DomainUUID = &v
+}
+  return nil
+}
+
+func (p *StartWorkflowExecutionWrappedRequest)  ReadField20(iprot thrift.TProtocol) error {
+  p.StartRequest = &shared.StartWorkflowExecutionRequest{}
+  if err := p.StartRequest.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.StartRequest), err)
+  }
+  return nil
+}
+
+func (p *StartWorkflowExecutionWrappedRequest) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("StartWorkflowExecutionWrappedRequest"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField10(oprot); err != nil { return err }
+    if err := p.writeField20(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *StartWorkflowExecutionWrappedRequest) writeField10(oprot thrift.TProtocol) (err error) {
+  if p.IsSetDomainUUID() {
+    if err := oprot.WriteFieldBegin("domainUUID", thrift.STRING, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:domainUUID: ", p), err) }
+    if err := oprot.WriteString(string(*p.DomainUUID)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.domainUUID (10) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:domainUUID: ", p), err) }
+  }
+  return err
+}
+
+func (p *StartWorkflowExecutionWrappedRequest) writeField20(oprot thrift.TProtocol) (err error) {
+  if p.IsSetStartRequest() {
+    if err := oprot.WriteFieldBegin("startRequest", thrift.STRUCT, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:startRequest: ", p), err) }
+    if err := p.StartRequest.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.StartRequest), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:startRequest: ", p), err) }
+  }
+  return err
+}
+
+func (p *StartWorkflowExecutionWrappedRequest) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("StartWorkflowExecutionWrappedRequest(%+v)", *p)
+}
+
+// Attributes:
+//  - DomainUUID
+//  - GetRequest
+type GetWorkflowExecutionHistoryWrappedRequest struct {
+  // unused fields # 1 to 9
+  DomainUUID *string `thrift:"domainUUID,10" db:"domainUUID" json:"domainUUID,omitempty"`
+  // unused fields # 11 to 19
+  GetRequest *shared.GetWorkflowExecutionHistoryRequest `thrift:"getRequest,20" db:"getRequest" json:"getRequest,omitempty"`
+}
+
+func NewGetWorkflowExecutionHistoryWrappedRequest() *GetWorkflowExecutionHistoryWrappedRequest {
+  return &GetWorkflowExecutionHistoryWrappedRequest{}
+}
+
+var GetWorkflowExecutionHistoryWrappedRequest_DomainUUID_DEFAULT string
+func (p *GetWorkflowExecutionHistoryWrappedRequest) GetDomainUUID() string {
+  if !p.IsSetDomainUUID() {
+    return GetWorkflowExecutionHistoryWrappedRequest_DomainUUID_DEFAULT
+  }
+return *p.DomainUUID
+}
+var GetWorkflowExecutionHistoryWrappedRequest_GetRequest_DEFAULT *shared.GetWorkflowExecutionHistoryRequest
+func (p *GetWorkflowExecutionHistoryWrappedRequest) GetGetRequest() *shared.GetWorkflowExecutionHistoryRequest {
+  if !p.IsSetGetRequest() {
+    return GetWorkflowExecutionHistoryWrappedRequest_GetRequest_DEFAULT
+  }
+return p.GetRequest
+}
+func (p *GetWorkflowExecutionHistoryWrappedRequest) IsSetDomainUUID() bool {
+  return p.DomainUUID != nil
+}
+
+func (p *GetWorkflowExecutionHistoryWrappedRequest) IsSetGetRequest() bool {
+  return p.GetRequest != nil
+}
+
+func (p *GetWorkflowExecutionHistoryWrappedRequest) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 10:
+      if err := p.ReadField10(iprot); err != nil {
+        return err
+      }
+    case 20:
+      if err := p.ReadField20(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *GetWorkflowExecutionHistoryWrappedRequest)  ReadField10(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 10: ", err)
+} else {
+  p.DomainUUID = &v
+}
+  return nil
+}
+
+func (p *GetWorkflowExecutionHistoryWrappedRequest)  ReadField20(iprot thrift.TProtocol) error {
+  p.GetRequest = &shared.GetWorkflowExecutionHistoryRequest{}
+  if err := p.GetRequest.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.GetRequest), err)
+  }
+  return nil
+}
+
+func (p *GetWorkflowExecutionHistoryWrappedRequest) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("GetWorkflowExecutionHistoryWrappedRequest"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField10(oprot); err != nil { return err }
+    if err := p.writeField20(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *GetWorkflowExecutionHistoryWrappedRequest) writeField10(oprot thrift.TProtocol) (err error) {
+  if p.IsSetDomainUUID() {
+    if err := oprot.WriteFieldBegin("domainUUID", thrift.STRING, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:domainUUID: ", p), err) }
+    if err := oprot.WriteString(string(*p.DomainUUID)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.domainUUID (10) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:domainUUID: ", p), err) }
+  }
+  return err
+}
+
+func (p *GetWorkflowExecutionHistoryWrappedRequest) writeField20(oprot thrift.TProtocol) (err error) {
+  if p.IsSetGetRequest() {
+    if err := oprot.WriteFieldBegin("getRequest", thrift.STRUCT, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:getRequest: ", p), err) }
+    if err := p.GetRequest.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.GetRequest), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:getRequest: ", p), err) }
+  }
+  return err
+}
+
+func (p *GetWorkflowExecutionHistoryWrappedRequest) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("GetWorkflowExecutionHistoryWrappedRequest(%+v)", *p)
+}
+
+// Attributes:
+//  - DomainUUID
+//  - CompleteRequest
+type RespondDecisionTaskCompletedWrappedRequest struct {
+  // unused fields # 1 to 9
+  DomainUUID *string `thrift:"domainUUID,10" db:"domainUUID" json:"domainUUID,omitempty"`
+  // unused fields # 11 to 19
+  CompleteRequest *shared.RespondDecisionTaskCompletedRequest `thrift:"completeRequest,20" db:"completeRequest" json:"completeRequest,omitempty"`
+}
+
+func NewRespondDecisionTaskCompletedWrappedRequest() *RespondDecisionTaskCompletedWrappedRequest {
+  return &RespondDecisionTaskCompletedWrappedRequest{}
+}
+
+var RespondDecisionTaskCompletedWrappedRequest_DomainUUID_DEFAULT string
+func (p *RespondDecisionTaskCompletedWrappedRequest) GetDomainUUID() string {
+  if !p.IsSetDomainUUID() {
+    return RespondDecisionTaskCompletedWrappedRequest_DomainUUID_DEFAULT
+  }
+return *p.DomainUUID
+}
+var RespondDecisionTaskCompletedWrappedRequest_CompleteRequest_DEFAULT *shared.RespondDecisionTaskCompletedRequest
+func (p *RespondDecisionTaskCompletedWrappedRequest) GetCompleteRequest() *shared.RespondDecisionTaskCompletedRequest {
+  if !p.IsSetCompleteRequest() {
+    return RespondDecisionTaskCompletedWrappedRequest_CompleteRequest_DEFAULT
+  }
+return p.CompleteRequest
+}
+func (p *RespondDecisionTaskCompletedWrappedRequest) IsSetDomainUUID() bool {
+  return p.DomainUUID != nil
+}
+
+func (p *RespondDecisionTaskCompletedWrappedRequest) IsSetCompleteRequest() bool {
+  return p.CompleteRequest != nil
+}
+
+func (p *RespondDecisionTaskCompletedWrappedRequest) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 10:
+      if err := p.ReadField10(iprot); err != nil {
+        return err
+      }
+    case 20:
+      if err := p.ReadField20(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *RespondDecisionTaskCompletedWrappedRequest)  ReadField10(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 10: ", err)
+} else {
+  p.DomainUUID = &v
+}
+  return nil
+}
+
+func (p *RespondDecisionTaskCompletedWrappedRequest)  ReadField20(iprot thrift.TProtocol) error {
+  p.CompleteRequest = &shared.RespondDecisionTaskCompletedRequest{}
+  if err := p.CompleteRequest.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.CompleteRequest), err)
+  }
+  return nil
+}
+
+func (p *RespondDecisionTaskCompletedWrappedRequest) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("RespondDecisionTaskCompletedWrappedRequest"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField10(oprot); err != nil { return err }
+    if err := p.writeField20(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *RespondDecisionTaskCompletedWrappedRequest) writeField10(oprot thrift.TProtocol) (err error) {
+  if p.IsSetDomainUUID() {
+    if err := oprot.WriteFieldBegin("domainUUID", thrift.STRING, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:domainUUID: ", p), err) }
+    if err := oprot.WriteString(string(*p.DomainUUID)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.domainUUID (10) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:domainUUID: ", p), err) }
+  }
+  return err
+}
+
+func (p *RespondDecisionTaskCompletedWrappedRequest) writeField20(oprot thrift.TProtocol) (err error) {
+  if p.IsSetCompleteRequest() {
+    if err := oprot.WriteFieldBegin("completeRequest", thrift.STRUCT, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:completeRequest: ", p), err) }
+    if err := p.CompleteRequest.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.CompleteRequest), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:completeRequest: ", p), err) }
+  }
+  return err
+}
+
+func (p *RespondDecisionTaskCompletedWrappedRequest) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("RespondDecisionTaskCompletedWrappedRequest(%+v)", *p)
+}
+
+// Attributes:
+//  - DomainUUID
+//  - HeartbeatRequest
+type RecordActivityTaskHeartbeatWrappedRequest struct {
+  // unused fields # 1 to 9
+  DomainUUID *string `thrift:"domainUUID,10" db:"domainUUID" json:"domainUUID,omitempty"`
+  // unused fields # 11 to 19
+  HeartbeatRequest *shared.RecordActivityTaskHeartbeatRequest `thrift:"heartbeatRequest,20" db:"heartbeatRequest" json:"heartbeatRequest,omitempty"`
+}
+
+func NewRecordActivityTaskHeartbeatWrappedRequest() *RecordActivityTaskHeartbeatWrappedRequest {
+  return &RecordActivityTaskHeartbeatWrappedRequest{}
+}
+
+var RecordActivityTaskHeartbeatWrappedRequest_DomainUUID_DEFAULT string
+func (p *RecordActivityTaskHeartbeatWrappedRequest) GetDomainUUID() string {
+  if !p.IsSetDomainUUID() {
+    return RecordActivityTaskHeartbeatWrappedRequest_DomainUUID_DEFAULT
+  }
+return *p.DomainUUID
+}
+var RecordActivityTaskHeartbeatWrappedRequest_HeartbeatRequest_DEFAULT *shared.RecordActivityTaskHeartbeatRequest
+func (p *RecordActivityTaskHeartbeatWrappedRequest) GetHeartbeatRequest() *shared.RecordActivityTaskHeartbeatRequest {
+  if !p.IsSetHeartbeatRequest() {
+    return RecordActivityTaskHeartbeatWrappedRequest_HeartbeatRequest_DEFAULT
+  }
+return p.HeartbeatRequest
+}
+func (p *RecordActivityTaskHeartbeatWrappedRequest) IsSetDomainUUID() bool {
+  return p.DomainUUID != nil
+}
+
+func (p *RecordActivityTaskHeartbeatWrappedRequest) IsSetHeartbeatRequest() bool {
+  return p.HeartbeatRequest != nil
+}
+
+func (p *RecordActivityTaskHeartbeatWrappedRequest) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 10:
+      if err := p.ReadField10(iprot); err != nil {
+        return err
+      }
+    case 20:
+      if err := p.ReadField20(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *RecordActivityTaskHeartbeatWrappedRequest)  ReadField10(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 10: ", err)
+} else {
+  p.DomainUUID = &v
+}
+  return nil
+}
+
+func (p *RecordActivityTaskHeartbeatWrappedRequest)  ReadField20(iprot thrift.TProtocol) error {
+  p.HeartbeatRequest = &shared.RecordActivityTaskHeartbeatRequest{}
+  if err := p.HeartbeatRequest.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.HeartbeatRequest), err)
+  }
+  return nil
+}
+
+func (p *RecordActivityTaskHeartbeatWrappedRequest) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("RecordActivityTaskHeartbeatWrappedRequest"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField10(oprot); err != nil { return err }
+    if err := p.writeField20(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *RecordActivityTaskHeartbeatWrappedRequest) writeField10(oprot thrift.TProtocol) (err error) {
+  if p.IsSetDomainUUID() {
+    if err := oprot.WriteFieldBegin("domainUUID", thrift.STRING, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:domainUUID: ", p), err) }
+    if err := oprot.WriteString(string(*p.DomainUUID)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.domainUUID (10) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:domainUUID: ", p), err) }
+  }
+  return err
+}
+
+func (p *RecordActivityTaskHeartbeatWrappedRequest) writeField20(oprot thrift.TProtocol) (err error) {
+  if p.IsSetHeartbeatRequest() {
+    if err := oprot.WriteFieldBegin("heartbeatRequest", thrift.STRUCT, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:heartbeatRequest: ", p), err) }
+    if err := p.HeartbeatRequest.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.HeartbeatRequest), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:heartbeatRequest: ", p), err) }
+  }
+  return err
+}
+
+func (p *RecordActivityTaskHeartbeatWrappedRequest) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("RecordActivityTaskHeartbeatWrappedRequest(%+v)", *p)
+}
+
+// Attributes:
+//  - DomainUUID
+//  - CompleteRequest
+type RespondActivityTaskCompletedWrappedRequest struct {
+  // unused fields # 1 to 9
+  DomainUUID *string `thrift:"domainUUID,10" db:"domainUUID" json:"domainUUID,omitempty"`
+  // unused fields # 11 to 19
+  CompleteRequest *shared.RespondActivityTaskCompletedRequest `thrift:"completeRequest,20" db:"completeRequest" json:"completeRequest,omitempty"`
+}
+
+func NewRespondActivityTaskCompletedWrappedRequest() *RespondActivityTaskCompletedWrappedRequest {
+  return &RespondActivityTaskCompletedWrappedRequest{}
+}
+
+var RespondActivityTaskCompletedWrappedRequest_DomainUUID_DEFAULT string
+func (p *RespondActivityTaskCompletedWrappedRequest) GetDomainUUID() string {
+  if !p.IsSetDomainUUID() {
+    return RespondActivityTaskCompletedWrappedRequest_DomainUUID_DEFAULT
+  }
+return *p.DomainUUID
+}
+var RespondActivityTaskCompletedWrappedRequest_CompleteRequest_DEFAULT *shared.RespondActivityTaskCompletedRequest
+func (p *RespondActivityTaskCompletedWrappedRequest) GetCompleteRequest() *shared.RespondActivityTaskCompletedRequest {
+  if !p.IsSetCompleteRequest() {
+    return RespondActivityTaskCompletedWrappedRequest_CompleteRequest_DEFAULT
+  }
+return p.CompleteRequest
+}
+func (p *RespondActivityTaskCompletedWrappedRequest) IsSetDomainUUID() bool {
+  return p.DomainUUID != nil
+}
+
+func (p *RespondActivityTaskCompletedWrappedRequest) IsSetCompleteRequest() bool {
+  return p.CompleteRequest != nil
+}
+
+func (p *RespondActivityTaskCompletedWrappedRequest) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 10:
+      if err := p.ReadField10(iprot); err != nil {
+        return err
+      }
+    case 20:
+      if err := p.ReadField20(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *RespondActivityTaskCompletedWrappedRequest)  ReadField10(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 10: ", err)
+} else {
+  p.DomainUUID = &v
+}
+  return nil
+}
+
+func (p *RespondActivityTaskCompletedWrappedRequest)  ReadField20(iprot thrift.TProtocol) error {
+  p.CompleteRequest = &shared.RespondActivityTaskCompletedRequest{}
+  if err := p.CompleteRequest.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.CompleteRequest), err)
+  }
+  return nil
+}
+
+func (p *RespondActivityTaskCompletedWrappedRequest) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("RespondActivityTaskCompletedWrappedRequest"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField10(oprot); err != nil { return err }
+    if err := p.writeField20(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *RespondActivityTaskCompletedWrappedRequest) writeField10(oprot thrift.TProtocol) (err error) {
+  if p.IsSetDomainUUID() {
+    if err := oprot.WriteFieldBegin("domainUUID", thrift.STRING, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:domainUUID: ", p), err) }
+    if err := oprot.WriteString(string(*p.DomainUUID)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.domainUUID (10) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:domainUUID: ", p), err) }
+  }
+  return err
+}
+
+func (p *RespondActivityTaskCompletedWrappedRequest) writeField20(oprot thrift.TProtocol) (err error) {
+  if p.IsSetCompleteRequest() {
+    if err := oprot.WriteFieldBegin("completeRequest", thrift.STRUCT, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:completeRequest: ", p), err) }
+    if err := p.CompleteRequest.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.CompleteRequest), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:completeRequest: ", p), err) }
+  }
+  return err
+}
+
+func (p *RespondActivityTaskCompletedWrappedRequest) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("RespondActivityTaskCompletedWrappedRequest(%+v)", *p)
+}
+
+// Attributes:
+//  - DomainUUID
+//  - FailedRequest
+type RespondActivityTaskFailedWrappedRequest struct {
+  // unused fields # 1 to 9
+  DomainUUID *string `thrift:"domainUUID,10" db:"domainUUID" json:"domainUUID,omitempty"`
+  // unused fields # 11 to 19
+  FailedRequest *shared.RespondActivityTaskFailedRequest `thrift:"failedRequest,20" db:"failedRequest" json:"failedRequest,omitempty"`
+}
+
+func NewRespondActivityTaskFailedWrappedRequest() *RespondActivityTaskFailedWrappedRequest {
+  return &RespondActivityTaskFailedWrappedRequest{}
+}
+
+var RespondActivityTaskFailedWrappedRequest_DomainUUID_DEFAULT string
+func (p *RespondActivityTaskFailedWrappedRequest) GetDomainUUID() string {
+  if !p.IsSetDomainUUID() {
+    return RespondActivityTaskFailedWrappedRequest_DomainUUID_DEFAULT
+  }
+return *p.DomainUUID
+}
+var RespondActivityTaskFailedWrappedRequest_FailedRequest_DEFAULT *shared.RespondActivityTaskFailedRequest
+func (p *RespondActivityTaskFailedWrappedRequest) GetFailedRequest() *shared.RespondActivityTaskFailedRequest {
+  if !p.IsSetFailedRequest() {
+    return RespondActivityTaskFailedWrappedRequest_FailedRequest_DEFAULT
+  }
+return p.FailedRequest
+}
+func (p *RespondActivityTaskFailedWrappedRequest) IsSetDomainUUID() bool {
+  return p.DomainUUID != nil
+}
+
+func (p *RespondActivityTaskFailedWrappedRequest) IsSetFailedRequest() bool {
+  return p.FailedRequest != nil
+}
+
+func (p *RespondActivityTaskFailedWrappedRequest) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 10:
+      if err := p.ReadField10(iprot); err != nil {
+        return err
+      }
+    case 20:
+      if err := p.ReadField20(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *RespondActivityTaskFailedWrappedRequest)  ReadField10(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 10: ", err)
+} else {
+  p.DomainUUID = &v
+}
+  return nil
+}
+
+func (p *RespondActivityTaskFailedWrappedRequest)  ReadField20(iprot thrift.TProtocol) error {
+  p.FailedRequest = &shared.RespondActivityTaskFailedRequest{}
+  if err := p.FailedRequest.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.FailedRequest), err)
+  }
+  return nil
+}
+
+func (p *RespondActivityTaskFailedWrappedRequest) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("RespondActivityTaskFailedWrappedRequest"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField10(oprot); err != nil { return err }
+    if err := p.writeField20(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *RespondActivityTaskFailedWrappedRequest) writeField10(oprot thrift.TProtocol) (err error) {
+  if p.IsSetDomainUUID() {
+    if err := oprot.WriteFieldBegin("domainUUID", thrift.STRING, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:domainUUID: ", p), err) }
+    if err := oprot.WriteString(string(*p.DomainUUID)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.domainUUID (10) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:domainUUID: ", p), err) }
+  }
+  return err
+}
+
+func (p *RespondActivityTaskFailedWrappedRequest) writeField20(oprot thrift.TProtocol) (err error) {
+  if p.IsSetFailedRequest() {
+    if err := oprot.WriteFieldBegin("failedRequest", thrift.STRUCT, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:failedRequest: ", p), err) }
+    if err := p.FailedRequest.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.FailedRequest), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:failedRequest: ", p), err) }
+  }
+  return err
+}
+
+func (p *RespondActivityTaskFailedWrappedRequest) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("RespondActivityTaskFailedWrappedRequest(%+v)", *p)
+}
+
+// Attributes:
+//  - DomainUUID
+//  - CancelRequest
+type RespondActivityTaskCanceledWrappedRequest struct {
+  // unused fields # 1 to 9
+  DomainUUID *string `thrift:"domainUUID,10" db:"domainUUID" json:"domainUUID,omitempty"`
+  // unused fields # 11 to 19
+  CancelRequest *shared.RespondActivityTaskCanceledRequest `thrift:"cancelRequest,20" db:"cancelRequest" json:"cancelRequest,omitempty"`
+}
+
+func NewRespondActivityTaskCanceledWrappedRequest() *RespondActivityTaskCanceledWrappedRequest {
+  return &RespondActivityTaskCanceledWrappedRequest{}
+}
+
+var RespondActivityTaskCanceledWrappedRequest_DomainUUID_DEFAULT string
+func (p *RespondActivityTaskCanceledWrappedRequest) GetDomainUUID() string {
+  if !p.IsSetDomainUUID() {
+    return RespondActivityTaskCanceledWrappedRequest_DomainUUID_DEFAULT
+  }
+return *p.DomainUUID
+}
+var RespondActivityTaskCanceledWrappedRequest_CancelRequest_DEFAULT *shared.RespondActivityTaskCanceledRequest
+func (p *RespondActivityTaskCanceledWrappedRequest) GetCancelRequest() *shared.RespondActivityTaskCanceledRequest {
+  if !p.IsSetCancelRequest() {
+    return RespondActivityTaskCanceledWrappedRequest_CancelRequest_DEFAULT
+  }
+return p.CancelRequest
+}
+func (p *RespondActivityTaskCanceledWrappedRequest) IsSetDomainUUID() bool {
+  return p.DomainUUID != nil
+}
+
+func (p *RespondActivityTaskCanceledWrappedRequest) IsSetCancelRequest() bool {
+  return p.CancelRequest != nil
+}
+
+func (p *RespondActivityTaskCanceledWrappedRequest) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 10:
+      if err := p.ReadField10(iprot); err != nil {
+        return err
+      }
+    case 20:
+      if err := p.ReadField20(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *RespondActivityTaskCanceledWrappedRequest)  ReadField10(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 10: ", err)
+} else {
+  p.DomainUUID = &v
+}
+  return nil
+}
+
+func (p *RespondActivityTaskCanceledWrappedRequest)  ReadField20(iprot thrift.TProtocol) error {
+  p.CancelRequest = &shared.RespondActivityTaskCanceledRequest{}
+  if err := p.CancelRequest.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.CancelRequest), err)
+  }
+  return nil
+}
+
+func (p *RespondActivityTaskCanceledWrappedRequest) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("RespondActivityTaskCanceledWrappedRequest"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField10(oprot); err != nil { return err }
+    if err := p.writeField20(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *RespondActivityTaskCanceledWrappedRequest) writeField10(oprot thrift.TProtocol) (err error) {
+  if p.IsSetDomainUUID() {
+    if err := oprot.WriteFieldBegin("domainUUID", thrift.STRING, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:domainUUID: ", p), err) }
+    if err := oprot.WriteString(string(*p.DomainUUID)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.domainUUID (10) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:domainUUID: ", p), err) }
+  }
+  return err
+}
+
+func (p *RespondActivityTaskCanceledWrappedRequest) writeField20(oprot thrift.TProtocol) (err error) {
+  if p.IsSetCancelRequest() {
+    if err := oprot.WriteFieldBegin("cancelRequest", thrift.STRUCT, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:cancelRequest: ", p), err) }
+    if err := p.CancelRequest.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.CancelRequest), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:cancelRequest: ", p), err) }
+  }
+  return err
+}
+
+func (p *RespondActivityTaskCanceledWrappedRequest) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("RespondActivityTaskCanceledWrappedRequest(%+v)", *p)
+}
+
+// Attributes:
+//  - DomainUUID
 //  - WorkflowExecution
 //  - ScheduleId
 //  - TaskId
 //  - RequestId
 //  - PollRequest
 type RecordActivityTaskStartedRequest struct {
-  // unused fields # 1 to 9
+  // unused fields # 1 to 4
+  DomainUUID *string `thrift:"domainUUID,5" db:"domainUUID" json:"domainUUID,omitempty"`
+  // unused fields # 6 to 9
   WorkflowExecution *shared.WorkflowExecution `thrift:"workflowExecution,10" db:"workflowExecution" json:"workflowExecution,omitempty"`
   // unused fields # 11 to 19
   ScheduleId *int64 `thrift:"scheduleId,20" db:"scheduleId" json:"scheduleId,omitempty"`
@@ -273,6 +1221,13 @@ func NewRecordActivityTaskStartedRequest() *RecordActivityTaskStartedRequest {
   return &RecordActivityTaskStartedRequest{}
 }
 
+var RecordActivityTaskStartedRequest_DomainUUID_DEFAULT string
+func (p *RecordActivityTaskStartedRequest) GetDomainUUID() string {
+  if !p.IsSetDomainUUID() {
+    return RecordActivityTaskStartedRequest_DomainUUID_DEFAULT
+  }
+return *p.DomainUUID
+}
 var RecordActivityTaskStartedRequest_WorkflowExecution_DEFAULT *shared.WorkflowExecution
 func (p *RecordActivityTaskStartedRequest) GetWorkflowExecution() *shared.WorkflowExecution {
   if !p.IsSetWorkflowExecution() {
@@ -308,6 +1263,10 @@ func (p *RecordActivityTaskStartedRequest) GetPollRequest() *shared.PollForActiv
   }
 return p.PollRequest
 }
+func (p *RecordActivityTaskStartedRequest) IsSetDomainUUID() bool {
+  return p.DomainUUID != nil
+}
+
 func (p *RecordActivityTaskStartedRequest) IsSetWorkflowExecution() bool {
   return p.WorkflowExecution != nil
 }
@@ -341,6 +1300,10 @@ func (p *RecordActivityTaskStartedRequest) Read(iprot thrift.TProtocol) error {
     }
     if fieldTypeId == thrift.STOP { break; }
     switch fieldId {
+    case 5:
+      if err := p.ReadField5(iprot); err != nil {
+        return err
+      }
     case 10:
       if err := p.ReadField10(iprot); err != nil {
         return err
@@ -373,6 +1336,15 @@ func (p *RecordActivityTaskStartedRequest) Read(iprot thrift.TProtocol) error {
   if err := iprot.ReadStructEnd(); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
   }
+  return nil
+}
+
+func (p *RecordActivityTaskStartedRequest)  ReadField5(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 5: ", err)
+} else {
+  p.DomainUUID = &v
+}
   return nil
 }
 
@@ -423,6 +1395,7 @@ func (p *RecordActivityTaskStartedRequest) Write(oprot thrift.TProtocol) error {
   if err := oprot.WriteStructBegin("RecordActivityTaskStartedRequest"); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
   if p != nil {
+    if err := p.writeField5(oprot); err != nil { return err }
     if err := p.writeField10(oprot); err != nil { return err }
     if err := p.writeField20(oprot); err != nil { return err }
     if err := p.writeField30(oprot); err != nil { return err }
@@ -434,6 +1407,18 @@ func (p *RecordActivityTaskStartedRequest) Write(oprot thrift.TProtocol) error {
   if err := oprot.WriteStructEnd(); err != nil {
     return thrift.PrependError("write struct stop error: ", err) }
   return nil
+}
+
+func (p *RecordActivityTaskStartedRequest) writeField5(oprot thrift.TProtocol) (err error) {
+  if p.IsSetDomainUUID() {
+    if err := oprot.WriteFieldBegin("domainUUID", thrift.STRING, 5); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 5:domainUUID: ", p), err) }
+    if err := oprot.WriteString(string(*p.DomainUUID)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.domainUUID (5) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 5:domainUUID: ", p), err) }
+  }
+  return err
 }
 
 func (p *RecordActivityTaskStartedRequest) writeField10(oprot thrift.TProtocol) (err error) {
@@ -641,13 +1626,16 @@ func (p *RecordActivityTaskStartedResponse) String() string {
 }
 
 // Attributes:
+//  - DomainUUID
 //  - WorkflowExecution
 //  - ScheduleId
 //  - TaskId
 //  - RequestId
 //  - PollRequest
 type RecordDecisionTaskStartedRequest struct {
-  // unused fields # 1 to 9
+  // unused fields # 1 to 4
+  DomainUUID *string `thrift:"domainUUID,5" db:"domainUUID" json:"domainUUID,omitempty"`
+  // unused fields # 6 to 9
   WorkflowExecution *shared.WorkflowExecution `thrift:"workflowExecution,10" db:"workflowExecution" json:"workflowExecution,omitempty"`
   // unused fields # 11 to 19
   ScheduleId *int64 `thrift:"scheduleId,20" db:"scheduleId" json:"scheduleId,omitempty"`
@@ -663,6 +1651,13 @@ func NewRecordDecisionTaskStartedRequest() *RecordDecisionTaskStartedRequest {
   return &RecordDecisionTaskStartedRequest{}
 }
 
+var RecordDecisionTaskStartedRequest_DomainUUID_DEFAULT string
+func (p *RecordDecisionTaskStartedRequest) GetDomainUUID() string {
+  if !p.IsSetDomainUUID() {
+    return RecordDecisionTaskStartedRequest_DomainUUID_DEFAULT
+  }
+return *p.DomainUUID
+}
 var RecordDecisionTaskStartedRequest_WorkflowExecution_DEFAULT *shared.WorkflowExecution
 func (p *RecordDecisionTaskStartedRequest) GetWorkflowExecution() *shared.WorkflowExecution {
   if !p.IsSetWorkflowExecution() {
@@ -698,6 +1693,10 @@ func (p *RecordDecisionTaskStartedRequest) GetPollRequest() *shared.PollForDecis
   }
 return p.PollRequest
 }
+func (p *RecordDecisionTaskStartedRequest) IsSetDomainUUID() bool {
+  return p.DomainUUID != nil
+}
+
 func (p *RecordDecisionTaskStartedRequest) IsSetWorkflowExecution() bool {
   return p.WorkflowExecution != nil
 }
@@ -731,6 +1730,10 @@ func (p *RecordDecisionTaskStartedRequest) Read(iprot thrift.TProtocol) error {
     }
     if fieldTypeId == thrift.STOP { break; }
     switch fieldId {
+    case 5:
+      if err := p.ReadField5(iprot); err != nil {
+        return err
+      }
     case 10:
       if err := p.ReadField10(iprot); err != nil {
         return err
@@ -763,6 +1766,15 @@ func (p *RecordDecisionTaskStartedRequest) Read(iprot thrift.TProtocol) error {
   if err := iprot.ReadStructEnd(); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
   }
+  return nil
+}
+
+func (p *RecordDecisionTaskStartedRequest)  ReadField5(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 5: ", err)
+} else {
+  p.DomainUUID = &v
+}
   return nil
 }
 
@@ -813,6 +1825,7 @@ func (p *RecordDecisionTaskStartedRequest) Write(oprot thrift.TProtocol) error {
   if err := oprot.WriteStructBegin("RecordDecisionTaskStartedRequest"); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
   if p != nil {
+    if err := p.writeField5(oprot); err != nil { return err }
     if err := p.writeField10(oprot); err != nil { return err }
     if err := p.writeField20(oprot); err != nil { return err }
     if err := p.writeField30(oprot); err != nil { return err }
@@ -824,6 +1837,18 @@ func (p *RecordDecisionTaskStartedRequest) Write(oprot thrift.TProtocol) error {
   if err := oprot.WriteStructEnd(); err != nil {
     return thrift.PrependError("write struct stop error: ", err) }
   return nil
+}
+
+func (p *RecordDecisionTaskStartedRequest) writeField5(oprot thrift.TProtocol) (err error) {
+  if p.IsSetDomainUUID() {
+    if err := oprot.WriteFieldBegin("domainUUID", thrift.STRING, 5); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 5:domainUUID: ", p), err) }
+    if err := oprot.WriteString(string(*p.DomainUUID)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.domainUUID (5) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 5:domainUUID: ", p), err) }
+  }
+  return err
 }
 
 func (p *RecordDecisionTaskStartedRequest) writeField10(oprot thrift.TProtocol) (err error) {
@@ -1122,14 +2147,14 @@ type HistoryService interface {  //HistoryService provides API to start a new lo
   // 
   // Parameters:
   //  - StartRequest
-  StartWorkflowExecution(startRequest *shared.StartWorkflowExecutionRequest) (r *shared.StartWorkflowExecutionResponse, err error)
+  StartWorkflowExecution(startRequest *StartWorkflowExecutionWrappedRequest) (r *shared.StartWorkflowExecutionResponse, err error)
   // Returns the history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow
   // execution in unknown to the service.
   // 
   // 
   // Parameters:
   //  - GetRequest
-  GetWorkflowExecutionHistory(getRequest *shared.GetWorkflowExecutionHistoryRequest) (r *shared.GetWorkflowExecutionHistoryResponse, err error)
+  GetWorkflowExecutionHistory(getRequest *GetWorkflowExecutionHistoryWrappedRequest) (r *shared.GetWorkflowExecutionHistoryResponse, err error)
   // RecordDecisionTaskStarted is called by the Matchingservice before it hands a decision task to the application worker in response to
   // a PollForDecisionTask call. It records in the history the event that the decision task has started. It will return 'EventAlreadyStartedError',
   // if the workflow's execution history already includes a record of the event starting.
@@ -1155,7 +2180,7 @@ type HistoryService interface {  //HistoryService provides API to start a new lo
   // 
   // Parameters:
   //  - CompleteRequest
-  RespondDecisionTaskCompleted(completeRequest *shared.RespondDecisionTaskCompletedRequest) (err error)
+  RespondDecisionTaskCompleted(completeRequest *RespondDecisionTaskCompletedWrappedRequest) (err error)
   // RecordActivityTaskHeartbeat is called by application worker while it is processing an ActivityTask.  If worker fails
   // to heartbeat within 'heartbeatTimeoutSeconds' interval for the ActivityTask, then it will be marked as timedout and
   // 'ActivityTaskTimedOut' event will be written to the workflow history.  Calling 'RecordActivityTaskHeartbeat' will
@@ -1165,7 +2190,7 @@ type HistoryService interface {  //HistoryService provides API to start a new lo
   // 
   // Parameters:
   //  - HeartbeatRequest
-  RecordActivityTaskHeartbeat(heartbeatRequest *shared.RecordActivityTaskHeartbeatRequest) (r *shared.RecordActivityTaskHeartbeatResponse, err error)
+  RecordActivityTaskHeartbeat(heartbeatRequest *RecordActivityTaskHeartbeatWrappedRequest) (r *shared.RecordActivityTaskHeartbeatResponse, err error)
   // RespondActivityTaskCompleted is called by application worker when it is done processing an ActivityTask.  It will
   // result in a new 'ActivityTaskCompleted' event being written to the workflow history and a new DecisionTask
   // created for the workflow so new decisions could be made.  Use the 'taskToken' provided as response of
@@ -1175,7 +2200,7 @@ type HistoryService interface {  //HistoryService provides API to start a new lo
   // 
   // Parameters:
   //  - CompleteRequest
-  RespondActivityTaskCompleted(completeRequest *shared.RespondActivityTaskCompletedRequest) (err error)
+  RespondActivityTaskCompleted(completeRequest *RespondActivityTaskCompletedWrappedRequest) (err error)
   // RespondActivityTaskFailed is called by application worker when it is done processing an ActivityTask.  It will
   // result in a new 'ActivityTaskFailed' event being written to the workflow history and a new DecisionTask
   // created for the workflow instance so new decisions could be made.  Use the 'taskToken' provided as response of
@@ -1185,7 +2210,7 @@ type HistoryService interface {  //HistoryService provides API to start a new lo
   // 
   // Parameters:
   //  - FailRequest
-  RespondActivityTaskFailed(failRequest *shared.RespondActivityTaskFailedRequest) (err error)
+  RespondActivityTaskFailed(failRequest *RespondActivityTaskFailedWrappedRequest) (err error)
   // RespondActivityTaskCanceled is called by application worker when it is successfully canceled an ActivityTask.  It will
   // result in a new 'ActivityTaskCanceled' event being written to the workflow history and a new DecisionTask
   // created for the workflow instance so new decisions could be made.  Use the 'taskToken' provided as response of
@@ -1195,7 +2220,7 @@ type HistoryService interface {  //HistoryService provides API to start a new lo
   // 
   // Parameters:
   //  - CanceledRequest
-  RespondActivityTaskCanceled(canceledRequest *shared.RespondActivityTaskCanceledRequest) (err error)
+  RespondActivityTaskCanceled(canceledRequest *RespondActivityTaskCanceledWrappedRequest) (err error)
 }
 
 //HistoryService provides API to start a new long running workflow instance, as well as query and update the history
@@ -1235,12 +2260,12 @@ func NewHistoryServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol
 // 
 // Parameters:
 //  - StartRequest
-func (p *HistoryServiceClient) StartWorkflowExecution(startRequest *shared.StartWorkflowExecutionRequest) (r *shared.StartWorkflowExecutionResponse, err error) {
+func (p *HistoryServiceClient) StartWorkflowExecution(startRequest *StartWorkflowExecutionWrappedRequest) (r *shared.StartWorkflowExecutionResponse, err error) {
   if err = p.sendStartWorkflowExecution(startRequest); err != nil { return }
   return p.recvStartWorkflowExecution()
 }
 
-func (p *HistoryServiceClient) sendStartWorkflowExecution(startRequest *shared.StartWorkflowExecutionRequest)(err error) {
+func (p *HistoryServiceClient) sendStartWorkflowExecution(startRequest *StartWorkflowExecutionWrappedRequest)(err error) {
   oprot := p.OutputProtocol
   if oprot == nil {
     oprot = p.ProtocolFactory.GetProtocol(p.Transport)
@@ -1328,12 +2353,12 @@ func (p *HistoryServiceClient) recvStartWorkflowExecution() (value *shared.Start
 // 
 // Parameters:
 //  - GetRequest
-func (p *HistoryServiceClient) GetWorkflowExecutionHistory(getRequest *shared.GetWorkflowExecutionHistoryRequest) (r *shared.GetWorkflowExecutionHistoryResponse, err error) {
+func (p *HistoryServiceClient) GetWorkflowExecutionHistory(getRequest *GetWorkflowExecutionHistoryWrappedRequest) (r *shared.GetWorkflowExecutionHistoryResponse, err error) {
   if err = p.sendGetWorkflowExecutionHistory(getRequest); err != nil { return }
   return p.recvGetWorkflowExecutionHistory()
 }
 
-func (p *HistoryServiceClient) sendGetWorkflowExecutionHistory(getRequest *shared.GetWorkflowExecutionHistoryRequest)(err error) {
+func (p *HistoryServiceClient) sendGetWorkflowExecutionHistory(getRequest *GetWorkflowExecutionHistoryWrappedRequest)(err error) {
   oprot := p.OutputProtocol
   if oprot == nil {
     oprot = p.ProtocolFactory.GetProtocol(p.Transport)
@@ -1618,12 +2643,12 @@ func (p *HistoryServiceClient) recvRecordActivityTaskStarted() (value *RecordAct
 // 
 // Parameters:
 //  - CompleteRequest
-func (p *HistoryServiceClient) RespondDecisionTaskCompleted(completeRequest *shared.RespondDecisionTaskCompletedRequest) (err error) {
+func (p *HistoryServiceClient) RespondDecisionTaskCompleted(completeRequest *RespondDecisionTaskCompletedWrappedRequest) (err error) {
   if err = p.sendRespondDecisionTaskCompleted(completeRequest); err != nil { return }
   return p.recvRespondDecisionTaskCompleted()
 }
 
-func (p *HistoryServiceClient) sendRespondDecisionTaskCompleted(completeRequest *shared.RespondDecisionTaskCompletedRequest)(err error) {
+func (p *HistoryServiceClient) sendRespondDecisionTaskCompleted(completeRequest *RespondDecisionTaskCompletedWrappedRequest)(err error) {
   oprot := p.OutputProtocol
   if oprot == nil {
     oprot = p.ProtocolFactory.GetProtocol(p.Transport)
@@ -1713,12 +2738,12 @@ func (p *HistoryServiceClient) recvRespondDecisionTaskCompleted() (err error) {
 // 
 // Parameters:
 //  - HeartbeatRequest
-func (p *HistoryServiceClient) RecordActivityTaskHeartbeat(heartbeatRequest *shared.RecordActivityTaskHeartbeatRequest) (r *shared.RecordActivityTaskHeartbeatResponse, err error) {
+func (p *HistoryServiceClient) RecordActivityTaskHeartbeat(heartbeatRequest *RecordActivityTaskHeartbeatWrappedRequest) (r *shared.RecordActivityTaskHeartbeatResponse, err error) {
   if err = p.sendRecordActivityTaskHeartbeat(heartbeatRequest); err != nil { return }
   return p.recvRecordActivityTaskHeartbeat()
 }
 
-func (p *HistoryServiceClient) sendRecordActivityTaskHeartbeat(heartbeatRequest *shared.RecordActivityTaskHeartbeatRequest)(err error) {
+func (p *HistoryServiceClient) sendRecordActivityTaskHeartbeat(heartbeatRequest *RecordActivityTaskHeartbeatWrappedRequest)(err error) {
   oprot := p.OutputProtocol
   if oprot == nil {
     oprot = p.ProtocolFactory.GetProtocol(p.Transport)
@@ -1809,12 +2834,12 @@ func (p *HistoryServiceClient) recvRecordActivityTaskHeartbeat() (value *shared.
 // 
 // Parameters:
 //  - CompleteRequest
-func (p *HistoryServiceClient) RespondActivityTaskCompleted(completeRequest *shared.RespondActivityTaskCompletedRequest) (err error) {
+func (p *HistoryServiceClient) RespondActivityTaskCompleted(completeRequest *RespondActivityTaskCompletedWrappedRequest) (err error) {
   if err = p.sendRespondActivityTaskCompleted(completeRequest); err != nil { return }
   return p.recvRespondActivityTaskCompleted()
 }
 
-func (p *HistoryServiceClient) sendRespondActivityTaskCompleted(completeRequest *shared.RespondActivityTaskCompletedRequest)(err error) {
+func (p *HistoryServiceClient) sendRespondActivityTaskCompleted(completeRequest *RespondActivityTaskCompletedWrappedRequest)(err error) {
   oprot := p.OutputProtocol
   if oprot == nil {
     oprot = p.ProtocolFactory.GetProtocol(p.Transport)
@@ -1901,12 +2926,12 @@ func (p *HistoryServiceClient) recvRespondActivityTaskCompleted() (err error) {
 // 
 // Parameters:
 //  - FailRequest
-func (p *HistoryServiceClient) RespondActivityTaskFailed(failRequest *shared.RespondActivityTaskFailedRequest) (err error) {
+func (p *HistoryServiceClient) RespondActivityTaskFailed(failRequest *RespondActivityTaskFailedWrappedRequest) (err error) {
   if err = p.sendRespondActivityTaskFailed(failRequest); err != nil { return }
   return p.recvRespondActivityTaskFailed()
 }
 
-func (p *HistoryServiceClient) sendRespondActivityTaskFailed(failRequest *shared.RespondActivityTaskFailedRequest)(err error) {
+func (p *HistoryServiceClient) sendRespondActivityTaskFailed(failRequest *RespondActivityTaskFailedWrappedRequest)(err error) {
   oprot := p.OutputProtocol
   if oprot == nil {
     oprot = p.ProtocolFactory.GetProtocol(p.Transport)
@@ -1996,12 +3021,12 @@ func (p *HistoryServiceClient) recvRespondActivityTaskFailed() (err error) {
 // 
 // Parameters:
 //  - CanceledRequest
-func (p *HistoryServiceClient) RespondActivityTaskCanceled(canceledRequest *shared.RespondActivityTaskCanceledRequest) (err error) {
+func (p *HistoryServiceClient) RespondActivityTaskCanceled(canceledRequest *RespondActivityTaskCanceledWrappedRequest) (err error) {
   if err = p.sendRespondActivityTaskCanceled(canceledRequest); err != nil { return }
   return p.recvRespondActivityTaskCanceled()
 }
 
-func (p *HistoryServiceClient) sendRespondActivityTaskCanceled(canceledRequest *shared.RespondActivityTaskCanceledRequest)(err error) {
+func (p *HistoryServiceClient) sendRespondActivityTaskCanceled(canceledRequest *RespondActivityTaskCanceledWrappedRequest)(err error) {
   oprot := p.OutputProtocol
   if oprot == nil {
     oprot = p.ProtocolFactory.GetProtocol(p.Transport)
@@ -2660,15 +3685,15 @@ func (p *historyServiceProcessorRespondActivityTaskCanceled) Process(seqId int32
 // Attributes:
 //  - StartRequest
 type HistoryServiceStartWorkflowExecutionArgs struct {
-  StartRequest *shared.StartWorkflowExecutionRequest `thrift:"startRequest,1" db:"startRequest" json:"startRequest"`
+  StartRequest *StartWorkflowExecutionWrappedRequest `thrift:"startRequest,1" db:"startRequest" json:"startRequest"`
 }
 
 func NewHistoryServiceStartWorkflowExecutionArgs() *HistoryServiceStartWorkflowExecutionArgs {
   return &HistoryServiceStartWorkflowExecutionArgs{}
 }
 
-var HistoryServiceStartWorkflowExecutionArgs_StartRequest_DEFAULT *shared.StartWorkflowExecutionRequest
-func (p *HistoryServiceStartWorkflowExecutionArgs) GetStartRequest() *shared.StartWorkflowExecutionRequest {
+var HistoryServiceStartWorkflowExecutionArgs_StartRequest_DEFAULT *StartWorkflowExecutionWrappedRequest
+func (p *HistoryServiceStartWorkflowExecutionArgs) GetStartRequest() *StartWorkflowExecutionWrappedRequest {
   if !p.IsSetStartRequest() {
     return HistoryServiceStartWorkflowExecutionArgs_StartRequest_DEFAULT
   }
@@ -2711,7 +3736,7 @@ func (p *HistoryServiceStartWorkflowExecutionArgs) Read(iprot thrift.TProtocol) 
 }
 
 func (p *HistoryServiceStartWorkflowExecutionArgs)  ReadField1(iprot thrift.TProtocol) error {
-  p.StartRequest = &shared.StartWorkflowExecutionRequest{}
+  p.StartRequest = &StartWorkflowExecutionWrappedRequest{}
   if err := p.StartRequest.Read(iprot); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.StartRequest), err)
   }
@@ -3002,15 +4027,15 @@ func (p *HistoryServiceStartWorkflowExecutionResult) String() string {
 // Attributes:
 //  - GetRequest
 type HistoryServiceGetWorkflowExecutionHistoryArgs struct {
-  GetRequest *shared.GetWorkflowExecutionHistoryRequest `thrift:"getRequest,1" db:"getRequest" json:"getRequest"`
+  GetRequest *GetWorkflowExecutionHistoryWrappedRequest `thrift:"getRequest,1" db:"getRequest" json:"getRequest"`
 }
 
 func NewHistoryServiceGetWorkflowExecutionHistoryArgs() *HistoryServiceGetWorkflowExecutionHistoryArgs {
   return &HistoryServiceGetWorkflowExecutionHistoryArgs{}
 }
 
-var HistoryServiceGetWorkflowExecutionHistoryArgs_GetRequest_DEFAULT *shared.GetWorkflowExecutionHistoryRequest
-func (p *HistoryServiceGetWorkflowExecutionHistoryArgs) GetGetRequest() *shared.GetWorkflowExecutionHistoryRequest {
+var HistoryServiceGetWorkflowExecutionHistoryArgs_GetRequest_DEFAULT *GetWorkflowExecutionHistoryWrappedRequest
+func (p *HistoryServiceGetWorkflowExecutionHistoryArgs) GetGetRequest() *GetWorkflowExecutionHistoryWrappedRequest {
   if !p.IsSetGetRequest() {
     return HistoryServiceGetWorkflowExecutionHistoryArgs_GetRequest_DEFAULT
   }
@@ -3053,7 +4078,7 @@ func (p *HistoryServiceGetWorkflowExecutionHistoryArgs) Read(iprot thrift.TProto
 }
 
 func (p *HistoryServiceGetWorkflowExecutionHistoryArgs)  ReadField1(iprot thrift.TProtocol) error {
-  p.GetRequest = &shared.GetWorkflowExecutionHistoryRequest{}
+  p.GetRequest = &GetWorkflowExecutionHistoryWrappedRequest{}
   if err := p.GetRequest.Read(iprot); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.GetRequest), err)
   }
@@ -4106,15 +5131,15 @@ func (p *HistoryServiceRecordActivityTaskStartedResult) String() string {
 // Attributes:
 //  - CompleteRequest
 type HistoryServiceRespondDecisionTaskCompletedArgs struct {
-  CompleteRequest *shared.RespondDecisionTaskCompletedRequest `thrift:"completeRequest,1" db:"completeRequest" json:"completeRequest"`
+  CompleteRequest *RespondDecisionTaskCompletedWrappedRequest `thrift:"completeRequest,1" db:"completeRequest" json:"completeRequest"`
 }
 
 func NewHistoryServiceRespondDecisionTaskCompletedArgs() *HistoryServiceRespondDecisionTaskCompletedArgs {
   return &HistoryServiceRespondDecisionTaskCompletedArgs{}
 }
 
-var HistoryServiceRespondDecisionTaskCompletedArgs_CompleteRequest_DEFAULT *shared.RespondDecisionTaskCompletedRequest
-func (p *HistoryServiceRespondDecisionTaskCompletedArgs) GetCompleteRequest() *shared.RespondDecisionTaskCompletedRequest {
+var HistoryServiceRespondDecisionTaskCompletedArgs_CompleteRequest_DEFAULT *RespondDecisionTaskCompletedWrappedRequest
+func (p *HistoryServiceRespondDecisionTaskCompletedArgs) GetCompleteRequest() *RespondDecisionTaskCompletedWrappedRequest {
   if !p.IsSetCompleteRequest() {
     return HistoryServiceRespondDecisionTaskCompletedArgs_CompleteRequest_DEFAULT
   }
@@ -4157,7 +5182,7 @@ func (p *HistoryServiceRespondDecisionTaskCompletedArgs) Read(iprot thrift.TProt
 }
 
 func (p *HistoryServiceRespondDecisionTaskCompletedArgs)  ReadField1(iprot thrift.TProtocol) error {
-  p.CompleteRequest = &shared.RespondDecisionTaskCompletedRequest{}
+  p.CompleteRequest = &RespondDecisionTaskCompletedWrappedRequest{}
   if err := p.CompleteRequest.Read(iprot); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.CompleteRequest), err)
   }
@@ -4409,15 +5434,15 @@ func (p *HistoryServiceRespondDecisionTaskCompletedResult) String() string {
 // Attributes:
 //  - HeartbeatRequest
 type HistoryServiceRecordActivityTaskHeartbeatArgs struct {
-  HeartbeatRequest *shared.RecordActivityTaskHeartbeatRequest `thrift:"heartbeatRequest,1" db:"heartbeatRequest" json:"heartbeatRequest"`
+  HeartbeatRequest *RecordActivityTaskHeartbeatWrappedRequest `thrift:"heartbeatRequest,1" db:"heartbeatRequest" json:"heartbeatRequest"`
 }
 
 func NewHistoryServiceRecordActivityTaskHeartbeatArgs() *HistoryServiceRecordActivityTaskHeartbeatArgs {
   return &HistoryServiceRecordActivityTaskHeartbeatArgs{}
 }
 
-var HistoryServiceRecordActivityTaskHeartbeatArgs_HeartbeatRequest_DEFAULT *shared.RecordActivityTaskHeartbeatRequest
-func (p *HistoryServiceRecordActivityTaskHeartbeatArgs) GetHeartbeatRequest() *shared.RecordActivityTaskHeartbeatRequest {
+var HistoryServiceRecordActivityTaskHeartbeatArgs_HeartbeatRequest_DEFAULT *RecordActivityTaskHeartbeatWrappedRequest
+func (p *HistoryServiceRecordActivityTaskHeartbeatArgs) GetHeartbeatRequest() *RecordActivityTaskHeartbeatWrappedRequest {
   if !p.IsSetHeartbeatRequest() {
     return HistoryServiceRecordActivityTaskHeartbeatArgs_HeartbeatRequest_DEFAULT
   }
@@ -4460,7 +5485,7 @@ func (p *HistoryServiceRecordActivityTaskHeartbeatArgs) Read(iprot thrift.TProto
 }
 
 func (p *HistoryServiceRecordActivityTaskHeartbeatArgs)  ReadField1(iprot thrift.TProtocol) error {
-  p.HeartbeatRequest = &shared.RecordActivityTaskHeartbeatRequest{}
+  p.HeartbeatRequest = &RecordActivityTaskHeartbeatWrappedRequest{}
   if err := p.HeartbeatRequest.Read(iprot); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.HeartbeatRequest), err)
   }
@@ -4751,15 +5776,15 @@ func (p *HistoryServiceRecordActivityTaskHeartbeatResult) String() string {
 // Attributes:
 //  - CompleteRequest
 type HistoryServiceRespondActivityTaskCompletedArgs struct {
-  CompleteRequest *shared.RespondActivityTaskCompletedRequest `thrift:"completeRequest,1" db:"completeRequest" json:"completeRequest"`
+  CompleteRequest *RespondActivityTaskCompletedWrappedRequest `thrift:"completeRequest,1" db:"completeRequest" json:"completeRequest"`
 }
 
 func NewHistoryServiceRespondActivityTaskCompletedArgs() *HistoryServiceRespondActivityTaskCompletedArgs {
   return &HistoryServiceRespondActivityTaskCompletedArgs{}
 }
 
-var HistoryServiceRespondActivityTaskCompletedArgs_CompleteRequest_DEFAULT *shared.RespondActivityTaskCompletedRequest
-func (p *HistoryServiceRespondActivityTaskCompletedArgs) GetCompleteRequest() *shared.RespondActivityTaskCompletedRequest {
+var HistoryServiceRespondActivityTaskCompletedArgs_CompleteRequest_DEFAULT *RespondActivityTaskCompletedWrappedRequest
+func (p *HistoryServiceRespondActivityTaskCompletedArgs) GetCompleteRequest() *RespondActivityTaskCompletedWrappedRequest {
   if !p.IsSetCompleteRequest() {
     return HistoryServiceRespondActivityTaskCompletedArgs_CompleteRequest_DEFAULT
   }
@@ -4802,7 +5827,7 @@ func (p *HistoryServiceRespondActivityTaskCompletedArgs) Read(iprot thrift.TProt
 }
 
 func (p *HistoryServiceRespondActivityTaskCompletedArgs)  ReadField1(iprot thrift.TProtocol) error {
-  p.CompleteRequest = &shared.RespondActivityTaskCompletedRequest{}
+  p.CompleteRequest = &RespondActivityTaskCompletedWrappedRequest{}
   if err := p.CompleteRequest.Read(iprot); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.CompleteRequest), err)
   }
@@ -5015,15 +6040,15 @@ func (p *HistoryServiceRespondActivityTaskCompletedResult) String() string {
 // Attributes:
 //  - FailRequest
 type HistoryServiceRespondActivityTaskFailedArgs struct {
-  FailRequest *shared.RespondActivityTaskFailedRequest `thrift:"failRequest,1" db:"failRequest" json:"failRequest"`
+  FailRequest *RespondActivityTaskFailedWrappedRequest `thrift:"failRequest,1" db:"failRequest" json:"failRequest"`
 }
 
 func NewHistoryServiceRespondActivityTaskFailedArgs() *HistoryServiceRespondActivityTaskFailedArgs {
   return &HistoryServiceRespondActivityTaskFailedArgs{}
 }
 
-var HistoryServiceRespondActivityTaskFailedArgs_FailRequest_DEFAULT *shared.RespondActivityTaskFailedRequest
-func (p *HistoryServiceRespondActivityTaskFailedArgs) GetFailRequest() *shared.RespondActivityTaskFailedRequest {
+var HistoryServiceRespondActivityTaskFailedArgs_FailRequest_DEFAULT *RespondActivityTaskFailedWrappedRequest
+func (p *HistoryServiceRespondActivityTaskFailedArgs) GetFailRequest() *RespondActivityTaskFailedWrappedRequest {
   if !p.IsSetFailRequest() {
     return HistoryServiceRespondActivityTaskFailedArgs_FailRequest_DEFAULT
   }
@@ -5066,7 +6091,7 @@ func (p *HistoryServiceRespondActivityTaskFailedArgs) Read(iprot thrift.TProtoco
 }
 
 func (p *HistoryServiceRespondActivityTaskFailedArgs)  ReadField1(iprot thrift.TProtocol) error {
-  p.FailRequest = &shared.RespondActivityTaskFailedRequest{}
+  p.FailRequest = &RespondActivityTaskFailedWrappedRequest{}
   if err := p.FailRequest.Read(iprot); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.FailRequest), err)
   }
@@ -5318,15 +6343,15 @@ func (p *HistoryServiceRespondActivityTaskFailedResult) String() string {
 // Attributes:
 //  - CanceledRequest
 type HistoryServiceRespondActivityTaskCanceledArgs struct {
-  CanceledRequest *shared.RespondActivityTaskCanceledRequest `thrift:"canceledRequest,1" db:"canceledRequest" json:"canceledRequest"`
+  CanceledRequest *RespondActivityTaskCanceledWrappedRequest `thrift:"canceledRequest,1" db:"canceledRequest" json:"canceledRequest"`
 }
 
 func NewHistoryServiceRespondActivityTaskCanceledArgs() *HistoryServiceRespondActivityTaskCanceledArgs {
   return &HistoryServiceRespondActivityTaskCanceledArgs{}
 }
 
-var HistoryServiceRespondActivityTaskCanceledArgs_CanceledRequest_DEFAULT *shared.RespondActivityTaskCanceledRequest
-func (p *HistoryServiceRespondActivityTaskCanceledArgs) GetCanceledRequest() *shared.RespondActivityTaskCanceledRequest {
+var HistoryServiceRespondActivityTaskCanceledArgs_CanceledRequest_DEFAULT *RespondActivityTaskCanceledWrappedRequest
+func (p *HistoryServiceRespondActivityTaskCanceledArgs) GetCanceledRequest() *RespondActivityTaskCanceledWrappedRequest {
   if !p.IsSetCanceledRequest() {
     return HistoryServiceRespondActivityTaskCanceledArgs_CanceledRequest_DEFAULT
   }
@@ -5369,7 +6394,7 @@ func (p *HistoryServiceRespondActivityTaskCanceledArgs) Read(iprot thrift.TProto
 }
 
 func (p *HistoryServiceRespondActivityTaskCanceledArgs)  ReadField1(iprot thrift.TProtocol) error {
-  p.CanceledRequest = &shared.RespondActivityTaskCanceledRequest{}
+  p.CanceledRequest = &RespondActivityTaskCanceledWrappedRequest{}
   if err := p.CanceledRequest.Read(iprot); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.CanceledRequest), err)
   }

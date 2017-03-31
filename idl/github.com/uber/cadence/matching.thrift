@@ -2,15 +2,25 @@ include "shared.thrift"
 
 namespace java com.uber.cadence
 
+struct PollForDecisionTaskWrappedRequest {
+  10: optional string domainUUID
+  20: optional shared.PollForDecisionTaskRequest pollRequest
+}
+
+struct PollForActivityTaskWrappedRequest {
+  10: optional string domainUUID
+  20: optional shared.PollForActivityTaskRequest pollRequest
+}
+
 struct AddDecisionTaskRequest {
-  5:  optional string domain
+  5:  optional string domainUUID
   10: optional shared.WorkflowExecution execution
   20: optional shared.TaskList taskList
   30: optional i64 (js.type = "Long") scheduleId
 }
 
 struct AddActivityTaskRequest {
-  5:  optional string domain
+  5:  optional string domainUUID
   10: optional shared.WorkflowExecution execution
   20: optional shared.TaskList taskList
   30: optional i64 (js.type = "Long") scheduleId
@@ -28,7 +38,7 @@ service MatchingService {
   * PollForDecisionTask is called by frontend to process DecisionTask from a specific taskList.  A
   * DecisionTask is dispatched to callers for active workflow executions, with pending decisions.
   **/
-  shared.PollForDecisionTaskResponse PollForDecisionTask(1: shared.PollForDecisionTaskRequest pollRequest)
+  shared.PollForDecisionTaskResponse PollForDecisionTask(1: PollForDecisionTaskWrappedRequest pollRequest)
     throws (
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,
@@ -38,7 +48,7 @@ service MatchingService {
   * PollForActivityTask is called by frontend to process ActivityTask from a specific taskList.  ActivityTask
   * is dispatched to callers whenever a ScheduleTask decision is made for a workflow execution.
   **/
-  shared.PollForActivityTaskResponse PollForActivityTask(1: shared.PollForActivityTaskRequest pollRequest)
+  shared.PollForActivityTaskResponse PollForActivityTask(1: PollForActivityTaskWrappedRequest pollRequest)
     throws (
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,

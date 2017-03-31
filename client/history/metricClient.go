@@ -23,7 +23,7 @@ func NewMetricClient(client Client, metricsClient metrics.Client) Client {
 }
 
 func (c *metricClient) StartWorkflowExecution(context thrift.Context,
-	request *workflow.StartWorkflowExecutionRequest) (*workflow.StartWorkflowExecutionResponse, error) {
+	request *h.StartWorkflowExecutionWrappedRequest) (*workflow.StartWorkflowExecutionResponse, error) {
 	c.metricsClient.IncCounter(metrics.HistoryClientStartWorkflowExecutionScope, metrics.CadenceRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.HistoryClientStartWorkflowExecutionScope, metrics.CadenceLatency)
@@ -38,7 +38,7 @@ func (c *metricClient) StartWorkflowExecution(context thrift.Context,
 }
 
 func (c *metricClient) GetWorkflowExecutionHistory(context thrift.Context,
-	request *workflow.GetWorkflowExecutionHistoryRequest) (*workflow.GetWorkflowExecutionHistoryResponse, error) {
+	request *h.GetWorkflowExecutionHistoryWrappedRequest) (*workflow.GetWorkflowExecutionHistoryResponse, error) {
 	c.metricsClient.IncCounter(metrics.HistoryClientGetWorkflowExecutionHistoryScope, metrics.CadenceRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.HistoryClientGetWorkflowExecutionHistoryScope, metrics.CadenceLatency)
@@ -83,7 +83,7 @@ func (c *metricClient) RecordActivityTaskStarted(context thrift.Context,
 }
 
 func (c *metricClient) RespondDecisionTaskCompleted(context thrift.Context,
-	request *workflow.RespondDecisionTaskCompletedRequest) error {
+	request *h.RespondDecisionTaskCompletedWrappedRequest) error {
 	c.metricsClient.IncCounter(metrics.HistoryClientRespondDecisionTaskCompletedScope, metrics.CadenceRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.HistoryClientRespondDecisionTaskCompletedScope, metrics.CadenceLatency)
@@ -98,7 +98,7 @@ func (c *metricClient) RespondDecisionTaskCompleted(context thrift.Context,
 }
 
 func (c *metricClient) RespondActivityTaskCompleted(context thrift.Context,
-	request *workflow.RespondActivityTaskCompletedRequest) error {
+	request *h.RespondActivityTaskCompletedWrappedRequest) error {
 	c.metricsClient.IncCounter(metrics.HistoryClientRespondActivityTaskCompletedScope, metrics.CadenceRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.HistoryClientRespondActivityTaskCompletedScope, metrics.CadenceLatency)
@@ -113,7 +113,7 @@ func (c *metricClient) RespondActivityTaskCompleted(context thrift.Context,
 }
 
 func (c *metricClient) RespondActivityTaskFailed(context thrift.Context,
-	request *workflow.RespondActivityTaskFailedRequest) error {
+	request *h.RespondActivityTaskFailedWrappedRequest) error {
 	c.metricsClient.IncCounter(metrics.HistoryClientRespondActivityTaskFailedScope, metrics.CadenceRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.HistoryClientRespondActivityTaskFailedScope, metrics.CadenceLatency)
@@ -128,7 +128,7 @@ func (c *metricClient) RespondActivityTaskFailed(context thrift.Context,
 }
 
 func (c *metricClient) RespondActivityTaskCanceled(context thrift.Context,
-	request *workflow.RespondActivityTaskCanceledRequest) error {
+	request *h.RespondActivityTaskCanceledWrappedRequest) error {
 	c.metricsClient.IncCounter(metrics.HistoryClientRespondActivityTaskCanceledScope, metrics.CadenceRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.HistoryClientRespondActivityTaskCanceledScope, metrics.CadenceLatency)
@@ -143,7 +143,7 @@ func (c *metricClient) RespondActivityTaskCanceled(context thrift.Context,
 }
 
 func (c *metricClient) RecordActivityTaskHeartbeat(context thrift.Context,
-	request *workflow.RecordActivityTaskHeartbeatRequest) (*workflow.RecordActivityTaskHeartbeatResponse, error) {
+	request *h.RecordActivityTaskHeartbeatWrappedRequest) (*workflow.RecordActivityTaskHeartbeatResponse, error) {
 	c.metricsClient.IncCounter(metrics.HistoryClientRecordActivityTaskHeartbeatScope, metrics.CadenceRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.HistoryClientRecordActivityTaskHeartbeatScope, metrics.CadenceLatency)
