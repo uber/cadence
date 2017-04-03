@@ -69,7 +69,7 @@ func (s *visibilityPersistenceSuite) TestBasicVisibility() {
 	})
 	s.Nil(err1)
 	s.Equal(1, len(resp.Executions))
-	s.Equal(workflowExecution.GetWorkflowId(), resp.Executions[0].WorkflowID)
+	s.Equal(workflowExecution.GetWorkflowId(), resp.Executions[0].Execution.GetWorkflowId())
 
 	err2 := s.VisibilityMgr.RecordWorkflowExecutionClosed(&RecordWorkflowExecutionClosedRequest{
 		DomainUUID:       testDomainUUID,
@@ -129,7 +129,7 @@ func (s *visibilityPersistenceSuite) TestVisibilityPagination() {
 	})
 	s.Nil(err2)
 	s.Equal(1, len(resp.Executions))
-	s.Equal(workflowExecution1.GetWorkflowId(), resp.Executions[0].WorkflowID)
+	s.Equal(workflowExecution1.GetWorkflowId(), resp.Executions[0].Execution.GetWorkflowId())
 
 	// Use token to get the second one
 	resp, err3 := s.VisibilityMgr.ListOpenWorkflowExecutions(&ListWorkflowExecutionsRequest{
@@ -139,7 +139,7 @@ func (s *visibilityPersistenceSuite) TestVisibilityPagination() {
 	})
 	s.Nil(err3)
 	s.Equal(1, len(resp.Executions))
-	s.Equal(workflowExecution2.GetWorkflowId(), resp.Executions[0].WorkflowID)
+	s.Equal(workflowExecution2.GetWorkflowId(), resp.Executions[0].Execution.GetWorkflowId())
 
 	// Now should get empty result by using token
 	resp, err4 := s.VisibilityMgr.ListOpenWorkflowExecutions(&ListWorkflowExecutionsRequest{

@@ -14,10 +14,8 @@ import (
 type (
 
 	// WorkflowExecutionRecord contains info about workflow execution
-	// TODO: move to Thrift
 	WorkflowExecutionRecord struct {
-		WorkflowID       string
-		RunID            string
+		Execution        s.WorkflowExecution
 		WorkflowTypeName string
 		StartTime        time.Time
 		CloseTime        time.Time

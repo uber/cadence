@@ -90,22 +90,18 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionStarted(
 
 func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 	request *RecordWorkflowExecutionClosedRequest) error {
+	batch := v.session.NewBatch(gocql.LoggedBatch)
+
 	// First, remove execution from the open table
-	query := v.session.Query(templateDeleteWorkflowExecutionStarted,
+	batch.Query(templateDeleteWorkflowExecutionStarted,
 		request.DomainUUID,
 		domainPartition,
 		request.Execution.GetWorkflowId(),
 		request.Execution.GetRunId(),
 	)
-	err := query.Exec()
-	if err != nil {
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("RecordWorkflowExecutionClosed operation failed. Error: %v", err),
-		}
-	}
 
 	// Next, add a row in the closed table. This row is kepy for defaultDeleteTTLSeconds
-	query = v.session.Query(templateCreateWorkflowExecutionClosed,
+	batch.Query(templateCreateWorkflowExecutionClosed,
 		request.DomainUUID,
 		domainPartition,
 		request.Execution.GetWorkflowId(),
@@ -115,7 +111,7 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 		request.WorkflowTypeName,
 		defaultDeleteTTLSeconds,
 	)
-	err = query.Exec()
+	err := v.session.ExecuteBatch(batch)
 	if err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("RecordWorkflowExecutionClosed operation failed. Error: %v", err),
@@ -191,9 +187,9 @@ func createWorkflowExecutionRecord(result map[string]interface{}) *WorkflowExecu
 	for k, v := range result {
 		switch k {
 		case "workflow_id":
-			record.WorkflowID = v.(string)
+			record.Execution.WorkflowId = common.StringPtr(v.(string))
 		case "run_id":
-			record.RunID = v.(gocql.UUID).String()
+			record.Execution.RunId = common.StringPtr(v.(gocql.UUID).String())
 		case "workflow_type_name":
 			record.WorkflowTypeName = v.(string)
 		case "start_time":
