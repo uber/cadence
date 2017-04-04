@@ -67,7 +67,7 @@ func (s *visibilityPersistenceSuite) TestBasicVisibility() {
 		DomainUUID:        testDomainUUID,
 		PageSize:          1,
 		EarliestStartTime: startTime,
-		OldestStartTime:   startTime,
+		LatestStartTime:   startTime,
 	})
 	s.Nil(err1)
 	s.Equal(1, len(resp.Executions))
@@ -86,7 +86,7 @@ func (s *visibilityPersistenceSuite) TestBasicVisibility() {
 		DomainUUID:        testDomainUUID,
 		PageSize:          1,
 		EarliestStartTime: startTime,
-		OldestStartTime:   startTime,
+		LatestStartTime:   startTime,
 	})
 	s.Nil(err3)
 	s.Equal(0, len(resp.Executions))
@@ -95,7 +95,7 @@ func (s *visibilityPersistenceSuite) TestBasicVisibility() {
 		DomainUUID:        testDomainUUID,
 		PageSize:          1,
 		EarliestStartTime: startTime,
-		OldestStartTime:   startTime,
+		LatestStartTime:   startTime,
 	})
 	s.Nil(err4)
 	s.Equal(1, len(resp.Executions))
@@ -136,7 +136,7 @@ func (s *visibilityPersistenceSuite) TestVisibilityPagination() {
 		DomainUUID:        testDomainUUID,
 		PageSize:          1,
 		EarliestStartTime: startTime1,
-		OldestStartTime:   startTime2,
+		LatestStartTime:   startTime2,
 	})
 	s.Nil(err2)
 	s.Equal(1, len(resp.Executions))
@@ -147,7 +147,7 @@ func (s *visibilityPersistenceSuite) TestVisibilityPagination() {
 		DomainUUID:        testDomainUUID,
 		PageSize:          1,
 		EarliestStartTime: startTime1,
-		OldestStartTime:   startTime2,
+		LatestStartTime:   startTime2,
 		NextPageToken:     resp.NextPageToken,
 	})
 	s.Nil(err3)
@@ -159,7 +159,7 @@ func (s *visibilityPersistenceSuite) TestVisibilityPagination() {
 		DomainUUID:        testDomainUUID,
 		PageSize:          1,
 		EarliestStartTime: startTime1,
-		OldestStartTime:   startTime2,
+		LatestStartTime:   startTime2,
 		NextPageToken:     resp.NextPageToken,
 	})
 	s.Nil(err4)
@@ -201,7 +201,7 @@ func (s *visibilityPersistenceSuite) TestFilteringByType() {
 			DomainUUID:        testDomainUUID,
 			PageSize:          2,
 			EarliestStartTime: startTime,
-			OldestStartTime:   startTime,
+			LatestStartTime:   startTime,
 		},
 		WorkflowTypeName: "visibility-workflow-1",
 	})
@@ -234,7 +234,7 @@ func (s *visibilityPersistenceSuite) TestFilteringByType() {
 			DomainUUID:        testDomainUUID,
 			PageSize:          2,
 			EarliestStartTime: startTime,
-			OldestStartTime:   startTime,
+			LatestStartTime:   startTime,
 		},
 		WorkflowTypeName: "visibility-workflow-2",
 	})
@@ -278,7 +278,7 @@ func (s *visibilityPersistenceSuite) TestFilteringByWorkflowID() {
 			DomainUUID:        testDomainUUID,
 			PageSize:          2,
 			EarliestStartTime: startTime,
-			OldestStartTime:   startTime,
+			LatestStartTime:   startTime,
 		},
 		WorkflowID: "visibility-filtering-test1",
 	})
@@ -311,7 +311,7 @@ func (s *visibilityPersistenceSuite) TestFilteringByWorkflowID() {
 			DomainUUID:        testDomainUUID,
 			PageSize:          2,
 			EarliestStartTime: startTime,
-			OldestStartTime:   startTime,
+			LatestStartTime:   startTime,
 		},
 		WorkflowID: "visibility-filtering-test2",
 	})

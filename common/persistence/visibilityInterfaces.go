@@ -44,7 +44,7 @@ type (
 	ListWorkflowExecutionsRequest struct {
 		DomainUUID        string
 		EarliestStartTime time.Time
-		OldestStartTime   time.Time
+		LatestStartTime   time.Time
 		// Maximum number of workflow executions per page
 		PageSize int
 		// Token to continue reading next page of workflow executions.

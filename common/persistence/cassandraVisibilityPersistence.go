@@ -162,7 +162,7 @@ func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutions(
 		request.DomainUUID,
 		domainPartition,
 		request.EarliestStartTime,
-		request.OldestStartTime)
+		request.LatestStartTime)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
 		// TODO: should return a bad request error if the token is invalid
@@ -197,7 +197,7 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutions(
 		request.DomainUUID,
 		domainPartition,
 		request.EarliestStartTime,
-		request.OldestStartTime)
+		request.LatestStartTime)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
 		// TODO: should return a bad request error if the token is invalid
@@ -232,7 +232,7 @@ func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutionsByType(
 		request.DomainUUID,
 		domainPartition,
 		request.EarliestStartTime,
-		request.OldestStartTime,
+		request.LatestStartTime,
 		request.WorkflowTypeName)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
@@ -268,7 +268,7 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByType(
 		request.DomainUUID,
 		domainPartition,
 		request.EarliestStartTime,
-		request.OldestStartTime,
+		request.LatestStartTime,
 		request.WorkflowTypeName)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
@@ -304,7 +304,7 @@ func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutionsByWorkflowID(
 		request.DomainUUID,
 		domainPartition,
 		request.EarliestStartTime,
-		request.OldestStartTime,
+		request.LatestStartTime,
 		request.WorkflowID)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
@@ -340,7 +340,7 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByWorkflowI
 		request.DomainUUID,
 		domainPartition,
 		request.EarliestStartTime,
-		request.OldestStartTime,
+		request.LatestStartTime,
 		request.WorkflowID)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
