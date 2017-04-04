@@ -61,7 +61,8 @@ const (
 		`workflow_id: ?, ` +
 		`run_id: ?, ` +
 		`task_list: ?, ` +
-		`history: ?, ` +
+		`workflow_type_name: ?, ` +
+		`decision_task_timeout: ?, ` +
 		`execution_context: ?, ` +
 		`state: ?, ` +
 		`next_event_id: ?, ` +
@@ -94,7 +95,9 @@ const (
 
 	templateActivityInfoType = `{` +
 		`schedule_id: ?, ` +
+		`scheduled_event: ?, ` +
 		`started_id: ?, ` +
+		`started_event: ?, ` +
 		`activity_id: ?, ` +
 		`request_id: ?, ` +
 		`details: ?, ` +
@@ -167,15 +170,7 @@ const (
 		`WHERE shard_id = ? ` +
 		`IF range_id = ?`
 
-	templateGetWorkflowExecutionQuery = `SELECT execution ` +
-		`FROM executions ` +
-		`WHERE shard_id = ? ` +
-		`and type = ? ` +
-		`and workflow_id = ? ` +
-		`and run_id = ? ` +
-		`and task_id = ?`
-
-	templateGetWorkflowMutableStateQuery = `SELECT execution, activity_map, timer_map ` +
+	templateGetWorkflowExecutionQuery = `SELECT execution, activity_map, timer_map ` +
 		`FROM executions ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
@@ -245,8 +240,7 @@ const (
 		`and type = ? ` +
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
-		`and task_id > ? ` +
-		`and task_id <= ? LIMIT ?`
+		`and task_id > ? LIMIT ?`
 
 	templateCompleteTransferTaskQuery = `DELETE FROM executions ` +
 		`WHERE shard_id = ? ` +
@@ -511,7 +505,8 @@ func (d *cassandraPersistence) CreateWorkflowExecution(request *CreateWorkflowEx
 		request.Execution.GetWorkflowId(),
 		request.Execution.GetRunId(),
 		request.TaskList,
-		request.History,
+		request.WorkflowTypeName,
+		request.DecisionTimeoutValue,
 		request.ExecutionContext,
 		WorkflowStateCreated,
 		request.NextEventID,
@@ -597,8 +592,8 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *GetWorkflowExecutio
 	if err := query.MapScan(result); err != nil {
 		if err == gocql.ErrNotFound {
 			return nil, &workflow.EntityNotExistsError{
-				Message: fmt.Sprintf("Workflow execution not found.  WorkflowId: %v, RunId: %v", execution.GetWorkflowId(),
-					execution.GetRunId()),
+				Message: fmt.Sprintf("Workflow execution not found.  WorkflowId: %v, RunId: %v",
+					execution.GetWorkflowId(), execution.GetRunId()),
 			}
 		}
 
@@ -607,9 +602,27 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *GetWorkflowExecutio
 		}
 	}
 
+	state := &WorkflowMutableState{}
 	info := createWorkflowExecutionInfo(result["execution"].(map[string]interface{}))
+	state.ExecutionInfo = info
 
-	return &GetWorkflowExecutionResponse{ExecutionInfo: info}, nil
+	activityInfos := make(map[int64]*ActivityInfo)
+	aMap := result["activity_map"].(map[int64]map[string]interface{})
+	for key, value := range aMap {
+		info := createActivityInfo(value)
+		activityInfos[key] = info
+	}
+	state.ActivitInfos = activityInfos
+
+	timerInfos := make(map[string]*TimerInfo)
+	tMap := result["timer_map"].(map[string]map[string]interface{})
+	for key, value := range tMap {
+		info := createTimerInfo(value)
+		timerInfos[key] = info
+	}
+	state.TimerInfos = timerInfos
+
+	return &GetWorkflowExecutionResponse{State: state}, nil
 }
 
 func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowExecutionRequest) error {
@@ -621,7 +634,8 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 		executionInfo.WorkflowID,
 		executionInfo.RunID,
 		executionInfo.TaskList,
-		executionInfo.History,
+		executionInfo.WorkflowTypeName,
+		executionInfo.DecisionTimeoutValue,
 		executionInfo.ExecutionContext,
 		executionInfo.State,
 		executionInfo.NextEventID,
@@ -716,7 +730,8 @@ func (d *cassandraPersistence) DeleteWorkflowExecution(request *DeleteWorkflowEx
 		info.WorkflowID,
 		info.RunID,
 		info.TaskList,
-		info.History,
+		info.WorkflowTypeName,
+		info.DecisionTimeoutValue,
 		info.ExecutionContext,
 		info.State,
 		info.NextEventID,
@@ -750,7 +765,6 @@ func (d *cassandraPersistence) GetTransferTasks(request *GetTransferTasksRequest
 		rowTypeTransferWorkflowID,
 		rowTypeTransferRunID,
 		request.ReadLevel,
-		request.MaxReadLevel,
 		request.BatchSize)
 
 	iter := query.Iter()
@@ -919,22 +933,23 @@ func (d *cassandraPersistence) UpdateTaskList(request *UpdateTaskListRequest) (*
 }
 
 // From TaskManager interface
-func (d *cassandraPersistence) CreateTask(request *CreateTaskRequest) (*CreateTaskResponse, error) {
+func (d *cassandraPersistence) CreateTasks(request *CreateTasksRequest) (*CreateTasksResponse, error) {
+	batch := d.session.NewBatch(gocql.LoggedBatch)
 	taskList := request.TaskList
-	scheduleID := request.Data.ScheduleID
 	taskListType := request.TaskListType
 
-	// Batch is used to include conditional update on range_id
-	batch := d.session.NewBatch(gocql.LoggedBatch)
+	for _, task := range request.Tasks {
+		scheduleID := task.Data.ScheduleID
 
-	batch.Query(templateCreateTaskQuery,
-		taskList,
-		taskListType,
-		rowTypeTask,
-		request.TaskID,
-		request.Execution.GetWorkflowId(),
-		request.Execution.GetRunId(),
-		scheduleID)
+		batch.Query(templateCreateTaskQuery,
+			taskList,
+			taskListType,
+			rowTypeTask,
+			task.TaskID,
+			task.Execution.GetWorkflowId(),
+			task.Execution.GetRunId(),
+			scheduleID)
+	}
 
 	// The following query is used to ensure that range_id didn't change
 	batch.Query(templateUpdateTaskListRangeOnlyQuery,
@@ -957,7 +972,8 @@ func (d *cassandraPersistence) CreateTask(request *CreateTaskRequest) (*CreateTa
 				taskList, taskListType, request.RangeID, rangeID),
 		}
 	}
-	return &CreateTaskResponse{}, nil
+
+	return &CreateTasksResponse{}, nil
 }
 
 // From TaskManager interface
@@ -1010,44 +1026,20 @@ PopulateTasks:
 
 // From TaskManager interface
 func (d *cassandraPersistence) CompleteTask(request *CompleteTaskRequest) error {
-	batch := d.session.NewBatch(gocql.LoggedBatch)
 	tli := request.TaskList
-	batch.Query(templateCompleteTaskQuery,
+	query := d.session.Query(templateCompleteTaskQuery,
 		tli.Name,
 		tli.TaskType,
 		rowTypeTask,
 		request.TaskID)
-	batch.Query(templateUpdateTaskListQuery,
-		tli.RangeID,
-		tli.Name,
-		tli.TaskType,
-		tli.AckLevel,
-		tli.Name,
-		tli.TaskType,
-		rowTypeTaskList,
-		taskListTaskID,
-		tli.RangeID,
-	)
 
-	previous := make(map[string]interface{})
-	applied, _, err := d.session.MapExecuteBatchCAS(batch, previous)
+	err := query.Exec()
 	if err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("CompleteTask operation failed. Error: %v", err),
 		}
 	}
 
-	if !applied {
-		var columns []string
-		for k, v := range previous {
-			columns = append(columns, fmt.Sprintf("%s=%v", k, v))
-		}
-
-		return &ConditionFailedError{
-			Msg: fmt.Sprintf("Failed to complete task. columns: (%v)",
-				strings.Join(columns, ",")),
-		}
-	}
 	return nil
 }
 
@@ -1096,56 +1088,6 @@ PopulateTasks:
 	}
 
 	return response, nil
-}
-
-func (d *cassandraPersistence) GetWorkflowMutableState(request *GetWorkflowMutableStateRequest) (
-	*GetWorkflowMutableStateResponse, error) {
-	query := d.session.Query(templateGetWorkflowMutableStateQuery,
-		d.shardID,
-		rowTypeExecution,
-		request.WorkflowID,
-		request.RunID,
-		rowTypeExecutionTaskID)
-
-	result := make(map[string]interface{})
-	if err := query.MapScan(result); err != nil {
-		if err == gocql.ErrNotFound {
-			return nil, &workflow.EntityNotExistsError{
-				Message: fmt.Sprintf("Workflow execution not found.  WorkflowId: %v, RunId: %v",
-					request.WorkflowID, request.RunID),
-			}
-		}
-
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("GetWorkflowExecution operation failed. Error: %v", err),
-		}
-	}
-
-	state := &WorkflowMutableState{}
-
-	ei := createWorkflowExecutionInfo(result["execution"].(map[string]interface{}))
-	// TODO: Removing this piece of code when history is moved out of execution info.
-	// This is just a safe way upstream mutable state doesn't hold on to it.
-	ei.History = nil
-	state.ExecutionInfo = ei
-
-	activityInfos := make(map[int64]*ActivityInfo)
-	aMap := result["activity_map"].(map[int64]map[string]interface{})
-	for key, value := range aMap {
-		info := createActivityInfo(value)
-		activityInfos[key] = info
-	}
-	state.ActivitInfos = activityInfos
-
-	timerInfos := make(map[string]*TimerInfo)
-	tMap := result["timer_map"].(map[string]map[string]interface{})
-	for key, value := range tMap {
-		info := createTimerInfo(value)
-		timerInfos[key] = info
-	}
-	state.TimerInfos = timerInfos
-
-	return &GetWorkflowMutableStateResponse{State: state}, nil
 }
 
 func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferTasks []Task, workflowID string,
@@ -1230,7 +1172,9 @@ func (d *cassandraPersistence) updateActivityInfos(batch *gocql.Batch, activityI
 		batch.Query(templateUpdateActivityInfoQuery,
 			a.ScheduleID,
 			a.ScheduleID,
+			a.ScheduledEvent,
 			a.StartedID,
+			a.StartedEvent,
 			a.ActivityID,
 			a.RequestID,
 			a.Details,
@@ -1326,8 +1270,10 @@ func createWorkflowExecutionInfo(result map[string]interface{}) *WorkflowExecuti
 			info.RunID = v.(gocql.UUID).String()
 		case "task_list":
 			info.TaskList = v.(string)
-		case "history":
-			info.History = v.([]byte)
+		case "workflow_type_name":
+			info.WorkflowTypeName = v.(string)
+		case "decision_task_timeout":
+			info.DecisionTimeoutValue = int32(v.(int))
 		case "execution_context":
 			info.ExecutionContext = v.([]byte)
 		case "state":
@@ -1382,8 +1328,12 @@ func createActivityInfo(result map[string]interface{}) *ActivityInfo {
 		switch k {
 		case "schedule_id":
 			info.ScheduleID = v.(int64)
+		case "scheduled_event":
+			info.ScheduledEvent = v.([]byte)
 		case "started_id":
 			info.StartedID = v.(int64)
+		case "started_event":
+			info.StartedEvent = v.([]byte)
 		case "activity_id":
 			info.ActivityID = v.(string)
 		case "request_id":

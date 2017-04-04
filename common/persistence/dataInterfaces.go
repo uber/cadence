@@ -70,7 +70,8 @@ type (
 		WorkflowID           string
 		RunID                string
 		TaskList             string
-		History              []byte
+		WorkflowTypeName     string
+		DecisionTimeoutValue int32
 		ExecutionContext     []byte
 		State                int
 		NextEventID          int64
@@ -123,6 +124,7 @@ type (
 	Task interface {
 		GetType() int
 		GetTaskID() int64
+		SetTaskID(id int64)
 	}
 
 	// ActivityTask identifies a transfer task for activity
@@ -173,7 +175,9 @@ type (
 	// ActivityInfo details.
 	ActivityInfo struct {
 		ScheduleID             int64
+		ScheduledEvent         []byte
 		StartedID              int64
+		StartedEvent           []byte
 		ActivityID             string
 		RequestID              string
 		Details                []byte
@@ -219,7 +223,8 @@ type (
 		RequestID                   string
 		Execution                   workflow.WorkflowExecution
 		TaskList                    string
-		History                     []byte
+		WorkflowTypeName            string
+		DecisionTimeoutValue        int32
 		ExecutionContext            []byte
 		NextEventID                 int64
 		LastProcessedEvent          int64
@@ -243,7 +248,7 @@ type (
 
 	// GetWorkflowExecutionResponse is the response to GetworkflowExecutionRequest
 	GetWorkflowExecutionResponse struct {
-		ExecutionInfo *WorkflowExecutionInfo
+		State *WorkflowMutableState
 	}
 
 	// UpdateWorkflowExecutionRequest is used to update a workflow execution
@@ -269,9 +274,8 @@ type (
 
 	// GetTransferTasksRequest is used to read tasks from the transfer task queue
 	GetTransferTasksRequest struct {
-		ReadLevel    int64
-		MaxReadLevel int64
-		BatchSize    int
+		ReadLevel int64
+		BatchSize int
 	}
 
 	// GetTransferTasksResponse is the response to GetTransferTasksRequest
@@ -309,18 +313,23 @@ type (
 	UpdateTaskListResponse struct {
 	}
 
-	// CreateTaskRequest is used to create a new task for a workflow exectution
-	CreateTaskRequest struct {
-		Execution    workflow.WorkflowExecution
+	// CreateTasksRequest is used to create a new task for a workflow exectution
+	CreateTasksRequest struct {
 		TaskList     string
 		TaskListType int
-		Data         *TaskInfo
-		TaskID       int64
 		RangeID      int64
+		Tasks        []*CreateTaskInfo
 	}
 
-	// CreateTaskResponse is the response to CreateTaskRequest
-	CreateTaskResponse struct {
+	// CreateTaskInfo describes a task to be created in CreateTasksRequest
+	CreateTaskInfo struct {
+		Execution workflow.WorkflowExecution
+		Data      *TaskInfo
+		TaskID    int64
+	}
+
+	// CreateTasksResponse is the response to CreateTasksRequest
+	CreateTasksResponse struct {
 	}
 
 	// GetTasksRequest is used to retrieve tasks of a task list
@@ -357,16 +366,39 @@ type (
 		Timers []*TimerTaskInfo
 	}
 
-	// GetWorkflowMutableStateRequest is used to retrieve the info of a workflow execution
-	GetWorkflowMutableStateRequest struct {
-		WorkflowID     string
-		RunID          string
-		IncludeDetails bool
+	// AppendHistoryEventsRequest is used to append new events to workflow execution history
+	AppendHistoryEventsRequest struct {
+		Execution     workflow.WorkflowExecution
+		FirstEventID  int64
+		RangeID       int64
+		TransactionID int64
+		Events        []byte
+		Overwrite     bool
 	}
 
-	// GetWorkflowMutableStateResponse is the response to GetWorkflowMutableStateRequest
-	GetWorkflowMutableStateResponse struct {
-		State *WorkflowMutableState
+	// GetWorkflowExecutionHistoryRequest is used to retrieve history of a workflow execution
+	GetWorkflowExecutionHistoryRequest struct {
+		Execution workflow.WorkflowExecution
+		// Get the history events upto NextEventID.  Not Inclusive.
+		NextEventID int64
+		// Maximum number of history append transactions per page
+		PageSize int
+		// Token to continue reading next page of history append transactions.  Pass in empty slice for first page
+		NextPageToken []byte
+	}
+
+	// GetWorkflowExecutionHistoryResponse is the response to GetWorkflowExecutionHistoryRequest
+	GetWorkflowExecutionHistoryResponse struct {
+		// Slice of history append transactioin payload
+		Events [][]byte
+		// Token to read next page if there are more events beyond page size.
+		// Use this to set NextPageToken on GetworkflowExecutionHistoryRequest to read the next page.
+		NextPageToken []byte
+	}
+
+	// DeleteWorkflowExecutionHistoryRequest is used to delete workflow execution history
+	DeleteWorkflowExecutionHistoryRequest struct {
+		Execution workflow.WorkflowExecution
 	}
 
 	// ShardManager is used to manage all shards
@@ -388,9 +420,6 @@ type (
 		// Timer related methods.
 		GetTimerIndexTasks(request *GetTimerIndexTasksRequest) (*GetTimerIndexTasksResponse, error)
 		CompleteTimerTask(request *CompleteTimerTaskRequest) error
-
-		// Workflow mutable state operations.
-		GetWorkflowMutableState(request *GetWorkflowMutableStateRequest) (*GetWorkflowMutableStateResponse, error)
 	}
 
 	// ExecutionManagerFactory creates an instance of ExecutionManager for a given shard
@@ -402,9 +431,18 @@ type (
 	TaskManager interface {
 		LeaseTaskList(request *LeaseTaskListRequest) (*LeaseTaskListResponse, error)
 		UpdateTaskList(request *UpdateTaskListRequest) (*UpdateTaskListResponse, error)
-		CreateTask(request *CreateTaskRequest) (*CreateTaskResponse, error)
+		CreateTasks(request *CreateTasksRequest) (*CreateTasksResponse, error)
 		GetTasks(request *GetTasksRequest) (*GetTasksResponse, error)
 		CompleteTask(request *CompleteTaskRequest) error
+	}
+
+	// HistoryManager is used to manage Workflow Execution History
+	HistoryManager interface {
+		AppendHistoryEvents(request *AppendHistoryEventsRequest) error
+		// GetWorkflowExecutionHistory retrieves the paginated list of history events for given execution
+		GetWorkflowExecutionHistory(request *GetWorkflowExecutionHistoryRequest) (*GetWorkflowExecutionHistoryResponse,
+			error)
+		DeleteWorkflowExecutionHistory(request *DeleteWorkflowExecutionHistoryRequest) error
 	}
 )
 
@@ -434,6 +472,11 @@ func (a *ActivityTask) GetTaskID() int64 {
 	return a.TaskID
 }
 
+// SetTaskID sets the sequence ID of the activity task
+func (a *ActivityTask) SetTaskID(id int64) {
+	a.TaskID = id
+}
+
 // GetType returns the type of the decision task
 func (d *DecisionTask) GetType() int {
 	return TransferTaskTypeDecisionTask
@@ -442,6 +485,11 @@ func (d *DecisionTask) GetType() int {
 // GetTaskID returns the sequence ID of the decision task.
 func (d *DecisionTask) GetTaskID() int64 {
 	return d.TaskID
+}
+
+// SetTaskID sets the sequence ID of the decision task
+func (d *DecisionTask) SetTaskID(id int64) {
+	d.TaskID = id
 }
 
 // GetType returns the type of the delete execution task
@@ -454,6 +502,11 @@ func (a *DeleteExecutionTask) GetTaskID() int64 {
 	return a.TaskID
 }
 
+// SetTaskID sets the sequence ID of the delete execution task
+func (a *DeleteExecutionTask) SetTaskID(id int64) {
+	a.TaskID = id
+}
+
 // GetType returns the type of the timer task
 func (d *DecisionTimeoutTask) GetType() int {
 	return TaskTypeDecisionTimeout
@@ -462,6 +515,11 @@ func (d *DecisionTimeoutTask) GetType() int {
 // GetTaskID returns the sequence ID.
 func (d *DecisionTimeoutTask) GetTaskID() int64 {
 	return d.TaskID
+}
+
+// SetTaskID sets the sequence ID.
+func (d *DecisionTimeoutTask) SetTaskID(id int64) {
+	d.TaskID = id
 }
 
 // GetType returns the type of the timer task
@@ -474,12 +532,22 @@ func (a *ActivityTimeoutTask) GetTaskID() int64 {
 	return a.TaskID
 }
 
+// SetTaskID sets the sequence ID.
+func (a *ActivityTimeoutTask) SetTaskID(id int64) {
+	a.TaskID = id
+}
+
 // GetType returns the type of the timer task
 func (u *UserTimerTask) GetType() int {
 	return TaskTypeUserTimer
 }
 
-// GetTaskID returns the sequence ID of the decision task.
+// GetTaskID returns the sequence ID of the timer task.
 func (u *UserTimerTask) GetTaskID() int64 {
 	return u.TaskID
+}
+
+// SetTaskID sets the sequence ID of the timer task.
+func (u *UserTimerTask) SetTaskID(id int64) {
+	u.TaskID = id
 }

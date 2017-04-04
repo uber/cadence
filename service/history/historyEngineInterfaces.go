@@ -11,7 +11,8 @@ type (
 	Engine interface {
 		common.Daemon
 		// TODO: Convert workflow.WorkflowExecution to pointer all over the place
-		StartWorkflowExecution(request *workflow.StartWorkflowExecutionRequest) (*workflow.StartWorkflowExecutionResponse, error)
+		StartWorkflowExecution(request *workflow.StartWorkflowExecutionRequest) (*workflow.StartWorkflowExecutionResponse,
+			error)
 		GetWorkflowExecutionHistory(
 			request *workflow.GetWorkflowExecutionHistoryRequest) (*workflow.GetWorkflowExecutionHistoryResponse, error)
 		RecordDecisionTaskStarted(request *h.RecordDecisionTaskStartedRequest) (*h.RecordDecisionTaskStartedResponse, error)
@@ -35,9 +36,13 @@ type (
 		Deserialize(data []byte) ([]*workflow.HistoryEvent, error)
 	}
 
+	historyEventSerializer interface {
+		Serialize(event *workflow.HistoryEvent) ([]byte, error)
+		Deserialize(data []byte) (*workflow.HistoryEvent, error)
+	}
+
 	transferQueueProcessor interface {
 		common.Daemon
-		UpdateMaxAllowedReadLevel(maxAllowedReadLevel int64)
 	}
 
 	timerQueueProcessor interface {
