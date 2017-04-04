@@ -74,6 +74,7 @@ type (
 
 	// WorkflowExecutionInfo describes a workflow execution
 	WorkflowExecutionInfo struct {
+		DomainID             string
 		WorkflowID           string
 		RunID                string
 		TaskList             string
@@ -93,6 +94,7 @@ type (
 
 	// TransferTaskInfo describes a transfer task
 	TransferTaskInfo struct {
+		DomainID   string
 		WorkflowID string
 		RunID      string
 		TaskID     int64
@@ -103,6 +105,7 @@ type (
 
 	// TimerTaskInfo describes a timer task.
 	TimerTaskInfo struct {
+		DomainID    string
 		WorkflowID  string
 		RunID       string
 		TaskID      int64
@@ -113,6 +116,7 @@ type (
 
 	// TaskListInfo describes a state of a task list implementation.
 	TaskListInfo struct {
+		DomainID string
 		Name     string
 		TaskType int
 		RangeID  int64
@@ -121,6 +125,7 @@ type (
 
 	// TaskInfo describes either activity or decision task
 	TaskInfo struct {
+		DomainID   string
 		WorkflowID string
 		RunID      string
 		TaskID     int64
@@ -137,6 +142,7 @@ type (
 	// ActivityTask identifies a transfer task for activity
 	ActivityTask struct {
 		TaskID     int64
+		DomainID   string
 		TaskList   string
 		ScheduleID int64
 	}
@@ -144,6 +150,7 @@ type (
 	// DecisionTask identifies a transfer task for decision
 	DecisionTask struct {
 		TaskID     int64
+		DomainID   string
 		TaskList   string
 		ScheduleID int64
 	}
@@ -228,6 +235,7 @@ type (
 	// CreateWorkflowExecutionRequest is used to write a new workflow execution
 	CreateWorkflowExecutionRequest struct {
 		RequestID                   string
+		DomainID                    string
 		Execution                   workflow.WorkflowExecution
 		TaskList                    string
 		WorkflowTypeName            string
@@ -250,6 +258,7 @@ type (
 
 	// GetWorkflowExecutionRequest is used to retrieve the info of a workflow execution
 	GetWorkflowExecutionRequest struct {
+		DomainID  string
 		Execution workflow.WorkflowExecution
 	}
 
@@ -302,6 +311,7 @@ type (
 
 	// LeaseTaskListRequest is used to request lease of a task list
 	LeaseTaskListRequest struct {
+		DomainID string
 		TaskList string
 		TaskType int
 	}
@@ -322,6 +332,7 @@ type (
 
 	// CreateTasksRequest is used to create a new task for a workflow exectution
 	CreateTasksRequest struct {
+		DomainID     string
 		TaskList     string
 		TaskListType int
 		RangeID      int64
@@ -341,6 +352,7 @@ type (
 
 	// GetTasksRequest is used to retrieve tasks of a task list
 	GetTasksRequest struct {
+		DomainID     string
 		TaskList     string
 		TaskType     int
 		ReadLevel    int64
@@ -375,6 +387,7 @@ type (
 
 	// AppendHistoryEventsRequest is used to append new events to workflow execution history
 	AppendHistoryEventsRequest struct {
+		DomainID      string
 		Execution     workflow.WorkflowExecution
 		FirstEventID  int64
 		RangeID       int64
@@ -385,6 +398,7 @@ type (
 
 	// GetWorkflowExecutionHistoryRequest is used to retrieve history of a workflow execution
 	GetWorkflowExecutionHistoryRequest struct {
+		DomainID  string
 		Execution workflow.WorkflowExecution
 		// Get the history events upto NextEventID.  Not Inclusive.
 		NextEventID int64
@@ -405,6 +419,7 @@ type (
 
 	// DeleteWorkflowExecutionHistoryRequest is used to delete workflow execution history
 	DeleteWorkflowExecutionHistoryRequest struct {
+		DomainID  string
 		Execution workflow.WorkflowExecution
 	}
 

@@ -88,11 +88,12 @@ workerPump:
 }
 
 func (s *transferQueueProcessorSuite) TestManyTransferTasks() {
+	domainID := "c867e7d6-0f0f-41df-a59c-1cd3eb1436f5"
 	workflowExecution := workflow.WorkflowExecution{WorkflowId: common.StringPtr("many-transfertasks-test"),
 		RunId: common.StringPtr("57d5f005-bdaa-42a5-a1c5-b9c45d8699a9")}
 	taskList := "many-transfertasks-queue"
 	activityTaskScheduleIds := []int64{2, 3, 4, 5, 6}
-	task0, err0 := s.CreateWorkflowExecutionManyTasks(workflowExecution, taskList, nil, 7, 0, nil,
+	task0, err0 := s.CreateWorkflowExecutionManyTasks(domainID, workflowExecution, taskList, nil, 7, 0, nil,
 		activityTaskScheduleIds)
 	s.Nil(err0, "No error expected.")
 	s.NotEmpty(task0, "Expected non empty task identifier.")
