@@ -35,6 +35,7 @@ type matchingEngineImpl struct {
 }
 
 type taskListID struct {
+	domainID     string
 	taskListName string
 	taskType     int
 }
@@ -157,15 +158,17 @@ func (e *matchingEngineImpl) removeTaskListManager(id *taskListID) {
 
 // AddDecisionTask either delivers task directly to waiting poller or save it into task list persistence.
 func (e *matchingEngineImpl) AddDecisionTask(addRequest *m.AddDecisionTaskRequest) error {
+	domainID := addRequest.GetDomainUUID()
 	taskListName := addRequest.GetTaskList().GetName()
 	e.logger.Debugf("Received AddDecisionTask for taskList=%v, WorkflowID=%v, RunID=%v",
 		addRequest.TaskList.Name, addRequest.Execution.WorkflowId, addRequest.Execution.RunId)
-	taskList := newTaskListID(taskListName, persistence.TaskListTypeDecision)
+	taskList := newTaskListID(domainID, taskListName, persistence.TaskListTypeDecision)
 	tlMgr, err := e.getTaskListManager(taskList)
 	if err != nil {
 		return err
 	}
 	taskInfo := &persistence.TaskInfo{
+		DomainID:   domainID,
 		RunID:      addRequest.GetExecution().GetRunId(),
 		WorkflowID: addRequest.GetExecution().GetWorkflowId(),
 		ScheduleID: addRequest.GetScheduleId(),
@@ -175,15 +178,17 @@ func (e *matchingEngineImpl) AddDecisionTask(addRequest *m.AddDecisionTaskReques
 
 // AddActivityTask either delivers task directly to waiting poller or save it into task list persistence.
 func (e *matchingEngineImpl) AddActivityTask(addRequest *m.AddActivityTaskRequest) error {
+	domainID := addRequest.GetDomainUUID()
 	taskListName := addRequest.GetTaskList().GetName()
 	e.logger.Debugf("Received AddActivityTask for taskList=%v WorkflowID=%v, RunID=%v",
 		taskListName, addRequest.Execution.WorkflowId, addRequest.Execution.RunId)
-	taskList := newTaskListID(taskListName, persistence.TaskListTypeActivity)
+	taskList := newTaskListID(domainID, taskListName, persistence.TaskListTypeActivity)
 	tlMgr, err := e.getTaskListManager(taskList)
 	if err != nil {
 		return err
 	}
 	taskInfo := &persistence.TaskInfo{
+		DomainID:   domainID,
 		RunID:      addRequest.GetExecution().GetRunId(),
 		WorkflowID: addRequest.GetExecution().GetWorkflowId(),
 		ScheduleID: addRequest.GetScheduleId(),
@@ -192,8 +197,10 @@ func (e *matchingEngineImpl) AddActivityTask(addRequest *m.AddActivityTaskReques
 }
 
 // PollForDecisionTask tries to get the decision task using exponential backoff.
-func (e *matchingEngineImpl) PollForDecisionTask(ctx thrift.Context, request *workflow.PollForDecisionTaskRequest) (
+func (e *matchingEngineImpl) PollForDecisionTask(ctx thrift.Context, req *m.PollForDecisionTaskRequest) (
 	*workflow.PollForDecisionTaskResponse, error) {
+	domainID := req.GetDomainUUID()
+	request := req.GetPollRequest()
 	taskListName := request.GetTaskList().GetName()
 	e.logger.Debugf("Received PollForDecisionTask for taskList=%v", taskListName)
 pollLoop:
@@ -203,7 +210,7 @@ pollLoop:
 			return nil, err
 		}
 
-		taskList := newTaskListID(taskListName, persistence.TaskListTypeDecision)
+		taskList := newTaskListID(domainID, taskListName, persistence.TaskListTypeDecision)
 		tCtx, err := e.getTask(ctx, taskList)
 		if err != nil {
 			// TODO: Is empty poll the best reply for errPumpClosed?
@@ -240,8 +247,10 @@ pollLoop:
 // pollForActivityTaskOperation takes one task from the task manager, update workflow execution history, mark task as
 // completed and return it to user. If a task from task manager is already started, return an empty response, without
 // error. Timeouts handled by the timer queue.
-func (e *matchingEngineImpl) PollForActivityTask(ctx thrift.Context, request *workflow.PollForActivityTaskRequest) (
+func (e *matchingEngineImpl) PollForActivityTask(ctx thrift.Context, req *m.PollForActivityTaskRequest) (
 	*workflow.PollForActivityTaskResponse, error) {
+	domainID := req.GetDomainUUID()
+	request := req.GetPollRequest()
 	taskListName := request.GetTaskList().GetName()
 	e.logger.Debugf("Received PollForActivityTask for taskList=%v", taskListName)
 pollLoop:
@@ -251,7 +260,7 @@ pollLoop:
 			return nil, err
 		}
 
-		taskList := newTaskListID(taskListName, persistence.TaskListTypeActivity)
+		taskList := newTaskListID(domainID, taskListName, persistence.TaskListTypeActivity)
 		tCtx, err := e.getTask(ctx, taskList)
 		if err != nil {
 			// TODO: Is empty poll the best reply for errPumpClosed?
@@ -313,6 +322,7 @@ func (e *matchingEngineImpl) createPollForDecisionTaskResponse(context *taskCont
 	response := workflow.NewPollForDecisionTaskResponse()
 	response.WorkflowExecution = workflowExecutionPtr(context.workflowExecution)
 	token := &common.TaskToken{
+		DomainID:   task.DomainID,
 		WorkflowID: task.WorkflowID,
 		RunID:      task.RunID,
 		ScheduleID: task.ScheduleID,
@@ -351,6 +361,7 @@ func (e *matchingEngineImpl) createPollForActivityTaskResponse(context *taskCont
 	response.WorkflowExecution = workflowExecutionPtr(context.workflowExecution)
 
 	token := &common.TaskToken{
+		DomainID:   task.DomainID,
 		WorkflowID: task.WorkflowID,
 		RunID:      task.RunID,
 		ScheduleID: task.ScheduleID,
@@ -359,9 +370,8 @@ func (e *matchingEngineImpl) createPollForActivityTaskResponse(context *taskCont
 	return response
 }
 
-func newTaskListID(taskListName string,
-	taskType int) *taskListID {
-	return &taskListID{taskListName: taskListName, taskType: taskType}
+func newTaskListID(domainID, taskListName string, taskType int) *taskListID {
+	return &taskListID{domainID: domainID, taskListName: taskListName, taskType: taskType}
 }
 
 func createEmptyGetTasksRetryPolicy() backoff.RetryPolicy {
