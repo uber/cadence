@@ -91,8 +91,10 @@ func (e *historyEngineImpl) Stop() {
 }
 
 // StartWorkflowExecution starts a workflow execution
-func (e *historyEngineImpl) StartWorkflowExecution(request *workflow.StartWorkflowExecutionRequest) (
+func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflowExecutionRequest) (
 	*workflow.StartWorkflowExecutionResponse, error) {
+	domainID := startRequest.GetDomainUUID()
+	request := startRequest.GetStartRequest()
 	executionID := request.GetWorkflowId()
 	// We generate a new workflow execution run_id on each StartWorkflowExecution call.  This generated run_id is
 	// returned back to the caller as the response to StartWorkflowExecution.
@@ -124,6 +126,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(request *workflow.StartWorkfl
 	}
 
 	err1 := e.shard.AppendHistoryEvents(&persistence.AppendHistoryEventsRequest{
+		DomainID:  domainID,
 		Execution: workflowExecution,
 		// It is ok to use 0 for TransactionID because RunID is unique so there are
 		// no potential duplicates to override.
@@ -137,6 +140,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(request *workflow.StartWorkfl
 
 	_, err := e.shard.CreateWorkflowExecution(&persistence.CreateWorkflowExecutionRequest{
 		RequestID:            request.GetRequestId(),
+		DomainID:             domainID,
 		Execution:            workflowExecution,
 		TaskList:             request.GetTaskList().GetName(),
 		WorkflowTypeName:     request.GetWorkflowType().GetName(),
@@ -190,13 +194,15 @@ func (e *historyEngineImpl) StartWorkflowExecution(request *workflow.StartWorkfl
 
 // GetWorkflowExecutionHistory retrieves the history for given workflow execution
 func (e *historyEngineImpl) GetWorkflowExecutionHistory(
-	request *workflow.GetWorkflowExecutionHistoryRequest) (*workflow.GetWorkflowExecutionHistoryResponse, error) {
+	getHistoryRequest *h.GetWorkflowExecutionHistoryRequest) (*workflow.GetWorkflowExecutionHistoryResponse, error) {
+	domainID := getHistoryRequest.GetDomainUUID()
+	request := getHistoryRequest.GetGetRequest()
 	execution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr(request.GetExecution().GetWorkflowId()),
 		RunId:      common.StringPtr(request.GetExecution().GetRunId()),
 	}
 
-	context, err0 := e.cache.getOrCreateWorkflowExecution(execution)
+	context, err0 := e.cache.getOrCreateWorkflowExecution(domainID, execution)
 	if err0 != nil {
 		return nil, err0
 	}
@@ -221,7 +227,8 @@ func (e *historyEngineImpl) GetWorkflowExecutionHistory(
 
 func (e *historyEngineImpl) RecordDecisionTaskStarted(
 	request *h.RecordDecisionTaskStartedRequest) (*h.RecordDecisionTaskStartedResponse, error) {
-	context, err0 := e.cache.getOrCreateWorkflowExecution(*request.WorkflowExecution)
+	domainID := request.GetDomainUUID()
+	context, err0 := e.cache.getOrCreateWorkflowExecution(domainID, *request.WorkflowExecution)
 	if err0 != nil {
 		return nil, err0
 	}
@@ -308,7 +315,8 @@ Update_History_Loop:
 
 func (e *historyEngineImpl) RecordActivityTaskStarted(
 	request *h.RecordActivityTaskStartedRequest) (*h.RecordActivityTaskStartedResponse, error) {
-	context, err0 := e.cache.getOrCreateWorkflowExecution(*request.WorkflowExecution)
+	domainID := request.GetDomainUUID()
+	context, err0 := e.cache.getOrCreateWorkflowExecution(domainID, *request.WorkflowExecution)
 	if err0 != nil {
 		return nil, err0
 	}
@@ -421,7 +429,9 @@ Update_History_Loop:
 }
 
 // RespondDecisionTaskCompleted completes a decision task
-func (e *historyEngineImpl) RespondDecisionTaskCompleted(request *workflow.RespondDecisionTaskCompletedRequest) error {
+func (e *historyEngineImpl) RespondDecisionTaskCompleted(req *h.RespondDecisionTaskCompletedRequest) error {
+	domainID := req.GetDomainUUID()
+	request := req.GetCompleteRequest()
 	token, err0 := e.tokenSerializer.Deserialize(request.GetTaskToken())
 	if err0 != nil {
 		return &workflow.BadRequestError{Message: "Error deserializing task token."}
@@ -432,7 +442,7 @@ func (e *historyEngineImpl) RespondDecisionTaskCompleted(request *workflow.Respo
 		RunId:      common.StringPtr(token.RunID),
 	}
 
-	context, err0 := e.cache.getOrCreateWorkflowExecution(workflowExecution)
+	context, err0 := e.cache.getOrCreateWorkflowExecution(domainID, workflowExecution)
 	if err0 != nil {
 		return err0
 	}
@@ -605,7 +615,9 @@ Update_History_Loop:
 }
 
 // RespondActivityTaskCompleted completes an activity task.
-func (e *historyEngineImpl) RespondActivityTaskCompleted(request *workflow.RespondActivityTaskCompletedRequest) error {
+func (e *historyEngineImpl) RespondActivityTaskCompleted(req *h.RespondActivityTaskCompletedRequest) error {
+	domainID := req.GetDomainUUID()
+	request := req.GetCompleteRequest()
 	token, err0 := e.tokenSerializer.Deserialize(request.GetTaskToken())
 	if err0 != nil {
 		return &workflow.BadRequestError{Message: "Error deserializing task token."}
@@ -616,7 +628,7 @@ func (e *historyEngineImpl) RespondActivityTaskCompleted(request *workflow.Respo
 		RunId:      common.StringPtr(token.RunID),
 	}
 
-	context, err0 := e.cache.getOrCreateWorkflowExecution(workflowExecution)
+	context, err0 := e.cache.getOrCreateWorkflowExecution(domainID, workflowExecution)
 	if err0 != nil {
 		return err0
 	}
@@ -684,7 +696,9 @@ Update_History_Loop:
 }
 
 // RespondActivityTaskFailed completes an activity task failure.
-func (e *historyEngineImpl) RespondActivityTaskFailed(request *workflow.RespondActivityTaskFailedRequest) error {
+func (e *historyEngineImpl) RespondActivityTaskFailed(req *h.RespondActivityTaskFailedRequest) error {
+	domainID := req.GetDomainUUID()
+	request := req.GetFailedRequest()
 	token, err0 := e.tokenSerializer.Deserialize(request.GetTaskToken())
 	if err0 != nil {
 		return &workflow.BadRequestError{Message: "Error deserializing task token."}
@@ -695,7 +709,7 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(request *workflow.RespondA
 		RunId:      common.StringPtr(token.RunID),
 	}
 
-	context, err0 := e.cache.getOrCreateWorkflowExecution(workflowExecution)
+	context, err0 := e.cache.getOrCreateWorkflowExecution(domainID, workflowExecution)
 	if err0 != nil {
 		return err0
 	}
@@ -763,7 +777,9 @@ Update_History_Loop:
 }
 
 // RespondActivityTaskCanceled completes an activity task failure.
-func (e *historyEngineImpl) RespondActivityTaskCanceled(request *workflow.RespondActivityTaskCanceledRequest) error {
+func (e *historyEngineImpl) RespondActivityTaskCanceled(req *h.RespondActivityTaskCanceledRequest) error {
+	domainID := req.GetDomainUUID()
+	request := req.GetCancelRequest()
 	token, err0 := e.tokenSerializer.Deserialize(request.GetTaskToken())
 	if err0 != nil {
 		return &workflow.BadRequestError{Message: "Error deserializing task token."}
@@ -774,7 +790,7 @@ func (e *historyEngineImpl) RespondActivityTaskCanceled(request *workflow.Respon
 		RunId:      common.StringPtr(token.RunID),
 	}
 
-	context, err0 := e.cache.getOrCreateWorkflowExecution(workflowExecution)
+	context, err0 := e.cache.getOrCreateWorkflowExecution(domainID, workflowExecution)
 	if err0 != nil {
 		return err0
 	}
@@ -847,7 +863,9 @@ Update_History_Loop:
 // - For reporting liveness of the activity.
 // - For reporting progress of the activity, this can be done even if the liveness is not configured.
 func (e *historyEngineImpl) RecordActivityTaskHeartbeat(
-	request *workflow.RecordActivityTaskHeartbeatRequest) (*workflow.RecordActivityTaskHeartbeatResponse, error) {
+	req *h.RecordActivityTaskHeartbeatRequest) (*workflow.RecordActivityTaskHeartbeatResponse, error) {
+	domainID := req.GetDomainUUID()
+	request := req.GetHeartbeatRequest()
 	token, err0 := e.tokenSerializer.Deserialize(request.GetTaskToken())
 	if err0 != nil {
 		return nil, &workflow.BadRequestError{Message: "Error deserializing task token."}
@@ -858,7 +876,7 @@ func (e *historyEngineImpl) RecordActivityTaskHeartbeat(
 		RunId:      common.StringPtr(token.RunID),
 	}
 
-	context, err0 := e.cache.getOrCreateWorkflowExecution(workflowExecution)
+	context, err0 := e.cache.getOrCreateWorkflowExecution(domainID, workflowExecution)
 	if err0 != nil {
 		return nil, err0
 	}

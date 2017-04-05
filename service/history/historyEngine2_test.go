@@ -528,6 +528,7 @@ func (s *engine2Suite) createExecutionStartedState(we workflow.WorkflowExecution
 }
 
 func (s *engine2Suite) TestRespondDecisionTaskCompletedRecordMarkerDecision() {
+	domainID := "domainId"
 	we := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),
 		RunId:      common.StringPtr("rId"),
@@ -562,22 +563,25 @@ func (s *engine2Suite) TestRespondDecisionTaskCompletedRecordMarkerDecision() {
 	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(nil).Once()
 
-	err := s.historyEngine.RespondDecisionTaskCompleted(&workflow.RespondDecisionTaskCompletedRequest{
-		TaskToken:        taskToken,
-		Decisions:        decisions,
-		ExecutionContext: nil,
-		Identity:         &identity,
+	err := s.historyEngine.RespondDecisionTaskCompleted(&h.RespondDecisionTaskCompletedRequest{
+		DomainUUID: common.StringPtr(domainID),
+		CompleteRequest: &workflow.RespondDecisionTaskCompletedRequest{
+			TaskToken:        taskToken,
+			Decisions:        decisions,
+			ExecutionContext: nil,
+			Identity:         &identity,
+		},
 	})
 	s.Nil(err)
-	executionBuilder := s.getBuilder(we)
+	executionBuilder := s.getBuilder(domainID, we)
 	s.Equal(int64(6), executionBuilder.executionInfo.NextEventID)
 	s.Equal(int64(3), executionBuilder.executionInfo.LastProcessedEvent)
 	s.Equal(persistence.WorkflowStateRunning, executionBuilder.executionInfo.State)
 	s.False(executionBuilder.HasPendingDecisionTask())
 }
 
-func (s *engine2Suite) getBuilder(we workflow.WorkflowExecution) *mutableStateBuilder {
-	context, err := s.historyEngine.cache.getOrCreateWorkflowExecution(we)
+func (s *engine2Suite) getBuilder(domainID string, we workflow.WorkflowExecution) *mutableStateBuilder {
+	context, err := s.historyEngine.cache.getOrCreateWorkflowExecution(domainID, we)
 	if err != nil {
 		return nil
 	}
