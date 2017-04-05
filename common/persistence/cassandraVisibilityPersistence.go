@@ -173,10 +173,10 @@ func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutions(
 
 	response := &ListWorkflowExecutionsResponse{}
 	response.Executions = make([]*WorkflowExecutionRecord, 0)
-	rec := make(map[string]interface{})
-	for iter.MapScan(rec) {
-		wfexecution := createWorkflowExecutionRecord(rec)
+	wfexecution, has := readOpenWorkflowExecutionRecord(iter)
+	for has {
 		response.Executions = append(response.Executions, wfexecution)
+		wfexecution, has = readOpenWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
@@ -208,10 +208,10 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutions(
 
 	response := &ListWorkflowExecutionsResponse{}
 	response.Executions = make([]*WorkflowExecutionRecord, 0)
-	rec := make(map[string]interface{})
-	for iter.MapScan(rec) {
-		wfexecution := createWorkflowExecutionRecord(rec)
+	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
+	for has {
 		response.Executions = append(response.Executions, wfexecution)
+		wfexecution, has = readClosedWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
@@ -244,10 +244,10 @@ func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutionsByType(
 
 	response := &ListWorkflowExecutionsResponse{}
 	response.Executions = make([]*WorkflowExecutionRecord, 0)
-	rec := make(map[string]interface{})
-	for iter.MapScan(rec) {
-		wfexecution := createWorkflowExecutionRecord(rec)
+	wfexecution, has := readOpenWorkflowExecutionRecord(iter)
+	for has {
 		response.Executions = append(response.Executions, wfexecution)
+		wfexecution, has = readOpenWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
@@ -280,10 +280,10 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByType(
 
 	response := &ListWorkflowExecutionsResponse{}
 	response.Executions = make([]*WorkflowExecutionRecord, 0)
-	rec := make(map[string]interface{})
-	for iter.MapScan(rec) {
-		wfexecution := createWorkflowExecutionRecord(rec)
+	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
+	for has {
 		response.Executions = append(response.Executions, wfexecution)
+		wfexecution, has = readClosedWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
@@ -316,10 +316,10 @@ func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutionsByWorkflowID(
 
 	response := &ListWorkflowExecutionsResponse{}
 	response.Executions = make([]*WorkflowExecutionRecord, 0)
-	rec := make(map[string]interface{})
-	for iter.MapScan(rec) {
-		wfexecution := createWorkflowExecutionRecord(rec)
+	wfexecution, has := readOpenWorkflowExecutionRecord(iter)
+	for has {
 		response.Executions = append(response.Executions, wfexecution)
+		wfexecution, has = readOpenWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
@@ -352,10 +352,10 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByWorkflowI
 
 	response := &ListWorkflowExecutionsResponse{}
 	response.Executions = make([]*WorkflowExecutionRecord, 0)
-	rec := make(map[string]interface{})
-	for iter.MapScan(rec) {
-		wfexecution := createWorkflowExecutionRecord(rec)
+	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
+	for has {
 		response.Executions = append(response.Executions, wfexecution)
+		wfexecution, has = readClosedWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
@@ -370,24 +370,36 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByWorkflowI
 	return response, nil
 }
 
-func createWorkflowExecutionRecord(result map[string]interface{}) *WorkflowExecutionRecord {
-	record := &WorkflowExecutionRecord{}
-	for k, v := range result {
-		switch k {
-		case "workflow_id":
-			record.Execution.WorkflowId = common.StringPtr(v.(string))
-		case "run_id":
-			record.Execution.RunId = common.StringPtr(v.(gocql.UUID).String())
-		case "workflow_type_name":
-			record.WorkflowTypeName = v.(string)
-		case "start_time":
-			record.StartTime = v.(time.Time)
-		case "close_time":
-			record.CloseTime = v.(time.Time)
-		default:
-			// Unknown field, could happen due to schema update
-		}
+func readOpenWorkflowExecutionRecord(iter *gocql.Iter) (*WorkflowExecutionRecord, bool) {
+	var workflowID string
+	var runID gocql.UUID
+	var typeName string
+	var startTime time.Time
+	if iter.Scan(&workflowID, &runID, &startTime, &typeName) {
+		record := &WorkflowExecutionRecord{}
+		record.Execution.WorkflowId = common.StringPtr(workflowID)
+		record.Execution.RunId = common.StringPtr(runID.String())
+		record.StartTime = startTime
+		record.WorkflowTypeName = typeName
+		return record, true
 	}
+	return nil, false
+}
 
-	return record
+func readClosedWorkflowExecutionRecord(iter *gocql.Iter) (*WorkflowExecutionRecord, bool) {
+	var workflowID string
+	var runID gocql.UUID
+	var typeName string
+	var startTime time.Time
+	var closeTime time.Time
+	if iter.Scan(&workflowID, &runID, &startTime, &closeTime, &typeName) {
+		record := &WorkflowExecutionRecord{}
+		record.Execution.WorkflowId = common.StringPtr(workflowID)
+		record.Execution.RunId = common.StringPtr(runID.String())
+		record.StartTime = startTime
+		record.CloseTime = closeTime
+		record.WorkflowTypeName = typeName
+		return record, true
+	}
+	return nil, false
 }
