@@ -320,8 +320,15 @@ func (s *TestBase) CreateWorkflowExecutionManyTasks(workflowExecution workflow.W
 // GetWorkflowExecutionInfo is a utility method to retrieve execution info
 func (s *TestBase) GetWorkflowExecutionInfo(workflowExecution workflow.WorkflowExecution) (*WorkflowMutableState,
 	error) {
+	return s.GetWorkflowExecutionInfoWithLockID(workflowExecution, 0)
+}
+
+// GetWorkflowExecutionInfoWithLockID is a utility method to retrieve execution info and update the lock
+func (s *TestBase) GetWorkflowExecutionInfoWithLockID(
+	workflowExecution workflow.WorkflowExecution, lockID int64) (*WorkflowMutableState, error) {
 	response, err := s.WorkflowMgr.GetWorkflowExecution(&GetWorkflowExecutionRequest{
 		Execution: workflowExecution,
+		LockID:    lockID,
 	})
 	if err != nil {
 		return nil, err

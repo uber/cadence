@@ -135,7 +135,7 @@ func (s *transferQueueProcessorSuite) TestDeleteExecutionTransferTasks() {
 	addCompleteWorkflowEvent(builder, completeDecisionEvent.GetEventId(), []byte("result"))
 
 	updatedInfo1 := copyWorkflowExecutionInfo(builder.executionInfo)
-	err1 := s.UpdateWorkflowExecutionAndDelete(updatedInfo1, int64(3))
+	err1 := s.UpdateWorkflowExecutionAndDelete(updatedInfo1, int64(0))
 	s.Nil(err1, "No error expected.")
 
 	newExecution := workflow.WorkflowExecution{WorkflowId: common.StringPtr("delete-execution-transfertasks-test"),

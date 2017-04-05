@@ -169,7 +169,7 @@ func (s *timerQueueProcessorSuite) createExecutionWithTimers(we workflow.Workflo
 	}
 
 	updatedState := createMutableState(builder)
-	err3 := s.UpdateWorkflowExecution(updatedState.ExecutionInfo, nil, nil, int64(3), timerTasks, nil, nil, nil, timerInfos, nil)
+	err3 := s.UpdateWorkflowExecution(updatedState.ExecutionInfo, nil, nil, int64(0), timerTasks, nil, nil, nil, timerInfos, nil)
 	s.Nil(err3)
 
 	return createMutableState(builder), timerTasks
