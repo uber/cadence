@@ -434,7 +434,7 @@ type (
 
 	// DomainConfig describes the domain configuration
 	DomainConfig struct {
-		Retention  int
+		Retention  int32
 		EmitMetric bool
 	}
 
@@ -444,7 +444,7 @@ type (
 		Status      int
 		Description string
 		OwnerEmail  string
-		Retention   int
+		Retention   int32
 		EmitMetric  bool
 	}
 

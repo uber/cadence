@@ -149,7 +149,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 		NextEventID:          msBuilder.GetNextEventID(),
 		LastProcessedEvent:   emptyEventID,
 		TransferTasks: []persistence.Task{&persistence.DecisionTask{
-			TaskList: taskList, ScheduleID: di.ScheduleID,
+			DomainID: domainID, TaskList: taskList, ScheduleID: di.ScheduleID,
 		}},
 		DecisionScheduleID:          di.ScheduleID,
 		DecisionStartedID:           di.StartedID,
@@ -164,6 +164,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 			// are always created for a unique run_id which is not visible beyond this call yet.
 			// TODO: Handle error on deletion of execution history
 			e.historyMgr.DeleteWorkflowExecutionHistory(&persistence.DeleteWorkflowExecutionHistoryRequest{
+				DomainID:  domainID,
 				Execution: workflowExecution,
 			})
 
@@ -214,7 +215,7 @@ func (e *historyEngineImpl) GetWorkflowExecutionHistory(
 		return nil, err1
 	}
 
-	executionHistory, err2 := e.getHistory(msBuilder)
+	executionHistory, err2 := e.getHistory(domainID, msBuilder)
 	if err2 != nil {
 		return nil, err2
 	}
@@ -269,7 +270,7 @@ Update_History_Loop:
 		if di.StartedID != emptyEventID {
 			// If decision is started as part of the current request scope then return a positive response
 			if di.RequestID == requestID {
-				return e.createRecordDecisionTaskStartedResponse(msBuilder, di.StartedID), nil
+				return e.createRecordDecisionTaskStartedResponse(domainID, msBuilder, di.StartedID), nil
 			}
 
 			// Looks like DecisionTask already started as a result of another call.
@@ -307,7 +308,7 @@ Update_History_Loop:
 			return nil, err3
 		}
 
-		return e.createRecordDecisionTaskStartedResponse(msBuilder, event.GetEventId()), nil
+		return e.createRecordDecisionTaskStartedResponse(domainID, msBuilder, event.GetEventId()), nil
 	}
 
 	return nil, ErrMaxAttemptsExceeded
@@ -504,6 +505,7 @@ Update_History_Loop:
 
 				scheduleEvent, ai := msBuilder.AddActivityTaskScheduledEvent(completedID, attributes)
 				transferTasks = append(transferTasks, &persistence.ActivityTask{
+					DomainID:   domainID,
 					TaskList:   attributes.GetTaskList().GetName(),
 					ScheduleID: scheduleEvent.GetEventId(),
 				})
@@ -668,6 +670,7 @@ Update_History_Loop:
 		if !msBuilder.HasPendingDecisionTask() {
 			newDecisionEvent, _ := msBuilder.AddDecisionTaskScheduledEvent()
 			transferTasks = []persistence.Task{&persistence.DecisionTask{
+				DomainID:   domainID,
 				TaskList:   newDecisionEvent.GetDecisionTaskScheduledEventAttributes().GetTaskList().GetName(),
 				ScheduleID: newDecisionEvent.GetEventId(),
 			}}
@@ -749,6 +752,7 @@ Update_History_Loop:
 		if !msBuilder.HasPendingDecisionTask() {
 			newDecisionEvent, _ := msBuilder.AddDecisionTaskScheduledEvent()
 			transferTasks = []persistence.Task{&persistence.DecisionTask{
+				DomainID:   domainID,
 				TaskList:   newDecisionEvent.GetDecisionTaskScheduledEventAttributes().GetTaskList().GetName(),
 				ScheduleID: newDecisionEvent.GetEventId(),
 			}}
@@ -831,6 +835,7 @@ Update_History_Loop:
 		if !msBuilder.HasPendingDecisionTask() {
 			newDecisionEvent, _ := msBuilder.AddDecisionTaskScheduledEvent()
 			transferTasks = []persistence.Task{&persistence.DecisionTask{
+				DomainID:   domainID,
 				TaskList:   newDecisionEvent.GetDecisionTaskScheduledEventAttributes().GetTaskList().GetName(),
 				ScheduleID: newDecisionEvent.GetEventId(),
 			}}
@@ -947,9 +952,9 @@ Update_History_Loop:
 	return &workflow.RecordActivityTaskHeartbeatResponse{}, ErrMaxAttemptsExceeded
 }
 
-func (e *historyEngineImpl) createRecordDecisionTaskStartedResponse(msBuilder *mutableStateBuilder,
+func (e *historyEngineImpl) createRecordDecisionTaskStartedResponse(domainID string, msBuilder *mutableStateBuilder,
 	startedEventID int64) *h.RecordDecisionTaskStartedResponse {
-	executionHistory, _ := e.getHistory(msBuilder)
+	executionHistory, _ := e.getHistory(domainID, msBuilder)
 	response := h.NewRecordDecisionTaskStartedResponse()
 	response.WorkflowType = msBuilder.getWorkflowType()
 	if msBuilder.previousDecisionStartedEvent() != emptyEventID {
@@ -961,7 +966,7 @@ func (e *historyEngineImpl) createRecordDecisionTaskStartedResponse(msBuilder *m
 	return response
 }
 
-func (e *historyEngineImpl) getHistory(msBuilder *mutableStateBuilder) (*workflow.History, error) {
+func (e *historyEngineImpl) getHistory(domainID string, msBuilder *mutableStateBuilder) (*workflow.History, error) {
 	execution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr(msBuilder.executionInfo.WorkflowID),
 		RunId:      common.StringPtr(msBuilder.executionInfo.RunID),
@@ -971,6 +976,7 @@ func (e *historyEngineImpl) getHistory(msBuilder *mutableStateBuilder) (*workflo
 Pagination_Loop:
 	for {
 		response, err := e.historyMgr.GetWorkflowExecutionHistory(&persistence.GetWorkflowExecutionHistoryRequest{
+			DomainID:      domainID,
 			Execution:     execution,
 			NextEventID:   msBuilder.GetNextEventID(),
 			PageSize:      100,

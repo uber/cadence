@@ -223,6 +223,7 @@ pollLoop:
 		// Generate a unique requestId for this task which will be used for all retries
 		requestID := uuid.New()
 		resp, err := tCtx.RecordDecisionTaskStartedWithRetry(&h.RecordDecisionTaskStartedRequest{
+			DomainUUID:        common.StringPtr(domainID),
 			WorkflowExecution: &tCtx.workflowExecution,
 			ScheduleId:        &tCtx.info.ScheduleID,
 			TaskId:            &tCtx.info.TaskID,

@@ -150,10 +150,9 @@ func (h *Handler) RecordActivityTaskStarted(ctx thrift.Context,
 func (h *Handler) RecordDecisionTaskStarted(ctx thrift.Context,
 	recordRequest *hist.RecordDecisionTaskStartedRequest) (*hist.RecordDecisionTaskStartedResponse, error) {
 	h.startWG.Wait()
-	h.Service.GetLogger().Debugf("RecordDecisionTaskStarted. WorkflowID: %v, RunID: %v, ScheduleID: %v",
-		recordRequest.GetWorkflowExecution().GetWorkflowId(),
-		recordRequest.GetWorkflowExecution().GetRunId(),
-		recordRequest.GetScheduleId())
+	h.Service.GetLogger().Debugf("RecordDecisionTaskStarted. DomainID: %v, WorkflowID: %v, RunID: %v, ScheduleID: %v",
+		recordRequest.GetDomainUUID(), recordRequest.GetWorkflowExecution().GetWorkflowId(),
+		recordRequest.GetWorkflowExecution().GetRunId(), recordRequest.GetScheduleId())
 
 	h.metricsClient.IncCounter(metrics.HistoryRecordDecisionTaskStartedScope, metrics.CadenceRequests)
 	sw := h.metricsClient.StartTimer(metrics.HistoryRecordDecisionTaskStartedScope, metrics.CadenceLatency)

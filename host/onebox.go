@@ -40,6 +40,7 @@ type (
 		numberOfHistoryShards int
 		numberOfHistoryHosts  int
 		logger                bark.Logger
+		metadataMgr           persistence.MetadataManager
 		shardMgr              persistence.ShardManager
 		historyMgr            persistence.HistoryManager
 		taskMgr               persistence.TaskManager
@@ -55,13 +56,14 @@ type (
 )
 
 // NewCadence returns an instance that hosts full cadence in one process
-func NewCadence(shardMgr persistence.ShardManager, historyMgr persistence.HistoryManager,
-	executionMgrFactory persistence.ExecutionManagerFactory, taskMgr persistence.TaskManager, numberOfHistoryShards,
-	numberOfHistoryHosts int, logger bark.Logger) Cadence {
+func NewCadence(metadataMgr persistence.MetadataManager,shardMgr persistence.ShardManager,
+	historyMgr persistence.HistoryManager, executionMgrFactory persistence.ExecutionManagerFactory,
+	taskMgr persistence.TaskManager, numberOfHistoryShards, numberOfHistoryHosts int, logger bark.Logger) Cadence {
 	return &cadenceImpl{
 		numberOfHistoryShards: numberOfHistoryShards,
 		numberOfHistoryHosts:  numberOfHistoryHosts,
 		logger:                logger,
+		metadataMgr:           metadataMgr,
 		shardMgr:              shardMgr,
 		historyMgr:            historyMgr,
 		taskMgr:               taskMgr,
@@ -127,7 +129,7 @@ func (c *cadenceImpl) startFrontend(logger bark.Logger, rpHosts []string, startW
 	rpFactory := newRingpopFactory(common.FrontendServiceName, rpHosts)
 	service := service.New(common.FrontendServiceName, logger, scope, tchanFactory, rpFactory, c.numberOfHistoryShards)
 	var thriftServices []thrift.TChanServer
-	c.frontendHandler, thriftServices = frontend.NewWorkflowHandler(service)
+	c.frontendHandler, thriftServices = frontend.NewWorkflowHandler(service, c.metadataMgr)
 	err := c.frontendHandler.Start(thriftServices)
 	if err != nil {
 		c.logger.WithField("error", err).Fatal("Failed to start frontend")
