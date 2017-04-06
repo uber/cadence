@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/cache"
 )
 
 type (
@@ -27,6 +28,7 @@ type (
 
 		mockHistoryEngine  *historyEngineImpl
 		mockMatchingClient *mocks.MatchingClient
+		mockMetadataMgr    *mocks.MetadataManager
 		mockExecutionMgr   *mocks.ExecutionManager
 		mockHistoryMgr     *mocks.HistoryManager
 	}
@@ -50,6 +52,7 @@ func (s *timerQueueProcessorSuite) SetupSuite() {
 
 	shardID := 0
 	s.mockShardManager = &mocks.ShardManager{}
+	s.mockMetadataMgr = &mocks.MetadataManager{}
 	resp, err := s.ShardMgr.GetShard(&persistence.GetShardRequest{ShardID: shardID})
 	if err != nil {
 		log.Fatal(err)
@@ -66,15 +69,16 @@ func (s *timerQueueProcessorSuite) SetupSuite() {
 		closeCh:                   s.shardClosedCh,
 		logger:                    s.logger,
 	}
-	cache := newHistoryCache(shard, s.logger)
-	cache.disabled = true
-	txProcessor := newTransferQueueProcessor(shard, &mocks.MatchingClient{}, cache)
+	historyCache := newHistoryCache(shard, s.logger)
+	historyCache.disabled = true
+	txProcessor := newTransferQueueProcessor(shard, &mocks.MatchingClient{}, historyCache)
 	s.engineImpl = &historyEngineImpl{
 		shard:            shard,
 		historyMgr:       s.HistoryMgr,
 		executionManager: s.WorkflowMgr,
 		txProcessor:      txProcessor,
-		cache:            cache,
+		historyCache:     historyCache,
+		domainCache:      cache.NewDomainCache(s.mockMetadataMgr, s.logger),
 		logger:           s.logger,
 		tokenSerializer:  common.NewJSONTaskTokenSerializer(),
 		hSerializer:      newJSONHistorySerializer(),
@@ -101,14 +105,14 @@ func (s *timerQueueProcessorSuite) SetupTest() {
 		logger:                    s.logger,
 	}
 
-	cache := newHistoryCache(mockShard, s.logger)
-	txProcessor := newTransferQueueProcessor(mockShard, s.mockMatchingClient, cache)
+	historyCache := newHistoryCache(mockShard, s.logger)
+	txProcessor := newTransferQueueProcessor(mockShard, s.mockMatchingClient, historyCache)
 	h := &historyEngineImpl{
 		shard:            mockShard,
 		historyMgr:       s.mockHistoryMgr,
 		executionManager: s.mockExecutionMgr,
 		txProcessor:      txProcessor,
-		cache:            cache,
+		historyCache:     historyCache,
 		logger:           s.logger,
 		tokenSerializer:  common.NewJSONTaskTokenSerializer(),
 		hSerializer:      newJSONHistorySerializer(),
@@ -129,7 +133,7 @@ func (s *timerQueueProcessorSuite) TearDownTest() {
 }
 
 func (s *timerQueueProcessorSuite) createExecutionWithTimers(domainID string, we workflow.WorkflowExecution, tl,
-	identity string, timeOuts []int32) (*persistence.WorkflowMutableState, []persistence.Task) {
+identity string, timeOuts []int32) (*persistence.WorkflowMutableState, []persistence.Task) {
 
 	// Generate first decision task event.
 	logger := bark.NewLoggerFromLogrus(log.New())
@@ -211,7 +215,7 @@ func (s *timerQueueProcessorSuite) TestSingleTimerTask() {
 func (s *timerQueueProcessorSuite) TestManyTimerTasks() {
 	domainID := "5bb49df8-71bc-4c63-b57f-05f2a508e7b5"
 	workflowExecution := workflow.WorkflowExecution{WorkflowId: common.StringPtr("multiple-timer-test"),
-		RunId: common.StringPtr("0d00698f-08e1-4d36-a3e2-3bf109f5d2d6")}
+		RunId:                                                    common.StringPtr("0d00698f-08e1-4d36-a3e2-3bf109f5d2d6")}
 
 	taskList := "multiple-timer-queue"
 	identity := "testIdentity"

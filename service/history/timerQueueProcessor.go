@@ -121,7 +121,7 @@ func newTimerQueueProcessor(historyService *historyEngineImpl, executionManager 
 	logger bark.Logger) timerQueueProcessor {
 	return &timerQueueProcessorImpl{
 		historyService:    historyService,
-		cache:             historyService.cache,
+		cache:             historyService.historyCache,
 		executionManager:  executionManager,
 		shutdownCh:        make(chan struct{}),
 		newTimerCh:        make(chan struct{}, 1),

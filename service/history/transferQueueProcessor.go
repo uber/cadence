@@ -196,6 +196,7 @@ ProcessRetryLoop:
 		default:
 			var err error
 			domainID := task.DomainID
+			targetDomainID := task.TargetDomainID
 			execution := workflow.WorkflowExecution{WorkflowId: common.StringPtr(task.WorkflowID),
 				RunId: common.StringPtr(task.RunID)}
 			switch task.TaskType {
@@ -205,7 +206,8 @@ ProcessRetryLoop:
 						Name: &task.TaskList,
 					}
 					err = t.matchingClient.AddActivityTask(nil, &m.AddActivityTaskRequest{
-						DomainUUID: common.StringPtr(domainID),
+						DomainUUID: common.StringPtr(targetDomainID),
+						SourceDomainUUID: common.StringPtr(domainID),
 						Execution:  &execution,
 						TaskList:   taskList,
 						ScheduleId: &task.ScheduleID,

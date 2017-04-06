@@ -84,6 +84,7 @@ func (wh *WorkflowHandler) RegisterDomain(ctx thrift.Context, registerRequest *g
 	response, err := wh.metadataMgr.CreateDomain(&persistence.CreateDomainRequest{
 		Name:        registerRequest.GetName(),
 		Status:      persistence.DomainStatusRegistered,
+		OwnerEmail:  registerRequest.GetOwnerEmail(),
 		Description: registerRequest.GetDescription(),
 		Retention:   registerRequest.GetWorkflowExecutionRetentionPeriodInDays(),
 		EmitMetric:  registerRequest.GetEmitMetric(),

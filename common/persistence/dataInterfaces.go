@@ -15,7 +15,7 @@ const (
 
 // Workflow execution states
 const (
-	WorkflowStateCreated = iota
+	WorkflowStateCreated   = iota
 	WorkflowStateRunning
 	WorkflowStateCompleted
 )
@@ -28,7 +28,7 @@ const (
 
 // Transfer task types
 const (
-	TransferTaskTypeDecisionTask = iota
+	TransferTaskTypeDecisionTask    = iota
 	TransferTaskTypeActivityTask
 	TransferTaskTypeDeleteExecution
 )
@@ -94,13 +94,14 @@ type (
 
 	// TransferTaskInfo describes a transfer task
 	TransferTaskInfo struct {
-		DomainID   string
-		WorkflowID string
-		RunID      string
-		TaskID     int64
-		TaskList   string
-		TaskType   int
-		ScheduleID int64
+		DomainID       string
+		WorkflowID     string
+		RunID          string
+		TaskID         int64
+		TargetDomainID string
+		TaskList       string
+		TaskType       int
+		ScheduleID     int64
 	}
 
 	// TimerTaskInfo describes a timer task.

@@ -220,10 +220,11 @@ func (s *matchingEngineSuite) AddTasksTest(taskType int) {
 		var err error
 		if taskType == persistence.TaskListTypeActivity {
 			addRequest := matching.AddActivityTaskRequest{
-				DomainUUID: common.StringPtr(domainID),
-				Execution:  &execution,
-				ScheduleId: &scheduleID,
-				TaskList:   taskList}
+				SourceDomainUUID: common.StringPtr(domainID),
+				DomainUUID:       common.StringPtr(domainID),
+				Execution:        &execution,
+				ScheduleId:       &scheduleID,
+				TaskList:         taskList}
 
 			err = s.matchingEngine.AddActivityTask(&addRequest)
 		} else {
@@ -269,10 +270,11 @@ func (s *matchingEngineSuite) TestAddThenConsumeActivities() {
 	for i := int64(0); i < taskCount; i++ {
 		scheduleID := i * 3
 		addRequest := matching.AddActivityTaskRequest{
-			DomainUUID: common.StringPtr(domainID),
-			Execution:  &workflowExecution,
-			ScheduleId: &scheduleID,
-			TaskList:   taskList}
+			SourceDomainUUID: common.StringPtr(domainID),
+			DomainUUID:       common.StringPtr(domainID),
+			Execution:        &workflowExecution,
+			ScheduleId:       &scheduleID,
+			TaskList:         taskList}
 
 		err := s.matchingEngine.AddActivityTask(&addRequest)
 		s.NoError(err)
@@ -413,10 +415,11 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 		}()
 		time.Sleep(50 * time.Millisecond)
 		addRequest := matching.AddActivityTaskRequest{
-			DomainUUID: common.StringPtr(domainID),
-			Execution:  &workflowExecution,
-			ScheduleId: &scheduleID,
-			TaskList:   taskList}
+			SourceDomainUUID: common.StringPtr(domainID),
+			DomainUUID:       common.StringPtr(domainID),
+			Execution:        &workflowExecution,
+			ScheduleId:       &scheduleID,
+			TaskList:         taskList}
 		err := s.matchingEngine.AddActivityTask(&addRequest)
 		s.NoError(err)
 
@@ -483,10 +486,11 @@ func (s *matchingEngineSuite) TestConcurrentPublishConsumeActivities() {
 		go func() {
 			for i := int64(0); i < taskCount; i++ {
 				addRequest := matching.AddActivityTaskRequest{
-					DomainUUID: common.StringPtr(domainID),
-					Execution:  &workflowExecution,
-					ScheduleId: &scheduleID,
-					TaskList:   taskList}
+					SourceDomainUUID: common.StringPtr(domainID),
+					DomainUUID:       common.StringPtr(domainID),
+					Execution:        &workflowExecution,
+					ScheduleId:       &scheduleID,
+					TaskList:         taskList}
 
 				err := s.matchingEngine.AddActivityTask(&addRequest)
 				if err != nil {
@@ -771,10 +775,11 @@ func (s *matchingEngineSuite) TestMultipleEnginesActivitiesRangeStealing() {
 			engine := engines[p]
 			for i := int64(0); i < taskCount; i++ {
 				addRequest := matching.AddActivityTaskRequest{
-					DomainUUID: common.StringPtr(domainID),
-					Execution:  &workflowExecution,
-					ScheduleId: &scheduleID,
-					TaskList:   taskList}
+					SourceDomainUUID: common.StringPtr(domainID),
+					DomainUUID:       common.StringPtr(domainID),
+					Execution:        &workflowExecution,
+					ScheduleId:       &scheduleID,
+					TaskList:         taskList}
 
 				err := engine.AddActivityTask(&addRequest)
 				if err != nil {
@@ -1057,10 +1062,11 @@ func (s *matchingEngineSuite) TestAddTaskAfterStartFailure() {
 
 	scheduleID := int64(0)
 	addRequest := matching.AddActivityTaskRequest{
-		DomainUUID: common.StringPtr(domainID),
-		Execution:  &workflowExecution,
-		ScheduleId: &scheduleID,
-		TaskList:   taskList}
+		SourceDomainUUID: common.StringPtr(domainID),
+		DomainUUID:       common.StringPtr(domainID),
+		Execution:        &workflowExecution,
+		ScheduleId:       &scheduleID,
+		TaskList:         taskList}
 
 	err := s.matchingEngine.AddActivityTask(&addRequest)
 	s.NoError(err)

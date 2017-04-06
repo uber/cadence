@@ -41,6 +41,7 @@ CREATE TYPE transfer_task (
   workflow_id      text,
   run_id           uuid,
   task_id          bigint,
+  target_domain_id uuid,
   task_list        text,
   type             int,  -- enum TaskType {ActivityTask, DecisionTask, DeleteExecution}
   schedule_id      bigint,

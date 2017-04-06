@@ -84,6 +84,7 @@ const (
 		`workflow_id: ?, ` +
 		`run_id: ?, ` +
 		`task_id: ?, ` +
+		`target_domain_id: ?, ` +
 		`task_list: ?, ` +
 		`type: ?, ` +
 		`schedule_id: ?` +
@@ -1149,18 +1150,19 @@ PopulateTasks:
 
 func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferTasks []Task, domainID, workflowID,
 	runID string, cqlNowTimestamp int64) {
+	targetDomainID := domainID
 	for _, task := range transferTasks {
 		var taskList string
 		var scheduleID int64
 
 		switch task.GetType() {
 		case TransferTaskTypeActivityTask:
-			domainID = task.(*ActivityTask).DomainID
+			targetDomainID = task.(*ActivityTask).DomainID
 			taskList = task.(*ActivityTask).TaskList
 			scheduleID = task.(*ActivityTask).ScheduleID
 
 		case TransferTaskTypeDecisionTask:
-			domainID = task.(*DecisionTask).DomainID
+			targetDomainID = task.(*DecisionTask).DomainID
 			taskList = task.(*DecisionTask).TaskList
 			scheduleID = task.(*DecisionTask).ScheduleID
 		}
@@ -1175,6 +1177,7 @@ func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferT
 			workflowID,
 			runID,
 			task.GetTaskID(),
+			targetDomainID,
 			taskList,
 			task.GetType(),
 			scheduleID,
@@ -1382,6 +1385,8 @@ func createTransferTaskInfo(result map[string]interface{}) *TransferTaskInfo {
 			info.RunID = v.(gocql.UUID).String()
 		case "task_id":
 			info.TaskID = v.(int64)
+		case "target_domain_id":
+			info.TargetDomainID = v.(gocql.UUID).String()
 		case "task_list":
 			info.TaskList = v.(string)
 		case "type":

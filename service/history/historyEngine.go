@@ -10,6 +10,7 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 )
@@ -24,6 +25,7 @@ const (
 type (
 	historyEngineImpl struct {
 		shard            ShardContext
+		metadataMgr      persistence.MetadataManager
 		historyMgr       persistence.HistoryManager
 		executionManager persistence.ExecutionManager
 		txProcessor      transferQueueProcessor
@@ -31,7 +33,8 @@ type (
 		tokenSerializer  common.TaskTokenSerializer
 		hSerializer      historySerializer
 		metricsReporter  metrics.Client
-		cache            *historyCache
+		historyCache     *historyCache
+		domainCache      cache.DomainCache
 		logger           bark.Logger
 	}
 )
@@ -48,20 +51,23 @@ var (
 )
 
 // NewEngineWithShardContext creates an instance of history engine
-func NewEngineWithShardContext(shard ShardContext, matching matching.Client) Engine {
+func NewEngineWithShardContext(shard ShardContext, metadataMgr persistence.MetadataManager,
+	matching matching.Client) Engine {
 	logger := shard.GetLogger()
 	executionManager := shard.GetExecutionManager()
 	historyManager := shard.GetHistoryManager()
-	cache := newHistoryCache(shard, logger)
-	txProcessor := newTransferQueueProcessor(shard, matching, cache)
+	historyCache := newHistoryCache(shard, logger)
+	txProcessor := newTransferQueueProcessor(shard, matching, historyCache)
 	historyEngImpl := &historyEngineImpl{
 		shard:            shard,
+		metadataMgr:      metadataMgr,
 		historyMgr:       historyManager,
 		executionManager: executionManager,
 		txProcessor:      txProcessor,
 		tokenSerializer:  common.NewJSONTaskTokenSerializer(),
 		hSerializer:      newJSONHistorySerializer(),
-		cache:            cache,
+		historyCache:     historyCache,
+		domainCache:      cache.NewDomainCache(metadataMgr, logger),
 		logger: logger.WithFields(bark.Fields{
 			tagWorkflowComponent: tagValueHistoryEngineComponent,
 		}),
@@ -203,7 +209,7 @@ func (e *historyEngineImpl) GetWorkflowExecutionHistory(
 		RunId:      common.StringPtr(request.GetExecution().GetRunId()),
 	}
 
-	context, err0 := e.cache.getOrCreateWorkflowExecution(domainID, execution)
+	context, err0 := e.historyCache.getOrCreateWorkflowExecution(domainID, execution)
 	if err0 != nil {
 		return nil, err0
 	}
@@ -229,7 +235,7 @@ func (e *historyEngineImpl) GetWorkflowExecutionHistory(
 func (e *historyEngineImpl) RecordDecisionTaskStarted(
 	request *h.RecordDecisionTaskStartedRequest) (*h.RecordDecisionTaskStartedResponse, error) {
 	domainID := request.GetDomainUUID()
-	context, err0 := e.cache.getOrCreateWorkflowExecution(domainID, *request.WorkflowExecution)
+	context, err0 := e.historyCache.getOrCreateWorkflowExecution(domainID, *request.WorkflowExecution)
 	if err0 != nil {
 		return nil, err0
 	}
@@ -317,7 +323,7 @@ Update_History_Loop:
 func (e *historyEngineImpl) RecordActivityTaskStarted(
 	request *h.RecordActivityTaskStartedRequest) (*h.RecordActivityTaskStartedResponse, error) {
 	domainID := request.GetDomainUUID()
-	context, err0 := e.cache.getOrCreateWorkflowExecution(domainID, *request.WorkflowExecution)
+	context, err0 := e.historyCache.getOrCreateWorkflowExecution(domainID, *request.WorkflowExecution)
 	if err0 != nil {
 		return nil, err0
 	}
@@ -443,7 +449,7 @@ func (e *historyEngineImpl) RespondDecisionTaskCompleted(req *h.RespondDecisionT
 		RunId:      common.StringPtr(token.RunID),
 	}
 
-	context, err0 := e.cache.getOrCreateWorkflowExecution(domainID, workflowExecution)
+	context, err0 := e.historyCache.getOrCreateWorkflowExecution(domainID, workflowExecution)
 	if err0 != nil {
 		return err0
 	}
@@ -487,7 +493,14 @@ Update_History_Loop:
 		for _, d := range request.Decisions {
 			switch d.GetDecisionType() {
 			case workflow.DecisionType_ScheduleActivityTask:
+				targetDomainID := domainID
 				attributes := d.GetScheduleActivityTaskDecisionAttributes()
+				// First check if we need to use a different target domain to schedule activity
+				if attributes.IsSetDomain() {
+					// TODO: Error handling for ActivitySchedule failed when domain lookup fails
+					info, _, _ := e.domainCache.GetDomain(attributes.GetDomain())
+					targetDomainID = info.ID
+				}
 				// TODO: We cannot fail the decision.  Append ActivityTaskScheduledFailed and continue processing
 				if attributes.GetStartToCloseTimeoutSeconds() <= 0 {
 					return &workflow.BadRequestError{Message: "Missing StartToCloseTimeoutSeconds in the activity scheduling parameters."}
@@ -505,7 +518,7 @@ Update_History_Loop:
 
 				scheduleEvent, ai := msBuilder.AddActivityTaskScheduledEvent(completedID, attributes)
 				transferTasks = append(transferTasks, &persistence.ActivityTask{
-					DomainID:   domainID,
+					DomainID:   targetDomainID,
 					TaskList:   attributes.GetTaskList().GetName(),
 					ScheduleID: scheduleEvent.GetEventId(),
 				})
@@ -630,7 +643,7 @@ func (e *historyEngineImpl) RespondActivityTaskCompleted(req *h.RespondActivityT
 		RunId:      common.StringPtr(token.RunID),
 	}
 
-	context, err0 := e.cache.getOrCreateWorkflowExecution(domainID, workflowExecution)
+	context, err0 := e.historyCache.getOrCreateWorkflowExecution(domainID, workflowExecution)
 	if err0 != nil {
 		return err0
 	}
@@ -712,7 +725,7 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(req *h.RespondActivityTask
 		RunId:      common.StringPtr(token.RunID),
 	}
 
-	context, err0 := e.cache.getOrCreateWorkflowExecution(domainID, workflowExecution)
+	context, err0 := e.historyCache.getOrCreateWorkflowExecution(domainID, workflowExecution)
 	if err0 != nil {
 		return err0
 	}
@@ -794,7 +807,7 @@ func (e *historyEngineImpl) RespondActivityTaskCanceled(req *h.RespondActivityTa
 		RunId:      common.StringPtr(token.RunID),
 	}
 
-	context, err0 := e.cache.getOrCreateWorkflowExecution(domainID, workflowExecution)
+	context, err0 := e.historyCache.getOrCreateWorkflowExecution(domainID, workflowExecution)
 	if err0 != nil {
 		return err0
 	}
@@ -881,7 +894,7 @@ func (e *historyEngineImpl) RecordActivityTaskHeartbeat(
 		RunId:      common.StringPtr(token.RunID),
 	}
 
-	context, err0 := e.cache.getOrCreateWorkflowExecution(domainID, workflowExecution)
+	context, err0 := e.historyCache.getOrCreateWorkflowExecution(domainID, workflowExecution)
 	if err0 != nil {
 		return nil, err0
 	}

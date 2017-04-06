@@ -179,6 +179,7 @@ func (e *matchingEngineImpl) AddDecisionTask(addRequest *m.AddDecisionTaskReques
 // AddActivityTask either delivers task directly to waiting poller or save it into task list persistence.
 func (e *matchingEngineImpl) AddActivityTask(addRequest *m.AddActivityTaskRequest) error {
 	domainID := addRequest.GetDomainUUID()
+	sourceDomainID := addRequest.GetSourceDomainUUID()
 	taskListName := addRequest.GetTaskList().GetName()
 	e.logger.Debugf("Received AddActivityTask for taskList=%v WorkflowID=%v, RunID=%v",
 		taskListName, addRequest.Execution.WorkflowId, addRequest.Execution.RunId)
@@ -188,7 +189,7 @@ func (e *matchingEngineImpl) AddActivityTask(addRequest *m.AddActivityTaskReques
 		return err
 	}
 	taskInfo := &persistence.TaskInfo{
-		DomainID:   domainID,
+		DomainID:   sourceDomainID,
 		RunID:      addRequest.GetExecution().GetRunId(),
 		WorkflowID: addRequest.GetExecution().GetWorkflowId(),
 		ScheduleID: addRequest.GetScheduleId(),
