@@ -71,6 +71,7 @@ const (
 		`state: ?, ` +
 		`next_event_id: ?, ` +
 		`last_processed_event: ?, ` +
+		`start_time: ?, ` +
 		`last_updated_time: ?, ` +
 		`create_request_id: ?, ` +
 		`decision_schedule_id: ?, ` +
@@ -87,7 +88,8 @@ const (
 		`target_domain_id: ?, ` +
 		`task_list: ?, ` +
 		`type: ?, ` +
-		`schedule_id: ?` +
+		`schedule_id: ?,` +
+		`event_time: ?` +
 		`}`
 
 	templateTimerTaskType = `{` +
@@ -545,6 +547,7 @@ func (d *cassandraPersistence) CreateWorkflowExecution(request *CreateWorkflowEx
 		request.NextEventID,
 		request.LastProcessedEvent,
 		cqlNowTimestamp,
+		cqlNowTimestamp,
 		request.RequestID,
 		request.DecisionScheduleID,
 		request.DecisionStartedID,
@@ -676,6 +679,7 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 		executionInfo.State,
 		executionInfo.NextEventID,
 		executionInfo.LastProcessedEvent,
+		executionInfo.StartTimestamp,
 		cqlNowTimestamp,
 		executionInfo.CreateRequestID,
 		executionInfo.DecisionScheduleID,
@@ -777,6 +781,7 @@ func (d *cassandraPersistence) DeleteWorkflowExecution(request *DeleteWorkflowEx
 		info.State,
 		info.NextEventID,
 		info.LastProcessedEvent,
+		info.StartTimestamp,
 		cqlNowTimestamp,
 		info.CreateRequestID,
 		info.DecisionScheduleID,
@@ -1181,6 +1186,7 @@ func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferT
 			taskList,
 			task.GetType(),
 			scheduleID,
+			cqlNowTimestamp,
 			task.GetTaskID())
 	}
 }
@@ -1355,6 +1361,8 @@ func createWorkflowExecutionInfo(result map[string]interface{}) *WorkflowExecuti
 			info.NextEventID = v.(int64)
 		case "last_processed_event":
 			info.LastProcessedEvent = v.(int64)
+		case "start_time":
+			info.StartTimestamp = v.(time.Time)
 		case "last_updated_time":
 			info.LastUpdatedTimestamp = v.(time.Time)
 		case "create_request_id":
@@ -1393,6 +1401,8 @@ func createTransferTaskInfo(result map[string]interface{}) *TransferTaskInfo {
 			info.TaskType = v.(int)
 		case "schedule_id":
 			info.ScheduleID = v.(int64)
+		case "event_time":
+			info.EventTimestamp = v.(time.Time)
 		}
 	}
 

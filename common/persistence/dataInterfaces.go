@@ -15,7 +15,7 @@ const (
 
 // Workflow execution states
 const (
-	WorkflowStateCreated   = iota
+	WorkflowStateCreated = iota
 	WorkflowStateRunning
 	WorkflowStateCompleted
 )
@@ -28,7 +28,7 @@ const (
 
 // Transfer task types
 const (
-	TransferTaskTypeDecisionTask    = iota
+	TransferTaskTypeDecisionTask = iota
 	TransferTaskTypeActivityTask
 	TransferTaskTypeDeleteExecution
 )
@@ -84,6 +84,7 @@ type (
 		State                int
 		NextEventID          int64
 		LastProcessedEvent   int64
+		StartTimestamp       time.Time
 		LastUpdatedTimestamp time.Time
 		CreateRequestID      string
 		DecisionScheduleID   int64
@@ -102,6 +103,7 @@ type (
 		TaskList       string
 		TaskType       int
 		ScheduleID     int64
+		EventTimestamp time.Time
 	}
 
 	// TimerTaskInfo describes a timer task.
