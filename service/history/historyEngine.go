@@ -498,7 +498,10 @@ Update_History_Loop:
 				// First check if we need to use a different target domain to schedule activity
 				if attributes.IsSetDomain() {
 					// TODO: Error handling for ActivitySchedule failed when domain lookup fails
-					info, _, _ := e.domainCache.GetDomain(attributes.GetDomain())
+					info, _, err := e.domainCache.GetDomain(attributes.GetDomain())
+					if err != nil {
+						return &workflow.InternalServiceError{Message: "Unable to schedule activity across domain."}
+					}
 					targetDomainID = info.ID
 				}
 				// TODO: We cannot fail the decision.  Append ActivityTaskScheduledFailed and continue processing

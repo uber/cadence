@@ -91,10 +91,11 @@ func (wh *WorkflowHandler) RegisterDomain(ctx thrift.Context, registerRequest *g
 	})
 
 	if err != nil {
-		return err
+		return wrapError(err)
 	}
 
-	wh.GetLogger().Infof("Register domain succeeded for name: %v, Id: %v", registerRequest.GetName(), response.ID)
+	// TODO: Log through logging framework.  We need to have good auditing of domain CRUD
+	wh.GetLogger().Debugf("Register domain succeeded for name: %v, Id: %v", registerRequest.GetName(), response.ID)
 	return nil
 }
 
@@ -107,7 +108,7 @@ func (wh *WorkflowHandler) DescribeDomain(ctx thrift.Context,
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, wrapError(err)
 	}
 
 	response := gen.NewDescribeDomainResponse()
@@ -131,7 +132,7 @@ func (wh *WorkflowHandler) UpdateDomain(ctx thrift.Context,
 	})
 
 	if err0 != nil {
-		return nil, err0
+		return nil, wrapError(err0)
 	}
 
 	info := getResponse.Info
@@ -162,7 +163,7 @@ func (wh *WorkflowHandler) UpdateDomain(ctx thrift.Context,
 		Config: config,
 	})
 	if err != nil {
-		return nil, err
+		return nil, wrapError(err)
 	}
 
 	response := gen.NewUpdateDomainResponse()
@@ -184,7 +185,7 @@ func (wh *WorkflowHandler) DeprecateDomain(ctx thrift.Context, deprecateRequest 
 	})
 
 	if err0 != nil {
-		return err0
+		return wrapError(err0)
 	}
 
 	info := getResponse.Info
@@ -461,15 +462,6 @@ func (wh *WorkflowHandler) getLoggerForTask(taskToken []byte) bark.Logger {
 	return logger
 }
 
-func (wh *WorkflowHandler) resolveDomain(name string) (string, error) {
-	info, _, err := wh.domainCache.GetDomain(name)
-	if err != nil {
-		return "", err
-	}
-
-	return info.ID, nil
-}
-
 func wrapError(err error) error {
 	if err != nil && shouldWrapInInternalServiceError(err) {
 		return &gen.InternalServiceError{Message: err.Error()}
@@ -486,6 +478,8 @@ func shouldWrapInInternalServiceError(err error) bool {
 	case *gen.EntityNotExistsError:
 		return false
 	case *gen.WorkflowExecutionAlreadyStartedError:
+		return false
+	case *gen.DomainAlreadyExistsError:
 		return false
 	}
 
