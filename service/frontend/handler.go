@@ -407,7 +407,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 	wh.Service.GetLogger().Debugf("Received StartWorkflowExecution. WorkflowID: %v", startRequest.GetWorkflowId())
 
 	if !startRequest.IsSetDomain() {
-		return nil, errTaskTokenNotSet
+		return nil, errDomainNotSet
 	}
 
 	domainName := startRequest.GetDomain()
@@ -436,7 +436,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	wh.startWG.Wait()
 
 	if !getRequest.IsSetDomain() {
-		return nil, errTaskTokenNotSet
+		return nil, errDomainNotSet
 	}
 
 	domainName := getRequest.GetDomain()
@@ -454,6 +454,11 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 // ListOpenWorkflowExecutions - retrieves info for open workflow executions in a domain
 func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx thrift.Context,
 	listRequest *gen.ListOpenWorkflowExecutionsRequest) (*gen.ListOpenWorkflowExecutionsResponse, error) {
+
+	if !listRequest.IsSetDomain() {
+		return nil, errDomainNotSet
+	}
+
 	if !listRequest.IsSetStartTimeFilter() {
 		return nil, &gen.BadRequestError{
 			Message: "StartTimeFilter is required",
@@ -478,8 +483,14 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx thrift.Context,
 		}
 	}
 
+	domainName := listRequest.GetDomain()
+	domainInfo, _, err := wh.domainCache.GetDomain(domainName)
+	if err != nil {
+		return nil, wrapError(err)
+	}
+
 	baseReq := persistence.ListWorkflowExecutionsRequest{
-		DomainUUID:        listRequest.GetDomain(),
+		DomainUUID:        domainInfo.ID,
 		PageSize:          int(listRequest.GetMaximumPageSize()),
 		NextPageToken:     listRequest.GetNextPageToken(),
 		EarliestStartTime: listRequest.GetStartTimeFilter().GetEarliestTime(),
@@ -487,7 +498,6 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx thrift.Context,
 	}
 
 	var persistenceResp *persistence.ListWorkflowExecutionsResponse
-	var err error
 	if listRequest.IsSetExecutionFilter() {
 		persistenceResp, err = wh.visibitiltyMgr.ListOpenWorkflowExecutionsByWorkflowID(
 			&persistence.ListWorkflowExecutionsByWorkflowIDRequest{
@@ -516,6 +526,10 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx thrift.Context,
 // ListClosedWorkflowExecutions - retrieves info for closed workflow executions in a domain
 func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx thrift.Context,
 	listRequest *gen.ListClosedWorkflowExecutionsRequest) (*gen.ListClosedWorkflowExecutionsResponse, error) {
+	if !listRequest.IsSetDomain() {
+		return nil, errDomainNotSet
+	}
+
 	if !listRequest.IsSetStartTimeFilter() {
 		return nil, &gen.BadRequestError{
 			Message: "StartTimeFilter is required",
@@ -540,8 +554,14 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx thrift.Context,
 		}
 	}
 
+	domainName := listRequest.GetDomain()
+	domainInfo, _, err := wh.domainCache.GetDomain(domainName)
+	if err != nil {
+		return nil, wrapError(err)
+	}
+
 	baseReq := persistence.ListWorkflowExecutionsRequest{
-		DomainUUID:        listRequest.GetDomain(),
+		DomainUUID:        domainInfo.ID,
 		PageSize:          int(listRequest.GetMaximumPageSize()),
 		NextPageToken:     listRequest.GetNextPageToken(),
 		EarliestStartTime: listRequest.GetStartTimeFilter().GetEarliestTime(),
@@ -549,7 +569,6 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx thrift.Context,
 	}
 
 	var persistenceResp *persistence.ListWorkflowExecutionsResponse
-	var err error
 	if listRequest.IsSetExecutionFilter() {
 		persistenceResp, err = wh.visibitiltyMgr.ListClosedWorkflowExecutionsByWorkflowID(
 			&persistence.ListWorkflowExecutionsByWorkflowIDRequest{
