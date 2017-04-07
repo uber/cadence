@@ -905,7 +905,7 @@ func (s *integrationSuite) TestActivityCancelation() {
 	s.logger.Infof("Waiting for workflow to complete: RunId: %v", we.GetRunId())
 }
 
-func (s *integrationSuite) testIntegrationVisibility() {
+func (s *integrationSuite) TestVisibility() {
 	startTime := time.Now().UnixNano()
 
 	id1 := "integration-visibility-test1"
