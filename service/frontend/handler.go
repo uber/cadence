@@ -212,7 +212,7 @@ func (wh *WorkflowHandler) PollForActivityTask(
 	domainName := pollRequest.GetDomain()
 	info, _, err := wh.domainCache.GetDomain(domainName)
 	if err != nil {
-		return nil, err
+		return nil, wrapError(err)
 	}
 
 	resp, err := wh.matching.PollForActivityTask(ctx, &m.PollForActivityTaskRequest{
@@ -240,7 +240,7 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	domainName := pollRequest.GetDomain()
 	info, _, err := wh.domainCache.GetDomain(domainName)
 	if err != nil {
-		return nil, err
+		return nil, wrapError(err)
 	}
 
 	wh.Service.GetLogger().Infof("Poll for decision domain name: %v", domainName)
@@ -269,7 +269,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeat(
 	}
 	taskToken, err := wh.tokenSerializer.Deserialize(heartbeatRequest.GetTaskToken())
 	if err != nil {
-		return nil, err
+		return nil, wrapError(err)
 	}
 	if taskToken.DomainID == "" {
 		return nil, errDomainNotSet
@@ -293,7 +293,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 	}
 	taskToken, err := wh.tokenSerializer.Deserialize(completeRequest.GetTaskToken())
 	if err != nil {
-		return err
+		return wrapError(err)
 	}
 	if taskToken.DomainID == "" {
 		return errDomainNotSet
@@ -321,7 +321,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailed(
 	}
 	taskToken, err := wh.tokenSerializer.Deserialize(failedRequest.GetTaskToken())
 	if err != nil {
-		return err
+		return wrapError(err)
 	}
 	if taskToken.DomainID == "" {
 		return errDomainNotSet
@@ -350,7 +350,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 	}
 	taskToken, err := wh.tokenSerializer.Deserialize(cancelRequest.GetTaskToken())
 	if err != nil {
-		return err
+		return wrapError(err)
 	}
 	if taskToken.DomainID == "" {
 		return errDomainNotSet
@@ -379,7 +379,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 	}
 	taskToken, err := wh.tokenSerializer.Deserialize(completeRequest.GetTaskToken())
 	if err != nil {
-		return err
+		return wrapError(err)
 	}
 	if taskToken.DomainID == "" {
 		return errDomainNotSet
@@ -412,7 +412,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 	wh.Service.GetLogger().Infof("Start workflow execution request domain: %v", domainName)
 	info, _, err := wh.domainCache.GetDomain(domainName)
 	if err != nil {
-		return nil, err
+		return nil, wrapError(err)
 	}
 
 	wh.Service.GetLogger().Infof("Start workflow execution request domainID: %v", info.ID)
@@ -440,7 +440,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	domainName := getRequest.GetDomain()
 	info, _, err := wh.domainCache.GetDomain(domainName)
 	if err != nil {
-		return nil, err
+		return nil, wrapError(err)
 	}
 
 	return wh.history.GetWorkflowExecutionHistory(ctx, &h.GetWorkflowExecutionHistoryRequest{
