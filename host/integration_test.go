@@ -905,6 +905,68 @@ func (s *integrationSuite) TestActivityCancelation() {
 	s.logger.Infof("Waiting for workflow to complete: RunId: %v", we.GetRunId())
 }
 
+func (s *integrationSuite) testIntegrationVisibility() {
+	startTime := time.Now().UnixNano()
+
+	id1 := "integration-visibility-test1"
+	id2 := "integration-visibility-test2"
+	wt := "integration-visibility-test-type"
+	tl := "integration-visibility-test-tasklist"
+	identity := "worker1"
+
+	workflowType := workflow.NewWorkflowType()
+	workflowType.Name = common.StringPtr(wt)
+
+	taskList := workflow.NewTaskList()
+	taskList.Name = common.StringPtr(tl)
+
+	request := &workflow.StartWorkflowExecutionRequest{
+		RequestId:    common.StringPtr(uuid.New()),
+		Domain:       common.StringPtr(s.domainName),
+		WorkflowId:   common.StringPtr(id1),
+		WorkflowType: workflowType,
+		TaskList:     taskList,
+		Input:        nil,
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
+		Identity:                            common.StringPtr(identity),
+	}
+
+	_, err0 := s.engine.StartWorkflowExecution(request)
+	s.Nil(err0)
+
+	request = &workflow.StartWorkflowExecutionRequest{
+		RequestId:    common.StringPtr(uuid.New()),
+		Domain:       common.StringPtr(s.domainName),
+		WorkflowId:   common.StringPtr(id2),
+		WorkflowType: workflowType,
+		TaskList:     taskList,
+		Input:        nil,
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
+		Identity:                            common.StringPtr(identity),
+	}
+
+	_, err1 := s.engine.StartWorkflowExecution(request)
+	s.Nil(err1)
+
+	// give time for transfer trasks to be processed
+	time.Sleep(time.Second * 2)
+
+	startFilter := workflow.NewStartTimeFilter()
+	startFilter.EarliestTime = common.Int64Ptr(startTime)
+	startFilter.LatestTime = common.Int64Ptr(time.Now().UnixNano())
+
+	resp, err2 := s.engine.ListOpenWorkflowExecutions(&workflow.ListOpenWorkflowExecutionsRequest{
+		Domain:          common.StringPtr(s.domainName),
+		MaximumPageSize: common.Int32Ptr(100),
+		StartTimeFilter: startFilter,
+	})
+
+	s.Nil(err2)
+	s.Equal(2, len(resp.Executions))
+}
+
 func (s *integrationSuite) setupShards() {
 	// shard 0 is always created, we create additional shards if needed
 	for shardID := 1; shardID < testNumberOfHistoryShards; shardID++ {
