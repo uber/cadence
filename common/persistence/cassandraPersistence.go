@@ -88,8 +88,7 @@ const (
 		`target_domain_id: ?, ` +
 		`task_list: ?, ` +
 		`type: ?, ` +
-		`schedule_id: ?,` +
-		`event_time: ?` +
+		`schedule_id: ?` +
 		`}`
 
 	templateTimerTaskType = `{` +
@@ -1186,7 +1185,6 @@ func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferT
 			taskList,
 			task.GetType(),
 			scheduleID,
-			cqlNowTimestamp,
 			task.GetTaskID())
 	}
 }
@@ -1401,8 +1399,6 @@ func createTransferTaskInfo(result map[string]interface{}) *TransferTaskInfo {
 			info.TaskType = v.(int)
 		case "schedule_id":
 			info.ScheduleID = v.(int64)
-		case "event_time":
-			info.EventTimestamp = v.(time.Time)
 		}
 	}
 

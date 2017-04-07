@@ -103,7 +103,6 @@ type (
 		TaskList       string
 		TaskType       int
 		ScheduleID     int64
-		EventTimestamp time.Time
 	}
 
 	// TimerTaskInfo describes a timer task.

@@ -46,7 +46,6 @@ CREATE TYPE transfer_task (
   task_list        text,
   type             int,  -- enum TaskType {ActivityTask, DecisionTask, DeleteExecution}
   schedule_id      bigint,
-  event_time       timestamp,
 );
 
 CREATE TYPE timer_task (
