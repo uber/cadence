@@ -482,6 +482,13 @@ struct GetWorkflowExecutionHistoryResponse {
   10: optional History history
 }
 
+struct TerminateWorkflowExecutionRequest {
+  10: optional string domain
+  20: optional WorkflowExecution workflowExecution
+  30: optional string reason
+  40: optional binary details
+}
+
 struct ListOpenWorkflowExecutionsRequest {
   10: optional string domain
   20: optional i32 maximumPageSize
@@ -509,3 +516,4 @@ struct ListClosedWorkflowExecutionsResponse {
   10: optional list<WorkflowExecutionInfo> executions
   20: optional binary nextPageToken
 }
+

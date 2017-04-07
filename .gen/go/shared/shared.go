@@ -13025,6 +13025,219 @@ func (p *GetWorkflowExecutionHistoryResponse) String() string {
 
 // Attributes:
 //  - Domain
+//  - WorkflowExecution
+//  - Reason
+//  - Details
+type TerminateWorkflowExecutionRequest struct {
+  // unused fields # 1 to 9
+  Domain *string `thrift:"domain,10" db:"domain" json:"domain,omitempty"`
+  // unused fields # 11 to 19
+  WorkflowExecution *WorkflowExecution `thrift:"workflowExecution,20" db:"workflowExecution" json:"workflowExecution,omitempty"`
+  // unused fields # 21 to 29
+  Reason *string `thrift:"reason,30" db:"reason" json:"reason,omitempty"`
+  // unused fields # 31 to 39
+  Details []byte `thrift:"details,40" db:"details" json:"details,omitempty"`
+}
+
+func NewTerminateWorkflowExecutionRequest() *TerminateWorkflowExecutionRequest {
+  return &TerminateWorkflowExecutionRequest{}
+}
+
+var TerminateWorkflowExecutionRequest_Domain_DEFAULT string
+func (p *TerminateWorkflowExecutionRequest) GetDomain() string {
+  if !p.IsSetDomain() {
+    return TerminateWorkflowExecutionRequest_Domain_DEFAULT
+  }
+return *p.Domain
+}
+var TerminateWorkflowExecutionRequest_WorkflowExecution_DEFAULT *WorkflowExecution
+func (p *TerminateWorkflowExecutionRequest) GetWorkflowExecution() *WorkflowExecution {
+  if !p.IsSetWorkflowExecution() {
+    return TerminateWorkflowExecutionRequest_WorkflowExecution_DEFAULT
+  }
+return p.WorkflowExecution
+}
+var TerminateWorkflowExecutionRequest_Reason_DEFAULT string
+func (p *TerminateWorkflowExecutionRequest) GetReason() string {
+  if !p.IsSetReason() {
+    return TerminateWorkflowExecutionRequest_Reason_DEFAULT
+  }
+return *p.Reason
+}
+var TerminateWorkflowExecutionRequest_Details_DEFAULT []byte
+
+func (p *TerminateWorkflowExecutionRequest) GetDetails() []byte {
+  return p.Details
+}
+func (p *TerminateWorkflowExecutionRequest) IsSetDomain() bool {
+  return p.Domain != nil
+}
+
+func (p *TerminateWorkflowExecutionRequest) IsSetWorkflowExecution() bool {
+  return p.WorkflowExecution != nil
+}
+
+func (p *TerminateWorkflowExecutionRequest) IsSetReason() bool {
+  return p.Reason != nil
+}
+
+func (p *TerminateWorkflowExecutionRequest) IsSetDetails() bool {
+  return p.Details != nil
+}
+
+func (p *TerminateWorkflowExecutionRequest) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 10:
+      if err := p.ReadField10(iprot); err != nil {
+        return err
+      }
+    case 20:
+      if err := p.ReadField20(iprot); err != nil {
+        return err
+      }
+    case 30:
+      if err := p.ReadField30(iprot); err != nil {
+        return err
+      }
+    case 40:
+      if err := p.ReadField40(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *TerminateWorkflowExecutionRequest)  ReadField10(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 10: ", err)
+} else {
+  p.Domain = &v
+}
+  return nil
+}
+
+func (p *TerminateWorkflowExecutionRequest)  ReadField20(iprot thrift.TProtocol) error {
+  p.WorkflowExecution = &WorkflowExecution{}
+  if err := p.WorkflowExecution.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.WorkflowExecution), err)
+  }
+  return nil
+}
+
+func (p *TerminateWorkflowExecutionRequest)  ReadField30(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 30: ", err)
+} else {
+  p.Reason = &v
+}
+  return nil
+}
+
+func (p *TerminateWorkflowExecutionRequest)  ReadField40(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadBinary(); err != nil {
+  return thrift.PrependError("error reading field 40: ", err)
+} else {
+  p.Details = v
+}
+  return nil
+}
+
+func (p *TerminateWorkflowExecutionRequest) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("TerminateWorkflowExecutionRequest"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField10(oprot); err != nil { return err }
+    if err := p.writeField20(oprot); err != nil { return err }
+    if err := p.writeField30(oprot); err != nil { return err }
+    if err := p.writeField40(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *TerminateWorkflowExecutionRequest) writeField10(oprot thrift.TProtocol) (err error) {
+  if p.IsSetDomain() {
+    if err := oprot.WriteFieldBegin("domain", thrift.STRING, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:domain: ", p), err) }
+    if err := oprot.WriteString(string(*p.Domain)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.domain (10) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:domain: ", p), err) }
+  }
+  return err
+}
+
+func (p *TerminateWorkflowExecutionRequest) writeField20(oprot thrift.TProtocol) (err error) {
+  if p.IsSetWorkflowExecution() {
+    if err := oprot.WriteFieldBegin("workflowExecution", thrift.STRUCT, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:workflowExecution: ", p), err) }
+    if err := p.WorkflowExecution.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.WorkflowExecution), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:workflowExecution: ", p), err) }
+  }
+  return err
+}
+
+func (p *TerminateWorkflowExecutionRequest) writeField30(oprot thrift.TProtocol) (err error) {
+  if p.IsSetReason() {
+    if err := oprot.WriteFieldBegin("reason", thrift.STRING, 30); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 30:reason: ", p), err) }
+    if err := oprot.WriteString(string(*p.Reason)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.reason (30) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 30:reason: ", p), err) }
+  }
+  return err
+}
+
+func (p *TerminateWorkflowExecutionRequest) writeField40(oprot thrift.TProtocol) (err error) {
+  if p.IsSetDetails() {
+    if err := oprot.WriteFieldBegin("details", thrift.STRING, 40); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 40:details: ", p), err) }
+    if err := oprot.WriteBinary(p.Details); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.details (40) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 40:details: ", p), err) }
+  }
+  return err
+}
+
+func (p *TerminateWorkflowExecutionRequest) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("TerminateWorkflowExecutionRequest(%+v)", *p)
+}
+
+// Attributes:
+//  - Domain
 //  - MaximumPageSize
 //  - NextPageToken
 //  - StartTimeFilter

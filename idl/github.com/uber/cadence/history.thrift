@@ -76,6 +76,11 @@ struct RecordDecisionTaskStartedResponse {
   40: optional shared.History history
 }
 
+struct TerminateWorkflowExecutionRequest {
+  10: optional string domainUUID
+  20: optional shared.TerminateWorkflowExecutionRequest terminateRequest
+}
+
 /**
 * HistoryService provides API to start a new long running workflow instance, as well as query and update the history
 * of workflow instances already created.
@@ -207,5 +212,16 @@ service HistoryService {
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
+    )
+
+  /**
+  * TerminateWorkflowExecution terminates an existing workflow execution by recording WorkflowExecutionTerminated event
+  * in the history and immediately terminating the execution instance.
+  **/
+  void TerminateWorkflowExecution(1: TerminateWorkflowExecutionRequest terminateRequest)
+    throws (
+      1: shared.BadRequestError badRequestError,
+      2: shared.InternalServiceError internalServiceError,
+      3: shared.EntityNotExistsError entityNotExistError,
     )
 }
