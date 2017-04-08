@@ -245,6 +245,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryClientGetWorkflowExecutionHistoryScope:  {operation: "HistoryClientGetWorkflowExecutionHistory"},
 		HistoryClientRecordDecisionTaskStartedScope:    {operation: "HistoryClientRecordDecisionTaskStarted"},
 		HistoryClientRecordActivityTaskStartedScope:    {operation: "HistoryClientRecordActivityTaskStarted"},
+		HistoryClientTerminateWorkflowExecutionScope:   {operation: "HistoryClientTerminateWorkflowExecution"},
 		MatchingClientPollForDecisionTaskScope:         {operation: "MatchingClientPollForDecisionTask"},
 		MatchingClientPollForActivityTaskScope:         {operation: "MatchingClientPollForActivityTask"},
 		MatchingClientAddActivityTaskScope:             {operation: "MatchingClientAddActivityTask"},
@@ -272,6 +273,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryGetWorkflowExecutionHistoryScope:  {operation: "GetWorkflowExecutionHistory"},
 		HistoryRecordDecisionTaskStartedScope:    {operation: "RecordDecisionTaskStarted"},
 		HistoryRecordActivityTaskStartedScope:    {operation: "RecordActivityTaskStarted"},
+		HistoryTerminateWorkflowExecutionScope:   {operation: "TerminateWorkflowExecution"},
 		HistoryProcessTransferTasksScope:         {operation: "ProcessTransferTask"},
 	},
 	// Matching Scope Names

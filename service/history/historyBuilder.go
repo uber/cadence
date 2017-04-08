@@ -127,6 +127,13 @@ func (b *historyBuilder) AddCompleteWorkflowExecutionFailedEvent(decisionComplet
 	return b.addEventToHistory(event)
 }
 
+func (b *historyBuilder) AddWorkflowExecutionTerminatedEvent(
+	request *workflow.TerminateWorkflowExecutionRequest) *workflow.HistoryEvent {
+	event := b.newWorkflowExecutionTerminatedEvent(request)
+
+	return b.addEventToHistory(event)
+}
+
 func (b *historyBuilder) AddTimerStartedEvent(decisionCompletedEventID int64,
 	request *workflow.StartTimerDecisionAttributes) *workflow.HistoryEvent {
 
@@ -402,6 +409,17 @@ func (b *historyBuilder) newCompleteWorkflowExecutionFailedEvent(decisionTaskCom
 	attributes.Cause = workflow.WorkflowCompleteFailedCausePtr(cause)
 	attributes.DecisionTaskCompletedEventId = common.Int64Ptr(decisionTaskCompletedEventID)
 	historyEvent.CompleteWorkflowExecutionFailedEventAttributes = attributes
+
+	return historyEvent
+}
+
+func (b *historyBuilder) newWorkflowExecutionTerminatedEvent(
+	request *workflow.TerminateWorkflowExecutionRequest) *workflow.HistoryEvent {
+	historyEvent := b.msBuilder.createNewHistoryEvent(workflow.EventType_WorkflowExecutionTerminated)
+	attributes := workflow.NewWorkflowExecutionTerminatedEventAttributes()
+	attributes.Reason = common.StringPtr(request.GetReason())
+	attributes.Details = request.GetDetails()
+	historyEvent.WorkflowExecutionTerminatedEventAttributes = attributes
 
 	return historyEvent
 }

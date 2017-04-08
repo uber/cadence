@@ -72,6 +72,7 @@ enum EventType {
   CancelTimerFailed,
   TimerCanceled,
   MarkerRecorded,
+  WorkflowExecutionTerminated,
 }
 
 enum WorkflowCompleteFailedCause {
@@ -297,6 +298,11 @@ struct MarkerRecordedEventAttributes {
   30: optional i64 (js.type = "Long") decisionTaskCompletedEventId
 }
 
+struct WorkflowExecutionTerminatedEventAttributes {
+  10: optional string reason
+  20: optional binary details
+}
+
 struct HistoryEvent {
   10:  optional i64 (js.type = "Long") eventId
   20:  optional i64 (js.type = "Long") timestamp
@@ -323,6 +329,7 @@ struct HistoryEvent {
   140: optional TimerCanceledEventAttributes timerCanceledEventAttributes
   150: optional CancelTimerFailedEventAttributes cancelTimerFailedEventAttributes
   160: optional MarkerRecordedEventAttributes markerRecordedEventAttributes
+  170: optional WorkflowExecutionTerminatedEventAttributes workflowExecutionTerminatedEventAttributes
 }
 
 struct History {
