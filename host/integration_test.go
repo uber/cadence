@@ -267,6 +267,7 @@ func (s *integrationSuite) TestTerminateWorkflow() {
 		},
 		Reason:  common.StringPtr(terminateReason),
 		Details: terminateDetails,
+		Identity: common.StringPtr(identity),
 	})
 	s.Nil(err)
 
@@ -294,6 +295,7 @@ GetHistoryLoop:
 		terminateEventAttributes := lastEvent.GetWorkflowExecutionTerminatedEventAttributes()
 		s.Equal(terminateReason, terminateEventAttributes.GetReason())
 		s.Equal(terminateDetails, terminateEventAttributes.GetDetails())
+		s.Equal(identity, terminateEventAttributes.GetIdentity())
 		executionTerminated = true
 		break GetHistoryLoop
 	}

@@ -301,6 +301,7 @@ struct MarkerRecordedEventAttributes {
 struct WorkflowExecutionTerminatedEventAttributes {
   10: optional string reason
   20: optional binary details
+  30: optional string identity
 }
 
 struct HistoryEvent {
@@ -494,6 +495,7 @@ struct TerminateWorkflowExecutionRequest {
   20: optional WorkflowExecution workflowExecution
   30: optional string reason
   40: optional binary details
+  50: optional string identity
 }
 
 struct ListOpenWorkflowExecutionsRequest {

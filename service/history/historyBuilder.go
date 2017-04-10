@@ -419,6 +419,7 @@ func (b *historyBuilder) newWorkflowExecutionTerminatedEvent(
 	attributes := workflow.NewWorkflowExecutionTerminatedEventAttributes()
 	attributes.Reason = common.StringPtr(request.GetReason())
 	attributes.Details = request.GetDetails()
+	attributes.Identity = common.StringPtr(request.GetIdentity())
 	historyEvent.WorkflowExecutionTerminatedEventAttributes = attributes
 
 	return historyEvent
@@ -431,6 +432,7 @@ func (b *historyBuilder) newMarkerRecordedEventAttributes(decisionTaskCompletedE
 	attributes.MarkerName = common.StringPtr(request.GetMarkerName())
 	attributes.Details = request.GetDetails()
 	attributes.DecisionTaskCompletedEventId = common.Int64Ptr(decisionTaskCompletedEventID)
+	historyEvent.MarkerRecordedEventAttributes = attributes
 
 	return historyEvent
 }

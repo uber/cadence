@@ -187,6 +187,8 @@ func (c *tchanHistoryServiceClient) RespondActivityTaskCompleted(ctx thrift.Cont
 			err = resp.InternalServiceError
 		case resp.EntityNotExistError != nil:
 			err = resp.EntityNotExistError
+		case resp.ShardOwnershipLostError != nil:
+			err = resp.ShardOwnershipLostError
 		default:
 			err = fmt.Errorf("received no result or unknown exception for RespondActivityTaskCompleted")
 		}
@@ -281,6 +283,8 @@ func (c *tchanHistoryServiceClient) TerminateWorkflowExecution(ctx thrift.Contex
 			err = resp.InternalServiceError
 		case resp.EntityNotExistError != nil:
 			err = resp.EntityNotExistError
+		case resp.ShardOwnershipLostError != nil:
+			err = resp.ShardOwnershipLostError
 		default:
 			err = fmt.Errorf("received no result or unknown exception for TerminateWorkflowExecution")
 		}
@@ -600,6 +604,11 @@ func (s *tchanHistoryServiceServer) handleRespondActivityTaskCompleted(ctx thrif
 				return false, nil, fmt.Errorf("Handler for entityNotExistError returned non-nil error type *shared.EntityNotExistsError but nil value")
 			}
 			res.EntityNotExistError = v
+		case *ShardOwnershipLostError:
+			if v == nil {
+				return false, nil, fmt.Errorf("Handler for shardOwnershipLostError returned non-nil error type *ShardOwnershipLostError but nil value")
+			}
+			res.ShardOwnershipLostError = v
 		default:
 			return false, nil, err
 		}
@@ -764,6 +773,11 @@ func (s *tchanHistoryServiceServer) handleTerminateWorkflowExecution(ctx thrift.
 				return false, nil, fmt.Errorf("Handler for entityNotExistError returned non-nil error type *shared.EntityNotExistsError but nil value")
 			}
 			res.EntityNotExistError = v
+		case *ShardOwnershipLostError:
+			if v == nil {
+				return false, nil, fmt.Errorf("Handler for shardOwnershipLostError returned non-nil error type *ShardOwnershipLostError but nil value")
+			}
+			res.ShardOwnershipLostError = v
 		default:
 			return false, nil, err
 		}
