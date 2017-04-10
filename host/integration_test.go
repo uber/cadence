@@ -975,28 +975,37 @@ func (s *integrationSuite) TestVisibility() {
 	err2 := poller.pollAndProcessDecisionTask(false, false)
 	s.Nil(err2)
 
-	// give time for transfer trasks to be processed
-	time.Sleep(time.Second * 2)
-
 	startFilter := workflow.NewStartTimeFilter()
 	startFilter.EarliestTime = common.Int64Ptr(startTime)
 	startFilter.LatestTime = common.Int64Ptr(time.Now().UnixNano())
 
-	resp, err3 := s.engine.ListOpenWorkflowExecutions(&workflow.ListOpenWorkflowExecutionsRequest{
-		Domain:          common.StringPtr(s.domainName),
-		MaximumPageSize: common.Int32Ptr(100),
-		StartTimeFilter: startFilter,
-	})
-	s.Nil(err3)
-	s.Equal(1, len(resp.Executions))
+	closedCount := 0
 
-	resp2, err4 := s.engine.ListClosedWorkflowExecutions(&workflow.ListClosedWorkflowExecutionsRequest{
+ListClosedLoop:
+	for i := 0; i < 10; i++ {
+		resp, err3 := s.engine.ListClosedWorkflowExecutions(&workflow.ListClosedWorkflowExecutionsRequest{
+			Domain:          common.StringPtr(s.domainName),
+			MaximumPageSize: common.Int32Ptr(100),
+			StartTimeFilter: startFilter,
+		})
+		s.Nil(err3)
+		closedCount = len(resp.Executions)
+		if closedCount == 0 {
+			s.logger.Info("Closed WorkflowExecution is not yet visibile")
+			time.Sleep(100 * time.Millisecond)
+			continue ListClosedLoop
+		}
+		break ListClosedLoop
+	}
+	s.Equal(1, closedCount)
+
+	resp, err4 := s.engine.ListOpenWorkflowExecutions(&workflow.ListOpenWorkflowExecutionsRequest{
 		Domain:          common.StringPtr(s.domainName),
 		MaximumPageSize: common.Int32Ptr(100),
 		StartTimeFilter: startFilter,
 	})
 	s.Nil(err4)
-	s.Equal(1, len(resp2.Executions))
+	s.Equal(1, len(resp.Executions))
 }
 
 func (s *integrationSuite) setupShards() {
