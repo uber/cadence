@@ -218,7 +218,7 @@ ProcessRetryLoop:
 			case persistence.TransferTaskTypeDecisionTask:
 				{
 					if task.ScheduleID == firstEventID+1 {
-						err = t.recordWorkflowExecutionStarted(task)
+						err = t.recordWorkflowExecutionStarted(execution, task)
 					}
 
 					if err == nil {
@@ -244,10 +244,11 @@ ProcessRetryLoop:
 					mb, err = context.loadWorkflowExecution()
 					if err == nil {
 						err = t.visibilityManager.RecordWorkflowExecutionClosed(&persistence.RecordWorkflowExecutionClosedRequest{
-							DomainUUID:     task.DomainID,
-							Execution:      execution,
-							StartTimestamp: mb.executionInfo.StartTimestamp.UnixNano(),
-							CloseTimestamp: mb.executionInfo.LastUpdatedTimestamp.UnixNano(),
+							DomainUUID:       task.DomainID,
+							Execution:        execution,
+							WorkflowTypeName: mb.executionInfo.WorkflowTypeName,
+							StartTimestamp:   mb.executionInfo.StartTimestamp.UnixNano(),
+							CloseTimestamp:   mb.executionInfo.LastUpdatedTimestamp.UnixNano(),
 						})
 						if err == nil {
 							err = context.deleteWorkflowExecution()
@@ -273,12 +274,8 @@ ProcessRetryLoop:
 	t.logger.Fatalf("Retry count exceeded for transfer taskID: %v", task.TaskID)
 }
 
-func (t *transferQueueProcessorImpl) recordWorkflowExecutionStarted(task *persistence.TransferTaskInfo) error {
-	execution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(task.WorkflowID),
-		RunId:      common.StringPtr(task.RunID),
-	}
-
+func (t *transferQueueProcessorImpl) recordWorkflowExecutionStarted(
+	execution workflow.WorkflowExecution, task *persistence.TransferTaskInfo) error {
 	context, err := t.cache.getOrCreateWorkflowExecution(task.DomainID, execution)
 	if err != nil {
 		return err
@@ -292,9 +289,10 @@ func (t *transferQueueProcessorImpl) recordWorkflowExecutionStarted(task *persis
 	}
 
 	err = t.visibilityManager.RecordWorkflowExecutionStarted(&persistence.RecordWorkflowExecutionStartedRequest{
-		DomainUUID:     task.DomainID,
-		Execution:      execution,
-		StartTimestamp: mb.executionInfo.StartTimestamp.UnixNano(),
+		DomainUUID:       task.DomainID,
+		Execution:        execution,
+		WorkflowTypeName: mb.executionInfo.WorkflowTypeName,
+		StartTimestamp:   mb.executionInfo.StartTimestamp.UnixNano(),
 	})
 
 	return err

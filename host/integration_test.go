@@ -908,6 +908,7 @@ func (s *integrationSuite) TestActivityCancelation() {
 func (s *integrationSuite) TestVisibility() {
 	startTime := time.Now().UnixNano()
 
+	// Start 2 workflow executions
 	id1 := "integration-visibility-test1"
 	id2 := "integration-visibility-test2"
 	wt := "integration-visibility-test-type"
@@ -950,6 +951,30 @@ func (s *integrationSuite) TestVisibility() {
 	_, err1 := s.engine.StartWorkflowExecution(request)
 	s.Nil(err1)
 
+	// Now complete one of the executions
+	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
+		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision) {
+		return []byte{}, []*workflow.Decision{{
+			DecisionType: workflow.DecisionTypePtr(workflow.DecisionType_CompleteWorkflowExecution),
+			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
+				Result_: []byte("Done."),
+			},
+		}}
+	}
+
+	poller := &taskPoller{
+		engine:          s.engine,
+		domain:          s.domainName,
+		taskList:        taskList,
+		identity:        identity,
+		decisionHandler: dtHandler,
+		activityHandler: nil,
+		logger:          s.logger,
+	}
+
+	err2 := poller.pollAndProcessDecisionTask(false, false)
+	s.Nil(err2)
+
 	// give time for transfer trasks to be processed
 	time.Sleep(time.Second * 2)
 
@@ -957,14 +982,21 @@ func (s *integrationSuite) TestVisibility() {
 	startFilter.EarliestTime = common.Int64Ptr(startTime)
 	startFilter.LatestTime = common.Int64Ptr(time.Now().UnixNano())
 
-	resp, err2 := s.engine.ListOpenWorkflowExecutions(&workflow.ListOpenWorkflowExecutionsRequest{
+	resp, err3 := s.engine.ListOpenWorkflowExecutions(&workflow.ListOpenWorkflowExecutionsRequest{
 		Domain:          common.StringPtr(s.domainName),
 		MaximumPageSize: common.Int32Ptr(100),
 		StartTimeFilter: startFilter,
 	})
+	s.Nil(err3)
+	s.Equal(1, len(resp.Executions))
 
-	s.Nil(err2)
-	s.Equal(2, len(resp.Executions))
+	resp2, err4 := s.engine.ListClosedWorkflowExecutions(&workflow.ListClosedWorkflowExecutionsRequest{
+		Domain:          common.StringPtr(s.domainName),
+		MaximumPageSize: common.Int32Ptr(100),
+		StartTimeFilter: startFilter,
+	})
+	s.Nil(err4)
+	s.Equal(1, len(resp2.Executions))
 }
 
 func (s *integrationSuite) setupShards() {
