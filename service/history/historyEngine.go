@@ -968,6 +968,10 @@ Update_History_Loop:
 	return &workflow.RecordActivityTaskHeartbeatResponse{}, ErrMaxAttemptsExceeded
 }
 
+func (e *historyEngineImpl) SignalWorkflowExecution(signalRequest *h.SignalWorkflowExecutionRequest) error {
+	return nil
+}
+
 func (e *historyEngineImpl) TerminateWorkflowExecution(terminateRequest *h.TerminateWorkflowExecutionRequest) error {
 	domainID := terminateRequest.GetDomainUUID()
 	request := terminateRequest.GetTerminateRequest()

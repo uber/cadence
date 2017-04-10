@@ -138,6 +138,8 @@ const (
 	HistoryClientRecordDecisionTaskStartedScope
 	// HistoryClientRecordActivityTaskStartedScope tracks RPC calls to history service
 	HistoryClientRecordActivityTaskStartedScope
+	// HistoryClientSignalWorkflowExecutionScope tracks RPC calls to history service
+	HistoryClientSignalWorkflowExecutionScope
 	// HistoryClientTerminateWorkflowExecutionScope tracks RPC calls to history service
 	HistoryClientTerminateWorkflowExecutionScope
 	// MatchingClientPollForDecisionTaskScope tracks RPC calls to matching service
@@ -194,6 +196,8 @@ const (
 	HistoryRecordDecisionTaskStartedScope
 	// HistoryRecordActivityTaskStartedScope tracks RecordActivityTaskStarted API calls received by service
 	HistoryRecordActivityTaskStartedScope
+	// HistorySignalWorkflowExecutionScope tracks SignalWorkflowExecution API calls received by service
+	HistorySignalWorkflowExecutionScope
 	// HistoryTerminateWorkflowExecutionScope tracks TerminateWorkflowExecution API calls received by service
 	HistoryTerminateWorkflowExecutionScope
 	// HistoryProcessTransferTasksScope tracks number of transfer tasks processed
@@ -245,6 +249,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryClientGetWorkflowExecutionHistoryScope:  {operation: "HistoryClientGetWorkflowExecutionHistory"},
 		HistoryClientRecordDecisionTaskStartedScope:    {operation: "HistoryClientRecordDecisionTaskStarted"},
 		HistoryClientRecordActivityTaskStartedScope:    {operation: "HistoryClientRecordActivityTaskStarted"},
+		HistoryClientSignalWorkflowExecutionScope:      {operation: "HistoryClientSignalWorkflowExecution"},
 		HistoryClientTerminateWorkflowExecutionScope:   {operation: "HistoryClientTerminateWorkflowExecution"},
 		MatchingClientPollForDecisionTaskScope:         {operation: "MatchingClientPollForDecisionTask"},
 		MatchingClientPollForActivityTaskScope:         {operation: "MatchingClientPollForActivityTask"},
@@ -273,6 +278,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryGetWorkflowExecutionHistoryScope:  {operation: "GetWorkflowExecutionHistory"},
 		HistoryRecordDecisionTaskStartedScope:    {operation: "RecordDecisionTaskStarted"},
 		HistoryRecordActivityTaskStartedScope:    {operation: "RecordActivityTaskStarted"},
+		HistorySignalWorkflowExecutionScope:      {operation: "SignalWorkflowExecution"},
 		HistoryTerminateWorkflowExecutionScope:   {operation: "TerminateWorkflowExecution"},
 		HistoryProcessTransferTasksScope:         {operation: "ProcessTransferTask"},
 	},
