@@ -651,13 +651,7 @@ func (t *timerQueueProcessorImpl) updateWorkflowExecution(context *workflowExecu
 		}}
 	}
 
-	// Generate a transaction ID for appending events to history
-	transactionID, err1 := t.historyService.shard.GetNextTransferTaskID()
-	if err1 != nil {
-		return err1
-	}
-
-	err := context.updateWorkflowExecutionWithDeleteTask(transferTasks, timerTasks, clearTimerTask, transactionID)
+	err := context.updateWorkflowExecutionWithDeleteTask(transferTasks, timerTasks, clearTimerTask)
 	if err != nil {
 		if isShardOwnershiptLostError(err) {
 			// Shard is stolen.  Stop timer processing to reduce duplicates
