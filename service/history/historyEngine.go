@@ -298,15 +298,9 @@ Update_History_Loop:
 		timerTasks := []persistence.Task{timeOutTask}
 		defer e.timerProcessor.NotifyNewTimer(timeOutTask.GetTaskID())
 
-		// Generate a transaction ID for appending events to history
-		transactionID, err2 := e.shard.GetNextTransferTaskID()
-		if err2 != nil {
-			return nil, err2
-		}
-
 		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 		// the history and try the operation again.
-		if err3 := context.updateWorkflowExecution(nil, timerTasks, transactionID); err3 != nil {
+		if err3 := context.updateWorkflowExecution(nil, timerTasks); err3 != nil {
 			if err3 == ErrConflict {
 				continue Update_History_Loop
 			}
@@ -410,15 +404,9 @@ Update_History_Loop:
 			defer e.timerProcessor.NotifyNewTimer(start2HeartBeatTimeoutTask.GetTaskID())
 		}
 
-		// Generate a transaction ID for appending events to history
-		transactionID, err2 := e.shard.GetNextTransferTaskID()
-		if err2 != nil {
-			return nil, err2
-		}
-
 		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 		// the history and try the operationi again.
-		if err3 := context.updateWorkflowExecution(nil, timerTasks, transactionID); err3 != nil {
+		if err3 := context.updateWorkflowExecution(nil, timerTasks); err3 != nil {
 			if err3 == ErrConflict {
 				continue Update_History_Loop
 			}
@@ -609,16 +597,9 @@ Update_History_Loop:
 			transferTasks = append(transferTasks, &persistence.DeleteExecutionTask{})
 		}
 
-		// Generate a transaction ID for appending events to history
-		transactionID, err3 := e.shard.GetNextTransferTaskID()
-		if err3 != nil {
-			return err3
-		}
-
 		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict then reload
 		// the history and try the operation again.
-		if err := context.updateWorkflowExecutionWithContext(request.GetExecutionContext(), transferTasks, timerTasks,
-			transactionID); err != nil {
+		if err := context.updateWorkflowExecutionWithContext(request.GetExecutionContext(), transferTasks, timerTasks); err != nil {
 			if err == ErrConflict {
 				continue Update_History_Loop
 			}
@@ -692,15 +673,9 @@ Update_History_Loop:
 			}}
 		}
 
-		// Generate a transaction ID for appending events to history
-		transactionID, err2 := e.shard.GetNextTransferTaskID()
-		if err2 != nil {
-			return err2
-		}
-
 		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 		// the history and try the operation again.
-		if err := context.updateWorkflowExecution(transferTasks, nil, transactionID); err != nil {
+		if err := context.updateWorkflowExecution(transferTasks, nil); err != nil {
 			if err == ErrConflict {
 				continue Update_History_Loop
 			}
@@ -774,15 +749,9 @@ Update_History_Loop:
 			}}
 		}
 
-		// Generate a transaction ID for appending events to history
-		transactionID, err3 := e.shard.GetNextTransferTaskID()
-		if err3 != nil {
-			return err3
-		}
-
 		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 		// the history and try the operation again.
-		if err := context.updateWorkflowExecution(transferTasks, nil, transactionID); err != nil {
+		if err := context.updateWorkflowExecution(transferTasks, nil); err != nil {
 			if err == ErrConflict {
 				continue Update_History_Loop
 			}
@@ -857,15 +826,9 @@ Update_History_Loop:
 			}}
 		}
 
-		// Generate a transaction ID for appending events to history
-		transactionID, err3 := e.shard.GetNextTransferTaskID()
-		if err3 != nil {
-			return err3
-		}
-
 		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 		// the history and try the operation again.
-		if err := context.updateWorkflowExecution(transferTasks, nil, transactionID); err != nil {
+		if err := context.updateWorkflowExecution(transferTasks, nil); err != nil {
 			if err == ErrConflict {
 				continue Update_History_Loop
 			}
@@ -946,15 +909,9 @@ Update_History_Loop:
 		// Save progress reported.
 		msBuilder.updateActivityProgress(ai, request.GetDetails())
 
-		// Generate a transaction ID for appending events to history
-		transactionID, err2 := e.shard.GetNextTransferTaskID()
-		if err2 != nil {
-			return nil, err2
-		}
-
 		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 		// the history and try the operation again.
-		if err := context.updateWorkflowExecution(transferTasks, timerTasks, transactionID); err != nil {
+		if err := context.updateWorkflowExecution(transferTasks, timerTasks); err != nil {
 			if err == ErrConflict {
 				continue Update_History_Loop
 			}
@@ -1002,15 +959,9 @@ Update_History_Loop:
 		// Create a transfer task to delete workflow execution
 		transferTasks := []persistence.Task{&persistence.DeleteExecutionTask{}}
 
-		// Generate a transaction ID for appending events to history
-		transactionID, err2 := e.shard.GetNextTransferTaskID()
-		if err2 != nil {
-			return err2
-		}
-
 		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict then reload
 		// the history and try the operation again.
-		if err := context.updateWorkflowExecution(transferTasks, nil, transactionID); err != nil {
+		if err := context.updateWorkflowExecution(transferTasks, nil); err != nil {
 			if err == ErrConflict {
 				continue Update_History_Loop
 			}

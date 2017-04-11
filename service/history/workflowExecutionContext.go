@@ -2,7 +2,6 @@ package history
 
 import (
 	"fmt"
-	"sync"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -18,13 +17,14 @@ type (
 		workflowExecution workflow.WorkflowExecution
 		shard             ShardContext
 		executionManager  persistence.ExecutionManager
+		lockManager       *executionLockManager
 		logger            bark.Logger
 
-		sync.Mutex
-		msBuilder       *mutableStateBuilder
-		tBuilder        *timerBuilder
-		updateCondition int64
-		deleteTimerTask persistence.Task
+		msBuilder            *mutableStateBuilder
+		tBuilder             *timerBuilder
+		updateCondition      int64
+		historyTransactionID int64
+		deleteTimerTask      persistence.Task
 	}
 )
 
@@ -33,7 +33,7 @@ var (
 )
 
 func newWorkflowExecutionContext(domainID string, execution workflow.WorkflowExecution, shard ShardContext,
-	executionManager persistence.ExecutionManager, logger bark.Logger) *workflowExecutionContext {
+	executionManager persistence.ExecutionManager, lockManager *executionLockManager, logger bark.Logger) *workflowExecutionContext {
 	lg := logger.WithFields(bark.Fields{
 		tagWorkflowExecutionID: execution.GetWorkflowId(),
 		tagWorkflowRunID:       execution.GetRunId(),
@@ -45,9 +45,18 @@ func newWorkflowExecutionContext(domainID string, execution workflow.WorkflowExe
 		workflowExecution: execution,
 		shard:             shard,
 		executionManager:  executionManager,
+		lockManager:       lockManager,
 		tBuilder:          tBuilder,
 		logger:            lg,
 	}
+}
+
+func (c *workflowExecutionContext) Lock() {
+	c.lockManager.lockExecution(c.workflowExecution.GetRunId())
+}
+
+func (c *workflowExecutionContext) Unlock() {
+	c.lockManager.unlockExecution(c.workflowExecution.GetRunId())
 }
 
 func (c *workflowExecutionContext) loadWorkflowExecution() (*mutableStateBuilder, error) {
@@ -64,6 +73,11 @@ func (c *workflowExecutionContext) loadWorkflowExecution() (*mutableStateBuilder
 		return nil, err
 	}
 
+	c.historyTransactionID, err = c.shard.GetNextTransferTaskID()
+	if err != nil {
+		return nil, err
+	}
+
 	msBuilder := newMutableStateBuilder(c.logger)
 	if response != nil && response.State != nil {
 		state := response.State
@@ -73,25 +87,26 @@ func (c *workflowExecutionContext) loadWorkflowExecution() (*mutableStateBuilder
 	}
 
 	c.msBuilder = msBuilder
+
 	return msBuilder, nil
 }
 
-func (c *workflowExecutionContext) updateWorkflowExecutionWithContext(context []byte, transferTasks []persistence.Task,
-	timerTasks []persistence.Task, transactionID int64) error {
+func (c *workflowExecutionContext) updateWorkflowExecutionWithContext(
+	context []byte, transferTasks []persistence.Task, timerTasks []persistence.Task) error {
 	c.msBuilder.executionInfo.ExecutionContext = context
 
-	return c.updateWorkflowExecution(transferTasks, timerTasks, transactionID)
+	return c.updateWorkflowExecution(transferTasks, timerTasks)
 }
 
-func (c *workflowExecutionContext) updateWorkflowExecutionWithDeleteTask(transferTasks []persistence.Task,
-	timerTasks []persistence.Task, deleteTimerTask persistence.Task, transactionID int64) error {
+func (c *workflowExecutionContext) updateWorkflowExecutionWithDeleteTask(
+	transferTasks []persistence.Task, timerTasks []persistence.Task, deleteTimerTask persistence.Task) error {
 	c.deleteTimerTask = deleteTimerTask
 
-	return c.updateWorkflowExecution(transferTasks, timerTasks, transactionID)
+	return c.updateWorkflowExecution(transferTasks, timerTasks)
 }
 
-func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persistence.Task,
-	timerTasks []persistence.Task, transactionID int64) error {
+func (c *workflowExecutionContext) updateWorkflowExecution(
+	transferTasks []persistence.Task, timerTasks []persistence.Task) error {
 	// Take a snapshot of all updates we have accumulated for this execution
 	updates := c.msBuilder.CloseUpdateSession()
 
@@ -108,7 +123,7 @@ func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persi
 		if err0 := c.shard.AppendHistoryEvents(&persistence.AppendHistoryEventsRequest{
 			DomainID:      c.domainID,
 			Execution:     c.workflowExecution,
-			TransactionID: transactionID,
+			TransactionID: c.historyTransactionID,
 			FirstEventID:  firstEvent.GetEventId(),
 			Events:        newEvents,
 		}); err0 != nil {
