@@ -18,16 +18,17 @@ var _ = shared.GoUnusedProtection__
 
 // TChanHistoryService is the interface that defines the server handler and client interface.
 type TChanHistoryService interface {
-	GetWorkflowExecutionHistory(ctx thrift.Context, getRequest *shared.GetWorkflowExecutionHistoryRequest) (*shared.GetWorkflowExecutionHistoryResponse, error)
-	RecordActivityTaskHeartbeat(ctx thrift.Context, heartbeatRequest *shared.RecordActivityTaskHeartbeatRequest) (*shared.RecordActivityTaskHeartbeatResponse, error)
+	GetWorkflowExecutionHistory(ctx thrift.Context, getRequest *GetWorkflowExecutionHistoryRequest) (*shared.GetWorkflowExecutionHistoryResponse, error)
+	RecordActivityTaskHeartbeat(ctx thrift.Context, heartbeatRequest *RecordActivityTaskHeartbeatRequest) (*shared.RecordActivityTaskHeartbeatResponse, error)
 	RecordActivityTaskStarted(ctx thrift.Context, addRequest *RecordActivityTaskStartedRequest) (*RecordActivityTaskStartedResponse, error)
 	RecordDecisionTaskStarted(ctx thrift.Context, addRequest *RecordDecisionTaskStartedRequest) (*RecordDecisionTaskStartedResponse, error)
-	RequestCancelWorkflowExecution(ctx thrift.Context, cancelRequest *shared.RequestCancelWorkflowExecutionRequest) error
-	RespondActivityTaskCanceled(ctx thrift.Context, canceledRequest *shared.RespondActivityTaskCanceledRequest) error
-	RespondActivityTaskCompleted(ctx thrift.Context, completeRequest *shared.RespondActivityTaskCompletedRequest) error
-	RespondActivityTaskFailed(ctx thrift.Context, failRequest *shared.RespondActivityTaskFailedRequest) error
-	RespondDecisionTaskCompleted(ctx thrift.Context, completeRequest *shared.RespondDecisionTaskCompletedRequest) error
-	StartWorkflowExecution(ctx thrift.Context, startRequest *shared.StartWorkflowExecutionRequest) (*shared.StartWorkflowExecutionResponse, error)
+	RequestCancelWorkflowExecution(ctx thrift.Context, cancelRequest *RequestCancelWorkflowExecutionRequest) error
+	RespondActivityTaskCanceled(ctx thrift.Context, canceledRequest *RespondActivityTaskCanceledRequest) error
+	RespondActivityTaskCompleted(ctx thrift.Context, completeRequest *RespondActivityTaskCompletedRequest) error
+	RespondActivityTaskFailed(ctx thrift.Context, failRequest *RespondActivityTaskFailedRequest) error
+	RespondDecisionTaskCompleted(ctx thrift.Context, completeRequest *RespondDecisionTaskCompletedRequest) error
+	StartWorkflowExecution(ctx thrift.Context, startRequest *StartWorkflowExecutionRequest) (*shared.StartWorkflowExecutionResponse, error)
+	TerminateWorkflowExecution(ctx thrift.Context, terminateRequest *TerminateWorkflowExecutionRequest) error
 }
 
 // Implementation of a client and service handler.
@@ -49,48 +50,48 @@ func NewTChanHistoryServiceClient(client thrift.TChanClient) TChanHistoryService
 	return NewTChanHistoryServiceInheritedClient("HistoryService", client)
 }
 
-func (c *tchanHistoryServiceClient) GetWorkflowExecutionHistory(ctx thrift.Context, getRequest *shared.GetWorkflowExecutionHistoryRequest) (*shared.GetWorkflowExecutionHistoryResponse, error) {
+func (c *tchanHistoryServiceClient) GetWorkflowExecutionHistory(ctx thrift.Context, getRequest *GetWorkflowExecutionHistoryRequest) (*shared.GetWorkflowExecutionHistoryResponse, error) {
 	var resp HistoryServiceGetWorkflowExecutionHistoryResult
 	args := HistoryServiceGetWorkflowExecutionHistoryArgs{
 		GetRequest: getRequest,
 	}
 	success, err := c.client.Call(ctx, c.thriftService, "GetWorkflowExecutionHistory", &args, &resp)
 	if err == nil && !success {
-		switch {
-		case resp.BadRequestError != nil:
-			err = resp.BadRequestError
-		case resp.InternalServiceError != nil:
-			err = resp.InternalServiceError
-		case resp.EntityNotExistError != nil:
-			err = resp.EntityNotExistError
-		case resp.ShardOwnershipLostError != nil:
-			err = resp.ShardOwnershipLostError
-		default:
-			err = fmt.Errorf("received no result or unknown exception for GetWorkflowExecutionHistory")
+		if e := resp.BadRequestError; e != nil {
+			err = e
+		}
+		if e := resp.InternalServiceError; e != nil {
+			err = e
+		}
+		if e := resp.EntityNotExistError; e != nil {
+			err = e
+		}
+		if e := resp.ShardOwnershipLostError; e != nil {
+			err = e
 		}
 	}
 
 	return resp.GetSuccess(), err
 }
 
-func (c *tchanHistoryServiceClient) RecordActivityTaskHeartbeat(ctx thrift.Context, heartbeatRequest *shared.RecordActivityTaskHeartbeatRequest) (*shared.RecordActivityTaskHeartbeatResponse, error) {
+func (c *tchanHistoryServiceClient) RecordActivityTaskHeartbeat(ctx thrift.Context, heartbeatRequest *RecordActivityTaskHeartbeatRequest) (*shared.RecordActivityTaskHeartbeatResponse, error) {
 	var resp HistoryServiceRecordActivityTaskHeartbeatResult
 	args := HistoryServiceRecordActivityTaskHeartbeatArgs{
 		HeartbeatRequest: heartbeatRequest,
 	}
 	success, err := c.client.Call(ctx, c.thriftService, "RecordActivityTaskHeartbeat", &args, &resp)
 	if err == nil && !success {
-		switch {
-		case resp.BadRequestError != nil:
-			err = resp.BadRequestError
-		case resp.InternalServiceError != nil:
-			err = resp.InternalServiceError
-		case resp.EntityNotExistError != nil:
-			err = resp.EntityNotExistError
-		case resp.ShardOwnershipLostError != nil:
-			err = resp.ShardOwnershipLostError
-		default:
-			err = fmt.Errorf("received no result or unknown exception for RecordActivityTaskHeartbeat")
+		if e := resp.BadRequestError; e != nil {
+			err = e
+		}
+		if e := resp.InternalServiceError; e != nil {
+			err = e
+		}
+		if e := resp.EntityNotExistError; e != nil {
+			err = e
+		}
+		if e := resp.ShardOwnershipLostError; e != nil {
+			err = e
 		}
 	}
 
@@ -104,19 +105,20 @@ func (c *tchanHistoryServiceClient) RecordActivityTaskStarted(ctx thrift.Context
 	}
 	success, err := c.client.Call(ctx, c.thriftService, "RecordActivityTaskStarted", &args, &resp)
 	if err == nil && !success {
-		switch {
-		case resp.BadRequestError != nil:
-			err = resp.BadRequestError
-		case resp.InternalServiceError != nil:
-			err = resp.InternalServiceError
-		case resp.EventAlreadyStartedError != nil:
-			err = resp.EventAlreadyStartedError
-		case resp.EntityNotExistError != nil:
-			err = resp.EntityNotExistError
-		case resp.ShardOwnershipLostError != nil:
-			err = resp.ShardOwnershipLostError
-		default:
-			err = fmt.Errorf("received no result or unknown exception for RecordActivityTaskStarted")
+		if e := resp.BadRequestError; e != nil {
+			err = e
+		}
+		if e := resp.InternalServiceError; e != nil {
+			err = e
+		}
+		if e := resp.EventAlreadyStartedError; e != nil {
+			err = e
+		}
+		if e := resp.EntityNotExistError; e != nil {
+			err = e
+		}
+		if e := resp.ShardOwnershipLostError; e != nil {
+			err = e
 		}
 	}
 
@@ -130,26 +132,27 @@ func (c *tchanHistoryServiceClient) RecordDecisionTaskStarted(ctx thrift.Context
 	}
 	success, err := c.client.Call(ctx, c.thriftService, "RecordDecisionTaskStarted", &args, &resp)
 	if err == nil && !success {
-		switch {
-		case resp.BadRequestError != nil:
-			err = resp.BadRequestError
-		case resp.InternalServiceError != nil:
-			err = resp.InternalServiceError
-		case resp.EventAlreadyStartedError != nil:
-			err = resp.EventAlreadyStartedError
-		case resp.EntityNotExistError != nil:
-			err = resp.EntityNotExistError
-		case resp.ShardOwnershipLostError != nil:
-			err = resp.ShardOwnershipLostError
-		default:
-			err = fmt.Errorf("received no result or unknown exception for RecordDecisionTaskStarted")
+		if e := resp.BadRequestError; e != nil {
+			err = e
+		}
+		if e := resp.InternalServiceError; e != nil {
+			err = e
+		}
+		if e := resp.EventAlreadyStartedError; e != nil {
+			err = e
+		}
+		if e := resp.EntityNotExistError; e != nil {
+			err = e
+		}
+		if e := resp.ShardOwnershipLostError; e != nil {
+			err = e
 		}
 	}
 
 	return resp.GetSuccess(), err
 }
 
-func (c *tchanHistoryServiceClient) RequestCancelWorkflowExecution(ctx thrift.Context, cancelRequest *shared.RequestCancelWorkflowExecutionRequest) error {
+func (c *tchanHistoryServiceClient) RequestCancelWorkflowExecution(ctx thrift.Context, cancelRequest *RequestCancelWorkflowExecutionRequest) error {
 	var resp HistoryServiceRequestCancelWorkflowExecutionResult
 	args := HistoryServiceRequestCancelWorkflowExecutionArgs{
 		CancelRequest: cancelRequest,
@@ -165,127 +168,156 @@ func (c *tchanHistoryServiceClient) RequestCancelWorkflowExecution(ctx thrift.Co
 		if e := resp.EntityNotExistError; e != nil {
 			err = e
 		}
+		if e := resp.ShardOwnershipLostError; e != nil {
+			err = e
+		}
 	}
 
 	return err
 }
 
-func (c *tchanHistoryServiceClient) RespondActivityTaskCanceled(ctx thrift.Context, canceledRequest *shared.RespondActivityTaskCanceledRequest) error {
+func (c *tchanHistoryServiceClient) RespondActivityTaskCanceled(ctx thrift.Context, canceledRequest *RespondActivityTaskCanceledRequest) error {
 	var resp HistoryServiceRespondActivityTaskCanceledResult
 	args := HistoryServiceRespondActivityTaskCanceledArgs{
 		CanceledRequest: canceledRequest,
 	}
 	success, err := c.client.Call(ctx, c.thriftService, "RespondActivityTaskCanceled", &args, &resp)
 	if err == nil && !success {
-		switch {
-		case resp.BadRequestError != nil:
-			err = resp.BadRequestError
-		case resp.InternalServiceError != nil:
-			err = resp.InternalServiceError
-		case resp.EntityNotExistError != nil:
-			err = resp.EntityNotExistError
-		case resp.ShardOwnershipLostError != nil:
-			err = resp.ShardOwnershipLostError
-		default:
-			err = fmt.Errorf("received no result or unknown exception for RespondActivityTaskCanceled")
+		if e := resp.BadRequestError; e != nil {
+			err = e
+		}
+		if e := resp.InternalServiceError; e != nil {
+			err = e
+		}
+		if e := resp.EntityNotExistError; e != nil {
+			err = e
+		}
+		if e := resp.ShardOwnershipLostError; e != nil {
+			err = e
 		}
 	}
 
 	return err
 }
 
-func (c *tchanHistoryServiceClient) RespondActivityTaskCompleted(ctx thrift.Context, completeRequest *shared.RespondActivityTaskCompletedRequest) error {
+func (c *tchanHistoryServiceClient) RespondActivityTaskCompleted(ctx thrift.Context, completeRequest *RespondActivityTaskCompletedRequest) error {
 	var resp HistoryServiceRespondActivityTaskCompletedResult
 	args := HistoryServiceRespondActivityTaskCompletedArgs{
 		CompleteRequest: completeRequest,
 	}
 	success, err := c.client.Call(ctx, c.thriftService, "RespondActivityTaskCompleted", &args, &resp)
 	if err == nil && !success {
-		switch {
-		case resp.BadRequestError != nil:
-			err = resp.BadRequestError
-		case resp.InternalServiceError != nil:
-			err = resp.InternalServiceError
-		case resp.EntityNotExistError != nil:
-			err = resp.EntityNotExistError
-		default:
-			err = fmt.Errorf("received no result or unknown exception for RespondActivityTaskCompleted")
+		if e := resp.BadRequestError; e != nil {
+			err = e
+		}
+		if e := resp.InternalServiceError; e != nil {
+			err = e
+		}
+		if e := resp.EntityNotExistError; e != nil {
+			err = e
+		}
+		if e := resp.ShardOwnershipLostError; e != nil {
+			err = e
 		}
 	}
 
 	return err
 }
 
-func (c *tchanHistoryServiceClient) RespondActivityTaskFailed(ctx thrift.Context, failRequest *shared.RespondActivityTaskFailedRequest) error {
+func (c *tchanHistoryServiceClient) RespondActivityTaskFailed(ctx thrift.Context, failRequest *RespondActivityTaskFailedRequest) error {
 	var resp HistoryServiceRespondActivityTaskFailedResult
 	args := HistoryServiceRespondActivityTaskFailedArgs{
 		FailRequest: failRequest,
 	}
 	success, err := c.client.Call(ctx, c.thriftService, "RespondActivityTaskFailed", &args, &resp)
 	if err == nil && !success {
-		switch {
-		case resp.BadRequestError != nil:
-			err = resp.BadRequestError
-		case resp.InternalServiceError != nil:
-			err = resp.InternalServiceError
-		case resp.EntityNotExistError != nil:
-			err = resp.EntityNotExistError
-		case resp.ShardOwnershipLostError != nil:
-			err = resp.ShardOwnershipLostError
-		default:
-			err = fmt.Errorf("received no result or unknown exception for RespondActivityTaskFailed")
+		if e := resp.BadRequestError; e != nil {
+			err = e
+		}
+		if e := resp.InternalServiceError; e != nil {
+			err = e
+		}
+		if e := resp.EntityNotExistError; e != nil {
+			err = e
+		}
+		if e := resp.ShardOwnershipLostError; e != nil {
+			err = e
 		}
 	}
 
 	return err
 }
 
-func (c *tchanHistoryServiceClient) RespondDecisionTaskCompleted(ctx thrift.Context, completeRequest *shared.RespondDecisionTaskCompletedRequest) error {
+func (c *tchanHistoryServiceClient) RespondDecisionTaskCompleted(ctx thrift.Context, completeRequest *RespondDecisionTaskCompletedRequest) error {
 	var resp HistoryServiceRespondDecisionTaskCompletedResult
 	args := HistoryServiceRespondDecisionTaskCompletedArgs{
 		CompleteRequest: completeRequest,
 	}
 	success, err := c.client.Call(ctx, c.thriftService, "RespondDecisionTaskCompleted", &args, &resp)
 	if err == nil && !success {
-		switch {
-		case resp.BadRequestError != nil:
-			err = resp.BadRequestError
-		case resp.InternalServiceError != nil:
-			err = resp.InternalServiceError
-		case resp.EntityNotExistError != nil:
-			err = resp.EntityNotExistError
-		case resp.ShardOwnershipLostError != nil:
-			err = resp.ShardOwnershipLostError
-		default:
-			err = fmt.Errorf("received no result or unknown exception for RespondDecisionTaskCompleted")
+		if e := resp.BadRequestError; e != nil {
+			err = e
+		}
+		if e := resp.InternalServiceError; e != nil {
+			err = e
+		}
+		if e := resp.EntityNotExistError; e != nil {
+			err = e
+		}
+		if e := resp.ShardOwnershipLostError; e != nil {
+			err = e
 		}
 	}
 
 	return err
 }
 
-func (c *tchanHistoryServiceClient) StartWorkflowExecution(ctx thrift.Context, startRequest *shared.StartWorkflowExecutionRequest) (*shared.StartWorkflowExecutionResponse, error) {
+func (c *tchanHistoryServiceClient) StartWorkflowExecution(ctx thrift.Context, startRequest *StartWorkflowExecutionRequest) (*shared.StartWorkflowExecutionResponse, error) {
 	var resp HistoryServiceStartWorkflowExecutionResult
 	args := HistoryServiceStartWorkflowExecutionArgs{
 		StartRequest: startRequest,
 	}
 	success, err := c.client.Call(ctx, c.thriftService, "StartWorkflowExecution", &args, &resp)
 	if err == nil && !success {
-		switch {
-		case resp.BadRequestError != nil:
-			err = resp.BadRequestError
-		case resp.InternalServiceError != nil:
-			err = resp.InternalServiceError
-		case resp.SessionAlreadyExistError != nil:
-			err = resp.SessionAlreadyExistError
-		case resp.ShardOwnershipLostError != nil:
-			err = resp.ShardOwnershipLostError
-		default:
-			err = fmt.Errorf("received no result or unknown exception for StartWorkflowExecution")
+		if e := resp.BadRequestError; e != nil {
+			err = e
+		}
+		if e := resp.InternalServiceError; e != nil {
+			err = e
+		}
+		if e := resp.SessionAlreadyExistError; e != nil {
+			err = e
+		}
+		if e := resp.ShardOwnershipLostError; e != nil {
+			err = e
 		}
 	}
 
 	return resp.GetSuccess(), err
+}
+
+func (c *tchanHistoryServiceClient) TerminateWorkflowExecution(ctx thrift.Context, terminateRequest *TerminateWorkflowExecutionRequest) error {
+	var resp HistoryServiceTerminateWorkflowExecutionResult
+	args := HistoryServiceTerminateWorkflowExecutionArgs{
+		TerminateRequest: terminateRequest,
+	}
+	success, err := c.client.Call(ctx, c.thriftService, "TerminateWorkflowExecution", &args, &resp)
+	if err == nil && !success {
+		if e := resp.BadRequestError; e != nil {
+			err = e
+		}
+		if e := resp.InternalServiceError; e != nil {
+			err = e
+		}
+		if e := resp.EntityNotExistError; e != nil {
+			err = e
+		}
+		if e := resp.ShardOwnershipLostError; e != nil {
+			err = e
+		}
+	}
+
+	return err
 }
 
 type tchanHistoryServiceServer struct {
@@ -316,6 +348,7 @@ func (s *tchanHistoryServiceServer) Methods() []string {
 		"RespondActivityTaskFailed",
 		"RespondDecisionTaskCompleted",
 		"StartWorkflowExecution",
+		"TerminateWorkflowExecution",
 	}
 }
 
@@ -341,6 +374,8 @@ func (s *tchanHistoryServiceServer) Handle(ctx thrift.Context, methodName string
 		return s.handleRespondDecisionTaskCompleted(ctx, protocol)
 	case "StartWorkflowExecution":
 		return s.handleStartWorkflowExecution(ctx, protocol)
+	case "TerminateWorkflowExecution":
+		return s.handleTerminateWorkflowExecution(ctx, protocol)
 
 	default:
 		return false, nil, fmt.Errorf("method %v not found in service %v", methodName, s.Service())
@@ -557,6 +592,11 @@ func (s *tchanHistoryServiceServer) handleRequestCancelWorkflowExecution(ctx thr
 				return false, nil, fmt.Errorf("Handler for entityNotExistError returned non-nil error type *shared.EntityNotExistsError but nil value")
 			}
 			res.EntityNotExistError = v
+		case *ShardOwnershipLostError:
+			if v == nil {
+				return false, nil, fmt.Errorf("Handler for shardOwnershipLostError returned non-nil error type *ShardOwnershipLostError but nil value")
+			}
+			res.ShardOwnershipLostError = v
 		default:
 			return false, nil, err
 		}
@@ -636,6 +676,11 @@ func (s *tchanHistoryServiceServer) handleRespondActivityTaskCompleted(ctx thrif
 				return false, nil, fmt.Errorf("Handler for entityNotExistError returned non-nil error type *shared.EntityNotExistsError but nil value")
 			}
 			res.EntityNotExistError = v
+		case *ShardOwnershipLostError:
+			if v == nil {
+				return false, nil, fmt.Errorf("Handler for shardOwnershipLostError returned non-nil error type *ShardOwnershipLostError but nil value")
+			}
+			res.ShardOwnershipLostError = v
 		default:
 			return false, nil, err
 		}
@@ -767,6 +812,48 @@ func (s *tchanHistoryServiceServer) handleStartWorkflowExecution(ctx thrift.Cont
 		}
 	} else {
 		res.Success = r
+	}
+
+	return err == nil, &res, nil
+}
+
+func (s *tchanHistoryServiceServer) handleTerminateWorkflowExecution(ctx thrift.Context, protocol athrift.TProtocol) (bool, athrift.TStruct, error) {
+	var req HistoryServiceTerminateWorkflowExecutionArgs
+	var res HistoryServiceTerminateWorkflowExecutionResult
+
+	if err := req.Read(protocol); err != nil {
+		return false, nil, err
+	}
+
+	err :=
+		s.handler.TerminateWorkflowExecution(ctx, req.TerminateRequest)
+
+	if err != nil {
+		switch v := err.(type) {
+		case *shared.BadRequestError:
+			if v == nil {
+				return false, nil, fmt.Errorf("Handler for badRequestError returned non-nil error type *shared.BadRequestError but nil value")
+			}
+			res.BadRequestError = v
+		case *shared.InternalServiceError:
+			if v == nil {
+				return false, nil, fmt.Errorf("Handler for internalServiceError returned non-nil error type *shared.InternalServiceError but nil value")
+			}
+			res.InternalServiceError = v
+		case *shared.EntityNotExistsError:
+			if v == nil {
+				return false, nil, fmt.Errorf("Handler for entityNotExistError returned non-nil error type *shared.EntityNotExistsError but nil value")
+			}
+			res.EntityNotExistError = v
+		case *ShardOwnershipLostError:
+			if v == nil {
+				return false, nil, fmt.Errorf("Handler for shardOwnershipLostError returned non-nil error type *ShardOwnershipLostError but nil value")
+			}
+			res.ShardOwnershipLostError = v
+		default:
+			return false, nil, err
+		}
+	} else {
 	}
 
 	return err == nil, &res, nil

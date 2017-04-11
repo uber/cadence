@@ -12,28 +12,29 @@ import (
 
 const (
 	templateAppendHistoryEvents = `INSERT INTO events (` +
-		`workflow_id, run_id, first_event_id, range_id, tx_id, data) ` +
-		`VALUES (?, ?, ?, ?, ?, ?) IF NOT EXISTS`
+		`domain_id, workflow_id, run_id, first_event_id, range_id, tx_id, data) ` +
+		`VALUES (?, ?, ?, ?, ?, ?, ?) IF NOT EXISTS`
 
 	templateOverwriteHistoryEvents = `UPDATE events ` +
 		`SET range_id = ?, tx_id = ?, data = ? ` +
-		`WHERE workflow_id = ? AND run_id = ? AND first_event_id = ? ` +
+		`WHERE domain_id = ? AND workflow_id = ? AND run_id = ? AND first_event_id = ? ` +
 		`IF range_id <= ? AND tx_id < ?`
 
 	templateGetWorkflowExecutionHistory = `SELECT first_event_id, data FROM events ` +
-		`WHERE workflow_id = ? ` +
+		`WHERE domain_id = ? ` +
+		`AND workflow_id = ? ` +
 		`AND run_id = ? ` +
 		`AND first_event_id < ?`
 
 	templateDeleteWorkflowExecutionHistory = `DELETE FROM events ` +
-		`WHERE workflow_id = ? ` +
+		`WHERE domain_id = ? ` +
+		`AND workflow_id = ? ` +
 		`AND run_id = ? `
 )
 
 type (
 	cassandraHistoryPersistence struct {
 		session      *gocql.Session
-		lowConslevel gocql.Consistency
 		logger       bark.Logger
 	}
 )
@@ -53,7 +54,7 @@ func NewCassandraHistoryPersistence(hosts string, dc string, keyspace string, lo
 		return nil, err
 	}
 
-	return &cassandraHistoryPersistence{session: session, lowConslevel: gocql.One, logger: logger}, nil
+	return &cassandraHistoryPersistence{session: session, logger: logger}, nil
 }
 
 func (h *cassandraHistoryPersistence) AppendHistoryEvents(request *AppendHistoryEventsRequest) error {
@@ -63,6 +64,7 @@ func (h *cassandraHistoryPersistence) AppendHistoryEvents(request *AppendHistory
 			request.RangeID,
 			request.TransactionID,
 			request.Events,
+			request.DomainID,
 			request.Execution.GetWorkflowId(),
 			request.Execution.GetRunId(),
 			request.FirstEventID,
@@ -70,6 +72,7 @@ func (h *cassandraHistoryPersistence) AppendHistoryEvents(request *AppendHistory
 			request.TransactionID)
 	} else {
 		query = h.session.Query(templateAppendHistoryEvents,
+			request.DomainID,
 			request.Execution.GetWorkflowId(),
 			request.Execution.GetRunId(),
 			request.FirstEventID,
@@ -104,6 +107,7 @@ func (h *cassandraHistoryPersistence) GetWorkflowExecutionHistory(request *GetWo
 	*GetWorkflowExecutionHistoryResponse, error) {
 	execution := request.Execution
 	query := h.session.Query(templateGetWorkflowExecutionHistory,
+		request.DomainID,
 		execution.GetWorkflowId(),
 		execution.GetRunId(),
 		request.NextEventID)
@@ -148,6 +152,7 @@ func (h *cassandraHistoryPersistence) DeleteWorkflowExecutionHistory(
 	request *DeleteWorkflowExecutionHistoryRequest) error {
 	execution := request.Execution
 	query := h.session.Query(templateDeleteWorkflowExecutionHistory,
+		request.DomainID,
 		execution.GetWorkflowId(),
 		execution.GetRunId())
 

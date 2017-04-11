@@ -127,6 +127,13 @@ func (b *historyBuilder) AddCompleteWorkflowExecutionFailedEvent(decisionComplet
 	return b.addEventToHistory(event)
 }
 
+func (b *historyBuilder) AddWorkflowExecutionTerminatedEvent(
+	request *workflow.TerminateWorkflowExecutionRequest) *workflow.HistoryEvent {
+	event := b.newWorkflowExecutionTerminatedEvent(request)
+
+	return b.addEventToHistory(event)
+}
+
 func (b *historyBuilder) AddTimerStartedEvent(decisionCompletedEventID int64,
 	request *workflow.StartTimerDecisionAttributes) *workflow.HistoryEvent {
 
@@ -302,6 +309,13 @@ func (b *historyBuilder) AddRequestCancelExternalWorkflowExecutionFailedEvent(de
 	return b.addEventToHistory(event)
 }
 
+func (b *historyBuilder) AddMarkerRecordedEvent(decisionCompletedEventID int64,
+	attributes *workflow.RecordMarkerDecisionAttributes) *workflow.HistoryEvent {
+	event := b.newMarkerRecordedEventAttributes(decisionCompletedEventID, attributes)
+
+	return b.addEventToHistory(event)
+}
+
 func (b *historyBuilder) addEventToHistory(event *workflow.HistoryEvent) *workflow.HistoryEvent {
 	b.history = append(b.history, event)
 	return event
@@ -470,6 +484,30 @@ func (b *historyBuilder) newCompleteWorkflowExecutionFailedEvent(decisionTaskCom
 	attributes.Cause = workflow.WorkflowCompleteFailedCausePtr(cause)
 	attributes.DecisionTaskCompletedEventId = common.Int64Ptr(decisionTaskCompletedEventID)
 	historyEvent.CompleteWorkflowExecutionFailedEventAttributes = attributes
+
+	return historyEvent
+}
+
+func (b *historyBuilder) newWorkflowExecutionTerminatedEvent(
+	request *workflow.TerminateWorkflowExecutionRequest) *workflow.HistoryEvent {
+	historyEvent := b.msBuilder.createNewHistoryEvent(workflow.EventType_WorkflowExecutionTerminated)
+	attributes := workflow.NewWorkflowExecutionTerminatedEventAttributes()
+	attributes.Reason = common.StringPtr(request.GetReason())
+	attributes.Details = request.GetDetails()
+	attributes.Identity = common.StringPtr(request.GetIdentity())
+	historyEvent.WorkflowExecutionTerminatedEventAttributes = attributes
+
+	return historyEvent
+}
+
+func (b *historyBuilder) newMarkerRecordedEventAttributes(decisionTaskCompletedEventID int64,
+	request *workflow.RecordMarkerDecisionAttributes) *workflow.HistoryEvent {
+	historyEvent := b.msBuilder.createNewHistoryEvent(workflow.EventType_MarkerRecorded)
+	attributes := workflow.NewMarkerRecordedEventAttributes()
+	attributes.MarkerName = common.StringPtr(request.GetMarkerName())
+	attributes.Details = request.GetDetails()
+	attributes.DecisionTaskCompletedEventId = common.Int64Ptr(decisionTaskCompletedEventID)
+	historyEvent.MarkerRecordedEventAttributes = attributes
 
 	return historyEvent
 }

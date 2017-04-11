@@ -20,8 +20,8 @@ var _ = shared.GoUnusedProtection__
 type TChanMatchingService interface {
 	AddActivityTask(ctx thrift.Context, addRequest *AddActivityTaskRequest) error
 	AddDecisionTask(ctx thrift.Context, addRequest *AddDecisionTaskRequest) error
-	PollForActivityTask(ctx thrift.Context, pollRequest *shared.PollForActivityTaskRequest) (*shared.PollForActivityTaskResponse, error)
-	PollForDecisionTask(ctx thrift.Context, pollRequest *shared.PollForDecisionTaskRequest) (*shared.PollForDecisionTaskResponse, error)
+	PollForActivityTask(ctx thrift.Context, pollRequest *PollForActivityTaskRequest) (*shared.PollForActivityTaskResponse, error)
+	PollForDecisionTask(ctx thrift.Context, pollRequest *PollForDecisionTaskRequest) (*shared.PollForDecisionTaskResponse, error)
 }
 
 // Implementation of a client and service handler.
@@ -50,15 +50,14 @@ func (c *tchanMatchingServiceClient) AddActivityTask(ctx thrift.Context, addRequ
 	}
 	success, err := c.client.Call(ctx, c.thriftService, "AddActivityTask", &args, &resp)
 	if err == nil && !success {
-		switch {
-		case resp.BadRequestError != nil:
-			err = resp.BadRequestError
-		case resp.InternalServiceError != nil:
-			err = resp.InternalServiceError
-		case resp.ServiceBusyError != nil:
-			err = resp.ServiceBusyError
-		default:
-			err = fmt.Errorf("received no result or unknown exception for AddActivityTask")
+		if e := resp.BadRequestError; e != nil {
+			err = e
+		}
+		if e := resp.InternalServiceError; e != nil {
+			err = e
+		}
+		if e := resp.ServiceBusyError; e != nil {
+			err = e
 		}
 	}
 
@@ -72,55 +71,50 @@ func (c *tchanMatchingServiceClient) AddDecisionTask(ctx thrift.Context, addRequ
 	}
 	success, err := c.client.Call(ctx, c.thriftService, "AddDecisionTask", &args, &resp)
 	if err == nil && !success {
-		switch {
-		case resp.BadRequestError != nil:
-			err = resp.BadRequestError
-		case resp.InternalServiceError != nil:
-			err = resp.InternalServiceError
-		case resp.ServiceBusyError != nil:
-			err = resp.ServiceBusyError
-		default:
-			err = fmt.Errorf("received no result or unknown exception for AddDecisionTask")
+		if e := resp.BadRequestError; e != nil {
+			err = e
+		}
+		if e := resp.InternalServiceError; e != nil {
+			err = e
+		}
+		if e := resp.ServiceBusyError; e != nil {
+			err = e
 		}
 	}
 
 	return err
 }
 
-func (c *tchanMatchingServiceClient) PollForActivityTask(ctx thrift.Context, pollRequest *shared.PollForActivityTaskRequest) (*shared.PollForActivityTaskResponse, error) {
+func (c *tchanMatchingServiceClient) PollForActivityTask(ctx thrift.Context, pollRequest *PollForActivityTaskRequest) (*shared.PollForActivityTaskResponse, error) {
 	var resp MatchingServicePollForActivityTaskResult
 	args := MatchingServicePollForActivityTaskArgs{
 		PollRequest: pollRequest,
 	}
 	success, err := c.client.Call(ctx, c.thriftService, "PollForActivityTask", &args, &resp)
 	if err == nil && !success {
-		switch {
-		case resp.BadRequestError != nil:
-			err = resp.BadRequestError
-		case resp.InternalServiceError != nil:
-			err = resp.InternalServiceError
-		default:
-			err = fmt.Errorf("received no result or unknown exception for PollForActivityTask")
+		if e := resp.BadRequestError; e != nil {
+			err = e
+		}
+		if e := resp.InternalServiceError; e != nil {
+			err = e
 		}
 	}
 
 	return resp.GetSuccess(), err
 }
 
-func (c *tchanMatchingServiceClient) PollForDecisionTask(ctx thrift.Context, pollRequest *shared.PollForDecisionTaskRequest) (*shared.PollForDecisionTaskResponse, error) {
+func (c *tchanMatchingServiceClient) PollForDecisionTask(ctx thrift.Context, pollRequest *PollForDecisionTaskRequest) (*shared.PollForDecisionTaskResponse, error) {
 	var resp MatchingServicePollForDecisionTaskResult
 	args := MatchingServicePollForDecisionTaskArgs{
 		PollRequest: pollRequest,
 	}
 	success, err := c.client.Call(ctx, c.thriftService, "PollForDecisionTask", &args, &resp)
 	if err == nil && !success {
-		switch {
-		case resp.BadRequestError != nil:
-			err = resp.BadRequestError
-		case resp.InternalServiceError != nil:
-			err = resp.InternalServiceError
-		default:
-			err = fmt.Errorf("received no result or unknown exception for PollForDecisionTask")
+		if e := resp.BadRequestError; e != nil {
+			err = e
+		}
+		if e := resp.InternalServiceError; e != nil {
+			err = e
 		}
 	}
 

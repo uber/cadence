@@ -6,6 +6,13 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 )
 
+// Domain status
+const (
+	DomainStatusRegistered = iota
+	DomainStatusDeprecated
+	DomainStatusDeleted
+)
+
 // Workflow execution states
 const (
 	WorkflowStateCreated = iota
@@ -67,6 +74,7 @@ type (
 
 	// WorkflowExecutionInfo describes a workflow execution
 	WorkflowExecutionInfo struct {
+		DomainID             string
 		WorkflowID           string
 		RunID                string
 		TaskList             string
@@ -76,6 +84,7 @@ type (
 		State                int
 		NextEventID          int64
 		LastProcessedEvent   int64
+		StartTimestamp       time.Time
 		LastUpdatedTimestamp time.Time
 		CreateRequestID      string
 		DecisionScheduleID   int64
@@ -86,16 +95,19 @@ type (
 
 	// TransferTaskInfo describes a transfer task
 	TransferTaskInfo struct {
-		WorkflowID string
-		RunID      string
-		TaskID     int64
-		TaskList   string
-		TaskType   int
-		ScheduleID int64
+		DomainID       string
+		WorkflowID     string
+		RunID          string
+		TaskID         int64
+		TargetDomainID string
+		TaskList       string
+		TaskType       int
+		ScheduleID     int64
 	}
 
 	// TimerTaskInfo describes a timer task.
 	TimerTaskInfo struct {
+		DomainID    string
 		WorkflowID  string
 		RunID       string
 		TaskID      int64
@@ -106,6 +118,7 @@ type (
 
 	// TaskListInfo describes a state of a task list implementation.
 	TaskListInfo struct {
+		DomainID string
 		Name     string
 		TaskType int
 		RangeID  int64
@@ -114,6 +127,7 @@ type (
 
 	// TaskInfo describes either activity or decision task
 	TaskInfo struct {
+		DomainID   string
 		WorkflowID string
 		RunID      string
 		TaskID     int64
@@ -130,6 +144,7 @@ type (
 	// ActivityTask identifies a transfer task for activity
 	ActivityTask struct {
 		TaskID     int64
+		DomainID   string
 		TaskList   string
 		ScheduleID int64
 	}
@@ -137,6 +152,7 @@ type (
 	// DecisionTask identifies a transfer task for decision
 	DecisionTask struct {
 		TaskID     int64
+		DomainID   string
 		TaskList   string
 		ScheduleID int64
 	}
@@ -221,6 +237,7 @@ type (
 	// CreateWorkflowExecutionRequest is used to write a new workflow execution
 	CreateWorkflowExecutionRequest struct {
 		RequestID                   string
+		DomainID                    string
 		Execution                   workflow.WorkflowExecution
 		TaskList                    string
 		WorkflowTypeName            string
@@ -243,6 +260,7 @@ type (
 
 	// GetWorkflowExecutionRequest is used to retrieve the info of a workflow execution
 	GetWorkflowExecutionRequest struct {
+		DomainID  string
 		Execution workflow.WorkflowExecution
 	}
 
@@ -295,6 +313,7 @@ type (
 
 	// LeaseTaskListRequest is used to request lease of a task list
 	LeaseTaskListRequest struct {
+		DomainID string
 		TaskList string
 		TaskType int
 	}
@@ -315,6 +334,7 @@ type (
 
 	// CreateTasksRequest is used to create a new task for a workflow exectution
 	CreateTasksRequest struct {
+		DomainID     string
 		TaskList     string
 		TaskListType int
 		RangeID      int64
@@ -334,6 +354,7 @@ type (
 
 	// GetTasksRequest is used to retrieve tasks of a task list
 	GetTasksRequest struct {
+		DomainID     string
 		TaskList     string
 		TaskType     int
 		ReadLevel    int64
@@ -368,6 +389,7 @@ type (
 
 	// AppendHistoryEventsRequest is used to append new events to workflow execution history
 	AppendHistoryEventsRequest struct {
+		DomainID      string
 		Execution     workflow.WorkflowExecution
 		FirstEventID  int64
 		RangeID       int64
@@ -378,6 +400,7 @@ type (
 
 	// GetWorkflowExecutionHistoryRequest is used to retrieve history of a workflow execution
 	GetWorkflowExecutionHistoryRequest struct {
+		DomainID  string
 		Execution workflow.WorkflowExecution
 		// Get the history events upto NextEventID.  Not Inclusive.
 		NextEventID int64
@@ -398,7 +421,66 @@ type (
 
 	// DeleteWorkflowExecutionHistoryRequest is used to delete workflow execution history
 	DeleteWorkflowExecutionHistoryRequest struct {
+		DomainID  string
 		Execution workflow.WorkflowExecution
+	}
+
+	// DomainInfo describes the domain entity
+	DomainInfo struct {
+		ID          string
+		Name        string
+		Status      int
+		Description string
+		OwnerEmail  string
+	}
+
+	// DomainConfig describes the domain configuration
+	DomainConfig struct {
+		Retention  int32
+		EmitMetric bool
+	}
+
+	// CreateDomainRequest is used to create the domain
+	CreateDomainRequest struct {
+		Name        string
+		Status      int
+		Description string
+		OwnerEmail  string
+		Retention   int32
+		EmitMetric  bool
+	}
+
+	// CreateDomainResponse is the response for CreateDomain
+	CreateDomainResponse struct {
+		ID string
+	}
+
+	// GetDomainRequest is used to read domain
+	GetDomainRequest struct {
+		ID   string
+		Name string
+	}
+
+	// GetDomainResponse is the response for GetDomain
+	GetDomainResponse struct {
+		Info   *DomainInfo
+		Config *DomainConfig
+	}
+
+	// UpdateDomainRequest is used to update domain
+	UpdateDomainRequest struct {
+		Info   *DomainInfo
+		Config *DomainConfig
+	}
+
+	// DeleteDomainRequest is used to delete domain entry from domains table
+	DeleteDomainRequest struct {
+		ID string
+	}
+
+	// DeleteDomainByNameRequest is used to delete domain entry from domains_by_name table
+	DeleteDomainByNameRequest struct {
+		Name string
 	}
 
 	// ShardManager is used to manage all shards
@@ -443,6 +525,15 @@ type (
 		GetWorkflowExecutionHistory(request *GetWorkflowExecutionHistoryRequest) (*GetWorkflowExecutionHistoryResponse,
 			error)
 		DeleteWorkflowExecutionHistory(request *DeleteWorkflowExecutionHistoryRequest) error
+	}
+
+	// MetadataManager is used to manage metadata CRUD for various entities
+	MetadataManager interface {
+		CreateDomain(request *CreateDomainRequest) (*CreateDomainResponse, error)
+		GetDomain(request *GetDomainRequest) (*GetDomainResponse, error)
+		UpdateDomain(request *UpdateDomainRequest) error
+		DeleteDomain(request *DeleteDomainRequest) error
+		DeleteDomainByName(request *DeleteDomainByNameRequest) error
 	}
 )
 

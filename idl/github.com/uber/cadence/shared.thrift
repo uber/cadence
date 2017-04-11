@@ -8,6 +8,10 @@ exception InternalServiceError {
   1: required string message
 }
 
+exception DomainAlreadyExistsError {
+  1: required string message
+}
+
 exception WorkflowExecutionAlreadyStartedError {
   10: optional string message
   20: optional string startRequestId
@@ -20,6 +24,12 @@ exception EntityNotExistsError {
 
 exception ServiceBusyError {
   1: required string message
+}
+
+enum DomainStatus {
+  REGISTERED,
+  DEPRECATED,
+  DELETED,
 }
 
 enum TimeoutType {
@@ -38,6 +48,7 @@ enum DecisionType {
   CancelTimer,
   CancelWorkflowExecution,
   RequestCancelExternalWorkflowExecution,
+  RecordMarker,
 }
 
 enum EventType {
@@ -67,6 +78,8 @@ enum EventType {
   WorkflowExecutionCanceled,
   RequestCancelExternalWorkflowExecutionInitiated,
   RequestCancelExternalWorkflowExecutionFailed,
+  MarkerRecorded,
+  WorkflowExecutionTerminated,
 }
 
 enum WorkflowCompleteFailedCause {
@@ -90,9 +103,18 @@ struct WorkflowExecution {
   20: optional string runId
 }
 
+struct WorkflowExecutionInfo {
+  10: optional WorkflowExecution execution
+  20: optional WorkflowType type
+  30: optional i64 (js.type = "Long") startTime
+  40: optional i64 (js.type = "Long") closeTime
+
+}
+
 struct ScheduleActivityTaskDecisionAttributes {
   10: optional string activityId
   20: optional ActivityType activityType
+  25: optional string domain
   30: optional TaskList taskList
   40: optional binary input
   45: optional i32 scheduleToCloseTimeoutSeconds
@@ -132,6 +154,11 @@ struct RequestCancelExternalWorkflowExecutionDecisionAttributes {
     20: optional string runId
 }
 
+struct RecordMarkerDecisionAttributes {
+  10: optional string markerName
+  20: optional binary details
+}
+
 struct Decision {
   10: optional DecisionType decisionType
   20: optional ScheduleActivityTaskDecisionAttributes scheduleActivityTaskDecisionAttributes
@@ -142,6 +169,7 @@ struct Decision {
   50: optional CancelTimerDecisionAttributes cancelTimerDecisionAttributes
   60: optional CancelWorkflowExecutionDecisionAttributes cancelWorkflowExecutionDecisionAttributes
   70: optional RequestCancelExternalWorkflowExecutionDecisionAttributes requestCancelExternalWorkflowExecutionDecisionAttributes
+  80: optional RecordMarkerDecisionAttributes recordMarkerDecisionAttributes
 }
 
 struct WorkflowExecutionStartedEventAttributes {
@@ -200,6 +228,7 @@ struct DecisionTaskTimedOutEventAttributes {
 struct ActivityTaskScheduledEventAttributes {
   10: optional string activityId
   20: optional ActivityType activityType
+  25: optional string domain
   30: optional TaskList taskList
   40: optional binary input
   45: optional i32 scheduleToCloseTimeoutSeconds
@@ -299,6 +328,18 @@ struct WorkflowExecutionCanceledEventAttributes {
   30: optional string identity
 }
 
+struct MarkerRecordedEventAttributes {
+  10: optional string markerName
+  20: optional binary details
+  30: optional i64 (js.type = "Long") decisionTaskCompletedEventId
+}
+
+struct WorkflowExecutionTerminatedEventAttributes {
+  10: optional string reason
+  20: optional binary details
+  30: optional string identity
+}
+
 struct RequestCancelExternalWorkflowExecutionInitiatedEventAttributes {
   10: optional i64 (js.type = "Long") decisionTaskCompletedEventId
   20: optional string workflowId
@@ -344,21 +385,86 @@ struct HistoryEvent {
   180: optional WorkflowExecutionCanceledEventAttributes workflowExecutionCanceledEventAttributes
   190: optional RequestCancelExternalWorkflowExecutionInitiatedEventAttributes requestCancelExternalWorkflowExecutionInitiatedEventAttributes
   200: optional RequestCancelExternalWorkflowExecutionFailedEventAttributes requestCancelExternalWorkflowExecutionFailedEventAttributes
+  210: optional MarkerRecordedEventAttributes markerRecordedEventAttributes
+  220: optional WorkflowExecutionTerminatedEventAttributes workflowExecutionTerminatedEventAttributes
 }
 
 struct History {
   10: optional list<HistoryEvent> events
 }
 
-struct StartWorkflowExecutionRequest {
+struct WorkflowExecutionFilter {
   10: optional string workflowId
-  20: optional WorkflowType workflowType
-  30: optional TaskList taskList
-  40: optional binary input
-  50: optional i32 executionStartToCloseTimeoutSeconds
-  60: optional i32 taskStartToCloseTimeoutSeconds
-  70: optional string identity
-  80: optional string requestId
+}
+
+struct WorkflowTypeFilter {
+  10: optional string name
+}
+
+struct StartTimeFilter {
+  10: optional i64 (js.type = "Long") earliestTime
+  20: optional i64 (js.type = "Long") latestTime
+}
+
+struct DomainInfo {
+  10: optional string name
+  20: optional DomainStatus status
+  30: optional string description
+  40: optional string ownerEmail
+}
+
+struct DomainConfiguration {
+  10: optional i32 workflowExecutionRetentionPeriodInDays
+  20: optional bool emitMetric
+}
+
+struct UpdateDomainInfo {
+  10: optional string description
+  20: optional string ownerEmail
+}
+
+struct RegisterDomainRequest {
+  10: optional string name
+  20: optional string description
+  30: optional string ownerEmail
+  40: optional i32 workflowExecutionRetentionPeriodInDays
+  50: optional bool emitMetric
+}
+
+struct DescribeDomainRequest {
+ 10: optional string name
+}
+
+struct DescribeDomainResponse {
+  10: optional DomainInfo domainInfo
+  20: optional DomainConfiguration configuration
+}
+
+struct UpdateDomainRequest {
+ 10: optional string name
+ 20: optional UpdateDomainInfo updatedInfo
+ 30: optional DomainConfiguration configuration
+}
+
+struct UpdateDomainResponse {
+  10: optional DomainInfo domainInfo
+  20: optional DomainConfiguration configuration
+}
+
+struct DeprecateDomainRequest {
+ 10: optional string name
+}
+
+struct StartWorkflowExecutionRequest {
+  10: optional string domain
+  20: optional string workflowId
+  30: optional WorkflowType workflowType
+  40: optional TaskList taskList
+  50: optional binary input
+  60: optional i32 executionStartToCloseTimeoutSeconds
+  70: optional i32 taskStartToCloseTimeoutSeconds
+  80: optional string identity
+  90: optional string requestId
 }
 
 struct StartWorkflowExecutionResponse {
@@ -366,8 +472,9 @@ struct StartWorkflowExecutionResponse {
 }
 
 struct PollForDecisionTaskRequest {
-  10: optional TaskList taskList
-  20: optional string identity
+  10: optional string domain
+  20: optional TaskList taskList
+  30: optional string identity
 }
 
 struct PollForDecisionTaskResponse {
@@ -387,8 +494,9 @@ struct RespondDecisionTaskCompletedRequest {
 }
 
 struct PollForActivityTaskRequest {
-  10: optional TaskList taskList
-  20: optional string identity
+  10: optional string domain
+  20: optional TaskList taskList
+  30: optional string identity
 }
 
 struct PollForActivityTaskResponse {
@@ -430,15 +538,54 @@ struct RespondActivityTaskCanceledRequest {
 }
 
 struct RequestCancelWorkflowExecutionRequest {
-  10: optional string workflowId
-  20: optional string runId
-  30: optional string identity
+  10: optional string domain
+  20: optional string workflowId
+  30: optional string runId
+  40: optional string identity
 }
 
 struct GetWorkflowExecutionHistoryRequest {
-  10: optional WorkflowExecution execution
+  10: optional string domain
+  20: optional WorkflowExecution execution
 }
 
 struct GetWorkflowExecutionHistoryResponse {
   10: optional History history
 }
+
+struct TerminateWorkflowExecutionRequest {
+  10: optional string domain
+  20: optional WorkflowExecution workflowExecution
+  30: optional string reason
+  40: optional binary details
+  50: optional string identity
+}
+
+struct ListOpenWorkflowExecutionsRequest {
+  10: optional string domain
+  20: optional i32 maximumPageSize
+  30: optional binary nextPageToken
+  40: optional StartTimeFilter StartTimeFilter
+  50: optional WorkflowExecutionFilter executionFilter
+  60: optional WorkflowTypeFilter typeFilter
+}
+
+struct ListOpenWorkflowExecutionsResponse {
+  10: optional list<WorkflowExecutionInfo> executions
+  20: optional binary nextPageToken
+}
+
+struct ListClosedWorkflowExecutionsRequest {
+  10: optional string domain
+  20: optional i32 maximumPageSize
+  30: optional binary nextPageToken
+  40: optional StartTimeFilter StartTimeFilter
+  50: optional WorkflowExecutionFilter executionFilter
+  60: optional WorkflowTypeFilter typeFilter
+}
+
+struct ListClosedWorkflowExecutionsResponse {
+  10: optional list<WorkflowExecutionInfo> executions
+  20: optional binary nextPageToken
+}
+

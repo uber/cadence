@@ -10,6 +10,7 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 )
@@ -24,6 +25,7 @@ const (
 type (
 	historyEngineImpl struct {
 		shard            ShardContext
+		metadataMgr      persistence.MetadataManager
 		historyMgr       persistence.HistoryManager
 		executionManager persistence.ExecutionManager
 		txProcessor      transferQueueProcessor
@@ -31,7 +33,8 @@ type (
 		tokenSerializer  common.TaskTokenSerializer
 		hSerializer      historySerializer
 		metricsReporter  metrics.Client
-		cache            *historyCache
+		historyCache     *historyCache
+		domainCache      cache.DomainCache
 		logger           bark.Logger
 	}
 )
@@ -48,20 +51,23 @@ var (
 )
 
 // NewEngineWithShardContext creates an instance of history engine
-func NewEngineWithShardContext(shard ShardContext, matching matching.Client) Engine {
+func NewEngineWithShardContext(shard ShardContext, metadataMgr persistence.MetadataManager,
+	visibilityMgr persistence.VisibilityManager, matching matching.Client) Engine {
 	logger := shard.GetLogger()
 	executionManager := shard.GetExecutionManager()
 	historyManager := shard.GetHistoryManager()
-	cache := newHistoryCache(shard, logger)
-	txProcessor := newTransferQueueProcessor(shard, matching, cache)
+	historyCache := newHistoryCache(shard, logger)
+	txProcessor := newTransferQueueProcessor(shard, visibilityMgr, matching, historyCache)
 	historyEngImpl := &historyEngineImpl{
 		shard:            shard,
+		metadataMgr:      metadataMgr,
 		historyMgr:       historyManager,
 		executionManager: executionManager,
 		txProcessor:      txProcessor,
 		tokenSerializer:  common.NewJSONTaskTokenSerializer(),
 		hSerializer:      newJSONHistorySerializer(),
-		cache:            cache,
+		historyCache:     historyCache,
+		domainCache:      cache.NewDomainCache(metadataMgr, logger),
 		logger: logger.WithFields(bark.Fields{
 			tagWorkflowComponent: tagValueHistoryEngineComponent,
 		}),
@@ -91,8 +97,10 @@ func (e *historyEngineImpl) Stop() {
 }
 
 // StartWorkflowExecution starts a workflow execution
-func (e *historyEngineImpl) StartWorkflowExecution(request *workflow.StartWorkflowExecutionRequest) (
+func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflowExecutionRequest) (
 	*workflow.StartWorkflowExecutionResponse, error) {
+	domainID := startRequest.GetDomainUUID()
+	request := startRequest.GetStartRequest()
 	executionID := request.GetWorkflowId()
 	// We generate a new workflow execution run_id on each StartWorkflowExecution call.  This generated run_id is
 	// returned back to the caller as the response to StartWorkflowExecution.
@@ -124,6 +132,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(request *workflow.StartWorkfl
 	}
 
 	err1 := e.shard.AppendHistoryEvents(&persistence.AppendHistoryEventsRequest{
+		DomainID:  domainID,
 		Execution: workflowExecution,
 		// It is ok to use 0 for TransactionID because RunID is unique so there are
 		// no potential duplicates to override.
@@ -137,6 +146,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(request *workflow.StartWorkfl
 
 	_, err := e.shard.CreateWorkflowExecution(&persistence.CreateWorkflowExecutionRequest{
 		RequestID:            request.GetRequestId(),
+		DomainID:             domainID,
 		Execution:            workflowExecution,
 		TaskList:             request.GetTaskList().GetName(),
 		WorkflowTypeName:     request.GetWorkflowType().GetName(),
@@ -145,7 +155,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(request *workflow.StartWorkfl
 		NextEventID:          msBuilder.GetNextEventID(),
 		LastProcessedEvent:   emptyEventID,
 		TransferTasks: []persistence.Task{&persistence.DecisionTask{
-			TaskList: taskList, ScheduleID: di.ScheduleID,
+			DomainID: domainID, TaskList: taskList, ScheduleID: di.ScheduleID,
 		}},
 		DecisionScheduleID:          di.ScheduleID,
 		DecisionStartedID:           di.StartedID,
@@ -160,6 +170,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(request *workflow.StartWorkfl
 			// are always created for a unique run_id which is not visible beyond this call yet.
 			// TODO: Handle error on deletion of execution history
 			e.historyMgr.DeleteWorkflowExecutionHistory(&persistence.DeleteWorkflowExecutionHistoryRequest{
+				DomainID:  domainID,
 				Execution: workflowExecution,
 			})
 
@@ -190,13 +201,15 @@ func (e *historyEngineImpl) StartWorkflowExecution(request *workflow.StartWorkfl
 
 // GetWorkflowExecutionHistory retrieves the history for given workflow execution
 func (e *historyEngineImpl) GetWorkflowExecutionHistory(
-	request *workflow.GetWorkflowExecutionHistoryRequest) (*workflow.GetWorkflowExecutionHistoryResponse, error) {
+	getHistoryRequest *h.GetWorkflowExecutionHistoryRequest) (*workflow.GetWorkflowExecutionHistoryResponse, error) {
+	domainID := getHistoryRequest.GetDomainUUID()
+	request := getHistoryRequest.GetGetRequest()
 	execution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr(request.GetExecution().GetWorkflowId()),
 		RunId:      common.StringPtr(request.GetExecution().GetRunId()),
 	}
 
-	context, err0 := e.cache.getOrCreateWorkflowExecution(execution)
+	context, err0 := e.historyCache.getOrCreateWorkflowExecution(domainID, execution)
 	if err0 != nil {
 		return nil, err0
 	}
@@ -208,7 +221,7 @@ func (e *historyEngineImpl) GetWorkflowExecutionHistory(
 		return nil, err1
 	}
 
-	executionHistory, err2 := e.getHistory(msBuilder)
+	executionHistory, err2 := e.getHistory(domainID, msBuilder)
 	if err2 != nil {
 		return nil, err2
 	}
@@ -221,7 +234,8 @@ func (e *historyEngineImpl) GetWorkflowExecutionHistory(
 
 func (e *historyEngineImpl) RecordDecisionTaskStarted(
 	request *h.RecordDecisionTaskStartedRequest) (*h.RecordDecisionTaskStartedResponse, error) {
-	context, err0 := e.cache.getOrCreateWorkflowExecution(*request.WorkflowExecution)
+	domainID := request.GetDomainUUID()
+	context, err0 := e.historyCache.getOrCreateWorkflowExecution(domainID, *request.WorkflowExecution)
 	if err0 != nil {
 		return nil, err0
 	}
@@ -250,7 +264,7 @@ Update_History_Loop:
 		// task is not outstanding than it is most probably a duplicate and complete the task.
 		di, isRunning := msBuilder.GetPendingDecision(scheduleID)
 
-		if !isRunning {
+		if !msBuilder.isWorkflowExecutionRunning() || !isRunning {
 			// Looks like DecisionTask already completed as a result of another call.
 			// It is OK to drop the task at this point.
 			logDuplicateTaskEvent(context.logger, persistence.TransferTaskTypeDecisionTask, request.GetTaskId(), requestID,
@@ -262,7 +276,7 @@ Update_History_Loop:
 		if di.StartedID != emptyEventID {
 			// If decision is started as part of the current request scope then return a positive response
 			if di.RequestID == requestID {
-				return e.createRecordDecisionTaskStartedResponse(msBuilder, di.StartedID), nil
+				return e.createRecordDecisionTaskStartedResponse(domainID, msBuilder, di.StartedID), nil
 			}
 
 			// Looks like DecisionTask already started as a result of another call.
@@ -300,7 +314,7 @@ Update_History_Loop:
 			return nil, err3
 		}
 
-		return e.createRecordDecisionTaskStartedResponse(msBuilder, event.GetEventId()), nil
+		return e.createRecordDecisionTaskStartedResponse(domainID, msBuilder, event.GetEventId()), nil
 	}
 
 	return nil, ErrMaxAttemptsExceeded
@@ -308,7 +322,8 @@ Update_History_Loop:
 
 func (e *historyEngineImpl) RecordActivityTaskStarted(
 	request *h.RecordActivityTaskStartedRequest) (*h.RecordActivityTaskStartedResponse, error) {
-	context, err0 := e.cache.getOrCreateWorkflowExecution(*request.WorkflowExecution)
+	domainID := request.GetDomainUUID()
+	context, err0 := e.historyCache.getOrCreateWorkflowExecution(domainID, *request.WorkflowExecution)
 	if err0 != nil {
 		return nil, err0
 	}
@@ -336,7 +351,7 @@ Update_History_Loop:
 		// Check execution state to make sure task is in the list of outstanding tasks and it is not yet started.  If
 		// task is not outstanding than it is most probably a duplicate and complete the task.
 		ai, isRunning := msBuilder.GetActivityInfo(scheduleID)
-		if !isRunning {
+		if !msBuilder.isWorkflowExecutionRunning() || !isRunning {
 			// Looks like ActivityTask already completed as a result of another call.
 			// It is OK to drop the task at this point.
 			logDuplicateTaskEvent(context.logger, persistence.TransferTaskTypeActivityTask, request.GetTaskId(), requestID,
@@ -421,7 +436,9 @@ Update_History_Loop:
 }
 
 // RespondDecisionTaskCompleted completes a decision task
-func (e *historyEngineImpl) RespondDecisionTaskCompleted(request *workflow.RespondDecisionTaskCompletedRequest) error {
+func (e *historyEngineImpl) RespondDecisionTaskCompleted(req *h.RespondDecisionTaskCompletedRequest) error {
+	domainID := req.GetDomainUUID()
+	request := req.GetCompleteRequest()
 	token, err0 := e.tokenSerializer.Deserialize(request.GetTaskToken())
 	if err0 != nil {
 		return &workflow.BadRequestError{Message: "Error deserializing task token."}
@@ -432,7 +449,7 @@ func (e *historyEngineImpl) RespondDecisionTaskCompleted(request *workflow.Respo
 		RunId:      common.StringPtr(token.RunID),
 	}
 
-	context, err0 := e.cache.getOrCreateWorkflowExecution(workflowExecution)
+	context, err0 := e.historyCache.getOrCreateWorkflowExecution(domainID, workflowExecution)
 	if err0 != nil {
 		return err0
 	}
@@ -457,7 +474,7 @@ Update_History_Loop:
 		}
 
 		di, isRunning := msBuilder.GetPendingDecision(scheduleID)
-		if !isRunning || di.StartedID == emptyEventID {
+		if !msBuilder.isWorkflowExecutionRunning() || !isRunning || di.StartedID == emptyEventID {
 			return &workflow.EntityNotExistsError{Message: "Decision task not found."}
 		}
 
@@ -476,7 +493,17 @@ Update_History_Loop:
 		for _, d := range request.Decisions {
 			switch d.GetDecisionType() {
 			case workflow.DecisionType_ScheduleActivityTask:
+				targetDomainID := domainID
 				attributes := d.GetScheduleActivityTaskDecisionAttributes()
+				// First check if we need to use a different target domain to schedule activity
+				if attributes.IsSetDomain() {
+					// TODO: Error handling for ActivitySchedule failed when domain lookup fails
+					info, _, err := e.domainCache.GetDomain(attributes.GetDomain())
+					if err != nil {
+						return &workflow.InternalServiceError{Message: "Unable to schedule activity across domain."}
+					}
+					targetDomainID = info.ID
+				}
 				// TODO: We cannot fail the decision.  Append ActivityTaskScheduledFailed and continue processing
 				if attributes.GetStartToCloseTimeoutSeconds() <= 0 {
 					return &workflow.BadRequestError{Message: "Missing StartToCloseTimeoutSeconds in the activity scheduling parameters."}
@@ -494,6 +521,7 @@ Update_History_Loop:
 
 				scheduleEvent, ai := msBuilder.AddActivityTaskScheduledEvent(completedID, attributes)
 				transferTasks = append(transferTasks, &persistence.ActivityTask{
+					DomainID:   targetDomainID,
 					TaskList:   attributes.GetTaskList().GetName(),
 					ScheduleID: scheduleEvent.GetEventId(),
 				})
@@ -559,6 +587,9 @@ Update_History_Loop:
 					msBuilder.AddCancelTimerFailedEvent(completedID, attributes, request.GetIdentity())
 				}
 
+			case workflow.DecisionType_RecordMarker:
+				msBuilder.AddRecordMarkerEvent(completedID, d.GetRecordMarkerDecisionAttributes())
+
 			default:
 				return &workflow.BadRequestError{Message: fmt.Sprintf("Unknown decision type: %v", d.GetDecisionType())}
 			}
@@ -602,7 +633,9 @@ Update_History_Loop:
 }
 
 // RespondActivityTaskCompleted completes an activity task.
-func (e *historyEngineImpl) RespondActivityTaskCompleted(request *workflow.RespondActivityTaskCompletedRequest) error {
+func (e *historyEngineImpl) RespondActivityTaskCompleted(req *h.RespondActivityTaskCompletedRequest) error {
+	domainID := req.GetDomainUUID()
+	request := req.GetCompleteRequest()
 	token, err0 := e.tokenSerializer.Deserialize(request.GetTaskToken())
 	if err0 != nil {
 		return &workflow.BadRequestError{Message: "Error deserializing task token."}
@@ -613,7 +646,7 @@ func (e *historyEngineImpl) RespondActivityTaskCompleted(request *workflow.Respo
 		RunId:      common.StringPtr(token.RunID),
 	}
 
-	context, err0 := e.cache.getOrCreateWorkflowExecution(workflowExecution)
+	context, err0 := e.historyCache.getOrCreateWorkflowExecution(domainID, workflowExecution)
 	if err0 != nil {
 		return err0
 	}
@@ -639,7 +672,7 @@ Update_History_Loop:
 		}
 
 		ai, isRunning := msBuilder.GetActivityInfo(scheduleID)
-		if !isRunning || ai.StartedID == emptyEventID {
+		if !msBuilder.isWorkflowExecutionRunning() || !isRunning || ai.StartedID == emptyEventID {
 			return &workflow.EntityNotExistsError{Message: "Activity task not found."}
 		}
 
@@ -653,6 +686,7 @@ Update_History_Loop:
 		if !msBuilder.HasPendingDecisionTask() {
 			newDecisionEvent, _ := msBuilder.AddDecisionTaskScheduledEvent()
 			transferTasks = []persistence.Task{&persistence.DecisionTask{
+				DomainID:   domainID,
 				TaskList:   newDecisionEvent.GetDecisionTaskScheduledEventAttributes().GetTaskList().GetName(),
 				ScheduleID: newDecisionEvent.GetEventId(),
 			}}
@@ -681,7 +715,9 @@ Update_History_Loop:
 }
 
 // RespondActivityTaskFailed completes an activity task failure.
-func (e *historyEngineImpl) RespondActivityTaskFailed(request *workflow.RespondActivityTaskFailedRequest) error {
+func (e *historyEngineImpl) RespondActivityTaskFailed(req *h.RespondActivityTaskFailedRequest) error {
+	domainID := req.GetDomainUUID()
+	request := req.GetFailedRequest()
 	token, err0 := e.tokenSerializer.Deserialize(request.GetTaskToken())
 	if err0 != nil {
 		return &workflow.BadRequestError{Message: "Error deserializing task token."}
@@ -692,7 +728,7 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(request *workflow.RespondA
 		RunId:      common.StringPtr(token.RunID),
 	}
 
-	context, err0 := e.cache.getOrCreateWorkflowExecution(workflowExecution)
+	context, err0 := e.historyCache.getOrCreateWorkflowExecution(domainID, workflowExecution)
 	if err0 != nil {
 		return err0
 	}
@@ -718,7 +754,7 @@ Update_History_Loop:
 		}
 
 		ai, isRunning := msBuilder.GetActivityInfo(scheduleID)
-		if !isRunning || ai.StartedID == emptyEventID {
+		if !msBuilder.isWorkflowExecutionRunning() || !isRunning || ai.StartedID == emptyEventID {
 			return &workflow.EntityNotExistsError{Message: "Activity task not found."}
 		}
 
@@ -732,6 +768,7 @@ Update_History_Loop:
 		if !msBuilder.HasPendingDecisionTask() {
 			newDecisionEvent, _ := msBuilder.AddDecisionTaskScheduledEvent()
 			transferTasks = []persistence.Task{&persistence.DecisionTask{
+				DomainID:   domainID,
 				TaskList:   newDecisionEvent.GetDecisionTaskScheduledEventAttributes().GetTaskList().GetName(),
 				ScheduleID: newDecisionEvent.GetEventId(),
 			}}
@@ -760,7 +797,9 @@ Update_History_Loop:
 }
 
 // RespondActivityTaskCanceled completes an activity task failure.
-func (e *historyEngineImpl) RespondActivityTaskCanceled(request *workflow.RespondActivityTaskCanceledRequest) error {
+func (e *historyEngineImpl) RespondActivityTaskCanceled(req *h.RespondActivityTaskCanceledRequest) error {
+	domainID := req.GetDomainUUID()
+	request := req.GetCancelRequest()
 	token, err0 := e.tokenSerializer.Deserialize(request.GetTaskToken())
 	if err0 != nil {
 		return &workflow.BadRequestError{Message: "Error deserializing task token."}
@@ -771,7 +810,7 @@ func (e *historyEngineImpl) RespondActivityTaskCanceled(request *workflow.Respon
 		RunId:      common.StringPtr(token.RunID),
 	}
 
-	context, err0 := e.cache.getOrCreateWorkflowExecution(workflowExecution)
+	context, err0 := e.historyCache.getOrCreateWorkflowExecution(domainID, workflowExecution)
 	if err0 != nil {
 		return err0
 	}
@@ -798,7 +837,7 @@ Update_History_Loop:
 		// Check execution state to make sure task is in the list of outstanding tasks and it is not yet started.  If
 		// task is not outstanding than it is most probably a duplicate and complete the task.
 		ai, isRunning := msBuilder.GetActivityInfo(scheduleID)
-		if !isRunning || ai.StartedID == emptyEventID {
+		if !msBuilder.isWorkflowExecutionRunning() || !isRunning || ai.StartedID == emptyEventID {
 			return &workflow.EntityNotExistsError{Message: "Activity task not found."}
 		}
 
@@ -812,6 +851,7 @@ Update_History_Loop:
 		if !msBuilder.HasPendingDecisionTask() {
 			newDecisionEvent, _ := msBuilder.AddDecisionTaskScheduledEvent()
 			transferTasks = []persistence.Task{&persistence.DecisionTask{
+				DomainID:   domainID,
 				TaskList:   newDecisionEvent.GetDecisionTaskScheduledEventAttributes().GetTaskList().GetName(),
 				ScheduleID: newDecisionEvent.GetEventId(),
 			}}
@@ -844,7 +884,9 @@ Update_History_Loop:
 // - For reporting liveness of the activity.
 // - For reporting progress of the activity, this can be done even if the liveness is not configured.
 func (e *historyEngineImpl) RecordActivityTaskHeartbeat(
-	request *workflow.RecordActivityTaskHeartbeatRequest) (*workflow.RecordActivityTaskHeartbeatResponse, error) {
+	req *h.RecordActivityTaskHeartbeatRequest) (*workflow.RecordActivityTaskHeartbeatResponse, error) {
+	domainID := req.GetDomainUUID()
+	request := req.GetHeartbeatRequest()
 	token, err0 := e.tokenSerializer.Deserialize(request.GetTaskToken())
 	if err0 != nil {
 		return nil, &workflow.BadRequestError{Message: "Error deserializing task token."}
@@ -855,7 +897,7 @@ func (e *historyEngineImpl) RecordActivityTaskHeartbeat(
 		RunId:      common.StringPtr(token.RunID),
 	}
 
-	context, err0 := e.cache.getOrCreateWorkflowExecution(workflowExecution)
+	context, err0 := e.historyCache.getOrCreateWorkflowExecution(domainID, workflowExecution)
 	if err0 != nil {
 		return nil, err0
 	}
@@ -880,7 +922,7 @@ Update_History_Loop:
 		}
 
 		ai, isRunning := msBuilder.GetActivityInfo(scheduleID)
-		if !isRunning || ai.StartedID == emptyEventID {
+		if !msBuilder.isWorkflowExecutionRunning() || !isRunning || ai.StartedID == emptyEventID {
 			e.logger.Debugf("Activity HeartBeat: scheduleEventID: %v, ActivityInfo: %+v, Exist: %v",
 				scheduleID, ai, isRunning)
 			return nil, &workflow.EntityNotExistsError{Message: "Activity task not found."}
@@ -926,13 +968,17 @@ Update_History_Loop:
 	return &workflow.RecordActivityTaskHeartbeatResponse{}, ErrMaxAttemptsExceeded
 }
 
-func (e *historyEngineImpl) RequestCancelWorkflowExecution(request *workflow.RequestCancelWorkflowExecutionRequest) error {
+func (e *historyEngineImpl) RequestCancelWorkflowExecution(
+	req *h.RequestCancelWorkflowExecutionRequest) error {
+	domainID := req.GetDomainUUID()
+	request := req.GetCancelRequest()
+
 	workflowExecution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr(request.GetWorkflowId()),
 		RunId:      common.StringPtr(request.GetRunId()),
 	}
 
-	context, err := e.cache.getOrCreateWorkflowExecution(workflowExecution)
+	context, err := e.historyCache.getOrCreateWorkflowExecution(domainID, workflowExecution)
 	if err != nil {
 		return err
 	}
@@ -982,9 +1028,62 @@ Update_History_Loop:
 	return ErrMaxAttemptsExceeded
 }
 
-func (e *historyEngineImpl) createRecordDecisionTaskStartedResponse(msBuilder *mutableStateBuilder,
+func (e *historyEngineImpl) TerminateWorkflowExecution(terminateRequest *h.TerminateWorkflowExecutionRequest) error {
+	domainID := terminateRequest.GetDomainUUID()
+	request := terminateRequest.GetTerminateRequest()
+	execution := workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr(request.GetWorkflowExecution().GetWorkflowId()),
+		RunId:      common.StringPtr(request.GetWorkflowExecution().GetRunId()),
+	}
+
+	context, err0 := e.historyCache.getOrCreateWorkflowExecution(domainID, execution)
+	if err0 != nil {
+		return err0
+	}
+
+	context.Lock()
+	defer context.Unlock()
+
+Update_History_Loop:
+	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
+		msBuilder, err1 := context.loadWorkflowExecution()
+		if err1 != nil {
+			return err1
+		}
+
+		if !msBuilder.isWorkflowExecutionRunning() {
+			return &workflow.EntityNotExistsError{Message: "Workflow execution already completed."}
+		}
+
+		if msBuilder.AddWorkflowExecutionTerminatedEvent(request) == nil {
+			return &workflow.InternalServiceError{Message: "Unable to terminate workflow execution."}
+		}
+
+		// Create a transfer task to delete workflow execution
+		transferTasks := []persistence.Task{&persistence.DeleteExecutionTask{}}
+
+		// Generate a transaction ID for appending events to history
+		transactionID, err2 := e.shard.GetNextTransferTaskID()
+		if err2 != nil {
+			return err2
+		}
+
+		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict then reload
+		// the history and try the operation again.
+		if err := context.updateWorkflowExecution(transferTasks, nil, transactionID); err != nil {
+			if err == ErrConflict {
+				continue Update_History_Loop
+			}
+			return err
+		}
+		return nil
+	}
+	return ErrMaxAttemptsExceeded
+}
+
+func (e *historyEngineImpl) createRecordDecisionTaskStartedResponse(domainID string, msBuilder *mutableStateBuilder,
 	startedEventID int64) *h.RecordDecisionTaskStartedResponse {
-	executionHistory, _ := e.getHistory(msBuilder)
+	executionHistory, _ := e.getHistory(domainID, msBuilder)
 	response := h.NewRecordDecisionTaskStartedResponse()
 	response.WorkflowType = msBuilder.getWorkflowType()
 	if msBuilder.previousDecisionStartedEvent() != emptyEventID {
@@ -996,7 +1095,7 @@ func (e *historyEngineImpl) createRecordDecisionTaskStartedResponse(msBuilder *m
 	return response
 }
 
-func (e *historyEngineImpl) getHistory(msBuilder *mutableStateBuilder) (*workflow.History, error) {
+func (e *historyEngineImpl) getHistory(domainID string, msBuilder *mutableStateBuilder) (*workflow.History, error) {
 	execution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr(msBuilder.executionInfo.WorkflowID),
 		RunId:      common.StringPtr(msBuilder.executionInfo.RunID),
@@ -1006,6 +1105,7 @@ func (e *historyEngineImpl) getHistory(msBuilder *mutableStateBuilder) (*workflo
 Pagination_Loop:
 	for {
 		response, err := e.historyMgr.GetWorkflowExecutionHistory(&persistence.GetWorkflowExecutionHistoryRequest{
+			DomainID:      domainID,
 			Execution:     execution,
 			NextEventID:   msBuilder.GetNextEventID(),
 			PageSize:      100,

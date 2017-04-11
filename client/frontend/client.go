@@ -41,6 +41,32 @@ func (c *clientImpl) createContext() (thrift.Context, context.CancelFunc) {
 	return thrift.NewContext(time.Minute * 3)
 }
 
+func (c *clientImpl) RegisterDomain(registerRequest *workflow.RegisterDomainRequest) error {
+	ctx, cancel := c.createContext()
+	defer cancel()
+	return c.client.RegisterDomain(ctx, registerRequest)
+}
+
+func (c *clientImpl) DescribeDomain(
+	describeRequest *workflow.DescribeDomainRequest) (*workflow.DescribeDomainResponse, error) {
+	ctx, cancel := c.createContext()
+	defer cancel()
+	return c.client.DescribeDomain(ctx, describeRequest)
+}
+
+func (c *clientImpl) UpdateDomain(
+	updateRequest *workflow.UpdateDomainRequest) (*workflow.UpdateDomainResponse, error) {
+	ctx, cancel := c.createContext()
+	defer cancel()
+	return c.client.UpdateDomain(ctx, updateRequest)
+}
+
+func (c *clientImpl) DeprecateDomain(deprecateRequest *workflow.DeprecateDomainRequest) error {
+	ctx, cancel := c.createContext()
+	defer cancel()
+	return c.client.DeprecateDomain(ctx, deprecateRequest)
+}
+
 func (c *clientImpl) StartWorkflowExecution(request *workflow.StartWorkflowExecutionRequest) (*workflow.StartWorkflowExecutionResponse, error) {
 	ctx, cancel := c.createContext()
 	defer cancel()
@@ -102,3 +128,22 @@ func (c *clientImpl) RequestCancelWorkflowExecution(cancelRequest *workflow.Requ
 	return c.client.RequestCancelWorkflowExecution(ctx, cancelRequest)
 }
 
+func (c *clientImpl) TerminateWorkflowExecution(request *workflow.TerminateWorkflowExecutionRequest) error {
+	ctx, cancel := c.createContext()
+	defer cancel()
+	return c.client.TerminateWorkflowExecution(ctx, request)
+}
+
+func (c *clientImpl) ListOpenWorkflowExecutions(
+	listRequest *workflow.ListOpenWorkflowExecutionsRequest) (*workflow.ListOpenWorkflowExecutionsResponse, error) {
+	ctx, cancel := c.createContext()
+	defer cancel()
+	return c.client.ListOpenWorkflowExecutions(ctx, listRequest)
+}
+
+func (c *clientImpl) ListClosedWorkflowExecutions(
+	listRequest *workflow.ListClosedWorkflowExecutionsRequest) (*workflow.ListClosedWorkflowExecutionsResponse, error) {
+	ctx, cancel := c.createContext()
+	defer cancel()
+	return c.client.ListClosedWorkflowExecutions(ctx, listRequest)
+}

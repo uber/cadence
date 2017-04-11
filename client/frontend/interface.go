@@ -6,6 +6,10 @@ import (
 
 // Client is the interface exposed by frontend service client
 type Client interface {
+	RegisterDomain(registerRequest *shared.RegisterDomainRequest) error
+	DescribeDomain(describeRequest *shared.DescribeDomainRequest) (*shared.DescribeDomainResponse, error)
+	UpdateDomain(updateRequest *shared.UpdateDomainRequest) (*shared.UpdateDomainResponse, error)
+	DeprecateDomain(deprecateRequest *shared.DeprecateDomainRequest) error
 	GetWorkflowExecutionHistory(getRequest *shared.GetWorkflowExecutionHistoryRequest) (*shared.GetWorkflowExecutionHistoryResponse, error)
 	PollForActivityTask(pollRequest *shared.PollForActivityTaskRequest) (*shared.PollForActivityTaskResponse, error)
 	PollForDecisionTask(pollRequest *shared.PollForDecisionTaskRequest) (*shared.PollForDecisionTaskResponse, error)
@@ -16,4 +20,7 @@ type Client interface {
 	RespondDecisionTaskCompleted(completeRequest *shared.RespondDecisionTaskCompletedRequest) error
 	StartWorkflowExecution(startRequest *shared.StartWorkflowExecutionRequest) (*shared.StartWorkflowExecutionResponse, error)
 	RequestCancelWorkflowExecution(cancelRequest *shared.RequestCancelWorkflowExecutionRequest) error
+	TerminateWorkflowExecution(terminateRequest *shared.TerminateWorkflowExecutionRequest) error
+	ListOpenWorkflowExecutions(listRequest *shared.ListOpenWorkflowExecutionsRequest) (*shared.ListOpenWorkflowExecutionsResponse, error)
+	ListClosedWorkflowExecutions(listRequest *shared.ListClosedWorkflowExecutionsRequest) (*shared.ListClosedWorkflowExecutionsResponse, error)
 }
