@@ -150,8 +150,9 @@ struct CancelWorkflowExecutionDecisionAttributes {
 }
 
 struct RequestCancelExternalWorkflowExecutionDecisionAttributes {
-    10: optional string workflowId
-    20: optional string runId
+    10: optional string domain
+    20: optional string workflowId
+    30: optional string runId
 }
 
 struct RecordMarkerDecisionAttributes {
@@ -342,17 +343,19 @@ struct WorkflowExecutionTerminatedEventAttributes {
 
 struct RequestCancelExternalWorkflowExecutionInitiatedEventAttributes {
   10: optional i64 (js.type = "Long") decisionTaskCompletedEventId
-  20: optional string workflowId
-  30: optional string runId
-  40: optional string identity
+  20: optional string domain
+  30: optional string workflowId
+  40: optional string runId
+  50: optional string identity
 }
 
 struct RequestCancelExternalWorkflowExecutionFailedEventAttributes {
   10: optional string cause
   20: optional i64 (js.type = "Long") decisionTaskCompletedEventId
-  30: optional string workflowId
-  40: optional string runId
-  50: optional i64 (js.type = "Long") initiatedEventId
+  30: optional string domain
+  40: optional string workflowId
+  50: optional string runId
+  60: optional i64 (js.type = "Long") initiatedEventId
 }
 
 struct HistoryEvent {
