@@ -102,6 +102,8 @@ const (
 	UpdateWorkflowExecutionScope
 	// DeleteWorkflowExecutionScope tracks DeleteWorkflowExecution calls made by service to persistence layer
 	DeleteWorkflowExecutionScope
+	// GetCurrentExecutionScope tracks GetCurrentExecution calls made by service to persistence layer
+	GetCurrentExecutionScope
 	// GetTransferTasksScope tracks GetTransferTasks calls made by service to persistence layer
 	GetTransferTasksScope
 	// CompleteTransferTasksScope tracks CompleteTransferTasks calls made by service to persistence layer
@@ -231,6 +233,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		GetWorkflowExecutionScope:    {operation: "GetWorkflowExecution"},
 		UpdateWorkflowExecutionScope: {operation: "UpdateWorkflowExecution"},
 		DeleteWorkflowExecutionScope: {operation: "DeleteWorkflowExecution"},
+		GetCurrentExecutionScope:     {operation: "GetCurrentExecution"},
 		GetTransferTasksScope:        {operation: "GetTransferTasks"},
 		CompleteTransferTaskScope:    {operation: "CompleteTransferTask"},
 		GetTimerIndexTasksScope:      {operation: "GetTimerIndexTasks"},
