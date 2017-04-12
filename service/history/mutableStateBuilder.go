@@ -569,6 +569,23 @@ func (e *mutableStateBuilder) AddWorkflowExecutionCancelRequestedEvent(cause str
 	return e.hBuilder.AddWorkflowExecutionCancelRequestedEvent(cause, workflowID, runID, identity)
 }
 
+func (e *mutableStateBuilder) AddWorkflowExecutionCanceledEvent(decisionTaskCompletedEventID int64,
+	details []byte, identity string) *workflow.HistoryEvent {
+	return e.AddWorkflowExecutionCanceledEvent(decisionTaskCompletedEventID, details, identity)
+}
+
+func (e *mutableStateBuilder) AddRequestCancelExternalWorkflowExecutionInitiatedEvent(
+	decisionCompletedEventID int64, domain, workflowID, runID string, identity string) *workflow.HistoryEvent {
+	return e.hBuilder.AddRequestCancelExternalWorkflowExecutionInitiatedEvent(
+		decisionCompletedEventID, domain, workflowID, runID, identity)
+}
+
+func (e *mutableStateBuilder) AddRequestCancelExternalWorkflowExecutionFailedEvent(
+	decisionTaskCompletedEventID, initiatedEventID int64, domain, workflowID, runID string, cause string) *workflow.HistoryEvent {
+	return e.hBuilder.AddRequestCancelExternalWorkflowExecutionFailedEvent(
+		decisionTaskCompletedEventID, initiatedEventID, domain, workflowID, runID, cause)
+}
+
 func (e *mutableStateBuilder) AddTimerStartedEvent(decisionCompletedEventID int64,
 	request *workflow.StartTimerDecisionAttributes) (*workflow.HistoryEvent, *persistence.TimerInfo) {
 	timerID := request.GetTimerId()

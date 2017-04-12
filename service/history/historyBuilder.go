@@ -279,11 +279,12 @@ func (b *historyBuilder) AddWorkflowExecutionCanceledEvent(decisionTaskCompleted
 }
 
 func (b *historyBuilder) AddRequestCancelExternalWorkflowExecutionInitiatedEvent(decisionTaskCompletedEventID int64,
-	workflowID, runID string, identity string) *workflow.HistoryEvent {
+	domain, workflowID, runID string, identity string) *workflow.HistoryEvent {
 
 	attributes := workflow.NewRequestCancelExternalWorkflowExecutionInitiatedEventAttributes()
 	attributes.DecisionTaskCompletedEventId = common.Int64Ptr(decisionTaskCompletedEventID)
 	attributes.Identity = common.StringPtr(identity)
+	attributes.Domain = common.StringPtr(domain)
 	attributes.WorkflowId = common.StringPtr(workflowID)
 	attributes.RunId = common.StringPtr(runID)
 
@@ -294,11 +295,12 @@ func (b *historyBuilder) AddRequestCancelExternalWorkflowExecutionInitiatedEvent
 }
 
 func (b *historyBuilder) AddRequestCancelExternalWorkflowExecutionFailedEvent(decisionTaskCompletedEventID, initiatedEventID int64,
-	workflowID, runID string, cause string) *workflow.HistoryEvent {
+	domain, workflowID, runID string, cause string) *workflow.HistoryEvent {
 
 	attributes := workflow.NewRequestCancelExternalWorkflowExecutionFailedEventAttributes()
 	attributes.DecisionTaskCompletedEventId = common.Int64Ptr(decisionTaskCompletedEventID)
 	attributes.InitiatedEventId = common.Int64Ptr(initiatedEventID)
+	attributes.Domain = common.StringPtr(domain)
 	attributes.WorkflowId = common.StringPtr(workflowID)
 	attributes.RunId = common.StringPtr(runID)
 	attributes.Cause = common.StringPtr(cause)

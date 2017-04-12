@@ -7,8 +7,10 @@ import (
 
 	"github.com/uber-common/bark"
 
+	"github.com/uber/cadence/.gen/go/history"
 	m "github.com/uber/cadence/.gen/go/matching"
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	hc "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/metrics"
@@ -21,14 +23,17 @@ const (
 	transferProcessorMaxPollInterval   = 10 * time.Second
 	transferProcessorUpdateAckInterval = 10 * time.Second
 	taskWorkerCount                    = 10
+	workflowCancellationUnknown        = "UNKNOWN_EXTERNAL_WORKFLOW_EXECUTION"
 )
 
 type (
 	transferQueueProcessorImpl struct {
+		shard             ShardContext
 		ackMgr            *ackManager
 		executionManager  persistence.ExecutionManager
 		visibilityManager persistence.VisibilityManager
 		matchingClient    matching.Client
+		historyClient     hc.Client
 		cache             *historyCache
 		isStarted         int32
 		isStopped         int32
@@ -56,12 +61,14 @@ type (
 )
 
 func newTransferQueueProcessor(shard ShardContext, visibilityMgr persistence.VisibilityManager,
-	matching matching.Client, cache *historyCache) transferQueueProcessor {
+	matching matching.Client, historyClient hc.Client, cache *historyCache) transferQueueProcessor {
 	executionManager := shard.GetExecutionManager()
 	logger := shard.GetLogger()
 	processor := &transferQueueProcessorImpl{
+		shard:             shard,
 		executionManager:  executionManager,
 		matchingClient:    matching,
+		historyClient:     historyClient,
 		visibilityManager: visibilityMgr,
 		cache:             cache,
 		shutdownCh:        make(chan struct{}),
@@ -255,6 +262,52 @@ ProcessRetryLoop:
 						}
 					}
 					context.Unlock()
+				}
+
+			case persistence.TransferTaskTypeCancelExecution:
+				{
+					isHistoryServiceRetryableError := func(err error) bool {
+						switch err.(type) {
+						case *workflow.EntityNotExistsError:
+							return false
+						case *workflow.BadRequestError:
+							return false
+						}
+						return true
+					}
+
+					err = t.historyClient.RequestCancelWorkflowExecution(nil,
+						&history.RequestCancelWorkflowExecutionRequest{
+							DomainUUID: common.StringPtr(targetDomainID),
+							CancelRequest: &workflow.RequestCancelWorkflowExecutionRequest{
+								Domain:     common.StringPtr(targetDomainID),
+								WorkflowId: common.StringPtr(task.TargetWorkflowID),
+								RunId:      common.StringPtr(task.TargetRunID),
+								Identity:   common.StringPtr("history-service"),
+							},
+						})
+
+					if err != nil && !isHistoryServiceRetryableError(err) {
+						var context *workflowExecutionContext
+						// Write failure event to history.
+						context, err = t.cache.getOrCreateWorkflowExecution(domainID, execution)
+						if err == nil {
+							var mb *mutableStateBuilder
+							mb, err = context.loadWorkflowExecution()
+							if err == nil {
+								mb.AddRequestCancelExternalWorkflowExecutionFailedEvent(
+									emptyEventID, task.ScheduleID, task.TargetDomainID,
+									task.TargetWorkflowID, task.TargetRunID, workflowCancellationUnknown)
+								// Generate a transaction ID for appending events to history
+								var transactionID int64
+								transactionID, err = t.shard.GetNextTransferTaskID()
+								if err == nil {
+									err = context.updateWorkflowExecution(nil, nil, transactionID)
+									// The below code will handle retries.
+								}
+							}
+						}
+					}
 				}
 			}
 

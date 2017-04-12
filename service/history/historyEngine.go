@@ -8,6 +8,7 @@ import (
 	"github.com/uber-common/bark"
 	h "github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	hc "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
@@ -52,12 +53,12 @@ var (
 
 // NewEngineWithShardContext creates an instance of history engine
 func NewEngineWithShardContext(shard ShardContext, metadataMgr persistence.MetadataManager,
-	visibilityMgr persistence.VisibilityManager, matching matching.Client) Engine {
+	visibilityMgr persistence.VisibilityManager, matching matching.Client, historyClient hc.Client) Engine {
 	logger := shard.GetLogger()
 	executionManager := shard.GetExecutionManager()
 	historyManager := shard.GetHistoryManager()
 	historyCache := newHistoryCache(shard, logger)
-	txProcessor := newTransferQueueProcessor(shard, visibilityMgr, matching, historyCache)
+	txProcessor := newTransferQueueProcessor(shard, visibilityMgr, matching, historyClient, historyCache)
 	historyEngImpl := &historyEngineImpl{
 		shard:            shard,
 		metadataMgr:      metadataMgr,
@@ -556,6 +557,16 @@ Update_History_Loop:
 				attributes := d.GetFailWorkflowExecutionDecisionAttributes()
 				msBuilder.AddFailWorkflowEvent(completedID, attributes)
 				isComplete = true
+			case workflow.DecisionType_CancelWorkflowExecution:
+				if isComplete {
+					msBuilder.AddCompleteWorkflowExecutionFailedEvent(completedID,
+						workflow.WorkflowCompleteFailedCause_UNHANDLED_DECISION)
+					continue Process_Decision_Loop
+				}
+				attributes := d.GetCancelWorkflowExecutionDecisionAttributes()
+				msBuilder.AddWorkflowExecutionCanceledEvent(
+					completedID, attributes.GetDetails(), request.GetIdentity())
+				isComplete = true
 			case workflow.DecisionType_StartTimer:
 				attributes := d.GetStartTimerDecisionAttributes()
 				_, ti := msBuilder.AddTimerStartedEvent(completedID, attributes)
@@ -589,6 +600,17 @@ Update_History_Loop:
 
 			case workflow.DecisionType_RecordMarker:
 				msBuilder.AddRecordMarkerEvent(completedID, d.GetRecordMarkerDecisionAttributes())
+
+			case workflow.DecisionType_RequestCancelExternalWorkflowExecution:
+				attributes := d.GetRequestCancelExternalWorkflowExecutionDecisionAttributes()
+				wfCancelReqEvent := msBuilder.AddRequestCancelExternalWorkflowExecutionInitiatedEvent(completedID, attributes.GetDomain(),
+					attributes.GetWorkflowId(), attributes.GetRunId(), request.GetIdentity())
+				transferTasks = append(transferTasks, &persistence.CancelExecutionTask{
+					TargetDomainID:   attributes.GetDomain(),
+					TargetWorkflowID: attributes.GetWorkflowId(),
+					TargetRunID:      attributes.GetRunId(),
+					ScheduleID:       wfCancelReqEvent.GetEventId(),
+				})
 
 			default:
 				return &workflow.BadRequestError{Message: fmt.Sprintf("Unknown decision type: %v", d.GetDecisionType())}
@@ -1004,6 +1026,7 @@ Update_History_Loop:
 		if !msBuilder.HasPendingDecisionTask() {
 			newDecisionEvent, _ := msBuilder.AddDecisionTaskScheduledEvent()
 			transferTasks = []persistence.Task{&persistence.DecisionTask{
+				DomainID: domainID,
 				TaskList:   newDecisionEvent.GetDecisionTaskScheduledEventAttributes().GetTaskList().GetName(),
 				ScheduleID: newDecisionEvent.GetEventId(),
 			}}
