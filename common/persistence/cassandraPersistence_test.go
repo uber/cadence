@@ -337,9 +337,6 @@ func (s *cassandraPersistenceSuite) TestGetCurrentWorkflow() {
 	s.NotEmpty(task1, "Expected non empty task identifier.")
 
 	runID1, err6 := s.GetCurrentWorkflow(domainID, workflowExecution2.GetWorkflowId())
-	if err6 != nil {
-		panic("STOP.")
-	}
 	s.Nil(err6, "No error expected.")
 	s.Equal(workflowExecution2.GetRunId(), runID1)
 }
