@@ -86,6 +86,8 @@ const (
 		`run_id: ?, ` +
 		`task_id: ?, ` +
 		`target_domain_id: ?, ` +
+		`target_workflow_id: ?, ` +
+		`target_run_id: ?, ` +
 		`task_list: ?, ` +
 		`type: ?, ` +
 		`schedule_id: ?` +
@@ -1158,6 +1160,8 @@ func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferT
 	for _, task := range transferTasks {
 		var taskList string
 		var scheduleID int64
+		targetWorkflowID := rowTypeTransferWorkflowID
+		targetRunID := rowTypeTransferRunID
 
 		switch task.GetType() {
 		case TransferTaskTypeActivityTask:
@@ -1169,6 +1173,12 @@ func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferT
 			targetDomainID = task.(*DecisionTask).DomainID
 			taskList = task.(*DecisionTask).TaskList
 			scheduleID = task.(*DecisionTask).ScheduleID
+
+		case TransferTaskTypeCancelExecution:
+			targetDomainID = task.(*CancelExecutionTask).TargetDomainID
+			targetWorkflowID = task.(*CancelExecutionTask).TargetWorkflowID
+			targetRunID = task.(*CancelExecutionTask).TargetRunID
+			scheduleID = task.(*CancelExecutionTask).ScheduleID
 		}
 
 		batch.Query(templateCreateTransferTaskQuery,
@@ -1182,6 +1192,8 @@ func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferT
 			runID,
 			task.GetTaskID(),
 			targetDomainID,
+			targetWorkflowID,
+			targetRunID,
 			taskList,
 			task.GetType(),
 			scheduleID,
@@ -1393,6 +1405,10 @@ func createTransferTaskInfo(result map[string]interface{}) *TransferTaskInfo {
 			info.TaskID = v.(int64)
 		case "target_domain_id":
 			info.TargetDomainID = v.(gocql.UUID).String()
+		case "target_workflow_id":
+			info.TargetWorkflowID = v.(string)
+		case "target_run_id":
+			info.TargetRunID = v.(gocql.UUID).String()
 		case "task_list":
 			info.TaskList = v.(string)
 		case "type":
