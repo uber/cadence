@@ -2,7 +2,6 @@ package history
 
 import (
 	"fmt"
-	"sync"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -20,7 +19,6 @@ type (
 		executionManager  persistence.ExecutionManager
 		logger            bark.Logger
 
-		sync.Mutex
 		msBuilder       *mutableStateBuilder
 		tBuilder        *timerBuilder
 		updateCondition int64
