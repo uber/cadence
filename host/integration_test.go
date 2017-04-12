@@ -174,9 +174,9 @@ func (s *integrationSuite) TestIntegrationStartWorkflowExecution() {
 }
 
 func (s *integrationSuite) TestTerminateWorkflow() {
-	id := "interation-terminate-workflow-test"
-	wt := "interation-terminate-workflow-test-type"
-	tl := "interation-terminate-workflow-test-tasklist"
+	id := "integration-terminate-workflow-test"
+	wt := "integration-terminate-workflow-test-type"
+	tl := "integration-terminate-workflow-test-tasklist"
 	identity := "worker1"
 	activityName := "activity_type1"
 
@@ -1167,6 +1167,134 @@ ListClosedLoop:
 	s.Nil(err4)
 	s.Equal(1, len(resp.Executions))
 }
+
+func (s *integrationSuite) TestCancellationWorkflow() {
+	id := "interation-cancel-workflow-test"
+	wt := "interation-cancel-workflow-test-type"
+	tl := "interation-cancel-workflow-test-tasklist"
+	identity := "worker1"
+	activityName := "activity_type1"
+
+	workflowType := workflow.NewWorkflowType()
+	workflowType.Name = common.StringPtr(wt)
+
+	taskList := workflow.NewTaskList()
+	taskList.Name = common.StringPtr(tl)
+
+	request := &workflow.StartWorkflowExecutionRequest{
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		Identity:                            common.StringPtr(identity),
+	}
+
+	we, err0 := s.engine.StartWorkflowExecution(request)
+	s.Nil(err0)
+
+	s.logger.Infof("StartWorkflowExecution: response: %v \n", we.GetRunId())
+
+	workflowComplete := false
+	activityCount := int32(1)
+	activityCounter := int32(0)
+	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
+		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision) {
+		if activityCounter < activityCount {
+			activityCounter++
+			buf := new(bytes.Buffer)
+			s.Nil(binary.Write(buf, binary.LittleEndian, activityCounter))
+
+			return []byte(strconv.Itoa(int(activityCounter))), []*workflow.Decision{{
+				DecisionType: workflow.DecisionTypePtr(workflow.DecisionType_ScheduleActivityTask),
+				ScheduleActivityTaskDecisionAttributes: &workflow.ScheduleActivityTaskDecisionAttributes{
+					ActivityId:                    common.StringPtr(strconv.Itoa(int(activityCounter))),
+					ActivityType:                  &workflow.ActivityType{Name: common.StringPtr(activityName)},
+					TaskList:                      &workflow.TaskList{Name: &tl},
+					Input:                         buf.Bytes(),
+					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
+					ScheduleToStartTimeoutSeconds: common.Int32Ptr(10),
+					StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
+					HeartbeatTimeoutSeconds:       common.Int32Ptr(5),
+				},
+			}}
+		}
+
+		workflowComplete = true
+		return []byte(strconv.Itoa(int(activityCounter))), []*workflow.Decision{{
+			DecisionType: workflow.DecisionTypePtr(workflow.DecisionType_CancelWorkflowExecution),
+			CancelWorkflowExecutionDecisionAttributes: &workflow.CancelWorkflowExecutionDecisionAttributes{
+				Details: []byte("Cancelled"),
+			},
+		}}
+	}
+
+	atHandler := func(execution *workflow.WorkflowExecution, activityType *workflow.ActivityType,
+		activityID string, startedEventID int64, input []byte, taskToken []byte) ([]byte, bool, error) {
+		return []byte("Activity Result."), false, nil
+	}
+
+	poller := &taskPoller{
+		engine:          s.engine,
+		domain:          s.domainName,
+		taskList:        taskList,
+		identity:        identity,
+		decisionHandler: dtHandler,
+		activityHandler: atHandler,
+		logger:          s.logger,
+	}
+
+	err := poller.pollAndProcessDecisionTask(false, false)
+	s.logger.Infof("pollAndProcessDecisionTask: %v", err)
+	s.Nil(err)
+
+	err = poller.pollAndProcessActivityTask(false)
+	s.logger.Infof("pollAndProcessActivityTask: %v", err)
+	s.Nil(err)
+
+	err = s.engine.RequestCancelWorkflowExecution(&workflow.RequestCancelWorkflowExecutionRequest{
+		Domain: common.StringPtr(s.domainName),
+		WorkflowId: common.StringPtr(id),
+		RunId:      common.StringPtr(we.GetRunId()),
+	})
+	s.Nil(err)
+
+	err = poller.pollAndProcessDecisionTask(true, false)
+	s.logger.Infof("pollAndProcessDecisionTask: %v", err)
+	s.Nil(err)
+
+	executionCancelled := false
+GetHistoryLoop:
+	for i := 1; i < 3; i++ {
+		historyResponse, err := s.engine.GetWorkflowExecutionHistory(&workflow.GetWorkflowExecutionHistoryRequest{
+			Domain: common.StringPtr(s.domainName),
+			Execution: &workflow.WorkflowExecution{
+				WorkflowId: common.StringPtr(id),
+				RunId:      common.StringPtr(we.GetRunId()),
+			},
+		})
+		s.Nil(err)
+		history := historyResponse.GetHistory()
+		common.PrettyPrintHistory(history, s.logger)
+
+		lastEvent := history.GetEvents()[len(history.GetEvents())-1]
+		if lastEvent.GetEventType() != workflow.EventType_WorkflowExecutionCanceled {
+			s.logger.Warnf("Execution not cancelled yet.")
+			time.Sleep(100 * time.Millisecond)
+			continue GetHistoryLoop
+		}
+
+		cancelledEventAttributes := lastEvent.GetWorkflowExecutionCanceledEventAttributes()
+		s.Equal("Cancelled", string(cancelledEventAttributes.GetDetails()))
+		executionCancelled = true
+		break GetHistoryLoop
+	}
+	s.True(executionCancelled)
+}
+
 
 func (s *integrationSuite) setupShards() {
 	// shard 0 is always created, we create additional shards if needed

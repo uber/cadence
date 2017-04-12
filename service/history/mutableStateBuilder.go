@@ -571,7 +571,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionCancelRequestedEvent(cause str
 
 func (e *mutableStateBuilder) AddWorkflowExecutionCanceledEvent(decisionTaskCompletedEventID int64,
 	details []byte, identity string) *workflow.HistoryEvent {
-	return e.AddWorkflowExecutionCanceledEvent(decisionTaskCompletedEventID, details, identity)
+	return e.hBuilder.AddWorkflowExecutionCanceledEvent(decisionTaskCompletedEventID, details, identity)
 }
 
 func (e *mutableStateBuilder) AddRequestCancelExternalWorkflowExecutionInitiatedEvent(
