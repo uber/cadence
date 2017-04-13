@@ -33,10 +33,6 @@ type (
 		executionManager persistence.ExecutionManager
 		disabled         bool
 		logger           bark.Logger
-
-		sync.Mutex
-		lockTable      map[string]*executionLock
-		pinnedContexts map[string]*workflowExecutionContext
 	}
 )
 
@@ -50,13 +46,12 @@ func newHistoryCache(shard ShardContext, logger bark.Logger) *historyCache {
 	opts := &cache.Options{}
 	opts.InitialCapacity = historyCacheInitialSize
 	opts.TTL = historyCacheTTL
+	opts.Pin = true
 
 	return &historyCache{
 		Cache:            cache.New(historyCacheMaxSize, opts),
 		shard:            shard,
 		executionManager: shard.GetExecutionManager(),
-		lockTable:        make(map[string]*executionLock),
-		pinnedContexts:   make(map[string]*workflowExecutionContext),
 		logger: logger.WithFields(bark.Fields{
 			tagWorkflowComponent: tagValueHistoryCacheComponent,
 		}),
@@ -83,30 +78,29 @@ func (c *historyCache) getOrCreateWorkflowExecution(domainID string,
 		execution.RunId = common.StringPtr(response.RunID)
 	}
 
-	executionLock := c.acquireExecutionLock(execution.GetRunId())
-
-	releaseFunc := func() {
-		c.releaseExecutionLock(execution.GetRunId(), executionLock)
-	}
-
 	// Test hook for disabling the cache
 	if c.disabled {
-		return newWorkflowExecutionContext(domainID, execution, c.shard, c.executionManager, c.logger), releaseFunc, nil
+		return newWorkflowExecutionContext(domainID, execution, c.shard, c.executionManager, c.logger), func() {}, nil
 	}
 
 	key := execution.GetRunId()
 	context, cacheHit := c.Get(key).(*workflowExecutionContext)
 	if !cacheHit {
-		// First check if there is a pinned context for this execution
-		context = c.getPinnedContext(execution.GetRunId())
-		if context == nil {
-			// Let's create the workflow execution context
-			context = newWorkflowExecutionContext(domainID, execution, c.shard, c.executionManager, c.logger)
-			context = c.PutIfNotExist(key, context).(*workflowExecutionContext)
+		// Let's create the workflow execution context
+		context = newWorkflowExecutionContext(domainID, execution, c.shard, c.executionManager, c.logger)
+		elem, err := c.PutIfNotExist(key, context)
+		if err != nil {
+			return nil, nil, err
 		}
+		context = elem.(*workflowExecutionContext)
 	}
 
-	c.pinExecutionContext(execution.GetRunId(), context)
+	releaseFunc := func() {
+		context.Unlock()
+		c.Release(key)
+	}
+
+	context.Lock()
 	return context, releaseFunc, nil
 }
 
@@ -126,50 +120,4 @@ func (c *historyCache) getCurrentExecutionWithRetry(
 	}
 
 	return response, nil
-}
-
-func (c *historyCache) acquireExecutionLock(runID string) *executionLock {
-	var lock *executionLock
-	var found bool
-
-	c.Lock()
-	if lock, found = c.lockTable[runID]; !found {
-		lock = &executionLock{}
-		c.lockTable[runID] = lock
-	}
-	lock.waitingCount++
-	c.Unlock()
-
-	lock.Lock()
-	return lock
-}
-
-func (c *historyCache) releaseExecutionLock(runID string, lock *executionLock) {
-	c.Lock()
-	lock.waitingCount--
-	if lock.waitingCount == 0 {
-		delete(c.lockTable, runID)
-		delete(c.pinnedContexts, runID)
-	}
-	c.Unlock()
-	lock.Unlock()
-}
-
-func (c *historyCache) pinExecutionContext(runID string, context *workflowExecutionContext) {
-	c.Lock()
-	defer c.Unlock()
-	if pinned, found := c.pinnedContexts[runID]; found {
-		// sanity check, the context objects have to be the same
-		if pinned != context {
-			c.logger.Panicf("Found more than one workflow execution contexts for the same execution!")
-		}
-		return
-	}
-	c.pinnedContexts[runID] = context
-}
-
-func (c *historyCache) getPinnedContext(runID string) *workflowExecutionContext {
-	c.Lock()
-	defer c.Unlock()
-	return c.pinnedContexts[runID]
 }
