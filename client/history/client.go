@@ -230,7 +230,7 @@ func (c *clientImpl) RecordActivityTaskHeartbeat(context thrift.Context,
 
 func (c *clientImpl) RequestCancelWorkflowExecution(context thrift.Context,
 	request *h.RequestCancelWorkflowExecutionRequest) error {
-	client, err := c.getHostForRequest(request.GetCancelRequest().GetWorkflowId())
+	client, err := c.getHostForRequest(request.GetCancelRequest().GetWorkflowExecution().GetWorkflowId())
 	if err != nil {
 		return err
 	}

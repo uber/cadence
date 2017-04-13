@@ -564,24 +564,27 @@ func (e *mutableStateBuilder) AddCompleteWorkflowExecutionFailedEvent(decisionCo
 	return e.hBuilder.AddCompleteWorkflowExecutionFailedEvent(decisionCompletedEventID, cause)
 }
 
-func (e *mutableStateBuilder) AddWorkflowExecutionCancelRequestedEvent(cause string, workflowID, runID string,
-	identity string) *workflow.HistoryEvent {
-	return e.hBuilder.AddWorkflowExecutionCancelRequestedEvent(cause, workflowID, runID, identity)
+func (e *mutableStateBuilder) AddWorkflowExecutionCancelRequestedEvent(cause string,
+	request *workflow.RequestCancelWorkflowExecutionRequest) *workflow.HistoryEvent {
+	return e.hBuilder.AddWorkflowExecutionCancelRequestedEvent(cause, request)
 }
 
 func (e *mutableStateBuilder) AddWorkflowExecutionCanceledEvent(decisionTaskCompletedEventID int64,
-	details []byte, identity string) *workflow.HistoryEvent {
-	return e.hBuilder.AddWorkflowExecutionCanceledEvent(decisionTaskCompletedEventID, details, identity)
+	attributes *workflow.CancelWorkflowExecutionDecisionAttributes) *workflow.HistoryEvent {
+
+	e.executionInfo.State = persistence.WorkflowStateCompleted
+	return e.hBuilder.AddWorkflowExecutionCanceledEvent(decisionTaskCompletedEventID, attributes)
 }
 
-func (e *mutableStateBuilder) AddRequestCancelExternalWorkflowExecutionInitiatedEvent(
-	decisionCompletedEventID int64, domain, workflowID, runID string, identity string) *workflow.HistoryEvent {
+func (e *mutableStateBuilder) AddRequestCancelExternalWorkflowExecutionInitiatedEvent(decisionCompletedEventID int64,
+	request *workflow.RequestCancelExternalWorkflowExecutionDecisionAttributes) *workflow.HistoryEvent {
 	return e.hBuilder.AddRequestCancelExternalWorkflowExecutionInitiatedEvent(
-		decisionCompletedEventID, domain, workflowID, runID, identity)
+		decisionCompletedEventID, request)
 }
 
 func (e *mutableStateBuilder) AddRequestCancelExternalWorkflowExecutionFailedEvent(
-	decisionTaskCompletedEventID, initiatedEventID int64, domain, workflowID, runID string, cause string) *workflow.HistoryEvent {
+	decisionTaskCompletedEventID, initiatedEventID int64,
+	domain, workflowID, runID string, cause workflow.CancelExternalWorkflowExecutionFailedCause) *workflow.HistoryEvent {
 	return e.hBuilder.AddRequestCancelExternalWorkflowExecutionFailedEvent(
 		decisionTaskCompletedEventID, initiatedEventID, domain, workflowID, runID, cause)
 }

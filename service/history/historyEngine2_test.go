@@ -545,9 +545,11 @@ func (s *engine2Suite) TestRequestCancelWorkflowExecutionSuccess() {
 	err := s.historyEngine.RequestCancelWorkflowExecution(&h.RequestCancelWorkflowExecutionRequest{
 		DomainUUID: common.StringPtr(domainID),
 		CancelRequest: &workflow.RequestCancelWorkflowExecutionRequest{
-			WorkflowId: workflowExecution.WorkflowId,
-			RunId:      workflowExecution.RunId,
-			Identity:   common.StringPtr("identity"),
+			WorkflowExecution: &workflow.WorkflowExecution{
+				WorkflowId: workflowExecution.WorkflowId,
+				RunId:      workflowExecution.RunId,
+			},
+			Identity: common.StringPtr("identity"),
 		},
 	})
 	s.Nil(err)
@@ -576,9 +578,11 @@ func (s *engine2Suite) TestRequestCancelWorkflowExecutionFail() {
 	err := s.historyEngine.RequestCancelWorkflowExecution(&h.RequestCancelWorkflowExecutionRequest{
 		DomainUUID: common.StringPtr(domainID),
 		CancelRequest: &workflow.RequestCancelWorkflowExecutionRequest{
-			WorkflowId: workflowExecution.WorkflowId,
-			RunId:      workflowExecution.RunId,
-			Identity:   common.StringPtr("identity"),
+			WorkflowExecution: &workflow.WorkflowExecution{
+				WorkflowId: workflowExecution.WorkflowId,
+				RunId:      workflowExecution.RunId,
+			},
+			Identity: common.StringPtr("identity"),
 		},
 	})
 	s.NotNil(err)

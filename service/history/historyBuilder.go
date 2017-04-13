@@ -234,79 +234,38 @@ func (b *historyBuilder) AddCancelTimerFailedEvent(timerID string, decisionTaskC
 	return b.addEventToHistory(event)
 }
 
-func (b *historyBuilder) AddWorkflowExecutionCancelRequestedEvent(cause string, workflowID, runID string,
-	identity string) *workflow.HistoryEvent {
-
-	attributes := workflow.NewWorkflowExecutionCancelRequestedEventAttributes()
-	attributes.Cause = common.StringPtr(cause)
-	attributes.Identity = common.StringPtr(identity)
-	attributes.ExternalWorkflowExecution = &workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID)}
-
-	event := b.msBuilder.createNewHistoryEvent(workflow.EventType_WorkflowExecutionCancelRequested)
-	event.WorkflowExecutionCancelRequestedEventAttributes = attributes
+func (b *historyBuilder) AddWorkflowExecutionCancelRequestedEvent(cause string,
+	request *workflow.RequestCancelWorkflowExecutionRequest) *workflow.HistoryEvent {
+	event := b.newWorkflowExecutionCancelRequestedEvent(cause, request)
 
 	return b.addEventToHistory(event)
 }
 
 func (b *historyBuilder) AddCancelWorkflowExecutionFailedEvent(decisionTaskCompletedEventID int64,
-	cause string, identity string) *workflow.HistoryEvent {
-
-	attributes := workflow.NewCancelWorkflowExecutionFailedEventAttributes()
-	attributes.Cause = common.StringPtr(cause)
-	attributes.Identity = common.StringPtr(identity)
-	attributes.DecisionTaskCompletedEventId = common.Int64Ptr(decisionTaskCompletedEventID)
-
-	event := b.msBuilder.createNewHistoryEvent(workflow.EventType_CancelWorkflowExecutionFailed)
-	event.CancelWorkflowExecutionFailedEventAttributes = attributes
+	request *workflow.CancelWorkflowExecutionFailedEventAttributes) *workflow.HistoryEvent {
+	event := b.newCancelWorkflowExecutionFailedEvent(decisionTaskCompletedEventID, request)
 
 	return b.addEventToHistory(event)
 }
 
 func (b *historyBuilder) AddWorkflowExecutionCanceledEvent(decisionTaskCompletedEventID int64,
-	details []byte, identity string) *workflow.HistoryEvent {
-
-	attributes := workflow.NewWorkflowExecutionCanceledEventAttributes()
-	attributes.DecisionTaskCompletedEventId = common.Int64Ptr(decisionTaskCompletedEventID)
-	attributes.Identity = common.StringPtr(identity)
-	attributes.Details = details
-
-	event := b.msBuilder.createNewHistoryEvent(workflow.EventType_WorkflowExecutionCanceled)
-	event.WorkflowExecutionCanceledEventAttributes = attributes
+	attributes *workflow.CancelWorkflowExecutionDecisionAttributes) *workflow.HistoryEvent {
+	event := b.newWorkflowExecutionCanceledEvent(decisionTaskCompletedEventID, attributes)
 
 	return b.addEventToHistory(event)
 }
 
 func (b *historyBuilder) AddRequestCancelExternalWorkflowExecutionInitiatedEvent(decisionTaskCompletedEventID int64,
-	domain, workflowID, runID string, identity string) *workflow.HistoryEvent {
-
-	attributes := workflow.NewRequestCancelExternalWorkflowExecutionInitiatedEventAttributes()
-	attributes.DecisionTaskCompletedEventId = common.Int64Ptr(decisionTaskCompletedEventID)
-	attributes.Identity = common.StringPtr(identity)
-	attributes.Domain = common.StringPtr(domain)
-	attributes.WorkflowId = common.StringPtr(workflowID)
-	attributes.RunId = common.StringPtr(runID)
-
-	event := b.msBuilder.createNewHistoryEvent(workflow.EventType_RequestCancelExternalWorkflowExecutionInitiated)
-	event.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes = attributes
+	request *workflow.RequestCancelExternalWorkflowExecutionDecisionAttributes) *workflow.HistoryEvent {
+	event := b.newRequestCancelExternalWorkflowExecutionInitiatedEvent(decisionTaskCompletedEventID, request)
 
 	return b.addEventToHistory(event)
 }
 
 func (b *historyBuilder) AddRequestCancelExternalWorkflowExecutionFailedEvent(decisionTaskCompletedEventID, initiatedEventID int64,
-	domain, workflowID, runID string, cause string) *workflow.HistoryEvent {
-
-	attributes := workflow.NewRequestCancelExternalWorkflowExecutionFailedEventAttributes()
-	attributes.DecisionTaskCompletedEventId = common.Int64Ptr(decisionTaskCompletedEventID)
-	attributes.InitiatedEventId = common.Int64Ptr(initiatedEventID)
-	attributes.Domain = common.StringPtr(domain)
-	attributes.WorkflowId = common.StringPtr(workflowID)
-	attributes.RunId = common.StringPtr(runID)
-	attributes.Cause = common.StringPtr(cause)
-
-	event := b.msBuilder.createNewHistoryEvent(workflow.EventType_RequestCancelExternalWorkflowExecutionFailed)
-	event.RequestCancelExternalWorkflowExecutionFailedEventAttributes = attributes
+	domain, workflowID, runID string, cause workflow.CancelExternalWorkflowExecutionFailedCause) *workflow.HistoryEvent {
+	event := b.newRequestCancelExternalWorkflowExecutionFailedEvent(decisionTaskCompletedEventID, initiatedEventID,
+		domain, workflowID, runID, cause)
 
 	return b.addEventToHistory(event)
 }
@@ -531,4 +490,68 @@ func (b *historyBuilder) newMarkerRecordedEventAttributes(decisionTaskCompletedE
 	historyEvent.MarkerRecordedEventAttributes = attributes
 
 	return historyEvent
+}
+
+func (b *historyBuilder) newWorkflowExecutionCancelRequestedEvent(cause string,
+	request *workflow.RequestCancelWorkflowExecutionRequest) *workflow.HistoryEvent {
+	event := b.msBuilder.createNewHistoryEvent(workflow.EventType_WorkflowExecutionCancelRequested)
+	attributes := workflow.NewWorkflowExecutionCancelRequestedEventAttributes()
+	attributes.Cause = common.StringPtr(cause)
+	attributes.Identity = common.StringPtr(request.GetIdentity())
+	attributes.ExternalWorkflowExecution = &workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr(request.GetWorkflowExecution().GetWorkflowId()),
+		RunId:      common.StringPtr(request.GetWorkflowExecution().GetRunId())}
+	event.WorkflowExecutionCancelRequestedEventAttributes = attributes
+
+	return event
+}
+
+func (b *historyBuilder) newCancelWorkflowExecutionFailedEvent(decisionTaskCompletedEventID int64,
+	request *workflow.CancelWorkflowExecutionFailedEventAttributes) *workflow.HistoryEvent {
+	event := b.msBuilder.createNewHistoryEvent(workflow.EventType_CancelWorkflowExecutionFailed)
+	attributes := workflow.NewCancelWorkflowExecutionFailedEventAttributes()
+	attributes.Cause = common.StringPtr(request.GetCause())
+	attributes.DecisionTaskCompletedEventId = common.Int64Ptr(decisionTaskCompletedEventID)
+	event.CancelWorkflowExecutionFailedEventAttributes = attributes
+
+	return event
+}
+
+func (b *historyBuilder) newWorkflowExecutionCanceledEvent(decisionTaskCompletedEventID int64,
+	request *workflow.CancelWorkflowExecutionDecisionAttributes) *workflow.HistoryEvent {
+	event := b.msBuilder.createNewHistoryEvent(workflow.EventType_WorkflowExecutionCanceled)
+	attributes := workflow.NewWorkflowExecutionCanceledEventAttributes()
+	attributes.DecisionTaskCompletedEventId = common.Int64Ptr(decisionTaskCompletedEventID)
+	attributes.Details = request.GetDetails()
+	event.WorkflowExecutionCanceledEventAttributes = attributes
+
+	return event
+}
+
+func (b *historyBuilder) newRequestCancelExternalWorkflowExecutionInitiatedEvent(decisionTaskCompletedEventID int64,
+	request *workflow.RequestCancelExternalWorkflowExecutionDecisionAttributes) *workflow.HistoryEvent {
+	event := b.msBuilder.createNewHistoryEvent(workflow.EventType_RequestCancelExternalWorkflowExecutionInitiated)
+	attributes := workflow.NewRequestCancelExternalWorkflowExecutionInitiatedEventAttributes()
+	attributes.DecisionTaskCompletedEventId = common.Int64Ptr(decisionTaskCompletedEventID)
+	attributes.Domain = common.StringPtr(request.GetDomain())
+	attributes.WorkflowId = common.StringPtr(request.GetWorkflowId())
+	attributes.RunId = common.StringPtr(request.GetRunId())
+	event.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes = attributes
+
+	return event
+}
+
+func (b *historyBuilder) newRequestCancelExternalWorkflowExecutionFailedEvent(decisionTaskCompletedEventID, initiatedEventID int64,
+	domain, workflowID, runID string, cause workflow.CancelExternalWorkflowExecutionFailedCause) *workflow.HistoryEvent {
+	event := b.msBuilder.createNewHistoryEvent(workflow.EventType_RequestCancelExternalWorkflowExecutionFailed)
+	attributes := workflow.NewRequestCancelExternalWorkflowExecutionFailedEventAttributes()
+	attributes.DecisionTaskCompletedEventId = common.Int64Ptr(decisionTaskCompletedEventID)
+	attributes.InitiatedEventId = common.Int64Ptr(initiatedEventID)
+	attributes.Domain = common.StringPtr(domain)
+	attributes.WorkflowId = common.StringPtr(workflowID)
+	attributes.RunId = common.StringPtr(runID)
+	attributes.Cause = workflow.CancelExternalWorkflowExecutionFailedCausePtr(cause)
+	event.RequestCancelExternalWorkflowExecutionFailedEventAttributes = attributes
+
+	return event
 }

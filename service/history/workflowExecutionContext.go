@@ -5,11 +5,13 @@ import (
 	"sync"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/persistence"
 
 	"github.com/uber-common/bark"
+	hc "github.com/uber/cadence/client/history"
 )
 
 type (
@@ -205,6 +207,36 @@ func (c *workflowExecutionContext) deleteWorkflowExecutionWithRetry(
 	}
 
 	return backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
+}
+
+func (c *workflowExecutionContext) requestExternalCancelWorkflowExecutionWithRetry(
+	historyClient hc.Client,
+	request *history.RequestCancelWorkflowExecutionRequest,
+	initiatedEventID int64) error {
+	op := func() error {
+		return historyClient.RequestCancelWorkflowExecution(nil, request)
+	}
+
+	err := backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
+	if err != nil && common.IsServiceNonRetryableError(err) {
+		if c.msBuilder.AddRequestCancelExternalWorkflowExecutionFailedEvent(
+			emptyEventID,
+			initiatedEventID,
+			request.GetDomainUUID(),
+			request.GetCancelRequest().GetWorkflowExecution().GetWorkflowId(),
+			request.GetCancelRequest().GetWorkflowExecution().GetRunId(),
+			workflow.CancelExternalWorkflowExecutionFailedCause_UNKNOWN_EXTERNAL_WORKFLOW_EXECUTION) == nil {
+			return &workflow.InternalServiceError{Message: "Unable to cancel workflow execution."}
+		}
+
+		// Generate a transaction ID for appending events to history
+		transactionID, err := c.shard.GetNextTransferTaskID()
+		if err != nil {
+			return err
+		}
+		return c.updateWorkflowExecution(nil, nil, transactionID)
+	}
+	return nil
 }
 
 func (c *workflowExecutionContext) clear() {

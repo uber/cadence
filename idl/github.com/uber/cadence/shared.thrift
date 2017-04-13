@@ -87,6 +87,10 @@ enum WorkflowCompleteFailedCause {
   UNHANDLED_DECISION,
 }
 
+enum CancelExternalWorkflowExecutionFailedCause {
+  UNKNOWN_EXTERNAL_WORKFLOW_EXECUTION,
+}
+
 struct WorkflowType {
   10: optional string name
 }
@@ -154,6 +158,7 @@ struct RequestCancelExternalWorkflowExecutionDecisionAttributes {
     10: optional string domain
     20: optional string workflowId
     30: optional string runId
+    40: optional string control
 }
 
 struct RecordMarkerDecisionAttributes {
@@ -314,20 +319,19 @@ struct CancelTimerFailedEventAttributes {
 
 struct WorkflowExecutionCancelRequestedEventAttributes {
   10: optional string cause
-  20: optional WorkflowExecution externalWorkflowExecution
-  30: optional string identity
+  20: optional i64 (js.type = "Long") externalInitiatedEventId
+  30: optional WorkflowExecution externalWorkflowExecution
+  40: optional string identity
 }
 
 struct CancelWorkflowExecutionFailedEventAttributes {
   10: optional string cause
   20: optional i64 (js.type = "Long") decisionTaskCompletedEventId
-  30: optional string identity
 }
 
 struct WorkflowExecutionCanceledEventAttributes {
   10: optional i64 (js.type = "Long") decisionTaskCompletedEventId
   20: optional binary details
-  30: optional string identity
 }
 
 struct MarkerRecordedEventAttributes {
@@ -353,11 +357,11 @@ struct RequestCancelExternalWorkflowExecutionInitiatedEventAttributes {
   20: optional string domain
   30: optional string workflowId
   40: optional string runId
-  50: optional string identity
+  50: optional string control
 }
 
 struct RequestCancelExternalWorkflowExecutionFailedEventAttributes {
-  10: optional string cause
+  10: optional CancelExternalWorkflowExecutionFailedCause cause
   20: optional i64 (js.type = "Long") decisionTaskCompletedEventId
   30: optional string domain
   40: optional string workflowId
@@ -550,9 +554,8 @@ struct RespondActivityTaskCanceledRequest {
 
 struct RequestCancelWorkflowExecutionRequest {
   10: optional string domain
-  20: optional string workflowId
-  30: optional string runId
-  40: optional string identity
+  20: optional WorkflowExecution workflowExecution
+  30: optional string identity
 }
 
 struct GetWorkflowExecutionHistoryRequest {

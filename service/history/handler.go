@@ -389,10 +389,10 @@ func (h *Handler) RequestCancelWorkflowExecution(ctx thrift.Context,
 	h.Service.GetLogger().Debugf("RequestCancelWorkflowExecution. DomainID: %v/%v, WorkflowID: %v, RunID: %v.",
 		cancelRequest.GetDomain(),
 		request.GetDomainUUID(),
-		cancelRequest.GetWorkflowId(),
-		cancelRequest.GetRunId())
+		cancelRequest.GetWorkflowExecution().GetWorkflowId(),
+		cancelRequest.GetWorkflowExecution().GetRunId())
 
-	engine, err1 := h.controller.GetEngine(cancelRequest.GetWorkflowId())
+	engine, err1 := h.controller.GetEngine(cancelRequest.GetWorkflowExecution().GetWorkflowId())
 	if err1 != nil {
 		h.updateErrorMetric(metrics.HistoryRequestCancelWorkflowExecutionScope, err1)
 		return err1

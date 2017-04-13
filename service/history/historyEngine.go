@@ -558,15 +558,16 @@ Update_History_Loop:
 				msBuilder.AddFailWorkflowEvent(completedID, attributes)
 				isComplete = true
 			case workflow.DecisionType_CancelWorkflowExecution:
+
 				if isComplete {
 					msBuilder.AddCompleteWorkflowExecutionFailedEvent(completedID,
 						workflow.WorkflowCompleteFailedCause_UNHANDLED_DECISION)
 					continue Process_Decision_Loop
 				}
 				attributes := d.GetCancelWorkflowExecutionDecisionAttributes()
-				msBuilder.AddWorkflowExecutionCanceledEvent(
-					completedID, attributes.GetDetails(), request.GetIdentity())
+				msBuilder.AddWorkflowExecutionCanceledEvent(completedID, attributes)
 				isComplete = true
+
 			case workflow.DecisionType_StartTimer:
 				attributes := d.GetStartTimerDecisionAttributes()
 				_, ti := msBuilder.AddTimerStartedEvent(completedID, attributes)
@@ -602,11 +603,24 @@ Update_History_Loop:
 				msBuilder.AddRecordMarkerEvent(completedID, d.GetRecordMarkerDecisionAttributes())
 
 			case workflow.DecisionType_RequestCancelExternalWorkflowExecution:
+
 				attributes := d.GetRequestCancelExternalWorkflowExecutionDecisionAttributes()
-				wfCancelReqEvent := msBuilder.AddRequestCancelExternalWorkflowExecutionInitiatedEvent(completedID, attributes.GetDomain(),
-					attributes.GetWorkflowId(), attributes.GetRunId(), request.GetIdentity())
+
+				foreignInfo, _, err := e.domainCache.GetDomain(attributes.GetDomain())
+				if err != nil {
+					return &workflow.InternalServiceError{
+						Message: fmt.Sprintf("Unable to schedule activity across domain: %v.",
+							attributes.GetDomain())}
+				}
+
+				wfCancelReqEvent := msBuilder.AddRequestCancelExternalWorkflowExecutionInitiatedEvent(
+					completedID, attributes)
+				if wfCancelReqEvent == nil {
+					return &workflow.InternalServiceError{Message: "Unable to add external cancel workflow request."}
+				}
+
 				transferTasks = append(transferTasks, &persistence.CancelExecutionTask{
-					TargetDomainID:   attributes.GetDomain(),
+					TargetDomainID:   foreignInfo.ID,
 					TargetWorkflowID: attributes.GetWorkflowId(),
 					TargetRunID:      attributes.GetRunId(),
 					ScheduleID:       wfCancelReqEvent.GetEventId(),
@@ -618,9 +632,10 @@ Update_History_Loop:
 		}
 
 		// Schedule another decision task if new events came in during this decision
-		if (completedID - startedID) > 1 {
+		if (completedID - startedID) > 1 && !isComplete {
 			newDecisionEvent, _ := msBuilder.AddDecisionTaskScheduledEvent()
 			transferTasks = append(transferTasks, &persistence.DecisionTask{
+				DomainID: domainID,
 				TaskList:   newDecisionEvent.GetDecisionTaskScheduledEventAttributes().GetTaskList().GetName(),
 				ScheduleID: newDecisionEvent.GetEventId(),
 			})
@@ -996,59 +1011,22 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 	request := req.GetCancelRequest()
 
 	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(request.GetWorkflowId()),
-		RunId:      common.StringPtr(request.GetRunId()),
+		WorkflowId: common.StringPtr(request.GetWorkflowExecution().GetWorkflowId()),
+		RunId:      common.StringPtr(request.GetWorkflowExecution().GetRunId()),
 	}
 
-	context, err := e.historyCache.getOrCreateWorkflowExecution(domainID, workflowExecution)
-	if err != nil {
-		return err
-	}
-
-	context.Lock()
-	defer context.Unlock()
-
-Update_History_Loop:
-	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
-		msBuilder, err := context.loadWorkflowExecution()
-		if err != nil {
-			return err
-		}
-
-		if msBuilder.executionInfo.State != persistence.WorkflowStateCreated &&
-			msBuilder.executionInfo.State != persistence.WorkflowStateRunning {
-			return &workflow.EntityNotExistsError{Message: "Workflow not found."}
-		}
-
-		msBuilder.AddWorkflowExecutionCancelRequestedEvent("", request.GetWorkflowId(), request.GetRunId(), request.GetIdentity())
-
-		var transferTasks []persistence.Task
-		if !msBuilder.HasPendingDecisionTask() {
-			newDecisionEvent, _ := msBuilder.AddDecisionTaskScheduledEvent()
-			transferTasks = []persistence.Task{&persistence.DecisionTask{
-				DomainID:   domainID,
-				TaskList:   newDecisionEvent.GetDecisionTaskScheduledEventAttributes().GetTaskList().GetName(),
-				ScheduleID: newDecisionEvent.GetEventId(),
-			}}
-		}
-
-		// Generate a transaction ID for appending events to history
-		transactionID, err := e.shard.GetNextTransferTaskID()
-		if err != nil {
-			return err
-		}
-
-		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
-		// the history and try the operation again.
-		if err := context.updateWorkflowExecution(transferTasks, nil, transactionID); err != nil {
-			if err == ErrConflict {
-				continue Update_History_Loop
+	return e.updateWorkflowExecution(domainID, workflowExecution, false, true,
+		func(msBuilder *mutableStateBuilder) error {
+			if !msBuilder.isWorkflowExecutionRunning() {
+				return &workflow.EntityNotExistsError{Message: "Workflow execution already completed."}
 			}
-			return err
-		}
-		return nil
-	}
-	return ErrMaxAttemptsExceeded
+
+			if msBuilder.AddWorkflowExecutionCancelRequestedEvent("", request) == nil {
+				return &workflow.InternalServiceError{Message: "Unable to cancel workflow execution."}
+			}
+
+			return nil
+		})
 }
 
 func (e *historyEngineImpl) SignalWorkflowExecution(signalRequest *h.SignalWorkflowExecutionRequest) error {

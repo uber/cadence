@@ -23,7 +23,6 @@ const (
 	transferProcessorMaxPollInterval   = 10 * time.Second
 	transferProcessorUpdateAckInterval = 10 * time.Second
 	taskWorkerCount                    = 10
-	workflowCancellationUnknown        = "UNKNOWN_EXTERNAL_WORKFLOW_EXECUTION"
 )
 
 type (
@@ -266,47 +265,30 @@ ProcessRetryLoop:
 
 			case persistence.TransferTaskTypeCancelExecution:
 				{
-					isHistoryServiceRetryableError := func(err error) bool {
-						switch err.(type) {
-						case *workflow.EntityNotExistsError:
-							return false
-						case *workflow.BadRequestError:
-							return false
-						}
-						return true
-					}
-
-					err = t.historyClient.RequestCancelWorkflowExecution(nil,
-						&history.RequestCancelWorkflowExecutionRequest{
-							DomainUUID: common.StringPtr(targetDomainID),
-							CancelRequest: &workflow.RequestCancelWorkflowExecutionRequest{
-								Domain:     common.StringPtr(targetDomainID),
-								WorkflowId: common.StringPtr(task.TargetWorkflowID),
-								RunId:      common.StringPtr(task.TargetRunID),
-								Identity:   common.StringPtr("history-service"),
-							},
-						})
-
-					if err != nil && !isHistoryServiceRetryableError(err) {
-						var context *workflowExecutionContext
-						// Write failure event to history.
-						context, err = t.cache.getOrCreateWorkflowExecution(domainID, execution)
+					var context *workflowExecutionContext
+					context, err = t.cache.getOrCreateWorkflowExecution(domainID, execution)
+					if err == nil {
+						// Load workflow execution.
+						context.Lock()
+						_, err = context.loadWorkflowExecution()
 						if err == nil {
-							var mb *mutableStateBuilder
-							mb, err = context.loadWorkflowExecution()
-							if err == nil {
-								mb.AddRequestCancelExternalWorkflowExecutionFailedEvent(
-									emptyEventID, task.ScheduleID, task.TargetDomainID,
-									task.TargetWorkflowID, task.TargetRunID, workflowCancellationUnknown)
-								// Generate a transaction ID for appending events to history
-								var transactionID int64
-								transactionID, err = t.shard.GetNextTransferTaskID()
-								if err == nil {
-									err = context.updateWorkflowExecution(nil, nil, transactionID)
-									// The below code will handle retries.
-								}
+							cancelRequest := &history.RequestCancelWorkflowExecutionRequest{
+								DomainUUID: common.StringPtr(targetDomainID),
+								CancelRequest: &workflow.RequestCancelWorkflowExecutionRequest{
+									WorkflowExecution: &workflow.WorkflowExecution{
+										WorkflowId: common.StringPtr(task.TargetWorkflowID),
+										RunId:      common.StringPtr(task.TargetRunID),
+									},
+									Identity: common.StringPtr("history-service"),
+								},
 							}
+
+							err = context.requestExternalCancelWorkflowExecutionWithRetry(
+								t.historyClient,
+								cancelRequest,
+								task.ScheduleID)
 						}
+						context.Unlock()
 					}
 				}
 			}
