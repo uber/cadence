@@ -102,6 +102,8 @@ const (
 	UpdateWorkflowExecutionScope
 	// DeleteWorkflowExecutionScope tracks DeleteWorkflowExecution calls made by service to persistence layer
 	DeleteWorkflowExecutionScope
+	// GetCurrentExecutionScope tracks GetCurrentExecution calls made by service to persistence layer
+	GetCurrentExecutionScope
 	// GetTransferTasksScope tracks GetTransferTasks calls made by service to persistence layer
 	GetTransferTasksScope
 	// CompleteTransferTasksScope tracks CompleteTransferTasks calls made by service to persistence layer
@@ -140,6 +142,8 @@ const (
 	HistoryClientRecordActivityTaskStartedScope
 	// HistoryClientRequestCancelWorkflowExecutionScope tracks RPC calls to history service
 	HistoryClientRequestCancelWorkflowExecutionScope
+	// HistoryClientSignalWorkflowExecutionScope tracks RPC calls to history service
+	HistoryClientSignalWorkflowExecutionScope
 	// HistoryClientTerminateWorkflowExecutionScope tracks RPC calls to history service
 	HistoryClientTerminateWorkflowExecutionScope
 	// MatchingClientPollForDecisionTaskScope tracks RPC calls to matching service
@@ -196,6 +200,8 @@ const (
 	HistoryRecordDecisionTaskStartedScope
 	// HistoryRecordActivityTaskStartedScope tracks RecordActivityTaskStarted API calls received by service
 	HistoryRecordActivityTaskStartedScope
+	// HistorySignalWorkflowExecutionScope tracks SignalWorkflowExecution API calls received by service
+	HistorySignalWorkflowExecutionScope
 	// HistoryTerminateWorkflowExecutionScope tracks TerminateWorkflowExecution API calls received by service
 	HistoryTerminateWorkflowExecutionScope
 	// HistoryProcessTransferTasksScope tracks number of transfer tasks processed
@@ -231,6 +237,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		GetWorkflowExecutionScope:    {operation: "GetWorkflowExecution"},
 		UpdateWorkflowExecutionScope: {operation: "UpdateWorkflowExecution"},
 		DeleteWorkflowExecutionScope: {operation: "DeleteWorkflowExecution"},
+		GetCurrentExecutionScope:     {operation: "GetCurrentExecution"},
 		GetTransferTasksScope:        {operation: "GetTransferTasks"},
 		CompleteTransferTaskScope:    {operation: "CompleteTransferTask"},
 		GetTimerIndexTasksScope:      {operation: "GetTimerIndexTasks"},
@@ -249,8 +256,9 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryClientGetWorkflowExecutionHistoryScope:    {operation: "HistoryClientGetWorkflowExecutionHistory"},
 		HistoryClientRecordDecisionTaskStartedScope:      {operation: "HistoryClientRecordDecisionTaskStarted"},
 		HistoryClientRecordActivityTaskStartedScope:      {operation: "HistoryClientRecordActivityTaskStarted"},
+		HistoryClientRequestCancelWorkflowExecutionScope: {operation: "HistoryClientRequestCancelWorkflowExecution"},
+		HistoryClientSignalWorkflowExecutionScope:        {operation: "HistoryClientSignalWorkflowExecution"},
 		HistoryClientTerminateWorkflowExecutionScope:     {operation: "HistoryClientTerminateWorkflowExecution"},
-		HistoryClientRequestCancelWorkflowExecutionScope: {operation: "HistoryClientRequestCancelWorkflowExecutionScope"},
 		MatchingClientPollForDecisionTaskScope:           {operation: "MatchingClientPollForDecisionTask"},
 		MatchingClientPollForActivityTaskScope:           {operation: "MatchingClientPollForActivityTask"},
 		MatchingClientAddActivityTaskScope:               {operation: "MatchingClientAddActivityTask"},
@@ -278,6 +286,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryGetWorkflowExecutionHistoryScope:    {operation: "GetWorkflowExecutionHistory"},
 		HistoryRecordDecisionTaskStartedScope:      {operation: "RecordDecisionTaskStarted"},
 		HistoryRecordActivityTaskStartedScope:      {operation: "RecordActivityTaskStarted"},
+		HistorySignalWorkflowExecutionScope:        {operation: "SignalWorkflowExecution"},
 		HistoryTerminateWorkflowExecutionScope:     {operation: "TerminateWorkflowExecution"},
 		HistoryProcessTransferTasksScope:           {operation: "ProcessTransferTask"},
 		HistoryRequestCancelWorkflowExecutionScope: {operation: "RequestCancelWorkflowExecution"},

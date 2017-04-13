@@ -168,6 +168,22 @@ func (c *metricClient) RequestCancelWorkflowExecution(context thrift.Context,
 	if err != nil {
 		c.metricsClient.IncCounter(metrics.HistoryClientRequestCancelWorkflowExecutionScope, metrics.CadenceFailures)
 	}
+
+	return err
+}
+
+func (c *metricClient) SignalWorkflowExecution(context thrift.Context,
+	request *h.SignalWorkflowExecutionRequest) error {
+	c.metricsClient.IncCounter(metrics.HistoryClientSignalWorkflowExecutionScope, metrics.CadenceRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.HistoryClientSignalWorkflowExecutionScope, metrics.CadenceLatency)
+	err := c.client.SignalWorkflowExecution(context, request)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.HistoryClientSignalWorkflowExecutionScope, metrics.CadenceFailures)
+	}
+
 	return err
 }
 

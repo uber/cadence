@@ -235,13 +235,27 @@ func (c *clientImpl) RequestCancelWorkflowExecution(context thrift.Context,
 		return err
 	}
 	op := func(context thrift.Context, client h.TChanHistoryService) error {
-		var err error
 		ctx, cancel := c.createContext(context)
 		defer cancel()
-		err = client.RequestCancelWorkflowExecution(ctx, request)
-		return err
+		return client.RequestCancelWorkflowExecution(ctx, request)
 	}
 	return c.executeWithRedirect(context, client, op)
+}
+
+func (c *clientImpl) SignalWorkflowExecution(context thrift.Context,
+	request *h.SignalWorkflowExecutionRequest) error {
+	client, err := c.getHostForRequest(request.GetSignalRequest().GetWorkflowExecution().GetWorkflowId())
+	if err != nil {
+		return err
+	}
+	op := func(context thrift.Context, client h.TChanHistoryService) error {
+		ctx, cancel := c.createContext(context)
+		defer cancel()
+		return client.SignalWorkflowExecution(ctx, request)
+	}
+	err = c.executeWithRedirect(context, client, op)
+
+	return err
 }
 
 func (c *clientImpl) TerminateWorkflowExecution(context thrift.Context,

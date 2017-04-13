@@ -20,6 +20,7 @@ type Client interface {
 	RespondDecisionTaskCompleted(completeRequest *shared.RespondDecisionTaskCompletedRequest) error
 	StartWorkflowExecution(startRequest *shared.StartWorkflowExecutionRequest) (*shared.StartWorkflowExecutionResponse, error)
 	RequestCancelWorkflowExecution(cancelRequest *shared.RequestCancelWorkflowExecutionRequest) error
+	SignalWorkflowExecution(request *shared.SignalWorkflowExecutionRequest) error
 	TerminateWorkflowExecution(terminateRequest *shared.TerminateWorkflowExecutionRequest) error
 	ListOpenWorkflowExecutions(listRequest *shared.ListOpenWorkflowExecutionsRequest) (*shared.ListOpenWorkflowExecutionsResponse, error)
 	ListClosedWorkflowExecutions(listRequest *shared.ListClosedWorkflowExecutionsRequest) (*shared.ListClosedWorkflowExecutionsResponse, error)
