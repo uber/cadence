@@ -1,7 +1,6 @@
 package history
 
 import (
-	"sync"
 	"time"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -20,11 +19,6 @@ const (
 )
 
 type (
-	executionLock struct {
-		sync.Mutex
-		waitingCount int
-	}
-
 	releaseWorkflowExecutionFunc func()
 
 	historyCache struct {
