@@ -17,33 +17,39 @@ CREATE TYPE shard (
 
 --- Workflow execution and mutable state ---
 CREATE TYPE workflow_execution (
-  workflow_id                       text,
-  run_id                            uuid,
-  task_list                         text,
-  history                           blob,
-  execution_context                 blob,
-  state                             int,  -- enum WorkflowState {Created, Running, Completed}
-  next_event_id                     bigint,
-  last_processed_event              bigint,
-  last_updated_time                 timestamp,
-  create_request_id                 uuid,
-  decision_schedule_id              bigint,
-  decision_started_id               bigint,
-  decision_request_id               text,    -- Identifier used by matching engine for retrying history service calls for recording task is started
-  decision_timeout                  int,
+  domain_id              uuid,
+  workflow_id            text,
+  run_id                 uuid,
+  task_list              text,
+  workflow_type_name     text,
+  decision_task_timeout  int,
+  execution_context      blob,
+  state                  int,  -- enum WorkflowState {Created, Running, Completed}
+  next_event_id          bigint,
+  last_processed_event   bigint,
+  start_time             timestamp,
+  last_updated_time      timestamp,
+  create_request_id      uuid,
+  decision_schedule_id   bigint,
+  decision_started_id    bigint,
+  decision_request_id    text,    -- Identifier used by matching engine for retrying history service calls for recording task is started
+  decision_timeout       int,
 );
 
 -- TODO: Remove fields that are left over from activity and workflow tasks.
 CREATE TYPE transfer_task (
+  domain_id        uuid,
   workflow_id      text,
   run_id           uuid,
   task_id          bigint,
+  target_domain_id uuid,
   task_list        text,
   type             int,  -- enum TaskType {ActivityTask, DecisionTask, DeleteExecution}
   schedule_id      bigint,
 );
 
 CREATE TYPE timer_task (
+  domain_id        uuid,
   workflow_id      text,
   run_id           uuid,
   task_id          bigint,
@@ -55,7 +61,9 @@ CREATE TYPE timer_task (
 -- Workflow activity in progress mutable state
 CREATE TYPE activity_info (
   schedule_id               bigint,
+  scheduled_event           blob,
   started_id                bigint,
+  started_event             blob,
   activity_id               text,    -- Client generated unique ID for the activity.
   request_id                text,    -- Identifier used by matching engine for retrying history service calls for recording task is started
   details                   blob,
@@ -68,14 +76,6 @@ CREATE TYPE activity_info (
   last_hb_updated_time      timestamp, -- Last time the heartbeat is received.
 );
 
--- Workflow decision in progress in mutable state
-CREATE TYPE decision_info (
-  schedule_id               bigint,
-  started_id                bigint,
-  request_id                text,    -- Identifier used by matching engine for retrying history service calls for recording task is started
-  start_to_close_timeout    int,
-);
-
 -- User timer details
 CREATE TYPE timer_info (
   timer_id      text,      -- User defined timer ID
@@ -84,9 +84,38 @@ CREATE TYPE timer_info (
   task_id       bigint,    -- The task ID if we have one created for this timer
 );
 
+-- Activity or workflow task in a task list
+CREATE TYPE task (
+  domain_id        uuid,
+  workflow_id      text,
+  run_id           uuid,
+  schedule_id      bigint,
+);
+
+CREATE TYPE task_list (
+  domain_id        uuid,
+  name             text,
+  type             int, -- enum TaskRowType {ActivityTask, DecisionTask}
+  ack_level        bigint, -- task_id of the last acknowledged message
+);
+
+CREATE TYPE domain (
+  id          uuid,
+  name        text,
+  status      int, -- enum DomainStatus {Registered, Deprecated, Deleted}
+  description text,
+  owner_email text,
+);
+
+CREATE TYPE domain_config (
+  retention int,
+  emit_metric boolean
+);
+
 CREATE TABLE executions (
   shard_id           int,
   type               int, -- enum RowType { Shard, Execution, TransferTask, TimerTask}
+  domain_id          uuid,
   workflow_id        text,
   run_id             uuid,
   current_run_id     uuid,
@@ -99,24 +128,25 @@ CREATE TABLE executions (
   range_id           bigint static, -- Increasing sequence identifier for transfer queue, checkpointed into shard info
   activity_map       map<bigint, frozen<activity_info>>,
   timer_map          map<text, frozen<timer_info>>,
-  PRIMARY KEY  (shard_id, type, workflow_id, run_id, task_id)
+  PRIMARY KEY  (shard_id, type, domain_id, workflow_id, run_id, task_id)
 );
 
--- Activity or workflow task in a task list
-CREATE TYPE task (
-  workflow_id      text,
-  run_id           uuid,
-  schedule_id      bigint,
-);
-
-CREATE TYPE task_list (
-  name             text,
-  type             int, -- enum TaskRowType {ActivityTask, DecisionTask}
-  ack_level        bigint, -- task_id of the last acknowledged message
+CREATE TABLE events (
+  domain_id      uuid,
+  workflow_id    text,
+  run_id         uuid,
+  -- We insert a batch of events with each append transaction.
+  -- This field stores the event id of first event in the batch.
+  first_event_id bigint,
+  range_id       bigint,
+  tx_id          bigint,
+  data           blob, -- Batch of workflow execution history events as a blob
+  PRIMARY KEY ((domain_id, workflow_id, run_id), first_event_id)
 );
 
 -- Stores activity or workflow tasks
 CREATE TABLE tasks (
+  domain_id        uuid,
   task_list_name   text,
   task_list_type   int, -- enum TaskListType {ActivityTask, DecisionTask}
   type             int, -- enum rowType {Task, TaskList}
@@ -124,5 +154,19 @@ CREATE TABLE tasks (
   range_id         bigint static, -- Used to ensure that only one process can write to the table
   task             frozen<task>,
   task_list        frozen<task_list>,
-  PRIMARY KEY ((task_list_name, task_list_type), type, task_id)
+  PRIMARY KEY ((domain_id, task_list_name, task_list_type), type, task_id)
+);
+
+CREATE TABLE domains (
+  id     uuid,
+  domain frozen<domain>,
+  config frozen<domain_config>,
+  PRIMARY KEY (id)
+);
+
+CREATE TABLE domains_by_name (
+  name   text,
+  domain frozen<domain>,
+  config frozen<domain_config>,
+  PRIMARY KEY (name)
 );

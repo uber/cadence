@@ -91,13 +91,14 @@ const (
 	tagValueActionTimerStarted                    = "add-timer-started-event"
 	tagValueActionTimerFired                      = "add-timer-fired-event"
 	tagValueActionTimerCanceled                   = "add-timer-Canceled-event"
+	tagValueActionWorkflowTerminated              = "add-workflowexecution-terminated-event"
+	tagValueActionWorkflowSignaled                = "add-workflowexecution-signaled-event"
 
 	// tagStoreOperation values
 	tagValueStoreOperationGetTasks                = "get-tasks"
 	tagValueStoreOperationCompleteTask            = "complete-task"
 	tagValueStoreOperationCreateWorkflowExecution = "create-wf-execution"
 	tagValueStoreOperationGetWorkflowExecution    = "get-wf-execution"
-	tagValueStoreOperationGetWorkflowMutableState = "get-wf-mutable-state"
 	tagValueStoreOperationUpdateWorkflowExecution = "update-wf-execution"
 	tagValueStoreOperationDeleteWorkflowExecution = "delete-wf-execution"
 )

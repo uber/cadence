@@ -41,6 +41,9 @@ type (
 		ExecutionMgrFactory ExecutionManagerFactory
 		WorkflowMgr         ExecutionManager
 		TaskMgr             TaskManager
+		HistoryMgr          HistoryManager
+		MetadataManager     MetadataManager
+		VisibilityMgr       VisibilityManager
 		ShardInfo           *ShardInfo
 		ShardContext        *testShardContext
 		readLevel           int64
@@ -58,6 +61,7 @@ type (
 		shardInfo              *ShardInfo
 		transferSequenceNumber int64
 		timerSequeceNumber     int64
+		historyMgr             HistoryManager
 		executionMgr           ExecutionManager
 		logger                 bark.Logger
 		metricsClient          metrics.Client
@@ -70,11 +74,12 @@ type (
 	}
 )
 
-func newTestShardContext(shardInfo *ShardInfo, transferSequenceNumber int64, executionMgr ExecutionManager,
-	logger bark.Logger) *testShardContext {
+func newTestShardContext(shardInfo *ShardInfo, transferSequenceNumber int64, historyMgr HistoryManager,
+	executionMgr ExecutionManager, logger bark.Logger) *testShardContext {
 	return &testShardContext{
 		shardInfo:              shardInfo,
 		transferSequenceNumber: transferSequenceNumber,
+		historyMgr:             historyMgr,
 		executionMgr:           executionMgr,
 		logger:                 logger,
 		metricsClient:          metrics.NewClient(tally.NoopScope, metrics.History),
@@ -83,6 +88,10 @@ func newTestShardContext(shardInfo *ShardInfo, transferSequenceNumber int64, exe
 
 func (s *testShardContext) GetExecutionManager() ExecutionManager {
 	return s.executionMgr
+}
+
+func (s *testShardContext) GetHistoryManager() HistoryManager {
+	return s.historyMgr
 }
 
 func (s *testShardContext) GetNextTransferTaskID() (int64, error) {
@@ -115,6 +124,10 @@ func (s *testShardContext) UpdateWorkflowExecution(request *UpdateWorkflowExecut
 	return s.executionMgr.UpdateWorkflowExecution(request)
 }
 
+func (s *testShardContext) AppendHistoryEvents(request *AppendHistoryEventsRequest) error {
+	return s.historyMgr.AppendHistoryEvents(request)
+}
+
 func (s *testShardContext) GetLogger() bark.Logger {
 	return s.logger
 }
@@ -142,7 +155,8 @@ func newTestExecutionMgrFactory(options TestBaseOptions, cassandra CassandraTest
 }
 
 func (f *testExecutionMgrFactory) CreateExecutionManager(shardID int) (ExecutionManager, error) {
-	return NewCassandraWorkflowExecutionPersistence(f.options.ClusterHost, f.options.Datacenter, f.cassandra.keyspace, shardID, f.logger)
+	return NewCassandraWorkflowExecutionPersistence(f.options.ClusterHost, f.options.Datacenter, f.cassandra.keyspace,
+		shardID, f.logger)
 }
 
 // SetupWorkflowStoreWithOptions to setup workflow test base
@@ -152,7 +166,8 @@ func (s *TestBase) SetupWorkflowStoreWithOptions(options TestBaseOptions) {
 	s.CassandraTestCluster.setupTestCluster(options.KeySpace, options.DropKeySpace, options.SchemaDir)
 	shardID := 0
 	var err error
-	s.ShardMgr, err = NewCassandraShardPersistence(options.ClusterHost, options.Datacenter, s.CassandraTestCluster.keyspace, log)
+	s.ShardMgr, err = NewCassandraShardPersistence(options.ClusterHost, options.Datacenter,
+		s.CassandraTestCluster.keyspace, log)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -162,10 +177,29 @@ func (s *TestBase) SetupWorkflowStoreWithOptions(options TestBaseOptions) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	s.TaskMgr, err = NewCassandraTaskPersistence(options.ClusterHost, options.Datacenter, s.CassandraTestCluster.keyspace, log)
+	s.TaskMgr, err = NewCassandraTaskPersistence(options.ClusterHost, options.Datacenter, s.CassandraTestCluster.keyspace,
+		log)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	s.HistoryMgr, err = NewCassandraHistoryPersistence(options.ClusterHost, options.Datacenter,
+		s.CassandraTestCluster.keyspace, log)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	s.MetadataManager, err = NewCassandraMetadataPersistence(options.ClusterHost, options.Datacenter,
+		s.CassandraTestCluster.keyspace, log)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	s.VisibilityMgr, err = NewCassandraVisibilityPersistence(options.ClusterHost, options.Datacenter, s.CassandraTestCluster.keyspace, log)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// Create a shard for test
 	s.readLevel = 0
 	s.ShardInfo = &ShardInfo{
@@ -173,7 +207,7 @@ func (s *TestBase) SetupWorkflowStoreWithOptions(options TestBaseOptions) {
 		RangeID:          0,
 		TransferAckLevel: 0,
 	}
-	s.ShardContext = newTestShardContext(s.ShardInfo, 0, s.WorkflowMgr, log)
+	s.ShardContext = newTestShardContext(s.ShardInfo, 0, s.HistoryMgr, s.WorkflowMgr, log)
 	err1 := s.ShardMgr.CreateShard(&CreateShardRequest{
 		ShardInfo: s.ShardInfo,
 	})
@@ -217,21 +251,27 @@ func (s *TestBase) UpdateShard(updatedInfo *ShardInfo, previousRangeID int64) er
 }
 
 // CreateWorkflowExecution is a utility method to create workflow executions
-func (s *TestBase) CreateWorkflowExecution(workflowExecution workflow.WorkflowExecution, taskList string,
-	history []byte, executionContext []byte, nextEventID int64, lastProcessedEventID int64, decisionScheduleID int64,
-	timerTasks []Task) (
-	string, error) {
+func (s *TestBase) CreateWorkflowExecution(domainID string, workflowExecution workflow.WorkflowExecution, taskList,
+wType string, decisionTimeout int32, executionContext []byte, nextEventID int64, lastProcessedEventID int64,
+	decisionScheduleID int64, timerTasks []Task) (string, error) {
 	response, err := s.WorkflowMgr.CreateWorkflowExecution(&CreateWorkflowExecutionRequest{
-		RequestID:          uuid.New(),
-		Execution:          workflowExecution,
-		TaskList:           taskList,
-		History:            history,
-		ExecutionContext:   executionContext,
-		NextEventID:        nextEventID,
-		LastProcessedEvent: lastProcessedEventID,
-		RangeID:            s.ShardContext.GetRangeID(),
+		RequestID:            uuid.New(),
+		DomainID:             domainID,
+		Execution:            workflowExecution,
+		TaskList:             taskList,
+		WorkflowTypeName:     wType,
+		DecisionTimeoutValue: decisionTimeout,
+		ExecutionContext:     executionContext,
+		NextEventID:          nextEventID,
+		LastProcessedEvent:   lastProcessedEventID,
+		RangeID:              s.ShardContext.GetRangeID(),
 		TransferTasks: []Task{
-			&DecisionTask{TaskID: s.GetNextSequenceNumber(), TaskList: taskList, ScheduleID: decisionScheduleID},
+			&DecisionTask{
+				TaskID:     s.GetNextSequenceNumber(),
+				DomainID:   domainID,
+				TaskList:   taskList,
+				ScheduleID: decisionScheduleID,
+			},
 		},
 		TimerTasks:                  timerTasks,
 		DecisionScheduleID:          decisionScheduleID,
@@ -247,26 +287,36 @@ func (s *TestBase) CreateWorkflowExecution(workflowExecution workflow.WorkflowEx
 }
 
 // CreateWorkflowExecutionManyTasks is a utility method to create workflow executions
-func (s *TestBase) CreateWorkflowExecutionManyTasks(workflowExecution workflow.WorkflowExecution,
-	taskList string, history string, executionContext []byte, nextEventID int64, lastProcessedEventID int64,
+func (s *TestBase) CreateWorkflowExecutionManyTasks(domainID string, workflowExecution workflow.WorkflowExecution,
+	taskList string, executionContext []byte, nextEventID int64, lastProcessedEventID int64,
 	decisionScheduleIDs []int64, activityScheduleIDs []int64) (string, error) {
 
 	transferTasks := []Task{}
 	for _, decisionScheduleID := range decisionScheduleIDs {
 		transferTasks = append(transferTasks,
-			&DecisionTask{TaskID: s.GetNextSequenceNumber(), TaskList: taskList, ScheduleID: int64(decisionScheduleID)})
+			&DecisionTask{
+				TaskID:     s.GetNextSequenceNumber(),
+				DomainID:   domainID,
+				TaskList:   taskList,
+				ScheduleID: int64(decisionScheduleID),
+			})
 	}
 
 	for _, activityScheduleID := range activityScheduleIDs {
 		transferTasks = append(transferTasks,
-			&ActivityTask{TaskID: s.GetNextSequenceNumber(), TaskList: taskList, ScheduleID: int64(activityScheduleID)})
+			&ActivityTask{
+				TaskID:     s.GetNextSequenceNumber(),
+				DomainID:   domainID,
+				TaskList:   taskList,
+				ScheduleID: int64(activityScheduleID),
+			})
 	}
 
 	response, err := s.WorkflowMgr.CreateWorkflowExecution(&CreateWorkflowExecutionRequest{
 		RequestID:                   uuid.New(),
+		DomainID:                    domainID,
 		Execution:                   workflowExecution,
 		TaskList:                    taskList,
-		History:                     []byte(history),
 		ExecutionContext:            executionContext,
 		NextEventID:                 nextEventID,
 		LastProcessedEvent:          lastProcessedEventID,
@@ -285,30 +335,30 @@ func (s *TestBase) CreateWorkflowExecutionManyTasks(workflowExecution workflow.W
 }
 
 // GetWorkflowExecutionInfo is a utility method to retrieve execution info
-func (s *TestBase) GetWorkflowExecutionInfo(workflowExecution workflow.WorkflowExecution) (*WorkflowExecutionInfo,
-	error) {
+func (s *TestBase) GetWorkflowExecutionInfo(domainID string, workflowExecution workflow.WorkflowExecution) (
+	*WorkflowMutableState, error) {
 	response, err := s.WorkflowMgr.GetWorkflowExecution(&GetWorkflowExecutionRequest{
+		DomainID:  domainID,
 		Execution: workflowExecution,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	return response.ExecutionInfo, nil
+	return response.State, nil
 }
 
-// GetWorkflowMutableState is a utility method to retrieve execution info
-func (s *TestBase) GetWorkflowMutableState(workflowExecution workflow.WorkflowExecution) (*WorkflowMutableState,
-	error) {
-	response, err := s.WorkflowMgr.GetWorkflowMutableState(&GetWorkflowMutableStateRequest{
-		WorkflowID: workflowExecution.GetWorkflowId(),
-		RunID:      workflowExecution.GetRunId(),
+func (s *TestBase) GetCurrentWorkflow(domainID, workflowID string) (string, error) {
+	response, err := s.WorkflowMgr.GetCurrentExecution(&GetCurrentExecutionRequest{
+		DomainID:   domainID,
+		WorkflowID: workflowID,
 	})
+
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return response.State, nil
+	return response.RunID, nil
 }
 
 // UpdateWorkflowExecution is a utility method to update workflow execution
@@ -348,6 +398,7 @@ func (s *TestBase) UpdateWorkflowExecutionWithRangeID(updatedInfo *WorkflowExecu
 	for _, decisionScheduleID := range decisionScheduleIDs {
 		transferTasks = append(transferTasks, &DecisionTask{
 			TaskID:     s.GetNextSequenceNumber(),
+			DomainID:   updatedInfo.DomainID,
 			TaskList:   updatedInfo.TaskList,
 			ScheduleID: int64(decisionScheduleID)})
 	}
@@ -355,6 +406,7 @@ func (s *TestBase) UpdateWorkflowExecutionWithRangeID(updatedInfo *WorkflowExecu
 	for _, activityScheduleID := range activityScheduleIDs {
 		transferTasks = append(transferTasks, &ActivityTask{
 			TaskID:     s.GetNextSequenceNumber(),
+			DomainID:   updatedInfo.DomainID,
 			TaskList:   updatedInfo.TaskList,
 			ScheduleID: int64(activityScheduleID)})
 	}
@@ -383,9 +435,8 @@ func (s *TestBase) DeleteWorkflowExecution(info *WorkflowExecutionInfo) error {
 // GetTransferTasks is a utility method to get tasks from transfer task queue
 func (s *TestBase) GetTransferTasks(batchSize int) ([]*TransferTaskInfo, error) {
 	response, err := s.WorkflowMgr.GetTransferTasks(&GetTransferTasksRequest{
-		ReadLevel:    s.GetReadLevel(),
-		MaxReadLevel: s.GetMaxAllowedReadLevel(),
-		BatchSize:    batchSize,
+		ReadLevel: s.GetReadLevel(),
+		BatchSize: batchSize,
 	})
 
 	if err != nil {
@@ -400,7 +451,7 @@ func (s *TestBase) GetTransferTasks(batchSize int) ([]*TransferTaskInfo, error) 
 }
 
 // CompleteTransferTask is a utility method to complete a transfer task
-func (s *TestBase) CompleteTransferTask(workflowExecution workflow.WorkflowExecution, taskID int64) error {
+func (s *TestBase) CompleteTransferTask(taskID int64) error {
 
 	return s.WorkflowMgr.CompleteTransferTask(&CompleteTransferTaskRequest{
 		TaskID: taskID,
@@ -420,26 +471,38 @@ func (s *TestBase) GetTimerIndexTasks(minKey int64, maxKey int64) ([]*TimerTaskI
 }
 
 // CreateDecisionTask is a utility method to create a task
-func (s *TestBase) CreateDecisionTask(workflowExecution workflow.WorkflowExecution, taskList string,
+func (s *TestBase) CreateDecisionTask(domainID string, workflowExecution workflow.WorkflowExecution, taskList string,
 	decisionScheduleID int64) (int64, error) {
-	leaseResponse, err := s.TaskMgr.LeaseTaskList(&LeaseTaskListRequest{TaskList: taskList, TaskType: TaskListTypeDecision})
+	leaseResponse, err := s.TaskMgr.LeaseTaskList(&LeaseTaskListRequest{
+		DomainID: domainID,
+		TaskList: taskList,
+		TaskType: TaskListTypeDecision,
+	})
 	if err != nil {
 		return 0, err
 	}
 
 	taskID := s.GetNextSequenceNumber()
-	_, err = s.TaskMgr.CreateTask(&CreateTaskRequest{
-		TaskID:       taskID,
-		Execution:    workflowExecution,
+	tasks := []*CreateTaskInfo{
+		&CreateTaskInfo{
+			TaskID:    taskID,
+			Execution: workflowExecution,
+			Data: &TaskInfo{
+				DomainID:   domainID,
+				WorkflowID: workflowExecution.GetWorkflowId(),
+				RunID:      workflowExecution.GetRunId(),
+				TaskID:     taskID,
+				ScheduleID: decisionScheduleID,
+			},
+		},
+	}
+
+	_, err = s.TaskMgr.CreateTasks(&CreateTasksRequest{
+		DomainID:     domainID,
 		TaskList:     taskList,
 		TaskListType: TaskListTypeDecision,
-		Data: &TaskInfo{
-			WorkflowID: workflowExecution.GetWorkflowId(),
-			RunID:      workflowExecution.GetRunId(),
-			TaskID:     taskID,
-			ScheduleID: decisionScheduleID,
-		},
-		RangeID: leaseResponse.TaskListInfo.RangeID,
+		Tasks:        tasks,
+		RangeID:      leaseResponse.TaskListInfo.RangeID,
 	})
 
 	if err != nil {
@@ -450,8 +513,8 @@ func (s *TestBase) CreateDecisionTask(workflowExecution workflow.WorkflowExecuti
 }
 
 // CreateActivityTasks is a utility method to create tasks
-func (s *TestBase) CreateActivityTasks(workflowExecution workflow.WorkflowExecution, activities map[int64]string) (
-	[]int64, error) {
+func (s *TestBase) CreateActivityTasks(domainID string, workflowExecution workflow.WorkflowExecution,
+	activities map[int64]string) ([]int64, error) {
 
 	var taskIDs []int64
 	var leaseResponse *LeaseTaskListResponse
@@ -459,24 +522,30 @@ func (s *TestBase) CreateActivityTasks(workflowExecution workflow.WorkflowExecut
 	for activityScheduleID, taskList := range activities {
 
 		leaseResponse, err = s.TaskMgr.LeaseTaskList(
-			&LeaseTaskListRequest{TaskList: taskList, TaskType: TaskListTypeActivity})
+			&LeaseTaskListRequest{DomainID: domainID, TaskList: taskList, TaskType: TaskListTypeActivity})
 		if err != nil {
 			return []int64{}, err
 		}
 		taskID := s.GetNextSequenceNumber()
-
-		_, err := s.TaskMgr.CreateTask(&CreateTaskRequest{
-			TaskID:       taskID,
-			Execution:    workflowExecution,
+		tasks := []*CreateTaskInfo{
+			&CreateTaskInfo{
+				TaskID:    taskID,
+				Execution: workflowExecution,
+				Data: &TaskInfo{
+					DomainID:   domainID,
+					WorkflowID: workflowExecution.GetWorkflowId(),
+					RunID:      workflowExecution.GetRunId(),
+					TaskID:     taskID,
+					ScheduleID: activityScheduleID,
+				},
+			},
+		}
+		_, err := s.TaskMgr.CreateTasks(&CreateTasksRequest{
+			DomainID:     domainID,
 			TaskList:     taskList,
 			TaskListType: TaskListTypeActivity,
-			Data: &TaskInfo{
-				WorkflowID: workflowExecution.GetWorkflowId(),
-				RunID:      workflowExecution.GetRunId(),
-				TaskID:     s.GetNextSequenceNumber(),
-				ScheduleID: activityScheduleID,
-			},
-			RangeID: leaseResponse.TaskListInfo.RangeID,
+			Tasks:        tasks,
+			RangeID:      leaseResponse.TaskListInfo.RangeID,
 		})
 
 		if err != nil {
@@ -490,13 +559,18 @@ func (s *TestBase) CreateActivityTasks(workflowExecution workflow.WorkflowExecut
 }
 
 // GetTasks is a utility method to get tasks from persistence
-func (s *TestBase) GetTasks(taskList string, taskType int, batchSize int) (*GetTasksResponse, error) {
-	leaseResponse, err := s.TaskMgr.LeaseTaskList(&LeaseTaskListRequest{TaskList: taskList, TaskType: taskType})
+func (s *TestBase) GetTasks(domainID, taskList string, taskType int, batchSize int) (*GetTasksResponse, error) {
+	leaseResponse, err := s.TaskMgr.LeaseTaskList(&LeaseTaskListRequest{
+		DomainID: domainID,
+		TaskList: taskList,
+		TaskType: taskType,
+	})
 	if err != nil {
 		return nil, err
 	}
 
 	response, err := s.TaskMgr.GetTasks(&GetTasksRequest{
+		DomainID:     domainID,
 		TaskList:     taskList,
 		TaskType:     taskType,
 		BatchSize:    batchSize,
@@ -512,14 +586,19 @@ func (s *TestBase) GetTasks(taskList string, taskType int, batchSize int) (*GetT
 }
 
 // CompleteTask is a utility method to complete a task
-func (s *TestBase) CompleteTask(taskList string, taskType int, taskID int64, ackLevel int64) error {
-	leaseResponse, err := s.TaskMgr.LeaseTaskList(&LeaseTaskListRequest{TaskList: taskList, TaskType: taskType})
+func (s *TestBase) CompleteTask(domainID, taskList string, taskType int, taskID int64, ackLevel int64) error {
+	leaseResponse, err := s.TaskMgr.LeaseTaskList(&LeaseTaskListRequest{
+		DomainID: domainID,
+		TaskList: taskList,
+		TaskType: taskType,
+	})
 	if err != nil {
 		return err
 	}
 
 	return s.TaskMgr.CompleteTask(&CompleteTaskRequest{
 		TaskList: &TaskListInfo{
+			DomainID: domainID,
 			AckLevel: ackLevel,
 			TaskType: taskType,
 			Name:     taskList,
@@ -541,8 +620,7 @@ func (s *TestBase) ClearTransferQueue() {
 	counter := 0
 	for _, t := range tasks {
 		log.Infof("Deleting transfer task with ID: %v", t.TaskID)
-		e := workflow.WorkflowExecution{WorkflowId: common.StringPtr(t.WorkflowID), RunId: common.StringPtr(t.RunID)}
-		s.CompleteTransferTask(e, t.TaskID)
+		s.CompleteTransferTask(t.TaskID)
 		counter++
 	}
 
@@ -576,11 +654,6 @@ func (s *TestBase) GetReadLevel() int64 {
 	return atomic.LoadInt64(&s.readLevel)
 }
 
-// GetMaxAllowedReadLevel returns the maximum allowed read level for the shard
-func (s *TestBase) GetMaxAllowedReadLevel() int64 {
-	return s.ShardContext.GetTransferSequenceNumber()
-}
-
 func (s *CassandraTestCluster) setupTestCluster(keySpace string, dropKeySpace bool, schemaDir string) {
 	if keySpace == "" {
 		keySpace = generateRandomKeyspace(10)
@@ -588,6 +661,7 @@ func (s *CassandraTestCluster) setupTestCluster(keySpace string, dropKeySpace bo
 	s.createCluster(testWorkflowClusterHosts, testDatacenter, gocql.Consistency(1), keySpace)
 	s.createKeyspace(1, dropKeySpace)
 	s.loadSchema("workflow_test.cql", schemaDir)
+	s.loadSchema("visibility_test.cql", schemaDir)
 }
 
 func (s *CassandraTestCluster) tearDownTestCluster() {

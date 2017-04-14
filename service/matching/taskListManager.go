@@ -19,8 +19,7 @@ const (
 	defaultRangeSize  = 100000
 	getTasksBatchSize = 100
 	// To perform one db operation if there are no pollers
-	taskBufferSize                  = getTasksBatchSize - 1
-	outstandingTaskAppendsThreshold = 250
+	taskBufferSize = getTasksBatchSize - 1
 
 	done time.Duration = -1
 )
@@ -34,16 +33,17 @@ type taskListManager interface {
 }
 
 func newTaskListManager(e *matchingEngineImpl, taskList *taskListID) taskListManager {
-	return &taskListManagerImpl{
-		engine:             e,
-		taskBuffer:         make(chan *persistence.TaskInfo, taskBufferSize),
-		shutdownCh:         make(chan struct{}),
-		taskListID:         taskList,
-		logger:             e.logger,
-		taskAckManager:     newAckManager(e.logger),
-		writeOffsetManager: newAckManager(e.logger),
-		syncMatch:          make(chan *getTaskResult),
+	tlMgr := &taskListManagerImpl{
+		engine:         e,
+		taskBuffer:     make(chan *persistence.TaskInfo, taskBufferSize),
+		shutdownCh:     make(chan struct{}),
+		taskListID:     taskList,
+		logger:         e.logger,
+		taskAckManager: newAckManager(e.logger),
+		syncMatch:      make(chan *getTaskResult),
 	}
+	tlMgr.taskWriter = newTaskWriter(tlMgr, tlMgr.shutdownCh)
+	return tlMgr
 }
 
 // Contains information needed for current task transition from queue to Workflow execution history.
@@ -59,18 +59,17 @@ type taskListManagerImpl struct {
 	taskListID *taskListID
 	logger     bark.Logger
 	engine     *matchingEngineImpl
+	taskWriter *taskWriter
 	taskBuffer chan *persistence.TaskInfo // tasks loaded from persistence
 	// Sync channel used to perform sync matching.
 	// It must to be unbuffered. addTask publishes to it asynchronously and expects publish to succeed
 	// only if there is waiting poll that consumes from it.
-	syncMatch              chan *getTaskResult
-	shutdownCh             chan struct{} // Delivers stop to the pump that populates taskBuffer
-	stopped                int32
-	outstandingTaskAppends int32
+	syncMatch  chan *getTaskResult
+	shutdownCh chan struct{} // Delivers stop to the pump that populates taskBuffer
+	stopped    int32
 
 	sync.Mutex
 	taskAckManager          ackManager // tracks ackLevel for delivered messages
-	writeOffsetManager      ackManager // tracks maxReadLevel for out of order message puts
 	rangeID                 int64      // Current range of the task list. Starts from 1.
 	taskSequenceNumber      int64      // Sequence number of the next task. Starts from 1.
 	nextRangeSequenceNumber int64      // Current range boundary
@@ -85,7 +84,7 @@ type getTaskResult struct {
 
 // syncMatchResponse result of sync match delivered to a createTask caller
 type syncMatchResponse struct {
-	response *persistence.CreateTaskResponse
+	response *persistence.CreateTasksResponse
 	err      error
 }
 
@@ -96,7 +95,7 @@ func (c *taskListManagerImpl) Start() error {
 	if err != nil {
 		return err
 	}
-
+	c.taskWriter.Start()
 	go c.getTasksPump()
 	return nil
 }
@@ -112,40 +111,13 @@ func (c *taskListManagerImpl) Stop() {
 }
 
 func (c *taskListManagerImpl) AddTask(execution *s.WorkflowExecution, taskInfo *persistence.TaskInfo) error {
-	queueLen := atomic.AddInt32(&c.outstandingTaskAppends, 1)
-	defer atomic.AddInt32(&c.outstandingTaskAppends, -1)
-	if queueLen > outstandingTaskAppendsThreshold {
-		return createServiceBusyError()
-	}
-
 	_, err := c.executeWithRetry(func(rangeID int64) (interface{}, error) {
 		r, err := c.trySyncMatch(taskInfo)
 		if err != nil || r != nil {
 			return r, err
 		}
-		taskID, err := c.initiateTaskAppend()
-		if err != nil {
-			return nil, err
-		}
 
-		r, err = c.engine.taskManager.CreateTask(&persistence.CreateTaskRequest{
-			Execution:    *execution,
-			TaskList:     c.taskListID.taskListName,
-			TaskListType: c.taskListID.taskType,
-			Data:         taskInfo,
-			TaskID:       taskID,
-			// Note that initiateTaskAppend could increment range, so rangeID parameter
-			// might be out of sync. This is OK as it will just cause a retry.
-			RangeID: rangeID,
-		})
-		c.completeTaskAppend(taskID)
-
-		if err != nil {
-			logPersistantStoreErrorEvent(c.logger, tagValueStoreOperationCreateTask, err,
-				fmt.Sprintf("{taskID: %v, taskType: %v, taskList: %v}",
-					taskID, c.taskListID.taskType, c.taskListID.taskListName))
-		}
-
+		r, err = c.taskWriter.appendTask(execution, taskInfo, rangeID)
 		return r, err
 	})
 	return err
@@ -189,6 +161,7 @@ func (c *taskListManagerImpl) persistAckLevel() error {
 	c.Lock()
 	updateTaskListRequest := &persistence.UpdateTaskListRequest{
 		TaskListInfo: &persistence.TaskListInfo{
+			DomainID: c.taskListID.domainID,
 			Name:     c.taskListID.taskListName,
 			TaskType: c.taskListID.taskType,
 			AckLevel: c.taskAckManager.getAckLevel(),
@@ -201,25 +174,18 @@ func (c *taskListManagerImpl) persistAckLevel() error {
 }
 
 // initiateTaskAppend returns taskID to use to persist the task
-func (c *taskListManagerImpl) initiateTaskAppend() (taskID int64, err error) {
+func (c *taskListManagerImpl) newTaskIDs(count int) (taskID []int64, err error) {
 	c.Lock()
 	defer c.Unlock()
-	err = c.updateRangeIfNeededLocked(c.engine)
-	if err != nil {
-		return -1, err
+	for i := 0; i < count; i++ {
+		err = c.updateRangeIfNeededLocked(c.engine)
+		if err != nil {
+			return nil, err
+		}
+		taskID = append(taskID, c.taskSequenceNumber)
+		c.taskSequenceNumber++
 	}
-	taskID = c.taskSequenceNumber
-	c.taskSequenceNumber++
-	c.writeOffsetManager.addTask(taskID)
 	return
-}
-
-// completeTaskAppend should be called after task append is done even if append has failed.
-// There is no correspondent initiateTaskAppend as append is initiated in getTaskID
-func (c *taskListManagerImpl) completeTaskAppend(taskID int64) {
-	c.Lock()
-	defer c.Unlock()
-	c.writeOffsetManager.completeTask(taskID)
 }
 
 func (c *taskListManagerImpl) getAckLevel() (ackLevel int64) {
@@ -229,7 +195,7 @@ func (c *taskListManagerImpl) getAckLevel() (ackLevel int64) {
 }
 
 // completeTaskPoll should be called after task poll is done even if append has failed.
-// There is no correspondent initiateTaskAppend as append is initiated in getTaskID
+// There is no correspondent initiateTaskPoll as append is initiated in getTasksPump
 func (c *taskListManagerImpl) completeTaskPoll(taskID int64) (ackLevel int64) {
 	c.Lock()
 	defer c.Unlock()
@@ -261,12 +227,13 @@ func (c *taskListManagerImpl) getTaskBatch() ([]*persistence.TaskInfo, error) {
 	response, err := c.executeWithRetry(func(rangeID int64) (interface{}, error) {
 		c.Lock()
 		request := &persistence.GetTasksRequest{
+			DomainID:     c.taskListID.domainID,
 			TaskList:     c.taskListID.taskListName,
 			TaskType:     c.taskListID.taskType,
 			BatchSize:    getTasksBatchSize,
 			RangeID:      c.rangeID,
 			ReadLevel:    c.taskAckManager.getReadLevel(),
-			MaxReadLevel: c.writeOffsetManager.getAckLevel(),
+			MaxReadLevel: c.taskSequenceNumber,
 		}
 		c.Unlock()
 		return c.engine.taskManager.GetTasks(request)
@@ -292,6 +259,7 @@ func (c *taskListManagerImpl) updateRangeIfNeededLocked(e *matchingEngineImpl) e
 	var resp *persistence.LeaseTaskListResponse
 	op := func() (err error) {
 		resp, err = e.taskManager.LeaseTaskList(&persistence.LeaseTaskListRequest{
+			DomainID: c.taskListID.domainID,
 			TaskList: c.taskListID.taskListName,
 			TaskType: c.taskListID.taskType,
 		})
@@ -309,7 +277,6 @@ func (c *taskListManagerImpl) updateRangeIfNeededLocked(e *matchingEngineImpl) e
 	c.taskAckManager.setAckLevel(tli.AckLevel)
 	c.taskSequenceNumber = (tli.RangeID-1)*e.rangeSize + 1
 
-	c.writeOffsetManager.setAckLevel(c.taskSequenceNumber - 1) // maxReadLevel is inclusive
 	c.nextRangeSequenceNumber = (tli.RangeID)*e.rangeSize + 1
 	c.logger.Debugf("updateRangeLocked rangeID=%v, c.taskSequenceNumber=%v, c.nextRangeSequenceNumber=%v",
 		c.rangeID, c.taskSequenceNumber, c.nextRangeSequenceNumber)
@@ -331,7 +298,6 @@ func (c *taskListManagerImpl) String() string {
 	r += fmt.Sprintf("TaskSequenceNumber=%v\n", c.taskSequenceNumber)
 	r += fmt.Sprintf("NextRangeSequenceNumber=%v\n", c.nextRangeSequenceNumber)
 	r += fmt.Sprintf("AckLevel=%v\n", c.taskAckManager.ackLevel)
-	r += fmt.Sprintf("MaxReadLevel=%v\n", c.writeOffsetManager.getAckLevel())
 	r += fmt.Sprintf("MaxReadLevel=%v\n", c.taskAckManager.getReadLevel())
 
 	return r
@@ -341,7 +307,7 @@ func (c *taskListManagerImpl) String() string {
 // When this method returns non nil response without error it is guaranteed that the task is started
 // and sent to a poller. So it not necessary to persist it.
 // Returns (nil, nil) if there is no waiting poller which indicates that task has to be persisted.
-func (c *taskListManagerImpl) trySyncMatch(task *persistence.TaskInfo) (*persistence.CreateTaskResponse, error) {
+func (c *taskListManagerImpl) trySyncMatch(task *persistence.TaskInfo) (*persistence.CreateTasksResponse, error) {
 	// Request from the point of view of Add(Activity|Decision)Task operation.
 	// But it is getTask result from the point of view of a poll operation.
 	request := &getTaskResult{task: task, C: make(chan *syncMatchResponse, 1)}
@@ -483,33 +449,55 @@ func (c *taskContext) RecordActivityTaskStartedWithRetry(
 // If poll received task from persistence then task is deleted from it if no error was reported.
 func (c *taskContext) completeTask(err error) {
 	tlMgr := c.tlMgr
-	c.tlMgr.logger.Debugf("completeTask task taskList=%v, taskID=%v, err=%v",
+	tlMgr.logger.Debugf("completeTask task taskList=%v, taskID=%v, err=%v",
 		tlMgr.taskListID.taskListName, c.info.TaskID, err)
 	if c.syncResponseCh != nil {
 		// It is OK to succeed task creation as it was already completed
 		c.syncResponseCh <- &syncMatchResponse{
-			response: &persistence.CreateTaskResponse{}, err: err}
+			response: &persistence.CreateTasksResponse{}, err: err}
 		return
 	}
 
 	if err != nil {
-		return
-	}
-	ackLevel := tlMgr.completeTaskPoll(c.info.TaskID)
-
-	_, err = tlMgr.executeWithRetry(func(rangeID int64) (interface{}, error) {
-		return nil, tlMgr.engine.taskManager.CompleteTask(&persistence.CompleteTaskRequest{
-			TaskList: &persistence.TaskListInfo{
-				Name:     tlMgr.taskListID.taskListName,
-				TaskType: tlMgr.taskListID.taskType,
-				AckLevel: ackLevel,
-				RangeID:  rangeID,
-			},
-			TaskID: c.info.TaskID,
+		// failed to start the task.
+		// We cannot just remove it from persistence because then it will be lost,
+		// which is criticial for decision tasks since there have no ScheduleToStart timeout.
+		// We handle this by writing the task back to persistence with a higher taskID.
+		// This will allow subsequent tasks to make progress, and hopefully by the time this task is picked-up
+		// again the underlying reason for failing to start will be resolved.
+		// Note that RecordTaskStarted only fails after retrying for a long time, so a single task will not be
+		// re-written to persistence frequently.
+		_, err = tlMgr.executeWithRetry(func(rangeID int64) (interface{}, error) {
+			return tlMgr.taskWriter.appendTask(&c.workflowExecution, c.info, rangeID)
 		})
+
+		if err != nil {
+			// OK, we also failed to write to persistence.
+			// This should only happen in very extreme cases where persistence is completely down.
+			// We still can't lose the old task so we just unload the entire task list
+			logPersistantStoreErrorEvent(tlMgr.logger, tagValueStoreOperationStopTaskList, err,
+				fmt.Sprintf("task writer failed to write task. Unloading TaskList{taskType: %v, taskList: %v}",
+					tlMgr.taskListID.taskType, tlMgr.taskListID.taskListName))
+			tlMgr.Stop()
+			return
+		}
+	}
+
+	tlMgr.completeTaskPoll(c.info.TaskID)
+
+	// TODO: use range deletes to complete all tasks below ack level instead of completing
+	// tasks one by one.
+	err2 := tlMgr.engine.taskManager.CompleteTask(&persistence.CompleteTaskRequest{
+		TaskList: &persistence.TaskListInfo{
+			DomainID: tlMgr.taskListID.domainID,
+			Name:     tlMgr.taskListID.taskListName,
+			TaskType: tlMgr.taskListID.taskType,
+		},
+		TaskID: c.info.TaskID,
 	})
-	if err != nil {
-		logPersistantStoreErrorEvent(tlMgr.logger, tagValueStoreOperationCompleteTask, err,
+
+	if err2 != nil {
+		logPersistantStoreErrorEvent(tlMgr.logger, tagValueStoreOperationCompleteTask, err2,
 			fmt.Sprintf("{taskID: %v, taskType: %v, taskList: %v}",
 				c.info.TaskID, tlMgr.taskListID.taskType, tlMgr.taskListID.taskListName))
 	}

@@ -25,16 +25,17 @@ const (
 
 type (
 	transferQueueProcessorImpl struct {
-		ackMgr           *ackManager
-		executionManager persistence.ExecutionManager
-		matchingClient   matching.Client
-		cache            *historyCache
-		isStarted        int32
-		isStopped        int32
-		shutdownWG       sync.WaitGroup
-		shutdownCh       chan struct{}
-		logger           bark.Logger
-		metricsClient    metrics.Client
+		ackMgr            *ackManager
+		executionManager  persistence.ExecutionManager
+		visibilityManager persistence.VisibilityManager
+		matchingClient    matching.Client
+		cache             *historyCache
+		isStarted         int32
+		isStopped         int32
+		shutdownWG        sync.WaitGroup
+		shutdownCh        chan struct{}
+		logger            bark.Logger
+		metricsClient     metrics.Client
 	}
 
 	// ackManager is created by transferQueueProcessor to keep track of the transfer queue ackLevel for the shard.
@@ -48,22 +49,22 @@ type (
 		logger       bark.Logger
 
 		sync.RWMutex
-		outstandingTasks    map[int64]bool
-		readLevel           int64
-		ackLevel            int64
-		maxAllowedReadLevel int64
+		outstandingTasks map[int64]bool
+		readLevel        int64
+		ackLevel         int64
 	}
 )
 
-func newTransferQueueProcessor(shard ShardContext, matching matching.Client,
-	cache *historyCache) transferQueueProcessor {
+func newTransferQueueProcessor(shard ShardContext, visibilityMgr persistence.VisibilityManager,
+	matching matching.Client, cache *historyCache) transferQueueProcessor {
 	executionManager := shard.GetExecutionManager()
 	logger := shard.GetLogger()
 	processor := &transferQueueProcessorImpl{
-		executionManager: executionManager,
-		matchingClient:   matching,
-		cache:            cache,
-		shutdownCh:       make(chan struct{}),
+		executionManager:  executionManager,
+		matchingClient:    matching,
+		visibilityManager: visibilityMgr,
+		cache:             cache,
+		shutdownCh:        make(chan struct{}),
 		logger: logger.WithFields(bark.Fields{
 			tagWorkflowComponent: tagValueTransferQueueComponent,
 		}),
@@ -78,14 +79,13 @@ func newAckManager(processor transferQueueProcessor, shard ShardContext, executi
 	logger bark.Logger) *ackManager {
 	ackLevel := shard.GetTransferAckLevel()
 	return &ackManager{
-		processor:           processor,
-		shard:               shard,
-		executionMgr:        executionMgr,
-		outstandingTasks:    make(map[int64]bool),
-		readLevel:           ackLevel,
-		ackLevel:            ackLevel,
-		maxAllowedReadLevel: shard.GetTransferSequenceNumber() - 1,
-		logger:              logger,
+		processor:        processor,
+		shard:            shard,
+		executionMgr:     executionMgr,
+		outstandingTasks: make(map[int64]bool),
+		readLevel:        ackLevel,
+		ackLevel:         ackLevel,
+		logger:           logger,
 	}
 }
 
@@ -116,10 +116,6 @@ func (t *transferQueueProcessorImpl) Stop() {
 	if success := common.AwaitWaitGroup(&t.shutdownWG, time.Minute); !success {
 		logTransferQueueProcesorShutdownTimedoutEvent(t.logger)
 	}
-}
-
-func (t *transferQueueProcessorImpl) UpdateMaxAllowedReadLevel(maxAllowedReadLevel int64) {
-	t.ackMgr.updateMaxAllowedReadLevel(maxAllowedReadLevel)
 }
 
 func (t *transferQueueProcessorImpl) processorPump() {
@@ -201,6 +197,8 @@ ProcessRetryLoop:
 			return
 		default:
 			var err error
+			domainID := task.DomainID
+			targetDomainID := task.TargetDomainID
 			execution := workflow.WorkflowExecution{WorkflowId: common.StringPtr(task.WorkflowID),
 				RunId: common.StringPtr(task.RunID)}
 			switch task.TaskType {
@@ -210,34 +208,52 @@ ProcessRetryLoop:
 						Name: &task.TaskList,
 					}
 					err = t.matchingClient.AddActivityTask(nil, &m.AddActivityTaskRequest{
-						Execution:  &execution,
-						TaskList:   taskList,
-						ScheduleId: &task.ScheduleID,
+						DomainUUID:       common.StringPtr(targetDomainID),
+						SourceDomainUUID: common.StringPtr(domainID),
+						Execution:        &execution,
+						TaskList:         taskList,
+						ScheduleId:       &task.ScheduleID,
 					})
 				}
 			case persistence.TransferTaskTypeDecisionTask:
 				{
-					taskList := &workflow.TaskList{
-						Name: &task.TaskList,
+					if task.ScheduleID == firstEventID+1 {
+						err = t.recordWorkflowExecutionStarted(execution, task)
 					}
-					err = t.matchingClient.AddDecisionTask(nil, &m.AddDecisionTaskRequest{
-						Execution:  &execution,
-						TaskList:   taskList,
-						ScheduleId: &task.ScheduleID,
-					})
+
+					if err == nil {
+						taskList := &workflow.TaskList{
+							Name: &task.TaskList,
+						}
+						err = t.matchingClient.AddDecisionTask(nil, &m.AddDecisionTaskRequest{
+							DomainUUID: common.StringPtr(domainID),
+							Execution:  &execution,
+							TaskList:   taskList,
+							ScheduleId: &task.ScheduleID,
+						})
+					}
 				}
 			case persistence.TransferTaskTypeDeleteExecution:
 				{
-					context, _ := t.cache.getOrCreateWorkflowExecution(execution)
+					context, release, _ := t.cache.getOrCreateWorkflowExecution(domainID, execution)
 
 					// TODO: We need to keep completed executions for auditing purpose.  Need a design for keeping them around
 					// for visibility purpose.
-					context.Lock()
-					_, err = context.loadWorkflowExecution()
+					var mb *mutableStateBuilder
+					mb, err = context.loadWorkflowExecution()
 					if err == nil {
-						err = context.deleteWorkflowExecution()
+						err = t.visibilityManager.RecordWorkflowExecutionClosed(&persistence.RecordWorkflowExecutionClosedRequest{
+							DomainUUID:       task.DomainID,
+							Execution:        execution,
+							WorkflowTypeName: mb.executionInfo.WorkflowTypeName,
+							StartTimestamp:   mb.executionInfo.StartTimestamp.UnixNano(),
+							CloseTimestamp:   mb.executionInfo.LastUpdatedTimestamp.UnixNano(),
+						})
+						if err == nil {
+							err = context.deleteWorkflowExecution()
+						}
 					}
-					context.Unlock()
+					release()
 				}
 			}
 
@@ -257,15 +273,35 @@ ProcessRetryLoop:
 	t.logger.Fatalf("Retry count exceeded for transfer taskID: %v", task.TaskID)
 }
 
+func (t *transferQueueProcessorImpl) recordWorkflowExecutionStarted(
+	execution workflow.WorkflowExecution, task *persistence.TransferTaskInfo) error {
+	context, release, err := t.cache.getOrCreateWorkflowExecution(task.DomainID, execution)
+	if err != nil {
+		return err
+	}
+	defer release()
+	mb, err := context.loadWorkflowExecution()
+	if err != nil {
+		return err
+	}
+
+	err = t.visibilityManager.RecordWorkflowExecutionStarted(&persistence.RecordWorkflowExecutionStartedRequest{
+		DomainUUID:       task.DomainID,
+		Execution:        execution,
+		WorkflowTypeName: mb.executionInfo.WorkflowTypeName,
+		StartTimestamp:   mb.executionInfo.StartTimestamp.UnixNano(),
+	})
+
+	return err
+}
+
 func (a *ackManager) readTransferTasks() ([]*persistence.TransferTaskInfo, error) {
 	a.RLock()
 	rLevel := a.readLevel
-	mLevel := a.maxAllowedReadLevel
 	a.RUnlock()
 	response, err := a.executionMgr.GetTransferTasks(&persistence.GetTransferTasksRequest{
-		ReadLevel:    rLevel,
-		MaxReadLevel: mLevel,
-		BatchSize:    transferTaskBatchSize,
+		ReadLevel: rLevel,
+		BatchSize: transferTaskBatchSize,
 	})
 
 	if err != nil {
@@ -329,15 +365,6 @@ MoveAckLevelLoop:
 		logOperationFailedEvent(a.logger, "Error updating ack level for shard", err)
 	}
 
-}
-
-func (a *ackManager) updateMaxAllowedReadLevel(maxAllowedReadLevel int64) {
-	a.Lock()
-	a.logger.Debugf("Updating max allowed read level for transfer tasks: %v", maxAllowedReadLevel)
-	if maxAllowedReadLevel > a.maxAllowedReadLevel {
-		a.maxAllowedReadLevel = maxAllowedReadLevel
-	}
-	a.Unlock()
 }
 
 func minDuration(x, y time.Duration) time.Duration {

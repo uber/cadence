@@ -3,6 +3,7 @@ package host
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
@@ -12,9 +13,15 @@ import (
 	"github.com/uber/cadence/service/frontend"
 	"github.com/uber/cadence/service/history"
 	"github.com/uber/cadence/service/matching"
+	ringpop "github.com/uber/ringpop-go"
+	"github.com/uber/ringpop-go/discovery/statichosts"
+	"github.com/uber/ringpop-go/swim"
 	tchannel "github.com/uber/tchannel-go"
 	"github.com/uber/tchannel-go/thrift"
 )
+
+const rpAppNamePrefix string = "cadence"
+const maxRpJoinTimeout = 30 * time.Second
 
 // Cadence hosts all of cadence services in one process
 type Cadence interface {
@@ -25,28 +32,43 @@ type Cadence interface {
 	HistoryServiceAddress() []string
 }
 
-type cadenceImpl struct {
-	frontendHandler       *frontend.WorkflowHandler
-	matchingHandler       *matching.Handler
-	historyHandlers       []*history.Handler
-	numberOfHistoryShards int
-	numberOfHistoryHosts  int
-	logger                bark.Logger
-	shardMgr              persistence.ShardManager
-	taskMgr               persistence.TaskManager
-	executionMgrFactory   persistence.ExecutionManagerFactory
-	shutdownCh            chan struct{}
-	shutdownWG            sync.WaitGroup
-}
+type (
+	cadenceImpl struct {
+		frontendHandler       *frontend.WorkflowHandler
+		matchingHandler       *matching.Handler
+		historyHandlers       []*history.Handler
+		numberOfHistoryShards int
+		numberOfHistoryHosts  int
+		logger                bark.Logger
+		metadataMgr           persistence.MetadataManager
+		shardMgr              persistence.ShardManager
+		historyMgr            persistence.HistoryManager
+		taskMgr               persistence.TaskManager
+		visibilityMgr         persistence.VisibilityManager
+		executionMgrFactory   persistence.ExecutionManagerFactory
+		shutdownCh            chan struct{}
+		shutdownWG            sync.WaitGroup
+	}
+
+	ringpopFactoryImpl struct {
+		service string
+		rpHosts []string
+	}
+)
 
 // NewCadence returns an instance that hosts full cadence in one process
-func NewCadence(shardMgr persistence.ShardManager, executionMgrFactory persistence.ExecutionManagerFactory,
-	taskMgr persistence.TaskManager, numberOfHistoryShards, numberOfHistoryHosts int, logger bark.Logger) Cadence {
+func NewCadence(metadataMgr persistence.MetadataManager, shardMgr persistence.ShardManager,
+	historyMgr persistence.HistoryManager, executionMgrFactory persistence.ExecutionManagerFactory,
+	taskMgr persistence.TaskManager, visibilityMgr persistence.VisibilityManager,
+	numberOfHistoryShards, numberOfHistoryHosts int, logger bark.Logger) Cadence {
 	return &cadenceImpl{
 		numberOfHistoryShards: numberOfHistoryShards,
 		numberOfHistoryHosts:  numberOfHistoryHosts,
 		logger:                logger,
+		metadataMgr:           metadataMgr,
+		visibilityMgr:         visibilityMgr,
 		shardMgr:              shardMgr,
+		historyMgr:            historyMgr,
 		taskMgr:               taskMgr,
 		executionMgrFactory:   executionMgrFactory,
 		shutdownCh:            make(chan struct{}),
@@ -61,7 +83,7 @@ func (c *cadenceImpl) Start() error {
 
 	var startWG sync.WaitGroup
 	startWG.Add(2)
-	go c.startHistory(c.logger, c.shardMgr, c.executionMgrFactory, rpHosts, &startWG)
+	go c.startHistory(c.logger, c.shardMgr, c.metadataMgr, c.visibilityMgr, c.historyMgr, c.executionMgrFactory, rpHosts, &startWG)
 	go c.startMatching(c.logger, c.taskMgr, rpHosts, &startWG)
 	startWG.Wait()
 
@@ -107,9 +129,10 @@ func (c *cadenceImpl) startFrontend(logger bark.Logger, rpHosts []string, startW
 		return c.createTChannel(sName, c.FrontendAddress(), thriftServices)
 	}
 	scope := tally.NewTestScope(common.FrontendServiceName, make(map[string]string))
-	service := service.New(common.FrontendServiceName, logger, scope, tchanFactory, rpHosts, c.numberOfHistoryShards)
+	rpFactory := newRingpopFactory(common.FrontendServiceName, rpHosts)
+	service := service.New(common.FrontendServiceName, logger, scope, tchanFactory, rpFactory, c.numberOfHistoryShards)
 	var thriftServices []thrift.TChanServer
-	c.frontendHandler, thriftServices = frontend.NewWorkflowHandler(service)
+	c.frontendHandler, thriftServices = frontend.NewWorkflowHandler(service, c.metadataMgr, c.visibilityMgr)
 	err := c.frontendHandler.Start(thriftServices)
 	if err != nil {
 		c.logger.WithField("error", err).Fatal("Failed to start frontend")
@@ -120,16 +143,19 @@ func (c *cadenceImpl) startFrontend(logger bark.Logger, rpHosts []string, startW
 }
 
 func (c *cadenceImpl) startHistory(logger bark.Logger, shardMgr persistence.ShardManager,
+	metadataMgr persistence.MetadataManager, visibilityMgr persistence.VisibilityManager, historyMgr persistence.HistoryManager,
 	executionMgrFactory persistence.ExecutionManagerFactory, rpHosts []string, startWG *sync.WaitGroup) {
 	for _, hostport := range c.HistoryServiceAddress() {
 		tchanFactory := func(sName string, thriftServices []thrift.TChanServer) (*tchannel.Channel, *thrift.Server) {
 			return c.createTChannel(sName, hostport, thriftServices)
 		}
 		scope := tally.NewTestScope(common.HistoryServiceName, make(map[string]string))
-		service := service.New(common.HistoryServiceName, logger, scope, tchanFactory, rpHosts, c.numberOfHistoryShards)
+		rpFactory := newRingpopFactory(common.FrontendServiceName, rpHosts)
+		service := service.New(common.HistoryServiceName, logger, scope, tchanFactory, rpFactory, c.numberOfHistoryShards)
 		var thriftServices []thrift.TChanServer
 		var handler *history.Handler
-		handler, thriftServices = history.NewHandler(service, shardMgr, executionMgrFactory, c.numberOfHistoryShards)
+		handler, thriftServices = history.NewHandler(service, shardMgr, metadataMgr, visibilityMgr, historyMgr, executionMgrFactory,
+			c.numberOfHistoryShards)
 		handler.Start(thriftServices)
 		c.historyHandlers = append(c.historyHandlers, handler)
 	}
@@ -144,7 +170,8 @@ func (c *cadenceImpl) startMatching(logger bark.Logger, taskMgr persistence.Task
 		return c.createTChannel(sName, c.MatchingServiceAddress(), thriftServices)
 	}
 	scope := tally.NewTestScope(common.MatchingServiceName, make(map[string]string))
-	service := service.New(common.MatchingServiceName, logger, scope, tchanFactory, rpHosts, c.numberOfHistoryShards)
+	rpFactory := newRingpopFactory(common.FrontendServiceName, rpHosts)
+	service := service.New(common.MatchingServiceName, logger, scope, tchanFactory, rpFactory, c.numberOfHistoryShards)
 	var thriftServices []thrift.TChanServer
 	c.matchingHandler, thriftServices = matching.NewHandler(taskMgr, service)
 	c.matchingHandler.Start(thriftServices)
@@ -169,4 +196,36 @@ func (c *cadenceImpl) createTChannel(sName string, hostPort string,
 		c.logger.WithField("error", err).Fatal("Failed to listen on tchannel")
 	}
 	return ch, server
+}
+
+func newRingpopFactory(service string, rpHosts []string) service.RingpopFactory {
+	return &ringpopFactoryImpl{
+		service: service,
+		rpHosts: rpHosts,
+	}
+}
+
+func (p *ringpopFactoryImpl) CreateRingpop(ch *tchannel.Channel) (*ringpop.Ringpop, error) {
+	rp, err := ringpop.New(fmt.Sprintf("%s", rpAppNamePrefix), ringpop.Channel(ch))
+	if err != nil {
+		return nil, err
+	}
+	err = p.bootstrapRingpop(rp, p.rpHosts)
+	if err != nil {
+		return nil, err
+	}
+	return rp, nil
+}
+
+// bootstrapRingpop tries to bootstrap the given ringpop instance using the hosts list
+func (p *ringpopFactoryImpl) bootstrapRingpop(rp *ringpop.Ringpop, rpHosts []string) error {
+	// TODO: log ring hosts
+
+	bOptions := new(swim.BootstrapOptions)
+	bOptions.DiscoverProvider = statichosts.New(rpHosts...)
+	bOptions.MaxJoinDuration = maxRpJoinTimeout
+	bOptions.JoinSize = 1 // this ensures the first guy comes up quickly
+
+	_, err := rp.Bootstrap(bOptions)
+	return err
 }
