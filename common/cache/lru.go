@@ -95,6 +95,10 @@ func (c *lru) Put(key string, value interface{}) interface{} {
 // PutIfNotExist puts a value associated with a given key if it does not exist
 func (c *lru) PutIfNotExist(key string, value interface{}) (interface{}, error) {
 	existing, err := c.putInternal(key, value, false)
+	if err != nil {
+		return nil, err
+	}
+
 	if existing == nil {
 		// This is a new value
 		return value, err
