@@ -89,6 +89,8 @@ func (c *historyCache) getOrCreateWorkflowExecution(domainID string,
 		context = elem.(*workflowExecutionContext)
 	}
 
+	// This will create a closure on every request.
+	// Consider revisiting this if it causes too much GC activity
 	releaseFunc := func() {
 		context.Unlock()
 		c.Release(key)
