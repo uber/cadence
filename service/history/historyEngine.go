@@ -31,7 +31,7 @@ type (
 		txProcessor      transferQueueProcessor
 		timerProcessor   timerQueueProcessor
 		tokenSerializer  common.TaskTokenSerializer
-		hSerializer      historySerializer
+		hSerializer      common.HistorySerializer
 		metricsReporter  metrics.Client
 		historyCache     *historyCache
 		domainCache      cache.DomainCache
@@ -65,7 +65,7 @@ func NewEngineWithShardContext(shard ShardContext, metadataMgr persistence.Metad
 		executionManager: executionManager,
 		txProcessor:      txProcessor,
 		tokenSerializer:  common.NewJSONTaskTokenSerializer(),
-		hSerializer:      newJSONHistorySerializer(),
+		hSerializer:      common.NewJSONHistorySerializer(),
 		historyCache:     historyCache,
 		domainCache:      cache.NewDomainCache(metadataMgr, logger),
 		logger: logger.WithFields(bark.Fields{
@@ -1062,14 +1062,12 @@ Update_History_Loop:
 
 func (e *historyEngineImpl) createRecordDecisionTaskStartedResponse(domainID string, msBuilder *mutableStateBuilder,
 	startedEventID int64) *h.RecordDecisionTaskStartedResponse {
-	executionHistory, _ := e.getHistory(domainID, msBuilder)
 	response := h.NewRecordDecisionTaskStartedResponse()
 	response.WorkflowType = msBuilder.getWorkflowType()
 	if msBuilder.previousDecisionStartedEvent() != emptyEventID {
 		response.PreviousStartedEventId = common.Int64Ptr(msBuilder.previousDecisionStartedEvent())
 	}
 	response.StartedEventId = common.Int64Ptr(startedEventID)
-	response.History = executionHistory
 
 	return response
 }
