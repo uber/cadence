@@ -263,6 +263,7 @@ type (
 		DecisionScheduleID          int64
 		DecisionStartedID           int64
 		DecisionStartToCloseTimeout int32
+		ContinueAsNew               bool
 	}
 
 	// CreateWorkflowExecutionResponse is the response to CreateWorkflowExecutionRequest
@@ -300,6 +301,7 @@ type (
 		DeleteTimerTask Task
 		Condition       int64
 		RangeID         int64
+		ContinueAsNew   *CreateWorkflowExecutionRequest
 
 		// Mutable state
 		UpsertActivityInfos []*ActivityInfo

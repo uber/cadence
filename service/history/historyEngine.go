@@ -171,6 +171,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 		DecisionScheduleID:          di.ScheduleID,
 		DecisionStartedID:           di.StartedID,
 		DecisionStartToCloseTimeout: di.DecisionTimeout,
+		ContinueAsNew:               false,
 	})
 
 	if err != nil {

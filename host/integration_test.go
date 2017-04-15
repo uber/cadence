@@ -178,14 +178,29 @@ func (s *integrationSuite) TestIntegrationStartWorkflowExecution() {
 		Identity:                            common.StringPtr(identity),
 	}
 
-	_, err0 := s.engine.StartWorkflowExecution(request)
+	we0, err0 := s.engine.StartWorkflowExecution(request)
 	s.Nil(err0)
 
 	we1, err1 := s.engine.StartWorkflowExecution(request)
-	s.NotNil(err1)
-	s.IsType(workflow.NewWorkflowExecutionAlreadyStartedError(), err1)
-	log.Infof("Unable to start workflow execution: %v", err1.Error())
-	s.Nil(we1)
+	s.Nil(err1)
+	s.Equal(we0.GetRunId(), we1.GetRunId())
+
+	newRequest := &workflow.StartWorkflowExecutionRequest{
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		Identity:                            common.StringPtr(identity),
+	}
+	we2, err2 := s.engine.StartWorkflowExecution(newRequest)
+	s.NotNil(err2)
+	s.IsType(workflow.NewWorkflowExecutionAlreadyStartedError(), err2)
+	log.Infof("Unable to start workflow execution: %v", err2.Error())
+	s.Nil(we2)
 }
 
 func (s *integrationSuite) TestTerminateWorkflow() {
