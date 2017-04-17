@@ -44,6 +44,7 @@ type (
 
 	transferQueueProcessor interface {
 		common.Daemon
+		NotifyNewTask()
 	}
 
 	timerQueueProcessor interface {

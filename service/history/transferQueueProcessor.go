@@ -30,6 +30,8 @@ type (
 		visibilityManager persistence.VisibilityManager
 		matchingClient    matching.Client
 		cache             *historyCache
+		rateLimiter       common.TokenBucket // Read rate limiter
+		appendCh          chan struct{}
 		isStarted         int32
 		isStopped         int32
 		shutdownWG        sync.WaitGroup
@@ -64,6 +66,8 @@ func newTransferQueueProcessor(shard ShardContext, visibilityMgr persistence.Vis
 		matchingClient:    matching,
 		visibilityManager: visibilityMgr,
 		cache:             cache,
+		rateLimiter:       common.NewTokenBucket(100, common.NewRealTimeSource()),
+		appendCh:          make(chan struct{}, 1),
 		shutdownCh:        make(chan struct{}),
 		logger: logger.WithFields(bark.Fields{
 			tagWorkflowComponent: tagValueTransferQueueComponent,
@@ -118,6 +122,14 @@ func (t *transferQueueProcessorImpl) Stop() {
 	}
 }
 
+func (t *transferQueueProcessorImpl) NotifyNewTask() {
+	var event struct{}
+	select {
+	case t.appendCh <- event:
+	default: // channel already has an event, don't block
+	}
+}
+
 func (t *transferQueueProcessorImpl) processorPump() {
 	defer t.shutdownWG.Done()
 	tasksCh := make(chan *persistence.TransferTaskInfo, transferTaskBatchSize)
@@ -143,6 +155,9 @@ func (t *transferQueueProcessorImpl) processorPump() {
 				t.logger.Warn("Transfer queue processor timed out on worker shutdown.")
 			}
 			return
+		case <-t.appendCh:
+			t.processTransferTasks(tasksCh, pollInterval)
+			pollTimer.Reset(pollInterval)
 		case <-pollTimer.C:
 			pollInterval = t.processTransferTasks(tasksCh, pollInterval)
 			pollTimer.Reset(pollInterval)
@@ -155,6 +170,11 @@ func (t *transferQueueProcessorImpl) processorPump() {
 
 func (t *transferQueueProcessorImpl) processTransferTasks(tasksCh chan<- *persistence.TransferTaskInfo,
 	prevPollInterval time.Duration) time.Duration {
+
+	if !t.rateLimiter.Consume(1, transferProcessorMaxPollInterval) {
+		return transferProcessorMaxPollInterval
+	}
+
 	tasks, err := t.ackMgr.readTransferTasks()
 
 	if err != nil {

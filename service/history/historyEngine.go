@@ -194,6 +194,8 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 		return nil, err
 	}
 
+	e.txProcessor.NotifyNewTask()
+
 	return &workflow.StartWorkflowExecutionResponse{
 		RunId: workflowExecution.RunId,
 	}, nil
@@ -621,6 +623,7 @@ Update_History_Loop:
 			return err
 		}
 
+		e.txProcessor.NotifyNewTask()
 		return nil
 	}
 
@@ -701,6 +704,7 @@ Update_History_Loop:
 			return err
 		}
 
+		e.txProcessor.NotifyNewTask()
 		return nil
 	}
 
@@ -781,6 +785,7 @@ Update_History_Loop:
 			return err
 		}
 
+		e.txProcessor.NotifyNewTask()
 		return nil
 	}
 
@@ -862,6 +867,7 @@ Update_History_Loop:
 			return err
 		}
 
+		e.txProcessor.NotifyNewTask()
 		return nil
 	}
 
@@ -1054,6 +1060,7 @@ Update_History_Loop:
 			return err
 		}
 
+		e.txProcessor.NotifyNewTask()
 		return nil
 	}
 
