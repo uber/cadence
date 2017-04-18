@@ -78,12 +78,17 @@ enum EventType {
   WorkflowExecutionCanceled,
   RequestCancelExternalWorkflowExecutionInitiated,
   RequestCancelExternalWorkflowExecutionFailed,
+  ExternalWorkflowExecutionCancelRequested,
   MarkerRecorded,
   WorkflowExecutionSignaled,
   WorkflowExecutionTerminated,
 }
 
 enum WorkflowCompleteFailedCause {
+  UNHANDLED_DECISION,
+}
+
+enum WorkflowCancelFailedCause {
   UNHANDLED_DECISION,
 }
 
@@ -158,7 +163,7 @@ struct RequestCancelExternalWorkflowExecutionDecisionAttributes {
     10: optional string domain
     20: optional string workflowId
     30: optional string runId
-    40: optional string control
+    40: optional binary control
 }
 
 struct RecordMarkerDecisionAttributes {
@@ -325,7 +330,7 @@ struct WorkflowExecutionCancelRequestedEventAttributes {
 }
 
 struct CancelWorkflowExecutionFailedEventAttributes {
-  10: optional string cause
+  10: optional WorkflowCancelFailedCause cause
   20: optional i64 (js.type = "Long") decisionTaskCompletedEventId
 }
 
@@ -355,18 +360,22 @@ struct WorkflowExecutionTerminatedEventAttributes {
 struct RequestCancelExternalWorkflowExecutionInitiatedEventAttributes {
   10: optional i64 (js.type = "Long") decisionTaskCompletedEventId
   20: optional string domain
-  30: optional string workflowId
-  40: optional string runId
-  50: optional string control
+  30: optional WorkflowExecution workflowExecution
+  40: optional binary control
 }
 
 struct RequestCancelExternalWorkflowExecutionFailedEventAttributes {
   10: optional CancelExternalWorkflowExecutionFailedCause cause
   20: optional i64 (js.type = "Long") decisionTaskCompletedEventId
   30: optional string domain
-  40: optional string workflowId
-  50: optional string runId
-  60: optional i64 (js.type = "Long") initiatedEventId
+  40: optional WorkflowExecution workflowExecution
+  50: optional i64 (js.type = "Long") initiatedEventId
+}
+
+struct ExternalWorkflowExecutionCancelRequestedEventAttributes {
+  10: optional i64 (js.type = "Long") initiatedEventId
+  20: optional string domain
+  30: optional WorkflowExecution workflowExecution
 }
 
 struct HistoryEvent {
@@ -402,6 +411,7 @@ struct HistoryEvent {
   210: optional WorkflowExecutionCanceledEventAttributes workflowExecutionCanceledEventAttributes
   220: optional RequestCancelExternalWorkflowExecutionInitiatedEventAttributes requestCancelExternalWorkflowExecutionInitiatedEventAttributes
   230: optional RequestCancelExternalWorkflowExecutionFailedEventAttributes requestCancelExternalWorkflowExecutionFailedEventAttributes
+  240: optional ExternalWorkflowExecutionCancelRequestedEventAttributes externalWorkflowExecutionCancelRequestedEventAttributes
 }
 
 struct History {
