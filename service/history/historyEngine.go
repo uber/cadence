@@ -1072,6 +1072,8 @@ func (e *historyEngineImpl) createRecordDecisionTaskStartedResponse(domainID str
 	return response
 }
 
+// There is a duplicate helper in the frontend that is almost identical to this
+// TODO: remove this helper when GetWorkflowExecutionHistory is served from the FE
 func (e *historyEngineImpl) getHistory(domainID string, msBuilder *mutableStateBuilder) (*workflow.History, error) {
 	execution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr(msBuilder.executionInfo.WorkflowID),
