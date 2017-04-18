@@ -37,6 +37,13 @@ type (
 		domainCache      cache.DomainCache
 		logger           bark.Logger
 	}
+
+	// shardContextWrapper wraps ShardContext to notify transferQueueProcessor on new tasks.
+	// TODO: use to notify timerQueueProcessor as well.
+	shardContextWrapper struct {
+		ShardContext
+		txProcessor transferQueueProcessor
+	}
 )
 
 var _ Engine = (*historyEngineImpl)(nil)
@@ -53,6 +60,8 @@ var (
 // NewEngineWithShardContext creates an instance of history engine
 func NewEngineWithShardContext(shard ShardContext, metadataMgr persistence.MetadataManager,
 	visibilityMgr persistence.VisibilityManager, matching matching.Client) Engine {
+	shardWrapper := &shardContextWrapper{ShardContext: shard}
+	shard = shardWrapper
 	logger := shard.GetLogger()
 	executionManager := shard.GetExecutionManager()
 	historyManager := shard.GetHistoryManager()
@@ -73,6 +82,7 @@ func NewEngineWithShardContext(shard ShardContext, metadataMgr persistence.Metad
 		}),
 	}
 	historyEngImpl.timerProcessor = newTimerQueueProcessor(historyEngImpl, executionManager, logger)
+	shardWrapper.txProcessor = txProcessor
 	return historyEngImpl
 }
 
@@ -193,8 +203,6 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 			fmt.Sprintf("{WorkflowID: %v, RunID: %v}", executionID, runID))
 		return nil, err
 	}
-
-	e.txProcessor.NotifyNewTask()
 
 	return &workflow.StartWorkflowExecutionResponse{
 		RunId: workflowExecution.RunId,
@@ -623,7 +631,6 @@ Update_History_Loop:
 			return err
 		}
 
-		e.txProcessor.NotifyNewTask()
 		return nil
 	}
 
@@ -704,7 +711,6 @@ Update_History_Loop:
 			return err
 		}
 
-		e.txProcessor.NotifyNewTask()
 		return nil
 	}
 
@@ -785,7 +791,6 @@ Update_History_Loop:
 			return err
 		}
 
-		e.txProcessor.NotifyNewTask()
 		return nil
 	}
 
@@ -867,7 +872,6 @@ Update_History_Loop:
 			return err
 		}
 
-		e.txProcessor.NotifyNewTask()
 		return nil
 	}
 
@@ -1060,7 +1064,6 @@ Update_History_Loop:
 			return err
 		}
 
-		e.txProcessor.NotifyNewTask()
 		return nil
 	}
 
@@ -1117,4 +1120,14 @@ Pagination_Loop:
 	executionHistory := workflow.NewHistory()
 	executionHistory.Events = historyEvents
 	return executionHistory, nil
+}
+
+func (s *shardContextWrapper) UpdateWorkflowExecution(request *persistence.UpdateWorkflowExecutionRequest) error {
+	err := s.ShardContext.UpdateWorkflowExecution(request)
+	if err == nil {
+		if len(request.TransferTasks) > 0 {
+			s.txProcessor.NotifyNewTask()
+		}
+	}
+	return err
 }

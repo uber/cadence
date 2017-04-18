@@ -17,8 +17,9 @@ import (
 
 const (
 	transferTaskBatchSize              = 10
+	transferProcessorMaxPollRPS        = 100
 	transferProcessorMinPollInterval   = 10 * time.Millisecond
-	transferProcessorMaxPollInterval   = 10 * time.Second
+	transferProcessorMaxPollInterval   = 30 * time.Second
 	transferProcessorUpdateAckInterval = 10 * time.Second
 	taskWorkerCount                    = 10
 )
@@ -66,7 +67,7 @@ func newTransferQueueProcessor(shard ShardContext, visibilityMgr persistence.Vis
 		matchingClient:    matching,
 		visibilityManager: visibilityMgr,
 		cache:             cache,
-		rateLimiter:       common.NewTokenBucket(100, common.NewRealTimeSource()),
+		rateLimiter:       common.NewTokenBucket(transferProcessorMaxPollRPS, common.NewRealTimeSource()),
 		appendCh:          make(chan struct{}, 1),
 		shutdownCh:        make(chan struct{}),
 		logger: logger.WithFields(bark.Fields{
