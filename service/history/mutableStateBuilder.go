@@ -569,6 +569,11 @@ func (e *mutableStateBuilder) AddWorkflowExecutionCancelRequestedEvent(cause str
 	return e.hBuilder.AddWorkflowExecutionCancelRequestedEvent(cause, request)
 }
 
+func (e *mutableStateBuilder) AddCancelWorkflowExecutionFailedEvent(decisionTaskCompletedEventID int64,
+	cause workflow.WorkflowCancelFailedCause) *workflow.HistoryEvent {
+	return e.hBuilder.AddCancelWorkflowExecutionFailedEvent(decisionTaskCompletedEventID, cause)
+}
+
 func (e *mutableStateBuilder) AddWorkflowExecutionCanceledEvent(decisionTaskCompletedEventID int64,
 	attributes *workflow.CancelWorkflowExecutionDecisionAttributes) *workflow.HistoryEvent {
 
@@ -587,6 +592,11 @@ func (e *mutableStateBuilder) AddRequestCancelExternalWorkflowExecutionFailedEve
 	domain, workflowID, runID string, cause workflow.CancelExternalWorkflowExecutionFailedCause) *workflow.HistoryEvent {
 	return e.hBuilder.AddRequestCancelExternalWorkflowExecutionFailedEvent(
 		decisionTaskCompletedEventID, initiatedEventID, domain, workflowID, runID, cause)
+}
+
+func (e *mutableStateBuilder) AddExternalWorkflowExecutionCancelRequested(initiatedEventID int64,
+	domain, workflowID, runID string) *workflow.HistoryEvent {
+	return e.hBuilder.AddExternalWorkflowExecutionCancelRequested(initiatedEventID, domain, workflowID, runID)
 }
 
 func (e *mutableStateBuilder) AddTimerStartedEvent(decisionCompletedEventID int64,

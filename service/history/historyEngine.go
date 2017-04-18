@@ -558,13 +558,12 @@ Update_History_Loop:
 				msBuilder.AddFailWorkflowEvent(completedID, attributes)
 				isComplete = true
 			case workflow.DecisionType_CancelWorkflowExecution:
-
+				attributes := d.GetCancelWorkflowExecutionDecisionAttributes()
 				if isComplete {
-					msBuilder.AddCompleteWorkflowExecutionFailedEvent(completedID,
-						workflow.WorkflowCompleteFailedCause_UNHANDLED_DECISION)
+					msBuilder.AddCancelWorkflowExecutionFailedEvent(completedID,
+						workflow.WorkflowCancelFailedCause_UNHANDLED_DECISION)
 					continue Process_Decision_Loop
 				}
-				attributes := d.GetCancelWorkflowExecutionDecisionAttributes()
 				msBuilder.AddWorkflowExecutionCanceledEvent(completedID, attributes)
 				isComplete = true
 
@@ -632,10 +631,10 @@ Update_History_Loop:
 		}
 
 		// Schedule another decision task if new events came in during this decision
-		if (completedID - startedID) > 1 && !isComplete {
+		if (completedID-startedID) > 1 && !isComplete {
 			newDecisionEvent, _ := msBuilder.AddDecisionTaskScheduledEvent()
 			transferTasks = append(transferTasks, &persistence.DecisionTask{
-				DomainID: domainID,
+				DomainID:   domainID,
 				TaskList:   newDecisionEvent.GetDecisionTaskScheduledEventAttributes().GetTaskList().GetName(),
 				ScheduleID: newDecisionEvent.GetEventId(),
 			})

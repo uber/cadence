@@ -218,7 +218,26 @@ func (c *workflowExecutionContext) requestExternalCancelWorkflowExecutionWithRet
 	}
 
 	err := backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
-	if err != nil && common.IsServiceNonRetryableError(err) {
+	if err == nil {
+		// We succeeded in request to cancel workflow.
+		if c.msBuilder.AddExternalWorkflowExecutionCancelRequested(
+			initiatedEventID,
+			request.GetDomainUUID(),
+			request.GetCancelRequest().GetWorkflowExecution().GetWorkflowId(),
+			request.GetCancelRequest().GetWorkflowExecution().GetRunId()) == nil {
+			return &workflow.InternalServiceError{
+				Message: "Unable to write event to complete request of external cancel workflow execution."}
+		}
+
+		// Generate a transaction ID for appending events to history
+		transactionID, err := c.shard.GetNextTransferTaskID()
+		if err != nil {
+			return err
+		}
+		return c.updateWorkflowExecution(nil, nil, transactionID)
+
+	} else if err != nil && common.IsServiceNonRetryableError(err) {
+		// We failed in request to cancel workflow.
 		if c.msBuilder.AddRequestCancelExternalWorkflowExecutionFailedEvent(
 			emptyEventID,
 			initiatedEventID,
@@ -226,7 +245,8 @@ func (c *workflowExecutionContext) requestExternalCancelWorkflowExecutionWithRet
 			request.GetCancelRequest().GetWorkflowExecution().GetWorkflowId(),
 			request.GetCancelRequest().GetWorkflowExecution().GetRunId(),
 			workflow.CancelExternalWorkflowExecutionFailedCause_UNKNOWN_EXTERNAL_WORKFLOW_EXECUTION) == nil {
-			return &workflow.InternalServiceError{Message: "Unable to cancel workflow execution."}
+			return &workflow.InternalServiceError{
+				Message: "Unable to write failure event of external cancel workflow execution."}
 		}
 
 		// Generate a transaction ID for appending events to history
@@ -236,7 +256,7 @@ func (c *workflowExecutionContext) requestExternalCancelWorkflowExecutionWithRet
 		}
 		return c.updateWorkflowExecution(nil, nil, transactionID)
 	}
-	return nil
+	return err
 }
 
 func (c *workflowExecutionContext) clear() {
