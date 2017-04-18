@@ -18,7 +18,7 @@ import (
 const (
 	transferTaskBatchSize              = 10
 	transferProcessorMaxPollRPS        = 100
-	transferProcessorMaxPollInterval   = 30 * time.Second
+	transferProcessorMaxPollInterval   = 10 * time.Second
 	transferProcessorUpdateAckInterval = 10 * time.Second
 	taskWorkerCount                    = 10
 )
