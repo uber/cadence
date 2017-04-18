@@ -18,7 +18,6 @@ import (
 const (
 	transferTaskBatchSize              = 10
 	transferProcessorMaxPollRPS        = 100
-	transferProcessorMinPollInterval   = 10 * time.Millisecond
 	transferProcessorMaxPollInterval   = 30 * time.Second
 	transferProcessorUpdateAckInterval = 10 * time.Second
 	taskWorkerCount                    = 10
@@ -103,6 +102,7 @@ func (t *transferQueueProcessorImpl) Start() {
 	defer logTransferQueueProcesorStartedEvent(t.logger)
 
 	t.shutdownWG.Add(1)
+	t.NotifyNewTask()
 	go t.processorPump()
 }
 
@@ -141,9 +141,6 @@ func (t *transferQueueProcessorImpl) processorPump() {
 		go t.taskWorker(tasksCh, &workerWG)
 	}
 
-	pollInterval := transferProcessorMinPollInterval
-	pollTimer := time.NewTimer(pollInterval)
-	defer pollTimer.Stop()
 	updateAckTimer := time.NewTimer(transferProcessorUpdateAckInterval)
 	defer updateAckTimer.Stop()
 	for {
@@ -157,11 +154,7 @@ func (t *transferQueueProcessorImpl) processorPump() {
 			}
 			return
 		case <-t.appendCh:
-			t.processTransferTasks(tasksCh, pollInterval)
-			pollTimer.Reset(pollInterval)
-		case <-pollTimer.C:
-			pollInterval = t.processTransferTasks(tasksCh, pollInterval)
-			pollTimer.Reset(pollInterval)
+			t.processTransferTasks(tasksCh)
 		case <-updateAckTimer.C:
 			t.ackMgr.updateAckLevel()
 			updateAckTimer = time.NewTimer(transferProcessorUpdateAckInterval)
@@ -169,29 +162,33 @@ func (t *transferQueueProcessorImpl) processorPump() {
 	}
 }
 
-func (t *transferQueueProcessorImpl) processTransferTasks(tasksCh chan<- *persistence.TransferTaskInfo,
-	prevPollInterval time.Duration) time.Duration {
+func (t *transferQueueProcessorImpl) processTransferTasks(tasksCh chan<- *persistence.TransferTaskInfo) {
 
 	if !t.rateLimiter.Consume(1, transferProcessorMaxPollInterval) {
-		return transferProcessorMaxPollInterval
+		t.NotifyNewTask() // re-enqueue the event
+		return
 	}
 
 	tasks, err := t.ackMgr.readTransferTasks()
 
 	if err != nil {
 		t.logger.Warnf("Processor unable to retrieve transfer tasks: %v", err)
-		return minDuration(2*prevPollInterval, transferProcessorMaxPollInterval)
+		t.NotifyNewTask() // re-enqueue the event
+		return
 	}
 
 	if len(tasks) == 0 {
-		return minDuration(2*prevPollInterval, transferProcessorMaxPollInterval)
+		return
 	}
 
 	for _, tsk := range tasks {
 		tasksCh <- tsk
 	}
 
-	return transferProcessorMinPollInterval
+	// There might be more task
+	// We return now to yield, but enqueue an event to poll later
+	t.NotifyNewTask()
+	return
 }
 
 func (t *transferQueueProcessorImpl) taskWorker(tasksCh <-chan *persistence.TransferTaskInfo, workerWG *sync.WaitGroup) {

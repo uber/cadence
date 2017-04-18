@@ -1131,3 +1131,14 @@ func (s *shardContextWrapper) UpdateWorkflowExecution(request *persistence.Updat
 	}
 	return err
 }
+
+func (s *shardContextWrapper) CreateWorkflowExecution(request *persistence.CreateWorkflowExecutionRequest) (
+	*persistence.CreateWorkflowExecutionResponse, error) {
+	resp, err := s.ShardContext.CreateWorkflowExecution(request)
+	if err == nil {
+		if len(request.TransferTasks) > 0 {
+			s.txProcessor.NotifyNewTask()
+		}
+	}
+	return resp, err
+}
