@@ -141,6 +141,8 @@ func (t *transferQueueProcessorImpl) processorPump() {
 		go t.taskWorker(tasksCh, &workerWG)
 	}
 
+	pollTimer := time.NewTimer(transferProcessorMaxPollInterval)
+	defer pollTimer.Stop()
 	updateAckTimer := time.NewTimer(transferProcessorUpdateAckInterval)
 	defer updateAckTimer.Stop()
 	for {
@@ -154,6 +156,8 @@ func (t *transferQueueProcessorImpl) processorPump() {
 			}
 			return
 		case <-t.appendCh:
+			t.processTransferTasks(tasksCh)
+		case <-pollTimer.C:
 			t.processTransferTasks(tasksCh)
 		case <-updateAckTimer.C:
 			t.ackMgr.updateAckLevel()
