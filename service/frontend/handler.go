@@ -264,9 +264,9 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	}
 
 	var history *gen.History
-	if execution := matchingResp.GetWorkflowExecution(); execution != nil {
+	if matchingResp.IsSetWorkflowExecution() {
 		// Non-empty response. Get the history
-		history, err = wh.getHistory(info.ID, *execution, matchingResp.GetStartedEventId()+1)
+		history, err = wh.getHistory(info.ID, *matchingResp.GetWorkflowExecution(), matchingResp.GetStartedEventId()+1)
 		if err != nil {
 			return nil, wrapError(err)
 		}
