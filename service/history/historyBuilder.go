@@ -3,6 +3,7 @@ package history
 import (
 	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/common"
 )
 
@@ -234,7 +235,7 @@ func (b *historyBuilder) AddCancelTimerFailedEvent(timerID string, decisionTaskC
 }
 
 func (b *historyBuilder) AddWorkflowExecutionCancelRequestedEvent(cause string,
-	request *workflow.RequestCancelWorkflowExecutionRequest) *workflow.HistoryEvent {
+	request *h.RequestCancelWorkflowExecutionRequest) *workflow.HistoryEvent {
 	event := b.newWorkflowExecutionCancelRequestedEvent(cause, request)
 
 	return b.addEventToHistory(event)
@@ -500,14 +501,17 @@ func (b *historyBuilder) newMarkerRecordedEventAttributes(decisionTaskCompletedE
 }
 
 func (b *historyBuilder) newWorkflowExecutionCancelRequestedEvent(cause string,
-	request *workflow.RequestCancelWorkflowExecutionRequest) *workflow.HistoryEvent {
+	request *h.RequestCancelWorkflowExecutionRequest) *workflow.HistoryEvent {
 	event := b.msBuilder.createNewHistoryEvent(workflow.EventType_WorkflowExecutionCancelRequested)
 	attributes := workflow.NewWorkflowExecutionCancelRequestedEventAttributes()
 	attributes.Cause = common.StringPtr(cause)
-	attributes.Identity = common.StringPtr(request.GetIdentity())
-	attributes.ExternalWorkflowExecution = &workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(request.GetWorkflowExecution().GetWorkflowId()),
-		RunId:      common.StringPtr(request.GetWorkflowExecution().GetRunId())}
+	attributes.Identity = common.StringPtr(request.GetCancelRequest().GetIdentity())
+	if request.IsSetExternalInitiatedEventId() {
+		attributes.ExternalInitiatedEventId = common.Int64Ptr(request.GetExternalInitiatedEventId())
+	}
+	if request.IsSetExternalWorkflowExecution() {
+		attributes.ExternalWorkflowExecution = request.GetExternalWorkflowExecution()
+	}
 	event.WorkflowExecutionCancelRequestedEventAttributes = attributes
 
 	return event

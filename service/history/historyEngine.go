@@ -1020,7 +1020,7 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 				return &workflow.EntityNotExistsError{Message: "Workflow execution already completed."}
 			}
 
-			if msBuilder.AddWorkflowExecutionCancelRequestedEvent("", request) == nil {
+			if msBuilder.AddWorkflowExecutionCancelRequestedEvent("", req) == nil {
 				return &workflow.InternalServiceError{Message: "Unable to cancel workflow execution."}
 			}
 

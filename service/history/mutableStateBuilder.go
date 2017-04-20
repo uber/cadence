@@ -6,6 +6,7 @@ import (
 	"time"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 
@@ -565,7 +566,7 @@ func (e *mutableStateBuilder) AddCompleteWorkflowExecutionFailedEvent(decisionCo
 }
 
 func (e *mutableStateBuilder) AddWorkflowExecutionCancelRequestedEvent(cause string,
-	request *workflow.RequestCancelWorkflowExecutionRequest) *workflow.HistoryEvent {
+	request *h.RequestCancelWorkflowExecutionRequest) *workflow.HistoryEvent {
 	return e.hBuilder.AddWorkflowExecutionCancelRequestedEvent(cause, request)
 }
 

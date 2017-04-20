@@ -281,6 +281,11 @@ ProcessRetryLoop:
 									},
 									Identity: common.StringPtr("history-service"),
 								},
+								ExternalInitiatedEventId: common.Int64Ptr(task.ScheduleID),
+								ExternalWorkflowExecution: &workflow.WorkflowExecution{
+									WorkflowId: common.StringPtr(task.WorkflowID),
+									RunId: common.StringPtr(task.RunID),
+								},
 							}
 
 							err = context.requestExternalCancelWorkflowExecutionWithRetry(
