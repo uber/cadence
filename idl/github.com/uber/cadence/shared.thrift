@@ -370,6 +370,7 @@ struct RequestCancelExternalWorkflowExecutionFailedEventAttributes {
   30: optional string domain
   40: optional WorkflowExecution workflowExecution
   50: optional i64 (js.type = "Long") initiatedEventId
+  60: optional binary control
 }
 
 struct ExternalWorkflowExecutionCancelRequestedEventAttributes {

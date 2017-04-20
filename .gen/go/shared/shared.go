@@ -8998,6 +8998,7 @@ func (p *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) String(
 //  - Domain
 //  - WorkflowExecution
 //  - InitiatedEventId
+//  - Control
 type RequestCancelExternalWorkflowExecutionFailedEventAttributes struct {
   // unused fields # 1 to 9
   Cause *CancelExternalWorkflowExecutionFailedCause `thrift:"cause,10" db:"cause" json:"cause,omitempty"`
@@ -9009,6 +9010,8 @@ type RequestCancelExternalWorkflowExecutionFailedEventAttributes struct {
   WorkflowExecution *WorkflowExecution `thrift:"workflowExecution,40" db:"workflowExecution" json:"workflowExecution,omitempty"`
   // unused fields # 41 to 49
   InitiatedEventId *int64 `thrift:"initiatedEventId,50" db:"initiatedEventId" json:"initiatedEventId,omitempty"`
+  // unused fields # 51 to 59
+  Control []byte `thrift:"control,60" db:"control" json:"control,omitempty"`
 }
 
 func NewRequestCancelExternalWorkflowExecutionFailedEventAttributes() *RequestCancelExternalWorkflowExecutionFailedEventAttributes {
@@ -9050,6 +9053,11 @@ func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes) GetInitiat
   }
 return *p.InitiatedEventId
 }
+var RequestCancelExternalWorkflowExecutionFailedEventAttributes_Control_DEFAULT []byte
+
+func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes) GetControl() []byte {
+  return p.Control
+}
 func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes) IsSetCause() bool {
   return p.Cause != nil
 }
@@ -9068,6 +9076,10 @@ func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes) IsSetWorkf
 
 func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes) IsSetInitiatedEventId() bool {
   return p.InitiatedEventId != nil
+}
+
+func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes) IsSetControl() bool {
+  return p.Control != nil
 }
 
 func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes) Read(iprot thrift.TProtocol) error {
@@ -9101,6 +9113,10 @@ func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes) Read(iprot
       }
     case 50:
       if err := p.ReadField50(iprot); err != nil {
+        return err
+      }
+    case 60:
+      if err := p.ReadField60(iprot); err != nil {
         return err
       }
     default:
@@ -9163,6 +9179,15 @@ func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes)  ReadField
   return nil
 }
 
+func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes)  ReadField60(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadBinary(); err != nil {
+  return thrift.PrependError("error reading field 60: ", err)
+} else {
+  p.Control = v
+}
+  return nil
+}
+
 func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes) Write(oprot thrift.TProtocol) error {
   if err := oprot.WriteStructBegin("RequestCancelExternalWorkflowExecutionFailedEventAttributes"); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
@@ -9172,6 +9197,7 @@ func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes) Write(opro
     if err := p.writeField30(oprot); err != nil { return err }
     if err := p.writeField40(oprot); err != nil { return err }
     if err := p.writeField50(oprot); err != nil { return err }
+    if err := p.writeField60(oprot); err != nil { return err }
   }
   if err := oprot.WriteFieldStop(); err != nil {
     return thrift.PrependError("write field stop error: ", err) }
@@ -9237,6 +9263,18 @@ func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes) writeField
     return thrift.PrependError(fmt.Sprintf("%T.initiatedEventId (50) field write error: ", p), err) }
     if err := oprot.WriteFieldEnd(); err != nil {
       return thrift.PrependError(fmt.Sprintf("%T write field end error 50:initiatedEventId: ", p), err) }
+  }
+  return err
+}
+
+func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes) writeField60(oprot thrift.TProtocol) (err error) {
+  if p.IsSetControl() {
+    if err := oprot.WriteFieldBegin("control", thrift.STRING, 60); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 60:control: ", p), err) }
+    if err := oprot.WriteBinary(p.Control); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.control (60) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 60:control: ", p), err) }
   }
   return err
 }

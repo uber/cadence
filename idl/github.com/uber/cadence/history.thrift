@@ -89,6 +89,8 @@ struct TerminateWorkflowExecutionRequest {
 struct RequestCancelWorkflowExecutionRequest {
     10: optional string domainUUID
     20: optional shared.RequestCancelWorkflowExecutionRequest cancelRequest
+    30: optional i64 (js.type = "Long") externalInitiatedEventId
+    40: optional shared.WorkflowExecution externalWorkflowExecution
 }
 
 /**
