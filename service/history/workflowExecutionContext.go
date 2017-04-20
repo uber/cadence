@@ -209,6 +209,15 @@ func (c *workflowExecutionContext) deleteWorkflowExecutionWithRetry(
 	return backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
 }
 
+// Few problems with this approach.
+//   https://github.com/uber/cadence/issues/145
+//  (1) On the target workflow we can generate more than one cancel request if we end up retrying because of intermittent
+//	errors. We might want to have deduping logic internally to avoid that.
+//  (2) For single cancel transfer task we can generate more than one ExternalWorkflowExecutionCancelRequested event in the
+//	history if we fail to delete transfer task and retry again. We need some logic to look back at the event
+//      state in mutable state when we are processing this transfer task.
+//      This means for one single ExternalWorkflowExecutionCancelInitiated we can see a
+//      ExternalWorkflowExecutionCancelRequested and RequestCancelExternalWorkflowExecutionFailedEvent.
 func (c *workflowExecutionContext) requestExternalCancelWorkflowExecutionWithRetry(
 	historyClient hc.Client,
 	request *history.RequestCancelWorkflowExecutionRequest,

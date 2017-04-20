@@ -1004,6 +1004,12 @@ Update_History_Loop:
 	return &workflow.RecordActivityTaskHeartbeatResponse{}, ErrMaxAttemptsExceeded
 }
 
+// RequestCancelWorkflowExecution
+// https://github.com/uber/cadence/issues/145
+// TODO: (1) Each external request can result in one cancel requested event. it would be nice
+//	 to have dedupe on the server side.
+//	(2) if there are multiple calls if one request goes through then can we respond to the other ones with
+//       cancellation in progress instead of success.
 func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 	req *h.RequestCancelWorkflowExecutionRequest) error {
 	domainID := req.GetDomainUUID()
