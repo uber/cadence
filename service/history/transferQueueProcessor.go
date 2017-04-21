@@ -57,6 +57,7 @@ type (
 		sync.RWMutex
 		outstandingTasks map[int64]bool
 		readLevel        int64
+		maxReadLevel     int64
 		ackLevel         int64
 	}
 )
@@ -94,6 +95,7 @@ func newAckManager(processor transferQueueProcessor, shard ShardContext, executi
 		executionMgr:     executionMgr,
 		outstandingTasks: make(map[int64]bool),
 		readLevel:        ackLevel,
+		maxReadLevel:     ackLevel,
 		ackLevel:         ackLevel,
 		logger:           logger,
 	}
@@ -135,6 +137,14 @@ func (t *transferQueueProcessorImpl) NotifyNewTask() {
 	case t.appendCh <- event:
 	default: // channel already has an event, don't block
 	}
+}
+
+func (t *transferQueueProcessorImpl) NotifyMaxReadLevel(rl int64) {
+	t.ackMgr.Lock()
+	if t.ackMgr.maxReadLevel < rl {
+		t.ackMgr.maxReadLevel = rl
+	}
+	t.ackMgr.Unlock()
 }
 
 func (t *transferQueueProcessorImpl) processorPump() {
@@ -360,10 +370,12 @@ func (t *transferQueueProcessorImpl) recordWorkflowExecutionStarted(
 func (a *ackManager) readTransferTasks() ([]*persistence.TransferTaskInfo, error) {
 	a.RLock()
 	rLevel := a.readLevel
+	mLevel := a.maxReadLevel
 	a.RUnlock()
 	response, err := a.executionMgr.GetTransferTasks(&persistence.GetTransferTasksRequest{
-		ReadLevel: rLevel,
-		BatchSize: transferTaskBatchSize,
+		ReadLevel:    rLevel,
+		MaxReadLevel: mLevel,
+		BatchSize:    transferTaskBatchSize,
 	})
 
 	if err != nil {

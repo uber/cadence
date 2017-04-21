@@ -1,6 +1,7 @@
 package history
 
 import (
+	"math"
 	"os"
 	"testing"
 
@@ -57,6 +58,7 @@ func (s *transferQueueProcessorSuite) TearDownSuite() {
 func (s *transferQueueProcessorSuite) SetupTest() {
 	// First cleanup transfer tasks from other tests and reset shard context
 	s.ClearTransferQueue()
+	s.processor.NotifyMaxReadLevel(int64(math.MaxInt64))
 }
 
 func (s *transferQueueProcessorSuite) TestSingleDecisionTask() {
