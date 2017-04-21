@@ -653,11 +653,6 @@ Update_History_Loop:
 				if err != nil {
 					return nil
 				}
-				/*transferTasks = append(transferTasks, &persistence.DecisionTask{
-					DomainID:   domainID,
-					TaskList:   newStateBuilder.executionInfo.TaskList,
-					ScheduleID: di.ScheduleID,
-				})*/
 				isComplete = true
 				continueAsNewBuilder = newStateBuilder
 
