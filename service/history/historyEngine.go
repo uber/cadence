@@ -559,7 +559,11 @@ Update_History_Loop:
 				isComplete = true
 			case workflow.DecisionType_CancelWorkflowExecution:
 				attributes := d.GetCancelWorkflowExecutionDecisionAttributes()
-				if isComplete {
+
+				// Either we are already completed (or) we have a new pending event came while
+				// we are processing the decision, we would fail this and give a chance to client
+				// to process the new event.
+				if isComplete || ((completedID-startedID) > 1) {
 					msBuilder.AddCancelWorkflowExecutionFailedEvent(completedID,
 						workflow.WorkflowCancelFailedCause_UNHANDLED_DECISION)
 					continue Process_Decision_Loop
@@ -631,7 +635,7 @@ Update_History_Loop:
 		}
 
 		// Schedule another decision task if new events came in during this decision
-		if (completedID-startedID) > 1 && !isComplete {
+		if (completedID-startedID) > 1 {
 			newDecisionEvent, _ := msBuilder.AddDecisionTaskScheduledEvent()
 			transferTasks = append(transferTasks, &persistence.DecisionTask{
 				DomainID:   domainID,
