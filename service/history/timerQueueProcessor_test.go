@@ -70,7 +70,7 @@ func (s *timerQueueProcessorSuite) SetupSuite() {
 		closeCh:                   s.shardClosedCh,
 		logger:                    s.logger,
 	}
-	historyCache := newHistoryCache(shard, s.logger)
+	historyCache := newHistoryCache(historyCacheMaxSize, shard, s.logger)
 	historyCache.disabled = true
 	txProcessor := newTransferQueueProcessor(shard, s.mockVisibilityMgr, &mocks.MatchingClient{}, &mocks.HistoryClient{}, historyCache)
 	s.engineImpl = &historyEngineImpl{
@@ -82,7 +82,7 @@ func (s *timerQueueProcessorSuite) SetupSuite() {
 		domainCache:      cache.NewDomainCache(s.mockMetadataMgr, s.logger),
 		logger:           s.logger,
 		tokenSerializer:  common.NewJSONTaskTokenSerializer(),
-		hSerializer:      newJSONHistorySerializer(),
+		hSerializer:      common.NewJSONHistorySerializer(),
 	}
 }
 
@@ -107,7 +107,7 @@ func (s *timerQueueProcessorSuite) SetupTest() {
 		logger:                    s.logger,
 	}
 
-	historyCache := newHistoryCache(mockShard, s.logger)
+	historyCache := newHistoryCache(historyCacheMaxSize, mockShard, s.logger)
 	txProcessor := newTransferQueueProcessor(mockShard, s.mockVisibilityMgr, s.mockMatchingClient, &mocks.HistoryClient{}, historyCache)
 	h := &historyEngineImpl{
 		shard:            mockShard,
@@ -117,7 +117,7 @@ func (s *timerQueueProcessorSuite) SetupTest() {
 		historyCache:     historyCache,
 		logger:           s.logger,
 		tokenSerializer:  common.NewJSONTaskTokenSerializer(),
-		hSerializer:      newJSONHistorySerializer(),
+		hSerializer:      common.NewJSONHistorySerializer(),
 	}
 	h.timerProcessor = newTimerQueueProcessor(h, s.mockExecutionMgr, s.logger)
 	s.mockHistoryEngine = h

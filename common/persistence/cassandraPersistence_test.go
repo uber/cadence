@@ -495,7 +495,7 @@ func (s *cassandraPersistenceSuite) TestCancelTransferTaskTasks() {
 	s.Nil(err, "No error expected.")
 	s.NotNil(tasks, "expected valid list of tasks.")
 	s.Equal(1, len(tasks), "Expected 1 cancel task.")
-	task := tasks[0]	
+	task := tasks[0]
 	s.Equal(TransferTaskTypeCancelExecution, task.TaskType)
 	s.Equal(domainID, task.DomainID)
 	s.Equal(workflowExecution.GetWorkflowId(), task.WorkflowID)
