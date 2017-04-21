@@ -129,6 +129,7 @@ func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persi
 
 	}
 
+	continueAsNew := updates.continueAsNew
 	if err1 := c.updateWorkflowExecutionWithRetry(&persistence.UpdateWorkflowExecutionRequest{
 		ExecutionInfo:       c.msBuilder.executionInfo,
 		TransferTasks:       transferTasks,
@@ -139,6 +140,7 @@ func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persi
 		DeleteActivityInfo:  updates.deleteActivityInfo,
 		UpserTimerInfos:     updates.updateTimerInfos,
 		DeleteTimerInfos:    updates.deleteTimerInfos,
+		ContinueAsNew:       continueAsNew,
 	}); err1 != nil {
 		// Clear all cached state in case of error
 		c.clear()
@@ -158,9 +160,51 @@ func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persi
 	return nil
 }
 
-func (c *workflowExecutionContext) deleteWorkflowExecution() error {
+func (c *workflowExecutionContext) continueAsNewWorkflowExecution(context []byte, newStateBuilder *mutableStateBuilder,
+	transferTasks []persistence.Task, transactionID int64) error {
+
+	domainID := newStateBuilder.executionInfo.DomainID
+	newExecution := workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr(newStateBuilder.executionInfo.WorkflowID),
+		RunId:      common.StringPtr(newStateBuilder.executionInfo.RunID),
+	}
+	firstEvent := newStateBuilder.hBuilder.history[0]
+
+	// Serialize the history
+	events, serializedError := newStateBuilder.hBuilder.Serialize()
+	if serializedError != nil {
+		logHistorySerializationErrorEvent(c.logger, serializedError, fmt.Sprintf(
+			"History serialization error on start workflow.  WorkflowID: %v, RunID: %v", newExecution.GetWorkflowId(),
+			newExecution.GetRunId()))
+		return serializedError
+	}
+
+	err1 := c.shard.AppendHistoryEvents(&persistence.AppendHistoryEventsRequest{
+		DomainID:  domainID,
+		Execution: newExecution,
+		// It is ok to use 0 for TransactionID because RunID is unique so there are
+		// no potential duplicates to override.
+		TransactionID: 0,
+		FirstEventID:  firstEvent.GetEventId(),
+		Events:        events,
+	})
+	if err1 != nil {
+		return err1
+	}
+
+	err2 := c.updateWorkflowExecutionWithContext(context, transferTasks, nil, transactionID)
+
+	if err2 != nil {
+		// TODO: Delete new execution if update fails due to conflict or shard being lost
+	}
+
+	return err2
+}
+
+func (c *workflowExecutionContext) deleteWorkflowExecution(continuedAsNew bool) error {
 	err := c.deleteWorkflowExecutionWithRetry(&persistence.DeleteWorkflowExecutionRequest{
-		ExecutionInfo: c.msBuilder.executionInfo,
+		ExecutionInfo:  c.msBuilder.executionInfo,
+		ContinuedAsNew: continuedAsNew,
 	})
 	if err != nil {
 		// TODO: We will be needing a background job to delete all leaking workflow executions due to failed delete

@@ -15,7 +15,7 @@ const (
 
 // Workflow execution states
 const (
-	WorkflowStateCreated = iota
+	WorkflowStateCreated   = iota
 	WorkflowStateRunning
 	WorkflowStateCompleted
 )
@@ -28,7 +28,7 @@ const (
 
 // Transfer task types
 const (
-	TransferTaskTypeDecisionTask = iota
+	TransferTaskTypeDecisionTask    = iota
 	TransferTaskTypeActivityTask
 	TransferTaskTypeDeleteExecution
 	TransferTaskTypeCancelExecution
@@ -106,6 +106,7 @@ type (
 		TaskList         string
 		TaskType         int
 		ScheduleID       int64
+		ContinuedAsNew bool
 	}
 
 	// TimerTaskInfo describes a timer task.
@@ -162,7 +163,8 @@ type (
 
 	// DeleteExecutionTask identifies a transfer task for deletion of execution
 	DeleteExecutionTask struct {
-		TaskID int64
+		TaskID         int64
+		ContinuedAsNew bool
 	}
 
 	// DecisionTimeoutTask identifies a timeout task.
@@ -284,7 +286,7 @@ type (
 
 	// GetCurrentExecutionRequest is used to retrieve the current RunId for an execution
 	GetCurrentExecutionRequest struct {
-		DomainID  string
+		DomainID   string
 		WorkflowID string
 	}
 
@@ -312,7 +314,8 @@ type (
 
 	// DeleteWorkflowExecutionRequest is used to delete a workflow execution
 	DeleteWorkflowExecutionRequest struct {
-		ExecutionInfo *WorkflowExecutionInfo
+		ExecutionInfo  *WorkflowExecutionInfo
+		ContinuedAsNew bool
 	}
 
 	// GetTransferTasksRequest is used to read tasks from the transfer task queue

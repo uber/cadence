@@ -124,7 +124,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 	// Generate first decision task event.
 	taskList := request.GetTaskList().GetName()
 	msBuilder := newMutableStateBuilder(e.logger)
-	startedEvent := msBuilder.AddWorkflowExecutionStartedEvent(workflowExecution, request)
+	startedEvent := msBuilder.AddWorkflowExecutionStartedEvent(domainID, workflowExecution, request)
 	if startedEvent == nil {
 		return nil, &workflow.InternalServiceError{Message: "Failed to add workflow execution started event."}
 	}
@@ -495,7 +495,7 @@ Update_History_Loop:
 		isComplete := false
 		transferTasks := []persistence.Task{}
 		timerTasks := []persistence.Task{}
-
+		var continueAsNewBuilder *mutableStateBuilder
 	Process_Decision_Loop:
 		for _, d := range request.Decisions {
 			switch d.GetDecisionType() {
@@ -635,6 +635,32 @@ Update_History_Loop:
 					ScheduleID:       wfCancelReqEvent.GetEventId(),
 				})
 
+			case workflow.DecisionType_ContinueAsNewWorkflowExecution:
+				if isComplete || msBuilder.hasPendingTasks() {
+					msBuilder.AddContinueAsNewFailedEvent(completedID,
+						workflow.WorkflowCompleteFailedCause_UNHANDLED_DECISION)
+					continue Process_Decision_Loop
+				}
+
+				attributes := d.GetContinueAsNewWorkflowExecutionDecisionAttributes()
+				if attributes == nil {
+					return &workflow.BadRequestError{
+						Message: "ContinueAsNew decision called without attributes.",
+					}
+				}
+				runID := uuid.New()
+				_, newStateBuilder, err := msBuilder.AddContinueAsNewEvent(completedID, domainID, runID, attributes)
+				if err != nil {
+					return nil
+				}
+				/*transferTasks = append(transferTasks, &persistence.DecisionTask{
+					DomainID:   domainID,
+					TaskList:   newStateBuilder.executionInfo.TaskList,
+					ScheduleID: di.ScheduleID,
+				})*/
+				isComplete = true
+				continueAsNewBuilder = newStateBuilder
+
 			default:
 				return &workflow.BadRequestError{Message: fmt.Sprintf("Unknown decision type: %v", d.GetDecisionType())}
 			}
@@ -652,7 +678,9 @@ Update_History_Loop:
 
 		if isComplete {
 			// Generate a transfer task to delete workflow execution
-			transferTasks = append(transferTasks, &persistence.DeleteExecutionTask{})
+			transferTasks = append(transferTasks, &persistence.DeleteExecutionTask{
+				ContinuedAsNew: continueAsNewBuilder != nil,
+			})
 		}
 
 		// Generate a transaction ID for appending events to history
@@ -663,13 +691,21 @@ Update_History_Loop:
 
 		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict then reload
 		// the history and try the operation again.
-		if err := context.updateWorkflowExecutionWithContext(request.GetExecutionContext(), transferTasks, timerTasks,
-			transactionID); err != nil {
-			if err == ErrConflict {
+		var updateErr error
+		if continueAsNewBuilder != nil {
+			updateErr = context.continueAsNewWorkflowExecution(request.GetExecutionContext(), continueAsNewBuilder,
+				transferTasks, transactionID)
+		} else {
+			updateErr = context.updateWorkflowExecutionWithContext(request.GetExecutionContext(), transferTasks, timerTasks,
+				transactionID)
+		}
+
+		if updateErr != nil {
+			if updateErr == ErrConflict {
 				continue Update_History_Loop
 			}
 
-			return err
+			return updateErr
 		}
 
 		return nil

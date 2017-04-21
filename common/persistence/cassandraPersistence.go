@@ -92,7 +92,8 @@ const (
 		`target_run_id: ?, ` +
 		`task_list: ?, ` +
 		`type: ?, ` +
-		`schedule_id: ?` +
+		`schedule_id: ?, ` +
+		`continued_as_new: ?` +
 		`}`
 
 	templateTimerTaskType = `{` +
@@ -750,7 +751,10 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 		executionInfo.WorkflowID, executionInfo.RunID, request.Condition, request.RangeID)
 
 	if request.ContinueAsNew != nil {
-		d.CreateWorkflowExecutionWithinBatch(request.ContinueAsNew, batch, cqlNowTimestamp)
+		startReq := request.ContinueAsNew
+		d.CreateWorkflowExecutionWithinBatch(startReq, batch, cqlNowTimestamp)
+		d.createTransferTasks(batch, startReq.TransferTasks, startReq.DomainID, startReq.Execution.GetWorkflowId(),
+			startReq.Execution.GetRunId(), cqlNowTimestamp)
 	}
 
 	previous := make(map[string]interface{})
@@ -802,13 +806,15 @@ func (d *cassandraPersistence) DeleteWorkflowExecution(request *DeleteWorkflowEx
 	info := request.ExecutionInfo
 	cqlNowTimestamp := common.UnixNanoToCQLTimestamp(time.Now().UnixNano())
 	batch := d.session.NewBatch(gocql.LoggedBatch)
-	batch.Query(templateDeleteWorkflowExecutionQuery,
-		d.shardID,
-		rowTypeExecution,
-		info.DomainID,
-		info.WorkflowID,
-		permanentRunID,
-		rowTypeExecutionTaskID)
+	if !request.ContinuedAsNew {
+		batch.Query(templateDeleteWorkflowExecutionQuery,
+			d.shardID,
+			rowTypeExecution,
+			info.DomainID,
+			info.WorkflowID,
+			permanentRunID,
+			rowTypeExecutionTaskID)
+	}
 
 	batch.Query(templateDeleteWorkflowExecutionTTLQuery,
 		d.shardID,
@@ -1231,6 +1237,7 @@ func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferT
 	for _, task := range transferTasks {
 		var taskList string
 		var scheduleID int64
+		var continuedAsNew bool
 		targetWorkflowID := transferTaskTransferTargetWorkflowID
 		targetRunID := transferTaskTypeTransferTargetRunID
 
@@ -1250,6 +1257,9 @@ func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferT
 			targetWorkflowID = task.(*CancelExecutionTask).TargetWorkflowID
 			targetRunID = task.(*CancelExecutionTask).TargetRunID
 			scheduleID = task.(*CancelExecutionTask).ScheduleID
+
+		case TransferTaskTypeDeleteExecution:
+			continuedAsNew = task.(*DeleteExecutionTask).ContinuedAsNew
 		}
 
 		batch.Query(templateCreateTransferTaskQuery,
@@ -1268,6 +1278,7 @@ func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferT
 			taskList,
 			task.GetType(),
 			scheduleID,
+			continuedAsNew,
 			task.GetTaskID())
 	}
 }
@@ -1486,6 +1497,8 @@ func createTransferTaskInfo(result map[string]interface{}) *TransferTaskInfo {
 			info.TaskType = v.(int)
 		case "schedule_id":
 			info.ScheduleID = v.(int64)
+		case "continued_as_new":
+			info.ContinuedAsNew = v.(bool)
 		}
 	}
 
