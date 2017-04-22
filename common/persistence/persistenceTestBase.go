@@ -428,7 +428,7 @@ func (s *TestBase) UpdateWorkflowExecutionAndDelete(updatedInfo *WorkflowExecuti
 		DeleteActivityInfo:  nil,
 		UpserTimerInfos:     nil,
 		DeleteTimerInfos:    nil,
-		DeleteExecution:     true,
+		CloseExecution:      true,
 	})
 }
 
@@ -472,10 +472,10 @@ func (s *TestBase) UpdateWorkflowExecutionWithRangeID(updatedInfo *WorkflowExecu
 func (s *TestBase) UpdateWorkflowExecutionWithTransferTasks(
 	updatedInfo *WorkflowExecutionInfo, condition int64, transferTasks []Task) error {
 	return s.WorkflowMgr.UpdateWorkflowExecution(&UpdateWorkflowExecutionRequest{
-		ExecutionInfo:       updatedInfo,
-		TransferTasks:       transferTasks,
-		Condition:           condition,
-		RangeID:             s.ShardContext.GetRangeID(),
+		ExecutionInfo: updatedInfo,
+		TransferTasks: transferTasks,
+		Condition:     condition,
+		RangeID:       s.ShardContext.GetRangeID(),
 	})
 }
 

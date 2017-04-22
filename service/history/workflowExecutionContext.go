@@ -147,7 +147,7 @@ func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persi
 		UpserTimerInfos:     updates.updateTimerInfos,
 		DeleteTimerInfos:    updates.deleteTimerInfos,
 		ContinueAsNew:       continueAsNew,
-		DeleteExecution:     deleteExecution,
+		CloseExecution:      deleteExecution,
 	}); err1 != nil {
 		// Clear all cached state in case of error
 		c.clear()

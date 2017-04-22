@@ -754,7 +754,7 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 		d.CreateWorkflowExecutionWithinBatch(startReq, batch, cqlNowTimestamp)
 		d.createTransferTasks(batch, startReq.TransferTasks, startReq.DomainID, startReq.Execution.GetWorkflowId(),
 			startReq.Execution.GetRunId(), cqlNowTimestamp)
-	} else if request.DeleteExecution {
+	} else if request.CloseExecution {
 		// Delete WorkflowExecution row representing current execution
 		batch.Query(templateDeleteWorkflowExecutionQuery,
 			d.shardID,
