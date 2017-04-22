@@ -106,7 +106,6 @@ type (
 		TaskList         string
 		TaskType         int
 		ScheduleID       int64
-		ContinuedAsNew bool
 	}
 
 	// TimerTaskInfo describes a timer task.
@@ -164,7 +163,6 @@ type (
 	// DeleteExecutionTask identifies a transfer task for deletion of execution
 	DeleteExecutionTask struct {
 		TaskID         int64
-		ContinuedAsNew bool
 	}
 
 	// DecisionTimeoutTask identifies a timeout task.
@@ -304,6 +302,7 @@ type (
 		Condition       int64
 		RangeID         int64
 		ContinueAsNew   *CreateWorkflowExecutionRequest
+		DeleteExecution bool
 
 		// Mutable state
 		UpsertActivityInfos []*ActivityInfo
@@ -315,7 +314,6 @@ type (
 	// DeleteWorkflowExecutionRequest is used to delete a workflow execution
 	DeleteWorkflowExecutionRequest struct {
 		ExecutionInfo  *WorkflowExecutionInfo
-		ContinuedAsNew bool
 	}
 
 	// GetTransferTasksRequest is used to read tasks from the transfer task queue

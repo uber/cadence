@@ -675,9 +675,7 @@ Update_History_Loop:
 
 		if isComplete {
 			// Generate a transfer task to delete workflow execution
-			transferTasks = append(transferTasks, &persistence.DeleteExecutionTask{
-				ContinuedAsNew: continueAsNewBuilder != nil,
-			})
+			transferTasks = append(transferTasks, &persistence.DeleteExecutionTask{})
 		}
 
 		// Generate a transaction ID for appending events to history

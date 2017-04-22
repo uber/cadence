@@ -321,8 +321,11 @@ func (s *cassandraPersistenceSuite) TestGetCurrentWorkflow() {
 	info0, err2 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.Nil(err2)
 
-	err3 := s.DeleteWorkflowExecution(info0.ExecutionInfo)
-	s.Nil(err3)
+	updatedInfo1 := copyWorkflowExecutionInfo(info0.ExecutionInfo)
+	updatedInfo1.NextEventID = int64(6)
+	updatedInfo1.LastProcessedEvent = int64(2)
+	err3 := s.UpdateWorkflowExecutionAndDelete(updatedInfo1, int64(3))
+	s.Nil(err3, "No error expected.")
 
 	_, err4 := s.GetCurrentWorkflow(domainID, workflowExecution.GetWorkflowId())
 	s.NotNil(err4, "No error expected.")
@@ -435,7 +438,7 @@ func (s *cassandraPersistenceSuite) TestTransferTasksThroughUpdate() {
 		WorkflowId: common.StringPtr("get-transfer-tasks-through-update-test"),
 		RunId:      common.StringPtr("2a038c8f-b575-4151-8d2c-d443e999ab5a"),
 	}
-	_, err6 := s.CreateWorkflowExecution(domainID, newExecution, "queue1", "wType", 13, nil, 3, 0, 2, nil)
+	_, err6 := s.GetCurrentWorkflow(domainID, "get-transfer-tasks-through-update-test")
 	s.NotNil(err6, "Entity exist error expected.")
 
 	tasks3, err7 := s.GetTransferTasks(1)

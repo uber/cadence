@@ -278,7 +278,7 @@ ProcessRetryLoop:
 							CloseTimestamp:   mb.executionInfo.LastUpdatedTimestamp.UnixNano(),
 						})
 						if err == nil {
-							err = context.deleteWorkflowExecution(task.ContinuedAsNew)
+							err = context.deleteWorkflowExecution()
 						}
 					}
 					release()

@@ -130,6 +130,12 @@ func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persi
 	}
 
 	continueAsNew := updates.continueAsNew
+	deleteExecution := false
+	if c.msBuilder.executionInfo.State == persistence.WorkflowStateCompleted {
+		// Workflow execution completed as part of this transaction.
+		// Also transactionally delete workflow execution representing current run for the execution
+		deleteExecution = true
+	}
 	if err1 := c.updateWorkflowExecutionWithRetry(&persistence.UpdateWorkflowExecutionRequest{
 		ExecutionInfo:       c.msBuilder.executionInfo,
 		TransferTasks:       transferTasks,
@@ -141,6 +147,7 @@ func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persi
 		UpserTimerInfos:     updates.updateTimerInfos,
 		DeleteTimerInfos:    updates.deleteTimerInfos,
 		ContinueAsNew:       continueAsNew,
+		DeleteExecution:     deleteExecution,
 	}); err1 != nil {
 		// Clear all cached state in case of error
 		c.clear()
@@ -201,10 +208,9 @@ func (c *workflowExecutionContext) continueAsNewWorkflowExecution(context []byte
 	return err2
 }
 
-func (c *workflowExecutionContext) deleteWorkflowExecution(continuedAsNew bool) error {
+func (c *workflowExecutionContext) deleteWorkflowExecution() error {
 	err := c.deleteWorkflowExecutionWithRetry(&persistence.DeleteWorkflowExecutionRequest{
-		ExecutionInfo:  c.msBuilder.executionInfo,
-		ContinuedAsNew: continuedAsNew,
+		ExecutionInfo: c.msBuilder.executionInfo,
 	})
 	if err != nil {
 		// TODO: We will be needing a background job to delete all leaking workflow executions due to failed delete
