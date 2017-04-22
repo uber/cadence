@@ -493,6 +493,7 @@ Update_History_Loop:
 		}
 
 		completedID := completedEvent.GetEventId()
+		hasUnhandledEvents := ((completedID-startedID) > 1)
 		isComplete := false
 		transferTasks := []persistence.Task{}
 		timerTasks := []persistence.Task{}
@@ -547,7 +548,7 @@ Update_History_Loop:
 				defer e.timerProcessor.NotifyNewTimer(Schedule2CloseTimeoutTask.GetTaskID())
 
 			case workflow.DecisionType_CompleteWorkflowExecution:
-				if isComplete || msBuilder.hasPendingTasks() {
+				if isComplete || hasUnhandledEvents {
 					msBuilder.AddCompleteWorkflowExecutionFailedEvent(completedID,
 						workflow.WorkflowCompleteFailedCause_UNHANDLED_DECISION)
 					continue Process_Decision_Loop
@@ -556,7 +557,7 @@ Update_History_Loop:
 				msBuilder.AddCompletedWorkflowEvent(completedID, attributes)
 				isComplete = true
 			case workflow.DecisionType_FailWorkflowExecution:
-				if isComplete || msBuilder.hasPendingTasks() {
+				if isComplete || hasUnhandledEvents {
 					msBuilder.AddCompleteWorkflowExecutionFailedEvent(completedID,
 						workflow.WorkflowCompleteFailedCause_UNHANDLED_DECISION)
 					continue Process_Decision_Loop
@@ -570,7 +571,7 @@ Update_History_Loop:
 				// Either we are already completed (or) we have a new pending event came while
 				// we are processing the decision, we would fail this and give a chance to client
 				// to process the new event.
-				if isComplete || ((completedID-startedID) > 1) {
+				if isComplete || hasUnhandledEvents {
 					msBuilder.AddCancelWorkflowExecutionFailedEvent(completedID,
 						workflow.WorkflowCancelFailedCause_UNHANDLED_DECISION)
 					continue Process_Decision_Loop
@@ -637,7 +638,7 @@ Update_History_Loop:
 				})
 
 			case workflow.DecisionType_ContinueAsNewWorkflowExecution:
-				if isComplete || msBuilder.hasPendingTasks() {
+				if isComplete || hasUnhandledEvents {
 					msBuilder.AddContinueAsNewFailedEvent(completedID,
 						workflow.WorkflowCompleteFailedCause_UNHANDLED_DECISION)
 					continue Process_Decision_Loop
@@ -663,7 +664,7 @@ Update_History_Loop:
 		}
 
 		// Schedule another decision task if new events came in during this decision
-		if (completedID-startedID) > 1 {
+		if hasUnhandledEvents {
 			newDecisionEvent, _ := msBuilder.AddDecisionTaskScheduledEvent()
 			transferTasks = append(transferTasks, &persistence.DecisionTask{
 				DomainID:   domainID,
