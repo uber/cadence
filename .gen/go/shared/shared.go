@@ -139,7 +139,10 @@ const (
   DecisionType_CompleteWorkflowExecution DecisionType = 3
   DecisionType_FailWorkflowExecution DecisionType = 4
   DecisionType_CancelTimer DecisionType = 5
-  DecisionType_RecordMarker DecisionType = 6
+  DecisionType_CancelWorkflowExecution DecisionType = 6
+  DecisionType_RequestCancelExternalWorkflowExecution DecisionType = 7
+  DecisionType_RecordMarker DecisionType = 8
+  DecisionType_ContinueAsNewWorkflowExecution DecisionType = 9
 )
 
 func (p DecisionType) String() string {
@@ -150,7 +153,10 @@ func (p DecisionType) String() string {
   case DecisionType_CompleteWorkflowExecution: return "CompleteWorkflowExecution"
   case DecisionType_FailWorkflowExecution: return "FailWorkflowExecution"
   case DecisionType_CancelTimer: return "CancelTimer"
+  case DecisionType_CancelWorkflowExecution: return "CancelWorkflowExecution"
+  case DecisionType_RequestCancelExternalWorkflowExecution: return "RequestCancelExternalWorkflowExecution"
   case DecisionType_RecordMarker: return "RecordMarker"
+  case DecisionType_ContinueAsNewWorkflowExecution: return "ContinueAsNewWorkflowExecution"
   }
   return "<UNSET>"
 }
@@ -163,7 +169,10 @@ func DecisionTypeFromString(s string) (DecisionType, error) {
   case "CompleteWorkflowExecution": return DecisionType_CompleteWorkflowExecution, nil 
   case "FailWorkflowExecution": return DecisionType_FailWorkflowExecution, nil 
   case "CancelTimer": return DecisionType_CancelTimer, nil 
+  case "CancelWorkflowExecution": return DecisionType_CancelWorkflowExecution, nil 
+  case "RequestCancelExternalWorkflowExecution": return DecisionType_RequestCancelExternalWorkflowExecution, nil 
   case "RecordMarker": return DecisionType_RecordMarker, nil 
+  case "ContinueAsNewWorkflowExecution": return DecisionType_ContinueAsNewWorkflowExecution, nil 
   }
   return DecisionType(0), fmt.Errorf("not a valid DecisionType string")
 }
@@ -222,9 +231,17 @@ const (
   EventType_CompleteWorkflowExecutionFailed EventType = 18
   EventType_CancelTimerFailed EventType = 19
   EventType_TimerCanceled EventType = 20
-  EventType_MarkerRecorded EventType = 21
-  EventType_WorkflowExecutionSignaled EventType = 22
-  EventType_WorkflowExecutionTerminated EventType = 23
+  EventType_WorkflowExecutionCancelRequested EventType = 21
+  EventType_CancelWorkflowExecutionFailed EventType = 22
+  EventType_WorkflowExecutionCanceled EventType = 23
+  EventType_RequestCancelExternalWorkflowExecutionInitiated EventType = 24
+  EventType_RequestCancelExternalWorkflowExecutionFailed EventType = 25
+  EventType_ExternalWorkflowExecutionCancelRequested EventType = 26
+  EventType_MarkerRecorded EventType = 27
+  EventType_WorkflowExecutionSignaled EventType = 28
+  EventType_WorkflowExecutionTerminated EventType = 29
+  EventType_WorkflowExecutionContinuedAsNew EventType = 30
+  EventType_ContinueAsNewWorkflowExecutionFailed EventType = 31
 )
 
 func (p EventType) String() string {
@@ -250,9 +267,17 @@ func (p EventType) String() string {
   case EventType_CompleteWorkflowExecutionFailed: return "CompleteWorkflowExecutionFailed"
   case EventType_CancelTimerFailed: return "CancelTimerFailed"
   case EventType_TimerCanceled: return "TimerCanceled"
+  case EventType_WorkflowExecutionCancelRequested: return "WorkflowExecutionCancelRequested"
+  case EventType_CancelWorkflowExecutionFailed: return "CancelWorkflowExecutionFailed"
+  case EventType_WorkflowExecutionCanceled: return "WorkflowExecutionCanceled"
+  case EventType_RequestCancelExternalWorkflowExecutionInitiated: return "RequestCancelExternalWorkflowExecutionInitiated"
+  case EventType_RequestCancelExternalWorkflowExecutionFailed: return "RequestCancelExternalWorkflowExecutionFailed"
+  case EventType_ExternalWorkflowExecutionCancelRequested: return "ExternalWorkflowExecutionCancelRequested"
   case EventType_MarkerRecorded: return "MarkerRecorded"
   case EventType_WorkflowExecutionSignaled: return "WorkflowExecutionSignaled"
   case EventType_WorkflowExecutionTerminated: return "WorkflowExecutionTerminated"
+  case EventType_WorkflowExecutionContinuedAsNew: return "WorkflowExecutionContinuedAsNew"
+  case EventType_ContinueAsNewWorkflowExecutionFailed: return "ContinueAsNewWorkflowExecutionFailed"
   }
   return "<UNSET>"
 }
@@ -280,9 +305,17 @@ func EventTypeFromString(s string) (EventType, error) {
   case "CompleteWorkflowExecutionFailed": return EventType_CompleteWorkflowExecutionFailed, nil 
   case "CancelTimerFailed": return EventType_CancelTimerFailed, nil 
   case "TimerCanceled": return EventType_TimerCanceled, nil 
+  case "WorkflowExecutionCancelRequested": return EventType_WorkflowExecutionCancelRequested, nil 
+  case "CancelWorkflowExecutionFailed": return EventType_CancelWorkflowExecutionFailed, nil 
+  case "WorkflowExecutionCanceled": return EventType_WorkflowExecutionCanceled, nil 
+  case "RequestCancelExternalWorkflowExecutionInitiated": return EventType_RequestCancelExternalWorkflowExecutionInitiated, nil 
+  case "RequestCancelExternalWorkflowExecutionFailed": return EventType_RequestCancelExternalWorkflowExecutionFailed, nil 
+  case "ExternalWorkflowExecutionCancelRequested": return EventType_ExternalWorkflowExecutionCancelRequested, nil 
   case "MarkerRecorded": return EventType_MarkerRecorded, nil 
   case "WorkflowExecutionSignaled": return EventType_WorkflowExecutionSignaled, nil 
   case "WorkflowExecutionTerminated": return EventType_WorkflowExecutionTerminated, nil 
+  case "WorkflowExecutionContinuedAsNew": return EventType_WorkflowExecutionContinuedAsNew, nil 
+  case "ContinueAsNewWorkflowExecutionFailed": return EventType_ContinueAsNewWorkflowExecutionFailed, nil 
   }
   return EventType(0), fmt.Errorf("not a valid EventType string")
 }
@@ -363,6 +396,106 @@ return nil
 }
 
 func (p * WorkflowCompleteFailedCause) Value() (driver.Value, error) {
+  if p == nil {
+    return nil, nil
+  }
+return int64(*p), nil
+}
+type WorkflowCancelFailedCause int64
+const (
+  WorkflowCancelFailedCause_UNHANDLED_DECISION WorkflowCancelFailedCause = 0
+)
+
+func (p WorkflowCancelFailedCause) String() string {
+  switch p {
+  case WorkflowCancelFailedCause_UNHANDLED_DECISION: return "UNHANDLED_DECISION"
+  }
+  return "<UNSET>"
+}
+
+func WorkflowCancelFailedCauseFromString(s string) (WorkflowCancelFailedCause, error) {
+  switch s {
+  case "UNHANDLED_DECISION": return WorkflowCancelFailedCause_UNHANDLED_DECISION, nil 
+  }
+  return WorkflowCancelFailedCause(0), fmt.Errorf("not a valid WorkflowCancelFailedCause string")
+}
+
+
+func WorkflowCancelFailedCausePtr(v WorkflowCancelFailedCause) *WorkflowCancelFailedCause { return &v }
+
+func (p WorkflowCancelFailedCause) MarshalText() ([]byte, error) {
+return []byte(p.String()), nil
+}
+
+func (p *WorkflowCancelFailedCause) UnmarshalText(text []byte) error {
+q, err := WorkflowCancelFailedCauseFromString(string(text))
+if (err != nil) {
+return err
+}
+*p = q
+return nil
+}
+
+func (p *WorkflowCancelFailedCause) Scan(value interface{}) error {
+v, ok := value.(int64)
+if !ok {
+return errors.New("Scan value is not int64")
+}
+*p = WorkflowCancelFailedCause(v)
+return nil
+}
+
+func (p * WorkflowCancelFailedCause) Value() (driver.Value, error) {
+  if p == nil {
+    return nil, nil
+  }
+return int64(*p), nil
+}
+type CancelExternalWorkflowExecutionFailedCause int64
+const (
+  CancelExternalWorkflowExecutionFailedCause_UNKNOWN_EXTERNAL_WORKFLOW_EXECUTION CancelExternalWorkflowExecutionFailedCause = 0
+)
+
+func (p CancelExternalWorkflowExecutionFailedCause) String() string {
+  switch p {
+  case CancelExternalWorkflowExecutionFailedCause_UNKNOWN_EXTERNAL_WORKFLOW_EXECUTION: return "UNKNOWN_EXTERNAL_WORKFLOW_EXECUTION"
+  }
+  return "<UNSET>"
+}
+
+func CancelExternalWorkflowExecutionFailedCauseFromString(s string) (CancelExternalWorkflowExecutionFailedCause, error) {
+  switch s {
+  case "UNKNOWN_EXTERNAL_WORKFLOW_EXECUTION": return CancelExternalWorkflowExecutionFailedCause_UNKNOWN_EXTERNAL_WORKFLOW_EXECUTION, nil 
+  }
+  return CancelExternalWorkflowExecutionFailedCause(0), fmt.Errorf("not a valid CancelExternalWorkflowExecutionFailedCause string")
+}
+
+
+func CancelExternalWorkflowExecutionFailedCausePtr(v CancelExternalWorkflowExecutionFailedCause) *CancelExternalWorkflowExecutionFailedCause { return &v }
+
+func (p CancelExternalWorkflowExecutionFailedCause) MarshalText() ([]byte, error) {
+return []byte(p.String()), nil
+}
+
+func (p *CancelExternalWorkflowExecutionFailedCause) UnmarshalText(text []byte) error {
+q, err := CancelExternalWorkflowExecutionFailedCauseFromString(string(text))
+if (err != nil) {
+return err
+}
+*p = q
+return nil
+}
+
+func (p *CancelExternalWorkflowExecutionFailedCause) Scan(value interface{}) error {
+v, ok := value.(int64)
+if !ok {
+return errors.New("Scan value is not int64")
+}
+*p = CancelExternalWorkflowExecutionFailedCause(v)
+return nil
+}
+
+func (p * CancelExternalWorkflowExecutionFailedCause) Value() (driver.Value, error) {
   if p == nil {
     return nil, nil
   }
@@ -2617,6 +2750,312 @@ func (p *CancelTimerDecisionAttributes) String() string {
 }
 
 // Attributes:
+//  - Details
+type CancelWorkflowExecutionDecisionAttributes struct {
+  // unused fields # 1 to 9
+  Details []byte `thrift:"details,10" db:"details" json:"details,omitempty"`
+}
+
+func NewCancelWorkflowExecutionDecisionAttributes() *CancelWorkflowExecutionDecisionAttributes {
+  return &CancelWorkflowExecutionDecisionAttributes{}
+}
+
+var CancelWorkflowExecutionDecisionAttributes_Details_DEFAULT []byte
+
+func (p *CancelWorkflowExecutionDecisionAttributes) GetDetails() []byte {
+  return p.Details
+}
+func (p *CancelWorkflowExecutionDecisionAttributes) IsSetDetails() bool {
+  return p.Details != nil
+}
+
+func (p *CancelWorkflowExecutionDecisionAttributes) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 10:
+      if err := p.ReadField10(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *CancelWorkflowExecutionDecisionAttributes)  ReadField10(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadBinary(); err != nil {
+  return thrift.PrependError("error reading field 10: ", err)
+} else {
+  p.Details = v
+}
+  return nil
+}
+
+func (p *CancelWorkflowExecutionDecisionAttributes) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("CancelWorkflowExecutionDecisionAttributes"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField10(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *CancelWorkflowExecutionDecisionAttributes) writeField10(oprot thrift.TProtocol) (err error) {
+  if p.IsSetDetails() {
+    if err := oprot.WriteFieldBegin("details", thrift.STRING, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:details: ", p), err) }
+    if err := oprot.WriteBinary(p.Details); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.details (10) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:details: ", p), err) }
+  }
+  return err
+}
+
+func (p *CancelWorkflowExecutionDecisionAttributes) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("CancelWorkflowExecutionDecisionAttributes(%+v)", *p)
+}
+
+// Attributes:
+//  - Domain
+//  - WorkflowId
+//  - RunId
+//  - Control
+type RequestCancelExternalWorkflowExecutionDecisionAttributes struct {
+  // unused fields # 1 to 9
+  Domain *string `thrift:"domain,10" db:"domain" json:"domain,omitempty"`
+  // unused fields # 11 to 19
+  WorkflowId *string `thrift:"workflowId,20" db:"workflowId" json:"workflowId,omitempty"`
+  // unused fields # 21 to 29
+  RunId *string `thrift:"runId,30" db:"runId" json:"runId,omitempty"`
+  // unused fields # 31 to 39
+  Control []byte `thrift:"control,40" db:"control" json:"control,omitempty"`
+}
+
+func NewRequestCancelExternalWorkflowExecutionDecisionAttributes() *RequestCancelExternalWorkflowExecutionDecisionAttributes {
+  return &RequestCancelExternalWorkflowExecutionDecisionAttributes{}
+}
+
+var RequestCancelExternalWorkflowExecutionDecisionAttributes_Domain_DEFAULT string
+func (p *RequestCancelExternalWorkflowExecutionDecisionAttributes) GetDomain() string {
+  if !p.IsSetDomain() {
+    return RequestCancelExternalWorkflowExecutionDecisionAttributes_Domain_DEFAULT
+  }
+return *p.Domain
+}
+var RequestCancelExternalWorkflowExecutionDecisionAttributes_WorkflowId_DEFAULT string
+func (p *RequestCancelExternalWorkflowExecutionDecisionAttributes) GetWorkflowId() string {
+  if !p.IsSetWorkflowId() {
+    return RequestCancelExternalWorkflowExecutionDecisionAttributes_WorkflowId_DEFAULT
+  }
+return *p.WorkflowId
+}
+var RequestCancelExternalWorkflowExecutionDecisionAttributes_RunId_DEFAULT string
+func (p *RequestCancelExternalWorkflowExecutionDecisionAttributes) GetRunId() string {
+  if !p.IsSetRunId() {
+    return RequestCancelExternalWorkflowExecutionDecisionAttributes_RunId_DEFAULT
+  }
+return *p.RunId
+}
+var RequestCancelExternalWorkflowExecutionDecisionAttributes_Control_DEFAULT []byte
+
+func (p *RequestCancelExternalWorkflowExecutionDecisionAttributes) GetControl() []byte {
+  return p.Control
+}
+func (p *RequestCancelExternalWorkflowExecutionDecisionAttributes) IsSetDomain() bool {
+  return p.Domain != nil
+}
+
+func (p *RequestCancelExternalWorkflowExecutionDecisionAttributes) IsSetWorkflowId() bool {
+  return p.WorkflowId != nil
+}
+
+func (p *RequestCancelExternalWorkflowExecutionDecisionAttributes) IsSetRunId() bool {
+  return p.RunId != nil
+}
+
+func (p *RequestCancelExternalWorkflowExecutionDecisionAttributes) IsSetControl() bool {
+  return p.Control != nil
+}
+
+func (p *RequestCancelExternalWorkflowExecutionDecisionAttributes) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 10:
+      if err := p.ReadField10(iprot); err != nil {
+        return err
+      }
+    case 20:
+      if err := p.ReadField20(iprot); err != nil {
+        return err
+      }
+    case 30:
+      if err := p.ReadField30(iprot); err != nil {
+        return err
+      }
+    case 40:
+      if err := p.ReadField40(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *RequestCancelExternalWorkflowExecutionDecisionAttributes)  ReadField10(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 10: ", err)
+} else {
+  p.Domain = &v
+}
+  return nil
+}
+
+func (p *RequestCancelExternalWorkflowExecutionDecisionAttributes)  ReadField20(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 20: ", err)
+} else {
+  p.WorkflowId = &v
+}
+  return nil
+}
+
+func (p *RequestCancelExternalWorkflowExecutionDecisionAttributes)  ReadField30(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 30: ", err)
+} else {
+  p.RunId = &v
+}
+  return nil
+}
+
+func (p *RequestCancelExternalWorkflowExecutionDecisionAttributes)  ReadField40(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadBinary(); err != nil {
+  return thrift.PrependError("error reading field 40: ", err)
+} else {
+  p.Control = v
+}
+  return nil
+}
+
+func (p *RequestCancelExternalWorkflowExecutionDecisionAttributes) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("RequestCancelExternalWorkflowExecutionDecisionAttributes"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField10(oprot); err != nil { return err }
+    if err := p.writeField20(oprot); err != nil { return err }
+    if err := p.writeField30(oprot); err != nil { return err }
+    if err := p.writeField40(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *RequestCancelExternalWorkflowExecutionDecisionAttributes) writeField10(oprot thrift.TProtocol) (err error) {
+  if p.IsSetDomain() {
+    if err := oprot.WriteFieldBegin("domain", thrift.STRING, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:domain: ", p), err) }
+    if err := oprot.WriteString(string(*p.Domain)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.domain (10) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:domain: ", p), err) }
+  }
+  return err
+}
+
+func (p *RequestCancelExternalWorkflowExecutionDecisionAttributes) writeField20(oprot thrift.TProtocol) (err error) {
+  if p.IsSetWorkflowId() {
+    if err := oprot.WriteFieldBegin("workflowId", thrift.STRING, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:workflowId: ", p), err) }
+    if err := oprot.WriteString(string(*p.WorkflowId)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.workflowId (20) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:workflowId: ", p), err) }
+  }
+  return err
+}
+
+func (p *RequestCancelExternalWorkflowExecutionDecisionAttributes) writeField30(oprot thrift.TProtocol) (err error) {
+  if p.IsSetRunId() {
+    if err := oprot.WriteFieldBegin("runId", thrift.STRING, 30); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 30:runId: ", p), err) }
+    if err := oprot.WriteString(string(*p.RunId)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.runId (30) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 30:runId: ", p), err) }
+  }
+  return err
+}
+
+func (p *RequestCancelExternalWorkflowExecutionDecisionAttributes) writeField40(oprot thrift.TProtocol) (err error) {
+  if p.IsSetControl() {
+    if err := oprot.WriteFieldBegin("control", thrift.STRING, 40); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 40:control: ", p), err) }
+    if err := oprot.WriteBinary(p.Control); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.control (40) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 40:control: ", p), err) }
+  }
+  return err
+}
+
+func (p *RequestCancelExternalWorkflowExecutionDecisionAttributes) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("RequestCancelExternalWorkflowExecutionDecisionAttributes(%+v)", *p)
+}
+
+// Attributes:
 //  - MarkerName
 //  - Details
 type RecordMarkerDecisionAttributes struct {
@@ -2750,6 +3189,259 @@ func (p *RecordMarkerDecisionAttributes) String() string {
 }
 
 // Attributes:
+//  - WorkflowType
+//  - TaskList
+//  - Input
+//  - ExecutionStartToCloseTimeoutSeconds
+//  - TaskStartToCloseTimeoutSeconds
+type ContinueAsNewWorkflowExecutionDecisionAttributes struct {
+  // unused fields # 1 to 9
+  WorkflowType *WorkflowType `thrift:"workflowType,10" db:"workflowType" json:"workflowType,omitempty"`
+  // unused fields # 11 to 19
+  TaskList *TaskList `thrift:"taskList,20" db:"taskList" json:"taskList,omitempty"`
+  // unused fields # 21 to 29
+  Input []byte `thrift:"input,30" db:"input" json:"input,omitempty"`
+  // unused fields # 31 to 39
+  ExecutionStartToCloseTimeoutSeconds *int32 `thrift:"executionStartToCloseTimeoutSeconds,40" db:"executionStartToCloseTimeoutSeconds" json:"executionStartToCloseTimeoutSeconds,omitempty"`
+  // unused fields # 41 to 49
+  TaskStartToCloseTimeoutSeconds *int32 `thrift:"taskStartToCloseTimeoutSeconds,50" db:"taskStartToCloseTimeoutSeconds" json:"taskStartToCloseTimeoutSeconds,omitempty"`
+}
+
+func NewContinueAsNewWorkflowExecutionDecisionAttributes() *ContinueAsNewWorkflowExecutionDecisionAttributes {
+  return &ContinueAsNewWorkflowExecutionDecisionAttributes{}
+}
+
+var ContinueAsNewWorkflowExecutionDecisionAttributes_WorkflowType_DEFAULT *WorkflowType
+func (p *ContinueAsNewWorkflowExecutionDecisionAttributes) GetWorkflowType() *WorkflowType {
+  if !p.IsSetWorkflowType() {
+    return ContinueAsNewWorkflowExecutionDecisionAttributes_WorkflowType_DEFAULT
+  }
+return p.WorkflowType
+}
+var ContinueAsNewWorkflowExecutionDecisionAttributes_TaskList_DEFAULT *TaskList
+func (p *ContinueAsNewWorkflowExecutionDecisionAttributes) GetTaskList() *TaskList {
+  if !p.IsSetTaskList() {
+    return ContinueAsNewWorkflowExecutionDecisionAttributes_TaskList_DEFAULT
+  }
+return p.TaskList
+}
+var ContinueAsNewWorkflowExecutionDecisionAttributes_Input_DEFAULT []byte
+
+func (p *ContinueAsNewWorkflowExecutionDecisionAttributes) GetInput() []byte {
+  return p.Input
+}
+var ContinueAsNewWorkflowExecutionDecisionAttributes_ExecutionStartToCloseTimeoutSeconds_DEFAULT int32
+func (p *ContinueAsNewWorkflowExecutionDecisionAttributes) GetExecutionStartToCloseTimeoutSeconds() int32 {
+  if !p.IsSetExecutionStartToCloseTimeoutSeconds() {
+    return ContinueAsNewWorkflowExecutionDecisionAttributes_ExecutionStartToCloseTimeoutSeconds_DEFAULT
+  }
+return *p.ExecutionStartToCloseTimeoutSeconds
+}
+var ContinueAsNewWorkflowExecutionDecisionAttributes_TaskStartToCloseTimeoutSeconds_DEFAULT int32
+func (p *ContinueAsNewWorkflowExecutionDecisionAttributes) GetTaskStartToCloseTimeoutSeconds() int32 {
+  if !p.IsSetTaskStartToCloseTimeoutSeconds() {
+    return ContinueAsNewWorkflowExecutionDecisionAttributes_TaskStartToCloseTimeoutSeconds_DEFAULT
+  }
+return *p.TaskStartToCloseTimeoutSeconds
+}
+func (p *ContinueAsNewWorkflowExecutionDecisionAttributes) IsSetWorkflowType() bool {
+  return p.WorkflowType != nil
+}
+
+func (p *ContinueAsNewWorkflowExecutionDecisionAttributes) IsSetTaskList() bool {
+  return p.TaskList != nil
+}
+
+func (p *ContinueAsNewWorkflowExecutionDecisionAttributes) IsSetInput() bool {
+  return p.Input != nil
+}
+
+func (p *ContinueAsNewWorkflowExecutionDecisionAttributes) IsSetExecutionStartToCloseTimeoutSeconds() bool {
+  return p.ExecutionStartToCloseTimeoutSeconds != nil
+}
+
+func (p *ContinueAsNewWorkflowExecutionDecisionAttributes) IsSetTaskStartToCloseTimeoutSeconds() bool {
+  return p.TaskStartToCloseTimeoutSeconds != nil
+}
+
+func (p *ContinueAsNewWorkflowExecutionDecisionAttributes) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 10:
+      if err := p.ReadField10(iprot); err != nil {
+        return err
+      }
+    case 20:
+      if err := p.ReadField20(iprot); err != nil {
+        return err
+      }
+    case 30:
+      if err := p.ReadField30(iprot); err != nil {
+        return err
+      }
+    case 40:
+      if err := p.ReadField40(iprot); err != nil {
+        return err
+      }
+    case 50:
+      if err := p.ReadField50(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *ContinueAsNewWorkflowExecutionDecisionAttributes)  ReadField10(iprot thrift.TProtocol) error {
+  p.WorkflowType = &WorkflowType{}
+  if err := p.WorkflowType.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.WorkflowType), err)
+  }
+  return nil
+}
+
+func (p *ContinueAsNewWorkflowExecutionDecisionAttributes)  ReadField20(iprot thrift.TProtocol) error {
+  p.TaskList = &TaskList{}
+  if err := p.TaskList.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.TaskList), err)
+  }
+  return nil
+}
+
+func (p *ContinueAsNewWorkflowExecutionDecisionAttributes)  ReadField30(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadBinary(); err != nil {
+  return thrift.PrependError("error reading field 30: ", err)
+} else {
+  p.Input = v
+}
+  return nil
+}
+
+func (p *ContinueAsNewWorkflowExecutionDecisionAttributes)  ReadField40(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI32(); err != nil {
+  return thrift.PrependError("error reading field 40: ", err)
+} else {
+  p.ExecutionStartToCloseTimeoutSeconds = &v
+}
+  return nil
+}
+
+func (p *ContinueAsNewWorkflowExecutionDecisionAttributes)  ReadField50(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI32(); err != nil {
+  return thrift.PrependError("error reading field 50: ", err)
+} else {
+  p.TaskStartToCloseTimeoutSeconds = &v
+}
+  return nil
+}
+
+func (p *ContinueAsNewWorkflowExecutionDecisionAttributes) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("ContinueAsNewWorkflowExecutionDecisionAttributes"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField10(oprot); err != nil { return err }
+    if err := p.writeField20(oprot); err != nil { return err }
+    if err := p.writeField30(oprot); err != nil { return err }
+    if err := p.writeField40(oprot); err != nil { return err }
+    if err := p.writeField50(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *ContinueAsNewWorkflowExecutionDecisionAttributes) writeField10(oprot thrift.TProtocol) (err error) {
+  if p.IsSetWorkflowType() {
+    if err := oprot.WriteFieldBegin("workflowType", thrift.STRUCT, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:workflowType: ", p), err) }
+    if err := p.WorkflowType.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.WorkflowType), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:workflowType: ", p), err) }
+  }
+  return err
+}
+
+func (p *ContinueAsNewWorkflowExecutionDecisionAttributes) writeField20(oprot thrift.TProtocol) (err error) {
+  if p.IsSetTaskList() {
+    if err := oprot.WriteFieldBegin("taskList", thrift.STRUCT, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:taskList: ", p), err) }
+    if err := p.TaskList.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.TaskList), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:taskList: ", p), err) }
+  }
+  return err
+}
+
+func (p *ContinueAsNewWorkflowExecutionDecisionAttributes) writeField30(oprot thrift.TProtocol) (err error) {
+  if p.IsSetInput() {
+    if err := oprot.WriteFieldBegin("input", thrift.STRING, 30); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 30:input: ", p), err) }
+    if err := oprot.WriteBinary(p.Input); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.input (30) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 30:input: ", p), err) }
+  }
+  return err
+}
+
+func (p *ContinueAsNewWorkflowExecutionDecisionAttributes) writeField40(oprot thrift.TProtocol) (err error) {
+  if p.IsSetExecutionStartToCloseTimeoutSeconds() {
+    if err := oprot.WriteFieldBegin("executionStartToCloseTimeoutSeconds", thrift.I32, 40); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 40:executionStartToCloseTimeoutSeconds: ", p), err) }
+    if err := oprot.WriteI32(int32(*p.ExecutionStartToCloseTimeoutSeconds)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.executionStartToCloseTimeoutSeconds (40) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 40:executionStartToCloseTimeoutSeconds: ", p), err) }
+  }
+  return err
+}
+
+func (p *ContinueAsNewWorkflowExecutionDecisionAttributes) writeField50(oprot thrift.TProtocol) (err error) {
+  if p.IsSetTaskStartToCloseTimeoutSeconds() {
+    if err := oprot.WriteFieldBegin("taskStartToCloseTimeoutSeconds", thrift.I32, 50); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 50:taskStartToCloseTimeoutSeconds: ", p), err) }
+    if err := oprot.WriteI32(int32(*p.TaskStartToCloseTimeoutSeconds)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.taskStartToCloseTimeoutSeconds (50) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 50:taskStartToCloseTimeoutSeconds: ", p), err) }
+  }
+  return err
+}
+
+func (p *ContinueAsNewWorkflowExecutionDecisionAttributes) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("ContinueAsNewWorkflowExecutionDecisionAttributes(%+v)", *p)
+}
+
+// Attributes:
 //  - DecisionType
 //  - ScheduleActivityTaskDecisionAttributes
 //  - StartTimerDecisionAttributes
@@ -2757,7 +3449,10 @@ func (p *RecordMarkerDecisionAttributes) String() string {
 //  - FailWorkflowExecutionDecisionAttributes
 //  - RequestCancelActivityTaskDecisionAttributes
 //  - CancelTimerDecisionAttributes
+//  - CancelWorkflowExecutionDecisionAttributes
+//  - RequestCancelExternalWorkflowExecutionDecisionAttributes
 //  - RecordMarkerDecisionAttributes
+//  - ContinueAsNewWorkflowExecutionDecisionAttributes
 type Decision struct {
   // unused fields # 1 to 9
   DecisionType *DecisionType `thrift:"decisionType,10" db:"decisionType" json:"decisionType,omitempty"`
@@ -2774,7 +3469,13 @@ type Decision struct {
   // unused fields # 41 to 49
   CancelTimerDecisionAttributes *CancelTimerDecisionAttributes `thrift:"cancelTimerDecisionAttributes,50" db:"cancelTimerDecisionAttributes" json:"cancelTimerDecisionAttributes,omitempty"`
   // unused fields # 51 to 59
-  RecordMarkerDecisionAttributes *RecordMarkerDecisionAttributes `thrift:"recordMarkerDecisionAttributes,60" db:"recordMarkerDecisionAttributes" json:"recordMarkerDecisionAttributes,omitempty"`
+  CancelWorkflowExecutionDecisionAttributes *CancelWorkflowExecutionDecisionAttributes `thrift:"cancelWorkflowExecutionDecisionAttributes,60" db:"cancelWorkflowExecutionDecisionAttributes" json:"cancelWorkflowExecutionDecisionAttributes,omitempty"`
+  // unused fields # 61 to 69
+  RequestCancelExternalWorkflowExecutionDecisionAttributes *RequestCancelExternalWorkflowExecutionDecisionAttributes `thrift:"requestCancelExternalWorkflowExecutionDecisionAttributes,70" db:"requestCancelExternalWorkflowExecutionDecisionAttributes" json:"requestCancelExternalWorkflowExecutionDecisionAttributes,omitempty"`
+  // unused fields # 71 to 79
+  RecordMarkerDecisionAttributes *RecordMarkerDecisionAttributes `thrift:"recordMarkerDecisionAttributes,80" db:"recordMarkerDecisionAttributes" json:"recordMarkerDecisionAttributes,omitempty"`
+  // unused fields # 81 to 89
+  ContinueAsNewWorkflowExecutionDecisionAttributes *ContinueAsNewWorkflowExecutionDecisionAttributes `thrift:"continueAsNewWorkflowExecutionDecisionAttributes,90" db:"continueAsNewWorkflowExecutionDecisionAttributes" json:"continueAsNewWorkflowExecutionDecisionAttributes,omitempty"`
 }
 
 func NewDecision() *Decision {
@@ -2830,12 +3531,33 @@ func (p *Decision) GetCancelTimerDecisionAttributes() *CancelTimerDecisionAttrib
   }
 return p.CancelTimerDecisionAttributes
 }
+var Decision_CancelWorkflowExecutionDecisionAttributes_DEFAULT *CancelWorkflowExecutionDecisionAttributes
+func (p *Decision) GetCancelWorkflowExecutionDecisionAttributes() *CancelWorkflowExecutionDecisionAttributes {
+  if !p.IsSetCancelWorkflowExecutionDecisionAttributes() {
+    return Decision_CancelWorkflowExecutionDecisionAttributes_DEFAULT
+  }
+return p.CancelWorkflowExecutionDecisionAttributes
+}
+var Decision_RequestCancelExternalWorkflowExecutionDecisionAttributes_DEFAULT *RequestCancelExternalWorkflowExecutionDecisionAttributes
+func (p *Decision) GetRequestCancelExternalWorkflowExecutionDecisionAttributes() *RequestCancelExternalWorkflowExecutionDecisionAttributes {
+  if !p.IsSetRequestCancelExternalWorkflowExecutionDecisionAttributes() {
+    return Decision_RequestCancelExternalWorkflowExecutionDecisionAttributes_DEFAULT
+  }
+return p.RequestCancelExternalWorkflowExecutionDecisionAttributes
+}
 var Decision_RecordMarkerDecisionAttributes_DEFAULT *RecordMarkerDecisionAttributes
 func (p *Decision) GetRecordMarkerDecisionAttributes() *RecordMarkerDecisionAttributes {
   if !p.IsSetRecordMarkerDecisionAttributes() {
     return Decision_RecordMarkerDecisionAttributes_DEFAULT
   }
 return p.RecordMarkerDecisionAttributes
+}
+var Decision_ContinueAsNewWorkflowExecutionDecisionAttributes_DEFAULT *ContinueAsNewWorkflowExecutionDecisionAttributes
+func (p *Decision) GetContinueAsNewWorkflowExecutionDecisionAttributes() *ContinueAsNewWorkflowExecutionDecisionAttributes {
+  if !p.IsSetContinueAsNewWorkflowExecutionDecisionAttributes() {
+    return Decision_ContinueAsNewWorkflowExecutionDecisionAttributes_DEFAULT
+  }
+return p.ContinueAsNewWorkflowExecutionDecisionAttributes
 }
 func (p *Decision) IsSetDecisionType() bool {
   return p.DecisionType != nil
@@ -2865,8 +3587,20 @@ func (p *Decision) IsSetCancelTimerDecisionAttributes() bool {
   return p.CancelTimerDecisionAttributes != nil
 }
 
+func (p *Decision) IsSetCancelWorkflowExecutionDecisionAttributes() bool {
+  return p.CancelWorkflowExecutionDecisionAttributes != nil
+}
+
+func (p *Decision) IsSetRequestCancelExternalWorkflowExecutionDecisionAttributes() bool {
+  return p.RequestCancelExternalWorkflowExecutionDecisionAttributes != nil
+}
+
 func (p *Decision) IsSetRecordMarkerDecisionAttributes() bool {
   return p.RecordMarkerDecisionAttributes != nil
+}
+
+func (p *Decision) IsSetContinueAsNewWorkflowExecutionDecisionAttributes() bool {
+  return p.ContinueAsNewWorkflowExecutionDecisionAttributes != nil
 }
 
 func (p *Decision) Read(iprot thrift.TProtocol) error {
@@ -2912,6 +3646,18 @@ func (p *Decision) Read(iprot thrift.TProtocol) error {
       }
     case 60:
       if err := p.ReadField60(iprot); err != nil {
+        return err
+      }
+    case 70:
+      if err := p.ReadField70(iprot); err != nil {
+        return err
+      }
+    case 80:
+      if err := p.ReadField80(iprot); err != nil {
+        return err
+      }
+    case 90:
+      if err := p.ReadField90(iprot); err != nil {
         return err
       }
     default:
@@ -2988,9 +3734,33 @@ func (p *Decision)  ReadField50(iprot thrift.TProtocol) error {
 }
 
 func (p *Decision)  ReadField60(iprot thrift.TProtocol) error {
+  p.CancelWorkflowExecutionDecisionAttributes = &CancelWorkflowExecutionDecisionAttributes{}
+  if err := p.CancelWorkflowExecutionDecisionAttributes.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.CancelWorkflowExecutionDecisionAttributes), err)
+  }
+  return nil
+}
+
+func (p *Decision)  ReadField70(iprot thrift.TProtocol) error {
+  p.RequestCancelExternalWorkflowExecutionDecisionAttributes = &RequestCancelExternalWorkflowExecutionDecisionAttributes{}
+  if err := p.RequestCancelExternalWorkflowExecutionDecisionAttributes.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.RequestCancelExternalWorkflowExecutionDecisionAttributes), err)
+  }
+  return nil
+}
+
+func (p *Decision)  ReadField80(iprot thrift.TProtocol) error {
   p.RecordMarkerDecisionAttributes = &RecordMarkerDecisionAttributes{}
   if err := p.RecordMarkerDecisionAttributes.Read(iprot); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.RecordMarkerDecisionAttributes), err)
+  }
+  return nil
+}
+
+func (p *Decision)  ReadField90(iprot thrift.TProtocol) error {
+  p.ContinueAsNewWorkflowExecutionDecisionAttributes = &ContinueAsNewWorkflowExecutionDecisionAttributes{}
+  if err := p.ContinueAsNewWorkflowExecutionDecisionAttributes.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.ContinueAsNewWorkflowExecutionDecisionAttributes), err)
   }
   return nil
 }
@@ -3007,6 +3777,9 @@ func (p *Decision) Write(oprot thrift.TProtocol) error {
     if err := p.writeField40(oprot); err != nil { return err }
     if err := p.writeField50(oprot); err != nil { return err }
     if err := p.writeField60(oprot); err != nil { return err }
+    if err := p.writeField70(oprot); err != nil { return err }
+    if err := p.writeField80(oprot); err != nil { return err }
+    if err := p.writeField90(oprot); err != nil { return err }
   }
   if err := oprot.WriteFieldStop(); err != nil {
     return thrift.PrependError("write field stop error: ", err) }
@@ -3106,14 +3879,53 @@ func (p *Decision) writeField50(oprot thrift.TProtocol) (err error) {
 }
 
 func (p *Decision) writeField60(oprot thrift.TProtocol) (err error) {
+  if p.IsSetCancelWorkflowExecutionDecisionAttributes() {
+    if err := oprot.WriteFieldBegin("cancelWorkflowExecutionDecisionAttributes", thrift.STRUCT, 60); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 60:cancelWorkflowExecutionDecisionAttributes: ", p), err) }
+    if err := p.CancelWorkflowExecutionDecisionAttributes.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.CancelWorkflowExecutionDecisionAttributes), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 60:cancelWorkflowExecutionDecisionAttributes: ", p), err) }
+  }
+  return err
+}
+
+func (p *Decision) writeField70(oprot thrift.TProtocol) (err error) {
+  if p.IsSetRequestCancelExternalWorkflowExecutionDecisionAttributes() {
+    if err := oprot.WriteFieldBegin("requestCancelExternalWorkflowExecutionDecisionAttributes", thrift.STRUCT, 70); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 70:requestCancelExternalWorkflowExecutionDecisionAttributes: ", p), err) }
+    if err := p.RequestCancelExternalWorkflowExecutionDecisionAttributes.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.RequestCancelExternalWorkflowExecutionDecisionAttributes), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 70:requestCancelExternalWorkflowExecutionDecisionAttributes: ", p), err) }
+  }
+  return err
+}
+
+func (p *Decision) writeField80(oprot thrift.TProtocol) (err error) {
   if p.IsSetRecordMarkerDecisionAttributes() {
-    if err := oprot.WriteFieldBegin("recordMarkerDecisionAttributes", thrift.STRUCT, 60); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field begin error 60:recordMarkerDecisionAttributes: ", p), err) }
+    if err := oprot.WriteFieldBegin("recordMarkerDecisionAttributes", thrift.STRUCT, 80); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 80:recordMarkerDecisionAttributes: ", p), err) }
     if err := p.RecordMarkerDecisionAttributes.Write(oprot); err != nil {
       return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.RecordMarkerDecisionAttributes), err)
     }
     if err := oprot.WriteFieldEnd(); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field end error 60:recordMarkerDecisionAttributes: ", p), err) }
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 80:recordMarkerDecisionAttributes: ", p), err) }
+  }
+  return err
+}
+
+func (p *Decision) writeField90(oprot thrift.TProtocol) (err error) {
+  if p.IsSetContinueAsNewWorkflowExecutionDecisionAttributes() {
+    if err := oprot.WriteFieldBegin("continueAsNewWorkflowExecutionDecisionAttributes", thrift.STRUCT, 90); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 90:continueAsNewWorkflowExecutionDecisionAttributes: ", p), err) }
+    if err := p.ContinueAsNewWorkflowExecutionDecisionAttributes.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.ContinueAsNewWorkflowExecutionDecisionAttributes), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 90:continueAsNewWorkflowExecutionDecisionAttributes: ", p), err) }
   }
   return err
 }
@@ -3821,6 +4633,339 @@ func (p *WorkflowExecutionTimedOutEventAttributes) String() string {
 }
 
 // Attributes:
+//  - NewExecutionRunId_
+//  - WorkflowType
+//  - TaskList
+//  - Input
+//  - ExecutionStartToCloseTimeoutSeconds
+//  - TaskStartToCloseTimeoutSeconds
+//  - DecisionTaskCompletedEventId
+type WorkflowExecutionContinuedAsNewEventAttributes struct {
+  // unused fields # 1 to 9
+  NewExecutionRunId_ *string `thrift:"newExecutionRunId,10" db:"newExecutionRunId" json:"newExecutionRunId,omitempty"`
+  // unused fields # 11 to 19
+  WorkflowType *WorkflowType `thrift:"workflowType,20" db:"workflowType" json:"workflowType,omitempty"`
+  // unused fields # 21 to 29
+  TaskList *TaskList `thrift:"taskList,30" db:"taskList" json:"taskList,omitempty"`
+  // unused fields # 31 to 39
+  Input []byte `thrift:"input,40" db:"input" json:"input,omitempty"`
+  // unused fields # 41 to 49
+  ExecutionStartToCloseTimeoutSeconds *int32 `thrift:"executionStartToCloseTimeoutSeconds,50" db:"executionStartToCloseTimeoutSeconds" json:"executionStartToCloseTimeoutSeconds,omitempty"`
+  // unused fields # 51 to 59
+  TaskStartToCloseTimeoutSeconds *int32 `thrift:"taskStartToCloseTimeoutSeconds,60" db:"taskStartToCloseTimeoutSeconds" json:"taskStartToCloseTimeoutSeconds,omitempty"`
+  // unused fields # 61 to 69
+  DecisionTaskCompletedEventId *int64 `thrift:"decisionTaskCompletedEventId,70" db:"decisionTaskCompletedEventId" json:"decisionTaskCompletedEventId,omitempty"`
+}
+
+func NewWorkflowExecutionContinuedAsNewEventAttributes() *WorkflowExecutionContinuedAsNewEventAttributes {
+  return &WorkflowExecutionContinuedAsNewEventAttributes{}
+}
+
+var WorkflowExecutionContinuedAsNewEventAttributes_NewExecutionRunId__DEFAULT string
+func (p *WorkflowExecutionContinuedAsNewEventAttributes) GetNewExecutionRunId_() string {
+  if !p.IsSetNewExecutionRunId_() {
+    return WorkflowExecutionContinuedAsNewEventAttributes_NewExecutionRunId__DEFAULT
+  }
+return *p.NewExecutionRunId_
+}
+var WorkflowExecutionContinuedAsNewEventAttributes_WorkflowType_DEFAULT *WorkflowType
+func (p *WorkflowExecutionContinuedAsNewEventAttributes) GetWorkflowType() *WorkflowType {
+  if !p.IsSetWorkflowType() {
+    return WorkflowExecutionContinuedAsNewEventAttributes_WorkflowType_DEFAULT
+  }
+return p.WorkflowType
+}
+var WorkflowExecutionContinuedAsNewEventAttributes_TaskList_DEFAULT *TaskList
+func (p *WorkflowExecutionContinuedAsNewEventAttributes) GetTaskList() *TaskList {
+  if !p.IsSetTaskList() {
+    return WorkflowExecutionContinuedAsNewEventAttributes_TaskList_DEFAULT
+  }
+return p.TaskList
+}
+var WorkflowExecutionContinuedAsNewEventAttributes_Input_DEFAULT []byte
+
+func (p *WorkflowExecutionContinuedAsNewEventAttributes) GetInput() []byte {
+  return p.Input
+}
+var WorkflowExecutionContinuedAsNewEventAttributes_ExecutionStartToCloseTimeoutSeconds_DEFAULT int32
+func (p *WorkflowExecutionContinuedAsNewEventAttributes) GetExecutionStartToCloseTimeoutSeconds() int32 {
+  if !p.IsSetExecutionStartToCloseTimeoutSeconds() {
+    return WorkflowExecutionContinuedAsNewEventAttributes_ExecutionStartToCloseTimeoutSeconds_DEFAULT
+  }
+return *p.ExecutionStartToCloseTimeoutSeconds
+}
+var WorkflowExecutionContinuedAsNewEventAttributes_TaskStartToCloseTimeoutSeconds_DEFAULT int32
+func (p *WorkflowExecutionContinuedAsNewEventAttributes) GetTaskStartToCloseTimeoutSeconds() int32 {
+  if !p.IsSetTaskStartToCloseTimeoutSeconds() {
+    return WorkflowExecutionContinuedAsNewEventAttributes_TaskStartToCloseTimeoutSeconds_DEFAULT
+  }
+return *p.TaskStartToCloseTimeoutSeconds
+}
+var WorkflowExecutionContinuedAsNewEventAttributes_DecisionTaskCompletedEventId_DEFAULT int64
+func (p *WorkflowExecutionContinuedAsNewEventAttributes) GetDecisionTaskCompletedEventId() int64 {
+  if !p.IsSetDecisionTaskCompletedEventId() {
+    return WorkflowExecutionContinuedAsNewEventAttributes_DecisionTaskCompletedEventId_DEFAULT
+  }
+return *p.DecisionTaskCompletedEventId
+}
+func (p *WorkflowExecutionContinuedAsNewEventAttributes) IsSetNewExecutionRunId_() bool {
+  return p.NewExecutionRunId_ != nil
+}
+
+func (p *WorkflowExecutionContinuedAsNewEventAttributes) IsSetWorkflowType() bool {
+  return p.WorkflowType != nil
+}
+
+func (p *WorkflowExecutionContinuedAsNewEventAttributes) IsSetTaskList() bool {
+  return p.TaskList != nil
+}
+
+func (p *WorkflowExecutionContinuedAsNewEventAttributes) IsSetInput() bool {
+  return p.Input != nil
+}
+
+func (p *WorkflowExecutionContinuedAsNewEventAttributes) IsSetExecutionStartToCloseTimeoutSeconds() bool {
+  return p.ExecutionStartToCloseTimeoutSeconds != nil
+}
+
+func (p *WorkflowExecutionContinuedAsNewEventAttributes) IsSetTaskStartToCloseTimeoutSeconds() bool {
+  return p.TaskStartToCloseTimeoutSeconds != nil
+}
+
+func (p *WorkflowExecutionContinuedAsNewEventAttributes) IsSetDecisionTaskCompletedEventId() bool {
+  return p.DecisionTaskCompletedEventId != nil
+}
+
+func (p *WorkflowExecutionContinuedAsNewEventAttributes) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 10:
+      if err := p.ReadField10(iprot); err != nil {
+        return err
+      }
+    case 20:
+      if err := p.ReadField20(iprot); err != nil {
+        return err
+      }
+    case 30:
+      if err := p.ReadField30(iprot); err != nil {
+        return err
+      }
+    case 40:
+      if err := p.ReadField40(iprot); err != nil {
+        return err
+      }
+    case 50:
+      if err := p.ReadField50(iprot); err != nil {
+        return err
+      }
+    case 60:
+      if err := p.ReadField60(iprot); err != nil {
+        return err
+      }
+    case 70:
+      if err := p.ReadField70(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *WorkflowExecutionContinuedAsNewEventAttributes)  ReadField10(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 10: ", err)
+} else {
+  p.NewExecutionRunId_ = &v
+}
+  return nil
+}
+
+func (p *WorkflowExecutionContinuedAsNewEventAttributes)  ReadField20(iprot thrift.TProtocol) error {
+  p.WorkflowType = &WorkflowType{}
+  if err := p.WorkflowType.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.WorkflowType), err)
+  }
+  return nil
+}
+
+func (p *WorkflowExecutionContinuedAsNewEventAttributes)  ReadField30(iprot thrift.TProtocol) error {
+  p.TaskList = &TaskList{}
+  if err := p.TaskList.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.TaskList), err)
+  }
+  return nil
+}
+
+func (p *WorkflowExecutionContinuedAsNewEventAttributes)  ReadField40(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadBinary(); err != nil {
+  return thrift.PrependError("error reading field 40: ", err)
+} else {
+  p.Input = v
+}
+  return nil
+}
+
+func (p *WorkflowExecutionContinuedAsNewEventAttributes)  ReadField50(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI32(); err != nil {
+  return thrift.PrependError("error reading field 50: ", err)
+} else {
+  p.ExecutionStartToCloseTimeoutSeconds = &v
+}
+  return nil
+}
+
+func (p *WorkflowExecutionContinuedAsNewEventAttributes)  ReadField60(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI32(); err != nil {
+  return thrift.PrependError("error reading field 60: ", err)
+} else {
+  p.TaskStartToCloseTimeoutSeconds = &v
+}
+  return nil
+}
+
+func (p *WorkflowExecutionContinuedAsNewEventAttributes)  ReadField70(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI64(); err != nil {
+  return thrift.PrependError("error reading field 70: ", err)
+} else {
+  p.DecisionTaskCompletedEventId = &v
+}
+  return nil
+}
+
+func (p *WorkflowExecutionContinuedAsNewEventAttributes) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("WorkflowExecutionContinuedAsNewEventAttributes"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField10(oprot); err != nil { return err }
+    if err := p.writeField20(oprot); err != nil { return err }
+    if err := p.writeField30(oprot); err != nil { return err }
+    if err := p.writeField40(oprot); err != nil { return err }
+    if err := p.writeField50(oprot); err != nil { return err }
+    if err := p.writeField60(oprot); err != nil { return err }
+    if err := p.writeField70(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *WorkflowExecutionContinuedAsNewEventAttributes) writeField10(oprot thrift.TProtocol) (err error) {
+  if p.IsSetNewExecutionRunId_() {
+    if err := oprot.WriteFieldBegin("newExecutionRunId", thrift.STRING, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:newExecutionRunId: ", p), err) }
+    if err := oprot.WriteString(string(*p.NewExecutionRunId_)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.newExecutionRunId (10) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:newExecutionRunId: ", p), err) }
+  }
+  return err
+}
+
+func (p *WorkflowExecutionContinuedAsNewEventAttributes) writeField20(oprot thrift.TProtocol) (err error) {
+  if p.IsSetWorkflowType() {
+    if err := oprot.WriteFieldBegin("workflowType", thrift.STRUCT, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:workflowType: ", p), err) }
+    if err := p.WorkflowType.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.WorkflowType), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:workflowType: ", p), err) }
+  }
+  return err
+}
+
+func (p *WorkflowExecutionContinuedAsNewEventAttributes) writeField30(oprot thrift.TProtocol) (err error) {
+  if p.IsSetTaskList() {
+    if err := oprot.WriteFieldBegin("taskList", thrift.STRUCT, 30); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 30:taskList: ", p), err) }
+    if err := p.TaskList.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.TaskList), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 30:taskList: ", p), err) }
+  }
+  return err
+}
+
+func (p *WorkflowExecutionContinuedAsNewEventAttributes) writeField40(oprot thrift.TProtocol) (err error) {
+  if p.IsSetInput() {
+    if err := oprot.WriteFieldBegin("input", thrift.STRING, 40); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 40:input: ", p), err) }
+    if err := oprot.WriteBinary(p.Input); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.input (40) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 40:input: ", p), err) }
+  }
+  return err
+}
+
+func (p *WorkflowExecutionContinuedAsNewEventAttributes) writeField50(oprot thrift.TProtocol) (err error) {
+  if p.IsSetExecutionStartToCloseTimeoutSeconds() {
+    if err := oprot.WriteFieldBegin("executionStartToCloseTimeoutSeconds", thrift.I32, 50); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 50:executionStartToCloseTimeoutSeconds: ", p), err) }
+    if err := oprot.WriteI32(int32(*p.ExecutionStartToCloseTimeoutSeconds)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.executionStartToCloseTimeoutSeconds (50) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 50:executionStartToCloseTimeoutSeconds: ", p), err) }
+  }
+  return err
+}
+
+func (p *WorkflowExecutionContinuedAsNewEventAttributes) writeField60(oprot thrift.TProtocol) (err error) {
+  if p.IsSetTaskStartToCloseTimeoutSeconds() {
+    if err := oprot.WriteFieldBegin("taskStartToCloseTimeoutSeconds", thrift.I32, 60); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 60:taskStartToCloseTimeoutSeconds: ", p), err) }
+    if err := oprot.WriteI32(int32(*p.TaskStartToCloseTimeoutSeconds)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.taskStartToCloseTimeoutSeconds (60) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 60:taskStartToCloseTimeoutSeconds: ", p), err) }
+  }
+  return err
+}
+
+func (p *WorkflowExecutionContinuedAsNewEventAttributes) writeField70(oprot thrift.TProtocol) (err error) {
+  if p.IsSetDecisionTaskCompletedEventId() {
+    if err := oprot.WriteFieldBegin("decisionTaskCompletedEventId", thrift.I64, 70); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 70:decisionTaskCompletedEventId: ", p), err) }
+    if err := oprot.WriteI64(int64(*p.DecisionTaskCompletedEventId)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.decisionTaskCompletedEventId (70) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 70:decisionTaskCompletedEventId: ", p), err) }
+  }
+  return err
+}
+
+func (p *WorkflowExecutionContinuedAsNewEventAttributes) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("WorkflowExecutionContinuedAsNewEventAttributes(%+v)", *p)
+}
+
+// Attributes:
 //  - Cause
 //  - DecisionTaskCompletedEventId
 type CompleteWorkflowExecutionFailedEventAttributes struct {
@@ -3954,6 +5099,142 @@ func (p *CompleteWorkflowExecutionFailedEventAttributes) String() string {
     return "<nil>"
   }
   return fmt.Sprintf("CompleteWorkflowExecutionFailedEventAttributes(%+v)", *p)
+}
+
+// Attributes:
+//  - Cause
+//  - DecisionTaskCompletedEventId
+type ContinueAsNewWorkflowExecutionFailedEventAttributes struct {
+  // unused fields # 1 to 9
+  Cause *WorkflowCompleteFailedCause `thrift:"cause,10" db:"cause" json:"cause,omitempty"`
+  // unused fields # 11 to 19
+  DecisionTaskCompletedEventId *int64 `thrift:"decisionTaskCompletedEventId,20" db:"decisionTaskCompletedEventId" json:"decisionTaskCompletedEventId,omitempty"`
+}
+
+func NewContinueAsNewWorkflowExecutionFailedEventAttributes() *ContinueAsNewWorkflowExecutionFailedEventAttributes {
+  return &ContinueAsNewWorkflowExecutionFailedEventAttributes{}
+}
+
+var ContinueAsNewWorkflowExecutionFailedEventAttributes_Cause_DEFAULT WorkflowCompleteFailedCause
+func (p *ContinueAsNewWorkflowExecutionFailedEventAttributes) GetCause() WorkflowCompleteFailedCause {
+  if !p.IsSetCause() {
+    return ContinueAsNewWorkflowExecutionFailedEventAttributes_Cause_DEFAULT
+  }
+return *p.Cause
+}
+var ContinueAsNewWorkflowExecutionFailedEventAttributes_DecisionTaskCompletedEventId_DEFAULT int64
+func (p *ContinueAsNewWorkflowExecutionFailedEventAttributes) GetDecisionTaskCompletedEventId() int64 {
+  if !p.IsSetDecisionTaskCompletedEventId() {
+    return ContinueAsNewWorkflowExecutionFailedEventAttributes_DecisionTaskCompletedEventId_DEFAULT
+  }
+return *p.DecisionTaskCompletedEventId
+}
+func (p *ContinueAsNewWorkflowExecutionFailedEventAttributes) IsSetCause() bool {
+  return p.Cause != nil
+}
+
+func (p *ContinueAsNewWorkflowExecutionFailedEventAttributes) IsSetDecisionTaskCompletedEventId() bool {
+  return p.DecisionTaskCompletedEventId != nil
+}
+
+func (p *ContinueAsNewWorkflowExecutionFailedEventAttributes) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 10:
+      if err := p.ReadField10(iprot); err != nil {
+        return err
+      }
+    case 20:
+      if err := p.ReadField20(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *ContinueAsNewWorkflowExecutionFailedEventAttributes)  ReadField10(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI32(); err != nil {
+  return thrift.PrependError("error reading field 10: ", err)
+} else {
+  temp := WorkflowCompleteFailedCause(v)
+  p.Cause = &temp
+}
+  return nil
+}
+
+func (p *ContinueAsNewWorkflowExecutionFailedEventAttributes)  ReadField20(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI64(); err != nil {
+  return thrift.PrependError("error reading field 20: ", err)
+} else {
+  p.DecisionTaskCompletedEventId = &v
+}
+  return nil
+}
+
+func (p *ContinueAsNewWorkflowExecutionFailedEventAttributes) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("ContinueAsNewWorkflowExecutionFailedEventAttributes"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField10(oprot); err != nil { return err }
+    if err := p.writeField20(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *ContinueAsNewWorkflowExecutionFailedEventAttributes) writeField10(oprot thrift.TProtocol) (err error) {
+  if p.IsSetCause() {
+    if err := oprot.WriteFieldBegin("cause", thrift.I32, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:cause: ", p), err) }
+    if err := oprot.WriteI32(int32(*p.Cause)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.cause (10) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:cause: ", p), err) }
+  }
+  return err
+}
+
+func (p *ContinueAsNewWorkflowExecutionFailedEventAttributes) writeField20(oprot thrift.TProtocol) (err error) {
+  if p.IsSetDecisionTaskCompletedEventId() {
+    if err := oprot.WriteFieldBegin("decisionTaskCompletedEventId", thrift.I64, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:decisionTaskCompletedEventId: ", p), err) }
+    if err := oprot.WriteI64(int64(*p.DecisionTaskCompletedEventId)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.decisionTaskCompletedEventId (20) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:decisionTaskCompletedEventId: ", p), err) }
+  }
+  return err
+}
+
+func (p *ContinueAsNewWorkflowExecutionFailedEventAttributes) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("ContinueAsNewWorkflowExecutionFailedEventAttributes(%+v)", *p)
 }
 
 // Attributes:
@@ -7267,6 +8548,490 @@ func (p *CancelTimerFailedEventAttributes) String() string {
 }
 
 // Attributes:
+//  - Cause
+//  - ExternalInitiatedEventId
+//  - ExternalWorkflowExecution
+//  - Identity
+type WorkflowExecutionCancelRequestedEventAttributes struct {
+  // unused fields # 1 to 9
+  Cause *string `thrift:"cause,10" db:"cause" json:"cause,omitempty"`
+  // unused fields # 11 to 19
+  ExternalInitiatedEventId *int64 `thrift:"externalInitiatedEventId,20" db:"externalInitiatedEventId" json:"externalInitiatedEventId,omitempty"`
+  // unused fields # 21 to 29
+  ExternalWorkflowExecution *WorkflowExecution `thrift:"externalWorkflowExecution,30" db:"externalWorkflowExecution" json:"externalWorkflowExecution,omitempty"`
+  // unused fields # 31 to 39
+  Identity *string `thrift:"identity,40" db:"identity" json:"identity,omitempty"`
+}
+
+func NewWorkflowExecutionCancelRequestedEventAttributes() *WorkflowExecutionCancelRequestedEventAttributes {
+  return &WorkflowExecutionCancelRequestedEventAttributes{}
+}
+
+var WorkflowExecutionCancelRequestedEventAttributes_Cause_DEFAULT string
+func (p *WorkflowExecutionCancelRequestedEventAttributes) GetCause() string {
+  if !p.IsSetCause() {
+    return WorkflowExecutionCancelRequestedEventAttributes_Cause_DEFAULT
+  }
+return *p.Cause
+}
+var WorkflowExecutionCancelRequestedEventAttributes_ExternalInitiatedEventId_DEFAULT int64
+func (p *WorkflowExecutionCancelRequestedEventAttributes) GetExternalInitiatedEventId() int64 {
+  if !p.IsSetExternalInitiatedEventId() {
+    return WorkflowExecutionCancelRequestedEventAttributes_ExternalInitiatedEventId_DEFAULT
+  }
+return *p.ExternalInitiatedEventId
+}
+var WorkflowExecutionCancelRequestedEventAttributes_ExternalWorkflowExecution_DEFAULT *WorkflowExecution
+func (p *WorkflowExecutionCancelRequestedEventAttributes) GetExternalWorkflowExecution() *WorkflowExecution {
+  if !p.IsSetExternalWorkflowExecution() {
+    return WorkflowExecutionCancelRequestedEventAttributes_ExternalWorkflowExecution_DEFAULT
+  }
+return p.ExternalWorkflowExecution
+}
+var WorkflowExecutionCancelRequestedEventAttributes_Identity_DEFAULT string
+func (p *WorkflowExecutionCancelRequestedEventAttributes) GetIdentity() string {
+  if !p.IsSetIdentity() {
+    return WorkflowExecutionCancelRequestedEventAttributes_Identity_DEFAULT
+  }
+return *p.Identity
+}
+func (p *WorkflowExecutionCancelRequestedEventAttributes) IsSetCause() bool {
+  return p.Cause != nil
+}
+
+func (p *WorkflowExecutionCancelRequestedEventAttributes) IsSetExternalInitiatedEventId() bool {
+  return p.ExternalInitiatedEventId != nil
+}
+
+func (p *WorkflowExecutionCancelRequestedEventAttributes) IsSetExternalWorkflowExecution() bool {
+  return p.ExternalWorkflowExecution != nil
+}
+
+func (p *WorkflowExecutionCancelRequestedEventAttributes) IsSetIdentity() bool {
+  return p.Identity != nil
+}
+
+func (p *WorkflowExecutionCancelRequestedEventAttributes) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 10:
+      if err := p.ReadField10(iprot); err != nil {
+        return err
+      }
+    case 20:
+      if err := p.ReadField20(iprot); err != nil {
+        return err
+      }
+    case 30:
+      if err := p.ReadField30(iprot); err != nil {
+        return err
+      }
+    case 40:
+      if err := p.ReadField40(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *WorkflowExecutionCancelRequestedEventAttributes)  ReadField10(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 10: ", err)
+} else {
+  p.Cause = &v
+}
+  return nil
+}
+
+func (p *WorkflowExecutionCancelRequestedEventAttributes)  ReadField20(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI64(); err != nil {
+  return thrift.PrependError("error reading field 20: ", err)
+} else {
+  p.ExternalInitiatedEventId = &v
+}
+  return nil
+}
+
+func (p *WorkflowExecutionCancelRequestedEventAttributes)  ReadField30(iprot thrift.TProtocol) error {
+  p.ExternalWorkflowExecution = &WorkflowExecution{}
+  if err := p.ExternalWorkflowExecution.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.ExternalWorkflowExecution), err)
+  }
+  return nil
+}
+
+func (p *WorkflowExecutionCancelRequestedEventAttributes)  ReadField40(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 40: ", err)
+} else {
+  p.Identity = &v
+}
+  return nil
+}
+
+func (p *WorkflowExecutionCancelRequestedEventAttributes) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("WorkflowExecutionCancelRequestedEventAttributes"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField10(oprot); err != nil { return err }
+    if err := p.writeField20(oprot); err != nil { return err }
+    if err := p.writeField30(oprot); err != nil { return err }
+    if err := p.writeField40(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *WorkflowExecutionCancelRequestedEventAttributes) writeField10(oprot thrift.TProtocol) (err error) {
+  if p.IsSetCause() {
+    if err := oprot.WriteFieldBegin("cause", thrift.STRING, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:cause: ", p), err) }
+    if err := oprot.WriteString(string(*p.Cause)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.cause (10) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:cause: ", p), err) }
+  }
+  return err
+}
+
+func (p *WorkflowExecutionCancelRequestedEventAttributes) writeField20(oprot thrift.TProtocol) (err error) {
+  if p.IsSetExternalInitiatedEventId() {
+    if err := oprot.WriteFieldBegin("externalInitiatedEventId", thrift.I64, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:externalInitiatedEventId: ", p), err) }
+    if err := oprot.WriteI64(int64(*p.ExternalInitiatedEventId)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.externalInitiatedEventId (20) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:externalInitiatedEventId: ", p), err) }
+  }
+  return err
+}
+
+func (p *WorkflowExecutionCancelRequestedEventAttributes) writeField30(oprot thrift.TProtocol) (err error) {
+  if p.IsSetExternalWorkflowExecution() {
+    if err := oprot.WriteFieldBegin("externalWorkflowExecution", thrift.STRUCT, 30); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 30:externalWorkflowExecution: ", p), err) }
+    if err := p.ExternalWorkflowExecution.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.ExternalWorkflowExecution), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 30:externalWorkflowExecution: ", p), err) }
+  }
+  return err
+}
+
+func (p *WorkflowExecutionCancelRequestedEventAttributes) writeField40(oprot thrift.TProtocol) (err error) {
+  if p.IsSetIdentity() {
+    if err := oprot.WriteFieldBegin("identity", thrift.STRING, 40); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 40:identity: ", p), err) }
+    if err := oprot.WriteString(string(*p.Identity)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.identity (40) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 40:identity: ", p), err) }
+  }
+  return err
+}
+
+func (p *WorkflowExecutionCancelRequestedEventAttributes) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("WorkflowExecutionCancelRequestedEventAttributes(%+v)", *p)
+}
+
+// Attributes:
+//  - Cause
+//  - DecisionTaskCompletedEventId
+type CancelWorkflowExecutionFailedEventAttributes struct {
+  // unused fields # 1 to 9
+  Cause *WorkflowCancelFailedCause `thrift:"cause,10" db:"cause" json:"cause,omitempty"`
+  // unused fields # 11 to 19
+  DecisionTaskCompletedEventId *int64 `thrift:"decisionTaskCompletedEventId,20" db:"decisionTaskCompletedEventId" json:"decisionTaskCompletedEventId,omitempty"`
+}
+
+func NewCancelWorkflowExecutionFailedEventAttributes() *CancelWorkflowExecutionFailedEventAttributes {
+  return &CancelWorkflowExecutionFailedEventAttributes{}
+}
+
+var CancelWorkflowExecutionFailedEventAttributes_Cause_DEFAULT WorkflowCancelFailedCause
+func (p *CancelWorkflowExecutionFailedEventAttributes) GetCause() WorkflowCancelFailedCause {
+  if !p.IsSetCause() {
+    return CancelWorkflowExecutionFailedEventAttributes_Cause_DEFAULT
+  }
+return *p.Cause
+}
+var CancelWorkflowExecutionFailedEventAttributes_DecisionTaskCompletedEventId_DEFAULT int64
+func (p *CancelWorkflowExecutionFailedEventAttributes) GetDecisionTaskCompletedEventId() int64 {
+  if !p.IsSetDecisionTaskCompletedEventId() {
+    return CancelWorkflowExecutionFailedEventAttributes_DecisionTaskCompletedEventId_DEFAULT
+  }
+return *p.DecisionTaskCompletedEventId
+}
+func (p *CancelWorkflowExecutionFailedEventAttributes) IsSetCause() bool {
+  return p.Cause != nil
+}
+
+func (p *CancelWorkflowExecutionFailedEventAttributes) IsSetDecisionTaskCompletedEventId() bool {
+  return p.DecisionTaskCompletedEventId != nil
+}
+
+func (p *CancelWorkflowExecutionFailedEventAttributes) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 10:
+      if err := p.ReadField10(iprot); err != nil {
+        return err
+      }
+    case 20:
+      if err := p.ReadField20(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *CancelWorkflowExecutionFailedEventAttributes)  ReadField10(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI32(); err != nil {
+  return thrift.PrependError("error reading field 10: ", err)
+} else {
+  temp := WorkflowCancelFailedCause(v)
+  p.Cause = &temp
+}
+  return nil
+}
+
+func (p *CancelWorkflowExecutionFailedEventAttributes)  ReadField20(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI64(); err != nil {
+  return thrift.PrependError("error reading field 20: ", err)
+} else {
+  p.DecisionTaskCompletedEventId = &v
+}
+  return nil
+}
+
+func (p *CancelWorkflowExecutionFailedEventAttributes) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("CancelWorkflowExecutionFailedEventAttributes"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField10(oprot); err != nil { return err }
+    if err := p.writeField20(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *CancelWorkflowExecutionFailedEventAttributes) writeField10(oprot thrift.TProtocol) (err error) {
+  if p.IsSetCause() {
+    if err := oprot.WriteFieldBegin("cause", thrift.I32, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:cause: ", p), err) }
+    if err := oprot.WriteI32(int32(*p.Cause)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.cause (10) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:cause: ", p), err) }
+  }
+  return err
+}
+
+func (p *CancelWorkflowExecutionFailedEventAttributes) writeField20(oprot thrift.TProtocol) (err error) {
+  if p.IsSetDecisionTaskCompletedEventId() {
+    if err := oprot.WriteFieldBegin("decisionTaskCompletedEventId", thrift.I64, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:decisionTaskCompletedEventId: ", p), err) }
+    if err := oprot.WriteI64(int64(*p.DecisionTaskCompletedEventId)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.decisionTaskCompletedEventId (20) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:decisionTaskCompletedEventId: ", p), err) }
+  }
+  return err
+}
+
+func (p *CancelWorkflowExecutionFailedEventAttributes) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("CancelWorkflowExecutionFailedEventAttributes(%+v)", *p)
+}
+
+// Attributes:
+//  - DecisionTaskCompletedEventId
+//  - Details
+type WorkflowExecutionCanceledEventAttributes struct {
+  // unused fields # 1 to 9
+  DecisionTaskCompletedEventId *int64 `thrift:"decisionTaskCompletedEventId,10" db:"decisionTaskCompletedEventId" json:"decisionTaskCompletedEventId,omitempty"`
+  // unused fields # 11 to 19
+  Details []byte `thrift:"details,20" db:"details" json:"details,omitempty"`
+}
+
+func NewWorkflowExecutionCanceledEventAttributes() *WorkflowExecutionCanceledEventAttributes {
+  return &WorkflowExecutionCanceledEventAttributes{}
+}
+
+var WorkflowExecutionCanceledEventAttributes_DecisionTaskCompletedEventId_DEFAULT int64
+func (p *WorkflowExecutionCanceledEventAttributes) GetDecisionTaskCompletedEventId() int64 {
+  if !p.IsSetDecisionTaskCompletedEventId() {
+    return WorkflowExecutionCanceledEventAttributes_DecisionTaskCompletedEventId_DEFAULT
+  }
+return *p.DecisionTaskCompletedEventId
+}
+var WorkflowExecutionCanceledEventAttributes_Details_DEFAULT []byte
+
+func (p *WorkflowExecutionCanceledEventAttributes) GetDetails() []byte {
+  return p.Details
+}
+func (p *WorkflowExecutionCanceledEventAttributes) IsSetDecisionTaskCompletedEventId() bool {
+  return p.DecisionTaskCompletedEventId != nil
+}
+
+func (p *WorkflowExecutionCanceledEventAttributes) IsSetDetails() bool {
+  return p.Details != nil
+}
+
+func (p *WorkflowExecutionCanceledEventAttributes) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 10:
+      if err := p.ReadField10(iprot); err != nil {
+        return err
+      }
+    case 20:
+      if err := p.ReadField20(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *WorkflowExecutionCanceledEventAttributes)  ReadField10(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI64(); err != nil {
+  return thrift.PrependError("error reading field 10: ", err)
+} else {
+  p.DecisionTaskCompletedEventId = &v
+}
+  return nil
+}
+
+func (p *WorkflowExecutionCanceledEventAttributes)  ReadField20(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadBinary(); err != nil {
+  return thrift.PrependError("error reading field 20: ", err)
+} else {
+  p.Details = v
+}
+  return nil
+}
+
+func (p *WorkflowExecutionCanceledEventAttributes) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("WorkflowExecutionCanceledEventAttributes"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField10(oprot); err != nil { return err }
+    if err := p.writeField20(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *WorkflowExecutionCanceledEventAttributes) writeField10(oprot thrift.TProtocol) (err error) {
+  if p.IsSetDecisionTaskCompletedEventId() {
+    if err := oprot.WriteFieldBegin("decisionTaskCompletedEventId", thrift.I64, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:decisionTaskCompletedEventId: ", p), err) }
+    if err := oprot.WriteI64(int64(*p.DecisionTaskCompletedEventId)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.decisionTaskCompletedEventId (10) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:decisionTaskCompletedEventId: ", p), err) }
+  }
+  return err
+}
+
+func (p *WorkflowExecutionCanceledEventAttributes) writeField20(oprot thrift.TProtocol) (err error) {
+  if p.IsSetDetails() {
+    if err := oprot.WriteFieldBegin("details", thrift.STRING, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:details: ", p), err) }
+    if err := oprot.WriteBinary(p.Details); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.details (20) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:details: ", p), err) }
+  }
+  return err
+}
+
+func (p *WorkflowExecutionCanceledEventAttributes) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("WorkflowExecutionCanceledEventAttributes(%+v)", *p)
+}
+
+// Attributes:
 //  - MarkerName
 //  - Details
 //  - DecisionTaskCompletedEventId
@@ -7786,6 +9551,688 @@ func (p *WorkflowExecutionTerminatedEventAttributes) String() string {
 }
 
 // Attributes:
+//  - DecisionTaskCompletedEventId
+//  - Domain
+//  - WorkflowExecution
+//  - Control
+type RequestCancelExternalWorkflowExecutionInitiatedEventAttributes struct {
+  // unused fields # 1 to 9
+  DecisionTaskCompletedEventId *int64 `thrift:"decisionTaskCompletedEventId,10" db:"decisionTaskCompletedEventId" json:"decisionTaskCompletedEventId,omitempty"`
+  // unused fields # 11 to 19
+  Domain *string `thrift:"domain,20" db:"domain" json:"domain,omitempty"`
+  // unused fields # 21 to 29
+  WorkflowExecution *WorkflowExecution `thrift:"workflowExecution,30" db:"workflowExecution" json:"workflowExecution,omitempty"`
+  // unused fields # 31 to 39
+  Control []byte `thrift:"control,40" db:"control" json:"control,omitempty"`
+}
+
+func NewRequestCancelExternalWorkflowExecutionInitiatedEventAttributes() *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes {
+  return &RequestCancelExternalWorkflowExecutionInitiatedEventAttributes{}
+}
+
+var RequestCancelExternalWorkflowExecutionInitiatedEventAttributes_DecisionTaskCompletedEventId_DEFAULT int64
+func (p *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) GetDecisionTaskCompletedEventId() int64 {
+  if !p.IsSetDecisionTaskCompletedEventId() {
+    return RequestCancelExternalWorkflowExecutionInitiatedEventAttributes_DecisionTaskCompletedEventId_DEFAULT
+  }
+return *p.DecisionTaskCompletedEventId
+}
+var RequestCancelExternalWorkflowExecutionInitiatedEventAttributes_Domain_DEFAULT string
+func (p *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) GetDomain() string {
+  if !p.IsSetDomain() {
+    return RequestCancelExternalWorkflowExecutionInitiatedEventAttributes_Domain_DEFAULT
+  }
+return *p.Domain
+}
+var RequestCancelExternalWorkflowExecutionInitiatedEventAttributes_WorkflowExecution_DEFAULT *WorkflowExecution
+func (p *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) GetWorkflowExecution() *WorkflowExecution {
+  if !p.IsSetWorkflowExecution() {
+    return RequestCancelExternalWorkflowExecutionInitiatedEventAttributes_WorkflowExecution_DEFAULT
+  }
+return p.WorkflowExecution
+}
+var RequestCancelExternalWorkflowExecutionInitiatedEventAttributes_Control_DEFAULT []byte
+
+func (p *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) GetControl() []byte {
+  return p.Control
+}
+func (p *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) IsSetDecisionTaskCompletedEventId() bool {
+  return p.DecisionTaskCompletedEventId != nil
+}
+
+func (p *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) IsSetDomain() bool {
+  return p.Domain != nil
+}
+
+func (p *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) IsSetWorkflowExecution() bool {
+  return p.WorkflowExecution != nil
+}
+
+func (p *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) IsSetControl() bool {
+  return p.Control != nil
+}
+
+func (p *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 10:
+      if err := p.ReadField10(iprot); err != nil {
+        return err
+      }
+    case 20:
+      if err := p.ReadField20(iprot); err != nil {
+        return err
+      }
+    case 30:
+      if err := p.ReadField30(iprot); err != nil {
+        return err
+      }
+    case 40:
+      if err := p.ReadField40(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes)  ReadField10(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI64(); err != nil {
+  return thrift.PrependError("error reading field 10: ", err)
+} else {
+  p.DecisionTaskCompletedEventId = &v
+}
+  return nil
+}
+
+func (p *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes)  ReadField20(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 20: ", err)
+} else {
+  p.Domain = &v
+}
+  return nil
+}
+
+func (p *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes)  ReadField30(iprot thrift.TProtocol) error {
+  p.WorkflowExecution = &WorkflowExecution{}
+  if err := p.WorkflowExecution.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.WorkflowExecution), err)
+  }
+  return nil
+}
+
+func (p *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes)  ReadField40(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadBinary(); err != nil {
+  return thrift.PrependError("error reading field 40: ", err)
+} else {
+  p.Control = v
+}
+  return nil
+}
+
+func (p *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("RequestCancelExternalWorkflowExecutionInitiatedEventAttributes"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField10(oprot); err != nil { return err }
+    if err := p.writeField20(oprot); err != nil { return err }
+    if err := p.writeField30(oprot); err != nil { return err }
+    if err := p.writeField40(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) writeField10(oprot thrift.TProtocol) (err error) {
+  if p.IsSetDecisionTaskCompletedEventId() {
+    if err := oprot.WriteFieldBegin("decisionTaskCompletedEventId", thrift.I64, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:decisionTaskCompletedEventId: ", p), err) }
+    if err := oprot.WriteI64(int64(*p.DecisionTaskCompletedEventId)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.decisionTaskCompletedEventId (10) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:decisionTaskCompletedEventId: ", p), err) }
+  }
+  return err
+}
+
+func (p *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) writeField20(oprot thrift.TProtocol) (err error) {
+  if p.IsSetDomain() {
+    if err := oprot.WriteFieldBegin("domain", thrift.STRING, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:domain: ", p), err) }
+    if err := oprot.WriteString(string(*p.Domain)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.domain (20) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:domain: ", p), err) }
+  }
+  return err
+}
+
+func (p *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) writeField30(oprot thrift.TProtocol) (err error) {
+  if p.IsSetWorkflowExecution() {
+    if err := oprot.WriteFieldBegin("workflowExecution", thrift.STRUCT, 30); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 30:workflowExecution: ", p), err) }
+    if err := p.WorkflowExecution.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.WorkflowExecution), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 30:workflowExecution: ", p), err) }
+  }
+  return err
+}
+
+func (p *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) writeField40(oprot thrift.TProtocol) (err error) {
+  if p.IsSetControl() {
+    if err := oprot.WriteFieldBegin("control", thrift.STRING, 40); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 40:control: ", p), err) }
+    if err := oprot.WriteBinary(p.Control); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.control (40) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 40:control: ", p), err) }
+  }
+  return err
+}
+
+func (p *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("RequestCancelExternalWorkflowExecutionInitiatedEventAttributes(%+v)", *p)
+}
+
+// Attributes:
+//  - Cause
+//  - DecisionTaskCompletedEventId
+//  - Domain
+//  - WorkflowExecution
+//  - InitiatedEventId
+//  - Control
+type RequestCancelExternalWorkflowExecutionFailedEventAttributes struct {
+  // unused fields # 1 to 9
+  Cause *CancelExternalWorkflowExecutionFailedCause `thrift:"cause,10" db:"cause" json:"cause,omitempty"`
+  // unused fields # 11 to 19
+  DecisionTaskCompletedEventId *int64 `thrift:"decisionTaskCompletedEventId,20" db:"decisionTaskCompletedEventId" json:"decisionTaskCompletedEventId,omitempty"`
+  // unused fields # 21 to 29
+  Domain *string `thrift:"domain,30" db:"domain" json:"domain,omitempty"`
+  // unused fields # 31 to 39
+  WorkflowExecution *WorkflowExecution `thrift:"workflowExecution,40" db:"workflowExecution" json:"workflowExecution,omitempty"`
+  // unused fields # 41 to 49
+  InitiatedEventId *int64 `thrift:"initiatedEventId,50" db:"initiatedEventId" json:"initiatedEventId,omitempty"`
+  // unused fields # 51 to 59
+  Control []byte `thrift:"control,60" db:"control" json:"control,omitempty"`
+}
+
+func NewRequestCancelExternalWorkflowExecutionFailedEventAttributes() *RequestCancelExternalWorkflowExecutionFailedEventAttributes {
+  return &RequestCancelExternalWorkflowExecutionFailedEventAttributes{}
+}
+
+var RequestCancelExternalWorkflowExecutionFailedEventAttributes_Cause_DEFAULT CancelExternalWorkflowExecutionFailedCause
+func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes) GetCause() CancelExternalWorkflowExecutionFailedCause {
+  if !p.IsSetCause() {
+    return RequestCancelExternalWorkflowExecutionFailedEventAttributes_Cause_DEFAULT
+  }
+return *p.Cause
+}
+var RequestCancelExternalWorkflowExecutionFailedEventAttributes_DecisionTaskCompletedEventId_DEFAULT int64
+func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes) GetDecisionTaskCompletedEventId() int64 {
+  if !p.IsSetDecisionTaskCompletedEventId() {
+    return RequestCancelExternalWorkflowExecutionFailedEventAttributes_DecisionTaskCompletedEventId_DEFAULT
+  }
+return *p.DecisionTaskCompletedEventId
+}
+var RequestCancelExternalWorkflowExecutionFailedEventAttributes_Domain_DEFAULT string
+func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes) GetDomain() string {
+  if !p.IsSetDomain() {
+    return RequestCancelExternalWorkflowExecutionFailedEventAttributes_Domain_DEFAULT
+  }
+return *p.Domain
+}
+var RequestCancelExternalWorkflowExecutionFailedEventAttributes_WorkflowExecution_DEFAULT *WorkflowExecution
+func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes) GetWorkflowExecution() *WorkflowExecution {
+  if !p.IsSetWorkflowExecution() {
+    return RequestCancelExternalWorkflowExecutionFailedEventAttributes_WorkflowExecution_DEFAULT
+  }
+return p.WorkflowExecution
+}
+var RequestCancelExternalWorkflowExecutionFailedEventAttributes_InitiatedEventId_DEFAULT int64
+func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes) GetInitiatedEventId() int64 {
+  if !p.IsSetInitiatedEventId() {
+    return RequestCancelExternalWorkflowExecutionFailedEventAttributes_InitiatedEventId_DEFAULT
+  }
+return *p.InitiatedEventId
+}
+var RequestCancelExternalWorkflowExecutionFailedEventAttributes_Control_DEFAULT []byte
+
+func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes) GetControl() []byte {
+  return p.Control
+}
+func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes) IsSetCause() bool {
+  return p.Cause != nil
+}
+
+func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes) IsSetDecisionTaskCompletedEventId() bool {
+  return p.DecisionTaskCompletedEventId != nil
+}
+
+func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes) IsSetDomain() bool {
+  return p.Domain != nil
+}
+
+func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes) IsSetWorkflowExecution() bool {
+  return p.WorkflowExecution != nil
+}
+
+func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes) IsSetInitiatedEventId() bool {
+  return p.InitiatedEventId != nil
+}
+
+func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes) IsSetControl() bool {
+  return p.Control != nil
+}
+
+func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 10:
+      if err := p.ReadField10(iprot); err != nil {
+        return err
+      }
+    case 20:
+      if err := p.ReadField20(iprot); err != nil {
+        return err
+      }
+    case 30:
+      if err := p.ReadField30(iprot); err != nil {
+        return err
+      }
+    case 40:
+      if err := p.ReadField40(iprot); err != nil {
+        return err
+      }
+    case 50:
+      if err := p.ReadField50(iprot); err != nil {
+        return err
+      }
+    case 60:
+      if err := p.ReadField60(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes)  ReadField10(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI32(); err != nil {
+  return thrift.PrependError("error reading field 10: ", err)
+} else {
+  temp := CancelExternalWorkflowExecutionFailedCause(v)
+  p.Cause = &temp
+}
+  return nil
+}
+
+func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes)  ReadField20(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI64(); err != nil {
+  return thrift.PrependError("error reading field 20: ", err)
+} else {
+  p.DecisionTaskCompletedEventId = &v
+}
+  return nil
+}
+
+func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes)  ReadField30(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 30: ", err)
+} else {
+  p.Domain = &v
+}
+  return nil
+}
+
+func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes)  ReadField40(iprot thrift.TProtocol) error {
+  p.WorkflowExecution = &WorkflowExecution{}
+  if err := p.WorkflowExecution.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.WorkflowExecution), err)
+  }
+  return nil
+}
+
+func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes)  ReadField50(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI64(); err != nil {
+  return thrift.PrependError("error reading field 50: ", err)
+} else {
+  p.InitiatedEventId = &v
+}
+  return nil
+}
+
+func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes)  ReadField60(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadBinary(); err != nil {
+  return thrift.PrependError("error reading field 60: ", err)
+} else {
+  p.Control = v
+}
+  return nil
+}
+
+func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("RequestCancelExternalWorkflowExecutionFailedEventAttributes"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField10(oprot); err != nil { return err }
+    if err := p.writeField20(oprot); err != nil { return err }
+    if err := p.writeField30(oprot); err != nil { return err }
+    if err := p.writeField40(oprot); err != nil { return err }
+    if err := p.writeField50(oprot); err != nil { return err }
+    if err := p.writeField60(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes) writeField10(oprot thrift.TProtocol) (err error) {
+  if p.IsSetCause() {
+    if err := oprot.WriteFieldBegin("cause", thrift.I32, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:cause: ", p), err) }
+    if err := oprot.WriteI32(int32(*p.Cause)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.cause (10) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:cause: ", p), err) }
+  }
+  return err
+}
+
+func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes) writeField20(oprot thrift.TProtocol) (err error) {
+  if p.IsSetDecisionTaskCompletedEventId() {
+    if err := oprot.WriteFieldBegin("decisionTaskCompletedEventId", thrift.I64, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:decisionTaskCompletedEventId: ", p), err) }
+    if err := oprot.WriteI64(int64(*p.DecisionTaskCompletedEventId)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.decisionTaskCompletedEventId (20) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:decisionTaskCompletedEventId: ", p), err) }
+  }
+  return err
+}
+
+func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes) writeField30(oprot thrift.TProtocol) (err error) {
+  if p.IsSetDomain() {
+    if err := oprot.WriteFieldBegin("domain", thrift.STRING, 30); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 30:domain: ", p), err) }
+    if err := oprot.WriteString(string(*p.Domain)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.domain (30) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 30:domain: ", p), err) }
+  }
+  return err
+}
+
+func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes) writeField40(oprot thrift.TProtocol) (err error) {
+  if p.IsSetWorkflowExecution() {
+    if err := oprot.WriteFieldBegin("workflowExecution", thrift.STRUCT, 40); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 40:workflowExecution: ", p), err) }
+    if err := p.WorkflowExecution.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.WorkflowExecution), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 40:workflowExecution: ", p), err) }
+  }
+  return err
+}
+
+func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes) writeField50(oprot thrift.TProtocol) (err error) {
+  if p.IsSetInitiatedEventId() {
+    if err := oprot.WriteFieldBegin("initiatedEventId", thrift.I64, 50); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 50:initiatedEventId: ", p), err) }
+    if err := oprot.WriteI64(int64(*p.InitiatedEventId)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.initiatedEventId (50) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 50:initiatedEventId: ", p), err) }
+  }
+  return err
+}
+
+func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes) writeField60(oprot thrift.TProtocol) (err error) {
+  if p.IsSetControl() {
+    if err := oprot.WriteFieldBegin("control", thrift.STRING, 60); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 60:control: ", p), err) }
+    if err := oprot.WriteBinary(p.Control); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.control (60) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 60:control: ", p), err) }
+  }
+  return err
+}
+
+func (p *RequestCancelExternalWorkflowExecutionFailedEventAttributes) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("RequestCancelExternalWorkflowExecutionFailedEventAttributes(%+v)", *p)
+}
+
+// Attributes:
+//  - InitiatedEventId
+//  - Domain
+//  - WorkflowExecution
+type ExternalWorkflowExecutionCancelRequestedEventAttributes struct {
+  // unused fields # 1 to 9
+  InitiatedEventId *int64 `thrift:"initiatedEventId,10" db:"initiatedEventId" json:"initiatedEventId,omitempty"`
+  // unused fields # 11 to 19
+  Domain *string `thrift:"domain,20" db:"domain" json:"domain,omitempty"`
+  // unused fields # 21 to 29
+  WorkflowExecution *WorkflowExecution `thrift:"workflowExecution,30" db:"workflowExecution" json:"workflowExecution,omitempty"`
+}
+
+func NewExternalWorkflowExecutionCancelRequestedEventAttributes() *ExternalWorkflowExecutionCancelRequestedEventAttributes {
+  return &ExternalWorkflowExecutionCancelRequestedEventAttributes{}
+}
+
+var ExternalWorkflowExecutionCancelRequestedEventAttributes_InitiatedEventId_DEFAULT int64
+func (p *ExternalWorkflowExecutionCancelRequestedEventAttributes) GetInitiatedEventId() int64 {
+  if !p.IsSetInitiatedEventId() {
+    return ExternalWorkflowExecutionCancelRequestedEventAttributes_InitiatedEventId_DEFAULT
+  }
+return *p.InitiatedEventId
+}
+var ExternalWorkflowExecutionCancelRequestedEventAttributes_Domain_DEFAULT string
+func (p *ExternalWorkflowExecutionCancelRequestedEventAttributes) GetDomain() string {
+  if !p.IsSetDomain() {
+    return ExternalWorkflowExecutionCancelRequestedEventAttributes_Domain_DEFAULT
+  }
+return *p.Domain
+}
+var ExternalWorkflowExecutionCancelRequestedEventAttributes_WorkflowExecution_DEFAULT *WorkflowExecution
+func (p *ExternalWorkflowExecutionCancelRequestedEventAttributes) GetWorkflowExecution() *WorkflowExecution {
+  if !p.IsSetWorkflowExecution() {
+    return ExternalWorkflowExecutionCancelRequestedEventAttributes_WorkflowExecution_DEFAULT
+  }
+return p.WorkflowExecution
+}
+func (p *ExternalWorkflowExecutionCancelRequestedEventAttributes) IsSetInitiatedEventId() bool {
+  return p.InitiatedEventId != nil
+}
+
+func (p *ExternalWorkflowExecutionCancelRequestedEventAttributes) IsSetDomain() bool {
+  return p.Domain != nil
+}
+
+func (p *ExternalWorkflowExecutionCancelRequestedEventAttributes) IsSetWorkflowExecution() bool {
+  return p.WorkflowExecution != nil
+}
+
+func (p *ExternalWorkflowExecutionCancelRequestedEventAttributes) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 10:
+      if err := p.ReadField10(iprot); err != nil {
+        return err
+      }
+    case 20:
+      if err := p.ReadField20(iprot); err != nil {
+        return err
+      }
+    case 30:
+      if err := p.ReadField30(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *ExternalWorkflowExecutionCancelRequestedEventAttributes)  ReadField10(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI64(); err != nil {
+  return thrift.PrependError("error reading field 10: ", err)
+} else {
+  p.InitiatedEventId = &v
+}
+  return nil
+}
+
+func (p *ExternalWorkflowExecutionCancelRequestedEventAttributes)  ReadField20(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 20: ", err)
+} else {
+  p.Domain = &v
+}
+  return nil
+}
+
+func (p *ExternalWorkflowExecutionCancelRequestedEventAttributes)  ReadField30(iprot thrift.TProtocol) error {
+  p.WorkflowExecution = &WorkflowExecution{}
+  if err := p.WorkflowExecution.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.WorkflowExecution), err)
+  }
+  return nil
+}
+
+func (p *ExternalWorkflowExecutionCancelRequestedEventAttributes) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("ExternalWorkflowExecutionCancelRequestedEventAttributes"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField10(oprot); err != nil { return err }
+    if err := p.writeField20(oprot); err != nil { return err }
+    if err := p.writeField30(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *ExternalWorkflowExecutionCancelRequestedEventAttributes) writeField10(oprot thrift.TProtocol) (err error) {
+  if p.IsSetInitiatedEventId() {
+    if err := oprot.WriteFieldBegin("initiatedEventId", thrift.I64, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:initiatedEventId: ", p), err) }
+    if err := oprot.WriteI64(int64(*p.InitiatedEventId)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.initiatedEventId (10) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:initiatedEventId: ", p), err) }
+  }
+  return err
+}
+
+func (p *ExternalWorkflowExecutionCancelRequestedEventAttributes) writeField20(oprot thrift.TProtocol) (err error) {
+  if p.IsSetDomain() {
+    if err := oprot.WriteFieldBegin("domain", thrift.STRING, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:domain: ", p), err) }
+    if err := oprot.WriteString(string(*p.Domain)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.domain (20) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:domain: ", p), err) }
+  }
+  return err
+}
+
+func (p *ExternalWorkflowExecutionCancelRequestedEventAttributes) writeField30(oprot thrift.TProtocol) (err error) {
+  if p.IsSetWorkflowExecution() {
+    if err := oprot.WriteFieldBegin("workflowExecution", thrift.STRUCT, 30); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 30:workflowExecution: ", p), err) }
+    if err := p.WorkflowExecution.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.WorkflowExecution), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 30:workflowExecution: ", p), err) }
+  }
+  return err
+}
+
+func (p *ExternalWorkflowExecutionCancelRequestedEventAttributes) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("ExternalWorkflowExecutionCancelRequestedEventAttributes(%+v)", *p)
+}
+
+// Attributes:
 //  - EventId
 //  - Timestamp
 //  - EventType
@@ -7813,6 +10260,14 @@ func (p *WorkflowExecutionTerminatedEventAttributes) String() string {
 //  - MarkerRecordedEventAttributes
 //  - WorkflowExecutionSignaledEventAttributes
 //  - WorkflowExecutionTerminatedEventAttributes
+//  - WorkflowExecutionCancelRequestedEventAttributes
+//  - CancelWorkflowExecutionFailedEventAttributes
+//  - WorkflowExecutionCanceledEventAttributes
+//  - RequestCancelExternalWorkflowExecutionInitiatedEventAttributes
+//  - RequestCancelExternalWorkflowExecutionFailedEventAttributes
+//  - ExternalWorkflowExecutionCancelRequestedEventAttributes
+//  - WorkflowExecutionContinuedAsNewEventAttributes
+//  - ContinueAsNewWorkflowExecutionFailedEventAttributes
 type HistoryEvent struct {
   // unused fields # 1 to 9
   EventId *int64 `thrift:"eventId,10" db:"eventId" json:"eventId,omitempty"`
@@ -7868,6 +10323,22 @@ type HistoryEvent struct {
   WorkflowExecutionSignaledEventAttributes *WorkflowExecutionSignaledEventAttributes `thrift:"workflowExecutionSignaledEventAttributes,170" db:"workflowExecutionSignaledEventAttributes" json:"workflowExecutionSignaledEventAttributes,omitempty"`
   // unused fields # 171 to 179
   WorkflowExecutionTerminatedEventAttributes *WorkflowExecutionTerminatedEventAttributes `thrift:"workflowExecutionTerminatedEventAttributes,180" db:"workflowExecutionTerminatedEventAttributes" json:"workflowExecutionTerminatedEventAttributes,omitempty"`
+  // unused fields # 181 to 189
+  WorkflowExecutionCancelRequestedEventAttributes *WorkflowExecutionCancelRequestedEventAttributes `thrift:"workflowExecutionCancelRequestedEventAttributes,190" db:"workflowExecutionCancelRequestedEventAttributes" json:"workflowExecutionCancelRequestedEventAttributes,omitempty"`
+  // unused fields # 191 to 199
+  CancelWorkflowExecutionFailedEventAttributes *CancelWorkflowExecutionFailedEventAttributes `thrift:"cancelWorkflowExecutionFailedEventAttributes,200" db:"cancelWorkflowExecutionFailedEventAttributes" json:"cancelWorkflowExecutionFailedEventAttributes,omitempty"`
+  // unused fields # 201 to 209
+  WorkflowExecutionCanceledEventAttributes *WorkflowExecutionCanceledEventAttributes `thrift:"workflowExecutionCanceledEventAttributes,210" db:"workflowExecutionCanceledEventAttributes" json:"workflowExecutionCanceledEventAttributes,omitempty"`
+  // unused fields # 211 to 219
+  RequestCancelExternalWorkflowExecutionInitiatedEventAttributes *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes `thrift:"requestCancelExternalWorkflowExecutionInitiatedEventAttributes,220" db:"requestCancelExternalWorkflowExecutionInitiatedEventAttributes" json:"requestCancelExternalWorkflowExecutionInitiatedEventAttributes,omitempty"`
+  // unused fields # 221 to 229
+  RequestCancelExternalWorkflowExecutionFailedEventAttributes *RequestCancelExternalWorkflowExecutionFailedEventAttributes `thrift:"requestCancelExternalWorkflowExecutionFailedEventAttributes,230" db:"requestCancelExternalWorkflowExecutionFailedEventAttributes" json:"requestCancelExternalWorkflowExecutionFailedEventAttributes,omitempty"`
+  // unused fields # 231 to 239
+  ExternalWorkflowExecutionCancelRequestedEventAttributes *ExternalWorkflowExecutionCancelRequestedEventAttributes `thrift:"externalWorkflowExecutionCancelRequestedEventAttributes,240" db:"externalWorkflowExecutionCancelRequestedEventAttributes" json:"externalWorkflowExecutionCancelRequestedEventAttributes,omitempty"`
+  // unused fields # 241 to 249
+  WorkflowExecutionContinuedAsNewEventAttributes *WorkflowExecutionContinuedAsNewEventAttributes `thrift:"workflowExecutionContinuedAsNewEventAttributes,250" db:"workflowExecutionContinuedAsNewEventAttributes" json:"workflowExecutionContinuedAsNewEventAttributes,omitempty"`
+  // unused fields # 251 to 259
+  ContinueAsNewWorkflowExecutionFailedEventAttributes *ContinueAsNewWorkflowExecutionFailedEventAttributes `thrift:"continueAsNewWorkflowExecutionFailedEventAttributes,260" db:"continueAsNewWorkflowExecutionFailedEventAttributes" json:"continueAsNewWorkflowExecutionFailedEventAttributes,omitempty"`
 }
 
 func NewHistoryEvent() *HistoryEvent {
@@ -8063,6 +10534,62 @@ func (p *HistoryEvent) GetWorkflowExecutionTerminatedEventAttributes() *Workflow
   }
 return p.WorkflowExecutionTerminatedEventAttributes
 }
+var HistoryEvent_WorkflowExecutionCancelRequestedEventAttributes_DEFAULT *WorkflowExecutionCancelRequestedEventAttributes
+func (p *HistoryEvent) GetWorkflowExecutionCancelRequestedEventAttributes() *WorkflowExecutionCancelRequestedEventAttributes {
+  if !p.IsSetWorkflowExecutionCancelRequestedEventAttributes() {
+    return HistoryEvent_WorkflowExecutionCancelRequestedEventAttributes_DEFAULT
+  }
+return p.WorkflowExecutionCancelRequestedEventAttributes
+}
+var HistoryEvent_CancelWorkflowExecutionFailedEventAttributes_DEFAULT *CancelWorkflowExecutionFailedEventAttributes
+func (p *HistoryEvent) GetCancelWorkflowExecutionFailedEventAttributes() *CancelWorkflowExecutionFailedEventAttributes {
+  if !p.IsSetCancelWorkflowExecutionFailedEventAttributes() {
+    return HistoryEvent_CancelWorkflowExecutionFailedEventAttributes_DEFAULT
+  }
+return p.CancelWorkflowExecutionFailedEventAttributes
+}
+var HistoryEvent_WorkflowExecutionCanceledEventAttributes_DEFAULT *WorkflowExecutionCanceledEventAttributes
+func (p *HistoryEvent) GetWorkflowExecutionCanceledEventAttributes() *WorkflowExecutionCanceledEventAttributes {
+  if !p.IsSetWorkflowExecutionCanceledEventAttributes() {
+    return HistoryEvent_WorkflowExecutionCanceledEventAttributes_DEFAULT
+  }
+return p.WorkflowExecutionCanceledEventAttributes
+}
+var HistoryEvent_RequestCancelExternalWorkflowExecutionInitiatedEventAttributes_DEFAULT *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes
+func (p *HistoryEvent) GetRequestCancelExternalWorkflowExecutionInitiatedEventAttributes() *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes {
+  if !p.IsSetRequestCancelExternalWorkflowExecutionInitiatedEventAttributes() {
+    return HistoryEvent_RequestCancelExternalWorkflowExecutionInitiatedEventAttributes_DEFAULT
+  }
+return p.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes
+}
+var HistoryEvent_RequestCancelExternalWorkflowExecutionFailedEventAttributes_DEFAULT *RequestCancelExternalWorkflowExecutionFailedEventAttributes
+func (p *HistoryEvent) GetRequestCancelExternalWorkflowExecutionFailedEventAttributes() *RequestCancelExternalWorkflowExecutionFailedEventAttributes {
+  if !p.IsSetRequestCancelExternalWorkflowExecutionFailedEventAttributes() {
+    return HistoryEvent_RequestCancelExternalWorkflowExecutionFailedEventAttributes_DEFAULT
+  }
+return p.RequestCancelExternalWorkflowExecutionFailedEventAttributes
+}
+var HistoryEvent_ExternalWorkflowExecutionCancelRequestedEventAttributes_DEFAULT *ExternalWorkflowExecutionCancelRequestedEventAttributes
+func (p *HistoryEvent) GetExternalWorkflowExecutionCancelRequestedEventAttributes() *ExternalWorkflowExecutionCancelRequestedEventAttributes {
+  if !p.IsSetExternalWorkflowExecutionCancelRequestedEventAttributes() {
+    return HistoryEvent_ExternalWorkflowExecutionCancelRequestedEventAttributes_DEFAULT
+  }
+return p.ExternalWorkflowExecutionCancelRequestedEventAttributes
+}
+var HistoryEvent_WorkflowExecutionContinuedAsNewEventAttributes_DEFAULT *WorkflowExecutionContinuedAsNewEventAttributes
+func (p *HistoryEvent) GetWorkflowExecutionContinuedAsNewEventAttributes() *WorkflowExecutionContinuedAsNewEventAttributes {
+  if !p.IsSetWorkflowExecutionContinuedAsNewEventAttributes() {
+    return HistoryEvent_WorkflowExecutionContinuedAsNewEventAttributes_DEFAULT
+  }
+return p.WorkflowExecutionContinuedAsNewEventAttributes
+}
+var HistoryEvent_ContinueAsNewWorkflowExecutionFailedEventAttributes_DEFAULT *ContinueAsNewWorkflowExecutionFailedEventAttributes
+func (p *HistoryEvent) GetContinueAsNewWorkflowExecutionFailedEventAttributes() *ContinueAsNewWorkflowExecutionFailedEventAttributes {
+  if !p.IsSetContinueAsNewWorkflowExecutionFailedEventAttributes() {
+    return HistoryEvent_ContinueAsNewWorkflowExecutionFailedEventAttributes_DEFAULT
+  }
+return p.ContinueAsNewWorkflowExecutionFailedEventAttributes
+}
 func (p *HistoryEvent) IsSetEventId() bool {
   return p.EventId != nil
 }
@@ -8169,6 +10696,38 @@ func (p *HistoryEvent) IsSetWorkflowExecutionSignaledEventAttributes() bool {
 
 func (p *HistoryEvent) IsSetWorkflowExecutionTerminatedEventAttributes() bool {
   return p.WorkflowExecutionTerminatedEventAttributes != nil
+}
+
+func (p *HistoryEvent) IsSetWorkflowExecutionCancelRequestedEventAttributes() bool {
+  return p.WorkflowExecutionCancelRequestedEventAttributes != nil
+}
+
+func (p *HistoryEvent) IsSetCancelWorkflowExecutionFailedEventAttributes() bool {
+  return p.CancelWorkflowExecutionFailedEventAttributes != nil
+}
+
+func (p *HistoryEvent) IsSetWorkflowExecutionCanceledEventAttributes() bool {
+  return p.WorkflowExecutionCanceledEventAttributes != nil
+}
+
+func (p *HistoryEvent) IsSetRequestCancelExternalWorkflowExecutionInitiatedEventAttributes() bool {
+  return p.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes != nil
+}
+
+func (p *HistoryEvent) IsSetRequestCancelExternalWorkflowExecutionFailedEventAttributes() bool {
+  return p.RequestCancelExternalWorkflowExecutionFailedEventAttributes != nil
+}
+
+func (p *HistoryEvent) IsSetExternalWorkflowExecutionCancelRequestedEventAttributes() bool {
+  return p.ExternalWorkflowExecutionCancelRequestedEventAttributes != nil
+}
+
+func (p *HistoryEvent) IsSetWorkflowExecutionContinuedAsNewEventAttributes() bool {
+  return p.WorkflowExecutionContinuedAsNewEventAttributes != nil
+}
+
+func (p *HistoryEvent) IsSetContinueAsNewWorkflowExecutionFailedEventAttributes() bool {
+  return p.ContinueAsNewWorkflowExecutionFailedEventAttributes != nil
 }
 
 func (p *HistoryEvent) Read(iprot thrift.TProtocol) error {
@@ -8290,6 +10849,38 @@ func (p *HistoryEvent) Read(iprot thrift.TProtocol) error {
       }
     case 180:
       if err := p.ReadField180(iprot); err != nil {
+        return err
+      }
+    case 190:
+      if err := p.ReadField190(iprot); err != nil {
+        return err
+      }
+    case 200:
+      if err := p.ReadField200(iprot); err != nil {
+        return err
+      }
+    case 210:
+      if err := p.ReadField210(iprot); err != nil {
+        return err
+      }
+    case 220:
+      if err := p.ReadField220(iprot); err != nil {
+        return err
+      }
+    case 230:
+      if err := p.ReadField230(iprot); err != nil {
+        return err
+      }
+    case 240:
+      if err := p.ReadField240(iprot); err != nil {
+        return err
+      }
+    case 250:
+      if err := p.ReadField250(iprot); err != nil {
+        return err
+      }
+    case 260:
+      if err := p.ReadField260(iprot); err != nil {
         return err
       }
     default:
@@ -8527,6 +11118,70 @@ func (p *HistoryEvent)  ReadField180(iprot thrift.TProtocol) error {
   return nil
 }
 
+func (p *HistoryEvent)  ReadField190(iprot thrift.TProtocol) error {
+  p.WorkflowExecutionCancelRequestedEventAttributes = &WorkflowExecutionCancelRequestedEventAttributes{}
+  if err := p.WorkflowExecutionCancelRequestedEventAttributes.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.WorkflowExecutionCancelRequestedEventAttributes), err)
+  }
+  return nil
+}
+
+func (p *HistoryEvent)  ReadField200(iprot thrift.TProtocol) error {
+  p.CancelWorkflowExecutionFailedEventAttributes = &CancelWorkflowExecutionFailedEventAttributes{}
+  if err := p.CancelWorkflowExecutionFailedEventAttributes.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.CancelWorkflowExecutionFailedEventAttributes), err)
+  }
+  return nil
+}
+
+func (p *HistoryEvent)  ReadField210(iprot thrift.TProtocol) error {
+  p.WorkflowExecutionCanceledEventAttributes = &WorkflowExecutionCanceledEventAttributes{}
+  if err := p.WorkflowExecutionCanceledEventAttributes.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.WorkflowExecutionCanceledEventAttributes), err)
+  }
+  return nil
+}
+
+func (p *HistoryEvent)  ReadField220(iprot thrift.TProtocol) error {
+  p.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes = &RequestCancelExternalWorkflowExecutionInitiatedEventAttributes{}
+  if err := p.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes), err)
+  }
+  return nil
+}
+
+func (p *HistoryEvent)  ReadField230(iprot thrift.TProtocol) error {
+  p.RequestCancelExternalWorkflowExecutionFailedEventAttributes = &RequestCancelExternalWorkflowExecutionFailedEventAttributes{}
+  if err := p.RequestCancelExternalWorkflowExecutionFailedEventAttributes.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.RequestCancelExternalWorkflowExecutionFailedEventAttributes), err)
+  }
+  return nil
+}
+
+func (p *HistoryEvent)  ReadField240(iprot thrift.TProtocol) error {
+  p.ExternalWorkflowExecutionCancelRequestedEventAttributes = &ExternalWorkflowExecutionCancelRequestedEventAttributes{}
+  if err := p.ExternalWorkflowExecutionCancelRequestedEventAttributes.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.ExternalWorkflowExecutionCancelRequestedEventAttributes), err)
+  }
+  return nil
+}
+
+func (p *HistoryEvent)  ReadField250(iprot thrift.TProtocol) error {
+  p.WorkflowExecutionContinuedAsNewEventAttributes = &WorkflowExecutionContinuedAsNewEventAttributes{}
+  if err := p.WorkflowExecutionContinuedAsNewEventAttributes.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.WorkflowExecutionContinuedAsNewEventAttributes), err)
+  }
+  return nil
+}
+
+func (p *HistoryEvent)  ReadField260(iprot thrift.TProtocol) error {
+  p.ContinueAsNewWorkflowExecutionFailedEventAttributes = &ContinueAsNewWorkflowExecutionFailedEventAttributes{}
+  if err := p.ContinueAsNewWorkflowExecutionFailedEventAttributes.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.ContinueAsNewWorkflowExecutionFailedEventAttributes), err)
+  }
+  return nil
+}
+
 func (p *HistoryEvent) Write(oprot thrift.TProtocol) error {
   if err := oprot.WriteStructBegin("HistoryEvent"); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
@@ -8558,6 +11213,14 @@ func (p *HistoryEvent) Write(oprot thrift.TProtocol) error {
     if err := p.writeField160(oprot); err != nil { return err }
     if err := p.writeField170(oprot); err != nil { return err }
     if err := p.writeField180(oprot); err != nil { return err }
+    if err := p.writeField190(oprot); err != nil { return err }
+    if err := p.writeField200(oprot); err != nil { return err }
+    if err := p.writeField210(oprot); err != nil { return err }
+    if err := p.writeField220(oprot); err != nil { return err }
+    if err := p.writeField230(oprot); err != nil { return err }
+    if err := p.writeField240(oprot); err != nil { return err }
+    if err := p.writeField250(oprot); err != nil { return err }
+    if err := p.writeField260(oprot); err != nil { return err }
   }
   if err := oprot.WriteFieldStop(); err != nil {
     return thrift.PrependError("write field stop error: ", err) }
@@ -8910,6 +11573,110 @@ func (p *HistoryEvent) writeField180(oprot thrift.TProtocol) (err error) {
     }
     if err := oprot.WriteFieldEnd(); err != nil {
       return thrift.PrependError(fmt.Sprintf("%T write field end error 180:workflowExecutionTerminatedEventAttributes: ", p), err) }
+  }
+  return err
+}
+
+func (p *HistoryEvent) writeField190(oprot thrift.TProtocol) (err error) {
+  if p.IsSetWorkflowExecutionCancelRequestedEventAttributes() {
+    if err := oprot.WriteFieldBegin("workflowExecutionCancelRequestedEventAttributes", thrift.STRUCT, 190); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 190:workflowExecutionCancelRequestedEventAttributes: ", p), err) }
+    if err := p.WorkflowExecutionCancelRequestedEventAttributes.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.WorkflowExecutionCancelRequestedEventAttributes), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 190:workflowExecutionCancelRequestedEventAttributes: ", p), err) }
+  }
+  return err
+}
+
+func (p *HistoryEvent) writeField200(oprot thrift.TProtocol) (err error) {
+  if p.IsSetCancelWorkflowExecutionFailedEventAttributes() {
+    if err := oprot.WriteFieldBegin("cancelWorkflowExecutionFailedEventAttributes", thrift.STRUCT, 200); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 200:cancelWorkflowExecutionFailedEventAttributes: ", p), err) }
+    if err := p.CancelWorkflowExecutionFailedEventAttributes.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.CancelWorkflowExecutionFailedEventAttributes), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 200:cancelWorkflowExecutionFailedEventAttributes: ", p), err) }
+  }
+  return err
+}
+
+func (p *HistoryEvent) writeField210(oprot thrift.TProtocol) (err error) {
+  if p.IsSetWorkflowExecutionCanceledEventAttributes() {
+    if err := oprot.WriteFieldBegin("workflowExecutionCanceledEventAttributes", thrift.STRUCT, 210); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 210:workflowExecutionCanceledEventAttributes: ", p), err) }
+    if err := p.WorkflowExecutionCanceledEventAttributes.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.WorkflowExecutionCanceledEventAttributes), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 210:workflowExecutionCanceledEventAttributes: ", p), err) }
+  }
+  return err
+}
+
+func (p *HistoryEvent) writeField220(oprot thrift.TProtocol) (err error) {
+  if p.IsSetRequestCancelExternalWorkflowExecutionInitiatedEventAttributes() {
+    if err := oprot.WriteFieldBegin("requestCancelExternalWorkflowExecutionInitiatedEventAttributes", thrift.STRUCT, 220); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 220:requestCancelExternalWorkflowExecutionInitiatedEventAttributes: ", p), err) }
+    if err := p.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 220:requestCancelExternalWorkflowExecutionInitiatedEventAttributes: ", p), err) }
+  }
+  return err
+}
+
+func (p *HistoryEvent) writeField230(oprot thrift.TProtocol) (err error) {
+  if p.IsSetRequestCancelExternalWorkflowExecutionFailedEventAttributes() {
+    if err := oprot.WriteFieldBegin("requestCancelExternalWorkflowExecutionFailedEventAttributes", thrift.STRUCT, 230); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 230:requestCancelExternalWorkflowExecutionFailedEventAttributes: ", p), err) }
+    if err := p.RequestCancelExternalWorkflowExecutionFailedEventAttributes.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.RequestCancelExternalWorkflowExecutionFailedEventAttributes), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 230:requestCancelExternalWorkflowExecutionFailedEventAttributes: ", p), err) }
+  }
+  return err
+}
+
+func (p *HistoryEvent) writeField240(oprot thrift.TProtocol) (err error) {
+  if p.IsSetExternalWorkflowExecutionCancelRequestedEventAttributes() {
+    if err := oprot.WriteFieldBegin("externalWorkflowExecutionCancelRequestedEventAttributes", thrift.STRUCT, 240); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 240:externalWorkflowExecutionCancelRequestedEventAttributes: ", p), err) }
+    if err := p.ExternalWorkflowExecutionCancelRequestedEventAttributes.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.ExternalWorkflowExecutionCancelRequestedEventAttributes), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 240:externalWorkflowExecutionCancelRequestedEventAttributes: ", p), err) }
+  }
+  return err
+}
+
+func (p *HistoryEvent) writeField250(oprot thrift.TProtocol) (err error) {
+  if p.IsSetWorkflowExecutionContinuedAsNewEventAttributes() {
+    if err := oprot.WriteFieldBegin("workflowExecutionContinuedAsNewEventAttributes", thrift.STRUCT, 250); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 250:workflowExecutionContinuedAsNewEventAttributes: ", p), err) }
+    if err := p.WorkflowExecutionContinuedAsNewEventAttributes.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.WorkflowExecutionContinuedAsNewEventAttributes), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 250:workflowExecutionContinuedAsNewEventAttributes: ", p), err) }
+  }
+  return err
+}
+
+func (p *HistoryEvent) writeField260(oprot thrift.TProtocol) (err error) {
+  if p.IsSetContinueAsNewWorkflowExecutionFailedEventAttributes() {
+    if err := oprot.WriteFieldBegin("continueAsNewWorkflowExecutionFailedEventAttributes", thrift.STRUCT, 260); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 260:continueAsNewWorkflowExecutionFailedEventAttributes: ", p), err) }
+    if err := p.ContinueAsNewWorkflowExecutionFailedEventAttributes.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.ContinueAsNewWorkflowExecutionFailedEventAttributes), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 260:continueAsNewWorkflowExecutionFailedEventAttributes: ", p), err) }
   }
   return err
 }
@@ -13223,6 +15990,181 @@ func (p *RespondActivityTaskCanceledRequest) String() string {
     return "<nil>"
   }
   return fmt.Sprintf("RespondActivityTaskCanceledRequest(%+v)", *p)
+}
+
+// Attributes:
+//  - Domain
+//  - WorkflowExecution
+//  - Identity
+type RequestCancelWorkflowExecutionRequest struct {
+  // unused fields # 1 to 9
+  Domain *string `thrift:"domain,10" db:"domain" json:"domain,omitempty"`
+  // unused fields # 11 to 19
+  WorkflowExecution *WorkflowExecution `thrift:"workflowExecution,20" db:"workflowExecution" json:"workflowExecution,omitempty"`
+  // unused fields # 21 to 29
+  Identity *string `thrift:"identity,30" db:"identity" json:"identity,omitempty"`
+}
+
+func NewRequestCancelWorkflowExecutionRequest() *RequestCancelWorkflowExecutionRequest {
+  return &RequestCancelWorkflowExecutionRequest{}
+}
+
+var RequestCancelWorkflowExecutionRequest_Domain_DEFAULT string
+func (p *RequestCancelWorkflowExecutionRequest) GetDomain() string {
+  if !p.IsSetDomain() {
+    return RequestCancelWorkflowExecutionRequest_Domain_DEFAULT
+  }
+return *p.Domain
+}
+var RequestCancelWorkflowExecutionRequest_WorkflowExecution_DEFAULT *WorkflowExecution
+func (p *RequestCancelWorkflowExecutionRequest) GetWorkflowExecution() *WorkflowExecution {
+  if !p.IsSetWorkflowExecution() {
+    return RequestCancelWorkflowExecutionRequest_WorkflowExecution_DEFAULT
+  }
+return p.WorkflowExecution
+}
+var RequestCancelWorkflowExecutionRequest_Identity_DEFAULT string
+func (p *RequestCancelWorkflowExecutionRequest) GetIdentity() string {
+  if !p.IsSetIdentity() {
+    return RequestCancelWorkflowExecutionRequest_Identity_DEFAULT
+  }
+return *p.Identity
+}
+func (p *RequestCancelWorkflowExecutionRequest) IsSetDomain() bool {
+  return p.Domain != nil
+}
+
+func (p *RequestCancelWorkflowExecutionRequest) IsSetWorkflowExecution() bool {
+  return p.WorkflowExecution != nil
+}
+
+func (p *RequestCancelWorkflowExecutionRequest) IsSetIdentity() bool {
+  return p.Identity != nil
+}
+
+func (p *RequestCancelWorkflowExecutionRequest) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 10:
+      if err := p.ReadField10(iprot); err != nil {
+        return err
+      }
+    case 20:
+      if err := p.ReadField20(iprot); err != nil {
+        return err
+      }
+    case 30:
+      if err := p.ReadField30(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *RequestCancelWorkflowExecutionRequest)  ReadField10(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 10: ", err)
+} else {
+  p.Domain = &v
+}
+  return nil
+}
+
+func (p *RequestCancelWorkflowExecutionRequest)  ReadField20(iprot thrift.TProtocol) error {
+  p.WorkflowExecution = &WorkflowExecution{}
+  if err := p.WorkflowExecution.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.WorkflowExecution), err)
+  }
+  return nil
+}
+
+func (p *RequestCancelWorkflowExecutionRequest)  ReadField30(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 30: ", err)
+} else {
+  p.Identity = &v
+}
+  return nil
+}
+
+func (p *RequestCancelWorkflowExecutionRequest) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("RequestCancelWorkflowExecutionRequest"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField10(oprot); err != nil { return err }
+    if err := p.writeField20(oprot); err != nil { return err }
+    if err := p.writeField30(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *RequestCancelWorkflowExecutionRequest) writeField10(oprot thrift.TProtocol) (err error) {
+  if p.IsSetDomain() {
+    if err := oprot.WriteFieldBegin("domain", thrift.STRING, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:domain: ", p), err) }
+    if err := oprot.WriteString(string(*p.Domain)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.domain (10) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:domain: ", p), err) }
+  }
+  return err
+}
+
+func (p *RequestCancelWorkflowExecutionRequest) writeField20(oprot thrift.TProtocol) (err error) {
+  if p.IsSetWorkflowExecution() {
+    if err := oprot.WriteFieldBegin("workflowExecution", thrift.STRUCT, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:workflowExecution: ", p), err) }
+    if err := p.WorkflowExecution.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.WorkflowExecution), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:workflowExecution: ", p), err) }
+  }
+  return err
+}
+
+func (p *RequestCancelWorkflowExecutionRequest) writeField30(oprot thrift.TProtocol) (err error) {
+  if p.IsSetIdentity() {
+    if err := oprot.WriteFieldBegin("identity", thrift.STRING, 30); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 30:identity: ", p), err) }
+    if err := oprot.WriteString(string(*p.Identity)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.identity (30) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 30:identity: ", p), err) }
+  }
+  return err
+}
+
+func (p *RequestCancelWorkflowExecutionRequest) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("RequestCancelWorkflowExecutionRequest(%+v)", *p)
 }
 
 // Attributes:

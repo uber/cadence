@@ -21,8 +21,8 @@ type (
 		RespondActivityTaskCompleted(request *h.RespondActivityTaskCompletedRequest) error
 		RespondActivityTaskFailed(request *h.RespondActivityTaskFailedRequest) error
 		RespondActivityTaskCanceled(request *h.RespondActivityTaskCanceledRequest) error
-		RecordActivityTaskHeartbeat(
-			request *h.RecordActivityTaskHeartbeatRequest) (*workflow.RecordActivityTaskHeartbeatResponse, error)
+		RecordActivityTaskHeartbeat(request *h.RecordActivityTaskHeartbeatRequest) (*workflow.RecordActivityTaskHeartbeatResponse, error)
+		RequestCancelWorkflowExecution(request *h.RequestCancelWorkflowExecutionRequest) error
 		SignalWorkflowExecution(request *h.SignalWorkflowExecutionRequest) error
 		TerminateWorkflowExecution(request *h.TerminateWorkflowExecutionRequest) error
 	}
@@ -32,11 +32,6 @@ type (
 		CreateEngine(context ShardContext) Engine
 	}
 
-	historySerializer interface {
-		Serialize(history []*workflow.HistoryEvent) ([]byte, error)
-		Deserialize(data []byte) ([]*workflow.HistoryEvent, error)
-	}
-
 	historyEventSerializer interface {
 		Serialize(event *workflow.HistoryEvent) ([]byte, error)
 		Deserialize(data []byte) (*workflow.HistoryEvent, error)
@@ -44,6 +39,7 @@ type (
 
 	transferQueueProcessor interface {
 		common.Daemon
+		NotifyNewTask()
 	}
 
 	timerQueueProcessor interface {

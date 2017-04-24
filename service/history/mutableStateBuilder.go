@@ -6,9 +6,11 @@ import (
 	"time"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 
+	"github.com/pborman/uuid"
 	"github.com/uber-common/bark"
 )
 
@@ -28,6 +30,7 @@ type (
 		deleteTimerInfos    []string                          // Deleted timers from last update.
 
 		executionInfo   *persistence.WorkflowExecutionInfo // Workflow mutable state info.
+		continueAsNew   *persistence.CreateWorkflowExecutionRequest
 		hBuilder        *historyBuilder
 		eventSerializer historyEventSerializer
 		logger          bark.Logger
@@ -39,6 +42,7 @@ type (
 		deleteActivityInfo  *int64
 		updateTimerInfos    []*persistence.TimerInfo
 		deleteTimerInfos    []string
+		continueAsNew       *persistence.CreateWorkflowExecutionRequest
 	}
 
 	// TODO: This should be part of persistence layer
@@ -87,6 +91,7 @@ func (e *mutableStateBuilder) CloseUpdateSession() *mutableStateSessionUpdates {
 		deleteActivityInfo:  e.deleteActivityInfo,
 		updateTimerInfos:    e.updateTimerInfos,
 		deleteTimerInfos:    e.deleteTimerInfos,
+		continueAsNew:       e.continueAsNew,
 	}
 
 	// Clear all updates to prepare for the next session
@@ -94,6 +99,7 @@ func (e *mutableStateBuilder) CloseUpdateSession() *mutableStateSessionUpdates {
 	e.updateActivityInfos = []*persistence.ActivityInfo{}
 	e.updateTimerInfos = []*persistence.TimerInfo{}
 	e.deleteTimerInfos = []string{}
+	e.continueAsNew = nil
 
 	return updates
 }
@@ -271,7 +277,44 @@ func (e *mutableStateBuilder) isWorkflowExecutionRunning() bool {
 	return e.executionInfo.State != persistence.WorkflowStateCompleted
 }
 
-func (e *mutableStateBuilder) AddWorkflowExecutionStartedEvent(execution workflow.WorkflowExecution,
+func (e *mutableStateBuilder) AddWorkflowExecutionStartedEventForContinueAsNew(domainID string,
+	execution workflow.WorkflowExecution, previousExecutionState *mutableStateBuilder,
+	attributes *workflow.ContinueAsNewWorkflowExecutionDecisionAttributes) *workflow.HistoryEvent {
+	taskList := previousExecutionState.executionInfo.TaskList
+	if attributes.IsSetTaskList() {
+		taskList = attributes.GetTaskList().GetName()
+	}
+	tl := workflow.NewTaskList()
+	tl.Name = common.StringPtr(taskList)
+
+	workflowType := previousExecutionState.executionInfo.WorkflowTypeName
+	if attributes.IsSetWorkflowType() {
+		workflowType = attributes.GetWorkflowType().GetName()
+	}
+	wType := workflow.NewWorkflowType()
+	wType.Name = common.StringPtr(workflowType)
+
+	decisionTimeout := previousExecutionState.executionInfo.DecisionTimeoutValue
+	if attributes.IsSetTaskStartToCloseTimeoutSeconds() {
+		decisionTimeout = attributes.GetTaskStartToCloseTimeoutSeconds()
+	}
+
+	createRequest := &workflow.StartWorkflowExecutionRequest{
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(previousExecutionState.executionInfo.DomainID),
+		WorkflowId:                          common.StringPtr(execution.GetWorkflowId()),
+		TaskList:                            tl,
+		WorkflowType:                        wType,
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(decisionTimeout),
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(attributes.GetExecutionStartToCloseTimeoutSeconds()),
+		Input:                               attributes.GetInput(),
+		Identity:                            nil,
+	}
+
+	return e.AddWorkflowExecutionStartedEvent(domainID, execution, createRequest)
+}
+
+func (e *mutableStateBuilder) AddWorkflowExecutionStartedEvent(domainID string, execution workflow.WorkflowExecution,
 	request *workflow.StartWorkflowExecutionRequest) *workflow.HistoryEvent {
 	eventID := e.GetNextEventID()
 	if eventID != firstEventID {
@@ -279,11 +322,13 @@ func (e *mutableStateBuilder) AddWorkflowExecutionStartedEvent(execution workflo
 		return nil
 	}
 
+	e.executionInfo.DomainID = domainID
 	e.executionInfo.WorkflowID = execution.GetWorkflowId()
 	e.executionInfo.RunID = execution.GetRunId()
 	e.executionInfo.TaskList = request.GetTaskList().GetName()
 	e.executionInfo.WorkflowTypeName = request.GetWorkflowType().GetName()
 	e.executionInfo.DecisionTimeoutValue = request.GetTaskStartToCloseTimeoutSeconds()
+
 	e.executionInfo.State = persistence.WorkflowStateCreated
 	e.executionInfo.LastProcessedEvent = emptyEventID
 	e.executionInfo.CreateRequestID = request.GetRequestId()
@@ -567,6 +612,41 @@ func (e *mutableStateBuilder) AddCompleteWorkflowExecutionFailedEvent(decisionCo
 	return e.hBuilder.AddCompleteWorkflowExecutionFailedEvent(decisionCompletedEventID, cause)
 }
 
+func (e *mutableStateBuilder) AddWorkflowExecutionCancelRequestedEvent(cause string,
+	request *h.RequestCancelWorkflowExecutionRequest) *workflow.HistoryEvent {
+	return e.hBuilder.AddWorkflowExecutionCancelRequestedEvent(cause, request)
+}
+
+func (e *mutableStateBuilder) AddCancelWorkflowExecutionFailedEvent(decisionTaskCompletedEventID int64,
+	cause workflow.WorkflowCancelFailedCause) *workflow.HistoryEvent {
+	return e.hBuilder.AddCancelWorkflowExecutionFailedEvent(decisionTaskCompletedEventID, cause)
+}
+
+func (e *mutableStateBuilder) AddWorkflowExecutionCanceledEvent(decisionTaskCompletedEventID int64,
+	attributes *workflow.CancelWorkflowExecutionDecisionAttributes) *workflow.HistoryEvent {
+
+	e.executionInfo.State = persistence.WorkflowStateCompleted
+	return e.hBuilder.AddWorkflowExecutionCanceledEvent(decisionTaskCompletedEventID, attributes)
+}
+
+func (e *mutableStateBuilder) AddRequestCancelExternalWorkflowExecutionInitiatedEvent(decisionCompletedEventID int64,
+	request *workflow.RequestCancelExternalWorkflowExecutionDecisionAttributes) *workflow.HistoryEvent {
+	return e.hBuilder.AddRequestCancelExternalWorkflowExecutionInitiatedEvent(
+		decisionCompletedEventID, request)
+}
+
+func (e *mutableStateBuilder) AddRequestCancelExternalWorkflowExecutionFailedEvent(
+	decisionTaskCompletedEventID, initiatedEventID int64,
+	domain, workflowID, runID string, cause workflow.CancelExternalWorkflowExecutionFailedCause) *workflow.HistoryEvent {
+	return e.hBuilder.AddRequestCancelExternalWorkflowExecutionFailedEvent(
+		decisionTaskCompletedEventID, initiatedEventID, domain, workflowID, runID, cause)
+}
+
+func (e *mutableStateBuilder) AddExternalWorkflowExecutionCancelRequested(initiatedEventID int64,
+	domain, workflowID, runID string) *workflow.HistoryEvent {
+	return e.hBuilder.AddExternalWorkflowExecutionCancelRequested(initiatedEventID, domain, workflowID, runID)
+}
+
 func (e *mutableStateBuilder) AddTimerStartedEvent(decisionCompletedEventID int64,
 	request *workflow.StartTimerDecisionAttributes) (*workflow.HistoryEvent, *persistence.TimerInfo) {
 	timerID := request.GetTimerId()
@@ -665,4 +745,58 @@ func (e *mutableStateBuilder) AddWorkflowExecutionSignaled(
 	}
 
 	return e.hBuilder.AddWorkflowExecutionSignaledEvent(request)
+}
+
+func (e *mutableStateBuilder) AddContinueAsNewEvent(decisionCompletedEventID int64, domainID, newRunID string,
+	attributes *workflow.ContinueAsNewWorkflowExecutionDecisionAttributes) (*workflow.HistoryEvent, *mutableStateBuilder,
+	error) {
+	if e.hasPendingTasks() || e.HasPendingDecisionTask() {
+		logInvalidHistoryActionEvent(e.logger, tagValueActionContinueAsNew, e.GetNextEventID(), fmt.Sprintf(
+			"{OutStandingActivityTasks: %v, HasPendingDecision: %v}", len(e.pendingActivityInfoIDs),
+			e.HasPendingDecisionTask()))
+	}
+
+	e.executionInfo.State = persistence.WorkflowStateCompleted
+	newExecution := workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr(e.executionInfo.WorkflowID),
+		RunId:      common.StringPtr(newRunID),
+	}
+
+	newStateBuilder := newMutableStateBuilder(e.logger)
+	startedEvent := newStateBuilder.AddWorkflowExecutionStartedEventForContinueAsNew(domainID, newExecution, e,
+		attributes)
+	if startedEvent == nil {
+		return nil, nil, &workflow.InternalServiceError{Message: "Failed to add workflow execution started event."}
+	}
+
+	_, di := newStateBuilder.AddDecisionTaskScheduledEvent()
+	if di == nil {
+		return nil, nil, &workflow.InternalServiceError{Message: "Failed to add decision started event."}
+	}
+
+	e.continueAsNew = &persistence.CreateWorkflowExecutionRequest{
+		RequestID:            uuid.New(),
+		DomainID:             domainID,
+		Execution:            newExecution,
+		TaskList:             newStateBuilder.executionInfo.TaskList,
+		WorkflowTypeName:     newStateBuilder.executionInfo.WorkflowTypeName,
+		DecisionTimeoutValue: newStateBuilder.executionInfo.DecisionTimeoutValue,
+		ExecutionContext:     nil,
+		NextEventID:          newStateBuilder.GetNextEventID(),
+		LastProcessedEvent:   common.EmptyEventID,
+		TransferTasks: []persistence.Task{&persistence.DecisionTask{
+			DomainID: domainID, TaskList: newStateBuilder.executionInfo.TaskList, ScheduleID: di.ScheduleID,
+		}},
+		DecisionScheduleID:          di.ScheduleID,
+		DecisionStartedID:           di.StartedID,
+		DecisionStartToCloseTimeout: di.DecisionTimeout,
+		ContinueAsNew:               true,
+	}
+
+	return e.hBuilder.AddContinuedAsNewEvent(decisionCompletedEventID, newRunID, attributes), newStateBuilder, nil
+}
+
+func (e *mutableStateBuilder) AddContinueAsNewFailedEvent(decisionCompletedEventID int64,
+	cause workflow.WorkflowCompleteFailedCause) *workflow.HistoryEvent {
+	return e.hBuilder.AddContinueAsNewFailedEvent(decisionCompletedEventID, cause)
 }

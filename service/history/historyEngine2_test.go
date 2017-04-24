@@ -28,6 +28,7 @@ type (
 		*require.Assertions
 		historyEngine      *historyEngineImpl
 		mockMatchingClient *mocks.MatchingClient
+		mockHistoryClient  *mocks.HistoryClient
 		mockMetadataMgr    *mocks.MetadataManager
 		mockVisibilityMgr  *mocks.VisibilityManager
 		mockExecutionMgr   *mocks.ExecutionManager
@@ -61,6 +62,7 @@ func (s *engine2Suite) SetupTest() {
 
 	shardID := 0
 	s.mockMatchingClient = &mocks.MatchingClient{}
+	s.mockHistoryClient = &mocks.HistoryClient{}
 	s.mockMetadataMgr = &mocks.MetadataManager{}
 	s.mockVisibilityMgr = &mocks.VisibilityManager{}
 	s.mockExecutionMgr = &mocks.ExecutionManager{}
@@ -81,8 +83,8 @@ func (s *engine2Suite) SetupTest() {
 		logger:                    s.logger,
 	}
 
-	historyCache := newHistoryCache(mockShard, s.logger)
-	txProcessor := newTransferQueueProcessor(mockShard, s.mockVisibilityMgr, s.mockMatchingClient, historyCache)
+	historyCache := newHistoryCache(historyCacheMaxSize, mockShard, s.logger)
+	txProcessor := newTransferQueueProcessor(mockShard, s.mockVisibilityMgr, s.mockMatchingClient, s.mockHistoryClient, historyCache)
 	h := &historyEngineImpl{
 		shard:            mockShard,
 		executionManager: s.mockExecutionMgr,
@@ -92,7 +94,7 @@ func (s *engine2Suite) SetupTest() {
 		domainCache:      cache.NewDomainCache(s.mockMetadataMgr, s.logger),
 		logger:           s.logger,
 		tokenSerializer:  common.NewJSONTaskTokenSerializer(),
-		hSerializer:      newJSONHistorySerializer(),
+		hSerializer:      common.NewJSONHistorySerializer(),
 	}
 	h.timerProcessor = newTimerQueueProcessor(h, s.mockExecutionMgr, s.logger)
 	s.historyEngine = h
@@ -253,10 +255,6 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedConflictOnUpdate() {
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gwmsResponse2, nil).Once()
 	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(nil).Once()
-	s.mockHistoryMgr.On("GetWorkflowExecutionHistory", mock.Anything).Return(&persistence.GetWorkflowExecutionHistoryResponse{
-		Events:        [][]byte{[]byte("event1;event2;event3")},
-		NextPageToken: []byte{},
-	}, nil).Once()
 
 	response, err := s.historyEngine.RecordDecisionTaskStarted(&h.RecordDecisionTaskStartedRequest{
 		WorkflowExecution: &workflowExecution,
@@ -299,10 +297,6 @@ func (s *engine2Suite) TestRecordDecisionTaskRetrySameRequest() {
 	ms2 := createMutableState(msBuilder)
 	gwmsResponse2 := &persistence.GetWorkflowExecutionResponse{State: ms2}
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gwmsResponse2, nil).Once()
-	s.mockHistoryMgr.On("GetWorkflowExecutionHistory", mock.Anything).Return(&persistence.GetWorkflowExecutionHistoryResponse{
-		Events:        [][]byte{[]byte("event1;event2;event3")},
-		NextPageToken: []byte{},
-	}, nil).Once()
 
 	response, err := s.historyEngine.RecordDecisionTaskStarted(&h.RecordDecisionTaskStartedRequest{
 		WorkflowExecution: &workflowExecution,
@@ -421,11 +415,6 @@ func (s *engine2Suite) TestRecordDecisionTaskSuccess() {
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gwmsResponse, nil).Once()
 	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(nil).Once()
-	s.mockHistoryMgr.On("GetWorkflowExecutionHistory", mock.Anything).Return(
-		&persistence.GetWorkflowExecutionHistoryResponse{
-			Events:        [][]byte{[]byte("event1;event2;event3")},
-			NextPageToken: []byte{},
-		}, nil).Once()
 
 	response, err := s.historyEngine.RecordDecisionTaskStarted(&h.RecordDecisionTaskStartedRequest{
 		WorkflowExecution: &workflowExecution,
@@ -522,6 +511,71 @@ func (s *engine2Suite) TestRecordActivityTaskStartedSuccess() {
 	s.Equal("reqId", response.GetStartedEvent().GetActivityTaskStartedEventAttributes().GetRequestId())
 }
 
+func (s *engine2Suite) TestRequestCancelWorkflowExecutionSuccess() {
+	domainID := "domainId"
+	workflowExecution := workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr("wId"),
+		RunId:      common.StringPtr("rId"),
+	}
+
+	identity := "testIdentity"
+	tl := "testTaskList"
+
+	msBuilder := s.createExecutionStartedState(workflowExecution, tl, identity, false)
+	ms1 := createMutableState(msBuilder)
+	gwmsResponse1 := &persistence.GetWorkflowExecutionResponse{State: ms1}
+
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gwmsResponse1, nil).Once()
+	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(nil).Once()
+	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(nil).Once()
+
+	err := s.historyEngine.RequestCancelWorkflowExecution(&h.RequestCancelWorkflowExecutionRequest{
+		DomainUUID: common.StringPtr(domainID),
+		CancelRequest: &workflow.RequestCancelWorkflowExecutionRequest{
+			WorkflowExecution: &workflow.WorkflowExecution{
+				WorkflowId: workflowExecution.WorkflowId,
+				RunId:      workflowExecution.RunId,
+			},
+			Identity: common.StringPtr("identity"),
+		},
+	})
+	s.Nil(err)
+
+	executionBuilder := s.getBuilder(domainID, workflowExecution)
+	s.Equal(int64(4), executionBuilder.GetNextEventID())
+}
+
+func (s *engine2Suite) TestRequestCancelWorkflowExecutionFail() {
+	domainID := "domainId"
+	workflowExecution := workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr("wId"),
+		RunId:      common.StringPtr("rId"),
+	}
+
+	identity := "testIdentity"
+	tl := "testTaskList"
+
+	msBuilder := s.createExecutionStartedState(workflowExecution, tl, identity, false)
+	msBuilder.executionInfo.State = persistence.WorkflowStateCompleted
+	ms1 := createMutableState(msBuilder)
+	gwmsResponse1 := &persistence.GetWorkflowExecutionResponse{State: ms1}
+
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gwmsResponse1, nil).Once()
+
+	err := s.historyEngine.RequestCancelWorkflowExecution(&h.RequestCancelWorkflowExecutionRequest{
+		DomainUUID: common.StringPtr(domainID),
+		CancelRequest: &workflow.RequestCancelWorkflowExecutionRequest{
+			WorkflowExecution: &workflow.WorkflowExecution{
+				WorkflowId: workflowExecution.WorkflowId,
+				RunId:      workflowExecution.RunId,
+			},
+			Identity: common.StringPtr("identity"),
+		},
+	})
+	s.NotNil(err)
+	s.IsType(&workflow.EntityNotExistsError{}, err)
+}
+
 func (s *engine2Suite) createExecutionStartedState(we workflow.WorkflowExecution, tl, identity string,
 	startDecision bool) *mutableStateBuilder {
 	msBuilder := newMutableStateBuilder(s.logger)
@@ -532,6 +586,16 @@ func (s *engine2Suite) createExecutionStartedState(we workflow.WorkflowExecution
 	}
 
 	return msBuilder
+}
+
+func (s *engine2Suite) printHistory(builder *mutableStateBuilder) string {
+	history, err := builder.hBuilder.Serialize()
+	if err != nil {
+		s.logger.Errorf("Error serializing history: %v", err)
+		return ""
+	}
+	s.logger.Infof("Printing History: %v", string(history))
+	return string(history)
 }
 
 func (s *engine2Suite) TestRespondDecisionTaskCompletedRecordMarkerDecision() {

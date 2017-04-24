@@ -87,12 +87,14 @@ const (
 	tagValueActionActivityTaskCancelRequestFailed = "add-activitytask-cancel-request-failed-event"
 	tagValueActionCompleteWorkflow                = "add-complete-workflow-event"
 	tagValueActionFailWorkflow                    = "add-fail-workflow-event"
+	tagValueActionCancelWorkflow                    = "add-cancel-workflow-event"
 	tagValueActionUnknownEvent                    = "add-unknown-event"
 	tagValueActionTimerStarted                    = "add-timer-started-event"
 	tagValueActionTimerFired                      = "add-timer-fired-event"
 	tagValueActionTimerCanceled                   = "add-timer-Canceled-event"
 	tagValueActionWorkflowTerminated              = "add-workflowexecution-terminated-event"
 	tagValueActionWorkflowSignaled                = "add-workflowexecution-signaled-event"
+	tagValueActionContinueAsNew                   = "add-continue-as-new-event"
 
 	// tagStoreOperation values
 	tagValueStoreOperationGetTasks                = "get-tasks"

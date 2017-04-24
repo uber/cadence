@@ -48,7 +48,7 @@ const (
 
 var (
 	// EmptyPollForDecisionTaskResponse is the response when there are no decision tasks to hand out
-	emptyPollForDecisionTaskResponse = workflow.NewPollForDecisionTaskResponse()
+	emptyPollForDecisionTaskResponse = m.NewPollForDecisionTaskResponse()
 	// EmptyPollForActivityTaskResponse is the response when there are no activity tasks to hand out
 	emptyPollForActivityTaskResponse   = workflow.NewPollForActivityTaskResponse()
 	persistenceOperationRetryPolicy    = common.CreatePersistanceRetryPolicy()
@@ -199,7 +199,7 @@ func (e *matchingEngineImpl) AddActivityTask(addRequest *m.AddActivityTaskReques
 
 // PollForDecisionTask tries to get the decision task using exponential backoff.
 func (e *matchingEngineImpl) PollForDecisionTask(ctx thrift.Context, req *m.PollForDecisionTaskRequest) (
-	*workflow.PollForDecisionTaskResponse, error) {
+	*m.PollForDecisionTaskResponse, error) {
 	domainID := req.GetDomainUUID()
 	request := req.GetPollRequest()
 	taskListName := request.GetTaskList().GetName()
@@ -274,6 +274,7 @@ pollLoop:
 		// Generate a unique requestId for this task which will be used for all retries
 		requestID := uuid.New()
 		resp, err := tCtx.RecordActivityTaskStartedWithRetry(&h.RecordActivityTaskStartedRequest{
+			DomainUUID:        common.StringPtr(domainID),
 			WorkflowExecution: &tCtx.workflowExecution,
 			ScheduleId:        &tCtx.info.ScheduleID,
 			TaskId:            &tCtx.info.TaskID,
@@ -318,10 +319,10 @@ func (e *matchingEngineImpl) unloadTaskList(id *taskListID) {
 
 // Populate the decision task response based on context and scheduled/started events.
 func (e *matchingEngineImpl) createPollForDecisionTaskResponse(context *taskContext,
-	historyResponse *h.RecordDecisionTaskStartedResponse) *workflow.PollForDecisionTaskResponse {
+	historyResponse *h.RecordDecisionTaskStartedResponse) *m.PollForDecisionTaskResponse {
 	task := context.info
 
-	response := workflow.NewPollForDecisionTaskResponse()
+	response := m.NewPollForDecisionTaskResponse()
 	response.WorkflowExecution = workflowExecutionPtr(context.workflowExecution)
 	token := &common.TaskToken{
 		DomainID:   task.DomainID,
@@ -335,7 +336,6 @@ func (e *matchingEngineImpl) createPollForDecisionTaskResponse(context *taskCont
 		response.PreviousStartedEventId = historyResponse.PreviousStartedEventId
 	}
 	response.StartedEventId = historyResponse.StartedEventId
-	response.History = historyResponse.History
 
 	return response
 }

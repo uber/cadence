@@ -15,7 +15,7 @@ const (
 
 // Workflow execution states
 const (
-	WorkflowStateCreated = iota
+	WorkflowStateCreated   = iota
 	WorkflowStateRunning
 	WorkflowStateCompleted
 )
@@ -28,9 +28,10 @@ const (
 
 // Transfer task types
 const (
-	TransferTaskTypeDecisionTask = iota
+	TransferTaskTypeDecisionTask    = iota
 	TransferTaskTypeActivityTask
 	TransferTaskTypeDeleteExecution
+	TransferTaskTypeCancelExecution
 )
 
 // Types of timers
@@ -95,14 +96,16 @@ type (
 
 	// TransferTaskInfo describes a transfer task
 	TransferTaskInfo struct {
-		DomainID       string
-		WorkflowID     string
-		RunID          string
-		TaskID         int64
-		TargetDomainID string
-		TaskList       string
-		TaskType       int
-		ScheduleID     int64
+		DomainID         string
+		WorkflowID       string
+		RunID            string
+		TaskID           int64
+		TargetDomainID   string
+		TargetWorkflowID string
+		TargetRunID      string
+		TaskList         string
+		TaskType         int
+		ScheduleID       int64
 	}
 
 	// TimerTaskInfo describes a timer task.
@@ -166,6 +169,15 @@ type (
 	DecisionTimeoutTask struct {
 		TaskID  int64
 		EventID int64
+	}
+
+	// CancelExecutionTask identifies a transfer task for cancel of execution
+	CancelExecutionTask struct {
+		TaskID           int64
+		TargetDomainID   string
+		TargetWorkflowID string
+		TargetRunID      string
+		ScheduleID       int64
 	}
 
 	// ActivityTimeoutTask identifies a timeout task.
@@ -252,6 +264,7 @@ type (
 		DecisionScheduleID          int64
 		DecisionStartedID           int64
 		DecisionStartToCloseTimeout int32
+		ContinueAsNew               bool
 	}
 
 	// CreateWorkflowExecutionResponse is the response to CreateWorkflowExecutionRequest
@@ -272,7 +285,7 @@ type (
 
 	// GetCurrentExecutionRequest is used to retrieve the current RunId for an execution
 	GetCurrentExecutionRequest struct {
-		DomainID  string
+		DomainID   string
 		WorkflowID string
 	}
 
@@ -289,6 +302,8 @@ type (
 		DeleteTimerTask Task
 		Condition       int64
 		RangeID         int64
+		ContinueAsNew   *CreateWorkflowExecutionRequest
+		CloseExecution  bool
 
 		// Mutable state
 		UpsertActivityInfos []*ActivityInfo
@@ -653,5 +668,20 @@ func (u *UserTimerTask) GetTaskID() int64 {
 
 // SetTaskID sets the sequence ID of the timer task.
 func (u *UserTimerTask) SetTaskID(id int64) {
+	u.TaskID = id
+}
+
+// GetType returns the type of the cancel transfer task
+func (u *CancelExecutionTask) GetType() int {
+	return TransferTaskTypeCancelExecution
+}
+
+// GetTaskID returns the sequence ID of the cancel transfer task.
+func (u *CancelExecutionTask) GetTaskID() int64 {
+	return u.TaskID
+}
+
+// SetTaskID sets the sequence ID of the cancel transfer task.
+func (u *CancelExecutionTask) SetTaskID(id int64) {
 	u.TaskID = id
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/uber-common/bark"
 	h "github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	hc "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
@@ -32,11 +33,18 @@ type (
 		txProcessor      transferQueueProcessor
 		timerProcessor   timerQueueProcessor
 		tokenSerializer  common.TaskTokenSerializer
-		hSerializer      historySerializer
+		hSerializer      common.HistorySerializer
 		metricsReporter  metrics.Client
 		historyCache     *historyCache
 		domainCache      cache.DomainCache
 		logger           bark.Logger
+	}
+
+	// shardContextWrapper wraps ShardContext to notify transferQueueProcessor on new tasks.
+	// TODO: use to notify timerQueueProcessor as well.
+	shardContextWrapper struct {
+		ShardContext
+		txProcessor transferQueueProcessor
 	}
 )
 
@@ -53,12 +61,14 @@ var (
 
 // NewEngineWithShardContext creates an instance of history engine
 func NewEngineWithShardContext(shard ShardContext, metadataMgr persistence.MetadataManager,
-	visibilityMgr persistence.VisibilityManager, matching matching.Client) Engine {
+	visibilityMgr persistence.VisibilityManager, matching matching.Client, historyClient hc.Client) Engine {
+	shardWrapper := &shardContextWrapper{ShardContext: shard}
+	shard = shardWrapper
 	logger := shard.GetLogger()
 	executionManager := shard.GetExecutionManager()
 	historyManager := shard.GetHistoryManager()
-	historyCache := newHistoryCache(shard, logger)
-	txProcessor := newTransferQueueProcessor(shard, visibilityMgr, matching, historyCache)
+	historyCache := newHistoryCache(historyCacheMaxSize, shard, logger)
+	txProcessor := newTransferQueueProcessor(shard, visibilityMgr, matching, historyClient, historyCache)
 	historyEngImpl := &historyEngineImpl{
 		shard:            shard,
 		metadataMgr:      metadataMgr,
@@ -66,7 +76,7 @@ func NewEngineWithShardContext(shard ShardContext, metadataMgr persistence.Metad
 		executionManager: executionManager,
 		txProcessor:      txProcessor,
 		tokenSerializer:  common.NewJSONTaskTokenSerializer(),
-		hSerializer:      newJSONHistorySerializer(),
+		hSerializer:      common.NewJSONHistorySerializer(),
 		historyCache:     historyCache,
 		domainCache:      cache.NewDomainCache(metadataMgr, logger),
 		logger: logger.WithFields(bark.Fields{
@@ -74,6 +84,7 @@ func NewEngineWithShardContext(shard ShardContext, metadataMgr persistence.Metad
 		}),
 	}
 	historyEngImpl.timerProcessor = newTimerQueueProcessor(historyEngImpl, executionManager, logger)
+	shardWrapper.txProcessor = txProcessor
 	return historyEngImpl
 }
 
@@ -114,7 +125,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 	// Generate first decision task event.
 	taskList := request.GetTaskList().GetName()
 	msBuilder := newMutableStateBuilder(e.logger)
-	startedEvent := msBuilder.AddWorkflowExecutionStartedEvent(workflowExecution, request)
+	startedEvent := msBuilder.AddWorkflowExecutionStartedEvent(domainID, workflowExecution, request)
 	if startedEvent == nil {
 		return nil, &workflow.InternalServiceError{Message: "Failed to add workflow execution started event."}
 	}
@@ -161,6 +172,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 		DecisionScheduleID:          di.ScheduleID,
 		DecisionStartedID:           di.StartedID,
 		DecisionStartToCloseTimeout: di.DecisionTimeout,
+		ContinueAsNew:               false,
 	})
 
 	if err != nil {
@@ -186,6 +198,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 			// are always created for a unique run_id which is not visible beyond this call yet.
 			// TODO: Handle error on deletion of execution history
 			e.historyMgr.DeleteWorkflowExecutionHistory(&persistence.DeleteWorkflowExecutionHistoryRequest{
+				DomainID:  domainID,
 				Execution: workflowExecution,
 			})
 		}
@@ -481,10 +494,11 @@ Update_History_Loop:
 		}
 
 		completedID := completedEvent.GetEventId()
+		hasUnhandledEvents := ((completedID-startedID) > 1)
 		isComplete := false
 		transferTasks := []persistence.Task{}
 		timerTasks := []persistence.Task{}
-
+		var continueAsNewBuilder *mutableStateBuilder
 	Process_Decision_Loop:
 		for _, d := range request.Decisions {
 			switch d.GetDecisionType() {
@@ -535,7 +549,7 @@ Update_History_Loop:
 				defer e.timerProcessor.NotifyNewTimer(Schedule2CloseTimeoutTask.GetTaskID())
 
 			case workflow.DecisionType_CompleteWorkflowExecution:
-				if isComplete || msBuilder.hasPendingTasks() {
+				if isComplete || hasUnhandledEvents {
 					msBuilder.AddCompleteWorkflowExecutionFailedEvent(completedID,
 						workflow.WorkflowCompleteFailedCause_UNHANDLED_DECISION)
 					continue Process_Decision_Loop
@@ -544,7 +558,7 @@ Update_History_Loop:
 				msBuilder.AddCompletedWorkflowEvent(completedID, attributes)
 				isComplete = true
 			case workflow.DecisionType_FailWorkflowExecution:
-				if isComplete || msBuilder.hasPendingTasks() {
+				if isComplete || hasUnhandledEvents {
 					msBuilder.AddCompleteWorkflowExecutionFailedEvent(completedID,
 						workflow.WorkflowCompleteFailedCause_UNHANDLED_DECISION)
 					continue Process_Decision_Loop
@@ -552,6 +566,20 @@ Update_History_Loop:
 				attributes := d.GetFailWorkflowExecutionDecisionAttributes()
 				msBuilder.AddFailWorkflowEvent(completedID, attributes)
 				isComplete = true
+			case workflow.DecisionType_CancelWorkflowExecution:
+				attributes := d.GetCancelWorkflowExecutionDecisionAttributes()
+
+				// Either we are already completed (or) we have a new pending event came while
+				// we are processing the decision, we would fail this and give a chance to client
+				// to process the new event.
+				if isComplete || hasUnhandledEvents {
+					msBuilder.AddCancelWorkflowExecutionFailedEvent(completedID,
+						workflow.WorkflowCancelFailedCause_UNHANDLED_DECISION)
+					continue Process_Decision_Loop
+				}
+				msBuilder.AddWorkflowExecutionCanceledEvent(completedID, attributes)
+				isComplete = true
+
 			case workflow.DecisionType_StartTimer:
 				attributes := d.GetStartTimerDecisionAttributes()
 				_, ti := msBuilder.AddTimerStartedEvent(completedID, attributes)
@@ -586,15 +614,61 @@ Update_History_Loop:
 			case workflow.DecisionType_RecordMarker:
 				msBuilder.AddRecordMarkerEvent(completedID, d.GetRecordMarkerDecisionAttributes())
 
+			case workflow.DecisionType_RequestCancelExternalWorkflowExecution:
+
+				attributes := d.GetRequestCancelExternalWorkflowExecutionDecisionAttributes()
+
+				foreignInfo, _, err := e.domainCache.GetDomain(attributes.GetDomain())
+				if err != nil {
+					return &workflow.InternalServiceError{
+						Message: fmt.Sprintf("Unable to schedule activity across domain: %v.",
+							attributes.GetDomain())}
+				}
+
+				wfCancelReqEvent := msBuilder.AddRequestCancelExternalWorkflowExecutionInitiatedEvent(
+					completedID, attributes)
+				if wfCancelReqEvent == nil {
+					return &workflow.InternalServiceError{Message: "Unable to add external cancel workflow request."}
+				}
+
+				transferTasks = append(transferTasks, &persistence.CancelExecutionTask{
+					TargetDomainID:   foreignInfo.ID,
+					TargetWorkflowID: attributes.GetWorkflowId(),
+					TargetRunID:      attributes.GetRunId(),
+					ScheduleID:       wfCancelReqEvent.GetEventId(),
+				})
+
+			case workflow.DecisionType_ContinueAsNewWorkflowExecution:
+				if isComplete || hasUnhandledEvents {
+					msBuilder.AddContinueAsNewFailedEvent(completedID,
+						workflow.WorkflowCompleteFailedCause_UNHANDLED_DECISION)
+					continue Process_Decision_Loop
+				}
+
+				attributes := d.GetContinueAsNewWorkflowExecutionDecisionAttributes()
+				if attributes == nil {
+					return &workflow.BadRequestError{
+						Message: "ContinueAsNew decision called without attributes.",
+					}
+				}
+				runID := uuid.New()
+				_, newStateBuilder, err := msBuilder.AddContinueAsNewEvent(completedID, domainID, runID, attributes)
+				if err != nil {
+					return nil
+				}
+				isComplete = true
+				continueAsNewBuilder = newStateBuilder
+
 			default:
 				return &workflow.BadRequestError{Message: fmt.Sprintf("Unknown decision type: %v", d.GetDecisionType())}
 			}
 		}
 
 		// Schedule another decision task if new events came in during this decision
-		if (completedID - startedID) > 1 {
+		if hasUnhandledEvents {
 			newDecisionEvent, _ := msBuilder.AddDecisionTaskScheduledEvent()
 			transferTasks = append(transferTasks, &persistence.DecisionTask{
+				DomainID:   domainID,
 				TaskList:   newDecisionEvent.GetDecisionTaskScheduledEventAttributes().GetTaskList().GetName(),
 				ScheduleID: newDecisionEvent.GetEventId(),
 			})
@@ -613,13 +687,21 @@ Update_History_Loop:
 
 		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict then reload
 		// the history and try the operation again.
-		if err := context.updateWorkflowExecutionWithContext(request.GetExecutionContext(), transferTasks, timerTasks,
-			transactionID); err != nil {
-			if err == ErrConflict {
+		var updateErr error
+		if continueAsNewBuilder != nil {
+			updateErr = context.continueAsNewWorkflowExecution(request.GetExecutionContext(), continueAsNewBuilder,
+				transferTasks, transactionID)
+		} else {
+			updateErr = context.updateWorkflowExecutionWithContext(request.GetExecutionContext(), transferTasks, timerTasks,
+				transactionID)
+		}
+
+		if updateErr != nil {
+			if updateErr == ErrConflict {
 				continue Update_History_Loop
 			}
 
-			return err
+			return updateErr
 		}
 
 		return nil
@@ -945,6 +1027,36 @@ Update_History_Loop:
 	return &workflow.RecordActivityTaskHeartbeatResponse{}, ErrMaxAttemptsExceeded
 }
 
+// RequestCancelWorkflowExecution
+// https://github.com/uber/cadence/issues/145
+// TODO: (1) Each external request can result in one cancel requested event. it would be nice
+//	 to have dedupe on the server side.
+//	(2) if there are multiple calls if one request goes through then can we respond to the other ones with
+//       cancellation in progress instead of success.
+func (e *historyEngineImpl) RequestCancelWorkflowExecution(
+	req *h.RequestCancelWorkflowExecutionRequest) error {
+	domainID := req.GetDomainUUID()
+	request := req.GetCancelRequest()
+
+	workflowExecution := workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr(request.GetWorkflowExecution().GetWorkflowId()),
+		RunId:      common.StringPtr(request.GetWorkflowExecution().GetRunId()),
+	}
+
+	return e.updateWorkflowExecution(domainID, workflowExecution, false, true,
+		func(msBuilder *mutableStateBuilder) error {
+			if !msBuilder.isWorkflowExecutionRunning() {
+				return &workflow.EntityNotExistsError{Message: "Workflow execution already completed."}
+			}
+
+			if msBuilder.AddWorkflowExecutionCancelRequestedEvent("", req) == nil {
+				return &workflow.InternalServiceError{Message: "Unable to cancel workflow execution."}
+			}
+
+			return nil
+		})
+}
+
 func (e *historyEngineImpl) SignalWorkflowExecution(signalRequest *h.SignalWorkflowExecutionRequest) error {
 	domainID := signalRequest.GetDomainUUID()
 	request := signalRequest.GetSignalRequest()
@@ -1040,30 +1152,27 @@ Update_History_Loop:
 			if err == ErrConflict {
 				continue Update_History_Loop
 			}
-
 			return err
 		}
-
 		return nil
 	}
-
 	return ErrMaxAttemptsExceeded
 }
 
 func (e *historyEngineImpl) createRecordDecisionTaskStartedResponse(domainID string, msBuilder *mutableStateBuilder,
 	startedEventID int64) *h.RecordDecisionTaskStartedResponse {
-	executionHistory, _ := e.getHistory(domainID, msBuilder)
 	response := h.NewRecordDecisionTaskStartedResponse()
 	response.WorkflowType = msBuilder.getWorkflowType()
 	if msBuilder.previousDecisionStartedEvent() != emptyEventID {
 		response.PreviousStartedEventId = common.Int64Ptr(msBuilder.previousDecisionStartedEvent())
 	}
 	response.StartedEventId = common.Int64Ptr(startedEventID)
-	response.History = executionHistory
 
 	return response
 }
 
+// There is a duplicate helper in the frontend that is almost identical to this
+// TODO: remove this helper when GetWorkflowExecutionHistory is served from the FE
 func (e *historyEngineImpl) getHistory(domainID string, msBuilder *mutableStateBuilder) (*workflow.History, error) {
 	execution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr(msBuilder.executionInfo.WorkflowID),
@@ -1100,4 +1209,25 @@ Pagination_Loop:
 	executionHistory := workflow.NewHistory()
 	executionHistory.Events = historyEvents
 	return executionHistory, nil
+}
+
+func (s *shardContextWrapper) UpdateWorkflowExecution(request *persistence.UpdateWorkflowExecutionRequest) error {
+	err := s.ShardContext.UpdateWorkflowExecution(request)
+	if err == nil {
+		if len(request.TransferTasks) > 0 {
+			s.txProcessor.NotifyNewTask()
+		}
+	}
+	return err
+}
+
+func (s *shardContextWrapper) CreateWorkflowExecution(request *persistence.CreateWorkflowExecutionRequest) (
+	*persistence.CreateWorkflowExecutionResponse, error) {
+	resp, err := s.ShardContext.CreateWorkflowExecution(request)
+	if err == nil {
+		if len(request.TransferTasks) > 0 {
+			s.txProcessor.NotifyNewTask()
+		}
+	}
+	return resp, err
 }
