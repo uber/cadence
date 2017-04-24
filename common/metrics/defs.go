@@ -33,7 +33,7 @@ const (
 
 // Service names for all services that emit metrics.
 const (
-	Common = iota
+	Common      = iota
 	Frontend
 	History
 	Matching
@@ -122,6 +122,17 @@ const (
 	LeaseTaskListScope
 	// UpdateTaskListScope tracks UpdateTaskListScope calls made by service to persistence layer
 	UpdateTaskListScope
+	// AppendHistoryEventsScope tracks AppendHistoryEvents calls made by service to persistence layer
+	AppendHistoryEventsScope
+	// PersistenceGetWorkflowExecutionHistoryScope tracks GetWorkflowExecutionHistory calls made by service to persistence layer
+	PersistenceGetWorkflowExecutionHistoryScope
+	// DeleteWorkflowExecutionHistoryScope tracks DeleteWorkflowExecutionHistory calls made by service to persistence layer
+	DeleteWorkflowExecutionHistoryScope
+	PersistenceCreateDomainScope
+	PersistenceGetDomainScope
+	PersistenceUpdateDomainScope
+	PersistenceDeleteDomainScope
+	PersistenceDeleteDomainByNameScope
 	// HistoryClientStartWorkflowExecutionScope tracks RPC calls to history service
 	HistoryClientStartWorkflowExecutionScope
 	// HistoryClientRecordActivityTaskHeartbeatScope tracks RPC calls to history service
@@ -230,23 +241,31 @@ const (
 var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 	// common scope Names
 	Common: {
-		CreateShardScope:             {operation: "CreateShard"},
-		GetShardScope:                {operation: "GetShard"},
-		UpdateShardScope:             {operation: "UpdateShard"},
-		CreateWorkflowExecutionScope: {operation: "CreateWorkflowExecution"},
-		GetWorkflowExecutionScope:    {operation: "GetWorkflowExecution"},
-		UpdateWorkflowExecutionScope: {operation: "UpdateWorkflowExecution"},
-		DeleteWorkflowExecutionScope: {operation: "DeleteWorkflowExecution"},
-		GetCurrentExecutionScope:     {operation: "GetCurrentExecution"},
-		GetTransferTasksScope:        {operation: "GetTransferTasks"},
-		CompleteTransferTaskScope:    {operation: "CompleteTransferTask"},
-		GetTimerIndexTasksScope:      {operation: "GetTimerIndexTasks"},
-		CompleteTimerTaskScope:       {operation: "CompleteTimerTask"},
-		CreateTaskScope:              {operation: "CreateTask"},
-		GetTasksScope:                {operation: "GetTasks"},
-		CompleteTaskScope:            {operation: "CompleteTask"},
-		LeaseTaskListScope:           {operation: "LeaseTaskList"},
-		UpdateTaskListScope:          {operation: "UpdateTaskList"},
+		CreateShardScope:                            {operation: "CreateShard"},
+		GetShardScope:                               {operation: "GetShard"},
+		UpdateShardScope:                            {operation: "UpdateShard"},
+		CreateWorkflowExecutionScope:                {operation: "CreateWorkflowExecution"},
+		GetWorkflowExecutionScope:                   {operation: "GetWorkflowExecution"},
+		UpdateWorkflowExecutionScope:                {operation: "UpdateWorkflowExecution"},
+		DeleteWorkflowExecutionScope:                {operation: "DeleteWorkflowExecution"},
+		GetCurrentExecutionScope:                    {operation: "GetCurrentExecution"},
+		GetTransferTasksScope:                       {operation: "GetTransferTasks"},
+		CompleteTransferTaskScope:                   {operation: "CompleteTransferTask"},
+		GetTimerIndexTasksScope:                     {operation: "GetTimerIndexTasks"},
+		CompleteTimerTaskScope:                      {operation: "CompleteTimerTask"},
+		CreateTaskScope:                             {operation: "CreateTask"},
+		GetTasksScope:                               {operation: "GetTasks"},
+		CompleteTaskScope:                           {operation: "CompleteTask"},
+		LeaseTaskListScope:                          {operation: "LeaseTaskList"},
+		UpdateTaskListScope:                         {operation: "UpdateTaskList"},
+		AppendHistoryEventsScope:                    {operation: "AppendHistoryEvents"},
+		PersistenceGetWorkflowExecutionHistoryScope: {operation: "GetWorkflowExecutionHistory"},
+		DeleteWorkflowExecutionHistoryScope:         {operation: "DeleteWorkflowExecutionHistory"},
+		PersistenceCreateDomainScope:                {operation: "CreateDomain"},
+		PersistenceGetDomainScope:                   {operation: "GetDomain"},
+		PersistenceUpdateDomainScope:                {operation: "UpdateDomain"},
+		PersistenceDeleteDomainScope:                {operation: "DeleteDomain"},
+		PersistenceDeleteDomainByNameScope:          {operation: "DeleteDomainByName"},
 
 		HistoryClientStartWorkflowExecutionScope:         {operation: "HistoryClientStartWorkflowExecution"},
 		HistoryClientRecordActivityTaskHeartbeatScope:    {operation: "HistoryClientRecordActivityTaskHeartbeat"},
@@ -302,12 +321,13 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 
 // Common Metrics enum
 const (
-	CadenceRequests = iota
+	CadenceRequests                          = iota
 	CadenceFailures
 	CadenceLatency
 	CadenceErrBadRequestCounter
 	CadenceErrEntityNotExistsCounter
 	CadenceErrExecutionAlreadyStartedCounter
+	CadenceErrDomainAlreadyExistsCounter
 	PersistenceRequests
 	PersistenceFailures
 	PersistenceLatency
@@ -321,7 +341,7 @@ const (
 
 // History Metrics enum
 const (
-	TransferTasksProcessedCounter = iota + NumCommonMetrics
+	TransferTasksProcessedCounter        = iota + NumCommonMetrics
 	CadenceErrEventAlreadyStartedCounter
 	CadenceErrShardOwnershipLostCounter
 )
