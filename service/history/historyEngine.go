@@ -493,7 +493,7 @@ Update_History_Loop:
 		}
 
 		completedID := completedEvent.GetEventId()
-		hasUnhandledEvents := ((completedID-startedID) > 1)
+		hasUnhandledEvents := ((completedID - startedID) > 1)
 		isComplete := false
 		transferTasks := []persistence.Task{}
 		timerTasks := []persistence.Task{}
@@ -1225,13 +1225,6 @@ func (s *shardContextWrapper) UpdateWorkflowExecution(request *persistence.Updat
 	err := s.ShardContext.UpdateWorkflowExecution(request)
 	if err == nil {
 		if len(request.TransferTasks) > 0 {
-			maxRL := int64(0)
-			for _, tsk := range request.TransferTasks {
-				if tsk.GetTaskID() > maxRL {
-					maxRL = tsk.GetTaskID()
-				}
-			}
-			s.txProcessor.NotifyMaxReadLevel(maxRL)
 			s.txProcessor.NotifyNewTask()
 		}
 	}
@@ -1243,13 +1236,6 @@ func (s *shardContextWrapper) CreateWorkflowExecution(request *persistence.Creat
 	resp, err := s.ShardContext.CreateWorkflowExecution(request)
 	if err == nil {
 		if len(request.TransferTasks) > 0 {
-			maxRL := int64(0)
-			for _, tsk := range request.TransferTasks {
-				if tsk.GetTaskID() > maxRL {
-					maxRL = tsk.GetTaskID()
-				}
-			}
-			s.txProcessor.NotifyMaxReadLevel(maxRL)
 			s.txProcessor.NotifyNewTask()
 		}
 	}

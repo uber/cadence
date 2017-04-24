@@ -95,7 +95,6 @@ func newAckManager(processor transferQueueProcessor, shard ShardContext, executi
 		executionMgr:     executionMgr,
 		outstandingTasks: make(map[int64]bool),
 		readLevel:        ackLevel,
-		maxReadLevel:     ackLevel,
 		ackLevel:         ackLevel,
 		logger:           logger,
 	}
@@ -137,14 +136,6 @@ func (t *transferQueueProcessorImpl) NotifyNewTask() {
 	case t.appendCh <- event:
 	default: // channel already has an event, don't block
 	}
-}
-
-func (t *transferQueueProcessorImpl) NotifyMaxReadLevel(rl int64) {
-	t.ackMgr.Lock()
-	if t.ackMgr.maxReadLevel < rl {
-		t.ackMgr.maxReadLevel = rl
-	}
-	t.ackMgr.Unlock()
 }
 
 func (t *transferQueueProcessorImpl) processorPump() {
@@ -315,7 +306,7 @@ ProcessRetryLoop:
 								ExternalInitiatedEventId: common.Int64Ptr(task.ScheduleID),
 								ExternalWorkflowExecution: &workflow.WorkflowExecution{
 									WorkflowId: common.StringPtr(task.WorkflowID),
-									RunId: common.StringPtr(task.RunID),
+									RunId:      common.StringPtr(task.RunID),
 								},
 							}
 
@@ -370,11 +361,10 @@ func (t *transferQueueProcessorImpl) recordWorkflowExecutionStarted(
 func (a *ackManager) readTransferTasks() ([]*persistence.TransferTaskInfo, error) {
 	a.RLock()
 	rLevel := a.readLevel
-	mLevel := a.maxReadLevel
 	a.RUnlock()
 	response, err := a.executionMgr.GetTransferTasks(&persistence.GetTransferTasksRequest{
 		ReadLevel:    rLevel,
-		MaxReadLevel: mLevel,
+		MaxReadLevel: a.shard.GetTransferMaxReadLevel(),
 		BatchSize:    transferTaskBatchSize,
 	})
 

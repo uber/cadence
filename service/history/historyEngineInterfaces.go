@@ -40,7 +40,6 @@ type (
 	transferQueueProcessor interface {
 		common.Daemon
 		NotifyNewTask()
-		NotifyMaxReadLevel(rl int64)
 	}
 
 	timerQueueProcessor interface {
