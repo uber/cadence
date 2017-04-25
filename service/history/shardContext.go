@@ -122,7 +122,7 @@ func (s *shardContextImpl) CreateWorkflowExecution(request *persistence.CreateWo
 	s.Lock()
 	defer s.Unlock()
 
-	transferReadLevel := int64(0)
+	transferMaxReadLevel := int64(0)
 	// assign IDs for the transfer tasks
 	// Must be done under the shard lock to ensure transfer tasks are written to persistence in increasing
 	// ID order
@@ -132,9 +132,9 @@ func (s *shardContextImpl) CreateWorkflowExecution(request *persistence.CreateWo
 			return nil, err
 		}
 		task.SetTaskID(id)
-		transferReadLevel = id
+		transferMaxReadLevel = id
 	}
-	defer s.updateMaxReadLevelLocked(transferReadLevel)
+	defer s.updateMaxReadLevelLocked(transferMaxReadLevel)
 
 Create_Loop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
@@ -181,7 +181,7 @@ func (s *shardContextImpl) UpdateWorkflowExecution(request *persistence.UpdateWo
 	s.Lock()
 	defer s.Unlock()
 
-	transferReadLevel := int64(0)
+	transferMaxReadLevel := int64(0)
 	// assign IDs for the transfer tasks
 	// Must be done under the shard lock to ensure transfer tasks are written to persistence in increasing
 	// ID order
@@ -191,7 +191,7 @@ func (s *shardContextImpl) UpdateWorkflowExecution(request *persistence.UpdateWo
 			return err
 		}
 		task.SetTaskID(id)
-		transferReadLevel = id
+		transferMaxReadLevel = id
 	}
 
 	if request.ContinueAsNew != nil {
@@ -201,10 +201,10 @@ func (s *shardContextImpl) UpdateWorkflowExecution(request *persistence.UpdateWo
 				return err
 			}
 			task.SetTaskID(id)
-			transferReadLevel = id
+			transferMaxReadLevel = id
 		}
 	}
-	defer s.updateMaxReadLevelLocked(transferReadLevel)
+	defer s.updateMaxReadLevelLocked(transferMaxReadLevel)
 
 Update_Loop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
