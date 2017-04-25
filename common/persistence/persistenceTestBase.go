@@ -99,7 +99,7 @@ func (s *testShardContext) GetNextTransferTaskID() (int64, error) {
 }
 
 func (s *testShardContext) GetTransferMaxReadLevel() int64 {
-	return atomic.LoadInt64(&s.shardInfo.TransferAckLevel)
+	return atomic.LoadInt64(&s.transferSequenceNumber)
 }
 
 func (s *testShardContext) GetTransferAckLevel() int64 {
