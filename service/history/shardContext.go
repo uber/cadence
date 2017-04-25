@@ -42,7 +42,6 @@ type (
 		timerSequenceNumber int64
 		rangeSize           uint
 		closeCh             chan<- int
-		transferCh          chan int64
 		isClosed            int32
 		logger              bark.Logger
 		metricsClient       metrics.Client
@@ -367,7 +366,6 @@ func acquireShard(shardID int, shardManager persistence.ShardManager, historyMgr
 		shardInfo:        updatedShardInfo,
 		rangeSize:        defaultRangeSize,
 		closeCh:          closeCh,
-		transferCh:       make(chan int64, 100),
 	}
 	context.logger = logger.WithFields(bark.Fields{
 		tagHistoryShardID: shardID,
