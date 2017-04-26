@@ -114,7 +114,7 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionStarted(
 		common.UnixNanoToCQLTimestamp(request.StartTimestamp),
 		request.WorkflowTypeName,
 	)
-	query.WithTimestamp(common.UnixNanoToCQLTimestamp(request.StartTimestamp))
+	query = query.WithTimestamp(common.UnixNanoToCQLTimestamp(request.StartTimestamp))
 	err := query.Exec()
 	if err != nil {
 		return &workflow.InternalServiceError{
