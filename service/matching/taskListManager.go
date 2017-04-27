@@ -38,7 +38,7 @@ func newTaskListManager(e *matchingEngineImpl, taskList *taskListID) taskListMan
 	tlMgr := &taskListManagerImpl{
 		engine:     e,
 		taskBuffer: make(chan *persistence.TaskInfo, taskBufferSize),
-		appendCh:   make(chan struct{}, 1),
+		notifyCh:   make(chan struct{}, 1),
 		shutdownCh: make(chan struct{}),
 		taskListID: taskList,
 		logger: e.logger.WithFields(bark.Fields{
@@ -71,7 +71,7 @@ type taskListManagerImpl struct {
 	// It must to be unbuffered. addTask publishes to it asynchronously and expects publish to succeed
 	// only if there is waiting poll that consumes from it.
 	syncMatch  chan *getTaskResult
-	appendCh   chan struct{} // Used as signal to notify pump of new tasks
+	notifyCh   chan struct{} // Used as signal to notify pump of new tasks
 	shutdownCh chan struct{} // Delivers stop to the pump that populates taskBuffer
 	stopped    int32
 
@@ -343,14 +343,16 @@ func (c *taskListManagerImpl) trySyncMatch(task *persistence.TaskInfo) (*persist
 
 func (c *taskListManagerImpl) getTasksPump() {
 	defer close(c.taskBuffer)
+
 	updateAckTimer := time.NewTimer(updateAckInterval)
 	defer updateAckTimer.Stop()
+
 getTasksPumpLoop:
 	for {
 		select {
 		case <-c.shutdownCh:
 			break getTasksPumpLoop
-		case <-c.appendCh:
+		case <-c.notifyCh:
 			{
 				tasks, err := c.getTaskBatch()
 				if err != nil {
@@ -384,6 +386,7 @@ getTasksPumpLoop:
 							c.taskListID.taskType, c.taskListID.taskListName))
 					// keep going as saving ack is not critical
 				}
+				c.signalNewTask() // periodically signal pump to check persistence for tasks
 			}
 		}
 	}
@@ -430,7 +433,7 @@ func (c *taskListManagerImpl) executeWithRetry(
 func (c *taskListManagerImpl) signalNewTask() {
 	var event struct{}
 	select {
-	case c.appendCh <- event:
+	case c.notifyCh <- event:
 	default: // channel already has an event, don't block
 	}
 }
