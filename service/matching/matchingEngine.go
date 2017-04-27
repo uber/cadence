@@ -5,6 +5,8 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"github.com/pborman/uuid"
 	"github.com/uber-common/bark"
 
@@ -208,6 +210,9 @@ pollLoop:
 	for {
 		err := common.IsValidContext(ctx)
 		if err != nil {
+			if err == context.DeadlineExceeded {
+				return emptyPollForDecisionTaskResponse, nil
+			}
 			return nil, err
 		}
 
@@ -259,6 +264,9 @@ pollLoop:
 	for {
 		err := common.IsValidContext(ctx)
 		if err != nil {
+			if err == context.DeadlineExceeded {
+				return emptyPollForActivityTaskResponse, nil
+			}
 			return nil, err
 		}
 
