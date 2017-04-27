@@ -3,7 +3,6 @@ package history
 import (
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/pborman/uuid"
 	"github.com/uber-common/bark"
@@ -494,7 +493,7 @@ Update_History_Loop:
 		}
 
 		completedID := completedEvent.GetEventId()
-		hasUnhandledEvents := ((completedID-startedID) > 1)
+		hasUnhandledEvents := ((completedID - startedID) > 1)
 		isComplete := false
 		transferTasks := []persistence.Task{}
 		timerTasks := []persistence.Task{}
@@ -1004,7 +1003,7 @@ Update_History_Loop:
 			scheduleID, ai, cancelRequested)
 
 		// Save progress and last HB reported time.
-		msBuilder.updateActivityProgress(ai, request.GetDetails(), time.Now())
+		msBuilder.updateActivityProgress(ai, request)
 
 		// Generate a transaction ID for appending events to history
 		transactionID, err2 := e.shard.GetNextTransferTaskID()
