@@ -168,7 +168,6 @@ func (t *transferQueueProcessorImpl) processorPump() {
 			t.processTransferTasks(tasksCh)
 		case <-updateAckTimer.C:
 			t.ackMgr.updateAckLevel()
-			updateAckTimer = time.NewTimer(transferProcessorUpdateAckInterval)
 		}
 	}
 }

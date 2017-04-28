@@ -375,6 +375,12 @@ getTasksPumpLoop:
 						break getTasksPumpLoop
 					}
 				}
+
+				if len(tasks) > 0 {
+					// There maybe more tasks.
+					// We yield now, but signal pump to check again later.
+					c.signalNewTask()
+				}
 			}
 		case <-updateAckTimer.C:
 			{
