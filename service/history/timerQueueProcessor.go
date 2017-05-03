@@ -386,7 +386,7 @@ func (t *timerQueueProcessorImpl) processTimerTask(key SequenceID) error {
 	}
 
 	t.logger.Debugf("Processing found timer: %s, for WorkflowID: %v, RunID: %v, Type: %v, TimeoutTupe: %v, EventID: %v",
-		SequenceID(timerTask.TaskID), timerTask.WorkflowID, timerTask.RunID, timerTask.TaskType,
+		SequenceID(timerTask.TaskID), timerTask.WorkflowID, timerTask.RunID, t.getTimerTaskType(timerTask.TaskType),
 		workflow.TimeoutType(timerTask.TimeoutType).String(), timerTask.EventID)
 
 	domainID := timerTask.DomainID
@@ -682,4 +682,16 @@ func (t *timerQueueProcessorImpl) updateWorkflowExecution(context *workflowExecu
 		}
 	}
 	return err
+}
+
+func (t *timerQueueProcessorImpl) getTimerTaskType(taskType int) string {
+	switch taskType {
+	case persistence.TaskTypeUserTimer:
+		return "UserTimer"
+	case persistence.TaskTypeActivityTimeout:
+		return "ActivityTimeout"
+	case persistence.TaskTypeDecisionTimeout:
+		return "DecisionTimeout"
+	}
+	return "UnKnown"
 }
