@@ -25,18 +25,18 @@ const (
 
 type (
 	historyEngineImpl struct {
-		shard            ShardContext
-		metadataMgr      persistence.MetadataManager
-		historyMgr       persistence.HistoryManager
-		executionManager persistence.ExecutionManager
-		txProcessor      transferQueueProcessor
-		timerProcessor   timerQueueProcessor
-		tokenSerializer  common.TaskTokenSerializer
-		hSerializer      common.HistorySerializer
-		metricsReporter  metrics.Client
-		historyCache     *historyCache
-		domainCache      cache.DomainCache
-		logger           bark.Logger
+		shard              ShardContext
+		metadataMgr        persistence.MetadataManager
+		historyMgr         persistence.HistoryManager
+		executionManager   persistence.ExecutionManager
+		txProcessor        transferQueueProcessor
+		timerProcessor     timerQueueProcessor
+		tokenSerializer    common.TaskTokenSerializer
+		hSerializerFactory persistence.HistorySerializerFactory
+		metricsReporter    metrics.Client
+		historyCache       *historyCache
+		domainCache        cache.DomainCache
+		logger             bark.Logger
 	}
 
 	// shardContextWrapper wraps ShardContext to notify transferQueueProcessor on new tasks.
@@ -69,15 +69,15 @@ func NewEngineWithShardContext(shard ShardContext, metadataMgr persistence.Metad
 	historyCache := newHistoryCache(historyCacheMaxSize, shard, logger)
 	txProcessor := newTransferQueueProcessor(shard, visibilityMgr, matching, historyClient, historyCache)
 	historyEngImpl := &historyEngineImpl{
-		shard:            shard,
-		metadataMgr:      metadataMgr,
-		historyMgr:       historyManager,
-		executionManager: executionManager,
-		txProcessor:      txProcessor,
-		tokenSerializer:  common.NewJSONTaskTokenSerializer(),
-		hSerializer:      common.NewJSONHistorySerializer(),
-		historyCache:     historyCache,
-		domainCache:      cache.NewDomainCache(metadataMgr, logger),
+		shard:              shard,
+		metadataMgr:        metadataMgr,
+		historyMgr:         historyManager,
+		executionManager:   executionManager,
+		txProcessor:        txProcessor,
+		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
+		hSerializerFactory: persistence.NewHistorySerializerFactory(),
+		historyCache:       historyCache,
+		domainCache:        cache.NewDomainCache(metadataMgr, logger),
 		logger: logger.WithFields(bark.Fields{
 			tagWorkflowComponent: tagValueHistoryEngineComponent,
 		}),
@@ -135,7 +135,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 	}
 
 	// Serialize the history
-	events, serializedError := msBuilder.hBuilder.Serialize()
+	encodedHistory, serializedError := msBuilder.hBuilder.Serialize()
 	if serializedError != nil {
 		logHistorySerializationErrorEvent(e.logger, serializedError, fmt.Sprintf(
 			"History serialization error on start workflow.  WorkflowID: %v, RunID: %v", executionID, runID))
@@ -149,7 +149,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 		// no potential duplicates to override.
 		TransactionID: 0,
 		FirstEventID:  startedEvent.GetEventId(),
-		Events:        events,
+		Events:        encodedHistory,
 	})
 	if err1 != nil {
 		return nil, err1
@@ -1193,9 +1193,14 @@ Pagination_Loop:
 			return nil, err
 		}
 
-		for _, data := range response.Events {
-			events, _ := e.hSerializer.Deserialize(data)
-			historyEvents = append(historyEvents, events...)
+		for _, event := range response.Events {
+			setSerializedHistoryDefaults(&event)
+			s, _ := e.hSerializerFactory.Get(event.EncodingType)
+			history, err1 := s.Deserialize(event.Version, event.Data)
+			if err1 != nil {
+				return nil, err
+			}
+			historyEvents = append(historyEvents, history.Events...)
 		}
 
 		if len(response.NextPageToken) == 0 {
@@ -1208,6 +1213,17 @@ Pagination_Loop:
 	executionHistory := workflow.NewHistory()
 	executionHistory.Events = historyEvents
 	return executionHistory, nil
+}
+
+// sets the version & encoding to default values for
+// backward compatibility
+func setSerializedHistoryDefaults(history *persistence.SerializedHistory) {
+	if history.Version == 0 {
+		history.Version = persistence.DefaultHistoryVersion
+	}
+	if len(history.EncodingType) == 0 {
+		history.EncodingType = persistence.DefaultEncodingType
+	}
 }
 
 func (s *shardContextWrapper) UpdateWorkflowExecution(request *persistence.UpdateWorkflowExecutionRequest) error {

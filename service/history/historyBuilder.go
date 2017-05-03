@@ -2,9 +2,10 @@ package history
 
 import (
 	"github.com/uber-common/bark"
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	h "github.com/uber/cadence/.gen/go/history"
+	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/persistence"
 )
 
 const (
@@ -14,26 +15,30 @@ const (
 
 type (
 	historyBuilder struct {
-		serializer common.HistorySerializer
-		history    []*workflow.HistoryEvent
-		msBuilder  *mutableStateBuilder
-		logger     bark.Logger
+		serializer     persistence.HistorySerializer
+		history        []*workflow.HistoryEvent
+		historyVersion int
+		msBuilder      *mutableStateBuilder
+		logger         bark.Logger
 	}
 )
 
 func newHistoryBuilder(msBuilder *mutableStateBuilder, logger bark.Logger) *historyBuilder {
 	return &historyBuilder{
-		serializer: common.NewJSONHistorySerializer(),
-		history:    []*workflow.HistoryEvent{},
-		msBuilder:  msBuilder,
-		logger:     logger.WithField(tagWorkflowComponent, tagValueHistoryBuilderComponent),
+		serializer:     persistence.NewJSONHistorySerializer(),
+		history:        []*workflow.HistoryEvent{},
+		historyVersion: persistence.DefaultHistoryVersion,
+		msBuilder:      msBuilder,
+		logger:         logger.WithField(tagWorkflowComponent, tagValueHistoryBuilderComponent),
 	}
 }
 
-func (b *historyBuilder) Serialize() ([]byte, error) {
-	history, err := b.serializer.Serialize(b.history)
-
-	return history, err
+func (b *historyBuilder) Serialize() (*persistence.SerializedHistory, error) {
+	history, err := b.serializer.Serialize(b.historyVersion, b.history)
+	if err != nil {
+		return nil, err
+	}
+	return history, nil
 }
 
 func (b *historyBuilder) AddWorkflowExecutionStartedEvent(

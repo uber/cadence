@@ -3,7 +3,9 @@ package persistence
 import (
 	"time"
 
+	"github.com/uber/cadence/common"
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"fmt"
 )
 
 // Domain status
@@ -427,6 +429,19 @@ type (
 		Timers []*TimerTaskInfo
 	}
 
+	// SerializedHistory represents a serialized batch of history events
+	SerializedHistory struct {
+		EncodingType common.EncodingType
+		Version      int
+		Data         []byte
+	}
+
+	// History represents a batch of history events
+	History struct {
+		Version int
+		Events  []*workflow.HistoryEvent
+	}
+
 	// AppendHistoryEventsRequest is used to append new events to workflow execution history
 	AppendHistoryEventsRequest struct {
 		DomainID      string
@@ -434,7 +449,7 @@ type (
 		FirstEventID  int64
 		RangeID       int64
 		TransactionID int64
-		Events        []byte
+		Events        *SerializedHistory
 		Overwrite     bool
 	}
 
@@ -452,8 +467,8 @@ type (
 
 	// GetWorkflowExecutionHistoryResponse is the response to GetWorkflowExecutionHistoryRequest
 	GetWorkflowExecutionHistoryResponse struct {
-		// Slice of history append transactioin payload
-		Events [][]byte
+		// Slice of history append transaction batches
+		Events []SerializedHistory
 		// Token to read next page if there are more events beyond page size.
 		// Use this to set NextPageToken on GetworkflowExecutionHistoryRequest to read the next page.
 		NextPageToken []byte
@@ -697,4 +712,18 @@ func (u *CancelExecutionTask) GetTaskID() int64 {
 // SetTaskID sets the sequence ID of the cancel transfer task.
 func (u *CancelExecutionTask) SetTaskID(id int64) {
 	u.TaskID = id
+}
+
+// NewSerializedHistory constructs and returns a new instance of of SerializedHistory
+func NewSerializedHistory(data []byte, encoding common.EncodingType, version int) *SerializedHistory {
+	return &SerializedHistory{
+		EncodingType: encoding,
+		Version:      version,
+		Data:         data,
+	}
+}
+
+func (h *SerializedHistory) String() string {
+	return fmt.Sprintf("[encodingType:%v,historyVersion:%v,history:%v]",
+		h.EncodingType, h.Version, string(h.Data))
 }

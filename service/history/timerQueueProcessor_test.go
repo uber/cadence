@@ -74,15 +74,15 @@ func (s *timerQueueProcessorSuite) SetupSuite() {
 	historyCache.disabled = true
 	txProcessor := newTransferQueueProcessor(shard, s.mockVisibilityMgr, &mocks.MatchingClient{}, &mocks.HistoryClient{}, historyCache)
 	s.engineImpl = &historyEngineImpl{
-		shard:            shard,
-		historyMgr:       s.HistoryMgr,
-		executionManager: s.WorkflowMgr,
-		txProcessor:      txProcessor,
-		historyCache:     historyCache,
-		domainCache:      cache.NewDomainCache(s.mockMetadataMgr, s.logger),
-		logger:           s.logger,
-		tokenSerializer:  common.NewJSONTaskTokenSerializer(),
-		hSerializer:      common.NewJSONHistorySerializer(),
+		shard:              shard,
+		historyMgr:         s.HistoryMgr,
+		executionManager:   s.WorkflowMgr,
+		txProcessor:        txProcessor,
+		historyCache:       historyCache,
+		domainCache:        cache.NewDomainCache(s.mockMetadataMgr, s.logger),
+		logger:             s.logger,
+		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
+		hSerializerFactory: persistence.NewHistorySerializerFactory(),
 	}
 }
 
@@ -110,14 +110,14 @@ func (s *timerQueueProcessorSuite) SetupTest() {
 	historyCache := newHistoryCache(historyCacheMaxSize, mockShard, s.logger)
 	txProcessor := newTransferQueueProcessor(mockShard, s.mockVisibilityMgr, s.mockMatchingClient, &mocks.HistoryClient{}, historyCache)
 	h := &historyEngineImpl{
-		shard:            mockShard,
-		historyMgr:       s.mockHistoryMgr,
-		executionManager: s.mockExecutionMgr,
-		txProcessor:      txProcessor,
-		historyCache:     historyCache,
-		logger:           s.logger,
-		tokenSerializer:  common.NewJSONTaskTokenSerializer(),
-		hSerializer:      common.NewJSONHistorySerializer(),
+		shard:              mockShard,
+		historyMgr:         s.mockHistoryMgr,
+		executionManager:   s.mockExecutionMgr,
+		txProcessor:        txProcessor,
+		historyCache:       historyCache,
+		logger:             s.logger,
+		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
+		hSerializerFactory: persistence.NewHistorySerializerFactory(),
 	}
 	h.timerProcessor = newTimerQueueProcessor(h, s.mockExecutionMgr, s.logger)
 	s.mockHistoryEngine = h
