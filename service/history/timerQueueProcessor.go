@@ -427,6 +427,15 @@ Update_History_Loop:
 			return err1
 		}
 
+		if !msBuilder.isWorkflowExecutionRunning() {
+			// Workflow is completed.
+			err := t.executionManager.CompleteTimerTask(&persistence.CompleteTimerTaskRequest{TaskID: task.TaskID})
+			if err != nil {
+				t.logger.Warnf("Processor unable to complete user timer task '%v': %v", task.TaskID, err)
+			}
+			return nil
+		}
+
 		context.tBuilder.LoadUserTimers(msBuilder)
 
 		var timerTasks []persistence.Task
@@ -508,7 +517,7 @@ Update_History_Loop:
 		scheduleNewDecision := false
 		updateHistory := false
 
-		if ai, isRunning := msBuilder.GetActivityInfo(scheduleID); isRunning {
+		if ai, isRunning := msBuilder.GetActivityInfo(scheduleID); isRunning && msBuilder.isWorkflowExecutionRunning() {
 			timeoutType := workflow.TimeoutType(timerTask.TimeoutType)
 			t.logger.Debugf("Activity TimeoutType: %v, scheduledID: %v, startedId: %v. \n",
 				timeoutType, scheduleID, ai.StartedID)
@@ -622,7 +631,7 @@ Update_History_Loop:
 		clearTimerTask := &persistence.DecisionTimeoutTask{TaskID: task.TaskID}
 
 		di, isRunning := msBuilder.GetPendingDecision(scheduleID)
-		if isRunning {
+		if isRunning && msBuilder.isWorkflowExecutionRunning() {
 			// Add a decision task timeout event.
 			timeoutEvent := msBuilder.AddDecisionTaskTimedOutEvent(scheduleID, di.StartedID)
 			if timeoutEvent == nil {
