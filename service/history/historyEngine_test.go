@@ -478,7 +478,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedCompleteWorkflowFailed() {
 	addActivityTaskCompletedEvent(msBuilder, activity1ScheduledEvent.GetEventId(),
 		activity1StartedEvent.GetEventId(), activity1Result, identity)
 	decisionScheduledEvent2, _ := addDecisionTaskScheduledEvent(msBuilder)
-	decisionStartedEvent2 := addDecisionTaskStartedEvent(msBuilder, decisionScheduledEvent2.GetEventId(), tl, identity)
+	addDecisionTaskStartedEvent(msBuilder, decisionScheduledEvent2.GetEventId(), tl, identity)
 	addActivityTaskCompletedEvent(msBuilder, activity2ScheduledEvent.GetEventId(),
 		activity2StartedEvent.GetEventId(), activity2Result, identity)
 
@@ -495,10 +495,12 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedCompleteWorkflowFailed() {
 		},
 	}}
 
-	ms := createMutableState(msBuilder)
-	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
+	for i := 0; i < 2; i++ {
+		ms := createMutableState(msBuilder)
+		gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
+		s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gwmsResponse, nil).Once()
+	}
 
-	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gwmsResponse, nil).Once()
 	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(nil).Once()
 
@@ -513,8 +515,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedCompleteWorkflowFailed() {
 	})
 	s.Nil(err, s.printHistory(msBuilder))
 	executionBuilder := s.getBuilder(domainID, we)
-	s.Equal(int64(16), executionBuilder.executionInfo.NextEventID)
-	s.Equal(decisionStartedEvent2.GetEventId(), executionBuilder.executionInfo.LastProcessedEvent)
+	s.Equal(int64(15), executionBuilder.executionInfo.NextEventID)
+	s.Equal(decisionStartedEvent1.GetEventId(), executionBuilder.executionInfo.LastProcessedEvent)
 	s.Equal(context, executionBuilder.executionInfo.ExecutionContext)
 	s.Equal(persistence.WorkflowStateRunning, executionBuilder.executionInfo.State)
 	s.True(executionBuilder.HasPendingDecisionTask())
@@ -555,7 +557,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedFailWorkflowFailed() {
 	addActivityTaskCompletedEvent(msBuilder, activity1ScheduledEvent.GetEventId(),
 		activity1StartedEvent.GetEventId(), activity1Result, identity)
 	decisionScheduledEvent2, _ := addDecisionTaskScheduledEvent(msBuilder)
-	decisionStartedEvent2 := addDecisionTaskStartedEvent(msBuilder, decisionScheduledEvent2.GetEventId(), tl, identity)
+	addDecisionTaskStartedEvent(msBuilder, decisionScheduledEvent2.GetEventId(), tl, identity)
 	addActivityTaskCompletedEvent(msBuilder, activity2ScheduledEvent.GetEventId(),
 		activity2StartedEvent.GetEventId(), activity2Result, identity)
 
@@ -573,10 +575,12 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedFailWorkflowFailed() {
 		},
 	}}
 
-	ms := createMutableState(msBuilder)
-	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
+	for i := 0; i < 2; i++ {
+		ms := createMutableState(msBuilder)
+		gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
+		s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gwmsResponse, nil).Once()
+	}
 
-	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gwmsResponse, nil).Once()
 	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(nil).Once()
 
@@ -591,8 +595,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedFailWorkflowFailed() {
 	})
 	s.Nil(err, s.printHistory(msBuilder))
 	executionBuilder := s.getBuilder(domainID, we)
-	s.Equal(int64(16), executionBuilder.executionInfo.NextEventID)
-	s.Equal(decisionStartedEvent2.GetEventId(), executionBuilder.executionInfo.LastProcessedEvent)
+	s.Equal(int64(15), executionBuilder.executionInfo.NextEventID)
+	s.Equal(decisionStartedEvent1.GetEventId(), executionBuilder.executionInfo.LastProcessedEvent)
 	s.Equal(context, executionBuilder.executionInfo.ExecutionContext)
 	s.Equal(persistence.WorkflowStateRunning, executionBuilder.executionInfo.State)
 	s.True(executionBuilder.HasPendingDecisionTask())
