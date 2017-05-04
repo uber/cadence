@@ -417,7 +417,8 @@ func (e *mutableStateBuilder) AddDecisionTaskTimedOutEvent(scheduleEventID int64
 }
 
 func (e *mutableStateBuilder) AddDecisionTaskFailedEvent(scheduleEventID int64,
-	startedEventID int64, cause workflow.DecisionTaskFailedCause) *workflow.HistoryEvent {
+	startedEventID int64, cause workflow.DecisionTaskFailedCause,
+	request *workflow.RespondDecisionTaskCompletedRequest) *workflow.HistoryEvent {
 	hasPendingDecision := e.HasPendingDecisionTask()
 	pendingDecisionTask, ok := e.GetPendingDecision(scheduleEventID)
 	if !hasPendingDecision || !ok || pendingDecisionTask.StartedID != startedEventID {
@@ -427,7 +428,7 @@ func (e *mutableStateBuilder) AddDecisionTaskFailedEvent(scheduleEventID int64,
 		return nil
 	}
 
-	event := e.hBuilder.AddDecisionTaskFailedEvent(scheduleEventID, startedEventID, cause)
+	event := e.hBuilder.AddDecisionTaskFailedEvent(scheduleEventID, startedEventID, cause, request)
 
 	e.DeleteDecision()
 	return event

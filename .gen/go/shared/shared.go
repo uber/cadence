@@ -5612,6 +5612,7 @@ func (p *DecisionTaskTimedOutEventAttributes) String() string {
 //  - ScheduledEventId
 //  - StartedEventId
 //  - Cause
+//  - Identity
 type DecisionTaskFailedEventAttributes struct {
   // unused fields # 1 to 9
   ScheduledEventId *int64 `thrift:"scheduledEventId,10" db:"scheduledEventId" json:"scheduledEventId,omitempty"`
@@ -5619,6 +5620,8 @@ type DecisionTaskFailedEventAttributes struct {
   StartedEventId *int64 `thrift:"startedEventId,20" db:"startedEventId" json:"startedEventId,omitempty"`
   // unused fields # 21 to 29
   Cause *DecisionTaskFailedCause `thrift:"cause,30" db:"cause" json:"cause,omitempty"`
+  // unused fields # 31 to 39
+  Identity *string `thrift:"identity,40" db:"identity" json:"identity,omitempty"`
 }
 
 func NewDecisionTaskFailedEventAttributes() *DecisionTaskFailedEventAttributes {
@@ -5646,6 +5649,13 @@ func (p *DecisionTaskFailedEventAttributes) GetCause() DecisionTaskFailedCause {
   }
 return *p.Cause
 }
+var DecisionTaskFailedEventAttributes_Identity_DEFAULT string
+func (p *DecisionTaskFailedEventAttributes) GetIdentity() string {
+  if !p.IsSetIdentity() {
+    return DecisionTaskFailedEventAttributes_Identity_DEFAULT
+  }
+return *p.Identity
+}
 func (p *DecisionTaskFailedEventAttributes) IsSetScheduledEventId() bool {
   return p.ScheduledEventId != nil
 }
@@ -5656,6 +5666,10 @@ func (p *DecisionTaskFailedEventAttributes) IsSetStartedEventId() bool {
 
 func (p *DecisionTaskFailedEventAttributes) IsSetCause() bool {
   return p.Cause != nil
+}
+
+func (p *DecisionTaskFailedEventAttributes) IsSetIdentity() bool {
+  return p.Identity != nil
 }
 
 func (p *DecisionTaskFailedEventAttributes) Read(iprot thrift.TProtocol) error {
@@ -5681,6 +5695,10 @@ func (p *DecisionTaskFailedEventAttributes) Read(iprot thrift.TProtocol) error {
       }
     case 30:
       if err := p.ReadField30(iprot); err != nil {
+        return err
+      }
+    case 40:
+      if err := p.ReadField40(iprot); err != nil {
         return err
       }
     default:
@@ -5726,6 +5744,15 @@ func (p *DecisionTaskFailedEventAttributes)  ReadField30(iprot thrift.TProtocol)
   return nil
 }
 
+func (p *DecisionTaskFailedEventAttributes)  ReadField40(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 40: ", err)
+} else {
+  p.Identity = &v
+}
+  return nil
+}
+
 func (p *DecisionTaskFailedEventAttributes) Write(oprot thrift.TProtocol) error {
   if err := oprot.WriteStructBegin("DecisionTaskFailedEventAttributes"); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
@@ -5733,6 +5760,7 @@ func (p *DecisionTaskFailedEventAttributes) Write(oprot thrift.TProtocol) error 
     if err := p.writeField10(oprot); err != nil { return err }
     if err := p.writeField20(oprot); err != nil { return err }
     if err := p.writeField30(oprot); err != nil { return err }
+    if err := p.writeField40(oprot); err != nil { return err }
   }
   if err := oprot.WriteFieldStop(); err != nil {
     return thrift.PrependError("write field stop error: ", err) }
@@ -5773,6 +5801,18 @@ func (p *DecisionTaskFailedEventAttributes) writeField30(oprot thrift.TProtocol)
     return thrift.PrependError(fmt.Sprintf("%T.cause (30) field write error: ", p), err) }
     if err := oprot.WriteFieldEnd(); err != nil {
       return thrift.PrependError(fmt.Sprintf("%T write field end error 30:cause: ", p), err) }
+  }
+  return err
+}
+
+func (p *DecisionTaskFailedEventAttributes) writeField40(oprot thrift.TProtocol) (err error) {
+  if p.IsSetIdentity() {
+    if err := oprot.WriteFieldBegin("identity", thrift.STRING, 40); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 40:identity: ", p), err) }
+    if err := oprot.WriteString(string(*p.Identity)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.identity (40) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 40:identity: ", p), err) }
   }
   return err
 }

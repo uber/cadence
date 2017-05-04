@@ -553,7 +553,7 @@ Update_History_Loop:
 				if hasUnhandledEvents {
 					var err error
 					msBuilder, err = e.failDecision(context, scheduleID, startedID,
-						workflow.DecisionTaskFailedCause_UNHANDLED_DECISION)
+						workflow.DecisionTaskFailedCause_UNHANDLED_DECISION, request)
 					if err != nil {
 						return err
 					}
@@ -574,7 +574,7 @@ Update_History_Loop:
 				if hasUnhandledEvents {
 					var err error
 					msBuilder, err = e.failDecision(context, scheduleID, startedID,
-						workflow.DecisionTaskFailedCause_UNHANDLED_DECISION)
+						workflow.DecisionTaskFailedCause_UNHANDLED_DECISION, request)
 					if err != nil {
 						return err
 					}
@@ -597,7 +597,7 @@ Update_History_Loop:
 				if hasUnhandledEvents {
 					var err error
 					msBuilder, err = e.failDecision(context, scheduleID, startedID,
-						workflow.DecisionTaskFailedCause_UNHANDLED_DECISION)
+						workflow.DecisionTaskFailedCause_UNHANDLED_DECISION, request)
 					if err != nil {
 						return err
 					}
@@ -677,7 +677,7 @@ Update_History_Loop:
 				if hasUnhandledEvents {
 					var err error
 					msBuilder, err = e.failDecision(context, scheduleID, startedID,
-						workflow.DecisionTaskFailedCause_UNHANDLED_DECISION)
+						workflow.DecisionTaskFailedCause_UNHANDLED_DECISION, request)
 					if err != nil {
 						return err
 					}
@@ -1258,7 +1258,8 @@ Pagination_Loop:
 }
 
 func (e *historyEngineImpl) failDecision(context *workflowExecutionContext, scheduleID, startedID int64,
-	cause workflow.DecisionTaskFailedCause) (*mutableStateBuilder, error) {
+	cause workflow.DecisionTaskFailedCause, request *workflow.RespondDecisionTaskCompletedRequest) (*mutableStateBuilder,
+	error) {
 	// Clear any updates we have accumulated so far
 	context.clear()
 
@@ -1268,7 +1269,7 @@ func (e *historyEngineImpl) failDecision(context *workflowExecutionContext, sche
 		return nil, err
 	}
 
-	msBuilder.AddDecisionTaskFailedEvent(scheduleID, startedID, cause)
+	msBuilder.AddDecisionTaskFailedEvent(scheduleID, startedID, cause, request)
 
 	// Return new builder back to the caller for further updates
 	return msBuilder, nil

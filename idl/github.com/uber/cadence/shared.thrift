@@ -252,6 +252,7 @@ struct DecisionTaskFailedEventAttributes {
   10: optional i64 (js.type = "Long") scheduledEventId
   20: optional i64 (js.type = "Long") startedEventId
   30: optional DecisionTaskFailedCause cause
+  40: optional string identity
 }
 
 struct ActivityTaskScheduledEventAttributes {
