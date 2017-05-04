@@ -584,8 +584,7 @@ Update_History_Loop:
 				msBuilder.AddFailWorkflowEvent(completedID, attributes)
 				isComplete = true
 			case workflow.DecisionType_CancelWorkflowExecution:
-				// Either we are already completed (or) we have a new pending event came while
-				// we are processing the decision, we would fail this and give a chance to client
+				// If new events came while we are processing the decision, we would fail this and give a chance to client
 				// to process the new event.
 				if hasUnhandledEvents {
 					var err error
