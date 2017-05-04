@@ -135,7 +135,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 	}
 
 	// Serialize the history
-	encodedHistory, serializedError := msBuilder.hBuilder.Serialize()
+	serializedHistory, serializedError := msBuilder.hBuilder.Serialize()
 	if serializedError != nil {
 		logHistorySerializationErrorEvent(e.logger, serializedError, fmt.Sprintf(
 			"History serialization error on start workflow.  WorkflowID: %v, RunID: %v", executionID, runID))
@@ -149,7 +149,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 		// no potential duplicates to override.
 		TransactionID: 0,
 		FirstEventID:  startedEvent.GetEventId(),
-		Events:        encodedHistory,
+		Events:        serializedHistory,
 	})
 	if err1 != nil {
 		return nil, err1
