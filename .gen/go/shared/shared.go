@@ -14889,7 +14889,9 @@ func (p *PollForActivityTaskRequest) String() string {
 //  - ActivityType
 //  - Input
 //  - StartedEventId
+//  - ScheduledTimestamp
 //  - ScheduleToCloseTimeoutSeconds
+//  - StartedTimestamp
 //  - StartToCloseTimeoutSeconds
 //  - HeartbeatTimeoutSeconds
 type PollForActivityTaskResponse struct {
@@ -14906,11 +14908,15 @@ type PollForActivityTaskResponse struct {
   // unused fields # 51 to 59
   StartedEventId *int64 `thrift:"startedEventId,60" db:"startedEventId" json:"startedEventId,omitempty"`
   // unused fields # 61 to 69
-  ScheduleToCloseTimeoutSeconds *int32 `thrift:"scheduleToCloseTimeoutSeconds,70" db:"scheduleToCloseTimeoutSeconds" json:"scheduleToCloseTimeoutSeconds,omitempty"`
+  ScheduledTimestamp *int64 `thrift:"scheduledTimestamp,70" db:"scheduledTimestamp" json:"scheduledTimestamp,omitempty"`
   // unused fields # 71 to 79
-  StartToCloseTimeoutSeconds *int32 `thrift:"startToCloseTimeoutSeconds,80" db:"startToCloseTimeoutSeconds" json:"startToCloseTimeoutSeconds,omitempty"`
+  ScheduleToCloseTimeoutSeconds *int32 `thrift:"scheduleToCloseTimeoutSeconds,80" db:"scheduleToCloseTimeoutSeconds" json:"scheduleToCloseTimeoutSeconds,omitempty"`
   // unused fields # 81 to 89
-  HeartbeatTimeoutSeconds *int32 `thrift:"heartbeatTimeoutSeconds,90" db:"heartbeatTimeoutSeconds" json:"heartbeatTimeoutSeconds,omitempty"`
+  StartedTimestamp *int64 `thrift:"startedTimestamp,90" db:"startedTimestamp" json:"startedTimestamp,omitempty"`
+  // unused fields # 91 to 99
+  StartToCloseTimeoutSeconds *int32 `thrift:"startToCloseTimeoutSeconds,100" db:"startToCloseTimeoutSeconds" json:"startToCloseTimeoutSeconds,omitempty"`
+  // unused fields # 101 to 109
+  HeartbeatTimeoutSeconds *int32 `thrift:"heartbeatTimeoutSeconds,110" db:"heartbeatTimeoutSeconds" json:"heartbeatTimeoutSeconds,omitempty"`
 }
 
 func NewPollForActivityTaskResponse() *PollForActivityTaskResponse {
@@ -14955,12 +14961,26 @@ func (p *PollForActivityTaskResponse) GetStartedEventId() int64 {
   }
 return *p.StartedEventId
 }
+var PollForActivityTaskResponse_ScheduledTimestamp_DEFAULT int64
+func (p *PollForActivityTaskResponse) GetScheduledTimestamp() int64 {
+  if !p.IsSetScheduledTimestamp() {
+    return PollForActivityTaskResponse_ScheduledTimestamp_DEFAULT
+  }
+return *p.ScheduledTimestamp
+}
 var PollForActivityTaskResponse_ScheduleToCloseTimeoutSeconds_DEFAULT int32
 func (p *PollForActivityTaskResponse) GetScheduleToCloseTimeoutSeconds() int32 {
   if !p.IsSetScheduleToCloseTimeoutSeconds() {
     return PollForActivityTaskResponse_ScheduleToCloseTimeoutSeconds_DEFAULT
   }
 return *p.ScheduleToCloseTimeoutSeconds
+}
+var PollForActivityTaskResponse_StartedTimestamp_DEFAULT int64
+func (p *PollForActivityTaskResponse) GetStartedTimestamp() int64 {
+  if !p.IsSetStartedTimestamp() {
+    return PollForActivityTaskResponse_StartedTimestamp_DEFAULT
+  }
+return *p.StartedTimestamp
 }
 var PollForActivityTaskResponse_StartToCloseTimeoutSeconds_DEFAULT int32
 func (p *PollForActivityTaskResponse) GetStartToCloseTimeoutSeconds() int32 {
@@ -15000,8 +15020,16 @@ func (p *PollForActivityTaskResponse) IsSetStartedEventId() bool {
   return p.StartedEventId != nil
 }
 
+func (p *PollForActivityTaskResponse) IsSetScheduledTimestamp() bool {
+  return p.ScheduledTimestamp != nil
+}
+
 func (p *PollForActivityTaskResponse) IsSetScheduleToCloseTimeoutSeconds() bool {
   return p.ScheduleToCloseTimeoutSeconds != nil
+}
+
+func (p *PollForActivityTaskResponse) IsSetStartedTimestamp() bool {
+  return p.StartedTimestamp != nil
 }
 
 func (p *PollForActivityTaskResponse) IsSetStartToCloseTimeoutSeconds() bool {
@@ -15059,6 +15087,14 @@ func (p *PollForActivityTaskResponse) Read(iprot thrift.TProtocol) error {
       }
     case 90:
       if err := p.ReadField90(iprot); err != nil {
+        return err
+      }
+    case 100:
+      if err := p.ReadField100(iprot); err != nil {
+        return err
+      }
+    case 110:
+      if err := p.ReadField110(iprot); err != nil {
         return err
       }
     default:
@@ -15129,10 +15165,10 @@ func (p *PollForActivityTaskResponse)  ReadField60(iprot thrift.TProtocol) error
 }
 
 func (p *PollForActivityTaskResponse)  ReadField70(iprot thrift.TProtocol) error {
-  if v, err := iprot.ReadI32(); err != nil {
+  if v, err := iprot.ReadI64(); err != nil {
   return thrift.PrependError("error reading field 70: ", err)
 } else {
-  p.ScheduleToCloseTimeoutSeconds = &v
+  p.ScheduledTimestamp = &v
 }
   return nil
 }
@@ -15141,14 +15177,32 @@ func (p *PollForActivityTaskResponse)  ReadField80(iprot thrift.TProtocol) error
   if v, err := iprot.ReadI32(); err != nil {
   return thrift.PrependError("error reading field 80: ", err)
 } else {
-  p.StartToCloseTimeoutSeconds = &v
+  p.ScheduleToCloseTimeoutSeconds = &v
 }
   return nil
 }
 
 func (p *PollForActivityTaskResponse)  ReadField90(iprot thrift.TProtocol) error {
-  if v, err := iprot.ReadI32(); err != nil {
+  if v, err := iprot.ReadI64(); err != nil {
   return thrift.PrependError("error reading field 90: ", err)
+} else {
+  p.StartedTimestamp = &v
+}
+  return nil
+}
+
+func (p *PollForActivityTaskResponse)  ReadField100(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI32(); err != nil {
+  return thrift.PrependError("error reading field 100: ", err)
+} else {
+  p.StartToCloseTimeoutSeconds = &v
+}
+  return nil
+}
+
+func (p *PollForActivityTaskResponse)  ReadField110(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI32(); err != nil {
+  return thrift.PrependError("error reading field 110: ", err)
 } else {
   p.HeartbeatTimeoutSeconds = &v
 }
@@ -15168,6 +15222,8 @@ func (p *PollForActivityTaskResponse) Write(oprot thrift.TProtocol) error {
     if err := p.writeField70(oprot); err != nil { return err }
     if err := p.writeField80(oprot); err != nil { return err }
     if err := p.writeField90(oprot); err != nil { return err }
+    if err := p.writeField100(oprot); err != nil { return err }
+    if err := p.writeField110(oprot); err != nil { return err }
   }
   if err := oprot.WriteFieldStop(); err != nil {
     return thrift.PrependError("write field stop error: ", err) }
@@ -15251,37 +15307,61 @@ func (p *PollForActivityTaskResponse) writeField60(oprot thrift.TProtocol) (err 
 }
 
 func (p *PollForActivityTaskResponse) writeField70(oprot thrift.TProtocol) (err error) {
-  if p.IsSetScheduleToCloseTimeoutSeconds() {
-    if err := oprot.WriteFieldBegin("scheduleToCloseTimeoutSeconds", thrift.I32, 70); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field begin error 70:scheduleToCloseTimeoutSeconds: ", p), err) }
-    if err := oprot.WriteI32(int32(*p.ScheduleToCloseTimeoutSeconds)); err != nil {
-    return thrift.PrependError(fmt.Sprintf("%T.scheduleToCloseTimeoutSeconds (70) field write error: ", p), err) }
+  if p.IsSetScheduledTimestamp() {
+    if err := oprot.WriteFieldBegin("scheduledTimestamp", thrift.I64, 70); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 70:scheduledTimestamp: ", p), err) }
+    if err := oprot.WriteI64(int64(*p.ScheduledTimestamp)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.scheduledTimestamp (70) field write error: ", p), err) }
     if err := oprot.WriteFieldEnd(); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field end error 70:scheduleToCloseTimeoutSeconds: ", p), err) }
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 70:scheduledTimestamp: ", p), err) }
   }
   return err
 }
 
 func (p *PollForActivityTaskResponse) writeField80(oprot thrift.TProtocol) (err error) {
-  if p.IsSetStartToCloseTimeoutSeconds() {
-    if err := oprot.WriteFieldBegin("startToCloseTimeoutSeconds", thrift.I32, 80); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field begin error 80:startToCloseTimeoutSeconds: ", p), err) }
-    if err := oprot.WriteI32(int32(*p.StartToCloseTimeoutSeconds)); err != nil {
-    return thrift.PrependError(fmt.Sprintf("%T.startToCloseTimeoutSeconds (80) field write error: ", p), err) }
+  if p.IsSetScheduleToCloseTimeoutSeconds() {
+    if err := oprot.WriteFieldBegin("scheduleToCloseTimeoutSeconds", thrift.I32, 80); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 80:scheduleToCloseTimeoutSeconds: ", p), err) }
+    if err := oprot.WriteI32(int32(*p.ScheduleToCloseTimeoutSeconds)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.scheduleToCloseTimeoutSeconds (80) field write error: ", p), err) }
     if err := oprot.WriteFieldEnd(); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field end error 80:startToCloseTimeoutSeconds: ", p), err) }
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 80:scheduleToCloseTimeoutSeconds: ", p), err) }
   }
   return err
 }
 
 func (p *PollForActivityTaskResponse) writeField90(oprot thrift.TProtocol) (err error) {
-  if p.IsSetHeartbeatTimeoutSeconds() {
-    if err := oprot.WriteFieldBegin("heartbeatTimeoutSeconds", thrift.I32, 90); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field begin error 90:heartbeatTimeoutSeconds: ", p), err) }
-    if err := oprot.WriteI32(int32(*p.HeartbeatTimeoutSeconds)); err != nil {
-    return thrift.PrependError(fmt.Sprintf("%T.heartbeatTimeoutSeconds (90) field write error: ", p), err) }
+  if p.IsSetStartedTimestamp() {
+    if err := oprot.WriteFieldBegin("startedTimestamp", thrift.I64, 90); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 90:startedTimestamp: ", p), err) }
+    if err := oprot.WriteI64(int64(*p.StartedTimestamp)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.startedTimestamp (90) field write error: ", p), err) }
     if err := oprot.WriteFieldEnd(); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field end error 90:heartbeatTimeoutSeconds: ", p), err) }
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 90:startedTimestamp: ", p), err) }
+  }
+  return err
+}
+
+func (p *PollForActivityTaskResponse) writeField100(oprot thrift.TProtocol) (err error) {
+  if p.IsSetStartToCloseTimeoutSeconds() {
+    if err := oprot.WriteFieldBegin("startToCloseTimeoutSeconds", thrift.I32, 100); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 100:startToCloseTimeoutSeconds: ", p), err) }
+    if err := oprot.WriteI32(int32(*p.StartToCloseTimeoutSeconds)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.startToCloseTimeoutSeconds (100) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 100:startToCloseTimeoutSeconds: ", p), err) }
+  }
+  return err
+}
+
+func (p *PollForActivityTaskResponse) writeField110(oprot thrift.TProtocol) (err error) {
+  if p.IsSetHeartbeatTimeoutSeconds() {
+    if err := oprot.WriteFieldBegin("heartbeatTimeoutSeconds", thrift.I32, 110); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 110:heartbeatTimeoutSeconds: ", p), err) }
+    if err := oprot.WriteI32(int32(*p.HeartbeatTimeoutSeconds)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.heartbeatTimeoutSeconds (110) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 110:heartbeatTimeoutSeconds: ", p), err) }
   }
   return err
 }
