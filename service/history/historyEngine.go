@@ -36,6 +36,7 @@ type (
 		metricsReporter  metrics.Client
 		historyCache     *historyCache
 		domainCache      cache.DomainCache
+		metricsClient    metrics.Client
 		logger           bark.Logger
 	}
 
@@ -81,6 +82,7 @@ func NewEngineWithShardContext(shard ShardContext, metadataMgr persistence.Metad
 		logger: logger.WithFields(bark.Fields{
 			tagWorkflowComponent: tagValueHistoryEngineComponent,
 		}),
+		metricsClient: shard.GetMetricsClient(),
 	}
 	historyEngImpl.timerProcessor = newTimerQueueProcessor(historyEngImpl, executionManager, logger)
 	shardWrapper.txProcessor = txProcessor
@@ -560,6 +562,9 @@ Update_History_Loop:
 
 				// If the decision has more than one completion event than just pick the first one
 				if isComplete {
+					e.metricsClient.AddCounter(metrics.HistoryMultipleCompletionDecisionsScope,
+						metrics.MultipleCompletionDecisionsCounter, 1)
+					logMultipleCompletionDecisionsEvent(e.logger, d.GetDecisionType())
 					continue Process_Decision_Loop
 				}
 				attributes := d.GetCompleteWorkflowExecutionDecisionAttributes()
@@ -578,6 +583,9 @@ Update_History_Loop:
 
 				// If the decision has more than one completion event than just pick the first one
 				if isComplete {
+					e.metricsClient.AddCounter(metrics.HistoryMultipleCompletionDecisionsScope,
+						metrics.MultipleCompletionDecisionsCounter, 1)
+					logMultipleCompletionDecisionsEvent(e.logger, d.GetDecisionType())
 					continue Process_Decision_Loop
 				}
 				attributes := d.GetFailWorkflowExecutionDecisionAttributes()
@@ -598,6 +606,9 @@ Update_History_Loop:
 
 				// If the decision has more than one completion event than just pick the first one
 				if isComplete {
+					e.metricsClient.AddCounter(metrics.HistoryMultipleCompletionDecisionsScope,
+						metrics.MultipleCompletionDecisionsCounter, 1)
+					logMultipleCompletionDecisionsEvent(e.logger, d.GetDecisionType())
 					continue Process_Decision_Loop
 				}
 				attributes := d.GetCancelWorkflowExecutionDecisionAttributes()
@@ -675,6 +686,9 @@ Update_History_Loop:
 
 				// If the decision has more than one completion event than just pick the first one
 				if isComplete {
+					e.metricsClient.AddCounter(metrics.HistoryMultipleCompletionDecisionsScope,
+						metrics.MultipleCompletionDecisionsCounter, 1)
+					logMultipleCompletionDecisionsEvent(e.logger, d.GetDecisionType())
 					continue Process_Decision_Loop
 				}
 				attributes := d.GetContinueAsNewWorkflowExecutionDecisionAttributes()
