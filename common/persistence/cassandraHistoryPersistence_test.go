@@ -53,22 +53,22 @@ func (s *historyPersistenceSuite) TestAppendHistoryEvents() {
 	}
 
 	events1 := []byte("event1;event2")
-	encodedHistory := &SerializedHistory{Version: 1, EncodingType: common.EncodingTypeJSON, Data: events1}
-	err0 := s.AppendHistoryEvents(domainID, workflowExecution, 1, 1, 1, encodedHistory, false)
+	serializedHistory := &SerializedHistory{Version: 1, EncodingType: common.EncodingTypeJSON, Data: events1}
+	err0 := s.AppendHistoryEvents(domainID, workflowExecution, 1, 1, 1, serializedHistory, false)
 	s.Nil(err0)
 
 	events2 := []byte("event3;")
-	encodedHistory.Data = events2
-	err1 := s.AppendHistoryEvents(domainID, workflowExecution, 3, 1, 1, encodedHistory, false)
+	serializedHistory.Data = events2
+	err1 := s.AppendHistoryEvents(domainID, workflowExecution, 3, 1, 1, serializedHistory, false)
 	s.Nil(err1)
 
 	events2New := []byte("event3new;")
-	encodedHistory.Data = events2New
-	err2 := s.AppendHistoryEvents(domainID, workflowExecution, 3, 1, 1, encodedHistory, false)
+	serializedHistory.Data = events2New
+	err2 := s.AppendHistoryEvents(domainID, workflowExecution, 3, 1, 1, serializedHistory, false)
 	s.NotNil(err2)
 	s.IsType(&ConditionFailedError{}, err2)
 
-	err3 := s.AppendHistoryEvents(domainID, workflowExecution, 3, 1, 2, encodedHistory, true)
+	err3 := s.AppendHistoryEvents(domainID, workflowExecution, 3, 1, 2, serializedHistory, true)
 	s.Nil(err3)
 }
 
@@ -80,8 +80,8 @@ func (s *historyPersistenceSuite) TestGetHistoryEvents() {
 	}
 
 	events := []byte("event1;event2")
-	encodedHistory := &SerializedHistory{Version: 1, EncodingType: common.EncodingTypeJSON, Data: events}
-	err0 := s.AppendHistoryEvents(domainID, workflowExecution, 1, 1, 1, encodedHistory, false)
+	serializedHistory := &SerializedHistory{Version: 1, EncodingType: common.EncodingTypeJSON, Data: events}
+	err0 := s.AppendHistoryEvents(domainID, workflowExecution, 1, 1, 1, serializedHistory, false)
 	s.Nil(err0)
 
 	history, token, err1 := s.GetWorkflowExecutionHistory(domainID, workflowExecution, 2, 10, nil)

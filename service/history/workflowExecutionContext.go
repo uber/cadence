@@ -180,7 +180,7 @@ func (c *workflowExecutionContext) continueAsNewWorkflowExecution(context []byte
 	firstEvent := newStateBuilder.hBuilder.history[0]
 
 	// Serialize the history
-	encodedHistory, serializedError := newStateBuilder.hBuilder.Serialize()
+	serializedHistory, serializedError := newStateBuilder.hBuilder.Serialize()
 	if serializedError != nil {
 		logHistorySerializationErrorEvent(c.logger, serializedError, fmt.Sprintf(
 			"History serialization error on start workflow.  WorkflowID: %v, RunID: %v", newExecution.GetWorkflowId(),
@@ -195,7 +195,7 @@ func (c *workflowExecutionContext) continueAsNewWorkflowExecution(context []byte
 		// no potential duplicates to override.
 		TransactionID: 0,
 		FirstEventID:  firstEvent.GetEventId(),
-		Events:        encodedHistory,
+		Events:        serializedHistory,
 	})
 	if err1 != nil {
 		return err1
