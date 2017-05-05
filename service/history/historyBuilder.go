@@ -15,26 +15,25 @@ const (
 
 type (
 	historyBuilder struct {
-		serializer     persistence.HistorySerializer
-		history        []*workflow.HistoryEvent
-		historyVersion int
-		msBuilder      *mutableStateBuilder
-		logger         bark.Logger
+		serializer persistence.HistorySerializer
+		history    []*workflow.HistoryEvent
+		msBuilder  *mutableStateBuilder
+		logger     bark.Logger
 	}
 )
 
 func newHistoryBuilder(msBuilder *mutableStateBuilder, logger bark.Logger) *historyBuilder {
 	return &historyBuilder{
-		serializer:     persistence.NewJSONHistorySerializer(),
-		history:        []*workflow.HistoryEvent{},
-		historyVersion: persistence.DefaultHistoryVersion,
-		msBuilder:      msBuilder,
-		logger:         logger.WithField(tagWorkflowComponent, tagValueHistoryBuilderComponent),
+		serializer: persistence.NewJSONHistorySerializer(),
+		history:    []*workflow.HistoryEvent{},
+		msBuilder:  msBuilder,
+		logger:     logger.WithField(tagWorkflowComponent, tagValueHistoryBuilderComponent),
 	}
 }
 
-func (b *historyBuilder) Serialize() (*persistence.SerializedHistory, error) {
-	history, err := b.serializer.Serialize(b.historyVersion, b.history)
+func (b *historyBuilder) Serialize() (*persistence.SerializedHistoryEventBatch, error) {
+	eventBatch := persistence.NewHistoryEventBatch(persistence.GetDefaultHistoryVersion(), b.history)
+	history, err := b.serializer.Serialize(eventBatch)
 	if err != nil {
 		return nil, err
 	}

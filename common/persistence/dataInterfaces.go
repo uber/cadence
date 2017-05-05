@@ -1,11 +1,11 @@
 package persistence
 
 import (
+	"fmt"
 	"time"
 
-	"github.com/uber/cadence/common"
 	workflow "github.com/uber/cadence/.gen/go/shared"
-	"fmt"
+	"github.com/uber/cadence/common"
 )
 
 // Domain status
@@ -429,15 +429,15 @@ type (
 		Timers []*TimerTaskInfo
 	}
 
-	// SerializedHistory represents a serialized batch of history events
-	SerializedHistory struct {
+	// SerializedHistoryEventBatch represents a serialized batch of history events
+	SerializedHistoryEventBatch struct {
 		EncodingType common.EncodingType
 		Version      int
 		Data         []byte
 	}
 
-	// History represents a batch of history events
-	History struct {
+	// HistoryEventBatch represents a batch of history events
+	HistoryEventBatch struct {
 		Version int
 		Events  []*workflow.HistoryEvent
 	}
@@ -449,7 +449,7 @@ type (
 		FirstEventID  int64
 		RangeID       int64
 		TransactionID int64
-		Events        *SerializedHistory
+		Events        *SerializedHistoryEventBatch
 		Overwrite     bool
 	}
 
@@ -468,7 +468,7 @@ type (
 	// GetWorkflowExecutionHistoryResponse is the response to GetWorkflowExecutionHistoryRequest
 	GetWorkflowExecutionHistoryResponse struct {
 		// Slice of history append transaction batches
-		Events []SerializedHistory
+		Events []SerializedHistoryEventBatch
 		// Token to read next page if there are more events beyond page size.
 		// Use this to set NextPageToken on GetworkflowExecutionHistoryRequest to read the next page.
 		NextPageToken []byte
@@ -574,7 +574,7 @@ type (
 		CompleteTask(request *CompleteTaskRequest) error
 	}
 
-	// HistoryManager is used to manage Workflow Execution History
+	// HistoryManager is used to manage Workflow Execution HistoryEventBatch
 	HistoryManager interface {
 		AppendHistoryEvents(request *AppendHistoryEventsRequest) error
 		// GetWorkflowExecutionHistory retrieves the paginated list of history events for given execution
@@ -714,16 +714,28 @@ func (u *CancelExecutionTask) SetTaskID(id int64) {
 	u.TaskID = id
 }
 
-// NewSerializedHistory constructs and returns a new instance of of SerializedHistory
-func NewSerializedHistory(data []byte, encoding common.EncodingType, version int) *SerializedHistory {
-	return &SerializedHistory{
+// NewHistoryEventBatch returns a new instance of HistoryEventBatch
+func NewHistoryEventBatch(version int, events []*workflow.HistoryEvent) *HistoryEventBatch {
+	return &HistoryEventBatch{
+		Version: version,
+		Events:  events,
+	}
+}
+
+func (b *HistoryEventBatch) String() string {
+	return fmt.Sprint("[version:%v, events:%v]", b.Version, b.Events)
+}
+
+// NewSerializedHistoryEventBatch constructs and returns a new instance of of SerializedHistoryEventBatch
+func NewSerializedHistoryEventBatch(data []byte, encoding common.EncodingType, version int) *SerializedHistoryEventBatch {
+	return &SerializedHistoryEventBatch{
 		EncodingType: encoding,
 		Version:      version,
 		Data:         data,
 	}
 }
 
-func (h *SerializedHistory) String() string {
+func (h *SerializedHistoryEventBatch) String() string {
 	return fmt.Sprintf("[encodingType:%v,historyVersion:%v,history:%v]",
 		h.EncodingType, h.Version, string(h.Data))
 }

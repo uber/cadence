@@ -138,7 +138,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 	serializedHistory, serializedError := msBuilder.hBuilder.Serialize()
 	if serializedError != nil {
 		logHistorySerializationErrorEvent(e.logger, serializedError, fmt.Sprintf(
-			"History serialization error on start workflow.  WorkflowID: %v, RunID: %v", executionID, runID))
+			"HistoryEventBatch serialization error on start workflow.  WorkflowID: %v, RunID: %v", executionID, runID))
 		return nil, serializedError
 	}
 
@@ -321,7 +321,6 @@ Update_History_Loop:
 			if err3 == ErrConflict {
 				continue Update_History_Loop
 			}
-
 			return nil, err3
 		}
 
@@ -1196,9 +1195,9 @@ Pagination_Loop:
 		for _, event := range response.Events {
 			setSerializedHistoryDefaults(&event)
 			s, _ := e.hSerializerFactory.Get(event.EncodingType)
-			history, err1 := s.Deserialize(event.Version, event.Data)
+			history, err1 := s.Deserialize(&event)
 			if err1 != nil {
-				return nil, err
+				return nil, err1
 			}
 			historyEvents = append(historyEvents, history.Events...)
 		}
@@ -1215,11 +1214,12 @@ Pagination_Loop:
 	return executionHistory, nil
 }
 
-// sets the version & encoding to default values for
-// backward compatibility
-func setSerializedHistoryDefaults(history *persistence.SerializedHistory) {
+// sets the version and encoding types to defaults if they
+// are missing from persistence. This is purely for backwards
+// compatibility
+func setSerializedHistoryDefaults(history *persistence.SerializedHistoryEventBatch) {
 	if history.Version == 0 {
-		history.Version = persistence.DefaultHistoryVersion
+		history.Version = persistence.GetDefaultHistoryVersion()
 	}
 	if len(history.EncodingType) == 0 {
 		history.EncodingType = persistence.DefaultEncodingType

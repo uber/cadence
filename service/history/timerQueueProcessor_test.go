@@ -364,7 +364,7 @@ func (s *timerQueueProcessorSuite) updateHistoryAndTimers(workflowExecution work
 	info, err1 := s.GetWorkflowExecutionInfo(workflowExecution)
 	s.Nil(err1)
 	condition := info.NextEventID
-	info.History = history
+	info.HistoryEventBatch = history
 	info.NextEventID = nextEventID
 	err2 := s.UpdateWorkflowExecution(info, nil, nil, condition, timerTasks, nil, activityInfos, nil, timerInfos, nil)
 	s.Nil(err2, "No error expected.")
@@ -469,7 +469,7 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTaskScheduleToStart_WithStar
 	running, isRunningFromMS, builder := s.checkTimedOutEventFor(workflowExecution, ase.GetEventId())
 	s.logger.Infof("HERE!!!! Running: %v, TimerID: %v", running, t.GetTaskID())
 	if !running {
-		s.logger.Info("Printing History: ")
+		s.logger.Info("Printing HistoryEventBatch: ")
 		common.PrettyPrintHistory(builder.getHistory(), s.logger)
 	}
 	s.True(running)
@@ -927,7 +927,7 @@ func (s *timerQueueProcessorSuite) TestTimerUpdateTimesOut() {
 				WorkflowID:           "wId",
 				RunID:                "rId",
 				TaskList:             taskList,
-				History:              h,
+				HistoryEventBatch:              h,
 				ExecutionContext:     nil,
 				State:                persistence.WorkflowStateRunning,
 				NextEventID:          builder.nextEventID,

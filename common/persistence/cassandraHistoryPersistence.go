@@ -34,8 +34,8 @@ const (
 
 type (
 	cassandraHistoryPersistence struct {
-		session      *gocql.Session
-		logger       bark.Logger
+		session *gocql.Session
+		logger  bark.Logger
 	}
 )
 
@@ -124,13 +124,13 @@ func (h *cassandraHistoryPersistence) GetWorkflowExecutionHistory(request *GetWo
 	}
 
 	var firstEventID int64
-	var history SerializedHistory
+	var history SerializedHistoryEventBatch
 	response := &GetWorkflowExecutionHistoryResponse{}
 	found := false
 	for iter.Scan(&firstEventID, &history.Data, &history.EncodingType, &history.Version) {
 		found = true
 		response.Events = append(response.Events, history)
-		history = SerializedHistory{}
+		history = SerializedHistoryEventBatch{}
 	}
 
 	nextPageToken := iter.PageState()

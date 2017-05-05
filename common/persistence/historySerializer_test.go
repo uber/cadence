@@ -2,13 +2,13 @@ package persistence
 
 import (
 	log "github.com/Sirupsen/logrus"
-	"github.com/stretchr/testify/suite"
 	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 	"github.com/uber-common/bark"
-	"testing"
-	"sync"
-	"github.com/uber/cadence/common"
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
+	"sync"
+	"testing"
 	"time"
 )
 
@@ -18,7 +18,7 @@ type (
 		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
 		// not merely log an error
 		*require.Assertions
-		logger    bark.Logger
+		logger bark.Logger
 	}
 )
 
@@ -45,14 +45,14 @@ func (s *historySerializerSuite) TestSerializerFactory() {
 	factory := NewHistorySerializerFactory()
 
 	event1 := &workflow.HistoryEvent{
-		EventId: common.Int64Ptr(999),
+		EventId:   common.Int64Ptr(999),
 		Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 		EventType: common.EventTypePtr(workflow.EventType_ActivityTaskCompleted),
-		ActivityTaskCompletedEventAttributes: &workflow.ActivityTaskCompletedEventAttributes {
-			Result_: []byte("result-1-event-1"),
+		ActivityTaskCompletedEventAttributes: &workflow.ActivityTaskCompletedEventAttributes{
+			Result_:          []byte("result-1-event-1"),
 			ScheduledEventId: common.Int64Ptr(4),
-			StartedEventId: common.Int64Ptr(5),
-			Identity: common.StringPtr("event-1"),
+			StartedEventId:   common.Int64Ptr(5),
+			Identity:         common.StringPtr("event-1"),
 		},
 	}
 
@@ -65,31 +65,38 @@ func (s *historySerializerSuite) TestSerializerFactory() {
 
 			serializer, err := factory.Get(common.EncodingTypeGob)
 			s.NotNil(err)
-			s.Equal(ErrUnknownEncodingType, err)
+			_, ok := err.(*UnknownEncodingTypeError)
+			s.True(ok)
 
 			serializer, err = factory.Get(common.EncodingTypeJSON)
 			s.Nil(err)
 			s.NotNil(serializer)
-			_, ok := serializer.(*jsonHistorySerializer)
+			_, ok = serializer.(*jsonHistorySerializer)
 			s.True(ok)
 
-			hist := []*workflow.HistoryEvent{event1}
-			sh, err := serializer.Serialize(MaxSupportedHistoryVersion+1, hist)
+			events := []*workflow.HistoryEvent{event1}
+			eventBatch := NewHistoryEventBatch(GetMaxSupportedHistoryVersion()+1, events)
+			sh, err := serializer.Serialize(eventBatch)
 			s.NotNil(err)
-			s.Equal(ErrHistoryVersionIncompatible, err)
+			_, ok = err.(*HistorySerializationError)
+			s.True(ok)
 
-			sh, err = serializer.Serialize(1, hist)
+			eventBatch.Version = 1
+			sh, err = serializer.Serialize(eventBatch)
 			s.Nil(err)
 			s.NotNil(sh)
 			s.Equal(1, sh.Version)
 			s.Equal(common.EncodingTypeJSON, sh.EncodingType)
 
-			dh, err := serializer.Deserialize(2, sh.Data)
+			sh.Version = 2
+			dh, err := serializer.Deserialize(sh)
 			s.NotNil(err)
-			s.Equal(ErrHistoryVersionIncompatible, err)
+			_, ok = err.(*HistoryDeserializationError)
+			s.True(ok)
 			s.Nil(dh)
 
-			dh, err = serializer.Deserialize(1, sh.Data)
+			sh.Version = 1
+			dh, err = serializer.Deserialize(sh)
 			s.Nil(err)
 			s.NotNil(dh)
 
@@ -100,7 +107,7 @@ func (s *historySerializerSuite) TestSerializerFactory() {
 			s.Equal(event1.GetEventType(), dh.Events[0].GetEventType())
 			s.Equal(event1.GetActivityTaskCompletedEventAttributes().GetResult_(), dh.Events[0].GetActivityTaskCompletedEventAttributes().GetResult_())
 
-		} ()
+		}()
 	}
 
 	startWG.Done()

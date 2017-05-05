@@ -183,7 +183,7 @@ func (c *workflowExecutionContext) continueAsNewWorkflowExecution(context []byte
 	serializedHistory, serializedError := newStateBuilder.hBuilder.Serialize()
 	if serializedError != nil {
 		logHistorySerializationErrorEvent(c.logger, serializedError, fmt.Sprintf(
-			"History serialization error on start workflow.  WorkflowID: %v, RunID: %v", newExecution.GetWorkflowId(),
+			"HistoryEventBatch serialization error on start workflow.  WorkflowID: %v, RunID: %v", newExecution.GetWorkflowId(),
 			newExecution.GetRunId()))
 		return serializedError
 	}
