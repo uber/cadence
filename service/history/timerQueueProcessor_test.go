@@ -482,7 +482,7 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTaskScheduleToStart_WithStar
 }
 
 func (s *timerQueueProcessorSuite) TestTimerActivityTaskStartToClose_WithStart() {
-	domainID := "5bb49df8-71bc-4c63-b57f-05f2a508e7b5"
+	domainID := "5bb49df8-71bc-4c63-b57f-05f2a508e123"
 	workflowExecution := workflow.WorkflowExecution{WorkflowId: common.StringPtr("activity-timer-START_TO_CLOSE-Started-test"),
 		RunId: common.StringPtr("0d00698f-08e1-4d36-a3e2-3bf109f5d2d6")}
 
@@ -773,7 +773,7 @@ func (s *timerQueueProcessorSuite) TestTimerUserTimersSameExpiry() {
 	p.NotifyNewTimer(timerTasks[0].GetTaskID())
 
 	s.waitForTimerTasksToProcess(p)
-	s.Equal(uint64(1), p.timerFiredCount)
+	s.Equal(uint64(len(timerTasks)), p.timerFiredCount)
 	running := s.checkTimedOutEventForUserTimer(domainID, workflowExecution, ti.TimerID)
 	s.False(running)
 	running = s.checkTimedOutEventForUserTimer(domainID, workflowExecution, ti2.TimerID)
@@ -821,6 +821,7 @@ func (s *timerQueueProcessorSuite) TestTimerUpdateTimesOut() {
 
 	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(errors.New("FAILED")).Once()
+	s.mockShardManager.On("UpdateShard", mock.Anything).Return(nil).Once()
 
 	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(nil).Run(func(arguments mock.Arguments) {
