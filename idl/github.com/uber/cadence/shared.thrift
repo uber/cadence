@@ -99,6 +99,15 @@ enum CancelExternalWorkflowExecutionFailedCause {
   UNKNOWN_EXTERNAL_WORKFLOW_EXECUTION,
 }
 
+enum WorkflowExecutionCloseStatus {
+  COMPLETED,
+  FAILED,
+  CANCELED,
+  TERMINATED,
+  CONTINUED_AS_NEW,
+  TIMED_OUT,
+}
+
 struct WorkflowType {
   10: optional string name
 }
@@ -121,7 +130,7 @@ struct WorkflowExecutionInfo {
   20: optional WorkflowType type
   30: optional i64 (js.type = "Long") startTime
   40: optional i64 (js.type = "Long") closeTime
-
+  50: optional WorkflowExecutionCloseStatus closeStatus
 }
 
 struct ScheduleActivityTaskDecisionAttributes {
@@ -644,6 +653,7 @@ struct ListClosedWorkflowExecutionsRequest {
   40: optional StartTimeFilter StartTimeFilter
   50: optional WorkflowExecutionFilter executionFilter
   60: optional WorkflowTypeFilter typeFilter
+  70: optional WorkflowExecutionCloseStatus statusFilter
 }
 
 struct ListClosedWorkflowExecutionsResponse {
