@@ -26,8 +26,8 @@ type (
 		shardClosedCh    chan int
 		logger           bark.Logger
 
-		mockMetadataMgr    *mocks.MetadataManager
-		mockVisibilityMgr  *mocks.VisibilityManager
+		mockMetadataMgr   *mocks.MetadataManager
+		mockVisibilityMgr *mocks.VisibilityManager
 	}
 )
 
@@ -77,7 +77,7 @@ func (s *timerQueueProcessorSuite) SetupSuite() {
 		domainCache:        cache.NewDomainCache(s.mockMetadataMgr, s.logger),
 		logger:             s.logger,
 		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
-    hSerializerFactory: persistence.NewHistorySerializerFactory(),
+		hSerializerFactory: persistence.NewHistorySerializerFactory(),
 	}
 }
 
@@ -775,5 +775,5 @@ func (s *timerQueueProcessorSuite) printHistory(builder *mutableStateBuilder) st
 	}
 
 	//s.logger.Info(string(history))
-	return string(history)
+	return history.String()
 }

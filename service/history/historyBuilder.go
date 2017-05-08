@@ -597,14 +597,3 @@ func (b *historyBuilder) newWorkflowExecutionContinuedAsNewEvent(decisionTaskCom
 
 	return historyEvent
 }
-
-func (b *historyBuilder) newContinueAsNewWorkflowExecutionFailedEvent(decisionTaskCompletedEventID int64,
-	cause workflow.WorkflowCompleteFailedCause) *workflow.HistoryEvent {
-	historyEvent := b.msBuilder.createNewHistoryEvent(workflow.EventType_ContinueAsNewWorkflowExecutionFailed)
-	attributes := workflow.NewContinueAsNewWorkflowExecutionFailedEventAttributes()
-	attributes.Cause = workflow.WorkflowCompleteFailedCausePtr(cause)
-	attributes.DecisionTaskCompletedEventId = common.Int64Ptr(decisionTaskCompletedEventID)
-	historyEvent.ContinueAsNewWorkflowExecutionFailedEventAttributes = attributes
-
-	return historyEvent
-}
