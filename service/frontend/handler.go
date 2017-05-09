@@ -4,6 +4,7 @@ import (
 	"log"
 	"sync"
 
+	"github.com/pborman/uuid"
 	"github.com/uber/cadence/.gen/go/cadence"
 	h "github.com/uber/cadence/.gen/go/history"
 	m "github.com/uber/cadence/.gen/go/matching"
@@ -40,6 +41,7 @@ var (
 	errTaskTokenNotSet = &gen.BadRequestError{Message: "Task token not set on request."}
 	errTaskListNotSet  = &gen.BadRequestError{Message: "TaskList is not set on request."}
 	errExecutionNotSet = &gen.BadRequestError{Message: "Execution is not set on request."}
+	errInvalidRunID    = &gen.BadRequestError{Message: "Invalid RunID."}
 )
 
 // NewWorkflowHandler creates a thrift handler for the cadence service
@@ -484,8 +486,16 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		return nil, errDomainNotSet
 	}
 
-	if !getRequest.IsSetExecution() || !getRequest.GetExecution().IsSetWorkflowId() || !getRequest.GetExecution().IsSetRunId() {
+	if !getRequest.IsSetExecution() || !getRequest.GetExecution().IsSetWorkflowId() {
 		return nil, errExecutionNotSet
+	}
+
+	if !getRequest.GetExecution().IsSetRunId() {
+		return nil, errInvalidRunID
+	}
+
+	if uuid.Parse(getRequest.GetExecution().GetRunId()) == nil {
+		return nil, errInvalidRunID
 	}
 
 	domainName := getRequest.GetDomain()
@@ -513,9 +523,16 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(ctx thrift.Context,
 		return errDomainNotSet
 	}
 
-	if !signalRequest.IsSetWorkflowExecution() ||
-		!signalRequest.GetWorkflowExecution().IsSetWorkflowId() || !signalRequest.GetWorkflowExecution().IsSetRunId() {
+	if !signalRequest.IsSetWorkflowExecution() || !signalRequest.GetWorkflowExecution().IsSetWorkflowId() {
 		return errExecutionNotSet
+	}
+
+	if !signalRequest.GetWorkflowExecution().IsSetRunId() {
+		return errInvalidRunID
+	}
+
+	if uuid.Parse(signalRequest.GetWorkflowExecution().GetRunId()) == nil {
+		return errInvalidRunID
 	}
 
 	if !signalRequest.IsSetSignalName() {
@@ -544,9 +561,16 @@ func (wh *WorkflowHandler) TerminateWorkflowExecution(ctx thrift.Context,
 		return errDomainNotSet
 	}
 
-	if !terminateRequest.IsSetWorkflowExecution() ||
-		!terminateRequest.GetWorkflowExecution().IsSetWorkflowId() || !terminateRequest.GetWorkflowExecution().IsSetRunId() {
+	if !terminateRequest.IsSetWorkflowExecution() || !terminateRequest.GetWorkflowExecution().IsSetWorkflowId() {
 		return errExecutionNotSet
+	}
+
+	if !terminateRequest.GetWorkflowExecution().IsSetRunId() {
+		return errInvalidRunID
+	}
+
+	if uuid.Parse(terminateRequest.GetWorkflowExecution().GetRunId()) == nil {
+		return errInvalidRunID
 	}
 
 	domainName := terminateRequest.GetDomain()
@@ -573,9 +597,16 @@ func (wh *WorkflowHandler) RequestCancelWorkflowExecution(
 		return errDomainNotSet
 	}
 
-	if !cancelRequest.IsSetWorkflowExecution() ||
-		!cancelRequest.GetWorkflowExecution().IsSetWorkflowId() || !cancelRequest.GetWorkflowExecution().IsSetRunId() {
+	if !cancelRequest.IsSetWorkflowExecution() || !cancelRequest.GetWorkflowExecution().IsSetWorkflowId() {
 		return errExecutionNotSet
+	}
+
+	if !cancelRequest.GetWorkflowExecution().IsSetRunId() {
+		return errInvalidRunID
+	}
+
+	if uuid.Parse(cancelRequest.GetWorkflowExecution().GetRunId()) == nil {
+		return errInvalidRunID
 	}
 
 	domainName := cancelRequest.GetDomain()
