@@ -27,6 +27,9 @@ install:
   - go get github.com/mattn/goveralls
   - go get golang.org/x/tools/cmd/cover
   - ccm create test -v 3.0.10 -n 1 -s
+  - mv /home/travis/.local/bin/cqlsh /home/travis/.local/bin/.cqlsh
+  - echo "/home/travis/.local/bin/.cqlsh --cqlversion=3.4.0" > /home/travis/.local/bin/cqlsh
+  - chmod +x /home/travis/.local/bin/cqlsh
   - sudo ln -sf /home/travis/.local/bin/cqlsh /usr/local/bin/cqlsh
 
 script:
