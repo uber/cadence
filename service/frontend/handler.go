@@ -38,6 +38,8 @@ type WorkflowHandler struct {
 var (
 	errDomainNotSet    = &gen.BadRequestError{Message: "Domain not set on request."}
 	errTaskTokenNotSet = &gen.BadRequestError{Message: "Task token not set on request."}
+	errTaskListNotSet  = &gen.BadRequestError{Message: "TaskList is not set on request."}
+	errExecutionNotSet = &gen.BadRequestError{Message: "Execution is not set on request."}
 )
 
 // NewWorkflowHandler creates a thrift handler for the cadence service
@@ -88,6 +90,10 @@ func (wh *WorkflowHandler) IsHealthy(ctx thrift.Context) (bool, error) {
 func (wh *WorkflowHandler) RegisterDomain(ctx thrift.Context, registerRequest *gen.RegisterDomainRequest) error {
 	wh.startWG.Wait()
 
+	if !registerRequest.IsSetName() || registerRequest.GetName() == "" {
+		return errDomainNotSet
+	}
+
 	response, err := wh.metadataMgr.CreateDomain(&persistence.CreateDomainRequest{
 		Name:        registerRequest.GetName(),
 		Status:      persistence.DomainStatusRegistered,
@@ -109,6 +115,10 @@ func (wh *WorkflowHandler) RegisterDomain(ctx thrift.Context, registerRequest *g
 func (wh *WorkflowHandler) DescribeDomain(ctx thrift.Context,
 	describeRequest *gen.DescribeDomainRequest) (*gen.DescribeDomainResponse, error) {
 	wh.startWG.Wait()
+
+	if !describeRequest.IsSetName() {
+		return nil, errDomainNotSet
+	}
 
 	resp, err := wh.metadataMgr.GetDomain(&persistence.GetDomainRequest{
 		Name: describeRequest.GetName(),
@@ -216,6 +226,10 @@ func (wh *WorkflowHandler) PollForActivityTask(
 		return nil, errDomainNotSet
 	}
 
+	if !pollRequest.IsSetTaskList() || !pollRequest.GetTaskList().IsSetName() || pollRequest.GetTaskList().GetName() == "" {
+		return nil, errTaskListNotSet
+	}
+
 	domainName := pollRequest.GetDomain()
 	info, _, err := wh.domainCache.GetDomain(domainName)
 	if err != nil {
@@ -242,6 +256,10 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	wh.Service.GetLogger().Debug("Received PollForDecisionTask")
 	if !pollRequest.IsSetDomain() {
 		return nil, errDomainNotSet
+	}
+
+	if !pollRequest.IsSetTaskList() || !pollRequest.GetTaskList().IsSetName() || pollRequest.GetTaskList().GetName() == "" {
+		return nil, errTaskListNotSet
 	}
 
 	domainName := pollRequest.GetDomain()
@@ -425,6 +443,18 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, errDomainNotSet
 	}
 
+	if !startRequest.IsSetWorkflowId() || startRequest.GetWorkflowId() == "" {
+		return nil, &gen.BadRequestError{Message: "WorkflowId is not set on request."}
+	}
+
+	if !startRequest.IsSetWorkflowType() || !startRequest.GetWorkflowType().IsSetName() || startRequest.GetWorkflowType().GetName() == "" {
+		return nil, &gen.BadRequestError{Message: "WorkflowType is not set on request."}
+	}
+
+	if !startRequest.IsSetTaskList() || !startRequest.GetTaskList().IsSetName() || startRequest.GetTaskList().GetName() == "" {
+		return nil, errTaskListNotSet
+	}
+
 	domainName := startRequest.GetDomain()
 	wh.Service.GetLogger().Infof("Start workflow execution request domain: %v", domainName)
 	info, _, err := wh.domainCache.GetDomain(domainName)
@@ -454,6 +484,10 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		return nil, errDomainNotSet
 	}
 
+	if !getRequest.IsSetExecution() || !getRequest.GetExecution().IsSetWorkflowId() || !getRequest.GetExecution().IsSetRunId() {
+		return nil, errExecutionNotSet
+	}
+
 	domainName := getRequest.GetDomain()
 	info, _, err := wh.domainCache.GetDomain(domainName)
 	if err != nil {
@@ -479,6 +513,15 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(ctx thrift.Context,
 		return errDomainNotSet
 	}
 
+	if !signalRequest.IsSetWorkflowExecution() ||
+		!signalRequest.GetWorkflowExecution().IsSetWorkflowId() || !signalRequest.GetWorkflowExecution().IsSetRunId() {
+		return errExecutionNotSet
+	}
+
+	if !signalRequest.IsSetSignalName() {
+		return &gen.BadRequestError{Message: "SignalName is not set on request."}
+	}
+
 	domainName := signalRequest.GetDomain()
 	info, _, err := wh.domainCache.GetDomain(domainName)
 	if err != nil {
@@ -499,6 +542,11 @@ func (wh *WorkflowHandler) TerminateWorkflowExecution(ctx thrift.Context,
 
 	if !terminateRequest.IsSetDomain() {
 		return errDomainNotSet
+	}
+
+	if !terminateRequest.IsSetWorkflowExecution() ||
+		!terminateRequest.GetWorkflowExecution().IsSetWorkflowId() || !terminateRequest.GetWorkflowExecution().IsSetRunId() {
+		return errExecutionNotSet
 	}
 
 	domainName := terminateRequest.GetDomain()
@@ -523,6 +571,11 @@ func (wh *WorkflowHandler) RequestCancelWorkflowExecution(
 
 	if !cancelRequest.IsSetDomain() {
 		return errDomainNotSet
+	}
+
+	if !cancelRequest.IsSetWorkflowExecution() ||
+		!cancelRequest.GetWorkflowExecution().IsSetWorkflowId() || !cancelRequest.GetWorkflowExecution().IsSetRunId() {
+		return errExecutionNotSet
 	}
 
 	domainName := cancelRequest.GetDomain()
@@ -569,6 +622,10 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx thrift.Context,
 		return nil, &gen.BadRequestError{
 			Message: "Only one of ExecutionFilter or TypeFilter is allowed",
 		}
+	}
+
+	if !listRequest.IsSetMaximumPageSize() || listRequest.GetMaximumPageSize() == 0 {
+		listRequest.MaximumPageSize = common.Int32Ptr(1000)
 	}
 
 	domainName := listRequest.GetDomain()
@@ -640,6 +697,10 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx thrift.Context,
 		return nil, &gen.BadRequestError{
 			Message: "Only one of ExecutionFilter or TypeFilter is allowed",
 		}
+	}
+
+	if !listRequest.IsSetMaximumPageSize() || listRequest.GetMaximumPageSize() == 0 {
+		listRequest.MaximumPageSize = common.Int32Ptr(1000)
 	}
 
 	domainName := listRequest.GetDomain()
