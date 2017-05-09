@@ -58,7 +58,7 @@ func DropCassandraKeyspace(s *gocql.Session, keyspace string) (err error) {
 	return
 }
 
-// LoadCassandraSchema loads the schema from the given .cql file on this keyspace using cqlsh
+// LoadCassandraSchema loads the schema from the given .cql files on this keyspace
 func LoadCassandraSchema(dir string, fileNames []string, keyspace string) (err error) {
 
 	tmpFile, err := ioutil.TempFile("", "_cadence_")
