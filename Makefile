@@ -65,7 +65,9 @@ cadence-cassandra-tool: vendor/glide.updated $(TOOLS_SRC)
 cadence: vendor/glide.updated main.go
 	go build -i -o cadence main.go
 
-bins: thriftc cadence-cassandra-tool cadence
+bins_nothrift: cadence-cassandra-tool cadence
+
+bins: thriftc bins_nothrift
 
 test: bins
 	@rm -f test
