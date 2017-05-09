@@ -30,6 +30,14 @@ func RunTool(args []string) error {
 	return app.Run(args)
 }
 
+// SetupSchema setups the cassandra schema
+func SetupSchema(config *SetupSchemaConfig) error {
+	if err := validateSetupSchemaConfig(config); err != nil {
+		return err
+	}
+	return handleSetupSchema(config)
+}
+
 func buildCLIOptions() *cli.App {
 
 	app := cli.NewApp()

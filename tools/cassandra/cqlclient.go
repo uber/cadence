@@ -42,6 +42,9 @@ type (
 		ListTables() ([]string, error)
 		// ListTypes lists the user defined types in a keyspace
 		ListTypes() ([]string, error)
+		// CreateKeyspace creates a keyspace, if it doesn't exist
+		// it uses SimpleStrategy by default
+		CreateKeyspace(name string, replicas int) error
 		// DropTable drops the given table
 		DropTable(name string) error
 		// DropType drops a user defined type from keyspace
@@ -67,6 +70,7 @@ var errGetSchemaVersion = errors.New("Failed to get current schema version from 
 const (
 	newLineDelim       = '\n'
 	defaultTimeout     = 30 * time.Second
+	cqlProtoVersion    = 4        // default CQL protocol version
 	defaultConsistency = "QUORUM" // schema updates must always be QUORUM
 )
 
@@ -91,10 +95,13 @@ const (
 		`new_version bigint, ` +
 		`old_version bigint, ` +
 		`PRIMARY KEY ((year, month), update_time));`
+
+	createKeyspaceCQL = `CREATE KEYSPACE IF NOT EXISTS %v ` +
+		`WITH replication = { 'class' : 'SimpleStrategy', 'replication_factor' : %v};`
 )
 
 // newCQLClient returns a new instance of CQLClient
-func newCQLClient(hostsCsv string, keyspace string, protoVersion int) (CQLClient, error) {
+func newCQLClient(hostsCsv string, keyspace string) (CQLClient, error) {
 	hosts := parseHosts(hostsCsv)
 	if len(hosts) == 0 {
 		return nil, errNoHosts
@@ -102,7 +109,7 @@ func newCQLClient(hostsCsv string, keyspace string, protoVersion int) (CQLClient
 	clusterCfg := gocql.NewCluster(hosts...)
 	clusterCfg.Keyspace = keyspace
 	clusterCfg.Timeout = defaultTimeout
-	clusterCfg.ProtoVersion = protoVersion
+	clusterCfg.ProtoVersion = cqlProtoVersion
 	clusterCfg.Consistency = gocql.ParseConsistency(defaultConsistency)
 	cqlClient := new(cqlClient)
 	cqlClient.clusterConfig = clusterCfg
@@ -112,6 +119,11 @@ func newCQLClient(hostsCsv string, keyspace string, protoVersion int) (CQLClient
 		return nil, err
 	}
 	return cqlClient, nil
+}
+
+// Createkeyspace creates a keyspace if it doesn't exist
+func (client *cqlClient) CreateKeyspace(name string, replicas int) error {
+	return client.Exec(fmt.Sprintf(createKeyspaceCQL, name, replicas))
 }
 
 // ListTables lists the table names in a keyspace
@@ -252,4 +264,31 @@ func ParseCQLFile(filePath string) ([]string, error) {
 	}
 
 	return nil, err
+}
+
+// dropKeyspace deletes all tables/types in the
+// keyspace without deleting the keyspace
+func dropKeyspace(client CQLClient) {
+	tables, err := client.ListTables()
+	if err != nil {
+		return
+	}
+	fmt.Printf("Dropping following tables: %v\n", tables)
+	for _, table := range tables {
+		err1 := client.DropTable(table)
+		if err1 != nil {
+			fmt.Printf("Error dropping table %v, err=%v\n", table, err1)
+		}
+	}
+	types, err := client.ListTypes()
+	if err != nil {
+		return
+	}
+	fmt.Printf("Dropping following types: %v\n", types)
+	for _, t := range types {
+		err1 := client.DropType(t)
+		if err1 != nil {
+			fmt.Printf("Error dropping type %v, err=%v\n", t, err1)
+		}
+	}
 }

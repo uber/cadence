@@ -26,7 +26,7 @@ type (
 	// baseConfig is the common config
 	// for all of the tasks that work
 	// with cassandra
-	baseConfig struct {
+	BaseConfig struct {
 		CassHosts    string
 		CassKeyspace string
 	}
@@ -34,7 +34,7 @@ type (
 	// UpdateSchemaConfig holds the config
 	// params for executing a UpdateSchemaTask
 	UpdateSchemaConfig struct {
-		baseConfig
+		BaseConfig
 		TargetVersion int
 		SchemaDir     string
 		IsDryRun      bool
@@ -43,7 +43,7 @@ type (
 	// SetupSchemaConfig holds the config
 	// params need by the SetupSchemaTask
 	SetupSchemaConfig struct {
-		baseConfig
+		BaseConfig
 		SchemaFilePath    string
 		InitialVersion    int
 		Overwrite         bool // overwrite previous data
@@ -71,10 +71,6 @@ const (
 	cliFlagSchemaFile        = cliOptSchemaFile + ", f"
 	cliFlagOverwrite         = cliOptOverwrite + ", o"
 	cliFlagDisableVersioning = cliOptDisableVersioning + ", d"
-)
-
-const (
-	cqlProtoVersion = 4 // default CQL protocol version
 )
 
 func newConfigError(msg string) error {

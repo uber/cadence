@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-common/bark"
-	"github.com/uber/cadence/common"
 	"math/rand"
 	"testing"
 	"time"
@@ -41,36 +40,32 @@ func (s *SetupSchemaTestSuite) SetupSuite() {
 	s.log = bark.NewLoggerFromLogrus(log.New())
 	s.rand = rand.New(rand.NewSource(time.Now().UnixNano()))
 	s.keyspace = fmt.Sprintf("setup_schema_test_%v", s.rand.Int63())
-	cfg := common.NewCassandraCluster("127.0.0.1", "")
 
-	session, err := cfg.CreateSession()
-	if err != nil {
-		s.log.Fatal("Cassandra createSession failed")
-	}
-
-	err = common.CreateCassandraKeyspace(session, s.keyspace, 1, true)
-	if err != nil {
-		s.log.Fatal("CreateCassandraKeyspace failed")
-	}
-
-	s.client, err = newCQLClient("127.0.0.1", s.keyspace, cqlProtoVersion)
+	client, err := newCQLClient("127.0.0.1", "system")
 	if err != nil {
 		s.log.Fatal("Error creating CQLClient")
 	}
 
-	s.session = session
+	err = client.CreateKeyspace(s.keyspace, 1)
+	if err != nil {
+		log.Fatalf("error creating keyspace, err=%v", err)
+	}
+
+	s.client = client
 }
 
 func (s *SetupSchemaTestSuite) TearDownSuite() {
-	common.DropCassandraKeyspace(s.session, s.keyspace)
-	s.session.Close()
+	s.client.Exec("DROP keyspace " + s.keyspace)
 }
 
 func (s *SetupSchemaTestSuite) TestSetupSchema() {
 
+	client, err := newCQLClient("127.0.0.1", s.keyspace)
+	s.Nil(err)
+
 	// test command fails without required arguments
 	RunTool([]string{"./tool", "-k", s.keyspace, "setup-schema"})
-	tables, err := s.client.ListTables()
+	tables, err := client.ListTables()
 	s.Nil(err)
 	s.Equal(0, len(tables))
 
@@ -86,7 +81,7 @@ func (s *SetupSchemaTestSuite) TestSetupSchema() {
 
 	// make sure command doesn't succeed without version or disable-version
 	RunTool([]string{"./tool", "-k", s.keyspace, "setup-schema", "-f", cqlFile.Name()})
-	tables, err = s.client.ListTables()
+	tables, err = client.ListTables()
 	s.Nil(err)
 	s.Equal(0, len(tables))
 
@@ -103,7 +98,7 @@ func (s *SetupSchemaTestSuite) TestSetupSchema() {
 		}
 
 		expectedTables := getExpectedTables(versioningEnabled)
-		tables, err = s.client.ListTables()
+		tables, err = client.ListTables()
 		s.Nil(err)
 		s.Equal(len(expectedTables), len(tables))
 
@@ -114,7 +109,7 @@ func (s *SetupSchemaTestSuite) TestSetupSchema() {
 		}
 		s.Equal(0, len(expectedTables))
 
-		gotVer, err := s.client.ReadSchemaVersion()
+		gotVer, err := client.ReadSchemaVersion()
 		if versioningEnabled {
 			s.Nil(err)
 			s.Equal(ver, int(gotVer))

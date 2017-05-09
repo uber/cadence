@@ -34,7 +34,7 @@ type SetupSchemaTask struct {
 }
 
 func newSetupSchemaTask(config *SetupSchemaConfig) (*SetupSchemaTask, error) {
-	client, err := newCQLClient(config.CassHosts, config.CassKeyspace, cqlProtoVersion)
+	client, err := newCQLClient(config.CassHosts, config.CassKeyspace)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +52,7 @@ func (task *SetupSchemaTask) run() error {
 	fmt.Printf("Starting schema setup, config=%+v\n", config)
 
 	if config.Overwrite {
-		task.dropKeyspace()
+		dropKeyspace(task.client)
 	}
 
 	if !config.DisableVersioning {
@@ -94,31 +94,4 @@ func (task *SetupSchemaTask) run() error {
 	fmt.Println("Schema setup complete")
 
 	return nil
-}
-
-// dropKeyspace deletes all tables/types in the
-// keyspace without deleting the keyspace
-func (task *SetupSchemaTask) dropKeyspace() {
-	tables, err := task.client.ListTables()
-	if err != nil {
-		return
-	}
-	fmt.Printf("Dropping following tables: %v\n", tables)
-	for _, table := range tables {
-		err1 := task.client.DropTable(table)
-		if err1 != nil {
-			fmt.Printf("Error dropping table %v, err=%v\n", table, err1)
-		}
-	}
-	types, err := task.client.ListTypes()
-	if err != nil {
-		return
-	}
-	fmt.Printf("Dropping following types: %v\n", types)
-	for _, t := range types {
-		err1 := task.client.DropType(t)
-		if err1 != nil {
-			fmt.Printf("Error dropping type %v, err=%v\n", t, err1)
-		}
-	}
 }

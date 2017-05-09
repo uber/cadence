@@ -26,7 +26,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-common/bark"
-	"github.com/uber/cadence/common"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -42,6 +41,7 @@ type (
 		suite.Suite
 		keyspace string
 		session  *gocql.Session
+		client   CQLClient
 		log      bark.Logger
 	}
 )
@@ -58,23 +58,22 @@ func (s *CQLClientTestSuite) SetupSuite() {
 	s.log = bark.NewLoggerFromLogrus(log.New())
 	rand := rand.New(rand.NewSource(time.Now().UnixNano()))
 	s.keyspace = fmt.Sprintf("cql_client_test_%v", rand.Int63())
-	cfg := common.NewCassandraCluster("127.0.0.1", "")
 
-	session, err := cfg.CreateSession()
+	client, err := newCQLClient("127.0.0.1", "system")
 	if err != nil {
-		s.log.Fatal("Cassandra createSession failed")
+		log.Fatalf("error creating CQLClient, err=%v", err)
 	}
 
-	err = common.CreateCassandraKeyspace(session, s.keyspace, 1, true)
+	err = client.CreateKeyspace(s.keyspace, 1)
 	if err != nil {
-		s.log.Fatal("CreateCassandraKeyspace failed")
+		log.Fatalf("error creating keyspace, err=%v", err)
 	}
-	s.session = session
+
+	s.client = client
 }
 
 func (s *CQLClientTestSuite) TearDownSuite() {
-	common.DropCassandraKeyspace(s.session, s.keyspace)
-	s.session.Close()
+	s.client.Exec("DROP keyspace " + s.keyspace)
 }
 
 func (s *CQLClientTestSuite) TestParseCQLFile() {
@@ -191,7 +190,7 @@ func (s *CQLClientTestSuite) testCreate(client CQLClient) {
 }
 
 func (s *CQLClientTestSuite) TestCQLClient() {
-	client, err := newCQLClient("127.0.0.1", s.keyspace, cqlProtoVersion)
+	client, err := newCQLClient("127.0.0.1", s.keyspace)
 	s.Nil(err)
 	s.testCreate(client)
 	s.testUpdate(client)

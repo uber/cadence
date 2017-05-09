@@ -29,23 +29,40 @@ import (
 // using the given command line arguments
 // as input
 func setupSchema(cli *cli.Context) error {
-	if err := handleSetupSchema(cli); err != nil {
+	config, err := newSetupSchemaConfig(cli)
+	if err != nil {
+		return newConfigError(err.Error())
+	}
+	if err := handleSetupSchema(config); err != nil {
 		fmt.Println(err)
 	}
 	return nil
 }
 
-func handleSetupSchema(cli *cli.Context) error {
-	config, err := newSetupSchemaConfig(cli)
-	if err != nil {
-		return newConfigError(err.Error())
-	}
+func handleSetupSchema(config *SetupSchemaConfig) error {
 	task, err := newSetupSchemaTask(config)
 	if err != nil {
 		return fmt.Errorf("Error creating task, err=%v\n", err)
 	}
 	if err := task.run(); err != nil {
 		return fmt.Errorf("Error setting up schema, err=%v\n", err)
+	}
+	return nil
+}
+
+func validateSetupSchemaConfig(config *SetupSchemaConfig) error {
+	if len(config.CassHosts) == 0 {
+		return newConfigError("missing cassandra host")
+	}
+	if len(config.CassKeyspace) == 0 {
+		return newConfigError("missing keyspace")
+	}
+	if len(config.SchemaFilePath) == 0 {
+		return newConfigError("missing schemaFilePath")
+	}
+	if (config.DisableVersioning && config.InitialVersion > 0) ||
+		(!config.DisableVersioning && config.InitialVersion == 0) {
+		return newConfigError("either disableVersioning or initialVersion must be specified")
 	}
 	return nil
 }
