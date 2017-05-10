@@ -36,12 +36,18 @@ type WorkflowHandler struct {
 	service.Service
 }
 
+const (
+	defaultHistoryMaxPageSize = 1000
+)
+
 var (
-	errDomainNotSet    = &gen.BadRequestError{Message: "Domain not set on request."}
-	errTaskTokenNotSet = &gen.BadRequestError{Message: "Task token not set on request."}
-	errTaskListNotSet  = &gen.BadRequestError{Message: "TaskList is not set on request."}
-	errExecutionNotSet = &gen.BadRequestError{Message: "Execution is not set on request."}
-	errInvalidRunID    = &gen.BadRequestError{Message: "Invalid RunID."}
+	errDomainNotSet     = &gen.BadRequestError{Message: "Domain not set on request."}
+	errTaskTokenNotSet  = &gen.BadRequestError{Message: "Task token not set on request."}
+	errTaskListNotSet   = &gen.BadRequestError{Message: "TaskList is not set on request."}
+	errExecutionNotSet  = &gen.BadRequestError{Message: "Execution is not set on request."}
+	errWorkflowIDNotSet = &gen.BadRequestError{Message: "WorkflowId is not set on request."}
+	errRunIDNotSet      = &gen.BadRequestError{Message: "RunId is not set on request."}
+	errInvalidRunID     = &gen.BadRequestError{Message: "Invalid RunId."}
 )
 
 // NewWorkflowHandler creates a thrift handler for the cadence service
@@ -486,12 +492,16 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		return nil, errDomainNotSet
 	}
 
-	if !getRequest.IsSetExecution() || !getRequest.GetExecution().IsSetWorkflowId() {
+	if !getRequest.IsSetExecution() {
 		return nil, errExecutionNotSet
 	}
 
+	if !getRequest.GetExecution().IsSetWorkflowId() {
+		return nil, errWorkflowIDNotSet
+	}
+
 	if !getRequest.GetExecution().IsSetRunId() {
-		return nil, errInvalidRunID
+		return nil, errRunIDNotSet
 	}
 
 	if uuid.Parse(getRequest.GetExecution().GetRunId()) == nil {
@@ -523,15 +533,16 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(ctx thrift.Context,
 		return errDomainNotSet
 	}
 
-	if !signalRequest.IsSetWorkflowExecution() || !signalRequest.GetWorkflowExecution().IsSetWorkflowId() {
+	if !signalRequest.IsSetWorkflowExecution() {
 		return errExecutionNotSet
 	}
 
-	if !signalRequest.GetWorkflowExecution().IsSetRunId() {
-		return errInvalidRunID
+	if !signalRequest.GetWorkflowExecution().IsSetWorkflowId() {
+		return errWorkflowIDNotSet
 	}
 
-	if uuid.Parse(signalRequest.GetWorkflowExecution().GetRunId()) == nil {
+	if signalRequest.GetWorkflowExecution().IsSetRunId() &&
+		uuid.Parse(signalRequest.GetWorkflowExecution().GetRunId()) == nil {
 		return errInvalidRunID
 	}
 
@@ -561,15 +572,16 @@ func (wh *WorkflowHandler) TerminateWorkflowExecution(ctx thrift.Context,
 		return errDomainNotSet
 	}
 
-	if !terminateRequest.IsSetWorkflowExecution() || !terminateRequest.GetWorkflowExecution().IsSetWorkflowId() {
+	if !terminateRequest.IsSetWorkflowExecution() {
 		return errExecutionNotSet
 	}
 
-	if !terminateRequest.GetWorkflowExecution().IsSetRunId() {
-		return errInvalidRunID
+	if !terminateRequest.GetWorkflowExecution().IsSetWorkflowId() {
+		return errWorkflowIDNotSet
 	}
 
-	if uuid.Parse(terminateRequest.GetWorkflowExecution().GetRunId()) == nil {
+	if terminateRequest.GetWorkflowExecution().IsSetRunId() &&
+		uuid.Parse(terminateRequest.GetWorkflowExecution().GetRunId()) == nil {
 		return errInvalidRunID
 	}
 
@@ -597,12 +609,16 @@ func (wh *WorkflowHandler) RequestCancelWorkflowExecution(
 		return errDomainNotSet
 	}
 
-	if !cancelRequest.IsSetWorkflowExecution() || !cancelRequest.GetWorkflowExecution().IsSetWorkflowId() {
+	if !cancelRequest.IsSetWorkflowExecution() {
 		return errExecutionNotSet
 	}
 
+	if !cancelRequest.GetWorkflowExecution().IsSetWorkflowId() {
+		return errWorkflowIDNotSet
+	}
+
 	if !cancelRequest.GetWorkflowExecution().IsSetRunId() {
-		return errInvalidRunID
+		return errRunIDNotSet
 	}
 
 	if uuid.Parse(cancelRequest.GetWorkflowExecution().GetRunId()) == nil {
@@ -656,7 +672,7 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx thrift.Context,
 	}
 
 	if !listRequest.IsSetMaximumPageSize() || listRequest.GetMaximumPageSize() == 0 {
-		listRequest.MaximumPageSize = common.Int32Ptr(1000)
+		listRequest.MaximumPageSize = common.Int32Ptr(defaultHistoryMaxPageSize)
 	}
 
 	domainName := listRequest.GetDomain()
