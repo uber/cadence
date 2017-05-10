@@ -13,6 +13,7 @@ import (
 	hc "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 )
@@ -77,7 +78,7 @@ func newTransferQueueProcessor(shard ShardContext, visibilityMgr persistence.Vis
 		appendCh:          make(chan struct{}, 1),
 		shutdownCh:        make(chan struct{}),
 		logger: logger.WithFields(bark.Fields{
-			tagWorkflowComponent: tagValueTransferQueueComponent,
+			logging.TagWorkflowComponent: logging.TagValueTransferQueueComponent,
 		}),
 		metricsClient: shard.GetMetricsClient(),
 	}
@@ -431,7 +432,7 @@ MoveAckLevelLoop:
 
 	// Always update ackLevel to detect if the shared is stolen
 	if err := a.shard.UpdateAckLevel(updatedAckLevel); err != nil {
-		logOperationFailedEvent(a.logger, "Error updating ack level for shard", err)
+		logging.LogOperationFailedEvent(a.logger, "Error updating ack level for shard", err)
 	}
 
 }

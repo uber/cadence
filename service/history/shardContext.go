@@ -6,6 +6,7 @@ import (
 	"sync/atomic"
 
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 
@@ -330,7 +331,7 @@ func (s *shardContextImpl) renewRangeLocked(isStealing bool) error {
 		ShardInfo:       updatedShardInfo,
 		PreviousRangeID: s.shardInfo.RangeID})
 	if err != nil {
-		logPersistantStoreErrorEvent(s.logger, tagValueStoreOperationUpdateShard, err,
+		logging.LogPersistantStoreErrorEvent(s.logger, logging.TagValueStoreOperationUpdateShard, err,
 			fmt.Sprintf("{RangeID: %v}", s.shardInfo.RangeID))
 		// Shard is stolen, trigger history engine shutdown
 		if _, ok := err.(*persistence.ShardOwnershipLostError); ok {
@@ -381,7 +382,7 @@ func acquireShard(shardID int, shardManager persistence.ShardManager, historyMgr
 		closeCh:          closeCh,
 	}
 	context.logger = logger.WithFields(bark.Fields{
-		tagHistoryShardID: shardID,
+		logging.TagHistoryShardID: shardID,
 	})
 	tags := map[string]string{
 		metrics.ShardTagName: string(shardID),

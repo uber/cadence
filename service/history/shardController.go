@@ -9,6 +9,7 @@ import (
 	"github.com/uber-common/bark"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
@@ -77,7 +78,7 @@ func newShardController(numberOfShards int, host *membership.HostInfo, resolver 
 		shardClosedCh:       make(chan int, numberOfShards),
 		shutdownCh:          make(chan struct{}),
 		logger: logger.WithFields(bark.Fields{
-			tagWorkflowComponent: tagValueShardController,
+			logging.TagWorkflowComponent: logging.TagValueShardController,
 		}),
 		metricsClient: reporter,
 	}
@@ -94,7 +95,7 @@ func newHistoryShardsItem(shardID int, shardMgr persistence.ShardManager, histor
 		engineFactory:       factory,
 		host:                host,
 		logger: logger.WithFields(bark.Fields{
-			tagHistoryShardID: shardID,
+			logging.TagHistoryShardID: shardID,
 		}),
 		metricsClient: reporter,
 	}
@@ -126,7 +127,7 @@ func (c *shardController) Stop() {
 
 	if atomic.LoadInt32(&c.isStarted) == 1 {
 		if err := c.hServiceResolver.RemoveListener(shardControllerMembershipUpdateListenerName); err != nil {
-			logOperationFailedEvent(c.logger, "Error removing membership update listerner", err)
+			logging.LogOperationFailedEvent(c.logger, "Error removing membership update listerner", err)
 		}
 		close(c.shutdownCh)
 	}
@@ -243,14 +244,14 @@ AcquireLoop:
 	for shardID := 0; shardID < c.numberOfShards; shardID++ {
 		info, err := c.hServiceResolver.Lookup(string(shardID))
 		if err != nil {
-			logOperationFailedEvent(c.logger, fmt.Sprintf("Error looking up host for shardID: %v", shardID), err)
+			logging.LogOperationFailedEvent(c.logger, fmt.Sprintf("Error looking up host for shardID: %v", shardID), err)
 			continue AcquireLoop
 		}
 
 		if info.Identity() == c.host.Identity() {
 			_, err1 := c.getEngineForShard(shardID)
 			if err1 != nil {
-				logOperationFailedEvent(c.logger, fmt.Sprintf("Unable to create history shard engine: %v", shardID),
+				logging.LogOperationFailedEvent(c.logger, fmt.Sprintf("Unable to create history shard engine: %v", shardID),
 					err1)
 				continue AcquireLoop
 			}

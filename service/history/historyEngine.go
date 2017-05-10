@@ -12,6 +12,7 @@ import (
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 )
@@ -36,7 +37,7 @@ type (
 		metricsReporter    metrics.Client
 		historyCache       *historyCache
 		domainCache        cache.DomainCache
-    metricsClient      metrics.Client
+		metricsClient      metrics.Client
 		logger             bark.Logger
 	}
 
@@ -80,7 +81,7 @@ func NewEngineWithShardContext(shard ShardContext, metadataMgr persistence.Metad
 		historyCache:       historyCache,
 		domainCache:        cache.NewDomainCache(metadataMgr, logger),
 		logger: logger.WithFields(bark.Fields{
-			tagWorkflowComponent: tagValueHistoryEngineComponent,
+			logging.TagWorkflowComponent: logging.TagValueHistoryEngineComponent,
 		}),
 		metricsClient: shard.GetMetricsClient(),
 	}
@@ -204,7 +205,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 			})
 		}
 
-		logPersistantStoreErrorEvent(e.logger, tagValueStoreOperationCreateWorkflowExecution, err,
+		logging.LogPersistantStoreErrorEvent(e.logger, logging.TagValueStoreOperationCreateWorkflowExecution, err,
 			fmt.Sprintf("{WorkflowID: %v, RunID: %v}", executionID, runID))
 		return nil, err
 	}
