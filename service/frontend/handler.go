@@ -747,7 +747,7 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx thrift.Context,
 	}
 
 	if !listRequest.IsSetMaximumPageSize() || listRequest.GetMaximumPageSize() == 0 {
-		listRequest.MaximumPageSize = common.Int32Ptr(1000)
+		listRequest.MaximumPageSize = common.Int32Ptr(defaultHistoryMaxPageSize)
 	}
 
 	domainName := listRequest.GetDomain()
