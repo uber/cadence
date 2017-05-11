@@ -347,7 +347,7 @@ func (s *shardContextImpl) renewRangeLocked(isStealing bool) error {
 	atomic.StoreInt64(&s.rangeID, updatedShardInfo.RangeID)
 	s.shardInfo = updatedShardInfo
 
-	logShardRangeUpdatedEvent(s.logger, s.shardInfo.ShardID, s.shardInfo.RangeID, s.transferSequenceNumber,
+	logging.LogShardRangeUpdatedEvent(s.logger, s.shardInfo.ShardID, s.shardInfo.RangeID, s.transferSequenceNumber,
 		s.maxTransferSequenceNumber)
 
 	return nil

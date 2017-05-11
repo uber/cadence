@@ -190,7 +190,7 @@ func (e *mutableStateBuilder) DeleteActivity(scheduleEventID int64) error {
 	a, ok := e.pendingActivityInfoIDs[scheduleEventID]
 	if !ok {
 		errorMsg := fmt.Sprintf("Unable to find activity with schedule event id: %v in mutable state", scheduleEventID)
-		logMutableStateInvalidAction(e.logger, errorMsg)
+		logging.LogMutableStateInvalidAction(e.logger, errorMsg)
 		return errors.New(errorMsg)
 	}
 	delete(e.pendingActivityInfoIDs, scheduleEventID)
@@ -198,7 +198,7 @@ func (e *mutableStateBuilder) DeleteActivity(scheduleEventID int64) error {
 	_, ok = e.pendingActivityInfoByActivityID[a.ActivityID]
 	if !ok {
 		errorMsg := fmt.Sprintf("Unable to find activity: %v in mutable state", a.ActivityID)
-		logMutableStateInvalidAction(e.logger, errorMsg)
+		logging.LogMutableStateInvalidAction(e.logger, errorMsg)
 		return errors.New(errorMsg)
 	}
 	delete(e.pendingActivityInfoByActivityID, a.ActivityID)
@@ -224,7 +224,7 @@ func (e *mutableStateBuilder) DeleteUserTimer(timerID string) error {
 	_, ok := e.pendingTimerInfoIDs[timerID]
 	if !ok {
 		errorMsg := fmt.Sprintf("Unable to find pending timer: %v", timerID)
-		logMutableStateInvalidAction(e.logger, errorMsg)
+		logging.LogMutableStateInvalidAction(e.logger, errorMsg)
 		return errors.New(errorMsg)
 	}
 	delete(e.pendingTimerInfoIDs, timerID)
@@ -320,7 +320,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionStartedEvent(domainID string, 
 	request *workflow.StartWorkflowExecutionRequest) *workflow.HistoryEvent {
 	eventID := e.GetNextEventID()
 	if eventID != firstEventID {
-		logInvalidHistoryActionEvent(e.logger, logging.TagValueActionWorkflowStarted, eventID, "")
+		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionWorkflowStarted, eventID, "")
 		return nil
 	}
 
@@ -348,7 +348,7 @@ func (e *mutableStateBuilder) AddDecisionTaskScheduledEvent() (*workflow.History
 	taskList := e.executionInfo.TaskList
 	startToCloseTimeoutSeconds := e.executionInfo.DecisionTimeoutValue
 	if e.HasPendingDecisionTask() {
-		logInvalidHistoryActionEvent(e.logger, logging.TagValueActionDecisionTaskScheduled, e.GetNextEventID(), fmt.Sprintf(
+		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionDecisionTaskScheduled, e.GetNextEventID(), fmt.Sprintf(
 			"{Pending Decision ScheduleID: %v}", e.executionInfo.DecisionScheduleID))
 		return nil, nil
 	}
@@ -370,7 +370,7 @@ func (e *mutableStateBuilder) AddDecisionTaskStartedEvent(scheduleEventID int64,
 	hasPendingDecision := e.HasPendingDecisionTask()
 	pendingDecisionTask, ok := e.GetPendingDecision(scheduleEventID)
 	if !hasPendingDecision || !ok || pendingDecisionTask.StartedID != emptyEventID {
-		logInvalidHistoryActionEvent(e.logger, logging.TagValueActionDecisionTaskStarted, e.GetNextEventID(), fmt.Sprintf(
+		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionDecisionTaskStarted, e.GetNextEventID(), fmt.Sprintf(
 			"{HasPending: %v, ScheduleID: %v, Exist: %v, Value: %v}", hasPendingDecision, scheduleEventID, ok, e))
 		return nil
 	}
@@ -390,7 +390,7 @@ func (e *mutableStateBuilder) AddDecisionTaskCompletedEvent(scheduleEventID, sta
 	hasPendingDecision := e.HasPendingDecisionTask()
 	pendingDecisionTask, ok := e.GetPendingDecision(scheduleEventID)
 	if !hasPendingDecision || !ok || pendingDecisionTask.StartedID != startedEventID {
-		logInvalidHistoryActionEvent(e.logger, logging.TagValueActionDecisionTaskCompleted, e.GetNextEventID(), fmt.Sprintf(
+		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionDecisionTaskCompleted, e.GetNextEventID(), fmt.Sprintf(
 			"{HasPending: %v, ScheduleID: %v, StartedID: %v, Exist: %v}", hasPendingDecision, scheduleEventID,
 			startedEventID, ok))
 		return nil
@@ -407,7 +407,7 @@ func (e *mutableStateBuilder) AddDecisionTaskTimedOutEvent(scheduleEventID int64
 	hasPendingDecision := e.HasPendingDecisionTask()
 	pendingDecisionTask, ok := e.GetPendingDecision(scheduleEventID)
 	if !hasPendingDecision || !ok || pendingDecisionTask.StartedID != startedEventID {
-		logInvalidHistoryActionEvent(e.logger, logging.TagValueActionDecisionTaskTimedOut, e.GetNextEventID(), fmt.Sprintf(
+		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionDecisionTaskTimedOut, e.GetNextEventID(), fmt.Sprintf(
 			"{HasPending: %v, ScheduleID: %v, StartedID: %v, Exist: %v}", hasPendingDecision, scheduleEventID,
 			startedEventID, ok))
 		return nil
@@ -425,7 +425,7 @@ func (e *mutableStateBuilder) AddDecisionTaskFailedEvent(scheduleEventID int64,
 	hasPendingDecision := e.HasPendingDecisionTask()
 	pendingDecisionTask, ok := e.GetPendingDecision(scheduleEventID)
 	if !hasPendingDecision || !ok || pendingDecisionTask.StartedID != startedEventID {
-		logInvalidHistoryActionEvent(e.logger, logging.TagValueActionDecisionTaskFailed, e.GetNextEventID(), fmt.Sprintf(
+		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionDecisionTaskFailed, e.GetNextEventID(), fmt.Sprintf(
 			"{HasPending: %v, ScheduleID: %v, StartedID: %v, Exist: %v}", hasPendingDecision, scheduleEventID,
 			startedEventID, ok))
 		return nil
@@ -440,7 +440,7 @@ func (e *mutableStateBuilder) AddDecisionTaskFailedEvent(scheduleEventID int64,
 func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(decisionCompletedEventID int64,
 	attributes *workflow.ScheduleActivityTaskDecisionAttributes) (*workflow.HistoryEvent, *persistence.ActivityInfo) {
 	if ai, ok := e.GetActivityInfo(e.GetNextEventID()); ok {
-		logInvalidHistoryActionEvent(e.logger, logging.TagValueActionActivityTaskScheduled, ai.ScheduleID, fmt.Sprintf(
+		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionActivityTaskScheduled, ai.ScheduleID, fmt.Sprintf(
 			"{Exist: %v, Value: %v}", ok, ai.StartedID))
 		return nil, nil
 	}
@@ -491,7 +491,7 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(decisionCompletedEve
 func (e *mutableStateBuilder) AddActivityTaskStartedEvent(ai *persistence.ActivityInfo, scheduleEventID int64,
 	requestID string, request *workflow.PollForActivityTaskRequest) *workflow.HistoryEvent {
 	if ai, ok := e.GetActivityInfo(scheduleEventID); !ok || ai.StartedID != emptyEventID {
-		logInvalidHistoryActionEvent(e.logger, logging.TagValueActionActivityTaskStarted, e.GetNextEventID(), fmt.Sprintf(
+		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionActivityTaskStarted, e.GetNextEventID(), fmt.Sprintf(
 			"{ScheduleID: %v, Exist: %v}", scheduleEventID, ok))
 		return nil
 	}
@@ -508,7 +508,7 @@ func (e *mutableStateBuilder) AddActivityTaskStartedEvent(ai *persistence.Activi
 func (e *mutableStateBuilder) AddActivityTaskCompletedEvent(scheduleEventID, startedEventID int64,
 	request *workflow.RespondActivityTaskCompletedRequest) *workflow.HistoryEvent {
 	if ai, ok := e.GetActivityInfo(scheduleEventID); !ok || ai.StartedID != startedEventID {
-		logInvalidHistoryActionEvent(e.logger, logging.TagValueActionActivityTaskCompleted, e.GetNextEventID(), fmt.Sprintf(
+		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionActivityTaskCompleted, e.GetNextEventID(), fmt.Sprintf(
 			"{ScheduleID: %v, StartedID: %v, Exist: %v}", scheduleEventID, startedEventID, ok))
 		return nil
 	}
@@ -523,7 +523,7 @@ func (e *mutableStateBuilder) AddActivityTaskCompletedEvent(scheduleEventID, sta
 func (e *mutableStateBuilder) AddActivityTaskFailedEvent(scheduleEventID, startedEventID int64,
 	request *workflow.RespondActivityTaskFailedRequest) *workflow.HistoryEvent {
 	if ai, ok := e.GetActivityInfo(scheduleEventID); !ok || ai.StartedID != startedEventID {
-		logInvalidHistoryActionEvent(e.logger, logging.TagValueActionActivityTaskFailed, e.GetNextEventID(), fmt.Sprintf(
+		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionActivityTaskFailed, e.GetNextEventID(), fmt.Sprintf(
 			"{ScheduleID: %v, StartedID: %v, Exist: %v}", scheduleEventID, startedEventID, ok))
 		return nil
 	}
@@ -540,7 +540,7 @@ func (e *mutableStateBuilder) AddActivityTaskTimedOutEvent(scheduleEventID, star
 	if ai, ok := e.GetActivityInfo(scheduleEventID); !ok || ai.StartedID != startedEventID ||
 		((timeoutType == workflow.TimeoutType_START_TO_CLOSE || timeoutType == workflow.TimeoutType_HEARTBEAT) &&
 			ai.StartedID == emptyEventID) {
-		logInvalidHistoryActionEvent(e.logger, logging.TagValueActionActivityTaskTimedOut, e.GetNextEventID(), fmt.Sprintf(
+		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionActivityTaskTimedOut, e.GetNextEventID(), fmt.Sprintf(
 			"{ScheduleID: %v, StartedID: %v, TimeOutType: %v, Exist: %v}", scheduleEventID, startedEventID,
 			timeoutType, ok))
 		return nil
@@ -559,7 +559,7 @@ func (e *mutableStateBuilder) AddActivityTaskCancelRequestedEvent(decisionComple
 
 	ai, isRunning := e.GetActivityByActivityID(activityID)
 	if !isRunning || ai.CancelRequested {
-		logInvalidHistoryActionEvent(e.logger, logging.TagValueActionActivityTaskCancelRequest, e.GetNextEventID(), fmt.Sprintf(
+		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionActivityTaskCancelRequest, e.GetNextEventID(), fmt.Sprintf(
 			"{isRunning: %v, ActivityID: %v}", isRunning, activityID))
 		return nil, nil, false
 	}
@@ -583,14 +583,14 @@ func (e *mutableStateBuilder) AddActivityTaskCanceledEvent(scheduleEventID, star
 	latestCancelRequestedEventID int64, details []byte, identity string) *workflow.HistoryEvent {
 	ai, ok := e.GetActivityInfo(scheduleEventID)
 	if !ok || ai.StartedID != startedEventID {
-		logInvalidHistoryActionEvent(e.logger, logging.TagValueActionActivityTaskCanceled, e.GetNextEventID(), fmt.Sprintf(
+		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionActivityTaskCanceled, e.GetNextEventID(), fmt.Sprintf(
 			"{ScheduleID: %v, StartedID: %v, Exist: %v}", scheduleEventID, startedEventID, ok))
 		return nil
 	}
 
 	// Verify cancel request as well.
 	if !ai.CancelRequested {
-		logInvalidHistoryActionEvent(e.logger, logging.TagValueActionActivityTaskCanceled, e.GetNextEventID(), fmt.Sprintf(
+		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionActivityTaskCanceled, e.GetNextEventID(), fmt.Sprintf(
 			"{No outstanding cancel request. ScheduleID: %v, ActivityID: %v, Exist: %v, Value: %v}",
 			scheduleEventID, ai.ActivityID, ok, ai.StartedID))
 		return nil
@@ -607,7 +607,7 @@ func (e *mutableStateBuilder) AddActivityTaskCanceledEvent(scheduleEventID, star
 func (e *mutableStateBuilder) AddCompletedWorkflowEvent(decisionCompletedEventID int64,
 	attributes *workflow.CompleteWorkflowExecutionDecisionAttributes) *workflow.HistoryEvent {
 	if e.executionInfo.State == persistence.WorkflowStateCompleted {
-		logInvalidHistoryActionEvent(e.logger, logging.TagValueActionCompleteWorkflow, e.GetNextEventID(), fmt.Sprintf(
+		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionCompleteWorkflow, e.GetNextEventID(), fmt.Sprintf(
 			"{State: %v}", e.executionInfo.State))
 	}
 
@@ -619,7 +619,7 @@ func (e *mutableStateBuilder) AddCompletedWorkflowEvent(decisionCompletedEventID
 func (e *mutableStateBuilder) AddFailWorkflowEvent(decisionCompletedEventID int64,
 	attributes *workflow.FailWorkflowExecutionDecisionAttributes) *workflow.HistoryEvent {
 	if e.executionInfo.State == persistence.WorkflowStateCompleted {
-		logInvalidHistoryActionEvent(e.logger, logging.TagValueActionFailWorkflow, e.GetNextEventID(), fmt.Sprintf(
+		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionFailWorkflow, e.GetNextEventID(), fmt.Sprintf(
 			"{State: %v}", e.executionInfo.State))
 	}
 
@@ -636,7 +636,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionCancelRequestedEvent(cause str
 func (e *mutableStateBuilder) AddWorkflowExecutionCanceledEvent(decisionTaskCompletedEventID int64,
 	attributes *workflow.CancelWorkflowExecutionDecisionAttributes) *workflow.HistoryEvent {
 	if e.executionInfo.State == persistence.WorkflowStateCompleted {
-		logInvalidHistoryActionEvent(e.logger, logging.TagValueActionWorkflowCanceled, e.GetNextEventID(), fmt.Sprintf(
+		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionWorkflowCanceled, e.GetNextEventID(), fmt.Sprintf(
 			"{State: %v}", e.executionInfo.State))
 	}
 
@@ -668,7 +668,7 @@ func (e *mutableStateBuilder) AddTimerStartedEvent(decisionCompletedEventID int6
 	timerID := request.GetTimerId()
 	isTimerRunning, ti := e.GetUserTimer(timerID)
 	if isTimerRunning {
-		logInvalidHistoryActionEvent(e.logger, logging.TagValueActionTimerStarted, e.GetNextEventID(), fmt.Sprintf(
+		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionTimerStarted, e.GetNextEventID(), fmt.Sprintf(
 			"{IsTimerRunning: %v, TimerID: %v, StartedID: %v}", isTimerRunning, timerID, ti.StartedID))
 		return nil, nil
 	}
@@ -694,7 +694,7 @@ func (e *mutableStateBuilder) AddTimerStartedEvent(decisionCompletedEventID int6
 func (e *mutableStateBuilder) AddTimerFiredEvent(startedEventID int64, timerID string) *workflow.HistoryEvent {
 	isTimerRunning, _ := e.GetUserTimer(timerID)
 	if !isTimerRunning {
-		logInvalidHistoryActionEvent(e.logger, logging.TagValueActionTimerFired, e.GetNextEventID(), fmt.Sprintf(
+		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionTimerFired, e.GetNextEventID(), fmt.Sprintf(
 			"{startedEventID: %v, Exist: %v, TimerID: %v}", startedEventID, isTimerRunning, timerID))
 		return nil
 	}
@@ -713,7 +713,7 @@ func (e *mutableStateBuilder) AddTimerCanceledEvent(decisionCompletedEventID int
 	timerID := attributes.GetTimerId()
 	isTimerRunning, ti := e.GetUserTimer(timerID)
 	if !isTimerRunning {
-		logInvalidHistoryActionEvent(e.logger, logging.TagValueActionTimerCanceled, e.GetNextEventID(), fmt.Sprintf(
+		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionTimerCanceled, e.GetNextEventID(), fmt.Sprintf(
 			"{IsTimerRunning: %v, timerID: %v}", isTimerRunning, timerID))
 		return nil
 	}
@@ -743,7 +743,7 @@ func (e *mutableStateBuilder) AddRecordMarkerEvent(decisionCompletedEventID int6
 func (e *mutableStateBuilder) AddWorkflowExecutionTerminatedEvent(
 	request *workflow.TerminateWorkflowExecutionRequest) *workflow.HistoryEvent {
 	if e.executionInfo.State == persistence.WorkflowStateCompleted {
-		logInvalidHistoryActionEvent(e.logger, logging.TagValueActionWorkflowTerminated, e.GetNextEventID(), fmt.Sprintf(
+		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionWorkflowTerminated, e.GetNextEventID(), fmt.Sprintf(
 			"{State: %v}", e.executionInfo.State))
 		return nil
 	}
@@ -756,7 +756,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionTerminatedEvent(
 func (e *mutableStateBuilder) AddWorkflowExecutionSignaled(
 	request *workflow.SignalWorkflowExecutionRequest) *workflow.HistoryEvent {
 	if e.executionInfo.State == persistence.WorkflowStateCompleted {
-		logInvalidHistoryActionEvent(e.logger, logging.TagValueActionWorkflowSignaled, e.GetNextEventID(), fmt.Sprintf(
+		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionWorkflowSignaled, e.GetNextEventID(), fmt.Sprintf(
 			"{State: %v}", e.executionInfo.State))
 		return nil
 	}
@@ -768,7 +768,7 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(decisionCompletedEventID int
 	attributes *workflow.ContinueAsNewWorkflowExecutionDecisionAttributes) (*workflow.HistoryEvent, *mutableStateBuilder,
 	error) {
 	if e.hasPendingTasks() || e.HasPendingDecisionTask() {
-		logInvalidHistoryActionEvent(e.logger, logging.TagValueActionContinueAsNew, e.GetNextEventID(), fmt.Sprintf(
+		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionContinueAsNew, e.GetNextEventID(), fmt.Sprintf(
 			"{OutStandingActivityTasks: %v, HasPendingDecision: %v}", len(e.pendingActivityInfoIDs),
 			e.HasPendingDecisionTask()))
 	}

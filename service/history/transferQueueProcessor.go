@@ -106,8 +106,8 @@ func (t *transferQueueProcessorImpl) Start() {
 		return
 	}
 
-	logTransferQueueProcesorStartingEvent(t.logger)
-	defer logTransferQueueProcesorStartedEvent(t.logger)
+	logging.LogTransferQueueProcesorStartingEvent(t.logger)
+	defer logging.LogTransferQueueProcesorStartedEvent(t.logger)
 
 	t.shutdownWG.Add(1)
 	t.NotifyNewTask()
@@ -119,15 +119,15 @@ func (t *transferQueueProcessorImpl) Stop() {
 		return
 	}
 
-	logTransferQueueProcesorShuttingDownEvent(t.logger)
-	defer logTransferQueueProcesorShutdownEvent(t.logger)
+	logging.LogTransferQueueProcesorShuttingDownEvent(t.logger)
+	defer logging.LogTransferQueueProcesorShutdownEvent(t.logger)
 
 	if atomic.LoadInt32(&t.isStarted) == 1 {
 		close(t.shutdownCh)
 	}
 
 	if success := common.AwaitWaitGroup(&t.shutdownWG, time.Minute); !success {
-		logTransferQueueProcesorShutdownTimedoutEvent(t.logger)
+		logging.LogTransferQueueProcesorShutdownTimedoutEvent(t.logger)
 	}
 }
 

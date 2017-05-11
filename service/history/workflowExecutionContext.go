@@ -105,7 +105,7 @@ func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persi
 		firstEvent := builder.history[0]
 		serializedHistory, err := builder.Serialize()
 		if err != nil {
-			logHistorySerializationErrorEvent(c.logger, err, "Unable to serialize execution history for update.")
+			logging.LogHistorySerializationErrorEvent(c.logger, err, "Unable to serialize execution history for update.")
 			return err
 		}
 
@@ -183,7 +183,7 @@ func (c *workflowExecutionContext) continueAsNewWorkflowExecution(context []byte
 	// Serialize the history
 	serializedHistory, serializedError := newStateBuilder.hBuilder.Serialize()
 	if serializedError != nil {
-		logHistorySerializationErrorEvent(c.logger, serializedError, fmt.Sprintf(
+		logging.LogHistorySerializationErrorEvent(c.logger, serializedError, fmt.Sprintf(
 			"HistoryEventBatch serialization error on start workflow.  WorkflowID: %v, RunID: %v", newExecution.GetWorkflowId(),
 			newExecution.GetRunId()))
 		return serializedError

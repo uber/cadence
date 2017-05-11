@@ -113,7 +113,7 @@ func (c *shardController) Start() {
 
 	c.hServiceResolver.AddListener(shardControllerMembershipUpdateListenerName, c.membershipUpdateCh)
 
-	logShardControllerStartedEvent(c.logger, c.host.Identity())
+	logging.LogShardControllerStartedEvent(c.logger, c.host.Identity())
 }
 
 func (c *shardController) Stop() {
@@ -133,10 +133,10 @@ func (c *shardController) Stop() {
 	}
 
 	if success := common.AwaitWaitGroup(&c.shutdownWG, time.Minute); !success {
-		logShardControllerShutdownTimedoutEvent(c.logger, c.host.Identity())
+		logging.LogShardControllerShutdownTimedoutEvent(c.logger, c.host.Identity())
 	}
 
-	logShardControllerShutdownEvent(c.logger, c.host.Identity())
+	logging.LogShardControllerShutdownEvent(c.logger, c.host.Identity())
 }
 
 func (c *shardController) GetEngine(workflowID string) (Engine, error) {
@@ -187,7 +187,7 @@ func (c *shardController) getOrCreateHistoryShardItem(shardID int) (*historyShar
 		shardItem := newHistoryShardsItem(shardID, c.shardMgr, c.historyMgr, c.executionMgrFactory, c.engineFactory, c.host,
 			c.logger, c.metricsClient)
 		c.historyShards[shardID] = shardItem
-		logShardItemCreatedEvent(shardItem.logger, info.Identity(), shardID)
+		logging.LogShardItemCreatedEvent(shardItem.logger, info.Identity(), shardID)
 		return shardItem, nil
 	}
 
@@ -204,7 +204,7 @@ func (c *shardController) removeHistoryShardItem(shardID int) (*historyShardsIte
 	}
 
 	delete(c.historyShards, shardID)
-	logShardItemRemovedEvent(item.logger, c.host.Identity(), shardID, len(c.historyShards))
+	logging.LogShardItemRemovedEvent(item.logger, c.host.Identity(), shardID, len(c.historyShards))
 
 	return item, nil
 }
@@ -217,7 +217,7 @@ func (c *shardController) shardManagementPump() {
 	for {
 		select {
 		case <-c.shutdownCh:
-			logShardControllerShuttingDownEvent(c.logger, c.host.Identity())
+			logging.LogShardControllerShuttingDownEvent(c.logger, c.host.Identity())
 			c.Lock()
 			defer c.Unlock()
 
@@ -229,11 +229,11 @@ func (c *shardController) shardManagementPump() {
 		case <-acquireTicker.C:
 			c.acquireShards()
 		case changedEvent := <-c.membershipUpdateCh:
-			logRingMembershipChangedEvent(c.logger, c.host.Identity(), len(changedEvent.HostsAdded),
+			logging.LogRingMembershipChangedEvent(c.logger, c.host.Identity(), len(changedEvent.HostsAdded),
 				len(changedEvent.HostsRemoved), len(changedEvent.HostsUpdated))
 			c.acquireShards()
 		case shardID := <-c.shardClosedCh:
-			logShardClosedEvent(c.logger, c.host.Identity(), shardID)
+			logging.LogShardClosedEvent(c.logger, c.host.Identity(), shardID)
 			c.removeEngineForShard(shardID)
 		}
 	}
@@ -283,8 +283,8 @@ func (i *historyShardsItem) getOrCreateEngine(shardClosedCh chan<- int) (Engine,
 		return i.engine, nil
 	}
 
-	logShardEngineCreatingEvent(i.logger, i.host.Identity(), i.shardID)
-	defer logShardEngineCreatedEvent(i.logger, i.host.Identity(), i.shardID)
+	logging.LogShardEngineCreatingEvent(i.logger, i.host.Identity(), i.shardID)
+	defer logging.LogShardEngineCreatedEvent(i.logger, i.host.Identity(), i.shardID)
 	executionMgr, err := i.executionMgrFactory.CreateExecutionManager(i.shardID)
 	if err != nil {
 		return nil, err
@@ -303,8 +303,8 @@ func (i *historyShardsItem) getOrCreateEngine(shardClosedCh chan<- int) (Engine,
 }
 
 func (i *historyShardsItem) stopEngine() {
-	logShardEngineStoppingEvent(i.logger, i.host.Identity(), i.shardID)
-	defer logShardEngineStoppedEvent(i.logger, i.host.Identity(), i.shardID)
+	logging.LogShardEngineStoppingEvent(i.logger, i.host.Identity(), i.shardID)
+	defer logging.LogShardEngineStoppedEvent(i.logger, i.host.Identity(), i.shardID)
 	i.Lock()
 	defer i.Unlock()
 
