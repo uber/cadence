@@ -23,6 +23,7 @@ package cassandra
 import (
 	"fmt"
 	"github.com/urfave/cli"
+	"log"
 )
 
 // setupSchema executes the setupSchemaTask
@@ -31,10 +32,40 @@ import (
 func setupSchema(cli *cli.Context) error {
 	config, err := newSetupSchemaConfig(cli)
 	if err != nil {
-		return newConfigError(err.Error())
+		err = newConfigError(err.Error())
+		log.Println(err)
+		return err
 	}
 	if err := handleSetupSchema(config); err != nil {
-		fmt.Println(err)
+		log.Println(err)
+		return err
+	}
+	return nil
+}
+
+// updateSchema executes the updateSchemaTask
+// using the given command lien args as input
+func updateSchema(cli *cli.Context) error {
+	config, err := newUpdateSchemaConfig(cli)
+	if err != nil {
+		err = newConfigError(err.Error())
+		log.Println(err)
+		return err
+	}
+	if err := handleUpdateSchema(config); err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
+}
+
+func handleUpdateSchema(config *UpdateSchemaConfig) error {
+	task, err := NewUpdateSchemaTask(config)
+	if err != nil {
+		return fmt.Errorf("Error creating task, err=%v\n", err)
+	}
+	if err := task.run(); err != nil {
+		return fmt.Errorf("Error setting up schema, err=%v\n", err)
 	}
 	return nil
 }
@@ -57,12 +88,19 @@ func validateSetupSchemaConfig(config *SetupSchemaConfig) error {
 	if len(config.CassKeyspace) == 0 {
 		return newConfigError("missing keyspace")
 	}
-	if len(config.SchemaFilePath) == 0 {
+	if len(config.SchemaFilePath) == 0 && config.DisableVersioning {
 		return newConfigError("missing schemaFilePath")
 	}
-	if (config.DisableVersioning && config.InitialVersion > 0) ||
-		(!config.DisableVersioning && config.InitialVersion == 0) {
+	if (config.DisableVersioning && len(config.InitialVersion) > 0) ||
+		(!config.DisableVersioning && len(config.InitialVersion) == 0) {
 		return newConfigError("either disableVersioning or initialVersion must be specified")
+	}
+	if !config.DisableVersioning {
+		ver, err := parseValidateVersion(config.InitialVersion)
+		if err != nil {
+			return newConfigError("invalid intialVersion arg:" + err.Error())
+		}
+		config.InitialVersion = ver
 	}
 	return nil
 }
@@ -73,7 +111,7 @@ func newSetupSchemaConfig(cli *cli.Context) (*SetupSchemaConfig, error) {
 	config.CassHosts = cli.GlobalString(cliOptEndpoint)
 	config.CassKeyspace = cli.GlobalString(cliOptKeyspace)
 	config.SchemaFilePath = cli.String(cliOptSchemaFile)
-	config.InitialVersion = cli.Int(cliOptVersion)
+	config.InitialVersion = cli.String(cliOptVersion)
 	config.DisableVersioning = cli.Bool(cliOptDisableVersioning)
 	config.Overwrite = cli.Bool(cliOptOverwrite)
 
@@ -83,15 +121,49 @@ func newSetupSchemaConfig(cli *cli.Context) (*SetupSchemaConfig, error) {
 	if len(config.CassKeyspace) == 0 {
 		return nil, fmt.Errorf("'%v' flag cannot be empty\n", cliOptKeyspace)
 	}
-	if len(config.SchemaFilePath) == 0 {
-		return nil, fmt.Errorf("'%v' flag cannot be empty\n", cliOptSchemaFile)
+	if len(config.SchemaFilePath) == 0 && config.DisableVersioning {
+		return nil, fmt.Errorf("both '%v' and '%v' flag cannot be empty\n", cliOptSchemaFile, cliOptDisableVersioning)
 	}
-	if config.DisableVersioning && config.InitialVersion > 0 {
+	if config.DisableVersioning && len(config.InitialVersion) > 0 {
 		return nil, fmt.Errorf("either specify '%v' or '%v', but not both", cliOptDisableVersioning, cliOptVersion)
 	}
-	if !config.DisableVersioning && config.InitialVersion == 0 {
+	if !config.DisableVersioning && len(config.InitialVersion) == 0 {
 		return nil, fmt.Errorf("must specify a value for either '%v' or '%v'\n", cliOptDisableVersioning, cliOptVersion)
 	}
+	if !config.DisableVersioning {
+		ver, err := parseValidateVersion(config.InitialVersion)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value for %v flag: %v\n", cliOptVersion, err.Error())
+		}
+		config.InitialVersion = ver
+	}
+	return config, nil
+}
 
+func newUpdateSchemaConfig(cli *cli.Context) (*UpdateSchemaConfig, error) {
+
+	config := new(UpdateSchemaConfig)
+	config.CassHosts = cli.GlobalString(cliOptEndpoint)
+	config.CassKeyspace = cli.GlobalString(cliOptKeyspace)
+	config.SchemaDir = cli.String(cliOptSchemaDir)
+	config.IsDryRun = cli.Bool(cliOptDryrun)
+	config.TargetVersion = cli.String(cliOptTargetVersion)
+
+	if len(config.CassHosts) == 0 {
+		return nil, fmt.Errorf("'%v' flag cannot be empty\n", cliOptEndpoint)
+	}
+	if len(config.CassKeyspace) == 0 {
+		return nil, fmt.Errorf("'%v' flag cannot be empty\n", cliOptKeyspace)
+	}
+	if len(config.SchemaDir) == 0 {
+		return nil, fmt.Errorf("%v flag cannot be empty\n", cliOptSchemaDir)
+	}
+	if len(config.TargetVersion) > 0 {
+		ver, err := parseValidateVersion(config.TargetVersion)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value for %v flag:%v\n", cliOptTargetVersion, err.Error())
+		}
+		config.TargetVersion = ver
+	}
 	return config, nil
 }
