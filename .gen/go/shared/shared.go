@@ -143,6 +143,7 @@ const (
   DecisionType_RequestCancelExternalWorkflowExecution DecisionType = 7
   DecisionType_RecordMarker DecisionType = 8
   DecisionType_ContinueAsNewWorkflowExecution DecisionType = 9
+  DecisionType_StartChildWorkflowExecution DecisionType = 10
 )
 
 func (p DecisionType) String() string {
@@ -157,6 +158,7 @@ func (p DecisionType) String() string {
   case DecisionType_RequestCancelExternalWorkflowExecution: return "RequestCancelExternalWorkflowExecution"
   case DecisionType_RecordMarker: return "RecordMarker"
   case DecisionType_ContinueAsNewWorkflowExecution: return "ContinueAsNewWorkflowExecution"
+  case DecisionType_StartChildWorkflowExecution: return "StartChildWorkflowExecution"
   }
   return "<UNSET>"
 }
@@ -173,6 +175,7 @@ func DecisionTypeFromString(s string) (DecisionType, error) {
   case "RequestCancelExternalWorkflowExecution": return DecisionType_RequestCancelExternalWorkflowExecution, nil 
   case "RecordMarker": return DecisionType_RecordMarker, nil 
   case "ContinueAsNewWorkflowExecution": return DecisionType_ContinueAsNewWorkflowExecution, nil 
+  case "StartChildWorkflowExecution": return DecisionType_StartChildWorkflowExecution, nil 
   }
   return DecisionType(0), fmt.Errorf("not a valid DecisionType string")
 }
@@ -240,6 +243,14 @@ const (
   EventType_WorkflowExecutionSignaled EventType = 27
   EventType_WorkflowExecutionTerminated EventType = 28
   EventType_WorkflowExecutionContinuedAsNew EventType = 29
+  EventType_StartChildWorkflowExecutionInitiatedEventAttributes EventType = 30
+  EventType_StartChildWorkflowExecutionFailedEventAttributes EventType = 31
+  EventType_ChildWorkflowExecutionStartedEventAttributes EventType = 32
+  EventType_ChildWorkflowExecutionCompletedEventAttributes EventType = 33
+  EventType_ChildWorkflowExecutionFailedEventAttributes EventType = 34
+  EventType_ChildWorkflowExecutionCanceledEventAttributes EventType = 35
+  EventType_ChildWorkflowExecutionTimedOutEventAttributes EventType = 36
+  EventType_ChildWorkflowExecutionTerminatedEventAttributes EventType = 37
 )
 
 func (p EventType) String() string {
@@ -274,6 +285,14 @@ func (p EventType) String() string {
   case EventType_WorkflowExecutionSignaled: return "WorkflowExecutionSignaled"
   case EventType_WorkflowExecutionTerminated: return "WorkflowExecutionTerminated"
   case EventType_WorkflowExecutionContinuedAsNew: return "WorkflowExecutionContinuedAsNew"
+  case EventType_StartChildWorkflowExecutionInitiatedEventAttributes: return "StartChildWorkflowExecutionInitiatedEventAttributes"
+  case EventType_StartChildWorkflowExecutionFailedEventAttributes: return "StartChildWorkflowExecutionFailedEventAttributes"
+  case EventType_ChildWorkflowExecutionStartedEventAttributes: return "ChildWorkflowExecutionStartedEventAttributes"
+  case EventType_ChildWorkflowExecutionCompletedEventAttributes: return "ChildWorkflowExecutionCompletedEventAttributes"
+  case EventType_ChildWorkflowExecutionFailedEventAttributes: return "ChildWorkflowExecutionFailedEventAttributes"
+  case EventType_ChildWorkflowExecutionCanceledEventAttributes: return "ChildWorkflowExecutionCanceledEventAttributes"
+  case EventType_ChildWorkflowExecutionTimedOutEventAttributes: return "ChildWorkflowExecutionTimedOutEventAttributes"
+  case EventType_ChildWorkflowExecutionTerminatedEventAttributes: return "ChildWorkflowExecutionTerminatedEventAttributes"
   }
   return "<UNSET>"
 }
@@ -310,6 +329,14 @@ func EventTypeFromString(s string) (EventType, error) {
   case "WorkflowExecutionSignaled": return EventType_WorkflowExecutionSignaled, nil 
   case "WorkflowExecutionTerminated": return EventType_WorkflowExecutionTerminated, nil 
   case "WorkflowExecutionContinuedAsNew": return EventType_WorkflowExecutionContinuedAsNew, nil 
+  case "StartChildWorkflowExecutionInitiatedEventAttributes": return EventType_StartChildWorkflowExecutionInitiatedEventAttributes, nil 
+  case "StartChildWorkflowExecutionFailedEventAttributes": return EventType_StartChildWorkflowExecutionFailedEventAttributes, nil 
+  case "ChildWorkflowExecutionStartedEventAttributes": return EventType_ChildWorkflowExecutionStartedEventAttributes, nil 
+  case "ChildWorkflowExecutionCompletedEventAttributes": return EventType_ChildWorkflowExecutionCompletedEventAttributes, nil 
+  case "ChildWorkflowExecutionFailedEventAttributes": return EventType_ChildWorkflowExecutionFailedEventAttributes, nil 
+  case "ChildWorkflowExecutionCanceledEventAttributes": return EventType_ChildWorkflowExecutionCanceledEventAttributes, nil 
+  case "ChildWorkflowExecutionTimedOutEventAttributes": return EventType_ChildWorkflowExecutionTimedOutEventAttributes, nil 
+  case "ChildWorkflowExecutionTerminatedEventAttributes": return EventType_ChildWorkflowExecutionTerminatedEventAttributes, nil 
   }
   return EventType(0), fmt.Errorf("not a valid EventType string")
 }
@@ -445,6 +472,56 @@ func (p * CancelExternalWorkflowExecutionFailedCause) Value() (driver.Value, err
   }
 return int64(*p), nil
 }
+type ChildWorkflowExecutionFailedCause int64
+const (
+  ChildWorkflowExecutionFailedCause_WORKFLOW_ALREADY_RUNNING ChildWorkflowExecutionFailedCause = 0
+)
+
+func (p ChildWorkflowExecutionFailedCause) String() string {
+  switch p {
+  case ChildWorkflowExecutionFailedCause_WORKFLOW_ALREADY_RUNNING: return "WORKFLOW_ALREADY_RUNNING"
+  }
+  return "<UNSET>"
+}
+
+func ChildWorkflowExecutionFailedCauseFromString(s string) (ChildWorkflowExecutionFailedCause, error) {
+  switch s {
+  case "WORKFLOW_ALREADY_RUNNING": return ChildWorkflowExecutionFailedCause_WORKFLOW_ALREADY_RUNNING, nil 
+  }
+  return ChildWorkflowExecutionFailedCause(0), fmt.Errorf("not a valid ChildWorkflowExecutionFailedCause string")
+}
+
+
+func ChildWorkflowExecutionFailedCausePtr(v ChildWorkflowExecutionFailedCause) *ChildWorkflowExecutionFailedCause { return &v }
+
+func (p ChildWorkflowExecutionFailedCause) MarshalText() ([]byte, error) {
+return []byte(p.String()), nil
+}
+
+func (p *ChildWorkflowExecutionFailedCause) UnmarshalText(text []byte) error {
+q, err := ChildWorkflowExecutionFailedCauseFromString(string(text))
+if (err != nil) {
+return err
+}
+*p = q
+return nil
+}
+
+func (p *ChildWorkflowExecutionFailedCause) Scan(value interface{}) error {
+v, ok := value.(int64)
+if !ok {
+return errors.New("Scan value is not int64")
+}
+*p = ChildWorkflowExecutionFailedCause(v)
+return nil
+}
+
+func (p * ChildWorkflowExecutionFailedCause) Value() (driver.Value, error) {
+  if p == nil {
+    return nil, nil
+  }
+return int64(*p), nil
+}
 type WorkflowExecutionCloseStatus int64
 const (
   WorkflowExecutionCloseStatus_COMPLETED WorkflowExecutionCloseStatus = 0
@@ -505,6 +582,62 @@ return nil
 }
 
 func (p * WorkflowExecutionCloseStatus) Value() (driver.Value, error) {
+  if p == nil {
+    return nil, nil
+  }
+return int64(*p), nil
+}
+type ChildPolicy int64
+const (
+  ChildPolicy_TERMINATE ChildPolicy = 0
+  ChildPolicy_REQUEST_CANCEL ChildPolicy = 1
+  ChildPolicy_ABANDON ChildPolicy = 2
+)
+
+func (p ChildPolicy) String() string {
+  switch p {
+  case ChildPolicy_TERMINATE: return "TERMINATE"
+  case ChildPolicy_REQUEST_CANCEL: return "REQUEST_CANCEL"
+  case ChildPolicy_ABANDON: return "ABANDON"
+  }
+  return "<UNSET>"
+}
+
+func ChildPolicyFromString(s string) (ChildPolicy, error) {
+  switch s {
+  case "TERMINATE": return ChildPolicy_TERMINATE, nil 
+  case "REQUEST_CANCEL": return ChildPolicy_REQUEST_CANCEL, nil 
+  case "ABANDON": return ChildPolicy_ABANDON, nil 
+  }
+  return ChildPolicy(0), fmt.Errorf("not a valid ChildPolicy string")
+}
+
+
+func ChildPolicyPtr(v ChildPolicy) *ChildPolicy { return &v }
+
+func (p ChildPolicy) MarshalText() ([]byte, error) {
+return []byte(p.String()), nil
+}
+
+func (p *ChildPolicy) UnmarshalText(text []byte) error {
+q, err := ChildPolicyFromString(string(text))
+if (err != nil) {
+return err
+}
+*p = q
+return nil
+}
+
+func (p *ChildPolicy) Scan(value interface{}) error {
+v, ok := value.(int64)
+if !ok {
+return errors.New("Scan value is not int64")
+}
+*p = ChildPolicy(v)
+return nil
+}
+
+func (p * ChildPolicy) Value() (driver.Value, error) {
   if p == nil {
     return nil, nil
   }
@@ -3489,6 +3622,378 @@ func (p *ContinueAsNewWorkflowExecutionDecisionAttributes) String() string {
     return "<nil>"
   }
   return fmt.Sprintf("ContinueAsNewWorkflowExecutionDecisionAttributes(%+v)", *p)
+}
+
+// Attributes:
+//  - WorkflowId
+//  - WorkflowType
+//  - TaskList
+//  - Input
+//  - ExecutionStartToCloseTimeoutSeconds
+//  - TaskStartToCloseTimeoutSeconds
+//  - ChildPolicy
+//  - Control
+type StartChildWorkflowExecutionDecisionAttributes struct {
+  // unused fields # 1 to 9
+  WorkflowId *string `thrift:"workflowId,10" db:"workflowId" json:"workflowId,omitempty"`
+  // unused fields # 11 to 19
+  WorkflowType *WorkflowType `thrift:"workflowType,20" db:"workflowType" json:"workflowType,omitempty"`
+  // unused fields # 21 to 29
+  TaskList *TaskList `thrift:"taskList,30" db:"taskList" json:"taskList,omitempty"`
+  // unused fields # 31 to 39
+  Input []byte `thrift:"input,40" db:"input" json:"input,omitempty"`
+  // unused fields # 41 to 49
+  ExecutionStartToCloseTimeoutSeconds *int32 `thrift:"executionStartToCloseTimeoutSeconds,50" db:"executionStartToCloseTimeoutSeconds" json:"executionStartToCloseTimeoutSeconds,omitempty"`
+  // unused fields # 51 to 59
+  TaskStartToCloseTimeoutSeconds *int32 `thrift:"taskStartToCloseTimeoutSeconds,60" db:"taskStartToCloseTimeoutSeconds" json:"taskStartToCloseTimeoutSeconds,omitempty"`
+  // unused fields # 61 to 69
+  ChildPolicy *ChildPolicy `thrift:"childPolicy,70" db:"childPolicy" json:"childPolicy,omitempty"`
+  // unused fields # 71 to 79
+  Control []byte `thrift:"control,80" db:"control" json:"control,omitempty"`
+}
+
+func NewStartChildWorkflowExecutionDecisionAttributes() *StartChildWorkflowExecutionDecisionAttributes {
+  return &StartChildWorkflowExecutionDecisionAttributes{}
+}
+
+var StartChildWorkflowExecutionDecisionAttributes_WorkflowId_DEFAULT string
+func (p *StartChildWorkflowExecutionDecisionAttributes) GetWorkflowId() string {
+  if !p.IsSetWorkflowId() {
+    return StartChildWorkflowExecutionDecisionAttributes_WorkflowId_DEFAULT
+  }
+return *p.WorkflowId
+}
+var StartChildWorkflowExecutionDecisionAttributes_WorkflowType_DEFAULT *WorkflowType
+func (p *StartChildWorkflowExecutionDecisionAttributes) GetWorkflowType() *WorkflowType {
+  if !p.IsSetWorkflowType() {
+    return StartChildWorkflowExecutionDecisionAttributes_WorkflowType_DEFAULT
+  }
+return p.WorkflowType
+}
+var StartChildWorkflowExecutionDecisionAttributes_TaskList_DEFAULT *TaskList
+func (p *StartChildWorkflowExecutionDecisionAttributes) GetTaskList() *TaskList {
+  if !p.IsSetTaskList() {
+    return StartChildWorkflowExecutionDecisionAttributes_TaskList_DEFAULT
+  }
+return p.TaskList
+}
+var StartChildWorkflowExecutionDecisionAttributes_Input_DEFAULT []byte
+
+func (p *StartChildWorkflowExecutionDecisionAttributes) GetInput() []byte {
+  return p.Input
+}
+var StartChildWorkflowExecutionDecisionAttributes_ExecutionStartToCloseTimeoutSeconds_DEFAULT int32
+func (p *StartChildWorkflowExecutionDecisionAttributes) GetExecutionStartToCloseTimeoutSeconds() int32 {
+  if !p.IsSetExecutionStartToCloseTimeoutSeconds() {
+    return StartChildWorkflowExecutionDecisionAttributes_ExecutionStartToCloseTimeoutSeconds_DEFAULT
+  }
+return *p.ExecutionStartToCloseTimeoutSeconds
+}
+var StartChildWorkflowExecutionDecisionAttributes_TaskStartToCloseTimeoutSeconds_DEFAULT int32
+func (p *StartChildWorkflowExecutionDecisionAttributes) GetTaskStartToCloseTimeoutSeconds() int32 {
+  if !p.IsSetTaskStartToCloseTimeoutSeconds() {
+    return StartChildWorkflowExecutionDecisionAttributes_TaskStartToCloseTimeoutSeconds_DEFAULT
+  }
+return *p.TaskStartToCloseTimeoutSeconds
+}
+var StartChildWorkflowExecutionDecisionAttributes_ChildPolicy_DEFAULT ChildPolicy
+func (p *StartChildWorkflowExecutionDecisionAttributes) GetChildPolicy() ChildPolicy {
+  if !p.IsSetChildPolicy() {
+    return StartChildWorkflowExecutionDecisionAttributes_ChildPolicy_DEFAULT
+  }
+return *p.ChildPolicy
+}
+var StartChildWorkflowExecutionDecisionAttributes_Control_DEFAULT []byte
+
+func (p *StartChildWorkflowExecutionDecisionAttributes) GetControl() []byte {
+  return p.Control
+}
+func (p *StartChildWorkflowExecutionDecisionAttributes) IsSetWorkflowId() bool {
+  return p.WorkflowId != nil
+}
+
+func (p *StartChildWorkflowExecutionDecisionAttributes) IsSetWorkflowType() bool {
+  return p.WorkflowType != nil
+}
+
+func (p *StartChildWorkflowExecutionDecisionAttributes) IsSetTaskList() bool {
+  return p.TaskList != nil
+}
+
+func (p *StartChildWorkflowExecutionDecisionAttributes) IsSetInput() bool {
+  return p.Input != nil
+}
+
+func (p *StartChildWorkflowExecutionDecisionAttributes) IsSetExecutionStartToCloseTimeoutSeconds() bool {
+  return p.ExecutionStartToCloseTimeoutSeconds != nil
+}
+
+func (p *StartChildWorkflowExecutionDecisionAttributes) IsSetTaskStartToCloseTimeoutSeconds() bool {
+  return p.TaskStartToCloseTimeoutSeconds != nil
+}
+
+func (p *StartChildWorkflowExecutionDecisionAttributes) IsSetChildPolicy() bool {
+  return p.ChildPolicy != nil
+}
+
+func (p *StartChildWorkflowExecutionDecisionAttributes) IsSetControl() bool {
+  return p.Control != nil
+}
+
+func (p *StartChildWorkflowExecutionDecisionAttributes) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 10:
+      if err := p.ReadField10(iprot); err != nil {
+        return err
+      }
+    case 20:
+      if err := p.ReadField20(iprot); err != nil {
+        return err
+      }
+    case 30:
+      if err := p.ReadField30(iprot); err != nil {
+        return err
+      }
+    case 40:
+      if err := p.ReadField40(iprot); err != nil {
+        return err
+      }
+    case 50:
+      if err := p.ReadField50(iprot); err != nil {
+        return err
+      }
+    case 60:
+      if err := p.ReadField60(iprot); err != nil {
+        return err
+      }
+    case 70:
+      if err := p.ReadField70(iprot); err != nil {
+        return err
+      }
+    case 80:
+      if err := p.ReadField80(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *StartChildWorkflowExecutionDecisionAttributes)  ReadField10(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 10: ", err)
+} else {
+  p.WorkflowId = &v
+}
+  return nil
+}
+
+func (p *StartChildWorkflowExecutionDecisionAttributes)  ReadField20(iprot thrift.TProtocol) error {
+  p.WorkflowType = &WorkflowType{}
+  if err := p.WorkflowType.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.WorkflowType), err)
+  }
+  return nil
+}
+
+func (p *StartChildWorkflowExecutionDecisionAttributes)  ReadField30(iprot thrift.TProtocol) error {
+  p.TaskList = &TaskList{}
+  if err := p.TaskList.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.TaskList), err)
+  }
+  return nil
+}
+
+func (p *StartChildWorkflowExecutionDecisionAttributes)  ReadField40(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadBinary(); err != nil {
+  return thrift.PrependError("error reading field 40: ", err)
+} else {
+  p.Input = v
+}
+  return nil
+}
+
+func (p *StartChildWorkflowExecutionDecisionAttributes)  ReadField50(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI32(); err != nil {
+  return thrift.PrependError("error reading field 50: ", err)
+} else {
+  p.ExecutionStartToCloseTimeoutSeconds = &v
+}
+  return nil
+}
+
+func (p *StartChildWorkflowExecutionDecisionAttributes)  ReadField60(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI32(); err != nil {
+  return thrift.PrependError("error reading field 60: ", err)
+} else {
+  p.TaskStartToCloseTimeoutSeconds = &v
+}
+  return nil
+}
+
+func (p *StartChildWorkflowExecutionDecisionAttributes)  ReadField70(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI32(); err != nil {
+  return thrift.PrependError("error reading field 70: ", err)
+} else {
+  temp := ChildPolicy(v)
+  p.ChildPolicy = &temp
+}
+  return nil
+}
+
+func (p *StartChildWorkflowExecutionDecisionAttributes)  ReadField80(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadBinary(); err != nil {
+  return thrift.PrependError("error reading field 80: ", err)
+} else {
+  p.Control = v
+}
+  return nil
+}
+
+func (p *StartChildWorkflowExecutionDecisionAttributes) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("StartChildWorkflowExecutionDecisionAttributes"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField10(oprot); err != nil { return err }
+    if err := p.writeField20(oprot); err != nil { return err }
+    if err := p.writeField30(oprot); err != nil { return err }
+    if err := p.writeField40(oprot); err != nil { return err }
+    if err := p.writeField50(oprot); err != nil { return err }
+    if err := p.writeField60(oprot); err != nil { return err }
+    if err := p.writeField70(oprot); err != nil { return err }
+    if err := p.writeField80(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *StartChildWorkflowExecutionDecisionAttributes) writeField10(oprot thrift.TProtocol) (err error) {
+  if p.IsSetWorkflowId() {
+    if err := oprot.WriteFieldBegin("workflowId", thrift.STRING, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:workflowId: ", p), err) }
+    if err := oprot.WriteString(string(*p.WorkflowId)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.workflowId (10) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:workflowId: ", p), err) }
+  }
+  return err
+}
+
+func (p *StartChildWorkflowExecutionDecisionAttributes) writeField20(oprot thrift.TProtocol) (err error) {
+  if p.IsSetWorkflowType() {
+    if err := oprot.WriteFieldBegin("workflowType", thrift.STRUCT, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:workflowType: ", p), err) }
+    if err := p.WorkflowType.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.WorkflowType), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:workflowType: ", p), err) }
+  }
+  return err
+}
+
+func (p *StartChildWorkflowExecutionDecisionAttributes) writeField30(oprot thrift.TProtocol) (err error) {
+  if p.IsSetTaskList() {
+    if err := oprot.WriteFieldBegin("taskList", thrift.STRUCT, 30); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 30:taskList: ", p), err) }
+    if err := p.TaskList.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.TaskList), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 30:taskList: ", p), err) }
+  }
+  return err
+}
+
+func (p *StartChildWorkflowExecutionDecisionAttributes) writeField40(oprot thrift.TProtocol) (err error) {
+  if p.IsSetInput() {
+    if err := oprot.WriteFieldBegin("input", thrift.STRING, 40); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 40:input: ", p), err) }
+    if err := oprot.WriteBinary(p.Input); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.input (40) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 40:input: ", p), err) }
+  }
+  return err
+}
+
+func (p *StartChildWorkflowExecutionDecisionAttributes) writeField50(oprot thrift.TProtocol) (err error) {
+  if p.IsSetExecutionStartToCloseTimeoutSeconds() {
+    if err := oprot.WriteFieldBegin("executionStartToCloseTimeoutSeconds", thrift.I32, 50); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 50:executionStartToCloseTimeoutSeconds: ", p), err) }
+    if err := oprot.WriteI32(int32(*p.ExecutionStartToCloseTimeoutSeconds)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.executionStartToCloseTimeoutSeconds (50) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 50:executionStartToCloseTimeoutSeconds: ", p), err) }
+  }
+  return err
+}
+
+func (p *StartChildWorkflowExecutionDecisionAttributes) writeField60(oprot thrift.TProtocol) (err error) {
+  if p.IsSetTaskStartToCloseTimeoutSeconds() {
+    if err := oprot.WriteFieldBegin("taskStartToCloseTimeoutSeconds", thrift.I32, 60); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 60:taskStartToCloseTimeoutSeconds: ", p), err) }
+    if err := oprot.WriteI32(int32(*p.TaskStartToCloseTimeoutSeconds)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.taskStartToCloseTimeoutSeconds (60) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 60:taskStartToCloseTimeoutSeconds: ", p), err) }
+  }
+  return err
+}
+
+func (p *StartChildWorkflowExecutionDecisionAttributes) writeField70(oprot thrift.TProtocol) (err error) {
+  if p.IsSetChildPolicy() {
+    if err := oprot.WriteFieldBegin("childPolicy", thrift.I32, 70); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 70:childPolicy: ", p), err) }
+    if err := oprot.WriteI32(int32(*p.ChildPolicy)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.childPolicy (70) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 70:childPolicy: ", p), err) }
+  }
+  return err
+}
+
+func (p *StartChildWorkflowExecutionDecisionAttributes) writeField80(oprot thrift.TProtocol) (err error) {
+  if p.IsSetControl() {
+    if err := oprot.WriteFieldBegin("control", thrift.STRING, 80); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 80:control: ", p), err) }
+    if err := oprot.WriteBinary(p.Control); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.control (80) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 80:control: ", p), err) }
+  }
+  return err
+}
+
+func (p *StartChildWorkflowExecutionDecisionAttributes) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("StartChildWorkflowExecutionDecisionAttributes(%+v)", *p)
 }
 
 // Attributes:
@@ -10091,6 +10596,2157 @@ func (p *ExternalWorkflowExecutionCancelRequestedEventAttributes) String() strin
 }
 
 // Attributes:
+//  - WorkflowId
+//  - WorkflowType
+//  - TaskList
+//  - Input
+//  - ExecutionStartToCloseTimeoutSeconds
+//  - TaskStartToCloseTimeoutSeconds
+//  - ChildPolicy
+//  - Control
+//  - DecisionTaskCompletedEventId
+type StartChildWorkflowExecutionInitiatedEventAttributes struct {
+  // unused fields # 1 to 9
+  WorkflowId *string `thrift:"workflowId,10" db:"workflowId" json:"workflowId,omitempty"`
+  // unused fields # 11 to 19
+  WorkflowType *WorkflowType `thrift:"workflowType,20" db:"workflowType" json:"workflowType,omitempty"`
+  // unused fields # 21 to 29
+  TaskList *TaskList `thrift:"taskList,30" db:"taskList" json:"taskList,omitempty"`
+  // unused fields # 31 to 39
+  Input []byte `thrift:"input,40" db:"input" json:"input,omitempty"`
+  // unused fields # 41 to 49
+  ExecutionStartToCloseTimeoutSeconds *int32 `thrift:"executionStartToCloseTimeoutSeconds,50" db:"executionStartToCloseTimeoutSeconds" json:"executionStartToCloseTimeoutSeconds,omitempty"`
+  // unused fields # 51 to 59
+  TaskStartToCloseTimeoutSeconds *int32 `thrift:"taskStartToCloseTimeoutSeconds,60" db:"taskStartToCloseTimeoutSeconds" json:"taskStartToCloseTimeoutSeconds,omitempty"`
+  // unused fields # 61 to 69
+  ChildPolicy *ChildPolicy `thrift:"childPolicy,70" db:"childPolicy" json:"childPolicy,omitempty"`
+  // unused fields # 71 to 79
+  Control []byte `thrift:"control,80" db:"control" json:"control,omitempty"`
+  // unused fields # 81 to 89
+  DecisionTaskCompletedEventId *int64 `thrift:"decisionTaskCompletedEventId,90" db:"decisionTaskCompletedEventId" json:"decisionTaskCompletedEventId,omitempty"`
+}
+
+func NewStartChildWorkflowExecutionInitiatedEventAttributes() *StartChildWorkflowExecutionInitiatedEventAttributes {
+  return &StartChildWorkflowExecutionInitiatedEventAttributes{}
+}
+
+var StartChildWorkflowExecutionInitiatedEventAttributes_WorkflowId_DEFAULT string
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes) GetWorkflowId() string {
+  if !p.IsSetWorkflowId() {
+    return StartChildWorkflowExecutionInitiatedEventAttributes_WorkflowId_DEFAULT
+  }
+return *p.WorkflowId
+}
+var StartChildWorkflowExecutionInitiatedEventAttributes_WorkflowType_DEFAULT *WorkflowType
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes) GetWorkflowType() *WorkflowType {
+  if !p.IsSetWorkflowType() {
+    return StartChildWorkflowExecutionInitiatedEventAttributes_WorkflowType_DEFAULT
+  }
+return p.WorkflowType
+}
+var StartChildWorkflowExecutionInitiatedEventAttributes_TaskList_DEFAULT *TaskList
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes) GetTaskList() *TaskList {
+  if !p.IsSetTaskList() {
+    return StartChildWorkflowExecutionInitiatedEventAttributes_TaskList_DEFAULT
+  }
+return p.TaskList
+}
+var StartChildWorkflowExecutionInitiatedEventAttributes_Input_DEFAULT []byte
+
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes) GetInput() []byte {
+  return p.Input
+}
+var StartChildWorkflowExecutionInitiatedEventAttributes_ExecutionStartToCloseTimeoutSeconds_DEFAULT int32
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes) GetExecutionStartToCloseTimeoutSeconds() int32 {
+  if !p.IsSetExecutionStartToCloseTimeoutSeconds() {
+    return StartChildWorkflowExecutionInitiatedEventAttributes_ExecutionStartToCloseTimeoutSeconds_DEFAULT
+  }
+return *p.ExecutionStartToCloseTimeoutSeconds
+}
+var StartChildWorkflowExecutionInitiatedEventAttributes_TaskStartToCloseTimeoutSeconds_DEFAULT int32
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes) GetTaskStartToCloseTimeoutSeconds() int32 {
+  if !p.IsSetTaskStartToCloseTimeoutSeconds() {
+    return StartChildWorkflowExecutionInitiatedEventAttributes_TaskStartToCloseTimeoutSeconds_DEFAULT
+  }
+return *p.TaskStartToCloseTimeoutSeconds
+}
+var StartChildWorkflowExecutionInitiatedEventAttributes_ChildPolicy_DEFAULT ChildPolicy
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes) GetChildPolicy() ChildPolicy {
+  if !p.IsSetChildPolicy() {
+    return StartChildWorkflowExecutionInitiatedEventAttributes_ChildPolicy_DEFAULT
+  }
+return *p.ChildPolicy
+}
+var StartChildWorkflowExecutionInitiatedEventAttributes_Control_DEFAULT []byte
+
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes) GetControl() []byte {
+  return p.Control
+}
+var StartChildWorkflowExecutionInitiatedEventAttributes_DecisionTaskCompletedEventId_DEFAULT int64
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes) GetDecisionTaskCompletedEventId() int64 {
+  if !p.IsSetDecisionTaskCompletedEventId() {
+    return StartChildWorkflowExecutionInitiatedEventAttributes_DecisionTaskCompletedEventId_DEFAULT
+  }
+return *p.DecisionTaskCompletedEventId
+}
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes) IsSetWorkflowId() bool {
+  return p.WorkflowId != nil
+}
+
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes) IsSetWorkflowType() bool {
+  return p.WorkflowType != nil
+}
+
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes) IsSetTaskList() bool {
+  return p.TaskList != nil
+}
+
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes) IsSetInput() bool {
+  return p.Input != nil
+}
+
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes) IsSetExecutionStartToCloseTimeoutSeconds() bool {
+  return p.ExecutionStartToCloseTimeoutSeconds != nil
+}
+
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes) IsSetTaskStartToCloseTimeoutSeconds() bool {
+  return p.TaskStartToCloseTimeoutSeconds != nil
+}
+
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes) IsSetChildPolicy() bool {
+  return p.ChildPolicy != nil
+}
+
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes) IsSetControl() bool {
+  return p.Control != nil
+}
+
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes) IsSetDecisionTaskCompletedEventId() bool {
+  return p.DecisionTaskCompletedEventId != nil
+}
+
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 10:
+      if err := p.ReadField10(iprot); err != nil {
+        return err
+      }
+    case 20:
+      if err := p.ReadField20(iprot); err != nil {
+        return err
+      }
+    case 30:
+      if err := p.ReadField30(iprot); err != nil {
+        return err
+      }
+    case 40:
+      if err := p.ReadField40(iprot); err != nil {
+        return err
+      }
+    case 50:
+      if err := p.ReadField50(iprot); err != nil {
+        return err
+      }
+    case 60:
+      if err := p.ReadField60(iprot); err != nil {
+        return err
+      }
+    case 70:
+      if err := p.ReadField70(iprot); err != nil {
+        return err
+      }
+    case 80:
+      if err := p.ReadField80(iprot); err != nil {
+        return err
+      }
+    case 90:
+      if err := p.ReadField90(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes)  ReadField10(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 10: ", err)
+} else {
+  p.WorkflowId = &v
+}
+  return nil
+}
+
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes)  ReadField20(iprot thrift.TProtocol) error {
+  p.WorkflowType = &WorkflowType{}
+  if err := p.WorkflowType.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.WorkflowType), err)
+  }
+  return nil
+}
+
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes)  ReadField30(iprot thrift.TProtocol) error {
+  p.TaskList = &TaskList{}
+  if err := p.TaskList.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.TaskList), err)
+  }
+  return nil
+}
+
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes)  ReadField40(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadBinary(); err != nil {
+  return thrift.PrependError("error reading field 40: ", err)
+} else {
+  p.Input = v
+}
+  return nil
+}
+
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes)  ReadField50(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI32(); err != nil {
+  return thrift.PrependError("error reading field 50: ", err)
+} else {
+  p.ExecutionStartToCloseTimeoutSeconds = &v
+}
+  return nil
+}
+
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes)  ReadField60(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI32(); err != nil {
+  return thrift.PrependError("error reading field 60: ", err)
+} else {
+  p.TaskStartToCloseTimeoutSeconds = &v
+}
+  return nil
+}
+
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes)  ReadField70(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI32(); err != nil {
+  return thrift.PrependError("error reading field 70: ", err)
+} else {
+  temp := ChildPolicy(v)
+  p.ChildPolicy = &temp
+}
+  return nil
+}
+
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes)  ReadField80(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadBinary(); err != nil {
+  return thrift.PrependError("error reading field 80: ", err)
+} else {
+  p.Control = v
+}
+  return nil
+}
+
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes)  ReadField90(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI64(); err != nil {
+  return thrift.PrependError("error reading field 90: ", err)
+} else {
+  p.DecisionTaskCompletedEventId = &v
+}
+  return nil
+}
+
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("StartChildWorkflowExecutionInitiatedEventAttributes"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField10(oprot); err != nil { return err }
+    if err := p.writeField20(oprot); err != nil { return err }
+    if err := p.writeField30(oprot); err != nil { return err }
+    if err := p.writeField40(oprot); err != nil { return err }
+    if err := p.writeField50(oprot); err != nil { return err }
+    if err := p.writeField60(oprot); err != nil { return err }
+    if err := p.writeField70(oprot); err != nil { return err }
+    if err := p.writeField80(oprot); err != nil { return err }
+    if err := p.writeField90(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes) writeField10(oprot thrift.TProtocol) (err error) {
+  if p.IsSetWorkflowId() {
+    if err := oprot.WriteFieldBegin("workflowId", thrift.STRING, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:workflowId: ", p), err) }
+    if err := oprot.WriteString(string(*p.WorkflowId)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.workflowId (10) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:workflowId: ", p), err) }
+  }
+  return err
+}
+
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes) writeField20(oprot thrift.TProtocol) (err error) {
+  if p.IsSetWorkflowType() {
+    if err := oprot.WriteFieldBegin("workflowType", thrift.STRUCT, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:workflowType: ", p), err) }
+    if err := p.WorkflowType.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.WorkflowType), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:workflowType: ", p), err) }
+  }
+  return err
+}
+
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes) writeField30(oprot thrift.TProtocol) (err error) {
+  if p.IsSetTaskList() {
+    if err := oprot.WriteFieldBegin("taskList", thrift.STRUCT, 30); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 30:taskList: ", p), err) }
+    if err := p.TaskList.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.TaskList), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 30:taskList: ", p), err) }
+  }
+  return err
+}
+
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes) writeField40(oprot thrift.TProtocol) (err error) {
+  if p.IsSetInput() {
+    if err := oprot.WriteFieldBegin("input", thrift.STRING, 40); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 40:input: ", p), err) }
+    if err := oprot.WriteBinary(p.Input); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.input (40) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 40:input: ", p), err) }
+  }
+  return err
+}
+
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes) writeField50(oprot thrift.TProtocol) (err error) {
+  if p.IsSetExecutionStartToCloseTimeoutSeconds() {
+    if err := oprot.WriteFieldBegin("executionStartToCloseTimeoutSeconds", thrift.I32, 50); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 50:executionStartToCloseTimeoutSeconds: ", p), err) }
+    if err := oprot.WriteI32(int32(*p.ExecutionStartToCloseTimeoutSeconds)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.executionStartToCloseTimeoutSeconds (50) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 50:executionStartToCloseTimeoutSeconds: ", p), err) }
+  }
+  return err
+}
+
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes) writeField60(oprot thrift.TProtocol) (err error) {
+  if p.IsSetTaskStartToCloseTimeoutSeconds() {
+    if err := oprot.WriteFieldBegin("taskStartToCloseTimeoutSeconds", thrift.I32, 60); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 60:taskStartToCloseTimeoutSeconds: ", p), err) }
+    if err := oprot.WriteI32(int32(*p.TaskStartToCloseTimeoutSeconds)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.taskStartToCloseTimeoutSeconds (60) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 60:taskStartToCloseTimeoutSeconds: ", p), err) }
+  }
+  return err
+}
+
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes) writeField70(oprot thrift.TProtocol) (err error) {
+  if p.IsSetChildPolicy() {
+    if err := oprot.WriteFieldBegin("childPolicy", thrift.I32, 70); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 70:childPolicy: ", p), err) }
+    if err := oprot.WriteI32(int32(*p.ChildPolicy)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.childPolicy (70) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 70:childPolicy: ", p), err) }
+  }
+  return err
+}
+
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes) writeField80(oprot thrift.TProtocol) (err error) {
+  if p.IsSetControl() {
+    if err := oprot.WriteFieldBegin("control", thrift.STRING, 80); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 80:control: ", p), err) }
+    if err := oprot.WriteBinary(p.Control); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.control (80) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 80:control: ", p), err) }
+  }
+  return err
+}
+
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes) writeField90(oprot thrift.TProtocol) (err error) {
+  if p.IsSetDecisionTaskCompletedEventId() {
+    if err := oprot.WriteFieldBegin("decisionTaskCompletedEventId", thrift.I64, 90); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 90:decisionTaskCompletedEventId: ", p), err) }
+    if err := oprot.WriteI64(int64(*p.DecisionTaskCompletedEventId)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.decisionTaskCompletedEventId (90) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 90:decisionTaskCompletedEventId: ", p), err) }
+  }
+  return err
+}
+
+func (p *StartChildWorkflowExecutionInitiatedEventAttributes) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("StartChildWorkflowExecutionInitiatedEventAttributes(%+v)", *p)
+}
+
+// Attributes:
+//  - Cause
+//  - WorkflowId
+//  - WorkflowType
+//  - Control
+//  - InitiatedEventId
+//  - DecisionTaskCompletedEventId
+type StartChildWorkflowExecutionFailedEventAttributes struct {
+  // unused fields # 1 to 9
+  Cause *ChildWorkflowExecutionFailedCause `thrift:"cause,10" db:"cause" json:"cause,omitempty"`
+  // unused fields # 11 to 19
+  WorkflowId *string `thrift:"workflowId,20" db:"workflowId" json:"workflowId,omitempty"`
+  // unused fields # 21 to 29
+  WorkflowType *WorkflowType `thrift:"workflowType,30" db:"workflowType" json:"workflowType,omitempty"`
+  // unused fields # 31 to 39
+  Control []byte `thrift:"control,40" db:"control" json:"control,omitempty"`
+  // unused fields # 41 to 49
+  InitiatedEventId *int64 `thrift:"initiatedEventId,50" db:"initiatedEventId" json:"initiatedEventId,omitempty"`
+  // unused fields # 51 to 59
+  DecisionTaskCompletedEventId *int64 `thrift:"decisionTaskCompletedEventId,60" db:"decisionTaskCompletedEventId" json:"decisionTaskCompletedEventId,omitempty"`
+}
+
+func NewStartChildWorkflowExecutionFailedEventAttributes() *StartChildWorkflowExecutionFailedEventAttributes {
+  return &StartChildWorkflowExecutionFailedEventAttributes{}
+}
+
+var StartChildWorkflowExecutionFailedEventAttributes_Cause_DEFAULT ChildWorkflowExecutionFailedCause
+func (p *StartChildWorkflowExecutionFailedEventAttributes) GetCause() ChildWorkflowExecutionFailedCause {
+  if !p.IsSetCause() {
+    return StartChildWorkflowExecutionFailedEventAttributes_Cause_DEFAULT
+  }
+return *p.Cause
+}
+var StartChildWorkflowExecutionFailedEventAttributes_WorkflowId_DEFAULT string
+func (p *StartChildWorkflowExecutionFailedEventAttributes) GetWorkflowId() string {
+  if !p.IsSetWorkflowId() {
+    return StartChildWorkflowExecutionFailedEventAttributes_WorkflowId_DEFAULT
+  }
+return *p.WorkflowId
+}
+var StartChildWorkflowExecutionFailedEventAttributes_WorkflowType_DEFAULT *WorkflowType
+func (p *StartChildWorkflowExecutionFailedEventAttributes) GetWorkflowType() *WorkflowType {
+  if !p.IsSetWorkflowType() {
+    return StartChildWorkflowExecutionFailedEventAttributes_WorkflowType_DEFAULT
+  }
+return p.WorkflowType
+}
+var StartChildWorkflowExecutionFailedEventAttributes_Control_DEFAULT []byte
+
+func (p *StartChildWorkflowExecutionFailedEventAttributes) GetControl() []byte {
+  return p.Control
+}
+var StartChildWorkflowExecutionFailedEventAttributes_InitiatedEventId_DEFAULT int64
+func (p *StartChildWorkflowExecutionFailedEventAttributes) GetInitiatedEventId() int64 {
+  if !p.IsSetInitiatedEventId() {
+    return StartChildWorkflowExecutionFailedEventAttributes_InitiatedEventId_DEFAULT
+  }
+return *p.InitiatedEventId
+}
+var StartChildWorkflowExecutionFailedEventAttributes_DecisionTaskCompletedEventId_DEFAULT int64
+func (p *StartChildWorkflowExecutionFailedEventAttributes) GetDecisionTaskCompletedEventId() int64 {
+  if !p.IsSetDecisionTaskCompletedEventId() {
+    return StartChildWorkflowExecutionFailedEventAttributes_DecisionTaskCompletedEventId_DEFAULT
+  }
+return *p.DecisionTaskCompletedEventId
+}
+func (p *StartChildWorkflowExecutionFailedEventAttributes) IsSetCause() bool {
+  return p.Cause != nil
+}
+
+func (p *StartChildWorkflowExecutionFailedEventAttributes) IsSetWorkflowId() bool {
+  return p.WorkflowId != nil
+}
+
+func (p *StartChildWorkflowExecutionFailedEventAttributes) IsSetWorkflowType() bool {
+  return p.WorkflowType != nil
+}
+
+func (p *StartChildWorkflowExecutionFailedEventAttributes) IsSetControl() bool {
+  return p.Control != nil
+}
+
+func (p *StartChildWorkflowExecutionFailedEventAttributes) IsSetInitiatedEventId() bool {
+  return p.InitiatedEventId != nil
+}
+
+func (p *StartChildWorkflowExecutionFailedEventAttributes) IsSetDecisionTaskCompletedEventId() bool {
+  return p.DecisionTaskCompletedEventId != nil
+}
+
+func (p *StartChildWorkflowExecutionFailedEventAttributes) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 10:
+      if err := p.ReadField10(iprot); err != nil {
+        return err
+      }
+    case 20:
+      if err := p.ReadField20(iprot); err != nil {
+        return err
+      }
+    case 30:
+      if err := p.ReadField30(iprot); err != nil {
+        return err
+      }
+    case 40:
+      if err := p.ReadField40(iprot); err != nil {
+        return err
+      }
+    case 50:
+      if err := p.ReadField50(iprot); err != nil {
+        return err
+      }
+    case 60:
+      if err := p.ReadField60(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *StartChildWorkflowExecutionFailedEventAttributes)  ReadField10(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI32(); err != nil {
+  return thrift.PrependError("error reading field 10: ", err)
+} else {
+  temp := ChildWorkflowExecutionFailedCause(v)
+  p.Cause = &temp
+}
+  return nil
+}
+
+func (p *StartChildWorkflowExecutionFailedEventAttributes)  ReadField20(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 20: ", err)
+} else {
+  p.WorkflowId = &v
+}
+  return nil
+}
+
+func (p *StartChildWorkflowExecutionFailedEventAttributes)  ReadField30(iprot thrift.TProtocol) error {
+  p.WorkflowType = &WorkflowType{}
+  if err := p.WorkflowType.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.WorkflowType), err)
+  }
+  return nil
+}
+
+func (p *StartChildWorkflowExecutionFailedEventAttributes)  ReadField40(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadBinary(); err != nil {
+  return thrift.PrependError("error reading field 40: ", err)
+} else {
+  p.Control = v
+}
+  return nil
+}
+
+func (p *StartChildWorkflowExecutionFailedEventAttributes)  ReadField50(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI64(); err != nil {
+  return thrift.PrependError("error reading field 50: ", err)
+} else {
+  p.InitiatedEventId = &v
+}
+  return nil
+}
+
+func (p *StartChildWorkflowExecutionFailedEventAttributes)  ReadField60(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI64(); err != nil {
+  return thrift.PrependError("error reading field 60: ", err)
+} else {
+  p.DecisionTaskCompletedEventId = &v
+}
+  return nil
+}
+
+func (p *StartChildWorkflowExecutionFailedEventAttributes) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("StartChildWorkflowExecutionFailedEventAttributes"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField10(oprot); err != nil { return err }
+    if err := p.writeField20(oprot); err != nil { return err }
+    if err := p.writeField30(oprot); err != nil { return err }
+    if err := p.writeField40(oprot); err != nil { return err }
+    if err := p.writeField50(oprot); err != nil { return err }
+    if err := p.writeField60(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *StartChildWorkflowExecutionFailedEventAttributes) writeField10(oprot thrift.TProtocol) (err error) {
+  if p.IsSetCause() {
+    if err := oprot.WriteFieldBegin("cause", thrift.I32, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:cause: ", p), err) }
+    if err := oprot.WriteI32(int32(*p.Cause)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.cause (10) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:cause: ", p), err) }
+  }
+  return err
+}
+
+func (p *StartChildWorkflowExecutionFailedEventAttributes) writeField20(oprot thrift.TProtocol) (err error) {
+  if p.IsSetWorkflowId() {
+    if err := oprot.WriteFieldBegin("workflowId", thrift.STRING, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:workflowId: ", p), err) }
+    if err := oprot.WriteString(string(*p.WorkflowId)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.workflowId (20) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:workflowId: ", p), err) }
+  }
+  return err
+}
+
+func (p *StartChildWorkflowExecutionFailedEventAttributes) writeField30(oprot thrift.TProtocol) (err error) {
+  if p.IsSetWorkflowType() {
+    if err := oprot.WriteFieldBegin("workflowType", thrift.STRUCT, 30); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 30:workflowType: ", p), err) }
+    if err := p.WorkflowType.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.WorkflowType), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 30:workflowType: ", p), err) }
+  }
+  return err
+}
+
+func (p *StartChildWorkflowExecutionFailedEventAttributes) writeField40(oprot thrift.TProtocol) (err error) {
+  if p.IsSetControl() {
+    if err := oprot.WriteFieldBegin("control", thrift.STRING, 40); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 40:control: ", p), err) }
+    if err := oprot.WriteBinary(p.Control); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.control (40) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 40:control: ", p), err) }
+  }
+  return err
+}
+
+func (p *StartChildWorkflowExecutionFailedEventAttributes) writeField50(oprot thrift.TProtocol) (err error) {
+  if p.IsSetInitiatedEventId() {
+    if err := oprot.WriteFieldBegin("initiatedEventId", thrift.I64, 50); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 50:initiatedEventId: ", p), err) }
+    if err := oprot.WriteI64(int64(*p.InitiatedEventId)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.initiatedEventId (50) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 50:initiatedEventId: ", p), err) }
+  }
+  return err
+}
+
+func (p *StartChildWorkflowExecutionFailedEventAttributes) writeField60(oprot thrift.TProtocol) (err error) {
+  if p.IsSetDecisionTaskCompletedEventId() {
+    if err := oprot.WriteFieldBegin("decisionTaskCompletedEventId", thrift.I64, 60); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 60:decisionTaskCompletedEventId: ", p), err) }
+    if err := oprot.WriteI64(int64(*p.DecisionTaskCompletedEventId)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.decisionTaskCompletedEventId (60) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 60:decisionTaskCompletedEventId: ", p), err) }
+  }
+  return err
+}
+
+func (p *StartChildWorkflowExecutionFailedEventAttributes) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("StartChildWorkflowExecutionFailedEventAttributes(%+v)", *p)
+}
+
+// Attributes:
+//  - InitiatedEventId
+//  - WorkflowExecution
+//  - WorkflowType
+type ChildWorkflowExecutionStartedEventAttributes struct {
+  // unused fields # 1 to 9
+  InitiatedEventId *int64 `thrift:"initiatedEventId,10" db:"initiatedEventId" json:"initiatedEventId,omitempty"`
+  // unused fields # 11 to 19
+  WorkflowExecution *WorkflowExecution `thrift:"workflowExecution,20" db:"workflowExecution" json:"workflowExecution,omitempty"`
+  // unused fields # 21 to 29
+  WorkflowType *WorkflowType `thrift:"workflowType,30" db:"workflowType" json:"workflowType,omitempty"`
+}
+
+func NewChildWorkflowExecutionStartedEventAttributes() *ChildWorkflowExecutionStartedEventAttributes {
+  return &ChildWorkflowExecutionStartedEventAttributes{}
+}
+
+var ChildWorkflowExecutionStartedEventAttributes_InitiatedEventId_DEFAULT int64
+func (p *ChildWorkflowExecutionStartedEventAttributes) GetInitiatedEventId() int64 {
+  if !p.IsSetInitiatedEventId() {
+    return ChildWorkflowExecutionStartedEventAttributes_InitiatedEventId_DEFAULT
+  }
+return *p.InitiatedEventId
+}
+var ChildWorkflowExecutionStartedEventAttributes_WorkflowExecution_DEFAULT *WorkflowExecution
+func (p *ChildWorkflowExecutionStartedEventAttributes) GetWorkflowExecution() *WorkflowExecution {
+  if !p.IsSetWorkflowExecution() {
+    return ChildWorkflowExecutionStartedEventAttributes_WorkflowExecution_DEFAULT
+  }
+return p.WorkflowExecution
+}
+var ChildWorkflowExecutionStartedEventAttributes_WorkflowType_DEFAULT *WorkflowType
+func (p *ChildWorkflowExecutionStartedEventAttributes) GetWorkflowType() *WorkflowType {
+  if !p.IsSetWorkflowType() {
+    return ChildWorkflowExecutionStartedEventAttributes_WorkflowType_DEFAULT
+  }
+return p.WorkflowType
+}
+func (p *ChildWorkflowExecutionStartedEventAttributes) IsSetInitiatedEventId() bool {
+  return p.InitiatedEventId != nil
+}
+
+func (p *ChildWorkflowExecutionStartedEventAttributes) IsSetWorkflowExecution() bool {
+  return p.WorkflowExecution != nil
+}
+
+func (p *ChildWorkflowExecutionStartedEventAttributes) IsSetWorkflowType() bool {
+  return p.WorkflowType != nil
+}
+
+func (p *ChildWorkflowExecutionStartedEventAttributes) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 10:
+      if err := p.ReadField10(iprot); err != nil {
+        return err
+      }
+    case 20:
+      if err := p.ReadField20(iprot); err != nil {
+        return err
+      }
+    case 30:
+      if err := p.ReadField30(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *ChildWorkflowExecutionStartedEventAttributes)  ReadField10(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI64(); err != nil {
+  return thrift.PrependError("error reading field 10: ", err)
+} else {
+  p.InitiatedEventId = &v
+}
+  return nil
+}
+
+func (p *ChildWorkflowExecutionStartedEventAttributes)  ReadField20(iprot thrift.TProtocol) error {
+  p.WorkflowExecution = &WorkflowExecution{}
+  if err := p.WorkflowExecution.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.WorkflowExecution), err)
+  }
+  return nil
+}
+
+func (p *ChildWorkflowExecutionStartedEventAttributes)  ReadField30(iprot thrift.TProtocol) error {
+  p.WorkflowType = &WorkflowType{}
+  if err := p.WorkflowType.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.WorkflowType), err)
+  }
+  return nil
+}
+
+func (p *ChildWorkflowExecutionStartedEventAttributes) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("ChildWorkflowExecutionStartedEventAttributes"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField10(oprot); err != nil { return err }
+    if err := p.writeField20(oprot); err != nil { return err }
+    if err := p.writeField30(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *ChildWorkflowExecutionStartedEventAttributes) writeField10(oprot thrift.TProtocol) (err error) {
+  if p.IsSetInitiatedEventId() {
+    if err := oprot.WriteFieldBegin("initiatedEventId", thrift.I64, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:initiatedEventId: ", p), err) }
+    if err := oprot.WriteI64(int64(*p.InitiatedEventId)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.initiatedEventId (10) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:initiatedEventId: ", p), err) }
+  }
+  return err
+}
+
+func (p *ChildWorkflowExecutionStartedEventAttributes) writeField20(oprot thrift.TProtocol) (err error) {
+  if p.IsSetWorkflowExecution() {
+    if err := oprot.WriteFieldBegin("workflowExecution", thrift.STRUCT, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:workflowExecution: ", p), err) }
+    if err := p.WorkflowExecution.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.WorkflowExecution), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:workflowExecution: ", p), err) }
+  }
+  return err
+}
+
+func (p *ChildWorkflowExecutionStartedEventAttributes) writeField30(oprot thrift.TProtocol) (err error) {
+  if p.IsSetWorkflowType() {
+    if err := oprot.WriteFieldBegin("workflowType", thrift.STRUCT, 30); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 30:workflowType: ", p), err) }
+    if err := p.WorkflowType.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.WorkflowType), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 30:workflowType: ", p), err) }
+  }
+  return err
+}
+
+func (p *ChildWorkflowExecutionStartedEventAttributes) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("ChildWorkflowExecutionStartedEventAttributes(%+v)", *p)
+}
+
+// Attributes:
+//  - Result_
+//  - WorkflowExecution
+//  - WorkflowType
+//  - InitiatedEventId
+//  - StartedEventId
+type ChildWorkflowExecutionCompletedEventAttributes struct {
+  // unused fields # 1 to 9
+  Result_ []byte `thrift:"result,10" db:"result" json:"result,omitempty"`
+  // unused fields # 11 to 19
+  WorkflowExecution *WorkflowExecution `thrift:"workflowExecution,20" db:"workflowExecution" json:"workflowExecution,omitempty"`
+  // unused fields # 21 to 29
+  WorkflowType *WorkflowType `thrift:"workflowType,30" db:"workflowType" json:"workflowType,omitempty"`
+  // unused fields # 31 to 39
+  InitiatedEventId *int64 `thrift:"initiatedEventId,40" db:"initiatedEventId" json:"initiatedEventId,omitempty"`
+  // unused fields # 41 to 49
+  StartedEventId *int64 `thrift:"startedEventId,50" db:"startedEventId" json:"startedEventId,omitempty"`
+}
+
+func NewChildWorkflowExecutionCompletedEventAttributes() *ChildWorkflowExecutionCompletedEventAttributes {
+  return &ChildWorkflowExecutionCompletedEventAttributes{}
+}
+
+var ChildWorkflowExecutionCompletedEventAttributes_Result__DEFAULT []byte
+
+func (p *ChildWorkflowExecutionCompletedEventAttributes) GetResult_() []byte {
+  return p.Result_
+}
+var ChildWorkflowExecutionCompletedEventAttributes_WorkflowExecution_DEFAULT *WorkflowExecution
+func (p *ChildWorkflowExecutionCompletedEventAttributes) GetWorkflowExecution() *WorkflowExecution {
+  if !p.IsSetWorkflowExecution() {
+    return ChildWorkflowExecutionCompletedEventAttributes_WorkflowExecution_DEFAULT
+  }
+return p.WorkflowExecution
+}
+var ChildWorkflowExecutionCompletedEventAttributes_WorkflowType_DEFAULT *WorkflowType
+func (p *ChildWorkflowExecutionCompletedEventAttributes) GetWorkflowType() *WorkflowType {
+  if !p.IsSetWorkflowType() {
+    return ChildWorkflowExecutionCompletedEventAttributes_WorkflowType_DEFAULT
+  }
+return p.WorkflowType
+}
+var ChildWorkflowExecutionCompletedEventAttributes_InitiatedEventId_DEFAULT int64
+func (p *ChildWorkflowExecutionCompletedEventAttributes) GetInitiatedEventId() int64 {
+  if !p.IsSetInitiatedEventId() {
+    return ChildWorkflowExecutionCompletedEventAttributes_InitiatedEventId_DEFAULT
+  }
+return *p.InitiatedEventId
+}
+var ChildWorkflowExecutionCompletedEventAttributes_StartedEventId_DEFAULT int64
+func (p *ChildWorkflowExecutionCompletedEventAttributes) GetStartedEventId() int64 {
+  if !p.IsSetStartedEventId() {
+    return ChildWorkflowExecutionCompletedEventAttributes_StartedEventId_DEFAULT
+  }
+return *p.StartedEventId
+}
+func (p *ChildWorkflowExecutionCompletedEventAttributes) IsSetResult_() bool {
+  return p.Result_ != nil
+}
+
+func (p *ChildWorkflowExecutionCompletedEventAttributes) IsSetWorkflowExecution() bool {
+  return p.WorkflowExecution != nil
+}
+
+func (p *ChildWorkflowExecutionCompletedEventAttributes) IsSetWorkflowType() bool {
+  return p.WorkflowType != nil
+}
+
+func (p *ChildWorkflowExecutionCompletedEventAttributes) IsSetInitiatedEventId() bool {
+  return p.InitiatedEventId != nil
+}
+
+func (p *ChildWorkflowExecutionCompletedEventAttributes) IsSetStartedEventId() bool {
+  return p.StartedEventId != nil
+}
+
+func (p *ChildWorkflowExecutionCompletedEventAttributes) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 10:
+      if err := p.ReadField10(iprot); err != nil {
+        return err
+      }
+    case 20:
+      if err := p.ReadField20(iprot); err != nil {
+        return err
+      }
+    case 30:
+      if err := p.ReadField30(iprot); err != nil {
+        return err
+      }
+    case 40:
+      if err := p.ReadField40(iprot); err != nil {
+        return err
+      }
+    case 50:
+      if err := p.ReadField50(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *ChildWorkflowExecutionCompletedEventAttributes)  ReadField10(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadBinary(); err != nil {
+  return thrift.PrependError("error reading field 10: ", err)
+} else {
+  p.Result_ = v
+}
+  return nil
+}
+
+func (p *ChildWorkflowExecutionCompletedEventAttributes)  ReadField20(iprot thrift.TProtocol) error {
+  p.WorkflowExecution = &WorkflowExecution{}
+  if err := p.WorkflowExecution.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.WorkflowExecution), err)
+  }
+  return nil
+}
+
+func (p *ChildWorkflowExecutionCompletedEventAttributes)  ReadField30(iprot thrift.TProtocol) error {
+  p.WorkflowType = &WorkflowType{}
+  if err := p.WorkflowType.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.WorkflowType), err)
+  }
+  return nil
+}
+
+func (p *ChildWorkflowExecutionCompletedEventAttributes)  ReadField40(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI64(); err != nil {
+  return thrift.PrependError("error reading field 40: ", err)
+} else {
+  p.InitiatedEventId = &v
+}
+  return nil
+}
+
+func (p *ChildWorkflowExecutionCompletedEventAttributes)  ReadField50(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI64(); err != nil {
+  return thrift.PrependError("error reading field 50: ", err)
+} else {
+  p.StartedEventId = &v
+}
+  return nil
+}
+
+func (p *ChildWorkflowExecutionCompletedEventAttributes) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("ChildWorkflowExecutionCompletedEventAttributes"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField10(oprot); err != nil { return err }
+    if err := p.writeField20(oprot); err != nil { return err }
+    if err := p.writeField30(oprot); err != nil { return err }
+    if err := p.writeField40(oprot); err != nil { return err }
+    if err := p.writeField50(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *ChildWorkflowExecutionCompletedEventAttributes) writeField10(oprot thrift.TProtocol) (err error) {
+  if p.IsSetResult_() {
+    if err := oprot.WriteFieldBegin("result", thrift.STRING, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:result: ", p), err) }
+    if err := oprot.WriteBinary(p.Result_); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.result (10) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:result: ", p), err) }
+  }
+  return err
+}
+
+func (p *ChildWorkflowExecutionCompletedEventAttributes) writeField20(oprot thrift.TProtocol) (err error) {
+  if p.IsSetWorkflowExecution() {
+    if err := oprot.WriteFieldBegin("workflowExecution", thrift.STRUCT, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:workflowExecution: ", p), err) }
+    if err := p.WorkflowExecution.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.WorkflowExecution), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:workflowExecution: ", p), err) }
+  }
+  return err
+}
+
+func (p *ChildWorkflowExecutionCompletedEventAttributes) writeField30(oprot thrift.TProtocol) (err error) {
+  if p.IsSetWorkflowType() {
+    if err := oprot.WriteFieldBegin("workflowType", thrift.STRUCT, 30); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 30:workflowType: ", p), err) }
+    if err := p.WorkflowType.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.WorkflowType), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 30:workflowType: ", p), err) }
+  }
+  return err
+}
+
+func (p *ChildWorkflowExecutionCompletedEventAttributes) writeField40(oprot thrift.TProtocol) (err error) {
+  if p.IsSetInitiatedEventId() {
+    if err := oprot.WriteFieldBegin("initiatedEventId", thrift.I64, 40); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 40:initiatedEventId: ", p), err) }
+    if err := oprot.WriteI64(int64(*p.InitiatedEventId)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.initiatedEventId (40) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 40:initiatedEventId: ", p), err) }
+  }
+  return err
+}
+
+func (p *ChildWorkflowExecutionCompletedEventAttributes) writeField50(oprot thrift.TProtocol) (err error) {
+  if p.IsSetStartedEventId() {
+    if err := oprot.WriteFieldBegin("startedEventId", thrift.I64, 50); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 50:startedEventId: ", p), err) }
+    if err := oprot.WriteI64(int64(*p.StartedEventId)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.startedEventId (50) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 50:startedEventId: ", p), err) }
+  }
+  return err
+}
+
+func (p *ChildWorkflowExecutionCompletedEventAttributes) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("ChildWorkflowExecutionCompletedEventAttributes(%+v)", *p)
+}
+
+// Attributes:
+//  - Reason
+//  - Details
+//  - WorkflowExecution
+//  - WorkflowType
+//  - InitiatedEventId
+//  - StartedEventId
+type ChildWorkflowExecutionFailedEventAttributes struct {
+  // unused fields # 1 to 9
+  Reason *string `thrift:"reason,10" db:"reason" json:"reason,omitempty"`
+  // unused fields # 11 to 19
+  Details []byte `thrift:"details,20" db:"details" json:"details,omitempty"`
+  // unused fields # 21 to 29
+  WorkflowExecution *WorkflowExecution `thrift:"workflowExecution,30" db:"workflowExecution" json:"workflowExecution,omitempty"`
+  // unused fields # 31 to 39
+  WorkflowType *WorkflowType `thrift:"workflowType,40" db:"workflowType" json:"workflowType,omitempty"`
+  // unused fields # 41 to 49
+  InitiatedEventId *int64 `thrift:"initiatedEventId,50" db:"initiatedEventId" json:"initiatedEventId,omitempty"`
+  // unused fields # 51 to 59
+  StartedEventId *int64 `thrift:"startedEventId,60" db:"startedEventId" json:"startedEventId,omitempty"`
+}
+
+func NewChildWorkflowExecutionFailedEventAttributes() *ChildWorkflowExecutionFailedEventAttributes {
+  return &ChildWorkflowExecutionFailedEventAttributes{}
+}
+
+var ChildWorkflowExecutionFailedEventAttributes_Reason_DEFAULT string
+func (p *ChildWorkflowExecutionFailedEventAttributes) GetReason() string {
+  if !p.IsSetReason() {
+    return ChildWorkflowExecutionFailedEventAttributes_Reason_DEFAULT
+  }
+return *p.Reason
+}
+var ChildWorkflowExecutionFailedEventAttributes_Details_DEFAULT []byte
+
+func (p *ChildWorkflowExecutionFailedEventAttributes) GetDetails() []byte {
+  return p.Details
+}
+var ChildWorkflowExecutionFailedEventAttributes_WorkflowExecution_DEFAULT *WorkflowExecution
+func (p *ChildWorkflowExecutionFailedEventAttributes) GetWorkflowExecution() *WorkflowExecution {
+  if !p.IsSetWorkflowExecution() {
+    return ChildWorkflowExecutionFailedEventAttributes_WorkflowExecution_DEFAULT
+  }
+return p.WorkflowExecution
+}
+var ChildWorkflowExecutionFailedEventAttributes_WorkflowType_DEFAULT *WorkflowType
+func (p *ChildWorkflowExecutionFailedEventAttributes) GetWorkflowType() *WorkflowType {
+  if !p.IsSetWorkflowType() {
+    return ChildWorkflowExecutionFailedEventAttributes_WorkflowType_DEFAULT
+  }
+return p.WorkflowType
+}
+var ChildWorkflowExecutionFailedEventAttributes_InitiatedEventId_DEFAULT int64
+func (p *ChildWorkflowExecutionFailedEventAttributes) GetInitiatedEventId() int64 {
+  if !p.IsSetInitiatedEventId() {
+    return ChildWorkflowExecutionFailedEventAttributes_InitiatedEventId_DEFAULT
+  }
+return *p.InitiatedEventId
+}
+var ChildWorkflowExecutionFailedEventAttributes_StartedEventId_DEFAULT int64
+func (p *ChildWorkflowExecutionFailedEventAttributes) GetStartedEventId() int64 {
+  if !p.IsSetStartedEventId() {
+    return ChildWorkflowExecutionFailedEventAttributes_StartedEventId_DEFAULT
+  }
+return *p.StartedEventId
+}
+func (p *ChildWorkflowExecutionFailedEventAttributes) IsSetReason() bool {
+  return p.Reason != nil
+}
+
+func (p *ChildWorkflowExecutionFailedEventAttributes) IsSetDetails() bool {
+  return p.Details != nil
+}
+
+func (p *ChildWorkflowExecutionFailedEventAttributes) IsSetWorkflowExecution() bool {
+  return p.WorkflowExecution != nil
+}
+
+func (p *ChildWorkflowExecutionFailedEventAttributes) IsSetWorkflowType() bool {
+  return p.WorkflowType != nil
+}
+
+func (p *ChildWorkflowExecutionFailedEventAttributes) IsSetInitiatedEventId() bool {
+  return p.InitiatedEventId != nil
+}
+
+func (p *ChildWorkflowExecutionFailedEventAttributes) IsSetStartedEventId() bool {
+  return p.StartedEventId != nil
+}
+
+func (p *ChildWorkflowExecutionFailedEventAttributes) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 10:
+      if err := p.ReadField10(iprot); err != nil {
+        return err
+      }
+    case 20:
+      if err := p.ReadField20(iprot); err != nil {
+        return err
+      }
+    case 30:
+      if err := p.ReadField30(iprot); err != nil {
+        return err
+      }
+    case 40:
+      if err := p.ReadField40(iprot); err != nil {
+        return err
+      }
+    case 50:
+      if err := p.ReadField50(iprot); err != nil {
+        return err
+      }
+    case 60:
+      if err := p.ReadField60(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *ChildWorkflowExecutionFailedEventAttributes)  ReadField10(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 10: ", err)
+} else {
+  p.Reason = &v
+}
+  return nil
+}
+
+func (p *ChildWorkflowExecutionFailedEventAttributes)  ReadField20(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadBinary(); err != nil {
+  return thrift.PrependError("error reading field 20: ", err)
+} else {
+  p.Details = v
+}
+  return nil
+}
+
+func (p *ChildWorkflowExecutionFailedEventAttributes)  ReadField30(iprot thrift.TProtocol) error {
+  p.WorkflowExecution = &WorkflowExecution{}
+  if err := p.WorkflowExecution.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.WorkflowExecution), err)
+  }
+  return nil
+}
+
+func (p *ChildWorkflowExecutionFailedEventAttributes)  ReadField40(iprot thrift.TProtocol) error {
+  p.WorkflowType = &WorkflowType{}
+  if err := p.WorkflowType.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.WorkflowType), err)
+  }
+  return nil
+}
+
+func (p *ChildWorkflowExecutionFailedEventAttributes)  ReadField50(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI64(); err != nil {
+  return thrift.PrependError("error reading field 50: ", err)
+} else {
+  p.InitiatedEventId = &v
+}
+  return nil
+}
+
+func (p *ChildWorkflowExecutionFailedEventAttributes)  ReadField60(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI64(); err != nil {
+  return thrift.PrependError("error reading field 60: ", err)
+} else {
+  p.StartedEventId = &v
+}
+  return nil
+}
+
+func (p *ChildWorkflowExecutionFailedEventAttributes) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("ChildWorkflowExecutionFailedEventAttributes"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField10(oprot); err != nil { return err }
+    if err := p.writeField20(oprot); err != nil { return err }
+    if err := p.writeField30(oprot); err != nil { return err }
+    if err := p.writeField40(oprot); err != nil { return err }
+    if err := p.writeField50(oprot); err != nil { return err }
+    if err := p.writeField60(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *ChildWorkflowExecutionFailedEventAttributes) writeField10(oprot thrift.TProtocol) (err error) {
+  if p.IsSetReason() {
+    if err := oprot.WriteFieldBegin("reason", thrift.STRING, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:reason: ", p), err) }
+    if err := oprot.WriteString(string(*p.Reason)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.reason (10) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:reason: ", p), err) }
+  }
+  return err
+}
+
+func (p *ChildWorkflowExecutionFailedEventAttributes) writeField20(oprot thrift.TProtocol) (err error) {
+  if p.IsSetDetails() {
+    if err := oprot.WriteFieldBegin("details", thrift.STRING, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:details: ", p), err) }
+    if err := oprot.WriteBinary(p.Details); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.details (20) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:details: ", p), err) }
+  }
+  return err
+}
+
+func (p *ChildWorkflowExecutionFailedEventAttributes) writeField30(oprot thrift.TProtocol) (err error) {
+  if p.IsSetWorkflowExecution() {
+    if err := oprot.WriteFieldBegin("workflowExecution", thrift.STRUCT, 30); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 30:workflowExecution: ", p), err) }
+    if err := p.WorkflowExecution.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.WorkflowExecution), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 30:workflowExecution: ", p), err) }
+  }
+  return err
+}
+
+func (p *ChildWorkflowExecutionFailedEventAttributes) writeField40(oprot thrift.TProtocol) (err error) {
+  if p.IsSetWorkflowType() {
+    if err := oprot.WriteFieldBegin("workflowType", thrift.STRUCT, 40); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 40:workflowType: ", p), err) }
+    if err := p.WorkflowType.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.WorkflowType), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 40:workflowType: ", p), err) }
+  }
+  return err
+}
+
+func (p *ChildWorkflowExecutionFailedEventAttributes) writeField50(oprot thrift.TProtocol) (err error) {
+  if p.IsSetInitiatedEventId() {
+    if err := oprot.WriteFieldBegin("initiatedEventId", thrift.I64, 50); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 50:initiatedEventId: ", p), err) }
+    if err := oprot.WriteI64(int64(*p.InitiatedEventId)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.initiatedEventId (50) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 50:initiatedEventId: ", p), err) }
+  }
+  return err
+}
+
+func (p *ChildWorkflowExecutionFailedEventAttributes) writeField60(oprot thrift.TProtocol) (err error) {
+  if p.IsSetStartedEventId() {
+    if err := oprot.WriteFieldBegin("startedEventId", thrift.I64, 60); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 60:startedEventId: ", p), err) }
+    if err := oprot.WriteI64(int64(*p.StartedEventId)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.startedEventId (60) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 60:startedEventId: ", p), err) }
+  }
+  return err
+}
+
+func (p *ChildWorkflowExecutionFailedEventAttributes) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("ChildWorkflowExecutionFailedEventAttributes(%+v)", *p)
+}
+
+// Attributes:
+//  - Details
+//  - WorkflowExecution
+//  - WorkflowType
+//  - InitiatedEventId
+//  - StartedEventId
+type ChildWorkflowExecutionCanceledEventAttributes struct {
+  // unused fields # 1 to 9
+  Details []byte `thrift:"details,10" db:"details" json:"details,omitempty"`
+  // unused fields # 11 to 19
+  WorkflowExecution *WorkflowExecution `thrift:"workflowExecution,20" db:"workflowExecution" json:"workflowExecution,omitempty"`
+  // unused fields # 21 to 29
+  WorkflowType *WorkflowType `thrift:"workflowType,30" db:"workflowType" json:"workflowType,omitempty"`
+  // unused fields # 31 to 39
+  InitiatedEventId *int64 `thrift:"initiatedEventId,40" db:"initiatedEventId" json:"initiatedEventId,omitempty"`
+  // unused fields # 41 to 49
+  StartedEventId *int64 `thrift:"startedEventId,50" db:"startedEventId" json:"startedEventId,omitempty"`
+}
+
+func NewChildWorkflowExecutionCanceledEventAttributes() *ChildWorkflowExecutionCanceledEventAttributes {
+  return &ChildWorkflowExecutionCanceledEventAttributes{}
+}
+
+var ChildWorkflowExecutionCanceledEventAttributes_Details_DEFAULT []byte
+
+func (p *ChildWorkflowExecutionCanceledEventAttributes) GetDetails() []byte {
+  return p.Details
+}
+var ChildWorkflowExecutionCanceledEventAttributes_WorkflowExecution_DEFAULT *WorkflowExecution
+func (p *ChildWorkflowExecutionCanceledEventAttributes) GetWorkflowExecution() *WorkflowExecution {
+  if !p.IsSetWorkflowExecution() {
+    return ChildWorkflowExecutionCanceledEventAttributes_WorkflowExecution_DEFAULT
+  }
+return p.WorkflowExecution
+}
+var ChildWorkflowExecutionCanceledEventAttributes_WorkflowType_DEFAULT *WorkflowType
+func (p *ChildWorkflowExecutionCanceledEventAttributes) GetWorkflowType() *WorkflowType {
+  if !p.IsSetWorkflowType() {
+    return ChildWorkflowExecutionCanceledEventAttributes_WorkflowType_DEFAULT
+  }
+return p.WorkflowType
+}
+var ChildWorkflowExecutionCanceledEventAttributes_InitiatedEventId_DEFAULT int64
+func (p *ChildWorkflowExecutionCanceledEventAttributes) GetInitiatedEventId() int64 {
+  if !p.IsSetInitiatedEventId() {
+    return ChildWorkflowExecutionCanceledEventAttributes_InitiatedEventId_DEFAULT
+  }
+return *p.InitiatedEventId
+}
+var ChildWorkflowExecutionCanceledEventAttributes_StartedEventId_DEFAULT int64
+func (p *ChildWorkflowExecutionCanceledEventAttributes) GetStartedEventId() int64 {
+  if !p.IsSetStartedEventId() {
+    return ChildWorkflowExecutionCanceledEventAttributes_StartedEventId_DEFAULT
+  }
+return *p.StartedEventId
+}
+func (p *ChildWorkflowExecutionCanceledEventAttributes) IsSetDetails() bool {
+  return p.Details != nil
+}
+
+func (p *ChildWorkflowExecutionCanceledEventAttributes) IsSetWorkflowExecution() bool {
+  return p.WorkflowExecution != nil
+}
+
+func (p *ChildWorkflowExecutionCanceledEventAttributes) IsSetWorkflowType() bool {
+  return p.WorkflowType != nil
+}
+
+func (p *ChildWorkflowExecutionCanceledEventAttributes) IsSetInitiatedEventId() bool {
+  return p.InitiatedEventId != nil
+}
+
+func (p *ChildWorkflowExecutionCanceledEventAttributes) IsSetStartedEventId() bool {
+  return p.StartedEventId != nil
+}
+
+func (p *ChildWorkflowExecutionCanceledEventAttributes) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 10:
+      if err := p.ReadField10(iprot); err != nil {
+        return err
+      }
+    case 20:
+      if err := p.ReadField20(iprot); err != nil {
+        return err
+      }
+    case 30:
+      if err := p.ReadField30(iprot); err != nil {
+        return err
+      }
+    case 40:
+      if err := p.ReadField40(iprot); err != nil {
+        return err
+      }
+    case 50:
+      if err := p.ReadField50(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *ChildWorkflowExecutionCanceledEventAttributes)  ReadField10(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadBinary(); err != nil {
+  return thrift.PrependError("error reading field 10: ", err)
+} else {
+  p.Details = v
+}
+  return nil
+}
+
+func (p *ChildWorkflowExecutionCanceledEventAttributes)  ReadField20(iprot thrift.TProtocol) error {
+  p.WorkflowExecution = &WorkflowExecution{}
+  if err := p.WorkflowExecution.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.WorkflowExecution), err)
+  }
+  return nil
+}
+
+func (p *ChildWorkflowExecutionCanceledEventAttributes)  ReadField30(iprot thrift.TProtocol) error {
+  p.WorkflowType = &WorkflowType{}
+  if err := p.WorkflowType.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.WorkflowType), err)
+  }
+  return nil
+}
+
+func (p *ChildWorkflowExecutionCanceledEventAttributes)  ReadField40(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI64(); err != nil {
+  return thrift.PrependError("error reading field 40: ", err)
+} else {
+  p.InitiatedEventId = &v
+}
+  return nil
+}
+
+func (p *ChildWorkflowExecutionCanceledEventAttributes)  ReadField50(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI64(); err != nil {
+  return thrift.PrependError("error reading field 50: ", err)
+} else {
+  p.StartedEventId = &v
+}
+  return nil
+}
+
+func (p *ChildWorkflowExecutionCanceledEventAttributes) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("ChildWorkflowExecutionCanceledEventAttributes"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField10(oprot); err != nil { return err }
+    if err := p.writeField20(oprot); err != nil { return err }
+    if err := p.writeField30(oprot); err != nil { return err }
+    if err := p.writeField40(oprot); err != nil { return err }
+    if err := p.writeField50(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *ChildWorkflowExecutionCanceledEventAttributes) writeField10(oprot thrift.TProtocol) (err error) {
+  if p.IsSetDetails() {
+    if err := oprot.WriteFieldBegin("details", thrift.STRING, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:details: ", p), err) }
+    if err := oprot.WriteBinary(p.Details); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.details (10) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:details: ", p), err) }
+  }
+  return err
+}
+
+func (p *ChildWorkflowExecutionCanceledEventAttributes) writeField20(oprot thrift.TProtocol) (err error) {
+  if p.IsSetWorkflowExecution() {
+    if err := oprot.WriteFieldBegin("workflowExecution", thrift.STRUCT, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:workflowExecution: ", p), err) }
+    if err := p.WorkflowExecution.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.WorkflowExecution), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:workflowExecution: ", p), err) }
+  }
+  return err
+}
+
+func (p *ChildWorkflowExecutionCanceledEventAttributes) writeField30(oprot thrift.TProtocol) (err error) {
+  if p.IsSetWorkflowType() {
+    if err := oprot.WriteFieldBegin("workflowType", thrift.STRUCT, 30); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 30:workflowType: ", p), err) }
+    if err := p.WorkflowType.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.WorkflowType), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 30:workflowType: ", p), err) }
+  }
+  return err
+}
+
+func (p *ChildWorkflowExecutionCanceledEventAttributes) writeField40(oprot thrift.TProtocol) (err error) {
+  if p.IsSetInitiatedEventId() {
+    if err := oprot.WriteFieldBegin("initiatedEventId", thrift.I64, 40); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 40:initiatedEventId: ", p), err) }
+    if err := oprot.WriteI64(int64(*p.InitiatedEventId)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.initiatedEventId (40) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 40:initiatedEventId: ", p), err) }
+  }
+  return err
+}
+
+func (p *ChildWorkflowExecutionCanceledEventAttributes) writeField50(oprot thrift.TProtocol) (err error) {
+  if p.IsSetStartedEventId() {
+    if err := oprot.WriteFieldBegin("startedEventId", thrift.I64, 50); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 50:startedEventId: ", p), err) }
+    if err := oprot.WriteI64(int64(*p.StartedEventId)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.startedEventId (50) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 50:startedEventId: ", p), err) }
+  }
+  return err
+}
+
+func (p *ChildWorkflowExecutionCanceledEventAttributes) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("ChildWorkflowExecutionCanceledEventAttributes(%+v)", *p)
+}
+
+// Attributes:
+//  - TimeoutType
+//  - WorkflowExecution
+//  - WorkflowType
+//  - InitiatedEventId
+//  - StartedEventId
+type ChildWorkflowExecutionTimedOutEventAttributes struct {
+  // unused fields # 1 to 9
+  TimeoutType *TimeoutType `thrift:"timeoutType,10" db:"timeoutType" json:"timeoutType,omitempty"`
+  // unused fields # 11 to 19
+  WorkflowExecution *WorkflowExecution `thrift:"workflowExecution,20" db:"workflowExecution" json:"workflowExecution,omitempty"`
+  // unused fields # 21 to 29
+  WorkflowType *WorkflowType `thrift:"workflowType,30" db:"workflowType" json:"workflowType,omitempty"`
+  // unused fields # 31 to 39
+  InitiatedEventId *int64 `thrift:"initiatedEventId,40" db:"initiatedEventId" json:"initiatedEventId,omitempty"`
+  // unused fields # 41 to 49
+  StartedEventId *int64 `thrift:"startedEventId,50" db:"startedEventId" json:"startedEventId,omitempty"`
+}
+
+func NewChildWorkflowExecutionTimedOutEventAttributes() *ChildWorkflowExecutionTimedOutEventAttributes {
+  return &ChildWorkflowExecutionTimedOutEventAttributes{}
+}
+
+var ChildWorkflowExecutionTimedOutEventAttributes_TimeoutType_DEFAULT TimeoutType
+func (p *ChildWorkflowExecutionTimedOutEventAttributes) GetTimeoutType() TimeoutType {
+  if !p.IsSetTimeoutType() {
+    return ChildWorkflowExecutionTimedOutEventAttributes_TimeoutType_DEFAULT
+  }
+return *p.TimeoutType
+}
+var ChildWorkflowExecutionTimedOutEventAttributes_WorkflowExecution_DEFAULT *WorkflowExecution
+func (p *ChildWorkflowExecutionTimedOutEventAttributes) GetWorkflowExecution() *WorkflowExecution {
+  if !p.IsSetWorkflowExecution() {
+    return ChildWorkflowExecutionTimedOutEventAttributes_WorkflowExecution_DEFAULT
+  }
+return p.WorkflowExecution
+}
+var ChildWorkflowExecutionTimedOutEventAttributes_WorkflowType_DEFAULT *WorkflowType
+func (p *ChildWorkflowExecutionTimedOutEventAttributes) GetWorkflowType() *WorkflowType {
+  if !p.IsSetWorkflowType() {
+    return ChildWorkflowExecutionTimedOutEventAttributes_WorkflowType_DEFAULT
+  }
+return p.WorkflowType
+}
+var ChildWorkflowExecutionTimedOutEventAttributes_InitiatedEventId_DEFAULT int64
+func (p *ChildWorkflowExecutionTimedOutEventAttributes) GetInitiatedEventId() int64 {
+  if !p.IsSetInitiatedEventId() {
+    return ChildWorkflowExecutionTimedOutEventAttributes_InitiatedEventId_DEFAULT
+  }
+return *p.InitiatedEventId
+}
+var ChildWorkflowExecutionTimedOutEventAttributes_StartedEventId_DEFAULT int64
+func (p *ChildWorkflowExecutionTimedOutEventAttributes) GetStartedEventId() int64 {
+  if !p.IsSetStartedEventId() {
+    return ChildWorkflowExecutionTimedOutEventAttributes_StartedEventId_DEFAULT
+  }
+return *p.StartedEventId
+}
+func (p *ChildWorkflowExecutionTimedOutEventAttributes) IsSetTimeoutType() bool {
+  return p.TimeoutType != nil
+}
+
+func (p *ChildWorkflowExecutionTimedOutEventAttributes) IsSetWorkflowExecution() bool {
+  return p.WorkflowExecution != nil
+}
+
+func (p *ChildWorkflowExecutionTimedOutEventAttributes) IsSetWorkflowType() bool {
+  return p.WorkflowType != nil
+}
+
+func (p *ChildWorkflowExecutionTimedOutEventAttributes) IsSetInitiatedEventId() bool {
+  return p.InitiatedEventId != nil
+}
+
+func (p *ChildWorkflowExecutionTimedOutEventAttributes) IsSetStartedEventId() bool {
+  return p.StartedEventId != nil
+}
+
+func (p *ChildWorkflowExecutionTimedOutEventAttributes) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 10:
+      if err := p.ReadField10(iprot); err != nil {
+        return err
+      }
+    case 20:
+      if err := p.ReadField20(iprot); err != nil {
+        return err
+      }
+    case 30:
+      if err := p.ReadField30(iprot); err != nil {
+        return err
+      }
+    case 40:
+      if err := p.ReadField40(iprot); err != nil {
+        return err
+      }
+    case 50:
+      if err := p.ReadField50(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *ChildWorkflowExecutionTimedOutEventAttributes)  ReadField10(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI32(); err != nil {
+  return thrift.PrependError("error reading field 10: ", err)
+} else {
+  temp := TimeoutType(v)
+  p.TimeoutType = &temp
+}
+  return nil
+}
+
+func (p *ChildWorkflowExecutionTimedOutEventAttributes)  ReadField20(iprot thrift.TProtocol) error {
+  p.WorkflowExecution = &WorkflowExecution{}
+  if err := p.WorkflowExecution.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.WorkflowExecution), err)
+  }
+  return nil
+}
+
+func (p *ChildWorkflowExecutionTimedOutEventAttributes)  ReadField30(iprot thrift.TProtocol) error {
+  p.WorkflowType = &WorkflowType{}
+  if err := p.WorkflowType.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.WorkflowType), err)
+  }
+  return nil
+}
+
+func (p *ChildWorkflowExecutionTimedOutEventAttributes)  ReadField40(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI64(); err != nil {
+  return thrift.PrependError("error reading field 40: ", err)
+} else {
+  p.InitiatedEventId = &v
+}
+  return nil
+}
+
+func (p *ChildWorkflowExecutionTimedOutEventAttributes)  ReadField50(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI64(); err != nil {
+  return thrift.PrependError("error reading field 50: ", err)
+} else {
+  p.StartedEventId = &v
+}
+  return nil
+}
+
+func (p *ChildWorkflowExecutionTimedOutEventAttributes) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("ChildWorkflowExecutionTimedOutEventAttributes"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField10(oprot); err != nil { return err }
+    if err := p.writeField20(oprot); err != nil { return err }
+    if err := p.writeField30(oprot); err != nil { return err }
+    if err := p.writeField40(oprot); err != nil { return err }
+    if err := p.writeField50(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *ChildWorkflowExecutionTimedOutEventAttributes) writeField10(oprot thrift.TProtocol) (err error) {
+  if p.IsSetTimeoutType() {
+    if err := oprot.WriteFieldBegin("timeoutType", thrift.I32, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:timeoutType: ", p), err) }
+    if err := oprot.WriteI32(int32(*p.TimeoutType)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.timeoutType (10) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:timeoutType: ", p), err) }
+  }
+  return err
+}
+
+func (p *ChildWorkflowExecutionTimedOutEventAttributes) writeField20(oprot thrift.TProtocol) (err error) {
+  if p.IsSetWorkflowExecution() {
+    if err := oprot.WriteFieldBegin("workflowExecution", thrift.STRUCT, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:workflowExecution: ", p), err) }
+    if err := p.WorkflowExecution.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.WorkflowExecution), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:workflowExecution: ", p), err) }
+  }
+  return err
+}
+
+func (p *ChildWorkflowExecutionTimedOutEventAttributes) writeField30(oprot thrift.TProtocol) (err error) {
+  if p.IsSetWorkflowType() {
+    if err := oprot.WriteFieldBegin("workflowType", thrift.STRUCT, 30); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 30:workflowType: ", p), err) }
+    if err := p.WorkflowType.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.WorkflowType), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 30:workflowType: ", p), err) }
+  }
+  return err
+}
+
+func (p *ChildWorkflowExecutionTimedOutEventAttributes) writeField40(oprot thrift.TProtocol) (err error) {
+  if p.IsSetInitiatedEventId() {
+    if err := oprot.WriteFieldBegin("initiatedEventId", thrift.I64, 40); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 40:initiatedEventId: ", p), err) }
+    if err := oprot.WriteI64(int64(*p.InitiatedEventId)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.initiatedEventId (40) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 40:initiatedEventId: ", p), err) }
+  }
+  return err
+}
+
+func (p *ChildWorkflowExecutionTimedOutEventAttributes) writeField50(oprot thrift.TProtocol) (err error) {
+  if p.IsSetStartedEventId() {
+    if err := oprot.WriteFieldBegin("startedEventId", thrift.I64, 50); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 50:startedEventId: ", p), err) }
+    if err := oprot.WriteI64(int64(*p.StartedEventId)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.startedEventId (50) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 50:startedEventId: ", p), err) }
+  }
+  return err
+}
+
+func (p *ChildWorkflowExecutionTimedOutEventAttributes) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("ChildWorkflowExecutionTimedOutEventAttributes(%+v)", *p)
+}
+
+// Attributes:
+//  - WorkflowExecution
+//  - WorkflowType
+//  - InitiatedEventId
+//  - StartedEventId
+type ChildWorkflowExecutionTerminatedEventAttributes struct {
+  // unused fields # 1 to 9
+  WorkflowExecution *WorkflowExecution `thrift:"workflowExecution,10" db:"workflowExecution" json:"workflowExecution,omitempty"`
+  // unused fields # 11 to 19
+  WorkflowType *WorkflowType `thrift:"workflowType,20" db:"workflowType" json:"workflowType,omitempty"`
+  // unused fields # 21 to 29
+  InitiatedEventId *int64 `thrift:"initiatedEventId,30" db:"initiatedEventId" json:"initiatedEventId,omitempty"`
+  // unused fields # 31 to 39
+  StartedEventId *int64 `thrift:"startedEventId,40" db:"startedEventId" json:"startedEventId,omitempty"`
+}
+
+func NewChildWorkflowExecutionTerminatedEventAttributes() *ChildWorkflowExecutionTerminatedEventAttributes {
+  return &ChildWorkflowExecutionTerminatedEventAttributes{}
+}
+
+var ChildWorkflowExecutionTerminatedEventAttributes_WorkflowExecution_DEFAULT *WorkflowExecution
+func (p *ChildWorkflowExecutionTerminatedEventAttributes) GetWorkflowExecution() *WorkflowExecution {
+  if !p.IsSetWorkflowExecution() {
+    return ChildWorkflowExecutionTerminatedEventAttributes_WorkflowExecution_DEFAULT
+  }
+return p.WorkflowExecution
+}
+var ChildWorkflowExecutionTerminatedEventAttributes_WorkflowType_DEFAULT *WorkflowType
+func (p *ChildWorkflowExecutionTerminatedEventAttributes) GetWorkflowType() *WorkflowType {
+  if !p.IsSetWorkflowType() {
+    return ChildWorkflowExecutionTerminatedEventAttributes_WorkflowType_DEFAULT
+  }
+return p.WorkflowType
+}
+var ChildWorkflowExecutionTerminatedEventAttributes_InitiatedEventId_DEFAULT int64
+func (p *ChildWorkflowExecutionTerminatedEventAttributes) GetInitiatedEventId() int64 {
+  if !p.IsSetInitiatedEventId() {
+    return ChildWorkflowExecutionTerminatedEventAttributes_InitiatedEventId_DEFAULT
+  }
+return *p.InitiatedEventId
+}
+var ChildWorkflowExecutionTerminatedEventAttributes_StartedEventId_DEFAULT int64
+func (p *ChildWorkflowExecutionTerminatedEventAttributes) GetStartedEventId() int64 {
+  if !p.IsSetStartedEventId() {
+    return ChildWorkflowExecutionTerminatedEventAttributes_StartedEventId_DEFAULT
+  }
+return *p.StartedEventId
+}
+func (p *ChildWorkflowExecutionTerminatedEventAttributes) IsSetWorkflowExecution() bool {
+  return p.WorkflowExecution != nil
+}
+
+func (p *ChildWorkflowExecutionTerminatedEventAttributes) IsSetWorkflowType() bool {
+  return p.WorkflowType != nil
+}
+
+func (p *ChildWorkflowExecutionTerminatedEventAttributes) IsSetInitiatedEventId() bool {
+  return p.InitiatedEventId != nil
+}
+
+func (p *ChildWorkflowExecutionTerminatedEventAttributes) IsSetStartedEventId() bool {
+  return p.StartedEventId != nil
+}
+
+func (p *ChildWorkflowExecutionTerminatedEventAttributes) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 10:
+      if err := p.ReadField10(iprot); err != nil {
+        return err
+      }
+    case 20:
+      if err := p.ReadField20(iprot); err != nil {
+        return err
+      }
+    case 30:
+      if err := p.ReadField30(iprot); err != nil {
+        return err
+      }
+    case 40:
+      if err := p.ReadField40(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *ChildWorkflowExecutionTerminatedEventAttributes)  ReadField10(iprot thrift.TProtocol) error {
+  p.WorkflowExecution = &WorkflowExecution{}
+  if err := p.WorkflowExecution.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.WorkflowExecution), err)
+  }
+  return nil
+}
+
+func (p *ChildWorkflowExecutionTerminatedEventAttributes)  ReadField20(iprot thrift.TProtocol) error {
+  p.WorkflowType = &WorkflowType{}
+  if err := p.WorkflowType.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.WorkflowType), err)
+  }
+  return nil
+}
+
+func (p *ChildWorkflowExecutionTerminatedEventAttributes)  ReadField30(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI64(); err != nil {
+  return thrift.PrependError("error reading field 30: ", err)
+} else {
+  p.InitiatedEventId = &v
+}
+  return nil
+}
+
+func (p *ChildWorkflowExecutionTerminatedEventAttributes)  ReadField40(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI64(); err != nil {
+  return thrift.PrependError("error reading field 40: ", err)
+} else {
+  p.StartedEventId = &v
+}
+  return nil
+}
+
+func (p *ChildWorkflowExecutionTerminatedEventAttributes) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("ChildWorkflowExecutionTerminatedEventAttributes"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField10(oprot); err != nil { return err }
+    if err := p.writeField20(oprot); err != nil { return err }
+    if err := p.writeField30(oprot); err != nil { return err }
+    if err := p.writeField40(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *ChildWorkflowExecutionTerminatedEventAttributes) writeField10(oprot thrift.TProtocol) (err error) {
+  if p.IsSetWorkflowExecution() {
+    if err := oprot.WriteFieldBegin("workflowExecution", thrift.STRUCT, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:workflowExecution: ", p), err) }
+    if err := p.WorkflowExecution.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.WorkflowExecution), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:workflowExecution: ", p), err) }
+  }
+  return err
+}
+
+func (p *ChildWorkflowExecutionTerminatedEventAttributes) writeField20(oprot thrift.TProtocol) (err error) {
+  if p.IsSetWorkflowType() {
+    if err := oprot.WriteFieldBegin("workflowType", thrift.STRUCT, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:workflowType: ", p), err) }
+    if err := p.WorkflowType.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.WorkflowType), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:workflowType: ", p), err) }
+  }
+  return err
+}
+
+func (p *ChildWorkflowExecutionTerminatedEventAttributes) writeField30(oprot thrift.TProtocol) (err error) {
+  if p.IsSetInitiatedEventId() {
+    if err := oprot.WriteFieldBegin("initiatedEventId", thrift.I64, 30); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 30:initiatedEventId: ", p), err) }
+    if err := oprot.WriteI64(int64(*p.InitiatedEventId)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.initiatedEventId (30) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 30:initiatedEventId: ", p), err) }
+  }
+  return err
+}
+
+func (p *ChildWorkflowExecutionTerminatedEventAttributes) writeField40(oprot thrift.TProtocol) (err error) {
+  if p.IsSetStartedEventId() {
+    if err := oprot.WriteFieldBegin("startedEventId", thrift.I64, 40); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 40:startedEventId: ", p), err) }
+    if err := oprot.WriteI64(int64(*p.StartedEventId)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.startedEventId (40) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 40:startedEventId: ", p), err) }
+  }
+  return err
+}
+
+func (p *ChildWorkflowExecutionTerminatedEventAttributes) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("ChildWorkflowExecutionTerminatedEventAttributes(%+v)", *p)
+}
+
+// Attributes:
 //  - EventId
 //  - Timestamp
 //  - EventType
@@ -10124,6 +12780,14 @@ func (p *ExternalWorkflowExecutionCancelRequestedEventAttributes) String() strin
 //  - RequestCancelExternalWorkflowExecutionFailedEventAttributes
 //  - ExternalWorkflowExecutionCancelRequestedEventAttributes
 //  - WorkflowExecutionContinuedAsNewEventAttributes
+//  - StartChildWorkflowExecutionInitiatedEventAttributes
+//  - StartChildWorkflowExecutionFailedEventAttributes
+//  - ChildWorkflowExecutionStartedEventAttributes
+//  - ChildWorkflowExecutionCompletedEventAttributes
+//  - ChildWorkflowExecutionFailedEventAttributes
+//  - ChildWorkflowExecutionCanceledEventAttributes
+//  - ChildWorkflowExecutionTimedOutEventAttributes
+//  - ChildWorkflowExecutionTerminatedEventAttributes
 type HistoryEvent struct {
   // unused fields # 1 to 9
   EventId *int64 `thrift:"eventId,10" db:"eventId" json:"eventId,omitempty"`
@@ -10191,6 +12855,22 @@ type HistoryEvent struct {
   ExternalWorkflowExecutionCancelRequestedEventAttributes *ExternalWorkflowExecutionCancelRequestedEventAttributes `thrift:"externalWorkflowExecutionCancelRequestedEventAttributes,320" db:"externalWorkflowExecutionCancelRequestedEventAttributes" json:"externalWorkflowExecutionCancelRequestedEventAttributes,omitempty"`
   // unused fields # 321 to 329
   WorkflowExecutionContinuedAsNewEventAttributes *WorkflowExecutionContinuedAsNewEventAttributes `thrift:"workflowExecutionContinuedAsNewEventAttributes,330" db:"workflowExecutionContinuedAsNewEventAttributes" json:"workflowExecutionContinuedAsNewEventAttributes,omitempty"`
+  // unused fields # 331 to 339
+  StartChildWorkflowExecutionInitiatedEventAttributes *StartChildWorkflowExecutionInitiatedEventAttributes `thrift:"startChildWorkflowExecutionInitiatedEventAttributes,340" db:"startChildWorkflowExecutionInitiatedEventAttributes" json:"startChildWorkflowExecutionInitiatedEventAttributes,omitempty"`
+  // unused fields # 341 to 349
+  StartChildWorkflowExecutionFailedEventAttributes *StartChildWorkflowExecutionFailedEventAttributes `thrift:"startChildWorkflowExecutionFailedEventAttributes,350" db:"startChildWorkflowExecutionFailedEventAttributes" json:"startChildWorkflowExecutionFailedEventAttributes,omitempty"`
+  // unused fields # 351 to 359
+  ChildWorkflowExecutionStartedEventAttributes *ChildWorkflowExecutionStartedEventAttributes `thrift:"childWorkflowExecutionStartedEventAttributes,360" db:"childWorkflowExecutionStartedEventAttributes" json:"childWorkflowExecutionStartedEventAttributes,omitempty"`
+  // unused fields # 361 to 369
+  ChildWorkflowExecutionCompletedEventAttributes *ChildWorkflowExecutionCompletedEventAttributes `thrift:"childWorkflowExecutionCompletedEventAttributes,370" db:"childWorkflowExecutionCompletedEventAttributes" json:"childWorkflowExecutionCompletedEventAttributes,omitempty"`
+  // unused fields # 371 to 379
+  ChildWorkflowExecutionFailedEventAttributes *ChildWorkflowExecutionFailedEventAttributes `thrift:"childWorkflowExecutionFailedEventAttributes,380" db:"childWorkflowExecutionFailedEventAttributes" json:"childWorkflowExecutionFailedEventAttributes,omitempty"`
+  // unused fields # 381 to 389
+  ChildWorkflowExecutionCanceledEventAttributes *ChildWorkflowExecutionCanceledEventAttributes `thrift:"childWorkflowExecutionCanceledEventAttributes,390" db:"childWorkflowExecutionCanceledEventAttributes" json:"childWorkflowExecutionCanceledEventAttributes,omitempty"`
+  // unused fields # 391 to 399
+  ChildWorkflowExecutionTimedOutEventAttributes *ChildWorkflowExecutionTimedOutEventAttributes `thrift:"childWorkflowExecutionTimedOutEventAttributes,400" db:"childWorkflowExecutionTimedOutEventAttributes" json:"childWorkflowExecutionTimedOutEventAttributes,omitempty"`
+  // unused fields # 401 to 409
+  ChildWorkflowExecutionTerminatedEventAttributes *ChildWorkflowExecutionTerminatedEventAttributes `thrift:"childWorkflowExecutionTerminatedEventAttributes,410" db:"childWorkflowExecutionTerminatedEventAttributes" json:"childWorkflowExecutionTerminatedEventAttributes,omitempty"`
 }
 
 func NewHistoryEvent() *HistoryEvent {
@@ -10428,6 +13108,62 @@ func (p *HistoryEvent) GetWorkflowExecutionContinuedAsNewEventAttributes() *Work
   }
 return p.WorkflowExecutionContinuedAsNewEventAttributes
 }
+var HistoryEvent_StartChildWorkflowExecutionInitiatedEventAttributes_DEFAULT *StartChildWorkflowExecutionInitiatedEventAttributes
+func (p *HistoryEvent) GetStartChildWorkflowExecutionInitiatedEventAttributes() *StartChildWorkflowExecutionInitiatedEventAttributes {
+  if !p.IsSetStartChildWorkflowExecutionInitiatedEventAttributes() {
+    return HistoryEvent_StartChildWorkflowExecutionInitiatedEventAttributes_DEFAULT
+  }
+return p.StartChildWorkflowExecutionInitiatedEventAttributes
+}
+var HistoryEvent_StartChildWorkflowExecutionFailedEventAttributes_DEFAULT *StartChildWorkflowExecutionFailedEventAttributes
+func (p *HistoryEvent) GetStartChildWorkflowExecutionFailedEventAttributes() *StartChildWorkflowExecutionFailedEventAttributes {
+  if !p.IsSetStartChildWorkflowExecutionFailedEventAttributes() {
+    return HistoryEvent_StartChildWorkflowExecutionFailedEventAttributes_DEFAULT
+  }
+return p.StartChildWorkflowExecutionFailedEventAttributes
+}
+var HistoryEvent_ChildWorkflowExecutionStartedEventAttributes_DEFAULT *ChildWorkflowExecutionStartedEventAttributes
+func (p *HistoryEvent) GetChildWorkflowExecutionStartedEventAttributes() *ChildWorkflowExecutionStartedEventAttributes {
+  if !p.IsSetChildWorkflowExecutionStartedEventAttributes() {
+    return HistoryEvent_ChildWorkflowExecutionStartedEventAttributes_DEFAULT
+  }
+return p.ChildWorkflowExecutionStartedEventAttributes
+}
+var HistoryEvent_ChildWorkflowExecutionCompletedEventAttributes_DEFAULT *ChildWorkflowExecutionCompletedEventAttributes
+func (p *HistoryEvent) GetChildWorkflowExecutionCompletedEventAttributes() *ChildWorkflowExecutionCompletedEventAttributes {
+  if !p.IsSetChildWorkflowExecutionCompletedEventAttributes() {
+    return HistoryEvent_ChildWorkflowExecutionCompletedEventAttributes_DEFAULT
+  }
+return p.ChildWorkflowExecutionCompletedEventAttributes
+}
+var HistoryEvent_ChildWorkflowExecutionFailedEventAttributes_DEFAULT *ChildWorkflowExecutionFailedEventAttributes
+func (p *HistoryEvent) GetChildWorkflowExecutionFailedEventAttributes() *ChildWorkflowExecutionFailedEventAttributes {
+  if !p.IsSetChildWorkflowExecutionFailedEventAttributes() {
+    return HistoryEvent_ChildWorkflowExecutionFailedEventAttributes_DEFAULT
+  }
+return p.ChildWorkflowExecutionFailedEventAttributes
+}
+var HistoryEvent_ChildWorkflowExecutionCanceledEventAttributes_DEFAULT *ChildWorkflowExecutionCanceledEventAttributes
+func (p *HistoryEvent) GetChildWorkflowExecutionCanceledEventAttributes() *ChildWorkflowExecutionCanceledEventAttributes {
+  if !p.IsSetChildWorkflowExecutionCanceledEventAttributes() {
+    return HistoryEvent_ChildWorkflowExecutionCanceledEventAttributes_DEFAULT
+  }
+return p.ChildWorkflowExecutionCanceledEventAttributes
+}
+var HistoryEvent_ChildWorkflowExecutionTimedOutEventAttributes_DEFAULT *ChildWorkflowExecutionTimedOutEventAttributes
+func (p *HistoryEvent) GetChildWorkflowExecutionTimedOutEventAttributes() *ChildWorkflowExecutionTimedOutEventAttributes {
+  if !p.IsSetChildWorkflowExecutionTimedOutEventAttributes() {
+    return HistoryEvent_ChildWorkflowExecutionTimedOutEventAttributes_DEFAULT
+  }
+return p.ChildWorkflowExecutionTimedOutEventAttributes
+}
+var HistoryEvent_ChildWorkflowExecutionTerminatedEventAttributes_DEFAULT *ChildWorkflowExecutionTerminatedEventAttributes
+func (p *HistoryEvent) GetChildWorkflowExecutionTerminatedEventAttributes() *ChildWorkflowExecutionTerminatedEventAttributes {
+  if !p.IsSetChildWorkflowExecutionTerminatedEventAttributes() {
+    return HistoryEvent_ChildWorkflowExecutionTerminatedEventAttributes_DEFAULT
+  }
+return p.ChildWorkflowExecutionTerminatedEventAttributes
+}
 func (p *HistoryEvent) IsSetEventId() bool {
   return p.EventId != nil
 }
@@ -10558,6 +13294,38 @@ func (p *HistoryEvent) IsSetExternalWorkflowExecutionCancelRequestedEventAttribu
 
 func (p *HistoryEvent) IsSetWorkflowExecutionContinuedAsNewEventAttributes() bool {
   return p.WorkflowExecutionContinuedAsNewEventAttributes != nil
+}
+
+func (p *HistoryEvent) IsSetStartChildWorkflowExecutionInitiatedEventAttributes() bool {
+  return p.StartChildWorkflowExecutionInitiatedEventAttributes != nil
+}
+
+func (p *HistoryEvent) IsSetStartChildWorkflowExecutionFailedEventAttributes() bool {
+  return p.StartChildWorkflowExecutionFailedEventAttributes != nil
+}
+
+func (p *HistoryEvent) IsSetChildWorkflowExecutionStartedEventAttributes() bool {
+  return p.ChildWorkflowExecutionStartedEventAttributes != nil
+}
+
+func (p *HistoryEvent) IsSetChildWorkflowExecutionCompletedEventAttributes() bool {
+  return p.ChildWorkflowExecutionCompletedEventAttributes != nil
+}
+
+func (p *HistoryEvent) IsSetChildWorkflowExecutionFailedEventAttributes() bool {
+  return p.ChildWorkflowExecutionFailedEventAttributes != nil
+}
+
+func (p *HistoryEvent) IsSetChildWorkflowExecutionCanceledEventAttributes() bool {
+  return p.ChildWorkflowExecutionCanceledEventAttributes != nil
+}
+
+func (p *HistoryEvent) IsSetChildWorkflowExecutionTimedOutEventAttributes() bool {
+  return p.ChildWorkflowExecutionTimedOutEventAttributes != nil
+}
+
+func (p *HistoryEvent) IsSetChildWorkflowExecutionTerminatedEventAttributes() bool {
+  return p.ChildWorkflowExecutionTerminatedEventAttributes != nil
 }
 
 func (p *HistoryEvent) Read(iprot thrift.TProtocol) error {
@@ -10703,6 +13471,38 @@ func (p *HistoryEvent) Read(iprot thrift.TProtocol) error {
       }
     case 330:
       if err := p.ReadField330(iprot); err != nil {
+        return err
+      }
+    case 340:
+      if err := p.ReadField340(iprot); err != nil {
+        return err
+      }
+    case 350:
+      if err := p.ReadField350(iprot); err != nil {
+        return err
+      }
+    case 360:
+      if err := p.ReadField360(iprot); err != nil {
+        return err
+      }
+    case 370:
+      if err := p.ReadField370(iprot); err != nil {
+        return err
+      }
+    case 380:
+      if err := p.ReadField380(iprot); err != nil {
+        return err
+      }
+    case 390:
+      if err := p.ReadField390(iprot); err != nil {
+        return err
+      }
+    case 400:
+      if err := p.ReadField400(iprot); err != nil {
+        return err
+      }
+    case 410:
+      if err := p.ReadField410(iprot); err != nil {
         return err
       }
     default:
@@ -10988,6 +13788,70 @@ func (p *HistoryEvent)  ReadField330(iprot thrift.TProtocol) error {
   return nil
 }
 
+func (p *HistoryEvent)  ReadField340(iprot thrift.TProtocol) error {
+  p.StartChildWorkflowExecutionInitiatedEventAttributes = &StartChildWorkflowExecutionInitiatedEventAttributes{}
+  if err := p.StartChildWorkflowExecutionInitiatedEventAttributes.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.StartChildWorkflowExecutionInitiatedEventAttributes), err)
+  }
+  return nil
+}
+
+func (p *HistoryEvent)  ReadField350(iprot thrift.TProtocol) error {
+  p.StartChildWorkflowExecutionFailedEventAttributes = &StartChildWorkflowExecutionFailedEventAttributes{}
+  if err := p.StartChildWorkflowExecutionFailedEventAttributes.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.StartChildWorkflowExecutionFailedEventAttributes), err)
+  }
+  return nil
+}
+
+func (p *HistoryEvent)  ReadField360(iprot thrift.TProtocol) error {
+  p.ChildWorkflowExecutionStartedEventAttributes = &ChildWorkflowExecutionStartedEventAttributes{}
+  if err := p.ChildWorkflowExecutionStartedEventAttributes.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.ChildWorkflowExecutionStartedEventAttributes), err)
+  }
+  return nil
+}
+
+func (p *HistoryEvent)  ReadField370(iprot thrift.TProtocol) error {
+  p.ChildWorkflowExecutionCompletedEventAttributes = &ChildWorkflowExecutionCompletedEventAttributes{}
+  if err := p.ChildWorkflowExecutionCompletedEventAttributes.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.ChildWorkflowExecutionCompletedEventAttributes), err)
+  }
+  return nil
+}
+
+func (p *HistoryEvent)  ReadField380(iprot thrift.TProtocol) error {
+  p.ChildWorkflowExecutionFailedEventAttributes = &ChildWorkflowExecutionFailedEventAttributes{}
+  if err := p.ChildWorkflowExecutionFailedEventAttributes.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.ChildWorkflowExecutionFailedEventAttributes), err)
+  }
+  return nil
+}
+
+func (p *HistoryEvent)  ReadField390(iprot thrift.TProtocol) error {
+  p.ChildWorkflowExecutionCanceledEventAttributes = &ChildWorkflowExecutionCanceledEventAttributes{}
+  if err := p.ChildWorkflowExecutionCanceledEventAttributes.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.ChildWorkflowExecutionCanceledEventAttributes), err)
+  }
+  return nil
+}
+
+func (p *HistoryEvent)  ReadField400(iprot thrift.TProtocol) error {
+  p.ChildWorkflowExecutionTimedOutEventAttributes = &ChildWorkflowExecutionTimedOutEventAttributes{}
+  if err := p.ChildWorkflowExecutionTimedOutEventAttributes.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.ChildWorkflowExecutionTimedOutEventAttributes), err)
+  }
+  return nil
+}
+
+func (p *HistoryEvent)  ReadField410(iprot thrift.TProtocol) error {
+  p.ChildWorkflowExecutionTerminatedEventAttributes = &ChildWorkflowExecutionTerminatedEventAttributes{}
+  if err := p.ChildWorkflowExecutionTerminatedEventAttributes.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.ChildWorkflowExecutionTerminatedEventAttributes), err)
+  }
+  return nil
+}
+
 func (p *HistoryEvent) Write(oprot thrift.TProtocol) error {
   if err := oprot.WriteStructBegin("HistoryEvent"); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
@@ -11025,6 +13889,14 @@ func (p *HistoryEvent) Write(oprot thrift.TProtocol) error {
     if err := p.writeField310(oprot); err != nil { return err }
     if err := p.writeField320(oprot); err != nil { return err }
     if err := p.writeField330(oprot); err != nil { return err }
+    if err := p.writeField340(oprot); err != nil { return err }
+    if err := p.writeField350(oprot); err != nil { return err }
+    if err := p.writeField360(oprot); err != nil { return err }
+    if err := p.writeField370(oprot); err != nil { return err }
+    if err := p.writeField380(oprot); err != nil { return err }
+    if err := p.writeField390(oprot); err != nil { return err }
+    if err := p.writeField400(oprot); err != nil { return err }
+    if err := p.writeField410(oprot); err != nil { return err }
   }
   if err := oprot.WriteFieldStop(); err != nil {
     return thrift.PrependError("write field stop error: ", err) }
@@ -11455,6 +14327,110 @@ func (p *HistoryEvent) writeField330(oprot thrift.TProtocol) (err error) {
     }
     if err := oprot.WriteFieldEnd(); err != nil {
       return thrift.PrependError(fmt.Sprintf("%T write field end error 330:workflowExecutionContinuedAsNewEventAttributes: ", p), err) }
+  }
+  return err
+}
+
+func (p *HistoryEvent) writeField340(oprot thrift.TProtocol) (err error) {
+  if p.IsSetStartChildWorkflowExecutionInitiatedEventAttributes() {
+    if err := oprot.WriteFieldBegin("startChildWorkflowExecutionInitiatedEventAttributes", thrift.STRUCT, 340); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 340:startChildWorkflowExecutionInitiatedEventAttributes: ", p), err) }
+    if err := p.StartChildWorkflowExecutionInitiatedEventAttributes.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.StartChildWorkflowExecutionInitiatedEventAttributes), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 340:startChildWorkflowExecutionInitiatedEventAttributes: ", p), err) }
+  }
+  return err
+}
+
+func (p *HistoryEvent) writeField350(oprot thrift.TProtocol) (err error) {
+  if p.IsSetStartChildWorkflowExecutionFailedEventAttributes() {
+    if err := oprot.WriteFieldBegin("startChildWorkflowExecutionFailedEventAttributes", thrift.STRUCT, 350); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 350:startChildWorkflowExecutionFailedEventAttributes: ", p), err) }
+    if err := p.StartChildWorkflowExecutionFailedEventAttributes.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.StartChildWorkflowExecutionFailedEventAttributes), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 350:startChildWorkflowExecutionFailedEventAttributes: ", p), err) }
+  }
+  return err
+}
+
+func (p *HistoryEvent) writeField360(oprot thrift.TProtocol) (err error) {
+  if p.IsSetChildWorkflowExecutionStartedEventAttributes() {
+    if err := oprot.WriteFieldBegin("childWorkflowExecutionStartedEventAttributes", thrift.STRUCT, 360); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 360:childWorkflowExecutionStartedEventAttributes: ", p), err) }
+    if err := p.ChildWorkflowExecutionStartedEventAttributes.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.ChildWorkflowExecutionStartedEventAttributes), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 360:childWorkflowExecutionStartedEventAttributes: ", p), err) }
+  }
+  return err
+}
+
+func (p *HistoryEvent) writeField370(oprot thrift.TProtocol) (err error) {
+  if p.IsSetChildWorkflowExecutionCompletedEventAttributes() {
+    if err := oprot.WriteFieldBegin("childWorkflowExecutionCompletedEventAttributes", thrift.STRUCT, 370); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 370:childWorkflowExecutionCompletedEventAttributes: ", p), err) }
+    if err := p.ChildWorkflowExecutionCompletedEventAttributes.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.ChildWorkflowExecutionCompletedEventAttributes), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 370:childWorkflowExecutionCompletedEventAttributes: ", p), err) }
+  }
+  return err
+}
+
+func (p *HistoryEvent) writeField380(oprot thrift.TProtocol) (err error) {
+  if p.IsSetChildWorkflowExecutionFailedEventAttributes() {
+    if err := oprot.WriteFieldBegin("childWorkflowExecutionFailedEventAttributes", thrift.STRUCT, 380); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 380:childWorkflowExecutionFailedEventAttributes: ", p), err) }
+    if err := p.ChildWorkflowExecutionFailedEventAttributes.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.ChildWorkflowExecutionFailedEventAttributes), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 380:childWorkflowExecutionFailedEventAttributes: ", p), err) }
+  }
+  return err
+}
+
+func (p *HistoryEvent) writeField390(oprot thrift.TProtocol) (err error) {
+  if p.IsSetChildWorkflowExecutionCanceledEventAttributes() {
+    if err := oprot.WriteFieldBegin("childWorkflowExecutionCanceledEventAttributes", thrift.STRUCT, 390); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 390:childWorkflowExecutionCanceledEventAttributes: ", p), err) }
+    if err := p.ChildWorkflowExecutionCanceledEventAttributes.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.ChildWorkflowExecutionCanceledEventAttributes), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 390:childWorkflowExecutionCanceledEventAttributes: ", p), err) }
+  }
+  return err
+}
+
+func (p *HistoryEvent) writeField400(oprot thrift.TProtocol) (err error) {
+  if p.IsSetChildWorkflowExecutionTimedOutEventAttributes() {
+    if err := oprot.WriteFieldBegin("childWorkflowExecutionTimedOutEventAttributes", thrift.STRUCT, 400); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 400:childWorkflowExecutionTimedOutEventAttributes: ", p), err) }
+    if err := p.ChildWorkflowExecutionTimedOutEventAttributes.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.ChildWorkflowExecutionTimedOutEventAttributes), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 400:childWorkflowExecutionTimedOutEventAttributes: ", p), err) }
+  }
+  return err
+}
+
+func (p *HistoryEvent) writeField410(oprot thrift.TProtocol) (err error) {
+  if p.IsSetChildWorkflowExecutionTerminatedEventAttributes() {
+    if err := oprot.WriteFieldBegin("childWorkflowExecutionTerminatedEventAttributes", thrift.STRUCT, 410); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 410:childWorkflowExecutionTerminatedEventAttributes: ", p), err) }
+    if err := p.ChildWorkflowExecutionTerminatedEventAttributes.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.ChildWorkflowExecutionTerminatedEventAttributes), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 410:childWorkflowExecutionTerminatedEventAttributes: ", p), err) }
   }
   return err
 }
