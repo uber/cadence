@@ -83,22 +83,23 @@ func handleSetupSchema(config *SetupSchemaConfig) error {
 
 func validateSetupSchemaConfig(config *SetupSchemaConfig) error {
 	if len(config.CassHosts) == 0 {
-		return newConfigError("missing cassandra host")
+		return newConfigError("missing cassandra endpoint argument " + flag(cliOptEndpoint))
 	}
 	if len(config.CassKeyspace) == 0 {
-		return newConfigError("missing keyspace")
+		return newConfigError("missing " + flag(cliOptKeyspace) + " argument ")
 	}
 	if len(config.SchemaFilePath) == 0 && config.DisableVersioning {
-		return newConfigError("missing schemaFilePath")
+		return newConfigError("missing schemaFilePath " + flag(cliOptSchemaFile))
 	}
 	if (config.DisableVersioning && len(config.InitialVersion) > 0) ||
 		(!config.DisableVersioning && len(config.InitialVersion) == 0) {
-		return newConfigError("either disableVersioning or initialVersion must be specified")
+		return newConfigError("either " + flag(cliOptDisableVersioning) + " or " +
+			flag(cliOptVersion) + " but not both must be specified")
 	}
 	if !config.DisableVersioning {
 		ver, err := parseValidateVersion(config.InitialVersion)
 		if err != nil {
-			return newConfigError("invalid intialVersion arg:" + err.Error())
+			return newConfigError("invalid " + flag(cliOptVersion) + " argument:" + err.Error())
 		}
 		config.InitialVersion = ver
 	}
@@ -115,29 +116,32 @@ func newSetupSchemaConfig(cli *cli.Context) (*SetupSchemaConfig, error) {
 	config.DisableVersioning = cli.Bool(cliOptDisableVersioning)
 	config.Overwrite = cli.Bool(cliOptOverwrite)
 
+	if err := validateSetupSchemaConfig(config); err != nil {
+		return nil, err
+	}
+
+	return config, nil
+}
+
+func validateUpdateSchemaConfig(config *UpdateSchemaConfig) error {
+
 	if len(config.CassHosts) == 0 {
-		return nil, fmt.Errorf("'%v' flag cannot be empty\n", cliOptEndpoint)
+		return newConfigError("missing cassandra endpoint argument " + flag(cliOptEndpoint))
 	}
 	if len(config.CassKeyspace) == 0 {
-		return nil, fmt.Errorf("'%v' flag cannot be empty\n", cliOptKeyspace)
+		return newConfigError("missing " + flag(cliOptKeyspace) + " argument ")
 	}
-	if len(config.SchemaFilePath) == 0 && config.DisableVersioning {
-		return nil, fmt.Errorf("both '%v' and '%v' flag cannot be empty\n", cliOptSchemaFile, cliOptDisableVersioning)
+	if len(config.SchemaDir) == 0 {
+		return newConfigError("missing " + flag(cliOptSchemaDir) + " argument ")
 	}
-	if config.DisableVersioning && len(config.InitialVersion) > 0 {
-		return nil, fmt.Errorf("either specify '%v' or '%v', but not both", cliOptDisableVersioning, cliOptVersion)
-	}
-	if !config.DisableVersioning && len(config.InitialVersion) == 0 {
-		return nil, fmt.Errorf("must specify a value for either '%v' or '%v'\n", cliOptDisableVersioning, cliOptVersion)
-	}
-	if !config.DisableVersioning {
-		ver, err := parseValidateVersion(config.InitialVersion)
+	if len(config.TargetVersion) > 0 {
+		ver, err := parseValidateVersion(config.TargetVersion)
 		if err != nil {
-			return nil, fmt.Errorf("invalid value for %v flag: %v\n", cliOptVersion, err.Error())
+			return newConfigError("invalid " + flag(cliOptTargetVersion) + " argument:" + err.Error())
 		}
-		config.InitialVersion = ver
+		config.TargetVersion = ver
 	}
-	return config, nil
+	return nil
 }
 
 func newUpdateSchemaConfig(cli *cli.Context) (*UpdateSchemaConfig, error) {
@@ -149,21 +153,13 @@ func newUpdateSchemaConfig(cli *cli.Context) (*UpdateSchemaConfig, error) {
 	config.IsDryRun = cli.Bool(cliOptDryrun)
 	config.TargetVersion = cli.String(cliOptTargetVersion)
 
-	if len(config.CassHosts) == 0 {
-		return nil, fmt.Errorf("'%v' flag cannot be empty\n", cliOptEndpoint)
+	if err := validateUpdateSchemaConfig(config); err != nil {
+		return nil, err
 	}
-	if len(config.CassKeyspace) == 0 {
-		return nil, fmt.Errorf("'%v' flag cannot be empty\n", cliOptKeyspace)
-	}
-	if len(config.SchemaDir) == 0 {
-		return nil, fmt.Errorf("%v flag cannot be empty\n", cliOptSchemaDir)
-	}
-	if len(config.TargetVersion) > 0 {
-		ver, err := parseValidateVersion(config.TargetVersion)
-		if err != nil {
-			return nil, fmt.Errorf("invalid value for %v flag:%v\n", cliOptTargetVersion, err.Error())
-		}
-		config.TargetVersion = ver
-	}
+
 	return config, nil
+}
+
+func flag(opt string) string {
+	return "(-" + opt + ")"
 }
