@@ -560,19 +560,15 @@ Update_History_Loop:
 					}
 					targetDomainID = info.ID
 				}
-				// TODO: We cannot fail the decision.  Append ActivityTaskScheduledFailed and continue processing
-				if attributes.GetStartToCloseTimeoutSeconds() <= 0 {
-					return &workflow.BadRequestError{Message: "Missing StartToCloseTimeoutSeconds in the activity scheduling parameters."}
-				}
-				if attributes.GetScheduleToStartTimeoutSeconds() <= 0 {
-					return &workflow.BadRequestError{Message: "Missing ScheduleToStartTimeoutSeconds in the activity scheduling parameters."}
-				}
-				if attributes.GetScheduleToCloseTimeoutSeconds() <= 0 {
-					return &workflow.BadRequestError{Message: "Missing ScheduleToCloseTimeoutSeconds in the activity scheduling parameters."}
-				}
-				if attributes.GetHeartbeatTimeoutSeconds() < 0 {
-					// Sanity check on server. HeartBeat of Zero is allowed.
-					return &workflow.BadRequestError{Message: "Invalid HeartbeatTimeoutSeconds value in the activity scheduling parameters."}
+
+				if !validateActivityScheduleAttributes(attributes) {
+					var err error
+					msBuilder, err = e.failDecision(context, scheduleID, startedID,
+						workflow.DecisionTaskFailedCause_BAD_SCHEDULE_ACTIVITY_ATTRIBUTES, request)
+					if err != nil {
+						return err
+					}
+					break Process_Decision_Loop
 				}
 
 				scheduleEvent, ai := msBuilder.AddActivityTaskScheduledEvent(completedID, attributes)
@@ -634,6 +630,15 @@ Update_History_Loop:
 					continue Process_Decision_Loop
 				}
 				attributes := d.GetFailWorkflowExecutionDecisionAttributes()
+				if !validateFailWorkflowExecutionAttributes(attributes) {
+					var err error
+					msBuilder, err = e.failDecision(context, scheduleID, startedID,
+						workflow.DecisionTaskFailedCause_BAD_FAIL_WORKFLOW_EXECUTION_ATTRIBUTES, request)
+					if err != nil {
+						return err
+					}
+					break Process_Decision_Loop
+				}
 				msBuilder.AddFailWorkflowEvent(completedID, attributes)
 				isComplete = true
 			case workflow.DecisionType_CancelWorkflowExecution:
@@ -657,11 +662,29 @@ Update_History_Loop:
 					continue Process_Decision_Loop
 				}
 				attributes := d.GetCancelWorkflowExecutionDecisionAttributes()
+				if !validateCancelWorkflowExecutionAttributes(attributes) {
+					var err error
+					msBuilder, err = e.failDecision(context, scheduleID, startedID,
+						workflow.DecisionTaskFailedCause_BAD_CANCEL_WORKFLOW_EXECUTION_ATTRIBUTES, request)
+					if err != nil {
+						return err
+					}
+					break Process_Decision_Loop
+				}
 				msBuilder.AddWorkflowExecutionCanceledEvent(completedID, attributes)
 				isComplete = true
 
 			case workflow.DecisionType_StartTimer:
 				attributes := d.GetStartTimerDecisionAttributes()
+				if !validateTimerScheduleAttributes(attributes) {
+					var err error
+					msBuilder, err = e.failDecision(context, scheduleID, startedID,
+						workflow.DecisionTaskFailedCause_BAD_START_TIMER_ATTRIBUTES, request)
+					if err != nil {
+						return err
+					}
+					break Process_Decision_Loop
+				}
 				_, ti := msBuilder.AddTimerStartedEvent(completedID, attributes)
 				nextTimerTask := context.tBuilder.AddUserTimer(ti, msBuilder)
 				if nextTimerTask != nil {
@@ -670,6 +693,15 @@ Update_History_Loop:
 				}
 			case workflow.DecisionType_RequestCancelActivityTask:
 				attributes := d.GetRequestCancelActivityTaskDecisionAttributes()
+				if !validateActivityCancelAttributes(attributes) {
+					var err error
+					msBuilder, err = e.failDecision(context, scheduleID, startedID,
+						workflow.DecisionTaskFailedCause_BAD_REQUEST_CANCEL_ACTIVITY_ATTRIBUTES, request)
+					if err != nil {
+						return err
+					}
+					break Process_Decision_Loop
+				}
 				activityID := attributes.GetActivityId()
 				actCancelReqEvent, ai, isRunning := msBuilder.AddActivityTaskCancelRequestedEvent(completedID, activityID,
 					request.GetIdentity())
@@ -687,16 +719,44 @@ Update_History_Loop:
 
 			case workflow.DecisionType_CancelTimer:
 				attributes := d.GetCancelTimerDecisionAttributes()
+				if !validateTimerCancelAttributes(attributes) {
+					var err error
+					msBuilder, err = e.failDecision(context, scheduleID, startedID,
+						workflow.DecisionTaskFailedCause_BAD_CANCEL_TIMER_ATTRIBUTES, request)
+					if err != nil {
+						return err
+					}
+					break Process_Decision_Loop
+				}
 				if msBuilder.AddTimerCanceledEvent(completedID, attributes, request.GetIdentity()) == nil {
 					msBuilder.AddCancelTimerFailedEvent(completedID, attributes, request.GetIdentity())
 				}
 
 			case workflow.DecisionType_RecordMarker:
-				msBuilder.AddRecordMarkerEvent(completedID, d.GetRecordMarkerDecisionAttributes())
+				attributes := d.GetRecordMarkerDecisionAttributes()
+				if !validateRecordMarkerAttributes(attributes) {
+					var err error
+					msBuilder, err = e.failDecision(context, scheduleID, startedID,
+						workflow.DecisionTaskFailedCause_BAD_RECORD_MARKER_ATTRIBUTES, request)
+					if err != nil {
+						return err
+					}
+					break Process_Decision_Loop
+				}
+				msBuilder.AddRecordMarkerEvent(completedID, attributes)
 
 			case workflow.DecisionType_RequestCancelExternalWorkflowExecution:
 
 				attributes := d.GetRequestCancelExternalWorkflowExecutionDecisionAttributes()
+				if !validateCancelExternalWorkflowExecutionAttributes(attributes) {
+					var err error
+					msBuilder, err = e.failDecision(context, scheduleID, startedID,
+						workflow.DecisionTaskFailedCause_BAD_REQUEST_CANCEL_EXTERNAL_WORKFLOW_EXECUTION_ATTRIBUTES, request)
+					if err != nil {
+						return err
+					}
+					break Process_Decision_Loop
+				}
 
 				foreignInfo, _, err := e.domainCache.GetDomain(attributes.GetDomain())
 				if err != nil {
@@ -737,10 +797,14 @@ Update_History_Loop:
 					continue Process_Decision_Loop
 				}
 				attributes := d.GetContinueAsNewWorkflowExecutionDecisionAttributes()
-				if attributes == nil {
-					return &workflow.BadRequestError{
-						Message: "ContinueAsNew decision called without attributes.",
+				if !validateContinueAsNewWorkflowExecutionAttributes(attributes) {
+					var err error
+					msBuilder, err = e.failDecision(context, scheduleID, startedID,
+						workflow.DecisionTaskFailedCause_BAD_CONTINUE_AS_NEW_ATTRIBUTES, request)
+					if err != nil {
+						return err
 					}
+					break Process_Decision_Loop
 				}
 				runID := uuid.New()
 				_, newStateBuilder, err := msBuilder.AddContinueAsNewEvent(completedID, domainID, runID, attributes)
@@ -1440,4 +1504,140 @@ func (s *shardContextWrapper) CreateWorkflowExecution(request *persistence.Creat
 		}
 	}
 	return resp, err
+}
+
+func validateActivityScheduleAttributes(attributes *workflow.ScheduleActivityTaskDecisionAttributes) bool {
+	if attributes == nil {
+		return false
+	}
+
+	if !attributes.IsSetTaskList() || !attributes.GetTaskList().IsSetName() || attributes.GetTaskList().GetName() == "" {
+		return false
+	}
+
+	if !attributes.IsSetActivityId() || attributes.GetActivityId() == "" {
+		return false
+	}
+
+	if !attributes.IsSetActivityType() || !attributes.GetActivityType().IsSetName() || attributes.GetActivityType().GetName() == "" {
+		return false
+	}
+
+	if !attributes.IsSetStartToCloseTimeoutSeconds() || attributes.GetStartToCloseTimeoutSeconds() <= 0 {
+		return false
+	}
+	if !attributes.IsSetScheduleToStartTimeoutSeconds() || attributes.GetScheduleToStartTimeoutSeconds() <= 0 {
+		return false
+	}
+	if !attributes.IsSetScheduleToCloseTimeoutSeconds() || attributes.GetScheduleToCloseTimeoutSeconds() <= 0 {
+		return false
+	}
+	if !attributes.IsSetHeartbeatTimeoutSeconds() || attributes.GetHeartbeatTimeoutSeconds() < 0 {
+		return false
+	}
+
+	return true
+}
+
+func validateTimerScheduleAttributes(attributes *workflow.StartTimerDecisionAttributes) bool {
+	if attributes == nil {
+		return false
+	}
+	if !attributes.IsSetTimerId() || attributes.GetTimerId() == "" {
+		return false
+	}
+	if !attributes.IsSetStartToFireTimeoutSeconds() || attributes.GetStartToFireTimeoutSeconds() <= 0 {
+		return false
+	}
+	return true
+}
+
+func validateActivityCancelAttributes(attributes *workflow.RequestCancelActivityTaskDecisionAttributes) bool {
+	if attributes == nil {
+		return false
+	}
+	if !attributes.IsSetActivityId() || attributes.GetActivityId() == "" {
+		return false
+	}
+	return true
+}
+
+func validateTimerCancelAttributes(attributes *workflow.CancelTimerDecisionAttributes) bool {
+	if attributes == nil {
+		return false
+	}
+	if !attributes.IsSetTimerId() || attributes.GetTimerId() == "" {
+		return false
+	}
+	return true
+}
+
+func validateRecordMarkerAttributes(attributes *workflow.RecordMarkerDecisionAttributes) bool {
+	if attributes == nil {
+		return false
+	}
+	if !attributes.IsSetMarkerName() || attributes.GetMarkerName() == "" {
+		return false
+	}
+	return true
+}
+
+func validateFailWorkflowExecutionAttributes(attributes *workflow.FailWorkflowExecutionDecisionAttributes) bool {
+	if attributes == nil {
+		return false
+	}
+	if !attributes.IsSetReason() {
+		return false
+	}
+	return true
+}
+
+func validateCancelWorkflowExecutionAttributes(attributes *workflow.CancelWorkflowExecutionDecisionAttributes) bool {
+	if attributes == nil {
+		return false
+	}
+	return true
+}
+
+func validateCancelExternalWorkflowExecutionAttributes(attributes *workflow.RequestCancelExternalWorkflowExecutionDecisionAttributes) bool {
+	if attributes == nil {
+		return false
+	}
+	if !attributes.IsSetWorkflowId() {
+		return false
+	}
+
+	if !attributes.IsSetRunId() {
+		return false
+	}
+
+	if uuid.Parse(attributes.GetRunId()) == nil {
+		return false
+	}
+
+	return true
+}
+
+func validateContinueAsNewWorkflowExecutionAttributes(attributes *workflow.ContinueAsNewWorkflowExecutionDecisionAttributes) bool {
+	if attributes == nil {
+		return false
+	}
+
+	if !attributes.IsSetWorkflowType() || !attributes.GetWorkflowType().IsSetName() || attributes.GetWorkflowType().GetName() == "" {
+		return false
+	}
+
+	if !attributes.IsSetTaskList() || !attributes.GetTaskList().IsSetName() || attributes.GetTaskList().GetName() == "" {
+		return false
+	}
+
+	if !attributes.IsSetExecutionStartToCloseTimeoutSeconds() || attributes.GetExecutionStartToCloseTimeoutSeconds() <= 0 {
+		return false
+	}
+
+	if !attributes.IsSetTaskStartToCloseTimeoutSeconds() || attributes.GetTaskStartToCloseTimeoutSeconds() <= 0 {
+		return false
+	}
+
+	return true
 }
