@@ -37,14 +37,14 @@ const (
 
 // Workflow execution states
 const (
-	WorkflowStateCreated = iota
+	WorkflowStateCreated   = iota
 	WorkflowStateRunning
 	WorkflowStateCompleted
 )
 
 // Workflow execution close status
 const (
-	WorkflowCloseStatusNone = iota
+	WorkflowCloseStatusNone           = iota
 	WorkflowCloseStatusCompleted
 	WorkflowCloseStatusFailed
 	WorkflowCloseStatusCanceled
@@ -61,7 +61,7 @@ const (
 
 // Transfer task types
 const (
-	TransferTaskTypeDecisionTask = iota
+	TransferTaskTypeDecisionTask    = iota
 	TransferTaskTypeActivityTask
 	TransferTaskTypeDeleteExecution
 	TransferTaskTypeCancelExecution
@@ -111,6 +111,9 @@ type (
 		DomainID             string
 		WorkflowID           string
 		RunID                string
+		ParentWorkflowID     string
+		ParentRunID          string
+		InitiatedID          int64
 		TaskList             string
 		WorkflowTypeName     string
 		DecisionTimeoutValue int32
@@ -230,9 +233,10 @@ type (
 
 	// WorkflowMutableState indicates workflow related state
 	WorkflowMutableState struct {
-		ActivitInfos  map[int64]*ActivityInfo
-		TimerInfos    map[string]*TimerInfo
-		ExecutionInfo *WorkflowExecutionInfo
+		ActivitInfos        map[int64]*ActivityInfo
+		TimerInfos          map[string]*TimerInfo
+		ChildExecutionInfos map[int64]*ChildExecutionInfo
+		ExecutionInfo       *WorkflowExecutionInfo
 	}
 
 	// ActivityInfo details.
@@ -261,6 +265,15 @@ type (
 		TaskID     int64
 	}
 
+	// Pending child execution details.
+	ChildExecutionInfo struct {
+		InitiatedID     int64
+		InitiatedEvent  []byte
+		StartedID       int64
+		StartedEvent    []byte
+		CreateRequestID string
+	}
+
 	// CreateShardRequest is used to create a shard in executions table
 	CreateShardRequest struct {
 		ShardInfo *ShardInfo
@@ -287,6 +300,8 @@ type (
 		RequestID                   string
 		DomainID                    string
 		Execution                   workflow.WorkflowExecution
+		ParentExecution             *workflow.WorkflowExecution
+		InitiatedID                 int64
 		TaskList                    string
 		WorkflowTypeName            string
 		DecisionTimeoutValue        int32
@@ -341,10 +356,12 @@ type (
 		CloseExecution  bool
 
 		// Mutable state
-		UpsertActivityInfos []*ActivityInfo
-		DeleteActivityInfo  *int64
-		UpserTimerInfos     []*TimerInfo
-		DeleteTimerInfos    []string
+		UpsertActivityInfos       []*ActivityInfo
+		DeleteActivityInfo        *int64
+		UpserTimerInfos           []*TimerInfo
+		DeleteTimerInfos          []string
+		UpsertChildExecutionInfos []*ChildExecutionInfo
+		DeleteChildExecutionInfo  *int64
 	}
 
 	// DeleteWorkflowExecutionRequest is used to delete a workflow execution

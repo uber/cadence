@@ -38,6 +38,7 @@ const (
 	defaultSessionTimeout                = 10 * time.Second
 	rowTypeExecutionTaskID               = int64(77)
 	permanentRunID                       = "dcb940ac-0c63-ffa2-ffea-a6c305881d71"
+	emptyRunID                           = "2912faa8-274d-f70d-f96d-0ac8cf614799"
 	rowTypeShardDomainID                 = "85aa26d5-0361-f1d2-f7c0-55f32c164de8"
 	rowTypeShardWorkflowID               = "3fe89dad-8326-fac5-fd40-fe08cfa25dec"
 	rowTypeShardRunID                    = "228ce20b-af54-fe2f-ff17-be728a00f785"
@@ -50,6 +51,7 @@ const (
 	transferTaskTransferTargetWorkflowID = "11111111-1a97-f929-fd00-b6fef701457d"
 	transferTaskTypeTransferTargetRunID  = "11111111-f1fa-fa16-f67b-4553d9859b8c"
 	rowTypeShardTaskID                   = int64(23)
+	emptyInitiatedID                     = int64(-7)
 	defaultDeleteTTLSeconds              = int64(time.Hour*24*7) / int64(time.Second) // keep deleted records for 7 days
 )
 
@@ -86,6 +88,9 @@ const (
 		`domain_id: ?, ` +
 		`workflow_id: ?, ` +
 		`run_id: ?, ` +
+		`parent_workflow_id: ?, ` +
+		`parent_run_id: ?, ` +
+		`initiated_id: ?, ` +
 		`task_list: ?, ` +
 		`workflow_type_name: ?, ` +
 		`decision_task_timeout: ?, ` +
@@ -148,6 +153,14 @@ const (
 		`started_id: ?, ` +
 		`expiry_time: ?, ` +
 		`task_id: ?` +
+		`}`
+
+	templateChildExecutionInfoType = `{` +
+		`initiated_id: ?, ` +
+		`initiated_event: ?, ` +
+		`started_id: ?, ` +
+		`started_event: ?, ` +
+		`create_request_id: ?` +
 		`}`
 
 	templateTaskListType = `{` +
@@ -217,7 +230,7 @@ const (
 		`WHERE shard_id = ? ` +
 		`IF range_id = ?`
 
-	templateGetWorkflowExecutionQuery = `SELECT execution, activity_map, timer_map ` +
+	templateGetWorkflowExecutionQuery = `SELECT execution, activity_map, timer_map, child_executions_map ` +
 		`FROM executions ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
@@ -265,6 +278,16 @@ const (
 		`and task_id = ? ` +
 		`IF next_event_id = ? and range_id = ?`
 
+	templateUpdateChildExecutionInfoQuery = `UPDATE executions ` +
+		`SET child_executions_map[ ? ] =` + templateChildExecutionInfoType + ` ` +
+		`WHERE shard_id = ? ` +
+		`and type = ? ` +
+		`and domain_id = ? ` +
+		`and workflow_id = ? ` +
+		`and run_id = ? ` +
+		`and task_id = ? ` +
+		`IF next_event_id = ? and range_id = ?`
+
 	templateDeleteActivityInfoQuery = `DELETE activity_map[ ? ] ` +
 		`FROM executions ` +
 		`WHERE shard_id = ? ` +
@@ -276,6 +299,16 @@ const (
 		`IF next_event_id = ? and range_id = ?`
 
 	templateDeleteTimerInfoQuery = `DELETE timer_map[ ? ] ` +
+		`FROM executions ` +
+		`WHERE shard_id = ? ` +
+		`and type = ? ` +
+		`and domain_id = ? ` +
+		`and workflow_id = ? ` +
+		`and run_id = ? ` +
+		`and task_id = ? ` +
+		`IF next_event_id = ? and range_id = ?`
+
+	templateDeleteChildExecutionInfoQuery = `DELETE child_executions_map[ ? ] ` +
 		`FROM executions ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
@@ -656,6 +689,15 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *Creat
 			request.RequestID)
 	}
 
+	parentWorkflowID := ""
+	parentRunID := emptyRunID
+	initiatedID := emptyInitiatedID
+	if request.ParentExecution != nil {
+		parentWorkflowID = request.ParentExecution.GetWorkflowId()
+		parentRunID = request.ParentExecution.GetRunId()
+		initiatedID = request.InitiatedID
+	}
+
 	batch.Query(templateCreateWorkflowExecutionQuery2,
 		d.shardID,
 		request.DomainID,
@@ -665,6 +707,9 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *Creat
 		request.DomainID,
 		request.Execution.GetWorkflowId(),
 		request.Execution.GetRunId(),
+		parentWorkflowID,
+		parentRunID,
+		initiatedID,
 		request.TaskList,
 		request.WorkflowTypeName,
 		request.DecisionTimeoutValue,
@@ -729,6 +774,14 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *GetWorkflowExecutio
 	}
 	state.TimerInfos = timerInfos
 
+	childExecutionInfos := make(map[int64]*ChildExecutionInfo)
+	cMap := result["child_executions_map"].(map[int64]map[string]interface{})
+	for key, value := range cMap {
+		info := createChildExecutionInfo(value)
+		childExecutionInfos[key] = info
+	}
+	state.ChildExecutionInfos = childExecutionInfos
+
 	return &GetWorkflowExecutionResponse{State: state}, nil
 }
 
@@ -741,6 +794,9 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 		executionInfo.DomainID,
 		executionInfo.WorkflowID,
 		executionInfo.RunID,
+		executionInfo.ParentWorkflowID,
+		executionInfo.ParentRunID,
+		executionInfo.InitiatedID,
 		executionInfo.TaskList,
 		executionInfo.WorkflowTypeName,
 		executionInfo.DecisionTimeoutValue,
@@ -777,6 +833,9 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 
 	d.updateTimerInfos(batch, request.UpserTimerInfos, request.DeleteTimerInfos, executionInfo.DomainID,
 		executionInfo.WorkflowID, executionInfo.RunID, request.Condition, request.RangeID)
+
+	d.updateChildExecutionInfos(batch, request.UpsertChildExecutionInfos, request.DeleteChildExecutionInfo,
+		executionInfo.DomainID, executionInfo.WorkflowID, executionInfo.RunID, request.Condition, request.RangeID)
 
 	if request.ContinueAsNew != nil {
 		startReq := request.ContinueAsNew
@@ -852,6 +911,9 @@ func (d *cassandraPersistence) DeleteWorkflowExecution(request *DeleteWorkflowEx
 		info.DomainID,
 		info.WorkflowID,
 		info.RunID,
+		info.ParentWorkflowID,
+		info.ParentRunID,
+		info.InitiatedID,
 		info.TaskList,
 		info.WorkflowTypeName,
 		info.DecisionTimeoutValue,
@@ -1445,6 +1507,41 @@ func (d *cassandraPersistence) updateTimerInfos(batch *gocql.Batch, timerInfos [
 	}
 }
 
+func (d *cassandraPersistence) updateChildExecutionInfos(batch *gocql.Batch, childExecutionInfos []*ChildExecutionInfo,
+	deleteInfo *int64, domainID, workflowID, runID string, condition int64, rangeID int64) {
+
+	for _, c := range childExecutionInfos {
+		batch.Query(templateUpdateChildExecutionInfoQuery,
+			c.InitiatedID,
+			c.InitiatedID,
+			c.InitiatedEvent,
+			c.StartedID,
+			c.StartedEvent,
+			c.CreateRequestID,
+			d.shardID,
+			rowTypeExecution,
+			domainID,
+			workflowID,
+			runID,
+			rowTypeExecutionTaskID,
+			condition,
+			rangeID)
+	}
+
+	if deleteInfo != nil {
+		batch.Query(templateDeleteChildExecutionInfoQuery,
+			*deleteInfo,
+			d.shardID,
+			rowTypeExecution,
+			domainID,
+			workflowID,
+			runID,
+			rowTypeExecutionTaskID,
+			condition,
+			rangeID)
+	}
+}
+
 func createShardInfo(result map[string]interface{}) *ShardInfo {
 	info := &ShardInfo{}
 	for k, v := range result {
@@ -1477,6 +1574,12 @@ func createWorkflowExecutionInfo(result map[string]interface{}) *WorkflowExecuti
 			info.WorkflowID = v.(string)
 		case "run_id":
 			info.RunID = v.(gocql.UUID).String()
+		case "parent_workflow_id":
+			info.ParentWorkflowID = v.(string)
+		case "parent_run_id":
+			info.ParentRunID = v.(gocql.UUID).String()
+		case "initiated_id":
+			info.InitiatedID = v.(int64)
 		case "task_list":
 			info.TaskList = v.(string)
 		case "workflow_type_name":
@@ -1595,6 +1698,26 @@ func createTimerInfo(result map[string]interface{}) *TimerInfo {
 			info.TaskID = v.(int64)
 		}
 	}
+	return info
+}
+
+func createChildExecutionInfo(result map[string]interface{}) *ChildExecutionInfo {
+	info := &ChildExecutionInfo{}
+	for k, v := range result {
+		switch k {
+		case "initiated_id":
+			info.InitiatedID = v.(int64)
+		case "initiated_event":
+			info.InitiatedEvent = v.([]byte)
+		case "started_id":
+			info.StartedID = v.(int64)
+		case "started_event":
+			info.StartedEvent = v.([]byte)
+		case "create_request_id":
+			info.CreateRequestID = v.(gocql.UUID).String()
+		}
+	}
+
 	return info
 }
 

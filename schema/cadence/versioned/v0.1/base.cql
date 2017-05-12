@@ -20,6 +20,9 @@ CREATE TYPE workflow_execution (
   domain_id              uuid,
   workflow_id            text,
   run_id                 uuid,
+  parent_workflow_id     text,  -- ID of parent workflow which started the workflow execution
+  parent_run_id          uuid,  -- RunID of parent workflow which started the workflow execution
+  initiated_id           bigint, -- Initiated event ID for parent workflow which resulted in this execution
   task_list              text,
   workflow_type_name     text,
   decision_task_timeout  int,
@@ -87,6 +90,15 @@ CREATE TYPE timer_info (
   task_id       bigint,    -- The task ID if we have one created for this timer
 );
 
+-- Child execution in progress mutable state
+CREATE TYPE child_execution_info (
+  initiated_id      bigint,
+  initiated_event   blob,
+  started_id        bigint,
+  started_event     blob,
+  create_request_id uuid,
+);
+
 -- Activity or workflow task in a task list
 CREATE TYPE task (
   domain_id        uuid,
@@ -116,21 +128,22 @@ CREATE TYPE domain_config (
 );
 
 CREATE TABLE executions (
-  shard_id           int,
-  type               int, -- enum RowType { Shard, Execution, TransferTask, TimerTask}
-  domain_id          uuid,
-  workflow_id        text,
-  run_id             uuid,
-  current_run_id     uuid,
-  task_id            bigint, -- unique identifier for transfer and timer tasks for an execution
-  shard              frozen<shard>,
-  execution          frozen<workflow_execution>,
-  transfer           frozen<transfer_task>,
-  timer              frozen<timer_task>,
-  next_event_id      bigint,  -- This is needed to make conditional updates on session history
-  range_id           bigint static, -- Increasing sequence identifier for transfer queue, checkpointed into shard info
-  activity_map       map<bigint, frozen<activity_info>>,
-  timer_map          map<text, frozen<timer_info>>,
+  shard_id             int,
+  type                 int, -- enum RowType { Shard, Execution, TransferTask, TimerTask}
+  domain_id            uuid,
+  workflow_id          text,
+  run_id               uuid,
+  current_run_id       uuid,
+  task_id              bigint, -- unique identifier for transfer and timer tasks for an execution
+  shard                frozen<shard>,
+  execution            frozen<workflow_execution>,
+  transfer             frozen<transfer_task>,
+  timer                frozen<timer_task>,
+  next_event_id        bigint,  -- This is needed to make conditional updates on session history
+  range_id             bigint static, -- Increasing sequence identifier for transfer queue, checkpointed into shard info
+  activity_map         map<bigint, frozen<activity_info>>,
+  timer_map            map<text, frozen<timer_info>>,
+  child_executions_map map<bigint, frozen<child_execution_info>>,
   PRIMARY KEY  (shard_id, type, domain_id, workflow_id, run_id, task_id)
 );
 
