@@ -797,7 +797,9 @@ Update_History_Loop:
 			if err1 != nil {
 				return err1
 			}
-			return err
+			isComplete = false
+			hasUnhandledEvents = true
+			continueAsNewBuilder = nil
 		}
 
 		// Schedule another decision task if new events came in during this decision
@@ -840,7 +842,7 @@ Update_History_Loop:
 			return updateErr
 		}
 
-		return nil
+		return err
 	}
 
 	return ErrMaxAttemptsExceeded
