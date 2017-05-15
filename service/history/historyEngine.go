@@ -539,6 +539,9 @@ Update_History_Loop:
 			return &workflow.InternalServiceError{Message: "Unable to add DecisionTaskCompleted event to history."}
 		}
 
+		failDecision := false
+		var failCause workflow.DecisionTaskFailedCause
+		var err error
 		completedID := completedEvent.GetEventId()
 		hasUnhandledEvents := ((completedID - startedID) > 1)
 		isComplete := false
@@ -561,13 +564,9 @@ Update_History_Loop:
 					targetDomainID = info.ID
 				}
 
-				if !validateActivityScheduleAttributes(attributes) {
-					var err error
-					msBuilder, err = e.failDecision(context, scheduleID, startedID,
-						workflow.DecisionTaskFailedCause_BAD_SCHEDULE_ACTIVITY_ATTRIBUTES, request)
-					if err != nil {
-						return err
-					}
+				if err = validateActivityScheduleAttributes(attributes); err != nil {
+					failDecision = true
+					failCause = workflow.DecisionTaskFailedCause_BAD_SCHEDULE_ACTIVITY_ATTRIBUTES
 					break Process_Decision_Loop
 				}
 
@@ -592,12 +591,8 @@ Update_History_Loop:
 
 			case workflow.DecisionType_CompleteWorkflowExecution:
 				if hasUnhandledEvents {
-					var err error
-					msBuilder, err = e.failDecision(context, scheduleID, startedID,
-						workflow.DecisionTaskFailedCause_UNHANDLED_DECISION, request)
-					if err != nil {
-						return err
-					}
+					failDecision = true
+					failCause = workflow.DecisionTaskFailedCause_UNHANDLED_DECISION
 					break Process_Decision_Loop
 				}
 
@@ -613,12 +608,8 @@ Update_History_Loop:
 				isComplete = true
 			case workflow.DecisionType_FailWorkflowExecution:
 				if hasUnhandledEvents {
-					var err error
-					msBuilder, err = e.failDecision(context, scheduleID, startedID,
-						workflow.DecisionTaskFailedCause_UNHANDLED_DECISION, request)
-					if err != nil {
-						return err
-					}
+					failDecision = true
+					failCause = workflow.DecisionTaskFailedCause_UNHANDLED_DECISION
 					break Process_Decision_Loop
 				}
 
@@ -630,13 +621,9 @@ Update_History_Loop:
 					continue Process_Decision_Loop
 				}
 				attributes := d.GetFailWorkflowExecutionDecisionAttributes()
-				if !validateFailWorkflowExecutionAttributes(attributes) {
-					var err error
-					msBuilder, err = e.failDecision(context, scheduleID, startedID,
-						workflow.DecisionTaskFailedCause_BAD_FAIL_WORKFLOW_EXECUTION_ATTRIBUTES, request)
-					if err != nil {
-						return err
-					}
+				if err = validateFailWorkflowExecutionAttributes(attributes); err != nil {
+					failDecision = true
+					failCause = workflow.DecisionTaskFailedCause_BAD_FAIL_WORKFLOW_EXECUTION_ATTRIBUTES
 					break Process_Decision_Loop
 				}
 				msBuilder.AddFailWorkflowEvent(completedID, attributes)
@@ -645,12 +632,8 @@ Update_History_Loop:
 				// If new events came while we are processing the decision, we would fail this and give a chance to client
 				// to process the new event.
 				if hasUnhandledEvents {
-					var err error
-					msBuilder, err = e.failDecision(context, scheduleID, startedID,
-						workflow.DecisionTaskFailedCause_UNHANDLED_DECISION, request)
-					if err != nil {
-						return err
-					}
+					failDecision = true
+					failCause = workflow.DecisionTaskFailedCause_UNHANDLED_DECISION
 					break Process_Decision_Loop
 				}
 
@@ -662,13 +645,9 @@ Update_History_Loop:
 					continue Process_Decision_Loop
 				}
 				attributes := d.GetCancelWorkflowExecutionDecisionAttributes()
-				if !validateCancelWorkflowExecutionAttributes(attributes) {
-					var err error
-					msBuilder, err = e.failDecision(context, scheduleID, startedID,
-						workflow.DecisionTaskFailedCause_BAD_CANCEL_WORKFLOW_EXECUTION_ATTRIBUTES, request)
-					if err != nil {
-						return err
-					}
+				if err = validateCancelWorkflowExecutionAttributes(attributes); err != nil {
+					failDecision = true
+					failCause = workflow.DecisionTaskFailedCause_BAD_CANCEL_WORKFLOW_EXECUTION_ATTRIBUTES
 					break Process_Decision_Loop
 				}
 				msBuilder.AddWorkflowExecutionCanceledEvent(completedID, attributes)
@@ -676,13 +655,9 @@ Update_History_Loop:
 
 			case workflow.DecisionType_StartTimer:
 				attributes := d.GetStartTimerDecisionAttributes()
-				if !validateTimerScheduleAttributes(attributes) {
-					var err error
-					msBuilder, err = e.failDecision(context, scheduleID, startedID,
-						workflow.DecisionTaskFailedCause_BAD_START_TIMER_ATTRIBUTES, request)
-					if err != nil {
-						return err
-					}
+				if err = validateTimerScheduleAttributes(attributes); err != nil {
+					failDecision = true
+					failCause = workflow.DecisionTaskFailedCause_BAD_START_TIMER_ATTRIBUTES
 					break Process_Decision_Loop
 				}
 				_, ti := msBuilder.AddTimerStartedEvent(completedID, attributes)
@@ -693,13 +668,9 @@ Update_History_Loop:
 				}
 			case workflow.DecisionType_RequestCancelActivityTask:
 				attributes := d.GetRequestCancelActivityTaskDecisionAttributes()
-				if !validateActivityCancelAttributes(attributes) {
-					var err error
-					msBuilder, err = e.failDecision(context, scheduleID, startedID,
-						workflow.DecisionTaskFailedCause_BAD_REQUEST_CANCEL_ACTIVITY_ATTRIBUTES, request)
-					if err != nil {
-						return err
-					}
+				if err = validateActivityCancelAttributes(attributes); err != nil {
+					failDecision = true
+					failCause = workflow.DecisionTaskFailedCause_BAD_REQUEST_CANCEL_ACTIVITY_ATTRIBUTES
 					break Process_Decision_Loop
 				}
 				activityID := attributes.GetActivityId()
@@ -719,13 +690,9 @@ Update_History_Loop:
 
 			case workflow.DecisionType_CancelTimer:
 				attributes := d.GetCancelTimerDecisionAttributes()
-				if !validateTimerCancelAttributes(attributes) {
-					var err error
-					msBuilder, err = e.failDecision(context, scheduleID, startedID,
-						workflow.DecisionTaskFailedCause_BAD_CANCEL_TIMER_ATTRIBUTES, request)
-					if err != nil {
-						return err
-					}
+				if err = validateTimerCancelAttributes(attributes); err != nil {
+					failDecision = true
+					failCause = workflow.DecisionTaskFailedCause_BAD_CANCEL_TIMER_ATTRIBUTES
 					break Process_Decision_Loop
 				}
 				if msBuilder.AddTimerCanceledEvent(completedID, attributes, request.GetIdentity()) == nil {
@@ -734,13 +701,9 @@ Update_History_Loop:
 
 			case workflow.DecisionType_RecordMarker:
 				attributes := d.GetRecordMarkerDecisionAttributes()
-				if !validateRecordMarkerAttributes(attributes) {
-					var err error
-					msBuilder, err = e.failDecision(context, scheduleID, startedID,
-						workflow.DecisionTaskFailedCause_BAD_RECORD_MARKER_ATTRIBUTES, request)
-					if err != nil {
-						return err
-					}
+				if err = validateRecordMarkerAttributes(attributes); err != nil {
+					failDecision = true
+					failCause = workflow.DecisionTaskFailedCause_BAD_RECORD_MARKER_ATTRIBUTES
 					break Process_Decision_Loop
 				}
 				msBuilder.AddRecordMarkerEvent(completedID, attributes)
@@ -748,13 +711,9 @@ Update_History_Loop:
 			case workflow.DecisionType_RequestCancelExternalWorkflowExecution:
 
 				attributes := d.GetRequestCancelExternalWorkflowExecutionDecisionAttributes()
-				if !validateCancelExternalWorkflowExecutionAttributes(attributes) {
-					var err error
-					msBuilder, err = e.failDecision(context, scheduleID, startedID,
-						workflow.DecisionTaskFailedCause_BAD_REQUEST_CANCEL_EXTERNAL_WORKFLOW_EXECUTION_ATTRIBUTES, request)
-					if err != nil {
-						return err
-					}
+				if err = validateCancelExternalWorkflowExecutionAttributes(attributes); err != nil {
+					failDecision = true
+					failCause = workflow.DecisionTaskFailedCause_BAD_REQUEST_CANCEL_EXTERNAL_WORKFLOW_EXECUTION_ATTRIBUTES
 					break Process_Decision_Loop
 				}
 
@@ -780,12 +739,8 @@ Update_History_Loop:
 
 			case workflow.DecisionType_ContinueAsNewWorkflowExecution:
 				if hasUnhandledEvents {
-					var err error
-					msBuilder, err = e.failDecision(context, scheduleID, startedID,
-						workflow.DecisionTaskFailedCause_UNHANDLED_DECISION, request)
-					if err != nil {
-						return err
-					}
+					failDecision = true
+					failCause = workflow.DecisionTaskFailedCause_UNHANDLED_DECISION
 					break Process_Decision_Loop
 				}
 
@@ -797,13 +752,9 @@ Update_History_Loop:
 					continue Process_Decision_Loop
 				}
 				attributes := d.GetContinueAsNewWorkflowExecutionDecisionAttributes()
-				if !validateContinueAsNewWorkflowExecutionAttributes(attributes) {
-					var err error
-					msBuilder, err = e.failDecision(context, scheduleID, startedID,
-						workflow.DecisionTaskFailedCause_BAD_CONTINUE_AS_NEW_ATTRIBUTES, request)
-					if err != nil {
-						return err
-					}
+				if err = validateContinueAsNewWorkflowExecutionAttributes(attributes); err != nil {
+					failDecision = true
+					failCause = workflow.DecisionTaskFailedCause_BAD_CONTINUE_AS_NEW_ATTRIBUTES
 					break Process_Decision_Loop
 				}
 				runID := uuid.New()
@@ -838,6 +789,15 @@ Update_History_Loop:
 			default:
 				return &workflow.BadRequestError{Message: fmt.Sprintf("Unknown decision type: %v", d.GetDecisionType())}
 			}
+		}
+
+		if failDecision {
+			var err1 error
+			msBuilder, err1 = e.failDecision(context, scheduleID, startedID, failCause, request)
+			if err1 != nil {
+				return err1
+			}
+			return err
 		}
 
 		// Schedule another decision task if new events came in during this decision
@@ -1506,138 +1466,138 @@ func (s *shardContextWrapper) CreateWorkflowExecution(request *persistence.Creat
 	return resp, err
 }
 
-func validateActivityScheduleAttributes(attributes *workflow.ScheduleActivityTaskDecisionAttributes) bool {
+func validateActivityScheduleAttributes(attributes *workflow.ScheduleActivityTaskDecisionAttributes) error {
 	if attributes == nil {
-		return false
+		return &workflow.BadRequestError{Message: "ScheduleActivityTaskDecisionAttributes is not set on decision."}
 	}
 
 	if !attributes.IsSetTaskList() || !attributes.GetTaskList().IsSetName() || attributes.GetTaskList().GetName() == "" {
-		return false
+		return &workflow.BadRequestError{Message: "TaskList is not set on decision."}
 	}
 
 	if !attributes.IsSetActivityId() || attributes.GetActivityId() == "" {
-		return false
+		return &workflow.BadRequestError{Message: "ActivityId is not set on decision."}
 	}
 
 	if !attributes.IsSetActivityType() || !attributes.GetActivityType().IsSetName() || attributes.GetActivityType().GetName() == "" {
-		return false
+		return &workflow.BadRequestError{Message: "ActivityType is not set on decision."}
 	}
 
 	if !attributes.IsSetStartToCloseTimeoutSeconds() || attributes.GetStartToCloseTimeoutSeconds() <= 0 {
-		return false
+		return &workflow.BadRequestError{Message: "A valid StartToCloseTimeoutSeconds is not set on decision."}
 	}
 	if !attributes.IsSetScheduleToStartTimeoutSeconds() || attributes.GetScheduleToStartTimeoutSeconds() <= 0 {
-		return false
+		return &workflow.BadRequestError{Message: "A valid ScheduleToStartTimeoutSeconds is not set on decision."}
 	}
 	if !attributes.IsSetScheduleToCloseTimeoutSeconds() || attributes.GetScheduleToCloseTimeoutSeconds() <= 0 {
-		return false
+		return &workflow.BadRequestError{Message: "A valid ScheduleToCloseTimeoutSeconds is not set on decision."}
 	}
 	if !attributes.IsSetHeartbeatTimeoutSeconds() || attributes.GetHeartbeatTimeoutSeconds() < 0 {
-		return false
+		return &workflow.BadRequestError{Message: "Ac valid HeartbeatTimeoutSeconds is not set on decision."}
 	}
 
-	return true
+	return nil
 }
 
-func validateTimerScheduleAttributes(attributes *workflow.StartTimerDecisionAttributes) bool {
+func validateTimerScheduleAttributes(attributes *workflow.StartTimerDecisionAttributes) error {
 	if attributes == nil {
-		return false
+		return &workflow.BadRequestError{Message: "StartTimerDecisionAttributes is not set on decision."}
 	}
 	if !attributes.IsSetTimerId() || attributes.GetTimerId() == "" {
-		return false
+		return &workflow.BadRequestError{Message: "TimerId is not set on decision."}
 	}
 	if !attributes.IsSetStartToFireTimeoutSeconds() || attributes.GetStartToFireTimeoutSeconds() <= 0 {
-		return false
+		return &workflow.BadRequestError{Message: "A valid StartToFireTimeoutSeconds is not set on decision."}
 	}
-	return true
+	return nil
 }
 
-func validateActivityCancelAttributes(attributes *workflow.RequestCancelActivityTaskDecisionAttributes) bool {
+func validateActivityCancelAttributes(attributes *workflow.RequestCancelActivityTaskDecisionAttributes) error {
 	if attributes == nil {
-		return false
+		return &workflow.BadRequestError{Message: "RequestCancelActivityTaskDecisionAttributes is not set on decision."}
 	}
 	if !attributes.IsSetActivityId() || attributes.GetActivityId() == "" {
-		return false
+		return &workflow.BadRequestError{Message: "ActivityId is not set on decision."}
 	}
-	return true
+	return nil
 }
 
-func validateTimerCancelAttributes(attributes *workflow.CancelTimerDecisionAttributes) bool {
+func validateTimerCancelAttributes(attributes *workflow.CancelTimerDecisionAttributes) error {
 	if attributes == nil {
-		return false
+		return &workflow.BadRequestError{Message: "CancelTimerDecisionAttributes is not set on decision."}
 	}
 	if !attributes.IsSetTimerId() || attributes.GetTimerId() == "" {
-		return false
+		return &workflow.BadRequestError{Message: "TimerId is not set on decision."}
 	}
-	return true
+	return nil
 }
 
-func validateRecordMarkerAttributes(attributes *workflow.RecordMarkerDecisionAttributes) bool {
+func validateRecordMarkerAttributes(attributes *workflow.RecordMarkerDecisionAttributes) error {
 	if attributes == nil {
-		return false
+		return &workflow.BadRequestError{Message: "RecordMarkerDecisionAttributes is not set on decision."}
 	}
 	if !attributes.IsSetMarkerName() || attributes.GetMarkerName() == "" {
-		return false
+		return &workflow.BadRequestError{Message: "MarkerName is not set on decision."}
 	}
-	return true
+	return nil
 }
 
-func validateFailWorkflowExecutionAttributes(attributes *workflow.FailWorkflowExecutionDecisionAttributes) bool {
+func validateFailWorkflowExecutionAttributes(attributes *workflow.FailWorkflowExecutionDecisionAttributes) error {
 	if attributes == nil {
-		return false
+		return &workflow.BadRequestError{Message: "FailWorkflowExecutionDecisionAttributes is not set on decision."}
 	}
 	if !attributes.IsSetReason() {
-		return false
+		return &workflow.BadRequestError{Message: "Reason is not set on decision."}
 	}
-	return true
+	return nil
 }
 
-func validateCancelWorkflowExecutionAttributes(attributes *workflow.CancelWorkflowExecutionDecisionAttributes) bool {
+func validateCancelWorkflowExecutionAttributes(attributes *workflow.CancelWorkflowExecutionDecisionAttributes) error {
 	if attributes == nil {
-		return false
+		return &workflow.BadRequestError{Message: "CancelWorkflowExecutionDecisionAttributes is not set on decision."}
 	}
-	return true
+	return nil
 }
 
-func validateCancelExternalWorkflowExecutionAttributes(attributes *workflow.RequestCancelExternalWorkflowExecutionDecisionAttributes) bool {
+func validateCancelExternalWorkflowExecutionAttributes(attributes *workflow.RequestCancelExternalWorkflowExecutionDecisionAttributes) error {
 	if attributes == nil {
-		return false
+		return &workflow.BadRequestError{Message: "RequestCancelExternalWorkflowExecutionDecisionAttributes is not set on decision."}
 	}
 	if !attributes.IsSetWorkflowId() {
-		return false
+		return &workflow.BadRequestError{Message: "WorkflowId is not set on decision."}
 	}
 
 	if !attributes.IsSetRunId() {
-		return false
+		return &workflow.BadRequestError{Message: "RunId is not set on decision."}
 	}
 
 	if uuid.Parse(attributes.GetRunId()) == nil {
-		return false
+		return &workflow.BadRequestError{Message: "Invalid RunId set on decision."}
 	}
 
-	return true
+	return nil
 }
 
-func validateContinueAsNewWorkflowExecutionAttributes(attributes *workflow.ContinueAsNewWorkflowExecutionDecisionAttributes) bool {
+func validateContinueAsNewWorkflowExecutionAttributes(attributes *workflow.ContinueAsNewWorkflowExecutionDecisionAttributes) error {
 	if attributes == nil {
-		return false
+		return &workflow.BadRequestError{Message: "ContinueAsNewWorkflowExecutionDecisionAttributes is not set on decision."}
 	}
 
 	if !attributes.IsSetWorkflowType() || !attributes.GetWorkflowType().IsSetName() || attributes.GetWorkflowType().GetName() == "" {
-		return false
+		return &workflow.BadRequestError{Message: "WorkflowType is not set on decision."}
 	}
 
 	if !attributes.IsSetTaskList() || !attributes.GetTaskList().IsSetName() || attributes.GetTaskList().GetName() == "" {
-		return false
+		return &workflow.BadRequestError{Message: "TaskList is not set on decision."}
 	}
 
 	if !attributes.IsSetExecutionStartToCloseTimeoutSeconds() || attributes.GetExecutionStartToCloseTimeoutSeconds() <= 0 {
-		return false
+		return &workflow.BadRequestError{Message: "A valid ExecutionStartToCloseTimeoutSeconds is not set on decision."}
 	}
 
 	if !attributes.IsSetTaskStartToCloseTimeoutSeconds() || attributes.GetTaskStartToCloseTimeoutSeconds() <= 0 {
-		return false
+		return &workflow.BadRequestError{Message: "A valid TaskStartToCloseTimeoutSeconds is not set on decision."}
 	}
 
-	return true
+	return nil
 }
