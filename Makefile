@@ -75,13 +75,16 @@ clean_thrift:
 
 thriftc: clean_thrift vendor/glide.updated $(THRIFT_GEN_SRC)
 
+copyright: cmd/tools/copyright/licensegen.go
+	go run ./cmd/tools/copyright/licensegen.go
+
 cadence-cassandra-tool: vendor/glide.updated $(TOOLS_SRC)
 	go build -i -o cadence-cassandra-tool cmd/tools/cassandra/main.go
 
 cadence: vendor/glide.updated main.go
 	go build -i -o cadence main.go
 
-bins_nothrift: cadence-cassandra-tool cadence
+bins_nothrift: copyright cadence-cassandra-tool cadence
 
 bins: thriftc bins_nothrift
 
