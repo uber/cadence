@@ -113,7 +113,8 @@ const (
 		`target_run_id: ?, ` +
 		`task_list: ?, ` +
 		`type: ?, ` +
-		`schedule_id: ?` +
+		`schedule_id: ?, ` +
+		`schedule_to_close_timeout: ?` +
 		`}`
 
 	templateTimerTaskType = `{` +
@@ -336,6 +337,10 @@ const (
 	templateCreateTaskQuery = `INSERT INTO tasks (` +
 		`domain_id, task_list_name, task_list_type, type, task_id, task) ` +
 		`VALUES(?, ?, ?, ?, ?, ` + templateTaskType + `)`
+
+	templateCreateTaskWithTTLQuery = `INSERT INTO tasks (` +
+		`domain_id, task_list_name, task_list_type, type, task_id, task) ` +
+		`VALUES(?, ?, ?, ?, ?, ` + templateTaskType + `) USING TTL ?`
 
 	templateGetTasksQuery = `SELECT task_id, task ` +
 		`FROM tasks ` +
@@ -1100,17 +1105,30 @@ func (d *cassandraPersistence) CreateTasks(request *CreateTasksRequest) (*Create
 
 	for _, task := range request.Tasks {
 		scheduleID := task.Data.ScheduleID
-
-		batch.Query(templateCreateTaskQuery,
-			domainID,
-			taskList,
-			taskListType,
-			rowTypeTask,
-			task.TaskID,
-			domainID,
-			task.Execution.GetWorkflowId(),
-			task.Execution.GetRunId(),
-			scheduleID)
+		if task.Data.ScheduleToCloseTimeout == 0 {
+			batch.Query(templateCreateTaskQuery,
+				domainID,
+				taskList,
+				taskListType,
+				rowTypeTask,
+				task.TaskID,
+				domainID,
+				task.Execution.GetWorkflowId(),
+				task.Execution.GetRunId(),
+				scheduleID)
+		} else {
+			batch.Query(templateCreateTaskWithTTLQuery,
+				domainID,
+				taskList,
+				taskListType,
+				rowTypeTask,
+				task.TaskID,
+				domainID,
+				task.Execution.GetWorkflowId(),
+				task.Execution.GetRunId(),
+				scheduleID,
+				task.Data.ScheduleToCloseTimeout)
+		}
 	}
 
 	// The following query is used to ensure that range_id didn't change
@@ -1264,12 +1282,14 @@ func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferT
 		var scheduleID int64
 		targetWorkflowID := transferTaskTransferTargetWorkflowID
 		targetRunID := transferTaskTypeTransferTargetRunID
+		var timeout int64
 
 		switch task.GetType() {
 		case TransferTaskTypeActivityTask:
 			targetDomainID = task.(*ActivityTask).DomainID
 			taskList = task.(*ActivityTask).TaskList
 			scheduleID = task.(*ActivityTask).ScheduleID
+			timeout = task.(*ActivityTask).ScheduleToCloseTimeoutSeconds
 
 		case TransferTaskTypeDecisionTask:
 			targetDomainID = task.(*DecisionTask).DomainID
@@ -1299,6 +1319,7 @@ func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferT
 			taskList,
 			task.GetType(),
 			scheduleID,
+			timeout,
 			task.GetTaskID())
 	}
 }
@@ -1520,6 +1541,8 @@ func createTransferTaskInfo(result map[string]interface{}) *TransferTaskInfo {
 			info.TaskType = v.(int)
 		case "schedule_id":
 			info.ScheduleID = v.(int64)
+		case "schedule_to_close_timeout":
+			info.ScheduleToCloseTimeout = int32(v.(int))
 		}
 	}
 

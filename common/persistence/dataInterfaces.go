@@ -130,16 +130,17 @@ type (
 
 	// TransferTaskInfo describes a transfer task
 	TransferTaskInfo struct {
-		DomainID         string
-		WorkflowID       string
-		RunID            string
-		TaskID           int64
-		TargetDomainID   string
-		TargetWorkflowID string
-		TargetRunID      string
-		TaskList         string
-		TaskType         int
-		ScheduleID       int64
+		DomainID               string
+		WorkflowID             string
+		RunID                  string
+		TaskID                 int64
+		TargetDomainID         string
+		TargetWorkflowID       string
+		TargetRunID            string
+		TaskList               string
+		TaskType               int
+		ScheduleID             int64
+		ScheduleToCloseTimeout int32
 	}
 
 	// TimerTaskInfo describes a timer task.
@@ -164,11 +165,12 @@ type (
 
 	// TaskInfo describes either activity or decision task
 	TaskInfo struct {
-		DomainID   string
-		WorkflowID string
-		RunID      string
-		TaskID     int64
-		ScheduleID int64
+		DomainID               string
+		WorkflowID             string
+		RunID                  string
+		TaskID                 int64
+		ScheduleID             int64
+		ScheduleToCloseTimeout int32
 	}
 
 	// Task is the generic interface for workflow tasks
@@ -180,10 +182,11 @@ type (
 
 	// ActivityTask identifies a transfer task for activity
 	ActivityTask struct {
-		TaskID     int64
-		DomainID   string
-		TaskList   string
-		ScheduleID int64
+		TaskID                        int64
+		DomainID                      string
+		TaskList                      string
+		ScheduleID                    int64
+		ScheduleToCloseTimeoutSeconds int64
 	}
 
 	// DecisionTask identifies a transfer task for decision

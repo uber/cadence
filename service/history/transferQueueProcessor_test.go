@@ -306,11 +306,12 @@ func createAddRequestFromTask(task *persistence.TransferTaskInfo) interface{} {
 	}
 	if task.TaskType == persistence.TransferTaskTypeActivityTask {
 		res = &m.AddActivityTaskRequest{
-			DomainUUID:       common.StringPtr(domainID),
-			SourceDomainUUID: common.StringPtr(domainID),
-			Execution:        &execution,
-			TaskList:         taskList,
-			ScheduleId:       &task.ScheduleID,
+			DomainUUID:                    common.StringPtr(domainID),
+			SourceDomainUUID:              common.StringPtr(domainID),
+			Execution:                     &execution,
+			TaskList:                      taskList,
+			ScheduleId:                    &task.ScheduleID,
+			ScheduleToCloseTimeoutSeconds: common.Int32Ptr(task.ScheduleToCloseTimeout),
 		}
 	} else if task.TaskType == persistence.TransferTaskTypeDecisionTask {
 		res = &m.AddDecisionTaskRequest{

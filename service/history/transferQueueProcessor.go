@@ -262,11 +262,12 @@ ProcessRetryLoop:
 						Name: &task.TaskList,
 					}
 					err = t.matchingClient.AddActivityTask(nil, &m.AddActivityTaskRequest{
-						DomainUUID:       common.StringPtr(targetDomainID),
-						SourceDomainUUID: common.StringPtr(domainID),
-						Execution:        &execution,
-						TaskList:         taskList,
-						ScheduleId:       &task.ScheduleID,
+						DomainUUID:                    common.StringPtr(targetDomainID),
+						SourceDomainUUID:              common.StringPtr(domainID),
+						Execution:                     &execution,
+						TaskList:                      taskList,
+						ScheduleId:                    &task.ScheduleID,
+						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(task.ScheduleToCloseTimeout),
 					})
 				}
 			case persistence.TransferTaskTypeDecisionTask:

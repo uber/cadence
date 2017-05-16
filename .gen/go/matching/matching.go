@@ -781,6 +781,7 @@ func (p *AddDecisionTaskRequest) String() string {
 //  - SourceDomainUUID
 //  - TaskList
 //  - ScheduleId
+//  - ScheduleToCloseTimeoutSeconds
 type AddActivityTaskRequest struct {
   // unused fields # 1 to 9
   DomainUUID *string `thrift:"domainUUID,10" db:"domainUUID" json:"domainUUID,omitempty"`
@@ -792,6 +793,8 @@ type AddActivityTaskRequest struct {
   TaskList *shared.TaskList `thrift:"taskList,40" db:"taskList" json:"taskList,omitempty"`
   // unused fields # 41 to 49
   ScheduleId *int64 `thrift:"scheduleId,50" db:"scheduleId" json:"scheduleId,omitempty"`
+  // unused fields # 51 to 59
+  ScheduleToCloseTimeoutSeconds *int32 `thrift:"scheduleToCloseTimeoutSeconds,60" db:"scheduleToCloseTimeoutSeconds" json:"scheduleToCloseTimeoutSeconds,omitempty"`
 }
 
 func NewAddActivityTaskRequest() *AddActivityTaskRequest {
@@ -833,6 +836,13 @@ func (p *AddActivityTaskRequest) GetScheduleId() int64 {
   }
 return *p.ScheduleId
 }
+var AddActivityTaskRequest_ScheduleToCloseTimeoutSeconds_DEFAULT int32
+func (p *AddActivityTaskRequest) GetScheduleToCloseTimeoutSeconds() int32 {
+  if !p.IsSetScheduleToCloseTimeoutSeconds() {
+    return AddActivityTaskRequest_ScheduleToCloseTimeoutSeconds_DEFAULT
+  }
+return *p.ScheduleToCloseTimeoutSeconds
+}
 func (p *AddActivityTaskRequest) IsSetDomainUUID() bool {
   return p.DomainUUID != nil
 }
@@ -851,6 +861,10 @@ func (p *AddActivityTaskRequest) IsSetTaskList() bool {
 
 func (p *AddActivityTaskRequest) IsSetScheduleId() bool {
   return p.ScheduleId != nil
+}
+
+func (p *AddActivityTaskRequest) IsSetScheduleToCloseTimeoutSeconds() bool {
+  return p.ScheduleToCloseTimeoutSeconds != nil
 }
 
 func (p *AddActivityTaskRequest) Read(iprot thrift.TProtocol) error {
@@ -884,6 +898,10 @@ func (p *AddActivityTaskRequest) Read(iprot thrift.TProtocol) error {
       }
     case 50:
       if err := p.ReadField50(iprot); err != nil {
+        return err
+      }
+    case 60:
+      if err := p.ReadField60(iprot); err != nil {
         return err
       }
     default:
@@ -944,6 +962,15 @@ func (p *AddActivityTaskRequest)  ReadField50(iprot thrift.TProtocol) error {
   return nil
 }
 
+func (p *AddActivityTaskRequest)  ReadField60(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI32(); err != nil {
+  return thrift.PrependError("error reading field 60: ", err)
+} else {
+  p.ScheduleToCloseTimeoutSeconds = &v
+}
+  return nil
+}
+
 func (p *AddActivityTaskRequest) Write(oprot thrift.TProtocol) error {
   if err := oprot.WriteStructBegin("AddActivityTaskRequest"); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
@@ -953,6 +980,7 @@ func (p *AddActivityTaskRequest) Write(oprot thrift.TProtocol) error {
     if err := p.writeField30(oprot); err != nil { return err }
     if err := p.writeField40(oprot); err != nil { return err }
     if err := p.writeField50(oprot); err != nil { return err }
+    if err := p.writeField60(oprot); err != nil { return err }
   }
   if err := oprot.WriteFieldStop(); err != nil {
     return thrift.PrependError("write field stop error: ", err) }
@@ -1019,6 +1047,18 @@ func (p *AddActivityTaskRequest) writeField50(oprot thrift.TProtocol) (err error
     return thrift.PrependError(fmt.Sprintf("%T.scheduleId (50) field write error: ", p), err) }
     if err := oprot.WriteFieldEnd(); err != nil {
       return thrift.PrependError(fmt.Sprintf("%T write field end error 50:scheduleId: ", p), err) }
+  }
+  return err
+}
+
+func (p *AddActivityTaskRequest) writeField60(oprot thrift.TProtocol) (err error) {
+  if p.IsSetScheduleToCloseTimeoutSeconds() {
+    if err := oprot.WriteFieldBegin("scheduleToCloseTimeoutSeconds", thrift.I32, 60); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 60:scheduleToCloseTimeoutSeconds: ", p), err) }
+    if err := oprot.WriteI32(int32(*p.ScheduleToCloseTimeoutSeconds)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.scheduleToCloseTimeoutSeconds (60) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 60:scheduleToCloseTimeoutSeconds: ", p), err) }
   }
   return err
 }
