@@ -113,8 +113,7 @@ const (
 		`target_run_id: ?, ` +
 		`task_list: ?, ` +
 		`type: ?, ` +
-		`schedule_id: ?, ` +
-		`schedule_to_close_timeout: ?` +
+		`schedule_id: ?` +
 		`}`
 
 	templateTimerTaskType = `{` +
@@ -1282,14 +1281,12 @@ func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferT
 		var scheduleID int64
 		targetWorkflowID := transferTaskTransferTargetWorkflowID
 		targetRunID := transferTaskTypeTransferTargetRunID
-		var timeout int64
 
 		switch task.GetType() {
 		case TransferTaskTypeActivityTask:
 			targetDomainID = task.(*ActivityTask).DomainID
 			taskList = task.(*ActivityTask).TaskList
 			scheduleID = task.(*ActivityTask).ScheduleID
-			timeout = task.(*ActivityTask).ScheduleToCloseTimeoutSeconds
 
 		case TransferTaskTypeDecisionTask:
 			targetDomainID = task.(*DecisionTask).DomainID
@@ -1319,7 +1316,6 @@ func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferT
 			taskList,
 			task.GetType(),
 			scheduleID,
-			timeout,
 			task.GetTaskID())
 	}
 }
@@ -1541,8 +1537,6 @@ func createTransferTaskInfo(result map[string]interface{}) *TransferTaskInfo {
 			info.TaskType = v.(int)
 		case "schedule_id":
 			info.ScheduleID = v.(int64)
-		case "schedule_to_close_timeout":
-			info.ScheduleToCloseTimeout = int32(v.(int))
 		}
 	}
 

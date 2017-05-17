@@ -261,14 +261,24 @@ ProcessRetryLoop:
 					taskList := &workflow.TaskList{
 						Name: &task.TaskList,
 					}
-					err = t.matchingClient.AddActivityTask(nil, &m.AddActivityTaskRequest{
-						DomainUUID:                    common.StringPtr(targetDomainID),
-						SourceDomainUUID:              common.StringPtr(domainID),
-						Execution:                     &execution,
-						TaskList:                      taskList,
-						ScheduleId:                    &task.ScheduleID,
-						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(task.ScheduleToCloseTimeout),
-					})
+					context, release, _ := t.cache.getOrCreateWorkflowExecution(domainID, execution)
+					var mb *mutableStateBuilder
+					mb, err = context.loadWorkflowExecution()
+					if err == nil {
+						if ai, found := mb.GetActivityInfo(task.ScheduleID); found {
+							err = t.matchingClient.AddActivityTask(nil, &m.AddActivityTaskRequest{
+								DomainUUID:                    common.StringPtr(targetDomainID),
+								SourceDomainUUID:              common.StringPtr(domainID),
+								Execution:                     &execution,
+								TaskList:                      taskList,
+								ScheduleId:                    &task.ScheduleID,
+								ScheduleToCloseTimeoutSeconds: common.Int32Ptr(ai.ScheduleToCloseTimeout),
+							})
+						} else {
+							t.logger.Infof("Task was not found asasan")
+						}
+					}
+					release()
 				}
 			case persistence.TransferTaskTypeDecisionTask:
 				{
