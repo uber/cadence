@@ -761,7 +761,7 @@ func (p *AddDecisionTaskRequest) String() string {
 //  - SourceDomainUUID
 //  - TaskList
 //  - ScheduleId
-//  - ScheduleToCloseTimeoutSeconds
+//  - ScheduleToStartTimeoutSeconds
 type AddActivityTaskRequest struct {
   // unused fields # 1 to 9
   DomainUUID *string `thrift:"domainUUID,10" db:"domainUUID" json:"domainUUID,omitempty"`
@@ -774,7 +774,7 @@ type AddActivityTaskRequest struct {
   // unused fields # 41 to 49
   ScheduleId *int64 `thrift:"scheduleId,50" db:"scheduleId" json:"scheduleId,omitempty"`
   // unused fields # 51 to 59
-  ScheduleToCloseTimeoutSeconds *int32 `thrift:"scheduleToCloseTimeoutSeconds,60" db:"scheduleToCloseTimeoutSeconds" json:"scheduleToCloseTimeoutSeconds,omitempty"`
+  ScheduleToStartTimeoutSeconds *int32 `thrift:"scheduleToStartTimeoutSeconds,60" db:"scheduleToStartTimeoutSeconds" json:"scheduleToStartTimeoutSeconds,omitempty"`
 }
 
 func NewAddActivityTaskRequest() *AddActivityTaskRequest {
@@ -816,12 +816,12 @@ func (p *AddActivityTaskRequest) GetScheduleId() int64 {
   }
 return *p.ScheduleId
 }
-var AddActivityTaskRequest_ScheduleToCloseTimeoutSeconds_DEFAULT int32
-func (p *AddActivityTaskRequest) GetScheduleToCloseTimeoutSeconds() int32 {
-  if !p.IsSetScheduleToCloseTimeoutSeconds() {
-    return AddActivityTaskRequest_ScheduleToCloseTimeoutSeconds_DEFAULT
+var AddActivityTaskRequest_ScheduleToStartTimeoutSeconds_DEFAULT int32
+func (p *AddActivityTaskRequest) GetScheduleToStartTimeoutSeconds() int32 {
+  if !p.IsSetScheduleToStartTimeoutSeconds() {
+    return AddActivityTaskRequest_ScheduleToStartTimeoutSeconds_DEFAULT
   }
-return *p.ScheduleToCloseTimeoutSeconds
+return *p.ScheduleToStartTimeoutSeconds
 }
 func (p *AddActivityTaskRequest) IsSetDomainUUID() bool {
   return p.DomainUUID != nil
@@ -843,8 +843,8 @@ func (p *AddActivityTaskRequest) IsSetScheduleId() bool {
   return p.ScheduleId != nil
 }
 
-func (p *AddActivityTaskRequest) IsSetScheduleToCloseTimeoutSeconds() bool {
-  return p.ScheduleToCloseTimeoutSeconds != nil
+func (p *AddActivityTaskRequest) IsSetScheduleToStartTimeoutSeconds() bool {
+  return p.ScheduleToStartTimeoutSeconds != nil
 }
 
 func (p *AddActivityTaskRequest) Read(iprot thrift.TProtocol) error {
@@ -946,7 +946,7 @@ func (p *AddActivityTaskRequest)  ReadField60(iprot thrift.TProtocol) error {
   if v, err := iprot.ReadI32(); err != nil {
   return thrift.PrependError("error reading field 60: ", err)
 } else {
-  p.ScheduleToCloseTimeoutSeconds = &v
+  p.ScheduleToStartTimeoutSeconds = &v
 }
   return nil
 }
@@ -1032,13 +1032,13 @@ func (p *AddActivityTaskRequest) writeField50(oprot thrift.TProtocol) (err error
 }
 
 func (p *AddActivityTaskRequest) writeField60(oprot thrift.TProtocol) (err error) {
-  if p.IsSetScheduleToCloseTimeoutSeconds() {
-    if err := oprot.WriteFieldBegin("scheduleToCloseTimeoutSeconds", thrift.I32, 60); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field begin error 60:scheduleToCloseTimeoutSeconds: ", p), err) }
-    if err := oprot.WriteI32(int32(*p.ScheduleToCloseTimeoutSeconds)); err != nil {
-    return thrift.PrependError(fmt.Sprintf("%T.scheduleToCloseTimeoutSeconds (60) field write error: ", p), err) }
+  if p.IsSetScheduleToStartTimeoutSeconds() {
+    if err := oprot.WriteFieldBegin("scheduleToStartTimeoutSeconds", thrift.I32, 60); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 60:scheduleToStartTimeoutSeconds: ", p), err) }
+    if err := oprot.WriteI32(int32(*p.ScheduleToStartTimeoutSeconds)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.scheduleToStartTimeoutSeconds (60) field write error: ", p), err) }
     if err := oprot.WriteFieldEnd(); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field end error 60:scheduleToCloseTimeoutSeconds: ", p), err) }
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 60:scheduleToStartTimeoutSeconds: ", p), err) }
   }
   return err
 }

@@ -321,7 +321,7 @@ workerPump:
 	s.mockHistoryClient.AssertExpectations(s.T())
 }
 
-func createAddRequestFromTask(task *persistence.TransferTaskInfo, scheduleToCloseTimeout int32) interface{} {
+func createAddRequestFromTask(task *persistence.TransferTaskInfo, scheduleToStartTimeout int32) interface{} {
 	var res interface{}
 	domainID := task.DomainID
 	execution := workflow.WorkflowExecution{WorkflowId: common.StringPtr(task.WorkflowID),
@@ -336,7 +336,7 @@ func createAddRequestFromTask(task *persistence.TransferTaskInfo, scheduleToClos
 			Execution:                     &execution,
 			TaskList:                      taskList,
 			ScheduleId:                    &task.ScheduleID,
-			ScheduleToCloseTimeoutSeconds: common.Int32Ptr(scheduleToCloseTimeout),
+			ScheduleToStartTimeoutSeconds: common.Int32Ptr(scheduleToStartTimeout),
 		}
 	} else if task.TaskType == persistence.TransferTaskTypeDecisionTask {
 		res = &m.AddDecisionTaskRequest{

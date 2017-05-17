@@ -214,7 +214,7 @@ func (e *matchingEngineImpl) AddActivityTask(addRequest *m.AddActivityTaskReques
 		RunID:                  addRequest.GetExecution().GetRunId(),
 		WorkflowID:             addRequest.GetExecution().GetWorkflowId(),
 		ScheduleID:             addRequest.GetScheduleId(),
-		ScheduleToCloseTimeout: addRequest.GetScheduleToCloseTimeoutSeconds(),
+		ScheduleToStartTimeout: addRequest.GetScheduleToStartTimeoutSeconds(),
 	}
 	return tlMgr.AddTask(addRequest.GetExecution(), taskInfo)
 }

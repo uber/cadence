@@ -1104,7 +1104,7 @@ func (d *cassandraPersistence) CreateTasks(request *CreateTasksRequest) (*Create
 
 	for _, task := range request.Tasks {
 		scheduleID := task.Data.ScheduleID
-		if task.Data.ScheduleToCloseTimeout == 0 {
+		if task.Data.ScheduleToStartTimeout == 0 {
 			batch.Query(templateCreateTaskQuery,
 				domainID,
 				taskList,
@@ -1126,7 +1126,7 @@ func (d *cassandraPersistence) CreateTasks(request *CreateTasksRequest) (*Create
 				task.Execution.GetWorkflowId(),
 				task.Execution.GetRunId(),
 				scheduleID,
-				task.Data.ScheduleToCloseTimeout)
+				task.Data.ScheduleToStartTimeout)
 		}
 	}
 

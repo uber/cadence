@@ -169,7 +169,7 @@ type (
 		RunID                  string
 		TaskID                 int64
 		ScheduleID             int64
-		ScheduleToCloseTimeout int32
+		ScheduleToStartTimeout int32
 	}
 
 	// Task is the generic interface for workflow tasks

@@ -272,7 +272,7 @@ ProcessRetryLoop:
 								Execution:                     &execution,
 								TaskList:                      taskList,
 								ScheduleId:                    &task.ScheduleID,
-								ScheduleToCloseTimeoutSeconds: common.Int32Ptr(ai.ScheduleToCloseTimeout),
+								ScheduleToStartTimeoutSeconds: common.Int32Ptr(ai.ScheduleToStartTimeout),
 							})
 						} else {
 							logging.LogDuplicateTransferTaskEvent(t.logger, persistence.TransferTaskTypeActivityTask, task.TaskID, task.ScheduleID)
