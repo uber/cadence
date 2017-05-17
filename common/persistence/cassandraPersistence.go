@@ -39,6 +39,7 @@ const (
 	rowTypeExecutionTaskID               = int64(77)
 	permanentRunID                       = "dcb940ac-0c63-ffa2-ffea-a6c305881d71"
 	emptyRunID                           = "2912faa8-274d-f70d-f96d-0ac8cf614799"
+	emptyDomainID                        = "33b14633-5012-ffca-fe51-7d7f3d3e7bb4"
 	rowTypeShardDomainID                 = "85aa26d5-0361-f1d2-f7c0-55f32c164de8"
 	rowTypeShardWorkflowID               = "3fe89dad-8326-fac5-fd40-fe08cfa25dec"
 	rowTypeShardRunID                    = "228ce20b-af54-fe2f-ff17-be728a00f785"
@@ -88,9 +89,11 @@ const (
 		`domain_id: ?, ` +
 		`workflow_id: ?, ` +
 		`run_id: ?, ` +
+		`parent_domain_id: ?, ` +
 		`parent_workflow_id: ?, ` +
 		`parent_run_id: ?, ` +
 		`initiated_id: ?, ` +
+		`completion_event: ?, ` +
 		`task_list: ?, ` +
 		`workflow_type_name: ?, ` +
 		`decision_task_timeout: ?, ` +
@@ -689,10 +692,12 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *Creat
 			request.RequestID)
 	}
 
+	parentDomainID := emptyDomainID
 	parentWorkflowID := ""
 	parentRunID := emptyRunID
 	initiatedID := emptyInitiatedID
 	if request.ParentExecution != nil {
+		parentDomainID = request.ParentDomainID
 		parentWorkflowID = request.ParentExecution.GetWorkflowId()
 		parentRunID = request.ParentExecution.GetRunId()
 		initiatedID = request.InitiatedID
@@ -707,9 +712,11 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *Creat
 		request.DomainID,
 		request.Execution.GetWorkflowId(),
 		request.Execution.GetRunId(),
+		parentDomainID,
 		parentWorkflowID,
 		parentRunID,
 		initiatedID,
+		nil,
 		request.TaskList,
 		request.WorkflowTypeName,
 		request.DecisionTimeoutValue,
@@ -794,9 +801,11 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 		executionInfo.DomainID,
 		executionInfo.WorkflowID,
 		executionInfo.RunID,
+		executionInfo.ParentDomainID,
 		executionInfo.ParentWorkflowID,
 		executionInfo.ParentRunID,
 		executionInfo.InitiatedID,
+		executionInfo.CompletionEvent,
 		executionInfo.TaskList,
 		executionInfo.WorkflowTypeName,
 		executionInfo.DecisionTimeoutValue,
@@ -911,9 +920,11 @@ func (d *cassandraPersistence) DeleteWorkflowExecution(request *DeleteWorkflowEx
 		info.DomainID,
 		info.WorkflowID,
 		info.RunID,
+		info.ParentDomainID,
 		info.ParentWorkflowID,
 		info.ParentRunID,
 		info.InitiatedID,
+		info.CompletionEvent,
 		info.TaskList,
 		info.WorkflowTypeName,
 		info.DecisionTimeoutValue,
@@ -1360,6 +1371,11 @@ func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferT
 			targetWorkflowID = task.(*CancelExecutionTask).TargetWorkflowID
 			targetRunID = task.(*CancelExecutionTask).TargetRunID
 			scheduleID = task.(*CancelExecutionTask).ScheduleID
+
+		case TransferTaskTypeStartChildExecution:
+			targetDomainID = task.(*StartChildExecutionTask).TargetDomainID
+			targetWorkflowID = task.(*StartChildExecutionTask).TargetWorkflowID
+			scheduleID = task.(*StartChildExecutionTask).InitiatedID
 		}
 
 		batch.Query(templateCreateTransferTaskQuery,
@@ -1574,12 +1590,16 @@ func createWorkflowExecutionInfo(result map[string]interface{}) *WorkflowExecuti
 			info.WorkflowID = v.(string)
 		case "run_id":
 			info.RunID = v.(gocql.UUID).String()
+		case "parent_domain_id":
+			info.ParentDomainID = v.(gocql.UUID).String()
 		case "parent_workflow_id":
 			info.ParentWorkflowID = v.(string)
 		case "parent_run_id":
 			info.ParentRunID = v.(gocql.UUID).String()
 		case "initiated_id":
 			info.InitiatedID = v.(int64)
+		case "completion_event":
+			info.CompletionEvent = v.([]byte)
 		case "task_list":
 			info.TaskList = v.(string)
 		case "workflow_type_name":

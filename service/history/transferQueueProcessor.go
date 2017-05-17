@@ -254,7 +254,7 @@ ProcessRetryLoop:
 			domainID := task.DomainID
 			targetDomainID := task.TargetDomainID
 			execution := workflow.WorkflowExecution{WorkflowId: common.StringPtr(task.WorkflowID),
-				RunId: common.StringPtr(task.RunID)}
+				RunId:                                            common.StringPtr(task.RunID)}
 			switch task.TaskType {
 			case persistence.TransferTaskTypeActivityTask:
 				{
@@ -313,6 +313,8 @@ ProcessRetryLoop:
 					var mb *mutableStateBuilder
 					mb, err = context.loadWorkflowExecution()
 					if err == nil {
+						// Communicate the result to parent execution if this is Child Workflow execution
+
 						err = t.visibilityManager.RecordWorkflowExecutionClosed(&persistence.RecordWorkflowExecutionClosedRequest{
 							DomainUUID:       task.DomainID,
 							Execution:        execution,
@@ -358,6 +360,85 @@ ProcessRetryLoop:
 								cancelRequest,
 								task.ScheduleID)
 						}
+						release()
+					}
+				}
+
+			case persistence.TransferTaskTypeStartChildExecution:
+				{
+					var context *workflowExecutionContext
+					var release releaseWorkflowExecutionFunc
+					context, release, err = t.cache.getOrCreateWorkflowExecution(domainID, execution)
+					if err == nil {
+						// Load workflow execution.
+						var msBuilder *mutableStateBuilder
+						msBuilder, err = context.loadWorkflowExecution()
+						if err == nil {
+							initiatedEventID := task.ScheduleID
+							ci, isRunning := msBuilder.GetChildExecutionInfo(initiatedEventID)
+							if isRunning {
+								initiatedEvent, ok := msBuilder.GetChildExecutionInitiatedEvent(initiatedEventID)
+								attributes := initiatedEvent.GetStartChildWorkflowExecutionInitiatedEventAttributes()
+								if ok && ci.StartedID == emptyEventID {
+									startRequest := &history.StartWorkflowExecutionRequest{
+										DomainUUID: common.StringPtr(targetDomainID),
+										StartRequest: &workflow.StartWorkflowExecutionRequest{
+											WorkflowId:                          common.StringPtr(attributes.GetWorkflowId()),
+											WorkflowType:                        attributes.GetWorkflowType(),
+											TaskList:                            attributes.GetTaskList(),
+											Input:                               attributes.GetInput(),
+											ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(attributes.GetExecutionStartToCloseTimeoutSeconds()),
+											TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(attributes.GetTaskStartToCloseTimeoutSeconds()),
+											// Use the same request ID to dedupe StartWorkflowExecution calls
+											RequestId: common.StringPtr(ci.CreateRequestID),
+										},
+										ParentExecutionInfo: &history.ParentExecutionInfo{
+											ParentExecution: &workflow.WorkflowExecution{
+												WorkflowId: common.StringPtr(task.WorkflowID),
+												RunId:      common.StringPtr(task.RunID),
+											},
+											InitiatedId: common.Int64Ptr(initiatedEventID),
+										},
+									}
+
+									var startResponse *workflow.StartWorkflowExecutionResponse
+									startResponse, err = t.historyClient.StartWorkflowExecution(nil, startRequest)
+									if err == nil {
+										startedEvent := msBuilder.AddChildWorkflowExecutionStartedEvent(targetDomainID,
+											&workflow.WorkflowExecution{
+												WorkflowId: common.StringPtr(attributes.GetWorkflowId()),
+												RunId:      common.StringPtr(startResponse.GetRunId()),
+											}, attributes.GetWorkflowType(), initiatedEventID)
+										startedAttributes := startedEvent.GetChildWorkflowExecutionStartedEventAttributes()
+
+										err = t.historyClient.ScheduleDecisionTask(nil, &history.ScheduleDecisionTaskRequest{
+											DomainUUID:        common.StringPtr(targetDomainID),
+											WorkflowExecution: startedAttributes.GetWorkflowExecution(),
+										})
+
+									} else {
+										// Check to see if the error is non-transient, in which case add StartChildWorkflowExecutionFailed
+										// event and complete transfer task by setting the err = nil
+										switch err.(type) {
+										case *workflow.WorkflowExecutionAlreadyStartedError:
+											msBuilder.AddStartChildWorkflowExecutionFailedEvent(initiatedEventID,
+												workflow.ChildWorkflowExecutionFailedCause_WORKFLOW_ALREADY_RUNNING,
+												initiatedEvent.GetStartChildWorkflowExecutionInitiatedEventAttributes())
+											err = nil
+										}
+									}
+								} else {
+									// ChildExecution already started, just create DecisionTask and complete transfer task
+									startedEvent, _ := msBuilder.GetChildExecutionStartedEvent(initiatedEventID)
+									startedAttributes := startedEvent.GetChildWorkflowExecutionStartedEventAttributes()
+									err = t.historyClient.ScheduleDecisionTask(nil, &history.ScheduleDecisionTaskRequest{
+										DomainUUID:        common.StringPtr(targetDomainID),
+										WorkflowExecution: startedAttributes.GetWorkflowExecution(),
+									})
+								}
+							}
+						}
+
 						release()
 					}
 				}

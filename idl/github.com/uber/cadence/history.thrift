@@ -31,9 +31,15 @@ exception ShardOwnershipLostError {
   20: optional string owner
 }
 
+struct ParentExecutionInfo {
+  10: optional shared.WorkflowExecution parentExecution
+  20: optional i64 (js.type = "Long") initiatedId
+}
+
 struct StartWorkflowExecutionRequest {
   10: optional string domainUUID
   20: optional shared.StartWorkflowExecutionRequest startRequest
+  30: optional ParentExecutionInfo parentExecutionInfo
 }
 
 struct GetWorkflowExecutionHistoryRequest {
@@ -106,10 +112,22 @@ struct TerminateWorkflowExecutionRequest {
 }
 
 struct RequestCancelWorkflowExecutionRequest {
-    10: optional string domainUUID
-    20: optional shared.RequestCancelWorkflowExecutionRequest cancelRequest
-    30: optional i64 (js.type = "Long") externalInitiatedEventId
-    40: optional shared.WorkflowExecution externalWorkflowExecution
+  10: optional string domainUUID
+  20: optional shared.RequestCancelWorkflowExecutionRequest cancelRequest
+  30: optional i64 (js.type = "Long") externalInitiatedEventId
+  40: optional shared.WorkflowExecution externalWorkflowExecution
+}
+
+struct ScheduleDecisionTaskRequest {
+  10: optional string domainUUID
+  20: optional shared.WorkflowExecution workflowExecution
+}
+
+struct CompleteChildExecutionRequest {
+  10: optional string domainUUID
+  20: optional shared.WorkflowExecution workflowExecution
+  30: optional i64 (js.type = "Long") initiatedId
+  40: optional shared.HistoryEvent completionEvent
 }
 
 /**
@@ -277,6 +295,22 @@ service HistoryService {
   * anymore due to completion or doesn't exist.
   **/
   void RequestCancelWorkflowExecution(1: RequestCancelWorkflowExecutionRequest cancelRequest)
+    throws (
+      1: shared.BadRequestError badRequestError,
+      2: shared.InternalServiceError internalServiceError,
+      3: shared.EntityNotExistsError entityNotExistError,
+      4: ShardOwnershipLostError shardOwnershipLostError,
+    )
+
+  void ScheduleDecisionTask(1: ScheduleDecisionTaskRequest scheduleRequest)
+    throws (
+      1: shared.BadRequestError badRequestError,
+      2: shared.InternalServiceError internalServiceError,
+      3: shared.EntityNotExistsError entityNotExistError,
+      4: ShardOwnershipLostError shardOwnershipLostError,
+    )
+
+  void CompleteChildExecution(1: CompleteChildExecutionRequest completionRequest)
     throws (
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,

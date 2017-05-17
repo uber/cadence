@@ -360,13 +360,14 @@ func (s *TestBase) CreateWorkflowExecutionManyTasks(domainID string, workflowExe
 
 // CreateWorkflowExecution is a utility method to create workflow executions
 func (s *TestBase) CreateChildWorkflowExecution(domainID string, workflowExecution workflow.WorkflowExecution,
-	parentExecution *workflow.WorkflowExecution, initiatedID int64, taskList, wType string, decisionTimeout int32,
-	executionContext []byte, nextEventID int64, lastProcessedEventID int64, decisionScheduleID int64,
-	timerTasks []Task) (string, error) {
+	parentDomainID string, parentExecution *workflow.WorkflowExecution, initiatedID int64, taskList, wType string,
+	decisionTimeout int32, executionContext []byte, nextEventID int64, lastProcessedEventID int64,
+	decisionScheduleID int64, timerTasks []Task) (string, error) {
 	response, err := s.WorkflowMgr.CreateWorkflowExecution(&CreateWorkflowExecutionRequest{
 		RequestID:            uuid.New(),
 		DomainID:             domainID,
 		Execution:            workflowExecution,
+		ParentDomainID:       parentDomainID,
 		ParentExecution:      parentExecution,
 		InitiatedID:          initiatedID,
 		TaskList:             taskList,

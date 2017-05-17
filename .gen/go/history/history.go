@@ -251,42 +251,42 @@ func (p *ShardOwnershipLostError) Error() string {
 }
 
 // Attributes:
-//  - DomainUUID
-//  - StartRequest
-type StartWorkflowExecutionRequest struct {
+//  - ParentExecution
+//  - InitiatedId
+type ParentExecutionInfo struct {
   // unused fields # 1 to 9
-  DomainUUID *string `thrift:"domainUUID,10" db:"domainUUID" json:"domainUUID,omitempty"`
+  ParentExecution *shared.WorkflowExecution `thrift:"parentExecution,10" db:"parentExecution" json:"parentExecution,omitempty"`
   // unused fields # 11 to 19
-  StartRequest *shared.StartWorkflowExecutionRequest `thrift:"startRequest,20" db:"startRequest" json:"startRequest,omitempty"`
+  InitiatedId *int64 `thrift:"initiatedId,20" db:"initiatedId" json:"initiatedId,omitempty"`
 }
 
-func NewStartWorkflowExecutionRequest() *StartWorkflowExecutionRequest {
-  return &StartWorkflowExecutionRequest{}
+func NewParentExecutionInfo() *ParentExecutionInfo {
+  return &ParentExecutionInfo{}
 }
 
-var StartWorkflowExecutionRequest_DomainUUID_DEFAULT string
-func (p *StartWorkflowExecutionRequest) GetDomainUUID() string {
-  if !p.IsSetDomainUUID() {
-    return StartWorkflowExecutionRequest_DomainUUID_DEFAULT
+var ParentExecutionInfo_ParentExecution_DEFAULT *shared.WorkflowExecution
+func (p *ParentExecutionInfo) GetParentExecution() *shared.WorkflowExecution {
+  if !p.IsSetParentExecution() {
+    return ParentExecutionInfo_ParentExecution_DEFAULT
   }
-return *p.DomainUUID
+return p.ParentExecution
 }
-var StartWorkflowExecutionRequest_StartRequest_DEFAULT *shared.StartWorkflowExecutionRequest
-func (p *StartWorkflowExecutionRequest) GetStartRequest() *shared.StartWorkflowExecutionRequest {
-  if !p.IsSetStartRequest() {
-    return StartWorkflowExecutionRequest_StartRequest_DEFAULT
+var ParentExecutionInfo_InitiatedId_DEFAULT int64
+func (p *ParentExecutionInfo) GetInitiatedId() int64 {
+  if !p.IsSetInitiatedId() {
+    return ParentExecutionInfo_InitiatedId_DEFAULT
   }
-return p.StartRequest
+return *p.InitiatedId
 }
-func (p *StartWorkflowExecutionRequest) IsSetDomainUUID() bool {
-  return p.DomainUUID != nil
-}
-
-func (p *StartWorkflowExecutionRequest) IsSetStartRequest() bool {
-  return p.StartRequest != nil
+func (p *ParentExecutionInfo) IsSetParentExecution() bool {
+  return p.ParentExecution != nil
 }
 
-func (p *StartWorkflowExecutionRequest) Read(iprot thrift.TProtocol) error {
+func (p *ParentExecutionInfo) IsSetInitiatedId() bool {
+  return p.InitiatedId != nil
+}
+
+func (p *ParentExecutionInfo) Read(iprot thrift.TProtocol) error {
   if _, err := iprot.ReadStructBegin(); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
   }
@@ -322,6 +322,159 @@ func (p *StartWorkflowExecutionRequest) Read(iprot thrift.TProtocol) error {
   return nil
 }
 
+func (p *ParentExecutionInfo)  ReadField10(iprot thrift.TProtocol) error {
+  p.ParentExecution = &shared.WorkflowExecution{}
+  if err := p.ParentExecution.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.ParentExecution), err)
+  }
+  return nil
+}
+
+func (p *ParentExecutionInfo)  ReadField20(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI64(); err != nil {
+  return thrift.PrependError("error reading field 20: ", err)
+} else {
+  p.InitiatedId = &v
+}
+  return nil
+}
+
+func (p *ParentExecutionInfo) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("ParentExecutionInfo"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField10(oprot); err != nil { return err }
+    if err := p.writeField20(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *ParentExecutionInfo) writeField10(oprot thrift.TProtocol) (err error) {
+  if p.IsSetParentExecution() {
+    if err := oprot.WriteFieldBegin("parentExecution", thrift.STRUCT, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:parentExecution: ", p), err) }
+    if err := p.ParentExecution.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.ParentExecution), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:parentExecution: ", p), err) }
+  }
+  return err
+}
+
+func (p *ParentExecutionInfo) writeField20(oprot thrift.TProtocol) (err error) {
+  if p.IsSetInitiatedId() {
+    if err := oprot.WriteFieldBegin("initiatedId", thrift.I64, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:initiatedId: ", p), err) }
+    if err := oprot.WriteI64(int64(*p.InitiatedId)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.initiatedId (20) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:initiatedId: ", p), err) }
+  }
+  return err
+}
+
+func (p *ParentExecutionInfo) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("ParentExecutionInfo(%+v)", *p)
+}
+
+// Attributes:
+//  - DomainUUID
+//  - StartRequest
+//  - ParentExecutionInfo
+type StartWorkflowExecutionRequest struct {
+  // unused fields # 1 to 9
+  DomainUUID *string `thrift:"domainUUID,10" db:"domainUUID" json:"domainUUID,omitempty"`
+  // unused fields # 11 to 19
+  StartRequest *shared.StartWorkflowExecutionRequest `thrift:"startRequest,20" db:"startRequest" json:"startRequest,omitempty"`
+  // unused fields # 21 to 29
+  ParentExecutionInfo *ParentExecutionInfo `thrift:"parentExecutionInfo,30" db:"parentExecutionInfo" json:"parentExecutionInfo,omitempty"`
+}
+
+func NewStartWorkflowExecutionRequest() *StartWorkflowExecutionRequest {
+  return &StartWorkflowExecutionRequest{}
+}
+
+var StartWorkflowExecutionRequest_DomainUUID_DEFAULT string
+func (p *StartWorkflowExecutionRequest) GetDomainUUID() string {
+  if !p.IsSetDomainUUID() {
+    return StartWorkflowExecutionRequest_DomainUUID_DEFAULT
+  }
+return *p.DomainUUID
+}
+var StartWorkflowExecutionRequest_StartRequest_DEFAULT *shared.StartWorkflowExecutionRequest
+func (p *StartWorkflowExecutionRequest) GetStartRequest() *shared.StartWorkflowExecutionRequest {
+  if !p.IsSetStartRequest() {
+    return StartWorkflowExecutionRequest_StartRequest_DEFAULT
+  }
+return p.StartRequest
+}
+var StartWorkflowExecutionRequest_ParentExecutionInfo_DEFAULT *ParentExecutionInfo
+func (p *StartWorkflowExecutionRequest) GetParentExecutionInfo() *ParentExecutionInfo {
+  if !p.IsSetParentExecutionInfo() {
+    return StartWorkflowExecutionRequest_ParentExecutionInfo_DEFAULT
+  }
+return p.ParentExecutionInfo
+}
+func (p *StartWorkflowExecutionRequest) IsSetDomainUUID() bool {
+  return p.DomainUUID != nil
+}
+
+func (p *StartWorkflowExecutionRequest) IsSetStartRequest() bool {
+  return p.StartRequest != nil
+}
+
+func (p *StartWorkflowExecutionRequest) IsSetParentExecutionInfo() bool {
+  return p.ParentExecutionInfo != nil
+}
+
+func (p *StartWorkflowExecutionRequest) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 10:
+      if err := p.ReadField10(iprot); err != nil {
+        return err
+      }
+    case 20:
+      if err := p.ReadField20(iprot); err != nil {
+        return err
+      }
+    case 30:
+      if err := p.ReadField30(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
 func (p *StartWorkflowExecutionRequest)  ReadField10(iprot thrift.TProtocol) error {
   if v, err := iprot.ReadString(); err != nil {
   return thrift.PrependError("error reading field 10: ", err)
@@ -339,12 +492,21 @@ func (p *StartWorkflowExecutionRequest)  ReadField20(iprot thrift.TProtocol) err
   return nil
 }
 
+func (p *StartWorkflowExecutionRequest)  ReadField30(iprot thrift.TProtocol) error {
+  p.ParentExecutionInfo = &ParentExecutionInfo{}
+  if err := p.ParentExecutionInfo.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.ParentExecutionInfo), err)
+  }
+  return nil
+}
+
 func (p *StartWorkflowExecutionRequest) Write(oprot thrift.TProtocol) error {
   if err := oprot.WriteStructBegin("StartWorkflowExecutionRequest"); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
   if p != nil {
     if err := p.writeField10(oprot); err != nil { return err }
     if err := p.writeField20(oprot); err != nil { return err }
+    if err := p.writeField30(oprot); err != nil { return err }
   }
   if err := oprot.WriteFieldStop(); err != nil {
     return thrift.PrependError("write field stop error: ", err) }
@@ -374,6 +536,19 @@ func (p *StartWorkflowExecutionRequest) writeField20(oprot thrift.TProtocol) (er
     }
     if err := oprot.WriteFieldEnd(); err != nil {
       return thrift.PrependError(fmt.Sprintf("%T write field end error 20:startRequest: ", p), err) }
+  }
+  return err
+}
+
+func (p *StartWorkflowExecutionRequest) writeField30(oprot thrift.TProtocol) (err error) {
+  if p.IsSetParentExecutionInfo() {
+    if err := oprot.WriteFieldBegin("parentExecutionInfo", thrift.STRUCT, 30); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 30:parentExecutionInfo: ", p), err) }
+    if err := p.ParentExecutionInfo.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.ParentExecutionInfo), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 30:parentExecutionInfo: ", p), err) }
   }
   return err
 }
@@ -2580,6 +2755,356 @@ func (p *RequestCancelWorkflowExecutionRequest) String() string {
   return fmt.Sprintf("RequestCancelWorkflowExecutionRequest(%+v)", *p)
 }
 
+// Attributes:
+//  - DomainUUID
+//  - WorkflowExecution
+type ScheduleDecisionTaskRequest struct {
+  // unused fields # 1 to 9
+  DomainUUID *string `thrift:"domainUUID,10" db:"domainUUID" json:"domainUUID,omitempty"`
+  // unused fields # 11 to 19
+  WorkflowExecution *shared.WorkflowExecution `thrift:"workflowExecution,20" db:"workflowExecution" json:"workflowExecution,omitempty"`
+}
+
+func NewScheduleDecisionTaskRequest() *ScheduleDecisionTaskRequest {
+  return &ScheduleDecisionTaskRequest{}
+}
+
+var ScheduleDecisionTaskRequest_DomainUUID_DEFAULT string
+func (p *ScheduleDecisionTaskRequest) GetDomainUUID() string {
+  if !p.IsSetDomainUUID() {
+    return ScheduleDecisionTaskRequest_DomainUUID_DEFAULT
+  }
+return *p.DomainUUID
+}
+var ScheduleDecisionTaskRequest_WorkflowExecution_DEFAULT *shared.WorkflowExecution
+func (p *ScheduleDecisionTaskRequest) GetWorkflowExecution() *shared.WorkflowExecution {
+  if !p.IsSetWorkflowExecution() {
+    return ScheduleDecisionTaskRequest_WorkflowExecution_DEFAULT
+  }
+return p.WorkflowExecution
+}
+func (p *ScheduleDecisionTaskRequest) IsSetDomainUUID() bool {
+  return p.DomainUUID != nil
+}
+
+func (p *ScheduleDecisionTaskRequest) IsSetWorkflowExecution() bool {
+  return p.WorkflowExecution != nil
+}
+
+func (p *ScheduleDecisionTaskRequest) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 10:
+      if err := p.ReadField10(iprot); err != nil {
+        return err
+      }
+    case 20:
+      if err := p.ReadField20(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *ScheduleDecisionTaskRequest)  ReadField10(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 10: ", err)
+} else {
+  p.DomainUUID = &v
+}
+  return nil
+}
+
+func (p *ScheduleDecisionTaskRequest)  ReadField20(iprot thrift.TProtocol) error {
+  p.WorkflowExecution = &shared.WorkflowExecution{}
+  if err := p.WorkflowExecution.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.WorkflowExecution), err)
+  }
+  return nil
+}
+
+func (p *ScheduleDecisionTaskRequest) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("ScheduleDecisionTaskRequest"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField10(oprot); err != nil { return err }
+    if err := p.writeField20(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *ScheduleDecisionTaskRequest) writeField10(oprot thrift.TProtocol) (err error) {
+  if p.IsSetDomainUUID() {
+    if err := oprot.WriteFieldBegin("domainUUID", thrift.STRING, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:domainUUID: ", p), err) }
+    if err := oprot.WriteString(string(*p.DomainUUID)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.domainUUID (10) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:domainUUID: ", p), err) }
+  }
+  return err
+}
+
+func (p *ScheduleDecisionTaskRequest) writeField20(oprot thrift.TProtocol) (err error) {
+  if p.IsSetWorkflowExecution() {
+    if err := oprot.WriteFieldBegin("workflowExecution", thrift.STRUCT, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:workflowExecution: ", p), err) }
+    if err := p.WorkflowExecution.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.WorkflowExecution), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:workflowExecution: ", p), err) }
+  }
+  return err
+}
+
+func (p *ScheduleDecisionTaskRequest) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("ScheduleDecisionTaskRequest(%+v)", *p)
+}
+
+// Attributes:
+//  - DomainUUID
+//  - WorkflowExecution
+//  - InitiatedId
+//  - CompletionEvent
+type CompleteChildExecutionRequest struct {
+  // unused fields # 1 to 9
+  DomainUUID *string `thrift:"domainUUID,10" db:"domainUUID" json:"domainUUID,omitempty"`
+  // unused fields # 11 to 19
+  WorkflowExecution *shared.WorkflowExecution `thrift:"workflowExecution,20" db:"workflowExecution" json:"workflowExecution,omitempty"`
+  // unused fields # 21 to 29
+  InitiatedId *int64 `thrift:"initiatedId,30" db:"initiatedId" json:"initiatedId,omitempty"`
+  // unused fields # 31 to 39
+  CompletionEvent *shared.HistoryEvent `thrift:"completionEvent,40" db:"completionEvent" json:"completionEvent,omitempty"`
+}
+
+func NewCompleteChildExecutionRequest() *CompleteChildExecutionRequest {
+  return &CompleteChildExecutionRequest{}
+}
+
+var CompleteChildExecutionRequest_DomainUUID_DEFAULT string
+func (p *CompleteChildExecutionRequest) GetDomainUUID() string {
+  if !p.IsSetDomainUUID() {
+    return CompleteChildExecutionRequest_DomainUUID_DEFAULT
+  }
+return *p.DomainUUID
+}
+var CompleteChildExecutionRequest_WorkflowExecution_DEFAULT *shared.WorkflowExecution
+func (p *CompleteChildExecutionRequest) GetWorkflowExecution() *shared.WorkflowExecution {
+  if !p.IsSetWorkflowExecution() {
+    return CompleteChildExecutionRequest_WorkflowExecution_DEFAULT
+  }
+return p.WorkflowExecution
+}
+var CompleteChildExecutionRequest_InitiatedId_DEFAULT int64
+func (p *CompleteChildExecutionRequest) GetInitiatedId() int64 {
+  if !p.IsSetInitiatedId() {
+    return CompleteChildExecutionRequest_InitiatedId_DEFAULT
+  }
+return *p.InitiatedId
+}
+var CompleteChildExecutionRequest_CompletionEvent_DEFAULT *shared.HistoryEvent
+func (p *CompleteChildExecutionRequest) GetCompletionEvent() *shared.HistoryEvent {
+  if !p.IsSetCompletionEvent() {
+    return CompleteChildExecutionRequest_CompletionEvent_DEFAULT
+  }
+return p.CompletionEvent
+}
+func (p *CompleteChildExecutionRequest) IsSetDomainUUID() bool {
+  return p.DomainUUID != nil
+}
+
+func (p *CompleteChildExecutionRequest) IsSetWorkflowExecution() bool {
+  return p.WorkflowExecution != nil
+}
+
+func (p *CompleteChildExecutionRequest) IsSetInitiatedId() bool {
+  return p.InitiatedId != nil
+}
+
+func (p *CompleteChildExecutionRequest) IsSetCompletionEvent() bool {
+  return p.CompletionEvent != nil
+}
+
+func (p *CompleteChildExecutionRequest) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 10:
+      if err := p.ReadField10(iprot); err != nil {
+        return err
+      }
+    case 20:
+      if err := p.ReadField20(iprot); err != nil {
+        return err
+      }
+    case 30:
+      if err := p.ReadField30(iprot); err != nil {
+        return err
+      }
+    case 40:
+      if err := p.ReadField40(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *CompleteChildExecutionRequest)  ReadField10(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 10: ", err)
+} else {
+  p.DomainUUID = &v
+}
+  return nil
+}
+
+func (p *CompleteChildExecutionRequest)  ReadField20(iprot thrift.TProtocol) error {
+  p.WorkflowExecution = &shared.WorkflowExecution{}
+  if err := p.WorkflowExecution.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.WorkflowExecution), err)
+  }
+  return nil
+}
+
+func (p *CompleteChildExecutionRequest)  ReadField30(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI64(); err != nil {
+  return thrift.PrependError("error reading field 30: ", err)
+} else {
+  p.InitiatedId = &v
+}
+  return nil
+}
+
+func (p *CompleteChildExecutionRequest)  ReadField40(iprot thrift.TProtocol) error {
+  p.CompletionEvent = &shared.HistoryEvent{}
+  if err := p.CompletionEvent.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.CompletionEvent), err)
+  }
+  return nil
+}
+
+func (p *CompleteChildExecutionRequest) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("CompleteChildExecutionRequest"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField10(oprot); err != nil { return err }
+    if err := p.writeField20(oprot); err != nil { return err }
+    if err := p.writeField30(oprot); err != nil { return err }
+    if err := p.writeField40(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *CompleteChildExecutionRequest) writeField10(oprot thrift.TProtocol) (err error) {
+  if p.IsSetDomainUUID() {
+    if err := oprot.WriteFieldBegin("domainUUID", thrift.STRING, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:domainUUID: ", p), err) }
+    if err := oprot.WriteString(string(*p.DomainUUID)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.domainUUID (10) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:domainUUID: ", p), err) }
+  }
+  return err
+}
+
+func (p *CompleteChildExecutionRequest) writeField20(oprot thrift.TProtocol) (err error) {
+  if p.IsSetWorkflowExecution() {
+    if err := oprot.WriteFieldBegin("workflowExecution", thrift.STRUCT, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:workflowExecution: ", p), err) }
+    if err := p.WorkflowExecution.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.WorkflowExecution), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:workflowExecution: ", p), err) }
+  }
+  return err
+}
+
+func (p *CompleteChildExecutionRequest) writeField30(oprot thrift.TProtocol) (err error) {
+  if p.IsSetInitiatedId() {
+    if err := oprot.WriteFieldBegin("initiatedId", thrift.I64, 30); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 30:initiatedId: ", p), err) }
+    if err := oprot.WriteI64(int64(*p.InitiatedId)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.initiatedId (30) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 30:initiatedId: ", p), err) }
+  }
+  return err
+}
+
+func (p *CompleteChildExecutionRequest) writeField40(oprot thrift.TProtocol) (err error) {
+  if p.IsSetCompletionEvent() {
+    if err := oprot.WriteFieldBegin("completionEvent", thrift.STRUCT, 40); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 40:completionEvent: ", p), err) }
+    if err := p.CompletionEvent.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.CompletionEvent), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 40:completionEvent: ", p), err) }
+  }
+  return err
+}
+
+func (p *CompleteChildExecutionRequest) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("CompleteChildExecutionRequest(%+v)", *p)
+}
+
 type HistoryService interface {  //HistoryService provides API to start a new long running workflow instance, as well as query and update the history
   //of workflow instances already created.
   //
@@ -2689,6 +3214,12 @@ type HistoryService interface {  //HistoryService provides API to start a new lo
   // Parameters:
   //  - CancelRequest
   RequestCancelWorkflowExecution(cancelRequest *RequestCancelWorkflowExecutionRequest) (err error)
+  // Parameters:
+  //  - ScheduleRequest
+  ScheduleDecisionTask(scheduleRequest *ScheduleDecisionTaskRequest) (err error)
+  // Parameters:
+  //  - CompletionRequest
+  CompleteChildExecution(completionRequest *CompleteChildExecutionRequest) (err error)
 }
 
 //HistoryService provides API to start a new long running workflow instance, as well as query and update the history
@@ -3856,6 +4387,182 @@ func (p *HistoryServiceClient) recvRequestCancelWorkflowExecution() (err error) 
   return
 }
 
+// Parameters:
+//  - ScheduleRequest
+func (p *HistoryServiceClient) ScheduleDecisionTask(scheduleRequest *ScheduleDecisionTaskRequest) (err error) {
+  if err = p.sendScheduleDecisionTask(scheduleRequest); err != nil { return }
+  return p.recvScheduleDecisionTask()
+}
+
+func (p *HistoryServiceClient) sendScheduleDecisionTask(scheduleRequest *ScheduleDecisionTaskRequest)(err error) {
+  oprot := p.OutputProtocol
+  if oprot == nil {
+    oprot = p.ProtocolFactory.GetProtocol(p.Transport)
+    p.OutputProtocol = oprot
+  }
+  p.SeqId++
+  if err = oprot.WriteMessageBegin("ScheduleDecisionTask", thrift.CALL, p.SeqId); err != nil {
+      return
+  }
+  args := HistoryServiceScheduleDecisionTaskArgs{
+  ScheduleRequest : scheduleRequest,
+  }
+  if err = args.Write(oprot); err != nil {
+      return
+  }
+  if err = oprot.WriteMessageEnd(); err != nil {
+      return
+  }
+  return oprot.Flush()
+}
+
+
+func (p *HistoryServiceClient) recvScheduleDecisionTask() (err error) {
+  iprot := p.InputProtocol
+  if iprot == nil {
+    iprot = p.ProtocolFactory.GetProtocol(p.Transport)
+    p.InputProtocol = iprot
+  }
+  method, mTypeId, seqId, err := iprot.ReadMessageBegin()
+  if err != nil {
+    return
+  }
+  if method != "ScheduleDecisionTask" {
+    err = thrift.NewTApplicationException(thrift.WRONG_METHOD_NAME, "ScheduleDecisionTask failed: wrong method name")
+    return
+  }
+  if p.SeqId != seqId {
+    err = thrift.NewTApplicationException(thrift.BAD_SEQUENCE_ID, "ScheduleDecisionTask failed: out of sequence response")
+    return
+  }
+  if mTypeId == thrift.EXCEPTION {
+    error24 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
+    var error25 error
+    error25, err = error24.Read(iprot)
+    if err != nil {
+      return
+    }
+    if err = iprot.ReadMessageEnd(); err != nil {
+      return
+    }
+    err = error25
+    return
+  }
+  if mTypeId != thrift.REPLY {
+    err = thrift.NewTApplicationException(thrift.INVALID_MESSAGE_TYPE_EXCEPTION, "ScheduleDecisionTask failed: invalid message type")
+    return
+  }
+  result := HistoryServiceScheduleDecisionTaskResult{}
+  if err = result.Read(iprot); err != nil {
+    return
+  }
+  if err = iprot.ReadMessageEnd(); err != nil {
+    return
+  }
+  if result.BadRequestError != nil {
+    err = result.BadRequestError
+    return 
+  } else   if result.InternalServiceError != nil {
+    err = result.InternalServiceError
+    return 
+  } else   if result.EntityNotExistError != nil {
+    err = result.EntityNotExistError
+    return 
+  } else   if result.ShardOwnershipLostError != nil {
+    err = result.ShardOwnershipLostError
+    return 
+  }
+  return
+}
+
+// Parameters:
+//  - CompletionRequest
+func (p *HistoryServiceClient) CompleteChildExecution(completionRequest *CompleteChildExecutionRequest) (err error) {
+  if err = p.sendCompleteChildExecution(completionRequest); err != nil { return }
+  return p.recvCompleteChildExecution()
+}
+
+func (p *HistoryServiceClient) sendCompleteChildExecution(completionRequest *CompleteChildExecutionRequest)(err error) {
+  oprot := p.OutputProtocol
+  if oprot == nil {
+    oprot = p.ProtocolFactory.GetProtocol(p.Transport)
+    p.OutputProtocol = oprot
+  }
+  p.SeqId++
+  if err = oprot.WriteMessageBegin("CompleteChildExecution", thrift.CALL, p.SeqId); err != nil {
+      return
+  }
+  args := HistoryServiceCompleteChildExecutionArgs{
+  CompletionRequest : completionRequest,
+  }
+  if err = args.Write(oprot); err != nil {
+      return
+  }
+  if err = oprot.WriteMessageEnd(); err != nil {
+      return
+  }
+  return oprot.Flush()
+}
+
+
+func (p *HistoryServiceClient) recvCompleteChildExecution() (err error) {
+  iprot := p.InputProtocol
+  if iprot == nil {
+    iprot = p.ProtocolFactory.GetProtocol(p.Transport)
+    p.InputProtocol = iprot
+  }
+  method, mTypeId, seqId, err := iprot.ReadMessageBegin()
+  if err != nil {
+    return
+  }
+  if method != "CompleteChildExecution" {
+    err = thrift.NewTApplicationException(thrift.WRONG_METHOD_NAME, "CompleteChildExecution failed: wrong method name")
+    return
+  }
+  if p.SeqId != seqId {
+    err = thrift.NewTApplicationException(thrift.BAD_SEQUENCE_ID, "CompleteChildExecution failed: out of sequence response")
+    return
+  }
+  if mTypeId == thrift.EXCEPTION {
+    error26 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
+    var error27 error
+    error27, err = error26.Read(iprot)
+    if err != nil {
+      return
+    }
+    if err = iprot.ReadMessageEnd(); err != nil {
+      return
+    }
+    err = error27
+    return
+  }
+  if mTypeId != thrift.REPLY {
+    err = thrift.NewTApplicationException(thrift.INVALID_MESSAGE_TYPE_EXCEPTION, "CompleteChildExecution failed: invalid message type")
+    return
+  }
+  result := HistoryServiceCompleteChildExecutionResult{}
+  if err = result.Read(iprot); err != nil {
+    return
+  }
+  if err = iprot.ReadMessageEnd(); err != nil {
+    return
+  }
+  if result.BadRequestError != nil {
+    err = result.BadRequestError
+    return 
+  } else   if result.InternalServiceError != nil {
+    err = result.InternalServiceError
+    return 
+  } else   if result.EntityNotExistError != nil {
+    err = result.EntityNotExistError
+    return 
+  } else   if result.ShardOwnershipLostError != nil {
+    err = result.ShardOwnershipLostError
+    return 
+  }
+  return
+}
+
 
 type HistoryServiceProcessor struct {
   processorMap map[string]thrift.TProcessorFunction
@@ -3877,20 +4584,22 @@ func (p *HistoryServiceProcessor) ProcessorMap() map[string]thrift.TProcessorFun
 
 func NewHistoryServiceProcessor(handler HistoryService) *HistoryServiceProcessor {
 
-  self24 := &HistoryServiceProcessor{handler:handler, processorMap:make(map[string]thrift.TProcessorFunction)}
-  self24.processorMap["StartWorkflowExecution"] = &historyServiceProcessorStartWorkflowExecution{handler:handler}
-  self24.processorMap["GetWorkflowExecutionHistory"] = &historyServiceProcessorGetWorkflowExecutionHistory{handler:handler}
-  self24.processorMap["RecordDecisionTaskStarted"] = &historyServiceProcessorRecordDecisionTaskStarted{handler:handler}
-  self24.processorMap["RecordActivityTaskStarted"] = &historyServiceProcessorRecordActivityTaskStarted{handler:handler}
-  self24.processorMap["RespondDecisionTaskCompleted"] = &historyServiceProcessorRespondDecisionTaskCompleted{handler:handler}
-  self24.processorMap["RecordActivityTaskHeartbeat"] = &historyServiceProcessorRecordActivityTaskHeartbeat{handler:handler}
-  self24.processorMap["RespondActivityTaskCompleted"] = &historyServiceProcessorRespondActivityTaskCompleted{handler:handler}
-  self24.processorMap["RespondActivityTaskFailed"] = &historyServiceProcessorRespondActivityTaskFailed{handler:handler}
-  self24.processorMap["RespondActivityTaskCanceled"] = &historyServiceProcessorRespondActivityTaskCanceled{handler:handler}
-  self24.processorMap["SignalWorkflowExecution"] = &historyServiceProcessorSignalWorkflowExecution{handler:handler}
-  self24.processorMap["TerminateWorkflowExecution"] = &historyServiceProcessorTerminateWorkflowExecution{handler:handler}
-  self24.processorMap["RequestCancelWorkflowExecution"] = &historyServiceProcessorRequestCancelWorkflowExecution{handler:handler}
-return self24
+  self28 := &HistoryServiceProcessor{handler:handler, processorMap:make(map[string]thrift.TProcessorFunction)}
+  self28.processorMap["StartWorkflowExecution"] = &historyServiceProcessorStartWorkflowExecution{handler:handler}
+  self28.processorMap["GetWorkflowExecutionHistory"] = &historyServiceProcessorGetWorkflowExecutionHistory{handler:handler}
+  self28.processorMap["RecordDecisionTaskStarted"] = &historyServiceProcessorRecordDecisionTaskStarted{handler:handler}
+  self28.processorMap["RecordActivityTaskStarted"] = &historyServiceProcessorRecordActivityTaskStarted{handler:handler}
+  self28.processorMap["RespondDecisionTaskCompleted"] = &historyServiceProcessorRespondDecisionTaskCompleted{handler:handler}
+  self28.processorMap["RecordActivityTaskHeartbeat"] = &historyServiceProcessorRecordActivityTaskHeartbeat{handler:handler}
+  self28.processorMap["RespondActivityTaskCompleted"] = &historyServiceProcessorRespondActivityTaskCompleted{handler:handler}
+  self28.processorMap["RespondActivityTaskFailed"] = &historyServiceProcessorRespondActivityTaskFailed{handler:handler}
+  self28.processorMap["RespondActivityTaskCanceled"] = &historyServiceProcessorRespondActivityTaskCanceled{handler:handler}
+  self28.processorMap["SignalWorkflowExecution"] = &historyServiceProcessorSignalWorkflowExecution{handler:handler}
+  self28.processorMap["TerminateWorkflowExecution"] = &historyServiceProcessorTerminateWorkflowExecution{handler:handler}
+  self28.processorMap["RequestCancelWorkflowExecution"] = &historyServiceProcessorRequestCancelWorkflowExecution{handler:handler}
+  self28.processorMap["ScheduleDecisionTask"] = &historyServiceProcessorScheduleDecisionTask{handler:handler}
+  self28.processorMap["CompleteChildExecution"] = &historyServiceProcessorCompleteChildExecution{handler:handler}
+return self28
 }
 
 func (p *HistoryServiceProcessor) Process(iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -3901,12 +4610,12 @@ func (p *HistoryServiceProcessor) Process(iprot, oprot thrift.TProtocol) (succes
   }
   iprot.Skip(thrift.STRUCT)
   iprot.ReadMessageEnd()
-  x25 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function " + name)
+  x29 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function " + name)
   oprot.WriteMessageBegin(name, thrift.EXCEPTION, seqId)
-  x25.Write(oprot)
+  x29.Write(oprot)
   oprot.WriteMessageEnd()
   oprot.Flush()
-  return false, x25
+  return false, x29
 
 }
 
@@ -4584,6 +5293,118 @@ func (p *historyServiceProcessorRequestCancelWorkflowExecution) Process(seqId in
   }
   }
   if err2 = oprot.WriteMessageBegin("RequestCancelWorkflowExecution", thrift.REPLY, seqId); err2 != nil {
+    err = err2
+  }
+  if err2 = result.Write(oprot); err == nil && err2 != nil {
+    err = err2
+  }
+  if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+    err = err2
+  }
+  if err2 = oprot.Flush(); err == nil && err2 != nil {
+    err = err2
+  }
+  if err != nil {
+    return
+  }
+  return true, err
+}
+
+type historyServiceProcessorScheduleDecisionTask struct {
+  handler HistoryService
+}
+
+func (p *historyServiceProcessorScheduleDecisionTask) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+  args := HistoryServiceScheduleDecisionTaskArgs{}
+  if err = args.Read(iprot); err != nil {
+    iprot.ReadMessageEnd()
+    x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+    oprot.WriteMessageBegin("ScheduleDecisionTask", thrift.EXCEPTION, seqId)
+    x.Write(oprot)
+    oprot.WriteMessageEnd()
+    oprot.Flush()
+    return false, err
+  }
+
+  iprot.ReadMessageEnd()
+  result := HistoryServiceScheduleDecisionTaskResult{}
+  var err2 error
+  if err2 = p.handler.ScheduleDecisionTask(args.ScheduleRequest); err2 != nil {
+  switch v := err2.(type) {
+    case *shared.BadRequestError:
+  result.BadRequestError = v
+    case *shared.InternalServiceError:
+  result.InternalServiceError = v
+    case *shared.EntityNotExistsError:
+  result.EntityNotExistError = v
+    case *ShardOwnershipLostError:
+  result.ShardOwnershipLostError = v
+    default:
+    x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing ScheduleDecisionTask: " + err2.Error())
+    oprot.WriteMessageBegin("ScheduleDecisionTask", thrift.EXCEPTION, seqId)
+    x.Write(oprot)
+    oprot.WriteMessageEnd()
+    oprot.Flush()
+    return true, err2
+  }
+  }
+  if err2 = oprot.WriteMessageBegin("ScheduleDecisionTask", thrift.REPLY, seqId); err2 != nil {
+    err = err2
+  }
+  if err2 = result.Write(oprot); err == nil && err2 != nil {
+    err = err2
+  }
+  if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+    err = err2
+  }
+  if err2 = oprot.Flush(); err == nil && err2 != nil {
+    err = err2
+  }
+  if err != nil {
+    return
+  }
+  return true, err
+}
+
+type historyServiceProcessorCompleteChildExecution struct {
+  handler HistoryService
+}
+
+func (p *historyServiceProcessorCompleteChildExecution) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+  args := HistoryServiceCompleteChildExecutionArgs{}
+  if err = args.Read(iprot); err != nil {
+    iprot.ReadMessageEnd()
+    x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+    oprot.WriteMessageBegin("CompleteChildExecution", thrift.EXCEPTION, seqId)
+    x.Write(oprot)
+    oprot.WriteMessageEnd()
+    oprot.Flush()
+    return false, err
+  }
+
+  iprot.ReadMessageEnd()
+  result := HistoryServiceCompleteChildExecutionResult{}
+  var err2 error
+  if err2 = p.handler.CompleteChildExecution(args.CompletionRequest); err2 != nil {
+  switch v := err2.(type) {
+    case *shared.BadRequestError:
+  result.BadRequestError = v
+    case *shared.InternalServiceError:
+  result.InternalServiceError = v
+    case *shared.EntityNotExistsError:
+  result.EntityNotExistError = v
+    case *ShardOwnershipLostError:
+  result.ShardOwnershipLostError = v
+    default:
+    x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing CompleteChildExecution: " + err2.Error())
+    oprot.WriteMessageBegin("CompleteChildExecution", thrift.EXCEPTION, seqId)
+    x.Write(oprot)
+    oprot.WriteMessageEnd()
+    oprot.Flush()
+    return true, err2
+  }
+  }
+  if err2 = oprot.WriteMessageBegin("CompleteChildExecution", thrift.REPLY, seqId); err2 != nil {
     err = err2
   }
   if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -8511,6 +9332,612 @@ func (p *HistoryServiceRequestCancelWorkflowExecutionResult) String() string {
     return "<nil>"
   }
   return fmt.Sprintf("HistoryServiceRequestCancelWorkflowExecutionResult(%+v)", *p)
+}
+
+// Attributes:
+//  - ScheduleRequest
+type HistoryServiceScheduleDecisionTaskArgs struct {
+  ScheduleRequest *ScheduleDecisionTaskRequest `thrift:"scheduleRequest,1" db:"scheduleRequest" json:"scheduleRequest"`
+}
+
+func NewHistoryServiceScheduleDecisionTaskArgs() *HistoryServiceScheduleDecisionTaskArgs {
+  return &HistoryServiceScheduleDecisionTaskArgs{}
+}
+
+var HistoryServiceScheduleDecisionTaskArgs_ScheduleRequest_DEFAULT *ScheduleDecisionTaskRequest
+func (p *HistoryServiceScheduleDecisionTaskArgs) GetScheduleRequest() *ScheduleDecisionTaskRequest {
+  if !p.IsSetScheduleRequest() {
+    return HistoryServiceScheduleDecisionTaskArgs_ScheduleRequest_DEFAULT
+  }
+return p.ScheduleRequest
+}
+func (p *HistoryServiceScheduleDecisionTaskArgs) IsSetScheduleRequest() bool {
+  return p.ScheduleRequest != nil
+}
+
+func (p *HistoryServiceScheduleDecisionTaskArgs) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 1:
+      if err := p.ReadField1(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *HistoryServiceScheduleDecisionTaskArgs)  ReadField1(iprot thrift.TProtocol) error {
+  p.ScheduleRequest = &ScheduleDecisionTaskRequest{}
+  if err := p.ScheduleRequest.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.ScheduleRequest), err)
+  }
+  return nil
+}
+
+func (p *HistoryServiceScheduleDecisionTaskArgs) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("ScheduleDecisionTask_args"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField1(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *HistoryServiceScheduleDecisionTaskArgs) writeField1(oprot thrift.TProtocol) (err error) {
+  if err := oprot.WriteFieldBegin("scheduleRequest", thrift.STRUCT, 1); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:scheduleRequest: ", p), err) }
+  if err := p.ScheduleRequest.Write(oprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.ScheduleRequest), err)
+  }
+  if err := oprot.WriteFieldEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 1:scheduleRequest: ", p), err) }
+  return err
+}
+
+func (p *HistoryServiceScheduleDecisionTaskArgs) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("HistoryServiceScheduleDecisionTaskArgs(%+v)", *p)
+}
+
+// Attributes:
+//  - BadRequestError
+//  - InternalServiceError
+//  - EntityNotExistError
+//  - ShardOwnershipLostError
+type HistoryServiceScheduleDecisionTaskResult struct {
+  BadRequestError *shared.BadRequestError `thrift:"badRequestError,1" db:"badRequestError" json:"badRequestError,omitempty"`
+  InternalServiceError *shared.InternalServiceError `thrift:"internalServiceError,2" db:"internalServiceError" json:"internalServiceError,omitempty"`
+  EntityNotExistError *shared.EntityNotExistsError `thrift:"entityNotExistError,3" db:"entityNotExistError" json:"entityNotExistError,omitempty"`
+  ShardOwnershipLostError *ShardOwnershipLostError `thrift:"shardOwnershipLostError,4" db:"shardOwnershipLostError" json:"shardOwnershipLostError,omitempty"`
+}
+
+func NewHistoryServiceScheduleDecisionTaskResult() *HistoryServiceScheduleDecisionTaskResult {
+  return &HistoryServiceScheduleDecisionTaskResult{}
+}
+
+var HistoryServiceScheduleDecisionTaskResult_BadRequestError_DEFAULT *shared.BadRequestError
+func (p *HistoryServiceScheduleDecisionTaskResult) GetBadRequestError() *shared.BadRequestError {
+  if !p.IsSetBadRequestError() {
+    return HistoryServiceScheduleDecisionTaskResult_BadRequestError_DEFAULT
+  }
+return p.BadRequestError
+}
+var HistoryServiceScheduleDecisionTaskResult_InternalServiceError_DEFAULT *shared.InternalServiceError
+func (p *HistoryServiceScheduleDecisionTaskResult) GetInternalServiceError() *shared.InternalServiceError {
+  if !p.IsSetInternalServiceError() {
+    return HistoryServiceScheduleDecisionTaskResult_InternalServiceError_DEFAULT
+  }
+return p.InternalServiceError
+}
+var HistoryServiceScheduleDecisionTaskResult_EntityNotExistError_DEFAULT *shared.EntityNotExistsError
+func (p *HistoryServiceScheduleDecisionTaskResult) GetEntityNotExistError() *shared.EntityNotExistsError {
+  if !p.IsSetEntityNotExistError() {
+    return HistoryServiceScheduleDecisionTaskResult_EntityNotExistError_DEFAULT
+  }
+return p.EntityNotExistError
+}
+var HistoryServiceScheduleDecisionTaskResult_ShardOwnershipLostError_DEFAULT *ShardOwnershipLostError
+func (p *HistoryServiceScheduleDecisionTaskResult) GetShardOwnershipLostError() *ShardOwnershipLostError {
+  if !p.IsSetShardOwnershipLostError() {
+    return HistoryServiceScheduleDecisionTaskResult_ShardOwnershipLostError_DEFAULT
+  }
+return p.ShardOwnershipLostError
+}
+func (p *HistoryServiceScheduleDecisionTaskResult) IsSetBadRequestError() bool {
+  return p.BadRequestError != nil
+}
+
+func (p *HistoryServiceScheduleDecisionTaskResult) IsSetInternalServiceError() bool {
+  return p.InternalServiceError != nil
+}
+
+func (p *HistoryServiceScheduleDecisionTaskResult) IsSetEntityNotExistError() bool {
+  return p.EntityNotExistError != nil
+}
+
+func (p *HistoryServiceScheduleDecisionTaskResult) IsSetShardOwnershipLostError() bool {
+  return p.ShardOwnershipLostError != nil
+}
+
+func (p *HistoryServiceScheduleDecisionTaskResult) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 1:
+      if err := p.ReadField1(iprot); err != nil {
+        return err
+      }
+    case 2:
+      if err := p.ReadField2(iprot); err != nil {
+        return err
+      }
+    case 3:
+      if err := p.ReadField3(iprot); err != nil {
+        return err
+      }
+    case 4:
+      if err := p.ReadField4(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *HistoryServiceScheduleDecisionTaskResult)  ReadField1(iprot thrift.TProtocol) error {
+  p.BadRequestError = &shared.BadRequestError{}
+  if err := p.BadRequestError.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.BadRequestError), err)
+  }
+  return nil
+}
+
+func (p *HistoryServiceScheduleDecisionTaskResult)  ReadField2(iprot thrift.TProtocol) error {
+  p.InternalServiceError = &shared.InternalServiceError{}
+  if err := p.InternalServiceError.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.InternalServiceError), err)
+  }
+  return nil
+}
+
+func (p *HistoryServiceScheduleDecisionTaskResult)  ReadField3(iprot thrift.TProtocol) error {
+  p.EntityNotExistError = &shared.EntityNotExistsError{}
+  if err := p.EntityNotExistError.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.EntityNotExistError), err)
+  }
+  return nil
+}
+
+func (p *HistoryServiceScheduleDecisionTaskResult)  ReadField4(iprot thrift.TProtocol) error {
+  p.ShardOwnershipLostError = &ShardOwnershipLostError{}
+  if err := p.ShardOwnershipLostError.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.ShardOwnershipLostError), err)
+  }
+  return nil
+}
+
+func (p *HistoryServiceScheduleDecisionTaskResult) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("ScheduleDecisionTask_result"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField1(oprot); err != nil { return err }
+    if err := p.writeField2(oprot); err != nil { return err }
+    if err := p.writeField3(oprot); err != nil { return err }
+    if err := p.writeField4(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *HistoryServiceScheduleDecisionTaskResult) writeField1(oprot thrift.TProtocol) (err error) {
+  if p.IsSetBadRequestError() {
+    if err := oprot.WriteFieldBegin("badRequestError", thrift.STRUCT, 1); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:badRequestError: ", p), err) }
+    if err := p.BadRequestError.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.BadRequestError), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 1:badRequestError: ", p), err) }
+  }
+  return err
+}
+
+func (p *HistoryServiceScheduleDecisionTaskResult) writeField2(oprot thrift.TProtocol) (err error) {
+  if p.IsSetInternalServiceError() {
+    if err := oprot.WriteFieldBegin("internalServiceError", thrift.STRUCT, 2); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:internalServiceError: ", p), err) }
+    if err := p.InternalServiceError.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.InternalServiceError), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 2:internalServiceError: ", p), err) }
+  }
+  return err
+}
+
+func (p *HistoryServiceScheduleDecisionTaskResult) writeField3(oprot thrift.TProtocol) (err error) {
+  if p.IsSetEntityNotExistError() {
+    if err := oprot.WriteFieldBegin("entityNotExistError", thrift.STRUCT, 3); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:entityNotExistError: ", p), err) }
+    if err := p.EntityNotExistError.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.EntityNotExistError), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 3:entityNotExistError: ", p), err) }
+  }
+  return err
+}
+
+func (p *HistoryServiceScheduleDecisionTaskResult) writeField4(oprot thrift.TProtocol) (err error) {
+  if p.IsSetShardOwnershipLostError() {
+    if err := oprot.WriteFieldBegin("shardOwnershipLostError", thrift.STRUCT, 4); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:shardOwnershipLostError: ", p), err) }
+    if err := p.ShardOwnershipLostError.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.ShardOwnershipLostError), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 4:shardOwnershipLostError: ", p), err) }
+  }
+  return err
+}
+
+func (p *HistoryServiceScheduleDecisionTaskResult) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("HistoryServiceScheduleDecisionTaskResult(%+v)", *p)
+}
+
+// Attributes:
+//  - CompletionRequest
+type HistoryServiceCompleteChildExecutionArgs struct {
+  CompletionRequest *CompleteChildExecutionRequest `thrift:"completionRequest,1" db:"completionRequest" json:"completionRequest"`
+}
+
+func NewHistoryServiceCompleteChildExecutionArgs() *HistoryServiceCompleteChildExecutionArgs {
+  return &HistoryServiceCompleteChildExecutionArgs{}
+}
+
+var HistoryServiceCompleteChildExecutionArgs_CompletionRequest_DEFAULT *CompleteChildExecutionRequest
+func (p *HistoryServiceCompleteChildExecutionArgs) GetCompletionRequest() *CompleteChildExecutionRequest {
+  if !p.IsSetCompletionRequest() {
+    return HistoryServiceCompleteChildExecutionArgs_CompletionRequest_DEFAULT
+  }
+return p.CompletionRequest
+}
+func (p *HistoryServiceCompleteChildExecutionArgs) IsSetCompletionRequest() bool {
+  return p.CompletionRequest != nil
+}
+
+func (p *HistoryServiceCompleteChildExecutionArgs) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 1:
+      if err := p.ReadField1(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *HistoryServiceCompleteChildExecutionArgs)  ReadField1(iprot thrift.TProtocol) error {
+  p.CompletionRequest = &CompleteChildExecutionRequest{}
+  if err := p.CompletionRequest.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.CompletionRequest), err)
+  }
+  return nil
+}
+
+func (p *HistoryServiceCompleteChildExecutionArgs) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("CompleteChildExecution_args"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField1(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *HistoryServiceCompleteChildExecutionArgs) writeField1(oprot thrift.TProtocol) (err error) {
+  if err := oprot.WriteFieldBegin("completionRequest", thrift.STRUCT, 1); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:completionRequest: ", p), err) }
+  if err := p.CompletionRequest.Write(oprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.CompletionRequest), err)
+  }
+  if err := oprot.WriteFieldEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 1:completionRequest: ", p), err) }
+  return err
+}
+
+func (p *HistoryServiceCompleteChildExecutionArgs) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("HistoryServiceCompleteChildExecutionArgs(%+v)", *p)
+}
+
+// Attributes:
+//  - BadRequestError
+//  - InternalServiceError
+//  - EntityNotExistError
+//  - ShardOwnershipLostError
+type HistoryServiceCompleteChildExecutionResult struct {
+  BadRequestError *shared.BadRequestError `thrift:"badRequestError,1" db:"badRequestError" json:"badRequestError,omitempty"`
+  InternalServiceError *shared.InternalServiceError `thrift:"internalServiceError,2" db:"internalServiceError" json:"internalServiceError,omitempty"`
+  EntityNotExistError *shared.EntityNotExistsError `thrift:"entityNotExistError,3" db:"entityNotExistError" json:"entityNotExistError,omitempty"`
+  ShardOwnershipLostError *ShardOwnershipLostError `thrift:"shardOwnershipLostError,4" db:"shardOwnershipLostError" json:"shardOwnershipLostError,omitempty"`
+}
+
+func NewHistoryServiceCompleteChildExecutionResult() *HistoryServiceCompleteChildExecutionResult {
+  return &HistoryServiceCompleteChildExecutionResult{}
+}
+
+var HistoryServiceCompleteChildExecutionResult_BadRequestError_DEFAULT *shared.BadRequestError
+func (p *HistoryServiceCompleteChildExecutionResult) GetBadRequestError() *shared.BadRequestError {
+  if !p.IsSetBadRequestError() {
+    return HistoryServiceCompleteChildExecutionResult_BadRequestError_DEFAULT
+  }
+return p.BadRequestError
+}
+var HistoryServiceCompleteChildExecutionResult_InternalServiceError_DEFAULT *shared.InternalServiceError
+func (p *HistoryServiceCompleteChildExecutionResult) GetInternalServiceError() *shared.InternalServiceError {
+  if !p.IsSetInternalServiceError() {
+    return HistoryServiceCompleteChildExecutionResult_InternalServiceError_DEFAULT
+  }
+return p.InternalServiceError
+}
+var HistoryServiceCompleteChildExecutionResult_EntityNotExistError_DEFAULT *shared.EntityNotExistsError
+func (p *HistoryServiceCompleteChildExecutionResult) GetEntityNotExistError() *shared.EntityNotExistsError {
+  if !p.IsSetEntityNotExistError() {
+    return HistoryServiceCompleteChildExecutionResult_EntityNotExistError_DEFAULT
+  }
+return p.EntityNotExistError
+}
+var HistoryServiceCompleteChildExecutionResult_ShardOwnershipLostError_DEFAULT *ShardOwnershipLostError
+func (p *HistoryServiceCompleteChildExecutionResult) GetShardOwnershipLostError() *ShardOwnershipLostError {
+  if !p.IsSetShardOwnershipLostError() {
+    return HistoryServiceCompleteChildExecutionResult_ShardOwnershipLostError_DEFAULT
+  }
+return p.ShardOwnershipLostError
+}
+func (p *HistoryServiceCompleteChildExecutionResult) IsSetBadRequestError() bool {
+  return p.BadRequestError != nil
+}
+
+func (p *HistoryServiceCompleteChildExecutionResult) IsSetInternalServiceError() bool {
+  return p.InternalServiceError != nil
+}
+
+func (p *HistoryServiceCompleteChildExecutionResult) IsSetEntityNotExistError() bool {
+  return p.EntityNotExistError != nil
+}
+
+func (p *HistoryServiceCompleteChildExecutionResult) IsSetShardOwnershipLostError() bool {
+  return p.ShardOwnershipLostError != nil
+}
+
+func (p *HistoryServiceCompleteChildExecutionResult) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 1:
+      if err := p.ReadField1(iprot); err != nil {
+        return err
+      }
+    case 2:
+      if err := p.ReadField2(iprot); err != nil {
+        return err
+      }
+    case 3:
+      if err := p.ReadField3(iprot); err != nil {
+        return err
+      }
+    case 4:
+      if err := p.ReadField4(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *HistoryServiceCompleteChildExecutionResult)  ReadField1(iprot thrift.TProtocol) error {
+  p.BadRequestError = &shared.BadRequestError{}
+  if err := p.BadRequestError.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.BadRequestError), err)
+  }
+  return nil
+}
+
+func (p *HistoryServiceCompleteChildExecutionResult)  ReadField2(iprot thrift.TProtocol) error {
+  p.InternalServiceError = &shared.InternalServiceError{}
+  if err := p.InternalServiceError.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.InternalServiceError), err)
+  }
+  return nil
+}
+
+func (p *HistoryServiceCompleteChildExecutionResult)  ReadField3(iprot thrift.TProtocol) error {
+  p.EntityNotExistError = &shared.EntityNotExistsError{}
+  if err := p.EntityNotExistError.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.EntityNotExistError), err)
+  }
+  return nil
+}
+
+func (p *HistoryServiceCompleteChildExecutionResult)  ReadField4(iprot thrift.TProtocol) error {
+  p.ShardOwnershipLostError = &ShardOwnershipLostError{}
+  if err := p.ShardOwnershipLostError.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.ShardOwnershipLostError), err)
+  }
+  return nil
+}
+
+func (p *HistoryServiceCompleteChildExecutionResult) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("CompleteChildExecution_result"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField1(oprot); err != nil { return err }
+    if err := p.writeField2(oprot); err != nil { return err }
+    if err := p.writeField3(oprot); err != nil { return err }
+    if err := p.writeField4(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *HistoryServiceCompleteChildExecutionResult) writeField1(oprot thrift.TProtocol) (err error) {
+  if p.IsSetBadRequestError() {
+    if err := oprot.WriteFieldBegin("badRequestError", thrift.STRUCT, 1); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:badRequestError: ", p), err) }
+    if err := p.BadRequestError.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.BadRequestError), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 1:badRequestError: ", p), err) }
+  }
+  return err
+}
+
+func (p *HistoryServiceCompleteChildExecutionResult) writeField2(oprot thrift.TProtocol) (err error) {
+  if p.IsSetInternalServiceError() {
+    if err := oprot.WriteFieldBegin("internalServiceError", thrift.STRUCT, 2); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:internalServiceError: ", p), err) }
+    if err := p.InternalServiceError.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.InternalServiceError), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 2:internalServiceError: ", p), err) }
+  }
+  return err
+}
+
+func (p *HistoryServiceCompleteChildExecutionResult) writeField3(oprot thrift.TProtocol) (err error) {
+  if p.IsSetEntityNotExistError() {
+    if err := oprot.WriteFieldBegin("entityNotExistError", thrift.STRUCT, 3); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:entityNotExistError: ", p), err) }
+    if err := p.EntityNotExistError.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.EntityNotExistError), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 3:entityNotExistError: ", p), err) }
+  }
+  return err
+}
+
+func (p *HistoryServiceCompleteChildExecutionResult) writeField4(oprot thrift.TProtocol) (err error) {
+  if p.IsSetShardOwnershipLostError() {
+    if err := oprot.WriteFieldBegin("shardOwnershipLostError", thrift.STRUCT, 4); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:shardOwnershipLostError: ", p), err) }
+    if err := p.ShardOwnershipLostError.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.ShardOwnershipLostError), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 4:shardOwnershipLostError: ", p), err) }
+  }
+  return err
+}
+
+func (p *HistoryServiceCompleteChildExecutionResult) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("HistoryServiceCompleteChildExecutionResult(%+v)", *p)
 }
 
 

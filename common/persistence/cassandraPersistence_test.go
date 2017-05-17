@@ -784,12 +784,13 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_ChildExecutions() {
 		RunId:      common.StringPtr("c63dba1e-929c-4fbf-8ec5-4533b16269a9"),
 	}
 
+	parentDomainID := "6036ded3-e541-42c9-8f69-3d9354dad081"
 	parentExecution := &gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("test-workflow-mutable-child-executions-child-test"),
 		RunId:      common.StringPtr("73e89362-25ec-4305-bcb8-d9448b90856c"),
 	}
 
-	task0, err0 := s.CreateChildWorkflowExecution(domainID, workflowExecution, parentExecution, 1, "taskList", "wType", 13, nil, 3, 0, 2, nil)
+	task0, err0 := s.CreateChildWorkflowExecution(domainID, workflowExecution, parentDomainID, parentExecution, 1, "taskList", "wType", 13, nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
 	s.NotEmpty(task0, "Expected non empty task identifier.")
 
@@ -797,6 +798,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_ChildExecutions() {
 	s.Nil(err1, "No error expected.")
 	info0 := state0.ExecutionInfo
 	s.NotNil(info0, "Valid Workflow info expected.")
+	s.Equal(parentDomainID, info0.ParentDomainID)
 	s.Equal(parentExecution.GetWorkflowId(), info0.ParentWorkflowID)
 	s.Equal(parentExecution.GetRunId(), info0.ParentRunID)
 	s.Equal(int64(1), info0.InitiatedID)
@@ -919,9 +921,11 @@ func copyWorkflowExecutionInfo(sourceInfo *WorkflowExecutionInfo) *WorkflowExecu
 		DomainID:             sourceInfo.DomainID,
 		WorkflowID:           sourceInfo.WorkflowID,
 		RunID:                sourceInfo.RunID,
+		ParentDomainID:       sourceInfo.ParentDomainID,
 		ParentWorkflowID:     sourceInfo.ParentWorkflowID,
 		ParentRunID:          sourceInfo.ParentRunID,
 		InitiatedID:          sourceInfo.InitiatedID,
+		CompletionEvent:      sourceInfo.CompletionEvent,
 		TaskList:             sourceInfo.TaskList,
 		WorkflowTypeName:     sourceInfo.WorkflowTypeName,
 		DecisionTimeoutValue: sourceInfo.DecisionTimeoutValue,

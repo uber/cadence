@@ -529,6 +529,60 @@ func (h *Handler) TerminateWorkflowExecution(ctx thrift.Context,
 	return nil
 }
 
+func (h *Handler) ScheduleDecisionTask(ctx thrift.Context, request *hist.ScheduleDecisionTaskRequest) error {
+	h.startWG.Wait()
+
+	h.metricsClient.IncCounter(metrics.HistoryScheduleDecisionTaskScope, metrics.CadenceRequests)
+	sw := h.metricsClient.StartTimer(metrics.HistoryScheduleDecisionTaskScope, metrics.CadenceLatency)
+	defer sw.Stop()
+
+	if !request.IsSetDomainUUID() {
+		return errDomainNotSet
+	}
+
+	workflowExecution := request.GetWorkflowExecution()
+	engine, err1 := h.controller.GetEngine(workflowExecution.GetWorkflowId())
+	if err1 != nil {
+		h.updateErrorMetric(metrics.HistoryScheduleDecisionTaskScope, err1)
+		return err1
+	}
+
+	err2 := engine.ScheduleDecisionTask(request)
+	if err2 != nil {
+		h.updateErrorMetric(metrics.HistoryScheduleDecisionTaskScope, h.convertError(err2))
+		return h.convertError(err2)
+	}
+
+	return nil
+}
+
+func (h *Handler) CompleteChildExecution(ctx thrift.Context, request *hist.CompleteChildExecutionRequest) error {
+	h.startWG.Wait()
+
+	h.metricsClient.IncCounter(metrics.HistoryCompleteChildExecutionScope, metrics.CadenceRequests)
+	sw := h.metricsClient.StartTimer(metrics.HistoryCompleteChildExecutionScope, metrics.CadenceLatency)
+	defer sw.Stop()
+
+	if !request.IsSetDomainUUID() {
+		return errDomainNotSet
+	}
+
+	workflowExecution := request.GetWorkflowExecution()
+	engine, err1 := h.controller.GetEngine(workflowExecution.GetWorkflowId())
+	if err1 != nil {
+		h.updateErrorMetric(metrics.HistoryCompleteChildExecutionScope, err1)
+		return err1
+	}
+
+	err2 := engine.CompleteChildExecution(request)
+	if err2 != nil {
+		h.updateErrorMetric(metrics.HistoryCompleteChildExecutionScope, h.convertError(err2))
+		return h.convertError(err2)
+	}
+
+	return nil
+}
+
 // convertError is a helper method to convert ShardOwnershipLostError from persistence layer returned by various
 // HistoryEngine API calls to ShardOwnershipLost error return by HistoryService for client to be redirected to the
 // correct shard.

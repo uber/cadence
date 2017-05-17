@@ -65,6 +65,7 @@ const (
 	TransferTaskTypeActivityTask
 	TransferTaskTypeDeleteExecution
 	TransferTaskTypeCancelExecution
+	TransferTaskTypeStartChildExecution
 )
 
 // Types of timers
@@ -111,9 +112,11 @@ type (
 		DomainID             string
 		WorkflowID           string
 		RunID                string
+		ParentDomainID       string
 		ParentWorkflowID     string
 		ParentRunID          string
 		InitiatedID          int64
+		CompletionEvent      []byte
 		TaskList             string
 		WorkflowTypeName     string
 		DecisionTimeoutValue int32
@@ -218,6 +221,14 @@ type (
 		ScheduleID       int64
 	}
 
+	// StartChildExecutionTask identifies a transfer task for starting child execution
+	StartChildExecutionTask struct {
+		TaskID           int64
+		TargetDomainID   string
+		TargetWorkflowID string
+		InitiatedID      int64
+	}
+
 	// ActivityTimeoutTask identifies a timeout task.
 	ActivityTimeoutTask struct {
 		TaskID      int64
@@ -300,6 +311,7 @@ type (
 		RequestID                   string
 		DomainID                    string
 		Execution                   workflow.WorkflowExecution
+		ParentDomainID              string
 		ParentExecution             *workflow.WorkflowExecution
 		InitiatedID                 int64
 		TaskList                    string
@@ -749,6 +761,21 @@ func (u *CancelExecutionTask) GetTaskID() int64 {
 
 // SetTaskID sets the sequence ID of the cancel transfer task.
 func (u *CancelExecutionTask) SetTaskID(id int64) {
+	u.TaskID = id
+}
+
+// GetType returns the type of the cancel transfer task
+func (u *StartChildExecutionTask) GetType() int {
+	return TransferTaskTypeStartChildExecution
+}
+
+// GetTaskID returns the sequence ID of the cancel transfer task.
+func (u *StartChildExecutionTask) GetTaskID() int64 {
+	return u.TaskID
+}
+
+// SetTaskID sets the sequence ID of the cancel transfer task.
+func (u *StartChildExecutionTask) SetTaskID(id int64) {
 	u.TaskID = id
 }
 
