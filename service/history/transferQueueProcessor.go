@@ -275,7 +275,7 @@ ProcessRetryLoop:
 								ScheduleToCloseTimeoutSeconds: common.Int32Ptr(ai.ScheduleToCloseTimeout),
 							})
 						} else {
-							t.logger.Infof("Task was not found asasan")
+							logging.LogDuplicateTransferTaskEvent(t.logger, persistence.TransferTaskTypeActivityTask, task.TaskID, task.ScheduleID)
 						}
 					}
 					release()
