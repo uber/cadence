@@ -32,8 +32,9 @@ exception ShardOwnershipLostError {
 }
 
 struct ParentExecutionInfo {
-  10: optional shared.WorkflowExecution parentExecution
-  20: optional i64 (js.type = "Long") initiatedId
+  10: optional string domainUUID
+  20: optional shared.WorkflowExecution execution
+  30: optional i64 (js.type = "Long") initiatedId
 }
 
 struct StartWorkflowExecutionRequest {
@@ -302,6 +303,12 @@ service HistoryService {
       4: ShardOwnershipLostError shardOwnershipLostError,
     )
 
+  /**
+  * ScheduleDecisionTask is used for creating a decision task for already started workflow execution.  This is mainly
+  * used by transfer queue processor during the processing of StartChildWorkflowExecution task, where it first starts
+  * child execution without creating the decision task and then calls this API after updating the mutable state of
+  * parent execution.
+  **/
   void ScheduleDecisionTask(1: ScheduleDecisionTaskRequest scheduleRequest)
     throws (
       1: shared.BadRequestError badRequestError,
@@ -310,6 +317,10 @@ service HistoryService {
       4: ShardOwnershipLostError shardOwnershipLostError,
     )
 
+  /**
+  * CompleteChildExecution is used for reporting the completion of child workflow execution to parent.  This is mainly
+  * called by transfer queue processor during the processing of DeleteExecution task.
+  **/
   void CompleteChildExecution(1: CompleteChildExecutionRequest completionRequest)
     throws (
       1: shared.BadRequestError badRequestError,

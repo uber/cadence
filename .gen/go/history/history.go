@@ -251,25 +251,35 @@ func (p *ShardOwnershipLostError) Error() string {
 }
 
 // Attributes:
-//  - ParentExecution
+//  - DomainUUID
+//  - Execution
 //  - InitiatedId
 type ParentExecutionInfo struct {
   // unused fields # 1 to 9
-  ParentExecution *shared.WorkflowExecution `thrift:"parentExecution,10" db:"parentExecution" json:"parentExecution,omitempty"`
+  DomainUUID *string `thrift:"domainUUID,10" db:"domainUUID" json:"domainUUID,omitempty"`
   // unused fields # 11 to 19
-  InitiatedId *int64 `thrift:"initiatedId,20" db:"initiatedId" json:"initiatedId,omitempty"`
+  Execution *shared.WorkflowExecution `thrift:"execution,20" db:"execution" json:"execution,omitempty"`
+  // unused fields # 21 to 29
+  InitiatedId *int64 `thrift:"initiatedId,30" db:"initiatedId" json:"initiatedId,omitempty"`
 }
 
 func NewParentExecutionInfo() *ParentExecutionInfo {
   return &ParentExecutionInfo{}
 }
 
-var ParentExecutionInfo_ParentExecution_DEFAULT *shared.WorkflowExecution
-func (p *ParentExecutionInfo) GetParentExecution() *shared.WorkflowExecution {
-  if !p.IsSetParentExecution() {
-    return ParentExecutionInfo_ParentExecution_DEFAULT
+var ParentExecutionInfo_DomainUUID_DEFAULT string
+func (p *ParentExecutionInfo) GetDomainUUID() string {
+  if !p.IsSetDomainUUID() {
+    return ParentExecutionInfo_DomainUUID_DEFAULT
   }
-return p.ParentExecution
+return *p.DomainUUID
+}
+var ParentExecutionInfo_Execution_DEFAULT *shared.WorkflowExecution
+func (p *ParentExecutionInfo) GetExecution() *shared.WorkflowExecution {
+  if !p.IsSetExecution() {
+    return ParentExecutionInfo_Execution_DEFAULT
+  }
+return p.Execution
 }
 var ParentExecutionInfo_InitiatedId_DEFAULT int64
 func (p *ParentExecutionInfo) GetInitiatedId() int64 {
@@ -278,8 +288,12 @@ func (p *ParentExecutionInfo) GetInitiatedId() int64 {
   }
 return *p.InitiatedId
 }
-func (p *ParentExecutionInfo) IsSetParentExecution() bool {
-  return p.ParentExecution != nil
+func (p *ParentExecutionInfo) IsSetDomainUUID() bool {
+  return p.DomainUUID != nil
+}
+
+func (p *ParentExecutionInfo) IsSetExecution() bool {
+  return p.Execution != nil
 }
 
 func (p *ParentExecutionInfo) IsSetInitiatedId() bool {
@@ -307,6 +321,10 @@ func (p *ParentExecutionInfo) Read(iprot thrift.TProtocol) error {
       if err := p.ReadField20(iprot); err != nil {
         return err
       }
+    case 30:
+      if err := p.ReadField30(iprot); err != nil {
+        return err
+      }
     default:
       if err := iprot.Skip(fieldTypeId); err != nil {
         return err
@@ -323,16 +341,25 @@ func (p *ParentExecutionInfo) Read(iprot thrift.TProtocol) error {
 }
 
 func (p *ParentExecutionInfo)  ReadField10(iprot thrift.TProtocol) error {
-  p.ParentExecution = &shared.WorkflowExecution{}
-  if err := p.ParentExecution.Read(iprot); err != nil {
-    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.ParentExecution), err)
-  }
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 10: ", err)
+} else {
+  p.DomainUUID = &v
+}
   return nil
 }
 
 func (p *ParentExecutionInfo)  ReadField20(iprot thrift.TProtocol) error {
+  p.Execution = &shared.WorkflowExecution{}
+  if err := p.Execution.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Execution), err)
+  }
+  return nil
+}
+
+func (p *ParentExecutionInfo)  ReadField30(iprot thrift.TProtocol) error {
   if v, err := iprot.ReadI64(); err != nil {
-  return thrift.PrependError("error reading field 20: ", err)
+  return thrift.PrependError("error reading field 30: ", err)
 } else {
   p.InitiatedId = &v
 }
@@ -345,6 +372,7 @@ func (p *ParentExecutionInfo) Write(oprot thrift.TProtocol) error {
   if p != nil {
     if err := p.writeField10(oprot); err != nil { return err }
     if err := p.writeField20(oprot); err != nil { return err }
+    if err := p.writeField30(oprot); err != nil { return err }
   }
   if err := oprot.WriteFieldStop(); err != nil {
     return thrift.PrependError("write field stop error: ", err) }
@@ -354,26 +382,38 @@ func (p *ParentExecutionInfo) Write(oprot thrift.TProtocol) error {
 }
 
 func (p *ParentExecutionInfo) writeField10(oprot thrift.TProtocol) (err error) {
-  if p.IsSetParentExecution() {
-    if err := oprot.WriteFieldBegin("parentExecution", thrift.STRUCT, 10); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:parentExecution: ", p), err) }
-    if err := p.ParentExecution.Write(oprot); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.ParentExecution), err)
-    }
+  if p.IsSetDomainUUID() {
+    if err := oprot.WriteFieldBegin("domainUUID", thrift.STRING, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:domainUUID: ", p), err) }
+    if err := oprot.WriteString(string(*p.DomainUUID)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.domainUUID (10) field write error: ", p), err) }
     if err := oprot.WriteFieldEnd(); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:parentExecution: ", p), err) }
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:domainUUID: ", p), err) }
   }
   return err
 }
 
 func (p *ParentExecutionInfo) writeField20(oprot thrift.TProtocol) (err error) {
-  if p.IsSetInitiatedId() {
-    if err := oprot.WriteFieldBegin("initiatedId", thrift.I64, 20); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:initiatedId: ", p), err) }
-    if err := oprot.WriteI64(int64(*p.InitiatedId)); err != nil {
-    return thrift.PrependError(fmt.Sprintf("%T.initiatedId (20) field write error: ", p), err) }
+  if p.IsSetExecution() {
+    if err := oprot.WriteFieldBegin("execution", thrift.STRUCT, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:execution: ", p), err) }
+    if err := p.Execution.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Execution), err)
+    }
     if err := oprot.WriteFieldEnd(); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:initiatedId: ", p), err) }
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:execution: ", p), err) }
+  }
+  return err
+}
+
+func (p *ParentExecutionInfo) writeField30(oprot thrift.TProtocol) (err error) {
+  if p.IsSetInitiatedId() {
+    if err := oprot.WriteFieldBegin("initiatedId", thrift.I64, 30); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 30:initiatedId: ", p), err) }
+    if err := oprot.WriteI64(int64(*p.InitiatedId)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.initiatedId (30) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 30:initiatedId: ", p), err) }
   }
   return err
 }
@@ -3214,9 +3254,19 @@ type HistoryService interface {  //HistoryService provides API to start a new lo
   // Parameters:
   //  - CancelRequest
   RequestCancelWorkflowExecution(cancelRequest *RequestCancelWorkflowExecutionRequest) (err error)
+  // ScheduleDecisionTask is used for creating a decision task for already started workflow execution.  This is mainly
+  // used by transfer queue processor during the processing of StartChildWorkflowExecution task, where it first starts
+  // child execution without creating the decision task and then calls this API after updating the mutable state of
+  // parent execution.
+  // 
+  // 
   // Parameters:
   //  - ScheduleRequest
   ScheduleDecisionTask(scheduleRequest *ScheduleDecisionTaskRequest) (err error)
+  // CompleteChildExecution is used for reporting the completion of child workflow execution to parent.  This is mainly
+  // called by transfer queue processor during the processing of DeleteExecution task.
+  // 
+  // 
   // Parameters:
   //  - CompletionRequest
   CompleteChildExecution(completionRequest *CompleteChildExecutionRequest) (err error)
@@ -4387,6 +4437,12 @@ func (p *HistoryServiceClient) recvRequestCancelWorkflowExecution() (err error) 
   return
 }
 
+// ScheduleDecisionTask is used for creating a decision task for already started workflow execution.  This is mainly
+// used by transfer queue processor during the processing of StartChildWorkflowExecution task, where it first starts
+// child execution without creating the decision task and then calls this API after updating the mutable state of
+// parent execution.
+// 
+// 
 // Parameters:
 //  - ScheduleRequest
 func (p *HistoryServiceClient) ScheduleDecisionTask(scheduleRequest *ScheduleDecisionTaskRequest) (err error) {
@@ -4475,6 +4531,10 @@ func (p *HistoryServiceClient) recvScheduleDecisionTask() (err error) {
   return
 }
 
+// CompleteChildExecution is used for reporting the completion of child workflow execution to parent.  This is mainly
+// called by transfer queue processor during the processing of DeleteExecution task.
+// 
+// 
 // Parameters:
 //  - CompletionRequest
 func (p *HistoryServiceClient) CompleteChildExecution(completionRequest *CompleteChildExecutionRequest) (err error) {

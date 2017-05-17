@@ -896,10 +896,25 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(decisionCompletedEventID int
 		return nil, nil, &workflow.InternalServiceError{Message: "Failed to add decision started event."}
 	}
 
+	parentDomainID := ""
+	var parentExecution *workflow.WorkflowExecution
+	initiatedID := emptyEventID
+	if e.executionInfo.ParentWorkflowID != "" {
+		parentDomainID = e.executionInfo.ParentDomainID
+		parentExecution = &workflow.WorkflowExecution{
+			WorkflowId: common.StringPtr(e.executionInfo.ParentWorkflowID),
+			RunId: common.StringPtr(e.executionInfo.ParentRunID),
+		}
+		initiatedID = e.executionInfo.InitiatedID
+	}
+
 	e.continueAsNew = &persistence.CreateWorkflowExecutionRequest{
 		RequestID:            uuid.New(),
 		DomainID:             domainID,
 		Execution:            newExecution,
+		ParentDomainID:       parentDomainID,
+		ParentExecution:      parentExecution,
+		InitiatedID:          initiatedID,
 		TaskList:             newStateBuilder.executionInfo.TaskList,
 		WorkflowTypeName:     newStateBuilder.executionInfo.WorkflowTypeName,
 		DecisionTimeoutValue: newStateBuilder.executionInfo.DecisionTimeoutValue,

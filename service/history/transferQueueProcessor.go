@@ -393,7 +393,8 @@ ProcessRetryLoop:
 											RequestId: common.StringPtr(ci.CreateRequestID),
 										},
 										ParentExecutionInfo: &history.ParentExecutionInfo{
-											ParentExecution: &workflow.WorkflowExecution{
+											DomainUUID: common.StringPtr(domainID),
+											Execution: &workflow.WorkflowExecution{
 												WorkflowId: common.StringPtr(task.WorkflowID),
 												RunId:      common.StringPtr(task.RunID),
 											},

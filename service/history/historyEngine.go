@@ -146,9 +146,11 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 
 	var parentExecution *workflow.WorkflowExecution
 	initiatedID := emptyEventID
+	parentDomainID := ""
 	parentInfo := startRequest.GetParentExecutionInfo()
 	if parentInfo != nil {
-		parentExecution = parentInfo.GetParentExecution()
+		parentDomainID = parentInfo.GetDomainUUID()
+		parentExecution = parentInfo.GetExecution()
 		initiatedID = parentInfo.GetInitiatedId()
 	}
 
@@ -204,6 +206,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 		RequestID:                   request.GetRequestId(),
 		DomainID:                    domainID,
 		Execution:                   workflowExecution,
+		ParentDomainID:              parentDomainID,
 		ParentExecution:             parentExecution,
 		InitiatedID:                 initiatedID,
 		TaskList:                    request.GetTaskList().GetName(),
