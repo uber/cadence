@@ -80,12 +80,10 @@ func Load(env string, configDir string, zone string, config interface{}) error {
 	log.Printf("Loading configFiles=%v\n", files)
 
 	for _, f := range files {
-
 		data, err := ioutil.ReadFile(f)
 		if err != nil {
 			return err
 		}
-
 		err = yaml.Unmarshal(data, config)
 		if err != nil {
 			return err
