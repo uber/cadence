@@ -484,7 +484,7 @@ func (s *cassandraPersistenceSuite) TestTransferTasksThroughUpdate() {
 func (s *cassandraPersistenceSuite) TestCancelTransferTaskTasks() {
 	domainID := "aeac8287-527b-4b35-80a9-667cb47e7c6d"
 	workflowExecution := gen.WorkflowExecution{WorkflowId: common.StringPtr("get-decision-task-test"),
-		RunId:                                               common.StringPtr("db20f7e2-1a1e-40d9-9278-d8b886738e05")}
+		RunId: common.StringPtr("db20f7e2-1a1e-40d9-9278-d8b886738e05")}
 
 	task0, err := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType", 13, nil, 3, 0, 2, nil)
 	s.Nil(err, "No error expected.")
@@ -534,7 +534,7 @@ func (s *cassandraPersistenceSuite) TestCancelTransferTaskTasks() {
 func (s *cassandraPersistenceSuite) TestCreateTask() {
 	domainID := "11adbd1b-f164-4ea7-b2f3-2e857a5048f1"
 	workflowExecution := gen.WorkflowExecution{WorkflowId: common.StringPtr("create-task-test"),
-		RunId:                                               common.StringPtr("c949447a-691a-4132-8b2a-a5b38106793c")}
+		RunId: common.StringPtr("c949447a-691a-4132-8b2a-a5b38106793c")}
 	task0, err0 := s.CreateDecisionTask(domainID, workflowExecution, "a5b38106793c", 5)
 	s.Nil(err0, "No error expected.")
 	s.NotEmpty(task0, "Expected non empty task identifier.")
@@ -565,7 +565,7 @@ func (s *cassandraPersistenceSuite) TestCreateTask() {
 func (s *cassandraPersistenceSuite) TestGetDecisionTasks() {
 	domainID := "aeac8287-527b-4b35-80a9-667cb47e7c6d"
 	workflowExecution := gen.WorkflowExecution{WorkflowId: common.StringPtr("get-decision-task-test"),
-		RunId:                                               common.StringPtr("db20f7e2-1a1e-40d9-9278-d8b886738e05")}
+		RunId: common.StringPtr("db20f7e2-1a1e-40d9-9278-d8b886738e05")}
 	taskList := "d8b886738e05"
 	task0, err0 := s.CreateDecisionTask(domainID, workflowExecution, taskList, 5)
 	s.Nil(err0, "No error expected.")
@@ -580,7 +580,7 @@ func (s *cassandraPersistenceSuite) TestGetDecisionTasks() {
 func (s *cassandraPersistenceSuite) TestCompleteDecisionTask() {
 	domainID := "f1116985-d1f1-40e0-aba9-83344db915bc"
 	workflowExecution := gen.WorkflowExecution{WorkflowId: common.StringPtr("complete-decision-task-test"),
-		RunId:                                               common.StringPtr("2aa0a74e-16ee-4f27-983d-48b07ec1915d")}
+		RunId: common.StringPtr("2aa0a74e-16ee-4f27-983d-48b07ec1915d")}
 	taskList := "48b07ec1915d"
 	tasks0, err0 := s.CreateActivityTasks(domainID, workflowExecution, map[int64]string{
 		10: taskList,

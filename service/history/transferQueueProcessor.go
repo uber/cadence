@@ -254,7 +254,7 @@ ProcessRetryLoop:
 			domainID := task.DomainID
 			targetDomainID := task.TargetDomainID
 			execution := workflow.WorkflowExecution{WorkflowId: common.StringPtr(task.WorkflowID),
-				RunId:                                            common.StringPtr(task.RunID)}
+				RunId: common.StringPtr(task.RunID)}
 			switch task.TaskType {
 			case persistence.TransferTaskTypeActivityTask:
 				{
@@ -302,6 +302,10 @@ ProcessRetryLoop:
 							TaskList:   taskList,
 							ScheduleId: &task.ScheduleID,
 						})
+
+						if err != nil {
+							t.logger.Errorf("*****Unable to add decision task: %v", err)
+						}
 					}
 				}
 			case persistence.TransferTaskTypeDeleteExecution:
@@ -410,10 +414,10 @@ ProcessRetryLoop:
 									startRequest := &history.StartWorkflowExecutionRequest{
 										DomainUUID: common.StringPtr(targetDomainID),
 										StartRequest: &workflow.StartWorkflowExecutionRequest{
-											WorkflowId:                          common.StringPtr(attributes.GetWorkflowId()),
-											WorkflowType:                        attributes.GetWorkflowType(),
-											TaskList:                            attributes.GetTaskList(),
-											Input:                               attributes.GetInput(),
+											WorkflowId:   common.StringPtr(attributes.GetWorkflowId()),
+											WorkflowType: attributes.GetWorkflowType(),
+											TaskList:     attributes.GetTaskList(),
+											Input:        attributes.GetInput(),
 											ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(attributes.GetExecutionStartToCloseTimeoutSeconds()),
 											TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(attributes.GetTaskStartToCloseTimeoutSeconds()),
 											// Use the same request ID to dedupe StartWorkflowExecution calls

@@ -529,6 +529,10 @@ func (h *Handler) TerminateWorkflowExecution(ctx thrift.Context,
 	return nil
 }
 
+// ScheduleDecisionTask is used for creating a decision task for already started workflow execution.  This is mainly
+// used by transfer queue processor during the processing of StartChildWorkflowExecution task, where it first starts
+// child execution without creating the decision task and then calls this API after updating the mutable state of
+// parent execution.
 func (h *Handler) ScheduleDecisionTask(ctx thrift.Context, request *hist.ScheduleDecisionTaskRequest) error {
 	h.startWG.Wait()
 
@@ -556,6 +560,8 @@ func (h *Handler) ScheduleDecisionTask(ctx thrift.Context, request *hist.Schedul
 	return nil
 }
 
+// CompleteChildExecution is used for reporting the completion of child workflow execution to parent.  This is mainly
+// called by transfer queue processor during the processing of DeleteExecution task.
 func (h *Handler) CompleteChildExecution(ctx thrift.Context, request *hist.CompleteChildExecutionRequest) error {
 	h.startWG.Wait()
 

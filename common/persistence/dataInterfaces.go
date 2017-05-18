@@ -37,14 +37,14 @@ const (
 
 // Workflow execution states
 const (
-	WorkflowStateCreated   = iota
+	WorkflowStateCreated = iota
 	WorkflowStateRunning
 	WorkflowStateCompleted
 )
 
 // Workflow execution close status
 const (
-	WorkflowCloseStatusNone           = iota
+	WorkflowCloseStatusNone = iota
 	WorkflowCloseStatusCompleted
 	WorkflowCloseStatusFailed
 	WorkflowCloseStatusCanceled
@@ -61,7 +61,7 @@ const (
 
 // Transfer task types
 const (
-	TransferTaskTypeDecisionTask    = iota
+	TransferTaskTypeDecisionTask = iota
 	TransferTaskTypeActivityTask
 	TransferTaskTypeDeleteExecution
 	TransferTaskTypeCancelExecution
@@ -276,7 +276,7 @@ type (
 		TaskID     int64
 	}
 
-	// Pending child execution details.
+	// ChildExecutionInfo has details for pending child executions.
 	ChildExecutionInfo struct {
 		InitiatedID     int64
 		InitiatedEvent  []byte

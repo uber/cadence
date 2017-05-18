@@ -227,7 +227,7 @@ func (e *mutableStateBuilder) GetChildExecutionStartedEvent(initiatedEventID int
 }
 
 // GetCompletionEvent retrieves the workflow completion event from mutable state
-func (e * mutableStateBuilder) GetCompletionEvent() (*workflow.HistoryEvent, bool) {
+func (e *mutableStateBuilder) GetCompletionEvent() (*workflow.HistoryEvent, bool) {
 	serializedEvent := e.executionInfo.CompletionEvent
 	if serializedEvent == nil {
 		return nil, false
@@ -242,7 +242,7 @@ func (e *mutableStateBuilder) DeletePendingChildExecution(initiatedEventID int64
 	if !ok {
 		errorMsg := fmt.Sprintf("Unable to find child execution with initiated event id: %v in mutable state",
 			initiatedEventID)
-		logMutableStateInvalidAction(e.logger, errorMsg)
+		logging.LogMutableStateInvalidAction(e.logger, errorMsg)
 		return errors.New(errorMsg)
 	}
 	delete(e.pendingChildExecutionInfoIDs, initiatedEventID)
@@ -251,10 +251,10 @@ func (e *mutableStateBuilder) DeletePendingChildExecution(initiatedEventID int64
 	return nil
 }
 
-func (e * mutableStateBuilder) writeCompletionEventToMutableState(completionEvent *workflow.HistoryEvent) error {
+func (e *mutableStateBuilder) writeCompletionEventToMutableState(completionEvent *workflow.HistoryEvent) error {
 	// First check to see if this is a Child Workflow
 	if e.hasParentExecution() {
-		serializedEvent , err := e.eventSerializer.Serialize(completionEvent)
+		serializedEvent, err := e.eventSerializer.Serialize(completionEvent)
 		if err != nil {
 			return err
 		}
@@ -415,8 +415,8 @@ func (e *mutableStateBuilder) AddWorkflowExecutionStartedEventForContinueAsNew(d
 		WorkflowType:                        wType,
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(decisionTimeout),
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(attributes.GetExecutionStartToCloseTimeoutSeconds()),
-		Input:                               attributes.GetInput(),
-		Identity:                            nil,
+		Input:    attributes.GetInput(),
+		Identity: nil,
 	}
 
 	return e.AddWorkflowExecutionStartedEvent(domainID, execution, createRequest)
@@ -917,7 +917,7 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(decisionCompletedEventID int
 		parentDomainID = e.executionInfo.ParentDomainID
 		parentExecution = &workflow.WorkflowExecution{
 			WorkflowId: common.StringPtr(e.executionInfo.ParentWorkflowID),
-			RunId: common.StringPtr(e.executionInfo.ParentRunID),
+			RunId:      common.StringPtr(e.executionInfo.ParentRunID),
 		}
 		initiatedID = e.executionInfo.InitiatedID
 	}
@@ -975,7 +975,7 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionStartedEvent(domain strin
 	workflowType *workflow.WorkflowType, initiatedID int64) *workflow.HistoryEvent {
 	ci, ok := e.GetChildExecutionInfo(initiatedID)
 	if !ok || ci.StartedID != emptyEventID {
-		logInvalidHistoryActionEvent(e.logger, tagValueActionChildExecutionStarted, e.GetNextEventID(), fmt.Sprintf(
+		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionChildExecutionStarted, e.GetNextEventID(), fmt.Sprintf(
 			"{InitiatedID: %v, Exist: %v}", initiatedID, ok))
 		return nil
 	}
@@ -999,7 +999,7 @@ func (e *mutableStateBuilder) AddStartChildWorkflowExecutionFailedEvent(initiate
 	initiatedEventAttributes *workflow.StartChildWorkflowExecutionInitiatedEventAttributes) *workflow.HistoryEvent {
 	ci, ok := e.GetChildExecutionInfo(initiatedID)
 	if !ok || ci.StartedID != emptyEventID {
-		logInvalidHistoryActionEvent(e.logger, tagValueActionStartChildExecutionFailed, e.GetNextEventID(), fmt.Sprintf(
+		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionStartChildExecutionFailed, e.GetNextEventID(), fmt.Sprintf(
 			"{InitiatedID: %v, Exist: %v}", initiatedID, ok))
 		return nil
 	}
@@ -1016,7 +1016,7 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionCompletedEvent(initiatedI
 	attributes *workflow.WorkflowExecutionCompletedEventAttributes) *workflow.HistoryEvent {
 	ci, ok := e.GetChildExecutionInfo(initiatedID)
 	if !ok || ci.StartedID == emptyEventID {
-		logInvalidHistoryActionEvent(e.logger, tagValueActionChildExecutionCompleted, e.GetNextEventID(), fmt.Sprintf(
+		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionChildExecutionCompleted, e.GetNextEventID(), fmt.Sprintf(
 			"{InitiatedID: %v, Exist: %v}", initiatedID, ok))
 		return nil
 	}
@@ -1028,7 +1028,7 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionCompletedEvent(initiatedI
 
 	if err := e.DeletePendingChildExecution(initiatedID); err == nil {
 		return e.hBuilder.AddChildWorkflowExecutionCompletedEvent(domain, childExecution, workflowType, ci.InitiatedID,
-		ci.StartedID, attributes)
+			ci.StartedID, attributes)
 	}
 
 	return nil
@@ -1039,7 +1039,7 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionFailedEvent(initiatedID i
 	attributes *workflow.WorkflowExecutionFailedEventAttributes) *workflow.HistoryEvent {
 	ci, ok := e.GetChildExecutionInfo(initiatedID)
 	if !ok || ci.StartedID == emptyEventID {
-		logInvalidHistoryActionEvent(e.logger, tagValueActionChildExecutionFailed, e.GetNextEventID(), fmt.Sprintf(
+		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionChildExecutionFailed, e.GetNextEventID(), fmt.Sprintf(
 			"{InitiatedID: %v, Exist: %v}", initiatedID, ok))
 		return nil
 	}
@@ -1062,7 +1062,7 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionCanceledEvent(initiatedID
 	attributes *workflow.WorkflowExecutionCanceledEventAttributes) *workflow.HistoryEvent {
 	ci, ok := e.GetChildExecutionInfo(initiatedID)
 	if !ok || ci.StartedID == emptyEventID {
-		logInvalidHistoryActionEvent(e.logger, tagValueActionChildExecutionCanceled, e.GetNextEventID(), fmt.Sprintf(
+		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionChildExecutionCanceled, e.GetNextEventID(), fmt.Sprintf(
 			"{InitiatedID: %v, Exist: %v}", initiatedID, ok))
 		return nil
 	}
@@ -1085,7 +1085,7 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionTerminatedEvent(initiated
 	attributes *workflow.WorkflowExecutionTerminatedEventAttributes) *workflow.HistoryEvent {
 	ci, ok := e.GetChildExecutionInfo(initiatedID)
 	if !ok || ci.StartedID == emptyEventID {
-		logInvalidHistoryActionEvent(e.logger, tagValueActionChildExecutionTerminated, e.GetNextEventID(), fmt.Sprintf(
+		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionChildExecutionTerminated, e.GetNextEventID(), fmt.Sprintf(
 			"{InitiatedID: %v, Exist: %v}", initiatedID, ok))
 		return nil
 	}
