@@ -81,8 +81,8 @@ copyright: cmd/tools/copyright/licensegen.go
 cadence-cassandra-tool: vendor/glide.updated $(TOOLS_SRC)
 	go build -i -o cadence-cassandra-tool cmd/tools/cassandra/main.go
 
-cadence: vendor/glide.updated main.go
-	go build -i -o cadence main.go
+cadence: vendor/glide.updated $(ALL_SRC)
+	go build -i -o cadence ./cmd/server/cadence.go
 
 bins_nothrift: lint copyright cadence-cassandra-tool cadence
 
