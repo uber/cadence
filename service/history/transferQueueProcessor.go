@@ -302,10 +302,6 @@ ProcessRetryLoop:
 							TaskList:   taskList,
 							ScheduleId: &task.ScheduleID,
 						})
-
-						if err != nil {
-							t.logger.Errorf("*****Unable to add decision task: %v", err)
-						}
 					}
 				}
 			case persistence.TransferTaskTypeDeleteExecution:
