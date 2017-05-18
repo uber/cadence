@@ -60,18 +60,14 @@ func startHandler(c *cli.Context) {
 
 	var cfg config.Config
 	config.Load(env, configDir, zone, &cfg)
-
 	log.Printf("config=\n%v\n", cfg.String())
 
 	var wg sync.WaitGroup
 
 	for _, s := range getServices(c) {
-
-		_, ok := cfg.Services[s]
-		if !ok {
+		if _, ok := cfg.Services[s]; !ok {
 			log.Fatalf("`%v` service missing config", s)
 		}
-
 		wg.Add(1)
 		startService(&cfg, s, &wg)
 	}
