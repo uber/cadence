@@ -57,7 +57,8 @@ type WorkflowHandler struct {
 }
 
 const (
-	defaultHistoryMaxPageSize = 1000
+	defaultVisibilityMaxPageSize = 1000
+	defaultHistoryMaxPageSize    = 1000
 )
 
 var (
@@ -319,14 +320,16 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	}
 
 	var history *gen.History
+	var token []byte
 	if matchingResp.IsSetWorkflowExecution() {
 		// Non-empty response. Get the history
-		history, err = wh.getHistory(info.ID, *matchingResp.GetWorkflowExecution(), matchingResp.GetStartedEventId()+1)
+		history, token, err = wh.getHistory(
+			info.ID, *matchingResp.GetWorkflowExecution(), matchingResp.GetStartedEventId()+1, pollRequest.GetMaximumHistoryPageSize(), nil)
 		if err != nil {
 			return nil, wrapError(err)
 		}
 	}
-	return createPollForDecisionTaskResponse(matchingResp, history), nil
+	return createPollForDecisionTaskResponse(matchingResp, history, token), nil
 }
 
 // RecordActivityTaskHeartbeat - Record Activity Task Heart beat.
@@ -545,21 +548,41 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		return nil, errInvalidRunID
 	}
 
+	if getRequest.IsSetNextPageToken() && !getRequest.IsSetNextEventId() {
+		return nil, &gen.BadRequestError{Message: "NextEventId must be set if NextPageToken is set."}
+	}
+
+	if !getRequest.IsSetMaximumPageSize() || getRequest.GetMaximumPageSize() == 0 {
+		getRequest.MaximumPageSize = common.Int32Ptr(defaultHistoryMaxPageSize)
+	}
+
 	domainName := getRequest.GetDomain()
 	info, _, err := wh.domainCache.GetDomain(domainName)
 	if err != nil {
 		return nil, wrapError(err)
 	}
 
-	response, err := wh.history.GetWorkflowExecutionHistory(ctx, &h.GetWorkflowExecutionHistoryRequest{
-		DomainUUID: common.StringPtr(info.ID),
-		GetRequest: getRequest,
-	})
+	var nextEventID int64
+	if !getRequest.IsSetNextEventId() {
+		response, err := wh.history.GetWorkflowExecutionNextEventID(ctx, &h.GetWorkflowExecutionNextEventIDRequest{
+			DomainUUID: common.StringPtr(info.ID),
+			Execution:  getRequest.GetExecution(),
+		})
+		if err != nil {
+			return nil, wrapError(err)
+		}
+		nextEventID = response.GetEventId()
+	} else {
+		nextEventID = getRequest.GetNextEventId()
+	}
+
+	history, token, err := wh.getHistory(
+		info.ID, *getRequest.GetExecution(), nextEventID, getRequest.GetMaximumPageSize(), getRequest.GetNextPageToken())
 	if err != nil {
 		return nil, wrapError(err)
 	}
+	return createGetWorkflowExecutionHistoryResponse(history, nextEventID, token), nil
 
-	return response, nil
 }
 
 // SignalWorkflowExecution is used to send a signal event to running workflow execution.  This results in
@@ -713,7 +736,7 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx thrift.Context,
 	}
 
 	if !listRequest.IsSetMaximumPageSize() || listRequest.GetMaximumPageSize() == 0 {
-		listRequest.MaximumPageSize = common.Int32Ptr(defaultHistoryMaxPageSize)
+		listRequest.MaximumPageSize = common.Int32Ptr(defaultVisibilityMaxPageSize)
 	}
 
 	domainName := listRequest.GetDomain()
@@ -799,7 +822,7 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx thrift.Context,
 	}
 
 	if !listRequest.IsSetMaximumPageSize() || listRequest.GetMaximumPageSize() == 0 {
-		listRequest.MaximumPageSize = common.Int32Ptr(defaultHistoryMaxPageSize)
+		listRequest.MaximumPageSize = common.Int32Ptr(defaultVisibilityMaxPageSize)
 	}
 
 	domainName := listRequest.GetDomain()
@@ -847,10 +870,12 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx thrift.Context,
 	return resp, nil
 }
 
-func (wh *WorkflowHandler) getHistory(
-	domainID string, execution gen.WorkflowExecution, nextEventID int64) (*gen.History, error) {
+func (wh *WorkflowHandler) getHistory(domainID string, execution gen.WorkflowExecution,
+	nextEventID int64, pageSize int32, nextPageToken []byte) (*gen.History, []byte, error) {
 
-	nextPageToken := []byte{}
+	if nextPageToken == nil {
+		nextPageToken = []byte{}
+	}
 	historyEvents := []*gen.HistoryEvent{}
 Pagination_Loop:
 	for {
@@ -863,7 +888,7 @@ Pagination_Loop:
 		})
 
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		for _, e := range response.Events {
@@ -871,12 +896,12 @@ Pagination_Loop:
 			s, _ := wh.hSerializerFactory.Get(e.EncodingType)
 			history, err1 := s.Deserialize(&e)
 			if err1 != nil {
-				return nil, err1
+				return nil, nil, err1
 			}
 			historyEvents = append(historyEvents, history.Events...)
 		}
 
-		if len(response.NextPageToken) == 0 {
+		if len(response.NextPageToken) == 0 || len(historyEvents) >= int(pageSize) {
 			break Pagination_Loop
 		}
 
@@ -885,7 +910,7 @@ Pagination_Loop:
 
 	executionHistory := gen.NewHistory()
 	executionHistory.Events = historyEvents
-	return executionHistory, nil
+	return executionHistory, nextPageToken, nil
 }
 
 // sets the version and encoding types to defaults if they
@@ -967,7 +992,7 @@ func createDomainResponse(info *persistence.DomainInfo, config *persistence.Doma
 }
 
 func createPollForDecisionTaskResponse(
-	matchingResponse *m.PollForDecisionTaskResponse, history *gen.History) *gen.PollForDecisionTaskResponse {
+	matchingResponse *m.PollForDecisionTaskResponse, history *gen.History, nextPageToken []byte) *gen.PollForDecisionTaskResponse {
 	resp := gen.NewPollForDecisionTaskResponse()
 	resp.TaskToken = matchingResponse.TaskToken
 	resp.WorkflowExecution = matchingResponse.WorkflowExecution
@@ -975,5 +1000,14 @@ func createPollForDecisionTaskResponse(
 	resp.PreviousStartedEventId = matchingResponse.PreviousStartedEventId
 	resp.StartedEventId = matchingResponse.StartedEventId
 	resp.History = history
+	resp.NextPageToken = nextPageToken
+	return resp
+}
+
+func createGetWorkflowExecutionHistoryResponse(
+	history *gen.History, nextEventID int64, nextPageToken []byte) *gen.GetWorkflowExecutionHistoryResponse {
+	resp := gen.NewGetWorkflowExecutionHistoryResponse()
+	resp.History = history
+	resp.NextPageToken = nextPageToken
 	return resp
 }
