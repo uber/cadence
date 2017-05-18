@@ -2934,6 +2934,7 @@ func (p *ScheduleDecisionTaskRequest) String() string {
 //  - DomainUUID
 //  - WorkflowExecution
 //  - InitiatedId
+//  - CompletedExecution
 //  - CompletionEvent
 type CompleteChildExecutionRequest struct {
   // unused fields # 1 to 9
@@ -2943,7 +2944,9 @@ type CompleteChildExecutionRequest struct {
   // unused fields # 21 to 29
   InitiatedId *int64 `thrift:"initiatedId,30" db:"initiatedId" json:"initiatedId,omitempty"`
   // unused fields # 31 to 39
-  CompletionEvent *shared.HistoryEvent `thrift:"completionEvent,40" db:"completionEvent" json:"completionEvent,omitempty"`
+  CompletedExecution *shared.WorkflowExecution `thrift:"completedExecution,40" db:"completedExecution" json:"completedExecution,omitempty"`
+  // unused fields # 41 to 49
+  CompletionEvent *shared.HistoryEvent `thrift:"completionEvent,50" db:"completionEvent" json:"completionEvent,omitempty"`
 }
 
 func NewCompleteChildExecutionRequest() *CompleteChildExecutionRequest {
@@ -2971,6 +2974,13 @@ func (p *CompleteChildExecutionRequest) GetInitiatedId() int64 {
   }
 return *p.InitiatedId
 }
+var CompleteChildExecutionRequest_CompletedExecution_DEFAULT *shared.WorkflowExecution
+func (p *CompleteChildExecutionRequest) GetCompletedExecution() *shared.WorkflowExecution {
+  if !p.IsSetCompletedExecution() {
+    return CompleteChildExecutionRequest_CompletedExecution_DEFAULT
+  }
+return p.CompletedExecution
+}
 var CompleteChildExecutionRequest_CompletionEvent_DEFAULT *shared.HistoryEvent
 func (p *CompleteChildExecutionRequest) GetCompletionEvent() *shared.HistoryEvent {
   if !p.IsSetCompletionEvent() {
@@ -2988,6 +2998,10 @@ func (p *CompleteChildExecutionRequest) IsSetWorkflowExecution() bool {
 
 func (p *CompleteChildExecutionRequest) IsSetInitiatedId() bool {
   return p.InitiatedId != nil
+}
+
+func (p *CompleteChildExecutionRequest) IsSetCompletedExecution() bool {
+  return p.CompletedExecution != nil
 }
 
 func (p *CompleteChildExecutionRequest) IsSetCompletionEvent() bool {
@@ -3021,6 +3035,10 @@ func (p *CompleteChildExecutionRequest) Read(iprot thrift.TProtocol) error {
       }
     case 40:
       if err := p.ReadField40(iprot); err != nil {
+        return err
+      }
+    case 50:
+      if err := p.ReadField50(iprot); err != nil {
         return err
       }
     default:
@@ -3065,6 +3083,14 @@ func (p *CompleteChildExecutionRequest)  ReadField30(iprot thrift.TProtocol) err
 }
 
 func (p *CompleteChildExecutionRequest)  ReadField40(iprot thrift.TProtocol) error {
+  p.CompletedExecution = &shared.WorkflowExecution{}
+  if err := p.CompletedExecution.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.CompletedExecution), err)
+  }
+  return nil
+}
+
+func (p *CompleteChildExecutionRequest)  ReadField50(iprot thrift.TProtocol) error {
   p.CompletionEvent = &shared.HistoryEvent{}
   if err := p.CompletionEvent.Read(iprot); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.CompletionEvent), err)
@@ -3080,6 +3106,7 @@ func (p *CompleteChildExecutionRequest) Write(oprot thrift.TProtocol) error {
     if err := p.writeField20(oprot); err != nil { return err }
     if err := p.writeField30(oprot); err != nil { return err }
     if err := p.writeField40(oprot); err != nil { return err }
+    if err := p.writeField50(oprot); err != nil { return err }
   }
   if err := oprot.WriteFieldStop(); err != nil {
     return thrift.PrependError("write field stop error: ", err) }
@@ -3126,14 +3153,27 @@ func (p *CompleteChildExecutionRequest) writeField30(oprot thrift.TProtocol) (er
 }
 
 func (p *CompleteChildExecutionRequest) writeField40(oprot thrift.TProtocol) (err error) {
+  if p.IsSetCompletedExecution() {
+    if err := oprot.WriteFieldBegin("completedExecution", thrift.STRUCT, 40); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 40:completedExecution: ", p), err) }
+    if err := p.CompletedExecution.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.CompletedExecution), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 40:completedExecution: ", p), err) }
+  }
+  return err
+}
+
+func (p *CompleteChildExecutionRequest) writeField50(oprot thrift.TProtocol) (err error) {
   if p.IsSetCompletionEvent() {
-    if err := oprot.WriteFieldBegin("completionEvent", thrift.STRUCT, 40); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field begin error 40:completionEvent: ", p), err) }
+    if err := oprot.WriteFieldBegin("completionEvent", thrift.STRUCT, 50); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 50:completionEvent: ", p), err) }
     if err := p.CompletionEvent.Write(oprot); err != nil {
       return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.CompletionEvent), err)
     }
     if err := oprot.WriteFieldEnd(); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field end error 40:completionEvent: ", p), err) }
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 50:completionEvent: ", p), err) }
   }
   return err
 }

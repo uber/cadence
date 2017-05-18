@@ -1248,27 +1248,28 @@ func (e *historyEngineImpl) CompleteChildExecution(completionRequest *h.Complete
 			}
 
 			initiatedID := completionRequest.GetInitiatedId()
+			completedExecution := completionRequest.GetCompletedExecution()
 			completionEvent := completionRequest.GetCompletionEvent()
 
 			// Check mutable state to make sure child execution is in pending child executions
 			ci, isRunning := msBuilder.GetChildExecutionInfo(initiatedID)
 			if !isRunning || ci.StartedID == emptyEventID {
-				return &workflow.EntityNotExistsError{Message: "Child execution not found."}
+				return &workflow.EntityNotExistsError{Message: "Pending child execution not found."}
 			}
 
 			switch completionEvent.GetEventType() {
 			case workflow.EventType_WorkflowExecutionCompleted:
 				attributes := completionEvent.GetWorkflowExecutionCompletedEventAttributes()
-				msBuilder.AddChildWorkflowExecutionCompletedEvent(initiatedID, attributes)
+				msBuilder.AddChildWorkflowExecutionCompletedEvent(initiatedID, completedExecution, attributes)
 			case workflow.EventType_WorkflowExecutionFailed:
 				attributes := completionEvent.GetWorkflowExecutionFailedEventAttributes()
-				msBuilder.AddChildWorkflowExecutionFailedEvent(initiatedID, attributes)
+				msBuilder.AddChildWorkflowExecutionFailedEvent(initiatedID, completedExecution, attributes)
 			case workflow.EventType_WorkflowExecutionCanceled:
 				attributes := completionEvent.GetWorkflowExecutionCanceledEventAttributes()
-				msBuilder.AddChildWorkflowExecutionCanceledEvent(initiatedID, attributes)
+				msBuilder.AddChildWorkflowExecutionCanceledEvent(initiatedID, completedExecution, attributes)
 			case workflow.EventType_WorkflowExecutionTerminated:
 				attributes := completionEvent.GetWorkflowExecutionTerminatedEventAttributes()
-				msBuilder.AddChildWorkflowExecutionTerminatedEvent(initiatedID, attributes)
+				msBuilder.AddChildWorkflowExecutionTerminatedEvent(initiatedID, completedExecution, attributes)
 			}
 
 			return nil

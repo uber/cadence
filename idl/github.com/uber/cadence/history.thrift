@@ -128,7 +128,8 @@ struct CompleteChildExecutionRequest {
   10: optional string domainUUID
   20: optional shared.WorkflowExecution workflowExecution
   30: optional i64 (js.type = "Long") initiatedId
-  40: optional shared.HistoryEvent completionEvent
+  40: optional shared.WorkflowExecution completedExecution
+  50: optional shared.HistoryEvent completionEvent
 }
 
 /**

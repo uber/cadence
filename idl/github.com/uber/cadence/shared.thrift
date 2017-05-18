@@ -104,14 +104,14 @@ enum EventType {
   WorkflowExecutionSignaled,
   WorkflowExecutionTerminated,
   WorkflowExecutionContinuedAsNew,
-  StartChildWorkflowExecutionInitiatedEventAttributes,
-  StartChildWorkflowExecutionFailedEventAttributes,
-  ChildWorkflowExecutionStartedEventAttributes,
-  ChildWorkflowExecutionCompletedEventAttributes,
-  ChildWorkflowExecutionFailedEventAttributes,
-  ChildWorkflowExecutionCanceledEventAttributes,
-  ChildWorkflowExecutionTimedOutEventAttributes,
-  ChildWorkflowExecutionTerminatedEventAttributes,
+  StartChildWorkflowExecutionInitiated,
+  StartChildWorkflowExecutionFailed,
+  ChildWorkflowExecutionStarted,
+  ChildWorkflowExecutionCompleted,
+  ChildWorkflowExecutionFailed,
+  ChildWorkflowExecutionCanceled,
+  ChildWorkflowExecutionTimedOut,
+  ChildWorkflowExecutionTerminated,
 }
 
 enum DecisionTaskFailedCause {
@@ -225,9 +225,9 @@ struct ContinueAsNewWorkflowExecutionDecisionAttributes {
 }
 
 struct StartChildWorkflowExecutionDecisionAttributes {
-  10: optional string workflowId
-  20: optional WorkflowType workflowType
-  30: optional string domain
+  10: optional string domain
+  20: optional string workflowId
+  30: optional WorkflowType workflowType
   40: optional TaskList taskList
   50: optional binary input
   60: optional i32 executionStartToCloseTimeoutSeconds
@@ -454,7 +454,7 @@ struct ExternalWorkflowExecutionCancelRequestedEventAttributes {
 }
 
 struct StartChildWorkflowExecutionInitiatedEventAttributes {
-  10:  optional string domainId
+  10:  optional string domain
   20:  optional string workflowId
   30:  optional WorkflowType workflowType
   40:  optional TaskList taskList
@@ -538,15 +538,15 @@ struct HistoryEvent {
   70:  optional WorkflowExecutionTimedOutEventAttributes workflowExecutionTimedOutEventAttributes
   80:  optional DecisionTaskScheduledEventAttributes decisionTaskScheduledEventAttributes
   90:  optional DecisionTaskStartedEventAttributes decisionTaskStartedEventAttributes
-  100:  optional DecisionTaskCompletedEventAttributes decisionTaskCompletedEventAttributes
-  110:  optional DecisionTaskTimedOutEventAttributes decisionTaskTimedOutEventAttributes
+  100: optional DecisionTaskCompletedEventAttributes decisionTaskCompletedEventAttributes
+  110: optional DecisionTaskTimedOutEventAttributes decisionTaskTimedOutEventAttributes
   120: optional DecisionTaskFailedEventAttributes decisionTaskFailedEventAttributes
-  130:  optional ActivityTaskScheduledEventAttributes activityTaskScheduledEventAttributes
-  140:  optional ActivityTaskStartedEventAttributes activityTaskStartedEventAttributes
-  150:  optional ActivityTaskCompletedEventAttributes activityTaskCompletedEventAttributes
-  160:  optional ActivityTaskFailedEventAttributes activityTaskFailedEventAttributes
-  170:  optional ActivityTaskTimedOutEventAttributes activityTaskTimedOutEventAttributes
-  180:  optional TimerStartedEventAttributes timerStartedEventAttributes
+  130: optional ActivityTaskScheduledEventAttributes activityTaskScheduledEventAttributes
+  140: optional ActivityTaskStartedEventAttributes activityTaskStartedEventAttributes
+  150: optional ActivityTaskCompletedEventAttributes activityTaskCompletedEventAttributes
+  160: optional ActivityTaskFailedEventAttributes activityTaskFailedEventAttributes
+  170: optional ActivityTaskTimedOutEventAttributes activityTaskTimedOutEventAttributes
+  180: optional TimerStartedEventAttributes timerStartedEventAttributes
   190: optional TimerFiredEventAttributes timerFiredEventAttributes
   200: optional ActivityTaskCancelRequestedEventAttributes activityTaskCancelRequestedEventAttributes
   210: optional RequestCancelActivityTaskFailedEventAttributes requestCancelActivityTaskFailedEventAttributes
