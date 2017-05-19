@@ -457,9 +457,6 @@ ProcessRetryLoop:
 										switch err.(type) {
 										case *workflow.WorkflowExecutionAlreadyStartedError:
 											err = t.recordStartChildExecutionFailed(task, context, attributes)
-											msBuilder.AddStartChildWorkflowExecutionFailedEvent(initiatedEventID,
-												workflow.ChildWorkflowExecutionFailedCause_WORKFLOW_ALREADY_RUNNING,
-												initiatedEvent.GetStartChildWorkflowExecutionInitiatedEventAttributes())
 										}
 									}
 								} else {
