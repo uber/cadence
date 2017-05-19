@@ -20,6 +20,7 @@ TEST_ARG ?= -race -v -timeout 5m
 BUILD := ./build
 TOOLS_CMD_ROOT=./cmd/tools
 INTEG_TEST_ROOT=./host
+INTEG_TEST_DIR=host
 
 export PATH := $(GOPATH)/bin:$(PATH)
 
@@ -51,9 +52,6 @@ TOOLS_SRC += $(TOOLS_CMD_ROOT)
 # all directories with *_test.go files in them
 TEST_DIRS := $(sort $(dir $(filter %_test.go,$(ALL_SRC))))
 
-# dirs that contain integration tests, these need to be treated
-# differently to get correct code coverage
-INTEG_TEST_DIRS := $(filter $(INTEG_TEST_ROOT)%,$(TEST_DIRS))
 # all tests other than integration test fall into the pkg_test category
 PKG_TEST_DIRS := $(filter-out $(INTEG_TEST_ROOT)%,$(TEST_DIRS))
 
@@ -99,12 +97,10 @@ cover_profile: clean bins_nothrift
 	@mkdir -p $(BUILD)
 	@echo "mode: atomic" > $(BUILD)/cover.out
 
-	@echo Running integration tests: $(INTEG_TEST_DIRS)
-	@time for dir in $(INTEG_TEST_DIRS); do \
-		mkdir -p $(BUILD)/"$$dir"; \
-		go test "$$dir" $(TEST_ARG) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/"$$dir"/coverage.out || exit 1; \
-		cat $(BUILD)/"$$dir"/coverage.out | grep -v "mode: atomic" >> $(BUILD)/cover.out; \
-	done
+	@echo Running integration test
+	@mkdir -p $(BUILD)/$(INTEG_TEST_DIR) 
+	@time go test $(INTEG_TEST_ROOT) $(TEST_ARG) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/"$$dir"/coverage.out || exit 1;
+	@cat $(BUILD)/$(INTEG_TEST_DIR)/coverage.out | grep -v "mode: atomic" >> $(BUILD)/cover.out
 
 	@echo Running package tests:
 	@for dir in $(PKG_TEST_DIRS); do \
@@ -122,7 +118,7 @@ cover_ci: cover_profile
 lint: vendor/glide.updated
 	@echo $(ALL_SRC)
 	@lintFail=0; for file in $(ALL_SRC); do \
-		golint -set_exit_status "$$file"; \
+		golint "$$file"; \
 		if [ $$? -eq 1 ]; then lintFail=1; fi; \
 	done; \
 	if [ $$lintFail -eq 1 ]; then exit 1; fi;
