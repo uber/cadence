@@ -73,7 +73,7 @@ vendor/glide.updated: glide.lock glide.yaml
 clean_thrift:
 	rm -rf .gen
 
-thriftc: clean_thrift vendor/glide.updated $(THRIFT_GEN_SRC)
+thriftc: clean_thrift $(THRIFT_GEN_SRC)
 
 copyright: cmd/tools/copyright/licensegen.go
 	go run ./cmd/tools/copyright/licensegen.go --verifyOnly
@@ -119,7 +119,7 @@ cover: cover_profile
 cover_ci: cover_profile
 	goveralls -coverprofile=$(BUILD)/cover.out -service=travis-ci || echo -e "\x1b[31mCoveralls failed\x1b[m"; \
 
-lint:
+lint: vendor/glide.updated
 	@echo $(ALL_SRC)
 	@lintFail=0; for file in $(ALL_SRC); do \
 		golint -set_exit_status "$$file"; \
