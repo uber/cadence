@@ -99,7 +99,7 @@ cover_profile: clean bins_nothrift
 	@mkdir -p $(BUILD)
 	@echo "mode: atomic" > $(BUILD)/cover.out
 
-	@echo Running integration tests:
+	@echo Running integration tests: $(INTEG_TEST_DIRS)
 	@time for dir in $(INTEG_TEST_DIRS); do \
 		mkdir -p $(BUILD)/"$$dir"; \
 		go test "$$dir" $(TEST_ARG) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/"$$dir"/coverage.out || exit 1; \
@@ -120,6 +120,7 @@ cover_ci: cover_profile
 	goveralls -coverprofile=$(BUILD)/cover.out -service=travis-ci || echo -e "\x1b[31mCoveralls failed\x1b[m"; \
 
 lint:
+	@echo $(ALL_SRC)
 	@lintFail=0; for file in $(ALL_SRC); do \
 		golint -set_exit_status "$$file"; \
 		if [ $$? -eq 1 ]; then lintFail=1; fi; \
