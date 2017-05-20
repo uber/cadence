@@ -2950,6 +2950,13 @@ func (p *ScheduleDecisionTaskRequest) String() string {
   return fmt.Sprintf("ScheduleDecisionTaskRequest(%+v)", *p)
 }
 
+// RecordChildExecutionCompletedRequest is used for reporting the completion of child execution to parent workflow
+// execution which started it.  When a child execution is completed it creates this request and calls the
+// RecordChildExecutionCompleted API with the workflowExecution of parent.  It also sets the completedExecution of the
+// child as it could potentially be different than the ChildExecutionStartedEvent of parent in the situation when
+// child creates multiple runs through ContinueAsNew before finally completing.
+// 
+// 
 // Attributes:
 //  - DomainUUID
 //  - WorkflowExecution

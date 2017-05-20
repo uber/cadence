@@ -11148,22 +11148,22 @@ func (p *StartChildWorkflowExecutionInitiatedEventAttributes) String() string {
 }
 
 // Attributes:
-//  - Cause
 //  - Domain
 //  - WorkflowId
 //  - WorkflowType
+//  - Cause
 //  - Control
 //  - InitiatedEventId
 //  - DecisionTaskCompletedEventId
 type StartChildWorkflowExecutionFailedEventAttributes struct {
   // unused fields # 1 to 9
-  Cause *ChildWorkflowExecutionFailedCause `thrift:"cause,10" db:"cause" json:"cause,omitempty"`
+  Domain *string `thrift:"domain,10" db:"domain" json:"domain,omitempty"`
   // unused fields # 11 to 19
-  Domain *string `thrift:"domain,20" db:"domain" json:"domain,omitempty"`
+  WorkflowId *string `thrift:"workflowId,20" db:"workflowId" json:"workflowId,omitempty"`
   // unused fields # 21 to 29
-  WorkflowId *string `thrift:"workflowId,30" db:"workflowId" json:"workflowId,omitempty"`
+  WorkflowType *WorkflowType `thrift:"workflowType,30" db:"workflowType" json:"workflowType,omitempty"`
   // unused fields # 31 to 39
-  WorkflowType *WorkflowType `thrift:"workflowType,40" db:"workflowType" json:"workflowType,omitempty"`
+  Cause *ChildWorkflowExecutionFailedCause `thrift:"cause,40" db:"cause" json:"cause,omitempty"`
   // unused fields # 41 to 49
   Control []byte `thrift:"control,50" db:"control" json:"control,omitempty"`
   // unused fields # 51 to 59
@@ -11176,13 +11176,6 @@ func NewStartChildWorkflowExecutionFailedEventAttributes() *StartChildWorkflowEx
   return &StartChildWorkflowExecutionFailedEventAttributes{}
 }
 
-var StartChildWorkflowExecutionFailedEventAttributes_Cause_DEFAULT ChildWorkflowExecutionFailedCause
-func (p *StartChildWorkflowExecutionFailedEventAttributes) GetCause() ChildWorkflowExecutionFailedCause {
-  if !p.IsSetCause() {
-    return StartChildWorkflowExecutionFailedEventAttributes_Cause_DEFAULT
-  }
-return *p.Cause
-}
 var StartChildWorkflowExecutionFailedEventAttributes_Domain_DEFAULT string
 func (p *StartChildWorkflowExecutionFailedEventAttributes) GetDomain() string {
   if !p.IsSetDomain() {
@@ -11204,6 +11197,13 @@ func (p *StartChildWorkflowExecutionFailedEventAttributes) GetWorkflowType() *Wo
   }
 return p.WorkflowType
 }
+var StartChildWorkflowExecutionFailedEventAttributes_Cause_DEFAULT ChildWorkflowExecutionFailedCause
+func (p *StartChildWorkflowExecutionFailedEventAttributes) GetCause() ChildWorkflowExecutionFailedCause {
+  if !p.IsSetCause() {
+    return StartChildWorkflowExecutionFailedEventAttributes_Cause_DEFAULT
+  }
+return *p.Cause
+}
 var StartChildWorkflowExecutionFailedEventAttributes_Control_DEFAULT []byte
 
 func (p *StartChildWorkflowExecutionFailedEventAttributes) GetControl() []byte {
@@ -11223,10 +11223,6 @@ func (p *StartChildWorkflowExecutionFailedEventAttributes) GetDecisionTaskComple
   }
 return *p.DecisionTaskCompletedEventId
 }
-func (p *StartChildWorkflowExecutionFailedEventAttributes) IsSetCause() bool {
-  return p.Cause != nil
-}
-
 func (p *StartChildWorkflowExecutionFailedEventAttributes) IsSetDomain() bool {
   return p.Domain != nil
 }
@@ -11237,6 +11233,10 @@ func (p *StartChildWorkflowExecutionFailedEventAttributes) IsSetWorkflowId() boo
 
 func (p *StartChildWorkflowExecutionFailedEventAttributes) IsSetWorkflowType() bool {
   return p.WorkflowType != nil
+}
+
+func (p *StartChildWorkflowExecutionFailedEventAttributes) IsSetCause() bool {
+  return p.Cause != nil
 }
 
 func (p *StartChildWorkflowExecutionFailedEventAttributes) IsSetControl() bool {
@@ -11308,11 +11308,10 @@ func (p *StartChildWorkflowExecutionFailedEventAttributes) Read(iprot thrift.TPr
 }
 
 func (p *StartChildWorkflowExecutionFailedEventAttributes)  ReadField10(iprot thrift.TProtocol) error {
-  if v, err := iprot.ReadI32(); err != nil {
+  if v, err := iprot.ReadString(); err != nil {
   return thrift.PrependError("error reading field 10: ", err)
 } else {
-  temp := ChildWorkflowExecutionFailedCause(v)
-  p.Cause = &temp
+  p.Domain = &v
 }
   return nil
 }
@@ -11321,25 +11320,26 @@ func (p *StartChildWorkflowExecutionFailedEventAttributes)  ReadField20(iprot th
   if v, err := iprot.ReadString(); err != nil {
   return thrift.PrependError("error reading field 20: ", err)
 } else {
-  p.Domain = &v
-}
-  return nil
-}
-
-func (p *StartChildWorkflowExecutionFailedEventAttributes)  ReadField30(iprot thrift.TProtocol) error {
-  if v, err := iprot.ReadString(); err != nil {
-  return thrift.PrependError("error reading field 30: ", err)
-} else {
   p.WorkflowId = &v
 }
   return nil
 }
 
-func (p *StartChildWorkflowExecutionFailedEventAttributes)  ReadField40(iprot thrift.TProtocol) error {
+func (p *StartChildWorkflowExecutionFailedEventAttributes)  ReadField30(iprot thrift.TProtocol) error {
   p.WorkflowType = &WorkflowType{}
   if err := p.WorkflowType.Read(iprot); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.WorkflowType), err)
   }
+  return nil
+}
+
+func (p *StartChildWorkflowExecutionFailedEventAttributes)  ReadField40(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadI32(); err != nil {
+  return thrift.PrependError("error reading field 40: ", err)
+} else {
+  temp := ChildWorkflowExecutionFailedCause(v)
+  p.Cause = &temp
+}
   return nil
 }
 
@@ -11390,50 +11390,50 @@ func (p *StartChildWorkflowExecutionFailedEventAttributes) Write(oprot thrift.TP
 }
 
 func (p *StartChildWorkflowExecutionFailedEventAttributes) writeField10(oprot thrift.TProtocol) (err error) {
-  if p.IsSetCause() {
-    if err := oprot.WriteFieldBegin("cause", thrift.I32, 10); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:cause: ", p), err) }
-    if err := oprot.WriteI32(int32(*p.Cause)); err != nil {
-    return thrift.PrependError(fmt.Sprintf("%T.cause (10) field write error: ", p), err) }
+  if p.IsSetDomain() {
+    if err := oprot.WriteFieldBegin("domain", thrift.STRING, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:domain: ", p), err) }
+    if err := oprot.WriteString(string(*p.Domain)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.domain (10) field write error: ", p), err) }
     if err := oprot.WriteFieldEnd(); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:cause: ", p), err) }
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:domain: ", p), err) }
   }
   return err
 }
 
 func (p *StartChildWorkflowExecutionFailedEventAttributes) writeField20(oprot thrift.TProtocol) (err error) {
-  if p.IsSetDomain() {
-    if err := oprot.WriteFieldBegin("domain", thrift.STRING, 20); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:domain: ", p), err) }
-    if err := oprot.WriteString(string(*p.Domain)); err != nil {
-    return thrift.PrependError(fmt.Sprintf("%T.domain (20) field write error: ", p), err) }
+  if p.IsSetWorkflowId() {
+    if err := oprot.WriteFieldBegin("workflowId", thrift.STRING, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:workflowId: ", p), err) }
+    if err := oprot.WriteString(string(*p.WorkflowId)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.workflowId (20) field write error: ", p), err) }
     if err := oprot.WriteFieldEnd(); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:domain: ", p), err) }
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:workflowId: ", p), err) }
   }
   return err
 }
 
 func (p *StartChildWorkflowExecutionFailedEventAttributes) writeField30(oprot thrift.TProtocol) (err error) {
-  if p.IsSetWorkflowId() {
-    if err := oprot.WriteFieldBegin("workflowId", thrift.STRING, 30); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field begin error 30:workflowId: ", p), err) }
-    if err := oprot.WriteString(string(*p.WorkflowId)); err != nil {
-    return thrift.PrependError(fmt.Sprintf("%T.workflowId (30) field write error: ", p), err) }
+  if p.IsSetWorkflowType() {
+    if err := oprot.WriteFieldBegin("workflowType", thrift.STRUCT, 30); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 30:workflowType: ", p), err) }
+    if err := p.WorkflowType.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.WorkflowType), err)
+    }
     if err := oprot.WriteFieldEnd(); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field end error 30:workflowId: ", p), err) }
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 30:workflowType: ", p), err) }
   }
   return err
 }
 
 func (p *StartChildWorkflowExecutionFailedEventAttributes) writeField40(oprot thrift.TProtocol) (err error) {
-  if p.IsSetWorkflowType() {
-    if err := oprot.WriteFieldBegin("workflowType", thrift.STRUCT, 40); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field begin error 40:workflowType: ", p), err) }
-    if err := p.WorkflowType.Write(oprot); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.WorkflowType), err)
-    }
+  if p.IsSetCause() {
+    if err := oprot.WriteFieldBegin("cause", thrift.I32, 40); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 40:cause: ", p), err) }
+    if err := oprot.WriteI32(int32(*p.Cause)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.cause (40) field write error: ", p), err) }
     if err := oprot.WriteFieldEnd(); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field end error 40:workflowType: ", p), err) }
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 40:cause: ", p), err) }
   }
   return err
 }
