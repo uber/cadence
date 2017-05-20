@@ -1,5 +1,5 @@
-hash: bf791dbcdd67ce8d8ff782746dc44c6d44aeb3f77a1582ba76fce3e71947b919
-updated: 2017-05-18T20:50:01.779018782-07:00
+hash: 7610339866217132b43d6d09606efa6a5b94694f0f240573ece8449caf5d9f77
+updated: 2017-05-19T17:00:48.026302929-07:00
 imports:
 - name: github.com/apache/thrift
   version: d1380d52999e3c47e978879059f5017d01b257f3
@@ -34,8 +34,6 @@ imports:
   - internal/lru
   - internal/murmur
   - internal/streams
-- name: github.com/golang/lint
-  version: cb00e5669539f047b2f4c53a421a01b0c8e172c6
 - name: github.com/golang/mock
   version: bd3c8e81be01eef76d4b503f5e687d2d1354d2d9
   subpackages:
