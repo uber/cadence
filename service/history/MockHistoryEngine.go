@@ -266,12 +266,12 @@ func (_m *MockHistoryEngine) ScheduleDecisionTask(request *gohistory.ScheduleDec
 	return r0
 }
 
-// CompleteChildExecution is mock implementation for CompleteChildExecution of HistoryEngine
-func (_m *MockHistoryEngine) CompleteChildExecution(request *gohistory.CompleteChildExecutionRequest) error {
+// RecordChildExecutionCompleted is mock implementation for CompleteChildExecution of HistoryEngine
+func (_m *MockHistoryEngine) RecordChildExecutionCompleted(request *gohistory.RecordChildExecutionCompletedRequest) error {
 	ret := _m.Called(request)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*gohistory.CompleteChildExecutionRequest) error); ok {
+	if rf, ok := ret.Get(0).(func(*gohistory.RecordChildExecutionCompletedRequest) error); ok {
 		r0 = rf(request)
 	} else {
 		r0 = ret.Error(0)

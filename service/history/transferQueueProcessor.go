@@ -316,7 +316,7 @@ ProcessRetryLoop:
 						// Communicate the result to parent execution if this is Child Workflow execution
 						if mb.hasParentExecution() && mb.executionInfo.CloseStatus != persistence.WorkflowCloseStatusContinuedAsNew {
 							completionEvent, _ := mb.GetCompletionEvent()
-							err = t.historyClient.CompleteChildExecution(nil, &history.CompleteChildExecutionRequest{
+							err = t.historyClient.RecordChildExecutionCompleted(nil, &history.RecordChildExecutionCompletedRequest{
 								DomainUUID: common.StringPtr(mb.executionInfo.ParentDomainID),
 								WorkflowExecution: &workflow.WorkflowExecution{
 									WorkflowId: common.StringPtr(mb.executionInfo.ParentWorkflowID),
@@ -450,7 +450,7 @@ ProcessRetryLoop:
 										}
 
 									} else {
-										t.logger.Debugf("Failed to child workflow execution. Error: %v", err)
+										t.logger.Debugf("Failed to start child workflow execution. Error: %v", err)
 
 										// Check to see if the error is non-transient, in which case add StartChildWorkflowExecutionFailed
 										// event and complete transfer task by setting the err = nil

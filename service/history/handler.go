@@ -59,7 +59,8 @@ var _ hist.TChanHistoryService = (*Handler)(nil)
 var _ EngineFactory = (*Handler)(nil)
 
 var (
-	errDomainNotSet = &gen.BadRequestError{Message: "Domain not set on request."}
+	errDomainNotSet            = &gen.BadRequestError{Message: "Domain not set on request."}
+	errWorkflowExecutionNotSet = &gen.BadRequestError{Message: "WorkflowExecution not set on request."}
 )
 
 // NewHandler creates a thrift handler for the history service
@@ -544,6 +545,10 @@ func (h *Handler) ScheduleDecisionTask(ctx thrift.Context, request *hist.Schedul
 		return errDomainNotSet
 	}
 
+	if !request.IsSetWorkflowExecution() {
+		return errWorkflowExecutionNotSet
+	}
+
 	workflowExecution := request.GetWorkflowExecution()
 	engine, err1 := h.controller.GetEngine(workflowExecution.GetWorkflowId())
 	if err1 != nil {
@@ -560,29 +565,33 @@ func (h *Handler) ScheduleDecisionTask(ctx thrift.Context, request *hist.Schedul
 	return nil
 }
 
-// CompleteChildExecution is used for reporting the completion of child workflow execution to parent.  This is mainly
-// called by transfer queue processor during the processing of DeleteExecution task.
-func (h *Handler) CompleteChildExecution(ctx thrift.Context, request *hist.CompleteChildExecutionRequest) error {
+// RecordChildExecutionCompleted is used for reporting the completion of child workflow execution to parent.
+// This is mainly called by transfer queue processor during the processing of DeleteExecution task.
+func (h *Handler) RecordChildExecutionCompleted(ctx thrift.Context, request *hist.RecordChildExecutionCompletedRequest) error {
 	h.startWG.Wait()
 
-	h.metricsClient.IncCounter(metrics.HistoryCompleteChildExecutionScope, metrics.CadenceRequests)
-	sw := h.metricsClient.StartTimer(metrics.HistoryCompleteChildExecutionScope, metrics.CadenceLatency)
+	h.metricsClient.IncCounter(metrics.HistoryRecordChildExecutionCompletedScope, metrics.CadenceRequests)
+	sw := h.metricsClient.StartTimer(metrics.HistoryRecordChildExecutionCompletedScope, metrics.CadenceLatency)
 	defer sw.Stop()
 
 	if !request.IsSetDomainUUID() {
 		return errDomainNotSet
 	}
 
+	if !request.IsSetWorkflowExecution() {
+		return errWorkflowExecutionNotSet
+	}
+
 	workflowExecution := request.GetWorkflowExecution()
 	engine, err1 := h.controller.GetEngine(workflowExecution.GetWorkflowId())
 	if err1 != nil {
-		h.updateErrorMetric(metrics.HistoryCompleteChildExecutionScope, err1)
+		h.updateErrorMetric(metrics.HistoryRecordChildExecutionCompletedScope, err1)
 		return err1
 	}
 
-	err2 := engine.CompleteChildExecution(request)
+	err2 := engine.RecordChildExecutionCompleted(request)
 	if err2 != nil {
-		h.updateErrorMetric(metrics.HistoryCompleteChildExecutionScope, h.convertError(err2))
+		h.updateErrorMetric(metrics.HistoryRecordChildExecutionCompletedScope, h.convertError(err2))
 		return h.convertError(err2)
 	}
 

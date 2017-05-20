@@ -46,7 +46,7 @@ type (
 		SignalWorkflowExecution(request *h.SignalWorkflowExecutionRequest) error
 		TerminateWorkflowExecution(request *h.TerminateWorkflowExecutionRequest) error
 		ScheduleDecisionTask(request *h.ScheduleDecisionTaskRequest) error
-		CompleteChildExecution(request *h.CompleteChildExecutionRequest) error
+		RecordChildExecutionCompleted(request *h.RecordChildExecutionCompletedRequest) error
 	}
 
 	// EngineFactory is used to create an instance of sharded history engine

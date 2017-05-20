@@ -1233,8 +1233,8 @@ func (e *historyEngineImpl) ScheduleDecisionTask(scheduleRequest *h.ScheduleDeci
 		})
 }
 
-// ScheduleDecisionTask schedules a decision if no outstanding decision found
-func (e *historyEngineImpl) CompleteChildExecution(completionRequest *h.CompleteChildExecutionRequest) error {
+// RecordChildExecutionCompleted records the completion of child execution into parent execution history
+func (e *historyEngineImpl) RecordChildExecutionCompleted(completionRequest *h.RecordChildExecutionCompletedRequest) error {
 	domainID := completionRequest.GetDomainUUID()
 	execution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr(completionRequest.GetWorkflowExecution().GetWorkflowId()),

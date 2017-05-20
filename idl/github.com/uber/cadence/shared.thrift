@@ -467,10 +467,10 @@ struct StartChildWorkflowExecutionInitiatedEventAttributes {
 }
 
 struct StartChildWorkflowExecutionFailedEventAttributes {
-  10: optional ChildWorkflowExecutionFailedCause cause
-  20: optional string domain
-  30: optional string workflowId
-  40: optional WorkflowType workflowType
+  10: optional string domain
+  20: optional string workflowId
+  30: optional WorkflowType workflowType
+  40: optional ChildWorkflowExecutionFailedCause cause
   50: optional binary control
   60: optional i64 (js.type = "Long") initiatedEventId
   70: optional i64 (js.type = "Long") decisionTaskCompletedEventId

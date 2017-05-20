@@ -2956,7 +2956,7 @@ func (p *ScheduleDecisionTaskRequest) String() string {
 //  - InitiatedId
 //  - CompletedExecution
 //  - CompletionEvent
-type CompleteChildExecutionRequest struct {
+type RecordChildExecutionCompletedRequest struct {
   // unused fields # 1 to 9
   DomainUUID *string `thrift:"domainUUID,10" db:"domainUUID" json:"domainUUID,omitempty"`
   // unused fields # 11 to 19
@@ -2969,66 +2969,66 @@ type CompleteChildExecutionRequest struct {
   CompletionEvent *shared.HistoryEvent `thrift:"completionEvent,50" db:"completionEvent" json:"completionEvent,omitempty"`
 }
 
-func NewCompleteChildExecutionRequest() *CompleteChildExecutionRequest {
-  return &CompleteChildExecutionRequest{}
+func NewRecordChildExecutionCompletedRequest() *RecordChildExecutionCompletedRequest {
+  return &RecordChildExecutionCompletedRequest{}
 }
 
-var CompleteChildExecutionRequest_DomainUUID_DEFAULT string
-func (p *CompleteChildExecutionRequest) GetDomainUUID() string {
+var RecordChildExecutionCompletedRequest_DomainUUID_DEFAULT string
+func (p *RecordChildExecutionCompletedRequest) GetDomainUUID() string {
   if !p.IsSetDomainUUID() {
-    return CompleteChildExecutionRequest_DomainUUID_DEFAULT
+    return RecordChildExecutionCompletedRequest_DomainUUID_DEFAULT
   }
 return *p.DomainUUID
 }
-var CompleteChildExecutionRequest_WorkflowExecution_DEFAULT *shared.WorkflowExecution
-func (p *CompleteChildExecutionRequest) GetWorkflowExecution() *shared.WorkflowExecution {
+var RecordChildExecutionCompletedRequest_WorkflowExecution_DEFAULT *shared.WorkflowExecution
+func (p *RecordChildExecutionCompletedRequest) GetWorkflowExecution() *shared.WorkflowExecution {
   if !p.IsSetWorkflowExecution() {
-    return CompleteChildExecutionRequest_WorkflowExecution_DEFAULT
+    return RecordChildExecutionCompletedRequest_WorkflowExecution_DEFAULT
   }
 return p.WorkflowExecution
 }
-var CompleteChildExecutionRequest_InitiatedId_DEFAULT int64
-func (p *CompleteChildExecutionRequest) GetInitiatedId() int64 {
+var RecordChildExecutionCompletedRequest_InitiatedId_DEFAULT int64
+func (p *RecordChildExecutionCompletedRequest) GetInitiatedId() int64 {
   if !p.IsSetInitiatedId() {
-    return CompleteChildExecutionRequest_InitiatedId_DEFAULT
+    return RecordChildExecutionCompletedRequest_InitiatedId_DEFAULT
   }
 return *p.InitiatedId
 }
-var CompleteChildExecutionRequest_CompletedExecution_DEFAULT *shared.WorkflowExecution
-func (p *CompleteChildExecutionRequest) GetCompletedExecution() *shared.WorkflowExecution {
+var RecordChildExecutionCompletedRequest_CompletedExecution_DEFAULT *shared.WorkflowExecution
+func (p *RecordChildExecutionCompletedRequest) GetCompletedExecution() *shared.WorkflowExecution {
   if !p.IsSetCompletedExecution() {
-    return CompleteChildExecutionRequest_CompletedExecution_DEFAULT
+    return RecordChildExecutionCompletedRequest_CompletedExecution_DEFAULT
   }
 return p.CompletedExecution
 }
-var CompleteChildExecutionRequest_CompletionEvent_DEFAULT *shared.HistoryEvent
-func (p *CompleteChildExecutionRequest) GetCompletionEvent() *shared.HistoryEvent {
+var RecordChildExecutionCompletedRequest_CompletionEvent_DEFAULT *shared.HistoryEvent
+func (p *RecordChildExecutionCompletedRequest) GetCompletionEvent() *shared.HistoryEvent {
   if !p.IsSetCompletionEvent() {
-    return CompleteChildExecutionRequest_CompletionEvent_DEFAULT
+    return RecordChildExecutionCompletedRequest_CompletionEvent_DEFAULT
   }
 return p.CompletionEvent
 }
-func (p *CompleteChildExecutionRequest) IsSetDomainUUID() bool {
+func (p *RecordChildExecutionCompletedRequest) IsSetDomainUUID() bool {
   return p.DomainUUID != nil
 }
 
-func (p *CompleteChildExecutionRequest) IsSetWorkflowExecution() bool {
+func (p *RecordChildExecutionCompletedRequest) IsSetWorkflowExecution() bool {
   return p.WorkflowExecution != nil
 }
 
-func (p *CompleteChildExecutionRequest) IsSetInitiatedId() bool {
+func (p *RecordChildExecutionCompletedRequest) IsSetInitiatedId() bool {
   return p.InitiatedId != nil
 }
 
-func (p *CompleteChildExecutionRequest) IsSetCompletedExecution() bool {
+func (p *RecordChildExecutionCompletedRequest) IsSetCompletedExecution() bool {
   return p.CompletedExecution != nil
 }
 
-func (p *CompleteChildExecutionRequest) IsSetCompletionEvent() bool {
+func (p *RecordChildExecutionCompletedRequest) IsSetCompletionEvent() bool {
   return p.CompletionEvent != nil
 }
 
-func (p *CompleteChildExecutionRequest) Read(iprot thrift.TProtocol) error {
+func (p *RecordChildExecutionCompletedRequest) Read(iprot thrift.TProtocol) error {
   if _, err := iprot.ReadStructBegin(); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
   }
@@ -3076,7 +3076,7 @@ func (p *CompleteChildExecutionRequest) Read(iprot thrift.TProtocol) error {
   return nil
 }
 
-func (p *CompleteChildExecutionRequest)  ReadField10(iprot thrift.TProtocol) error {
+func (p *RecordChildExecutionCompletedRequest)  ReadField10(iprot thrift.TProtocol) error {
   if v, err := iprot.ReadString(); err != nil {
   return thrift.PrependError("error reading field 10: ", err)
 } else {
@@ -3085,7 +3085,7 @@ func (p *CompleteChildExecutionRequest)  ReadField10(iprot thrift.TProtocol) err
   return nil
 }
 
-func (p *CompleteChildExecutionRequest)  ReadField20(iprot thrift.TProtocol) error {
+func (p *RecordChildExecutionCompletedRequest)  ReadField20(iprot thrift.TProtocol) error {
   p.WorkflowExecution = &shared.WorkflowExecution{}
   if err := p.WorkflowExecution.Read(iprot); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.WorkflowExecution), err)
@@ -3093,7 +3093,7 @@ func (p *CompleteChildExecutionRequest)  ReadField20(iprot thrift.TProtocol) err
   return nil
 }
 
-func (p *CompleteChildExecutionRequest)  ReadField30(iprot thrift.TProtocol) error {
+func (p *RecordChildExecutionCompletedRequest)  ReadField30(iprot thrift.TProtocol) error {
   if v, err := iprot.ReadI64(); err != nil {
   return thrift.PrependError("error reading field 30: ", err)
 } else {
@@ -3102,7 +3102,7 @@ func (p *CompleteChildExecutionRequest)  ReadField30(iprot thrift.TProtocol) err
   return nil
 }
 
-func (p *CompleteChildExecutionRequest)  ReadField40(iprot thrift.TProtocol) error {
+func (p *RecordChildExecutionCompletedRequest)  ReadField40(iprot thrift.TProtocol) error {
   p.CompletedExecution = &shared.WorkflowExecution{}
   if err := p.CompletedExecution.Read(iprot); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.CompletedExecution), err)
@@ -3110,7 +3110,7 @@ func (p *CompleteChildExecutionRequest)  ReadField40(iprot thrift.TProtocol) err
   return nil
 }
 
-func (p *CompleteChildExecutionRequest)  ReadField50(iprot thrift.TProtocol) error {
+func (p *RecordChildExecutionCompletedRequest)  ReadField50(iprot thrift.TProtocol) error {
   p.CompletionEvent = &shared.HistoryEvent{}
   if err := p.CompletionEvent.Read(iprot); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.CompletionEvent), err)
@@ -3118,8 +3118,8 @@ func (p *CompleteChildExecutionRequest)  ReadField50(iprot thrift.TProtocol) err
   return nil
 }
 
-func (p *CompleteChildExecutionRequest) Write(oprot thrift.TProtocol) error {
-  if err := oprot.WriteStructBegin("CompleteChildExecutionRequest"); err != nil {
+func (p *RecordChildExecutionCompletedRequest) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("RecordChildExecutionCompletedRequest"); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
   if p != nil {
     if err := p.writeField10(oprot); err != nil { return err }
@@ -3135,7 +3135,7 @@ func (p *CompleteChildExecutionRequest) Write(oprot thrift.TProtocol) error {
   return nil
 }
 
-func (p *CompleteChildExecutionRequest) writeField10(oprot thrift.TProtocol) (err error) {
+func (p *RecordChildExecutionCompletedRequest) writeField10(oprot thrift.TProtocol) (err error) {
   if p.IsSetDomainUUID() {
     if err := oprot.WriteFieldBegin("domainUUID", thrift.STRING, 10); err != nil {
       return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:domainUUID: ", p), err) }
@@ -3147,7 +3147,7 @@ func (p *CompleteChildExecutionRequest) writeField10(oprot thrift.TProtocol) (er
   return err
 }
 
-func (p *CompleteChildExecutionRequest) writeField20(oprot thrift.TProtocol) (err error) {
+func (p *RecordChildExecutionCompletedRequest) writeField20(oprot thrift.TProtocol) (err error) {
   if p.IsSetWorkflowExecution() {
     if err := oprot.WriteFieldBegin("workflowExecution", thrift.STRUCT, 20); err != nil {
       return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:workflowExecution: ", p), err) }
@@ -3160,7 +3160,7 @@ func (p *CompleteChildExecutionRequest) writeField20(oprot thrift.TProtocol) (er
   return err
 }
 
-func (p *CompleteChildExecutionRequest) writeField30(oprot thrift.TProtocol) (err error) {
+func (p *RecordChildExecutionCompletedRequest) writeField30(oprot thrift.TProtocol) (err error) {
   if p.IsSetInitiatedId() {
     if err := oprot.WriteFieldBegin("initiatedId", thrift.I64, 30); err != nil {
       return thrift.PrependError(fmt.Sprintf("%T write field begin error 30:initiatedId: ", p), err) }
@@ -3172,7 +3172,7 @@ func (p *CompleteChildExecutionRequest) writeField30(oprot thrift.TProtocol) (er
   return err
 }
 
-func (p *CompleteChildExecutionRequest) writeField40(oprot thrift.TProtocol) (err error) {
+func (p *RecordChildExecutionCompletedRequest) writeField40(oprot thrift.TProtocol) (err error) {
   if p.IsSetCompletedExecution() {
     if err := oprot.WriteFieldBegin("completedExecution", thrift.STRUCT, 40); err != nil {
       return thrift.PrependError(fmt.Sprintf("%T write field begin error 40:completedExecution: ", p), err) }
@@ -3185,7 +3185,7 @@ func (p *CompleteChildExecutionRequest) writeField40(oprot thrift.TProtocol) (er
   return err
 }
 
-func (p *CompleteChildExecutionRequest) writeField50(oprot thrift.TProtocol) (err error) {
+func (p *RecordChildExecutionCompletedRequest) writeField50(oprot thrift.TProtocol) (err error) {
   if p.IsSetCompletionEvent() {
     if err := oprot.WriteFieldBegin("completionEvent", thrift.STRUCT, 50); err != nil {
       return thrift.PrependError(fmt.Sprintf("%T write field begin error 50:completionEvent: ", p), err) }
@@ -3198,11 +3198,11 @@ func (p *CompleteChildExecutionRequest) writeField50(oprot thrift.TProtocol) (er
   return err
 }
 
-func (p *CompleteChildExecutionRequest) String() string {
+func (p *RecordChildExecutionCompletedRequest) String() string {
   if p == nil {
     return "<nil>"
   }
-  return fmt.Sprintf("CompleteChildExecutionRequest(%+v)", *p)
+  return fmt.Sprintf("RecordChildExecutionCompletedRequest(%+v)", *p)
 }
 
 type HistoryService interface {  //HistoryService provides API to start a new long running workflow instance, as well as query and update the history
@@ -3323,13 +3323,13 @@ type HistoryService interface {  //HistoryService provides API to start a new lo
   // Parameters:
   //  - ScheduleRequest
   ScheduleDecisionTask(scheduleRequest *ScheduleDecisionTaskRequest) (err error)
-  // CompleteChildExecution is used for reporting the completion of child workflow execution to parent.  This is mainly
-  // called by transfer queue processor during the processing of DeleteExecution task.
+  // RecordChildExecutionCompleted is used for reporting the completion of child workflow execution to parent.
+  // This is mainly called by transfer queue processor during the processing of DeleteExecution task.
   // 
   // 
   // Parameters:
   //  - CompletionRequest
-  CompleteChildExecution(completionRequest *CompleteChildExecutionRequest) (err error)
+  RecordChildExecutionCompleted(completionRequest *RecordChildExecutionCompletedRequest) (err error)
 }
 
 //HistoryService provides API to start a new long running workflow instance, as well as query and update the history
@@ -4591,28 +4591,28 @@ func (p *HistoryServiceClient) recvScheduleDecisionTask() (err error) {
   return
 }
 
-// CompleteChildExecution is used for reporting the completion of child workflow execution to parent.  This is mainly
-// called by transfer queue processor during the processing of DeleteExecution task.
+// RecordChildExecutionCompleted is used for reporting the completion of child workflow execution to parent.
+// This is mainly called by transfer queue processor during the processing of DeleteExecution task.
 // 
 // 
 // Parameters:
 //  - CompletionRequest
-func (p *HistoryServiceClient) CompleteChildExecution(completionRequest *CompleteChildExecutionRequest) (err error) {
-  if err = p.sendCompleteChildExecution(completionRequest); err != nil { return }
-  return p.recvCompleteChildExecution()
+func (p *HistoryServiceClient) RecordChildExecutionCompleted(completionRequest *RecordChildExecutionCompletedRequest) (err error) {
+  if err = p.sendRecordChildExecutionCompleted(completionRequest); err != nil { return }
+  return p.recvRecordChildExecutionCompleted()
 }
 
-func (p *HistoryServiceClient) sendCompleteChildExecution(completionRequest *CompleteChildExecutionRequest)(err error) {
+func (p *HistoryServiceClient) sendRecordChildExecutionCompleted(completionRequest *RecordChildExecutionCompletedRequest)(err error) {
   oprot := p.OutputProtocol
   if oprot == nil {
     oprot = p.ProtocolFactory.GetProtocol(p.Transport)
     p.OutputProtocol = oprot
   }
   p.SeqId++
-  if err = oprot.WriteMessageBegin("CompleteChildExecution", thrift.CALL, p.SeqId); err != nil {
+  if err = oprot.WriteMessageBegin("RecordChildExecutionCompleted", thrift.CALL, p.SeqId); err != nil {
       return
   }
-  args := HistoryServiceCompleteChildExecutionArgs{
+  args := HistoryServiceRecordChildExecutionCompletedArgs{
   CompletionRequest : completionRequest,
   }
   if err = args.Write(oprot); err != nil {
@@ -4625,7 +4625,7 @@ func (p *HistoryServiceClient) sendCompleteChildExecution(completionRequest *Com
 }
 
 
-func (p *HistoryServiceClient) recvCompleteChildExecution() (err error) {
+func (p *HistoryServiceClient) recvRecordChildExecutionCompleted() (err error) {
   iprot := p.InputProtocol
   if iprot == nil {
     iprot = p.ProtocolFactory.GetProtocol(p.Transport)
@@ -4635,12 +4635,12 @@ func (p *HistoryServiceClient) recvCompleteChildExecution() (err error) {
   if err != nil {
     return
   }
-  if method != "CompleteChildExecution" {
-    err = thrift.NewTApplicationException(thrift.WRONG_METHOD_NAME, "CompleteChildExecution failed: wrong method name")
+  if method != "RecordChildExecutionCompleted" {
+    err = thrift.NewTApplicationException(thrift.WRONG_METHOD_NAME, "RecordChildExecutionCompleted failed: wrong method name")
     return
   }
   if p.SeqId != seqId {
-    err = thrift.NewTApplicationException(thrift.BAD_SEQUENCE_ID, "CompleteChildExecution failed: out of sequence response")
+    err = thrift.NewTApplicationException(thrift.BAD_SEQUENCE_ID, "RecordChildExecutionCompleted failed: out of sequence response")
     return
   }
   if mTypeId == thrift.EXCEPTION {
@@ -4657,10 +4657,10 @@ func (p *HistoryServiceClient) recvCompleteChildExecution() (err error) {
     return
   }
   if mTypeId != thrift.REPLY {
-    err = thrift.NewTApplicationException(thrift.INVALID_MESSAGE_TYPE_EXCEPTION, "CompleteChildExecution failed: invalid message type")
+    err = thrift.NewTApplicationException(thrift.INVALID_MESSAGE_TYPE_EXCEPTION, "RecordChildExecutionCompleted failed: invalid message type")
     return
   }
-  result := HistoryServiceCompleteChildExecutionResult{}
+  result := HistoryServiceRecordChildExecutionCompletedResult{}
   if err = result.Read(iprot); err != nil {
     return
   }
@@ -4718,7 +4718,7 @@ func NewHistoryServiceProcessor(handler HistoryService) *HistoryServiceProcessor
   self28.processorMap["TerminateWorkflowExecution"] = &historyServiceProcessorTerminateWorkflowExecution{handler:handler}
   self28.processorMap["RequestCancelWorkflowExecution"] = &historyServiceProcessorRequestCancelWorkflowExecution{handler:handler}
   self28.processorMap["ScheduleDecisionTask"] = &historyServiceProcessorScheduleDecisionTask{handler:handler}
-  self28.processorMap["CompleteChildExecution"] = &historyServiceProcessorCompleteChildExecution{handler:handler}
+  self28.processorMap["RecordChildExecutionCompleted"] = &historyServiceProcessorRecordChildExecutionCompleted{handler:handler}
 return self28
 }
 
@@ -5486,16 +5486,16 @@ func (p *historyServiceProcessorScheduleDecisionTask) Process(seqId int32, iprot
   return true, err
 }
 
-type historyServiceProcessorCompleteChildExecution struct {
+type historyServiceProcessorRecordChildExecutionCompleted struct {
   handler HistoryService
 }
 
-func (p *historyServiceProcessorCompleteChildExecution) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-  args := HistoryServiceCompleteChildExecutionArgs{}
+func (p *historyServiceProcessorRecordChildExecutionCompleted) Process(seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+  args := HistoryServiceRecordChildExecutionCompletedArgs{}
   if err = args.Read(iprot); err != nil {
     iprot.ReadMessageEnd()
     x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
-    oprot.WriteMessageBegin("CompleteChildExecution", thrift.EXCEPTION, seqId)
+    oprot.WriteMessageBegin("RecordChildExecutionCompleted", thrift.EXCEPTION, seqId)
     x.Write(oprot)
     oprot.WriteMessageEnd()
     oprot.Flush()
@@ -5503,9 +5503,9 @@ func (p *historyServiceProcessorCompleteChildExecution) Process(seqId int32, ipr
   }
 
   iprot.ReadMessageEnd()
-  result := HistoryServiceCompleteChildExecutionResult{}
+  result := HistoryServiceRecordChildExecutionCompletedResult{}
   var err2 error
-  if err2 = p.handler.CompleteChildExecution(args.CompletionRequest); err2 != nil {
+  if err2 = p.handler.RecordChildExecutionCompleted(args.CompletionRequest); err2 != nil {
   switch v := err2.(type) {
     case *shared.BadRequestError:
   result.BadRequestError = v
@@ -5516,15 +5516,15 @@ func (p *historyServiceProcessorCompleteChildExecution) Process(seqId int32, ipr
     case *ShardOwnershipLostError:
   result.ShardOwnershipLostError = v
     default:
-    x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing CompleteChildExecution: " + err2.Error())
-    oprot.WriteMessageBegin("CompleteChildExecution", thrift.EXCEPTION, seqId)
+    x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing RecordChildExecutionCompleted: " + err2.Error())
+    oprot.WriteMessageBegin("RecordChildExecutionCompleted", thrift.EXCEPTION, seqId)
     x.Write(oprot)
     oprot.WriteMessageEnd()
     oprot.Flush()
     return true, err2
   }
   }
-  if err2 = oprot.WriteMessageBegin("CompleteChildExecution", thrift.REPLY, seqId); err2 != nil {
+  if err2 = oprot.WriteMessageBegin("RecordChildExecutionCompleted", thrift.REPLY, seqId); err2 != nil {
     err = err2
   }
   if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -9759,26 +9759,26 @@ func (p *HistoryServiceScheduleDecisionTaskResult) String() string {
 
 // Attributes:
 //  - CompletionRequest
-type HistoryServiceCompleteChildExecutionArgs struct {
-  CompletionRequest *CompleteChildExecutionRequest `thrift:"completionRequest,1" db:"completionRequest" json:"completionRequest"`
+type HistoryServiceRecordChildExecutionCompletedArgs struct {
+  CompletionRequest *RecordChildExecutionCompletedRequest `thrift:"completionRequest,1" db:"completionRequest" json:"completionRequest"`
 }
 
-func NewHistoryServiceCompleteChildExecutionArgs() *HistoryServiceCompleteChildExecutionArgs {
-  return &HistoryServiceCompleteChildExecutionArgs{}
+func NewHistoryServiceRecordChildExecutionCompletedArgs() *HistoryServiceRecordChildExecutionCompletedArgs {
+  return &HistoryServiceRecordChildExecutionCompletedArgs{}
 }
 
-var HistoryServiceCompleteChildExecutionArgs_CompletionRequest_DEFAULT *CompleteChildExecutionRequest
-func (p *HistoryServiceCompleteChildExecutionArgs) GetCompletionRequest() *CompleteChildExecutionRequest {
+var HistoryServiceRecordChildExecutionCompletedArgs_CompletionRequest_DEFAULT *RecordChildExecutionCompletedRequest
+func (p *HistoryServiceRecordChildExecutionCompletedArgs) GetCompletionRequest() *RecordChildExecutionCompletedRequest {
   if !p.IsSetCompletionRequest() {
-    return HistoryServiceCompleteChildExecutionArgs_CompletionRequest_DEFAULT
+    return HistoryServiceRecordChildExecutionCompletedArgs_CompletionRequest_DEFAULT
   }
 return p.CompletionRequest
 }
-func (p *HistoryServiceCompleteChildExecutionArgs) IsSetCompletionRequest() bool {
+func (p *HistoryServiceRecordChildExecutionCompletedArgs) IsSetCompletionRequest() bool {
   return p.CompletionRequest != nil
 }
 
-func (p *HistoryServiceCompleteChildExecutionArgs) Read(iprot thrift.TProtocol) error {
+func (p *HistoryServiceRecordChildExecutionCompletedArgs) Read(iprot thrift.TProtocol) error {
   if _, err := iprot.ReadStructBegin(); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
   }
@@ -9810,16 +9810,16 @@ func (p *HistoryServiceCompleteChildExecutionArgs) Read(iprot thrift.TProtocol) 
   return nil
 }
 
-func (p *HistoryServiceCompleteChildExecutionArgs)  ReadField1(iprot thrift.TProtocol) error {
-  p.CompletionRequest = &CompleteChildExecutionRequest{}
+func (p *HistoryServiceRecordChildExecutionCompletedArgs)  ReadField1(iprot thrift.TProtocol) error {
+  p.CompletionRequest = &RecordChildExecutionCompletedRequest{}
   if err := p.CompletionRequest.Read(iprot); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.CompletionRequest), err)
   }
   return nil
 }
 
-func (p *HistoryServiceCompleteChildExecutionArgs) Write(oprot thrift.TProtocol) error {
-  if err := oprot.WriteStructBegin("CompleteChildExecution_args"); err != nil {
+func (p *HistoryServiceRecordChildExecutionCompletedArgs) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("RecordChildExecutionCompleted_args"); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
   if p != nil {
     if err := p.writeField1(oprot); err != nil { return err }
@@ -9831,7 +9831,7 @@ func (p *HistoryServiceCompleteChildExecutionArgs) Write(oprot thrift.TProtocol)
   return nil
 }
 
-func (p *HistoryServiceCompleteChildExecutionArgs) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *HistoryServiceRecordChildExecutionCompletedArgs) writeField1(oprot thrift.TProtocol) (err error) {
   if err := oprot.WriteFieldBegin("completionRequest", thrift.STRUCT, 1); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:completionRequest: ", p), err) }
   if err := p.CompletionRequest.Write(oprot); err != nil {
@@ -9842,11 +9842,11 @@ func (p *HistoryServiceCompleteChildExecutionArgs) writeField1(oprot thrift.TPro
   return err
 }
 
-func (p *HistoryServiceCompleteChildExecutionArgs) String() string {
+func (p *HistoryServiceRecordChildExecutionCompletedArgs) String() string {
   if p == nil {
     return "<nil>"
   }
-  return fmt.Sprintf("HistoryServiceCompleteChildExecutionArgs(%+v)", *p)
+  return fmt.Sprintf("HistoryServiceRecordChildExecutionCompletedArgs(%+v)", *p)
 }
 
 // Attributes:
@@ -9854,62 +9854,62 @@ func (p *HistoryServiceCompleteChildExecutionArgs) String() string {
 //  - InternalServiceError
 //  - EntityNotExistError
 //  - ShardOwnershipLostError
-type HistoryServiceCompleteChildExecutionResult struct {
+type HistoryServiceRecordChildExecutionCompletedResult struct {
   BadRequestError *shared.BadRequestError `thrift:"badRequestError,1" db:"badRequestError" json:"badRequestError,omitempty"`
   InternalServiceError *shared.InternalServiceError `thrift:"internalServiceError,2" db:"internalServiceError" json:"internalServiceError,omitempty"`
   EntityNotExistError *shared.EntityNotExistsError `thrift:"entityNotExistError,3" db:"entityNotExistError" json:"entityNotExistError,omitempty"`
   ShardOwnershipLostError *ShardOwnershipLostError `thrift:"shardOwnershipLostError,4" db:"shardOwnershipLostError" json:"shardOwnershipLostError,omitempty"`
 }
 
-func NewHistoryServiceCompleteChildExecutionResult() *HistoryServiceCompleteChildExecutionResult {
-  return &HistoryServiceCompleteChildExecutionResult{}
+func NewHistoryServiceRecordChildExecutionCompletedResult() *HistoryServiceRecordChildExecutionCompletedResult {
+  return &HistoryServiceRecordChildExecutionCompletedResult{}
 }
 
-var HistoryServiceCompleteChildExecutionResult_BadRequestError_DEFAULT *shared.BadRequestError
-func (p *HistoryServiceCompleteChildExecutionResult) GetBadRequestError() *shared.BadRequestError {
+var HistoryServiceRecordChildExecutionCompletedResult_BadRequestError_DEFAULT *shared.BadRequestError
+func (p *HistoryServiceRecordChildExecutionCompletedResult) GetBadRequestError() *shared.BadRequestError {
   if !p.IsSetBadRequestError() {
-    return HistoryServiceCompleteChildExecutionResult_BadRequestError_DEFAULT
+    return HistoryServiceRecordChildExecutionCompletedResult_BadRequestError_DEFAULT
   }
 return p.BadRequestError
 }
-var HistoryServiceCompleteChildExecutionResult_InternalServiceError_DEFAULT *shared.InternalServiceError
-func (p *HistoryServiceCompleteChildExecutionResult) GetInternalServiceError() *shared.InternalServiceError {
+var HistoryServiceRecordChildExecutionCompletedResult_InternalServiceError_DEFAULT *shared.InternalServiceError
+func (p *HistoryServiceRecordChildExecutionCompletedResult) GetInternalServiceError() *shared.InternalServiceError {
   if !p.IsSetInternalServiceError() {
-    return HistoryServiceCompleteChildExecutionResult_InternalServiceError_DEFAULT
+    return HistoryServiceRecordChildExecutionCompletedResult_InternalServiceError_DEFAULT
   }
 return p.InternalServiceError
 }
-var HistoryServiceCompleteChildExecutionResult_EntityNotExistError_DEFAULT *shared.EntityNotExistsError
-func (p *HistoryServiceCompleteChildExecutionResult) GetEntityNotExistError() *shared.EntityNotExistsError {
+var HistoryServiceRecordChildExecutionCompletedResult_EntityNotExistError_DEFAULT *shared.EntityNotExistsError
+func (p *HistoryServiceRecordChildExecutionCompletedResult) GetEntityNotExistError() *shared.EntityNotExistsError {
   if !p.IsSetEntityNotExistError() {
-    return HistoryServiceCompleteChildExecutionResult_EntityNotExistError_DEFAULT
+    return HistoryServiceRecordChildExecutionCompletedResult_EntityNotExistError_DEFAULT
   }
 return p.EntityNotExistError
 }
-var HistoryServiceCompleteChildExecutionResult_ShardOwnershipLostError_DEFAULT *ShardOwnershipLostError
-func (p *HistoryServiceCompleteChildExecutionResult) GetShardOwnershipLostError() *ShardOwnershipLostError {
+var HistoryServiceRecordChildExecutionCompletedResult_ShardOwnershipLostError_DEFAULT *ShardOwnershipLostError
+func (p *HistoryServiceRecordChildExecutionCompletedResult) GetShardOwnershipLostError() *ShardOwnershipLostError {
   if !p.IsSetShardOwnershipLostError() {
-    return HistoryServiceCompleteChildExecutionResult_ShardOwnershipLostError_DEFAULT
+    return HistoryServiceRecordChildExecutionCompletedResult_ShardOwnershipLostError_DEFAULT
   }
 return p.ShardOwnershipLostError
 }
-func (p *HistoryServiceCompleteChildExecutionResult) IsSetBadRequestError() bool {
+func (p *HistoryServiceRecordChildExecutionCompletedResult) IsSetBadRequestError() bool {
   return p.BadRequestError != nil
 }
 
-func (p *HistoryServiceCompleteChildExecutionResult) IsSetInternalServiceError() bool {
+func (p *HistoryServiceRecordChildExecutionCompletedResult) IsSetInternalServiceError() bool {
   return p.InternalServiceError != nil
 }
 
-func (p *HistoryServiceCompleteChildExecutionResult) IsSetEntityNotExistError() bool {
+func (p *HistoryServiceRecordChildExecutionCompletedResult) IsSetEntityNotExistError() bool {
   return p.EntityNotExistError != nil
 }
 
-func (p *HistoryServiceCompleteChildExecutionResult) IsSetShardOwnershipLostError() bool {
+func (p *HistoryServiceRecordChildExecutionCompletedResult) IsSetShardOwnershipLostError() bool {
   return p.ShardOwnershipLostError != nil
 }
 
-func (p *HistoryServiceCompleteChildExecutionResult) Read(iprot thrift.TProtocol) error {
+func (p *HistoryServiceRecordChildExecutionCompletedResult) Read(iprot thrift.TProtocol) error {
   if _, err := iprot.ReadStructBegin(); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
   }
@@ -9953,7 +9953,7 @@ func (p *HistoryServiceCompleteChildExecutionResult) Read(iprot thrift.TProtocol
   return nil
 }
 
-func (p *HistoryServiceCompleteChildExecutionResult)  ReadField1(iprot thrift.TProtocol) error {
+func (p *HistoryServiceRecordChildExecutionCompletedResult)  ReadField1(iprot thrift.TProtocol) error {
   p.BadRequestError = &shared.BadRequestError{}
   if err := p.BadRequestError.Read(iprot); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.BadRequestError), err)
@@ -9961,7 +9961,7 @@ func (p *HistoryServiceCompleteChildExecutionResult)  ReadField1(iprot thrift.TP
   return nil
 }
 
-func (p *HistoryServiceCompleteChildExecutionResult)  ReadField2(iprot thrift.TProtocol) error {
+func (p *HistoryServiceRecordChildExecutionCompletedResult)  ReadField2(iprot thrift.TProtocol) error {
   p.InternalServiceError = &shared.InternalServiceError{}
   if err := p.InternalServiceError.Read(iprot); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.InternalServiceError), err)
@@ -9969,7 +9969,7 @@ func (p *HistoryServiceCompleteChildExecutionResult)  ReadField2(iprot thrift.TP
   return nil
 }
 
-func (p *HistoryServiceCompleteChildExecutionResult)  ReadField3(iprot thrift.TProtocol) error {
+func (p *HistoryServiceRecordChildExecutionCompletedResult)  ReadField3(iprot thrift.TProtocol) error {
   p.EntityNotExistError = &shared.EntityNotExistsError{}
   if err := p.EntityNotExistError.Read(iprot); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.EntityNotExistError), err)
@@ -9977,7 +9977,7 @@ func (p *HistoryServiceCompleteChildExecutionResult)  ReadField3(iprot thrift.TP
   return nil
 }
 
-func (p *HistoryServiceCompleteChildExecutionResult)  ReadField4(iprot thrift.TProtocol) error {
+func (p *HistoryServiceRecordChildExecutionCompletedResult)  ReadField4(iprot thrift.TProtocol) error {
   p.ShardOwnershipLostError = &ShardOwnershipLostError{}
   if err := p.ShardOwnershipLostError.Read(iprot); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.ShardOwnershipLostError), err)
@@ -9985,8 +9985,8 @@ func (p *HistoryServiceCompleteChildExecutionResult)  ReadField4(iprot thrift.TP
   return nil
 }
 
-func (p *HistoryServiceCompleteChildExecutionResult) Write(oprot thrift.TProtocol) error {
-  if err := oprot.WriteStructBegin("CompleteChildExecution_result"); err != nil {
+func (p *HistoryServiceRecordChildExecutionCompletedResult) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("RecordChildExecutionCompleted_result"); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
   if p != nil {
     if err := p.writeField1(oprot); err != nil { return err }
@@ -10001,7 +10001,7 @@ func (p *HistoryServiceCompleteChildExecutionResult) Write(oprot thrift.TProtoco
   return nil
 }
 
-func (p *HistoryServiceCompleteChildExecutionResult) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *HistoryServiceRecordChildExecutionCompletedResult) writeField1(oprot thrift.TProtocol) (err error) {
   if p.IsSetBadRequestError() {
     if err := oprot.WriteFieldBegin("badRequestError", thrift.STRUCT, 1); err != nil {
       return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:badRequestError: ", p), err) }
@@ -10014,7 +10014,7 @@ func (p *HistoryServiceCompleteChildExecutionResult) writeField1(oprot thrift.TP
   return err
 }
 
-func (p *HistoryServiceCompleteChildExecutionResult) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *HistoryServiceRecordChildExecutionCompletedResult) writeField2(oprot thrift.TProtocol) (err error) {
   if p.IsSetInternalServiceError() {
     if err := oprot.WriteFieldBegin("internalServiceError", thrift.STRUCT, 2); err != nil {
       return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:internalServiceError: ", p), err) }
@@ -10027,7 +10027,7 @@ func (p *HistoryServiceCompleteChildExecutionResult) writeField2(oprot thrift.TP
   return err
 }
 
-func (p *HistoryServiceCompleteChildExecutionResult) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *HistoryServiceRecordChildExecutionCompletedResult) writeField3(oprot thrift.TProtocol) (err error) {
   if p.IsSetEntityNotExistError() {
     if err := oprot.WriteFieldBegin("entityNotExistError", thrift.STRUCT, 3); err != nil {
       return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:entityNotExistError: ", p), err) }
@@ -10040,7 +10040,7 @@ func (p *HistoryServiceCompleteChildExecutionResult) writeField3(oprot thrift.TP
   return err
 }
 
-func (p *HistoryServiceCompleteChildExecutionResult) writeField4(oprot thrift.TProtocol) (err error) {
+func (p *HistoryServiceRecordChildExecutionCompletedResult) writeField4(oprot thrift.TProtocol) (err error) {
   if p.IsSetShardOwnershipLostError() {
     if err := oprot.WriteFieldBegin("shardOwnershipLostError", thrift.STRUCT, 4); err != nil {
       return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:shardOwnershipLostError: ", p), err) }
@@ -10053,11 +10053,11 @@ func (p *HistoryServiceCompleteChildExecutionResult) writeField4(oprot thrift.TP
   return err
 }
 
-func (p *HistoryServiceCompleteChildExecutionResult) String() string {
+func (p *HistoryServiceRecordChildExecutionCompletedResult) String() string {
   if p == nil {
     return "<nil>"
   }
-  return fmt.Sprintf("HistoryServiceCompleteChildExecutionResult(%+v)", *p)
+  return fmt.Sprintf("HistoryServiceRecordChildExecutionCompletedResult(%+v)", *p)
 }
 
 

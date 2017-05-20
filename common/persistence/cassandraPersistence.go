@@ -1544,6 +1544,7 @@ func (d *cassandraPersistence) updateChildExecutionInfos(batch *gocql.Batch, chi
 			rangeID)
 	}
 
+	// deleteInfo is the initiatedID for ChildInfo being deleted
 	if deleteInfo != nil {
 		batch.Query(templateDeleteChildExecutionInfoQuery,
 			*deleteInfo,

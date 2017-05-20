@@ -258,11 +258,11 @@ func (_m *HistoryClient) ScheduleDecisionTask(ctx thrift.Context, request *histo
 }
 
 // CompleteChildExecution provides a mock function with given fields: ctx, request
-func (_m *HistoryClient) CompleteChildExecution(ctx thrift.Context, request *history.CompleteChildExecutionRequest) error {
+func (_m *HistoryClient) RecordChildExecutionCompleted(ctx thrift.Context, request *history.RecordChildExecutionCompletedRequest) error {
 	ret := _m.Called(ctx, request)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(thrift.Context, *history.CompleteChildExecutionRequest) error); ok {
+	if rf, ok := ret.Get(0).(func(thrift.Context, *history.RecordChildExecutionCompletedRequest) error); ok {
 		r0 = rf(ctx, request)
 	} else {
 		r0 = ret.Error(0)

@@ -124,7 +124,14 @@ struct ScheduleDecisionTaskRequest {
   20: optional shared.WorkflowExecution workflowExecution
 }
 
-struct CompleteChildExecutionRequest {
+/**
+* RecordChildExecutionCompletedRequest is used for reporting the completion of child execution to parent workflow
+* execution which started it.  When a child execution is completed it creates this request and calls the
+* RecordChildExecutionCompleted API with the workflowExecution of parent.  It also sets the completedExecution of the
+* child as it could potentially be different than the ChildExecutionStartedEvent of parent in the situation when
+* child creates multiple runs through ContinueAsNew before finally completing.
+**/
+struct RecordChildExecutionCompletedRequest {
   10: optional string domainUUID
   20: optional shared.WorkflowExecution workflowExecution
   30: optional i64 (js.type = "Long") initiatedId
@@ -319,10 +326,10 @@ service HistoryService {
     )
 
   /**
-  * CompleteChildExecution is used for reporting the completion of child workflow execution to parent.  This is mainly
-  * called by transfer queue processor during the processing of DeleteExecution task.
+  * RecordChildExecutionCompleted is used for reporting the completion of child workflow execution to parent.
+  * This is mainly called by transfer queue processor during the processing of DeleteExecution task.
   **/
-  void CompleteChildExecution(1: CompleteChildExecutionRequest completionRequest)
+  void RecordChildExecutionCompleted(1: RecordChildExecutionCompletedRequest completionRequest)
     throws (
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,

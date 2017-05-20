@@ -307,7 +307,7 @@ func (c *clientImpl) ScheduleDecisionTask(context thrift.Context, request *h.Sch
 	return err
 }
 
-func (c *clientImpl) CompleteChildExecution(context thrift.Context, request *h.CompleteChildExecutionRequest) error {
+func (c *clientImpl) RecordChildExecutionCompleted(context thrift.Context, request *h.RecordChildExecutionCompletedRequest) error {
 	client, err := c.getHostForRequest(request.GetWorkflowExecution().GetWorkflowId())
 	if err != nil {
 		return err
@@ -315,7 +315,7 @@ func (c *clientImpl) CompleteChildExecution(context thrift.Context, request *h.C
 	op := func(context thrift.Context, client h.TChanHistoryService) error {
 		ctx, cancel := c.createContext(context)
 		defer cancel()
-		return client.CompleteChildExecution(ctx, request)
+		return client.RecordChildExecutionCompleted(ctx, request)
 	}
 	err = c.executeWithRedirect(context, client, op)
 	return err

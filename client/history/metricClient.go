@@ -237,16 +237,16 @@ func (c *metricClient) ScheduleDecisionTask(context thrift.Context,
 	return err
 }
 
-func (c *metricClient) CompleteChildExecution(context thrift.Context,
-	request *h.CompleteChildExecutionRequest) error {
-	c.metricsClient.IncCounter(metrics.HistoryClientCompleteChildExecutionScope, metrics.CadenceRequests)
+func (c *metricClient) RecordChildExecutionCompleted(context thrift.Context,
+	request *h.RecordChildExecutionCompletedRequest) error {
+	c.metricsClient.IncCounter(metrics.HistoryClientRecordChildExecutionCompletedScope, metrics.CadenceRequests)
 
-	sw := c.metricsClient.StartTimer(metrics.HistoryClientCompleteChildExecutionScope, metrics.CadenceLatency)
-	err := c.client.CompleteChildExecution(context, request)
+	sw := c.metricsClient.StartTimer(metrics.HistoryClientRecordChildExecutionCompletedScope, metrics.CadenceLatency)
+	err := c.client.RecordChildExecutionCompleted(context, request)
 	sw.Stop()
 
 	if err != nil {
-		c.metricsClient.IncCounter(metrics.HistoryClientCompleteChildExecutionScope, metrics.CadenceFailures)
+		c.metricsClient.IncCounter(metrics.HistoryClientRecordChildExecutionCompletedScope, metrics.CadenceFailures)
 	}
 
 	return err

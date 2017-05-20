@@ -23,7 +23,7 @@ CREATE TYPE workflow_execution (
   parent_domain_id       uuid,   -- Domain ID of parent workflow which started the workflow execution
   parent_workflow_id     text,   -- ID of parent workflow which started the workflow execution
   parent_run_id          uuid,   -- RunID of parent workflow which started the workflow execution
-  initiated_id           bigint, -- Initiated event ID for parent workflow which resulted in this execution
+  initiated_id           bigint, -- Initiated event ID of parent workflow which started this execution
   completion_event       blob,   -- Completion event used to communicate result to parent workflow execution
   task_list              text,
   workflow_type_name     text,
