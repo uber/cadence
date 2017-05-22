@@ -21,23 +21,11 @@
 package main
 
 import (
-	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/config"
-	"github.com/uber/cadence/service/frontend"
-	"github.com/uber/cadence/service/history"
-	"github.com/uber/cadence/service/matching"
 	"github.com/urfave/cli"
 	"log"
 	"os"
 	"strings"
-	"sync"
-)
-
-const (
-	historyService  = "history"
-	matchingService = "matching"
-	frontendService = "frontend"
 )
 
 // validServices is the list of all valid cadence services
@@ -49,9 +37,8 @@ func main() {
 	app.Run(os.Args)
 }
 
-// startHandler handles a server start command from the CLI
+// startHandler is the handler for the cli start command
 func startHandler(c *cli.Context) {
-
 	env := getEnvironment(c)
 	zone := getZone(c)
 	configDir := getConfigDir(c)
@@ -62,57 +49,13 @@ func startHandler(c *cli.Context) {
 	config.Load(env, configDir, zone, &cfg)
 	log.Printf("config=\n%v\n", cfg.String())
 
-	var wg sync.WaitGroup
-
-	for _, s := range getServices(c) {
-		if _, ok := cfg.Services[s]; !ok {
-			log.Fatalf("`%v` service missing config", s)
+	for _, svc := range getServices(c) {
+		if _, ok := cfg.Services[svc]; !ok {
+			log.Fatalf("`%v` service missing config", svc)
 		}
-		wg.Add(1)
-		startService(&cfg, s, &wg)
+		server := newServer(svc, &cfg)
+		go server.Start()
 	}
-
-	wg.Wait()
-}
-
-// startService starts a service with the given name and config
-func startService(cfg *config.Config, name string, wg *sync.WaitGroup) {
-
-	var err error
-
-	params := service.BootstrapParams{}
-	params.Name = "cadence-" + name
-	params.Logger = cfg.Log.NewBarkLogger()
-	params.CassandraConfig = cfg.Cassandra
-
-	params.RingpopFactory, err = cfg.Ringpop.NewFactory()
-	if err != nil {
-		log.Fatalf("error creating ringpop factory: %v", err)
-	}
-
-	svcCfg := cfg.Services[name]
-
-	params.MetricScope = svcCfg.Metrics.NewScope()
-	params.TChannelFactory = svcCfg.TChannel.NewFactory()
-
-	var daemon common.Daemon
-
-	switch name {
-	case frontendService:
-		daemon = frontend.NewService(&params)
-	case historyService:
-		daemon = history.NewService(&params)
-	case matchingService:
-		daemon = matching.NewService(&params)
-	}
-
-	go execDaemon(daemon, wg)
-}
-
-// execDaemon runs the daemon in a separate go routine
-func execDaemon(d common.Daemon, wg *sync.WaitGroup) {
-	defer wg.Done()
-	d.Start()
 }
 
 func getEnvironment(c *cli.Context) string {
@@ -131,7 +74,7 @@ func getServices(c *cli.Context) []string {
 	tokens := strings.Split(val, ",")
 
 	if len(tokens) == 0 {
-		log.Fatalf("list of services is empty")
+		log.Fatal("list of services is empty")
 	}
 
 	for _, t := range tokens {

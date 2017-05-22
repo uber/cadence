@@ -36,7 +36,10 @@ type Service struct {
 
 // NewService builds a new cadence-history service
 func NewService(params *service.BootstrapParams) common.Daemon {
-	return &Service{params: params}
+	return &Service{
+		params: params,
+		stopC:  make(chan struct{}),
+	}
 }
 
 // Start starts the service
@@ -116,6 +119,7 @@ func (s *Service) Start() {
 	log.Infof("%v started", common.HistoryServiceName)
 
 	<-s.stopC
+	base.Stop()
 }
 
 // Stop stops the service
