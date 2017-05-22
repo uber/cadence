@@ -27,16 +27,17 @@ import (
 	"github.com/uber/cadence/service/frontend"
 	"github.com/uber/cadence/service/history"
 	"github.com/uber/cadence/service/matching"
+	"go/doc"
 	"log"
 	"time"
 )
 
 type (
 	server struct {
-		name  string
-		cfg   *config.Config
-		doneC chan struct{}
-		stopC chan struct{}
+		name   string
+		cfg    *config.Config
+		doneC  chan struct{}
+		daemon common.Daemon
 	}
 )
 
@@ -53,7 +54,6 @@ func newServer(service string, cfg *config.Config) common.Daemon {
 		cfg:   cfg,
 		name:  service,
 		doneC: make(chan struct{}),
-		stopC: make(chan struct{}),
 	}
 }
 
@@ -62,21 +62,30 @@ func (s *server) Start() {
 	if _, ok := s.cfg.Services[s.name]; !ok {
 		log.Fatalf("`%v` service missing config", s)
 	}
-	s.startService()
+	s.daemon = s.startService()
 }
 
 // Stop stops the server
 func (s *server) Stop() {
-	s.stopC <- struct{}{}
+
+	if s.daemon == nil {
+		return
+	}
+
 	select {
 	case <-s.doneC:
-	case <-time.After(time.Minute):
-		log.Printf("timed out waiting for server %v to exit\n", s.name)
+	default:
+		s.daemon.Stop()
+		select {
+		case <-s.doneC:
+		case <-time.After(time.Minute):
+			log.Printf("timed out waiting for server %v to exit\n", s.name)
+		}
 	}
 }
 
 // startService starts a service with the given name and config
-func (s *server) startService() {
+func (s *server) startService() common.Daemon {
 
 	var err error
 
@@ -108,11 +117,7 @@ func (s *server) startService() {
 
 	go execute(daemon, s.doneC)
 
-	select {
-	case <-s.doneC:
-	case <-s.stopC:
-		daemon.Stop()
-	}
+	return daemon
 }
 
 // execute runs the daemon in a separate go routine
