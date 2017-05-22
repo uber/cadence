@@ -39,6 +39,7 @@ func main() {
 
 // startHandler is the handler for the cli start command
 func startHandler(c *cli.Context) {
+
 	env := getEnvironment(c)
 	zone := getZone(c)
 	configDir := getConfigDir(c)

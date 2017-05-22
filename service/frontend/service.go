@@ -86,7 +86,6 @@ func (s *Service) Start() {
 	log.Infof("%v started", common.FrontendServiceName)
 
 	<-s.stopC
-
 	base.Stop()
 }
 
