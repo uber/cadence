@@ -55,8 +55,10 @@ func startHandler(c *cli.Context) {
 			log.Fatalf("`%v` service missing config", svc)
 		}
 		server := newServer(svc, &cfg)
-		go server.Start()
+		server.Start()
 	}
+
+	select {}
 }
 
 func getEnvironment(c *cli.Context) string {
