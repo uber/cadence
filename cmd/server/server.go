@@ -27,7 +27,6 @@ import (
 	"github.com/uber/cadence/service/frontend"
 	"github.com/uber/cadence/service/history"
 	"github.com/uber/cadence/service/matching"
-	"go/doc"
 	"log"
 	"time"
 )
