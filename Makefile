@@ -80,7 +80,7 @@ cadence-cassandra-tool: vendor/glide.updated $(TOOLS_SRC)
 	go build -i -o cadence-cassandra-tool cmd/tools/cassandra/main.go
 
 cadence: vendor/glide.updated $(ALL_SRC)
-	go build -i -o cadence ./cmd/server/cadence.go
+	go build -i -o cadence cmd/server/cadence.go cmd/server/server.go
 
 bins_nothrift: lint copyright cadence-cassandra-tool cadence
 
