@@ -21,6 +21,7 @@
 package frontend
 
 import (
+	"encoding/json"
 	"log"
 	"sync"
 
@@ -42,19 +43,28 @@ import (
 
 var _ cadence.TChanWorkflowService = (*WorkflowHandler)(nil)
 
-// WorkflowHandler - Thrift handler inteface for workflow service
-type WorkflowHandler struct {
-	domainCache        cache.DomainCache
-	metadataMgr        persistence.MetadataManager
-	historyMgr         persistence.HistoryManager
-	visibitiltyMgr     persistence.VisibilityManager
-	history            history.Client
-	matching           matching.Client
-	tokenSerializer    common.TaskTokenSerializer
-	hSerializerFactory persistence.HistorySerializerFactory
-	startWG            sync.WaitGroup
-	service.Service
-}
+type (
+	// WorkflowHandler - Thrift handler inteface for workflow service
+	WorkflowHandler struct {
+		domainCache        cache.DomainCache
+		metadataMgr        persistence.MetadataManager
+		historyMgr         persistence.HistoryManager
+		visibitiltyMgr     persistence.VisibilityManager
+		history            history.Client
+		matching           matching.Client
+		tokenSerializer    common.TaskTokenSerializer
+		hSerializerFactory persistence.HistorySerializerFactory
+		startWG            sync.WaitGroup
+		service.Service
+	}
+
+	// PollForDecisionTaskToken is used to read next history page
+	PollForDecisionTaskToken struct {
+		execution     gen.WorkflowExecution
+		nextEventID   int64
+		nextPageToken []byte
+	}
+)
 
 const (
 	defaultVisibilityMaxPageSize = 1000
@@ -62,13 +72,14 @@ const (
 )
 
 var (
-	errDomainNotSet     = &gen.BadRequestError{Message: "Domain not set on request."}
-	errTaskTokenNotSet  = &gen.BadRequestError{Message: "Task token not set on request."}
-	errTaskListNotSet   = &gen.BadRequestError{Message: "TaskList is not set on request."}
-	errExecutionNotSet  = &gen.BadRequestError{Message: "Execution is not set on request."}
-	errWorkflowIDNotSet = &gen.BadRequestError{Message: "WorkflowId is not set on request."}
-	errRunIDNotSet      = &gen.BadRequestError{Message: "RunId is not set on request."}
-	errInvalidRunID     = &gen.BadRequestError{Message: "Invalid RunId."}
+	errDomainNotSet         = &gen.BadRequestError{Message: "Domain not set on request."}
+	errTaskTokenNotSet      = &gen.BadRequestError{Message: "Task token not set on request."}
+	errTaskListNotSet       = &gen.BadRequestError{Message: "TaskList is not set on request."}
+	errExecutionNotSet      = &gen.BadRequestError{Message: "Execution is not set on request."}
+	errWorkflowIDNotSet     = &gen.BadRequestError{Message: "WorkflowId is not set on request."}
+	errRunIDNotSet          = &gen.BadRequestError{Message: "RunId is not set on request."}
+	errInvalidRunID         = &gen.BadRequestError{Message: "Invalid RunId."}
+	errInvalidNextPageToken = &gen.BadRequestError{Message: "Invalid NextPageToken."}
 )
 
 // NewWorkflowHandler creates a thrift handler for the cadence service
@@ -300,6 +311,10 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 		return nil, errTaskListNotSet
 	}
 
+	if !pollRequest.IsSetMaximumPageSize() || pollRequest.GetMaximumPageSize() == 0 {
+		pollRequest.MaximumPageSize = common.Int32Ptr(defaultHistoryMaxPageSize)
+	}
+
 	domainName := pollRequest.GetDomain()
 	info, _, err := wh.domainCache.GetDomain(domainName)
 	if err != nil {
@@ -309,27 +324,55 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	wh.Service.GetLogger().Infof("Poll for decision domain name: %v", domainName)
 	wh.Service.GetLogger().Infof("Poll for decision request domainID: %v", info.ID)
 
-	matchingResp, err := wh.matching.PollForDecisionTask(ctx, &m.PollForDecisionTaskRequest{
-		DomainUUID:  common.StringPtr(info.ID),
-		PollRequest: pollRequest,
-	})
-	if err != nil {
-		wh.Service.GetLogger().Errorf(
-			"PollForDecisionTask failed. TaskList: %v, Error: %v", pollRequest.GetTaskList().GetName(), err)
-		return nil, wrapError(err)
+	var history *gen.History
+	var persistenceToken []byte
+	var matchingResp *m.PollForDecisionTaskResponse
+	nextPageToken := &PollForDecisionTaskToken{}
+
+	if pollRequest.IsSetNextPageToken() {
+		continuation, err := deserializePollForDecisionTaskToken(pollRequest.GetNextPageToken())
+		if err != nil {
+			return nil, errInvalidNextPageToken
+		}
+		history, persistenceToken, err = wh.getHistory(info.ID, continuation.execution, continuation.nextEventID, pollRequest.GetMaximumPageSize(), continuation.nextPageToken)
+		if err != nil {
+			return nil, wrapError(err)
+		}
+		nextPageToken = continuation
+	} else {
+		matchingResp, err = wh.matching.PollForDecisionTask(ctx, &m.PollForDecisionTaskRequest{
+			DomainUUID:  common.StringPtr(info.ID),
+			PollRequest: pollRequest,
+		})
+		if err != nil {
+			wh.Service.GetLogger().Errorf(
+				"PollForDecisionTask failed. TaskList: %v, Error: %v", pollRequest.GetTaskList().GetName(), err)
+			return nil, wrapError(err)
+		}
+
+		if matchingResp.IsSetWorkflowExecution() {
+			// Non-empty response. Get the history
+			nextPageToken.execution = *matchingResp.GetWorkflowExecution()
+			nextPageToken.nextEventID = matchingResp.GetStartedEventId() + 1
+
+			history, persistenceToken, err = wh.getHistory(
+				info.ID, nextPageToken.execution, nextPageToken.nextEventID, pollRequest.GetMaximumPageSize(), nil)
+			if err != nil {
+				return nil, wrapError(err)
+			}
+		}
 	}
 
-	var history *gen.History
-	var token []byte
-	if matchingResp.IsSetWorkflowExecution() {
-		// Non-empty response. Get the history
-		history, token, err = wh.getHistory(
-			info.ID, *matchingResp.GetWorkflowExecution(), matchingResp.GetStartedEventId()+1, pollRequest.GetMaximumHistoryPageSize(), nil)
+	var serializedToken []byte
+	if persistenceToken != nil {
+		nextPageToken.nextPageToken = persistenceToken
+		serializedToken, err = serializePollForDecisionTaskToken(nextPageToken)
 		if err != nil {
 			return nil, wrapError(err)
 		}
 	}
-	return createPollForDecisionTaskResponse(matchingResp, history, token), nil
+
+	return createPollForDecisionTaskResponse(matchingResp, history, serializedToken), nil
 }
 
 // RecordActivityTaskHeartbeat - Record Activity Task Heart beat.
@@ -877,36 +920,30 @@ func (wh *WorkflowHandler) getHistory(domainID string, execution gen.WorkflowExe
 		nextPageToken = []byte{}
 	}
 	historyEvents := []*gen.HistoryEvent{}
-Pagination_Loop:
-	for {
-		response, err := wh.historyMgr.GetWorkflowExecutionHistory(&persistence.GetWorkflowExecutionHistoryRequest{
-			DomainID:      domainID,
-			Execution:     execution,
-			NextEventID:   nextEventID,
-			PageSize:      100,
-			NextPageToken: nextPageToken,
-		})
 
-		if err != nil {
-			return nil, nil, err
-		}
+	response, err := wh.historyMgr.GetWorkflowExecutionHistory(&persistence.GetWorkflowExecutionHistoryRequest{
+		DomainID:      domainID,
+		Execution:     execution,
+		NextEventID:   nextEventID,
+		PageSize:      int(pageSize),
+		NextPageToken: nextPageToken,
+	})
 
-		for _, e := range response.Events {
-			setSerializedHistoryDefaults(&e)
-			s, _ := wh.hSerializerFactory.Get(e.EncodingType)
-			history, err1 := s.Deserialize(&e)
-			if err1 != nil {
-				return nil, nil, err1
-			}
-			historyEvents = append(historyEvents, history.Events...)
-		}
-
-		if len(response.NextPageToken) == 0 || len(historyEvents) >= int(pageSize) {
-			break Pagination_Loop
-		}
-
-		nextPageToken = response.NextPageToken
+	if err != nil {
+		return nil, nil, err
 	}
+
+	for _, e := range response.Events {
+		setSerializedHistoryDefaults(&e)
+		s, _ := wh.hSerializerFactory.Get(e.EncodingType)
+		history, err1 := s.Deserialize(&e)
+		if err1 != nil {
+			return nil, nil, err1
+		}
+		historyEvents = append(historyEvents, history.Events...)
+	}
+
+	nextPageToken = response.NextPageToken
 
 	executionHistory := gen.NewHistory()
 	executionHistory.Events = historyEvents
@@ -994,11 +1031,13 @@ func createDomainResponse(info *persistence.DomainInfo, config *persistence.Doma
 func createPollForDecisionTaskResponse(
 	matchingResponse *m.PollForDecisionTaskResponse, history *gen.History, nextPageToken []byte) *gen.PollForDecisionTaskResponse {
 	resp := gen.NewPollForDecisionTaskResponse()
-	resp.TaskToken = matchingResponse.TaskToken
-	resp.WorkflowExecution = matchingResponse.WorkflowExecution
-	resp.WorkflowType = matchingResponse.WorkflowType
-	resp.PreviousStartedEventId = matchingResponse.PreviousStartedEventId
-	resp.StartedEventId = matchingResponse.StartedEventId
+	if matchingResponse != nil {
+		resp.TaskToken = matchingResponse.TaskToken
+		resp.WorkflowExecution = matchingResponse.WorkflowExecution
+		resp.WorkflowType = matchingResponse.WorkflowType
+		resp.PreviousStartedEventId = matchingResponse.PreviousStartedEventId
+		resp.StartedEventId = matchingResponse.StartedEventId
+	}
 	resp.History = history
 	resp.NextPageToken = nextPageToken
 	return resp
@@ -1010,4 +1049,17 @@ func createGetWorkflowExecutionHistoryResponse(
 	resp.History = history
 	resp.NextPageToken = nextPageToken
 	return resp
+}
+
+func serializePollForDecisionTaskToken(token *PollForDecisionTaskToken) ([]byte, error) {
+	data, err := json.Marshal(token)
+
+	return data, err
+}
+
+func deserializePollForDecisionTaskToken(data []byte) (*PollForDecisionTaskToken, error) {
+	var token PollForDecisionTaskToken
+	err := json.Unmarshal(data, &token)
+
+	return &token, err
 }

@@ -668,7 +668,8 @@ struct PollForDecisionTaskRequest {
   10: optional string domain
   20: optional TaskList taskList
   30: optional string identity
-  40: optional i32 maximumHistoryPageSize
+  40: optional i32 maximumPageSize
+  50: optional binary nextPageToken
 }
 
 struct PollForDecisionTaskResponse {

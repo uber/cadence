@@ -17218,7 +17218,8 @@ func (p *StartWorkflowExecutionResponse) String() string {
 //  - Domain
 //  - TaskList
 //  - Identity
-//  - MaximumHistoryPageSize
+//  - MaximumPageSize
+//  - NextPageToken
 type PollForDecisionTaskRequest struct {
   // unused fields # 1 to 9
   Domain *string `thrift:"domain,10" db:"domain" json:"domain,omitempty"`
@@ -17227,7 +17228,9 @@ type PollForDecisionTaskRequest struct {
   // unused fields # 21 to 29
   Identity *string `thrift:"identity,30" db:"identity" json:"identity,omitempty"`
   // unused fields # 31 to 39
-  MaximumHistoryPageSize *int32 `thrift:"maximumHistoryPageSize,40" db:"maximumHistoryPageSize" json:"maximumHistoryPageSize,omitempty"`
+  MaximumPageSize *int32 `thrift:"maximumPageSize,40" db:"maximumPageSize" json:"maximumPageSize,omitempty"`
+  // unused fields # 41 to 49
+  NextPageToken []byte `thrift:"nextPageToken,50" db:"nextPageToken" json:"nextPageToken,omitempty"`
 }
 
 func NewPollForDecisionTaskRequest() *PollForDecisionTaskRequest {
@@ -17255,12 +17258,17 @@ func (p *PollForDecisionTaskRequest) GetIdentity() string {
   }
 return *p.Identity
 }
-var PollForDecisionTaskRequest_MaximumHistoryPageSize_DEFAULT int32
-func (p *PollForDecisionTaskRequest) GetMaximumHistoryPageSize() int32 {
-  if !p.IsSetMaximumHistoryPageSize() {
-    return PollForDecisionTaskRequest_MaximumHistoryPageSize_DEFAULT
+var PollForDecisionTaskRequest_MaximumPageSize_DEFAULT int32
+func (p *PollForDecisionTaskRequest) GetMaximumPageSize() int32 {
+  if !p.IsSetMaximumPageSize() {
+    return PollForDecisionTaskRequest_MaximumPageSize_DEFAULT
   }
-return *p.MaximumHistoryPageSize
+return *p.MaximumPageSize
+}
+var PollForDecisionTaskRequest_NextPageToken_DEFAULT []byte
+
+func (p *PollForDecisionTaskRequest) GetNextPageToken() []byte {
+  return p.NextPageToken
 }
 func (p *PollForDecisionTaskRequest) IsSetDomain() bool {
   return p.Domain != nil
@@ -17274,8 +17282,12 @@ func (p *PollForDecisionTaskRequest) IsSetIdentity() bool {
   return p.Identity != nil
 }
 
-func (p *PollForDecisionTaskRequest) IsSetMaximumHistoryPageSize() bool {
-  return p.MaximumHistoryPageSize != nil
+func (p *PollForDecisionTaskRequest) IsSetMaximumPageSize() bool {
+  return p.MaximumPageSize != nil
+}
+
+func (p *PollForDecisionTaskRequest) IsSetNextPageToken() bool {
+  return p.NextPageToken != nil
 }
 
 func (p *PollForDecisionTaskRequest) Read(iprot thrift.TProtocol) error {
@@ -17305,6 +17317,10 @@ func (p *PollForDecisionTaskRequest) Read(iprot thrift.TProtocol) error {
       }
     case 40:
       if err := p.ReadField40(iprot); err != nil {
+        return err
+      }
+    case 50:
+      if err := p.ReadField50(iprot); err != nil {
         return err
       }
     default:
@@ -17352,7 +17368,16 @@ func (p *PollForDecisionTaskRequest)  ReadField40(iprot thrift.TProtocol) error 
   if v, err := iprot.ReadI32(); err != nil {
   return thrift.PrependError("error reading field 40: ", err)
 } else {
-  p.MaximumHistoryPageSize = &v
+  p.MaximumPageSize = &v
+}
+  return nil
+}
+
+func (p *PollForDecisionTaskRequest)  ReadField50(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadBinary(); err != nil {
+  return thrift.PrependError("error reading field 50: ", err)
+} else {
+  p.NextPageToken = v
 }
   return nil
 }
@@ -17365,6 +17390,7 @@ func (p *PollForDecisionTaskRequest) Write(oprot thrift.TProtocol) error {
     if err := p.writeField20(oprot); err != nil { return err }
     if err := p.writeField30(oprot); err != nil { return err }
     if err := p.writeField40(oprot); err != nil { return err }
+    if err := p.writeField50(oprot); err != nil { return err }
   }
   if err := oprot.WriteFieldStop(); err != nil {
     return thrift.PrependError("write field stop error: ", err) }
@@ -17411,13 +17437,25 @@ func (p *PollForDecisionTaskRequest) writeField30(oprot thrift.TProtocol) (err e
 }
 
 func (p *PollForDecisionTaskRequest) writeField40(oprot thrift.TProtocol) (err error) {
-  if p.IsSetMaximumHistoryPageSize() {
-    if err := oprot.WriteFieldBegin("maximumHistoryPageSize", thrift.I32, 40); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field begin error 40:maximumHistoryPageSize: ", p), err) }
-    if err := oprot.WriteI32(int32(*p.MaximumHistoryPageSize)); err != nil {
-    return thrift.PrependError(fmt.Sprintf("%T.maximumHistoryPageSize (40) field write error: ", p), err) }
+  if p.IsSetMaximumPageSize() {
+    if err := oprot.WriteFieldBegin("maximumPageSize", thrift.I32, 40); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 40:maximumPageSize: ", p), err) }
+    if err := oprot.WriteI32(int32(*p.MaximumPageSize)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.maximumPageSize (40) field write error: ", p), err) }
     if err := oprot.WriteFieldEnd(); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field end error 40:maximumHistoryPageSize: ", p), err) }
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 40:maximumPageSize: ", p), err) }
+  }
+  return err
+}
+
+func (p *PollForDecisionTaskRequest) writeField50(oprot thrift.TProtocol) (err error) {
+  if p.IsSetNextPageToken() {
+    if err := oprot.WriteFieldBegin("nextPageToken", thrift.STRING, 50); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 50:nextPageToken: ", p), err) }
+    if err := oprot.WriteBinary(p.NextPageToken); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.nextPageToken (50) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 50:nextPageToken: ", p), err) }
   }
   return err
 }
