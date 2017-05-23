@@ -291,7 +291,6 @@ func (t *transferQueueProcessorImpl) processActivityTask(task *persistence.Trans
 	}
 
 	context, release, err := t.cache.getOrCreateWorkflowExecution(domainID, execution)
-	defer release()
 	if err != nil {
 		return err
 	}
@@ -300,6 +299,7 @@ func (t *transferQueueProcessorImpl) processActivityTask(task *persistence.Trans
 	mb, err = context.loadWorkflowExecution()
 	timeout := int32(0)
 	if err != nil {
+		release()
 		return err
 	}
 
@@ -308,6 +308,7 @@ func (t *transferQueueProcessorImpl) processActivityTask(task *persistence.Trans
 	} else {
 		logging.LogDuplicateTransferTaskEvent(t.logger, persistence.TransferTaskTypeActivityTask, task.TaskID, task.ScheduleID)
 	}
+	release()
 
 	if timeout != 0 {
 		err = t.matchingClient.AddActivityTask(nil, &m.AddActivityTaskRequest{
