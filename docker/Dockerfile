@@ -49,7 +49,7 @@ ENV CADENCE_HOME $GOPATH/src/github.com/uber/cadence
 
 RUN go get -u github.com/Masterminds/glide
 RUN go get -u github.com/golang/lint/golint
-RUN git clone --depth=50 https://venkat1109:6ad9da43da9fd8a6a6ade001497ebcacd87f436e@github.com/uber/cadence.git $CADENCE_HOME
+RUN git clone --depth=50 https://github.com/uber/cadence.git $CADENCE_HOME
 RUN cd $CADENCE_HOME; make bins_nothrift
 
 EXPOSE 7933 7934 7935
