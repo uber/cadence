@@ -434,7 +434,7 @@ func (t *timerQueueProcessorImpl) processTimerTask(key SequenceID) error {
 	if err != nil {
 		if _, ok := err.(*workflow.EntityNotExistsError); ok {
 			// Timer could fire after the execution is deleted.
-			// In which case just ignore the error
+			// In which case just ignore the error so we can complete the timer task.
 			err = nil
 		}
 	}
