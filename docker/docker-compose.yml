@@ -9,12 +9,9 @@ services:
     ports:
       - "8080:80"
       - "2003:2003"
-      - "2004:2004"
-      - "2023:2023"
-      - "2024:2024"
       - "8125:8125"
       - "8126:8126"
-  cadencev2:
+  cadence:
     build: .
     image: uber/cadence:master
     ports:

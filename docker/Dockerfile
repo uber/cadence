@@ -28,6 +28,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 		make \
 		pkg-config \
 		libev4 libev-dev \
+		gettext-base \
 		wget \
 		python-pip \
 		git-all \

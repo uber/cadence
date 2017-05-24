@@ -27,7 +27,8 @@ setup_schema() {
 }
 
 wait_for_cassandra() {
-    until cqlsh cassandra < /dev/null; do
+    server=`echo $CASSANDRA_SEEDS | awk -F ',' '{print $1}'`
+    until cqlsh --cqlversion=3.4.2 $server < /dev/null; do
         echo 'waiting for cassandra to start up'
         sleep 1
     done
