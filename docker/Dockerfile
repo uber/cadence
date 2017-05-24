@@ -20,7 +20,7 @@
 
 FROM cassandra:3.9
 
-# get golang 1.7.4 (https://github.com/docker-library/golang/blob/18ee81a2ec649dd7b3d5126b24eef86bc9c86d80/1.7/Dockerfile)
+# get golang 1.8.1
 RUN apt-get update && apt-get install -y --no-install-recommends \
 		g++ \
 		gcc \

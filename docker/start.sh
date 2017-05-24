@@ -20,32 +20,26 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-start_cassandra() {
-    pushd /
-    ./docker-entrypoint.sh cassandra
-    popd
+setup_schema() {
+    SCHEMA_FILE=$CADENCE_HOME/schema/cadence/schema.cql
+    $CADENCE_HOME/cadence-cassandra-tool --ep $CASSANDRA_SEEDS create -k $KEYSPACE --rf $RF
+    $CADENCE_HOME/cadence-cassandra-tool --ep $CASSANDRA_SEEDS -k $KEYSPACE setup-schema -d -f $SCHEMA_FILE
+}
 
-    until cqlsh "$HOST_IP" < /dev/null; do
+wait_for_cassandra() {
+    until cqlsh cassandra < /dev/null; do
         echo 'waiting for cassandra to start up'
         sleep 1
     done
     echo 'cassandra started'
 }
 
-setup_schema() {
-    SCHEMA_FILE=$CADENCE_HOME/schema/cadence/schema.cql
-    $CADENCE_HOME/cadence-cassandra-tool --ep $HOST_IP create -k $KEYSPACE --rf $RF
-    $CADENCE_HOME/cadence-cassandra-tool --ep $HOST_IP -k $KEYSPACE setup-schema -d -f $SCHEMA_FILE
-}
-
 init_env() {
 
     export HOST_IP="127.0.0.1" # default to localhost binding
-    export CASSANDRA_LISTEN_ADDRESS="127.0.0.1"
 
     if [ "$BIND_ON_LOCALHOST" == false ]; then
             export HOST_IP=`hostname --ip-address`
-            export CASSANDRA_LISTEN_ADDRESS=$HOST_IP
     else
         export BIND_ON_LOCALHOST=true
     fi
@@ -82,11 +76,8 @@ if [ -z "$SERVICES" ]; then
 fi
 
 init_env
-
-if [[ -z "$NO_CASSANDRA" || "$NO_CASSANDRA" == false ]]; then
-    start_cassandra
-    setup_schema
-fi
+wait_for_cassandra
+setup_schema
 
 # fix up config
 envsubst < config/docker_template.yaml > config/docker.yaml
