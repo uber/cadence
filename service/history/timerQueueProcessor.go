@@ -431,6 +431,14 @@ func (t *timerQueueProcessorImpl) processTimerTask(key SequenceID) error {
 		err = t.processDecisionTimeout(context, timerTask)
 	}
 
+	if err != nil {
+		if _, ok := err.(*workflow.EntityNotExistsError); ok {
+			// Timer could fire after the execution is deleted.
+			// In which case just ignore the error
+			err = nil
+		}
+	}
+
 	if err == nil {
 		// Tracking only successful ones.
 		atomic.AddUint64(&t.timerFiredCount, 1)
