@@ -18,7 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-FROM cassandra:3.9
+FROM debian:jessie
 
 # get golang 1.8.1
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -27,16 +27,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 		libc6-dev \
 		make \
 		pkg-config \
-		curl \
-		git libsnappy-dev zlib1g-dev libbz2-dev libgflags-dev gettext \
+		libev4 libev-dev \
+		wget \
+		python-pip \
+		git-all \
 	&& rm -rf /var/lib/apt/lists/*
 
-ENV GOLANG_VERSION 1.8.1
-ENV GOLANG_DOWNLOAD_URL https://golang.org/dl/go$GOLANG_VERSION.linux-amd64.tar.gz
-ENV GOLANG_DOWNLOAD_SHA256 a579ab19d5237e263254f1eac5352efcf1d70b9dacadb6d6bb12b0911ede8994
+RUN pip install cqlsh
 
-RUN curl -fsSL "$GOLANG_DOWNLOAD_URL" -o golang.tar.gz \
-	&& echo "$GOLANG_DOWNLOAD_SHA256  golang.tar.gz" | sha256sum -c - \
+ENV GOLANG_VERSION 1.8.2
+ENV GOLANG_DOWNLOAD_URL https://golang.org/dl/go$GOLANG_VERSION.linux-amd64.tar.gz
+ENV GOLANG_DOWNLOAD_SHA256 5477d6c9a4f96fa120847fafa88319d7b56b5d5068e41c3587eebe248b939be7
+
+RUN set -eux; \
+    wget -O golang.tar.gz "$GOLANG_DOWNLOAD_URL" \
+	&& echo "$GOLANG_DOWNLOAD_SHA256 golang.tar.gz" | sha256sum -c - \
 	&& tar -C /usr/local -xzf golang.tar.gz \
 	&& rm golang.tar.gz
 
