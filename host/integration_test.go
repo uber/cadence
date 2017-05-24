@@ -500,6 +500,23 @@ retry:
 			p.logger.Fatalf("History Events are empty: %v", events)
 		}
 
+		nextPageToken := response.GetNextPageToken()
+		for events[len(events)-1].GetEventId() != response.GetStartedEventId() {
+			resp, err2 := p.engine.GetWorkflowExecutionHistory(&workflow.GetWorkflowExecutionHistoryRequest{
+				Domain:        common.StringPtr(p.domain),
+				Execution:     response.GetWorkflowExecution(),
+				NextEventId:   common.Int64Ptr(response.GetStartedEventId() + 1),
+				NextPageToken: nextPageToken,
+			})
+
+			if err2 != nil {
+				return err2
+			}
+
+			events = append(events, resp.GetHistory().GetEvents()...)
+			nextPageToken = resp.GetNextPageToken()
+		}
+
 		if dropTask {
 			p.logger.Info("Dropping Decision task: ")
 			return nil

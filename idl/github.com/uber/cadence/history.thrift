@@ -165,7 +165,7 @@ service HistoryService {
   /**
   * Returns the nextEventID of the history of workflow execution. Only events in the history with Ids below the returned Id are
   * guaranteed to be valid, so the first step of reading an execution's history is to retrieve this event Id.
-  * It fails with 'EntityNotExistError' if speficied workflow execution in unknown to the service.
+  * It fails with 'EntityNotExistError' if specified workflow execution in unknown to the service.
   **/
   GetWorkflowExecutionNextEventIDResponse GetWorkflowExecutionNextEventID(1: GetWorkflowExecutionNextEventIDRequest getRequest)
     throws (

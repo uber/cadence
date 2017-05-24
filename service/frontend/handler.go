@@ -21,7 +21,6 @@
 package frontend
 
 import (
-	"encoding/json"
 	"log"
 	"sync"
 
@@ -56,13 +55,6 @@ type (
 		hSerializerFactory persistence.HistorySerializerFactory
 		startWG            sync.WaitGroup
 		service.Service
-	}
-
-	// PollForDecisionTaskToken is used to read next history page
-	PollForDecisionTaskToken struct {
-		execution     gen.WorkflowExecution
-		nextEventID   int64
-		nextPageToken []byte
 	}
 )
 
@@ -311,10 +303,6 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 		return nil, errTaskListNotSet
 	}
 
-	if !pollRequest.IsSetMaximumPageSize() || pollRequest.GetMaximumPageSize() == 0 {
-		pollRequest.MaximumPageSize = common.Int32Ptr(defaultHistoryMaxPageSize)
-	}
-
 	domainName := pollRequest.GetDomain()
 	info, _, err := wh.domainCache.GetDomain(domainName)
 	if err != nil {
@@ -324,55 +312,28 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	wh.Service.GetLogger().Infof("Poll for decision domain name: %v", domainName)
 	wh.Service.GetLogger().Infof("Poll for decision request domainID: %v", info.ID)
 
+	matchingResp, err := wh.matching.PollForDecisionTask(ctx, &m.PollForDecisionTaskRequest{
+		DomainUUID:  common.StringPtr(info.ID),
+		PollRequest: pollRequest,
+	})
+	if err != nil {
+		wh.Service.GetLogger().Errorf(
+			"PollForDecisionTask failed. TaskList: %v, Error: %v", pollRequest.GetTaskList().GetName(), err)
+		return nil, wrapError(err)
+	}
+
 	var history *gen.History
-	var persistenceToken []byte
-	var matchingResp *m.PollForDecisionTaskResponse
-	nextPageToken := &PollForDecisionTaskToken{}
-
-	if pollRequest.IsSetNextPageToken() {
-		continuation, err := deserializePollForDecisionTaskToken(pollRequest.GetNextPageToken())
-		if err != nil {
-			return nil, errInvalidNextPageToken
-		}
-		history, persistenceToken, err = wh.getHistory(info.ID, continuation.execution, continuation.nextEventID, pollRequest.GetMaximumPageSize(), continuation.nextPageToken)
-		if err != nil {
-			return nil, wrapError(err)
-		}
-		nextPageToken = continuation
-	} else {
-		matchingResp, err = wh.matching.PollForDecisionTask(ctx, &m.PollForDecisionTaskRequest{
-			DomainUUID:  common.StringPtr(info.ID),
-			PollRequest: pollRequest,
-		})
-		if err != nil {
-			wh.Service.GetLogger().Errorf(
-				"PollForDecisionTask failed. TaskList: %v, Error: %v", pollRequest.GetTaskList().GetName(), err)
-			return nil, wrapError(err)
-		}
-
-		if matchingResp.IsSetWorkflowExecution() {
-			// Non-empty response. Get the history
-			nextPageToken.execution = *matchingResp.GetWorkflowExecution()
-			nextPageToken.nextEventID = matchingResp.GetStartedEventId() + 1
-
-			history, persistenceToken, err = wh.getHistory(
-				info.ID, nextPageToken.execution, nextPageToken.nextEventID, pollRequest.GetMaximumPageSize(), nil)
-			if err != nil {
-				return nil, wrapError(err)
-			}
-		}
-	}
-
-	var serializedToken []byte
-	if persistenceToken != nil {
-		nextPageToken.nextPageToken = persistenceToken
-		serializedToken, err = serializePollForDecisionTaskToken(nextPageToken)
+	var token []byte
+	if matchingResp.IsSetWorkflowExecution() {
+		// Non-empty response. Get the history
+		history, token, err = wh.getHistory(
+			info.ID, *matchingResp.GetWorkflowExecution(), matchingResp.GetStartedEventId()+1, defaultHistoryMaxPageSize, nil)
 		if err != nil {
 			return nil, wrapError(err)
 		}
 	}
 
-	return createPollForDecisionTaskResponse(matchingResp, history, serializedToken), nil
+	return createPollForDecisionTaskResponse(matchingResp, history, token), nil
 }
 
 // RecordActivityTaskHeartbeat - Record Activity Task Heart beat.
@@ -1049,17 +1010,4 @@ func createGetWorkflowExecutionHistoryResponse(
 	resp.History = history
 	resp.NextPageToken = nextPageToken
 	return resp
-}
-
-func serializePollForDecisionTaskToken(token *PollForDecisionTaskToken) ([]byte, error) {
-	data, err := json.Marshal(token)
-
-	return data, err
-}
-
-func deserializePollForDecisionTaskToken(data []byte) (*PollForDecisionTaskToken, error) {
-	var token PollForDecisionTaskToken
-	err := json.Unmarshal(data, &token)
-
-	return &token, err
 }

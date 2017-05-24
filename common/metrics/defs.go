@@ -234,8 +234,8 @@ const (
 	HistoryRespondActivityTaskFailedScope
 	// HistoryRespondActivityTaskCanceledScope tracks RespondActivityTaskCanceled API calls received by service
 	HistoryRespondActivityTaskCanceledScope
-	// HistoryGetWorkflowExecutionHistoryScope tracks GetWorkflowExecutionHistory API calls received by service
-	HistoryGetWorkflowExecutionHistoryScope
+	// HistoryGetWorkflowExecutionNextEventIDScope tracks GetWorkflowExecutionHistory API calls received by service
+	HistoryGetWorkflowExecutionNextEventIDScope
 	// HistoryRecordDecisionTaskStartedScope tracks RecordDecisionTaskStarted API calls received by service
 	HistoryRecordDecisionTaskStartedScope
 	// HistoryRecordActivityTaskStartedScope tracks RecordActivityTaskStarted API calls received by service
@@ -334,22 +334,22 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 	},
 	// History Scope Names
 	History: {
-		HistoryStartWorkflowExecutionScope:         {operation: "StartWorkflowExecution"},
-		HistoryRecordActivityTaskHeartbeatScope:    {operation: "RecordActivityTaskHeartbeat"},
-		HistoryRespondDecisionTaskCompletedScope:   {operation: "RespondDecisionTaskCompleted"},
-		HistoryRespondActivityTaskCompletedScope:   {operation: "RespondActivityTaskCompleted"},
-		HistoryRespondActivityTaskFailedScope:      {operation: "RespondActivityTaskFailed"},
-		HistoryRespondActivityTaskCanceledScope:    {operation: "RespondActivityTaskCanceled"},
-		HistoryGetWorkflowExecutionHistoryScope:    {operation: "GetWorkflowExecutionHistory"},
-		HistoryRecordDecisionTaskStartedScope:      {operation: "RecordDecisionTaskStarted"},
-		HistoryRecordActivityTaskStartedScope:      {operation: "RecordActivityTaskStarted"},
-		HistorySignalWorkflowExecutionScope:        {operation: "SignalWorkflowExecution"},
-		HistoryTerminateWorkflowExecutionScope:     {operation: "TerminateWorkflowExecution"},
-		HistoryScheduleDecisionTaskScope:           {operation: "ScheduleDecisionTask"},
-		HistoryRecordChildExecutionCompletedScope:  {operation: "RecordChildExecutionCompleted"},
-		HistoryProcessTransferTasksScope:           {operation: "ProcessTransferTask"},
-		HistoryRequestCancelWorkflowExecutionScope: {operation: "RequestCancelWorkflowExecution"},
-		HistoryMultipleCompletionDecisionsScope:    {operation: "MultipleCompletionDecisions"},
+		HistoryStartWorkflowExecutionScope:          {operation: "StartWorkflowExecution"},
+		HistoryRecordActivityTaskHeartbeatScope:     {operation: "RecordActivityTaskHeartbeat"},
+		HistoryRespondDecisionTaskCompletedScope:    {operation: "RespondDecisionTaskCompleted"},
+		HistoryRespondActivityTaskCompletedScope:    {operation: "RespondActivityTaskCompleted"},
+		HistoryRespondActivityTaskFailedScope:       {operation: "RespondActivityTaskFailed"},
+		HistoryRespondActivityTaskCanceledScope:     {operation: "RespondActivityTaskCanceled"},
+		HistoryGetWorkflowExecutionNextEventIDScope: {operation: "GetWorkflowExecutionNextEventIDScope"},
+		HistoryRecordDecisionTaskStartedScope:       {operation: "RecordDecisionTaskStarted"},
+		HistoryRecordActivityTaskStartedScope:       {operation: "RecordActivityTaskStarted"},
+		HistorySignalWorkflowExecutionScope:         {operation: "SignalWorkflowExecution"},
+		HistoryTerminateWorkflowExecutionScope:      {operation: "TerminateWorkflowExecution"},
+		HistoryScheduleDecisionTaskScope:            {operation: "ScheduleDecisionTask"},
+		HistoryRecordChildExecutionCompletedScope:   {operation: "RecordChildExecutionCompleted"},
+		HistoryProcessTransferTasksScope:            {operation: "ProcessTransferTask"},
+		HistoryRequestCancelWorkflowExecutionScope:  {operation: "RequestCancelWorkflowExecution"},
+		HistoryMultipleCompletionDecisionsScope:     {operation: "MultipleCompletionDecisions"},
 	},
 	// Matching Scope Names
 	Matching: {
