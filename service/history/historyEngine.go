@@ -604,6 +604,11 @@ Update_History_Loop:
 					continue Process_Decision_Loop
 				}
 				attributes := d.GetCompleteWorkflowExecutionDecisionAttributes()
+				if err = validateCompleteWorkflowExecutionAttributes(attributes); err != nil {
+					failDecision = true
+					failCause = workflow.DecisionTaskFailedCause_BAD_COMPLETE_WORKFLOW_EXECUTION_ATTRIBUTES
+					break Process_Decision_Loop
+				}
 				msBuilder.AddCompletedWorkflowEvent(completedID, attributes)
 				isComplete = true
 			case workflow.DecisionType_FailWorkflowExecution:
@@ -792,8 +797,8 @@ Update_History_Loop:
 		}
 
 		if failDecision {
-			e.metricsClient.AddCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
-				metrics.FailedDecisionsCounter, 1)
+			e.logger.Info("failing the decision")
+			e.metricsClient.AddCounter(metrics.RespondDecisionTaskCompletedScope, metrics.FailedDecisionsCounter, 1)
 			var err1 error
 			msBuilder, err1 = e.failDecision(context, scheduleID, startedID, failCause, request)
 			if err1 != nil {
@@ -1542,6 +1547,13 @@ func validateRecordMarkerAttributes(attributes *workflow.RecordMarkerDecisionAtt
 	}
 	if !attributes.IsSetMarkerName() || attributes.GetMarkerName() == "" {
 		return &workflow.BadRequestError{Message: "MarkerName is not set on decision."}
+	}
+	return nil
+}
+
+func validateCompleteWorkflowExecutionAttributes(attributes *workflow.CompleteWorkflowExecutionDecisionAttributes) error {
+	if attributes == nil {
+		return &workflow.BadRequestError{Message: "CompleteWorkflowExecutionDecisionAttributes is not set on decision."}
 	}
 	return nil
 }
