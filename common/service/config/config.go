@@ -72,7 +72,7 @@ type (
 		BootstrapFile string `yaml:"bootstrapFile"`
 		// MaxJoinDuration is the max wait time to join the ring
 		MaxJoinDuration time.Duration `yaml:"maxJoinDuration"`
-		// Custom discover provider, cannot be specified through yaml
+		// Custom discovery provider, cannot be specified through yaml
 		DiscoveryProvider discovery.DiscoverProvider `yaml:"-"`
 	}
 
