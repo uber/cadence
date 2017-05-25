@@ -746,8 +746,7 @@ struct GetWorkflowExecutionHistoryRequest {
   10: optional string domain
   20: optional WorkflowExecution execution
   30: optional i32 maximumPageSize
-  40: optional i64 (js.type = "Long") nextEventId
-  50: optional binary nextPageToken
+  40: optional binary nextPageToken
 }
 
 struct GetWorkflowExecutionHistoryResponse {

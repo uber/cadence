@@ -21,6 +21,7 @@
 package frontend
 
 import (
+	"encoding/json"
 	"log"
 	"sync"
 
@@ -55,6 +56,11 @@ type (
 		hSerializerFactory persistence.HistorySerializerFactory
 		startWG            sync.WaitGroup
 		service.Service
+	}
+
+	getHistoryContinuationToken struct {
+		nextEventID      int64
+		persistenceToken []byte
 	}
 )
 
@@ -323,17 +329,26 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	}
 
 	var history *gen.History
-	var token []byte
+	var persistenceToken []byte
 	if matchingResp.IsSetWorkflowExecution() {
 		// Non-empty response. Get the history
-		history, token, err = wh.getHistory(
+		history, persistenceToken, err = wh.getHistory(
 			info.ID, *matchingResp.GetWorkflowExecution(), matchingResp.GetStartedEventId()+1, defaultHistoryMaxPageSize, nil)
 		if err != nil {
 			return nil, wrapError(err)
 		}
 	}
 
-	return createPollForDecisionTaskResponse(matchingResp, history, token), nil
+	token := &getHistoryContinuationToken{
+		nextEventID:      matchingResp.GetStartedEventId() + 1,
+		persistenceToken: persistenceToken,
+	}
+	continuation, err := serializeGetHistoryToken(token)
+	if err != nil {
+		return nil, wrapError(err)
+	}
+
+	return createPollForDecisionTaskResponse(matchingResp, history, continuation), nil
 }
 
 // RecordActivityTaskHeartbeat - Record Activity Task Heart beat.
@@ -552,10 +567,6 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		return nil, errInvalidRunID
 	}
 
-	if getRequest.IsSetNextPageToken() && !getRequest.IsSetNextEventId() {
-		return nil, &gen.BadRequestError{Message: "NextEventId must be set if NextPageToken is set."}
-	}
-
 	if !getRequest.IsSetMaximumPageSize() || getRequest.GetMaximumPageSize() == 0 {
 		getRequest.MaximumPageSize = common.Int32Ptr(defaultHistoryMaxPageSize)
 	}
@@ -566,8 +577,13 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		return nil, wrapError(err)
 	}
 
-	var nextEventID int64
-	if !getRequest.IsSetNextEventId() {
+	token := &getHistoryContinuationToken{}
+	if getRequest.IsSetNextPageToken() {
+		token, err = deserializeGetHistoryToken(getRequest.GetNextPageToken())
+		if err != nil {
+			return nil, errInvalidNextPageToken
+		}
+	} else {
 		response, err := wh.history.GetWorkflowExecutionNextEventID(ctx, &h.GetWorkflowExecutionNextEventIDRequest{
 			DomainUUID: common.StringPtr(info.ID),
 			Execution:  getRequest.GetExecution(),
@@ -575,18 +591,22 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		if err != nil {
 			return nil, wrapError(err)
 		}
-		nextEventID = response.GetEventId()
-	} else {
-		nextEventID = getRequest.GetNextEventId()
+		token.nextEventID = response.GetEventId()
 	}
 
-	history, token, err := wh.getHistory(
-		info.ID, *getRequest.GetExecution(), nextEventID, getRequest.GetMaximumPageSize(), getRequest.GetNextPageToken())
+	history, persistenceToken, err := wh.getHistory(
+		info.ID, *getRequest.GetExecution(), token.nextEventID, getRequest.GetMaximumPageSize(), getRequest.GetNextPageToken())
 	if err != nil {
 		return nil, wrapError(err)
 	}
-	return createGetWorkflowExecutionHistoryResponse(history, nextEventID, token), nil
 
+	token.persistenceToken = persistenceToken
+	nextToken, err := serializeGetHistoryToken(token)
+	if err != nil {
+		return nil, wrapError(err)
+	}
+
+	return createGetWorkflowExecutionHistoryResponse(history, token.nextEventID, nextToken), nil
 }
 
 // SignalWorkflowExecution is used to send a signal event to running workflow execution.  This results in
@@ -1010,4 +1030,17 @@ func createGetWorkflowExecutionHistoryResponse(
 	resp.History = history
 	resp.NextPageToken = nextPageToken
 	return resp
+}
+
+func serializeGetHistoryToken(token *getHistoryContinuationToken) ([]byte, error) {
+	data, err := json.Marshal(token)
+
+	return data, err
+}
+
+func deserializeGetHistoryToken(data []byte) (*getHistoryContinuationToken, error) {
+	var token getHistoryContinuationToken
+	err := json.Unmarshal(data, &token)
+
+	return &token, err
 }

@@ -19613,7 +19613,6 @@ func (p *RequestCancelWorkflowExecutionRequest) String() string {
 //  - Domain
 //  - Execution
 //  - MaximumPageSize
-//  - NextEventId
 //  - NextPageToken
 type GetWorkflowExecutionHistoryRequest struct {
   // unused fields # 1 to 9
@@ -19623,9 +19622,7 @@ type GetWorkflowExecutionHistoryRequest struct {
   // unused fields # 21 to 29
   MaximumPageSize *int32 `thrift:"maximumPageSize,30" db:"maximumPageSize" json:"maximumPageSize,omitempty"`
   // unused fields # 31 to 39
-  NextEventId *int64 `thrift:"nextEventId,40" db:"nextEventId" json:"nextEventId,omitempty"`
-  // unused fields # 41 to 49
-  NextPageToken []byte `thrift:"nextPageToken,50" db:"nextPageToken" json:"nextPageToken,omitempty"`
+  NextPageToken []byte `thrift:"nextPageToken,40" db:"nextPageToken" json:"nextPageToken,omitempty"`
 }
 
 func NewGetWorkflowExecutionHistoryRequest() *GetWorkflowExecutionHistoryRequest {
@@ -19653,13 +19650,6 @@ func (p *GetWorkflowExecutionHistoryRequest) GetMaximumPageSize() int32 {
   }
 return *p.MaximumPageSize
 }
-var GetWorkflowExecutionHistoryRequest_NextEventId_DEFAULT int64
-func (p *GetWorkflowExecutionHistoryRequest) GetNextEventId() int64 {
-  if !p.IsSetNextEventId() {
-    return GetWorkflowExecutionHistoryRequest_NextEventId_DEFAULT
-  }
-return *p.NextEventId
-}
 var GetWorkflowExecutionHistoryRequest_NextPageToken_DEFAULT []byte
 
 func (p *GetWorkflowExecutionHistoryRequest) GetNextPageToken() []byte {
@@ -19675,10 +19665,6 @@ func (p *GetWorkflowExecutionHistoryRequest) IsSetExecution() bool {
 
 func (p *GetWorkflowExecutionHistoryRequest) IsSetMaximumPageSize() bool {
   return p.MaximumPageSize != nil
-}
-
-func (p *GetWorkflowExecutionHistoryRequest) IsSetNextEventId() bool {
-  return p.NextEventId != nil
 }
 
 func (p *GetWorkflowExecutionHistoryRequest) IsSetNextPageToken() bool {
@@ -19712,10 +19698,6 @@ func (p *GetWorkflowExecutionHistoryRequest) Read(iprot thrift.TProtocol) error 
       }
     case 40:
       if err := p.ReadField40(iprot); err != nil {
-        return err
-      }
-    case 50:
-      if err := p.ReadField50(iprot); err != nil {
         return err
       }
     default:
@@ -19760,17 +19742,8 @@ func (p *GetWorkflowExecutionHistoryRequest)  ReadField30(iprot thrift.TProtocol
 }
 
 func (p *GetWorkflowExecutionHistoryRequest)  ReadField40(iprot thrift.TProtocol) error {
-  if v, err := iprot.ReadI64(); err != nil {
-  return thrift.PrependError("error reading field 40: ", err)
-} else {
-  p.NextEventId = &v
-}
-  return nil
-}
-
-func (p *GetWorkflowExecutionHistoryRequest)  ReadField50(iprot thrift.TProtocol) error {
   if v, err := iprot.ReadBinary(); err != nil {
-  return thrift.PrependError("error reading field 50: ", err)
+  return thrift.PrependError("error reading field 40: ", err)
 } else {
   p.NextPageToken = v
 }
@@ -19785,7 +19758,6 @@ func (p *GetWorkflowExecutionHistoryRequest) Write(oprot thrift.TProtocol) error
     if err := p.writeField20(oprot); err != nil { return err }
     if err := p.writeField30(oprot); err != nil { return err }
     if err := p.writeField40(oprot); err != nil { return err }
-    if err := p.writeField50(oprot); err != nil { return err }
   }
   if err := oprot.WriteFieldStop(); err != nil {
     return thrift.PrependError("write field stop error: ", err) }
@@ -19832,25 +19804,13 @@ func (p *GetWorkflowExecutionHistoryRequest) writeField30(oprot thrift.TProtocol
 }
 
 func (p *GetWorkflowExecutionHistoryRequest) writeField40(oprot thrift.TProtocol) (err error) {
-  if p.IsSetNextEventId() {
-    if err := oprot.WriteFieldBegin("nextEventId", thrift.I64, 40); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field begin error 40:nextEventId: ", p), err) }
-    if err := oprot.WriteI64(int64(*p.NextEventId)); err != nil {
-    return thrift.PrependError(fmt.Sprintf("%T.nextEventId (40) field write error: ", p), err) }
-    if err := oprot.WriteFieldEnd(); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field end error 40:nextEventId: ", p), err) }
-  }
-  return err
-}
-
-func (p *GetWorkflowExecutionHistoryRequest) writeField50(oprot thrift.TProtocol) (err error) {
   if p.IsSetNextPageToken() {
-    if err := oprot.WriteFieldBegin("nextPageToken", thrift.STRING, 50); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field begin error 50:nextPageToken: ", p), err) }
+    if err := oprot.WriteFieldBegin("nextPageToken", thrift.STRING, 40); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 40:nextPageToken: ", p), err) }
     if err := oprot.WriteBinary(p.NextPageToken); err != nil {
-    return thrift.PrependError(fmt.Sprintf("%T.nextPageToken (50) field write error: ", p), err) }
+    return thrift.PrependError(fmt.Sprintf("%T.nextPageToken (40) field write error: ", p), err) }
     if err := oprot.WriteFieldEnd(); err != nil {
-      return thrift.PrependError(fmt.Sprintf("%T write field end error 50:nextPageToken: ", p), err) }
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 40:nextPageToken: ", p), err) }
   }
   return err
 }

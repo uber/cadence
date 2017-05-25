@@ -3322,7 +3322,7 @@ type HistoryService interface {  //HistoryService provides API to start a new lo
   StartWorkflowExecution(startRequest *StartWorkflowExecutionRequest) (r *shared.StartWorkflowExecutionResponse, err error)
   // Returns the nextEventID of the history of workflow execution. Only events in the history with Ids below the returned Id are
   // guaranteed to be valid, so the first step of reading an execution's history is to retrieve this event Id.
-  // It fails with 'EntityNotExistError' if speficied workflow execution in unknown to the service.
+  // It fails with 'EntityNotExistError' if specified workflow execution in unknown to the service.
   // 
   // 
   // Parameters:
@@ -3561,7 +3561,7 @@ func (p *HistoryServiceClient) recvStartWorkflowExecution() (value *shared.Start
 
 // Returns the nextEventID of the history of workflow execution. Only events in the history with Ids below the returned Id are
 // guaranteed to be valid, so the first step of reading an execution's history is to retrieve this event Id.
-// It fails with 'EntityNotExistError' if speficied workflow execution in unknown to the service.
+// It fails with 'EntityNotExistError' if specified workflow execution in unknown to the service.
 // 
 // 
 // Parameters:
