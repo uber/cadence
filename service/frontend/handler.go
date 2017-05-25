@@ -339,11 +339,7 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 		}
 	}
 
-	token := &getHistoryContinuationToken{
-		nextEventID:      matchingResp.GetStartedEventId() + 1,
-		persistenceToken: persistenceToken,
-	}
-	continuation, err := serializeGetHistoryToken(token)
+	continuation, err := getSerializedGetHistoryToken(persistenceToken, history, matchingResp.GetStartedEventId()+1)
 	if err != nil {
 		return nil, wrapError(err)
 	}
@@ -600,8 +596,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		return nil, wrapError(err)
 	}
 
-	token.persistenceToken = persistenceToken
-	nextToken, err := serializeGetHistoryToken(token)
+	nextToken, err := getSerializedGetHistoryToken(persistenceToken, history, token.nextEventID)
 	if err != nil {
 		return nil, wrapError(err)
 	}
@@ -1032,15 +1027,27 @@ func createGetWorkflowExecutionHistoryResponse(
 	return resp
 }
 
-func serializeGetHistoryToken(token *getHistoryContinuationToken) ([]byte, error) {
-	data, err := json.Marshal(token)
-
-	return data, err
-}
-
 func deserializeGetHistoryToken(data []byte) (*getHistoryContinuationToken, error) {
 	var token getHistoryContinuationToken
 	err := json.Unmarshal(data, &token)
 
 	return &token, err
+}
+
+func getSerializedGetHistoryToken(persistenceToken []byte, history *gen.History, nextEventID int64) ([]byte, error) {
+	// create token if there are more events to read
+	if history == nil {
+		return nil, nil
+	}
+	events := history.GetEvents()
+	if len(persistenceToken) > 0 && len(events) > 0 && events[len(events)-1].GetEventId() < nextEventID-1 {
+		token := &getHistoryContinuationToken{
+			nextEventID:      nextEventID,
+			persistenceToken: persistenceToken,
+		}
+		data, err := json.Marshal(token)
+
+		return data, err
+	}
+	return nil, nil
 }

@@ -501,7 +501,7 @@ retry:
 		}
 
 		nextPageToken := response.GetNextPageToken()
-		for events[len(events)-1].GetEventId() != response.GetStartedEventId() {
+		for nextPageToken != nil {
 			resp, err2 := p.engine.GetWorkflowExecutionHistory(&workflow.GetWorkflowExecutionHistoryRequest{
 				Domain:        common.StringPtr(p.domain),
 				Execution:     response.GetWorkflowExecution(),
