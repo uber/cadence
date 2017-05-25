@@ -505,7 +505,6 @@ retry:
 			resp, err2 := p.engine.GetWorkflowExecutionHistory(&workflow.GetWorkflowExecutionHistoryRequest{
 				Domain:        common.StringPtr(p.domain),
 				Execution:     response.GetWorkflowExecution(),
-				NextEventId:   common.Int64Ptr(response.GetStartedEventId() + 1),
 				NextPageToken: nextPageToken,
 			})
 
