@@ -59,6 +59,7 @@ type (
 	}
 
 	getHistoryContinuationToken struct {
+		runID            string
 		nextEventID      int64
 		persistenceToken []byte
 	}
@@ -339,7 +340,8 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 		}
 	}
 
-	continuation, err := getSerializedGetHistoryToken(persistenceToken, history, matchingResp.GetStartedEventId()+1)
+	continuation, err :=
+		getSerializedGetHistoryToken(persistenceToken, matchingResp.GetWorkflowExecution().GetRunId(), history, matchingResp.GetStartedEventId()+1)
 	if err != nil {
 		return nil, wrapError(err)
 	}
@@ -588,15 +590,20 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 			return nil, wrapError(err)
 		}
 		token.nextEventID = response.GetEventId()
+		token.runID = response.GetRunId()
 	}
 
-	history, persistenceToken, err := wh.getHistory(
-		info.ID, *getRequest.GetExecution(), token.nextEventID, getRequest.GetMaximumPageSize(), getRequest.GetNextPageToken())
+	we := gen.WorkflowExecution{
+		WorkflowId: getRequest.GetExecution().WorkflowId,
+		RunId:      common.StringPtr(token.runID),
+	}
+	history, persistenceToken, err :=
+		wh.getHistory(info.ID, we, token.nextEventID, getRequest.GetMaximumPageSize(), getRequest.GetNextPageToken())
 	if err != nil {
 		return nil, wrapError(err)
 	}
 
-	nextToken, err := getSerializedGetHistoryToken(persistenceToken, history, token.nextEventID)
+	nextToken, err := getSerializedGetHistoryToken(persistenceToken, token.runID, history, token.nextEventID)
 	if err != nil {
 		return nil, wrapError(err)
 	}
@@ -1034,7 +1041,7 @@ func deserializeGetHistoryToken(data []byte) (*getHistoryContinuationToken, erro
 	return &token, err
 }
 
-func getSerializedGetHistoryToken(persistenceToken []byte, history *gen.History, nextEventID int64) ([]byte, error) {
+func getSerializedGetHistoryToken(persistenceToken []byte, runID string, history *gen.History, nextEventID int64) ([]byte, error) {
 	// create token if there are more events to read
 	if history == nil {
 		return nil, nil
@@ -1042,6 +1049,7 @@ func getSerializedGetHistoryToken(persistenceToken []byte, history *gen.History,
 	events := history.GetEvents()
 	if len(persistenceToken) > 0 && len(events) > 0 && events[len(events)-1].GetEventId() < nextEventID-1 {
 		token := &getHistoryContinuationToken{
+			runID:            runID,
 			nextEventID:      nextEventID,
 			persistenceToken: persistenceToken,
 		}

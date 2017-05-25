@@ -50,6 +50,7 @@ struct GetWorkflowExecutionNextEventIDRequest {
 
 struct GetWorkflowExecutionNextEventIDResponse {
   10: optional i64 (js.type = "Long") eventId
+  20: optional string runId
 }
 
 struct RespondDecisionTaskCompletedRequest {

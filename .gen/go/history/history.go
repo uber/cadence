@@ -757,9 +757,12 @@ func (p *GetWorkflowExecutionNextEventIDRequest) String() string {
 
 // Attributes:
 //  - EventId
+//  - RunId
 type GetWorkflowExecutionNextEventIDResponse struct {
   // unused fields # 1 to 9
   EventId *int64 `thrift:"eventId,10" db:"eventId" json:"eventId,omitempty"`
+  // unused fields # 11 to 19
+  RunId *string `thrift:"runId,20" db:"runId" json:"runId,omitempty"`
 }
 
 func NewGetWorkflowExecutionNextEventIDResponse() *GetWorkflowExecutionNextEventIDResponse {
@@ -773,8 +776,19 @@ func (p *GetWorkflowExecutionNextEventIDResponse) GetEventId() int64 {
   }
 return *p.EventId
 }
+var GetWorkflowExecutionNextEventIDResponse_RunId_DEFAULT string
+func (p *GetWorkflowExecutionNextEventIDResponse) GetRunId() string {
+  if !p.IsSetRunId() {
+    return GetWorkflowExecutionNextEventIDResponse_RunId_DEFAULT
+  }
+return *p.RunId
+}
 func (p *GetWorkflowExecutionNextEventIDResponse) IsSetEventId() bool {
   return p.EventId != nil
+}
+
+func (p *GetWorkflowExecutionNextEventIDResponse) IsSetRunId() bool {
+  return p.RunId != nil
 }
 
 func (p *GetWorkflowExecutionNextEventIDResponse) Read(iprot thrift.TProtocol) error {
@@ -792,6 +806,10 @@ func (p *GetWorkflowExecutionNextEventIDResponse) Read(iprot thrift.TProtocol) e
     switch fieldId {
     case 10:
       if err := p.ReadField10(iprot); err != nil {
+        return err
+      }
+    case 20:
+      if err := p.ReadField20(iprot); err != nil {
         return err
       }
     default:
@@ -818,11 +836,21 @@ func (p *GetWorkflowExecutionNextEventIDResponse)  ReadField10(iprot thrift.TPro
   return nil
 }
 
+func (p *GetWorkflowExecutionNextEventIDResponse)  ReadField20(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 20: ", err)
+} else {
+  p.RunId = &v
+}
+  return nil
+}
+
 func (p *GetWorkflowExecutionNextEventIDResponse) Write(oprot thrift.TProtocol) error {
   if err := oprot.WriteStructBegin("GetWorkflowExecutionNextEventIDResponse"); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
   if p != nil {
     if err := p.writeField10(oprot); err != nil { return err }
+    if err := p.writeField20(oprot); err != nil { return err }
   }
   if err := oprot.WriteFieldStop(); err != nil {
     return thrift.PrependError("write field stop error: ", err) }
@@ -839,6 +867,18 @@ func (p *GetWorkflowExecutionNextEventIDResponse) writeField10(oprot thrift.TPro
     return thrift.PrependError(fmt.Sprintf("%T.eventId (10) field write error: ", p), err) }
     if err := oprot.WriteFieldEnd(); err != nil {
       return thrift.PrependError(fmt.Sprintf("%T write field end error 10:eventId: ", p), err) }
+  }
+  return err
+}
+
+func (p *GetWorkflowExecutionNextEventIDResponse) writeField20(oprot thrift.TProtocol) (err error) {
+  if p.IsSetRunId() {
+    if err := oprot.WriteFieldBegin("runId", thrift.STRING, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:runId: ", p), err) }
+    if err := oprot.WriteString(string(*p.RunId)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.runId (20) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:runId: ", p), err) }
   }
   return err
 }

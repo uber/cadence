@@ -282,6 +282,7 @@ func (e *historyEngineImpl) GetWorkflowExecutionNextEventID(
 
 	result := h.NewGetWorkflowExecutionNextEventIDResponse()
 	result.EventId = common.Int64Ptr(msBuilder.GetNextEventID())
+	result.RunId = context.workflowExecution.RunId
 
 	return result, nil
 }
