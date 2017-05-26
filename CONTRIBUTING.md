@@ -1,4 +1,4 @@
-# Developing cadence
+# Developing Cadence
 
 This doc is intended for contributors to `cadence` server (hopefully that's you!)
 
@@ -49,7 +49,17 @@ make bins
 
 ## Testing
 
-Run all the tests with coverage and race detector enabled:
+Before running the tests you must have `cassandra` running locally:
+
+```bash
+# for OS X
+brew install cassandra
+
+# start cassandra
+/usr/local/bin/cassandra
+``` 
+
+Run all the tests:
 
 ```bash
 make test

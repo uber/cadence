@@ -2,12 +2,17 @@
 
 Cadence is a distributed, scalable, durable, and highly available orchestration engine we developed at Uber Engineering to execute asynchronous long-running business logic in a scalable and resilient way.
 
-This repo contains the source code of the Cadence server. Your application needs to use the client to interact with the server. The client can be found [here](https://github.com/uber-go/cadence-client).
+Business logic is modeled as workflows and activities. Workflows are the implementation of coordination logic. Its sole purpose is to orchestrate activity executions. Activities are the implementation of a particular task in the business logic. The workflow and activity implementation are hosted and executed in worker processes. These workers long-poll the Cadence server for tasks, execute the tasks by invoking either a workflow or activity implementation, and return the results of the task back to the Cadence server. Furthermore, the workers can be implemented as completely stateless services which in turn allows for unlimited horizontal scaling.
+
+The Cadence server brokers and persists tasks and events generated during workflow execution, which provides certain scalability and realiability guarantees for workflow executions. An individual activity execution is not fault tolerant as it can fail for various reasons. But the workflow that defines in which order and how (location, input parameters, timeouts, etc.) activities are executed is guaranteed to continue execution under various failure conditions.
+
+This repo contains the source code of the Cadence server. The client lib you can use to implement workflows, activities and worker can be found [here](https://github.com/uber-go/cadence-client).
 
 ## Running
-### From source
 
-* Build the binaries following the instructions [here](CONTRIBUTING.md).
+### Locally
+
+* Build the required binaries following the instructions [here](CONTRIBUTING.md).
 
 * Install and run `cassandra` locally:
 ```bash
@@ -29,7 +34,7 @@ brew install cassandra
 ./cadence
 ```
 
-### Docker
+### Using Docker
 
 You can also [build and run](docker/README.md) the service using Docker. 
 
