@@ -46,7 +46,8 @@ to just bring up cadence server
 ```
 cd $GOPATH/src/github.com/uber/cadence/docker
 docker build -t uber/cadence:master .
-docker run -e CASSANDRA_CONSISTENCY=Quorum \
+docker run uber/cadence
+    -e CASSANDRA_CONSISTENCY=Quorum \
     -e CASSANDRA_SEEDS=127.0.0.1 \                      -- Cassandra server seed list
     -e RINGPOP_SEEDS=10.0.0.1 \                         -- Use this as the gossip bootstrap hosts for ringpop
     -e NUM_HISTORY_SHARDS=1024  \                       -- Number of history shards
