@@ -65,7 +65,7 @@ type (
 		MetadataManager     MetadataManager
 		VisibilityMgr       VisibilityManager
 		ShardInfo           *ShardInfo
-		ShardContext        *testShardContext
+		ShardContext        *TestShardContext
 		readLevel           int64
 		CassandraTestCluster
 	}
@@ -77,10 +77,12 @@ type (
 		session  *gocql.Session
 	}
 
-	testShardContext struct {
+	// TODO: Cleanup, move this out of persistence
+	TestShardContext struct {
 		shardInfo              *ShardInfo
 		transferSequenceNumber int64
 		timerSequeceNumber     int64
+		timerMaxReadLevel      int64
 		historyMgr             HistoryManager
 		executionMgr           ExecutionManager
 		logger                 bark.Logger
@@ -95,8 +97,8 @@ type (
 )
 
 func newTestShardContext(shardInfo *ShardInfo, transferSequenceNumber int64, historyMgr HistoryManager,
-	executionMgr ExecutionManager, logger bark.Logger) *testShardContext {
-	return &testShardContext{
+	executionMgr ExecutionManager, logger bark.Logger) *TestShardContext {
+	return &TestShardContext{
 		shardInfo:              shardInfo,
 		transferSequenceNumber: transferSequenceNumber,
 		historyMgr:             historyMgr,
@@ -106,66 +108,95 @@ func newTestShardContext(shardInfo *ShardInfo, transferSequenceNumber int64, his
 	}
 }
 
-func (s *testShardContext) GetExecutionManager() ExecutionManager {
+func (s *TestShardContext) GetExecutionManager() ExecutionManager {
 	return s.executionMgr
 }
 
-func (s *testShardContext) GetHistoryManager() HistoryManager {
+func (s *TestShardContext) GetHistoryManager() HistoryManager {
 	return s.historyMgr
 }
 
-func (s *testShardContext) GetNextTransferTaskID() (int64, error) {
+func (s *TestShardContext) GetNextTransferTaskID() (int64, error) {
 	return atomic.AddInt64(&s.transferSequenceNumber, 1), nil
 }
 
-func (s *testShardContext) GetTransferMaxReadLevel() int64 {
+func (s *TestShardContext) GetTransferMaxReadLevel() int64 {
 	return atomic.LoadInt64(&s.transferSequenceNumber)
 }
 
-func (s *testShardContext) GetTransferAckLevel() int64 {
+func (s *TestShardContext) GetTransferAckLevel() int64 {
 	return atomic.LoadInt64(&s.shardInfo.TransferAckLevel)
 }
 
-func (s *testShardContext) GetTimerSequenceNumber() int64 {
-	return atomic.AddInt64(&s.timerSequeceNumber, 1)
-}
-
-func (s *testShardContext) UpdateAckLevel(ackLevel int64) error {
+func (s *TestShardContext) UpdateTransferAckLevel(ackLevel int64) error {
 	atomic.StoreInt64(&s.shardInfo.TransferAckLevel, ackLevel)
 	return nil
 }
 
-func (s *testShardContext) GetTransferSequenceNumber() int64 {
+func (s *TestShardContext) GetTransferSequenceNumber() int64 {
 	return atomic.LoadInt64(&s.transferSequenceNumber)
 }
 
-func (s *testShardContext) CreateWorkflowExecution(request *CreateWorkflowExecutionRequest) (
+func (s *TestShardContext) GetTimerSequenceNumber() int64 {
+	return atomic.AddInt64(&s.timerSequeceNumber, 1)
+}
+
+func (s *TestShardContext) GetTimerMaxReadLevel() int64 {
+	return atomic.LoadInt64(&s.timerMaxReadLevel)
+}
+
+func (s *TestShardContext) GetTimerAckLevel() int64 {
+	return atomic.LoadInt64(&s.shardInfo.TransferAckLevel)
+}
+
+func (s *TestShardContext) UpdateTimerMaxReadLevel(level int64)  {
+	atomic.StoreInt64(&s.timerMaxReadLevel, level)
+}
+
+func (s *TestShardContext) UpdateTimerAckLevel(ackLevel int64) error {
+	atomic.StoreInt64(&s.shardInfo.TimerAckLevel, ackLevel)
+	return nil
+}
+
+func (s *TestShardContext) CreateWorkflowExecution(request *CreateWorkflowExecutionRequest) (
 	*CreateWorkflowExecutionResponse, error) {
 	return s.executionMgr.CreateWorkflowExecution(request)
 }
 
-func (s *testShardContext) UpdateWorkflowExecution(request *UpdateWorkflowExecutionRequest) error {
+func (s *TestShardContext) UpdateWorkflowExecution(request *UpdateWorkflowExecutionRequest) error {
+	// assign IDs for the timer tasks. They need to be assigned under shard lock.
+	// TODO: This needs to be moved out of persistence.
+	b := (int64(1) << 26) - 1
+	for _, task := range request.TimerTasks {
+		seqNum := s.GetTimerSequenceNumber()
+		seqID := task.GetTaskID() & (math.MaxInt64 &^ b) | (seqNum & b)
+		task.SetTaskID(int64(seqID))
+		s.logger.Infof("TestShardContext: Assigning timer task ID: %v", seqID)
+		if int64(seqID) > s.timerMaxReadLevel {
+			s.timerMaxReadLevel = int64(seqID)
+		}
+	}
 	return s.executionMgr.UpdateWorkflowExecution(request)
 }
 
-func (s *testShardContext) AppendHistoryEvents(request *AppendHistoryEventsRequest) error {
+func (s *TestShardContext) AppendHistoryEvents(request *AppendHistoryEventsRequest) error {
 	return s.historyMgr.AppendHistoryEvents(request)
 }
 
-func (s *testShardContext) GetLogger() bark.Logger {
+func (s *TestShardContext) GetLogger() bark.Logger {
 	return s.logger
 }
 
-func (s *testShardContext) GetMetricsClient() metrics.Client {
+func (s *TestShardContext) GetMetricsClient() metrics.Client {
 	return s.metricsClient
 }
 
-func (s *testShardContext) Reset() {
+func (s *TestShardContext) Reset() {
 	atomic.StoreInt64(&s.shardInfo.RangeID, 0)
 	atomic.StoreInt64(&s.shardInfo.TransferAckLevel, 0)
 }
 
-func (s *testShardContext) GetRangeID() int64 {
+func (s *TestShardContext) GetRangeID() int64 {
 	return atomic.LoadInt64(&s.shardInfo.RangeID)
 }
 

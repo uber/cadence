@@ -46,34 +46,40 @@ type (
 		GetTransferSequenceNumber() int64
 		GetTransferMaxReadLevel() int64
 		GetTransferAckLevel() int64
-		UpdateAckLevel(ackLevel int64) error
-		GetTimerSequenceNumber() int64
+		UpdateTransferAckLevel(ackLevel int64) error
 		CreateWorkflowExecution(request *persistence.CreateWorkflowExecutionRequest) (
 			*persistence.CreateWorkflowExecutionResponse, error)
 		UpdateWorkflowExecution(request *persistence.UpdateWorkflowExecutionRequest) error
 		AppendHistoryEvents(request *persistence.AppendHistoryEventsRequest) error
 		GetLogger() bark.Logger
 		GetMetricsClient() metrics.Client
+		GetTimerSequenceNumber() int64
+		GetTimerMaxReadLevel() int64
+		GetTimerAckLevel() int64
+		UpdateTimerAckLevel(ackLevel int64) error
 	}
 
 	shardContextImpl struct {
-		shardID             int
-		rangeID             int64
-		shardManager        persistence.ShardManager
-		historyMgr          persistence.HistoryManager
-		executionManager    persistence.ExecutionManager
-		timerSequenceNumber int64
-		rangeSize           uint
-		closeCh             chan<- int
-		isClosed            bool
-		logger              bark.Logger
-		metricsClient       metrics.Client
+		shardID          int
+		rangeID          int64
+		shardManager     persistence.ShardManager
+		historyMgr       persistence.HistoryManager
+		executionManager persistence.ExecutionManager
+		rangeSize        uint
+		closeCh          chan<- int
+		isClosed         bool
+		logger           bark.Logger
+		metricsClient    metrics.Client
 
 		sync.RWMutex
 		shardInfo                 *persistence.ShardInfo
 		transferSequenceNumber    int64
 		maxTransferSequenceNumber int64
 		transferMaxReadLevel      int64
+		// TODO: timerSequenceNumber starts with zero, at some time we need this to change to
+		// start with number seeded by range ID. This is an existing issue will be addressed.
+		timerSequenceNumber int64
+		timerMaxReadLevel   int64
 	}
 )
 
@@ -114,7 +120,7 @@ func (s *shardContextImpl) GetTransferMaxReadLevel() int64 {
 	return s.transferMaxReadLevel
 }
 
-func (s *shardContextImpl) UpdateAckLevel(ackLevel int64) error {
+func (s *shardContextImpl) UpdateTransferAckLevel(ackLevel int64) error {
 	s.Lock()
 	defer s.Unlock()
 	s.shardInfo.TransferAckLevel = ackLevel
@@ -140,6 +146,41 @@ func (s *shardContextImpl) GetTimerSequenceNumber() int64 {
 	return atomic.AddInt64(&s.timerSequenceNumber, 1)
 }
 
+func (s *shardContextImpl) GetTimerMaxReadLevel() int64 {
+	s.RLock()
+	defer s.RUnlock()
+	return s.timerMaxReadLevel
+}
+
+func (s *shardContextImpl) GetTimerAckLevel() int64 {
+	s.RLock()
+	defer s.RUnlock()
+	return s.shardInfo.TimerAckLevel
+}
+
+func (s *shardContextImpl) UpdateTimerAckLevel(ackLevel int64) error {
+	s.Lock()
+	defer s.Unlock()
+
+	s.shardInfo.TimerAckLevel = ackLevel
+	s.shardInfo.StolenSinceRenew = 0
+	updatedShardInfo := copyShardInfo(s.shardInfo)
+
+	err := s.shardManager.UpdateShard(&persistence.UpdateShardRequest{
+		ShardInfo:       updatedShardInfo,
+		PreviousRangeID: s.shardInfo.RangeID,
+	})
+
+	if err != nil {
+		// Shard is stolen, trigger history engine shutdown
+		if _, ok := err.(*persistence.ShardOwnershipLostError); ok {
+			s.closeShard()
+		}
+	}
+
+	return err
+}
+
 func (s *shardContextImpl) CreateWorkflowExecution(request *persistence.CreateWorkflowExecutionRequest) (
 	*persistence.CreateWorkflowExecutionResponse, error) {
 	s.Lock()
@@ -159,6 +200,17 @@ func (s *shardContextImpl) CreateWorkflowExecution(request *persistence.CreateWo
 		transferMaxReadLevel = id
 	}
 	defer s.updateMaxReadLevelLocked(transferMaxReadLevel)
+
+	// assign IDs for the timer tasks. They need to be assigned under shard lock.
+	for _, task := range request.TimerTasks {
+		seqNum := s.GetTimerSequenceNumber()
+		seqID := ConstructTimerKey(task.GetTaskID(), seqNum)
+		task.SetTaskID(int64(seqID))
+		s.logger.Debugf("Assigning timer task ID: %v", seqID)
+		if int64(seqID) > s.timerMaxReadLevel {
+			s.timerMaxReadLevel = int64(seqID)
+		}
+	}
 
 Create_Loop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
@@ -232,6 +284,18 @@ func (s *shardContextImpl) UpdateWorkflowExecution(request *persistence.UpdateWo
 		}
 	}
 	defer s.updateMaxReadLevelLocked(transferMaxReadLevel)
+
+	// assign IDs for the timer tasks. They need to be assigned under shard lock.
+	for _, task := range request.TimerTasks {
+		seqNum := s.GetTimerSequenceNumber()
+		seqID := ConstructTimerKey(task.GetTaskID(), seqNum)
+		task.SetTaskID(int64(seqID))
+		s.logger.Debugf("Assigning timer task ID: %v", seqID)
+		if int64(seqID) > s.timerMaxReadLevel {
+			s.timerMaxReadLevel = int64(seqID)
+		}
+		// TODO: Add a warning if seqID <= timerQueuProcessor.ackMgr.Read Level.
+	}
 
 Update_Loop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
