@@ -82,7 +82,8 @@ const (
 		`range_id: ?, ` +
 		`stolen_since_renew: ?, ` +
 		`updated_at: ?, ` +
-		`transfer_ack_level: ?` +
+		`transfer_ack_level: ?, ` +
+		`timer_ack_level: ?` +
 		`}`
 
 	templateWorkflowExecutionType = `{` +
@@ -358,8 +359,8 @@ const (
 		`and domain_id = ? ` +
 		`and workflow_id = ?` +
 		`and run_id = ?` +
-		`and task_id >= ?` +
-		`and task_id < ? LIMIT ?`
+		`and task_id > ?` +
+		`and task_id <= ? LIMIT ?`
 
 	templateCompleteTimerTaskQuery = `DELETE FROM executions ` +
 		`WHERE shard_id = ? ` +
@@ -506,6 +507,7 @@ func (d *cassandraPersistence) CreateShard(request *CreateShardRequest) error {
 		shardInfo.StolenSinceRenew,
 		cqlNowTimestamp,
 		shardInfo.TransferAckLevel,
+		shardInfo.TimerAckLevel,
 		shardInfo.RangeID)
 
 	previous := make(map[string]interface{})
@@ -566,6 +568,7 @@ func (d *cassandraPersistence) UpdateShard(request *UpdateShardRequest) error {
 		shardInfo.StolenSinceRenew,
 		cqlNowTimestamp,
 		shardInfo.TransferAckLevel,
+		shardInfo.TimerAckLevel,
 		shardInfo.RangeID,
 		shardInfo.ShardID,
 		rowTypeShard,
@@ -1566,6 +1569,8 @@ func createShardInfo(result map[string]interface{}) *ShardInfo {
 			info.UpdatedAt = v.(time.Time)
 		case "transfer_ack_level":
 			info.TransferAckLevel = v.(int64)
+		case "timer_ack_level":
+			info.TimerAckLevel = v.(int64)
 		}
 	}
 

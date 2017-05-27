@@ -105,6 +105,7 @@ type (
 		StolenSinceRenew int
 		UpdatedAt        time.Time
 		TransferAckLevel int64
+		TimerAckLevel    int64
 	}
 
 	// WorkflowExecutionInfo describes a workflow execution
