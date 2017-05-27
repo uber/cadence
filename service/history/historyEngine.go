@@ -105,7 +105,7 @@ func NewEngineWithShardContext(shard ShardContext, metadataMgr persistence.Metad
 		}),
 		metricsClient: shard.GetMetricsClient(),
 	}
-	historyEngImpl.timerProcessor = newTimerQueueProcessor(historyEngImpl, executionManager, logger)
+	historyEngImpl.timerProcessor = newTimerQueueProcessor(shard, historyEngImpl, executionManager, logger)
 	shardWrapper.txProcessor = txProcessor
 	return historyEngImpl
 }
@@ -355,7 +355,7 @@ Update_History_Loop:
 		// Start a timer for the decision task.
 		timeOutTask := context.tBuilder.AddDecisionTimoutTask(scheduleID, di.DecisionTimeout)
 		timerTasks := []persistence.Task{timeOutTask}
-		defer e.timerProcessor.NotifyNewTimer(timeOutTask.GetTaskID())
+		defer e.timerProcessor.NotifyNewTimer()
 
 		// Generate a transaction ID for appending events to history
 		transactionID, err2 := e.shard.GetNextTransferTaskID()
@@ -456,7 +456,7 @@ Update_History_Loop:
 			return nil, err
 		}
 		timerTasks = append(timerTasks, start2CloseTimeoutTask)
-		defer e.timerProcessor.NotifyNewTimer(start2CloseTimeoutTask.GetTaskID())
+		defer e.timerProcessor.NotifyNewTimer()
 
 		start2HeartBeatTimeoutTask, err := context.tBuilder.AddHeartBeatActivityTimeout(ai)
 		if err != nil {
@@ -464,7 +464,6 @@ Update_History_Loop:
 		}
 		if start2HeartBeatTimeoutTask != nil {
 			timerTasks = append(timerTasks, start2HeartBeatTimeoutTask)
-			defer e.timerProcessor.NotifyNewTimer(start2HeartBeatTimeoutTask.GetTaskID())
 		}
 
 		// Generate a transaction ID for appending events to history
@@ -585,14 +584,13 @@ Update_History_Loop:
 				// Create activity timeouts.
 				Schedule2StartTimeoutTask := context.tBuilder.AddScheduleToStartActivityTimeout(ai)
 				timerTasks = append(timerTasks, Schedule2StartTimeoutTask)
-				defer e.timerProcessor.NotifyNewTimer(Schedule2StartTimeoutTask.GetTaskID())
 
 				Schedule2CloseTimeoutTask, err := context.tBuilder.AddScheduleToCloseActivityTimeout(ai)
 				if err != nil {
 					return err
 				}
 				timerTasks = append(timerTasks, Schedule2CloseTimeoutTask)
-				defer e.timerProcessor.NotifyNewTimer(Schedule2CloseTimeoutTask.GetTaskID())
+				defer e.timerProcessor.NotifyNewTimer()
 
 			case workflow.DecisionType_CompleteWorkflowExecution:
 				if hasUnhandledEvents {
@@ -666,7 +664,7 @@ Update_History_Loop:
 				nextTimerTask := context.tBuilder.AddUserTimer(ti, msBuilder)
 				if nextTimerTask != nil {
 					timerTasks = append(timerTasks, nextTimerTask)
-					defer e.timerProcessor.NotifyNewTimer(nextTimerTask.GetTaskID())
+					defer e.timerProcessor.NotifyNewTimer()
 				}
 			case workflow.DecisionType_RequestCancelActivityTask:
 				attributes := d.GetRequestCancelActivityTaskDecisionAttributes()

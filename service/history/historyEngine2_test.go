@@ -116,7 +116,7 @@ func (s *engine2Suite) SetupTest() {
 		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
 		hSerializerFactory: persistence.NewHistorySerializerFactory(),
 	}
-	h.timerProcessor = newTimerQueueProcessor(h, s.mockExecutionMgr, s.logger)
+	h.timerProcessor = newTimerQueueProcessor(mockShard, h, s.mockExecutionMgr, s.logger)
 	s.historyEngine = h
 }
 

@@ -77,6 +77,7 @@ type (
 		session  *gocql.Session
 	}
 
+	// TestShardContext shard context for testing.
 	// TODO: Cleanup, move this out of persistence
 	TestShardContext struct {
 		shardInfo              *ShardInfo
@@ -108,68 +109,82 @@ func newTestShardContext(shardInfo *ShardInfo, transferSequenceNumber int64, his
 	}
 }
 
+// GetExecutionManager test implementation
 func (s *TestShardContext) GetExecutionManager() ExecutionManager {
 	return s.executionMgr
 }
 
+// GetHistoryManager test implementation
 func (s *TestShardContext) GetHistoryManager() HistoryManager {
 	return s.historyMgr
 }
 
+// GetNextTransferTaskID test implementation
 func (s *TestShardContext) GetNextTransferTaskID() (int64, error) {
 	return atomic.AddInt64(&s.transferSequenceNumber, 1), nil
 }
 
+// GetTransferMaxReadLevel test implementation
 func (s *TestShardContext) GetTransferMaxReadLevel() int64 {
 	return atomic.LoadInt64(&s.transferSequenceNumber)
 }
 
+// GetTransferAckLevel test implementation
 func (s *TestShardContext) GetTransferAckLevel() int64 {
 	return atomic.LoadInt64(&s.shardInfo.TransferAckLevel)
 }
 
+// UpdateTransferAckLevel test implementation
 func (s *TestShardContext) UpdateTransferAckLevel(ackLevel int64) error {
 	atomic.StoreInt64(&s.shardInfo.TransferAckLevel, ackLevel)
 	return nil
 }
 
+// GetTransferSequenceNumber test implementation
 func (s *TestShardContext) GetTransferSequenceNumber() int64 {
 	return atomic.LoadInt64(&s.transferSequenceNumber)
 }
 
+// GetTimerSequenceNumber test implementation
 func (s *TestShardContext) GetTimerSequenceNumber() int64 {
 	return atomic.AddInt64(&s.timerSequeceNumber, 1)
 }
 
+// GetTimerMaxReadLevel test implementation
 func (s *TestShardContext) GetTimerMaxReadLevel() int64 {
 	return atomic.LoadInt64(&s.timerMaxReadLevel)
 }
 
+// GetTimerAckLevel test implementation
 func (s *TestShardContext) GetTimerAckLevel() int64 {
 	return atomic.LoadInt64(&s.shardInfo.TransferAckLevel)
 }
 
-func (s *TestShardContext) UpdateTimerMaxReadLevel(level int64)  {
+// UpdateTimerMaxReadLevel test implementation
+func (s *TestShardContext) UpdateTimerMaxReadLevel(level int64) {
 	atomic.StoreInt64(&s.timerMaxReadLevel, level)
 }
 
+// UpdateTimerAckLevel test implementation
 func (s *TestShardContext) UpdateTimerAckLevel(ackLevel int64) error {
 	atomic.StoreInt64(&s.shardInfo.TimerAckLevel, ackLevel)
 	return nil
 }
 
+// CreateWorkflowExecution test implementation
 func (s *TestShardContext) CreateWorkflowExecution(request *CreateWorkflowExecutionRequest) (
 	*CreateWorkflowExecutionResponse, error) {
 	return s.executionMgr.CreateWorkflowExecution(request)
 }
 
+// UpdateWorkflowExecution test implementation
 func (s *TestShardContext) UpdateWorkflowExecution(request *UpdateWorkflowExecutionRequest) error {
 	// assign IDs for the timer tasks. They need to be assigned under shard lock.
 	// TODO: This needs to be moved out of persistence.
 	b := (int64(1) << 26) - 1
 	for _, task := range request.TimerTasks {
 		seqNum := s.GetTimerSequenceNumber()
-		seqID := task.GetTaskID() & (math.MaxInt64 &^ b) | (seqNum & b)
+		seqID := task.GetTaskID()&(math.MaxInt64&^b) | (seqNum & b)
 		task.SetTaskID(int64(seqID))
 		s.logger.Infof("TestShardContext: Assigning timer task ID: %v", seqID)
 		if int64(seqID) > s.timerMaxReadLevel {
@@ -179,23 +194,28 @@ func (s *TestShardContext) UpdateWorkflowExecution(request *UpdateWorkflowExecut
 	return s.executionMgr.UpdateWorkflowExecution(request)
 }
 
+// AppendHistoryEvents test implementation
 func (s *TestShardContext) AppendHistoryEvents(request *AppendHistoryEventsRequest) error {
 	return s.historyMgr.AppendHistoryEvents(request)
 }
 
+// GetLogger test implementation
 func (s *TestShardContext) GetLogger() bark.Logger {
 	return s.logger
 }
 
+// GetMetricsClient test implementation
 func (s *TestShardContext) GetMetricsClient() metrics.Client {
 	return s.metricsClient
 }
 
+// Reset test implementation
 func (s *TestShardContext) Reset() {
 	atomic.StoreInt64(&s.shardInfo.RangeID, 0)
 	atomic.StoreInt64(&s.shardInfo.TransferAckLevel, 0)
 }
 
+// GetRangeID test implementation
 func (s *TestShardContext) GetRangeID() int64 {
 	return atomic.LoadInt64(&s.shardInfo.RangeID)
 }
