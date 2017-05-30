@@ -53,7 +53,6 @@ type (
 		AppendHistoryEvents(request *persistence.AppendHistoryEventsRequest) error
 		GetLogger() bark.Logger
 		GetMetricsClient() metrics.Client
-		GetTimerSequenceNumber() int64
 		GetTimerMaxReadLevel() int64
 		GetTimerAckLevel() int64
 		UpdateTimerAckLevel(ackLevel int64) error
@@ -76,10 +75,7 @@ type (
 		transferSequenceNumber    int64
 		maxTransferSequenceNumber int64
 		transferMaxReadLevel      int64
-		// TODO: timerSequenceNumber starts with zero, at some time we need this to change to
-		// start with number seeded by range ID. This is an existing issue will be addressed.
-		timerSequenceNumber int64
-		timerMaxReadLevel   int64
+		timerMaxReadLevel         int64
 	}
 )
 
@@ -125,25 +121,7 @@ func (s *shardContextImpl) UpdateTransferAckLevel(ackLevel int64) error {
 	defer s.Unlock()
 	s.shardInfo.TransferAckLevel = ackLevel
 	s.shardInfo.StolenSinceRenew = 0
-	updatedShardInfo := copyShardInfo(s.shardInfo)
-
-	err := s.shardManager.UpdateShard(&persistence.UpdateShardRequest{
-		ShardInfo:       updatedShardInfo,
-		PreviousRangeID: s.shardInfo.RangeID,
-	})
-
-	if err != nil {
-		// Shard is stolen, trigger history engine shutdown
-		if _, ok := err.(*persistence.ShardOwnershipLostError); ok {
-			s.closeShard()
-		}
-	}
-
-	return err
-}
-
-func (s *shardContextImpl) GetTimerSequenceNumber() int64 {
-	return atomic.AddInt64(&s.timerSequenceNumber, 1)
+	return s.updateShardInfo()
 }
 
 func (s *shardContextImpl) GetTimerMaxReadLevel() int64 {
@@ -164,21 +142,7 @@ func (s *shardContextImpl) UpdateTimerAckLevel(ackLevel int64) error {
 
 	s.shardInfo.TimerAckLevel = ackLevel
 	s.shardInfo.StolenSinceRenew = 0
-	updatedShardInfo := copyShardInfo(s.shardInfo)
-
-	err := s.shardManager.UpdateShard(&persistence.UpdateShardRequest{
-		ShardInfo:       updatedShardInfo,
-		PreviousRangeID: s.shardInfo.RangeID,
-	})
-
-	if err != nil {
-		// Shard is stolen, trigger history engine shutdown
-		if _, ok := err.(*persistence.ShardOwnershipLostError); ok {
-			s.closeShard()
-		}
-	}
-
-	return err
+	return s.updateShardInfo()
 }
 
 func (s *shardContextImpl) CreateWorkflowExecution(request *persistence.CreateWorkflowExecutionRequest) (
@@ -203,7 +167,10 @@ func (s *shardContextImpl) CreateWorkflowExecution(request *persistence.CreateWo
 
 	// assign IDs for the timer tasks. They need to be assigned under shard lock.
 	for _, task := range request.TimerTasks {
-		seqNum := s.GetTimerSequenceNumber()
+		seqNum, err := s.getNextTransferTaskIDLocked()
+		if err != nil {
+			return nil, err
+		}
 		seqID := ConstructTimerKey(task.GetTaskID(), seqNum)
 		task.SetTaskID(int64(seqID))
 		s.logger.Debugf("Assigning timer task ID: %v", seqID)
@@ -287,7 +254,10 @@ func (s *shardContextImpl) UpdateWorkflowExecution(request *persistence.UpdateWo
 
 	// assign IDs for the timer tasks. They need to be assigned under shard lock.
 	for _, task := range request.TimerTasks {
-		seqNum := s.GetTimerSequenceNumber()
+		seqNum, err := s.getNextTransferTaskIDLocked()
+		if err != nil {
+			return err
+		}
 		seqID := ConstructTimerKey(task.GetTaskID(), seqNum)
 		task.SetTaskID(int64(seqID))
 		s.logger.Debugf("Assigning timer task ID: %v", seqID)
@@ -444,6 +414,24 @@ func (s *shardContextImpl) updateMaxReadLevelLocked(rl int64) {
 	}
 }
 
+func (s *shardContextImpl) updateShardInfo() error {
+	updatedShardInfo := copyShardInfo(s.shardInfo)
+
+	err := s.shardManager.UpdateShard(&persistence.UpdateShardRequest{
+		ShardInfo:       updatedShardInfo,
+		PreviousRangeID: s.shardInfo.RangeID,
+	})
+
+	if err != nil {
+		// Shard is stolen, trigger history engine shutdown
+		if _, ok := err.(*persistence.ShardOwnershipLostError); ok {
+			s.closeShard()
+		}
+	}
+
+	return err
+}
+
 // TODO: This method has too many parameters.  Clean it up.  Maybe create a struct to pass in as parameter.
 func acquireShard(shardID int, shardManager persistence.ShardManager, historyMgr persistence.HistoryManager,
 	executionMgr persistence.ExecutionManager, owner string, closeCh chan<- int, logger bark.Logger,
@@ -488,6 +476,7 @@ func copyShardInfo(shardInfo *persistence.ShardInfo) *persistence.ShardInfo {
 		RangeID:          shardInfo.RangeID,
 		StolenSinceRenew: shardInfo.StolenSinceRenew,
 		TransferAckLevel: atomic.LoadInt64(&shardInfo.TransferAckLevel),
+		TimerAckLevel:    atomic.LoadInt64(&shardInfo.TimerAckLevel),
 	}
 
 	return shardInfoCopy

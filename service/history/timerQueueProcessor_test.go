@@ -92,6 +92,18 @@ func (s *timerQueueProcessorSuite) TearDownTest() {
 	s.mockShardManager.AssertExpectations(s.T())
 }
 
+func (s *timerQueueProcessorSuite) updateTimerSeqNumbers(timerTasks []persistence.Task) {
+	for _, task := range timerTasks {
+		seqNum, err := s.ShardContext.GetNextTransferTaskID()
+		if err != nil {
+			panic(err)
+		}
+		taskID := ConstructTimerKey(task.GetTaskID(), seqNum)
+		task.SetTaskID(int64(taskID))
+		s.ShardContext.UpdateTimerMaxReadLevel(int64(taskID))
+	}
+}
+
 func (s *timerQueueProcessorSuite) createExecutionWithTimers(domainID string, we workflow.WorkflowExecution, tl,
 	identity string, timeOuts []int32) (*persistence.WorkflowMutableState, []persistence.Task) {
 
@@ -131,11 +143,7 @@ func (s *timerQueueProcessorSuite) createExecutionWithTimers(domainID string, we
 		}
 	}
 
-	for _, task := range timerTasks {
-		taskID := ConstructTimerKey(task.GetTaskID(), s.ShardContext.GetTimerSequenceNumber())
-		task.SetTaskID(int64(taskID))
-		s.ShardContext.UpdateTimerMaxReadLevel(int64(taskID))
-	}
+	s.updateTimerSeqNumbers(timerTasks)
 
 	updatedState := createMutableState(builder)
 	err3 := s.UpdateWorkflowExecution(updatedState.ExecutionInfo, nil, nil, int64(3), timerTasks, nil, nil, nil, timerInfos, nil)
@@ -158,12 +166,7 @@ func (s *timerQueueProcessorSuite) addDecisionTimer(domainID string, we workflow
 	timeOutTask := tb.AddDecisionTimoutTask(scheduledEvent.GetEventId(), 1)
 	timerTasks := []persistence.Task{timeOutTask}
 
-	for _, task := range timerTasks {
-		taskID := ConstructTimerKey(task.GetTaskID(), s.ShardContext.GetTimerSequenceNumber())
-		task.SetTaskID(int64(taskID))
-		s.ShardContext.UpdateTimerMaxReadLevel(int64(taskID))
-	}
-
+	s.updateTimerSeqNumbers(timerTasks)
 	err2 := s.UpdateWorkflowExecution(state.ExecutionInfo, nil, nil, condition, timerTasks, nil, nil, nil, nil, nil)
 	s.Nil(err2, "No error expected.")
 	return timeOutTask
@@ -369,12 +372,7 @@ func (s *timerQueueProcessorSuite) updateHistoryAndTimers(ms *mutableStateBuilde
 		timerInfos = append(timerInfos, x)
 	}
 
-	for _, task := range timerTasks {
-		taskID := ConstructTimerKey(task.GetTaskID(), s.ShardContext.GetTimerSequenceNumber())
-		task.SetTaskID(int64(taskID))
-		s.ShardContext.UpdateTimerMaxReadLevel(int64(taskID))
-	}
-
+	s.updateTimerSeqNumbers(timerTasks)
 	err3 := s.UpdateWorkflowExecution(
 		updatedState.ExecutionInfo, nil, nil, condition, timerTasks, nil, actInfos, nil, timerInfos, nil)
 	s.Nil(err3)

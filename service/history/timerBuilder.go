@@ -119,7 +119,8 @@ func (td *timerDetails) String() string {
 }
 
 func (s *shardSeqNumGenerator) NextSeq() int64 {
-	return s.context.GetTimerSequenceNumber()
+	seqId, _ := s.context.GetNextTransferTaskID()
+	return seqId
 }
 
 func (l *localSeqNumGenerator) NextSeq() int64 {

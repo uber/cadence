@@ -82,7 +82,6 @@ type (
 	TestShardContext struct {
 		shardInfo              *ShardInfo
 		transferSequenceNumber int64
-		timerSequeceNumber     int64
 		timerMaxReadLevel      int64
 		historyMgr             HistoryManager
 		executionMgr           ExecutionManager
@@ -145,11 +144,6 @@ func (s *TestShardContext) GetTransferSequenceNumber() int64 {
 	return atomic.LoadInt64(&s.transferSequenceNumber)
 }
 
-// GetTimerSequenceNumber test implementation
-func (s *TestShardContext) GetTimerSequenceNumber() int64 {
-	return atomic.AddInt64(&s.timerSequeceNumber, 1)
-}
-
 // GetTimerMaxReadLevel test implementation
 func (s *TestShardContext) GetTimerMaxReadLevel() int64 {
 	return atomic.LoadInt64(&s.timerMaxReadLevel)
@@ -183,7 +177,10 @@ func (s *TestShardContext) UpdateWorkflowExecution(request *UpdateWorkflowExecut
 	// TODO: This needs to be moved out of persistence.
 	b := (int64(1) << 26) - 1
 	for _, task := range request.TimerTasks {
-		seqNum := s.GetTimerSequenceNumber()
+		seqNum, err := s.GetNextTransferTaskID()
+		if err != nil {
+			return err
+		}
 		seqID := task.GetTaskID()&(math.MaxInt64&^b) | (seqNum & b)
 		task.SetTaskID(int64(seqID))
 		s.logger.Infof("TestShardContext: Assigning timer task ID: %v", seqID)
