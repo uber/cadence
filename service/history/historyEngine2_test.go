@@ -70,7 +70,9 @@ func (s *engine2Suite) SetupSuite() {
 		log.SetOutput(os.Stdout)
 	}
 
-	s.logger = bark.NewLoggerFromLogrus(log.New())
+	l := log.New()
+	l.Level = log.DebugLevel
+	s.logger = bark.NewLoggerFromLogrus(l)
 }
 
 func (s *engine2Suite) TearDownSuite() {

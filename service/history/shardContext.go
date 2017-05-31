@@ -127,11 +127,7 @@ func (s *shardContextImpl) UpdateTransferAckLevel(ackLevel int64) error {
 }
 
 func (s *shardContextImpl) GetTimerSequenceNumber() int64 {
-	s.RLock()
-	defer s.RUnlock()
-	num := s.timerSequenceNumber
-	s.timerSequenceNumber++
-	return num
+	return atomic.AddInt64(&s.timerSequenceNumber, 1)
 }
 
 func (s *shardContextImpl) GetTimerAckLevel() int64 {

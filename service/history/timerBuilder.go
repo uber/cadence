@@ -119,8 +119,8 @@ func (td *timerDetails) String() string {
 }
 
 func (s *shardSeqNumGenerator) NextSeq() int64 {
-	seqId, _ := s.context.GetNextTransferTaskID()
-	return seqId
+	seqID, _ := s.context.GetNextTransferTaskID()
+	return seqID
 }
 
 func (l *localSeqNumGenerator) NextSeq() int64 {
@@ -152,8 +152,8 @@ func (tb *timerBuilder) UserTimer(taskID SequenceID) (bool, *persistence.TimerIn
 func (tb *timerBuilder) AddDecisionTimoutTask(scheduleID int64,
 	startToCloseTimeout int32) *persistence.DecisionTimeoutTask {
 	timeOutTask := tb.createDecisionTimeoutTask(startToCloseTimeout, scheduleID)
-	tb.logger.Debugf("Adding Decision Timeout: SequenceID: %v, EventID: %v",
-		SequenceID(timeOutTask.TaskID), timeOutTask.EventID)
+	tb.logger.Debugf("Adding Decision Timeout: with timeout: %v sec, EventID: %v",
+		startToCloseTimeout, timeOutTask.EventID)
 	return timeOutTask
 }
 
@@ -191,8 +191,8 @@ func (tb *timerBuilder) AddActivityTimeoutTask(scheduleID int64,
 	}
 
 	timeOutTask := tb.createActivityTimeoutTask(fireTimeout, timeoutType, scheduleID, baseTime)
-	tb.logger.Debugf("%s: Adding Activity Timeout: SequenceID: %v, TimeoutType: %v, EventID: %v",
-		time.Now(), SequenceID(timeOutTask.TaskID), timeoutType.String(), timeOutTask.EventID)
+	tb.logger.Debugf("%s: Adding Activity Timeout: with timeout: %v sec, TimeoutType: %v, EventID: %v",
+		time.Now(), fireTimeout, timeoutType.String(), timeOutTask.EventID)
 	return timeOutTask
 }
 
