@@ -719,16 +719,12 @@ func (t *timerAckMgr) readTimerTasks() ([]*persistence.TimerTaskInfo, *persisten
 	rLevel := t.readLevel
 	t.RUnlock()
 
-	tasks, err := t.processor.getTimerTasks(
-		SequenceID(rLevel),
-		SequenceID(t.shard.GetTimerMaxReadLevel()),
-		timerTaskBatchSize)
-
-	t.logger.Debugf("readTimerTasks: ReadLeveL: %v, MaxReadLevel: %v, count: %v",
-		rLevel, t.shard.GetTimerMaxReadLevel(), len(tasks))
+	tasks, err := t.processor.getTimerTasks(SequenceID(rLevel), MaxTimerKey, timerTaskBatchSize)
 	if err != nil {
 		return nil, nil, err
 	}
+
+	t.logger.Debugf("readTimerTasks: ReadLevel: %v, count: %v", rLevel, len(tasks))
 
 	// We filter tasks so read only moves to desired timer tasks.
 	// We also get a look ahead task but it doesn't move the read level, this is for timer
@@ -783,7 +779,6 @@ MoveAckLevelLoop:
 	for _, current := range taskIDs {
 		if acked, ok := t.outstandingTasks[current]; ok {
 			if acked {
-				t.logger.Debugf("Updating timer ack level: %v", current)
 				t.ackLevel = current
 				updatedAckLevel = current
 				delete(t.outstandingTasks, current)
@@ -794,8 +789,14 @@ MoveAckLevelLoop:
 	}
 	t.Unlock()
 
+	// We checkpoint the timestamp of till when we processed.
+	ackLevelTimeStamp, _ := DeconstructTimerKey(SequenceID(updatedAckLevel))
+	newAckLevel := ConstructTimerKey(ackLevelTimeStamp, 0)
+
+	t.logger.Debugf("Updating timer ack level: %v", newAckLevel)
+
 	// Always update ackLevel to detect if the shared is stolen
-	if err := t.shard.UpdateTimerAckLevel(updatedAckLevel); err != nil {
+	if err := t.shard.UpdateTimerAckLevel(int64(newAckLevel)); err != nil {
 		t.logger.Errorf("Error updating timer ack level for shard: %v", err)
 	}
 }

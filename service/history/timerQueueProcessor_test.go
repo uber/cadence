@@ -94,13 +94,9 @@ func (s *timerQueueProcessorSuite) TearDownTest() {
 
 func (s *timerQueueProcessorSuite) updateTimerSeqNumbers(timerTasks []persistence.Task) {
 	for _, task := range timerTasks {
-		seqNum, err := s.ShardContext.GetNextTransferTaskID()
-		if err != nil {
-			panic(err)
-		}
-		taskID := ConstructTimerKey(task.GetTaskID(), seqNum)
+		taskID := ConstructTimerKey(task.GetTaskID(), s.ShardContext.GetTimerSequenceNumber())
 		task.SetTaskID(int64(taskID))
-		s.ShardContext.UpdateTimerMaxReadLevel(int64(taskID))
+		s.logger.Infof("%v: TestTimerQueueProcessorSuite: Assigning timer task ID: %v", time.Now(), taskID)
 	}
 }
 
