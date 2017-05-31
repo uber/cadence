@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/logging"
@@ -53,7 +54,7 @@ type (
 		AppendHistoryEvents(request *persistence.AppendHistoryEventsRequest) error
 		GetLogger() bark.Logger
 		GetMetricsClient() metrics.Client
-		GetTimerMaxReadLevel() int64
+		GetTimerSequenceNumber() int64
 		GetTimerAckLevel() int64
 		UpdateTimerAckLevel(ackLevel int64) error
 	}
@@ -75,7 +76,8 @@ type (
 		transferSequenceNumber    int64
 		maxTransferSequenceNumber int64
 		transferMaxReadLevel      int64
-		timerMaxReadLevel         int64
+		// in memory sequence number to generate unique timer ID in the same resolution of timer.
+		timerSequenceNumber int64
 	}
 )
 
@@ -124,10 +126,12 @@ func (s *shardContextImpl) UpdateTransferAckLevel(ackLevel int64) error {
 	return s.updateShardInfo()
 }
 
-func (s *shardContextImpl) GetTimerMaxReadLevel() int64 {
+func (s *shardContextImpl) GetTimerSequenceNumber() int64 {
 	s.RLock()
 	defer s.RUnlock()
-	return s.timerMaxReadLevel
+	num := s.timerSequenceNumber
+	s.timerSequenceNumber++
+	return num
 }
 
 func (s *shardContextImpl) GetTimerAckLevel() int64 {
@@ -165,19 +169,7 @@ func (s *shardContextImpl) CreateWorkflowExecution(request *persistence.CreateWo
 	}
 	defer s.updateMaxReadLevelLocked(transferMaxReadLevel)
 
-	// assign IDs for the timer tasks. They need to be assigned under shard lock.
-	for _, task := range request.TimerTasks {
-		seqNum, err := s.getNextTransferTaskIDLocked()
-		if err != nil {
-			return nil, err
-		}
-		seqID := ConstructTimerKey(task.GetTaskID(), seqNum)
-		task.SetTaskID(int64(seqID))
-		s.logger.Debugf("Assigning timer task ID: %v", seqID)
-		if int64(seqID) > s.timerMaxReadLevel {
-			s.timerMaxReadLevel = int64(seqID)
-		}
-	}
+	s.allocateTimerIDs(request.TimerTasks)
 
 Create_Loop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
@@ -252,20 +244,7 @@ func (s *shardContextImpl) UpdateWorkflowExecution(request *persistence.UpdateWo
 	}
 	defer s.updateMaxReadLevelLocked(transferMaxReadLevel)
 
-	// assign IDs for the timer tasks. They need to be assigned under shard lock.
-	for _, task := range request.TimerTasks {
-		seqNum, err := s.getNextTransferTaskIDLocked()
-		if err != nil {
-			return err
-		}
-		seqID := ConstructTimerKey(task.GetTaskID(), seqNum)
-		task.SetTaskID(int64(seqID))
-		s.logger.Debugf("Assigning timer task ID: %v", seqID)
-		if int64(seqID) > s.timerMaxReadLevel {
-			s.timerMaxReadLevel = int64(seqID)
-		}
-		// TODO: Add a warning if seqID <= timerQueuProcessor.ackMgr.Read Level.
-	}
+	s.allocateTimerIDs(request.TimerTasks)
 
 Update_Loop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
@@ -432,6 +411,27 @@ func (s *shardContextImpl) updateShardInfo() error {
 	return err
 }
 
+func (s *shardContextImpl) allocateTimerIDs(timerTasks []persistence.Task) error {
+	// assign IDs for the timer tasks. They need to be assigned under shard lock.
+	for _, task := range timerTasks {
+		seqID := ConstructTimerKey(task.GetTaskID(), s.GetTimerSequenceNumber())
+		if int64(seqID) < s.shardInfo.TimerAckLevel {
+			// This is not a common scenario, the shard can move and new host might have a time SKU.
+			// We generate a new timer ID that is above the ack level with an offset.
+			s.logger.Warn("%v: New timer ID generated is less than ack level: %v, ackLeveL: %v",
+				time.Now(), seqID, s.shardInfo.TimerAckLevel)
+			ackLevelTS, _ := DeconstructTimerKey(SequenceID(s.shardInfo.TimerAckLevel))
+			ackLevelTS += time.Second.Nanoseconds()
+			seqID = ConstructTimerKey(ackLevelTS, s.GetTimerSequenceNumber())
+		}
+
+		task.SetTaskID(int64(seqID))
+		s.logger.Debugf("%v: Assigning timer task ID: %v, ackLeveL: %v",
+			time.Now(), seqID, s.shardInfo.TimerAckLevel)
+	}
+	return nil
+}
+
 // TODO: This method has too many parameters.  Clean it up.  Maybe create a struct to pass in as parameter.
 func acquireShard(shardID int, shardManager persistence.ShardManager, historyMgr persistence.HistoryManager,
 	executionMgr persistence.ExecutionManager, owner string, closeCh chan<- int, logger bark.Logger,
@@ -445,13 +445,14 @@ func acquireShard(shardID int, shardManager persistence.ShardManager, historyMgr
 	updatedShardInfo := copyShardInfo(shardInfo)
 	updatedShardInfo.Owner = owner
 	context := &shardContextImpl{
-		shardID:          shardID,
-		shardManager:     shardManager,
-		historyMgr:       historyMgr,
-		executionManager: executionMgr,
-		shardInfo:        updatedShardInfo,
-		rangeSize:        defaultRangeSize,
-		closeCh:          closeCh,
+		shardID:             shardID,
+		shardManager:        shardManager,
+		historyMgr:          historyMgr,
+		executionManager:    executionMgr,
+		shardInfo:           updatedShardInfo,
+		rangeSize:           defaultRangeSize,
+		closeCh:             closeCh,
+		timerSequenceNumber: 1,
 	}
 	context.logger = logger.WithFields(bark.Fields{
 		logging.TagHistoryShardID: shardID,
