@@ -441,13 +441,13 @@ func acquireShard(shardID int, shardManager persistence.ShardManager, historyMgr
 	updatedShardInfo := copyShardInfo(shardInfo)
 	updatedShardInfo.Owner = owner
 	context := &shardContextImpl{
-		shardID:             shardID,
-		shardManager:        shardManager,
-		historyMgr:          historyMgr,
-		executionManager:    executionMgr,
-		shardInfo:           updatedShardInfo,
-		rangeSize:           defaultRangeSize,
-		closeCh:             closeCh,
+		shardID:          shardID,
+		shardManager:     shardManager,
+		historyMgr:       historyMgr,
+		executionManager: executionMgr,
+		shardInfo:        updatedShardInfo,
+		rangeSize:        defaultRangeSize,
+		closeCh:          closeCh,
 	}
 	context.logger = logger.WithFields(bark.Fields{
 		logging.TagHistoryShardID: shardID,
