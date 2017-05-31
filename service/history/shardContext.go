@@ -448,7 +448,6 @@ func acquireShard(shardID int, shardManager persistence.ShardManager, historyMgr
 		shardInfo:           updatedShardInfo,
 		rangeSize:           defaultRangeSize,
 		closeCh:             closeCh,
-		timerSequenceNumber: 1,
 	}
 	context.logger = logger.WithFields(bark.Fields{
 		logging.TagHistoryShardID: shardID,

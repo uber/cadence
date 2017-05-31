@@ -82,7 +82,6 @@ type (
 		sync.RWMutex
 		outstandingTasks map[int64]bool
 		readLevel        int64
-		maxReadLevel     int64
 		ackLevel         int64
 	}
 )
