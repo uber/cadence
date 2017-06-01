@@ -123,7 +123,7 @@ func (s *shardContextImpl) UpdateTransferAckLevel(ackLevel int64) error {
 	defer s.Unlock()
 	s.shardInfo.TransferAckLevel = ackLevel
 	s.shardInfo.StolenSinceRenew = 0
-	return s.updateShardInfo()
+	return s.updateShardInfoLocked()
 }
 
 func (s *shardContextImpl) GetTimerSequenceNumber() int64 {
@@ -142,7 +142,7 @@ func (s *shardContextImpl) UpdateTimerAckLevel(ackLevel int64) error {
 
 	s.shardInfo.TimerAckLevel = ackLevel
 	s.shardInfo.StolenSinceRenew = 0
-	return s.updateShardInfo()
+	return s.updateShardInfoLocked()
 }
 
 func (s *shardContextImpl) CreateWorkflowExecution(request *persistence.CreateWorkflowExecutionRequest) (
@@ -389,7 +389,7 @@ func (s *shardContextImpl) updateMaxReadLevelLocked(rl int64) {
 	}
 }
 
-func (s *shardContextImpl) updateShardInfo() error {
+func (s *shardContextImpl) updateShardInfoLocked() error {
 	updatedShardInfo := copyShardInfo(s.shardInfo)
 
 	err := s.shardManager.UpdateShard(&persistence.UpdateShardRequest{
