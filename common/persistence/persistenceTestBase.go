@@ -660,7 +660,7 @@ func (s *TestBase) CreateDecisionTask(domainID string, workflowExecution workflo
 
 	taskID := s.GetNextSequenceNumber()
 	tasks := []*CreateTaskInfo{
-		&CreateTaskInfo{
+		{
 			TaskID:    taskID,
 			Execution: workflowExecution,
 			Data: &TaskInfo{
@@ -704,7 +704,7 @@ func (s *TestBase) CreateActivityTasks(domainID string, workflowExecution workfl
 		}
 		taskID := s.GetNextSequenceNumber()
 		tasks := []*CreateTaskInfo{
-			&CreateTaskInfo{
+			{
 				TaskID:    taskID,
 				Execution: workflowExecution,
 				Data: &TaskInfo{
