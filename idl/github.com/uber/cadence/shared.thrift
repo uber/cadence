@@ -116,6 +116,16 @@ enum EventType {
 
 enum DecisionTaskFailedCause {
   UNHANDLED_DECISION,
+  BAD_SCHEDULE_ACTIVITY_ATTRIBUTES,
+  BAD_REQUEST_CANCEL_ACTIVITY_ATTRIBUTES,
+  BAD_START_TIMER_ATTRIBUTES,
+  BAD_CANCEL_TIMER_ATTRIBUTES,
+  BAD_RECORD_MARKER_ATTRIBUTES,
+  BAD_COMPLETE_WORKFLOW_EXECUTION_ATTRIBUTES,
+  BAD_FAIL_WORKFLOW_EXECUTION_ATTRIBUTES,
+  BAD_CANCEL_WORKFLOW_EXECUTION_ATTRIBUTES,
+  BAD_REQUEST_CANCEL_EXTERNAL_WORKFLOW_EXECUTION_ATTRIBUTES,
+  BAD_CONTINUE_AS_NEW_ATTRIBUTES,
 }
 
 enum CancelExternalWorkflowExecutionFailedCause {
@@ -667,6 +677,7 @@ struct PollForDecisionTaskResponse {
   40: optional i64 (js.type = "Long") previousStartedEventId
   50: optional i64 (js.type = "Long") startedEventId
   60: optional History history
+  70: optional binary nextPageToken
 }
 
 struct RespondDecisionTaskCompletedRequest {
@@ -734,10 +745,13 @@ struct RequestCancelWorkflowExecutionRequest {
 struct GetWorkflowExecutionHistoryRequest {
   10: optional string domain
   20: optional WorkflowExecution execution
+  30: optional i32 maximumPageSize
+  40: optional binary nextPageToken
 }
 
 struct GetWorkflowExecutionHistoryResponse {
   10: optional History history
+  20: optional binary nextPageToken
 }
 
 struct SignalWorkflowExecutionRequest {
