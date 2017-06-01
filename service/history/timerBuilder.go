@@ -63,7 +63,6 @@ type (
 		timers            timers
 		pendingUserTimers map[SequenceID]*persistence.TimerInfo
 		logger            bark.Logger
-		seqNumGen         SequenceNumberGenerator // The real sequence number generator
 		localSeqNumGen    SequenceNumberGenerator // This one used to order in-memory list.
 	}
 
@@ -77,10 +76,6 @@ type (
 
 	localSeqNumGenerator struct {
 		counter int64
-	}
-
-	shardSeqNumGenerator struct {
-		context ShardContext
 	}
 )
 
@@ -118,22 +113,16 @@ func (td *timerDetails) String() string {
 	return fmt.Sprintf("timerDetails: [%s expiry=%s]", td.SequenceID, time.Unix(0, int64(td.SequenceID)))
 }
 
-func (s *shardSeqNumGenerator) NextSeq() int64 {
-	seqID, _ := s.context.GetNextTransferTaskID()
-	return seqID
-}
-
 func (l *localSeqNumGenerator) NextSeq() int64 {
 	return atomic.AddInt64(&l.counter, 1)
 }
 
 // newTimerBuilder creates a timer builder.
-func newTimerBuilder(seqNumGen SequenceNumberGenerator, logger bark.Logger) *timerBuilder {
+func newTimerBuilder(logger bark.Logger) *timerBuilder {
 	return &timerBuilder{
 		timers:            timers{},
 		pendingUserTimers: make(map[SequenceID]*persistence.TimerInfo),
 		logger:            logger.WithField(logging.TagWorkflowComponent, "timer"),
-		seqNumGen:         seqNumGen,
 		localSeqNumGen:    &localSeqNumGenerator{counter: 1}}
 }
 

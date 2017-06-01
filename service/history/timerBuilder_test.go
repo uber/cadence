@@ -58,11 +58,11 @@ func (s *timerBuilderProcessorSuite) SetupSuite() {
 	logger := log.New()
 	//logger.Level = log.DebugLevel
 	s.logger = bark.NewLoggerFromLogrus(logger)
-	s.tb = newTimerBuilder(&localSeqNumGenerator{counter: 1}, s.logger)
+	s.tb = newTimerBuilder(s.logger)
 }
 
 func (s *timerBuilderProcessorSuite) TestTimerBuilderSingleUserTimer() {
-	tb := newTimerBuilder(&localSeqNumGenerator{counter: 1}, s.logger)
+	tb := newTimerBuilder(s.logger)
 
 	// Add one timer.
 	msb := newMutableStateBuilder(s.logger)
@@ -90,7 +90,7 @@ func (s *timerBuilderProcessorSuite) TestTimerBuilderSingleUserTimer() {
 }
 
 func (s *timerBuilderProcessorSuite) TestTimerBuilderMulitpleUserTimer() {
-	tb := newTimerBuilder(&localSeqNumGenerator{counter: 1}, s.logger)
+	tb := newTimerBuilder(s.logger)
 
 	// Add two timers. (before and after)
 	tp := &persistence.TimerInfo{TimerID: "tid1", StartedID: 201, TaskID: 101, ExpiryTime: time.Now().Add(10 * time.Second)}
@@ -146,7 +146,7 @@ func (s *timerBuilderProcessorSuite) TestTimerBuilderMulitpleUserTimer() {
 }
 
 func (s *timerBuilderProcessorSuite) TestTimerBuilderDuplicateTimerID() {
-	tb := newTimerBuilder(&localSeqNumGenerator{counter: 1}, s.logger)
+	tb := newTimerBuilder(s.logger)
 	tp := &persistence.TimerInfo{TimerID: "tid-exist", StartedID: 201, TaskID: 101, ExpiryTime: time.Now().Add(10 * time.Second)}
 	timerInfos := map[string]*persistence.TimerInfo{"tid-exist": tp}
 	msb := newMutableStateBuilder(s.logger)
