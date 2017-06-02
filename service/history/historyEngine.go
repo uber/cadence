@@ -89,7 +89,7 @@ func NewEngineWithShardContext(shard ShardContext, metadataMgr persistence.Metad
 	executionManager := shard.GetExecutionManager()
 	historyManager := shard.GetHistoryManager()
 	historyCache := newHistoryCache(historyCacheMaxSize, shard, logger)
-	txProcessor := newTransferQueueProcessor(shard, visibilityMgr, matching, historyClient, historyCache)
+	txProcessor := newTransferQueueProcessor(shard, metadataMgr, visibilityMgr, matching, historyClient, historyCache)
 	historyEngImpl := &historyEngineImpl{
 		shard:              shard,
 		metadataMgr:        metadataMgr,

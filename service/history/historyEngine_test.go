@@ -108,7 +108,7 @@ func (s *engineSuite) SetupTest() {
 	}
 
 	historyCache := newHistoryCache(historyCacheMaxSize, mockShard, s.logger)
-	txProcessor := newTransferQueueProcessor(mockShard, s.mockVisibilityMgr, s.mockMatchingClient, s.mockHistoryClient, historyCache)
+	txProcessor := newTransferQueueProcessor(mockShard, s.mockMetadataMgr, s.mockVisibilityMgr, s.mockMatchingClient, s.mockHistoryClient, historyCache)
 	h := &historyEngineImpl{
 		shard:              mockShard,
 		executionManager:   s.mockExecutionMgr,

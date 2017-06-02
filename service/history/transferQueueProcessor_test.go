@@ -43,6 +43,7 @@ type (
 		processor         *transferQueueProcessorImpl
 		mockMatching      *mocks.MatchingClient
 		mockHistoryClient *mocks.HistoryClient
+		mockMetadataMgr   *mocks.MetadataManager
 		mockVisibilityMgr *mocks.VisibilityManager
 		logger            bark.Logger
 	}
@@ -66,8 +67,9 @@ func (s *transferQueueProcessorSuite) SetupSuite() {
 	s.mockMatching = &mocks.MatchingClient{}
 	s.mockHistoryClient = &mocks.HistoryClient{}
 	s.mockVisibilityMgr = &mocks.VisibilityManager{}
+	s.mockMetadataMgr = &mocks.MetadataManager{}
 	cache := newHistoryCache(historyCacheMaxSize, s.ShardContext, s.logger)
-	s.processor = newTransferQueueProcessor(s.ShardContext, s.mockVisibilityMgr, s.mockMatching, s.mockHistoryClient, cache).(*transferQueueProcessorImpl)
+	s.processor = newTransferQueueProcessor(s.ShardContext, s.mockMetadataMgr, s.mockVisibilityMgr, s.mockMatching, s.mockHistoryClient, cache).(*transferQueueProcessorImpl)
 }
 
 func (s *transferQueueProcessorSuite) TearDownSuite() {
@@ -201,6 +203,11 @@ workerPump:
 					s.mockVisibilityMgr.On("RecordWorkflowExecutionStarted", mock.Anything).Once().Return(nil)
 				}
 			} else if task.TaskType == persistence.TransferTaskTypeDeleteExecution {
+				s.mockMetadataMgr.On("GetDomain", mock.Anything).Once().Return(&persistence.GetDomainResponse{
+					Config: &persistence.DomainConfig{
+						Retention: 3600,
+					},
+				}, nil)
 				s.mockVisibilityMgr.On("RecordWorkflowExecutionClosed", mock.Anything).Once().Return(nil)
 			}
 			s.processor.processTransferTask(task)

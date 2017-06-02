@@ -165,7 +165,14 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 		request.Execution.GetRunId(),
 	)
 
-	// Next, add a row in the closed table. This row is kepy for defaultDeleteTTLSeconds
+	// Next, add a row in the closed table.
+
+	// Find how long to keep the row
+	retention := request.RetentionSeconds
+	if retention == 0 {
+		retention = defaultDeleteTTLSeconds
+	}
+
 	batch.Query(templateCreateWorkflowExecutionClosed,
 		request.DomainUUID,
 		domainPartition,
@@ -175,7 +182,7 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 		common.UnixNanoToCQLTimestamp(request.CloseTimestamp),
 		request.WorkflowTypeName,
 		request.Status,
-		defaultDeleteTTLSeconds,
+		retention,
 	)
 
 	batch = batch.WithTimestamp(common.UnixNanoToCQLTimestamp(request.CloseTimestamp))

@@ -51,6 +51,7 @@ type (
 		shard             ShardContext
 		ackMgr            *ackManager
 		executionManager  persistence.ExecutionManager
+		metadataManager   persistence.MetadataManager
 		visibilityManager persistence.VisibilityManager
 		matchingClient    matching.Client
 		historyClient     hc.Client
@@ -83,13 +84,14 @@ type (
 	}
 )
 
-func newTransferQueueProcessor(shard ShardContext, visibilityMgr persistence.VisibilityManager,
+func newTransferQueueProcessor(shard ShardContext, metadataMgr persistence.MetadataManager, visibilityMgr persistence.VisibilityManager,
 	matching matching.Client, historyClient hc.Client, cache *historyCache) transferQueueProcessor {
 	executionManager := shard.GetExecutionManager()
 	logger := shard.GetLogger()
 	processor := &transferQueueProcessorImpl{
 		shard:             shard,
 		executionManager:  executionManager,
+		metadataManager:   metadataMgr,
 		matchingClient:    matching,
 		historyClient:     historyClient,
 		visibilityManager: visibilityMgr,
@@ -404,6 +406,14 @@ func (t *transferQueueProcessorImpl) processDeleteExecution(task *persistence.Tr
 		return err
 	}
 
+	// Record closing in visibility store
+	domainResp, err := t.metadataManager.GetDomain(&persistence.GetDomainRequest{
+		ID: task.DomainID,
+	})
+	if err != nil {
+		return err
+	}
+
 	err = t.visibilityManager.RecordWorkflowExecutionClosed(&persistence.RecordWorkflowExecutionClosedRequest{
 		DomainUUID:       task.DomainID,
 		Execution:        execution,
@@ -411,6 +421,7 @@ func (t *transferQueueProcessorImpl) processDeleteExecution(task *persistence.Tr
 		StartTimestamp:   mb.executionInfo.StartTimestamp.UnixNano(),
 		CloseTimestamp:   mb.executionInfo.LastUpdatedTimestamp.UnixNano(),
 		Status:           getWorkflowExecutionCloseStatus(mb.executionInfo.CloseStatus),
+		RetentionSeconds: int64(domainResp.Config.Retention),
 	})
 	if err != nil {
 		return err
