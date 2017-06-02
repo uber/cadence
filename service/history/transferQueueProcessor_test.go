@@ -32,6 +32,7 @@ import (
 	m "github.com/uber/cadence/.gen/go/matching"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 )
@@ -68,8 +69,9 @@ func (s *transferQueueProcessorSuite) SetupSuite() {
 	s.mockHistoryClient = &mocks.HistoryClient{}
 	s.mockVisibilityMgr = &mocks.VisibilityManager{}
 	s.mockMetadataMgr = &mocks.MetadataManager{}
-	cache := newHistoryCache(historyCacheMaxSize, s.ShardContext, s.logger)
-	s.processor = newTransferQueueProcessor(s.ShardContext, s.mockMetadataMgr, s.mockVisibilityMgr, s.mockMatching, s.mockHistoryClient, cache).(*transferQueueProcessorImpl)
+	historyCache := newHistoryCache(historyCacheMaxSize, s.ShardContext, s.logger)
+	domainCache := cache.NewDomainCache(s.mockMetadataMgr, s.logger)
+	s.processor = newTransferQueueProcessor(s.ShardContext, s.mockVisibilityMgr, s.mockMatching, s.mockHistoryClient, historyCache, domainCache).(*transferQueueProcessorImpl)
 }
 
 func (s *transferQueueProcessorSuite) TearDownSuite() {
