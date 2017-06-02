@@ -24,6 +24,7 @@ import (
 	"math"
 	"math/rand"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -80,9 +81,9 @@ type (
 	// TestShardContext shard context for testing.
 	// TODO: Cleanup, move this out of persistence
 	TestShardContext struct {
+		sync.Mutex
 		shardInfo              *ShardInfo
 		transferSequenceNumber int64
-		timerSequenceNumber    int64
 		historyMgr             HistoryManager
 		executionMgr           ExecutionManager
 		logger                 bark.Logger
@@ -144,19 +145,18 @@ func (s *TestShardContext) GetTransferSequenceNumber() int64 {
 	return atomic.LoadInt64(&s.transferSequenceNumber)
 }
 
-// GetTimerSequenceNumber test implementation
-func (s *TestShardContext) GetTimerSequenceNumber() int64 {
-	return atomic.AddInt64(&s.timerSequenceNumber, 1)
-}
-
 // GetTimerAckLevel test implementation
-func (s *TestShardContext) GetTimerAckLevel() int64 {
-	return atomic.LoadInt64(&s.shardInfo.TransferAckLevel)
+func (s *TestShardContext) GetTimerAckLevel() time.Time {
+	s.Lock()
+	defer s.Unlock()
+	return s.shardInfo.TimerAckLevel
 }
 
 // UpdateTimerAckLevel test implementation
-func (s *TestShardContext) UpdateTimerAckLevel(ackLevel int64) error {
-	atomic.StoreInt64(&s.shardInfo.TimerAckLevel, ackLevel)
+func (s *TestShardContext) UpdateTimerAckLevel(ackLevel time.Time) error {
+	s.Lock()
+	defer s.Unlock()
+	s.shardInfo.TimerAckLevel = ackLevel
 	return nil
 }
 
@@ -170,12 +170,14 @@ func (s *TestShardContext) CreateWorkflowExecution(request *CreateWorkflowExecut
 func (s *TestShardContext) UpdateWorkflowExecution(request *UpdateWorkflowExecutionRequest) error {
 	// assign IDs for the timer tasks. They need to be assigned under shard lock.
 	// TODO: This needs to be moved out of persistence.
-	b := (int64(1) << 26) - 1
 	for _, task := range request.TimerTasks {
-		seqNum := s.GetTimerSequenceNumber()
-		seqID := task.GetTaskID()&(math.MaxInt64&^b) | (seqNum & b)
-		task.SetTaskID(int64(seqID))
-		s.logger.Infof("%v: TestShardContext: Assigning timer task ID: %v", time.Now(), seqID)
+		seqID, err := s.GetNextTransferTaskID()
+		if err != nil {
+			panic(err)
+		}
+		task.SetTaskID(seqID)
+		s.logger.Infof("%v: TestShardContext: Assigning timer (timestamp: %v, seq: %v)",
+			time.Now(), task.GetVisibilityTimestamp(), task.GetTaskID())
 	}
 	return s.executionMgr.UpdateWorkflowExecution(request)
 }
@@ -635,9 +637,12 @@ func (s *TestBase) CompleteTransferTask(taskID int64) error {
 }
 
 // GetTimerIndexTasks is a utility method to get tasks from transfer task queue
-func (s *TestBase) GetTimerIndexTasks(minKey int64, maxKey int64) ([]*TimerTaskInfo, error) {
+func (s *TestBase) GetTimerIndexTasks() ([]*TimerTaskInfo, error) {
 	response, err := s.WorkflowMgr.GetTimerIndexTasks(&GetTimerIndexTasksRequest{
-		MinKey: minKey, MaxKey: maxKey, BatchSize: 10})
+		MinTimestamp: time.Time{},
+		MinKey:       0,
+		MaxTimestamp: time.Unix(math.MaxInt32, 0),
+		BatchSize:    10})
 
 	if err != nil {
 		return nil, err

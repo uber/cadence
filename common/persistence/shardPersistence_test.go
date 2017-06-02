@@ -23,6 +23,7 @@ package persistence
 import (
 	"os"
 	"testing"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/stretchr/testify/require"
@@ -118,7 +119,7 @@ func (s *shardPersistenceSuite) TestUpdateShard() {
 	updatedInfo.RangeID = updatedRangeID
 	updatedInfo.TransferAckLevel = updatedTransferAckLevel
 	updatedInfo.StolenSinceRenew = updatedStolenSinceRenew
-	updatedTimerAckLevel := int64(998)
+	updatedTimerAckLevel := time.Now()
 	updatedInfo.TimerAckLevel = updatedTimerAckLevel
 	err2 := s.UpdateShard(updatedInfo, shardInfo.RangeID)
 	s.Nil(err2)
@@ -130,7 +131,7 @@ func (s *shardPersistenceSuite) TestUpdateShard() {
 	s.Equal(updatedRangeID, info1.RangeID)
 	s.Equal(updatedTransferAckLevel, info1.TransferAckLevel)
 	s.Equal(updatedStolenSinceRenew, info1.StolenSinceRenew)
-	s.Equal(updatedTimerAckLevel, info1.TimerAckLevel)
+	s.Equal(updatedTimerAckLevel.Unix(), info1.TimerAckLevel.Unix())
 
 	failedUpdateInfo := copyShardInfo(shardInfo)
 	failedUpdateInfo.Owner = "failed_owner"
@@ -146,7 +147,7 @@ func (s *shardPersistenceSuite) TestUpdateShard() {
 	s.Equal(updatedRangeID, info2.RangeID)
 	s.Equal(updatedTransferAckLevel, info2.TransferAckLevel)
 	s.Equal(updatedStolenSinceRenew, info2.StolenSinceRenew)
-	s.Equal(updatedTimerAckLevel, info1.TimerAckLevel)
+	s.Equal(updatedTimerAckLevel.Unix(), info1.TimerAckLevel.Unix())
 }
 
 func copyShardInfo(sourceInfo *ShardInfo) *ShardInfo {

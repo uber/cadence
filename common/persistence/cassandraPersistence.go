@@ -129,6 +129,7 @@ const (
 		`domain_id: ?, ` +
 		`workflow_id: ?, ` +
 		`run_id: ?, ` +
+		`visiblity_ts: ?, ` +
 		`task_id: ?, ` +
 		`type: ?, ` +
 		`timeout_type: ?, ` +
@@ -182,8 +183,8 @@ const (
 		`}`
 
 	templateCreateShardQuery = `INSERT INTO executions (` +
-		`shard_id, type, domain_id, workflow_id, run_id, task_id, shard, range_id)` +
-		`VALUES(?, ?, ?, ?, ?, ?, ` + templateShardType + `, ?) IF NOT EXISTS`
+		`shard_id, type, domain_id, workflow_id, run_id, visiblity_ts, task_id, shard, range_id)` +
+		`VALUES(?, ?, ?, ?, ?, ?, ?, ` + templateShardType + `, ?) IF NOT EXISTS`
 
 	templateGetShardQuery = `SELECT shard ` +
 		`FROM executions ` +
@@ -192,6 +193,7 @@ const (
 		`and domain_id = ? ` +
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
+		`and visiblity_ts = ? ` +
 		`and task_id = ?`
 
 	templateUpdateShardQuery = `UPDATE executions ` +
@@ -201,6 +203,7 @@ const (
 		`and domain_id = ? ` +
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
+		`and visiblity_ts = ? ` +
 		`and task_id = ? ` +
 		`IF range_id = ?`
 
@@ -211,23 +214,24 @@ const (
 		`and domain_id = ? ` +
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
+		`and visiblity_ts = ? ` +
 		`and task_id = ? `
 
 	templateCreateWorkflowExecutionQuery = `INSERT INTO executions (` +
-		`shard_id, type, domain_id, workflow_id, run_id, task_id, current_run_id, execution) ` +
-		`VALUES(?, ?, ?, ?, ?, ?, ?, {run_id: ?, create_request_id: ?}) IF NOT EXISTS`
+		`shard_id, type, domain_id, workflow_id, run_id, visiblity_ts, task_id, current_run_id, execution) ` +
+		`VALUES(?, ?, ?, ?, ?, ?, ?, ?, {run_id: ?, create_request_id: ?}) IF NOT EXISTS`
 
 	templateCreateWorkflowExecutionQuery2 = `INSERT INTO executions (` +
-		`shard_id, domain_id, workflow_id, run_id, type, execution, next_event_id, task_id) ` +
-		`VALUES(?, ?, ?, ?, ?, ` + templateWorkflowExecutionType + `, ?, ?) `
+		`shard_id, domain_id, workflow_id, run_id, type, execution, next_event_id, visiblity_ts, task_id) ` +
+		`VALUES(?, ?, ?, ?, ?, ` + templateWorkflowExecutionType + `, ?, ?, ?) `
 
 	templateCreateTransferTaskQuery = `INSERT INTO executions (` +
-		`shard_id, type, domain_id, workflow_id, run_id, transfer, task_id) ` +
-		`VALUES(?, ?, ?, ?, ?, ` + templateTransferTaskType + `, ?)`
+		`shard_id, type, domain_id, workflow_id, run_id, transfer, visiblity_ts, task_id) ` +
+		`VALUES(?, ?, ?, ?, ?, ` + templateTransferTaskType + `, ?, ?)`
 
 	templateCreateTimerTaskQuery = `INSERT INTO executions (` +
-		`shard_id, type, domain_id, workflow_id, run_id, timer, task_id) ` +
-		`VALUES(?, ?, ?, ?, ?, ` + templateTimerTaskType + `, ?)`
+		`shard_id, type, domain_id, workflow_id, run_id, timer, visiblity_ts, task_id) ` +
+		`VALUES(?, ?, ?, ?, ?, ` + templateTimerTaskType + `, ?, ?)`
 
 	templateUpdateLeaseQuery = `UPDATE executions ` +
 		`SET range_id = ? ` +
@@ -241,6 +245,7 @@ const (
 		`and domain_id = ? ` +
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
+		`and visiblity_ts = ? ` +
 		`and task_id = ?`
 
 	templateGetCurrentExecutionQuery = `SELECT current_run_id ` +
@@ -250,6 +255,7 @@ const (
 		`and domain_id = ? ` +
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
+		`and visiblity_ts = ? ` +
 		`and task_id = ?`
 
 	templateUpdateWorkflowExecutionQuery = `UPDATE executions ` +
@@ -259,6 +265,7 @@ const (
 		`and domain_id = ? ` +
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
+		`and visiblity_ts = ? ` +
 		`and task_id = ? ` +
 		`IF next_event_id = ? and range_id = ?`
 
@@ -269,6 +276,7 @@ const (
 		`and domain_id = ? ` +
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
+		`and visiblity_ts = ? ` +
 		`and task_id = ? ` +
 		`IF next_event_id = ? and range_id = ?`
 
@@ -279,6 +287,7 @@ const (
 		`and domain_id = ? ` +
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
+		`and visiblity_ts = ? ` +
 		`and task_id = ? ` +
 		`IF next_event_id = ? and range_id = ?`
 
@@ -289,6 +298,7 @@ const (
 		`and domain_id = ? ` +
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
+		`and visiblity_ts = ? ` +
 		`and task_id = ? ` +
 		`IF next_event_id = ? and range_id = ?`
 
@@ -299,6 +309,7 @@ const (
 		`and domain_id = ? ` +
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
+		`and visiblity_ts = ? ` +
 		`and task_id = ? ` +
 		`IF next_event_id = ? and range_id = ?`
 
@@ -309,6 +320,7 @@ const (
 		`and domain_id = ? ` +
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
+		`and visiblity_ts = ? ` +
 		`and task_id = ? ` +
 		`IF next_event_id = ? and range_id = ?`
 
@@ -319,6 +331,7 @@ const (
 		`and domain_id = ? ` +
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
+		`and visiblity_ts = ? ` +
 		`and task_id = ? ` +
 		`IF next_event_id = ? and range_id = ?`
 
@@ -328,6 +341,7 @@ const (
 		`and domain_id = ? ` +
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
+		`and visiblity_ts = ? ` +
 		`and task_id = ? `
 
 	templateDeleteWorkflowExecutionMutableStateQuery = `DELETE FROM executions ` +
@@ -336,6 +350,7 @@ const (
 		`and domain_id = ? ` +
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
+		`and visiblity_ts = ? ` +
 		`and task_id = ? `
 
 	templateGetTransferTasksQuery = `SELECT transfer ` +
@@ -345,6 +360,7 @@ const (
 		`and domain_id = ? ` +
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
+		`and visiblity_ts = ? ` +
 		`and task_id > ? ` +
 		`and task_id <= ? LIMIT ?`
 
@@ -354,6 +370,7 @@ const (
 		`and domain_id = ? ` +
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
+		`and visiblity_ts = ? ` +
 		`and task_id = ?`
 
 	templateGetTimerTasksQuery = `SELECT timer ` +
@@ -363,6 +380,7 @@ const (
 		`and domain_id = ? ` +
 		`and workflow_id = ?` +
 		`and run_id = ?` +
+		`and visiblity_ts > ? ` +
 		`and task_id > ?` +
 		`and task_id <= ? LIMIT ?`
 
@@ -372,6 +390,7 @@ const (
 		`and domain_id = ? ` +
 		`and workflow_id = ?` +
 		`and run_id = ?` +
+		`and visiblity_ts = ? ` +
 		`and task_id = ?`
 
 	templateCreateTaskQuery = `INSERT INTO tasks (` +
@@ -434,6 +453,10 @@ const (
 		`and task_list_name = ? ` +
 		`and task_list_type = ? ` +
 		`IF range_id = ?`
+)
+
+var (
+	defaultVisibilityTimestamp = time.Time{} // The zero value of type Time is January 1, year 1, 00:00:00.000000000 UTC
 )
 
 type (
@@ -504,6 +527,7 @@ func (d *cassandraPersistence) CreateShard(request *CreateShardRequest) error {
 		rowTypeShardDomainID,
 		rowTypeShardWorkflowID,
 		rowTypeShardRunID,
+		defaultVisibilityTimestamp,
 		rowTypeShardTaskID,
 		shardInfo.ShardID,
 		shardInfo.Owner,
@@ -541,6 +565,7 @@ func (d *cassandraPersistence) GetShard(request *GetShardRequest) (*GetShardResp
 		rowTypeShardDomainID,
 		rowTypeShardWorkflowID,
 		rowTypeShardRunID,
+		defaultVisibilityTimestamp,
 		rowTypeShardTaskID).Consistency(d.lowConslevel)
 
 	result := make(map[string]interface{})
@@ -579,6 +604,7 @@ func (d *cassandraPersistence) UpdateShard(request *UpdateShardRequest) error {
 		rowTypeShardDomainID,
 		rowTypeShardWorkflowID,
 		rowTypeShardRunID,
+		defaultVisibilityTimestamp,
 		rowTypeShardTaskID,
 		request.PreviousRangeID)
 
@@ -685,6 +711,7 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *Creat
 			request.DomainID,
 			request.Execution.GetWorkflowId(),
 			permanentRunID,
+			defaultVisibilityTimestamp,
 			rowTypeExecutionTaskID)
 	} else {
 		batch.Query(templateCreateWorkflowExecutionQuery,
@@ -693,6 +720,7 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *Creat
 			request.DomainID,
 			request.Execution.GetWorkflowId(),
 			permanentRunID,
+			defaultVisibilityTimestamp,
 			rowTypeExecutionTaskID,
 			request.Execution.GetRunId(),
 			request.Execution.GetRunId(),
@@ -740,6 +768,7 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *Creat
 		"", // Decision Start Request ID
 		request.DecisionStartToCloseTimeout,
 		request.NextEventID,
+		defaultVisibilityTimestamp,
 		rowTypeExecutionTaskID)
 }
 
@@ -752,6 +781,7 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *GetWorkflowExecutio
 		request.DomainID,
 		execution.GetWorkflowId(),
 		execution.GetRunId(),
+		defaultVisibilityTimestamp,
 		rowTypeExecutionTaskID)
 
 	result := make(map[string]interface{})
@@ -834,6 +864,7 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 		executionInfo.DomainID,
 		executionInfo.WorkflowID,
 		executionInfo.RunID,
+		defaultVisibilityTimestamp,
 		rowTypeExecutionTaskID,
 		request.Condition,
 		request.RangeID)
@@ -866,6 +897,7 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 			executionInfo.DomainID,
 			executionInfo.WorkflowID,
 			permanentRunID,
+			defaultVisibilityTimestamp,
 			rowTypeExecutionTaskID)
 	}
 
@@ -923,6 +955,7 @@ func (d *cassandraPersistence) DeleteWorkflowExecution(request *DeleteWorkflowEx
 		info.DomainID,
 		info.WorkflowID,
 		info.RunID,
+		defaultVisibilityTimestamp,
 		rowTypeExecutionTaskID)
 
 	err := query.Exec()
@@ -943,6 +976,7 @@ func (d *cassandraPersistence) GetCurrentExecution(request *GetCurrentExecutionR
 		request.DomainID,
 		request.WorkflowID,
 		permanentRunID,
+		defaultVisibilityTimestamp,
 		rowTypeExecutionTaskID)
 
 	var currentRunID string
@@ -971,6 +1005,7 @@ func (d *cassandraPersistence) GetTransferTasks(request *GetTransferTasksRequest
 		rowTypeTransferDomainID,
 		rowTypeTransferWorkflowID,
 		rowTypeTransferRunID,
+		defaultVisibilityTimestamp,
 		request.ReadLevel,
 		request.MaxReadLevel,
 		request.BatchSize)
@@ -1008,6 +1043,7 @@ func (d *cassandraPersistence) CompleteTransferTask(request *CompleteTransferTas
 		rowTypeTransferDomainID,
 		rowTypeTransferWorkflowID,
 		rowTypeTransferRunID,
+		defaultVisibilityTimestamp,
 		request.TaskID)
 
 	err := query.Exec()
@@ -1027,6 +1063,7 @@ func (d *cassandraPersistence) CompleteTimerTask(request *CompleteTimerTaskReque
 		rowTypeTimerDomainID,
 		rowTypeTimerWorkflowID,
 		rowTypeTimerRunID,
+		request.Timestamp,
 		request.TaskID)
 
 	err := query.Exec()
@@ -1288,8 +1325,9 @@ func (d *cassandraPersistence) GetTimerIndexTasks(request *GetTimerIndexTasksReq
 		rowTypeTimerDomainID,
 		rowTypeTimerWorkflowID,
 		rowTypeTimerRunID,
+		request.MinTimestamp,
 		request.MinKey,
-		request.MaxKey,
+		request.MaxTimestamp,
 		request.BatchSize)
 
 	iter := query.Iter()
@@ -1366,6 +1404,7 @@ func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferT
 			taskList,
 			task.GetType(),
 			scheduleID,
+			defaultVisibilityTimestamp,
 			task.GetTaskID())
 	}
 }
@@ -1399,10 +1438,12 @@ func (d *cassandraPersistence) createTimerTasks(batch *gocql.Batch, timerTasks [
 			domainID,
 			workflowID,
 			runID,
+			task.GetVisibilityTimestamp(),
 			task.GetTaskID(),
 			task.GetType(),
 			timeoutType,
 			eventID,
+			defaultVisibilityTimestamp,
 			task.GetTaskID())
 	}
 
@@ -1413,6 +1454,7 @@ func (d *cassandraPersistence) createTimerTasks(batch *gocql.Batch, timerTasks [
 			rowTypeTimerDomainID,
 			rowTypeTimerWorkflowID,
 			rowTypeTimerRunID,
+			deleteTimerTask.GetVisibilityTimestamp(),
 			deleteTimerTask.GetTaskID())
 	}
 }
@@ -1442,6 +1484,7 @@ func (d *cassandraPersistence) updateActivityInfos(batch *gocql.Batch, activityI
 			domainID,
 			workflowID,
 			runID,
+			defaultVisibilityTimestamp,
 			rowTypeExecutionTaskID,
 			condition,
 			rangeID)
@@ -1455,6 +1498,7 @@ func (d *cassandraPersistence) updateActivityInfos(batch *gocql.Batch, activityI
 			domainID,
 			workflowID,
 			runID,
+			defaultVisibilityTimestamp,
 			rowTypeExecutionTaskID,
 			condition,
 			rangeID)
@@ -1476,6 +1520,7 @@ func (d *cassandraPersistence) updateTimerInfos(batch *gocql.Batch, timerInfos [
 			domainID,
 			workflowID,
 			runID,
+			defaultVisibilityTimestamp,
 			rowTypeExecutionTaskID,
 			condition,
 			rangeID)
@@ -1489,6 +1534,7 @@ func (d *cassandraPersistence) updateTimerInfos(batch *gocql.Batch, timerInfos [
 			domainID,
 			workflowID,
 			runID,
+			defaultVisibilityTimestamp,
 			rowTypeExecutionTaskID,
 			condition,
 			rangeID)
@@ -1511,6 +1557,7 @@ func (d *cassandraPersistence) updateChildExecutionInfos(batch *gocql.Batch, chi
 			domainID,
 			workflowID,
 			runID,
+			defaultVisibilityTimestamp,
 			rowTypeExecutionTaskID,
 			condition,
 			rangeID)
@@ -1525,6 +1572,7 @@ func (d *cassandraPersistence) updateChildExecutionInfos(batch *gocql.Batch, chi
 			domainID,
 			workflowID,
 			runID,
+			defaultVisibilityTimestamp,
 			rowTypeExecutionTaskID,
 			condition,
 			rangeID)
@@ -1548,7 +1596,7 @@ func createShardInfo(result map[string]interface{}) *ShardInfo {
 		case "transfer_ack_level":
 			info.TransferAckLevel = v.(int64)
 		case "timer_ack_level":
-			info.TimerAckLevel = v.(int64)
+			info.TimerAckLevel = v.(time.Time)
 		}
 	}
 
@@ -1744,6 +1792,8 @@ func createTimerTaskInfo(result map[string]interface{}) *TimerTaskInfo {
 			info.WorkflowID = v.(string)
 		case "run_id":
 			info.RunID = v.(gocql.UUID).String()
+		case "visiblity_ts":
+			info.VisibilityTimestamp = v.(time.Time)
 		case "task_id":
 			info.TaskID = v.(int64)
 		case "type":
