@@ -225,6 +225,62 @@ workerPump:
 	s.mockVisibilityMgr.AssertExpectations(s.T())
 }
 
+func (s *transferQueueProcessorSuite) TestDeleteExecutionTransferTasksDomainNotExist() {
+	domainID := "1399c0d5-f119-42d3-bd03-bedb6cf96e46"
+	workflowID := "delete-execution-transfertasks-domain-test"
+	runID := "623525ab-da2b-4715-8756-2d6263d81524"
+	workflowExecution := workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr(workflowID),
+		RunId:      common.StringPtr(runID),
+	}
+	taskList := "delete-execution-transfertasks-domain-queue"
+	identity := "delete-execution-transfertasks-domain-test"
+	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, taskList, "wType", 10, nil, 3, 0, 2, nil)
+	s.Nil(err0, "No error expected.")
+	s.NotEmpty(task0, "Expected non empty task identifier.")
+
+	builder := newMutableStateBuilder(s.logger)
+	info1, _ := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
+	builder.Load(info1)
+	startedEvent := addDecisionTaskStartedEvent(builder, int64(2), taskList, identity)
+	completeDecisionEvent := addDecisionTaskCompletedEvent(builder, int64(2), startedEvent.GetEventId(), nil, identity)
+	addCompleteWorkflowEvent(builder, completeDecisionEvent.GetEventId(), []byte("result"))
+
+	updatedInfo1 := copyWorkflowExecutionInfo(builder.executionInfo)
+	err1 := s.UpdateWorkflowExecutionAndDelete(updatedInfo1, int64(3))
+	s.Nil(err1, "No error expected.")
+
+	newExecution := workflow.WorkflowExecution{WorkflowId: common.StringPtr("delete-execution-transfertasks-test"),
+		RunId: common.StringPtr("d3ac892e-9fc1-4def-84fa-bfc44b9128cc")}
+
+	tasksCh := make(chan *persistence.TransferTaskInfo, 10)
+	s.processor.processTransferTasks(tasksCh)
+workerPump:
+	for {
+		select {
+		case task := <-tasksCh:
+			if task.TaskType == persistence.TransferTaskTypeDecisionTask {
+				s.mockMatching.On("AddDecisionTask", mock.Anything, createAddRequestFromTask(task, 0)).Once().Return(nil)
+				if task.ScheduleID == firstEventID+1 {
+					s.mockVisibilityMgr.On("RecordWorkflowExecutionStarted", mock.Anything).Once().Return(nil)
+				}
+			} else if task.TaskType == persistence.TransferTaskTypeDeleteExecution {
+				s.mockMetadataMgr.On("GetDomain", mock.Anything).Once().Return(nil, &workflow.EntityNotExistsError{})
+				s.mockVisibilityMgr.On("RecordWorkflowExecutionClosed", mock.Anything).Once().Return(nil)
+			}
+			s.processor.processTransferTask(task)
+		default:
+			break workerPump
+		}
+	}
+
+	_, err3 := s.CreateWorkflowExecution(domainID, newExecution, taskList, "wType", 10, nil, 3, 0, 2, nil)
+	s.Nil(err3, "No error expected.")
+	s.logger.Infof("Execution created successfully: %v", err3)
+	s.mockMatching.AssertExpectations(s.T())
+	s.mockVisibilityMgr.AssertExpectations(s.T())
+}
+
 func (s *transferQueueProcessorSuite) TestCancelRemoteExecutionTransferTasks() {
 	domainID := "f5f1ece7-000d-495d-81c3-918ac29006ed"
 	workflowExecution := workflow.WorkflowExecution{
