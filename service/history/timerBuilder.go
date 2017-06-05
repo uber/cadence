@@ -22,7 +22,6 @@ package history
 
 import (
 	"fmt"
-	"math"
 	"sort"
 	"sync/atomic"
 	"time"
@@ -34,15 +33,8 @@ import (
 	"github.com/uber/cadence/common/persistence"
 )
 
-// Timer constansts
+// Timer constants
 const (
-	TimerQueueSeqNumBits                  = 26 // For timer-queues, use 38 bits of (expiry) timestamp, 26 bits of seqnum
-	TimerQueueSeqNumBitmask               = (int64(1) << TimerQueueSeqNumBits) - 1
-	TimerQueueTimeStampBitmask            = math.MaxInt64 &^ TimerQueueSeqNumBitmask
-	SeqNumMax                             = math.MaxInt64 & TimerQueueSeqNumBitmask // The max allowed seqnum (subject to mode-specific bitmask)
-	MinTimerKey                SequenceID = -1
-	MaxTimerKey                SequenceID = math.MaxInt64
-
 	DefaultScheduleToStartActivityTimeoutInSecs = 10
 	DefaultScheduleToCloseActivityTimeoutInSecs = 10
 	DefaultStartToCloseActivityTimeoutInSecs    = 10
@@ -67,7 +59,10 @@ type (
 	}
 
 	// SequenceID - Visibility timer stamp + Sequence Number.
-	SequenceID int64
+	SequenceID struct {
+		VisibilityTimestamp time.Time
+		TaskID              int64
+	}
 
 	// SequenceNumberGenerator - Generates next sequence number.
 	SequenceNumberGenerator interface {
@@ -79,19 +74,8 @@ type (
 	}
 )
 
-// ConstructTimerKey forms a unique sequence number given a expiry and sequence number.
-func ConstructTimerKey(expiryTime int64, seqNum int64) SequenceID {
-	return SequenceID((expiryTime & TimerQueueTimeStampBitmask) | (seqNum & TimerQueueSeqNumBitmask))
-}
-
-// DeconstructTimerKey decomoposes a unique sequence number to an expiry and sequence number.
-func DeconstructTimerKey(key SequenceID) (expiryTime int64, seqNum int64) {
-	return int64(int64(key) & TimerQueueTimeStampBitmask), int64(int64(key) & TimerQueueSeqNumBitmask)
-}
-
 func (s SequenceID) String() string {
-	expiry, seqNum := DeconstructTimerKey(s)
-	return fmt.Sprintf("SequenceID=%v(%x %x) %s", int64(s), expiry, seqNum, time.Unix(0, int64(expiry)))
+	return fmt.Sprintf("timestamp: %v, seq: %v", s.VisibilityTimestamp.UTC(), s.TaskID)
 }
 
 // Len implements sort.Interace
@@ -100,17 +84,18 @@ func (t timers) Len() int {
 }
 
 // Swap implements sort.Interface.
+// Swap implements sort.Interface.
 func (t timers) Swap(i, j int) {
 	t[i], t[j] = t[j], t[i]
 }
 
 // Less implements sort.Interface
 func (t timers) Less(i, j int) bool {
-	return t[i].SequenceID < t[j].SequenceID
+	return compareTimerIDLess(&t[i].SequenceID, &t[j].SequenceID)
 }
 
 func (td *timerDetails) String() string {
-	return fmt.Sprintf("timerDetails: [%s expiry=%s]", td.SequenceID, time.Unix(0, int64(td.SequenceID)))
+	return fmt.Sprintf("timerDetails: %s", td.SequenceID)
 }
 
 func (l *localSeqNumGenerator) NextSeq() int64 {
@@ -216,47 +201,44 @@ func (tb *timerBuilder) LoadUserTimers(msBuilder *mutableStateBuilder) {
 }
 
 // IsTimerExpired - Whether a timer is expired w.r.t reference time.
-func (tb *timerBuilder) IsTimerExpired(td *timerDetails, referenceTime int64) bool {
-	expiry, _ := DeconstructTimerKey(td.SequenceID)
-	return expiry <= referenceTime
+func (tb *timerBuilder) IsTimerExpired(td *timerDetails, referenceTime time.Time) bool {
+	expiry := td.SequenceID.VisibilityTimestamp.UnixNano()
+	return expiry <= referenceTime.UnixNano()
 }
 
 // createDecisionTimeoutTask - Creates a decision timeout task.
 func (tb *timerBuilder) createDecisionTimeoutTask(fireTimeOut int32, eventID int64) *persistence.DecisionTimeoutTask {
-	expiryTime := common.AddSecondsToBaseTime(time.Now().UnixNano(), int64(fireTimeOut))
-	seqID := expiryTime
+	expiryTime := time.Now().Add(time.Duration(fireTimeOut) * time.Second)
 	return &persistence.DecisionTimeoutTask{
-		TaskID:  int64(seqID),
-		EventID: eventID,
+		VisibilityTimestamp: expiryTime,
+		EventID:             eventID,
 	}
 }
 
 // createActivityTimeoutTask - Creates a activity timeout task.
 func (tb *timerBuilder) createActivityTimeoutTask(fireTimeOut int32, timeoutType w.TimeoutType,
 	eventID int64, baseTime *time.Time) *persistence.ActivityTimeoutTask {
-	var expiryTime int64
+	var expiryTime time.Time
 	if baseTime != nil {
-		expiryTime = common.AddSecondsToBaseTime(baseTime.UnixNano(), int64(fireTimeOut))
+		expiryTime = baseTime.Add(time.Duration(fireTimeOut) * time.Second)
 	} else {
-		expiryTime = common.AddSecondsToBaseTime(time.Now().UnixNano(), int64(fireTimeOut))
+		expiryTime = time.Now().Add(time.Duration(fireTimeOut) * time.Second)
 	}
 
-	seqID := expiryTime
 	return &persistence.ActivityTimeoutTask{
-		TaskID:      int64(seqID),
-		TimeoutType: int(timeoutType),
-		EventID:     eventID,
+		VisibilityTimestamp: expiryTime,
+		TimeoutType:         int(timeoutType),
+		EventID:             eventID,
 	}
 }
 
 // createUserTimerTask - Creates a user timer task.
-func (tb *timerBuilder) createUserTimerTask(expiryTime int64, startedEventID int64) *persistence.UserTimerTask {
-	seqID := expiryTime
+func (tb *timerBuilder) createUserTimerTask(expiryTime time.Time, startedEventID int64) *persistence.UserTimerTask {
 	t := &persistence.UserTimerTask{
-		TaskID:  int64(seqID),
-		EventID: startedEventID,
+		VisibilityTimestamp: expiryTime,
+		EventID:             startedEventID,
 	}
-	tb.logger.Debugf("createUserTimerTask: %v", t)
+	tb.logger.Debugf("createUserTimerTask: with an expiry time: %v", expiryTime.UTC())
 	return t
 }
 
@@ -267,7 +249,7 @@ func (tb *timerBuilder) loadUserTimer(expires int64, task *persistence.UserTimer
 func (tb *timerBuilder) createTimer(expires int64, task *persistence.UserTimerTask, taskCreated bool) (*timerDetails, bool) {
 	seqNum := tb.localSeqNumGen.NextSeq()
 	timer := &timerDetails{
-		SequenceID:  ConstructTimerKey(expires, seqNum),
+		SequenceID:  SequenceID{VisibilityTimestamp: time.Unix(0, expires), TaskID: seqNum},
 		TimerTask:   task,
 		TaskCreated: taskCreated}
 	isFirst := tb.insertTimer(timer)
@@ -277,7 +259,7 @@ func (tb *timerBuilder) createTimer(expires int64, task *persistence.UserTimerTa
 func (tb *timerBuilder) insertTimer(td *timerDetails) bool {
 	size := len(tb.timers)
 	i := sort.Search(size,
-		func(i int) bool { return tb.timers[i].SequenceID >= td.SequenceID })
+		func(i int) bool { return !compareTimerIDLess(&tb.timers[i].SequenceID, &td.SequenceID) })
 	if i == size {
 		tb.timers = append(tb.timers, td)
 	} else {
@@ -296,14 +278,21 @@ func (tb *timerBuilder) firstTimer() persistence.Task {
 func (tb *timerBuilder) createNewTask(td *timerDetails) persistence.Task {
 	task := td.TimerTask
 
-	// Allocate real sequence number
-	expiry, _ := DeconstructTimerKey(td.SequenceID)
-
 	// Create a copy of this task.
 	switch task.GetType() {
 	case persistence.TaskTypeUserTimer:
 		userTimerTask := task.(*persistence.UserTimerTask)
-		return tb.createUserTimerTask(expiry, userTimerTask.EventID)
+		return tb.createUserTimerTask(td.SequenceID.VisibilityTimestamp, userTimerTask.EventID)
 	}
 	return nil
+}
+
+func compareTimerIDLess(first *SequenceID, second *SequenceID) bool {
+	if first.VisibilityTimestamp.Before(second.VisibilityTimestamp) {
+		return true
+	}
+	if first.VisibilityTimestamp.Equal(second.VisibilityTimestamp) {
+		return first.TaskID < second.TaskID
+	}
+	return false
 }

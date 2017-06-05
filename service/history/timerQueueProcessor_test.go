@@ -94,9 +94,13 @@ func (s *timerQueueProcessorSuite) TearDownTest() {
 
 func (s *timerQueueProcessorSuite) updateTimerSeqNumbers(timerTasks []persistence.Task) {
 	for _, task := range timerTasks {
-		taskID := ConstructTimerKey(task.GetTaskID(), s.ShardContext.GetTimerSequenceNumber())
-		task.SetTaskID(int64(taskID))
-		s.logger.Infof("%v: TestTimerQueueProcessorSuite: Assigning timer task ID: %v", time.Now(), taskID)
+		taskID, err  := s.ShardContext.GetNextTransferTaskID()
+		if err != nil {
+			panic(err)
+		}
+		task.SetTaskID(taskID)
+		s.logger.Infof("%v: TestTimerQueueProcessorSuite: Assigning timer: %s",
+			time.Now().UTC(), SequenceID{VisibilityTimestamp: task.GetVisibilityTimestamp(), TaskID: task.GetTaskID()})
 	}
 }
 
@@ -230,7 +234,7 @@ func (s *timerQueueProcessorSuite) TestSingleTimerTask() {
 	identity := "testIdentity"
 	s.createExecutionWithTimers(domainID, workflowExecution, taskList, identity, []int32{1})
 
-	timerInfo, err := s.GetTimerIndexTasks(int64(MinTimerKey), int64(MaxTimerKey))
+	timerInfo, err := s.GetTimerIndexTasks()
 	s.Nil(err, "No error expected.")
 	s.NotEmpty(timerInfo, "Expected non empty timers list")
 	s.Equal(1, len(timerInfo))
@@ -240,7 +244,7 @@ func (s *timerQueueProcessorSuite) TestSingleTimerTask() {
 	processor.NotifyNewTimer()
 
 	for {
-		timerInfo, err := s.GetTimerIndexTasks(int64(MinTimerKey), int64(MaxTimerKey))
+		timerInfo, err := s.GetTimerIndexTasks()
 		s.Nil(err, "No error expected.")
 		if len(timerInfo) == 0 {
 			processor.Stop()
@@ -249,7 +253,7 @@ func (s *timerQueueProcessorSuite) TestSingleTimerTask() {
 		time.Sleep(10 * time.Millisecond)
 	}
 
-	timerInfo, err = s.GetTimerIndexTasks(int64(MinTimerKey), int64(MaxTimerKey))
+	timerInfo, err = s.GetTimerIndexTasks()
 	s.Nil(err, "No error expected.")
 	s.Equal(0, len(timerInfo))
 }
@@ -263,7 +267,7 @@ func (s *timerQueueProcessorSuite) TestManyTimerTasks() {
 	identity := "testIdentity"
 	s.createExecutionWithTimers(domainID, workflowExecution, taskList, identity, []int32{1, 2, 3})
 
-	timerInfo, err := s.GetTimerIndexTasks(int64(MinTimerKey), int64(MaxTimerKey))
+	timerInfo, err := s.GetTimerIndexTasks()
 	s.Nil(err, "No error expected.")
 	s.NotEmpty(timerInfo, "Expected non empty timers list")
 	s.Equal(1, len(timerInfo))
@@ -274,7 +278,7 @@ func (s *timerQueueProcessorSuite) TestManyTimerTasks() {
 	processor.NotifyNewTimer()
 
 	for {
-		timerInfo, err := s.GetTimerIndexTasks(int64(MinTimerKey), int64(MaxTimerKey))
+		timerInfo, err := s.GetTimerIndexTasks()
 		s.logger.Infof("TestManyTimerTasks: GetTimerIndexTasks: Response Count: %d \n", len(timerInfo))
 		s.Nil(err, "No error expected.")
 		if len(timerInfo) == 0 {
@@ -284,7 +288,7 @@ func (s *timerQueueProcessorSuite) TestManyTimerTasks() {
 		time.Sleep(1000 * time.Millisecond)
 	}
 
-	timerInfo, err = s.GetTimerIndexTasks(int64(MinTimerKey), int64(MaxTimerKey))
+	timerInfo, err = s.GetTimerIndexTasks()
 	s.Nil(err, "No error expected.")
 	s.Equal(0, len(timerInfo))
 
@@ -301,7 +305,7 @@ func (s *timerQueueProcessorSuite) TestTimerTaskAfterProcessorStart() {
 
 	s.createExecutionWithTimers(domainID, workflowExecution, taskList, identity, []int32{})
 
-	timerInfo, err := s.GetTimerIndexTasks(int64(MinTimerKey), int64(MaxTimerKey))
+	timerInfo, err := s.GetTimerIndexTasks()
 	s.Nil(err, "No error expected.")
 	s.Empty(timerInfo, "Expected empty timers list")
 
@@ -314,7 +318,7 @@ func (s *timerQueueProcessorSuite) TestTimerTaskAfterProcessorStart() {
 
 	s.waitForTimerTasksToProcess(processor)
 
-	timerInfo, err = s.GetTimerIndexTasks(int64(MinTimerKey), int64(MaxTimerKey))
+	timerInfo, err = s.GetTimerIndexTasks()
 	s.Nil(err, "No error expected.")
 	s.Equal(0, len(timerInfo))
 
@@ -323,7 +327,7 @@ func (s *timerQueueProcessorSuite) TestTimerTaskAfterProcessorStart() {
 
 func (s *timerQueueProcessorSuite) waitForTimerTasksToProcess(p timerQueueProcessor) {
 	for i := 0; i < 10; i++ {
-		timerInfo, err := s.GetTimerIndexTasks(int64(MinTimerKey), int64(MaxTimerKey))
+		timerInfo, err := s.GetTimerIndexTasks()
 		//fmt.Printf("TestAfterTimerTasks: GetTimerIndexTasks: Response Count: %d \n", len(timerInfo))
 		s.Nil(err, "No error expected.")
 		if len(timerInfo) == 0 {

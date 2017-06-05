@@ -54,9 +54,8 @@ type (
 		AppendHistoryEvents(request *persistence.AppendHistoryEventsRequest) error
 		GetLogger() bark.Logger
 		GetMetricsClient() metrics.Client
-		GetTimerSequenceNumber() int64
-		GetTimerAckLevel() int64
-		UpdateTimerAckLevel(ackLevel int64) error
+		GetTimerAckLevel() time.Time
+		UpdateTimerAckLevel(ackLevel time.Time) error
 	}
 
 	shardContextImpl struct {
@@ -76,8 +75,6 @@ type (
 		transferSequenceNumber    int64
 		maxTransferSequenceNumber int64
 		transferMaxReadLevel      int64
-		// in memory sequence number to generate unique timer ID in the same resolution of timer.
-		timerSequenceNumber int64
 	}
 )
 
@@ -126,17 +123,13 @@ func (s *shardContextImpl) UpdateTransferAckLevel(ackLevel int64) error {
 	return s.updateShardInfoLocked()
 }
 
-func (s *shardContextImpl) GetTimerSequenceNumber() int64 {
-	return atomic.AddInt64(&s.timerSequenceNumber, 1)
-}
-
-func (s *shardContextImpl) GetTimerAckLevel() int64 {
+func (s *shardContextImpl) GetTimerAckLevel() time.Time {
 	s.RLock()
 	defer s.RUnlock()
 	return s.shardInfo.TimerAckLevel
 }
 
-func (s *shardContextImpl) UpdateTimerAckLevel(ackLevel int64) error {
+func (s *shardContextImpl) UpdateTimerAckLevel(ackLevel time.Time) error {
 	s.Lock()
 	defer s.Unlock()
 
@@ -410,20 +403,22 @@ func (s *shardContextImpl) updateShardInfoLocked() error {
 func (s *shardContextImpl) allocateTimerIDs(timerTasks []persistence.Task) error {
 	// assign IDs for the timer tasks. They need to be assigned under shard lock.
 	for _, task := range timerTasks {
-		seqID := ConstructTimerKey(task.GetTaskID(), s.GetTimerSequenceNumber())
-		if int64(seqID) < s.shardInfo.TimerAckLevel {
+		if task.GetVisibilityTimestamp().Before(s.shardInfo.TimerAckLevel) {
 			// This is not a common scenario, the shard can move and new host might have a time SKU.
 			// We generate a new timer ID that is above the ack level with an offset.
-			s.logger.Warn("%v: New timer ID generated is less than ack level: %v, ackLeveL: %v",
-				time.Now(), seqID, s.shardInfo.TimerAckLevel)
-			ackLevelTS, _ := DeconstructTimerKey(SequenceID(s.shardInfo.TimerAckLevel))
-			ackLevelTS += time.Second.Nanoseconds()
-			seqID = ConstructTimerKey(ackLevelTS, s.GetTimerSequenceNumber())
+			s.logger.Warn("%v: New timer generated is less than ack level. timestamp: %v, ackLevel: %v",
+				time.Now(), task.GetVisibilityTimestamp(), s.shardInfo.TimerAckLevel)
+			newTimestamp := s.shardInfo.TimerAckLevel
+			task.SetVisibilityTimestamp(newTimestamp.Add(time.Second))
 		}
 
-		task.SetTaskID(int64(seqID))
-		s.logger.Debugf("%v: Assigning timer task ID: %v, ackLeveL: %v",
-			time.Now(), seqID, s.shardInfo.TimerAckLevel)
+		seqNum, err := s.getNextTransferTaskIDLocked()
+		if err != nil {
+			return err
+		}
+		task.SetTaskID(seqNum)
+		s.logger.Debugf("%v: Assigning new timer (timestamp: %v, seq: %v) ackLeveL: %v",
+			task.GetVisibilityTimestamp(), task.GetTaskID(), s.shardInfo.TimerAckLevel)
 	}
 	return nil
 }
@@ -472,7 +467,7 @@ func copyShardInfo(shardInfo *persistence.ShardInfo) *persistence.ShardInfo {
 		RangeID:          shardInfo.RangeID,
 		StolenSinceRenew: shardInfo.StolenSinceRenew,
 		TransferAckLevel: atomic.LoadInt64(&shardInfo.TransferAckLevel),
-		TimerAckLevel:    atomic.LoadInt64(&shardInfo.TimerAckLevel),
+		TimerAckLevel:    shardInfo.TimerAckLevel,
 	}
 
 	return shardInfoCopy
