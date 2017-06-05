@@ -165,7 +165,6 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 		common.UnixNanoToCQLTimestamp(request.StartTimestamp),
 		request.Execution.GetRunId(),
 	)
-
 	// Next, add a row in the closed table.
 
 	// Find how long to keep the row

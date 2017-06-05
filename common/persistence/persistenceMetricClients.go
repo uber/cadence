@@ -422,6 +422,21 @@ func (p *historyPersistenceClient) DeleteWorkflowExecutionHistory(
 	return err
 }
 
+func (p *historyPersistenceClient) DeleteWorkflowExecutionHistorySuffix(
+	request *DeleteWorkflowExecutionHistorySuffixRequest) error {
+	p.metricClient.IncCounter(metrics.PersistenceDeleteWorkflowExecutionHistoryScope, metrics.PersistenceRequests)
+
+	sw := p.metricClient.StartTimer(metrics.PersistenceDeleteWorkflowExecutionHistoryScope, metrics.PersistenceLatency)
+	err := p.persistence.DeleteWorkflowExecutionHistorySuffix(request)
+	sw.Stop()
+
+	if err != nil {
+		p.updateErrorMetric(metrics.PersistenceDeleteWorkflowExecutionHistoryScope, err)
+	}
+
+	return err
+}
+
 func (p *historyPersistenceClient) updateErrorMetric(scope int, err error) {
 	switch err.(type) {
 	case *workflow.EntityNotExistsError:

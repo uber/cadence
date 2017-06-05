@@ -276,7 +276,20 @@ func (c *workflowExecutionContext) updateWorkflowExecutionWithRetry(
 
 func (c *workflowExecutionContext) deleteWorkflowExecutionWithRetry(
 	request *persistence.DeleteWorkflowExecutionRequest) error {
+	execution := workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr(request.ExecutionInfo.WorkflowID),
+		RunId:      common.StringPtr(request.ExecutionInfo.RunID),
+	}
 	op := func() error {
+		// remove any invalid events from the history
+		err := c.shard.GetHistoryManager().DeleteWorkflowExecutionHistorySuffix(&persistence.DeleteWorkflowExecutionHistorySuffixRequest{
+			DomainID:    request.ExecutionInfo.DomainID,
+			Execution:   execution,
+			NextEventID: request.ExecutionInfo.NextEventID,
+		})
+		if err != nil {
+			return err
+		}
 		return c.executionManager.DeleteWorkflowExecution(request)
 	}
 
