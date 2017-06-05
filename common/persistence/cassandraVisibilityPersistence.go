@@ -33,7 +33,8 @@ import (
 
 // Fixed domain values for now
 const (
-	domainPartition = 0
+	domainPartition        = 0
+	defaultCloseTTLSeconds = 86400
 )
 
 const (
@@ -170,7 +171,7 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 	// Find how long to keep the row
 	retention := request.RetentionSeconds
 	if retention == 0 {
-		retention = defaultDeleteTTLSeconds
+		retention = defaultCloseTTLSeconds
 	}
 
 	batch.Query(templateCreateWorkflowExecutionClosed,
