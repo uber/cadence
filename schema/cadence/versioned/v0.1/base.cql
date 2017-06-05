@@ -61,7 +61,7 @@ CREATE TYPE timer_task (
   domain_id        uuid,
   workflow_id      text,
   run_id           uuid,
-  visiblity_ts     timestamp,
+  visibility_ts    timestamp,
   task_id          bigint,
   type             int,  -- enum TaskType {DecisionTaskTimeout, ActivityTaskTimeout, UserTimer}
   timeout_type     int, -- enum TimeoutType in IDL {START_TO_CLOSE, SCHEDULE_TO_START, SCHEDULE_TO_CLOSE, HEARTBEAT}
@@ -138,7 +138,7 @@ CREATE TABLE executions (
   workflow_id          text,
   run_id               uuid,
   current_run_id       uuid,
-  visiblity_ts         timestamp, -- unique identifier for timer tasks for an execution
+  visibility_ts        timestamp, -- unique identifier for timer tasks for an execution
   task_id              bigint, -- unique identifier for transfer and timer tasks for an execution
   shard                frozen<shard>,
   execution            frozen<workflow_execution>,
@@ -149,7 +149,7 @@ CREATE TABLE executions (
   activity_map         map<bigint, frozen<activity_info>>,
   timer_map            map<text, frozen<timer_info>>,
   child_executions_map map<bigint, frozen<child_execution_info>>,
-  PRIMARY KEY  (shard_id, type, domain_id, workflow_id, run_id, visiblity_ts, task_id)
+  PRIMARY KEY  (shard_id, type, domain_id, workflow_id, run_id, visibility_ts, task_id)
 ) WITH COMPACTION = {
     'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'
   }

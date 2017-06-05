@@ -478,7 +478,6 @@ type (
 	// TODO: replace this with an iterator that can configure min and max index.
 	GetTimerIndexTasksRequest struct {
 		MinTimestamp time.Time
-		MinKey       int64
 		MaxTimestamp time.Time
 		BatchSize    int
 	}

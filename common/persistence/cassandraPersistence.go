@@ -129,7 +129,7 @@ const (
 		`domain_id: ?, ` +
 		`workflow_id: ?, ` +
 		`run_id: ?, ` +
-		`visiblity_ts: ?, ` +
+		`visibility_ts: ?, ` +
 		`task_id: ?, ` +
 		`type: ?, ` +
 		`timeout_type: ?, ` +
@@ -183,7 +183,7 @@ const (
 		`}`
 
 	templateCreateShardQuery = `INSERT INTO executions (` +
-		`shard_id, type, domain_id, workflow_id, run_id, visiblity_ts, task_id, shard, range_id)` +
+		`shard_id, type, domain_id, workflow_id, run_id, visibility_ts, task_id, shard, range_id)` +
 		`VALUES(?, ?, ?, ?, ?, ?, ?, ` + templateShardType + `, ?) IF NOT EXISTS`
 
 	templateGetShardQuery = `SELECT shard ` +
@@ -193,7 +193,7 @@ const (
 		`and domain_id = ? ` +
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
-		`and visiblity_ts = ? ` +
+		`and visibility_ts = ? ` +
 		`and task_id = ?`
 
 	templateUpdateShardQuery = `UPDATE executions ` +
@@ -203,7 +203,7 @@ const (
 		`and domain_id = ? ` +
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
-		`and visiblity_ts = ? ` +
+		`and visibility_ts = ? ` +
 		`and task_id = ? ` +
 		`IF range_id = ?`
 
@@ -214,23 +214,23 @@ const (
 		`and domain_id = ? ` +
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
-		`and visiblity_ts = ? ` +
+		`and visibility_ts = ? ` +
 		`and task_id = ? `
 
 	templateCreateWorkflowExecutionQuery = `INSERT INTO executions (` +
-		`shard_id, type, domain_id, workflow_id, run_id, visiblity_ts, task_id, current_run_id, execution) ` +
+		`shard_id, type, domain_id, workflow_id, run_id, visibility_ts, task_id, current_run_id, execution) ` +
 		`VALUES(?, ?, ?, ?, ?, ?, ?, ?, {run_id: ?, create_request_id: ?}) IF NOT EXISTS`
 
 	templateCreateWorkflowExecutionQuery2 = `INSERT INTO executions (` +
-		`shard_id, domain_id, workflow_id, run_id, type, execution, next_event_id, visiblity_ts, task_id) ` +
+		`shard_id, domain_id, workflow_id, run_id, type, execution, next_event_id, visibility_ts, task_id) ` +
 		`VALUES(?, ?, ?, ?, ?, ` + templateWorkflowExecutionType + `, ?, ?, ?) `
 
 	templateCreateTransferTaskQuery = `INSERT INTO executions (` +
-		`shard_id, type, domain_id, workflow_id, run_id, transfer, visiblity_ts, task_id) ` +
+		`shard_id, type, domain_id, workflow_id, run_id, transfer, visibility_ts, task_id) ` +
 		`VALUES(?, ?, ?, ?, ?, ` + templateTransferTaskType + `, ?, ?)`
 
 	templateCreateTimerTaskQuery = `INSERT INTO executions (` +
-		`shard_id, type, domain_id, workflow_id, run_id, timer, visiblity_ts, task_id) ` +
+		`shard_id, type, domain_id, workflow_id, run_id, timer, visibility_ts, task_id) ` +
 		`VALUES(?, ?, ?, ?, ?, ` + templateTimerTaskType + `, ?, ?)`
 
 	templateUpdateLeaseQuery = `UPDATE executions ` +
@@ -245,7 +245,7 @@ const (
 		`and domain_id = ? ` +
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
-		`and visiblity_ts = ? ` +
+		`and visibility_ts = ? ` +
 		`and task_id = ?`
 
 	templateGetCurrentExecutionQuery = `SELECT current_run_id ` +
@@ -255,7 +255,7 @@ const (
 		`and domain_id = ? ` +
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
-		`and visiblity_ts = ? ` +
+		`and visibility_ts = ? ` +
 		`and task_id = ?`
 
 	templateUpdateWorkflowExecutionQuery = `UPDATE executions ` +
@@ -265,7 +265,7 @@ const (
 		`and domain_id = ? ` +
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
-		`and visiblity_ts = ? ` +
+		`and visibility_ts = ? ` +
 		`and task_id = ? ` +
 		`IF next_event_id = ? and range_id = ?`
 
@@ -276,7 +276,7 @@ const (
 		`and domain_id = ? ` +
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
-		`and visiblity_ts = ? ` +
+		`and visibility_ts = ? ` +
 		`and task_id = ? ` +
 		`IF next_event_id = ? and range_id = ?`
 
@@ -287,7 +287,7 @@ const (
 		`and domain_id = ? ` +
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
-		`and visiblity_ts = ? ` +
+		`and visibility_ts = ? ` +
 		`and task_id = ? ` +
 		`IF next_event_id = ? and range_id = ?`
 
@@ -298,7 +298,7 @@ const (
 		`and domain_id = ? ` +
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
-		`and visiblity_ts = ? ` +
+		`and visibility_ts = ? ` +
 		`and task_id = ? ` +
 		`IF next_event_id = ? and range_id = ?`
 
@@ -309,7 +309,7 @@ const (
 		`and domain_id = ? ` +
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
-		`and visiblity_ts = ? ` +
+		`and visibility_ts = ? ` +
 		`and task_id = ? ` +
 		`IF next_event_id = ? and range_id = ?`
 
@@ -320,7 +320,7 @@ const (
 		`and domain_id = ? ` +
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
-		`and visiblity_ts = ? ` +
+		`and visibility_ts = ? ` +
 		`and task_id = ? ` +
 		`IF next_event_id = ? and range_id = ?`
 
@@ -331,7 +331,7 @@ const (
 		`and domain_id = ? ` +
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
-		`and visiblity_ts = ? ` +
+		`and visibility_ts = ? ` +
 		`and task_id = ? ` +
 		`IF next_event_id = ? and range_id = ?`
 
@@ -341,7 +341,7 @@ const (
 		`and domain_id = ? ` +
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
-		`and visiblity_ts = ? ` +
+		`and visibility_ts = ? ` +
 		`and task_id = ? `
 
 	templateDeleteWorkflowExecutionMutableStateQuery = `DELETE FROM executions ` +
@@ -350,7 +350,7 @@ const (
 		`and domain_id = ? ` +
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
-		`and visiblity_ts = ? ` +
+		`and visibility_ts = ? ` +
 		`and task_id = ? `
 
 	templateGetTransferTasksQuery = `SELECT transfer ` +
@@ -360,7 +360,7 @@ const (
 		`and domain_id = ? ` +
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
-		`and visiblity_ts = ? ` +
+		`and visibility_ts = ? ` +
 		`and task_id > ? ` +
 		`and task_id <= ? LIMIT ?`
 
@@ -370,7 +370,7 @@ const (
 		`and domain_id = ? ` +
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
-		`and visiblity_ts = ? ` +
+		`and visibility_ts = ? ` +
 		`and task_id = ?`
 
 	templateGetTimerTasksQuery = `SELECT timer ` +
@@ -380,9 +380,8 @@ const (
 		`and domain_id = ? ` +
 		`and workflow_id = ?` +
 		`and run_id = ?` +
-		`and visiblity_ts > ? ` +
-		`and task_id > ?` +
-		`and task_id <= ? LIMIT ?`
+		`and visibility_ts >= ? ` +
+		`and visibility_ts < ? LIMIT ?`
 
 	templateCompleteTimerTaskQuery = `DELETE FROM executions ` +
 		`WHERE shard_id = ? ` +
@@ -390,7 +389,7 @@ const (
 		`and domain_id = ? ` +
 		`and workflow_id = ?` +
 		`and run_id = ?` +
-		`and visiblity_ts = ? ` +
+		`and visibility_ts = ? ` +
 		`and task_id = ?`
 
 	templateCreateTaskQuery = `INSERT INTO tasks (` +
@@ -1057,13 +1056,14 @@ func (d *cassandraPersistence) CompleteTransferTask(request *CompleteTransferTas
 }
 
 func (d *cassandraPersistence) CompleteTimerTask(request *CompleteTimerTaskRequest) error {
+	ts := common.UnixNanoToCQLTimestamp(request.Timestamp.UnixNano())
 	query := d.session.Query(templateCompleteTimerTaskQuery,
 		d.shardID,
 		rowTypeTimerTask,
 		rowTypeTimerDomainID,
 		rowTypeTimerWorkflowID,
 		rowTypeTimerRunID,
-		request.Timestamp,
+		ts,
 		request.TaskID)
 
 	err := query.Exec()
@@ -1319,15 +1319,16 @@ func (d *cassandraPersistence) CompleteTask(request *CompleteTaskRequest) error 
 func (d *cassandraPersistence) GetTimerIndexTasks(request *GetTimerIndexTasksRequest) (*GetTimerIndexTasksResponse,
 	error) {
 	// Reading timer tasks need to be quorum level consistent, otherwise we could loose task
+	minTimestamp := common.UnixNanoToCQLTimestamp(request.MinTimestamp.UnixNano())
+	maxTimestamp := common.UnixNanoToCQLTimestamp(request.MaxTimestamp.UnixNano())
 	query := d.session.Query(templateGetTimerTasksQuery,
 		d.shardID,
 		rowTypeTimerTask,
 		rowTypeTimerDomainID,
 		rowTypeTimerWorkflowID,
 		rowTypeTimerRunID,
-		request.MinTimestamp,
-		request.MinKey,
-		request.MaxTimestamp,
+		minTimestamp,
+		maxTimestamp,
 		request.BatchSize)
 
 	iter := query.Iter()
@@ -1429,6 +1430,8 @@ func (d *cassandraPersistence) createTimerTasks(batch *gocql.Batch, timerTasks [
 			eventID = task.(*UserTimerTask).EventID
 		}
 
+		ts := common.UnixNanoToCQLTimestamp(task.GetVisibilityTimestamp().UnixNano())
+
 		batch.Query(templateCreateTimerTaskQuery,
 			d.shardID,
 			rowTypeTimerTask,
@@ -1438,23 +1441,24 @@ func (d *cassandraPersistence) createTimerTasks(batch *gocql.Batch, timerTasks [
 			domainID,
 			workflowID,
 			runID,
-			task.GetVisibilityTimestamp(),
+			ts,
 			task.GetTaskID(),
 			task.GetType(),
 			timeoutType,
 			eventID,
-			defaultVisibilityTimestamp,
+			ts,
 			task.GetTaskID())
 	}
 
 	if deleteTimerTask != nil {
+		ts := common.UnixNanoToCQLTimestamp(deleteTimerTask.GetVisibilityTimestamp().UnixNano())
 		batch.Query(templateCompleteTimerTaskQuery,
 			d.shardID,
 			rowTypeTimerTask,
 			rowTypeTimerDomainID,
 			rowTypeTimerWorkflowID,
 			rowTypeTimerRunID,
-			deleteTimerTask.GetVisibilityTimestamp(),
+			ts,
 			deleteTimerTask.GetTaskID())
 	}
 }
@@ -1792,7 +1796,7 @@ func createTimerTaskInfo(result map[string]interface{}) *TimerTaskInfo {
 			info.WorkflowID = v.(string)
 		case "run_id":
 			info.RunID = v.(gocql.UUID).String()
-		case "visiblity_ts":
+		case "visibility_ts":
 			info.VisibilityTimestamp = v.(time.Time)
 		case "task_id":
 			info.TaskID = v.(int64)

@@ -177,7 +177,7 @@ func (s *TestShardContext) UpdateWorkflowExecution(request *UpdateWorkflowExecut
 		}
 		task.SetTaskID(seqID)
 		s.logger.Infof("%v: TestShardContext: Assigning timer (timestamp: %v, seq: %v)",
-			time.Now(), task.GetVisibilityTimestamp(), task.GetTaskID())
+			time.Now().UTC(), task.GetVisibilityTimestamp().UTC(), task.GetTaskID())
 	}
 	return s.executionMgr.UpdateWorkflowExecution(request)
 }
@@ -640,8 +640,7 @@ func (s *TestBase) CompleteTransferTask(taskID int64) error {
 func (s *TestBase) GetTimerIndexTasks() ([]*TimerTaskInfo, error) {
 	response, err := s.WorkflowMgr.GetTimerIndexTasks(&GetTimerIndexTasksRequest{
 		MinTimestamp: time.Time{},
-		MinKey:       0,
-		MaxTimestamp: time.Unix(math.MaxInt32, 0),
+		MaxTimestamp: time.Unix(0, math.MaxInt64),
 		BatchSize:    10})
 
 	if err != nil {
@@ -649,6 +648,14 @@ func (s *TestBase) GetTimerIndexTasks() ([]*TimerTaskInfo, error) {
 	}
 
 	return response.Timers, nil
+}
+
+// CompleteTimerTask is a utility method to complete a timer task
+func (s *TestBase) CompleteTimerTask(ts time.Time, taskID int64) error {
+	return s.WorkflowMgr.CompleteTimerTask(&CompleteTimerTaskRequest{
+		Timestamp: ts,
+		TaskID: taskID,
+	})
 }
 
 // CreateDecisionTask is a utility method to create a task
