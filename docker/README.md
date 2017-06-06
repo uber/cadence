@@ -17,6 +17,11 @@ View metrics at localhost:8080/dashboard
 
 Using a pre-built image
 =======================
+With every tagged release of the cadence server, there is also a corresponding
+docker image that's uploaded to docker hub. In addition, the release will also
+contain a docker.tar.gz file (docker-compose startup scripts). Execute the following
+commands to start a pre-built image along with all dependencies.
+
 ```
 wget https://github.com/uber/cadence/releases/download/v0.1.0-beta/docker.tar.gz
 tar -xzvf docker.tar.gz
