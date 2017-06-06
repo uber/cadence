@@ -164,7 +164,7 @@ func (s *timerQueueProcessor2Suite) TestTimerUpdateTimesOut() {
 	}).Once()
 
 	processor := newTimerQueueProcessor(s.mockShard, s.mockHistoryEngine, s.mockExecutionMgr, s.logger).(*timerQueueProcessorImpl)
-	processor.NotifyNewTimer()
+	processor.NotifyNewTimer([]persistence.Task{})
 
 	// Start timer Processor.
 	processor.Start()

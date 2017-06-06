@@ -65,6 +65,7 @@ type (
 		timerFiredCount  uint64
 		lock             sync.Mutex // Used to synchronize pending timers.
 		ackMgr           *timerAckMgr
+		minPendingTimer  time.Time // Track the minimum timer ID in memory.
 	}
 
 	timeGate struct {
@@ -139,8 +140,8 @@ func (t *timeGate) engaged() bool {
 	return t.tNext > t.tNow
 }
 
-func (t *timeGate) setNext(nextKey SequenceID) {
-	t.tNext = nextKey.VisibilityTimestamp.UnixNano()
+func (t *timeGate) setNext(next time.Time) {
+	t.tNext = next.UnixNano()
 }
 
 func (t *timeGate) close() {
@@ -195,13 +196,25 @@ func (t *timerQueueProcessorImpl) Stop() {
 }
 
 // NotifyNewTimer - Notify the processor about the new timer arrival.
-func (t *timerQueueProcessorImpl) NotifyNewTimer() {
-	select {
-	case t.newTimerCh <- struct{}{}:
-	// Notified about new timer.
+func (t *timerQueueProcessorImpl) NotifyNewTimer(timerTasks []persistence.Task) {
+	updatedMinTimer := false
+	t.lock.Lock()
+	for _, task := range timerTasks {
+		if t.minPendingTimer.IsZero() || task.GetVisibilityTimestamp().Before(t.minPendingTimer) {
+			t.minPendingTimer = task.GetVisibilityTimestamp()
+			updatedMinTimer = true
+		}
+	}
+	t.lock.Unlock()
 
-	default:
-		// Channel "full" -> drop and move on, since we are using it as an event.
+	if updatedMinTimer {
+		select {
+		case t.newTimerCh <- struct{}{}:
+			// Notified about new timer.
+
+		default:
+			// Channel "full" -> drop and move on, since we are using it as an event.
+		}
 	}
 }
 
@@ -244,6 +257,8 @@ func (t *timerQueueProcessorImpl) internalProcessor(tasksCh chan<- *persistence.
 	var nextKeyTask *persistence.TimerTaskInfo
 
 	for {
+		isWokeByNewTimer := false
+
 		if nextKeyTask == nil || gate.engaged() {
 			gateC := gate.beforeSleep()
 
@@ -251,6 +266,7 @@ func (t *timerQueueProcessorImpl) internalProcessor(tasksCh chan<- *persistence.
 			// 1. we get notified of a new message
 			// 2. the timer fires (message scheduled to be delivered)
 			// 3. shutdown was triggered.
+			// 4. updating ack level
 			//
 			select {
 
@@ -263,11 +279,27 @@ func (t *timerQueueProcessorImpl) internalProcessor(tasksCh chan<- *persistence.
 
 			case <-t.newTimerCh:
 				// New Timer has arrived.
-				t.logger.Debugf("Woke up by the timer")
+				isWokeByNewTimer = true
 
 			case <-updateAckChan:
 				t.ackMgr.updateAckLevel()
 			}
+		}
+
+		if isWokeByNewTimer {
+			t.logger.Debugf("Woke up by the timer")
+
+			t.lock.Lock()
+			newMinTimestamp := t.minPendingTimer
+			if !gate.engaged() || newMinTimestamp.UnixNano() < gate.tNext {
+				gate.setNext(newMinTimestamp)
+			}
+			t.minPendingTimer = time.Time{}
+			t.lock.Unlock()
+
+			t.logger.Debugf("%v: Next key after woke up by timer: %v",
+				time.Now().UTC(), newMinTimestamp.UTC())
+			continue
 		}
 
 		// Either we have new timer (or) we are gated on timer to query for it.
@@ -283,7 +315,7 @@ func (t *timerQueueProcessorImpl) internalProcessor(tasksCh chan<- *persistence.
 				tasksCh <- task
 			}
 
-			if lookAheadTask != nil || len(timerTasks) < timerTaskBatchSize  {
+			if lookAheadTask != nil || len(timerTasks) < timerTaskBatchSize {
 				// We have processed all the tasks.
 				nextKeyTask = lookAheadTask
 				break
@@ -294,7 +326,7 @@ func (t *timerQueueProcessorImpl) internalProcessor(tasksCh chan<- *persistence.
 			nextKey := SequenceID{VisibilityTimestamp: nextKeyTask.VisibilityTimestamp, TaskID: nextKeyTask.TaskID}
 			t.logger.Debugf("%s: GetNextKey: %s", time.Now().UTC(), nextKey)
 
-			gate.setNext(nextKey)
+			gate.setNext(nextKey.VisibilityTimestamp)
 		}
 	}
 }
@@ -403,7 +435,7 @@ func (t *timerQueueProcessorImpl) processTimerTask(timerTask *persistence.TimerT
 		atomic.AddUint64(&t.timerFiredCount, 1)
 		err := t.executionManager.CompleteTimerTask(&persistence.CompleteTimerTaskRequest{
 			Timestamp: timerTask.VisibilityTimestamp,
-			TaskID: timerTask.TaskID})
+			TaskID:    timerTask.TaskID})
 		if err != nil {
 			t.logger.Warnf("Processor unable to complete timer task '%v': %v", timerTask.TaskID, err)
 		}
@@ -462,7 +494,7 @@ Update_History_Loop:
 					// Update the task ID tracking the corresponding timer task.
 					ti.TaskID = nextTask.GetTaskID()
 					msBuilder.UpdateUserTimer(ti.TimerID, ti)
-					defer t.NotifyNewTimer()
+					defer t.NotifyNewTimer(timerTasks)
 				}
 
 				// Done!
@@ -473,7 +505,6 @@ Update_History_Loop:
 		clearTimerTask = &persistence.UserTimerTask{
 			VisibilityTimestamp: task.VisibilityTimestamp,
 			TaskID:              task.TaskID}
-
 		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 		// the history and try the operation again.
 		err := t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, timerTasks, clearTimerTask)
@@ -560,7 +591,6 @@ Update_History_Loop:
 						}
 						if hbTimeoutTask != nil {
 							timerTasks = append(timerTasks, hbTimeoutTask)
-							defer t.NotifyNewTimer()
 						}
 					}
 				}
@@ -585,6 +615,7 @@ Update_History_Loop:
 			clearTimerTask := &persistence.ActivityTimeoutTask{
 				VisibilityTimestamp: timerTask.VisibilityTimestamp,
 				TaskID:              timerTask.TaskID}
+			defer t.NotifyNewTimer(timerTasks)
 			err := t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, timerTasks, clearTimerTask)
 			if err != nil {
 				if err == ErrConflict {
