@@ -654,7 +654,7 @@ func (s *TestBase) GetTimerIndexTasks() ([]*TimerTaskInfo, error) {
 func (s *TestBase) CompleteTimerTask(ts time.Time, taskID int64) error {
 	return s.WorkflowMgr.CompleteTimerTask(&CompleteTimerTaskRequest{
 		Timestamp: ts,
-		TaskID: taskID,
+		TaskID:    taskID,
 	})
 }
 

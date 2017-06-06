@@ -94,7 +94,7 @@ func (s *timerQueueProcessorSuite) TearDownTest() {
 
 func (s *timerQueueProcessorSuite) updateTimerSeqNumbers(timerTasks []persistence.Task) {
 	for _, task := range timerTasks {
-		taskID, err  := s.ShardContext.GetNextTransferTaskID()
+		taskID, err := s.ShardContext.GetNextTransferTaskID()
 		if err != nil {
 			panic(err)
 		}
