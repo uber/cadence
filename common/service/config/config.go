@@ -23,6 +23,7 @@ package config
 import (
 	"encoding/json"
 	"github.com/uber-go/tally/m3"
+	"github.com/uber/ringpop-go/discovery"
 	"time"
 )
 
@@ -71,6 +72,8 @@ type (
 		BootstrapFile string `yaml:"bootstrapFile"`
 		// MaxJoinDuration is the max wait time to join the ring
 		MaxJoinDuration time.Duration `yaml:"maxJoinDuration"`
+		// Custom discovery provider, cannot be specified through yaml
+		DiscoveryProvider discovery.DiscoverProvider `yaml:"-"`
 	}
 
 	// Cassandra contains configuration to connect to Cassandra cluster
@@ -79,6 +82,8 @@ type (
 		Hosts string `yaml:"hosts" validate:"nonzero"`
 		// Keyspace is the cassandra keyspace
 		Keyspace string `yaml:"keyspace" validate:"nonzero"`
+		// VisibilityKeyspace is the cassandra keyspace for visibility store
+		VisibilityKeyspace string `yaml:"visibilityKeyspace" validate:"nonzero"`
 		// Consistency is the default cassandra consistency level
 		Consistency string `yaml:"consistency"`
 		// Datacenter is the data center filter arg for cassandra

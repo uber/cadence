@@ -26,6 +26,7 @@ import (
 	"testing"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 
@@ -92,7 +93,8 @@ func (s *timerQueueProcessor2Suite) SetupTest() {
 	}
 
 	historyCache := newHistoryCache(historyCacheMaxSize, s.mockShard, s.logger)
-	txProcessor := newTransferQueueProcessor(s.mockShard, s.mockVisibilityMgr, s.mockMatchingClient, &mocks.HistoryClient{}, historyCache)
+	domainCache := cache.NewDomainCache(s.mockMetadataMgr, s.logger)
+	txProcessor := newTransferQueueProcessor(s.mockShard, s.mockVisibilityMgr, s.mockMatchingClient, &mocks.HistoryClient{}, historyCache, domainCache)
 	h := &historyEngineImpl{
 		shard:              s.mockShard,
 		historyMgr:         s.mockHistoryMgr,

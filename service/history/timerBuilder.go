@@ -202,8 +202,9 @@ func (tb *timerBuilder) LoadUserTimers(msBuilder *mutableStateBuilder) {
 
 // IsTimerExpired - Whether a timer is expired w.r.t reference time.
 func (tb *timerBuilder) IsTimerExpired(td *timerDetails, referenceTime time.Time) bool {
-	expiry := td.SequenceID.VisibilityTimestamp.UnixNano()
-	return expiry <= referenceTime.UnixNano()
+	// Cql timestamp is in milli sec resolution, here we do the check in terms of second resolution.
+	expiry := td.SequenceID.VisibilityTimestamp.Unix()
+	return expiry <= referenceTime.Unix()
 }
 
 // createDecisionTimeoutTask - Creates a decision timeout task.

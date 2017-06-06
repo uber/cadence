@@ -154,17 +154,18 @@ func (t *timeGate) String() string {
 
 func newTimerQueueProcessor(shard ShardContext, historyService *historyEngineImpl, executionManager persistence.ExecutionManager,
 	logger bark.Logger) timerQueueProcessor {
+	l := logger.WithFields(bark.Fields{
+		logging.TagWorkflowComponent: logging.TagValueTimerQueueComponent,
+	})
 	tp := &timerQueueProcessorImpl{
 		historyService:   historyService,
 		cache:            historyService.historyCache,
 		executionManager: executionManager,
 		shutdownCh:       make(chan struct{}),
 		newTimerCh:       make(chan struct{}, 1),
-		logger: logger.WithFields(bark.Fields{
-			logging.TagWorkflowComponent: logging.TagValueTimerQueueComponent,
-		}),
+		logger:           l,
 	}
-	tp.ackMgr = newTimerAckMgr(tp, shard, executionManager, logger)
+	tp.ackMgr = newTimerAckMgr(tp, shard, executionManager, l)
 	return tp
 }
 
