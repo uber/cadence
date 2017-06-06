@@ -14,6 +14,16 @@ docker-compose up
 
 View metrics at localhost:8080/dashboard
 
+
+Using a pre-built image
+=======================
+```
+wget https://github.com/uber/cadence/releases/download/v0.1.0-beta/docker.tar.gz
+tar -xzvf docker.tar.gz
+cd docker
+docker-compose up
+```
+
 Building and running the image
 ==============================
 
