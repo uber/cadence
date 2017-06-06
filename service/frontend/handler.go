@@ -37,6 +37,8 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
 
+	"math"
+
 	"github.com/uber-common/bark"
 	"github.com/uber/tchannel-go/thrift"
 )
@@ -558,11 +560,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		return nil, errWorkflowIDNotSet
 	}
 
-	if !getRequest.GetExecution().IsSetRunId() {
-		return nil, errRunIDNotSet
-	}
-
-	if uuid.Parse(getRequest.GetExecution().GetRunId()) == nil {
+	if getRequest.GetExecution().IsSetRunId() && uuid.Parse(getRequest.GetExecution().GetRunId()) == nil {
 		return nil, errInvalidRunID
 	}
 
@@ -576,6 +574,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		return nil, wrapError(err)
 	}
 
+	var msNotFoundError error
 	token := &getHistoryContinuationToken{}
 	if getRequest.IsSetNextPageToken() {
 		token, err = deserializeGetHistoryToken(getRequest.GetNextPageToken())
@@ -587,11 +586,21 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 			DomainUUID: common.StringPtr(info.ID),
 			Execution:  getRequest.GetExecution(),
 		})
-		if err != nil {
-			return nil, wrapError(err)
+		if err == nil {
+			token.nextEventID = response.GetEventId()
+			token.runID = response.GetRunId()
+		} else {
+			if _, ok := err.(*gen.EntityNotExistsError); !ok || !getRequest.GetExecution().IsSetRunId() {
+				return nil, wrapError(err)
+			}
+
+			// It is possible that we still have the events in the table even though the mutable state is gone
+			msNotFoundError = err
+			err = nil
+			token.nextEventID = math.MaxInt64
+			token.runID = getRequest.GetExecution().GetRunId()
 		}
-		token.nextEventID = response.GetEventId()
-		token.runID = response.GetRunId()
+
 	}
 
 	we := gen.WorkflowExecution{
@@ -602,6 +611,10 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		wh.getHistory(info.ID, we, token.nextEventID, getRequest.GetMaximumPageSize(), getRequest.GetNextPageToken())
 	if err != nil {
 		return nil, wrapError(err)
+	}
+
+	if msNotFoundError != nil && len(history.GetEvents()) == 0 {
+		return nil, wrapError(msNotFoundError)
 	}
 
 	nextToken, err := getSerializedGetHistoryToken(persistenceToken, token.runID, history, token.nextEventID)
