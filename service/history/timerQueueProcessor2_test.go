@@ -51,6 +51,7 @@ type (
 		mockVisibilityMgr  *mocks.VisibilityManager
 		mockExecutionMgr   *mocks.ExecutionManager
 		mockHistoryMgr     *mocks.HistoryManager
+		mockShard          ShardContext
 	}
 )
 
@@ -79,7 +80,7 @@ func (s *timerQueueProcessor2Suite) SetupTest() {
 	s.mockVisibilityMgr = &mocks.VisibilityManager{}
 	s.shardClosedCh = make(chan int, 100)
 
-	mockShard := &shardContextImpl{
+	s.mockShard = &shardContextImpl{
 		shardInfo:                 &persistence.ShardInfo{ShardID: shardID, RangeID: 1, TransferAckLevel: 0},
 		transferSequenceNumber:    1,
 		executionManager:          s.mockExecutionMgr,
@@ -91,11 +92,11 @@ func (s *timerQueueProcessor2Suite) SetupTest() {
 		logger:                    s.logger,
 	}
 
-	historyCache := newHistoryCache(historyCacheMaxSize, mockShard, s.logger)
+	historyCache := newHistoryCache(historyCacheMaxSize, s.mockShard, s.logger)
 	domainCache := cache.NewDomainCache(s.mockMetadataMgr, s.logger)
-	txProcessor := newTransferQueueProcessor(mockShard, s.mockVisibilityMgr, s.mockMatchingClient, &mocks.HistoryClient{}, historyCache, domainCache)
+	txProcessor := newTransferQueueProcessor(s.mockShard, s.mockVisibilityMgr, s.mockMatchingClient, &mocks.HistoryClient{}, historyCache, domainCache)
 	h := &historyEngineImpl{
-		shard:              mockShard,
+		shard:              s.mockShard,
 		historyMgr:         s.mockHistoryMgr,
 		executionManager:   s.mockExecutionMgr,
 		txProcessor:        txProcessor,
@@ -104,7 +105,7 @@ func (s *timerQueueProcessor2Suite) SetupTest() {
 		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
 		hSerializerFactory: persistence.NewHistorySerializerFactory(),
 	}
-	h.timerProcessor = newTimerQueueProcessor(h, s.mockExecutionMgr, s.logger)
+	h.timerProcessor = newTimerQueueProcessor(s.mockShard, h, s.mockExecutionMgr, s.logger)
 	s.mockHistoryEngine = h
 }
 
@@ -141,12 +142,9 @@ func (s *timerQueueProcessor2Suite) TestTimerUpdateTimesOut() {
 		EventID: decisionScheduledEvent.GetEventId()}
 	timerIndexResponse := &persistence.GetTimerIndexTasksResponse{Timers: []*persistence.TimerTaskInfo{timerTask}}
 
-	s.mockExecutionMgr.On("GetTimerIndexTasks", mock.Anything).Return(timerIndexResponse, nil).Once() // initial
+	s.mockExecutionMgr.On("GetTimerIndexTasks", mock.Anything).Return(timerIndexResponse, nil).Once()
 
 	for i := 0; i < 2; i++ {
-		s.mockExecutionMgr.On("GetTimerIndexTasks",
-			&persistence.GetTimerIndexTasksRequest{MinKey: 100, MaxKey: 101, BatchSize: 1}).Return(timerIndexResponse, nil).Once()
-
 		ms := createMutableState(builder)
 		wfResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 		s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(wfResponse, nil).Once()
@@ -167,8 +165,8 @@ func (s *timerQueueProcessor2Suite) TestTimerUpdateTimesOut() {
 		waitCh <- struct{}{}
 	}).Once()
 
-	processor := newTimerQueueProcessor(s.mockHistoryEngine, s.mockExecutionMgr, s.logger).(*timerQueueProcessorImpl)
-	processor.NotifyNewTimer(taskID)
+	processor := newTimerQueueProcessor(s.mockShard, s.mockHistoryEngine, s.mockExecutionMgr, s.logger).(*timerQueueProcessorImpl)
+	processor.NotifyNewTimer([]persistence.Task{})
 
 	// Start timer Processor.
 	processor.Start()
