@@ -424,6 +424,7 @@ func (t *transferQueueProcessorImpl) processDeleteExecution(task *persistence.Tr
 		}
 		// it is possible that the domain got deleted. Use default retention.
 	} else {
+		// retention in domain config is in days
 		retentionSeconds = int64(domainConfig.Retention) * 86400
 	}
 
