@@ -56,7 +56,7 @@ func (s *Service) Start() {
 
 	shardMgr, err := persistence.NewCassandraShardPersistence(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Datacenter,
-		p.CassandraConfig.Keyspace,
+		p.CassandraConfig.VisibilityKeyspace,
 		p.Logger)
 
 	if err != nil {
