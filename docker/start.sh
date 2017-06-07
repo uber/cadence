@@ -24,6 +24,9 @@ setup_schema() {
     SCHEMA_FILE=$CADENCE_HOME/schema/cadence/schema.cql
     $CADENCE_HOME/cadence-cassandra-tool --ep $CASSANDRA_SEEDS create -k $KEYSPACE --rf $RF
     $CADENCE_HOME/cadence-cassandra-tool --ep $CASSANDRA_SEEDS -k $KEYSPACE setup-schema -d -f $SCHEMA_FILE
+    VISIBILITY_SCHEMA_FILE=$CADENCE_HOME/schema/visibility/schema.cql
+    $CADENCE_HOME/cadence-cassandra-tool --ep $CASSANDRA_SEEDS create -k $VISIBILITY_KEYSPACE --rf $RF
+    $CADENCE_HOME/cadence-cassandra-tool --ep $CASSANDRA_SEEDS -k $VISIBILITY_KEYSPACE setup-schema -d -f $VISIBILITY_SCHEMA_FILE
 }
 
 wait_for_cassandra() {
@@ -37,16 +40,20 @@ wait_for_cassandra() {
 
 init_env() {
 
-    export HOST_IP="127.0.0.1" # default to localhost binding
+    export HOST_IP=`hostname --ip-address`
 
-    if [ "$BIND_ON_LOCALHOST" == false ]; then
-            export HOST_IP=`hostname --ip-address`
+    if [ "$BIND_ON_LOCALHOST" == true ]; then
+            export HOST_IP="127.0.0.1"
     else
-        export BIND_ON_LOCALHOST=true
+        export BIND_ON_LOCALHOST=false
     fi
 
     if [ -z "$KEYSPACE" ]; then
         export KEYSPACE="cadence"
+    fi
+
+    if [ -z "$VISIBILITY_KEYSPACE" ]; then
+        export VISIBILITY_KEYSPACE="cadence_visibility"
     fi
 
     if [ -z "$CASSANDRA_SEEDS" ]; then
@@ -58,7 +65,7 @@ init_env() {
     fi
 
     if [ -z "$RINGPOP_SEEDS" ]; then
-        export RINGPOP_SEEDS=$HOST_IP:7933,$HOST_IP:7934,$HOST_IP:7935
+        export RINGPOP_SEEDS=$HOST_IP:7933
     fi
 
     if [ -z "$NUM_HISTORY_SHARDS" ]; then
@@ -78,7 +85,10 @@ fi
 
 init_env
 wait_for_cassandra
-setup_schema
+
+if [ "$SKIP_SCHEMA_SETUP" != true ]; then
+    setup_schema
+fi
 
 # fix up config
 envsubst < config/docker_template.yaml > config/docker.yaml
