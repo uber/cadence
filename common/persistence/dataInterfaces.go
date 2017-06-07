@@ -530,6 +530,14 @@ type (
 		Execution workflow.WorkflowExecution
 	}
 
+	// DeleteWorkflowExecutionHistorySuffixRequest is used to delete events in the execution history
+	// with ID equal or higher than NextEventID
+	DeleteWorkflowExecutionHistorySuffixRequest struct {
+		DomainID    string
+		Execution   workflow.WorkflowExecution
+		NextEventID int64
+	}
+
 	// DomainInfo describes the domain entity
 	DomainInfo struct {
 		ID          string
@@ -631,6 +639,7 @@ type (
 		GetWorkflowExecutionHistory(request *GetWorkflowExecutionHistoryRequest) (*GetWorkflowExecutionHistoryResponse,
 			error)
 		DeleteWorkflowExecutionHistory(request *DeleteWorkflowExecutionHistoryRequest) error
+		DeleteWorkflowExecutionHistorySuffix(request *DeleteWorkflowExecutionHistorySuffixRequest) error
 	}
 
 	// MetadataManager is used to manage metadata CRUD for various entities

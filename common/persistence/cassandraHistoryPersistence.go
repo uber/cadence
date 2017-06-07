@@ -50,6 +50,12 @@ const (
 		`WHERE domain_id = ? ` +
 		`AND workflow_id = ? ` +
 		`AND run_id = ? `
+
+	templateDeleteWorkflowExecutionHistorySuffix = `DELETE FROM events ` +
+		`WHERE domain_id = ? ` +
+		`AND workflow_id = ? ` +
+		`AND run_id = ? ` +
+		`AND first_event_id >= ? `
 )
 
 type (
@@ -184,6 +190,25 @@ func (h *cassandraHistoryPersistence) DeleteWorkflowExecutionHistory(
 	if err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("DeleteWorkflowExecutionHistory operation failed. Error: %v", err),
+		}
+	}
+
+	return nil
+}
+
+func (h *cassandraHistoryPersistence) DeleteWorkflowExecutionHistorySuffix(
+	request *DeleteWorkflowExecutionHistorySuffixRequest) error {
+	execution := request.Execution
+	query := h.session.Query(templateDeleteWorkflowExecutionHistorySuffix,
+		request.DomainID,
+		execution.GetWorkflowId(),
+		execution.GetRunId(),
+		request.NextEventID)
+
+	err := query.Exec()
+	if err != nil {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("DeleteWorkflowExecutionHistorySuffix operation failed. Error: %v", err),
 		}
 	}
 

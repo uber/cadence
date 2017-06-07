@@ -148,6 +148,8 @@ const (
 	PersistenceGetWorkflowExecutionHistoryScope
 	// PersistenceDeleteWorkflowExecutionHistoryScope tracks DeleteWorkflowExecutionHistory calls made by service to persistence layer
 	PersistenceDeleteWorkflowExecutionHistoryScope
+	// PersistenceDeleteWorkflowExecutionHistorySuffixScope tracks DeleteWorkflowExecutionHistorySuffix calls made by service to persistence layer
+	PersistenceDeleteWorkflowExecutionHistorySuffixScope
 	// PersistenceCreateDomainScope tracks CreateDomain calls made by service to persistence layer
 	PersistenceCreateDomainScope
 	// PersistenceGetDomainScope tracks GetDomain calls made by service to persistence layer
@@ -276,31 +278,32 @@ const (
 var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 	// common scope Names
 	Common: {
-		PersistenceCreateShardScope:                    {operation: "CreateShard"},
-		PersistenceGetShardScope:                       {operation: "GetShard"},
-		PersistenceUpdateShardScope:                    {operation: "UpdateShard"},
-		PersistenceCreateWorkflowExecutionScope:        {operation: "CreateWorkflowExecution"},
-		PersistenceGetWorkflowExecutionScope:           {operation: "GetWorkflowExecution"},
-		PersistenceUpdateWorkflowExecutionScope:        {operation: "UpdateWorkflowExecution"},
-		PersistenceDeleteWorkflowExecutionScope:        {operation: "DeleteWorkflowExecution"},
-		PersistenceGetCurrentExecutionScope:            {operation: "GetCurrentExecution"},
-		PersistenceGetTransferTasksScope:               {operation: "GetTransferTasks"},
-		PersistenceCompleteTransferTaskScope:           {operation: "CompleteTransferTask"},
-		PersistenceGetTimerIndexTasksScope:             {operation: "GetTimerIndexTasks"},
-		PersistenceCompleteTimerTaskScope:              {operation: "CompleteTimerTask"},
-		PersistenceCreateTaskScope:                     {operation: "CreateTask"},
-		PersistenceGetTasksScope:                       {operation: "GetTasks"},
-		PersistenceCompleteTaskScope:                   {operation: "CompleteTask"},
-		PersistenceLeaseTaskListScope:                  {operation: "LeaseTaskList"},
-		PersistenceUpdateTaskListScope:                 {operation: "UpdateTaskList"},
-		PersistenceAppendHistoryEventsScope:            {operation: "AppendHistoryEvents"},
-		PersistenceGetWorkflowExecutionHistoryScope:    {operation: "GetWorkflowExecutionHistory"},
-		PersistenceDeleteWorkflowExecutionHistoryScope: {operation: "DeleteWorkflowExecutionHistory"},
-		PersistenceCreateDomainScope:                   {operation: "CreateDomain"},
-		PersistenceGetDomainScope:                      {operation: "GetDomain"},
-		PersistenceUpdateDomainScope:                   {operation: "UpdateDomain"},
-		PersistenceDeleteDomainScope:                   {operation: "DeleteDomain"},
-		PersistenceDeleteDomainByNameScope:             {operation: "DeleteDomainByName"},
+		PersistenceCreateShardScope:                          {operation: "CreateShard"},
+		PersistenceGetShardScope:                             {operation: "GetShard"},
+		PersistenceUpdateShardScope:                          {operation: "UpdateShard"},
+		PersistenceCreateWorkflowExecutionScope:              {operation: "CreateWorkflowExecution"},
+		PersistenceGetWorkflowExecutionScope:                 {operation: "GetWorkflowExecution"},
+		PersistenceUpdateWorkflowExecutionScope:              {operation: "UpdateWorkflowExecution"},
+		PersistenceDeleteWorkflowExecutionScope:              {operation: "DeleteWorkflowExecution"},
+		PersistenceGetCurrentExecutionScope:                  {operation: "GetCurrentExecution"},
+		PersistenceGetTransferTasksScope:                     {operation: "GetTransferTasks"},
+		PersistenceCompleteTransferTaskScope:                 {operation: "CompleteTransferTask"},
+		PersistenceGetTimerIndexTasksScope:                   {operation: "GetTimerIndexTasks"},
+		PersistenceCompleteTimerTaskScope:                    {operation: "CompleteTimerTask"},
+		PersistenceCreateTaskScope:                           {operation: "CreateTask"},
+		PersistenceGetTasksScope:                             {operation: "GetTasks"},
+		PersistenceCompleteTaskScope:                         {operation: "CompleteTask"},
+		PersistenceLeaseTaskListScope:                        {operation: "LeaseTaskList"},
+		PersistenceUpdateTaskListScope:                       {operation: "UpdateTaskList"},
+		PersistenceAppendHistoryEventsScope:                  {operation: "AppendHistoryEvents"},
+		PersistenceGetWorkflowExecutionHistoryScope:          {operation: "GetWorkflowExecutionHistory"},
+		PersistenceDeleteWorkflowExecutionHistoryScope:       {operation: "DeleteWorkflowExecutionHistory"},
+		PersistenceDeleteWorkflowExecutionHistorySuffixScope: {operation: "DeleteWorkflowExecutionHistorySuffix"},
+		PersistenceCreateDomainScope:                         {operation: "CreateDomain"},
+		PersistenceGetDomainScope:                            {operation: "GetDomain"},
+		PersistenceUpdateDomainScope:                         {operation: "UpdateDomain"},
+		PersistenceDeleteDomainScope:                         {operation: "DeleteDomain"},
+		PersistenceDeleteDomainByNameScope:                   {operation: "DeleteDomainByName"},
 
 		HistoryClientStartWorkflowExecutionScope:          {operation: "HistoryClientStartWorkflowExecution"},
 		HistoryClientRecordActivityTaskHeartbeatScope:     {operation: "HistoryClientRecordActivityTaskHeartbeat"},
