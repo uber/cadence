@@ -157,7 +157,7 @@ func (s *timerQueueProcessor2Suite) TestTimerUpdateTimesOut() {
 
 	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(errors.New("FAILED")).Once()
-	s.mockShardManager.On("UpdateShard", mock.Anything).Return(nil).Once()
+	s.mockShardManager.On("UpdateShard", mock.Anything).Return(nil)
 
 	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(nil).Run(func(arguments mock.Arguments) {
