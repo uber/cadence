@@ -424,8 +424,8 @@ func (t *transferQueueProcessorImpl) processDeleteExecution(task *persistence.Tr
 		}
 		// it is possible that the domain got deleted. Use default retention.
 	} else {
-		// retention in domain config is in days
-		retentionSeconds = int64(domainConfig.Retention) * 86400
+		// retention in domain config is in days, convert to seconds
+		retentionSeconds = int64(domainConfig.Retention) * 24 * 60 * 60
 	}
 
 	err = t.visibilityManager.RecordWorkflowExecutionClosed(&persistence.RecordWorkflowExecutionClosedRequest{
