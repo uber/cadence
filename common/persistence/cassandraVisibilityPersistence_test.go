@@ -434,6 +434,7 @@ func (s *visibilityPersistenceSuite) TestGetClosedExecution() {
 		WorkflowTypeName: "visibility-workflow",
 		StartTimestamp:   startTime,
 		CloseTimestamp:   time.Now().UnixNano(),
+		HistoryLength:    3,
 	})
 	s.Nil(err2)
 
@@ -443,4 +444,5 @@ func (s *visibilityPersistenceSuite) TestGetClosedExecution() {
 	})
 	s.Nil(err3)
 	s.Equal(workflowExecution.GetWorkflowId(), resp.Execution.GetExecution().GetWorkflowId())
+	s.Equal(int64(3), resp.Execution.GetHistoryLength())
 }
