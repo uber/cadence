@@ -478,6 +478,12 @@ func (v *cassandraVisibilityPersistence) GetClosedWorkflowExecution(
 		}
 	}
 
+	if err := iter.Close(); err != nil {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("GetClosedWorkflowExecution operation failed. Error: %v", err),
+		}
+	}
+
 	return &GetClosedWorkflowExecutionResponse{
 		Execution: wfexecution,
 	}, nil
