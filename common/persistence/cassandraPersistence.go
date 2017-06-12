@@ -1823,6 +1823,7 @@ func isTimeoutError(err error) bool {
 	return ok
 }
 
+// GetVisibilityTSFrom - helper method to get visibility timestamp
 func GetVisibilityTSFrom(task Task) time.Time {
 	switch task.GetType() {
 	case TaskTypeDecisionTimeout:
@@ -1837,6 +1838,7 @@ func GetVisibilityTSFrom(task Task) time.Time {
 	return time.Time{}
 }
 
+// SetVisibilityTSFrom - helper method to set visibility timestamp
 func SetVisibilityTSFrom(task Task, t time.Time) {
 	switch task.GetType() {
 	case TaskTypeDecisionTimeout:
