@@ -185,8 +185,6 @@ type (
 		GetType() int
 		GetTaskID() int64
 		SetTaskID(id int64)
-		GetVisibilityTimestamp() time.Time
-		SetVisibilityTimestamp(t time.Time)
 	}
 
 	// ActivityTask identifies a transfer task for activity
@@ -407,8 +405,8 @@ type (
 
 	// CompleteTimerTaskRequest is used to complete a task in the timer task queue
 	CompleteTimerTaskRequest struct {
-		Timestamp time.Time
-		TaskID    int64
+		VisibilityTimestamp time.Time
+		TaskID              int64
 	}
 
 	// LeaseTaskListRequest is used to request lease of a task list
@@ -682,16 +680,6 @@ func (a *ActivityTask) SetTaskID(id int64) {
 	a.TaskID = id
 }
 
-// GetVisibilityTimestamp gets the visibility time stamp
-func (a *ActivityTask) GetVisibilityTimestamp() time.Time {
-	return defaultVisibilityTimestamp
-}
-
-// SetVisibilityTimestamp gets the visibility time stamp
-func (a *ActivityTask) SetVisibilityTimestamp(t time.Time) {
-	panic("Not expected to call this!")
-}
-
 // GetType returns the type of the decision task
 func (d *DecisionTask) GetType() int {
 	return TransferTaskTypeDecisionTask
@@ -707,16 +695,6 @@ func (d *DecisionTask) SetTaskID(id int64) {
 	d.TaskID = id
 }
 
-// GetVisibilityTimestamp gets the visibility time stamp
-func (d *DecisionTask) GetVisibilityTimestamp() time.Time {
-	return defaultVisibilityTimestamp
-}
-
-// SetVisibilityTimestamp gets the visibility time stamp
-func (d *DecisionTask) SetVisibilityTimestamp(t time.Time) {
-	panic("Not expected to call this!")
-}
-
 // GetType returns the type of the delete execution task
 func (a *DeleteExecutionTask) GetType() int {
 	return TransferTaskTypeDeleteExecution
@@ -730,16 +708,6 @@ func (a *DeleteExecutionTask) GetTaskID() int64 {
 // SetTaskID sets the sequence ID of the delete execution task
 func (a *DeleteExecutionTask) SetTaskID(id int64) {
 	a.TaskID = id
-}
-
-// GetVisibilityTimestamp gets the visibility time stamp
-func (a *DeleteExecutionTask) GetVisibilityTimestamp() time.Time {
-	return defaultVisibilityTimestamp
-}
-
-// SetVisibilityTimestamp gets the visibility time stamp
-func (a *DeleteExecutionTask) SetVisibilityTimestamp(t time.Time) {
-	panic("Not expected to call this!")
 }
 
 // GetType returns the type of the timer task
@@ -832,16 +800,6 @@ func (u *CancelExecutionTask) SetTaskID(id int64) {
 	u.TaskID = id
 }
 
-// GetVisibilityTimestamp gets the visibility time stamp
-func (u *CancelExecutionTask) GetVisibilityTimestamp() time.Time {
-	return defaultVisibilityTimestamp
-}
-
-// SetVisibilityTimestamp gets the visibility time stamp
-func (u *CancelExecutionTask) SetVisibilityTimestamp(t time.Time) {
-	panic("Not expected to call this!")
-}
-
 // GetType returns the type of the cancel transfer task
 func (u *StartChildExecutionTask) GetType() int {
 	return TransferTaskTypeStartChildExecution
@@ -855,16 +813,6 @@ func (u *StartChildExecutionTask) GetTaskID() int64 {
 // SetTaskID sets the sequence ID of the cancel transfer task.
 func (u *StartChildExecutionTask) SetTaskID(id int64) {
 	u.TaskID = id
-}
-
-// GetVisibilityTimestamp gets the visibility time stamp
-func (u *StartChildExecutionTask) GetVisibilityTimestamp() time.Time {
-	return defaultVisibilityTimestamp
-}
-
-// SetVisibilityTimestamp gets the visibility time stamp
-func (u *StartChildExecutionTask) SetVisibilityTimestamp(t time.Time) {
-	panic("Not expected to call this!")
 }
 
 // NewHistoryEventBatch returns a new instance of HistoryEventBatch

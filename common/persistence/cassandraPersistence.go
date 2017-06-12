@@ -1056,7 +1056,7 @@ func (d *cassandraPersistence) CompleteTransferTask(request *CompleteTransferTas
 }
 
 func (d *cassandraPersistence) CompleteTimerTask(request *CompleteTimerTaskRequest) error {
-	ts := common.UnixNanoToCQLTimestamp(request.Timestamp.UnixNano())
+	ts := common.UnixNanoToCQLTimestamp(request.VisibilityTimestamp.UnixNano())
 	query := d.session.Query(templateCompleteTimerTaskQuery,
 		d.shardID,
 		rowTypeTimerTask,
@@ -1430,7 +1430,7 @@ func (d *cassandraPersistence) createTimerTasks(batch *gocql.Batch, timerTasks [
 			eventID = task.(*UserTimerTask).EventID
 		}
 
-		ts := common.UnixNanoToCQLTimestamp(task.GetVisibilityTimestamp().UnixNano())
+		ts := common.UnixNanoToCQLTimestamp(GetVisibilityTSFrom(task).UnixNano())
 
 		batch.Query(templateCreateTimerTaskQuery,
 			d.shardID,
@@ -1451,7 +1451,7 @@ func (d *cassandraPersistence) createTimerTasks(batch *gocql.Batch, timerTasks [
 	}
 
 	if deleteTimerTask != nil {
-		ts := common.UnixNanoToCQLTimestamp(deleteTimerTask.GetVisibilityTimestamp().UnixNano())
+		ts := common.UnixNanoToCQLTimestamp(GetVisibilityTSFrom(deleteTimerTask).UnixNano())
 		batch.Query(templateCompleteTimerTaskQuery,
 			d.shardID,
 			rowTypeTimerTask,
@@ -1821,4 +1821,31 @@ func isTimeoutError(err error) bool {
 	}
 	_, ok := err.(*gocql.RequestErrWriteTimeout)
 	return ok
+}
+
+func GetVisibilityTSFrom(task Task) time.Time {
+	switch task.GetType() {
+	case TaskTypeDecisionTimeout:
+		return task.(*DecisionTimeoutTask).VisibilityTimestamp
+
+	case TaskTypeActivityTimeout:
+		return task.(*ActivityTimeoutTask).VisibilityTimestamp
+
+	case TaskTypeUserTimer:
+		return task.(*UserTimerTask).VisibilityTimestamp
+	}
+	return time.Time{}
+}
+
+func SetVisibilityTSFrom(task Task, t time.Time) {
+	switch task.GetType() {
+	case TaskTypeDecisionTimeout:
+		task.(*DecisionTimeoutTask).VisibilityTimestamp = t
+
+	case TaskTypeActivityTimeout:
+		task.(*ActivityTimeoutTask).VisibilityTimestamp = t
+
+	case TaskTypeUserTimer:
+		task.(*UserTimerTask).VisibilityTimestamp = t
+	}
 }

@@ -201,8 +201,9 @@ func (t *timerQueueProcessorImpl) NotifyNewTimer(timerTasks []persistence.Task) 
 	updatedMinTimer := false
 	t.lock.Lock()
 	for _, task := range timerTasks {
-		if t.minPendingTimer.IsZero() || task.GetVisibilityTimestamp().Before(t.minPendingTimer) {
-			t.minPendingTimer = task.GetVisibilityTimestamp()
+		ts := persistence.GetVisibilityTSFrom(task)
+		if t.minPendingTimer.IsZero() || ts.Before(t.minPendingTimer) {
+			t.minPendingTimer = ts
 			updatedMinTimer = true
 		}
 	}
@@ -435,8 +436,8 @@ func (t *timerQueueProcessorImpl) processTimerTask(timerTask *persistence.TimerT
 		// Tracking only successful ones.
 		atomic.AddUint64(&t.timerFiredCount, 1)
 		err := t.executionManager.CompleteTimerTask(&persistence.CompleteTimerTaskRequest{
-			Timestamp: timerTask.VisibilityTimestamp,
-			TaskID:    timerTask.TaskID})
+			VisibilityTimestamp: timerTask.VisibilityTimestamp,
+			TaskID:              timerTask.TaskID})
 		if err != nil {
 			t.logger.Warnf("Processor unable to complete timer task '%v': %v", timerTask.TaskID, err)
 		}
@@ -457,7 +458,9 @@ Update_History_Loop:
 
 		if !msBuilder.isWorkflowExecutionRunning() {
 			// Workflow is completed.
-			err := t.executionManager.CompleteTimerTask(&persistence.CompleteTimerTaskRequest{TaskID: task.TaskID})
+			err := t.executionManager.CompleteTimerTask(&persistence.CompleteTimerTaskRequest{
+				VisibilityTimestamp: task.VisibilityTimestamp,
+				TaskID:              task.TaskID})
 			if err != nil {
 				t.logger.Warnf("Processor unable to complete user timer task '%v': %v", task.TaskID, err)
 			}

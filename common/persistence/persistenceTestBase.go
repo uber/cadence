@@ -177,7 +177,7 @@ func (s *TestShardContext) UpdateWorkflowExecution(request *UpdateWorkflowExecut
 		}
 		task.SetTaskID(seqID)
 		s.logger.Infof("%v: TestShardContext: Assigning timer (timestamp: %v, seq: %v)",
-			time.Now().UTC(), task.GetVisibilityTimestamp().UTC(), task.GetTaskID())
+			time.Now().UTC(), GetVisibilityTSFrom(task).UTC(), task.GetTaskID())
 	}
 	return s.executionMgr.UpdateWorkflowExecution(request)
 }
@@ -653,8 +653,8 @@ func (s *TestBase) GetTimerIndexTasks() ([]*TimerTaskInfo, error) {
 // CompleteTimerTask is a utility method to complete a timer task
 func (s *TestBase) CompleteTimerTask(ts time.Time, taskID int64) error {
 	return s.WorkflowMgr.CompleteTimerTask(&CompleteTimerTaskRequest{
-		Timestamp: ts,
-		TaskID:    taskID,
+		VisibilityTimestamp: ts,
+		TaskID:              taskID,
 	})
 }
 
