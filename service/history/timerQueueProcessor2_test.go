@@ -24,6 +24,7 @@ import (
 	"errors"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
@@ -136,9 +137,12 @@ func (s *timerQueueProcessor2Suite) TestTimerUpdateTimesOut() {
 
 	waitCh := make(chan struct{})
 
+	mockTS := &mockTimeSource{currTime: time.Now()}
+
 	taskID := int64(100)
 	timerTask := &persistence.TimerTaskInfo{WorkflowID: "wid", RunID: "rid", TaskID: taskID,
 		TaskType: persistence.TaskTypeDecisionTimeout, TimeoutType: int(workflow.TimeoutType_START_TO_CLOSE),
+		VisibilityTimestamp: mockTS.Now(),
 		EventID: decisionScheduledEvent.GetEventId()}
 	timerIndexResponse := &persistence.GetTimerIndexTasksResponse{Timers: []*persistence.TimerTaskInfo{timerTask}}
 
@@ -165,11 +169,15 @@ func (s *timerQueueProcessor2Suite) TestTimerUpdateTimesOut() {
 		waitCh <- struct{}{}
 	}).Once()
 
-	processor := newTimerQueueProcessor(s.mockShard, s.mockHistoryEngine, s.mockExecutionMgr, s.logger).(*timerQueueProcessorImpl)
-	processor.NotifyNewTimer([]persistence.Task{})
-
 	// Start timer Processor.
+	processor := newTimerQueueProcessor(s.mockShard, s.mockHistoryEngine, s.mockExecutionMgr, s.logger).(*timerQueueProcessorImpl)
 	processor.Start()
+
+	processor.NotifyNewTimer([]persistence.Task{&persistence.DecisionTimeoutTask{
+		VisibilityTimestamp: timerTask.VisibilityTimestamp,
+		EventID:             timerTask.EventID,
+	}})
+
 	<-waitCh
 	processor.Stop()
 }

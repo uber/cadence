@@ -294,6 +294,7 @@ func (t *timerQueueProcessorImpl) internalProcessor(tasksCh chan<- *persistence.
 			t.lock.Lock()
 			newMinTimestamp := t.minPendingTimer
 			if !gate.engaged() || newMinTimestamp.UnixNano() < gate.tNext {
+				nextKeyTask = nil
 				gate.setNext(newMinTimestamp)
 			}
 			t.minPendingTimer = time.Time{}
@@ -301,7 +302,10 @@ func (t *timerQueueProcessorImpl) internalProcessor(tasksCh chan<- *persistence.
 
 			t.logger.Debugf("%v: Next key after woke up by timer: %v",
 				time.Now().UTC(), newMinTimestamp.UTC())
-			continue
+
+			if !t.isProcessNow(time.Unix(0, gate.tNext)) {
+				continue
+			}
 		}
 
 		// Either we have new timer (or) we are gated on timer to query for it.
@@ -334,7 +338,7 @@ func (t *timerQueueProcessorImpl) internalProcessor(tasksCh chan<- *persistence.
 }
 
 func (t *timerQueueProcessorImpl) isProcessNow(expiryTime time.Time) bool {
-	return expiryTime.UnixNano() <= time.Now().UnixNano()
+	return !expiryTime.IsZero() && expiryTime.UnixNano() <= time.Now().UnixNano()
 }
 
 func (t *timerQueueProcessorImpl) getTasksAndNextKey() ([]*persistence.TimerTaskInfo, *persistence.TimerTaskInfo, error) {
@@ -458,19 +462,12 @@ Update_History_Loop:
 
 		if !msBuilder.isWorkflowExecutionRunning() {
 			// Workflow is completed.
-			err := t.executionManager.CompleteTimerTask(&persistence.CompleteTimerTaskRequest{
-				VisibilityTimestamp: task.VisibilityTimestamp,
-				TaskID:              task.TaskID})
-			if err != nil {
-				t.logger.Warnf("Processor unable to complete user timer task '%v': %v", task.TaskID, err)
-			}
 			return nil
 		}
 
 		context.tBuilder.LoadUserTimers(msBuilder)
 
 		var timerTasks []persistence.Task
-		var clearTimerTask persistence.Task
 
 		scheduleNewDecision := false
 
@@ -506,12 +503,9 @@ Update_History_Loop:
 			}
 		}
 
-		clearTimerTask = &persistence.UserTimerTask{
-			VisibilityTimestamp: task.VisibilityTimestamp,
-			TaskID:              task.TaskID}
 		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 		// the history and try the operation again.
-		err := t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, timerTasks, clearTimerTask)
+		err := t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, timerTasks, nil)
 		if err != nil {
 			if err == ErrConflict {
 				continue Update_History_Loop
@@ -616,11 +610,8 @@ Update_History_Loop:
 		if updateHistory {
 			// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 			// the history and try the operation again.
-			clearTimerTask := &persistence.ActivityTimeoutTask{
-				VisibilityTimestamp: timerTask.VisibilityTimestamp,
-				TaskID:              timerTask.TaskID}
 			defer t.NotifyNewTimer(timerTasks)
-			err := t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, timerTasks, clearTimerTask)
+			err := t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, timerTasks, nil)
 			if err != nil {
 				if err == ErrConflict {
 					continue Update_History_Loop
@@ -655,10 +646,6 @@ Update_History_Loop:
 		}
 
 		scheduleNewDecision := false
-		clearTimerTask := &persistence.DecisionTimeoutTask{
-			VisibilityTimestamp: task.VisibilityTimestamp,
-			TaskID:              task.TaskID}
-
 		di, isRunning := msBuilder.GetPendingDecision(scheduleID)
 		if isRunning && msBuilder.isWorkflowExecutionRunning() {
 			// Add a decision task timeout event.
@@ -674,7 +661,7 @@ Update_History_Loop:
 		if scheduleNewDecision {
 			// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 			// the history and try the operation again.
-			err := t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, nil, clearTimerTask)
+			err := t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, nil, nil)
 			if err != nil {
 				if err == ErrConflict {
 					continue Update_History_Loop
