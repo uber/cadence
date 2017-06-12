@@ -158,7 +158,7 @@ func (s *shardContextImpl) CreateWorkflowExecution(request *persistence.CreateWo
 	}
 	defer s.updateMaxReadLevelLocked(transferMaxReadLevel)
 
-	s.allocateTimerIDs(request.TimerTasks)
+	s.allocateTimerIDsLocked(request.TimerTasks)
 
 Create_Loop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
@@ -233,7 +233,7 @@ func (s *shardContextImpl) UpdateWorkflowExecution(request *persistence.UpdateWo
 	}
 	defer s.updateMaxReadLevelLocked(transferMaxReadLevel)
 
-	s.allocateTimerIDs(request.TimerTasks)
+	s.allocateTimerIDsLocked(request.TimerTasks)
 
 Update_Loop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
@@ -400,7 +400,7 @@ func (s *shardContextImpl) updateShardInfoLocked() error {
 	return err
 }
 
-func (s *shardContextImpl) allocateTimerIDs(timerTasks []persistence.Task) error {
+func (s *shardContextImpl) allocateTimerIDsLocked(timerTasks []persistence.Task) error {
 	// assign IDs for the timer tasks. They need to be assigned under shard lock.
 	for _, task := range timerTasks {
 		ts := persistence.GetVisibilityTSFrom(task)

@@ -46,6 +46,14 @@ type (
 	}
 )
 
+type mockTimeSource struct {
+	currTime time.Time
+}
+
+func (ts *mockTimeSource) Now() time.Time {
+	return ts.currTime
+}
+
 func TestTimerBuilderSuite(t *testing.T) {
 	s := new(timerBuilderProcessorSuite)
 	suite.Run(t, s)
@@ -58,11 +66,11 @@ func (s *timerBuilderProcessorSuite) SetupSuite() {
 	logger := log.New()
 	//logger.Level = log.DebugLevel
 	s.logger = bark.NewLoggerFromLogrus(logger)
-	s.tb = newTimerBuilder(s.logger)
+	s.tb = newTimerBuilder(s.logger, &mockTimeSource{currTime: time.Now()})
 }
 
 func (s *timerBuilderProcessorSuite) TestTimerBuilderSingleUserTimer() {
-	tb := newTimerBuilder(s.logger)
+	tb := newTimerBuilder(s.logger, &mockTimeSource{currTime: time.Now()})
 
 	// Add one timer.
 	msb := newMutableStateBuilder(s.logger)
@@ -89,7 +97,7 @@ func (s *timerBuilderProcessorSuite) TestTimerBuilderSingleUserTimer() {
 }
 
 func (s *timerBuilderProcessorSuite) TestTimerBuilderMulitpleUserTimer() {
-	tb := newTimerBuilder(s.logger)
+	tb := newTimerBuilder(s.logger, &mockTimeSource{currTime: time.Now()})
 
 	// Add two timers. (before and after)
 	tp := &persistence.TimerInfo{TimerID: "tid1", StartedID: 201, TaskID: 101, ExpiryTime: time.Now().Add(10 * time.Second)}
@@ -144,7 +152,7 @@ func (s *timerBuilderProcessorSuite) TestTimerBuilderMulitpleUserTimer() {
 }
 
 func (s *timerBuilderProcessorSuite) TestTimerBuilderDuplicateTimerID() {
-	tb := newTimerBuilder(s.logger)
+	tb := newTimerBuilder(s.logger, &mockTimeSource{currTime: time.Now()})
 	tp := &persistence.TimerInfo{TimerID: "tid-exist", StartedID: 201, TaskID: 101, ExpiryTime: time.Now().Add(10 * time.Second)}
 	timerInfos := map[string]*persistence.TimerInfo{"tid-exist": tp}
 	msb := newMutableStateBuilder(s.logger)

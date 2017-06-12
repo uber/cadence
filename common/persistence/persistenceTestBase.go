@@ -81,7 +81,7 @@ type (
 	// TestShardContext shard context for testing.
 	// TODO: Cleanup, move this out of persistence
 	TestShardContext struct {
-		sync.Mutex
+		sync.RWMutex
 		shardInfo              *ShardInfo
 		transferSequenceNumber int64
 		historyMgr             HistoryManager
@@ -147,8 +147,8 @@ func (s *TestShardContext) GetTransferSequenceNumber() int64 {
 
 // GetTimerAckLevel test implementation
 func (s *TestShardContext) GetTimerAckLevel() time.Time {
-	s.Lock()
-	defer s.Unlock()
+	s.RLock()
+	defer s.RLock()
 	return s.shardInfo.TimerAckLevel
 }
 

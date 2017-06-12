@@ -56,6 +56,7 @@ type (
 		pendingUserTimers map[SequenceID]*persistence.TimerInfo
 		logger            bark.Logger
 		localSeqNumGen    SequenceNumberGenerator // This one used to order in-memory list.
+		timeSource        common.TimeSource
 	}
 
 	// SequenceID - Visibility timer stamp + Sequence Number.
@@ -103,12 +104,14 @@ func (l *localSeqNumGenerator) NextSeq() int64 {
 }
 
 // newTimerBuilder creates a timer builder.
-func newTimerBuilder(logger bark.Logger) *timerBuilder {
+func newTimerBuilder(logger bark.Logger, timeSource common.TimeSource) *timerBuilder {
 	return &timerBuilder{
 		timers:            timers{},
 		pendingUserTimers: make(map[SequenceID]*persistence.TimerInfo),
 		logger:            logger.WithField(logging.TagWorkflowComponent, "timer"),
-		localSeqNumGen:    &localSeqNumGenerator{counter: 1}}
+		localSeqNumGen:    &localSeqNumGenerator{counter: 1},
+		timeSource:        timeSource,
+	}
 }
 
 // AllTimers - Get all timers.
@@ -151,7 +154,7 @@ func (tb *timerBuilder) AddHeartBeatActivityTimeout(ai *persistence.ActivityInfo
 	// We want to create the timer starting from the last heart beat time stamp but
 	// avoid creating timers before the current timer frame.
 	targetTime := common.AddSecondsToBaseTime(ai.LastHeartBeatUpdatedTime.UnixNano(), int64(ai.HeartbeatTimeout))
-	if targetTime > time.Now().UnixNano() {
+	if targetTime > tb.timeSource.Now().UnixNano() {
 		return tb.AddActivityTimeoutTask(ai.ScheduleID, w.TimeoutType_HEARTBEAT, ai.HeartbeatTimeout, &ai.LastHeartBeatUpdatedTime), nil
 	}
 	return tb.AddActivityTimeoutTask(ai.ScheduleID, w.TimeoutType_HEARTBEAT, ai.HeartbeatTimeout, nil), nil
@@ -209,7 +212,7 @@ func (tb *timerBuilder) IsTimerExpired(td *timerDetails, referenceTime time.Time
 
 // createDecisionTimeoutTask - Creates a decision timeout task.
 func (tb *timerBuilder) createDecisionTimeoutTask(fireTimeOut int32, eventID int64) *persistence.DecisionTimeoutTask {
-	expiryTime := time.Now().Add(time.Duration(fireTimeOut) * time.Second)
+	expiryTime := tb.timeSource.Now().Add(time.Duration(fireTimeOut) * time.Second)
 	return &persistence.DecisionTimeoutTask{
 		VisibilityTimestamp: expiryTime,
 		EventID:             eventID,
@@ -223,7 +226,7 @@ func (tb *timerBuilder) createActivityTimeoutTask(fireTimeOut int32, timeoutType
 	if baseTime != nil {
 		expiryTime = baseTime.Add(time.Duration(fireTimeOut) * time.Second)
 	} else {
-		expiryTime = time.Now().Add(time.Duration(fireTimeOut) * time.Second)
+		expiryTime = tb.timeSource.Now().Add(time.Duration(fireTimeOut) * time.Second)
 	}
 
 	return &persistence.ActivityTimeoutTask{
