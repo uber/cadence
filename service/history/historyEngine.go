@@ -792,7 +792,7 @@ Update_History_Loop:
 
 		if failDecision {
 			e.logger.Info("failing the decision")
-			e.metricsClient.AddCounter(metrics.RespondDecisionTaskCompletedScope, metrics.FailedDecisionsCounter, 1)
+			e.metricsClient.AddCounter(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.FailedDecisionsCounter, 1)
 			var err1 error
 			msBuilder, err1 = e.failDecision(context, scheduleID, startedID, failCause, request)
 			if err1 != nil {
