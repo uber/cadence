@@ -143,7 +143,7 @@ func (s *timerQueueProcessor2Suite) TestTimerUpdateTimesOut() {
 	timerTask := &persistence.TimerTaskInfo{WorkflowID: "wid", RunID: "rid", TaskID: taskID,
 		TaskType: persistence.TaskTypeDecisionTimeout, TimeoutType: int(workflow.TimeoutType_START_TO_CLOSE),
 		VisibilityTimestamp: mockTS.Now(),
-		EventID: decisionScheduledEvent.GetEventId()}
+		EventID:             decisionScheduledEvent.GetEventId()}
 	timerIndexResponse := &persistence.GetTimerIndexTasksResponse{Timers: []*persistence.TimerTaskInfo{timerTask}}
 
 	s.mockExecutionMgr.On("GetTimerIndexTasks", mock.Anything).Return(timerIndexResponse, nil).Once()

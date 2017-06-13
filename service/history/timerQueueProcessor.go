@@ -37,8 +37,8 @@ import (
 )
 
 const (
-	timerTaskBatchSize              = 10
-	processTimerTaskWorkerCount     = 5
+	timerTaskBatchSize              = 100
+	processTimerTaskWorkerCount     = 30
 	updateFailureRetryCount         = 5
 	getFailureRetryCount            = 5
 	timerProcessorUpdateAckInterval = 10 * time.Second
@@ -224,7 +224,7 @@ func (t *timerQueueProcessorImpl) processorPump(taskWorkerCount int) {
 	defer t.shutdownWG.Done()
 
 	// Workers to process timer tasks that are expired.
-	tasksCh := make(chan *persistence.TimerTaskInfo, timerTaskBatchSize)
+	tasksCh := make(chan *persistence.TimerTaskInfo, 10*timerTaskBatchSize)
 	var workerWG sync.WaitGroup
 	for i := 0; i < taskWorkerCount; i++ {
 		workerWG.Add(1)
