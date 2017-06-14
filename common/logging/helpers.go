@@ -42,7 +42,16 @@ func LogPersistantStoreErrorEvent(logger bark.Logger, operation string, err erro
 func LogOperationFailedEvent(logger bark.Logger, msg string, err error) {
 	logger.WithFields(bark.Fields{
 		TagWorkflowEventID: OperationFailed,
+		TagWorkflowErr:     err,
 	}).Warnf("%v.  Error: %v", msg, err)
+}
+
+// LogOperationPanicEvent is used to log fatal errors by application to cause panic
+func LogOperationPanicEvent(logger bark.Logger, msg string, err error) {
+	logger.WithFields(bark.Fields{
+		TagWorkflowEventID: OperationPanic,
+		TagWorkflowErr:     err,
+	}).Fatalf("%v.  Error: %v", msg, err)
 }
 
 //

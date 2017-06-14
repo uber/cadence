@@ -268,12 +268,22 @@ const (
 	HistoryScheduleDecisionTaskScope
 	// HistoryRecordChildExecutionCompletedScope tracks CompleteChildExecution API calls received by service
 	HistoryRecordChildExecutionCompletedScope
-	// HistoryProcessTransferTasksScope tracks number of transfer tasks processed
-	HistoryProcessTransferTasksScope
 	// HistoryRequestCancelWorkflowExecutionScope tracks RequestCancelWorkflowExecution API calls received by service
 	HistoryRequestCancelWorkflowExecutionScope
-	// HistoryMultipleCompletionDecisionsScope tracks number of duplicate completion decisions for an execution
-	HistoryMultipleCompletionDecisionsScope
+	// TransferQueueProcessorScope is the scope used by all metric emitted by transfer queue processor
+	TransferQueueProcessorScope
+	// TransferTaskActivityScope is the scope used for activity task processing by transfer queue processor
+	TransferTaskActivityScope
+	// TransferTaskDecisionScope is the scope used for decision task processing by transfer queue processor
+	TransferTaskDecisionScope
+	// TransferTaskDeleteExecutionScope is the scope used for delete execution task processing by transfer queue processor
+	TransferTaskDeleteExecutionScope
+	// TransferTaskCancelExecutionScope is the scope used for cancel execution task processing by transfer queue processor
+	TransferTaskCancelExecutionScope
+	// TransferTaskStartChildExecutionScope is the scope used for start child execution task processing by transfer queue processor
+	TransferTaskStartChildExecutionScope
+	// TimerQueueProcessorScope is the scope used by all metric emitted by timer queue processor
+	TimerQueueProcessorScope
 
 	NumHistoryScopes
 )
@@ -377,9 +387,14 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryTerminateWorkflowExecutionScope:      {operation: "TerminateWorkflowExecution"},
 		HistoryScheduleDecisionTaskScope:            {operation: "ScheduleDecisionTask"},
 		HistoryRecordChildExecutionCompletedScope:   {operation: "RecordChildExecutionCompleted"},
-		HistoryProcessTransferTasksScope:            {operation: "ProcessTransferTask"},
 		HistoryRequestCancelWorkflowExecutionScope:  {operation: "RequestCancelWorkflowExecution"},
-		HistoryMultipleCompletionDecisionsScope:     {operation: "MultipleCompletionDecisions"},
+		TransferQueueProcessorScope:                 {operation: "TransferQueueProcessor"},
+		TransferTaskActivityScope:                   {operation: "TransferTaskActivity"},
+		TransferTaskDecisionScope:                   {operation: "TransferTaskDecision"},
+		TransferTaskDeleteExecutionScope:            {operation: "TransferTaskDeleteExecution"},
+		TransferTaskCancelExecutionScope:            {operation: "TransferTaskCancelExecution"},
+		TransferTaskStartChildExecutionScope:        {operation: "TransferTaskStartChildExecution"},
+		TimerQueueProcessorScope:                    {operation: "TimerQueueProcessor"},
 	},
 	// Matching Scope Names
 	Matching: {
@@ -412,9 +427,14 @@ const (
 
 // History Metrics enum
 const (
-	TransferTasksProcessedCounter = iota + NumCommonMetrics
+	TaskRequests = iota + NumCommonMetrics
+	TaskFailures
+	TaskLatency
+	AckLevelUpdateCounter
+	AckLevelUpdateFailedCounter
 	MultipleCompletionDecisionsCounter
 	FailedDecisionsCounter
+	StaleMutableStateCounter
 	CadenceErrEventAlreadyStartedCounter
 	CadenceErrShardOwnershipLostCounter
 )
@@ -439,9 +459,14 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 	},
 	Frontend: {},
 	History: {
-		TransferTasksProcessedCounter:        {metricName: "transfer-tasks-processed", metricType: Counter},
+		TaskRequests:                         {metricName: "task.requests", metricType: Counter},
+		TaskFailures:                         {metricName: "task.errors", metricType: Counter},
+		TaskLatency:                          {metricName: "task.latency", metricType: Counter},
+		AckLevelUpdateCounter:                {metricName: "ack-level-update", metricType: Counter},
+		AckLevelUpdateFailedCounter:          {metricName: "ack-level-update-failed", metricType: Counter},
 		MultipleCompletionDecisionsCounter:   {metricName: "multiple-completion-decisions", metricType: Counter},
 		FailedDecisionsCounter:               {metricName: "failed-decisions", metricType: Counter},
+		StaleMutableStateCounter:             {metricName: "stale-mutable-state", metricType: Counter},
 		CadenceErrShardOwnershipLostCounter:  {metricName: "cadence.errors.shard-ownership-lost", metricType: Counter},
 		CadenceErrEventAlreadyStartedCounter: {metricName: "cadence.errors.event-already-started", metricType: Counter},
 	},

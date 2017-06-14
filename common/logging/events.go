@@ -22,6 +22,8 @@ package logging
 
 // Events
 const (
+	// Global Events
+
 	// HistoryBuilder events
 	InvalidHistoryActionEventID = 1000
 
@@ -65,4 +67,5 @@ const (
 
 	// General purpose events
 	OperationFailed = 9000
+	OperationPanic  = 9001
 )

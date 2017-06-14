@@ -310,6 +310,7 @@ Update_History_Loop:
 		// First check to see if cache needs to be refreshed as we could potentially have stale workflow execution in
 		// some extreme cassandra failure cases.
 		if scheduleID >= msBuilder.GetNextEventID() {
+			e.metricsClient.IncCounter(metrics.HistoryRecordDecisionTaskStartedScope, metrics.StaleMutableStateCounter)
 			// Reload workflow execution history
 			context.clear()
 			continue Update_History_Loop
@@ -339,7 +340,7 @@ Update_History_Loop:
 			logging.LogDuplicateTaskEvent(context.logger, persistence.TaskListTypeDecision, request.GetTaskId(), requestID,
 				scheduleID, di.StartedID, isRunning)
 
-			return nil, &workflow.EntityNotExistsError{Message: "Decision task already started."}
+			return nil, &h.EventAlreadyStartedError{Message: "Decision task already started."}
 		}
 
 		event := msBuilder.AddDecisionTaskStartedEvent(scheduleID, requestID, request.PollRequest)
@@ -396,6 +397,7 @@ Update_History_Loop:
 		// First check to see if cache needs to be refreshed as we could potentially have stale workflow execution in
 		// some extreme cassandra failure cases.
 		if scheduleID >= msBuilder.GetNextEventID() {
+			e.metricsClient.IncCounter(metrics.HistoryRecordActivityTaskStartedScope, metrics.StaleMutableStateCounter)
 			// Reload workflow execution history
 			context.clear()
 			continue Update_History_Loop
@@ -436,7 +438,7 @@ Update_History_Loop:
 			logging.LogDuplicateTaskEvent(context.logger, persistence.TransferTaskTypeActivityTask, request.GetTaskId(), requestID,
 				scheduleID, ai.StartedID, isRunning)
 
-			return nil, &workflow.EntityNotExistsError{Message: "Activity task already started."}
+			return nil, &h.EventAlreadyStartedError{Message: "Activity task already started."}
 		}
 
 		startedEvent := msBuilder.AddActivityTaskStartedEvent(ai, scheduleID, requestID, request.PollRequest)
@@ -518,6 +520,7 @@ Update_History_Loop:
 		// First check to see if cache needs to be refreshed as we could potentially have stale workflow execution in
 		// some extreme cassandra failure cases.
 		if scheduleID >= msBuilder.GetNextEventID() {
+			e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.StaleMutableStateCounter)
 			// Reload workflow execution history
 			context.clear()
 			continue Update_History_Loop
@@ -592,7 +595,7 @@ Update_History_Loop:
 
 				// If the decision has more than one completion event than just pick the first one
 				if isComplete {
-					e.metricsClient.IncCounter(metrics.HistoryMultipleCompletionDecisionsScope,
+					e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
 						metrics.MultipleCompletionDecisionsCounter)
 					logging.LogMultipleCompletionDecisionsEvent(e.logger, d.GetDecisionType())
 					continue Process_Decision_Loop
@@ -614,7 +617,7 @@ Update_History_Loop:
 
 				// If the decision has more than one completion event than just pick the first one
 				if isComplete {
-					e.metricsClient.IncCounter(metrics.HistoryMultipleCompletionDecisionsScope,
+					e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
 						metrics.MultipleCompletionDecisionsCounter)
 					logging.LogMultipleCompletionDecisionsEvent(e.logger, d.GetDecisionType())
 					continue Process_Decision_Loop
@@ -638,7 +641,7 @@ Update_History_Loop:
 
 				// If the decision has more than one completion event than just pick the first one
 				if isComplete {
-					e.metricsClient.IncCounter(metrics.HistoryMultipleCompletionDecisionsScope,
+					e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
 						metrics.MultipleCompletionDecisionsCounter)
 					logging.LogMultipleCompletionDecisionsEvent(e.logger, d.GetDecisionType())
 					continue Process_Decision_Loop
@@ -745,7 +748,7 @@ Update_History_Loop:
 
 				// If the decision has more than one completion event than just pick the first one
 				if isComplete {
-					e.metricsClient.IncCounter(metrics.HistoryMultipleCompletionDecisionsScope,
+					e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
 						metrics.MultipleCompletionDecisionsCounter)
 					logging.LogMultipleCompletionDecisionsEvent(e.logger, d.GetDecisionType())
 					continue Process_Decision_Loop
@@ -881,6 +884,7 @@ Update_History_Loop:
 		// First check to see if cache needs to be refreshed as we could potentially have stale workflow execution in
 		// some extreme cassandra failure cases.
 		if scheduleID >= msBuilder.GetNextEventID() {
+			e.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskCompletedScope, metrics.StaleMutableStateCounter)
 			// Reload workflow execution history
 			context.clear()
 			continue Update_History_Loop
@@ -961,6 +965,7 @@ Update_History_Loop:
 		// First check to see if cache needs to be refreshed as we could potentially have stale workflow execution in
 		// some extreme cassandra failure cases.
 		if scheduleID >= msBuilder.GetNextEventID() {
+			e.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskFailedScope, metrics.StaleMutableStateCounter)
 			// Reload workflow execution history
 			context.clear()
 			continue Update_History_Loop
@@ -1040,6 +1045,7 @@ Update_History_Loop:
 		// First check to see if cache needs to be refreshed as we could potentially have stale workflow execution in
 		// some extreme cassandra failure cases.
 		if scheduleID >= msBuilder.GetNextEventID() {
+			e.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskFailedScope, metrics.StaleMutableStateCounter)
 			// Reload workflow execution history
 			context.clear()
 			continue Update_History_Loop
@@ -1125,6 +1131,7 @@ Update_History_Loop:
 		// First check to see if cache needs to be refreshed as we could potentially have stale workflow execution in
 		// some extreme cassandra failure cases.
 		if scheduleID >= msBuilder.GetNextEventID() {
+			e.metricsClient.IncCounter(metrics.HistoryRecordActivityTaskHeartbeatScope, metrics.StaleMutableStateCounter)
 			// Reload workflow execution history
 			context.clear()
 			continue Update_History_Loop
