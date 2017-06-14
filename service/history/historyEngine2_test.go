@@ -215,7 +215,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedIfTaskAlreadyStarted() {
 	})
 	s.Nil(response)
 	s.NotNil(err)
-	s.IsType(&workflow.EntityNotExistsError{}, err)
+	s.IsType(&h.EventAlreadyStartedError{}, err)
 	s.logger.Errorf("RecordDecisionTaskStarted failed with: %v", err)
 }
 
@@ -379,7 +379,7 @@ func (s *engine2Suite) TestRecordDecisionTaskRetryDifferentRequest() {
 
 	s.Nil(response)
 	s.NotNil(err)
-	s.IsType(&workflow.EntityNotExistsError{}, err)
+	s.IsType(&h.EventAlreadyStartedError{}, err)
 	s.logger.Infof("Failed with error: %v", err)
 }
 
