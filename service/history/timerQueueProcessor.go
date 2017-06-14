@@ -166,7 +166,7 @@ func newTimerQueueProcessor(shard ShardContext, historyService *historyEngineImp
 		shutdownCh:       make(chan struct{}),
 		newTimerCh:       make(chan struct{}, 1),
 		logger:           l,
-    metricsClient: historyService.metricsClient,
+		metricsClient:    historyService.metricsClient,
 	}
 	tp.ackMgr = newTimerAckMgr(tp, shard, executionManager, l)
 	return tp
