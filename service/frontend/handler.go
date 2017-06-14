@@ -39,6 +39,7 @@ import (
 	"github.com/uber/cadence/common/service"
 
 	"github.com/uber-common/bark"
+	"github.com/uber-go/tally"
 	"github.com/uber/tchannel-go/thrift"
 )
 
@@ -134,11 +135,9 @@ func (wh *WorkflowHandler) IsHealthy(ctx thrift.Context) (bool, error) {
 // acts as a sandbox and provides isolation for all resources within the domain.  All resources belongs to exactly one
 // domain.
 func (wh *WorkflowHandler) RegisterDomain(ctx thrift.Context, registerRequest *gen.RegisterDomainRequest) error {
-	wh.startWG.Wait()
 
 	scope := metrics.FrontendRegisterDomainScope
-	wh.metricsClient.IncCounter(scope, metrics.CadenceRequests)
-	sw := wh.metricsClient.StartTimer(scope, metrics.CadenceLatency)
+	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
 
 	if !registerRequest.IsSetName() || registerRequest.GetName() == "" {
@@ -166,11 +165,9 @@ func (wh *WorkflowHandler) RegisterDomain(ctx thrift.Context, registerRequest *g
 // DescribeDomain returns the information and configuration for a registered domain.
 func (wh *WorkflowHandler) DescribeDomain(ctx thrift.Context,
 	describeRequest *gen.DescribeDomainRequest) (*gen.DescribeDomainResponse, error) {
-	wh.startWG.Wait()
 
 	scope := metrics.FrontendDescribeDomainScope
-	wh.metricsClient.IncCounter(scope, metrics.CadenceRequests)
-	sw := wh.metricsClient.StartTimer(scope, metrics.CadenceLatency)
+	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
 
 	if !describeRequest.IsSetName() {
@@ -194,11 +191,9 @@ func (wh *WorkflowHandler) DescribeDomain(ctx thrift.Context,
 // UpdateDomain is used to update the information and configuration for a registered domain.
 func (wh *WorkflowHandler) UpdateDomain(ctx thrift.Context,
 	updateRequest *gen.UpdateDomainRequest) (*gen.UpdateDomainResponse, error) {
-	wh.startWG.Wait()
 
 	scope := metrics.FrontendUpdateDomainScope
-	wh.metricsClient.IncCounter(scope, metrics.CadenceRequests)
-	sw := wh.metricsClient.StartTimer(scope, metrics.CadenceLatency)
+	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
 
 	if !updateRequest.IsSetName() {
@@ -255,11 +250,9 @@ func (wh *WorkflowHandler) UpdateDomain(ctx thrift.Context,
 // it cannot be used to start new workflow executions.  Existing workflow executions will continue to run on
 // deprecated domains.
 func (wh *WorkflowHandler) DeprecateDomain(ctx thrift.Context, deprecateRequest *gen.DeprecateDomainRequest) error {
-	wh.startWG.Wait()
 
 	scope := metrics.FrontendDeprecateDomainScope
-	wh.metricsClient.IncCounter(scope, metrics.CadenceRequests)
-	sw := wh.metricsClient.StartTimer(scope, metrics.CadenceLatency)
+	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
 
 	if !deprecateRequest.IsSetName() {
@@ -294,11 +287,9 @@ func (wh *WorkflowHandler) DeprecateDomain(ctx thrift.Context, deprecateRequest 
 func (wh *WorkflowHandler) PollForActivityTask(
 	ctx thrift.Context,
 	pollRequest *gen.PollForActivityTaskRequest) (*gen.PollForActivityTaskResponse, error) {
-	wh.startWG.Wait()
 
 	scope := metrics.FrontendPollForActivityTaskScope
-	wh.metricsClient.IncCounter(scope, metrics.CadenceRequests)
-	sw := wh.metricsClient.StartTimer(scope, metrics.CadenceLatency)
+	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
 
 	wh.Service.GetLogger().Debug("Received PollForActivityTask")
@@ -333,11 +324,9 @@ func (wh *WorkflowHandler) PollForActivityTask(
 func (wh *WorkflowHandler) PollForDecisionTask(
 	ctx thrift.Context,
 	pollRequest *gen.PollForDecisionTaskRequest) (*gen.PollForDecisionTaskResponse, error) {
-	wh.startWG.Wait()
 
 	scope := metrics.FrontendPollForDecisionTaskScope
-	wh.metricsClient.IncCounter(scope, metrics.CadenceRequests)
-	sw := wh.metricsClient.StartTimer(scope, metrics.CadenceLatency)
+	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
 
 	wh.Service.GetLogger().Debug("Received PollForDecisionTask")
@@ -394,11 +383,9 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 func (wh *WorkflowHandler) RecordActivityTaskHeartbeat(
 	ctx thrift.Context,
 	heartbeatRequest *gen.RecordActivityTaskHeartbeatRequest) (*gen.RecordActivityTaskHeartbeatResponse, error) {
-	wh.startWG.Wait()
 
 	scope := metrics.FrontendRecordActivityTaskHeartbeatScope
-	wh.metricsClient.IncCounter(scope, metrics.CadenceRequests)
-	sw := wh.metricsClient.StartTimer(scope, metrics.CadenceLatency)
+	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
 
 	wh.Service.GetLogger().Debug("Received RecordActivityTaskHeartbeat")
@@ -427,11 +414,9 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeat(
 func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 	ctx thrift.Context,
 	completeRequest *gen.RespondActivityTaskCompletedRequest) error {
-	wh.startWG.Wait()
 
 	scope := metrics.FrontendRespondActivityTaskCompletedScope
-	wh.metricsClient.IncCounter(scope, metrics.CadenceRequests)
-	sw := wh.metricsClient.StartTimer(scope, metrics.CadenceLatency)
+	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
 
 	if !completeRequest.IsSetTaskToken() {
@@ -461,11 +446,9 @@ func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 func (wh *WorkflowHandler) RespondActivityTaskFailed(
 	ctx thrift.Context,
 	failedRequest *gen.RespondActivityTaskFailedRequest) error {
-	wh.startWG.Wait()
 
 	scope := metrics.FrontendRespondActivityTaskFailedScope
-	wh.metricsClient.IncCounter(scope, metrics.CadenceRequests)
-	sw := wh.metricsClient.StartTimer(scope, metrics.CadenceLatency)
+	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
 
 	if !failedRequest.IsSetTaskToken() {
@@ -496,11 +479,9 @@ func (wh *WorkflowHandler) RespondActivityTaskFailed(
 func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 	ctx thrift.Context,
 	cancelRequest *gen.RespondActivityTaskCanceledRequest) error {
-	wh.startWG.Wait()
 
 	scope := metrics.FrontendRespondActivityTaskCanceledScope
-	wh.metricsClient.IncCounter(scope, metrics.CadenceRequests)
-	sw := wh.metricsClient.StartTimer(scope, metrics.CadenceLatency)
+	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
 
 	if !cancelRequest.IsSetTaskToken() {
@@ -531,11 +512,9 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 	ctx thrift.Context,
 	completeRequest *gen.RespondDecisionTaskCompletedRequest) error {
-	wh.startWG.Wait()
 
 	scope := metrics.FrontendRespondDecisionTaskCompletedScope
-	wh.metricsClient.IncCounter(scope, metrics.CadenceRequests)
-	sw := wh.metricsClient.StartTimer(scope, metrics.CadenceLatency)
+	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
 
 	if !completeRequest.IsSetTaskToken() {
@@ -566,11 +545,8 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 	ctx thrift.Context,
 	startRequest *gen.StartWorkflowExecutionRequest) (*gen.StartWorkflowExecutionResponse, error) {
 
-	wh.startWG.Wait()
-
 	scope := metrics.FrontendStartWorkflowExecutionScope
-	wh.metricsClient.IncCounter(scope, metrics.CadenceRequests)
-	sw := wh.metricsClient.StartTimer(scope, metrics.CadenceLatency)
+	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
 
 	wh.Service.GetLogger().Debugf("Received StartWorkflowExecution. WorkflowID: %v", startRequest.GetWorkflowId())
@@ -631,11 +607,8 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	ctx thrift.Context,
 	getRequest *gen.GetWorkflowExecutionHistoryRequest) (*gen.GetWorkflowExecutionHistoryResponse, error) {
 
-	wh.startWG.Wait()
-
 	scope := metrics.FrontendGetWorkflowExecutionHistoryScope
-	wh.metricsClient.IncCounter(scope, metrics.CadenceRequests)
-	sw := wh.metricsClient.StartTimer(scope, metrics.CadenceLatency)
+	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
 
 	if !getRequest.IsSetDomain() {
@@ -719,11 +692,8 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 func (wh *WorkflowHandler) SignalWorkflowExecution(ctx thrift.Context,
 	signalRequest *gen.SignalWorkflowExecutionRequest) error {
 
-	wh.startWG.Wait()
-
 	scope := metrics.FrontendSignalWorkflowExecutionScope
-	wh.metricsClient.IncCounter(scope, metrics.CadenceRequests)
-	sw := wh.metricsClient.StartTimer(scope, metrics.CadenceLatency)
+	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
 
 	if !signalRequest.IsSetDomain() {
@@ -768,11 +738,9 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(ctx thrift.Context,
 // in the history and immediately terminating the execution instance.
 func (wh *WorkflowHandler) TerminateWorkflowExecution(ctx thrift.Context,
 	terminateRequest *gen.TerminateWorkflowExecutionRequest) error {
-	wh.startWG.Wait()
 
 	scope := metrics.FrontendTerminateWorkflowExecutionScope
-	wh.metricsClient.IncCounter(scope, metrics.CadenceRequests)
-	sw := wh.metricsClient.StartTimer(scope, metrics.CadenceLatency)
+	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
 
 	if !terminateRequest.IsSetDomain() {
@@ -813,11 +781,9 @@ func (wh *WorkflowHandler) TerminateWorkflowExecution(ctx thrift.Context,
 func (wh *WorkflowHandler) RequestCancelWorkflowExecution(
 	ctx thrift.Context,
 	cancelRequest *gen.RequestCancelWorkflowExecutionRequest) error {
-	wh.startWG.Wait()
 
 	scope := metrics.FrontendRequestCancelWorkflowExecutionScope
-	wh.metricsClient.IncCounter(scope, metrics.CadenceRequests)
-	sw := wh.metricsClient.StartTimer(scope, metrics.CadenceLatency)
+	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
 
 	if !cancelRequest.IsSetDomain() {
@@ -861,11 +827,8 @@ func (wh *WorkflowHandler) RequestCancelWorkflowExecution(
 func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx thrift.Context,
 	listRequest *gen.ListOpenWorkflowExecutionsRequest) (*gen.ListOpenWorkflowExecutionsResponse, error) {
 
-	wh.startWG.Wait()
-
 	scope := metrics.FrontendListOpenWorkflowExecutionsScope
-	wh.metricsClient.IncCounter(scope, metrics.CadenceRequests)
-	sw := wh.metricsClient.StartTimer(scope, metrics.CadenceLatency)
+	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
 
 	if !listRequest.IsSetDomain() {
@@ -937,11 +900,8 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx thrift.Context,
 func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx thrift.Context,
 	listRequest *gen.ListClosedWorkflowExecutionsRequest) (*gen.ListClosedWorkflowExecutionsResponse, error) {
 
-	wh.startWG.Wait()
-
 	scope := metrics.FrontendListClosedWorkflowExecutionsScope
-	wh.metricsClient.IncCounter(scope, metrics.CadenceRequests)
-	sw := wh.metricsClient.StartTimer(scope, metrics.CadenceLatency)
+	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
 
 	if !listRequest.IsSetDomain() {
@@ -1085,6 +1045,14 @@ func (wh *WorkflowHandler) getLoggerForTask(taskToken []byte) bark.Logger {
 		})
 	}
 	return logger
+}
+
+// startRequestProfile initiates recording of request metrics
+func (wh *WorkflowHandler) startRequestProfile(scope int) tally.Stopwatch {
+	wh.startWG.Wait()
+	sw := wh.metricsClient.StartTimer(scope, metrics.CadenceLatency)
+	wh.metricsClient.IncCounter(scope, metrics.CadenceRequests)
+	return sw
 }
 
 func (wh *WorkflowHandler) error(err error, scope int) error {
