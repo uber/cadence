@@ -387,7 +387,7 @@ func (p *taskPersistenceClient) updateErrorMetric(scope int, err error) {
 }
 
 func (p *taskPersistenceClient) Close() {
-	p.Close()
+	p.persistence.Close()
 }
 
 func (p *historyPersistenceClient) AppendHistoryEvents(request *AppendHistoryEventsRequest) error {

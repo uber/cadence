@@ -56,7 +56,6 @@ type (
 		GetMetricsClient() metrics.Client
 		GetTimerAckLevel() time.Time
 		UpdateTimerAckLevel(ackLevel time.Time) error
-		Close()
 	}
 
 	shardContextImpl struct {
@@ -80,12 +79,6 @@ type (
 )
 
 var _ ShardContext = (*shardContextImpl)(nil)
-
-// Close releases the resources held by this object
-func (s *shardContextImpl) Close() {
-	s.GetExecutionManager().Close()
-	s.closeShard()
-}
 
 func (s *shardContextImpl) GetExecutionManager() persistence.ExecutionManager {
 	return s.executionManager
@@ -182,7 +175,7 @@ Create_Loop:
 						continue Create_Loop
 					} else {
 						// Shard is stolen, trigger shutdown of history engine
-						s.Close()
+						s.closeShard()
 					}
 				}
 			case *shared.WorkflowExecutionAlreadyStartedError:
@@ -197,7 +190,7 @@ Create_Loop:
 					if err1 != nil {
 						// At this point we have no choice but to unload the shard, so that it
 						// gets a new RangeID when it's reloaded.
-						s.Close()
+						s.closeShard()
 					}
 				}
 			}
@@ -257,7 +250,7 @@ Update_Loop:
 						continue Update_Loop
 					} else {
 						// Shard is stolen, trigger shutdown of history engine
-						s.Close()
+						s.closeShard()
 					}
 				}
 			case *persistence.ConditionFailedError:
@@ -272,7 +265,7 @@ Update_Loop:
 					if err1 != nil {
 						// At this point we have no choice but to unload the shard, so that it
 						// gets a new RangeID when it's reloaded.
-						s.Close()
+						s.closeShard()
 					}
 				}
 			}
@@ -364,7 +357,7 @@ func (s *shardContextImpl) renewRangeLocked(isStealing bool) error {
 			fmt.Sprintf("{RangeID: %v}", s.shardInfo.RangeID))
 		// Shard is stolen, trigger history engine shutdown
 		if _, ok := err.(*persistence.ShardOwnershipLostError); ok {
-			s.Close()
+			s.closeShard()
 		}
 		return err
 	}
@@ -400,7 +393,7 @@ func (s *shardContextImpl) updateShardInfoLocked() error {
 	if err != nil {
 		// Shard is stolen, trigger history engine shutdown
 		if _, ok := err.(*persistence.ShardOwnershipLostError); ok {
-			s.Close()
+			s.closeShard()
 		}
 	}
 
