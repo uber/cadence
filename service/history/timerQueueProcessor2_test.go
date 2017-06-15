@@ -37,8 +37,8 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-common/bark"
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber-go/tally"
+	workflow "github.com/uber/cadence/.gen/go/shared"
 )
 
 type (

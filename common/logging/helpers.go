@@ -264,7 +264,7 @@ func LogMultipleCompletionDecisionsEvent(lg bark.Logger, decisionType shared.Dec
 	}).Warnf("Multiple completion decisions.  DecisionType: %v", decisionType)
 }
 
-// LogMultipleCompletionDecisionsEvent is used to log multiple completion decisions for an execution
+// LogDecisionFailedEvent is used to log decision failures by RespondDecisionTaskCompleted handler
 func LogDecisionFailedEvent(lg bark.Logger, domainID, workflowID, runID string,
 	failCause shared.DecisionTaskFailedCause) {
 	lg.WithFields(bark.Fields{

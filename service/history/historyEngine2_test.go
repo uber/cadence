@@ -32,6 +32,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-common/bark"
 
+	"github.com/uber-go/tally"
 	h "github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -39,7 +40,6 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber-go/tally"
 )
 
 type (
