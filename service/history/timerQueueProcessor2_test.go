@@ -28,6 +28,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 
@@ -37,6 +38,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber-go/tally"
 )
 
 type (
@@ -91,6 +93,7 @@ func (s *timerQueueProcessor2Suite) SetupTest() {
 		maxTransferSequenceNumber: 100000,
 		closeCh:                   s.shardClosedCh,
 		logger:                    s.logger,
+		metricsClient:             metrics.NewClient(tally.NoopScope, metrics.History),
 	}
 
 	historyCache := newHistoryCache(historyCacheMaxSize, s.mockShard, s.logger)

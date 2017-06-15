@@ -36,8 +36,10 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber-go/tally"
 )
 
 type (
@@ -103,6 +105,7 @@ func (s *engine2Suite) SetupTest() {
 		maxTransferSequenceNumber: 100000,
 		closeCh:                   s.shardClosedCh,
 		logger:                    s.logger,
+		metricsClient:             metrics.NewClient(tally.NoopScope, metrics.History),
 	}
 
 	historyCache := newHistoryCache(historyCacheMaxSize, mockShard, s.logger)
@@ -116,6 +119,7 @@ func (s *engine2Suite) SetupTest() {
 		historyCache:       historyCache,
 		domainCache:        domainCache,
 		logger:             s.logger,
+		metricsClient:      metrics.NewClient(tally.NoopScope, metrics.History),
 		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
 		hSerializerFactory: persistence.NewHistorySerializerFactory(),
 	}
