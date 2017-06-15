@@ -37,6 +37,7 @@ const (
 	DuplicateTaskEventID               = 2030
 	MultipleCompletionDecisionsEventID = 2040
 	DuplicateTransferTaskEventID       = 2050
+	DecisionFailedEventID              = 2060
 
 	// Transfer Queue Processor events
 	TransferQueueProcessorStarting         = 2100

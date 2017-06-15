@@ -432,9 +432,21 @@ const (
 	TaskLatency
 	AckLevelUpdateCounter
 	AckLevelUpdateFailedCounter
+	DecisionTypeScheduleActivityCounter
+	DecisionTypeCompleteWorkflowCounter
+	DecisionTypeFailWorkflowCounter
+	DecisionTypeCancelWorkflowCounter
+	DecisionTypeStartTimerCounter
+	DecisionTypeCancelActivityCounter
+	DecisionTypeCancelTimerCounter
+	DecisionTypeRecordMarkerCounter
+	DecisionTypeCancelExternalWorkflowCounter
+	DecisionTypeChildWorkflowCounter
+	DecisionTypeContinueAsNewCounter
 	MultipleCompletionDecisionsCounter
 	FailedDecisionsCounter
 	StaleMutableStateCounter
+	ConcurrencyUpdateFailureCounter
 	CadenceErrEventAlreadyStartedCounter
 	CadenceErrShardOwnershipLostCounter
 )
@@ -459,16 +471,28 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 	},
 	Frontend: {},
 	History: {
-		TaskRequests:                         {metricName: "task.requests", metricType: Counter},
-		TaskFailures:                         {metricName: "task.errors", metricType: Counter},
-		TaskLatency:                          {metricName: "task.latency", metricType: Counter},
-		AckLevelUpdateCounter:                {metricName: "ack-level-update", metricType: Counter},
-		AckLevelUpdateFailedCounter:          {metricName: "ack-level-update-failed", metricType: Counter},
-		MultipleCompletionDecisionsCounter:   {metricName: "multiple-completion-decisions", metricType: Counter},
-		FailedDecisionsCounter:               {metricName: "failed-decisions", metricType: Counter},
-		StaleMutableStateCounter:             {metricName: "stale-mutable-state", metricType: Counter},
-		CadenceErrShardOwnershipLostCounter:  {metricName: "cadence.errors.shard-ownership-lost", metricType: Counter},
-		CadenceErrEventAlreadyStartedCounter: {metricName: "cadence.errors.event-already-started", metricType: Counter},
+		TaskRequests:                              {metricName: "task.requests", metricType: Counter},
+		TaskFailures:                              {metricName: "task.errors", metricType: Counter},
+		TaskLatency:                               {metricName: "task.latency", metricType: Counter},
+		AckLevelUpdateCounter:                     {metricName: "ack-level-update", metricType: Counter},
+		AckLevelUpdateFailedCounter:               {metricName: "ack-level-update-failed", metricType: Counter},
+		DecisionTypeScheduleActivityCounter:       {metricName: "schedule-activity-decision", metricType: Counter},
+		DecisionTypeCompleteWorkflowCounter:       {metricName: "complete-workflow-decision", metricType: Counter},
+		DecisionTypeFailWorkflowCounter:           {metricName: "fail-workflow-decision", metricType: Counter},
+		DecisionTypeCancelWorkflowCounter:         {metricName: "cancel-workflow-decision", metricType: Counter},
+		DecisionTypeStartTimerCounter:             {metricName: "start-timer-decision", metricType: Counter},
+		DecisionTypeCancelActivityCounter:         {metricName: "cancel-activity-decision", metricType: Counter},
+		DecisionTypeCancelTimerCounter:            {metricName: "cancel-timer-decision", metricType: Counter},
+		DecisionTypeRecordMarkerCounter:           {metricName: "record-marker-decision", metricType: Counter},
+		DecisionTypeCancelExternalWorkflowCounter: {metricName: "cancel-external-workflow-decision", metricType: Counter},
+		DecisionTypeContinueAsNewCounter:          {metricName: "continue-as-new-decision", metricType: Counter},
+		DecisionTypeChildWorkflowCounter:          {metricName: "child-workflow-decision", metricType: Counter},
+		MultipleCompletionDecisionsCounter:        {metricName: "multiple-completion-decisions", metricType: Counter},
+		FailedDecisionsCounter:                    {metricName: "failed-decisions", metricType: Counter},
+		StaleMutableStateCounter:                  {metricName: "stale-mutable-state", metricType: Counter},
+		ConcurrencyUpdateFailureCounter:           {metricName: "concurrency-update-failure", metricType: Counter},
+		CadenceErrShardOwnershipLostCounter:       {metricName: "cadence.errors.shard-ownership-lost", metricType: Counter},
+		CadenceErrEventAlreadyStartedCounter:      {metricName: "cadence.errors.event-already-started", metricType: Counter},
 	},
 	Matching: {},
 }

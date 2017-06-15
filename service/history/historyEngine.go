@@ -364,6 +364,8 @@ Update_History_Loop:
 		// the history and try the operation again.
 		if err3 := context.updateWorkflowExecution(nil, timerTasks, transactionID); err3 != nil {
 			if err3 == ErrConflict {
+				e.metricsClient.IncCounter(metrics.HistoryRecordDecisionTaskStartedScope,
+					metrics.ConcurrencyUpdateFailureCounter)
 				continue Update_History_Loop
 			}
 			return nil, err3
@@ -474,6 +476,8 @@ Update_History_Loop:
 		// the history and try the operationi again.
 		if err3 := context.updateWorkflowExecution(nil, timerTasks, transactionID); err3 != nil {
 			if err3 == ErrConflict {
+				e.metricsClient.IncCounter(metrics.HistoryRecordActivityTaskStartedScope,
+					metrics.ConcurrencyUpdateFailureCounter)
 				continue Update_History_Loop
 			}
 
@@ -550,6 +554,8 @@ Update_History_Loop:
 		for _, d := range request.Decisions {
 			switch d.GetDecisionType() {
 			case workflow.DecisionType_ScheduleActivityTask:
+				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
+					metrics.DecisionTypeScheduleActivityCounter)
 				targetDomainID := domainID
 				attributes := d.GetScheduleActivityTaskDecisionAttributes()
 				// First check if we need to use a different target domain to schedule activity
@@ -587,6 +593,8 @@ Update_History_Loop:
 				defer e.timerProcessor.NotifyNewTimer(timerTasks)
 
 			case workflow.DecisionType_CompleteWorkflowExecution:
+				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
+					metrics.DecisionTypeCompleteWorkflowCounter)
 				if hasUnhandledEvents {
 					failDecision = true
 					failCause = workflow.DecisionTaskFailedCause_UNHANDLED_DECISION
@@ -609,6 +617,8 @@ Update_History_Loop:
 				msBuilder.AddCompletedWorkflowEvent(completedID, attributes)
 				isComplete = true
 			case workflow.DecisionType_FailWorkflowExecution:
+				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
+					metrics.DecisionTypeFailWorkflowCounter)
 				if hasUnhandledEvents {
 					failDecision = true
 					failCause = workflow.DecisionTaskFailedCause_UNHANDLED_DECISION
@@ -631,6 +641,8 @@ Update_History_Loop:
 				msBuilder.AddFailWorkflowEvent(completedID, attributes)
 				isComplete = true
 			case workflow.DecisionType_CancelWorkflowExecution:
+				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
+					metrics.DecisionTypeCancelWorkflowCounter)
 				// If new events came while we are processing the decision, we would fail this and give a chance to client
 				// to process the new event.
 				if hasUnhandledEvents {
@@ -656,6 +668,8 @@ Update_History_Loop:
 				isComplete = true
 
 			case workflow.DecisionType_StartTimer:
+				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
+					metrics.DecisionTypeStartTimerCounter)
 				attributes := d.GetStartTimerDecisionAttributes()
 				if err = validateTimerScheduleAttributes(attributes); err != nil {
 					failDecision = true
@@ -669,6 +683,8 @@ Update_History_Loop:
 					defer e.timerProcessor.NotifyNewTimer(timerTasks)
 				}
 			case workflow.DecisionType_RequestCancelActivityTask:
+				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
+					metrics.DecisionTypeCancelActivityCounter)
 				attributes := d.GetRequestCancelActivityTaskDecisionAttributes()
 				if err = validateActivityCancelAttributes(attributes); err != nil {
 					failDecision = true
@@ -691,6 +707,8 @@ Update_History_Loop:
 				}
 
 			case workflow.DecisionType_CancelTimer:
+				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
+					metrics.DecisionTypeCancelTimerCounter)
 				attributes := d.GetCancelTimerDecisionAttributes()
 				if err = validateTimerCancelAttributes(attributes); err != nil {
 					failDecision = true
@@ -702,6 +720,8 @@ Update_History_Loop:
 				}
 
 			case workflow.DecisionType_RecordMarker:
+				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
+					metrics.DecisionTypeRecordMarkerCounter)
 				attributes := d.GetRecordMarkerDecisionAttributes()
 				if err = validateRecordMarkerAttributes(attributes); err != nil {
 					failDecision = true
@@ -711,7 +731,8 @@ Update_History_Loop:
 				msBuilder.AddRecordMarkerEvent(completedID, attributes)
 
 			case workflow.DecisionType_RequestCancelExternalWorkflowExecution:
-
+				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
+					metrics.DecisionTypeCancelExternalWorkflowCounter)
 				attributes := d.GetRequestCancelExternalWorkflowExecutionDecisionAttributes()
 				if err = validateCancelExternalWorkflowExecutionAttributes(attributes); err != nil {
 					failDecision = true
@@ -740,6 +761,8 @@ Update_History_Loop:
 				})
 
 			case workflow.DecisionType_ContinueAsNewWorkflowExecution:
+				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
+					metrics.DecisionTypeContinueAsNewCounter)
 				if hasUnhandledEvents {
 					failDecision = true
 					failCause = workflow.DecisionTaskFailedCause_UNHANDLED_DECISION
@@ -768,6 +791,8 @@ Update_History_Loop:
 				continueAsNewBuilder = newStateBuilder
 
 			case workflow.DecisionType_StartChildWorkflowExecution:
+				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
+					metrics.DecisionTypeChildWorkflowCounter)
 				targetDomainID := domainID
 				attributes := d.GetStartChildWorkflowExecutionDecisionAttributes()
 				// First check if we need to use a different target domain to schedule child execution
@@ -794,8 +819,8 @@ Update_History_Loop:
 		}
 
 		if failDecision {
-			e.logger.Info("failing the decision")
 			e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.FailedDecisionsCounter)
+			logging.LogDecisionFailedEvent(e.logger, domainID, token.WorkflowID, token.RunID, failCause)
 			var err1 error
 			msBuilder, err1 = e.failDecision(context, scheduleID, startedID, failCause, request)
 			if err1 != nil {
@@ -840,6 +865,8 @@ Update_History_Loop:
 
 		if updateErr != nil {
 			if updateErr == ErrConflict {
+				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
+					metrics.ConcurrencyUpdateFailureCounter)
 				continue Update_History_Loop
 			}
 
@@ -921,6 +948,8 @@ Update_History_Loop:
 		// the history and try the operation again.
 		if err := context.updateWorkflowExecution(transferTasks, nil, transactionID); err != nil {
 			if err == ErrConflict {
+				e.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskCompletedScope,
+					metrics.ConcurrencyUpdateFailureCounter)
 				continue Update_History_Loop
 			}
 
@@ -1002,6 +1031,8 @@ Update_History_Loop:
 		// the history and try the operation again.
 		if err := context.updateWorkflowExecution(transferTasks, nil, transactionID); err != nil {
 			if err == ErrConflict {
+				e.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskFailedScope,
+					metrics.ConcurrencyUpdateFailureCounter)
 				continue Update_History_Loop
 			}
 
@@ -1045,7 +1076,7 @@ Update_History_Loop:
 		// First check to see if cache needs to be refreshed as we could potentially have stale workflow execution in
 		// some extreme cassandra failure cases.
 		if scheduleID >= msBuilder.GetNextEventID() {
-			e.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskFailedScope, metrics.StaleMutableStateCounter)
+			e.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskCanceledScope, metrics.StaleMutableStateCounter)
 			// Reload workflow execution history
 			context.clear()
 			continue Update_History_Loop
@@ -1084,6 +1115,8 @@ Update_History_Loop:
 		// the history and try the operation again.
 		if err := context.updateWorkflowExecution(transferTasks, nil, transactionID); err != nil {
 			if err == ErrConflict {
+				e.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskCanceledScope,
+					metrics.ConcurrencyUpdateFailureCounter)
 				continue Update_History_Loop
 			}
 
@@ -1162,6 +1195,8 @@ Update_History_Loop:
 		// the history and try the operation again.
 		if err := context.updateWorkflowExecution(nil, nil, transactionID); err != nil {
 			if err == ErrConflict {
+				e.metricsClient.IncCounter(metrics.HistoryRecordActivityTaskHeartbeatScope,
+					metrics.ConcurrencyUpdateFailureCounter)
 				continue Update_History_Loop
 			}
 
