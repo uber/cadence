@@ -109,6 +109,11 @@ func newTestShardContext(shardInfo *ShardInfo, transferSequenceNumber int64, his
 	}
 }
 
+// Close closes the context
+func (s *TestShardContext) Close() {
+	s.executionMgr.Close()
+}
+
 // GetExecutionManager test implementation
 func (s *TestShardContext) GetExecutionManager() ExecutionManager {
 	return s.executionMgr
