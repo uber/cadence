@@ -284,6 +284,12 @@ const (
 	TransferTaskStartChildExecutionScope
 	// TimerQueueProcessorScope is the scope used by all metric emitted by timer queue processor
 	TimerQueueProcessorScope
+	// TimerTaskActivityTimeoutScope is the scope used by metric emitted by timer queue processor for processing activity timeouts
+	TimerTaskActivityTimeoutScope
+	// TimerTaskDecisionTimeoutScope is the scope used by metric emitted by timer queue processor for processing decision timeouts
+	TimerTaskDecisionTimeoutScope
+	// TimerTaskUserTimerScope is the scope used by metric emitted by timer queue processor for processing user timers
+	TimerTaskUserTimerScope
 
 	NumHistoryScopes
 )
@@ -395,6 +401,9 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		TransferTaskCancelExecutionScope:            {operation: "TransferTaskCancelExecution"},
 		TransferTaskStartChildExecutionScope:        {operation: "TransferTaskStartChildExecution"},
 		TimerQueueProcessorScope:                    {operation: "TimerQueueProcessor"},
+		TimerTaskActivityTimeoutScope:               {operation: "TimerTaskActivityTimeoutScope"},
+		TimerTaskDecisionTimeoutScope:               {operation: "TimerTaskDecisionTimeoutScope"},
+		TimerTaskUserTimerScope:                     {operation: "TimerTaskUserTimerScope"},
 	},
 	// Matching Scope Names
 	Matching: {
@@ -449,6 +458,12 @@ const (
 	ConcurrencyUpdateFailureCounter
 	CadenceErrEventAlreadyStartedCounter
 	CadenceErrShardOwnershipLostCounter
+	ActivityTimerTypeHeartbeatCounter
+	ActivityTimerTypeScheduleToStartCounter
+	ActivityTimerTypeStartToCloseCounter
+	ActivityTimerTypeScheduleToCloseCounter
+	NewCounter
+	NewTimerNotifyCounter
 )
 
 // MetricDefs record the metrics for all services
@@ -493,6 +508,12 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ConcurrencyUpdateFailureCounter:           {metricName: "concurrency-update-failure", metricType: Counter},
 		CadenceErrShardOwnershipLostCounter:       {metricName: "cadence.errors.shard-ownership-lost", metricType: Counter},
 		CadenceErrEventAlreadyStartedCounter:      {metricName: "cadence.errors.event-already-started", metricType: Counter},
+		ActivityTimerTypeHeartbeatCounter:         {metricName: "activity-timer-heartbeat", metricType: Counter},
+		ActivityTimerTypeScheduleToStartCounter:   {metricName: "activity-timer-schedule-to-start", metricType: Counter},
+		ActivityTimerTypeStartToCloseCounter:      {metricName: "activity-timer-start-to-close", metricType: Counter},
+		ActivityTimerTypeScheduleToCloseCounter:   {metricName: "activity-timer-schedule-to-close", metricType: Counter},
+		NewCounter:                                {metricName: "new", metricType: Counter},
+		NewTimerNotifyCounter:                     {metricName: "new-timer-notifications", metricType: Counter},
 	},
 	Matching: {},
 }
