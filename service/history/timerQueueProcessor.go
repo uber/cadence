@@ -580,7 +580,7 @@ Update_History_Loop:
 			switch timeoutType {
 			case workflow.TimeoutType_SCHEDULE_TO_CLOSE:
 				{
-					t.metricsClient.IncCounter(metrics.TimerTaskActivityTimeoutScope, metrics.ActivityTimerTypeScheduleToCloseCounter)
+					t.metricsClient.IncCounter(metrics.TimerTaskActivityTimeoutScope, metrics.ScheduleToCloseTimeoutCounter)
 					if msBuilder.AddActivityTaskTimedOutEvent(scheduleID, ai.StartedID, timeoutType, nil) == nil {
 						return errFailedToAddTimeoutEvent
 					}
@@ -591,7 +591,7 @@ Update_History_Loop:
 
 			case workflow.TimeoutType_START_TO_CLOSE:
 				{
-					t.metricsClient.IncCounter(metrics.TimerTaskActivityTimeoutScope, metrics.ActivityTimerTypeStartToCloseCounter)
+					t.metricsClient.IncCounter(metrics.TimerTaskActivityTimeoutScope, metrics.StartToCloseTimeoutCounter)
 					if ai.StartedID != emptyEventID {
 						if msBuilder.AddActivityTaskTimedOutEvent(scheduleID, ai.StartedID, timeoutType, nil) == nil {
 							return errFailedToAddTimeoutEvent
@@ -604,7 +604,7 @@ Update_History_Loop:
 
 			case workflow.TimeoutType_HEARTBEAT:
 				{
-					t.metricsClient.IncCounter(metrics.TimerTaskActivityTimeoutScope, metrics.ActivityTimerTypeHeartbeatCounter)
+					t.metricsClient.IncCounter(metrics.TimerTaskActivityTimeoutScope, metrics.HeartbeatTimeoutCounter)
 					lastHeartbeat := ai.LastHeartBeatUpdatedTime.Add(
 						time.Duration(ai.HeartbeatTimeout) * time.Second)
 
@@ -630,7 +630,7 @@ Update_History_Loop:
 
 			case workflow.TimeoutType_SCHEDULE_TO_START:
 				{
-					t.metricsClient.IncCounter(metrics.TimerTaskActivityTimeoutScope, metrics.ActivityTimerTypeScheduleToStartCounter)
+					t.metricsClient.IncCounter(metrics.TimerTaskActivityTimeoutScope, metrics.ScheduleToStartTimeoutCounter)
 					if ai.StartedID == emptyEventID {
 						if msBuilder.AddActivityTaskTimedOutEvent(scheduleID, ai.StartedID, timeoutType, nil) == nil {
 							return errFailedToAddTimeoutEvent
