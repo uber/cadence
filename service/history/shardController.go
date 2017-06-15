@@ -304,7 +304,7 @@ func (i *historyShardsItem) getOrCreateEngine(shardClosedCh chan<- int) (Engine,
 	}
 
 	logging.LogShardEngineCreatingEvent(i.logger, i.host.Identity(), i.shardID)
-	defer logging.LogShardEngineCreatedEvent(i.logger, i.host.Identity(), i.shardID)
+
 	executionMgr, err := i.executionMgrFactory.CreateExecutionManager(i.shardID)
 	if err != nil {
 		return nil, err
@@ -313,24 +313,26 @@ func (i *historyShardsItem) getOrCreateEngine(shardClosedCh chan<- int) (Engine,
 	context, err := acquireShard(i.shardID, i.shardMgr, i.historyMgr, executionMgr, i.host.Identity(), shardClosedCh,
 		i.logger, i.metricsClient)
 	if err != nil {
+		executionMgr.Close()
 		return nil, err
 	}
 
 	i.engine = i.engineFactory.CreateEngine(context)
 	i.engine.Start()
 
+	logging.LogShardEngineCreatedEvent(i.logger, i.host.Identity(), i.shardID)
 	return i.engine, nil
 }
 
 func (i *historyShardsItem) stopEngine() {
-	logging.LogShardEngineStoppingEvent(i.logger, i.host.Identity(), i.shardID)
-	defer logging.LogShardEngineStoppedEvent(i.logger, i.host.Identity(), i.shardID)
 	i.Lock()
 	defer i.Unlock()
 
 	if i.engine != nil {
+		logging.LogShardEngineStoppingEvent(i.logger, i.host.Identity(), i.shardID)
 		i.engine.Stop()
 		i.engine = nil
+		logging.LogShardEngineStoppedEvent(i.logger, i.host.Identity(), i.shardID)
 	}
 }
 

@@ -129,6 +129,7 @@ func (e *historyEngineImpl) Stop() {
 
 	e.txProcessor.Stop()
 	e.timerProcessor.Stop()
+	e.shard.Close()
 }
 
 // StartWorkflowExecution starts a workflow execution
