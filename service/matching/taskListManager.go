@@ -252,6 +252,7 @@ func (c *taskListManagerImpl) getTask(ctx thrift.Context) (*getTaskResult, error
 	select {
 	case task, ok := <-c.taskBuffer:
 		if !ok { // Task list getTasks pump is shutdown
+			c.metricsClient.IncCounter(scope, metrics.PollErrorsCounter)
 			return nil, errPumpClosed
 		}
 		c.metricsClient.IncCounter(scope, metrics.PollSuccessCounter)
