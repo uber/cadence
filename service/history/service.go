@@ -73,8 +73,11 @@ func (s *Service) Start() {
 				RangeID:          0,
 				TransferAckLevel: 0,
 			}})
+
 		if err != nil {
-			log.Fatalf("failed to create shard with error: %v", err)
+			if _, ok := err.(*persistence.ShardAlreadyExistError); !ok {
+				log.Fatalf("failed to create shard for ShardId: %v, with error: %v", shardID, err)
+			}
 		}
 	}
 
