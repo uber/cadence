@@ -202,7 +202,7 @@ func (t *timerQueueProcessorImpl) Stop() {
 
 // NotifyNewTimer - Notify the processor about the new timer arrival.
 func (t *timerQueueProcessorImpl) NotifyNewTimer(timerTasks []persistence.Task) {
-	t.metricsClient.AddCounter(metrics.TimerQueueProcessorScope, metrics.NewCounter, int64(len(timerTasks)))
+	t.metricsClient.AddCounter(metrics.TimerQueueProcessorScope, metrics.NewTimerCounter, int64(len(timerTasks)))
 
 	updatedMinTimer := false
 	t.lock.Lock()
@@ -215,11 +215,11 @@ func (t *timerQueueProcessorImpl) NotifyNewTimer(timerTasks []persistence.Task) 
 
 		switch task.GetType() {
 		case persistence.TaskTypeDecisionTimeout:
-			t.metricsClient.IncCounter(metrics.TimerTaskDecisionTimeoutScope, metrics.NewCounter)
+			t.metricsClient.IncCounter(metrics.TimerTaskDecisionTimeoutScope, metrics.NewTimerCounter)
 		case persistence.TaskTypeActivityTimeout:
-			t.metricsClient.IncCounter(metrics.TimerTaskActivityTimeoutScope, metrics.NewCounter)
+			t.metricsClient.IncCounter(metrics.TimerTaskActivityTimeoutScope, metrics.NewTimerCounter)
 		case persistence.TaskTypeUserTimer:
-			t.metricsClient.IncCounter(metrics.TimerTaskUserTimerScope, metrics.NewCounter)
+			t.metricsClient.IncCounter(metrics.TimerTaskUserTimerScope, metrics.NewTimerCounter)
 		}
 	}
 	t.lock.Unlock()

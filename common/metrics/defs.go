@@ -462,7 +462,7 @@ const (
 	ScheduleToStartTimeoutCounter
 	StartToCloseTimeoutCounter
 	ScheduleToCloseTimeoutCounter
-	NewCounter
+	NewTimerCounter
 	NewTimerNotifyCounter
 )
 
@@ -512,7 +512,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ScheduleToStartTimeoutCounter:             {metricName: "schedule-to-start-timeout", metricType: Counter},
 		StartToCloseTimeoutCounter:                {metricName: "start-to-close-timeout", metricType: Counter},
 		ScheduleToCloseTimeoutCounter:             {metricName: "schedule-to-close-timeout", metricType: Counter},
-		NewCounter:                                {metricName: "new", metricType: Counter},
+		NewTimerCounter:                           {metricName: "new-timer", metricType: Counter},
 		NewTimerNotifyCounter:                     {metricName: "new-timer-notifications", metricType: Counter},
 	},
 	Matching: {},
