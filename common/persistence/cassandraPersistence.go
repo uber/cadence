@@ -152,7 +152,8 @@ const (
 		`heart_beat_timeout: ?, ` +
 		`cancel_requested: ?, ` +
 		`cancel_request_id: ?, ` +
-		`last_hb_updated_time: ?` +
+		`last_hb_updated_time: ?, ` +
+		`timer_task_status: ?` +
 		`}`
 
 	templateTimerInfoType = `{` +
@@ -1535,6 +1536,7 @@ func (d *cassandraPersistence) updateActivityInfos(batch *gocql.Batch, activityI
 			a.CancelRequested,
 			a.CancelRequestID,
 			a.LastHeartBeatUpdatedTime,
+			a.TimerTaskStatus,
 			d.shardID,
 			rowTypeExecution,
 			domainID,
@@ -1816,6 +1818,8 @@ func createActivityInfo(result map[string]interface{}) *ActivityInfo {
 			info.CancelRequestID = v.(int64)
 		case "last_hb_updated_time":
 			info.LastHeartBeatUpdatedTime = v.(time.Time)
+		case "timer_task_status":
+			info.TimerTaskStatus = int32(v.(int))
 		}
 	}
 
