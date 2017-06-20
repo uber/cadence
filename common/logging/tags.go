@@ -68,6 +68,7 @@ const (
 	TagValueActionActivityTaskCancelRequestFailed = "add-activitytask-cancel-request-failed-event"
 	TagValueActionCompleteWorkflow                = "add-complete-workflow-event"
 	TagValueActionFailWorkflow                    = "add-fail-workflow-event"
+	TagValueActionTimeoutWorkflow                 = "add-timeout-workflow-event"
 	TagValueActionCancelWorkflow                  = "add-cancel-workflow-event"
 	TagValueActionUnknownEvent                    = "add-unknown-event"
 	TagValueActionTimerStarted                    = "add-timer-started-event"

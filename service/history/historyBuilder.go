@@ -152,6 +152,12 @@ func (b *historyBuilder) AddFailWorkflowEvent(decisionCompletedEventID int64,
 	return b.addEventToHistory(event)
 }
 
+func (b *historyBuilder) AddTimeoutWorkflowEvent() *workflow.HistoryEvent {
+	event := b.newTimeoutWorkflowExecutionEvent()
+
+	return b.addEventToHistory(event)
+}
+
 func (b *historyBuilder) AddWorkflowExecutionTerminatedEvent(
 	request *workflow.TerminateWorkflowExecutionRequest) *workflow.HistoryEvent {
 	event := b.newWorkflowExecutionTerminatedEvent(request)
@@ -548,6 +554,16 @@ func (b *historyBuilder) newFailWorkflowExecutionEvent(decisionTaskCompletedEven
 
 	return historyEvent
 }
+
+func (b *historyBuilder) newTimeoutWorkflowExecutionEvent() *workflow.HistoryEvent {
+	historyEvent := b.msBuilder.createNewHistoryEvent(workflow.EventType_WorkflowExecutionTimedOut)
+	attributes := workflow.NewWorkflowExecutionTimedOutEventAttributes()
+	attributes.TimeoutType = workflow.TimeoutTypePtr(workflow.TimeoutType_START_TO_CLOSE)
+	historyEvent.WorkflowExecutionTimedOutEventAttributes = attributes
+
+	return historyEvent
+}
+
 
 func (b *historyBuilder) newWorkflowExecutionSignaledEvent(
 	request *workflow.SignalWorkflowExecutionRequest) *workflow.HistoryEvent {

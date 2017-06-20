@@ -740,6 +740,20 @@ func (e *mutableStateBuilder) AddFailWorkflowEvent(decisionCompletedEventID int6
 	return event
 }
 
+func (e *mutableStateBuilder) AddTimeoutWorkflowEvent() *workflow.HistoryEvent {
+	if e.executionInfo.State == persistence.WorkflowStateCompleted {
+		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionTimeoutWorkflow, e.GetNextEventID(), fmt.Sprintf(
+			"{State: %v}", e.executionInfo.State))
+	}
+
+	e.executionInfo.State = persistence.WorkflowStateCompleted
+	e.executionInfo.CloseStatus = persistence.WorkflowCloseStatusTimedOut
+	event := e.hBuilder.AddTimeoutWorkflowEvent()
+	e.writeCompletionEventToMutableState(event)
+
+	return event
+}
+
 func (e *mutableStateBuilder) AddWorkflowExecutionCancelRequestedEvent(cause string,
 	request *h.RequestCancelWorkflowExecutionRequest) *workflow.HistoryEvent {
 	return e.hBuilder.AddWorkflowExecutionCancelRequestedEvent(cause, request)

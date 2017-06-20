@@ -292,6 +292,8 @@ const (
 	TimerTaskDecisionTimeoutScope
 	// TimerTaskUserTimerScope is the scope used by metric emitted by timer queue processor for processing user timers
 	TimerTaskUserTimerScope
+	// TimerTaskWorkflowTimeoutScope is the scope used by metric emitted by timer queue processor for processing workflow timeouts.
+	TimerTaskWorkflowTimeoutScope
 
 	NumHistoryScopes
 )
@@ -408,6 +410,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		TimerTaskActivityTimeoutScope:               {operation: "TimerTaskActivityTimeout"},
 		TimerTaskDecisionTimeoutScope:               {operation: "TimerTaskDecisionTimeout"},
 		TimerTaskUserTimerScope:                     {operation: "TimerTaskUserTimer"},
+		TimerTaskWorkflowTimeoutScope:               {operation: "TimerTaskWorkflowTimeout"},
 	},
 	// Matching Scope Names
 	Matching: {

@@ -23,6 +23,7 @@ package history
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/pborman/uuid"
 	"github.com/uber-common/bark"
@@ -137,6 +138,14 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 	domainID := startRequest.GetDomainUUID()
 	request := startRequest.GetStartRequest()
 	executionID := request.GetWorkflowId()
+
+	if request.GetExecutionStartToCloseTimeoutSeconds() <= 0 {
+		return nil, &workflow.BadRequestError{Message: "Missing or invalid ExecutionStartToCloseTimeoutSeconds."}
+	}
+	if request.GetTaskStartToCloseTimeoutSeconds() <= 0 {
+		return nil, &workflow.BadRequestError{Message: "Missing or invalid TaskStartToCloseTimeoutSeconds."}
+	}
+
 	// We generate a new workflow execution run_id on each StartWorkflowExecution call.  This generated run_id is
 	// returned back to the caller as the response to StartWorkflowExecution.
 	runID := uuid.New()
@@ -182,6 +191,9 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 		decisionTimeout = di.DecisionTimeout
 	}
 
+	timerTasks := []persistence.Task{&persistence.WorkflowTimeoutTask{
+		VisibilityTimestamp: time.Now().Add(time.Duration(request.GetExecutionStartToCloseTimeoutSeconds()) * time.Second),
+	}}
 	// Serialize the history
 	serializedHistory, serializedError := msBuilder.hBuilder.Serialize()
 	if serializedError != nil {
@@ -221,6 +233,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 		DecisionStartedID:           decisionStartID,
 		DecisionStartToCloseTimeout: decisionTimeout,
 		ContinueAsNew:               false,
+		TimerTasks:                  timerTasks,
 	})
 
 	if err != nil {
@@ -255,6 +268,8 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 			fmt.Sprintf("{WorkflowID: %v, RunID: %v}", executionID, runID))
 		return nil, err
 	}
+
+	e.timerProcessor.NotifyNewTimer(timerTasks)
 
 	return &workflow.StartWorkflowExecutionResponse{
 		RunId: workflowExecution.RunId,
