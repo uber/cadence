@@ -194,8 +194,8 @@ func (s *timerQueueProcessor2Suite) TestWorkflowTimeout() {
 
 	builder := newMutableStateBuilder(s.logger)
 	builder.AddWorkflowExecutionStartedEvent(domainID, we, &workflow.StartWorkflowExecutionRequest{
-		WorkflowType:                   &workflow.WorkflowType{Name: common.StringPtr("wType")},
-		TaskList:                       common.TaskListPtr(workflow.TaskList{Name: common.StringPtr(taskList)}),
+		WorkflowType: &workflow.WorkflowType{Name: common.StringPtr("wType")},
+		TaskList:     common.TaskListPtr(workflow.TaskList{Name: common.StringPtr(taskList)}),
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 	})
 
@@ -208,7 +208,7 @@ func (s *timerQueueProcessor2Suite) TestWorkflowTimeout() {
 
 	taskID := int64(100)
 	timerTask := &persistence.TimerTaskInfo{WorkflowID: "wid", RunID: "rid", TaskID: taskID,
-		TaskType: persistence.TaskTypeWorkflowTimeout,
+		TaskType:            persistence.TaskTypeWorkflowTimeout,
 		VisibilityTimestamp: mockTS.Now(),
 		EventID:             decisionScheduledEvent.GetEventId()}
 	timerIndexResponse := &persistence.GetTimerIndexTasksResponse{Timers: []*persistence.TimerTaskInfo{timerTask}}

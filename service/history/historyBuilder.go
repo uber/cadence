@@ -564,7 +564,6 @@ func (b *historyBuilder) newTimeoutWorkflowExecutionEvent() *workflow.HistoryEve
 	return historyEvent
 }
 
-
 func (b *historyBuilder) newWorkflowExecutionSignaledEvent(
 	request *workflow.SignalWorkflowExecutionRequest) *workflow.HistoryEvent {
 	historyEvent := b.msBuilder.createNewHistoryEvent(workflow.EventType_WorkflowExecutionSignaled)

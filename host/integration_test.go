@@ -2497,7 +2497,6 @@ GetHistoryLoop:
 	s.True(workflowComplete)
 }
 
-
 func (s *integrationSuite) setupShards() {
 	// shard 0 is always created, we create additional shards if needed
 	for shardID := 1; shardID < testNumberOfHistoryShards; shardID++ {
