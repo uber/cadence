@@ -166,7 +166,7 @@ func (s *timerBuilderProcessorSuite) TestTimerBuilderDuplicateTimerID() {
 	msb := newMutableStateBuilder(s.logger)
 	msb.Load(&persistence.WorkflowMutableState{
 		ExecutionInfo: &persistence.WorkflowExecutionInfo{NextEventID: int64(203)},
-		TimerInfos: timerInfos,
+		TimerInfos:    timerInfos,
 	})
 
 	_, ti := msb.AddTimerStartedEvent(int64(3), &workflow.StartTimerDecisionAttributes{
