@@ -36,6 +36,8 @@ CREATE TYPE workflow_execution (
   decision_started_id    bigint,
   decision_request_id    text,    -- Identifier used by matching engine for retrying history service calls for recording task is started
   decision_timeout       int,
+  cancel_requested       boolean,
+  cancel_request_id      text,
 );
 
 -- TODO: Remove fields that are left over from activity and workflow tasks.

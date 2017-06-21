@@ -134,6 +134,8 @@ type (
 		DecisionStartedID    int64
 		DecisionRequestID    string
 		DecisionTimeout      int32
+		CancelRequested      bool
+		CancelRequestID      string
 	}
 
 	// TransferTaskInfo describes a transfer task

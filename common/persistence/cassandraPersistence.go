@@ -109,7 +109,9 @@ const (
 		`decision_schedule_id: ?, ` +
 		`decision_started_id: ?, ` +
 		`decision_request_id: ?, ` +
-		`decision_timeout: ?` +
+		`decision_timeout: ?, ` +
+		`cancel_requested: ?, ` +
+		`cancel_request_id: ?` +
 		`}`
 
 	templateTransferTaskType = `{` +
@@ -774,6 +776,8 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *Creat
 		request.DecisionStartedID,
 		"", // Decision Start Request ID
 		request.DecisionStartToCloseTimeout,
+		false,
+		"",
 		request.NextEventID,
 		defaultVisibilityTimestamp,
 		rowTypeExecutionTaskID)
@@ -865,6 +869,8 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 		executionInfo.DecisionStartedID,
 		executionInfo.DecisionRequestID,
 		executionInfo.DecisionTimeout,
+		executionInfo.CancelRequested,
+		executionInfo.CancelRequestID,
 		executionInfo.NextEventID,
 		d.shardID,
 		rowTypeExecution,
@@ -1665,6 +1671,10 @@ func createWorkflowExecutionInfo(result map[string]interface{}) *WorkflowExecuti
 			info.DecisionRequestID = v.(string)
 		case "decision_timeout":
 			info.DecisionTimeout = int32(v.(int))
+		case "cancel_requested":
+			info.CancelRequested = v.(bool)
+		case "cancel_request_id":
+			info.CancelRequestID = v.(string)
 		}
 	}
 
