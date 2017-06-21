@@ -550,6 +550,7 @@ Update_History_Loop:
 		transferTasks := []persistence.Task{}
 		timerTasks := []persistence.Task{}
 		var continueAsNewBuilder *mutableStateBuilder
+		userTimersLoaded := false
 	Process_Decision_Loop:
 		for _, d := range request.Decisions {
 			switch d.GetDecisionType() {
@@ -590,7 +591,6 @@ Update_History_Loop:
 					return err
 				}
 				timerTasks = append(timerTasks, Schedule2CloseTimeoutTask)
-				defer e.timerProcessor.NotifyNewTimer(timerTasks)
 
 			case workflow.DecisionType_CompleteWorkflowExecution:
 				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
@@ -676,12 +676,18 @@ Update_History_Loop:
 					failCause = workflow.DecisionTaskFailedCause_BAD_START_TIMER_ATTRIBUTES
 					break Process_Decision_Loop
 				}
-				_, ti := msBuilder.AddTimerStartedEvent(completedID, attributes)
-				nextTimerTask := context.tBuilder.AddUserTimer(ti, msBuilder)
-				if nextTimerTask != nil {
-					timerTasks = append(timerTasks, nextTimerTask)
-					defer e.timerProcessor.NotifyNewTimer(timerTasks)
+				if !userTimersLoaded {
+					context.tBuilder.LoadUserTimers(msBuilder)
+					userTimersLoaded = true
 				}
+				_, ti := msBuilder.AddTimerStartedEvent(completedID, attributes)
+				if ti != nil {
+					failDecision = true
+					failCause = workflow.DecisionTaskFailedCause_BAD_START_TIMER_DUPLICATE_ID
+					break Process_Decision_Loop
+				}
+				context.tBuilder.AddUserTimer(ti)
+
 			case workflow.DecisionType_RequestCancelActivityTask:
 				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
 					metrics.DecisionTypeCancelActivityCounter)
@@ -831,6 +837,12 @@ Update_History_Loop:
 			continueAsNewBuilder = nil
 		}
 
+		if userTimersLoaded {
+			if tt := context.tBuilder.GetUserTimerTaskIfNeeded(msBuilder); tt != nil {
+				timerTasks = append(timerTasks, tt)
+			}
+		}
+
 		// Schedule another decision task if new events came in during this decision
 		if hasUnhandledEvents {
 			newDecisionEvent, _ := msBuilder.AddDecisionTaskScheduledEvent()
@@ -872,6 +884,9 @@ Update_History_Loop:
 
 			return updateErr
 		}
+
+		// Inform timer about the new ones.
+		e.timerProcessor.NotifyNewTimer(timerTasks)
 
 		return err
 	}
