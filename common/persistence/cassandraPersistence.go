@@ -170,6 +170,11 @@ const (
 		`create_request_id: ?` +
 		`}`
 
+	templateRequestCancelInfoType = `{` +
+		`initiated_id: ?, ` +
+		`cancel_request_id: ?` +
+		`}`
+
 	templateTaskListType = `{` +
 		`domain_id: ?, ` +
 		`name: ?, ` +
@@ -240,7 +245,7 @@ const (
 		`WHERE shard_id = ? ` +
 		`IF range_id = ?`
 
-	templateGetWorkflowExecutionQuery = `SELECT execution, activity_map, timer_map, child_executions_map ` +
+	templateGetWorkflowExecutionQuery = `SELECT execution, activity_map, timer_map, child_executions_map, request_cancel_map ` +
 		`FROM executions ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
@@ -304,6 +309,17 @@ const (
 		`and task_id = ? ` +
 		`IF next_event_id = ? and range_id = ?`
 
+	templateUpdateRequestCancelInfoQuery = `UPDATE executions ` +
+		`SET request_cancel_map[ ? ] =` + templateRequestCancelInfoType + ` ` +
+		`WHERE shard_id = ? ` +
+		`and type = ? ` +
+		`and domain_id = ? ` +
+		`and workflow_id = ? ` +
+		`and run_id = ? ` +
+		`and visibility_ts = ? ` +
+		`and task_id = ? ` +
+		`IF next_event_id = ? and range_id = ?`
+
 	templateDeleteActivityInfoQuery = `DELETE activity_map[ ? ] ` +
 		`FROM executions ` +
 		`WHERE shard_id = ? ` +
@@ -327,6 +343,17 @@ const (
 		`IF next_event_id = ? and range_id = ?`
 
 	templateDeleteChildExecutionInfoQuery = `DELETE child_executions_map[ ? ] ` +
+		`FROM executions ` +
+		`WHERE shard_id = ? ` +
+		`and type = ? ` +
+		`and domain_id = ? ` +
+		`and workflow_id = ? ` +
+		`and run_id = ? ` +
+		`and visibility_ts = ? ` +
+		`and task_id = ? ` +
+		`IF next_event_id = ? and range_id = ?`
+
+	templateDeleteRequestCancelInfoQuery = `DELETE request_cancel_map[ ? ] ` +
 		`FROM executions ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
@@ -837,6 +864,14 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *GetWorkflowExecutio
 	}
 	state.ChildExecutionInfos = childExecutionInfos
 
+	requestCancelInfos := make(map[int64]*RequestCancelInfo)
+	rMap := result["request_cancel_map"].(map[int64]map[string]interface{})
+	for key, value := range rMap {
+		info := createRequestCancelInfo(value)
+		requestCancelInfos[key] = info
+	}
+	state.RequestCancelInfos = requestCancelInfos
+
 	return &GetWorkflowExecutionResponse{State: state}, nil
 }
 
@@ -895,6 +930,9 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 		executionInfo.WorkflowID, executionInfo.RunID, request.Condition, request.RangeID)
 
 	d.updateChildExecutionInfos(batch, request.UpsertChildExecutionInfos, request.DeleteChildExecutionInfo,
+		executionInfo.DomainID, executionInfo.WorkflowID, executionInfo.RunID, request.Condition, request.RangeID)
+
+	d.updateRequestCancelInfos(batch, request.UpsertRequestCancelInfos, request.DeleteRequestCancelInfo,
 		executionInfo.DomainID, executionInfo.WorkflowID, executionInfo.RunID, request.Condition, request.RangeID)
 
 	if request.ContinueAsNew != nil {
@@ -1597,6 +1635,41 @@ func (d *cassandraPersistence) updateChildExecutionInfos(batch *gocql.Batch, chi
 	}
 }
 
+func (d *cassandraPersistence) updateRequestCancelInfos(batch *gocql.Batch, requestCancelInfos []*RequestCancelInfo,
+	deleteInfo *int64, domainID, workflowID, runID string, condition int64, rangeID int64) {
+
+	for _, c := range requestCancelInfos {
+		batch.Query(templateUpdateRequestCancelInfoQuery,
+			c.InitiatedID,
+			c.InitiatedID,
+			c.CancelRequestID,
+			d.shardID,
+			rowTypeExecution,
+			domainID,
+			workflowID,
+			runID,
+			defaultVisibilityTimestamp,
+			rowTypeExecutionTaskID,
+			condition,
+			rangeID)
+	}
+
+	// deleteInfo is the initiatedID for RequestCancelInfo being deleted
+	if deleteInfo != nil {
+		batch.Query(templateDeleteRequestCancelInfoQuery,
+			*deleteInfo,
+			d.shardID,
+			rowTypeExecution,
+			domainID,
+			workflowID,
+			runID,
+			defaultVisibilityTimestamp,
+			rowTypeExecutionTaskID,
+			condition,
+			rangeID)
+	}
+}
+
 func createShardInfo(result map[string]interface{}) *ShardInfo {
 	info := &ShardInfo{}
 	for k, v := range result {
@@ -1780,6 +1853,20 @@ func createChildExecutionInfo(result map[string]interface{}) *ChildExecutionInfo
 			info.StartedEvent = v.([]byte)
 		case "create_request_id":
 			info.CreateRequestID = v.(gocql.UUID).String()
+		}
+	}
+
+	return info
+}
+
+func createRequestCancelInfo(result map[string]interface{}) *RequestCancelInfo {
+	info := &RequestCancelInfo{}
+	for k, v := range result {
+		switch k {
+		case "initiated_id":
+			info.InitiatedID = v.(int64)
+		case "cancel_request_id":
+			info.CancelRequestID = v.(string)
 		}
 	}
 

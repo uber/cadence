@@ -1781,9 +1781,9 @@ CheckHistoryLoopForCancelSent:
 		history := historyResponse.GetHistory()
 		common.PrettyPrintHistory(history, s.logger)
 
-		lastEvent := history.GetEvents()[len(history.GetEvents())-1]
+		lastEvent := history.GetEvents()[len(history.GetEvents())-2]
 		if lastEvent.GetEventType() != workflow.EventType_ExternalWorkflowExecutionCancelRequested {
-			s.logger.Info("Cancellaton has been sent.")
+			s.logger.Info("Cancellaton still not sent.")
 			time.Sleep(100 * time.Millisecond)
 			continue CheckHistoryLoopForCancelSent
 		}
@@ -1950,9 +1950,9 @@ CheckHistoryLoopForCancelSent:
 		history := historyResponse.GetHistory()
 		common.PrettyPrintHistory(history, s.logger)
 
-		lastEvent := history.GetEvents()[len(history.GetEvents())-1]
+		lastEvent := history.GetEvents()[len(history.GetEvents())-2]
 		if lastEvent.GetEventType() != workflow.EventType_RequestCancelExternalWorkflowExecutionFailed {
-			s.logger.Info("Cancellaton has been sent.")
+			s.logger.Info("Cancellaton not cancelled yet.")
 			time.Sleep(100 * time.Millisecond)
 			continue CheckHistoryLoopForCancelSent
 		}
