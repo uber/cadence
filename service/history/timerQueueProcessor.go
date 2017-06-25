@@ -739,11 +739,7 @@ Update_History_Loop:
 			return nil
 		}
 
-		timeoutEvent := msBuilder.AddTimeoutWorkflowEvent()
-		if timeoutEvent == nil {
-			// Unable to add WorkflowTimeout event to history
-			return &workflow.InternalServiceError{Message: "Unable to add WorkflowTimeout event to history."}
-		}
+		msBuilder.AddTimeoutWorkflowEvent()
 
 		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 		// the history and try the operation again.

@@ -208,6 +208,7 @@ func (s *TestShardContext) GetRangeID() int64 {
 	return atomic.LoadInt64(&s.shardInfo.RangeID)
 }
 
+// GetTimeSource test implementation
 func (s *TestShardContext) GetTimeSource() common.TimeSource {
 	return common.NewRealTimeSource()
 }
