@@ -191,8 +191,9 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 		decisionTimeout = di.DecisionTimeout
 	}
 
+	duration := time.Duration(request.GetExecutionStartToCloseTimeoutSeconds()) * time.Second
 	timerTasks := []persistence.Task{&persistence.WorkflowTimeoutTask{
-		VisibilityTimestamp: time.Now().Add(time.Duration(request.GetExecutionStartToCloseTimeoutSeconds()) * time.Second),
+		VisibilityTimestamp: e.shard.GetTimeSource().Now().Add(duration),
 	}}
 	// Serialize the history
 	serializedHistory, serializedError := msBuilder.hBuilder.Serialize()
