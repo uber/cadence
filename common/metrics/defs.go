@@ -64,14 +64,11 @@ const (
 const (
 	HostnameTagName  = "hostname"
 	OperationTagName = "operation"
-	// ShardTagName is temporary until we can get all metric data removed for the service
-	ShardTagName = "shard"
 )
 
 // This package should hold all the metrics and tags for cadence
 const (
 	UnknownDirectoryTagValue = "Unknown"
-	AllShardsTagValue        = "ALL"
 )
 
 // Common service base metrics
@@ -294,6 +291,8 @@ const (
 	TimerTaskUserTimerScope
 	// TimerTaskWorkflowTimeoutScope is the scope used by metric emitted by timer queue processor for processing workflow timeouts.
 	TimerTaskWorkflowTimeoutScope
+	// TimerTaskDeleteHistoryEvent is the scope used by metric emitted by timer queue processor for processing history event cleanup
+	TimerTaskDeleteHistoryEvent
 
 	NumHistoryScopes
 )
@@ -411,6 +410,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		TimerTaskDecisionTimeoutScope:               {operation: "TimerTaskDecisionTimeout"},
 		TimerTaskUserTimerScope:                     {operation: "TimerTaskUserTimer"},
 		TimerTaskWorkflowTimeoutScope:               {operation: "TimerTaskWorkflowTimeout"},
+		TimerTaskDeleteHistoryEvent:                 {operation: "TimerTaskDeleteHistoryEvent"},
 	},
 	// Matching Scope Names
 	Matching: {

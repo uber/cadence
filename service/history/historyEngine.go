@@ -860,6 +860,19 @@ Update_History_Loop:
 		if isComplete {
 			// Generate a transfer task to delete workflow execution
 			transferTasks = append(transferTasks, &persistence.DeleteExecutionTask{})
+
+			// Generate a timer task to cleanup history events for this workflow execution
+			var retentionInDays int32
+			_, domainConfig, err := e.domainCache.GetDomainByID(domainID)
+			if err != nil {
+				if _, ok := err.(*workflow.EntityNotExistsError); !ok {
+					return err
+				}
+			} else {
+				retentionInDays = domainConfig.Retention
+			}
+			cleanupTask := context.tBuilder.createDeleteHistoryEventTimerTask(time.Duration(retentionInDays) * time.Hour * 24)
+			timerTasks = append(timerTasks, cleanupTask)
 		}
 
 		// Generate a transaction ID for appending events to history
@@ -873,7 +886,7 @@ Update_History_Loop:
 		var updateErr error
 		if continueAsNewBuilder != nil {
 			updateErr = context.continueAsNewWorkflowExecution(request.GetExecutionContext(), continueAsNewBuilder,
-				transferTasks, transactionID)
+				transferTasks, timerTasks, transactionID)
 		} else {
 			updateErr = context.updateWorkflowExecutionWithContext(request.GetExecutionContext(), transferTasks, timerTasks,
 				transactionID)
