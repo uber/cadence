@@ -1241,8 +1241,10 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 			}
 
 			isCancelRequested, cancelRequestID := msBuilder.isCancelRequested()
+			e.logger.Errorf("****isCancelRequested: %v, CancelRequestID: %v", isCancelRequested, cancelRequestID)
 			if isCancelRequested {
 				cancelRequest := req.GetCancelRequest()
+				e.logger.Errorf("****CancelRequestSet: %v", cancelRequest.IsSetRequestId())
 				if cancelRequest.IsSetRequestId() {
 					requestID := cancelRequest.GetRequestId()
 					if requestID != "" && cancelRequestID == requestID {
@@ -1250,6 +1252,7 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 					}
 				}
 
+				e.logger.Error("***Return Cancellation error.")
 				return &workflow.CancellationAlreadyRequestedError{
 					Message: "Cancellation already requested for this workflow execution.",
 				}
