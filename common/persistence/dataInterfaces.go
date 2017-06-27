@@ -135,6 +135,8 @@ type (
 		DecisionStartedID    int64
 		DecisionRequestID    string
 		DecisionTimeout      int32
+		CancelRequested      bool
+		CancelRequestID      string
 	}
 
 	// TransferTaskInfo describes a transfer task
@@ -266,6 +268,7 @@ type (
 		ActivitInfos        map[int64]*ActivityInfo
 		TimerInfos          map[string]*TimerInfo
 		ChildExecutionInfos map[int64]*ChildExecutionInfo
+		RequestCancelInfos  map[int64]*RequestCancelInfo
 		ExecutionInfo       *WorkflowExecutionInfo
 	}
 
@@ -302,6 +305,12 @@ type (
 		StartedID       int64
 		StartedEvent    []byte
 		CreateRequestID string
+	}
+
+	// RequestCancelInfo has details for pending external workflow cancellations
+	RequestCancelInfo struct {
+		InitiatedID     int64
+		CancelRequestID string
 	}
 
 	// CreateShardRequest is used to create a shard in executions table
@@ -393,6 +402,8 @@ type (
 		DeleteTimerInfos          []string
 		UpsertChildExecutionInfos []*ChildExecutionInfo
 		DeleteChildExecutionInfo  *int64
+		UpsertRequestCancelInfos  []*RequestCancelInfo
+		DeleteRequestCancelInfo   *int64
 	}
 
 	// DeleteWorkflowExecutionRequest is used to delete a workflow execution

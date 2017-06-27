@@ -820,7 +820,7 @@ func (wh *WorkflowHandler) RequestCancelWorkflowExecution(
 		CancelRequest: cancelRequest,
 	})
 	if err != nil {
-		wh.error(err, scope)
+		return wh.error(err, scope)
 	}
 
 	return nil
@@ -1074,6 +1074,9 @@ func (wh *WorkflowHandler) error(err error, scope int) error {
 		return err
 	case *gen.DomainAlreadyExistsError:
 		wh.metricsClient.IncCounter(scope, metrics.CadenceErrDomainAlreadyExistsCounter)
+		return err
+	case *gen.CancellationAlreadyRequestedError:
+		wh.metricsClient.IncCounter(scope, metrics.CadenceErrCancellationAlreadyRequestedCounter)
 		return err
 	default:
 		wh.metricsClient.IncCounter(scope, metrics.CadenceFailures)

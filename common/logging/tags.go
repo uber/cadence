@@ -40,6 +40,8 @@ const (
 	TagHistoryShardID       = "shard-id"
 	TagDecisionType         = "decision-type"
 	TagDecisionFailCause    = "decision-fail-cause"
+	TagTaskID               = "task-id"
+	TagTaskType             = "task-type"
 
 	// workflow logging tag values
 	// TagWorkflowComponent Values
@@ -70,7 +72,6 @@ const (
 	TagValueActionFailWorkflow                    = "add-fail-workflow-event"
 	TagValueActionTimeoutWorkflow                 = "add-timeout-workflow-event"
 	TagValueActionCancelWorkflow                  = "add-cancel-workflow-event"
-	TagValueActionUnknownEvent                    = "add-unknown-event"
 	TagValueActionTimerStarted                    = "add-timer-started-event"
 	TagValueActionTimerFired                      = "add-timer-fired-event"
 	TagValueActionTimerCanceled                   = "add-timer-Canceled-event"
@@ -84,6 +85,10 @@ const (
 	TagValueActionChildExecutionFailed            = "add-childexecution-failed-event"
 	TagValueActionChildExecutionCanceled          = "add-childexecution-canceled-event"
 	TagValueActionChildExecutionTerminated        = "add-childexecution-terminated-event"
+	TagValueActionRequestCancelWorkflow           = "add-request-cancel-workflow-event"
+	TagValueActionWorkflowCancelRequested         = "add-workflow-execution-cancel-requested-event"
+	TagValueActionWorkflowCancelFailed            = "add-workflow-execution-cancel-failed-event"
+	TagValueActionUnknownEvent                    = "add-unknown-event"
 
 	// TagStoreOperation values
 	TagValueStoreOperationGetTasks                = "get-tasks"
