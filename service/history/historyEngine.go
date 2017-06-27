@@ -630,7 +630,9 @@ Update_History_Loop:
 					failCause = workflow.DecisionTaskFailedCause_BAD_COMPLETE_WORKFLOW_EXECUTION_ATTRIBUTES
 					break Process_Decision_Loop
 				}
-				msBuilder.AddCompletedWorkflowEvent(completedID, attributes)
+				if e := msBuilder.AddCompletedWorkflowEvent(completedID, attributes); e == nil {
+					return &workflow.InternalServiceError{Message: "Unable to add complete workflow event."}
+				}
 				isComplete = true
 			case workflow.DecisionType_FailWorkflowExecution:
 				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
@@ -654,7 +656,9 @@ Update_History_Loop:
 					failCause = workflow.DecisionTaskFailedCause_BAD_FAIL_WORKFLOW_EXECUTION_ATTRIBUTES
 					break Process_Decision_Loop
 				}
-				msBuilder.AddFailWorkflowEvent(completedID, attributes)
+				if e := msBuilder.AddFailWorkflowEvent(completedID, attributes); e == nil {
+					return &workflow.InternalServiceError{Message: "Unable to add fail workflow event."}
+				}
 				isComplete = true
 			case workflow.DecisionType_CancelWorkflowExecution:
 				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,

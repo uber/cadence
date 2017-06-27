@@ -781,7 +781,11 @@ Update_History_Loop:
 			return nil
 		}
 
-		msBuilder.AddTimeoutWorkflowEvent()
+		if e := msBuilder.AddTimeoutWorkflowEvent(); e == nil {
+			// If we failed to add the event that means the workflow is already completed.
+			// we drop this timeout event.
+			return nil
+		}
 
 		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 		// the history and try the operation again.
