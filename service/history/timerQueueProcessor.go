@@ -32,6 +32,7 @@ import (
 	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
@@ -220,6 +221,10 @@ func (t *timerQueueProcessorImpl) NotifyNewTimer(timerTasks []persistence.Task) 
 			t.metricsClient.IncCounter(metrics.TimerTaskActivityTimeoutScope, metrics.NewTimerCounter)
 		case persistence.TaskTypeUserTimer:
 			t.metricsClient.IncCounter(metrics.TimerTaskUserTimerScope, metrics.NewTimerCounter)
+		case persistence.TaskTypeWorkflowTimeout:
+			t.metricsClient.IncCounter(metrics.TimerTaskWorkflowTimeoutScope, metrics.NewTimerCounter)
+		case persistence.TaskTypeDeleteHistoryEvent:
+			t.metricsClient.IncCounter(metrics.TimerTaskDeleteHistoryEvent, metrics.NewTimerCounter)
 		}
 	}
 	t.lock.Unlock()
@@ -418,34 +423,32 @@ func (t *timerQueueProcessorImpl) processTaskWorker(tasksCh <-chan *persistence.
 
 func (t *timerQueueProcessorImpl) processTimerTask(timerTask *persistence.TimerTaskInfo) error {
 	taskID := SequenceID{VisibilityTimestamp: timerTask.VisibilityTimestamp, TaskID: timerTask.TaskID}
-	t.logger.Debugf("Processing timer: (%s), for WorkflowID: %v, RunID: %v, Type: %v, TimeoutTupe: %v, EventID: %v",
+	t.logger.Debugf("Processing timer: (%s), for WorkflowID: %v, RunID: %v, Type: %v, TimeoutType: %v, EventID: %v",
 		taskID, timerTask.WorkflowID, timerTask.RunID, t.getTimerTaskType(timerTask.TaskType),
 		workflow.TimeoutType(timerTask.TimeoutType).String(), timerTask.EventID)
-
-	domainID := timerTask.DomainID
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(timerTask.WorkflowID),
-		RunId:      common.StringPtr(timerTask.RunID),
-	}
-
-	context, release, err0 := t.cache.getOrCreateWorkflowExecution(domainID, workflowExecution)
-	if err0 != nil {
-		return err0
-	}
-	defer release()
 
 	var err error
 	scope := metrics.TimerQueueProcessorScope
 	switch timerTask.TaskType {
 	case persistence.TaskTypeUserTimer:
 		scope = metrics.TimerTaskUserTimerScope
-		err = t.processExpiredUserTimer(context, timerTask)
+		err = t.processExpiredUserTimer(timerTask)
+
 	case persistence.TaskTypeActivityTimeout:
 		scope = metrics.TimerTaskActivityTimeoutScope
-		err = t.processActivityTimeout(context, timerTask)
+		err = t.processActivityTimeout(timerTask)
+
 	case persistence.TaskTypeDecisionTimeout:
 		scope = metrics.TimerTaskDecisionTimeoutScope
-		err = t.processDecisionTimeout(context, timerTask)
+		err = t.processDecisionTimeout(timerTask)
+
+	case persistence.TaskTypeWorkflowTimeout:
+		scope = metrics.TimerTaskWorkflowTimeoutScope
+		err = t.processWorkflowTimeout(timerTask)
+
+	case persistence.TaskTypeDeleteHistoryEvent:
+		scope = metrics.TimerTaskDeleteHistoryEvent
+		err = t.processDeleteHistoryEvent(timerTask)
 	}
 
 	if err != nil {
@@ -474,11 +477,16 @@ func (t *timerQueueProcessorImpl) processTimerTask(timerTask *persistence.TimerT
 	return err
 }
 
-func (t *timerQueueProcessorImpl) processExpiredUserTimer(
-	context *workflowExecutionContext, task *persistence.TimerTaskInfo) error {
+func (t *timerQueueProcessorImpl) processExpiredUserTimer(task *persistence.TimerTaskInfo) error {
 	t.metricsClient.IncCounter(metrics.TimerTaskUserTimerScope, metrics.TaskRequests)
 	sw := t.metricsClient.StartTimer(metrics.TimerTaskUserTimerScope, metrics.TaskLatency)
 	defer sw.Stop()
+
+	context, release, err0 := t.cache.getOrCreateWorkflowExecution(getDomainIDAndWorkflowExecution(task))
+	if err0 != nil {
+		return err0
+	}
+	defer release()
 
 Update_History_Loop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
@@ -543,11 +551,23 @@ Update_History_Loop:
 	return ErrMaxAttemptsExceeded
 }
 
-func (t *timerQueueProcessorImpl) processActivityTimeout(
-	context *workflowExecutionContext, timerTask *persistence.TimerTaskInfo) error {
+func getDomainIDAndWorkflowExecution(task *persistence.TimerTaskInfo) (string, workflow.WorkflowExecution) {
+	return task.DomainID, workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr(task.WorkflowID),
+		RunId:      common.StringPtr(task.RunID),
+	}
+}
+
+func (t *timerQueueProcessorImpl) processActivityTimeout(timerTask *persistence.TimerTaskInfo) error {
 	t.metricsClient.IncCounter(metrics.TimerTaskActivityTimeoutScope, metrics.TaskRequests)
 	sw := t.metricsClient.StartTimer(metrics.TimerTaskActivityTimeoutScope, metrics.TaskLatency)
 	defer sw.Stop()
+
+	context, release, err0 := t.cache.getOrCreateWorkflowExecution(getDomainIDAndWorkflowExecution(timerTask))
+	if err0 != nil {
+		return err0
+	}
+	defer release()
 
 Update_History_Loop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
@@ -662,11 +682,33 @@ Update_History_Loop:
 	return ErrMaxAttemptsExceeded
 }
 
-func (t *timerQueueProcessorImpl) processDecisionTimeout(
-	context *workflowExecutionContext, task *persistence.TimerTaskInfo) error {
+func (t *timerQueueProcessorImpl) processDeleteHistoryEvent(task *persistence.TimerTaskInfo) error {
+	t.metricsClient.IncCounter(metrics.TimerTaskDeleteHistoryEvent, metrics.TaskRequests)
+	sw := t.metricsClient.StartTimer(metrics.TimerTaskDeleteHistoryEvent, metrics.TaskLatency)
+	defer sw.Stop()
+
+	domainID, workflowExecution := getDomainIDAndWorkflowExecution(task)
+	op := func() error {
+		return t.historyService.historyMgr.DeleteWorkflowExecutionHistory(
+			&persistence.DeleteWorkflowExecutionHistoryRequest{
+				DomainID:  domainID,
+				Execution: workflowExecution,
+			})
+	}
+
+	return backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
+}
+
+func (t *timerQueueProcessorImpl) processDecisionTimeout(task *persistence.TimerTaskInfo) error {
 	t.metricsClient.IncCounter(metrics.TimerTaskDecisionTimeoutScope, metrics.TaskRequests)
 	sw := t.metricsClient.StartTimer(metrics.TimerTaskDecisionTimeoutScope, metrics.TaskLatency)
 	defer sw.Stop()
+
+	context, release, err0 := t.cache.getOrCreateWorkflowExecution(getDomainIDAndWorkflowExecution(task))
+	if err0 != nil {
+		return err0
+	}
+	defer release()
 
 Update_History_Loop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
@@ -717,6 +759,47 @@ Update_History_Loop:
 	return ErrMaxAttemptsExceeded
 }
 
+func (t *timerQueueProcessorImpl) processWorkflowTimeout(task *persistence.TimerTaskInfo) error {
+	t.metricsClient.IncCounter(metrics.TimerTaskWorkflowTimeoutScope, metrics.TaskRequests)
+	sw := t.metricsClient.StartTimer(metrics.TimerTaskWorkflowTimeoutScope, metrics.TaskLatency)
+	defer sw.Stop()
+
+	context, release, err0 := t.cache.getOrCreateWorkflowExecution(getDomainIDAndWorkflowExecution(task))
+	if err0 != nil {
+		return err0
+	}
+	defer release()
+
+Update_History_Loop:
+	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
+		msBuilder, err1 := context.loadWorkflowExecution()
+		if err1 != nil {
+			return err1
+		}
+
+		if !msBuilder.isWorkflowExecutionRunning() {
+			return nil
+		}
+
+		if e := msBuilder.AddTimeoutWorkflowEvent(); e == nil {
+			// If we failed to add the event that means the workflow is already completed.
+			// we drop this timeout event.
+			return nil
+		}
+
+		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
+		// the history and try the operation again.
+		err := t.updateWorkflowExecution(context, msBuilder, false, nil, nil)
+		if err != nil {
+			if err == ErrConflict {
+				continue Update_History_Loop
+			}
+		}
+		return err
+	}
+	return ErrMaxAttemptsExceeded
+}
+
 func (t *timerQueueProcessorImpl) updateWorkflowExecution(context *workflowExecutionContext,
 	msBuilder *mutableStateBuilder, scheduleNewDecision bool, timerTasks []persistence.Task,
 	clearTimerTask persistence.Task) error {
@@ -755,6 +838,10 @@ func (t *timerQueueProcessorImpl) getTimerTaskType(taskType int) string {
 		return "ActivityTimeout"
 	case persistence.TaskTypeDecisionTimeout:
 		return "DecisionTimeout"
+	case persistence.TaskTypeWorkflowTimeout:
+		return "WorkflowTimeout"
+	case persistence.TaskTypeDeleteHistoryEvent:
+		return "DeleteHistoryEvent"
 	}
 	return "UnKnown"
 }

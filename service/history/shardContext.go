@@ -32,6 +32,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 
 	"github.com/uber-common/bark"
+	"github.com/uber/cadence/common"
 )
 
 const (
@@ -56,6 +57,7 @@ type (
 		GetMetricsClient() metrics.Client
 		GetTimerAckLevel() time.Time
 		UpdateTimerAckLevel(ackLevel time.Time) error
+		GetTimeSource() common.TimeSource
 	}
 
 	shardContextImpl struct {
@@ -424,6 +426,10 @@ func (s *shardContextImpl) allocateTimerIDsLocked(timerTasks []persistence.Task)
 	return nil
 }
 
+func (s *shardContextImpl) GetTimeSource() common.TimeSource {
+	return common.NewRealTimeSource()
+}
+
 // TODO: This method has too many parameters.  Clean it up.  Maybe create a struct to pass in as parameter.
 func acquireShard(shardID int, shardManager persistence.ShardManager, historyMgr persistence.HistoryManager,
 	executionMgr persistence.ExecutionManager, owner string, closeCh chan<- int, logger bark.Logger,
@@ -436,6 +442,9 @@ func acquireShard(shardID int, shardManager persistence.ShardManager, historyMgr
 	shardInfo := response.ShardInfo
 	updatedShardInfo := copyShardInfo(shardInfo)
 	updatedShardInfo.Owner = owner
+	tags := map[string]string{
+		metrics.ShardTagName: metrics.AllShardsTagValue,
+	}
 	context := &shardContextImpl{
 		shardID:          shardID,
 		shardManager:     shardManager,
@@ -444,7 +453,7 @@ func acquireShard(shardID int, shardManager persistence.ShardManager, historyMgr
 		shardInfo:        updatedShardInfo,
 		rangeSize:        defaultRangeSize,
 		closeCh:          closeCh,
-		metricsClient:    metricsClient,
+		metricsClient:    metricsClient.Tagged(tags),
 	}
 	context.logger = logger.WithFields(bark.Fields{
 		logging.TagHistoryShardID: shardID,

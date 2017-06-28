@@ -1346,6 +1346,100 @@ func (p *ServiceBusyError) Error() string {
 }
 
 // Attributes:
+//  - Message
+type CancellationAlreadyRequestedError struct {
+  Message string `thrift:"message,1,required" db:"message" json:"message"`
+}
+
+func NewCancellationAlreadyRequestedError() *CancellationAlreadyRequestedError {
+  return &CancellationAlreadyRequestedError{}
+}
+
+
+func (p *CancellationAlreadyRequestedError) GetMessage() string {
+  return p.Message
+}
+func (p *CancellationAlreadyRequestedError) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+  var issetMessage bool = false;
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 1:
+      if err := p.ReadField1(iprot); err != nil {
+        return err
+      }
+      issetMessage = true
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  if !issetMessage{
+    return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("Required field Message is not set"));
+  }
+  return nil
+}
+
+func (p *CancellationAlreadyRequestedError)  ReadField1(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 1: ", err)
+} else {
+  p.Message = v
+}
+  return nil
+}
+
+func (p *CancellationAlreadyRequestedError) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("CancellationAlreadyRequestedError"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField1(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *CancellationAlreadyRequestedError) writeField1(oprot thrift.TProtocol) (err error) {
+  if err := oprot.WriteFieldBegin("message", thrift.STRING, 1); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:message: ", p), err) }
+  if err := oprot.WriteString(string(p.Message)); err != nil {
+  return thrift.PrependError(fmt.Sprintf("%T.message (1) field write error: ", p), err) }
+  if err := oprot.WriteFieldEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 1:message: ", p), err) }
+  return err
+}
+
+func (p *CancellationAlreadyRequestedError) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("CancellationAlreadyRequestedError(%+v)", *p)
+}
+
+func (p *CancellationAlreadyRequestedError) Error() string {
+  return p.String()
+}
+
+// Attributes:
 //  - Name
 type WorkflowType struct {
   // unused fields # 1 to 9
@@ -19481,6 +19575,7 @@ func (p *RespondActivityTaskCanceledRequest) String() string {
 //  - Domain
 //  - WorkflowExecution
 //  - Identity
+//  - RequestId
 type RequestCancelWorkflowExecutionRequest struct {
   // unused fields # 1 to 9
   Domain *string `thrift:"domain,10" db:"domain" json:"domain,omitempty"`
@@ -19488,6 +19583,8 @@ type RequestCancelWorkflowExecutionRequest struct {
   WorkflowExecution *WorkflowExecution `thrift:"workflowExecution,20" db:"workflowExecution" json:"workflowExecution,omitempty"`
   // unused fields # 21 to 29
   Identity *string `thrift:"identity,30" db:"identity" json:"identity,omitempty"`
+  // unused fields # 31 to 39
+  RequestId *string `thrift:"requestId,40" db:"requestId" json:"requestId,omitempty"`
 }
 
 func NewRequestCancelWorkflowExecutionRequest() *RequestCancelWorkflowExecutionRequest {
@@ -19515,6 +19612,13 @@ func (p *RequestCancelWorkflowExecutionRequest) GetIdentity() string {
   }
 return *p.Identity
 }
+var RequestCancelWorkflowExecutionRequest_RequestId_DEFAULT string
+func (p *RequestCancelWorkflowExecutionRequest) GetRequestId() string {
+  if !p.IsSetRequestId() {
+    return RequestCancelWorkflowExecutionRequest_RequestId_DEFAULT
+  }
+return *p.RequestId
+}
 func (p *RequestCancelWorkflowExecutionRequest) IsSetDomain() bool {
   return p.Domain != nil
 }
@@ -19525,6 +19629,10 @@ func (p *RequestCancelWorkflowExecutionRequest) IsSetWorkflowExecution() bool {
 
 func (p *RequestCancelWorkflowExecutionRequest) IsSetIdentity() bool {
   return p.Identity != nil
+}
+
+func (p *RequestCancelWorkflowExecutionRequest) IsSetRequestId() bool {
+  return p.RequestId != nil
 }
 
 func (p *RequestCancelWorkflowExecutionRequest) Read(iprot thrift.TProtocol) error {
@@ -19550,6 +19658,10 @@ func (p *RequestCancelWorkflowExecutionRequest) Read(iprot thrift.TProtocol) err
       }
     case 30:
       if err := p.ReadField30(iprot); err != nil {
+        return err
+      }
+    case 40:
+      if err := p.ReadField40(iprot); err != nil {
         return err
       }
     default:
@@ -19593,6 +19705,15 @@ func (p *RequestCancelWorkflowExecutionRequest)  ReadField30(iprot thrift.TProto
   return nil
 }
 
+func (p *RequestCancelWorkflowExecutionRequest)  ReadField40(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 40: ", err)
+} else {
+  p.RequestId = &v
+}
+  return nil
+}
+
 func (p *RequestCancelWorkflowExecutionRequest) Write(oprot thrift.TProtocol) error {
   if err := oprot.WriteStructBegin("RequestCancelWorkflowExecutionRequest"); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
@@ -19600,6 +19721,7 @@ func (p *RequestCancelWorkflowExecutionRequest) Write(oprot thrift.TProtocol) er
     if err := p.writeField10(oprot); err != nil { return err }
     if err := p.writeField20(oprot); err != nil { return err }
     if err := p.writeField30(oprot); err != nil { return err }
+    if err := p.writeField40(oprot); err != nil { return err }
   }
   if err := oprot.WriteFieldStop(); err != nil {
     return thrift.PrependError("write field stop error: ", err) }
@@ -19641,6 +19763,18 @@ func (p *RequestCancelWorkflowExecutionRequest) writeField30(oprot thrift.TProto
     return thrift.PrependError(fmt.Sprintf("%T.identity (30) field write error: ", p), err) }
     if err := oprot.WriteFieldEnd(); err != nil {
       return thrift.PrependError(fmt.Sprintf("%T write field end error 30:identity: ", p), err) }
+  }
+  return err
+}
+
+func (p *RequestCancelWorkflowExecutionRequest) writeField40(oprot thrift.TProtocol) (err error) {
+  if p.IsSetRequestId() {
+    if err := oprot.WriteFieldBegin("requestId", thrift.STRING, 40); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 40:requestId: ", p), err) }
+    if err := oprot.WriteString(string(*p.RequestId)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.requestId (40) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 40:requestId: ", p), err) }
   }
   return err
 }

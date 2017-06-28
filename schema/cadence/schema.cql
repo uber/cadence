@@ -1,8 +1,3 @@
-CREATE TABLE shards (
-  shard_id           int,
-  PRIMARY KEY (shard_id)
-);
-
 CREATE TYPE shard (
   shard_id            int,
   owner               text, -- Host identifier processing the shard
@@ -41,6 +36,8 @@ CREATE TYPE workflow_execution (
   decision_started_id    bigint,
   decision_request_id    text,    -- Identifier used by matching engine for retrying history service calls for recording task is started
   decision_timeout       int,
+  cancel_requested       boolean,
+  cancel_request_id      text,
 );
 
 -- TODO: Remove fields that are left over from activity and workflow tasks.
@@ -103,6 +100,12 @@ CREATE TYPE child_execution_info (
   create_request_id uuid,
 );
 
+-- External workflow cancellation in progress mutable state
+CREATE TYPE request_cancel_info (
+  initiated_id      bigint,
+  cancel_request_id text,
+);
+
 -- Activity or workflow task in a task list
 CREATE TYPE task (
   domain_id        uuid,
@@ -149,6 +152,7 @@ CREATE TABLE executions (
   activity_map         map<bigint, frozen<activity_info>>,
   timer_map            map<text, frozen<timer_info>>,
   child_executions_map map<bigint, frozen<child_execution_info>>,
+  request_cancel_map   map<bigint, frozen<request_cancel_info>>,
   PRIMARY KEY  (shard_id, type, domain_id, workflow_id, run_id, visibility_ts, task_id)
 ) WITH COMPACTION = {
     'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'

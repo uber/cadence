@@ -1579,6 +1579,16 @@ func (s *integrationSuite) TestExternalRequestCancelWorkflowExecution() {
 	})
 	s.Nil(err)
 
+	err = s.engine.RequestCancelWorkflowExecution(&workflow.RequestCancelWorkflowExecutionRequest{
+		Domain: common.StringPtr(s.domainName),
+		WorkflowExecution: &workflow.WorkflowExecution{
+			WorkflowId: common.StringPtr(id),
+			RunId:      common.StringPtr(we.GetRunId()),
+		},
+	})
+	s.NotNil(err)
+	s.IsType(&workflow.CancellationAlreadyRequestedError{}, err)
+
 	err = poller.pollAndProcessDecisionTask(true, false)
 	s.logger.Infof("pollAndProcessDecisionTask: %v", err)
 	s.Nil(err)
@@ -1781,9 +1791,9 @@ CheckHistoryLoopForCancelSent:
 		history := historyResponse.GetHistory()
 		common.PrettyPrintHistory(history, s.logger)
 
-		lastEvent := history.GetEvents()[len(history.GetEvents())-1]
+		lastEvent := history.GetEvents()[len(history.GetEvents())-2]
 		if lastEvent.GetEventType() != workflow.EventType_ExternalWorkflowExecutionCancelRequested {
-			s.logger.Info("Cancellaton has been sent.")
+			s.logger.Info("Cancellaton still not sent.")
 			time.Sleep(100 * time.Millisecond)
 			continue CheckHistoryLoopForCancelSent
 		}
@@ -1950,9 +1960,9 @@ CheckHistoryLoopForCancelSent:
 		history := historyResponse.GetHistory()
 		common.PrettyPrintHistory(history, s.logger)
 
-		lastEvent := history.GetEvents()[len(history.GetEvents())-1]
+		lastEvent := history.GetEvents()[len(history.GetEvents())-2]
 		if lastEvent.GetEventType() != workflow.EventType_RequestCancelExternalWorkflowExecutionFailed {
-			s.logger.Info("Cancellaton has been sent.")
+			s.logger.Info("Cancellaton not cancelled yet.")
 			time.Sleep(100 * time.Millisecond)
 			continue CheckHistoryLoopForCancelSent
 		}
@@ -2436,6 +2446,65 @@ func (s *integrationSuite) TestChildWorkflowWithContinueAsNew() {
 	s.logger.Info("Child Workflow Execution History: ")
 	s.printWorkflowHistory(s.domainName,
 		startedEvent.GetChildWorkflowExecutionStartedEventAttributes().GetWorkflowExecution())
+}
+
+func (s *integrationSuite) TestWorkflowTimeout() {
+	id := "integration-workflow-timeout-test"
+	wt := "integration-workflow-timeout-type"
+	tl := "integration-workflow-timeout-tasklist"
+	identity := "worker1"
+
+	workflowType := workflow.NewWorkflowType()
+	workflowType.Name = common.StringPtr(wt)
+
+	taskList := workflow.NewTaskList()
+	taskList.Name = common.StringPtr(tl)
+
+	request := &workflow.StartWorkflowExecutionRequest{
+		RequestId:    common.StringPtr(uuid.New()),
+		Domain:       common.StringPtr(s.domainName),
+		WorkflowId:   common.StringPtr(id),
+		WorkflowType: workflowType,
+		TaskList:     taskList,
+		Input:        nil,
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		Identity:                            common.StringPtr(identity),
+	}
+
+	we, err0 := s.engine.StartWorkflowExecution(request)
+	s.Nil(err0)
+
+	s.logger.Infof("StartWorkflowExecution: response: %v \n", we.GetRunId())
+
+	workflowComplete := false
+
+GetHistoryLoop:
+	for i := 0; i < 10; i++ {
+		historyResponse, err := s.engine.GetWorkflowExecutionHistory(&workflow.GetWorkflowExecutionHistoryRequest{
+			Domain: common.StringPtr(s.domainName),
+			Execution: &workflow.WorkflowExecution{
+				WorkflowId: common.StringPtr(id),
+				RunId:      common.StringPtr(we.GetRunId()),
+			},
+		})
+		s.Nil(err)
+		history := historyResponse.GetHistory()
+		common.PrettyPrintHistory(history, s.logger)
+
+		lastEvent := history.GetEvents()[len(history.GetEvents())-1]
+		if lastEvent.GetEventType() != workflow.EventType_WorkflowExecutionTimedOut {
+			s.logger.Warnf("Execution not timedout yet.")
+			time.Sleep(200 * time.Millisecond)
+			continue GetHistoryLoop
+		}
+
+		timeoutEventAttributes := lastEvent.GetWorkflowExecutionTimedOutEventAttributes()
+		s.Equal(workflow.TimeoutType_START_TO_CLOSE, timeoutEventAttributes.GetTimeoutType())
+		workflowComplete = true
+		break GetHistoryLoop
+	}
+	s.True(workflowComplete)
 }
 
 func (s *integrationSuite) setupShards() {

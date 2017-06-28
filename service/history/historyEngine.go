@@ -23,6 +23,7 @@ package history
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/pborman/uuid"
 	"github.com/uber-common/bark"
@@ -137,6 +138,14 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 	domainID := startRequest.GetDomainUUID()
 	request := startRequest.GetStartRequest()
 	executionID := request.GetWorkflowId()
+
+	if request.GetExecutionStartToCloseTimeoutSeconds() <= 0 {
+		return nil, &workflow.BadRequestError{Message: "Missing or invalid ExecutionStartToCloseTimeoutSeconds."}
+	}
+	if request.GetTaskStartToCloseTimeoutSeconds() <= 0 {
+		return nil, &workflow.BadRequestError{Message: "Missing or invalid TaskStartToCloseTimeoutSeconds."}
+	}
+
 	// We generate a new workflow execution run_id on each StartWorkflowExecution call.  This generated run_id is
 	// returned back to the caller as the response to StartWorkflowExecution.
 	runID := uuid.New()
@@ -182,6 +191,10 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 		decisionTimeout = di.DecisionTimeout
 	}
 
+	duration := time.Duration(request.GetExecutionStartToCloseTimeoutSeconds()) * time.Second
+	timerTasks := []persistence.Task{&persistence.WorkflowTimeoutTask{
+		VisibilityTimestamp: e.shard.GetTimeSource().Now().Add(duration),
+	}}
 	// Serialize the history
 	serializedHistory, serializedError := msBuilder.hBuilder.Serialize()
 	if serializedError != nil {
@@ -221,6 +234,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 		DecisionStartedID:           decisionStartID,
 		DecisionStartToCloseTimeout: decisionTimeout,
 		ContinueAsNew:               false,
+		TimerTasks:                  timerTasks,
 	})
 
 	if err != nil {
@@ -255,6 +269,8 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 			fmt.Sprintf("{WorkflowID: %v, RunID: %v}", executionID, runID))
 		return nil, err
 	}
+
+	e.timerProcessor.NotifyNewTimer(timerTasks)
 
 	return &workflow.StartWorkflowExecutionResponse{
 		RunId: workflowExecution.RunId,
@@ -614,7 +630,9 @@ Update_History_Loop:
 					failCause = workflow.DecisionTaskFailedCause_BAD_COMPLETE_WORKFLOW_EXECUTION_ATTRIBUTES
 					break Process_Decision_Loop
 				}
-				msBuilder.AddCompletedWorkflowEvent(completedID, attributes)
+				if e := msBuilder.AddCompletedWorkflowEvent(completedID, attributes); e == nil {
+					return &workflow.InternalServiceError{Message: "Unable to add complete workflow event."}
+				}
 				isComplete = true
 			case workflow.DecisionType_FailWorkflowExecution:
 				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
@@ -638,7 +656,9 @@ Update_History_Loop:
 					failCause = workflow.DecisionTaskFailedCause_BAD_FAIL_WORKFLOW_EXECUTION_ATTRIBUTES
 					break Process_Decision_Loop
 				}
-				msBuilder.AddFailWorkflowEvent(completedID, attributes)
+				if e := msBuilder.AddFailWorkflowEvent(completedID, attributes); e == nil {
+					return &workflow.InternalServiceError{Message: "Unable to add fail workflow event."}
+				}
 				isComplete = true
 			case workflow.DecisionType_CancelWorkflowExecution:
 				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
@@ -753,8 +773,9 @@ Update_History_Loop:
 							attributes.GetDomain())}
 				}
 
-				wfCancelReqEvent := msBuilder.AddRequestCancelExternalWorkflowExecutionInitiatedEvent(
-					completedID, attributes)
+				cancelRequestID := uuid.New()
+				wfCancelReqEvent, _ := msBuilder.AddRequestCancelExternalWorkflowExecutionInitiatedEvent(completedID,
+					cancelRequestID, attributes)
 				if wfCancelReqEvent == nil {
 					return &workflow.InternalServiceError{Message: "Unable to add external cancel workflow request."}
 				}
@@ -856,6 +877,19 @@ Update_History_Loop:
 		if isComplete {
 			// Generate a transfer task to delete workflow execution
 			transferTasks = append(transferTasks, &persistence.DeleteExecutionTask{})
+
+			// Generate a timer task to cleanup history events for this workflow execution
+			var retentionInDays int32
+			_, domainConfig, err := e.domainCache.GetDomainByID(domainID)
+			if err != nil {
+				if _, ok := err.(*workflow.EntityNotExistsError); !ok {
+					return err
+				}
+			} else {
+				retentionInDays = domainConfig.Retention
+			}
+			cleanupTask := context.tBuilder.createDeleteHistoryEventTimerTask(time.Duration(retentionInDays) * time.Hour * 24)
+			timerTasks = append(timerTasks, cleanupTask)
 		}
 
 		// Generate a transaction ID for appending events to history
@@ -869,7 +903,7 @@ Update_History_Loop:
 		var updateErr error
 		if continueAsNewBuilder != nil {
 			updateErr = context.continueAsNewWorkflowExecution(request.GetExecutionContext(), continueAsNewBuilder,
-				transferTasks, transactionID)
+				transferTasks, timerTasks, transactionID)
 		} else {
 			updateErr = context.updateWorkflowExecutionWithContext(request.GetExecutionContext(), transferTasks, timerTasks,
 				transactionID)
@@ -1223,12 +1257,7 @@ Update_History_Loop:
 	return &workflow.RecordActivityTaskHeartbeatResponse{}, ErrMaxAttemptsExceeded
 }
 
-// RequestCancelWorkflowExecution
-// https://github.com/uber/cadence/issues/145
-// TODO: (1) Each external request can result in one cancel requested event. it would be nice
-//	 to have dedupe on the server side.
-//	(2) if there are multiple calls if one request goes through then can we respond to the other ones with
-//       cancellation in progress instead of success.
+// RequestCancelWorkflowExecution records request cancellation event for workflow execution
 func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 	req *h.RequestCancelWorkflowExecutionRequest) error {
 	domainID := req.GetDomainUUID()
@@ -1243,6 +1272,21 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 		func(msBuilder *mutableStateBuilder) error {
 			if !msBuilder.isWorkflowExecutionRunning() {
 				return &workflow.EntityNotExistsError{Message: "Workflow execution already completed."}
+			}
+
+			isCancelRequested, cancelRequestID := msBuilder.isCancelRequested()
+			if isCancelRequested {
+				cancelRequest := req.GetCancelRequest()
+				if cancelRequest.IsSetRequestId() {
+					requestID := cancelRequest.GetRequestId()
+					if requestID != "" && cancelRequestID == requestID {
+						return nil
+					}
+				}
+
+				return &workflow.CancellationAlreadyRequestedError{
+					Message: "Cancellation already requested for this workflow execution.",
+				}
 			}
 
 			if msBuilder.AddWorkflowExecutionCancelRequestedEvent("", req) == nil {

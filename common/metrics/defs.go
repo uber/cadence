@@ -64,11 +64,14 @@ const (
 const (
 	HostnameTagName  = "hostname"
 	OperationTagName = "operation"
+	// ShardTagName is temporary until we can get all metric data removed for the service
+	ShardTagName = "shard"
 )
 
 // This package should hold all the metrics and tags for cadence
 const (
 	UnknownDirectoryTagValue = "Unknown"
+	AllShardsTagValue        = "ALL"
 )
 
 // Common service base metrics
@@ -289,6 +292,10 @@ const (
 	TimerTaskDecisionTimeoutScope
 	// TimerTaskUserTimerScope is the scope used by metric emitted by timer queue processor for processing user timers
 	TimerTaskUserTimerScope
+	// TimerTaskWorkflowTimeoutScope is the scope used by metric emitted by timer queue processor for processing workflow timeouts.
+	TimerTaskWorkflowTimeoutScope
+	// TimerTaskDeleteHistoryEvent is the scope used by metric emitted by timer queue processor for processing history event cleanup
+	TimerTaskDeleteHistoryEvent
 
 	NumHistoryScopes
 )
@@ -405,6 +412,8 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		TimerTaskActivityTimeoutScope:               {operation: "TimerTaskActivityTimeout"},
 		TimerTaskDecisionTimeoutScope:               {operation: "TimerTaskDecisionTimeout"},
 		TimerTaskUserTimerScope:                     {operation: "TimerTaskUserTimer"},
+		TimerTaskWorkflowTimeoutScope:               {operation: "TimerTaskWorkflowTimeout"},
+		TimerTaskDeleteHistoryEvent:                 {operation: "TimerTaskDeleteHistoryEvent"},
 	},
 	// Matching Scope Names
 	Matching: {
@@ -425,6 +434,7 @@ const (
 	CadenceErrEntityNotExistsCounter
 	CadenceErrExecutionAlreadyStartedCounter
 	CadenceErrDomainAlreadyExistsCounter
+	CadenceErrCancellationAlreadyRequestedCounter
 	PersistenceRequests
 	PersistenceFailures
 	PersistenceLatency
@@ -482,20 +492,21 @@ const (
 // MetricDefs record the metrics for all services
 var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 	Common: {
-		CadenceRequests:                          {metricName: "cadence.requests", metricType: Counter},
-		CadenceFailures:                          {metricName: "cadence.errors", metricType: Counter},
-		CadenceLatency:                           {metricName: "cadence.latency", metricType: Timer},
-		CadenceErrBadRequestCounter:              {metricName: "cadence.errors.bad-request", metricType: Counter},
-		CadenceErrEntityNotExistsCounter:         {metricName: "cadence.errors.entity-not-exists", metricType: Counter},
-		CadenceErrExecutionAlreadyStartedCounter: {metricName: "cadence.errors.execution-already-started", metricType: Counter},
-		CadenceErrDomainAlreadyExistsCounter:     {metricName: "cadence.errors.domain-already-exists", metricType: Counter},
-		PersistenceRequests:                      {metricName: "persistence.requests", metricType: Counter},
-		PersistenceFailures:                      {metricName: "persistence.errors", metricType: Counter},
-		PersistenceLatency:                       {metricName: "persistence.latency", metricType: Timer},
-		PersistenceErrShardExistsCounter:         {metricName: "persistence.errors.shard-exists", metricType: Counter},
-		PersistenceErrShardOwnershipLostCounter:  {metricName: "persistence.errors.shard-ownership-lost", metricType: Counter},
-		PersistenceErrConditionFailedCounter:     {metricName: "persistence.errors.condition-failed", metricType: Counter},
-		PersistenceErrTimeoutCounter:             {metricName: "persistence.errors.timeout", metricType: Counter},
+		CadenceRequests:                               {metricName: "cadence.requests", metricType: Counter},
+		CadenceFailures:                               {metricName: "cadence.errors", metricType: Counter},
+		CadenceLatency:                                {metricName: "cadence.latency", metricType: Timer},
+		CadenceErrBadRequestCounter:                   {metricName: "cadence.errors.bad-request", metricType: Counter},
+		CadenceErrEntityNotExistsCounter:              {metricName: "cadence.errors.entity-not-exists", metricType: Counter},
+		CadenceErrExecutionAlreadyStartedCounter:      {metricName: "cadence.errors.execution-already-started", metricType: Counter},
+		CadenceErrDomainAlreadyExistsCounter:          {metricName: "cadence.errors.domain-already-exists", metricType: Counter},
+		CadenceErrCancellationAlreadyRequestedCounter: {metricName: "cadence.errors.cancellation-already-requested", metricType: Counter},
+		PersistenceRequests:                           {metricName: "persistence.requests", metricType: Counter},
+		PersistenceFailures:                           {metricName: "persistence.errors", metricType: Counter},
+		PersistenceLatency:                            {metricName: "persistence.latency", metricType: Timer},
+		PersistenceErrShardExistsCounter:              {metricName: "persistence.errors.shard-exists", metricType: Counter},
+		PersistenceErrShardOwnershipLostCounter:       {metricName: "persistence.errors.shard-ownership-lost", metricType: Counter},
+		PersistenceErrConditionFailedCounter:          {metricName: "persistence.errors.condition-failed", metricType: Counter},
+		PersistenceErrTimeoutCounter:                  {metricName: "persistence.errors.timeout", metricType: Counter},
 	},
 	Frontend: {},
 	History: {

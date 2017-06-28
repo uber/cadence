@@ -73,6 +73,8 @@ const (
 	TaskTypeDecisionTimeout = iota
 	TaskTypeActivityTimeout
 	TaskTypeUserTimer
+	TaskTypeWorkflowTimeout
+	TaskTypeDeleteHistoryEvent
 )
 
 type (
@@ -133,6 +135,8 @@ type (
 		DecisionStartedID    int64
 		DecisionRequestID    string
 		DecisionTimeout      int32
+		CancelRequested      bool
+		CancelRequestID      string
 	}
 
 	// TransferTaskInfo describes a transfer task
@@ -208,11 +212,23 @@ type (
 		TaskID int64
 	}
 
+	// DeleteHistoryEventTask identifies a timer task for deletion of history events of completed execution.
+	DeleteHistoryEventTask struct {
+		VisibilityTimestamp time.Time
+		TaskID              int64
+	}
+
 	// DecisionTimeoutTask identifies a timeout task.
 	DecisionTimeoutTask struct {
 		VisibilityTimestamp time.Time
 		TaskID              int64
 		EventID             int64
+	}
+
+	// WorkflowTimeoutTask identifies a timeout task.
+	WorkflowTimeoutTask struct {
+		VisibilityTimestamp time.Time
+		TaskID              int64
 	}
 
 	// CancelExecutionTask identifies a transfer task for cancel of execution
@@ -252,6 +268,7 @@ type (
 		ActivitInfos        map[int64]*ActivityInfo
 		TimerInfos          map[string]*TimerInfo
 		ChildExecutionInfos map[int64]*ChildExecutionInfo
+		RequestCancelInfos  map[int64]*RequestCancelInfo
 		ExecutionInfo       *WorkflowExecutionInfo
 	}
 
@@ -288,6 +305,12 @@ type (
 		StartedID       int64
 		StartedEvent    []byte
 		CreateRequestID string
+	}
+
+	// RequestCancelInfo has details for pending external workflow cancellations
+	RequestCancelInfo struct {
+		InitiatedID     int64
+		CancelRequestID string
 	}
 
 	// CreateShardRequest is used to create a shard in executions table
@@ -379,6 +402,8 @@ type (
 		DeleteTimerInfos          []string
 		UpsertChildExecutionInfos []*ChildExecutionInfo
 		DeleteChildExecutionInfo  *int64
+		UpsertRequestCancelInfos  []*RequestCancelInfo
+		DeleteRequestCancelInfo   *int64
 	}
 
 	// DeleteWorkflowExecutionRequest is used to delete a workflow execution
@@ -720,6 +745,21 @@ func (a *DeleteExecutionTask) SetTaskID(id int64) {
 	a.TaskID = id
 }
 
+// GetType returns the type of the delete execution task
+func (a *DeleteHistoryEventTask) GetType() int {
+	return TaskTypeDeleteHistoryEvent
+}
+
+// GetTaskID returns the sequence ID of the delete execution task
+func (a *DeleteHistoryEventTask) GetTaskID() int64 {
+	return a.TaskID
+}
+
+// SetTaskID sets the sequence ID of the delete execution task
+func (a *DeleteHistoryEventTask) SetTaskID(id int64) {
+	a.TaskID = id
+}
+
 // GetType returns the type of the timer task
 func (d *DecisionTimeoutTask) GetType() int {
 	return TaskTypeDecisionTimeout
@@ -792,6 +832,31 @@ func (u *UserTimerTask) GetVisibilityTimestamp() time.Time {
 
 // SetVisibilityTimestamp gets the visibility time stamp
 func (u *UserTimerTask) SetVisibilityTimestamp(t time.Time) {
+	u.VisibilityTimestamp = t
+}
+
+// GetType returns the type of the timeout task.
+func (u *WorkflowTimeoutTask) GetType() int {
+	return TaskTypeWorkflowTimeout
+}
+
+// GetTaskID returns the sequence ID of the cancel transfer task.
+func (u *WorkflowTimeoutTask) GetTaskID() int64 {
+	return u.TaskID
+}
+
+// SetTaskID sets the sequence ID of the cancel transfer task.
+func (u *WorkflowTimeoutTask) SetTaskID(id int64) {
+	u.TaskID = id
+}
+
+// GetVisibilityTimestamp gets the visibility time stamp
+func (u *WorkflowTimeoutTask) GetVisibilityTimestamp() time.Time {
+	return u.VisibilityTimestamp
+}
+
+// SetVisibilityTimestamp gets the visibility time stamp
+func (u *WorkflowTimeoutTask) SetVisibilityTimestamp(t time.Time) {
 	u.VisibilityTimestamp = t
 }
 
