@@ -508,7 +508,7 @@ Update_History_Loop:
 
 	ExpireUserTimers:
 		for _, td := range context.tBuilder.AllTimers() {
-			hasTimer, ti := context.tBuilder.UserTimer(td.SequenceID)
+			hasTimer, ti := context.tBuilder.UserTimer(td.TimerID)
 			if !hasTimer {
 				t.logger.Debugf("Failed to find in memory user timer for: %s", td.SequenceID)
 				return fmt.Errorf("failed to find user timer")
@@ -540,7 +540,7 @@ Update_History_Loop:
 
 		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 		// the history and try the operation again.
-		err := t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, timerTasks, nil)
+		err := t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, timerTasks, nil, []persistence.Task{})
 		if err != nil {
 			if err == ErrConflict {
 				continue Update_History_Loop
@@ -667,7 +667,7 @@ Update_History_Loop:
 			// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 			// the history and try the operation again.
 			defer t.NotifyNewTimer(timerTasks)
-			err := t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, timerTasks, nil)
+			err := t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, timerTasks, nil, []persistence.Task{})
 			if err != nil {
 				if err == ErrConflict {
 					continue Update_History_Loop
@@ -744,7 +744,7 @@ Update_History_Loop:
 		if scheduleNewDecision {
 			// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 			// the history and try the operation again.
-			err := t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, nil, nil)
+			err := t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, nil, nil, []persistence.Task{})
 			if err != nil {
 				if err == ErrConflict {
 					continue Update_History_Loop
@@ -787,9 +787,25 @@ Update_History_Loop:
 			return nil
 		}
 
+		// Generate a transfer task to delete workflow execution
+		transferTasks := []persistence.Task{&persistence.DeleteExecutionTask{}}
+
+		// Generate a timer task to cleanup history events for this workflow execution
+		var retentionInDays int32
+		_, domainConfig, err := t.historyService.domainCache.GetDomainByID(task.DomainID)
+		if err != nil {
+			if _, ok := err.(*workflow.EntityNotExistsError); !ok {
+				return err
+			}
+		} else {
+			retentionInDays = domainConfig.Retention
+		}
+		cleanupTask := context.tBuilder.createDeleteHistoryEventTimerTask(time.Duration(retentionInDays) * time.Hour * 24)
+		timerTasks := []persistence.Task{cleanupTask}
+
 		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 		// the history and try the operation again.
-		err := t.updateWorkflowExecution(context, msBuilder, false, nil, nil)
+		err = t.updateWorkflowExecution(context, msBuilder, false, timerTasks, nil, transferTasks)
 		if err != nil {
 			if err == ErrConflict {
 				continue Update_History_Loop
@@ -800,10 +816,13 @@ Update_History_Loop:
 	return ErrMaxAttemptsExceeded
 }
 
-func (t *timerQueueProcessorImpl) updateWorkflowExecution(context *workflowExecutionContext,
-	msBuilder *mutableStateBuilder, scheduleNewDecision bool, timerTasks []persistence.Task,
-	clearTimerTask persistence.Task) error {
-	var transferTasks []persistence.Task
+func (t *timerQueueProcessorImpl) updateWorkflowExecution(
+	context *workflowExecutionContext,
+	msBuilder *mutableStateBuilder,
+	scheduleNewDecision bool,
+	timerTasks []persistence.Task,
+	clearTimerTask persistence.Task,
+	transferTasks []persistence.Task) error {
 	if scheduleNewDecision {
 		// Schedule a new decision.
 		newDecisionEvent, _ := msBuilder.AddDecisionTaskScheduledEvent()
