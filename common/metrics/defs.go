@@ -72,6 +72,7 @@ const (
 const (
 	UnknownDirectoryTagValue = "Unknown"
 	AllShardsTagValue        = "ALL"
+	NoneShardsTagValue       = "NONE"
 )
 
 // Common service base metrics
@@ -332,19 +333,19 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceCompleteTransferTaskScope:           {operation: "CompleteTransferTask"},
 		PersistenceGetTimerIndexTasksScope:             {operation: "GetTimerIndexTasks"},
 		PersistenceCompleteTimerTaskScope:              {operation: "CompleteTimerTask"},
-		PersistenceCreateTaskScope:                     {operation: "CreateTask", tags: map[string]string{"shard": "none"}},
-		PersistenceGetTasksScope:                       {operation: "GetTasks", tags: map[string]string{"shard": "none"}},
-		PersistenceCompleteTaskScope:                   {operation: "CompleteTask", tags: map[string]string{"shard": "none"}},
-		PersistenceLeaseTaskListScope:                  {operation: "LeaseTaskList", tags: map[string]string{"shard": "none"}},
-		PersistenceUpdateTaskListScope:                 {operation: "UpdateTaskList", tags: map[string]string{"shard": "none"}},
-		PersistenceAppendHistoryEventsScope:            {operation: "AppendHistoryEvents", tags: map[string]string{"shard": "none"}},
-		PersistenceGetWorkflowExecutionHistoryScope:    {operation: "GetWorkflowExecutionHistory", tags: map[string]string{"shard": "none"}},
-		PersistenceDeleteWorkflowExecutionHistoryScope: {operation: "DeleteWorkflowExecutionHistory", tags: map[string]string{"shard": "none"}},
-		PersistenceCreateDomainScope:                   {operation: "CreateDomain", tags: map[string]string{"shard": "none"}},
-		PersistenceGetDomainScope:                      {operation: "GetDomain", tags: map[string]string{"shard": "none"}},
-		PersistenceUpdateDomainScope:                   {operation: "UpdateDomain", tags: map[string]string{"shard": "none"}},
-		PersistenceDeleteDomainScope:                   {operation: "DeleteDomain", tags: map[string]string{"shard": "none"}},
-		PersistenceDeleteDomainByNameScope:             {operation: "DeleteDomainByName", tags: map[string]string{"shard": "none"}},
+		PersistenceCreateTaskScope:                     {operation: "CreateTask", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceGetTasksScope:                       {operation: "GetTasks", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceCompleteTaskScope:                   {operation: "CompleteTask", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceLeaseTaskListScope:                  {operation: "LeaseTaskList", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceUpdateTaskListScope:                 {operation: "UpdateTaskList", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceAppendHistoryEventsScope:            {operation: "AppendHistoryEvents", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceGetWorkflowExecutionHistoryScope:    {operation: "GetWorkflowExecutionHistory", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceDeleteWorkflowExecutionHistoryScope: {operation: "DeleteWorkflowExecutionHistory", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceCreateDomainScope:                   {operation: "CreateDomain", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceGetDomainScope:                      {operation: "GetDomain", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceUpdateDomainScope:                   {operation: "UpdateDomain", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceDeleteDomainScope:                   {operation: "DeleteDomain", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceDeleteDomainByNameScope:             {operation: "DeleteDomainByName", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 
 		HistoryClientStartWorkflowExecutionScope:          {operation: "HistoryClientStartWorkflowExecution"},
 		HistoryClientRecordActivityTaskHeartbeatScope:     {operation: "HistoryClientRecordActivityTaskHeartbeat"},
