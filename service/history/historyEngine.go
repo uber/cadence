@@ -703,7 +703,7 @@ Update_History_Loop:
 				_, ti := msBuilder.AddTimerStartedEvent(completedID, attributes)
 				if ti == nil {
 					failDecision = true
-					failCause = workflow.DecisionTaskFailedCause_BAD_START_TIMER_DUPLICATE_ID
+					failCause = workflow.DecisionTaskFailedCause_START_TIMER_DUPLICATE_ID
 					break Process_Decision_Loop
 				}
 				context.tBuilder.AddUserTimer(ti)

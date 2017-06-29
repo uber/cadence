@@ -183,14 +183,21 @@ func (tb *timerBuilder) AddUserTimer(ti *persistence.TimerInfo) {
 func (tb *timerBuilder) LoadUserTimers(msBuilder *mutableStateBuilder) {
 	tb.userTimers = timers{}
 	tb.pendingUserTimers = msBuilder.pendingTimerInfoIDs
+	tb.userTimers = make(timers, 0, len(msBuilder.pendingTimerInfoIDs))
 	for _, v := range msBuilder.pendingTimerInfoIDs {
-		tb.loadUserTimer(v.ExpiryTime, v.TimerID, v.TaskID != emptyTimerID)
+		seqNum := tb.localSeqNumGen.NextSeq()
+		td := &timerDetails{
+			SequenceID:  SequenceID{VisibilityTimestamp: v.ExpiryTime, TaskID: seqNum},
+			TimerID:     v.TimerID,
+			TaskCreated: v.TaskID != emptyTimerID}
+		tb.userTimers = append(tb.userTimers, td)
 	}
+	sort.Sort(tb.userTimers)
 }
 
 // GetUserTimerTaskIfNeeded - if we need create a timer task for the user timers
 func (tb *timerBuilder) GetUserTimerTaskIfNeeded(msBuilder *mutableStateBuilder) persistence.Task {
-	timerTask := tb.firstTimer()
+	timerTask := tb.firstTimerTask()
 	if timerTask != nil {
 		// Update the task ID tracking if it has created timer task or not.
 		ti := tb.pendingUserTimers[tb.userTimers[0].TimerID]
@@ -263,7 +270,7 @@ func (tb *timerBuilder) insertTimer(td *timerDetails) bool {
 	return i == 0 // This is the first timer in the list.
 }
 
-func (tb *timerBuilder) firstTimer() persistence.Task {
+func (tb *timerBuilder) firstTimerTask() persistence.Task {
 	if len(tb.userTimers) > 0 && !tb.userTimers[0].TaskCreated {
 		return tb.createNewTask(tb.userTimers[0])
 	}
