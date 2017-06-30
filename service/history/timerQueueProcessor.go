@@ -825,12 +825,7 @@ func (t *timerQueueProcessorImpl) updateWorkflowExecution(
 			return nil
 		}
 		transferTasks = append(transferTasks, tranT)
-
-		if timerTasks != nil {
-			timerTasks = append(timerTasks, timerT)
-		} else {
-			timerTasks = []persistence.Task{timerT}
-		}
+		timerTasks = append(timerTasks, timerT)
 	}
 
 	// Generate a transaction ID for appending events to history

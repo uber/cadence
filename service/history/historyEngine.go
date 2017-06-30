@@ -1397,16 +1397,16 @@ Update_History_Loop:
 			return err1
 		}
 
-		var transferTasks []persistence.Task
 		if err := action(msBuilder); err != nil {
 			return err
 		}
 
+		var transferTasks []persistence.Task
 		var timerTasks []persistence.Task
 		if createDeletionTask {
 			tranT, timerT, err := e.getDeleteWorkflowTasks(domainID, context)
 			if err != nil {
-				return nil
+				return err
 			}
 			transferTasks = append(transferTasks, tranT)
 			timerTasks = append(timerTasks, timerT)
