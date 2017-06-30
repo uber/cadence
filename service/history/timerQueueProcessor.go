@@ -820,24 +820,16 @@ func (t *timerQueueProcessorImpl) updateWorkflowExecution(
 	}
 
 	if createDeletionTask {
-		// Create a transfer task to delete workflow execution
-		transferTasks = append(transferTasks, &persistence.DeleteExecutionTask{})
-
-		// Generate a timer task to cleanup history events for this workflow execution
-		var retentionInDays int32
-		_, domainConfig, err := t.historyService.domainCache.GetDomainByID(msBuilder.executionInfo.DomainID)
+		tranT, timerT, err := t.historyService.getDeleteWorkflowTasks(msBuilder.executionInfo.DomainID, context)
 		if err != nil {
-			if _, ok := err.(*workflow.EntityNotExistsError); !ok {
-				return err
-			}
-		} else {
-			retentionInDays = domainConfig.Retention
+			return nil
 		}
-		cleanupTask := context.tBuilder.createDeleteHistoryEventTimerTask(time.Duration(retentionInDays) * time.Hour * 24)
+		transferTasks = append(transferTasks, tranT)
+
 		if timerTasks != nil {
-			timerTasks = append(timerTasks, cleanupTask)
+			timerTasks = append(timerTasks, timerT)
 		} else {
-			timerTasks = []persistence.Task{cleanupTask}
+			timerTasks = []persistence.Task{timerT}
 		}
 	}
 
