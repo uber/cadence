@@ -191,7 +191,6 @@ func (c *taskListManagerImpl) isEqualRangeID(rangeID int64) bool {
 	return c.rangeID == rangeID
 }
 
-// TODO: Update ackLevel on time based interval instead of on each GetTasks call
 func (c *taskListManagerImpl) persistAckLevel() error {
 	c.Lock()
 	updateTaskListRequest := &persistence.UpdateTaskListRequest{
@@ -423,6 +422,10 @@ getTasksPumpLoop:
 					logging.LogPersistantStoreErrorEvent(c.logger, logging.TagValueStoreOperationUpdateTaskList, err,
 						fmt.Sprintf("{taskType: %v, taskList: %v}",
 							c.taskListID.taskType, c.taskListID.taskListName))
+					if _, ok := err.(*persistence.ConditionFailedError); ok {
+						// This indicates the task list may have moved to another host.
+						c.Stop()
+					}
 					// keep going as saving ack is not critical
 				}
 				c.signalNewTask() // periodically signal pump to check persistence for tasks
