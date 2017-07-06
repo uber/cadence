@@ -1484,7 +1484,7 @@ ListOpenLoop:
 		})
 		s.Nil(err4)
 		openCount = len(resp.Executions)
-		if closedCount == 0 {
+		if openCount == 0 {
 			s.logger.Info("Open WorkflowExecution is not yet visibile")
 			time.Sleep(100 * time.Millisecond)
 			continue ListOpenLoop
