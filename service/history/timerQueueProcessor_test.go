@@ -135,8 +135,6 @@ func (s *timerQueueProcessorSuite) createExecutionWithTimers(domainID string, we
 	decisionCompletedID := int64(4)
 	tBuilder := newTimerBuilder(s.logger, &mockTimeSource{currTime: time.Now()})
 
-	tBuilder.LoadUserTimers(builder)
-
 	for _, timeOut := range timeOuts {
 		_, ti := builder.AddTimerStartedEvent(decisionCompletedID,
 			&workflow.StartTimerDecisionAttributes{
@@ -144,7 +142,7 @@ func (s *timerQueueProcessorSuite) createExecutionWithTimers(domainID string, we
 				StartToFireTimeoutSeconds: common.Int64Ptr(int64(timeOut)),
 			})
 		timerInfos = append(timerInfos, ti)
-		tBuilder.AddUserTimer(ti)
+		tBuilder.AddUserTimer(ti, builder)
 	}
 
 	if t := tBuilder.GetUserTimerTaskIfNeeded(builder); t != nil {
@@ -188,10 +186,9 @@ func (s *timerQueueProcessorSuite) addUserTimer(domainID string, we workflow.Wor
 	condition := state.ExecutionInfo.NextEventID
 
 	// create a user timer
-	tb.LoadUserTimers(builder)
 	_, ti := builder.AddTimerStartedEvent(emptyEventID,
 		&workflow.StartTimerDecisionAttributes{TimerId: common.StringPtr(timerID), StartToFireTimeoutSeconds: common.Int64Ptr(1)})
-	tb.AddUserTimer(ti)
+	tb.AddUserTimer(ti, builder)
 	t := tb.GetUserTimerTaskIfNeeded(builder)
 	s.NotNil(t)
 	timerTasks := []persistence.Task{t}
@@ -745,7 +742,6 @@ func (s *timerQueueProcessorSuite) TestTimerUserTimersSameExpiry() {
 	// load any timers.
 	tBuilder := newTimerBuilder(s.logger, &mockTimeSource{currTime: time.Now().Add(-1 * time.Second)})
 	timerTasks := []persistence.Task{}
-	tBuilder.LoadUserTimers(builder)
 
 	// create two user timers.
 	_, ti := builder.AddTimerStartedEvent(emptyEventID,
@@ -753,8 +749,8 @@ func (s *timerQueueProcessorSuite) TestTimerUserTimersSameExpiry() {
 	_, ti2 := builder.AddTimerStartedEvent(emptyEventID,
 		&workflow.StartTimerDecisionAttributes{TimerId: common.StringPtr("tid2"), StartToFireTimeoutSeconds: common.Int64Ptr(1)})
 
-	tBuilder.AddUserTimer(ti)
-	tBuilder.AddUserTimer(ti2)
+	tBuilder.AddUserTimer(ti, builder)
+	tBuilder.AddUserTimer(ti2, builder)
 	t := tBuilder.GetUserTimerTaskIfNeeded(builder)
 	timerTasks = append(timerTasks, t)
 

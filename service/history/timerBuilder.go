@@ -52,11 +52,12 @@ type (
 	timers []*timerDetails
 
 	timerBuilder struct {
-		userTimers        timers                            // all user timers sorted by expiry time stamp.
-		pendingUserTimers map[string]*persistence.TimerInfo // all user timers indexed by timerID(this just points to mutable state)
-		logger            bark.Logger
-		localSeqNumGen    SequenceNumberGenerator // This one used to order in-memory list.
-		timeSource        common.TimeSource
+		userTimers         timers                            // all user timers sorted by expiry time stamp.
+		pendingUserTimers  map[string]*persistence.TimerInfo // all user timers indexed by timerID(this just points to mutable state)
+		isLoadedUserTimers bool
+		logger             bark.Logger
+		localSeqNumGen     SequenceNumberGenerator // This one used to order in-memory list.
+		timeSource         common.TimeSource
 	}
 
 	// SequenceID - Visibility timer stamp + Sequence Number.
@@ -114,17 +115,6 @@ func newTimerBuilder(logger bark.Logger, timeSource common.TimeSource) *timerBui
 	}
 }
 
-// AllTimers - Get all timers.
-func (tb *timerBuilder) AllTimers() timers {
-	return tb.userTimers
-}
-
-// UserTimer - Get a specific user timer.
-func (tb *timerBuilder) UserTimer(timerID string) (bool, *persistence.TimerInfo) {
-	ti, ok := tb.pendingUserTimers[timerID]
-	return ok, ti
-}
-
 // AddDecisionTimeoutTask - Add a decision timeout task.
 func (tb *timerBuilder) AddDecisionTimoutTask(scheduleID int64,
 	startToCloseTimeout int32) *persistence.DecisionTimeoutTask {
@@ -174,13 +164,56 @@ func (tb *timerBuilder) AddActivityTimeoutTask(scheduleID int64,
 }
 
 // AddUserTimer - Adds an user timeout request.
-func (tb *timerBuilder) AddUserTimer(ti *persistence.TimerInfo) {
-	tb.logger.Debugf("Adding User Timeout for timer ID: %s", ti.TimerID)
-	tb.loadUserTimer(ti.ExpiryTime, ti.TimerID, ti.TaskID != emptyTimerID)
+func (tb *timerBuilder) AddUserTimer(ti *persistence.TimerInfo, msBuilder *mutableStateBuilder) {
+	if !tb.isLoadedUserTimers {
+		tb.loadUserTimers(msBuilder)
+	}
+	seqNum := tb.localSeqNumGen.NextSeq()
+	timer := &timerDetails{
+		SequenceID:  SequenceID{VisibilityTimestamp: ti.ExpiryTime, TaskID: seqNum},
+		TimerID:     ti.TimerID,
+		TaskCreated: ti.TaskID != emptyTimerID}
+	tb.insertTimer(timer)
+	tb.logger.Debugf("Added User Timeout for timer ID: %s", ti.TimerID)
 }
 
-// LoadUserTimers - Load all user timers from mutable state.
-func (tb *timerBuilder) LoadUserTimers(msBuilder *mutableStateBuilder) {
+// GetUserTimerTaskIfNeeded - if we need create a timer task for the user timers
+func (tb *timerBuilder) GetUserTimerTaskIfNeeded(msBuilder *mutableStateBuilder) persistence.Task {
+	if !tb.isLoadedUserTimers {
+		return nil
+	}
+	timerTask := tb.firstTimerTask()
+	if timerTask != nil {
+		// Update the task ID tracking if it has created timer task or not.
+		ti := tb.pendingUserTimers[tb.userTimers[0].TimerID]
+		ti.TaskID = 1
+		// TODO: We append updates to timer tasks twice.  Why?
+		msBuilder.UpdateUserTimer(ti.TimerID, ti)
+	}
+	return timerTask
+}
+
+// GetUserTimers - Get all user timers.
+func (tb *timerBuilder) GetUserTimers(msBuilder *mutableStateBuilder) timers {
+	tb.loadUserTimers(msBuilder)
+	return tb.userTimers
+}
+
+// GetUserTimer - Get a specific user timer.
+func (tb *timerBuilder) GetUserTimer(timerID string) (bool, *persistence.TimerInfo) {
+	ti, ok := tb.pendingUserTimers[timerID]
+	return ok, ti
+}
+
+// IsTimerExpired - Whether a timer is expired w.r.t reference time.
+func (tb *timerBuilder) IsTimerExpired(td *timerDetails, referenceTime time.Time) bool {
+	// Cql timestamp is in milli sec resolution, here we do the check in terms of second resolution.
+	expiry := td.SequenceID.VisibilityTimestamp.Unix()
+	return expiry <= referenceTime.Unix()
+}
+
+// loadUserTimers - Load all user timers from mutable state.
+func (tb *timerBuilder) loadUserTimers(msBuilder *mutableStateBuilder) {
 	tb.userTimers = timers{}
 	tb.pendingUserTimers = msBuilder.pendingTimerInfoIDs
 	tb.userTimers = make(timers, 0, len(msBuilder.pendingTimerInfoIDs))
@@ -193,26 +226,7 @@ func (tb *timerBuilder) LoadUserTimers(msBuilder *mutableStateBuilder) {
 		tb.userTimers = append(tb.userTimers, td)
 	}
 	sort.Sort(tb.userTimers)
-}
-
-// GetUserTimerTaskIfNeeded - if we need create a timer task for the user timers
-func (tb *timerBuilder) GetUserTimerTaskIfNeeded(msBuilder *mutableStateBuilder) persistence.Task {
-	timerTask := tb.firstTimerTask()
-	if timerTask != nil {
-		// Update the task ID tracking if it has created timer task or not.
-		ti := tb.pendingUserTimers[tb.userTimers[0].TimerID]
-		ti.TaskID = 1
-		// TODO: We append updates to timer tasks twice.  Why?
-		msBuilder.UpdateUserTimer(ti.TimerID, ti)
-	}
-	return timerTask
-}
-
-// IsTimerExpired - Whether a timer is expired w.r.t reference time.
-func (tb *timerBuilder) IsTimerExpired(td *timerDetails, referenceTime time.Time) bool {
-	// Cql timestamp is in milli sec resolution, here we do the check in terms of second resolution.
-	expiry := td.SequenceID.VisibilityTimestamp.Unix()
-	return expiry <= referenceTime.Unix()
+	tb.isLoadedUserTimers = true
 }
 
 func (tb *timerBuilder) createDeleteHistoryEventTimerTask(d time.Duration) *persistence.DeleteHistoryEventTask {

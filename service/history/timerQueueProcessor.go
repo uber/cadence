@@ -501,18 +501,15 @@ Update_History_Loop:
 			return nil
 		}
 
-		tBuilder.LoadUserTimers(msBuilder)
-
 		var timerTasks []persistence.Task
-
 		scheduleNewDecision := false
 
 	ExpireUserTimers:
-		for _, td := range tBuilder.AllTimers() {
-			hasTimer, ti := tBuilder.UserTimer(td.TimerID)
+		for _, td := range tBuilder.GetUserTimers(msBuilder) {
+			hasTimer, ti := tBuilder.GetUserTimer(td.TimerID)
 			if !hasTimer {
-				t.logger.Debugf("Failed to find in memory user timer for: %s", td.SequenceID)
-				return fmt.Errorf("failed to find user timer")
+				t.logger.Debugf("Failed to find in memory user timer: %s", td.TimerID)
+				return fmt.Errorf("Failed to find in memory user timer: %s", td.TimerID)
 			}
 
 			if isExpired := tBuilder.IsTimerExpired(td, task.VisibilityTimestamp); isExpired {

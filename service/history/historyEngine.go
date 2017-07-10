@@ -569,7 +569,6 @@ Update_History_Loop:
 		transferTasks := []persistence.Task{}
 		timerTasks := []persistence.Task{}
 		var continueAsNewBuilder *mutableStateBuilder
-		userTimersLoaded := false
 	Process_Decision_Loop:
 		for _, d := range request.Decisions {
 			switch d.GetDecisionType() {
@@ -699,17 +698,13 @@ Update_History_Loop:
 					failCause = workflow.DecisionTaskFailedCause_BAD_START_TIMER_ATTRIBUTES
 					break Process_Decision_Loop
 				}
-				if !userTimersLoaded {
-					tBuilder.LoadUserTimers(msBuilder)
-					userTimersLoaded = true
-				}
 				_, ti := msBuilder.AddTimerStartedEvent(completedID, attributes)
 				if ti == nil {
 					failDecision = true
 					failCause = workflow.DecisionTaskFailedCause_START_TIMER_DUPLICATE_ID
 					break Process_Decision_Loop
 				}
-				tBuilder.AddUserTimer(ti)
+				tBuilder.AddUserTimer(ti, context.msBuilder)
 
 			case workflow.DecisionType_RequestCancelActivityTask:
 				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
@@ -861,10 +856,8 @@ Update_History_Loop:
 			continueAsNewBuilder = nil
 		}
 
-		if userTimersLoaded {
-			if tt := tBuilder.GetUserTimerTaskIfNeeded(msBuilder); tt != nil {
-				timerTasks = append(timerTasks, tt)
-			}
+		if tt := tBuilder.GetUserTimerTaskIfNeeded(msBuilder); tt != nil {
+			timerTasks = append(timerTasks, tt)
 		}
 
 		// Schedule another decision task if new events came in during this decision
