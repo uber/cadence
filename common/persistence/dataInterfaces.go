@@ -288,7 +288,7 @@ type (
 		CancelRequested          bool
 		CancelRequestID          int64
 		LastHeartBeatUpdatedTime time.Time
-		TimerTaskStatus		 int32
+		TimerTaskStatus          int32
 	}
 
 	// TimerInfo details - metadata about user timer info.

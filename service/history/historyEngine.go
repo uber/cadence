@@ -322,6 +322,7 @@ Update_History_Loop:
 		if err0 != nil {
 			return nil, err0
 		}
+		tBuilder := e.getTimerBuilder(&context.workflowExecution)
 
 		// First check to see if cache needs to be refreshed as we could potentially have stale workflow execution in
 		// some extreme cassandra failure cases.
@@ -366,7 +367,7 @@ Update_History_Loop:
 		}
 
 		// Start a timer for the decision task.
-		timeOutTask := context.tBuilder.AddDecisionTimoutTask(scheduleID, di.DecisionTimeout)
+		timeOutTask := tBuilder.AddDecisionTimoutTask(scheduleID, di.DecisionTimeout)
 		timerTasks := []persistence.Task{timeOutTask}
 		defer e.timerProcessor.NotifyNewTimer(timerTasks)
 
@@ -411,6 +412,7 @@ Update_History_Loop:
 		if err0 != nil {
 			return nil, err0
 		}
+		tBuilder := e.getTimerBuilder(&context.workflowExecution)
 
 		// First check to see if cache needs to be refreshed as we could potentially have stale workflow execution in
 		// some extreme cassandra failure cases.
@@ -467,13 +469,13 @@ Update_History_Loop:
 
 		// Start a timer for the activity task.
 		timerTasks := []persistence.Task{}
-		start2CloseTimeoutTask, err := context.tBuilder.AddStartToCloseActivityTimeout(ai)
+		start2CloseTimeoutTask, err := tBuilder.AddStartToCloseActivityTimeout(ai)
 		if err != nil {
 			return nil, err
 		}
 		timerTasks = append(timerTasks, start2CloseTimeoutTask)
 
-		start2HeartBeatTimeoutTask, err := context.tBuilder.AddHeartBeatActivityTimeout(ai)
+		start2HeartBeatTimeoutTask, err := tBuilder.AddHeartBeatActivityTimeout(ai)
 		if err != nil {
 			return nil, err
 		}
@@ -535,6 +537,7 @@ Update_History_Loop:
 		if err1 != nil {
 			return err1
 		}
+		tBuilder := e.getTimerBuilder(&context.workflowExecution)
 
 		scheduleID := token.ScheduleID
 		// First check to see if cache needs to be refreshed as we could potentially have stale workflow execution in
@@ -599,10 +602,10 @@ Update_History_Loop:
 				})
 
 				// Create activity timeouts.
-				Schedule2StartTimeoutTask := context.tBuilder.AddScheduleToStartActivityTimeout(ai)
+				Schedule2StartTimeoutTask := tBuilder.AddScheduleToStartActivityTimeout(ai)
 				timerTasks = append(timerTasks, Schedule2StartTimeoutTask)
 
-				Schedule2CloseTimeoutTask, err := context.tBuilder.AddScheduleToCloseActivityTimeout(ai)
+				Schedule2CloseTimeoutTask, err := tBuilder.AddScheduleToCloseActivityTimeout(ai)
 				if err != nil {
 					return err
 				}
@@ -697,7 +700,7 @@ Update_History_Loop:
 					break Process_Decision_Loop
 				}
 				if !userTimersLoaded {
-					context.tBuilder.LoadUserTimers(msBuilder)
+					tBuilder.LoadUserTimers(msBuilder)
 					userTimersLoaded = true
 				}
 				_, ti := msBuilder.AddTimerStartedEvent(completedID, attributes)
@@ -706,7 +709,7 @@ Update_History_Loop:
 					failCause = workflow.DecisionTaskFailedCause_START_TIMER_DUPLICATE_ID
 					break Process_Decision_Loop
 				}
-				context.tBuilder.AddUserTimer(ti)
+				tBuilder.AddUserTimer(ti)
 
 			case workflow.DecisionType_RequestCancelActivityTask:
 				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
@@ -859,7 +862,7 @@ Update_History_Loop:
 		}
 
 		if userTimersLoaded {
-			if tt := context.tBuilder.GetUserTimerTaskIfNeeded(msBuilder); tt != nil {
+			if tt := tBuilder.GetUserTimerTaskIfNeeded(msBuilder); tt != nil {
 				timerTasks = append(timerTasks, tt)
 			}
 		}
@@ -875,7 +878,7 @@ Update_History_Loop:
 		}
 
 		if isComplete {
-			tranT, timerT, err := e.getDeleteWorkflowTasks(domainID, context)
+			tranT, timerT, err := e.getDeleteWorkflowTasks(domainID, tBuilder)
 			if err != nil {
 				return err
 			}
@@ -1411,6 +1414,7 @@ Update_History_Loop:
 		if err1 != nil {
 			return err1
 		}
+		tBuilder := e.getTimerBuilder(&context.workflowExecution)
 
 		if err := action(msBuilder); err != nil {
 			return err
@@ -1419,7 +1423,7 @@ Update_History_Loop:
 		var transferTasks []persistence.Task
 		var timerTasks []persistence.Task
 		if createDeletionTask {
-			tranT, timerT, err := e.getDeleteWorkflowTasks(domainID, context)
+			tranT, timerT, err := e.getDeleteWorkflowTasks(domainID, tBuilder)
 			if err != nil {
 				return err
 			}
@@ -1460,7 +1464,7 @@ Update_History_Loop:
 
 func (e *historyEngineImpl) getDeleteWorkflowTasks(
 	domainID string,
-	context *workflowExecutionContext,
+	tBuilder *timerBuilder,
 ) (persistence.Task, persistence.Task, error) {
 
 	// Create a transfer task to delete workflow execution
@@ -1476,7 +1480,7 @@ func (e *historyEngineImpl) getDeleteWorkflowTasks(
 	} else {
 		retentionInDays = domainConfig.Retention
 	}
-	cleanupTask := context.tBuilder.createDeleteHistoryEventTimerTask(time.Duration(retentionInDays) * time.Hour * 24)
+	cleanupTask := tBuilder.createDeleteHistoryEventTimerTask(time.Duration(retentionInDays) * time.Hour * 24)
 
 	return deleteTask, cleanupTask, nil
 }
@@ -1521,6 +1525,14 @@ func (e *historyEngineImpl) failDecision(context *workflowExecutionContext, sche
 
 	// Return new builder back to the caller for further updates
 	return msBuilder, nil
+}
+
+func (e *historyEngineImpl) getTimerBuilder(we *workflow.WorkflowExecution) *timerBuilder {
+	lg := e.logger.WithFields(bark.Fields{
+		logging.TagWorkflowExecutionID: we.GetWorkflowId(),
+		logging.TagWorkflowRunID:       we.GetRunId(),
+	})
+	return newTimerBuilder(lg, common.NewRealTimeSource())
 }
 
 func (s *shardContextWrapper) UpdateWorkflowExecution(request *persistence.UpdateWorkflowExecutionRequest) error {

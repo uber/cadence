@@ -494,27 +494,28 @@ Update_History_Loop:
 		if err1 != nil {
 			return err1
 		}
+		tBuilder := t.historyService.getTimerBuilder(&context.workflowExecution)
 
 		if !msBuilder.isWorkflowExecutionRunning() {
 			// Workflow is completed.
 			return nil
 		}
 
-		context.tBuilder.LoadUserTimers(msBuilder)
+		tBuilder.LoadUserTimers(msBuilder)
 
 		var timerTasks []persistence.Task
 
 		scheduleNewDecision := false
 
 	ExpireUserTimers:
-		for _, td := range context.tBuilder.AllTimers() {
-			hasTimer, ti := context.tBuilder.UserTimer(td.TimerID)
+		for _, td := range tBuilder.AllTimers() {
+			hasTimer, ti := tBuilder.UserTimer(td.TimerID)
 			if !hasTimer {
 				t.logger.Debugf("Failed to find in memory user timer for: %s", td.SequenceID)
 				return fmt.Errorf("failed to find user timer")
 			}
 
-			if isExpired := context.tBuilder.IsTimerExpired(td, task.VisibilityTimestamp); isExpired {
+			if isExpired := tBuilder.IsTimerExpired(td, task.VisibilityTimestamp); isExpired {
 				// Add TimerFired event to history.
 				if msBuilder.AddTimerFiredEvent(ti.StartedID, ti.TimerID) == nil {
 					return errFailedToAddTimerFiredEvent
@@ -524,7 +525,7 @@ Update_History_Loop:
 			} else {
 				// See if we have next timer in list to be created.
 				if !td.TaskCreated {
-					nextTask := context.tBuilder.createNewTask(td)
+					nextTask := tBuilder.createNewTask(td)
 					timerTasks = []persistence.Task{nextTask}
 
 					// Update the task ID tracking the corresponding timer task.
@@ -575,6 +576,7 @@ Update_History_Loop:
 		if err1 != nil {
 			return err1
 		}
+		tBuilder := t.historyService.getTimerBuilder(&context.workflowExecution)
 
 		scheduleID := timerTask.EventID
 		// First check to see if cache needs to be refreshed as we could potentially have stale workflow execution in
@@ -638,7 +640,7 @@ Update_History_Loop:
 						scheduleNewDecision = !msBuilder.HasPendingDecisionTask()
 					} else {
 						// Re-Schedule next heartbeat.
-						hbTimeoutTask, err := context.tBuilder.AddHeartBeatActivityTimeout(ai)
+						hbTimeoutTask, err := tBuilder.AddHeartBeatActivityTimeout(ai)
 						if err != nil {
 							return err
 						}
@@ -820,7 +822,8 @@ func (t *timerQueueProcessorImpl) updateWorkflowExecution(
 	}
 
 	if createDeletionTask {
-		tranT, timerT, err := t.historyService.getDeleteWorkflowTasks(msBuilder.executionInfo.DomainID, context)
+		tBuilder := t.historyService.getTimerBuilder(&context.workflowExecution)
+		tranT, timerT, err := t.historyService.getDeleteWorkflowTasks(msBuilder.executionInfo.DomainID, tBuilder)
 		if err != nil {
 			return nil
 		}
