@@ -690,8 +690,10 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_Activities() {
 		{
 			ScheduleID:               1,
 			ScheduledEvent:           []byte("scheduled_event_1"),
+			ScheduledTime:            currentTime,
 			StartedID:                2,
 			StartedEvent:             []byte("started_event_1"),
+			StartedTime:              currentTime,
 			ScheduleToCloseTimeout:   1,
 			ScheduleToStartTimeout:   2,
 			StartToCloseTimeout:      3,
@@ -711,8 +713,10 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_Activities() {
 	s.NotNil(ai)
 	s.Equal(int64(1), ai.ScheduleID)
 	s.Equal([]byte("scheduled_event_1"), ai.ScheduledEvent)
+	s.Equal(currentTime.Unix(), ai.ScheduledTime.Unix())
 	s.Equal(int64(2), ai.StartedID)
 	s.Equal([]byte("started_event_1"), ai.StartedEvent)
+	s.Equal(currentTime.Unix(), ai.StartedTime.Unix())
 	s.Equal(int32(1), ai.ScheduleToCloseTimeout)
 	s.Equal(int32(2), ai.ScheduleToStartTimeout)
 	s.Equal(int32(3), ai.StartToCloseTimeout)

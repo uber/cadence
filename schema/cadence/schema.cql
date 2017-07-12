@@ -69,8 +69,10 @@ CREATE TYPE timer_task (
 CREATE TYPE activity_info (
   schedule_id               bigint,
   scheduled_event           blob,
+  scheduled_time            timestamp,
   started_id                bigint,
   started_event             blob,
+  started_time              timestamp,
   activity_id               text,    -- Client generated unique ID for the activity.
   request_id                text,    -- Identifier used by matching engine for retrying history service calls for recording task is started
   details                   blob,
