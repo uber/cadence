@@ -47,17 +47,24 @@ type (
 		SequenceID  SequenceID
 		TaskCreated bool
 		TimerID     string
+		ActivityID  int64
+		TimeoutType w.TimeoutType
+		EventID     int64
+		TimeoutSec  int32
 	}
 
 	timers []*timerDetails
 
 	timerBuilder struct {
-		userTimers         timers                            // all user timers sorted by expiry time stamp.
-		pendingUserTimers  map[string]*persistence.TimerInfo // all user timers indexed by timerID(this just points to mutable state)
-		isLoadedUserTimers bool
-		logger             bark.Logger
-		localSeqNumGen     SequenceNumberGenerator // This one used to order in-memory list.
-		timeSource         common.TimeSource
+		userTimers             timers                            // all user timers sorted by expiry time stamp.
+		pendingUserTimers      map[string]*persistence.TimerInfo // all user timers indexed by timerID(this just points to mutable state)
+		isLoadedUserTimers     bool
+		activityTimers         timers
+		pendingActivityTimers  map[int64]*persistence.ActivityInfo
+		isLoadedActivityTimers bool
+		logger                 bark.Logger
+		localSeqNumGen         SequenceNumberGenerator // This one used to order in-memory list.
+		timeSource             common.TimeSource
 	}
 
 	// SequenceID - Visibility timer stamp + Sequence Number.
@@ -97,7 +104,8 @@ func (t timers) Less(i, j int) bool {
 }
 
 func (td *timerDetails) String() string {
-	return fmt.Sprintf("timerDetails: %s", td.SequenceID)
+	return fmt.Sprintf("TimerDetails: SeqID: %s, TimerID: %v, ActivityID: %v, TaskCreated: %v, EventID: %v, TimeoutType: %v, TimeoutSec: %v",
+		td.SequenceID, td.TimerID, td.ActivityID, td.TaskCreated, td.EventID, td.TimeoutType.String(), td.TimeoutSec)
 }
 
 func (l *localSeqNumGenerator) NextSeq() int64 {
@@ -107,11 +115,13 @@ func (l *localSeqNumGenerator) NextSeq() int64 {
 // newTimerBuilder creates a timer builder.
 func newTimerBuilder(logger bark.Logger, timeSource common.TimeSource) *timerBuilder {
 	return &timerBuilder{
-		userTimers:        timers{},
-		pendingUserTimers: make(map[string]*persistence.TimerInfo),
-		logger:            logger.WithField(logging.TagWorkflowComponent, "timer"),
-		localSeqNumGen:    &localSeqNumGenerator{counter: 1},
-		timeSource:        timeSource,
+		userTimers:            timers{},
+		pendingUserTimers:     make(map[string]*persistence.TimerInfo),
+		activityTimers:        timers{},
+		pendingActivityTimers: make(map[int64]*persistence.ActivityInfo),
+		logger:                logger.WithField(logging.TagWorkflowComponent, "timer-builder"),
+		localSeqNumGen:        &localSeqNumGenerator{counter: 1},
+		timeSource:            timeSource,
 	}
 }
 
@@ -212,9 +222,33 @@ func (tb *timerBuilder) IsTimerExpired(td *timerDetails, referenceTime time.Time
 	return expiry <= referenceTime.Unix()
 }
 
+func (tb *timerBuilder) GetActivityTimers(msBuilder *mutableStateBuilder) timers {
+	tb.loadActivityTimers(msBuilder)
+	return tb.activityTimers
+}
+
+// GetActivityTimerTaskIfNeeded - if we need create a activity timer task for the activities
+func (tb *timerBuilder) GetActivityTimerTaskIfNeeded(msBuilder *mutableStateBuilder) persistence.Task {
+	if !tb.isLoadedActivityTimers {
+		tb.loadActivityTimers(msBuilder)
+	}
+
+	timerTask := tb.firstActivityTimerTask()
+	if timerTask != nil {
+		// Update the task ID tracking if it has created timer task or not.
+		td := tb.activityTimers[0]
+		ai := tb.pendingActivityTimers[td.ActivityID]
+		ai.TimerTaskStatus = 1
+		msBuilder.UpdateActivity(ai)
+		at := timerTask.(*persistence.ActivityTimeoutTask)
+		tb.logger.Debugf("%s: Adding Activity Timeout: with timeout: %v sec, ExpiryTime: %s, TimeoutType: %v, EventID: %v",
+			time.Now(), td.TimeoutSec, at.VisibilityTimestamp, td.TimeoutType.String(), at.EventID)
+	}
+	return timerTask
+}
+
 // loadUserTimers - Load all user timers from mutable state.
 func (tb *timerBuilder) loadUserTimers(msBuilder *mutableStateBuilder) {
-	tb.userTimers = timers{}
 	tb.pendingUserTimers = msBuilder.pendingTimerInfoIDs
 	tb.userTimers = make(timers, 0, len(msBuilder.pendingTimerInfoIDs))
 	for _, v := range msBuilder.pendingTimerInfoIDs {
@@ -227,6 +261,58 @@ func (tb *timerBuilder) loadUserTimers(msBuilder *mutableStateBuilder) {
 	}
 	sort.Sort(tb.userTimers)
 	tb.isLoadedUserTimers = true
+}
+
+func (tb *timerBuilder) loadActivityTimers(msBuilder *mutableStateBuilder) {
+	tb.pendingActivityTimers = msBuilder.pendingActivityInfoIDs
+	tb.activityTimers = make(timers, 0, len(msBuilder.pendingActivityInfoIDs))
+	for _, v := range msBuilder.pendingActivityInfoIDs {
+		if v.ScheduleID != emptyEventID {
+			if v.StartedID != emptyEventID {
+				startToCloseExpiry := v.StartedTime.Add(time.Duration(v.StartToCloseTimeout) * time.Second)
+				td := &timerDetails{
+					SequenceID:  SequenceID{VisibilityTimestamp: startToCloseExpiry},
+					ActivityID:  v.ScheduleID,
+					EventID:     v.StartedID,
+					TimeoutType: w.TimeoutType_START_TO_CLOSE,
+					TimeoutSec:  v.StartToCloseTimeout,
+					TaskCreated: v.TimerTaskStatus != emptyTimerID}
+				tb.activityTimers = append(tb.activityTimers, td)
+				if v.HeartbeatTimeout > 0 {
+					heartBeatExpiry := v.LastHeartBeatUpdatedTime.Add(time.Duration(v.HeartbeatTimeout) * time.Second)
+					td := &timerDetails{
+						SequenceID:  SequenceID{VisibilityTimestamp: heartBeatExpiry},
+						ActivityID:  v.ScheduleID,
+						EventID:     v.StartedID,
+						TimeoutType: w.TimeoutType_HEARTBEAT,
+						TimeoutSec:  v.HeartbeatTimeout,
+						TaskCreated: v.TimerTaskStatus != emptyTimerID}
+					tb.activityTimers = append(tb.activityTimers, td)
+				}
+			} else {
+				scheduleToStartExpiry := v.ScheduledTime.Add(time.Duration(v.ScheduleToStartTimeout) * time.Second)
+				td := &timerDetails{
+					SequenceID:  SequenceID{VisibilityTimestamp: scheduleToStartExpiry},
+					ActivityID:  v.ScheduleID,
+					EventID:     v.ScheduleID,
+					TimeoutSec:  v.ScheduleToStartTimeout,
+					TimeoutType: w.TimeoutType_SCHEDULE_TO_START,
+					TaskCreated: v.TimerTaskStatus != emptyTimerID}
+				tb.activityTimers = append(tb.activityTimers, td)
+				scheduleToCloseExpiry := v.ScheduledTime.Add(time.Duration(v.ScheduleToCloseTimeout) * time.Second)
+				td = &timerDetails{
+					SequenceID:  SequenceID{VisibilityTimestamp: scheduleToCloseExpiry},
+					ActivityID:  v.ScheduleID,
+					EventID:     v.ScheduleID,
+					TimeoutSec:  v.ScheduleToCloseTimeout,
+					TimeoutType: w.TimeoutType_SCHEDULE_TO_CLOSE,
+					TaskCreated: v.TimerTaskStatus != emptyTimerID}
+				tb.activityTimers = append(tb.activityTimers, td)
+			}
+		}
+	}
+	sort.Sort(tb.activityTimers)
+	tb.isLoadedActivityTimers = true
 }
 
 func (tb *timerBuilder) createDeleteHistoryEventTimerTask(d time.Duration) *persistence.DeleteHistoryEventTask {
@@ -291,6 +377,13 @@ func (tb *timerBuilder) firstTimerTask() persistence.Task {
 	return nil
 }
 
+func (tb *timerBuilder) firstActivityTimerTask() persistence.Task {
+	if len(tb.activityTimers) > 0 && !tb.activityTimers[0].TaskCreated {
+		return tb.createNewTask(tb.activityTimers[0])
+	}
+	return nil
+}
+
 func (tb *timerBuilder) createNewTask(td *timerDetails) persistence.Task {
 	// Create a copy of this task.
 	if td.TimerID != "" {
@@ -298,6 +391,12 @@ func (tb *timerBuilder) createNewTask(td *timerDetails) persistence.Task {
 		return &persistence.UserTimerTask{
 			VisibilityTimestamp: td.SequenceID.VisibilityTimestamp,
 			EventID:             tt.StartedID,
+		}
+	} else if td.ActivityID != 0 && td.ActivityID != emptyEventID {
+		return &persistence.ActivityTimeoutTask{
+			VisibilityTimestamp: td.SequenceID.VisibilityTimestamp,
+			EventID:             td.EventID,
+			TimeoutType:         int(td.TimeoutType),
 		}
 	}
 	return nil

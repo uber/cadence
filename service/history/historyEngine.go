@@ -469,20 +469,9 @@ Update_History_Loop:
 
 		// Start a timer for the activity task.
 		timerTasks := []persistence.Task{}
-		start2CloseTimeoutTask, err := tBuilder.AddStartToCloseActivityTimeout(ai)
-		if err != nil {
-			return nil, err
+		if tt := tBuilder.GetActivityTimerTaskIfNeeded(msBuilder); tt != nil {
+			timerTasks = append(timerTasks, tt)
 		}
-		timerTasks = append(timerTasks, start2CloseTimeoutTask)
-
-		start2HeartBeatTimeoutTask, err := tBuilder.AddHeartBeatActivityTimeout(ai)
-		if err != nil {
-			return nil, err
-		}
-		if start2HeartBeatTimeoutTask != nil {
-			timerTasks = append(timerTasks, start2HeartBeatTimeoutTask)
-		}
-		defer e.timerProcessor.NotifyNewTimer(timerTasks)
 
 		// Generate a transaction ID for appending events to history
 		transactionID, err2 := e.shard.GetNextTransferTaskID()
@@ -501,6 +490,7 @@ Update_History_Loop:
 
 			return nil, err3
 		}
+		defer e.timerProcessor.NotifyNewTimer(timerTasks)
 
 		response := h.NewRecordActivityTaskStartedResponse()
 		response.ScheduledEvent = scheduledEvent
@@ -569,6 +559,8 @@ Update_History_Loop:
 		transferTasks := []persistence.Task{}
 		timerTasks := []persistence.Task{}
 		var continueAsNewBuilder *mutableStateBuilder
+		hasDecisionScheduleActivityTask := false
+
 	Process_Decision_Loop:
 		for _, d := range request.Decisions {
 			switch d.GetDecisionType() {
@@ -593,22 +585,13 @@ Update_History_Loop:
 					break Process_Decision_Loop
 				}
 
-				scheduleEvent, ai := msBuilder.AddActivityTaskScheduledEvent(completedID, attributes)
+				scheduleEvent, _ := msBuilder.AddActivityTaskScheduledEvent(completedID, attributes)
 				transferTasks = append(transferTasks, &persistence.ActivityTask{
 					DomainID:   targetDomainID,
 					TaskList:   attributes.GetTaskList().GetName(),
 					ScheduleID: scheduleEvent.GetEventId(),
 				})
-
-				// Create activity timeouts.
-				Schedule2StartTimeoutTask := tBuilder.AddScheduleToStartActivityTimeout(ai)
-				timerTasks = append(timerTasks, Schedule2StartTimeoutTask)
-
-				Schedule2CloseTimeoutTask, err := tBuilder.AddScheduleToCloseActivityTimeout(ai)
-				if err != nil {
-					return err
-				}
-				timerTasks = append(timerTasks, Schedule2CloseTimeoutTask)
+				hasDecisionScheduleActivityTask = true
 
 			case workflow.DecisionType_CompleteWorkflowExecution:
 				e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope,
@@ -858,6 +841,11 @@ Update_History_Loop:
 
 		if tt := tBuilder.GetUserTimerTaskIfNeeded(msBuilder); tt != nil {
 			timerTasks = append(timerTasks, tt)
+		}
+		if hasDecisionScheduleActivityTask {
+			if tt := tBuilder.GetActivityTimerTaskIfNeeded(msBuilder); tt != nil {
+				timerTasks = append(timerTasks, tt)
+			}
 		}
 
 		// Schedule another decision task if new events came in during this decision
