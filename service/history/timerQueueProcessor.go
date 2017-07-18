@@ -598,7 +598,6 @@ Update_History_Loop:
 
 	ExpireActivityTimers:
 		for _, td := range tBuilder.GetActivityTimers(msBuilder) {
-			//t.logger.Debugf("Processing timer details: %v", td)
 			ai, isRunning := msBuilder.GetActivityInfo(td.ActivityID)
 			if !isRunning {
 				//  We might have time out this activity already.
@@ -659,8 +658,7 @@ Update_History_Loop:
 					nextTask := tBuilder.createNewTask(td)
 					timerTasks = []persistence.Task{nextTask}
 
-					// Update the task ID tracking the corresponding timer task.
-					ai.TimerTaskStatus = 1
+					ai.TimerTaskStatus = TimerTaskStatusCreated
 					msBuilder.UpdateActivity(ai)
 					at := nextTask.(*persistence.ActivityTimeoutTask)
 					t.logger.Debugf("%s: Adding Activity Timeout: with timeout: %v sec, ExpiryTime: %s, TimeoutType: %v, EventID: %v",

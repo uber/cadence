@@ -464,6 +464,46 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTaskScheduleToStart_WithStar
 	s.False(running)
 }
 
+func (s *timerQueueProcessorSuite) TestTimerActivityTaskScheduleToStart_MoreThanStartToClose() {
+	domainID := "5bb49df8-71bc-4c63-b57f-05f2a508e7b5"
+	workflowExecution := workflow.WorkflowExecution{WorkflowId: common.StringPtr("activity-timer-SCHEDULE_TO_START-more-than-start2close"),
+		RunId: common.StringPtr("0d00698f-08e1-4d36-a3e2-3bf109f5d2d6")}
+
+	taskList := "activity-timer-queue"
+
+	s.createExecutionWithTimers(domainID, workflowExecution, taskList, "identity", []int32{})
+
+	// TimeoutType_SCHEDULE_TO_START - Without Start
+	processor := newTimerQueueProcessor(s.ShardContext, s.engineImpl, s.WorkflowMgr, s.logger).(*timerQueueProcessorImpl)
+	processor.Start()
+
+	state, err := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
+	s.Nil(err)
+	builder := newMutableStateBuilder(s.logger)
+	builder.Load(state)
+	condition := state.ExecutionInfo.NextEventID
+
+	activityScheduledEvent, _ := builder.AddActivityTaskScheduledEvent(emptyEventID,
+		&workflow.ScheduleActivityTaskDecisionAttributes{
+			ScheduleToStartTimeoutSeconds: common.Int32Ptr(2),
+			StartToCloseTimeoutSeconds:    common.Int32Ptr(1),
+		})
+
+	tBuilder := newTimerBuilder(s.logger, &mockTimeSource{currTime: time.Now()})
+	tt := tBuilder.GetActivityTimerTaskIfNeeded(builder)
+	s.NotNil(tt)
+	s.Equal(workflow.TimeoutType_SCHEDULE_TO_START, workflow.TimeoutType(tt.(*persistence.ActivityTimeoutTask).TimeoutType))
+	timerTasks := []persistence.Task{tt}
+
+	s.updateHistoryAndTimers(builder, timerTasks, condition)
+	processor.NotifyNewTimer(timerTasks)
+
+	s.waitForTimerTasksToProcess(processor)
+	s.Equal(uint64(1), processor.timerFiredCount)
+	running := s.checkTimedOutEventFor(domainID, workflowExecution, activityScheduledEvent.GetEventId())
+	s.False(running)
+}
+
 func (s *timerQueueProcessorSuite) TestTimerActivityTaskStartToClose_WithStart() {
 	domainID := "5bb49df8-71bc-4c63-b57f-05f2a508e123"
 	workflowExecution := workflow.WorkflowExecution{WorkflowId: common.StringPtr("activity-timer-START_TO_CLOSE-Started-test"),

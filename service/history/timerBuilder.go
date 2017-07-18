@@ -42,6 +42,12 @@ const (
 	emptyTimerID = -1
 )
 
+// Timer task status
+const (
+	TimerTaskStatusNone = iota
+	TimerTaskStatusCreated
+)
+
 type (
 	timerDetails struct {
 		SequenceID  SequenceID
@@ -238,7 +244,7 @@ func (tb *timerBuilder) GetActivityTimerTaskIfNeeded(msBuilder *mutableStateBuil
 		// Update the task ID tracking if it has created timer task or not.
 		td := tb.activityTimers[0]
 		ai := tb.pendingActivityTimers[td.ActivityID]
-		ai.TimerTaskStatus = 1
+		ai.TimerTaskStatus = TimerTaskStatusCreated
 		msBuilder.UpdateActivity(ai)
 		at := timerTask.(*persistence.ActivityTimeoutTask)
 		tb.logger.Debugf("%s: Adding Activity Timeout: with timeout: %v sec, ExpiryTime: %s, TimeoutType: %v, EventID: %v",
@@ -276,7 +282,7 @@ func (tb *timerBuilder) loadActivityTimers(msBuilder *mutableStateBuilder) {
 					EventID:     v.StartedID,
 					TimeoutType: w.TimeoutType_START_TO_CLOSE,
 					TimeoutSec:  v.StartToCloseTimeout,
-					TaskCreated: v.TimerTaskStatus != emptyTimerID}
+					TaskCreated: v.TimerTaskStatus == TimerTaskStatusCreated}
 				tb.activityTimers = append(tb.activityTimers, td)
 				if v.HeartbeatTimeout > 0 {
 					heartBeatExpiry := v.LastHeartBeatUpdatedTime.Add(time.Duration(v.HeartbeatTimeout) * time.Second)
@@ -286,7 +292,7 @@ func (tb *timerBuilder) loadActivityTimers(msBuilder *mutableStateBuilder) {
 						EventID:     v.StartedID,
 						TimeoutType: w.TimeoutType_HEARTBEAT,
 						TimeoutSec:  v.HeartbeatTimeout,
-						TaskCreated: v.TimerTaskStatus != emptyTimerID}
+						TaskCreated: v.TimerTaskStatus == TimerTaskStatusCreated}
 					tb.activityTimers = append(tb.activityTimers, td)
 				}
 			} else {
@@ -297,7 +303,7 @@ func (tb *timerBuilder) loadActivityTimers(msBuilder *mutableStateBuilder) {
 					EventID:     v.ScheduleID,
 					TimeoutSec:  v.ScheduleToStartTimeout,
 					TimeoutType: w.TimeoutType_SCHEDULE_TO_START,
-					TaskCreated: v.TimerTaskStatus != emptyTimerID}
+					TaskCreated: v.TimerTaskStatus == TimerTaskStatusCreated}
 				tb.activityTimers = append(tb.activityTimers, td)
 				scheduleToCloseExpiry := v.ScheduledTime.Add(time.Duration(v.ScheduleToCloseTimeout) * time.Second)
 				td = &timerDetails{
@@ -306,7 +312,7 @@ func (tb *timerBuilder) loadActivityTimers(msBuilder *mutableStateBuilder) {
 					EventID:     v.ScheduleID,
 					TimeoutSec:  v.ScheduleToCloseTimeout,
 					TimeoutType: w.TimeoutType_SCHEDULE_TO_CLOSE,
-					TaskCreated: v.TimerTaskStatus != emptyTimerID}
+					TaskCreated: v.TimerTaskStatus == TimerTaskStatusCreated}
 				tb.activityTimers = append(tb.activityTimers, td)
 			}
 		}
