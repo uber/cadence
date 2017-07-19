@@ -722,7 +722,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_Activities() {
 	s.Equal(int32(3), ai.StartToCloseTimeout)
 	s.Equal(int32(4), ai.HeartbeatTimeout)
 	s.Equal(currentTime.Unix(), ai.LastHeartBeatUpdatedTime.Unix())
-	s.Equal(int32(10), ai.TimerTaskStatus)
+	s.Equal(int32(1), ai.TimerTaskStatus)
 
 	err2 = s.UpdateWorkflowExecution(updatedInfo, nil, nil, int64(5), nil, nil, nil, common.Int64Ptr(1), nil, nil)
 	s.Nil(err2, "No error expected.")
