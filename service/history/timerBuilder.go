@@ -38,8 +38,6 @@ const (
 	DefaultScheduleToStartActivityTimeoutInSecs = 10
 	DefaultScheduleToCloseActivityTimeoutInSecs = 10
 	DefaultStartToCloseActivityTimeoutInSecs    = 10
-
-	emptyTimerID = -1
 )
 
 // Timer task status
@@ -188,7 +186,7 @@ func (tb *timerBuilder) AddUserTimer(ti *persistence.TimerInfo, msBuilder *mutab
 	timer := &timerDetails{
 		SequenceID:  SequenceID{VisibilityTimestamp: ti.ExpiryTime, TaskID: seqNum},
 		TimerID:     ti.TimerID,
-		TaskCreated: ti.TaskID != emptyTimerID}
+		TaskCreated: ti.TaskID == TimerTaskStatusCreated}
 	tb.insertTimer(timer)
 	tb.logger.Debugf("Added User Timeout for timer ID: %s", ti.TimerID)
 }
@@ -262,7 +260,7 @@ func (tb *timerBuilder) loadUserTimers(msBuilder *mutableStateBuilder) {
 		td := &timerDetails{
 			SequenceID:  SequenceID{VisibilityTimestamp: v.ExpiryTime, TaskID: seqNum},
 			TimerID:     v.TimerID,
-			TaskCreated: v.TaskID != emptyTimerID}
+			TaskCreated: v.TaskID == TimerTaskStatusCreated}
 		tb.userTimers = append(tb.userTimers, td)
 	}
 	sort.Sort(tb.userTimers)

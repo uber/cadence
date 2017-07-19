@@ -635,7 +635,7 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(decisionCompletedEve
 		CancelRequested:          false,
 		CancelRequestID:          emptyEventID,
 		LastHeartBeatUpdatedTime: time.Time{},
-		TimerTaskStatus:          emptyTimerID,
+		TimerTaskStatus:          TimerTaskStatusNone,
 	}
 
 	e.pendingActivityInfoIDs[scheduleEventID] = ai
@@ -918,7 +918,7 @@ func (e *mutableStateBuilder) AddTimerStartedEvent(decisionCompletedEventID int6
 		TimerID:    timerID,
 		ExpiryTime: expiryTime,
 		StartedID:  event.GetEventId(),
-		TaskID:     emptyTimerID,
+		TaskID:     TimerTaskStatusNone,
 	}
 
 	e.pendingTimerInfoIDs[timerID] = ti

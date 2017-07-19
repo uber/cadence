@@ -130,7 +130,7 @@ func (s *timerBuilderProcessorSuite) TestTimerBuilderMulitpleUserTimer() {
 
 	// Mutable state with out a timer task.
 	tb = newTimerBuilder(s.logger, &mockTimeSource{currTime: time.Now()})
-	tp2 := &persistence.TimerInfo{TimerID: "tid1", StartedID: 201, TaskID: emptyTimerID, ExpiryTime: time.Now().Add(10 * time.Second)}
+	tp2 := &persistence.TimerInfo{TimerID: "tid1", StartedID: 201, TaskID: TimerTaskStatusNone, ExpiryTime: time.Now().Add(10 * time.Second)}
 	timerInfos = map[string]*persistence.TimerInfo{"tid1": tp2}
 	msb = newMutableStateBuilder(s.logger)
 	msb.Load(&persistence.WorkflowMutableState{
@@ -152,7 +152,7 @@ func (s *timerBuilderProcessorSuite) TestTimerBuilderMulitpleUserTimer() {
 	isRunning, ti := msb.GetUserTimer("tid-after")
 	s.True(isRunning)
 	s.NotNil(ti)
-	s.Equal(int64(emptyTimerID), ti.TaskID)
+	s.Equal(int64(TimerTaskStatusNone), ti.TaskID)
 	s.Equal(int64(203), ti.StartedID)
 }
 
