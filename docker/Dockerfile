@@ -20,7 +20,7 @@
 
 FROM debian:jessie
 
-# get golang 1.8.1
+# get golang 1.8.2
 RUN apt-get update && apt-get install -y --no-install-recommends \
 		g++ \
 		gcc \
