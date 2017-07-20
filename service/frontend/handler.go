@@ -62,9 +62,9 @@ type (
 	}
 
 	getHistoryContinuationToken struct {
-		runID            string
-		nextEventID      int64
-		persistenceToken []byte
+		RunID            string
+		NextEventID      int64
+		PersistenceToken []byte
 	}
 )
 
@@ -651,8 +651,8 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 			Execution:  getRequest.GetExecution(),
 		})
 		if err == nil {
-			token.nextEventID = response.GetEventId()
-			token.runID = response.GetRunId()
+			token.NextEventID = response.GetEventId()
+			token.RunID = response.GetRunId()
 		} else {
 			if _, ok := err.(*gen.EntityNotExistsError); !ok || !getRequest.GetExecution().IsSetRunId() {
 				return nil, wh.error(err, scope)
@@ -666,27 +666,27 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 			if err != nil {
 				return nil, wh.error(err, scope)
 			}
-			token.nextEventID = visibilityResp.Execution.GetHistoryLength()
-			token.runID = visibilityResp.Execution.GetExecution().GetRunId()
+			token.NextEventID = visibilityResp.Execution.GetHistoryLength()
+			token.RunID = visibilityResp.Execution.GetExecution().GetRunId()
 		}
 	}
 
 	we := gen.WorkflowExecution{
 		WorkflowId: getRequest.GetExecution().WorkflowId,
-		RunId:      common.StringPtr(token.runID),
+		RunId:      common.StringPtr(token.RunID),
 	}
 	history, persistenceToken, err :=
-		wh.getHistory(info.ID, we, token.nextEventID, getRequest.GetMaximumPageSize(), getRequest.GetNextPageToken())
+		wh.getHistory(info.ID, we, token.NextEventID, getRequest.GetMaximumPageSize(), token.PersistenceToken)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
 
-	nextToken, err := getSerializedGetHistoryToken(persistenceToken, token.runID, history, token.nextEventID)
+	nextToken, err := getSerializedGetHistoryToken(persistenceToken, token.RunID, history, token.NextEventID)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
 
-	return createGetWorkflowExecutionHistoryResponse(history, token.nextEventID, nextToken), nil
+	return createGetWorkflowExecutionHistoryResponse(history, token.NextEventID, nextToken), nil
 }
 
 // SignalWorkflowExecution is used to send a signal event to running workflow execution.  This results in
@@ -1150,9 +1150,9 @@ func getSerializedGetHistoryToken(persistenceToken []byte, runID string, history
 	events := history.GetEvents()
 	if len(persistenceToken) > 0 && len(events) > 0 && events[len(events)-1].GetEventId() < nextEventID-1 {
 		token := &getHistoryContinuationToken{
-			runID:            runID,
-			nextEventID:      nextEventID,
-			persistenceToken: persistenceToken,
+			RunID:            runID,
+			NextEventID:      nextEventID,
+			PersistenceToken: persistenceToken,
 		}
 		data, err := json.Marshal(token)
 
