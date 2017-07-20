@@ -74,14 +74,15 @@ const (
 )
 
 var (
-	errDomainNotSet         = &gen.BadRequestError{Message: "Domain not set on request."}
-	errTaskTokenNotSet      = &gen.BadRequestError{Message: "Task token not set on request."}
-	errTaskListNotSet       = &gen.BadRequestError{Message: "TaskList is not set on request."}
-	errExecutionNotSet      = &gen.BadRequestError{Message: "Execution is not set on request."}
-	errWorkflowIDNotSet     = &gen.BadRequestError{Message: "WorkflowId is not set on request."}
-	errRunIDNotSet          = &gen.BadRequestError{Message: "RunId is not set on request."}
-	errInvalidRunID         = &gen.BadRequestError{Message: "Invalid RunId."}
-	errInvalidNextPageToken = &gen.BadRequestError{Message: "Invalid NextPageToken."}
+	errDomainNotSet               = &gen.BadRequestError{Message: "Domain not set on request."}
+	errTaskTokenNotSet            = &gen.BadRequestError{Message: "Task token not set on request."}
+	errTaskListNotSet             = &gen.BadRequestError{Message: "TaskList is not set on request."}
+	errExecutionNotSet            = &gen.BadRequestError{Message: "Execution is not set on request."}
+	errWorkflowIDNotSet           = &gen.BadRequestError{Message: "WorkflowId is not set on request."}
+	errRunIDNotSet                = &gen.BadRequestError{Message: "RunId is not set on request."}
+	errInvalidRunID               = &gen.BadRequestError{Message: "Invalid RunId."}
+	errInvalidNextPageToken       = &gen.BadRequestError{Message: "Invalid NextPageToken."}
+	errNextPageTokenRunIDMismatch = &gen.BadRequestError{Message: "RunID in the request does not match the NextPageToken."}
 )
 
 // NewWorkflowHandler creates a thrift handler for the cadence service
@@ -644,6 +645,9 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		token, err = deserializeGetHistoryToken(getRequest.GetNextPageToken())
 		if err != nil {
 			return nil, wh.error(errInvalidNextPageToken, scope)
+		}
+		if getRequest.GetExecution().IsSetRunId() && getRequest.GetExecution().GetRunId() != token.RunID {
+			return nil, wh.error(errNextPageTokenRunIDMismatch, scope)
 		}
 	} else {
 		response, err := wh.history.GetWorkflowExecutionNextEventID(ctx, &h.GetWorkflowExecutionNextEventIDRequest{
