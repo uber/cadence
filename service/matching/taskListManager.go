@@ -85,11 +85,14 @@ type taskContext struct {
 
 // Single task list in memory state
 type taskListManagerImpl struct {
-	taskListID      *taskListID
-	logger          bark.Logger
-	metricsClient   metrics.Client
-	engine          *matchingEngineImpl
-	persistenceLock sync.Mutex // serializes all writes to persistence
+	taskListID    *taskListID
+	logger        bark.Logger
+	metricsClient metrics.Client
+	engine        *matchingEngineImpl
+	// serializes all writes to persistence
+	// This is needed because of a known Cassandra issue where concurrent LWT to the same partition
+	// cause timeout errors.
+	persistenceLock sync.Mutex
 	taskWriter      *taskWriter
 	taskBuffer      chan *persistence.TaskInfo // tasks loaded from persistence
 	// Sync channel used to perform sync matching.
