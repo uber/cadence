@@ -654,15 +654,30 @@ Update_History_Loop:
 				}
 			} else {
 				// See if we have next timer in list to be created.
-				if !td.TaskCreated || td.ActivityID == scheduleID {
+				isHeartBeatTask := timerTask.TimeoutType == int(workflow.TimeoutType_HEARTBEAT)
+
+				// Create next timer task if we don't have one (or)
+				// if current one is HB task and we need to create next HB task for the same.
+				if !td.TaskCreated || (isHeartBeatTask && td.ActivityID == scheduleID) {
 					nextTask := tBuilder.createNewTask(td)
 					timerTasks = []persistence.Task{nextTask}
-
-					ai.TimerTaskStatus = TimerTaskStatusCreated
-					msBuilder.UpdateActivity(ai)
 					at := nextTask.(*persistence.ActivityTimeoutTask)
+
+					ai.TimerTaskStatus = ai.TimerTaskStatus & getActivityTimerStatus(workflow.TimeoutType(at.TimeoutType))
+					msBuilder.UpdateActivity(ai)
+
 					t.logger.Debugf("%s: Adding Activity Timeout: with timeout: %v sec, ExpiryTime: %s, TimeoutType: %v, EventID: %v",
 						time.Now(), td.TimeoutSec, at.VisibilityTimestamp, td.TimeoutType.String(), at.EventID)
+				}
+
+				if isHeartBeatTask && td.ActivityID != scheduleID {
+					ai, isRunning := msBuilder.GetActivityInfo(scheduleID)
+					if isRunning {
+						// Unset the time task status for which this timer task is created so we can
+						// create the next HB task when needed.
+						ai.TimerTaskStatus = ai.TimerTaskStatus & ^TimerTaskStatusCreatedHeartbeat
+						msBuilder.UpdateActivity(ai)
+					}
 				}
 
 				// Done!
