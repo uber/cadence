@@ -151,7 +151,7 @@ CREATE TABLE executions (
   transfer             frozen<transfer_task>,
   timer                frozen<timer_task>,
   next_event_id        bigint,  -- This is needed to make conditional updates on session history
-  range_id             bigint static, -- Increasing sequence identifier for transfer queue, checkpointed into shard info
+  range_id             bigint, -- Increasing sequence identifier for transfer queue, checkpointed into shard info
   activity_map         map<bigint, frozen<activity_info>>,
   timer_map            map<text, frozen<timer_info>>,
   child_executions_map map<bigint, frozen<child_execution_info>>,
@@ -187,7 +187,7 @@ CREATE TABLE tasks (
   task_list_type   int, -- enum TaskListType {ActivityTask, DecisionTask}
   type             int, -- enum rowType {Task, TaskList}
   task_id          bigint,  -- unique identifier for tasks, monotonically increasing
-  range_id         bigint static, -- Used to ensure that only one process can write to the table
+  range_id         bigint, -- Used to ensure that only one process can write to the table
   task             frozen<task>,
   task_list        frozen<task_list>,
   PRIMARY KEY ((domain_id, task_list_name, task_list_type), type, task_id)
