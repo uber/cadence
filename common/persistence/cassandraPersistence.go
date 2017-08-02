@@ -33,6 +33,12 @@ import (
 	"github.com/uber/cadence/common"
 )
 
+// Guidelines for creating new special UUID constants
+// Each UUID should be of the form: E0000000-R000-f000-f000-00000000000x
+// Where x is any hexadecimal value, E represents the entity type valid values are:
+// E = {DomainID = 1, WorkflowID = 2, RunID = 3}
+// R represents row type in executions table, valid values are:
+// R = {Shard = 1, Execution = 2, Transfer = 3, Timer = 4}
 const (
 	cassandraProtoVersion = 4
 	defaultSessionTimeout = 10 * time.Second
