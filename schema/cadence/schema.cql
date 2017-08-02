@@ -160,7 +160,6 @@ CREATE TABLE executions (
 ) WITH COMPACTION = {
     'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'
   }
-  AND GC_GRACE_SECONDS = 172800;
 
 CREATE TABLE events (
   domain_id      uuid,
@@ -178,7 +177,6 @@ CREATE TABLE events (
 ) WITH COMPACTION = {
     'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'
   }
-  AND GC_GRACE_SECONDS = 172800;
 
 -- Stores activity or workflow tasks
 CREATE TABLE tasks (
@@ -194,7 +192,6 @@ CREATE TABLE tasks (
 ) WITH COMPACTION = {
     'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'
   }
-  AND GC_GRACE_SECONDS = 172800;
 
 CREATE TABLE domains (
   id     uuid,
@@ -204,7 +201,6 @@ CREATE TABLE domains (
 ) WITH COMPACTION = {
     'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'
   }
-  AND GC_GRACE_SECONDS = 172800;
 
 CREATE TABLE domains_by_name (
   name   text,
@@ -214,4 +210,3 @@ CREATE TABLE domains_by_name (
 )  WITH COMPACTION = {
      'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'
    }
-   AND GC_GRACE_SECONDS = 172800;

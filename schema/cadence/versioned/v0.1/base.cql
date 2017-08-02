@@ -36,6 +36,8 @@ CREATE TYPE workflow_execution (
   decision_started_id    bigint,
   decision_request_id    text,    -- Identifier used by matching engine for retrying history service calls for recording task is started
   decision_timeout       int,
+  cancel_requested       boolean,
+  cancel_request_id      text,
 );
 
 -- TODO: Remove fields that are left over from activity and workflow tasks.
@@ -67,8 +69,10 @@ CREATE TYPE timer_task (
 CREATE TYPE activity_info (
   schedule_id               bigint,
   scheduled_event           blob,
+  scheduled_time            timestamp,
   started_id                bigint,
   started_event             blob,
+  started_time              timestamp,
   activity_id               text,    -- Client generated unique ID for the activity.
   request_id                text,    -- Identifier used by matching engine for retrying history service calls for recording task is started
   details                   blob,
@@ -79,6 +83,7 @@ CREATE TYPE activity_info (
   cancel_requested          boolean, -- If a cancel request is made to cancel the activity in progress.
   cancel_request_id         bigint,  -- Event ID that identifies the cancel request.
   last_hb_updated_time      timestamp, -- Last time the heartbeat is received.
+  timer_task_status         int,    -- Indicates wheter timers are created for this activity.
 );
 
 -- User timer details
@@ -96,6 +101,12 @@ CREATE TYPE child_execution_info (
   started_id        bigint,
   started_event     blob,
   create_request_id uuid,
+);
+
+-- External workflow cancellation in progress mutable state
+CREATE TYPE request_cancel_info (
+  initiated_id      bigint,
+  cancel_request_id text,
 );
 
 -- Activity or workflow task in a task list
@@ -144,11 +155,11 @@ CREATE TABLE executions (
   activity_map         map<bigint, frozen<activity_info>>,
   timer_map            map<text, frozen<timer_info>>,
   child_executions_map map<bigint, frozen<child_execution_info>>,
+  request_cancel_map   map<bigint, frozen<request_cancel_info>>,
   PRIMARY KEY  (shard_id, type, domain_id, workflow_id, run_id, visibility_ts, task_id)
 ) WITH COMPACTION = {
     'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'
   }
-  AND GC_GRACE_SECONDS = 172800;
 
 CREATE TABLE events (
   domain_id      uuid,
@@ -166,7 +177,6 @@ CREATE TABLE events (
 ) WITH COMPACTION = {
     'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'
   }
-  AND GC_GRACE_SECONDS = 172800;
 
 -- Stores activity or workflow tasks
 CREATE TABLE tasks (
@@ -182,7 +192,6 @@ CREATE TABLE tasks (
 ) WITH COMPACTION = {
     'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'
   }
-  AND GC_GRACE_SECONDS = 172800;
 
 CREATE TABLE domains (
   id     uuid,
@@ -192,7 +201,6 @@ CREATE TABLE domains (
 ) WITH COMPACTION = {
     'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'
   }
-  AND GC_GRACE_SECONDS = 172800;
 
 CREATE TABLE domains_by_name (
   name   text,
@@ -202,4 +210,3 @@ CREATE TABLE domains_by_name (
 )  WITH COMPACTION = {
      'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'
    }
-   AND GC_GRACE_SECONDS = 172800;
