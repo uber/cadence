@@ -751,7 +751,8 @@ func (d *cassandraPersistence) CreateWorkflowExecution(request *CreateWorkflowEx
 
 			previous = make(map[string]interface{})
 			if !iter.MapScan(previous) {
-				// This should never really happen, but just in case.
+				// Cassandra returns the actual row that caused a condition failure, so we should always return
+				// from the checks above, but just in case.
 				break GetFailureReasonLoop
 			}
 		}
@@ -1046,7 +1047,8 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 
 			previous = make(map[string]interface{})
 			if !iter.MapScan(previous) {
-				// This should never really happen, but just in case.
+				// Cassandra returns the actual row that caused a condition failure, so we should always return
+				// from the checks above, but just in case.
 				break GetFailureReasonLoop
 			}
 		}
