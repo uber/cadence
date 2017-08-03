@@ -23,7 +23,6 @@ package matching
 import (
 	"errors"
 	"sync"
-	"time"
 
 	"github.com/pborman/uuid"
 	"github.com/uber-common/bark"
@@ -46,15 +45,14 @@ import (
 // TODO: Switch implementation from lock/channel based to a partitioned agent
 // to simplify code and reduce possiblity of synchronization errors.
 type matchingEngineImpl struct {
-	taskManager                persistence.TaskManager
-	historyService             history.Client
-	tokenSerializer            common.TaskTokenSerializer
-	rangeSize                  int64
-	logger                     bark.Logger
-	metricsClient              metrics.Client
-	longPollExpirationInterval time.Duration
-	taskListsLock              sync.RWMutex                   // locks mutation of taskLists
-	taskLists                  map[taskListID]taskListManager // Convert to LRU cache
+	taskManager     persistence.TaskManager
+	historyService  history.Client
+	tokenSerializer common.TaskTokenSerializer
+	logger          bark.Logger
+	metricsClient   metrics.Client
+	taskListsLock   sync.RWMutex                   // locks mutation of taskLists
+	taskLists       map[taskListID]taskListManager // Convert to LRU cache
+	config          *Config
 }
 
 type taskListID struct {
@@ -63,12 +61,6 @@ type taskListID struct {
 	taskType     int
 }
 
-const (
-	defaultLongPollExpirationInterval = time.Minute
-	emptyGetRetryInitialInterval      = 100 * time.Millisecond
-	emptyGetRetryMaxInterval          = 1 * time.Second
-)
-
 var (
 	// EmptyPollForDecisionTaskResponse is the response when there are no decision tasks to hand out
 	emptyPollForDecisionTaskResponse = m.NewPollForDecisionTaskResponse()
@@ -76,7 +68,8 @@ var (
 	emptyPollForActivityTaskResponse   = workflow.NewPollForActivityTaskResponse()
 	persistenceOperationRetryPolicy    = common.CreatePersistanceRetryPolicy()
 	historyServiceOperationRetryPolicy = common.CreateHistoryServiceRetryPolicy()
-	emptyGetTasksRetryPolicy           = createEmptyGetTasksRetryPolicy()
+	//emptyGetTasksRetryPolicy           = createEmptyGetTasksRetryPolicy()
+
 	// ErrNoTasks is exported temporarily for integration test
 	ErrNoTasks    = errors.New("No tasks")
 	errPumpClosed = errors.New("Task list pump closed its channel")
@@ -100,20 +93,20 @@ var _ Engine = (*matchingEngineImpl)(nil) // Asserts that interface is indeed im
 // NewEngine creates an instance of matching engine
 func NewEngine(taskManager persistence.TaskManager,
 	historyService history.Client,
+	config *Config,
 	logger bark.Logger,
 	metricsClient metrics.Client) Engine {
 
 	return &matchingEngineImpl{
-		taskManager:                taskManager,
-		historyService:             historyService,
-		tokenSerializer:            common.NewJSONTaskTokenSerializer(),
-		taskLists:                  make(map[taskListID]taskListManager),
-		rangeSize:                  defaultRangeSize,
-		longPollExpirationInterval: defaultLongPollExpirationInterval,
+		taskManager:     taskManager,
+		historyService:  historyService,
+		tokenSerializer: common.NewJSONTaskTokenSerializer(),
+		taskLists:       make(map[taskListID]taskListManager),
 		logger: logger.WithFields(bark.Fields{
 			logging.TagWorkflowComponent: logging.TagValueMatchingEngineComponent,
 		}),
 		metricsClient: metricsClient,
+		config:        config,
 	}
 }
 
@@ -162,7 +155,7 @@ func (e *matchingEngineImpl) getTaskListManager(taskList *taskListID) (taskListM
 	}
 	e.taskListsLock.RUnlock()
 	logging.LogTaskListLoadingEvent(e.logger, taskList.taskListName, taskList.taskType)
-	mgr := newTaskListManager(e, taskList)
+	mgr := newTaskListManager(e, taskList, e.config)
 	e.taskListsLock.Lock()
 	if result, ok := e.taskLists[*taskList]; ok {
 		e.taskListsLock.Unlock()
@@ -411,9 +404,9 @@ func newTaskListID(domainID, taskListName string, taskType int) *taskListID {
 	return &taskListID{domainID: domainID, taskListName: taskListName, taskType: taskType}
 }
 
-func createEmptyGetTasksRetryPolicy() backoff.RetryPolicy {
-	policy := backoff.NewExponentialRetryPolicy(emptyGetRetryInitialInterval)
-	policy.SetMaximumInterval(emptyGetRetryMaxInterval)
+func createEmptyGetTasksRetryPolicy(config *Config) backoff.RetryPolicy {
+	policy := backoff.NewExponentialRetryPolicy(config.EmptyGetRetryInitialInterval)
+	policy.SetMaximumInterval(config.EmptyGetRetryMaxInterval)
 
 	return policy
 }
