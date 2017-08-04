@@ -82,9 +82,6 @@ func handleUpdateSchema(config *UpdateSchemaConfig) error {
 }
 
 func handleSetupSchema(config *SetupSchemaConfig) error {
-	if config.CassPort == 0 {
-		config.CassPort = defaultCassandraPort
-	}
 	task, err := newSetupSchemaTask(config)
 	if err != nil {
 		return fmt.Errorf("error creating task, err=%v", err)
@@ -98,6 +95,9 @@ func handleSetupSchema(config *SetupSchemaConfig) error {
 func validateSetupSchemaConfig(config *SetupSchemaConfig) error {
 	if len(config.CassHosts) == 0 {
 		return newConfigError("missing cassandra endpoint argument " + flag(cliOptEndpoint))
+	}
+	if config.CassPort == 0 {
+		config.CassPort = defaultCassandraPort
 	}
 	if len(config.CassKeyspace) == 0 {
 		return newConfigError("missing " + flag(cliOptKeyspace) + " argument ")
@@ -144,6 +144,9 @@ func validateUpdateSchemaConfig(config *UpdateSchemaConfig) error {
 
 	if len(config.CassHosts) == 0 {
 		return newConfigError("missing cassandra endpoint argument " + flag(cliOptEndpoint))
+	}
+	if config.CassPort == 0 {
+		config.CassPort = defaultCassandraPort
 	}
 	if len(config.CassKeyspace) == 0 {
 		return newConfigError("missing " + flag(cliOptKeyspace) + " argument ")
@@ -198,6 +201,9 @@ func newCreateKeyspaceConfig(cli *cli.Context) (*CreateKeyspaceConfig, error) {
 func validateCreateKeyspaceConfig(config *CreateKeyspaceConfig) error {
 	if len(config.CassHosts) == 0 {
 		return newConfigError("missing cassandra endpoint argument " + flag(cliOptEndpoint))
+	}
+	if config.CassPort == 0 {
+		config.CassPort = defaultCassandraPort
 	}
 	if len(config.CassKeyspace) == 0 {
 		return newConfigError("missing " + flag(cliOptKeyspace) + " argument ")
