@@ -47,7 +47,7 @@ type Handler struct {
 }
 
 // NewHandler creates a thrift handler for the history service
-func NewHandler(taskPersistence persistence.TaskManager, sVice service.Service, config *Config) (*Handler, []thrift.TChanServer) {
+func NewHandler(sVice service.Service, config *Config, taskPersistence persistence.TaskManager) (*Handler, []thrift.TChanServer) {
 	handler := &Handler{
 		Service:         sVice,
 		taskPersistence: taskPersistence,

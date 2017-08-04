@@ -97,7 +97,7 @@ func (s *Service) Start() {
 
 	taskPersistence = persistence.NewTaskPersistenceClient(taskPersistence, base.GetMetricsClient())
 
-	handler, tchanServers := NewHandler(taskPersistence, base, s.config)
+	handler, tchanServers := NewHandler(base, s.config, taskPersistence)
 	handler.Start(tchanServers)
 
 	log.Infof("%v started", common.MatchingServiceName)

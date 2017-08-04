@@ -203,7 +203,7 @@ func (c *cadenceImpl) startMatching(logger bark.Logger, taskMgr persistence.Task
 	params.CassandraConfig.NumHistoryShards = c.numberOfHistoryShards
 	service := service.New(params)
 	var thriftServices []thrift.TChanServer
-	c.matchingHandler, thriftServices = matching.NewHandler(taskMgr, service, matching.NewConfig())
+	c.matchingHandler, thriftServices = matching.NewHandler(service, matching.NewConfig(), taskMgr)
 	c.matchingHandler.Start(thriftServices)
 	startWG.Done()
 	<-c.shutdownCh
