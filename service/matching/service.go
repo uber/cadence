@@ -30,10 +30,9 @@ import (
 
 // Config represents configuration for cadence-matching service
 type Config struct {
-	EnableSyncMatch              bool
-	LongPollExpirationInterval   time.Duration
-	EmptyGetRetryInitialInterval time.Duration
-	EmptyGetRetryMaxInterval     time.Duration
+	EnableSyncMatch bool
+	// Time to hold a poll request before returning an empty response if there are no tasks
+	LongPollExpirationInterval time.Duration
 
 	// taskListManager configuration
 	RangeSize         int64
@@ -48,15 +47,11 @@ type Config struct {
 // NewConfig returns new service config with default values
 func NewConfig() *Config {
 	return &Config{
-		EnableSyncMatch:              true,
-		LongPollExpirationInterval:   time.Minute,
-		EmptyGetRetryInitialInterval: 100 * time.Millisecond,
-		EmptyGetRetryMaxInterval:     1 * time.Second,
-
-		RangeSize:         100000,
-		GetTasksBatchSize: 1000,
-		UpdateAckInterval: 10 * time.Second,
-
+		EnableSyncMatch:                 true,
+		LongPollExpirationInterval:      time.Minute,
+		RangeSize:                       100000,
+		GetTasksBatchSize:               1000,
+		UpdateAckInterval:               10 * time.Second,
 		OutstandingTaskAppendsThreshold: 250,
 		MaxTaskBatchSize:                100,
 	}

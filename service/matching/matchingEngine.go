@@ -34,7 +34,6 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
@@ -68,7 +67,6 @@ var (
 	emptyPollForActivityTaskResponse   = workflow.NewPollForActivityTaskResponse()
 	persistenceOperationRetryPolicy    = common.CreatePersistanceRetryPolicy()
 	historyServiceOperationRetryPolicy = common.CreateHistoryServiceRetryPolicy()
-	//emptyGetTasksRetryPolicy           = createEmptyGetTasksRetryPolicy()
 
 	// ErrNoTasks is exported temporarily for integration test
 	ErrNoTasks    = errors.New("No tasks")
@@ -402,13 +400,6 @@ func (e *matchingEngineImpl) createPollForActivityTaskResponse(context *taskCont
 
 func newTaskListID(domainID, taskListName string, taskType int) *taskListID {
 	return &taskListID{domainID: domainID, taskListName: taskListName, taskType: taskType}
-}
-
-func createEmptyGetTasksRetryPolicy(config *Config) backoff.RetryPolicy {
-	policy := backoff.NewExponentialRetryPolicy(config.EmptyGetRetryInitialInterval)
-	policy.SetMaximumInterval(config.EmptyGetRetryMaxInterval)
-
-	return policy
 }
 
 func workflowExecutionPtr(execution workflow.WorkflowExecution) *workflow.WorkflowExecution {
