@@ -75,7 +75,6 @@ type (
 		VisibilityMgr       VisibilityManager
 		ShardInfo           *ShardInfo
 		TaskIDGenerator     TransferTaskIDGenerator
-		seqNum              int64
 		readLevel           int64
 		CassandraTestCluster
 	}
@@ -92,6 +91,10 @@ type (
 		cassandra CassandraTestCluster
 		logger    bark.Logger
 	}
+
+	testTransferTaskIDGenerator struct {
+		seqNum int64
+	}
 )
 
 func newTestExecutionMgrFactory(options TestBaseOptions, cassandra CassandraTestCluster,
@@ -107,6 +110,10 @@ func (f *testExecutionMgrFactory) CreateExecutionManager(shardID int) (Execution
 	return NewCassandraWorkflowExecutionPersistence(f.options.ClusterHost, f.options.ClusterPort, f.options.ClusterUser,
 		f.options.ClusterPassword, f.options.Datacenter, f.cassandra.keyspace,
 		shardID, f.logger)
+}
+
+func (g *testTransferTaskIDGenerator) GetNextTransferTaskID() (int64, error) {
+	return atomic.AddInt64(&g.seqNum, 1), nil
 }
 
 // SetupWorkflowStoreWithOptions to setup workflow test base
@@ -151,6 +158,8 @@ func (s *TestBase) SetupWorkflowStoreWithOptions(options TestBaseOptions) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	s.TaskIDGenerator = &testTransferTaskIDGenerator{}
 
 	// Create a shard for test
 	s.readLevel = 0
@@ -730,11 +739,8 @@ func (s *TestBase) TearDownWorkflowStore() {
 
 // GetNextSequenceNumber generates a unique sequence number for can be used for transfer queue taskId
 func (s *TestBase) GetNextSequenceNumber() int64 {
-	if s.TaskIDGenerator != nil {
-		taskID, _ := s.TaskIDGenerator.GetNextTransferTaskID()
-		return taskID
-	}
-	return atomic.AddInt64(&s.seqNum, 1)
+	taskID, _ := s.TaskIDGenerator.GetNextTransferTaskID()
+	return taskID
 }
 
 // GetReadLevel returns the current read level for shard
