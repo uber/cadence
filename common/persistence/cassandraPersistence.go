@@ -713,7 +713,6 @@ func (d *cassandraPersistence) CreateWorkflowExecution(request *CreateWorkflowEx
 
 	previous := make(map[string]interface{})
 	applied, iter, err := d.session.MapExecuteBatchCAS(batch, previous)
-	defer iter.Close()
 	if err != nil {
 		if isTimeoutError(err) {
 			// Write may have succeeded, but we don't know
@@ -725,6 +724,12 @@ func (d *cassandraPersistence) CreateWorkflowExecution(request *CreateWorkflowEx
 		}
 
 	}
+
+	defer func() {
+		if iter != nil {
+			iter.Close()
+		}
+	}()
 
 	if !applied {
 		// There can be two reasons why the query does not get applied. Either the RangeID has changed, or
@@ -1019,7 +1024,6 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 
 	previous := make(map[string]interface{})
 	applied, iter, err := d.session.MapExecuteBatchCAS(batch, previous)
-	defer iter.Close()
 	if err != nil {
 		if isTimeoutError(err) {
 			// Write may have succeeded, but we don't know
@@ -1030,6 +1034,12 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 			Message: fmt.Sprintf("UpdateWorkflowExecution operation failed. Error: %v", err),
 		}
 	}
+
+	defer func() {
+		if iter != nil {
+			iter.Close()
+		}
+	}()
 
 	if !applied {
 		// There can be two reasons why the query does not get applied. Either the RangeID has changed, or
