@@ -26,16 +26,34 @@ import (
 	"github.com/uber/cadence/common/service"
 )
 
+// Config represents configuration for cadence-frontend service
+type Config struct {
+	DefaultVisibilityMaxPageSize int32
+	DefaultHistoryMaxPageSize    int32
+	RPS                          int
+}
+
+// NewConfig returns new service config with default values
+func NewConfig() *Config {
+	return &Config{
+		DefaultVisibilityMaxPageSize: 1000,
+		DefaultHistoryMaxPageSize:    1000,
+		RPS: 1200, // This limit is based on experimental runs.
+	}
+}
+
 // Service represents the cadence-frontend service
 type Service struct {
 	stopC  chan struct{}
+	config *Config
 	params *service.BootstrapParams
 }
 
 // NewService builds a new cadence-frontend service
-func NewService(params *service.BootstrapParams) common.Daemon {
+func NewService(params *service.BootstrapParams, config *Config) common.Daemon {
 	return &Service{
 		params: params,
+		config: config,
 		stopC:  make(chan struct{}),
 	}
 }
@@ -51,6 +69,9 @@ func (s *Service) Start() {
 	base := service.New(p)
 
 	metadata, err := persistence.NewCassandraMetadataPersistence(p.CassandraConfig.Hosts,
+		p.CassandraConfig.Port,
+		p.CassandraConfig.User,
+		p.CassandraConfig.Password,
 		p.CassandraConfig.Datacenter,
 		p.CassandraConfig.Keyspace,
 		p.Logger)
@@ -61,6 +82,9 @@ func (s *Service) Start() {
 	metadata = persistence.NewMetadataPersistenceClient(metadata, base.GetMetricsClient())
 
 	visibility, err := persistence.NewCassandraVisibilityPersistence(p.CassandraConfig.Hosts,
+		p.CassandraConfig.Port,
+		p.CassandraConfig.User,
+		p.CassandraConfig.Password,
 		p.CassandraConfig.Datacenter,
 		p.CassandraConfig.VisibilityKeyspace,
 		p.Logger)
@@ -70,6 +94,9 @@ func (s *Service) Start() {
 	}
 
 	history, err := persistence.NewCassandraHistoryPersistence(p.CassandraConfig.Hosts,
+		p.CassandraConfig.Port,
+		p.CassandraConfig.User,
+		p.CassandraConfig.Password,
 		p.CassandraConfig.Datacenter,
 		p.CassandraConfig.Keyspace,
 		p.Logger)
@@ -80,7 +107,7 @@ func (s *Service) Start() {
 
 	history = persistence.NewHistoryPersistenceClient(history, base.GetMetricsClient())
 
-	handler, tchanServers := NewWorkflowHandler(base, metadata, history, visibility)
+	handler, tchanServers := NewWorkflowHandler(base, s.config, metadata, history, visibility)
 	handler.Start(tchanServers)
 
 	log.Infof("%v started", common.FrontendServiceName)
