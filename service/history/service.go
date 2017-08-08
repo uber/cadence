@@ -187,7 +187,7 @@ func (s *Service) Start() {
 	execMgrFactory := NewExecutionManagerFactory(&p.CassandraConfig, p.Logger, base.GetMetricsClient())
 
 	handler, tchanServers := NewHandler(base,
-		NewConfig(p.CassandraConfig.NumHistoryShards),
+		s.config,
 		shardMgr,
 		metadata,
 		visibility,
