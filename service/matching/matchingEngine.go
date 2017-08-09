@@ -165,6 +165,7 @@ func (e *matchingEngineImpl) getTaskListManager(taskList *taskListID) (taskListM
 	err := mgr.Start()
 	if err != nil {
 		e.removeTaskListManager(taskList)
+		logging.LogTaskListLoadingFailedEvent(e.logger, taskList.taskListName, taskList.taskType, err)
 		return nil, err
 	}
 	logging.LogTaskListLoadedEvent(e.logger, taskList.taskListName, taskList.taskType)
