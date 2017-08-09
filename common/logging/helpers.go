@@ -311,7 +311,7 @@ func LogTaskListLoadedEvent(logger bark.Logger, taskListName string, taskListTyp
 // LogTaskListLoadingFailedEvent is used to log failure of a new task list loading
 func LogTaskListLoadingFailedEvent(logger bark.Logger, taskListName string, taskListType int, err error) {
 	logger.WithFields(bark.Fields{
-		TagWorkflowEventID: TaskListLoading,
+		TagWorkflowEventID: TaskListLoadingFailed,
 		TagTaskListName:    taskListName,
 		TagTaskListType:    taskListType,
 		TagWorkflowErr:     err,
