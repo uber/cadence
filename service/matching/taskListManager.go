@@ -127,6 +127,8 @@ type syncMatchResponse struct {
 func (c *taskListManagerImpl) Start() error {
 	err := c.updateRangeIfNeeded() // Grabs a new range and updates read and ackLevels
 	if err != nil {
+		atomic.StoreInt32(&c.stopped, 1)
+		close(c.taskBuffer)
 		return err
 	}
 	c.taskWriter.Start()
