@@ -152,7 +152,6 @@ func (e *matchingEngineImpl) getTaskListManager(taskList *taskListID) (taskListM
 		return result, nil
 	}
 	e.taskListsLock.RUnlock()
-	logging.LogTaskListLoadingEvent(e.logger, taskList.taskListName, taskList.taskType)
 	mgr := newTaskListManager(e, taskList, e.config)
 	e.taskListsLock.Lock()
 	if result, ok := e.taskLists[*taskList]; ok {
@@ -161,7 +160,7 @@ func (e *matchingEngineImpl) getTaskListManager(taskList *taskListID) (taskListM
 	}
 	e.taskLists[*taskList] = mgr
 	e.taskListsLock.Unlock()
-
+	logging.LogTaskListLoadingEvent(e.logger, taskList.taskListName, taskList.taskType)
 	err := mgr.Start()
 	if err != nil {
 		e.removeTaskListManager(taskList)
