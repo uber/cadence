@@ -126,7 +126,6 @@ func (s *matchingEngineSuite) newMatchingEngine(config *Config, taskMgr persiste
 
 func (s *matchingEngineSuite) TearDownTest() {
 	s.mockExecutionManager.AssertExpectations(s.T())
-	s.mockTaskManager.AssertExpectations(s.T())
 	s.matchingEngine.Stop()
 	s.mockMatchingEngine.Stop()
 }
@@ -1149,6 +1148,7 @@ func (s *matchingEngineSuite) TestLoadTaskListError() {
 	tl := "makeToast"
 
 	tlID := newTaskListID(domainID, tl, persistence.TaskListTypeDecision)
+	s.mockTaskManager.On("GetTasks", mock.Anything).Return(nil, &persistence.GetTasksResponse{})
 	s.mockTaskManager.On("LeaseTaskList", mock.Anything).Once().Return(nil, errors.New("load error"))
 	tlMgr, err := s.mockMatchingEngine.getTaskListManager(tlID)
 	s.Nil(tlMgr)

@@ -127,6 +127,8 @@ type syncMatchResponse struct {
 // Starts reading pump for the given task list.
 // The pump fills up taskBuffer from persistence.
 func (c *taskListManagerImpl) Start() error {
+	defer c.startWG.Done()
+
 	c.taskWriter.Start()
 	c.signalNewTask()
 	go c.getTasksPump()
