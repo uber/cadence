@@ -224,6 +224,7 @@ func (c *shardController) removeHistoryShardItem(shardID int) (*historyShardsIte
 	c.Lock()
 	item, ok := c.historyShards[shardID]
 	if !ok {
+		c.Unlock()
 		return nil, fmt.Errorf("No item found to remove for shard: %v", shardID)
 	}
 	delete(c.historyShards, shardID)
