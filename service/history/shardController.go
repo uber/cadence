@@ -221,6 +221,7 @@ func (c *shardController) getOrCreateHistoryShardItem(shardID int) (*historyShar
 }
 
 func (c *shardController) removeHistoryShardItem(shardID int) (*historyShardsItem, error) {
+	nShards := 0
 	c.Lock()
 	item, ok := c.historyShards[shardID]
 	if !ok {
@@ -228,10 +229,11 @@ func (c *shardController) removeHistoryShardItem(shardID int) (*historyShardsIte
 		return nil, fmt.Errorf("No item found to remove for shard: %v", shardID)
 	}
 	delete(c.historyShards, shardID)
+	nShards = len(c.historyShards)
 	c.Unlock()
 
 	c.metricsClient.IncCounter(metrics.HistoryShardControllerScope, metrics.ShardItemRemovedCounter)
-	logging.LogShardItemRemovedEvent(item.logger, c.host.Identity(), shardID, len(c.historyShards))
+	logging.LogShardItemRemovedEvent(item.logger, c.host.Identity(), shardID, nShards)
 	return item, nil
 }
 
@@ -303,6 +305,8 @@ AcquireLoop:
 			c.removeEngineForShard(shardID)
 		}
 	}
+
+	c.metricsClient.UpdateGauge(metrics.HistoryShardControllerScope, metrics.NumShardsGauge, float64(c.numShards()))
 }
 
 func (c *shardController) doShutdown() {
@@ -326,6 +330,14 @@ func (c *shardController) processShardClosedEvents() {
 			return
 		}
 	}
+}
+
+func (c *shardController) numShards() int {
+	nShards := 0
+	c.RLock()
+	nShards = len(c.historyShards)
+	c.RUnlock()
+	return nShards
 }
 
 func (i *historyShardsItem) getEngine() Engine {

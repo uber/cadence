@@ -487,6 +487,7 @@ const (
 	ShardItemCreatedCounter
 	ShardItemRemovedCounter
 	MembershipChangedCounter
+	NumShardsGauge
 )
 
 // Matching metrics enum
@@ -556,6 +557,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ShardItemCreatedCounter:                   {metricName: "sharditem-created-count", metricType: Counter},
 		ShardItemRemovedCounter:                   {metricName: "sharditem-removed-count", metricType: Counter},
 		MembershipChangedCounter:                  {metricName: "membership-changed-count", metricType: Counter},
+		NumShardsGauge:                            {metricName: "numshards-gauge", metricType: Gauge},
 	},
 	Matching: {
 		PollSuccessCounter:          {metricName: "poll.success"},
