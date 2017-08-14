@@ -488,6 +488,10 @@ const (
 	ShardItemRemovedCounter
 	MembershipChangedCounter
 	NumShardsGauge
+	GetEngineForShardErrorCounter
+	GetEngineForShardLatency
+	RemoveEngineForShardLatency
+	AcquireShardsRingpopLookupLatency
 )
 
 // Matching metrics enum
@@ -558,6 +562,10 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ShardItemRemovedCounter:                   {metricName: "sharditem-removed-count", metricType: Counter},
 		MembershipChangedCounter:                  {metricName: "membership-changed-count", metricType: Counter},
 		NumShardsGauge:                            {metricName: "numshards-gauge", metricType: Gauge},
+		GetEngineForShardErrorCounter:             {metricName: "get-engine-for-shard-errors", metricType: Counter},
+		GetEngineForShardLatency:                  {metricName: "get-engine-for-shard-latency", metricType: Timer},
+		RemoveEngineForShardLatency:               {metricName: "remove-engine-for-shard-latency", metricType: Timer},
+		AcquireShardsRingpopLookupLatency:         {metricName: "acquire-shards-lookup-latency", metricType: Timer},
 	},
 	Matching: {
 		PollSuccessCounter:          {metricName: "poll.success"},

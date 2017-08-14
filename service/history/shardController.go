@@ -288,21 +288,28 @@ func (c *shardController) acquireShards() {
 
 AcquireLoop:
 	for shardID := 0; shardID < c.config.NumberOfShards; shardID++ {
+		sw1 := c.metricsClient.StartTimer(metrics.HistoryShardControllerScope, metrics.AcquireShardsRingpopLookupLatency)
 		info, err := c.hServiceResolver.Lookup(string(shardID))
+		sw1.Stop()
 		if err != nil {
 			logging.LogOperationFailedEvent(c.logger, fmt.Sprintf("Error looking up host for shardID: %v", shardID), err)
 			continue AcquireLoop
 		}
 
 		if info.Identity() == c.host.Identity() {
+			sw2 := c.metricsClient.StartTimer(metrics.HistoryShardControllerScope, metrics.GetEngineForShardLatency)
 			_, err1 := c.getEngineForShard(shardID)
+			sw2.Stop()
 			if err1 != nil {
+				c.metricsClient.IncCounter(metrics.HistoryShardControllerScope, metrics.GetEngineForShardErrorCounter)
 				logging.LogOperationFailedEvent(c.logger, fmt.Sprintf("Unable to create history shard engine: %v", shardID),
 					err1)
 				continue AcquireLoop
 			}
 		} else {
+			sw2 := c.metricsClient.StartTimer(metrics.HistoryShardControllerScope, metrics.RemoveEngineForShardLatency)
 			c.removeEngineForShard(shardID)
+			sw2.Stop()
 		}
 	}
 
