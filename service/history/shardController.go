@@ -275,7 +275,7 @@ func (c *shardController) shardManagementPump() {
 			// To reduce the chance of the race happening, lets
 			// process all closed events at once before we attempt
 			// to acquire new shards again
-			//c.processShardClosedEvents()
+			c.processShardClosedEvents()
 		}
 	}
 }
@@ -388,13 +388,10 @@ func (i *historyShardsItem) stopEngine() {
 	i.Lock()
 	defer i.Unlock()
 
-	if i.executionMgr != nil {
-		i.executionMgr.Close()
-	}
-
 	if i.engine != nil {
 		logging.LogShardEngineStoppingEvent(i.logger, i.host.Identity(), i.shardID)
 		i.engine.Stop()
+		i.executionMgr.Close()
 		i.engine = nil
 		logging.LogShardEngineStoppedEvent(i.logger, i.host.Identity(), i.shardID)
 	}
