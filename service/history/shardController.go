@@ -275,7 +275,7 @@ func (c *shardController) shardManagementPump() {
 			// To reduce the chance of the race happening, lets
 			// process all closed events at once before we attempt
 			// to acquire new shards again
-			c.processShardClosedEvents()
+			//c.processShardClosedEvents()
 		}
 	}
 }
