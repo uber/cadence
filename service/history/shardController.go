@@ -392,6 +392,9 @@ func (i *historyShardsItem) stopEngine() {
 		logging.LogShardEngineStoppedEvent(i.logger, i.host.Identity(), i.shardID)
 	}
 
+	// Shutting down executionMgr will close all connections
+	// to cassandra for this engine. So, make sure to
+	// close executionMgr only after stopping the engine
 	if i.executionMgr != nil {
 		i.executionMgr.Close()
 	}
