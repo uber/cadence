@@ -391,9 +391,12 @@ func (i *historyShardsItem) stopEngine() {
 	if i.engine != nil {
 		logging.LogShardEngineStoppingEvent(i.logger, i.host.Identity(), i.shardID)
 		i.engine.Stop()
-		i.executionMgr.Close()
 		i.engine = nil
 		logging.LogShardEngineStoppedEvent(i.logger, i.host.Identity(), i.shardID)
+	}
+
+	if i.executionMgr != nil {
+		i.executionMgr.Close()
 	}
 }
 
