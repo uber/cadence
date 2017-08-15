@@ -167,15 +167,18 @@ func (c *shardController) GetEngine(workflowID string) (Engine, error) {
 }
 
 func (c *shardController) getEngineForShard(shardID int) (Engine, error) {
+	sw := c.metricsClient.StartTimer(metrics.HistoryShardControllerScope, metrics.GetEngineForShardLatency)
+	defer sw.Stop()
 	item, err := c.getOrCreateHistoryShardItem(shardID)
 	if err != nil {
 		return nil, err
 	}
-
 	return item.getOrCreateEngine(c.shardClosedCh)
 }
 
 func (c *shardController) removeEngineForShard(shardID int) {
+	sw := c.metricsClient.StartTimer(metrics.HistoryShardControllerScope, metrics.RemoveEngineForShardLatency)
+	defer sw.Stop()
 	item, _ := c.removeHistoryShardItem(shardID)
 	if item != nil {
 		item.stopEngine()
@@ -288,18 +291,14 @@ func (c *shardController) acquireShards() {
 
 AcquireLoop:
 	for shardID := 0; shardID < c.config.NumberOfShards; shardID++ {
-		sw1 := c.metricsClient.StartTimer(metrics.HistoryShardControllerScope, metrics.AcquireShardsRingpopLookupLatency)
 		info, err := c.hServiceResolver.Lookup(string(shardID))
-		sw1.Stop()
 		if err != nil {
 			logging.LogOperationFailedEvent(c.logger, fmt.Sprintf("Error looking up host for shardID: %v", shardID), err)
 			continue AcquireLoop
 		}
 
 		if info.Identity() == c.host.Identity() {
-			sw2 := c.metricsClient.StartTimer(metrics.HistoryShardControllerScope, metrics.GetEngineForShardLatency)
 			_, err1 := c.getEngineForShard(shardID)
-			sw2.Stop()
 			if err1 != nil {
 				c.metricsClient.IncCounter(metrics.HistoryShardControllerScope, metrics.GetEngineForShardErrorCounter)
 				logging.LogOperationFailedEvent(c.logger, fmt.Sprintf("Unable to create history shard engine: %v", shardID),
@@ -307,9 +306,7 @@ AcquireLoop:
 				continue AcquireLoop
 			}
 		} else {
-			sw2 := c.metricsClient.StartTimer(metrics.HistoryShardControllerScope, metrics.RemoveEngineForShardLatency)
 			c.removeEngineForShard(shardID)
-			sw2.Stop()
 		}
 	}
 
