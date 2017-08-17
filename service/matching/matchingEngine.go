@@ -255,7 +255,7 @@ pollLoop:
 		if err != nil {
 			switch err.(type) {
 			case *workflow.EntityNotExistsError, *h.EventAlreadyStartedError:
-				e.logger.Debugf("Duplicated activity task taskList=%v, taskID=%v",
+				e.logger.Debugf("Duplicated decision task taskList=%v, taskID=%v",
 					taskListName, tCtx.info.TaskID)
 				tCtx.completeTask(nil)
 			default:
