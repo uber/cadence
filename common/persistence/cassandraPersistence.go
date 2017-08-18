@@ -1373,7 +1373,7 @@ func (d *cassandraPersistence) UpdateTaskList(request *UpdateTaskListRequest) (*
 	if err != nil {
 		if isThrottlingError(err) {
 			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("LeaseTaskList operation failed. Error: %v", err),
+				Message: fmt.Sprintf("UpdateTaskList operation failed. Error: %v", err),
 			}
 		}
 		return nil, &workflow.InternalServiceError{
