@@ -447,6 +447,7 @@ const (
 	PersistenceErrShardOwnershipLostCounter
 	PersistenceErrConditionFailedCounter
 	PersistenceErrTimeoutCounter
+	PersistenceErrBusyCounter
 
 	NumCommonMetrics
 )
@@ -488,6 +489,9 @@ const (
 	ShardItemRemovedCounter
 	MembershipChangedCounter
 	NumShardsGauge
+	GetEngineForShardErrorCounter
+	GetEngineForShardLatency
+	RemoveEngineForShardLatency
 )
 
 // Matching metrics enum
@@ -520,6 +524,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		PersistenceErrShardOwnershipLostCounter:       {metricName: "persistence.errors.shard-ownership-lost", metricType: Counter},
 		PersistenceErrConditionFailedCounter:          {metricName: "persistence.errors.condition-failed", metricType: Counter},
 		PersistenceErrTimeoutCounter:                  {metricName: "persistence.errors.timeout", metricType: Counter},
+		PersistenceErrBusyCounter:                     {metricName: "persistence.errors.busy", metricType: Counter},
 	},
 	Frontend: {},
 	History: {
@@ -558,6 +563,9 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ShardItemRemovedCounter:                   {metricName: "sharditem-removed-count", metricType: Counter},
 		MembershipChangedCounter:                  {metricName: "membership-changed-count", metricType: Counter},
 		NumShardsGauge:                            {metricName: "numshards-gauge", metricType: Gauge},
+		GetEngineForShardErrorCounter:             {metricName: "get-engine-for-shard-errors", metricType: Counter},
+		GetEngineForShardLatency:                  {metricName: "get-engine-for-shard-latency", metricType: Timer},
+		RemoveEngineForShardLatency:               {metricName: "remove-engine-for-shard-latency", metricType: Timer},
 	},
 	Matching: {
 		PollSuccessCounter:          {metricName: "poll.success"},

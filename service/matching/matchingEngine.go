@@ -152,7 +152,6 @@ func (e *matchingEngineImpl) getTaskListManager(taskList *taskListID) (taskListM
 		return result, nil
 	}
 	e.taskListsLock.RUnlock()
-	logging.LogTaskListLoadingEvent(e.logger, taskList.taskListName, taskList.taskType)
 	mgr := newTaskListManager(e, taskList, e.config)
 	e.taskListsLock.Lock()
 	if result, ok := e.taskLists[*taskList]; ok {
@@ -161,9 +160,10 @@ func (e *matchingEngineImpl) getTaskListManager(taskList *taskListID) (taskListM
 	}
 	e.taskLists[*taskList] = mgr
 	e.taskListsLock.Unlock()
-
+	logging.LogTaskListLoadingEvent(e.logger, taskList.taskListName, taskList.taskType)
 	err := mgr.Start()
 	if err != nil {
+		logging.LogTaskListLoadingFailedEvent(e.logger, taskList.taskListName, taskList.taskType, err)
 		return nil, err
 	}
 	logging.LogTaskListLoadedEvent(e.logger, taskList.taskListName, taskList.taskType)
@@ -253,13 +253,15 @@ pollLoop:
 			PollRequest:       request,
 		})
 		if err != nil {
-			if _, ok := err.(*workflow.EntityNotExistsError); ok {
-				e.logger.Debugf("Duplicated decision task taskList=%v, taskID=",
+			switch err.(type) {
+			case *workflow.EntityNotExistsError, *h.EventAlreadyStartedError:
+				e.logger.Debugf("Duplicated decision task taskList=%v, taskID=%v",
 					taskListName, tCtx.info.TaskID)
 				tCtx.completeTask(nil)
-				continue pollLoop
+			default:
+				tCtx.completeTask(err)
 			}
-			tCtx.completeTask(err)
+
 			continue pollLoop
 		}
 		tCtx.completeTask(nil)
@@ -303,13 +305,15 @@ pollLoop:
 			PollRequest:       request,
 		})
 		if err != nil {
-			if _, ok := err.(*workflow.EntityNotExistsError); ok {
+			switch err.(type) {
+			case *workflow.EntityNotExistsError, *h.EventAlreadyStartedError:
 				e.logger.Debugf("Duplicated activity task taskList=%v, taskID=%v",
 					taskListName, tCtx.info.TaskID)
 				tCtx.completeTask(nil)
-				continue pollLoop // Duplicated or cancelled task
+			default:
+				tCtx.completeTask(err)
 			}
-			tCtx.completeTask(err)
+
 			continue pollLoop
 		}
 		tCtx.completeTask(nil)
