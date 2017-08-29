@@ -45,6 +45,7 @@ type TChanWorkflowService interface {
 	ListOpenWorkflowExecutions(ctx thrift.Context, listRequest *shared.ListOpenWorkflowExecutionsRequest) (*shared.ListOpenWorkflowExecutionsResponse, error)
 	PollForActivityTask(ctx thrift.Context, pollRequest *shared.PollForActivityTaskRequest) (*shared.PollForActivityTaskResponse, error)
 	PollForDecisionTask(ctx thrift.Context, pollRequest *shared.PollForDecisionTaskRequest) (*shared.PollForDecisionTaskResponse, error)
+	QueryWorkflow(ctx thrift.Context, queryRequest *shared.QueryWorkflowRequest) (*shared.QueryWorkflowResponse, error)
 	RecordActivityTaskHeartbeat(ctx thrift.Context, heartbeatRequest *shared.RecordActivityTaskHeartbeatRequest) (*shared.RecordActivityTaskHeartbeatResponse, error)
 	RegisterDomain(ctx thrift.Context, registerRequest *shared.RegisterDomainRequest) error
 	RequestCancelWorkflowExecution(ctx thrift.Context, cancelRequest *shared.RequestCancelWorkflowExecutionRequest) error
@@ -231,6 +232,30 @@ func (c *tchanWorkflowServiceClient) PollForDecisionTask(ctx thrift.Context, pol
 			err = resp.ServiceBusyError
 		default:
 			err = fmt.Errorf("received no result or unknown exception for PollForDecisionTask")
+		}
+	}
+
+	return resp.GetSuccess(), err
+}
+
+func (c *tchanWorkflowServiceClient) QueryWorkflow(ctx thrift.Context, queryRequest *shared.QueryWorkflowRequest) (*shared.QueryWorkflowResponse, error) {
+	var resp WorkflowServiceQueryWorkflowResult
+	args := WorkflowServiceQueryWorkflowArgs{
+		QueryRequest: queryRequest,
+	}
+	success, err := c.client.Call(ctx, c.thriftService, "QueryWorkflow", &args, &resp)
+	if err == nil && !success {
+		switch {
+		case resp.BadRequestError != nil:
+			err = resp.BadRequestError
+		case resp.InternalServiceError != nil:
+			err = resp.InternalServiceError
+		case resp.EntityNotExistError != nil:
+			err = resp.EntityNotExistError
+		case resp.QueryFailedError != nil:
+			err = resp.QueryFailedError
+		default:
+			err = fmt.Errorf("received no result or unknown exception for QueryWorkflow")
 		}
 	}
 
@@ -514,6 +539,7 @@ func (s *tchanWorkflowServiceServer) Methods() []string {
 		"ListOpenWorkflowExecutions",
 		"PollForActivityTask",
 		"PollForDecisionTask",
+		"QueryWorkflow",
 		"RecordActivityTaskHeartbeat",
 		"RegisterDomain",
 		"RequestCancelWorkflowExecution",
@@ -544,6 +570,8 @@ func (s *tchanWorkflowServiceServer) Handle(ctx thrift.Context, methodName strin
 		return s.handlePollForActivityTask(ctx, protocol)
 	case "PollForDecisionTask":
 		return s.handlePollForDecisionTask(ctx, protocol)
+	case "QueryWorkflow":
+		return s.handleQueryWorkflow(ctx, protocol)
 	case "RecordActivityTaskHeartbeat":
 		return s.handleRecordActivityTaskHeartbeat(ctx, protocol)
 	case "RegisterDomain":
@@ -842,6 +870,49 @@ func (s *tchanWorkflowServiceServer) handlePollForDecisionTask(ctx thrift.Contex
 				return false, nil, fmt.Errorf("Handler for serviceBusyError returned non-nil error type *shared.ServiceBusyError but nil value")
 			}
 			res.ServiceBusyError = v
+		default:
+			return false, nil, err
+		}
+	} else {
+		res.Success = r
+	}
+
+	return err == nil, &res, nil
+}
+
+func (s *tchanWorkflowServiceServer) handleQueryWorkflow(ctx thrift.Context, protocol athrift.TProtocol) (bool, athrift.TStruct, error) {
+	var req WorkflowServiceQueryWorkflowArgs
+	var res WorkflowServiceQueryWorkflowResult
+
+	if err := req.Read(protocol); err != nil {
+		return false, nil, err
+	}
+
+	r, err :=
+		s.handler.QueryWorkflow(ctx, req.QueryRequest)
+
+	if err != nil {
+		switch v := err.(type) {
+		case *shared.BadRequestError:
+			if v == nil {
+				return false, nil, fmt.Errorf("Handler for badRequestError returned non-nil error type *shared.BadRequestError but nil value")
+			}
+			res.BadRequestError = v
+		case *shared.InternalServiceError:
+			if v == nil {
+				return false, nil, fmt.Errorf("Handler for internalServiceError returned non-nil error type *shared.InternalServiceError but nil value")
+			}
+			res.InternalServiceError = v
+		case *shared.EntityNotExistsError:
+			if v == nil {
+				return false, nil, fmt.Errorf("Handler for entityNotExistError returned non-nil error type *shared.EntityNotExistsError but nil value")
+			}
+			res.EntityNotExistError = v
+		case *shared.QueryFailedError:
+			if v == nil {
+				return false, nil, fmt.Errorf("Handler for queryFailedError returned non-nil error type *shared.QueryFailedError but nil value")
+			}
+			res.QueryFailedError = v
 		default:
 			return false, nil, err
 		}

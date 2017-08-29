@@ -164,6 +164,7 @@ const (
   DecisionType_RecordMarker DecisionType = 8
   DecisionType_ContinueAsNewWorkflowExecution DecisionType = 9
   DecisionType_StartChildWorkflowExecution DecisionType = 10
+  DecisionType_QueryWorkflowCompleted DecisionType = 11
 )
 
 func (p DecisionType) String() string {
@@ -179,6 +180,7 @@ func (p DecisionType) String() string {
   case DecisionType_RecordMarker: return "RecordMarker"
   case DecisionType_ContinueAsNewWorkflowExecution: return "ContinueAsNewWorkflowExecution"
   case DecisionType_StartChildWorkflowExecution: return "StartChildWorkflowExecution"
+  case DecisionType_QueryWorkflowCompleted: return "QueryWorkflowCompleted"
   }
   return "<UNSET>"
 }
@@ -196,6 +198,7 @@ func DecisionTypeFromString(s string) (DecisionType, error) {
   case "RecordMarker": return DecisionType_RecordMarker, nil 
   case "ContinueAsNewWorkflowExecution": return DecisionType_ContinueAsNewWorkflowExecution, nil 
   case "StartChildWorkflowExecution": return DecisionType_StartChildWorkflowExecution, nil 
+  case "QueryWorkflowCompleted": return DecisionType_QueryWorkflowCompleted, nil 
   }
   return DecisionType(0), fmt.Errorf("not a valid DecisionType string")
 }
@@ -1436,6 +1439,100 @@ func (p *CancellationAlreadyRequestedError) String() string {
 }
 
 func (p *CancellationAlreadyRequestedError) Error() string {
+  return p.String()
+}
+
+// Attributes:
+//  - Message
+type QueryFailedError struct {
+  Message string `thrift:"message,1,required" db:"message" json:"message"`
+}
+
+func NewQueryFailedError() *QueryFailedError {
+  return &QueryFailedError{}
+}
+
+
+func (p *QueryFailedError) GetMessage() string {
+  return p.Message
+}
+func (p *QueryFailedError) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+  var issetMessage bool = false;
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 1:
+      if err := p.ReadField1(iprot); err != nil {
+        return err
+      }
+      issetMessage = true
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  if !issetMessage{
+    return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("Required field Message is not set"));
+  }
+  return nil
+}
+
+func (p *QueryFailedError)  ReadField1(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 1: ", err)
+} else {
+  p.Message = v
+}
+  return nil
+}
+
+func (p *QueryFailedError) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("QueryFailedError"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField1(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *QueryFailedError) writeField1(oprot thrift.TProtocol) (err error) {
+  if err := oprot.WriteFieldBegin("message", thrift.STRING, 1); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:message: ", p), err) }
+  if err := oprot.WriteString(string(p.Message)); err != nil {
+  return thrift.PrependError(fmt.Sprintf("%T.message (1) field write error: ", p), err) }
+  if err := oprot.WriteFieldEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write field end error 1:message: ", p), err) }
+  return err
+}
+
+func (p *QueryFailedError) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("QueryFailedError(%+v)", *p)
+}
+
+func (p *QueryFailedError) Error() string {
   return p.String()
 }
 
@@ -4224,6 +4321,137 @@ func (p *StartChildWorkflowExecutionDecisionAttributes) String() string {
 }
 
 // Attributes:
+//  - TaskToken
+//  - QueryResult_
+type QueryWorkflowCompletedDecisionAttributes struct {
+  // unused fields # 1 to 9
+  TaskToken []byte `thrift:"taskToken,10" db:"taskToken" json:"taskToken,omitempty"`
+  // unused fields # 11 to 19
+  QueryResult_ []byte `thrift:"queryResult,20" db:"queryResult" json:"queryResult,omitempty"`
+}
+
+func NewQueryWorkflowCompletedDecisionAttributes() *QueryWorkflowCompletedDecisionAttributes {
+  return &QueryWorkflowCompletedDecisionAttributes{}
+}
+
+var QueryWorkflowCompletedDecisionAttributes_TaskToken_DEFAULT []byte
+
+func (p *QueryWorkflowCompletedDecisionAttributes) GetTaskToken() []byte {
+  return p.TaskToken
+}
+var QueryWorkflowCompletedDecisionAttributes_QueryResult__DEFAULT []byte
+
+func (p *QueryWorkflowCompletedDecisionAttributes) GetQueryResult_() []byte {
+  return p.QueryResult_
+}
+func (p *QueryWorkflowCompletedDecisionAttributes) IsSetTaskToken() bool {
+  return p.TaskToken != nil
+}
+
+func (p *QueryWorkflowCompletedDecisionAttributes) IsSetQueryResult_() bool {
+  return p.QueryResult_ != nil
+}
+
+func (p *QueryWorkflowCompletedDecisionAttributes) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 10:
+      if err := p.ReadField10(iprot); err != nil {
+        return err
+      }
+    case 20:
+      if err := p.ReadField20(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *QueryWorkflowCompletedDecisionAttributes)  ReadField10(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadBinary(); err != nil {
+  return thrift.PrependError("error reading field 10: ", err)
+} else {
+  p.TaskToken = v
+}
+  return nil
+}
+
+func (p *QueryWorkflowCompletedDecisionAttributes)  ReadField20(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadBinary(); err != nil {
+  return thrift.PrependError("error reading field 20: ", err)
+} else {
+  p.QueryResult_ = v
+}
+  return nil
+}
+
+func (p *QueryWorkflowCompletedDecisionAttributes) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("QueryWorkflowCompletedDecisionAttributes"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField10(oprot); err != nil { return err }
+    if err := p.writeField20(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *QueryWorkflowCompletedDecisionAttributes) writeField10(oprot thrift.TProtocol) (err error) {
+  if p.IsSetTaskToken() {
+    if err := oprot.WriteFieldBegin("taskToken", thrift.STRING, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:taskToken: ", p), err) }
+    if err := oprot.WriteBinary(p.TaskToken); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.taskToken (10) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:taskToken: ", p), err) }
+  }
+  return err
+}
+
+func (p *QueryWorkflowCompletedDecisionAttributes) writeField20(oprot thrift.TProtocol) (err error) {
+  if p.IsSetQueryResult_() {
+    if err := oprot.WriteFieldBegin("queryResult", thrift.STRING, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:queryResult: ", p), err) }
+    if err := oprot.WriteBinary(p.QueryResult_); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.queryResult (20) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:queryResult: ", p), err) }
+  }
+  return err
+}
+
+func (p *QueryWorkflowCompletedDecisionAttributes) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("QueryWorkflowCompletedDecisionAttributes(%+v)", *p)
+}
+
+// Attributes:
 //  - DecisionType
 //  - ScheduleActivityTaskDecisionAttributes
 //  - StartTimerDecisionAttributes
@@ -4236,6 +4464,7 @@ func (p *StartChildWorkflowExecutionDecisionAttributes) String() string {
 //  - RecordMarkerDecisionAttributes
 //  - ContinueAsNewWorkflowExecutionDecisionAttributes
 //  - StartChildWorkflowExecutionDecisionAttributes
+//  - QueryWorkflowCompletedDecisionAttributes
 type Decision struct {
   // unused fields # 1 to 9
   DecisionType *DecisionType `thrift:"decisionType,10" db:"decisionType" json:"decisionType,omitempty"`
@@ -4261,6 +4490,8 @@ type Decision struct {
   ContinueAsNewWorkflowExecutionDecisionAttributes *ContinueAsNewWorkflowExecutionDecisionAttributes `thrift:"continueAsNewWorkflowExecutionDecisionAttributes,90" db:"continueAsNewWorkflowExecutionDecisionAttributes" json:"continueAsNewWorkflowExecutionDecisionAttributes,omitempty"`
   // unused fields # 91 to 99
   StartChildWorkflowExecutionDecisionAttributes *StartChildWorkflowExecutionDecisionAttributes `thrift:"startChildWorkflowExecutionDecisionAttributes,100" db:"startChildWorkflowExecutionDecisionAttributes" json:"startChildWorkflowExecutionDecisionAttributes,omitempty"`
+  // unused fields # 101 to 109
+  QueryWorkflowCompletedDecisionAttributes *QueryWorkflowCompletedDecisionAttributes `thrift:"queryWorkflowCompletedDecisionAttributes,110" db:"queryWorkflowCompletedDecisionAttributes" json:"queryWorkflowCompletedDecisionAttributes,omitempty"`
 }
 
 func NewDecision() *Decision {
@@ -4351,6 +4582,13 @@ func (p *Decision) GetStartChildWorkflowExecutionDecisionAttributes() *StartChil
   }
 return p.StartChildWorkflowExecutionDecisionAttributes
 }
+var Decision_QueryWorkflowCompletedDecisionAttributes_DEFAULT *QueryWorkflowCompletedDecisionAttributes
+func (p *Decision) GetQueryWorkflowCompletedDecisionAttributes() *QueryWorkflowCompletedDecisionAttributes {
+  if !p.IsSetQueryWorkflowCompletedDecisionAttributes() {
+    return Decision_QueryWorkflowCompletedDecisionAttributes_DEFAULT
+  }
+return p.QueryWorkflowCompletedDecisionAttributes
+}
 func (p *Decision) IsSetDecisionType() bool {
   return p.DecisionType != nil
 }
@@ -4397,6 +4635,10 @@ func (p *Decision) IsSetContinueAsNewWorkflowExecutionDecisionAttributes() bool 
 
 func (p *Decision) IsSetStartChildWorkflowExecutionDecisionAttributes() bool {
   return p.StartChildWorkflowExecutionDecisionAttributes != nil
+}
+
+func (p *Decision) IsSetQueryWorkflowCompletedDecisionAttributes() bool {
+  return p.QueryWorkflowCompletedDecisionAttributes != nil
 }
 
 func (p *Decision) Read(iprot thrift.TProtocol) error {
@@ -4458,6 +4700,10 @@ func (p *Decision) Read(iprot thrift.TProtocol) error {
       }
     case 100:
       if err := p.ReadField100(iprot); err != nil {
+        return err
+      }
+    case 110:
+      if err := p.ReadField110(iprot); err != nil {
         return err
       }
     default:
@@ -4573,6 +4819,14 @@ func (p *Decision)  ReadField100(iprot thrift.TProtocol) error {
   return nil
 }
 
+func (p *Decision)  ReadField110(iprot thrift.TProtocol) error {
+  p.QueryWorkflowCompletedDecisionAttributes = &QueryWorkflowCompletedDecisionAttributes{}
+  if err := p.QueryWorkflowCompletedDecisionAttributes.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.QueryWorkflowCompletedDecisionAttributes), err)
+  }
+  return nil
+}
+
 func (p *Decision) Write(oprot thrift.TProtocol) error {
   if err := oprot.WriteStructBegin("Decision"); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
@@ -4589,6 +4843,7 @@ func (p *Decision) Write(oprot thrift.TProtocol) error {
     if err := p.writeField80(oprot); err != nil { return err }
     if err := p.writeField90(oprot); err != nil { return err }
     if err := p.writeField100(oprot); err != nil { return err }
+    if err := p.writeField110(oprot); err != nil { return err }
   }
   if err := oprot.WriteFieldStop(); err != nil {
     return thrift.PrependError("write field stop error: ", err) }
@@ -4748,6 +5003,19 @@ func (p *Decision) writeField100(oprot thrift.TProtocol) (err error) {
     }
     if err := oprot.WriteFieldEnd(); err != nil {
       return thrift.PrependError(fmt.Sprintf("%T write field end error 100:startChildWorkflowExecutionDecisionAttributes: ", p), err) }
+  }
+  return err
+}
+
+func (p *Decision) writeField110(oprot thrift.TProtocol) (err error) {
+  if p.IsSetQueryWorkflowCompletedDecisionAttributes() {
+    if err := oprot.WriteFieldBegin("queryWorkflowCompletedDecisionAttributes", thrift.STRUCT, 110); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 110:queryWorkflowCompletedDecisionAttributes: ", p), err) }
+    if err := p.QueryWorkflowCompletedDecisionAttributes.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.QueryWorkflowCompletedDecisionAttributes), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 110:queryWorkflowCompletedDecisionAttributes: ", p), err) }
   }
   return err
 }
@@ -17534,6 +17802,7 @@ func (p *PollForDecisionTaskRequest) String() string {
 //  - StartedEventId
 //  - History
 //  - NextPageToken
+//  - Query
 type PollForDecisionTaskResponse struct {
   // unused fields # 1 to 9
   TaskToken []byte `thrift:"taskToken,10" db:"taskToken" json:"taskToken,omitempty"`
@@ -17549,6 +17818,8 @@ type PollForDecisionTaskResponse struct {
   History *History `thrift:"history,60" db:"history" json:"history,omitempty"`
   // unused fields # 61 to 69
   NextPageToken []byte `thrift:"nextPageToken,70" db:"nextPageToken" json:"nextPageToken,omitempty"`
+  // unused fields # 71 to 79
+  Query *WorkflowQuery `thrift:"query,80" db:"query" json:"query,omitempty"`
 }
 
 func NewPollForDecisionTaskResponse() *PollForDecisionTaskResponse {
@@ -17600,6 +17871,13 @@ var PollForDecisionTaskResponse_NextPageToken_DEFAULT []byte
 func (p *PollForDecisionTaskResponse) GetNextPageToken() []byte {
   return p.NextPageToken
 }
+var PollForDecisionTaskResponse_Query_DEFAULT *WorkflowQuery
+func (p *PollForDecisionTaskResponse) GetQuery() *WorkflowQuery {
+  if !p.IsSetQuery() {
+    return PollForDecisionTaskResponse_Query_DEFAULT
+  }
+return p.Query
+}
 func (p *PollForDecisionTaskResponse) IsSetTaskToken() bool {
   return p.TaskToken != nil
 }
@@ -17626,6 +17904,10 @@ func (p *PollForDecisionTaskResponse) IsSetHistory() bool {
 
 func (p *PollForDecisionTaskResponse) IsSetNextPageToken() bool {
   return p.NextPageToken != nil
+}
+
+func (p *PollForDecisionTaskResponse) IsSetQuery() bool {
+  return p.Query != nil
 }
 
 func (p *PollForDecisionTaskResponse) Read(iprot thrift.TProtocol) error {
@@ -17667,6 +17949,10 @@ func (p *PollForDecisionTaskResponse) Read(iprot thrift.TProtocol) error {
       }
     case 70:
       if err := p.ReadField70(iprot); err != nil {
+        return err
+      }
+    case 80:
+      if err := p.ReadField80(iprot); err != nil {
         return err
       }
     default:
@@ -17744,6 +18030,14 @@ func (p *PollForDecisionTaskResponse)  ReadField70(iprot thrift.TProtocol) error
   return nil
 }
 
+func (p *PollForDecisionTaskResponse)  ReadField80(iprot thrift.TProtocol) error {
+  p.Query = &WorkflowQuery{}
+  if err := p.Query.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Query), err)
+  }
+  return nil
+}
+
 func (p *PollForDecisionTaskResponse) Write(oprot thrift.TProtocol) error {
   if err := oprot.WriteStructBegin("PollForDecisionTaskResponse"); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
@@ -17755,6 +18049,7 @@ func (p *PollForDecisionTaskResponse) Write(oprot thrift.TProtocol) error {
     if err := p.writeField50(oprot); err != nil { return err }
     if err := p.writeField60(oprot); err != nil { return err }
     if err := p.writeField70(oprot); err != nil { return err }
+    if err := p.writeField80(oprot); err != nil { return err }
   }
   if err := oprot.WriteFieldStop(); err != nil {
     return thrift.PrependError("write field stop error: ", err) }
@@ -17846,6 +18141,19 @@ func (p *PollForDecisionTaskResponse) writeField70(oprot thrift.TProtocol) (err 
     return thrift.PrependError(fmt.Sprintf("%T.nextPageToken (70) field write error: ", p), err) }
     if err := oprot.WriteFieldEnd(); err != nil {
       return thrift.PrependError(fmt.Sprintf("%T write field end error 70:nextPageToken: ", p), err) }
+  }
+  return err
+}
+
+func (p *PollForDecisionTaskResponse) writeField80(oprot thrift.TProtocol) (err error) {
+  if p.IsSetQuery() {
+    if err := oprot.WriteFieldBegin("query", thrift.STRUCT, 80); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 80:query: ", p), err) }
+    if err := p.Query.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Query), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 80:query: ", p), err) }
   }
   return err
 }
@@ -21565,5 +21873,406 @@ func (p *ListClosedWorkflowExecutionsResponse) String() string {
     return "<nil>"
   }
   return fmt.Sprintf("ListClosedWorkflowExecutionsResponse(%+v)", *p)
+}
+
+// Attributes:
+//  - Domain
+//  - Execution
+//  - Query
+type QueryWorkflowRequest struct {
+  // unused fields # 1 to 9
+  Domain *string `thrift:"domain,10" db:"domain" json:"domain,omitempty"`
+  // unused fields # 11 to 19
+  Execution *WorkflowExecution `thrift:"execution,20" db:"execution" json:"execution,omitempty"`
+  // unused fields # 21 to 29
+  Query *WorkflowQuery `thrift:"query,30" db:"query" json:"query,omitempty"`
+}
+
+func NewQueryWorkflowRequest() *QueryWorkflowRequest {
+  return &QueryWorkflowRequest{}
+}
+
+var QueryWorkflowRequest_Domain_DEFAULT string
+func (p *QueryWorkflowRequest) GetDomain() string {
+  if !p.IsSetDomain() {
+    return QueryWorkflowRequest_Domain_DEFAULT
+  }
+return *p.Domain
+}
+var QueryWorkflowRequest_Execution_DEFAULT *WorkflowExecution
+func (p *QueryWorkflowRequest) GetExecution() *WorkflowExecution {
+  if !p.IsSetExecution() {
+    return QueryWorkflowRequest_Execution_DEFAULT
+  }
+return p.Execution
+}
+var QueryWorkflowRequest_Query_DEFAULT *WorkflowQuery
+func (p *QueryWorkflowRequest) GetQuery() *WorkflowQuery {
+  if !p.IsSetQuery() {
+    return QueryWorkflowRequest_Query_DEFAULT
+  }
+return p.Query
+}
+func (p *QueryWorkflowRequest) IsSetDomain() bool {
+  return p.Domain != nil
+}
+
+func (p *QueryWorkflowRequest) IsSetExecution() bool {
+  return p.Execution != nil
+}
+
+func (p *QueryWorkflowRequest) IsSetQuery() bool {
+  return p.Query != nil
+}
+
+func (p *QueryWorkflowRequest) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 10:
+      if err := p.ReadField10(iprot); err != nil {
+        return err
+      }
+    case 20:
+      if err := p.ReadField20(iprot); err != nil {
+        return err
+      }
+    case 30:
+      if err := p.ReadField30(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *QueryWorkflowRequest)  ReadField10(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 10: ", err)
+} else {
+  p.Domain = &v
+}
+  return nil
+}
+
+func (p *QueryWorkflowRequest)  ReadField20(iprot thrift.TProtocol) error {
+  p.Execution = &WorkflowExecution{}
+  if err := p.Execution.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Execution), err)
+  }
+  return nil
+}
+
+func (p *QueryWorkflowRequest)  ReadField30(iprot thrift.TProtocol) error {
+  p.Query = &WorkflowQuery{}
+  if err := p.Query.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Query), err)
+  }
+  return nil
+}
+
+func (p *QueryWorkflowRequest) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("QueryWorkflowRequest"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField10(oprot); err != nil { return err }
+    if err := p.writeField20(oprot); err != nil { return err }
+    if err := p.writeField30(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *QueryWorkflowRequest) writeField10(oprot thrift.TProtocol) (err error) {
+  if p.IsSetDomain() {
+    if err := oprot.WriteFieldBegin("domain", thrift.STRING, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:domain: ", p), err) }
+    if err := oprot.WriteString(string(*p.Domain)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.domain (10) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:domain: ", p), err) }
+  }
+  return err
+}
+
+func (p *QueryWorkflowRequest) writeField20(oprot thrift.TProtocol) (err error) {
+  if p.IsSetExecution() {
+    if err := oprot.WriteFieldBegin("execution", thrift.STRUCT, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:execution: ", p), err) }
+    if err := p.Execution.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Execution), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:execution: ", p), err) }
+  }
+  return err
+}
+
+func (p *QueryWorkflowRequest) writeField30(oprot thrift.TProtocol) (err error) {
+  if p.IsSetQuery() {
+    if err := oprot.WriteFieldBegin("query", thrift.STRUCT, 30); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 30:query: ", p), err) }
+    if err := p.Query.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Query), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 30:query: ", p), err) }
+  }
+  return err
+}
+
+func (p *QueryWorkflowRequest) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("QueryWorkflowRequest(%+v)", *p)
+}
+
+// Attributes:
+//  - QueryResult_
+type QueryWorkflowResponse struct {
+  // unused fields # 1 to 9
+  QueryResult_ []byte `thrift:"queryResult,10" db:"queryResult" json:"queryResult,omitempty"`
+}
+
+func NewQueryWorkflowResponse() *QueryWorkflowResponse {
+  return &QueryWorkflowResponse{}
+}
+
+var QueryWorkflowResponse_QueryResult__DEFAULT []byte
+
+func (p *QueryWorkflowResponse) GetQueryResult_() []byte {
+  return p.QueryResult_
+}
+func (p *QueryWorkflowResponse) IsSetQueryResult_() bool {
+  return p.QueryResult_ != nil
+}
+
+func (p *QueryWorkflowResponse) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 10:
+      if err := p.ReadField10(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *QueryWorkflowResponse)  ReadField10(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadBinary(); err != nil {
+  return thrift.PrependError("error reading field 10: ", err)
+} else {
+  p.QueryResult_ = v
+}
+  return nil
+}
+
+func (p *QueryWorkflowResponse) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("QueryWorkflowResponse"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField10(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *QueryWorkflowResponse) writeField10(oprot thrift.TProtocol) (err error) {
+  if p.IsSetQueryResult_() {
+    if err := oprot.WriteFieldBegin("queryResult", thrift.STRING, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:queryResult: ", p), err) }
+    if err := oprot.WriteBinary(p.QueryResult_); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.queryResult (10) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:queryResult: ", p), err) }
+  }
+  return err
+}
+
+func (p *QueryWorkflowResponse) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("QueryWorkflowResponse(%+v)", *p)
+}
+
+// Attributes:
+//  - QueryType
+//  - QueryArgs_
+type WorkflowQuery struct {
+  // unused fields # 1 to 9
+  QueryType *string `thrift:"queryType,10" db:"queryType" json:"queryType,omitempty"`
+  // unused fields # 11 to 19
+  QueryArgs_ []byte `thrift:"queryArgs,20" db:"queryArgs" json:"queryArgs,omitempty"`
+}
+
+func NewWorkflowQuery() *WorkflowQuery {
+  return &WorkflowQuery{}
+}
+
+var WorkflowQuery_QueryType_DEFAULT string
+func (p *WorkflowQuery) GetQueryType() string {
+  if !p.IsSetQueryType() {
+    return WorkflowQuery_QueryType_DEFAULT
+  }
+return *p.QueryType
+}
+var WorkflowQuery_QueryArgs__DEFAULT []byte
+
+func (p *WorkflowQuery) GetQueryArgs_() []byte {
+  return p.QueryArgs_
+}
+func (p *WorkflowQuery) IsSetQueryType() bool {
+  return p.QueryType != nil
+}
+
+func (p *WorkflowQuery) IsSetQueryArgs_() bool {
+  return p.QueryArgs_ != nil
+}
+
+func (p *WorkflowQuery) Read(iprot thrift.TProtocol) error {
+  if _, err := iprot.ReadStructBegin(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+  }
+
+
+  for {
+    _, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+    if err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+    }
+    if fieldTypeId == thrift.STOP { break; }
+    switch fieldId {
+    case 10:
+      if err := p.ReadField10(iprot); err != nil {
+        return err
+      }
+    case 20:
+      if err := p.ReadField20(iprot); err != nil {
+        return err
+      }
+    default:
+      if err := iprot.Skip(fieldTypeId); err != nil {
+        return err
+      }
+    }
+    if err := iprot.ReadFieldEnd(); err != nil {
+      return err
+    }
+  }
+  if err := iprot.ReadStructEnd(); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+  }
+  return nil
+}
+
+func (p *WorkflowQuery)  ReadField10(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadString(); err != nil {
+  return thrift.PrependError("error reading field 10: ", err)
+} else {
+  p.QueryType = &v
+}
+  return nil
+}
+
+func (p *WorkflowQuery)  ReadField20(iprot thrift.TProtocol) error {
+  if v, err := iprot.ReadBinary(); err != nil {
+  return thrift.PrependError("error reading field 20: ", err)
+} else {
+  p.QueryArgs_ = v
+}
+  return nil
+}
+
+func (p *WorkflowQuery) Write(oprot thrift.TProtocol) error {
+  if err := oprot.WriteStructBegin("WorkflowQuery"); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
+  if p != nil {
+    if err := p.writeField10(oprot); err != nil { return err }
+    if err := p.writeField20(oprot); err != nil { return err }
+  }
+  if err := oprot.WriteFieldStop(); err != nil {
+    return thrift.PrependError("write field stop error: ", err) }
+  if err := oprot.WriteStructEnd(); err != nil {
+    return thrift.PrependError("write struct stop error: ", err) }
+  return nil
+}
+
+func (p *WorkflowQuery) writeField10(oprot thrift.TProtocol) (err error) {
+  if p.IsSetQueryType() {
+    if err := oprot.WriteFieldBegin("queryType", thrift.STRING, 10); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 10:queryType: ", p), err) }
+    if err := oprot.WriteString(string(*p.QueryType)); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.queryType (10) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 10:queryType: ", p), err) }
+  }
+  return err
+}
+
+func (p *WorkflowQuery) writeField20(oprot thrift.TProtocol) (err error) {
+  if p.IsSetQueryArgs_() {
+    if err := oprot.WriteFieldBegin("queryArgs", thrift.STRING, 20); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 20:queryArgs: ", p), err) }
+    if err := oprot.WriteBinary(p.QueryArgs_); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T.queryArgs (20) field write error: ", p), err) }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 20:queryArgs: ", p), err) }
+  }
+  return err
+}
+
+func (p *WorkflowQuery) String() string {
+  if p == nil {
+    return "<nil>"
+  }
+  return fmt.Sprintf("WorkflowQuery(%+v)", *p)
 }
 

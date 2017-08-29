@@ -1043,6 +1043,14 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx thrift.Context,
 	return resp, nil
 }
 
+// QueryWorkflow returns query result for a specified workflow execution
+func (wh *WorkflowHandler) QueryWorkflow(ctx thrift.Context,
+	queryRequest *gen.QueryWorkflowRequest) (*gen.QueryWorkflowResponse, error) {
+	err := gen.NewInternalServiceError()
+	err.Message = "Not implemented yet."
+	return nil, err
+}
+
 func (wh *WorkflowHandler) getHistory(domainID string, execution gen.WorkflowExecution,
 	nextEventID int64, pageSize int32, nextPageToken []byte) (*gen.History, []byte, error) {
 

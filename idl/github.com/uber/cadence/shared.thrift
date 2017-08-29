@@ -50,6 +50,10 @@ exception CancellationAlreadyRequestedError {
   1: required string message
 }
 
+exception QueryFailedError {
+  1: required string message
+}
+
 enum DomainStatus {
   REGISTERED,
   DEPRECATED,
@@ -75,6 +79,7 @@ enum DecisionType {
   RecordMarker,
   ContinueAsNewWorkflowExecution,
   StartChildWorkflowExecution,
+  QueryWorkflowCompleted
 }
 
 enum EventType {
@@ -252,6 +257,11 @@ struct StartChildWorkflowExecutionDecisionAttributes {
   90: optional binary control
 }
 
+struct QueryWorkflowCompletedDecisionAttributes {
+  10: optional binary taskToken
+  20: optional binary queryResult
+}
+
 struct Decision {
   10:  optional DecisionType decisionType
   20:  optional ScheduleActivityTaskDecisionAttributes scheduleActivityTaskDecisionAttributes
@@ -265,6 +275,7 @@ struct Decision {
   80:  optional RecordMarkerDecisionAttributes recordMarkerDecisionAttributes
   90:  optional ContinueAsNewWorkflowExecutionDecisionAttributes continueAsNewWorkflowExecutionDecisionAttributes
   100: optional StartChildWorkflowExecutionDecisionAttributes startChildWorkflowExecutionDecisionAttributes
+  110: optional QueryWorkflowCompletedDecisionAttributes queryWorkflowCompletedDecisionAttributes
 }
 
 struct WorkflowExecutionStartedEventAttributes {
@@ -684,6 +695,7 @@ struct PollForDecisionTaskResponse {
   50: optional i64 (js.type = "Long") startedEventId
   60: optional History history
   70: optional binary nextPageToken
+  80: optional WorkflowQuery query
 }
 
 struct RespondDecisionTaskCompletedRequest {
@@ -804,4 +816,19 @@ struct ListClosedWorkflowExecutionsRequest {
 struct ListClosedWorkflowExecutionsResponse {
   10: optional list<WorkflowExecutionInfo> executions
   20: optional binary nextPageToken
+}
+
+struct QueryWorkflowRequest {
+  10: optional string domain
+  20: optional WorkflowExecution execution
+  30: optional WorkflowQuery query
+}
+
+struct QueryWorkflowResponse {
+  10: optional binary queryResult
+}
+
+struct WorkflowQuery {
+  10: optional string queryType
+  20: optional binary queryArgs
 }
