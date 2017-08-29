@@ -143,12 +143,22 @@ func (h *Handler) PollForDecisionTask(ctx context.Context,
 // QueryWorkflow queries a given workflow synchronously and return the query result.
 func (h *Handler) QueryWorkflow(ctx context.Context,
 	queryRequest *m.QueryWorkflowRequest) (*gen.QueryWorkflowResponse, error) {
-	return nil, &gen.InternalServiceError{Message: "Not implemented yet"}
+	scope := metrics.MatchingQueryWorkflowScope
+	sw := h.startRequestProfile("QueryWorkflow", scope)
+	defer sw.Stop()
+
+	response, error := h.engine.QueryWorkflow(ctx, queryRequest)
+	return response, h.handleErr(error, scope)
 }
 
 // RespondQueryTaskCompleted responds a query task completed
 func (h *Handler) RespondQueryTaskCompleted(ctx context.Context, request *m.RespondQueryTaskCompletedRequest) error {
-	return &gen.InternalServiceError{Message: "Not implemented yet"}
+	scope := metrics.MatchingRespondQueryTaskCompletedScope
+	sw := h.startRequestProfile("RespondQueryTaskCompleted", scope)
+	defer sw.Stop()
+
+	error := h.engine.RespondQueryTaskCompleted(ctx, request)
+	return h.handleErr(error, scope)
 }
 
 func (h *Handler) handleErr(err error, scope int) error {
@@ -172,6 +182,9 @@ func (h *Handler) handleErr(err error, scope int) error {
 		return err
 	case *gen.DomainAlreadyExistsError:
 		h.metricsClient.IncCounter(scope, metrics.CadenceErrDomainAlreadyExistsCounter)
+		return err
+	case *gen.QueryFailedError:
+		h.metricsClient.IncCounter(scope, metrics.CadenceErrQueryFailedCounter)
 		return err
 	default:
 		h.metricsClient.IncCounter(scope, metrics.CadenceFailures)

@@ -23,13 +23,11 @@ package matching
 import (
 	"context"
 	"errors"
+	"math"
 	"sync"
 
 	"github.com/pborman/uuid"
 	"github.com/uber-common/bark"
-
-	"math"
-
 	h "github.com/uber/cadence/.gen/go/history"
 	m "github.com/uber/cadence/.gen/go/matching"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -52,6 +50,8 @@ type matchingEngineImpl struct {
 	taskListsLock   sync.RWMutex                   // locks mutation of taskLists
 	taskLists       map[taskListID]taskListManager // Convert to LRU cache
 	config          *Config
+	queryTaskMap    map[string]chan *workflow.RespondQueryTaskCompletedRequest
+	queryMapLock    sync.Mutex
 }
 
 type taskListID struct {
@@ -105,6 +105,7 @@ func NewEngine(taskManager persistence.TaskManager,
 		}),
 		metricsClient: metricsClient,
 		config:        config,
+		queryTaskMap:  make(map[string]chan *workflow.RespondQueryTaskCompletedRequest),
 	}
 }
 
@@ -242,6 +243,20 @@ pollLoop:
 			return nil, err
 		}
 
+		if tCtx.queryTaskInfo != nil {
+			// for query task, we don't need to update history to record decision task started, so we would use a fake
+			// RecordDecisionTaskStartedResponse with large startEventID so when frontend receives the response, it will
+			// load the entire history (eventID < StartedEventID + 1). We also use the same large number as
+			// PreviousStartedEventId so when worker replay the history, it will treat all events as old events during replay.
+			var startedEventID int64 = math.MaxInt64 - 1 // minus 1 to avoid overflow (when StartedEventID + 1)
+			resp := &h.RecordDecisionTaskStartedResponse{
+				PreviousStartedEventId: &startedEventID,
+				StartedEventId:         &startedEventID,
+			}
+			tCtx.completeTask(nil)
+			return e.createPollForDecisionTaskResponse(tCtx, resp), nil
+		}
+
 		// Generate a unique requestId for this task which will be used for all retries
 		requestID := uuid.New()
 		resp, err := tCtx.RecordDecisionTaskStartedWithRetry(&h.RecordDecisionTaskStartedRequest{
@@ -321,6 +336,59 @@ pollLoop:
 	}
 }
 
+// QueryWorkflow creates a DecisionTask with query data, send it through sync match channel, wait for that DecisionTask
+// to be processed by worker, and then return the query result.
+func (e *matchingEngineImpl) QueryWorkflow(ctx context.Context, queryRequest *m.QueryWorkflowRequest) (*workflow.QueryWorkflowResponse, error) {
+	domainID := queryRequest.GetDomainUUID()
+	taskListName := *queryRequest.TaskList.Name
+	taskList := newTaskListID(domainID, taskListName, persistence.TaskListTypeDecision)
+	tlMgr, err := e.getTaskListManager(taskList)
+	if err != nil {
+		return nil, err
+	}
+	queryTask := &queryTaskInfo{
+		queryRequest: queryRequest,
+		taskID:       uuid.New(),
+	}
+	err = tlMgr.SyncMatchQueryTask(ctx, queryTask)
+	if err != nil {
+		return nil, err
+	}
+
+	queryResultCh := make(chan *workflow.RespondQueryTaskCompletedRequest)
+	e.queryMapLock.Lock()
+	e.queryTaskMap[queryTask.taskID] = queryResultCh
+	e.queryMapLock.Unlock()
+	defer func() {
+		e.queryMapLock.Lock()
+		delete(e.queryTaskMap, queryTask.taskID)
+		e.queryMapLock.Unlock()
+	}()
+
+	select {
+	case result := <-queryResultCh:
+		if *result.CompletedType == workflow.QueryTaskCompletedTypeFailed {
+			return nil, &workflow.QueryFailedError{Message: result.GetErrorMessage()}
+		}
+		return &workflow.QueryWorkflowResponse{QueryResult: result.QueryResult}, nil
+	case <-ctx.Done():
+		return nil, &workflow.QueryFailedError{Message: "timeout: workflow worker is not responding"}
+	}
+}
+
+func (e *matchingEngineImpl) RespondQueryTaskCompleted(ctx context.Context, request *m.RespondQueryTaskCompletedRequest) error {
+	e.queryMapLock.Lock()
+	queryResultCh, ok := e.queryTaskMap[request.GetTaskID()]
+	e.queryMapLock.Unlock()
+	if !ok {
+		return &workflow.EntityNotExistsError{Message: "query task not found, or already expired"}
+	}
+
+	queryResultCh <- request.CompletedRequest
+
+	return nil
+}
+
 // Loads a task from persistence and wraps it in a task context
 func (e *matchingEngineImpl) getTask(ctx context.Context, taskList *taskListID) (*taskContext, error) {
 	tlMgr, err := e.getTaskListManager(taskList)
@@ -349,16 +417,27 @@ func (e *matchingEngineImpl) createPollForDecisionTaskResponse(context *taskCont
 
 	response := &m.PollForDecisionTaskResponse{}
 	response.WorkflowExecution = workflowExecutionPtr(context.workflowExecution)
-	token := &common.TaskToken{
-		DomainID:   task.DomainID,
-		WorkflowID: task.WorkflowID,
-		RunID:      task.RunID,
-		ScheduleID: task.ScheduleID,
+	if context.queryTaskInfo != nil {
+		// for a query task
+		queryRequest := context.queryTaskInfo.queryRequest
+		token := &common.QueryTaskToken{
+			DomainID: *queryRequest.DomainUUID,
+			TaskList: *queryRequest.TaskList.Name,
+			TaskID:   context.queryTaskInfo.taskID,
+		}
+		response.TaskToken, _ = e.tokenSerializer.SerializeQueryTaskToken(token)
+		response.Query = context.queryTaskInfo.queryRequest.QueryRequest.Query
+	} else {
+		token := &common.TaskToken{
+			DomainID:   task.DomainID,
+			WorkflowID: task.WorkflowID,
+			RunID:      task.RunID,
+			ScheduleID: task.ScheduleID,
+		}
+		response.TaskToken, _ = e.tokenSerializer.Serialize(token)
+		response.WorkflowType = historyResponse.WorkflowType
 	}
-	response.TaskToken, _ = e.tokenSerializer.Serialize(token)
-	response.WorkflowType = historyResponse.WorkflowType
-	if historyResponse.PreviousStartedEventId == nil ||
-		*historyResponse.PreviousStartedEventId != common.EmptyEventID {
+	if historyResponse.GetPreviousStartedEventId() != common.EmptyEventID {
 		response.PreviousStartedEventId = historyResponse.PreviousStartedEventId
 	}
 	response.StartedEventId = historyResponse.StartedEventId
