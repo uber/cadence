@@ -565,6 +565,7 @@ func (p *PollForActivityTaskRequest) String() string {
 //  - Execution
 //  - TaskList
 //  - ScheduleId
+//  - Query
 type AddDecisionTaskRequest struct {
   // unused fields # 1 to 9
   DomainUUID *string `thrift:"domainUUID,10" db:"domainUUID" json:"domainUUID,omitempty"`
@@ -574,6 +575,8 @@ type AddDecisionTaskRequest struct {
   TaskList *shared.TaskList `thrift:"taskList,30" db:"taskList" json:"taskList,omitempty"`
   // unused fields # 31 to 39
   ScheduleId *int64 `thrift:"scheduleId,40" db:"scheduleId" json:"scheduleId,omitempty"`
+  // unused fields # 41 to 49
+  Query *shared.WorkflowQuery `thrift:"query,50" db:"query" json:"query,omitempty"`
 }
 
 func NewAddDecisionTaskRequest() *AddDecisionTaskRequest {
@@ -608,6 +611,13 @@ func (p *AddDecisionTaskRequest) GetScheduleId() int64 {
   }
 return *p.ScheduleId
 }
+var AddDecisionTaskRequest_Query_DEFAULT *shared.WorkflowQuery
+func (p *AddDecisionTaskRequest) GetQuery() *shared.WorkflowQuery {
+  if !p.IsSetQuery() {
+    return AddDecisionTaskRequest_Query_DEFAULT
+  }
+return p.Query
+}
 func (p *AddDecisionTaskRequest) IsSetDomainUUID() bool {
   return p.DomainUUID != nil
 }
@@ -622,6 +632,10 @@ func (p *AddDecisionTaskRequest) IsSetTaskList() bool {
 
 func (p *AddDecisionTaskRequest) IsSetScheduleId() bool {
   return p.ScheduleId != nil
+}
+
+func (p *AddDecisionTaskRequest) IsSetQuery() bool {
+  return p.Query != nil
 }
 
 func (p *AddDecisionTaskRequest) Read(iprot thrift.TProtocol) error {
@@ -651,6 +665,10 @@ func (p *AddDecisionTaskRequest) Read(iprot thrift.TProtocol) error {
       }
     case 40:
       if err := p.ReadField40(iprot); err != nil {
+        return err
+      }
+    case 50:
+      if err := p.ReadField50(iprot); err != nil {
         return err
       }
     default:
@@ -702,6 +720,14 @@ func (p *AddDecisionTaskRequest)  ReadField40(iprot thrift.TProtocol) error {
   return nil
 }
 
+func (p *AddDecisionTaskRequest)  ReadField50(iprot thrift.TProtocol) error {
+  p.Query = &shared.WorkflowQuery{}
+  if err := p.Query.Read(iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Query), err)
+  }
+  return nil
+}
+
 func (p *AddDecisionTaskRequest) Write(oprot thrift.TProtocol) error {
   if err := oprot.WriteStructBegin("AddDecisionTaskRequest"); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
@@ -710,6 +736,7 @@ func (p *AddDecisionTaskRequest) Write(oprot thrift.TProtocol) error {
     if err := p.writeField20(oprot); err != nil { return err }
     if err := p.writeField30(oprot); err != nil { return err }
     if err := p.writeField40(oprot); err != nil { return err }
+    if err := p.writeField50(oprot); err != nil { return err }
   }
   if err := oprot.WriteFieldStop(); err != nil {
     return thrift.PrependError("write field stop error: ", err) }
@@ -764,6 +791,19 @@ func (p *AddDecisionTaskRequest) writeField40(oprot thrift.TProtocol) (err error
     return thrift.PrependError(fmt.Sprintf("%T.scheduleId (40) field write error: ", p), err) }
     if err := oprot.WriteFieldEnd(); err != nil {
       return thrift.PrependError(fmt.Sprintf("%T write field end error 40:scheduleId: ", p), err) }
+  }
+  return err
+}
+
+func (p *AddDecisionTaskRequest) writeField50(oprot thrift.TProtocol) (err error) {
+  if p.IsSetQuery() {
+    if err := oprot.WriteFieldBegin("query", thrift.STRUCT, 50); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 50:query: ", p), err) }
+    if err := p.Query.Write(oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Query), err)
+    }
+    if err := oprot.WriteFieldEnd(); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 50:query: ", p), err) }
   }
   return err
 }
