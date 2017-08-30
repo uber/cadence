@@ -519,6 +519,7 @@ func (t *transferQueueProcessorImpl) processCancelExecution(task *persistence.Tr
 	cancelRequest := &history.RequestCancelWorkflowExecutionRequest{
 		DomainUUID: common.StringPtr(targetDomainID),
 		CancelRequest: &workflow.RequestCancelWorkflowExecutionRequest{
+			Domain: common.StringPtr(targetDomainID),
 			WorkflowExecution: &workflow.WorkflowExecution{
 				WorkflowId: common.StringPtr(task.TargetWorkflowID),
 				RunId:      common.StringPtr(task.TargetRunID),
@@ -601,19 +602,20 @@ func (t *transferQueueProcessorImpl) processStartChildExecution(task *persistenc
 	ci, isRunning := msBuilder.GetChildExecutionInfo(initiatedEventID)
 	if isRunning {
 		initiatedEvent, ok := msBuilder.GetChildExecutionInitiatedEvent(initiatedEventID)
-		attributes := initiatedEvent.GetStartChildWorkflowExecutionInitiatedEventAttributes()
+		attributes := initiatedEvent.StartChildWorkflowExecutionInitiatedEventAttributes
 		if ok && ci.StartedID == emptyEventID {
 			// Found pending child execution and it is not marked as started
 			// Let's try and start the child execution
 			startRequest := &history.StartWorkflowExecutionRequest{
 				DomainUUID: common.StringPtr(targetDomainID),
 				StartRequest: &workflow.StartWorkflowExecutionRequest{
-					WorkflowId:   common.StringPtr(attributes.GetWorkflowId()),
-					WorkflowType: attributes.GetWorkflowType(),
-					TaskList:     attributes.GetTaskList(),
-					Input:        attributes.GetInput(),
-					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(attributes.GetExecutionStartToCloseTimeoutSeconds()),
-					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(attributes.GetTaskStartToCloseTimeoutSeconds()),
+					Domain:       common.StringPtr(targetDomainID),
+					WorkflowId:   common.StringPtr(*attributes.WorkflowId),
+					WorkflowType: attributes.WorkflowType,
+					TaskList:     attributes.TaskList,
+					Input:        attributes.Input,
+					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(*attributes.ExecutionStartToCloseTimeoutSeconds),
+					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(*attributes.TaskStartToCloseTimeoutSeconds),
 					// Use the same request ID to dedupe StartWorkflowExecution calls
 					RequestId: common.StringPtr(ci.CreateRequestID),
 				},
@@ -642,10 +644,10 @@ func (t *transferQueueProcessorImpl) processStartChildExecution(task *persistenc
 			}
 
 			t.logger.Debugf("Child Execution started successfully.  WorkflowID: %v, RunID: %v",
-				attributes.GetWorkflowId(), startResponse.GetRunId())
+				*attributes.WorkflowId, *startResponse.RunId)
 
 			// Child execution is successfully started, record ChildExecutionStartedEvent in parent execution
-			err = t.recordChildExecutionStarted(task, context, attributes, startResponse.GetRunId())
+			err = t.recordChildExecutionStarted(task, context, attributes, *startResponse.RunId)
 
 			if err != nil {
 				return err
@@ -655,16 +657,16 @@ func (t *transferQueueProcessorImpl) processStartChildExecution(task *persistenc
 				DomainUUID: common.StringPtr(targetDomainID),
 				WorkflowExecution: &workflow.WorkflowExecution{
 					WorkflowId: common.StringPtr(task.TargetWorkflowID),
-					RunId:      common.StringPtr(startResponse.GetRunId()),
+					RunId:      common.StringPtr(*startResponse.RunId),
 				},
 			})
 		} else {
 			// ChildExecution already started, just create DecisionTask and complete transfer task
 			startedEvent, _ := msBuilder.GetChildExecutionStartedEvent(initiatedEventID)
-			startedAttributes := startedEvent.GetChildWorkflowExecutionStartedEventAttributes()
+			startedAttributes := startedEvent.ChildWorkflowExecutionStartedEventAttributes
 			err = t.historyClient.ScheduleDecisionTask(nil, &history.ScheduleDecisionTaskRequest{
 				DomainUUID:        common.StringPtr(targetDomainID),
-				WorkflowExecution: startedAttributes.GetWorkflowExecution(),
+				WorkflowExecution: startedAttributes.WorkflowExecution,
 			})
 		}
 	}
@@ -704,7 +706,7 @@ func (t *transferQueueProcessorImpl) recordChildExecutionStarted(task *persisten
 				return &workflow.EntityNotExistsError{Message: "Workflow execution already completed."}
 			}
 
-			domain := initiatedAttributes.GetDomain()
+			domain := *initiatedAttributes.Domain
 			initiatedEventID := task.ScheduleID
 			ci, isRunning := msBuilder.GetChildExecutionInfo(initiatedEventID)
 			if !isRunning || ci.StartedID != emptyEventID {
@@ -715,7 +717,7 @@ func (t *transferQueueProcessorImpl) recordChildExecutionStarted(task *persisten
 				&workflow.WorkflowExecution{
 					WorkflowId: common.StringPtr(task.TargetWorkflowID),
 					RunId:      common.StringPtr(runID),
-				}, initiatedAttributes.GetWorkflowType(), initiatedEventID)
+				}, initiatedAttributes.WorkflowType, initiatedEventID)
 
 			return nil
 		})
@@ -738,7 +740,7 @@ func (t *transferQueueProcessorImpl) recordStartChildExecutionFailed(task *persi
 			}
 
 			msBuilder.AddStartChildWorkflowExecutionFailedEvent(initiatedEventID,
-				workflow.ChildWorkflowExecutionFailedCause_WORKFLOW_ALREADY_RUNNING, initiatedAttributes)
+				workflow.ChildWorkflowExecutionFailedCauseWorkflowAlreadyRunning, initiatedAttributes)
 
 			return nil
 		})
@@ -762,9 +764,9 @@ func (t *transferQueueProcessorImpl) requestCancelCompleted(task *persistence.Tr
 
 			msBuilder.AddExternalWorkflowExecutionCancelRequested(
 				initiatedEventID,
-				request.GetDomainUUID(),
-				request.GetCancelRequest().GetWorkflowExecution().GetWorkflowId(),
-				request.GetCancelRequest().GetWorkflowExecution().GetRunId())
+				*request.DomainUUID,
+				*request.CancelRequest.WorkflowExecution.WorkflowId,
+				common.StringDefault(request.CancelRequest.WorkflowExecution.RunId))
 
 			return nil
 		})
@@ -789,10 +791,10 @@ func (t *transferQueueProcessorImpl) requestCancelFailed(task *persistence.Trans
 			msBuilder.AddRequestCancelExternalWorkflowExecutionFailedEvent(
 				emptyEventID,
 				initiatedEventID,
-				request.GetDomainUUID(),
-				request.GetCancelRequest().GetWorkflowExecution().GetWorkflowId(),
-				request.GetCancelRequest().GetWorkflowExecution().GetRunId(),
-				workflow.CancelExternalWorkflowExecutionFailedCause_UNKNOWN_EXTERNAL_WORKFLOW_EXECUTION)
+				*request.DomainUUID,
+				*request.CancelRequest.WorkflowExecution.WorkflowId,
+				common.StringDefault(request.CancelRequest.WorkflowExecution.RunId),
+				workflow.CancelExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution)
 
 			return nil
 		})
@@ -818,8 +820,8 @@ Update_History_Loop:
 				newDecisionEvent, _ := msBuilder.AddDecisionTaskScheduledEvent()
 				transferTasks = append(transferTasks, &persistence.DecisionTask{
 					DomainID:   domainID,
-					TaskList:   newDecisionEvent.GetDecisionTaskScheduledEventAttributes().GetTaskList().GetName(),
-					ScheduleID: newDecisionEvent.GetEventId(),
+					TaskList:   *newDecisionEvent.DecisionTaskScheduledEventAttributes.TaskList.Name,
+					ScheduleID: *newDecisionEvent.EventId,
 				})
 			}
 		}
@@ -931,17 +933,17 @@ func minDuration(x, y time.Duration) time.Duration {
 func getWorkflowExecutionCloseStatus(status int) workflow.WorkflowExecutionCloseStatus {
 	switch status {
 	case persistence.WorkflowCloseStatusCompleted:
-		return workflow.WorkflowExecutionCloseStatus_COMPLETED
+		return workflow.WorkflowExecutionCloseStatusCompleted
 	case persistence.WorkflowCloseStatusFailed:
-		return workflow.WorkflowExecutionCloseStatus_FAILED
+		return workflow.WorkflowExecutionCloseStatusFailed
 	case persistence.WorkflowCloseStatusCanceled:
-		return workflow.WorkflowExecutionCloseStatus_CANCELED
+		return workflow.WorkflowExecutionCloseStatusCanceled
 	case persistence.WorkflowCloseStatusTerminated:
-		return workflow.WorkflowExecutionCloseStatus_TERMINATED
+		return workflow.WorkflowExecutionCloseStatusTerminated
 	case persistence.WorkflowCloseStatusContinuedAsNew:
-		return workflow.WorkflowExecutionCloseStatus_CONTINUED_AS_NEW
+		return workflow.WorkflowExecutionCloseStatusContinuedAsNew
 	case persistence.WorkflowCloseStatusTimedOut:
-		return workflow.WorkflowExecutionCloseStatus_TIMED_OUT
+		return workflow.WorkflowExecutionCloseStatusTimedOut
 	default:
 		panic("Invalid value for enum WorkflowExecutionCloseStatus")
 	}

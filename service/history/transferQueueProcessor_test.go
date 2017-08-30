@@ -187,8 +187,8 @@ func (s *transferQueueProcessorSuite) TestDeleteExecutionTransferTasks() {
 	info1, _ := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	builder.Load(info1)
 	startedEvent := addDecisionTaskStartedEvent(builder, int64(2), taskList, identity)
-	completeDecisionEvent := addDecisionTaskCompletedEvent(builder, int64(2), startedEvent.GetEventId(), nil, identity)
-	addCompleteWorkflowEvent(builder, completeDecisionEvent.GetEventId(), []byte("result"))
+	completeDecisionEvent := addDecisionTaskCompletedEvent(builder, int64(2), *startedEvent.EventId, nil, identity)
+	addCompleteWorkflowEvent(builder, *completeDecisionEvent.EventId, []byte("result"))
 
 	updatedInfo1 := copyWorkflowExecutionInfo(builder.executionInfo)
 	err1 := s.UpdateWorkflowExecutionAndDelete(updatedInfo1, int64(3))
@@ -245,8 +245,8 @@ func (s *transferQueueProcessorSuite) TestDeleteExecutionTransferTasksDomainNotE
 	info1, _ := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	builder.Load(info1)
 	startedEvent := addDecisionTaskStartedEvent(builder, int64(2), taskList, identity)
-	completeDecisionEvent := addDecisionTaskCompletedEvent(builder, int64(2), startedEvent.GetEventId(), nil, identity)
-	addCompleteWorkflowEvent(builder, completeDecisionEvent.GetEventId(), []byte("result"))
+	completeDecisionEvent := addDecisionTaskCompletedEvent(builder, int64(2), *startedEvent.EventId, nil, identity)
+	addCompleteWorkflowEvent(builder, *completeDecisionEvent.EventId, []byte("result"))
 
 	updatedInfo1 := copyWorkflowExecutionInfo(builder.executionInfo)
 	err1 := s.UpdateWorkflowExecutionAndDelete(updatedInfo1, int64(3))
@@ -299,8 +299,8 @@ func (s *transferQueueProcessorSuite) TestCancelRemoteExecutionTransferTasks() {
 	info, _ := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	builder.Load(info)
 	startedEvent := addDecisionTaskStartedEvent(builder, int64(2), taskList, identity)
-	completeDecisionEvent := addDecisionTaskCompletedEvent(builder, int64(2), startedEvent.GetEventId(), nil, identity)
-	initiatedEvent := addRequestCancelInitiatedEvent(builder, completeDecisionEvent.GetEventId(), "request-id",
+	completeDecisionEvent := addDecisionTaskCompletedEvent(builder, int64(2), *startedEvent.EventId, nil, identity)
+	initiatedEvent := addRequestCancelInitiatedEvent(builder, *completeDecisionEvent.EventId, "request-id",
 		targetDomain, targetWorkflowID, targetRunID)
 
 	transferTasks := []persistence.Task{&persistence.CancelExecutionTask{
@@ -308,7 +308,7 @@ func (s *transferQueueProcessorSuite) TestCancelRemoteExecutionTransferTasks() {
 		TargetDomainID:   targetDomain,
 		TargetWorkflowID: targetWorkflowID,
 		TargetRunID:      targetRunID,
-		ScheduleID:       initiatedEvent.GetEventId(),
+		ScheduleID:       *initiatedEvent.EventId,
 	}}
 	updatedInfo := copyWorkflowExecutionInfo(builder.executionInfo)
 	err1 := s.UpdateWorkflowExecutionForRequestCancel(updatedInfo, int64(3), transferTasks,
@@ -358,8 +358,8 @@ func (s *transferQueueProcessorSuite) TestCancelRemoteExecutionTransferTask_Requ
 	info, _ := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	builder.Load(info)
 	startedEvent := addDecisionTaskStartedEvent(builder, int64(2), taskList, identity)
-	completeDecisionEvent := addDecisionTaskCompletedEvent(builder, int64(2), startedEvent.GetEventId(), nil, identity)
-	initiatedEvent := addRequestCancelInitiatedEvent(builder, completeDecisionEvent.GetEventId(), "request-id",
+	completeDecisionEvent := addDecisionTaskCompletedEvent(builder, int64(2), *startedEvent.EventId, nil, identity)
+	initiatedEvent := addRequestCancelInitiatedEvent(builder, *completeDecisionEvent.EventId, "request-id",
 		targetDomain, targetWorkflowID, targetRunID)
 
 	transferTasks := []persistence.Task{&persistence.CancelExecutionTask{
@@ -367,7 +367,7 @@ func (s *transferQueueProcessorSuite) TestCancelRemoteExecutionTransferTask_Requ
 		TargetDomainID:   targetDomain,
 		TargetWorkflowID: targetWorkflowID,
 		TargetRunID:      targetRunID,
-		ScheduleID:       initiatedEvent.GetEventId(),
+		ScheduleID:       *initiatedEvent.EventId,
 	}}
 	updatedInfo := copyWorkflowExecutionInfo(builder.executionInfo)
 	err1 := s.UpdateWorkflowExecutionForRequestCancel(updatedInfo, int64(3), transferTasks,
