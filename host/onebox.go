@@ -22,11 +22,15 @@ package host
 
 import (
 	"fmt"
+	"reflect"
 	"sync"
 	"time"
 
+	"errors"
 	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
+	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
+	fecli "github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
@@ -36,8 +40,9 @@ import (
 	ringpop "github.com/uber/ringpop-go"
 	"github.com/uber/ringpop-go/discovery/statichosts"
 	"github.com/uber/ringpop-go/swim"
-	tchannel "github.com/uber/tchannel-go"
-	"github.com/uber/tchannel-go/thrift"
+	tcg "github.com/uber/tchannel-go"
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/transport/tchannel"
 )
 
 const rpAppNamePrefix string = "cadence"
@@ -47,9 +52,7 @@ const maxRpJoinTimeout = 30 * time.Second
 type Cadence interface {
 	Start() error
 	Stop()
-	FrontendAddress() string
-	MatchingServiceAddress() string
-	HistoryServiceAddress() []string
+	GetFrontendClient() workflowserviceclient.Interface
 }
 
 type (
@@ -68,6 +71,7 @@ type (
 		executionMgrFactory   persistence.ExecutionManagerFactory
 		shutdownCh            chan struct{}
 		shutdownWG            sync.WaitGroup
+		frontEndService       service.Service
 	}
 
 	ringpopFactoryImpl struct {
@@ -144,19 +148,24 @@ func (c *cadenceImpl) MatchingServiceAddress() string {
 	return "127.0.0.1:7106"
 }
 
+func (c *cadenceImpl) GetFrontendClient() workflowserviceclient.Interface {
+	return fecli.New(c.frontEndService.GetDispatcher())
+}
+
 func (c *cadenceImpl) startFrontend(logger bark.Logger, rpHosts []string, startWG *sync.WaitGroup) {
 	params := new(service.BootstrapParams)
 	params.Name = common.FrontendServiceName
 	params.Logger = logger
-	params.TChannelFactory = newTChannelFactory(c.FrontendAddress(), logger)
+	params.DispatcherFactory = newDispatcherFactoryImpl(common.FrontendServiceName, c.FrontendAddress(), logger)
 	params.MetricScope = tally.NewTestScope(common.FrontendServiceName, make(map[string]string))
 	params.RingpopFactory = newRingpopFactory(common.FrontendServiceName, rpHosts)
 	params.CassandraConfig.NumHistoryShards = c.numberOfHistoryShards
 	params.CassandraConfig.Hosts = "127.0.0.1"
-	service := service.New(params)
-	var thriftServices []thrift.TChanServer
-	c.frontendHandler, thriftServices = frontend.NewWorkflowHandler(service, frontend.NewConfig(), c.metadataMgr, c.historyMgr, c.visibilityMgr)
-	err := c.frontendHandler.Start(thriftServices)
+
+	c.frontEndService = service.New(params)
+	c.frontendHandler = frontend.NewWorkflowHandler(
+		c.frontEndService, frontend.NewConfig(), c.metadataMgr, c.historyMgr, c.visibilityMgr)
+	err := c.frontendHandler.Start()
 	if err != nil {
 		c.logger.WithField("error", err).Fatal("Failed to start frontend")
 	}
@@ -173,16 +182,14 @@ func (c *cadenceImpl) startHistory(logger bark.Logger, shardMgr persistence.Shar
 		params := new(service.BootstrapParams)
 		params.Name = common.HistoryServiceName
 		params.Logger = logger
-		params.TChannelFactory = newTChannelFactory(hostport, logger)
+		params.DispatcherFactory = newDispatcherFactoryImpl(common.HistoryServiceName, hostport, logger)
 		params.MetricScope = tally.NewTestScope(common.HistoryServiceName, make(map[string]string))
 		params.RingpopFactory = newRingpopFactory(common.FrontendServiceName, rpHosts)
 		params.CassandraConfig.NumHistoryShards = c.numberOfHistoryShards
 		service := service.New(params)
-		var thriftServices []thrift.TChanServer
-		var handler *history.Handler
-		handler, thriftServices = history.NewHandler(service, history.NewConfig(c.numberOfHistoryShards), shardMgr, metadataMgr,
+		handler := history.NewHandler(service, history.NewConfig(c.numberOfHistoryShards), shardMgr, metadataMgr,
 			visibilityMgr, historyMgr, executionMgrFactory)
-		handler.Start(thriftServices)
+		handler.Start()
 		c.historyHandlers = append(c.historyHandlers, handler)
 	}
 	startWG.Done()
@@ -196,15 +203,13 @@ func (c *cadenceImpl) startMatching(logger bark.Logger, taskMgr persistence.Task
 	params := new(service.BootstrapParams)
 	params.Name = common.MatchingServiceName
 	params.Logger = logger
-
-	params.TChannelFactory = newTChannelFactory(c.MatchingServiceAddress(), logger)
+	params.DispatcherFactory = newDispatcherFactoryImpl(common.MatchingServiceName, c.MatchingServiceAddress(), logger)
 	params.MetricScope = tally.NewTestScope(common.MatchingServiceName, make(map[string]string))
 	params.RingpopFactory = newRingpopFactory(common.FrontendServiceName, rpHosts)
 	params.CassandraConfig.NumHistoryShards = c.numberOfHistoryShards
 	service := service.New(params)
-	var thriftServices []thrift.TChanServer
-	c.matchingHandler, thriftServices = matching.NewHandler(service, matching.NewConfig(), taskMgr)
-	c.matchingHandler.Start(thriftServices)
+	c.matchingHandler = matching.NewHandler(service, matching.NewConfig(), taskMgr)
+	c.matchingHandler.Start()
 	startWG.Done()
 	<-c.shutdownCh
 	c.shutdownWG.Done()
@@ -217,7 +222,15 @@ func newRingpopFactory(service string, rpHosts []string) service.RingpopFactory 
 	}
 }
 
-func (p *ringpopFactoryImpl) CreateRingpop(ch *tchannel.Channel) (*ringpop.Ringpop, error) {
+func (p *ringpopFactoryImpl) CreateRingpop(dispatcher *yarpc.Dispatcher) (*ringpop.Ringpop, error) {
+	t := dispatcher.Inbounds()[0].Transports()[0].(*tchannel.ChannelTransport)
+	ty := reflect.ValueOf(t.Channel())
+	var ch *tcg.Channel
+	var ok bool
+	if ch, ok = ty.Interface().(*tcg.Channel); !ok {
+		return nil, errors.New("Unable to get tchannel out of the dispatcher")
+	}
+
 	rp, err := ringpop.New(fmt.Sprintf("%s", rpAppNamePrefix), ringpop.Channel(ch))
 	if err != nil {
 		return nil, err
@@ -242,33 +255,50 @@ func (p *ringpopFactoryImpl) bootstrapRingpop(rp *ringpop.Ringpop, rpHosts []str
 	return err
 }
 
-type tchannelFactoryImpl struct {
-	hostPort string
-	logger   bark.Logger
+type dispatcherFactoryImpl struct {
+	ch          *tchannel.ChannelTransport
+	serviceName string
+	hostPort    string
+	logger      bark.Logger
 }
 
-func newTChannelFactory(hostPort string, logger bark.Logger) service.TChannelFactory {
-	return &tchannelFactoryImpl{
-		hostPort: hostPort,
-		logger:   logger,
+func newDispatcherFactoryImpl(sName string, hostPort string, logger bark.Logger) common.DispatcherFactory {
+	return &dispatcherFactoryImpl{
+		serviceName: sName,
+		hostPort:    hostPort,
+		logger:      logger,
 	}
 }
 
-func (c *tchannelFactoryImpl) CreateChannel(sName string,
-	thriftServices []thrift.TChanServer) (*tchannel.Channel, *thrift.Server) {
-
-	ch, err := tchannel.NewChannel(sName, nil)
+func (c *dispatcherFactoryImpl) CreateDispatcher() *yarpc.Dispatcher {
+	// Setup dispatcher for onebox
+	var err error
+	c.ch, err = tchannel.NewChannelTransport(
+		tchannel.ServiceName(c.serviceName), tchannel.ListenAddr(c.hostPort))
 	if err != nil {
-		c.logger.WithField("error", err).Fatal("Failed to create TChannel")
+		c.logger.WithField("error", err).Fatal("Failed to create transport channel")
 	}
-	server := thrift.NewServer(ch)
-	for _, thriftService := range thriftServices {
-		server.Register(thriftService)
-	}
+	return yarpc.NewDispatcher(yarpc.Config{
+		Name:     c.serviceName,
+		Inbounds: yarpc.Inbounds{c.ch.NewInbound()},
+		// For integration tests to generate client out of the same outbound.
+		Outbounds: yarpc.Outbounds{
+			c.serviceName: {Unary: c.ch.NewSingleOutbound(c.hostPort)},
+		},
+	})
+}
 
-	err = ch.ListenAndServe(c.hostPort)
-	if err != nil {
-		c.logger.WithField("error", err).Fatal("Failed to listen on tchannel")
+func (c *dispatcherFactoryImpl) CreateDispatcherForOutbound(
+	callerName, serviceName, hostName string) *yarpc.Dispatcher {
+	// Setup dispatcher(outbound) for onebox
+	d := yarpc.NewDispatcher(yarpc.Config{
+		Name: callerName,
+		Outbounds: yarpc.Outbounds{
+			serviceName: {Unary: c.ch.NewSingleOutbound(hostName)},
+		},
+	})
+	if err := d.Start(); err != nil {
+		c.logger.WithField("error", err).Fatal("Failed to create outbound transport channel")
 	}
-	return ch, server
+	return d
 }
