@@ -98,7 +98,7 @@ test: bins
 		go test -coverprofile=$@ "$$dir" | tee -a test.log; \
 	done;
 
-cover_profile: clean bins_nothrift
+cover_profile: clean bins
 	@mkdir -p $(BUILD)
 	@echo "mode: atomic" > $(BUILD)/cover.out
 
