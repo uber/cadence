@@ -52,12 +52,15 @@ func newDispatcherFactory(cfg *RPC, sName string, logger bark.Logger) *Dispatche
 func (d *DispatcherFactory) CreateDispatcher() *yarpc.Dispatcher {
 	// Setup dispatcher for onebox
 	var err error
+	hostAddress := fmt.Sprintf("%v:%v", d.getListenIP(), d.config.Port)
 	d.ch, err = tchannel.NewChannelTransport(
 		tchannel.ServiceName(d.serviceName),
-		tchannel.ListenAddr(fmt.Sprintf("%v:%v", d.getListenIP(), d.config.Port)))
+		tchannel.ListenAddr(hostAddress))
 	if err != nil {
 		d.logger.WithField("error", err).Fatal("Failed to create transport channel")
 	}
+	d.logger.Infof("Created YARPC dispatcher for: %v and listening at: %v",
+		d.serviceName, hostAddress)
 	return yarpc.NewDispatcher(yarpc.Config{
 		Name:     d.serviceName,
 		Inbounds: yarpc.Inbounds{d.ch.NewInbound()},
@@ -68,6 +71,8 @@ func (d *DispatcherFactory) CreateDispatcher() *yarpc.Dispatcher {
 func (d *DispatcherFactory) CreateDispatcherForOutbound(
 	callerName, serviceName, hostName string) *yarpc.Dispatcher {
 	// Setup dispatcher(outbound) for onebox
+	d.logger.Infof("Created YARPC dispatcher outbound for service: %v for host: %v",
+		serviceName, hostName)
 	return yarpc.NewDispatcher(yarpc.Config{
 		Name: callerName,
 		Outbounds: yarpc.Outbounds{
