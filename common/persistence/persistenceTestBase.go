@@ -607,8 +607,8 @@ func (s *TestBase) CreateDecisionTask(domainID string, workflowExecution workflo
 			Execution: workflowExecution,
 			Data: &TaskInfo{
 				DomainID:   domainID,
-				WorkflowID: workflowExecution.GetWorkflowId(),
-				RunID:      workflowExecution.GetRunId(),
+				WorkflowID: *workflowExecution.WorkflowId,
+				RunID:      *workflowExecution.RunId,
 				TaskID:     taskID,
 				ScheduleID: decisionScheduleID,
 			},
@@ -648,8 +648,8 @@ func (s *TestBase) CreateActivityTasks(domainID string, workflowExecution workfl
 				Execution: workflowExecution,
 				Data: &TaskInfo{
 					DomainID:   domainID,
-					WorkflowID: workflowExecution.GetWorkflowId(),
-					RunID:      workflowExecution.GetRunId(),
+					WorkflowID: *workflowExecution.WorkflowId,
+					RunID:      *workflowExecution.RunId,
 					TaskID:     taskID,
 					ScheduleID: activityScheduleID,
 				},

@@ -152,8 +152,8 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionStarted(
 	query := v.session.Query(templateCreateWorkflowExecutionStarted,
 		request.DomainUUID,
 		domainPartition,
-		request.Execution.GetWorkflowId(),
-		request.Execution.GetRunId(),
+		*request.Execution.WorkflowId,
+		*request.Execution.RunId,
 		common.UnixNanoToCQLTimestamp(request.StartTimestamp),
 		request.WorkflowTypeName,
 	)
@@ -177,7 +177,7 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 		request.DomainUUID,
 		domainPartition,
 		common.UnixNanoToCQLTimestamp(request.StartTimestamp),
-		request.Execution.GetRunId(),
+		*request.Execution.RunId,
 	)
 
 	// Next, add a row in the closed table.
@@ -191,8 +191,8 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 	batch.Query(templateCreateWorkflowExecutionClosed,
 		request.DomainUUID,
 		domainPartition,
-		request.Execution.GetWorkflowId(),
-		request.Execution.GetRunId(),
+		*request.Execution.WorkflowId,
+		*request.Execution.RunId,
 		common.UnixNanoToCQLTimestamp(request.StartTimestamp),
 		common.UnixNanoToCQLTimestamp(request.CloseTimestamp),
 		request.WorkflowTypeName,
@@ -467,8 +467,8 @@ func (v *cassandraVisibilityPersistence) GetClosedWorkflowExecution(
 	query := v.session.Query(templateGetClosedWorkflowExecution,
 		request.DomainUUID,
 		domainPartition,
-		execution.GetWorkflowId(),
-		execution.GetRunId())
+		*execution.WorkflowId,
+		*execution.RunId)
 
 	iter := query.Iter()
 	if iter == nil {
@@ -481,7 +481,7 @@ func (v *cassandraVisibilityPersistence) GetClosedWorkflowExecution(
 	if !has {
 		return nil, &workflow.EntityNotExistsError{
 			Message: fmt.Sprintf("Workflow execution not found.  WorkflowId: %v, RunId: %v",
-				execution.GetWorkflowId(), execution.GetRunId()),
+				*execution.WorkflowId, *execution.RunId),
 		}
 	}
 
@@ -502,14 +502,14 @@ func readOpenWorkflowExecutionRecord(iter *gocql.Iter) (*workflow.WorkflowExecut
 	var typeName string
 	var startTime time.Time
 	if iter.Scan(&workflowID, &runID, &startTime, &typeName) {
-		execution := workflow.NewWorkflowExecution()
+		execution := &workflow.WorkflowExecution{}
 		execution.WorkflowId = common.StringPtr(workflowID)
 		execution.RunId = common.StringPtr(runID.String())
 
-		wfType := workflow.NewWorkflowType()
+		wfType := &workflow.WorkflowType{}
 		wfType.Name = common.StringPtr(typeName)
 
-		record := workflow.NewWorkflowExecutionInfo()
+		record := &workflow.WorkflowExecutionInfo{}
 		record.Execution = execution
 		record.StartTime = common.Int64Ptr(startTime.UnixNano())
 		record.Type = wfType
@@ -527,19 +527,19 @@ func readClosedWorkflowExecutionRecord(iter *gocql.Iter) (*workflow.WorkflowExec
 	var status workflow.WorkflowExecutionCloseStatus
 	var historyLength int64
 	if iter.Scan(&workflowID, &runID, &startTime, &closeTime, &typeName, &status, &historyLength) {
-		execution := workflow.NewWorkflowExecution()
+		execution := &workflow.WorkflowExecution{}
 		execution.WorkflowId = common.StringPtr(workflowID)
 		execution.RunId = common.StringPtr(runID.String())
 
-		wfType := workflow.NewWorkflowType()
+		wfType := &workflow.WorkflowType{}
 		wfType.Name = common.StringPtr(typeName)
 
-		record := workflow.NewWorkflowExecutionInfo()
+		record := &workflow.WorkflowExecutionInfo{}
 		record.Execution = execution
 		record.StartTime = common.Int64Ptr(startTime.UnixNano())
 		record.CloseTime = common.Int64Ptr(closeTime.UnixNano())
 		record.Type = wfType
-		record.CloseStatus = workflow.WorkflowExecutionCloseStatusPtr(status)
+		record.CloseStatus = &status
 		record.HistoryLength = common.Int64Ptr(historyLength)
 		return record, true
 	}
