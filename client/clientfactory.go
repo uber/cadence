@@ -23,9 +23,9 @@ package client
 import (
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
-	tchannel "github.com/uber/tchannel-go"
 )
 
 // Factory can be used to create RPC clients for cadence services
@@ -34,26 +34,26 @@ type Factory interface {
 	NewMatchingClient() (matching.Client, error)
 }
 
-type tchannelClientFactory struct {
-	ch                    *tchannel.Channel
+type dispatcherClientFactory struct {
+	df                    common.DispatcherFactory
 	monitor               membership.Monitor
 	metricsClient         metrics.Client
 	numberOfHistoryShards int
 }
 
-// NewTChannelClientFactory creates an instance of client factory using tchannel
-func NewTChannelClientFactory(ch *tchannel.Channel,
+// NewDispatcherClientFactory creates an instance of client factory that knows how to dispatch RPC calls.
+func NewDispatcherClientFactory(df common.DispatcherFactory,
 	monitor membership.Monitor, metricsClient metrics.Client, numberOfHistoryShards int) Factory {
-	return &tchannelClientFactory{
-		ch:                    ch,
+	return &dispatcherClientFactory{
+		df:                    df,
 		monitor:               monitor,
 		metricsClient:         metricsClient,
 		numberOfHistoryShards: numberOfHistoryShards,
 	}
 }
 
-func (cf *tchannelClientFactory) NewHistoryClient() (history.Client, error) {
-	client, err := history.NewClient(cf.ch, cf.monitor, cf.numberOfHistoryShards)
+func (cf *dispatcherClientFactory) NewHistoryClient() (history.Client, error) {
+	client, err := history.NewClient(cf.df, cf.monitor, cf.numberOfHistoryShards)
 	if err != nil {
 		return nil, err
 	}
@@ -63,8 +63,8 @@ func (cf *tchannelClientFactory) NewHistoryClient() (history.Client, error) {
 	return client, nil
 }
 
-func (cf *tchannelClientFactory) NewMatchingClient() (matching.Client, error) {
-	client, err := matching.NewClient(cf.ch, cf.monitor)
+func (cf *dispatcherClientFactory) NewMatchingClient() (matching.Client, error) {
+	client, err := matching.NewClient(cf.df, cf.monitor)
 	if err != nil {
 		return nil, err
 	}
