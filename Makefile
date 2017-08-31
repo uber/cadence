@@ -26,12 +26,10 @@ INTEG_TEST_DIR=host
 
 export PATH := $(GOPATH)/bin:$(PATH)
 
-THRIFT_GEN=$(GOPATH)/bin/thrift-gen
-
 define thriftrwrule
-THRIFTRW_GEN_SRC += $(THRIFT_GENDIR)/go/$1/tchan-$1.go
+THRIFTRW_GEN_SRC += $(THRIFT_GENDIR)/go/$1/$1.go
 
-$(THRIFT_GENDIR)/go/$1/tchan-$1.go:: $2 $(THRIFT_GEN)
+$(THRIFT_GENDIR)/go/$1/$1.go:: $2
 	@mkdir -p $(THRIFT_GENDIR)/go
 	$(ECHO_V)thriftrw --plugin=yarpc --no-recurse --pkg-prefix=$(PROJECT_ROOT)/$(THRIFT_GENDIR)/go/ --out=$(THRIFT_GENDIR)/go $2
 endef
