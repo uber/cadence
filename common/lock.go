@@ -54,56 +54,38 @@ func NewRWMutex() RWMutex {
 }
 
 func (m *rwMutexImpl) Lock(ctx thrift.Context) error {
-	var stateLock sync.Mutex
-	state := acquiring
-
-	acquiredCh := make(chan error)
-	acquire := func() {
+	lock := func() {
 		m.RWMutex.Lock()
-
-		stateLock.Lock()
-		defer stateLock.Unlock()
-		if state == bailed {
-			// already bailed due to context closing
-			m.RWMutex.Unlock()
-			acquiredCh <- ctx.Err()
-		} else {
-			state = acquired
-			acquiredCh <- nil
-		}
 	}
-	go acquire()
-
-	select {
-	case e := <-acquiredCh:
-		return e
-	case <-ctx.Done():
-		{
-			stateLock.Lock()
-			defer stateLock.Unlock()
-			if state == acquired {
-				// Lock was already acquired before context expired
-				return nil
-			}
-			state = bailed
-			return ctx.Err()
-		}
+	unlock := func() {
+		m.RWMutex.Unlock()
 	}
+	return m.lockInternal(ctx, lock, unlock)
 }
 
 func (m *rwMutexImpl) RLock(ctx thrift.Context) error {
+	lock := func() {
+		m.RWMutex.RLock()
+	}
+	unlock := func() {
+		m.RWMutex.RUnlock()
+	}
+	return m.lockInternal(ctx, lock, unlock)
+}
+
+func (m *rwMutexImpl) lockInternal(ctx thrift.Context, lock func(), unlock func()) error {
 	var stateLock sync.Mutex
 	state := acquiring
 
 	acquiredCh := make(chan error)
 	acquire := func() {
-		m.RWMutex.RLock()
+		lock()
 
 		stateLock.Lock()
 		defer stateLock.Unlock()
 		if state == bailed {
 			// already bailed due to context closing
-			m.RWMutex.RUnlock()
+			unlock()
 			acquiredCh <- ctx.Err()
 		} else {
 			state = acquired
