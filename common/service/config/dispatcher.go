@@ -82,5 +82,12 @@ func (d *DispatcherFactory) CreateDispatcherForOutbound(
 }
 
 func (d *DispatcherFactory) getListenIP() net.IP {
-	return net.IPv4(127, 0, 0, 1)
+	if d.config.BindOnLocalHost {
+		return net.IPv4(127, 0, 0, 1)
+	}
+	ip, err := ListenIP()
+	if err != nil {
+		d.logger.Fatalf("tchannel.ListenIP failed, err=%v", err)
+	}
+	return ip
 }
