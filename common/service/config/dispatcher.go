@@ -59,7 +59,7 @@ func (d *DispatcherFactory) CreateDispatcher() *yarpc.Dispatcher {
 	if err != nil {
 		d.logger.WithField("error", err).Fatal("Failed to create transport channel")
 	}
-	d.logger.Infof("Created YARPC dispatcher for: %v and listening at: %v",
+	d.logger.Infof("Created YARPC dispatcher for '%v' and listening at '%v'",
 		d.serviceName, hostAddress)
 	return yarpc.NewDispatcher(yarpc.Config{
 		Name:     d.serviceName,
@@ -71,7 +71,7 @@ func (d *DispatcherFactory) CreateDispatcher() *yarpc.Dispatcher {
 func (d *DispatcherFactory) CreateDispatcherForOutbound(
 	callerName, serviceName, hostName string) *yarpc.Dispatcher {
 	// Setup dispatcher(outbound) for onebox
-	d.logger.Infof("Created YARPC dispatcher outbound for service: %v for host: %v",
+	d.logger.Infof("Created YARPC dispatcher outbound for service '%v' for host '%v'",
 		serviceName, hostName)
 	return yarpc.NewDispatcher(yarpc.Config{
 		Name: callerName,
@@ -87,7 +87,7 @@ func (d *DispatcherFactory) getListenIP() net.IP {
 	}
 	ip, err := ListenIP()
 	if err != nil {
-		d.logger.Fatalf("tchannel.ListenIP failed, err=%v", err)
+		d.logger.Fatalf("ListenIP failed, err=%v", err)
 	}
 	return ip
 }
