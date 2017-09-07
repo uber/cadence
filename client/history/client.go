@@ -42,12 +42,11 @@ type clientImpl struct {
 	// TODO: consider refactor thriftCache into a separate struct
 	thriftCacheLock   sync.RWMutex
 	thriftCache       map[string]historyserviceclient.Interface
-	dispatcherCache   map[string]*yarpc.Dispatcher
-	dispatcherFactory common.DispatcherFactory
+	dispatcherFactory common.RPCFactory
 }
 
 // NewClient creates a new history service TChannel client
-func NewClient(d common.DispatcherFactory, monitor membership.Monitor, numberOfShards int) (Client, error) {
+func NewClient(d common.RPCFactory, monitor membership.Monitor, numberOfShards int) (Client, error) {
 	sResolver, err := monitor.GetResolver(common.HistoryServiceName)
 	if err != nil {
 		return nil, err

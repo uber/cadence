@@ -44,12 +44,12 @@ type (
 	// BootstrapParams holds the set of parameters
 	// needed to bootstrap a service
 	BootstrapParams struct {
-		Name              string
-		Logger            bark.Logger
-		MetricScope       tally.Scope
-		RingpopFactory    RingpopFactory
-		DispatcherFactory common.DispatcherFactory
-		CassandraConfig   config.Cassandra
+		Name            string
+		Logger          bark.Logger
+		MetricScope     tally.Scope
+		RingpopFactory  RingpopFactory
+		RPCFactory      common.RPCFactory
+		CassandraConfig config.Cassandra
 	}
 
 	// RingpopFactory provides a bootstrapped ringpop
@@ -67,7 +67,7 @@ type (
 		rp                     *ringpop.Ringpop
 		rpFactory              RingpopFactory
 		membershipMonitor      membership.Monitor
-		dispatcherFactory      common.DispatcherFactory
+		rpcFactory             common.RPCFactory
 		clientFactory          client.Factory
 		numberOfHistoryShards  int
 		logger                 bark.Logger
@@ -83,14 +83,14 @@ func New(params *BootstrapParams) Service {
 	sVice := &serviceImpl{
 		sName:                 params.Name,
 		logger:                params.Logger.WithField("Service", params.Name),
-		dispatcherFactory:     params.DispatcherFactory,
+		rpcFactory:            params.RPCFactory,
 		rpFactory:             params.RingpopFactory,
 		metricsScope:          params.MetricScope,
 		numberOfHistoryShards: params.CassandraConfig.NumHistoryShards,
 	}
 	sVice.runtimeMetricsReporter = metrics.NewRuntimeMetricsReporter(params.MetricScope, time.Minute, sVice.logger)
 	sVice.metricsClient = metrics.NewClient(params.MetricScope, getMetricsServiceIdx(params.Name, params.Logger))
-	sVice.dispatcher = sVice.dispatcherFactory.CreateDispatcher()
+	sVice.dispatcher = sVice.rpcFactory.CreateDispatcher()
 	if sVice.dispatcher == nil {
 		sVice.logger.Fatal("Unable to create yarpc dispatcher")
 	}
@@ -147,7 +147,7 @@ func (h *serviceImpl) Start() {
 	}
 	h.hostInfo = hostInfo
 
-	h.clientFactory = client.NewDispatcherClientFactory(h.dispatcherFactory, h.membershipMonitor, h.metricsClient,
+	h.clientFactory = client.NewRPCClientFactory(h.rpcFactory, h.membershipMonitor, h.metricsClient,
 		h.numberOfHistoryShards)
 
 	// The service is now started up

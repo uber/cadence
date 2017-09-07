@@ -156,7 +156,7 @@ func (c *cadenceImpl) startFrontend(logger bark.Logger, rpHosts []string, startW
 	params := new(service.BootstrapParams)
 	params.Name = common.FrontendServiceName
 	params.Logger = logger
-	params.DispatcherFactory = newDispatcherFactoryImpl(common.FrontendServiceName, c.FrontendAddress(), logger)
+	params.RPCFactory = newRPCFactoryImpl(common.FrontendServiceName, c.FrontendAddress(), logger)
 	params.MetricScope = tally.NewTestScope(common.FrontendServiceName, make(map[string]string))
 	params.RingpopFactory = newRingpopFactory(common.FrontendServiceName, rpHosts)
 	params.CassandraConfig.NumHistoryShards = c.numberOfHistoryShards
@@ -182,7 +182,7 @@ func (c *cadenceImpl) startHistory(logger bark.Logger, shardMgr persistence.Shar
 		params := new(service.BootstrapParams)
 		params.Name = common.HistoryServiceName
 		params.Logger = logger
-		params.DispatcherFactory = newDispatcherFactoryImpl(common.HistoryServiceName, hostport, logger)
+		params.RPCFactory = newRPCFactoryImpl(common.HistoryServiceName, hostport, logger)
 		params.MetricScope = tally.NewTestScope(common.HistoryServiceName, make(map[string]string))
 		params.RingpopFactory = newRingpopFactory(common.FrontendServiceName, rpHosts)
 		params.CassandraConfig.NumHistoryShards = c.numberOfHistoryShards
@@ -203,7 +203,7 @@ func (c *cadenceImpl) startMatching(logger bark.Logger, taskMgr persistence.Task
 	params := new(service.BootstrapParams)
 	params.Name = common.MatchingServiceName
 	params.Logger = logger
-	params.DispatcherFactory = newDispatcherFactoryImpl(common.MatchingServiceName, c.MatchingServiceAddress(), logger)
+	params.RPCFactory = newRPCFactoryImpl(common.MatchingServiceName, c.MatchingServiceAddress(), logger)
 	params.MetricScope = tally.NewTestScope(common.MatchingServiceName, make(map[string]string))
 	params.RingpopFactory = newRingpopFactory(common.FrontendServiceName, rpHosts)
 	params.CassandraConfig.NumHistoryShards = c.numberOfHistoryShards
@@ -223,12 +223,10 @@ func newRingpopFactory(service string, rpHosts []string) service.RingpopFactory 
 }
 
 func (p *ringpopFactoryImpl) CreateRingpop(dispatcher *yarpc.Dispatcher) (*ringpop.Ringpop, error) {
-	t := dispatcher.Inbounds()[0].Transports()[0].(*tchannel.ChannelTransport)
-	ty := reflect.ValueOf(t.Channel())
 	var ch *tcg.Channel
-	var ok bool
-	if ch, ok = ty.Interface().(*tcg.Channel); !ok {
-		return nil, errors.New("Unable to get tchannel out of the dispatcher")
+	var err error
+	if ch, err = p.getChannel(dispatcher); err != nil {
+		return nil, err
 	}
 
 	rp, err := ringpop.New(fmt.Sprintf("%s", rpAppNamePrefix), ringpop.Channel(ch))
@@ -240,6 +238,17 @@ func (p *ringpopFactoryImpl) CreateRingpop(dispatcher *yarpc.Dispatcher) (*ringp
 		return nil, err
 	}
 	return rp, nil
+}
+
+func (p *ringpopFactoryImpl) getChannel(dispatcher *yarpc.Dispatcher) (*tcg.Channel, error) {
+	t := dispatcher.Inbounds()[0].Transports()[0].(*tchannel.ChannelTransport)
+	ty := reflect.ValueOf(t.Channel())
+	var ch *tcg.Channel
+	var ok bool
+	if ch, ok = ty.Interface().(*tcg.Channel); !ok {
+		return nil, errors.New("Unable to get tchannel out of the dispatcher")
+	}
+	return ch, nil
 }
 
 // bootstrapRingpop tries to bootstrap the given ringpop instance using the hosts list
@@ -255,22 +264,22 @@ func (p *ringpopFactoryImpl) bootstrapRingpop(rp *ringpop.Ringpop, rpHosts []str
 	return err
 }
 
-type dispatcherFactoryImpl struct {
+type rpcFactoryImpl struct {
 	ch          *tchannel.ChannelTransport
 	serviceName string
 	hostPort    string
 	logger      bark.Logger
 }
 
-func newDispatcherFactoryImpl(sName string, hostPort string, logger bark.Logger) common.DispatcherFactory {
-	return &dispatcherFactoryImpl{
+func newRPCFactoryImpl(sName string, hostPort string, logger bark.Logger) common.RPCFactory {
+	return &rpcFactoryImpl{
 		serviceName: sName,
 		hostPort:    hostPort,
 		logger:      logger,
 	}
 }
 
-func (c *dispatcherFactoryImpl) CreateDispatcher() *yarpc.Dispatcher {
+func (c *rpcFactoryImpl) CreateDispatcher() *yarpc.Dispatcher {
 	// Setup dispatcher for onebox
 	var err error
 	c.ch, err = tchannel.NewChannelTransport(
@@ -288,7 +297,7 @@ func (c *dispatcherFactoryImpl) CreateDispatcher() *yarpc.Dispatcher {
 	})
 }
 
-func (c *dispatcherFactoryImpl) CreateDispatcherForOutbound(
+func (c *rpcFactoryImpl) CreateDispatcherForOutbound(
 	callerName, serviceName, hostName string) *yarpc.Dispatcher {
 	// Setup dispatcher(outbound) for onebox
 	d := yarpc.NewDispatcher(yarpc.Config{

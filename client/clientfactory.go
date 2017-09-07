@@ -34,17 +34,17 @@ type Factory interface {
 	NewMatchingClient() (matching.Client, error)
 }
 
-type dispatcherClientFactory struct {
-	df                    common.DispatcherFactory
+type rpcClientFactory struct {
+	df                    common.RPCFactory
 	monitor               membership.Monitor
 	metricsClient         metrics.Client
 	numberOfHistoryShards int
 }
 
-// NewDispatcherClientFactory creates an instance of client factory that knows how to dispatch RPC calls.
-func NewDispatcherClientFactory(df common.DispatcherFactory,
+// NewRPCClientFactory creates an instance of client factory that knows how to dispatch RPC calls.
+func NewRPCClientFactory(df common.RPCFactory,
 	monitor membership.Monitor, metricsClient metrics.Client, numberOfHistoryShards int) Factory {
-	return &dispatcherClientFactory{
+	return &rpcClientFactory{
 		df:                    df,
 		monitor:               monitor,
 		metricsClient:         metricsClient,
@@ -52,7 +52,7 @@ func NewDispatcherClientFactory(df common.DispatcherFactory,
 	}
 }
 
-func (cf *dispatcherClientFactory) NewHistoryClient() (history.Client, error) {
+func (cf *rpcClientFactory) NewHistoryClient() (history.Client, error) {
 	client, err := history.NewClient(cf.df, cf.monitor, cf.numberOfHistoryShards)
 	if err != nil {
 		return nil, err
@@ -63,7 +63,7 @@ func (cf *dispatcherClientFactory) NewHistoryClient() (history.Client, error) {
 	return client, nil
 }
 
-func (cf *dispatcherClientFactory) NewMatchingClient() (matching.Client, error) {
+func (cf *rpcClientFactory) NewMatchingClient() (matching.Client, error) {
 	client, err := matching.NewClient(cf.df, cf.monitor)
 	if err != nil {
 		return nil, err

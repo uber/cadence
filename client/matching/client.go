@@ -39,12 +39,11 @@ type clientImpl struct {
 	resolver          membership.ServiceResolver
 	thriftCacheLock   sync.RWMutex
 	thriftCache       map[string]matchingserviceclient.Interface
-	dispatcherCache   map[string]*yarpc.Dispatcher
-	dispatcherFactory common.DispatcherFactory
+	dispatcherFactory common.RPCFactory
 }
 
 // NewClient creates a new history service TChannel client
-func NewClient(d common.DispatcherFactory, monitor membership.Monitor) (Client, error) {
+func NewClient(d common.RPCFactory, monitor membership.Monitor) (Client, error) {
 	sResolver, err := monitor.GetResolver(common.MatchingServiceName)
 	if err != nil {
 		return nil, err

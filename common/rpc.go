@@ -25,8 +25,8 @@ import (
 )
 
 type (
-	// DispatcherFactory Creates a dispatcher that knows how to transport requests.
-	DispatcherFactory interface {
+	// RPCFactory Creates a dispatcher that knows how to transport requests.
+	RPCFactory interface {
 		CreateDispatcher() *yarpc.Dispatcher
 		CreateDispatcherForOutbound(callerName, serviceName, hostName string) *yarpc.Dispatcher
 	}
