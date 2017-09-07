@@ -69,6 +69,7 @@ func newTaskListManager(e *matchingEngineImpl, taskList *taskListID, config *Con
 		config:         config,
 	}
 	tlMgr.taskWriter = newTaskWriter(tlMgr)
+	tlMgr.startWG.Add(1)
 	return tlMgr
 }
 
@@ -97,8 +98,9 @@ type taskListManagerImpl struct {
 	// It must to be unbuffered. addTask publishes to it asynchronously and expects publish to succeed
 	// only if there is waiting poll that consumes from it.
 	syncMatch  chan *getTaskResult
-	notifyCh   chan struct{} // Used as signal to notify pump of new tasks
-	shutdownCh chan struct{} // Delivers stop to the pump that populates taskBuffer
+	notifyCh   chan struct{}  // Used as signal to notify pump of new tasks
+	shutdownCh chan struct{}  // Delivers stop to the pump that populates taskBuffer
+	startWG    sync.WaitGroup // ensures that background processes do not start until setup is ready
 	stopped    int32
 
 	sync.Mutex
@@ -124,13 +126,16 @@ type syncMatchResponse struct {
 // Starts reading pump for the given task list.
 // The pump fills up taskBuffer from persistence.
 func (c *taskListManagerImpl) Start() error {
-	err := c.updateRangeIfNeeded() // Grabs a new range and updates read and ackLevels
-	if err != nil {
-		return err
-	}
+	defer c.startWG.Done()
+
 	c.taskWriter.Start()
 	c.signalNewTask()
 	go c.getTasksPump()
+	err := c.updateRangeIfNeeded() // Grabs a new range and updates read and ackLevels
+	if err != nil {
+		c.Stop()
+		return err
+	}
 	return nil
 }
 
@@ -147,6 +152,7 @@ func (c *taskListManagerImpl) Stop() {
 }
 
 func (c *taskListManagerImpl) AddTask(execution *s.WorkflowExecution, taskInfo *persistence.TaskInfo) error {
+	c.startWG.Wait()
 	_, err := c.executeWithRetry(func(rangeID int64) (interface{}, error) {
 		r, err := c.trySyncMatch(taskInfo)
 		if err != nil || r != nil {
@@ -384,6 +390,7 @@ func (c *taskListManagerImpl) trySyncMatch(task *persistence.TaskInfo) (*persist
 
 func (c *taskListManagerImpl) getTasksPump() {
 	defer close(c.taskBuffer)
+	c.startWG.Wait()
 
 	updateAckTimer := time.NewTimer(c.config.UpdateAckInterval)
 
@@ -499,10 +506,11 @@ func (c *taskContext) RecordDecisionTaskStartedWithRetry(
 		return err
 	}
 	err = backoff.Retry(op, historyServiceOperationRetryPolicy, func(err error) bool {
-		if _, ok := err.(*s.EntityNotExistsError); !ok {
-			return true
+		switch err.(type) {
+		case *s.EntityNotExistsError, *h.EventAlreadyStartedError:
+			return false
 		}
-		return false
+		return true
 	})
 	return
 }
@@ -515,10 +523,11 @@ func (c *taskContext) RecordActivityTaskStartedWithRetry(
 		return err
 	}
 	err = backoff.Retry(op, historyServiceOperationRetryPolicy, func(err error) bool {
-		if _, ok := err.(*s.EntityNotExistsError); !ok {
-			return true
+		switch err.(type) {
+		case *s.EntityNotExistsError, *h.EventAlreadyStartedError:
+			return false
 		}
-		return false
+		return true
 	})
 	return
 }

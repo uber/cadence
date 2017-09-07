@@ -101,13 +101,14 @@ func (s *matchingEngineSuite) SetupTest() {
 	s.mockExecutionManager = &mocks.ExecutionManager{}
 	s.historyClient = &mocks.HistoryClient{}
 	s.taskManager = newTestTaskManager(s.logger)
-	s.matchingEngine = s.newMatchingEngine(defaultTestConfig())
+
+	s.matchingEngine = s.newMatchingEngine(defaultTestConfig(), s.taskManager)
 	s.matchingEngine.Start()
 }
 
-func (s *matchingEngineSuite) newMatchingEngine(config *Config) *matchingEngineImpl {
+func (s *matchingEngineSuite) newMatchingEngine(config *Config, taskMgr persistence.TaskManager) *matchingEngineImpl {
 	return &matchingEngineImpl{
-		taskManager:     s.taskManager,
+		taskManager:     taskMgr,
 		historyService:  s.historyClient,
 		taskLists:       make(map[taskListID]taskListManager),
 		logger:          s.logger,
@@ -178,10 +179,9 @@ func (s *matchingEngineSuite) TestPollForDecisionTasksEmptyResult() {
 }
 
 func (s *matchingEngineSuite) PollForTasksEmptyResultTest(taskType int) {
-	config := defaultTestConfig()
-	config.RangeSize = 2 // to test that range is not updated without tasks
-	config.LongPollExpirationInterval = 10 * time.Millisecond
-	s.matchingEngine.config = config
+	s.matchingEngine.config.RangeSize = 2 // to test that range is not updated without tasks
+	s.matchingEngine.config.LongPollExpirationInterval = 10 * time.Millisecond
+
 	domainID := "domainId"
 	tl := "makeToast"
 	identity := "selfDrivingToaster"
@@ -845,7 +845,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesActivitiesRangeStealing() {
 	var engines []*matchingEngineImpl
 
 	for p := 0; p < engineCount; p++ {
-		e := s.newMatchingEngine(defaultTestConfig())
+		e := s.newMatchingEngine(defaultTestConfig(), s.taskManager)
 		e.config.RangeSize = rangeSize
 		engines = append(engines, e)
 		e.Start()
@@ -1003,7 +1003,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesDecisionsRangeStealing() {
 	var engines []*matchingEngineImpl
 
 	for p := 0; p < engineCount; p++ {
-		e := s.newMatchingEngine(defaultTestConfig())
+		e := s.newMatchingEngine(defaultTestConfig(), s.taskManager)
 		e.config.RangeSize = rangeSize
 		engines = append(engines, e)
 		e.Start()
@@ -1056,7 +1056,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesDecisionsRangeStealing() {
 		func(ctx context.Context, taskRequest *gohistory.RecordDecisionTaskStartedRequest) error {
 			if _, ok := startedTasks[*taskRequest.TaskId]; ok {
 				s.logger.Debugf("From error function Mock Received DUPLICATED RecordDecisionTaskStartedRequest for taskID=%v", taskRequest.TaskId)
-				return &workflow.EntityNotExistsError{Message: "already started"}
+				return &gohistory.EventAlreadyStartedError{Message: "already started"}
 			}
 			startedTasks[*taskRequest.TaskId] = true
 			return nil

@@ -2513,6 +2513,24 @@ func addRequestCancelInitiatedEvent(builder *mutableStateBuilder, decisionComple
 	return event
 }
 
+func addStartChildWorkflowExecutionInitiatedEvent(builder *mutableStateBuilder, decisionCompletedID int64,
+	createRequestID, domain, workflowID, workflowType, tasklist string, input []byte,
+	executionStartToCloseTimeout, taskStartToCloseTimeout int32) (*workflow.HistoryEvent,
+	*persistence.ChildExecutionInfo) {
+	return builder.AddStartChildWorkflowExecutionInitiatedEvent(decisionCompletedID, createRequestID,
+		&workflow.StartChildWorkflowExecutionDecisionAttributes{
+			Domain:       common.StringPtr(domain),
+			WorkflowId:   common.StringPtr(workflowID),
+			WorkflowType: &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
+			TaskList:     &workflow.TaskList{Name: common.StringPtr(tasklist)},
+			Input:        input,
+			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(executionStartToCloseTimeout),
+			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(taskStartToCloseTimeout),
+			ChildPolicy:                         common.ChildPolicyPtr(workflow.ChildPolicyTerminate),
+			Control:                             nil,
+		})
+}
+
 func addCompleteWorkflowEvent(builder *mutableStateBuilder, decisionCompletedEventID int64,
 	result []byte) *workflow.HistoryEvent {
 	e := builder.AddCompletedWorkflowEvent(decisionCompletedEventID, &workflow.CompleteWorkflowExecutionDecisionAttributes{
