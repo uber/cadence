@@ -21,7 +21,7 @@ See Maxim's talk at [Data@Scale Conference](https://atscaleconference.com/videos
 # for OS X
 brew install cassandra
 
-# start cassandra
+# start cassandra 
 /usr/local/bin/cassandra
 ```
 
