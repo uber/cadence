@@ -53,6 +53,7 @@ type Cadence interface {
 	Start() error
 	Stop()
 	GetFrontendClient() workflowserviceclient.Interface
+	FrontendAddress() string
 }
 
 type (
