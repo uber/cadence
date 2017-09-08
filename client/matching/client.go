@@ -36,10 +36,10 @@ import (
 var _ Client = (*clientImpl)(nil)
 
 type clientImpl struct {
-	resolver          membership.ServiceResolver
-	thriftCacheLock   sync.RWMutex
-	thriftCache       map[string]matchingserviceclient.Interface
-	dispatcherFactory common.RPCFactory
+	resolver        membership.ServiceResolver
+	thriftCacheLock sync.RWMutex
+	thriftCache     map[string]matchingserviceclient.Interface
+	rpcFactory      common.RPCFactory
 }
 
 // NewClient creates a new history service TChannel client
@@ -50,9 +50,9 @@ func NewClient(d common.RPCFactory, monitor membership.Monitor) (Client, error) 
 	}
 
 	client := &clientImpl{
-		dispatcherFactory: d,
-		resolver:          sResolver,
-		thriftCache:       make(map[string]matchingserviceclient.Interface),
+		rpcFactory:  d,
+		resolver:    sResolver,
+		thriftCache: make(map[string]matchingserviceclient.Interface),
 	}
 	return client, nil
 }
@@ -150,7 +150,7 @@ func (c *clientImpl) getThriftClient(hostPort string) matchingserviceclient.Inte
 	// before we acquired the lock
 	client, ok = c.thriftCache[hostPort]
 	if !ok {
-		d := c.dispatcherFactory.CreateDispatcherForOutbound(
+		d := c.rpcFactory.CreateDispatcherForOutbound(
 			"matching-service-client", common.MatchingServiceName, hostPort)
 		client = matchingserviceclient.New(d.ClientConfig(common.MatchingServiceName))
 		c.thriftCache[hostPort] = client

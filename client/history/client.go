@@ -40,9 +40,9 @@ type clientImpl struct {
 	tokenSerializer common.TaskTokenSerializer
 	numberOfShards  int
 	// TODO: consider refactor thriftCache into a separate struct
-	thriftCacheLock   sync.RWMutex
-	thriftCache       map[string]historyserviceclient.Interface
-	dispatcherFactory common.RPCFactory
+	thriftCacheLock sync.RWMutex
+	thriftCache     map[string]historyserviceclient.Interface
+	rpcFactory      common.RPCFactory
 }
 
 // NewClient creates a new history service TChannel client
@@ -53,11 +53,11 @@ func NewClient(d common.RPCFactory, monitor membership.Monitor, numberOfShards i
 	}
 
 	client := &clientImpl{
-		dispatcherFactory: d,
-		resolver:          sResolver,
-		tokenSerializer:   common.NewJSONTaskTokenSerializer(),
-		numberOfShards:    numberOfShards,
-		thriftCache:       make(map[string]historyserviceclient.Interface),
+		rpcFactory:      d,
+		resolver:        sResolver,
+		tokenSerializer: common.NewJSONTaskTokenSerializer(),
+		numberOfShards:  numberOfShards,
+		thriftCache:     make(map[string]historyserviceclient.Interface),
 	}
 	return client, nil
 }
@@ -384,7 +384,7 @@ func (c *clientImpl) getThriftClient(hostPort string) historyserviceclient.Inter
 	// before we acquired the lock
 	client, ok = c.thriftCache[hostPort]
 	if !ok {
-		d := c.dispatcherFactory.CreateDispatcherForOutbound(
+		d := c.rpcFactory.CreateDispatcherForOutbound(
 			"history-service-client", common.HistoryServiceName, hostPort)
 		client = historyserviceclient.New(d.ClientConfig(common.HistoryServiceName))
 		c.thriftCache[hostPort] = client
