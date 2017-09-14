@@ -522,6 +522,7 @@ const (
 	LeaseRequestCounter
 	LeaseFailureCounter
 	ConditionFailedErrorCounter
+	RespondQueryTaskFailedCounter
 )
 
 // MetricDefs record the metrics for all services
@@ -587,13 +588,14 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		RemoveEngineForShardLatency:               {metricName: "remove-engine-for-shard-latency", metricType: Timer},
 	},
 	Matching: {
-		PollSuccessCounter:          {metricName: "poll.success"},
-		PollTimeoutCounter:          {metricName: "poll.timeouts"},
-		PollErrorsCounter:           {metricName: "poll.errors"},
-		PollSuccessWithSyncCounter:  {metricName: "poll.success.sync"},
-		LeaseRequestCounter:         {metricName: "lease.requests"},
-		LeaseFailureCounter:         {metricName: "lease.failures"},
-		ConditionFailedErrorCounter: {metricName: "condition-failed-errors"},
+		PollSuccessCounter:            {metricName: "poll.success"},
+		PollTimeoutCounter:            {metricName: "poll.timeouts"},
+		PollErrorsCounter:             {metricName: "poll.errors"},
+		PollSuccessWithSyncCounter:    {metricName: "poll.success.sync"},
+		LeaseRequestCounter:           {metricName: "lease.requests"},
+		LeaseFailureCounter:           {metricName: "lease.failures"},
+		ConditionFailedErrorCounter:   {metricName: "condition-failed-errors"},
+		RespondQueryTaskFailedCounter: {metricName: "respond-query-failed"},
 	},
 }
 

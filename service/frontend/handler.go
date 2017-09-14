@@ -1106,8 +1106,8 @@ func (wh *WorkflowHandler) QueryWorkflow(ctx context.Context,
 		queryRequest.Execution.RunId = response.RunId
 		matchingRequest.TaskList = response.Tasklist
 	} else {
-		// Get the TaskList from history
-		history, _, err := wh.getHistory(domainInfo.ID, *queryRequest.Execution, 0, 1, nil)
+		// Get the TaskList from history (first event)
+		history, _, err := wh.getHistory(domainInfo.ID, *queryRequest.Execution, 2, 1, nil)
 		if err != nil {
 			return nil, wh.error(err, scope)
 		}

@@ -399,6 +399,7 @@ func (e *matchingEngineImpl) RespondQueryTaskCompleted(ctx context.Context, requ
 	queryResultCh, ok := e.queryTaskMap[request.GetTaskID()]
 	e.queryMapLock.Unlock()
 	if !ok {
+		e.metricsClient.IncCounter(metrics.MatchingRespondQueryTaskCompletedScope, metrics.RespondQueryTaskFailedCounter)
 		return &workflow.EntityNotExistsError{Message: "query task not found, or already expired"}
 	}
 
