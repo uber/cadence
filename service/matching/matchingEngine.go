@@ -50,8 +50,11 @@ type matchingEngineImpl struct {
 	taskListsLock   sync.RWMutex                   // locks mutation of taskLists
 	taskLists       map[taskListID]taskListManager // Convert to LRU cache
 	config          *Config
-	queryTaskMap    map[string]chan *workflow.RespondQueryTaskCompletedRequest
 	queryMapLock    sync.Mutex
+	// map from query TaskID (which is a UUID generated in QueryWorkflow() call) to a channel that QueryWorkflow()
+	// will block and wait for. The RespondQueryTaskCompleted() call will send the data through that channel which will
+	// unblock QueryWorkflow() call.
+	queryTaskMap map[string]chan *workflow.RespondQueryTaskCompletedRequest
 }
 
 type taskListID struct {
@@ -244,14 +247,29 @@ pollLoop:
 		}
 
 		if tCtx.queryTaskInfo != nil {
-			// for query task, we don't need to update history to record decision task started, so we would use a fake
-			// RecordDecisionTaskStartedResponse with large startEventID so when frontend receives the response, it will
-			// load the entire history (eventID < StartedEventID + 1). We also use the same large number as
-			// PreviousStartedEventId so when worker replay the history, it will treat all events as old events during replay.
-			var startedEventID int64 = math.MaxInt64 - 1 // minus 1 to avoid overflow (when StartedEventID + 1)
+			// for query task, we don't need to update history to record decision task started. but we need to know
+			// the NextEventID so front end knows what are the history events to load for this decision task.
+			nextIDResp, err := e.historyService.GetWorkflowExecutionNextEventID(ctx, &h.GetWorkflowExecutionNextEventIDRequest{
+				DomainUUID: req.DomainUUID,
+				Execution:  &tCtx.workflowExecution,
+			})
+			if err != nil {
+				// will notify query client that the query task failed
+				completeType := workflow.QueryTaskCompletedTypeFailed
+				e.RespondQueryTaskCompleted(ctx, &m.RespondQueryTaskCompletedRequest{
+					TaskID: common.StringPtr(tCtx.queryTaskInfo.taskID),
+					CompletedRequest: &workflow.RespondQueryTaskCompletedRequest{
+						CompletedType: &completeType,
+						ErrorMessage:  common.StringPtr("server internal error: failed to get nextID " + err.Error()),
+					},
+				})
+				return emptyPollForDecisionTaskResponse, nil
+			}
+
+			var lastEventID = *nextIDResp.EventId - 1
 			resp := &h.RecordDecisionTaskStartedResponse{
-				PreviousStartedEventId: &startedEventID,
-				StartedEventId:         &startedEventID,
+				PreviousStartedEventId: &lastEventID,
+				StartedEventId:         &lastEventID,
 			}
 			tCtx.completeTask(nil)
 			return e.createPollForDecisionTaskResponse(tCtx, resp), nil
@@ -355,7 +373,7 @@ func (e *matchingEngineImpl) QueryWorkflow(ctx context.Context, queryRequest *m.
 		return nil, err
 	}
 
-	queryResultCh := make(chan *workflow.RespondQueryTaskCompletedRequest)
+	queryResultCh := make(chan *workflow.RespondQueryTaskCompletedRequest, 1)
 	e.queryMapLock.Lock()
 	e.queryTaskMap[queryTask.taskID] = queryResultCh
 	e.queryMapLock.Unlock()

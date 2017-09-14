@@ -403,7 +403,7 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 		}
 	}
 
-	return createPollForDecisionTaskResponse(matchingResp, history, continuation), nil
+	return wh.createPollForDecisionTaskResponse(ctx, matchingResp, history, continuation), nil
 }
 
 // RecordActivityTaskHeartbeat - Record Activity Task Heart beat.
@@ -1120,13 +1120,14 @@ func (wh *WorkflowHandler) QueryWorkflow(ctx context.Context,
 
 	matchingResp, err := wh.matching.QueryWorkflow(ctx, matchingRequest)
 	if err != nil {
-		wh.Service.GetLogger().Infof(
-			"QueryWorkflow failed. Domain: %v, DomainID :%v, WorkflowID: %v, RunID: %v, TaskList: %v, Error: %v",
-			queryRequest.GetDomain(),
-			domainInfo.ID,
-			*queryRequest.Execution.WorkflowId,
-			*queryRequest.Execution.RunId,
-			*matchingRequest.TaskList.Name, err)
+		wh.GetLogger().WithFields(bark.Fields{
+			"Domain":     *queryRequest.Domain,
+			"WorkflowID": *queryRequest.Execution.WorkflowId,
+			"RunID":      *queryRequest.Execution.RunId,
+			"QueryType":  *queryRequest.Query.QueryType,
+			"TaskList":   *matchingRequest.TaskList.Name,
+			"Error":      err.Error(),
+		}).Error("QueryWorkflow failed.")
 		return nil, wh.error(err, scope)
 	}
 
@@ -1287,7 +1288,7 @@ func createDomainResponse(info *persistence.DomainInfo, config *persistence.Doma
 	return i, c
 }
 
-func createPollForDecisionTaskResponse(
+func (wh *WorkflowHandler) createPollForDecisionTaskResponse(ctx context.Context,
 	matchingResponse *m.PollForDecisionTaskResponse, history *gen.History, nextPageToken []byte) *gen.PollForDecisionTaskResponse {
 	resp := &gen.PollForDecisionTaskResponse{}
 	if matchingResponse != nil {
@@ -1299,11 +1300,31 @@ func createPollForDecisionTaskResponse(
 		resp.Query = matchingResponse.Query
 	}
 
-	if resp.WorkflowType == nil && history != nil && len(history.Events) > 0 &&
-		history.Events[0].WorkflowExecutionStartedEventAttributes != nil {
+	if matchingResponse.Query != nil && resp.WorkflowType == nil {
 		// for query task, the matching engine was not able to populate the WorkflowType, so set here from history
-		resp.WorkflowType = history.Events[0].WorkflowExecutionStartedEventAttributes.WorkflowType
+		if history != nil && len(history.Events) > 0 &&
+			history.Events[0].WorkflowExecutionStartedEventAttributes != nil {
+			resp.WorkflowType = history.Events[0].WorkflowExecutionStartedEventAttributes.WorkflowType
+		} else {
+			// this should never happen, but if it does happen, log it and respond error back to query client.
+			wh.GetLogger().WithFields(bark.Fields{
+				"WorkflowID": *matchingResponse.WorkflowExecution.WorkflowId,
+				"RunID":      *matchingResponse.WorkflowExecution.RunId,
+				"QueryType":  *resp.Query.QueryType,
+			}).Error("Cannot get WorkflowType for QueryTask.")
+
+			completeType := gen.QueryTaskCompletedTypeFailed
+			wh.RespondQueryTaskCompleted(ctx, &gen.RespondQueryTaskCompletedRequest{
+				TaskToken:     matchingResponse.TaskToken,
+				CompletedType: &completeType,
+				ErrorMessage:  common.StringPtr("server internal error: cannot get WorkflowType for QueryTask"),
+			})
+
+			// in this case, just return empty response for the pool request and client will just ignore
+			return &gen.PollForDecisionTaskResponse{}
+		}
 	}
+
 	resp.History = history
 	resp.NextPageToken = nextPageToken
 	return resp
