@@ -39,6 +39,7 @@ import (
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
@@ -1120,14 +1121,12 @@ func (wh *WorkflowHandler) QueryWorkflow(ctx context.Context,
 
 	matchingResp, err := wh.matching.QueryWorkflow(ctx, matchingRequest)
 	if err != nil {
-		wh.GetLogger().WithFields(bark.Fields{
-			"Domain":     *queryRequest.Domain,
-			"WorkflowID": *queryRequest.Execution.WorkflowId,
-			"RunID":      *queryRequest.Execution.RunId,
-			"QueryType":  *queryRequest.Query.QueryType,
-			"TaskList":   *matchingRequest.TaskList.Name,
-			"Error":      err.Error(),
-		}).Error("QueryWorkflow failed.")
+		logging.LogQueryTaskFailedEvent(wh.GetLogger(),
+			*queryRequest.Domain,
+			*queryRequest.Execution.WorkflowId,
+			*queryRequest.Execution.RunId,
+			*queryRequest.Query.QueryType,
+			err.Error())
 		return nil, wh.error(err, scope)
 	}
 
@@ -1307,18 +1306,25 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(ctx context.Context
 			resp.WorkflowType = history.Events[0].WorkflowExecutionStartedEventAttributes.WorkflowType
 		} else {
 			// this should never happen, but if it does happen, log it and respond error back to query client.
-			wh.GetLogger().WithFields(bark.Fields{
-				"WorkflowID": *matchingResponse.WorkflowExecution.WorkflowId,
-				"RunID":      *matchingResponse.WorkflowExecution.RunId,
-				"QueryType":  *resp.Query.QueryType,
-			}).Error("Cannot get WorkflowType for QueryTask.")
+			logging.LogQueryTaskMissingWorkflowTypeErrorEvent(wh.GetLogger(),
+				*matchingResponse.WorkflowExecution.WorkflowId,
+				*matchingResponse.WorkflowExecution.RunId,
+				*resp.Query.QueryType)
 
-			completeType := gen.QueryTaskCompletedTypeFailed
-			wh.RespondQueryTaskCompleted(ctx, &gen.RespondQueryTaskCompletedRequest{
-				TaskToken:     matchingResponse.TaskToken,
-				CompletedType: &completeType,
-				ErrorMessage:  common.StringPtr("server internal error: cannot get WorkflowType for QueryTask"),
-			})
+			queryTaskToken, err := wh.tokenSerializer.DeserializeQueryTaskToken(matchingResponse.TaskToken)
+			if err == nil {
+				completeType := gen.QueryTaskCompletedTypeFailed
+				wh.matching.RespondQueryTaskCompleted(ctx, &m.RespondQueryTaskCompletedRequest{
+					DomainUUID: common.StringPtr(queryTaskToken.DomainID),
+					TaskList:   &gen.TaskList{Name: common.StringPtr(queryTaskToken.TaskList)},
+					TaskID:     common.StringPtr(queryTaskToken.TaskID),
+					CompletedRequest: &gen.RespondQueryTaskCompletedRequest{
+						TaskToken:     matchingResponse.TaskToken,
+						CompletedType: &completeType,
+						ErrorMessage:  common.StringPtr("server internal error: cannot get WorkflowType for QueryTask"),
+					},
+				})
+			}
 
 			// in this case, just return empty response for the pool request and client will just ignore
 			return &gen.PollForDecisionTaskResponse{}
