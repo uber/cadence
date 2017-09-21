@@ -128,7 +128,6 @@ func (h *Handler) PollForActivityTask(ctx context.Context,
 // PollForDecisionTask - long poll for a decision task.
 func (h *Handler) PollForDecisionTask(ctx context.Context,
 	pollRequest *m.PollForDecisionTaskRequest) (*m.PollForDecisionTaskResponse, error) {
-	//h.GetLogger().Infof("********PollID: %v", yarpc.CallFromContext(ctx).Header("pollID"))
 
 	scope := metrics.MatchingPollForDecisionTaskScope
 	sw := h.startRequestProfile("PollForDecisionTask", scope)

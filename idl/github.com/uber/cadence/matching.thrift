@@ -150,6 +150,15 @@ service MatchingService {
 	  3: shared.EntityNotExistsError entityNotExistError,
 	)
 
+  /**
+    * CancelOutstandingPoll is called by frontend to unblock long polls on matching for zombie pollers.
+    * Our rpc stack does not support context propagation, so when a client connection goes away frontend sees
+    * cancellation of context for that handler, but any corresponding calls (long-poll) to matching service does not
+    * see the cancellation propagated so it can unblock corresponding long-polls on its end.  This results is tasks
+    * being dispatched to zombie pollers in this situation.  This API is added so everytime frontend makes a long-poll
+    * api call to matching it passes in a pollerID and then calls this API when it detects client connection is closed
+    * to unblock long polls for this poller and prevent tasks being sent to these zombie pollers.
+    **/
   void CancelOutstandingPoll(1: CancelOutstandingPollRequest request)
     throws (
       1: shared.BadRequestError badRequestError,

@@ -325,22 +325,28 @@ func (wh *WorkflowHandler) PollForActivityTask(
 		PollRequest: pollRequest,
 	})
 	if err != nil {
+		// First check if this err is due to context cancellation.  This means client connection to frontend is closed.
 		if ctx.Err() == context.Canceled {
+			// Our rpc stack does not propagates context cancellation to the other service.  Lets make an explicit
+			// call to matching to notify this poller is gone to prevent any tasks being dispatched to zombie pollers.
 			err = wh.matching.CancelOutstandingPoll(nil, &m.CancelOutstandingPollRequest{
 				DomainUUID:   common.StringPtr(info.ID),
 				TaskListType: common.Int32Ptr(persistence.TaskListTypeActivity),
 				TaskList:     pollRequest.TaskList,
 				PollerID:     common.StringPtr(pollerID),
 			})
+			// We can do much if this call fails.  Just log the error and move on
 			if err != nil {
 				wh.Service.GetLogger().Errorf("Failed to cancel activity poller.  Tasklist: %v, Error: %v,",
 					*pollRequest.TaskList.Name, err)
 				return nil, wh.error(err, scope)
 			}
 
+			// Does'nt matter what we return here.  Client already went away.
 			return nil, nil
 		}
 
+		// For all other errors log an error and return it back to client.
 		wh.Service.GetLogger().Errorf(
 			"PollForActivityTask failed. TaskList: %v, Error: %v", *pollRequest.TaskList.Name, err)
 		return nil, wh.error(err, scope)
@@ -385,21 +391,28 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 		PollRequest: pollRequest,
 	})
 	if err != nil {
+		// First check if this err is due to context cancellation.  This means client connection to frontend is closed.
 		if ctx.Err() == context.Canceled {
+			// Our rpc stack does not propagates context cancellation to the other service.  Lets make an explicit
+			// call to matching to notify this poller is gone to prevent any tasks being dispatched to zombie pollers.
 			err = wh.matching.CancelOutstandingPoll(nil, &m.CancelOutstandingPollRequest{
 				DomainUUID:   common.StringPtr(info.ID),
 				TaskListType: common.Int32Ptr(persistence.TaskListTypeDecision),
 				TaskList:     pollRequest.TaskList,
 				PollerID:     common.StringPtr(pollerID),
 			})
+			// We can do much if this call fails.  Just log the error and move on
 			if err != nil {
 				wh.Service.GetLogger().Errorf("Failed to cancel decision poller.  Tasklist: %v, Error: %v,",
 					*pollRequest.TaskList.Name, err)
 				return nil, wh.error(err, scope)
 			}
 
+			// Does'nt matter what we return here.  Client already went away.
 			return nil, nil
 		}
+
+		// For all other errors log an error and return it back to client.
 		wh.Service.GetLogger().Errorf(
 			"PollForDecisionTask failed. TaskList: %v, Error: %v", *pollRequest.TaskList.Name, err)
 		return nil, wh.error(err, scope)
