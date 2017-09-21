@@ -128,6 +128,7 @@ func (h *Handler) PollForActivityTask(ctx context.Context,
 // PollForDecisionTask - long poll for a decision task.
 func (h *Handler) PollForDecisionTask(ctx context.Context,
 	pollRequest *m.PollForDecisionTaskRequest) (*m.PollForDecisionTaskResponse, error) {
+	//h.GetLogger().Infof("********PollID: %v", yarpc.CallFromContext(ctx).Header("pollID"))
 
 	scope := metrics.MatchingPollForDecisionTaskScope
 	sw := h.startRequestProfile("PollForDecisionTask", scope)
@@ -155,6 +156,17 @@ func (h *Handler) RespondQueryTaskCompleted(ctx context.Context, request *m.Resp
 	defer sw.Stop()
 
 	err := h.engine.RespondQueryTaskCompleted(ctx, request)
+	return h.handleErr(err, scope)
+}
+
+// CancelOutstandingPoll is used to cancel outstanding pollers
+func (h *Handler) CancelOutstandingPoll(ctx context.Context,
+	request *m.CancelOutstandingPollRequest) error {
+	scope := metrics.MatchingCancelOutstandingPollScope
+	sw := h.startRequestProfile("CancelOutstandingPoll", scope)
+	defer sw.Stop()
+
+	err := h.engine.CancelOutstandingPoll(ctx, request)
 	return h.handleErr(err, scope)
 }
 

@@ -24,6 +24,7 @@ namespace java com.uber.cadence.matching
 
 struct PollForDecisionTaskRequest {
   10: optional string domainUUID
+  15: optional string pollerID
   20: optional shared.PollForDecisionTaskRequest pollRequest
 }
 
@@ -38,6 +39,7 @@ struct PollForDecisionTaskResponse {
 
 struct PollForActivityTaskRequest {
   10: optional string domainUUID
+  15: optional string pollerID
   20: optional shared.PollForActivityTaskRequest pollRequest
 }
 
@@ -68,6 +70,13 @@ struct RespondQueryTaskCompletedRequest {
   20: optional shared.TaskList taskList
   30: optional string taskID
   40: optional shared.RespondQueryTaskCompletedRequest completedRequest
+}
+
+struct CancelOutstandingPollRequest {
+  10: optional string domainUUID
+  20: optional i32 taskListType
+  30: optional shared.TaskList taskList
+  40: optional string pollerID
 }
 
 /**
@@ -140,5 +149,11 @@ service MatchingService {
 	  2: shared.InternalServiceError internalServiceError,
 	  3: shared.EntityNotExistsError entityNotExistError,
 	)
+
+  void CancelOutstandingPoll(1: CancelOutstandingPollRequest request)
+    throws (
+      1: shared.BadRequestError badRequestError,
+      2: shared.InternalServiceError internalServiceError,
+    )
 
 }

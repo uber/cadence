@@ -48,6 +48,7 @@ type taskListManager interface {
 	AddTask(execution *s.WorkflowExecution, taskInfo *persistence.TaskInfo) error
 	GetTaskContext(ctx context.Context) (*taskContext, error)
 	SyncMatchQueryTask(ctx context.Context, queryTask *queryTaskInfo) error
+	CancelPoller(pollerID string)
 	String() string
 }
 
@@ -65,10 +66,11 @@ func newTaskListManager(e *matchingEngineImpl, taskList *taskListID, config *Con
 			logging.TagTaskListType: taskList.taskType,
 			logging.TagTaskListName: taskList.taskListName,
 		}),
-		metricsClient:  e.metricsClient,
-		taskAckManager: newAckManager(e.logger),
-		syncMatch:      make(chan *getTaskResult),
-		config:         config,
+		metricsClient:       e.metricsClient,
+		taskAckManager:      newAckManager(e.logger),
+		syncMatch:           make(chan *getTaskResult),
+		config:              config,
+		outstandingPollsMap: make(map[string]context.CancelFunc),
 	}
 	tlMgr.taskWriter = newTaskWriter(tlMgr)
 	tlMgr.startWG.Add(1)
@@ -116,6 +118,9 @@ type taskListManagerImpl struct {
 	rangeID                 int64      // Current range of the task list. Starts from 1.
 	taskSequenceNumber      int64      // Sequence number of the next task. Starts from 1.
 	nextRangeSequenceNumber int64      // Current range boundary
+
+	outstandingPollsLock sync.Mutex
+	outstandingPollsMap  map[string]context.CancelFunc
 }
 
 // getTaskResult contains task info and optional channel to notify createTask caller
@@ -288,11 +293,38 @@ func (c *taskListManagerImpl) completeTaskPoll(taskID int64) (ackLevel int64) {
 	return
 }
 
+func (c *taskListManagerImpl) cancelOutstandingPoll(pollID string) {
+	c.outstandingPollsLock.Lock()
+	cancel, ok := c.outstandingPollsMap[pollID]
+	c.outstandingPollsLock.Unlock()
+	if ok {
+		cancel()
+	}
+}
+
 // Loads task from taskBuffer (which is populated from persistence) or from sync match to add task call
 func (c *taskListManagerImpl) getTask(ctx context.Context) (*getTaskResult, error) {
 	scope := metrics.MatchingTaskListMgrScope
 	timer := time.NewTimer(c.config.LongPollExpirationInterval)
 	defer timer.Stop()
+
+	pollID, ok := ctx.Value("pollerID").(string)
+	childCtx, cancel := context.WithCancel(ctx)
+	if ok {
+		c.logger.Infof("Recieved poll with ID: %v", pollID)
+		c.outstandingPollsLock.Lock()
+		c.outstandingPollsMap[pollID] = cancel
+		c.outstandingPollsLock.Unlock()
+		defer func() {
+			c.outstandingPollsLock.Lock()
+			delete(c.outstandingPollsMap, pollID)
+			c.outstandingPollsLock.Unlock()
+		}()
+	} else {
+		c.logger.Infof("Recieved poll without ID. Ctx: %v", ctx)
+		defer cancel()
+	}
+
 	select {
 	case task, ok := <-c.taskBuffer:
 		if !ok { // Task list getTasks pump is shutdown
@@ -308,13 +340,23 @@ func (c *taskListManagerImpl) getTask(ctx context.Context) (*getTaskResult, erro
 	case <-timer.C:
 		c.metricsClient.IncCounter(scope, metrics.PollTimeoutCounter)
 		return nil, ErrNoTasks
-	case <-ctx.Done():
-		err := ctx.Err()
-		if err == context.DeadlineExceeded {
+	case <-childCtx.Done():
+		err := childCtx.Err()
+		if err == context.DeadlineExceeded || err == context.Canceled {
 			err = ErrNoTasks
 		}
 		c.metricsClient.IncCounter(scope, metrics.PollTimeoutCounter)
 		return nil, err
+	}
+}
+
+func (c *taskListManagerImpl) CancelPoller(pollerID string) {
+	c.outstandingPollsLock.Lock()
+	cancel, ok := c.outstandingPollsMap[pollerID]
+	c.outstandingPollsLock.Unlock()
+
+	if ok && cancel != nil {
+		cancel()
 	}
 }
 

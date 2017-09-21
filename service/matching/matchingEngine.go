@@ -225,7 +225,8 @@ func (e *matchingEngineImpl) AddActivityTask(addRequest *m.AddActivityTaskReques
 // PollForDecisionTask tries to get the decision task using exponential backoff.
 func (e *matchingEngineImpl) PollForDecisionTask(ctx context.Context, req *m.PollForDecisionTaskRequest) (
 	*m.PollForDecisionTaskResponse, error) {
-	domainID := *req.DomainUUID
+	domainID := req.GetDomainUUID()
+	pollerID := req.GetPollerID()
 	request := req.PollRequest
 	taskListName := *request.TaskList.Name
 	e.logger.Debugf("Received PollForDecisionTask for taskList=%v", taskListName)
@@ -235,9 +236,9 @@ pollLoop:
 		if err != nil {
 			return nil, err
 		}
-
+		pollerCtx := context.WithValue(ctx, "pollerID", pollerID)
 		taskList := newTaskListID(domainID, taskListName, persistence.TaskListTypeDecision)
-		tCtx, err := e.getTask(ctx, taskList)
+		tCtx, err := e.getTask(pollerCtx, taskList)
 		if err != nil {
 			// TODO: Is empty poll the best reply for errPumpClosed?
 			if err == ErrNoTasks || err == errPumpClosed {
@@ -308,6 +309,7 @@ pollLoop:
 func (e *matchingEngineImpl) PollForActivityTask(ctx context.Context, req *m.PollForActivityTaskRequest) (
 	*workflow.PollForActivityTaskResponse, error) {
 	domainID := *req.DomainUUID
+	pollerID := req.GetPollerID()
 	request := req.PollRequest
 	taskListName := *request.TaskList.Name
 	e.logger.Debugf("Received PollForActivityTask for taskList=%v", taskListName)
@@ -319,7 +321,8 @@ pollLoop:
 		}
 
 		taskList := newTaskListID(domainID, taskListName, persistence.TaskListTypeActivity)
-		tCtx, err := e.getTask(ctx, taskList)
+		pollerCtx := context.WithValue(ctx, "pollerID", pollerID)
+		tCtx, err := e.getTask(pollerCtx, taskList)
 		if err != nil {
 			// TODO: Is empty poll the best reply for errPumpClosed?
 			if err == ErrNoTasks || err == errPumpClosed {
@@ -405,6 +408,22 @@ func (e *matchingEngineImpl) RespondQueryTaskCompleted(ctx context.Context, requ
 
 	queryResultCh <- request.CompletedRequest
 
+	return nil
+}
+
+func (e *matchingEngineImpl) CancelOutstandingPoll(ctx context.Context, request *m.CancelOutstandingPollRequest) error {
+	domainID := request.GetDomainUUID()
+	taskListType := int(request.GetTaskListType())
+	taskListName := request.TaskList.GetName()
+	pollerID := request.GetPollerID()
+
+	taskList := newTaskListID(domainID, taskListName, taskListType)
+	tlMgr, err := e.getTaskListManager(taskList)
+	if err != nil {
+		return err
+	}
+
+	tlMgr.CancelPoller(pollerID)
 	return nil
 }
 

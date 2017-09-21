@@ -318,11 +318,29 @@ func (wh *WorkflowHandler) PollForActivityTask(
 		return nil, wh.error(err, scope)
 	}
 
+	pollerID := uuid.New()
 	resp, err := wh.matching.PollForActivityTask(ctx, &m.PollForActivityTaskRequest{
 		DomainUUID:  common.StringPtr(info.ID),
+		PollerID:    common.StringPtr(pollerID),
 		PollRequest: pollRequest,
 	})
 	if err != nil {
+		if ctx.Err() == context.Canceled {
+			err = wh.matching.CancelOutstandingPoll(nil, &m.CancelOutstandingPollRequest{
+				DomainUUID:   common.StringPtr(info.ID),
+				TaskListType: common.Int32Ptr(persistence.TaskListTypeActivity),
+				TaskList:     pollRequest.TaskList,
+				PollerID:     common.StringPtr(pollerID),
+			})
+			if err != nil {
+				wh.Service.GetLogger().Errorf("Failed to cancel activity poller.  Tasklist: %v, Error: %v,",
+					*pollRequest.TaskList.Name, err)
+				return nil, wh.error(err, scope)
+			}
+
+			return nil, nil
+		}
+
 		wh.Service.GetLogger().Errorf(
 			"PollForActivityTask failed. TaskList: %v, Error: %v", *pollRequest.TaskList.Name, err)
 		return nil, wh.error(err, scope)
@@ -360,11 +378,28 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 
 	wh.Service.GetLogger().Debugf("Poll for decision. DomainName: %v, DomainID: %v", domainName, info.ID)
 
+	pollerID := uuid.New()
 	matchingResp, err := wh.matching.PollForDecisionTask(ctx, &m.PollForDecisionTaskRequest{
 		DomainUUID:  common.StringPtr(info.ID),
+		PollerID:    common.StringPtr(pollerID),
 		PollRequest: pollRequest,
 	})
 	if err != nil {
+		if ctx.Err() == context.Canceled {
+			err = wh.matching.CancelOutstandingPoll(nil, &m.CancelOutstandingPollRequest{
+				DomainUUID:   common.StringPtr(info.ID),
+				TaskListType: common.Int32Ptr(persistence.TaskListTypeDecision),
+				TaskList:     pollRequest.TaskList,
+				PollerID:     common.StringPtr(pollerID),
+			})
+			if err != nil {
+				wh.Service.GetLogger().Errorf("Failed to cancel decision poller.  Tasklist: %v, Error: %v,",
+					*pollRequest.TaskList.Name, err)
+				return nil, wh.error(err, scope)
+			}
+
+			return nil, nil
+		}
 		wh.Service.GetLogger().Errorf(
 			"PollForDecisionTask failed. TaskList: %v, Error: %v", *pollRequest.TaskList.Name, err)
 		return nil, wh.error(err, scope)
