@@ -325,31 +325,13 @@ func (wh *WorkflowHandler) PollForActivityTask(
 		PollRequest: pollRequest,
 	})
 	if err != nil {
-		// First check if this err is due to context cancellation.  This means client connection to frontend is closed.
-		if ctx.Err() == context.Canceled {
-			// Our rpc stack does not propagates context cancellation to the other service.  Lets make an explicit
-			// call to matching to notify this poller is gone to prevent any tasks being dispatched to zombie pollers.
-			err = wh.matching.CancelOutstandingPoll(nil, &m.CancelOutstandingPollRequest{
-				DomainUUID:   common.StringPtr(info.ID),
-				TaskListType: common.Int32Ptr(persistence.TaskListTypeActivity),
-				TaskList:     pollRequest.TaskList,
-				PollerID:     common.StringPtr(pollerID),
-			})
-			// We can do much if this call fails.  Just log the error and move on
-			if err != nil {
-				wh.Service.GetLogger().Errorf("Failed to cancel activity poller.  Tasklist: %v, Error: %v,",
-					*pollRequest.TaskList.Name, err)
-				return nil, wh.error(err, scope)
-			}
-
-			// Does'nt matter what we return here.  Client already went away.
-			return nil, nil
+		err = wh.cancelOutstandingPoll(ctx, err, info.ID, persistence.TaskListTypeActivity, pollRequest.TaskList, pollerID)
+		if err != nil {
+			// For all other errors log an error and return it back to client.
+			wh.Service.GetLogger().Errorf(
+				"PollForActivityTask failed. TaskList: %v, Error: %v", *pollRequest.TaskList.Name, err)
+			return nil, wh.error(err, scope)
 		}
-
-		// For all other errors log an error and return it back to client.
-		wh.Service.GetLogger().Errorf(
-			"PollForActivityTask failed. TaskList: %v, Error: %v", *pollRequest.TaskList.Name, err)
-		return nil, wh.error(err, scope)
 	}
 	return resp, nil
 }
@@ -391,31 +373,13 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 		PollRequest: pollRequest,
 	})
 	if err != nil {
-		// First check if this err is due to context cancellation.  This means client connection to frontend is closed.
-		if ctx.Err() == context.Canceled {
-			// Our rpc stack does not propagates context cancellation to the other service.  Lets make an explicit
-			// call to matching to notify this poller is gone to prevent any tasks being dispatched to zombie pollers.
-			err = wh.matching.CancelOutstandingPoll(nil, &m.CancelOutstandingPollRequest{
-				DomainUUID:   common.StringPtr(info.ID),
-				TaskListType: common.Int32Ptr(persistence.TaskListTypeDecision),
-				TaskList:     pollRequest.TaskList,
-				PollerID:     common.StringPtr(pollerID),
-			})
-			// We can do much if this call fails.  Just log the error and move on
-			if err != nil {
-				wh.Service.GetLogger().Errorf("Failed to cancel decision poller.  Tasklist: %v, Error: %v,",
-					*pollRequest.TaskList.Name, err)
-				return nil, wh.error(err, scope)
-			}
-
-			// Does'nt matter what we return here.  Client already went away.
-			return nil, nil
+		err = wh.cancelOutstandingPoll(ctx, err, info.ID, persistence.TaskListTypeDecision, pollRequest.TaskList, pollerID)
+		if err != nil {
+			// For all other errors log an error and return it back to client.
+			wh.Service.GetLogger().Errorf(
+				"PollForDecisionTask failed. TaskList: %v, Error: %v", *pollRequest.TaskList.Name, err)
+			return nil, wh.error(err, scope)
 		}
-
-		// For all other errors log an error and return it back to client.
-		wh.Service.GetLogger().Errorf(
-			"PollForDecisionTask failed. TaskList: %v, Error: %v", *pollRequest.TaskList.Name, err)
-		return nil, wh.error(err, scope)
 	}
 
 	var history *gen.History
@@ -453,6 +417,31 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	}
 
 	return wh.createPollForDecisionTaskResponse(ctx, matchingResp, history, continuation), nil
+}
+
+func (wh *WorkflowHandler) cancelOutstandingPoll(ctx context.Context, err error, domainID string, taskListType int32,
+	taskList *gen.TaskList, pollerID string) error {
+	// First check if this err is due to context cancellation.  This means client connection to frontend is closed.
+	if ctx.Err() == context.Canceled {
+		// Our rpc stack does not propagates context cancellation to the other service.  Lets make an explicit
+		// call to matching to notify this poller is gone to prevent any tasks being dispatched to zombie pollers.
+		err = wh.matching.CancelOutstandingPoll(context.Background(), &m.CancelOutstandingPollRequest{
+			DomainUUID:   common.StringPtr(domainID),
+			TaskListType: common.Int32Ptr(taskListType),
+			TaskList:     taskList,
+			PollerID:     common.StringPtr(pollerID),
+		})
+		// We can do much if this call fails.  Just log the error and move on
+		if err != nil {
+			wh.Service.GetLogger().Errorf("Failed to cancel outstanding poller.  Tasklist: %v, Error: %v,",
+				taskList.GetName(), err)
+		}
+
+		// Does'nt matter what we return here.  Client already went away.
+		return nil
+	}
+
+	return err
 }
 
 // RecordActivityTaskHeartbeat - Record Activity Task Heart beat.

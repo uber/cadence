@@ -305,10 +305,12 @@ func (c *taskListManagerImpl) getTask(ctx context.Context) (*getTaskResult, erro
 	defer timer.Stop()
 
 	pollerID, ok := ctx.Value(pollerIDKey).(string)
-	childCtx, cancel := context.WithCancel(ctx)
-	if ok {
+	childCtx := ctx
+	if ok && pollerID != "" {
 		// Found pollerID on context, add it to the map to allow it to be canceled in
 		// response to CancelPoller call
+		var cancel context.CancelFunc
+		childCtx, cancel = context.WithCancel(ctx)
 		c.outstandingPollsLock.Lock()
 		c.outstandingPollsMap[pollerID] = cancel
 		c.outstandingPollsLock.Unlock()
@@ -318,8 +320,6 @@ func (c *taskListManagerImpl) getTask(ctx context.Context) (*getTaskResult, erro
 			c.outstandingPollsLock.Unlock()
 			cancel()
 		}()
-	} else {
-		defer cancel()
 	}
 
 	select {
