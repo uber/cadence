@@ -380,6 +380,9 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 				"PollForDecisionTask failed. TaskList: %v, Error: %v", *pollRequest.TaskList.Name, err)
 			return nil, wh.error(err, scope)
 		}
+
+		// Must be cancellation error.  Does'nt matter what we return here.  Client already went away.
+		return nil, nil
 	}
 
 	var history *gen.History
@@ -437,7 +440,7 @@ func (wh *WorkflowHandler) cancelOutstandingPoll(ctx context.Context, err error,
 				taskList.GetName(), err)
 		}
 
-		// Does'nt matter what we return here.  Client already went away.
+		// Clear error as we don't want to report context cancellation error to count against our SLA
 		return nil
 	}
 
