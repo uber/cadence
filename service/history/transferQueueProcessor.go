@@ -950,8 +950,9 @@ MoveAckLevelLoop:
 	if err := a.shard.UpdateTransferAckLevel(updatedAckLevel); err != nil {
 		a.metricsClient.IncCounter(metrics.TransferQueueProcessorScope, metrics.AckLevelUpdateFailedCounter)
 		logging.LogOperationFailedEvent(a.logger, "Error updating ack level for shard", err)
+	} else {
+		a.lastUpdated = time.Now()
 	}
-
 }
 
 func minDuration(x, y time.Duration) time.Duration {

@@ -999,5 +999,7 @@ MoveAckLevelLoop:
 	if err := t.shard.UpdateTimerAckLevel(updatedAckLevel); err != nil {
 		t.metricsClient.IncCounter(metrics.TimerQueueProcessorScope, metrics.AckLevelUpdateFailedCounter)
 		t.logger.Errorf("Error updating timer ack level for shard: %v", err)
+	} else {
+		t.lastUpdated = time.Now()
 	}
 }
