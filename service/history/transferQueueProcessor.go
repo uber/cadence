@@ -942,7 +942,7 @@ MoveAckLevelLoop:
 	a.Unlock()
 
 	// Do not update Acklevel if nothing changed upto force update interval
-	if initialAckLevel == updatedAckLevel && time.Since(a.lastUpdated) > a.config.TransferProcessorForceUpdateInterval {
+	if initialAckLevel == updatedAckLevel && time.Since(a.lastUpdated) < a.config.TransferProcessorForceUpdateInterval {
 		return
 	}
 

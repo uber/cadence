@@ -989,7 +989,7 @@ MoveAckLevelLoop:
 	t.Unlock()
 
 	// Do not update Acklevel if nothing changed upto force update interval
-	if initialAckLevel == updatedAckLevel && time.Since(t.lastUpdated) > t.config.TimerProcessorForceUpdateInterval {
+	if initialAckLevel == updatedAckLevel && time.Since(t.lastUpdated) < t.config.TimerProcessorForceUpdateInterval {
 		return
 	}
 
