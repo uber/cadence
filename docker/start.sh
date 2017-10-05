@@ -43,7 +43,7 @@ init_env() {
     export HOST_IP=`hostname --ip-address`
 
     if [ "$BIND_ON_LOCALHOST" == true ]; then
-            export HOST_IP="127.0.0.1"
+        export HOST_IP="127.0.0.1"
     else
         export BIND_ON_LOCALHOST=false
     fi
@@ -72,6 +72,11 @@ init_env() {
         export NUM_HISTORY_SHARDS=4
     fi
 }
+
+if [ $# -eq 0 ]; then
+    echo 'Missing required argument. Usage: ./start.sh <path_to_Cadence_repo>'
+    exit
+fi
 
 CADENCE_HOME=$1
 

@@ -119,8 +119,8 @@ func (f *tokenBucketFactoryImpl) CreateTokenBucket(rps int, timeSource TimeSourc
 }
 
 func (tb *tokenBucketImpl) TryConsume(count int) (bool, time.Duration) {
-	now := tb.timeSource.Now().UnixNano()
 	tb.Lock()
+	now := tb.timeSource.Now().UnixNano()
 	tb.refill(now)
 	nextRefillTime := time.Duration(tb.nextRefillTime - now)
 	if tb.tokens < count {
