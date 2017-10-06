@@ -32,10 +32,11 @@ docker-compose up
 Updating an existing image and restarting
 -----------------------------------------
 ```
-cd $GOPATH/src/github.com/uber/cadence/docker
 docker-compose stop
-docker-compose build
+cd $GOPATH/src/github.com/uber/cadence/docker
+docker build . -t ubercadence/server:master --build-arg build_branch=YOUR_CHECKOUT_BRANCH
 docker-compose up
+
 ```
 
 Quickstart for production
@@ -51,9 +52,10 @@ docker run -e CASSANDRA_CONSISTENCY=Quorum \            -- Default cassandra con
     -e KEYSPACE=<keyspace>                              -- Cassandra keyspace
     -e VISIBILITY_KEYSPACE=<visibility_keyspace>        -- Cassandra visibility keyspace
     -e SKIP_SCHEMA_SETUP=true                           -- do not setup cassandra schema during startup
-    -e RINGPOP_SEEDS=10.x.x.x  \                        -- csv of ipaddrs for gossip bootstrap
+    -e RINGPOP_SEEDS=10.x.x.x,10.x.x.x  \               -- csv of ipaddrs for gossip bootstrap
     -e STATSD_ENDPOINT=10.x.x.x:8125                    -- statsd server endpoint
     -e NUM_HISTORY_SHARDS=1024  \                       -- Number of history shards
     -e SERVICES=history,matching \                      -- Spinup only the provided services
+    -e LOG_LEVEL=debug,info \                           -- Logging level
     ubercadence/server:<tag>
 ```
