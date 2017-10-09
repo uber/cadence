@@ -19,24 +19,30 @@ Using a pre-built image
 -----------------------
 With every tagged release of the cadence server, there is also a corresponding
 docker image that's uploaded to docker hub. In addition, the release will also
-contain a docker.tar.gz file (docker-compose startup scripts). Execute the following
+contain a **docker.tar.gz** file (docker-compose startup scripts). 
+Go [here](https://github.com/uber/cadence/releases/latest) to download a latest **docker.tar.gz** 
+
+Execute the following
 commands to start a pre-built image along with all dependencies (cassandra/statsd).
 
 ```
-wget https://github.com/uber/cadence/releases/download/v0.1.0-beta/docker.tar.gz
 tar -xzvf docker.tar.gz
 cd docker
 docker-compose up
 ```
 
-Updating an existing image and restarting
+Building an image for any branch and restarting
 -----------------------------------------
+Replace **YOUR_TAG** and **YOUR_CHECKOUT_BRANCH** in the below command to build:
 ```
-docker-compose stop
 cd $GOPATH/src/github.com/uber/cadence/docker
-docker build . -t ubercadence/server:master --build-arg build_branch=YOUR_CHECKOUT_BRANCH
+docker build . -t ubercadence/server:YOUR_TAG --build-arg git_branch=YOUR_CHECKOUT_BRANCH
+```
+Replace the tag of **image: ubercadence/server** to **YOUR_TAG** in docker-compose.yml .
+Then stop service and remove all containers using the below commands.
+```
+docker-compose down
 docker-compose up
-
 ```
 
 Quickstart for production
