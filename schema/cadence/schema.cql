@@ -210,3 +210,5 @@ CREATE TABLE domains_by_name (
 )  WITH COMPACTION = {
      'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'
    };
+
+ALTER TYPE workflow_execution ADD workflow_timeout int;

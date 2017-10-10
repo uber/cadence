@@ -61,4 +61,9 @@ Run all the tests:
 
 ```bash
 make test
+
+# or go to folder with *_test.go, e.g
+cd service/history/ 
+go test -v
+go test -run <TestSpercificTaskName>
 ```

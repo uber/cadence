@@ -361,15 +361,34 @@ func (t *transferQueueProcessorImpl) processDecisionTask(task *persistence.Trans
 		WorkflowId: common.StringPtr(task.WorkflowID),
 		RunId:      common.StringPtr(task.RunID),
 	}
-
 	taskList := &workflow.TaskList{
 		Name: &task.TaskList,
 	}
+
+	// get workflow timeout
+	context, release, err := t.cache.getOrCreateWorkflowExecution(domainID, execution)
+	if err != nil {
+		return err
+	}
+	var mb *mutableStateBuilder
+	mb, err = context.loadWorkflowExecution()
+	if err != nil {
+		release()
+		if _, ok := err.(*workflow.EntityNotExistsError); ok {
+			// this could happen if this is a duplicate processing of the task, and the execution has already completed.
+			return nil
+		}
+		return err
+	}
+	timeout := mb.executionInfo.WorkflowTimeout
+	release()
+
 	err = t.matchingClient.AddDecisionTask(nil, &m.AddDecisionTaskRequest{
-		DomainUUID: common.StringPtr(domainID),
-		Execution:  &execution,
-		TaskList:   taskList,
-		ScheduleId: &task.ScheduleID,
+		DomainUUID:                    common.StringPtr(domainID),
+		Execution:                     &execution,
+		TaskList:                      taskList,
+		ScheduleId:                    &task.ScheduleID,
+		ScheduleToStartTimeoutSeconds: common.Int32Ptr(timeout),
 	})
 
 	if err != nil {

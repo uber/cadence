@@ -73,11 +73,11 @@ func (s *cassandraPersistenceSuite) TestPersistenceStartWorkflow() {
 		WorkflowId: common.StringPtr("start-workflow-test"),
 		RunId:      common.StringPtr("7f9fe8a0-9237-11e6-ae22-56b6b6499611"),
 	}
-	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType", 13, nil, 3, 0, 2, nil)
+	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType", 20, 13, nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
 	s.NotEmpty(task0, "Expected non empty task identifier.")
 
-	task1, err1 := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType1", 14, nil, 3, 0, 2, nil)
+	task1, err1 := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType1", 20, 14, nil, 3, 0, 2, nil)
 	s.NotNil(err1, "Expected workflow creation to fail.")
 	log.Infof("Unable to start workflow execution: %v", err1)
 	startedErr, ok := err1.(*gen.WorkflowExecutionAlreadyStartedError)
@@ -91,6 +91,7 @@ func (s *cassandraPersistenceSuite) TestPersistenceStartWorkflow() {
 		Execution:            workflowExecution,
 		TaskList:             "queue1",
 		WorkflowTypeName:     "workflow_type_test",
+		WorkflowTimeout:      20,
 		DecisionTimeoutValue: 13,
 		ExecutionContext:     nil,
 		NextEventID:          int64(3),
@@ -122,7 +123,7 @@ func (s *cassandraPersistenceSuite) TestGetWorkflow() {
 		WorkflowId: common.StringPtr("get-workflow-test"),
 		RunId:      common.StringPtr("918e7b1d-bfa4-4fe0-86cb-604858f90ce4"),
 	}
-	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType", 13, nil, 3, 0, 2, nil)
+	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType", 20, 13, nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
 	s.NotEmpty(task0, "Expected non empty task identifier.")
 
@@ -154,7 +155,7 @@ func (s *cassandraPersistenceSuite) TestUpdateWorkflow() {
 		WorkflowId: common.StringPtr("update-workflow-test"),
 		RunId:      common.StringPtr("5ba5e531-e46b-48d9-b4b3-859919839553"),
 	}
-	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType", 13, nil, 3, 0, 2, nil)
+	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType", 20, 13, nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
 	s.NotEmpty(task0, "Expected non empty task identifier.")
 
@@ -271,7 +272,7 @@ func (s *cassandraPersistenceSuite) TestDeleteWorkflow() {
 		WorkflowId: common.StringPtr("delete-workflow-test"),
 		RunId:      common.StringPtr("4e0917f2-9361-4a14-b16f-1fafe09b287a"),
 	}
-	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType", 13, nil, 3, 0, 2, nil)
+	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType", 20, 13, nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
 	s.NotNil(task0, "Expected non empty task identifier.")
 
@@ -313,7 +314,7 @@ func (s *cassandraPersistenceSuite) TestGetCurrentWorkflow() {
 		WorkflowId: common.StringPtr("get-current-workflow-test"),
 		RunId:      common.StringPtr("6cae4054-6ba7-46d3-8755-e3c2db6f74ea"),
 	}
-	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType", 13, nil, 3, 0, 2, nil)
+	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType", 20, 13, nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
 	s.NotEmpty(task0, "Expected non empty task identifier.")
 
@@ -338,7 +339,7 @@ func (s *cassandraPersistenceSuite) TestGetCurrentWorkflow() {
 		WorkflowId: common.StringPtr("get-current-workflow-test"),
 		RunId:      common.StringPtr("c3ff4bc6-de18-4643-83b2-037a33f45322"),
 	}
-	task1, err5 := s.CreateWorkflowExecution(domainID, workflowExecution2, "queue1", "wType", 13, nil, 3, 0, 2, nil)
+	task1, err5 := s.CreateWorkflowExecution(domainID, workflowExecution2, "queue1", "wType", 20, 13, nil, 3, 0, 2, nil)
 	s.Nil(err5, "No error expected.")
 	s.NotEmpty(task1, "Expected non empty task identifier.")
 
@@ -354,7 +355,7 @@ func (s *cassandraPersistenceSuite) TestTransferTasks() {
 		RunId:      common.StringPtr("93c87aff-ed89-4ecb-b0fd-d5d1e25dc46d"),
 	}
 
-	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType", 13, nil, 3, 0, 2, nil)
+	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType", 20, 13, nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
 	s.NotEmpty(task0, "Expected non empty task identifier.")
 
@@ -387,7 +388,7 @@ func (s *cassandraPersistenceSuite) TestTransferTasksThroughUpdate() {
 		RunId:      common.StringPtr("30a9fa1f-0db1-4d7a-8c34-aa82c5dad3aa"),
 	}
 
-	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType", 13, nil, 3, 0, 2, nil)
+	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType", 20, 13, nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
 	s.NotEmpty(task0, "Expected non empty task identifier.")
 
@@ -460,7 +461,7 @@ func (s *cassandraPersistenceSuite) TestTransferTasksThroughUpdate() {
 	err9 := s.CompleteTransferTask(task3.TaskID)
 	s.Nil(err9)
 
-	_, err10 := s.CreateWorkflowExecution(domainID, newExecution, "queue1", "wType", 13, nil, 3, 0, 2, nil)
+	_, err10 := s.CreateWorkflowExecution(domainID, newExecution, "queue1", "wType", 20, 13, nil, 3, 0, 2, nil)
 	s.Nil(err10, "No error expected.")
 }
 
@@ -469,7 +470,7 @@ func (s *cassandraPersistenceSuite) TestCancelTransferTaskTasks() {
 	workflowExecution := gen.WorkflowExecution{WorkflowId: common.StringPtr("get-decision-task-test"),
 		RunId: common.StringPtr("db20f7e2-1a1e-40d9-9278-d8b886738e05")}
 
-	task0, err := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType", 13, nil, 3, 0, 2, nil)
+	task0, err := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType", 20, 13, nil, 3, 0, 2, nil)
 	s.Nil(err, "No error expected.")
 	s.NotEmpty(task0, "Expected non empty task identifier.")
 
@@ -628,7 +629,7 @@ func (s *cassandraPersistenceSuite) TestTimerTasks() {
 		RunId:      common.StringPtr("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
 	}
 
-	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "taskList", "wType", 13, nil, 3, 0, 2, nil)
+	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "taskList", "wType", 20, 13, nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
 	s.NotEmpty(task0, "Expected non empty task identifier.")
 
@@ -673,7 +674,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_Activities() {
 		RunId:      common.StringPtr("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
 	}
 
-	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "taskList", "wType", 13, nil, 3, 0, 2, nil)
+	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "taskList", "wType", 20, 13, nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
 	s.NotEmpty(task0, "Expected non empty task identifier.")
 
@@ -740,7 +741,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_Timers() {
 		RunId:      common.StringPtr("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
 	}
 
-	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "taskList", "wType", 13, nil, 3, 0, 2, nil)
+	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "taskList", "wType", 20, 13, nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
 	s.NotEmpty(task0, "Expected non empty task identifier.")
 
@@ -789,7 +790,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_ChildExecutions() {
 		RunId:      common.StringPtr("73e89362-25ec-4305-bcb8-d9448b90856c"),
 	}
 
-	task0, err0 := s.CreateChildWorkflowExecution(domainID, workflowExecution, parentDomainID, parentExecution, 1, "taskList", "wType", 13, nil, 3, 0, 2, nil)
+	task0, err0 := s.CreateChildWorkflowExecution(domainID, workflowExecution, parentDomainID, parentExecution, 1, "taskList", "wType", 20, 13, nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
 	s.NotEmpty(task0, "Expected non empty task identifier.")
 
@@ -846,7 +847,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_RequestCancel() {
 		RunId:      common.StringPtr("87f96253-b925-426e-90db-aa4ee89b5aca"),
 	}
 
-	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "taskList", "wType", 13, nil, 3, 0, 2, nil)
+	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "taskList", "wType", 20, 13, nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
 	s.NotEmpty(task0, "Expected non empty task identifier.")
 
@@ -893,7 +894,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableStateInfo() {
 		RunId:      common.StringPtr("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
 	}
 
-	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "taskList", "wType", 13, nil, 3, 0, 2, nil)
+	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "taskList", "wType", 20, 13, nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
 	s.NotEmpty(task0, "Expected non empty task identifier.")
 
@@ -924,7 +925,7 @@ func (s *cassandraPersistenceSuite) TestContinueAsNew() {
 		RunId:      common.StringPtr("551c88d2-d9e6-404f-8131-9eec14f36643"),
 	}
 
-	_, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType", 13, nil, 3, 0, 2, nil)
+	_, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType", 20, 13, nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
 
 	state0, err1 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
