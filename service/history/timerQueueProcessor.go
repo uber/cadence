@@ -301,6 +301,7 @@ func (t *timerQueueProcessorImpl) internalProcessor(tasksCh chan<- *persistence.
 
 			case <-updateAckChan:
 				t.ackMgr.updateAckLevel()
+				continue
 			}
 		}
 
