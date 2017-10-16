@@ -381,6 +381,8 @@ func (t *transferQueueProcessorImpl) processDecisionTask(task *persistence.Trans
 		return err
 	}
 	timeout := mb.executionInfo.WorkflowTimeout
+	wfTypeName := mb.executionInfo.WorkflowTypeName
+	startTimestamp := mb.executionInfo.StartTimestamp
 	release()
 
 	err = t.matchingClient.AddDecisionTask(nil, &m.AddDecisionTaskRequest{
@@ -396,7 +398,7 @@ func (t *transferQueueProcessorImpl) processDecisionTask(task *persistence.Trans
 	}
 
 	if task.ScheduleID == firstEventID+1 {
-		err = t.recordWorkflowExecutionStarted(execution, task)
+		err = t.recordWorkflowExecutionStarted(execution, task, wfTypeName, startTimestamp)
 	}
 
 	if err != nil {
@@ -693,22 +695,13 @@ func (t *transferQueueProcessorImpl) processStartChildExecution(task *persistenc
 }
 
 func (t *transferQueueProcessorImpl) recordWorkflowExecutionStarted(
-	execution workflow.WorkflowExecution, task *persistence.TransferTaskInfo) error {
-	context, release, err := t.cache.getOrCreateWorkflowExecution(task.DomainID, execution)
-	if err != nil {
-		return err
-	}
-	defer release()
-	mb, err := context.loadWorkflowExecution()
-	if err != nil {
-		return err
-	}
+	execution workflow.WorkflowExecution, task *persistence.TransferTaskInfo, wfTypeName string, startTimestamp time.Time) error {
 
-	err = t.visibilityManager.RecordWorkflowExecutionStarted(&persistence.RecordWorkflowExecutionStartedRequest{
+	err := t.visibilityManager.RecordWorkflowExecutionStarted(&persistence.RecordWorkflowExecutionStartedRequest{
 		DomainUUID:       task.DomainID,
 		Execution:        execution,
-		WorkflowTypeName: mb.executionInfo.WorkflowTypeName,
-		StartTimestamp:   mb.executionInfo.StartTimestamp.UnixNano(),
+		WorkflowTypeName: wfTypeName,
+		StartTimestamp:   startTimestamp.UnixNano(),
 	})
 
 	return err

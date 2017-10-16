@@ -1885,6 +1885,8 @@ func createWorkflowExecutionInfo(result map[string]interface{}) *WorkflowExecuti
 			info.TaskList = v.(string)
 		case "workflow_type_name":
 			info.WorkflowTypeName = v.(string)
+		case "workflow_timeout":
+			info.WorkflowTimeout = int32(v.(int))
 		case "decision_task_timeout":
 			info.DecisionTimeoutValue = int32(v.(int))
 		case "execution_context":

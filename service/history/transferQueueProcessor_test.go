@@ -109,7 +109,7 @@ workerPump:
 	for {
 		select {
 		case task := <-tasksCh:
-			s.mockMatching.On("AddDecisionTask", mock.Anything, createAddRequestFromTask(task, 0)).Once().Return(nil)
+			s.mockMatching.On("AddDecisionTask", mock.Anything, createAddRequestFromTask(task, 20)).Once().Return(nil)
 			if task.ScheduleID == firstEventID+1 {
 				s.mockVisibilityMgr.On("RecordWorkflowExecutionStarted", mock.Anything).Once().Return(nil)
 			}

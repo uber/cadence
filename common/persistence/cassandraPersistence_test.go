@@ -113,7 +113,7 @@ func (s *cassandraPersistenceSuite) TestPersistenceStartWorkflow() {
 
 	s.NotNil(err2, "Expected workflow creation to fail.")
 	s.Nil(response)
-	log.Infof("Unable to start workflow execution: %v", err1)
+	log.Infof("Unable to start workflow execution: %v", err2)
 	s.IsType(&ShardOwnershipLostError{}, err2)
 }
 
@@ -137,6 +137,7 @@ func (s *cassandraPersistenceSuite) TestGetWorkflow() {
 	s.Equal("918e7b1d-bfa4-4fe0-86cb-604858f90ce4", info.RunID)
 	s.Equal("queue1", info.TaskList)
 	s.Equal("wType", info.WorkflowTypeName)
+	s.Equal(int32(20), info.WorkflowTimeout)
 	s.Equal(int32(13), info.DecisionTimeoutValue)
 	s.Equal([]byte(nil), info.ExecutionContext)
 	s.Equal(WorkflowStateCreated, info.State)
@@ -168,6 +169,7 @@ func (s *cassandraPersistenceSuite) TestUpdateWorkflow() {
 	s.Equal("5ba5e531-e46b-48d9-b4b3-859919839553", info0.RunID)
 	s.Equal("queue1", info0.TaskList)
 	s.Equal("wType", info0.WorkflowTypeName)
+	s.Equal(int32(20), info0.WorkflowTimeout)
 	s.Equal(int32(13), info0.DecisionTimeoutValue)
 	s.Equal([]byte(nil), info0.ExecutionContext)
 	s.Equal(WorkflowStateCreated, info0.State)
@@ -195,6 +197,7 @@ func (s *cassandraPersistenceSuite) TestUpdateWorkflow() {
 	s.Equal("5ba5e531-e46b-48d9-b4b3-859919839553", info1.RunID)
 	s.Equal("queue1", info1.TaskList)
 	s.Equal("wType", info1.WorkflowTypeName)
+	s.Equal(int32(20), info1.WorkflowTimeout)
 	s.Equal(int32(13), info1.DecisionTimeoutValue)
 	s.Equal([]byte(nil), info1.ExecutionContext)
 	s.Equal(WorkflowStateCreated, info1.State)
@@ -224,6 +227,7 @@ func (s *cassandraPersistenceSuite) TestUpdateWorkflow() {
 	s.Equal("5ba5e531-e46b-48d9-b4b3-859919839553", info2.RunID)
 	s.Equal("queue1", info2.TaskList)
 	s.Equal("wType", info2.WorkflowTypeName)
+	s.Equal(int32(20), info2.WorkflowTimeout)
 	s.Equal(int32(13), info2.DecisionTimeoutValue)
 	s.Equal([]byte(nil), info2.ExecutionContext)
 	s.Equal(WorkflowStateCreated, info2.State)
@@ -253,6 +257,7 @@ func (s *cassandraPersistenceSuite) TestUpdateWorkflow() {
 	s.Equal("5ba5e531-e46b-48d9-b4b3-859919839553", info3.RunID)
 	s.Equal("queue1", info3.TaskList)
 	s.Equal("wType", info3.WorkflowTypeName)
+	s.Equal(int32(20), info1.WorkflowTimeout)
 	s.Equal(int32(13), info3.DecisionTimeoutValue)
 	s.Equal([]byte(nil), info3.ExecutionContext)
 	s.Equal(WorkflowStateCreated, info3.State)
@@ -285,6 +290,7 @@ func (s *cassandraPersistenceSuite) TestDeleteWorkflow() {
 	s.Equal("4e0917f2-9361-4a14-b16f-1fafe09b287a", info0.RunID)
 	s.Equal("queue1", info0.TaskList)
 	s.Equal("wType", info0.WorkflowTypeName)
+	s.Equal(int32(20), info0.WorkflowTimeout)
 	s.Equal(int32(13), info0.DecisionTimeoutValue)
 	s.Equal([]byte(nil), info0.ExecutionContext)
 	s.Equal(WorkflowStateCreated, info0.State)
@@ -975,6 +981,7 @@ func copyWorkflowExecutionInfo(sourceInfo *WorkflowExecutionInfo) *WorkflowExecu
 		CompletionEvent:      sourceInfo.CompletionEvent,
 		TaskList:             sourceInfo.TaskList,
 		WorkflowTypeName:     sourceInfo.WorkflowTypeName,
+		WorkflowTimeout:      sourceInfo.WorkflowTimeout,
 		DecisionTimeoutValue: sourceInfo.DecisionTimeoutValue,
 		ExecutionContext:     sourceInfo.ExecutionContext,
 		State:                sourceInfo.State,
