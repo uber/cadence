@@ -58,6 +58,10 @@ type (
 		updateRequestCancelInfos    []*persistence.RequestCancelInfo         // Modified RequestCancel Infos since last update
 		deleteRequestCancelInfo     *int64                                   // Deleted RequestCancel Info since last update
 
+		persistedBufferedEvents []*persistence.SerializedHistoryEventBatch // buffered history events that are already persisted
+		pendingBufferedEvents   []*persistence.SerializedHistoryEventBatch // buffered history events that needs to be persisted
+		clearBufferedEvents     bool                                       // delete buffered events from persistence
+
 		executionInfo   *persistence.WorkflowExecutionInfo // Workflow mutable state info.
 		continueAsNew   *persistence.CreateWorkflowExecutionRequest
 		hBuilder        *historyBuilder
@@ -75,6 +79,8 @@ type (
 		updateChildExecutionInfos []*persistence.ChildExecutionInfo
 		deleteChildExecutionInfo  *int64
 		continueAsNew             *persistence.CreateWorkflowExecutionRequest
+		newBufferedEvents         []*persistence.SerializedHistoryEventBatch
+		clearBufferedEvents       bool
 	}
 
 	// TODO: This should be part of persistence layer
@@ -119,12 +125,93 @@ func (e *mutableStateBuilder) Load(state *persistence.WorkflowMutableState) {
 	e.pendingChildExecutionInfoIDs = state.ChildExecutionInfos
 	e.pendingRequestCancelInfoIDs = state.RequestCancelInfos
 	e.executionInfo = state.ExecutionInfo
+	e.persistedBufferedEvents = state.BufferedEvents
 	for _, ai := range state.ActivitInfos {
 		e.pendingActivityInfoByActivityID[ai.ActivityID] = ai.ScheduleID
 	}
 }
 
-func (e *mutableStateBuilder) CloseUpdateSession() *mutableStateSessionUpdates {
+func (e *mutableStateBuilder) FlushBufferedEvents() error {
+	// put new events into 2 buckets:
+	//  1) if the event was added while there was in-flight decision, then put it in buffered bucket
+	//  2) otherwise, put it in committed bucket
+	var newBufferedEvents []*workflow.HistoryEvent
+	var newCommittedEvents []*workflow.HistoryEvent
+	for _, event := range e.hBuilder.history {
+		if event.GetEventId() == bufferedEventID {
+			newBufferedEvents = append(newBufferedEvents, event)
+		} else {
+			newCommittedEvents = append(newCommittedEvents, event)
+		}
+	}
+
+	// no decision in-flight, flush all buffered events to committed bucket
+	if !e.HasInFlightDecisionTask() {
+		flush := func(bufferedEvents []*persistence.SerializedHistoryEventBatch) error {
+			for _, serializedEvents := range bufferedEvents {
+				// TODO: get serializer based on eventBatch's EncodingType when we support multiple encoding
+				eventBatch, err := e.hBuilder.serializer.Deserialize(serializedEvents)
+				if err != nil {
+					logging.LogHistoryDeserializationErrorEvent(e.logger, err, "Unable to serialize execution history for update.")
+					return err
+				}
+				for _, event := range eventBatch.Events {
+					newCommittedEvents = append(newCommittedEvents, event)
+				}
+			}
+			return nil
+		}
+
+		// flush persisted buffered events
+		if err := flush(e.persistedBufferedEvents); err != nil {
+			return err
+		}
+		// flush pending buffered events
+		if err := flush(e.pendingBufferedEvents); err != nil {
+			return err
+		}
+
+		// flush new buffered events that were not saved to persistence yet
+		newCommittedEvents = append(newCommittedEvents, newBufferedEvents...)
+		newBufferedEvents = nil
+
+		// remove the persisted buffered events from persistence if there is any
+		e.clearBufferedEvents = e.clearBufferedEvents || len(e.persistedBufferedEvents) > 0
+		e.persistedBufferedEvents = nil
+		// clear pending buffered events
+		e.pendingBufferedEvents = nil
+	}
+
+	// make sure all new committed events have correct EventID
+	for _, event := range newCommittedEvents {
+		if event.GetEventId() == bufferedEventID {
+			eventID := e.executionInfo.NextEventID
+			event.EventId = common.Int64Ptr(eventID)
+			e.executionInfo.NextEventID++
+		}
+	}
+	e.hBuilder.history = newCommittedEvents
+
+	// if decision is not closed yet, and there are new buffered events, then put those to the pending buffer
+	if e.HasInFlightDecisionTask() && len(newBufferedEvents) > 0 {
+		// decision in-flight, and some new events needs to be buffered
+		bufferedBatch := persistence.NewHistoryEventBatch(persistence.GetDefaultHistoryVersion(), newBufferedEvents)
+		serializedEvents, err := e.hBuilder.serializer.Serialize(bufferedBatch)
+		if err != nil {
+			logging.LogHistorySerializationErrorEvent(e.logger, err, "Unable to serialize execution history for update.")
+			return err
+		}
+		e.pendingBufferedEvents = append(e.pendingBufferedEvents, serializedEvents)
+	}
+
+	return nil
+}
+
+func (e *mutableStateBuilder) CloseUpdateSession() (*mutableStateSessionUpdates, error) {
+	if err := e.FlushBufferedEvents(); err != nil {
+		return nil, err
+	}
+
 	updates := &mutableStateSessionUpdates{
 		newEventsBuilder:          e.hBuilder,
 		updateActivityInfos:       e.updateActivityInfos,
@@ -134,6 +221,8 @@ func (e *mutableStateBuilder) CloseUpdateSession() *mutableStateSessionUpdates {
 		updateChildExecutionInfos: e.updateChildExecutionInfos,
 		deleteChildExecutionInfo:  e.deleteChildExecutionInfo,
 		continueAsNew:             e.continueAsNew,
+		newBufferedEvents:         e.pendingBufferedEvents,
+		clearBufferedEvents:       e.clearBufferedEvents,
 	}
 
 	// Clear all updates to prepare for the next session
@@ -147,19 +236,30 @@ func (e *mutableStateBuilder) CloseUpdateSession() *mutableStateSessionUpdates {
 	e.updateRequestCancelInfos = []*persistence.RequestCancelInfo{}
 	e.deleteRequestCancelInfo = nil
 	e.continueAsNew = nil
+	e.persistedBufferedEvents = append(e.persistedBufferedEvents, e.pendingBufferedEvents...)
+	e.pendingBufferedEvents = nil
 
-	return updates
+	return updates, nil
 }
 
 func (e *mutableStateBuilder) createNewHistoryEvent(eventType workflow.EventType) *workflow.HistoryEvent {
 	eventID := e.executionInfo.NextEventID
+	if e.HasInFlightDecisionTask() &&
+		eventType != workflow.EventTypeDecisionTaskCompleted &&
+		eventType != workflow.EventTypeDecisionTaskFailed &&
+		eventType != workflow.EventTypeDecisionTaskTimedOut {
+		eventID = bufferedEventID
+	} else {
+		// only increase NextEventID if there is no in-flight decision task
+		e.executionInfo.NextEventID++
+	}
+
 	ts := common.Int64Ptr(time.Now().UnixNano())
 	historyEvent := &workflow.HistoryEvent{}
 	historyEvent.EventId = common.Int64Ptr(eventID)
 	historyEvent.Timestamp = ts
 	historyEvent.EventType = common.EventTypePtr(eventType)
 
-	e.executionInfo.NextEventID++
 	return historyEvent
 }
 
@@ -390,6 +490,10 @@ func (e *mutableStateBuilder) HasPendingDecisionTask() bool {
 	return e.executionInfo.DecisionScheduleID != emptyEventID
 }
 
+func (e *mutableStateBuilder) HasInFlightDecisionTask() bool {
+	return e.executionInfo.DecisionStartedID > 0
+}
+
 // UpdateDecision updates a decision task.
 func (e *mutableStateBuilder) UpdateDecision(di *decisionInfo) {
 	e.executionInfo.DecisionScheduleID = di.ScheduleID
@@ -407,6 +511,8 @@ func (e *mutableStateBuilder) DeleteDecision() {
 		DecisionTimeout: 0,
 	}
 	e.UpdateDecision(emptyDecisionInfo)
+	// flush buffered events
+	e.FlushBufferedEvents()
 }
 
 // GetNextEventID returns next event ID

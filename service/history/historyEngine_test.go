@@ -32,7 +32,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-common/bark"
-
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -401,7 +400,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedConflictOnUpdate() {
 	activity3Attributes := s.getActivityScheduledEvent(executionBuilder, 14).ActivityTaskScheduledEventAttributes
 	s.Equal(activity3ID, *activity3Attributes.ActivityId)
 	s.Equal(activity3Type, *activity3Attributes.ActivityType.Name)
-	s.Equal(int64(13), *activity3Attributes.DecisionTaskCompletedEventId)
+	s.Equal(int64(12), *activity3Attributes.DecisionTaskCompletedEventId)
 	s.Equal(tl, *activity3Attributes.TaskList.Name)
 	s.Equal(activity3Input, activity3Attributes.Input)
 	s.Equal(int32(100), *activity3Attributes.ScheduleToCloseTimeoutSeconds)
@@ -2550,10 +2549,20 @@ func createMutableState(builder *mutableStateBuilder) *persistence.WorkflowMutab
 	for id, info := range builder.pendingTimerInfoIDs {
 		timerInfos[id] = copyTimerInfo(info)
 	}
+	builder.FlushBufferedEvents()
+	var bufferedEvents []*persistence.SerializedHistoryEventBatch
+	if len(builder.persistedBufferedEvents) > 0 {
+		bufferedEvents = append(bufferedEvents, builder.persistedBufferedEvents...)
+	}
+	if len(builder.pendingBufferedEvents) > 0 {
+		bufferedEvents = append(bufferedEvents, builder.pendingBufferedEvents...)
+	}
+
 	return &persistence.WorkflowMutableState{
-		ExecutionInfo: info,
-		ActivitInfos:  activityInfos,
-		TimerInfos:    timerInfos,
+		ExecutionInfo:  info,
+		ActivitInfos:   activityInfos,
+		TimerInfos:     timerInfos,
+		BufferedEvents: bufferedEvents,
 	}
 }
 

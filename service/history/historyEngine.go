@@ -573,7 +573,7 @@ Update_History_Loop:
 		var failCause workflow.DecisionTaskFailedCause
 		var err error
 		completedID := *completedEvent.EventId
-		hasUnhandledEvents := ((completedID - startedID) > 1)
+		hasUnhandledEvents := (msBuilder.GetNextEventID() - completedID) > 1
 		isComplete := false
 		transferTasks := []persistence.Task{}
 		timerTasks := []persistence.Task{}
