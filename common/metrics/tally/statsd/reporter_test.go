@@ -52,7 +52,7 @@ func TestMetricNameWithTagsStability(t *testing.T) {
 	name := "test-metric-name2"
 
 	//test the order is stable
-	for i := 1;  i<=16; i++ {
+	for i := 1; i <= 16; i++ {
 		assert.Equal(t, r.metricNameWithTags(name, tags), r.metricNameWithTags(name, tags))
 	}
 }
