@@ -397,7 +397,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedConflictOnUpdate() {
 	s.Equal(context, ms2.ExecutionInfo.ExecutionContext)
 
 	executionBuilder := s.getBuilder(domainID, we)
-	activity3Attributes := s.getActivityScheduledEvent(executionBuilder, 14).ActivityTaskScheduledEventAttributes
+	activity3Attributes := s.getActivityScheduledEvent(executionBuilder, 13).ActivityTaskScheduledEventAttributes
 	s.Equal(activity3ID, *activity3Attributes.ActivityId)
 	s.Equal(activity3Type, *activity3Attributes.ActivityType.Name)
 	s.Equal(int64(12), *activity3Attributes.DecisionTaskCompletedEventId)
@@ -2443,6 +2443,8 @@ func addDecisionTaskCompletedEvent(builder *mutableStateBuilder, scheduleID, sta
 		Identity:         common.StringPtr(identity),
 	})
 
+	builder.FlushBufferedEvents()
+
 	return e
 }
 
@@ -2551,11 +2553,11 @@ func createMutableState(builder *mutableStateBuilder) *persistence.WorkflowMutab
 	}
 	builder.FlushBufferedEvents()
 	var bufferedEvents []*persistence.SerializedHistoryEventBatch
-	if len(builder.persistedBufferedEvents) > 0 {
-		bufferedEvents = append(bufferedEvents, builder.persistedBufferedEvents...)
+	if len(builder.bufferedEvents) > 0 {
+		bufferedEvents = append(bufferedEvents, builder.bufferedEvents...)
 	}
-	if len(builder.pendingBufferedEvents) > 0 {
-		bufferedEvents = append(bufferedEvents, builder.pendingBufferedEvents...)
+	if builder.updateBufferedEvents != nil {
+		bufferedEvents = append(bufferedEvents, builder.updateBufferedEvents)
 	}
 
 	return &persistence.WorkflowMutableState{

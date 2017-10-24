@@ -230,7 +230,7 @@ func (s *timerQueueProcessor2Suite) TestWorkflowTimeout() {
 	s.mockExecutionMgr.On("CompleteTimerTask", mock.Anything).Return(nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(nil).Run(func(arguments mock.Arguments) {
 		request := arguments.Get(0).(*persistence.UpdateWorkflowExecutionRequest)
-		s.True(len(request.NewBufferedEvents) > 0)
+		s.NotNil(request.NewBufferedEvents)
 		// Done.
 		waitCh <- struct{}{}
 	}).Once()

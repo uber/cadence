@@ -410,7 +410,7 @@ type (
 		DeleteChildExecutionInfo  *int64
 		UpsertRequestCancelInfos  []*RequestCancelInfo
 		DeleteRequestCancelInfo   *int64
-		NewBufferedEvents         []*SerializedHistoryEventBatch
+		NewBufferedEvents         *SerializedHistoryEventBatch
 		ClearBufferedEvents       bool
 	}
 

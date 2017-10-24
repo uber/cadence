@@ -1870,7 +1870,7 @@ func (d *cassandraPersistence) updateRequestCancelInfos(batch *gocql.Batch, requ
 	}
 }
 
-func (d *cassandraPersistence) updateBufferedEvents(batch *gocql.Batch, newBufferedEvents []*SerializedHistoryEventBatch,
+func (d *cassandraPersistence) updateBufferedEvents(batch *gocql.Batch, newBufferedEvents *SerializedHistoryEventBatch,
 	clearBufferedEvents bool, domainID, workflowID, runID string, condition int64, rangeID int64) {
 
 	if clearBufferedEvents {
@@ -1883,17 +1883,12 @@ func (d *cassandraPersistence) updateBufferedEvents(batch *gocql.Batch, newBuffe
 			defaultVisibilityTimestamp,
 			rowTypeExecutionTaskID,
 			condition)
-	}
-
-	if len(newBufferedEvents) > 0 {
-		newEventValues := make([]map[string]interface{}, 0, len(newBufferedEvents))
-		for _, eventBatch := range newBufferedEvents {
-			values := make(map[string]interface{})
-			values["encoding_type"] = eventBatch.EncodingType
-			values["version"] = eventBatch.Version
-			values["data"] = eventBatch.Data
-			newEventValues = append(newEventValues, values)
-		}
+	} else if newBufferedEvents != nil {
+		values := make(map[string]interface{})
+		values["encoding_type"] = newBufferedEvents.EncodingType
+		values["version"] = newBufferedEvents.Version
+		values["data"] = newBufferedEvents.Data
+		newEventValues := []map[string]interface{}{values}
 		batch.Query(templateAppendBufferedEventsQuery,
 			newEventValues,
 			d.shardID,

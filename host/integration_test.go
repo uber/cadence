@@ -1429,8 +1429,19 @@ func (s *integrationSuite) TestBufferedEvents() {
 					Identity:   common.StringPtr(identity),
 				})
 			s.NoError(err)
-			// this will complete the decision task, and since there is buffered event, so a new decision will be scheduled
-			return nil, []*workflow.Decision{}
+			return nil, []*workflow.Decision{{
+				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeScheduleActivityTask),
+				ScheduleActivityTaskDecisionAttributes: &workflow.ScheduleActivityTaskDecisionAttributes{
+					ActivityId:   common.StringPtr("1"),
+					ActivityType: &workflow.ActivityType{Name: common.StringPtr("test-activity-type")},
+					TaskList:     &workflow.TaskList{Name: &tl},
+					Input:        []byte("test-input"),
+					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
+					ScheduleToStartTimeoutSeconds: common.Int32Ptr(2),
+					StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
+					HeartbeatTimeoutSeconds:       common.Int32Ptr(5),
+				},
+			}}
 		} else if previousStartedEventID > 0 && signalEvent == nil {
 			for _, event := range history.Events[previousStartedEventID:] {
 				if *event.EventType == workflow.EventTypeWorkflowExecutionSignaled {
@@ -1473,9 +1484,10 @@ func (s *integrationSuite) TestBufferedEvents() {
 	})
 	s.NoError(err)
 	s.NotNil(histResp.History.Events)
-	s.True(len(histResp.History.Events) >= 5)
+	s.True(len(histResp.History.Events) >= 6)
 	s.Equal(histResp.History.Events[3].GetEventType(), workflow.EventTypeDecisionTaskCompleted)
-	s.Equal(histResp.History.Events[4].GetEventType(), workflow.EventTypeWorkflowExecutionSignaled)
+	s.Equal(histResp.History.Events[4].GetEventType(), workflow.EventTypeActivityTaskScheduled)
+	s.Equal(histResp.History.Events[5].GetEventType(), workflow.EventTypeWorkflowExecutionSignaled)
 
 	// Process signal in decider
 	err = poller.pollAndProcessDecisionTask(true, false)
@@ -2579,16 +2591,15 @@ func (s *integrationSuite) TestChildWorkflowExecution() {
 	s.Nil(err)
 	s.True(childExecutionStarted)
 
-	// Process ChildExecution Started event
+	// Process ChildExecution Started event and Process Child Execution and complete it
 	err = poller.pollAndProcessDecisionTask(false, false)
 	s.logger.Infof("pollAndProcessDecisionTask: %v", err)
 	s.Nil(err)
-	s.NotNil(startedEvent)
+	err = poller.pollAndProcessDecisionTask(false, false)
+	s.logger.Infof("pollAndProcessDecisionTask: %v", err)
+	s.Nil(err)
 
-	// Process Child Execution and complete it
-	err = poller.pollAndProcessDecisionTask(false, false)
-	s.logger.Infof("pollAndProcessDecisionTask: %v", err)
-	s.Nil(err)
+	s.NotNil(startedEvent)
 	s.True(childComplete)
 
 	// Process ChildExecution completed event and complete parent execution
