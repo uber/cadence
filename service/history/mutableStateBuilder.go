@@ -186,7 +186,7 @@ func (e *mutableStateBuilder) FlushBufferedEvents() error {
 
 	e.hBuilder.history = newCommittedEvents
 	// make sure all new committed events have correct EventID
-	e.assignEventIdToBufferedEvents()
+	e.assignEventIDToBufferedEvents()
 
 	// if decision is not closed yet, and there are new buffered events, then put those to the pending buffer
 	if e.HasInFlightDecisionTask() && len(newBufferedEvents) > 0 {
@@ -240,10 +240,11 @@ func (e *mutableStateBuilder) CloseUpdateSession() (*mutableStateSessionUpdates,
 	return updates, nil
 }
 
-func (e *mutableStateBuilder) assignEventIdToBufferedEvents() {
+func (e *mutableStateBuilder) assignEventIDToBufferedEvents() {
 	newCommittedEvents := e.hBuilder.history
 
-	for i, event := range newCommittedEvents {
+	scheduledIDToStartedID := make(map[int64]int64)
+	for _, event := range newCommittedEvents {
 		if event.GetEventId() != bufferedEventID {
 			continue
 		}
@@ -254,48 +255,65 @@ func (e *mutableStateBuilder) assignEventIdToBufferedEvents() {
 
 		switch event.GetEventType() {
 		case workflow.EventTypeActivityTaskStarted:
-			// need to update startedEventId in mutableState if it is still there
-			scheduledEventId := event.ActivityTaskStartedEventAttributes.GetScheduledEventId()
-			if ai, ok := e.GetActivityInfo(scheduledEventId); ok {
+			attributes := event.ActivityTaskStartedEventAttributes
+			scheduledID := attributes.GetScheduledEventId()
+			scheduledIDToStartedID[scheduledID] = eventID
+			if ai, ok := e.GetActivityInfo(scheduledID); ok {
 				ai.StartedID = eventID
 				e.updateActivityInfos = append(e.updateActivityInfos, ai)
 			}
-			// update subsequent buffered events in this batch that have reference to the startedEventId
-			for j := i + 1; j < len(newCommittedEvents); j++ {
-				closeEvent := newCommittedEvents[j]
-				switch closeEvent.GetEventType() {
-				case workflow.EventTypeActivityTaskCompleted:
-					closeEvent.ActivityTaskCompletedEventAttributes.StartedEventId = common.Int64Ptr(eventID)
-				case workflow.EventTypeActivityTaskFailed:
-					closeEvent.ActivityTaskFailedEventAttributes.StartedEventId = common.Int64Ptr(eventID)
-				case workflow.EventTypeActivityTaskTimedOut:
-					closeEvent.ActivityTaskTimedOutEventAttributes.StartedEventId = common.Int64Ptr(eventID)
-				case workflow.EventTypeActivityTaskCanceled:
-					closeEvent.ActivityTaskCanceledEventAttributes.StartedEventId = common.Int64Ptr(eventID)
-				}
-			}
 		case workflow.EventTypeChildWorkflowExecutionStarted:
-			// need to update startedEventId in mutableState if it is still there
-			initiatedEventId := event.ChildWorkflowExecutionStartedEventAttributes.GetInitiatedEventId()
-			if ci, ok := e.GetChildExecutionInfo(initiatedEventId); ok {
+			attributes := event.ChildWorkflowExecutionStartedEventAttributes
+			initiatedID := attributes.GetInitiatedEventId()
+			scheduledIDToStartedID[initiatedID] = eventID
+			if ci, ok := e.GetChildExecutionInfo(initiatedID); ok {
 				ci.StartedID = eventID
 				e.updateChildExecutionInfos = append(e.updateChildExecutionInfos, ci)
 			}
-			// update subsequent buffered events in this batch that have reference to the startedEventId
-			for j := i + 1; j < len(newCommittedEvents); j++ {
-				closeEvent := newCommittedEvents[j]
-				switch closeEvent.GetEventType() {
-				case workflow.EventTypeChildWorkflowExecutionCompleted:
-					closeEvent.ChildWorkflowExecutionCompletedEventAttributes.StartedEventId = common.Int64Ptr(eventID)
-				case workflow.EventTypeChildWorkflowExecutionFailed:
-					closeEvent.ChildWorkflowExecutionFailedEventAttributes.StartedEventId = common.Int64Ptr(eventID)
-				case workflow.EventTypeChildWorkflowExecutionTimedOut:
-					closeEvent.ChildWorkflowExecutionTimedOutEventAttributes.StartedEventId = common.Int64Ptr(eventID)
-				case workflow.EventTypeChildWorkflowExecutionCanceled:
-					closeEvent.ChildWorkflowExecutionCanceledEventAttributes.StartedEventId = common.Int64Ptr(eventID)
-				case workflow.EventTypeChildWorkflowExecutionTerminated:
-					closeEvent.ChildWorkflowExecutionTerminatedEventAttributes.StartedEventId = common.Int64Ptr(eventID)
-				}
+		case workflow.EventTypeActivityTaskCompleted:
+			attributes := event.ActivityTaskCompletedEventAttributes
+			if startedID, ok := scheduledIDToStartedID[attributes.GetScheduledEventId()]; ok {
+				attributes.StartedEventId = common.Int64Ptr(startedID)
+			}
+		case workflow.EventTypeActivityTaskFailed:
+			attributes := event.ActivityTaskFailedEventAttributes
+			if startedID, ok := scheduledIDToStartedID[attributes.GetScheduledEventId()]; ok {
+				attributes.StartedEventId = common.Int64Ptr(startedID)
+			}
+		case workflow.EventTypeActivityTaskTimedOut:
+			attributes := event.ActivityTaskTimedOutEventAttributes
+			if startedID, ok := scheduledIDToStartedID[attributes.GetScheduledEventId()]; ok {
+				attributes.StartedEventId = common.Int64Ptr(startedID)
+			}
+		case workflow.EventTypeActivityTaskCanceled:
+			attributes := event.ActivityTaskCanceledEventAttributes
+			if startedID, ok := scheduledIDToStartedID[attributes.GetScheduledEventId()]; ok {
+				attributes.StartedEventId = common.Int64Ptr(startedID)
+			}
+		case workflow.EventTypeChildWorkflowExecutionCompleted:
+			attributes := event.ChildWorkflowExecutionCompletedEventAttributes
+			if startedID, ok := scheduledIDToStartedID[attributes.GetInitiatedEventId()]; ok {
+				attributes.StartedEventId = common.Int64Ptr(startedID)
+			}
+		case workflow.EventTypeChildWorkflowExecutionFailed:
+			attributes := event.ChildWorkflowExecutionFailedEventAttributes
+			if startedID, ok := scheduledIDToStartedID[attributes.GetInitiatedEventId()]; ok {
+				attributes.StartedEventId = common.Int64Ptr(startedID)
+			}
+		case workflow.EventTypeChildWorkflowExecutionTimedOut:
+			attributes := event.ChildWorkflowExecutionTimedOutEventAttributes
+			if startedID, ok := scheduledIDToStartedID[attributes.GetInitiatedEventId()]; ok {
+				attributes.StartedEventId = common.Int64Ptr(startedID)
+			}
+		case workflow.EventTypeChildWorkflowExecutionCanceled:
+			attributes := event.ChildWorkflowExecutionCanceledEventAttributes
+			if startedID, ok := scheduledIDToStartedID[attributes.GetInitiatedEventId()]; ok {
+				attributes.StartedEventId = common.Int64Ptr(startedID)
+			}
+		case workflow.EventTypeChildWorkflowExecutionTerminated:
+			attributes := event.ChildWorkflowExecutionTerminatedEventAttributes
+			if startedID, ok := scheduledIDToStartedID[attributes.GetInitiatedEventId()]; ok {
+				attributes.StartedEventId = common.Int64Ptr(startedID)
 			}
 		}
 	}
