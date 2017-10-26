@@ -184,15 +184,9 @@ func (e *mutableStateBuilder) FlushBufferedEvents() error {
 		e.updateBufferedEvents = nil
 	}
 
-	// make sure all new committed events have correct EventID
-	for _, event := range newCommittedEvents {
-		if event.GetEventId() == bufferedEventID {
-			eventID := e.executionInfo.NextEventID
-			event.EventId = common.Int64Ptr(eventID)
-			e.executionInfo.NextEventID++
-		}
-	}
 	e.hBuilder.history = newCommittedEvents
+	// make sure all new committed events have correct EventID
+	e.assignEventIdToBufferedEvents()
 
 	// if decision is not closed yet, and there are new buffered events, then put those to the pending buffer
 	if e.HasInFlightDecisionTask() && len(newBufferedEvents) > 0 {
@@ -244,6 +238,67 @@ func (e *mutableStateBuilder) CloseUpdateSession() (*mutableStateSessionUpdates,
 	}
 
 	return updates, nil
+}
+
+func (e *mutableStateBuilder) assignEventIdToBufferedEvents() {
+	newCommittedEvents := e.hBuilder.history
+
+	for i, event := range newCommittedEvents {
+		if event.GetEventId() != bufferedEventID {
+			continue
+		}
+
+		eventID := e.executionInfo.NextEventID
+		event.EventId = common.Int64Ptr(eventID)
+		e.executionInfo.NextEventID++
+
+		switch event.GetEventType() {
+		case workflow.EventTypeActivityTaskStarted:
+			// need to update startedEventId in mutableState if it is still there
+			scheduledEventId := event.ActivityTaskStartedEventAttributes.GetScheduledEventId()
+			if ai, ok := e.GetActivityInfo(scheduledEventId); ok {
+				ai.StartedID = eventID
+				e.updateActivityInfos = append(e.updateActivityInfos, ai)
+			}
+			// update subsequent buffered events in this batch that have reference to the startedEventId
+			for j := i + 1; j < len(newCommittedEvents); j++ {
+				closeEvent := newCommittedEvents[j]
+				switch closeEvent.GetEventType() {
+				case workflow.EventTypeActivityTaskCompleted:
+					closeEvent.ActivityTaskCompletedEventAttributes.StartedEventId = common.Int64Ptr(eventID)
+				case workflow.EventTypeActivityTaskFailed:
+					closeEvent.ActivityTaskFailedEventAttributes.StartedEventId = common.Int64Ptr(eventID)
+				case workflow.EventTypeActivityTaskTimedOut:
+					closeEvent.ActivityTaskTimedOutEventAttributes.StartedEventId = common.Int64Ptr(eventID)
+				case workflow.EventTypeActivityTaskCanceled:
+					closeEvent.ActivityTaskCanceledEventAttributes.StartedEventId = common.Int64Ptr(eventID)
+				}
+			}
+		case workflow.EventTypeChildWorkflowExecutionStarted:
+			// need to update startedEventId in mutableState if it is still there
+			initiatedEventId := event.ChildWorkflowExecutionStartedEventAttributes.GetInitiatedEventId()
+			if ci, ok := e.GetChildExecutionInfo(initiatedEventId); ok {
+				ci.StartedID = eventID
+				e.updateChildExecutionInfos = append(e.updateChildExecutionInfos, ci)
+			}
+			// update subsequent buffered events in this batch that have reference to the startedEventId
+			for j := i + 1; j < len(newCommittedEvents); j++ {
+				closeEvent := newCommittedEvents[j]
+				switch closeEvent.GetEventType() {
+				case workflow.EventTypeChildWorkflowExecutionCompleted:
+					closeEvent.ChildWorkflowExecutionCompletedEventAttributes.StartedEventId = common.Int64Ptr(eventID)
+				case workflow.EventTypeChildWorkflowExecutionFailed:
+					closeEvent.ChildWorkflowExecutionFailedEventAttributes.StartedEventId = common.Int64Ptr(eventID)
+				case workflow.EventTypeChildWorkflowExecutionTimedOut:
+					closeEvent.ChildWorkflowExecutionTimedOutEventAttributes.StartedEventId = common.Int64Ptr(eventID)
+				case workflow.EventTypeChildWorkflowExecutionCanceled:
+					closeEvent.ChildWorkflowExecutionCanceledEventAttributes.StartedEventId = common.Int64Ptr(eventID)
+				case workflow.EventTypeChildWorkflowExecutionTerminated:
+					closeEvent.ChildWorkflowExecutionTerminatedEventAttributes.StartedEventId = common.Int64Ptr(eventID)
+				}
+			}
+		}
+	}
 }
 
 func (e *mutableStateBuilder) createNewHistoryEvent(eventType workflow.EventType) *workflow.HistoryEvent {
