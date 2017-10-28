@@ -398,7 +398,9 @@ func (t *transferQueueProcessorImpl) processDecisionTask(task *persistence.Trans
 	}
 
 	if task.ScheduleID == firstEventID+1 {
-		err = t.recordWorkflowExecutionStarted(execution, task, wfTypeName, startTimestamp)
+		err = t.recordWorkflowExecutionStarted(
+			execution, task, wfTypeName, startTimestamp, timeout,
+		)
 	}
 
 	if err != nil {
@@ -695,13 +697,16 @@ func (t *transferQueueProcessorImpl) processStartChildExecution(task *persistenc
 }
 
 func (t *transferQueueProcessorImpl) recordWorkflowExecutionStarted(
-	execution workflow.WorkflowExecution, task *persistence.TransferTaskInfo, wfTypeName string, startTimestamp time.Time) error {
-
+	execution workflow.WorkflowExecution, task *persistence.TransferTaskInfo, wfTypeName string,
+	startTimestamp time.Time, timeout int32,
+) error {
+	ttlBuffer := t.shard.GetConfig().OpenWorkflowTTLBufferInSecs
 	err := t.visibilityManager.RecordWorkflowExecutionStarted(&persistence.RecordWorkflowExecutionStartedRequest{
 		DomainUUID:       task.DomainID,
 		Execution:        execution,
 		WorkflowTypeName: wfTypeName,
 		StartTimestamp:   startTimestamp.UnixNano(),
+		RetentionSeconds: int64(timeout + ttlBuffer),
 	})
 
 	return err

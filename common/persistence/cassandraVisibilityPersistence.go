@@ -40,7 +40,7 @@ const (
 const (
 	templateCreateWorkflowExecutionStarted = `INSERT INTO open_executions (` +
 		`domain_id, domain_partition, workflow_id, run_id, start_time, workflow_type_name) ` +
-		`VALUES (?, ?, ?, ?, ?, ?)`
+		`VALUES (?, ?, ?, ?, ?, ?) using TTL ?`
 
 	templateDeleteWorkflowExecutionStarted = `DELETE FROM open_executions ` +
 		`WHERE domain_id = ? ` +
@@ -156,6 +156,7 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionStarted(
 		*request.Execution.RunId,
 		common.UnixNanoToCQLTimestamp(request.StartTimestamp),
 		request.WorkflowTypeName,
+		request.RetentionSeconds,
 	)
 	query = query.WithTimestamp(common.UnixNanoToCQLTimestamp(request.StartTimestamp))
 	err := query.Exec()

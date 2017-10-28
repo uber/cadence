@@ -21,6 +21,7 @@
 package history
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -180,7 +181,10 @@ func (s *transferQueueProcessorSuite) TestDeleteExecutionTransferTasks() {
 	}
 	taskList := "delete-execution-transfertasks-queue"
 	identity := "delete-execution-transfertasks-test"
-	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, taskList, "wType", 20, 10, nil, 3, 0, 2, nil)
+	wtimeout := int32(20)
+	task0, err0 := s.CreateWorkflowExecution(
+		domainID, workflowExecution, taskList, "wType", wtimeout, 10, nil, 3, 0, 2, nil,
+	)
 	s.Nil(err0, "No error expected.")
 	s.NotEmpty(task0, "Expected non empty task identifier.")
 
@@ -205,9 +209,14 @@ workerPump:
 		select {
 		case task := <-tasksCh:
 			if task.TaskType == persistence.TransferTaskTypeDecisionTask {
-				s.mockMatching.On("AddDecisionTask", mock.Anything, createAddRequestFromTask(task, 0)).Once().Return(nil)
+				s.mockMatching.On("AddDecisionTask", mock.Anything, createAddRequestFromTask(task, wtimeout)).Once().Return(nil)
 				if task.ScheduleID == firstEventID+1 {
-					s.mockVisibilityMgr.On("RecordWorkflowExecutionStarted", mock.Anything).Once().Return(nil)
+					s.mockVisibilityMgr.On("RecordWorkflowExecutionStarted", mock.MatchedBy(
+						func(request *persistence.RecordWorkflowExecutionStartedRequest) bool {
+							fmt.Println("Test TTL: ", wtimeout)
+							return request.RetentionSeconds == int64(wtimeout+60) // 60 is the buffer
+						},
+					)).Once().Return(nil)
 				}
 			} else if task.TaskType == persistence.TransferTaskTypeDeleteExecution {
 				s.mockMetadataMgr.On("GetDomain", mock.Anything).Once().Return(&persistence.GetDomainResponse{
@@ -238,7 +247,8 @@ func (s *transferQueueProcessorSuite) TestDeleteExecutionTransferTasksDomainNotE
 	}
 	taskList := "delete-execution-transfertasks-domain-queue"
 	identity := "delete-execution-transfertasks-domain-test"
-	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, taskList, "wType", 20, 10, nil, 3, 0, 2, nil)
+	wtimeout := int32(20)
+	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, taskList, "wType", wtimeout, 10, nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
 	s.NotEmpty(task0, "Expected non empty task identifier.")
 
@@ -263,7 +273,7 @@ workerPump:
 		select {
 		case task := <-tasksCh:
 			if task.TaskType == persistence.TransferTaskTypeDecisionTask {
-				s.mockMatching.On("AddDecisionTask", mock.Anything, createAddRequestFromTask(task, 0)).Once().Return(nil)
+				s.mockMatching.On("AddDecisionTask", mock.Anything, createAddRequestFromTask(task, wtimeout)).Once().Return(nil)
 				if task.ScheduleID == firstEventID+1 {
 					s.mockVisibilityMgr.On("RecordWorkflowExecutionStarted", mock.Anything).Once().Return(nil)
 				}
@@ -292,7 +302,8 @@ func (s *transferQueueProcessorSuite) TestCancelRemoteExecutionTransferTasks() {
 	targetDomain := "f2bfaab6-7e8b-4fac-9a62-17da8d37becb"
 	targetWorkflowID := "target-workflow_id"
 	targetRunID := "0d00698f-08e1-4d36-a3e2-3bf109f5d2d6"
-	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, taskList, "wType", 20, 10, nil, 3, 0, 2, nil)
+	wtimeout := int32(20)
+	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, taskList, "wType", wtimeout, 10, nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
 	s.NotEmpty(task0, "Expected non empty task identifier.")
 
@@ -324,7 +335,7 @@ workerPump:
 		case task := <-tasksCh:
 			s.logger.Infof("Processing transfer task type: %v", task.TaskType)
 			if task.TaskType == persistence.TransferTaskTypeDecisionTask {
-				s.mockMatching.On("AddDecisionTask", mock.Anything, createAddRequestFromTask(task, 0)).Once().Return(nil)
+				s.mockMatching.On("AddDecisionTask", mock.Anything, createAddRequestFromTask(task, wtimeout)).Once().Return(nil)
 				if task.ScheduleID == firstEventID+1 {
 					s.mockVisibilityMgr.On("RecordWorkflowExecutionStarted", mock.Anything).Once().Return(nil)
 				}
@@ -351,7 +362,10 @@ func (s *transferQueueProcessorSuite) TestCancelRemoteExecutionTransferTask_Requ
 	targetWorkflowID := "target-workflow_id"
 	targetRunID := "0d00698f-08e1-4d36-a3e2-3bf109f5d2d6"
 
-	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, taskList, "wType", 20, 10, nil, 3, 0, 2, nil)
+	wtimeout := int32(20)
+	task0, err0 := s.CreateWorkflowExecution(
+		domainID, workflowExecution, taskList, "wType", wtimeout, 10, nil, 3, 0, 2, nil,
+	)
 	s.Nil(err0, "No error expected.")
 	s.NotEmpty(task0, "Expected non empty task identifier.")
 
@@ -384,7 +398,7 @@ workerPump:
 			s.logger.Infof("Processing transfer task type: %v, TaskID: %v, Task.ScheduleID: %v", task.TaskType,
 				task.TaskID, task.ScheduleID)
 			if task.TaskType == persistence.TransferTaskTypeDecisionTask {
-				s.mockMatching.On("AddDecisionTask", mock.Anything, createAddRequestFromTask(task, 0)).Once().Return(nil)
+				s.mockMatching.On("AddDecisionTask", mock.Anything, createAddRequestFromTask(task, wtimeout)).Once().Return(nil)
 				if task.ScheduleID == firstEventID+1 {
 					s.mockVisibilityMgr.On("RecordWorkflowExecutionStarted", mock.Anything).Once().Return(nil)
 				}

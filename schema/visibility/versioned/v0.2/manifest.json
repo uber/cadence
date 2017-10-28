@@ -1,0 +1,8 @@
+{
+    "CurrVersion": "0.2",
+    "MinCompatibleVersion": "0.2",
+    "Description": "lower gc_grace_seconds for open_executions table",
+    "SchemaUpdateCqlFiles": [
+        "reduce_open_workflow_gc_time.cql"
+    ]
+}
