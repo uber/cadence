@@ -39,6 +39,8 @@ CREATE TYPE workflow_execution (
   decision_timeout       int,
   cancel_requested       boolean,
   cancel_request_id      text,
+  sticky_task_list       text,   -- sticky worker task list
+  sticky_schedule_to_start_timeout int,
 );
 
 -- TODO: Remove fields that are left over from activity and workflow tasks.

@@ -91,13 +91,11 @@ func NewEngineWithShardContext(shard ShardContext, metadataMgr persistence.Metad
 	historyManager := shard.GetHistoryManager()
 	historyCache := newHistoryCache(shard, logger)
 	domainCache := cache.NewDomainCache(metadataMgr, logger)
-	txProcessor := newTransferQueueProcessor(shard, visibilityMgr, matching, historyClient, historyCache, domainCache)
 	historyEngImpl := &historyEngineImpl{
 		shard:              shard,
 		metadataMgr:        metadataMgr,
 		historyMgr:         historyManager,
 		executionManager:   executionManager,
-		txProcessor:        txProcessor,
 		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
 		hSerializerFactory: persistence.NewHistorySerializerFactory(),
 		historyCache:       historyCache,
@@ -107,7 +105,9 @@ func NewEngineWithShardContext(shard ShardContext, metadataMgr persistence.Metad
 		}),
 		metricsClient: shard.GetMetricsClient(),
 	}
+	txProcessor := newTransferQueueProcessor(shard, historyEngImpl, visibilityMgr, matching, historyClient)
 	historyEngImpl.timerProcessor = newTimerQueueProcessor(shard, historyEngImpl, executionManager, logger)
+	historyEngImpl.txProcessor = txProcessor
 	shardWrapper.txProcessor = txProcessor
 	return historyEngImpl
 }
@@ -580,6 +580,14 @@ Update_History_Loop:
 		var continueAsNewBuilder *mutableStateBuilder
 		hasDecisionScheduleActivityTask := false
 
+		if request.StickyAttributes == nil {
+			msBuilder.executionInfo.StickyTaskList = ""
+			msBuilder.executionInfo.StickyScheduleToStartTimeout = 0
+		} else {
+			msBuilder.executionInfo.StickyTaskList = request.StickyAttributes.GetWorkerTaskList()
+			msBuilder.executionInfo.StickyScheduleToStartTimeout = request.StickyAttributes.GetScheduleToStartTimeoutSeconds()
+		}
+
 	Process_Decision_Loop:
 		for _, d := range request.Decisions {
 			switch *d.DecisionType {
@@ -878,6 +886,11 @@ Update_History_Loop:
 				TaskList:   *newDecisionEvent.DecisionTaskScheduledEventAttributes.TaskList.Name,
 				ScheduleID: *newDecisionEvent.EventId,
 			})
+			if len(msBuilder.executionInfo.StickyTaskList) > 0 {
+				tBuilder := e.getTimerBuilder(&context.workflowExecution)
+				stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(*newDecisionEvent.EventId, msBuilder.executionInfo.StickyScheduleToStartTimeout)
+				timerTasks = append(timerTasks, stickyTaskTimeoutTimer)
+			}
 		}
 
 		if isComplete {
@@ -978,6 +991,7 @@ Update_History_Loop:
 		}
 
 		var transferTasks []persistence.Task
+		var timerTasks []persistence.Task
 		if !msBuilder.HasPendingDecisionTask() {
 			newDecisionEvent, _ := msBuilder.AddDecisionTaskScheduledEvent()
 			transferTasks = []persistence.Task{&persistence.DecisionTask{
@@ -985,6 +999,11 @@ Update_History_Loop:
 				TaskList:   *newDecisionEvent.DecisionTaskScheduledEventAttributes.TaskList.Name,
 				ScheduleID: *newDecisionEvent.EventId,
 			}}
+			if len(msBuilder.executionInfo.StickyTaskList) > 0 {
+				tBuilder := e.getTimerBuilder(&context.workflowExecution)
+				stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(*newDecisionEvent.EventId, msBuilder.executionInfo.StickyScheduleToStartTimeout)
+				timerTasks = []persistence.Task{stickyTaskTimeoutTimer}
+			}
 		}
 
 		// Generate a transaction ID for appending events to history
@@ -995,7 +1014,7 @@ Update_History_Loop:
 
 		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 		// the history and try the operation again.
-		if err := context.updateWorkflowExecution(transferTasks, nil, transactionID); err != nil {
+		if err := context.updateWorkflowExecution(transferTasks, timerTasks, transactionID); err != nil {
 			if err == ErrConflict {
 				e.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskCompletedScope,
 					metrics.ConcurrencyUpdateFailureCounter)
@@ -1004,7 +1023,7 @@ Update_History_Loop:
 
 			return err
 		}
-
+		e.timerProcessor.NotifyNewTimer(timerTasks)
 		return nil
 	}
 
@@ -1064,6 +1083,7 @@ Update_History_Loop:
 		}
 
 		var transferTasks []persistence.Task
+		var timerTasks []persistence.Task
 		if !msBuilder.HasPendingDecisionTask() {
 			newDecisionEvent, _ := msBuilder.AddDecisionTaskScheduledEvent()
 			transferTasks = []persistence.Task{&persistence.DecisionTask{
@@ -1071,6 +1091,11 @@ Update_History_Loop:
 				TaskList:   *newDecisionEvent.DecisionTaskScheduledEventAttributes.TaskList.Name,
 				ScheduleID: *newDecisionEvent.EventId,
 			}}
+			if len(msBuilder.executionInfo.StickyTaskList) > 0 {
+				tBuilder := e.getTimerBuilder(&context.workflowExecution)
+				stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(*newDecisionEvent.EventId, msBuilder.executionInfo.StickyScheduleToStartTimeout)
+				timerTasks = []persistence.Task{stickyTaskTimeoutTimer}
+			}
 		}
 
 		// Generate a transaction ID for appending events to history
@@ -1081,7 +1106,7 @@ Update_History_Loop:
 
 		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 		// the history and try the operation again.
-		if err := context.updateWorkflowExecution(transferTasks, nil, transactionID); err != nil {
+		if err := context.updateWorkflowExecution(transferTasks, timerTasks, transactionID); err != nil {
 			if err == ErrConflict {
 				e.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskFailedScope,
 					metrics.ConcurrencyUpdateFailureCounter)
@@ -1090,6 +1115,7 @@ Update_History_Loop:
 
 			return err
 		}
+		e.timerProcessor.NotifyNewTimer(timerTasks)
 
 		return nil
 	}
@@ -1151,6 +1177,7 @@ Update_History_Loop:
 		}
 
 		var transferTasks []persistence.Task
+		var timerTasks []persistence.Task
 		if !msBuilder.HasPendingDecisionTask() {
 			newDecisionEvent, _ := msBuilder.AddDecisionTaskScheduledEvent()
 			transferTasks = []persistence.Task{&persistence.DecisionTask{
@@ -1158,6 +1185,11 @@ Update_History_Loop:
 				TaskList:   *newDecisionEvent.DecisionTaskScheduledEventAttributes.TaskList.Name,
 				ScheduleID: *newDecisionEvent.EventId,
 			}}
+			if len(msBuilder.executionInfo.StickyTaskList) > 0 {
+				tBuilder := e.getTimerBuilder(&context.workflowExecution)
+				stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(*newDecisionEvent.EventId, msBuilder.executionInfo.StickyScheduleToStartTimeout)
+				timerTasks = []persistence.Task{stickyTaskTimeoutTimer}
+			}
 		}
 
 		// Generate a transaction ID for appending events to history
@@ -1168,7 +1200,7 @@ Update_History_Loop:
 
 		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 		// the history and try the operation again.
-		if err := context.updateWorkflowExecution(transferTasks, nil, transactionID); err != nil {
+		if err := context.updateWorkflowExecution(transferTasks, timerTasks, transactionID); err != nil {
 			if err == ErrConflict {
 				e.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskCanceledScope,
 					metrics.ConcurrencyUpdateFailureCounter)
@@ -1177,6 +1209,8 @@ Update_History_Loop:
 
 			return err
 		}
+
+		e.timerProcessor.NotifyNewTimer(timerTasks)
 
 		return nil
 	}
@@ -1470,6 +1504,11 @@ Update_History_Loop:
 					TaskList:   *newDecisionEvent.DecisionTaskScheduledEventAttributes.TaskList.Name,
 					ScheduleID: *newDecisionEvent.EventId,
 				})
+				if len(msBuilder.executionInfo.StickyTaskList) > 0 {
+					tBuilder := e.getTimerBuilder(&context.workflowExecution)
+					stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(*newDecisionEvent.EventId, msBuilder.executionInfo.StickyScheduleToStartTimeout)
+					timerTasks = append(timerTasks, stickyTaskTimeoutTimer)
+				}
 			}
 		}
 
@@ -1487,6 +1526,7 @@ Update_History_Loop:
 			}
 			return err
 		}
+		e.timerProcessor.NotifyNewTimer(timerTasks)
 		return nil
 	}
 	return ErrMaxAttemptsExceeded
