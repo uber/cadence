@@ -398,9 +398,7 @@ func (t *transferQueueProcessorImpl) processDecisionTask(task *persistence.Trans
 	}
 
 	if task.ScheduleID == firstEventID+1 {
-		err = t.recordWorkflowExecutionStarted(
-			execution, task, wfTypeName, startTimestamp, timeout,
-		)
+		err = t.recordWorkflowExecutionStarted(execution, task, wfTypeName, startTimestamp, timeout)
 	}
 
 	if err != nil {
