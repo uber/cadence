@@ -35,6 +35,7 @@ import (
 const (
 	domainPartition        = 0
 	defaultCloseTTLSeconds = 86400
+	openExecutionTTLBuffer = int64(20)
 )
 
 const (
@@ -149,6 +150,7 @@ func (v *cassandraVisibilityPersistence) Close() {
 
 func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionStarted(
 	request *RecordWorkflowExecutionStartedRequest) error {
+	ttl := request.WorkflowTimeout + openExecutionTTLBuffer
 	query := v.session.Query(templateCreateWorkflowExecutionStarted,
 		request.DomainUUID,
 		domainPartition,
@@ -156,7 +158,7 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionStarted(
 		*request.Execution.RunId,
 		common.UnixNanoToCQLTimestamp(request.StartTimestamp),
 		request.WorkflowTypeName,
-		request.RetentionSeconds,
+		ttl,
 	)
 	query = query.WithTimestamp(common.UnixNanoToCQLTimestamp(request.StartTimestamp))
 	err := query.Exec()

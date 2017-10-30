@@ -700,13 +700,12 @@ func (t *transferQueueProcessorImpl) recordWorkflowExecutionStarted(
 	execution workflow.WorkflowExecution, task *persistence.TransferTaskInfo, wfTypeName string,
 	startTimestamp time.Time, timeout int32,
 ) error {
-	ttlBuffer := t.shard.GetConfig().OpenWorkflowTTLBufferInSecs
 	err := t.visibilityManager.RecordWorkflowExecutionStarted(&persistence.RecordWorkflowExecutionStartedRequest{
 		DomainUUID:       task.DomainID,
 		Execution:        execution,
 		WorkflowTypeName: wfTypeName,
 		StartTimestamp:   startTimestamp.UnixNano(),
-		RetentionSeconds: int64(timeout + ttlBuffer),
+		WorkflowTimeout:  int64(timeout),
 	})
 
 	return err

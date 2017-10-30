@@ -62,7 +62,6 @@ type Config struct {
 	TransferProcessorUpdateAckInterval   time.Duration
 	TransferProcessorForceUpdateInterval time.Duration
 	TransferTaskWorkerCount              int
-	OpenWorkflowTTLBufferInSecs          int32
 
 	// Persistence settings
 	ExecutionMgrNumConns int
@@ -93,7 +92,6 @@ func NewConfig(numberOfShards int) *Config {
 		TransferProcessorUpdateAckInterval:          10 * time.Second,
 		TransferProcessorForceUpdateInterval:        10 * time.Minute,
 		TransferTaskWorkerCount:                     10,
-		OpenWorkflowTTLBufferInSecs:                 60,
 		ExecutionMgrNumConns:                        100,
 		HistoryMgrNumConns:                          100,
 	}

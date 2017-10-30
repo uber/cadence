@@ -21,7 +21,6 @@
 package history
 
 import (
-	"fmt"
 	"os"
 	"testing"
 
@@ -213,8 +212,7 @@ workerPump:
 				if task.ScheduleID == firstEventID+1 {
 					s.mockVisibilityMgr.On("RecordWorkflowExecutionStarted", mock.MatchedBy(
 						func(request *persistence.RecordWorkflowExecutionStartedRequest) bool {
-							fmt.Println("Test TTL: ", wtimeout)
-							return request.RetentionSeconds == int64(wtimeout+60) // 60 is the buffer
+							return request.WorkflowTimeout == int64(wtimeout)
 						},
 					)).Once().Return(nil)
 				}
