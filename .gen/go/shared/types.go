@@ -13854,8 +13854,8 @@ func (v *StartWorkflowExecutionResponse) GetRunId() (o string) {
 }
 
 type StickyExecutionAttributes struct {
-	WorkerTaskList                *string `json:"WorkerTaskList,omitempty"`
-	ScheduleToStartTimeoutSeconds *int32  `json:"scheduleToStartTimeoutSeconds,omitempty"`
+	WorkerTaskList                *TaskList `json:"workerTaskList,omitempty"`
+	ScheduleToStartTimeoutSeconds *int32    `json:"scheduleToStartTimeoutSeconds,omitempty"`
 }
 
 func (v *StickyExecutionAttributes) ToWire() (wire.Value, error) {
@@ -13866,7 +13866,7 @@ func (v *StickyExecutionAttributes) ToWire() (wire.Value, error) {
 		err    error
 	)
 	if v.WorkerTaskList != nil {
-		w, err = wire.NewValueString(*(v.WorkerTaskList)), error(nil)
+		w, err = v.WorkerTaskList.ToWire()
 		if err != nil {
 			return w, err
 		}
@@ -13889,10 +13889,8 @@ func (v *StickyExecutionAttributes) FromWire(w wire.Value) error {
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
 		case 10:
-			if field.Value.Type() == wire.TBinary {
-				var x string
-				x, err = field.Value.GetString(), error(nil)
-				v.WorkerTaskList = &x
+			if field.Value.Type() == wire.TStruct {
+				v.WorkerTaskList, err = _TaskList_Read(field.Value)
 				if err != nil {
 					return err
 				}
@@ -13918,7 +13916,7 @@ func (v *StickyExecutionAttributes) String() string {
 	var fields [2]string
 	i := 0
 	if v.WorkerTaskList != nil {
-		fields[i] = fmt.Sprintf("WorkerTaskList: %v", *(v.WorkerTaskList))
+		fields[i] = fmt.Sprintf("WorkerTaskList: %v", v.WorkerTaskList)
 		i++
 	}
 	if v.ScheduleToStartTimeoutSeconds != nil {
@@ -13929,20 +13927,13 @@ func (v *StickyExecutionAttributes) String() string {
 }
 
 func (v *StickyExecutionAttributes) Equals(rhs *StickyExecutionAttributes) bool {
-	if !_String_EqualsPtr(v.WorkerTaskList, rhs.WorkerTaskList) {
+	if !((v.WorkerTaskList == nil && rhs.WorkerTaskList == nil) || (v.WorkerTaskList != nil && rhs.WorkerTaskList != nil && v.WorkerTaskList.Equals(rhs.WorkerTaskList))) {
 		return false
 	}
 	if !_I32_EqualsPtr(v.ScheduleToStartTimeoutSeconds, rhs.ScheduleToStartTimeoutSeconds) {
 		return false
 	}
 	return true
-}
-
-func (v *StickyExecutionAttributes) GetWorkerTaskList() (o string) {
-	if v.WorkerTaskList != nil {
-		return *v.WorkerTaskList
-	}
-	return
 }
 
 func (v *StickyExecutionAttributes) GetScheduleToStartTimeoutSeconds() (o int32) {

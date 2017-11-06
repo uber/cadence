@@ -319,6 +319,10 @@ func (e *mutableStateBuilder) assignEventIDToBufferedEvents() {
 	}
 }
 
+func (e *mutableStateBuilder) isStickyTaskListEnabled() bool {
+	return len(e.executionInfo.StickyTaskList) > 0
+}
+
 func (e *mutableStateBuilder) createNewHistoryEvent(eventType workflow.EventType) *workflow.HistoryEvent {
 	eventID := e.executionInfo.NextEventID
 	if e.HasInFlightDecisionTask() &&
@@ -698,7 +702,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionStartedEvent(domainID string, 
 func (e *mutableStateBuilder) AddDecisionTaskScheduledEvent() (*workflow.HistoryEvent, *decisionInfo) {
 	// Tasklist and decision timeout should already be set from workflow execution started event
 	taskList := e.executionInfo.TaskList
-	if len(e.executionInfo.StickyTaskList) > 0 {
+	if e.isStickyTaskListEnabled() {
 		taskList = e.executionInfo.StickyTaskList
 	}
 	startToCloseTimeoutSeconds := e.executionInfo.DecisionTimeoutValue

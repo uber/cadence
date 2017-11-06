@@ -747,6 +747,7 @@ Update_History_Loop:
 		scheduleNewDecision := false
 		switch task.TimeoutType {
 		case int(workflow.TimeoutTypeStartToClose):
+			t.metricsClient.IncCounter(metrics.TimerTaskDecisionTimeoutScope, metrics.StartToCloseTimeoutCounter)
 			di, isRunning := msBuilder.GetPendingDecision(scheduleID)
 			if isRunning && msBuilder.isWorkflowExecutionRunning() {
 				// Add a decision task timeout event.
@@ -759,9 +760,10 @@ Update_History_Loop:
 				scheduleNewDecision = true
 			}
 		case int(workflow.TimeoutTypeScheduleToStart):
+			t.metricsClient.IncCounter(metrics.TimerTaskDecisionTimeoutScope, metrics.ScheduleToStartTimeoutCounter)
 			// decision schedule to start timeout only apply to sticky decision
 			// check if scheduled decision still pending and not started yet
-			if len(msBuilder.executionInfo.StickyTaskList) > 0 &&
+			if msBuilder.isStickyTaskListEnabled() &&
 				msBuilder.executionInfo.DecisionScheduleID == scheduleID &&
 				msBuilder.executionInfo.DecisionStartedID == emptyEventID {
 				// remove pending decision, and clear stickiness
@@ -849,7 +851,7 @@ func (t *timerQueueProcessorImpl) updateWorkflowExecution(
 			TaskList:   *newDecisionEvent.DecisionTaskScheduledEventAttributes.TaskList.Name,
 			ScheduleID: *newDecisionEvent.EventId,
 		}}
-		if len(msBuilder.executionInfo.StickyTaskList) > 0 {
+		if msBuilder.isStickyTaskListEnabled() {
 			tBuilder := t.historyService.getTimerBuilder(&context.workflowExecution)
 			stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(*newDecisionEvent.EventId, msBuilder.executionInfo.StickyScheduleToStartTimeout)
 			timerTasks = append(timerTasks, stickyTaskTimeoutTimer)

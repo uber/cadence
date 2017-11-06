@@ -697,7 +697,7 @@ struct PollForDecisionTaskResponse {
 }
 
 struct StickyExecutionAttributes {
-  10: optional string WorkerTaskList
+  10: optional TaskList workerTaskList
   20: optional i32 scheduleToStartTimeoutSeconds
 }
 

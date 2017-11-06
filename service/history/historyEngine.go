@@ -580,11 +580,13 @@ Update_History_Loop:
 		var continueAsNewBuilder *mutableStateBuilder
 		hasDecisionScheduleActivityTask := false
 
-		if request.StickyAttributes == nil {
+		if request.StickyAttributes == nil || request.StickyAttributes.WorkerTaskList == nil {
+			e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.CompleteDecisionWithStickyDisabledCounter)
 			msBuilder.executionInfo.StickyTaskList = ""
 			msBuilder.executionInfo.StickyScheduleToStartTimeout = 0
 		} else {
-			msBuilder.executionInfo.StickyTaskList = request.StickyAttributes.GetWorkerTaskList()
+			e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.CompleteDecisionWithStickyEnabledCounter)
+			msBuilder.executionInfo.StickyTaskList = request.StickyAttributes.WorkerTaskList.GetName()
 			msBuilder.executionInfo.StickyScheduleToStartTimeout = request.StickyAttributes.GetScheduleToStartTimeoutSeconds()
 		}
 
@@ -886,7 +888,7 @@ Update_History_Loop:
 				TaskList:   *newDecisionEvent.DecisionTaskScheduledEventAttributes.TaskList.Name,
 				ScheduleID: *newDecisionEvent.EventId,
 			})
-			if len(msBuilder.executionInfo.StickyTaskList) > 0 {
+			if msBuilder.isStickyTaskListEnabled() {
 				tBuilder := e.getTimerBuilder(&context.workflowExecution)
 				stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(*newDecisionEvent.EventId, msBuilder.executionInfo.StickyScheduleToStartTimeout)
 				timerTasks = append(timerTasks, stickyTaskTimeoutTimer)
@@ -999,7 +1001,7 @@ Update_History_Loop:
 				TaskList:   *newDecisionEvent.DecisionTaskScheduledEventAttributes.TaskList.Name,
 				ScheduleID: *newDecisionEvent.EventId,
 			}}
-			if len(msBuilder.executionInfo.StickyTaskList) > 0 {
+			if msBuilder.isStickyTaskListEnabled() {
 				tBuilder := e.getTimerBuilder(&context.workflowExecution)
 				stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(*newDecisionEvent.EventId, msBuilder.executionInfo.StickyScheduleToStartTimeout)
 				timerTasks = []persistence.Task{stickyTaskTimeoutTimer}
@@ -1091,7 +1093,7 @@ Update_History_Loop:
 				TaskList:   *newDecisionEvent.DecisionTaskScheduledEventAttributes.TaskList.Name,
 				ScheduleID: *newDecisionEvent.EventId,
 			}}
-			if len(msBuilder.executionInfo.StickyTaskList) > 0 {
+			if msBuilder.isStickyTaskListEnabled() {
 				tBuilder := e.getTimerBuilder(&context.workflowExecution)
 				stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(*newDecisionEvent.EventId, msBuilder.executionInfo.StickyScheduleToStartTimeout)
 				timerTasks = []persistence.Task{stickyTaskTimeoutTimer}
@@ -1185,7 +1187,7 @@ Update_History_Loop:
 				TaskList:   *newDecisionEvent.DecisionTaskScheduledEventAttributes.TaskList.Name,
 				ScheduleID: *newDecisionEvent.EventId,
 			}}
-			if len(msBuilder.executionInfo.StickyTaskList) > 0 {
+			if msBuilder.isStickyTaskListEnabled() {
 				tBuilder := e.getTimerBuilder(&context.workflowExecution)
 				stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(*newDecisionEvent.EventId, msBuilder.executionInfo.StickyScheduleToStartTimeout)
 				timerTasks = []persistence.Task{stickyTaskTimeoutTimer}
@@ -1504,7 +1506,7 @@ Update_History_Loop:
 					TaskList:   *newDecisionEvent.DecisionTaskScheduledEventAttributes.TaskList.Name,
 					ScheduleID: *newDecisionEvent.EventId,
 				})
-				if len(msBuilder.executionInfo.StickyTaskList) > 0 {
+				if msBuilder.isStickyTaskListEnabled() {
 					tBuilder := e.getTimerBuilder(&context.workflowExecution)
 					stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(*newDecisionEvent.EventId, msBuilder.executionInfo.StickyScheduleToStartTimeout)
 					timerTasks = append(timerTasks, stickyTaskTimeoutTimer)

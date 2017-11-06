@@ -385,7 +385,7 @@ func (t *transferQueueProcessorImpl) processDecisionTask(task *persistence.Trans
 	timeout := mb.executionInfo.WorkflowTimeout
 	wfTypeName := mb.executionInfo.WorkflowTypeName
 	startTimestamp := mb.executionInfo.StartTimestamp
-	if len(mb.executionInfo.StickyTaskList) > 0 {
+	if mb.isStickyTaskListEnabled() {
 		taskList.Name = common.StringPtr(mb.executionInfo.StickyTaskList)
 		timeout = mb.executionInfo.StickyScheduleToStartTimeout
 	}
@@ -861,7 +861,7 @@ Update_History_Loop:
 					TaskList:   *newDecisionEvent.DecisionTaskScheduledEventAttributes.TaskList.Name,
 					ScheduleID: *newDecisionEvent.EventId,
 				})
-				if len(msBuilder.executionInfo.StickyTaskList) > 0 {
+				if msBuilder.isStickyTaskListEnabled() {
 					lg := t.logger.WithFields(bark.Fields{
 						logging.TagWorkflowExecutionID: context.workflowExecution.WorkflowId,
 						logging.TagWorkflowRunID:       context.workflowExecution.RunId,
