@@ -392,10 +392,8 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 		// Non-empty response. Get the history
 		nextEventID := common.Int64Default(matchingResp.StartedEventId) + 1
 		firstEventID := common.FirstEventID
-		if matchingResp.StickyExecutionEnabled != nil &&
-			*matchingResp.StickyExecutionEnabled &&
-			matchingResp.PreviousStartedEventId != nil {
-			firstEventID = *matchingResp.PreviousStartedEventId + 1
+		if matchingResp.GetStickyExecutionEnabled() {
+			firstEventID = matchingResp.GetPreviousStartedEventId() + 1
 		}
 		history, persistenceToken, err = wh.getHistory(
 			info.ID,
