@@ -44,6 +44,7 @@ const (
 		`WHERE domain_id = ? ` +
 		`AND workflow_id = ? ` +
 		`AND run_id = ? ` +
+		`AND first_event_id >= ? ` +
 		`AND first_event_id < ?`
 
 	templateDeleteWorkflowExecutionHistory = `DELETE FROM events ` +
@@ -147,6 +148,7 @@ func (h *cassandraHistoryPersistence) GetWorkflowExecutionHistory(request *GetWo
 		request.DomainID,
 		*execution.WorkflowId,
 		*execution.RunId,
+		request.FirstEventID,
 		request.NextEventID)
 
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
