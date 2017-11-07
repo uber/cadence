@@ -422,6 +422,21 @@ func (p *historyPersistenceClient) GetWorkflowExecutionHistory(
 	return response, err
 }
 
+func (p *historyPersistenceClient) ListWorkflowExecutionHistory(
+	request *ListWorkflowExecutionHistoryRequest) (*ListWorkflowExecutionHistoryResponse, error) {
+	p.metricClient.IncCounter(metrics.PersistenceListWorkflowExecutionHistoryScope, metrics.PersistenceRequests)
+
+	sw := p.metricClient.StartTimer(metrics.PersistenceListWorkflowExecutionHistoryScope, metrics.PersistenceLatency)
+	response, err := p.persistence.ListWorkflowExecutionHistory(request)
+	sw.Stop()
+
+	if err != nil {
+		p.updateErrorMetric(metrics.PersistenceListWorkflowExecutionHistoryScope, err)
+	}
+
+	return response, err
+}
+
 func (p *historyPersistenceClient) DeleteWorkflowExecutionHistory(
 	request *DeleteWorkflowExecutionHistoryRequest) error {
 	p.metricClient.IncCounter(metrics.PersistenceDeleteWorkflowExecutionHistoryScope, metrics.PersistenceRequests)

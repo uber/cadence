@@ -85,4 +85,28 @@ func (_m *HistoryManager) GetWorkflowExecutionHistory(
 	return r0, r1
 }
 
+// ListWorkflowExecutionHistory provides a mock function with given fields: request
+func (_m *HistoryManager) ListWorkflowExecutionHistory(
+	request *persistence.ListWorkflowExecutionHistoryRequest) (*persistence.ListWorkflowExecutionHistoryResponse, error) {
+	ret := _m.Called(request)
+
+	var r0 *persistence.ListWorkflowExecutionHistoryResponse
+	if rf, ok := ret.Get(0).(func(*persistence.ListWorkflowExecutionHistoryRequest) *persistence.ListWorkflowExecutionHistoryResponse); ok {
+		r0 = rf(request)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*persistence.ListWorkflowExecutionHistoryResponse)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*persistence.ListWorkflowExecutionHistoryRequest) error); ok {
+		r1 = rf(request)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 var _ persistence.HistoryManager = (*HistoryManager)(nil)

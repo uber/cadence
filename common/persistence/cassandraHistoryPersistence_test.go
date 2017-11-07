@@ -22,7 +22,9 @@ package persistence
 
 import (
 	"os"
+	"strconv"
 	"testing"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
@@ -113,6 +115,58 @@ func (s *historyPersistenceSuite) TestGetHistoryEvents() {
 	s.Equal(events, history[0].Data)
 }
 
+func (s *historyPersistenceSuite) TestListHistoryEvents() {
+	domainID := "373de9d6-e41e-42d4-bee9-9e06968e4d0d"
+	workflowExecution := gen.WorkflowExecution{
+		WorkflowId: common.StringPtr("delete-list-history-events-test"),
+		RunId:      common.StringPtr("2122fd8d-f583-459e-a2e2-d1fb273a43cc"),
+	}
+
+	historySerializer, _ := NewHistorySerializerFactory().Get(common.EncodingTypeJSON)
+	var events []*gen.HistoryEvent
+	var eventBatches []*HistoryEventBatch
+	for i := 1; i <= 14; i++ {
+		event := GenerareEvent(int64(i))
+		events = append(events, event)
+	}
+	eventBatches = append(eventBatches, NewHistoryEventBatch(int(defaultHistoryVersion), events[0:2]))
+	eventBatches = append(eventBatches, NewHistoryEventBatch(int(defaultHistoryVersion), events[2:3]))
+	eventBatches = append(eventBatches, NewHistoryEventBatch(int(defaultHistoryVersion), events[3:6]))
+	eventBatches = append(eventBatches, NewHistoryEventBatch(int(defaultHistoryVersion), events[6:10]))
+	eventBatches = append(eventBatches, NewHistoryEventBatch(int(defaultHistoryVersion), events[10:14]))
+
+	for i, eventBatch := range eventBatches {
+		serializedEventBatch, _ := historySerializer.Serialize(eventBatch)
+		err0 := s.AppendHistoryEvents(domainID, workflowExecution, *(eventBatch.Events[0].EventId), 1, int64(i), serializedEventBatch, false)
+		s.Nil(err0)
+	}
+
+	for nextEventID := 2; nextEventID <= 16; nextEventID++ {
+		for pageSize := 1; pageSize <= 16; pageSize++ {
+			var historyEvents []*gen.HistoryEvent
+			var nexttoken []byte
+			for {
+				history, token, err := s.ListWorkflowExecutionHistory(domainID, workflowExecution, int64(nextEventID), pageSize, nexttoken)
+				s.Nil(err)
+				historyEvents = append(historyEvents, history...)
+				if token == nil {
+					break
+				}
+				nexttoken = token
+			}
+
+			// verify that result is expected
+			var length = len(events)
+			if length > nextEventID-1 {
+				length = nextEventID - 1
+			}
+			for i := 0; i < length; i++ {
+				s.Equal(*events[i], *historyEvents[i])
+			}
+		}
+	}
+}
+
 func (s *historyPersistenceSuite) TestDeleteHistoryEvents() {
 	domainID := "373de9d6-e41e-42d4-bee9-9e06968e4d0d"
 	workflowExecution := gen.WorkflowExecution{
@@ -157,6 +211,59 @@ func (s *historyPersistenceSuite) TestDeleteHistoryEvents() {
 	s.Nil(data1)
 }
 
+func (s *historyPersistenceSuite) TestDeleteListHistoryEvents() {
+	domainID := "373de9d6-e41e-42d4-bee9-9e06968e4d0d"
+	workflowExecution := gen.WorkflowExecution{
+		WorkflowId: common.StringPtr("delete-history-events-test"),
+		RunId:      common.StringPtr("2122fd8d-f583-459e-a2e2-d1fb273a43cc"),
+	}
+
+	historySerializer, _ := NewHistorySerializerFactory().Get(common.EncodingTypeJSON)
+	var events []*gen.HistoryEvent
+	var eventBatches []*HistoryEventBatch
+	for i := 1; i <= 14; i++ {
+		event := GenerareEvent(int64(i))
+		events = append(events, event)
+	}
+	eventBatches = append(eventBatches, NewHistoryEventBatch(int(defaultHistoryVersion), events[0:2]))
+	eventBatches = append(eventBatches, NewHistoryEventBatch(int(defaultHistoryVersion), events[2:3]))
+	eventBatches = append(eventBatches, NewHistoryEventBatch(int(defaultHistoryVersion), events[3:6]))
+	eventBatches = append(eventBatches, NewHistoryEventBatch(int(defaultHistoryVersion), events[6:10]))
+	eventBatches = append(eventBatches, NewHistoryEventBatch(int(defaultHistoryVersion), events[10:14]))
+
+	for i, eventBatch := range eventBatches {
+		serializedEventBatch, _ := historySerializer.Serialize(eventBatch)
+
+		err0 := s.AppendHistoryEvents(domainID, workflowExecution, *(eventBatch.Events[0].EventId), 1, int64(i), serializedEventBatch, false)
+		s.Nil(err0)
+	}
+
+	historyEvents1, token1, err1 := s.ListWorkflowExecutionHistory(domainID, workflowExecution, 15, 10, nil)
+	s.Nil(err1)
+	s.False(nil == token1)
+	s.Equal(10, len(historyEvents1))
+	for i := 0; i < len(historyEvents1); i++ {
+		s.Equal(*events[i], *historyEvents1[i])
+	}
+
+	historyEvents2, token2, err2 := s.ListWorkflowExecutionHistory(domainID, workflowExecution, 15, 10, token1)
+	s.Nil(err2)
+	s.True(nil == token2)
+	s.Equal(4, len(historyEvents2))
+	for i := 0; i < len(historyEvents2); i++ {
+		s.Equal(*events[10+i], *historyEvents2[i])
+	}
+
+	err3 := s.DeleteWorkflowExecutionHistory(domainID, workflowExecution)
+	s.Nil(err3)
+
+	historyEvents4, token4, err4 := s.ListWorkflowExecutionHistory(domainID, workflowExecution, 15, 10, nil)
+	s.NotNil(err4)
+	s.IsType(&gen.EntityNotExistsError{}, err4)
+	s.Nil(token4)
+	s.Nil(historyEvents4)
+}
+
 func (s *historyPersistenceSuite) TestAppendAndGet() {
 	domainID := uuid.New()
 	workflowExecution := gen.WorkflowExecution{
@@ -184,6 +291,46 @@ func (s *historyPersistenceSuite) TestAppendAndGet() {
 			s.Equal(historyList[i].Data, gotHistoryList[i].Data)
 			s.Equal(historyList[i].Version, gotHistoryList[i].Version)
 			s.Equal(historyList[i].EncodingType, gotHistoryList[i].EncodingType)
+		}
+	}
+}
+
+func (s *historyPersistenceSuite) TestAppendAndList() {
+	domainID := uuid.New()
+	workflowExecution := gen.WorkflowExecution{
+		WorkflowId: common.StringPtr("append-and-list-test"),
+		RunId:      common.StringPtr("4ffba1bf-17e6-495b-b898-69d8a8ea385a"),
+		//uuid.New()),
+	}
+
+	historySerializer, _ := NewHistorySerializerFactory().Get(common.EncodingTypeJSON)
+	var events []*gen.HistoryEvent
+	var eventBatches []*HistoryEventBatch
+	for i := 1; i <= 14; i++ {
+		event := GenerareEvent(int64(i))
+		events = append(events, event)
+	}
+	eventBatches = append(eventBatches, NewHistoryEventBatch(int(defaultHistoryVersion), events[0:3]))
+	eventBatches = append(eventBatches, NewHistoryEventBatch(int(defaultHistoryVersion), events[3:4]))
+	eventBatches = append(eventBatches, NewHistoryEventBatch(int(defaultHistoryVersion), events[4:7]))
+	eventBatches = append(eventBatches, NewHistoryEventBatch(int(defaultHistoryVersion), events[7:11]))
+	eventBatches = append(eventBatches, NewHistoryEventBatch(int(defaultHistoryVersion), events[11:14]))
+
+	numberOfEvents := 0
+	for i, eventBatch := range eventBatches {
+		numberOfEvents += len(eventBatch.Events)
+		serializedEventBatch, _ := historySerializer.Serialize(eventBatch)
+
+		err0 := s.AppendHistoryEvents(domainID, workflowExecution, *(eventBatch.Events[0].EventId), 1, int64(i), serializedEventBatch, false)
+		s.Nil(err0)
+
+		historyEvents1, token1, err1 := s.ListWorkflowExecutionHistory(domainID, workflowExecution, 15, 20, nil)
+		s.Nil(err1)
+		s.True(nil == token1)
+		s.Equal(numberOfEvents, len(historyEvents1))
+
+		for j := 0; j < numberOfEvents; j++ {
+			s.Equal(*events[j], *historyEvents1[j])
 		}
 	}
 }
@@ -220,6 +367,24 @@ func (s *historyPersistenceSuite) GetWorkflowExecutionHistory(domainID string, w
 	return response.Events, response.NextPageToken, nil
 }
 
+func (s *historyPersistenceSuite) ListWorkflowExecutionHistory(domainID string, workflowExecution gen.WorkflowExecution,
+	nextEventID int64, pageSize int, token []byte) ([]*gen.HistoryEvent, []byte, error) {
+
+	response, err := s.HistoryMgr.ListWorkflowExecutionHistory(&ListWorkflowExecutionHistoryRequest{
+		DomainID:      domainID,
+		Execution:     workflowExecution,
+		NextEventID:   nextEventID,
+		PageSize:      pageSize,
+		NextPageToken: token,
+	})
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return response.Events, response.NextPageToken, nil
+}
+
 func (s *historyPersistenceSuite) DeleteWorkflowExecutionHistory(domainID string,
 	workflowExecution gen.WorkflowExecution) error {
 
@@ -227,4 +392,18 @@ func (s *historyPersistenceSuite) DeleteWorkflowExecutionHistory(domainID string
 		DomainID:  domainID,
 		Execution: workflowExecution,
 	})
+}
+
+func GenerareEvent(eventID int64) *gen.HistoryEvent {
+	return &gen.HistoryEvent{
+		EventId:   common.Int64Ptr(eventID),
+		Timestamp: common.Int64Ptr(time.Now().UnixNano()),
+		EventType: common.EventTypePtr(gen.EventTypeActivityTaskCompleted),
+		ActivityTaskCompletedEventAttributes: &gen.ActivityTaskCompletedEventAttributes{
+			Result:           []byte("event-" + strconv.Itoa(int(eventID))),
+			ScheduledEventId: common.Int64Ptr(eventID),
+			StartedEventId:   common.Int64Ptr(eventID),
+			Identity:         common.StringPtr("event-" + strconv.Itoa(int(eventID))),
+		},
+	}
 }
