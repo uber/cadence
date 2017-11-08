@@ -21,6 +21,7 @@
 package persistence
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/gocql/gocql"
@@ -46,6 +47,13 @@ const (
 		`AND run_id = ? ` +
 		`AND first_event_id < ?`
 
+	templateListWorkflowExecutionHistory = `SELECT first_event_id, data, data_encoding, data_version FROM events ` +
+		`WHERE domain_id = ? ` +
+		`AND workflow_id = ? ` +
+		`AND run_id = ? ` +
+		`AND first_event_id >= ? ` +
+		`AND first_event_id < ?`
+
 	templateDeleteWorkflowExecutionHistory = `DELETE FROM events ` +
 		`WHERE domain_id = ? ` +
 		`AND workflow_id = ? ` +
@@ -54,8 +62,17 @@ const (
 
 type (
 	cassandraHistoryPersistence struct {
-		session *gocql.Session
-		logger  bark.Logger
+		session                  *gocql.Session
+		logger                   bark.Logger
+		historySerializerFactory HistorySerializerFactory
+	}
+
+	historyPaginationToken struct {
+		// Query the history events begining from this event ID. Inclusive.
+		QueryEventIDStart int64
+		// Indicates that we should return events which has ID >= this ID. Inclusive.
+		FilterEventIDStart int64
+		// QueryEventIDStart <= FilterEventIDStart
 	}
 )
 
@@ -76,7 +93,11 @@ func NewCassandraHistoryPersistence(hosts string, port int, user, password, dc s
 		return nil, err
 	}
 
-	return &cassandraHistoryPersistence{session: session, logger: logger}, nil
+	return &cassandraHistoryPersistence{
+		session: session,
+		logger:  logger,
+		historySerializerFactory: NewHistorySerializerFactory(),
+	}, nil
 }
 
 // Close gracefully releases the resources held by this object
@@ -185,6 +206,117 @@ func (h *cassandraHistoryPersistence) GetWorkflowExecutionHistory(request *GetWo
 	return response, nil
 }
 
+func (h *cassandraHistoryPersistence) ListWorkflowExecutionHistory(request *ListWorkflowExecutionHistoryRequest) (
+	*ListWorkflowExecutionHistoryResponse, error) {
+
+	// this API requires the followings to be ALWAYS true
+	// 1. token.QueryEventIDStart <= token.FilterEventIDStart < request.NextEventID
+	// 2. page size > 0
+	// 1 && 2 will guarantee the number of ruturned events in the response to be > 0
+
+	execution := request.Execution
+	token, err := deserializeHistoryPaginationToken(request.NextPageToken)
+	if err != nil {
+		return nil, err
+	}
+	queryEventIDStart := token.QueryEventIDStart
+	filterEventIDStart := token.FilterEventIDStart
+	queryEventIDEnd := request.NextEventID
+	query := h.session.Query(templateListWorkflowExecutionHistory,
+		request.DomainID,
+		*execution.WorkflowId,
+		*execution.RunId,
+		queryEventIDStart,
+		queryEventIDEnd)
+
+	// here the page size means number of rows to be fetched, i.e. number of batch of events tabel rows
+	iter := query.PageSize(request.PageSize + 1).PageState([]byte{}).Iter()
+	if iter == nil {
+		return nil, &workflow.InternalServiceError{
+			Message: "GetWorkflowExecutionHistory operation failed.  Not able to create query iterator.",
+		}
+	}
+
+	// the first event ID within a batch of events
+	var serializedFirstEventID int64
+	// serialized batch of events
+	var serializedEventBatch SerializedHistoryEventBatch
+	var eventIdToSerializedFirstEventIdMap = make(map[int64]int64)
+	var found = false
+	var events []*workflow.HistoryEvent
+
+	for iter.Scan(&serializedFirstEventID, &serializedEventBatch.Data, &serializedEventBatch.EncodingType, &serializedEventBatch.Version) {
+		found = true
+		setSerializedHistoryDefaults(&serializedEventBatch)
+		historySerializer, _ := h.historySerializerFactory.Get(serializedEventBatch.EncodingType)
+		deserializedEvents, err1 := historySerializer.Deserialize(&serializedEventBatch)
+		if err1 != nil {
+			return nil, err1
+		}
+
+		for _, event := range deserializedEvents.Events {
+			eventIdToSerializedFirstEventIdMap[*(event.EventId)] = serializedFirstEventID
+			if *event.EventId >= filterEventIDStart {
+				events = append(events, event)
+			}
+		}
+	}
+
+	if err := iter.Close(); err != nil {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("GetWorkflowExecutionHistory2 operation failed. Error: %v", err),
+		}
+	}
+
+	if !found {
+		return nil, &workflow.EntityNotExistsError{
+			Message: fmt.Sprintf("Workflow execution history not found.  WorkflowId: %v, RunId: %v",
+				*execution.WorkflowId, *execution.RunId),
+		}
+	}
+
+	if len(iter.PageState()) == 0 && queryEventIDEnd > *(events[len(events)-1].EventId)+1 {
+		// this happen meaning we potentially need to update the next event ID,
+		// since there is a chance that next event ID provided is > actual next event ID
+		queryEventIDEnd = *(events[len(events)-1].EventId) + 1
+	}
+
+	response := &ListWorkflowExecutionHistoryResponse{}
+	for _, event := range events {
+		// it is possible that caller will provide a next event ID
+		// which is not the event ID of any first event in a patch of events
+		if *event.EventId < filterEventIDStart {
+			continue
+		} else if *event.EventId >= queryEventIDEnd {
+			break
+		} else if len(response.Events) < request.PageSize {
+			response.Events = append(response.Events, event)
+		} else {
+			// len(response.Events) >= request.PageSize
+			break
+		}
+	}
+
+	token = &historyPaginationToken{}
+	nextFilterEventIDStart := *(response.Events[len(response.Events)-1].EventId) + 1
+	nextQueryEventIDStart, ok := eventIdToSerializedFirstEventIdMap[nextFilterEventIDStart]
+	if !ok {
+		nextQueryEventIDStart = nextFilterEventIDStart
+	}
+
+	if nextFilterEventIDStart >= queryEventIDEnd {
+		token = nil
+	} else {
+		token.QueryEventIDStart = nextQueryEventIDStart
+		token.FilterEventIDStart = nextFilterEventIDStart
+	}
+	response.NextPageToken, err = serializeHistoryPaginationToken(token)
+	if err != nil {
+		return nil, err
+	}
+	return response, nil
+}
+
 func (h *cassandraHistoryPersistence) DeleteWorkflowExecutionHistory(
 	request *DeleteWorkflowExecutionHistoryRequest) error {
 	execution := request.Execution
@@ -206,4 +338,38 @@ func (h *cassandraHistoryPersistence) DeleteWorkflowExecutionHistory(
 	}
 
 	return nil
+}
+
+// sets the version and encoding types to defaults if they
+// are missing from persistence. This is purely for backwards
+// compatibility
+func setSerializedHistoryDefaults(history *SerializedHistoryEventBatch) {
+	if history.Version == 0 {
+		history.Version = GetDefaultHistoryVersion()
+	}
+	if len(history.EncodingType) == 0 {
+		history.EncodingType = DefaultEncodingType
+	}
+}
+
+func deserializeHistoryPaginationToken(bytes []byte) (*historyPaginationToken, error) {
+	token := &historyPaginationToken{}
+	if bytes == nil {
+		token.QueryEventIDStart = 1
+		token.FilterEventIDStart = 1
+		return token, nil
+	}
+
+	err := json.Unmarshal(bytes, token)
+	// TODO make this invalid next token err
+	return token, err
+}
+
+func serializeHistoryPaginationToken(token *historyPaginationToken) ([]byte, error) {
+	if token == nil {
+		return nil, nil
+	}
+	bytes, err := json.Marshal(token)
+	// TODO make this invalid next token err
+	return bytes, err
 }

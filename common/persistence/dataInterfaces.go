@@ -563,6 +563,30 @@ type (
 		NextPageToken []byte
 	}
 
+	// ListWorkflowExecutionHistoryRequest is used to retrieve history of a workflow execution
+	// this API guarantees number of returned events will not exceed the given page size
+	ListWorkflowExecutionHistoryRequest struct {
+		DomainID  string
+		Execution workflow.WorkflowExecution
+
+		// Get the history events upto NextEventID. Exclusive.
+		NextEventID int64
+		// Maximum number of history append transactions per page
+		PageSize int
+
+		// Token to continue reading next page of workflow events.
+		NextPageToken []byte
+	}
+
+	// ListWorkflowExecutionHistoryResponse is the response to ListWorkflowExecutionHistoryRequest
+	ListWorkflowExecutionHistoryResponse struct {
+		// Slice of history events
+		Events []*workflow.HistoryEvent
+		// Token to read next page if there are more events beyond page size.
+		// Use this to set NextPageToken on ListWorkflowExecutionHistoryRequest to read the next page.
+		NextPageToken []byte
+	}
+
 	// DeleteWorkflowExecutionHistoryRequest is used to delete workflow execution history
 	DeleteWorkflowExecutionHistoryRequest struct {
 		DomainID  string
@@ -679,6 +703,7 @@ type (
 		// GetWorkflowExecutionHistory retrieves the paginated list of history events for given execution
 		GetWorkflowExecutionHistory(request *GetWorkflowExecutionHistoryRequest) (*GetWorkflowExecutionHistoryResponse,
 			error)
+		ListWorkflowExecutionHistory(request *ListWorkflowExecutionHistoryRequest) (*ListWorkflowExecutionHistoryResponse, error)
 		DeleteWorkflowExecutionHistory(request *DeleteWorkflowExecutionHistoryRequest) error
 	}
 

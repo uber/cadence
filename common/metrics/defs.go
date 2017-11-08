@@ -149,6 +149,8 @@ const (
 	PersistenceAppendHistoryEventsScope
 	// PersistenceGetWorkflowExecutionHistoryScope tracks GetWorkflowExecutionHistory calls made by service to persistence layer
 	PersistenceGetWorkflowExecutionHistoryScope
+	// PersistenceListWorkflowExecutionHistoryScope tracks ListWorkflowExecutionHistory calls made by service to persistence layer
+	PersistenceListWorkflowExecutionHistoryScope
 	// PersistenceDeleteWorkflowExecutionHistoryScope tracks DeleteWorkflowExecutionHistory calls made by service to persistence layer
 	PersistenceDeleteWorkflowExecutionHistoryScope
 	// PersistenceCreateDomainScope tracks CreateDomain calls made by service to persistence layer
