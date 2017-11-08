@@ -546,7 +546,9 @@ type (
 	GetWorkflowExecutionHistoryRequest struct {
 		DomainID  string
 		Execution workflow.WorkflowExecution
-		// Get the history events upto NextEventID.  Not Inclusive.
+		// Get the history events begining from FirstEventID.  Inclusive.
+		FirstEventID int64
+		// Get the history events upto NextEventID.  Exclusive.
 		NextEventID int64
 		// Maximum number of history append transactions per page
 		PageSize int
