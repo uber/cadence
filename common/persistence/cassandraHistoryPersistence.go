@@ -46,6 +46,13 @@ const (
 		`AND run_id = ? ` +
 		`AND first_event_id < ?`
 
+	templateGetWorkflowExecutionHistoryWithStartEventID = `SELECT first_event_id, data, data_encoding, data_version FROM events ` +
+		`WHERE domain_id = ? ` +
+		`AND workflow_id = ? ` +
+		`AND run_id = ? ` +
+		`AND first_event_id >= ? ` +
+		`AND first_event_id < ?`
+
 	templateDeleteWorkflowExecutionHistory = `DELETE FROM events ` +
 		`WHERE domain_id = ? ` +
 		`AND workflow_id = ? ` +
@@ -143,11 +150,21 @@ func (h *cassandraHistoryPersistence) AppendHistoryEvents(request *AppendHistory
 func (h *cassandraHistoryPersistence) GetWorkflowExecutionHistory(request *GetWorkflowExecutionHistoryRequest) (
 	*GetWorkflowExecutionHistoryResponse, error) {
 	execution := request.Execution
-	query := h.session.Query(templateGetWorkflowExecutionHistory,
-		request.DomainID,
-		*execution.WorkflowId,
-		*execution.RunId,
-		request.NextEventID)
+	var query *gocql.Query
+	if request.FirstEventID > 0 {
+		query = h.session.Query(templateGetWorkflowExecutionHistoryWithStartEventID,
+			request.DomainID,
+			*execution.WorkflowId,
+			*execution.RunId,
+			request.FirstEventID,
+			request.NextEventID)
+	} else {
+		query = h.session.Query(templateGetWorkflowExecutionHistory,
+			request.DomainID,
+			*execution.WorkflowId,
+			*execution.RunId,
+			request.NextEventID)
+	}
 
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
@@ -175,7 +192,9 @@ func (h *cassandraHistoryPersistence) GetWorkflowExecutionHistory(request *GetWo
 		}
 	}
 
-	if !found {
+	if !found && len(request.NextPageToken) == 0 {
+		// adding the check of request next token being not nil, since
+		// there can be case when found == false at the very end of pagination.
 		return nil, &workflow.EntityNotExistsError{
 			Message: fmt.Sprintf("Workflow execution history not found.  WorkflowId: %v, RunId: %v",
 				*execution.WorkflowId, *execution.RunId),
