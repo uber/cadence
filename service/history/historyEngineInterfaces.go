@@ -21,6 +21,8 @@
 package history
 
 import (
+	"context"
+
 	h "github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -34,8 +36,7 @@ type (
 		// TODO: Convert workflow.WorkflowExecution to pointer all over the place
 		StartWorkflowExecution(request *h.StartWorkflowExecutionRequest) (*workflow.StartWorkflowExecutionResponse,
 			error)
-		GetWorkflowExecutionNextEventID(
-			request *h.GetWorkflowExecutionNextEventIDRequest) (*h.GetWorkflowExecutionNextEventIDResponse, error)
+		GetWorkflowExecutionNextEventID(ctx context.Context, request *h.GetWorkflowExecutionNextEventIDRequest) (*h.GetWorkflowExecutionNextEventIDResponse, error)
 		DescribeWorkflowExecution(
 			request *h.DescribeWorkflowExecutionRequest) (*workflow.DescribeWorkflowExecutionResponse, error)
 		RecordDecisionTaskStarted(request *h.RecordDecisionTaskStartedRequest) (*h.RecordDecisionTaskStartedResponse, error)
@@ -71,5 +72,12 @@ type (
 	timerQueueProcessor interface {
 		common.Daemon
 		NotifyNewTimer(timerTask []persistence.Task)
+	}
+
+	historyEventNotifier interface {
+		common.Daemon
+		NotifyNewHistoryEvent(event *historyEvent)
+		WatchHistoryEvent(domainID *string, execution *workflow.WorkflowExecution) (*string, chan *historyEvent, error)
+		UnwatchHistoryEvent(domainID *string, execution *workflow.WorkflowExecution, subscriberID *string) error
 	}
 )

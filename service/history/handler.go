@@ -40,23 +40,26 @@ import (
 )
 
 // Handler - Thrift handler inteface for history service
-type Handler struct {
-	numberOfShards        int
-	shardManager          persistence.ShardManager
-	metadataMgr           persistence.MetadataManager
-	visibilityMgr         persistence.VisibilityManager
-	historyMgr            persistence.HistoryManager
-	executionMgrFactory   persistence.ExecutionManagerFactory
-	historyServiceClient  hc.Client
-	matchingServiceClient matching.Client
-	hServiceResolver      membership.ServiceResolver
-	controller            *shardController
-	tokenSerializer       common.TaskTokenSerializer
-	startWG               sync.WaitGroup
-	metricsClient         metrics.Client
-	config                *Config
-	service.Service
-}
+type (
+	Handler struct {
+		numberOfShards        int
+		shardManager          persistence.ShardManager
+		metadataMgr           persistence.MetadataManager
+		visibilityMgr         persistence.VisibilityManager
+		historyMgr            persistence.HistoryManager
+		executionMgrFactory   persistence.ExecutionManagerFactory
+		historyServiceClient  hc.Client
+		matchingServiceClient matching.Client
+		hServiceResolver      membership.ServiceResolver
+		controller            *shardController
+		tokenSerializer       common.TaskTokenSerializer
+		startWG               sync.WaitGroup
+		metricsClient         metrics.Client
+		config                *Config
+		historyEventNotifier  historyEventNotifier
+		service.Service
+	}
+)
 
 var _ historyserviceserver.Interface = (*Handler)(nil)
 var _ EngineFactory = (*Handler)(nil)
@@ -71,15 +74,17 @@ func NewHandler(sVice service.Service, config *Config, shardManager persistence.
 	metadataMgr persistence.MetadataManager, visibilityMgr persistence.VisibilityManager,
 	historyMgr persistence.HistoryManager, executionMgrFactory persistence.ExecutionManagerFactory) *Handler {
 	handler := &Handler{
-		Service:             sVice,
-		config:              config,
-		shardManager:        shardManager,
-		metadataMgr:         metadataMgr,
-		historyMgr:          historyMgr,
-		visibilityMgr:       visibilityMgr,
-		executionMgrFactory: executionMgrFactory,
-		tokenSerializer:     common.NewJSONTaskTokenSerializer(),
+		Service:              sVice,
+		config:               config,
+		shardManager:         shardManager,
+		metadataMgr:          metadataMgr,
+		historyMgr:           historyMgr,
+		visibilityMgr:        visibilityMgr,
+		executionMgrFactory:  executionMgrFactory,
+		tokenSerializer:      common.NewJSONTaskTokenSerializer(),
+		historyEventNotifier: newHistoryEventNotifier(),
 	}
+
 	// prevent us from trying to serve requests before shard controller is started and ready
 	handler.startWG.Add(1)
 	return handler
@@ -111,12 +116,15 @@ func (h *Handler) Start() error {
 		h.executionMgrFactory, h, h.config, h.GetLogger(), h.GetMetricsClient())
 	h.controller.Start()
 	h.metricsClient = h.GetMetricsClient()
+	h.historyEventNotifier.Start()
+
 	h.startWG.Done()
 	return nil
 }
 
 // Stop stops the handler
 func (h *Handler) Stop() {
+	h.historyEventNotifier.Stop()
 	h.controller.Stop()
 	h.shardManager.Close()
 	h.historyMgr.Close()
@@ -128,7 +136,8 @@ func (h *Handler) Stop() {
 
 // CreateEngine is implementation for HistoryEngineFactory used for creating the engine instance for shard
 func (h *Handler) CreateEngine(context ShardContext) Engine {
-	return NewEngineWithShardContext(context, h.metadataMgr, h.visibilityMgr, h.matchingServiceClient, h.historyServiceClient)
+	return NewEngineWithShardContext(context, h.metadataMgr, h.visibilityMgr,
+		h.matchingServiceClient, h.historyServiceClient, h.historyEventNotifier)
 }
 
 // Health is for health check
@@ -482,7 +491,7 @@ func (h *Handler) GetWorkflowExecutionNextEventID(ctx context.Context,
 		return nil, err1
 	}
 
-	resp, err2 := engine.GetWorkflowExecutionNextEventID(getRequest)
+	resp, err2 := engine.GetWorkflowExecutionNextEventID(ctx, getRequest)
 	if err2 != nil {
 		h.updateErrorMetric(metrics.HistoryGetWorkflowExecutionNextEventIDScope, h.convertError(err2))
 		return nil, h.convertError(err2)
