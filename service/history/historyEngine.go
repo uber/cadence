@@ -310,10 +310,11 @@ func (e *historyEngineImpl) GetWorkflowExecutionNextEventID(ctx context.Context,
 	expectedNextEventID := request.GetExpectedNextEventID()
 	nextEventID := msBuilder.GetNextEventID()
 	taskList := context.msBuilder.executionInfo.TaskList
+	isWorkflowExecutionRunning := msBuilder.isWorkflowExecutionRunning()
 
 	// if caller decide to long poll on workflow execution
 	// and the event ID we are looking for is smaller than current next event ID
-	if expectedNextEventID > nextEventID && msBuilder.isWorkflowExecutionRunning() {
+	if expectedNextEventID >= nextEventID && isWorkflowExecutionRunning {
 		subscribeID, channel, err := context.watchWorkflowExecution()
 		if err != nil {
 			return nil, err
@@ -350,6 +351,7 @@ func (e *historyEngineImpl) GetWorkflowExecutionNextEventID(ctx context.Context,
 	result.EventId = common.Int64Ptr(nextEventID)
 	result.RunId = context.workflowExecution.RunId
 	result.Tasklist = &workflow.TaskList{Name: common.StringPtr(taskList)}
+	result.IsWorkflowExecutionRunning = &isWorkflowExecutionRunning
 
 	return result, nil
 }
