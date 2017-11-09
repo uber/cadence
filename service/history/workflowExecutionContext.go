@@ -25,6 +25,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pborman/uuid"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -46,6 +48,9 @@ type (
 		msBuilder       *mutableStateBuilder
 		updateCondition int64
 		deleteTimerTask persistence.Task
+
+		// map of subscriber ID to channel of signal
+		subscriberNotificationChan map[string]chan bool
 	}
 )
 
@@ -66,6 +71,8 @@ func newWorkflowExecutionContext(domainID string, execution workflow.WorkflowExe
 		shard:             shard,
 		executionManager:  executionManager,
 		logger:            lg,
+
+		subscriberNotificationChan: make(map[string]chan bool),
 	}
 }
 
@@ -192,6 +199,43 @@ func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persi
 	// Update went through so update the condition for new updates
 	c.updateCondition = c.msBuilder.GetNextEventID()
 	c.msBuilder.executionInfo.LastUpdatedTimestamp = time.Now()
+
+	// for all subscriber which watch changes of this workflow execution context
+	for _, channel := range c.subscriberNotificationChan {
+		select {
+		case channel <- true:
+			// this only notify watcher that there is a change
+		default:
+			// in case the channel is already filled with message
+			// this should NOT happen, unless there is a bug
+		}
+	}
+	return nil
+}
+
+func (c *workflowExecutionContext) watchWorkflowExecution() (string, chan bool, error) {
+	subscriberID := uuid.NewUUID().String()
+	if _, ok := c.subscriberNotificationChan[subscriberID]; ok {
+		// UUID collision
+		return "", nil, &workflow.InternalServiceError{
+			Message: "Unable to watch on workflow execution.",
+		}
+	}
+
+	channel := make(chan bool, 1)
+	c.subscriberNotificationChan[subscriberID] = channel
+	return subscriberID, channel, nil
+}
+
+func (c *workflowExecutionContext) unwatchWorkflowExecution(subscriberID string) error {
+	if _, ok := c.subscriberNotificationChan[subscriberID]; !ok {
+		// cannot find the subscribe ID, which means there is a bug
+		return &workflow.EntityNotExistsError{
+			Message: "Unable to unwatch on workflow execution.",
+		}
+	}
+
+	delete(c.subscriberNotificationChan, subscriberID)
 	return nil
 }
 

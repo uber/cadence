@@ -300,6 +300,25 @@ func (e *historyEngineImpl) GetWorkflowExecutionNextEventID(
 	}
 	defer release()
 
+	// if caller decide to long poll on workflow execution next event ID changes
+	if request.WaitForNewEvent != nil && *request.WaitForNewEvent == true {
+		subscribeID, channel, err := context.watchWorkflowExecution()
+		if err != nil {
+			return nil, err
+		}
+
+		context.Unlock()
+		timeoutChan := time.NewTimer(e.shard.GetConfig().LongPollExpirationInterval).C
+		// wait until timeout or nitified that workflow execution is updated
+		select {
+		case <-channel:
+		case <-timeoutChan:
+		}
+		context.Lock()
+
+		context.unwatchWorkflowExecution(subscribeID)
+	}
+
 	msBuilder, err1 := context.loadWorkflowExecution()
 	if err1 != nil {
 		return nil, err1
