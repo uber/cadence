@@ -21,7 +21,6 @@
 package history
 
 import (
-	"errors"
 	"sync"
 	"sync/atomic"
 
@@ -36,11 +35,6 @@ const (
 	statusIdle    int32 = 0
 	statusStarted int32 = 1
 	statusStopped int32 = 2
-)
-
-var (
-	// ErrNoEvents indicates there is no event before geven timeout
-	ErrNoEvents = errors.New("No events")
 )
 
 type (

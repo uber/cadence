@@ -312,7 +312,7 @@ func (e *historyEngineImpl) GetWorkflowExecutionNextEventID(ctx context.Context,
 
 	// if caller decide to long poll on workflow execution
 	// and the event ID we are looking for is smaller than current next event ID
-	if expectedNextEventID > response.GetEventId() && response.GetIsWorkflowRunning() {
+	if expectedNextEventID >= response.GetEventId() && response.GetIsWorkflowRunning() {
 		subscriberID, channel, err := e.historyEventNotifier.WatchHistoryEvent(&domainID, &execution)
 		if err != nil {
 			return nil, err
@@ -325,7 +325,7 @@ func (e *historyEngineImpl) GetWorkflowExecutionNextEventID(ctx context.Context,
 			return nil, err
 		}
 
-		if expectedNextEventID <= response.GetEventId() || !response.GetIsWorkflowRunning() {
+		if expectedNextEventID < response.GetEventId() || !response.GetIsWorkflowRunning() {
 			return response, nil
 		}
 
@@ -335,7 +335,7 @@ func (e *historyEngineImpl) GetWorkflowExecutionNextEventID(ctx context.Context,
 			case event := <-channel:
 				response.EventId = common.Int64Ptr(event.nextEventID)
 				response.IsWorkflowRunning = common.BoolPtr(event.isWorkflowRunning)
-				if expectedNextEventID <= response.GetEventId() || !response.GetIsWorkflowRunning() {
+				if expectedNextEventID < response.GetEventId() || !response.GetIsWorkflowRunning() {
 					return response, nil
 				}
 			case <-timeoutChan:
