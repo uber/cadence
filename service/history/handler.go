@@ -440,7 +440,7 @@ func (h *Handler) GetWorkflowExecutionNextEventID(ctx context.Context,
 		return nil, err1
 	}
 
-	resp, err2 := engine.GetWorkflowExecutionNextEventID(getRequest)
+	resp, err2 := engine.GetWorkflowExecutionNextEventID(ctx, getRequest)
 	if err2 != nil {
 		h.updateErrorMetric(metrics.HistoryGetWorkflowExecutionNextEventIDScope, h.convertError(err2))
 		return nil, h.convertError(err2)

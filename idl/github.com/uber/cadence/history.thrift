@@ -46,6 +46,7 @@ struct StartWorkflowExecutionRequest {
 struct GetWorkflowExecutionNextEventIDRequest {
   10: optional string domainUUID
   20: optional shared.WorkflowExecution execution
+  30: optional i64 (js.type = "Long") expectedNextEventID
 }
 
 struct GetWorkflowExecutionNextEventIDResponse {

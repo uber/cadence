@@ -768,6 +768,9 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 			if _, ok := err.(*gen.EntityNotExistsError); !ok || getRequest.Execution.RunId == nil {
 				return nil, wh.error(err, scope)
 			}
+			// here we have error == EntityNotExistsError && run ID != nil
+			// (validateExecution guarantee that when run ID != nil, run ID is a valid UUID)
+
 			// It is possible that we still have the events in the table even though the mutable state is gone
 			// Get the nextEventID from visibility store if we still have it.
 			visibilityResp, err := wh.visibitiltyMgr.GetClosedWorkflowExecution(&persistence.GetClosedWorkflowExecutionRequest{
