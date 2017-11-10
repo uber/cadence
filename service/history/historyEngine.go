@@ -313,7 +313,7 @@ func (e *historyEngineImpl) GetWorkflowExecutionNextEventID(ctx context.Context,
 
 	// if caller decide to long poll on workflow execution
 	// and the event ID we are looking for is smaller than current next event ID
-	if expectedNextEventID > nextEventID {
+	if expectedNextEventID > nextEventID && msBuilder.isWorkflowExecutionRunning() {
 		subscribeID, channel, err := context.watchWorkflowExecution()
 		if err != nil {
 			return nil, err
