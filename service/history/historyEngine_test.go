@@ -197,14 +197,13 @@ func (s *engineSuite) TestGetWorkflowExecutionNextEventIDLongPoll() {
 		timer := time.NewTimer(delay)
 
 		<-timer.C
-		err := s.mockHistoryEngine.RespondDecisionTaskCompleted(&history.RespondDecisionTaskCompletedRequest{
+		s.mockHistoryEngine.RespondDecisionTaskCompleted(&history.RespondDecisionTaskCompletedRequest{
 			DomainUUID: common.StringPtr(domainID),
 			CompleteRequest: &workflow.RespondDecisionTaskCompletedRequest{
 				TaskToken: taskToken,
 				Identity:  &identity,
 			},
 		})
-		s.Nil(err)
 		// right now the next event ID is 5
 	}
 
