@@ -622,6 +622,39 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 	return nil
 }
 
+// RespondDecisionTaskFailed - failed response to a decision task
+func (wh *WorkflowHandler) RespondDecisionTaskFailed(
+	ctx context.Context,
+	failedRequest *gen.RespondDecisionTaskFailedRequest) error {
+
+	scope := metrics.FrontendRespondDecisionTaskFailedScope
+	sw := wh.startRequestProfile(scope)
+	defer sw.Stop()
+
+	// Count the request in the RPS, but we still accept it even if RPS is exceeded
+	wh.rateLimiter.TryConsume(1)
+
+	if failedRequest.TaskToken == nil {
+		return wh.error(errTaskTokenNotSet, scope)
+	}
+	taskToken, err := wh.tokenSerializer.Deserialize(failedRequest.TaskToken)
+	if err != nil {
+		return wh.error(err, scope)
+	}
+	if taskToken.DomainID == "" {
+		return wh.error(errDomainNotSet, scope)
+	}
+
+	err = wh.history.RespondDecisionTaskFailed(ctx, &h.RespondDecisionTaskFailedRequest{
+		DomainUUID:    common.StringPtr(taskToken.DomainID),
+		FailedRequest: failedRequest,
+	})
+	if err != nil {
+		return wh.error(err, scope)
+	}
+	return nil
+}
+
 // RespondQueryTaskCompleted - response to a query task
 func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 	ctx context.Context,

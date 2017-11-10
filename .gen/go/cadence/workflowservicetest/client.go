@@ -576,6 +576,37 @@ func (mr *_MockClientRecorder) RespondDecisionTaskCompleted(
 	return mr.mock.ctrl.RecordCall(mr.mock, "RespondDecisionTaskCompleted", args...)
 }
 
+// RespondDecisionTaskFailed responds to a RespondDecisionTaskFailed call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().RespondDecisionTaskFailed(gomock.Any(), ...).Return(...)
+// 	... := client.RespondDecisionTaskFailed(...)
+func (m *MockClient) RespondDecisionTaskFailed(
+	ctx context.Context,
+	_FailedRequest *shared.RespondDecisionTaskFailedRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := []interface{}{ctx, _FailedRequest}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "RespondDecisionTaskFailed", args...)
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) RespondDecisionTaskFailed(
+	ctx interface{},
+	_FailedRequest interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _FailedRequest}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "RespondDecisionTaskFailed", args...)
+}
+
 // RespondQueryTaskCompleted responds to a RespondQueryTaskCompleted call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.

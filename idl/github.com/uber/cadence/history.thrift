@@ -59,6 +59,11 @@ struct RespondDecisionTaskCompletedRequest {
   20: optional shared.RespondDecisionTaskCompletedRequest completeRequest
 }
 
+struct RespondDecisionTaskFailedRequest {
+  10: optional string domainUUID
+  20: optional shared.RespondDecisionTaskFailedRequest failedRequest
+}
+
 struct RecordActivityTaskHeartbeatRequest {
   10: optional string domainUUID
   20: optional shared.RecordActivityTaskHeartbeatRequest heartbeatRequest
@@ -219,6 +224,19 @@ service HistoryService {
   * for completing the DecisionTask.
   **/
   void RespondDecisionTaskCompleted(1: RespondDecisionTaskCompletedRequest completeRequest)
+    throws (
+      1: shared.BadRequestError badRequestError,
+      2: shared.InternalServiceError internalServiceError,
+      3: shared.EntityNotExistsError entityNotExistError,
+      4: ShardOwnershipLostError shardOwnershipLostError,
+    )
+
+  /**
+  * RespondDecisionTaskFailed is called by application worker to indicate failure.  This results in
+  * DecisionTaskFailedEvent written to the history and a new DecisionTask created.  This API can be used by client to
+  * either clear sticky tasklist or report ny panics during DecisionTask processing.
+  **/
+  void RespondDecisionTaskFailed(1: RespondDecisionTaskFailedRequest failedRequest)
     throws (
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,

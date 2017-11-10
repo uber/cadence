@@ -114,6 +114,11 @@ type Interface interface {
 		CompleteRequest *shared.RespondDecisionTaskCompletedRequest,
 	) error
 
+	RespondDecisionTaskFailed(
+		ctx context.Context,
+		FailedRequest *shared.RespondDecisionTaskFailedRequest,
+	) error
+
 	RespondQueryTaskCompleted(
 		ctx context.Context,
 		CompleteRequest *shared.RespondQueryTaskCompletedRequest,
@@ -324,6 +329,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary: thrift.UnaryHandler(h.RespondDecisionTaskCompleted),
 				},
 				Signature:    "RespondDecisionTaskCompleted(CompleteRequest *shared.RespondDecisionTaskCompletedRequest)",
+				ThriftModule: cadence.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "RespondDecisionTaskFailed",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.RespondDecisionTaskFailed),
+				},
+				Signature:    "RespondDecisionTaskFailed(FailedRequest *shared.RespondDecisionTaskFailedRequest)",
 				ThriftModule: cadence.ThriftModule,
 			},
 
@@ -686,6 +702,25 @@ func (h handler) RespondDecisionTaskCompleted(ctx context.Context, body wire.Val
 
 	hadError := err != nil
 	result, err := cadence.WorkflowService_RespondDecisionTaskCompleted_Helper.WrapResponse(err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) RespondDecisionTaskFailed(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args cadence.WorkflowService_RespondDecisionTaskFailed_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	err := h.impl.RespondDecisionTaskFailed(ctx, args.FailedRequest)
+
+	hadError := err != nil
+	result, err := cadence.WorkflowService_RespondDecisionTaskFailed_Helper.WrapResponse(err)
 
 	var response thrift.Response
 	if err == nil {

@@ -985,6 +985,36 @@ Update_History_Loop:
 	return ErrMaxAttemptsExceeded
 }
 
+func (e *historyEngineImpl) RespondDecisionTaskFailed(req *h.RespondDecisionTaskFailedRequest) error {
+	domainID, err := getDomainUUID(req.DomainUUID)
+	if err != nil {
+		return err
+	}
+	request := req.FailedRequest
+	token, err0 := e.tokenSerializer.Deserialize(request.TaskToken)
+	if err0 != nil {
+		return &workflow.BadRequestError{Message: "Error deserializing task token."}
+	}
+
+	workflowExecution := workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr(token.WorkflowID),
+		RunId:      common.StringPtr(token.RunID),
+	}
+
+	return e.updateWorkflowExecution(domainID, workflowExecution, false, true,
+		func(msBuilder *mutableStateBuilder) error {
+			if !msBuilder.isWorkflowExecutionRunning() {
+				return &workflow.EntityNotExistsError{Message: "Workflow execution already completed."}
+			}
+
+			if msBuilder.AddWorkflowExecutionSignaled(request) == nil {
+				return &workflow.InternalServiceError{Message: "Unable to signal workflow execution."}
+			}
+
+			return nil
+		})
+}
+
 // RespondActivityTaskCompleted completes an activity task.
 func (e *historyEngineImpl) RespondActivityTaskCompleted(req *h.RespondActivityTaskCompletedRequest) error {
 	domainID, err := getDomainUUID(req.DomainUUID)

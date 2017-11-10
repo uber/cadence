@@ -102,6 +102,12 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) error
 
+	RespondDecisionTaskFailed(
+		ctx context.Context,
+		FailedRequest *history.RespondDecisionTaskFailedRequest,
+		opts ...yarpc.CallOption,
+	) error
+
 	ScheduleDecisionTask(
 		ctx context.Context,
 		ScheduleRequest *history.ScheduleDecisionTaskRequest,
@@ -401,6 +407,29 @@ func (c client) RespondDecisionTaskCompleted(
 	}
 
 	err = history.HistoryService_RespondDecisionTaskCompleted_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) RespondDecisionTaskFailed(
+	ctx context.Context,
+	_FailedRequest *history.RespondDecisionTaskFailedRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := history.HistoryService_RespondDecisionTaskFailed_Helper.Args(_FailedRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result history.HistoryService_RespondDecisionTaskFailed_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	err = history.HistoryService_RespondDecisionTaskFailed_Helper.UnwrapResponse(&result)
 	return
 }
 

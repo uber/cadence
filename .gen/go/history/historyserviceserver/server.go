@@ -89,6 +89,11 @@ type Interface interface {
 		CompleteRequest *history.RespondDecisionTaskCompletedRequest,
 	) error
 
+	RespondDecisionTaskFailed(
+		ctx context.Context,
+		FailedRequest *history.RespondDecisionTaskFailedRequest,
+	) error
+
 	ScheduleDecisionTask(
 		ctx context.Context,
 		ScheduleRequest *history.ScheduleDecisionTaskRequest,
@@ -239,6 +244,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary: thrift.UnaryHandler(h.RespondDecisionTaskCompleted),
 				},
 				Signature:    "RespondDecisionTaskCompleted(CompleteRequest *history.RespondDecisionTaskCompletedRequest)",
+				ThriftModule: history.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "RespondDecisionTaskFailed",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.RespondDecisionTaskFailed),
+				},
+				Signature:    "RespondDecisionTaskFailed(FailedRequest *history.RespondDecisionTaskFailedRequest)",
 				ThriftModule: history.ThriftModule,
 			},
 
@@ -495,6 +511,25 @@ func (h handler) RespondDecisionTaskCompleted(ctx context.Context, body wire.Val
 
 	hadError := err != nil
 	result, err := history.HistoryService_RespondDecisionTaskCompleted_Helper.WrapResponse(err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) RespondDecisionTaskFailed(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args history.HistoryService_RespondDecisionTaskFailed_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	err := h.impl.RespondDecisionTaskFailed(ctx, args.FailedRequest)
+
+	hadError := err != nil
+	result, err := history.HistoryService_RespondDecisionTaskFailed_Helper.WrapResponse(err)
 
 	var response thrift.Response
 	if err == nil {

@@ -132,6 +132,12 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) error
 
+	RespondDecisionTaskFailed(
+		ctx context.Context,
+		FailedRequest *shared.RespondDecisionTaskFailedRequest,
+		opts ...yarpc.CallOption,
+	) error
+
 	RespondQueryTaskCompleted(
 		ctx context.Context,
 		CompleteRequest *shared.RespondQueryTaskCompletedRequest,
@@ -552,6 +558,29 @@ func (c client) RespondDecisionTaskCompleted(
 	}
 
 	err = cadence.WorkflowService_RespondDecisionTaskCompleted_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) RespondDecisionTaskFailed(
+	ctx context.Context,
+	_FailedRequest *shared.RespondDecisionTaskFailedRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := cadence.WorkflowService_RespondDecisionTaskFailed_Helper.Args(_FailedRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result cadence.WorkflowService_RespondDecisionTaskFailed_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	err = cadence.WorkflowService_RespondDecisionTaskFailed_Helper.UnwrapResponse(&result)
 	return
 }
 

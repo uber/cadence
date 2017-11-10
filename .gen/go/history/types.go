@@ -2039,6 +2039,102 @@ func (v *RespondDecisionTaskCompletedRequest) GetDomainUUID() (o string) {
 	return
 }
 
+type RespondDecisionTaskFailedRequest struct {
+	DomainUUID    *string                                  `json:"domainUUID,omitempty"`
+	FailedRequest *shared.RespondDecisionTaskFailedRequest `json:"failedRequest,omitempty"`
+}
+
+func (v *RespondDecisionTaskFailedRequest) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+	if v.DomainUUID != nil {
+		w, err = wire.NewValueString(*(v.DomainUUID)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.FailedRequest != nil {
+		w, err = v.FailedRequest.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _RespondDecisionTaskFailedRequest_Read(w wire.Value) (*shared.RespondDecisionTaskFailedRequest, error) {
+	var v shared.RespondDecisionTaskFailedRequest
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func (v *RespondDecisionTaskFailedRequest) FromWire(w wire.Value) error {
+	var err error
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.DomainUUID = &x
+				if err != nil {
+					return err
+				}
+			}
+		case 20:
+			if field.Value.Type() == wire.TStruct {
+				v.FailedRequest, err = _RespondDecisionTaskFailedRequest_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (v *RespondDecisionTaskFailedRequest) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [2]string
+	i := 0
+	if v.DomainUUID != nil {
+		fields[i] = fmt.Sprintf("DomainUUID: %v", *(v.DomainUUID))
+		i++
+	}
+	if v.FailedRequest != nil {
+		fields[i] = fmt.Sprintf("FailedRequest: %v", v.FailedRequest)
+		i++
+	}
+	return fmt.Sprintf("RespondDecisionTaskFailedRequest{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *RespondDecisionTaskFailedRequest) Equals(rhs *RespondDecisionTaskFailedRequest) bool {
+	if !_String_EqualsPtr(v.DomainUUID, rhs.DomainUUID) {
+		return false
+	}
+	if !((v.FailedRequest == nil && rhs.FailedRequest == nil) || (v.FailedRequest != nil && rhs.FailedRequest != nil && v.FailedRequest.Equals(rhs.FailedRequest))) {
+		return false
+	}
+	return true
+}
+
+func (v *RespondDecisionTaskFailedRequest) GetDomainUUID() (o string) {
+	if v.DomainUUID != nil {
+		return *v.DomainUUID
+	}
+	return
+}
+
 type ScheduleDecisionTaskRequest struct {
 	DomainUUID        *string                   `json:"domainUUID,omitempty"`
 	WorkflowExecution *shared.WorkflowExecution `json:"workflowExecution,omitempty"`

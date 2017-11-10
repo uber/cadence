@@ -135,6 +135,8 @@ enum DecisionTaskFailedCause {
   BAD_REQUEST_CANCEL_EXTERNAL_WORKFLOW_EXECUTION_ATTRIBUTES,
   BAD_CONTINUE_AS_NEW_ATTRIBUTES,
   START_TIMER_DUPLICATE_ID,
+  RESET_STICKY_TASKLIST,
+  PANIC
 }
 
 enum CancelExternalWorkflowExecutionFailedCause {
@@ -349,6 +351,7 @@ struct DecisionTaskFailedEventAttributes {
   10: optional i64 (js.type = "Long") scheduledEventId
   20: optional i64 (js.type = "Long") startedEventId
   30: optional DecisionTaskFailedCause cause
+  35: optional binary details
   40: optional string identity
 }
 
@@ -719,6 +722,13 @@ struct RespondDecisionTaskCompletedRequest {
   30: optional binary executionContext
   40: optional string identity
   50: optional StickyExecutionAttributes stickyAttributes
+}
+
+struct RespondDecisionTaskFailedRequest {
+  10: optional binary taskToken
+  20: optional DecisionTaskFailedCause cause
+  30: optional binary details
+  40: optional string identity
 }
 
 struct PollForActivityTaskRequest {
