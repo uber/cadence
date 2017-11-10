@@ -21,6 +21,7 @@
 package history
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"os"
@@ -137,6 +138,7 @@ func (s *engineSuite) TearDownTest() {
 }
 
 func (s *engineSuite) TestGetWorkflowExecutionNextEventIDSync() {
+	ctx := context.Background()
 	domainID := "domainId"
 	execution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("test-get-workflow-execution-event-id"),
@@ -155,7 +157,7 @@ func (s *engineSuite) TestGetWorkflowExecutionNextEventIDSync() {
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gweResponse, nil).Once()
 
 	// test get the next event ID instantly
-	response, err := s.mockHistoryEngine.GetWorkflowExecutionNextEventID(&history.GetWorkflowExecutionNextEventIDRequest{
+	response, err := s.mockHistoryEngine.GetWorkflowExecutionNextEventID(ctx, &history.GetWorkflowExecutionNextEventIDRequest{
 		DomainUUID: common.StringPtr(domainID),
 		Execution:  &execution,
 	})
@@ -164,6 +166,7 @@ func (s *engineSuite) TestGetWorkflowExecutionNextEventIDSync() {
 }
 
 func (s *engineSuite) TestGetWorkflowExecutionNextEventIDLongPoll() {
+	ctx := context.Background()
 	domainID := "domainId"
 	execution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("test-get-workflow-execution-event-id"),
@@ -205,18 +208,28 @@ func (s *engineSuite) TestGetWorkflowExecutionNextEventIDLongPoll() {
 		// right now the next event ID is 5
 	}
 
+	// return immediately, since the expected next event ID appears
+	response, err := s.mockHistoryEngine.GetWorkflowExecutionNextEventID(ctx, &history.GetWorkflowExecutionNextEventIDRequest{
+		DomainUUID:          common.StringPtr(domainID),
+		Execution:           &execution,
+		ExpectedNextEventID: common.Int64Ptr(4),
+	})
+	s.Nil(err)
+	s.Equal(int64(4), *response.EventId)
+
 	// long poll, new event happen before long poll timeout
 	go asycWorkflowUpdate(time.Second * 10)
-	response, err := s.mockHistoryEngine.GetWorkflowExecutionNextEventID(&history.GetWorkflowExecutionNextEventIDRequest{
-		DomainUUID:      common.StringPtr(domainID),
-		Execution:       &execution,
-		WaitForNewEvent: common.BoolPtr(true),
+	response, err = s.mockHistoryEngine.GetWorkflowExecutionNextEventID(ctx, &history.GetWorkflowExecutionNextEventIDRequest{
+		DomainUUID:          common.StringPtr(domainID),
+		Execution:           &execution,
+		ExpectedNextEventID: common.Int64Ptr(5),
 	})
 	s.Nil(err)
 	s.Equal(int64(5), *response.EventId)
 }
 
 func (s *engineSuite) TestGetWorkflowExecutionNextEventIDLongPollTimeout() {
+	ctx := context.Background()
 	domainID := "domainId"
 	execution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("test-get-workflow-execution-event-id"),
@@ -235,10 +248,10 @@ func (s *engineSuite) TestGetWorkflowExecutionNextEventIDLongPollTimeout() {
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gweResponse, nil).Once()
 
 	// long poll, no event happen after long poll timeout
-	response, err := s.mockHistoryEngine.GetWorkflowExecutionNextEventID(&history.GetWorkflowExecutionNextEventIDRequest{
-		DomainUUID:      common.StringPtr(domainID),
-		Execution:       &execution,
-		WaitForNewEvent: common.BoolPtr(true),
+	response, err := s.mockHistoryEngine.GetWorkflowExecutionNextEventID(ctx, &history.GetWorkflowExecutionNextEventIDRequest{
+		DomainUUID:          common.StringPtr(domainID),
+		Execution:           &execution,
+		ExpectedNextEventID: common.Int64Ptr(5),
 	})
 	s.Nil(err)
 	s.Equal(int64(4), *response.EventId)

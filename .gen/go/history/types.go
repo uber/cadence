@@ -95,9 +95,9 @@ func (v *EventAlreadyStartedError) Error() string {
 }
 
 type GetWorkflowExecutionNextEventIDRequest struct {
-	DomainUUID      *string                   `json:"domainUUID,omitempty"`
-	Execution       *shared.WorkflowExecution `json:"execution,omitempty"`
-	WaitForNewEvent *bool                     `json:"waitForNewEvent,omitempty"`
+	DomainUUID          *string                   `json:"domainUUID,omitempty"`
+	Execution           *shared.WorkflowExecution `json:"execution,omitempty"`
+	ExpectedNextEventID *int64                    `json:"expectedNextEventID,omitempty"`
 }
 
 func (v *GetWorkflowExecutionNextEventIDRequest) ToWire() (wire.Value, error) {
@@ -123,8 +123,8 @@ func (v *GetWorkflowExecutionNextEventIDRequest) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 20, Value: w}
 		i++
 	}
-	if v.WaitForNewEvent != nil {
-		w, err = wire.NewValueBool(*(v.WaitForNewEvent)), error(nil)
+	if v.ExpectedNextEventID != nil {
+		w, err = wire.NewValueI64(*(v.ExpectedNextEventID)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -161,10 +161,10 @@ func (v *GetWorkflowExecutionNextEventIDRequest) FromWire(w wire.Value) error {
 				}
 			}
 		case 30:
-			if field.Value.Type() == wire.TBool {
-				var x bool
-				x, err = field.Value.GetBool(), error(nil)
-				v.WaitForNewEvent = &x
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.ExpectedNextEventID = &x
 				if err != nil {
 					return err
 				}
@@ -188,8 +188,8 @@ func (v *GetWorkflowExecutionNextEventIDRequest) String() string {
 		fields[i] = fmt.Sprintf("Execution: %v", v.Execution)
 		i++
 	}
-	if v.WaitForNewEvent != nil {
-		fields[i] = fmt.Sprintf("WaitForNewEvent: %v", *(v.WaitForNewEvent))
+	if v.ExpectedNextEventID != nil {
+		fields[i] = fmt.Sprintf("ExpectedNextEventID: %v", *(v.ExpectedNextEventID))
 		i++
 	}
 	return fmt.Sprintf("GetWorkflowExecutionNextEventIDRequest{%v}", strings.Join(fields[:i], ", "))
@@ -204,7 +204,7 @@ func _String_EqualsPtr(lhs, rhs *string) bool {
 	return lhs == nil && rhs == nil
 }
 
-func _Bool_EqualsPtr(lhs, rhs *bool) bool {
+func _I64_EqualsPtr(lhs, rhs *int64) bool {
 	if lhs != nil && rhs != nil {
 		x := *lhs
 		y := *rhs
@@ -220,7 +220,7 @@ func (v *GetWorkflowExecutionNextEventIDRequest) Equals(rhs *GetWorkflowExecutio
 	if !((v.Execution == nil && rhs.Execution == nil) || (v.Execution != nil && rhs.Execution != nil && v.Execution.Equals(rhs.Execution))) {
 		return false
 	}
-	if !_Bool_EqualsPtr(v.WaitForNewEvent, rhs.WaitForNewEvent) {
+	if !_I64_EqualsPtr(v.ExpectedNextEventID, rhs.ExpectedNextEventID) {
 		return false
 	}
 	return true
@@ -233,9 +233,9 @@ func (v *GetWorkflowExecutionNextEventIDRequest) GetDomainUUID() (o string) {
 	return
 }
 
-func (v *GetWorkflowExecutionNextEventIDRequest) GetWaitForNewEvent() (o bool) {
-	if v.WaitForNewEvent != nil {
-		return *v.WaitForNewEvent
+func (v *GetWorkflowExecutionNextEventIDRequest) GetExpectedNextEventID() (o int64) {
+	if v.ExpectedNextEventID != nil {
+		return *v.ExpectedNextEventID
 	}
 	return
 }
@@ -339,15 +339,6 @@ func (v *GetWorkflowExecutionNextEventIDResponse) String() string {
 		i++
 	}
 	return fmt.Sprintf("GetWorkflowExecutionNextEventIDResponse{%v}", strings.Join(fields[:i], ", "))
-}
-
-func _I64_EqualsPtr(lhs, rhs *int64) bool {
-	if lhs != nil && rhs != nil {
-		x := *lhs
-		y := *rhs
-		return (x == y)
-	}
-	return lhs == nil && rhs == nil
 }
 
 func (v *GetWorkflowExecutionNextEventIDResponse) Equals(rhs *GetWorkflowExecutionNextEventIDResponse) bool {

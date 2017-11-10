@@ -21,6 +21,7 @@
 package history
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -281,7 +282,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 }
 
 // GetWorkflowExecutionNextEventID retrieves the nextEventId of the workflow execution history
-func (e *historyEngineImpl) GetWorkflowExecutionNextEventID(
+func (e *historyEngineImpl) GetWorkflowExecutionNextEventID(ctx context.Context,
 	request *h.GetWorkflowExecutionNextEventIDRequest) (*h.GetWorkflowExecutionNextEventIDResponse, error) {
 
 	domainID, err := getDomainUUID(request.DomainUUID)
@@ -300,8 +301,19 @@ func (e *historyEngineImpl) GetWorkflowExecutionNextEventID(
 	}
 	defer release()
 
-	// if caller decide to long poll on workflow execution next event ID changes
-	if request.WaitForNewEvent != nil && *request.WaitForNewEvent == true {
+	msBuilder, err1 := context.loadWorkflowExecution()
+	if err1 != nil {
+		return nil, err1
+	}
+
+	// expectedNextEventID is 0 when caller want to get the current next event ID without blocking
+	expectedNextEventID := request.GetExpectedNextEventID()
+	nextEventID := msBuilder.GetNextEventID()
+	taskList := context.msBuilder.executionInfo.TaskList
+
+	// if caller decide to long poll on workflow execution
+	// and the event ID we are looking for is smaller than current next event ID
+	if expectedNextEventID > nextEventID {
 		subscribeID, channel, err := context.watchWorkflowExecution()
 		if err != nil {
 			return nil, err
@@ -309,25 +321,35 @@ func (e *historyEngineImpl) GetWorkflowExecutionNextEventID(
 
 		context.Unlock()
 		timeoutChan := time.NewTimer(e.shard.GetConfig().LongPollExpirationInterval).C
-		// wait until timeout or nitified that workflow execution is updated
-		select {
-		case <-channel:
-		case <-timeoutChan:
+
+	Check_Next_Event_ID_Loop:
+		for {
+			select {
+			case <-channel:
+				context.Lock()
+				nextEventID = msBuilder.GetNextEventID()
+				taskList = context.msBuilder.executionInfo.TaskList
+				if expectedNextEventID > nextEventID {
+					context.Unlock()
+				} else {
+					context.unwatchWorkflowExecution(subscribeID)
+					break Check_Next_Event_ID_Loop
+				}
+			case <-timeoutChan:
+				context.Lock()
+				context.unwatchWorkflowExecution(subscribeID)
+				break Check_Next_Event_ID_Loop
+			case <-ctx.Done():
+				context.Lock()
+				return nil, &workflow.BadRequestError{Message: "timeout: frontend timeout the request"}
+			}
 		}
-		context.Lock()
-
-		context.unwatchWorkflowExecution(subscribeID)
-	}
-
-	msBuilder, err1 := context.loadWorkflowExecution()
-	if err1 != nil {
-		return nil, err1
 	}
 
 	result := &h.GetWorkflowExecutionNextEventIDResponse{}
-	result.EventId = common.Int64Ptr(msBuilder.GetNextEventID())
+	result.EventId = common.Int64Ptr(nextEventID)
 	result.RunId = context.workflowExecution.RunId
-	result.Tasklist = &workflow.TaskList{Name: common.StringPtr(context.msBuilder.executionInfo.TaskList)}
+	result.Tasklist = &workflow.TaskList{Name: common.StringPtr(taskList)}
 
 	return result, nil
 }
