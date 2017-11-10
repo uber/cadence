@@ -263,7 +263,7 @@ func (c *taskListManagerImpl) persistAckLevel() error {
 }
 
 // newTaskIDs taskID to use to persist the task
-func (c *taskListManagerImpl) newTaskIDs(count int) (taskID []int64, err error) {
+func (c *taskListManagerImpl) newTaskIDs(count int) (taskIDs []int64, err error) {
 	c.Lock()
 	defer c.Unlock()
 	for i := 0; i < count; i++ {
@@ -271,7 +271,7 @@ func (c *taskListManagerImpl) newTaskIDs(count int) (taskID []int64, err error) 
 		if err != nil {
 			return nil, err
 		}
-		taskID = append(taskID, c.taskSequenceNumber)
+		taskIDs = append(taskIDs, c.taskSequenceNumber)
 		c.taskSequenceNumber++
 	}
 	return
@@ -359,6 +359,26 @@ func (c *taskListManagerImpl) CancelPoller(pollerID string) {
 
 // Returns a batch of tasks from persistence starting form current read level.
 func (c *taskListManagerImpl) getTaskBatch() ([]*persistence.TaskInfo, error) {
+	result := make([]*persistence.TaskInfo, 0)
+	readLevel := c.taskAckManager.getReadLevel()
+	maxReadLevel := c.taskWriter.GetMaxReadLevel()
+	// when gap is large, query db multiple times to avoid query aborted caused by tombstone
+	for readLevel < maxReadLevel {
+		upper := readLevel + c.config.RangeSize
+		if upper > maxReadLevel {
+			upper = maxReadLevel
+		}
+		tasks, err := c.getTaskBatchWithRange(readLevel, upper)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, tasks...)
+		readLevel = upper
+	}
+	return result, nil
+}
+
+func (c *taskListManagerImpl) getTaskBatchWithRange(readLevel int64, maxReadLevel int64) ([]*persistence.TaskInfo, error) {
 	response, err := c.executeWithRetry(func(rangeID int64) (interface{}, error) {
 		c.Lock()
 		request := &persistence.GetTasksRequest{
@@ -367,8 +387,8 @@ func (c *taskListManagerImpl) getTaskBatch() ([]*persistence.TaskInfo, error) {
 			TaskType:     c.taskListID.taskType,
 			BatchSize:    c.config.GetTasksBatchSize,
 			RangeID:      rangeID,
-			ReadLevel:    c.taskAckManager.getReadLevel(),
-			MaxReadLevel: c.taskWriter.GetMaxReadLevel(),
+			ReadLevel:    readLevel,
+			MaxReadLevel: maxReadLevel,
 		}
 		c.Unlock()
 		return c.engine.taskManager.GetTasks(request)
@@ -414,7 +434,6 @@ func (c *taskListManagerImpl) updateRangeIfNeededLocked(e *matchingEngineImpl) e
 	c.rangeID = tli.RangeID // Starts from 1
 	c.taskAckManager.setAckLevel(tli.AckLevel)
 	c.taskSequenceNumber = (tli.RangeID-1)*e.config.RangeSize + 1
-
 	c.nextRangeSequenceNumber = (tli.RangeID)*e.config.RangeSize + 1
 	c.logger.Debugf("updateRangeLocked rangeID=%v, c.taskSequenceNumber=%v, c.nextRangeSequenceNumber=%v",
 		c.rangeID, c.taskSequenceNumber, c.nextRangeSequenceNumber)
@@ -619,7 +638,7 @@ func (c *taskContext) completeTask(err error) {
 	if err != nil {
 		// failed to start the task.
 		// We cannot just remove it from persistence because then it will be lost,
-		// which is criticial for decision tasks since there have no ScheduleToStart timeout.
+		// which is critical for decision tasks since there have no ScheduleToStart timeout.
 		// We handle this by writing the task back to persistence with a higher taskID.
 		// This will allow subsequent tasks to make progress, and hopefully by the time this task is picked-up
 		// again the underlying reason for failing to start will be resolved.
