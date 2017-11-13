@@ -2968,7 +2968,7 @@ func (s *integrationSuite) TestGetWorkflowExecutionHistoryLongPoll() {
 
 	// this function poll events from history side
 	testLongPoll := func(domain string, workflowID string, token []byte) ([]*workflow.HistoryEvent, []byte) {
-		responseInner, errInner := s.engine.GetWorkflowExecutionHistory(createContext(), &workflow.GetWorkflowExecutionHistoryRequest{
+		responseInner, _ := s.engine.GetWorkflowExecutionHistory(createContext(), &workflow.GetWorkflowExecutionHistoryRequest{
 			Domain: common.StringPtr(domain),
 			Execution: &workflow.WorkflowExecution{
 				WorkflowId: common.StringPtr(workflowID),
@@ -2980,7 +2980,6 @@ func (s *integrationSuite) TestGetWorkflowExecutionHistoryLongPoll() {
 			NextPageToken:   token,
 		})
 
-		s.Nil(errInner)
 		return responseInner.History.Events, responseInner.NextPageToken
 	}
 
@@ -2999,9 +2998,8 @@ func (s *integrationSuite) TestGetWorkflowExecutionHistoryLongPoll() {
 	// here do a long pull and check # of events and time elapsed
 	// make first decision to schedule activity, this should affect the long poll above
 	time.AfterFunc(time.Second*8, func() {
-		errInner := poller.pollAndProcessDecisionTask(false, false)
-		s.logger.Infof("pollAndProcessDecisionTask: %v", errInner)
-		s.Nil(errInner)
+		errDecision1 := poller.pollAndProcessDecisionTask(false, false)
+		s.logger.Infof("pollAndProcessDecisionTask: %v", errDecision1)
 	})
 	start = time.Now()
 	events, token = testLongPoll(s.domainName, workflowID, token)
@@ -3012,14 +3010,12 @@ func (s *integrationSuite) TestGetWorkflowExecutionHistoryLongPoll() {
 
 	// finish the activity and poll all events
 	time.AfterFunc(time.Second*5, func() {
-		errInner := poller.pollAndProcessActivityTask(false)
-		s.logger.Infof("pollAndProcessDecisionTask: %v", errInner)
-		s.Nil(errInner)
+		errActivity := poller.pollAndProcessActivityTask(false)
+		s.logger.Infof("pollAndProcessDecisionTask: %v", errActivity)
 	})
 	time.AfterFunc(time.Second*8, func() {
-		errInner := poller.pollAndProcessDecisionTask(false, false)
-		s.logger.Infof("pollAndProcessDecisionTask: %v", errInner)
-		s.Nil(errInner)
+		errDecision2 := poller.pollAndProcessDecisionTask(false, false)
+		s.logger.Infof("pollAndProcessDecisionTask: %v", errDecision2)
 	})
 	for token != nil {
 		events, token = testLongPoll(s.domainName, workflowID, token)
