@@ -862,11 +862,12 @@ func (t *timerQueueProcessorImpl) updateWorkflowExecution(
 	var transferTasks []persistence.Task
 	if scheduleNewDecision {
 		// Schedule a new decision.
-		newDecisionEvent, _ := msBuilder.AddDecisionTaskScheduledEvent()
+		newDecisionEvent, di := msBuilder.AddDecisionTaskScheduledEvent()
 		transferTasks = []persistence.Task{&persistence.DecisionTask{
-			DomainID:   msBuilder.executionInfo.DomainID,
-			TaskList:   *newDecisionEvent.DecisionTaskScheduledEventAttributes.TaskList.Name,
-			ScheduleID: *newDecisionEvent.EventId,
+			DomainID:        msBuilder.executionInfo.DomainID,
+			TaskList:        *newDecisionEvent.DecisionTaskScheduledEventAttributes.TaskList.Name,
+			ScheduleID:      di.ScheduleID,
+			ScheduleAttempt: di.Attempt,
 		}}
 		if msBuilder.isStickyTaskListEnabled() {
 			tBuilder := t.historyService.getTimerBuilder(&context.workflowExecution)

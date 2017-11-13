@@ -36,7 +36,6 @@ import (
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"go/token"
 )
 
 const (
@@ -189,7 +188,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 		}
 
 		transferTasks = []persistence.Task{&persistence.DecisionTask{
-			DomainID: domainID, TaskList: taskList, ScheduleID: di.ScheduleID,
+			DomainID: domainID, TaskList: taskList, ScheduleID: di.ScheduleID, ScheduleAttempt: di.Attempt,
 		}}
 		decisionScheduleID = di.ScheduleID
 		decisionStartID = di.StartedID
@@ -928,11 +927,12 @@ Update_History_Loop:
 
 		// Schedule another decision task if new events came in during this decision
 		if hasUnhandledEvents {
-			newDecisionEvent, _ := msBuilder.AddDecisionTaskScheduledEvent()
+			newDecisionEvent, di := msBuilder.AddDecisionTaskScheduledEvent()
 			transferTasks = append(transferTasks, &persistence.DecisionTask{
-				DomainID:   domainID,
-				TaskList:   *newDecisionEvent.DecisionTaskScheduledEventAttributes.TaskList.Name,
-				ScheduleID: *newDecisionEvent.EventId,
+				DomainID:        domainID,
+				TaskList:        *newDecisionEvent.DecisionTaskScheduledEventAttributes.TaskList.Name,
+				ScheduleID:      di.ScheduleID,
+				ScheduleAttempt: di.Attempt,
 			})
 			if msBuilder.isStickyTaskListEnabled() {
 				tBuilder := e.getTimerBuilder(&context.workflowExecution)
@@ -1008,9 +1008,14 @@ func (e *historyEngineImpl) RespondDecisionTaskFailed(req *h.RespondDecisionTask
 				return &workflow.EntityNotExistsError{Message: "Workflow execution already completed."}
 			}
 
-			if msBuilder.AddWorkflowExecutionSignaled(request) == nil {
-				return &workflow.InternalServiceError{Message: "Unable to signal workflow execution."}
+			scheduleID := token.ScheduleID
+			di, isRunning := msBuilder.GetPendingDecision(scheduleID)
+			if !isRunning || di.StartedID == emptyEventID {
+				return &workflow.EntityNotExistsError{Message: "Decision task not found."}
 			}
+
+			msBuilder.AddDecisionTaskFailedEvent(di.ScheduleID, di.StartedID, request.GetCause(), request.Details,
+				request.GetIdentity())
 
 			return nil
 		})
@@ -1071,11 +1076,12 @@ Update_History_Loop:
 		var transferTasks []persistence.Task
 		var timerTasks []persistence.Task
 		if !msBuilder.HasPendingDecisionTask() {
-			newDecisionEvent, _ := msBuilder.AddDecisionTaskScheduledEvent()
+			newDecisionEvent, di := msBuilder.AddDecisionTaskScheduledEvent()
 			transferTasks = []persistence.Task{&persistence.DecisionTask{
-				DomainID:   domainID,
-				TaskList:   *newDecisionEvent.DecisionTaskScheduledEventAttributes.TaskList.Name,
-				ScheduleID: *newDecisionEvent.EventId,
+				DomainID:        domainID,
+				TaskList:        *newDecisionEvent.DecisionTaskScheduledEventAttributes.TaskList.Name,
+				ScheduleID:      di.ScheduleID,
+				ScheduleAttempt: di.Attempt,
 			}}
 			if msBuilder.isStickyTaskListEnabled() {
 				tBuilder := e.getTimerBuilder(&context.workflowExecution)
@@ -1163,11 +1169,12 @@ Update_History_Loop:
 		var transferTasks []persistence.Task
 		var timerTasks []persistence.Task
 		if !msBuilder.HasPendingDecisionTask() {
-			newDecisionEvent, _ := msBuilder.AddDecisionTaskScheduledEvent()
+			newDecisionEvent, di := msBuilder.AddDecisionTaskScheduledEvent()
 			transferTasks = []persistence.Task{&persistence.DecisionTask{
-				DomainID:   domainID,
-				TaskList:   *newDecisionEvent.DecisionTaskScheduledEventAttributes.TaskList.Name,
-				ScheduleID: *newDecisionEvent.EventId,
+				DomainID:        domainID,
+				TaskList:        *newDecisionEvent.DecisionTaskScheduledEventAttributes.TaskList.Name,
+				ScheduleID:      di.ScheduleID,
+				ScheduleAttempt: di.Attempt,
 			}}
 			if msBuilder.isStickyTaskListEnabled() {
 				tBuilder := e.getTimerBuilder(&context.workflowExecution)
@@ -1257,11 +1264,12 @@ Update_History_Loop:
 		var transferTasks []persistence.Task
 		var timerTasks []persistence.Task
 		if !msBuilder.HasPendingDecisionTask() {
-			newDecisionEvent, _ := msBuilder.AddDecisionTaskScheduledEvent()
+			newDecisionEvent, di := msBuilder.AddDecisionTaskScheduledEvent()
 			transferTasks = []persistence.Task{&persistence.DecisionTask{
-				DomainID:   domainID,
-				TaskList:   *newDecisionEvent.DecisionTaskScheduledEventAttributes.TaskList.Name,
-				ScheduleID: *newDecisionEvent.EventId,
+				DomainID:        domainID,
+				TaskList:        *newDecisionEvent.DecisionTaskScheduledEventAttributes.TaskList.Name,
+				ScheduleID:      di.ScheduleID,
+				ScheduleAttempt: di.Attempt,
 			}}
 			if msBuilder.isStickyTaskListEnabled() {
 				tBuilder := e.getTimerBuilder(&context.workflowExecution)
@@ -1576,11 +1584,12 @@ Update_History_Loop:
 		if createDecisionTask {
 			// Create a transfer task to schedule a decision task
 			if !msBuilder.HasPendingDecisionTask() {
-				newDecisionEvent, _ := msBuilder.AddDecisionTaskScheduledEvent()
+				newDecisionEvent, di := msBuilder.AddDecisionTaskScheduledEvent()
 				transferTasks = append(transferTasks, &persistence.DecisionTask{
-					DomainID:   domainID,
-					TaskList:   *newDecisionEvent.DecisionTaskScheduledEventAttributes.TaskList.Name,
-					ScheduleID: *newDecisionEvent.EventId,
+					DomainID:        domainID,
+					TaskList:        *newDecisionEvent.DecisionTaskScheduledEventAttributes.TaskList.Name,
+					ScheduleID:      di.ScheduleID,
+					ScheduleAttempt: di.Attempt,
 				})
 				if msBuilder.isStickyTaskListEnabled() {
 					tBuilder := e.getTimerBuilder(&context.workflowExecution)
@@ -1670,7 +1679,7 @@ func (e *historyEngineImpl) failDecision(context *workflowExecutionContext, sche
 		return nil, err
 	}
 
-	msBuilder.AddDecisionTaskFailedEvent(scheduleID, startedID, cause, request)
+	msBuilder.AddDecisionTaskFailedEvent(scheduleID, startedID, cause, nil, request.GetIdentity())
 
 	// Return new builder back to the caller for further updates
 	return msBuilder, nil

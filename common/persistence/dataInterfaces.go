@@ -156,6 +156,7 @@ type (
 		TaskList         string
 		TaskType         int
 		ScheduleID       int64
+		ScheduleAttempt  int64
 	}
 
 	// TimerTaskInfo describes a timer task.
@@ -187,6 +188,7 @@ type (
 		TaskID                 int64
 		ScheduleID             int64
 		ScheduleToStartTimeout int32
+		ScheduleAttempt        int64
 	}
 
 	// Task is the generic interface for workflow tasks
@@ -206,10 +208,11 @@ type (
 
 	// DecisionTask identifies a transfer task for decision
 	DecisionTask struct {
-		TaskID     int64
-		DomainID   string
-		TaskList   string
-		ScheduleID int64
+		TaskID          int64
+		DomainID        string
+		TaskList        string
+		ScheduleID      int64
+		ScheduleAttempt int64
 	}
 
 	// CloseExecutionTask identifies a transfer task for deletion of execution

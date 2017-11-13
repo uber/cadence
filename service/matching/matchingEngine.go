@@ -189,7 +189,8 @@ func (e *matchingEngineImpl) AddDecisionTask(addRequest *m.AddDecisionTaskReques
 	domainID := *addRequest.DomainUUID
 	taskListName := *addRequest.TaskList.Name
 	e.logger.Debugf("Received AddDecisionTask for taskList=%v, WorkflowID=%v, RunID=%v, ScheduleToStartTimeout=%v",
-		addRequest.TaskList.GetName(), addRequest.Execution.GetWorkflowId(), addRequest.Execution.GetRunId(), addRequest.GetScheduleToStartTimeoutSeconds())
+		addRequest.TaskList.GetName(), addRequest.Execution.GetWorkflowId(), addRequest.Execution.GetRunId(),
+		addRequest.GetScheduleToStartTimeoutSeconds())
 	taskList := newTaskListID(domainID, taskListName, persistence.TaskListTypeDecision)
 	tlMgr, err := e.getTaskListManager(taskList)
 	if err != nil {
@@ -200,6 +201,7 @@ func (e *matchingEngineImpl) AddDecisionTask(addRequest *m.AddDecisionTaskReques
 		RunID:                  *addRequest.Execution.RunId,
 		WorkflowID:             *addRequest.Execution.WorkflowId,
 		ScheduleID:             *addRequest.ScheduleId,
+		ScheduleAttempt:        *addRequest.ScheduleAttempt,
 		ScheduleToStartTimeout: *addRequest.ScheduleToStartTimeoutSeconds,
 	}
 	return tlMgr.AddTask(addRequest.Execution, taskInfo)
@@ -289,6 +291,7 @@ pollLoop:
 			DomainUUID:        common.StringPtr(domainID),
 			WorkflowExecution: &tCtx.workflowExecution,
 			ScheduleId:        &tCtx.info.ScheduleID,
+			ScheduleAttempt:   &tCtx.info.ScheduleAttempt,
 			TaskId:            &tCtx.info.TaskID,
 			RequestId:         common.StringPtr(requestID),
 			PollRequest:       request,

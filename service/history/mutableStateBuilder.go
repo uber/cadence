@@ -58,9 +58,10 @@ type (
 		updateRequestCancelInfos    []*persistence.RequestCancelInfo         // Modified RequestCancel Infos since last update
 		deleteRequestCancelInfo     *int64                                   // Deleted RequestCancel Info since last update
 
-		bufferedEvents       []*persistence.SerializedHistoryEventBatch // buffered history events that are already persisted
-		updateBufferedEvents *persistence.SerializedHistoryEventBatch   // buffered history events that needs to be persisted
-		clearBufferedEvents  bool                                       // delete buffered events from persistence
+		bufferedEvents               []*persistence.SerializedHistoryEventBatch // buffered history events that are already persisted
+		updateBufferedEvents         *persistence.SerializedHistoryEventBatch   // buffered history events that needs to be persisted
+		clearBufferedEvents          bool                                       // delete buffered events from persistence
+		lastFailedDecisionScheduleID *int64
 
 		executionInfo   *persistence.WorkflowExecutionInfo // Workflow mutable state info.
 		continueAsNew   *persistence.CreateWorkflowExecutionRequest
@@ -238,6 +239,7 @@ func (e *mutableStateBuilder) CloseUpdateSession() (*mutableStateSessionUpdates,
 		e.bufferedEvents = append(e.bufferedEvents, e.updateBufferedEvents)
 		e.updateBufferedEvents = nil
 	}
+	e.lastFailedDecisionScheduleID = nil
 
 	return updates, nil
 }
@@ -627,7 +629,8 @@ func (e *mutableStateBuilder) DeleteDecision() {
 	e.UpdateDecision(emptyDecisionInfo)
 }
 
-func (e *mutableStateBuilder) FailDecision(startedEventID int64) {
+func (e *mutableStateBuilder) FailDecision(scheduleEventID, startedEventID int64) {
+	e.lastFailedDecisionScheduleID = &scheduleEventID
 	failDecisionInfo := &decisionInfo{
 		ScheduleID:      emptyEventID,
 		StartedID:       emptyEventID,
@@ -695,8 +698,8 @@ func (e *mutableStateBuilder) AddWorkflowExecutionStartedEventForContinueAsNew(d
 		WorkflowType:                        wType,
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(decisionTimeout),
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(*attributes.ExecutionStartToCloseTimeoutSeconds),
-		Input:                               attributes.Input,
-		Identity:                            nil,
+		Input:    attributes.Input,
+		Identity: nil,
 	}
 
 	return e.AddWorkflowExecutionStartedEvent(domainID, execution, createRequest)
@@ -730,8 +733,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionStartedEvent(domainID string, 
 	return e.hBuilder.AddWorkflowExecutionStartedEvent(request)
 }
 
-func (e *mutableStateBuilder) AddDecisionTaskScheduledEvent(scheduleID int64, failedID int64) (*workflow.HistoryEvent,
-	*decisionInfo) {
+func (e *mutableStateBuilder) AddDecisionTaskScheduledEvent() (*workflow.HistoryEvent, *decisionInfo) {
 	// Tasklist and decision timeout should already be set from workflow execution started event
 	taskList := e.executionInfo.TaskList
 	if e.isStickyTaskListEnabled() {
@@ -745,6 +747,11 @@ func (e *mutableStateBuilder) AddDecisionTaskScheduledEvent(scheduleID int64, fa
 	}
 
 	var newDecisionEvent *workflow.HistoryEvent
+	scheduleID := emptyEventID
+	// Read the last cached value from mutable state so we can reuse the decision schedule event
+	if e.lastFailedDecisionScheduleID != nil {
+		scheduleID = *e.lastFailedDecisionScheduleID
+	}
 	// Avoid creating new history events when decisions are continuously failing
 	if e.executionInfo.DecisionAttempt == 0 || e.executionInfo.FailedDecisionStartedID == emptyEventID {
 		newDecisionEvent = e.hBuilder.AddDecisionTaskScheduledEvent(taskList, startToCloseTimeoutSeconds)
@@ -778,7 +785,7 @@ func (e *mutableStateBuilder) AddDecisionTaskStartedEvent(scheduleEventID int64,
 	var event *workflow.HistoryEvent
 	startedEventID := dt.FailedStartedID
 	// Avoid creating new history events when decisions are continuously failing
-	if dt.Attempt == 0 || dt.FailedStartedID == emptyEventID || e.GetNextEventID() > (dt.FailedStartedID + 2) {
+	if dt.Attempt == 0 || dt.FailedStartedID == emptyEventID || e.GetNextEventID() > (dt.FailedStartedID+2) {
 		event = e.hBuilder.AddDecisionTaskStartedEvent(scheduleEventID, requestID, request)
 		startedEventID = event.GetEventId()
 	}
@@ -811,17 +818,21 @@ func (e *mutableStateBuilder) AddDecisionTaskCompletedEvent(scheduleEventID, sta
 func (e *mutableStateBuilder) AddDecisionTaskTimedOutEvent(scheduleEventID int64,
 	startedEventID int64) *workflow.HistoryEvent {
 	hasPendingDecision := e.HasPendingDecisionTask()
-	pendingDecisionTask, ok := e.GetPendingDecision(scheduleEventID)
-	if !hasPendingDecision || !ok || pendingDecisionTask.StartedID != startedEventID {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionDecisionTaskTimedOut, e.GetNextEventID(), fmt.Sprintf(
-			"{HasPending: %v, ScheduleID: %v, StartedID: %v, Exist: %v}", hasPendingDecision, scheduleEventID,
-			startedEventID, ok))
+	dt, ok := e.GetPendingDecision(scheduleEventID)
+	if !hasPendingDecision || !ok || dt.StartedID != startedEventID {
+		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionDecisionTaskTimedOut, e.GetNextEventID(),
+			fmt.Sprintf("{HasPending: %v, ScheduleID: %v, StartedID: %v, Exist: %v}", hasPendingDecision, scheduleEventID,
+				startedEventID, ok))
 		return nil
 	}
 
-	event := e.hBuilder.AddDecisionTaskTimedOutEvent(scheduleEventID, startedEventID, workflow.TimeoutTypeStartToClose)
+	var event *workflow.HistoryEvent
+	// Avoid creating new history events when decisions are continuously timing out
+	if dt.Attempt == 0 || dt.FailedStartedID == emptyEventID {
+		event = e.hBuilder.AddDecisionTaskTimedOutEvent(scheduleEventID, startedEventID, workflow.TimeoutTypeStartToClose)
+	}
 
-	e.DeleteDecision()
+	e.FailDecision(scheduleEventID, startedEventID)
 	return event
 }
 
@@ -840,8 +851,8 @@ func (e *mutableStateBuilder) AddDecisionTaskScheduleToStartTimeoutEvent(schedul
 }
 
 func (e *mutableStateBuilder) AddDecisionTaskFailedEvent(scheduleEventID int64,
-	startedEventID int64, cause workflow.DecisionTaskFailedCause,
-	request *workflow.RespondDecisionTaskCompletedRequest) *workflow.HistoryEvent {
+	startedEventID int64, cause workflow.DecisionTaskFailedCause, details []byte,
+	identity string) *workflow.HistoryEvent {
 	hasPendingDecision := e.HasPendingDecisionTask()
 	dt, ok := e.GetPendingDecision(scheduleEventID)
 	if !hasPendingDecision || !ok || dt.StartedID != startedEventID {
@@ -854,10 +865,10 @@ func (e *mutableStateBuilder) AddDecisionTaskFailedEvent(scheduleEventID int64,
 	var event *workflow.HistoryEvent
 	// Only emit DecisionTaskFailedEvent for the very first time
 	if dt.Attempt == 0 {
-		event = e.hBuilder.AddDecisionTaskFailedEvent(scheduleEventID, startedEventID, cause, request)
+		event = e.hBuilder.AddDecisionTaskFailedEvent(scheduleEventID, startedEventID, cause, details, identity)
 	}
 
-	e.FailDecision(startedEventID)
+	e.FailDecision(scheduleEventID, startedEventID)
 	return event
 }
 
@@ -1312,7 +1323,7 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(decisionCompletedEventID int
 		return nil, nil, &workflow.InternalServiceError{Message: "Failed to add workflow execution started event."}
 	}
 
-	_, di := newStateBuilder.AddDecisionTaskScheduledEvent()
+	_, di := newStateBuilder.AddDecisionTaskScheduledEvent(emptyEventID, emptyEventID)
 	if di == nil {
 		return nil, nil, &workflow.InternalServiceError{Message: "Failed to add decision started event."}
 	}
@@ -1344,7 +1355,10 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(decisionCompletedEventID int
 		NextEventID:          newStateBuilder.GetNextEventID(),
 		LastProcessedEvent:   common.EmptyEventID,
 		TransferTasks: []persistence.Task{&persistence.DecisionTask{
-			DomainID: domainID, TaskList: newStateBuilder.executionInfo.TaskList, ScheduleID: di.ScheduleID,
+			DomainID:        domainID,
+			TaskList:        newStateBuilder.executionInfo.TaskList,
+			ScheduleID:      di.ScheduleID,
+			ScheduleAttempt: di.Attempt,
 		}},
 		DecisionScheduleID:          di.ScheduleID,
 		DecisionStartedID:           di.StartedID,

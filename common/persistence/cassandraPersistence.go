@@ -124,6 +124,8 @@ const (
 		`decision_started_id: ?, ` +
 		`decision_request_id: ?, ` +
 		`decision_timeout: ?, ` +
+		`decision_attempt: ?, ` +
+		`failed_decision_started_id: ?, ` +
 		`cancel_requested: ?, ` +
 		`cancel_request_id: ?, ` +
 		`sticky_task_list: ?, ` +
@@ -140,7 +142,8 @@ const (
 		`target_run_id: ?, ` +
 		`task_list: ?, ` +
 		`type: ?, ` +
-		`schedule_id: ?` +
+		`schedule_id: ?, ` +
+		`schedule_attempt: ?` +
 		`}`
 
 	templateTimerTaskType = `{` +
@@ -205,7 +208,8 @@ const (
 		`domain_id: ?, ` +
 		`workflow_id: ?, ` +
 		`run_id: ?, ` +
-		`schedule_id: ?` +
+		`schedule_id: ?, ` +
+		`schedule_attempt: ?` +
 		`}`
 
 	templateCreateShardQuery = `INSERT INTO executions (` +
@@ -893,6 +897,8 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *Creat
 		request.DecisionStartedID,
 		"", // Decision Start Request ID
 		request.DecisionStartToCloseTimeout,
+		0,
+		common.EmptyEventID,
 		false,
 		"",
 		"", // sticky_task_list (no sticky tasklist for new workflow execution)
@@ -1009,6 +1015,8 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 		executionInfo.DecisionStartedID,
 		executionInfo.DecisionRequestID,
 		executionInfo.DecisionTimeout,
+		executionInfo.DecisionAttempt,
+		executionInfo.FailedDecisionStartedID,
 		executionInfo.CancelRequested,
 		executionInfo.CancelRequestID,
 		executionInfo.StickyTaskList,
@@ -1434,6 +1442,7 @@ func (d *cassandraPersistence) CreateTasks(request *CreateTasksRequest) (*Create
 
 	for _, task := range request.Tasks {
 		scheduleID := task.Data.ScheduleID
+		scheduleAttempt := task.Data.ScheduleAttempt
 		if task.Data.ScheduleToStartTimeout == 0 {
 			batch.Query(templateCreateTaskQuery,
 				domainID,
@@ -1444,7 +1453,8 @@ func (d *cassandraPersistence) CreateTasks(request *CreateTasksRequest) (*Create
 				domainID,
 				*task.Execution.WorkflowId,
 				*task.Execution.RunId,
-				scheduleID)
+				scheduleID,
+				scheduleAttempt)
 		} else {
 			batch.Query(templateCreateTaskWithTTLQuery,
 				domainID,
@@ -1456,6 +1466,7 @@ func (d *cassandraPersistence) CreateTasks(request *CreateTasksRequest) (*Create
 				*task.Execution.WorkflowId,
 				*task.Execution.RunId,
 				scheduleID,
+				scheduleAttempt,
 				task.Data.ScheduleToStartTimeout)
 		}
 	}
@@ -1624,6 +1635,7 @@ func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferT
 	for _, task := range transferTasks {
 		var taskList string
 		var scheduleID int64
+		var scheduleAttempt int64
 		targetWorkflowID := transferTaskTransferTargetWorkflowID
 		targetRunID := transferTaskTypeTransferTargetRunID
 
@@ -1637,6 +1649,7 @@ func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferT
 			targetDomainID = task.(*DecisionTask).DomainID
 			taskList = task.(*DecisionTask).TaskList
 			scheduleID = task.(*DecisionTask).ScheduleID
+			scheduleAttempt = task.(*DecisionTask).ScheduleAttempt
 
 		case TransferTaskTypeCancelExecution:
 			targetDomainID = task.(*CancelExecutionTask).TargetDomainID
@@ -1666,6 +1679,7 @@ func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferT
 			taskList,
 			task.GetType(),
 			scheduleID,
+			scheduleAttempt,
 			defaultVisibilityTimestamp,
 			task.GetTaskID())
 	}
@@ -1983,6 +1997,10 @@ func createWorkflowExecutionInfo(result map[string]interface{}) *WorkflowExecuti
 			info.DecisionRequestID = v.(string)
 		case "decision_timeout":
 			info.DecisionTimeout = int32(v.(int))
+		case "decision_attempt":
+			info.DecisionAttempt = v.(int64)
+		case "failed_decision_started_id":
+			info.FailedDecisionStartedID = v.(int64)
 		case "cancel_requested":
 			info.CancelRequested = v.(bool)
 		case "cancel_request_id":
@@ -2021,6 +2039,8 @@ func createTransferTaskInfo(result map[string]interface{}) *TransferTaskInfo {
 			info.TaskType = v.(int)
 		case "schedule_id":
 			info.ScheduleID = v.(int64)
+		case "schedule_attempt":
+			info.ScheduleAttempt = v.(int64)
 		}
 	}
 
@@ -2149,6 +2169,8 @@ func createTaskInfo(result map[string]interface{}) *TaskInfo {
 			info.RunID = v.(gocql.UUID).String()
 		case "schedule_id":
 			info.ScheduleID = v.(int64)
+		case "schedule_attempt":
+			info.ScheduleAttempt = v.(int64)
 		}
 	}
 

@@ -396,6 +396,7 @@ func (t *transferQueueProcessorImpl) processDecisionTask(task *persistence.Trans
 		Execution:                     &execution,
 		TaskList:                      taskList,
 		ScheduleId:                    &task.ScheduleID,
+		ScheduleAttempt:               &task.ScheduleAttempt,
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(timeout),
 	})
 
@@ -841,11 +842,12 @@ Update_History_Loop:
 		if createDecisionTask {
 			// Create a transfer task to schedule a decision task
 			if !msBuilder.HasPendingDecisionTask() {
-				newDecisionEvent, _ := msBuilder.AddDecisionTaskScheduledEvent()
+				newDecisionEvent, di := msBuilder.AddDecisionTaskScheduledEvent()
 				transferTasks = append(transferTasks, &persistence.DecisionTask{
-					DomainID:   domainID,
-					TaskList:   *newDecisionEvent.DecisionTaskScheduledEventAttributes.TaskList.Name,
-					ScheduleID: *newDecisionEvent.EventId,
+					DomainID:        domainID,
+					TaskList:        *newDecisionEvent.DecisionTaskScheduledEventAttributes.TaskList.Name,
+					ScheduleID:      di.ScheduleID,
+					ScheduleAttempt: di.Attempt,
 				})
 				if msBuilder.isStickyTaskListEnabled() {
 					lg := t.logger.WithFields(bark.Fields{
