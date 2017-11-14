@@ -6191,11 +6191,12 @@ type GetWorkflowExecutionHistoryRequest struct {
 	Execution       *WorkflowExecution `json:"execution,omitempty"`
 	MaximumPageSize *int32             `json:"maximumPageSize,omitempty"`
 	NextPageToken   []byte             `json:"nextPageToken"`
+	WaitForNewEvent *bool              `json:"waitForNewEvent,omitempty"`
 }
 
 func (v *GetWorkflowExecutionHistoryRequest) ToWire() (wire.Value, error) {
 	var (
-		fields [4]wire.Field
+		fields [5]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -6230,6 +6231,14 @@ func (v *GetWorkflowExecutionHistoryRequest) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 40, Value: w}
+		i++
+	}
+	if v.WaitForNewEvent != nil {
+		w, err = wire.NewValueBool(*(v.WaitForNewEvent)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 50, Value: w}
 		i++
 	}
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
@@ -6271,6 +6280,15 @@ func (v *GetWorkflowExecutionHistoryRequest) FromWire(w wire.Value) error {
 					return err
 				}
 			}
+		case 50:
+			if field.Value.Type() == wire.TBool {
+				var x bool
+				x, err = field.Value.GetBool(), error(nil)
+				v.WaitForNewEvent = &x
+				if err != nil {
+					return err
+				}
+			}
 		}
 	}
 	return nil
@@ -6280,7 +6298,7 @@ func (v *GetWorkflowExecutionHistoryRequest) String() string {
 	if v == nil {
 		return "<nil>"
 	}
-	var fields [4]string
+	var fields [5]string
 	i := 0
 	if v.Domain != nil {
 		fields[i] = fmt.Sprintf("Domain: %v", *(v.Domain))
@@ -6296,6 +6314,10 @@ func (v *GetWorkflowExecutionHistoryRequest) String() string {
 	}
 	if v.NextPageToken != nil {
 		fields[i] = fmt.Sprintf("NextPageToken: %v", v.NextPageToken)
+		i++
+	}
+	if v.WaitForNewEvent != nil {
+		fields[i] = fmt.Sprintf("WaitForNewEvent: %v", *(v.WaitForNewEvent))
 		i++
 	}
 	return fmt.Sprintf("GetWorkflowExecutionHistoryRequest{%v}", strings.Join(fields[:i], ", "))
@@ -6314,6 +6336,9 @@ func (v *GetWorkflowExecutionHistoryRequest) Equals(rhs *GetWorkflowExecutionHis
 	if !((v.NextPageToken == nil && rhs.NextPageToken == nil) || (v.NextPageToken != nil && rhs.NextPageToken != nil && bytes.Equal(v.NextPageToken, rhs.NextPageToken))) {
 		return false
 	}
+	if !_Bool_EqualsPtr(v.WaitForNewEvent, rhs.WaitForNewEvent) {
+		return false
+	}
 	return true
 }
 
@@ -6327,6 +6352,13 @@ func (v *GetWorkflowExecutionHistoryRequest) GetDomain() (o string) {
 func (v *GetWorkflowExecutionHistoryRequest) GetMaximumPageSize() (o int32) {
 	if v.MaximumPageSize != nil {
 		return *v.MaximumPageSize
+	}
+	return
+}
+
+func (v *GetWorkflowExecutionHistoryRequest) GetWaitForNewEvent() (o bool) {
+	if v.WaitForNewEvent != nil {
+		return *v.WaitForNewEvent
 	}
 	return
 }

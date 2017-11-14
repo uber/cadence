@@ -241,14 +241,15 @@ func (v *GetWorkflowExecutionNextEventIDRequest) GetExpectedNextEventID() (o int
 }
 
 type GetWorkflowExecutionNextEventIDResponse struct {
-	EventId  *int64           `json:"eventId,omitempty"`
-	RunId    *string          `json:"runId,omitempty"`
-	Tasklist *shared.TaskList `json:"tasklist,omitempty"`
+	EventId                    *int64           `json:"eventId,omitempty"`
+	RunId                      *string          `json:"runId,omitempty"`
+	Tasklist                   *shared.TaskList `json:"tasklist,omitempty"`
+	IsWorkflowExecutionRunning *bool            `json:"isWorkflowExecutionRunning,omitempty"`
 }
 
 func (v *GetWorkflowExecutionNextEventIDResponse) ToWire() (wire.Value, error) {
 	var (
-		fields [3]wire.Field
+		fields [4]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -275,6 +276,14 @@ func (v *GetWorkflowExecutionNextEventIDResponse) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 30, Value: w}
+		i++
+	}
+	if v.IsWorkflowExecutionRunning != nil {
+		w, err = wire.NewValueBool(*(v.IsWorkflowExecutionRunning)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 40, Value: w}
 		i++
 	}
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
@@ -315,6 +324,15 @@ func (v *GetWorkflowExecutionNextEventIDResponse) FromWire(w wire.Value) error {
 					return err
 				}
 			}
+		case 40:
+			if field.Value.Type() == wire.TBool {
+				var x bool
+				x, err = field.Value.GetBool(), error(nil)
+				v.IsWorkflowExecutionRunning = &x
+				if err != nil {
+					return err
+				}
+			}
 		}
 	}
 	return nil
@@ -324,7 +342,7 @@ func (v *GetWorkflowExecutionNextEventIDResponse) String() string {
 	if v == nil {
 		return "<nil>"
 	}
-	var fields [3]string
+	var fields [4]string
 	i := 0
 	if v.EventId != nil {
 		fields[i] = fmt.Sprintf("EventId: %v", *(v.EventId))
@@ -338,7 +356,20 @@ func (v *GetWorkflowExecutionNextEventIDResponse) String() string {
 		fields[i] = fmt.Sprintf("Tasklist: %v", v.Tasklist)
 		i++
 	}
+	if v.IsWorkflowExecutionRunning != nil {
+		fields[i] = fmt.Sprintf("IsWorkflowExecutionRunning: %v", *(v.IsWorkflowExecutionRunning))
+		i++
+	}
 	return fmt.Sprintf("GetWorkflowExecutionNextEventIDResponse{%v}", strings.Join(fields[:i], ", "))
+}
+
+func _Bool_EqualsPtr(lhs, rhs *bool) bool {
+	if lhs != nil && rhs != nil {
+		x := *lhs
+		y := *rhs
+		return (x == y)
+	}
+	return lhs == nil && rhs == nil
 }
 
 func (v *GetWorkflowExecutionNextEventIDResponse) Equals(rhs *GetWorkflowExecutionNextEventIDResponse) bool {
@@ -349,6 +380,9 @@ func (v *GetWorkflowExecutionNextEventIDResponse) Equals(rhs *GetWorkflowExecuti
 		return false
 	}
 	if !((v.Tasklist == nil && rhs.Tasklist == nil) || (v.Tasklist != nil && rhs.Tasklist != nil && v.Tasklist.Equals(rhs.Tasklist))) {
+		return false
+	}
+	if !_Bool_EqualsPtr(v.IsWorkflowExecutionRunning, rhs.IsWorkflowExecutionRunning) {
 		return false
 	}
 	return true
@@ -364,6 +398,13 @@ func (v *GetWorkflowExecutionNextEventIDResponse) GetEventId() (o int64) {
 func (v *GetWorkflowExecutionNextEventIDResponse) GetRunId() (o string) {
 	if v.RunId != nil {
 		return *v.RunId
+	}
+	return
+}
+
+func (v *GetWorkflowExecutionNextEventIDResponse) GetIsWorkflowExecutionRunning() (o bool) {
+	if v.IsWorkflowExecutionRunning != nil {
+		return *v.IsWorkflowExecutionRunning
 	}
 	return
 }
@@ -1275,11 +1316,12 @@ type RecordDecisionTaskStartedResponse struct {
 	WorkflowType           *shared.WorkflowType `json:"workflowType,omitempty"`
 	PreviousStartedEventId *int64               `json:"previousStartedEventId,omitempty"`
 	StartedEventId         *int64               `json:"startedEventId,omitempty"`
+	StickyExecutionEnabled *bool                `json:"stickyExecutionEnabled,omitempty"`
 }
 
 func (v *RecordDecisionTaskStartedResponse) ToWire() (wire.Value, error) {
 	var (
-		fields [3]wire.Field
+		fields [4]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -1306,6 +1348,14 @@ func (v *RecordDecisionTaskStartedResponse) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 30, Value: w}
+		i++
+	}
+	if v.StickyExecutionEnabled != nil {
+		w, err = wire.NewValueBool(*(v.StickyExecutionEnabled)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 40, Value: w}
 		i++
 	}
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
@@ -1346,6 +1396,15 @@ func (v *RecordDecisionTaskStartedResponse) FromWire(w wire.Value) error {
 					return err
 				}
 			}
+		case 40:
+			if field.Value.Type() == wire.TBool {
+				var x bool
+				x, err = field.Value.GetBool(), error(nil)
+				v.StickyExecutionEnabled = &x
+				if err != nil {
+					return err
+				}
+			}
 		}
 	}
 	return nil
@@ -1355,7 +1414,7 @@ func (v *RecordDecisionTaskStartedResponse) String() string {
 	if v == nil {
 		return "<nil>"
 	}
-	var fields [3]string
+	var fields [4]string
 	i := 0
 	if v.WorkflowType != nil {
 		fields[i] = fmt.Sprintf("WorkflowType: %v", v.WorkflowType)
@@ -1367,6 +1426,10 @@ func (v *RecordDecisionTaskStartedResponse) String() string {
 	}
 	if v.StartedEventId != nil {
 		fields[i] = fmt.Sprintf("StartedEventId: %v", *(v.StartedEventId))
+		i++
+	}
+	if v.StickyExecutionEnabled != nil {
+		fields[i] = fmt.Sprintf("StickyExecutionEnabled: %v", *(v.StickyExecutionEnabled))
 		i++
 	}
 	return fmt.Sprintf("RecordDecisionTaskStartedResponse{%v}", strings.Join(fields[:i], ", "))
@@ -1382,6 +1445,9 @@ func (v *RecordDecisionTaskStartedResponse) Equals(rhs *RecordDecisionTaskStarte
 	if !_I64_EqualsPtr(v.StartedEventId, rhs.StartedEventId) {
 		return false
 	}
+	if !_Bool_EqualsPtr(v.StickyExecutionEnabled, rhs.StickyExecutionEnabled) {
+		return false
+	}
 	return true
 }
 
@@ -1395,6 +1461,13 @@ func (v *RecordDecisionTaskStartedResponse) GetPreviousStartedEventId() (o int64
 func (v *RecordDecisionTaskStartedResponse) GetStartedEventId() (o int64) {
 	if v.StartedEventId != nil {
 		return *v.StartedEventId
+	}
+	return
+}
+
+func (v *RecordDecisionTaskStartedResponse) GetStickyExecutionEnabled() (o bool) {
+	if v.StickyExecutionEnabled != nil {
+		return *v.StickyExecutionEnabled
 	}
 	return
 }

@@ -392,8 +392,11 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	var continuation []byte
 	if matchingResp.WorkflowExecution != nil {
 		// Non-empty response. Get the history
-		firstEventID := int64(0)
 		nextEventID := common.Int64Default(matchingResp.StartedEventId) + 1
+		firstEventID := common.FirstEventID
+		if matchingResp.GetStickyExecutionEnabled() {
+			firstEventID = matchingResp.GetPreviousStartedEventId() + 1
+		}
 		history, persistenceToken, err = wh.getHistory(
 			info.ID,
 			*matchingResp.WorkflowExecution,
@@ -1200,10 +1203,7 @@ func (wh *WorkflowHandler) QueryWorkflow(ctx context.Context,
 		matchingRequest.TaskList = response.Tasklist
 	} else {
 		// Get the TaskList from history (first event)
-		firstEventID := int64(0)
-		nextEventID := int64(2)
-		pageSize := int32(1)
-		history, _, err := wh.getHistory(domainInfo.ID, *queryRequest.Execution, firstEventID, nextEventID, pageSize, nil)
+		history, _, err := wh.getHistory(domainInfo.ID, *queryRequest.Execution, common.FirstEventID, common.FirstEventID+1, 1, nil)
 		if err != nil {
 			return nil, wh.error(err, scope)
 		}
