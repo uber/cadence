@@ -53,6 +53,7 @@ struct GetWorkflowExecutionNextEventIDResponse {
   10: optional i64 (js.type = "Long") eventId
   20: optional string runId
   30: optional shared.TaskList tasklist
+  40: optional bool isWorkflowExecutionRunning
 }
 
 struct RespondDecisionTaskCompletedRequest {
@@ -107,6 +108,7 @@ struct RecordDecisionTaskStartedResponse {
   10: optional shared.WorkflowType workflowType
   20: optional i64 (js.type = "Long") previousStartedEventId
   30: optional i64 (js.type = "Long") startedEventId
+  40: optional bool stickyExecutionEnabled
 }
 
 struct SignalWorkflowExecutionRequest {
