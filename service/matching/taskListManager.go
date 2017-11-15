@@ -166,7 +166,6 @@ func (c *taskListManagerImpl) Stop() {
 	if !atomic.CompareAndSwapInt32(&c.stopped, 0, 1) {
 		return
 	}
-	logging.LogTaskListUnloadingEvent(c.logger)
 	close(c.shutdownCh)
 	c.taskWriter.Stop()
 	c.engine.removeTaskListManager(c.taskListID)
@@ -358,11 +357,11 @@ func (c *taskListManagerImpl) CancelPoller(pollerID string) {
 }
 
 // Returns a batch of tasks from persistence starting form current read level.
-func (c *taskListManagerImpl) getTaskBatch() ([]*persistence.TaskInfo, error) {
-	result := make([]*persistence.TaskInfo, 0)
+// Also return a number that can be used to update readLevel
+func (c *taskListManagerImpl) getTaskBatch() ([]*persistence.TaskInfo, int64, error) {
+	var tasks []*persistence.TaskInfo
 	readLevel := c.taskAckManager.getReadLevel()
 	maxReadLevel := c.taskWriter.GetMaxReadLevel()
-	// when gap is large, query db multiple times to avoid query aborted caused by tombstone
 	for readLevel < maxReadLevel {
 		upper := readLevel + c.config.RangeSize
 		if upper > maxReadLevel {
@@ -370,12 +369,15 @@ func (c *taskListManagerImpl) getTaskBatch() ([]*persistence.TaskInfo, error) {
 		}
 		tasks, err := c.getTaskBatchWithRange(readLevel, upper)
 		if err != nil {
-			return nil, err
+			return nil, readLevel, err
 		}
-		result = append(result, tasks...)
+		// return as long as it grabs any tasks
+		if len(tasks) > 0 {
+			return tasks, upper, nil
+		}
 		readLevel = upper
 	}
-	return result, nil
+	return tasks, readLevel, nil // caller will update readLevel when no task grabbed
 }
 
 func (c *taskListManagerImpl) getTaskBatchWithRange(readLevel int64, maxReadLevel int64) ([]*persistence.TaskInfo, error) {
@@ -387,8 +389,8 @@ func (c *taskListManagerImpl) getTaskBatchWithRange(readLevel int64, maxReadLeve
 			TaskType:     c.taskListID.taskType,
 			BatchSize:    c.config.GetTasksBatchSize,
 			RangeID:      rangeID,
-			ReadLevel:    readLevel,
-			MaxReadLevel: maxReadLevel,
+			ReadLevel:    readLevel,    // exclusive
+			MaxReadLevel: maxReadLevel, // inclusive
 		}
 		c.Unlock()
 		return c.engine.taskManager.GetTasks(request)
@@ -493,15 +495,19 @@ getTasksPumpLoop:
 			break getTasksPumpLoop
 		case <-c.notifyCh:
 			{
-				tasks, err := c.getTaskBatch()
+				tasks, readLevel, err := c.getTaskBatch()
 				if err != nil {
 					c.signalNewTask() // re-enqueue the event
 					// TODO: Should we ever stop retrying on db errors?
 					continue getTasksPumpLoop
 				}
 				c.Lock()
-				for _, t := range tasks {
-					c.taskAckManager.addTask(t.TaskID)
+				if len(tasks) == 0 {
+					c.taskAckManager.setReadLevel(readLevel)
+				} else {
+					for _, t := range tasks {
+						c.taskAckManager.addTask(t.TaskID)
+					}
 				}
 				c.Unlock()
 				for _, t := range tasks {
@@ -637,8 +643,7 @@ func (c *taskContext) completeTask(err error) {
 
 	if err != nil {
 		// failed to start the task.
-		// We cannot just remove it from persistence because then it will be lost,
-		// which is critical for decision tasks since there have no ScheduleToStart timeout.
+		// We cannot just remove it from persistence because then it will be lost.
 		// We handle this by writing the task back to persistence with a higher taskID.
 		// This will allow subsequent tasks to make progress, and hopefully by the time this task is picked-up
 		// again the underlying reason for failing to start will be resolved.
