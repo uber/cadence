@@ -201,7 +201,6 @@ func (e *matchingEngineImpl) AddDecisionTask(addRequest *m.AddDecisionTaskReques
 		RunID:                  *addRequest.Execution.RunId,
 		WorkflowID:             *addRequest.Execution.WorkflowId,
 		ScheduleID:             *addRequest.ScheduleId,
-		ScheduleAttempt:        *addRequest.ScheduleAttempt,
 		ScheduleToStartTimeout: *addRequest.ScheduleToStartTimeoutSeconds,
 	}
 	return tlMgr.AddTask(addRequest.Execution, taskInfo)
@@ -291,7 +290,6 @@ pollLoop:
 			DomainUUID:        common.StringPtr(domainID),
 			WorkflowExecution: &tCtx.workflowExecution,
 			ScheduleId:        &tCtx.info.ScheduleID,
-			ScheduleAttempt:   &tCtx.info.ScheduleAttempt,
 			TaskId:            &tCtx.info.TaskID,
 			RequestId:         common.StringPtr(requestID),
 			PollRequest:       request,

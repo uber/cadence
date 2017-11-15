@@ -862,16 +862,17 @@ func (t *timerQueueProcessorImpl) updateWorkflowExecution(
 	var transferTasks []persistence.Task
 	if scheduleNewDecision {
 		// Schedule a new decision.
-		newDecisionEvent, di := msBuilder.AddDecisionTaskScheduledEvent()
+		di := msBuilder.AddDecisionTaskScheduledEvent()
 		transferTasks = []persistence.Task{&persistence.DecisionTask{
 			DomainID:        msBuilder.executionInfo.DomainID,
-			TaskList:        *newDecisionEvent.DecisionTaskScheduledEventAttributes.TaskList.Name,
+			TaskList:        di.Tasklist,
 			ScheduleID:      di.ScheduleID,
 			ScheduleAttempt: di.Attempt,
 		}}
 		if msBuilder.isStickyTaskListEnabled() {
 			tBuilder := t.historyService.getTimerBuilder(&context.workflowExecution)
-			stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(*newDecisionEvent.EventId, msBuilder.executionInfo.StickyScheduleToStartTimeout)
+			stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(di.ScheduleID,
+				msBuilder.executionInfo.StickyScheduleToStartTimeout)
 			timerTasks = append(timerTasks, stickyTaskTimeoutTimer)
 		}
 	}

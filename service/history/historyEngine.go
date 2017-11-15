@@ -182,7 +182,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 	decisionTimeout := int32(0)
 	if parentInfo == nil {
 		// DecisionTask is only created when it is not a Child Workflow Execution
-		_, di := msBuilder.AddDecisionTaskScheduledEvent()
+		di := msBuilder.AddDecisionTaskScheduledEvent()
 		if di == nil {
 			return nil, &workflow.InternalServiceError{Message: "Failed to add decision started event."}
 		}
@@ -927,16 +927,16 @@ Update_History_Loop:
 
 		// Schedule another decision task if new events came in during this decision
 		if hasUnhandledEvents {
-			newDecisionEvent, di := msBuilder.AddDecisionTaskScheduledEvent()
+			di := msBuilder.AddDecisionTaskScheduledEvent()
 			transferTasks = append(transferTasks, &persistence.DecisionTask{
 				DomainID:        domainID,
-				TaskList:        *newDecisionEvent.DecisionTaskScheduledEventAttributes.TaskList.Name,
+				TaskList:        di.Tasklist,
 				ScheduleID:      di.ScheduleID,
 				ScheduleAttempt: di.Attempt,
 			})
 			if msBuilder.isStickyTaskListEnabled() {
 				tBuilder := e.getTimerBuilder(&context.workflowExecution)
-				stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(*newDecisionEvent.EventId, msBuilder.executionInfo.StickyScheduleToStartTimeout)
+				stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(di.ScheduleID, msBuilder.executionInfo.StickyScheduleToStartTimeout)
 				timerTasks = append(timerTasks, stickyTaskTimeoutTimer)
 			}
 		}
@@ -1076,16 +1076,16 @@ Update_History_Loop:
 		var transferTasks []persistence.Task
 		var timerTasks []persistence.Task
 		if !msBuilder.HasPendingDecisionTask() {
-			newDecisionEvent, di := msBuilder.AddDecisionTaskScheduledEvent()
+			di := msBuilder.AddDecisionTaskScheduledEvent()
 			transferTasks = []persistence.Task{&persistence.DecisionTask{
 				DomainID:        domainID,
-				TaskList:        *newDecisionEvent.DecisionTaskScheduledEventAttributes.TaskList.Name,
+				TaskList:        di.Tasklist,
 				ScheduleID:      di.ScheduleID,
 				ScheduleAttempt: di.Attempt,
 			}}
 			if msBuilder.isStickyTaskListEnabled() {
 				tBuilder := e.getTimerBuilder(&context.workflowExecution)
-				stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(*newDecisionEvent.EventId, msBuilder.executionInfo.StickyScheduleToStartTimeout)
+				stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(di.ScheduleID, msBuilder.executionInfo.StickyScheduleToStartTimeout)
 				timerTasks = []persistence.Task{stickyTaskTimeoutTimer}
 			}
 		}
@@ -1169,16 +1169,16 @@ Update_History_Loop:
 		var transferTasks []persistence.Task
 		var timerTasks []persistence.Task
 		if !msBuilder.HasPendingDecisionTask() {
-			newDecisionEvent, di := msBuilder.AddDecisionTaskScheduledEvent()
+			di := msBuilder.AddDecisionTaskScheduledEvent()
 			transferTasks = []persistence.Task{&persistence.DecisionTask{
 				DomainID:        domainID,
-				TaskList:        *newDecisionEvent.DecisionTaskScheduledEventAttributes.TaskList.Name,
+				TaskList:        di.Tasklist,
 				ScheduleID:      di.ScheduleID,
 				ScheduleAttempt: di.Attempt,
 			}}
 			if msBuilder.isStickyTaskListEnabled() {
 				tBuilder := e.getTimerBuilder(&context.workflowExecution)
-				stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(*newDecisionEvent.EventId, msBuilder.executionInfo.StickyScheduleToStartTimeout)
+				stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(di.ScheduleID, msBuilder.executionInfo.StickyScheduleToStartTimeout)
 				timerTasks = []persistence.Task{stickyTaskTimeoutTimer}
 			}
 		}
@@ -1264,16 +1264,16 @@ Update_History_Loop:
 		var transferTasks []persistence.Task
 		var timerTasks []persistence.Task
 		if !msBuilder.HasPendingDecisionTask() {
-			newDecisionEvent, di := msBuilder.AddDecisionTaskScheduledEvent()
+			di := msBuilder.AddDecisionTaskScheduledEvent()
 			transferTasks = []persistence.Task{&persistence.DecisionTask{
 				DomainID:        domainID,
-				TaskList:        *newDecisionEvent.DecisionTaskScheduledEventAttributes.TaskList.Name,
+				TaskList:        di.Tasklist,
 				ScheduleID:      di.ScheduleID,
 				ScheduleAttempt: di.Attempt,
 			}}
 			if msBuilder.isStickyTaskListEnabled() {
 				tBuilder := e.getTimerBuilder(&context.workflowExecution)
-				stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(*newDecisionEvent.EventId, msBuilder.executionInfo.StickyScheduleToStartTimeout)
+				stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(di.ScheduleID, msBuilder.executionInfo.StickyScheduleToStartTimeout)
 				timerTasks = []persistence.Task{stickyTaskTimeoutTimer}
 			}
 		}
@@ -1584,16 +1584,17 @@ Update_History_Loop:
 		if createDecisionTask {
 			// Create a transfer task to schedule a decision task
 			if !msBuilder.HasPendingDecisionTask() {
-				newDecisionEvent, di := msBuilder.AddDecisionTaskScheduledEvent()
+				di := msBuilder.AddDecisionTaskScheduledEvent()
 				transferTasks = append(transferTasks, &persistence.DecisionTask{
 					DomainID:        domainID,
-					TaskList:        *newDecisionEvent.DecisionTaskScheduledEventAttributes.TaskList.Name,
+					TaskList:        di.Tasklist,
 					ScheduleID:      di.ScheduleID,
 					ScheduleAttempt: di.Attempt,
 				})
 				if msBuilder.isStickyTaskListEnabled() {
 					tBuilder := e.getTimerBuilder(&context.workflowExecution)
-					stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(*newDecisionEvent.EventId, msBuilder.executionInfo.StickyScheduleToStartTimeout)
+					stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(di.ScheduleID,
+						msBuilder.executionInfo.StickyScheduleToStartTimeout)
 					timerTasks = append(timerTasks, stickyTaskTimeoutTimer)
 				}
 			}

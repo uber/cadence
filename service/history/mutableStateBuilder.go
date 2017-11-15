@@ -90,6 +90,7 @@ type (
 		StartedID       int64
 		RequestID       string
 		DecisionTimeout int32
+		Tasklist        string // This is only needed to communicate tasklist used after AddDecisionTaskScheduledEvent
 		Attempt         int64
 		FailedStartedID int64
 	}
@@ -733,7 +734,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionStartedEvent(domainID string, 
 	return e.hBuilder.AddWorkflowExecutionStartedEvent(request)
 }
 
-func (e *mutableStateBuilder) AddDecisionTaskScheduledEvent() (*workflow.HistoryEvent, *decisionInfo) {
+func (e *mutableStateBuilder) AddDecisionTaskScheduledEvent() *decisionInfo {
 	// Tasklist and decision timeout should already be set from workflow execution started event
 	taskList := e.executionInfo.TaskList
 	if e.isStickyTaskListEnabled() {
@@ -741,9 +742,9 @@ func (e *mutableStateBuilder) AddDecisionTaskScheduledEvent() (*workflow.History
 	}
 	startToCloseTimeoutSeconds := e.executionInfo.DecisionTimeoutValue
 	if e.HasPendingDecisionTask() {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionDecisionTaskScheduled, e.GetNextEventID(), fmt.Sprintf(
-			"{Pending Decision ScheduleID: %v}", e.executionInfo.DecisionScheduleID))
-		return nil, nil
+		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionDecisionTaskScheduled, e.GetNextEventID(),
+			fmt.Sprintf("{Pending Decision ScheduleID: %v}", e.executionInfo.DecisionScheduleID))
+		return nil
 	}
 
 	var newDecisionEvent *workflow.HistoryEvent
@@ -758,18 +759,18 @@ func (e *mutableStateBuilder) AddDecisionTaskScheduledEvent() (*workflow.History
 		scheduleID = newDecisionEvent.GetEventId()
 	}
 
-	// TODO: Also need to return tasklist
 	di := &decisionInfo{
 		ScheduleID:      scheduleID,
 		StartedID:       emptyEventID,
 		RequestID:       emptyUUID,
 		DecisionTimeout: startToCloseTimeoutSeconds,
+		Tasklist:        taskList,
 		Attempt:         e.executionInfo.DecisionAttempt,
 		FailedStartedID: e.executionInfo.FailedDecisionStartedID,
 	}
 	e.UpdateDecision(di)
 
-	return newDecisionEvent, di
+	return di
 }
 
 func (e *mutableStateBuilder) AddDecisionTaskStartedEvent(scheduleEventID int64, requestID string,
@@ -1323,7 +1324,7 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(decisionCompletedEventID int
 		return nil, nil, &workflow.InternalServiceError{Message: "Failed to add workflow execution started event."}
 	}
 
-	_, di := newStateBuilder.AddDecisionTaskScheduledEvent(emptyEventID, emptyEventID)
+	di := newStateBuilder.AddDecisionTaskScheduledEvent()
 	if di == nil {
 		return nil, nil, &workflow.InternalServiceError{Message: "Failed to add decision started event."}
 	}

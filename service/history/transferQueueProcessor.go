@@ -396,7 +396,6 @@ func (t *transferQueueProcessorImpl) processDecisionTask(task *persistence.Trans
 		Execution:                     &execution,
 		TaskList:                      taskList,
 		ScheduleId:                    &task.ScheduleID,
-		ScheduleAttempt:               &task.ScheduleAttempt,
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(timeout),
 	})
 
@@ -842,10 +841,10 @@ Update_History_Loop:
 		if createDecisionTask {
 			// Create a transfer task to schedule a decision task
 			if !msBuilder.HasPendingDecisionTask() {
-				newDecisionEvent, di := msBuilder.AddDecisionTaskScheduledEvent()
+				di := msBuilder.AddDecisionTaskScheduledEvent()
 				transferTasks = append(transferTasks, &persistence.DecisionTask{
 					DomainID:        domainID,
-					TaskList:        *newDecisionEvent.DecisionTaskScheduledEventAttributes.TaskList.Name,
+					TaskList:        di.Tasklist,
 					ScheduleID:      di.ScheduleID,
 					ScheduleAttempt: di.Attempt,
 				})
@@ -855,7 +854,8 @@ Update_History_Loop:
 						logging.TagWorkflowRunID:       context.workflowExecution.RunId,
 					})
 					tBuilder := newTimerBuilder(t.shard.GetConfig(), lg, common.NewRealTimeSource())
-					stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(*newDecisionEvent.EventId, msBuilder.executionInfo.StickyScheduleToStartTimeout)
+					stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(di.ScheduleID,
+						msBuilder.executionInfo.StickyScheduleToStartTimeout)
 					timerTasks = []persistence.Task{stickyTaskTimeoutTimer}
 				}
 			}
