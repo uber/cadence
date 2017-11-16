@@ -179,6 +179,7 @@ struct TaskList {
 
 struct TaskListMetadata {
   10: optional double maxTasksPerSecond
+  20: optional i64 version
 }
 
 struct WorkflowExecution {
