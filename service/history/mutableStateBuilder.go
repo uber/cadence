@@ -1356,10 +1356,9 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(decisionCompletedEventID int
 		NextEventID:          newStateBuilder.GetNextEventID(),
 		LastProcessedEvent:   common.EmptyEventID,
 		TransferTasks: []persistence.Task{&persistence.DecisionTask{
-			DomainID:        domainID,
-			TaskList:        newStateBuilder.executionInfo.TaskList,
-			ScheduleID:      di.ScheduleID,
-			ScheduleAttempt: di.Attempt,
+			DomainID:   domainID,
+			TaskList:   newStateBuilder.executionInfo.TaskList,
+			ScheduleID: di.ScheduleID,
 		}},
 		DecisionScheduleID:          di.ScheduleID,
 		DecisionStartedID:           di.StartedID,

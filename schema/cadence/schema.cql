@@ -57,7 +57,6 @@ CREATE TYPE transfer_task (
   task_list           text,
   type                int,    -- enum TaskType {ActivityTask, DecisionTask, DeleteExecution, CancelExecution, StartChildExecution}
   schedule_id         bigint,
-  schedule_attempt    bigint,
 );
 
 CREATE TYPE timer_task (
@@ -121,7 +120,6 @@ CREATE TYPE task (
   workflow_id      text,
   run_id           uuid,
   schedule_id      bigint,
-  schedule_attempt bigint,
 );
 
 CREATE TYPE task_list (

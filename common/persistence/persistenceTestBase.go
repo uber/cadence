@@ -596,7 +596,7 @@ func (s *TestBase) CompleteTimerTask(ts time.Time, taskID int64) error {
 
 // CreateDecisionTask is a utility method to create a task
 func (s *TestBase) CreateDecisionTask(domainID string, workflowExecution workflow.WorkflowExecution, taskList string,
-	decisionScheduleID, scheduleAttempt int64) (int64, error) {
+	decisionScheduleID int64) (int64, error) {
 	leaseResponse, err := s.TaskMgr.LeaseTaskList(&LeaseTaskListRequest{
 		DomainID: domainID,
 		TaskList: taskList,
@@ -612,12 +612,11 @@ func (s *TestBase) CreateDecisionTask(domainID string, workflowExecution workflo
 			TaskID:    taskID,
 			Execution: workflowExecution,
 			Data: &TaskInfo{
-				DomainID:        domainID,
-				WorkflowID:      *workflowExecution.WorkflowId,
-				RunID:           *workflowExecution.RunId,
-				TaskID:          taskID,
-				ScheduleID:      decisionScheduleID,
-				ScheduleAttempt: scheduleAttempt,
+				DomainID:   domainID,
+				WorkflowID: *workflowExecution.WorkflowId,
+				RunID:      *workflowExecution.RunId,
+				TaskID:     taskID,
+				ScheduleID: decisionScheduleID,
 			},
 		},
 	}

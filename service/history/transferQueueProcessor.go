@@ -843,10 +843,9 @@ Update_History_Loop:
 			if !msBuilder.HasPendingDecisionTask() {
 				di := msBuilder.AddDecisionTaskScheduledEvent()
 				transferTasks = append(transferTasks, &persistence.DecisionTask{
-					DomainID:        domainID,
-					TaskList:        di.Tasklist,
-					ScheduleID:      di.ScheduleID,
-					ScheduleAttempt: di.Attempt,
+					DomainID:   domainID,
+					TaskList:   di.Tasklist,
+					ScheduleID: di.ScheduleID,
 				})
 				if msBuilder.isStickyTaskListEnabled() {
 					lg := t.logger.WithFields(bark.Fields{

@@ -208,11 +208,10 @@ type (
 
 	// DecisionTask identifies a transfer task for decision
 	DecisionTask struct {
-		TaskID          int64
-		DomainID        string
-		TaskList        string
-		ScheduleID      int64
-		ScheduleAttempt int64
+		TaskID     int64
+		DomainID   string
+		TaskList   string
+		ScheduleID int64
 	}
 
 	// CloseExecutionTask identifies a transfer task for deletion of execution

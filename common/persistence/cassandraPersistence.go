@@ -142,8 +142,7 @@ const (
 		`target_run_id: ?, ` +
 		`task_list: ?, ` +
 		`type: ?, ` +
-		`schedule_id: ?, ` +
-		`schedule_attempt: ?` +
+		`schedule_id: ?` +
 		`}`
 
 	templateTimerTaskType = `{` +
@@ -208,8 +207,7 @@ const (
 		`domain_id: ?, ` +
 		`workflow_id: ?, ` +
 		`run_id: ?, ` +
-		`schedule_id: ?, ` +
-		`schedule_attempt: ?` +
+		`schedule_id: ?` +
 		`}`
 
 	templateCreateShardQuery = `INSERT INTO executions (` +
@@ -1442,7 +1440,6 @@ func (d *cassandraPersistence) CreateTasks(request *CreateTasksRequest) (*Create
 
 	for _, task := range request.Tasks {
 		scheduleID := task.Data.ScheduleID
-		scheduleAttempt := task.Data.ScheduleAttempt
 		if task.Data.ScheduleToStartTimeout == 0 {
 			batch.Query(templateCreateTaskQuery,
 				domainID,
@@ -1453,8 +1450,7 @@ func (d *cassandraPersistence) CreateTasks(request *CreateTasksRequest) (*Create
 				domainID,
 				*task.Execution.WorkflowId,
 				*task.Execution.RunId,
-				scheduleID,
-				scheduleAttempt)
+				scheduleID)
 		} else {
 			batch.Query(templateCreateTaskWithTTLQuery,
 				domainID,
@@ -1466,7 +1462,6 @@ func (d *cassandraPersistence) CreateTasks(request *CreateTasksRequest) (*Create
 				*task.Execution.WorkflowId,
 				*task.Execution.RunId,
 				scheduleID,
-				scheduleAttempt,
 				task.Data.ScheduleToStartTimeout)
 		}
 	}
@@ -1635,7 +1630,6 @@ func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferT
 	for _, task := range transferTasks {
 		var taskList string
 		var scheduleID int64
-		var scheduleAttempt int64
 		targetWorkflowID := transferTaskTransferTargetWorkflowID
 		targetRunID := transferTaskTypeTransferTargetRunID
 
@@ -1649,7 +1643,6 @@ func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferT
 			targetDomainID = task.(*DecisionTask).DomainID
 			taskList = task.(*DecisionTask).TaskList
 			scheduleID = task.(*DecisionTask).ScheduleID
-			scheduleAttempt = task.(*DecisionTask).ScheduleAttempt
 
 		case TransferTaskTypeCancelExecution:
 			targetDomainID = task.(*CancelExecutionTask).TargetDomainID
@@ -1679,7 +1672,6 @@ func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferT
 			taskList,
 			task.GetType(),
 			scheduleID,
-			scheduleAttempt,
 			defaultVisibilityTimestamp,
 			task.GetTaskID())
 	}
@@ -2039,8 +2031,6 @@ func createTransferTaskInfo(result map[string]interface{}) *TransferTaskInfo {
 			info.TaskType = v.(int)
 		case "schedule_id":
 			info.ScheduleID = v.(int64)
-		case "schedule_attempt":
-			info.ScheduleAttempt = v.(int64)
 		}
 	}
 
@@ -2169,8 +2159,6 @@ func createTaskInfo(result map[string]interface{}) *TaskInfo {
 			info.RunID = v.(gocql.UUID).String()
 		case "schedule_id":
 			info.ScheduleID = v.(int64)
-		case "schedule_attempt":
-			info.ScheduleAttempt = v.(int64)
 		}
 	}
 

@@ -188,7 +188,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 		}
 
 		transferTasks = []persistence.Task{&persistence.DecisionTask{
-			DomainID: domainID, TaskList: taskList, ScheduleID: di.ScheduleID, ScheduleAttempt: di.Attempt,
+			DomainID: domainID, TaskList: taskList, ScheduleID: di.ScheduleID,
 		}}
 		decisionScheduleID = di.ScheduleID
 		decisionStartID = di.StartedID
@@ -929,10 +929,9 @@ Update_History_Loop:
 		if hasUnhandledEvents {
 			di := msBuilder.AddDecisionTaskScheduledEvent()
 			transferTasks = append(transferTasks, &persistence.DecisionTask{
-				DomainID:        domainID,
-				TaskList:        di.Tasklist,
-				ScheduleID:      di.ScheduleID,
-				ScheduleAttempt: di.Attempt,
+				DomainID:   domainID,
+				TaskList:   di.Tasklist,
+				ScheduleID: di.ScheduleID,
 			})
 			if msBuilder.isStickyTaskListEnabled() {
 				tBuilder := e.getTimerBuilder(&context.workflowExecution)
@@ -1078,10 +1077,9 @@ Update_History_Loop:
 		if !msBuilder.HasPendingDecisionTask() {
 			di := msBuilder.AddDecisionTaskScheduledEvent()
 			transferTasks = []persistence.Task{&persistence.DecisionTask{
-				DomainID:        domainID,
-				TaskList:        di.Tasklist,
-				ScheduleID:      di.ScheduleID,
-				ScheduleAttempt: di.Attempt,
+				DomainID:   domainID,
+				TaskList:   di.Tasklist,
+				ScheduleID: di.ScheduleID,
 			}}
 			if msBuilder.isStickyTaskListEnabled() {
 				tBuilder := e.getTimerBuilder(&context.workflowExecution)
@@ -1171,10 +1169,9 @@ Update_History_Loop:
 		if !msBuilder.HasPendingDecisionTask() {
 			di := msBuilder.AddDecisionTaskScheduledEvent()
 			transferTasks = []persistence.Task{&persistence.DecisionTask{
-				DomainID:        domainID,
-				TaskList:        di.Tasklist,
-				ScheduleID:      di.ScheduleID,
-				ScheduleAttempt: di.Attempt,
+				DomainID:   domainID,
+				TaskList:   di.Tasklist,
+				ScheduleID: di.ScheduleID,
 			}}
 			if msBuilder.isStickyTaskListEnabled() {
 				tBuilder := e.getTimerBuilder(&context.workflowExecution)
@@ -1266,10 +1263,9 @@ Update_History_Loop:
 		if !msBuilder.HasPendingDecisionTask() {
 			di := msBuilder.AddDecisionTaskScheduledEvent()
 			transferTasks = []persistence.Task{&persistence.DecisionTask{
-				DomainID:        domainID,
-				TaskList:        di.Tasklist,
-				ScheduleID:      di.ScheduleID,
-				ScheduleAttempt: di.Attempt,
+				DomainID:   domainID,
+				TaskList:   di.Tasklist,
+				ScheduleID: di.ScheduleID,
 			}}
 			if msBuilder.isStickyTaskListEnabled() {
 				tBuilder := e.getTimerBuilder(&context.workflowExecution)
@@ -1586,10 +1582,9 @@ Update_History_Loop:
 			if !msBuilder.HasPendingDecisionTask() {
 				di := msBuilder.AddDecisionTaskScheduledEvent()
 				transferTasks = append(transferTasks, &persistence.DecisionTask{
-					DomainID:        domainID,
-					TaskList:        di.Tasklist,
-					ScheduleID:      di.ScheduleID,
-					ScheduleAttempt: di.Attempt,
+					DomainID:   domainID,
+					TaskList:   di.Tasklist,
+					ScheduleID: di.ScheduleID,
 				})
 				if msBuilder.isStickyTaskListEnabled() {
 					tBuilder := e.getTimerBuilder(&context.workflowExecution)
