@@ -67,6 +67,7 @@ type (
 
 	getHistoryContinuationToken struct {
 		RunID            string
+		FirstEventID     int64
 		NextEventID      int64
 		PersistenceToken []byte
 	}
@@ -391,9 +392,14 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	if matchingResp.WorkflowExecution != nil {
 		// Non-empty response. Get the history
 		nextEventID := common.Int64Default(matchingResp.StartedEventId) + 1
+		firstEventID := common.FirstEventID
+		if matchingResp.GetStickyExecutionEnabled() {
+			firstEventID = matchingResp.GetPreviousStartedEventId() + 1
+		}
 		history, persistenceToken, err = wh.getHistory(
 			info.ID,
 			*matchingResp.WorkflowExecution,
+			firstEventID,
 			nextEventID,
 			wh.config.DefaultHistoryMaxPageSize,
 			nil)
@@ -413,6 +419,7 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 				persistenceToken,
 				*matchingResp.WorkflowExecution.RunId,
 				history,
+				firstEventID,
 				nextEventID)
 		if err != nil {
 			return nil, wh.error(err, scope)
@@ -761,6 +768,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 			DomainUUID: common.StringPtr(info.ID),
 			Execution:  getRequest.Execution,
 		})
+		token.FirstEventID = common.FirstEventID
 		if err == nil {
 			token.NextEventID = *response.EventId
 			token.RunID = *response.RunId
@@ -787,17 +795,17 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		RunId:      common.StringPtr(token.RunID),
 	}
 	history, persistenceToken, err :=
-		wh.getHistory(info.ID, we, token.NextEventID, *getRequest.MaximumPageSize, token.PersistenceToken)
+		wh.getHistory(info.ID, we, token.FirstEventID, token.NextEventID, *getRequest.MaximumPageSize, token.PersistenceToken)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
 
-	nextToken, err := getSerializedGetHistoryToken(persistenceToken, token.RunID, history, token.NextEventID)
+	nextToken, err := getSerializedGetHistoryToken(persistenceToken, token.RunID, history, token.FirstEventID, token.NextEventID)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
 
-	return createGetWorkflowExecutionHistoryResponse(history, token.NextEventID, nextToken), nil
+	return createGetWorkflowExecutionHistoryResponse(history, nextToken), nil
 }
 
 // SignalWorkflowExecution is used to send a signal event to running workflow execution.  This results in
@@ -1138,7 +1146,7 @@ func (wh *WorkflowHandler) QueryWorkflow(ctx context.Context,
 		matchingRequest.TaskList = response.Tasklist
 	} else {
 		// Get the TaskList from history (first event)
-		history, _, err := wh.getHistory(domainInfo.ID, *queryRequest.Execution, 2, 1, nil)
+		history, _, err := wh.getHistory(domainInfo.ID, *queryRequest.Execution, common.FirstEventID, common.FirstEventID+1, 1, nil)
 		if err != nil {
 			return nil, wh.error(err, scope)
 		}
@@ -1163,7 +1171,7 @@ func (wh *WorkflowHandler) QueryWorkflow(ctx context.Context,
 }
 
 func (wh *WorkflowHandler) getHistory(domainID string, execution gen.WorkflowExecution,
-	nextEventID int64, pageSize int32, nextPageToken []byte) (*gen.History, []byte, error) {
+	firstEventID, nextEventID int64, pageSize int32, nextPageToken []byte) (*gen.History, []byte, error) {
 
 	if nextPageToken == nil {
 		nextPageToken = []byte{}
@@ -1173,6 +1181,7 @@ func (wh *WorkflowHandler) getHistory(domainID string, execution gen.WorkflowExe
 	response, err := wh.historyMgr.GetWorkflowExecutionHistory(&persistence.GetWorkflowExecutionHistoryRequest{
 		DomainID:      domainID,
 		Execution:     execution,
+		FirstEventID:  firstEventID,
 		NextEventID:   nextEventID,
 		PageSize:      int(pageSize),
 		NextPageToken: nextPageToken,
@@ -1366,7 +1375,7 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(ctx context.Context
 }
 
 func createGetWorkflowExecutionHistoryResponse(
-	history *gen.History, nextEventID int64, nextPageToken []byte) *gen.GetWorkflowExecutionHistoryResponse {
+	history *gen.History, nextPageToken []byte) *gen.GetWorkflowExecutionHistoryResponse {
 	resp := &gen.GetWorkflowExecutionHistoryResponse{}
 	resp.History = history
 	resp.NextPageToken = nextPageToken
@@ -1380,7 +1389,7 @@ func deserializeGetHistoryToken(data []byte) (*getHistoryContinuationToken, erro
 	return &token, err
 }
 
-func getSerializedGetHistoryToken(persistenceToken []byte, runID string, history *gen.History, nextEventID int64) ([]byte, error) {
+func getSerializedGetHistoryToken(persistenceToken []byte, runID string, history *gen.History, firstEventID, nextEventID int64) ([]byte, error) {
 	// create token if there are more events to read
 	if history == nil {
 		return nil, nil
@@ -1389,6 +1398,7 @@ func getSerializedGetHistoryToken(persistenceToken []byte, runID string, history
 	if len(persistenceToken) > 0 && len(events) > 0 && *events[len(events)-1].EventId < nextEventID-1 {
 		token := &getHistoryContinuationToken{
 			RunID:            runID,
+			FirstEventID:     firstEventID,
 			NextEventID:      nextEventID,
 			PersistenceToken: persistenceToken,
 		}
