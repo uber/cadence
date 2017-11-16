@@ -407,7 +407,7 @@ Update_History_Loop:
 		if di.StartedID != emptyEventID {
 			// If decision is started as part of the current request scope then return a positive response
 			if di.RequestID == requestID {
-				return e.createRecordDecisionTaskStartedResponse(domainID, msBuilder, di.StartedID), nil
+				return e.createRecordDecisionTaskStartedResponse(domainID, msBuilder, di), nil
 			}
 
 			// Looks like DecisionTask already started as a result of another call.
@@ -418,14 +418,14 @@ Update_History_Loop:
 			return nil, &h.EventAlreadyStartedError{Message: "Decision task already started."}
 		}
 
-		event := msBuilder.AddDecisionTaskStartedEvent(scheduleID, requestID, request.PollRequest)
+		event, di := msBuilder.AddDecisionTaskStartedEvent(scheduleID, requestID, request.PollRequest)
 		if event == nil {
 			// Unable to add DecisionTaskStarted event to history
 			return nil, &workflow.InternalServiceError{Message: "Unable to add DecisionTaskStarted event to history."}
 		}
 
 		// Start a timer for the decision task.
-		timeOutTask := tBuilder.AddDecisionTimoutTask(scheduleID, di.DecisionTimeout)
+		timeOutTask := tBuilder.AddDecisionTimoutTask(scheduleID, di.Attempt, di.DecisionTimeout)
 		timerTasks := []persistence.Task{timeOutTask}
 		defer e.timerProcessor.NotifyNewTimer(timerTasks)
 
@@ -446,7 +446,7 @@ Update_History_Loop:
 			return nil, err3
 		}
 
-		return e.createRecordDecisionTaskStartedResponse(domainID, msBuilder, *event.EventId), nil
+		return e.createRecordDecisionTaskStartedResponse(domainID, msBuilder, di), nil
 	}
 
 	return nil, ErrMaxAttemptsExceeded
@@ -604,7 +604,8 @@ Update_History_Loop:
 		}
 
 		di, isRunning := msBuilder.GetPendingDecision(scheduleID)
-		if !msBuilder.isWorkflowExecutionRunning() || !isRunning || di.StartedID == emptyEventID {
+		if !msBuilder.isWorkflowExecutionRunning() || !isRunning || di.Attempt != token.ScheduleAttempt ||
+			di.StartedID == emptyEventID {
 			return &workflow.EntityNotExistsError{Message: "Decision task not found."}
 		}
 
@@ -935,7 +936,8 @@ Update_History_Loop:
 			})
 			if msBuilder.isStickyTaskListEnabled() {
 				tBuilder := e.getTimerBuilder(&context.workflowExecution)
-				stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(di.ScheduleID, msBuilder.executionInfo.StickyScheduleToStartTimeout)
+				stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(di.ScheduleID, di.Attempt,
+					msBuilder.executionInfo.StickyScheduleToStartTimeout)
 				timerTasks = append(timerTasks, stickyTaskTimeoutTimer)
 			}
 		}
@@ -1009,7 +1011,7 @@ func (e *historyEngineImpl) RespondDecisionTaskFailed(req *h.RespondDecisionTask
 
 			scheduleID := token.ScheduleID
 			di, isRunning := msBuilder.GetPendingDecision(scheduleID)
-			if !isRunning || di.StartedID == emptyEventID {
+			if !isRunning || di.Attempt != token.ScheduleAttempt || di.StartedID == emptyEventID {
 				return &workflow.EntityNotExistsError{Message: "Decision task not found."}
 			}
 
@@ -1083,7 +1085,8 @@ Update_History_Loop:
 			}}
 			if msBuilder.isStickyTaskListEnabled() {
 				tBuilder := e.getTimerBuilder(&context.workflowExecution)
-				stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(di.ScheduleID, msBuilder.executionInfo.StickyScheduleToStartTimeout)
+				stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(di.ScheduleID, di.Attempt,
+					msBuilder.executionInfo.StickyScheduleToStartTimeout)
 				timerTasks = []persistence.Task{stickyTaskTimeoutTimer}
 			}
 		}
@@ -1175,7 +1178,8 @@ Update_History_Loop:
 			}}
 			if msBuilder.isStickyTaskListEnabled() {
 				tBuilder := e.getTimerBuilder(&context.workflowExecution)
-				stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(di.ScheduleID, msBuilder.executionInfo.StickyScheduleToStartTimeout)
+				stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(di.ScheduleID, di.Attempt,
+					msBuilder.executionInfo.StickyScheduleToStartTimeout)
 				timerTasks = []persistence.Task{stickyTaskTimeoutTimer}
 			}
 		}
@@ -1269,7 +1273,8 @@ Update_History_Loop:
 			}}
 			if msBuilder.isStickyTaskListEnabled() {
 				tBuilder := e.getTimerBuilder(&context.workflowExecution)
-				stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(di.ScheduleID, msBuilder.executionInfo.StickyScheduleToStartTimeout)
+				stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(di.ScheduleID, di.Attempt,
+					msBuilder.executionInfo.StickyScheduleToStartTimeout)
 				timerTasks = []persistence.Task{stickyTaskTimeoutTimer}
 			}
 		}
@@ -1588,7 +1593,7 @@ Update_History_Loop:
 				})
 				if msBuilder.isStickyTaskListEnabled() {
 					tBuilder := e.getTimerBuilder(&context.workflowExecution)
-					stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(di.ScheduleID,
+					stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(di.ScheduleID, di.Attempt,
 						msBuilder.executionInfo.StickyScheduleToStartTimeout)
 					timerTasks = append(timerTasks, stickyTaskTimeoutTimer)
 				}
@@ -1639,14 +1644,16 @@ func (e *historyEngineImpl) getDeleteWorkflowTasks(
 }
 
 func (e *historyEngineImpl) createRecordDecisionTaskStartedResponse(domainID string, msBuilder *mutableStateBuilder,
-	startedEventID int64) *h.RecordDecisionTaskStartedResponse {
+	di *decisionInfo) *h.RecordDecisionTaskStartedResponse {
 	response := &h.RecordDecisionTaskStartedResponse{}
 	response.WorkflowType = msBuilder.getWorkflowType()
 	if msBuilder.previousDecisionStartedEvent() != emptyEventID {
 		response.PreviousStartedEventId = common.Int64Ptr(msBuilder.previousDecisionStartedEvent())
 	}
-	response.StartedEventId = common.Int64Ptr(startedEventID)
+
+	response.StartedEventId = common.Int64Ptr(di.StartedID)
 	response.StickyExecutionEnabled = common.BoolPtr(msBuilder.isStickyTaskListEnabled())
+	response.Attempt = common.Int64Ptr(di.Attempt)
 
 	return response
 }

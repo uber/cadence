@@ -153,7 +153,8 @@ const (
 		`task_id: ?, ` +
 		`type: ?, ` +
 		`timeout_type: ?, ` +
-		`event_id: ?` +
+		`event_id: ?, ` +
+		`schedule_attempt: ?` +
 		`}`
 
 	templateActivityInfoType = `{` +
@@ -1682,6 +1683,7 @@ func (d *cassandraPersistence) createTimerTasks(batch *gocql.Batch, timerTasks [
 
 	for _, task := range timerTasks {
 		var eventID int64
+		var attempt int64
 
 		timeoutType := 0
 
@@ -1689,6 +1691,7 @@ func (d *cassandraPersistence) createTimerTasks(batch *gocql.Batch, timerTasks [
 		case TaskTypeDecisionTimeout:
 			eventID = task.(*DecisionTimeoutTask).EventID
 			timeoutType = task.(*DecisionTimeoutTask).TimeoutType
+			attempt = task.(*DecisionTimeoutTask).ScheduleAttempt
 
 		case TaskTypeActivityTimeout:
 			eventID = task.(*ActivityTimeoutTask).EventID
@@ -1714,6 +1717,7 @@ func (d *cassandraPersistence) createTimerTasks(batch *gocql.Batch, timerTasks [
 			task.GetType(),
 			timeoutType,
 			eventID,
+			attempt,
 			ts,
 			task.GetTaskID())
 	}
@@ -2185,6 +2189,8 @@ func createTimerTaskInfo(result map[string]interface{}) *TimerTaskInfo {
 			info.TimeoutType = v.(int)
 		case "event_id":
 			info.EventID = v.(int64)
+		case "schedule_attempt":
+			info.ScheduleAttempt = v.(int64)
 		}
 	}
 

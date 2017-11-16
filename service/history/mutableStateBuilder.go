@@ -774,29 +774,36 @@ func (e *mutableStateBuilder) AddDecisionTaskScheduledEvent() *decisionInfo {
 }
 
 func (e *mutableStateBuilder) AddDecisionTaskStartedEvent(scheduleEventID int64, requestID string,
-	request *workflow.PollForDecisionTaskRequest) *workflow.HistoryEvent {
+	request *workflow.PollForDecisionTaskRequest) (*workflow.HistoryEvent, *decisionInfo) {
 	hasPendingDecision := e.HasPendingDecisionTask()
-	dt, ok := e.GetPendingDecision(scheduleEventID)
-	if !hasPendingDecision || !ok || dt.StartedID != emptyEventID {
+	di, ok := e.GetPendingDecision(scheduleEventID)
+	if !hasPendingDecision || !ok || di.StartedID != emptyEventID {
 		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionDecisionTaskStarted, e.GetNextEventID(), fmt.Sprintf(
 			"{HasPending: %v, ScheduleID: %v, Exist: %v, Value: %v}", hasPendingDecision, scheduleEventID, ok, e))
-		return nil
+		return nil, nil
 	}
 
 	var event *workflow.HistoryEvent
-	startedEventID := dt.FailedStartedID
+	startedEventID := di.FailedStartedID
 	// Avoid creating new history events when decisions are continuously failing
-	if dt.Attempt == 0 || dt.FailedStartedID == emptyEventID || e.GetNextEventID() > (dt.FailedStartedID+2) {
+	if di.Attempt == 0 || di.FailedStartedID == emptyEventID || e.GetNextEventID() > (di.FailedStartedID+2) {
 		event = e.hBuilder.AddDecisionTaskStartedEvent(scheduleEventID, requestID, request)
 		startedEventID = event.GetEventId()
 	}
 
-	// Update mutable decision state
-	e.executionInfo.DecisionStartedID = startedEventID
-	e.executionInfo.DecisionRequestID = requestID
 	e.executionInfo.State = persistence.WorkflowStateRunning
+	// Update mutable decision state
+	di = &decisionInfo{
+		ScheduleID:      di.ScheduleID,
+		StartedID:       startedEventID,
+		RequestID:       requestID,
+		DecisionTimeout: di.DecisionTimeout,
+		Attempt:         di.Attempt,
+		FailedStartedID: di.FailedStartedID,
+	}
+	e.UpdateDecision(di)
 
-	return event
+	return event, di
 }
 
 func (e *mutableStateBuilder) AddDecisionTaskCompletedEvent(scheduleEventID, startedEventID int64,

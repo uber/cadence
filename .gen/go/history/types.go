@@ -1340,6 +1340,7 @@ type RecordDecisionTaskStartedResponse struct {
 	PreviousStartedEventId *int64               `json:"previousStartedEventId,omitempty"`
 	StartedEventId         *int64               `json:"startedEventId,omitempty"`
 	StickyExecutionEnabled *bool                `json:"stickyExecutionEnabled,omitempty"`
+	Attempt                *int64               `json:"Attempt,omitempty"`
 }
 
 func (v *RecordDecisionTaskStartedResponse) ToWire() (wire.Value, error) {
@@ -1375,6 +1376,8 @@ func (v *RecordDecisionTaskStartedResponse) ToWire() (wire.Value, error) {
 	}
 	if v.StickyExecutionEnabled != nil {
 		w, err = wire.NewValueBool(*(v.StickyExecutionEnabled)), error(nil)
+	if v.Attempt != nil {
+		w, err = wire.NewValueI64(*(v.Attempt)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -1390,48 +1393,48 @@ func _WorkflowType_Read(w wire.Value) (*shared.WorkflowType, error) {
 	return &v, err
 }
 
-func (v *RecordDecisionTaskStartedResponse) FromWire(w wire.Value) error {
-	var err error
-	for _, field := range w.GetStruct().Fields {
-		switch field.ID {
-		case 10:
-			if field.Value.Type() == wire.TStruct {
-				v.WorkflowType, err = _WorkflowType_Read(field.Value)
-				if err != nil {
-					return err
-				}
-			}
-		case 20:
-			if field.Value.Type() == wire.TI64 {
-				var x int64
-				x, err = field.Value.GetI64(), error(nil)
-				v.PreviousStartedEventId = &x
-				if err != nil {
-					return err
-				}
-			}
-		case 30:
-			if field.Value.Type() == wire.TI64 {
-				var x int64
-				x, err = field.Value.GetI64(), error(nil)
-				v.StartedEventId = &x
-				if err != nil {
-					return err
-				}
-			}
-		case 40:
-			if field.Value.Type() == wire.TBool {
-				var x bool
-				x, err = field.Value.GetBool(), error(nil)
-				v.StickyExecutionEnabled = &x
-				if err != nil {
-					return err
-				}
-			}
-		}
+func (v *RecordDecisionTaskStartedResponse) FromWire(w wire.Value) error{
+		var err error
+		for _, field := range w.GetStruct().Fields{
+		switch field.ID{
+	case 10:
+		if field.Value.Type() == wire.TStruct{
+		v.WorkflowType, err = _WorkflowType_Read(field.Value)
+		if err != nil{
+		return err
 	}
-	return nil
-}
+	}
+	case 20:
+		if field.Value.Type() == wire.TI64{
+		var x int64
+		x, err = field.Value.GetI64(), error(nil)
+		v.PreviousStartedEventId = &x
+		if err != nil{
+		return err
+	}
+	}
+	case 30:
+		if field.Value.Type() == wire.TI64{
+		var x int64
+		x, err = field.Value.GetI64(), error(nil)
+		v.StartedEventId = &x
+		if err != nil{
+		return err
+	}
+	}
+	case 40:
+		if field.Value.Type() == wire.TBool{
+		var x bool
+		x, err = field.Value.GetBool(), error(nil)
+		v.StickyExecutionEnabled = &x
+		if err != nil{
+		return err
+	}
+	}
+	}
+		return nil
+	}
+	}
 
 func (v *RecordDecisionTaskStartedResponse) String() string {
 	if v == nil {

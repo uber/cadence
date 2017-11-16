@@ -853,7 +853,7 @@ Update_History_Loop:
 						logging.TagWorkflowRunID:       context.workflowExecution.RunId,
 					})
 					tBuilder := newTimerBuilder(t.shard.GetConfig(), lg, common.NewRealTimeSource())
-					stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(di.ScheduleID,
+					stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(di.ScheduleID, di.Attempt,
 						msBuilder.executionInfo.StickyScheduleToStartTimeout)
 					timerTasks = []persistence.Task{stickyTaskTimeoutTimer}
 				}

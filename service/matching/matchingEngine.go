@@ -477,10 +477,11 @@ func (e *matchingEngineImpl) createPollForDecisionTaskResponse(context *taskCont
 		response.Query = context.queryTaskInfo.queryRequest.QueryRequest.Query
 	} else {
 		token := &common.TaskToken{
-			DomainID:   task.DomainID,
-			WorkflowID: task.WorkflowID,
-			RunID:      task.RunID,
-			ScheduleID: task.ScheduleID,
+			DomainID:        task.DomainID,
+			WorkflowID:      task.WorkflowID,
+			RunID:           task.RunID,
+			ScheduleID:      task.ScheduleID,
+			ScheduleAttempt: historyResponse.GetAttempt(),
 		}
 		response.TaskToken, _ = e.tokenSerializer.Serialize(token)
 		response.WorkflowType = historyResponse.WorkflowType

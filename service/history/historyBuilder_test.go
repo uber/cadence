@@ -495,7 +495,7 @@ func (s *historyBuilderSuite) addDecisionTaskScheduledEvent() *decisionInfo {
 
 func (s *historyBuilderSuite) addDecisionTaskStartedEvent(scheduleID int64,
 	taskList, identity string) *workflow.HistoryEvent {
-	e := s.msBuilder.AddDecisionTaskStartedEvent(scheduleID, uuid.New(), &workflow.PollForDecisionTaskRequest{
+	e, _ := s.msBuilder.AddDecisionTaskStartedEvent(scheduleID, uuid.New(), &workflow.PollForDecisionTaskRequest{
 		TaskList: &workflow.TaskList{Name: common.StringPtr(taskList)},
 		Identity: common.StringPtr(identity),
 	})

@@ -68,6 +68,7 @@ CREATE TYPE timer_task (
   type             int,  -- enum TaskType {DecisionTaskTimeout, ActivityTaskTimeout, UserTimer}
   timeout_type     int, -- enum TimeoutType in IDL {START_TO_CLOSE, SCHEDULE_TO_START, SCHEDULE_TO_CLOSE, HEARTBEAT}
   event_id         bigint, -- Corresponds to event ID in history that is responsible for this timer.
+  schedule_attempt bigint, -- Used to retry failed decision tasks using mutable state
 );
 
 -- Workflow activity in progress mutable state

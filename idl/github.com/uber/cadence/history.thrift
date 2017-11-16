@@ -112,6 +112,7 @@ struct RecordDecisionTaskStartedResponse {
   20: optional i64 (js.type = "Long") previousStartedEventId
   30: optional i64 (js.type = "Long") startedEventId
   40: optional bool stickyExecutionEnabled
+  50: optional i64 (js.type = "Long") Attempt
 }
 
 struct SignalWorkflowExecutionRequest {

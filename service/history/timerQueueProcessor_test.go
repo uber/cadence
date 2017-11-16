@@ -168,7 +168,7 @@ func (s *timerQueueProcessorSuite) addDecisionTimer(domainID string, we workflow
 	di := addDecisionTaskScheduledEvent(builder)
 	addDecisionTaskStartedEvent(builder, di.ScheduleID, state.ExecutionInfo.TaskList, "identity")
 
-	timeOutTask := tb.AddDecisionTimoutTask(di.ScheduleID, 1)
+	timeOutTask := tb.AddDecisionTimoutTask(di.ScheduleID, di.Attempt, 1)
 	timerTasks := []persistence.Task{timeOutTask}
 
 	s.updateTimerSeqNumbers(timerTasks)
