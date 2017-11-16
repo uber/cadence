@@ -1345,7 +1345,7 @@ type RecordDecisionTaskStartedResponse struct {
 
 func (v *RecordDecisionTaskStartedResponse) ToWire() (wire.Value, error) {
 	var (
-		fields [4]wire.Field
+		fields [5]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -1376,12 +1376,18 @@ func (v *RecordDecisionTaskStartedResponse) ToWire() (wire.Value, error) {
 	}
 	if v.StickyExecutionEnabled != nil {
 		w, err = wire.NewValueBool(*(v.StickyExecutionEnabled)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 40, Value: w}
+		i++
+	}
 	if v.Attempt != nil {
 		w, err = wire.NewValueI64(*(v.Attempt)), error(nil)
 		if err != nil {
 			return w, err
 		}
-		fields[i] = wire.Field{ID: 40, Value: w}
+		fields[i] = wire.Field{ID: 50, Value: w}
 		i++
 	}
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
@@ -1393,54 +1399,63 @@ func _WorkflowType_Read(w wire.Value) (*shared.WorkflowType, error) {
 	return &v, err
 }
 
-func (v *RecordDecisionTaskStartedResponse) FromWire(w wire.Value) error{
-		var err error
-		for _, field := range w.GetStruct().Fields{
-		switch field.ID{
-	case 10:
-		if field.Value.Type() == wire.TStruct{
-		v.WorkflowType, err = _WorkflowType_Read(field.Value)
-		if err != nil{
-		return err
+func (v *RecordDecisionTaskStartedResponse) FromWire(w wire.Value) error {
+	var err error
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TStruct {
+				v.WorkflowType, err = _WorkflowType_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 20:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.PreviousStartedEventId = &x
+				if err != nil {
+					return err
+				}
+			}
+		case 30:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.StartedEventId = &x
+				if err != nil {
+					return err
+				}
+			}
+		case 40:
+			if field.Value.Type() == wire.TBool {
+				var x bool
+				x, err = field.Value.GetBool(), error(nil)
+				v.StickyExecutionEnabled = &x
+				if err != nil {
+					return err
+				}
+			}
+		case 50:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Attempt = &x
+				if err != nil {
+					return err
+				}
+			}
+		}
 	}
-	}
-	case 20:
-		if field.Value.Type() == wire.TI64{
-		var x int64
-		x, err = field.Value.GetI64(), error(nil)
-		v.PreviousStartedEventId = &x
-		if err != nil{
-		return err
-	}
-	}
-	case 30:
-		if field.Value.Type() == wire.TI64{
-		var x int64
-		x, err = field.Value.GetI64(), error(nil)
-		v.StartedEventId = &x
-		if err != nil{
-		return err
-	}
-	}
-	case 40:
-		if field.Value.Type() == wire.TBool{
-		var x bool
-		x, err = field.Value.GetBool(), error(nil)
-		v.StickyExecutionEnabled = &x
-		if err != nil{
-		return err
-	}
-	}
-	}
-		return nil
-	}
-	}
+	return nil
+}
 
 func (v *RecordDecisionTaskStartedResponse) String() string {
 	if v == nil {
 		return "<nil>"
 	}
-	var fields [4]string
+	var fields [5]string
 	i := 0
 	if v.WorkflowType != nil {
 		fields[i] = fmt.Sprintf("WorkflowType: %v", v.WorkflowType)
@@ -1456,6 +1471,10 @@ func (v *RecordDecisionTaskStartedResponse) String() string {
 	}
 	if v.StickyExecutionEnabled != nil {
 		fields[i] = fmt.Sprintf("StickyExecutionEnabled: %v", *(v.StickyExecutionEnabled))
+		i++
+	}
+	if v.Attempt != nil {
+		fields[i] = fmt.Sprintf("Attempt: %v", *(v.Attempt))
 		i++
 	}
 	return fmt.Sprintf("RecordDecisionTaskStartedResponse{%v}", strings.Join(fields[:i], ", "))
@@ -1483,6 +1502,9 @@ func (v *RecordDecisionTaskStartedResponse) Equals(rhs *RecordDecisionTaskStarte
 	if !_Bool_EqualsPtr(v.StickyExecutionEnabled, rhs.StickyExecutionEnabled) {
 		return false
 	}
+	if !_I64_EqualsPtr(v.Attempt, rhs.Attempt) {
+		return false
+	}
 	return true
 }
 
@@ -1503,6 +1525,13 @@ func (v *RecordDecisionTaskStartedResponse) GetStartedEventId() (o int64) {
 func (v *RecordDecisionTaskStartedResponse) GetStickyExecutionEnabled() (o bool) {
 	if v.StickyExecutionEnabled != nil {
 		return *v.StickyExecutionEnabled
+	}
+	return
+}
+
+func (v *RecordDecisionTaskStartedResponse) GetAttempt() (o int64) {
+	if v.Attempt != nil {
+		return *v.Attempt
 	}
 	return
 }
