@@ -789,6 +789,7 @@ func (e *mutableStateBuilder) AddDecisionTaskStartedEvent(scheduleEventID int64,
 	if di.Attempt == 0 || di.FailedStartedID == emptyEventID || e.GetNextEventID() > (di.FailedStartedID+2) {
 		event = e.hBuilder.AddDecisionTaskStartedEvent(scheduleEventID, requestID, request)
 		startedEventID = event.GetEventId()
+		di.Attempt = 0
 	}
 
 	e.executionInfo.State = persistence.WorkflowStateRunning

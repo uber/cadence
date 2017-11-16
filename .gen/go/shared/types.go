@@ -9465,6 +9465,7 @@ type PollForDecisionTaskResponse struct {
 	PreviousStartedEventId *int64             `json:"previousStartedEventId,omitempty"`
 	StartedEventId         *int64             `json:"startedEventId,omitempty"`
 	BacklogCountHint       *int64             `json:"backlogCountHint,omitempty"`
+	Attempt                *int64             `json:"attempt,omitempty"`
 	History                *History           `json:"history,omitempty"`
 	NextPageToken          []byte             `json:"nextPageToken"`
 	Query                  *WorkflowQuery     `json:"query,omitempty"`

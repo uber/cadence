@@ -706,6 +706,7 @@ struct PollForDecisionTaskResponse {
   40: optional i64 (js.type = "Long") previousStartedEventId
   50: optional i64 (js.type = "Long") startedEventId
   54: optional i64 (js.type = "Long") backlogCountHint
+  55: optional i64 (js.type = "Long") attempt
   60: optional History history
   70: optional binary nextPageToken
   80: optional WorkflowQuery query

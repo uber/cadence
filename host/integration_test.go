@@ -86,6 +86,7 @@ type (
 		activityHandler activityTaskHandler
 		queryHandler    queryHandler
 		logger          bark.Logger
+		suite           *integrationSuite
 	}
 )
 
@@ -283,6 +284,7 @@ func (s *integrationSuite) TestTerminateWorkflow() {
 		decisionHandler: dtHandler,
 		activityHandler: atHandler,
 		logger:          s.logger,
+		suite:           s,
 	}
 
 	err := poller.pollAndProcessDecisionTask(false, false)
@@ -453,6 +455,7 @@ func (s *integrationSuite) TestSequentialWorkflow() {
 		decisionHandler: dtHandler,
 		activityHandler: atHandler,
 		logger:          s.logger,
+		suite:           s,
 	}
 
 	for i := 0; i < 10; i++ {
@@ -470,6 +473,11 @@ func (s *integrationSuite) TestSequentialWorkflow() {
 }
 
 func (p *taskPoller) pollAndProcessDecisionTask(dumpHistory bool, dropTask bool) error {
+	return p.pollAndProcessDecisionTaskWithAttempt(dumpHistory, dropTask, int64(0))
+}
+
+func (p *taskPoller) pollAndProcessDecisionTaskWithAttempt(dumpHistory bool, dropTask bool,
+	decisionAttempt int64) error {
 retry:
 	for attempt := 0; attempt < 5; attempt++ {
 		response, err1 := p.engine.PollForDecisionTask(createContext(), &workflow.PollForDecisionTaskRequest{
@@ -501,6 +509,7 @@ retry:
 		if events == nil || len(events) == 0 {
 			p.logger.Fatalf("History Events are empty: %v", events)
 		}
+		p.suite.Equal(decisionAttempt, response.GetAttempt())
 
 		nextPageToken := response.NextPageToken
 		for nextPageToken != nil {
@@ -767,12 +776,18 @@ func (s *integrationSuite) TestDecisionAndActivityTimeoutsWorkflow() {
 		decisionHandler: dtHandler,
 		activityHandler: atHandler,
 		logger:          s.logger,
+		suite:           s,
 	}
 
 	for i := 0; i < 8; i++ {
 		dropDecisionTask := (i%2 == 0)
 		s.logger.Infof("Calling Decision Task: %d", i)
-		err := poller.pollAndProcessDecisionTask(false, dropDecisionTask)
+		var err error
+		if dropDecisionTask {
+			err = poller.pollAndProcessDecisionTask(false, true)
+		} else {
+			err = poller.pollAndProcessDecisionTaskWithAttempt(false, false, int64(1))
+		}
 		s.True(err == nil || err == matching.ErrNoTasks)
 		if !dropDecisionTask {
 			s.logger.Infof("Calling Activity Task: %d", i)
@@ -879,6 +894,7 @@ func (s *integrationSuite) TestActivityHeartBeatWorkflow_Success() {
 		decisionHandler: dtHandler,
 		activityHandler: atHandler,
 		logger:          s.logger,
+		suite:           s,
 	}
 
 	err := poller.pollAndProcessDecisionTask(false, false)
@@ -982,6 +998,7 @@ func (s *integrationSuite) TestActivityHeartBeatWorkflow_Timeout() {
 		decisionHandler: dtHandler,
 		activityHandler: atHandler,
 		logger:          s.logger,
+		suite:           s,
 	}
 
 	err := poller.pollAndProcessDecisionTask(false, false)
@@ -1060,6 +1077,7 @@ func (s *integrationSuite) TestSequential_UserTimers() {
 		decisionHandler: dtHandler,
 		activityHandler: nil,
 		logger:          s.logger,
+		suite:           s,
 	}
 
 	for i := 0; i < 4; i++ {
@@ -1176,6 +1194,7 @@ func (s *integrationSuite) TestActivityCancelation() {
 		decisionHandler: dtHandler,
 		activityHandler: atHandler,
 		logger:          s.logger,
+		suite:           s,
 	}
 
 	err := poller.pollAndProcessDecisionTask(false, false)
@@ -1303,6 +1322,7 @@ func (s *integrationSuite) TestSignalWorkflow() {
 		decisionHandler: dtHandler,
 		activityHandler: atHandler,
 		logger:          s.logger,
+		suite:           s,
 	}
 
 	// Make first decision to schedule activity
@@ -1475,6 +1495,7 @@ func (s *integrationSuite) TestBufferedEvents() {
 		decisionHandler: dtHandler,
 		activityHandler: nil,
 		logger:          s.logger,
+		suite:           s,
 	}
 
 	// first decision, which sends signal and the signal event should be buffered to append after first decision closed
@@ -1609,6 +1630,7 @@ func (s *integrationSuite) TestQueryWorkflow() {
 		activityHandler: atHandler,
 		queryHandler:    queryHandler,
 		logger:          s.logger,
+		suite:           s,
 	}
 
 	// Make first decision to schedule activity
@@ -1854,6 +1876,7 @@ func (s *integrationSuite) TestContinueAsNewWorkflow() {
 		identity:        identity,
 		decisionHandler: dtHandler,
 		logger:          s.logger,
+		suite:           s,
 	}
 
 	for i := 0; i < 10; i++ {
@@ -1932,6 +1955,7 @@ func (s *integrationSuite) TestVisibility() {
 		decisionHandler: dtHandler,
 		activityHandler: nil,
 		logger:          s.logger,
+		suite:           s,
 	}
 
 	err2 := poller.pollAndProcessDecisionTask(false, false)
@@ -2058,6 +2082,7 @@ func (s *integrationSuite) TestExternalRequestCancelWorkflowExecution() {
 		decisionHandler: dtHandler,
 		activityHandler: atHandler,
 		logger:          s.logger,
+		suite:           s,
 	}
 
 	err := poller.pollAndProcessDecisionTask(false, false)
@@ -2210,6 +2235,7 @@ func (s *integrationSuite) TestRequestCancelWorkflowDecisionExecution() {
 		decisionHandler: dtHandler,
 		activityHandler: atHandler,
 		logger:          s.logger,
+		suite:           s,
 	}
 
 	foreginWorkflowComplete := false
@@ -2254,6 +2280,7 @@ func (s *integrationSuite) TestRequestCancelWorkflowDecisionExecution() {
 		decisionHandler: foreignDtHandler,
 		activityHandler: atHandler,
 		logger:          s.logger,
+		suite:           s,
 	}
 
 	// Start both current and foreign workflows to make some progress.
@@ -2431,6 +2458,7 @@ func (s *integrationSuite) TestRequestCancelWorkflowDecisionExecution_UnKnownTar
 		decisionHandler: dtHandler,
 		activityHandler: atHandler,
 		logger:          s.logger,
+		suite:           s,
 	}
 
 	// Start both current and foreign workflows to make some progress.
@@ -2569,10 +2597,12 @@ func (s *integrationSuite) TestHistoryVersionCompatibilityCheck() {
 		decisionHandler: dtHandler,
 		activityHandler: atHandler,
 		logger:          s.logger,
+		suite:           s,
 	}
 
 	upgradeRollbackStep := 2
 	testDecisionPollFailStep := 3
+	decisionFailed := false
 
 	for i := 0; i < int(activityCount)+1; i++ {
 
@@ -2583,7 +2613,12 @@ func (s *integrationSuite) TestHistoryVersionCompatibilityCheck() {
 		}
 
 		s.logger.Infof("Calling Decision Task: %d", i)
-		err := poller.pollAndProcessDecisionTask(false, false)
+		var err error
+		if decisionFailed {
+			err = poller.pollAndProcessDecisionTaskWithAttempt(false, false, int64(1))
+		} else {
+			err = poller.pollAndProcessDecisionTask(false, false)
+		}
 
 		if i == testDecisionPollFailStep {
 			// make sure we get an error due to history version
@@ -2593,6 +2628,7 @@ func (s *integrationSuite) TestHistoryVersionCompatibilityCheck() {
 			// polls / activities to succeed
 			persistence.SetMaxSupportedHistoryVersion(prevMaxVersion + 1)
 			persistence.SetDefaultHistoryVersion(prevMaxVersion + 1)
+			decisionFailed = true
 			continue
 		}
 
@@ -2722,6 +2758,7 @@ func (s *integrationSuite) TestChildWorkflowExecution() {
 		identity:        identity,
 		decisionHandler: dtHandler,
 		logger:          s.logger,
+		suite:           s,
 	}
 
 	// Make first decision to start child execution
@@ -2890,6 +2927,7 @@ func (s *integrationSuite) TestChildWorkflowWithContinueAsNew() {
 		identity:        identity,
 		decisionHandler: dtHandler,
 		logger:          s.logger,
+		suite:           s,
 	}
 
 	// Make first decision to start child execution
@@ -3109,6 +3147,7 @@ func (s *integrationSuite) TestDecisionTaskFailed() {
 		decisionHandler: dtHandler,
 		activityHandler: atHandler,
 		logger:          s.logger,
+		suite:           s,
 	}
 
 	// Make first decision to schedule activity
@@ -3123,12 +3162,12 @@ func (s *integrationSuite) TestDecisionTaskFailed() {
 
 	// fail decision 10 times
 	for i := 0; i < 10; i++ {
-		err := poller.pollAndProcessDecisionTask(false, false)
+		err := poller.pollAndProcessDecisionTaskWithAttempt(false, false, int64(i))
 		s.Nil(err)
 	}
 
 	// Make complete workflow decision
-	err = poller.pollAndProcessDecisionTask(true, false)
+	err = poller.pollAndProcessDecisionTaskWithAttempt(true, false, int64(10))
 	s.logger.Infof("pollAndProcessDecisionTask: %v", err)
 	s.Nil(err)
 	s.True(workflowComplete)
@@ -3137,85 +3176,6 @@ func (s *integrationSuite) TestDecisionTaskFailed() {
 		WorkflowId: common.StringPtr(id),
 		RunId:      common.StringPtr(*we.RunId),
 	})
-
-	/*
-		// Send first signal using RunID
-		signalName := "my signal"
-		signalInput := []byte("my signal input.")
-		err = s.engine.SignalWorkflowExecution(createContext(), &workflow.SignalWorkflowExecutionRequest{
-			Domain: common.StringPtr(s.domainName),
-			WorkflowExecution: &workflow.WorkflowExecution{
-				WorkflowId: common.StringPtr(id),
-				RunId:      common.StringPtr(*we.RunId),
-			},
-			SignalName: common.StringPtr(signalName),
-			Input:      signalInput,
-			Identity:   common.StringPtr(identity),
-		})
-		s.Nil(err)
-
-		// Process signal in decider
-		err = poller.pollAndProcessDecisionTask(true, false)
-		s.logger.Infof("pollAndProcessDecisionTask: %v", err)
-		s.Nil(err)
-
-		s.False(workflowComplete)
-		s.True(signalEvent != nil)
-		s.Equal(signalName, *signalEvent.WorkflowExecutionSignaledEventAttributes.SignalName)
-		s.Equal(signalInput, signalEvent.WorkflowExecutionSignaledEventAttributes.Input)
-		s.Equal(identity, *signalEvent.WorkflowExecutionSignaledEventAttributes.Identity)
-
-		// Send another signal without RunID
-		signalName = "another signal"
-		signalInput = []byte("another signal input.")
-		err = s.engine.SignalWorkflowExecution(createContext(), &workflow.SignalWorkflowExecutionRequest{
-			Domain: common.StringPtr(s.domainName),
-			WorkflowExecution: &workflow.WorkflowExecution{
-				WorkflowId: common.StringPtr(id),
-			},
-			SignalName: common.StringPtr(signalName),
-			Input:      signalInput,
-			Identity:   common.StringPtr(identity),
-		})
-		s.Nil(err)
-
-		// Process signal in decider
-		err = poller.pollAndProcessDecisionTask(true, false)
-		s.logger.Infof("pollAndProcessDecisionTask: %v", err)
-		s.Nil(err)
-
-		s.False(workflowComplete)
-		s.True(signalEvent != nil)
-		s.Equal(signalName, *signalEvent.WorkflowExecutionSignaledEventAttributes.SignalName)
-		s.Equal(signalInput, signalEvent.WorkflowExecutionSignaledEventAttributes.Input)
-		s.Equal(identity, *signalEvent.WorkflowExecutionSignaledEventAttributes.Identity)
-
-		// Terminate workflow execution
-		err = s.engine.TerminateWorkflowExecution(createContext(), &workflow.TerminateWorkflowExecutionRequest{
-			Domain: common.StringPtr(s.domainName),
-			WorkflowExecution: &workflow.WorkflowExecution{
-				WorkflowId: common.StringPtr(id),
-			},
-			Reason:   common.StringPtr("test signal"),
-			Details:  nil,
-			Identity: common.StringPtr(identity),
-		})
-		s.Nil(err)
-
-		// Send signal to terminated workflow
-		err = s.engine.SignalWorkflowExecution(createContext(), &workflow.SignalWorkflowExecutionRequest{
-			Domain: common.StringPtr(s.domainName),
-			WorkflowExecution: &workflow.WorkflowExecution{
-				WorkflowId: common.StringPtr(id),
-				RunId:      common.StringPtr(*we.RunId),
-			},
-			SignalName: common.StringPtr("failed signal 1."),
-			Input:      nil,
-			Identity:   common.StringPtr(identity),
-		})
-		s.NotNil(err)
-		s.IsType(&workflow.EntityNotExistsError{}, err)
-	*/
 }
 
 func (s *integrationSuite) setupShards() {
