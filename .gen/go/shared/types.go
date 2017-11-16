@@ -14248,7 +14248,7 @@ func (v *TaskList) GetName() (o string) {
 }
 
 type TaskListMetadata struct {
-	MaxTasksPerSecond *int64 `json:"maxTasksPerSecond,omitempty"`
+	MaxTasksPerSecond *float64 `json:"maxTasksPerSecond,omitempty"`
 }
 
 func (v *TaskListMetadata) ToWire() (wire.Value, error) {
@@ -14259,7 +14259,7 @@ func (v *TaskListMetadata) ToWire() (wire.Value, error) {
 		err    error
 	)
 	if v.MaxTasksPerSecond != nil {
-		w, err = wire.NewValueI64(*(v.MaxTasksPerSecond)), error(nil)
+		w, err = wire.NewValueDouble(*(v.MaxTasksPerSecond)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -14274,9 +14274,9 @@ func (v *TaskListMetadata) FromWire(w wire.Value) error {
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
 		case 10:
-			if field.Value.Type() == wire.TI64 {
-				var x int64
-				x, err = field.Value.GetI64(), error(nil)
+			if field.Value.Type() == wire.TDouble {
+				var x float64
+				x, err = field.Value.GetDouble(), error(nil)
 				v.MaxTasksPerSecond = &x
 				if err != nil {
 					return err
@@ -14300,14 +14300,23 @@ func (v *TaskListMetadata) String() string {
 	return fmt.Sprintf("TaskListMetadata{%v}", strings.Join(fields[:i], ", "))
 }
 
+func _Double_EqualsPtr(lhs, rhs *float64) bool {
+	if lhs != nil && rhs != nil {
+		x := *lhs
+		y := *rhs
+		return (x == y)
+	}
+	return lhs == nil && rhs == nil
+}
+
 func (v *TaskListMetadata) Equals(rhs *TaskListMetadata) bool {
-	if !_I64_EqualsPtr(v.MaxTasksPerSecond, rhs.MaxTasksPerSecond) {
+	if !_Double_EqualsPtr(v.MaxTasksPerSecond, rhs.MaxTasksPerSecond) {
 		return false
 	}
 	return true
 }
 
-func (v *TaskListMetadata) GetMaxTasksPerSecond() (o int64) {
+func (v *TaskListMetadata) GetMaxTasksPerSecond() (o float64) {
 	if v.MaxTasksPerSecond != nil {
 		return *v.MaxTasksPerSecond
 	}
