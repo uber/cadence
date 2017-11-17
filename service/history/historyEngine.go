@@ -1015,6 +1015,12 @@ func (e *historyEngineImpl) RespondDecisionTaskFailed(req *h.RespondDecisionTask
 				return &workflow.EntityNotExistsError{Message: "Decision task not found."}
 			}
 
+			if request.GetCause() == workflow.DecisionTaskFailedCauseResetStickyTasklist {
+				// remove pending decision, and clear stickiness
+				msBuilder.executionInfo.StickyTaskList = ""
+				msBuilder.executionInfo.StickyScheduleToStartTimeout = 0
+			}
+
 			msBuilder.AddDecisionTaskFailedEvent(di.ScheduleID, di.StartedID, request.GetCause(), request.Details,
 				request.GetIdentity())
 
