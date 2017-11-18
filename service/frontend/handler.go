@@ -764,14 +764,14 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 			return nil, wh.error(errNextPageTokenRunIDMismatch, scope)
 		}
 	} else {
-		response, err := wh.history.GetWorkflowExecutionNextEventID(ctx, &h.GetWorkflowExecutionNextEventIDRequest{
+		response, err := wh.history.DescribeWorkflowExecution(ctx, &h.DescribeWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(info.ID),
 			Execution:  getRequest.Execution,
 		})
 		token.FirstEventID = common.FirstEventID
 		if err == nil {
-			token.NextEventID = *response.EventId
-			token.RunID = *response.RunId
+			token.NextEventID = response.GetNextEventId()
+			token.RunID = response.Response.WorkflowExecutionInfo.Execution.GetRunId()
 		} else {
 			if _, ok := err.(*gen.EntityNotExistsError); !ok || getRequest.Execution.RunId == nil {
 				return nil, wh.error(err, scope)
@@ -1134,7 +1134,7 @@ func (wh *WorkflowHandler) QueryWorkflow(ctx context.Context,
 	}
 	if queryRequest.Execution.RunId == nil {
 		// RunID is not set, we would use the running one if it exists.
-		response, err := wh.history.GetWorkflowExecutionNextEventID(ctx, &h.GetWorkflowExecutionNextEventIDRequest{
+		response, err := wh.history.DescribeWorkflowExecution(ctx, &h.DescribeWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(domainInfo.ID),
 			Execution:  queryRequest.Execution,
 		})
@@ -1142,8 +1142,8 @@ func (wh *WorkflowHandler) QueryWorkflow(ctx context.Context,
 			return nil, wh.error(err, scope)
 		}
 
-		queryRequest.Execution.RunId = response.RunId
-		matchingRequest.TaskList = response.Tasklist
+		queryRequest.Execution.RunId = response.Response.WorkflowExecutionInfo.Execution.RunId
+		matchingRequest.TaskList = response.Response.ExecutionConfiguration.TaskList
 	} else {
 		// Get the TaskList from history (first event)
 		history, _, err := wh.getHistory(domainInfo.ID, *queryRequest.Execution, common.FirstEventID, common.FirstEventID+1, 1, nil)
@@ -1195,14 +1195,14 @@ func (wh *WorkflowHandler) DescribeWorkflowExecution(ctx context.Context, reques
 
 	response, err := wh.history.DescribeWorkflowExecution(ctx, &h.DescribeWorkflowExecutionRequest{
 		DomainUUID: common.StringPtr(domainInfo.ID),
-		Request:    request,
+		Execution:  request.Execution,
 	})
 
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
 
-	return response, nil
+	return response.Response, nil
 }
 
 func (wh *WorkflowHandler) getHistory(domainID string, execution gen.WorkflowExecution,

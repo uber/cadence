@@ -73,7 +73,7 @@ func (m *MockClient) DescribeWorkflowExecution(
 	ctx context.Context,
 	_DescribeRequest *history.DescribeWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
-) (success *shared.DescribeWorkflowExecutionResponse, err error) {
+) (success *history.DescribeWorkflowExecutionResponse, err error) {
 
 	args := []interface{}{ctx, _DescribeRequest}
 	for _, o := range opts {
@@ -81,7 +81,7 @@ func (m *MockClient) DescribeWorkflowExecution(
 	}
 	i := 0
 	ret := m.ctrl.Call(m, "DescribeWorkflowExecution", args...)
-	success, _ = ret[i].(*shared.DescribeWorkflowExecutionResponse)
+	success, _ = ret[i].(*history.DescribeWorkflowExecutionResponse)
 	i++
 	err, _ = ret[i].(error)
 	return
@@ -94,39 +94,6 @@ func (mr *_MockClientRecorder) DescribeWorkflowExecution(
 ) *gomock.Call {
 	args := append([]interface{}{ctx, _DescribeRequest}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "DescribeWorkflowExecution", args...)
-}
-
-// GetWorkflowExecutionNextEventID responds to a GetWorkflowExecutionNextEventID call based on the mock expectations. This
-// call will fail if the mock does not expect this call. Use EXPECT to expect
-// a call to this function.
-//
-// 	client.EXPECT().GetWorkflowExecutionNextEventID(gomock.Any(), ...).Return(...)
-// 	... := client.GetWorkflowExecutionNextEventID(...)
-func (m *MockClient) GetWorkflowExecutionNextEventID(
-	ctx context.Context,
-	_GetRequest *history.GetWorkflowExecutionNextEventIDRequest,
-	opts ...yarpc.CallOption,
-) (success *history.GetWorkflowExecutionNextEventIDResponse, err error) {
-
-	args := []interface{}{ctx, _GetRequest}
-	for _, o := range opts {
-		args = append(args, o)
-	}
-	i := 0
-	ret := m.ctrl.Call(m, "GetWorkflowExecutionNextEventID", args...)
-	success, _ = ret[i].(*history.GetWorkflowExecutionNextEventIDResponse)
-	i++
-	err, _ = ret[i].(error)
-	return
-}
-
-func (mr *_MockClientRecorder) GetWorkflowExecutionNextEventID(
-	ctx interface{},
-	_GetRequest interface{},
-	opts ...interface{},
-) *gomock.Call {
-	args := append([]interface{}{ctx, _GetRequest}, opts...)
-	return mr.mock.ctrl.RecordCall(mr.mock, "GetWorkflowExecutionNextEventID", args...)
 }
 
 // RecordActivityTaskHeartbeat responds to a RecordActivityTaskHeartbeat call based on the mock expectations. This

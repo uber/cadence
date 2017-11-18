@@ -32,8 +32,8 @@ import (
 )
 
 type DescribeWorkflowExecutionRequest struct {
-	DomainUUID *string                                  `json:"domainUUID,omitempty"`
-	Request    *shared.DescribeWorkflowExecutionRequest `json:"request,omitempty"`
+	DomainUUID *string                   `json:"domainUUID,omitempty"`
+	Execution  *shared.WorkflowExecution `json:"execution,omitempty"`
 }
 
 func (v *DescribeWorkflowExecutionRequest) ToWire() (wire.Value, error) {
@@ -51,8 +51,8 @@ func (v *DescribeWorkflowExecutionRequest) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 10, Value: w}
 		i++
 	}
-	if v.Request != nil {
-		w, err = v.Request.ToWire()
+	if v.Execution != nil {
+		w, err = v.Execution.ToWire()
 		if err != nil {
 			return w, err
 		}
@@ -62,8 +62,8 @@ func (v *DescribeWorkflowExecutionRequest) ToWire() (wire.Value, error) {
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _DescribeWorkflowExecutionRequest_Read(w wire.Value) (*shared.DescribeWorkflowExecutionRequest, error) {
-	var v shared.DescribeWorkflowExecutionRequest
+func _WorkflowExecution_Read(w wire.Value) (*shared.WorkflowExecution, error) {
+	var v shared.WorkflowExecution
 	err := v.FromWire(w)
 	return &v, err
 }
@@ -83,7 +83,7 @@ func (v *DescribeWorkflowExecutionRequest) FromWire(w wire.Value) error {
 			}
 		case 20:
 			if field.Value.Type() == wire.TStruct {
-				v.Request, err = _DescribeWorkflowExecutionRequest_Read(field.Value)
+				v.Execution, err = _WorkflowExecution_Read(field.Value)
 				if err != nil {
 					return err
 				}
@@ -103,8 +103,8 @@ func (v *DescribeWorkflowExecutionRequest) String() string {
 		fields[i] = fmt.Sprintf("DomainUUID: %v", *(v.DomainUUID))
 		i++
 	}
-	if v.Request != nil {
-		fields[i] = fmt.Sprintf("Request: %v", v.Request)
+	if v.Execution != nil {
+		fields[i] = fmt.Sprintf("Execution: %v", v.Execution)
 		i++
 	}
 	return fmt.Sprintf("DescribeWorkflowExecutionRequest{%v}", strings.Join(fields[:i], ", "))
@@ -123,7 +123,7 @@ func (v *DescribeWorkflowExecutionRequest) Equals(rhs *DescribeWorkflowExecution
 	if !_String_EqualsPtr(v.DomainUUID, rhs.DomainUUID) {
 		return false
 	}
-	if !((v.Request == nil && rhs.Request == nil) || (v.Request != nil && rhs.Request != nil && v.Request.Equals(rhs.Request))) {
+	if !((v.Execution == nil && rhs.Execution == nil) || (v.Execution != nil && rhs.Execution != nil && v.Execution.Equals(rhs.Execution))) {
 		return false
 	}
 	return true
@@ -132,6 +132,175 @@ func (v *DescribeWorkflowExecutionRequest) Equals(rhs *DescribeWorkflowExecution
 func (v *DescribeWorkflowExecutionRequest) GetDomainUUID() (o string) {
 	if v.DomainUUID != nil {
 		return *v.DomainUUID
+	}
+	return
+}
+
+type DescribeWorkflowExecutionResponse struct {
+	Response               *shared.DescribeWorkflowExecutionResponse `json:"response,omitempty"`
+	NextEventId            *int64                                    `json:"NextEventId,omitempty"`
+	PreviousStartedEventId *int64                                    `json:"PreviousStartedEventId,omitempty"`
+	StartedEventId         *int64                                    `json:"StartedEventId,omitempty"`
+}
+
+func (v *DescribeWorkflowExecutionResponse) ToWire() (wire.Value, error) {
+	var (
+		fields [4]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+	if v.Response != nil {
+		w, err = v.Response.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.NextEventId != nil {
+		w, err = wire.NewValueI64(*(v.NextEventId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	if v.PreviousStartedEventId != nil {
+		w, err = wire.NewValueI64(*(v.PreviousStartedEventId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 30, Value: w}
+		i++
+	}
+	if v.StartedEventId != nil {
+		w, err = wire.NewValueI64(*(v.StartedEventId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 40, Value: w}
+		i++
+	}
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _DescribeWorkflowExecutionResponse_Read(w wire.Value) (*shared.DescribeWorkflowExecutionResponse, error) {
+	var v shared.DescribeWorkflowExecutionResponse
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func (v *DescribeWorkflowExecutionResponse) FromWire(w wire.Value) error {
+	var err error
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TStruct {
+				v.Response, err = _DescribeWorkflowExecutionResponse_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 20:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.NextEventId = &x
+				if err != nil {
+					return err
+				}
+			}
+		case 30:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.PreviousStartedEventId = &x
+				if err != nil {
+					return err
+				}
+			}
+		case 40:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.StartedEventId = &x
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (v *DescribeWorkflowExecutionResponse) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [4]string
+	i := 0
+	if v.Response != nil {
+		fields[i] = fmt.Sprintf("Response: %v", v.Response)
+		i++
+	}
+	if v.NextEventId != nil {
+		fields[i] = fmt.Sprintf("NextEventId: %v", *(v.NextEventId))
+		i++
+	}
+	if v.PreviousStartedEventId != nil {
+		fields[i] = fmt.Sprintf("PreviousStartedEventId: %v", *(v.PreviousStartedEventId))
+		i++
+	}
+	if v.StartedEventId != nil {
+		fields[i] = fmt.Sprintf("StartedEventId: %v", *(v.StartedEventId))
+		i++
+	}
+	return fmt.Sprintf("DescribeWorkflowExecutionResponse{%v}", strings.Join(fields[:i], ", "))
+}
+
+func _I64_EqualsPtr(lhs, rhs *int64) bool {
+	if lhs != nil && rhs != nil {
+		x := *lhs
+		y := *rhs
+		return (x == y)
+	}
+	return lhs == nil && rhs == nil
+}
+
+func (v *DescribeWorkflowExecutionResponse) Equals(rhs *DescribeWorkflowExecutionResponse) bool {
+	if !((v.Response == nil && rhs.Response == nil) || (v.Response != nil && rhs.Response != nil && v.Response.Equals(rhs.Response))) {
+		return false
+	}
+	if !_I64_EqualsPtr(v.NextEventId, rhs.NextEventId) {
+		return false
+	}
+	if !_I64_EqualsPtr(v.PreviousStartedEventId, rhs.PreviousStartedEventId) {
+		return false
+	}
+	if !_I64_EqualsPtr(v.StartedEventId, rhs.StartedEventId) {
+		return false
+	}
+	return true
+}
+
+func (v *DescribeWorkflowExecutionResponse) GetNextEventId() (o int64) {
+	if v.NextEventId != nil {
+		return *v.NextEventId
+	}
+	return
+}
+
+func (v *DescribeWorkflowExecutionResponse) GetPreviousStartedEventId() (o int64) {
+	if v.PreviousStartedEventId != nil {
+		return *v.PreviousStartedEventId
+	}
+	return
+}
+
+func (v *DescribeWorkflowExecutionResponse) GetStartedEventId() (o int64) {
+	if v.StartedEventId != nil {
+		return *v.StartedEventId
 	}
 	return
 }
@@ -197,239 +366,6 @@ func (v *EventAlreadyStartedError) Equals(rhs *EventAlreadyStartedError) bool {
 
 func (v *EventAlreadyStartedError) Error() string {
 	return v.String()
-}
-
-type GetWorkflowExecutionNextEventIDRequest struct {
-	DomainUUID *string                   `json:"domainUUID,omitempty"`
-	Execution  *shared.WorkflowExecution `json:"execution,omitempty"`
-}
-
-func (v *GetWorkflowExecutionNextEventIDRequest) ToWire() (wire.Value, error) {
-	var (
-		fields [2]wire.Field
-		i      int = 0
-		w      wire.Value
-		err    error
-	)
-	if v.DomainUUID != nil {
-		w, err = wire.NewValueString(*(v.DomainUUID)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 10, Value: w}
-		i++
-	}
-	if v.Execution != nil {
-		w, err = v.Execution.ToWire()
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 20, Value: w}
-		i++
-	}
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
-}
-
-func _WorkflowExecution_Read(w wire.Value) (*shared.WorkflowExecution, error) {
-	var v shared.WorkflowExecution
-	err := v.FromWire(w)
-	return &v, err
-}
-
-func (v *GetWorkflowExecutionNextEventIDRequest) FromWire(w wire.Value) error {
-	var err error
-	for _, field := range w.GetStruct().Fields {
-		switch field.ID {
-		case 10:
-			if field.Value.Type() == wire.TBinary {
-				var x string
-				x, err = field.Value.GetString(), error(nil)
-				v.DomainUUID = &x
-				if err != nil {
-					return err
-				}
-			}
-		case 20:
-			if field.Value.Type() == wire.TStruct {
-				v.Execution, err = _WorkflowExecution_Read(field.Value)
-				if err != nil {
-					return err
-				}
-			}
-		}
-	}
-	return nil
-}
-
-func (v *GetWorkflowExecutionNextEventIDRequest) String() string {
-	if v == nil {
-		return "<nil>"
-	}
-	var fields [2]string
-	i := 0
-	if v.DomainUUID != nil {
-		fields[i] = fmt.Sprintf("DomainUUID: %v", *(v.DomainUUID))
-		i++
-	}
-	if v.Execution != nil {
-		fields[i] = fmt.Sprintf("Execution: %v", v.Execution)
-		i++
-	}
-	return fmt.Sprintf("GetWorkflowExecutionNextEventIDRequest{%v}", strings.Join(fields[:i], ", "))
-}
-
-func (v *GetWorkflowExecutionNextEventIDRequest) Equals(rhs *GetWorkflowExecutionNextEventIDRequest) bool {
-	if !_String_EqualsPtr(v.DomainUUID, rhs.DomainUUID) {
-		return false
-	}
-	if !((v.Execution == nil && rhs.Execution == nil) || (v.Execution != nil && rhs.Execution != nil && v.Execution.Equals(rhs.Execution))) {
-		return false
-	}
-	return true
-}
-
-func (v *GetWorkflowExecutionNextEventIDRequest) GetDomainUUID() (o string) {
-	if v.DomainUUID != nil {
-		return *v.DomainUUID
-	}
-	return
-}
-
-type GetWorkflowExecutionNextEventIDResponse struct {
-	EventId  *int64           `json:"eventId,omitempty"`
-	RunId    *string          `json:"runId,omitempty"`
-	Tasklist *shared.TaskList `json:"tasklist,omitempty"`
-}
-
-func (v *GetWorkflowExecutionNextEventIDResponse) ToWire() (wire.Value, error) {
-	var (
-		fields [3]wire.Field
-		i      int = 0
-		w      wire.Value
-		err    error
-	)
-	if v.EventId != nil {
-		w, err = wire.NewValueI64(*(v.EventId)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 10, Value: w}
-		i++
-	}
-	if v.RunId != nil {
-		w, err = wire.NewValueString(*(v.RunId)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 20, Value: w}
-		i++
-	}
-	if v.Tasklist != nil {
-		w, err = v.Tasklist.ToWire()
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 30, Value: w}
-		i++
-	}
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
-}
-
-func _TaskList_Read(w wire.Value) (*shared.TaskList, error) {
-	var v shared.TaskList
-	err := v.FromWire(w)
-	return &v, err
-}
-
-func (v *GetWorkflowExecutionNextEventIDResponse) FromWire(w wire.Value) error {
-	var err error
-	for _, field := range w.GetStruct().Fields {
-		switch field.ID {
-		case 10:
-			if field.Value.Type() == wire.TI64 {
-				var x int64
-				x, err = field.Value.GetI64(), error(nil)
-				v.EventId = &x
-				if err != nil {
-					return err
-				}
-			}
-		case 20:
-			if field.Value.Type() == wire.TBinary {
-				var x string
-				x, err = field.Value.GetString(), error(nil)
-				v.RunId = &x
-				if err != nil {
-					return err
-				}
-			}
-		case 30:
-			if field.Value.Type() == wire.TStruct {
-				v.Tasklist, err = _TaskList_Read(field.Value)
-				if err != nil {
-					return err
-				}
-			}
-		}
-	}
-	return nil
-}
-
-func (v *GetWorkflowExecutionNextEventIDResponse) String() string {
-	if v == nil {
-		return "<nil>"
-	}
-	var fields [3]string
-	i := 0
-	if v.EventId != nil {
-		fields[i] = fmt.Sprintf("EventId: %v", *(v.EventId))
-		i++
-	}
-	if v.RunId != nil {
-		fields[i] = fmt.Sprintf("RunId: %v", *(v.RunId))
-		i++
-	}
-	if v.Tasklist != nil {
-		fields[i] = fmt.Sprintf("Tasklist: %v", v.Tasklist)
-		i++
-	}
-	return fmt.Sprintf("GetWorkflowExecutionNextEventIDResponse{%v}", strings.Join(fields[:i], ", "))
-}
-
-func _I64_EqualsPtr(lhs, rhs *int64) bool {
-	if lhs != nil && rhs != nil {
-		x := *lhs
-		y := *rhs
-		return (x == y)
-	}
-	return lhs == nil && rhs == nil
-}
-
-func (v *GetWorkflowExecutionNextEventIDResponse) Equals(rhs *GetWorkflowExecutionNextEventIDResponse) bool {
-	if !_I64_EqualsPtr(v.EventId, rhs.EventId) {
-		return false
-	}
-	if !_String_EqualsPtr(v.RunId, rhs.RunId) {
-		return false
-	}
-	if !((v.Tasklist == nil && rhs.Tasklist == nil) || (v.Tasklist != nil && rhs.Tasklist != nil && v.Tasklist.Equals(rhs.Tasklist))) {
-		return false
-	}
-	return true
-}
-
-func (v *GetWorkflowExecutionNextEventIDResponse) GetEventId() (o int64) {
-	if v.EventId != nil {
-		return *v.EventId
-	}
-	return
-}
-
-func (v *GetWorkflowExecutionNextEventIDResponse) GetRunId() (o string) {
-	if v.RunId != nil {
-		return *v.RunId
-	}
-	return
 }
 
 type ParentExecutionInfo struct {

@@ -37,12 +37,7 @@ type Interface interface {
 	DescribeWorkflowExecution(
 		ctx context.Context,
 		DescribeRequest *history.DescribeWorkflowExecutionRequest,
-	) (*shared.DescribeWorkflowExecutionResponse, error)
-
-	GetWorkflowExecutionNextEventID(
-		ctx context.Context,
-		GetRequest *history.GetWorkflowExecutionNextEventIDRequest,
-	) (*history.GetWorkflowExecutionNextEventIDResponse, error)
+	) (*history.DescribeWorkflowExecutionResponse, error)
 
 	RecordActivityTaskHeartbeat(
 		ctx context.Context,
@@ -128,18 +123,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.DescribeWorkflowExecution),
 				},
-				Signature:    "DescribeWorkflowExecution(DescribeRequest *history.DescribeWorkflowExecutionRequest) (*shared.DescribeWorkflowExecutionResponse)",
-				ThriftModule: history.ThriftModule,
-			},
-
-			thrift.Method{
-				Name: "GetWorkflowExecutionNextEventID",
-				HandlerSpec: thrift.HandlerSpec{
-
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.GetWorkflowExecutionNextEventID),
-				},
-				Signature:    "GetWorkflowExecutionNextEventID(GetRequest *history.GetWorkflowExecutionNextEventIDRequest) (*history.GetWorkflowExecutionNextEventIDResponse)",
+				Signature:    "DescribeWorkflowExecution(DescribeRequest *history.DescribeWorkflowExecutionRequest) (*history.DescribeWorkflowExecutionResponse)",
 				ThriftModule: history.ThriftModule,
 			},
 
@@ -288,7 +272,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 15)
+	procedures := make([]transport.Procedure, 0, 14)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
@@ -305,25 +289,6 @@ func (h handler) DescribeWorkflowExecution(ctx context.Context, body wire.Value)
 
 	hadError := err != nil
 	result, err := history.HistoryService_DescribeWorkflowExecution_Helper.WrapResponse(success, err)
-
-	var response thrift.Response
-	if err == nil {
-		response.IsApplicationError = hadError
-		response.Body = result
-	}
-	return response, err
-}
-
-func (h handler) GetWorkflowExecutionNextEventID(ctx context.Context, body wire.Value) (thrift.Response, error) {
-	var args history.HistoryService_GetWorkflowExecutionNextEventID_Args
-	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
-	}
-
-	success, err := h.impl.GetWorkflowExecutionNextEventID(ctx, args.GetRequest)
-
-	hadError := err != nil
-	result, err := history.HistoryService_GetWorkflowExecutionNextEventID_Helper.WrapResponse(success, err)
 
 	var response thrift.Response
 	if err == nil {

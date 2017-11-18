@@ -85,38 +85,15 @@ func (c *clientImpl) StartWorkflowExecution(
 	return response, nil
 }
 
-func (c *clientImpl) GetWorkflowExecutionNextEventID(
+func (c *clientImpl) DescribeWorkflowExecution(
 	ctx context.Context,
-	request *h.GetWorkflowExecutionNextEventIDRequest,
-	opts ...yarpc.CallOption) (*h.GetWorkflowExecutionNextEventIDResponse, error) {
+	request *h.DescribeWorkflowExecutionRequest,
+	opts ...yarpc.CallOption) (*h.DescribeWorkflowExecutionResponse, error) {
 	client, err := c.getHostForRequest(*request.Execution.WorkflowId)
 	if err != nil {
 		return nil, err
 	}
-	var response *h.GetWorkflowExecutionNextEventIDResponse
-	op := func(ctx context.Context, client historyserviceclient.Interface) error {
-		var err error
-		ctx, cancel := c.createContext(ctx)
-		defer cancel()
-		response, err = client.GetWorkflowExecutionNextEventID(ctx, request)
-		return err
-	}
-	err = c.executeWithRedirect(ctx, client, op)
-	if err != nil {
-		return nil, err
-	}
-	return response, nil
-}
-
-func (c *clientImpl) DescribeWorkflowExecution(
-	ctx context.Context,
-	request *h.DescribeWorkflowExecutionRequest,
-	opts ...yarpc.CallOption) (*workflow.DescribeWorkflowExecutionResponse, error) {
-	client, err := c.getHostForRequest(*request.Request.Execution.WorkflowId)
-	if err != nil {
-		return nil, err
-	}
-	var response *workflow.DescribeWorkflowExecutionResponse
+	var response *h.DescribeWorkflowExecutionResponse
 	op := func(ctx context.Context, client historyserviceclient.Interface) error {
 		var err error
 		ctx, cancel := c.createContext(ctx)

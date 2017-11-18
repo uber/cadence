@@ -420,36 +420,8 @@ func (h *Handler) StartWorkflowExecution(ctx context.Context,
 	return response, nil
 }
 
-// GetWorkflowExecutionNextEventID - returns the id of the next event in the execution's history
-func (h *Handler) GetWorkflowExecutionNextEventID(ctx context.Context,
-	getRequest *hist.GetWorkflowExecutionNextEventIDRequest) (*hist.GetWorkflowExecutionNextEventIDResponse, error) {
-	h.startWG.Wait()
-
-	h.metricsClient.IncCounter(metrics.HistoryGetWorkflowExecutionNextEventIDScope, metrics.CadenceRequests)
-	sw := h.metricsClient.StartTimer(metrics.HistoryGetWorkflowExecutionNextEventIDScope, metrics.CadenceLatency)
-	defer sw.Stop()
-
-	if getRequest.DomainUUID == nil {
-		return nil, errDomainNotSet
-	}
-
-	workflowExecution := getRequest.Execution
-	engine, err1 := h.controller.GetEngine(*workflowExecution.WorkflowId)
-	if err1 != nil {
-		h.updateErrorMetric(metrics.HistoryGetWorkflowExecutionNextEventIDScope, err1)
-		return nil, err1
-	}
-
-	resp, err2 := engine.GetWorkflowExecutionNextEventID(getRequest)
-	if err2 != nil {
-		h.updateErrorMetric(metrics.HistoryGetWorkflowExecutionNextEventIDScope, h.convertError(err2))
-		return nil, h.convertError(err2)
-	}
-	return resp, nil
-}
-
 // DescribeWorkflowExecution returns information about the specified workflow execution.
-func (h *Handler) DescribeWorkflowExecution(ctx context.Context, request *hist.DescribeWorkflowExecutionRequest) (*gen.DescribeWorkflowExecutionResponse, error) {
+func (h *Handler) DescribeWorkflowExecution(ctx context.Context, request *hist.DescribeWorkflowExecutionRequest) (*hist.DescribeWorkflowExecutionResponse, error) {
 	h.startWG.Wait()
 
 	h.metricsClient.IncCounter(metrics.HistoryDescribeWorkflowExecutionScope, metrics.CadenceRequests)
@@ -460,7 +432,7 @@ func (h *Handler) DescribeWorkflowExecution(ctx context.Context, request *hist.D
 		return nil, errDomainNotSet
 	}
 
-	workflowExecution := request.Request.Execution
+	workflowExecution := request.Execution
 	engine, err1 := h.controller.GetEngine(*workflowExecution.WorkflowId)
 	if err1 != nil {
 		h.updateErrorMetric(metrics.HistoryDescribeWorkflowExecutionScope, err1)

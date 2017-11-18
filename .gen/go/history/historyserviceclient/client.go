@@ -40,13 +40,7 @@ type Interface interface {
 		ctx context.Context,
 		DescribeRequest *history.DescribeWorkflowExecutionRequest,
 		opts ...yarpc.CallOption,
-	) (*shared.DescribeWorkflowExecutionResponse, error)
-
-	GetWorkflowExecutionNextEventID(
-		ctx context.Context,
-		GetRequest *history.GetWorkflowExecutionNextEventIDRequest,
-		opts ...yarpc.CallOption,
-	) (*history.GetWorkflowExecutionNextEventIDResponse, error)
+	) (*history.DescribeWorkflowExecutionResponse, error)
 
 	RecordActivityTaskHeartbeat(
 		ctx context.Context,
@@ -155,7 +149,7 @@ func (c client) DescribeWorkflowExecution(
 	ctx context.Context,
 	_DescribeRequest *history.DescribeWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
-) (success *shared.DescribeWorkflowExecutionResponse, err error) {
+) (success *history.DescribeWorkflowExecutionResponse, err error) {
 
 	args := history.HistoryService_DescribeWorkflowExecution_Helper.Args(_DescribeRequest)
 
@@ -171,29 +165,6 @@ func (c client) DescribeWorkflowExecution(
 	}
 
 	success, err = history.HistoryService_DescribeWorkflowExecution_Helper.UnwrapResponse(&result)
-	return
-}
-
-func (c client) GetWorkflowExecutionNextEventID(
-	ctx context.Context,
-	_GetRequest *history.GetWorkflowExecutionNextEventIDRequest,
-	opts ...yarpc.CallOption,
-) (success *history.GetWorkflowExecutionNextEventIDResponse, err error) {
-
-	args := history.HistoryService_GetWorkflowExecutionNextEventID_Helper.Args(_GetRequest)
-
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
-
-	var result history.HistoryService_GetWorkflowExecutionNextEventID_Result
-	if err = result.FromWire(body); err != nil {
-		return
-	}
-
-	success, err = history.HistoryService_GetWorkflowExecutionNextEventID_Helper.UnwrapResponse(&result)
 	return
 }
 

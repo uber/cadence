@@ -60,27 +60,10 @@ func (c *metricClient) StartWorkflowExecution(
 	return resp, err
 }
 
-func (c *metricClient) GetWorkflowExecutionNextEventID(
-	context context.Context,
-	request *h.GetWorkflowExecutionNextEventIDRequest,
-	opts ...yarpc.CallOption) (*h.GetWorkflowExecutionNextEventIDResponse, error) {
-	c.metricsClient.IncCounter(metrics.HistoryClientGetWorkflowExecutionNextEventIDScope, metrics.CadenceRequests)
-
-	sw := c.metricsClient.StartTimer(metrics.HistoryClientGetWorkflowExecutionNextEventIDScope, metrics.CadenceLatency)
-	resp, err := c.client.GetWorkflowExecutionNextEventID(context, request)
-	sw.Stop()
-
-	if err != nil {
-		c.metricsClient.IncCounter(metrics.HistoryClientGetWorkflowExecutionNextEventIDScope, metrics.CadenceFailures)
-	}
-
-	return resp, err
-}
-
 func (c *metricClient) DescribeWorkflowExecution(
 	context context.Context,
 	request *h.DescribeWorkflowExecutionRequest,
-	opts ...yarpc.CallOption) (*shared.DescribeWorkflowExecutionResponse, error) {
+	opts ...yarpc.CallOption) (*h.DescribeWorkflowExecutionResponse, error) {
 	c.metricsClient.IncCounter(metrics.HistoryClientDescribeWorkflowExecutionScope, metrics.CadenceRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.HistoryClientDescribeWorkflowExecutionScope, metrics.CadenceLatency)

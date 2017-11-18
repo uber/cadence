@@ -53,7 +53,7 @@ func (v *HistoryService_DescribeWorkflowExecution_Args) ToWire() (wire.Value, er
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _DescribeWorkflowExecutionRequest_1_Read(w wire.Value) (*DescribeWorkflowExecutionRequest, error) {
+func _DescribeWorkflowExecutionRequest_Read(w wire.Value) (*DescribeWorkflowExecutionRequest, error) {
 	var v DescribeWorkflowExecutionRequest
 	err := v.FromWire(w)
 	return &v, err
@@ -65,7 +65,7 @@ func (v *HistoryService_DescribeWorkflowExecution_Args) FromWire(w wire.Value) e
 		switch field.ID {
 		case 1:
 			if field.Value.Type() == wire.TStruct {
-				v.DescribeRequest, err = _DescribeWorkflowExecutionRequest_1_Read(field.Value)
+				v.DescribeRequest, err = _DescribeWorkflowExecutionRequest_Read(field.Value)
 				if err != nil {
 					return err
 				}
@@ -106,8 +106,8 @@ func (v *HistoryService_DescribeWorkflowExecution_Args) EnvelopeType() wire.Enve
 var HistoryService_DescribeWorkflowExecution_Helper = struct {
 	Args           func(describeRequest *DescribeWorkflowExecutionRequest) *HistoryService_DescribeWorkflowExecution_Args
 	IsException    func(error) bool
-	WrapResponse   func(*shared.DescribeWorkflowExecutionResponse, error) (*HistoryService_DescribeWorkflowExecution_Result, error)
-	UnwrapResponse func(*HistoryService_DescribeWorkflowExecution_Result) (*shared.DescribeWorkflowExecutionResponse, error)
+	WrapResponse   func(*DescribeWorkflowExecutionResponse, error) (*HistoryService_DescribeWorkflowExecution_Result, error)
+	UnwrapResponse func(*HistoryService_DescribeWorkflowExecution_Result) (*DescribeWorkflowExecutionResponse, error)
 }{}
 
 func init() {
@@ -128,7 +128,7 @@ func init() {
 			return false
 		}
 	}
-	HistoryService_DescribeWorkflowExecution_Helper.WrapResponse = func(success *shared.DescribeWorkflowExecutionResponse, err error) (*HistoryService_DescribeWorkflowExecution_Result, error) {
+	HistoryService_DescribeWorkflowExecution_Helper.WrapResponse = func(success *DescribeWorkflowExecutionResponse, err error) (*HistoryService_DescribeWorkflowExecution_Result, error) {
 		if err == nil {
 			return &HistoryService_DescribeWorkflowExecution_Result{Success: success}, nil
 		}
@@ -156,7 +156,7 @@ func init() {
 		}
 		return nil, err
 	}
-	HistoryService_DescribeWorkflowExecution_Helper.UnwrapResponse = func(result *HistoryService_DescribeWorkflowExecution_Result) (success *shared.DescribeWorkflowExecutionResponse, err error) {
+	HistoryService_DescribeWorkflowExecution_Helper.UnwrapResponse = func(result *HistoryService_DescribeWorkflowExecution_Result) (success *DescribeWorkflowExecutionResponse, err error) {
 		if result.BadRequestError != nil {
 			err = result.BadRequestError
 			return
@@ -183,11 +183,11 @@ func init() {
 }
 
 type HistoryService_DescribeWorkflowExecution_Result struct {
-	Success                 *shared.DescribeWorkflowExecutionResponse `json:"success,omitempty"`
-	BadRequestError         *shared.BadRequestError                   `json:"badRequestError,omitempty"`
-	InternalServiceError    *shared.InternalServiceError              `json:"internalServiceError,omitempty"`
-	EntityNotExistError     *shared.EntityNotExistsError              `json:"entityNotExistError,omitempty"`
-	ShardOwnershipLostError *ShardOwnershipLostError                  `json:"shardOwnershipLostError,omitempty"`
+	Success                 *DescribeWorkflowExecutionResponse `json:"success,omitempty"`
+	BadRequestError         *shared.BadRequestError            `json:"badRequestError,omitempty"`
+	InternalServiceError    *shared.InternalServiceError       `json:"internalServiceError,omitempty"`
+	EntityNotExistError     *shared.EntityNotExistsError       `json:"entityNotExistError,omitempty"`
+	ShardOwnershipLostError *ShardOwnershipLostError           `json:"shardOwnershipLostError,omitempty"`
 }
 
 func (v *HistoryService_DescribeWorkflowExecution_Result) ToWire() (wire.Value, error) {
@@ -243,8 +243,8 @@ func (v *HistoryService_DescribeWorkflowExecution_Result) ToWire() (wire.Value, 
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _DescribeWorkflowExecutionResponse_Read(w wire.Value) (*shared.DescribeWorkflowExecutionResponse, error) {
-	var v shared.DescribeWorkflowExecutionResponse
+func _DescribeWorkflowExecutionResponse_1_Read(w wire.Value) (*DescribeWorkflowExecutionResponse, error) {
+	var v DescribeWorkflowExecutionResponse
 	err := v.FromWire(w)
 	return &v, err
 }
@@ -279,7 +279,7 @@ func (v *HistoryService_DescribeWorkflowExecution_Result) FromWire(w wire.Value)
 		switch field.ID {
 		case 0:
 			if field.Value.Type() == wire.TStruct {
-				v.Success, err = _DescribeWorkflowExecutionResponse_Read(field.Value)
+				v.Success, err = _DescribeWorkflowExecutionResponse_1_Read(field.Value)
 				if err != nil {
 					return err
 				}

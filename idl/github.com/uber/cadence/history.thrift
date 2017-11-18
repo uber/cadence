@@ -43,17 +43,6 @@ struct StartWorkflowExecutionRequest {
   30: optional ParentExecutionInfo parentExecutionInfo
 }
 
-struct GetWorkflowExecutionNextEventIDRequest {
-  10: optional string domainUUID
-  20: optional shared.WorkflowExecution execution
-}
-
-struct GetWorkflowExecutionNextEventIDResponse {
-  10: optional i64 (js.type = "Long") eventId
-  20: optional string runId
-  30: optional shared.TaskList tasklist
-}
-
 struct RespondDecisionTaskCompletedRequest {
   10: optional string domainUUID
   20: optional shared.RespondDecisionTaskCompletedRequest completeRequest
@@ -133,7 +122,14 @@ struct ScheduleDecisionTaskRequest {
 
 struct DescribeWorkflowExecutionRequest {
   10: optional string domainUUID
-  20: optional shared.DescribeWorkflowExecutionRequest request
+  20: optional shared.WorkflowExecution execution
+}
+
+struct DescribeWorkflowExecutionResponse {
+  10: optional shared.DescribeWorkflowExecutionResponse response
+  20: optional i64 (js.type = "Long") NextEventId
+  30: optional i64 (js.type = "Long") PreviousStartedEventId
+  40: optional i64 (js.type = "Long") StartedEventId
 }
 
 /**
@@ -167,19 +163,6 @@ service HistoryService {
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,
       3: shared.WorkflowExecutionAlreadyStartedError sessionAlreadyExistError,
-      4: ShardOwnershipLostError shardOwnershipLostError,
-    )
-
-  /**
-  * Returns the nextEventID of the history of workflow execution. Only events in the history with Ids below the returned Id are
-  * guaranteed to be valid, so the first step of reading an execution's history is to retrieve this event Id.
-  * It fails with 'EntityNotExistError' if specified workflow execution in unknown to the service.
-  **/
-  GetWorkflowExecutionNextEventIDResponse GetWorkflowExecutionNextEventID(1: GetWorkflowExecutionNextEventIDRequest getRequest)
-    throws (
-      1: shared.BadRequestError badRequestError,
-      2: shared.InternalServiceError internalServiceError,
-      3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
     )
 
@@ -354,7 +337,7 @@ service HistoryService {
   /**
   * DescribeWorkflowExecution returns information about the specified workflow execution.
   **/
-  shared.DescribeWorkflowExecutionResponse DescribeWorkflowExecution(1: DescribeWorkflowExecutionRequest describeRequest)
+  DescribeWorkflowExecutionResponse DescribeWorkflowExecution(1: DescribeWorkflowExecutionRequest describeRequest)
     throws (
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,

@@ -280,48 +280,15 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 	}, nil
 }
 
-// GetWorkflowExecutionNextEventID retrieves the nextEventId of the workflow execution history
-func (e *historyEngineImpl) GetWorkflowExecutionNextEventID(
-	request *h.GetWorkflowExecutionNextEventIDRequest) (*h.GetWorkflowExecutionNextEventIDResponse, error) {
-
-	domainID, err := getDomainUUID(request.DomainUUID)
-	if err != nil {
-		return nil, err
-	}
-
-	execution := workflow.WorkflowExecution{
-		WorkflowId: request.Execution.WorkflowId,
-		RunId:      request.Execution.RunId,
-	}
-
-	context, release, err0 := e.historyCache.getOrCreateWorkflowExecution(domainID, execution)
-	if err0 != nil {
-		return nil, err0
-	}
-	defer release()
-
-	msBuilder, err1 := context.loadWorkflowExecution()
-	if err1 != nil {
-		return nil, err1
-	}
-
-	result := &h.GetWorkflowExecutionNextEventIDResponse{}
-	result.EventId = common.Int64Ptr(msBuilder.GetNextEventID())
-	result.RunId = context.workflowExecution.RunId
-	result.Tasklist = &workflow.TaskList{Name: common.StringPtr(context.msBuilder.executionInfo.TaskList)}
-
-	return result, nil
-}
-
 // DescribeWorkflowExecution returns information about the specified workflow execution.
 func (e *historyEngineImpl) DescribeWorkflowExecution(
-	request *h.DescribeWorkflowExecutionRequest) (*workflow.DescribeWorkflowExecutionResponse, error) {
+	request *h.DescribeWorkflowExecutionRequest) (*h.DescribeWorkflowExecutionResponse, error) {
 	domainID, err := getDomainUUID(request.DomainUUID)
 	if err != nil {
 		return nil, err
 	}
 
-	execution := *request.Request.Execution
+	execution := *request.Execution
 
 	context, release, err0 := e.historyCache.getOrCreateWorkflowExecution(domainID, execution)
 	if err0 != nil {
@@ -334,7 +301,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 		return nil, err1
 	}
 
-	result := &workflow.DescribeWorkflowExecutionResponse{
+	response := &workflow.DescribeWorkflowExecutionResponse{
 		ExecutionConfiguration: &workflow.WorkflowExecutionConfiguration{
 			TaskList: &workflow.TaskList{Name: common.StringPtr(msBuilder.executionInfo.TaskList)},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(msBuilder.executionInfo.WorkflowTimeout),
@@ -342,7 +309,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 			ChildPolicy:                         common.ChildPolicyPtr(workflow.ChildPolicyTerminate),
 		},
 		WorkflowExecutionInfo: &workflow.WorkflowExecutionInfo{
-			Execution:     request.Request.Execution,
+			Execution:     request.Execution,
 			Type:          &workflow.WorkflowType{Name: common.StringPtr(msBuilder.executionInfo.WorkflowTypeName)},
 			StartTime:     common.Int64Ptr(msBuilder.executionInfo.StartTimestamp.UnixNano()),
 			HistoryLength: common.Int64Ptr(msBuilder.GetNextEventID() - common.FirstEventID),
@@ -351,8 +318,15 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 	if msBuilder.executionInfo.State == persistence.WorkflowStateCompleted {
 		// for closed workflow
 		closeStatus := getWorkflowExecutionCloseStatus(msBuilder.executionInfo.CloseStatus)
-		result.WorkflowExecutionInfo.CloseStatus = &closeStatus
-		result.WorkflowExecutionInfo.CloseTime = common.Int64Ptr(msBuilder.getLastUpdatedTimestamp())
+		response.WorkflowExecutionInfo.CloseStatus = &closeStatus
+		response.WorkflowExecutionInfo.CloseTime = common.Int64Ptr(msBuilder.getLastUpdatedTimestamp())
+	}
+
+	result := &h.DescribeWorkflowExecutionResponse{
+		Response:               response,
+		NextEventId:            common.Int64Ptr(msBuilder.executionInfo.NextEventID),
+		StartedEventId:         common.Int64Ptr(msBuilder.executionInfo.DecisionStartedID),
+		PreviousStartedEventId: common.Int64Ptr(msBuilder.executionInfo.LastProcessedEvent),
 	}
 
 	return result, nil

@@ -31,39 +31,16 @@ type HistoryClient struct {
 	mock.Mock
 }
 
-// GetWorkflowExecutionNextEventID provides a mock function with given fields: ctx, getRequest
-func (_m *HistoryClient) GetWorkflowExecutionNextEventID(ctx context.Context, getRequest *history.GetWorkflowExecutionNextEventIDRequest, opts ...yarpc.CallOption) (*history.GetWorkflowExecutionNextEventIDResponse, error) {
-	ret := _m.Called(ctx, getRequest)
-
-	var r0 *history.GetWorkflowExecutionNextEventIDResponse
-	if rf, ok := ret.Get(0).(func(context.Context, *history.GetWorkflowExecutionNextEventIDRequest) *history.GetWorkflowExecutionNextEventIDResponse); ok {
-		r0 = rf(ctx, getRequest)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*history.GetWorkflowExecutionNextEventIDResponse)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *history.GetWorkflowExecutionNextEventIDRequest) error); ok {
-		r1 = rf(ctx, getRequest)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // DescribeWorkflowExecution provides a mock function with given fields: ctx, request
-func (_m *HistoryClient) DescribeWorkflowExecution(ctx context.Context, request *history.DescribeWorkflowExecutionRequest, opts ...yarpc.CallOption) (*shared.DescribeWorkflowExecutionResponse, error) {
+func (_m *HistoryClient) DescribeWorkflowExecution(ctx context.Context, request *history.DescribeWorkflowExecutionRequest, opts ...yarpc.CallOption) (*history.DescribeWorkflowExecutionResponse, error) {
 	ret := _m.Called(ctx, request)
 
-	var r0 *shared.DescribeWorkflowExecutionResponse
-	if rf, ok := ret.Get(0).(func(context.Context, *history.DescribeWorkflowExecutionRequest) *shared.DescribeWorkflowExecutionResponse); ok {
+	var r0 *history.DescribeWorkflowExecutionResponse
+	if rf, ok := ret.Get(0).(func(context.Context, *history.DescribeWorkflowExecutionRequest) *history.DescribeWorkflowExecutionResponse); ok {
 		r0 = rf(ctx, request)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*shared.DescribeWorkflowExecutionResponse)
+			r0 = ret.Get(0).(*history.DescribeWorkflowExecutionResponse)
 		}
 	}
 

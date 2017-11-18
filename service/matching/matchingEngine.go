@@ -257,7 +257,7 @@ pollLoop:
 		if tCtx.queryTaskInfo != nil {
 			// for query task, we don't need to update history to record decision task started. but we need to know
 			// the NextEventID so front end knows what are the history events to load for this decision task.
-			nextIDResp, err := e.historyService.GetWorkflowExecutionNextEventID(ctx, &h.GetWorkflowExecutionNextEventIDRequest{
+			describResponse, err := e.historyService.DescribeWorkflowExecution(ctx, &h.DescribeWorkflowExecutionRequest{
 				DomainUUID: req.DomainUUID,
 				Execution:  &tCtx.workflowExecution,
 			})
@@ -274,7 +274,7 @@ pollLoop:
 				return emptyPollForDecisionTaskResponse, nil
 			}
 
-			var lastEventID = *nextIDResp.EventId - 1
+			var lastEventID = describResponse.GetNextEventId() - 1
 			resp := &h.RecordDecisionTaskStartedResponse{
 				PreviousStartedEventId: &lastEventID,
 				StartedEventId:         &lastEventID,
