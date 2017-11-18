@@ -14042,14 +14042,6 @@ func (v *StartWorkflowExecutionResponse) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 10, Value: w}
 		i++
 	}
-	if v.Version != nil {
-		w, err = wire.NewValueI64(*(v.Version)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 20, Value: w}
-		i++
-	}
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
@@ -14062,15 +14054,6 @@ func (v *StartWorkflowExecutionResponse) FromWire(w wire.Value) error {
 				var x string
 				x, err = field.Value.GetString(), error(nil)
 				v.RunId = &x
-				if err != nil {
-					return err
-				}
-			}
-		case 20:
-			if field.Value.Type() == wire.TI64 {
-				var x int64
-				x, err = field.Value.GetI64(), error(nil)
-				v.Version = &x
 				if err != nil {
 					return err
 				}
@@ -14266,12 +14249,11 @@ func (v *TaskList) GetName() (o string) {
 
 type TaskListMetadata struct {
 	MaxTasksPerSecond *float64 `json:"maxTasksPerSecond,omitempty"`
-	Version           *int64   `json:"version,omitempty"`
 }
 
 func (v *TaskListMetadata) ToWire() (wire.Value, error) {
 	var (
-		fields [2]wire.Field
+		fields [1]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -14309,14 +14291,10 @@ func (v *TaskListMetadata) String() string {
 	if v == nil {
 		return "<nil>"
 	}
-	var fields [2]string
+	var fields [1]string
 	i := 0
 	if v.MaxTasksPerSecond != nil {
 		fields[i] = fmt.Sprintf("MaxTasksPerSecond: %v", *(v.MaxTasksPerSecond))
-		i++
-	}
-	if v.Version != nil {
-		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
 		i++
 	}
 	return fmt.Sprintf("TaskListMetadata{%v}", strings.Join(fields[:i], ", "))
@@ -14335,22 +14313,12 @@ func (v *TaskListMetadata) Equals(rhs *TaskListMetadata) bool {
 	if !_Double_EqualsPtr(v.MaxTasksPerSecond, rhs.MaxTasksPerSecond) {
 		return false
 	}
-	if !_I64_EqualsPtr(v.Version, rhs.Version) {
-		return false
-	}
 	return true
 }
 
 func (v *TaskListMetadata) GetMaxTasksPerSecond() (o float64) {
 	if v.MaxTasksPerSecond != nil {
 		return *v.MaxTasksPerSecond
-	}
-	return
-}
-
-func (v *TaskListMetadata) GetVersion() (o int64) {
-	if v.Version != nil {
-		return *v.Version
 	}
 	return
 }

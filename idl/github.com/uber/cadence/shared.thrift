@@ -179,9 +179,6 @@ struct TaskList {
 
 struct TaskListMetadata {
   10: optional double maxTasksPerSecond
-  // version is used to protect against rolling upgrades. Metadata will be updated only if input
-  // version is greater than the current version
-  20: optional i64 version
 }
 
 struct WorkflowExecution {
