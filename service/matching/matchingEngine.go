@@ -278,7 +278,7 @@ pollLoop:
 			var lastEventID = *nextIDResp.EventId - 1
 			resp := &h.RecordDecisionTaskStartedResponse{
 				PreviousStartedEventId: &lastEventID,
-				StartedEventId:         &lastEventID,
+				NextEventId:            &lastEventID,
 			}
 			tCtx.completeTask(nil)
 			return e.createPollForDecisionTaskResponse(tCtx, resp), nil
@@ -493,9 +493,8 @@ func (e *matchingEngineImpl) createPollForDecisionTaskResponse(context *taskCont
 	response.StickyExecutionEnabled = historyResponse.StickyExecutionEnabled
 	response.BacklogCountHint = common.Int64Ptr(context.backlogCountHint)
 	response.Attempt = historyResponse.Attempt
+	response.NextEventId = historyResponse.NextEventId
 	response.DecisionInfo = historyResponse.DecisionInfo
-	e.logger.Errorf("**** Matching PollForDecisionResponse: {StartedID: %v, DecisionInfo: %v}",
-		historyResponse.GetStartedEventId(), historyResponse.DecisionInfo)
 
 	return response
 }

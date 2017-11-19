@@ -392,7 +392,7 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	var continuation []byte
 	if matchingResp.WorkflowExecution != nil {
 		// Non-empty response. Get the history
-		nextEventID := common.Int64Default(matchingResp.StartedEventId) + 1
+		nextEventID := matchingResp.GetNextEventId()
 		firstEventID := common.FirstEventID
 		if matchingResp.GetStickyExecutionEnabled() {
 			firstEventID = matchingResp.GetPreviousStartedEventId() + 1
@@ -1406,9 +1406,6 @@ func createDomainResponse(info *persistence.DomainInfo, config *persistence.Doma
 
 func (wh *WorkflowHandler) createPollForDecisionTaskResponse(ctx context.Context,
 	matchingResponse *m.PollForDecisionTaskResponse, history *gen.History, nextPageToken []byte) *gen.PollForDecisionTaskResponse {
-	wh.GetLogger().Errorf("**** Frontend PollForDTResponse: {NextPageToken: %v}", nextPageToken)
-	wh.GetLogger().Error("**** Frontend PollForDTResponse: Printing History:")
-	common.PrettyPrintHistory(history, wh.GetLogger())
 	resp := &gen.PollForDecisionTaskResponse{}
 	if matchingResponse != nil {
 		resp.TaskToken = matchingResponse.TaskToken

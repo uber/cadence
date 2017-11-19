@@ -1666,9 +1666,6 @@ func (e *historyEngineImpl) createRecordDecisionTaskStartedResponse(domainID str
 		response.DecisionInfo = &workflow.TransientDecisionInfo{}
 		response.DecisionInfo.ScheduledEvent = scheduledEvent
 		response.DecisionInfo.StartedEvent = startedEvent
-		// Override StartedEventID on the response to point to last history event
-		lastHistoryEvent := msBuilder.GetNextEventID()
-		response.StartedEventId = common.Int64Ptr(lastHistoryEvent)
 	}
 
 	return response

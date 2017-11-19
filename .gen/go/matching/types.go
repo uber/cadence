@@ -876,12 +876,13 @@ type PollForDecisionTaskResponse struct {
 	StickyExecutionEnabled *bool                     `json:"stickyExecutionEnabled,omitempty"`
 	Attempt                *int64                    `json:"attempt,omitempty"`
 	Query                  *shared.WorkflowQuery     `json:"query,omitempty"`
+	NextEventId            *int64                        `json:"nextEventId,omitempty"`
 	DecisionInfo           *shared.TransientDecisionInfo `json:"decisionInfo,omitempty"`
 }
 
 func (v *PollForDecisionTaskResponse) ToWire() (wire.Value, error) {
 	var (
-		fields [8]wire.Field
+		fields [9]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -950,12 +951,20 @@ func (v *PollForDecisionTaskResponse) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 60, Value: w}
 		i++
 	}
+	if v.NextEventId != nil {
+		w, err = wire.NewValueI64(*(v.NextEventId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 70, Value: w}
+		i++
+	}
 	if v.DecisionInfo != nil {
 		w, err = v.DecisionInfo.ToWire()
 		if err != nil {
 			return w, err
 		}
-		fields[i] = wire.Field{ID: 70, Value: w}
+		fields[i] = wire.Field{ID: 80, Value: w}
 		i++
 	}
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
@@ -1048,6 +1057,15 @@ func (v *PollForDecisionTaskResponse) FromWire(w wire.Value) error {
 				}
 			}
 		case 70:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.NextEventId = &x
+				if err != nil {
+					return err
+				}
+			}
+		case 80:
 			if field.Value.Type() == wire.TStruct {
 				v.DecisionInfo, err = _TransientDecisionInfo_Read(field.Value)
 				if err != nil {
@@ -1063,7 +1081,7 @@ func (v *PollForDecisionTaskResponse) String() string {
 	if v == nil {
 		return "<nil>"
 	}
-	var fields [8]string
+	var fields [9]string
 	i := 0
 	if v.TaskToken != nil {
 		fields[i] = fmt.Sprintf("TaskToken: %v", v.TaskToken)
@@ -1095,6 +1113,10 @@ func (v *PollForDecisionTaskResponse) String() string {
 	}
 	if v.Query != nil {
 		fields[i] = fmt.Sprintf("Query: %v", v.Query)
+		i++
+	}
+	if v.NextEventId != nil {
+		fields[i] = fmt.Sprintf("NextEventId: %v", *(v.NextEventId))
 		i++
 	}
 	if v.DecisionInfo != nil {
@@ -1138,6 +1160,9 @@ func (v *PollForDecisionTaskResponse) Equals(rhs *PollForDecisionTaskResponse) b
 	if !((v.Query == nil && rhs.Query == nil) || (v.Query != nil && rhs.Query != nil && v.Query.Equals(rhs.Query))) {
 		return false
 	}
+	if !_I64_EqualsPtr(v.NextEventId, rhs.NextEventId) {
+		return false
+	}
 	if !((v.DecisionInfo == nil && rhs.DecisionInfo == nil) || (v.DecisionInfo != nil && rhs.DecisionInfo != nil && v.DecisionInfo.Equals(rhs.DecisionInfo))) {
 		return false
 	}
@@ -1168,6 +1193,13 @@ func (v *PollForDecisionTaskResponse) GetBacklogCountHint() (o int64) {
 func (v *PollForDecisionTaskResponse) GetStickyExecutionEnabled() (o bool) {
 	if v.StickyExecutionEnabled != nil {
 		return *v.StickyExecutionEnabled
+	}
+	return
+}
+
+func (v *PollForDecisionTaskResponse) GetNextEventId() (o int64) {
+	if v.NextEventId != nil {
+		return *v.NextEventId
 	}
 	return
 }

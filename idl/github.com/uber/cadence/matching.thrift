@@ -37,7 +37,8 @@ struct PollForDecisionTaskResponse {
   54: optional i64 (js.type = "Long") backlogCountHint
   55: optional bool stickyExecutionEnabled
   60: optional shared.WorkflowQuery query
-  70: optional shared.TransientDecisionInfo decisionInfo
+  70: optional i64 (js.type = "Long") nextEventId
+  80: optional shared.TransientDecisionInfo decisionInfo
 }
 
 struct PollForActivityTaskRequest {
