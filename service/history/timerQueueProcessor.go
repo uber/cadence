@@ -764,12 +764,7 @@ Update_History_Loop:
 			di, isPending := msBuilder.GetPendingDecision(scheduleID)
 			if isPending && di.Attempt == task.ScheduleAttempt && msBuilder.isWorkflowExecutionRunning() {
 				// Add a decision task timeout event.
-				timeoutEvent := msBuilder.AddDecisionTaskTimedOutEvent(scheduleID, di.StartedID)
-				if timeoutEvent == nil {
-					// Unable to add DecisionTaskTimedout event to history
-					return &workflow.InternalServiceError{Message: "Unable to add DecisionTaskTimedout event to history."}
-				}
-
+				msBuilder.AddDecisionTaskTimedOutEvent(scheduleID, di.StartedID)
 				scheduleNewDecision = true
 			}
 		case int(workflow.TimeoutTypeScheduleToStart):
@@ -779,9 +774,6 @@ Update_History_Loop:
 			di, isPending := msBuilder.GetPendingDecision(scheduleID)
 			if isPending && di.Attempt == task.ScheduleAttempt && di.StartedID == emptyEventID &&
 				msBuilder.isStickyTaskListEnabled() {
-				// remove pending decision, and clear stickiness
-				msBuilder.executionInfo.StickyTaskList = ""
-				msBuilder.executionInfo.StickyScheduleToStartTimeout = 0
 				timeoutEvent := msBuilder.AddDecisionTaskScheduleToStartTimeoutEvent(scheduleID)
 				if timeoutEvent == nil {
 					// Unable to add DecisionTaskTimedout event to history

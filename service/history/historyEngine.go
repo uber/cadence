@@ -382,18 +382,19 @@ Update_History_Loop:
 		}
 		tBuilder := e.getTimerBuilder(&context.workflowExecution)
 
+		// Check execution state to make sure task is in the list of outstanding tasks and it is not yet started.  If
+		// task is not outstanding than it is most probably a duplicate and complete the task.
+		di, isRunning := msBuilder.GetPendingDecision(scheduleID)
+		e.logger.Errorf("**** RecordDecisionTaskStarted: {ScheduleID: %v, isRunning: %v}", scheduleID, isRunning)
+
 		// First check to see if cache needs to be refreshed as we could potentially have stale workflow execution in
 		// some extreme cassandra failure cases.
-		if scheduleID >= msBuilder.GetNextEventID() {
+		if !isRunning && scheduleID >= msBuilder.GetNextEventID() {
 			e.metricsClient.IncCounter(metrics.HistoryRecordDecisionTaskStartedScope, metrics.StaleMutableStateCounter)
 			// Reload workflow execution history
 			context.clear()
 			continue Update_History_Loop
 		}
-
-		// Check execution state to make sure task is in the list of outstanding tasks and it is not yet started.  If
-		// task is not outstanding than it is most probably a duplicate and complete the task.
-		di, isRunning := msBuilder.GetPendingDecision(scheduleID)
 
 		if !msBuilder.isWorkflowExecutionRunning() || !isRunning {
 			// Looks like DecisionTask already completed as a result of another call.
@@ -407,7 +408,7 @@ Update_History_Loop:
 		if di.StartedID != emptyEventID {
 			// If decision is started as part of the current request scope then return a positive response
 			if di.RequestID == requestID {
-				return e.createRecordDecisionTaskStartedResponse(domainID, msBuilder, di), nil
+				return e.createRecordDecisionTaskStartedResponse(domainID, msBuilder, di, request.PollRequest.GetIdentity()), nil
 			}
 
 			// Looks like DecisionTask already started as a result of another call.
@@ -418,8 +419,8 @@ Update_History_Loop:
 			return nil, &h.EventAlreadyStartedError{Message: "Decision task already started."}
 		}
 
-		event, di := msBuilder.AddDecisionTaskStartedEvent(scheduleID, requestID, request.PollRequest)
-		if event == nil {
+		_, di = msBuilder.AddDecisionTaskStartedEvent(scheduleID, requestID, request.PollRequest)
+		if di == nil {
 			// Unable to add DecisionTaskStarted event to history
 			return nil, &workflow.InternalServiceError{Message: "Unable to add DecisionTaskStarted event to history."}
 		}
@@ -446,7 +447,7 @@ Update_History_Loop:
 			return nil, err3
 		}
 
-		return e.createRecordDecisionTaskStartedResponse(domainID, msBuilder, di), nil
+		return e.createRecordDecisionTaskStartedResponse(domainID, msBuilder, di, request.PollRequest.GetIdentity()), nil
 	}
 
 	return nil, ErrMaxAttemptsExceeded
@@ -474,10 +475,11 @@ Update_History_Loop:
 			return nil, err0
 		}
 		tBuilder := e.getTimerBuilder(&context.workflowExecution)
+		ai, isRunning := msBuilder.GetActivityInfo(scheduleID)
 
 		// First check to see if cache needs to be refreshed as we could potentially have stale workflow execution in
 		// some extreme cassandra failure cases.
-		if scheduleID >= msBuilder.GetNextEventID() {
+		if !isRunning && scheduleID >= msBuilder.GetNextEventID() {
 			e.metricsClient.IncCounter(metrics.HistoryRecordActivityTaskStartedScope, metrics.StaleMutableStateCounter)
 			// Reload workflow execution history
 			context.clear()
@@ -486,7 +488,6 @@ Update_History_Loop:
 
 		// Check execution state to make sure task is in the list of outstanding tasks and it is not yet started.  If
 		// task is not outstanding than it is most probably a duplicate and complete the task.
-		ai, isRunning := msBuilder.GetActivityInfo(scheduleID)
 		if !msBuilder.isWorkflowExecutionRunning() || !isRunning {
 			// Looks like ActivityTask already completed as a result of another call.
 			// It is OK to drop the task at this point.
@@ -594,16 +595,17 @@ Update_History_Loop:
 		tBuilder := e.getTimerBuilder(&context.workflowExecution)
 
 		scheduleID := token.ScheduleID
+		di, isRunning := msBuilder.GetPendingDecision(scheduleID)
+
 		// First check to see if cache needs to be refreshed as we could potentially have stale workflow execution in
 		// some extreme cassandra failure cases.
-		if scheduleID >= msBuilder.GetNextEventID() {
+		if !isRunning && scheduleID >= msBuilder.GetNextEventID() {
 			e.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.StaleMutableStateCounter)
 			// Reload workflow execution history
 			context.clear()
 			continue Update_History_Loop
 		}
 
-		di, isRunning := msBuilder.GetPendingDecision(scheduleID)
 		if !msBuilder.isWorkflowExecutionRunning() || !isRunning || di.Attempt != token.ScheduleAttempt ||
 			di.StartedID == emptyEventID {
 			return &workflow.EntityNotExistsError{Message: "Decision task not found."}
@@ -1015,12 +1017,6 @@ func (e *historyEngineImpl) RespondDecisionTaskFailed(req *h.RespondDecisionTask
 				return &workflow.EntityNotExistsError{Message: "Decision task not found."}
 			}
 
-			if request.GetCause() == workflow.DecisionTaskFailedCauseResetStickyTasklist {
-				// remove pending decision, and clear stickiness
-				msBuilder.executionInfo.StickyTaskList = ""
-				msBuilder.executionInfo.StickyScheduleToStartTimeout = 0
-			}
-
 			msBuilder.AddDecisionTaskFailedEvent(di.ScheduleID, di.StartedID, request.GetCause(), request.Details,
 				request.GetIdentity())
 
@@ -1059,17 +1055,17 @@ Update_History_Loop:
 		}
 
 		scheduleID := token.ScheduleID
+		ai, isRunning := msBuilder.GetActivityInfo(scheduleID)
 
 		// First check to see if cache needs to be refreshed as we could potentially have stale workflow execution in
 		// some extreme cassandra failure cases.
-		if scheduleID >= msBuilder.GetNextEventID() {
+		if !isRunning && scheduleID >= msBuilder.GetNextEventID() {
 			e.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskCompletedScope, metrics.StaleMutableStateCounter)
 			// Reload workflow execution history
 			context.clear()
 			continue Update_History_Loop
 		}
 
-		ai, isRunning := msBuilder.GetActivityInfo(scheduleID)
 		if !msBuilder.isWorkflowExecutionRunning() || !isRunning || ai.StartedID == emptyEventID {
 			return &workflow.EntityNotExistsError{Message: "Activity task not found."}
 		}
@@ -1152,17 +1148,17 @@ Update_History_Loop:
 		}
 
 		scheduleID := token.ScheduleID
+		ai, isRunning := msBuilder.GetActivityInfo(scheduleID)
 
 		// First check to see if cache needs to be refreshed as we could potentially have stale workflow execution in
 		// some extreme cassandra failure cases.
-		if scheduleID >= msBuilder.GetNextEventID() {
+		if !isRunning && scheduleID >= msBuilder.GetNextEventID() {
 			e.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskFailedScope, metrics.StaleMutableStateCounter)
 			// Reload workflow execution history
 			context.clear()
 			continue Update_History_Loop
 		}
 
-		ai, isRunning := msBuilder.GetActivityInfo(scheduleID)
 		if !msBuilder.isWorkflowExecutionRunning() || !isRunning || ai.StartedID == emptyEventID {
 			return &workflow.EntityNotExistsError{Message: "Activity task not found."}
 		}
@@ -1246,9 +1242,11 @@ Update_History_Loop:
 		}
 
 		scheduleID := token.ScheduleID
+		ai, isRunning := msBuilder.GetActivityInfo(scheduleID)
+
 		// First check to see if cache needs to be refreshed as we could potentially have stale workflow execution in
 		// some extreme cassandra failure cases.
-		if scheduleID >= msBuilder.GetNextEventID() {
+		if !isRunning && scheduleID >= msBuilder.GetNextEventID() {
 			e.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskCanceledScope, metrics.StaleMutableStateCounter)
 			// Reload workflow execution history
 			context.clear()
@@ -1257,7 +1255,6 @@ Update_History_Loop:
 
 		// Check execution state to make sure task is in the list of outstanding tasks and it is not yet started.  If
 		// task is not outstanding than it is most probably a duplicate and complete the task.
-		ai, isRunning := msBuilder.GetActivityInfo(scheduleID)
 		if !msBuilder.isWorkflowExecutionRunning() || !isRunning || ai.StartedID == emptyEventID {
 			return &workflow.EntityNotExistsError{Message: "Activity task not found."}
 		}
@@ -1346,16 +1343,17 @@ Update_History_Loop:
 		}
 
 		scheduleID := token.ScheduleID
+		ai, isRunning := msBuilder.GetActivityInfo(scheduleID)
+
 		// First check to see if cache needs to be refreshed as we could potentially have stale workflow execution in
 		// some extreme cassandra failure cases.
-		if scheduleID >= msBuilder.GetNextEventID() {
+		if !isRunning && scheduleID >= msBuilder.GetNextEventID() {
 			e.metricsClient.IncCounter(metrics.HistoryRecordActivityTaskHeartbeatScope, metrics.StaleMutableStateCounter)
 			// Reload workflow execution history
 			context.clear()
 			continue Update_History_Loop
 		}
 
-		ai, isRunning := msBuilder.GetActivityInfo(scheduleID)
 		if !msBuilder.isWorkflowExecutionRunning() || !isRunning || ai.StartedID == emptyEventID {
 			e.logger.Debugf("Activity HeartBeat: scheduleEventID: %v, ActivityInfo: %+v, Exist: %v",
 				scheduleID, ai, isRunning)
@@ -1650,7 +1648,7 @@ func (e *historyEngineImpl) getDeleteWorkflowTasks(
 }
 
 func (e *historyEngineImpl) createRecordDecisionTaskStartedResponse(domainID string, msBuilder *mutableStateBuilder,
-	di *decisionInfo) *h.RecordDecisionTaskStartedResponse {
+	di *decisionInfo, identity string) *h.RecordDecisionTaskStartedResponse {
 	response := &h.RecordDecisionTaskStartedResponse{}
 	response.WorkflowType = msBuilder.getWorkflowType()
 	if msBuilder.previousDecisionStartedEvent() != emptyEventID {
@@ -1659,7 +1657,19 @@ func (e *historyEngineImpl) createRecordDecisionTaskStartedResponse(domainID str
 
 	response.StartedEventId = common.Int64Ptr(di.StartedID)
 	response.StickyExecutionEnabled = common.BoolPtr(msBuilder.isStickyTaskListEnabled())
+	response.NextEventId = common.Int64Ptr(msBuilder.GetNextEventID())
 	response.Attempt = common.Int64Ptr(di.Attempt)
+	if di.Attempt > 0 {
+		// This decision is retried from mutable state
+		// Also return schedule and started which are not written to history yet
+		scheduledEvent, startedEvent := msBuilder.createTransientDecisionEvents(di, identity)
+		response.DecisionInfo = &workflow.TransientDecisionInfo{}
+		response.DecisionInfo.ScheduledEvent = scheduledEvent
+		response.DecisionInfo.StartedEvent = startedEvent
+		// Override StartedEventID on the response to point to last history event
+		lastHistoryEvent := msBuilder.GetNextEventID()
+		response.StartedEventId = common.Int64Ptr(lastHistoryEvent)
+	}
 
 	return response
 }

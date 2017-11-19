@@ -204,6 +204,11 @@ struct WorkflowExecutionConfiguration {
   40: optional ChildPolicy childPolicy
 }
 
+struct TransientDecisionInfo {
+  10: optional HistoryEvent scheduledEvent
+  20: optional HistoryEvent startedEvent
+}
+
 struct ScheduleActivityTaskDecisionAttributes {
   10: optional string activityId
   20: optional ActivityType activityType
@@ -326,6 +331,7 @@ struct WorkflowExecutionContinuedAsNewEventAttributes {
 struct DecisionTaskScheduledEventAttributes {
   10: optional TaskList taskList
   20: optional i32 startToCloseTimeoutSeconds
+  30: optional i64 (js.type = "Long") attempt
 }
 
 struct DecisionTaskStartedEventAttributes {
@@ -705,8 +711,11 @@ struct PollForDecisionTaskResponse {
   30: optional WorkflowType workflowType
   40: optional i64 (js.type = "Long") previousStartedEventId
   50: optional i64 (js.type = "Long") startedEventId
+<<<<<<< HEAD
   54: optional i64 (js.type = "Long") backlogCountHint
   55: optional i64 (js.type = "Long") attempt
+=======
+>>>>>>> create transient decision events
   60: optional History history
   70: optional binary nextPageToken
   80: optional WorkflowQuery query

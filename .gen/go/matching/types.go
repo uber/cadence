@@ -876,6 +876,7 @@ type PollForDecisionTaskResponse struct {
 	StickyExecutionEnabled *bool                     `json:"stickyExecutionEnabled,omitempty"`
 	Attempt                *int64                    `json:"attempt,omitempty"`
 	Query                  *shared.WorkflowQuery     `json:"query,omitempty"`
+	DecisionInfo           *shared.TransientDecisionInfo `json:"decisionInfo,omitempty"`
 }
 
 func (v *PollForDecisionTaskResponse) ToWire() (wire.Value, error) {
@@ -941,20 +942,20 @@ func (v *PollForDecisionTaskResponse) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 55, Value: w}
 		i++
 	}
-	if v.Attempt != nil {
-		w, err = wire.NewValueI64(*(v.Attempt)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 58, Value: w}
-		i++
-	}
 	if v.Query != nil {
 		w, err = v.Query.ToWire()
 		if err != nil {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 60, Value: w}
+		i++
+	}
+	if v.DecisionInfo != nil {
+		w, err = v.DecisionInfo.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 70, Value: w}
 		i++
 	}
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
@@ -968,6 +969,12 @@ func _WorkflowType_Read(w wire.Value) (*shared.WorkflowType, error) {
 
 func _WorkflowQuery_Read(w wire.Value) (*shared.WorkflowQuery, error) {
 	var v shared.WorkflowQuery
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _TransientDecisionInfo_Read(w wire.Value) (*shared.TransientDecisionInfo, error) {
+	var v shared.TransientDecisionInfo
 	err := v.FromWire(w)
 	return &v, err
 }
@@ -1033,18 +1040,16 @@ func (v *PollForDecisionTaskResponse) FromWire(w wire.Value) error {
 					return err
 				}
 			}
-		case 58:
-			if field.Value.Type() == wire.TI64 {
-				var x int64
-				x, err = field.Value.GetI64(), error(nil)
-				v.Attempt = &x
+		case 60:
+			if field.Value.Type() == wire.TStruct {
+				v.Query, err = _WorkflowQuery_Read(field.Value)
 				if err != nil {
 					return err
 				}
 			}
-		case 60:
+		case 70:
 			if field.Value.Type() == wire.TStruct {
-				v.Query, err = _WorkflowQuery_Read(field.Value)
+				v.DecisionInfo, err = _TransientDecisionInfo_Read(field.Value)
 				if err != nil {
 					return err
 				}
@@ -1088,12 +1093,12 @@ func (v *PollForDecisionTaskResponse) String() string {
 		fields[i] = fmt.Sprintf("StickyExecutionEnabled: %v", *(v.StickyExecutionEnabled))
 		i++
 	}
-	if v.Attempt != nil {
-		fields[i] = fmt.Sprintf("Attempt: %v", *(v.Attempt))
-		i++
-	}
 	if v.Query != nil {
 		fields[i] = fmt.Sprintf("Query: %v", v.Query)
+		i++
+	}
+	if v.DecisionInfo != nil {
+		fields[i] = fmt.Sprintf("DecisionInfo: %v", v.DecisionInfo)
 		i++
 	}
 	return fmt.Sprintf("PollForDecisionTaskResponse{%v}", strings.Join(fields[:i], ", "))
@@ -1130,10 +1135,10 @@ func (v *PollForDecisionTaskResponse) Equals(rhs *PollForDecisionTaskResponse) b
 	if !_Bool_EqualsPtr(v.StickyExecutionEnabled, rhs.StickyExecutionEnabled) {
 		return false
 	}
-	if !_I64_EqualsPtr(v.Attempt, rhs.Attempt) {
+	if !((v.Query == nil && rhs.Query == nil) || (v.Query != nil && rhs.Query != nil && v.Query.Equals(rhs.Query))) {
 		return false
 	}
-	if !((v.Query == nil && rhs.Query == nil) || (v.Query != nil && rhs.Query != nil && v.Query.Equals(rhs.Query))) {
+	if !((v.DecisionInfo == nil && rhs.DecisionInfo == nil) || (v.DecisionInfo != nil && rhs.DecisionInfo != nil && v.DecisionInfo.Equals(rhs.DecisionInfo))) {
 		return false
 	}
 	return true
@@ -1163,13 +1168,6 @@ func (v *PollForDecisionTaskResponse) GetBacklogCountHint() (o int64) {
 func (v *PollForDecisionTaskResponse) GetStickyExecutionEnabled() (o bool) {
 	if v.StickyExecutionEnabled != nil {
 		return *v.StickyExecutionEnabled
-	}
-	return
-}
-
-func (v *PollForDecisionTaskResponse) GetAttempt() (o int64) {
-	if v.Attempt != nil {
-		return *v.Attempt
 	}
 	return
 }

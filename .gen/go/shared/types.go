@@ -4399,11 +4399,12 @@ func (v *DecisionTaskFailedEventAttributes) GetIdentity() (o string) {
 type DecisionTaskScheduledEventAttributes struct {
 	TaskList                   *TaskList `json:"taskList,omitempty"`
 	StartToCloseTimeoutSeconds *int32    `json:"startToCloseTimeoutSeconds,omitempty"`
+	Attempt                    *int64    `json:"attempt,omitempty"`
 }
 
 func (v *DecisionTaskScheduledEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [2]wire.Field
+		fields [3]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -4422,6 +4423,14 @@ func (v *DecisionTaskScheduledEventAttributes) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	if v.Attempt != nil {
+		w, err = wire.NewValueI64(*(v.Attempt)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 30, Value: w}
 		i++
 	}
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
@@ -4447,6 +4456,15 @@ func (v *DecisionTaskScheduledEventAttributes) FromWire(w wire.Value) error {
 					return err
 				}
 			}
+		case 30:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Attempt = &x
+				if err != nil {
+					return err
+				}
+			}
 		}
 	}
 	return nil
@@ -4456,7 +4474,7 @@ func (v *DecisionTaskScheduledEventAttributes) String() string {
 	if v == nil {
 		return "<nil>"
 	}
-	var fields [2]string
+	var fields [3]string
 	i := 0
 	if v.TaskList != nil {
 		fields[i] = fmt.Sprintf("TaskList: %v", v.TaskList)
@@ -4464,6 +4482,10 @@ func (v *DecisionTaskScheduledEventAttributes) String() string {
 	}
 	if v.StartToCloseTimeoutSeconds != nil {
 		fields[i] = fmt.Sprintf("StartToCloseTimeoutSeconds: %v", *(v.StartToCloseTimeoutSeconds))
+		i++
+	}
+	if v.Attempt != nil {
+		fields[i] = fmt.Sprintf("Attempt: %v", *(v.Attempt))
 		i++
 	}
 	return fmt.Sprintf("DecisionTaskScheduledEventAttributes{%v}", strings.Join(fields[:i], ", "))
@@ -4476,12 +4498,22 @@ func (v *DecisionTaskScheduledEventAttributes) Equals(rhs *DecisionTaskScheduled
 	if !_I32_EqualsPtr(v.StartToCloseTimeoutSeconds, rhs.StartToCloseTimeoutSeconds) {
 		return false
 	}
+	if !_I64_EqualsPtr(v.Attempt, rhs.Attempt) {
+		return false
+	}
 	return true
 }
 
 func (v *DecisionTaskScheduledEventAttributes) GetStartToCloseTimeoutSeconds() (o int32) {
 	if v.StartToCloseTimeoutSeconds != nil {
 		return *v.StartToCloseTimeoutSeconds
+	}
+	return
+}
+
+func (v *DecisionTaskScheduledEventAttributes) GetAttempt() (o int64) {
+	if v.Attempt != nil {
+		return *v.Attempt
 	}
 	return
 }
@@ -9473,7 +9505,7 @@ type PollForDecisionTaskResponse struct {
 
 func (v *PollForDecisionTaskResponse) ToWire() (wire.Value, error) {
 	var (
-		fields [9]wire.Field
+		fields [8]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -9641,7 +9673,7 @@ func (v *PollForDecisionTaskResponse) String() string {
 	if v == nil {
 		return "<nil>"
 	}
-	var fields [9]string
+	var fields [8]string
 	i := 0
 	if v.TaskToken != nil {
 		fields[i] = fmt.Sprintf("TaskToken: %v", v.TaskToken)
@@ -15178,6 +15210,87 @@ func (v *TimerStartedEventAttributes) GetDecisionTaskCompletedEventId() (o int64
 		return *v.DecisionTaskCompletedEventId
 	}
 	return
+}
+
+type TransientDecisionInfo struct {
+	ScheduledEvent *HistoryEvent `json:"scheduledEvent,omitempty"`
+	StartedEvent   *HistoryEvent `json:"startedEvent,omitempty"`
+}
+
+func (v *TransientDecisionInfo) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+	if v.ScheduledEvent != nil {
+		w, err = v.ScheduledEvent.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.StartedEvent != nil {
+		w, err = v.StartedEvent.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *TransientDecisionInfo) FromWire(w wire.Value) error {
+	var err error
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TStruct {
+				v.ScheduledEvent, err = _HistoryEvent_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 20:
+			if field.Value.Type() == wire.TStruct {
+				v.StartedEvent, err = _HistoryEvent_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (v *TransientDecisionInfo) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [2]string
+	i := 0
+	if v.ScheduledEvent != nil {
+		fields[i] = fmt.Sprintf("ScheduledEvent: %v", v.ScheduledEvent)
+		i++
+	}
+	if v.StartedEvent != nil {
+		fields[i] = fmt.Sprintf("StartedEvent: %v", v.StartedEvent)
+		i++
+	}
+	return fmt.Sprintf("TransientDecisionInfo{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *TransientDecisionInfo) Equals(rhs *TransientDecisionInfo) bool {
+	if !((v.ScheduledEvent == nil && rhs.ScheduledEvent == nil) || (v.ScheduledEvent != nil && rhs.ScheduledEvent != nil && v.ScheduledEvent.Equals(rhs.ScheduledEvent))) {
+		return false
+	}
+	if !((v.StartedEvent == nil && rhs.StartedEvent == nil) || (v.StartedEvent != nil && rhs.StartedEvent != nil && v.StartedEvent.Equals(rhs.StartedEvent))) {
+		return false
+	}
+	return true
 }
 
 type UpdateDomainInfo struct {

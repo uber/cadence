@@ -509,7 +509,6 @@ retry:
 		if events == nil || len(events) == 0 {
 			p.logger.Fatalf("History Events are empty: %v", events)
 		}
-		p.suite.Equal(decisionAttempt, response.GetAttempt())
 
 		nextPageToken := response.NextPageToken
 		for nextPageToken != nil {
@@ -527,8 +526,19 @@ retry:
 			nextPageToken = resp.NextPageToken
 		}
 
+		var lastDecisionScheduleEvent *workflow.HistoryEvent
+		for _, e := range events {
+			if e.GetEventType() == workflow.EventTypeDecisionTaskScheduled {
+				lastDecisionScheduleEvent = e
+			}
+		}
+
+		if lastDecisionScheduleEvent != nil {
+			p.suite.Equal(decisionAttempt, lastDecisionScheduleEvent.DecisionTaskScheduledEventAttributes.GetAttempt())
+		}
+
 		if dropTask {
-			p.logger.Info("Dropping Decision task: ")
+			p.logger.Info("Dropping Decision task...")
 			return nil
 		}
 
@@ -779,16 +789,46 @@ func (s *integrationSuite) TestDecisionAndActivityTimeoutsWorkflow() {
 		suite:           s,
 	}
 
+	/*dresp, _ := s.MetadataManager.GetDomain(&persistence.GetDomainRequest{
+		Name: s.domainName,
+	})
+	duuid := dresp.Info.ID
+	*/
 	for i := 0; i < 8; i++ {
+		/*info, err111 := s.GetWorkflowExecutionInfo(duuid, workflow.WorkflowExecution{
+			WorkflowId: common.StringPtr(id),
+			RunId:      common.StringPtr(*we.RunId),
+		})
+		if err111 != nil {
+			s.logger.Errorf("**** Error: %v, info: %v", err111, info)
+		}
+		s.logger.Errorf("**** Info: {Scheduled: %v, Started: %v, ID: %v: Timeout: %v, Attempt: %v, TS: %v}",
+			info.ExecutionInfo.DecisionScheduleID, info.ExecutionInfo.DecisionStartedID, info.ExecutionInfo.DecisionRequestID,
+			info.ExecutionInfo.DecisionTimeout, info.ExecutionInfo.DecisionAttempt, info.ExecutionInfo.DecisionTimestamp)
+			s.logger.Fatal("STOP!!!")
+
+		*/
 		dropDecisionTask := (i%2 == 0)
 		s.logger.Infof("Calling Decision Task: %d", i)
 		var err error
 		if dropDecisionTask {
-			err = poller.pollAndProcessDecisionTask(false, true)
+			err = poller.pollAndProcessDecisionTask(true, true)
 		} else {
-			err = poller.pollAndProcessDecisionTaskWithAttempt(false, false, int64(1))
+			err = poller.pollAndProcessDecisionTaskWithAttempt(true, false, int64(1))
 		}
-		s.True(err == nil || err == matching.ErrNoTasks)
+		if err != nil {
+			historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &workflow.GetWorkflowExecutionHistoryRequest{
+				Domain: common.StringPtr(s.domainName),
+				Execution: &workflow.WorkflowExecution{
+					WorkflowId: common.StringPtr(id),
+					RunId:      common.StringPtr(*we.RunId),
+				},
+			})
+			s.Nil(err)
+			history := historyResponse.History
+			common.PrettyPrintHistory(history, s.logger)
+		}
+		s.True(err == nil || err == matching.ErrNoTasks, "Error: %v", err)
 		if !dropDecisionTask {
 			s.logger.Infof("Calling Activity Task: %d", i)
 			err = poller.pollAndProcessActivityTask(i%4 == 0)

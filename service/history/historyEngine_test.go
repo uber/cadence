@@ -546,9 +546,9 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedCompleteWorkflowFailed() {
 	s.Equal(context, executionBuilder.executionInfo.ExecutionContext)
 	s.Equal(persistence.WorkflowStateRunning, executionBuilder.executionInfo.State)
 	s.True(executionBuilder.HasPendingDecisionTask())
-	di3, ok := executionBuilder.GetPendingDecision(di2.ScheduleID)
+	di3, ok := executionBuilder.GetPendingDecision(executionBuilder.executionInfo.NextEventID)
 	s.True(ok)
-	s.Equal(di2.ScheduleID, di3.ScheduleID)
+	s.Equal(executionBuilder.executionInfo.NextEventID, di3.ScheduleID)
 	s.Equal(int64(1), di3.Attempt)
 }
 
@@ -630,9 +630,9 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedFailWorkflowFailed() {
 	s.Equal(context, executionBuilder.executionInfo.ExecutionContext)
 	s.Equal(persistence.WorkflowStateRunning, executionBuilder.executionInfo.State)
 	s.True(executionBuilder.HasPendingDecisionTask())
-	di3, ok := executionBuilder.GetPendingDecision(di2.ScheduleID)
+	di3, ok := executionBuilder.GetPendingDecision(executionBuilder.executionInfo.NextEventID)
 	s.True(ok)
-	s.Equal(di2.ScheduleID, di3.ScheduleID)
+	s.Equal(executionBuilder.executionInfo.NextEventID, di3.ScheduleID)
 	s.Equal(int64(1), di3.Attempt)
 }
 
@@ -2242,9 +2242,10 @@ func (s *engineSuite) TestStarTimer_DuplicateTimerID() {
 	executionBuilder = s.getBuilder(domainID, we)
 	s.Equal(persistence.WorkflowStateRunning, executionBuilder.executionInfo.State)
 	s.True(executionBuilder.HasPendingDecisionTask())
-	di3, ok := executionBuilder.GetPendingDecision(di2.ScheduleID)
-	s.True(ok)
-	s.Equal(di2.ScheduleID, di3.ScheduleID)
+	di3, ok := executionBuilder.GetPendingDecision(executionBuilder.executionInfo.NextEventID)
+	s.True(ok, "DI.ScheduleID: %v, ScheduleID: %v, StartedID: %v", di2.ScheduleID,
+		executionBuilder.executionInfo.DecisionScheduleID, executionBuilder.executionInfo.DecisionStartedID)
+	s.Equal(executionBuilder.executionInfo.NextEventID, di3.ScheduleID)
 	s.Equal(int64(1), di3.Attempt)
 }
 

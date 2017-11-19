@@ -125,7 +125,7 @@ const (
 		`decision_request_id: ?, ` +
 		`decision_timeout: ?, ` +
 		`decision_attempt: ?, ` +
-		`failed_decision_started_id: ?, ` +
+		`decision_timestamp: ?, ` +
 		`cancel_requested: ?, ` +
 		`cancel_request_id: ?, ` +
 		`sticky_task_list: ?, ` +
@@ -897,7 +897,7 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *Creat
 		"", // Decision Start Request ID
 		request.DecisionStartToCloseTimeout,
 		0,
-		common.EmptyEventID,
+		0,
 		false,
 		"",
 		"", // sticky_task_list (no sticky tasklist for new workflow execution)
@@ -1015,7 +1015,7 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 		executionInfo.DecisionRequestID,
 		executionInfo.DecisionTimeout,
 		executionInfo.DecisionAttempt,
-		executionInfo.FailedDecisionStartedID,
+		executionInfo.DecisionTimestamp,
 		executionInfo.CancelRequested,
 		executionInfo.CancelRequestID,
 		executionInfo.StickyTaskList,
@@ -1995,8 +1995,8 @@ func createWorkflowExecutionInfo(result map[string]interface{}) *WorkflowExecuti
 			info.DecisionTimeout = int32(v.(int))
 		case "decision_attempt":
 			info.DecisionAttempt = v.(int64)
-		case "failed_decision_started_id":
-			info.FailedDecisionStartedID = v.(int64)
+		case "decision_timestamp":
+			info.DecisionTimestamp = v.(int64)
 		case "cancel_requested":
 			info.CancelRequested = v.(bool)
 		case "cancel_request_id":

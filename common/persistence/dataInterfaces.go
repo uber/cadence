@@ -137,7 +137,7 @@ type (
 		DecisionRequestID            string
 		DecisionTimeout              int32
 		DecisionAttempt              int64
-		FailedDecisionStartedID      int64
+		DecisionTimestamp            int64
 		CancelRequested              bool
 		CancelRequestID              string
 		StickyTaskList               string
