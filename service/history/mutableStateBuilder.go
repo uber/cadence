@@ -618,7 +618,8 @@ func (e *mutableStateBuilder) UpdateDecision(di *decisionInfo) {
 	e.executionInfo.DecisionTimeout = di.DecisionTimeout
 	e.executionInfo.DecisionAttempt = di.Attempt
 	e.executionInfo.DecisionTimestamp = di.Timestamp
-	e.logger.Errorf("**** Decision Updated: {Schedule: %v, Started: %v, ID: %v, Timeout: %v, Attempt: %v, Timestamp: %v}",
+	
+	e.logger.Debugf("Decision Updated: {Schedule: %v, Started: %v, ID: %v, Timeout: %v, Attempt: %v, Timestamp: %v}",
 		di.ScheduleID, di.StartedID, di.RequestID, di.DecisionTimeout, di.Attempt, di.Timestamp)
 }
 
@@ -778,7 +779,6 @@ func (e *mutableStateBuilder) AddDecisionTaskScheduledEvent() *decisionInfo {
 
 func (e *mutableStateBuilder) AddDecisionTaskStartedEvent(scheduleEventID int64, requestID string,
 	request *workflow.PollForDecisionTaskRequest) (*workflow.HistoryEvent, *decisionInfo) {
-	e.logger.Errorf("**** AddDecisionTaskStartedEvent: {ScheduleID: %v, RequestID: %v} ", scheduleEventID, requestID)
 	hasPendingDecision := e.HasPendingDecisionTask()
 	di, ok := e.GetPendingDecision(scheduleEventID)
 	if !hasPendingDecision || !ok || di.StartedID != emptyEventID {

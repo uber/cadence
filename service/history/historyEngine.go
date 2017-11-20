@@ -382,10 +382,7 @@ Update_History_Loop:
 		}
 		tBuilder := e.getTimerBuilder(&context.workflowExecution)
 
-		// Check execution state to make sure task is in the list of outstanding tasks and it is not yet started.  If
-		// task is not outstanding than it is most probably a duplicate and complete the task.
 		di, isRunning := msBuilder.GetPendingDecision(scheduleID)
-		e.logger.Errorf("**** RecordDecisionTaskStarted: {ScheduleID: %v, isRunning: %v}", scheduleID, isRunning)
 
 		// First check to see if cache needs to be refreshed as we could potentially have stale workflow execution in
 		// some extreme cassandra failure cases.
@@ -396,6 +393,8 @@ Update_History_Loop:
 			continue Update_History_Loop
 		}
 
+		// Check execution state to make sure task is in the list of outstanding tasks and it is not yet started.  If
+		// task is not outstanding than it is most probably a duplicate and complete the task.
 		if !msBuilder.isWorkflowExecutionRunning() || !isRunning {
 			// Looks like DecisionTask already completed as a result of another call.
 			// It is OK to drop the task at this point.

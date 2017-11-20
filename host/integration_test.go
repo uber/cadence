@@ -789,25 +789,7 @@ func (s *integrationSuite) TestDecisionAndActivityTimeoutsWorkflow() {
 		suite:           s,
 	}
 
-	/*dresp, _ := s.MetadataManager.GetDomain(&persistence.GetDomainRequest{
-		Name: s.domainName,
-	})
-	duuid := dresp.Info.ID
-	*/
 	for i := 0; i < 8; i++ {
-		/*info, err111 := s.GetWorkflowExecutionInfo(duuid, workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(id),
-			RunId:      common.StringPtr(*we.RunId),
-		})
-		if err111 != nil {
-			s.logger.Errorf("**** Error: %v, info: %v", err111, info)
-		}
-		s.logger.Errorf("**** Info: {Scheduled: %v, Started: %v, ID: %v: Timeout: %v, Attempt: %v, TS: %v}",
-			info.ExecutionInfo.DecisionScheduleID, info.ExecutionInfo.DecisionStartedID, info.ExecutionInfo.DecisionRequestID,
-			info.ExecutionInfo.DecisionTimeout, info.ExecutionInfo.DecisionAttempt, info.ExecutionInfo.DecisionTimestamp)
-			s.logger.Fatal("STOP!!!")
-
-		*/
 		dropDecisionTask := (i%2 == 0)
 		s.logger.Infof("Calling Decision Task: %d", i)
 		var err error
