@@ -111,10 +111,10 @@ struct RecordDecisionTaskStartedResponse {
   10: optional shared.WorkflowType workflowType
   20: optional i64 (js.type = "Long") previousStartedEventId
   30: optional i64 (js.type = "Long") startedEventId
-  35: optional i64 (js.type = "Long") nextEventId
-  40: optional bool stickyExecutionEnabled
+  40: optional i64 (js.type = "Long") nextEventId
   50: optional i64 (js.type = "Long") attempt
-  60: optional shared.TransientDecisionInfo decisionInfo
+  60: optional bool stickyExecutionEnabled
+  70: optional shared.TransientDecisionInfo decisionInfo
 }
 
 struct SignalWorkflowExecutionRequest {
