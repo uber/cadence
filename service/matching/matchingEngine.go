@@ -275,10 +275,9 @@ pollLoop:
 				return emptyPollForDecisionTaskResponse, nil
 			}
 
-			var lastEventID = *nextIDResp.EventId - 1
 			resp := &h.RecordDecisionTaskStartedResponse{
-				PreviousStartedEventId: &lastEventID,
-				NextEventId:            &lastEventID,
+				PreviousStartedEventId: nextIDResp.EventId,
+				NextEventId:            nextIDResp.EventId,
 			}
 			tCtx.completeTask(nil)
 			return e.createPollForDecisionTaskResponse(tCtx, resp), nil

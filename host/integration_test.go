@@ -549,6 +549,7 @@ retry:
 		executionCtx, decisions, err := p.decisionHandler(response.WorkflowExecution, response.WorkflowType,
 			common.Int64Default(response.PreviousStartedEventId), common.Int64Default(response.StartedEventId), response.History)
 		if err != nil {
+			p.logger.Infof("Failing Decision. Decision handler failed with error: %v", err)
 			return p.engine.RespondDecisionTaskFailed(createContext(), &workflow.RespondDecisionTaskFailedRequest{
 				TaskToken: response.TaskToken,
 				Cause:     common.DecisionTaskFailedCausePtr(workflow.DecisionTaskFailedCausePanic),
@@ -557,6 +558,7 @@ retry:
 			})
 		}
 
+		p.logger.Infof("Completing Decision.  Decisions: %v", decisions)
 		return p.engine.RespondDecisionTaskCompleted(createContext(), &workflow.RespondDecisionTaskCompletedRequest{
 			TaskToken:        response.TaskToken,
 			Identity:         common.StringPtr(p.identity),

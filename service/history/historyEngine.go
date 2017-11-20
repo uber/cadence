@@ -371,8 +371,8 @@ func (e *historyEngineImpl) RecordDecisionTaskStarted(
 	}
 	defer release()
 
-	scheduleID := *request.ScheduleId
-	requestID := common.StringDefault(request.RequestId)
+	scheduleID := request.GetScheduleId()
+	requestID := request.GetRequestId()
 
 Update_History_Loop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
@@ -621,6 +621,7 @@ Update_History_Loop:
 		var err error
 		completedID := *completedEvent.EventId
 		hasUnhandledEvents := msBuilder.HasBufferedEvents()
+		e.logger.Errorf("Unhandled Events: %v", hasUnhandledEvents)
 		isComplete := false
 		transferTasks := []persistence.Task{}
 		timerTasks := []persistence.Task{}
