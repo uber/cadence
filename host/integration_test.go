@@ -526,6 +526,10 @@ retry:
 			nextPageToken = resp.NextPageToken
 		}
 
+		if dumpHistory {
+			common.PrettyPrintHistory(response.History, p.logger)
+		}
+
 		var lastDecisionScheduleEvent *workflow.HistoryEvent
 		for _, e := range events {
 			if e.GetEventType() == workflow.EventTypeDecisionTaskScheduled {
@@ -540,10 +544,6 @@ retry:
 		if dropTask {
 			p.logger.Info("Dropping Decision task...")
 			return nil
-		}
-
-		if dumpHistory {
-			common.PrettyPrintHistory(response.History, p.logger)
 		}
 
 		executionCtx, decisions, err := p.decisionHandler(response.WorkflowExecution, response.WorkflowType,
@@ -3112,17 +3112,41 @@ func (s *integrationSuite) TestDecisionTaskFailed() {
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
-
 	s.logger.Infof("StartWorkflowExecution: response: %v \n", *we.RunId)
+
+	workflowExecution := &workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr(id),
+		RunId:      common.StringPtr(*we.RunId),
+	}
 
 	// decider logic
 	workflowComplete := false
 	activityScheduled := false
 	activityData := int32(1)
 	failureCount := 10
+	signalCount := 0
+	sendSignal := false
 	//var signalEvent *workflow.HistoryEvent
 	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
 		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
+		// Count signals
+		for _, event := range history.Events[previousStartedEventID:] {
+			if event.GetEventType() == workflow.EventTypeWorkflowExecutionSignaled {
+				signalCount++
+			}
+		}
+		// Some signals received on this decision
+		if signalCount == 1 {
+			return nil, []*workflow.Decision{}, nil
+		}
+
+		// Send signals during decision
+		if sendSignal {
+			s.sendSignal(s.domainName, workflowExecution, "signalC", nil, identity)
+			s.sendSignal(s.domainName, workflowExecution, "signalD", nil, identity)
+			s.sendSignal(s.domainName, workflowExecution, "signalE", nil, identity)
+			sendSignal = false
+		}
 
 		if !activityScheduled {
 			activityScheduled = true
@@ -3143,6 +3167,7 @@ func (s *integrationSuite) TestDecisionTaskFailed() {
 				},
 			}}, nil
 		} else if failureCount > 0 {
+			// Otherwise decrement failureCount and keep failing decisions
 			failureCount--
 			return nil, nil, errors.New("Decider Panic")
 		}
@@ -3184,22 +3209,60 @@ func (s *integrationSuite) TestDecisionTaskFailed() {
 	s.logger.Infof("pollAndProcessActivityTask: %v", err)
 	s.Nil(err)
 
-	// fail decision 10 times
-	for i := 0; i < 10; i++ {
+	// fail decision 5 times
+	for i := 0; i < 5; i++ {
 		err := poller.pollAndProcessDecisionTaskWithAttempt(false, false, int64(i))
 		s.Nil(err)
 	}
 
+	err = s.sendSignal(s.domainName, workflowExecution, "signalA", nil, identity)
+	s.Nil(err, "failed to send signal to execution")
+
+	// process signal
+	err = poller.pollAndProcessDecisionTask(true, false)
+	s.logger.Infof("pollAndProcessDecisionTask: %v", err)
+	s.Nil(err)
+	s.Equal(1, signalCount)
+
+	// send another signal to trigger decision
+	err = s.sendSignal(s.domainName, workflowExecution, "signalB", nil, identity)
+	s.Nil(err, "failed to send signal to execution")
+
+	// fail decision 2 more times
+	for i := 0; i < 2; i++ {
+		err := poller.pollAndProcessDecisionTaskWithAttempt(false, false, int64(i))
+		s.Nil(err)
+	}
+	s.Equal(3, signalCount)
+
+	// now send a signal during failed decision
+	sendSignal = true
+	err = poller.pollAndProcessDecisionTaskWithAttempt(false, false, int64(2))
+	s.Nil(err)
+	s.Equal(4, signalCount)
+
+	// fail decision 1 more times
+	for i := 0; i < 2; i++ {
+		err := poller.pollAndProcessDecisionTaskWithAttempt(false, false, int64(i))
+		s.Nil(err)
+	}
+	s.Equal(12, signalCount)
+
 	// Make complete workflow decision
-	err = poller.pollAndProcessDecisionTaskWithAttempt(true, false, int64(10))
+	err = poller.pollAndProcessDecisionTaskWithAttempt(true, false, int64(2))
 	s.logger.Infof("pollAndProcessDecisionTask: %v", err)
 	s.Nil(err)
 	s.True(workflowComplete)
+	s.Equal(16, signalCount)
 
-	s.printWorkflowHistory(s.domainName, &workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(id),
-		RunId:      common.StringPtr(*we.RunId),
-	})
+	s.printWorkflowHistory(s.domainName, workflowExecution)
+
+	events := s.getHistory(s.domainName, workflowExecution)
+	var lastEvent *workflow.HistoryEvent
+	for _, e := range events {
+		lastEvent = e
+	}
+	s.Equal(workflow.EventTypeWorkflowExecutionCompleted, lastEvent.GetEventType())
 }
 
 func (s *integrationSuite) setupShards() {
@@ -3212,7 +3275,7 @@ func (s *integrationSuite) setupShards() {
 	}
 }
 
-func (s *integrationSuite) printWorkflowHistory(domain string, execution *workflow.WorkflowExecution) {
+func (s *integrationSuite) getHistory(domain string, execution *workflow.WorkflowExecution) []*workflow.HistoryEvent {
 	historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &workflow.GetWorkflowExecutionHistoryRequest{
 		Domain:          common.StringPtr(domain),
 		Execution:       execution,
@@ -3220,7 +3283,6 @@ func (s *integrationSuite) printWorkflowHistory(domain string, execution *workfl
 	})
 	s.Nil(err)
 
-	history := historyResponse.History
 	events := historyResponse.History.Events
 	for historyResponse.NextPageToken != nil {
 		historyResponse, err = s.engine.GetWorkflowExecutionHistory(createContext(), &workflow.GetWorkflowExecutionHistoryRequest{
@@ -3231,6 +3293,24 @@ func (s *integrationSuite) printWorkflowHistory(domain string, execution *workfl
 		s.Nil(err)
 		events = append(events, historyResponse.History.Events...)
 	}
+
+	return events
+}
+
+func (s *integrationSuite) sendSignal(domainName string, execution *workflow.WorkflowExecution, signalName string,
+	input []byte, identity string) error {
+	return s.engine.SignalWorkflowExecution(createContext(), &workflow.SignalWorkflowExecutionRequest{
+		Domain:            common.StringPtr(domainName),
+		WorkflowExecution: execution,
+		SignalName:        common.StringPtr(signalName),
+		Input:             input,
+		Identity:          common.StringPtr(identity),
+	})
+}
+
+func (s *integrationSuite) printWorkflowHistory(domain string, execution *workflow.WorkflowExecution) {
+	events := s.getHistory(domain, execution)
+	history := &workflow.History{}
 	history.Events = events
 	common.PrettyPrintHistory(history, s.logger)
 }

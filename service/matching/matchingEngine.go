@@ -479,7 +479,7 @@ func (e *matchingEngineImpl) createPollForDecisionTaskResponse(context *taskCont
 			DomainID:        task.DomainID,
 			WorkflowID:      task.WorkflowID,
 			RunID:           task.RunID,
-			ScheduleID:      task.ScheduleID,
+			ScheduleID:      historyResponse.GetScheduledEventId(),
 			ScheduleAttempt: historyResponse.GetAttempt(),
 		}
 		response.TaskToken, _ = e.tokenSerializer.Serialize(token)

@@ -1338,6 +1338,7 @@ func (v *RecordDecisionTaskStartedRequest) GetRequestId() (o string) {
 type RecordDecisionTaskStartedResponse struct {
 	WorkflowType           *shared.WorkflowType          `json:"workflowType,omitempty"`
 	PreviousStartedEventId *int64                        `json:"previousStartedEventId,omitempty"`
+	ScheduledEventId       *int64                        `json:"scheduledEventId,omitempty"`
 	StartedEventId         *int64                        `json:"startedEventId,omitempty"`
 	NextEventId            *int64                        `json:"nextEventId,omitempty"`
 	Attempt                *int64                        `json:"attempt,omitempty"`
@@ -1347,7 +1348,7 @@ type RecordDecisionTaskStartedResponse struct {
 
 func (v *RecordDecisionTaskStartedResponse) ToWire() (wire.Value, error) {
 	var (
-		fields [7]wire.Field
+		fields [8]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -1368,12 +1369,20 @@ func (v *RecordDecisionTaskStartedResponse) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 20, Value: w}
 		i++
 	}
+	if v.ScheduledEventId != nil {
+		w, err = wire.NewValueI64(*(v.ScheduledEventId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 30, Value: w}
+		i++
+	}
 	if v.StartedEventId != nil {
 		w, err = wire.NewValueI64(*(v.StartedEventId)), error(nil)
 		if err != nil {
 			return w, err
 		}
-		fields[i] = wire.Field{ID: 30, Value: w}
+		fields[i] = wire.Field{ID: 40, Value: w}
 		i++
 	}
 	if v.NextEventId != nil {
@@ -1381,7 +1390,7 @@ func (v *RecordDecisionTaskStartedResponse) ToWire() (wire.Value, error) {
 		if err != nil {
 			return w, err
 		}
-		fields[i] = wire.Field{ID: 40, Value: w}
+		fields[i] = wire.Field{ID: 50, Value: w}
 		i++
 	}
 	if v.Attempt != nil {
@@ -1389,7 +1398,7 @@ func (v *RecordDecisionTaskStartedResponse) ToWire() (wire.Value, error) {
 		if err != nil {
 			return w, err
 		}
-		fields[i] = wire.Field{ID: 50, Value: w}
+		fields[i] = wire.Field{ID: 60, Value: w}
 		i++
 	}
 	if v.StickyExecutionEnabled != nil {
@@ -1397,7 +1406,7 @@ func (v *RecordDecisionTaskStartedResponse) ToWire() (wire.Value, error) {
 		if err != nil {
 			return w, err
 		}
-		fields[i] = wire.Field{ID: 60, Value: w}
+		fields[i] = wire.Field{ID: 70, Value: w}
 		i++
 	}
 	if v.DecisionInfo != nil {
@@ -1405,7 +1414,7 @@ func (v *RecordDecisionTaskStartedResponse) ToWire() (wire.Value, error) {
 		if err != nil {
 			return w, err
 		}
-		fields[i] = wire.Field{ID: 70, Value: w}
+		fields[i] = wire.Field{ID: 80, Value: w}
 		i++
 	}
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
@@ -1447,7 +1456,7 @@ func (v *RecordDecisionTaskStartedResponse) FromWire(w wire.Value) error {
 			if field.Value.Type() == wire.TI64 {
 				var x int64
 				x, err = field.Value.GetI64(), error(nil)
-				v.StartedEventId = &x
+				v.ScheduledEventId = &x
 				if err != nil {
 					return err
 				}
@@ -1456,7 +1465,7 @@ func (v *RecordDecisionTaskStartedResponse) FromWire(w wire.Value) error {
 			if field.Value.Type() == wire.TI64 {
 				var x int64
 				x, err = field.Value.GetI64(), error(nil)
-				v.NextEventId = &x
+				v.StartedEventId = &x
 				if err != nil {
 					return err
 				}
@@ -1465,12 +1474,21 @@ func (v *RecordDecisionTaskStartedResponse) FromWire(w wire.Value) error {
 			if field.Value.Type() == wire.TI64 {
 				var x int64
 				x, err = field.Value.GetI64(), error(nil)
-				v.Attempt = &x
+				v.NextEventId = &x
 				if err != nil {
 					return err
 				}
 			}
 		case 60:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Attempt = &x
+				if err != nil {
+					return err
+				}
+			}
+		case 70:
 			if field.Value.Type() == wire.TBool {
 				var x bool
 				x, err = field.Value.GetBool(), error(nil)
@@ -1479,7 +1497,7 @@ func (v *RecordDecisionTaskStartedResponse) FromWire(w wire.Value) error {
 					return err
 				}
 			}
-		case 70:
+		case 80:
 			if field.Value.Type() == wire.TStruct {
 				v.DecisionInfo, err = _TransientDecisionInfo_Read(field.Value)
 				if err != nil {
@@ -1495,7 +1513,7 @@ func (v *RecordDecisionTaskStartedResponse) String() string {
 	if v == nil {
 		return "<nil>"
 	}
-	var fields [7]string
+	var fields [8]string
 	i := 0
 	if v.WorkflowType != nil {
 		fields[i] = fmt.Sprintf("WorkflowType: %v", v.WorkflowType)
@@ -1503,6 +1521,10 @@ func (v *RecordDecisionTaskStartedResponse) String() string {
 	}
 	if v.PreviousStartedEventId != nil {
 		fields[i] = fmt.Sprintf("PreviousStartedEventId: %v", *(v.PreviousStartedEventId))
+		i++
+	}
+	if v.ScheduledEventId != nil {
+		fields[i] = fmt.Sprintf("ScheduledEventId: %v", *(v.ScheduledEventId))
 		i++
 	}
 	if v.StartedEventId != nil {
@@ -1544,6 +1566,9 @@ func (v *RecordDecisionTaskStartedResponse) Equals(rhs *RecordDecisionTaskStarte
 	if !_I64_EqualsPtr(v.PreviousStartedEventId, rhs.PreviousStartedEventId) {
 		return false
 	}
+	if !_I64_EqualsPtr(v.ScheduledEventId, rhs.ScheduledEventId) {
+		return false
+	}
 	if !_I64_EqualsPtr(v.StartedEventId, rhs.StartedEventId) {
 		return false
 	}
@@ -1565,6 +1590,13 @@ func (v *RecordDecisionTaskStartedResponse) Equals(rhs *RecordDecisionTaskStarte
 func (v *RecordDecisionTaskStartedResponse) GetPreviousStartedEventId() (o int64) {
 	if v.PreviousStartedEventId != nil {
 		return *v.PreviousStartedEventId
+	}
+	return
+}
+
+func (v *RecordDecisionTaskStartedResponse) GetScheduledEventId() (o int64) {
+	if v.ScheduledEventId != nil {
+		return *v.ScheduledEventId
 	}
 	return
 }

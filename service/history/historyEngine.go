@@ -621,7 +621,6 @@ Update_History_Loop:
 		var err error
 		completedID := *completedEvent.EventId
 		hasUnhandledEvents := msBuilder.HasBufferedEvents()
-		e.logger.Errorf("Unhandled Events: %v", hasUnhandledEvents)
 		isComplete := false
 		transferTasks := []persistence.Task{}
 		timerTasks := []persistence.Task{}
@@ -1655,6 +1654,9 @@ func (e *historyEngineImpl) createRecordDecisionTaskStartedResponse(domainID str
 		response.PreviousStartedEventId = common.Int64Ptr(msBuilder.previousDecisionStartedEvent())
 	}
 
+	// Starting decision could result in different scheduleID if decision was transient and new new events came in
+	// before it was started.
+	response.ScheduledEventId = common.Int64Ptr(di.ScheduleID)
 	response.StartedEventId = common.Int64Ptr(di.StartedID)
 	response.StickyExecutionEnabled = common.BoolPtr(msBuilder.isStickyTaskListEnabled())
 	response.NextEventId = common.Int64Ptr(msBuilder.GetNextEventID())

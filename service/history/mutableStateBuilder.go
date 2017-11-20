@@ -619,7 +619,7 @@ func (e *mutableStateBuilder) UpdateDecision(di *decisionInfo) {
 	e.executionInfo.DecisionAttempt = di.Attempt
 	e.executionInfo.DecisionTimestamp = di.Timestamp
 
-	e.logger.Debugf("**** Decision Updated: {Schedule: %v, Started: %v, ID: %v, Timeout: %v, Attempt: %v, Timestamp: %v}",
+	e.logger.Debugf("Decision Updated: {Schedule: %v, Started: %v, ID: %v, Timeout: %v, Attempt: %v, Timestamp: %v}",
 		di.ScheduleID, di.StartedID, di.RequestID, di.DecisionTimeout, di.Attempt, di.Timestamp)
 }
 
@@ -794,15 +794,15 @@ func (e *mutableStateBuilder) AddDecisionTaskStartedEvent(scheduleEventID int64,
 	// First check to see if new events came since transient decision was scheduled
 	if di.Attempt > 0 && di.ScheduleID != e.GetNextEventID() {
 		// Also create a new DecisionTaskScheduledEvent since new events came in when it was scheduled
-		scheduleEvent := e.hBuilder.AddDecisionTaskScheduledEvent(di.Tasklist, di.DecisionTimeout, di.Attempt)
-		di.ScheduleID = scheduleEvent.GetEventId()
+		scheduleEvent := e.hBuilder.AddDecisionTaskScheduledEvent(di.Tasklist, di.DecisionTimeout, 0)
+		scheduleID = scheduleEvent.GetEventId()
 		di.Attempt = 0
 	}
 
 	// Avoid creating new history events when decisions are continuously failing
 	if di.Attempt == 0 {
 		// Now create DecisionTaskStartedEvent
-		event = e.hBuilder.AddDecisionTaskStartedEvent(scheduleEventID, requestID, request.GetIdentity())
+		event = e.hBuilder.AddDecisionTaskStartedEvent(scheduleID, requestID, request.GetIdentity())
 		startedID = event.GetEventId()
 		timestamp = int64(0)
 	}
@@ -810,7 +810,7 @@ func (e *mutableStateBuilder) AddDecisionTaskStartedEvent(scheduleEventID int64,
 	e.executionInfo.State = persistence.WorkflowStateRunning
 	// Update mutable decision state
 	di = &decisionInfo{
-		ScheduleID:      di.ScheduleID,
+		ScheduleID:      scheduleID,
 		StartedID:       startedID,
 		RequestID:       requestID,
 		DecisionTimeout: di.DecisionTimeout,
