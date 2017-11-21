@@ -66,11 +66,12 @@ type (
 	}
 
 	getHistoryContinuationToken struct {
-		RunID             string
-		FirstEventID      int64
-		NextEventID       int64
-		PersistenceToken  []byte
-		TransientDecision *gen.TransientDecisionInfo
+		RunID                 string
+		FirstEventID          int64
+		NextEventID           int64
+		PersistenceToken      []byte
+		TransientDecision     *gen.TransientDecisionInfo
+		FilterIndexToEventIDs map[int]map[int64]bool
 	}
 )
 
@@ -835,6 +836,9 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 			token.PersistenceToken, token.TransientDecision)
 	if err != nil {
 		return nil, wh.error(err, scope)
+	}
+	if len(getRequest.Filters) != 0 {
+		history.Events = FilterHistoryEvents(getRequest.Filters, history.Events, token)
 	}
 
 	nextToken, err := getSerializedGetHistoryToken(persistenceToken, token.RunID, history, token.FirstEventID,

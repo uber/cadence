@@ -798,6 +798,7 @@ struct GetWorkflowExecutionHistoryRequest {
   20: optional WorkflowExecution execution
   30: optional i32 maximumPageSize
   40: optional binary nextPageToken
+  60: optional list<HistoryEventFilter> filters
 }
 
 struct GetWorkflowExecutionHistoryResponse {
@@ -881,3 +882,182 @@ struct DescribeWorkflowExecutionResponse {
   10: optional WorkflowExecutionConfiguration executionConfiguration
   20: optional WorkflowExecutionInfo workflowExecutionInfo
 }
+
+struct HistoryEventFilter {
+  10:  optional EventType eventType
+  40:  optional WorkflowExecutionStartedEventFilter workflowExecutionStartedEventFilter
+  50:  optional WorkflowExecutionCompletedEventFilter workflowExecutionCompletedEventFilter
+  60:  optional WorkflowExecutionFailedEventFilter workflowExecutionFailedEventFilter
+  70:  optional WorkflowExecutionTimedOutEventFilter workflowExecutionTimedOutEventFilter
+  80:  optional DecisionTaskScheduledEventFilter decisionTaskScheduledEventFilter
+  90:  optional DecisionTaskStartedEventFilter decisionTaskStartedEventFilter
+  100: optional DecisionTaskCompletedEventFilter decisionTaskCompletedEventFilter
+  110: optional DecisionTaskTimedOutEventFilter decisionTaskTimedOutEventFilter
+  120: optional DecisionTaskFailedEventFilter decisionTaskFailedEventFilter
+  130: optional ActivityTaskScheduledEventFilter activityTaskScheduledEventFilter
+  140: optional ActivityTaskStartedEventFilter activityTaskStartedEventFilter
+  150: optional ActivityTaskCompletedEventFilter activityTaskCompletedEventFilter
+  160: optional ActivityTaskFailedEventFilter activityTaskFailedEventFilter
+  170: optional ActivityTaskTimedOutEventFilter activityTaskTimedOutEventFilter
+  180: optional TimerStartedEventFilter timerStartedEventFilter
+  190: optional TimerFiredEventFilter timerFiredEventFilter
+  200: optional ActivityTaskCancelRequestedEventFilter activityTaskCancelRequestedEventFilter
+  210: optional RequestCancelActivityTaskFailedEventFilter requestCancelActivityTaskFailedEventFilter
+  220: optional ActivityTaskCanceledEventFilter activityTaskCanceledEventFilter
+  230: optional TimerCanceledEventFilter timerCanceledEventFilter
+  240: optional CancelTimerFailedEventFilter cancelTimerFailedEventFilter
+  250: optional MarkerRecordedEventFilter markerRecordedEventFilter
+  260: optional WorkflowExecutionSignaledEventFilter workflowExecutionSignaledEventFilter
+  270: optional WorkflowExecutionTerminatedEventFilter workflowExecutionTerminatedEventFilter
+  280: optional WorkflowExecutionCancelRequestedEventFilter workflowExecutionCancelRequestedEventFilter
+  290: optional WorkflowExecutionCanceledEventFilter workflowExecutionCanceledEventFilter
+  300: optional RequestCancelExternalWorkflowExecutionInitiatedEventFilter requestCancelExternalWorkflowExecutionInitiatedEventFilter
+  310: optional RequestCancelExternalWorkflowExecutionFailedEventFilter requestCancelExternalWorkflowExecutionFailedEventFilter
+  320: optional ExternalWorkflowExecutionCancelRequestedEventFilter externalWorkflowExecutionCancelRequestedEventFilter
+  330: optional WorkflowExecutionContinuedAsNewEventFilter workflowExecutionContinuedAsNewEventFilter
+  340: optional StartChildWorkflowExecutionInitiatedEventFilter startChildWorkflowExecutionInitiatedEventFilter
+  350: optional StartChildWorkflowExecutionFailedEventFilter startChildWorkflowExecutionFailedEventFilter
+  360: optional ChildWorkflowExecutionStartedEventFilter childWorkflowExecutionStartedEventFilter
+  370: optional ChildWorkflowExecutionCompletedEventFilter childWorkflowExecutionCompletedEventFilter
+  380: optional ChildWorkflowExecutionFailedEventFilter childWorkflowExecutionFailedEventFilter
+  390: optional ChildWorkflowExecutionCanceledEventFilter childWorkflowExecutionCanceledEventFilter
+  400: optional ChildWorkflowExecutionTimedOutEventFilter childWorkflowExecutionTimedOutEventFilter
+  410: optional ChildWorkflowExecutionTerminatedEventFilter childWorkflowExecutionTerminatedEventFilter
+}
+
+/*
+ * Workflow signal
+ */
+struct WorkflowExecutionSignaledEventFilter {
+  10: optional string signalName
+}
+
+/*
+ * Marker event
+ */
+struct MarkerRecordedEventFilter {
+  10: optional string markerName
+}
+
+/*
+ * Child workflow event
+ */
+struct StartChildWorkflowExecutionInitiatedEventFilter {
+  10: optional WorkflowType workflowType
+  20: optional string workflowId
+}
+
+struct StartChildWorkflowExecutionFailedEventFilter {
+  10: optional WorkflowType workflowType
+  20: optional string workflowId
+}
+
+struct ChildWorkflowExecutionStartedEventFilter {
+  10: optional WorkflowType workflowType
+  20: optional string workflowId
+}
+
+struct ChildWorkflowExecutionCompletedEventFilter {
+  10: optional WorkflowType workflowType
+  20: optional string workflowId
+}
+
+struct ChildWorkflowExecutionFailedEventFilter {
+  10: optional WorkflowType workflowType
+  20: optional string workflowId
+}
+
+struct ChildWorkflowExecutionTimedOutEventFilter {
+  10: optional WorkflowType workflowType
+  20: optional string workflowId
+}
+
+struct ChildWorkflowExecutionTerminatedEventFilter {
+  10: optional WorkflowType workflowType
+  20: optional string workflowId
+}
+
+struct ChildWorkflowExecutionCanceledEventFilter {
+  10: optional WorkflowType workflowType
+  20: optional string workflowId
+}
+
+/*
+ * Activity event
+ */
+struct ActivityTaskScheduledEventFilter {
+  10: optional ActivityType activityType
+  20: optional string activityId
+}
+
+struct ActivityTaskStartedEventFilter {
+  10: optional ActivityType activityType
+  20: optional string activityId
+}
+
+struct ActivityTaskCompletedEventFilter {
+  10: optional ActivityType activityType
+  20: optional string activityId
+}
+
+struct ActivityTaskFailedEventFilter {
+  10: optional ActivityType activityType
+  20: optional string activityId
+}
+
+struct ActivityTaskTimedOutEventFilter {
+  10: optional ActivityType activityType
+  20: optional string activityId
+}
+
+struct ActivityTaskCanceledEventFilter {
+  10: optional ActivityType activityType
+  20: optional string activityId
+}
+
+/*
+ * Below are the events which practally have no useful information inside
+ */
+
+/*
+ * Workflow event
+ */
+struct WorkflowExecutionStartedEventFilter {}
+struct WorkflowExecutionCompletedEventFilter {}
+struct WorkflowExecutionFailedEventFilter {}
+struct WorkflowExecutionTimedOutEventFilter {}
+struct WorkflowExecutionTerminatedEventFilter {}
+struct WorkflowExecutionCanceledEventFilter {}
+struct WorkflowExecutionContinuedAsNew {}
+struct WorkflowExecutionContinuedAsNewEventFilter {}
+
+/*
+ * Workflow cancellation
+ */
+struct WorkflowExecutionCancelRequestedEventFilter {}
+struct RequestCancelExternalWorkflowExecutionInitiatedEventFilter {}
+struct RequestCancelExternalWorkflowExecutionFailedEventFilter {}
+struct ExternalWorkflowExecutionCancelRequestedEventFilter {}
+
+/*
+ * Activity cancellation
+ */
+struct ActivityTaskCancelRequestedEventFilter {}
+struct RequestCancelActivityTaskFailedEventFilter {}
+
+/*
+ * Decision event
+ */
+struct DecisionTaskScheduledEventFilter {}
+struct DecisionTaskStartedEventFilter {}
+struct DecisionTaskCompletedEventFilter {}
+struct DecisionTaskTimedOutEventFilter {}
+struct DecisionTaskFailedEventFilter {}
+
+/*
+ * Timer events
+ */
+struct TimerStartedEventFilter {}
+struct TimerFiredEventFilter {}
+struct TimerCanceledEventFilter {}
+struct CancelTimerFailedEventFilter {}
