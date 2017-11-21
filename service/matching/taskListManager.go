@@ -42,6 +42,9 @@ const (
 	done time.Duration = -1
 )
 
+// NOTE: Is this good enough for stress tests?
+var _maxDispatchDefault = 100000.0
+
 type taskListManager interface {
 	Start() error
 	Stop()
@@ -49,13 +52,18 @@ type taskListManager interface {
 	GetTaskContext(ctx context.Context) (*taskContext, error)
 	SyncMatchQueryTask(ctx context.Context, queryTask *queryTaskInfo) error
 	CancelPoller(pollerID string)
+	UpdateMaxDispatch(maxDispatchPerSecond *float64)
 	String() string
 }
 
-func newTaskListManager(e *matchingEngineImpl, taskList *taskListID, config *Config) taskListManager {
+func newTaskListManager(
+	e *matchingEngineImpl, taskList *taskListID, config *Config, maxDispatchPerSecond *float64,
+) taskListManager {
 	// To perform one db operation if there are no pollers
 	taskBufferSize := config.GetTasksBatchSize - 1
-
+	if maxDispatchPerSecond == nil {
+		maxDispatchPerSecond = &_maxDispatchDefault
+	}
 	tlMgr := &taskListManagerImpl{
 		engine:     e,
 		taskBuffer: make(chan *persistence.TaskInfo, taskBufferSize),
@@ -66,11 +74,15 @@ func newTaskListManager(e *matchingEngineImpl, taskList *taskListID, config *Con
 			logging.TagTaskListType: taskList.taskType,
 			logging.TagTaskListName: taskList.taskListName,
 		}),
-		metricsClient:       e.metricsClient,
-		taskAckManager:      newAckManager(e.logger),
-		syncMatch:           make(chan *getTaskResult),
-		config:              config,
-		outstandingPollsMap: make(map[string]context.CancelFunc),
+		metricsClient:        e.metricsClient,
+		taskAckManager:       newAckManager(e.logger),
+		syncMatch:            make(chan *getTaskResult),
+		config:               config,
+		outstandingPollsMap:  make(map[string]context.CancelFunc),
+		maxDispatchPerSecond: maxDispatchPerSecond,
+		rateLimiter: common.NewTokenBucket(
+			int(*maxDispatchPerSecond), common.NewRealTimeSource(),
+		),
 	}
 	tlMgr.taskWriter = newTaskWriter(tlMgr)
 	tlMgr.startWG.Add(1)
@@ -94,11 +106,12 @@ type queryTaskInfo struct {
 
 // Single task list in memory state
 type taskListManagerImpl struct {
-	taskListID    *taskListID
-	logger        bark.Logger
-	metricsClient metrics.Client
-	engine        *matchingEngineImpl
-	config        *Config
+	taskListID           *taskListID
+	maxDispatchPerSecond *float64
+	logger               bark.Logger
+	metricsClient        metrics.Client
+	engine               *matchingEngineImpl
+	config               *Config
 	// serializes all writes to persistence
 	// This is needed because of a known Cassandra issue where concurrent LWT to the same partition
 	// cause timeout errors.
@@ -127,6 +140,9 @@ type taskListManagerImpl struct {
 	// prevent tasks being dispatched to zombie pollers.
 	outstandingPollsLock sync.Mutex
 	outstandingPollsMap  map[string]context.CancelFunc
+	// Rate limiter for task dispatch
+	rateLimiter common.TokenBucket
+	dispatchMu  sync.RWMutex
 }
 
 // getTaskResult contains task info and optional channel to notify createTask caller
@@ -232,6 +248,21 @@ func (c *taskListManagerImpl) GetTaskContext(ctx context.Context) (*taskContext,
 	return tCtx, nil
 }
 
+func (c *taskListManagerImpl) UpdateMaxDispatch(maxDispatchPerSecond *float64) {
+	if c.shouldUpdate(maxDispatchPerSecond) {
+		c.dispatchMu.Lock()
+		defer c.dispatchMu.Unlock()
+		c.maxDispatchPerSecond = maxDispatchPerSecond
+		c.rateLimiter = common.NewTokenBucket(int(*maxDispatchPerSecond), common.NewRealTimeSource())
+	}
+}
+
+func (c *taskListManagerImpl) shouldUpdate(maxDispatchPerSecond *float64) bool {
+	c.dispatchMu.RLock()
+	defer c.dispatchMu.RUnlock()
+	return maxDispatchPerSecond != nil && *maxDispatchPerSecond < *c.maxDispatchPerSecond
+}
+
 func (c *taskListManagerImpl) getRangeID() int64 {
 	c.Lock()
 	defer c.Unlock()
@@ -323,6 +354,17 @@ func (c *taskListManagerImpl) getTask(ctx context.Context) (*getTaskResult, erro
 		}()
 	}
 
+	c.dispatchMu.RLock()
+	if c.maxDispatchPerSecond != nil {
+		fmt.Println("PollForActivityTask: MaxDispatch: ", *c.maxDispatchPerSecond)
+	}
+	if ok, _ := c.rateLimiter.TryConsume(1); !ok {
+		c.dispatchMu.RUnlock()
+		// Note: Is a better error counter more appropriate here? We might not want high sevs for this
+		c.metricsClient.IncCounter(scope, metrics.PollErrorsCounter)
+		return nil, createServiceBusyError("TaskList dispatch exceeded limit")
+	}
+	c.dispatchMu.RUnlock()
 	select {
 	case task, ok := <-c.taskBuffer:
 		if !ok { // Task list getTasks pump is shutdown
@@ -688,8 +730,6 @@ func (c *taskContext) completeTask(err error) {
 	}
 }
 
-func createServiceBusyError() *s.ServiceBusyError {
-	err := &s.ServiceBusyError{}
-	err.Message = "Too many outstanding appends to the TaskList"
-	return err
+func createServiceBusyError(msg string) *s.ServiceBusyError {
+	return &s.ServiceBusyError{Message: msg}
 }

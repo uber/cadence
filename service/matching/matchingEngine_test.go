@@ -1154,12 +1154,12 @@ func (s *matchingEngineSuite) TestAddTaskAfterStartFailure() {
 	s.NoError(err)
 	s.EqualValues(1, s.taskManager.getTaskCount(tlID))
 
-	ctx, err := s.matchingEngine.getTask(context.Background(), tlID)
+	ctx, err := s.matchingEngine.getTask(context.Background(), tlID, nil)
 	s.NoError(err)
 
 	ctx.completeTask(errors.New("test error"))
 	s.EqualValues(1, s.taskManager.getTaskCount(tlID))
-	ctx2, err := s.matchingEngine.getTask(context.Background(), tlID)
+	ctx2, err := s.matchingEngine.getTask(context.Background(), tlID, nil)
 	s.NoError(err)
 
 	s.NotEqual(ctx.info.TaskID, ctx2.info.TaskID)

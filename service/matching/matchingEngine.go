@@ -153,15 +153,22 @@ func (e *matchingEngineImpl) String() string {
 	return r
 }
 
-// Returns taskListManager for a task list. If not already cached gets new range from DB and if successful creates one.
 func (e *matchingEngineImpl) getTaskListManager(taskList *taskListID) (taskListManager, error) {
+	return e.getTaskListManagerWithRPS(taskList, nil)
+}
+
+// Returns taskListManager for a task list. If not already cached gets new range from DB and if successful creates one.
+func (e *matchingEngineImpl) getTaskListManagerWithRPS(
+	taskList *taskListID, maxDispatchPerSecond *float64,
+) (taskListManager, error) {
 	e.taskListsLock.RLock()
 	if result, ok := e.taskLists[*taskList]; ok {
+		result.UpdateMaxDispatch(maxDispatchPerSecond)
 		e.taskListsLock.RUnlock()
 		return result, nil
 	}
 	e.taskListsLock.RUnlock()
-	mgr := newTaskListManager(e, taskList, e.config)
+	mgr := newTaskListManager(e, taskList, e.config, maxDispatchPerSecond)
 	e.taskListsLock.Lock()
 	if result, ok := e.taskLists[*taskList]; ok {
 		e.taskListsLock.Unlock()
@@ -247,7 +254,7 @@ pollLoop:
 		// long-poll when frontend calls CancelOutstandingPoll API
 		pollerCtx := context.WithValue(ctx, pollerIDKey, pollerID)
 		taskList := newTaskListID(domainID, taskListName, persistence.TaskListTypeDecision)
-		tCtx, err := e.getTask(pollerCtx, taskList)
+		tCtx, err := e.getTask(pollerCtx, taskList, nil)
 		if err != nil {
 			// TODO: Is empty poll the best reply for errPumpClosed?
 			if err == ErrNoTasks || err == errPumpClosed {
@@ -341,10 +348,14 @@ pollLoop:
 		}
 
 		taskList := newTaskListID(domainID, taskListName, persistence.TaskListTypeActivity)
+		var maxDispatch *float64
+		if req.PollRequest.TaskListMetadata != nil {
+			maxDispatch = req.PollRequest.TaskListMetadata.MaxTasksPerSecond
+		}
 		// Add frontend generated pollerID to context so tasklistMgr can support cancellation of
 		// long-poll when frontend calls CancelOutstandingPoll API
 		pollerCtx := context.WithValue(ctx, pollerIDKey, pollerID)
-		tCtx, err := e.getTask(pollerCtx, taskList)
+		tCtx, err := e.getTask(pollerCtx, taskList, maxDispatch)
 		if err != nil {
 			// TODO: Is empty poll the best reply for errPumpClosed?
 			if err == ErrNoTasks || err == errPumpClosed {
@@ -450,8 +461,10 @@ func (e *matchingEngineImpl) CancelOutstandingPoll(ctx context.Context, request 
 }
 
 // Loads a task from persistence and wraps it in a task context
-func (e *matchingEngineImpl) getTask(ctx context.Context, taskList *taskListID) (*taskContext, error) {
-	tlMgr, err := e.getTaskListManager(taskList)
+func (e *matchingEngineImpl) getTask(
+	ctx context.Context, taskList *taskListID, maxDispatchPerSecond *float64,
+) (*taskContext, error) {
+	tlMgr, err := e.getTaskListManagerWithRPS(taskList, maxDispatchPerSecond)
 	if err != nil {
 		return nil, err
 	}
