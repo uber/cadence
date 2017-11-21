@@ -747,10 +747,11 @@ Update_History_Loop:
 		}
 
 		scheduleID := task.EventID
+		di, isPending := msBuilder.GetPendingDecision(scheduleID)
 
 		// First check to see if cache needs to be refreshed as we could potentially have stale workflow execution in
 		// some extreme cassandra failure cases.
-		if scheduleID >= msBuilder.GetNextEventID() {
+		if !isPending && scheduleID >= msBuilder.GetNextEventID() {
 			t.metricsClient.IncCounter(metrics.TimerQueueProcessorScope, metrics.StaleMutableStateCounter)
 			// Reload workflow execution history
 			context.clear()
@@ -761,7 +762,6 @@ Update_History_Loop:
 		switch task.TimeoutType {
 		case int(workflow.TimeoutTypeStartToClose):
 			t.metricsClient.IncCounter(metrics.TimerTaskDecisionTimeoutScope, metrics.StartToCloseTimeoutCounter)
-			di, isPending := msBuilder.GetPendingDecision(scheduleID)
 			if isPending && di.Attempt == task.ScheduleAttempt && msBuilder.isWorkflowExecutionRunning() {
 				// Add a decision task timeout event.
 				msBuilder.AddDecisionTaskTimedOutEvent(scheduleID, di.StartedID)
@@ -771,7 +771,6 @@ Update_History_Loop:
 			t.metricsClient.IncCounter(metrics.TimerTaskDecisionTimeoutScope, metrics.ScheduleToStartTimeoutCounter)
 			// decision schedule to start timeout only apply to sticky decision
 			// check if scheduled decision still pending and not started yet
-			di, isPending := msBuilder.GetPendingDecision(scheduleID)
 			if isPending && di.Attempt == task.ScheduleAttempt && di.StartedID == emptyEventID &&
 				msBuilder.isStickyTaskListEnabled() {
 				timeoutEvent := msBuilder.AddDecisionTaskScheduleToStartTimeoutEvent(scheduleID)
