@@ -136,7 +136,7 @@ enum DecisionTaskFailedCause {
   BAD_CONTINUE_AS_NEW_ATTRIBUTES,
   START_TIMER_DUPLICATE_ID,
   RESET_STICKY_TASKLIST,
-  PANIC
+  DECIDER_PANIC
 }
 
 enum CancelExternalWorkflowExecutionFailedCause {

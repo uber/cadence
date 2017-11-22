@@ -4029,11 +4029,11 @@ const (
 	DecisionTaskFailedCauseBadContinueAsNewAttributes                          DecisionTaskFailedCause = 10
 	DecisionTaskFailedCauseStartTimerDuplicateID                               DecisionTaskFailedCause = 11
 	DecisionTaskFailedCauseResetStickyTasklist                                 DecisionTaskFailedCause = 12
-	DecisionTaskFailedCausePanic                                               DecisionTaskFailedCause = 13
+	DecisionTaskFailedCauseDeciderPanic                                        DecisionTaskFailedCause = 13
 )
 
 func DecisionTaskFailedCause_Values() []DecisionTaskFailedCause {
-	return []DecisionTaskFailedCause{DecisionTaskFailedCauseUnhandledDecision, DecisionTaskFailedCauseBadScheduleActivityAttributes, DecisionTaskFailedCauseBadRequestCancelActivityAttributes, DecisionTaskFailedCauseBadStartTimerAttributes, DecisionTaskFailedCauseBadCancelTimerAttributes, DecisionTaskFailedCauseBadRecordMarkerAttributes, DecisionTaskFailedCauseBadCompleteWorkflowExecutionAttributes, DecisionTaskFailedCauseBadFailWorkflowExecutionAttributes, DecisionTaskFailedCauseBadCancelWorkflowExecutionAttributes, DecisionTaskFailedCauseBadRequestCancelExternalWorkflowExecutionAttributes, DecisionTaskFailedCauseBadContinueAsNewAttributes, DecisionTaskFailedCauseStartTimerDuplicateID, DecisionTaskFailedCauseResetStickyTasklist, DecisionTaskFailedCausePanic}
+	return []DecisionTaskFailedCause{DecisionTaskFailedCauseUnhandledDecision, DecisionTaskFailedCauseBadScheduleActivityAttributes, DecisionTaskFailedCauseBadRequestCancelActivityAttributes, DecisionTaskFailedCauseBadStartTimerAttributes, DecisionTaskFailedCauseBadCancelTimerAttributes, DecisionTaskFailedCauseBadRecordMarkerAttributes, DecisionTaskFailedCauseBadCompleteWorkflowExecutionAttributes, DecisionTaskFailedCauseBadFailWorkflowExecutionAttributes, DecisionTaskFailedCauseBadCancelWorkflowExecutionAttributes, DecisionTaskFailedCauseBadRequestCancelExternalWorkflowExecutionAttributes, DecisionTaskFailedCauseBadContinueAsNewAttributes, DecisionTaskFailedCauseStartTimerDuplicateID, DecisionTaskFailedCauseResetStickyTasklist, DecisionTaskFailedCauseDeciderPanic}
 }
 
 func (v *DecisionTaskFailedCause) UnmarshalText(value []byte) error {
@@ -4077,8 +4077,8 @@ func (v *DecisionTaskFailedCause) UnmarshalText(value []byte) error {
 	case "RESET_STICKY_TASKLIST":
 		*v = DecisionTaskFailedCauseResetStickyTasklist
 		return nil
-	case "PANIC":
-		*v = DecisionTaskFailedCausePanic
+	case "DECIDER_PANIC":
+		*v = DecisionTaskFailedCauseDeciderPanic
 		return nil
 	default:
 		return fmt.Errorf("unknown enum value %q for %q", value, "DecisionTaskFailedCause")
@@ -4124,7 +4124,7 @@ func (v DecisionTaskFailedCause) String() string {
 	case 12:
 		return "RESET_STICKY_TASKLIST"
 	case 13:
-		return "PANIC"
+		return "DECIDER_PANIC"
 	}
 	return fmt.Sprintf("DecisionTaskFailedCause(%d)", w)
 }
@@ -4162,7 +4162,7 @@ func (v DecisionTaskFailedCause) MarshalJSON() ([]byte, error) {
 	case 12:
 		return ([]byte)("\"RESET_STICKY_TASKLIST\""), nil
 	case 13:
-		return ([]byte)("\"PANIC\""), nil
+		return ([]byte)("\"DECIDER_PANIC\""), nil
 	}
 	return ([]byte)(strconv.FormatInt(int64(v), 10)), nil
 }
