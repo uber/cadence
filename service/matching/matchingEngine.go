@@ -491,7 +491,6 @@ func (e *matchingEngineImpl) createPollForDecisionTaskResponse(context *taskCont
 	response.StartedEventId = historyResponse.StartedEventId
 	response.StickyExecutionEnabled = historyResponse.StickyExecutionEnabled
 	response.BacklogCountHint = common.Int64Ptr(context.backlogCountHint)
-	response.Attempt = historyResponse.Attempt
 	response.NextEventId = historyResponse.NextEventId
 	response.DecisionInfo = historyResponse.DecisionInfo
 

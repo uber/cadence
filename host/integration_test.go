@@ -1748,7 +1748,7 @@ func (s *integrationSuite) TestDescribeWorkflowExecution() {
 	signalSent := false
 	var signalEvent *workflow.HistoryEvent
 	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
-		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision) {
+		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
 		if !signalSent {
 			signalSent = true
 
@@ -1765,7 +1765,7 @@ func (s *integrationSuite) TestDescribeWorkflowExecution() {
 					StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
 					HeartbeatTimeoutSeconds:       common.Int32Ptr(5),
 				},
-			}}
+			}}, nil
 		} else if previousStartedEventID > 0 && signalEvent == nil {
 			for _, event := range history.Events[previousStartedEventID:] {
 				if *event.EventType == workflow.EventTypeWorkflowExecutionSignaled {
@@ -1780,7 +1780,7 @@ func (s *integrationSuite) TestDescribeWorkflowExecution() {
 			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
 				Result: []byte("Done."),
 			},
-		}}
+		}}, nil
 	}
 
 	poller := &taskPoller{
@@ -1791,6 +1791,7 @@ func (s *integrationSuite) TestDescribeWorkflowExecution() {
 		decisionHandler: dtHandler,
 		activityHandler: nil,
 		logger:          s.logger,
+		suite:           s,
 	}
 
 	// first decision to schedule new activity
