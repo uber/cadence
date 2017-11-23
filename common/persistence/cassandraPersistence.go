@@ -1687,18 +1687,16 @@ func (d *cassandraPersistence) createTimerTasks(batch *gocql.Batch, timerTasks [
 
 		timeoutType := 0
 
-		switch task.GetType() {
-		case TaskTypeDecisionTimeout:
-			eventID = task.(*DecisionTimeoutTask).EventID
-			timeoutType = task.(*DecisionTimeoutTask).TimeoutType
-			attempt = task.(*DecisionTimeoutTask).ScheduleAttempt
-
-		case TaskTypeActivityTimeout:
-			eventID = task.(*ActivityTimeoutTask).EventID
-			timeoutType = task.(*ActivityTimeoutTask).TimeoutType
-
-		case TaskTypeUserTimer:
-			eventID = task.(*UserTimerTask).EventID
+		switch t := task.(type) {
+		case *DecisionTimeoutTask:
+			eventID = t.EventID
+			timeoutType = t.TimeoutType
+			attempt = t.ScheduleAttempt
+		case *ActivityTimeoutTask:
+			eventID = t.EventID
+			timeoutType = t.TimeoutType
+		case *UserTimerTask:
+			eventID = t.EventID
 		}
 
 		ts := common.UnixNanoToCQLTimestamp(GetVisibilityTSFrom(task).UnixNano())

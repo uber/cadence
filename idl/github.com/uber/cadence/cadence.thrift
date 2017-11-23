@@ -133,7 +133,8 @@ service WorkflowService {
   /**
   * RespondDecisionTaskFailed is called by application worker to indicate failure.  This results in
   * DecisionTaskFailedEvent written to the history and a new DecisionTask created.  This API can be used by client to
-  * either clear sticky tasklist or report any panics during DecisionTask processing.
+  * either clear sticky tasklist or report any panics during DecisionTask processing.  Cadence will only append first
+  * DecisionTaskFailed event to the history of workflow execution for consecutive failures.
   **/
   void RespondDecisionTaskFailed(1: shared.RespondDecisionTaskFailedRequest failedRequest)
     throws (

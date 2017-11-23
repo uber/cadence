@@ -390,7 +390,6 @@ func (s *cassandraPersistenceSuite) TestTransferTasks() {
 	s.Equal("queue1", task1.TaskList)
 	s.Equal(TransferTaskTypeDecisionTask, task1.TaskType)
 	s.Equal(int64(2), task1.ScheduleID)
-	s.Equal(int64(0), task1.ScheduleAttempt)
 	s.Equal(transferTaskTransferTargetWorkflowID, task1.TargetWorkflowID)
 	s.Equal(transferTaskTypeTransferTargetRunID, task1.TargetRunID)
 

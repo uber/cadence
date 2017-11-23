@@ -156,7 +156,6 @@ type (
 		TaskList         string
 		TaskType         int
 		ScheduleID       int64
-		ScheduleAttempt  int64
 	}
 
 	// TimerTaskInfo describes a timer task.
@@ -189,7 +188,6 @@ type (
 		TaskID                 int64
 		ScheduleID             int64
 		ScheduleToStartTimeout int32
-		ScheduleAttempt        int64
 	}
 
 	// Task is the generic interface for workflow tasks
