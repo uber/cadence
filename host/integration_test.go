@@ -552,7 +552,7 @@ retry:
 			p.logger.Infof("Failing Decision. Decision handler failed with error: %v", err)
 			return p.engine.RespondDecisionTaskFailed(createContext(), &workflow.RespondDecisionTaskFailedRequest{
 				TaskToken: response.TaskToken,
-				Cause:     common.DecisionTaskFailedCausePtr(workflow.DecisionTaskFailedCauseDeciderPanic),
+				Cause:     common.DecisionTaskFailedCausePtr(workflow.DecisionTaskFailedCauseWorkflowWorkerUnhandledFailure),
 				Details:   []byte(err.Error()),
 				Identity:  common.StringPtr(p.identity),
 			})
