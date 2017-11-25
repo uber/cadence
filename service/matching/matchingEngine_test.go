@@ -456,6 +456,14 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 	s.taskManager.getTaskListManager(tlID).rangeID = initialRangeID
 	s.matchingEngine.config.RangeSize = rangeSize // override to low number for the test
 
+	dispatchTTL := time.Nanosecond
+	mgr := newTaskListManagerWithRateLimiter(
+		s.matchingEngine, tlID, s.matchingEngine.config,
+		newRateLimiter(&_maxDispatchDefault, dispatchTTL),
+	)
+	s.matchingEngine.updateTaskList(tlID, mgr)
+	s.NoError(mgr.Start())
+
 	taskList := &workflow.TaskList{}
 	taskList.Name = &tl
 	activityTypeName := "activity1"
@@ -489,6 +497,7 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 				})}
 		}, nil)
 
+	zeroDispatchCt := 0
 	for i := int64(0); i < taskCount; i++ {
 		scheduleID := i * 3
 
@@ -496,16 +505,30 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 
 		var result *workflow.PollForActivityTaskResponse
 		var pollErr error
+		maxDispatch := _maxDispatchDefault + 1
+		if i%2 == 0 {
+			maxDispatch = 0
+		}
 		wg.Add(1)
 		go func() {
 			result, pollErr = s.matchingEngine.PollForActivityTask(s.callContext, &matching.PollForActivityTaskRequest{
 				DomainUUID: common.StringPtr(domainID),
 				PollRequest: &workflow.PollForActivityTaskRequest{
-					TaskList: taskList,
-					Identity: &identity},
+					TaskList:         taskList,
+					Identity:         &identity,
+					TaskListMetadata: &workflow.TaskListMetadata{MaxTasksPerSecond: &maxDispatch},
+				},
 			})
 			wg.Done()
 		}()
+		if maxDispatch == 0 {
+			wg.Wait()
+			s.Error(pollErr)
+			s.Contains(pollErr.Error(), "ServiceBusyError")
+			time.Sleep(dispatchTTL) // Sleep should be atleast ttl so max Dispatch gets updated
+			zeroDispatchCt++
+			continue
+		}
 		time.Sleep(50 * time.Millisecond)
 		addRequest := matching.AddActivityTaskRequest{
 			SourceDomainUUID:              common.StringPtr(domainID),
@@ -517,7 +540,6 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 		}
 		err := s.matchingEngine.AddActivityTask(&addRequest)
 		s.NoError(err)
-
 		wg.Wait()
 
 		s.NoError(pollErr)
@@ -543,6 +565,7 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 		s.EqualValues(string(taskToken), string(result.TaskToken))
 
 	}
+	s.Equal(taskCount/2, zeroDispatchCt)                     // Every multiple of 2 should be zero dispatch
 	s.EqualValues(0, s.taskManager.getCreateTaskCount(tlID)) // Not tasks stored in persistence
 	s.EqualValues(0, s.taskManager.getTaskCount(tlID))
 	expectedRange := int64(initialRangeID + taskCount/rangeSize)
@@ -634,11 +657,13 @@ func (s *matchingEngineSuite) TestConcurrentPublishConsumeActivities() {
 				result, err := s.matchingEngine.PollForActivityTask(s.callContext, &matching.PollForActivityTaskRequest{
 					DomainUUID: common.StringPtr(domainID),
 					PollRequest: &workflow.PollForActivityTaskRequest{
-						TaskList: taskList,
-						Identity: &identity},
+						TaskList:         taskList,
+						Identity:         &identity,
+						TaskListMetadata: &workflow.TaskListMetadata{MaxTasksPerSecond: &_maxDispatchDefault},
+					},
 				})
 				if err != nil {
-					panic(err)
+					s.NoError(err)
 				}
 				s.NotNil(result)
 				if len(result.TaskToken) == 0 {
@@ -657,7 +682,7 @@ func (s *matchingEngineSuite) TestConcurrentPublishConsumeActivities() {
 				}
 				resultToken, err := s.matchingEngine.tokenSerializer.Deserialize(result.TaskToken)
 				if err != nil {
-					panic(err)
+					s.NoError(err)
 				}
 
 				//taskToken, _ := s.matchingEngine.tokenSerializer.Serialize(token)

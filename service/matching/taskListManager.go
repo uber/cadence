@@ -43,7 +43,10 @@ const (
 )
 
 // NOTE: Is this good enough for stress tests?
-var _maxDispatchDefault = 100000.0
+var (
+	_maxDispatchDefault = 100000.0
+	_dispatchLimitTTL   = time.Second
+)
 
 type taskListManager interface {
 	Start() error
@@ -56,14 +59,77 @@ type taskListManager interface {
 	String() string
 }
 
+type rateLimiter struct {
+	maxDispatchPerSecond *float64
+	tokenBucket          common.TokenBucket
+	ttl                  *time.Timer
+	sync.RWMutex
+	ttlRaw time.Duration
+}
+
+func newRateLimiter(maxDispatchPerSecond *float64, ttl time.Duration) rateLimiter {
+	return rateLimiter{
+		maxDispatchPerSecond: maxDispatchPerSecond,
+		tokenBucket: common.NewTokenBucket(
+			int(*maxDispatchPerSecond), common.NewRealTimeSource(),
+		),
+		ttlRaw: ttl,
+		ttl:    time.NewTimer(ttl),
+	}
+}
+
+func (rl *rateLimiter) UpdateMaxDispatch(maxDispatchPerSecond *float64) {
+	if rl.shouldUpdate(maxDispatchPerSecond) {
+		rl.Lock()
+		defer rl.Unlock()
+		rl.maxDispatchPerSecond = maxDispatchPerSecond
+		rl.tokenBucket = common.NewTokenBucket(int(*maxDispatchPerSecond), common.NewRealTimeSource())
+	}
+}
+
+func (rl *rateLimiter) shouldUpdate(maxDispatchPerSecond *float64) bool {
+	rl.RLock()
+	defer rl.RUnlock()
+	if maxDispatchPerSecond == nil {
+		return false
+	}
+	select {
+	case <-rl.ttl.C:
+		rl.ttl.Reset(rl.ttlRaw)
+		return true
+	default:
+		return *maxDispatchPerSecond < *rl.maxDispatchPerSecond
+	}
+}
+
+func (rl *rateLimiter) TryConsume(count int) (bool, time.Duration) {
+	rl.RLock()
+	defer rl.RUnlock()
+	return rl.tokenBucket.TryConsume(count)
+}
+
+func (rl *rateLimiter) Consume(count int, timeout time.Duration) bool {
+	rl.RLock()
+	defer rl.RUnlock()
+	return rl.tokenBucket.Consume(count, timeout)
+}
+
 func newTaskListManager(
 	e *matchingEngineImpl, taskList *taskListID, config *Config, maxDispatchPerSecond *float64,
 ) taskListManager {
-	// To perform one db operation if there are no pollers
-	taskBufferSize := config.GetTasksBatchSize - 1
 	if maxDispatchPerSecond == nil {
 		maxDispatchPerSecond = &_maxDispatchDefault
 	}
+	rl := newRateLimiter(maxDispatchPerSecond, _dispatchLimitTTL)
+	return newTaskListManagerWithRateLimiter(e, taskList, config, rl)
+}
+
+// Only for tests
+func newTaskListManagerWithRateLimiter(
+	e *matchingEngineImpl, taskList *taskListID, config *Config, rl rateLimiter,
+) taskListManager {
+	// To perform one db operation if there are no pollers
+	taskBufferSize := config.GetTasksBatchSize - 1
 	tlMgr := &taskListManagerImpl{
 		engine:     e,
 		taskBuffer: make(chan *persistence.TaskInfo, taskBufferSize),
@@ -74,15 +140,12 @@ func newTaskListManager(
 			logging.TagTaskListType: taskList.taskType,
 			logging.TagTaskListName: taskList.taskListName,
 		}),
-		metricsClient:        e.metricsClient,
-		taskAckManager:       newAckManager(e.logger),
-		syncMatch:            make(chan *getTaskResult),
-		config:               config,
-		outstandingPollsMap:  make(map[string]context.CancelFunc),
-		maxDispatchPerSecond: maxDispatchPerSecond,
-		rateLimiter: common.NewTokenBucket(
-			int(*maxDispatchPerSecond), common.NewRealTimeSource(),
-		),
+		metricsClient:       e.metricsClient,
+		taskAckManager:      newAckManager(e.logger),
+		syncMatch:           make(chan *getTaskResult),
+		config:              config,
+		outstandingPollsMap: make(map[string]context.CancelFunc),
+		rateLimiter:         rl,
 	}
 	tlMgr.taskWriter = newTaskWriter(tlMgr)
 	tlMgr.startWG.Add(1)
@@ -106,12 +169,11 @@ type queryTaskInfo struct {
 
 // Single task list in memory state
 type taskListManagerImpl struct {
-	taskListID           *taskListID
-	maxDispatchPerSecond *float64
-	logger               bark.Logger
-	metricsClient        metrics.Client
-	engine               *matchingEngineImpl
-	config               *Config
+	taskListID    *taskListID
+	logger        bark.Logger
+	metricsClient metrics.Client
+	engine        *matchingEngineImpl
+	config        *Config
 	// serializes all writes to persistence
 	// This is needed because of a known Cassandra issue where concurrent LWT to the same partition
 	// cause timeout errors.
@@ -141,8 +203,7 @@ type taskListManagerImpl struct {
 	outstandingPollsLock sync.Mutex
 	outstandingPollsMap  map[string]context.CancelFunc
 	// Rate limiter for task dispatch
-	rateLimiter common.TokenBucket
-	dispatchMu  sync.RWMutex
+	rateLimiter rateLimiter
 }
 
 // getTaskResult contains task info and optional channel to notify createTask caller
@@ -249,18 +310,7 @@ func (c *taskListManagerImpl) GetTaskContext(ctx context.Context) (*taskContext,
 }
 
 func (c *taskListManagerImpl) UpdateMaxDispatch(maxDispatchPerSecond *float64) {
-	if c.shouldUpdate(maxDispatchPerSecond) {
-		c.dispatchMu.Lock()
-		defer c.dispatchMu.Unlock()
-		c.maxDispatchPerSecond = maxDispatchPerSecond
-		c.rateLimiter = common.NewTokenBucket(int(*maxDispatchPerSecond), common.NewRealTimeSource())
-	}
-}
-
-func (c *taskListManagerImpl) shouldUpdate(maxDispatchPerSecond *float64) bool {
-	c.dispatchMu.RLock()
-	defer c.dispatchMu.RUnlock()
-	return maxDispatchPerSecond != nil && *maxDispatchPerSecond < *c.maxDispatchPerSecond
+	c.rateLimiter.UpdateMaxDispatch(maxDispatchPerSecond)
 }
 
 func (c *taskListManagerImpl) getRangeID() int64 {
@@ -354,17 +404,11 @@ func (c *taskListManagerImpl) getTask(ctx context.Context) (*getTaskResult, erro
 		}()
 	}
 
-	c.dispatchMu.RLock()
-	if c.maxDispatchPerSecond != nil {
-		fmt.Println("PollForActivityTask: MaxDispatch: ", *c.maxDispatchPerSecond)
-	}
 	if ok, _ := c.rateLimiter.TryConsume(1); !ok {
-		c.dispatchMu.RUnlock()
 		// Note: Is a better error counter more appropriate here? We might not want high sevs for this
 		c.metricsClient.IncCounter(scope, metrics.PollErrorsCounter)
 		return nil, createServiceBusyError("TaskList dispatch exceeded limit")
 	}
-	c.dispatchMu.RUnlock()
 	select {
 	case task, ok := <-c.taskBuffer:
 		if !ok { // Task list getTasks pump is shutdown
