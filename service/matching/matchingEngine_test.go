@@ -453,6 +453,7 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 	domainID := "domainId"
 	tl := "makeToast"
 	tlID := &taskListID{domainID: domainID, taskListName: tl, taskType: persistence.TaskListTypeActivity}
+	// TODO (madhu): Move aftertask list update
 	s.taskManager.getTaskListManager(tlID).rangeID = initialRangeID
 	s.matchingEngine.config.RangeSize = rangeSize // override to low number for the test
 
@@ -498,6 +499,7 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 		}, nil)
 
 	zeroDispatchCt := 0
+	var maxDispatch float64
 	for i := int64(0); i < taskCount; i++ {
 		scheduleID := i * 3
 
@@ -505,7 +507,7 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 
 		var result *workflow.PollForActivityTaskResponse
 		var pollErr error
-		maxDispatch := _maxDispatchDefault + 1
+		maxDispatch = float64(i)
 		if i%2 == 0 {
 			maxDispatch = 0
 		}
@@ -577,21 +579,54 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 }
 
 func (s *matchingEngineSuite) TestConcurrentPublishConsumeActivities() {
+	dispatchLimitFn := func(int, int64) float64 {
+		return _maxDispatchDefault
+	}
+	const workerCount = 200
+	const taskCount = 100
+	tlID, errCt := s.concurrentPublishConsumeActivities(workerCount, taskCount, dispatchLimitFn)
+	s.Zero(errCt)
+	s.EqualValues(0, s.taskManager.getTaskCount(tlID))
+}
+
+func (s *matchingEngineSuite) TestConcurrentPublishConsumeActivitiesWithZeroDispatch() {
+	dispatchLimitFn := func(wc int, tc int64) float64 {
+		if tc == 0 && wc%50 == 0 { // Gets triggered atleast 4 times
+			return 0
+		}
+		return _maxDispatchDefault
+	}
+	const workerCount = 200
+	const taskCount = 100
+	tlID, errCt := s.concurrentPublishConsumeActivities(workerCount, taskCount, dispatchLimitFn)
+	// atleast 4 times from 0 dispatch poll, but quite a bit more until TTL is hit and throttle limit
+	// is reset
+	s.True(errCt >= 4 && errCt < (workerCount*int(taskCount)))
+	s.True(s.taskManager.getTaskCount(tlID) > 0)
+}
+
+func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
+	workerCount int, taskCount int64, dispatchLimitFn func(int, int64) float64,
+) (*taskListID, int) {
 	runID := "run1"
 	workflowID := "workflow1"
 	workflowExecution := workflow.WorkflowExecution{RunId: &runID, WorkflowId: &workflowID}
 
-	const workerCount = 200
-	const taskCount = 100
 	const initialRangeID = 0
 	const rangeSize = 3
 	var scheduleID int64 = 123
-
 	domainID := "domainId"
 	tl := "makeToast"
 	tlID := &taskListID{domainID: domainID, taskListName: tl, taskType: persistence.TaskListTypeActivity}
-	s.taskManager.getTaskListManager(tlID).rangeID = initialRangeID
+	dispatchTTL := time.Nanosecond
 	s.matchingEngine.config.RangeSize = rangeSize // override to low number for the test
+	mgr := newTaskListManagerWithRateLimiter(
+		s.matchingEngine, tlID, s.matchingEngine.config,
+		newRateLimiter(&_maxDispatchDefault, dispatchTTL),
+	)
+	s.matchingEngine.updateTaskList(tlID, mgr)
+	s.taskManager.getTaskListManager(tlID).rangeID = initialRangeID
+	s.NoError(mgr.Start())
 
 	taskList := &workflow.TaskList{}
 	taskList.Name = &tl
@@ -651,19 +686,25 @@ func (s *matchingEngineSuite) TestConcurrentPublishConsumeActivities() {
 					Identity: &identity,
 				})}
 		}, nil)
+	var maxDispatch float64
+	throttleCt := 0
 	for p := 0; p < workerCount; p++ {
 		go func() {
 			for i := int64(0); i < taskCount; {
+				maxDispatch = dispatchLimitFn(p, i)
 				result, err := s.matchingEngine.PollForActivityTask(s.callContext, &matching.PollForActivityTaskRequest{
 					DomainUUID: common.StringPtr(domainID),
 					PollRequest: &workflow.PollForActivityTaskRequest{
 						TaskList:         taskList,
 						Identity:         &identity,
-						TaskListMetadata: &workflow.TaskListMetadata{MaxTasksPerSecond: &_maxDispatchDefault},
+						TaskListMetadata: &workflow.TaskListMetadata{MaxTasksPerSecond: &maxDispatch},
 					},
 				})
 				if err != nil {
-					s.NoError(err)
+					s.Contains(err.Error(), "ServiceBusyError")
+					throttleCt++
+					i++
+					continue
 				}
 				s.NotNil(result)
 				if len(result.TaskToken) == 0 {
@@ -694,8 +735,7 @@ func (s *matchingEngineSuite) TestConcurrentPublishConsumeActivities() {
 		}()
 	}
 	wg.Wait()
-	s.EqualValues(0, s.taskManager.getTaskCount(tlID))
-	totalTasks := taskCount * workerCount
+	totalTasks := int(taskCount) * workerCount
 	persisted := s.taskManager.getCreateTaskCount(tlID)
 	s.True(persisted < totalTasks)
 	expectedRange := int64(initialRangeID + persisted/rangeSize)
@@ -704,6 +744,7 @@ func (s *matchingEngineSuite) TestConcurrentPublishConsumeActivities() {
 	}
 	// Due to conflicts some ids are skipped and more real ranges are used.
 	s.True(expectedRange <= s.taskManager.getTaskListManager(tlID).rangeID)
+	return tlID, throttleCt
 }
 
 func (s *matchingEngineSuite) TestConcurrentPublishConsumeDecisions() {
