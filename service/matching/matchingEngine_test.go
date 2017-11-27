@@ -530,7 +530,7 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 			zeroDispatchCt++
 			continue
 		}
-		time.Sleep(dispatchTTL)
+		time.Sleep(50 * time.Millisecond) // Necessary for sync match to happen
 		addRequest := matching.AddActivityTaskRequest{
 			SourceDomainUUID:              common.StringPtr(domainID),
 			DomainUUID:                    common.StringPtr(domainID),
