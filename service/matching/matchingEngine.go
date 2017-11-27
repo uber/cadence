@@ -129,10 +129,10 @@ func (e *matchingEngineImpl) Stop() {
 }
 
 func (e *matchingEngineImpl) getTaskLists(maxCount int) (lists []taskListManager) {
-	lists = make([]taskListManager, 0, len(e.taskLists))
-	count := 0
 	e.taskListsLock.Lock()
 	defer e.taskListsLock.Unlock()
+	lists = make([]taskListManager, 0, len(e.taskLists))
+	count := 0
 	for _, tlMgr := range e.taskLists {
 		lists = append(lists, tlMgr)
 		count++
