@@ -157,7 +157,9 @@ func (e *matchingEngineImpl) getTaskListManager(taskList *taskListID) (taskListM
 	return e.getTaskListManagerWithRPS(taskList, nil)
 }
 
-// Returns taskListManager for a task list. If not already cached gets new range from DB and if successful creates one.
+// Returns taskListManager for a task list. If not already cached gets new range from DB and
+// if successful creates one. The passed in throttling limit determines how many tasks are
+// dispatcher per second.
 func (e *matchingEngineImpl) getTaskListManagerWithRPS(
 	taskList *taskListID, maxDispatchPerSecond *float64,
 ) (taskListManager, error) {

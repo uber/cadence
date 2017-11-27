@@ -453,8 +453,6 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 	domainID := "domainId"
 	tl := "makeToast"
 	tlID := &taskListID{domainID: domainID, taskListName: tl, taskType: persistence.TaskListTypeActivity}
-	// TODO (madhu): Move aftertask list update
-	s.taskManager.getTaskListManager(tlID).rangeID = initialRangeID
 	s.matchingEngine.config.RangeSize = rangeSize // override to low number for the test
 
 	dispatchTTL := time.Nanosecond
@@ -463,6 +461,7 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 		newRateLimiter(&_maxDispatchDefault, dispatchTTL),
 	)
 	s.matchingEngine.updateTaskList(tlID, mgr)
+	s.taskManager.getTaskListManager(tlID).rangeID = initialRangeID
 	s.NoError(mgr.Start())
 
 	taskList := &workflow.TaskList{}
@@ -722,9 +721,7 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 					ScheduleID: scheduleID,
 				}
 				resultToken, err := s.matchingEngine.tokenSerializer.Deserialize(result.TaskToken)
-				if err != nil {
-					s.NoError(err)
-				}
+				s.NoError(err)
 
 				//taskToken, _ := s.matchingEngine.tokenSerializer.Serialize(token)
 				//s.EqualValues(taskToken, result.TaskToken, fmt.Sprintf("%v!=%v", string(taskToken)))
