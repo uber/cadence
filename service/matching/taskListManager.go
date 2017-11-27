@@ -43,7 +43,7 @@ const (
 )
 
 // NOTE: Is this good enough for stress tests?
-var (
+const (
 	_maxDispatchDefault = 100000.0
 	_dispatchLimitTTL   = time.Second
 )
@@ -117,8 +117,9 @@ func (rl *rateLimiter) Consume(count int, timeout time.Duration) bool {
 func newTaskListManager(
 	e *matchingEngineImpl, taskList *taskListID, config *Config, maxDispatchPerSecond *float64,
 ) taskListManager {
+	dPtr := _maxDispatchDefault
 	if maxDispatchPerSecond == nil {
-		maxDispatchPerSecond = &_maxDispatchDefault
+		maxDispatchPerSecond = &dPtr
 	}
 	rl := newRateLimiter(maxDispatchPerSecond, _dispatchLimitTTL)
 	return newTaskListManagerWithRateLimiter(e, taskList, config, rl)

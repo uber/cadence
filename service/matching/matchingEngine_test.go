@@ -456,9 +456,10 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 	s.matchingEngine.config.RangeSize = rangeSize // override to low number for the test
 
 	dispatchTTL := time.Nanosecond
+	dPtr := _maxDispatchDefault
 	mgr := newTaskListManagerWithRateLimiter(
 		s.matchingEngine, tlID, s.matchingEngine.config,
-		newRateLimiter(&_maxDispatchDefault, dispatchTTL),
+		newRateLimiter(&dPtr, dispatchTTL),
 	)
 	s.matchingEngine.updateTaskList(tlID, mgr)
 	s.taskManager.getTaskListManager(tlID).rangeID = initialRangeID
@@ -498,7 +499,6 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 		}, nil)
 
 	zeroDispatchCt := 0
-	var maxDispatch float64
 	for i := int64(0); i < taskCount; i++ {
 		scheduleID := i * 3
 
@@ -506,7 +506,7 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 
 		var result *workflow.PollForActivityTaskResponse
 		var pollErr error
-		maxDispatch = float64(i)
+		maxDispatch := float64(i)
 		if i%2 == 0 {
 			maxDispatch = 0
 		}
@@ -619,9 +619,10 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 	tlID := &taskListID{domainID: domainID, taskListName: tl, taskType: persistence.TaskListTypeActivity}
 	dispatchTTL := time.Nanosecond
 	s.matchingEngine.config.RangeSize = rangeSize // override to low number for the test
+	dPtr := _maxDispatchDefault
 	mgr := newTaskListManagerWithRateLimiter(
 		s.matchingEngine, tlID, s.matchingEngine.config,
-		newRateLimiter(&_maxDispatchDefault, dispatchTTL),
+		newRateLimiter(&dPtr, dispatchTTL),
 	)
 	s.matchingEngine.updateTaskList(tlID, mgr)
 	s.taskManager.getTaskListManager(tlID).rangeID = initialRangeID
@@ -685,12 +686,12 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 					Identity: &identity,
 				})}
 		}, nil)
-	var maxDispatch float64
+	var throttleMu sync.Mutex
 	throttleCt := 0
 	for p := 0; p < workerCount; p++ {
-		go func() {
+		go func(wNum int) {
 			for i := int64(0); i < taskCount; {
-				maxDispatch = dispatchLimitFn(p, i)
+				maxDispatch := dispatchLimitFn(wNum, i)
 				result, err := s.matchingEngine.PollForActivityTask(s.callContext, &matching.PollForActivityTaskRequest{
 					DomainUUID: common.StringPtr(domainID),
 					PollRequest: &workflow.PollForActivityTaskRequest{
@@ -701,7 +702,9 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 				})
 				if err != nil {
 					s.Contains(err.Error(), "ServiceBusyError")
+					throttleMu.Lock()
 					throttleCt++
+					throttleMu.Unlock()
 					i++
 					continue
 				}
@@ -729,7 +732,7 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 				i++
 			}
 			wg.Done()
-		}()
+		}(p)
 	}
 	wg.Wait()
 	totalTasks := int(taskCount) * workerCount
