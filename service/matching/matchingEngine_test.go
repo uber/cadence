@@ -581,7 +581,7 @@ func (s *matchingEngineSuite) TestConcurrentPublishConsumeActivities() {
 	dispatchLimitFn := func(int, int64) float64 {
 		return _maxDispatchDefault
 	}
-	const workerCount = 200
+	const workerCount = 20
 	const taskCount = 100
 	tlID, errCt := s.concurrentPublishConsumeActivities(workerCount, taskCount, dispatchLimitFn)
 	s.Zero(errCt)
@@ -590,12 +590,12 @@ func (s *matchingEngineSuite) TestConcurrentPublishConsumeActivities() {
 
 func (s *matchingEngineSuite) TestConcurrentPublishConsumeActivitiesWithZeroDispatch() {
 	dispatchLimitFn := func(wc int, tc int64) float64 {
-		if tc == 0 && wc%50 == 0 { // Gets triggered atleast 4 times
+		if tc == 0 && wc%5 == 0 { // Gets triggered atleast 4 times
 			return 0
 		}
 		return _maxDispatchDefault
 	}
-	const workerCount = 200
+	const workerCount = 20
 	const taskCount = 100
 	tlID, errCt := s.concurrentPublishConsumeActivities(workerCount, taskCount, dispatchLimitFn)
 	// atleast 4 times from 0 dispatch poll, but quite a bit more until TTL is hit and throttle limit
@@ -749,7 +749,7 @@ func (s *matchingEngineSuite) TestConcurrentPublishConsumeDecisions() {
 	workflowID := "workflow1"
 	workflowExecution := workflow.WorkflowExecution{RunId: &runID, WorkflowId: &workflowID}
 
-	const workerCount = 200
+	const workerCount = 20
 	const taskCount = 100
 	const initialRangeID = 0
 	const rangeSize = 5
