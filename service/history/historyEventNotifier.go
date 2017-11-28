@@ -38,46 +38,34 @@ const (
 )
 
 type (
-	workflowIdentifier struct {
-		domainID   string
-		workflowID string
-		runID      string
-	}
-
-	historyEvent struct {
-		workflowIdentifier
-		nextEventID       int64
-		isWorkflowRunning bool
-	}
-
 	historyEventNotifierImpl struct {
 		status int32
 		// stop signal channel
 		closeChan chan bool
+		// this channel will never close
+		eventsChan chan *historyEventNotification
 
 		sync.Mutex
-		// this channel will never close
-		eventsChan chan *historyEvent
 		// map of workflow identifier to map of subscriber ID to channel
-		eventsPubsubs map[workflowIdentifier]map[string]chan *historyEvent
+		eventsPubsubs map[workflowIdentifier]map[string]chan *historyEventNotification
 	}
 )
 
 var _ historyEventNotifier = (*historyEventNotifierImpl)(nil)
 
-func newWorkflowIdentifier(domainID *string, workflowExecution *gen.WorkflowExecution) *workflowIdentifier {
+func newWorkflowIdentifier(domainID string, workflowExecution *gen.WorkflowExecution) *workflowIdentifier {
 	return &workflowIdentifier{
-		domainID:   *domainID,
+		domainID:   domainID,
 		workflowID: *workflowExecution.WorkflowId,
 		runID:      *workflowExecution.RunId,
 	}
 }
 
-func newHistoryEvent(domainID *string, workflowExecution *gen.WorkflowExecution,
-	nextEventID int64, isWorkflowRunning bool) *historyEvent {
-	return &historyEvent{
+func newHistoryEventNotification(domainID string, workflowExecution *gen.WorkflowExecution,
+	nextEventID int64, isWorkflowRunning bool) *historyEventNotification {
+	return &historyEventNotification{
 		workflowIdentifier: workflowIdentifier{
-			domainID:   *domainID,
+			domainID:   domainID,
 			workflowID: *workflowExecution.WorkflowId,
 			runID:      *workflowExecution.RunId,
 		},
@@ -90,13 +78,13 @@ func newHistoryEventNotifier() *historyEventNotifierImpl {
 	return &historyEventNotifierImpl{
 		status:        statusIdle,
 		closeChan:     make(chan bool),
-		eventsChan:    make(chan *historyEvent, eventsChanSize),
-		eventsPubsubs: make(map[workflowIdentifier]map[string]chan *historyEvent),
+		eventsChan:    make(chan *historyEventNotification, eventsChanSize),
+		eventsPubsubs: make(map[workflowIdentifier]map[string]chan *historyEventNotification),
 	}
 }
 
-func (notifier *historyEventNotifierImpl) WatchHistoryEvent(domainID *string,
-	execution *gen.WorkflowExecution) (*string, chan *historyEvent, error) {
+func (notifier *historyEventNotifierImpl) WatchHistoryEvent(domainID string,
+	execution *gen.WorkflowExecution) (string, chan *historyEventNotification, error) {
 
 	identifier := newWorkflowIdentifier(domainID, execution)
 
@@ -105,25 +93,25 @@ func (notifier *historyEventNotifierImpl) WatchHistoryEvent(domainID *string,
 
 	eventsPubsubs, ok := notifier.eventsPubsubs[*identifier]
 	if !ok {
-		eventsPubsubs = make(map[string]chan *historyEvent)
+		eventsPubsubs = make(map[string]chan *historyEventNotification)
 		notifier.eventsPubsubs[*identifier] = eventsPubsubs
 	}
 
 	subscriberID := uuid.NewUUID().String()
 	if _, ok := eventsPubsubs[subscriberID]; ok {
 		// UUID collision
-		return nil, nil, &gen.InternalServiceError{
+		return "", nil, &gen.InternalServiceError{
 			Message: "Unable to watch on workflow execution.",
 		}
 	}
 
-	channel := make(chan *historyEvent, 1)
+	channel := make(chan *historyEventNotification, 1)
 	eventsPubsubs[subscriberID] = channel
-	return &subscriberID, channel, nil
+	return subscriberID, channel, nil
 }
 
-func (notifier *historyEventNotifierImpl) UnwatchHistoryEvent(domainID *string,
-	execution *gen.WorkflowExecution, subscriberID *string) error {
+func (notifier *historyEventNotifierImpl) UnwatchHistoryEvent(domainID string,
+	execution *gen.WorkflowExecution, subscriberID string) error {
 
 	identifier := newWorkflowIdentifier(domainID, execution)
 
@@ -137,14 +125,14 @@ func (notifier *historyEventNotifierImpl) UnwatchHistoryEvent(domainID *string,
 		}
 	}
 
-	if _, ok := eventsPubsubs[*subscriberID]; !ok {
+	if _, ok := eventsPubsubs[subscriberID]; !ok {
 		// cannot find the subscribe ID, which means there is a bug
 		return &gen.EntityNotExistsError{
 			Message: "Unable to unwatch on workflow execution.",
 		}
 	}
 
-	delete(eventsPubsubs, *subscriberID)
+	delete(eventsPubsubs, subscriberID)
 
 	if len(eventsPubsubs) == 0 {
 		delete(notifier.eventsPubsubs, *identifier)
@@ -153,7 +141,7 @@ func (notifier *historyEventNotifierImpl) UnwatchHistoryEvent(domainID *string,
 	return nil
 }
 
-func (notifier *historyEventNotifierImpl) dispatchHistoryEvent(event *historyEvent) {
+func (notifier *historyEventNotifierImpl) dispatchHistoryEventNotification(event *historyEventNotification) {
 	identifier := &event.workflowIdentifier
 
 	notifier.Lock()
@@ -174,7 +162,7 @@ func (notifier *historyEventNotifierImpl) dispatchHistoryEvent(event *historyEve
 	}
 }
 
-func (notifier *historyEventNotifierImpl) enqueueHistoryEvents(event *historyEvent) {
+func (notifier *historyEventNotifierImpl) enqueueHistoryEventNotification(event *historyEventNotification) {
 	select {
 	case notifier.eventsChan <- event:
 	default:
@@ -183,11 +171,11 @@ func (notifier *historyEventNotifierImpl) enqueueHistoryEvents(event *historyEve
 	}
 }
 
-func (notifier *historyEventNotifierImpl) dequeueHistoryEvents() {
+func (notifier *historyEventNotifierImpl) dequeueHistoryEventNotifications() {
 	for {
 		select {
 		case event := <-notifier.eventsChan:
-			notifier.dispatchHistoryEvent(event)
+			notifier.dispatchHistoryEventNotification(event)
 		case <-notifier.closeChan:
 			// shutdown
 			return
@@ -199,7 +187,7 @@ func (notifier *historyEventNotifierImpl) Start() {
 	if !atomic.CompareAndSwapInt32(&notifier.status, statusIdle, statusStarted) {
 		return
 	}
-	go notifier.dequeueHistoryEvents()
+	go notifier.dequeueHistoryEventNotifications()
 }
 
 func (notifier *historyEventNotifierImpl) Stop() {
@@ -209,6 +197,6 @@ func (notifier *historyEventNotifierImpl) Stop() {
 	close(notifier.closeChan)
 }
 
-func (notifier *historyEventNotifierImpl) NotifyNewHistoryEvent(event *historyEvent) {
-	notifier.enqueueHistoryEvents(event)
+func (notifier *historyEventNotifierImpl) NotifyNewHistoryEvent(event *historyEventNotification) {
+	notifier.enqueueHistoryEventNotification(event)
 }

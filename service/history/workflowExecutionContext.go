@@ -194,8 +194,8 @@ func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persi
 	c.msBuilder.executionInfo.LastUpdatedTimestamp = time.Now()
 
 	// for any change in the workflow, send a event
-	c.shard.NotifyHistoryEvent(newHistoryEvent(
-		&c.domainID,
+	c.shard.NotifyNewHistoryEvent(newHistoryEventNotification(
+		c.domainID,
 		&c.workflowExecution,
 		c.msBuilder.GetNextEventID(),
 		c.msBuilder.isWorkflowExecutionRunning(),

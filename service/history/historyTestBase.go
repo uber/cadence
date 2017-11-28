@@ -152,8 +152,8 @@ func (s *TestShardContext) AppendHistoryEvents(request *persistence.AppendHistor
 	return s.historyMgr.AppendHistoryEvents(request)
 }
 
-// NotifyHistoryEvent test implementation
-func (s *TestShardContext) NotifyHistoryEvent(event *historyEvent) error {
+// NotifyNewHistoryEvent test implementation
+func (s *TestShardContext) NotifyNewHistoryEvent(event *historyEventNotification) error {
 	return nil
 }
 

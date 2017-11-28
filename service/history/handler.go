@@ -124,7 +124,6 @@ func (h *Handler) Start() error {
 
 // Stop stops the handler
 func (h *Handler) Stop() {
-	h.historyEventNotifier.Stop()
 	h.controller.Stop()
 	h.shardManager.Close()
 	h.historyMgr.Close()
@@ -132,6 +131,7 @@ func (h *Handler) Stop() {
 	h.metadataMgr.Close()
 	h.visibilityMgr.Close()
 	h.Service.Stop()
+	h.historyEventNotifier.Stop()
 }
 
 // CreateEngine is implementation for HistoryEngineFactory used for creating the engine instance for shard

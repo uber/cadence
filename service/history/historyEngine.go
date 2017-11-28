@@ -313,11 +313,11 @@ func (e *historyEngineImpl) GetWorkflowExecutionNextEventID(ctx context.Context,
 	// if caller decide to long poll on workflow execution
 	// and the event ID we are looking for is smaller than current next event ID
 	if expectedNextEventID >= response.GetEventId() && response.GetIsWorkflowRunning() {
-		subscriberID, channel, err := e.historyEventNotifier.WatchHistoryEvent(&domainID, &execution)
+		subscriberID, channel, err := e.historyEventNotifier.WatchHistoryEvent(domainID, &execution)
 		if err != nil {
 			return nil, err
 		}
-		defer e.historyEventNotifier.UnwatchHistoryEvent(&domainID, &execution, subscriberID)
+		defer e.historyEventNotifier.UnwatchHistoryEvent(domainID, &execution, subscriberID)
 
 		// check again in case the next event ID is updated
 		response, err = e.getWorkflowExecutionNextEventID(domainID, execution)
@@ -329,7 +329,8 @@ func (e *historyEngineImpl) GetWorkflowExecutionNextEventID(ctx context.Context,
 			return response, nil
 		}
 
-		timeoutChan := time.NewTimer(e.shard.GetConfig().LongPollExpirationInterval).C
+		timer := time.NewTimer(e.shard.GetConfig().LongPollExpirationInterval)
+		defer timer.Stop()
 		for {
 			select {
 			case event := <-channel:
@@ -338,10 +339,10 @@ func (e *historyEngineImpl) GetWorkflowExecutionNextEventID(ctx context.Context,
 				if expectedNextEventID < response.GetEventId() || !response.GetIsWorkflowRunning() {
 					return response, nil
 				}
-			case <-timeoutChan:
+			case <-timer.C:
 				return response, nil
 			case <-ctx.Done():
-				return nil, &workflow.BadRequestError{Message: "timeout: frontend timeout the request"}
+				return nil, ctx.Err()
 			}
 		}
 	}
@@ -1808,9 +1809,10 @@ func (s *shardContextWrapper) CreateWorkflowExecution(request *persistence.Creat
 	return resp, err
 }
 
-func (s *shardContextWrapper) NotifyHistoryEvent(event *historyEvent) error {
+func (s *shardContextWrapper) NotifyNewHistoryEvent(event *historyEventNotification) error {
 	s.historyEventNotifier.NotifyNewHistoryEvent(event)
-	return nil
+	err := s.ShardContext.NotifyNewHistoryEvent(event)
+	return err
 }
 
 func validateActivityScheduleAttributes(attributes *workflow.ScheduleActivityTaskDecisionAttributes) error {

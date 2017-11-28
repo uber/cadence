@@ -65,14 +65,14 @@ func (s *historyEventNotifierSuite) TearDownTest() {
 }
 
 func (s *historyEventNotifierSuite) TestSingleSubscriberWatchingEvents() {
-	domainID := common.StringPtr("domain ID")
+	domainID := "domain ID"
 	execution := &gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("workflow ID"),
 		RunId:      common.StringPtr("run ID"),
 	}
 	var nextEventID int64 = 18
 	isRunning := true
-	historyEvent := newHistoryEvent(domainID, execution, nextEventID, isRunning)
+	historyEvent := newHistoryEventNotification(domainID, execution, nextEventID, isRunning)
 	timerChan := time.NewTimer(time.Second * 2).C
 
 	subscriberID, channel, err := s.historyEventNotifier.WatchHistoryEvent(domainID, execution)
@@ -97,7 +97,7 @@ func (s *historyEventNotifierSuite) TestSingleSubscriberWatchingEvents() {
 }
 
 func (s *historyEventNotifierSuite) TestMultipleSubscriberWatchingEvents() {
-	domainID := common.StringPtr("domain ID")
+	domainID := "domain ID"
 	execution := &gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("workflow ID"),
 		RunId:      common.StringPtr("run ID"),
@@ -105,7 +105,7 @@ func (s *historyEventNotifierSuite) TestMultipleSubscriberWatchingEvents() {
 
 	var nextEventID int64 = 18
 	isRunning := true
-	historyEvent := newHistoryEvent(domainID, execution, nextEventID, isRunning)
+	historyEvent := newHistoryEventNotification(domainID, execution, nextEventID, isRunning)
 	timerChan := time.NewTimer(time.Second * 5).C
 
 	subscriberCount := 5

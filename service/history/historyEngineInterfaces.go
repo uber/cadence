@@ -30,6 +30,17 @@ import (
 )
 
 type (
+	workflowIdentifier struct {
+		domainID   string
+		workflowID string
+		runID      string
+	}
+
+	historyEventNotification struct {
+		workflowIdentifier
+		nextEventID       int64
+		isWorkflowRunning bool
+	}
 	// Engine represents an interface for managing workflow execution history.
 	Engine interface {
 		common.Daemon
@@ -76,8 +87,8 @@ type (
 
 	historyEventNotifier interface {
 		common.Daemon
-		NotifyNewHistoryEvent(event *historyEvent)
-		WatchHistoryEvent(domainID *string, execution *workflow.WorkflowExecution) (*string, chan *historyEvent, error)
-		UnwatchHistoryEvent(domainID *string, execution *workflow.WorkflowExecution, subscriberID *string) error
+		NotifyNewHistoryEvent(event *historyEventNotification)
+		WatchHistoryEvent(domainID string, execution *workflow.WorkflowExecution) (string, chan *historyEventNotification, error)
+		UnwatchHistoryEvent(domainID string, execution *workflow.WorkflowExecution, subscriberID string) error
 	}
 )

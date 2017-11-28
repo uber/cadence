@@ -991,7 +991,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		return *visibilityResp.Execution.Execution.RunId, *visibilityResp.Execution.HistoryLength, false, nil
 	}
 
-	isLongPull := getRequest.GetWaitForNewEvent()
+	isLongPoll := getRequest.GetWaitForNewEvent()
 	execution := getRequest.Execution
 	token := &getHistoryContinuationToken{}
 
@@ -1005,11 +1005,12 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 			return nil, wh.error(errNextPageTokenRunIDMismatch, scope)
 		}
 
-		execution.RunId = &token.RunID
+		execution.RunId = common.StringPtr(token.RunID)
 
 		// we need to update the current next event ID and whether workflow is running
-		if token.FirstEventID >= token.NextEventID && isLongPull && token.IsWorkflowRunning {
-			_, nextEventID, isRunning, err := getNextEventID(domainInfo.ID, execution, &token.FirstEventID)
+		if len(token.PersistenceToken) == 0 && isLongPoll && token.IsWorkflowRunning {
+			token.FirstEventID = token.NextEventID
+			_, nextEventID, isRunning, err := getNextEventID(domainInfo.ID, execution, &token.NextEventID)
 			if err != nil {
 				return nil, wh.error(err, scope)
 			}
@@ -1050,12 +1051,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 
 		// here, for long pull on history events, we need to intercept the paging token from cassandra
 		// and do something clever
-		if len(token.PersistenceToken) == 0 && token.IsWorkflowRunning && isLongPull {
-			// meaning, there is no more history fur current pagination token
-			// but since the workflow is still running, more should be returned
-			token.FirstEventID = token.NextEventID
-			token.PersistenceToken = nil
-		} else if len(token.PersistenceToken) == 0 {
+		if len(token.PersistenceToken) == 0 && (!token.IsWorkflowRunning || !isLongPoll) {
 			// meaning, there is no more history to be returned
 			token = nil
 		}
@@ -1470,9 +1466,6 @@ func (wh *WorkflowHandler) getHistory(domainID string, execution gen.WorkflowExe
 	firstEventID, nextEventID int64, pageSize int32, nextPageToken []byte,
 	transientDecision *gen.TransientDecisionInfo) (*gen.History, []byte, error) {
 
-	// if nextPageToken == nil {
-	// 	nextPageToken = []byte{}
-	// }
 	historyEvents := []*gen.HistoryEvent{}
 
 	response, err := wh.historyMgr.GetWorkflowExecutionHistory(&persistence.GetWorkflowExecutionHistoryRequest{
