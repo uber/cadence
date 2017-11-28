@@ -163,21 +163,15 @@ func (e *matchingEngineImpl) getTaskListManager(taskList *taskListID) (taskListM
 func (e *matchingEngineImpl) getTaskListManagerWithRPS(
 	taskList *taskListID, maxDispatchPerSecond *float64,
 ) (taskListManager, error) {
-	e.taskListsLock.RLock()
+	e.taskListsLock.Lock()
 	if result, ok := e.taskLists[*taskList]; ok {
 		result.UpdateMaxDispatch(maxDispatchPerSecond)
-		e.taskListsLock.RUnlock()
+		e.taskListsLock.Unlock()
 		return result, nil
 	}
-	e.taskListsLock.RUnlock()
 	mgr := newTaskListManager(e, taskList, e.config, maxDispatchPerSecond)
-	e.taskListsLock.RLock()
-	if result, ok := e.taskLists[*taskList]; ok {
-		e.taskListsLock.RUnlock()
-		return result, nil
-	}
-	e.taskListsLock.RUnlock()
-	e.updateTaskList(taskList, mgr)
+	e.taskLists[*taskList] = mgr
+	e.taskListsLock.Unlock()
 	logging.LogTaskListLoadingEvent(e.logger, taskList.taskListName, taskList.taskType)
 	err := mgr.Start()
 	if err != nil {
@@ -188,6 +182,7 @@ func (e *matchingEngineImpl) getTaskListManagerWithRPS(
 	return mgr, nil
 }
 
+// For use in tests
 func (e *matchingEngineImpl) updateTaskList(taskList *taskListID, mgr taskListManager) {
 	e.taskListsLock.Lock()
 	defer e.taskListsLock.Unlock()

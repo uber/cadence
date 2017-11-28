@@ -74,6 +74,7 @@ type rateLimiter struct {
 func newRateLimiter(maxDispatchPerSecond *float64, ttl time.Duration) rateLimiter {
 	return rateLimiter{
 		maxDispatchPerSecond: maxDispatchPerSecond,
+		// Note: Potentially expose burst config in future
 		limiter: rate.NewLimiter(
 			rate.Limit(*maxDispatchPerSecond), int(*maxDispatchPerSecond),
 		),
@@ -108,11 +109,11 @@ func (rl *rateLimiter) shouldUpdate(maxDispatchPerSecond *float64) bool {
 	}
 }
 
-func (rl *rateLimiter) Wait(timeout time.Duration) error {
+func (rl *rateLimiter) Wait(ctx context.Context, timeout time.Duration) error {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
 	rl.RLock()
 	defer rl.RUnlock()
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
 	return rl.limiter.Wait(ctx)
 }
 
@@ -127,7 +128,7 @@ func newTaskListManager(
 	return newTaskListManagerWithRateLimiter(e, taskList, config, rl)
 }
 
-// Only for tests
+// This is for use in tests
 func newTaskListManagerWithRateLimiter(
 	e *matchingEngineImpl, taskList *taskListID, config *Config, rl rateLimiter,
 ) taskListManager {
@@ -408,7 +409,7 @@ func (c *taskListManagerImpl) getTask(ctx context.Context) (*getTaskResult, erro
 	}
 
 	// Wait till long poll expiration for token. If token acquired, proceed.
-	if err := c.rateLimiter.Wait(c.config.LongPollExpirationInterval); err != nil {
+	if err := c.rateLimiter.Wait(ctx, c.config.LongPollExpirationInterval); err != nil {
 		c.metricsClient.IncCounter(scope, metrics.ThrottleErrorCounter)
 		msg := fmt.Sprintf("TaskList dispatch exceeded limit: %s", err.Error())
 		// TODO: It's the client that's busy, not the server. Doesn't fit into any other error.
