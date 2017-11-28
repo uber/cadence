@@ -151,6 +151,37 @@ func (v *ActivityTaskCancelRequestedEventAttributes) GetDecisionTaskCompletedEve
 	return
 }
 
+type ActivityTaskCancelRequestedEventFilter struct{}
+
+func (v *ActivityTaskCancelRequestedEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [0]wire.Field
+		i      int = 0
+	)
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *ActivityTaskCancelRequestedEventFilter) FromWire(w wire.Value) error {
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		}
+	}
+	return nil
+}
+
+func (v *ActivityTaskCancelRequestedEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [0]string
+	i := 0
+	return fmt.Sprintf("ActivityTaskCancelRequestedEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *ActivityTaskCancelRequestedEventFilter) Equals(rhs *ActivityTaskCancelRequestedEventFilter) bool {
+	return true
+}
+
 type ActivityTaskCanceledEventAttributes struct {
 	Details                      []byte  `json:"details"`
 	LatestCancelRequestedEventId *int64  `json:"latestCancelRequestedEventId,omitempty"`
@@ -337,6 +368,102 @@ func (v *ActivityTaskCanceledEventAttributes) GetIdentity() (o string) {
 	return
 }
 
+type ActivityTaskCanceledEventFilter struct {
+	ActivityType *ActivityType `json:"activityType,omitempty"`
+	ActivityId   *string       `json:"activityId,omitempty"`
+}
+
+func (v *ActivityTaskCanceledEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+	if v.ActivityType != nil {
+		w, err = v.ActivityType.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.ActivityId != nil {
+		w, err = wire.NewValueString(*(v.ActivityId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _ActivityType_Read(w wire.Value) (*ActivityType, error) {
+	var v ActivityType
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func (v *ActivityTaskCanceledEventFilter) FromWire(w wire.Value) error {
+	var err error
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TStruct {
+				v.ActivityType, err = _ActivityType_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 20:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.ActivityId = &x
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (v *ActivityTaskCanceledEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [2]string
+	i := 0
+	if v.ActivityType != nil {
+		fields[i] = fmt.Sprintf("ActivityType: %v", v.ActivityType)
+		i++
+	}
+	if v.ActivityId != nil {
+		fields[i] = fmt.Sprintf("ActivityId: %v", *(v.ActivityId))
+		i++
+	}
+	return fmt.Sprintf("ActivityTaskCanceledEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *ActivityTaskCanceledEventFilter) Equals(rhs *ActivityTaskCanceledEventFilter) bool {
+	if !((v.ActivityType == nil && rhs.ActivityType == nil) || (v.ActivityType != nil && rhs.ActivityType != nil && v.ActivityType.Equals(rhs.ActivityType))) {
+		return false
+	}
+	if !_String_EqualsPtr(v.ActivityId, rhs.ActivityId) {
+		return false
+	}
+	return true
+}
+
+func (v *ActivityTaskCanceledEventFilter) GetActivityId() (o string) {
+	if v.ActivityId != nil {
+		return *v.ActivityId
+	}
+	return
+}
+
 type ActivityTaskCompletedEventAttributes struct {
 	Result           []byte  `json:"result"`
 	ScheduledEventId *int64  `json:"scheduledEventId,omitempty"`
@@ -487,6 +614,96 @@ func (v *ActivityTaskCompletedEventAttributes) GetStartedEventId() (o int64) {
 func (v *ActivityTaskCompletedEventAttributes) GetIdentity() (o string) {
 	if v.Identity != nil {
 		return *v.Identity
+	}
+	return
+}
+
+type ActivityTaskCompletedEventFilter struct {
+	ActivityType *ActivityType `json:"activityType,omitempty"`
+	ActivityId   *string       `json:"activityId,omitempty"`
+}
+
+func (v *ActivityTaskCompletedEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+	if v.ActivityType != nil {
+		w, err = v.ActivityType.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.ActivityId != nil {
+		w, err = wire.NewValueString(*(v.ActivityId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *ActivityTaskCompletedEventFilter) FromWire(w wire.Value) error {
+	var err error
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TStruct {
+				v.ActivityType, err = _ActivityType_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 20:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.ActivityId = &x
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (v *ActivityTaskCompletedEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [2]string
+	i := 0
+	if v.ActivityType != nil {
+		fields[i] = fmt.Sprintf("ActivityType: %v", v.ActivityType)
+		i++
+	}
+	if v.ActivityId != nil {
+		fields[i] = fmt.Sprintf("ActivityId: %v", *(v.ActivityId))
+		i++
+	}
+	return fmt.Sprintf("ActivityTaskCompletedEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *ActivityTaskCompletedEventFilter) Equals(rhs *ActivityTaskCompletedEventFilter) bool {
+	if !((v.ActivityType == nil && rhs.ActivityType == nil) || (v.ActivityType != nil && rhs.ActivityType != nil && v.ActivityType.Equals(rhs.ActivityType))) {
+		return false
+	}
+	if !_String_EqualsPtr(v.ActivityId, rhs.ActivityId) {
+		return false
+	}
+	return true
+}
+
+func (v *ActivityTaskCompletedEventFilter) GetActivityId() (o string) {
+	if v.ActivityId != nil {
+		return *v.ActivityId
 	}
 	return
 }
@@ -677,6 +894,96 @@ func (v *ActivityTaskFailedEventAttributes) GetIdentity() (o string) {
 	return
 }
 
+type ActivityTaskFailedEventFilter struct {
+	ActivityType *ActivityType `json:"activityType,omitempty"`
+	ActivityId   *string       `json:"activityId,omitempty"`
+}
+
+func (v *ActivityTaskFailedEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+	if v.ActivityType != nil {
+		w, err = v.ActivityType.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.ActivityId != nil {
+		w, err = wire.NewValueString(*(v.ActivityId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *ActivityTaskFailedEventFilter) FromWire(w wire.Value) error {
+	var err error
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TStruct {
+				v.ActivityType, err = _ActivityType_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 20:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.ActivityId = &x
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (v *ActivityTaskFailedEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [2]string
+	i := 0
+	if v.ActivityType != nil {
+		fields[i] = fmt.Sprintf("ActivityType: %v", v.ActivityType)
+		i++
+	}
+	if v.ActivityId != nil {
+		fields[i] = fmt.Sprintf("ActivityId: %v", *(v.ActivityId))
+		i++
+	}
+	return fmt.Sprintf("ActivityTaskFailedEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *ActivityTaskFailedEventFilter) Equals(rhs *ActivityTaskFailedEventFilter) bool {
+	if !((v.ActivityType == nil && rhs.ActivityType == nil) || (v.ActivityType != nil && rhs.ActivityType != nil && v.ActivityType.Equals(rhs.ActivityType))) {
+		return false
+	}
+	if !_String_EqualsPtr(v.ActivityId, rhs.ActivityId) {
+		return false
+	}
+	return true
+}
+
+func (v *ActivityTaskFailedEventFilter) GetActivityId() (o string) {
+	if v.ActivityId != nil {
+		return *v.ActivityId
+	}
+	return
+}
+
 type ActivityTaskScheduledEventAttributes struct {
 	ActivityId                    *string       `json:"activityId,omitempty"`
 	ActivityType                  *ActivityType `json:"activityType,omitempty"`
@@ -778,12 +1085,6 @@ func (v *ActivityTaskScheduledEventAttributes) ToWire() (wire.Value, error) {
 		i++
 	}
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
-}
-
-func _ActivityType_Read(w wire.Value) (*ActivityType, error) {
-	var v ActivityType
-	err := v.FromWire(w)
-	return &v, err
 }
 
 func _TaskList_Read(w wire.Value) (*TaskList, error) {
@@ -1026,6 +1327,96 @@ func (v *ActivityTaskScheduledEventAttributes) GetDecisionTaskCompletedEventId()
 	return
 }
 
+type ActivityTaskScheduledEventFilter struct {
+	ActivityType *ActivityType `json:"activityType,omitempty"`
+	ActivityId   *string       `json:"activityId,omitempty"`
+}
+
+func (v *ActivityTaskScheduledEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+	if v.ActivityType != nil {
+		w, err = v.ActivityType.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.ActivityId != nil {
+		w, err = wire.NewValueString(*(v.ActivityId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *ActivityTaskScheduledEventFilter) FromWire(w wire.Value) error {
+	var err error
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TStruct {
+				v.ActivityType, err = _ActivityType_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 20:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.ActivityId = &x
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (v *ActivityTaskScheduledEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [2]string
+	i := 0
+	if v.ActivityType != nil {
+		fields[i] = fmt.Sprintf("ActivityType: %v", v.ActivityType)
+		i++
+	}
+	if v.ActivityId != nil {
+		fields[i] = fmt.Sprintf("ActivityId: %v", *(v.ActivityId))
+		i++
+	}
+	return fmt.Sprintf("ActivityTaskScheduledEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *ActivityTaskScheduledEventFilter) Equals(rhs *ActivityTaskScheduledEventFilter) bool {
+	if !((v.ActivityType == nil && rhs.ActivityType == nil) || (v.ActivityType != nil && rhs.ActivityType != nil && v.ActivityType.Equals(rhs.ActivityType))) {
+		return false
+	}
+	if !_String_EqualsPtr(v.ActivityId, rhs.ActivityId) {
+		return false
+	}
+	return true
+}
+
+func (v *ActivityTaskScheduledEventFilter) GetActivityId() (o string) {
+	if v.ActivityId != nil {
+		return *v.ActivityId
+	}
+	return
+}
+
 type ActivityTaskStartedEventAttributes struct {
 	ScheduledEventId *int64  `json:"scheduledEventId,omitempty"`
 	Identity         *string `json:"identity,omitempty"`
@@ -1153,6 +1544,96 @@ func (v *ActivityTaskStartedEventAttributes) GetIdentity() (o string) {
 func (v *ActivityTaskStartedEventAttributes) GetRequestId() (o string) {
 	if v.RequestId != nil {
 		return *v.RequestId
+	}
+	return
+}
+
+type ActivityTaskStartedEventFilter struct {
+	ActivityType *ActivityType `json:"activityType,omitempty"`
+	ActivityId   *string       `json:"activityId,omitempty"`
+}
+
+func (v *ActivityTaskStartedEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+	if v.ActivityType != nil {
+		w, err = v.ActivityType.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.ActivityId != nil {
+		w, err = wire.NewValueString(*(v.ActivityId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *ActivityTaskStartedEventFilter) FromWire(w wire.Value) error {
+	var err error
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TStruct {
+				v.ActivityType, err = _ActivityType_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 20:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.ActivityId = &x
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (v *ActivityTaskStartedEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [2]string
+	i := 0
+	if v.ActivityType != nil {
+		fields[i] = fmt.Sprintf("ActivityType: %v", v.ActivityType)
+		i++
+	}
+	if v.ActivityId != nil {
+		fields[i] = fmt.Sprintf("ActivityId: %v", *(v.ActivityId))
+		i++
+	}
+	return fmt.Sprintf("ActivityTaskStartedEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *ActivityTaskStartedEventFilter) Equals(rhs *ActivityTaskStartedEventFilter) bool {
+	if !((v.ActivityType == nil && rhs.ActivityType == nil) || (v.ActivityType != nil && rhs.ActivityType != nil && v.ActivityType.Equals(rhs.ActivityType))) {
+		return false
+	}
+	if !_String_EqualsPtr(v.ActivityId, rhs.ActivityId) {
+		return false
+	}
+	return true
+}
+
+func (v *ActivityTaskStartedEventFilter) GetActivityId() (o string) {
+	if v.ActivityId != nil {
+		return *v.ActivityId
 	}
 	return
 }
@@ -1322,6 +1803,96 @@ func (v *ActivityTaskTimedOutEventAttributes) GetStartedEventId() (o int64) {
 func (v *ActivityTaskTimedOutEventAttributes) GetTimeoutType() (o TimeoutType) {
 	if v.TimeoutType != nil {
 		return *v.TimeoutType
+	}
+	return
+}
+
+type ActivityTaskTimedOutEventFilter struct {
+	ActivityType *ActivityType `json:"activityType,omitempty"`
+	ActivityId   *string       `json:"activityId,omitempty"`
+}
+
+func (v *ActivityTaskTimedOutEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+	if v.ActivityType != nil {
+		w, err = v.ActivityType.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.ActivityId != nil {
+		w, err = wire.NewValueString(*(v.ActivityId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *ActivityTaskTimedOutEventFilter) FromWire(w wire.Value) error {
+	var err error
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TStruct {
+				v.ActivityType, err = _ActivityType_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 20:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.ActivityId = &x
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (v *ActivityTaskTimedOutEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [2]string
+	i := 0
+	if v.ActivityType != nil {
+		fields[i] = fmt.Sprintf("ActivityType: %v", v.ActivityType)
+		i++
+	}
+	if v.ActivityId != nil {
+		fields[i] = fmt.Sprintf("ActivityId: %v", *(v.ActivityId))
+		i++
+	}
+	return fmt.Sprintf("ActivityTaskTimedOutEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *ActivityTaskTimedOutEventFilter) Equals(rhs *ActivityTaskTimedOutEventFilter) bool {
+	if !((v.ActivityType == nil && rhs.ActivityType == nil) || (v.ActivityType != nil && rhs.ActivityType != nil && v.ActivityType.Equals(rhs.ActivityType))) {
+		return false
+	}
+	if !_String_EqualsPtr(v.ActivityId, rhs.ActivityId) {
+		return false
+	}
+	return true
+}
+
+func (v *ActivityTaskTimedOutEventFilter) GetActivityId() (o string) {
+	if v.ActivityId != nil {
+		return *v.ActivityId
 	}
 	return
 }
@@ -1764,6 +2335,37 @@ func (v *CancelTimerFailedEventAttributes) GetIdentity() (o string) {
 	return
 }
 
+type CancelTimerFailedEventFilter struct{}
+
+func (v *CancelTimerFailedEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [0]wire.Field
+		i      int = 0
+	)
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *CancelTimerFailedEventFilter) FromWire(w wire.Value) error {
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		}
+	}
+	return nil
+}
+
+func (v *CancelTimerFailedEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [0]string
+	i := 0
+	return fmt.Sprintf("CancelTimerFailedEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *CancelTimerFailedEventFilter) Equals(rhs *CancelTimerFailedEventFilter) bool {
+	return true
+}
+
 type CancelWorkflowExecutionDecisionAttributes struct {
 	Details []byte `json:"details"`
 }
@@ -2191,6 +2793,96 @@ func (v *ChildWorkflowExecutionCanceledEventAttributes) GetStartedEventId() (o i
 	return
 }
 
+type ChildWorkflowExecutionCanceledEventFilter struct {
+	WorkflowType *WorkflowType `json:"workflowType,omitempty"`
+	WorkflowId   *string       `json:"workflowId,omitempty"`
+}
+
+func (v *ChildWorkflowExecutionCanceledEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+	if v.WorkflowType != nil {
+		w, err = v.WorkflowType.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.WorkflowId != nil {
+		w, err = wire.NewValueString(*(v.WorkflowId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *ChildWorkflowExecutionCanceledEventFilter) FromWire(w wire.Value) error {
+	var err error
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TStruct {
+				v.WorkflowType, err = _WorkflowType_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 20:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.WorkflowId = &x
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (v *ChildWorkflowExecutionCanceledEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [2]string
+	i := 0
+	if v.WorkflowType != nil {
+		fields[i] = fmt.Sprintf("WorkflowType: %v", v.WorkflowType)
+		i++
+	}
+	if v.WorkflowId != nil {
+		fields[i] = fmt.Sprintf("WorkflowId: %v", *(v.WorkflowId))
+		i++
+	}
+	return fmt.Sprintf("ChildWorkflowExecutionCanceledEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *ChildWorkflowExecutionCanceledEventFilter) Equals(rhs *ChildWorkflowExecutionCanceledEventFilter) bool {
+	if !((v.WorkflowType == nil && rhs.WorkflowType == nil) || (v.WorkflowType != nil && rhs.WorkflowType != nil && v.WorkflowType.Equals(rhs.WorkflowType))) {
+		return false
+	}
+	if !_String_EqualsPtr(v.WorkflowId, rhs.WorkflowId) {
+		return false
+	}
+	return true
+}
+
+func (v *ChildWorkflowExecutionCanceledEventFilter) GetWorkflowId() (o string) {
+	if v.WorkflowId != nil {
+		return *v.WorkflowId
+	}
+	return
+}
+
 type ChildWorkflowExecutionCompletedEventAttributes struct {
 	Result            []byte             `json:"result"`
 	Domain            *string            `json:"domain,omitempty"`
@@ -2387,6 +3079,96 @@ func (v *ChildWorkflowExecutionCompletedEventAttributes) GetInitiatedEventId() (
 func (v *ChildWorkflowExecutionCompletedEventAttributes) GetStartedEventId() (o int64) {
 	if v.StartedEventId != nil {
 		return *v.StartedEventId
+	}
+	return
+}
+
+type ChildWorkflowExecutionCompletedEventFilter struct {
+	WorkflowType *WorkflowType `json:"workflowType,omitempty"`
+	WorkflowId   *string       `json:"workflowId,omitempty"`
+}
+
+func (v *ChildWorkflowExecutionCompletedEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+	if v.WorkflowType != nil {
+		w, err = v.WorkflowType.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.WorkflowId != nil {
+		w, err = wire.NewValueString(*(v.WorkflowId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *ChildWorkflowExecutionCompletedEventFilter) FromWire(w wire.Value) error {
+	var err error
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TStruct {
+				v.WorkflowType, err = _WorkflowType_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 20:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.WorkflowId = &x
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (v *ChildWorkflowExecutionCompletedEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [2]string
+	i := 0
+	if v.WorkflowType != nil {
+		fields[i] = fmt.Sprintf("WorkflowType: %v", v.WorkflowType)
+		i++
+	}
+	if v.WorkflowId != nil {
+		fields[i] = fmt.Sprintf("WorkflowId: %v", *(v.WorkflowId))
+		i++
+	}
+	return fmt.Sprintf("ChildWorkflowExecutionCompletedEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *ChildWorkflowExecutionCompletedEventFilter) Equals(rhs *ChildWorkflowExecutionCompletedEventFilter) bool {
+	if !((v.WorkflowType == nil && rhs.WorkflowType == nil) || (v.WorkflowType != nil && rhs.WorkflowType != nil && v.WorkflowType.Equals(rhs.WorkflowType))) {
+		return false
+	}
+	if !_String_EqualsPtr(v.WorkflowId, rhs.WorkflowId) {
+		return false
+	}
+	return true
+}
+
+func (v *ChildWorkflowExecutionCompletedEventFilter) GetWorkflowId() (o string) {
+	if v.WorkflowId != nil {
+		return *v.WorkflowId
 	}
 	return
 }
@@ -2701,6 +3483,96 @@ func (v *ChildWorkflowExecutionFailedEventAttributes) GetStartedEventId() (o int
 	return
 }
 
+type ChildWorkflowExecutionFailedEventFilter struct {
+	WorkflowType *WorkflowType `json:"workflowType,omitempty"`
+	WorkflowId   *string       `json:"workflowId,omitempty"`
+}
+
+func (v *ChildWorkflowExecutionFailedEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+	if v.WorkflowType != nil {
+		w, err = v.WorkflowType.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.WorkflowId != nil {
+		w, err = wire.NewValueString(*(v.WorkflowId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *ChildWorkflowExecutionFailedEventFilter) FromWire(w wire.Value) error {
+	var err error
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TStruct {
+				v.WorkflowType, err = _WorkflowType_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 20:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.WorkflowId = &x
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (v *ChildWorkflowExecutionFailedEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [2]string
+	i := 0
+	if v.WorkflowType != nil {
+		fields[i] = fmt.Sprintf("WorkflowType: %v", v.WorkflowType)
+		i++
+	}
+	if v.WorkflowId != nil {
+		fields[i] = fmt.Sprintf("WorkflowId: %v", *(v.WorkflowId))
+		i++
+	}
+	return fmt.Sprintf("ChildWorkflowExecutionFailedEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *ChildWorkflowExecutionFailedEventFilter) Equals(rhs *ChildWorkflowExecutionFailedEventFilter) bool {
+	if !((v.WorkflowType == nil && rhs.WorkflowType == nil) || (v.WorkflowType != nil && rhs.WorkflowType != nil && v.WorkflowType.Equals(rhs.WorkflowType))) {
+		return false
+	}
+	if !_String_EqualsPtr(v.WorkflowId, rhs.WorkflowId) {
+		return false
+	}
+	return true
+}
+
+func (v *ChildWorkflowExecutionFailedEventFilter) GetWorkflowId() (o string) {
+	if v.WorkflowId != nil {
+		return *v.WorkflowId
+	}
+	return
+}
+
 type ChildWorkflowExecutionStartedEventAttributes struct {
 	Domain            *string            `json:"domain,omitempty"`
 	InitiatedEventId  *int64             `json:"initiatedEventId,omitempty"`
@@ -2842,6 +3714,96 @@ func (v *ChildWorkflowExecutionStartedEventAttributes) GetDomain() (o string) {
 func (v *ChildWorkflowExecutionStartedEventAttributes) GetInitiatedEventId() (o int64) {
 	if v.InitiatedEventId != nil {
 		return *v.InitiatedEventId
+	}
+	return
+}
+
+type ChildWorkflowExecutionStartedEventFilter struct {
+	WorkflowType *WorkflowType `json:"workflowType,omitempty"`
+	WorkflowId   *string       `json:"workflowId,omitempty"`
+}
+
+func (v *ChildWorkflowExecutionStartedEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+	if v.WorkflowType != nil {
+		w, err = v.WorkflowType.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.WorkflowId != nil {
+		w, err = wire.NewValueString(*(v.WorkflowId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *ChildWorkflowExecutionStartedEventFilter) FromWire(w wire.Value) error {
+	var err error
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TStruct {
+				v.WorkflowType, err = _WorkflowType_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 20:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.WorkflowId = &x
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (v *ChildWorkflowExecutionStartedEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [2]string
+	i := 0
+	if v.WorkflowType != nil {
+		fields[i] = fmt.Sprintf("WorkflowType: %v", v.WorkflowType)
+		i++
+	}
+	if v.WorkflowId != nil {
+		fields[i] = fmt.Sprintf("WorkflowId: %v", *(v.WorkflowId))
+		i++
+	}
+	return fmt.Sprintf("ChildWorkflowExecutionStartedEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *ChildWorkflowExecutionStartedEventFilter) Equals(rhs *ChildWorkflowExecutionStartedEventFilter) bool {
+	if !((v.WorkflowType == nil && rhs.WorkflowType == nil) || (v.WorkflowType != nil && rhs.WorkflowType != nil && v.WorkflowType.Equals(rhs.WorkflowType))) {
+		return false
+	}
+	if !_String_EqualsPtr(v.WorkflowId, rhs.WorkflowId) {
+		return false
+	}
+	return true
+}
+
+func (v *ChildWorkflowExecutionStartedEventFilter) GetWorkflowId() (o string) {
+	if v.WorkflowId != nil {
+		return *v.WorkflowId
 	}
 	return
 }
@@ -3019,6 +3981,96 @@ func (v *ChildWorkflowExecutionTerminatedEventAttributes) GetInitiatedEventId() 
 func (v *ChildWorkflowExecutionTerminatedEventAttributes) GetStartedEventId() (o int64) {
 	if v.StartedEventId != nil {
 		return *v.StartedEventId
+	}
+	return
+}
+
+type ChildWorkflowExecutionTerminatedEventFilter struct {
+	WorkflowType *WorkflowType `json:"workflowType,omitempty"`
+	WorkflowId   *string       `json:"workflowId,omitempty"`
+}
+
+func (v *ChildWorkflowExecutionTerminatedEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+	if v.WorkflowType != nil {
+		w, err = v.WorkflowType.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.WorkflowId != nil {
+		w, err = wire.NewValueString(*(v.WorkflowId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *ChildWorkflowExecutionTerminatedEventFilter) FromWire(w wire.Value) error {
+	var err error
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TStruct {
+				v.WorkflowType, err = _WorkflowType_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 20:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.WorkflowId = &x
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (v *ChildWorkflowExecutionTerminatedEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [2]string
+	i := 0
+	if v.WorkflowType != nil {
+		fields[i] = fmt.Sprintf("WorkflowType: %v", v.WorkflowType)
+		i++
+	}
+	if v.WorkflowId != nil {
+		fields[i] = fmt.Sprintf("WorkflowId: %v", *(v.WorkflowId))
+		i++
+	}
+	return fmt.Sprintf("ChildWorkflowExecutionTerminatedEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *ChildWorkflowExecutionTerminatedEventFilter) Equals(rhs *ChildWorkflowExecutionTerminatedEventFilter) bool {
+	if !((v.WorkflowType == nil && rhs.WorkflowType == nil) || (v.WorkflowType != nil && rhs.WorkflowType != nil && v.WorkflowType.Equals(rhs.WorkflowType))) {
+		return false
+	}
+	if !_String_EqualsPtr(v.WorkflowId, rhs.WorkflowId) {
+		return false
+	}
+	return true
+}
+
+func (v *ChildWorkflowExecutionTerminatedEventFilter) GetWorkflowId() (o string) {
+	if v.WorkflowId != nil {
+		return *v.WorkflowId
 	}
 	return
 }
@@ -3228,6 +4280,96 @@ func (v *ChildWorkflowExecutionTimedOutEventAttributes) GetInitiatedEventId() (o
 func (v *ChildWorkflowExecutionTimedOutEventAttributes) GetStartedEventId() (o int64) {
 	if v.StartedEventId != nil {
 		return *v.StartedEventId
+	}
+	return
+}
+
+type ChildWorkflowExecutionTimedOutEventFilter struct {
+	WorkflowType *WorkflowType `json:"workflowType,omitempty"`
+	WorkflowId   *string       `json:"workflowId,omitempty"`
+}
+
+func (v *ChildWorkflowExecutionTimedOutEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+	if v.WorkflowType != nil {
+		w, err = v.WorkflowType.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.WorkflowId != nil {
+		w, err = wire.NewValueString(*(v.WorkflowId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *ChildWorkflowExecutionTimedOutEventFilter) FromWire(w wire.Value) error {
+	var err error
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TStruct {
+				v.WorkflowType, err = _WorkflowType_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 20:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.WorkflowId = &x
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (v *ChildWorkflowExecutionTimedOutEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [2]string
+	i := 0
+	if v.WorkflowType != nil {
+		fields[i] = fmt.Sprintf("WorkflowType: %v", v.WorkflowType)
+		i++
+	}
+	if v.WorkflowId != nil {
+		fields[i] = fmt.Sprintf("WorkflowId: %v", *(v.WorkflowId))
+		i++
+	}
+	return fmt.Sprintf("ChildWorkflowExecutionTimedOutEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *ChildWorkflowExecutionTimedOutEventFilter) Equals(rhs *ChildWorkflowExecutionTimedOutEventFilter) bool {
+	if !((v.WorkflowType == nil && rhs.WorkflowType == nil) || (v.WorkflowType != nil && rhs.WorkflowType != nil && v.WorkflowType.Equals(rhs.WorkflowType))) {
+		return false
+	}
+	if !_String_EqualsPtr(v.WorkflowId, rhs.WorkflowId) {
+		return false
+	}
+	return true
+}
+
+func (v *ChildWorkflowExecutionTimedOutEventFilter) GetWorkflowId() (o string) {
+	if v.WorkflowId != nil {
+		return *v.WorkflowId
 	}
 	return
 }
@@ -4013,6 +5155,37 @@ func (v *DecisionTaskCompletedEventAttributes) GetIdentity() (o string) {
 	return
 }
 
+type DecisionTaskCompletedEventFilter struct{}
+
+func (v *DecisionTaskCompletedEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [0]wire.Field
+		i      int = 0
+	)
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *DecisionTaskCompletedEventFilter) FromWire(w wire.Value) error {
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		}
+	}
+	return nil
+}
+
+func (v *DecisionTaskCompletedEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [0]string
+	i := 0
+	return fmt.Sprintf("DecisionTaskCompletedEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *DecisionTaskCompletedEventFilter) Equals(rhs *DecisionTaskCompletedEventFilter) bool {
+	return true
+}
+
 type DecisionTaskFailedCause int32
 
 const (
@@ -4396,6 +5569,37 @@ func (v *DecisionTaskFailedEventAttributes) GetIdentity() (o string) {
 	return
 }
 
+type DecisionTaskFailedEventFilter struct{}
+
+func (v *DecisionTaskFailedEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [0]wire.Field
+		i      int = 0
+	)
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *DecisionTaskFailedEventFilter) FromWire(w wire.Value) error {
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		}
+	}
+	return nil
+}
+
+func (v *DecisionTaskFailedEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [0]string
+	i := 0
+	return fmt.Sprintf("DecisionTaskFailedEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *DecisionTaskFailedEventFilter) Equals(rhs *DecisionTaskFailedEventFilter) bool {
+	return true
+}
+
 type DecisionTaskScheduledEventAttributes struct {
 	TaskList                   *TaskList `json:"taskList,omitempty"`
 	StartToCloseTimeoutSeconds *int32    `json:"startToCloseTimeoutSeconds,omitempty"`
@@ -4516,6 +5720,37 @@ func (v *DecisionTaskScheduledEventAttributes) GetAttempt() (o int64) {
 		return *v.Attempt
 	}
 	return
+}
+
+type DecisionTaskScheduledEventFilter struct{}
+
+func (v *DecisionTaskScheduledEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [0]wire.Field
+		i      int = 0
+	)
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *DecisionTaskScheduledEventFilter) FromWire(w wire.Value) error {
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		}
+	}
+	return nil
+}
+
+func (v *DecisionTaskScheduledEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [0]string
+	i := 0
+	return fmt.Sprintf("DecisionTaskScheduledEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *DecisionTaskScheduledEventFilter) Equals(rhs *DecisionTaskScheduledEventFilter) bool {
+	return true
 }
 
 type DecisionTaskStartedEventAttributes struct {
@@ -4649,6 +5884,37 @@ func (v *DecisionTaskStartedEventAttributes) GetRequestId() (o string) {
 	return
 }
 
+type DecisionTaskStartedEventFilter struct{}
+
+func (v *DecisionTaskStartedEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [0]wire.Field
+		i      int = 0
+	)
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *DecisionTaskStartedEventFilter) FromWire(w wire.Value) error {
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		}
+	}
+	return nil
+}
+
+func (v *DecisionTaskStartedEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [0]string
+	i := 0
+	return fmt.Sprintf("DecisionTaskStartedEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *DecisionTaskStartedEventFilter) Equals(rhs *DecisionTaskStartedEventFilter) bool {
+	return true
+}
+
 type DecisionTaskTimedOutEventAttributes struct {
 	ScheduledEventId *int64       `json:"scheduledEventId,omitempty"`
 	StartedEventId   *int64       `json:"startedEventId,omitempty"`
@@ -4778,6 +6044,37 @@ func (v *DecisionTaskTimedOutEventAttributes) GetTimeoutType() (o TimeoutType) {
 		return *v.TimeoutType
 	}
 	return
+}
+
+type DecisionTaskTimedOutEventFilter struct{}
+
+func (v *DecisionTaskTimedOutEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [0]wire.Field
+		i      int = 0
+	)
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *DecisionTaskTimedOutEventFilter) FromWire(w wire.Value) error {
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		}
+	}
+	return nil
+}
+
+func (v *DecisionTaskTimedOutEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [0]string
+	i := 0
+	return fmt.Sprintf("DecisionTaskTimedOutEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *DecisionTaskTimedOutEventFilter) Equals(rhs *DecisionTaskTimedOutEventFilter) bool {
+	return true
 }
 
 type DecisionType int32
@@ -6350,6 +7647,37 @@ func (v *ExternalWorkflowExecutionCancelRequestedEventAttributes) GetDomain() (o
 	return
 }
 
+type ExternalWorkflowExecutionCancelRequestedEventFilter struct{}
+
+func (v *ExternalWorkflowExecutionCancelRequestedEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [0]wire.Field
+		i      int = 0
+	)
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *ExternalWorkflowExecutionCancelRequestedEventFilter) FromWire(w wire.Value) error {
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		}
+	}
+	return nil
+}
+
+func (v *ExternalWorkflowExecutionCancelRequestedEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [0]string
+	i := 0
+	return fmt.Sprintf("ExternalWorkflowExecutionCancelRequestedEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *ExternalWorkflowExecutionCancelRequestedEventFilter) Equals(rhs *ExternalWorkflowExecutionCancelRequestedEventFilter) bool {
+	return true
+}
+
 type FailWorkflowExecutionDecisionAttributes struct {
 	Reason  *string `json:"reason,omitempty"`
 	Details []byte  `json:"details"`
@@ -6441,15 +7769,46 @@ func (v *FailWorkflowExecutionDecisionAttributes) GetReason() (o string) {
 }
 
 type GetWorkflowExecutionHistoryRequest struct {
-	Domain          *string            `json:"domain,omitempty"`
-	Execution       *WorkflowExecution `json:"execution,omitempty"`
-	MaximumPageSize *int32             `json:"maximumPageSize,omitempty"`
-	NextPageToken   []byte             `json:"nextPageToken"`
+	Domain          *string               `json:"domain,omitempty"`
+	Execution       *WorkflowExecution    `json:"execution,omitempty"`
+	MaximumPageSize *int32                `json:"maximumPageSize,omitempty"`
+	NextPageToken   []byte                `json:"nextPageToken"`
+	Filters         []*HistoryEventFilter `json:"filters"`
+}
+
+type _List_HistoryEventFilter_ValueList []*HistoryEventFilter
+
+func (v _List_HistoryEventFilter_ValueList) ForEach(f func(wire.Value) error) error {
+	for i, x := range v {
+		if x == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", i)
+		}
+		w, err := x.ToWire()
+		if err != nil {
+			return err
+		}
+		err = f(w)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (v _List_HistoryEventFilter_ValueList) Size() int {
+	return len(v)
+}
+
+func (_List_HistoryEventFilter_ValueList) ValueType() wire.Type {
+	return wire.TStruct
+}
+
+func (_List_HistoryEventFilter_ValueList) Close() {
 }
 
 func (v *GetWorkflowExecutionHistoryRequest) ToWire() (wire.Value, error) {
 	var (
-		fields [4]wire.Field
+		fields [5]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -6486,7 +7845,38 @@ func (v *GetWorkflowExecutionHistoryRequest) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 40, Value: w}
 		i++
 	}
+	if v.Filters != nil {
+		w, err = wire.NewValueList(_List_HistoryEventFilter_ValueList(v.Filters)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 60, Value: w}
+		i++
+	}
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _HistoryEventFilter_Read(w wire.Value) (*HistoryEventFilter, error) {
+	var v HistoryEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _List_HistoryEventFilter_Read(l wire.ValueList) ([]*HistoryEventFilter, error) {
+	if l.ValueType() != wire.TStruct {
+		return nil, nil
+	}
+	o := make([]*HistoryEventFilter, 0, l.Size())
+	err := l.ForEach(func(x wire.Value) error {
+		i, err := _HistoryEventFilter_Read(x)
+		if err != nil {
+			return err
+		}
+		o = append(o, i)
+		return nil
+	})
+	l.Close()
+	return o, err
 }
 
 func (v *GetWorkflowExecutionHistoryRequest) FromWire(w wire.Value) error {
@@ -6525,6 +7915,13 @@ func (v *GetWorkflowExecutionHistoryRequest) FromWire(w wire.Value) error {
 					return err
 				}
 			}
+		case 60:
+			if field.Value.Type() == wire.TList {
+				v.Filters, err = _List_HistoryEventFilter_Read(field.Value.GetList())
+				if err != nil {
+					return err
+				}
+			}
 		}
 	}
 	return nil
@@ -6534,7 +7931,7 @@ func (v *GetWorkflowExecutionHistoryRequest) String() string {
 	if v == nil {
 		return "<nil>"
 	}
-	var fields [4]string
+	var fields [5]string
 	i := 0
 	if v.Domain != nil {
 		fields[i] = fmt.Sprintf("Domain: %v", *(v.Domain))
@@ -6552,7 +7949,24 @@ func (v *GetWorkflowExecutionHistoryRequest) String() string {
 		fields[i] = fmt.Sprintf("NextPageToken: %v", v.NextPageToken)
 		i++
 	}
+	if v.Filters != nil {
+		fields[i] = fmt.Sprintf("Filters: %v", v.Filters)
+		i++
+	}
 	return fmt.Sprintf("GetWorkflowExecutionHistoryRequest{%v}", strings.Join(fields[:i], ", "))
+}
+
+func _List_HistoryEventFilter_Equals(lhs, rhs []*HistoryEventFilter) bool {
+	if len(lhs) != len(rhs) {
+		return false
+	}
+	for i, lv := range lhs {
+		rv := rhs[i]
+		if !lv.Equals(rv) {
+			return false
+		}
+	}
+	return true
 }
 
 func (v *GetWorkflowExecutionHistoryRequest) Equals(rhs *GetWorkflowExecutionHistoryRequest) bool {
@@ -6566,6 +7980,9 @@ func (v *GetWorkflowExecutionHistoryRequest) Equals(rhs *GetWorkflowExecutionHis
 		return false
 	}
 	if !((v.NextPageToken == nil && rhs.NextPageToken == nil) || (v.NextPageToken != nil && rhs.NextPageToken != nil && bytes.Equal(v.NextPageToken, rhs.NextPageToken))) {
+		return false
+	}
+	if !((v.Filters == nil && rhs.Filters == nil) || (v.Filters != nil && rhs.Filters != nil && _List_HistoryEventFilter_Equals(v.Filters, rhs.Filters))) {
 		return false
 	}
 	return true
@@ -8044,6 +9461,1175 @@ func (v *HistoryEvent) GetEventType() (o EventType) {
 	return
 }
 
+type HistoryEventFilter struct {
+	EventType                                                  *EventType                                                  `json:"eventType,omitempty"`
+	WorkflowExecutionStartedEventFilter                        *WorkflowExecutionStartedEventFilter                        `json:"workflowExecutionStartedEventFilter,omitempty"`
+	WorkflowExecutionCompletedEventFilter                      *WorkflowExecutionCompletedEventFilter                      `json:"workflowExecutionCompletedEventFilter,omitempty"`
+	WorkflowExecutionFailedEventFilter                         *WorkflowExecutionFailedEventFilter                         `json:"workflowExecutionFailedEventFilter,omitempty"`
+	WorkflowExecutionTimedOutEventFilter                       *WorkflowExecutionTimedOutEventFilter                       `json:"workflowExecutionTimedOutEventFilter,omitempty"`
+	DecisionTaskScheduledEventFilter                           *DecisionTaskScheduledEventFilter                           `json:"decisionTaskScheduledEventFilter,omitempty"`
+	DecisionTaskStartedEventFilter                             *DecisionTaskStartedEventFilter                             `json:"decisionTaskStartedEventFilter,omitempty"`
+	DecisionTaskCompletedEventFilter                           *DecisionTaskCompletedEventFilter                           `json:"decisionTaskCompletedEventFilter,omitempty"`
+	DecisionTaskTimedOutEventFilter                            *DecisionTaskTimedOutEventFilter                            `json:"decisionTaskTimedOutEventFilter,omitempty"`
+	DecisionTaskFailedEventFilter                              *DecisionTaskFailedEventFilter                              `json:"decisionTaskFailedEventFilter,omitempty"`
+	ActivityTaskScheduledEventFilter                           *ActivityTaskScheduledEventFilter                           `json:"activityTaskScheduledEventFilter,omitempty"`
+	ActivityTaskStartedEventFilter                             *ActivityTaskStartedEventFilter                             `json:"activityTaskStartedEventFilter,omitempty"`
+	ActivityTaskCompletedEventFilter                           *ActivityTaskCompletedEventFilter                           `json:"activityTaskCompletedEventFilter,omitempty"`
+	ActivityTaskFailedEventFilter                              *ActivityTaskFailedEventFilter                              `json:"activityTaskFailedEventFilter,omitempty"`
+	ActivityTaskTimedOutEventFilter                            *ActivityTaskTimedOutEventFilter                            `json:"activityTaskTimedOutEventFilter,omitempty"`
+	TimerStartedEventFilter                                    *TimerStartedEventFilter                                    `json:"timerStartedEventFilter,omitempty"`
+	TimerFiredEventFilter                                      *TimerFiredEventFilter                                      `json:"timerFiredEventFilter,omitempty"`
+	ActivityTaskCancelRequestedEventFilter                     *ActivityTaskCancelRequestedEventFilter                     `json:"activityTaskCancelRequestedEventFilter,omitempty"`
+	RequestCancelActivityTaskFailedEventFilter                 *RequestCancelActivityTaskFailedEventFilter                 `json:"requestCancelActivityTaskFailedEventFilter,omitempty"`
+	ActivityTaskCanceledEventFilter                            *ActivityTaskCanceledEventFilter                            `json:"activityTaskCanceledEventFilter,omitempty"`
+	TimerCanceledEventFilter                                   *TimerCanceledEventFilter                                   `json:"timerCanceledEventFilter,omitempty"`
+	CancelTimerFailedEventFilter                               *CancelTimerFailedEventFilter                               `json:"cancelTimerFailedEventFilter,omitempty"`
+	MarkerRecordedEventFilter                                  *MarkerRecordedEventFilter                                  `json:"markerRecordedEventFilter,omitempty"`
+	WorkflowExecutionSignaledEventFilter                       *WorkflowExecutionSignaledEventFilter                       `json:"workflowExecutionSignaledEventFilter,omitempty"`
+	WorkflowExecutionTerminatedEventFilter                     *WorkflowExecutionTerminatedEventFilter                     `json:"workflowExecutionTerminatedEventFilter,omitempty"`
+	WorkflowExecutionCancelRequestedEventFilter                *WorkflowExecutionCancelRequestedEventFilter                `json:"workflowExecutionCancelRequestedEventFilter,omitempty"`
+	WorkflowExecutionCanceledEventFilter                       *WorkflowExecutionCanceledEventFilter                       `json:"workflowExecutionCanceledEventFilter,omitempty"`
+	RequestCancelExternalWorkflowExecutionInitiatedEventFilter *RequestCancelExternalWorkflowExecutionInitiatedEventFilter `json:"requestCancelExternalWorkflowExecutionInitiatedEventFilter,omitempty"`
+	RequestCancelExternalWorkflowExecutionFailedEventFilter    *RequestCancelExternalWorkflowExecutionFailedEventFilter    `json:"requestCancelExternalWorkflowExecutionFailedEventFilter,omitempty"`
+	ExternalWorkflowExecutionCancelRequestedEventFilter        *ExternalWorkflowExecutionCancelRequestedEventFilter        `json:"externalWorkflowExecutionCancelRequestedEventFilter,omitempty"`
+	WorkflowExecutionContinuedAsNewEventFilter                 *WorkflowExecutionContinuedAsNewEventFilter                 `json:"workflowExecutionContinuedAsNewEventFilter,omitempty"`
+	StartChildWorkflowExecutionInitiatedEventFilter            *StartChildWorkflowExecutionInitiatedEventFilter            `json:"startChildWorkflowExecutionInitiatedEventFilter,omitempty"`
+	StartChildWorkflowExecutionFailedEventFilter               *StartChildWorkflowExecutionFailedEventFilter               `json:"startChildWorkflowExecutionFailedEventFilter,omitempty"`
+	ChildWorkflowExecutionStartedEventFilter                   *ChildWorkflowExecutionStartedEventFilter                   `json:"childWorkflowExecutionStartedEventFilter,omitempty"`
+	ChildWorkflowExecutionCompletedEventFilter                 *ChildWorkflowExecutionCompletedEventFilter                 `json:"childWorkflowExecutionCompletedEventFilter,omitempty"`
+	ChildWorkflowExecutionFailedEventFilter                    *ChildWorkflowExecutionFailedEventFilter                    `json:"childWorkflowExecutionFailedEventFilter,omitempty"`
+	ChildWorkflowExecutionCanceledEventFilter                  *ChildWorkflowExecutionCanceledEventFilter                  `json:"childWorkflowExecutionCanceledEventFilter,omitempty"`
+	ChildWorkflowExecutionTimedOutEventFilter                  *ChildWorkflowExecutionTimedOutEventFilter                  `json:"childWorkflowExecutionTimedOutEventFilter,omitempty"`
+	ChildWorkflowExecutionTerminatedEventFilter                *ChildWorkflowExecutionTerminatedEventFilter                `json:"childWorkflowExecutionTerminatedEventFilter,omitempty"`
+}
+
+func (v *HistoryEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [39]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+	if v.EventType != nil {
+		w, err = v.EventType.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.WorkflowExecutionStartedEventFilter != nil {
+		w, err = v.WorkflowExecutionStartedEventFilter.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 40, Value: w}
+		i++
+	}
+	if v.WorkflowExecutionCompletedEventFilter != nil {
+		w, err = v.WorkflowExecutionCompletedEventFilter.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 50, Value: w}
+		i++
+	}
+	if v.WorkflowExecutionFailedEventFilter != nil {
+		w, err = v.WorkflowExecutionFailedEventFilter.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 60, Value: w}
+		i++
+	}
+	if v.WorkflowExecutionTimedOutEventFilter != nil {
+		w, err = v.WorkflowExecutionTimedOutEventFilter.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 70, Value: w}
+		i++
+	}
+	if v.DecisionTaskScheduledEventFilter != nil {
+		w, err = v.DecisionTaskScheduledEventFilter.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 80, Value: w}
+		i++
+	}
+	if v.DecisionTaskStartedEventFilter != nil {
+		w, err = v.DecisionTaskStartedEventFilter.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 90, Value: w}
+		i++
+	}
+	if v.DecisionTaskCompletedEventFilter != nil {
+		w, err = v.DecisionTaskCompletedEventFilter.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 100, Value: w}
+		i++
+	}
+	if v.DecisionTaskTimedOutEventFilter != nil {
+		w, err = v.DecisionTaskTimedOutEventFilter.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 110, Value: w}
+		i++
+	}
+	if v.DecisionTaskFailedEventFilter != nil {
+		w, err = v.DecisionTaskFailedEventFilter.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 120, Value: w}
+		i++
+	}
+	if v.ActivityTaskScheduledEventFilter != nil {
+		w, err = v.ActivityTaskScheduledEventFilter.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 130, Value: w}
+		i++
+	}
+	if v.ActivityTaskStartedEventFilter != nil {
+		w, err = v.ActivityTaskStartedEventFilter.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 140, Value: w}
+		i++
+	}
+	if v.ActivityTaskCompletedEventFilter != nil {
+		w, err = v.ActivityTaskCompletedEventFilter.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 150, Value: w}
+		i++
+	}
+	if v.ActivityTaskFailedEventFilter != nil {
+		w, err = v.ActivityTaskFailedEventFilter.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 160, Value: w}
+		i++
+	}
+	if v.ActivityTaskTimedOutEventFilter != nil {
+		w, err = v.ActivityTaskTimedOutEventFilter.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 170, Value: w}
+		i++
+	}
+	if v.TimerStartedEventFilter != nil {
+		w, err = v.TimerStartedEventFilter.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 180, Value: w}
+		i++
+	}
+	if v.TimerFiredEventFilter != nil {
+		w, err = v.TimerFiredEventFilter.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 190, Value: w}
+		i++
+	}
+	if v.ActivityTaskCancelRequestedEventFilter != nil {
+		w, err = v.ActivityTaskCancelRequestedEventFilter.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 200, Value: w}
+		i++
+	}
+	if v.RequestCancelActivityTaskFailedEventFilter != nil {
+		w, err = v.RequestCancelActivityTaskFailedEventFilter.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 210, Value: w}
+		i++
+	}
+	if v.ActivityTaskCanceledEventFilter != nil {
+		w, err = v.ActivityTaskCanceledEventFilter.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 220, Value: w}
+		i++
+	}
+	if v.TimerCanceledEventFilter != nil {
+		w, err = v.TimerCanceledEventFilter.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 230, Value: w}
+		i++
+	}
+	if v.CancelTimerFailedEventFilter != nil {
+		w, err = v.CancelTimerFailedEventFilter.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 240, Value: w}
+		i++
+	}
+	if v.MarkerRecordedEventFilter != nil {
+		w, err = v.MarkerRecordedEventFilter.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 250, Value: w}
+		i++
+	}
+	if v.WorkflowExecutionSignaledEventFilter != nil {
+		w, err = v.WorkflowExecutionSignaledEventFilter.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 260, Value: w}
+		i++
+	}
+	if v.WorkflowExecutionTerminatedEventFilter != nil {
+		w, err = v.WorkflowExecutionTerminatedEventFilter.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 270, Value: w}
+		i++
+	}
+	if v.WorkflowExecutionCancelRequestedEventFilter != nil {
+		w, err = v.WorkflowExecutionCancelRequestedEventFilter.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 280, Value: w}
+		i++
+	}
+	if v.WorkflowExecutionCanceledEventFilter != nil {
+		w, err = v.WorkflowExecutionCanceledEventFilter.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 290, Value: w}
+		i++
+	}
+	if v.RequestCancelExternalWorkflowExecutionInitiatedEventFilter != nil {
+		w, err = v.RequestCancelExternalWorkflowExecutionInitiatedEventFilter.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 300, Value: w}
+		i++
+	}
+	if v.RequestCancelExternalWorkflowExecutionFailedEventFilter != nil {
+		w, err = v.RequestCancelExternalWorkflowExecutionFailedEventFilter.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 310, Value: w}
+		i++
+	}
+	if v.ExternalWorkflowExecutionCancelRequestedEventFilter != nil {
+		w, err = v.ExternalWorkflowExecutionCancelRequestedEventFilter.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 320, Value: w}
+		i++
+	}
+	if v.WorkflowExecutionContinuedAsNewEventFilter != nil {
+		w, err = v.WorkflowExecutionContinuedAsNewEventFilter.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 330, Value: w}
+		i++
+	}
+	if v.StartChildWorkflowExecutionInitiatedEventFilter != nil {
+		w, err = v.StartChildWorkflowExecutionInitiatedEventFilter.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 340, Value: w}
+		i++
+	}
+	if v.StartChildWorkflowExecutionFailedEventFilter != nil {
+		w, err = v.StartChildWorkflowExecutionFailedEventFilter.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 350, Value: w}
+		i++
+	}
+	if v.ChildWorkflowExecutionStartedEventFilter != nil {
+		w, err = v.ChildWorkflowExecutionStartedEventFilter.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 360, Value: w}
+		i++
+	}
+	if v.ChildWorkflowExecutionCompletedEventFilter != nil {
+		w, err = v.ChildWorkflowExecutionCompletedEventFilter.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 370, Value: w}
+		i++
+	}
+	if v.ChildWorkflowExecutionFailedEventFilter != nil {
+		w, err = v.ChildWorkflowExecutionFailedEventFilter.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 380, Value: w}
+		i++
+	}
+	if v.ChildWorkflowExecutionCanceledEventFilter != nil {
+		w, err = v.ChildWorkflowExecutionCanceledEventFilter.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 390, Value: w}
+		i++
+	}
+	if v.ChildWorkflowExecutionTimedOutEventFilter != nil {
+		w, err = v.ChildWorkflowExecutionTimedOutEventFilter.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 400, Value: w}
+		i++
+	}
+	if v.ChildWorkflowExecutionTerminatedEventFilter != nil {
+		w, err = v.ChildWorkflowExecutionTerminatedEventFilter.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 410, Value: w}
+		i++
+	}
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _WorkflowExecutionStartedEventFilter_Read(w wire.Value) (*WorkflowExecutionStartedEventFilter, error) {
+	var v WorkflowExecutionStartedEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _WorkflowExecutionCompletedEventFilter_Read(w wire.Value) (*WorkflowExecutionCompletedEventFilter, error) {
+	var v WorkflowExecutionCompletedEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _WorkflowExecutionFailedEventFilter_Read(w wire.Value) (*WorkflowExecutionFailedEventFilter, error) {
+	var v WorkflowExecutionFailedEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _WorkflowExecutionTimedOutEventFilter_Read(w wire.Value) (*WorkflowExecutionTimedOutEventFilter, error) {
+	var v WorkflowExecutionTimedOutEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _DecisionTaskScheduledEventFilter_Read(w wire.Value) (*DecisionTaskScheduledEventFilter, error) {
+	var v DecisionTaskScheduledEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _DecisionTaskStartedEventFilter_Read(w wire.Value) (*DecisionTaskStartedEventFilter, error) {
+	var v DecisionTaskStartedEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _DecisionTaskCompletedEventFilter_Read(w wire.Value) (*DecisionTaskCompletedEventFilter, error) {
+	var v DecisionTaskCompletedEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _DecisionTaskTimedOutEventFilter_Read(w wire.Value) (*DecisionTaskTimedOutEventFilter, error) {
+	var v DecisionTaskTimedOutEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _DecisionTaskFailedEventFilter_Read(w wire.Value) (*DecisionTaskFailedEventFilter, error) {
+	var v DecisionTaskFailedEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _ActivityTaskScheduledEventFilter_Read(w wire.Value) (*ActivityTaskScheduledEventFilter, error) {
+	var v ActivityTaskScheduledEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _ActivityTaskStartedEventFilter_Read(w wire.Value) (*ActivityTaskStartedEventFilter, error) {
+	var v ActivityTaskStartedEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _ActivityTaskCompletedEventFilter_Read(w wire.Value) (*ActivityTaskCompletedEventFilter, error) {
+	var v ActivityTaskCompletedEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _ActivityTaskFailedEventFilter_Read(w wire.Value) (*ActivityTaskFailedEventFilter, error) {
+	var v ActivityTaskFailedEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _ActivityTaskTimedOutEventFilter_Read(w wire.Value) (*ActivityTaskTimedOutEventFilter, error) {
+	var v ActivityTaskTimedOutEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _TimerStartedEventFilter_Read(w wire.Value) (*TimerStartedEventFilter, error) {
+	var v TimerStartedEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _TimerFiredEventFilter_Read(w wire.Value) (*TimerFiredEventFilter, error) {
+	var v TimerFiredEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _ActivityTaskCancelRequestedEventFilter_Read(w wire.Value) (*ActivityTaskCancelRequestedEventFilter, error) {
+	var v ActivityTaskCancelRequestedEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _RequestCancelActivityTaskFailedEventFilter_Read(w wire.Value) (*RequestCancelActivityTaskFailedEventFilter, error) {
+	var v RequestCancelActivityTaskFailedEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _ActivityTaskCanceledEventFilter_Read(w wire.Value) (*ActivityTaskCanceledEventFilter, error) {
+	var v ActivityTaskCanceledEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _TimerCanceledEventFilter_Read(w wire.Value) (*TimerCanceledEventFilter, error) {
+	var v TimerCanceledEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _CancelTimerFailedEventFilter_Read(w wire.Value) (*CancelTimerFailedEventFilter, error) {
+	var v CancelTimerFailedEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _MarkerRecordedEventFilter_Read(w wire.Value) (*MarkerRecordedEventFilter, error) {
+	var v MarkerRecordedEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _WorkflowExecutionSignaledEventFilter_Read(w wire.Value) (*WorkflowExecutionSignaledEventFilter, error) {
+	var v WorkflowExecutionSignaledEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _WorkflowExecutionTerminatedEventFilter_Read(w wire.Value) (*WorkflowExecutionTerminatedEventFilter, error) {
+	var v WorkflowExecutionTerminatedEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _WorkflowExecutionCancelRequestedEventFilter_Read(w wire.Value) (*WorkflowExecutionCancelRequestedEventFilter, error) {
+	var v WorkflowExecutionCancelRequestedEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _WorkflowExecutionCanceledEventFilter_Read(w wire.Value) (*WorkflowExecutionCanceledEventFilter, error) {
+	var v WorkflowExecutionCanceledEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _RequestCancelExternalWorkflowExecutionInitiatedEventFilter_Read(w wire.Value) (*RequestCancelExternalWorkflowExecutionInitiatedEventFilter, error) {
+	var v RequestCancelExternalWorkflowExecutionInitiatedEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _RequestCancelExternalWorkflowExecutionFailedEventFilter_Read(w wire.Value) (*RequestCancelExternalWorkflowExecutionFailedEventFilter, error) {
+	var v RequestCancelExternalWorkflowExecutionFailedEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _ExternalWorkflowExecutionCancelRequestedEventFilter_Read(w wire.Value) (*ExternalWorkflowExecutionCancelRequestedEventFilter, error) {
+	var v ExternalWorkflowExecutionCancelRequestedEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _WorkflowExecutionContinuedAsNewEventFilter_Read(w wire.Value) (*WorkflowExecutionContinuedAsNewEventFilter, error) {
+	var v WorkflowExecutionContinuedAsNewEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _StartChildWorkflowExecutionInitiatedEventFilter_Read(w wire.Value) (*StartChildWorkflowExecutionInitiatedEventFilter, error) {
+	var v StartChildWorkflowExecutionInitiatedEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _StartChildWorkflowExecutionFailedEventFilter_Read(w wire.Value) (*StartChildWorkflowExecutionFailedEventFilter, error) {
+	var v StartChildWorkflowExecutionFailedEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _ChildWorkflowExecutionStartedEventFilter_Read(w wire.Value) (*ChildWorkflowExecutionStartedEventFilter, error) {
+	var v ChildWorkflowExecutionStartedEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _ChildWorkflowExecutionCompletedEventFilter_Read(w wire.Value) (*ChildWorkflowExecutionCompletedEventFilter, error) {
+	var v ChildWorkflowExecutionCompletedEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _ChildWorkflowExecutionFailedEventFilter_Read(w wire.Value) (*ChildWorkflowExecutionFailedEventFilter, error) {
+	var v ChildWorkflowExecutionFailedEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _ChildWorkflowExecutionCanceledEventFilter_Read(w wire.Value) (*ChildWorkflowExecutionCanceledEventFilter, error) {
+	var v ChildWorkflowExecutionCanceledEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _ChildWorkflowExecutionTimedOutEventFilter_Read(w wire.Value) (*ChildWorkflowExecutionTimedOutEventFilter, error) {
+	var v ChildWorkflowExecutionTimedOutEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _ChildWorkflowExecutionTerminatedEventFilter_Read(w wire.Value) (*ChildWorkflowExecutionTerminatedEventFilter, error) {
+	var v ChildWorkflowExecutionTerminatedEventFilter
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func (v *HistoryEventFilter) FromWire(w wire.Value) error {
+	var err error
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TI32 {
+				var x EventType
+				x, err = _EventType_Read(field.Value)
+				v.EventType = &x
+				if err != nil {
+					return err
+				}
+			}
+		case 40:
+			if field.Value.Type() == wire.TStruct {
+				v.WorkflowExecutionStartedEventFilter, err = _WorkflowExecutionStartedEventFilter_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 50:
+			if field.Value.Type() == wire.TStruct {
+				v.WorkflowExecutionCompletedEventFilter, err = _WorkflowExecutionCompletedEventFilter_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 60:
+			if field.Value.Type() == wire.TStruct {
+				v.WorkflowExecutionFailedEventFilter, err = _WorkflowExecutionFailedEventFilter_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 70:
+			if field.Value.Type() == wire.TStruct {
+				v.WorkflowExecutionTimedOutEventFilter, err = _WorkflowExecutionTimedOutEventFilter_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 80:
+			if field.Value.Type() == wire.TStruct {
+				v.DecisionTaskScheduledEventFilter, err = _DecisionTaskScheduledEventFilter_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 90:
+			if field.Value.Type() == wire.TStruct {
+				v.DecisionTaskStartedEventFilter, err = _DecisionTaskStartedEventFilter_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 100:
+			if field.Value.Type() == wire.TStruct {
+				v.DecisionTaskCompletedEventFilter, err = _DecisionTaskCompletedEventFilter_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 110:
+			if field.Value.Type() == wire.TStruct {
+				v.DecisionTaskTimedOutEventFilter, err = _DecisionTaskTimedOutEventFilter_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 120:
+			if field.Value.Type() == wire.TStruct {
+				v.DecisionTaskFailedEventFilter, err = _DecisionTaskFailedEventFilter_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 130:
+			if field.Value.Type() == wire.TStruct {
+				v.ActivityTaskScheduledEventFilter, err = _ActivityTaskScheduledEventFilter_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 140:
+			if field.Value.Type() == wire.TStruct {
+				v.ActivityTaskStartedEventFilter, err = _ActivityTaskStartedEventFilter_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 150:
+			if field.Value.Type() == wire.TStruct {
+				v.ActivityTaskCompletedEventFilter, err = _ActivityTaskCompletedEventFilter_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 160:
+			if field.Value.Type() == wire.TStruct {
+				v.ActivityTaskFailedEventFilter, err = _ActivityTaskFailedEventFilter_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 170:
+			if field.Value.Type() == wire.TStruct {
+				v.ActivityTaskTimedOutEventFilter, err = _ActivityTaskTimedOutEventFilter_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 180:
+			if field.Value.Type() == wire.TStruct {
+				v.TimerStartedEventFilter, err = _TimerStartedEventFilter_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 190:
+			if field.Value.Type() == wire.TStruct {
+				v.TimerFiredEventFilter, err = _TimerFiredEventFilter_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 200:
+			if field.Value.Type() == wire.TStruct {
+				v.ActivityTaskCancelRequestedEventFilter, err = _ActivityTaskCancelRequestedEventFilter_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 210:
+			if field.Value.Type() == wire.TStruct {
+				v.RequestCancelActivityTaskFailedEventFilter, err = _RequestCancelActivityTaskFailedEventFilter_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 220:
+			if field.Value.Type() == wire.TStruct {
+				v.ActivityTaskCanceledEventFilter, err = _ActivityTaskCanceledEventFilter_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 230:
+			if field.Value.Type() == wire.TStruct {
+				v.TimerCanceledEventFilter, err = _TimerCanceledEventFilter_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 240:
+			if field.Value.Type() == wire.TStruct {
+				v.CancelTimerFailedEventFilter, err = _CancelTimerFailedEventFilter_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 250:
+			if field.Value.Type() == wire.TStruct {
+				v.MarkerRecordedEventFilter, err = _MarkerRecordedEventFilter_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 260:
+			if field.Value.Type() == wire.TStruct {
+				v.WorkflowExecutionSignaledEventFilter, err = _WorkflowExecutionSignaledEventFilter_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 270:
+			if field.Value.Type() == wire.TStruct {
+				v.WorkflowExecutionTerminatedEventFilter, err = _WorkflowExecutionTerminatedEventFilter_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 280:
+			if field.Value.Type() == wire.TStruct {
+				v.WorkflowExecutionCancelRequestedEventFilter, err = _WorkflowExecutionCancelRequestedEventFilter_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 290:
+			if field.Value.Type() == wire.TStruct {
+				v.WorkflowExecutionCanceledEventFilter, err = _WorkflowExecutionCanceledEventFilter_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 300:
+			if field.Value.Type() == wire.TStruct {
+				v.RequestCancelExternalWorkflowExecutionInitiatedEventFilter, err = _RequestCancelExternalWorkflowExecutionInitiatedEventFilter_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 310:
+			if field.Value.Type() == wire.TStruct {
+				v.RequestCancelExternalWorkflowExecutionFailedEventFilter, err = _RequestCancelExternalWorkflowExecutionFailedEventFilter_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 320:
+			if field.Value.Type() == wire.TStruct {
+				v.ExternalWorkflowExecutionCancelRequestedEventFilter, err = _ExternalWorkflowExecutionCancelRequestedEventFilter_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 330:
+			if field.Value.Type() == wire.TStruct {
+				v.WorkflowExecutionContinuedAsNewEventFilter, err = _WorkflowExecutionContinuedAsNewEventFilter_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 340:
+			if field.Value.Type() == wire.TStruct {
+				v.StartChildWorkflowExecutionInitiatedEventFilter, err = _StartChildWorkflowExecutionInitiatedEventFilter_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 350:
+			if field.Value.Type() == wire.TStruct {
+				v.StartChildWorkflowExecutionFailedEventFilter, err = _StartChildWorkflowExecutionFailedEventFilter_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 360:
+			if field.Value.Type() == wire.TStruct {
+				v.ChildWorkflowExecutionStartedEventFilter, err = _ChildWorkflowExecutionStartedEventFilter_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 370:
+			if field.Value.Type() == wire.TStruct {
+				v.ChildWorkflowExecutionCompletedEventFilter, err = _ChildWorkflowExecutionCompletedEventFilter_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 380:
+			if field.Value.Type() == wire.TStruct {
+				v.ChildWorkflowExecutionFailedEventFilter, err = _ChildWorkflowExecutionFailedEventFilter_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 390:
+			if field.Value.Type() == wire.TStruct {
+				v.ChildWorkflowExecutionCanceledEventFilter, err = _ChildWorkflowExecutionCanceledEventFilter_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 400:
+			if field.Value.Type() == wire.TStruct {
+				v.ChildWorkflowExecutionTimedOutEventFilter, err = _ChildWorkflowExecutionTimedOutEventFilter_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 410:
+			if field.Value.Type() == wire.TStruct {
+				v.ChildWorkflowExecutionTerminatedEventFilter, err = _ChildWorkflowExecutionTerminatedEventFilter_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (v *HistoryEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [39]string
+	i := 0
+	if v.EventType != nil {
+		fields[i] = fmt.Sprintf("EventType: %v", *(v.EventType))
+		i++
+	}
+	if v.WorkflowExecutionStartedEventFilter != nil {
+		fields[i] = fmt.Sprintf("WorkflowExecutionStartedEventFilter: %v", v.WorkflowExecutionStartedEventFilter)
+		i++
+	}
+	if v.WorkflowExecutionCompletedEventFilter != nil {
+		fields[i] = fmt.Sprintf("WorkflowExecutionCompletedEventFilter: %v", v.WorkflowExecutionCompletedEventFilter)
+		i++
+	}
+	if v.WorkflowExecutionFailedEventFilter != nil {
+		fields[i] = fmt.Sprintf("WorkflowExecutionFailedEventFilter: %v", v.WorkflowExecutionFailedEventFilter)
+		i++
+	}
+	if v.WorkflowExecutionTimedOutEventFilter != nil {
+		fields[i] = fmt.Sprintf("WorkflowExecutionTimedOutEventFilter: %v", v.WorkflowExecutionTimedOutEventFilter)
+		i++
+	}
+	if v.DecisionTaskScheduledEventFilter != nil {
+		fields[i] = fmt.Sprintf("DecisionTaskScheduledEventFilter: %v", v.DecisionTaskScheduledEventFilter)
+		i++
+	}
+	if v.DecisionTaskStartedEventFilter != nil {
+		fields[i] = fmt.Sprintf("DecisionTaskStartedEventFilter: %v", v.DecisionTaskStartedEventFilter)
+		i++
+	}
+	if v.DecisionTaskCompletedEventFilter != nil {
+		fields[i] = fmt.Sprintf("DecisionTaskCompletedEventFilter: %v", v.DecisionTaskCompletedEventFilter)
+		i++
+	}
+	if v.DecisionTaskTimedOutEventFilter != nil {
+		fields[i] = fmt.Sprintf("DecisionTaskTimedOutEventFilter: %v", v.DecisionTaskTimedOutEventFilter)
+		i++
+	}
+	if v.DecisionTaskFailedEventFilter != nil {
+		fields[i] = fmt.Sprintf("DecisionTaskFailedEventFilter: %v", v.DecisionTaskFailedEventFilter)
+		i++
+	}
+	if v.ActivityTaskScheduledEventFilter != nil {
+		fields[i] = fmt.Sprintf("ActivityTaskScheduledEventFilter: %v", v.ActivityTaskScheduledEventFilter)
+		i++
+	}
+	if v.ActivityTaskStartedEventFilter != nil {
+		fields[i] = fmt.Sprintf("ActivityTaskStartedEventFilter: %v", v.ActivityTaskStartedEventFilter)
+		i++
+	}
+	if v.ActivityTaskCompletedEventFilter != nil {
+		fields[i] = fmt.Sprintf("ActivityTaskCompletedEventFilter: %v", v.ActivityTaskCompletedEventFilter)
+		i++
+	}
+	if v.ActivityTaskFailedEventFilter != nil {
+		fields[i] = fmt.Sprintf("ActivityTaskFailedEventFilter: %v", v.ActivityTaskFailedEventFilter)
+		i++
+	}
+	if v.ActivityTaskTimedOutEventFilter != nil {
+		fields[i] = fmt.Sprintf("ActivityTaskTimedOutEventFilter: %v", v.ActivityTaskTimedOutEventFilter)
+		i++
+	}
+	if v.TimerStartedEventFilter != nil {
+		fields[i] = fmt.Sprintf("TimerStartedEventFilter: %v", v.TimerStartedEventFilter)
+		i++
+	}
+	if v.TimerFiredEventFilter != nil {
+		fields[i] = fmt.Sprintf("TimerFiredEventFilter: %v", v.TimerFiredEventFilter)
+		i++
+	}
+	if v.ActivityTaskCancelRequestedEventFilter != nil {
+		fields[i] = fmt.Sprintf("ActivityTaskCancelRequestedEventFilter: %v", v.ActivityTaskCancelRequestedEventFilter)
+		i++
+	}
+	if v.RequestCancelActivityTaskFailedEventFilter != nil {
+		fields[i] = fmt.Sprintf("RequestCancelActivityTaskFailedEventFilter: %v", v.RequestCancelActivityTaskFailedEventFilter)
+		i++
+	}
+	if v.ActivityTaskCanceledEventFilter != nil {
+		fields[i] = fmt.Sprintf("ActivityTaskCanceledEventFilter: %v", v.ActivityTaskCanceledEventFilter)
+		i++
+	}
+	if v.TimerCanceledEventFilter != nil {
+		fields[i] = fmt.Sprintf("TimerCanceledEventFilter: %v", v.TimerCanceledEventFilter)
+		i++
+	}
+	if v.CancelTimerFailedEventFilter != nil {
+		fields[i] = fmt.Sprintf("CancelTimerFailedEventFilter: %v", v.CancelTimerFailedEventFilter)
+		i++
+	}
+	if v.MarkerRecordedEventFilter != nil {
+		fields[i] = fmt.Sprintf("MarkerRecordedEventFilter: %v", v.MarkerRecordedEventFilter)
+		i++
+	}
+	if v.WorkflowExecutionSignaledEventFilter != nil {
+		fields[i] = fmt.Sprintf("WorkflowExecutionSignaledEventFilter: %v", v.WorkflowExecutionSignaledEventFilter)
+		i++
+	}
+	if v.WorkflowExecutionTerminatedEventFilter != nil {
+		fields[i] = fmt.Sprintf("WorkflowExecutionTerminatedEventFilter: %v", v.WorkflowExecutionTerminatedEventFilter)
+		i++
+	}
+	if v.WorkflowExecutionCancelRequestedEventFilter != nil {
+		fields[i] = fmt.Sprintf("WorkflowExecutionCancelRequestedEventFilter: %v", v.WorkflowExecutionCancelRequestedEventFilter)
+		i++
+	}
+	if v.WorkflowExecutionCanceledEventFilter != nil {
+		fields[i] = fmt.Sprintf("WorkflowExecutionCanceledEventFilter: %v", v.WorkflowExecutionCanceledEventFilter)
+		i++
+	}
+	if v.RequestCancelExternalWorkflowExecutionInitiatedEventFilter != nil {
+		fields[i] = fmt.Sprintf("RequestCancelExternalWorkflowExecutionInitiatedEventFilter: %v", v.RequestCancelExternalWorkflowExecutionInitiatedEventFilter)
+		i++
+	}
+	if v.RequestCancelExternalWorkflowExecutionFailedEventFilter != nil {
+		fields[i] = fmt.Sprintf("RequestCancelExternalWorkflowExecutionFailedEventFilter: %v", v.RequestCancelExternalWorkflowExecutionFailedEventFilter)
+		i++
+	}
+	if v.ExternalWorkflowExecutionCancelRequestedEventFilter != nil {
+		fields[i] = fmt.Sprintf("ExternalWorkflowExecutionCancelRequestedEventFilter: %v", v.ExternalWorkflowExecutionCancelRequestedEventFilter)
+		i++
+	}
+	if v.WorkflowExecutionContinuedAsNewEventFilter != nil {
+		fields[i] = fmt.Sprintf("WorkflowExecutionContinuedAsNewEventFilter: %v", v.WorkflowExecutionContinuedAsNewEventFilter)
+		i++
+	}
+	if v.StartChildWorkflowExecutionInitiatedEventFilter != nil {
+		fields[i] = fmt.Sprintf("StartChildWorkflowExecutionInitiatedEventFilter: %v", v.StartChildWorkflowExecutionInitiatedEventFilter)
+		i++
+	}
+	if v.StartChildWorkflowExecutionFailedEventFilter != nil {
+		fields[i] = fmt.Sprintf("StartChildWorkflowExecutionFailedEventFilter: %v", v.StartChildWorkflowExecutionFailedEventFilter)
+		i++
+	}
+	if v.ChildWorkflowExecutionStartedEventFilter != nil {
+		fields[i] = fmt.Sprintf("ChildWorkflowExecutionStartedEventFilter: %v", v.ChildWorkflowExecutionStartedEventFilter)
+		i++
+	}
+	if v.ChildWorkflowExecutionCompletedEventFilter != nil {
+		fields[i] = fmt.Sprintf("ChildWorkflowExecutionCompletedEventFilter: %v", v.ChildWorkflowExecutionCompletedEventFilter)
+		i++
+	}
+	if v.ChildWorkflowExecutionFailedEventFilter != nil {
+		fields[i] = fmt.Sprintf("ChildWorkflowExecutionFailedEventFilter: %v", v.ChildWorkflowExecutionFailedEventFilter)
+		i++
+	}
+	if v.ChildWorkflowExecutionCanceledEventFilter != nil {
+		fields[i] = fmt.Sprintf("ChildWorkflowExecutionCanceledEventFilter: %v", v.ChildWorkflowExecutionCanceledEventFilter)
+		i++
+	}
+	if v.ChildWorkflowExecutionTimedOutEventFilter != nil {
+		fields[i] = fmt.Sprintf("ChildWorkflowExecutionTimedOutEventFilter: %v", v.ChildWorkflowExecutionTimedOutEventFilter)
+		i++
+	}
+	if v.ChildWorkflowExecutionTerminatedEventFilter != nil {
+		fields[i] = fmt.Sprintf("ChildWorkflowExecutionTerminatedEventFilter: %v", v.ChildWorkflowExecutionTerminatedEventFilter)
+		i++
+	}
+	return fmt.Sprintf("HistoryEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *HistoryEventFilter) Equals(rhs *HistoryEventFilter) bool {
+	if !_EventType_EqualsPtr(v.EventType, rhs.EventType) {
+		return false
+	}
+	if !((v.WorkflowExecutionStartedEventFilter == nil && rhs.WorkflowExecutionStartedEventFilter == nil) || (v.WorkflowExecutionStartedEventFilter != nil && rhs.WorkflowExecutionStartedEventFilter != nil && v.WorkflowExecutionStartedEventFilter.Equals(rhs.WorkflowExecutionStartedEventFilter))) {
+		return false
+	}
+	if !((v.WorkflowExecutionCompletedEventFilter == nil && rhs.WorkflowExecutionCompletedEventFilter == nil) || (v.WorkflowExecutionCompletedEventFilter != nil && rhs.WorkflowExecutionCompletedEventFilter != nil && v.WorkflowExecutionCompletedEventFilter.Equals(rhs.WorkflowExecutionCompletedEventFilter))) {
+		return false
+	}
+	if !((v.WorkflowExecutionFailedEventFilter == nil && rhs.WorkflowExecutionFailedEventFilter == nil) || (v.WorkflowExecutionFailedEventFilter != nil && rhs.WorkflowExecutionFailedEventFilter != nil && v.WorkflowExecutionFailedEventFilter.Equals(rhs.WorkflowExecutionFailedEventFilter))) {
+		return false
+	}
+	if !((v.WorkflowExecutionTimedOutEventFilter == nil && rhs.WorkflowExecutionTimedOutEventFilter == nil) || (v.WorkflowExecutionTimedOutEventFilter != nil && rhs.WorkflowExecutionTimedOutEventFilter != nil && v.WorkflowExecutionTimedOutEventFilter.Equals(rhs.WorkflowExecutionTimedOutEventFilter))) {
+		return false
+	}
+	if !((v.DecisionTaskScheduledEventFilter == nil && rhs.DecisionTaskScheduledEventFilter == nil) || (v.DecisionTaskScheduledEventFilter != nil && rhs.DecisionTaskScheduledEventFilter != nil && v.DecisionTaskScheduledEventFilter.Equals(rhs.DecisionTaskScheduledEventFilter))) {
+		return false
+	}
+	if !((v.DecisionTaskStartedEventFilter == nil && rhs.DecisionTaskStartedEventFilter == nil) || (v.DecisionTaskStartedEventFilter != nil && rhs.DecisionTaskStartedEventFilter != nil && v.DecisionTaskStartedEventFilter.Equals(rhs.DecisionTaskStartedEventFilter))) {
+		return false
+	}
+	if !((v.DecisionTaskCompletedEventFilter == nil && rhs.DecisionTaskCompletedEventFilter == nil) || (v.DecisionTaskCompletedEventFilter != nil && rhs.DecisionTaskCompletedEventFilter != nil && v.DecisionTaskCompletedEventFilter.Equals(rhs.DecisionTaskCompletedEventFilter))) {
+		return false
+	}
+	if !((v.DecisionTaskTimedOutEventFilter == nil && rhs.DecisionTaskTimedOutEventFilter == nil) || (v.DecisionTaskTimedOutEventFilter != nil && rhs.DecisionTaskTimedOutEventFilter != nil && v.DecisionTaskTimedOutEventFilter.Equals(rhs.DecisionTaskTimedOutEventFilter))) {
+		return false
+	}
+	if !((v.DecisionTaskFailedEventFilter == nil && rhs.DecisionTaskFailedEventFilter == nil) || (v.DecisionTaskFailedEventFilter != nil && rhs.DecisionTaskFailedEventFilter != nil && v.DecisionTaskFailedEventFilter.Equals(rhs.DecisionTaskFailedEventFilter))) {
+		return false
+	}
+	if !((v.ActivityTaskScheduledEventFilter == nil && rhs.ActivityTaskScheduledEventFilter == nil) || (v.ActivityTaskScheduledEventFilter != nil && rhs.ActivityTaskScheduledEventFilter != nil && v.ActivityTaskScheduledEventFilter.Equals(rhs.ActivityTaskScheduledEventFilter))) {
+		return false
+	}
+	if !((v.ActivityTaskStartedEventFilter == nil && rhs.ActivityTaskStartedEventFilter == nil) || (v.ActivityTaskStartedEventFilter != nil && rhs.ActivityTaskStartedEventFilter != nil && v.ActivityTaskStartedEventFilter.Equals(rhs.ActivityTaskStartedEventFilter))) {
+		return false
+	}
+	if !((v.ActivityTaskCompletedEventFilter == nil && rhs.ActivityTaskCompletedEventFilter == nil) || (v.ActivityTaskCompletedEventFilter != nil && rhs.ActivityTaskCompletedEventFilter != nil && v.ActivityTaskCompletedEventFilter.Equals(rhs.ActivityTaskCompletedEventFilter))) {
+		return false
+	}
+	if !((v.ActivityTaskFailedEventFilter == nil && rhs.ActivityTaskFailedEventFilter == nil) || (v.ActivityTaskFailedEventFilter != nil && rhs.ActivityTaskFailedEventFilter != nil && v.ActivityTaskFailedEventFilter.Equals(rhs.ActivityTaskFailedEventFilter))) {
+		return false
+	}
+	if !((v.ActivityTaskTimedOutEventFilter == nil && rhs.ActivityTaskTimedOutEventFilter == nil) || (v.ActivityTaskTimedOutEventFilter != nil && rhs.ActivityTaskTimedOutEventFilter != nil && v.ActivityTaskTimedOutEventFilter.Equals(rhs.ActivityTaskTimedOutEventFilter))) {
+		return false
+	}
+	if !((v.TimerStartedEventFilter == nil && rhs.TimerStartedEventFilter == nil) || (v.TimerStartedEventFilter != nil && rhs.TimerStartedEventFilter != nil && v.TimerStartedEventFilter.Equals(rhs.TimerStartedEventFilter))) {
+		return false
+	}
+	if !((v.TimerFiredEventFilter == nil && rhs.TimerFiredEventFilter == nil) || (v.TimerFiredEventFilter != nil && rhs.TimerFiredEventFilter != nil && v.TimerFiredEventFilter.Equals(rhs.TimerFiredEventFilter))) {
+		return false
+	}
+	if !((v.ActivityTaskCancelRequestedEventFilter == nil && rhs.ActivityTaskCancelRequestedEventFilter == nil) || (v.ActivityTaskCancelRequestedEventFilter != nil && rhs.ActivityTaskCancelRequestedEventFilter != nil && v.ActivityTaskCancelRequestedEventFilter.Equals(rhs.ActivityTaskCancelRequestedEventFilter))) {
+		return false
+	}
+	if !((v.RequestCancelActivityTaskFailedEventFilter == nil && rhs.RequestCancelActivityTaskFailedEventFilter == nil) || (v.RequestCancelActivityTaskFailedEventFilter != nil && rhs.RequestCancelActivityTaskFailedEventFilter != nil && v.RequestCancelActivityTaskFailedEventFilter.Equals(rhs.RequestCancelActivityTaskFailedEventFilter))) {
+		return false
+	}
+	if !((v.ActivityTaskCanceledEventFilter == nil && rhs.ActivityTaskCanceledEventFilter == nil) || (v.ActivityTaskCanceledEventFilter != nil && rhs.ActivityTaskCanceledEventFilter != nil && v.ActivityTaskCanceledEventFilter.Equals(rhs.ActivityTaskCanceledEventFilter))) {
+		return false
+	}
+	if !((v.TimerCanceledEventFilter == nil && rhs.TimerCanceledEventFilter == nil) || (v.TimerCanceledEventFilter != nil && rhs.TimerCanceledEventFilter != nil && v.TimerCanceledEventFilter.Equals(rhs.TimerCanceledEventFilter))) {
+		return false
+	}
+	if !((v.CancelTimerFailedEventFilter == nil && rhs.CancelTimerFailedEventFilter == nil) || (v.CancelTimerFailedEventFilter != nil && rhs.CancelTimerFailedEventFilter != nil && v.CancelTimerFailedEventFilter.Equals(rhs.CancelTimerFailedEventFilter))) {
+		return false
+	}
+	if !((v.MarkerRecordedEventFilter == nil && rhs.MarkerRecordedEventFilter == nil) || (v.MarkerRecordedEventFilter != nil && rhs.MarkerRecordedEventFilter != nil && v.MarkerRecordedEventFilter.Equals(rhs.MarkerRecordedEventFilter))) {
+		return false
+	}
+	if !((v.WorkflowExecutionSignaledEventFilter == nil && rhs.WorkflowExecutionSignaledEventFilter == nil) || (v.WorkflowExecutionSignaledEventFilter != nil && rhs.WorkflowExecutionSignaledEventFilter != nil && v.WorkflowExecutionSignaledEventFilter.Equals(rhs.WorkflowExecutionSignaledEventFilter))) {
+		return false
+	}
+	if !((v.WorkflowExecutionTerminatedEventFilter == nil && rhs.WorkflowExecutionTerminatedEventFilter == nil) || (v.WorkflowExecutionTerminatedEventFilter != nil && rhs.WorkflowExecutionTerminatedEventFilter != nil && v.WorkflowExecutionTerminatedEventFilter.Equals(rhs.WorkflowExecutionTerminatedEventFilter))) {
+		return false
+	}
+	if !((v.WorkflowExecutionCancelRequestedEventFilter == nil && rhs.WorkflowExecutionCancelRequestedEventFilter == nil) || (v.WorkflowExecutionCancelRequestedEventFilter != nil && rhs.WorkflowExecutionCancelRequestedEventFilter != nil && v.WorkflowExecutionCancelRequestedEventFilter.Equals(rhs.WorkflowExecutionCancelRequestedEventFilter))) {
+		return false
+	}
+	if !((v.WorkflowExecutionCanceledEventFilter == nil && rhs.WorkflowExecutionCanceledEventFilter == nil) || (v.WorkflowExecutionCanceledEventFilter != nil && rhs.WorkflowExecutionCanceledEventFilter != nil && v.WorkflowExecutionCanceledEventFilter.Equals(rhs.WorkflowExecutionCanceledEventFilter))) {
+		return false
+	}
+	if !((v.RequestCancelExternalWorkflowExecutionInitiatedEventFilter == nil && rhs.RequestCancelExternalWorkflowExecutionInitiatedEventFilter == nil) || (v.RequestCancelExternalWorkflowExecutionInitiatedEventFilter != nil && rhs.RequestCancelExternalWorkflowExecutionInitiatedEventFilter != nil && v.RequestCancelExternalWorkflowExecutionInitiatedEventFilter.Equals(rhs.RequestCancelExternalWorkflowExecutionInitiatedEventFilter))) {
+		return false
+	}
+	if !((v.RequestCancelExternalWorkflowExecutionFailedEventFilter == nil && rhs.RequestCancelExternalWorkflowExecutionFailedEventFilter == nil) || (v.RequestCancelExternalWorkflowExecutionFailedEventFilter != nil && rhs.RequestCancelExternalWorkflowExecutionFailedEventFilter != nil && v.RequestCancelExternalWorkflowExecutionFailedEventFilter.Equals(rhs.RequestCancelExternalWorkflowExecutionFailedEventFilter))) {
+		return false
+	}
+	if !((v.ExternalWorkflowExecutionCancelRequestedEventFilter == nil && rhs.ExternalWorkflowExecutionCancelRequestedEventFilter == nil) || (v.ExternalWorkflowExecutionCancelRequestedEventFilter != nil && rhs.ExternalWorkflowExecutionCancelRequestedEventFilter != nil && v.ExternalWorkflowExecutionCancelRequestedEventFilter.Equals(rhs.ExternalWorkflowExecutionCancelRequestedEventFilter))) {
+		return false
+	}
+	if !((v.WorkflowExecutionContinuedAsNewEventFilter == nil && rhs.WorkflowExecutionContinuedAsNewEventFilter == nil) || (v.WorkflowExecutionContinuedAsNewEventFilter != nil && rhs.WorkflowExecutionContinuedAsNewEventFilter != nil && v.WorkflowExecutionContinuedAsNewEventFilter.Equals(rhs.WorkflowExecutionContinuedAsNewEventFilter))) {
+		return false
+	}
+	if !((v.StartChildWorkflowExecutionInitiatedEventFilter == nil && rhs.StartChildWorkflowExecutionInitiatedEventFilter == nil) || (v.StartChildWorkflowExecutionInitiatedEventFilter != nil && rhs.StartChildWorkflowExecutionInitiatedEventFilter != nil && v.StartChildWorkflowExecutionInitiatedEventFilter.Equals(rhs.StartChildWorkflowExecutionInitiatedEventFilter))) {
+		return false
+	}
+	if !((v.StartChildWorkflowExecutionFailedEventFilter == nil && rhs.StartChildWorkflowExecutionFailedEventFilter == nil) || (v.StartChildWorkflowExecutionFailedEventFilter != nil && rhs.StartChildWorkflowExecutionFailedEventFilter != nil && v.StartChildWorkflowExecutionFailedEventFilter.Equals(rhs.StartChildWorkflowExecutionFailedEventFilter))) {
+		return false
+	}
+	if !((v.ChildWorkflowExecutionStartedEventFilter == nil && rhs.ChildWorkflowExecutionStartedEventFilter == nil) || (v.ChildWorkflowExecutionStartedEventFilter != nil && rhs.ChildWorkflowExecutionStartedEventFilter != nil && v.ChildWorkflowExecutionStartedEventFilter.Equals(rhs.ChildWorkflowExecutionStartedEventFilter))) {
+		return false
+	}
+	if !((v.ChildWorkflowExecutionCompletedEventFilter == nil && rhs.ChildWorkflowExecutionCompletedEventFilter == nil) || (v.ChildWorkflowExecutionCompletedEventFilter != nil && rhs.ChildWorkflowExecutionCompletedEventFilter != nil && v.ChildWorkflowExecutionCompletedEventFilter.Equals(rhs.ChildWorkflowExecutionCompletedEventFilter))) {
+		return false
+	}
+	if !((v.ChildWorkflowExecutionFailedEventFilter == nil && rhs.ChildWorkflowExecutionFailedEventFilter == nil) || (v.ChildWorkflowExecutionFailedEventFilter != nil && rhs.ChildWorkflowExecutionFailedEventFilter != nil && v.ChildWorkflowExecutionFailedEventFilter.Equals(rhs.ChildWorkflowExecutionFailedEventFilter))) {
+		return false
+	}
+	if !((v.ChildWorkflowExecutionCanceledEventFilter == nil && rhs.ChildWorkflowExecutionCanceledEventFilter == nil) || (v.ChildWorkflowExecutionCanceledEventFilter != nil && rhs.ChildWorkflowExecutionCanceledEventFilter != nil && v.ChildWorkflowExecutionCanceledEventFilter.Equals(rhs.ChildWorkflowExecutionCanceledEventFilter))) {
+		return false
+	}
+	if !((v.ChildWorkflowExecutionTimedOutEventFilter == nil && rhs.ChildWorkflowExecutionTimedOutEventFilter == nil) || (v.ChildWorkflowExecutionTimedOutEventFilter != nil && rhs.ChildWorkflowExecutionTimedOutEventFilter != nil && v.ChildWorkflowExecutionTimedOutEventFilter.Equals(rhs.ChildWorkflowExecutionTimedOutEventFilter))) {
+		return false
+	}
+	if !((v.ChildWorkflowExecutionTerminatedEventFilter == nil && rhs.ChildWorkflowExecutionTerminatedEventFilter == nil) || (v.ChildWorkflowExecutionTerminatedEventFilter != nil && rhs.ChildWorkflowExecutionTerminatedEventFilter != nil && v.ChildWorkflowExecutionTerminatedEventFilter.Equals(rhs.ChildWorkflowExecutionTerminatedEventFilter))) {
+		return false
+	}
+	return true
+}
+
+func (v *HistoryEventFilter) GetEventType() (o EventType) {
+	if v.EventType != nil {
+		return *v.EventType
+	}
+	return
+}
+
 type InternalServiceError struct {
 	Message string `json:"message,required"`
 }
@@ -8894,6 +11480,73 @@ func (v *MarkerRecordedEventAttributes) GetMarkerName() (o string) {
 func (v *MarkerRecordedEventAttributes) GetDecisionTaskCompletedEventId() (o int64) {
 	if v.DecisionTaskCompletedEventId != nil {
 		return *v.DecisionTaskCompletedEventId
+	}
+	return
+}
+
+type MarkerRecordedEventFilter struct {
+	MarkerName *string `json:"markerName,omitempty"`
+}
+
+func (v *MarkerRecordedEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+	if v.MarkerName != nil {
+		w, err = wire.NewValueString(*(v.MarkerName)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *MarkerRecordedEventFilter) FromWire(w wire.Value) error {
+	var err error
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.MarkerName = &x
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (v *MarkerRecordedEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [1]string
+	i := 0
+	if v.MarkerName != nil {
+		fields[i] = fmt.Sprintf("MarkerName: %v", *(v.MarkerName))
+		i++
+	}
+	return fmt.Sprintf("MarkerRecordedEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *MarkerRecordedEventFilter) Equals(rhs *MarkerRecordedEventFilter) bool {
+	if !_String_EqualsPtr(v.MarkerName, rhs.MarkerName) {
+		return false
+	}
+	return true
+}
+
+func (v *MarkerRecordedEventFilter) GetMarkerName() (o string) {
+	if v.MarkerName != nil {
+		return *v.MarkerName
 	}
 	return
 }
@@ -10748,6 +13401,37 @@ func (v *RequestCancelActivityTaskFailedEventAttributes) GetDecisionTaskComplete
 	return
 }
 
+type RequestCancelActivityTaskFailedEventFilter struct{}
+
+func (v *RequestCancelActivityTaskFailedEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [0]wire.Field
+		i      int = 0
+	)
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *RequestCancelActivityTaskFailedEventFilter) FromWire(w wire.Value) error {
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		}
+	}
+	return nil
+}
+
+func (v *RequestCancelActivityTaskFailedEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [0]string
+	i := 0
+	return fmt.Sprintf("RequestCancelActivityTaskFailedEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *RequestCancelActivityTaskFailedEventFilter) Equals(rhs *RequestCancelActivityTaskFailedEventFilter) bool {
+	return true
+}
+
 type RequestCancelExternalWorkflowExecutionDecisionAttributes struct {
 	Domain     *string `json:"domain,omitempty"`
 	WorkflowId *string `json:"workflowId,omitempty"`
@@ -11126,6 +13810,37 @@ func (v *RequestCancelExternalWorkflowExecutionFailedEventAttributes) GetInitiat
 	return
 }
 
+type RequestCancelExternalWorkflowExecutionFailedEventFilter struct{}
+
+func (v *RequestCancelExternalWorkflowExecutionFailedEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [0]wire.Field
+		i      int = 0
+	)
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *RequestCancelExternalWorkflowExecutionFailedEventFilter) FromWire(w wire.Value) error {
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		}
+	}
+	return nil
+}
+
+func (v *RequestCancelExternalWorkflowExecutionFailedEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [0]string
+	i := 0
+	return fmt.Sprintf("RequestCancelExternalWorkflowExecutionFailedEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *RequestCancelExternalWorkflowExecutionFailedEventFilter) Equals(rhs *RequestCancelExternalWorkflowExecutionFailedEventFilter) bool {
+	return true
+}
+
 type RequestCancelExternalWorkflowExecutionInitiatedEventAttributes struct {
 	DecisionTaskCompletedEventId *int64             `json:"decisionTaskCompletedEventId,omitempty"`
 	Domain                       *string            `json:"domain,omitempty"`
@@ -11269,6 +13984,37 @@ func (v *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) GetDoma
 		return *v.Domain
 	}
 	return
+}
+
+type RequestCancelExternalWorkflowExecutionInitiatedEventFilter struct{}
+
+func (v *RequestCancelExternalWorkflowExecutionInitiatedEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [0]wire.Field
+		i      int = 0
+	)
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *RequestCancelExternalWorkflowExecutionInitiatedEventFilter) FromWire(w wire.Value) error {
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		}
+	}
+	return nil
+}
+
+func (v *RequestCancelExternalWorkflowExecutionInitiatedEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [0]string
+	i := 0
+	return fmt.Sprintf("RequestCancelExternalWorkflowExecutionInitiatedEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *RequestCancelExternalWorkflowExecutionInitiatedEventFilter) Equals(rhs *RequestCancelExternalWorkflowExecutionInitiatedEventFilter) bool {
+	return true
 }
 
 type RequestCancelWorkflowExecutionRequest struct {
@@ -13426,6 +16172,96 @@ func (v *StartChildWorkflowExecutionFailedEventAttributes) GetDecisionTaskComple
 	return
 }
 
+type StartChildWorkflowExecutionFailedEventFilter struct {
+	WorkflowType *WorkflowType `json:"workflowType,omitempty"`
+	WorkflowId   *string       `json:"workflowId,omitempty"`
+}
+
+func (v *StartChildWorkflowExecutionFailedEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+	if v.WorkflowType != nil {
+		w, err = v.WorkflowType.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.WorkflowId != nil {
+		w, err = wire.NewValueString(*(v.WorkflowId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *StartChildWorkflowExecutionFailedEventFilter) FromWire(w wire.Value) error {
+	var err error
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TStruct {
+				v.WorkflowType, err = _WorkflowType_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 20:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.WorkflowId = &x
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (v *StartChildWorkflowExecutionFailedEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [2]string
+	i := 0
+	if v.WorkflowType != nil {
+		fields[i] = fmt.Sprintf("WorkflowType: %v", v.WorkflowType)
+		i++
+	}
+	if v.WorkflowId != nil {
+		fields[i] = fmt.Sprintf("WorkflowId: %v", *(v.WorkflowId))
+		i++
+	}
+	return fmt.Sprintf("StartChildWorkflowExecutionFailedEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *StartChildWorkflowExecutionFailedEventFilter) Equals(rhs *StartChildWorkflowExecutionFailedEventFilter) bool {
+	if !((v.WorkflowType == nil && rhs.WorkflowType == nil) || (v.WorkflowType != nil && rhs.WorkflowType != nil && v.WorkflowType.Equals(rhs.WorkflowType))) {
+		return false
+	}
+	if !_String_EqualsPtr(v.WorkflowId, rhs.WorkflowId) {
+		return false
+	}
+	return true
+}
+
+func (v *StartChildWorkflowExecutionFailedEventFilter) GetWorkflowId() (o string) {
+	if v.WorkflowId != nil {
+		return *v.WorkflowId
+	}
+	return
+}
+
 type StartChildWorkflowExecutionInitiatedEventAttributes struct {
 	Domain                              *string       `json:"domain,omitempty"`
 	WorkflowId                          *string       `json:"workflowId,omitempty"`
@@ -13741,6 +16577,96 @@ func (v *StartChildWorkflowExecutionInitiatedEventAttributes) GetChildPolicy() (
 func (v *StartChildWorkflowExecutionInitiatedEventAttributes) GetDecisionTaskCompletedEventId() (o int64) {
 	if v.DecisionTaskCompletedEventId != nil {
 		return *v.DecisionTaskCompletedEventId
+	}
+	return
+}
+
+type StartChildWorkflowExecutionInitiatedEventFilter struct {
+	WorkflowType *WorkflowType `json:"workflowType,omitempty"`
+	WorkflowId   *string       `json:"workflowId,omitempty"`
+}
+
+func (v *StartChildWorkflowExecutionInitiatedEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+	if v.WorkflowType != nil {
+		w, err = v.WorkflowType.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.WorkflowId != nil {
+		w, err = wire.NewValueString(*(v.WorkflowId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *StartChildWorkflowExecutionInitiatedEventFilter) FromWire(w wire.Value) error {
+	var err error
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TStruct {
+				v.WorkflowType, err = _WorkflowType_Read(field.Value)
+				if err != nil {
+					return err
+				}
+			}
+		case 20:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.WorkflowId = &x
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (v *StartChildWorkflowExecutionInitiatedEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [2]string
+	i := 0
+	if v.WorkflowType != nil {
+		fields[i] = fmt.Sprintf("WorkflowType: %v", v.WorkflowType)
+		i++
+	}
+	if v.WorkflowId != nil {
+		fields[i] = fmt.Sprintf("WorkflowId: %v", *(v.WorkflowId))
+		i++
+	}
+	return fmt.Sprintf("StartChildWorkflowExecutionInitiatedEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *StartChildWorkflowExecutionInitiatedEventFilter) Equals(rhs *StartChildWorkflowExecutionInitiatedEventFilter) bool {
+	if !((v.WorkflowType == nil && rhs.WorkflowType == nil) || (v.WorkflowType != nil && rhs.WorkflowType != nil && v.WorkflowType.Equals(rhs.WorkflowType))) {
+		return false
+	}
+	if !_String_EqualsPtr(v.WorkflowId, rhs.WorkflowId) {
+		return false
+	}
+	return true
+}
+
+func (v *StartChildWorkflowExecutionInitiatedEventFilter) GetWorkflowId() (o string) {
+	if v.WorkflowId != nil {
+		return *v.WorkflowId
 	}
 	return
 }
@@ -14981,6 +17907,37 @@ func (v *TimerCanceledEventAttributes) GetIdentity() (o string) {
 	return
 }
 
+type TimerCanceledEventFilter struct{}
+
+func (v *TimerCanceledEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [0]wire.Field
+		i      int = 0
+	)
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *TimerCanceledEventFilter) FromWire(w wire.Value) error {
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		}
+	}
+	return nil
+}
+
+func (v *TimerCanceledEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [0]string
+	i := 0
+	return fmt.Sprintf("TimerCanceledEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *TimerCanceledEventFilter) Equals(rhs *TimerCanceledEventFilter) bool {
+	return true
+}
+
 type TimerFiredEventAttributes struct {
 	TimerId        *string `json:"timerId,omitempty"`
 	StartedEventId *int64  `json:"startedEventId,omitempty"`
@@ -15078,6 +18035,37 @@ func (v *TimerFiredEventAttributes) GetStartedEventId() (o int64) {
 		return *v.StartedEventId
 	}
 	return
+}
+
+type TimerFiredEventFilter struct{}
+
+func (v *TimerFiredEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [0]wire.Field
+		i      int = 0
+	)
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *TimerFiredEventFilter) FromWire(w wire.Value) error {
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		}
+	}
+	return nil
+}
+
+func (v *TimerFiredEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [0]string
+	i := 0
+	return fmt.Sprintf("TimerFiredEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *TimerFiredEventFilter) Equals(rhs *TimerFiredEventFilter) bool {
+	return true
 }
 
 type TimerStartedEventAttributes struct {
@@ -15209,6 +18197,37 @@ func (v *TimerStartedEventAttributes) GetDecisionTaskCompletedEventId() (o int64
 		return *v.DecisionTaskCompletedEventId
 	}
 	return
+}
+
+type TimerStartedEventFilter struct{}
+
+func (v *TimerStartedEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [0]wire.Field
+		i      int = 0
+	)
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *TimerStartedEventFilter) FromWire(w wire.Value) error {
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		}
+	}
+	return nil
+}
+
+func (v *TimerStartedEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [0]string
+	i := 0
+	return fmt.Sprintf("TimerStartedEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *TimerStartedEventFilter) Equals(rhs *TimerStartedEventFilter) bool {
+	return true
 }
 
 type TransientDecisionInfo struct {
@@ -15979,6 +18998,37 @@ func (v *WorkflowExecutionCancelRequestedEventAttributes) GetIdentity() (o strin
 	return
 }
 
+type WorkflowExecutionCancelRequestedEventFilter struct{}
+
+func (v *WorkflowExecutionCancelRequestedEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [0]wire.Field
+		i      int = 0
+	)
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *WorkflowExecutionCancelRequestedEventFilter) FromWire(w wire.Value) error {
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		}
+	}
+	return nil
+}
+
+func (v *WorkflowExecutionCancelRequestedEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [0]string
+	i := 0
+	return fmt.Sprintf("WorkflowExecutionCancelRequestedEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *WorkflowExecutionCancelRequestedEventFilter) Equals(rhs *WorkflowExecutionCancelRequestedEventFilter) bool {
+	return true
+}
+
 type WorkflowExecutionCanceledEventAttributes struct {
 	DecisionTaskCompletedEventId *int64 `json:"decisionTaskCompletedEventId,omitempty"`
 	Details                      []byte `json:"details"`
@@ -16067,6 +19117,37 @@ func (v *WorkflowExecutionCanceledEventAttributes) GetDecisionTaskCompletedEvent
 		return *v.DecisionTaskCompletedEventId
 	}
 	return
+}
+
+type WorkflowExecutionCanceledEventFilter struct{}
+
+func (v *WorkflowExecutionCanceledEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [0]wire.Field
+		i      int = 0
+	)
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *WorkflowExecutionCanceledEventFilter) FromWire(w wire.Value) error {
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		}
+	}
+	return nil
+}
+
+func (v *WorkflowExecutionCanceledEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [0]string
+	i := 0
+	return fmt.Sprintf("WorkflowExecutionCanceledEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *WorkflowExecutionCanceledEventFilter) Equals(rhs *WorkflowExecutionCanceledEventFilter) bool {
+	return true
 }
 
 type WorkflowExecutionCloseStatus int32
@@ -16277,6 +19358,37 @@ func (v *WorkflowExecutionCompletedEventAttributes) GetDecisionTaskCompletedEven
 	return
 }
 
+type WorkflowExecutionCompletedEventFilter struct{}
+
+func (v *WorkflowExecutionCompletedEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [0]wire.Field
+		i      int = 0
+	)
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *WorkflowExecutionCompletedEventFilter) FromWire(w wire.Value) error {
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		}
+	}
+	return nil
+}
+
+func (v *WorkflowExecutionCompletedEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [0]string
+	i := 0
+	return fmt.Sprintf("WorkflowExecutionCompletedEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *WorkflowExecutionCompletedEventFilter) Equals(rhs *WorkflowExecutionCompletedEventFilter) bool {
+	return true
+}
+
 type WorkflowExecutionConfiguration struct {
 	TaskList                            *TaskList    `json:"taskList,omitempty"`
 	ExecutionStartToCloseTimeoutSeconds *int32       `json:"executionStartToCloseTimeoutSeconds,omitempty"`
@@ -16429,6 +19541,37 @@ func (v *WorkflowExecutionConfiguration) GetChildPolicy() (o ChildPolicy) {
 		return *v.ChildPolicy
 	}
 	return
+}
+
+type WorkflowExecutionContinuedAsNew struct{}
+
+func (v *WorkflowExecutionContinuedAsNew) ToWire() (wire.Value, error) {
+	var (
+		fields [0]wire.Field
+		i      int = 0
+	)
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *WorkflowExecutionContinuedAsNew) FromWire(w wire.Value) error {
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		}
+	}
+	return nil
+}
+
+func (v *WorkflowExecutionContinuedAsNew) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [0]string
+	i := 0
+	return fmt.Sprintf("WorkflowExecutionContinuedAsNew{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *WorkflowExecutionContinuedAsNew) Equals(rhs *WorkflowExecutionContinuedAsNew) bool {
+	return true
 }
 
 type WorkflowExecutionContinuedAsNewEventAttributes struct {
@@ -16663,6 +19806,37 @@ func (v *WorkflowExecutionContinuedAsNewEventAttributes) GetDecisionTaskComplete
 	return
 }
 
+type WorkflowExecutionContinuedAsNewEventFilter struct{}
+
+func (v *WorkflowExecutionContinuedAsNewEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [0]wire.Field
+		i      int = 0
+	)
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *WorkflowExecutionContinuedAsNewEventFilter) FromWire(w wire.Value) error {
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		}
+	}
+	return nil
+}
+
+func (v *WorkflowExecutionContinuedAsNewEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [0]string
+	i := 0
+	return fmt.Sprintf("WorkflowExecutionContinuedAsNewEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *WorkflowExecutionContinuedAsNewEventFilter) Equals(rhs *WorkflowExecutionContinuedAsNewEventFilter) bool {
+	return true
+}
+
 type WorkflowExecutionFailedEventAttributes struct {
 	Reason                       *string `json:"reason,omitempty"`
 	Details                      []byte  `json:"details"`
@@ -16783,6 +19957,37 @@ func (v *WorkflowExecutionFailedEventAttributes) GetDecisionTaskCompletedEventId
 		return *v.DecisionTaskCompletedEventId
 	}
 	return
+}
+
+type WorkflowExecutionFailedEventFilter struct{}
+
+func (v *WorkflowExecutionFailedEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [0]wire.Field
+		i      int = 0
+	)
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *WorkflowExecutionFailedEventFilter) FromWire(w wire.Value) error {
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		}
+	}
+	return nil
+}
+
+func (v *WorkflowExecutionFailedEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [0]string
+	i := 0
+	return fmt.Sprintf("WorkflowExecutionFailedEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *WorkflowExecutionFailedEventFilter) Equals(rhs *WorkflowExecutionFailedEventFilter) bool {
+	return true
 }
 
 type WorkflowExecutionFilter struct {
@@ -17183,6 +20388,73 @@ func (v *WorkflowExecutionSignaledEventAttributes) GetIdentity() (o string) {
 	return
 }
 
+type WorkflowExecutionSignaledEventFilter struct {
+	SignalName *string `json:"signalName,omitempty"`
+}
+
+func (v *WorkflowExecutionSignaledEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+	if v.SignalName != nil {
+		w, err = wire.NewValueString(*(v.SignalName)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *WorkflowExecutionSignaledEventFilter) FromWire(w wire.Value) error {
+	var err error
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.SignalName = &x
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (v *WorkflowExecutionSignaledEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [1]string
+	i := 0
+	if v.SignalName != nil {
+		fields[i] = fmt.Sprintf("SignalName: %v", *(v.SignalName))
+		i++
+	}
+	return fmt.Sprintf("WorkflowExecutionSignaledEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *WorkflowExecutionSignaledEventFilter) Equals(rhs *WorkflowExecutionSignaledEventFilter) bool {
+	if !_String_EqualsPtr(v.SignalName, rhs.SignalName) {
+		return false
+	}
+	return true
+}
+
+func (v *WorkflowExecutionSignaledEventFilter) GetSignalName() (o string) {
+	if v.SignalName != nil {
+		return *v.SignalName
+	}
+	return
+}
+
 type WorkflowExecutionStartedEventAttributes struct {
 	WorkflowType                        *WorkflowType `json:"workflowType,omitempty"`
 	TaskList                            *TaskList     `json:"taskList,omitempty"`
@@ -17383,6 +20655,37 @@ func (v *WorkflowExecutionStartedEventAttributes) GetIdentity() (o string) {
 	return
 }
 
+type WorkflowExecutionStartedEventFilter struct{}
+
+func (v *WorkflowExecutionStartedEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [0]wire.Field
+		i      int = 0
+	)
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *WorkflowExecutionStartedEventFilter) FromWire(w wire.Value) error {
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		}
+	}
+	return nil
+}
+
+func (v *WorkflowExecutionStartedEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [0]string
+	i := 0
+	return fmt.Sprintf("WorkflowExecutionStartedEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *WorkflowExecutionStartedEventFilter) Equals(rhs *WorkflowExecutionStartedEventFilter) bool {
+	return true
+}
+
 type WorkflowExecutionTerminatedEventAttributes struct {
 	Reason   *string `json:"reason,omitempty"`
 	Details  []byte  `json:"details"`
@@ -17505,6 +20808,37 @@ func (v *WorkflowExecutionTerminatedEventAttributes) GetIdentity() (o string) {
 	return
 }
 
+type WorkflowExecutionTerminatedEventFilter struct{}
+
+func (v *WorkflowExecutionTerminatedEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [0]wire.Field
+		i      int = 0
+	)
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *WorkflowExecutionTerminatedEventFilter) FromWire(w wire.Value) error {
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		}
+	}
+	return nil
+}
+
+func (v *WorkflowExecutionTerminatedEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [0]string
+	i := 0
+	return fmt.Sprintf("WorkflowExecutionTerminatedEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *WorkflowExecutionTerminatedEventFilter) Equals(rhs *WorkflowExecutionTerminatedEventFilter) bool {
+	return true
+}
+
 type WorkflowExecutionTimedOutEventAttributes struct {
 	TimeoutType *TimeoutType `json:"timeoutType,omitempty"`
 }
@@ -17570,6 +20904,37 @@ func (v *WorkflowExecutionTimedOutEventAttributes) GetTimeoutType() (o TimeoutTy
 		return *v.TimeoutType
 	}
 	return
+}
+
+type WorkflowExecutionTimedOutEventFilter struct{}
+
+func (v *WorkflowExecutionTimedOutEventFilter) ToWire() (wire.Value, error) {
+	var (
+		fields [0]wire.Field
+		i      int = 0
+	)
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func (v *WorkflowExecutionTimedOutEventFilter) FromWire(w wire.Value) error {
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		}
+	}
+	return nil
+}
+
+func (v *WorkflowExecutionTimedOutEventFilter) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	var fields [0]string
+	i := 0
+	return fmt.Sprintf("WorkflowExecutionTimedOutEventFilter{%v}", strings.Join(fields[:i], ", "))
+}
+
+func (v *WorkflowExecutionTimedOutEventFilter) Equals(rhs *WorkflowExecutionTimedOutEventFilter) bool {
+	return true
 }
 
 type WorkflowQuery struct {
