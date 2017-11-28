@@ -21,12 +21,12 @@
 package matching
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/uber-common/bark"
 	h "github.com/uber/cadence/.gen/go/history"
 	m "github.com/uber/cadence/.gen/go/matching"
 	s "github.com/uber/cadence/.gen/go/shared"
@@ -35,7 +35,9 @@ import (
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"golang.org/x/net/context"
+
+	"github.com/uber-common/bark"
+	"golang.org/x/time/rate"
 )
 
 const (
@@ -44,8 +46,8 @@ const (
 
 // NOTE: Is this good enough for stress tests?
 const (
-	_maxDispatchDefault = 100000.0
-	_dispatchLimitTTL   = time.Second
+	_defaultTaskDispatchRPS    = 100000.0
+	_defaultTaskDispatchRPSTTL = 60 * time.Second
 )
 
 type taskListManager interface {
@@ -60,21 +62,23 @@ type taskListManager interface {
 }
 
 type rateLimiter struct {
-	maxDispatchPerSecond *float64
-	tokenBucket          common.TokenBucket
-	ttl                  *time.Timer
 	sync.RWMutex
-	ttlRaw time.Duration
+	maxDispatchPerSecond *float64
+	limiter              *rate.Limiter
+	// TTL is used to determine whether to update the limit. Until TTL, pick
+	// lower(existing TTL, input TTL). After TTL, pick input TTL if different from existing TTL
+	ttlTimer *time.Timer
+	ttl      time.Duration
 }
 
 func newRateLimiter(maxDispatchPerSecond *float64, ttl time.Duration) rateLimiter {
 	return rateLimiter{
 		maxDispatchPerSecond: maxDispatchPerSecond,
-		tokenBucket: common.NewTokenBucket(
-			int(*maxDispatchPerSecond), common.NewRealTimeSource(),
+		limiter: rate.NewLimiter(
+			rate.Limit(*maxDispatchPerSecond), int(*maxDispatchPerSecond),
 		),
-		ttlRaw: ttl,
-		ttl:    time.NewTimer(ttl),
+		ttl:      ttl,
+		ttlTimer: time.NewTimer(ttl),
 	}
 }
 
@@ -83,7 +87,7 @@ func (rl *rateLimiter) UpdateMaxDispatch(maxDispatchPerSecond *float64) {
 		rl.Lock()
 		defer rl.Unlock()
 		rl.maxDispatchPerSecond = maxDispatchPerSecond
-		rl.tokenBucket = common.NewTokenBucket(int(*maxDispatchPerSecond), common.NewRealTimeSource())
+		rl.limiter = rate.NewLimiter(rate.Limit(*maxDispatchPerSecond), int(*maxDispatchPerSecond))
 	}
 }
 
@@ -92,9 +96,11 @@ func (rl *rateLimiter) shouldUpdate(maxDispatchPerSecond *float64) bool {
 		return false
 	}
 	select {
-	case <-rl.ttl.C:
-		rl.ttl.Reset(rl.ttlRaw)
-		return true
+	case <-rl.ttlTimer.C:
+		rl.ttlTimer.Reset(rl.ttl)
+		rl.RLock()
+		defer rl.RUnlock()
+		return *maxDispatchPerSecond != *rl.maxDispatchPerSecond
 	default:
 		rl.RLock()
 		defer rl.RUnlock()
@@ -102,26 +108,22 @@ func (rl *rateLimiter) shouldUpdate(maxDispatchPerSecond *float64) bool {
 	}
 }
 
-func (rl *rateLimiter) TryConsume(count int) (bool, time.Duration) {
+func (rl *rateLimiter) Wait(timeout time.Duration) error {
 	rl.RLock()
 	defer rl.RUnlock()
-	return rl.tokenBucket.TryConsume(count)
-}
-
-func (rl *rateLimiter) Consume(count int, timeout time.Duration) bool {
-	rl.RLock()
-	defer rl.RUnlock()
-	return rl.tokenBucket.Consume(count, timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	return rl.limiter.Wait(ctx)
 }
 
 func newTaskListManager(
 	e *matchingEngineImpl, taskList *taskListID, config *Config, maxDispatchPerSecond *float64,
 ) taskListManager {
-	dPtr := _maxDispatchDefault
+	dPtr := _defaultTaskDispatchRPS
 	if maxDispatchPerSecond == nil {
 		maxDispatchPerSecond = &dPtr
 	}
-	rl := newRateLimiter(maxDispatchPerSecond, _dispatchLimitTTL)
+	rl := newRateLimiter(maxDispatchPerSecond, _defaultTaskDispatchRPSTTL)
 	return newTaskListManagerWithRateLimiter(e, taskList, config, rl)
 }
 
@@ -406,10 +408,11 @@ func (c *taskListManagerImpl) getTask(ctx context.Context) (*getTaskResult, erro
 	}
 
 	// Wait till long poll expiration for token. If token acquired, proceed.
-	if ok := c.rateLimiter.Consume(1, c.config.LongPollExpirationInterval); !ok {
-		// Note: Is a better error counter more appropriate here? We might not want high sevs for this
-		c.metricsClient.IncCounter(scope, metrics.PollErrorsCounter)
-		return nil, createServiceBusyError("TaskList dispatch exceeded limit")
+	if err := c.rateLimiter.Wait(c.config.LongPollExpirationInterval); err != nil {
+		c.metricsClient.IncCounter(scope, metrics.ThrottleErrorCounter)
+		msg := fmt.Sprintf("TaskList dispatch exceeded limit: %s", err.Error())
+		// TODO: It's the client that's busy, not the server. Doesn't fit into any other error.
+		return nil, createServiceBusyError(msg)
 	}
 	select {
 	case task, ok := <-c.taskBuffer:

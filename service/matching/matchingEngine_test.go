@@ -457,7 +457,7 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 	s.matchingEngine.config.RangeSize = rangeSize // override to low number for the test
 
 	dispatchTTL := time.Nanosecond
-	dPtr := _maxDispatchDefault
+	dPtr := _defaultTaskDispatchRPS
 	mgr := newTaskListManagerWithRateLimiter(
 		s.matchingEngine, tlID, s.matchingEngine.config,
 		newRateLimiter(&dPtr, dispatchTTL),
@@ -580,7 +580,7 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 
 func (s *matchingEngineSuite) TestConcurrentPublishConsumeActivities() {
 	dispatchLimitFn := func(int, int64) float64 {
-		return _maxDispatchDefault
+		return _defaultTaskDispatchRPS
 	}
 	const workerCount = 20
 	const taskCount = 100
@@ -596,14 +596,13 @@ func (s *matchingEngineSuite) TestConcurrentPublishConsumeActivitiesWithZeroDisp
 		if tc == 0 && wc%5 == 0 { // Gets triggered atleast 4 times
 			return 0
 		}
-		return _maxDispatchDefault
+		return _defaultTaskDispatchRPS
 	}
 	const workerCount = 20
 	const taskCount = 100
 	tlID, errCt := s.concurrentPublishConsumeActivities(workerCount, taskCount, dispatchLimitFn)
 	// atleast 4 times from 0 dispatch poll, but quite a bit more until TTL is hit and throttle limit
 	// is reset
-	fmt.Println("Error count: ", errCt)
 	s.True(errCt >= 4 && errCt < (workerCount*int(taskCount)))
 	s.True(s.taskManager.getTaskCount(tlID) > 0)
 }
@@ -623,7 +622,7 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 	tlID := &taskListID{domainID: domainID, taskListName: tl, taskType: persistence.TaskListTypeActivity}
 	dispatchTTL := time.Nanosecond
 	s.matchingEngine.config.RangeSize = rangeSize // override to low number for the test
-	dPtr := _maxDispatchDefault
+	dPtr := _defaultTaskDispatchRPS
 	mgr := newTaskListManagerWithRateLimiter(
 		s.matchingEngine, tlID, s.matchingEngine.config,
 		newRateLimiter(&dPtr, dispatchTTL),
