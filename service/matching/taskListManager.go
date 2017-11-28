@@ -88,8 +88,6 @@ func (rl *rateLimiter) UpdateMaxDispatch(maxDispatchPerSecond *float64) {
 }
 
 func (rl *rateLimiter) shouldUpdate(maxDispatchPerSecond *float64) bool {
-	rl.RLock()
-	defer rl.RUnlock()
 	if maxDispatchPerSecond == nil {
 		return false
 	}
@@ -98,6 +96,8 @@ func (rl *rateLimiter) shouldUpdate(maxDispatchPerSecond *float64) bool {
 		rl.ttl.Reset(rl.ttlRaw)
 		return true
 	default:
+		rl.RLock()
+		defer rl.RUnlock()
 		return *maxDispatchPerSecond < *rl.maxDispatchPerSecond
 	}
 }
@@ -405,7 +405,8 @@ func (c *taskListManagerImpl) getTask(ctx context.Context) (*getTaskResult, erro
 		}()
 	}
 
-	if ok, _ := c.rateLimiter.TryConsume(1); !ok {
+	// Wait till long poll expiration for token. If token acquired, proceed.
+	if ok := c.rateLimiter.Consume(1, c.config.LongPollExpirationInterval); !ok {
 		// Note: Is a better error counter more appropriate here? We might not want high sevs for this
 		c.metricsClient.IncCounter(scope, metrics.PollErrorsCounter)
 		return nil, createServiceBusyError("TaskList dispatch exceeded limit")

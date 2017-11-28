@@ -439,7 +439,8 @@ func (s *matchingEngineSuite) TestAddThenConsumeActivities() {
 }
 
 func (s *matchingEngineSuite) TestSyncMatchActivities() {
-	s.matchingEngine.config.LongPollExpirationInterval = 1 * time.Minute
+	// Set a short long poll expiration so we don't have to wait too long for 0 throttling cases
+	s.matchingEngine.config.LongPollExpirationInterval = 50 * time.Millisecond
 
 	runID := "run1"
 	workflowID := "workflow1"
@@ -530,7 +531,7 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 			zeroDispatchCt++
 			continue
 		}
-		time.Sleep(50 * time.Millisecond) // Necessary for sync match to happen
+		time.Sleep(20 * time.Millisecond) // Necessary for sync match to happen
 		addRequest := matching.AddActivityTaskRequest{
 			SourceDomainUUID:              common.StringPtr(domainID),
 			DomainUUID:                    common.StringPtr(domainID),
@@ -589,6 +590,8 @@ func (s *matchingEngineSuite) TestConcurrentPublishConsumeActivities() {
 }
 
 func (s *matchingEngineSuite) TestConcurrentPublishConsumeActivitiesWithZeroDispatch() {
+	// Set a short long poll expiration so we don't have to wait too long for 0 throttling cases
+	s.matchingEngine.config.LongPollExpirationInterval = 20 * time.Millisecond
 	dispatchLimitFn := func(wc int, tc int64) float64 {
 		if tc == 0 && wc%5 == 0 { // Gets triggered atleast 4 times
 			return 0
@@ -600,6 +603,7 @@ func (s *matchingEngineSuite) TestConcurrentPublishConsumeActivitiesWithZeroDisp
 	tlID, errCt := s.concurrentPublishConsumeActivities(workerCount, taskCount, dispatchLimitFn)
 	// atleast 4 times from 0 dispatch poll, but quite a bit more until TTL is hit and throttle limit
 	// is reset
+	fmt.Println("Error count: ", errCt)
 	s.True(errCt >= 4 && errCt < (workerCount*int(taskCount)))
 	s.True(s.taskManager.getTaskCount(tlID) > 0)
 }
