@@ -88,7 +88,7 @@ func (m *rwMutexImpl) lockInternal(ctx context.Context, lock func(), unlock func
 		} else {
 			state = acquired
 		}
-		
+
 		close(acquiredCh)
 	}
 	go acquire()
