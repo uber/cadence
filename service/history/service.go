@@ -103,6 +103,11 @@ func NewConfig(numberOfShards int) *Config {
 	}
 }
 
+// GetShardID return the corresponding shard ID for a given workflow ID
+func (config *Config) GetShardID(workflowID string) int {
+	return common.WorkflowIDToHistoryShard(workflowID, config.NumberOfShards)
+}
+
 // Service represents the cadence-history service
 type Service struct {
 	stopC         chan struct{}

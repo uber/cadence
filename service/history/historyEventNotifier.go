@@ -198,7 +198,7 @@ func (notifier *historyEventNotifierImpl) dequeueHistoryEventNotifications() {
 			// send out metrics about message processing delay
 			timeelapsed := time.Since(event.timestamp)
 			notifier.metrics.RecordTimer(metrics.HistoryEventNotificationScope,
-				metrics.HistoryEventNotificationQueuingLatency, timeelapsed)
+				metrics.HistoryEventNotificationQueueingLatency, timeelapsed)
 
 			notifier.dispatchHistoryEventNotification(event)
 		case <-notifier.closeChan:

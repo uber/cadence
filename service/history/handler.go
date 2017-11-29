@@ -114,7 +114,7 @@ func (h *Handler) Start() error {
 	h.controller = newShardController(h.GetHostInfo(), hServiceResolver, h.shardManager, h.historyMgr,
 		h.executionMgrFactory, h, h.config, h.GetLogger(), h.GetMetricsClient())
 	h.metricsClient = h.GetMetricsClient()
-	h.historyEventNotifier = newHistoryEventNotifier(h.GetMetricsClient(), h.controller.GetShardID)
+	h.historyEventNotifier = newHistoryEventNotifier(h.GetMetricsClient(), h.config.GetShardID)
 	// events notifier must starts before controller
 	h.historyEventNotifier.Start()
 	h.controller.Start()
