@@ -308,7 +308,10 @@ func (e *historyEngineImpl) GetWorkflowExecutionNextEventID(ctx context.Context,
 	}
 
 	// expectedNextEventID is 0 when caller want to get the current next event ID without blocking
-	expectedNextEventID := request.GetExpectedNextEventId()
+	expectedNextEventID := common.FirstEventID
+	if request.ExpectedNextEventId != nil {
+		expectedNextEventID = request.GetExpectedNextEventId()
+	}
 
 	// if caller decide to long poll on workflow execution
 	// and the event ID we are looking for is smaller than current next event ID
