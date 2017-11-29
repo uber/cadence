@@ -526,7 +526,7 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 		if maxDispatch == 0 {
 			wg.Wait()
 			s.Error(pollErr)
-			s.Contains(pollErr.Error(), "ServiceBusyError")
+			s.Contains(pollErr.Error(), "TaskList dispatch exceeded limit")
 			time.Sleep(dispatchTTL) // Sleep should be atleast ttl so max Dispatch gets updated
 			zeroDispatchCt++
 			continue
@@ -704,7 +704,7 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 					},
 				})
 				if err != nil {
-					s.Contains(err.Error(), "ServiceBusyError")
+					s.Contains(err.Error(), "TaskList dispatch exceeded limit")
 					throttleMu.Lock()
 					throttleCt++
 					throttleMu.Unlock()

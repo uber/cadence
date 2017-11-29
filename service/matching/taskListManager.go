@@ -22,6 +22,7 @@ package matching
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -409,11 +410,14 @@ func (c *taskListManagerImpl) getTask(ctx context.Context) (*getTaskResult, erro
 	}
 
 	// Wait till long poll expiration for token. If token acquired, proceed.
-	if err := c.rateLimiter.Wait(ctx, c.config.LongPollExpirationInterval); err != nil {
-		c.metricsClient.IncCounter(scope, metrics.ThrottleErrorCounter)
+	stopWatch := c.metricsClient.StartTimer(scope, metrics.PollThrottleLatency)
+	err := c.rateLimiter.Wait(ctx, c.config.LongPollExpirationInterval)
+	stopWatch.Stop()
+	if err != nil {
+		c.metricsClient.IncCounter(scope, metrics.PollThrottleCounter)
 		msg := fmt.Sprintf("TaskList dispatch exceeded limit: %s", err.Error())
 		// TODO: It's the client that's busy, not the server. Doesn't fit into any other error.
-		return nil, createServiceBusyError(msg)
+		return nil, errors.New(msg)
 	}
 	select {
 	case task, ok := <-c.taskBuffer:
