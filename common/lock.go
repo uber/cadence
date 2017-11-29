@@ -21,9 +21,8 @@
 package common
 
 import (
+	"context"
 	"sync"
-
-	"github.com/uber/tchannel-go/thrift"
 )
 
 type (
@@ -31,9 +30,9 @@ type (
 	// It blocks the goroutine until either the lock is acquired or the context
 	// is closed.
 	RWMutex interface {
-		Lock(thrift.Context) error
+		Lock(context.Context) error
 		Unlock()
-		RLock(thrift.Context) error
+		RLock(context.Context) error
 		RUnlock()
 	}
 
@@ -53,7 +52,7 @@ func NewRWMutex() RWMutex {
 	return &rwMutexImpl{}
 }
 
-func (m *rwMutexImpl) Lock(ctx thrift.Context) error {
+func (m *rwMutexImpl) Lock(ctx context.Context) error {
 	lock := func() {
 		m.RWMutex.Lock()
 	}
@@ -63,7 +62,7 @@ func (m *rwMutexImpl) Lock(ctx thrift.Context) error {
 	return m.lockInternal(ctx, lock, unlock)
 }
 
-func (m *rwMutexImpl) RLock(ctx thrift.Context) error {
+func (m *rwMutexImpl) RLock(ctx context.Context) error {
 	lock := func() {
 		m.RWMutex.RLock()
 	}
@@ -73,11 +72,11 @@ func (m *rwMutexImpl) RLock(ctx thrift.Context) error {
 	return m.lockInternal(ctx, lock, unlock)
 }
 
-func (m *rwMutexImpl) lockInternal(ctx thrift.Context, lock func(), unlock func()) error {
+func (m *rwMutexImpl) lockInternal(ctx context.Context, lock func(), unlock func()) error {
 	var stateLock sync.Mutex
 	state := acquiring
 
-	acquiredCh := make(chan error)
+	acquiredCh := make(chan struct{})
 	acquire := func() {
 		lock()
 
@@ -86,17 +85,17 @@ func (m *rwMutexImpl) lockInternal(ctx thrift.Context, lock func(), unlock func(
 		if state == bailed {
 			// already bailed due to context closing
 			unlock()
-			acquiredCh <- ctx.Err()
 		} else {
 			state = acquired
-			acquiredCh <- nil
 		}
+		
+		close(acquiredCh)
 	}
 	go acquire()
 
 	select {
-	case e := <-acquiredCh:
-		return e
+	case <-acquiredCh:
+		return nil
 	case <-ctx.Done():
 		{
 			stateLock.Lock()

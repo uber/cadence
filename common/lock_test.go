@@ -21,12 +21,12 @@
 package common
 
 import (
+	"context"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber/tchannel-go/thrift"
 )
 
 type (
@@ -46,29 +46,29 @@ func (s *LockSuite) SetupTest() {
 
 func (s *LockSuite) TestBasicLocking() {
 	lock := NewRWMutex()
-	err1 := lock.Lock(BackgroundThriftContext())
+	err1 := lock.Lock(context.Background())
 	s.Nil(err1)
 	lock.Unlock()
 
-	err2 := lock.RLock(BackgroundThriftContext())
+	err2 := lock.RLock(context.Background())
 	s.Nil(err2)
 	lock.RUnlock()
 }
 
 func (s *LockSuite) TestExpiredContext() {
 	lock := NewRWMutex()
-	err1 := lock.Lock(BackgroundThriftContext())
+	err1 := lock.Lock(context.Background())
 	s.Nil(err1)
 
-	context, cancel := thrift.NewContext(time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	cancel()
-	err2 := lock.RLock(context)
+	err2 := lock.RLock(ctx)
 	s.NotNil(err2)
-	s.Equal(err2, context.Err())
+	s.Equal(err2, ctx.Err())
 
 	lock.Unlock()
 
-	err3 := lock.Lock(BackgroundThriftContext())
+	err3 := lock.Lock(context.Background())
 	s.Nil(err3)
 	lock.Unlock()
 }
