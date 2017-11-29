@@ -23,9 +23,11 @@ package history
 import (
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/pborman/uuid"
 	gen "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/metrics"
 )
 
 const (
@@ -39,15 +41,19 @@ const (
 
 type (
 	historyEventNotifierImpl struct {
+		metrics metrics.Client
+		// internal status indicator
 		status int32
 		// stop signal channel
 		closeChan chan bool
 		// this channel will never close
 		eventsChan chan *historyEventNotification
+		// function which calculate the shard ID from given workflow ID
+		workflowIDToShardID func(string) int
 
-		sync.Mutex
-		// map of workflow identifier to map of subscriber ID to channel
-		eventsPubsubs map[workflowIdentifier]map[string]chan *historyEventNotification
+		metadataLock       sync.RWMutex
+		shardLocks         map[int]*sync.RWMutex
+		shardEventsPubsubs map[int]map[workflowIdentifier]map[string]chan *historyEventNotification
 	}
 )
 
@@ -74,31 +80,36 @@ func newHistoryEventNotification(domainID string, workflowExecution *gen.Workflo
 	}
 }
 
-func newHistoryEventNotifier() *historyEventNotifierImpl {
+func newHistoryEventNotifier(metrics metrics.Client, workflowIDToShardID func(string) int) *historyEventNotifierImpl {
 	return &historyEventNotifierImpl{
-		status:        statusIdle,
-		closeChan:     make(chan bool),
-		eventsChan:    make(chan *historyEventNotification, eventsChanSize),
-		eventsPubsubs: make(map[workflowIdentifier]map[string]chan *historyEventNotification),
+		metrics:    metrics,
+		status:     statusIdle,
+		closeChan:  make(chan bool),
+		eventsChan: make(chan *historyEventNotification, eventsChanSize),
+
+		workflowIDToShardID: workflowIDToShardID,
+
+		shardLocks:         make(map[int]*sync.RWMutex),
+		shardEventsPubsubs: make(map[int]map[workflowIdentifier]map[string]chan *historyEventNotification),
 	}
 }
 
-func (notifier *historyEventNotifierImpl) WatchHistoryEvent(domainID string,
-	execution *gen.WorkflowExecution) (string, chan *historyEventNotification, error) {
+func (notifier *historyEventNotifierImpl) WatchHistoryEvent(
+	identifier *workflowIdentifier) (string, chan *historyEventNotification, error) {
 
-	identifier := newWorkflowIdentifier(domainID, execution)
+	shardID := notifier.workflowIDToShardID(identifier.workflowID)
+	lock, eventsPubsubs := notifier.createOrGetShards(shardID)
+	lock.Lock()
+	defer lock.Unlock()
 
-	notifier.Lock()
-	defer notifier.Unlock()
-
-	eventsPubsubs, ok := notifier.eventsPubsubs[*identifier]
+	subscribers, ok := eventsPubsubs[*identifier]
 	if !ok {
-		eventsPubsubs = make(map[string]chan *historyEventNotification)
-		notifier.eventsPubsubs[*identifier] = eventsPubsubs
+		subscribers = make(map[string]chan *historyEventNotification)
+		eventsPubsubs[*identifier] = subscribers
 	}
 
 	subscriberID := uuid.NewUUID().String()
-	if _, ok := eventsPubsubs[subscriberID]; ok {
+	if _, ok := subscribers[subscriberID]; ok {
 		// UUID collision
 		return "", nil, &gen.InternalServiceError{
 			Message: "Unable to watch on workflow execution.",
@@ -106,36 +117,36 @@ func (notifier *historyEventNotifierImpl) WatchHistoryEvent(domainID string,
 	}
 
 	channel := make(chan *historyEventNotification, 1)
-	eventsPubsubs[subscriberID] = channel
+	subscribers[subscriberID] = channel
 	return subscriberID, channel, nil
 }
 
-func (notifier *historyEventNotifierImpl) UnwatchHistoryEvent(domainID string,
-	execution *gen.WorkflowExecution, subscriberID string) error {
+func (notifier *historyEventNotifierImpl) UnwatchHistoryEvent(
+	identifier *workflowIdentifier, subscriberID string) error {
 
-	identifier := newWorkflowIdentifier(domainID, execution)
+	shardID := notifier.workflowIDToShardID(identifier.workflowID)
+	lock, eventsPubsubs := notifier.createOrGetShards(shardID)
+	lock.Lock()
+	defer lock.Unlock()
 
-	notifier.Lock()
-	defer notifier.Unlock()
-
-	eventsPubsubs, ok := notifier.eventsPubsubs[*identifier]
+	subscribers, ok := eventsPubsubs[*identifier]
 	if !ok {
 		return &gen.InternalServiceError{
 			Message: "Unable to unwatch on workflow execution.",
 		}
 	}
 
-	if _, ok := eventsPubsubs[subscriberID]; !ok {
+	if _, ok := subscribers[subscriberID]; !ok {
 		// cannot find the subscribe ID, which means there is a bug
 		return &gen.EntityNotExistsError{
 			Message: "Unable to unwatch on workflow execution.",
 		}
 	}
 
-	delete(eventsPubsubs, subscriberID)
+	delete(subscribers, subscriberID)
 
-	if len(eventsPubsubs) == 0 {
-		delete(notifier.eventsPubsubs, *identifier)
+	if len(subscribers) == 0 {
+		delete(eventsPubsubs, *identifier)
 	}
 
 	return nil
@@ -144,15 +155,19 @@ func (notifier *historyEventNotifierImpl) UnwatchHistoryEvent(domainID string,
 func (notifier *historyEventNotifierImpl) dispatchHistoryEventNotification(event *historyEventNotification) {
 	identifier := &event.workflowIdentifier
 
-	notifier.Lock()
-	defer notifier.Unlock()
+	shardID := notifier.workflowIDToShardID(identifier.workflowID)
+	lock, eventsPubsubs := notifier.createOrGetShards(shardID)
+	lock.RLock()
+	defer lock.RUnlock()
 
-	eventsPubsubs, ok := notifier.eventsPubsubs[*identifier]
+	subscribers, ok := eventsPubsubs[*identifier]
 	if !ok {
 		return
 	}
 
-	for _, channel := range eventsPubsubs {
+	timer := notifier.metrics.StartTimer(metrics.HistoryEventNotificationFanoutLatency, metrics.HistoryEventNotificationFanoutLatency)
+	defer timer.Stop()
+	for _, channel := range subscribers {
 		select {
 		case channel <- event:
 		default:
@@ -163,6 +178,8 @@ func (notifier *historyEventNotifierImpl) dispatchHistoryEventNotification(event
 }
 
 func (notifier *historyEventNotifierImpl) enqueueHistoryEventNotification(event *historyEventNotification) {
+	// set the timestamp just before enqueuing the event
+	event.timestamp = time.Now()
 	select {
 	case notifier.eventsChan <- event:
 	default:
@@ -173,14 +190,51 @@ func (notifier *historyEventNotifierImpl) enqueueHistoryEventNotification(event 
 
 func (notifier *historyEventNotifierImpl) dequeueHistoryEventNotifications() {
 	for {
+		// send out metrics about the current number of messages in flight
+		notifier.metrics.UpdateGauge(metrics.HistoryEventNotificationScope,
+			metrics.HistoryEventNotificationInFlightMessageGauge, float64(len(notifier.eventsChan)))
 		select {
 		case event := <-notifier.eventsChan:
+			// send out metrics about message processing delay
+			timeelapsed := time.Since(event.timestamp)
+			notifier.metrics.RecordTimer(metrics.HistoryEventNotificationScope,
+				metrics.HistoryEventNotificationQueuingLatency, timeelapsed)
+
 			notifier.dispatchHistoryEventNotification(event)
 		case <-notifier.closeChan:
 			// shutdown
 			return
 		}
 	}
+}
+
+func (notifier *historyEventNotifierImpl) createOrGetShards(
+	shardID int) (*sync.RWMutex, map[workflowIdentifier]map[string]chan *historyEventNotification) {
+
+	notifier.metadataLock.RLock()
+	lock, ok := notifier.shardLocks[shardID]
+	if ok {
+		eventsPubsubs := notifier.shardEventsPubsubs[shardID]
+		notifier.metadataLock.RUnlock()
+		return lock, eventsPubsubs
+	}
+	notifier.metadataLock.RUnlock()
+
+	notifier.metadataLock.Lock()
+	defer notifier.metadataLock.Unlock()
+
+	lock, ok = notifier.shardLocks[shardID]
+	if !ok {
+		lock = &sync.RWMutex{}
+		notifier.shardLocks[shardID] = lock
+	}
+
+	eventsPubsubs, ok := notifier.shardEventsPubsubs[shardID]
+	if !ok {
+		eventsPubsubs = make(map[workflowIdentifier]map[string]chan *historyEventNotification)
+		notifier.shardEventsPubsubs[shardID] = eventsPubsubs
+	}
+	return lock, eventsPubsubs
 }
 
 func (notifier *historyEventNotifierImpl) Start() {

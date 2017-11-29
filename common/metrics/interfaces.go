@@ -39,8 +39,8 @@ type (
 		// RecordTimer starts a timer for the given
 		// metric name
 		RecordTimer(scope int, timer int, d time.Duration)
-		// UpdateGauge reports Gauge type metric
-		UpdateGauge(scope int, gauge int, delta float64)
+		// UpdateGauge reports Gauge type absolute value metric
+		UpdateGauge(scope int, gauge int, value float64)
 		// Tagged returns a client that adds the given tags to all metrics
 		Tagged(tags map[string]string) Client
 	}

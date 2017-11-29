@@ -313,11 +313,11 @@ func (e *historyEngineImpl) GetWorkflowExecutionNextEventID(ctx context.Context,
 	// if caller decide to long poll on workflow execution
 	// and the event ID we are looking for is smaller than current next event ID
 	if expectedNextEventID >= response.GetEventId() && response.GetIsWorkflowRunning() {
-		subscriberID, channel, err := e.historyEventNotifier.WatchHistoryEvent(domainID, &execution)
+		subscriberID, channel, err := e.historyEventNotifier.WatchHistoryEvent(newWorkflowIdentifier(domainID, &execution))
 		if err != nil {
 			return nil, err
 		}
-		defer e.historyEventNotifier.UnwatchHistoryEvent(domainID, &execution, subscriberID)
+		defer e.historyEventNotifier.UnwatchHistoryEvent(newWorkflowIdentifier(domainID, &execution), subscriberID)
 
 		// check again in case the next event ID is updated
 		response, err = e.getWorkflowExecutionNextEventID(domainID, execution)

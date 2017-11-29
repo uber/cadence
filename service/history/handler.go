@@ -74,15 +74,14 @@ func NewHandler(sVice service.Service, config *Config, shardManager persistence.
 	metadataMgr persistence.MetadataManager, visibilityMgr persistence.VisibilityManager,
 	historyMgr persistence.HistoryManager, executionMgrFactory persistence.ExecutionManagerFactory) *Handler {
 	handler := &Handler{
-		Service:              sVice,
-		config:               config,
-		shardManager:         shardManager,
-		metadataMgr:          metadataMgr,
-		historyMgr:           historyMgr,
-		visibilityMgr:        visibilityMgr,
-		executionMgrFactory:  executionMgrFactory,
-		tokenSerializer:      common.NewJSONTaskTokenSerializer(),
-		historyEventNotifier: newHistoryEventNotifier(),
+		Service:             sVice,
+		config:              config,
+		shardManager:        shardManager,
+		metadataMgr:         metadataMgr,
+		historyMgr:          historyMgr,
+		visibilityMgr:       visibilityMgr,
+		executionMgrFactory: executionMgrFactory,
+		tokenSerializer:     common.NewJSONTaskTokenSerializer(),
 	}
 
 	// prevent us from trying to serve requests before shard controller is started and ready
@@ -114,10 +113,11 @@ func (h *Handler) Start() error {
 	h.hServiceResolver = hServiceResolver
 	h.controller = newShardController(h.GetHostInfo(), hServiceResolver, h.shardManager, h.historyMgr,
 		h.executionMgrFactory, h, h.config, h.GetLogger(), h.GetMetricsClient())
-	h.controller.Start()
 	h.metricsClient = h.GetMetricsClient()
+	h.historyEventNotifier = newHistoryEventNotifier(h.GetMetricsClient(), h.controller.GetShardID)
+	// events notifier must starts before controller
 	h.historyEventNotifier.Start()
-
+	h.controller.Start()
 	h.startWG.Done()
 	return nil
 }

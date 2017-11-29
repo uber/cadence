@@ -22,6 +22,7 @@ package history
 
 import (
 	"context"
+	"time"
 
 	h "github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -40,6 +41,7 @@ type (
 		workflowIdentifier
 		nextEventID       int64
 		isWorkflowRunning bool
+		timestamp         time.Time
 	}
 	// Engine represents an interface for managing workflow execution history.
 	Engine interface {
@@ -88,7 +90,7 @@ type (
 	historyEventNotifier interface {
 		common.Daemon
 		NotifyNewHistoryEvent(event *historyEventNotification)
-		WatchHistoryEvent(domainID string, execution *workflow.WorkflowExecution) (string, chan *historyEventNotification, error)
-		UnwatchHistoryEvent(domainID string, execution *workflow.WorkflowExecution, subscriberID string) error
+		WatchHistoryEvent(identifier *workflowIdentifier) (string, chan *historyEventNotification, error)
+		UnwatchHistoryEvent(identifier *workflowIdentifier, subscriberID string) error
 	}
 )

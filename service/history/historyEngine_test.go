@@ -58,6 +58,7 @@ type (
 		mockExecutionMgr   *mocks.ExecutionManager
 		mockHistoryMgr     *mocks.HistoryManager
 		mockShardManager   *mocks.ShardManager
+		mockMetricClient   metrics.Client
 		shardClosedCh      chan int
 		eventSerializer    historyEventSerializer
 		config             *Config
@@ -97,8 +98,14 @@ func (s *engineSuite) SetupTest() {
 	s.mockShardManager = &mocks.ShardManager{}
 	s.shardClosedCh = make(chan int, 100)
 	s.eventSerializer = newJSONHistoryEventSerializer()
+	s.mockMetricClient = metrics.NewClient(tally.NoopScope, metrics.History)
 
-	historyEventNotifier := newHistoryEventNotifier()
+	historyEventNotifier := newHistoryEventNotifier(
+		s.mockMetricClient,
+		func(workflowID string) int {
+			return len(workflowID)
+		},
+	)
 	mockShard := &shardContextImpl{
 		shardInfo:                 &persistence.ShardInfo{ShardID: shardID, RangeID: 1, TransferAckLevel: 0},
 		transferSequenceNumber:    1,
