@@ -53,8 +53,16 @@ func startHandler(c *cli.Context) {
 	log.Printf("config=\n%v\n", cfg.String())
 
 	cassCfg := cfg.Cassandra
-	cassandra.ValidateSchemaVersion(cassCfg, cassCfg.Keyspace, "cadence")
-	cassandra.ValidateSchemaVersion(cassCfg, cassCfg.VisibilityKeyspace, "visibility")
+	if err := cassandra.CheckCompatibleVersion(
+		cassCfg, cassCfg.Keyspace, "./schema/cadence",
+	); err != nil {
+		log.Fatalf("Incompatible versions", err)
+	}
+	if err = cassandra.CheckCompatibleVersion(
+		cassCfg, cassCfg.VisibilityKeyspace, "./schema/visibility",
+	); err != nil {
+		log.Fatalf("Incompatible versions", err)
+	}
 	for _, svc := range getServices(c) {
 		if _, ok := cfg.Services[svc]; !ok {
 			log.Fatalf("`%v` service missing config", svc)

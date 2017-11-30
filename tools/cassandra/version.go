@@ -22,9 +22,9 @@ package cassandra
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"regexp"
 	"strconv"
 	"strings"
@@ -127,24 +127,33 @@ func getExpectedVersion(dirPath string) (string, error) {
 	return currVer, nil
 }
 
-func ValidateSchemaVersion(cfg config.Cassandra, keyspace string, dirPath string) {
+func CheckCompatibleVersion(cfg config.Cassandra, keyspace string, dirPath string) error {
 	cqlClient, err := NewCQLClient(cfg.Hosts, cfg.Port, cfg.User, cfg.Password, keyspace)
 	if err != nil {
-		log.Fatalf("Unable to create CQL Client: %s", err.Error())
+		return errors.New("Unable to create CQL Client: " + err.Error())
 	}
 	defer cqlClient.Close()
 	version, err := cqlClient.ReadSchemaVersion()
 	if err != nil {
-		log.Fatalf("Unable to create schema version: %s", err.Error())
+		return errors.New("Unable to create schema version: " + err.Error())
 	}
-	expectedVersion, err := getExpectedVersion("./schema/" + dirPath)
+	expectedVersion, err := getExpectedVersion(dirPath)
 	if err != nil {
-		log.Fatalf("Unable to read expected schema version: %s", err.Error())
+		return errors.New("Unable to read expected schema version: " + err.Error())
 	}
-	if version != expectedVersion {
-		log.Fatalf(
-			"Version mismatch for keyspace: %q. Expected version: %s, Actual version: %s",
-			keyspace, expectedVersion, version,
-		)
+	expectedNum, err := strconv.ParseFloat(expectedVersion, 64)
+	if err != nil {
+		return errors.New("Unable to convert expected version to float: " + expectedVersion)
 	}
+	actualNum, err := strconv.ParseFloat(version, 64)
+	if err != nil {
+		return errors.New("Unable to convert actual version to float: " + version)
+	}
+	if actualNum <= expectedNum {
+		return errors.New(fmt.Sprintf(
+			"Version mismatch for keyspace: %q. Expected version: %s cannot be greater than "+
+				"Actual version: %s", keyspace, expectedVersion, version,
+		))
+	}
+	return nil
 }

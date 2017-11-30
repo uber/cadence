@@ -21,9 +21,13 @@
 package cassandra
 
 import (
+	"io/ioutil"
+	"os"
+	"testing"
+
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"testing"
+	"github.com/uber/cadence/common/service/config"
 )
 
 type (
@@ -116,4 +120,58 @@ func (s *VersionTestSuite) execParseTest(input string, expMajor int, expMinor in
 	s.Nil(err)
 	s.Equal(expMajor, maj)
 	s.Equal(expMinor, min)
+}
+
+func (s *VersionTestSuite) TestGetExpectedVersion() {
+	flags := []struct {
+		input    string
+		expected string
+		err      string
+	}{
+		{`{"ExpectedVersion": "1.0"}`, "1.0", ""},
+		{`{"ExpectedVersion": "1abc123"}`, "", "invalid ExpectedVersion"},
+		{`hello there`, "", "invalid"},
+	}
+	for _, flag := range flags {
+		s.expectedVersionTest(flag.input, flag.expected, flag.err)
+	}
+}
+
+func (s *VersionTestSuite) expectedVersionTest(versionData string, expected string, errStr string) {
+	dir := "version_test"
+	tmpDir, err := ioutil.TempDir("", dir)
+	s.NoError(err)
+	defer os.RemoveAll(tmpDir)
+
+	err = ioutil.WriteFile(tmpDir+"/version.json", []byte(versionData), os.FileMode(0644))
+	s.NoError(err)
+	v, err := getExpectedVersion(tmpDir)
+	if len(errStr) == 0 {
+		s.Equal(expected, v)
+	} else {
+		s.Error(err)
+		s.Contains(err.Error(), errStr)
+	}
+}
+
+func (s *VersionTestSuite) TestCheckCompatibleVersion() {
+	dir := "check_version"
+	tmpDir, err := ioutil.TempDir("", dir)
+	s.NoError(err)
+	defer os.RemoveAll(tmpDir)
+
+	subdir := tmpDir + "/cadence"
+	s.NoError(os.Mkdir(subdir, os.FileMode(0744)))
+	data := `{"ExpectedVersion": "1.0"}`
+	s.NoError(ioutil.WriteFile(subdir+"/version.json", []byte(data), os.FileMode(0644)))
+
+	cfg := config.Cassandra{
+		Hosts:    "127.0.0.1",
+		Port:     defaultCassandraPort,
+		User:     "",
+		Password: "",
+	}
+	err = CheckCompatibleVersion(cfg, "cadence", subdir)
+	s.Error(err)
+	s.Contains(err.Error(), "Version mismatch")
 }
