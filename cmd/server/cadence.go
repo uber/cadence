@@ -52,7 +52,6 @@ func startHandler(c *cli.Context) {
 	config.Load(env, configDir, zone, &cfg)
 	log.Printf("config=\n%v\n", cfg.String())
 
-	// TODO: Cassandra version check
 	cassCfg := cfg.Cassandra
 	validateSchemaVersion(cassCfg, cassCfg.Keyspace, "cadence")
 	validateSchemaVersion(cassCfg, cassCfg.VisibilityKeyspace, "visibility")
