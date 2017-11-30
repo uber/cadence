@@ -58,7 +58,7 @@ func startHandler(c *cli.Context) {
 	); err != nil {
 		log.Fatalf("Incompatible versions", err)
 	}
-	if err = cassandra.CheckCompatibleVersion(
+	if err := cassandra.CheckCompatibleVersion(
 		cassCfg, cassCfg.VisibilityKeyspace, "./schema/visibility",
 	); err != nil {
 		log.Fatalf("Incompatible versions", err)
