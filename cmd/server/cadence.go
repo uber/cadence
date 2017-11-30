@@ -53,8 +53,8 @@ func startHandler(c *cli.Context) {
 	log.Printf("config=\n%v\n", cfg.String())
 
 	cassCfg := cfg.Cassandra
-	validateSchemaVersion(cassCfg, cassCfg.Keyspace, "cadence")
-	validateSchemaVersion(cassCfg, cassCfg.VisibilityKeyspace, "visibility")
+	cassandra.ValidateSchemaVersion(cassCfg, cassCfg.Keyspace, "cadence")
+	cassandra.ValidateSchemaVersion(cassCfg, cassCfg.VisibilityKeyspace, "visibility")
 	for _, svc := range getServices(c) {
 		if _, ok := cfg.Services[svc]; !ok {
 			log.Fatalf("`%v` service missing config", svc)
@@ -64,30 +64,6 @@ func startHandler(c *cli.Context) {
 	}
 
 	select {}
-}
-
-func validateSchemaVersion(cfg config.Cassandra, keyspace string, dirPath string) {
-	cqlClient, err := cassandra.NewCQLClient(
-		cfg.Hosts, cfg.Port, cfg.User, cfg.Password, keyspace,
-	)
-	if err != nil {
-		log.Fatalf("Unable to create CQL Client: %s", err.Error())
-	}
-	defer cqlClient.Close()
-	version, err := cqlClient.ReadSchemaVersion()
-	if err != nil {
-		log.Fatalf("Unable to create schema version: %s", err.Error())
-	}
-	expectedVersion, err := cassandra.GetExpectedVersion("./schema/" + dirPath)
-	if err != nil {
-		log.Fatalf("Unable to read expected schema version: %s", err.Error())
-	}
-	if version != expectedVersion {
-		log.Fatalf(
-			"Version mismatch for keyspace: %q. Expected version: %s, Actual version: %s",
-			keyspace, expectedVersion, version,
-		)
-	}
 }
 
 func getEnvironment(c *cli.Context) string {

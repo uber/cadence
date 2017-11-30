@@ -24,9 +24,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/uber/cadence/common/service/config"
 )
 
 // represents names of the form vx.x where x.x is a (major, minor) version pair
@@ -102,8 +105,8 @@ type versionManifest struct {
 	ExpectedVersion string
 }
 
-// GetExpectedVersion gets the expected version
-func GetExpectedVersion(dirPath string) (string, error) {
+// getExpectedVersion gets the expected version
+func getExpectedVersion(dirPath string) (string, error) {
 	filePath := dirPath + "/version.json"
 	jsonStr, err := ioutil.ReadFile(filePath)
 	if err != nil {
@@ -122,4 +125,26 @@ func GetExpectedVersion(dirPath string) (string, error) {
 		return "", fmt.Errorf("invalid ExpectedVersion in manifest: %s", err.Error())
 	}
 	return currVer, nil
+}
+
+func ValidateSchemaVersion(cfg config.Cassandra, keyspace string, dirPath string) {
+	cqlClient, err := NewCQLClient(cfg.Hosts, cfg.Port, cfg.User, cfg.Password, keyspace)
+	if err != nil {
+		log.Fatalf("Unable to create CQL Client: %s", err.Error())
+	}
+	defer cqlClient.Close()
+	version, err := cqlClient.ReadSchemaVersion()
+	if err != nil {
+		log.Fatalf("Unable to create schema version: %s", err.Error())
+	}
+	expectedVersion, err := getExpectedVersion("./schema/" + dirPath)
+	if err != nil {
+		log.Fatalf("Unable to read expected schema version: %s", err.Error())
+	}
+	if version != expectedVersion {
+		log.Fatalf(
+			"Version mismatch for keyspace: %q. Expected version: %s, Actual version: %s",
+			keyspace, expectedVersion, version,
+		)
+	}
 }
