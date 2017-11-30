@@ -165,7 +165,7 @@ func (notifier *historyEventNotifierImpl) dispatchHistoryEventNotification(event
 		return
 	}
 
-	timer := notifier.metrics.StartTimer(metrics.HistoryEventNotificationFanoutLatency, metrics.HistoryEventNotificationFanoutLatency)
+	timer := notifier.metrics.StartTimer(metrics.HistoryEventNotificationScope, metrics.HistoryEventNotificationFanoutLatency)
 	defer timer.Stop()
 	for _, channel := range subscribers {
 		select {
