@@ -21,11 +21,14 @@
 package main
 
 import (
-	"github.com/uber/cadence/common/service/config"
-	"github.com/urfave/cli"
 	"log"
 	"os"
 	"strings"
+
+	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/tools/cassandra"
+
+	"github.com/urfave/cli"
 )
 
 // validServices is the list of all valid cadence services
@@ -49,6 +52,10 @@ func startHandler(c *cli.Context) {
 	config.Load(env, configDir, zone, &cfg)
 	log.Printf("config=\n%v\n", cfg.String())
 
+	// TODO: Cassandra version check
+	cassCfg := cfg.Cassandra
+	validateSchemaVersion(cassCfg, cassCfg.Keyspace, "cadence")
+	validateSchemaVersion(cassCfg, cassCfg.VisibilityKeyspace, "visibility")
 	for _, svc := range getServices(c) {
 		if _, ok := cfg.Services[svc]; !ok {
 			log.Fatalf("`%v` service missing config", svc)
@@ -58,6 +65,30 @@ func startHandler(c *cli.Context) {
 	}
 
 	select {}
+}
+
+func validateSchemaVersion(cfg config.Cassandra, keyspace string, dirPath string) {
+	cqlClient, err := cassandra.NewCQLClient(
+		cfg.Hosts, cfg.Port, cfg.User, cfg.Password, keyspace,
+	)
+	if err != nil {
+		log.Fatalf("Unable to create CQL Client: %s", err.Error())
+	}
+	defer cqlClient.Close()
+	version, err := cqlClient.ReadSchemaVersion()
+	if err != nil {
+		log.Fatalf("Unable to create schema version: %s", err.Error())
+	}
+	expectedVersion, err := cassandra.GetExpectedVersion("./schema/" + dirPath)
+	if err != nil {
+		log.Fatalf("Unable to read expected schema version: %s", err.Error())
+	}
+	if version != expectedVersion {
+		log.Fatalf(
+			"Version mismatch for keyspace: %q. Expected version: %s, Actual version: %s",
+			keyspace, expectedVersion, version,
+		)
+	}
 }
 
 func getEnvironment(c *cli.Context) string {

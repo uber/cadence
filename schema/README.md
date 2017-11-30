@@ -8,6 +8,7 @@ This directory contains the cassandra schema for every keyspace that cadence own
    - keyspace2/
         - keyspace.cql     -- Contains the keyspace definition
         - schema.cql       -- Contains the latest & greatest snapshot of the schema for the keyspace
+        - version.json    -- Contains the expected (usually latest) version compatible with the code
         - versioned
              - v0.1/
              - v0.2/       -- One directory per schema version change

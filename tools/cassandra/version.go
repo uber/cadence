@@ -21,7 +21,9 @@
 package cassandra
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"regexp"
 	"strconv"
 	"strings"
@@ -79,8 +81,7 @@ func parseVersion(ver string) (major int, minor int, err error) {
 	return
 }
 
-// parseValidteVersion validates that the given
-// input conforms to either of vx.x or x.x and
+// parseValidateVersion validates that the given input conforms to either of vx.x or x.x and
 // returns x.x on success
 func parseValidateVersion(ver string) (string, error) {
 	if len(ver) == 0 {
@@ -93,4 +94,32 @@ func parseValidateVersion(ver string) (string, error) {
 		return "", fmt.Errorf("invalid version, expected format is x.x")
 	}
 	return ver, nil
+}
+
+// versionManifest is a value type that represents the deserialized version.json file within
+// a schema directory
+type versionManifest struct {
+	ExpectedVersion string
+}
+
+// GetExpectedVersion gets the expected version
+func GetExpectedVersion(dirPath string) (string, error) {
+	filePath := dirPath + "/version.json"
+	jsonStr, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return "", err
+	}
+
+	jsonBlob := []byte(jsonStr)
+	var manifest versionManifest
+	err = json.Unmarshal(jsonBlob, &manifest)
+	if err != nil {
+		return "", err
+	}
+
+	currVer, err := parseValidateVersion(manifest.ExpectedVersion)
+	if err != nil {
+		return "", fmt.Errorf("invalid ExpectedVersion in manifest: %s", err.Error())
+	}
+	return currVer, nil
 }

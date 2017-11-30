@@ -106,6 +106,11 @@ const (
 		`WITH replication = { 'class' : 'SimpleStrategy', 'replication_factor' : %v};`
 )
 
+// NewCQLClient returns a new instance of CQLClient
+func NewCQLClient(hostsCsv string, port int, user, password, keyspace string) (CQLClient, error) {
+	return newCQLClient(hostsCsv, port, user, password, keyspace)
+}
+
 // newCQLClient returns a new instance of CQLClient
 func newCQLClient(hostsCsv string, port int, user, password, keyspace string) (CQLClient, error) {
 	hosts := parseHosts(hostsCsv)
@@ -113,7 +118,9 @@ func newCQLClient(hostsCsv string, port int, user, password, keyspace string) (C
 		return nil, errNoHosts
 	}
 	clusterCfg := gocql.NewCluster(hosts...)
-	clusterCfg.Port = port
+	if port > 0 {
+		clusterCfg.Port = port
+	}
 	if user != "" && password != "" {
 		clusterCfg.Authenticator = gocql.PasswordAuthenticator{
 			Username: user,
