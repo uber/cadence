@@ -149,6 +149,10 @@ func CheckCompatibleVersion(cfg config.Cassandra, keyspace string, dirPath strin
 	if err != nil {
 		return errors.New("Unable to convert actual version to float: " + version)
 	}
+	// In most cases, the versions should match. However if after a schema upgrade there is a code
+	// rollback, the code version (expected version) would fall lower than the actual version in
+	// cassandra. This check is to allow such rollbacks since we only make backwards compatible schema
+	// changes
 	if actualNum <= expectedNum {
 		return errors.New(fmt.Sprintf(
 			"Version mismatch for keyspace: %q. Expected version: %s cannot be greater than "+
