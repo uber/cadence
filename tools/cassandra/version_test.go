@@ -21,10 +21,14 @@
 package cassandra
 
 import (
+	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"testing"
+	"time"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber/cadence/common/service/config"
@@ -155,15 +159,35 @@ func (s *VersionTestSuite) expectedVersionTest(versionData string, expected stri
 }
 
 func (s *VersionTestSuite) TestCheckCompatibleVersion() {
+
+	client, err := newCQLClient("127.0.0.1", defaultCassandraPort, "", "", "system")
+	s.NoError(err)
+	defer client.Close()
+
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	keyspace := fmt.Sprintf("version_test_%v", r.Int63())
+	err = client.CreateKeyspace(keyspace, 1)
+	if err != nil {
+		log.Fatalf("error creating keyspace, err=%v", err)
+	}
+	defer client.DropKeyspace(keyspace)
+
 	dir := "check_version"
 	tmpDir, err := ioutil.TempDir("", dir)
 	s.NoError(err)
 	defer os.RemoveAll(tmpDir)
 
-	subdir := tmpDir + "/cadence"
+	subdir := tmpDir + "/" + keyspace
 	s.NoError(os.Mkdir(subdir, os.FileMode(0744)))
 	data := `{"ExpectedVersion": "1.0"}`
 	s.NoError(ioutil.WriteFile(subdir+"/version.json", []byte(data), os.FileMode(0644)))
+
+	vDir := subdir + "/1.0"
+	s.NoError(os.Mkdir(vDir, os.FileMode(0744)))
+	cqlFile := vDir + "/tmp.cql"
+	s.NoError(ioutil.WriteFile(cqlFile, []byte{}, os.FileMode(0644)))
+
+	RunTool([]string{"./tool", "-k", keyspace, "-q", "setup-schema", "-f", cqlFile, "-version", "1.0", "-o"})
 
 	cfg := config.Cassandra{
 		Hosts:    "127.0.0.1",
@@ -171,7 +195,7 @@ func (s *VersionTestSuite) TestCheckCompatibleVersion() {
 		User:     "",
 		Password: "",
 	}
-	err = CheckCompatibleVersion(cfg, "cadence", subdir)
+	err = CheckCompatibleVersion(cfg, keyspace, subdir)
 	s.Error(err)
 	s.Contains(err.Error(), "Version mismatch")
 }
