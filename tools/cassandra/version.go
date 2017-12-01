@@ -145,7 +145,6 @@ func CheckCompatibleVersion(cfg config.Cassandra, keyspace string, dirPath strin
 	// rollback, the code version (expected version) would fall lower than the actual version in
 	// cassandra. This check is to allow such rollbacks since we only make backwards compatible schema
 	// changes
-	fmt.Println("Versions: expected, actual: ", expectedVersion, version)
 	if cmpVersion(version, expectedVersion) < 0 {
 		return errors.New(fmt.Sprintf(
 			"version mismatch for keyspace: %q. Expected version: %s cannot be greater than "+
