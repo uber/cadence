@@ -552,6 +552,7 @@ const (
 	HistoryEventNotificationQueueingLatency
 	HistoryEventNotificationFanoutLatency
 	HistoryEventNotificationInFlightMessageGauge
+	HistoryEventNotificationFailDeliveryCount
 )
 
 // Matching metrics enum
@@ -633,6 +634,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		HistoryEventNotificationQueueingLatency:      {metricName: "history-event-notification-queueing-latency", metricType: Timer},
 		HistoryEventNotificationFanoutLatency:        {metricName: "history-event-notification-fanout-latency", metricType: Timer},
 		HistoryEventNotificationInFlightMessageGauge: {metricName: "history-event-notification-inflight-message-gauge", metricType: Gauge},
+		HistoryEventNotificationFailDeliveryCount:    {metricName: "history-event-notification-fail-delivery-count", metricType: Counter},
 	},
 	Matching: {
 		PollSuccessCounter:            {metricName: "poll.success"},

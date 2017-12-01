@@ -21,6 +21,7 @@
 package collection
 
 import (
+	"errors"
 	"math/rand"
 	"sync"
 	"sync/atomic"
@@ -78,21 +79,27 @@ func (s *ConcurrentTxMapSuite) TestGetAndDo() {
 	var value intType
 	fnApplied := false
 
-	interf, ok := testMap.GetAndDo(key, func(key interface{}, value interface{}) { fnApplied = true })
+	interf, ok, err := testMap.GetAndDo(key, func(key interface{}, value interface{}) error {
+		fnApplied = true
+		return nil
+	})
 	s.Nil(interf, "GetAndDo should return nil when key not found")
+	s.Nil(err, "GetAndDo should return nil when function not applied")
 	s.False(ok, "GetAndDo should return false when key not found")
 	s.False(fnApplied, "GetAndDo should not apply function when key not exixts")
 
 	value = intType(1)
 	testMap.Put(key, &value)
-	interf, ok = testMap.GetAndDo(key, func(key interface{}, value interface{}) {
+	interf, ok, err = testMap.GetAndDo(key, func(key interface{}, value interface{}) error {
 		fnApplied = true
 		intValue := value.(*intType)
 		*intValue++
+		return errors.New("some err")
 	})
 
 	value1 := interf.(*intType)
 	s.Equal(*(value1), intType(2))
+	s.NotNil(err, "GetAndDo should return non nil when function applied")
 	s.True(ok, "GetAndDo should return true when key found")
 	s.True(fnApplied, "GetAndDo should apply function when key exixts")
 }
@@ -104,19 +111,27 @@ func (s *ConcurrentTxMapSuite) TestPutOrDo() {
 	fnApplied := false
 
 	value = intType(1)
-	interf := testMap.PutOrDo(key, &value, func(key interface{}, value interface{}) { fnApplied = true })
+	interf, ok, err := testMap.PutOrDo(key, &value, func(key interface{}, value interface{}) error {
+		fnApplied = true
+		return errors.New("some err")
+	})
 	valueRetuern := interf.(*intType)
 	s.Equal(value, *valueRetuern)
+	s.Nil(err, "PutOrDo should return nil when function not applied")
+	s.False(ok, "PutOrDo should return false when function not applied")
 	s.False(fnApplied, "PutOrDo should not apply function when key not exixts")
 
 	anotherValue := intType(111)
-	interf = testMap.PutOrDo(key, &anotherValue, func(key interface{}, value interface{}) {
+	interf, ok, err = testMap.PutOrDo(key, &anotherValue, func(key interface{}, value interface{}) error {
 		fnApplied = true
 		intValue := value.(*intType)
 		*intValue++
+		return errors.New("some err")
 	})
 	valueRetuern = interf.(*intType)
 	s.Equal(value, *valueRetuern)
+	s.NotNil(err, "PutOrDo should return non nil when function applied")
+	s.True(ok, "PutOrDo should return true when function applied")
 	s.True(fnApplied, "PutOrDo should apply function when key exixts")
 }
 
@@ -127,7 +142,7 @@ func (s *ConcurrentTxMapSuite) TestRemoveIf() {
 	value = intType(1)
 	testMap.Put(key, &value)
 
-	testMap.RemoveIf(key, func(key interface{}, value interface{}) bool {
+	removed := testMap.RemoveIf(key, func(key interface{}, value interface{}) bool {
 		intValue := value.(*intType)
 		if *intValue == intType(2) {
 			return true
@@ -135,8 +150,9 @@ func (s *ConcurrentTxMapSuite) TestRemoveIf() {
 		return false
 	})
 	s.Equal(1, testMap.Size(), "TestRemoveIf should only entry if condition is met")
+	s.False(removed, "TestRemoveIf should return false if key is not deleted")
 
-	testMap.RemoveIf(key, func(key interface{}, value interface{}) bool {
+	removed = testMap.RemoveIf(key, func(key interface{}, value interface{}) bool {
 		intValue := value.(*intType)
 		if *intValue == intType(1) {
 			return true
@@ -144,6 +160,7 @@ func (s *ConcurrentTxMapSuite) TestRemoveIf() {
 		return false
 	})
 	s.Equal(0, testMap.Size(), "TestRemoveIf should only entry if condition is met")
+	s.True(removed, "TestRemoveIf should return true if key is deleted")
 }
 
 func (s *ConcurrentTxMapSuite) TestGetAfterPut() {

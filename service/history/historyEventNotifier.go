@@ -106,29 +106,27 @@ func (notifier *historyEventNotifierImpl) WatchHistoryEvent(
 	identifier *workflowIdentifier) (string, chan *historyEventNotification, error) {
 
 	channel := make(chan *historyEventNotification, 1)
-	subscriberID := uuid.NewUUID().String()
+	subscriberID := uuid.New()
 	subscribers := map[string]chan *historyEventNotification{
 		subscriberID: channel,
 	}
 
-	// this attr indicate whether there is a UUID collision
-	success := true
-	notifier.eventsPubsubs.PutOrDo(*identifier, subscribers, func(key interface{}, value interface{}) {
+	_, _, err := notifier.eventsPubsubs.PutOrDo(*identifier, subscribers, func(key interface{}, value interface{}) error {
 		subscribers := value.(map[string]chan *historyEventNotification)
 
 		if _, ok := subscribers[subscriberID]; ok {
 			// UUID collision
-			success = false
+			return &gen.InternalServiceError{
+				Message: "Unable to watch on workflow execution.",
+			}
 		} else {
 			subscribers[subscriberID] = channel
+			return nil
 		}
 	})
 
-	if !success {
-		// UUID collision
-		return "", nil, &gen.InternalServiceError{
-			Message: "Unable to watch on workflow execution.",
-		}
+	if err != nil {
+		return "", nil, err
 	}
 
 	return subscriberID, channel, nil
@@ -166,7 +164,7 @@ func (notifier *historyEventNotifierImpl) dispatchHistoryEventNotification(event
 
 	timer := notifier.metrics.StartTimer(metrics.HistoryEventNotificationScope, metrics.HistoryEventNotificationFanoutLatency)
 	defer timer.Stop()
-	notifier.eventsPubsubs.GetAndDo(*identifier, func(key interface{}, value interface{}) {
+	notifier.eventsPubsubs.GetAndDo(*identifier, func(key interface{}, value interface{}) error {
 		subscribers := value.(map[string]chan *historyEventNotification)
 
 		for _, channel := range subscribers {
@@ -177,6 +175,7 @@ func (notifier *historyEventNotifierImpl) dispatchHistoryEventNotification(event
 				// this should NOT happen, unless there is a bug or high load
 			}
 		}
+		return nil
 	})
 }
 
@@ -188,6 +187,8 @@ func (notifier *historyEventNotifierImpl) enqueueHistoryEventNotification(event 
 	default:
 		// in case the channel is already filled with message
 		// this can be caused by high load
+		notifier.metrics.IncCounter(metrics.HistoryEventNotificationScope,
+			metrics.HistoryEventNotificationFailDeliveryCount)
 	}
 }
 

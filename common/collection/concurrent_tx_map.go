@@ -37,6 +37,11 @@ type (
 	// HashFunc represents a hash function for string
 	HashFunc func(interface{}) uint32
 
+	// ActionFunc take a key and value, do calulation and return err
+	ActionFunc func(key interface{}, value interface{}) error
+	// PredicateFunc take a key and value, do calulation and return boolean
+	PredicateFunc func(key interface{}, value interface{}) bool
+
 	// ConcurrentTxMap is a generic interface for any
 	// implementation of a dictionary or a key value
 	// lookup table that is thread safe, and
@@ -53,11 +58,14 @@ type (
 		// Remove deletes the key from the map
 		Remove(key interface{})
 		// GetAndDo returns the value corresponding to the key, and apply fn to key value before return value
-		GetAndDo(key interface{}, fn func(key interface{}, value interface{})) (interface{}, bool)
+		// return (value, value exist or not, error when evaluation fn)
+		GetAndDo(key interface{}, fn ActionFunc) (interface{}, bool, error)
 		// PutOrDo put the key value in the map, if key does not exists, otherwise, call fn with existing key and value
-		PutOrDo(key interface{}, value interface{}, fn func(key interface{}, value interface{})) interface{}
+		// return (value, fn evaluated or not, error when evaluation fn)
+		PutOrDo(key interface{}, value interface{}, fn ActionFunc) (interface{}, bool, error)
 		// RemoveIf deletes the given key from the map if fn return true
-		RemoveIf(key interface{}, fn func(key interface{}, value interface{}) bool)
+		// return whether the key is removed or not
+		RemoveIf(key interface{}, fn PredicateFunc) bool
 		// Iter returns an iterator to the map
 		Iter() MapIterator
 		// Size returns the number of items in the map
@@ -188,24 +196,28 @@ func (cmap *ShardedConcurrentTxMap) Remove(key interface{}) {
 }
 
 // GetAndDo returns the value corresponding to the key, and apply fn to key value before return value
-func (cmap *ShardedConcurrentTxMap) GetAndDo(key interface{}, fn func(key interface{}, value interface{})) (interface{}, bool) {
+// return (value, value exist or not, error when evaluation fn)
+func (cmap *ShardedConcurrentTxMap) GetAndDo(key interface{}, fn ActionFunc) (interface{}, bool, error) {
 	shard := cmap.getShard(key)
-	var ok bool
 	var value interface{}
+	var ok bool
+	var err error
 	shard.Lock()
 	if shard.items != nil {
 		value, ok = shard.items[key]
 		if ok {
-			fn(key, value)
+			err = fn(key, value)
 		}
 	}
 	shard.Unlock()
-	return value, ok
+	return value, ok, err
 }
 
 // PutOrDo put the key value in the map, if key does not exists, otherwise, call fn with existing key and value
-func (cmap *ShardedConcurrentTxMap) PutOrDo(key interface{}, value interface{}, fn func(key interface{}, value interface{})) interface{} {
+// return (value, fn evaluated or not, error when evaluation fn)
+func (cmap *ShardedConcurrentTxMap) PutOrDo(key interface{}, value interface{}, fn ActionFunc) (interface{}, bool, error) {
 	shard := cmap.getShard(key)
+	var err error
 	shard.Lock()
 	cmap.lazyInitShard(shard)
 	v, ok := shard.items[key]
@@ -214,24 +226,27 @@ func (cmap *ShardedConcurrentTxMap) PutOrDo(key interface{}, value interface{}, 
 		v = value
 		atomic.AddInt32(&cmap.size, 1)
 	} else {
-		fn(key, v)
+		err = fn(key, v)
 	}
 	shard.Unlock()
-	return v
+	return v, ok, err
 }
 
 // RemoveIf deletes the given key from the map if fn return true
-func (cmap *ShardedConcurrentTxMap) RemoveIf(key interface{}, fn func(key interface{}, value interface{}) bool) {
+func (cmap *ShardedConcurrentTxMap) RemoveIf(key interface{}, fn PredicateFunc) bool {
 	shard := cmap.getShard(key)
+	var removed bool
 	shard.Lock()
 	if shard.items != nil {
 		value, ok := shard.items[key]
 		if ok && fn(key, value) {
+			removed = true
 			delete(shard.items, key)
 			atomic.AddInt32(&cmap.size, -1)
 		}
 	}
 	shard.Unlock()
+	return removed
 }
 
 // Close closes the iterator
