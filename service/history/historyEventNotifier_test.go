@@ -115,7 +115,7 @@ func (s *historyEventNotifierSuite) TestMultipleSubscriberWatchingEvents() {
 	historyEvent := newHistoryEventNotification(domainID, execution, nextEventID, isRunning)
 	timerChan := time.NewTimer(time.Second * 5).C
 
-	subscriberCount := 5
+	subscriberCount := 100
 	waitGroup := sync.WaitGroup{}
 	waitGroup.Add(subscriberCount)
 

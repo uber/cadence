@@ -21,12 +21,12 @@
 package history
 
 import (
-	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/pborman/uuid"
 	gen "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/metrics"
 )
 
@@ -51,9 +51,11 @@ type (
 		// function which calculate the shard ID from given workflow ID
 		workflowIDToShardID func(string) int
 
-		metadataLock       sync.RWMutex
-		shardLocks         map[int]*sync.RWMutex
-		shardEventsPubsubs map[int]map[workflowIdentifier]map[string]chan *historyEventNotification
+		// concurrent map with key workflowIdentifier, value map[string]chan *historyEventNotification.
+		// the reason for the second map being non thread safe:
+		// 1. expected number of subscriber per workflow is low, i.e. < 5
+		// 2. update to this map is already guarded by GetAndDo API provided by ConcurrentTxMap
+		eventsPubsubs collection.ConcurrentTxMap
 	}
 )
 
@@ -81,6 +83,13 @@ func newHistoryEventNotification(domainID string, workflowExecution *gen.Workflo
 }
 
 func newHistoryEventNotifier(metrics metrics.Client, workflowIDToShardID func(string) int) *historyEventNotifierImpl {
+	hashFn := func(key interface{}) uint32 {
+		id, ok := key.(historyEventNotification)
+		if !ok {
+			return 0
+		}
+		return uint32(workflowIDToShardID(id.workflowID))
+	}
 	return &historyEventNotifierImpl{
 		metrics:    metrics,
 		status:     statusIdle,
@@ -89,64 +98,64 @@ func newHistoryEventNotifier(metrics metrics.Client, workflowIDToShardID func(st
 
 		workflowIDToShardID: workflowIDToShardID,
 
-		shardLocks:         make(map[int]*sync.RWMutex),
-		shardEventsPubsubs: make(map[int]map[workflowIdentifier]map[string]chan *historyEventNotification),
+		eventsPubsubs: collection.NewShardedConcurrentTxMap(1024, hashFn),
 	}
 }
 
 func (notifier *historyEventNotifierImpl) WatchHistoryEvent(
 	identifier *workflowIdentifier) (string, chan *historyEventNotification, error) {
 
-	shardID := notifier.workflowIDToShardID(identifier.workflowID)
-	lock, eventsPubsubs := notifier.createOrGetShards(shardID)
-	lock.Lock()
-	defer lock.Unlock()
-
-	subscribers, ok := eventsPubsubs[*identifier]
-	if !ok {
-		subscribers = make(map[string]chan *historyEventNotification)
-		eventsPubsubs[*identifier] = subscribers
+	channel := make(chan *historyEventNotification, 1)
+	subscriberID := uuid.NewUUID().String()
+	subscribers := map[string]chan *historyEventNotification{
+		subscriberID: channel,
 	}
 
-	subscriberID := uuid.NewUUID().String()
-	if _, ok := subscribers[subscriberID]; ok {
+	// this attr indicate whether there is a UUID collision
+	success := true
+	notifier.eventsPubsubs.PutOrDo(*identifier, subscribers, func(key interface{}, value interface{}) {
+		subscribers := value.(map[string]chan *historyEventNotification)
+
+		if _, ok := subscribers[subscriberID]; ok {
+			// UUID collision
+			success = false
+		} else {
+			subscribers[subscriberID] = channel
+		}
+	})
+
+	if !success {
 		// UUID collision
 		return "", nil, &gen.InternalServiceError{
 			Message: "Unable to watch on workflow execution.",
 		}
 	}
 
-	channel := make(chan *historyEventNotification, 1)
-	subscribers[subscriberID] = channel
 	return subscriberID, channel, nil
 }
 
 func (notifier *historyEventNotifierImpl) UnwatchHistoryEvent(
 	identifier *workflowIdentifier, subscriberID string) error {
 
-	shardID := notifier.workflowIDToShardID(identifier.workflowID)
-	lock, eventsPubsubs := notifier.createOrGetShards(shardID)
-	lock.Lock()
-	defer lock.Unlock()
+	success := true
+	notifier.eventsPubsubs.RemoveIf(*identifier, func(key interface{}, value interface{}) bool {
+		subscribers := value.(map[string]chan *historyEventNotification)
 
-	subscribers, ok := eventsPubsubs[*identifier]
-	if !ok {
+		if _, ok := subscribers[subscriberID]; !ok {
+			// cannot find the subscribe ID, which means there is a bug
+			success = false
+		} else {
+			delete(subscribers, subscriberID)
+		}
+
+		return len(subscribers) == 0
+	})
+
+	if !success {
+		// cannot find the subscribe ID, which means there is a bug
 		return &gen.InternalServiceError{
 			Message: "Unable to unwatch on workflow execution.",
 		}
-	}
-
-	if _, ok := subscribers[subscriberID]; !ok {
-		// cannot find the subscribe ID, which means there is a bug
-		return &gen.EntityNotExistsError{
-			Message: "Unable to unwatch on workflow execution.",
-		}
-	}
-
-	delete(subscribers, subscriberID)
-
-	if len(subscribers) == 0 {
-		delete(eventsPubsubs, *identifier)
 	}
 
 	return nil
@@ -155,26 +164,20 @@ func (notifier *historyEventNotifierImpl) UnwatchHistoryEvent(
 func (notifier *historyEventNotifierImpl) dispatchHistoryEventNotification(event *historyEventNotification) {
 	identifier := &event.workflowIdentifier
 
-	shardID := notifier.workflowIDToShardID(identifier.workflowID)
-	lock, eventsPubsubs := notifier.createOrGetShards(shardID)
-	lock.RLock()
-	defer lock.RUnlock()
-
-	subscribers, ok := eventsPubsubs[*identifier]
-	if !ok {
-		return
-	}
-
 	timer := notifier.metrics.StartTimer(metrics.HistoryEventNotificationScope, metrics.HistoryEventNotificationFanoutLatency)
 	defer timer.Stop()
-	for _, channel := range subscribers {
-		select {
-		case channel <- event:
-		default:
-			// in case the channel is already filled with message
-			// this should NOT happen, unless there is a bug or high load
+	notifier.eventsPubsubs.GetAndDo(*identifier, func(key interface{}, value interface{}) {
+		subscribers := value.(map[string]chan *historyEventNotification)
+
+		for _, channel := range subscribers {
+			select {
+			case channel <- event:
+			default:
+				// in case the channel is already filled with message
+				// this should NOT happen, unless there is a bug or high load
+			}
 		}
-	}
+	})
 }
 
 func (notifier *historyEventNotifierImpl) enqueueHistoryEventNotification(event *historyEventNotification) {
@@ -206,35 +209,6 @@ func (notifier *historyEventNotifierImpl) dequeueHistoryEventNotifications() {
 			return
 		}
 	}
-}
-
-func (notifier *historyEventNotifierImpl) createOrGetShards(
-	shardID int) (*sync.RWMutex, map[workflowIdentifier]map[string]chan *historyEventNotification) {
-
-	notifier.metadataLock.RLock()
-	lock, ok := notifier.shardLocks[shardID]
-	if ok {
-		eventsPubsubs := notifier.shardEventsPubsubs[shardID]
-		notifier.metadataLock.RUnlock()
-		return lock, eventsPubsubs
-	}
-	notifier.metadataLock.RUnlock()
-
-	notifier.metadataLock.Lock()
-	defer notifier.metadataLock.Unlock()
-
-	lock, ok = notifier.shardLocks[shardID]
-	if !ok {
-		lock = &sync.RWMutex{}
-		notifier.shardLocks[shardID] = lock
-	}
-
-	eventsPubsubs, ok := notifier.shardEventsPubsubs[shardID]
-	if !ok {
-		eventsPubsubs = make(map[workflowIdentifier]map[string]chan *historyEventNotification)
-		notifier.shardEventsPubsubs[shardID] = eventsPubsubs
-	}
-	return lock, eventsPubsubs
 }
 
 func (notifier *historyEventNotifierImpl) Start() {
