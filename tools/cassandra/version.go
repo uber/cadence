@@ -21,7 +21,6 @@
 package cassandra
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -99,32 +98,33 @@ func parseValidateVersion(ver string) (string, error) {
 	return ver, nil
 }
 
-// versionManifest is a value type that represents the deserialized version.json file within
-// a schema directory
-type versionManifest struct {
-	ExpectedVersion string
-}
-
-// getExpectedVersion gets the expected version
-func getExpectedVersion(dirPath string) (string, error) {
-	filePath := dirPath + "/version.json"
-	jsonStr, err := ioutil.ReadFile(filePath)
+// getExpectedVersion gets the latest version from the schema directory
+func getExpectedVersion(dir string) (string, error) {
+	subdirs, err := ioutil.ReadDir(dir)
 	if err != nil {
 		return "", err
 	}
 
-	jsonBlob := []byte(jsonStr)
-	var manifest versionManifest
-	err = json.Unmarshal(jsonBlob, &manifest)
-	if err != nil {
-		return "", err
+	var result string
+	for _, subdir := range subdirs {
+		if !subdir.IsDir() {
+			continue
+		}
+		dirname := subdir.Name()
+		if !versionStrRegex.MatchString(dirname) {
+			continue
+		}
+		ver := dirToVersion(dirname)
+		fmt.Println("Version", ver)
+		if len(result) == 0 || cmpVersion(ver, result) > 0 {
+			result = ver
+		}
 	}
-
-	currVer, err := parseValidateVersion(manifest.ExpectedVersion)
-	if err != nil {
-		return "", fmt.Errorf("invalid ExpectedVersion in: %s, error : %s", filePath, err.Error())
+	fmt.Println("Result", result)
+	if len(result) == 0 {
+		return "", errors.New(fmt.Sprintf("no valid schemas found in dir: %s", dir))
 	}
-	return currVer, nil
+	return result, nil
 }
 
 func CheckCompatibleVersion(cfg config.Cassandra, keyspace string, dirPath string) error {
@@ -141,6 +141,7 @@ func CheckCompatibleVersion(cfg config.Cassandra, keyspace string, dirPath strin
 	if err != nil {
 		return errors.New(fmt.Sprintf("unable to read expected schema version: %v", err.Error()))
 	}
+	fmt.Println("Expected, actual: ", expectedVersion, version)
 	// In most cases, the versions should match. However if after a schema upgrade there is a code
 	// rollback, the code version (expected version) would fall lower than the actual version in
 	// cassandra. This check is to allow such rollbacks since we only make backwards compatible schema
