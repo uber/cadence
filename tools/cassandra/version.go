@@ -122,40 +122,33 @@ func getExpectedVersion(dirPath string) (string, error) {
 
 	currVer, err := parseValidateVersion(manifest.ExpectedVersion)
 	if err != nil {
-		return "", fmt.Errorf("invalid ExpectedVersion in manifest: %s", err.Error())
+		return "", fmt.Errorf("invalid ExpectedVersion in: %s, error : %s", filePath, err.Error())
 	}
 	return currVer, nil
 }
 
 func CheckCompatibleVersion(cfg config.Cassandra, keyspace string, dirPath string) error {
-	cqlClient, err := NewCQLClient(cfg.Hosts, cfg.Port, cfg.User, cfg.Password, keyspace)
+	cqlClient, err := newCQLClient(cfg.Hosts, cfg.Port, cfg.User, cfg.Password, keyspace)
 	if err != nil {
-		return errors.New("Unable to create CQL Client: " + err.Error())
+		return errors.New(fmt.Sprintf("unable to create CQL Client: %v", err.Error()))
 	}
 	defer cqlClient.Close()
 	version, err := cqlClient.ReadSchemaVersion()
 	if err != nil {
-		return errors.New("Unable to create schema version: " + err.Error())
+		return errors.New(fmt.Sprintf("unable to read cassandra schema version: %v", err.Error()))
 	}
 	expectedVersion, err := getExpectedVersion(dirPath)
 	if err != nil {
-		return errors.New("Unable to read expected schema version: " + err.Error())
-	}
-	expectedNum, err := strconv.ParseFloat(expectedVersion, 64)
-	if err != nil {
-		return errors.New("Unable to convert expected version to float: " + expectedVersion)
-	}
-	actualNum, err := strconv.ParseFloat(version, 64)
-	if err != nil {
-		return errors.New("Unable to convert actual version to float: " + version)
+		return errors.New(fmt.Sprintf("unable to read expected schema version: %v", err.Error()))
 	}
 	// In most cases, the versions should match. However if after a schema upgrade there is a code
 	// rollback, the code version (expected version) would fall lower than the actual version in
 	// cassandra. This check is to allow such rollbacks since we only make backwards compatible schema
 	// changes
-	if actualNum <= expectedNum {
+	fmt.Println("Versions: expected, actual: ", expectedVersion, version)
+	if cmpVersion(version, expectedVersion) < 0 {
 		return errors.New(fmt.Sprintf(
-			"Version mismatch for keyspace: %q. Expected version: %s cannot be greater than "+
+			"version mismatch for keyspace: %q. Expected version: %s cannot be greater than "+
 				"Actual version: %s", keyspace, expectedVersion, version,
 		))
 	}

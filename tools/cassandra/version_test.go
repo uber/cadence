@@ -159,7 +159,23 @@ func (s *VersionTestSuite) expectedVersionTest(versionData string, expected stri
 }
 
 func (s *VersionTestSuite) TestCheckCompatibleVersion() {
+	flags := []struct {
+		expectedVersion string
+		actualVersion   string
+		errStr          string
+	}{
+		{"2.0", "1.0", "version mismatch"},
+		{"1.0", "1.0", ""},
+		{"1.0", "2.0", ""},
+		{"1.0", "abc", "unable to read cassandra schema version"},
+		{"abc", "1.0", "unable to read expected schema version"},
+	}
+	for _, flag := range flags {
+		s.checkCompatibleVersion(flag.expectedVersion, flag.actualVersion, flag.errStr)
+	}
+}
 
+func (s *VersionTestSuite) checkCompatibleVersion(expected string, actual string, errStr string) {
 	client, err := newCQLClient("127.0.0.1", defaultCassandraPort, "", "", "system")
 	s.NoError(err)
 	defer client.Close()
@@ -179,15 +195,15 @@ func (s *VersionTestSuite) TestCheckCompatibleVersion() {
 
 	subdir := tmpDir + "/" + keyspace
 	s.NoError(os.Mkdir(subdir, os.FileMode(0744)))
-	data := `{"ExpectedVersion": "1.0"}`
+	data := `{"ExpectedVersion": "` + expected + `"}`
 	s.NoError(ioutil.WriteFile(subdir+"/version.json", []byte(data), os.FileMode(0644)))
 
-	vDir := subdir + "/1.0"
+	vDir := subdir + "/" + actual
 	s.NoError(os.Mkdir(vDir, os.FileMode(0744)))
 	cqlFile := vDir + "/tmp.cql"
 	s.NoError(ioutil.WriteFile(cqlFile, []byte{}, os.FileMode(0644)))
 
-	RunTool([]string{"./tool", "-k", keyspace, "-q", "setup-schema", "-f", cqlFile, "-version", "1.0", "-o"})
+	RunTool([]string{"./tool", "-k", keyspace, "-q", "setup-schema", "-f", cqlFile, "-version", actual, "-o"})
 
 	cfg := config.Cassandra{
 		Hosts:    "127.0.0.1",
@@ -196,6 +212,10 @@ func (s *VersionTestSuite) TestCheckCompatibleVersion() {
 		Password: "",
 	}
 	err = CheckCompatibleVersion(cfg, keyspace, subdir)
-	s.Error(err)
-	s.Contains(err.Error(), "Version mismatch")
+	if len(errStr) > 0 {
+		s.Error(err)
+		s.Contains(err.Error(), errStr)
+	} else {
+		s.NoError(err)
+	}
 }

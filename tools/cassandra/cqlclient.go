@@ -106,11 +106,6 @@ const (
 		`WITH replication = { 'class' : 'SimpleStrategy', 'replication_factor' : %v};`
 )
 
-// NewCQLClient returns a new instance of CQLClient
-func NewCQLClient(hostsCsv string, port int, user, password, keyspace string) (CQLClient, error) {
-	return newCQLClient(hostsCsv, port, user, password, keyspace)
-}
-
 // newCQLClient returns a new instance of CQLClient
 func newCQLClient(hostsCsv string, port int, user, password, keyspace string) (CQLClient, error) {
 	hosts := parseHosts(hostsCsv)
