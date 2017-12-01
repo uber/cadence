@@ -173,7 +173,6 @@ func (s *VersionTestSuite) TestCheckCompatibleVersion() {
 		{"abc", "1.0", "unable to read expected schema version", true},
 	}
 	for _, flag := range flags {
-		fmt.Println("Test: ", flag.expectedVersion, flag.actualVersion, flag.errStr)
 		s.checkCompatibleVersion(flag.expectedVersion, flag.actualVersion, flag.errStr, flag.expectedFail)
 	}
 }
@@ -207,7 +206,6 @@ func (s *VersionTestSuite) checkCompatibleVersion(
 	}
 
 	cqlFile := subdir + "/v" + actual + "/tmp.cql"
-	fmt.Println("CQL file: ", cqlFile)
 	RunTool([]string{
 		"./tool", "-k", keyspace, "-q", "setup-schema", "-f", cqlFile, "-version", actual, "-o",
 	})

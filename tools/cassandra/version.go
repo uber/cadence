@@ -119,7 +119,6 @@ func getExpectedVersion(dir string) (string, error) {
 			result = ver
 		}
 	}
-	fmt.Println("Result", result)
 	if len(result) == 0 {
 		return "", errors.New(fmt.Sprintf("no valid schemas found in dir: %s", dir))
 	}
@@ -140,7 +139,6 @@ func CheckCompatibleVersion(cfg config.Cassandra, keyspace string, dirPath strin
 	if err != nil {
 		return errors.New(fmt.Sprintf("unable to read expected schema version: %v", err.Error()))
 	}
-	fmt.Println("Expected, actual: ", expectedVersion, version)
 	// In most cases, the versions should match. However if after a schema upgrade there is a code
 	// rollback, the code version (expected version) would fall lower than the actual version in
 	// cassandra. This check is to allow such rollbacks since we only make backwards compatible schema
