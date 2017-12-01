@@ -129,27 +129,27 @@ func (s *VersionTestSuite) execParseTest(input string, expMajor int, expMinor in
 func (s *VersionTestSuite) TestGetExpectedVersion() {
 	s.T().Skip()
 	flags := []struct {
-		input    string
+		dirs     []string
 		expected string
 		err      string
 	}{
-		{`{"ExpectedVersion": "1.0"}`, "1.0", ""},
-		{`{"ExpectedVersion": "1abc123"}`, "", "invalid ExpectedVersion"},
-		{`hello there`, "", "invalid"},
+		{[]string{"1.0"}, "1.0", ""},
+		{[]string{"1.0", "2.0"}, "2.0", ""},
+		{[]string{"abc"}, "", "no valid schemas"},
 	}
 	for _, flag := range flags {
-		s.expectedVersionTest(flag.input, flag.expected, flag.err)
+		s.expectedVersionTest(flag.expected, flag.dirs, flag.err)
 	}
 }
 
-func (s *VersionTestSuite) expectedVersionTest(versionData string, expected string, errStr string) {
-	dir := "version_test"
-	tmpDir, err := ioutil.TempDir("", dir)
+func (s *VersionTestSuite) expectedVersionTest(expected string, dirs []string, errStr string) {
+	tmpDir, err := ioutil.TempDir("", "version_test")
 	s.NoError(err)
 	defer os.RemoveAll(tmpDir)
 
-	err = ioutil.WriteFile(tmpDir+"/version.json", []byte(versionData), os.FileMode(0644))
-	s.NoError(err)
+	for _, dir := range dirs {
+		s.createSchemaForVersion(tmpDir, dir)
+	}
 	v, err := getExpectedVersion(tmpDir)
 	if len(errStr) == 0 {
 		s.Equal(expected, v)

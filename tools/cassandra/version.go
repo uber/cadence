@@ -115,7 +115,6 @@ func getExpectedVersion(dir string) (string, error) {
 			continue
 		}
 		ver := dirToVersion(dirname)
-		fmt.Println("Version", ver)
 		if len(result) == 0 || cmpVersion(ver, result) > 0 {
 			result = ver
 		}
