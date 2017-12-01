@@ -536,7 +536,6 @@ retry:
 				lastDecisionScheduleEvent = e
 			}
 		}
-
 		if lastDecisionScheduleEvent != nil {
 			p.suite.Equal(decisionAttempt, lastDecisionScheduleEvent.DecisionTaskScheduledEventAttributes.GetAttempt())
 		}
@@ -3292,6 +3291,7 @@ func (s *integrationSuite) TestGetWorkflowExecutionHistoryLongPoll() {
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
+
 	s.logger.Infof("StartWorkflowExecution: response: %v \n", *we.RunId)
 
 	// decider logic
@@ -3300,7 +3300,8 @@ func (s *integrationSuite) TestGetWorkflowExecutionHistoryLongPoll() {
 	activityData := int32(1)
 	// var signalEvent *workflow.HistoryEvent
 	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
-		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision) {
+		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
+
 		if !activityScheduled {
 			activityScheduled = true
 			buf := new(bytes.Buffer)
@@ -3318,7 +3319,7 @@ func (s *integrationSuite) TestGetWorkflowExecutionHistoryLongPoll() {
 					StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
 					HeartbeatTimeoutSeconds:       common.Int32Ptr(25),
 				},
-			}}
+			}}, nil
 		}
 
 		workflowComplete = true
@@ -3327,7 +3328,7 @@ func (s *integrationSuite) TestGetWorkflowExecutionHistoryLongPoll() {
 			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
 				Result: []byte("Done."),
 			},
-		}}
+		}}, nil
 	}
 
 	// activity handler
@@ -3345,6 +3346,7 @@ func (s *integrationSuite) TestGetWorkflowExecutionHistoryLongPoll() {
 		decisionHandler: dtHandler,
 		activityHandler: atHandler,
 		logger:          s.logger,
+		suite:           s,
 	}
 
 	// this function poll events from history side

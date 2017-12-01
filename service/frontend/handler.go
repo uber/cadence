@@ -421,11 +421,11 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 
 		if len(persistenceToken) != 0 {
 			continuation, err = serializeHistoryToken(&getHistoryContinuationToken{
-				RunID:            *matchingResp.WorkflowExecution.RunId,
-				FirstEventID:     firstEventID,
-				NextEventID:      nextEventID,
-				PersistenceToken: persistenceToken,
-				TransientDecision: matchingResp.DecisionInfo
+				RunID:             *matchingResp.WorkflowExecution.RunId,
+				FirstEventID:      firstEventID,
+				NextEventID:       nextEventID,
+				PersistenceToken:  persistenceToken,
+				TransientDecision: matchingResp.DecisionInfo,
 			})
 			if err != nil {
 				return nil, wh.error(err, scope)
