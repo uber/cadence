@@ -278,6 +278,7 @@ pollLoop:
 			resp := &h.RecordDecisionTaskStartedResponse{
 				PreviousStartedEventId: nextIDResp.EventId,
 				NextEventId:            nextIDResp.EventId,
+				StickyExecutionEnabled: tCtx.queryTaskInfo.queryRequest.StickyExecutionEnabled,
 			}
 			tCtx.completeTask(nil)
 			return e.createPollForDecisionTaskResponse(tCtx, resp), nil

@@ -24,6 +24,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/pborman/uuid"
@@ -390,50 +391,11 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 		return nil, nil
 	}
 
-	var history *gen.History
-	var persistenceToken []byte
-	var continuation []byte
-	if matchingResp.WorkflowExecution != nil {
-		// Non-empty response. Get the history
-		nextEventID := matchingResp.GetNextEventId()
-		firstEventID := common.FirstEventID
-		if matchingResp.GetStickyExecutionEnabled() {
-			firstEventID = matchingResp.GetPreviousStartedEventId() + 1
-		}
-		history, persistenceToken, err = wh.getHistory(
-			info.ID,
-			*matchingResp.WorkflowExecution,
-			firstEventID,
-			nextEventID,
-			wh.config.DefaultHistoryMaxPageSize,
-			nil,
-			matchingResp.DecisionInfo)
-		if err != nil {
-			return nil, wh.error(err, scope)
-		}
-
-		if matchingResp.WorkflowExecution.RunId == nil {
-			wh.Service.GetLogger().Errorf(
-				"PollForDecisionTask from matching engine doesn't have run id. TaskList: %v",
-				*pollRequest.TaskList.Name)
-			return nil, wh.error(errRunIDNotSet, scope)
-		}
-
-		if len(persistenceToken) != 0 {
-			continuation, err = serializeHistoryToken(&getHistoryContinuationToken{
-				RunID:             *matchingResp.WorkflowExecution.RunId,
-				FirstEventID:      firstEventID,
-				NextEventID:       nextEventID,
-				PersistenceToken:  persistenceToken,
-				TransientDecision: matchingResp.DecisionInfo,
-			})
-			if err != nil {
-				return nil, wh.error(err, scope)
-			}
-		}
+	resp, err := wh.createPollForDecisionTaskResponse(ctx, info.ID, matchingResp)
+	if err != nil {
+		return nil, wh.error(err, scope)
 	}
-
-	return wh.createPollForDecisionTaskResponse(ctx, matchingResp, history, continuation), nil
+	return resp, nil
 }
 
 func (wh *WorkflowHandler) cancelOutstandingPoll(ctx context.Context, err error, domainID string, taskListType int32,
@@ -1388,32 +1350,33 @@ func (wh *WorkflowHandler) QueryWorkflow(ctx context.Context,
 		DomainUUID:   common.StringPtr(domainInfo.ID),
 		QueryRequest: queryRequest,
 	}
-	if queryRequest.Execution.RunId == nil {
-		// RunID is not set, we would use the running one if it exists.
-		response, err := wh.history.GetWorkflowExecutionNextEventID(ctx, &h.GetWorkflowExecutionNextEventIDRequest{
-			DomainUUID: common.StringPtr(domainInfo.ID),
-			Execution:  queryRequest.Execution,
-		})
-		if err != nil {
-			return nil, wh.error(err, scope)
-		}
 
-		queryRequest.Execution.RunId = response.RunId
-		matchingRequest.TaskList = response.Tasklist
-	} else {
-		// Get the TaskList from history (first event)
-		history, _, err := wh.getHistory(domainInfo.ID, *queryRequest.Execution, common.FirstEventID, common.FirstEventID+1,
-			1, nil, nil)
-		if err != nil {
-			return nil, wh.error(err, scope)
-		}
-		if len(history.Events) == 0 || history.Events[0].GetEventType() != gen.EventTypeWorkflowExecutionStarted {
-			// this should not happen
-			return nil, wh.error(errors.New("invalid history events"), scope)
-		}
-		matchingRequest.TaskList = history.Events[0].WorkflowExecutionStartedEventAttributes.TaskList
+	// we should always use the mutable state, since it contains the sticky tasklist information
+	response, err := wh.history.DescribeWorkflowExecution(
+		ctx,
+		&h.DescribeWorkflowExecutionRequest{
+			DomainUUID: common.StringPtr(domainInfo.ID),
+			Request: &gen.DescribeWorkflowExecutionRequest{
+				Domain:    queryRequest.Domain,
+				Execution: queryRequest.Execution,
+			},
+		})
+	if err != nil {
+		return nil, wh.error(err, scope)
 	}
 
+	queryRequest.Execution.RunId = response.WorkflowExecutionInfo.Execution.RunId
+	if len(response.ExecutionConfiguration.StickyTaskList.GetName()) == 0 {
+		matchingRequest.TaskList = response.ExecutionConfiguration.TaskList
+		matchingRequest.StickyExecutionEnabled = common.BoolPtr(false)
+	} else {
+		matchingRequest.TaskList = response.ExecutionConfiguration.StickyTaskList
+		matchingRequest.StickyExecutionEnabled = common.BoolPtr(true)
+	}
+
+	fmt.Println("matching query workflow request")
+	fmt.Println(matchingRequest)
+	fmt.Println("matching query workflow request")
 	matchingResp, err := wh.matching.QueryWorkflow(ctx, matchingRequest)
 	if err != nil {
 		logging.LogQueryTaskFailedEvent(wh.GetLogger(),
@@ -1619,32 +1582,46 @@ func createDomainResponse(info *persistence.DomainInfo, config *persistence.Doma
 	return i, c
 }
 
-func (wh *WorkflowHandler) createPollForDecisionTaskResponse(ctx context.Context,
-	matchingResponse *m.PollForDecisionTaskResponse, history *gen.History, nextPageToken []byte) *gen.PollForDecisionTaskResponse {
-	resp := &gen.PollForDecisionTaskResponse{}
-	if matchingResponse != nil {
-		resp.TaskToken = matchingResponse.TaskToken
-		resp.WorkflowExecution = matchingResponse.WorkflowExecution
-		resp.WorkflowType = matchingResponse.WorkflowType
-		resp.PreviousStartedEventId = matchingResponse.PreviousStartedEventId
-		resp.StartedEventId = matchingResponse.StartedEventId
-		resp.Query = matchingResponse.Query
-		resp.BacklogCountHint = matchingResponse.BacklogCountHint
+func (wh *WorkflowHandler) createPollForDecisionTaskResponse(ctx context.Context, domainID string,
+	matchingResp *m.PollForDecisionTaskResponse) (*gen.PollForDecisionTaskResponse, error) {
+
+	if matchingResp.WorkflowExecution == nil {
+		// this will happen if there is no decision task to be send to worker / caller
+		return &gen.PollForDecisionTaskResponse{}, nil
 	}
 
-	if matchingResponse.Query != nil && resp.WorkflowType == nil {
-		// for query task, the matching engine was not able to populate the WorkflowType, so set here from history
-		if history != nil && len(history.Events) > 0 &&
-			history.Events[0].WorkflowExecutionStartedEventAttributes != nil {
-			resp.WorkflowType = history.Events[0].WorkflowExecutionStartedEventAttributes.WorkflowType
-		} else {
+	var history *gen.History
+	var continuation []byte
+	var err error
+
+	// if matchingResp.WorkflowExecution.RunId == nil {
+	// 	wh.Service.GetLogger().Errorf(
+	// 		"PollForDecisionTask from matching engine doesn't have run id. TaskList: %v",
+	// 		*pollRequest.TaskList.Name)
+	// 	return nil, wh.error(errRunIDNotSet, scope)
+	// }
+
+	fmt.Println("@@@@@@@@@@@@@@")
+	fmt.Println(matchingResp)
+	fmt.Println(matchingResp.GetStickyExecutionEnabled())
+	fmt.Println(matchingResp.Query)
+	fmt.Println("@@@@@@@@@@@@@@")
+	if matchingResp.GetStickyExecutionEnabled() && matchingResp.Query != nil {
+		// meaning sticky query, we should not return any events to worker
+		// since query task only check the current status
+		history = &gen.History{
+			Events: []*gen.HistoryEvent{},
+		}
+		// when sticky query happen, the workflow type is not set from the mathing service side
+		matchingResp.WorkflowType, _, err = wh.getWorkflowTypeTaskList(domainID, matchingResp.WorkflowExecution)
+		if err != nil {
 			// this should never happen, but if it does happen, log it and respond error back to query client.
 			logging.LogQueryTaskMissingWorkflowTypeErrorEvent(wh.GetLogger(),
-				*matchingResponse.WorkflowExecution.WorkflowId,
-				*matchingResponse.WorkflowExecution.RunId,
-				*resp.Query.QueryType)
+				*matchingResp.WorkflowExecution.WorkflowId,
+				*matchingResp.WorkflowExecution.RunId,
+				*matchingResp.Query.QueryType)
 
-			queryTaskToken, err := wh.tokenSerializer.DeserializeQueryTaskToken(matchingResponse.TaskToken)
+			queryTaskToken, err := wh.tokenSerializer.DeserializeQueryTaskToken(matchingResp.TaskToken)
 			if err == nil {
 				completeType := gen.QueryTaskCompletedTypeFailed
 				wh.matching.RespondQueryTaskCompleted(ctx, &m.RespondQueryTaskCompletedRequest{
@@ -1652,7 +1629,7 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(ctx context.Context
 					TaskList:   &gen.TaskList{Name: common.StringPtr(queryTaskToken.TaskList)},
 					TaskID:     common.StringPtr(queryTaskToken.TaskID),
 					CompletedRequest: &gen.RespondQueryTaskCompletedRequest{
-						TaskToken:     matchingResponse.TaskToken,
+						TaskToken:     matchingResp.TaskToken,
 						CompletedType: &completeType,
 						ErrorMessage:  common.StringPtr("server internal error: cannot get WorkflowType for QueryTask"),
 					},
@@ -1660,13 +1637,62 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(ctx context.Context
 			}
 
 			// in this case, just return empty response for the pool request and client will just ignore
-			return &gen.PollForDecisionTaskResponse{}
+			return &gen.PollForDecisionTaskResponse{}, nil
+		}
+	} else {
+		// here we have 3 cases:
+		// 1. sticky && non query task
+		// 2. non sticky &&  non query task
+		// 3. non sticky && query task
+		// for 1, partial history have to be send back
+		// for 2 and 3, full history have to be send back
+
+		var persistenceToken []byte
+
+		firstEventID := common.FirstEventID
+		nextEventID := matchingResp.GetNextEventId()
+		if matchingResp.GetStickyExecutionEnabled() {
+			firstEventID = matchingResp.GetPreviousStartedEventId() + 1
+		}
+		history, persistenceToken, err = wh.getHistory(
+			domainID,
+			*matchingResp.WorkflowExecution,
+			firstEventID,
+			nextEventID,
+			wh.config.DefaultHistoryMaxPageSize,
+			nil,
+			matchingResp.DecisionInfo)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(persistenceToken) != 0 {
+			continuation, err = serializeHistoryToken(&getHistoryContinuationToken{
+				RunID:             *matchingResp.WorkflowExecution.RunId,
+				FirstEventID:      firstEventID,
+				NextEventID:       nextEventID,
+				PersistenceToken:  persistenceToken,
+				TransientDecision: matchingResp.DecisionInfo,
+			})
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
-	resp.History = history
-	resp.NextPageToken = nextPageToken
-	return resp
+	resp := &gen.PollForDecisionTaskResponse{
+		TaskToken:              matchingResp.TaskToken,
+		WorkflowExecution:      matchingResp.WorkflowExecution,
+		WorkflowType:           matchingResp.WorkflowType,
+		PreviousStartedEventId: matchingResp.PreviousStartedEventId,
+		StartedEventId:         matchingResp.StartedEventId,
+		Query:                  matchingResp.Query,
+		BacklogCountHint:       matchingResp.BacklogCountHint,
+		History:                history,
+		NextPageToken:          continuation,
+	}
+
+	return resp, nil
 }
 
 func createGetWorkflowExecutionHistoryResponse(
@@ -1696,4 +1722,19 @@ func createServiceBusyError() *gen.ServiceBusyError {
 	err := &gen.ServiceBusyError{}
 	err.Message = "Too many outstanding requests to the cadence service"
 	return err
+}
+
+func (wh *WorkflowHandler) getWorkflowTypeTaskList(domainID string, execution *gen.WorkflowExecution) (*gen.WorkflowType, *gen.TaskList, error) {
+	// Get the workflowType from history (first event)
+	history, _, err := wh.getHistory(domainID, *execution, common.FirstEventID, common.FirstEventID+1,
+		1, nil, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(history.Events) == 0 || history.Events[0].GetEventType() != gen.EventTypeWorkflowExecutionStarted {
+		// this should not happen
+		return nil, nil, errors.New("invalid history events")
+	}
+	attrs := history.Events[0].WorkflowExecutionStartedEventAttributes
+	return attrs.WorkflowType, attrs.TaskList, nil
 }

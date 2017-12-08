@@ -68,6 +68,7 @@ struct QueryWorkflowRequest {
   10: optional string domainUUID
   20: optional shared.TaskList taskList
   30: optional shared.QueryWorkflowRequest queryRequest
+  40: optional bool stickyExecutionEnabled
 }
 
 struct RespondQueryTaskCompletedRequest {

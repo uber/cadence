@@ -1566,9 +1566,10 @@ func (v *PollForDecisionTaskResponse) GetStickyExecutionEnabled() (o bool) {
 }
 
 type QueryWorkflowRequest struct {
-	DomainUUID   *string                      `json:"domainUUID,omitempty"`
-	TaskList     *shared.TaskList             `json:"taskList,omitempty"`
-	QueryRequest *shared.QueryWorkflowRequest `json:"queryRequest,omitempty"`
+	DomainUUID             *string                      `json:"domainUUID,omitempty"`
+	TaskList               *shared.TaskList             `json:"taskList,omitempty"`
+	QueryRequest           *shared.QueryWorkflowRequest `json:"queryRequest,omitempty"`
+	StickyExecutionEnabled *bool                        `json:"stickyExecutionEnabled,omitempty"`
 }
 
 // ToWire translates a QueryWorkflowRequest struct into a Thrift-level intermediate
@@ -1588,7 +1589,7 @@ type QueryWorkflowRequest struct {
 //   }
 func (v *QueryWorkflowRequest) ToWire() (wire.Value, error) {
 	var (
-		fields [3]wire.Field
+		fields [4]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -1616,6 +1617,14 @@ func (v *QueryWorkflowRequest) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 30, Value: w}
+		i++
+	}
+	if v.StickyExecutionEnabled != nil {
+		w, err = wire.NewValueBool(*(v.StickyExecutionEnabled)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 40, Value: w}
 		i++
 	}
 
@@ -1676,6 +1685,16 @@ func (v *QueryWorkflowRequest) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 40:
+			if field.Value.Type() == wire.TBool {
+				var x bool
+				x, err = field.Value.GetBool(), error(nil)
+				v.StickyExecutionEnabled = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -1689,7 +1708,7 @@ func (v *QueryWorkflowRequest) String() string {
 		return "<nil>"
 	}
 
-	var fields [3]string
+	var fields [4]string
 	i := 0
 	if v.DomainUUID != nil {
 		fields[i] = fmt.Sprintf("DomainUUID: %v", *(v.DomainUUID))
@@ -1701,6 +1720,10 @@ func (v *QueryWorkflowRequest) String() string {
 	}
 	if v.QueryRequest != nil {
 		fields[i] = fmt.Sprintf("QueryRequest: %v", v.QueryRequest)
+		i++
+	}
+	if v.StickyExecutionEnabled != nil {
+		fields[i] = fmt.Sprintf("StickyExecutionEnabled: %v", *(v.StickyExecutionEnabled))
 		i++
 	}
 
@@ -1721,6 +1744,9 @@ func (v *QueryWorkflowRequest) Equals(rhs *QueryWorkflowRequest) bool {
 	if !((v.QueryRequest == nil && rhs.QueryRequest == nil) || (v.QueryRequest != nil && rhs.QueryRequest != nil && v.QueryRequest.Equals(rhs.QueryRequest))) {
 		return false
 	}
+	if !_Bool_EqualsPtr(v.StickyExecutionEnabled, rhs.StickyExecutionEnabled) {
+		return false
+	}
 
 	return true
 }
@@ -1730,6 +1756,16 @@ func (v *QueryWorkflowRequest) Equals(rhs *QueryWorkflowRequest) bool {
 func (v *QueryWorkflowRequest) GetDomainUUID() (o string) {
 	if v.DomainUUID != nil {
 		return *v.DomainUUID
+	}
+
+	return
+}
+
+// GetStickyExecutionEnabled returns the value of StickyExecutionEnabled if it is set or its
+// zero value if it is unset.
+func (v *QueryWorkflowRequest) GetStickyExecutionEnabled() (o bool) {
+	if v.StickyExecutionEnabled != nil {
+		return *v.StickyExecutionEnabled
 	}
 
 	return
