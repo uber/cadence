@@ -1065,16 +1065,6 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 		d.CreateWorkflowExecutionWithinBatch(startReq, batch, cqlNowTimestamp)
 		d.createTransferTasks(batch, startReq.TransferTasks, startReq.DomainID, *startReq.Execution.WorkflowId,
 			*startReq.Execution.RunId, cqlNowTimestamp)
-	} else if request.CloseExecution {
-		// Delete WorkflowExecution row representing current execution
-		batch.Query(templateDeleteWorkflowExecutionQuery,
-			d.shardID,
-			rowTypeExecution,
-			executionInfo.DomainID,
-			executionInfo.WorkflowID,
-			permanentRunID,
-			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID)
 	}
 
 	// Verifies that the RangeID has not changed

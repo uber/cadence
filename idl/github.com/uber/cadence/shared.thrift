@@ -54,6 +54,12 @@ exception QueryFailedError {
   1: required string message
 }
 
+enum StartWorkflowType {
+  AllowDuplicateFailedOnly,
+  AllowDuplicate,
+  RejectDuplicate,
+}
+
 enum DomainStatus {
   REGISTERED,
   DEPRECATED,
@@ -693,6 +699,7 @@ struct StartWorkflowExecutionRequest {
   70: optional i32 taskStartToCloseTimeoutSeconds
   80: optional string identity
   90: optional string requestId
+  100: optional StartWorkflowType startWorkflowType
 }
 
 struct StartWorkflowExecutionResponse {

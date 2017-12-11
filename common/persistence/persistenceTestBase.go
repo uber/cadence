@@ -340,8 +340,8 @@ func (s *TestBase) GetWorkflowExecutionInfo(domainID string, workflowExecution w
 	return response.State, nil
 }
 
-// GetCurrentWorkflow returns the workflow state for the given params
-func (s *TestBase) GetCurrentWorkflow(domainID, workflowID string) (string, error) {
+// GetCurrentWorkflowRunID returns the workflow run ID for the given params
+func (s *TestBase) GetCurrentWorkflowRunID(domainID, workflowID string) (string, error) {
 	response, err := s.WorkflowMgr.GetCurrentExecution(&GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
@@ -407,8 +407,8 @@ func (s *TestBase) UpdateWorkflowExecution(updatedInfo *WorkflowExecutionInfo, d
 		upsertTimerInfos, deleteTimerInfos, nil, nil, nil, nil)
 }
 
-// UpdateWorkflowExecutionAndDelete is a utility method to update workflow execution
-func (s *TestBase) UpdateWorkflowExecutionAndDelete(updatedInfo *WorkflowExecutionInfo, condition int64) error {
+// UpdateWorkflowExecutionAndFinish is a utility method to update workflow execution
+func (s *TestBase) UpdateWorkflowExecutionAndFinish(updatedInfo *WorkflowExecutionInfo, condition int64) error {
 	transferTasks := []Task{}
 	transferTasks = append(transferTasks, &CloseExecutionTask{TaskID: s.GetNextSequenceNumber()})
 	return s.WorkflowMgr.UpdateWorkflowExecution(&UpdateWorkflowExecutionRequest{
@@ -422,7 +422,6 @@ func (s *TestBase) UpdateWorkflowExecutionAndDelete(updatedInfo *WorkflowExecuti
 		DeleteActivityInfo:  nil,
 		UpserTimerInfos:     nil,
 		DeleteTimerInfos:    nil,
-		CloseExecution:      true,
 	})
 }
 

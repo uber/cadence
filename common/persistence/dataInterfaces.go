@@ -409,7 +409,6 @@ type (
 		Condition       int64
 		RangeID         int64
 		ContinueAsNew   *CreateWorkflowExecutionRequest
-		CloseExecution  bool
 
 		// Mutable state
 		UpsertActivityInfos       []*ActivityInfo

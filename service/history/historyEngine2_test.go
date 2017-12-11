@@ -27,6 +27,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/pborman/uuid"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -689,6 +691,258 @@ func (s *engine2Suite) TestRespondDecisionTaskCompletedRecordMarkerDecision() {
 	s.Equal(int64(3), executionBuilder.executionInfo.LastProcessedEvent)
 	s.Equal(persistence.WorkflowStateRunning, executionBuilder.executionInfo.State)
 	s.False(executionBuilder.HasPendingDecisionTask())
+}
+
+func (s *engine2Suite) TestStartWorkflowExecution_BrandNew() {
+	domainID := "domainId"
+	workflowID := "workflowID"
+	workflowType := "workflowType"
+	taskList := "testTaskList"
+	identity := "testIdentity"
+
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything).Return(nil, &workflow.EntityNotExistsError{}).Once()
+	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(nil).Once()
+	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(&persistence.CreateWorkflowExecutionResponse{TaskID: uuid.New()}, nil).Once()
+
+	resp, err := s.historyEngine.StartWorkflowExecution(&h.StartWorkflowExecutionRequest{
+		DomainUUID: common.StringPtr(domainID),
+		StartRequest: &workflow.StartWorkflowExecutionRequest{
+			Domain:       common.StringPtr(domainID),
+			WorkflowId:   common.StringPtr(workflowID),
+			WorkflowType: &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
+			TaskList:     &workflow.TaskList{Name: common.StringPtr(taskList)},
+			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
+			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
+			Identity:                            common.StringPtr(identity),
+		},
+	})
+	s.Nil(err)
+	s.NotNil(resp.RunId)
+}
+
+func (s *engine2Suite) TestStartWorkflowExecution_StillRunning_Dedup() {
+	domainID := "domainId"
+	workflowID := "workflowID"
+	runID := "runID"
+	workflowType := "workflowType"
+	taskList := "testTaskList"
+	identity := "testIdentity"
+	requestID := "requestID"
+
+	workflowExecution := workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr(workflowID),
+		RunId:      common.StringPtr(runID),
+	}
+
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything).Return(&persistence.GetCurrentExecutionResponse{RunID: runID}, nil).Once()
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(
+		&persistence.GetWorkflowExecutionResponse{
+			State: &persistence.WorkflowMutableState{
+				ExecutionInfo: &persistence.WorkflowExecutionInfo{
+					CreateRequestID: requestID,
+					State:           persistence.WorkflowStateRunning,
+					CloseStatus:     persistence.WorkflowCloseStatusNone,
+				},
+			},
+		},
+		nil,
+	).Once()
+
+	resp, err := s.historyEngine.StartWorkflowExecution(&h.StartWorkflowExecutionRequest{
+		DomainUUID: common.StringPtr(domainID),
+		StartRequest: &workflow.StartWorkflowExecutionRequest{
+			Domain:       common.StringPtr(domainID),
+			WorkflowId:   common.StringPtr(*workflowExecution.WorkflowId),
+			WorkflowType: &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
+			TaskList:     &workflow.TaskList{Name: common.StringPtr(taskList)},
+			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
+			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
+			Identity:                            common.StringPtr(identity),
+			RequestId:                           common.StringPtr(requestID),
+		},
+	})
+	s.Nil(err)
+	s.NotNil(resp.RunId)
+}
+
+func (s *engine2Suite) TestStartWorkflowExecution_StillRunning_NonDeDup() {
+	domainID := "domainId"
+	workflowID := "workflowID"
+	runID := "runID"
+	workflowType := "workflowType"
+	taskList := "testTaskList"
+	identity := "testIdentity"
+
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything).Return(&persistence.GetCurrentExecutionResponse{RunID: runID}, nil).Once()
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(
+		&persistence.GetWorkflowExecutionResponse{
+			State: &persistence.WorkflowMutableState{
+				ExecutionInfo: &persistence.WorkflowExecutionInfo{
+					CreateRequestID: "oldRequestID",
+					State:           persistence.WorkflowStateRunning,
+					CloseStatus:     persistence.WorkflowCloseStatusNone,
+				},
+			},
+		},
+		nil,
+	).Once()
+
+	resp, err := s.historyEngine.StartWorkflowExecution(&h.StartWorkflowExecutionRequest{
+		DomainUUID: common.StringPtr(domainID),
+		StartRequest: &workflow.StartWorkflowExecutionRequest{
+			Domain:       common.StringPtr(domainID),
+			WorkflowId:   common.StringPtr(workflowID),
+			WorkflowType: &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
+			TaskList:     &workflow.TaskList{Name: common.StringPtr(taskList)},
+			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
+			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
+			Identity:                            common.StringPtr(identity),
+			RequestId:                           common.StringPtr("newRequestID"),
+		},
+	})
+	s.NotNil(err)
+	s.Nil(resp)
+}
+
+func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevSuccess() {
+	domainID := "domainId"
+	workflowID := "workflowID"
+	runID := "runID"
+	workflowType := "workflowType"
+	taskList := "testTaskList"
+	identity := "testIdentity"
+
+	options := []workflow.StartWorkflowType{
+		workflow.StartWorkflowTypeAllowDuplicateFailedOnly,
+		workflow.StartWorkflowTypeAllowDuplicate,
+		workflow.StartWorkflowTypeRejectDuplicate,
+	}
+
+	expecedErrs := []bool{true, false, true}
+
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything).Return(&persistence.GetCurrentExecutionResponse{RunID: runID}, nil).Times(len(expecedErrs))
+	// since cache is enabled in the test suit, this will only be executed once
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(
+		&persistence.GetWorkflowExecutionResponse{
+			State: &persistence.WorkflowMutableState{
+				ExecutionInfo: &persistence.WorkflowExecutionInfo{
+					CreateRequestID: "oldRequestID",
+					State:           persistence.WorkflowStateCompleted,
+					CloseStatus:     persistence.WorkflowCloseStatusCompleted,
+				},
+			},
+		},
+		nil,
+	).Once()
+	for index, option := range options {
+
+		if !expecedErrs[index] {
+			s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(nil).Once()
+			s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(&persistence.CreateWorkflowExecutionResponse{TaskID: uuid.New()}, nil).Once()
+		}
+
+		resp, err := s.historyEngine.StartWorkflowExecution(&h.StartWorkflowExecutionRequest{
+			DomainUUID: common.StringPtr(domainID),
+			StartRequest: &workflow.StartWorkflowExecutionRequest{
+				Domain:       common.StringPtr(domainID),
+				WorkflowId:   common.StringPtr(workflowID),
+				WorkflowType: &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
+				TaskList:     &workflow.TaskList{Name: common.StringPtr(taskList)},
+				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
+				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
+				Identity:                            common.StringPtr(identity),
+				RequestId:                           common.StringPtr("newRequestID"),
+				StartWorkflowType:                   &option,
+			},
+		})
+
+		if expecedErrs[index] {
+			s.NotNil(err)
+			s.Nil(resp)
+		} else {
+			s.Nil(err)
+			s.NotNil(resp)
+		}
+	}
+}
+
+func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevFail() {
+	domainID := "domainId"
+	workflowID := "workflowID"
+	workflowType := "workflowType"
+	taskList := "testTaskList"
+	identity := "testIdentity"
+
+	execution := workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr(workflowID),
+	}
+
+	options := []workflow.StartWorkflowType{
+		workflow.StartWorkflowTypeAllowDuplicateFailedOnly,
+		workflow.StartWorkflowTypeAllowDuplicate,
+		workflow.StartWorkflowTypeRejectDuplicate,
+	}
+
+	expecedErrs := []bool{false, false, true}
+
+	closeStates := []int{
+		persistence.WorkflowCloseStatusFailed,
+		persistence.WorkflowCloseStatusCanceled,
+		persistence.WorkflowCloseStatusTerminated,
+		persistence.WorkflowCloseStatusTimedOut,
+	}
+	runIDs := []string{"1", "2", "3", "4"}
+
+	for i, closeState := range closeStates {
+		s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything).Return(&persistence.GetCurrentExecutionResponse{RunID: runIDs[i]}, nil).Times(len(expecedErrs))
+		// since cache is enabled in the test suit, this will only be executed once
+		execution.RunId = common.StringPtr(runIDs[i])
+		s.mockExecutionMgr.On("GetWorkflowExecution", &persistence.GetWorkflowExecutionRequest{
+			DomainID:  domainID,
+			Execution: execution,
+		}).Return(
+			&persistence.GetWorkflowExecutionResponse{
+				State: &persistence.WorkflowMutableState{
+					ExecutionInfo: &persistence.WorkflowExecutionInfo{
+						CreateRequestID: "oldRequestID",
+						State:           persistence.WorkflowStateCompleted,
+						CloseStatus:     closeState,
+					},
+				},
+			},
+			nil,
+		).Once()
+		for j, option := range options {
+
+			if !expecedErrs[j] {
+				s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(nil).Once()
+				s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(&persistence.CreateWorkflowExecutionResponse{TaskID: uuid.New()}, nil).Once()
+			}
+
+			resp, err := s.historyEngine.StartWorkflowExecution(&h.StartWorkflowExecutionRequest{
+				DomainUUID: common.StringPtr(domainID),
+				StartRequest: &workflow.StartWorkflowExecutionRequest{
+					Domain:       common.StringPtr(domainID),
+					WorkflowId:   common.StringPtr(workflowID),
+					WorkflowType: &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
+					TaskList:     &workflow.TaskList{Name: common.StringPtr(taskList)},
+					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
+					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
+					Identity:                            common.StringPtr(identity),
+					RequestId:                           common.StringPtr("newRequestID"),
+					StartWorkflowType:                   &option,
+				},
+			})
+
+			if expecedErrs[j] {
+				s.NotNil(err)
+				s.Nil(resp)
+			} else {
+				s.Nil(err)
+				s.NotNil(resp)
+			}
+		}
+	}
 }
 
 func (s *engine2Suite) getBuilder(domainID string, we workflow.WorkflowExecution) *mutableStateBuilder {

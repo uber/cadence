@@ -156,12 +156,6 @@ func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persi
 	}
 
 	continueAsNew := updates.continueAsNew
-	deleteExecution := false
-	if c.msBuilder.executionInfo.State == persistence.WorkflowStateCompleted {
-		// Workflow execution completed as part of this transaction.
-		// Also transactionally delete workflow execution representing current run for the execution
-		deleteExecution = true
-	}
 	if err1 := c.updateWorkflowExecutionWithRetry(&persistence.UpdateWorkflowExecutionRequest{
 		ExecutionInfo:             c.msBuilder.executionInfo,
 		TransferTasks:             transferTasks,
@@ -177,7 +171,6 @@ func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persi
 		NewBufferedEvents:         updates.newBufferedEvents,
 		ClearBufferedEvents:       updates.clearBufferedEvents,
 		ContinueAsNew:             continueAsNew,
-		CloseExecution:            deleteExecution,
 	}); err1 != nil {
 		switch err1.(type) {
 		case *persistence.ConditionFailedError:
@@ -267,15 +260,6 @@ func (c *workflowExecutionContext) updateWorkflowExecutionWithRetry(
 	request *persistence.UpdateWorkflowExecutionRequest) error {
 	op := func() error {
 		return c.shard.UpdateWorkflowExecution(request)
-	}
-
-	return backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
-}
-
-func (c *workflowExecutionContext) deleteWorkflowExecutionWithRetry(
-	request *persistence.DeleteWorkflowExecutionRequest) error {
-	op := func() error {
-		return c.executionManager.DeleteWorkflowExecution(request)
 	}
 
 	return backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
