@@ -23,8 +23,6 @@ package frontend
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"sync"
 
 	"github.com/pborman/uuid"
@@ -1366,17 +1364,12 @@ func (wh *WorkflowHandler) QueryWorkflow(ctx context.Context,
 	}
 
 	queryRequest.Execution.RunId = response.WorkflowExecutionInfo.Execution.RunId
-	if len(response.ExecutionConfiguration.StickyTaskList.GetName()) == 0 {
+	if response.ExecutionConfiguration.StickyTaskList == nil || len(response.ExecutionConfiguration.StickyTaskList.GetName()) == 0 {
 		matchingRequest.TaskList = response.ExecutionConfiguration.TaskList
-		matchingRequest.StickyExecutionEnabled = common.BoolPtr(false)
 	} else {
 		matchingRequest.TaskList = response.ExecutionConfiguration.StickyTaskList
-		matchingRequest.StickyExecutionEnabled = common.BoolPtr(true)
 	}
 
-	fmt.Println("matching query workflow request")
-	fmt.Println(matchingRequest)
-	fmt.Println("matching query workflow request")
 	matchingResp, err := wh.matching.QueryWorkflow(ctx, matchingRequest)
 	if err != nil {
 		logging.LogQueryTaskFailedEvent(wh.GetLogger(),
@@ -1594,50 +1587,11 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(ctx context.Context
 	var continuation []byte
 	var err error
 
-	// if matchingResp.WorkflowExecution.RunId == nil {
-	// 	wh.Service.GetLogger().Errorf(
-	// 		"PollForDecisionTask from matching engine doesn't have run id. TaskList: %v",
-	// 		*pollRequest.TaskList.Name)
-	// 	return nil, wh.error(errRunIDNotSet, scope)
-	// }
-
-	fmt.Println("@@@@@@@@@@@@@@")
-	fmt.Println(matchingResp)
-	fmt.Println(matchingResp.GetStickyExecutionEnabled())
-	fmt.Println(matchingResp.Query)
-	fmt.Println("@@@@@@@@@@@@@@")
 	if matchingResp.GetStickyExecutionEnabled() && matchingResp.Query != nil {
 		// meaning sticky query, we should not return any events to worker
 		// since query task only check the current status
 		history = &gen.History{
 			Events: []*gen.HistoryEvent{},
-		}
-		// when sticky query happen, the workflow type is not set from the mathing service side
-		matchingResp.WorkflowType, _, err = wh.getWorkflowTypeTaskList(domainID, matchingResp.WorkflowExecution)
-		if err != nil {
-			// this should never happen, but if it does happen, log it and respond error back to query client.
-			logging.LogQueryTaskMissingWorkflowTypeErrorEvent(wh.GetLogger(),
-				*matchingResp.WorkflowExecution.WorkflowId,
-				*matchingResp.WorkflowExecution.RunId,
-				*matchingResp.Query.QueryType)
-
-			queryTaskToken, err := wh.tokenSerializer.DeserializeQueryTaskToken(matchingResp.TaskToken)
-			if err == nil {
-				completeType := gen.QueryTaskCompletedTypeFailed
-				wh.matching.RespondQueryTaskCompleted(ctx, &m.RespondQueryTaskCompletedRequest{
-					DomainUUID: common.StringPtr(queryTaskToken.DomainID),
-					TaskList:   &gen.TaskList{Name: common.StringPtr(queryTaskToken.TaskList)},
-					TaskID:     common.StringPtr(queryTaskToken.TaskID),
-					CompletedRequest: &gen.RespondQueryTaskCompletedRequest{
-						TaskToken:     matchingResp.TaskToken,
-						CompletedType: &completeType,
-						ErrorMessage:  common.StringPtr("server internal error: cannot get WorkflowType for QueryTask"),
-					},
-				})
-			}
-
-			// in this case, just return empty response for the pool request and client will just ignore
-			return &gen.PollForDecisionTaskResponse{}, nil
 		}
 	} else {
 		// here we have 3 cases:
@@ -1722,19 +1676,4 @@ func createServiceBusyError() *gen.ServiceBusyError {
 	err := &gen.ServiceBusyError{}
 	err.Message = "Too many outstanding requests to the cadence service"
 	return err
-}
-
-func (wh *WorkflowHandler) getWorkflowTypeTaskList(domainID string, execution *gen.WorkflowExecution) (*gen.WorkflowType, *gen.TaskList, error) {
-	// Get the workflowType from history (first event)
-	history, _, err := wh.getHistory(domainID, *execution, common.FirstEventID, common.FirstEventID+1,
-		1, nil, nil)
-	if err != nil {
-		return nil, nil, err
-	}
-	if len(history.Events) == 0 || history.Events[0].GetEventType() != gen.EventTypeWorkflowExecutionStarted {
-		// this should not happen
-		return nil, nil, errors.New("invalid history events")
-	}
-	attrs := history.Events[0].WorkflowExecutionStartedEventAttributes
-	return attrs.WorkflowType, attrs.TaskList, nil
 }
