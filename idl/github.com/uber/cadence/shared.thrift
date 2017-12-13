@@ -885,6 +885,7 @@ struct QueryWorkflowRequest {
   10: optional string domain
   20: optional WorkflowExecution execution
   30: optional WorkflowQuery query
+  40: optional bool isStickyQuery
 }
 
 struct QueryWorkflowResponse {

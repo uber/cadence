@@ -1339,6 +1339,11 @@ func (wh *WorkflowHandler) QueryWorkflow(ctx context.Context,
 		return nil, wh.error(errQueryTypeNotSet, scope)
 	}
 
+	isStickyQuery := false
+	if queryRequest.IsStickyQuery != nil {
+		isStickyQuery = queryRequest.GetIsStickyQuery()
+	}
+
 	domainInfo, _, err := wh.domainCache.GetDomain(queryRequest.GetDomain())
 	if err != nil {
 		return nil, wh.error(err, scope)
@@ -1365,6 +1370,9 @@ func (wh *WorkflowHandler) QueryWorkflow(ctx context.Context,
 
 	queryRequest.Execution.RunId = response.WorkflowExecutionInfo.Execution.RunId
 	if response.ExecutionConfiguration.StickyTaskList == nil || len(response.ExecutionConfiguration.StickyTaskList.GetName()) == 0 {
+		matchingRequest.TaskList = response.ExecutionConfiguration.TaskList
+	} else if !isStickyQuery {
+		// sticky enabled on the client side, but client chose to use non sticky, which is also the default
 		matchingRequest.TaskList = response.ExecutionConfiguration.TaskList
 	} else {
 		matchingRequest.TaskList = response.ExecutionConfiguration.StickyTaskList
