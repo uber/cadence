@@ -812,10 +812,10 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevSuccess() {
 	taskList := "testTaskList"
 	identity := "testIdentity"
 
-	options := []workflow.StartWorkflowType{
-		workflow.StartWorkflowTypeAllowDuplicateFailedOnly,
-		workflow.StartWorkflowTypeAllowDuplicate,
-		workflow.StartWorkflowTypeRejectDuplicate,
+	options := []workflow.WorkflowIdReusePolicy{
+		workflow.WorkflowIdReusePolicyAllowDuplicateFailedOnly,
+		workflow.WorkflowIdReusePolicyAllowDuplicate,
+		workflow.WorkflowIdReusePolicyRejectDuplicate,
 	}
 
 	expecedErrs := []bool{true, false, true}
@@ -852,7 +852,7 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevSuccess() {
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 				Identity:                            common.StringPtr(identity),
 				RequestId:                           common.StringPtr("newRequestID"),
-				StartWorkflowType:                   &option,
+				WorkflowIdReusePolicy:               &option,
 			},
 		})
 
@@ -877,10 +877,10 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevFail() {
 		WorkflowId: common.StringPtr(workflowID),
 	}
 
-	options := []workflow.StartWorkflowType{
-		workflow.StartWorkflowTypeAllowDuplicateFailedOnly,
-		workflow.StartWorkflowTypeAllowDuplicate,
-		workflow.StartWorkflowTypeRejectDuplicate,
+	options := []workflow.WorkflowIdReusePolicy{
+		workflow.WorkflowIdReusePolicyAllowDuplicateFailedOnly,
+		workflow.WorkflowIdReusePolicyAllowDuplicate,
+		workflow.WorkflowIdReusePolicyRejectDuplicate,
 	}
 
 	expecedErrs := []bool{false, false, true}
@@ -930,7 +930,7 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevFail() {
 					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 					Identity:                            common.StringPtr(identity),
 					RequestId:                           common.StringPtr("newRequestID"),
-					StartWorkflowType:                   &option,
+					WorkflowIdReusePolicy:               &option,
 				},
 			})
 

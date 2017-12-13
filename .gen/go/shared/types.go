@@ -19736,16 +19736,16 @@ func (v *StartTimerDecisionAttributes) GetStartToFireTimeoutSeconds() (o int64) 
 }
 
 type StartWorkflowExecutionRequest struct {
-	Domain                              *string            `json:"domain,omitempty"`
-	WorkflowId                          *string            `json:"workflowId,omitempty"`
-	WorkflowType                        *WorkflowType      `json:"workflowType,omitempty"`
-	TaskList                            *TaskList          `json:"taskList,omitempty"`
-	Input                               []byte             `json:"input,omitempty"`
-	ExecutionStartToCloseTimeoutSeconds *int32             `json:"executionStartToCloseTimeoutSeconds,omitempty"`
-	TaskStartToCloseTimeoutSeconds      *int32             `json:"taskStartToCloseTimeoutSeconds,omitempty"`
-	Identity                            *string            `json:"identity,omitempty"`
-	RequestId                           *string            `json:"requestId,omitempty"`
-	StartWorkflowType                   *StartWorkflowType `json:"startWorkflowType,omitempty"`
+	Domain                              *string                `json:"domain,omitempty"`
+	WorkflowId                          *string                `json:"workflowId,omitempty"`
+	WorkflowType                        *WorkflowType          `json:"workflowType,omitempty"`
+	TaskList                            *TaskList              `json:"taskList,omitempty"`
+	Input                               []byte                 `json:"input,omitempty"`
+	ExecutionStartToCloseTimeoutSeconds *int32                 `json:"executionStartToCloseTimeoutSeconds,omitempty"`
+	TaskStartToCloseTimeoutSeconds      *int32                 `json:"taskStartToCloseTimeoutSeconds,omitempty"`
+	Identity                            *string                `json:"identity,omitempty"`
+	RequestId                           *string                `json:"requestId,omitempty"`
+	WorkflowIdReusePolicy               *WorkflowIdReusePolicy `json:"workflowIdReusePolicy,omitempty"`
 }
 
 // ToWire translates a StartWorkflowExecutionRequest struct into a Thrift-level intermediate
@@ -19843,8 +19843,8 @@ func (v *StartWorkflowExecutionRequest) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 90, Value: w}
 		i++
 	}
-	if v.StartWorkflowType != nil {
-		w, err = v.StartWorkflowType.ToWire()
+	if v.WorkflowIdReusePolicy != nil {
+		w, err = v.WorkflowIdReusePolicy.ToWire()
 		if err != nil {
 			return w, err
 		}
@@ -19855,8 +19855,8 @@ func (v *StartWorkflowExecutionRequest) ToWire() (wire.Value, error) {
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _StartWorkflowType_Read(w wire.Value) (StartWorkflowType, error) {
-	var v StartWorkflowType
+func _WorkflowIdReusePolicy_Read(w wire.Value) (WorkflowIdReusePolicy, error) {
+	var v WorkflowIdReusePolicy
 	err := v.FromWire(w)
 	return v, err
 }
@@ -19969,9 +19969,9 @@ func (v *StartWorkflowExecutionRequest) FromWire(w wire.Value) error {
 			}
 		case 100:
 			if field.Value.Type() == wire.TI32 {
-				var x StartWorkflowType
-				x, err = _StartWorkflowType_Read(field.Value)
-				v.StartWorkflowType = &x
+				var x WorkflowIdReusePolicy
+				x, err = _WorkflowIdReusePolicy_Read(field.Value)
+				v.WorkflowIdReusePolicy = &x
 				if err != nil {
 					return err
 				}
@@ -20028,15 +20028,15 @@ func (v *StartWorkflowExecutionRequest) String() string {
 		fields[i] = fmt.Sprintf("RequestId: %v", *(v.RequestId))
 		i++
 	}
-	if v.StartWorkflowType != nil {
-		fields[i] = fmt.Sprintf("StartWorkflowType: %v", *(v.StartWorkflowType))
+	if v.WorkflowIdReusePolicy != nil {
+		fields[i] = fmt.Sprintf("WorkflowIdReusePolicy: %v", *(v.WorkflowIdReusePolicy))
 		i++
 	}
 
 	return fmt.Sprintf("StartWorkflowExecutionRequest{%v}", strings.Join(fields[:i], ", "))
 }
 
-func _StartWorkflowType_EqualsPtr(lhs, rhs *StartWorkflowType) bool {
+func _WorkflowIdReusePolicy_EqualsPtr(lhs, rhs *WorkflowIdReusePolicy) bool {
 	if lhs != nil && rhs != nil {
 
 		x := *lhs
@@ -20078,7 +20078,7 @@ func (v *StartWorkflowExecutionRequest) Equals(rhs *StartWorkflowExecutionReques
 	if !_String_EqualsPtr(v.RequestId, rhs.RequestId) {
 		return false
 	}
-	if !_StartWorkflowType_EqualsPtr(v.StartWorkflowType, rhs.StartWorkflowType) {
+	if !_WorkflowIdReusePolicy_EqualsPtr(v.WorkflowIdReusePolicy, rhs.WorkflowIdReusePolicy) {
 		return false
 	}
 
@@ -20145,11 +20145,11 @@ func (v *StartWorkflowExecutionRequest) GetRequestId() (o string) {
 	return
 }
 
-// GetStartWorkflowType returns the value of StartWorkflowType if it is set or its
+// GetWorkflowIdReusePolicy returns the value of WorkflowIdReusePolicy if it is set or its
 // zero value if it is unset.
-func (v *StartWorkflowExecutionRequest) GetStartWorkflowType() (o StartWorkflowType) {
-	if v.StartWorkflowType != nil {
-		return *v.StartWorkflowType
+func (v *StartWorkflowExecutionRequest) GetWorkflowIdReusePolicy() (o WorkflowIdReusePolicy) {
+	if v.WorkflowIdReusePolicy != nil {
+		return *v.WorkflowIdReusePolicy
 	}
 
 	return
@@ -20269,145 +20269,6 @@ func (v *StartWorkflowExecutionResponse) GetRunId() (o string) {
 	}
 
 	return
-}
-
-type StartWorkflowType int32
-
-const (
-	StartWorkflowTypeAllowDuplicateFailedOnly StartWorkflowType = 0
-	StartWorkflowTypeAllowDuplicate           StartWorkflowType = 1
-	StartWorkflowTypeRejectDuplicate          StartWorkflowType = 2
-)
-
-// StartWorkflowType_Values returns all recognized values of StartWorkflowType.
-func StartWorkflowType_Values() []StartWorkflowType {
-	return []StartWorkflowType{
-		StartWorkflowTypeAllowDuplicateFailedOnly,
-		StartWorkflowTypeAllowDuplicate,
-		StartWorkflowTypeRejectDuplicate,
-	}
-}
-
-// UnmarshalText tries to decode StartWorkflowType from a byte slice
-// containing its name.
-//
-//   var v StartWorkflowType
-//   err := v.UnmarshalText([]byte("AllowDuplicateFailedOnly"))
-func (v *StartWorkflowType) UnmarshalText(value []byte) error {
-	switch string(value) {
-	case "AllowDuplicateFailedOnly":
-		*v = StartWorkflowTypeAllowDuplicateFailedOnly
-		return nil
-	case "AllowDuplicate":
-		*v = StartWorkflowTypeAllowDuplicate
-		return nil
-	case "RejectDuplicate":
-		*v = StartWorkflowTypeRejectDuplicate
-		return nil
-	default:
-		return fmt.Errorf("unknown enum value %q for %q", value, "StartWorkflowType")
-	}
-}
-
-// ToWire translates StartWorkflowType into a Thrift-level intermediate
-// representation. This intermediate representation may be serialized
-// into bytes using a ThriftRW protocol implementation.
-//
-// Enums are represented as 32-bit integers over the wire.
-func (v StartWorkflowType) ToWire() (wire.Value, error) {
-	return wire.NewValueI32(int32(v)), nil
-}
-
-// FromWire deserializes StartWorkflowType from its Thrift-level
-// representation.
-//
-//   x, err := binaryProtocol.Decode(reader, wire.TI32)
-//   if err != nil {
-//     return StartWorkflowType(0), err
-//   }
-//
-//   var v StartWorkflowType
-//   if err := v.FromWire(x); err != nil {
-//     return StartWorkflowType(0), err
-//   }
-//   return v, nil
-func (v *StartWorkflowType) FromWire(w wire.Value) error {
-	*v = (StartWorkflowType)(w.GetI32())
-	return nil
-}
-
-// String returns a readable string representation of StartWorkflowType.
-func (v StartWorkflowType) String() string {
-	w := int32(v)
-	switch w {
-	case 0:
-		return "AllowDuplicateFailedOnly"
-	case 1:
-		return "AllowDuplicate"
-	case 2:
-		return "RejectDuplicate"
-	}
-	return fmt.Sprintf("StartWorkflowType(%d)", w)
-}
-
-// Equals returns true if this StartWorkflowType value matches the provided
-// value.
-func (v StartWorkflowType) Equals(rhs StartWorkflowType) bool {
-	return v == rhs
-}
-
-// MarshalJSON serializes StartWorkflowType into JSON.
-//
-// If the enum value is recognized, its name is returned. Otherwise,
-// its integer value is returned.
-//
-// This implements json.Marshaler.
-func (v StartWorkflowType) MarshalJSON() ([]byte, error) {
-	switch int32(v) {
-	case 0:
-		return ([]byte)("\"AllowDuplicateFailedOnly\""), nil
-	case 1:
-		return ([]byte)("\"AllowDuplicate\""), nil
-	case 2:
-		return ([]byte)("\"RejectDuplicate\""), nil
-	}
-	return ([]byte)(strconv.FormatInt(int64(v), 10)), nil
-}
-
-// UnmarshalJSON attempts to decode StartWorkflowType from its JSON
-// representation.
-//
-// This implementation supports both, numeric and string inputs. If a
-// string is provided, it must be a known enum name.
-//
-// This implements json.Unmarshaler.
-func (v *StartWorkflowType) UnmarshalJSON(text []byte) error {
-	d := json.NewDecoder(bytes.NewReader(text))
-	d.UseNumber()
-	t, err := d.Token()
-	if err != nil {
-		return err
-	}
-
-	switch w := t.(type) {
-	case json.Number:
-		x, err := w.Int64()
-		if err != nil {
-			return err
-		}
-		if x > math.MaxInt32 {
-			return fmt.Errorf("enum overflow from JSON %q for %q", text, "StartWorkflowType")
-		}
-		if x < math.MinInt32 {
-			return fmt.Errorf("enum underflow from JSON %q for %q", text, "StartWorkflowType")
-		}
-		*v = (StartWorkflowType)(x)
-		return nil
-	case string:
-		return v.UnmarshalText([]byte(w))
-	default:
-		return fmt.Errorf("invalid JSON value %q (%T) to unmarshal into %q", t, t, "StartWorkflowType")
-	}
 }
 
 type StickyExecutionAttributes struct {
@@ -25118,6 +24979,145 @@ func (v *WorkflowExecutionTimedOutEventAttributes) GetTimeoutType() (o TimeoutTy
 	}
 
 	return
+}
+
+type WorkflowIdReusePolicy int32
+
+const (
+	WorkflowIdReusePolicyAllowDuplicateFailedOnly WorkflowIdReusePolicy = 0
+	WorkflowIdReusePolicyAllowDuplicate           WorkflowIdReusePolicy = 1
+	WorkflowIdReusePolicyRejectDuplicate          WorkflowIdReusePolicy = 2
+)
+
+// WorkflowIdReusePolicy_Values returns all recognized values of WorkflowIdReusePolicy.
+func WorkflowIdReusePolicy_Values() []WorkflowIdReusePolicy {
+	return []WorkflowIdReusePolicy{
+		WorkflowIdReusePolicyAllowDuplicateFailedOnly,
+		WorkflowIdReusePolicyAllowDuplicate,
+		WorkflowIdReusePolicyRejectDuplicate,
+	}
+}
+
+// UnmarshalText tries to decode WorkflowIdReusePolicy from a byte slice
+// containing its name.
+//
+//   var v WorkflowIdReusePolicy
+//   err := v.UnmarshalText([]byte("AllowDuplicateFailedOnly"))
+func (v *WorkflowIdReusePolicy) UnmarshalText(value []byte) error {
+	switch string(value) {
+	case "AllowDuplicateFailedOnly":
+		*v = WorkflowIdReusePolicyAllowDuplicateFailedOnly
+		return nil
+	case "AllowDuplicate":
+		*v = WorkflowIdReusePolicyAllowDuplicate
+		return nil
+	case "RejectDuplicate":
+		*v = WorkflowIdReusePolicyRejectDuplicate
+		return nil
+	default:
+		return fmt.Errorf("unknown enum value %q for %q", value, "WorkflowIdReusePolicy")
+	}
+}
+
+// ToWire translates WorkflowIdReusePolicy into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// Enums are represented as 32-bit integers over the wire.
+func (v WorkflowIdReusePolicy) ToWire() (wire.Value, error) {
+	return wire.NewValueI32(int32(v)), nil
+}
+
+// FromWire deserializes WorkflowIdReusePolicy from its Thrift-level
+// representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TI32)
+//   if err != nil {
+//     return WorkflowIdReusePolicy(0), err
+//   }
+//
+//   var v WorkflowIdReusePolicy
+//   if err := v.FromWire(x); err != nil {
+//     return WorkflowIdReusePolicy(0), err
+//   }
+//   return v, nil
+func (v *WorkflowIdReusePolicy) FromWire(w wire.Value) error {
+	*v = (WorkflowIdReusePolicy)(w.GetI32())
+	return nil
+}
+
+// String returns a readable string representation of WorkflowIdReusePolicy.
+func (v WorkflowIdReusePolicy) String() string {
+	w := int32(v)
+	switch w {
+	case 0:
+		return "AllowDuplicateFailedOnly"
+	case 1:
+		return "AllowDuplicate"
+	case 2:
+		return "RejectDuplicate"
+	}
+	return fmt.Sprintf("WorkflowIdReusePolicy(%d)", w)
+}
+
+// Equals returns true if this WorkflowIdReusePolicy value matches the provided
+// value.
+func (v WorkflowIdReusePolicy) Equals(rhs WorkflowIdReusePolicy) bool {
+	return v == rhs
+}
+
+// MarshalJSON serializes WorkflowIdReusePolicy into JSON.
+//
+// If the enum value is recognized, its name is returned. Otherwise,
+// its integer value is returned.
+//
+// This implements json.Marshaler.
+func (v WorkflowIdReusePolicy) MarshalJSON() ([]byte, error) {
+	switch int32(v) {
+	case 0:
+		return ([]byte)("\"AllowDuplicateFailedOnly\""), nil
+	case 1:
+		return ([]byte)("\"AllowDuplicate\""), nil
+	case 2:
+		return ([]byte)("\"RejectDuplicate\""), nil
+	}
+	return ([]byte)(strconv.FormatInt(int64(v), 10)), nil
+}
+
+// UnmarshalJSON attempts to decode WorkflowIdReusePolicy from its JSON
+// representation.
+//
+// This implementation supports both, numeric and string inputs. If a
+// string is provided, it must be a known enum name.
+//
+// This implements json.Unmarshaler.
+func (v *WorkflowIdReusePolicy) UnmarshalJSON(text []byte) error {
+	d := json.NewDecoder(bytes.NewReader(text))
+	d.UseNumber()
+	t, err := d.Token()
+	if err != nil {
+		return err
+	}
+
+	switch w := t.(type) {
+	case json.Number:
+		x, err := w.Int64()
+		if err != nil {
+			return err
+		}
+		if x > math.MaxInt32 {
+			return fmt.Errorf("enum overflow from JSON %q for %q", text, "WorkflowIdReusePolicy")
+		}
+		if x < math.MinInt32 {
+			return fmt.Errorf("enum underflow from JSON %q for %q", text, "WorkflowIdReusePolicy")
+		}
+		*v = (WorkflowIdReusePolicy)(x)
+		return nil
+	case string:
+		return v.UnmarshalText([]byte(w))
+	default:
+		return fmt.Errorf("invalid JSON value %q (%T) to unmarshal into %q", t, t, "WorkflowIdReusePolicy")
+	}
 }
 
 type WorkflowQuery struct {

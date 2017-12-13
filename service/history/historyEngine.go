@@ -84,6 +84,15 @@ var (
 	ErrConflict = errors.New("Conditional update failed")
 	// ErrMaxAttemptsExceeded is exported temporarily for integration test
 	ErrMaxAttemptsExceeded = errors.New("Maximum attempts exceeded to update history")
+
+	// for start workflow execution API
+	// FailedWorkflowCloseState is a set of failed workflow close states, used for start workflow policy
+	FailedWorkflowCloseState = map[int]bool{
+		persistence.WorkflowCloseStatusFailed:     true,
+		persistence.WorkflowCloseStatusCanceled:   true,
+		persistence.WorkflowCloseStatusTerminated: true,
+		persistence.WorkflowCloseStatusTimedOut:   true,
+	}
 )
 
 // NewEngineWithShardContext creates an instance of history engine
@@ -159,7 +168,6 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 		return nil, &workflow.BadRequestError{Message: "Missing or invalid TaskStartToCloseTimeoutSeconds."}
 	}
 
-	// TODO
 	execution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr(*request.WorkflowId),
 	}
@@ -167,6 +175,15 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 	// without setting the run ID so we can get the current workflow. if any
 	context, release, err := e.historyCache.getOrCreateWorkflowExecution(domainID, execution)
 	execution.RunId = common.StringPtr(uuid.New())
+
+	errFn := func(errMsg string, ms *mutableStateBuilder) error {
+		msg := fmt.Sprintf(errMsg, ms.executionInfo.WorkflowID, ms.executionInfo.RunID)
+		return &workflow.WorkflowExecutionAlreadyStartedError{
+			Message:        common.StringPtr(msg),
+			StartRequestId: common.StringPtr(fmt.Sprintf("%v", ms.executionInfo.CreateRequestID)),
+			RunId:          common.StringPtr(fmt.Sprintf("%v", ms.executionInfo.RunID)),
+		}
+	}
 
 	if err != nil {
 		if _, ok := err.(*workflow.EntityNotExistsError); !ok {
@@ -182,67 +199,33 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 			return nil, err
 		}
 		// here we know there is some information about the workflow, i.e. either running right now or has history
-
 		// check if the this workflow is finished
 		if msBuilder.isWorkflowExecutionRunning() {
-
 			// if client issue a duplicate request
 			if msBuilder.executionInfo.CreateRequestID == common.StringDefault(request.RequestId) {
-				return &workflow.StartWorkflowExecutionResponse{
-					RunId: common.StringPtr(msBuilder.executionInfo.RunID),
-				}, nil
+				return &workflow.StartWorkflowExecutionResponse{RunId: common.StringPtr(msBuilder.executionInfo.RunID)}, nil
 			}
-
-			msg := fmt.Sprintf("Workflow execution already running. WorkflowId: %v, RunId: %v.",
-				msBuilder.executionInfo.WorkflowID, msBuilder.executionInfo.RunID)
-			return nil, &workflow.WorkflowExecutionAlreadyStartedError{
-				Message:        common.StringPtr(msg),
-				StartRequestId: common.StringPtr(fmt.Sprintf("%v", msBuilder.executionInfo.CreateRequestID)),
-				RunId:          common.StringPtr(fmt.Sprintf("%v", msBuilder.executionInfo.RunID)),
-			}
-
+			msg := "Workflow execution already running. WorkflowId: %v, RunId: %v."
+			return nil, errFn(msg, msBuilder)
 		}
 
 	StartType:
-		switch startRequest.StartRequest.GetStartWorkflowType() {
-		case workflow.StartWorkflowTypeAllowDuplicateFailedOnly:
-			// workflow not running, need to check the close state
-			switch msBuilder.executionInfo.CloseStatus {
-			case persistence.WorkflowCloseStatusFailed:
-				break StartType
-			case persistence.WorkflowCloseStatusCanceled:
-				break StartType
-			case persistence.WorkflowCloseStatusTerminated:
-				break StartType
-			case persistence.WorkflowCloseStatusTimedOut:
-				break StartType
-			default:
-				msg := fmt.Sprintf("Workflow execution already finished successfully. WorkflowId: %v, RunId: %v.",
-					msBuilder.executionInfo.WorkflowID, msBuilder.executionInfo.RunID)
-				return nil, &workflow.WorkflowExecutionAlreadyStartedError{
-					Message:        common.StringPtr(msg),
-					StartRequestId: common.StringPtr(fmt.Sprintf("%v", msBuilder.executionInfo.CreateRequestID)),
-					RunId:          common.StringPtr(fmt.Sprintf("%v", msBuilder.executionInfo.RunID)),
-				}
+		switch startRequest.StartRequest.GetWorkflowIdReusePolicy() {
+		case workflow.WorkflowIdReusePolicyAllowDuplicateFailedOnly:
+			if _, ok := FailedWorkflowCloseState[msBuilder.executionInfo.CloseStatus]; !ok {
+				msg := "Workflow execution already finished successfully. WorkflowId: %v, RunId: %v."
+				return nil, errFn(msg, msBuilder)
 			}
-		case workflow.StartWorkflowTypeAllowDuplicate:
 			break StartType
-		case workflow.StartWorkflowTypeRejectDuplicate:
-			msg := fmt.Sprintf("Workflow execution already finished. WorkflowId: %v, RunId: %v.",
-				msBuilder.executionInfo.WorkflowID, msBuilder.executionInfo.RunID)
-			return nil, &workflow.WorkflowExecutionAlreadyStartedError{
-				Message:        common.StringPtr(msg),
-				StartRequestId: common.StringPtr(fmt.Sprintf("%v", msBuilder.executionInfo.CreateRequestID)),
-				RunId:          common.StringPtr(fmt.Sprintf("%v", msBuilder.executionInfo.RunID)),
-			}
+		case workflow.WorkflowIdReusePolicyAllowDuplicate:
+			break StartType
+		case workflow.WorkflowIdReusePolicyRejectDuplicate:
+			msg := "Workflow execution already finished. WorkflowId: %v, RunId: %v."
+			return nil, errFn(msg, msBuilder)
 		default:
-			return nil, &workflow.InternalServiceError{
-				Message: "Internal Server Error",
-			}
+			return nil, &workflow.InternalServiceError{Message: "Internal Server Error"}
 		}
 	}
-
-	// TODO
 
 	var parentExecution *workflow.WorkflowExecution
 	initiatedID := emptyEventID
