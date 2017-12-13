@@ -207,24 +207,16 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 		switch startRequest.StartRequest.GetStartWorkflowType() {
 		case workflow.StartWorkflowTypeAllowDuplicateFailedOnly:
 			// workflow not running, need to check the close state
-			fmt.Println("@@@@")
-			fmt.Println(msBuilder.executionInfo.CloseStatus)
-			fmt.Println("@@@@")
 			switch msBuilder.executionInfo.CloseStatus {
 			case persistence.WorkflowCloseStatusFailed:
-				fmt.Println(1)
 				break StartType
 			case persistence.WorkflowCloseStatusCanceled:
-				fmt.Println(2)
 				break StartType
 			case persistence.WorkflowCloseStatusTerminated:
-				fmt.Println(3)
 				break StartType
 			case persistence.WorkflowCloseStatusTimedOut:
-				fmt.Println(4)
 				break StartType
 			default:
-				fmt.Println(5)
 				msg := fmt.Sprintf("Workflow execution already finished successfully. WorkflowId: %v, RunId: %v.",
 					msBuilder.executionInfo.WorkflowID, msBuilder.executionInfo.RunID)
 				return nil, &workflow.WorkflowExecutionAlreadyStartedError{
