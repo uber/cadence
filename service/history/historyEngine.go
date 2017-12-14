@@ -205,25 +205,23 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 			if msBuilder.executionInfo.CreateRequestID == common.StringDefault(request.RequestId) {
 				return &workflow.StartWorkflowExecutionResponse{RunId: common.StringPtr(msBuilder.executionInfo.RunID)}, nil
 			}
-			msg := "Workflow execution already running. WorkflowId: %v, RunId: %v."
+			msg := "Workflow execution is already running. WorkflowId: %v, RunId: %v."
 			return nil, errFn(msg, msBuilder)
 		}
 
-	StartType:
 		switch startRequest.StartRequest.GetWorkflowIdReusePolicy() {
 		case workflow.WorkflowIdReusePolicyAllowDuplicateFailedOnly:
 			if _, ok := FailedWorkflowCloseState[msBuilder.executionInfo.CloseStatus]; !ok {
 				msg := "Workflow execution already finished successfully. WorkflowId: %v, RunId: %v."
 				return nil, errFn(msg, msBuilder)
 			}
-			break StartType
 		case workflow.WorkflowIdReusePolicyAllowDuplicate:
-			break StartType
+			// as long as workflow not running, so this case has no check
 		case workflow.WorkflowIdReusePolicyRejectDuplicate:
 			msg := "Workflow execution already finished. WorkflowId: %v, RunId: %v."
 			return nil, errFn(msg, msBuilder)
 		default:
-			return nil, &workflow.InternalServiceError{Message: "Internal Server Error"}
+			return nil, &workflow.InternalServiceError{Message: "Failed to process start workflow reuse policy."}
 		}
 	}
 

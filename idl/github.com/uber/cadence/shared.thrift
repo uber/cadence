@@ -58,7 +58,7 @@ enum WorkflowIdReusePolicy {
   /*
    * allow start a workflow execution using the same workflow ID,
    * when workflow not running, and the last execution close state is in
-   * [closed, cancelled, timeouted, failed].
+   * [terminated, cancelled, timeouted, failed].
    */
   AllowDuplicateFailedOnly,
   /*
