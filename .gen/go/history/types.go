@@ -489,6 +489,7 @@ func (v *GetMutableStateRequest) GetExpectedNextEventId() (o int64) {
 	return
 }
 
+<<<<<<< HEAD
 type GetMutableStateResponse struct {
 	Execution            *shared.WorkflowExecution `json:"execution,omitempty"`
 	WorkflowType         *shared.WorkflowType      `json:"workflowType,omitempty"`
@@ -500,6 +501,14 @@ type GetMutableStateResponse struct {
 	ClientFeatureVersion *string                   `json:"clientFeatureVersion,omitempty"`
 	ClientImpl           *string                   `json:"clientImpl,omitempty"`
 	IsWorkflowRunning    *bool                     `json:"isWorkflowRunning,omitempty"`
+=======
+type GetWorkflowExecutionNextEventIDResponse struct {
+	NextEventId       *int64           `json:"nextEventId,omitempty"`
+	RunId             *string          `json:"runId,omitempty"`
+	Tasklist          *shared.TaskList `json:"tasklist,omitempty"`
+	IsWorkflowRunning *bool            `json:"isWorkflowRunning,omitempty"`
+	LastFirstEventId  *int64           `json:"lastFirstEventId,omitempty"`
+>>>>>>> 71df3cb... implement filter which allow caller choose all events or only close event of when dumping history events
 }
 
 // ToWire translates a GetMutableStateResponse struct into a Thrift-level intermediate
@@ -519,14 +528,23 @@ type GetMutableStateResponse struct {
 //   }
 func (v *GetMutableStateResponse) ToWire() (wire.Value, error) {
 	var (
+<<<<<<< HEAD
 		fields [10]wire.Field
+=======
+		fields [5]wire.Field
+>>>>>>> 71df3cb... implement filter which allow caller choose all events or only close event of when dumping history events
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+<<<<<<< HEAD
 	if v.Execution != nil {
 		w, err = v.Execution.ToWire()
+=======
+	if v.NextEventId != nil {
+		w, err = wire.NewValueI64(*(v.NextEventId)), error(nil)
+>>>>>>> 71df3cb... implement filter which allow caller choose all events or only close event of when dumping history events
 		if err != nil {
 			return w, err
 		}
@@ -603,6 +621,14 @@ func (v *GetMutableStateResponse) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 100, Value: w}
+		i++
+	}
+	if v.LastFirstEventId != nil {
+		w, err = wire.NewValueI64(*(v.LastFirstEventId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 50, Value: w}
 		i++
 	}
 
@@ -735,6 +761,16 @@ func (v *GetMutableStateResponse) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 50:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.LastFirstEventId = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -748,10 +784,17 @@ func (v *GetMutableStateResponse) String() string {
 		return "<nil>"
 	}
 
+<<<<<<< HEAD
 	var fields [10]string
 	i := 0
 	if v.Execution != nil {
 		fields[i] = fmt.Sprintf("Execution: %v", v.Execution)
+=======
+	var fields [5]string
+	i := 0
+	if v.NextEventId != nil {
+		fields[i] = fmt.Sprintf("NextEventId: %v", *(v.NextEventId))
+>>>>>>> 71df3cb... implement filter which allow caller choose all events or only close event of when dumping history events
 		i++
 	}
 	if v.WorkflowType != nil {
@@ -790,6 +833,10 @@ func (v *GetMutableStateResponse) String() string {
 		fields[i] = fmt.Sprintf("IsWorkflowRunning: %v", *(v.IsWorkflowRunning))
 		i++
 	}
+	if v.LastFirstEventId != nil {
+		fields[i] = fmt.Sprintf("LastFirstEventId: %v", *(v.LastFirstEventId))
+		i++
+	}
 
 	return fmt.Sprintf("GetMutableStateResponse{%v}", strings.Join(fields[:i], ", "))
 }
@@ -808,8 +855,13 @@ func _Bool_EqualsPtr(lhs, rhs *bool) bool {
 // provided GetMutableStateResponse.
 //
 // This function performs a deep comparison.
+<<<<<<< HEAD
 func (v *GetMutableStateResponse) Equals(rhs *GetMutableStateResponse) bool {
 	if !((v.Execution == nil && rhs.Execution == nil) || (v.Execution != nil && rhs.Execution != nil && v.Execution.Equals(rhs.Execution))) {
+=======
+func (v *GetWorkflowExecutionNextEventIDResponse) Equals(rhs *GetWorkflowExecutionNextEventIDResponse) bool {
+	if !_I64_EqualsPtr(v.NextEventId, rhs.NextEventId) {
+>>>>>>> 71df3cb... implement filter which allow caller choose all events or only close event of when dumping history events
 		return false
 	}
 	if !((v.WorkflowType == nil && rhs.WorkflowType == nil) || (v.WorkflowType != nil && rhs.WorkflowType != nil && v.WorkflowType.Equals(rhs.WorkflowType))) {
@@ -839,13 +891,20 @@ func (v *GetMutableStateResponse) Equals(rhs *GetMutableStateResponse) bool {
 	if !_Bool_EqualsPtr(v.IsWorkflowRunning, rhs.IsWorkflowRunning) {
 		return false
 	}
+	if !_I64_EqualsPtr(v.LastFirstEventId, rhs.LastFirstEventId) {
+		return false
+	}
 
 	return true
 }
 
 // GetNextEventId returns the value of NextEventId if it is set or its
 // zero value if it is unset.
+<<<<<<< HEAD
 func (v *GetMutableStateResponse) GetNextEventId() (o int64) {
+=======
+func (v *GetWorkflowExecutionNextEventIDResponse) GetNextEventId() (o int64) {
+>>>>>>> 71df3cb... implement filter which allow caller choose all events or only close event of when dumping history events
 	if v.NextEventId != nil {
 		return *v.NextEventId
 	}
@@ -898,6 +957,16 @@ func (v *GetMutableStateResponse) GetClientImpl() (o string) {
 func (v *GetMutableStateResponse) GetIsWorkflowRunning() (o bool) {
 	if v.IsWorkflowRunning != nil {
 		return *v.IsWorkflowRunning
+	}
+
+	return
+}
+
+// GetLastFirstEventId returns the value of LastFirstEventId if it is set or its
+// zero value if it is unset.
+func (v *GetWorkflowExecutionNextEventIDResponse) GetLastFirstEventId() (o int64) {
+	if v.LastFirstEventId != nil {
+		return *v.LastFirstEventId
 	}
 
 	return

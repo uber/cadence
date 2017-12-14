@@ -185,6 +185,11 @@ enum QueryTaskCompletedType {
   FAILED,
 }
 
+enum HistoryEventFilterType {
+  ALL_EVENT,
+  CLOSE_EVENT,
+}
+
 struct WorkflowType {
   10: optional string name
 }
@@ -847,6 +852,7 @@ struct GetWorkflowExecutionHistoryRequest {
   30: optional i32 maximumPageSize
   40: optional binary nextPageToken
   50: optional bool waitForNewEvent
+  60: optional HistoryEventFilterType HistoryEventFilterType
 }
 
 struct GetWorkflowExecutionHistoryResponse {

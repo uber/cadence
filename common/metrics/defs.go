@@ -525,6 +525,7 @@ const (
 	DecisionTypeCancelExternalWorkflowCounter
 	DecisionTypeChildWorkflowCounter
 	DecisionTypeContinueAsNewCounter
+	DecisionTypeStateTransitionCounter
 	MultipleCompletionDecisionsCounter
 	FailedDecisionsCounter
 	StaleMutableStateCounter
@@ -607,6 +608,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		DecisionTypeCancelExternalWorkflowCounter:    {metricName: "cancel-external-workflow-decision", metricType: Counter},
 		DecisionTypeContinueAsNewCounter:             {metricName: "continue-as-new-decision", metricType: Counter},
 		DecisionTypeChildWorkflowCounter:             {metricName: "child-workflow-decision", metricType: Counter},
+		DecisionTypeStateTransitionCounter:           {metricName: "state-transition-decision", metricType: Counter},
 		MultipleCompletionDecisionsCounter:           {metricName: "multiple-completion-decisions", metricType: Counter},
 		FailedDecisionsCounter:                       {metricName: "failed-decisions", metricType: Counter},
 		StaleMutableStateCounter:                     {metricName: "stale-mutable-state", metricType: Counter},
