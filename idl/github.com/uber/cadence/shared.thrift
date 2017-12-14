@@ -204,6 +204,9 @@ struct WorkflowExecutionConfiguration {
   40: optional ChildPolicy childPolicy
   50: optional TaskList stickyTaskList
   60: optional i32 stickyScheduleToStartTimeoutSeconds
+  70: optional string clientLibraryVersion
+  80: optional string clientFeatureVersion
+  90: optional string clientLang
 }
 
 struct TransientDecisionInfo {
@@ -885,7 +888,6 @@ struct QueryWorkflowRequest {
   10: optional string domain
   20: optional WorkflowExecution execution
   30: optional WorkflowQuery query
-  40: optional bool isStickyQuery
 }
 
 struct QueryWorkflowResponse {

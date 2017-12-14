@@ -397,7 +397,7 @@ func (h *Handler) RespondDecisionTaskCompleted(ctx context.Context,
 		return err1
 	}
 
-	err2 := engine.RespondDecisionTaskCompleted(wrappedRequest)
+	err2 := engine.RespondDecisionTaskCompleted(ctx, wrappedRequest)
 	if err2 != nil {
 		h.updateErrorMetric(metrics.HistoryRespondDecisionTaskCompletedScope, h.convertError(err2))
 		return h.convertError(err2)

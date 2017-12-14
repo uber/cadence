@@ -13312,10 +13312,9 @@ func (v *QueryTaskCompletedType) UnmarshalJSON(text []byte) error {
 }
 
 type QueryWorkflowRequest struct {
-	Domain        *string            `json:"domain,omitempty"`
-	Execution     *WorkflowExecution `json:"execution,omitempty"`
-	Query         *WorkflowQuery     `json:"query,omitempty"`
-	IsStickyQuery *bool              `json:"isStickyQuery,omitempty"`
+	Domain    *string            `json:"domain,omitempty"`
+	Execution *WorkflowExecution `json:"execution,omitempty"`
+	Query     *WorkflowQuery     `json:"query,omitempty"`
 }
 
 // ToWire translates a QueryWorkflowRequest struct into a Thrift-level intermediate
@@ -13335,7 +13334,7 @@ type QueryWorkflowRequest struct {
 //   }
 func (v *QueryWorkflowRequest) ToWire() (wire.Value, error) {
 	var (
-		fields [4]wire.Field
+		fields [3]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -13363,14 +13362,6 @@ func (v *QueryWorkflowRequest) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 30, Value: w}
-		i++
-	}
-	if v.IsStickyQuery != nil {
-		w, err = wire.NewValueBool(*(v.IsStickyQuery)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 40, Value: w}
 		i++
 	}
 
@@ -13425,16 +13416,6 @@ func (v *QueryWorkflowRequest) FromWire(w wire.Value) error {
 				}
 
 			}
-		case 40:
-			if field.Value.Type() == wire.TBool {
-				var x bool
-				x, err = field.Value.GetBool(), error(nil)
-				v.IsStickyQuery = &x
-				if err != nil {
-					return err
-				}
-
-			}
 		}
 	}
 
@@ -13448,7 +13429,7 @@ func (v *QueryWorkflowRequest) String() string {
 		return "<nil>"
 	}
 
-	var fields [4]string
+	var fields [3]string
 	i := 0
 	if v.Domain != nil {
 		fields[i] = fmt.Sprintf("Domain: %v", *(v.Domain))
@@ -13460,10 +13441,6 @@ func (v *QueryWorkflowRequest) String() string {
 	}
 	if v.Query != nil {
 		fields[i] = fmt.Sprintf("Query: %v", v.Query)
-		i++
-	}
-	if v.IsStickyQuery != nil {
-		fields[i] = fmt.Sprintf("IsStickyQuery: %v", *(v.IsStickyQuery))
 		i++
 	}
 
@@ -13484,9 +13461,6 @@ func (v *QueryWorkflowRequest) Equals(rhs *QueryWorkflowRequest) bool {
 	if !((v.Query == nil && rhs.Query == nil) || (v.Query != nil && rhs.Query != nil && v.Query.Equals(rhs.Query))) {
 		return false
 	}
-	if !_Bool_EqualsPtr(v.IsStickyQuery, rhs.IsStickyQuery) {
-		return false
-	}
 
 	return true
 }
@@ -13496,16 +13470,6 @@ func (v *QueryWorkflowRequest) Equals(rhs *QueryWorkflowRequest) bool {
 func (v *QueryWorkflowRequest) GetDomain() (o string) {
 	if v.Domain != nil {
 		return *v.Domain
-	}
-
-	return
-}
-
-// GetIsStickyQuery returns the value of IsStickyQuery if it is set or its
-// zero value if it is unset.
-func (v *QueryWorkflowRequest) GetIsStickyQuery() (o bool) {
-	if v.IsStickyQuery != nil {
-		return *v.IsStickyQuery
 	}
 
 	return
@@ -23136,6 +23100,9 @@ type WorkflowExecutionConfiguration struct {
 	ChildPolicy                         *ChildPolicy `json:"childPolicy,omitempty"`
 	StickyTaskList                      *TaskList    `json:"stickyTaskList,omitempty"`
 	StickyScheduleToStartTimeoutSeconds *int32       `json:"stickyScheduleToStartTimeoutSeconds,omitempty"`
+	ClientLibraryVersion                *string      `json:"clientLibraryVersion,omitempty"`
+	ClientFeatureVersion                *string      `json:"clientFeatureVersion,omitempty"`
+	ClientLang                          *string      `json:"clientLang,omitempty"`
 }
 
 // ToWire translates a WorkflowExecutionConfiguration struct into a Thrift-level intermediate
@@ -23155,7 +23122,7 @@ type WorkflowExecutionConfiguration struct {
 //   }
 func (v *WorkflowExecutionConfiguration) ToWire() (wire.Value, error) {
 	var (
-		fields [6]wire.Field
+		fields [9]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -23207,6 +23174,30 @@ func (v *WorkflowExecutionConfiguration) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 60, Value: w}
+		i++
+	}
+	if v.ClientLibraryVersion != nil {
+		w, err = wire.NewValueString(*(v.ClientLibraryVersion)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 70, Value: w}
+		i++
+	}
+	if v.ClientFeatureVersion != nil {
+		w, err = wire.NewValueString(*(v.ClientFeatureVersion)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 80, Value: w}
+		i++
+	}
+	if v.ClientLang != nil {
+		w, err = wire.NewValueString(*(v.ClientLang)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 90, Value: w}
 		i++
 	}
 
@@ -23291,6 +23282,36 @@ func (v *WorkflowExecutionConfiguration) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 70:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.ClientLibraryVersion = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 80:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.ClientFeatureVersion = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 90:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.ClientLang = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -23304,7 +23325,7 @@ func (v *WorkflowExecutionConfiguration) String() string {
 		return "<nil>"
 	}
 
-	var fields [6]string
+	var fields [9]string
 	i := 0
 	if v.TaskList != nil {
 		fields[i] = fmt.Sprintf("TaskList: %v", v.TaskList)
@@ -23328,6 +23349,18 @@ func (v *WorkflowExecutionConfiguration) String() string {
 	}
 	if v.StickyScheduleToStartTimeoutSeconds != nil {
 		fields[i] = fmt.Sprintf("StickyScheduleToStartTimeoutSeconds: %v", *(v.StickyScheduleToStartTimeoutSeconds))
+		i++
+	}
+	if v.ClientLibraryVersion != nil {
+		fields[i] = fmt.Sprintf("ClientLibraryVersion: %v", *(v.ClientLibraryVersion))
+		i++
+	}
+	if v.ClientFeatureVersion != nil {
+		fields[i] = fmt.Sprintf("ClientFeatureVersion: %v", *(v.ClientFeatureVersion))
+		i++
+	}
+	if v.ClientLang != nil {
+		fields[i] = fmt.Sprintf("ClientLang: %v", *(v.ClientLang))
 		i++
 	}
 
@@ -23355,6 +23388,15 @@ func (v *WorkflowExecutionConfiguration) Equals(rhs *WorkflowExecutionConfigurat
 		return false
 	}
 	if !_I32_EqualsPtr(v.StickyScheduleToStartTimeoutSeconds, rhs.StickyScheduleToStartTimeoutSeconds) {
+		return false
+	}
+	if !_String_EqualsPtr(v.ClientLibraryVersion, rhs.ClientLibraryVersion) {
+		return false
+	}
+	if !_String_EqualsPtr(v.ClientFeatureVersion, rhs.ClientFeatureVersion) {
+		return false
+	}
+	if !_String_EqualsPtr(v.ClientLang, rhs.ClientLang) {
 		return false
 	}
 
@@ -23396,6 +23438,36 @@ func (v *WorkflowExecutionConfiguration) GetChildPolicy() (o ChildPolicy) {
 func (v *WorkflowExecutionConfiguration) GetStickyScheduleToStartTimeoutSeconds() (o int32) {
 	if v.StickyScheduleToStartTimeoutSeconds != nil {
 		return *v.StickyScheduleToStartTimeoutSeconds
+	}
+
+	return
+}
+
+// GetClientLibraryVersion returns the value of ClientLibraryVersion if it is set or its
+// zero value if it is unset.
+func (v *WorkflowExecutionConfiguration) GetClientLibraryVersion() (o string) {
+	if v.ClientLibraryVersion != nil {
+		return *v.ClientLibraryVersion
+	}
+
+	return
+}
+
+// GetClientFeatureVersion returns the value of ClientFeatureVersion if it is set or its
+// zero value if it is unset.
+func (v *WorkflowExecutionConfiguration) GetClientFeatureVersion() (o string) {
+	if v.ClientFeatureVersion != nil {
+		return *v.ClientFeatureVersion
+	}
+
+	return
+}
+
+// GetClientLang returns the value of ClientLang if it is set or its
+// zero value if it is unset.
+func (v *WorkflowExecutionConfiguration) GetClientLang() (o string) {
+	if v.ClientLang != nil {
+		return *v.ClientLang
 	}
 
 	return

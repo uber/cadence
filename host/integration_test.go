@@ -37,6 +37,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-common/bark"
+	"go.uber.org/yarpc"
 
 	wsc "github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -613,16 +614,22 @@ Loop:
 			})
 		}
 		// sticky tasklist
-		return false, p.engine.RespondDecisionTaskCompleted(createContext(), &workflow.RespondDecisionTaskCompletedRequest{
-			TaskToken:        response.TaskToken,
-			Identity:         common.StringPtr(p.identity),
-			ExecutionContext: executionCtx,
-			Decisions:        decisions,
-			StickyAttributes: &workflow.StickyExecutionAttributes{
-				WorkerTaskList:                p.sticktTaskList,
-				ScheduleToStartTimeoutSeconds: p.stickyScheduleToStartTimeoutSeconds,
+		return false, p.engine.RespondDecisionTaskCompleted(
+			createContext(),
+			&workflow.RespondDecisionTaskCompletedRequest{
+				TaskToken:        response.TaskToken,
+				Identity:         common.StringPtr(p.identity),
+				ExecutionContext: executionCtx,
+				Decisions:        decisions,
+				StickyAttributes: &workflow.StickyExecutionAttributes{
+					WorkerTaskList:                p.sticktTaskList,
+					ScheduleToStartTimeoutSeconds: p.stickyScheduleToStartTimeoutSeconds,
+				},
 			},
-		})
+			yarpc.WithHeader(common.LibraryVersionHeaderName, "0.0.1"),
+			yarpc.WithHeader(common.FeatureVersionHeaderName, "1"),
+			yarpc.WithHeader(common.LanguageHeaderName, "go"),
+		)
 	}
 
 	return false, matching.ErrNoTasks
@@ -1669,7 +1676,6 @@ func (s *integrationSuite) TestQueryWorkflow_Sticky() {
 			Query: &workflow.WorkflowQuery{
 				QueryType: common.StringPtr(queryType),
 			},
-			IsStickyQuery: common.BoolPtr(true),
 		})
 		queryResultCh <- QueryResult{Resp: queryResp, Err: err}
 	}
@@ -1698,178 +1704,6 @@ func (s *integrationSuite) TestQueryWorkflow_Sticky() {
 	for {
 		// loop until process the query task
 		isQueryTask, errInner := poller.pollAndProcessDecisionTaskWithSticky(false, false)
-		s.logger.Infof("pollAndProcessDecisionTask: %v", err)
-		s.Nil(errInner)
-		if isQueryTask {
-			break
-		}
-	}
-	queryResult = <-queryResultCh
-	s.NotNil(queryResult.Err)
-	queryFailError, ok := queryResult.Err.(*workflow.QueryFailedError)
-	s.True(ok)
-	s.Equal("unknown-query-type", queryFailError.Message)
-}
-
-func (s *integrationSuite) TestQueryWorkflow_Sticky_UseNonSticky() {
-	id := "interation-query-workflow-test"
-	wt := "interation-query-workflow-test-type"
-	tl := "interation-query-workflow-test-tasklist"
-	stl := "interation-query-workflow-test-tasklist-sticky"
-	identity := "worker1"
-	activityName := "activity_type1"
-	queryType := "test-query"
-
-	workflowType := &workflow.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
-
-	taskList := &workflow.TaskList{}
-	taskList.Name = common.StringPtr(tl)
-
-	stickyTaskList := &workflow.TaskList{}
-	stickyTaskList.Name = common.StringPtr(stl)
-	stickyScheduleToStartTimeoutSeconds := common.Int32Ptr(10)
-
-	// Start workflow execution
-	request := &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(id),
-		WorkflowType: workflowType,
-		TaskList:     taskList,
-		Input:        nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
-	}
-
-	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
-	s.Nil(err0)
-
-	s.logger.Infof("StartWorkflowExecution: response: %v \n", *we.RunId)
-
-	// decider logic
-	workflowComplete := false
-	activityScheduled := false
-	activityData := int32(1)
-	var signalEvent *workflow.HistoryEvent
-	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
-		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
-
-		if !activityScheduled {
-			activityScheduled = true
-			buf := new(bytes.Buffer)
-			s.Nil(binary.Write(buf, binary.LittleEndian, activityData))
-
-			return nil, []*workflow.Decision{{
-				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeScheduleActivityTask),
-				ScheduleActivityTaskDecisionAttributes: &workflow.ScheduleActivityTaskDecisionAttributes{
-					ActivityId:   common.StringPtr(strconv.Itoa(int(1))),
-					ActivityType: &workflow.ActivityType{Name: common.StringPtr(activityName)},
-					TaskList:     &workflow.TaskList{Name: &tl},
-					Input:        buf.Bytes(),
-					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
-					ScheduleToStartTimeoutSeconds: common.Int32Ptr(2),
-					StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
-					HeartbeatTimeoutSeconds:       common.Int32Ptr(5),
-				},
-			}}, nil
-		} else if previousStartedEventID > 0 {
-			for _, event := range history.Events[previousStartedEventID:] {
-				if *event.EventType == workflow.EventTypeWorkflowExecutionSignaled {
-					signalEvent = event
-					return nil, []*workflow.Decision{}, nil
-				}
-			}
-		}
-
-		workflowComplete = true
-		return nil, []*workflow.Decision{{
-			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
-			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
-				Result: []byte("Done."),
-			},
-		}}, nil
-	}
-
-	// activity handler
-	atHandler := func(execution *workflow.WorkflowExecution, activityType *workflow.ActivityType,
-		activityID string, input []byte, taskToken []byte) ([]byte, bool, error) {
-
-		return []byte("Activity Result."), false, nil
-	}
-
-	queryHandler := func(task *workflow.PollForDecisionTaskResponse) ([]byte, error) {
-		s.NotNil(task.Query)
-		s.NotNil(task.Query.QueryType)
-		if *task.Query.QueryType == queryType {
-			return []byte("query-result"), nil
-		}
-
-		return nil, errors.New("unknown-query-type")
-	}
-
-	poller := &taskPoller{
-		engine:                              s.engine,
-		domain:                              s.domainName,
-		taskList:                            taskList,
-		identity:                            identity,
-		decisionHandler:                     dtHandler,
-		activityHandler:                     atHandler,
-		queryHandler:                        queryHandler,
-		logger:                              s.logger,
-		suite:                               s,
-		sticktTaskList:                      stickyTaskList,
-		stickyScheduleToStartTimeoutSeconds: stickyScheduleToStartTimeoutSeconds,
-	}
-
-	// Make first decision to schedule activity
-	_, err := poller.pollAndProcessDecisionTask(false, false)
-	s.logger.Infof("pollAndProcessDecisionTask: %v", err)
-	s.Nil(err)
-
-	type QueryResult struct {
-		Resp *workflow.QueryWorkflowResponse
-		Err  error
-	}
-	queryResultCh := make(chan QueryResult)
-	queryWorkflowFn := func(queryType string) {
-		queryResp, err := s.engine.QueryWorkflow(createContext(), &workflow.QueryWorkflowRequest{
-			Domain: common.StringPtr(s.domainName),
-			Execution: &workflow.WorkflowExecution{
-				WorkflowId: common.StringPtr(id),
-				RunId:      common.StringPtr(*we.RunId),
-			},
-			Query: &workflow.WorkflowQuery{
-				QueryType: common.StringPtr(queryType),
-			},
-		})
-		queryResultCh <- QueryResult{Resp: queryResp, Err: err}
-	}
-
-	// call QueryWorkflow in separate goroutinue (because it is blocking). That will generate a query task
-	go queryWorkflowFn(queryType)
-	// process that query task, which should respond via RespondQueryTaskCompleted
-	for {
-		// loop until process the query task
-		isQueryTask, errInner := poller.pollAndProcessDecisionTask(false, false)
-		s.logger.Infof("pollAndProcessDecisionTask: %v", err)
-		s.Nil(errInner)
-		if isQueryTask {
-			break
-		}
-	} // wait until query result is ready
-	queryResult := <-queryResultCh
-	s.NoError(queryResult.Err)
-	s.NotNil(queryResult.Resp)
-	s.NotNil(queryResult.Resp.QueryResult)
-	queryResultString := string(queryResult.Resp.QueryResult)
-	s.Equal("query-result", queryResultString)
-
-	go queryWorkflowFn("invalid-query-type")
-	for {
-		// loop until process the query task
-		isQueryTask, errInner := poller.pollAndProcessDecisionTask(false, false)
 		s.logger.Infof("pollAndProcessDecisionTask: %v", err)
 		s.Nil(errInner)
 		if isQueryTask {

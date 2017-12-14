@@ -18,33 +18,40 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package common
+package client
 
 import (
-	"go.uber.org/yarpc"
-)
+	"testing"
 
-const (
-	// LibraryVersionHeaderName refers to the name of the
-	// tchannel / http header that contains the client
-	// library version
-	LibraryVersionHeaderName = "cadence-client-library-version"
-
-	// FeatureVersionHeaderName refers to the name of the
-	// tchannel / http header that contains the client
-	// feature version
-	FeatureVersionHeaderName = "cadence-client-feature-version"
-
-	// LanguageHeaderName refers to the name of the
-	// tchannel / http header that contains the client
-	// language
-	LanguageHeaderName = "cadence-client-language"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 )
 
 type (
-	// RPCFactory Creates a dispatcher that knows how to transport requests.
-	RPCFactory interface {
-		CreateDispatcher() *yarpc.Dispatcher
-		CreateDispatcherForOutbound(callerName, serviceName, hostName string) *yarpc.Dispatcher
+	FeatureSuite struct {
+		*require.Assertions // override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test, not merely log an error
+		suite.Suite
 	}
 )
+
+func TestFeatureSuiteSuite(t *testing.T) {
+	suite.Run(t, new(FeatureSuite))
+}
+
+func (s *FeatureSuite) SetupTest() {
+	s.Assertions = require.New(s.T()) // Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
+}
+
+func (s *FeatureSuite) TestSupportStickyQuery() {
+	libVersion := "lib ver"
+	featureVersion := "1"
+	lang := "go"
+	feature := NewFeatureImpl(libVersion, featureVersion, lang)
+	s.True(feature.SupportStickyQuery(), "Should support sticky query")
+
+	libVersion = ""
+	featureVersion = ""
+	lang = ""
+	feature = NewFeatureImpl(libVersion, featureVersion, lang)
+	s.False(feature.SupportStickyQuery(), "Should support sticky query")
+}

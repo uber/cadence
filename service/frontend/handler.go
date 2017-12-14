@@ -38,10 +38,12 @@ import (
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
+	"go.uber.org/yarpc"
 )
 
 var _ workflowserviceserver.Interface = (*WorkflowHandler)(nil)
@@ -743,10 +745,20 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 		return wh.error(errDomainNotSet, scope)
 	}
 
-	err = wh.history.RespondDecisionTaskCompleted(ctx, &h.RespondDecisionTaskCompletedRequest{
-		DomainUUID:      common.StringPtr(taskToken.DomainID),
-		CompleteRequest: completeRequest,
-	})
+	var headers []yarpc.CallOption
+	call := yarpc.CallFromContext(ctx)
+	for _, key := range call.HeaderNames() {
+		value := call.Header(key)
+		headers = append(headers, yarpc.WithHeader(key, value))
+	}
+	err = wh.history.RespondDecisionTaskCompleted(
+		ctx,
+		&h.RespondDecisionTaskCompletedRequest{
+			DomainUUID:      common.StringPtr(taskToken.DomainID),
+			CompleteRequest: completeRequest,
+		},
+		headers...,
+	)
 	if err != nil {
 		return wh.error(err, scope)
 	}
@@ -1339,11 +1351,6 @@ func (wh *WorkflowHandler) QueryWorkflow(ctx context.Context,
 		return nil, wh.error(errQueryTypeNotSet, scope)
 	}
 
-	isStickyQuery := false
-	if queryRequest.IsStickyQuery != nil {
-		isStickyQuery = queryRequest.GetIsStickyQuery()
-	}
-
 	domainInfo, _, err := wh.domainCache.GetDomain(queryRequest.GetDomain())
 	if err != nil {
 		return nil, wh.error(err, scope)
@@ -1367,11 +1374,16 @@ func (wh *WorkflowHandler) QueryWorkflow(ctx context.Context,
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
+	clientFeature := client.NewFeatureImpl(
+		*response.ExecutionConfiguration.ClientLibraryVersion,
+		*response.ExecutionConfiguration.ClientFeatureVersion,
+		*response.ExecutionConfiguration.ClientLang,
+	)
 
 	queryRequest.Execution.RunId = response.WorkflowExecutionInfo.Execution.RunId
 	if response.ExecutionConfiguration.StickyTaskList == nil || len(response.ExecutionConfiguration.StickyTaskList.GetName()) == 0 {
 		matchingRequest.TaskList = response.ExecutionConfiguration.TaskList
-	} else if !isStickyQuery {
+	} else if !clientFeature.SupportStickyQuery() {
 		// sticky enabled on the client side, but client chose to use non sticky, which is also the default
 		matchingRequest.TaskList = response.ExecutionConfiguration.TaskList
 	} else {

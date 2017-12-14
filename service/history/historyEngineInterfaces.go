@@ -54,7 +54,7 @@ type (
 			request *h.DescribeWorkflowExecutionRequest) (*workflow.DescribeWorkflowExecutionResponse, error)
 		RecordDecisionTaskStarted(request *h.RecordDecisionTaskStartedRequest) (*h.RecordDecisionTaskStartedResponse, error)
 		RecordActivityTaskStarted(request *h.RecordActivityTaskStartedRequest) (*h.RecordActivityTaskStartedResponse, error)
-		RespondDecisionTaskCompleted(request *h.RespondDecisionTaskCompletedRequest) error
+		RespondDecisionTaskCompleted(ctx context.Context, request *h.RespondDecisionTaskCompletedRequest) error
 		RespondDecisionTaskFailed(request *h.RespondDecisionTaskFailedRequest) error
 		RespondActivityTaskCompleted(request *h.RespondActivityTaskCompletedRequest) error
 		RespondActivityTaskFailed(request *h.RespondActivityTaskFailedRequest) error

@@ -159,8 +159,8 @@ func (_m *MockHistoryEngine) RecordActivityTaskStarted(request *gohistory.Record
 }
 
 // RespondDecisionTaskCompleted is mock implementation for RespondDecisionTaskCompleted of HistoryEngine
-func (_m *MockHistoryEngine) RespondDecisionTaskCompleted(request *gohistory.RespondDecisionTaskCompletedRequest) error {
-	ret := _m.Called(request)
+func (_m *MockHistoryEngine) RespondDecisionTaskCompleted(ctx context.Context, request *gohistory.RespondDecisionTaskCompletedRequest) error {
+	ret := _m.Called(ctx, request)
 
 	var r0 error
 	if rf, ok := ret.Get(0).(func(*gohistory.RespondDecisionTaskCompletedRequest) error); ok {

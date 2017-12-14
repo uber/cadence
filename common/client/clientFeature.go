@@ -18,33 +18,46 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package common
+package client
 
 import (
-	"go.uber.org/yarpc"
+	"strconv"
 )
 
 const (
-	// LibraryVersionHeaderName refers to the name of the
-	// tchannel / http header that contains the client
-	// library version
-	LibraryVersionHeaderName = "cadence-client-library-version"
-
-	// FeatureVersionHeaderName refers to the name of the
-	// tchannel / http header that contains the client
-	// feature version
-	FeatureVersionHeaderName = "cadence-client-feature-version"
-
-	// LanguageHeaderName refers to the name of the
-	// tchannel / http header that contains the client
-	// language
-	LanguageHeaderName = "cadence-client-language"
+	intBase    = 10
+	intBitSize = 32
 )
 
 type (
-	// RPCFactory Creates a dispatcher that knows how to transport requests.
-	RPCFactory interface {
-		CreateDispatcher() *yarpc.Dispatcher
-		CreateDispatcherForOutbound(callerName, serviceName, hostName string) *yarpc.Dispatcher
+	// Feature provides information about client's capibility
+	Feature interface {
+		SupportStickyQuery() bool
+	}
+
+	// FeatureImpl is used for determining the client's capibility.
+	// This can be useful when service support a feature, while
+	// client does not, so we can use be backward comparible
+	FeatureImpl struct {
+		libVersion     string
+		featureVersion int
+		lang           string
 	}
 )
+
+// NewFeatureImpl make a new NewFeatureImpl
+func NewFeatureImpl(libVersion string, featureVersion string, lang string) *FeatureImpl {
+	impl := &FeatureImpl{
+		libVersion: libVersion,
+		lang:       lang,
+	}
+	if feature, err := strconv.ParseInt(featureVersion, intBase, intBitSize); err == nil {
+		impl.featureVersion = int(feature)
+	}
+	return impl
+}
+
+// SupportStickyQuery whether a client support sticky query
+func (feature *FeatureImpl) SupportStickyQuery() bool {
+	return feature.featureVersion > 0
+}

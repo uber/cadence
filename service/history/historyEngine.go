@@ -26,6 +26,8 @@ import (
 	"fmt"
 	"time"
 
+	"go.uber.org/yarpc"
+
 	"github.com/pborman/uuid"
 	"github.com/uber-common/bark"
 	h "github.com/uber/cadence/.gen/go/history"
@@ -404,6 +406,9 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 			ChildPolicy:                         common.ChildPolicyPtr(workflow.ChildPolicyTerminate),
 			StickyTaskList:                      &workflow.TaskList{Name: common.StringPtr(msBuilder.executionInfo.StickyTaskList)},
 			StickyScheduleToStartTimeoutSeconds: common.Int32Ptr(msBuilder.executionInfo.StickyScheduleToStartTimeout),
+			ClientLibraryVersion:                common.StringPtr(msBuilder.executionInfo.ClientLibraryVersion),
+			ClientFeatureVersion:                common.StringPtr(msBuilder.executionInfo.ClientFeatureVersion),
+			ClientLang:                          common.StringPtr(msBuilder.executionInfo.ClientLang),
 		},
 		WorkflowExecutionInfo: &workflow.WorkflowExecutionInfo{
 			Execution:     request.Request.Execution,
@@ -627,7 +632,7 @@ Update_History_Loop:
 }
 
 // RespondDecisionTaskCompleted completes a decision task
-func (e *historyEngineImpl) RespondDecisionTaskCompleted(req *h.RespondDecisionTaskCompletedRequest) error {
+func (e *historyEngineImpl) RespondDecisionTaskCompleted(ctx context.Context, req *h.RespondDecisionTaskCompletedRequest) error {
 	domainID, err := getDomainUUID(req.DomainUUID)
 	if err != nil {
 		return err
@@ -642,6 +647,11 @@ func (e *historyEngineImpl) RespondDecisionTaskCompleted(req *h.RespondDecisionT
 		WorkflowId: common.StringPtr(token.WorkflowID),
 		RunId:      common.StringPtr(token.RunID),
 	}
+
+	call := yarpc.CallFromContext(ctx)
+	clientLibVersion := call.Header(common.LibraryVersionHeaderName)
+	clientFeatureVersion := call.Header(common.FeatureVersionHeaderName)
+	clientLang := call.Header(common.LanguageHeaderName)
 
 	context, release, err0 := e.historyCache.getOrCreateWorkflowExecution(domainID, workflowExecution)
 	if err0 != nil {
@@ -700,6 +710,9 @@ Update_History_Loop:
 			msBuilder.executionInfo.StickyTaskList = request.StickyAttributes.WorkerTaskList.GetName()
 			msBuilder.executionInfo.StickyScheduleToStartTimeout = request.StickyAttributes.GetScheduleToStartTimeoutSeconds()
 		}
+		msBuilder.executionInfo.ClientLibraryVersion = clientLibVersion
+		msBuilder.executionInfo.ClientFeatureVersion = clientFeatureVersion
+		msBuilder.executionInfo.ClientLang = clientLang
 
 	Process_Decision_Loop:
 		for _, d := range request.Decisions {

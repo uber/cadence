@@ -75,7 +75,7 @@ func (c *clientImpl) StartWorkflowExecution(
 		var err error
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
-		response, err = client.StartWorkflowExecution(ctx, request)
+		response, err = client.StartWorkflowExecution(ctx, request, opts...)
 		return err
 	}
 	err = c.executeWithRedirect(ctx, client, op)
@@ -98,7 +98,7 @@ func (c *clientImpl) GetWorkflowExecutionNextEventID(
 		var err error
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
-		response, err = client.GetWorkflowExecutionNextEventID(ctx, request)
+		response, err = client.GetWorkflowExecutionNextEventID(ctx, request, opts...)
 		return err
 	}
 	err = c.executeWithRedirect(ctx, client, op)
@@ -121,7 +121,7 @@ func (c *clientImpl) DescribeWorkflowExecution(
 		var err error
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
-		response, err = client.DescribeWorkflowExecution(ctx, request)
+		response, err = client.DescribeWorkflowExecution(ctx, request, opts...)
 		return err
 	}
 	err = c.executeWithRedirect(ctx, client, op)
@@ -144,7 +144,7 @@ func (c *clientImpl) RecordDecisionTaskStarted(
 		var err error
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
-		response, err = client.RecordDecisionTaskStarted(ctx, request)
+		response, err = client.RecordDecisionTaskStarted(ctx, request, opts...)
 		return err
 	}
 	err = c.executeWithRedirect(ctx, client, op)
@@ -167,7 +167,7 @@ func (c *clientImpl) RecordActivityTaskStarted(
 		var err error
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
-		response, err = client.RecordActivityTaskStarted(ctx, request)
+		response, err = client.RecordActivityTaskStarted(ctx, request, opts...)
 		return err
 	}
 	err = c.executeWithRedirect(ctx, client, op)
@@ -192,7 +192,7 @@ func (c *clientImpl) RespondDecisionTaskCompleted(
 	op := func(ctx context.Context, client historyserviceclient.Interface) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
-		return client.RespondDecisionTaskCompleted(ctx, request)
+		return client.RespondDecisionTaskCompleted(ctx, request, opts...)
 	}
 	err = c.executeWithRedirect(ctx, client, op)
 	return err
@@ -213,7 +213,7 @@ func (c *clientImpl) RespondDecisionTaskFailed(
 	op := func(ctx context.Context, client historyserviceclient.Interface) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
-		return client.RespondDecisionTaskFailed(ctx, request)
+		return client.RespondDecisionTaskFailed(ctx, request, opts...)
 	}
 	err = c.executeWithRedirect(ctx, client, op)
 	return err
@@ -234,7 +234,7 @@ func (c *clientImpl) RespondActivityTaskCompleted(
 	op := func(ctx context.Context, client historyserviceclient.Interface) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
-		return client.RespondActivityTaskCompleted(ctx, request)
+		return client.RespondActivityTaskCompleted(ctx, request, opts...)
 	}
 	err = c.executeWithRedirect(ctx, client, op)
 	return err
@@ -255,7 +255,7 @@ func (c *clientImpl) RespondActivityTaskFailed(
 	op := func(ctx context.Context, client historyserviceclient.Interface) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
-		return client.RespondActivityTaskFailed(ctx, request)
+		return client.RespondActivityTaskFailed(ctx, request, opts...)
 	}
 	err = c.executeWithRedirect(ctx, client, op)
 	return err
@@ -276,7 +276,7 @@ func (c *clientImpl) RespondActivityTaskCanceled(
 	op := func(ctx context.Context, client historyserviceclient.Interface) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
-		return client.RespondActivityTaskCanceled(ctx, request)
+		return client.RespondActivityTaskCanceled(ctx, request, opts...)
 	}
 	err = c.executeWithRedirect(ctx, client, op)
 	return err
@@ -299,7 +299,7 @@ func (c *clientImpl) RecordActivityTaskHeartbeat(
 		var err error
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
-		response, err = client.RecordActivityTaskHeartbeat(ctx, request)
+		response, err = client.RecordActivityTaskHeartbeat(ctx, request, opts...)
 		return err
 	}
 	err = c.executeWithRedirect(ctx, client, op)
@@ -320,7 +320,7 @@ func (c *clientImpl) RequestCancelWorkflowExecution(
 	op := func(ctx context.Context, client historyserviceclient.Interface) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
-		return client.RequestCancelWorkflowExecution(ctx, request)
+		return client.RequestCancelWorkflowExecution(ctx, request, opts...)
 	}
 	return c.executeWithRedirect(ctx, client, op)
 }
@@ -336,7 +336,7 @@ func (c *clientImpl) SignalWorkflowExecution(
 	op := func(ctx context.Context, client historyserviceclient.Interface) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
-		return client.SignalWorkflowExecution(ctx, request)
+		return client.SignalWorkflowExecution(ctx, request, opts...)
 	}
 	err = c.executeWithRedirect(ctx, client, op)
 
@@ -354,7 +354,7 @@ func (c *clientImpl) TerminateWorkflowExecution(
 	op := func(ctx context.Context, client historyserviceclient.Interface) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
-		return client.TerminateWorkflowExecution(ctx, request)
+		return client.TerminateWorkflowExecution(ctx, request, opts...)
 	}
 	err = c.executeWithRedirect(ctx, client, op)
 	return err
@@ -371,7 +371,7 @@ func (c *clientImpl) ScheduleDecisionTask(
 	op := func(ctx context.Context, client historyserviceclient.Interface) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
-		return client.ScheduleDecisionTask(ctx, request)
+		return client.ScheduleDecisionTask(ctx, request, opts...)
 	}
 	err = c.executeWithRedirect(ctx, client, op)
 	return err
@@ -388,7 +388,7 @@ func (c *clientImpl) RecordChildExecutionCompleted(
 	op := func(ctx context.Context, client historyserviceclient.Interface) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
-		return client.RecordChildExecutionCompleted(ctx, request)
+		return client.RecordChildExecutionCompleted(ctx, request, opts...)
 	}
 	err = c.executeWithRedirect(ctx, client, op)
 	return err
