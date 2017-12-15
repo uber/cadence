@@ -70,7 +70,7 @@ func (c *clientImpl) StartWorkflowExecution(
 	if err != nil {
 		return nil, err
 	}
-	opts = aggregateYarpcOptions(ctx, opts...)
+	opts = common.AggregateYarpcOptions(ctx, opts...)
 	var response *workflow.StartWorkflowExecutionResponse
 	op := func(ctx context.Context, client historyserviceclient.Interface) error {
 		var err error
@@ -94,7 +94,7 @@ func (c *clientImpl) GetMutableState(
 	if err != nil {
 		return nil, err
 	}
-	opts = aggregateYarpcOptions(ctx, opts...)
+	opts = common.AggregateYarpcOptions(ctx, opts...)
 	var response *h.GetMutableStateResponse
 	op := func(ctx context.Context, client historyserviceclient.Interface) error {
 		var err error
@@ -118,7 +118,7 @@ func (c *clientImpl) DescribeWorkflowExecution(
 	if err != nil {
 		return nil, err
 	}
-	opts = aggregateYarpcOptions(ctx, opts...)
+	opts = common.AggregateYarpcOptions(ctx, opts...)
 	var response *workflow.DescribeWorkflowExecutionResponse
 	op := func(ctx context.Context, client historyserviceclient.Interface) error {
 		var err error
@@ -142,7 +142,7 @@ func (c *clientImpl) RecordDecisionTaskStarted(
 	if err != nil {
 		return nil, err
 	}
-	opts = aggregateYarpcOptions(ctx, opts...)
+	opts = common.AggregateYarpcOptions(ctx, opts...)
 	var response *h.RecordDecisionTaskStartedResponse
 	op := func(ctx context.Context, client historyserviceclient.Interface) error {
 		var err error
@@ -166,7 +166,7 @@ func (c *clientImpl) RecordActivityTaskStarted(
 	if err != nil {
 		return nil, err
 	}
-	opts = aggregateYarpcOptions(ctx, opts...)
+	opts = common.AggregateYarpcOptions(ctx, opts...)
 	var response *h.RecordActivityTaskStartedResponse
 	op := func(ctx context.Context, client historyserviceclient.Interface) error {
 		var err error
@@ -194,7 +194,7 @@ func (c *clientImpl) RespondDecisionTaskCompleted(
 	if err != nil {
 		return err
 	}
-	opts = aggregateYarpcOptions(ctx, opts...)
+	opts = common.AggregateYarpcOptions(ctx, opts...)
 	op := func(ctx context.Context, client historyserviceclient.Interface) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
@@ -216,7 +216,7 @@ func (c *clientImpl) RespondDecisionTaskFailed(
 	if err != nil {
 		return err
 	}
-	opts = aggregateYarpcOptions(ctx, opts...)
+	opts = common.AggregateYarpcOptions(ctx, opts...)
 	op := func(ctx context.Context, client historyserviceclient.Interface) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
@@ -238,7 +238,7 @@ func (c *clientImpl) RespondActivityTaskCompleted(
 	if err != nil {
 		return err
 	}
-	opts = aggregateYarpcOptions(ctx, opts...)
+	opts = common.AggregateYarpcOptions(ctx, opts...)
 	op := func(ctx context.Context, client historyserviceclient.Interface) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
@@ -260,7 +260,7 @@ func (c *clientImpl) RespondActivityTaskFailed(
 	if err != nil {
 		return err
 	}
-	opts = aggregateYarpcOptions(ctx, opts...)
+	opts = common.AggregateYarpcOptions(ctx, opts...)
 	op := func(ctx context.Context, client historyserviceclient.Interface) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
@@ -282,7 +282,7 @@ func (c *clientImpl) RespondActivityTaskCanceled(
 	if err != nil {
 		return err
 	}
-	opts = aggregateYarpcOptions(ctx, opts...)
+	opts = common.AggregateYarpcOptions(ctx, opts...)
 	op := func(ctx context.Context, client historyserviceclient.Interface) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
@@ -304,7 +304,7 @@ func (c *clientImpl) RecordActivityTaskHeartbeat(
 	if err != nil {
 		return nil, err
 	}
-	opts = aggregateYarpcOptions(ctx, opts...)
+	opts = common.AggregateYarpcOptions(ctx, opts...)
 	var response *workflow.RecordActivityTaskHeartbeatResponse
 	op := func(ctx context.Context, client historyserviceclient.Interface) error {
 		var err error
@@ -328,7 +328,7 @@ func (c *clientImpl) RequestCancelWorkflowExecution(
 	if err != nil {
 		return err
 	}
-	opts = aggregateYarpcOptions(ctx, opts...)
+	opts = common.AggregateYarpcOptions(ctx, opts...)
 	op := func(ctx context.Context, client historyserviceclient.Interface) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
@@ -345,7 +345,7 @@ func (c *clientImpl) SignalWorkflowExecution(
 	if err != nil {
 		return err
 	}
-	opts = aggregateYarpcOptions(ctx, opts...)
+	opts = common.AggregateYarpcOptions(ctx, opts...)
 	op := func(ctx context.Context, client historyserviceclient.Interface) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
@@ -364,7 +364,7 @@ func (c *clientImpl) TerminateWorkflowExecution(
 	if err != nil {
 		return err
 	}
-	opts = aggregateYarpcOptions(ctx, opts...)
+	opts = common.AggregateYarpcOptions(ctx, opts...)
 	op := func(ctx context.Context, client historyserviceclient.Interface) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
@@ -382,7 +382,7 @@ func (c *clientImpl) ScheduleDecisionTask(
 	if err != nil {
 		return err
 	}
-	opts = aggregateYarpcOptions(ctx, opts...)
+	opts = common.AggregateYarpcOptions(ctx, opts...)
 	op := func(ctx context.Context, client historyserviceclient.Interface) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
@@ -400,7 +400,7 @@ func (c *clientImpl) RecordChildExecutionCompleted(
 	if err != nil {
 		return err
 	}
-	opts = aggregateYarpcOptions(ctx, opts...)
+	opts = common.AggregateYarpcOptions(ctx, opts...)
 	op := func(ctx context.Context, client historyserviceclient.Interface) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
@@ -475,17 +475,4 @@ redirectLoop:
 		break redirectLoop
 	}
 	return err
-}
-
-func aggregateYarpcOptions(ctx context.Context, opts ...yarpc.CallOption) []yarpc.CallOption {
-	var result []yarpc.CallOption
-	if ctx != nil {
-		call := yarpc.CallFromContext(ctx)
-		for _, key := range call.HeaderNames() {
-			value := call.Header(key)
-			result = append(result, yarpc.WithHeader(key, value))
-		}
-		result = append(result, opts...)
-	}
-	return result
 }

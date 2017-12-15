@@ -61,7 +61,7 @@ func (c *clientImpl) AddActivityTask(
 	ctx context.Context,
 	addRequest *m.AddActivityTaskRequest,
 	opts ...yarpc.CallOption) error {
-	opts = aggregateYarpcOptions(ctx, opts...)
+	opts = common.AggregateYarpcOptions(ctx, opts...)
 	client, err := c.getHostForRequest(*addRequest.TaskList.Name)
 	if err != nil {
 		return err
@@ -75,7 +75,7 @@ func (c *clientImpl) AddDecisionTask(
 	ctx context.Context,
 	addRequest *m.AddDecisionTaskRequest,
 	opts ...yarpc.CallOption) error {
-	opts = aggregateYarpcOptions(ctx, opts...)
+	opts = common.AggregateYarpcOptions(ctx, opts...)
 	client, err := c.getHostForRequest(*addRequest.TaskList.Name)
 	if err != nil {
 		return err
@@ -89,7 +89,7 @@ func (c *clientImpl) PollForActivityTask(
 	ctx context.Context,
 	pollRequest *m.PollForActivityTaskRequest,
 	opts ...yarpc.CallOption) (*workflow.PollForActivityTaskResponse, error) {
-	opts = aggregateYarpcOptions(ctx, opts...)
+	opts = common.AggregateYarpcOptions(ctx, opts...)
 	client, err := c.getHostForRequest(*pollRequest.PollRequest.TaskList.Name)
 	if err != nil {
 		return nil, err
@@ -103,7 +103,7 @@ func (c *clientImpl) PollForDecisionTask(
 	ctx context.Context,
 	pollRequest *m.PollForDecisionTaskRequest,
 	opts ...yarpc.CallOption) (*m.PollForDecisionTaskResponse, error) {
-	opts = aggregateYarpcOptions(ctx, opts...)
+	opts = common.AggregateYarpcOptions(ctx, opts...)
 	client, err := c.getHostForRequest(*pollRequest.PollRequest.TaskList.Name)
 	if err != nil {
 		return nil, err
@@ -114,7 +114,7 @@ func (c *clientImpl) PollForDecisionTask(
 }
 
 func (c *clientImpl) QueryWorkflow(ctx context.Context, queryRequest *m.QueryWorkflowRequest, opts ...yarpc.CallOption) (*workflow.QueryWorkflowResponse, error) {
-	opts = aggregateYarpcOptions(ctx, opts...)
+	opts = common.AggregateYarpcOptions(ctx, opts...)
 	client, err := c.getHostForRequest(*queryRequest.TaskList.Name)
 	if err != nil {
 		return nil, err
@@ -125,7 +125,7 @@ func (c *clientImpl) QueryWorkflow(ctx context.Context, queryRequest *m.QueryWor
 }
 
 func (c *clientImpl) RespondQueryTaskCompleted(ctx context.Context, request *m.RespondQueryTaskCompletedRequest, opts ...yarpc.CallOption) error {
-	opts = aggregateYarpcOptions(ctx, opts...)
+	opts = common.AggregateYarpcOptions(ctx, opts...)
 	client, err := c.getHostForRequest(*request.TaskList.Name)
 	if err != nil {
 		return err
@@ -136,7 +136,7 @@ func (c *clientImpl) RespondQueryTaskCompleted(ctx context.Context, request *m.R
 }
 
 func (c *clientImpl) CancelOutstandingPoll(ctx context.Context, request *m.CancelOutstandingPollRequest, opts ...yarpc.CallOption) error {
-	opts = aggregateYarpcOptions(ctx, opts...)
+	opts = common.AggregateYarpcOptions(ctx, opts...)
 	client, err := c.getHostForRequest(*request.TaskList.Name)
 	if err != nil {
 		return err
@@ -193,17 +193,4 @@ func (c *clientImpl) getThriftClient(hostPort string) matchingserviceclient.Inte
 		c.thriftCache[hostPort] = client
 	}
 	return client
-}
-
-func aggregateYarpcOptions(ctx context.Context, opts ...yarpc.CallOption) []yarpc.CallOption {
-	var result []yarpc.CallOption
-	if ctx != nil {
-		call := yarpc.CallFromContext(ctx)
-		for _, key := range call.HeaderNames() {
-			value := call.Header(key)
-			result = append(result, yarpc.WithHeader(key, value))
-		}
-	}
-	result = append(result, opts...)
-	return result
 }

@@ -22,6 +22,7 @@ package common
 
 import (
 	"go.uber.org/yarpc"
+	"golang.org/x/net/context"
 )
 
 const (
@@ -33,6 +34,10 @@ const (
 	// FeatureVersionHeaderName refers to the name of the
 	// tchannel / http header that contains the client
 	// feature version
+	// the feature version sent from client represents the
+	// feature set of the cadence client library support.
+	// This can be used for client capibility check, on
+	// Cadence server, for backward compatibility
 	FeatureVersionHeaderName = "cadence-client-feature-version"
 
 	// ClientImplHeaderName refers to the name of the
@@ -47,3 +52,17 @@ type (
 		CreateDispatcherForOutbound(callerName, serviceName, hostName string) *yarpc.Dispatcher
 	}
 )
+
+// AggregateYarpcOptions aggregate the header information from context to existing yarpc call options
+func AggregateYarpcOptions(ctx context.Context, opts ...yarpc.CallOption) []yarpc.CallOption {
+	var result []yarpc.CallOption
+	if ctx != nil {
+		call := yarpc.CallFromContext(ctx)
+		for _, key := range call.HeaderNames() {
+			value := call.Header(key)
+			result = append(result, yarpc.WithHeader(key, value))
+		}
+	}
+	result = append(result, opts...)
+	return result
+}
