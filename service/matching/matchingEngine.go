@@ -489,6 +489,8 @@ func (e *matchingEngineImpl) createPollForDecisionTaskResponse(context *taskCont
 			ScheduleAttempt: historyResponse.GetAttempt(),
 		}
 		response.TaskToken, _ = e.tokenSerializer.Serialize(token)
+		response.WorkflowType = historyResponse.WorkflowType
+		response.Attempt = common.Int64Ptr(historyResponse.GetAttempt())
 	}
 	if historyResponse.GetPreviousStartedEventId() != common.EmptyEventID {
 		response.PreviousStartedEventId = historyResponse.PreviousStartedEventId
