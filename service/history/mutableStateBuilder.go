@@ -682,7 +682,7 @@ func (e *mutableStateBuilder) clearStickyness() {
 	e.executionInfo.StickyScheduleToStartTimeout = 0
 	e.executionInfo.ClientLibraryVersion = ""
 	e.executionInfo.ClientFeatureVersion = ""
-	e.executionInfo.ClientLang = ""
+	e.executionInfo.ClientImpl = ""
 }
 
 // GetNextEventID returns next event ID

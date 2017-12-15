@@ -35,10 +35,9 @@ const (
 	// feature version
 	FeatureVersionHeaderName = "cadence-client-feature-version"
 
-	// LanguageHeaderName refers to the name of the
-	// tchannel / http header that contains the client
-	// language
-	LanguageHeaderName = "cadence-client-language"
+	// ClientImplHeaderName refers to the name of the
+	// header that contains the client implementation
+	ClientImplHeaderName = "cadence-client-name"
 )
 
 type (

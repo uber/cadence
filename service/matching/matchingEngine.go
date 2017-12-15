@@ -258,12 +258,9 @@ pollLoop:
 		if tCtx.queryTaskInfo != nil {
 			// for query task, we don't need to update history to record decision task started. but we need to know
 			// the NextEventID so front end knows what are the history events to load for this decision task.
-			describeResp, err := e.historyService.DescribeWorkflowExecution(ctx, &h.DescribeWorkflowExecutionRequest{
+			mutableStateResp, err := e.historyService.GetMutableState(ctx, &h.GetMutableStateRequest{
 				DomainUUID: req.DomainUUID,
-				Request: &workflow.DescribeWorkflowExecutionRequest{
-					Domain:    req.PollRequest.Domain,
-					Execution: &tCtx.workflowExecution,
-				},
+				Execution:  &tCtx.workflowExecution,
 			})
 			if err != nil {
 				// will notify query client that the query task failed
@@ -279,13 +276,13 @@ pollLoop:
 			}
 
 			isStickyEnabled := false
-			if describeResp.ExecutionConfiguration.StickyTaskList != nil && len(describeResp.ExecutionConfiguration.StickyTaskList.GetName()) != 0 {
+			if len(mutableStateResp.StickyTaskList.GetName()) != 0 {
 				isStickyEnabled = true
 			}
 			resp := &h.RecordDecisionTaskStartedResponse{
-				PreviousStartedEventId: describeResp.WorkflowExecutionInfo.HistoryLength,
-				NextEventId:            describeResp.WorkflowExecutionInfo.HistoryLength,
-				WorkflowType:           describeResp.WorkflowExecutionInfo.Type,
+				PreviousStartedEventId: mutableStateResp.NextEventId,
+				NextEventId:            mutableStateResp.NextEventId,
+				WorkflowType:           mutableStateResp.WorkflowType,
 				StickyExecutionEnabled: common.BoolPtr(isStickyEnabled),
 			}
 			tCtx.completeTask(nil)

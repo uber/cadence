@@ -23098,11 +23098,6 @@ type WorkflowExecutionConfiguration struct {
 	ExecutionStartToCloseTimeoutSeconds *int32       `json:"executionStartToCloseTimeoutSeconds,omitempty"`
 	TaskStartToCloseTimeoutSeconds      *int32       `json:"taskStartToCloseTimeoutSeconds,omitempty"`
 	ChildPolicy                         *ChildPolicy `json:"childPolicy,omitempty"`
-	StickyTaskList                      *TaskList    `json:"stickyTaskList,omitempty"`
-	StickyScheduleToStartTimeoutSeconds *int32       `json:"stickyScheduleToStartTimeoutSeconds,omitempty"`
-	ClientLibraryVersion                *string      `json:"clientLibraryVersion,omitempty"`
-	ClientFeatureVersion                *string      `json:"clientFeatureVersion,omitempty"`
-	ClientLang                          *string      `json:"clientLang,omitempty"`
 }
 
 // ToWire translates a WorkflowExecutionConfiguration struct into a Thrift-level intermediate
@@ -23122,7 +23117,7 @@ type WorkflowExecutionConfiguration struct {
 //   }
 func (v *WorkflowExecutionConfiguration) ToWire() (wire.Value, error) {
 	var (
-		fields [9]wire.Field
+		fields [4]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -23158,46 +23153,6 @@ func (v *WorkflowExecutionConfiguration) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 40, Value: w}
-		i++
-	}
-	if v.StickyTaskList != nil {
-		w, err = v.StickyTaskList.ToWire()
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 50, Value: w}
-		i++
-	}
-	if v.StickyScheduleToStartTimeoutSeconds != nil {
-		w, err = wire.NewValueI32(*(v.StickyScheduleToStartTimeoutSeconds)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 60, Value: w}
-		i++
-	}
-	if v.ClientLibraryVersion != nil {
-		w, err = wire.NewValueString(*(v.ClientLibraryVersion)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 70, Value: w}
-		i++
-	}
-	if v.ClientFeatureVersion != nil {
-		w, err = wire.NewValueString(*(v.ClientFeatureVersion)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 80, Value: w}
-		i++
-	}
-	if v.ClientLang != nil {
-		w, err = wire.NewValueString(*(v.ClientLang)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 90, Value: w}
 		i++
 	}
 
@@ -23264,54 +23219,6 @@ func (v *WorkflowExecutionConfiguration) FromWire(w wire.Value) error {
 				}
 
 			}
-		case 50:
-			if field.Value.Type() == wire.TStruct {
-				v.StickyTaskList, err = _TaskList_Read(field.Value)
-				if err != nil {
-					return err
-				}
-
-			}
-		case 60:
-			if field.Value.Type() == wire.TI32 {
-				var x int32
-				x, err = field.Value.GetI32(), error(nil)
-				v.StickyScheduleToStartTimeoutSeconds = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		case 70:
-			if field.Value.Type() == wire.TBinary {
-				var x string
-				x, err = field.Value.GetString(), error(nil)
-				v.ClientLibraryVersion = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		case 80:
-			if field.Value.Type() == wire.TBinary {
-				var x string
-				x, err = field.Value.GetString(), error(nil)
-				v.ClientFeatureVersion = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		case 90:
-			if field.Value.Type() == wire.TBinary {
-				var x string
-				x, err = field.Value.GetString(), error(nil)
-				v.ClientLang = &x
-				if err != nil {
-					return err
-				}
-
-			}
 		}
 	}
 
@@ -23325,7 +23232,7 @@ func (v *WorkflowExecutionConfiguration) String() string {
 		return "<nil>"
 	}
 
-	var fields [9]string
+	var fields [4]string
 	i := 0
 	if v.TaskList != nil {
 		fields[i] = fmt.Sprintf("TaskList: %v", v.TaskList)
@@ -23341,26 +23248,6 @@ func (v *WorkflowExecutionConfiguration) String() string {
 	}
 	if v.ChildPolicy != nil {
 		fields[i] = fmt.Sprintf("ChildPolicy: %v", *(v.ChildPolicy))
-		i++
-	}
-	if v.StickyTaskList != nil {
-		fields[i] = fmt.Sprintf("StickyTaskList: %v", v.StickyTaskList)
-		i++
-	}
-	if v.StickyScheduleToStartTimeoutSeconds != nil {
-		fields[i] = fmt.Sprintf("StickyScheduleToStartTimeoutSeconds: %v", *(v.StickyScheduleToStartTimeoutSeconds))
-		i++
-	}
-	if v.ClientLibraryVersion != nil {
-		fields[i] = fmt.Sprintf("ClientLibraryVersion: %v", *(v.ClientLibraryVersion))
-		i++
-	}
-	if v.ClientFeatureVersion != nil {
-		fields[i] = fmt.Sprintf("ClientFeatureVersion: %v", *(v.ClientFeatureVersion))
-		i++
-	}
-	if v.ClientLang != nil {
-		fields[i] = fmt.Sprintf("ClientLang: %v", *(v.ClientLang))
 		i++
 	}
 
@@ -23382,21 +23269,6 @@ func (v *WorkflowExecutionConfiguration) Equals(rhs *WorkflowExecutionConfigurat
 		return false
 	}
 	if !_ChildPolicy_EqualsPtr(v.ChildPolicy, rhs.ChildPolicy) {
-		return false
-	}
-	if !((v.StickyTaskList == nil && rhs.StickyTaskList == nil) || (v.StickyTaskList != nil && rhs.StickyTaskList != nil && v.StickyTaskList.Equals(rhs.StickyTaskList))) {
-		return false
-	}
-	if !_I32_EqualsPtr(v.StickyScheduleToStartTimeoutSeconds, rhs.StickyScheduleToStartTimeoutSeconds) {
-		return false
-	}
-	if !_String_EqualsPtr(v.ClientLibraryVersion, rhs.ClientLibraryVersion) {
-		return false
-	}
-	if !_String_EqualsPtr(v.ClientFeatureVersion, rhs.ClientFeatureVersion) {
-		return false
-	}
-	if !_String_EqualsPtr(v.ClientLang, rhs.ClientLang) {
 		return false
 	}
 
@@ -23428,46 +23300,6 @@ func (v *WorkflowExecutionConfiguration) GetTaskStartToCloseTimeoutSeconds() (o 
 func (v *WorkflowExecutionConfiguration) GetChildPolicy() (o ChildPolicy) {
 	if v.ChildPolicy != nil {
 		return *v.ChildPolicy
-	}
-
-	return
-}
-
-// GetStickyScheduleToStartTimeoutSeconds returns the value of StickyScheduleToStartTimeoutSeconds if it is set or its
-// zero value if it is unset.
-func (v *WorkflowExecutionConfiguration) GetStickyScheduleToStartTimeoutSeconds() (o int32) {
-	if v.StickyScheduleToStartTimeoutSeconds != nil {
-		return *v.StickyScheduleToStartTimeoutSeconds
-	}
-
-	return
-}
-
-// GetClientLibraryVersion returns the value of ClientLibraryVersion if it is set or its
-// zero value if it is unset.
-func (v *WorkflowExecutionConfiguration) GetClientLibraryVersion() (o string) {
-	if v.ClientLibraryVersion != nil {
-		return *v.ClientLibraryVersion
-	}
-
-	return
-}
-
-// GetClientFeatureVersion returns the value of ClientFeatureVersion if it is set or its
-// zero value if it is unset.
-func (v *WorkflowExecutionConfiguration) GetClientFeatureVersion() (o string) {
-	if v.ClientFeatureVersion != nil {
-		return *v.ClientFeatureVersion
-	}
-
-	return
-}
-
-// GetClientLang returns the value of ClientLang if it is set or its
-// zero value if it is unset.
-func (v *WorkflowExecutionConfiguration) GetClientLang() (o string) {
-	if v.ClientLang != nil {
-		return *v.ClientLang
 	}
 
 	return

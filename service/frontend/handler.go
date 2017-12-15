@@ -43,7 +43,6 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
-	"go.uber.org/yarpc"
 )
 
 var _ workflowserviceserver.Interface = (*WorkflowHandler)(nil)
@@ -745,19 +744,9 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 		return wh.error(errDomainNotSet, scope)
 	}
 
-	var headers []yarpc.CallOption
-	call := yarpc.CallFromContext(ctx)
-	for _, key := range call.HeaderNames() {
-		value := call.Header(key)
-		headers = append(headers, yarpc.WithHeader(key, value))
-	}
-	err = wh.history.RespondDecisionTaskCompleted(
-		ctx,
-		&h.RespondDecisionTaskCompletedRequest{
-			DomainUUID:      common.StringPtr(taskToken.DomainID),
-			CompleteRequest: completeRequest,
-		},
-		headers...,
+	err = wh.history.RespondDecisionTaskCompleted(ctx, &h.RespondDecisionTaskCompletedRequest{
+		DomainUUID:      common.StringPtr(taskToken.DomainID),
+		CompleteRequest: completeRequest},
 	)
 	if err != nil {
 		return wh.error(err, scope)
@@ -935,14 +924,14 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	// 2. the next event ID
 	// 3. whether the workflow is closed
 	getNextEventID := func(domainUUID string, execution *gen.WorkflowExecution, expectedNextEventID *int64) (string, int64, bool, error) {
-		response, err := wh.history.GetWorkflowExecutionNextEventID(ctx, &h.GetWorkflowExecutionNextEventIDRequest{
+		response, err := wh.history.GetMutableState(ctx, &h.GetMutableStateRequest{
 			DomainUUID:          common.StringPtr(domainUUID),
 			Execution:           execution,
 			ExpectedNextEventId: expectedNextEventID,
 		})
 
 		if err == nil {
-			return response.GetRunId(), response.GetEventId(), response.GetIsWorkflowRunning(), nil
+			return response.Execution.GetRunId(), response.GetNextEventId(), response.GetIsWorkflowRunning(), nil
 		}
 
 		if _, ok := err.(*gen.EntityNotExistsError); !ok || execution.RunId == nil {
@@ -1362,32 +1351,27 @@ func (wh *WorkflowHandler) QueryWorkflow(ctx context.Context,
 	}
 
 	// we should always use the mutable state, since it contains the sticky tasklist information
-	response, err := wh.history.DescribeWorkflowExecution(
-		ctx,
-		&h.DescribeWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(domainInfo.ID),
-			Request: &gen.DescribeWorkflowExecutionRequest{
-				Domain:    queryRequest.Domain,
-				Execution: queryRequest.Execution,
-			},
-		})
+	response, err := wh.history.GetMutableState(ctx, &h.GetMutableStateRequest{
+		DomainUUID: common.StringPtr(domainInfo.ID),
+		Execution:  queryRequest.Execution,
+	})
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
 	clientFeature := client.NewFeatureImpl(
-		*response.ExecutionConfiguration.ClientLibraryVersion,
-		*response.ExecutionConfiguration.ClientFeatureVersion,
-		*response.ExecutionConfiguration.ClientLang,
+		response.GetClientLibraryVersion(),
+		response.GetClientFeatureVersion(),
+		response.GetClientImpl(),
 	)
 
-	queryRequest.Execution.RunId = response.WorkflowExecutionInfo.Execution.RunId
-	if response.ExecutionConfiguration.StickyTaskList == nil || len(response.ExecutionConfiguration.StickyTaskList.GetName()) == 0 {
-		matchingRequest.TaskList = response.ExecutionConfiguration.TaskList
+	queryRequest.Execution.RunId = response.Execution.RunId
+	if len(response.StickyTaskList.GetName()) == 0 {
+		matchingRequest.TaskList = response.TaskList
 	} else if !clientFeature.SupportStickyQuery() {
 		// sticky enabled on the client side, but client chose to use non sticky, which is also the default
-		matchingRequest.TaskList = response.ExecutionConfiguration.TaskList
+		matchingRequest.TaskList = response.TaskList
 	} else {
-		matchingRequest.TaskList = response.ExecutionConfiguration.StickyTaskList
+		matchingRequest.TaskList = response.StickyTaskList
 	}
 
 	matchingResp, err := wh.matching.QueryWorkflow(ctx, matchingRequest)
@@ -1642,7 +1626,7 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(ctx context.Context
 
 		if len(persistenceToken) != 0 {
 			continuation, err = serializeHistoryToken(&getHistoryContinuationToken{
-				RunID:             *matchingResp.WorkflowExecution.RunId,
+				RunID:             matchingResp.WorkflowExecution.GetRunId(),
 				FirstEventID:      firstEventID,
 				NextEventID:       nextEventID,
 				PersistenceToken:  persistenceToken,

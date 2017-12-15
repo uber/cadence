@@ -290,9 +290,9 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 	}, nil
 }
 
-// GetWorkflowExecutionNextEventID retrieves the nextEventId of the workflow execution history
-func (e *historyEngineImpl) GetWorkflowExecutionNextEventID(ctx context.Context,
-	request *h.GetWorkflowExecutionNextEventIDRequest) (*h.GetWorkflowExecutionNextEventIDResponse, error) {
+// GetMutableState retrieves the mutable state of the workflow execution
+func (e *historyEngineImpl) GetMutableState(ctx context.Context,
+	request *h.GetMutableStateRequest) (*h.GetMutableStateResponse, error) {
 
 	domainID, err := getDomainUUID(request.DomainUUID)
 	if err != nil {
@@ -304,7 +304,7 @@ func (e *historyEngineImpl) GetWorkflowExecutionNextEventID(ctx context.Context,
 		RunId:      request.Execution.RunId,
 	}
 
-	response, err := e.getWorkflowExecutionNextEventID(domainID, execution)
+	response, err := e.getMutableState(domainID, execution)
 	if err != nil {
 		return nil, err
 	}
@@ -317,7 +317,7 @@ func (e *historyEngineImpl) GetWorkflowExecutionNextEventID(ctx context.Context,
 
 	// if caller decide to long poll on workflow execution
 	// and the event ID we are looking for is smaller than current next event ID
-	if expectedNextEventID >= response.GetEventId() && response.GetIsWorkflowRunning() {
+	if expectedNextEventID >= response.GetNextEventId() && response.GetIsWorkflowRunning() {
 		subscriberID, channel, err := e.historyEventNotifier.WatchHistoryEvent(newWorkflowIdentifier(domainID, &execution))
 		if err != nil {
 			return nil, err
@@ -325,12 +325,12 @@ func (e *historyEngineImpl) GetWorkflowExecutionNextEventID(ctx context.Context,
 		defer e.historyEventNotifier.UnwatchHistoryEvent(newWorkflowIdentifier(domainID, &execution), subscriberID)
 
 		// check again in case the next event ID is updated
-		response, err = e.getWorkflowExecutionNextEventID(domainID, execution)
+		response, err = e.getMutableState(domainID, execution)
 		if err != nil {
 			return nil, err
 		}
 
-		if expectedNextEventID < response.GetEventId() || !response.GetIsWorkflowRunning() {
+		if expectedNextEventID < response.GetNextEventId() || !response.GetIsWorkflowRunning() {
 			return response, nil
 		}
 
@@ -339,9 +339,9 @@ func (e *historyEngineImpl) GetWorkflowExecutionNextEventID(ctx context.Context,
 		for {
 			select {
 			case event := <-channel:
-				response.EventId = common.Int64Ptr(event.nextEventID)
+				response.NextEventId = common.Int64Ptr(event.nextEventID)
 				response.IsWorkflowRunning = common.BoolPtr(event.isWorkflowRunning)
-				if expectedNextEventID < response.GetEventId() || !response.GetIsWorkflowRunning() {
+				if expectedNextEventID < response.GetNextEventId() || !response.GetIsWorkflowRunning() {
 					return response, nil
 				}
 			case <-timer.C:
@@ -355,8 +355,8 @@ func (e *historyEngineImpl) GetWorkflowExecutionNextEventID(ctx context.Context,
 	return response, nil
 }
 
-func (e *historyEngineImpl) getWorkflowExecutionNextEventID(
-	domainID string, execution workflow.WorkflowExecution) (*h.GetWorkflowExecutionNextEventIDResponse, error) {
+func (e *historyEngineImpl) getMutableState(
+	domainID string, execution workflow.WorkflowExecution) (*h.GetMutableStateResponse, error) {
 
 	context, release, err0 := e.historyCache.getOrCreateWorkflowExecution(domainID, execution)
 	if err0 != nil {
@@ -369,11 +369,19 @@ func (e *historyEngineImpl) getWorkflowExecutionNextEventID(
 		return nil, err1
 	}
 
-	result := &h.GetWorkflowExecutionNextEventIDResponse{}
-	result.EventId = common.Int64Ptr(msBuilder.GetNextEventID())
-	result.RunId = context.workflowExecution.RunId
-	result.Tasklist = &workflow.TaskList{Name: common.StringPtr(context.msBuilder.executionInfo.TaskList)}
-	result.IsWorkflowRunning = common.BoolPtr(msBuilder.isWorkflowExecutionRunning())
+	execution.RunId = context.workflowExecution.RunId
+	result := &h.GetMutableStateResponse{
+		Execution:            &execution,
+		WorkflowType:         &workflow.WorkflowType{Name: common.StringPtr(msBuilder.executionInfo.WorkflowTypeName)},
+		NextEventId:          common.Int64Ptr(msBuilder.GetNextEventID()),
+		TaskList:             &workflow.TaskList{Name: common.StringPtr(context.msBuilder.executionInfo.TaskList)},
+		StickyTaskList:       &workflow.TaskList{Name: common.StringPtr(msBuilder.executionInfo.StickyTaskList)},
+		ClientLibraryVersion: common.StringPtr(msBuilder.executionInfo.ClientLibraryVersion),
+		ClientFeatureVersion: common.StringPtr(msBuilder.executionInfo.ClientFeatureVersion),
+		ClientImpl:           common.StringPtr(msBuilder.executionInfo.ClientImpl),
+		IsWorkflowRunning:    common.BoolPtr(msBuilder.isWorkflowExecutionRunning()),
+	}
+
 	return result, nil
 }
 
@@ -404,11 +412,6 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(msBuilder.executionInfo.WorkflowTimeout),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(msBuilder.executionInfo.DecisionTimeoutValue),
 			ChildPolicy:                         common.ChildPolicyPtr(workflow.ChildPolicyTerminate),
-			StickyTaskList:                      &workflow.TaskList{Name: common.StringPtr(msBuilder.executionInfo.StickyTaskList)},
-			StickyScheduleToStartTimeoutSeconds: common.Int32Ptr(msBuilder.executionInfo.StickyScheduleToStartTimeout),
-			ClientLibraryVersion:                common.StringPtr(msBuilder.executionInfo.ClientLibraryVersion),
-			ClientFeatureVersion:                common.StringPtr(msBuilder.executionInfo.ClientFeatureVersion),
-			ClientLang:                          common.StringPtr(msBuilder.executionInfo.ClientLang),
 		},
 		WorkflowExecutionInfo: &workflow.WorkflowExecutionInfo{
 			Execution:     request.Request.Execution,
@@ -651,7 +654,7 @@ func (e *historyEngineImpl) RespondDecisionTaskCompleted(ctx context.Context, re
 	call := yarpc.CallFromContext(ctx)
 	clientLibVersion := call.Header(common.LibraryVersionHeaderName)
 	clientFeatureVersion := call.Header(common.FeatureVersionHeaderName)
-	clientLang := call.Header(common.LanguageHeaderName)
+	clientImpl := call.Header(common.ClientImplHeaderName)
 
 	context, release, err0 := e.historyCache.getOrCreateWorkflowExecution(domainID, workflowExecution)
 	if err0 != nil {
@@ -712,7 +715,7 @@ Update_History_Loop:
 		}
 		msBuilder.executionInfo.ClientLibraryVersion = clientLibVersion
 		msBuilder.executionInfo.ClientFeatureVersion = clientFeatureVersion
-		msBuilder.executionInfo.ClientLang = clientLang
+		msBuilder.executionInfo.ClientImpl = clientImpl
 
 	Process_Decision_Loop:
 		for _, d := range request.Decisions {

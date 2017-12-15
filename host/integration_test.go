@@ -627,8 +627,8 @@ Loop:
 				},
 			},
 			yarpc.WithHeader(common.LibraryVersionHeaderName, "0.0.1"),
-			yarpc.WithHeader(common.FeatureVersionHeaderName, "1"),
-			yarpc.WithHeader(common.LanguageHeaderName, "go"),
+			yarpc.WithHeader(common.FeatureVersionHeaderName, "1.0.0"),
+			yarpc.WithHeader(common.ClientImplHeaderName, "go"),
 		)
 	}
 
@@ -1882,125 +1882,7 @@ func (s *integrationSuite) TestQueryWorkflow_NonSticky() {
 	s.Equal("unknown-query-type", queryFailError.Message)
 }
 
-func (s *integrationSuite) TestDescribeWorkflowExecution_Sticky() {
-	id := "interation-describe-wfe-test"
-	wt := "interation-describe-wfe-test-type"
-	tl := "interation-describe-wfe-test-tasklist"
-	stl := "interation-query-workflow-test-tasklist-sticky"
-	identity := "worker1"
-
-	workflowType := &workflow.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
-
-	taskList := &workflow.TaskList{}
-	taskList.Name = common.StringPtr(tl)
-
-	stickyTaskList := &workflow.TaskList{}
-	stickyTaskList.Name = common.StringPtr(stl)
-	stickyScheduleToStartTimeoutSeconds := common.Int32Ptr(10)
-
-	execution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(id),
-	}
-
-	// Start workflow execution
-	request := &workflow.StartWorkflowExecutionRequest{
-		RequestId:    common.StringPtr(uuid.New()),
-		Domain:       common.StringPtr(s.domainName),
-		WorkflowId:   common.StringPtr(id),
-		WorkflowType: workflowType,
-		TaskList:     taskList,
-		Input:        nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
-	}
-
-	resp, err0 := s.engine.StartWorkflowExecution(createContext(), request)
-	execution.RunId = resp.RunId
-	s.Nil(err0)
-
-	s.logger.Infof("StartWorkflowExecution: response: %v \n", *resp.RunId)
-
-	describeWorkflowExecution := func() (*workflow.DescribeWorkflowExecutionResponse, error) {
-		return s.engine.DescribeWorkflowExecution(createContext(), &workflow.DescribeWorkflowExecutionRequest{
-			Domain:    common.StringPtr(s.domainName),
-			Execution: &execution,
-		})
-	}
-	dweResponse, err := describeWorkflowExecution()
-	s.Nil(err)
-	s.True(nil == dweResponse.WorkflowExecutionInfo.CloseTime)
-	s.Equal(int64(2), *dweResponse.WorkflowExecutionInfo.HistoryLength) // WorkflowStarted, DecisionScheduled
-
-	// decider logic
-	workflowComplete := false
-	signalSent := false
-	var signalEvent *workflow.HistoryEvent
-	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
-		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
-		if !signalSent {
-			signalSent = true
-
-			s.NoError(err)
-			return nil, []*workflow.Decision{{
-				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeScheduleActivityTask),
-				ScheduleActivityTaskDecisionAttributes: &workflow.ScheduleActivityTaskDecisionAttributes{
-					ActivityId:   common.StringPtr("1"),
-					ActivityType: &workflow.ActivityType{Name: common.StringPtr("test-activity-type")},
-					TaskList:     &workflow.TaskList{Name: &tl},
-					Input:        []byte("test-input"),
-					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
-					ScheduleToStartTimeoutSeconds: common.Int32Ptr(2),
-					StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
-					HeartbeatTimeoutSeconds:       common.Int32Ptr(5),
-				},
-			}}, nil
-		} else if previousStartedEventID > 0 && signalEvent == nil {
-			for _, event := range history.Events[previousStartedEventID:] {
-				if *event.EventType == workflow.EventTypeWorkflowExecutionSignaled {
-					signalEvent = event
-				}
-			}
-		}
-
-		workflowComplete = true
-		return nil, []*workflow.Decision{{
-			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
-			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
-				Result: []byte("Done."),
-			},
-		}}, nil
-	}
-
-	poller := &taskPoller{
-		engine:                              s.engine,
-		domain:                              s.domainName,
-		taskList:                            taskList,
-		identity:                            identity,
-		decisionHandler:                     dtHandler,
-		activityHandler:                     nil,
-		logger:                              s.logger,
-		suite:                               s,
-		sticktTaskList:                      stickyTaskList,
-		stickyScheduleToStartTimeoutSeconds: stickyScheduleToStartTimeoutSeconds,
-	}
-
-	// first decision to schedule new activity, tell server can use sticky tasklist
-	_, err = poller.pollAndProcessDecisionTaskWithAttempt(false, false, false, true, int64(0))
-	s.logger.Infof("pollAndProcessDecisionTask: %v", err)
-	s.Nil(err)
-
-	dweResponse, err = describeWorkflowExecution()
-	s.Nil(err)
-	s.True(nil == dweResponse.WorkflowExecutionInfo.CloseStatus)
-	s.Equal(int64(5), *dweResponse.WorkflowExecutionInfo.HistoryLength) // DecisionStarted, DecisionCompleted, ActivityScheduled
-	s.Equal(tl, dweResponse.ExecutionConfiguration.TaskList.GetName())
-	s.Equal(stl, dweResponse.ExecutionConfiguration.StickyTaskList.GetName())
-	s.Equal(*stickyScheduleToStartTimeoutSeconds, *dweResponse.ExecutionConfiguration.StickyScheduleToStartTimeoutSeconds)
-}
-
-func (s *integrationSuite) TestDescribeWorkflowExecution_NonSticky() {
+func (s *integrationSuite) TestDescribeWorkflowExecution() {
 	id := "interation-describe-wfe-test"
 	wt := "interation-describe-wfe-test-type"
 	tl := "interation-describe-wfe-test-tasklist"

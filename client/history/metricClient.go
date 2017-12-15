@@ -61,18 +61,18 @@ func (c *metricClient) StartWorkflowExecution(
 	return resp, err
 }
 
-func (c *metricClient) GetWorkflowExecutionNextEventID(
+func (c *metricClient) GetMutableState(
 	context context.Context,
-	request *h.GetWorkflowExecutionNextEventIDRequest,
-	opts ...yarpc.CallOption) (*h.GetWorkflowExecutionNextEventIDResponse, error) {
-	c.metricsClient.IncCounter(metrics.HistoryClientGetWorkflowExecutionNextEventIDScope, metrics.CadenceRequests)
+	request *h.GetMutableStateRequest,
+	opts ...yarpc.CallOption) (*h.GetMutableStateResponse, error) {
+	c.metricsClient.IncCounter(metrics.HistoryClientGetMutableStateScope, metrics.CadenceRequests)
 
-	sw := c.metricsClient.StartTimer(metrics.HistoryClientGetWorkflowExecutionNextEventIDScope, metrics.CadenceLatency)
-	resp, err := c.client.GetWorkflowExecutionNextEventID(context, request, opts...)
+	sw := c.metricsClient.StartTimer(metrics.HistoryClientGetMutableStateScope, metrics.CadenceLatency)
+	resp, err := c.client.GetMutableState(context, request, opts...)
 	sw.Stop()
 
 	if err != nil {
-		c.metricsClient.IncCounter(metrics.HistoryClientGetWorkflowExecutionNextEventIDScope, metrics.CadenceFailures)
+		c.metricsClient.IncCounter(metrics.HistoryClientGetMutableStateScope, metrics.CadenceFailures)
 	}
 
 	return resp, err

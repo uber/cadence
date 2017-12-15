@@ -153,7 +153,7 @@ func (s *engineSuite) TearDownTest() {
 	s.mockVisibilityMgr.AssertExpectations(s.T())
 }
 
-func (s *engineSuite) TestGetWorkflowExecutionNextEventIDSync() {
+func (s *engineSuite) TestGetMutableStateSync() {
 	ctx := context.Background()
 	domainID := "domainId"
 	execution := workflow.WorkflowExecution{
@@ -173,15 +173,15 @@ func (s *engineSuite) TestGetWorkflowExecutionNextEventIDSync() {
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gweResponse, nil).Once()
 
 	// test get the next event ID instantly
-	response, err := s.mockHistoryEngine.GetWorkflowExecutionNextEventID(ctx, &history.GetWorkflowExecutionNextEventIDRequest{
+	response, err := s.mockHistoryEngine.GetMutableState(ctx, &history.GetMutableStateRequest{
 		DomainUUID: common.StringPtr(domainID),
 		Execution:  &execution,
 	})
 	s.Nil(err)
-	s.Equal(int64(4), *response.EventId)
+	s.Equal(int64(4), *response.NextEventId)
 }
 
-func (s *engineSuite) TestGetWorkflowExecutionNextEventIDLongPoll() {
+func (s *engineSuite) TestGetMutableStateLongPoll() {
 	ctx := context.Background()
 	domainID := "domainId"
 	execution := workflow.WorkflowExecution{
@@ -224,28 +224,28 @@ func (s *engineSuite) TestGetWorkflowExecutionNextEventIDLongPoll() {
 	}
 
 	// return immediately, since the expected next event ID appears
-	response, err := s.mockHistoryEngine.GetWorkflowExecutionNextEventID(ctx, &history.GetWorkflowExecutionNextEventIDRequest{
+	response, err := s.mockHistoryEngine.GetMutableState(ctx, &history.GetMutableStateRequest{
 		DomainUUID:          common.StringPtr(domainID),
 		Execution:           &execution,
 		ExpectedNextEventId: common.Int64Ptr(4),
 	})
 	s.Nil(err)
-	s.Equal(int64(4), *response.EventId)
+	s.Equal(int64(4), *response.NextEventId)
 
 	// long poll, new event happen before long poll timeout
 	go asycWorkflowUpdate(time.Second * 10)
 	start := time.Now()
-	response, err = s.mockHistoryEngine.GetWorkflowExecutionNextEventID(ctx, &history.GetWorkflowExecutionNextEventIDRequest{
+	response, err = s.mockHistoryEngine.GetMutableState(ctx, &history.GetMutableStateRequest{
 		DomainUUID:          common.StringPtr(domainID),
 		Execution:           &execution,
 		ExpectedNextEventId: common.Int64Ptr(5),
 	})
 	s.True(time.Now().After(start.Add(time.Second * 5)))
 	s.Nil(err)
-	s.Equal(int64(5), *response.EventId)
+	s.Equal(int64(5), *response.NextEventId)
 }
 
-func (s *engineSuite) TestGetWorkflowExecutionNextEventIDLongPollTimeout() {
+func (s *engineSuite) TestGetMutableStateLongPollTimeout() {
 	ctx := context.Background()
 	domainID := "domainId"
 	execution := workflow.WorkflowExecution{
@@ -265,13 +265,13 @@ func (s *engineSuite) TestGetWorkflowExecutionNextEventIDLongPollTimeout() {
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gweResponse, nil).Once()
 
 	// long poll, no event happen after long poll timeout
-	response, err := s.mockHistoryEngine.GetWorkflowExecutionNextEventID(ctx, &history.GetWorkflowExecutionNextEventIDRequest{
+	response, err := s.mockHistoryEngine.GetMutableState(ctx, &history.GetMutableStateRequest{
 		DomainUUID:          common.StringPtr(domainID),
 		Execution:           &execution,
 		ExpectedNextEventId: common.Int64Ptr(5),
 	})
 	s.Nil(err)
-	s.Equal(int64(4), *response.EventId)
+	s.Equal(int64(4), *response.NextEventId)
 }
 
 func (s *engineSuite) TestRespondDecisionTaskCompletedInvalidToken() {

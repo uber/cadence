@@ -144,7 +144,7 @@ type (
 		StickyScheduleToStartTimeout int32
 		ClientLibraryVersion         string
 		ClientFeatureVersion         string
-		ClientLang                   string
+		ClientImpl                   string
 	}
 
 	// TransferTaskInfo describes a transfer task

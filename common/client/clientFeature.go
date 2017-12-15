@@ -22,12 +22,18 @@ package client
 
 import (
 	"strconv"
+	"strings"
 )
 
 const (
 	intBase    = 10
 	intBitSize = 32
+
+	versionDelim = "."
+	versionLen   = 3
 )
+
+var defaultVersion = version{0, 0, 0}
 
 type (
 	// Feature provides information about client's capibility
@@ -39,25 +45,59 @@ type (
 	// This can be useful when service support a feature, while
 	// client does not, so we can use be backward comparible
 	FeatureImpl struct {
-		libVersion     string
-		featureVersion int
+		libVersion     version
+		featureVersion version
 		lang           string
+	}
+
+	version struct {
+		major int64
+		minor int64
+		patch int64
 	}
 )
 
 // NewFeatureImpl make a new NewFeatureImpl
+// libVersion and featureVersion, will be both of format MAJOR.MINOR.PATCH
 func NewFeatureImpl(libVersion string, featureVersion string, lang string) *FeatureImpl {
 	impl := &FeatureImpl{
-		libVersion: libVersion,
-		lang:       lang,
+		libVersion:     parseVersion(libVersion),
+		featureVersion: parseVersion(featureVersion),
+		lang:           lang,
 	}
-	if feature, err := strconv.ParseInt(featureVersion, intBase, intBitSize); err == nil {
-		impl.featureVersion = int(feature)
-	}
+
 	return impl
 }
 
 // SupportStickyQuery whether a client support sticky query
 func (feature *FeatureImpl) SupportStickyQuery() bool {
-	return feature.featureVersion > 0
+	return feature.featureVersion.major > 0
+}
+
+func parseVersion(versionStr string) version {
+	var major int64
+	var minor int64
+	var patch int64
+	var err error
+	versions := strings.Split(versionStr, versionDelim)
+
+	if len(versions) != versionLen {
+		// for any random input version, just assume default
+		return defaultVersion
+	}
+
+	if major, err = strconv.ParseInt(versions[0], intBase, intBitSize); err != nil {
+		return defaultVersion
+	}
+
+	if minor, err = strconv.ParseInt(versions[1], intBase, intBitSize); err != nil {
+		return defaultVersion
+	}
+
+	if patch, err = strconv.ParseInt(versions[2], intBase, intBitSize); err != nil {
+		return defaultVersion
+	}
+
+	return version{major, minor, patch}
+
 }
