@@ -422,6 +422,7 @@ func (s *TestBase) UpdateWorkflowExecutionAndFinish(updatedInfo *WorkflowExecuti
 		DeleteActivityInfo:  nil,
 		UpserTimerInfos:     nil,
 		DeleteTimerInfos:    nil,
+		FinishExecution:     true,
 	})
 }
 

@@ -397,18 +397,21 @@ type (
 
 	// GetCurrentExecutionResponse is the response to GetCurrentExecution
 	GetCurrentExecutionResponse struct {
-		RunID string
+		RunID         string
+		ExecutionInfo *WorkflowExecutionInfo
 	}
 
 	// UpdateWorkflowExecutionRequest is used to update a workflow execution
 	UpdateWorkflowExecutionRequest struct {
-		ExecutionInfo   *WorkflowExecutionInfo
-		TransferTasks   []Task
-		TimerTasks      []Task
-		DeleteTimerTask Task
-		Condition       int64
-		RangeID         int64
-		ContinueAsNew   *CreateWorkflowExecutionRequest
+		ExecutionInfo        *WorkflowExecutionInfo
+		TransferTasks        []Task
+		TimerTasks           []Task
+		DeleteTimerTask      Task
+		Condition            int64
+		RangeID              int64
+		ContinueAsNew        *CreateWorkflowExecutionRequest
+		FinishExecution      bool
+		FinishedExecutionTTL int32
 
 		// Mutable state
 		UpsertActivityInfos       []*ActivityInfo

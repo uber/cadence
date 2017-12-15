@@ -156,6 +156,19 @@ func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persi
 	}
 
 	continueAsNew := updates.continueAsNew
+	finishExecution := false
+	var finishExecutionTTL int32
+	if c.msBuilder.executionInfo.State == persistence.WorkflowStateCompleted {
+		// Workflow execution completed as part of this transaction.
+		// Also transactionally delete workflow execution representing
+		// current run for the execution using cassandra TTL
+		finishExecution = true
+		_, domainConfig, err := c.shard.GetDomainCache().GetDomainByID(c.msBuilder.executionInfo.DomainID)
+		if err != nil {
+			return err
+		}
+		finishExecutionTTL = domainConfig.Retention
+	}
 	if err1 := c.updateWorkflowExecutionWithRetry(&persistence.UpdateWorkflowExecutionRequest{
 		ExecutionInfo:             c.msBuilder.executionInfo,
 		TransferTasks:             transferTasks,
@@ -171,6 +184,8 @@ func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persi
 		NewBufferedEvents:         updates.newBufferedEvents,
 		ClearBufferedEvents:       updates.clearBufferedEvents,
 		ContinueAsNew:             continueAsNew,
+		FinishExecution:           finishExecution,
+		FinishedExecutionTTL:      finishExecutionTTL,
 	}); err1 != nil {
 		switch err1.(type) {
 		case *persistence.ConditionFailedError:

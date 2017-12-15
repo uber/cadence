@@ -51,7 +51,6 @@ const (
 type (
 	historyEngineImpl struct {
 		shard                ShardContext
-		metadataMgr          persistence.MetadataManager
 		historyMgr           persistence.HistoryManager
 		executionManager     persistence.ExecutionManager
 		txProcessor          transferQueueProcessor
@@ -85,8 +84,8 @@ var (
 	// ErrMaxAttemptsExceeded is exported temporarily for integration test
 	ErrMaxAttemptsExceeded = errors.New("Maximum attempts exceeded to update history")
 
-	// for start workflow execution API
 	// FailedWorkflowCloseState is a set of failed workflow close states, used for start workflow policy
+	// for start workflow execution API
 	FailedWorkflowCloseState = map[int]bool{
 		persistence.WorkflowCloseStatusFailed:     true,
 		persistence.WorkflowCloseStatusCanceled:   true,
@@ -96,7 +95,7 @@ var (
 )
 
 // NewEngineWithShardContext creates an instance of history engine
-func NewEngineWithShardContext(shard ShardContext, metadataMgr persistence.MetadataManager,
+func NewEngineWithShardContext(shard ShardContext, domainCache cache.DomainCache,
 	visibilityMgr persistence.VisibilityManager, matching matching.Client, historyClient hc.Client,
 	historyEventNotifier historyEventNotifier) Engine {
 	shardWrapper := &shardContextWrapper{
@@ -108,10 +107,8 @@ func NewEngineWithShardContext(shard ShardContext, metadataMgr persistence.Metad
 	executionManager := shard.GetExecutionManager()
 	historyManager := shard.GetHistoryManager()
 	historyCache := newHistoryCache(shard, logger)
-	domainCache := cache.NewDomainCache(metadataMgr, logger)
 	historyEngImpl := &historyEngineImpl{
 		shard:              shard,
-		metadataMgr:        metadataMgr,
 		historyMgr:         historyManager,
 		executionManager:   executionManager,
 		tokenSerializer:    common.NewJSONTaskTokenSerializer(),

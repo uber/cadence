@@ -239,7 +239,7 @@ const (
 		`and task_id = ? ` +
 		`IF range_id = ?`
 
-	templateUpdateCurrentWorkflowExecutionQuery = `UPDATE executions ` +
+	templateUpdateCurrentWorkflowExecutionQuery = `UPDATE executions USING TTL 0 ` +
 		`SET current_run_id = ?, execution = {run_id: ?, create_request_id: ?}` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
@@ -251,7 +251,7 @@ const (
 
 	templateCreateWorkflowExecutionQuery = `INSERT INTO executions (` +
 		`shard_id, type, domain_id, workflow_id, run_id, visibility_ts, task_id, current_run_id, execution) ` +
-		`VALUES(?, ?, ?, ?, ?, ?, ?, ?, {run_id: ?, create_request_id: ?}) IF NOT EXISTS`
+		`VALUES(?, ?, ?, ?, ?, ?, ?, ?, {run_id: ?, create_request_id: ?}) IF NOT EXISTS USING TTL 0 `
 
 	templateCreateWorkflowExecutionQuery2 = `INSERT INTO executions (` +
 		`shard_id, domain_id, workflow_id, run_id, type, execution, next_event_id, visibility_ts, task_id) ` +
@@ -417,14 +417,9 @@ const (
 		`and task_id = ? ` +
 		`IF next_event_id = ?`
 
-	templateDeleteWorkflowExecutionQuery = `DELETE FROM executions ` +
-		`WHERE shard_id = ? ` +
-		`and type = ? ` +
-		`and domain_id = ? ` +
-		`and workflow_id = ? ` +
-		`and run_id = ? ` +
-		`and visibility_ts = ? ` +
-		`and task_id = ? `
+	templateDeleteWorkflowExecutionQueryWithTTL = `INSERT INTO executions ` +
+		`(shard_id, type, domain_id, workflow_id, run_id, visibility_ts, task_id, current_run_id, execution) ` +
+		`VALUES(?, ?, ?, ?, ?, ?, ?, ?, {run_id: ?, create_request_id: ?, state: ?, close_status: ?}) USING TTL ? `
 
 	templateDeleteWorkflowExecutionMutableStateQuery = `DELETE FROM executions ` +
 		`WHERE shard_id = ? ` +
@@ -843,7 +838,8 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *Creat
 			*request.Execution.WorkflowId,
 			permanentRunID,
 			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID)
+			rowTypeExecutionTaskID,
+		)
 	} else {
 		batch.Query(templateCreateWorkflowExecutionQuery,
 			d.shardID,
@@ -855,7 +851,8 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *Creat
 			rowTypeExecutionTaskID,
 			*request.Execution.RunId,
 			*request.Execution.RunId,
-			request.RequestID)
+			request.RequestID,
+		)
 	}
 
 	parentDomainID := emptyDomainID
@@ -1065,6 +1062,23 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 		d.CreateWorkflowExecutionWithinBatch(startReq, batch, cqlNowTimestamp)
 		d.createTransferTasks(batch, startReq.TransferTasks, startReq.DomainID, *startReq.Execution.WorkflowId,
 			*startReq.Execution.RunId, cqlNowTimestamp)
+	} else if request.FinishExecution {
+		// Delete WorkflowExecution row representing current execution, by using a TTL
+		batch.Query(templateDeleteWorkflowExecutionQueryWithTTL,
+			d.shardID,
+			rowTypeExecution,
+			executionInfo.DomainID,
+			executionInfo.WorkflowID,
+			permanentRunID,
+			defaultVisibilityTimestamp,
+			rowTypeExecutionTaskID,
+			executionInfo.RunID,
+			executionInfo.RunID,
+			executionInfo.CreateRequestID,
+			executionInfo.State,
+			executionInfo.CloseStatus,
+			request.FinishedExecutionTTL,
+		)
 	}
 
 	// Verifies that the RangeID has not changed

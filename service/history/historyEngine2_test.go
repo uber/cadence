@@ -105,6 +105,7 @@ func (s *engine2Suite) SetupTest() {
 		transferSequenceNumber:    1,
 		executionManager:          s.mockExecutionMgr,
 		historyMgr:                s.mockHistoryMgr,
+		domainCache:               cache.NewDomainCache(s.mockMetadataMgr, s.logger),
 		shardManager:              s.mockShardManager,
 		maxTransferSequenceNumber: 100000,
 		closeCh:                   s.shardClosedCh,
