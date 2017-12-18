@@ -94,6 +94,15 @@ type (
 		Msg     string
 	}
 
+	// WorkflowExecutionAlreadyStartedError is returned when creating a new workflow failed.
+	WorkflowExecutionAlreadyStartedError struct {
+		Msg            string
+		StartRequestID string
+		RunID          string
+		State          int
+		CloseStatus    int
+	}
+
 	// TimeoutError is returned when a write operation fails due to a timeout
 	TimeoutError struct {
 		Msg string
@@ -371,6 +380,8 @@ type (
 		DecisionStartedID           int64
 		DecisionStartToCloseTimeout int32
 		ContinueAsNew               bool
+		PreviousRunID               string
+		ExecutionInfo               *WorkflowExecutionInfo
 	}
 
 	// CreateWorkflowExecutionResponse is the response to CreateWorkflowExecutionRequest
@@ -397,8 +408,10 @@ type (
 
 	// GetCurrentExecutionResponse is the response to GetCurrentExecution
 	GetCurrentExecutionResponse struct {
-		RunID         string
-		ExecutionInfo *WorkflowExecutionInfo
+		StartRequestID string
+		RunID          string
+		State          int
+		CloseStatus    int
 	}
 
 	// UpdateWorkflowExecutionRequest is used to update a workflow execution
@@ -715,6 +728,10 @@ func (e *ShardAlreadyExistError) Error() string {
 }
 
 func (e *ShardOwnershipLostError) Error() string {
+	return e.Msg
+}
+
+func (e *WorkflowExecutionAlreadyStartedError) Error() string {
 	return e.Msg
 }
 

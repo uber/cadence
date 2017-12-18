@@ -701,7 +701,6 @@ func (s *engine2Suite) TestStartWorkflowExecution_BrandNew() {
 	taskList := "testTaskList"
 	identity := "testIdentity"
 
-	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything).Return(nil, &workflow.EntityNotExistsError{}).Once()
 	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(nil).Once()
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(&persistence.CreateWorkflowExecutionResponse{TaskID: uuid.New()}, nil).Once()
 
@@ -730,30 +729,22 @@ func (s *engine2Suite) TestStartWorkflowExecution_StillRunning_Dedup() {
 	identity := "testIdentity"
 	requestID := "requestID"
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
-	}
-
-	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything).Return(&persistence.GetCurrentExecutionResponse{RunID: runID}, nil).Once()
-	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(
-		&persistence.GetWorkflowExecutionResponse{
-			State: &persistence.WorkflowMutableState{
-				ExecutionInfo: &persistence.WorkflowExecutionInfo{
-					CreateRequestID: requestID,
-					State:           persistence.WorkflowStateRunning,
-					CloseStatus:     persistence.WorkflowCloseStatusNone,
-				},
-			},
-		},
-		nil,
-	).Once()
+	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(nil).Once()
+	s.mockShardManager.On("UpdateShard", mock.Anything).Return(nil).Once()
+	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(nil, &persistence.WorkflowExecutionAlreadyStartedError{
+		Msg:            "random message",
+		StartRequestID: requestID,
+		RunID:          runID,
+		State:          persistence.WorkflowStateRunning,
+		CloseStatus:    persistence.WorkflowCloseStatusNone,
+	}).Once()
+	s.mockHistoryMgr.On("DeleteWorkflowExecutionHistory", mock.Anything).Return(nil).Once()
 
 	resp, err := s.historyEngine.StartWorkflowExecution(&h.StartWorkflowExecutionRequest{
 		DomainUUID: common.StringPtr(domainID),
 		StartRequest: &workflow.StartWorkflowExecutionRequest{
 			Domain:       common.StringPtr(domainID),
-			WorkflowId:   common.StringPtr(*workflowExecution.WorkflowId),
+			WorkflowId:   common.StringPtr(workflowID),
 			WorkflowType: &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
 			TaskList:     &workflow.TaskList{Name: common.StringPtr(taskList)},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
@@ -763,7 +754,7 @@ func (s *engine2Suite) TestStartWorkflowExecution_StillRunning_Dedup() {
 		},
 	})
 	s.Nil(err)
-	s.NotNil(resp.RunId)
+	s.Equal(runID, resp.GetRunId())
 }
 
 func (s *engine2Suite) TestStartWorkflowExecution_StillRunning_NonDeDup() {
@@ -774,19 +765,16 @@ func (s *engine2Suite) TestStartWorkflowExecution_StillRunning_NonDeDup() {
 	taskList := "testTaskList"
 	identity := "testIdentity"
 
-	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything).Return(&persistence.GetCurrentExecutionResponse{RunID: runID}, nil).Once()
-	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(
-		&persistence.GetWorkflowExecutionResponse{
-			State: &persistence.WorkflowMutableState{
-				ExecutionInfo: &persistence.WorkflowExecutionInfo{
-					CreateRequestID: "oldRequestID",
-					State:           persistence.WorkflowStateRunning,
-					CloseStatus:     persistence.WorkflowCloseStatusNone,
-				},
-			},
-		},
-		nil,
-	).Once()
+	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(nil).Once()
+	s.mockShardManager.On("UpdateShard", mock.Anything).Return(nil).Once()
+	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(nil, &persistence.WorkflowExecutionAlreadyStartedError{
+		Msg:            "random message",
+		StartRequestID: "oldRequestID",
+		RunID:          runID,
+		State:          persistence.WorkflowStateRunning,
+		CloseStatus:    persistence.WorkflowCloseStatusNone,
+	}).Once()
+	s.mockHistoryMgr.On("DeleteWorkflowExecutionHistory", mock.Anything).Return(nil).Once()
 
 	resp, err := s.historyEngine.StartWorkflowExecution(&h.StartWorkflowExecutionRequest{
 		DomainUUID: common.StringPtr(domainID),
@@ -821,25 +809,27 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevSuccess() {
 
 	expecedErrs := []bool{true, false, true}
 
-	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything).Return(&persistence.GetCurrentExecutionResponse{RunID: runID}, nil).Times(len(expecedErrs))
-	// since cache is enabled in the test suit, this will only be executed once
-	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(
-		&persistence.GetWorkflowExecutionResponse{
-			State: &persistence.WorkflowMutableState{
-				ExecutionInfo: &persistence.WorkflowExecutionInfo{
-					CreateRequestID: "oldRequestID",
-					State:           persistence.WorkflowStateCompleted,
-					CloseStatus:     persistence.WorkflowCloseStatusCompleted,
-				},
-			},
-		},
-		nil,
-	).Once()
-	for index, option := range options {
+	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(nil).Times(len(expecedErrs))
+	s.mockShardManager.On("UpdateShard", mock.Anything).Return(nil).Times(len(expecedErrs))
+	s.mockExecutionMgr.On(
+		"CreateWorkflowExecution",
+		mock.MatchedBy(func(request *persistence.CreateWorkflowExecutionRequest) bool { return request.ContinueAsNew == false }),
+	).Return(nil, &persistence.WorkflowExecutionAlreadyStartedError{
+		Msg:            "random message",
+		StartRequestID: "oldRequestID",
+		RunID:          runID,
+		State:          persistence.WorkflowStateCompleted,
+		CloseStatus:    persistence.WorkflowCloseStatusCompleted,
+	}).Times(len(expecedErrs))
 
+	for index, option := range options {
 		if !expecedErrs[index] {
-			s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(nil).Once()
-			s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(&persistence.CreateWorkflowExecutionResponse{TaskID: uuid.New()}, nil).Once()
+			s.mockExecutionMgr.On(
+				"CreateWorkflowExecution",
+				mock.MatchedBy(func(request *persistence.CreateWorkflowExecutionRequest) bool { return request.ContinueAsNew == true }),
+			).Return(&persistence.CreateWorkflowExecutionResponse{TaskID: uuid.New()}, nil).Once()
+		} else {
+			s.mockHistoryMgr.On("DeleteWorkflowExecutionHistory", mock.Anything).Return(nil).Once()
 		}
 
 		resp, err := s.historyEngine.StartWorkflowExecution(&h.StartWorkflowExecutionRequest{
@@ -874,10 +864,6 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevFail() {
 	taskList := "testTaskList"
 	identity := "testIdentity"
 
-	execution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
-	}
-
 	options := []workflow.WorkflowIdReusePolicy{
 		workflow.WorkflowIdReusePolicyAllowDuplicateFailedOnly,
 		workflow.WorkflowIdReusePolicyAllowDuplicate,
@@ -895,29 +881,29 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevFail() {
 	runIDs := []string{"1", "2", "3", "4"}
 
 	for i, closeState := range closeStates {
-		s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything).Return(&persistence.GetCurrentExecutionResponse{RunID: runIDs[i]}, nil).Times(len(expecedErrs))
-		// since cache is enabled in the test suit, this will only be executed once
-		execution.RunId = common.StringPtr(runIDs[i])
-		s.mockExecutionMgr.On("GetWorkflowExecution", &persistence.GetWorkflowExecutionRequest{
-			DomainID:  domainID,
-			Execution: execution,
-		}).Return(
-			&persistence.GetWorkflowExecutionResponse{
-				State: &persistence.WorkflowMutableState{
-					ExecutionInfo: &persistence.WorkflowExecutionInfo{
-						CreateRequestID: "oldRequestID",
-						State:           persistence.WorkflowStateCompleted,
-						CloseStatus:     closeState,
-					},
-				},
-			},
-			nil,
-		).Once()
+
+		s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(nil).Times(len(expecedErrs))
+		s.mockShardManager.On("UpdateShard", mock.Anything).Return(nil).Times(len(expecedErrs))
+		s.mockExecutionMgr.On(
+			"CreateWorkflowExecution",
+			mock.MatchedBy(func(request *persistence.CreateWorkflowExecutionRequest) bool { return request.ContinueAsNew == false }),
+		).Return(nil, &persistence.WorkflowExecutionAlreadyStartedError{
+			Msg:            "random message",
+			StartRequestID: "oldRequestID",
+			RunID:          runIDs[i],
+			State:          persistence.WorkflowStateCompleted,
+			CloseStatus:    closeState,
+		}).Times(len(expecedErrs))
+
 		for j, option := range options {
 
 			if !expecedErrs[j] {
-				s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(nil).Once()
-				s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(&persistence.CreateWorkflowExecutionResponse{TaskID: uuid.New()}, nil).Once()
+				s.mockExecutionMgr.On(
+					"CreateWorkflowExecution",
+					mock.MatchedBy(func(request *persistence.CreateWorkflowExecutionRequest) bool { return request.ContinueAsNew == true }),
+				).Return(&persistence.CreateWorkflowExecutionResponse{TaskID: uuid.New()}, nil).Once()
+			} else {
+				s.mockHistoryMgr.On("DeleteWorkflowExecutionHistory", mock.Anything).Return(nil).Once()
 			}
 
 			resp, err := s.historyEngine.StartWorkflowExecution(&h.StartWorkflowExecutionRequest{

@@ -80,9 +80,9 @@ func (s *cassandraPersistenceSuite) TestPersistenceStartWorkflow() {
 	task1, err1 := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType1", 20, 14, nil, 3, 0, 2, nil)
 	s.NotNil(err1, "Expected workflow creation to fail.")
 	log.Infof("Unable to start workflow execution: %v", err1)
-	startedErr, ok := err1.(*gen.WorkflowExecutionAlreadyStartedError)
+	startedErr, ok := err1.(*WorkflowExecutionAlreadyStartedError)
 	s.True(ok)
-	s.Equal(workflowExecution.RunId, startedErr.RunId, startedErr.Message)
+	s.Equal(workflowExecution.GetRunId(), startedErr.RunID, startedErr.Msg)
 	s.Empty(task1, "Expected empty task identifier.")
 
 	response, err2 := s.WorkflowMgr.CreateWorkflowExecution(&CreateWorkflowExecutionRequest{
