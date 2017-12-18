@@ -226,13 +226,13 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 		// It is ok to use 0 for TransactionID because RunID is unique so there are
 		// no potential duplicates to override.
 		TransactionID: 0,
-		FirstEventID:  *startedEvent.EventId,
+		FirstEventID:  startedEvent.GetEventId(),
 		Events:        serializedHistory,
 	})
 	if err != nil {
 		return nil, err
 	}
-	msBuilder.executionInfo.LastFirstEventID = *startedEvent.EventId
+	msBuilder.executionInfo.LastFirstEventID = startedEvent.GetEventId()
 
 	deleteEvents := func() {
 		// We created the history events but failed to create workflow execution, so cleanup the history which could cause
@@ -368,6 +368,8 @@ func (e *historyEngineImpl) GetMutableState(ctx context.Context,
 	if err != nil {
 		return nil, err
 	}
+	// set the run id in case query the current running workflwo
+	execution.RunId = response.RunId
 
 	// expectedNextEventID is 0 when caller want to get the current next event ID without blocking
 	expectedNextEventID := common.FirstEventID

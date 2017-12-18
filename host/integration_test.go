@@ -3741,7 +3741,7 @@ func (s *integrationSuite) TestGetWorkflowExecutionHistory_Close() {
 	// here do a long pull (which return immediately with at least the WorkflowExecutionStarted)
 	start := time.Now()
 	events, token = getHistory(s.domainName, workflowID, token, true)
-	s.True(time.Now().Before(start.Add(time.Second * 5)))
+	s.True(time.Now().After(start.Add(time.Second * 10)))
 	// since we are only interested in close event
 	s.Empty(events)
 	s.NotNil(token)
@@ -3754,7 +3754,7 @@ func (s *integrationSuite) TestGetWorkflowExecutionHistory_Close() {
 	})
 	start = time.Now()
 	events, token = getHistory(s.domainName, workflowID, token, true)
-	s.True(time.Now().After(start.Add(time.Second * 5)))
+	s.True(time.Now().After(start.Add(time.Second * 10)))
 	// since we are only interested in close event
 	s.Empty(events)
 	s.NotNil(token)

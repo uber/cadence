@@ -928,7 +928,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		response, err := wh.history.GetMutableState(ctx, &h.GetMutableStateRequest{
 			DomainUUID:          common.StringPtr(domainUUID),
 			Execution:           execution,
-			ExpectedNextEventId: expectedNextEventID,
+			ExpectedNextEventId: common.Int64Ptr(expectedNextEventID),
 		})
 
 		if err != nil {
@@ -948,6 +948,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	var isWorkflowRunning bool
 
 	// process the token for paging
+	queryNextEventID := common.EndEventID
 	if getRequest.NextPageToken != nil {
 		token, err = deserializeHistoryToken(getRequest.NextPageToken)
 		if err != nil {
@@ -961,17 +962,23 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 
 		// we need to update the current next event ID and whether workflow is running
 		if len(token.PersistenceToken) == 0 && isLongPoll && token.IsWorkflowRunning {
-			token.FirstEventID = token.NextEventID
-			_, lastFirstEventID, nextEventID, isWorkflowRunning, err = queryHistory(domainInfo.ID, execution, &token.NextEventID)
+			if !isCloseEventOnly {
+				queryNextEventID = token.NextEventID
+			}
+			_, lastFirstEventID, nextEventID, isWorkflowRunning, err = queryHistory(domainInfo.ID, execution, queryNextEventID)
 			if err != nil {
 				return nil, wh.error(err, scope)
 			}
 
+			token.FirstEventID = token.NextEventID
 			token.NextEventID = nextEventID
 			token.IsWorkflowRunning = isWorkflowRunning
 		}
 	} else {
-		runID, lastFirstEventID, nextEventID, isWorkflowRunning, err = queryHistory(domainInfo.ID, execution, nil)
+		if !isCloseEventOnly {
+			queryNextEventID = common.FirstEventID
+		}
+		runID, lastFirstEventID, nextEventID, isWorkflowRunning, err = queryHistory(domainInfo.ID, execution, queryNextEventID)
 		if err != nil {
 			return nil, wh.error(err, scope)
 		}
@@ -979,7 +986,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		execution.RunId = &runID
 
 		token.RunID = runID
-		token.FirstEventID = 0
+		token.FirstEventID = common.FirstEventID
 		token.NextEventID = nextEventID
 		token.IsWorkflowRunning = isWorkflowRunning
 		token.PersistenceToken = nil
