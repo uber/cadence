@@ -600,7 +600,6 @@ func (s *matchingEngineSuite) TestConcurrentPublishConsumeActivitiesWithZeroDisp
 	errCt := s.concurrentPublishConsumeActivities(workerCount, taskCount, dispatchLimitFn)
 	// atleast 4 times from 0 dispatch poll, but quite a bit more until TTL is hit and throttle limit
 	// is reset
-	fmt.Println("Error count: ", errCt)
 	s.True(errCt >= 4 && errCt < (workerCount*int(taskCount)))
 }
 
@@ -699,7 +698,6 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 			defer wg.Done()
 			for i := int64(0); i < taskCount; {
 				maxDispatch := dispatchLimitFn(wNum, i)
-				fmt.Println("Max dispatch: ", maxDispatch)
 				result, err := s.matchingEngine.PollForActivityTask(s.callContext, &matching.PollForActivityTaskRequest{
 					DomainUUID: common.StringPtr(domainID),
 					PollRequest: &workflow.PollForActivityTaskRequest{
@@ -1324,6 +1322,7 @@ func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch() {
 				})}
 		}, nil)
 
+	time.Sleep(time.Second)
 	// complete rangeSize events
 	for i := int64(0); i < rangeSize; i++ {
 		result, err := s.matchingEngine.PollForActivityTask(s.callContext, &matching.PollForActivityTaskRequest{

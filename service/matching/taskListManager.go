@@ -64,7 +64,7 @@ type taskListManager interface {
 type rateLimiter struct {
 	sync.RWMutex
 	maxDispatchPerSecond *float64
-	limiter              *rate.Limiter
+	globalLimiter        atomic.Value
 	// TTL is used to determine whether to update the limit. Until TTL, pick
 	// lower(existing TTL, input TTL). After TTL, pick input TTL if different from existing TTL
 	ttlTimer *time.Timer
@@ -72,23 +72,27 @@ type rateLimiter struct {
 }
 
 func newRateLimiter(maxDispatchPerSecond *float64, ttl time.Duration) rateLimiter {
-	return rateLimiter{
+	rl := rateLimiter{
 		maxDispatchPerSecond: maxDispatchPerSecond,
-		// Note: Potentially expose burst config in future
-		limiter: rate.NewLimiter(
-			rate.Limit(*maxDispatchPerSecond), int(*maxDispatchPerSecond),
-		),
-		ttl:      ttl,
-		ttlTimer: time.NewTimer(ttl),
+		ttl:                  ttl,
+		ttlTimer:             time.NewTimer(ttl),
 	}
+	// Note: Potentially expose burst config in future
+	limiter := rate.NewLimiter(
+		rate.Limit(*maxDispatchPerSecond), int(*maxDispatchPerSecond),
+	)
+	rl.globalLimiter.Store(limiter)
+	return rl
 }
 
 func (rl *rateLimiter) UpdateMaxDispatch(maxDispatchPerSecond *float64) {
 	if rl.shouldUpdate(maxDispatchPerSecond) {
 		rl.Lock()
-		defer rl.Unlock()
 		rl.maxDispatchPerSecond = maxDispatchPerSecond
-		rl.limiter = rate.NewLimiter(rate.Limit(*maxDispatchPerSecond), int(*maxDispatchPerSecond))
+		rl.Unlock()
+		rl.globalLimiter.Store(
+			rate.NewLimiter(rate.Limit(*maxDispatchPerSecond), int(*maxDispatchPerSecond)),
+		)
 	}
 }
 
@@ -110,15 +114,13 @@ func (rl *rateLimiter) shouldUpdate(maxDispatchPerSecond *float64) bool {
 }
 
 func (rl *rateLimiter) Wait(ctx context.Context) error {
-	rl.RLock()
-	defer rl.RUnlock()
-	return rl.limiter.Wait(ctx)
+	limiter := rl.globalLimiter.Load().(*rate.Limiter)
+	return limiter.Wait(ctx)
 }
 
 func (rl *rateLimiter) Reserve() *rate.Reservation {
-	rl.RLock()
-	defer rl.RUnlock()
-	return rl.limiter.Reserve()
+	limiter := rl.globalLimiter.Load().(*rate.Limiter)
+	return limiter.Reserve()
 }
 
 func newTaskListManager(
@@ -139,11 +141,12 @@ func newTaskListManagerWithRateLimiter(
 	// To perform one db operation if there are no pollers
 	taskBufferSize := config.GetTasksBatchSize - 1
 	tlMgr := &taskListManagerImpl{
-		engine:     e,
-		taskBuffer: make(chan *persistence.TaskInfo, taskBufferSize),
-		notifyCh:   make(chan struct{}, 1),
-		shutdownCh: make(chan struct{}),
-		taskListID: taskList,
+		engine:                  e,
+		taskBuffer:              make(chan *persistence.TaskInfo, taskBufferSize),
+		notifyCh:                make(chan struct{}, 1),
+		shutdownCh:              make(chan struct{}),
+		deliverBufferShutdownCh: make(chan struct{}),
+		taskListID:              taskList,
 		logger: e.logger.WithFields(bark.Fields{
 			logging.TagTaskListType: taskList.taskType,
 			logging.TagTaskListName: taskList.taskListName,
@@ -193,10 +196,13 @@ type taskListManagerImpl struct {
 	// only if there is waiting poll that consumes from it. Tasks in taskBuffer will blocking-add to
 	// this channel
 	tasksForPoll chan *getTaskResult
-	notifyCh     chan struct{}  // Used as signal to notify pump of new tasks
-	shutdownCh   chan struct{}  // Delivers stop to the pump that populates taskBuffer
-	startWG      sync.WaitGroup // ensures that background processes do not start until setup is ready
-	stopped      int32
+	notifyCh     chan struct{} // Used as signal to notify pump of new tasks
+	// Note: We need two shutdown channels so we can stop task pump independently of the deliverBuffer
+	// loop in getTasksPump in unit tests
+	shutdownCh              chan struct{}  // Delivers stop to the pump that populates taskBuffer
+	deliverBufferShutdownCh chan struct{}  // Delivers stop to the pump that populates taskBuffer
+	startWG                 sync.WaitGroup // ensures that background processes do not start until setup is ready
+	stopped                 int32
 
 	sync.Mutex
 	taskAckManager          ackManager // tracks ackLevel for delivered messages
@@ -255,6 +261,7 @@ func (c *taskListManagerImpl) Stop() {
 		return
 	}
 	close(c.shutdownCh)
+	close(c.deliverBufferShutdownCh)
 	c.taskWriter.Stop()
 	c.engine.removeTaskListManager(c.taskListID)
 	logging.LogTaskListUnloadedEvent(c.logger)
@@ -596,12 +603,13 @@ func (c *taskListManagerImpl) getTasksPump() {
 				defer wg.Done()
 				select {
 				case <-done:
-				case <-c.shutdownCh:
+				case <-c.deliverBufferShutdownCh:
 				}
 				cancel()
 			}()
 			err := c.rateLimiter.Wait(ctx)
 			if err != nil {
+				c.logger.Warn("Unable to send tasks for poll, limit exceeded")
 				done <- struct{}{}
 				wg.Wait()
 				c.metricsClient.IncCounter(scope, metrics.AddThrottleCounter)
@@ -615,7 +623,7 @@ func (c *taskListManagerImpl) getTasksPump() {
 					break deliverBufferTasksLoop
 				}
 				c.tasksForPoll <- &getTaskResult{task: task}
-			case <-c.shutdownCh:
+			case <-c.deliverBufferShutdownCh:
 				break deliverBufferTasksLoop
 			}
 		}
