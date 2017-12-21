@@ -591,7 +591,7 @@ func (s *matchingEngineSuite) TestConcurrentPublishConsumeActivitiesWithZeroDisp
 	// Set a short long poll expiration so we don't have to wait too long for 0 throttling cases
 	s.matchingEngine.config.LongPollExpirationInterval = 20 * time.Millisecond
 	dispatchLimitFn := func(wc int, tc int64) float64 {
-		if tc == 0 && wc%5 == 0 { // Gets triggered atleast 4 times
+		if tc%50 == 0 && wc%5 == 0 { // Gets triggered atleast 20 times
 			return 0
 		}
 		return _defaultTaskDispatchRPS
@@ -599,9 +599,9 @@ func (s *matchingEngineSuite) TestConcurrentPublishConsumeActivitiesWithZeroDisp
 	const workerCount = 20
 	const taskCount = 100
 	errCt := s.concurrentPublishConsumeActivities(workerCount, taskCount, dispatchLimitFn)
-	// atleast 4 times from 0 dispatch poll, but quite a bit more until TTL is hit and throttle limit
-	// is reset
-	s.True(errCt >= 4 && errCt < (workerCount*int(taskCount)))
+	// atleast once from 0 dispatch poll, and until TTL is hit at which time throttle limit is reset
+	// hard to predict exactly how many times, since the atomic.Value load might not have updated.
+	s.True(errCt >= 1 && errCt < (workerCount*int(taskCount)))
 }
 
 func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
