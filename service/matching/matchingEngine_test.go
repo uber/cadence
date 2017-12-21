@@ -542,6 +542,7 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 			zeroDispatchCt++
 			continue
 		}
+		wg.Wait()
 		s.NoError(err)
 		s.NoError(pollErr)
 		s.NotNil(result)
