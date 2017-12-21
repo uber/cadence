@@ -23,6 +23,6 @@ package common
 type (
 	// PProfInitializer initialize the pprof based on config
 	PProfInitializer interface {
-		Initialize() error
+		Start() error
 	}
 )

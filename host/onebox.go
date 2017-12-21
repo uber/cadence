@@ -160,7 +160,7 @@ func (c *cadenceImpl) HistoryPProfPort() []int {
 		ports = append(ports, port)
 	}
 
-	c.logger.Infof("History pprof prots: %v", ports)
+	c.logger.Infof("History pprof ports: %v", ports)
 	return ports
 }
 

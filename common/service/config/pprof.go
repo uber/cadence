@@ -45,9 +45,13 @@ func (cfg *PProf) NewInitializer(logger bark.Logger) *PProfInitializerImpl {
 	}
 }
 
-// Initialize the pprof based on config
-func (initializer *PProfInitializerImpl) Initialize() error {
+// Start the pprof based on config
+func (initializer *PProfInitializerImpl) Start() error {
 	port := initializer.PProf.Port
+	if port == 0 {
+		initializer.Logger.Info("PProf not started due to port not set")
+		return nil
+	}
 
 	go func() {
 		initializer.Logger.Info("PProf listen on %d", port)

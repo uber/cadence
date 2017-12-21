@@ -119,7 +119,7 @@ func (h *serviceImpl) Start() {
 	h.metricsScope.Counter(metrics.RestartCount).Inc(1)
 	h.runtimeMetricsReporter.Start()
 
-	if err := h.pprofInitializer.Initialize(); err != nil {
+	if err := h.pprofInitializer.Start(); err != nil {
 		h.logger.WithFields(bark.Fields{logging.TagErr: err}).Fatal("Failed to start pprof")
 	}
 
