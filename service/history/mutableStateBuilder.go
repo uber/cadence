@@ -1448,7 +1448,6 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(decisionCompletedEventID int
 		WorkflowTimeout:      newStateBuilder.executionInfo.WorkflowTimeout,
 		DecisionTimeoutValue: newStateBuilder.executionInfo.DecisionTimeoutValue,
 		ExecutionContext:     nil,
-		LastFirstEventID:     startedEvent.GetEventId(),
 		NextEventID:          newStateBuilder.GetNextEventID(),
 		LastProcessedEvent:   common.EmptyEventID,
 		TransferTasks: []persistence.Task{&persistence.DecisionTask{

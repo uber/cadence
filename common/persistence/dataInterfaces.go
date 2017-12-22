@@ -372,7 +372,6 @@ type (
 		WorkflowTimeout             int32
 		DecisionTimeoutValue        int32
 		ExecutionContext            []byte
-		LastFirstEventID            int64
 		NextEventID                 int64
 		LastProcessedEvent          int64
 		TransferTasks               []Task

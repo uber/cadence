@@ -901,7 +901,7 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *Creat
 		request.ExecutionContext,
 		WorkflowStateCreated,
 		WorkflowCloseStatusNone,
-		request.LastFirstEventID,
+		common.FirstEventID,
 		request.NextEventID,
 		request.LastProcessedEvent,
 		cqlNowTimestamp,

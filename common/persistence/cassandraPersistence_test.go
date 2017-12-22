@@ -94,7 +94,6 @@ func (s *cassandraPersistenceSuite) TestPersistenceStartWorkflow() {
 		WorkflowTimeout:      20,
 		DecisionTimeoutValue: 13,
 		ExecutionContext:     nil,
-		LastFirstEventID:     common.FirstEventID,
 		NextEventID:          int64(3),
 		LastProcessedEvent:   0,
 		RangeID:              s.ShardInfo.RangeID - 1,
