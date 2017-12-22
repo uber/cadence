@@ -216,7 +216,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 	if serializedError != nil {
 		logging.LogHistorySerializationErrorEvent(e.logger, serializedError, fmt.Sprintf(
 			"HistoryEventBatch serialization error on start workflow.  WorkflowID: %v, RunID: %v",
-			*execution.WorkflowId, *execution.RunId))
+			execution.GetWorkflowId(), execution.GetRunId()))
 		return nil, serializedError
 	}
 
@@ -310,14 +310,14 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 		case workflow.WorkflowIdReusePolicyAllowDuplicateFailedOnly:
 			if _, ok := FailedWorkflowCloseState[prevCloseState]; !ok {
 				deleteEvents()
-				msg := "Workflow execution already finished successfully. WorkflowId: %v, RunId: %v."
+				msg := "Workflow execution already finished successfully. WorkflowId: %v, RunId: %v. Workflow ID reuse policy: allow duplicate workflow ID if last run failed."
 				return errFn(msg, prevStartRequestID, execution.GetWorkflowId(), prevRunID)
 			}
 		case workflow.WorkflowIdReusePolicyAllowDuplicate:
 			// as long as workflow not running, so this case has no check
 		case workflow.WorkflowIdReusePolicyRejectDuplicate:
 			deleteEvents()
-			msg := "Workflow execution already finished. WorkflowId: %v, RunId: %v."
+			msg := "Workflow execution already finished. WorkflowId: %v, RunId: %v. Workflow ID reuse policy: reject duplicate workflow ID."
 			return errFn(msg, prevStartRequestID, execution.GetWorkflowId(), prevRunID)
 		default:
 			deleteEvents()
