@@ -3749,7 +3749,7 @@ func (s *integrationSuite) TestGetWorkflowExecutionHistory_Close() {
 	// here do a long pull and check # of events and time elapsed
 	// make first decision to schedule activity, this should affect the long poll above
 	time.AfterFunc(time.Second*8, func() {
-		errDecision1 := poller.pollAndProcessDecisionTask(false, false)
+		_, errDecision1 := poller.pollAndProcessDecisionTask(false, false)
 		s.logger.Infof("pollAndProcessDecisionTask: %v", errDecision1)
 	})
 	start = time.Now()
@@ -3765,7 +3765,7 @@ func (s *integrationSuite) TestGetWorkflowExecutionHistory_Close() {
 		s.logger.Infof("pollAndProcessDecisionTask: %v", errActivity)
 	})
 	time.AfterFunc(time.Second*8, func() {
-		errDecision2 := poller.pollAndProcessDecisionTask(false, false)
+		_, errDecision2 := poller.pollAndProcessDecisionTask(false, false)
 		s.logger.Infof("pollAndProcessDecisionTask: %v", errDecision2)
 	})
 	for token != nil {

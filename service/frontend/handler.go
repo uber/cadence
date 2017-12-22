@@ -924,7 +924,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	// 2. the last first event ID (the event ID of the last batch of events in the history)
 	// 3. the next event ID
 	// 4. whether the workflow is closed
-	queryHistory := func(domainUUID string, execution *gen.WorkflowExecution, expectedNextEventID *int64) (string, int64, int64, bool, error) {
+	queryHistory := func(domainUUID string, execution *gen.WorkflowExecution, expectedNextEventID int64) (string, int64, int64, bool, error) {
 		response, err := wh.history.GetMutableState(ctx, &h.GetMutableStateRequest{
 			DomainUUID:          common.StringPtr(domainUUID),
 			Execution:           execution,
@@ -934,7 +934,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		if err != nil {
 			return "", 0, 0, false, err
 		}
-		return response.GetRunId(), response.GetLastFirstEventId(), response.GetNextEventId(), response.GetIsWorkflowRunning(), nil
+		return response.Execution.GetRunId(), response.GetLastFirstEventId(), response.GetNextEventId(), response.GetIsWorkflowRunning(), nil
 	}
 
 	isLongPoll := getRequest.GetWaitForNewEvent()
