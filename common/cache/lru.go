@@ -36,7 +36,7 @@ var (
 type lru struct {
 	mut      sync.Mutex
 	byAccess *list.List
-	byKey    map[string]*list.Element
+	byKey    map[interface{}]*list.Element
 	maxSize  int
 	ttl      time.Duration
 	pin      bool
@@ -51,7 +51,7 @@ func New(maxSize int, opts *Options) Cache {
 
 	return &lru{
 		byAccess: list.New(),
-		byKey:    make(map[string]*list.Element, opts.InitialCapacity),
+		byKey:    make(map[interface{}]*list.Element, opts.InitialCapacity),
 		ttl:      opts.TTL,
 		maxSize:  maxSize,
 		pin:      opts.Pin,
@@ -74,7 +74,7 @@ func NewLRUWithInitialCapacity(initialCapacity, maxSize int) Cache {
 }
 
 // Get retrieves the value stored under the given key
-func (c *lru) Get(key string) interface{} {
+func (c *lru) Get(key interface{}) interface{} {
 	c.mut.Lock()
 	defer c.mut.Unlock()
 
@@ -104,7 +104,7 @@ func (c *lru) Get(key string) interface{} {
 }
 
 // Put puts a new value associated with a given key, returning the existing value (if present)
-func (c *lru) Put(key string, value interface{}) interface{} {
+func (c *lru) Put(key interface{}, value interface{}) interface{} {
 	if c.pin {
 		panic("Cannot use Put API in Pin mode. Use Delete and PutIfNotExist if necessary")
 	}
@@ -113,7 +113,7 @@ func (c *lru) Put(key string, value interface{}) interface{} {
 }
 
 // PutIfNotExist puts a value associated with a given key if it does not exist
-func (c *lru) PutIfNotExist(key string, value interface{}) (interface{}, error) {
+func (c *lru) PutIfNotExist(key interface{}, value interface{}) (interface{}, error) {
 	existing, err := c.putInternal(key, value, false)
 	if err != nil {
 		return nil, err
@@ -128,7 +128,7 @@ func (c *lru) PutIfNotExist(key string, value interface{}) (interface{}, error) 
 }
 
 // Delete deletes a key, value pair associated with a key
-func (c *lru) Delete(key string) {
+func (c *lru) Delete(key interface{}) {
 	c.mut.Lock()
 	defer c.mut.Unlock()
 
@@ -143,7 +143,7 @@ func (c *lru) Delete(key string) {
 }
 
 // Release decrements the ref count of a pinned element.
-func (c *lru) Release(key string) {
+func (c *lru) Release(key interface{}) {
 	c.mut.Lock()
 	defer c.mut.Unlock()
 
@@ -162,7 +162,7 @@ func (c *lru) Size() int {
 
 // Put puts a new value associated with a given key, returning the existing value (if present)
 // allowUpdate flag is used to control overwrite behavior if the value exists
-func (c *lru) putInternal(key string, value interface{}, allowUpdate bool) (interface{}, error) {
+func (c *lru) putInternal(key interface{}, value interface{}, allowUpdate bool) (interface{}, error) {
 	c.mut.Lock()
 	defer c.mut.Unlock()
 
@@ -219,7 +219,7 @@ func (c *lru) putInternal(key string, value interface{}, allowUpdate bool) (inte
 }
 
 type cacheEntry struct {
-	key        string
+	key        interface{}
 	expiration time.Time
 	value      interface{}
 	refCount   int

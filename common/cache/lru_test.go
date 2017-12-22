@@ -28,6 +28,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type keyType struct {
+	dummyString string
+	dummyInt    int
+}
+
 func TestLRU(t *testing.T) {
 	cache := NewLRU(5)
 
@@ -60,6 +65,27 @@ func TestLRU(t *testing.T) {
 
 	cache.Delete("A")
 	assert.Nil(t, cache.Get("A"))
+}
+
+func TestGenerics(t *testing.T) {
+	key := keyType{
+		dummyString: "some random key",
+		dummyInt:    59,
+	}
+	value := "some random value"
+
+	cache := NewLRU(5)
+	cache.Put(key, value)
+
+	assert.Equal(t, value, cache.Get(key))
+	assert.Equal(t, value, cache.Get(keyType{
+		dummyString: "some random key",
+		dummyInt:    59,
+	}))
+	assert.Nil(t, cache.Get(keyType{
+		dummyString: "some other random key",
+		dummyInt:    56,
+	}))
 }
 
 func TestLRUWithTTL(t *testing.T) {

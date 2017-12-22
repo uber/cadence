@@ -29,20 +29,20 @@ import (
 type Cache interface {
 	// Get retrieves an element based on a key, returning nil if the element
 	// does not exist
-	Get(key string) interface{}
+	Get(key interface{}) interface{}
 
 	// Put adds an element to the cache, returning the previous element
-	Put(key string, value interface{}) interface{}
+	Put(key interface{}, value interface{}) interface{}
 
 	// PutIfNotExist puts a value associated with a given key if it does not exist
-	PutIfNotExist(key string, value interface{}) (interface{}, error)
+	PutIfNotExist(key interface{}, value interface{}) (interface{}, error)
 
 	// Delete deletes an element in the cache
-	Delete(key string)
+	Delete(key interface{})
 
 	// Release decrements the ref count of a pinned element. If the ref count
 	// drops to 0, the element can be evicted from the cache.
-	Release(key string)
+	Release(key interface{})
 
 	// Size returns the number of entries currently stored in the Cache
 	Size() int
