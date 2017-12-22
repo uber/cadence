@@ -89,10 +89,10 @@ func (rl *rateLimiter) UpdateMaxDispatch(maxDispatchPerSecond *float64) {
 	if rl.shouldUpdate(maxDispatchPerSecond) {
 		rl.Lock()
 		rl.maxDispatchPerSecond = maxDispatchPerSecond
-		rl.Unlock()
 		rl.globalLimiter.Store(
 			rate.NewLimiter(rate.Limit(*maxDispatchPerSecond), int(*maxDispatchPerSecond)),
 		)
+		rl.Unlock()
 	}
 }
 
@@ -596,6 +596,7 @@ func (c *taskListManagerImpl) getTasksPump() {
 	deliverBufferTasksLoop:
 		for {
 			ctx, cancel := context.WithCancel(context.Background())
+			// Cancel context if process shutdown signal is received or if Wait returns successfully
 			done := make(chan struct{})
 			var wg sync.WaitGroup
 			wg.Add(1)
