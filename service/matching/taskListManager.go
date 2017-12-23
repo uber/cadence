@@ -140,12 +140,15 @@ func newTaskListManagerWithRateLimiter(
 ) taskListManager {
 	// To perform one db operation if there are no pollers
 	taskBufferSize := config.GetTasksBatchSize - 1
+	ctx, cancel := context.WithCancel(context.Background())
 	tlMgr := &taskListManagerImpl{
 		engine:                  e,
 		taskBuffer:              make(chan *persistence.TaskInfo, taskBufferSize),
 		notifyCh:                make(chan struct{}, 1),
 		shutdownCh:              make(chan struct{}),
 		deliverBufferShutdownCh: make(chan struct{}),
+		cancelCtx:               ctx,
+		cancelFunc:              cancel,
 		taskListID:              taskList,
 		logger: e.logger.WithFields(bark.Fields{
 			logging.TagTaskListType: taskList.taskType,
@@ -203,6 +206,13 @@ type taskListManagerImpl struct {
 	deliverBufferShutdownCh chan struct{}  // Delivers stop to the pump that populates taskBuffer
 	startWG                 sync.WaitGroup // ensures that background processes do not start until setup is ready
 	stopped                 int32
+	// The cancel objects are to cancel the ratelimiter Wait in deliverBufferTasksLoop. The ideal
+	// approach is to use request-scoped contexts and use a unique one for each call to Wait. However
+	// in order to cancel it on shutdown, we need a new goroutine for each call that would wait on
+	// the shutdown channel. To optimize on efficiency, we instead create one and tag it on the struct
+	// so the cancel can be called directly on shutdown.
+	cancelCtx  context.Context
+	cancelFunc context.CancelFunc
 
 	sync.Mutex
 	taskAckManager          ackManager // tracks ackLevel for delivered messages
@@ -260,8 +270,9 @@ func (c *taskListManagerImpl) Stop() {
 	if !atomic.CompareAndSwapInt32(&c.stopped, 0, 1) {
 		return
 	}
-	close(c.shutdownCh)
 	close(c.deliverBufferShutdownCh)
+	c.cancelFunc()
+	close(c.shutdownCh)
 	c.taskWriter.Stop()
 	c.engine.removeTaskListManager(c.taskListID)
 	logging.LogTaskListUnloadedEvent(c.logger)
@@ -595,29 +606,16 @@ func (c *taskListManagerImpl) getTasksPump() {
 	go func() {
 	deliverBufferTasksLoop:
 		for {
-			ctx, cancel := context.WithCancel(context.Background())
-			// Cancel context if process shutdown signal is received or if Wait returns successfully
-			done := make(chan struct{})
-			var wg sync.WaitGroup
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				select {
-				case <-done:
-				case <-c.deliverBufferShutdownCh:
-				}
-				cancel()
-			}()
-			err := c.rateLimiter.Wait(ctx)
+			err := c.rateLimiter.Wait(c.cancelCtx)
 			if err != nil {
+				if err == context.Canceled {
+					c.logger.Warn("Tasklist manager context is cancelled, shutting down")
+					break deliverBufferTasksLoop
+				}
 				c.logger.Warn("Unable to send tasks for poll, limit exceeded")
-				done <- struct{}{}
-				wg.Wait()
 				c.metricsClient.IncCounter(scope, metrics.AddThrottleCounter)
 				continue
 			}
-			done <- struct{}{}
-			wg.Wait()
 			select {
 			case task, ok := <-c.taskBuffer:
 				if !ok { // Task list getTasks pump is shutdown
