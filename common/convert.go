@@ -20,7 +20,11 @@
 
 package common
 
-import s "github.com/uber/cadence/.gen/go/shared"
+import (
+	"time"
+
+	s "github.com/uber/cadence/.gen/go/shared"
+)
 
 // IntPtr makes a copy and returns the pointer to an int.
 func IntPtr(v int) *int {
@@ -55,6 +59,12 @@ func Float64Ptr(v float64) *float64 {
 // BoolPtr makes a copy and returns the pointer to a bool.
 func BoolPtr(v bool) *bool {
 	return &v
+}
+
+// TimePtr makes a copy and returns the pointer to a string for time.Time, as ISO 8601 format.
+func TimePtr(v time.Time) *string {
+	time := v.UTC().Format(time.RFC3339)
+	return &time
 }
 
 // StringPtr makes a copy and returns the pointer to a string.

@@ -930,3 +930,30 @@ struct DescribeWorkflowExecutionResponse {
   10: optional WorkflowExecutionConfiguration executionConfiguration
   20: optional WorkflowExecutionInfo workflowExecutionInfo
 }
+
+struct GetPollerHistoryRequest {
+  10: optional string domain
+  20: optional TaskList taskList
+  30: optional TaskListType taskListType
+}
+
+struct GetPollerHistoryResponse {
+  10: optional list<PollerInfo> pollers
+}
+
+enum TaskListType {
+  /*
+   * Decision type of tasklist
+   */
+  Decision,
+  /*
+   * Activity type of tasklist
+   */
+  Activity,
+}
+
+struct PollerInfo {
+  // ISO 8601 format
+  10: optional string timestamp
+  20: optional string identity
+}

@@ -44,6 +44,9 @@ type Cache interface {
 	// drops to 0, the element can be evicted from the cache.
 	Release(key interface{})
 
+	// Iterator returns the iterator of the cache
+	Iterator() Iterator
+
 	// Size returns the number of entries currently stored in the Cache
 	Size() int
 }
@@ -70,3 +73,23 @@ type Options struct {
 // appropriate signature and i is the interface{} scheduled for
 // deletion, Cache calls go f(i)
 type RemovedFunc func(interface{})
+
+// Iterator represents the interface for cache iterators
+type Iterator interface {
+	// Close closes the iterator
+	// and releases any allocated resources
+	Close()
+	// Entries returns a channel of MapEntry
+	// objects that can be used in a range loop
+	Entries() <-chan Entry
+}
+
+// Entry represents a key-value entry within the map
+type Entry interface {
+	// Key represents the key
+	Key() interface{}
+	// Value represents the value
+	Value() interface{}
+	// Timestamp represents the time when the value is updated
+	Timestamp() time.Time
+}

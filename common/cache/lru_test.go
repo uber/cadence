@@ -116,8 +116,9 @@ func TestLRUCacheConcurrentAccess(t *testing.T) {
 	start := make(chan struct{})
 	var wg sync.WaitGroup
 	for i := 0; i < 20; i++ {
-		wg.Add(1)
+		wg.Add(2)
 
+		// concurrent get and put
 		go func() {
 			defer wg.Done()
 
@@ -125,6 +126,23 @@ func TestLRUCacheConcurrentAccess(t *testing.T) {
 
 			for j := 0; j < 1000; j++ {
 				cache.Get("A")
+				cache.Put("A", "fooo")
+			}
+		}()
+
+		// confurrent iteration
+		go func() {
+			defer wg.Done()
+
+			<-start
+
+			for j := 0; j < 50; j++ {
+				result := []Entry{}
+				it := cache.Iterator()
+				defer it.Close()
+				for entry := range it.Entries() {
+					result = append(result, entry)
+				}
 			}
 		}()
 	}
@@ -179,4 +197,29 @@ func TestRemovedFuncWithTTL(t *testing.T) {
 	case <-timeout.C:
 		t.Error("RemovedFunc did not send true on channel ch")
 	}
+}
+
+func TestIterator(t *testing.T) {
+	expected := map[string]string{
+		"A": "Alpha",
+		"B": "Beta",
+		"G": "Gamma",
+		"D": "Delta",
+	}
+
+	cache := NewLRU(5)
+
+	for k, v := range expected {
+		cache.Put(k, v)
+	}
+
+	actual := map[string]string{}
+
+	ite := cache.Iterator()
+	defer ite.Close()
+	for entry := range ite.Entries() {
+		actual[entry.Key().(string)] = entry.Value().(string)
+	}
+
+	assert.Equal(t, expected, actual)
 }

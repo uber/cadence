@@ -146,6 +146,17 @@ func (c *clientImpl) CancelOutstandingPoll(ctx context.Context, request *m.Cance
 	return client.CancelOutstandingPoll(ctx, request, opts...)
 }
 
+func (c *clientImpl) GetPollerHistory(ctx context.Context, request *m.GetPollerHistoryRequest, opts ...yarpc.CallOption) (*workflow.GetPollerHistoryResponse, error) {
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+	client, err := c.getHostForRequest(request.GetRequest.TaskList.GetName())
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return client.GetPollerHistory(ctx, request, opts...)
+}
+
 func (c *clientImpl) getHostForRequest(key string) (matchingserviceclient.Interface, error) {
 	host, err := c.resolver.Lookup(key)
 	if err != nil {

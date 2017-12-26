@@ -162,3 +162,20 @@ func (c *metricClient) CancelOutstandingPoll(
 
 	return err
 }
+
+func (c *metricClient) GetPollerHistory(
+	ctx context.Context,
+	request *m.GetPollerHistoryRequest,
+	opts ...yarpc.CallOption) (*workflow.GetPollerHistoryResponse, error) {
+	c.metricsClient.IncCounter(metrics.MatchingClientGetPollerHistoryScope, metrics.CadenceRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.MatchingClientGetPollerHistoryScope, metrics.CadenceLatency)
+	resp, err := c.client.GetPollerHistory(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.MatchingClientGetPollerHistoryScope, metrics.CadenceFailures)
+	}
+
+	return resp, err
+}

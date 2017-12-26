@@ -793,6 +793,152 @@ func (v *CancelOutstandingPollRequest) GetPollerID() (o string) {
 	return
 }
 
+type GetPollerHistoryRequest struct {
+	DomainUUID *string                         `json:"domainUUID,omitempty"`
+	GetRequest *shared.GetPollerHistoryRequest `json:"getRequest,omitempty"`
+}
+
+// ToWire translates a GetPollerHistoryRequest struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *GetPollerHistoryRequest) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.DomainUUID != nil {
+		w, err = wire.NewValueString(*(v.DomainUUID)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.GetRequest != nil {
+		w, err = v.GetRequest.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _GetPollerHistoryRequest_Read(w wire.Value) (*shared.GetPollerHistoryRequest, error) {
+	var v shared.GetPollerHistoryRequest
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a GetPollerHistoryRequest struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a GetPollerHistoryRequest struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v GetPollerHistoryRequest
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *GetPollerHistoryRequest) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.DomainUUID = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TStruct {
+				v.GetRequest, err = _GetPollerHistoryRequest_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a GetPollerHistoryRequest
+// struct.
+func (v *GetPollerHistoryRequest) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [2]string
+	i := 0
+	if v.DomainUUID != nil {
+		fields[i] = fmt.Sprintf("DomainUUID: %v", *(v.DomainUUID))
+		i++
+	}
+	if v.GetRequest != nil {
+		fields[i] = fmt.Sprintf("GetRequest: %v", v.GetRequest)
+		i++
+	}
+
+	return fmt.Sprintf("GetPollerHistoryRequest{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this GetPollerHistoryRequest match the
+// provided GetPollerHistoryRequest.
+//
+// This function performs a deep comparison.
+func (v *GetPollerHistoryRequest) Equals(rhs *GetPollerHistoryRequest) bool {
+	if !_String_EqualsPtr(v.DomainUUID, rhs.DomainUUID) {
+		return false
+	}
+	if !((v.GetRequest == nil && rhs.GetRequest == nil) || (v.GetRequest != nil && rhs.GetRequest != nil && v.GetRequest.Equals(rhs.GetRequest))) {
+		return false
+	}
+
+	return true
+}
+
+// GetDomainUUID returns the value of DomainUUID if it is set or its
+// zero value if it is unset.
+func (v *GetPollerHistoryRequest) GetDomainUUID() (o string) {
+	if v.DomainUUID != nil {
+		return *v.DomainUUID
+	}
+
+	return
+}
+
 type PollForActivityTaskRequest struct {
 	DomainUUID  *string                            `json:"domainUUID,omitempty"`
 	PollerID    *string                            `json:"pollerID,omitempty"`

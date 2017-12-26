@@ -207,6 +207,8 @@ const (
 	MatchingClientRespondQueryTaskCompletedScope
 	// MatchingClientCancelOutstandingPollScope tracks RPC calls to matching service
 	MatchingClientCancelOutstandingPollScope
+	// MatchingClientGetPollerHistoryScope tracks RPC calls to matching service
+	MatchingClientGetPollerHistoryScope
 
 	NumCommonScopes
 )
@@ -263,6 +265,8 @@ const (
 	FrontendQueryWorkflowScope
 	// FrontendDescribeWorkflowExecutionScope is the metric scope for frontend.DescribeWorkflowExecution
 	FrontendDescribeWorkflowExecutionScope
+	// FrontendGetPollerHistoryScope is the metric scope for frontend.GetPollerHistory
+	FrontendGetPollerHistoryScope
 
 	NumFrontendScopes
 )
@@ -351,6 +355,8 @@ const (
 	MatchingRespondQueryTaskCompletedScope
 	// MatchingCancelOutstandingPollScope tracks CancelOutstandingPoll API calls received by service
 	MatchingCancelOutstandingPollScope
+	// MatchingGetPollerHistoryScope tracks GetPollerHistory API calls received by service
+	MatchingGetPollerHistoryScope
 
 	NumMatchingScopes
 )
@@ -408,6 +414,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		MatchingClientQueryWorkflowScope:                 {operation: "MatchingClientQueryWorkflow"},
 		MatchingClientRespondQueryTaskCompletedScope:     {operation: "MatchingClientRespondQueryTaskCompleted"},
 		MatchingClientCancelOutstandingPollScope:         {operation: "MatchingClientCancelOutstandingPoll"},
+		MatchingClientGetPollerHistoryScope:              {operation: "MatchingClientGetPollerHistory"},
 	},
 	// Frontend Scope Names
 	Frontend: {
@@ -436,6 +443,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FrontendDeprecateDomainScope:                  {operation: "DeprecateDomain"},
 		FrontendQueryWorkflowScope:                    {operation: "QueryWorkflow"},
 		FrontendDescribeWorkflowExecutionScope:        {operation: "DescribeWorkflowExecution"},
+		FrontendGetPollerHistoryScope:                 {operation: "GetPollerHistory"},
 	},
 	// History Scope Names
 	History: {
@@ -480,6 +488,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		MatchingQueryWorkflowScope:             {operation: "QueryWorkflow"},
 		MatchingRespondQueryTaskCompletedScope: {operation: "RespondQueryTaskCompleted"},
 		MatchingCancelOutstandingPollScope:     {operation: "CancelOutstandingPoll"},
+		MatchingGetPollerHistoryScope:          {operation: "GetPollerHistory"},
 	},
 }
 

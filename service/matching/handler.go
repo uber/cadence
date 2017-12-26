@@ -169,6 +169,16 @@ func (h *Handler) CancelOutstandingPoll(ctx context.Context,
 	return h.handleErr(err, scope)
 }
 
+// GetPollerHistory get poller information for given tasklist
+func (h *Handler) GetPollerHistory(ctx context.Context, request *m.GetPollerHistoryRequest) (*gen.GetPollerHistoryResponse, error) {
+	scope := metrics.MatchingGetPollerHistoryScope
+	sw := h.startRequestProfile("GetPollerHistory", scope)
+	defer sw.Stop()
+
+	response, err := h.engine.GetPollerHistory(ctx, request)
+	return response, h.handleErr(err, scope)
+}
+
 func (h *Handler) handleErr(err error, scope int) error {
 
 	if err == nil {

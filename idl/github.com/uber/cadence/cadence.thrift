@@ -351,4 +351,14 @@ service WorkflowService {
       3: shared.EntityNotExistsError entityNotExistError,
     )
 
+  /**
+  * GetPollerHistory returns pollers which poll from given tasklist in last few minutes.
+  **/
+  shared.GetPollerHistoryResponse GetPollerHistory(1: shared.GetPollerHistoryRequest request)
+    throws (
+        1: shared.BadRequestError badRequestError,
+        2: shared.InternalServiceError internalServiceError,
+        3: shared.EntityNotExistsError entityNotExistError,
+      )
+
 }

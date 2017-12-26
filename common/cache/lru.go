@@ -33,14 +33,90 @@ var (
 )
 
 // lru is a concurrent fixed size cache that evicts elements in lru order
-type lru struct {
-	mut      sync.Mutex
-	byAccess *list.List
-	byKey    map[interface{}]*list.Element
-	maxSize  int
-	ttl      time.Duration
-	pin      bool
-	rmFunc   RemovedFunc
+type (
+	lru struct {
+		mut      sync.Mutex
+		byAccess *list.List
+		byKey    map[interface{}]*list.Element
+		maxSize  int
+		ttl      time.Duration
+		pin      bool
+		rmFunc   RemovedFunc
+	}
+
+	iteratorImpl struct {
+		stopCh chan struct{}
+		dataCh chan Entry
+	}
+
+	entryImpl struct {
+		key       interface{}
+		timestamp time.Time
+		value     interface{}
+		refCount  int
+	}
+)
+
+// Close closes the iterator
+func (it *iteratorImpl) Close() {
+	close(it.stopCh)
+}
+
+// Entries returns a channel of map entries
+func (it *iteratorImpl) Entries() <-chan Entry {
+	return it.dataCh
+}
+
+// Iterator returns an iterator to the map. This map
+// does not use re-entrant locks, so access or modification
+// to the map during iteration can cause a dead lock.
+func (c *lru) Iterator() Iterator {
+
+	iterator := &iteratorImpl{
+		dataCh: make(chan Entry, 8),
+		stopCh: make(chan struct{}),
+	}
+
+	go func(iterator *iteratorImpl) {
+		c.mut.Lock()
+		for _, element := range c.byKey {
+			entry := element.Value.(*entryImpl)
+			if c.isEntryExpired(entry) {
+				// Entry has expired
+				c.deleteInternal(element)
+				continue
+			}
+			// make a copy of the entry so there will be no concurrent access to this entry
+			entry = &entryImpl{
+				key:       entry.key,
+				value:     entry.value,
+				timestamp: entry.timestamp,
+			}
+			select {
+			case iterator.dataCh <- entry:
+			case <-iterator.stopCh:
+				c.mut.Unlock()
+				close(iterator.dataCh)
+				return
+			}
+		}
+		c.mut.Unlock()
+		close(iterator.dataCh)
+	}(iterator)
+
+	return iterator
+}
+
+func (entry *entryImpl) Key() interface{} {
+	return entry.key
+}
+
+func (entry *entryImpl) Value() interface{} {
+	return entry.value
+}
+
+func (entry *entryImpl) Timestamp() time.Time {
+	return entry.timestamp
 }
 
 // New creates a new cache with the given options
@@ -78,29 +154,25 @@ func (c *lru) Get(key interface{}) interface{} {
 	c.mut.Lock()
 	defer c.mut.Unlock()
 
-	elt := c.byKey[key]
-	if elt == nil {
+	element := c.byKey[key]
+	if element == nil {
 		return nil
 	}
 
-	cacheEntry := elt.Value.(*cacheEntry)
+	entry := element.Value.(*entryImpl)
 
 	if c.pin {
-		cacheEntry.refCount++
+		entry.refCount++
 	}
 
-	if cacheEntry.refCount == 0 && !cacheEntry.expiration.IsZero() && time.Now().After(cacheEntry.expiration) {
+	if c.isEntryExpired(entry) {
 		// Entry has expired
-		if c.rmFunc != nil {
-			go c.rmFunc(cacheEntry.value)
-		}
-		c.byAccess.Remove(elt)
-		delete(c.byKey, cacheEntry.key)
+		c.deleteInternal(element)
 		return nil
 	}
 
-	c.byAccess.MoveToFront(elt)
-	return cacheEntry.value
+	c.byAccess.MoveToFront(element)
+	return entry.value
 }
 
 // Put puts a new value associated with a given key, returning the existing value (if present)
@@ -132,13 +204,9 @@ func (c *lru) Delete(key interface{}) {
 	c.mut.Lock()
 	defer c.mut.Unlock()
 
-	elt := c.byKey[key]
-	if elt != nil {
-		entry := c.byAccess.Remove(elt).(*cacheEntry)
-		if c.rmFunc != nil {
-			go c.rmFunc(entry.value)
-		}
-		delete(c.byKey, key)
+	element := c.byKey[key]
+	if element != nil {
+		c.deleteInternal(element)
 	}
 }
 
@@ -148,8 +216,8 @@ func (c *lru) Release(key interface{}) {
 	defer c.mut.Unlock()
 
 	elt := c.byKey[key]
-	cacheEntry := elt.Value.(*cacheEntry)
-	cacheEntry.refCount--
+	entry := elt.Value.(*entryImpl)
+	entry.refCount--
 }
 
 // Size returns the number of entries currently in the lru, useful if cache is not full
@@ -168,13 +236,13 @@ func (c *lru) putInternal(key interface{}, value interface{}, allowUpdate bool) 
 
 	elt := c.byKey[key]
 	if elt != nil {
-		entry := elt.Value.(*cacheEntry)
+		entry := elt.Value.(*entryImpl)
 		existing := entry.value
 		if allowUpdate {
 			entry.value = value
 		}
 		if c.ttl != 0 {
-			entry.expiration = time.Now().Add(c.ttl)
+			entry.timestamp = time.Now()
 		}
 		c.byAccess.MoveToFront(elt)
 		if c.pin {
@@ -183,7 +251,7 @@ func (c *lru) putInternal(key interface{}, value interface{}, allowUpdate bool) 
 		return existing, nil
 	}
 
-	entry := &cacheEntry{
+	entry := &entryImpl{
 		key:   key,
 		value: value,
 	}
@@ -193,34 +261,34 @@ func (c *lru) putInternal(key interface{}, value interface{}, allowUpdate bool) 
 	}
 
 	if c.ttl != 0 {
-		entry.expiration = time.Now().Add(c.ttl)
+		entry.timestamp = time.Now()
 	}
 
 	c.byKey[key] = c.byAccess.PushFront(entry)
 	if len(c.byKey) == c.maxSize {
-		oldest := c.byAccess.Back().Value.(*cacheEntry)
+		oldest := c.byAccess.Back().Value.(*entryImpl)
 
 		if oldest.refCount > 0 {
 			// Cache is full with pinned elements
 			// revert the insert and return
-			c.byAccess.Remove(c.byAccess.Front())
-			delete(c.byKey, key)
+			c.deleteInternal(c.byAccess.Front())
 			return nil, ErrCacheFull
 		}
 
-		c.byAccess.Remove(c.byAccess.Back())
-		if c.rmFunc != nil {
-			go c.rmFunc(oldest.value)
-		}
-		delete(c.byKey, oldest.key)
+		c.deleteInternal(c.byAccess.Back())
 	}
 
 	return nil, nil
 }
 
-type cacheEntry struct {
-	key        interface{}
-	expiration time.Time
-	value      interface{}
-	refCount   int
+func (c *lru) deleteInternal(element *list.Element) {
+	entry := c.byAccess.Remove(element).(*entryImpl)
+	if c.rmFunc != nil {
+		go c.rmFunc(entry.value)
+	}
+	delete(c.byKey, entry.key)
+}
+
+func (c *lru) isEntryExpired(entry *entryImpl) bool {
+	return entry.refCount == 0 && !entry.timestamp.IsZero() && time.Now().After(entry.timestamp.Add(c.ttl))
 }

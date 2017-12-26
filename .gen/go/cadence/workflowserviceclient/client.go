@@ -54,6 +54,12 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*shared.DescribeWorkflowExecutionResponse, error)
 
+	GetPollerHistory(
+		ctx context.Context,
+		Request *shared.GetPollerHistoryRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.GetPollerHistoryResponse, error)
+
 	GetWorkflowExecutionHistory(
 		ctx context.Context,
 		GetRequest *shared.GetWorkflowExecutionHistoryRequest,
@@ -277,6 +283,29 @@ func (c client) DescribeWorkflowExecution(
 	}
 
 	success, err = cadence.WorkflowService_DescribeWorkflowExecution_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) GetPollerHistory(
+	ctx context.Context,
+	_Request *shared.GetPollerHistoryRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.GetPollerHistoryResponse, err error) {
+
+	args := cadence.WorkflowService_GetPollerHistory_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result cadence.WorkflowService_GetPollerHistory_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = cadence.WorkflowService_GetPollerHistory_Helper.UnwrapResponse(&result)
 	return
 }
 

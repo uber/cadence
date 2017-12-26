@@ -54,6 +54,12 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) error
 
+	GetPollerHistory(
+		ctx context.Context,
+		Request *matching.GetPollerHistoryRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.GetPollerHistoryResponse, error)
+
 	PollForActivityTask(
 		ctx context.Context,
 		PollRequest *matching.PollForActivityTaskRequest,
@@ -169,6 +175,29 @@ func (c client) CancelOutstandingPoll(
 	}
 
 	err = matching.MatchingService_CancelOutstandingPoll_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) GetPollerHistory(
+	ctx context.Context,
+	_Request *matching.GetPollerHistoryRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.GetPollerHistoryResponse, err error) {
+
+	args := matching.MatchingService_GetPollerHistory_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result matching.MatchingService_GetPollerHistory_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = matching.MatchingService_GetPollerHistory_Helper.UnwrapResponse(&result)
 	return
 }
 

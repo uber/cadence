@@ -49,6 +49,11 @@ type Interface interface {
 		Request *matching.CancelOutstandingPollRequest,
 	) error
 
+	GetPollerHistory(
+		ctx context.Context,
+		Request *matching.GetPollerHistoryRequest,
+	) (*shared.GetPollerHistoryResponse, error)
+
 	PollForActivityTask(
 		ctx context.Context,
 		PollRequest *matching.PollForActivityTaskRequest,
@@ -115,6 +120,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
+				Name: "GetPollerHistory",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.GetPollerHistory),
+				},
+				Signature:    "GetPollerHistory(Request *matching.GetPollerHistoryRequest) (*shared.GetPollerHistoryResponse)",
+				ThriftModule: matching.ThriftModule,
+			},
+
+			thrift.Method{
 				Name: "PollForActivityTask",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -160,7 +176,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 7)
+	procedures := make([]transport.Procedure, 0, 8)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
@@ -215,6 +231,25 @@ func (h handler) CancelOutstandingPoll(ctx context.Context, body wire.Value) (th
 
 	hadError := err != nil
 	result, err := matching.MatchingService_CancelOutstandingPoll_Helper.WrapResponse(err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) GetPollerHistory(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args matching.MatchingService_GetPollerHistory_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.GetPollerHistory(ctx, args.Request)
+
+	hadError := err != nil
+	result, err := matching.MatchingService_GetPollerHistory_Helper.WrapResponse(success, err)
 
 	var response thrift.Response
 	if err == nil {

@@ -159,6 +159,39 @@ func (mr *_MockClientRecorder) DescribeWorkflowExecution(
 	return mr.mock.ctrl.RecordCall(mr.mock, "DescribeWorkflowExecution", args...)
 }
 
+// GetPollerHistory responds to a GetPollerHistory call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().GetPollerHistory(gomock.Any(), ...).Return(...)
+// 	... := client.GetPollerHistory(...)
+func (m *MockClient) GetPollerHistory(
+	ctx context.Context,
+	_Request *shared.GetPollerHistoryRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.GetPollerHistoryResponse, err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "GetPollerHistory", args...)
+	success, _ = ret[i].(*shared.GetPollerHistoryResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) GetPollerHistory(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "GetPollerHistory", args...)
+}
+
 // GetWorkflowExecutionHistory responds to a GetWorkflowExecutionHistory call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
