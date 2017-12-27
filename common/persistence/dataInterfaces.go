@@ -26,6 +26,7 @@ import (
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/metrics"
 )
 
 // Domain status
@@ -685,7 +686,7 @@ type (
 	// ExecutionManagerFactory creates an instance of ExecutionManager for a given shard
 	ExecutionManagerFactory interface {
 		Closeable
-		CreateExecutionManager(shardID int) (ExecutionManager, error)
+		CreateExecutionManager(shardID int, metricsClient metrics.Client) (ExecutionManager, error)
 	}
 
 	// TaskManager is used to manage tasks
