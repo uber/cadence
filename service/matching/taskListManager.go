@@ -596,38 +596,37 @@ func (c *taskListManagerImpl) trySyncMatch(task *persistence.TaskInfo) (*persist
 	}
 }
 
+func (c *taskListManagerImpl) deliverBufferTasksForPoll() {
+deliverBufferTasksLoop:
+	for {
+		err := c.rateLimiter.Wait(c.cancelCtx)
+		if err != nil {
+			if err == context.Canceled {
+				c.logger.Warn("Tasklist manager context is cancelled, shutting down")
+				break deliverBufferTasksLoop
+			}
+			c.logger.Warn("Unable to send tasks for poll, limit exceeded")
+			c.metricsClient.IncCounter(metrics.MatchingTaskListMgrScope, metrics.AddThrottleCounter)
+			continue
+		}
+		select {
+		case task, ok := <-c.taskBuffer:
+			if !ok { // Task list getTasks pump is shutdown
+				break deliverBufferTasksLoop
+			}
+			c.tasksForPoll <- &getTaskResult{task: task}
+		case <-c.deliverBufferShutdownCh:
+			break deliverBufferTasksLoop
+		}
+	}
+}
+
 func (c *taskListManagerImpl) getTasksPump() {
 	defer close(c.taskBuffer)
 	c.startWG.Wait()
 
+	go c.deliverBufferTasksForPoll()
 	updateAckTimer := time.NewTimer(c.config.UpdateAckInterval)
-	scope := metrics.MatchingTaskListMgrScope
-
-	go func() {
-	deliverBufferTasksLoop:
-		for {
-			err := c.rateLimiter.Wait(c.cancelCtx)
-			if err != nil {
-				if err == context.Canceled {
-					c.logger.Warn("Tasklist manager context is cancelled, shutting down")
-					break deliverBufferTasksLoop
-				}
-				c.logger.Warn("Unable to send tasks for poll, limit exceeded")
-				c.metricsClient.IncCounter(scope, metrics.AddThrottleCounter)
-				continue
-			}
-			select {
-			case task, ok := <-c.taskBuffer:
-				if !ok { // Task list getTasks pump is shutdown
-					break deliverBufferTasksLoop
-				}
-				c.tasksForPoll <- &getTaskResult{task: task}
-			case <-c.deliverBufferShutdownCh:
-				break deliverBufferTasksLoop
-			}
-		}
-	}()
-
 getTasksPumpLoop:
 	for {
 		select {

@@ -38,6 +38,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-common/bark"
+	"github.com/uber/cadence/client/history"
 
 	"github.com/uber-go/tally"
 	gohistory "github.com/uber/cadence/.gen/go/history"
@@ -108,12 +109,21 @@ func (s *matchingEngineSuite) SetupTest() {
 	s.matchingEngine.Start()
 }
 
-func (s *matchingEngineSuite) newMatchingEngine(config *Config, taskMgr persistence.TaskManager) *matchingEngineImpl {
+func (s *matchingEngineSuite) newMatchingEngine(
+	config *Config, taskMgr persistence.TaskManager,
+) *matchingEngineImpl {
+	return newMatchingEngine(config, taskMgr, s.historyClient, s.logger)
+}
+
+func newMatchingEngine(
+	config *Config, taskMgr persistence.TaskManager, historyClient history.Client,
+	logger bark.Logger,
+) *matchingEngineImpl {
 	return &matchingEngineImpl{
 		taskManager:     taskMgr,
-		historyService:  s.historyClient,
+		historyService:  historyClient,
 		taskLists:       make(map[taskListID]taskListManager),
-		logger:          s.logger,
+		logger:          logger,
 		metricsClient:   metrics.NewClient(tally.NoopScope, metrics.Matching),
 		tokenSerializer: common.NewJSONTaskTokenSerializer(),
 		config:          config,
