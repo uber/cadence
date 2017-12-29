@@ -131,6 +131,11 @@ struct SignalWorkflowExecutionRequest {
   20: optional shared.SignalWorkflowExecutionRequest signalRequest
 }
 
+struct DeleteWorkflowExecutionSignalRequest {
+  10: optional string domainUUID
+  20: optional shared.DeleteWorkflowExecutionSignalRequest deleteRequest
+}
+
 struct TerminateWorkflowExecutionRequest {
   10: optional string domainUUID
   20: optional shared.TerminateWorkflowExecutionRequest terminateRequest
@@ -320,6 +325,18 @@ service HistoryService {
   * WorkflowExecutionSignaled event recorded in the history and a decision task being created for the execution.
   **/
   void SignalWorkflowExecution(1: SignalWorkflowExecutionRequest signalRequest)
+    throws (
+      1: shared.BadRequestError badRequestError,
+      2: shared.InternalServiceError internalServiceError,
+      3: shared.EntityNotExistsError entityNotExistError,
+      4: ShardOwnershipLostError shardOwnershipLostError,
+    )
+
+  /**
+  * DeleteWorkflowExecutionSignal is used to delete a signal request ID that was previously recorded.  This is currently
+  * used to clean execution info when signal decision finished.
+  **/
+  void DeleteWorkflowExecutionSignal(1: DeleteWorkflowExecutionSignalRequest deleteRequest)
     throws (
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,

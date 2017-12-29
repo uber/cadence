@@ -197,6 +197,12 @@ func (s *TestShardContext) GetTimeSource() common.TimeSource {
 	return common.NewRealTimeSource()
 }
 
+// DeleteWorkflowExecutionSignal test implementation
+func (s *TestShardContext) DeleteWorkflowExecutionSignal(
+	request *persistence.DeleteWorkflowExecutionSignalRequestedRequest) error {
+	return s.executionMgr.DeleteSignalRequestedID(request)
+}
+
 // SetupWorkflowStoreWithOptions to setup workflow test base
 func (s *TestBase) SetupWorkflowStoreWithOptions(options persistence.TestBaseOptions) {
 	s.TestBase.SetupWorkflowStoreWithOptions(options)

@@ -66,6 +66,7 @@ const (
 	TransferTaskTypeCloseExecution
 	TransferTaskTypeCancelExecution
 	TransferTaskTypeStartChildExecution
+	TransferTaskTypeSignalExecution
 )
 
 // Types of timers
@@ -261,6 +262,15 @@ type (
 		ScheduleID       int64
 	}
 
+	// SignalExecutionTask identifies a transfer task for signal execution
+	SignalExecutionTask struct {
+		TaskID           int64
+		TargetDomainID   string
+		TargetWorkflowID string
+		TargetRunID      string
+		ScheduleID       int64
+	}
+
 	// StartChildExecutionTask identifies a transfer task for starting child execution
 	StartChildExecutionTask struct {
 		TaskID           int64
@@ -290,6 +300,8 @@ type (
 		TimerInfos          map[string]*TimerInfo
 		ChildExecutionInfos map[int64]*ChildExecutionInfo
 		RequestCancelInfos  map[int64]*RequestCancelInfo
+		SignalInfos         map[int64]*SignalInfo
+		SignalRequestedIDs  map[string]struct{}
 		ExecutionInfo       *WorkflowExecutionInfo
 		BufferedEvents      []*SerializedHistoryEventBatch
 	}
@@ -336,6 +348,14 @@ type (
 	RequestCancelInfo struct {
 		InitiatedID     int64
 		CancelRequestID string
+	}
+
+	// SignalInfo has details for pending external workflow signal
+	SignalInfo struct {
+		InitiatedID     int64
+		SignalRequestID string
+		SignalName      string
+		Input           []byte
 	}
 
 	// CreateShardRequest is used to create a shard in executions table
@@ -436,6 +456,9 @@ type (
 		DeleteChildExecutionInfo  *int64
 		UpsertRequestCancelInfos  []*RequestCancelInfo
 		DeleteRequestCancelInfo   *int64
+		UpsertSignalInfos         []*SignalInfo
+		DeleteSignalInfo          *int64
+		UpsertSignalRequestedIDs  []string
 		NewBufferedEvents         *SerializedHistoryEventBatch
 		ClearBufferedEvents       bool
 	}
@@ -445,6 +468,14 @@ type (
 		DomainID   string
 		WorkflowID string
 		RunID      string
+	}
+
+	// DeleteWorkflowExecutionSignalRequestedRequest is used to delete signal_requested of a workflow execution
+	DeleteWorkflowExecutionSignalRequestedRequest struct {
+		DomainID        string
+		WorkflowID      string
+		RunID           string
+		SignalRequestID string
 	}
 
 	// GetTransferTasksRequest is used to read tasks from the transfer task queue
@@ -675,6 +706,7 @@ type (
 		GetWorkflowExecution(request *GetWorkflowExecutionRequest) (*GetWorkflowExecutionResponse, error)
 		UpdateWorkflowExecution(request *UpdateWorkflowExecutionRequest) error
 		DeleteWorkflowExecution(request *DeleteWorkflowExecutionRequest) error
+		DeleteSignalRequestedID(request *DeleteWorkflowExecutionSignalRequestedRequest) error
 		GetCurrentExecution(request *GetCurrentExecutionRequest) (*GetCurrentExecutionResponse, error)
 		GetTransferTasks(request *GetTransferTasksRequest) (*GetTransferTasksResponse, error)
 		CompleteTransferTask(request *CompleteTransferTaskRequest) error
@@ -913,6 +945,21 @@ func (u *CancelExecutionTask) GetTaskID() int64 {
 
 // SetTaskID sets the sequence ID of the cancel transfer task.
 func (u *CancelExecutionTask) SetTaskID(id int64) {
+	u.TaskID = id
+}
+
+// GetType returns the type of the signal transfer task
+func (u *SignalExecutionTask) GetType() int {
+	return TransferTaskTypeSignalExecution
+}
+
+// GetTaskID returns the sequence ID of the signal transfer task.
+func (u *SignalExecutionTask) GetTaskID() int64 {
+	return u.TaskID
+}
+
+// SetTaskID sets the sequence ID of the signal transfer task.
+func (u *SignalExecutionTask) SetTaskID(id int64) {
 	u.TaskID = id
 }
 

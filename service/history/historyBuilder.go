@@ -310,6 +310,29 @@ func (b *historyBuilder) AddExternalWorkflowExecutionCancelRequested(initiatedEv
 	return b.addEventToHistory(event)
 }
 
+func (b *historyBuilder) AddSignalExternalWorkflowExecutionInitiatedEvent(decisionTaskCompletedEventID int64,
+	attributes *workflow.SignalExternalWorkflowExecutionDecisionAttributes) *workflow.HistoryEvent {
+	event := b.newSignalExternalWorkflowExecutionInitiatedEvent(decisionTaskCompletedEventID, attributes)
+
+	return b.addEventToHistory(event)
+}
+
+func (b *historyBuilder) AddSignalExternalWorkflowExecutionFailedEvent(decisionTaskCompletedEventID, initiatedEventID int64,
+	domain, workflowID, runID string, cause workflow.SignalExternalWorkflowExecutionFailedCause) *workflow.HistoryEvent {
+	event := b.newSignalExternalWorkflowExecutionFailedEvent(decisionTaskCompletedEventID, initiatedEventID,
+		domain, workflowID, runID, cause)
+
+	return b.addEventToHistory(event)
+}
+
+func (b *historyBuilder) AddExternalWorkflowExecutionSignalRequested(initiatedEventID int64,
+	domain, workflowID, runID string) *workflow.HistoryEvent {
+	event := b.newExternalWorkflowExecutionSignalRequestedEvent(initiatedEventID,
+		domain, workflowID, runID)
+
+	return b.addEventToHistory(event)
+}
+
 func (b *historyBuilder) AddMarkerRecordedEvent(decisionCompletedEventID int64,
 	attributes *workflow.RecordMarkerDecisionAttributes) *workflow.HistoryEvent {
 	event := b.newMarkerRecordedEventAttributes(decisionCompletedEventID, attributes)
@@ -673,6 +696,56 @@ func (b *historyBuilder) newExternalWorkflowExecutionCancelRequestedEvent(initia
 		RunId:      common.StringPtr(runID),
 	}
 	event.ExternalWorkflowExecutionCancelRequestedEventAttributes = attributes
+
+	return event
+}
+
+func (b *historyBuilder) newSignalExternalWorkflowExecutionInitiatedEvent(decisionTaskCompletedEventID int64,
+	request *workflow.SignalExternalWorkflowExecutionDecisionAttributes) *workflow.HistoryEvent {
+	event := b.msBuilder.createNewHistoryEvent(workflow.EventTypeSignalExternalWorkflowExecutionInitiated)
+	attributes := &workflow.SignalExternalWorkflowExecutionInitiatedEventAttributes{}
+	attributes.DecisionTaskCompletedEventId = common.Int64Ptr(decisionTaskCompletedEventID)
+	attributes.Domain = common.StringPtr(*request.Domain)
+	attributes.WorkflowExecution = &workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr(*request.WorkflowId),
+		RunId:      common.StringPtr(*request.RunId),
+	}
+	attributes.SignalName = common.StringPtr(*request.SignalName)
+	attributes.Input = request.Input
+	attributes.Control = request.Control
+	event.SignalExternalWorkflowExecutionInitiatedEventAttributes = attributes
+
+	return event
+}
+
+func (b *historyBuilder) newSignalExternalWorkflowExecutionFailedEvent(decisionTaskCompletedEventID, initiatedEventID int64,
+	domain, workflowID, runID string, cause workflow.SignalExternalWorkflowExecutionFailedCause) *workflow.HistoryEvent {
+	event := b.msBuilder.createNewHistoryEvent(workflow.EventTypeSignalExternalWorkflowExecutionFailed)
+	attributes := &workflow.SignalExternalWorkflowExecutionFailedEventAttributes{}
+	attributes.DecisionTaskCompletedEventId = common.Int64Ptr(decisionTaskCompletedEventID)
+	attributes.InitiatedEventId = common.Int64Ptr(initiatedEventID)
+	attributes.Domain = common.StringPtr(domain)
+	attributes.WorkflowExecution = &workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr(workflowID),
+		RunId:      common.StringPtr(runID),
+	}
+	attributes.Cause = common.SignalExternalWorkflowExecutionFailedCausePtr(cause)
+	event.SignalExternalWorkflowExecutionFailedEventAttributes = attributes
+
+	return event
+}
+
+func (b *historyBuilder) newExternalWorkflowExecutionSignalRequestedEvent(initiatedEventID int64,
+	domain, workflowID, runID string) *workflow.HistoryEvent {
+	event := b.msBuilder.createNewHistoryEvent(workflow.EventTypeExternalWorkflowExecutionSignalRequested)
+	attributes := &workflow.ExternalWorkflowExecutionSignalRequestedEventAttributes{}
+	attributes.InitiatedEventId = common.Int64Ptr(initiatedEventID)
+	attributes.Domain = common.StringPtr(domain)
+	attributes.WorkflowExecution = &workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr(workflowID),
+		RunId:      common.StringPtr(runID),
+	}
+	event.ExternalWorkflowExecutionSignalRequestedEventAttributes = attributes
 
 	return event
 }

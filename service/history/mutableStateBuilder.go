@@ -58,6 +58,13 @@ type (
 		updateRequestCancelInfos    []*persistence.RequestCancelInfo         // Modified RequestCancel Infos since last update
 		deleteRequestCancelInfo     *int64                                   // Deleted RequestCancel Info since last update
 
+		pendingSignalInfoIDs map[int64]*persistence.SignalInfo // Initiated Event ID -> SignalInfo
+		updateSignalInfos    []*persistence.SignalInfo         // Modified SignalInfo since last update
+		deleteSignalInfo     *int64                            // Deleted SignalInfo since last update
+
+		pendingSignalRequestedIDs map[string]struct{} // Set of signaled requestIds
+		updateSignalRequestedIDs  map[string]struct{} // Set of signaled requestIds since last update
+
 		bufferedEvents       []*persistence.SerializedHistoryEventBatch // buffered history events that are already persisted
 		updateBufferedEvents *persistence.SerializedHistoryEventBatch   // buffered history events that needs to be persisted
 		clearBufferedEvents  bool                                       // delete buffered events from persistence
@@ -71,16 +78,21 @@ type (
 	}
 
 	mutableStateSessionUpdates struct {
-		newEventsBuilder          *historyBuilder
-		updateActivityInfos       []*persistence.ActivityInfo
-		deleteActivityInfo        *int64
-		updateTimerInfos          []*persistence.TimerInfo
-		deleteTimerInfos          []string
-		updateChildExecutionInfos []*persistence.ChildExecutionInfo
-		deleteChildExecutionInfo  *int64
-		continueAsNew             *persistence.CreateWorkflowExecutionRequest
-		newBufferedEvents         *persistence.SerializedHistoryEventBatch
-		clearBufferedEvents       bool
+		newEventsBuilder           *historyBuilder
+		updateActivityInfos        []*persistence.ActivityInfo
+		deleteActivityInfo         *int64
+		updateTimerInfos           []*persistence.TimerInfo
+		deleteTimerInfos           []string
+		updateChildExecutionInfos  []*persistence.ChildExecutionInfo
+		deleteChildExecutionInfo   *int64
+		updateCancelExecutionInfos []*persistence.RequestCancelInfo
+		deleteCancelExecutionInfo  *int64
+		updateSignalInfos          []*persistence.SignalInfo
+		deleteSignalInfo           *int64
+		updateSignalRequestedIDs   []string
+		continueAsNew              *persistence.CreateWorkflowExecutionRequest
+		newBufferedEvents          *persistence.SerializedHistoryEventBatch
+		clearBufferedEvents        bool
 	}
 
 	// TODO: This should be part of persistence layer
@@ -107,6 +119,10 @@ func newMutableStateBuilder(config *Config, logger bark.Logger) *mutableStateBui
 		pendingChildExecutionInfoIDs:    make(map[int64]*persistence.ChildExecutionInfo),
 		updateRequestCancelInfos:        []*persistence.RequestCancelInfo{},
 		pendingRequestCancelInfoIDs:     make(map[int64]*persistence.RequestCancelInfo),
+		updateSignalInfos:               []*persistence.SignalInfo{},
+		pendingSignalInfoIDs:            make(map[int64]*persistence.SignalInfo),
+		updateSignalRequestedIDs:        make(map[string]struct{}),
+		pendingSignalRequestedIDs:       make(map[string]struct{}),
 		eventSerializer:                 newJSONHistoryEventSerializer(),
 		config:                          config,
 		logger:                          logger,
@@ -127,6 +143,8 @@ func (e *mutableStateBuilder) Load(state *persistence.WorkflowMutableState) {
 	e.pendingTimerInfoIDs = state.TimerInfos
 	e.pendingChildExecutionInfoIDs = state.ChildExecutionInfos
 	e.pendingRequestCancelInfoIDs = state.RequestCancelInfos
+	e.pendingSignalInfoIDs = state.SignalInfos
+	e.pendingSignalRequestedIDs = state.SignalRequestedIDs
 	e.executionInfo = state.ExecutionInfo
 	e.bufferedEvents = state.BufferedEvents
 	for _, ai := range state.ActivitInfos {
@@ -219,9 +237,14 @@ func (e *mutableStateBuilder) CloseUpdateSession() (*mutableStateSessionUpdates,
 		deleteTimerInfos:          e.deleteTimerInfos,
 		updateChildExecutionInfos: e.updateChildExecutionInfos,
 		deleteChildExecutionInfo:  e.deleteChildExecutionInfo,
-		continueAsNew:             e.continueAsNew,
-		newBufferedEvents:         e.updateBufferedEvents,
-		clearBufferedEvents:       e.clearBufferedEvents,
+		//updateCancelExecutionInfos: e.updateRequestCancelInfos,
+		//deleteCancelExecutionInfo:  e.deleteRequestCancelInfo,
+		updateSignalInfos:        e.updateSignalInfos,
+		deleteSignalInfo:         e.deleteSignalInfo,
+		updateSignalRequestedIDs: getSignalRequestedIDs(e.updateSignalRequestedIDs),
+		continueAsNew:            e.continueAsNew,
+		newBufferedEvents:        e.updateBufferedEvents,
+		clearBufferedEvents:      e.clearBufferedEvents,
 	}
 
 	// Clear all updates to prepare for the next session
@@ -234,6 +257,9 @@ func (e *mutableStateBuilder) CloseUpdateSession() (*mutableStateSessionUpdates,
 	e.deleteChildExecutionInfo = nil
 	e.updateRequestCancelInfos = []*persistence.RequestCancelInfo{}
 	e.deleteRequestCancelInfo = nil
+	e.updateSignalInfos = []*persistence.SignalInfo{}
+	e.deleteSignalInfo = nil
+	e.updateSignalRequestedIDs = make(map[string]struct{})
 	e.continueAsNew = nil
 	e.clearBufferedEvents = false
 	if e.updateBufferedEvents != nil {
@@ -242,6 +268,14 @@ func (e *mutableStateBuilder) CloseUpdateSession() (*mutableStateSessionUpdates,
 	}
 
 	return updates, nil
+}
+
+func getSignalRequestedIDs(signalReqIDs map[string]struct{}) []string {
+	var result []string
+	for k := range signalReqIDs {
+		result = append(result, k)
+	}
+	return result
 }
 
 func (e *mutableStateBuilder) assignEventIDToBufferedEvents() {
@@ -470,6 +504,12 @@ func (e *mutableStateBuilder) GetRequestCancelInfo(initiatedEventID int64) (*per
 	return ri, ok
 }
 
+// GetSignalInfo get details about a signal request that is currently in progress.
+func (e *mutableStateBuilder) GetSignalInfo(initiatedEventID int64) (*persistence.SignalInfo, bool) {
+	ri, ok := e.pendingSignalInfoIDs[initiatedEventID]
+	return ri, ok
+}
+
 // GetCompletionEvent retrieves the workflow completion event from mutable state
 func (e *mutableStateBuilder) GetCompletionEvent() (*workflow.HistoryEvent, bool) {
 	serializedEvent := e.executionInfo.CompletionEvent
@@ -507,6 +547,21 @@ func (e *mutableStateBuilder) DeletePendingRequestCancel(initiatedEventID int64)
 	delete(e.pendingRequestCancelInfoIDs, initiatedEventID)
 
 	e.deleteRequestCancelInfo = common.Int64Ptr(initiatedEventID)
+	return nil
+}
+
+// DeletePendingSignal deletes details about a SignalInfo
+func (e *mutableStateBuilder) DeletePendingSignal(initiatedEventID int64) error {
+	_, ok := e.pendingSignalInfoIDs[initiatedEventID]
+	if !ok {
+		errorMsg := fmt.Sprintf("Unable to find signal request with initiated event id: %v in mutable state",
+			initiatedEventID)
+		logging.LogMutableStateInvalidAction(e.logger, errorMsg)
+		return errors.New(errorMsg)
+	}
+	delete(e.pendingSignalInfoIDs, initiatedEventID)
+
+	e.deleteSignalInfo = common.Int64Ptr(initiatedEventID)
 	return nil
 }
 
@@ -706,6 +761,30 @@ func (e *mutableStateBuilder) isCancelRequested() (bool, string) {
 	}
 
 	return false, ""
+}
+
+func (e *mutableStateBuilder) isSignalRequested(requestID string) bool {
+	fmt.Println("signalRequestedIDs map:")
+	fmt.Println(e.pendingSignalRequestedIDs)
+	if _, ok := e.pendingSignalRequestedIDs[requestID]; ok {
+		return true
+	}
+	return false
+}
+
+func (e *mutableStateBuilder) addSignalRequested(requestID string) {
+	if e.pendingSignalRequestedIDs == nil {
+		e.pendingSignalRequestedIDs = make(map[string]struct{})
+	}
+	if e.updateSignalRequestedIDs == nil {
+		e.updateSignalRequestedIDs = make(map[string]struct{})
+	}
+	e.pendingSignalRequestedIDs[requestID] = struct{}{} // add requestID to set
+	e.updateSignalRequestedIDs[requestID] = struct{}{}
+}
+
+func (e *mutableStateBuilder) deleteSignalRequested(requestID string) {
+	delete(e.pendingSignalRequestedIDs, requestID)
 }
 
 func (e *mutableStateBuilder) getHistoryEvent(serializedEvent []byte) (*workflow.HistoryEvent, bool) {
@@ -1286,6 +1365,65 @@ func (e *mutableStateBuilder) AddRequestCancelExternalWorkflowExecutionFailedEve
 
 	if e.DeletePendingRequestCancel(initiatedID) == nil {
 		return e.hBuilder.AddRequestCancelExternalWorkflowExecutionFailedEvent(decisionTaskCompletedEventID, initiatedID,
+			domain, workflowID, runID, cause)
+	}
+
+	return nil
+}
+
+func (e *mutableStateBuilder) AddSignalExternalWorkflowExecutionInitiatedEvent(decisionCompletedEventID int64,
+	signalRequestID string, request *workflow.SignalExternalWorkflowExecutionDecisionAttributes) *workflow.HistoryEvent {
+
+	event := e.hBuilder.AddSignalExternalWorkflowExecutionInitiatedEvent(decisionCompletedEventID, request)
+	if event == nil {
+		return nil
+	}
+
+	initiatedEventID := *event.EventId
+	ri := &persistence.SignalInfo{
+		InitiatedID:     initiatedEventID,
+		SignalRequestID: signalRequestID,
+		SignalName:      *request.SignalName,
+		Input:           request.Input,
+	}
+
+	e.pendingSignalInfoIDs[initiatedEventID] = ri
+	e.updateSignalInfos = append(e.updateSignalInfos, ri)
+
+	return event
+}
+
+func (e *mutableStateBuilder) AddExternalWorkflowExecutionSignalRequested(initiatedID int64,
+	domain, workflowID, runID string) *workflow.HistoryEvent {
+	_, ok := e.GetSignalInfo(initiatedID)
+	if !ok {
+		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionWorkflowSignalRequested, e.GetNextEventID(),
+			fmt.Sprintf("{InitiatedID: %v, Exist: %v}", initiatedID, ok))
+
+		return nil
+	}
+
+	if e.DeletePendingSignal(initiatedID) == nil {
+		return e.hBuilder.AddExternalWorkflowExecutionSignalRequested(initiatedID, domain, workflowID, runID)
+	}
+
+	return nil
+}
+
+func (e *mutableStateBuilder) AddSignalExternalWorkflowExecutionFailedEvent(
+	decisionTaskCompletedEventID, initiatedID int64,
+	domain, workflowID, runID string, cause workflow.SignalExternalWorkflowExecutionFailedCause) *workflow.HistoryEvent {
+
+	_, ok := e.GetSignalInfo(initiatedID)
+	if !ok {
+		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionWorkflowSignalFailed, e.GetNextEventID(),
+			fmt.Sprintf("{InitiatedID: %v, Exist: %v}", initiatedID, ok))
+
+		return nil
+	}
+
+	if e.DeletePendingSignal(initiatedID) == nil {
+		return e.hBuilder.AddSignalExternalWorkflowExecutionFailedEvent(decisionTaskCompletedEventID, initiatedID,
 			domain, workflowID, runID, cause)
 	}
 

@@ -63,6 +63,37 @@ func (m *MockClient) EXPECT() *_MockClientRecorder {
 	return m.recorder
 }
 
+// DeleteWorkflowExecutionSignal responds to a DeleteWorkflowExecutionSignal call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().DeleteWorkflowExecutionSignal(gomock.Any(), ...).Return(...)
+// 	... := client.DeleteWorkflowExecutionSignal(...)
+func (m *MockClient) DeleteWorkflowExecutionSignal(
+	ctx context.Context,
+	_DeleteRequest *history.DeleteWorkflowExecutionSignalRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := []interface{}{ctx, _DeleteRequest}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "DeleteWorkflowExecutionSignal", args...)
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) DeleteWorkflowExecutionSignal(
+	ctx interface{},
+	_DeleteRequest interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _DeleteRequest}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "DeleteWorkflowExecutionSignal", args...)
+}
+
 // DescribeWorkflowExecution responds to a DescribeWorkflowExecution call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.

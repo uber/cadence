@@ -1424,6 +1424,150 @@ func (s *integrationSuite) TestSignalWorkflow() {
 	s.IsType(&workflow.EntityNotExistsError{}, err)
 }
 
+func (s *integrationSuite) TestSignalWorkflow_DuplicateRequest() {
+	id := "interation-signal-workflow-test"
+	wt := "interation-signal-workflow-test-type"
+	tl := "interation-signal-workflow-test-tasklist"
+	identity := "worker1"
+	activityName := "activity_type1"
+
+	workflowType := &workflow.WorkflowType{}
+	workflowType.Name = common.StringPtr(wt)
+
+	taskList := &workflow.TaskList{}
+	taskList.Name = common.StringPtr(tl)
+
+	// Start workflow execution
+	request := &workflow.StartWorkflowExecutionRequest{
+		RequestId:    common.StringPtr(uuid.New()),
+		Domain:       common.StringPtr(s.domainName),
+		WorkflowId:   common.StringPtr(id),
+		WorkflowType: workflowType,
+		TaskList:     taskList,
+		Input:        nil,
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		Identity:                            common.StringPtr(identity),
+	}
+
+	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
+	s.Nil(err0)
+	s.logger.Infof("StartWorkflowExecution: response: %v \n", *we.RunId)
+
+	// decider logic
+	workflowComplete := false
+	activityScheduled := false
+	activityData := int32(1)
+	var signalEvent *workflow.HistoryEvent
+	numOfSignaledEvent := 0
+	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
+		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
+
+		if !activityScheduled {
+			activityScheduled = true
+			buf := new(bytes.Buffer)
+			s.Nil(binary.Write(buf, binary.LittleEndian, activityData))
+
+			return nil, []*workflow.Decision{{
+				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeScheduleActivityTask),
+				ScheduleActivityTaskDecisionAttributes: &workflow.ScheduleActivityTaskDecisionAttributes{
+					ActivityId:   common.StringPtr(strconv.Itoa(int(1))),
+					ActivityType: &workflow.ActivityType{Name: common.StringPtr(activityName)},
+					TaskList:     &workflow.TaskList{Name: &tl},
+					Input:        buf.Bytes(),
+					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
+					ScheduleToStartTimeoutSeconds: common.Int32Ptr(2),
+					StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
+					HeartbeatTimeoutSeconds:       common.Int32Ptr(5),
+				},
+			}}, nil
+		} else if previousStartedEventID > 0 {
+			numOfSignaledEvent = 0
+			for _, event := range history.Events[previousStartedEventID:] {
+				if *event.EventType == workflow.EventTypeWorkflowExecutionSignaled {
+					signalEvent = event
+					numOfSignaledEvent++
+				}
+			}
+			return nil, []*workflow.Decision{}, nil
+		}
+
+		workflowComplete = true
+		return nil, []*workflow.Decision{{
+			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
+			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
+				Result: []byte("Done."),
+			},
+		}}, nil
+	}
+
+	// activity handler
+	atHandler := func(execution *workflow.WorkflowExecution, activityType *workflow.ActivityType,
+		activityID string, input []byte, taskToken []byte) ([]byte, bool, error) {
+
+		return []byte("Activity Result."), false, nil
+	}
+
+	poller := &taskPoller{
+		engine:          s.engine,
+		domain:          s.domainName,
+		taskList:        taskList,
+		identity:        identity,
+		decisionHandler: dtHandler,
+		activityHandler: atHandler,
+		logger:          s.logger,
+		suite:           s,
+	}
+
+	// Make first decision to schedule activity
+	_, err := poller.pollAndProcessDecisionTask(false, false)
+	s.logger.Infof("pollAndProcessDecisionTask: %v", err)
+	s.Nil(err)
+
+	// Send first signal
+	signalName := "my signal"
+	signalInput := []byte("my signal input.")
+	requestID := uuid.New()
+	signalReqest := &workflow.SignalWorkflowExecutionRequest{
+		Domain: common.StringPtr(s.domainName),
+		WorkflowExecution: &workflow.WorkflowExecution{
+			WorkflowId: common.StringPtr(id),
+			RunId:      common.StringPtr(*we.RunId),
+		},
+		SignalName: common.StringPtr(signalName),
+		Input:      signalInput,
+		Identity:   common.StringPtr(identity),
+		RequestId:  common.StringPtr(requestID),
+	}
+	err = s.engine.SignalWorkflowExecution(createContext(), signalReqest)
+	s.Nil(err)
+
+	// Process signal in decider
+	_, err = poller.pollAndProcessDecisionTask(false, false)
+	s.logger.Infof("pollAndProcessDecisionTask: %v", err)
+	s.Nil(err)
+
+	s.False(workflowComplete)
+	s.True(signalEvent != nil)
+	s.Equal(signalName, *signalEvent.WorkflowExecutionSignaledEventAttributes.SignalName)
+	s.Equal(signalInput, signalEvent.WorkflowExecutionSignaledEventAttributes.Input)
+	s.Equal(identity, *signalEvent.WorkflowExecutionSignaledEventAttributes.Identity)
+	s.Equal(1, numOfSignaledEvent)
+
+	// Send another signal with same request id
+	err = s.engine.SignalWorkflowExecution(createContext(), signalReqest)
+	s.Nil(err)
+
+	// Process signal in decider
+	_, err = poller.pollAndProcessDecisionTask(true, false)
+	s.logger.Infof("pollAndProcessDecisionTask: %v", err)
+	s.Nil(err)
+
+	s.False(workflowComplete)
+	s.True(signalEvent != nil)
+	s.Equal(0, numOfSignaledEvent)
+}
+
 func (s *integrationSuite) TestBufferedEvents() {
 	id := "interation-buffered-events-test"
 	wt := "interation-buffered-events-test-type"
@@ -2351,7 +2495,6 @@ func (s *integrationSuite) TestExternalRequestCancelWorkflowExecution() {
 
 	s.logger.Infof("StartWorkflowExecution: response: %v \n", *we.RunId)
 
-	workflowComplete := false
 	activityCount := int32(1)
 	activityCounter := int32(0)
 	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
@@ -2376,7 +2519,6 @@ func (s *integrationSuite) TestExternalRequestCancelWorkflowExecution() {
 			}}, nil
 		}
 
-		workflowComplete = true
 		return []byte(strconv.Itoa(int(activityCounter))), []*workflow.Decision{{
 			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCancelWorkflowExecution),
 			CancelWorkflowExecutionDecisionAttributes: &workflow.CancelWorkflowExecutionDecisionAttributes{
@@ -2554,7 +2696,6 @@ func (s *integrationSuite) TestRequestCancelWorkflowDecisionExecution() {
 		suite:           s,
 	}
 
-	foreginWorkflowComplete := false
 	foreignActivityCount := int32(1)
 	foreignActivityCounter := int32(0)
 	foreignDtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
@@ -2579,7 +2720,6 @@ func (s *integrationSuite) TestRequestCancelWorkflowDecisionExecution() {
 			}}, nil
 		}
 
-		foreginWorkflowComplete = true
 		return []byte(strconv.Itoa(int(foreignActivityCounter))), []*workflow.Decision{{
 			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCancelWorkflowExecution),
 			CancelWorkflowExecutionDecisionAttributes: &workflow.CancelWorkflowExecutionDecisionAttributes{
@@ -2634,7 +2774,7 @@ CheckHistoryLoopForCancelSent:
 
 		lastEvent := history.Events[len(history.Events)-2]
 		if *lastEvent.EventType != workflow.EventTypeExternalWorkflowExecutionCancelRequested {
-			s.logger.Info("Cancellaton still not sent.")
+			s.logger.Info("Cancellation still not sent.")
 			time.Sleep(100 * time.Millisecond)
 			continue CheckHistoryLoopForCancelSent
 		}
@@ -2777,7 +2917,7 @@ func (s *integrationSuite) TestRequestCancelWorkflowDecisionExecution_UnKnownTar
 		suite:           s,
 	}
 
-	// Start both current and foreign workflows to make some progress.
+	// Start workflows to make some progress.
 	_, err := poller.pollAndProcessDecisionTask(false, false)
 	s.logger.Infof("pollAndProcessDecisionTask: %v", err)
 	s.Nil(err)
@@ -3970,7 +4110,6 @@ func (s *integrationSuite) TestDescribeTaskList() {
 	// activity handler
 	atHandler := func(execution *workflow.WorkflowExecution, activityType *workflow.ActivityType,
 		activityID string, input []byte, taskToken []byte) ([]byte, bool, error) {
-
 		return []byte("Activity Result."), false, nil
 	}
 

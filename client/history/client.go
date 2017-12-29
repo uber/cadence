@@ -356,6 +356,24 @@ func (c *clientImpl) SignalWorkflowExecution(
 	return err
 }
 
+func (c *clientImpl) DeleteWorkflowExecutionSignal(
+	ctx context.Context,
+	request *h.DeleteWorkflowExecutionSignalRequest,
+	opts ...yarpc.CallOption) error {
+	client, err := c.getHostForRequest(*request.DeleteRequest.WorkflowExecution.WorkflowId)
+	if err != nil {
+		return err
+	}
+	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+		ctx, cancel := c.createContext(ctx)
+		defer cancel()
+		return client.DeleteWorkflowExecutionSignal(ctx, request)
+	}
+	err = c.executeWithRedirect(ctx, client, op)
+
+	return err
+}
+
 func (c *clientImpl) TerminateWorkflowExecution(
 	ctx context.Context,
 	request *h.TerminateWorkflowExecutionRequest,

@@ -279,6 +279,20 @@ func (_m *MockHistoryEngine) SignalWorkflowExecution(request *gohistory.SignalWo
 	return r0
 }
 
+// DeleteWorkflowExecutionSignal is mock implementation for DeleteWorkflowExecutionSignal of HistoryEngine
+func (_m *MockHistoryEngine) DeleteWorkflowExecutionSignal(request *gohistory.DeleteWorkflowExecutionSignalRequest) error {
+	ret := _m.Called(request)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*gohistory.DeleteWorkflowExecutionSignalRequest) error); ok {
+		r0 = rf(request)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // TerminateWorkflowExecution is mock implementation for TerminateWorkflowExecution of HistoryEngine
 func (_m *MockHistoryEngine) TerminateWorkflowExecution(request *gohistory.TerminateWorkflowExecutionRequest) error {
 	ret := _m.Called(request)

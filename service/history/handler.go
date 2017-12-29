@@ -598,6 +598,33 @@ func (h *Handler) SignalWorkflowExecution(ctx context.Context,
 	return nil
 }
 
+// DeleteWorkflowExecutionSignal is used to delete a signal request ID that was previously recorded.  This is currently
+// used to clean execution info when signal decision finished.
+func (h *Handler) DeleteWorkflowExecutionSignal(ctx context.Context,
+	wrappedRequest *hist.DeleteWorkflowExecutionSignalRequest) error {
+	h.startWG.Wait()
+
+	h.metricsClient.IncCounter(metrics.HistoryDeleteWorkflowExecutionSignalScope, metrics.CadenceRequests)
+	sw := h.metricsClient.StartTimer(metrics.HistoryDeleteWorkflowExecutionSignalScope, metrics.CadenceLatency)
+	defer sw.Stop()
+
+	if wrappedRequest.DomainUUID == nil {
+		return errDomainNotSet
+	}
+
+	deleteRequest := wrappedRequest.DeleteRequest
+	workflowExecution := deleteRequest.WorkflowExecution
+	engine, err1 := h.controller.GetEngine(*workflowExecution.WorkflowId)
+	if err1 != nil {
+		h.updateErrorMetric(metrics.HistoryDeleteWorkflowExecutionSignalScope, err1)
+		return err1
+	}
+
+	engine.DeleteWorkflowExecutionSignal(wrappedRequest)
+
+	return nil
+}
+
 // TerminateWorkflowExecution terminates an existing workflow execution by recording WorkflowExecutionTerminated event
 // in the history and immediately terminating the execution instance.
 func (h *Handler) TerminateWorkflowExecution(ctx context.Context,

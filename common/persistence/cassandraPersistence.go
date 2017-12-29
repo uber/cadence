@@ -204,6 +204,13 @@ const (
 		`cancel_request_id: ?` +
 		`}`
 
+	templateSignalInfoType = `{` +
+		`initiated_id: ?, ` +
+		`signal_request_id: ?, ` +
+		`signal_name: ?, ` +
+		`input: ?` +
+		`}`
+
 	templateTaskListType = `{` +
 		`domain_id: ?, ` +
 		`name: ?, ` +
@@ -281,7 +288,7 @@ const (
 		`and task_id = ? ` +
 		`IF range_id = ?`
 
-	templateGetWorkflowExecutionQuery = `SELECT execution, activity_map, timer_map, child_executions_map, request_cancel_map, buffered_events_list ` +
+	templateGetWorkflowExecutionQuery = `SELECT execution, activity_map, timer_map, child_executions_map, request_cancel_map, signal_map, signal_requested, buffered_events_list ` +
 		`FROM executions ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
@@ -347,6 +354,28 @@ const (
 
 	templateUpdateRequestCancelInfoQuery = `UPDATE executions ` +
 		`SET request_cancel_map[ ? ] =` + templateRequestCancelInfoType + ` ` +
+		`WHERE shard_id = ? ` +
+		`and type = ? ` +
+		`and domain_id = ? ` +
+		`and workflow_id = ? ` +
+		`and run_id = ? ` +
+		`and visibility_ts = ? ` +
+		`and task_id = ? ` +
+		`IF next_event_id = ?`
+
+	templateUpdateSignalInfoQuery = `UPDATE executions ` +
+		`SET signal_map[ ? ] =` + templateSignalInfoType + ` ` +
+		`WHERE shard_id = ? ` +
+		`and type = ? ` +
+		`and domain_id = ? ` +
+		`and workflow_id = ? ` +
+		`and run_id = ? ` +
+		`and visibility_ts = ? ` +
+		`and task_id = ? ` +
+		`IF next_event_id = ?`
+
+	templateUpdateSignalRequestedQuery = `UPDATE executions ` +
+		`SET signal_requested = signal_requested + ? ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
 		`and domain_id = ? ` +
@@ -426,7 +455,28 @@ const (
 		`(shard_id, type, domain_id, workflow_id, run_id, visibility_ts, task_id, current_run_id, execution) ` +
 		`VALUES(?, ?, ?, ?, ?, ?, ?, ?, {run_id: ?, create_request_id: ?, state: ?, close_status: ?}) USING TTL ? `
 
+	templateDeleteSignalInfoQuery = `DELETE signal_map[ ? ] ` +
+		`FROM executions ` +
+		`WHERE shard_id = ? ` +
+		`and type = ? ` +
+		`and domain_id = ? ` +
+		`and workflow_id = ? ` +
+		`and run_id = ? ` +
+		`and visibility_ts = ? ` +
+		`and task_id = ? ` +
+		`IF next_event_id = ?`
+
 	templateDeleteWorkflowExecutionMutableStateQuery = `DELETE FROM executions ` +
+		`WHERE shard_id = ? ` +
+		`and type = ? ` +
+		`and domain_id = ? ` +
+		`and workflow_id = ? ` +
+		`and run_id = ? ` +
+		`and visibility_ts = ? ` +
+		`and task_id = ? `
+
+	templateDeleteWorkflowExecutionSignalRequestedQuery = `UPDATE executions ` +
+		`SET signal_requested = signal_requested - ? ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
 		`and domain_id = ? ` +
@@ -994,6 +1044,21 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *GetWorkflowExecutio
 	}
 	state.RequestCancelInfos = requestCancelInfos
 
+	signalInfos := make(map[int64]*SignalInfo)
+	sMap := result["signal_map"].(map[int64]map[string]interface{})
+	for key, value := range sMap {
+		info := createSignalInfo(value)
+		signalInfos[key] = info
+	}
+	state.SignalInfos = signalInfos
+
+	signalRequestedIDs := make(map[string]struct{})
+	sList := result["signal_requested"].([]gocql.UUID)
+	for _, v := range sList {
+		signalRequestedIDs[v.String()] = struct{}{}
+	}
+	state.SignalRequestedIDs = signalRequestedIDs
+
 	eList := result["buffered_events_list"].([]map[string]interface{})
 	bufferedEvents := make([]*SerializedHistoryEventBatch, 0, len(eList))
 	for _, v := range eList {
@@ -1071,6 +1136,12 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 		executionInfo.DomainID, executionInfo.WorkflowID, executionInfo.RunID, request.Condition, request.RangeID)
 
 	d.updateRequestCancelInfos(batch, request.UpsertRequestCancelInfos, request.DeleteRequestCancelInfo,
+		executionInfo.DomainID, executionInfo.WorkflowID, executionInfo.RunID, request.Condition, request.RangeID)
+
+	d.updateSignalInfos(batch, request.UpsertSignalInfos, request.DeleteSignalInfo,
+		executionInfo.DomainID, executionInfo.WorkflowID, executionInfo.RunID, request.Condition, request.RangeID)
+
+	d.updateSignalsRequested(batch, request.UpsertSignalRequestedIDs,
 		executionInfo.DomainID, executionInfo.WorkflowID, executionInfo.RunID, request.Condition, request.RangeID)
 
 	d.updateBufferedEvents(batch, request.NewBufferedEvents, request.ClearBufferedEvents,
@@ -1215,6 +1286,33 @@ func (d *cassandraPersistence) DeleteWorkflowExecution(request *DeleteWorkflowEx
 		}
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("DeleteWorkflowExecution operation failed. Error: %v", err),
+		}
+	}
+
+	return nil
+}
+
+func (d *cassandraPersistence) DeleteSignalRequestedID(request *DeleteWorkflowExecutionSignalRequestedRequest) error {
+	req := []string{request.SignalRequestID} // for cassandra set binding
+	query := d.session.Query(templateDeleteWorkflowExecutionSignalRequestedQuery,
+		req,
+		d.shardID,
+		rowTypeExecution,
+		request.DomainID,
+		request.WorkflowID,
+		request.RunID,
+		defaultVisibilityTimestamp,
+		rowTypeExecutionTaskID)
+
+	err := query.Exec()
+	if err != nil {
+		if isThrottlingError(err) {
+			return &workflow.ServiceBusyError{
+				Message: fmt.Sprintf("DeleteSignalRequestedID operation failed. Error: %v", err),
+			}
+		}
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("DeleteSignalRequestedID operation failed. Error: %v", err),
 		}
 	}
 
@@ -1696,6 +1794,12 @@ func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferT
 			targetRunID = task.(*CancelExecutionTask).TargetRunID
 			scheduleID = task.(*CancelExecutionTask).ScheduleID
 
+		case TransferTaskTypeSignalExecution:
+			targetDomainID = task.(*SignalExecutionTask).TargetDomainID
+			targetWorkflowID = task.(*SignalExecutionTask).TargetWorkflowID
+			targetRunID = task.(*SignalExecutionTask).TargetRunID
+			scheduleID = task.(*SignalExecutionTask).ScheduleID
+
 		case TransferTaskTypeStartChildExecution:
 			targetDomainID = task.(*StartChildExecutionTask).TargetDomainID
 			targetWorkflowID = task.(*StartChildExecutionTask).TargetWorkflowID
@@ -1926,6 +2030,60 @@ func (d *cassandraPersistence) updateRequestCancelInfos(batch *gocql.Batch, requ
 			rowTypeExecutionTaskID,
 			condition)
 	}
+}
+
+func (d *cassandraPersistence) updateSignalInfos(batch *gocql.Batch, signalInfos []*SignalInfo,
+	deleteInfo *int64, domainID, workflowID, runID string, condition int64, rangeID int64) {
+
+	for _, c := range signalInfos {
+		batch.Query(templateUpdateSignalInfoQuery,
+			c.InitiatedID,
+			c.InitiatedID,
+			c.SignalRequestID,
+			c.SignalName,
+			c.Input,
+			d.shardID,
+			rowTypeExecution,
+			domainID,
+			workflowID,
+			runID,
+			defaultVisibilityTimestamp,
+			rowTypeExecutionTaskID,
+			condition)
+	}
+
+	// deleteInfo is the initiatedID for SignalInfo being deleted
+	if deleteInfo != nil {
+		batch.Query(templateDeleteSignalInfoQuery,
+			*deleteInfo,
+			d.shardID,
+			rowTypeExecution,
+			domainID,
+			workflowID,
+			runID,
+			defaultVisibilityTimestamp,
+			rowTypeExecutionTaskID,
+			condition)
+	}
+}
+
+func (d *cassandraPersistence) updateSignalsRequested(batch *gocql.Batch, signalReqIDs []string,
+	domainID, workflowID, runID string, condition int64, rangeID int64) {
+
+	if signalReqIDs == nil || len(signalReqIDs) == 0 {
+		return
+	}
+
+	batch.Query(templateUpdateSignalRequestedQuery,
+		signalReqIDs,
+		d.shardID,
+		rowTypeExecution,
+		domainID,
+		workflowID,
+		runID,
+		defaultVisibilityTimestamp,
+		rowTypeExecutionTaskID,
+		condition)
 }
 
 func (d *cassandraPersistence) updateBufferedEvents(batch *gocql.Batch, newBufferedEvents *SerializedHistoryEventBatch,
@@ -2181,6 +2339,24 @@ func createRequestCancelInfo(result map[string]interface{}) *RequestCancelInfo {
 			info.InitiatedID = v.(int64)
 		case "cancel_request_id":
 			info.CancelRequestID = v.(string)
+		}
+	}
+
+	return info
+}
+
+func createSignalInfo(result map[string]interface{}) *SignalInfo {
+	info := &SignalInfo{}
+	for k, v := range result {
+		switch k {
+		case "initiated_id":
+			info.InitiatedID = v.(int64)
+		case "signal_request_id":
+			info.SignalRequestID = v.(string)
+		case "signal_name":
+			info.SignalName = v.(string)
+		case "input":
+			info.Input = v.([]byte)
 		}
 	}
 

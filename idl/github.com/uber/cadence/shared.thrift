@@ -97,6 +97,7 @@ enum DecisionType {
   RecordMarker,
   ContinueAsNewWorkflowExecution,
   StartChildWorkflowExecution,
+  SignalExternalWorkflowExecution,
 }
 
 enum EventType {
@@ -127,6 +128,9 @@ enum EventType {
   RequestCancelExternalWorkflowExecutionFailed,
   ExternalWorkflowExecutionCancelRequested,
   MarkerRecorded,
+  SignalExternalWorkflowExecutionInitiated,
+  SignalExternalWorkflowExecutionFailed,
+  ExternalWorkflowExecutionSignalRequested,
   WorkflowExecutionSignaled,
   WorkflowExecutionTerminated,
   WorkflowExecutionContinuedAsNew,
@@ -150,6 +154,7 @@ enum DecisionTaskFailedCause {
   BAD_COMPLETE_WORKFLOW_EXECUTION_ATTRIBUTES,
   BAD_FAIL_WORKFLOW_EXECUTION_ATTRIBUTES,
   BAD_CANCEL_WORKFLOW_EXECUTION_ATTRIBUTES,
+  BAD_SIGNAL_WORKFLOW_EXECUTION_ATTRIBUTES,
   BAD_REQUEST_CANCEL_EXTERNAL_WORKFLOW_EXECUTION_ATTRIBUTES,
   BAD_CONTINUE_AS_NEW_ATTRIBUTES,
   START_TIMER_DUPLICATE_ID,
@@ -158,6 +163,10 @@ enum DecisionTaskFailedCause {
 }
 
 enum CancelExternalWorkflowExecutionFailedCause {
+  UNKNOWN_EXTERNAL_WORKFLOW_EXECUTION,
+}
+
+enum SignalExternalWorkflowExecutionFailedCause {
   UNKNOWN_EXTERNAL_WORKFLOW_EXECUTION,
 }
 
@@ -283,6 +292,15 @@ struct RequestCancelExternalWorkflowExecutionDecisionAttributes {
   40: optional binary control
 }
 
+struct SignalExternalWorkflowExecutionDecisionAttributes {
+  10: optional string domain
+  20: optional string workflowId
+  30: optional string runId
+  40: optional string signalName
+  50: optional binary input
+  60: optional binary control
+}
+
 struct RecordMarkerDecisionAttributes {
   10: optional string markerName
   20: optional binary details
@@ -322,6 +340,7 @@ struct Decision {
   80:  optional RecordMarkerDecisionAttributes recordMarkerDecisionAttributes
   90:  optional ContinueAsNewWorkflowExecutionDecisionAttributes continueAsNewWorkflowExecutionDecisionAttributes
   100: optional StartChildWorkflowExecutionDecisionAttributes startChildWorkflowExecutionDecisionAttributes
+  110: optional SignalExternalWorkflowExecutionDecisionAttributes signalExternalWorkflowExecutionDecisionAttributes
 }
 
 struct WorkflowExecutionStartedEventAttributes {
@@ -528,6 +547,30 @@ struct ExternalWorkflowExecutionCancelRequestedEventAttributes {
   30: optional WorkflowExecution workflowExecution
 }
 
+struct SignalExternalWorkflowExecutionInitiatedEventAttributes {
+  10: optional i64 (js.type = "Long") decisionTaskCompletedEventId
+  20: optional string domain
+  30: optional WorkflowExecution workflowExecution
+  40: optional string signalName
+  50: optional binary input
+  60: optional binary control
+}
+
+struct SignalExternalWorkflowExecutionFailedEventAttributes {
+  10: optional SignalExternalWorkflowExecutionFailedCause cause,
+  20: optional i64 (js.type = "Long") decisionTaskCompletedEventId
+  30: optional string domain
+  40: optional WorkflowExecution workflowExecution
+  50: optional i64 (js.type = "Long") initiatedEventId
+  60: optional binary control
+}
+
+struct ExternalWorkflowExecutionSignalRequestedEventAttributes {
+  10: optional i64 (js.type = "Long") initiatedEventId
+  20: optional string domain
+  30: optional WorkflowExecution workflowExecution
+}
+
 struct StartChildWorkflowExecutionInitiatedEventAttributes {
   10:  optional string domain
   20:  optional string workflowId
@@ -646,6 +689,9 @@ struct HistoryEvent {
   390: optional ChildWorkflowExecutionCanceledEventAttributes childWorkflowExecutionCanceledEventAttributes
   400: optional ChildWorkflowExecutionTimedOutEventAttributes childWorkflowExecutionTimedOutEventAttributes
   410: optional ChildWorkflowExecutionTerminatedEventAttributes childWorkflowExecutionTerminatedEventAttributes
+  420: optional SignalExternalWorkflowExecutionInitiatedEventAttributes signalExternalWorkflowExecutionInitiatedEventAttributes
+  430: optional SignalExternalWorkflowExecutionFailedEventAttributes signalExternalWorkflowExecutionFailedEventAttributes
+  440: optional ExternalWorkflowExecutionSignalRequestedEventAttributes externalWorkflowExecutionSignalRequestedEventAttributes
 }
 
 struct History {
@@ -874,6 +920,14 @@ struct SignalWorkflowExecutionRequest {
   30: optional string signalName
   40: optional binary input
   50: optional string identity
+  60: optional string requestId
+}
+
+struct DeleteWorkflowExecutionSignalRequest {
+  10: optional string domain
+  20: optional WorkflowExecution workflowExecution
+  30: optional string identity
+  40: optional string requestId
 }
 
 struct TerminateWorkflowExecutionRequest {

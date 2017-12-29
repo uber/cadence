@@ -265,6 +265,23 @@ func (c *metricClient) SignalWorkflowExecution(
 	return err
 }
 
+func (c *metricClient) DeleteWorkflowExecutionSignal(
+	context context.Context,
+	request *h.DeleteWorkflowExecutionSignalRequest,
+	opts ...yarpc.CallOption) error {
+	c.metricsClient.IncCounter(metrics.HistoryClientDeleteWorkflowExecutionSignalScope, metrics.CadenceRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.HistoryClientDeleteWorkflowExecutionSignalScope, metrics.CadenceLatency)
+	err := c.client.DeleteWorkflowExecutionSignal(context, request)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.HistoryClientDeleteWorkflowExecutionSignalScope, metrics.CadenceFailures)
+	}
+
+	return err
+}
+
 func (c *metricClient) TerminateWorkflowExecution(
 	context context.Context,
 	request *h.TerminateWorkflowExecutionRequest,

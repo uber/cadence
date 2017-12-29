@@ -34,6 +34,11 @@ import (
 
 // Interface is the server-side interface for the HistoryService service.
 type Interface interface {
+	DeleteWorkflowExecutionSignal(
+		ctx context.Context,
+		DeleteRequest *history.DeleteWorkflowExecutionSignalRequest,
+	) error
+
 	DescribeWorkflowExecution(
 		ctx context.Context,
 		DescribeRequest *history.DescribeWorkflowExecutionRequest,
@@ -125,6 +130,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 	service := thrift.Service{
 		Name: "HistoryService",
 		Methods: []thrift.Method{
+
+			thrift.Method{
+				Name: "DeleteWorkflowExecutionSignal",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.DeleteWorkflowExecutionSignal),
+				},
+				Signature:    "DeleteWorkflowExecutionSignal(DeleteRequest *history.DeleteWorkflowExecutionSignalRequest)",
+				ThriftModule: history.ThriftModule,
+			},
 
 			thrift.Method{
 				Name: "DescribeWorkflowExecution",
@@ -304,12 +320,31 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 16)
+	procedures := make([]transport.Procedure, 0, 17)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
 
 type handler struct{ impl Interface }
+
+func (h handler) DeleteWorkflowExecutionSignal(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args history.HistoryService_DeleteWorkflowExecutionSignal_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	err := h.impl.DeleteWorkflowExecutionSignal(ctx, args.DeleteRequest)
+
+	hadError := err != nil
+	result, err := history.HistoryService_DeleteWorkflowExecutionSignal_Helper.WrapResponse(err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
 
 func (h handler) DescribeWorkflowExecution(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args history.HistoryService_DescribeWorkflowExecution_Args

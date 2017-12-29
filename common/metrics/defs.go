@@ -125,6 +125,8 @@ const (
 	PersistenceUpdateWorkflowExecutionScope
 	// PersistenceDeleteWorkflowExecutionScope tracks DeleteWorkflowExecution calls made by service to persistence layer
 	PersistenceDeleteWorkflowExecutionScope
+	// PersistenceDeleteSignalRequestedIDScope tracks DeleteSignalRequestedID calls made by service to persistence layer
+	PersistenceDeleteSignalRequestedIDScope
 	// PersistenceGetCurrentExecutionScope tracks GetCurrentExecution calls made by service to persistence layer
 	PersistenceGetCurrentExecutionScope
 	// PersistenceGetTransferTasksScope tracks GetTransferTasks calls made by service to persistence layer
@@ -207,6 +209,8 @@ const (
 	HistoryClientRequestCancelWorkflowExecutionScope
 	// HistoryClientSignalWorkflowExecutionScope tracks RPC calls to history service
 	HistoryClientSignalWorkflowExecutionScope
+	// HistoryClientDeleteWorkflowExecutionSignalScope tracks RPC calls to history service
+	HistoryClientDeleteWorkflowExecutionSignalScope
 	// HistoryClientTerminateWorkflowExecutionScope tracks RPC calls to history service
 	HistoryClientTerminateWorkflowExecutionScope
 	// HistoryClientScheduleDecisionTaskScope tracks RPC calls to history service
@@ -317,6 +321,8 @@ const (
 	HistoryRecordActivityTaskStartedScope
 	// HistorySignalWorkflowExecutionScope tracks SignalWorkflowExecution API calls received by service
 	HistorySignalWorkflowExecutionScope
+	// HistoryDeleteWorkflowExecutionSignalScope tracks DeleteWorkflowExecutionSignal API calls received by service
+	HistoryDeleteWorkflowExecutionSignalScope
 	// HistoryTerminateWorkflowExecutionScope tracks TerminateWorkflowExecution API calls received by service
 	HistoryTerminateWorkflowExecutionScope
 	// HistoryScheduleDecisionTaskScope tracks ScheduleDecisionTask API calls received by service
@@ -337,6 +343,8 @@ const (
 	TransferTaskCloseExecutionScope
 	// TransferTaskCancelExecutionScope is the scope used for cancel execution task processing by transfer queue processor
 	TransferTaskCancelExecutionScope
+	// TransferTaskSignalExecutionScope is the scope used for signal execution task processing by transfer queue processor
+	TransferTaskSignalExecutionScope
 	// TransferTaskStartChildExecutionScope is the scope used for start child execution task processing by transfer queue processor
 	TransferTaskStartChildExecutionScope
 	// TimerQueueProcessorScope is the scope used by all metric emitted by timer queue processor
@@ -420,6 +428,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceListClosedWorkflowExecutionsByWorkflowIDScope: {operation: "ListClosedWorkflowExecutionsByWorkflowID"},
 		PersistenceListClosedWorkflowExecutionsByStatusScope:     {operation: "ListClosedWorkflowExecutionsByStatus"},
 		PersistenceGetClosedWorkflowExecutionScope:               {operation: "GetClosedWorkflowExecution"},
+		PersistenceDeleteSignalRequestedIDScope:                  {operation: "DeleteSignalRequestedID"},
 
 		HistoryClientStartWorkflowExecutionScope:         {operation: "HistoryClientStartWorkflowExecution"},
 		HistoryClientRecordActivityTaskHeartbeatScope:    {operation: "HistoryClientRecordActivityTaskHeartbeat"},
@@ -434,6 +443,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryClientRecordActivityTaskStartedScope:      {operation: "HistoryClientRecordActivityTaskStarted"},
 		HistoryClientRequestCancelWorkflowExecutionScope: {operation: "HistoryClientRequestCancelWorkflowExecution"},
 		HistoryClientSignalWorkflowExecutionScope:        {operation: "HistoryClientSignalWorkflowExecution"},
+		HistoryClientDeleteWorkflowExecutionSignalScope:  {operation: "HistoryClientDeleteWorkflowExecutionSignal"},
 		HistoryClientTerminateWorkflowExecutionScope:     {operation: "HistoryClientTerminateWorkflowExecution"},
 		HistoryClientScheduleDecisionTaskScope:           {operation: "HistoryClientScheduleDecisionTask"},
 		HistoryClientRecordChildExecutionCompletedScope:  {operation: "HistoryClientRecordChildExecutionCompleted"},
@@ -489,6 +499,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryRecordDecisionTaskStartedScope:      {operation: "RecordDecisionTaskStarted"},
 		HistoryRecordActivityTaskStartedScope:      {operation: "RecordActivityTaskStarted"},
 		HistorySignalWorkflowExecutionScope:        {operation: "SignalWorkflowExecution"},
+		HistoryDeleteWorkflowExecutionSignalScope:  {operation: "DeleteWorkflowExecutionSignal"},
 		HistoryTerminateWorkflowExecutionScope:     {operation: "TerminateWorkflowExecution"},
 		HistoryScheduleDecisionTaskScope:           {operation: "ScheduleDecisionTask"},
 		HistoryRecordChildExecutionCompletedScope:  {operation: "RecordChildExecutionCompleted"},
@@ -499,6 +510,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		TransferTaskDecisionScope:                  {operation: "TransferTaskDecision"},
 		TransferTaskCloseExecutionScope:            {operation: "TransferTaskCloseExecution"},
 		TransferTaskCancelExecutionScope:           {operation: "TransferTaskCancelExecution"},
+		TransferTaskSignalExecutionScope:           {operation: "TransferTaskSignalExecution"},
 		TransferTaskStartChildExecutionScope:       {operation: "TransferTaskStartChildExecution"},
 		TimerQueueProcessorScope:                   {operation: "TimerQueueProcessor"},
 		TimerTaskActivityTimeoutScope:              {operation: "TimerTaskActivityTimeout"},
@@ -567,6 +579,7 @@ const (
 	DecisionTypeCancelExternalWorkflowCounter
 	DecisionTypeChildWorkflowCounter
 	DecisionTypeContinueAsNewCounter
+	DecisionTypeSignalExternalWorkflowCounter
 	MultipleCompletionDecisionsCounter
 	FailedDecisionsCounter
 	StaleMutableStateCounter

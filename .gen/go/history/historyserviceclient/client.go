@@ -36,6 +36,12 @@ import (
 
 // Interface is a client for the HistoryService service.
 type Interface interface {
+	DeleteWorkflowExecutionSignal(
+		ctx context.Context,
+		DeleteRequest *history.DeleteWorkflowExecutionSignalRequest,
+		opts ...yarpc.CallOption,
+	) error
+
 	DescribeWorkflowExecution(
 		ctx context.Context,
 		DescribeRequest *history.DescribeWorkflowExecutionRequest,
@@ -155,6 +161,29 @@ func init() {
 
 type client struct {
 	c thrift.Client
+}
+
+func (c client) DeleteWorkflowExecutionSignal(
+	ctx context.Context,
+	_DeleteRequest *history.DeleteWorkflowExecutionSignalRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := history.HistoryService_DeleteWorkflowExecutionSignal_Helper.Args(_DeleteRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result history.HistoryService_DeleteWorkflowExecutionSignal_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	err = history.HistoryService_DeleteWorkflowExecutionSignal_Helper.UnwrapResponse(&result)
+	return
 }
 
 func (c client) DescribeWorkflowExecution(
