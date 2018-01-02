@@ -703,6 +703,8 @@ func (p *visibilityPersistenceClient) updateErrorMetric(scope int, err error) {
 	case *TimeoutError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrTimeoutCounter)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
+	case *workflow.EntityNotExistsError:
+		p.metricClient.IncCounter(scope, metrics.CadenceErrEntityNotExistsCounter)
 	case *workflow.ServiceBusyError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrBusyCounter)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
