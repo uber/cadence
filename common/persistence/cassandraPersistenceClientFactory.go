@@ -29,14 +29,15 @@ import (
 
 type (
 	cassandraPersistenceClientFactory struct {
-		session *gocql.Session
-		logger  bark.Logger
+		session       *gocql.Session
+		logger        bark.Logger
+		metricsClient metrics.Client
 	}
 )
 
 // NewCassandraPersistenceClientFactory is used to create an instance of ExecutionManagerFactory implementation
 func NewCassandraPersistenceClientFactory(hosts string, port int, user, password, dc string, keyspace string,
-	numConns int, logger bark.Logger) (ExecutionManagerFactory, error) {
+	numConns int, logger bark.Logger, metricsClient metrics.Client) (ExecutionManagerFactory, error) {
 	cluster := common.NewCassandraCluster(hosts, port, user, password, dc)
 	cluster.Keyspace = keyspace
 	cluster.ProtoVersion = cassandraProtoVersion
@@ -50,22 +51,22 @@ func NewCassandraPersistenceClientFactory(hosts string, port int, user, password
 		return nil, err
 	}
 
-	return &cassandraPersistenceClientFactory{session: session, logger: logger}, nil
+	return &cassandraPersistenceClientFactory{session: session, logger: logger, metricsClient: metricsClient}, nil
 }
 
 // CreateExecutionManager implements ExecutionManagerFactory interface
-func (f *cassandraPersistenceClientFactory) CreateExecutionManager(shardID int, metricsClient metrics.Client) (ExecutionManager, error) {
+func (f *cassandraPersistenceClientFactory) CreateExecutionManager(shardID int) (ExecutionManager, error) {
 	mgr, err := NewCassandraWorkflowExecutionPersistence(shardID, f.session, f.logger)
 
 	if err != nil {
 		return nil, err
 	}
 
-	if metricsClient == nil {
+	if f.metricsClient == nil {
 		return mgr, nil
 	}
 
-	return NewWorkflowExecutionPersistenceClient(mgr, metricsClient), nil
+	return NewWorkflowExecutionPersistenceClient(mgr, f.metricsClient), nil
 }
 
 // Close releases the underlying resources held by this object

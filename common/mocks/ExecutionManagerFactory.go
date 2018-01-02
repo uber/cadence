@@ -22,7 +22,6 @@ package mocks
 
 import (
 	"github.com/stretchr/testify/mock"
-	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 )
 
@@ -32,12 +31,12 @@ type ExecutionManagerFactory struct {
 }
 
 // CreateExecutionManager provides a mock function with given fields: shardID
-func (_m *ExecutionManagerFactory) CreateExecutionManager(shardID int, metricsClient metrics.Client) (persistence.ExecutionManager, error) {
-	ret := _m.Called(shardID, metricsClient)
+func (_m *ExecutionManagerFactory) CreateExecutionManager(shardID int) (persistence.ExecutionManager, error) {
+	ret := _m.Called(shardID)
 
 	var r0 persistence.ExecutionManager
-	if rf, ok := ret.Get(0).(func(int, metrics.Client) persistence.ExecutionManager); ok {
-		r0 = rf(shardID, metricsClient)
+	if rf, ok := ret.Get(0).(func(int) persistence.ExecutionManager); ok {
+		r0 = rf(shardID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(persistence.ExecutionManager)
@@ -45,8 +44,8 @@ func (_m *ExecutionManagerFactory) CreateExecutionManager(shardID int, metricsCl
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(int, metrics.Client) error); ok {
-		r1 = rf(shardID, metricsClient)
+	if rf, ok := ret.Get(1).(func(int) error); ok {
+		r1 = rf(shardID)
 	} else {
 		r1 = ret.Error(1)
 	}

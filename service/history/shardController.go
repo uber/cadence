@@ -109,12 +109,7 @@ func newHistoryShardsItem(shardID int, shardMgr persistence.ShardManager, histor
 	metadataMgr persistence.MetadataManager, executionMgrFactory persistence.ExecutionManagerFactory, factory EngineFactory,
 	host *membership.HostInfo, config *Config, logger bark.Logger, metricsClient metrics.Client) (*historyShardsItem, error) {
 
-	tags := map[string]string{
-		metrics.ShardTagName: metrics.AllShardsTagValue,
-	}
-	metricsClient = metricsClient.Tagged(tags)
-
-	executionMgr, err := executionMgrFactory.CreateExecutionManager(shardID, metricsClient)
+	executionMgr, err := executionMgrFactory.CreateExecutionManager(shardID)
 	if err != nil {
 		return nil, err
 	}

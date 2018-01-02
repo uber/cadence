@@ -214,6 +214,7 @@ func (s *Service) Start() {
 		p.CassandraConfig.Keyspace,
 		s.config.ExecutionMgrNumConns,
 		p.Logger,
+		s.metricsClient,
 	)
 	if err != nil {
 		log.Fatalf("Creating Cassandra execution manager persistence factory failed: %v", err)

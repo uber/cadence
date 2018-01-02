@@ -114,12 +114,12 @@ func (s *TestBase) SetupWorkflowStoreWithOptions(options TestBaseOptions) {
 		log.Fatal(err)
 	}
 	s.ExecutionMgrFactory, err = NewCassandraPersistenceClientFactory(options.ClusterHost, options.ClusterPort,
-		options.ClusterUser, options.ClusterPassword, options.Datacenter, s.CassandraTestCluster.keyspace, 2, log)
+		options.ClusterUser, options.ClusterPassword, options.Datacenter, s.CassandraTestCluster.keyspace, 2, log, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 	// Create an ExecutionManager for the shard for use in unit tests
-	s.WorkflowMgr, err = s.ExecutionMgrFactory.CreateExecutionManager(shardID, nil)
+	s.WorkflowMgr, err = s.ExecutionMgrFactory.CreateExecutionManager(shardID)
 	if err != nil {
 		log.Fatal(err)
 	}
