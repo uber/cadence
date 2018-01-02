@@ -30,8 +30,8 @@ import (
 type (
 	cassandraPersistenceClientFactory struct {
 		session       *gocql.Session
-		logger        bark.Logger
 		metricsClient metrics.Client
+		logger        bark.Logger
 	}
 )
 
