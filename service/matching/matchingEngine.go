@@ -163,6 +163,16 @@ func (e *matchingEngineImpl) getTaskListManager(taskList *taskListID) (taskListM
 func (e *matchingEngineImpl) getTaskListManagerWithRPS(
 	taskList *taskListID, maxDispatchPerSecond *float64,
 ) (taskListManager, error) {
+	// The first check is an optimization so almost all requests will have a task list manager
+	// and return avoiding the write lock
+	e.taskListsLock.RLock()
+	if result, ok := e.taskLists[*taskList]; ok {
+		e.taskListsLock.RUnlock()
+		result.UpdateMaxDispatch(maxDispatchPerSecond)
+		return result, nil
+	}
+	e.taskListsLock.RUnlock()
+	// If it gets here, write lock and check again in case a task list is created between the two locks
 	e.taskListsLock.Lock()
 	if result, ok := e.taskLists[*taskList]; ok {
 		result.UpdateMaxDispatch(maxDispatchPerSecond)
