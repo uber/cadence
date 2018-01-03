@@ -352,8 +352,8 @@ pollLoop:
 
 		taskList := newTaskListID(domainID, taskListName, persistence.TaskListTypeActivity)
 		var maxDispatch *float64
-		if req.PollRequest.TaskListMetadata != nil {
-			maxDispatch = req.PollRequest.TaskListMetadata.MaxTasksPerSecond
+		if request.TaskListMetadata != nil {
+			maxDispatch = request.TaskListMetadata.MaxTasksPerSecond
 		}
 		// Add frontend generated pollerID to context so tasklistMgr can support cancellation of
 		// long-poll when frontend calls CancelOutstandingPoll API

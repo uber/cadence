@@ -602,10 +602,10 @@ deliverBufferTasksLoop:
 		err := c.rateLimiter.Wait(c.cancelCtx)
 		if err != nil {
 			if err == context.Canceled {
-				c.logger.Warn("Tasklist manager context is cancelled, shutting down")
+				c.logger.Info("Tasklist manager context is cancelled, shutting down")
 				break deliverBufferTasksLoop
 			}
-			c.logger.Warn("Unable to send tasks for poll, limit exceeded")
+			c.logger.Warnf("Unable to send tasks for poll, rate limit failed: %s", err.Error())
 			c.metricsClient.IncCounter(metrics.MatchingTaskListMgrScope, metrics.AddThrottleCounter)
 			continue
 		}
