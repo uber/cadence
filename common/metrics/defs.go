@@ -597,7 +597,8 @@ const (
 	LeaseFailureCounter
 	ConditionFailedErrorCounter
 	RespondQueryTaskFailedCounter
-	AddThrottleCounter
+	SyncThrottleCounter
+	BufferThrottleCounter
 )
 
 // MetricDefs record the metrics for all services
@@ -680,7 +681,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		LeaseFailureCounter:           {metricName: "lease.failures"},
 		ConditionFailedErrorCounter:   {metricName: "condition-failed-errors"},
 		RespondQueryTaskFailedCounter: {metricName: "respond-query-failed"},
-		AddThrottleCounter:            {metricName: "add.throttle.count"},
+		SyncThrottleCounter:           {metricName: "sync.throttle.count"},
+		BufferThrottleCounter:         {metricName: "buffer.throttle.count"},
 	},
 }
 

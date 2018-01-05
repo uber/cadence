@@ -50,6 +50,8 @@ const (
 	_defaultTaskDispatchRPSTTL = 60 * time.Second
 )
 
+var errAddTasklistThrottled = fmt.Errorf("cannot add to tasklist, limit exceeded")
+
 type taskListManager interface {
 	Start() error
 	Stop()
@@ -282,7 +284,7 @@ func (c *taskListManagerImpl) AddTask(execution *s.WorkflowExecution, taskInfo *
 	c.startWG.Wait()
 	_, err := c.executeWithRetry(func(rangeID int64) (interface{}, error) {
 		r, err := c.trySyncMatch(taskInfo)
-		if err != nil || r != nil {
+		if (err != nil && err != errAddTasklistThrottled) || r != nil {
 			return r, err
 		}
 		r, err = c.taskWriter.appendTask(execution, taskInfo, rangeID)
@@ -582,9 +584,8 @@ func (c *taskListManagerImpl) trySyncMatch(task *persistence.TaskInfo) (*persist
 
 	rsv := c.rateLimiter.Reserve()
 	if !rsv.OK() {
-		scope := metrics.MatchingTaskListMgrScope
-		c.metricsClient.IncCounter(scope, metrics.AddThrottleCounter)
-		return nil, fmt.Errorf("cannot add to tasklist, limit exceeded")
+		c.metricsClient.IncCounter(metrics.MatchingTaskListMgrScope, metrics.SyncThrottleCounter)
+		return nil, errAddTasklistThrottled
 	}
 	select {
 	case c.tasksForPoll <- request: // poller goroutine picked up the task
@@ -606,7 +607,7 @@ deliverBufferTasksLoop:
 				break deliverBufferTasksLoop
 			}
 			c.logger.Warnf("Unable to send tasks for poll, rate limit failed: %s", err.Error())
-			c.metricsClient.IncCounter(metrics.MatchingTaskListMgrScope, metrics.AddThrottleCounter)
+			c.metricsClient.IncCounter(metrics.MatchingTaskListMgrScope, metrics.BufferThrottleCounter)
 			continue
 		}
 		select {
