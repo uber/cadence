@@ -54,11 +54,11 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) error
 
-	GetPollerHistory(
+	DescribeTaskList(
 		ctx context.Context,
-		Request *matching.GetPollerHistoryRequest,
+		Request *matching.DescribeTaskListRequest,
 		opts ...yarpc.CallOption,
-	) (*shared.GetPollerHistoryResponse, error)
+	) (*shared.DescribeTaskListResponse, error)
 
 	PollForActivityTask(
 		ctx context.Context,
@@ -178,13 +178,13 @@ func (c client) CancelOutstandingPoll(
 	return
 }
 
-func (c client) GetPollerHistory(
+func (c client) DescribeTaskList(
 	ctx context.Context,
-	_Request *matching.GetPollerHistoryRequest,
+	_Request *matching.DescribeTaskListRequest,
 	opts ...yarpc.CallOption,
-) (success *shared.GetPollerHistoryResponse, err error) {
+) (success *shared.DescribeTaskListResponse, err error) {
 
-	args := matching.MatchingService_GetPollerHistory_Helper.Args(_Request)
+	args := matching.MatchingService_DescribeTaskList_Helper.Args(_Request)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)
@@ -192,12 +192,12 @@ func (c client) GetPollerHistory(
 		return
 	}
 
-	var result matching.MatchingService_GetPollerHistory_Result
+	var result matching.MatchingService_DescribeTaskList_Result
 	if err = result.FromWire(body); err != nil {
 		return
 	}
 
-	success, err = matching.MatchingService_GetPollerHistory_Helper.UnwrapResponse(&result)
+	success, err = matching.MatchingService_DescribeTaskList_Helper.UnwrapResponse(&result)
 	return
 }
 

@@ -44,15 +44,15 @@ type Interface interface {
 		DescribeRequest *shared.DescribeDomainRequest,
 	) (*shared.DescribeDomainResponse, error)
 
+	DescribeTaskList(
+		ctx context.Context,
+		Request *shared.DescribeTaskListRequest,
+	) (*shared.DescribeTaskListResponse, error)
+
 	DescribeWorkflowExecution(
 		ctx context.Context,
 		DescribeRequest *shared.DescribeWorkflowExecutionRequest,
 	) (*shared.DescribeWorkflowExecutionResponse, error)
-
-	GetPollerHistory(
-		ctx context.Context,
-		Request *shared.GetPollerHistoryRequest,
-	) (*shared.GetPollerHistoryResponse, error)
 
 	GetWorkflowExecutionHistory(
 		ctx context.Context,
@@ -199,6 +199,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
+				Name: "DescribeTaskList",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.DescribeTaskList),
+				},
+				Signature:    "DescribeTaskList(Request *shared.DescribeTaskListRequest) (*shared.DescribeTaskListResponse)",
+				ThriftModule: cadence.ThriftModule,
+			},
+
+			thrift.Method{
 				Name: "DescribeWorkflowExecution",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -206,17 +217,6 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary: thrift.UnaryHandler(h.DescribeWorkflowExecution),
 				},
 				Signature:    "DescribeWorkflowExecution(DescribeRequest *shared.DescribeWorkflowExecutionRequest) (*shared.DescribeWorkflowExecutionResponse)",
-				ThriftModule: cadence.ThriftModule,
-			},
-
-			thrift.Method{
-				Name: "GetPollerHistory",
-				HandlerSpec: thrift.HandlerSpec{
-
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.GetPollerHistory),
-				},
-				Signature:    "GetPollerHistory(Request *shared.GetPollerHistoryRequest) (*shared.GetPollerHistoryResponse)",
 				ThriftModule: cadence.ThriftModule,
 			},
 
@@ -509,6 +509,25 @@ func (h handler) DescribeDomain(ctx context.Context, body wire.Value) (thrift.Re
 	return response, err
 }
 
+func (h handler) DescribeTaskList(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args cadence.WorkflowService_DescribeTaskList_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.DescribeTaskList(ctx, args.Request)
+
+	hadError := err != nil
+	result, err := cadence.WorkflowService_DescribeTaskList_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
 func (h handler) DescribeWorkflowExecution(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args cadence.WorkflowService_DescribeWorkflowExecution_Args
 	if err := args.FromWire(body); err != nil {
@@ -519,25 +538,6 @@ func (h handler) DescribeWorkflowExecution(ctx context.Context, body wire.Value)
 
 	hadError := err != nil
 	result, err := cadence.WorkflowService_DescribeWorkflowExecution_Helper.WrapResponse(success, err)
-
-	var response thrift.Response
-	if err == nil {
-		response.IsApplicationError = hadError
-		response.Body = result
-	}
-	return response, err
-}
-
-func (h handler) GetPollerHistory(ctx context.Context, body wire.Value) (thrift.Response, error) {
-	var args cadence.WorkflowService_GetPollerHistory_Args
-	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
-	}
-
-	success, err := h.impl.GetPollerHistory(ctx, args.Request)
-
-	hadError := err != nil
-	result, err := cadence.WorkflowService_GetPollerHistory_Helper.WrapResponse(success, err)
 
 	var response thrift.Response
 	if err == nil {

@@ -49,10 +49,10 @@ type Interface interface {
 		Request *matching.CancelOutstandingPollRequest,
 	) error
 
-	GetPollerHistory(
+	DescribeTaskList(
 		ctx context.Context,
-		Request *matching.GetPollerHistoryRequest,
-	) (*shared.GetPollerHistoryResponse, error)
+		Request *matching.DescribeTaskListRequest,
+	) (*shared.DescribeTaskListResponse, error)
 
 	PollForActivityTask(
 		ctx context.Context,
@@ -120,13 +120,13 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
-				Name: "GetPollerHistory",
+				Name: "DescribeTaskList",
 				HandlerSpec: thrift.HandlerSpec{
 
 					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.GetPollerHistory),
+					Unary: thrift.UnaryHandler(h.DescribeTaskList),
 				},
-				Signature:    "GetPollerHistory(Request *matching.GetPollerHistoryRequest) (*shared.GetPollerHistoryResponse)",
+				Signature:    "DescribeTaskList(Request *matching.DescribeTaskListRequest) (*shared.DescribeTaskListResponse)",
 				ThriftModule: matching.ThriftModule,
 			},
 
@@ -240,16 +240,16 @@ func (h handler) CancelOutstandingPoll(ctx context.Context, body wire.Value) (th
 	return response, err
 }
 
-func (h handler) GetPollerHistory(ctx context.Context, body wire.Value) (thrift.Response, error) {
-	var args matching.MatchingService_GetPollerHistory_Args
+func (h handler) DescribeTaskList(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args matching.MatchingService_DescribeTaskList_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	success, err := h.impl.GetPollerHistory(ctx, args.Request)
+	success, err := h.impl.DescribeTaskList(ctx, args.Request)
 
 	hadError := err != nil
-	result, err := matching.MatchingService_GetPollerHistory_Helper.WrapResponse(success, err)
+	result, err := matching.MatchingService_DescribeTaskList_Helper.WrapResponse(success, err)
 
 	var response thrift.Response
 	if err == nil {

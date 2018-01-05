@@ -169,13 +169,14 @@ func (h *Handler) CancelOutstandingPoll(ctx context.Context,
 	return h.handleErr(err, scope)
 }
 
-// GetPollerHistory get poller information for given tasklist
-func (h *Handler) GetPollerHistory(ctx context.Context, request *m.GetPollerHistoryRequest) (*gen.GetPollerHistoryResponse, error) {
-	scope := metrics.MatchingGetPollerHistoryScope
-	sw := h.startRequestProfile("GetPollerHistory", scope)
+// DescribeTaskList returns information about the target tasklist, right now this API returns the
+// pollers which polled this tasklist in last few minutes.
+func (h *Handler) DescribeTaskList(ctx context.Context, request *m.DescribeTaskListRequest) (*gen.DescribeTaskListResponse, error) {
+	scope := metrics.MatchingDescribeTaskListScope
+	sw := h.startRequestProfile("DescribeTaskList", scope)
 	defer sw.Stop()
 
-	response, err := h.engine.GetPollerHistory(ctx, request)
+	response, err := h.engine.DescribeTaskList(ctx, request)
 	return response, h.handleErr(err, scope)
 }
 

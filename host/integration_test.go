@@ -3621,7 +3621,7 @@ func (s *integrationSuite) TestGetWorkflowExecutionHistoryLongPoll() {
 	s.Equal(11, len(allEvents))
 }
 
-func (s *integrationSuite) TestGetPollerHistory() {
+func (s *integrationSuite) TestDescribeTaskList() {
 	workflowID := "interation-get-poller-history"
 	identity := "worker1"
 	activityName := "activity_type1"
@@ -3706,8 +3706,8 @@ func (s *integrationSuite) TestGetPollerHistory() {
 	}
 
 	// this function poll events from history side
-	testGetPollerHistory := func(domain string, tasklist *workflow.TaskList, tasklistType workflow.TaskListType) []*workflow.PollerInfo {
-		responseInner, errInner := s.engine.GetPollerHistory(createContext(), &workflow.GetPollerHistoryRequest{
+	testDescribeTaskList := func(domain string, tasklist *workflow.TaskList, tasklistType workflow.TaskListType) []*workflow.PollerInfo {
+		responseInner, errInner := s.engine.DescribeTaskList(createContext(), &workflow.DescribeTaskListRequest{
 			Domain:       common.StringPtr(domain),
 			TaskList:     taskList,
 			TaskListType: &tasklistType,
@@ -3717,30 +3717,35 @@ func (s *integrationSuite) TestGetPollerHistory() {
 		return responseInner.Pollers
 	}
 
+	before := time.Now()
+
 	// when no one polling on the tasklist (activity or decition), there shall be no poller information
-	pollerInfos := testGetPollerHistory(s.domainName, taskList, workflow.TaskListTypeActivity)
+	pollerInfos := testDescribeTaskList(s.domainName, taskList, workflow.TaskListTypeActivity)
 	s.Empty(pollerInfos)
-	pollerInfos = testGetPollerHistory(s.domainName, taskList, workflow.TaskListTypeDecision)
+	pollerInfos = testDescribeTaskList(s.domainName, taskList, workflow.TaskListTypeDecision)
 	s.Empty(pollerInfos)
 
 	_, errDecision := poller.pollAndProcessDecisionTask(false, false)
 	s.Nil(errDecision)
-	pollerInfos = testGetPollerHistory(s.domainName, taskList, workflow.TaskListTypeActivity)
+	pollerInfos = testDescribeTaskList(s.domainName, taskList, workflow.TaskListTypeActivity)
 	s.Empty(pollerInfos)
-	pollerInfos = testGetPollerHistory(s.domainName, taskList, workflow.TaskListTypeDecision)
+	pollerInfos = testDescribeTaskList(s.domainName, taskList, workflow.TaskListTypeDecision)
 	s.Equal(1, len(pollerInfos))
 	s.Equal(identity, pollerInfos[0].GetIdentity())
+	s.True(time.Unix(0, pollerInfos[0].GetTimestamp()).After(before))
 	s.NotEmpty(pollerInfos[0].GetTimestamp())
 
 	errActivity := poller.pollAndProcessActivityTask(false)
 	s.Nil(errActivity)
-	pollerInfos = testGetPollerHistory(s.domainName, taskList, workflow.TaskListTypeActivity)
+	pollerInfos = testDescribeTaskList(s.domainName, taskList, workflow.TaskListTypeActivity)
 	s.Equal(1, len(pollerInfos))
 	s.Equal(identity, pollerInfos[0].GetIdentity())
+	s.True(time.Unix(0, pollerInfos[0].GetTimestamp()).After(before))
 	s.NotEmpty(pollerInfos[0].GetTimestamp())
-	pollerInfos = testGetPollerHistory(s.domainName, taskList, workflow.TaskListTypeDecision)
+	pollerInfos = testDescribeTaskList(s.domainName, taskList, workflow.TaskListTypeDecision)
 	s.Equal(1, len(pollerInfos))
 	s.Equal(identity, pollerInfos[0].GetIdentity())
+	s.True(time.Unix(0, pollerInfos[0].GetTimestamp()).After(before))
 	s.NotEmpty(pollerInfos[0].GetTimestamp())
 }
 

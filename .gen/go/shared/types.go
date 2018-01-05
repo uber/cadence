@@ -7092,6 +7092,370 @@ func (v *DescribeDomainResponse) Equals(rhs *DescribeDomainResponse) bool {
 	return true
 }
 
+type DescribeTaskListRequest struct {
+	Domain       *string       `json:"domain,omitempty"`
+	TaskList     *TaskList     `json:"taskList,omitempty"`
+	TaskListType *TaskListType `json:"taskListType,omitempty"`
+}
+
+// ToWire translates a DescribeTaskListRequest struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *DescribeTaskListRequest) ToWire() (wire.Value, error) {
+	var (
+		fields [3]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Domain != nil {
+		w, err = wire.NewValueString(*(v.Domain)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.TaskList != nil {
+		w, err = v.TaskList.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	if v.TaskListType != nil {
+		w, err = v.TaskListType.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 30, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _TaskListType_Read(w wire.Value) (TaskListType, error) {
+	var v TaskListType
+	err := v.FromWire(w)
+	return v, err
+}
+
+// FromWire deserializes a DescribeTaskListRequest struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a DescribeTaskListRequest struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v DescribeTaskListRequest
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *DescribeTaskListRequest) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.Domain = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TStruct {
+				v.TaskList, err = _TaskList_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 30:
+			if field.Value.Type() == wire.TI32 {
+				var x TaskListType
+				x, err = _TaskListType_Read(field.Value)
+				v.TaskListType = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a DescribeTaskListRequest
+// struct.
+func (v *DescribeTaskListRequest) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [3]string
+	i := 0
+	if v.Domain != nil {
+		fields[i] = fmt.Sprintf("Domain: %v", *(v.Domain))
+		i++
+	}
+	if v.TaskList != nil {
+		fields[i] = fmt.Sprintf("TaskList: %v", v.TaskList)
+		i++
+	}
+	if v.TaskListType != nil {
+		fields[i] = fmt.Sprintf("TaskListType: %v", *(v.TaskListType))
+		i++
+	}
+
+	return fmt.Sprintf("DescribeTaskListRequest{%v}", strings.Join(fields[:i], ", "))
+}
+
+func _TaskListType_EqualsPtr(lhs, rhs *TaskListType) bool {
+	if lhs != nil && rhs != nil {
+
+		x := *lhs
+		y := *rhs
+		return x.Equals(y)
+	}
+	return lhs == nil && rhs == nil
+}
+
+// Equals returns true if all the fields of this DescribeTaskListRequest match the
+// provided DescribeTaskListRequest.
+//
+// This function performs a deep comparison.
+func (v *DescribeTaskListRequest) Equals(rhs *DescribeTaskListRequest) bool {
+	if !_String_EqualsPtr(v.Domain, rhs.Domain) {
+		return false
+	}
+	if !((v.TaskList == nil && rhs.TaskList == nil) || (v.TaskList != nil && rhs.TaskList != nil && v.TaskList.Equals(rhs.TaskList))) {
+		return false
+	}
+	if !_TaskListType_EqualsPtr(v.TaskListType, rhs.TaskListType) {
+		return false
+	}
+
+	return true
+}
+
+// GetDomain returns the value of Domain if it is set or its
+// zero value if it is unset.
+func (v *DescribeTaskListRequest) GetDomain() (o string) {
+	if v.Domain != nil {
+		return *v.Domain
+	}
+
+	return
+}
+
+// GetTaskListType returns the value of TaskListType if it is set or its
+// zero value if it is unset.
+func (v *DescribeTaskListRequest) GetTaskListType() (o TaskListType) {
+	if v.TaskListType != nil {
+		return *v.TaskListType
+	}
+
+	return
+}
+
+type DescribeTaskListResponse struct {
+	Pollers []*PollerInfo `json:"pollers,omitempty"`
+}
+
+type _List_PollerInfo_ValueList []*PollerInfo
+
+func (v _List_PollerInfo_ValueList) ForEach(f func(wire.Value) error) error {
+	for i, x := range v {
+		if x == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", i)
+		}
+		w, err := x.ToWire()
+		if err != nil {
+			return err
+		}
+		err = f(w)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (v _List_PollerInfo_ValueList) Size() int {
+	return len(v)
+}
+
+func (_List_PollerInfo_ValueList) ValueType() wire.Type {
+	return wire.TStruct
+}
+
+func (_List_PollerInfo_ValueList) Close() {}
+
+// ToWire translates a DescribeTaskListResponse struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *DescribeTaskListResponse) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Pollers != nil {
+		w, err = wire.NewValueList(_List_PollerInfo_ValueList(v.Pollers)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _PollerInfo_Read(w wire.Value) (*PollerInfo, error) {
+	var v PollerInfo
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _List_PollerInfo_Read(l wire.ValueList) ([]*PollerInfo, error) {
+	if l.ValueType() != wire.TStruct {
+		return nil, nil
+	}
+
+	o := make([]*PollerInfo, 0, l.Size())
+	err := l.ForEach(func(x wire.Value) error {
+		i, err := _PollerInfo_Read(x)
+		if err != nil {
+			return err
+		}
+		o = append(o, i)
+		return nil
+	})
+	l.Close()
+	return o, err
+}
+
+// FromWire deserializes a DescribeTaskListResponse struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a DescribeTaskListResponse struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v DescribeTaskListResponse
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *DescribeTaskListResponse) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TList {
+				v.Pollers, err = _List_PollerInfo_Read(field.Value.GetList())
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a DescribeTaskListResponse
+// struct.
+func (v *DescribeTaskListResponse) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.Pollers != nil {
+		fields[i] = fmt.Sprintf("Pollers: %v", v.Pollers)
+		i++
+	}
+
+	return fmt.Sprintf("DescribeTaskListResponse{%v}", strings.Join(fields[:i], ", "))
+}
+
+func _List_PollerInfo_Equals(lhs, rhs []*PollerInfo) bool {
+	if len(lhs) != len(rhs) {
+		return false
+	}
+
+	for i, lv := range lhs {
+		rv := rhs[i]
+		if !lv.Equals(rv) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// Equals returns true if all the fields of this DescribeTaskListResponse match the
+// provided DescribeTaskListResponse.
+//
+// This function performs a deep comparison.
+func (v *DescribeTaskListResponse) Equals(rhs *DescribeTaskListResponse) bool {
+	if !((v.Pollers == nil && rhs.Pollers == nil) || (v.Pollers != nil && rhs.Pollers != nil && _List_PollerInfo_Equals(v.Pollers, rhs.Pollers))) {
+		return false
+	}
+
+	return true
+}
+
 type DescribeWorkflowExecutionRequest struct {
 	Domain    *string            `json:"domain,omitempty"`
 	Execution *WorkflowExecution `json:"execution,omitempty"`
@@ -8901,370 +9265,6 @@ func (v *FailWorkflowExecutionDecisionAttributes) GetReason() (o string) {
 	}
 
 	return
-}
-
-type GetPollerHistoryRequest struct {
-	Domain       *string       `json:"domain,omitempty"`
-	TaskList     *TaskList     `json:"taskList,omitempty"`
-	TaskListType *TaskListType `json:"taskListType,omitempty"`
-}
-
-// ToWire translates a GetPollerHistoryRequest struct into a Thrift-level intermediate
-// representation. This intermediate representation may be serialized
-// into bytes using a ThriftRW protocol implementation.
-//
-// An error is returned if the struct or any of its fields failed to
-// validate.
-//
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
-//
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
-func (v *GetPollerHistoryRequest) ToWire() (wire.Value, error) {
-	var (
-		fields [3]wire.Field
-		i      int = 0
-		w      wire.Value
-		err    error
-	)
-
-	if v.Domain != nil {
-		w, err = wire.NewValueString(*(v.Domain)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 10, Value: w}
-		i++
-	}
-	if v.TaskList != nil {
-		w, err = v.TaskList.ToWire()
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 20, Value: w}
-		i++
-	}
-	if v.TaskListType != nil {
-		w, err = v.TaskListType.ToWire()
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 30, Value: w}
-		i++
-	}
-
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
-}
-
-func _TaskListType_Read(w wire.Value) (TaskListType, error) {
-	var v TaskListType
-	err := v.FromWire(w)
-	return v, err
-}
-
-// FromWire deserializes a GetPollerHistoryRequest struct from its Thrift-level
-// representation. The Thrift-level representation may be obtained
-// from a ThriftRW protocol implementation.
-//
-// An error is returned if we were unable to build a GetPollerHistoryRequest struct
-// from the provided intermediate representation.
-//
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
-//
-//   var v GetPollerHistoryRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
-func (v *GetPollerHistoryRequest) FromWire(w wire.Value) error {
-	var err error
-
-	for _, field := range w.GetStruct().Fields {
-		switch field.ID {
-		case 10:
-			if field.Value.Type() == wire.TBinary {
-				var x string
-				x, err = field.Value.GetString(), error(nil)
-				v.Domain = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		case 20:
-			if field.Value.Type() == wire.TStruct {
-				v.TaskList, err = _TaskList_Read(field.Value)
-				if err != nil {
-					return err
-				}
-
-			}
-		case 30:
-			if field.Value.Type() == wire.TI32 {
-				var x TaskListType
-				x, err = _TaskListType_Read(field.Value)
-				v.TaskListType = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		}
-	}
-
-	return nil
-}
-
-// String returns a readable string representation of a GetPollerHistoryRequest
-// struct.
-func (v *GetPollerHistoryRequest) String() string {
-	if v == nil {
-		return "<nil>"
-	}
-
-	var fields [3]string
-	i := 0
-	if v.Domain != nil {
-		fields[i] = fmt.Sprintf("Domain: %v", *(v.Domain))
-		i++
-	}
-	if v.TaskList != nil {
-		fields[i] = fmt.Sprintf("TaskList: %v", v.TaskList)
-		i++
-	}
-	if v.TaskListType != nil {
-		fields[i] = fmt.Sprintf("TaskListType: %v", *(v.TaskListType))
-		i++
-	}
-
-	return fmt.Sprintf("GetPollerHistoryRequest{%v}", strings.Join(fields[:i], ", "))
-}
-
-func _TaskListType_EqualsPtr(lhs, rhs *TaskListType) bool {
-	if lhs != nil && rhs != nil {
-
-		x := *lhs
-		y := *rhs
-		return x.Equals(y)
-	}
-	return lhs == nil && rhs == nil
-}
-
-// Equals returns true if all the fields of this GetPollerHistoryRequest match the
-// provided GetPollerHistoryRequest.
-//
-// This function performs a deep comparison.
-func (v *GetPollerHistoryRequest) Equals(rhs *GetPollerHistoryRequest) bool {
-	if !_String_EqualsPtr(v.Domain, rhs.Domain) {
-		return false
-	}
-	if !((v.TaskList == nil && rhs.TaskList == nil) || (v.TaskList != nil && rhs.TaskList != nil && v.TaskList.Equals(rhs.TaskList))) {
-		return false
-	}
-	if !_TaskListType_EqualsPtr(v.TaskListType, rhs.TaskListType) {
-		return false
-	}
-
-	return true
-}
-
-// GetDomain returns the value of Domain if it is set or its
-// zero value if it is unset.
-func (v *GetPollerHistoryRequest) GetDomain() (o string) {
-	if v.Domain != nil {
-		return *v.Domain
-	}
-
-	return
-}
-
-// GetTaskListType returns the value of TaskListType if it is set or its
-// zero value if it is unset.
-func (v *GetPollerHistoryRequest) GetTaskListType() (o TaskListType) {
-	if v.TaskListType != nil {
-		return *v.TaskListType
-	}
-
-	return
-}
-
-type GetPollerHistoryResponse struct {
-	Pollers []*PollerInfo `json:"pollers,omitempty"`
-}
-
-type _List_PollerInfo_ValueList []*PollerInfo
-
-func (v _List_PollerInfo_ValueList) ForEach(f func(wire.Value) error) error {
-	for i, x := range v {
-		if x == nil {
-			return fmt.Errorf("invalid [%v]: value is nil", i)
-		}
-		w, err := x.ToWire()
-		if err != nil {
-			return err
-		}
-		err = f(w)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (v _List_PollerInfo_ValueList) Size() int {
-	return len(v)
-}
-
-func (_List_PollerInfo_ValueList) ValueType() wire.Type {
-	return wire.TStruct
-}
-
-func (_List_PollerInfo_ValueList) Close() {}
-
-// ToWire translates a GetPollerHistoryResponse struct into a Thrift-level intermediate
-// representation. This intermediate representation may be serialized
-// into bytes using a ThriftRW protocol implementation.
-//
-// An error is returned if the struct or any of its fields failed to
-// validate.
-//
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
-//
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
-func (v *GetPollerHistoryResponse) ToWire() (wire.Value, error) {
-	var (
-		fields [1]wire.Field
-		i      int = 0
-		w      wire.Value
-		err    error
-	)
-
-	if v.Pollers != nil {
-		w, err = wire.NewValueList(_List_PollerInfo_ValueList(v.Pollers)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 10, Value: w}
-		i++
-	}
-
-	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
-}
-
-func _PollerInfo_Read(w wire.Value) (*PollerInfo, error) {
-	var v PollerInfo
-	err := v.FromWire(w)
-	return &v, err
-}
-
-func _List_PollerInfo_Read(l wire.ValueList) ([]*PollerInfo, error) {
-	if l.ValueType() != wire.TStruct {
-		return nil, nil
-	}
-
-	o := make([]*PollerInfo, 0, l.Size())
-	err := l.ForEach(func(x wire.Value) error {
-		i, err := _PollerInfo_Read(x)
-		if err != nil {
-			return err
-		}
-		o = append(o, i)
-		return nil
-	})
-	l.Close()
-	return o, err
-}
-
-// FromWire deserializes a GetPollerHistoryResponse struct from its Thrift-level
-// representation. The Thrift-level representation may be obtained
-// from a ThriftRW protocol implementation.
-//
-// An error is returned if we were unable to build a GetPollerHistoryResponse struct
-// from the provided intermediate representation.
-//
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
-//
-//   var v GetPollerHistoryResponse
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
-func (v *GetPollerHistoryResponse) FromWire(w wire.Value) error {
-	var err error
-
-	for _, field := range w.GetStruct().Fields {
-		switch field.ID {
-		case 10:
-			if field.Value.Type() == wire.TList {
-				v.Pollers, err = _List_PollerInfo_Read(field.Value.GetList())
-				if err != nil {
-					return err
-				}
-
-			}
-		}
-	}
-
-	return nil
-}
-
-// String returns a readable string representation of a GetPollerHistoryResponse
-// struct.
-func (v *GetPollerHistoryResponse) String() string {
-	if v == nil {
-		return "<nil>"
-	}
-
-	var fields [1]string
-	i := 0
-	if v.Pollers != nil {
-		fields[i] = fmt.Sprintf("Pollers: %v", v.Pollers)
-		i++
-	}
-
-	return fmt.Sprintf("GetPollerHistoryResponse{%v}", strings.Join(fields[:i], ", "))
-}
-
-func _List_PollerInfo_Equals(lhs, rhs []*PollerInfo) bool {
-	if len(lhs) != len(rhs) {
-		return false
-	}
-
-	for i, lv := range lhs {
-		rv := rhs[i]
-		if !lv.Equals(rv) {
-			return false
-		}
-	}
-
-	return true
-}
-
-// Equals returns true if all the fields of this GetPollerHistoryResponse match the
-// provided GetPollerHistoryResponse.
-//
-// This function performs a deep comparison.
-func (v *GetPollerHistoryResponse) Equals(rhs *GetPollerHistoryResponse) bool {
-	if !((v.Pollers == nil && rhs.Pollers == nil) || (v.Pollers != nil && rhs.Pollers != nil && _List_PollerInfo_Equals(v.Pollers, rhs.Pollers))) {
-		return false
-	}
-
-	return true
 }
 
 type GetWorkflowExecutionHistoryRequest struct {
@@ -13472,7 +13472,7 @@ func (v *PollForDecisionTaskResponse) GetBacklogCountHint() (o int64) {
 }
 
 type PollerInfo struct {
-	Timestamp *string `json:"timestamp,omitempty"`
+	Timestamp *int64  `json:"timestamp,omitempty"`
 	Identity  *string `json:"identity,omitempty"`
 }
 
@@ -13500,7 +13500,7 @@ func (v *PollerInfo) ToWire() (wire.Value, error) {
 	)
 
 	if v.Timestamp != nil {
-		w, err = wire.NewValueString(*(v.Timestamp)), error(nil)
+		w, err = wire.NewValueI64(*(v.Timestamp)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -13542,9 +13542,9 @@ func (v *PollerInfo) FromWire(w wire.Value) error {
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
 		case 10:
-			if field.Value.Type() == wire.TBinary {
-				var x string
-				x, err = field.Value.GetString(), error(nil)
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
 				v.Timestamp = &x
 				if err != nil {
 					return err
@@ -13593,7 +13593,7 @@ func (v *PollerInfo) String() string {
 //
 // This function performs a deep comparison.
 func (v *PollerInfo) Equals(rhs *PollerInfo) bool {
-	if !_String_EqualsPtr(v.Timestamp, rhs.Timestamp) {
+	if !_I64_EqualsPtr(v.Timestamp, rhs.Timestamp) {
 		return false
 	}
 	if !_String_EqualsPtr(v.Identity, rhs.Identity) {
@@ -13605,7 +13605,7 @@ func (v *PollerInfo) Equals(rhs *PollerInfo) bool {
 
 // GetTimestamp returns the value of Timestamp if it is set or its
 // zero value if it is unset.
-func (v *PollerInfo) GetTimestamp() (o string) {
+func (v *PollerInfo) GetTimestamp() (o int64) {
 	if v.Timestamp != nil {
 		return *v.Timestamp
 	}

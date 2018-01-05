@@ -453,13 +453,13 @@ func (e *matchingEngineImpl) CancelOutstandingPoll(ctx context.Context, request 
 	return nil
 }
 
-func (e *matchingEngineImpl) GetPollerHistory(ctx context.Context, request *m.GetPollerHistoryRequest) (*workflow.GetPollerHistoryResponse, error) {
+func (e *matchingEngineImpl) DescribeTaskList(ctx context.Context, request *m.DescribeTaskListRequest) (*workflow.DescribeTaskListResponse, error) {
 	domainID := request.GetDomainUUID()
 	taskListType := persistence.TaskListTypeDecision
-	if request.GetRequest.GetTaskListType() == workflow.TaskListTypeActivity {
+	if request.DescRequest.GetTaskListType() == workflow.TaskListTypeActivity {
 		taskListType = persistence.TaskListTypeActivity
 	}
-	taskListName := request.GetRequest.TaskList.GetName()
+	taskListName := request.DescRequest.TaskList.GetName()
 
 	taskList := newTaskListID(domainID, taskListName, taskListType)
 	tlMgr, err := e.getTaskListManager(taskList)
@@ -474,7 +474,7 @@ func (e *matchingEngineImpl) GetPollerHistory(ctx context.Context, request *m.Ge
 			Timestamp: common.TimePtr(poller.timestamp),
 		})
 	}
-	return &workflow.GetPollerHistoryResponse{Pollers: pollers}, nil
+	return &workflow.DescribeTaskListResponse{Pollers: pollers}, nil
 }
 
 // Loads a task from persistence and wraps it in a task context

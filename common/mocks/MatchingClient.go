@@ -165,22 +165,22 @@ func (_m *MatchingClient) CancelOutstandingPoll(ctx context.Context,
 	return r0
 }
 
-// GetPollerHistory provides a mock function with given fields: ctx, request
-func (_m *MatchingClient) GetPollerHistory(ctx context.Context,
-	request *matching.GetPollerHistoryRequest, opts ...yarpc.CallOption) (*shared.GetPollerHistoryResponse, error) {
+// DescribeTaskList provides a mock function with given fields: ctx, request
+func (_m *MatchingClient) DescribeTaskList(ctx context.Context,
+	request *matching.DescribeTaskListRequest, opts ...yarpc.CallOption) (*shared.DescribeTaskListResponse, error) {
 	ret := _m.Called(ctx, request)
 
-	var r0 *shared.GetPollerHistoryResponse
-	if rf, ok := ret.Get(0).(func(context.Context, *matching.GetPollerHistoryRequest) *shared.GetPollerHistoryResponse); ok {
+	var r0 *shared.DescribeTaskListResponse
+	if rf, ok := ret.Get(0).(func(context.Context, *matching.DescribeTaskListRequest) *shared.DescribeTaskListResponse); ok {
 		r0 = rf(ctx, request)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*shared.GetPollerHistoryResponse)
+			r0 = ret.Get(0).(*shared.DescribeTaskListResponse)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *matching.GetPollerHistoryRequest) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *matching.DescribeTaskListRequest) error); ok {
 		r1 = rf(ctx, request)
 	} else {
 		r1 = ret.Error(1)

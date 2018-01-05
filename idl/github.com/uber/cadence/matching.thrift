@@ -85,9 +85,9 @@ struct CancelOutstandingPollRequest {
   40: optional string pollerID
 }
 
-struct GetPollerHistoryRequest {
+struct DescribeTaskListRequest {
   10: optional string domainUUID
-  20: optional shared.GetPollerHistoryRequest getRequest
+  20: optional shared.DescribeTaskListRequest descRequest
 }
 
 /**
@@ -177,9 +177,10 @@ service MatchingService {
     )
 
   /**
-  * GetPollerHistory returns pollers which poll from given tasklist in last few minutes.
+  * DescribeTaskList returns information about the target tasklist, right now this API returns the
+  * pollers which polled this tasklist in last few minutes.
   **/
-  shared.GetPollerHistoryResponse GetPollerHistory(1: GetPollerHistoryRequest request)
+  shared.DescribeTaskListResponse DescribeTaskList(1: DescribeTaskListRequest request)
     throws (
         1: shared.BadRequestError badRequestError,
         2: shared.InternalServiceError internalServiceError,

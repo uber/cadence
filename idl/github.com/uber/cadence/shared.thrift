@@ -931,13 +931,13 @@ struct DescribeWorkflowExecutionResponse {
   20: optional WorkflowExecutionInfo workflowExecutionInfo
 }
 
-struct GetPollerHistoryRequest {
+struct DescribeTaskListRequest {
   10: optional string domain
   20: optional TaskList taskList
   30: optional TaskListType taskListType
 }
 
-struct GetPollerHistoryResponse {
+struct DescribeTaskListResponse {
   10: optional list<PollerInfo> pollers
 }
 
@@ -953,7 +953,7 @@ enum TaskListType {
 }
 
 struct PollerInfo {
-  // ISO 8601 format
-  10: optional string timestamp
+  // Unix Nano
+  10: optional i64 (js.type = "Long")  timestamp
   20: optional string identity
 }

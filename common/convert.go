@@ -62,8 +62,8 @@ func BoolPtr(v bool) *bool {
 }
 
 // TimePtr makes a copy and returns the pointer to a string for time.Time, as ISO 8601 format.
-func TimePtr(v time.Time) *string {
-	time := v.UTC().Format(time.RFC3339)
+func TimePtr(v time.Time) *int64 {
+	time := v.UTC().UnixNano()
 	return &time
 }
 

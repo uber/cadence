@@ -352,9 +352,10 @@ service WorkflowService {
     )
 
   /**
-  * GetPollerHistory returns pollers which poll from given tasklist in last few minutes.
+  * DescribeTaskList returns information about the target tasklist, right now this API returns the
+  * pollers which polled this tasklist in last few minutes.
   **/
-  shared.GetPollerHistoryResponse GetPollerHistory(1: shared.GetPollerHistoryRequest request)
+  shared.DescribeTaskListResponse DescribeTaskList(1: shared.DescribeTaskListRequest request)
     throws (
         1: shared.BadRequestError badRequestError,
         2: shared.InternalServiceError internalServiceError,

@@ -793,12 +793,12 @@ func (v *CancelOutstandingPollRequest) GetPollerID() (o string) {
 	return
 }
 
-type GetPollerHistoryRequest struct {
-	DomainUUID *string                         `json:"domainUUID,omitempty"`
-	GetRequest *shared.GetPollerHistoryRequest `json:"getRequest,omitempty"`
+type DescribeTaskListRequest struct {
+	DomainUUID  *string                         `json:"domainUUID,omitempty"`
+	DescRequest *shared.DescribeTaskListRequest `json:"descRequest,omitempty"`
 }
 
-// ToWire translates a GetPollerHistoryRequest struct into a Thrift-level intermediate
+// ToWire translates a DescribeTaskListRequest struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
 // into bytes using a ThriftRW protocol implementation.
 //
@@ -813,7 +813,7 @@ type GetPollerHistoryRequest struct {
 //   if err := binaryProtocol.Encode(x, writer); err != nil {
 //     return err
 //   }
-func (v *GetPollerHistoryRequest) ToWire() (wire.Value, error) {
+func (v *DescribeTaskListRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
 		i      int = 0
@@ -829,8 +829,8 @@ func (v *GetPollerHistoryRequest) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 10, Value: w}
 		i++
 	}
-	if v.GetRequest != nil {
-		w, err = v.GetRequest.ToWire()
+	if v.DescRequest != nil {
+		w, err = v.DescRequest.ToWire()
 		if err != nil {
 			return w, err
 		}
@@ -841,17 +841,17 @@ func (v *GetPollerHistoryRequest) ToWire() (wire.Value, error) {
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _GetPollerHistoryRequest_Read(w wire.Value) (*shared.GetPollerHistoryRequest, error) {
-	var v shared.GetPollerHistoryRequest
+func _DescribeTaskListRequest_Read(w wire.Value) (*shared.DescribeTaskListRequest, error) {
+	var v shared.DescribeTaskListRequest
 	err := v.FromWire(w)
 	return &v, err
 }
 
-// FromWire deserializes a GetPollerHistoryRequest struct from its Thrift-level
+// FromWire deserializes a DescribeTaskListRequest struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.
 //
-// An error is returned if we were unable to build a GetPollerHistoryRequest struct
+// An error is returned if we were unable to build a DescribeTaskListRequest struct
 // from the provided intermediate representation.
 //
 //   x, err := binaryProtocol.Decode(reader, wire.TStruct)
@@ -859,12 +859,12 @@ func _GetPollerHistoryRequest_Read(w wire.Value) (*shared.GetPollerHistoryReques
 //     return nil, err
 //   }
 //
-//   var v GetPollerHistoryRequest
+//   var v DescribeTaskListRequest
 //   if err := v.FromWire(x); err != nil {
 //     return nil, err
 //   }
 //   return &v, nil
-func (v *GetPollerHistoryRequest) FromWire(w wire.Value) error {
+func (v *DescribeTaskListRequest) FromWire(w wire.Value) error {
 	var err error
 
 	for _, field := range w.GetStruct().Fields {
@@ -881,7 +881,7 @@ func (v *GetPollerHistoryRequest) FromWire(w wire.Value) error {
 			}
 		case 20:
 			if field.Value.Type() == wire.TStruct {
-				v.GetRequest, err = _GetPollerHistoryRequest_Read(field.Value)
+				v.DescRequest, err = _DescribeTaskListRequest_Read(field.Value)
 				if err != nil {
 					return err
 				}
@@ -893,9 +893,9 @@ func (v *GetPollerHistoryRequest) FromWire(w wire.Value) error {
 	return nil
 }
 
-// String returns a readable string representation of a GetPollerHistoryRequest
+// String returns a readable string representation of a DescribeTaskListRequest
 // struct.
-func (v *GetPollerHistoryRequest) String() string {
+func (v *DescribeTaskListRequest) String() string {
 	if v == nil {
 		return "<nil>"
 	}
@@ -906,23 +906,23 @@ func (v *GetPollerHistoryRequest) String() string {
 		fields[i] = fmt.Sprintf("DomainUUID: %v", *(v.DomainUUID))
 		i++
 	}
-	if v.GetRequest != nil {
-		fields[i] = fmt.Sprintf("GetRequest: %v", v.GetRequest)
+	if v.DescRequest != nil {
+		fields[i] = fmt.Sprintf("DescRequest: %v", v.DescRequest)
 		i++
 	}
 
-	return fmt.Sprintf("GetPollerHistoryRequest{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("DescribeTaskListRequest{%v}", strings.Join(fields[:i], ", "))
 }
 
-// Equals returns true if all the fields of this GetPollerHistoryRequest match the
-// provided GetPollerHistoryRequest.
+// Equals returns true if all the fields of this DescribeTaskListRequest match the
+// provided DescribeTaskListRequest.
 //
 // This function performs a deep comparison.
-func (v *GetPollerHistoryRequest) Equals(rhs *GetPollerHistoryRequest) bool {
+func (v *DescribeTaskListRequest) Equals(rhs *DescribeTaskListRequest) bool {
 	if !_String_EqualsPtr(v.DomainUUID, rhs.DomainUUID) {
 		return false
 	}
-	if !((v.GetRequest == nil && rhs.GetRequest == nil) || (v.GetRequest != nil && rhs.GetRequest != nil && v.GetRequest.Equals(rhs.GetRequest))) {
+	if !((v.DescRequest == nil && rhs.DescRequest == nil) || (v.DescRequest != nil && rhs.DescRequest != nil && v.DescRequest.Equals(rhs.DescRequest))) {
 		return false
 	}
 
@@ -931,7 +931,7 @@ func (v *GetPollerHistoryRequest) Equals(rhs *GetPollerHistoryRequest) bool {
 
 // GetDomainUUID returns the value of DomainUUID if it is set or its
 // zero value if it is unset.
-func (v *GetPollerHistoryRequest) GetDomainUUID() (o string) {
+func (v *DescribeTaskListRequest) GetDomainUUID() (o string) {
 	if v.DomainUUID != nil {
 		return *v.DomainUUID
 	}

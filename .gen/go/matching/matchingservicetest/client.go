@@ -156,37 +156,37 @@ func (mr *_MockClientRecorder) CancelOutstandingPoll(
 	return mr.mock.ctrl.RecordCall(mr.mock, "CancelOutstandingPoll", args...)
 }
 
-// GetPollerHistory responds to a GetPollerHistory call based on the mock expectations. This
+// DescribeTaskList responds to a DescribeTaskList call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().GetPollerHistory(gomock.Any(), ...).Return(...)
-// 	... := client.GetPollerHistory(...)
-func (m *MockClient) GetPollerHistory(
+// 	client.EXPECT().DescribeTaskList(gomock.Any(), ...).Return(...)
+// 	... := client.DescribeTaskList(...)
+func (m *MockClient) DescribeTaskList(
 	ctx context.Context,
-	_Request *matching.GetPollerHistoryRequest,
+	_Request *matching.DescribeTaskListRequest,
 	opts ...yarpc.CallOption,
-) (success *shared.GetPollerHistoryResponse, err error) {
+) (success *shared.DescribeTaskListResponse, err error) {
 
 	args := []interface{}{ctx, _Request}
 	for _, o := range opts {
 		args = append(args, o)
 	}
 	i := 0
-	ret := m.ctrl.Call(m, "GetPollerHistory", args...)
-	success, _ = ret[i].(*shared.GetPollerHistoryResponse)
+	ret := m.ctrl.Call(m, "DescribeTaskList", args...)
+	success, _ = ret[i].(*shared.DescribeTaskListResponse)
 	i++
 	err, _ = ret[i].(error)
 	return
 }
 
-func (mr *_MockClientRecorder) GetPollerHistory(
+func (mr *_MockClientRecorder) DescribeTaskList(
 	ctx interface{},
 	_Request interface{},
 	opts ...interface{},
 ) *gomock.Call {
 	args := append([]interface{}{ctx, _Request}, opts...)
-	return mr.mock.ctrl.RecordCall(mr.mock, "GetPollerHistory", args...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "DescribeTaskList", args...)
 }
 
 // PollForActivityTask responds to a PollForActivityTask call based on the mock expectations. This

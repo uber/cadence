@@ -1423,10 +1423,11 @@ func (wh *WorkflowHandler) DescribeWorkflowExecution(ctx context.Context, reques
 	return response, nil
 }
 
-// GetPollerHistory get poller information for given tasklist
-func (wh *WorkflowHandler) GetPollerHistory(ctx context.Context, request *gen.GetPollerHistoryRequest) (*gen.GetPollerHistoryResponse, error) {
+// DescribeTaskList returns information about the target tasklist, right now this API returns the
+// pollers which polled this tasklist in last few minutes.
+func (wh *WorkflowHandler) DescribeTaskList(ctx context.Context, request *gen.DescribeTaskListRequest) (*gen.DescribeTaskListResponse, error) {
 
-	scope := metrics.FrontendGetPollerHistoryScope
+	scope := metrics.FrontendDescribeTaskListScope
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
 
@@ -1450,9 +1451,9 @@ func (wh *WorkflowHandler) GetPollerHistory(ctx context.Context, request *gen.Ge
 		return nil, err
 	}
 
-	response, err := wh.matching.GetPollerHistory(ctx, &m.GetPollerHistoryRequest{
-		DomainUUID: common.StringPtr(domainInfo.ID),
-		GetRequest: request,
+	response, err := wh.matching.DescribeTaskList(ctx, &m.DescribeTaskListRequest{
+		DomainUUID:  common.StringPtr(domainInfo.ID),
+		DescRequest: request,
 	})
 
 	if err != nil {

@@ -223,17 +223,17 @@ func (s *matchingEngineSuite) PollForTasksEmptyResultTest(taskType int) {
 			tasklistType = workflow.TaskListTypeDecision
 		}
 		// check the poller information
-		getResp, err := s.matchingEngine.GetPollerHistory(s.callContext, &matching.GetPollerHistoryRequest{
+		descResp, err := s.matchingEngine.DescribeTaskList(s.callContext, &matching.DescribeTaskListRequest{
 			DomainUUID: common.StringPtr(domainID),
-			GetRequest: &workflow.GetPollerHistoryRequest{
+			DescRequest: &workflow.DescribeTaskListRequest{
 				TaskList:     taskList,
 				TaskListType: &tasklistType,
 			},
 		})
 		s.NoError(err)
-		s.Equal(1, len(getResp.Pollers))
-		s.Equal(identity, getResp.Pollers[0].GetIdentity())
-		s.NotEmpty(getResp.Pollers[0].GetTimestamp())
+		s.Equal(1, len(descResp.Pollers))
+		s.Equal(identity, descResp.Pollers[0].GetIdentity())
+		s.NotEmpty(descResp.Pollers[0].GetTimestamp())
 	}
 	s.EqualValues(1, s.taskManager.taskLists[*tlID].rangeID)
 }
