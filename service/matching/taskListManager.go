@@ -22,6 +22,7 @@ package matching
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -50,7 +51,7 @@ const (
 	_defaultTaskDispatchRPSTTL = 60 * time.Second
 )
 
-var errAddTasklistThrottled = fmt.Errorf("cannot add to tasklist, limit exceeded")
+var errAddTasklistThrottled = errors.New("cannot add to tasklist, limit exceeded")
 
 type taskListManager interface {
 	Start() error
