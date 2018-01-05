@@ -569,6 +569,7 @@ struct ExternalWorkflowExecutionSignalRequestedEventAttributes {
   10: optional i64 (js.type = "Long") initiatedEventId
   20: optional string domain
   30: optional WorkflowExecution workflowExecution
+  40: optional binary control
 }
 
 struct StartChildWorkflowExecutionInitiatedEventAttributes {

@@ -9510,6 +9510,7 @@ type ExternalWorkflowExecutionSignalRequestedEventAttributes struct {
 	InitiatedEventId  *int64             `json:"initiatedEventId,omitempty"`
 	Domain            *string            `json:"domain,omitempty"`
 	WorkflowExecution *WorkflowExecution `json:"workflowExecution,omitempty"`
+	Control           []byte             `json:"control,omitempty"`
 }
 
 // ToWire translates a ExternalWorkflowExecutionSignalRequestedEventAttributes struct into a Thrift-level intermediate
@@ -9529,7 +9530,7 @@ type ExternalWorkflowExecutionSignalRequestedEventAttributes struct {
 //   }
 func (v *ExternalWorkflowExecutionSignalRequestedEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [3]wire.Field
+		fields [4]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -9557,6 +9558,14 @@ func (v *ExternalWorkflowExecutionSignalRequestedEventAttributes) ToWire() (wire
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 30, Value: w}
+		i++
+	}
+	if v.Control != nil {
+		w, err = wire.NewValueBinary(v.Control), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 40, Value: w}
 		i++
 	}
 
@@ -9613,6 +9622,14 @@ func (v *ExternalWorkflowExecutionSignalRequestedEventAttributes) FromWire(w wir
 				}
 
 			}
+		case 40:
+			if field.Value.Type() == wire.TBinary {
+				v.Control, err = field.Value.GetBinary(), error(nil)
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -9626,7 +9643,7 @@ func (v *ExternalWorkflowExecutionSignalRequestedEventAttributes) String() strin
 		return "<nil>"
 	}
 
-	var fields [3]string
+	var fields [4]string
 	i := 0
 	if v.InitiatedEventId != nil {
 		fields[i] = fmt.Sprintf("InitiatedEventId: %v", *(v.InitiatedEventId))
@@ -9638,6 +9655,10 @@ func (v *ExternalWorkflowExecutionSignalRequestedEventAttributes) String() strin
 	}
 	if v.WorkflowExecution != nil {
 		fields[i] = fmt.Sprintf("WorkflowExecution: %v", v.WorkflowExecution)
+		i++
+	}
+	if v.Control != nil {
+		fields[i] = fmt.Sprintf("Control: %v", v.Control)
 		i++
 	}
 
@@ -9656,6 +9677,9 @@ func (v *ExternalWorkflowExecutionSignalRequestedEventAttributes) Equals(rhs *Ex
 		return false
 	}
 	if !((v.WorkflowExecution == nil && rhs.WorkflowExecution == nil) || (v.WorkflowExecution != nil && rhs.WorkflowExecution != nil && v.WorkflowExecution.Equals(rhs.WorkflowExecution))) {
+		return false
+	}
+	if !((v.Control == nil && rhs.Control == nil) || (v.Control != nil && rhs.Control != nil && bytes.Equal(v.Control, rhs.Control))) {
 		return false
 	}
 
