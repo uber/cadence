@@ -61,6 +61,5 @@ func createTestTaskListManager() *taskListManagerImpl {
 	tl := "tl"
 	dID := "domain"
 	tlID := &taskListID{domainID: dID, taskListName: tl, taskType: persistence.TaskListTypeActivity}
-	rps := 1000.0
-	return newTaskListManager(me, tlID, cfg, &rps).(*taskListManagerImpl)
+	return newTaskListManager(me, tlID, cfg).(*taskListManagerImpl)
 }

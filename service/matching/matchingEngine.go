@@ -153,33 +153,24 @@ func (e *matchingEngineImpl) String() string {
 	return r
 }
 
-func (e *matchingEngineImpl) getTaskListManager(taskList *taskListID) (taskListManager, error) {
-	return e.getTaskListManagerWithRPS(taskList, nil)
-}
-
 // Returns taskListManager for a task list. If not already cached gets new range from DB and
-// if successful creates one. The passed in throttling limit determines how many tasks are
-// dispatcher per second.
-func (e *matchingEngineImpl) getTaskListManagerWithRPS(
-	taskList *taskListID, maxDispatchPerSecond *float64,
-) (taskListManager, error) {
+// if successful creates one.
+func (e *matchingEngineImpl) getTaskListManager(taskList *taskListID) (taskListManager, error) {
 	// The first check is an optimization so almost all requests will have a task list manager
 	// and return avoiding the write lock
 	e.taskListsLock.RLock()
 	if result, ok := e.taskLists[*taskList]; ok {
 		e.taskListsLock.RUnlock()
-		result.UpdateMaxDispatch(maxDispatchPerSecond)
 		return result, nil
 	}
 	e.taskListsLock.RUnlock()
 	// If it gets here, write lock and check again in case a task list is created between the two locks
 	e.taskListsLock.Lock()
 	if result, ok := e.taskLists[*taskList]; ok {
-		result.UpdateMaxDispatch(maxDispatchPerSecond)
 		e.taskListsLock.Unlock()
 		return result, nil
 	}
-	mgr := newTaskListManager(e, taskList, e.config, maxDispatchPerSecond)
+	mgr := newTaskListManager(e, taskList, e.config)
 	e.taskLists[*taskList] = mgr
 	e.taskListsLock.Unlock()
 	logging.LogTaskListLoadingEvent(e.logger, taskList.taskListName, taskList.taskType)
@@ -477,11 +468,11 @@ func (e *matchingEngineImpl) CancelOutstandingPoll(ctx context.Context, request 
 func (e *matchingEngineImpl) getTask(
 	ctx context.Context, taskList *taskListID, maxDispatchPerSecond *float64,
 ) (*taskContext, error) {
-	tlMgr, err := e.getTaskListManagerWithRPS(taskList, maxDispatchPerSecond)
+	tlMgr, err := e.getTaskListManager(taskList)
 	if err != nil {
 		return nil, err
 	}
-	return tlMgr.GetTaskContext(ctx)
+	return tlMgr.GetTaskContext(ctx, maxDispatchPerSecond)
 }
 
 func (e *matchingEngineImpl) unloadTaskList(id *taskListID) {

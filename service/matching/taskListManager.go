@@ -56,10 +56,9 @@ type taskListManager interface {
 	Start() error
 	Stop()
 	AddTask(execution *s.WorkflowExecution, taskInfo *persistence.TaskInfo) error
-	GetTaskContext(ctx context.Context) (*taskContext, error)
+	GetTaskContext(ctx context.Context, maxDispatchPerSecond *float64) (*taskContext, error)
 	SyncMatchQueryTask(ctx context.Context, queryTask *queryTaskInfo) error
 	CancelPoller(pollerID string)
-	UpdateMaxDispatch(maxDispatchPerSecond *float64)
 	String() string
 }
 
@@ -126,13 +125,10 @@ func (rl *rateLimiter) Reserve() *rate.Reservation {
 }
 
 func newTaskListManager(
-	e *matchingEngineImpl, taskList *taskListID, config *Config, maxDispatchPerSecond *float64,
+	e *matchingEngineImpl, taskList *taskListID, config *Config,
 ) taskListManager {
 	dPtr := _defaultTaskDispatchRPS
-	if maxDispatchPerSecond == nil {
-		maxDispatchPerSecond = &dPtr
-	}
-	rl := newRateLimiter(maxDispatchPerSecond, _defaultTaskDispatchRPSTTL)
+	rl := newRateLimiter(&dPtr, _defaultTaskDispatchRPSTTL)
 	return newTaskListManagerWithRateLimiter(e, taskList, config, rl)
 }
 
@@ -318,7 +314,11 @@ func (c *taskListManagerImpl) SyncMatchQueryTask(ctx context.Context, queryTask 
 }
 
 // Loads a task from DB or from sync match and wraps it in a task context
-func (c *taskListManagerImpl) GetTaskContext(ctx context.Context) (*taskContext, error) {
+func (c *taskListManagerImpl) GetTaskContext(
+	ctx context.Context,
+	maxDispatchPerSecond *float64,
+) (*taskContext, error) {
+	c.rateLimiter.UpdateMaxDispatch(maxDispatchPerSecond)
 	result, err := c.getTask(ctx)
 	if err != nil {
 		return nil, err
@@ -337,10 +337,6 @@ func (c *taskListManagerImpl) GetTaskContext(ctx context.Context) (*taskContext,
 		backlogCountHint:  c.taskAckManager.getBacklogCountHint(),
 	}
 	return tCtx, nil
-}
-
-func (c *taskListManagerImpl) UpdateMaxDispatch(maxDispatchPerSecond *float64) {
-	c.rateLimiter.UpdateMaxDispatch(maxDispatchPerSecond)
 }
 
 func (c *taskListManagerImpl) getRangeID() int64 {
