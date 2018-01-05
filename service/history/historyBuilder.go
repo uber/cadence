@@ -705,12 +705,12 @@ func (b *historyBuilder) newSignalExternalWorkflowExecutionInitiatedEvent(decisi
 	event := b.msBuilder.createNewHistoryEvent(workflow.EventTypeSignalExternalWorkflowExecutionInitiated)
 	attributes := &workflow.SignalExternalWorkflowExecutionInitiatedEventAttributes{}
 	attributes.DecisionTaskCompletedEventId = common.Int64Ptr(decisionTaskCompletedEventID)
-	attributes.Domain = common.StringPtr(*request.Domain)
+	attributes.Domain = common.StringPtr(request.GetDomain())
 	attributes.WorkflowExecution = &workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(*request.WorkflowId),
-		RunId:      common.StringPtr(*request.RunId),
+		WorkflowId: common.StringPtr(request.GetWorkflowId()),
+		RunId:      common.StringPtr(request.GetRunId()),
 	}
-	attributes.SignalName = common.StringPtr(*request.SignalName)
+	attributes.SignalName = common.StringPtr(request.GetSignalName())
 	attributes.Input = request.Input
 	attributes.Control = request.Control
 	event.SignalExternalWorkflowExecutionInitiatedEventAttributes = attributes

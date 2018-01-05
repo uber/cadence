@@ -1023,11 +1023,11 @@ Update_History_Loop:
 					break Process_Decision_Loop
 				}
 
-				foreignInfo, _, err := e.domainCache.GetDomain(*attributes.Domain)
+				foreignInfo, _, err := e.domainCache.GetDomain(attributes.GetDomain())
 				if err != nil {
 					return &workflow.InternalServiceError{
 						Message: fmt.Sprintf("Unable to signal workflow across domain: %v.",
-							*attributes.Domain)}
+							attributes.GetDomain())}
 				}
 
 				signalRequestID := uuid.New() // for deduplicate
@@ -1039,9 +1039,9 @@ Update_History_Loop:
 
 				transferTasks = append(transferTasks, &persistence.SignalExecutionTask{
 					TargetDomainID:   foreignInfo.ID,
-					TargetWorkflowID: *attributes.WorkflowId,
+					TargetWorkflowID: attributes.GetWorkflowId(),
 					TargetRunID:      common.StringDefault(attributes.RunId),
-					ScheduleID:       *wfSignalReqEvent.EventId,
+					ScheduleID:       wfSignalReqEvent.GetEventId(),
 				})
 
 			case workflow.DecisionTypeContinueAsNewWorkflowExecution:

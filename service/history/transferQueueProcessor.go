@@ -920,8 +920,8 @@ func (t *transferQueueProcessorImpl) requestSignalCompleted(task *persistence.Tr
 
 			msBuilder.AddExternalWorkflowExecutionSignalRequested(
 				initiatedEventID,
-				*request.DomainUUID,
-				*request.SignalRequest.WorkflowExecution.WorkflowId,
+				request.GetDomainUUID(),
+				request.SignalRequest.WorkflowExecution.GetWorkflowId(),
 				common.StringDefault(request.SignalRequest.WorkflowExecution.RunId))
 
 			return nil
@@ -975,8 +975,8 @@ func (t *transferQueueProcessorImpl) requestSignalFailed(task *persistence.Trans
 			msBuilder.AddSignalExternalWorkflowExecutionFailedEvent(
 				emptyEventID,
 				initiatedEventID,
-				*request.DomainUUID,
-				*request.SignalRequest.WorkflowExecution.WorkflowId,
+				request.GetDomainUUID(),
+				request.SignalRequest.WorkflowExecution.GetWorkflowId(),
 				common.StringDefault(request.SignalRequest.WorkflowExecution.RunId),
 				workflow.SignalExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution)
 

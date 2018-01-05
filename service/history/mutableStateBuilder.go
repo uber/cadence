@@ -1383,7 +1383,7 @@ func (e *mutableStateBuilder) AddSignalExternalWorkflowExecutionInitiatedEvent(d
 	ri := &persistence.SignalInfo{
 		InitiatedID:     initiatedEventID,
 		SignalRequestID: signalRequestID,
-		SignalName:      *request.SignalName,
+		SignalName:      request.GetSignalName(),
 		Input:           request.Input,
 	}
 
