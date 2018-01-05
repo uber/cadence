@@ -534,9 +534,10 @@ const (
 	PersistenceErrTimeoutCounter
 	PersistenceErrBusyCounter
 
-	NumCommonMetrics
-	HistoryFailures
-	MatchingFailures
+	HistoryClientFailures
+	MatchingClientFailures
+
+	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
 
 // History Metrics enum
@@ -621,8 +622,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		PersistenceErrConditionFailedCounter:          {metricName: "persistence.errors.condition-failed", metricType: Counter},
 		PersistenceErrTimeoutCounter:                  {metricName: "persistence.errors.timeout", metricType: Counter},
 		PersistenceErrBusyCounter:                     {metricName: "persistence.errors.busy", metricType: Counter},
-		HistoryFailures:                               {metricName: "history.client.errors", metricType: Counter},
-		MatchingFailures:                              {metricName: "matching.client.errors", metricType: Counter},
+		HistoryClientFailures:                         {metricName: "client.history.errors", metricType: Counter},
+		MatchingClientFailures:                        {metricName: "client.matching.errors", metricType: Counter},
 	},
 	Frontend: {},
 	History: {
