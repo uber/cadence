@@ -34,11 +34,6 @@ import (
 
 // Interface is the server-side interface for the HistoryService service.
 type Interface interface {
-	DeleteWorkflowExecutionSignal(
-		ctx context.Context,
-		DeleteRequest *history.DeleteWorkflowExecutionSignalRequest,
-	) error
-
 	DescribeWorkflowExecution(
 		ctx context.Context,
 		DescribeRequest *history.DescribeWorkflowExecutionRequest,
@@ -68,6 +63,11 @@ type Interface interface {
 		ctx context.Context,
 		AddRequest *history.RecordDecisionTaskStartedRequest,
 	) (*history.RecordDecisionTaskStartedResponse, error)
+
+	RemoveSignalMutableState(
+		ctx context.Context,
+		RemoveRequest *history.RemoveSignalMutableStateRequest,
+	) error
 
 	RequestCancelWorkflowExecution(
 		ctx context.Context,
@@ -132,17 +132,6 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		Methods: []thrift.Method{
 
 			thrift.Method{
-				Name: "DeleteWorkflowExecutionSignal",
-				HandlerSpec: thrift.HandlerSpec{
-
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.DeleteWorkflowExecutionSignal),
-				},
-				Signature:    "DeleteWorkflowExecutionSignal(DeleteRequest *history.DeleteWorkflowExecutionSignalRequest)",
-				ThriftModule: history.ThriftModule,
-			},
-
-			thrift.Method{
 				Name: "DescribeWorkflowExecution",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -205,6 +194,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary: thrift.UnaryHandler(h.RecordDecisionTaskStarted),
 				},
 				Signature:    "RecordDecisionTaskStarted(AddRequest *history.RecordDecisionTaskStartedRequest) (*history.RecordDecisionTaskStartedResponse)",
+				ThriftModule: history.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "RemoveSignalMutableState",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.RemoveSignalMutableState),
+				},
+				Signature:    "RemoveSignalMutableState(RemoveRequest *history.RemoveSignalMutableStateRequest)",
 				ThriftModule: history.ThriftModule,
 			},
 
@@ -327,25 +327,6 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 type handler struct{ impl Interface }
 
-func (h handler) DeleteWorkflowExecutionSignal(ctx context.Context, body wire.Value) (thrift.Response, error) {
-	var args history.HistoryService_DeleteWorkflowExecutionSignal_Args
-	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
-	}
-
-	err := h.impl.DeleteWorkflowExecutionSignal(ctx, args.DeleteRequest)
-
-	hadError := err != nil
-	result, err := history.HistoryService_DeleteWorkflowExecutionSignal_Helper.WrapResponse(err)
-
-	var response thrift.Response
-	if err == nil {
-		response.IsApplicationError = hadError
-		response.Body = result
-	}
-	return response, err
-}
-
 func (h handler) DescribeWorkflowExecution(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args history.HistoryService_DescribeWorkflowExecution_Args
 	if err := args.FromWire(body); err != nil {
@@ -451,6 +432,25 @@ func (h handler) RecordDecisionTaskStarted(ctx context.Context, body wire.Value)
 
 	hadError := err != nil
 	result, err := history.HistoryService_RecordDecisionTaskStarted_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) RemoveSignalMutableState(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args history.HistoryService_RemoveSignalMutableState_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	err := h.impl.RemoveSignalMutableState(ctx, args.RemoveRequest)
+
+	hadError := err != nil
+	result, err := history.HistoryService_RemoveSignalMutableState_Helper.WrapResponse(err)
 
 	var response thrift.Response
 	if err == nil {

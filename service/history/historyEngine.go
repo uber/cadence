@@ -1040,8 +1040,8 @@ Update_History_Loop:
 				transferTasks = append(transferTasks, &persistence.SignalExecutionTask{
 					TargetDomainID:   foreignInfo.ID,
 					TargetWorkflowID: attributes.GetWorkflowId(),
-					TargetRunID:      common.StringDefault(attributes.RunId),
-					ScheduleID:       wfSignalReqEvent.GetEventId(),
+					TargetRunID:      attributes.GetRunId(),
+					InitiatedID:      wfSignalReqEvent.GetEventId(),
 				})
 
 			case workflow.DecisionTypeContinueAsNewWorkflowExecution:
@@ -1676,14 +1676,11 @@ func (e *historyEngineImpl) SignalWorkflowExecution(signalRequest *h.SignalWorkf
 			}
 
 			// deduplicate by request id for signal decision
-			if request.RequestId != nil {
-				requestID := *request.RequestId
-				if requestID != "" {
-					if msBuilder.isSignalRequested(requestID) {
-						return nil
-					}
-					msBuilder.addSignalRequested(requestID)
+			if requestID := request.GetRequestId(); requestID != "" {
+				if msBuilder.isSignalRequested(requestID) {
+					return nil
 				}
+				msBuilder.addSignalRequested(requestID)
 			}
 
 			if msBuilder.AddWorkflowExecutionSignaled(request) == nil {
@@ -1694,40 +1691,27 @@ func (e *historyEngineImpl) SignalWorkflowExecution(signalRequest *h.SignalWorkf
 		})
 }
 
-func (e *historyEngineImpl) DeleteWorkflowExecutionSignal(deleteRequest *h.DeleteWorkflowExecutionSignalRequest) error {
-	domainID, err := getDomainUUID(deleteRequest.DomainUUID)
+// RemoveSignalMutableState remove the signal request id in signal_requested for deduplicate
+func (e *historyEngineImpl) RemoveSignalMutableState(request *h.RemoveSignalMutableStateRequest) error {
+	domainID, err := getDomainUUID(request.DomainUUID)
 	if err != nil {
 		return err
 	}
-	request := deleteRequest.DeleteRequest
 	execution := workflow.WorkflowExecution{
 		WorkflowId: request.WorkflowExecution.WorkflowId,
 		RunId:      request.WorkflowExecution.RunId,
 	}
-	deleteReq := &persistence.DeleteWorkflowExecutionSignalRequestedRequest{
-		DomainID:        domainID,
-		WorkflowID:      *request.WorkflowExecution.WorkflowId,
-		RunID:           *request.WorkflowExecution.RunId,
-		SignalRequestID: *request.RequestId,
-	}
 
-	context, release, err0 := e.historyCache.getOrCreateWorkflowExecution(domainID, execution)
-	if err0 != nil {
-		return err0
-	}
-	defer release()
+	return e.updateWorkflowExecution(domainID, execution, false, false,
+		func(msBuilder *mutableStateBuilder) error {
+			if !msBuilder.isWorkflowExecutionRunning() {
+				return &workflow.EntityNotExistsError{Message: "Workflow execution already completed."}
+			}
 
-	msBuilder, err1 := context.loadWorkflowExecution()
-	if err1 != nil {
-		return err1
-	}
+			msBuilder.deleteSignalRequested(request.GetRequestId())
 
-	msBuilder.deleteSignalRequested(*request.RequestId)
-
-	// No need to retry this delete, just leave the record on error until workflow execution is deleted as whole
-	context.executionManager.DeleteSignalRequestedID(deleteReq)
-
-	return nil
+			return nil
+		})
 }
 
 func (e *historyEngineImpl) TerminateWorkflowExecution(terminateRequest *h.TerminateWorkflowExecutionRequest) error {
@@ -2138,10 +2122,8 @@ func validateSignalExternalWorkflowExecutionAttributes(attributes *workflow.Sign
 	if attributes.WorkflowId == nil {
 		return &workflow.BadRequestError{Message: "WorkflowId is not set on decision."}
 	}
-	if attributes.RunId == nil {
-		return &workflow.BadRequestError{Message: "RunId is not set on decision."}
-	}
-	if uuid.Parse(*attributes.RunId) == nil {
+	runID := attributes.GetRunId()
+	if runID != "" && uuid.Parse(runID) == nil {
 		return &workflow.BadRequestError{Message: "Invalid RunId set on decision."}
 	}
 	if attributes.SignalName == nil {

@@ -125,6 +125,7 @@ CREATE TYPE signal_info (
   signal_request_id uuid,
   signal_name       text,
   input             blob,
+  control           blob,
 );
 
 -- Activity or workflow task in a task list

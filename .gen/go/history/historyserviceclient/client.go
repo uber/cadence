@@ -36,12 +36,6 @@ import (
 
 // Interface is a client for the HistoryService service.
 type Interface interface {
-	DeleteWorkflowExecutionSignal(
-		ctx context.Context,
-		DeleteRequest *history.DeleteWorkflowExecutionSignalRequest,
-		opts ...yarpc.CallOption,
-	) error
-
 	DescribeWorkflowExecution(
 		ctx context.Context,
 		DescribeRequest *history.DescribeWorkflowExecutionRequest,
@@ -77,6 +71,12 @@ type Interface interface {
 		AddRequest *history.RecordDecisionTaskStartedRequest,
 		opts ...yarpc.CallOption,
 	) (*history.RecordDecisionTaskStartedResponse, error)
+
+	RemoveSignalMutableState(
+		ctx context.Context,
+		RemoveRequest *history.RemoveSignalMutableStateRequest,
+		opts ...yarpc.CallOption,
+	) error
 
 	RequestCancelWorkflowExecution(
 		ctx context.Context,
@@ -161,29 +161,6 @@ func init() {
 
 type client struct {
 	c thrift.Client
-}
-
-func (c client) DeleteWorkflowExecutionSignal(
-	ctx context.Context,
-	_DeleteRequest *history.DeleteWorkflowExecutionSignalRequest,
-	opts ...yarpc.CallOption,
-) (err error) {
-
-	args := history.HistoryService_DeleteWorkflowExecutionSignal_Helper.Args(_DeleteRequest)
-
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
-
-	var result history.HistoryService_DeleteWorkflowExecutionSignal_Result
-	if err = result.FromWire(body); err != nil {
-		return
-	}
-
-	err = history.HistoryService_DeleteWorkflowExecutionSignal_Helper.UnwrapResponse(&result)
-	return
 }
 
 func (c client) DescribeWorkflowExecution(
@@ -321,6 +298,29 @@ func (c client) RecordDecisionTaskStarted(
 	}
 
 	success, err = history.HistoryService_RecordDecisionTaskStarted_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) RemoveSignalMutableState(
+	ctx context.Context,
+	_RemoveRequest *history.RemoveSignalMutableStateRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := history.HistoryService_RemoveSignalMutableState_Helper.Args(_RemoveRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result history.HistoryService_RemoveSignalMutableState_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	err = history.HistoryService_RemoveSignalMutableState_Helper.UnwrapResponse(&result)
 	return
 }
 

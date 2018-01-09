@@ -3181,24 +3181,20 @@ func (s *engineSuite) TestSignalWorkflowExecution_Failed() {
 	s.EqualError(err, "EntityNotExistsError{Message: Workflow execution already completed.}")
 }
 
-func (s *engineSuite) TestDeleteWorkflowExecutionSignal() {
-	deleteRequest := &history.DeleteWorkflowExecutionSignalRequest{}
-	err := s.mockHistoryEngine.DeleteWorkflowExecutionSignal(deleteRequest)
+func (s *engineSuite) TestRemoveSignalMutableState() {
+	removeRequest := &history.RemoveSignalMutableStateRequest{}
+	err := s.mockHistoryEngine.RemoveSignalMutableState(removeRequest)
 	s.EqualError(err, "BadRequestError{Message: Missing domain UUID.}")
 
 	domain := "domainID"
 	requestID := uuid.New()
-	deleteRequest = &history.DeleteWorkflowExecutionSignalRequest{
+	removeRequest = &history.RemoveSignalMutableStateRequest{
 		DomainUUID: common.StringPtr(domain),
-		DeleteRequest: &workflow.DeleteWorkflowExecutionSignalRequest{
-			Domain: common.StringPtr(domain),
-			WorkflowExecution: &workflow.WorkflowExecution{
-				WorkflowId: common.StringPtr("wId"),
-				RunId:      common.StringPtr("rId"),
-			},
-			Identity:  common.StringPtr("test"),
-			RequestId: common.StringPtr(requestID),
+		WorkflowExecution: &workflow.WorkflowExecution{
+			WorkflowId: common.StringPtr("wId"),
+			RunId:      common.StringPtr("rId"),
 		},
+		RequestId: common.StringPtr(requestID),
 	}
 
 	msBuilder := newMutableStateBuilder(s.config, bark.NewLoggerFromLogrus(log.New()))
@@ -3206,9 +3202,9 @@ func (s *engineSuite) TestDeleteWorkflowExecutionSignal() {
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gwmsResponse, nil).Once()
-	s.mockExecutionMgr.On("DeleteSignalRequestedID", mock.Anything).Return(nil).Once()
+	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(nil).Once()
 
-	err = s.mockHistoryEngine.DeleteWorkflowExecutionSignal(deleteRequest)
+	err = s.mockHistoryEngine.RemoveSignalMutableState(removeRequest)
 	s.Nil(err)
 }
 
@@ -3223,15 +3219,12 @@ func (s *engineSuite) TestValidateSignalExternalWorkflowExecutionAttributes() {
 
 	attributes.WorkflowId = common.StringPtr("workflow-id")
 	err = validateSignalExternalWorkflowExecutionAttributes(attributes)
-	s.EqualError(err, "BadRequestError{Message: RunId is not set on decision.}")
+	s.EqualError(err, "BadRequestError{Message: SignalName is not set on decision.}")
 
 	attributes.RunId = common.StringPtr("run-id")
 	err = validateSignalExternalWorkflowExecutionAttributes(attributes)
 	s.EqualError(err, "BadRequestError{Message: Invalid RunId set on decision.}")
-
 	attributes.RunId = common.StringPtr(uuid.New())
-	err = validateSignalExternalWorkflowExecutionAttributes(attributes)
-	s.EqualError(err, "BadRequestError{Message: SignalName is not set on decision.}")
 
 	attributes.SignalName = common.StringPtr("my signal name")
 	err = validateSignalExternalWorkflowExecutionAttributes(attributes)

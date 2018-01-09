@@ -273,7 +273,7 @@ func (s *cassandraPersistenceSuite) TestUpdateWorkflow() {
 	failedUpdatedInfo2.LastProcessedEvent = int64(3)
 	failedUpdatedInfo.DecisionAttempt = int64(666)
 	failedUpdatedInfo.DecisionTimestamp = int64(66)
-	err5 := s.UpdateWorkflowExecutionWithRangeID(updatedInfo, []int64{int64(5)}, nil, int64(12345), int64(5), nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	err5 := s.UpdateWorkflowExecutionWithRangeID(updatedInfo, []int64{int64(5)}, nil, int64(12345), int64(5), nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "")
 	s.NotNil(err5, "expected non nil error.")
 	s.IsType(&ShardOwnershipLostError{}, err5)
 	log.Errorf("Conditional update failed with error: %v", err5)
@@ -947,12 +947,14 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_SignalInfo() {
 	signalRequestID := uuid.New()
 	signalName := "my signal"
 	input := []byte("test signal input")
+	control := []byte(uuid.New())
 	signalInfos := []*SignalInfo{
 		{
 			InitiatedID:     1,
 			SignalRequestID: signalRequestID,
 			SignalName:      signalName,
 			Input:           input,
+			Control:         control,
 		}}
 	err2 := s.UpsertSignalInfoState(updatedInfo, int64(3), signalInfos)
 	s.Nil(err2, "No error expected.")
@@ -968,6 +970,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_SignalInfo() {
 	s.Equal(signalRequestID, ri.SignalRequestID)
 	s.Equal(signalName, ri.SignalName)
 	s.Equal(input, ri.Input)
+	s.Equal(control, ri.Control)
 
 	err2 = s.DeleteSignalState(updatedInfo, int64(5), int64(1))
 	s.Nil(err2, "No error expected.")
@@ -1011,13 +1014,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_SignalRequested() {
 	s.True(ok)
 	s.NotNil(ri)
 
-	deleteRequest := &DeleteWorkflowExecutionSignalRequestedRequest{
-		DomainID:        domainID,
-		WorkflowID:      *workflowExecution.WorkflowId,
-		RunID:           runID,
-		SignalRequestID: signalRequestedID,
-	}
-	err2 = s.DeleteSignalRequestedID(deleteRequest)
+	err2 = s.DeleteSignalsRequestedState(updatedInfo, int64(5), signalRequestedID)
 	s.Nil(err2, "No error expected.")
 
 	state, err1 = s.GetWorkflowExecutionInfo(domainID, workflowExecution)

@@ -208,7 +208,8 @@ const (
 		`initiated_id: ?, ` +
 		`signal_request_id: ?, ` +
 		`signal_name: ?, ` +
-		`input: ?` +
+		`input: ?, ` +
+		`control: ?` +
 		`}`
 
 	templateTaskListType = `{` +
@@ -1141,7 +1142,7 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 	d.updateSignalInfos(batch, request.UpsertSignalInfos, request.DeleteSignalInfo,
 		executionInfo.DomainID, executionInfo.WorkflowID, executionInfo.RunID, request.Condition, request.RangeID)
 
-	d.updateSignalsRequested(batch, request.UpsertSignalRequestedIDs,
+	d.updateSignalsRequested(batch, request.UpsertSignalRequestedIDs, request.DeleteSignalRequestedID,
 		executionInfo.DomainID, executionInfo.WorkflowID, executionInfo.RunID, request.Condition, request.RangeID)
 
 	d.updateBufferedEvents(batch, request.NewBufferedEvents, request.ClearBufferedEvents,
@@ -1286,33 +1287,6 @@ func (d *cassandraPersistence) DeleteWorkflowExecution(request *DeleteWorkflowEx
 		}
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("DeleteWorkflowExecution operation failed. Error: %v", err),
-		}
-	}
-
-	return nil
-}
-
-func (d *cassandraPersistence) DeleteSignalRequestedID(request *DeleteWorkflowExecutionSignalRequestedRequest) error {
-	req := []string{request.SignalRequestID} // for cassandra set binding
-	query := d.session.Query(templateDeleteWorkflowExecutionSignalRequestedQuery,
-		req,
-		d.shardID,
-		rowTypeExecution,
-		request.DomainID,
-		request.WorkflowID,
-		request.RunID,
-		defaultVisibilityTimestamp,
-		rowTypeExecutionTaskID)
-
-	err := query.Exec()
-	if err != nil {
-		if isThrottlingError(err) {
-			return &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("DeleteSignalRequestedID operation failed. Error: %v", err),
-			}
-		}
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("DeleteSignalRequestedID operation failed. Error: %v", err),
 		}
 	}
 
@@ -1798,7 +1772,7 @@ func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferT
 			targetDomainID = task.(*SignalExecutionTask).TargetDomainID
 			targetWorkflowID = task.(*SignalExecutionTask).TargetWorkflowID
 			targetRunID = task.(*SignalExecutionTask).TargetRunID
-			scheduleID = task.(*SignalExecutionTask).ScheduleID
+			scheduleID = task.(*SignalExecutionTask).InitiatedID
 
 		case TransferTaskTypeStartChildExecution:
 			targetDomainID = task.(*StartChildExecutionTask).TargetDomainID
@@ -2042,6 +2016,7 @@ func (d *cassandraPersistence) updateSignalInfos(batch *gocql.Batch, signalInfos
 			c.SignalRequestID,
 			c.SignalName,
 			c.Input,
+			c.Control,
 			d.shardID,
 			rowTypeExecution,
 			domainID,
@@ -2067,23 +2042,34 @@ func (d *cassandraPersistence) updateSignalInfos(batch *gocql.Batch, signalInfos
 	}
 }
 
-func (d *cassandraPersistence) updateSignalsRequested(batch *gocql.Batch, signalReqIDs []string,
+func (d *cassandraPersistence) updateSignalsRequested(batch *gocql.Batch, signalReqIDs []string, deleteSignalReqID string,
 	domainID, workflowID, runID string, condition int64, rangeID int64) {
 
-	if signalReqIDs == nil || len(signalReqIDs) == 0 {
-		return
+	if len(signalReqIDs) > 0 {
+		batch.Query(templateUpdateSignalRequestedQuery,
+			signalReqIDs,
+			d.shardID,
+			rowTypeExecution,
+			domainID,
+			workflowID,
+			runID,
+			defaultVisibilityTimestamp,
+			rowTypeExecutionTaskID,
+			condition)
 	}
 
-	batch.Query(templateUpdateSignalRequestedQuery,
-		signalReqIDs,
-		d.shardID,
-		rowTypeExecution,
-		domainID,
-		workflowID,
-		runID,
-		defaultVisibilityTimestamp,
-		rowTypeExecutionTaskID,
-		condition)
+	if deleteSignalReqID != "" {
+		req := []string{deleteSignalReqID} // for cassandra set binding
+		batch.Query(templateDeleteWorkflowExecutionSignalRequestedQuery,
+			req,
+			d.shardID,
+			rowTypeExecution,
+			domainID,
+			workflowID,
+			runID,
+			defaultVisibilityTimestamp,
+			rowTypeExecutionTaskID)
+	}
 }
 
 func (d *cassandraPersistence) updateBufferedEvents(batch *gocql.Batch, newBufferedEvents *SerializedHistoryEventBatch,
@@ -2352,11 +2338,13 @@ func createSignalInfo(result map[string]interface{}) *SignalInfo {
 		case "initiated_id":
 			info.InitiatedID = v.(int64)
 		case "signal_request_id":
-			info.SignalRequestID = v.(string)
+			info.SignalRequestID = v.(gocql.UUID).String()
 		case "signal_name":
 			info.SignalName = v.(string)
 		case "input":
 			info.Input = v.([]byte)
+		case "control":
+			info.Control = v.([]byte)
 		}
 	}
 

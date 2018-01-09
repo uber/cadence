@@ -59,7 +59,6 @@ type (
 		GetTimerAckLevel() time.Time
 		UpdateTimerAckLevel(ackLevel time.Time) error
 		GetTimeSource() common.TimeSource
-		DeleteWorkflowExecutionSignal(request *persistence.DeleteWorkflowExecutionSignalRequestedRequest) error
 	}
 
 	shardContextImpl struct {
@@ -286,12 +285,6 @@ Update_Loop:
 	}
 
 	return ErrMaxAttemptsExceeded
-}
-
-func (s *shardContextImpl) DeleteWorkflowExecutionSignal(
-	request *persistence.DeleteWorkflowExecutionSignalRequestedRequest) error {
-	// No need to lock context here, as we can delete signal concurrently.
-	return s.executionManager.DeleteSignalRequestedID(request)
 }
 
 func (s *shardContextImpl) AppendHistoryEvents(request *persistence.AppendHistoryEventsRequest) error {

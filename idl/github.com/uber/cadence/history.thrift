@@ -131,9 +131,10 @@ struct SignalWorkflowExecutionRequest {
   20: optional shared.SignalWorkflowExecutionRequest signalRequest
 }
 
-struct DeleteWorkflowExecutionSignalRequest {
+struct RemoveSignalMutableStateRequest {
   10: optional string domainUUID
-  20: optional shared.DeleteWorkflowExecutionSignalRequest deleteRequest
+  20: optional shared.WorkflowExecution workflowExecution
+  30: optional string requestId
 }
 
 struct TerminateWorkflowExecutionRequest {
@@ -333,10 +334,10 @@ service HistoryService {
     )
 
   /**
-  * DeleteWorkflowExecutionSignal is used to delete a signal request ID that was previously recorded.  This is currently
+  * RemoveSignalMutableState is used to remove a signal request ID that was previously recorded.  This is currently
   * used to clean execution info when signal decision finished.
   **/
-  void DeleteWorkflowExecutionSignal(1: DeleteWorkflowExecutionSignalRequest deleteRequest)
+  void RemoveSignalMutableState(1: RemoveSignalMutableStateRequest removeRequest)
     throws (
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,

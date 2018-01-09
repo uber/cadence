@@ -637,16 +637,14 @@ func (t *transferQueueProcessorImpl) processSignalExecution(task *persistence.Tr
 			Identity:   common.StringPtr(identityHistoryService),
 			SignalName: common.StringPtr(ri.SignalName),
 			Input:      ri.Input,
-			// Use same request ID to dedupe SignalWorkflowExecution calls
+			// Use same request ID to deduplicate SignalWorkflowExecution calls
 			RequestId: common.StringPtr(ri.SignalRequestID),
+			Control:   ri.Control,
 		},
 	}
 
-	op := func() error {
-		return t.historyClient.SignalWorkflowExecution(nil, signalRequest)
-	}
+	err = t.SignalExecutionWithRetry(signalRequest)
 
-	err = backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
 	if err != nil {
 		t.logger.Debugf("Failed to signal external workflow execution. Error: %v", err)
 
@@ -672,20 +670,16 @@ func (t *transferQueueProcessorImpl) processSignalExecution(task *persistence.Tr
 	}
 
 	// remove signalRequestedID from target workflow, after Signal detail is removed from source workflow
-	deleteRequest := &history.DeleteWorkflowExecutionSignalRequest{
+	removeRequest := &history.RemoveSignalMutableStateRequest{
 		DomainUUID: common.StringPtr(targetDomainID),
-		DeleteRequest: &workflow.DeleteWorkflowExecutionSignalRequest{
-			Domain: common.StringPtr(targetDomainID),
-			WorkflowExecution: &workflow.WorkflowExecution{
-				WorkflowId: common.StringPtr(task.TargetWorkflowID),
-				RunId:      common.StringPtr(task.TargetRunID),
-			},
-			Identity:  common.StringPtr(identityHistoryService),
-			RequestId: common.StringPtr(ri.SignalRequestID),
+		WorkflowExecution: &workflow.WorkflowExecution{
+			WorkflowId: common.StringPtr(task.TargetWorkflowID),
+			RunId:      common.StringPtr(task.TargetRunID),
 		},
+		RequestId: common.StringPtr(ri.SignalRequestID),
 	}
 
-	t.historyClient.DeleteWorkflowExecutionSignal(nil, deleteRequest)
+	t.historyClient.RemoveSignalMutableState(nil, removeRequest)
 
 	return err
 }
@@ -922,7 +916,8 @@ func (t *transferQueueProcessorImpl) requestSignalCompleted(task *persistence.Tr
 				initiatedEventID,
 				request.GetDomainUUID(),
 				request.SignalRequest.WorkflowExecution.GetWorkflowId(),
-				common.StringDefault(request.SignalRequest.WorkflowExecution.RunId))
+				request.SignalRequest.WorkflowExecution.GetRunId(),
+				request.SignalRequest.Control)
 
 			return nil
 		})
@@ -977,7 +972,8 @@ func (t *transferQueueProcessorImpl) requestSignalFailed(task *persistence.Trans
 				initiatedEventID,
 				request.GetDomainUUID(),
 				request.SignalRequest.WorkflowExecution.GetWorkflowId(),
-				common.StringDefault(request.SignalRequest.WorkflowExecution.RunId),
+				request.SignalRequest.WorkflowExecution.GetRunId(),
+				request.SignalRequest.Control,
 				workflow.SignalExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution)
 
 			return nil
@@ -1042,6 +1038,14 @@ Update_History_Loop:
 	}
 
 	return ErrMaxAttemptsExceeded
+}
+
+func (t *transferQueueProcessorImpl) SignalExecutionWithRetry(signalRequest *history.SignalWorkflowExecutionRequest) error {
+	op := func() error {
+		return t.historyClient.SignalWorkflowExecution(nil, signalRequest)
+	}
+
+	return backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
 }
 
 func (a *ackManager) readTransferTasks() ([]*persistence.TransferTaskInfo, error) {

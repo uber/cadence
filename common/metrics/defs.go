@@ -125,8 +125,6 @@ const (
 	PersistenceUpdateWorkflowExecutionScope
 	// PersistenceDeleteWorkflowExecutionScope tracks DeleteWorkflowExecution calls made by service to persistence layer
 	PersistenceDeleteWorkflowExecutionScope
-	// PersistenceDeleteSignalRequestedIDScope tracks DeleteSignalRequestedID calls made by service to persistence layer
-	PersistenceDeleteSignalRequestedIDScope
 	// PersistenceGetCurrentExecutionScope tracks GetCurrentExecution calls made by service to persistence layer
 	PersistenceGetCurrentExecutionScope
 	// PersistenceGetTransferTasksScope tracks GetTransferTasks calls made by service to persistence layer
@@ -209,8 +207,8 @@ const (
 	HistoryClientRequestCancelWorkflowExecutionScope
 	// HistoryClientSignalWorkflowExecutionScope tracks RPC calls to history service
 	HistoryClientSignalWorkflowExecutionScope
-	// HistoryClientDeleteWorkflowExecutionSignalScope tracks RPC calls to history service
-	HistoryClientDeleteWorkflowExecutionSignalScope
+	// HistoryClientRemoveSignalMutableStateScope tracks RPC calls to history service
+	HistoryClientRemoveSignalMutableStateScope
 	// HistoryClientTerminateWorkflowExecutionScope tracks RPC calls to history service
 	HistoryClientTerminateWorkflowExecutionScope
 	// HistoryClientScheduleDecisionTaskScope tracks RPC calls to history service
@@ -321,8 +319,8 @@ const (
 	HistoryRecordActivityTaskStartedScope
 	// HistorySignalWorkflowExecutionScope tracks SignalWorkflowExecution API calls received by service
 	HistorySignalWorkflowExecutionScope
-	// HistoryDeleteWorkflowExecutionSignalScope tracks DeleteWorkflowExecutionSignal API calls received by service
-	HistoryDeleteWorkflowExecutionSignalScope
+	// HistoryRemoveSignalMutableStateScope tracks RemoveSignalMutableState API calls received by service
+	HistoryRemoveSignalMutableStateScope
 	// HistoryTerminateWorkflowExecutionScope tracks TerminateWorkflowExecution API calls received by service
 	HistoryTerminateWorkflowExecutionScope
 	// HistoryScheduleDecisionTaskScope tracks ScheduleDecisionTask API calls received by service
@@ -428,7 +426,6 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceListClosedWorkflowExecutionsByWorkflowIDScope: {operation: "ListClosedWorkflowExecutionsByWorkflowID"},
 		PersistenceListClosedWorkflowExecutionsByStatusScope:     {operation: "ListClosedWorkflowExecutionsByStatus"},
 		PersistenceGetClosedWorkflowExecutionScope:               {operation: "GetClosedWorkflowExecution"},
-		PersistenceDeleteSignalRequestedIDScope:                  {operation: "DeleteSignalRequestedID"},
 
 		HistoryClientStartWorkflowExecutionScope:         {operation: "HistoryClientStartWorkflowExecution"},
 		HistoryClientRecordActivityTaskHeartbeatScope:    {operation: "HistoryClientRecordActivityTaskHeartbeat"},
@@ -443,7 +440,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryClientRecordActivityTaskStartedScope:      {operation: "HistoryClientRecordActivityTaskStarted"},
 		HistoryClientRequestCancelWorkflowExecutionScope: {operation: "HistoryClientRequestCancelWorkflowExecution"},
 		HistoryClientSignalWorkflowExecutionScope:        {operation: "HistoryClientSignalWorkflowExecution"},
-		HistoryClientDeleteWorkflowExecutionSignalScope:  {operation: "HistoryClientDeleteWorkflowExecutionSignal"},
+		HistoryClientRemoveSignalMutableStateScope:       {operation: "HistoryClientRemoveSignalMutableStateScope"},
 		HistoryClientTerminateWorkflowExecutionScope:     {operation: "HistoryClientTerminateWorkflowExecution"},
 		HistoryClientScheduleDecisionTaskScope:           {operation: "HistoryClientScheduleDecisionTask"},
 		HistoryClientRecordChildExecutionCompletedScope:  {operation: "HistoryClientRecordChildExecutionCompleted"},
@@ -499,7 +496,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryRecordDecisionTaskStartedScope:      {operation: "RecordDecisionTaskStarted"},
 		HistoryRecordActivityTaskStartedScope:      {operation: "RecordActivityTaskStarted"},
 		HistorySignalWorkflowExecutionScope:        {operation: "SignalWorkflowExecution"},
-		HistoryDeleteWorkflowExecutionSignalScope:  {operation: "DeleteWorkflowExecutionSignal"},
+		HistoryRemoveSignalMutableStateScope:       {operation: "RemoveSignalMutableState"},
 		HistoryTerminateWorkflowExecutionScope:     {operation: "TerminateWorkflowExecution"},
 		HistoryScheduleDecisionTaskScope:           {operation: "ScheduleDecisionTask"},
 		HistoryRecordChildExecutionCompletedScope:  {operation: "RecordChildExecutionCompleted"},

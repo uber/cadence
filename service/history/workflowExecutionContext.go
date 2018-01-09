@@ -190,13 +190,15 @@ func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persi
 		// TODO (Bowei): looks like a bug in cancel external execution, missing updateinfo
 		//UpsertRequestCancelInfos:  updates.updateCancelExecutionInfos,
 		//DeleteRequestCancelInfo:   updates.deleteCancelExecutionInfo,
-		UpsertSignalInfos:    updates.updateSignalInfos,
-		DeleteSignalInfo:     updates.deleteSignalInfo,
-		NewBufferedEvents:    updates.newBufferedEvents,
-		ClearBufferedEvents:  updates.clearBufferedEvents,
-		ContinueAsNew:        continueAsNew,
-		FinishExecution:      finishExecution,
-		FinishedExecutionTTL: finishExecutionTTL,
+		UpsertSignalInfos:        updates.updateSignalInfos,
+		DeleteSignalInfo:         updates.deleteSignalInfo,
+		UpsertSignalRequestedIDs: updates.updateSignalRequestedIDs,
+		DeleteSignalRequestedID:  updates.deleteSignalRequestedID,
+		NewBufferedEvents:        updates.newBufferedEvents,
+		ClearBufferedEvents:      updates.clearBufferedEvents,
+		ContinueAsNew:            continueAsNew,
+		FinishExecution:          finishExecution,
+		FinishedExecutionTTL:     finishExecutionTTL,
 	}); err1 != nil {
 		switch err1.(type) {
 		case *persistence.ConditionFailedError:

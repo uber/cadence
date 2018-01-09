@@ -356,18 +356,18 @@ func (c *clientImpl) SignalWorkflowExecution(
 	return err
 }
 
-func (c *clientImpl) DeleteWorkflowExecutionSignal(
+func (c *clientImpl) RemoveSignalMutableState(
 	ctx context.Context,
-	request *h.DeleteWorkflowExecutionSignalRequest,
+	request *h.RemoveSignalMutableStateRequest,
 	opts ...yarpc.CallOption) error {
-	client, err := c.getHostForRequest(*request.DeleteRequest.WorkflowExecution.WorkflowId)
+	client, err := c.getHostForRequest(*request.WorkflowExecution.WorkflowId)
 	if err != nil {
 		return err
 	}
 	op := func(ctx context.Context, client historyserviceclient.Interface) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
-		return client.DeleteWorkflowExecutionSignal(ctx, request)
+		return client.RemoveSignalMutableState(ctx, request)
 	}
 	err = c.executeWithRedirect(ctx, client, op)
 

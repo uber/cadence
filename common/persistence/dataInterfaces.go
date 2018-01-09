@@ -268,7 +268,7 @@ type (
 		TargetDomainID   string
 		TargetWorkflowID string
 		TargetRunID      string
-		ScheduleID       int64
+		InitiatedID      int64
 	}
 
 	// StartChildExecutionTask identifies a transfer task for starting child execution
@@ -356,6 +356,7 @@ type (
 		SignalRequestID string
 		SignalName      string
 		Input           []byte
+		Control         []byte
 	}
 
 	// CreateShardRequest is used to create a shard in executions table
@@ -459,6 +460,7 @@ type (
 		UpsertSignalInfos         []*SignalInfo
 		DeleteSignalInfo          *int64
 		UpsertSignalRequestedIDs  []string
+		DeleteSignalRequestedID   string
 		NewBufferedEvents         *SerializedHistoryEventBatch
 		ClearBufferedEvents       bool
 	}
@@ -468,14 +470,6 @@ type (
 		DomainID   string
 		WorkflowID string
 		RunID      string
-	}
-
-	// DeleteWorkflowExecutionSignalRequestedRequest is used to delete signal_requested of a workflow execution
-	DeleteWorkflowExecutionSignalRequestedRequest struct {
-		DomainID        string
-		WorkflowID      string
-		RunID           string
-		SignalRequestID string
 	}
 
 	// GetTransferTasksRequest is used to read tasks from the transfer task queue
@@ -706,7 +700,6 @@ type (
 		GetWorkflowExecution(request *GetWorkflowExecutionRequest) (*GetWorkflowExecutionResponse, error)
 		UpdateWorkflowExecution(request *UpdateWorkflowExecutionRequest) error
 		DeleteWorkflowExecution(request *DeleteWorkflowExecutionRequest) error
-		DeleteSignalRequestedID(request *DeleteWorkflowExecutionSignalRequestedRequest) error
 		GetCurrentExecution(request *GetCurrentExecutionRequest) (*GetCurrentExecutionResponse, error)
 		GetTransferTasks(request *GetTransferTasksRequest) (*GetTransferTasksResponse, error)
 		CompleteTransferTask(request *CompleteTransferTaskRequest) error

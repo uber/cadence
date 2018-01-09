@@ -318,17 +318,17 @@ func (b *historyBuilder) AddSignalExternalWorkflowExecutionInitiatedEvent(decisi
 }
 
 func (b *historyBuilder) AddSignalExternalWorkflowExecutionFailedEvent(decisionTaskCompletedEventID, initiatedEventID int64,
-	domain, workflowID, runID string, cause workflow.SignalExternalWorkflowExecutionFailedCause) *workflow.HistoryEvent {
+	domain, workflowID, runID string, control []byte, cause workflow.SignalExternalWorkflowExecutionFailedCause) *workflow.HistoryEvent {
 	event := b.newSignalExternalWorkflowExecutionFailedEvent(decisionTaskCompletedEventID, initiatedEventID,
-		domain, workflowID, runID, cause)
+		domain, workflowID, runID, control, cause)
 
 	return b.addEventToHistory(event)
 }
 
 func (b *historyBuilder) AddExternalWorkflowExecutionSignalRequested(initiatedEventID int64,
-	domain, workflowID, runID string) *workflow.HistoryEvent {
+	domain, workflowID, runID string, control []byte) *workflow.HistoryEvent {
 	event := b.newExternalWorkflowExecutionSignalRequestedEvent(initiatedEventID,
-		domain, workflowID, runID)
+		domain, workflowID, runID, control)
 
 	return b.addEventToHistory(event)
 }
@@ -719,7 +719,7 @@ func (b *historyBuilder) newSignalExternalWorkflowExecutionInitiatedEvent(decisi
 }
 
 func (b *historyBuilder) newSignalExternalWorkflowExecutionFailedEvent(decisionTaskCompletedEventID, initiatedEventID int64,
-	domain, workflowID, runID string, cause workflow.SignalExternalWorkflowExecutionFailedCause) *workflow.HistoryEvent {
+	domain, workflowID, runID string, control []byte, cause workflow.SignalExternalWorkflowExecutionFailedCause) *workflow.HistoryEvent {
 	event := b.msBuilder.createNewHistoryEvent(workflow.EventTypeSignalExternalWorkflowExecutionFailed)
 	attributes := &workflow.SignalExternalWorkflowExecutionFailedEventAttributes{}
 	attributes.DecisionTaskCompletedEventId = common.Int64Ptr(decisionTaskCompletedEventID)
@@ -730,13 +730,14 @@ func (b *historyBuilder) newSignalExternalWorkflowExecutionFailedEvent(decisionT
 		RunId:      common.StringPtr(runID),
 	}
 	attributes.Cause = common.SignalExternalWorkflowExecutionFailedCausePtr(cause)
+	attributes.Control = control
 	event.SignalExternalWorkflowExecutionFailedEventAttributes = attributes
 
 	return event
 }
 
 func (b *historyBuilder) newExternalWorkflowExecutionSignalRequestedEvent(initiatedEventID int64,
-	domain, workflowID, runID string) *workflow.HistoryEvent {
+	domain, workflowID, runID string, control []byte) *workflow.HistoryEvent {
 	event := b.msBuilder.createNewHistoryEvent(workflow.EventTypeExternalWorkflowExecutionSignalRequested)
 	attributes := &workflow.ExternalWorkflowExecutionSignalRequestedEventAttributes{}
 	attributes.InitiatedEventId = common.Int64Ptr(initiatedEventID)
@@ -745,6 +746,7 @@ func (b *historyBuilder) newExternalWorkflowExecutionSignalRequestedEvent(initia
 		WorkflowId: common.StringPtr(workflowID),
 		RunId:      common.StringPtr(runID),
 	}
+	attributes.Control = control
 	event.ExternalWorkflowExecutionSignalRequestedEventAttributes = attributes
 
 	return event

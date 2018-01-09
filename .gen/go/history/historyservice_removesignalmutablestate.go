@@ -31,14 +31,14 @@ import (
 	"strings"
 )
 
-// HistoryService_DeleteWorkflowExecutionSignal_Args represents the arguments for the HistoryService.DeleteWorkflowExecutionSignal function.
+// HistoryService_RemoveSignalMutableState_Args represents the arguments for the HistoryService.RemoveSignalMutableState function.
 //
-// The arguments for DeleteWorkflowExecutionSignal are sent and received over the wire as this struct.
-type HistoryService_DeleteWorkflowExecutionSignal_Args struct {
-	DeleteRequest *DeleteWorkflowExecutionSignalRequest `json:"deleteRequest,omitempty"`
+// The arguments for RemoveSignalMutableState are sent and received over the wire as this struct.
+type HistoryService_RemoveSignalMutableState_Args struct {
+	RemoveRequest *RemoveSignalMutableStateRequest `json:"removeRequest,omitempty"`
 }
 
-// ToWire translates a HistoryService_DeleteWorkflowExecutionSignal_Args struct into a Thrift-level intermediate
+// ToWire translates a HistoryService_RemoveSignalMutableState_Args struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
 // into bytes using a ThriftRW protocol implementation.
 //
@@ -53,7 +53,7 @@ type HistoryService_DeleteWorkflowExecutionSignal_Args struct {
 //   if err := binaryProtocol.Encode(x, writer); err != nil {
 //     return err
 //   }
-func (v *HistoryService_DeleteWorkflowExecutionSignal_Args) ToWire() (wire.Value, error) {
+func (v *HistoryService_RemoveSignalMutableState_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
 		i      int = 0
@@ -61,8 +61,8 @@ func (v *HistoryService_DeleteWorkflowExecutionSignal_Args) ToWire() (wire.Value
 		err    error
 	)
 
-	if v.DeleteRequest != nil {
-		w, err = v.DeleteRequest.ToWire()
+	if v.RemoveRequest != nil {
+		w, err = v.RemoveRequest.ToWire()
 		if err != nil {
 			return w, err
 		}
@@ -73,17 +73,17 @@ func (v *HistoryService_DeleteWorkflowExecutionSignal_Args) ToWire() (wire.Value
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _DeleteWorkflowExecutionSignalRequest_1_Read(w wire.Value) (*DeleteWorkflowExecutionSignalRequest, error) {
-	var v DeleteWorkflowExecutionSignalRequest
+func _RemoveSignalMutableStateRequest_Read(w wire.Value) (*RemoveSignalMutableStateRequest, error) {
+	var v RemoveSignalMutableStateRequest
 	err := v.FromWire(w)
 	return &v, err
 }
 
-// FromWire deserializes a HistoryService_DeleteWorkflowExecutionSignal_Args struct from its Thrift-level
+// FromWire deserializes a HistoryService_RemoveSignalMutableState_Args struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.
 //
-// An error is returned if we were unable to build a HistoryService_DeleteWorkflowExecutionSignal_Args struct
+// An error is returned if we were unable to build a HistoryService_RemoveSignalMutableState_Args struct
 // from the provided intermediate representation.
 //
 //   x, err := binaryProtocol.Decode(reader, wire.TStruct)
@@ -91,19 +91,19 @@ func _DeleteWorkflowExecutionSignalRequest_1_Read(w wire.Value) (*DeleteWorkflow
 //     return nil, err
 //   }
 //
-//   var v HistoryService_DeleteWorkflowExecutionSignal_Args
+//   var v HistoryService_RemoveSignalMutableState_Args
 //   if err := v.FromWire(x); err != nil {
 //     return nil, err
 //   }
 //   return &v, nil
-func (v *HistoryService_DeleteWorkflowExecutionSignal_Args) FromWire(w wire.Value) error {
+func (v *HistoryService_RemoveSignalMutableState_Args) FromWire(w wire.Value) error {
 	var err error
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
 		case 1:
 			if field.Value.Type() == wire.TStruct {
-				v.DeleteRequest, err = _DeleteWorkflowExecutionSignalRequest_1_Read(field.Value)
+				v.RemoveRequest, err = _RemoveSignalMutableStateRequest_Read(field.Value)
 				if err != nil {
 					return err
 				}
@@ -115,29 +115,29 @@ func (v *HistoryService_DeleteWorkflowExecutionSignal_Args) FromWire(w wire.Valu
 	return nil
 }
 
-// String returns a readable string representation of a HistoryService_DeleteWorkflowExecutionSignal_Args
+// String returns a readable string representation of a HistoryService_RemoveSignalMutableState_Args
 // struct.
-func (v *HistoryService_DeleteWorkflowExecutionSignal_Args) String() string {
+func (v *HistoryService_RemoveSignalMutableState_Args) String() string {
 	if v == nil {
 		return "<nil>"
 	}
 
 	var fields [1]string
 	i := 0
-	if v.DeleteRequest != nil {
-		fields[i] = fmt.Sprintf("DeleteRequest: %v", v.DeleteRequest)
+	if v.RemoveRequest != nil {
+		fields[i] = fmt.Sprintf("RemoveRequest: %v", v.RemoveRequest)
 		i++
 	}
 
-	return fmt.Sprintf("HistoryService_DeleteWorkflowExecutionSignal_Args{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("HistoryService_RemoveSignalMutableState_Args{%v}", strings.Join(fields[:i], ", "))
 }
 
-// Equals returns true if all the fields of this HistoryService_DeleteWorkflowExecutionSignal_Args match the
-// provided HistoryService_DeleteWorkflowExecutionSignal_Args.
+// Equals returns true if all the fields of this HistoryService_RemoveSignalMutableState_Args match the
+// provided HistoryService_RemoveSignalMutableState_Args.
 //
 // This function performs a deep comparison.
-func (v *HistoryService_DeleteWorkflowExecutionSignal_Args) Equals(rhs *HistoryService_DeleteWorkflowExecutionSignal_Args) bool {
-	if !((v.DeleteRequest == nil && rhs.DeleteRequest == nil) || (v.DeleteRequest != nil && rhs.DeleteRequest != nil && v.DeleteRequest.Equals(rhs.DeleteRequest))) {
+func (v *HistoryService_RemoveSignalMutableState_Args) Equals(rhs *HistoryService_RemoveSignalMutableState_Args) bool {
+	if !((v.RemoveRequest == nil && rhs.RemoveRequest == nil) || (v.RemoveRequest != nil && rhs.RemoveRequest != nil && v.RemoveRequest.Equals(rhs.RemoveRequest))) {
 		return false
 	}
 
@@ -147,74 +147,74 @@ func (v *HistoryService_DeleteWorkflowExecutionSignal_Args) Equals(rhs *HistoryS
 // MethodName returns the name of the Thrift function as specified in
 // the IDL, for which this struct represent the arguments.
 //
-// This will always be "DeleteWorkflowExecutionSignal" for this struct.
-func (v *HistoryService_DeleteWorkflowExecutionSignal_Args) MethodName() string {
-	return "DeleteWorkflowExecutionSignal"
+// This will always be "RemoveSignalMutableState" for this struct.
+func (v *HistoryService_RemoveSignalMutableState_Args) MethodName() string {
+	return "RemoveSignalMutableState"
 }
 
 // EnvelopeType returns the kind of value inside this struct.
 //
 // This will always be Call for this struct.
-func (v *HistoryService_DeleteWorkflowExecutionSignal_Args) EnvelopeType() wire.EnvelopeType {
+func (v *HistoryService_RemoveSignalMutableState_Args) EnvelopeType() wire.EnvelopeType {
 	return wire.Call
 }
 
-// HistoryService_DeleteWorkflowExecutionSignal_Helper provides functions that aid in handling the
-// parameters and return values of the HistoryService.DeleteWorkflowExecutionSignal
+// HistoryService_RemoveSignalMutableState_Helper provides functions that aid in handling the
+// parameters and return values of the HistoryService.RemoveSignalMutableState
 // function.
-var HistoryService_DeleteWorkflowExecutionSignal_Helper = struct {
-	// Args accepts the parameters of DeleteWorkflowExecutionSignal in-order and returns
+var HistoryService_RemoveSignalMutableState_Helper = struct {
+	// Args accepts the parameters of RemoveSignalMutableState in-order and returns
 	// the arguments struct for the function.
 	Args func(
-		deleteRequest *DeleteWorkflowExecutionSignalRequest,
-	) *HistoryService_DeleteWorkflowExecutionSignal_Args
+		removeRequest *RemoveSignalMutableStateRequest,
+	) *HistoryService_RemoveSignalMutableState_Args
 
 	// IsException returns true if the given error can be thrown
-	// by DeleteWorkflowExecutionSignal.
+	// by RemoveSignalMutableState.
 	//
-	// An error can be thrown by DeleteWorkflowExecutionSignal only if the
+	// An error can be thrown by RemoveSignalMutableState only if the
 	// corresponding exception type was mentioned in the 'throws'
 	// section for it in the Thrift file.
 	IsException func(error) bool
 
-	// WrapResponse returns the result struct for DeleteWorkflowExecutionSignal
+	// WrapResponse returns the result struct for RemoveSignalMutableState
 	// given the error returned by it. The provided error may
-	// be nil if DeleteWorkflowExecutionSignal did not fail.
+	// be nil if RemoveSignalMutableState did not fail.
 	//
-	// This allows mapping errors returned by DeleteWorkflowExecutionSignal into a
+	// This allows mapping errors returned by RemoveSignalMutableState into a
 	// serializable result struct. WrapResponse returns a
 	// non-nil error if the provided error cannot be thrown by
-	// DeleteWorkflowExecutionSignal
+	// RemoveSignalMutableState
 	//
-	//   err := DeleteWorkflowExecutionSignal(args)
-	//   result, err := HistoryService_DeleteWorkflowExecutionSignal_Helper.WrapResponse(err)
+	//   err := RemoveSignalMutableState(args)
+	//   result, err := HistoryService_RemoveSignalMutableState_Helper.WrapResponse(err)
 	//   if err != nil {
-	//     return fmt.Errorf("unexpected error from DeleteWorkflowExecutionSignal: %v", err)
+	//     return fmt.Errorf("unexpected error from RemoveSignalMutableState: %v", err)
 	//   }
 	//   serialize(result)
-	WrapResponse func(error) (*HistoryService_DeleteWorkflowExecutionSignal_Result, error)
+	WrapResponse func(error) (*HistoryService_RemoveSignalMutableState_Result, error)
 
-	// UnwrapResponse takes the result struct for DeleteWorkflowExecutionSignal
+	// UnwrapResponse takes the result struct for RemoveSignalMutableState
 	// and returns the erorr returned by it (if any).
 	//
-	// The error is non-nil only if DeleteWorkflowExecutionSignal threw an
+	// The error is non-nil only if RemoveSignalMutableState threw an
 	// exception.
 	//
 	//   result := deserialize(bytes)
-	//   err := HistoryService_DeleteWorkflowExecutionSignal_Helper.UnwrapResponse(result)
-	UnwrapResponse func(*HistoryService_DeleteWorkflowExecutionSignal_Result) error
+	//   err := HistoryService_RemoveSignalMutableState_Helper.UnwrapResponse(result)
+	UnwrapResponse func(*HistoryService_RemoveSignalMutableState_Result) error
 }{}
 
 func init() {
-	HistoryService_DeleteWorkflowExecutionSignal_Helper.Args = func(
-		deleteRequest *DeleteWorkflowExecutionSignalRequest,
-	) *HistoryService_DeleteWorkflowExecutionSignal_Args {
-		return &HistoryService_DeleteWorkflowExecutionSignal_Args{
-			DeleteRequest: deleteRequest,
+	HistoryService_RemoveSignalMutableState_Helper.Args = func(
+		removeRequest *RemoveSignalMutableStateRequest,
+	) *HistoryService_RemoveSignalMutableState_Args {
+		return &HistoryService_RemoveSignalMutableState_Args{
+			RemoveRequest: removeRequest,
 		}
 	}
 
-	HistoryService_DeleteWorkflowExecutionSignal_Helper.IsException = func(err error) bool {
+	HistoryService_RemoveSignalMutableState_Helper.IsException = func(err error) bool {
 		switch err.(type) {
 		case *shared.BadRequestError:
 			return true
@@ -229,37 +229,37 @@ func init() {
 		}
 	}
 
-	HistoryService_DeleteWorkflowExecutionSignal_Helper.WrapResponse = func(err error) (*HistoryService_DeleteWorkflowExecutionSignal_Result, error) {
+	HistoryService_RemoveSignalMutableState_Helper.WrapResponse = func(err error) (*HistoryService_RemoveSignalMutableState_Result, error) {
 		if err == nil {
-			return &HistoryService_DeleteWorkflowExecutionSignal_Result{}, nil
+			return &HistoryService_RemoveSignalMutableState_Result{}, nil
 		}
 
 		switch e := err.(type) {
 		case *shared.BadRequestError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for HistoryService_DeleteWorkflowExecutionSignal_Result.BadRequestError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for HistoryService_RemoveSignalMutableState_Result.BadRequestError")
 			}
-			return &HistoryService_DeleteWorkflowExecutionSignal_Result{BadRequestError: e}, nil
+			return &HistoryService_RemoveSignalMutableState_Result{BadRequestError: e}, nil
 		case *shared.InternalServiceError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for HistoryService_DeleteWorkflowExecutionSignal_Result.InternalServiceError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for HistoryService_RemoveSignalMutableState_Result.InternalServiceError")
 			}
-			return &HistoryService_DeleteWorkflowExecutionSignal_Result{InternalServiceError: e}, nil
+			return &HistoryService_RemoveSignalMutableState_Result{InternalServiceError: e}, nil
 		case *shared.EntityNotExistsError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for HistoryService_DeleteWorkflowExecutionSignal_Result.EntityNotExistError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for HistoryService_RemoveSignalMutableState_Result.EntityNotExistError")
 			}
-			return &HistoryService_DeleteWorkflowExecutionSignal_Result{EntityNotExistError: e}, nil
+			return &HistoryService_RemoveSignalMutableState_Result{EntityNotExistError: e}, nil
 		case *ShardOwnershipLostError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for HistoryService_DeleteWorkflowExecutionSignal_Result.ShardOwnershipLostError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for HistoryService_RemoveSignalMutableState_Result.ShardOwnershipLostError")
 			}
-			return &HistoryService_DeleteWorkflowExecutionSignal_Result{ShardOwnershipLostError: e}, nil
+			return &HistoryService_RemoveSignalMutableState_Result{ShardOwnershipLostError: e}, nil
 		}
 
 		return nil, err
 	}
-	HistoryService_DeleteWorkflowExecutionSignal_Helper.UnwrapResponse = func(result *HistoryService_DeleteWorkflowExecutionSignal_Result) (err error) {
+	HistoryService_RemoveSignalMutableState_Helper.UnwrapResponse = func(result *HistoryService_RemoveSignalMutableState_Result) (err error) {
 		if result.BadRequestError != nil {
 			err = result.BadRequestError
 			return
@@ -281,17 +281,17 @@ func init() {
 
 }
 
-// HistoryService_DeleteWorkflowExecutionSignal_Result represents the result of a HistoryService.DeleteWorkflowExecutionSignal function call.
+// HistoryService_RemoveSignalMutableState_Result represents the result of a HistoryService.RemoveSignalMutableState function call.
 //
-// The result of a DeleteWorkflowExecutionSignal execution is sent and received over the wire as this struct.
-type HistoryService_DeleteWorkflowExecutionSignal_Result struct {
+// The result of a RemoveSignalMutableState execution is sent and received over the wire as this struct.
+type HistoryService_RemoveSignalMutableState_Result struct {
 	BadRequestError         *shared.BadRequestError      `json:"badRequestError,omitempty"`
 	InternalServiceError    *shared.InternalServiceError `json:"internalServiceError,omitempty"`
 	EntityNotExistError     *shared.EntityNotExistsError `json:"entityNotExistError,omitempty"`
 	ShardOwnershipLostError *ShardOwnershipLostError     `json:"shardOwnershipLostError,omitempty"`
 }
 
-// ToWire translates a HistoryService_DeleteWorkflowExecutionSignal_Result struct into a Thrift-level intermediate
+// ToWire translates a HistoryService_RemoveSignalMutableState_Result struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
 // into bytes using a ThriftRW protocol implementation.
 //
@@ -306,7 +306,7 @@ type HistoryService_DeleteWorkflowExecutionSignal_Result struct {
 //   if err := binaryProtocol.Encode(x, writer); err != nil {
 //     return err
 //   }
-func (v *HistoryService_DeleteWorkflowExecutionSignal_Result) ToWire() (wire.Value, error) {
+func (v *HistoryService_RemoveSignalMutableState_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [4]wire.Field
 		i      int = 0
@@ -348,41 +348,17 @@ func (v *HistoryService_DeleteWorkflowExecutionSignal_Result) ToWire() (wire.Val
 	}
 
 	if i > 1 {
-		return wire.Value{}, fmt.Errorf("HistoryService_DeleteWorkflowExecutionSignal_Result should have at most one field: got %v fields", i)
+		return wire.Value{}, fmt.Errorf("HistoryService_RemoveSignalMutableState_Result should have at most one field: got %v fields", i)
 	}
 
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _BadRequestError_Read(w wire.Value) (*shared.BadRequestError, error) {
-	var v shared.BadRequestError
-	err := v.FromWire(w)
-	return &v, err
-}
-
-func _InternalServiceError_Read(w wire.Value) (*shared.InternalServiceError, error) {
-	var v shared.InternalServiceError
-	err := v.FromWire(w)
-	return &v, err
-}
-
-func _EntityNotExistsError_Read(w wire.Value) (*shared.EntityNotExistsError, error) {
-	var v shared.EntityNotExistsError
-	err := v.FromWire(w)
-	return &v, err
-}
-
-func _ShardOwnershipLostError_Read(w wire.Value) (*ShardOwnershipLostError, error) {
-	var v ShardOwnershipLostError
-	err := v.FromWire(w)
-	return &v, err
-}
-
-// FromWire deserializes a HistoryService_DeleteWorkflowExecutionSignal_Result struct from its Thrift-level
+// FromWire deserializes a HistoryService_RemoveSignalMutableState_Result struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.
 //
-// An error is returned if we were unable to build a HistoryService_DeleteWorkflowExecutionSignal_Result struct
+// An error is returned if we were unable to build a HistoryService_RemoveSignalMutableState_Result struct
 // from the provided intermediate representation.
 //
 //   x, err := binaryProtocol.Decode(reader, wire.TStruct)
@@ -390,12 +366,12 @@ func _ShardOwnershipLostError_Read(w wire.Value) (*ShardOwnershipLostError, erro
 //     return nil, err
 //   }
 //
-//   var v HistoryService_DeleteWorkflowExecutionSignal_Result
+//   var v HistoryService_RemoveSignalMutableState_Result
 //   if err := v.FromWire(x); err != nil {
 //     return nil, err
 //   }
 //   return &v, nil
-func (v *HistoryService_DeleteWorkflowExecutionSignal_Result) FromWire(w wire.Value) error {
+func (v *HistoryService_RemoveSignalMutableState_Result) FromWire(w wire.Value) error {
 	var err error
 
 	for _, field := range w.GetStruct().Fields {
@@ -449,15 +425,15 @@ func (v *HistoryService_DeleteWorkflowExecutionSignal_Result) FromWire(w wire.Va
 		count++
 	}
 	if count > 1 {
-		return fmt.Errorf("HistoryService_DeleteWorkflowExecutionSignal_Result should have at most one field: got %v fields", count)
+		return fmt.Errorf("HistoryService_RemoveSignalMutableState_Result should have at most one field: got %v fields", count)
 	}
 
 	return nil
 }
 
-// String returns a readable string representation of a HistoryService_DeleteWorkflowExecutionSignal_Result
+// String returns a readable string representation of a HistoryService_RemoveSignalMutableState_Result
 // struct.
-func (v *HistoryService_DeleteWorkflowExecutionSignal_Result) String() string {
+func (v *HistoryService_RemoveSignalMutableState_Result) String() string {
 	if v == nil {
 		return "<nil>"
 	}
@@ -481,14 +457,14 @@ func (v *HistoryService_DeleteWorkflowExecutionSignal_Result) String() string {
 		i++
 	}
 
-	return fmt.Sprintf("HistoryService_DeleteWorkflowExecutionSignal_Result{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("HistoryService_RemoveSignalMutableState_Result{%v}", strings.Join(fields[:i], ", "))
 }
 
-// Equals returns true if all the fields of this HistoryService_DeleteWorkflowExecutionSignal_Result match the
-// provided HistoryService_DeleteWorkflowExecutionSignal_Result.
+// Equals returns true if all the fields of this HistoryService_RemoveSignalMutableState_Result match the
+// provided HistoryService_RemoveSignalMutableState_Result.
 //
 // This function performs a deep comparison.
-func (v *HistoryService_DeleteWorkflowExecutionSignal_Result) Equals(rhs *HistoryService_DeleteWorkflowExecutionSignal_Result) bool {
+func (v *HistoryService_RemoveSignalMutableState_Result) Equals(rhs *HistoryService_RemoveSignalMutableState_Result) bool {
 	if !((v.BadRequestError == nil && rhs.BadRequestError == nil) || (v.BadRequestError != nil && rhs.BadRequestError != nil && v.BadRequestError.Equals(rhs.BadRequestError))) {
 		return false
 	}
@@ -508,14 +484,14 @@ func (v *HistoryService_DeleteWorkflowExecutionSignal_Result) Equals(rhs *Histor
 // MethodName returns the name of the Thrift function as specified in
 // the IDL, for which this struct represent the result.
 //
-// This will always be "DeleteWorkflowExecutionSignal" for this struct.
-func (v *HistoryService_DeleteWorkflowExecutionSignal_Result) MethodName() string {
-	return "DeleteWorkflowExecutionSignal"
+// This will always be "RemoveSignalMutableState" for this struct.
+func (v *HistoryService_RemoveSignalMutableState_Result) MethodName() string {
+	return "RemoveSignalMutableState"
 }
 
 // EnvelopeType returns the kind of value inside this struct.
 //
 // This will always be Reply for this struct.
-func (v *HistoryService_DeleteWorkflowExecutionSignal_Result) EnvelopeType() wire.EnvelopeType {
+func (v *HistoryService_RemoveSignalMutableState_Result) EnvelopeType() wire.EnvelopeType {
 	return wire.Reply
 }

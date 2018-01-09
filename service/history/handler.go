@@ -598,29 +598,28 @@ func (h *Handler) SignalWorkflowExecution(ctx context.Context,
 	return nil
 }
 
-// DeleteWorkflowExecutionSignal is used to delete a signal request ID that was previously recorded.  This is currently
+// RemoveSignalMutableState is used to remove a signal request ID that was previously recorded.  This is currently
 // used to clean execution info when signal decision finished.
-func (h *Handler) DeleteWorkflowExecutionSignal(ctx context.Context,
-	wrappedRequest *hist.DeleteWorkflowExecutionSignalRequest) error {
+func (h *Handler) RemoveSignalMutableState(ctx context.Context,
+	wrappedRequest *hist.RemoveSignalMutableStateRequest) error {
 	h.startWG.Wait()
 
-	h.metricsClient.IncCounter(metrics.HistoryDeleteWorkflowExecutionSignalScope, metrics.CadenceRequests)
-	sw := h.metricsClient.StartTimer(metrics.HistoryDeleteWorkflowExecutionSignalScope, metrics.CadenceLatency)
+	h.metricsClient.IncCounter(metrics.HistoryRemoveSignalMutableStateScope, metrics.CadenceRequests)
+	sw := h.metricsClient.StartTimer(metrics.HistoryRemoveSignalMutableStateScope, metrics.CadenceLatency)
 	defer sw.Stop()
 
 	if wrappedRequest.DomainUUID == nil {
 		return errDomainNotSet
 	}
 
-	deleteRequest := wrappedRequest.DeleteRequest
-	workflowExecution := deleteRequest.WorkflowExecution
+	workflowExecution := wrappedRequest.WorkflowExecution
 	engine, err1 := h.controller.GetEngine(*workflowExecution.WorkflowId)
 	if err1 != nil {
-		h.updateErrorMetric(metrics.HistoryDeleteWorkflowExecutionSignalScope, err1)
+		h.updateErrorMetric(metrics.HistoryRemoveSignalMutableStateScope, err1)
 		return err1
 	}
 
-	engine.DeleteWorkflowExecutionSignal(wrappedRequest)
+	engine.RemoveSignalMutableState(wrappedRequest)
 
 	return nil
 }
