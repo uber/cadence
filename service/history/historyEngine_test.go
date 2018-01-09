@@ -3401,6 +3401,21 @@ func addRequestCancelInitiatedEvent(builder *mutableStateBuilder, decisionComple
 	return event
 }
 
+func addRequestSignalInitiatedEvent(builder *mutableStateBuilder, decisionCompletedEventID int64,
+	signalRequestID, domain, workflowID, runID, signalName string, input, control []byte) *workflow.HistoryEvent {
+	event := builder.AddSignalExternalWorkflowExecutionInitiatedEvent(decisionCompletedEventID, signalRequestID,
+		&workflow.SignalExternalWorkflowExecutionDecisionAttributes{
+			Domain:     common.StringPtr(domain),
+			WorkflowId: common.StringPtr(workflowID),
+			RunId:      common.StringPtr(runID),
+			SignalName: common.StringPtr(signalName),
+			Input:      input,
+			Control:    control,
+		})
+
+	return event
+}
+
 func addStartChildWorkflowExecutionInitiatedEvent(builder *mutableStateBuilder, decisionCompletedID int64,
 	createRequestID, domain, workflowID, workflowType, tasklist string, input []byte,
 	executionStartToCloseTimeout, taskStartToCloseTimeout int32) (*workflow.HistoryEvent,

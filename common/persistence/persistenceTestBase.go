@@ -452,15 +452,6 @@ func (s *TestBase) UpsertSignalsRequestedState(updatedInfo *WorkflowExecutionInf
 		nil, nil, upsertSignalsRequested, "")
 }
 
-// DeleteSignalsRequestedState is a utility method to delete mutable state of workflow execution
-func (s *TestBase) DeleteSignalsRequestedState(updatedInfo *WorkflowExecutionInfo, condition int64,
-	deleteSignalsRequestedID string) error {
-	return s.UpdateWorkflowExecutionWithRangeID(updatedInfo, nil, nil,
-		s.ShardInfo.RangeID, condition, nil, nil, nil, nil,
-		nil, nil, nil, nil, nil, nil,
-		nil, nil, nil, deleteSignalsRequestedID)
-}
-
 // DeleteChildExecutionsState is a utility method to delete child execution from mutable state
 func (s *TestBase) DeleteChildExecutionsState(updatedInfo *WorkflowExecutionInfo, condition int64,
 	deleteChildInfo int64) error {
@@ -486,6 +477,15 @@ func (s *TestBase) DeleteSignalState(updatedInfo *WorkflowExecutionInfo, conditi
 		s.ShardInfo.RangeID, condition, nil, nil, nil, nil,
 		nil, nil, nil, nil, nil, nil,
 		nil, &deleteSignalInfo, nil, "")
+}
+
+// DeleteSignalsRequestedState is a utility method to delete mutable state of workflow execution
+func (s *TestBase) DeleteSignalsRequestedState(updatedInfo *WorkflowExecutionInfo, condition int64,
+	deleteSignalsRequestedID string) error {
+	return s.UpdateWorkflowExecutionWithRangeID(updatedInfo, nil, nil,
+		s.ShardInfo.RangeID, condition, nil, nil, nil, nil,
+		nil, nil, nil, nil, nil, nil,
+		nil, nil, nil, deleteSignalsRequestedID)
 }
 
 // UpdateWorkflowExecutionWithRangeID is a utility method to update workflow execution
@@ -569,6 +569,19 @@ func (s *TestBase) UpdateWorkflowExecutionForRequestCancel(
 		Condition:                condition,
 		UpsertRequestCancelInfos: upsertRequestCancelInfo,
 		RangeID:                  s.ShardInfo.RangeID,
+	})
+}
+
+// UpdateWorkflowExecutionForSignal is a utility method to update workflow execution
+func (s *TestBase) UpdateWorkflowExecutionForSignal(
+	updatedInfo *WorkflowExecutionInfo, condition int64, transferTasks []Task,
+	upsertSignalInfos []*SignalInfo) error {
+	return s.WorkflowMgr.UpdateWorkflowExecution(&UpdateWorkflowExecutionRequest{
+		ExecutionInfo:     updatedInfo,
+		TransferTasks:     transferTasks,
+		Condition:         condition,
+		UpsertSignalInfos: upsertSignalInfos,
+		RangeID:           s.ShardInfo.RangeID,
 	})
 }
 
