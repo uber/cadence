@@ -1043,9 +1043,11 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowSucc
 	decisions := []*workflow.Decision{{
 		DecisionType: common.DecisionTypePtr(workflow.DecisionTypeSignalExternalWorkflowExecution),
 		SignalExternalWorkflowExecutionDecisionAttributes: &workflow.SignalExternalWorkflowExecutionDecisionAttributes{
-			Domain:     common.StringPtr(domainID),
-			WorkflowId: we.WorkflowId,
-			RunId:      we.RunId,
+			Domain: common.StringPtr(domainID),
+			Execution: &workflow.WorkflowExecution{
+				WorkflowId: we.WorkflowId,
+				RunId:      we.RunId,
+			},
 			SignalName: common.StringPtr("signal"),
 			Input:      []byte("test input"),
 		},
@@ -1106,9 +1108,11 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowFail
 	decisions := []*workflow.Decision{{
 		DecisionType: common.DecisionTypePtr(workflow.DecisionTypeSignalExternalWorkflowExecution),
 		SignalExternalWorkflowExecutionDecisionAttributes: &workflow.SignalExternalWorkflowExecutionDecisionAttributes{
-			Domain:     common.StringPtr(domainID),
-			WorkflowId: we.WorkflowId,
-			RunId:      we.RunId,
+			Domain: common.StringPtr(domainID),
+			Execution: &workflow.WorkflowExecution{
+				WorkflowId: we.WorkflowId,
+				RunId:      we.RunId,
+			},
 			SignalName: common.StringPtr("signal"),
 			Input:      []byte("test input"),
 		},
@@ -1157,9 +1161,11 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowFail
 	decisions := []*workflow.Decision{{
 		DecisionType: common.DecisionTypePtr(workflow.DecisionTypeSignalExternalWorkflowExecution),
 		SignalExternalWorkflowExecutionDecisionAttributes: &workflow.SignalExternalWorkflowExecutionDecisionAttributes{
-			Domain:     common.StringPtr(domainID),
-			WorkflowId: we.WorkflowId,
-			RunId:      we.RunId,
+			Domain: common.StringPtr(domainID),
+			Execution: &workflow.WorkflowExecution{
+				WorkflowId: we.WorkflowId,
+				RunId:      we.RunId,
+			},
 			SignalName: common.StringPtr("signal"),
 			Input:      []byte("test input"),
 		},
@@ -3215,16 +3221,17 @@ func (s *engineSuite) TestValidateSignalExternalWorkflowExecutionAttributes() {
 
 	attributes = &workflow.SignalExternalWorkflowExecutionDecisionAttributes{}
 	err = validateSignalExternalWorkflowExecutionAttributes(attributes)
-	s.EqualError(err, "BadRequestError{Message: WorkflowId is not set on decision.}")
+	s.EqualError(err, "BadRequestError{Message: Execution is nil on decision.}")
 
-	attributes.WorkflowId = common.StringPtr("workflow-id")
+	attributes.Execution = &workflow.WorkflowExecution{}
+	attributes.Execution.WorkflowId = common.StringPtr("workflow-id")
 	err = validateSignalExternalWorkflowExecutionAttributes(attributes)
 	s.EqualError(err, "BadRequestError{Message: SignalName is not set on decision.}")
 
-	attributes.RunId = common.StringPtr("run-id")
+	attributes.Execution.RunId = common.StringPtr("run-id")
 	err = validateSignalExternalWorkflowExecutionAttributes(attributes)
 	s.EqualError(err, "BadRequestError{Message: Invalid RunId set on decision.}")
-	attributes.RunId = common.StringPtr(uuid.New())
+	attributes.Execution.RunId = common.StringPtr(uuid.New())
 
 	attributes.SignalName = common.StringPtr("my signal name")
 	err = validateSignalExternalWorkflowExecutionAttributes(attributes)
@@ -3405,9 +3412,11 @@ func addRequestSignalInitiatedEvent(builder *mutableStateBuilder, decisionComple
 	signalRequestID, domain, workflowID, runID, signalName string, input, control []byte) *workflow.HistoryEvent {
 	event := builder.AddSignalExternalWorkflowExecutionInitiatedEvent(decisionCompletedEventID, signalRequestID,
 		&workflow.SignalExternalWorkflowExecutionDecisionAttributes{
-			Domain:     common.StringPtr(domain),
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+			Domain: common.StringPtr(domain),
+			Execution: &workflow.WorkflowExecution{
+				WorkflowId: common.StringPtr(workflowID),
+				RunId:      common.StringPtr(runID),
+			},
 			SignalName: common.StringPtr(signalName),
 			Input:      input,
 			Control:    control,

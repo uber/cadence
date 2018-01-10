@@ -1397,7 +1397,7 @@ func (e *mutableStateBuilder) AddSignalExternalWorkflowExecutionInitiatedEvent(d
 	return event
 }
 
-func (e *mutableStateBuilder) AddExternalWorkflowExecutionSignalRequested(initiatedID int64,
+func (e *mutableStateBuilder) AddExternalWorkflowExecutionSignaled(initiatedID int64,
 	domain, workflowID, runID string, control []byte) *workflow.HistoryEvent {
 	_, ok := e.GetSignalInfo(initiatedID)
 	if !ok {
@@ -1408,7 +1408,7 @@ func (e *mutableStateBuilder) AddExternalWorkflowExecutionSignalRequested(initia
 	}
 
 	if err := e.DeletePendingSignal(initiatedID); err == nil {
-		return e.hBuilder.AddExternalWorkflowExecutionSignalRequested(initiatedID, domain, workflowID, runID, control)
+		return e.hBuilder.AddExternalWorkflowExecutionSignaled(initiatedID, domain, workflowID, runID, control)
 	}
 	// TODO: handle err case
 

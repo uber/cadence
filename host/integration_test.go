@@ -4107,7 +4107,6 @@ func (s *integrationSuite) TestDescribeTaskList() {
 		}}, nil
 	}
 
-	// activity handler
 	atHandler := func(execution *workflow.WorkflowExecution, activityType *workflow.ActivityType,
 		activityID string, input []byte, taskToken []byte) ([]byte, bool, error) {
 		return []byte("Activity Result."), false, nil

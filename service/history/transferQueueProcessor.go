@@ -912,7 +912,7 @@ func (t *transferQueueProcessorImpl) requestSignalCompleted(task *persistence.Tr
 				return &workflow.EntityNotExistsError{Message: "Pending signal request not found."}
 			}
 
-			msBuilder.AddExternalWorkflowExecutionSignalRequested(
+			msBuilder.AddExternalWorkflowExecutionSignaled(
 				initiatedEventID,
 				request.GetDomainUUID(),
 				request.SignalRequest.WorkflowExecution.GetWorkflowId(),

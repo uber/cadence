@@ -8680,7 +8680,7 @@ const (
 	EventTypeChildWorkflowExecutionTerminated                EventType = 37
 	EventTypeSignalExternalWorkflowExecutionInitiated        EventType = 38
 	EventTypeSignalExternalWorkflowExecutionFailed           EventType = 39
-	EventTypeExternalWorkflowExecutionSignalRequested        EventType = 40
+	EventTypeExternalWorkflowExecutionSignaled               EventType = 40
 )
 
 // EventType_Values returns all recognized values of EventType.
@@ -8726,7 +8726,7 @@ func EventType_Values() []EventType {
 		EventTypeChildWorkflowExecutionTerminated,
 		EventTypeSignalExternalWorkflowExecutionInitiated,
 		EventTypeSignalExternalWorkflowExecutionFailed,
-		EventTypeExternalWorkflowExecutionSignalRequested,
+		EventTypeExternalWorkflowExecutionSignaled,
 	}
 }
 
@@ -8857,8 +8857,8 @@ func (v *EventType) UnmarshalText(value []byte) error {
 	case "SignalExternalWorkflowExecutionFailed":
 		*v = EventTypeSignalExternalWorkflowExecutionFailed
 		return nil
-	case "ExternalWorkflowExecutionSignalRequested":
-		*v = EventTypeExternalWorkflowExecutionSignalRequested
+	case "ExternalWorkflowExecutionSignaled":
+		*v = EventTypeExternalWorkflowExecutionSignaled
 		return nil
 	default:
 		return fmt.Errorf("unknown enum value %q for %q", value, "EventType")
@@ -8977,7 +8977,7 @@ func (v EventType) String() string {
 	case 39:
 		return "SignalExternalWorkflowExecutionFailed"
 	case 40:
-		return "ExternalWorkflowExecutionSignalRequested"
+		return "ExternalWorkflowExecutionSignaled"
 	}
 	return fmt.Sprintf("EventType(%d)", w)
 }
@@ -9077,7 +9077,7 @@ func (v EventType) MarshalJSON() ([]byte, error) {
 	case 39:
 		return ([]byte)("\"SignalExternalWorkflowExecutionFailed\""), nil
 	case 40:
-		return ([]byte)("\"ExternalWorkflowExecutionSignalRequested\""), nil
+		return ([]byte)("\"ExternalWorkflowExecutionSignaled\""), nil
 	}
 	return ([]byte)(strconv.FormatInt(int64(v), 10)), nil
 }
@@ -9294,14 +9294,14 @@ func (v *ExternalWorkflowExecutionCancelRequestedEventAttributes) GetDomain() (o
 	return
 }
 
-type ExternalWorkflowExecutionSignalRequestedEventAttributes struct {
+type ExternalWorkflowExecutionSignaledEventAttributes struct {
 	InitiatedEventId  *int64             `json:"initiatedEventId,omitempty"`
 	Domain            *string            `json:"domain,omitempty"`
 	WorkflowExecution *WorkflowExecution `json:"workflowExecution,omitempty"`
 	Control           []byte             `json:"control,omitempty"`
 }
 
-// ToWire translates a ExternalWorkflowExecutionSignalRequestedEventAttributes struct into a Thrift-level intermediate
+// ToWire translates a ExternalWorkflowExecutionSignaledEventAttributes struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
 // into bytes using a ThriftRW protocol implementation.
 //
@@ -9316,7 +9316,7 @@ type ExternalWorkflowExecutionSignalRequestedEventAttributes struct {
 //   if err := binaryProtocol.Encode(x, writer); err != nil {
 //     return err
 //   }
-func (v *ExternalWorkflowExecutionSignalRequestedEventAttributes) ToWire() (wire.Value, error) {
+func (v *ExternalWorkflowExecutionSignaledEventAttributes) ToWire() (wire.Value, error) {
 	var (
 		fields [4]wire.Field
 		i      int = 0
@@ -9360,11 +9360,11 @@ func (v *ExternalWorkflowExecutionSignalRequestedEventAttributes) ToWire() (wire
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-// FromWire deserializes a ExternalWorkflowExecutionSignalRequestedEventAttributes struct from its Thrift-level
+// FromWire deserializes a ExternalWorkflowExecutionSignaledEventAttributes struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.
 //
-// An error is returned if we were unable to build a ExternalWorkflowExecutionSignalRequestedEventAttributes struct
+// An error is returned if we were unable to build a ExternalWorkflowExecutionSignaledEventAttributes struct
 // from the provided intermediate representation.
 //
 //   x, err := binaryProtocol.Decode(reader, wire.TStruct)
@@ -9372,12 +9372,12 @@ func (v *ExternalWorkflowExecutionSignalRequestedEventAttributes) ToWire() (wire
 //     return nil, err
 //   }
 //
-//   var v ExternalWorkflowExecutionSignalRequestedEventAttributes
+//   var v ExternalWorkflowExecutionSignaledEventAttributes
 //   if err := v.FromWire(x); err != nil {
 //     return nil, err
 //   }
 //   return &v, nil
-func (v *ExternalWorkflowExecutionSignalRequestedEventAttributes) FromWire(w wire.Value) error {
+func (v *ExternalWorkflowExecutionSignaledEventAttributes) FromWire(w wire.Value) error {
 	var err error
 
 	for _, field := range w.GetStruct().Fields {
@@ -9424,9 +9424,9 @@ func (v *ExternalWorkflowExecutionSignalRequestedEventAttributes) FromWire(w wir
 	return nil
 }
 
-// String returns a readable string representation of a ExternalWorkflowExecutionSignalRequestedEventAttributes
+// String returns a readable string representation of a ExternalWorkflowExecutionSignaledEventAttributes
 // struct.
-func (v *ExternalWorkflowExecutionSignalRequestedEventAttributes) String() string {
+func (v *ExternalWorkflowExecutionSignaledEventAttributes) String() string {
 	if v == nil {
 		return "<nil>"
 	}
@@ -9450,14 +9450,14 @@ func (v *ExternalWorkflowExecutionSignalRequestedEventAttributes) String() strin
 		i++
 	}
 
-	return fmt.Sprintf("ExternalWorkflowExecutionSignalRequestedEventAttributes{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("ExternalWorkflowExecutionSignaledEventAttributes{%v}", strings.Join(fields[:i], ", "))
 }
 
-// Equals returns true if all the fields of this ExternalWorkflowExecutionSignalRequestedEventAttributes match the
-// provided ExternalWorkflowExecutionSignalRequestedEventAttributes.
+// Equals returns true if all the fields of this ExternalWorkflowExecutionSignaledEventAttributes match the
+// provided ExternalWorkflowExecutionSignaledEventAttributes.
 //
 // This function performs a deep comparison.
-func (v *ExternalWorkflowExecutionSignalRequestedEventAttributes) Equals(rhs *ExternalWorkflowExecutionSignalRequestedEventAttributes) bool {
+func (v *ExternalWorkflowExecutionSignaledEventAttributes) Equals(rhs *ExternalWorkflowExecutionSignaledEventAttributes) bool {
 	if !_I64_EqualsPtr(v.InitiatedEventId, rhs.InitiatedEventId) {
 		return false
 	}
@@ -9476,7 +9476,7 @@ func (v *ExternalWorkflowExecutionSignalRequestedEventAttributes) Equals(rhs *Ex
 
 // GetInitiatedEventId returns the value of InitiatedEventId if it is set or its
 // zero value if it is unset.
-func (v *ExternalWorkflowExecutionSignalRequestedEventAttributes) GetInitiatedEventId() (o int64) {
+func (v *ExternalWorkflowExecutionSignaledEventAttributes) GetInitiatedEventId() (o int64) {
 	if v.InitiatedEventId != nil {
 		return *v.InitiatedEventId
 	}
@@ -9486,7 +9486,7 @@ func (v *ExternalWorkflowExecutionSignalRequestedEventAttributes) GetInitiatedEv
 
 // GetDomain returns the value of Domain if it is set or its
 // zero value if it is unset.
-func (v *ExternalWorkflowExecutionSignalRequestedEventAttributes) GetDomain() (o string) {
+func (v *ExternalWorkflowExecutionSignaledEventAttributes) GetDomain() (o string) {
 	if v.Domain != nil {
 		return *v.Domain
 	}
@@ -10272,7 +10272,7 @@ type HistoryEvent struct {
 	ChildWorkflowExecutionTerminatedEventAttributes                *ChildWorkflowExecutionTerminatedEventAttributes                `json:"childWorkflowExecutionTerminatedEventAttributes,omitempty"`
 	SignalExternalWorkflowExecutionInitiatedEventAttributes        *SignalExternalWorkflowExecutionInitiatedEventAttributes        `json:"signalExternalWorkflowExecutionInitiatedEventAttributes,omitempty"`
 	SignalExternalWorkflowExecutionFailedEventAttributes           *SignalExternalWorkflowExecutionFailedEventAttributes           `json:"signalExternalWorkflowExecutionFailedEventAttributes,omitempty"`
-	ExternalWorkflowExecutionSignalRequestedEventAttributes        *ExternalWorkflowExecutionSignalRequestedEventAttributes        `json:"externalWorkflowExecutionSignalRequestedEventAttributes,omitempty"`
+	ExternalWorkflowExecutionSignaledEventAttributes               *ExternalWorkflowExecutionSignaledEventAttributes               `json:"externalWorkflowExecutionSignaledEventAttributes,omitempty"`
 }
 
 // ToWire translates a HistoryEvent struct into a Thrift-level intermediate
@@ -10642,8 +10642,8 @@ func (v *HistoryEvent) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 430, Value: w}
 		i++
 	}
-	if v.ExternalWorkflowExecutionSignalRequestedEventAttributes != nil {
-		w, err = v.ExternalWorkflowExecutionSignalRequestedEventAttributes.ToWire()
+	if v.ExternalWorkflowExecutionSignaledEventAttributes != nil {
+		w, err = v.ExternalWorkflowExecutionSignaledEventAttributes.ToWire()
 		if err != nil {
 			return w, err
 		}
@@ -10900,8 +10900,8 @@ func _SignalExternalWorkflowExecutionFailedEventAttributes_Read(w wire.Value) (*
 	return &v, err
 }
 
-func _ExternalWorkflowExecutionSignalRequestedEventAttributes_Read(w wire.Value) (*ExternalWorkflowExecutionSignalRequestedEventAttributes, error) {
-	var v ExternalWorkflowExecutionSignalRequestedEventAttributes
+func _ExternalWorkflowExecutionSignaledEventAttributes_Read(w wire.Value) (*ExternalWorkflowExecutionSignaledEventAttributes, error) {
+	var v ExternalWorkflowExecutionSignaledEventAttributes
 	err := v.FromWire(w)
 	return &v, err
 }
@@ -11280,7 +11280,7 @@ func (v *HistoryEvent) FromWire(w wire.Value) error {
 			}
 		case 440:
 			if field.Value.Type() == wire.TStruct {
-				v.ExternalWorkflowExecutionSignalRequestedEventAttributes, err = _ExternalWorkflowExecutionSignalRequestedEventAttributes_Read(field.Value)
+				v.ExternalWorkflowExecutionSignaledEventAttributes, err = _ExternalWorkflowExecutionSignaledEventAttributes_Read(field.Value)
 				if err != nil {
 					return err
 				}
@@ -11473,8 +11473,8 @@ func (v *HistoryEvent) String() string {
 		fields[i] = fmt.Sprintf("SignalExternalWorkflowExecutionFailedEventAttributes: %v", v.SignalExternalWorkflowExecutionFailedEventAttributes)
 		i++
 	}
-	if v.ExternalWorkflowExecutionSignalRequestedEventAttributes != nil {
-		fields[i] = fmt.Sprintf("ExternalWorkflowExecutionSignalRequestedEventAttributes: %v", v.ExternalWorkflowExecutionSignalRequestedEventAttributes)
+	if v.ExternalWorkflowExecutionSignaledEventAttributes != nil {
+		fields[i] = fmt.Sprintf("ExternalWorkflowExecutionSignaledEventAttributes: %v", v.ExternalWorkflowExecutionSignaledEventAttributes)
 		i++
 	}
 
@@ -11625,7 +11625,7 @@ func (v *HistoryEvent) Equals(rhs *HistoryEvent) bool {
 	if !((v.SignalExternalWorkflowExecutionFailedEventAttributes == nil && rhs.SignalExternalWorkflowExecutionFailedEventAttributes == nil) || (v.SignalExternalWorkflowExecutionFailedEventAttributes != nil && rhs.SignalExternalWorkflowExecutionFailedEventAttributes != nil && v.SignalExternalWorkflowExecutionFailedEventAttributes.Equals(rhs.SignalExternalWorkflowExecutionFailedEventAttributes))) {
 		return false
 	}
-	if !((v.ExternalWorkflowExecutionSignalRequestedEventAttributes == nil && rhs.ExternalWorkflowExecutionSignalRequestedEventAttributes == nil) || (v.ExternalWorkflowExecutionSignalRequestedEventAttributes != nil && rhs.ExternalWorkflowExecutionSignalRequestedEventAttributes != nil && v.ExternalWorkflowExecutionSignalRequestedEventAttributes.Equals(rhs.ExternalWorkflowExecutionSignalRequestedEventAttributes))) {
+	if !((v.ExternalWorkflowExecutionSignaledEventAttributes == nil && rhs.ExternalWorkflowExecutionSignaledEventAttributes == nil) || (v.ExternalWorkflowExecutionSignaledEventAttributes != nil && rhs.ExternalWorkflowExecutionSignaledEventAttributes != nil && v.ExternalWorkflowExecutionSignaledEventAttributes.Equals(rhs.ExternalWorkflowExecutionSignaledEventAttributes))) {
 		return false
 	}
 
@@ -19654,12 +19654,11 @@ func (v *ServiceBusyError) Error() string {
 }
 
 type SignalExternalWorkflowExecutionDecisionAttributes struct {
-	Domain     *string `json:"domain,omitempty"`
-	WorkflowId *string `json:"workflowId,omitempty"`
-	RunId      *string `json:"runId,omitempty"`
-	SignalName *string `json:"signalName,omitempty"`
-	Input      []byte  `json:"input,omitempty"`
-	Control    []byte  `json:"control,omitempty"`
+	Domain     *string            `json:"domain,omitempty"`
+	Execution  *WorkflowExecution `json:"execution,omitempty"`
+	SignalName *string            `json:"signalName,omitempty"`
+	Input      []byte             `json:"input,omitempty"`
+	Control    []byte             `json:"control,omitempty"`
 }
 
 // ToWire translates a SignalExternalWorkflowExecutionDecisionAttributes struct into a Thrift-level intermediate
@@ -19679,7 +19678,7 @@ type SignalExternalWorkflowExecutionDecisionAttributes struct {
 //   }
 func (v *SignalExternalWorkflowExecutionDecisionAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [6]wire.Field
+		fields [5]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -19693,20 +19692,12 @@ func (v *SignalExternalWorkflowExecutionDecisionAttributes) ToWire() (wire.Value
 		fields[i] = wire.Field{ID: 10, Value: w}
 		i++
 	}
-	if v.WorkflowId != nil {
-		w, err = wire.NewValueString(*(v.WorkflowId)), error(nil)
+	if v.Execution != nil {
+		w, err = v.Execution.ToWire()
 		if err != nil {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 20, Value: w}
-		i++
-	}
-	if v.RunId != nil {
-		w, err = wire.NewValueString(*(v.RunId)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 30, Value: w}
 		i++
 	}
 	if v.SignalName != nil {
@@ -19714,7 +19705,7 @@ func (v *SignalExternalWorkflowExecutionDecisionAttributes) ToWire() (wire.Value
 		if err != nil {
 			return w, err
 		}
-		fields[i] = wire.Field{ID: 40, Value: w}
+		fields[i] = wire.Field{ID: 30, Value: w}
 		i++
 	}
 	if v.Input != nil {
@@ -19722,7 +19713,7 @@ func (v *SignalExternalWorkflowExecutionDecisionAttributes) ToWire() (wire.Value
 		if err != nil {
 			return w, err
 		}
-		fields[i] = wire.Field{ID: 50, Value: w}
+		fields[i] = wire.Field{ID: 40, Value: w}
 		i++
 	}
 	if v.Control != nil {
@@ -19730,7 +19721,7 @@ func (v *SignalExternalWorkflowExecutionDecisionAttributes) ToWire() (wire.Value
 		if err != nil {
 			return w, err
 		}
-		fields[i] = wire.Field{ID: 60, Value: w}
+		fields[i] = wire.Field{ID: 50, Value: w}
 		i++
 	}
 
@@ -19770,10 +19761,8 @@ func (v *SignalExternalWorkflowExecutionDecisionAttributes) FromWire(w wire.Valu
 
 			}
 		case 20:
-			if field.Value.Type() == wire.TBinary {
-				var x string
-				x, err = field.Value.GetString(), error(nil)
-				v.WorkflowId = &x
+			if field.Value.Type() == wire.TStruct {
+				v.Execution, err = _WorkflowExecution_Read(field.Value)
 				if err != nil {
 					return err
 				}
@@ -19783,7 +19772,7 @@ func (v *SignalExternalWorkflowExecutionDecisionAttributes) FromWire(w wire.Valu
 			if field.Value.Type() == wire.TBinary {
 				var x string
 				x, err = field.Value.GetString(), error(nil)
-				v.RunId = &x
+				v.SignalName = &x
 				if err != nil {
 					return err
 				}
@@ -19791,23 +19780,13 @@ func (v *SignalExternalWorkflowExecutionDecisionAttributes) FromWire(w wire.Valu
 			}
 		case 40:
 			if field.Value.Type() == wire.TBinary {
-				var x string
-				x, err = field.Value.GetString(), error(nil)
-				v.SignalName = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		case 50:
-			if field.Value.Type() == wire.TBinary {
 				v.Input, err = field.Value.GetBinary(), error(nil)
 				if err != nil {
 					return err
 				}
 
 			}
-		case 60:
+		case 50:
 			if field.Value.Type() == wire.TBinary {
 				v.Control, err = field.Value.GetBinary(), error(nil)
 				if err != nil {
@@ -19828,18 +19807,14 @@ func (v *SignalExternalWorkflowExecutionDecisionAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [6]string
+	var fields [5]string
 	i := 0
 	if v.Domain != nil {
 		fields[i] = fmt.Sprintf("Domain: %v", *(v.Domain))
 		i++
 	}
-	if v.WorkflowId != nil {
-		fields[i] = fmt.Sprintf("WorkflowId: %v", *(v.WorkflowId))
-		i++
-	}
-	if v.RunId != nil {
-		fields[i] = fmt.Sprintf("RunId: %v", *(v.RunId))
+	if v.Execution != nil {
+		fields[i] = fmt.Sprintf("Execution: %v", v.Execution)
 		i++
 	}
 	if v.SignalName != nil {
@@ -19866,10 +19841,7 @@ func (v *SignalExternalWorkflowExecutionDecisionAttributes) Equals(rhs *SignalEx
 	if !_String_EqualsPtr(v.Domain, rhs.Domain) {
 		return false
 	}
-	if !_String_EqualsPtr(v.WorkflowId, rhs.WorkflowId) {
-		return false
-	}
-	if !_String_EqualsPtr(v.RunId, rhs.RunId) {
+	if !((v.Execution == nil && rhs.Execution == nil) || (v.Execution != nil && rhs.Execution != nil && v.Execution.Equals(rhs.Execution))) {
 		return false
 	}
 	if !_String_EqualsPtr(v.SignalName, rhs.SignalName) {
@@ -19890,26 +19862,6 @@ func (v *SignalExternalWorkflowExecutionDecisionAttributes) Equals(rhs *SignalEx
 func (v *SignalExternalWorkflowExecutionDecisionAttributes) GetDomain() (o string) {
 	if v.Domain != nil {
 		return *v.Domain
-	}
-
-	return
-}
-
-// GetWorkflowId returns the value of WorkflowId if it is set or its
-// zero value if it is unset.
-func (v *SignalExternalWorkflowExecutionDecisionAttributes) GetWorkflowId() (o string) {
-	if v.WorkflowId != nil {
-		return *v.WorkflowId
-	}
-
-	return
-}
-
-// GetRunId returns the value of RunId if it is set or its
-// zero value if it is unset.
-func (v *SignalExternalWorkflowExecutionDecisionAttributes) GetRunId() (o string) {
-	if v.RunId != nil {
-		return *v.RunId
 	}
 
 	return

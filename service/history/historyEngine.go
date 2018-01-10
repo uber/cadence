@@ -1039,8 +1039,8 @@ Update_History_Loop:
 
 				transferTasks = append(transferTasks, &persistence.SignalExecutionTask{
 					TargetDomainID:   foreignInfo.ID,
-					TargetWorkflowID: attributes.GetWorkflowId(),
-					TargetRunID:      attributes.GetRunId(),
+					TargetWorkflowID: attributes.Execution.GetWorkflowId(),
+					TargetRunID:      attributes.Execution.GetRunId(),
 					InitiatedID:      wfSignalReqEvent.GetEventId(),
 				})
 
@@ -2119,10 +2119,13 @@ func validateSignalExternalWorkflowExecutionAttributes(attributes *workflow.Sign
 	if attributes == nil {
 		return &workflow.BadRequestError{Message: "SignalExternalWorkflowExecutionDecisionAttributes is not set on decision."}
 	}
-	if attributes.WorkflowId == nil {
+	if attributes.Execution == nil {
+		return &workflow.BadRequestError{Message: "Execution is nil on decision."}
+	}
+	if attributes.Execution.WorkflowId == nil {
 		return &workflow.BadRequestError{Message: "WorkflowId is not set on decision."}
 	}
-	runID := attributes.GetRunId()
+	runID := attributes.Execution.GetRunId()
 	if runID != "" && uuid.Parse(runID) == nil {
 		return &workflow.BadRequestError{Message: "Invalid RunId set on decision."}
 	}
