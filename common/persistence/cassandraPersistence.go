@@ -1567,8 +1567,8 @@ func (d *cassandraPersistence) CreateTasks(request *CreateTasksRequest) (*Create
 				rowTypeTask,
 				task.TaskID,
 				domainID,
-				*task.Execution.WorkflowId,
-				*task.Execution.RunId,
+				task.Execution.GetWorkflowId(),
+				task.Execution.GetRunId(),
 				scheduleID)
 		} else {
 			batch.Query(templateCreateTaskWithTTLQuery,
@@ -1578,8 +1578,8 @@ func (d *cassandraPersistence) CreateTasks(request *CreateTasksRequest) (*Create
 				rowTypeTask,
 				task.TaskID,
 				domainID,
-				*task.Execution.WorkflowId,
-				*task.Execution.RunId,
+				task.Execution.GetWorkflowId(),
+				task.Execution.GetRunId(),
 				scheduleID,
 				task.Data.ScheduleToStartTimeout)
 		}

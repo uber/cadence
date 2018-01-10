@@ -200,7 +200,7 @@ func (e *matchingEngineImpl) removeTaskListManager(id *taskListID) {
 
 // AddDecisionTask either delivers task directly to waiting poller or save it into task list persistence.
 func (e *matchingEngineImpl) AddDecisionTask(addRequest *m.AddDecisionTaskRequest) error {
-	domainID := *addRequest.DomainUUID
+	domainID := addRequest.GetDomainUUID()
 	taskListName := *addRequest.TaskList.Name
 	e.logger.Debugf("Received AddDecisionTask for taskList=%v, WorkflowID=%v, RunID=%v, ScheduleToStartTimeout=%v",
 		addRequest.TaskList.GetName(), addRequest.Execution.GetWorkflowId(), addRequest.Execution.GetRunId(),
@@ -212,18 +212,18 @@ func (e *matchingEngineImpl) AddDecisionTask(addRequest *m.AddDecisionTaskReques
 	}
 	taskInfo := &persistence.TaskInfo{
 		DomainID:               domainID,
-		RunID:                  *addRequest.Execution.RunId,
-		WorkflowID:             *addRequest.Execution.WorkflowId,
-		ScheduleID:             *addRequest.ScheduleId,
-		ScheduleToStartTimeout: *addRequest.ScheduleToStartTimeoutSeconds,
+		RunID:                  addRequest.Execution.GetRunId(),
+		WorkflowID:             addRequest.Execution.GetWorkflowId(),
+		ScheduleID:             addRequest.GetScheduleId(),
+		ScheduleToStartTimeout: addRequest.GetScheduleToStartTimeoutSeconds(),
 	}
 	return tlMgr.AddTask(addRequest.Execution, taskInfo)
 }
 
 // AddActivityTask either delivers task directly to waiting poller or save it into task list persistence.
 func (e *matchingEngineImpl) AddActivityTask(addRequest *m.AddActivityTaskRequest) error {
-	domainID := *addRequest.DomainUUID
-	sourceDomainID := *addRequest.SourceDomainUUID
+	domainID := addRequest.GetDomainUUID()
+	sourceDomainID := addRequest.GetSourceDomainUUID()
 	taskListName := *addRequest.TaskList.Name
 	e.logger.Debugf("Received AddActivityTask for taskList=%v WorkflowID=%v, RunID=%v",
 		taskListName, addRequest.Execution.WorkflowId, addRequest.Execution.RunId)
@@ -234,10 +234,10 @@ func (e *matchingEngineImpl) AddActivityTask(addRequest *m.AddActivityTaskReques
 	}
 	taskInfo := &persistence.TaskInfo{
 		DomainID:               sourceDomainID,
-		RunID:                  *addRequest.Execution.RunId,
-		WorkflowID:             *addRequest.Execution.WorkflowId,
-		ScheduleID:             *addRequest.ScheduleId,
-		ScheduleToStartTimeout: *addRequest.ScheduleToStartTimeoutSeconds,
+		RunID:                  addRequest.Execution.GetRunId(),
+		WorkflowID:             addRequest.Execution.GetWorkflowId(),
+		ScheduleID:             addRequest.GetScheduleId(),
+		ScheduleToStartTimeout: addRequest.GetScheduleToStartTimeoutSeconds(),
 	}
 	return tlMgr.AddTask(addRequest.Execution, taskInfo)
 }
