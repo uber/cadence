@@ -25,6 +25,7 @@ import (
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/persistence"
 	"go.uber.org/yarpc"
 )
 
@@ -51,5 +52,8 @@ type (
 		GetMembershipMonitor() membership.Monitor
 
 		GetHostInfo() *membership.HostInfo
+
+		// GetClusterMetadata returns the service cluster metadata
+		GetClusterMetadata() persistence.ClusterMetadata
 	}
 )

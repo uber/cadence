@@ -816,11 +816,11 @@ Update_History_Loop:
 				// First check if we need to use a different target domain to schedule activity
 				if attributes.Domain != nil {
 					// TODO: Error handling for ActivitySchedule failed when domain lookup fails
-					info, _, err := e.domainCache.GetDomain(*attributes.Domain)
+					domainEntry, err := e.domainCache.GetDomain(*attributes.Domain)
 					if err != nil {
 						return &workflow.InternalServiceError{Message: "Unable to schedule activity across domain."}
 					}
-					targetDomainID = info.ID
+					targetDomainID = domainEntry.Info.ID
 				}
 
 				if err = validateActivityScheduleAttributes(attributes); err != nil {
@@ -991,7 +991,7 @@ Update_History_Loop:
 					break Process_Decision_Loop
 				}
 
-				foreignInfo, _, err := e.domainCache.GetDomain(*attributes.Domain)
+				foreignDomainEntry, err := e.domainCache.GetDomain(*attributes.Domain)
 				if err != nil {
 					return &workflow.InternalServiceError{
 						Message: fmt.Sprintf("Unable to cancel workflow across domain: %v.",
@@ -1006,7 +1006,7 @@ Update_History_Loop:
 				}
 
 				transferTasks = append(transferTasks, &persistence.CancelExecutionTask{
-					TargetDomainID:   foreignInfo.ID,
+					TargetDomainID:   foreignDomainEntry.Info.ID,
 					TargetWorkflowID: *attributes.WorkflowId,
 					TargetRunID:      common.StringDefault(attributes.RunId),
 					ScheduleID:       *wfCancelReqEvent.EventId,
@@ -1023,7 +1023,7 @@ Update_History_Loop:
 					break Process_Decision_Loop
 				}
 
-				foreignInfo, _, err := e.domainCache.GetDomain(attributes.GetDomain())
+				foreignDomainEntry, err := e.domainCache.GetDomain(attributes.GetDomain())
 				if err != nil {
 					return &workflow.InternalServiceError{
 						Message: fmt.Sprintf("Unable to signal workflow across domain: %v.",
@@ -1038,7 +1038,7 @@ Update_History_Loop:
 				}
 
 				transferTasks = append(transferTasks, &persistence.SignalExecutionTask{
-					TargetDomainID:   foreignInfo.ID,
+					TargetDomainID:   foreignDomainEntry.Info.ID,
 					TargetWorkflowID: attributes.Execution.GetWorkflowId(),
 					TargetRunID:      attributes.Execution.GetRunId(),
 					InitiatedID:      wfSignalReqEvent.GetEventId(),
@@ -1090,11 +1090,11 @@ Update_History_Loop:
 				// First check if we need to use a different target domain to schedule child execution
 				if attributes.Domain == nil {
 					// TODO: Error handling for DecisionType_StartChildWorkflowExecution failed when domain lookup fails
-					info, _, err := e.domainCache.GetDomain(*attributes.Domain)
+					domainEntry, err := e.domainCache.GetDomain(*attributes.Domain)
 					if err != nil {
 						return &workflow.InternalServiceError{Message: "Unable to schedule child execution across domain."}
 					}
-					targetDomainID = info.ID
+					targetDomainID = domainEntry.Info.ID
 				}
 
 				requestID := uuid.New()
@@ -1893,13 +1893,13 @@ func (e *historyEngineImpl) getDeleteWorkflowTasks(
 
 	// Generate a timer task to cleanup history events for this workflow execution
 	var retentionInDays int32
-	_, domainConfig, err := e.domainCache.GetDomainByID(domainID)
+	domainEntry, err := e.domainCache.GetDomainByID(domainID)
 	if err != nil {
 		if _, ok := err.(*workflow.EntityNotExistsError); !ok {
 			return nil, nil, err
 		}
 	} else {
-		retentionInDays = domainConfig.Retention
+		retentionInDays = domainEntry.Config.Retention
 	}
 	cleanupTask := tBuilder.createDeleteHistoryEventTimerTask(time.Duration(retentionInDays) * time.Hour * 24)
 

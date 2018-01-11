@@ -141,16 +141,22 @@ func (s *integrationSuite) SetupTest() {
 		Name:        s.domainName,
 		Status:      persistence.DomainStatusRegistered,
 		Description: "Test domain for integration test",
-		Retention:   1,
-		EmitMetric:  false,
+		Config: &persistence.DomainConfig{
+			Retention:  1,
+			EmitMetric: false,
+		},
+		ReplicationConfig: &persistence.DomainReplicationConfig{},
 	})
 	s.foreignDomainName = "integration-foreign-test-domain"
 	s.MetadataManager.CreateDomain(&persistence.CreateDomainRequest{
 		Name:        s.foreignDomainName,
 		Status:      persistence.DomainStatusRegistered,
 		Description: "Test foreign domain for integration test",
-		Retention:   1,
-		EmitMetric:  false,
+		Config: &persistence.DomainConfig{
+			Retention:  1,
+			EmitMetric: false,
+		},
+		ReplicationConfig: &persistence.DomainReplicationConfig{},
 	})
 }
 

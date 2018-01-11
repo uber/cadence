@@ -44,8 +44,8 @@ type (
 	// in updating the domain entry every 10 seconds but in the case of a cassandra failure we can still keep on serving
 	// requests using the stale entry from cache upto an hour
 	DomainCache interface {
-		GetDomain(name string) (*persistence.DomainInfo, *persistence.DomainConfig, error)
-		GetDomainByID(id string) (*persistence.DomainInfo, *persistence.DomainConfig, error)
+		GetDomain(name string) (*domainCacheEntry, error)
+		GetDomainByID(id string) (*domainCacheEntry, error)
 		GetDomainID(name string) (string, error)
 	}
 
@@ -58,9 +58,10 @@ type (
 	}
 
 	domainCacheEntry struct {
-		info   *persistence.DomainInfo
-		config *persistence.DomainConfig
-		expiry int64
+		Info              *persistence.DomainInfo
+		Config            *persistence.DomainConfig
+		ReplicationConfig *persistence.DomainReplicationConfig
+		expiry            int64
 		sync.RWMutex
 	}
 )
@@ -86,48 +87,52 @@ func newDomainCacheEntry() *domainCacheEntry {
 
 // GetDomain retrieves the information from the cache if it exists, otherwise retrieves the information from metadata
 // store and writes it to the cache with an expiry before returning back
-func (c *domainCache) GetDomain(name string) (*persistence.DomainInfo, *persistence.DomainConfig, error) {
+func (c *domainCache) GetDomain(name string) (*domainCacheEntry, error) {
 	return c.getDomain(name, "", name, c.cacheByName)
 }
 
 // GetDomainByID retrieves the information from the cache if it exists, otherwise retrieves the information from metadata
 // store and writes it to the cache with an expiry before returning back
-func (c *domainCache) GetDomainByID(id string) (*persistence.DomainInfo, *persistence.DomainConfig, error) {
+func (c *domainCache) GetDomainByID(id string) (*domainCacheEntry, error) {
 	return c.getDomain(id, id, "", c.cacheByID)
 }
 
 // GetDomainID retrieves domainID by using GetDomain
 func (c *domainCache) GetDomainID(name string) (string, error) {
-	info, _, err := c.GetDomain(name)
+	entry, err := c.GetDomain(name)
 	if err != nil {
 		return "", err
 	}
-	return info.ID, nil
+	return entry.Info.ID, nil
 }
 
 // GetDomain retrieves the information from the cache if it exists, otherwise retrieves the information from metadata
 // store and writes it to the cache with an expiry before returning back
-func (c *domainCache) getDomain(key, id, name string, cache Cache) (*persistence.DomainInfo, *persistence.DomainConfig, error) {
+func (c *domainCache) getDomain(key, id, name string, cache Cache) (*domainCacheEntry, error) {
 	now := c.timeSource.Now().UnixNano()
-	refreshCache := false
-	var info *persistence.DomainInfo
-	var config *persistence.DomainConfig
+	var result *domainCacheEntry
+
+	copyEntry := func(input *domainCacheEntry) *domainCacheEntry {
+		output := newDomainCacheEntry()
+		output.Info = input.Info
+		output.Config = input.Config
+		output.ReplicationConfig = input.ReplicationConfig
+		return output
+	}
+
+	isCacheExpired := func(entry *domainCacheEntry) bool { return entry.expiry == 0 || now >= entry.expiry }
+
 	entry, cacheHit := cache.Get(key).(*domainCacheEntry)
 	if cacheHit {
 		// Found the information in the cache, lets check if it needs to be refreshed before returning back
 		entry.RLock()
-		info = entry.info
-		config = entry.config
-
-		if entry.expiry == 0 || now >= entry.expiry {
-			refreshCache = true
+		if !isCacheExpired(entry) {
+			result = copyEntry(entry)
+			entry.RUnlock()
+			return result, nil
 		}
+		// cache expired, need to refresh
 		entry.RUnlock()
-	}
-
-	// Found a cache entry and no need to refresh.  Return immediately
-	if cacheHit && !refreshCache {
-		return info, config, nil
 	}
 
 	// Cache entry not found, Let's create an entry and add it to cache
@@ -141,7 +146,7 @@ func (c *domainCache) getDomain(key, id, name string, cache Cache) (*persistence
 	defer entry.Unlock()
 
 	// Check again under the lock to make sure someone else did not update the entry
-	if entry.expiry == 0 || now >= entry.expiry {
+	if isCacheExpired(entry) {
 		response, err := c.metadataMgr.GetDomain(&persistence.GetDomainRequest{
 			Name: name,
 			ID:   id,
@@ -150,16 +155,17 @@ func (c *domainCache) getDomain(key, id, name string, cache Cache) (*persistence
 		// Failed to get domain.  Return stale entry if we have one, otherwise just return error
 		if err != nil {
 			if entry.expiry > 0 {
-				return entry.info, entry.config, nil
+				return entry, nil
 			}
 
-			return nil, nil, err
+			return nil, err
 		}
 
-		entry.info = response.Info
-		entry.config = response.Config
+		entry.Info = response.Info
+		entry.Config = response.Config
+		entry.ReplicationConfig = response.ReplicationConfig
 		entry.expiry = now + domainEntryRefreshInterval
 	}
 
-	return entry.info, entry.config, nil
+	return copyEntry(entry), nil
 }

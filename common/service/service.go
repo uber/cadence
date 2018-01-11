@@ -30,6 +30,7 @@ import (
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/config"
 
 	"github.com/uber-common/bark"
@@ -51,6 +52,7 @@ type (
 		RPCFactory       common.RPCFactory
 		PProfInitializer common.PProfInitializer
 		CassandraConfig  config.Cassandra
+		ClusterMetadata  persistence.ClusterMetadata
 	}
 
 	// RingpopFactory provides a bootstrapped ringpop
@@ -76,6 +78,7 @@ type (
 		metricsScope           tally.Scope
 		runtimeMetricsReporter *metrics.RuntimeMetricsReporter
 		metricsClient          metrics.Client
+		clusterMetadata        persistence.ClusterMetadata
 	}
 )
 
@@ -204,6 +207,11 @@ func (h *serviceImpl) GetHostInfo() *membership.HostInfo {
 
 func (h *serviceImpl) GetDispatcher() *yarpc.Dispatcher {
 	return h.dispatcher
+}
+
+// GetClusterMetadata returns the service cluster metadata
+func (h *serviceImpl) GetClusterMetadata() persistence.ClusterMetadata {
+	return h.clusterMetadata
 }
 
 func getMetricsServiceIdx(serviceName string, logger bark.Logger) metrics.ServiceIdx {
