@@ -45,16 +45,16 @@ type (
 	}
 
 	iteratorImpl struct {
-		lru       *lru
-		timestamp time.Time
-		nextItem  *list.Element
+		lru        *lru
+		createTime time.Time
+		nextItem   *list.Element
 	}
 
 	entryImpl struct {
-		key       interface{}
-		timestamp time.Time
-		value     interface{}
-		refCount  int
+		key            interface{}
+		lastAccessTime time.Time
+		value          interface{}
+		refCount       int
 	}
 )
 
@@ -65,7 +65,6 @@ func (it *iteratorImpl) Close() {
 
 // HasNext return true if there is more items to be returned
 func (it *iteratorImpl) HasNext() bool {
-	it.checkNext()
 	return it.nextItem != nil
 }
 
@@ -79,17 +78,18 @@ func (it *iteratorImpl) Next() Entry {
 	it.nextItem = it.nextItem.Next()
 	// make a copy of the entry so there will be no concurrent access to this entry
 	entry = &entryImpl{
-		key:       entry.key,
-		value:     entry.value,
-		timestamp: entry.timestamp,
+		key:            entry.key,
+		value:          entry.value,
+		lastAccessTime: entry.lastAccessTime,
 	}
+	it.prepareNext()
 	return entry
 }
 
-func (it *iteratorImpl) checkNext() {
+func (it *iteratorImpl) prepareNext() {
 	for it.nextItem != nil {
 		entry := it.nextItem.Value.(*entryImpl)
-		if it.lru.isEntryExpired(entry, it.timestamp) {
+		if it.lru.isEntryExpired(entry, it.createTime) {
 			nextItem := it.nextItem.Next()
 			it.lru.deleteInternal(it.nextItem)
 			it.nextItem = nextItem
@@ -105,10 +105,11 @@ func (it *iteratorImpl) checkNext() {
 func (c *lru) Iterator() Iterator {
 	c.mut.Lock()
 	iterator := &iteratorImpl{
-		lru:       c,
-		timestamp: time.Now(),
-		nextItem:  c.byAccess.Front(),
+		lru:        c,
+		createTime: time.Now(),
+		nextItem:   c.byAccess.Front(),
 	}
+	iterator.prepareNext()
 	return iterator
 }
 
@@ -120,8 +121,8 @@ func (entry *entryImpl) Value() interface{} {
 	return entry.value
 }
 
-func (entry *entryImpl) Timestamp() time.Time {
-	return entry.timestamp
+func (entry *entryImpl) LastAccessTime() time.Time {
+	return entry.lastAccessTime
 }
 
 // New creates a new cache with the given options
@@ -247,7 +248,7 @@ func (c *lru) putInternal(key interface{}, value interface{}, allowUpdate bool) 
 			entry.value = value
 		}
 		if c.ttl != 0 {
-			entry.timestamp = time.Now()
+			entry.lastAccessTime = time.Now()
 		}
 		c.byAccess.MoveToFront(elt)
 		if c.pin {
@@ -266,7 +267,7 @@ func (c *lru) putInternal(key interface{}, value interface{}, allowUpdate bool) 
 	}
 
 	if c.ttl != 0 {
-		entry.timestamp = time.Now()
+		entry.lastAccessTime = time.Now()
 	}
 
 	c.byKey[key] = c.byAccess.PushFront(entry)
@@ -294,6 +295,6 @@ func (c *lru) deleteInternal(element *list.Element) {
 	delete(c.byKey, entry.key)
 }
 
-func (c *lru) isEntryExpired(entry *entryImpl, timestamp time.Time) bool {
-	return entry.refCount == 0 && !entry.timestamp.IsZero() && timestamp.After(entry.timestamp.Add(c.ttl))
+func (c *lru) isEntryExpired(entry *entryImpl, currentTime time.Time) bool {
+	return entry.refCount == 0 && !entry.lastAccessTime.IsZero() && currentTime.After(entry.lastAccessTime.Add(c.ttl))
 }

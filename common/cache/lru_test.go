@@ -217,11 +217,18 @@ func TestIterator(t *testing.T) {
 	actual := map[string]string{}
 
 	it := cache.Iterator()
-	defer it.Close()
 	for it.HasNext() {
 		entry := it.Next()
 		actual[entry.Key().(string)] = entry.Value().(string)
 	}
+	it.Close()
+	assert.Equal(t, expected, actual)
 
+	it = cache.Iterator()
+	for i := 0; i < len(expected); i++ {
+		entry := it.Next()
+		actual[entry.Key().(string)] = entry.Value().(string)
+	}
+	it.Close()
 	assert.Equal(t, expected, actual)
 }

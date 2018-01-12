@@ -75,7 +75,7 @@ func (pollers *pollerHistory) getAllPollerInfo() []*pollerInfo {
 	for ite.HasNext() {
 		entry := ite.Next()
 		key := entry.Key().(pollerIdentity)
-		timestamp := entry.Timestamp()
+		timestamp := entry.LastAccessTime()
 		result = append(result, &pollerInfo{
 			identity: key.identity,
 			// TODO add IP, T1396795
