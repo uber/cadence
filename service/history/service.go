@@ -191,6 +191,7 @@ func (s *Service) Start() {
 	if err != nil {
 		log.Fatalf("failed to create visiblity manager: %v", err)
 	}
+	visibility = persistence.NewVisibilityPersistenceClient(visibility, base.GetMetricsClient())
 
 	history, err := persistence.NewCassandraHistoryPersistence(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,
@@ -214,7 +215,8 @@ func (s *Service) Start() {
 		p.CassandraConfig.Keyspace,
 		s.config.ExecutionMgrNumConns,
 		p.Logger,
-		base.GetMetricsClient())
+		s.metricsClient,
+	)
 	if err != nil {
 		log.Fatalf("Creating Cassandra execution manager persistence factory failed: %v", err)
 	}

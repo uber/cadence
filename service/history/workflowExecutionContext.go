@@ -34,6 +34,10 @@ import (
 	"github.com/uber-common/bark"
 )
 
+const (
+	secondsInDay = int32(24 * time.Hour / time.Second)
+)
+
 type (
 	workflowExecutionContext struct {
 		domainID          string
@@ -153,6 +157,7 @@ func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persi
 				fmt.Sprintf("{updateCondition: %v}", c.updateCondition))
 			return err0
 		}
+		c.msBuilder.executionInfo.LastFirstEventID = *firstEvent.EventId
 	}
 
 	continueAsNew := updates.continueAsNew
@@ -167,7 +172,8 @@ func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persi
 		if err != nil {
 			return err
 		}
-		finishExecutionTTL = domainConfig.Retention
+		// NOTE: domain retention is in days, so we need to do a conversion
+		finishExecutionTTL = domainConfig.Retention * secondsInDay
 	}
 	if err1 := c.updateWorkflowExecutionWithRetry(&persistence.UpdateWorkflowExecutionRequest{
 		ExecutionInfo:             c.msBuilder.executionInfo,
@@ -205,6 +211,7 @@ func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persi
 	c.shard.NotifyNewHistoryEvent(newHistoryEventNotification(
 		c.domainID,
 		&c.workflowExecution,
+		c.msBuilder.GetLastFirstEventID(),
 		c.msBuilder.GetNextEventID(),
 		c.msBuilder.isWorkflowExecutionRunning(),
 	))
@@ -243,6 +250,7 @@ func (c *workflowExecutionContext) continueAsNewWorkflowExecution(context []byte
 	if err1 != nil {
 		return err1
 	}
+	c.msBuilder.executionInfo.LastFirstEventID = *firstEvent.EventId
 
 	err2 := c.updateWorkflowExecutionWithContext(context, transferTasks, timerTasks, transactionID)
 

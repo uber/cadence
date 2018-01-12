@@ -685,6 +685,12 @@ func (e *mutableStateBuilder) clearStickyness() {
 	e.executionInfo.ClientImpl = ""
 }
 
+// GetLastFirstEventID returns last first event ID
+// first event ID is the ID of a batch of events in a single history events record
+func (e *mutableStateBuilder) GetLastFirstEventID() int64 {
+	return e.executionInfo.LastFirstEventID
+}
+
 // GetNextEventID returns next event ID
 func (e *mutableStateBuilder) GetNextEventID() int64 {
 	return e.executionInfo.NextEventID
@@ -890,7 +896,7 @@ func (e *mutableStateBuilder) AddDecisionTaskCompletedEvent(scheduleEventID, sta
 
 	if di.Attempt > 0 {
 		// Create corresponding DecisionTaskSchedule and DecisionTaskStarted events for decisions we have been retrying
-		scheduledEvent := e.hBuilder.AddDecisionTaskScheduledEvent(di.Tasklist, di.DecisionTimeout, di.Attempt)
+		scheduledEvent := e.hBuilder.AddDecisionTaskScheduledEvent(e.executionInfo.TaskList, di.DecisionTimeout, di.Attempt)
 		startedEvent := e.hBuilder.AddDecisionTaskStartedEvent(scheduledEvent.GetEventId(), di.RequestID,
 			request.GetIdentity())
 		startedEventID = startedEvent.GetEventId()
@@ -1609,6 +1615,29 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionTerminatedEvent(initiated
 
 	if err := e.DeletePendingChildExecution(initiatedID); err == nil {
 		return e.hBuilder.AddChildWorkflowExecutionTerminatedEvent(domain, childExecution, workflowType, ci.InitiatedID,
+			ci.StartedID, attributes)
+	}
+
+	return nil
+}
+
+func (e *mutableStateBuilder) AddChildWorkflowExecutionTimedOutEvent(initiatedID int64,
+	childExecution *workflow.WorkflowExecution,
+	attributes *workflow.WorkflowExecutionTimedOutEventAttributes) *workflow.HistoryEvent {
+	ci, ok := e.GetChildExecutionInfo(initiatedID)
+	if !ok || ci.StartedID == emptyEventID {
+		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionChildExecutionTimedOut, e.GetNextEventID(),
+			fmt.Sprintf("{InitiatedID: %v, Exist: %v}", initiatedID, ok))
+		return nil
+	}
+
+	startedEvent, _ := e.getHistoryEvent(ci.StartedEvent)
+
+	domain := *startedEvent.ChildWorkflowExecutionStartedEventAttributes.Domain
+	workflowType := startedEvent.ChildWorkflowExecutionStartedEventAttributes.WorkflowType
+
+	if err := e.DeletePendingChildExecution(initiatedID); err == nil {
+		return e.hBuilder.AddChildWorkflowExecutionTimedOutEvent(domain, childExecution, workflowType, ci.InitiatedID,
 			ci.StartedID, attributes)
 	}
 

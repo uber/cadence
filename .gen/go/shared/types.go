@@ -7599,7 +7599,37 @@ func (v *DescribeWorkflowExecutionRequest) GetDomain() (o string) {
 type DescribeWorkflowExecutionResponse struct {
 	ExecutionConfiguration *WorkflowExecutionConfiguration `json:"executionConfiguration,omitempty"`
 	WorkflowExecutionInfo  *WorkflowExecutionInfo          `json:"workflowExecutionInfo,omitempty"`
+	PendingActivities      []*PendingActivityInfo          `json:"pendingActivities,omitempty"`
 }
+
+type _List_PendingActivityInfo_ValueList []*PendingActivityInfo
+
+func (v _List_PendingActivityInfo_ValueList) ForEach(f func(wire.Value) error) error {
+	for i, x := range v {
+		if x == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", i)
+		}
+		w, err := x.ToWire()
+		if err != nil {
+			return err
+		}
+		err = f(w)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (v _List_PendingActivityInfo_ValueList) Size() int {
+	return len(v)
+}
+
+func (_List_PendingActivityInfo_ValueList) ValueType() wire.Type {
+	return wire.TStruct
+}
+
+func (_List_PendingActivityInfo_ValueList) Close() {}
 
 // ToWire translates a DescribeWorkflowExecutionResponse struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
@@ -7618,7 +7648,7 @@ type DescribeWorkflowExecutionResponse struct {
 //   }
 func (v *DescribeWorkflowExecutionResponse) ToWire() (wire.Value, error) {
 	var (
-		fields [2]wire.Field
+		fields [3]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -7640,6 +7670,14 @@ func (v *DescribeWorkflowExecutionResponse) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 20, Value: w}
 		i++
 	}
+	if v.PendingActivities != nil {
+		w, err = wire.NewValueList(_List_PendingActivityInfo_ValueList(v.PendingActivities)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 30, Value: w}
+		i++
+	}
 
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
@@ -7654,6 +7692,30 @@ func _WorkflowExecutionInfo_Read(w wire.Value) (*WorkflowExecutionInfo, error) {
 	var v WorkflowExecutionInfo
 	err := v.FromWire(w)
 	return &v, err
+}
+
+func _PendingActivityInfo_Read(w wire.Value) (*PendingActivityInfo, error) {
+	var v PendingActivityInfo
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _List_PendingActivityInfo_Read(l wire.ValueList) ([]*PendingActivityInfo, error) {
+	if l.ValueType() != wire.TStruct {
+		return nil, nil
+	}
+
+	o := make([]*PendingActivityInfo, 0, l.Size())
+	err := l.ForEach(func(x wire.Value) error {
+		i, err := _PendingActivityInfo_Read(x)
+		if err != nil {
+			return err
+		}
+		o = append(o, i)
+		return nil
+	})
+	l.Close()
+	return o, err
 }
 
 // FromWire deserializes a DescribeWorkflowExecutionResponse struct from its Thrift-level
@@ -7694,6 +7756,14 @@ func (v *DescribeWorkflowExecutionResponse) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 30:
+			if field.Value.Type() == wire.TList {
+				v.PendingActivities, err = _List_PendingActivityInfo_Read(field.Value.GetList())
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -7707,7 +7777,7 @@ func (v *DescribeWorkflowExecutionResponse) String() string {
 		return "<nil>"
 	}
 
-	var fields [2]string
+	var fields [3]string
 	i := 0
 	if v.ExecutionConfiguration != nil {
 		fields[i] = fmt.Sprintf("ExecutionConfiguration: %v", v.ExecutionConfiguration)
@@ -7717,8 +7787,27 @@ func (v *DescribeWorkflowExecutionResponse) String() string {
 		fields[i] = fmt.Sprintf("WorkflowExecutionInfo: %v", v.WorkflowExecutionInfo)
 		i++
 	}
+	if v.PendingActivities != nil {
+		fields[i] = fmt.Sprintf("PendingActivities: %v", v.PendingActivities)
+		i++
+	}
 
 	return fmt.Sprintf("DescribeWorkflowExecutionResponse{%v}", strings.Join(fields[:i], ", "))
+}
+
+func _List_PendingActivityInfo_Equals(lhs, rhs []*PendingActivityInfo) bool {
+	if len(lhs) != len(rhs) {
+		return false
+	}
+
+	for i, lv := range lhs {
+		rv := rhs[i]
+		if !lv.Equals(rv) {
+			return false
+		}
+	}
+
+	return true
 }
 
 // Equals returns true if all the fields of this DescribeWorkflowExecutionResponse match the
@@ -7730,6 +7819,9 @@ func (v *DescribeWorkflowExecutionResponse) Equals(rhs *DescribeWorkflowExecutio
 		return false
 	}
 	if !((v.WorkflowExecutionInfo == nil && rhs.WorkflowExecutionInfo == nil) || (v.WorkflowExecutionInfo != nil && rhs.WorkflowExecutionInfo != nil && v.WorkflowExecutionInfo.Equals(rhs.WorkflowExecutionInfo))) {
+		return false
+	}
+	if !((v.PendingActivities == nil && rhs.PendingActivities == nil) || (v.PendingActivities != nil && rhs.PendingActivities != nil && _List_PendingActivityInfo_Equals(v.PendingActivities, rhs.PendingActivities))) {
 		return false
 	}
 
@@ -9268,11 +9360,12 @@ func (v *FailWorkflowExecutionDecisionAttributes) GetReason() (o string) {
 }
 
 type GetWorkflowExecutionHistoryRequest struct {
-	Domain          *string            `json:"domain,omitempty"`
-	Execution       *WorkflowExecution `json:"execution,omitempty"`
-	MaximumPageSize *int32             `json:"maximumPageSize,omitempty"`
-	NextPageToken   []byte             `json:"nextPageToken,omitempty"`
-	WaitForNewEvent *bool              `json:"waitForNewEvent,omitempty"`
+	Domain                 *string                 `json:"domain,omitempty"`
+	Execution              *WorkflowExecution      `json:"execution,omitempty"`
+	MaximumPageSize        *int32                  `json:"maximumPageSize,omitempty"`
+	NextPageToken          []byte                  `json:"nextPageToken,omitempty"`
+	WaitForNewEvent        *bool                   `json:"waitForNewEvent,omitempty"`
+	HistoryEventFilterType *HistoryEventFilterType `json:"HistoryEventFilterType,omitempty"`
 }
 
 // ToWire translates a GetWorkflowExecutionHistoryRequest struct into a Thrift-level intermediate
@@ -9292,7 +9385,7 @@ type GetWorkflowExecutionHistoryRequest struct {
 //   }
 func (v *GetWorkflowExecutionHistoryRequest) ToWire() (wire.Value, error) {
 	var (
-		fields [5]wire.Field
+		fields [6]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -9338,8 +9431,22 @@ func (v *GetWorkflowExecutionHistoryRequest) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 50, Value: w}
 		i++
 	}
+	if v.HistoryEventFilterType != nil {
+		w, err = v.HistoryEventFilterType.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 60, Value: w}
+		i++
+	}
 
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _HistoryEventFilterType_Read(w wire.Value) (HistoryEventFilterType, error) {
+	var v HistoryEventFilterType
+	err := v.FromWire(w)
+	return v, err
 }
 
 // FromWire deserializes a GetWorkflowExecutionHistoryRequest struct from its Thrift-level
@@ -9410,6 +9517,16 @@ func (v *GetWorkflowExecutionHistoryRequest) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 60:
+			if field.Value.Type() == wire.TI32 {
+				var x HistoryEventFilterType
+				x, err = _HistoryEventFilterType_Read(field.Value)
+				v.HistoryEventFilterType = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -9423,7 +9540,7 @@ func (v *GetWorkflowExecutionHistoryRequest) String() string {
 		return "<nil>"
 	}
 
-	var fields [5]string
+	var fields [6]string
 	i := 0
 	if v.Domain != nil {
 		fields[i] = fmt.Sprintf("Domain: %v", *(v.Domain))
@@ -9445,8 +9562,22 @@ func (v *GetWorkflowExecutionHistoryRequest) String() string {
 		fields[i] = fmt.Sprintf("WaitForNewEvent: %v", *(v.WaitForNewEvent))
 		i++
 	}
+	if v.HistoryEventFilterType != nil {
+		fields[i] = fmt.Sprintf("HistoryEventFilterType: %v", *(v.HistoryEventFilterType))
+		i++
+	}
 
 	return fmt.Sprintf("GetWorkflowExecutionHistoryRequest{%v}", strings.Join(fields[:i], ", "))
+}
+
+func _HistoryEventFilterType_EqualsPtr(lhs, rhs *HistoryEventFilterType) bool {
+	if lhs != nil && rhs != nil {
+
+		x := *lhs
+		y := *rhs
+		return x.Equals(y)
+	}
+	return lhs == nil && rhs == nil
 }
 
 // Equals returns true if all the fields of this GetWorkflowExecutionHistoryRequest match the
@@ -9467,6 +9598,9 @@ func (v *GetWorkflowExecutionHistoryRequest) Equals(rhs *GetWorkflowExecutionHis
 		return false
 	}
 	if !_Bool_EqualsPtr(v.WaitForNewEvent, rhs.WaitForNewEvent) {
+		return false
+	}
+	if !_HistoryEventFilterType_EqualsPtr(v.HistoryEventFilterType, rhs.HistoryEventFilterType) {
 		return false
 	}
 
@@ -9498,6 +9632,16 @@ func (v *GetWorkflowExecutionHistoryRequest) GetMaximumPageSize() (o int32) {
 func (v *GetWorkflowExecutionHistoryRequest) GetWaitForNewEvent() (o bool) {
 	if v.WaitForNewEvent != nil {
 		return *v.WaitForNewEvent
+	}
+
+	return
+}
+
+// GetHistoryEventFilterType returns the value of HistoryEventFilterType if it is set or its
+// zero value if it is unset.
+func (v *GetWorkflowExecutionHistoryRequest) GetHistoryEventFilterType() (o HistoryEventFilterType) {
+	if v.HistoryEventFilterType != nil {
+		return *v.HistoryEventFilterType
 	}
 
 	return
@@ -11153,6 +11297,136 @@ func (v *HistoryEvent) GetEventType() (o EventType) {
 	return
 }
 
+type HistoryEventFilterType int32
+
+const (
+	HistoryEventFilterTypeAllEvent   HistoryEventFilterType = 0
+	HistoryEventFilterTypeCloseEvent HistoryEventFilterType = 1
+)
+
+// HistoryEventFilterType_Values returns all recognized values of HistoryEventFilterType.
+func HistoryEventFilterType_Values() []HistoryEventFilterType {
+	return []HistoryEventFilterType{
+		HistoryEventFilterTypeAllEvent,
+		HistoryEventFilterTypeCloseEvent,
+	}
+}
+
+// UnmarshalText tries to decode HistoryEventFilterType from a byte slice
+// containing its name.
+//
+//   var v HistoryEventFilterType
+//   err := v.UnmarshalText([]byte("ALL_EVENT"))
+func (v *HistoryEventFilterType) UnmarshalText(value []byte) error {
+	switch string(value) {
+	case "ALL_EVENT":
+		*v = HistoryEventFilterTypeAllEvent
+		return nil
+	case "CLOSE_EVENT":
+		*v = HistoryEventFilterTypeCloseEvent
+		return nil
+	default:
+		return fmt.Errorf("unknown enum value %q for %q", value, "HistoryEventFilterType")
+	}
+}
+
+// ToWire translates HistoryEventFilterType into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// Enums are represented as 32-bit integers over the wire.
+func (v HistoryEventFilterType) ToWire() (wire.Value, error) {
+	return wire.NewValueI32(int32(v)), nil
+}
+
+// FromWire deserializes HistoryEventFilterType from its Thrift-level
+// representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TI32)
+//   if err != nil {
+//     return HistoryEventFilterType(0), err
+//   }
+//
+//   var v HistoryEventFilterType
+//   if err := v.FromWire(x); err != nil {
+//     return HistoryEventFilterType(0), err
+//   }
+//   return v, nil
+func (v *HistoryEventFilterType) FromWire(w wire.Value) error {
+	*v = (HistoryEventFilterType)(w.GetI32())
+	return nil
+}
+
+// String returns a readable string representation of HistoryEventFilterType.
+func (v HistoryEventFilterType) String() string {
+	w := int32(v)
+	switch w {
+	case 0:
+		return "ALL_EVENT"
+	case 1:
+		return "CLOSE_EVENT"
+	}
+	return fmt.Sprintf("HistoryEventFilterType(%d)", w)
+}
+
+// Equals returns true if this HistoryEventFilterType value matches the provided
+// value.
+func (v HistoryEventFilterType) Equals(rhs HistoryEventFilterType) bool {
+	return v == rhs
+}
+
+// MarshalJSON serializes HistoryEventFilterType into JSON.
+//
+// If the enum value is recognized, its name is returned. Otherwise,
+// its integer value is returned.
+//
+// This implements json.Marshaler.
+func (v HistoryEventFilterType) MarshalJSON() ([]byte, error) {
+	switch int32(v) {
+	case 0:
+		return ([]byte)("\"ALL_EVENT\""), nil
+	case 1:
+		return ([]byte)("\"CLOSE_EVENT\""), nil
+	}
+	return ([]byte)(strconv.FormatInt(int64(v), 10)), nil
+}
+
+// UnmarshalJSON attempts to decode HistoryEventFilterType from its JSON
+// representation.
+//
+// This implementation supports both, numeric and string inputs. If a
+// string is provided, it must be a known enum name.
+//
+// This implements json.Unmarshaler.
+func (v *HistoryEventFilterType) UnmarshalJSON(text []byte) error {
+	d := json.NewDecoder(bytes.NewReader(text))
+	d.UseNumber()
+	t, err := d.Token()
+	if err != nil {
+		return err
+	}
+
+	switch w := t.(type) {
+	case json.Number:
+		x, err := w.Int64()
+		if err != nil {
+			return err
+		}
+		if x > math.MaxInt32 {
+			return fmt.Errorf("enum overflow from JSON %q for %q", text, "HistoryEventFilterType")
+		}
+		if x < math.MinInt32 {
+			return fmt.Errorf("enum underflow from JSON %q for %q", text, "HistoryEventFilterType")
+		}
+		*v = (HistoryEventFilterType)(x)
+		return nil
+	case string:
+		return v.UnmarshalText([]byte(w))
+	default:
+		return fmt.Errorf("invalid JSON value %q (%T) to unmarshal into %q", t, t, "HistoryEventFilterType")
+	}
+}
+
 type InternalServiceError struct {
 	Message string `json:"message,required"`
 }
@@ -12321,6 +12595,397 @@ func (v *MarkerRecordedEventAttributes) GetDecisionTaskCompletedEventId() (o int
 	}
 
 	return
+}
+
+type PendingActivityInfo struct {
+	ActivityID             *string               `json:"activityID,omitempty"`
+	ActivityType           *ActivityType         `json:"activityType,omitempty"`
+	State                  *PendingActivityState `json:"state,omitempty"`
+	HeartbeatDetails       []byte                `json:"heartbeatDetails,omitempty"`
+	LastHeartbeatTimestamp *int64                `json:"lastHeartbeatTimestamp,omitempty"`
+}
+
+// ToWire translates a PendingActivityInfo struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *PendingActivityInfo) ToWire() (wire.Value, error) {
+	var (
+		fields [5]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.ActivityID != nil {
+		w, err = wire.NewValueString(*(v.ActivityID)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.ActivityType != nil {
+		w, err = v.ActivityType.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	if v.State != nil {
+		w, err = v.State.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 30, Value: w}
+		i++
+	}
+	if v.HeartbeatDetails != nil {
+		w, err = wire.NewValueBinary(v.HeartbeatDetails), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 40, Value: w}
+		i++
+	}
+	if v.LastHeartbeatTimestamp != nil {
+		w, err = wire.NewValueI64(*(v.LastHeartbeatTimestamp)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 50, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _PendingActivityState_Read(w wire.Value) (PendingActivityState, error) {
+	var v PendingActivityState
+	err := v.FromWire(w)
+	return v, err
+}
+
+// FromWire deserializes a PendingActivityInfo struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a PendingActivityInfo struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v PendingActivityInfo
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *PendingActivityInfo) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.ActivityID = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TStruct {
+				v.ActivityType, err = _ActivityType_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 30:
+			if field.Value.Type() == wire.TI32 {
+				var x PendingActivityState
+				x, err = _PendingActivityState_Read(field.Value)
+				v.State = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 40:
+			if field.Value.Type() == wire.TBinary {
+				v.HeartbeatDetails, err = field.Value.GetBinary(), error(nil)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 50:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.LastHeartbeatTimestamp = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a PendingActivityInfo
+// struct.
+func (v *PendingActivityInfo) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [5]string
+	i := 0
+	if v.ActivityID != nil {
+		fields[i] = fmt.Sprintf("ActivityID: %v", *(v.ActivityID))
+		i++
+	}
+	if v.ActivityType != nil {
+		fields[i] = fmt.Sprintf("ActivityType: %v", v.ActivityType)
+		i++
+	}
+	if v.State != nil {
+		fields[i] = fmt.Sprintf("State: %v", *(v.State))
+		i++
+	}
+	if v.HeartbeatDetails != nil {
+		fields[i] = fmt.Sprintf("HeartbeatDetails: %v", v.HeartbeatDetails)
+		i++
+	}
+	if v.LastHeartbeatTimestamp != nil {
+		fields[i] = fmt.Sprintf("LastHeartbeatTimestamp: %v", *(v.LastHeartbeatTimestamp))
+		i++
+	}
+
+	return fmt.Sprintf("PendingActivityInfo{%v}", strings.Join(fields[:i], ", "))
+}
+
+func _PendingActivityState_EqualsPtr(lhs, rhs *PendingActivityState) bool {
+	if lhs != nil && rhs != nil {
+
+		x := *lhs
+		y := *rhs
+		return x.Equals(y)
+	}
+	return lhs == nil && rhs == nil
+}
+
+// Equals returns true if all the fields of this PendingActivityInfo match the
+// provided PendingActivityInfo.
+//
+// This function performs a deep comparison.
+func (v *PendingActivityInfo) Equals(rhs *PendingActivityInfo) bool {
+	if !_String_EqualsPtr(v.ActivityID, rhs.ActivityID) {
+		return false
+	}
+	if !((v.ActivityType == nil && rhs.ActivityType == nil) || (v.ActivityType != nil && rhs.ActivityType != nil && v.ActivityType.Equals(rhs.ActivityType))) {
+		return false
+	}
+	if !_PendingActivityState_EqualsPtr(v.State, rhs.State) {
+		return false
+	}
+	if !((v.HeartbeatDetails == nil && rhs.HeartbeatDetails == nil) || (v.HeartbeatDetails != nil && rhs.HeartbeatDetails != nil && bytes.Equal(v.HeartbeatDetails, rhs.HeartbeatDetails))) {
+		return false
+	}
+	if !_I64_EqualsPtr(v.LastHeartbeatTimestamp, rhs.LastHeartbeatTimestamp) {
+		return false
+	}
+
+	return true
+}
+
+// GetActivityID returns the value of ActivityID if it is set or its
+// zero value if it is unset.
+func (v *PendingActivityInfo) GetActivityID() (o string) {
+	if v.ActivityID != nil {
+		return *v.ActivityID
+	}
+
+	return
+}
+
+// GetState returns the value of State if it is set or its
+// zero value if it is unset.
+func (v *PendingActivityInfo) GetState() (o PendingActivityState) {
+	if v.State != nil {
+		return *v.State
+	}
+
+	return
+}
+
+// GetLastHeartbeatTimestamp returns the value of LastHeartbeatTimestamp if it is set or its
+// zero value if it is unset.
+func (v *PendingActivityInfo) GetLastHeartbeatTimestamp() (o int64) {
+	if v.LastHeartbeatTimestamp != nil {
+		return *v.LastHeartbeatTimestamp
+	}
+
+	return
+}
+
+type PendingActivityState int32
+
+const (
+	PendingActivityStateScheduled       PendingActivityState = 0
+	PendingActivityStateStarted         PendingActivityState = 1
+	PendingActivityStateCancelRequested PendingActivityState = 2
+)
+
+// PendingActivityState_Values returns all recognized values of PendingActivityState.
+func PendingActivityState_Values() []PendingActivityState {
+	return []PendingActivityState{
+		PendingActivityStateScheduled,
+		PendingActivityStateStarted,
+		PendingActivityStateCancelRequested,
+	}
+}
+
+// UnmarshalText tries to decode PendingActivityState from a byte slice
+// containing its name.
+//
+//   var v PendingActivityState
+//   err := v.UnmarshalText([]byte("SCHEDULED"))
+func (v *PendingActivityState) UnmarshalText(value []byte) error {
+	switch string(value) {
+	case "SCHEDULED":
+		*v = PendingActivityStateScheduled
+		return nil
+	case "STARTED":
+		*v = PendingActivityStateStarted
+		return nil
+	case "CANCEL_REQUESTED":
+		*v = PendingActivityStateCancelRequested
+		return nil
+	default:
+		return fmt.Errorf("unknown enum value %q for %q", value, "PendingActivityState")
+	}
+}
+
+// ToWire translates PendingActivityState into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// Enums are represented as 32-bit integers over the wire.
+func (v PendingActivityState) ToWire() (wire.Value, error) {
+	return wire.NewValueI32(int32(v)), nil
+}
+
+// FromWire deserializes PendingActivityState from its Thrift-level
+// representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TI32)
+//   if err != nil {
+//     return PendingActivityState(0), err
+//   }
+//
+//   var v PendingActivityState
+//   if err := v.FromWire(x); err != nil {
+//     return PendingActivityState(0), err
+//   }
+//   return v, nil
+func (v *PendingActivityState) FromWire(w wire.Value) error {
+	*v = (PendingActivityState)(w.GetI32())
+	return nil
+}
+
+// String returns a readable string representation of PendingActivityState.
+func (v PendingActivityState) String() string {
+	w := int32(v)
+	switch w {
+	case 0:
+		return "SCHEDULED"
+	case 1:
+		return "STARTED"
+	case 2:
+		return "CANCEL_REQUESTED"
+	}
+	return fmt.Sprintf("PendingActivityState(%d)", w)
+}
+
+// Equals returns true if this PendingActivityState value matches the provided
+// value.
+func (v PendingActivityState) Equals(rhs PendingActivityState) bool {
+	return v == rhs
+}
+
+// MarshalJSON serializes PendingActivityState into JSON.
+//
+// If the enum value is recognized, its name is returned. Otherwise,
+// its integer value is returned.
+//
+// This implements json.Marshaler.
+func (v PendingActivityState) MarshalJSON() ([]byte, error) {
+	switch int32(v) {
+	case 0:
+		return ([]byte)("\"SCHEDULED\""), nil
+	case 1:
+		return ([]byte)("\"STARTED\""), nil
+	case 2:
+		return ([]byte)("\"CANCEL_REQUESTED\""), nil
+	}
+	return ([]byte)(strconv.FormatInt(int64(v), 10)), nil
+}
+
+// UnmarshalJSON attempts to decode PendingActivityState from its JSON
+// representation.
+//
+// This implementation supports both, numeric and string inputs. If a
+// string is provided, it must be a known enum name.
+//
+// This implements json.Unmarshaler.
+func (v *PendingActivityState) UnmarshalJSON(text []byte) error {
+	d := json.NewDecoder(bytes.NewReader(text))
+	d.UseNumber()
+	t, err := d.Token()
+	if err != nil {
+		return err
+	}
+
+	switch w := t.(type) {
+	case json.Number:
+		x, err := w.Int64()
+		if err != nil {
+			return err
+		}
+		if x > math.MaxInt32 {
+			return fmt.Errorf("enum overflow from JSON %q for %q", text, "PendingActivityState")
+		}
+		if x < math.MinInt32 {
+			return fmt.Errorf("enum underflow from JSON %q for %q", text, "PendingActivityState")
+		}
+		*v = (PendingActivityState)(x)
+		return nil
+	case string:
+		return v.UnmarshalText([]byte(w))
+	default:
+		return fmt.Errorf("invalid JSON value %q (%T) to unmarshal into %q", t, t, "PendingActivityState")
+	}
 }
 
 type PollForActivityTaskRequest struct {

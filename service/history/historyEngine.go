@@ -58,7 +58,6 @@ type (
 		historyEventNotifier historyEventNotifier
 		tokenSerializer      common.TaskTokenSerializer
 		hSerializerFactory   persistence.HistorySerializerFactory
-		metricsReporter      metrics.Client
 		historyCache         *historyCache
 		domainCache          cache.DomainCache
 		metricsClient        metrics.Client
@@ -226,12 +225,13 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 		// It is ok to use 0 for TransactionID because RunID is unique so there are
 		// no potential duplicates to override.
 		TransactionID: 0,
-		FirstEventID:  *startedEvent.EventId,
+		FirstEventID:  startedEvent.GetEventId(),
 		Events:        serializedHistory,
 	})
 	if err != nil {
 		return nil, err
 	}
+	msBuilder.executionInfo.LastFirstEventID = startedEvent.GetEventId()
 
 	deleteEvents := func() {
 		// We created the history events but failed to create workflow execution, so cleanup the history which could cause
@@ -367,6 +367,8 @@ func (e *historyEngineImpl) GetMutableState(ctx context.Context,
 	if err != nil {
 		return nil, err
 	}
+	// set the run id in case query the current running workflwo
+	execution.RunId = response.Execution.RunId
 
 	// expectedNextEventID is 0 when caller want to get the current next event ID without blocking
 	expectedNextEventID := common.FirstEventID
@@ -398,6 +400,7 @@ func (e *historyEngineImpl) GetMutableState(ctx context.Context,
 		for {
 			select {
 			case event := <-channel:
+				response.LastFirstEventId = common.Int64Ptr(event.lastFirstEventID)
 				response.NextEventId = common.Int64Ptr(event.nextEventID)
 				response.IsWorkflowRunning = common.BoolPtr(event.isWorkflowRunning)
 				if expectedNextEventID < response.GetNextEventId() || !response.GetIsWorkflowRunning() {
@@ -432,6 +435,7 @@ func (e *historyEngineImpl) getMutableState(
 	result := &h.GetMutableStateResponse{
 		Execution:            &execution,
 		WorkflowType:         &workflow.WorkflowType{Name: common.StringPtr(msBuilder.executionInfo.WorkflowTypeName)},
+		LastFirstEventId:     common.Int64Ptr(msBuilder.GetLastFirstEventID()),
 		NextEventId:          common.Int64Ptr(msBuilder.GetNextEventID()),
 		TaskList:             &workflow.TaskList{Name: common.StringPtr(context.msBuilder.executionInfo.TaskList)},
 		StickyTaskList:       &workflow.TaskList{Name: common.StringPtr(msBuilder.executionInfo.StickyTaskList)},
@@ -484,6 +488,30 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 		closeStatus := getWorkflowExecutionCloseStatus(msBuilder.executionInfo.CloseStatus)
 		result.WorkflowExecutionInfo.CloseStatus = &closeStatus
 		result.WorkflowExecutionInfo.CloseTime = common.Int64Ptr(msBuilder.getLastUpdatedTimestamp())
+	}
+
+	if len(msBuilder.pendingActivityInfoIDs) > 0 {
+		for _, pi := range msBuilder.pendingActivityInfoIDs {
+			ai := &workflow.PendingActivityInfo{
+				ActivityID: common.StringPtr(pi.ActivityID),
+			}
+			state := workflow.PendingActivityStateScheduled
+			if pi.CancelRequested {
+				state = workflow.PendingActivityStateCancelRequested
+			} else if pi.StartedID != emptyEventID {
+				state = workflow.PendingActivityStateStarted
+			}
+			ai.State = &state
+			lastHeartbeatUnixNano := pi.LastHeartBeatUpdatedTime.UnixNano()
+			if lastHeartbeatUnixNano > 0 {
+				ai.LastHeartbeatTimestamp = common.Int64Ptr(lastHeartbeatUnixNano)
+				ai.HeartbeatDetails = pi.Details
+			}
+			if scheduledEvent, ok := msBuilder.getHistoryEvent(pi.ScheduledEvent); ok {
+				ai.ActivityType = scheduledEvent.ActivityTaskScheduledEventAttributes.ActivityType
+			}
+			result.PendingActivities = append(result.PendingActivities, ai)
+		}
 	}
 
 	return result, nil
@@ -761,6 +789,7 @@ Update_History_Loop:
 		transferTasks := []persistence.Task{}
 		timerTasks := []persistence.Task{}
 		var continueAsNewBuilder *mutableStateBuilder
+		var continueAsNewTimerTasks []persistence.Task
 		hasDecisionScheduleActivityTask := false
 
 		if request.StickyAttributes == nil || request.StickyAttributes.WorkerTaskList == nil {
@@ -1010,6 +1039,14 @@ Update_History_Loop:
 				if err != nil {
 					return nil
 				}
+
+				// add timer task to new workflow
+				duration := time.Duration(*attributes.ExecutionStartToCloseTimeoutSeconds) * time.Second
+				continueAsNewTimerTasks = []persistence.Task{&persistence.WorkflowTimeoutTask{
+					VisibilityTimestamp: e.shard.GetTimeSource().Now().Add(duration),
+				}}
+				msBuilder.continueAsNew.TimerTasks = continueAsNewTimerTasks
+
 				isComplete = true
 				continueAsNewBuilder = newStateBuilder
 
@@ -1115,8 +1152,11 @@ Update_History_Loop:
 			return updateErr
 		}
 
+		// add continueAsNewTimerTask
+		timerTasks = append(timerTasks, continueAsNewTimerTasks...)
 		// Inform timer about the new ones.
 		e.timerProcessor.NotifyNewTimer(timerTasks)
+
 		return err
 	}
 
@@ -1699,6 +1739,9 @@ func (e *historyEngineImpl) RecordChildExecutionCompleted(completionRequest *h.R
 			case workflow.EventTypeWorkflowExecutionTerminated:
 				attributes := completionEvent.WorkflowExecutionTerminatedEventAttributes
 				msBuilder.AddChildWorkflowExecutionTerminatedEvent(initiatedID, completedExecution, attributes)
+			case workflow.EventTypeWorkflowExecutionTimedOut:
+				attributes := completionEvent.WorkflowExecutionTimedOutEventAttributes
+				msBuilder.AddChildWorkflowExecutionTimedOutEvent(initiatedID, completedExecution, attributes)
 			}
 
 			return nil

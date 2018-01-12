@@ -185,6 +185,17 @@ enum QueryTaskCompletedType {
   FAILED,
 }
 
+enum PendingActivityState {
+  SCHEDULED,
+  STARTED,
+  CANCEL_REQUESTED,
+}
+
+enum HistoryEventFilterType {
+  ALL_EVENT,
+  CLOSE_EVENT,
+}
+
 struct WorkflowType {
   10: optional string name
 }
@@ -847,6 +858,7 @@ struct GetWorkflowExecutionHistoryRequest {
   30: optional i32 maximumPageSize
   40: optional binary nextPageToken
   50: optional bool waitForNewEvent
+  60: optional HistoryEventFilterType HistoryEventFilterType
 }
 
 struct GetWorkflowExecutionHistoryResponse {
@@ -926,9 +938,18 @@ struct DescribeWorkflowExecutionRequest {
   20: optional WorkflowExecution execution
 }
 
+struct PendingActivityInfo {
+  10: optional string activityID
+  20: optional ActivityType activityType
+  30: optional PendingActivityState state
+  40: optional binary heartbeatDetails
+  50: optional i64 (js.type = "Long") lastHeartbeatTimestamp
+}
+
 struct DescribeWorkflowExecutionResponse {
   10: optional WorkflowExecutionConfiguration executionConfiguration
   20: optional WorkflowExecutionInfo workflowExecutionInfo
+  30: optional list<PendingActivityInfo> pendingActivities
 }
 
 struct DescribeTaskListRequest {

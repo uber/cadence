@@ -131,7 +131,8 @@ func (e *matchingEngineImpl) Stop() {
 }
 
 func (e *matchingEngineImpl) getTaskLists(maxCount int) (lists []taskListManager) {
-	e.taskListsLock.Lock()
+	e.taskListsLock.RLock()
+	defer e.taskListsLock.RUnlock()
 	lists = make([]taskListManager, 0, len(e.taskLists))
 	count := 0
 	for _, tlMgr := range e.taskLists {
@@ -141,7 +142,6 @@ func (e *matchingEngineImpl) getTaskLists(maxCount int) (lists []taskListManager
 			break
 		}
 	}
-	e.taskListsLock.Unlock()
 	return
 }
 
@@ -155,20 +155,24 @@ func (e *matchingEngineImpl) String() string {
 	return r
 }
 
-// Returns taskListManager for a task list. If not already cached gets new range from DB and if successful creates one.
+// Returns taskListManager for a task list. If not already cached gets new range from DB and
+// if successful creates one.
 func (e *matchingEngineImpl) getTaskListManager(taskList *taskListID) (taskListManager, error) {
+	// The first check is an optimization so almost all requests will have a task list manager
+	// and return avoiding the write lock
 	e.taskListsLock.RLock()
 	if result, ok := e.taskLists[*taskList]; ok {
 		e.taskListsLock.RUnlock()
 		return result, nil
 	}
 	e.taskListsLock.RUnlock()
-	mgr := newTaskListManager(e, taskList, e.config)
+	// If it gets here, write lock and check again in case a task list is created between the two locks
 	e.taskListsLock.Lock()
 	if result, ok := e.taskLists[*taskList]; ok {
 		e.taskListsLock.Unlock()
 		return result, nil
 	}
+	mgr := newTaskListManager(e, taskList, e.config)
 	e.taskLists[*taskList] = mgr
 	e.taskListsLock.Unlock()
 	logging.LogTaskListLoadingEvent(e.logger, taskList.taskListName, taskList.taskType)
@@ -179,6 +183,13 @@ func (e *matchingEngineImpl) getTaskListManager(taskList *taskListID) (taskListM
 	}
 	logging.LogTaskListLoadedEvent(e.logger, taskList.taskListName, taskList.taskType)
 	return mgr, nil
+}
+
+// For use in tests
+func (e *matchingEngineImpl) updateTaskList(taskList *taskListID, mgr taskListManager) {
+	e.taskListsLock.Lock()
+	defer e.taskListsLock.Unlock()
+	e.taskLists[*taskList] = mgr
 }
 
 func (e *matchingEngineImpl) removeTaskListManager(id *taskListID) {
@@ -250,7 +261,7 @@ pollLoop:
 		pollerCtx := context.WithValue(ctx, pollerIDKey, pollerID)
 		pollerCtx = context.WithValue(pollerCtx, identityKey, request.GetIdentity())
 		taskList := newTaskListID(domainID, taskListName, persistence.TaskListTypeDecision)
-		tCtx, err := e.getTask(pollerCtx, taskList)
+		tCtx, err := e.getTask(pollerCtx, taskList, nil)
 		if err != nil {
 			// TODO: Is empty poll the best reply for errPumpClosed?
 			if err == ErrNoTasks || err == errPumpClosed {
@@ -344,11 +355,15 @@ pollLoop:
 		}
 
 		taskList := newTaskListID(domainID, taskListName, persistence.TaskListTypeActivity)
+		var maxDispatch *float64
+		if request.TaskListMetadata != nil {
+			maxDispatch = request.TaskListMetadata.MaxTasksPerSecond
+		}
 		// Add frontend generated pollerID to context so tasklistMgr can support cancellation of
 		// long-poll when frontend calls CancelOutstandingPoll API
 		pollerCtx := context.WithValue(ctx, pollerIDKey, pollerID)
 		pollerCtx = context.WithValue(pollerCtx, identityKey, request.GetIdentity())
-		tCtx, err := e.getTask(pollerCtx, taskList)
+		tCtx, err := e.getTask(pollerCtx, taskList, maxDispatch)
 		if err != nil {
 			// TODO: Is empty poll the best reply for errPumpClosed?
 			if err == ErrNoTasks || err == errPumpClosed {
@@ -478,12 +493,14 @@ func (e *matchingEngineImpl) DescribeTaskList(ctx context.Context, request *m.De
 }
 
 // Loads a task from persistence and wraps it in a task context
-func (e *matchingEngineImpl) getTask(ctx context.Context, taskList *taskListID) (*taskContext, error) {
+func (e *matchingEngineImpl) getTask(
+	ctx context.Context, taskList *taskListID, maxDispatchPerSecond *float64,
+) (*taskContext, error) {
 	tlMgr, err := e.getTaskListManager(taskList)
 	if err != nil {
 		return nil, err
 	}
-	return tlMgr.GetTaskContext(ctx)
+	return tlMgr.GetTaskContext(ctx, maxDispatchPerSecond)
 }
 
 func (e *matchingEngineImpl) unloadTaskList(id *taskListID) {
