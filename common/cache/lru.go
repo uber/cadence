@@ -45,8 +45,9 @@ type (
 	}
 
 	iteratorImpl struct {
-		lru      *lru
-		nextItem *list.Element
+		lru       *lru
+		timestamp time.Time
+		nextItem  *list.Element
 	}
 
 	entryImpl struct {
@@ -66,7 +67,7 @@ func (it *iteratorImpl) Close() {
 func (it *iteratorImpl) HasNext() bool {
 	for it.nextItem != nil {
 		entry := it.nextItem.Value.(*entryImpl)
-		if !it.lru.isEntryExpired(entry) {
+		if !it.lru.isEntryExpired(entry, it.timestamp) {
 			// Entry is valid
 			return true
 		}
@@ -102,8 +103,9 @@ func (it *iteratorImpl) Next() Entry {
 func (c *lru) Iterator() Iterator {
 	c.mut.Lock()
 	iterator := &iteratorImpl{
-		lru:      c,
-		nextItem: c.byAccess.Front(),
+		lru:       c,
+		timestamp: time.Now(),
+		nextItem:  c.byAccess.Front(),
 	}
 	return iterator
 }
@@ -166,7 +168,7 @@ func (c *lru) Get(key interface{}) interface{} {
 		entry.refCount++
 	}
 
-	if c.isEntryExpired(entry) {
+	if c.isEntryExpired(entry, time.Now()) {
 		// Entry has expired
 		c.deleteInternal(element)
 		return nil
@@ -290,6 +292,6 @@ func (c *lru) deleteInternal(element *list.Element) {
 	delete(c.byKey, entry.key)
 }
 
-func (c *lru) isEntryExpired(entry *entryImpl) bool {
-	return entry.refCount == 0 && !entry.timestamp.IsZero() && time.Now().After(entry.timestamp.Add(c.ttl))
+func (c *lru) isEntryExpired(entry *entryImpl, timestamp time.Time) bool {
+	return entry.refCount == 0 && !entry.timestamp.IsZero() && timestamp.After(entry.timestamp.Add(c.ttl))
 }
