@@ -21,8 +21,6 @@
 package common
 
 import (
-	"time"
-
 	s "github.com/uber/cadence/.gen/go/shared"
 )
 
@@ -59,12 +57,6 @@ func Float64Ptr(v float64) *float64 {
 // BoolPtr makes a copy and returns the pointer to a bool.
 func BoolPtr(v bool) *bool {
 	return &v
-}
-
-// TimeInt64Ptr makes a copy and returns the pointer to a string for time.Time, as ISO 8601 format.
-func TimeInt64Ptr(v time.Time) *int64 {
-	time := v.UnixNano()
-	return &time
 }
 
 // StringPtr makes a copy and returns the pointer to a string.

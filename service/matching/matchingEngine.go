@@ -471,7 +471,7 @@ func (e *matchingEngineImpl) DescribeTaskList(ctx context.Context, request *m.De
 	for _, poller := range tlMgr.GetAllPollerInfo() {
 		pollers = append(pollers, &workflow.PollerInfo{
 			Identity:  common.StringPtr(poller.identity),
-			Timestamp: common.TimeInt64Ptr(poller.timestamp),
+			Timestamp: common.Int64Ptr(poller.timestamp.UnixNano()),
 		})
 	}
 	return &workflow.DescribeTaskListResponse{Pollers: pollers}, nil

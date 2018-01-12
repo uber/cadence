@@ -65,24 +65,13 @@ func (it *iteratorImpl) Close() {
 
 // HasNext return true if there is more items to be returned
 func (it *iteratorImpl) HasNext() bool {
-	for it.nextItem != nil {
-		entry := it.nextItem.Value.(*entryImpl)
-		if !it.lru.isEntryExpired(entry, it.timestamp) {
-			// Entry is valid
-			return true
-		}
-
-		nextItem := it.nextItem.Next()
-		it.lru.deleteInternal(it.nextItem)
-		it.nextItem = nextItem
-	}
-
-	return false
+	it.checkNext()
+	return it.nextItem != nil
 }
 
 // Next return the next item
 func (it *iteratorImpl) Next() Entry {
-	if !it.HasNext() {
+	if it.nextItem == nil {
 		panic("LRU cache iterator Next called when there is no next item")
 	}
 
@@ -95,6 +84,19 @@ func (it *iteratorImpl) Next() Entry {
 		timestamp: entry.timestamp,
 	}
 	return entry
+}
+
+func (it *iteratorImpl) checkNext() {
+	for it.nextItem != nil {
+		entry := it.nextItem.Value.(*entryImpl)
+		if it.lru.isEntryExpired(entry, it.timestamp) {
+			nextItem := it.nextItem.Next()
+			it.lru.deleteInternal(it.nextItem)
+			it.nextItem = nextItem
+		} else {
+			return
+		}
+	}
 }
 
 // Iterator returns an iterator to the map. This map
