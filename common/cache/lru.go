@@ -45,8 +45,8 @@ type (
 	}
 
 	iteratorImpl struct {
-		stopCh chan struct{}
-		dataCh chan Entry
+		lru      *lru
+		nextItem *list.Element
 	}
 
 	entryImpl struct {
@@ -59,51 +59,52 @@ type (
 
 // Close closes the iterator
 func (it *iteratorImpl) Close() {
-	close(it.stopCh)
+	it.lru.mut.Unlock()
 }
 
-// Entries returns a channel of map entries
-func (it *iteratorImpl) Entries() <-chan Entry {
-	return it.dataCh
+// HasNext return true if there is more items to be returned
+func (it *iteratorImpl) HasNext() bool {
+	for it.nextItem != nil {
+		entry := it.nextItem.Value.(*entryImpl)
+		if !it.lru.isEntryExpired(entry) {
+			// Entry is valid
+			return true
+		}
+
+		nextItem := it.nextItem.Next()
+		it.lru.deleteInternal(it.nextItem)
+		it.nextItem = nextItem
+	}
+
+	return false
+}
+
+// Next return the next item
+func (it *iteratorImpl) Next() Entry {
+	if !it.HasNext() {
+		panic("LRU cache iterator Next called when there is no next item")
+	}
+
+	entry := it.nextItem.Value.(*entryImpl)
+	it.nextItem = it.nextItem.Next()
+	// make a copy of the entry so there will be no concurrent access to this entry
+	entry = &entryImpl{
+		key:       entry.key,
+		value:     entry.value,
+		timestamp: entry.timestamp,
+	}
+	return entry
 }
 
 // Iterator returns an iterator to the map. This map
 // does not use re-entrant locks, so access or modification
 // to the map during iteration can cause a dead lock.
 func (c *lru) Iterator() Iterator {
-
+	c.mut.Lock()
 	iterator := &iteratorImpl{
-		dataCh: make(chan Entry, 8),
-		stopCh: make(chan struct{}),
+		lru:      c,
+		nextItem: c.byAccess.Front(),
 	}
-
-	go func(iterator *iteratorImpl) {
-		c.mut.Lock()
-		for _, element := range c.byKey {
-			entry := element.Value.(*entryImpl)
-			if c.isEntryExpired(entry) {
-				// Entry has expired
-				c.deleteInternal(element)
-				continue
-			}
-			// make a copy of the entry so there will be no concurrent access to this entry
-			entry = &entryImpl{
-				key:       entry.key,
-				value:     entry.value,
-				timestamp: entry.timestamp,
-			}
-			select {
-			case iterator.dataCh <- entry:
-			case <-iterator.stopCh:
-				c.mut.Unlock()
-				close(iterator.dataCh)
-				return
-			}
-		}
-		c.mut.Unlock()
-		close(iterator.dataCh)
-	}(iterator)
-
 	return iterator
 }
 

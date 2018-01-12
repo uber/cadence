@@ -52,10 +52,11 @@ type pollerHistory struct {
 }
 
 func newPollerHistory() *pollerHistory {
-	opts := &cache.Options{}
-	opts.InitialCapacity = pollerHistoryInitSize
-	opts.TTL = pollerHistoryTTL
-	opts.Pin = false
+	opts := &cache.Options{
+		InitialCapacity: pollerHistoryInitSize,
+		TTL:             pollerHistoryTTL,
+		Pin:             false,
+	}
 
 	return &pollerHistory{
 		history: cache.New(pollerHistoryInitMaxSize, opts),
@@ -71,7 +72,8 @@ func (pollers *pollerHistory) getAllPollerInfo() []*pollerInfo {
 
 	ite := pollers.history.Iterator()
 	defer ite.Close()
-	for entry := range ite.Entries() {
+	for ite.HasNext() {
+		entry := ite.Next()
 		key := entry.Key().(pollerIdentity)
 		timestamp := entry.Timestamp()
 		result = append(result, &pollerInfo{

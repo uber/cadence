@@ -79,9 +79,10 @@ type Iterator interface {
 	// Close closes the iterator
 	// and releases any allocated resources
 	Close()
-	// Entries returns a channel of MapEntry
-	// objects that can be used in a range loop
-	Entries() <-chan Entry
+	// HasNext return true if there is more items to be returned
+	HasNext() bool
+	// Next return the next item
+	Next() Entry
 }
 
 // Entry represents a key-value entry within the map

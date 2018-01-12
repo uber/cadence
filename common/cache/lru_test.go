@@ -139,10 +139,11 @@ func TestLRUCacheConcurrentAccess(t *testing.T) {
 			for j := 0; j < 50; j++ {
 				result := []Entry{}
 				it := cache.Iterator()
-				defer it.Close()
-				for entry := range it.Entries() {
+				for it.HasNext() {
+					entry := it.Next()
 					result = append(result, entry)
 				}
+				it.Close()
 			}
 		}()
 	}
@@ -215,9 +216,10 @@ func TestIterator(t *testing.T) {
 
 	actual := map[string]string{}
 
-	ite := cache.Iterator()
-	defer ite.Close()
-	for entry := range ite.Entries() {
+	it := cache.Iterator()
+	defer it.Close()
+	for it.HasNext() {
+		entry := it.Next()
 		actual[entry.Key().(string)] = entry.Value().(string)
 	}
 
