@@ -91,6 +91,6 @@ type Entry interface {
 	Key() interface{}
 	// Value represents the value
 	Value() interface{}
-	// LastAccessTime represents the time when the value is last accessed
-	LastAccessTime() time.Time
+	// CreateTime represents the time when the entry is created
+	CreateTime() time.Time
 }

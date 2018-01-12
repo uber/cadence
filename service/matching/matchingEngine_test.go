@@ -233,7 +233,7 @@ func (s *matchingEngineSuite) PollForTasksEmptyResultTest(taskType int) {
 		s.NoError(err)
 		s.Equal(1, len(descResp.Pollers))
 		s.Equal(identity, descResp.Pollers[0].GetIdentity())
-		s.NotEmpty(descResp.Pollers[0].GetTimestamp())
+		s.NotEmpty(descResp.Pollers[0].GetLastAccessTime())
 	}
 	s.EqualValues(1, s.taskManager.taskLists[*tlID].rangeID)
 }

@@ -51,10 +51,10 @@ type (
 	}
 
 	entryImpl struct {
-		key            interface{}
-		lastAccessTime time.Time
-		value          interface{}
-		refCount       int
+		key        interface{}
+		createTime time.Time
+		value      interface{}
+		refCount   int
 	}
 )
 
@@ -78,9 +78,9 @@ func (it *iteratorImpl) Next() Entry {
 	it.nextItem = it.nextItem.Next()
 	// make a copy of the entry so there will be no concurrent access to this entry
 	entry = &entryImpl{
-		key:            entry.key,
-		value:          entry.value,
-		lastAccessTime: entry.lastAccessTime,
+		key:        entry.key,
+		value:      entry.value,
+		createTime: entry.createTime,
 	}
 	it.prepareNext()
 	return entry
@@ -121,8 +121,8 @@ func (entry *entryImpl) Value() interface{} {
 	return entry.value
 }
 
-func (entry *entryImpl) LastAccessTime() time.Time {
-	return entry.lastAccessTime
+func (entry *entryImpl) CreateTime() time.Time {
+	return entry.createTime
 }
 
 // New creates a new cache with the given options
@@ -246,10 +246,11 @@ func (c *lru) putInternal(key interface{}, value interface{}, allowUpdate bool) 
 		existing := entry.value
 		if allowUpdate {
 			entry.value = value
+			if c.ttl != 0 {
+				entry.createTime = time.Now()
+			}
 		}
-		if c.ttl != 0 {
-			entry.lastAccessTime = time.Now()
-		}
+
 		c.byAccess.MoveToFront(elt)
 		if c.pin {
 			entry.refCount++
@@ -267,7 +268,7 @@ func (c *lru) putInternal(key interface{}, value interface{}, allowUpdate bool) 
 	}
 
 	if c.ttl != 0 {
-		entry.lastAccessTime = time.Now()
+		entry.createTime = time.Now()
 	}
 
 	c.byKey[key] = c.byAccess.PushFront(entry)
@@ -296,5 +297,5 @@ func (c *lru) deleteInternal(element *list.Element) {
 }
 
 func (c *lru) isEntryExpired(entry *entryImpl, currentTime time.Time) bool {
-	return entry.refCount == 0 && !entry.lastAccessTime.IsZero() && currentTime.After(entry.lastAccessTime.Add(c.ttl))
+	return entry.refCount == 0 && !entry.createTime.IsZero() && currentTime.After(entry.createTime.Add(c.ttl))
 }

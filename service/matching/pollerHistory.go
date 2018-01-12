@@ -41,7 +41,7 @@ type (
 	pollerInfo struct {
 		identity string
 		// TODO add IP, T1396795
-		timestamp time.Time
+		lastAccessTime time.Time
 	}
 )
 
@@ -75,11 +75,11 @@ func (pollers *pollerHistory) getAllPollerInfo() []*pollerInfo {
 	for ite.HasNext() {
 		entry := ite.Next()
 		key := entry.Key().(pollerIdentity)
-		timestamp := entry.LastAccessTime()
+		lastAccessTime := entry.CreateTime()
 		result = append(result, &pollerInfo{
 			identity: key.identity,
 			// TODO add IP, T1396795
-			timestamp: timestamp,
+			lastAccessTime: lastAccessTime,
 		})
 	}
 

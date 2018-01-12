@@ -3732,21 +3732,21 @@ func (s *integrationSuite) TestDescribeTaskList() {
 	pollerInfos = testDescribeTaskList(s.domainName, taskList, workflow.TaskListTypeDecision)
 	s.Equal(1, len(pollerInfos))
 	s.Equal(identity, pollerInfos[0].GetIdentity())
-	s.True(time.Unix(0, pollerInfos[0].GetTimestamp()).After(before))
-	s.NotEmpty(pollerInfos[0].GetTimestamp())
+	s.True(time.Unix(0, pollerInfos[0].GetLastAccessTime()).After(before))
+	s.NotEmpty(pollerInfos[0].GetLastAccessTime())
 
 	errActivity := poller.pollAndProcessActivityTask(false)
 	s.Nil(errActivity)
 	pollerInfos = testDescribeTaskList(s.domainName, taskList, workflow.TaskListTypeActivity)
 	s.Equal(1, len(pollerInfos))
 	s.Equal(identity, pollerInfos[0].GetIdentity())
-	s.True(time.Unix(0, pollerInfos[0].GetTimestamp()).After(before))
-	s.NotEmpty(pollerInfos[0].GetTimestamp())
+	s.True(time.Unix(0, pollerInfos[0].GetLastAccessTime()).After(before))
+	s.NotEmpty(pollerInfos[0].GetLastAccessTime())
 	pollerInfos = testDescribeTaskList(s.domainName, taskList, workflow.TaskListTypeDecision)
 	s.Equal(1, len(pollerInfos))
 	s.Equal(identity, pollerInfos[0].GetIdentity())
-	s.True(time.Unix(0, pollerInfos[0].GetTimestamp()).After(before))
-	s.NotEmpty(pollerInfos[0].GetTimestamp())
+	s.True(time.Unix(0, pollerInfos[0].GetLastAccessTime()).After(before))
+	s.NotEmpty(pollerInfos[0].GetLastAccessTime())
 }
 
 func (s *integrationSuite) setupShards() {

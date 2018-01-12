@@ -954,6 +954,6 @@ enum TaskListType {
 
 struct PollerInfo {
   // Unix Nano
-  10: optional i64 (js.type = "Long")  timestamp
+  10: optional i64 (js.type = "Long")  lastAccessTime
   20: optional string identity
 }

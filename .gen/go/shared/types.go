@@ -13472,8 +13472,8 @@ func (v *PollForDecisionTaskResponse) GetBacklogCountHint() (o int64) {
 }
 
 type PollerInfo struct {
-	Timestamp *int64  `json:"timestamp,omitempty"`
-	Identity  *string `json:"identity,omitempty"`
+	LastAccessTime *int64  `json:"lastAccessTime,omitempty"`
+	Identity       *string `json:"identity,omitempty"`
 }
 
 // ToWire translates a PollerInfo struct into a Thrift-level intermediate
@@ -13499,8 +13499,8 @@ func (v *PollerInfo) ToWire() (wire.Value, error) {
 		err    error
 	)
 
-	if v.Timestamp != nil {
-		w, err = wire.NewValueI64(*(v.Timestamp)), error(nil)
+	if v.LastAccessTime != nil {
+		w, err = wire.NewValueI64(*(v.LastAccessTime)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -13545,7 +13545,7 @@ func (v *PollerInfo) FromWire(w wire.Value) error {
 			if field.Value.Type() == wire.TI64 {
 				var x int64
 				x, err = field.Value.GetI64(), error(nil)
-				v.Timestamp = &x
+				v.LastAccessTime = &x
 				if err != nil {
 					return err
 				}
@@ -13576,8 +13576,8 @@ func (v *PollerInfo) String() string {
 
 	var fields [2]string
 	i := 0
-	if v.Timestamp != nil {
-		fields[i] = fmt.Sprintf("Timestamp: %v", *(v.Timestamp))
+	if v.LastAccessTime != nil {
+		fields[i] = fmt.Sprintf("LastAccessTime: %v", *(v.LastAccessTime))
 		i++
 	}
 	if v.Identity != nil {
@@ -13593,7 +13593,7 @@ func (v *PollerInfo) String() string {
 //
 // This function performs a deep comparison.
 func (v *PollerInfo) Equals(rhs *PollerInfo) bool {
-	if !_I64_EqualsPtr(v.Timestamp, rhs.Timestamp) {
+	if !_I64_EqualsPtr(v.LastAccessTime, rhs.LastAccessTime) {
 		return false
 	}
 	if !_String_EqualsPtr(v.Identity, rhs.Identity) {
@@ -13603,11 +13603,11 @@ func (v *PollerInfo) Equals(rhs *PollerInfo) bool {
 	return true
 }
 
-// GetTimestamp returns the value of Timestamp if it is set or its
+// GetLastAccessTime returns the value of LastAccessTime if it is set or its
 // zero value if it is unset.
-func (v *PollerInfo) GetTimestamp() (o int64) {
-	if v.Timestamp != nil {
-		return *v.Timestamp
+func (v *PollerInfo) GetLastAccessTime() (o int64) {
+	if v.LastAccessTime != nil {
+		return *v.LastAccessTime
 	}
 
 	return
