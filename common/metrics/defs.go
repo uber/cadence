@@ -534,7 +534,10 @@ const (
 	PersistenceErrTimeoutCounter
 	PersistenceErrBusyCounter
 
-	NumCommonMetrics
+	HistoryClientFailures
+	MatchingClientFailures
+
+	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
 
 // History Metrics enum
@@ -542,7 +545,6 @@ const (
 	TaskRequests = iota + NumCommonMetrics
 	TaskFailures
 	TaskLatency
-	HistoryFailures
 	AckLevelUpdateCounter
 	AckLevelUpdateFailedCounter
 	DecisionTypeScheduleActivityCounter
@@ -588,15 +590,15 @@ const (
 
 // Matching metrics enum
 const (
-	MatchingFailures = iota + NumCommonMetrics
-	PollSuccessCounter
+	PollSuccessCounter = iota + NumCommonMetrics
 	PollTimeoutCounter
-	PollErrorsCounter
 	PollSuccessWithSyncCounter
 	LeaseRequestCounter
 	LeaseFailureCounter
 	ConditionFailedErrorCounter
 	RespondQueryTaskFailedCounter
+	SyncThrottleCounter
+	BufferThrottleCounter
 )
 
 // MetricDefs record the metrics for all services
@@ -620,13 +622,14 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		PersistenceErrConditionFailedCounter:          {metricName: "persistence.errors.condition-failed", metricType: Counter},
 		PersistenceErrTimeoutCounter:                  {metricName: "persistence.errors.timeout", metricType: Counter},
 		PersistenceErrBusyCounter:                     {metricName: "persistence.errors.busy", metricType: Counter},
+		HistoryClientFailures:                         {metricName: "client.history.errors", metricType: Counter},
+		MatchingClientFailures:                        {metricName: "client.matching.errors", metricType: Counter},
 	},
 	Frontend: {},
 	History: {
 		TaskRequests:                                 {metricName: "task.requests", metricType: Counter},
 		TaskFailures:                                 {metricName: "task.errors", metricType: Counter},
 		TaskLatency:                                  {metricName: "task.latency", metricType: Counter},
-		HistoryFailures:                              {metricName: "history.errors", metricType: Counter},
 		AckLevelUpdateCounter:                        {metricName: "ack-level-update", metricType: Counter},
 		AckLevelUpdateFailedCounter:                  {metricName: "ack-level-update-failed", metricType: Counter},
 		DecisionTypeScheduleActivityCounter:          {metricName: "schedule-activity-decision", metricType: Counter},
@@ -670,15 +673,15 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		HistoryEventNotificationFailDeliveryCount:    {metricName: "history-event-notification-fail-delivery-count", metricType: Counter},
 	},
 	Matching: {
-		MatchingFailures:              {metricName: "matching.errors", metricType: Counter},
 		PollSuccessCounter:            {metricName: "poll.success"},
 		PollTimeoutCounter:            {metricName: "poll.timeouts"},
-		PollErrorsCounter:             {metricName: "poll.errors"},
 		PollSuccessWithSyncCounter:    {metricName: "poll.success.sync"},
 		LeaseRequestCounter:           {metricName: "lease.requests"},
 		LeaseFailureCounter:           {metricName: "lease.failures"},
 		ConditionFailedErrorCounter:   {metricName: "condition-failed-errors"},
 		RespondQueryTaskFailedCounter: {metricName: "respond-query-failed"},
+		SyncThrottleCounter:           {metricName: "sync.throttle.count"},
+		BufferThrottleCounter:         {metricName: "buffer.throttle.count"},
 	},
 }
 

@@ -18,56 +18,48 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package config
+package matching
 
 import (
-	"fmt"
-	"net/http"
-	"sync/atomic"
-	// DO NOT REMOVE THE LINE BELOW
-	_ "net/http/pprof"
+	"sync"
+	"testing"
 
+	"github.com/uber/cadence/common/mocks"
+
+	log "github.com/sirupsen/logrus"
 	"github.com/uber-common/bark"
+	"github.com/uber/cadence/common/persistence"
 )
 
-type (
-	// PProfInitializerImpl initialize the pprof based on config
-	PProfInitializerImpl struct {
-		PProf  *PProf
-		Logger bark.Logger
+func TestDeliverBufferTasks(t *testing.T) {
+	tests := []func(tlm *taskListManagerImpl){
+		func(tlm *taskListManagerImpl) { close(tlm.taskBuffer) },
+		func(tlm *taskListManagerImpl) { close(tlm.deliverBufferShutdownCh) },
+		func(tlm *taskListManagerImpl) { tlm.cancelFunc() },
 	}
-)
-
-const (
-	pprofNotInitialized int32 = 0
-	pprofInitialized    int32 = 1
-)
-
-// the pprof should only be initialized once per process
-// otherwise, the caller / worker will experience weird issue
-var pprofStatus = pprofNotInitialized
-
-// NewInitializer create a new instance of PProf Initializer
-func (cfg *PProf) NewInitializer(logger bark.Logger) *PProfInitializerImpl {
-	return &PProfInitializerImpl{
-		PProf:  cfg,
-		Logger: logger,
+	for _, test := range tests {
+		tlm := createTestTaskListManager()
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			tlm.deliverBufferTasksForPoll()
+		}()
+		test(tlm)
+		// deliverBufferTasksForPoll should stop after invokation of the test function
+		wg.Wait()
 	}
 }
 
-// Start the pprof based on config
-func (initializer *PProfInitializerImpl) Start() error {
-	port := initializer.PProf.Port
-	if port == 0 {
-		initializer.Logger.Info("PProf not started due to port not set")
-		return nil
-	}
-
-	if atomic.CompareAndSwapInt32(&pprofStatus, pprofNotInitialized, pprofInitialized) {
-		go func() {
-			initializer.Logger.Infof("PProf listen on %d", port)
-			http.ListenAndServe(fmt.Sprintf("localhost:%d", port), nil)
-		}()
-	}
-	return nil
+func createTestTaskListManager() *taskListManagerImpl {
+	logger := bark.NewLoggerFromLogrus(log.New())
+	tm := newTestTaskManager(logger)
+	cfg := defaultTestConfig()
+	me := newMatchingEngine(
+		cfg, tm, &mocks.HistoryClient{}, logger,
+	)
+	tl := "tl"
+	dID := "domain"
+	tlID := &taskListID{domainID: dID, taskListName: tl, taskType: persistence.TaskListTypeActivity}
+	return newTaskListManager(me, tlID, cfg).(*taskListManagerImpl)
 }
