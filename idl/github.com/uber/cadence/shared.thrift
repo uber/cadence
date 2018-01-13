@@ -556,7 +556,7 @@ struct SignalExternalWorkflowExecutionInitiatedEventAttributes {
 }
 
 struct SignalExternalWorkflowExecutionFailedEventAttributes {
-  10: optional SignalExternalWorkflowExecutionFailedCause cause,
+  10: optional SignalExternalWorkflowExecutionFailedCause cause
   20: optional i64 (js.type = "Long") decisionTaskCompletedEventId
   30: optional string domain
   40: optional WorkflowExecution workflowExecution

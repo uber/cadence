@@ -626,13 +626,20 @@ func (t *transferQueueProcessorImpl) processSignalExecution(task *persistence.Tr
 		return nil
 	}
 
+	targetRunID := task.TargetRunID
+	if targetRunID == persistence.GetTransferTaskTypeTransferTargetRunID() {
+		// when signal decision has empty runID, db will save default runID to transfer task.
+		// change it to empty string here, so that getOrCreateWorkflowExecution can return current runID for this workflow.
+		targetRunID = ""
+	}
+
 	signalRequest := &history.SignalWorkflowExecutionRequest{
 		DomainUUID: common.StringPtr(targetDomainID),
 		SignalRequest: &workflow.SignalWorkflowExecutionRequest{
 			Domain: common.StringPtr(targetDomainID),
 			WorkflowExecution: &workflow.WorkflowExecution{
 				WorkflowId: common.StringPtr(task.TargetWorkflowID),
-				RunId:      common.StringPtr(task.TargetRunID),
+				RunId:      common.StringPtr(targetRunID),
 			},
 			Identity:   common.StringPtr(identityHistoryService),
 			SignalName: common.StringPtr(ri.SignalName),
@@ -674,7 +681,7 @@ func (t *transferQueueProcessorImpl) processSignalExecution(task *persistence.Tr
 		DomainUUID: common.StringPtr(targetDomainID),
 		WorkflowExecution: &workflow.WorkflowExecution{
 			WorkflowId: common.StringPtr(task.TargetWorkflowID),
-			RunId:      common.StringPtr(task.TargetRunID),
+			RunId:      common.StringPtr(targetRunID),
 		},
 		RequestId: common.StringPtr(ri.SignalRequestID),
 	}

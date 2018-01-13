@@ -1772,6 +1772,9 @@ func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferT
 			targetDomainID = task.(*SignalExecutionTask).TargetDomainID
 			targetWorkflowID = task.(*SignalExecutionTask).TargetWorkflowID
 			targetRunID = task.(*SignalExecutionTask).TargetRunID
+			if targetRunID == "" {
+				targetRunID = transferTaskTypeTransferTargetRunID
+			}
 			scheduleID = task.(*SignalExecutionTask).InitiatedID
 
 		case TransferTaskTypeStartChildExecution:
@@ -2470,4 +2473,9 @@ func SetVisibilityTSFrom(task Task, t time.Time) {
 	case TaskTypeDeleteHistoryEvent:
 		task.(*DeleteHistoryEventTask).VisibilityTimestamp = t
 	}
+}
+
+// GetTransferTaskTypeTransferTargetRunID - helper method to the default runID
+func GetTransferTaskTypeTransferTargetRunID() string {
+	return transferTaskTypeTransferTargetRunID
 }
