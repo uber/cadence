@@ -623,6 +623,9 @@ func (t *transferQueueProcessorImpl) processSignalExecution(task *persistence.Tr
 	initiatedEventID := task.ScheduleID
 	ri, isRunning := msBuilder.GetSignalInfo(initiatedEventID)
 	if !isRunning {
+		// TODO: here we should also RemoveSignalMutableState from target workflow
+		// Otherwise, target SignalRequestID still can leak if shard restart after requestSignalCompleted
+		// To do that, probably need to add the SignalRequestID in transfer task.
 		return nil
 	}
 
