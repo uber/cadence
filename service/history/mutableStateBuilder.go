@@ -1408,13 +1408,10 @@ func (e *mutableStateBuilder) AddExternalWorkflowExecutionSignaled(initiatedID i
 
 	if err := e.DeletePendingSignal(initiatedID); err == nil {
 		return e.hBuilder.AddExternalWorkflowExecutionSignaled(initiatedID, domain, workflowID, runID, control)
-	} else {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionWorkflowSignalRequested, e.GetNextEventID(),
-			fmt.Sprintf("{InitiatedID: %v, Exist: %v}", initiatedID, ok))
-		return nil
 	}
 
-
+	logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionWorkflowSignalRequested, e.GetNextEventID(),
+		fmt.Sprintf("{InitiatedID: %v, Exist: %v}", initiatedID, ok))
 	return nil
 }
 
@@ -1433,12 +1430,10 @@ func (e *mutableStateBuilder) AddSignalExternalWorkflowExecutionFailedEvent(
 	if e.DeletePendingSignal(initiatedID) == nil {
 		return e.hBuilder.AddSignalExternalWorkflowExecutionFailedEvent(decisionTaskCompletedEventID, initiatedID,
 			domain, workflowID, runID, control, cause)
-	} else {
-		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionWorkflowSignalRequested, e.GetNextEventID(),
-			fmt.Sprintf("{InitiatedID: %v, Exist: %v}", initiatedID, ok))
-		return nil
 	}
 
+	logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionWorkflowSignalRequested, e.GetNextEventID(),
+		fmt.Sprintf("{InitiatedID: %v, Exist: %v}", initiatedID, ok))
 	return nil
 }
 
