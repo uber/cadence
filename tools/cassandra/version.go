@@ -133,13 +133,16 @@ func getExpectedVersion(dir string) (string, error) {
 // rollback, the code version (expected version) would fall lower than the actual version in
 // cassandra.
 func VerifyCompatibleVersion(cfg config.Cassandra) error {
-	_, filename, _, ok := runtime.Caller(0)
+	_, filename, _, ok := runtime.Caller(1)
 	if !ok {
 		return errors.New("unable to get the current function path")
 	}
-	// Traverse 3 levels up to go to project root to navigate to the schema/ directory
+	// Traverse until project root i.e. "cadence" dir to navigate to the schema/ directory
 	projRoot := filename
-	for i := 0; i < 3; i++ {
+	if _, err := ioutil.ReadDir(path.Dir(projRoot)); err != nil {
+		return err
+	}
+	for path.Base(projRoot) != "cadence" {
 		projRoot = path.Dir(projRoot)
 		if projRoot == "." {
 			return fmt.Errorf("Unable to get project root from path: %s", filename)
