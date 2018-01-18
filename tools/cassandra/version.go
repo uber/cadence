@@ -139,9 +139,6 @@ func VerifyCompatibleVersion(cfg config.Cassandra) error {
 	}
 	// Traverse until project root i.e. "cadence" dir to navigate to the schema/ directory
 	projRoot := filename
-	if _, err := ioutil.ReadDir(path.Dir(projRoot)); err != nil {
-		return err
-	}
 	for path.Base(projRoot) != "cadence" {
 		projRoot = path.Dir(projRoot)
 		if projRoot == "." {
