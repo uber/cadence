@@ -573,7 +573,6 @@ const (
 	ConcurrencyUpdateFailureCounter
 	CadenceErrEventAlreadyStartedCounter
 	CadenceErrShardOwnershipLostCounter
-	CadenceErrWorkflowAlreadyStartedCounter
 	HeartbeatTimeoutCounter
 	ScheduleToStartTimeoutCounter
 	StartToCloseTimeoutCounter
@@ -659,7 +658,6 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ConcurrencyUpdateFailureCounter:              {metricName: "concurrency-update-failure", metricType: Counter},
 		CadenceErrShardOwnershipLostCounter:          {metricName: "cadence.errors.shard-ownership-lost", metricType: Counter},
 		CadenceErrEventAlreadyStartedCounter:         {metricName: "cadence.errors.event-already-started", metricType: Counter},
-		CadenceErrWorkflowAlreadyStartedCounter:      {metricName: "cadence.errors.workflow-already-started", metricType: Counter},
 		HeartbeatTimeoutCounter:                      {metricName: "heartbeat-tiemout", metricType: Counter},
 		ScheduleToStartTimeoutCounter:                {metricName: "schedule-to-start-timeout", metricType: Counter},
 		StartToCloseTimeoutCounter:                   {metricName: "start-to-close-timeout", metricType: Counter},

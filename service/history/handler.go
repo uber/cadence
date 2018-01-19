@@ -723,7 +723,7 @@ func (h *Handler) updateErrorMetric(scope int, err error) {
 	case *gen.BadRequestError:
 		h.metricsClient.IncCounter(scope, metrics.CadenceErrBadRequestCounter)
 	case *gen.WorkflowExecutionAlreadyStartedError:
-		h.metricsClient.IncCounter(scope, metrics.CadenceErrWorkflowAlreadyStartedCounter)
+		h.metricsClient.IncCounter(scope, metrics.CadenceErrExecutionAlreadyStartedCounter)
 	case *gen.EntityNotExistsError:
 		h.metricsClient.IncCounter(scope, metrics.CadenceErrEntityNotExistsCounter)
 	case *gen.CancellationAlreadyRequestedError:
