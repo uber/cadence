@@ -324,8 +324,8 @@ func (s *matchingEngineSuite) TestTaskWriterShutdown() {
 		taskListName: tl,
 		taskType:     persistence.TaskListTypeActivity,
 	}
-
-	tlm, err := s.matchingEngine.getTaskListManager(tlID)
+	tlKind := common.TaskListKindPtr(workflow.TaskListKindNormal)
+	tlm, err := s.matchingEngine.getTaskListManager(tlID, tlKind)
 	s.Nil(err)
 
 	addRequest := matching.AddActivityTaskRequest{
@@ -482,6 +482,7 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 	domainID := "domainId"
 	tl := "makeToast"
 	tlID := &taskListID{domainID: domainID, taskListName: tl, taskType: persistence.TaskListTypeActivity}
+	tlKind := common.TaskListKindPtr(workflow.TaskListKindNormal)
 	s.matchingEngine.config.RangeSize = rangeSize // override to low number for the test
 	// So we can get snapshots
 	scope := tally.NewTestScope("test", nil)
@@ -490,7 +491,7 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 	dispatchTTL := time.Nanosecond
 	dPtr := _defaultTaskDispatchRPS
 	mgr := newTaskListManagerWithRateLimiter(
-		s.matchingEngine, tlID, s.matchingEngine.config,
+		s.matchingEngine, tlID, tlKind, s.matchingEngine.config,
 		newRateLimiter(&dPtr, dispatchTTL, _minBurst),
 	)
 	s.matchingEngine.updateTaskList(tlID, mgr)
@@ -643,11 +644,12 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 	domainID := "domainId"
 	tl := "makeToast"
 	tlID := &taskListID{domainID: domainID, taskListName: tl, taskType: persistence.TaskListTypeActivity}
+	tlKind := common.TaskListKindPtr(workflow.TaskListKindNormal)
 	dispatchTTL := time.Nanosecond
 	s.matchingEngine.config.RangeSize = rangeSize // override to low number for the test
 	dPtr := _defaultTaskDispatchRPS
 	mgr := newTaskListManagerWithRateLimiter(
-		s.matchingEngine, tlID, s.matchingEngine.config,
+		s.matchingEngine, tlID, tlKind, s.matchingEngine.config,
 		newRateLimiter(&dPtr, dispatchTTL, _minBurst),
 	)
 	s.matchingEngine.updateTaskList(tlID, mgr)
@@ -1223,6 +1225,7 @@ func (s *matchingEngineSuite) TestAddTaskAfterStartFailure() {
 	domainID := "domainId"
 	tl := "makeToast"
 	tlID := &taskListID{domainID: domainID, taskListName: tl, taskType: persistence.TaskListTypeActivity}
+	tlKind := common.TaskListKindPtr(workflow.TaskListKindNormal)
 
 	taskList := &workflow.TaskList{}
 	taskList.Name = &tl
@@ -1241,12 +1244,12 @@ func (s *matchingEngineSuite) TestAddTaskAfterStartFailure() {
 	s.NoError(err)
 	s.EqualValues(1, s.taskManager.getTaskCount(tlID))
 
-	ctx, err := s.matchingEngine.getTask(context.Background(), tlID, nil)
+	ctx, err := s.matchingEngine.getTask(context.Background(), tlID, nil, tlKind)
 	s.NoError(err)
 
 	ctx.completeTask(errors.New("test error"))
 	s.EqualValues(1, s.taskManager.getTaskCount(tlID))
-	ctx2, err := s.matchingEngine.getTask(context.Background(), tlID, nil)
+	ctx2, err := s.matchingEngine.getTask(context.Background(), tlID, nil, tlKind)
 	s.NoError(err)
 
 	s.NotEqual(ctx.info.TaskID, ctx2.info.TaskID)
@@ -1478,6 +1481,7 @@ func (m *testTaskManager) LeaseTaskList(request *persistence.LeaseTaskListReques
 			Name:     request.TaskList,
 			TaskType: request.TaskType,
 			RangeID:  tlm.rangeID,
+			Kind:     request.TaskListKind,
 		},
 	}, nil
 }

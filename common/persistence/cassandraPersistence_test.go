@@ -657,6 +657,54 @@ func (s *cassandraPersistenceSuite) TestLeaseTaskList() {
 	tli = response.TaskListInfo
 	s.EqualValues(2, tli.RangeID)
 	s.EqualValues(0, tli.AckLevel)
+
+	taskListInfo := &TaskListInfo{
+		DomainID: domainID,
+		Name:     taskList,
+		TaskType: TaskListTypeActivity,
+		RangeID:  2,
+		AckLevel: 0,
+		Kind:     TaskListKindNormal,
+	}
+	_, err = s.TaskMgr.UpdateTaskList(&UpdateTaskListRequest{
+		TaskListInfo: taskListInfo,
+	})
+	s.NoError(err)
+
+	taskListInfo.RangeID = 3
+	_, err = s.TaskMgr.UpdateTaskList(&UpdateTaskListRequest{
+		TaskListInfo: taskListInfo,
+	})
+	s.Error(err)
+}
+
+func (s *cassandraPersistenceSuite) TestLeaseTaskList_Sticky() {
+	domainID := uuid.New()
+	taskList := "aaaaaaa"
+	response, err := s.TaskMgr.LeaseTaskList(&LeaseTaskListRequest{
+		DomainID:     domainID,
+		TaskList:     taskList,
+		TaskType:     TaskListTypeDecision,
+		TaskListKind: TaskListKindWorker,
+	})
+	s.NoError(err)
+	tli := response.TaskListInfo
+	s.EqualValues(1, tli.RangeID)
+	s.EqualValues(0, tli.AckLevel)
+	s.EqualValues(TaskListKindWorker, tli.Kind)
+
+	taskListInfo := &TaskListInfo{
+		DomainID: domainID,
+		Name:     taskList,
+		TaskType: TaskListTypeDecision,
+		RangeID:  2,
+		AckLevel: 0,
+		Kind:     TaskListKindWorker,
+	}
+	_, err = s.TaskMgr.UpdateTaskList(&UpdateTaskListRequest{
+		TaskListInfo: taskListInfo,
+	})
+	s.NoError(err) // because update with ttl doesn't check rangeID
 }
 
 func (s *cassandraPersistenceSuite) TestTimerTasks() {
