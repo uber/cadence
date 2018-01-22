@@ -484,7 +484,8 @@ const (
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
 		`and visibility_ts = ? ` +
-		`and task_id = ? `
+		`and task_id = ? ` +
+		`IF next_event_id = ?`
 
 	templateGetTransferTasksQuery = `SELECT transfer ` +
 		`FROM executions ` +
@@ -2071,7 +2072,8 @@ func (d *cassandraPersistence) updateSignalsRequested(batch *gocql.Batch, signal
 			workflowID,
 			runID,
 			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID)
+			rowTypeExecutionTaskID,
+			condition)
 	}
 }
 
