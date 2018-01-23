@@ -26,7 +26,6 @@ import (
 	"math"
 	"sync"
 
-	"fmt"
 	"github.com/pborman/uuid"
 	"github.com/uber-common/bark"
 	h "github.com/uber/cadence/.gen/go/history"
@@ -486,7 +485,6 @@ func (e *matchingEngineImpl) DescribeTaskList(ctx context.Context, request *m.De
 
 	taskList := newTaskListID(domainID, taskListName, taskListType)
 	taskListKind := common.TaskListKindPtr(request.DescRequest.TaskList.GetKind())
-	fmt.Printf("vancexu in DescribeTaskList: %v\n", request.DescRequest.TaskList.GetKind())
 	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
 	if err != nil {
 		return nil, err
