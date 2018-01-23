@@ -23,6 +23,10 @@ package matching
 import (
 	"sync"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"golang.org/x/time/rate"
 
 	"github.com/uber/cadence/common/mocks"
 
@@ -49,6 +53,13 @@ func TestDeliverBufferTasks(t *testing.T) {
 		// deliverBufferTasksForPoll should stop after invokation of the test function
 		wg.Wait()
 	}
+}
+
+func TestNewRateLimiter(t *testing.T) {
+	maxDispatch := float64(0.01)
+	rl := newRateLimiter(&maxDispatch, time.Second)
+	limiter := rl.globalLimiter.Load().(*rate.Limiter)
+	assert.Equal(t, 5, limiter.Burst())
 }
 
 func createTestTaskListManager() *taskListManagerImpl {
