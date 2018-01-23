@@ -81,9 +81,12 @@ func newRateLimiter(maxDispatchPerSecond *float64, ttl time.Duration) rateLimite
 		ttlTimer:             time.NewTimer(ttl),
 	}
 	// Note: Potentially expose burst config in future
-	limiter := rate.NewLimiter(
-		rate.Limit(*maxDispatchPerSecond), int(*maxDispatchPerSecond),
-	)
+	// Set burst to be a minimum of 5 when maxDispatch is set to low numbers
+	burst := int(*maxDispatchPerSecond)
+	if burst <= 5 {
+		burst = 5
+	}
+	limiter := rate.NewLimiter(rate.Limit(*maxDispatchPerSecond), burst)
 	rl.globalLimiter.Store(limiter)
 	return rl
 }
@@ -626,7 +629,7 @@ deliverBufferTasksLoop:
 				c.logger.Info("Tasklist manager context is cancelled, shutting down")
 				break deliverBufferTasksLoop
 			}
-			c.logger.Warnf("Unable to send tasks for poll, rate limit failed: %s", err.Error())
+			c.logger.Debugf("Unable to send tasks for poll, rate limit failed: %s", err.Error())
 			c.metricsClient.IncCounter(metrics.MatchingTaskListMgrScope, metrics.BufferThrottleCounter)
 			continue
 		}
