@@ -35,6 +35,8 @@ import (
 	"github.com/uber/cadence/common/persistence"
 )
 
+const _minBurst = 5
+
 func TestDeliverBufferTasks(t *testing.T) {
 	tests := []func(tlm *taskListManagerImpl){
 		func(tlm *taskListManagerImpl) { close(tlm.taskBuffer) },
@@ -57,9 +59,9 @@ func TestDeliverBufferTasks(t *testing.T) {
 
 func TestNewRateLimiter(t *testing.T) {
 	maxDispatch := float64(0.01)
-	rl := newRateLimiter(&maxDispatch, time.Second)
+	rl := newRateLimiter(&maxDispatch, time.Second, _minBurst)
 	limiter := rl.globalLimiter.Load().(*rate.Limiter)
-	assert.Equal(t, 5, limiter.Burst())
+	assert.Equal(t, _minBurst, limiter.Burst())
 }
 
 func createTestTaskListManager() *taskListManagerImpl {

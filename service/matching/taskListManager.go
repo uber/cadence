@@ -74,7 +74,7 @@ type rateLimiter struct {
 	ttl      time.Duration
 }
 
-func newRateLimiter(maxDispatchPerSecond *float64, ttl time.Duration) rateLimiter {
+func newRateLimiter(maxDispatchPerSecond *float64, ttl time.Duration, minBurst int) rateLimiter {
 	rl := rateLimiter{
 		maxDispatchPerSecond: maxDispatchPerSecond,
 		ttl:                  ttl,
@@ -83,8 +83,8 @@ func newRateLimiter(maxDispatchPerSecond *float64, ttl time.Duration) rateLimite
 	// Note: Potentially expose burst config in future
 	// Set burst to be a minimum of 5 when maxDispatch is set to low numbers
 	burst := int(*maxDispatchPerSecond)
-	if burst <= 5 {
-		burst = 5
+	if burst <= minBurst {
+		burst = minBurst
 	}
 	limiter := rate.NewLimiter(rate.Limit(*maxDispatchPerSecond), burst)
 	rl.globalLimiter.Store(limiter)
@@ -133,7 +133,7 @@ func newTaskListManager(
 	e *matchingEngineImpl, taskList *taskListID, config *Config,
 ) taskListManager {
 	dPtr := _defaultTaskDispatchRPS
-	rl := newRateLimiter(&dPtr, _defaultTaskDispatchRPSTTL)
+	rl := newRateLimiter(&dPtr, _defaultTaskDispatchRPSTTL, config.MinTaskThrottlingBurstSize)
 	return newTaskListManagerWithRateLimiter(e, taskList, config, rl)
 }
 
