@@ -1524,8 +1524,7 @@ func (d *cassandraPersistence) LeaseTaskList(request *LeaseTaskListRequest) (*Le
 func (d *cassandraPersistence) UpdateTaskList(request *UpdateTaskListRequest) (*UpdateTaskListResponse, error) {
 	tli := request.TaskListInfo
 
-	if tli.Kind == TaskListKindWorker { // if task_list is sticky, then update with TTL
-		fmt.Println("vancexu in updateTaskList with TTL")
+	if tli.Kind == TaskListKindSticky { // if task_list is sticky, then update with TTL
 		query := d.session.Query(templateUpdateTaskListQueryWithTTL,
 			tli.DomainID,
 			&tli.Name,

@@ -6,6 +6,6 @@
     "add_client_version.cql",
     "add_last_first_event_id.cql",
     "add_signal_decision.cql",
-    "add_tasklist_kind.cql",
+    "add_tasklist_kind.cql"
   ]
 }

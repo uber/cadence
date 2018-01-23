@@ -203,7 +203,7 @@ func (s *matchingEngineSuite) PollForTasksEmptyResultTest(taskType int) {
 
 	taskList := &workflow.TaskList{}
 	taskList.Name = &tl
-	tasklistType := workflow.TaskListTypeDecision
+	var taskListType workflow.TaskListType
 	tlID := newTaskListID(domainID, tl, taskType)
 	//const rangeID = 123
 	const pollCount = 10
@@ -219,7 +219,7 @@ func (s *matchingEngineSuite) PollForTasksEmptyResultTest(taskType int) {
 			s.NoError(err)
 			s.Equal(emptyPollForActivityTaskResponse, pollResp)
 
-			tasklistType = workflow.TaskListTypeActivity
+			taskListType = workflow.TaskListTypeActivity
 		} else {
 			resp, err := s.matchingEngine.PollForDecisionTask(s.callContext, &matching.PollForDecisionTaskRequest{
 				DomainUUID: common.StringPtr(domainID),
@@ -230,18 +230,20 @@ func (s *matchingEngineSuite) PollForTasksEmptyResultTest(taskType int) {
 			s.NoError(err)
 			s.Equal(emptyPollForDecisionTaskResponse, resp)
 
-			tasklistType = workflow.TaskListTypeDecision
+			taskListType = workflow.TaskListTypeDecision
 		}
 		// check the poller information
 		descResp, err := s.matchingEngine.DescribeTaskList(s.callContext, &matching.DescribeTaskListRequest{
 			DomainUUID: common.StringPtr(domainID),
 			DescRequest: &workflow.DescribeTaskListRequest{
 				TaskList:     taskList,
-				TaskListType: &tasklistType,
+				TaskListType: &taskListType,
 			},
 		})
 		s.NoError(err)
+		fmt.Printf("%v\n", len(descResp.Pollers))
 		s.Equal(1, len(descResp.Pollers))
+		fmt.Printf("%v\n", descResp.Pollers)
 		s.Equal(identity, descResp.Pollers[0].GetIdentity())
 		s.NotEmpty(descResp.Pollers[0].GetLastAccessTime())
 	}

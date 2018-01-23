@@ -207,7 +207,7 @@ enum HistoryEventFilterType {
 
 enum TaskListKind {
   NORMAL,
-  WORKER,
+  STICKY,
 }
 
 struct WorkflowType {

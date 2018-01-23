@@ -62,7 +62,7 @@ const (
 // Kinds of task lists
 const (
 	TaskListKindNormal = iota
-	TaskListKindWorker
+	TaskListKindSticky
 )
 
 // Transfer task types

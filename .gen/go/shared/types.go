@@ -23154,14 +23154,14 @@ type TaskListKind int32
 
 const (
 	TaskListKindNormal TaskListKind = 0
-	TaskListKindWorker TaskListKind = 1
+	TaskListKindSticky TaskListKind = 1
 )
 
 // TaskListKind_Values returns all recognized values of TaskListKind.
 func TaskListKind_Values() []TaskListKind {
 	return []TaskListKind{
 		TaskListKindNormal,
-		TaskListKindWorker,
+		TaskListKindSticky,
 	}
 }
 
@@ -23175,8 +23175,8 @@ func (v *TaskListKind) UnmarshalText(value []byte) error {
 	case "NORMAL":
 		*v = TaskListKindNormal
 		return nil
-	case "WORKER":
-		*v = TaskListKindWorker
+	case "STICKY":
+		*v = TaskListKindSticky
 		return nil
 	default:
 		return fmt.Errorf("unknown enum value %q for %q", value, "TaskListKind")
@@ -23217,7 +23217,7 @@ func (v TaskListKind) String() string {
 	case 0:
 		return "NORMAL"
 	case 1:
-		return "WORKER"
+		return "STICKY"
 	}
 	return fmt.Sprintf("TaskListKind(%d)", w)
 }
@@ -23239,7 +23239,7 @@ func (v TaskListKind) MarshalJSON() ([]byte, error) {
 	case 0:
 		return ([]byte)("\"NORMAL\""), nil
 	case 1:
-		return ([]byte)("\"WORKER\""), nil
+		return ([]byte)("\"STICKY\""), nil
 	}
 	return ([]byte)(strconv.FormatInt(int64(v), 10)), nil
 }

@@ -238,7 +238,7 @@ type taskListManagerImpl struct {
 	// Rate limiter for task dispatch
 	rateLimiter rateLimiter
 
-	taskListKind *s.TaskListKind // TaskListKindWorker is sticky taskList that needs different process in persistence
+	taskListKind *s.TaskListKind // sticky taskList has different process in persistence
 }
 
 // getTaskResult contains task info and optional channel to notify createTask caller
