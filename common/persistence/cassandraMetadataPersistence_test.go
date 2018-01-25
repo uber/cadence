@@ -91,6 +91,8 @@ func (m *metadataPersistenceSuite) TestCreateDomain() {
 	id := resp0.ID
 	m.True(len(id) > 0)
 
+	// for domain which do not have replication config set, will default to
+	// use current cluster as active, with current cluster as all clusters
 	resp1, err1 := m.GetDomain(id, "")
 	m.Nil(err1)
 	m.NotNil(resp1)
@@ -103,10 +105,8 @@ func (m *metadataPersistenceSuite) TestCreateDomain() {
 	m.Equal(emitMetric, resp1.Config.EmitMetric)
 	m.Equal(testCurrentClusterName, resp1.ReplicationConfig.ActiveClusterName)
 	m.Equal(int64(0), resp1.ReplicationConfig.FailoverVersion)
-	m.Equal(len(testAllClusterNames), len(resp1.ReplicationConfig.Clusters))
-	for index := range testAllClusterNames {
-		m.Equal(testAllClusterNames[index], resp1.ReplicationConfig.Clusters[index].ClusterName)
-	}
+	m.Equal(1, len(resp1.ReplicationConfig.Clusters))
+	m.True(resp1.ReplicationConfig.Clusters[0].ClusterName == testCurrentClusterName)
 	m.Equal(int64(0), resp1.Version)
 
 	resp2, err2 := m.CreateDomain(

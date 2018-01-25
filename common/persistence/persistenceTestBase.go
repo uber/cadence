@@ -47,10 +47,11 @@ const (
 	testInitialFailoverVersion   = int64(0)
 	testFailoverVersionIncrement = int64(10)
 	testCurrentClusterName       = "current-cluster"
+	testAlternativeClusterName   = "alternative-cluster"
 )
 
 var (
-	testAllClusterNames = []string{testCurrentClusterName}
+	testAllClusterNames = []string{testCurrentClusterName, testAlternativeClusterName}
 )
 
 type (
