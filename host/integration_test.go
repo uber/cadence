@@ -1076,7 +1076,7 @@ func (s *integrationSuite) TestActivityTimeouts() {
 					TaskList:     &workflow.TaskList{Name: common.StringPtr("NoWorker")},
 					Input:        []byte("ScheduleToStart"),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(35),
-					ScheduleToStartTimeoutSeconds: common.Int32Ptr(3),  // ActivityID A is expected to timeout using ScheduleToStart
+					ScheduleToStartTimeoutSeconds: common.Int32Ptr(3), // ActivityID A is expected to timeout using ScheduleToStart
 					StartToCloseTimeoutSeconds:    common.Int32Ptr(30),
 					HeartbeatTimeoutSeconds:       common.Int32Ptr(0),
 				},
@@ -1114,7 +1114,7 @@ func (s *integrationSuite) TestActivityTimeouts() {
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(35),
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(20),
 					StartToCloseTimeoutSeconds:    common.Int32Ptr(15),
-					HeartbeatTimeoutSeconds:       common.Int32Ptr(3),  // ActivityID D is expected to timeout using Heartbeat
+					HeartbeatTimeoutSeconds:       common.Int32Ptr(3), // ActivityID D is expected to timeout using Heartbeat
 				},
 			}}, nil
 		} else if previousStartedEventID > 0 {
