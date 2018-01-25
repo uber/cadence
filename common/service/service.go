@@ -93,6 +93,7 @@ func New(params *BootstrapParams) Service {
 		pprofInitializer:      params.PProfInitializer,
 		metricsScope:          params.MetricScope,
 		numberOfHistoryShards: params.CassandraConfig.NumHistoryShards,
+		clusterMetadata:       params.ClusterMetadata,
 	}
 	sVice.runtimeMetricsReporter = metrics.NewRuntimeMetricsReporter(params.MetricScope, time.Minute, sVice.logger)
 	sVice.metricsClient = metrics.NewClient(params.MetricScope, getMetricsServiceIdx(params.Name, params.Logger))
