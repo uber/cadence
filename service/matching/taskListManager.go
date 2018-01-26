@@ -654,6 +654,7 @@ deliverBufferTasksLoop:
 				c.taskListID.domainID, c.taskListID.taskListName, err.Error(),
 			)
 			c.metricsClient.IncCounter(metrics.MatchingTaskListMgrScope, metrics.BufferThrottleCounter)
+			// This is to prevent busy looping when throttling is set to 0
 			runtime.Gosched()
 			continue
 		}
