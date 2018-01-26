@@ -630,7 +630,7 @@ func (s *matchingEngineSuite) TestConcurrentPublishConsumeActivitiesWithZeroDisp
 	s.logger.Infof("Number of tasks throttled: %d", throttleCt)
 	// atleast once from 0 dispatch poll, and until TTL is hit at which time throttle limit is reset
 	// hard to predict exactly how many times, since the atomic.Value load might not have updated.
-	s.True(throttleCt >= 1 && throttleCt < int64(workerCount*int(taskCount)))
+	s.True(throttleCt >= 1)
 }
 
 func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
