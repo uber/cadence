@@ -661,6 +661,31 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 
 	taskList := &workflow.TaskList{}
 	taskList.Name = &tl
+	var wg sync.WaitGroup
+	wg.Add(2 * workerCount)
+
+	for p := 0; p < workerCount; p++ {
+		go func() {
+			defer wg.Done()
+			for i := int64(0); i < taskCount; i++ {
+				addRequest := matching.AddActivityTaskRequest{
+					SourceDomainUUID:              common.StringPtr(domainID),
+					DomainUUID:                    common.StringPtr(domainID),
+					Execution:                     &workflowExecution,
+					ScheduleId:                    &scheduleID,
+					TaskList:                      taskList,
+					ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
+				}
+
+				err := s.matchingEngine.AddActivityTask(&addRequest)
+				if err != nil {
+					s.logger.Infof("Failure in AddActivityTask: %v", err)
+					i--
+				}
+			}
+		}()
+	}
+
 	activityTypeName := "activity1"
 	activityID := "activityId1"
 	activityType := &workflow.ActivityType{Name: &activityTypeName}
@@ -692,29 +717,7 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 				})}
 		}, nil)
 
-	var wg sync.WaitGroup
-	wg.Add(2 * workerCount)
-
 	for p := 0; p < workerCount; p++ {
-		go func() {
-			defer wg.Done()
-			for i := int64(0); i < taskCount; i++ {
-				addRequest := matching.AddActivityTaskRequest{
-					SourceDomainUUID:              common.StringPtr(domainID),
-					DomainUUID:                    common.StringPtr(domainID),
-					Execution:                     &workflowExecution,
-					ScheduleId:                    &scheduleID,
-					TaskList:                      taskList,
-					ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
-				}
-
-				err := s.matchingEngine.AddActivityTask(&addRequest)
-				if err != nil {
-					s.logger.Infof("Failure in AddActivityTask: %v", err)
-					i--
-				}
-			}
-		}()
 		go func(wNum int) {
 			defer wg.Done()
 			for i := int64(0); i < taskCount; {
