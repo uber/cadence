@@ -624,6 +624,7 @@ func (c *taskListManagerImpl) trySyncMatch(task *persistence.TaskInfo) (*persist
 	request := &getTaskResult{task: task, C: make(chan *syncMatchResponse, 1), syncMatch: true}
 
 	rsv := c.rateLimiter.Reserve()
+	// If we have to wait too long for reservation, better to store in task buffer and handle later.
 	if !rsv.OK() || rsv.Delay() > time.Second {
 		c.metricsClient.IncCounter(metrics.MatchingTaskListMgrScope, metrics.SyncThrottleCounter)
 		return nil, errAddTasklistThrottled
