@@ -663,7 +663,7 @@ func (c *taskListManagerImpl) getTasksPump() {
 
 	go c.deliverBufferTasksForPoll()
 	updateAckTimer := time.NewTimer(c.config.UpdateAckInterval)
-	checkPollerTimer := time.NewTimer(c.config.CheckPollerInterval)
+	checkPollerTimer := time.NewTimer(c.config.IdleTasklistCheckInterval)
 getTasksPumpLoop:
 	for {
 		select {
@@ -723,7 +723,7 @@ getTasksPumpLoop:
 				if len(pollers) == 0 {
 					c.Stop()
 				}
-				checkPollerTimer = time.NewTimer(c.config.CheckPollerInterval)
+				checkPollerTimer = time.NewTimer(c.config.IdleTasklistCheckInterval)
 			}
 		}
 	}

@@ -38,7 +38,7 @@ type Config struct {
 	RangeSize                  int64
 	GetTasksBatchSize          int
 	UpdateAckInterval          time.Duration
-	CheckPollerInterval        time.Duration
+	IdleTasklistCheckInterval  time.Duration
 	MinTaskThrottlingBurstSize int
 
 	// taskWriter configuration
@@ -54,7 +54,7 @@ func NewConfig() *Config {
 		RangeSize:                       100000,
 		GetTasksBatchSize:               1000,
 		UpdateAckInterval:               10 * time.Second,
-		CheckPollerInterval:             5 * time.Minute,
+		IdleTasklistCheckInterval:       5 * time.Minute,
 		OutstandingTaskAppendsThreshold: 250,
 		MaxTaskBatchSize:                100,
 		MinTaskThrottlingBurstSize:      10000,
