@@ -24,6 +24,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -98,7 +99,8 @@ func (rl *rateLimiter) UpdateMaxDispatch(maxDispatchPerSecond *float64) {
 
 func (rl *rateLimiter) storeLimiter(maxDispatchPerSecond *float64) {
 	burst := int(*maxDispatchPerSecond)
-	if burst <= rl.minBurst {
+	// If throttling is zero, burst also has to be 0
+	if *maxDispatchPerSecond != 0 && burst <= rl.minBurst {
 		burst = rl.minBurst
 	}
 	limiter := rate.NewLimiter(rate.Limit(*maxDispatchPerSecond), burst)
@@ -622,10 +624,11 @@ func (c *taskListManagerImpl) trySyncMatch(task *persistence.TaskInfo) (*persist
 	request := &getTaskResult{task: task, C: make(chan *syncMatchResponse, 1), syncMatch: true}
 
 	rsv := c.rateLimiter.Reserve()
-	if !rsv.OK() {
+	if !rsv.OK() || rsv.Delay() > time.Second {
 		c.metricsClient.IncCounter(metrics.MatchingTaskListMgrScope, metrics.SyncThrottleCounter)
 		return nil, errAddTasklistThrottled
 	}
+	time.Sleep(rsv.Delay())
 	select {
 	case c.tasksForPoll <- request: // poller goroutine picked up the task
 		r := <-request.C
@@ -650,6 +653,7 @@ deliverBufferTasksLoop:
 				c.taskListID.domainID, c.taskListID.taskListName, err.Error(),
 			)
 			c.metricsClient.IncCounter(metrics.MatchingTaskListMgrScope, metrics.BufferThrottleCounter)
+			runtime.Gosched()
 			continue
 		}
 		select {

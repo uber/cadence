@@ -55,7 +55,7 @@ func NewConfig() *Config {
 		UpdateAckInterval:               10 * time.Second,
 		OutstandingTaskAppendsThreshold: 250,
 		MaxTaskBatchSize:                100,
-		MinTaskThrottlingBurstSize:      10000,
+		MinTaskThrottlingBurstSize:      1,
 	}
 }
 
