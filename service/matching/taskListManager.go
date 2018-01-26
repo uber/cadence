@@ -72,6 +72,7 @@ type rateLimiter struct {
 	// lower(existing TTL, input TTL). After TTL, pick input TTL if different from existing TTL
 	ttlTimer *time.Timer
 	ttl      time.Duration
+	minBurst int
 }
 
 func newRateLimiter(maxDispatchPerSecond *float64, ttl time.Duration, minBurst int) rateLimiter {
@@ -79,15 +80,10 @@ func newRateLimiter(maxDispatchPerSecond *float64, ttl time.Duration, minBurst i
 		maxDispatchPerSecond: maxDispatchPerSecond,
 		ttl:                  ttl,
 		ttlTimer:             time.NewTimer(ttl),
+		// Note: Potentially expose burst config to users in future
+		minBurst: minBurst,
 	}
-	// Note: Potentially expose burst config in future
-	// Set burst to be a minimum of 5 when maxDispatch is set to low numbers
-	burst := int(*maxDispatchPerSecond)
-	if burst <= minBurst {
-		burst = minBurst
-	}
-	limiter := rate.NewLimiter(rate.Limit(*maxDispatchPerSecond), burst)
-	rl.globalLimiter.Store(limiter)
+	rl.storeLimiter(maxDispatchPerSecond)
 	return rl
 }
 
@@ -95,11 +91,18 @@ func (rl *rateLimiter) UpdateMaxDispatch(maxDispatchPerSecond *float64) {
 	if rl.shouldUpdate(maxDispatchPerSecond) {
 		rl.Lock()
 		rl.maxDispatchPerSecond = maxDispatchPerSecond
-		rl.globalLimiter.Store(
-			rate.NewLimiter(rate.Limit(*maxDispatchPerSecond), int(*maxDispatchPerSecond)),
-		)
+		rl.storeLimiter(maxDispatchPerSecond)
 		rl.Unlock()
 	}
+}
+
+func (rl *rateLimiter) storeLimiter(maxDispatchPerSecond *float64) {
+	burst := int(*maxDispatchPerSecond)
+	if burst <= rl.minBurst {
+		burst = rl.minBurst
+	}
+	limiter := rate.NewLimiter(rate.Limit(*maxDispatchPerSecond), burst)
+	rl.globalLimiter.Store(limiter)
 }
 
 func (rl *rateLimiter) shouldUpdate(maxDispatchPerSecond *float64) bool {
@@ -642,6 +645,10 @@ deliverBufferTasksLoop:
 				c.logger.Info("Tasklist manager context is cancelled, shutting down")
 				break deliverBufferTasksLoop
 			}
+			c.logger.Debugf(
+				"Unable to add buffer task, rate limit failed, domainId: %s, tasklist: %s, error: %s",
+				c.taskListID.domainID, c.taskListID.taskListName, err.Error(),
+			)
 			c.metricsClient.IncCounter(metrics.MatchingTaskListMgrScope, metrics.BufferThrottleCounter)
 			continue
 		}
