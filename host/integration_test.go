@@ -169,7 +169,7 @@ func (s *integrationSuite) TearDownTest() {
 func (s *integrationSuite) TestIntegrationRegisterGetDomain_AllDefault() {
 	domainName := "some random domain name"
 	clusters := []*workflow.ClusterReplicationConfiguration{}
-	for _, replicationConfig := range s.ClusterMetadata.GetOrUseDefaultClusters(nil) {
+	for _, replicationConfig := range persistence.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
 		clusters = append(clusters, &workflow.ClusterReplicationConfiguration{
 			ClusterName: common.StringPtr(replicationConfig.ClusterName),
 		})

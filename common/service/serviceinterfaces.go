@@ -23,9 +23,9 @@ package service
 import (
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/client"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/persistence"
 	"go.uber.org/yarpc"
 )
 
@@ -54,6 +54,6 @@ type (
 		GetHostInfo() *membership.HostInfo
 
 		// GetClusterMetadata returns the service cluster metadata
-		GetClusterMetadata() persistence.ClusterMetadata
+		GetClusterMetadata() cluster.Metadata
 	}
 )

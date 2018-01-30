@@ -87,15 +87,15 @@ const (
 
 type (
 	cassandraMetadataPersistence struct {
-		session         *gocql.Session
-		clusterMetadata ClusterMetadata
-		logger          bark.Logger
+		session            *gocql.Session
+		currentClusterName string
+		logger             bark.Logger
 	}
 )
 
 // NewCassandraMetadataPersistence is used to create an instance of HistoryManager implementation
 func NewCassandraMetadataPersistence(hosts string, port int, user, password, dc string, keyspace string,
-	clusterMetadata ClusterMetadata, logger bark.Logger) (MetadataManager,
+	currentClusterName string, logger bark.Logger) (MetadataManager,
 	error) {
 	cluster := common.NewCassandraCluster(hosts, port, user, password, dc)
 	cluster.Keyspace = keyspace
@@ -110,9 +110,9 @@ func NewCassandraMetadataPersistence(hosts string, port int, user, password, dc 
 	}
 
 	return &cassandraMetadataPersistence{
-		session:         session,
-		clusterMetadata: clusterMetadata,
-		logger:          logger,
+		session:            session,
+		currentClusterName: currentClusterName,
+		logger:             logger,
 	}, nil
 }
 
@@ -128,11 +128,6 @@ func (m *cassandraMetadataPersistence) Close() {
 // delete the orphaned entry from domains table.  There is a chance delete entry could fail and we never delete the
 // orphaned entry from domains table.  We might need a background job to delete those orphaned record.
 func (m *cassandraMetadataPersistence) CreateDomain(request *CreateDomainRequest) (*CreateDomainResponse, error) {
-	clusterReplicationConfigs := []map[string]interface{}{}
-	for index := range request.ReplicationConfig.Clusters {
-		clusterReplicationConfigs = append(clusterReplicationConfigs, request.ReplicationConfig.Clusters[index].serialize())
-	}
-
 	domainUUID := uuid.New()
 	if err := m.session.Query(templateCreateDomainQuery, domainUUID, request.Name).Exec(); err != nil {
 		return nil, &workflow.InternalServiceError{
@@ -151,7 +146,7 @@ func (m *cassandraMetadataPersistence) CreateDomain(request *CreateDomainRequest
 		request.Config.EmitMetric,
 		request.ReplicationConfig.ActiveClusterName,
 		request.ReplicationConfig.FailoverVersion,
-		clusterReplicationConfigs,
+		serializeClusterConfigs(request.ReplicationConfig.Clusters),
 	)
 
 	previous := make(map[string]interface{})
@@ -248,13 +243,9 @@ func (m *cassandraMetadataPersistence) GetDomain(request *GetDomainRequest) (*Ge
 		return nil, handleError(request.Name, request.ID, err)
 	}
 
-	replicationConfig.ActiveClusterName = m.clusterMetadata.GetOrUseDefaultActiveCluster(replicationConfig.ActiveClusterName)
-	for index := range replicationClusters {
-		clusterReplicationConfig := &ClusterReplicationConfig{}
-		clusterReplicationConfig.deserialize(replicationClusters[index])
-		replicationConfig.Clusters = append(replicationConfig.Clusters, clusterReplicationConfig)
-	}
-	replicationConfig.Clusters = m.clusterMetadata.GetOrUseDefaultClusters(replicationConfig.Clusters)
+	replicationConfig.ActiveClusterName = GetOrUseDefaultActiveCluster(m.currentClusterName, replicationConfig.ActiveClusterName)
+	replicationConfig.Clusters = deserializeClusterConfigs(replicationClusters)
+	replicationConfig.Clusters = GetOrUseDefaultClusters(m.currentClusterName, replicationConfig.Clusters)
 
 	return &GetDomainResponse{
 		Info:              info,
@@ -265,11 +256,6 @@ func (m *cassandraMetadataPersistence) GetDomain(request *GetDomainRequest) (*Ge
 }
 
 func (m *cassandraMetadataPersistence) UpdateDomain(request *UpdateDomainRequest) error {
-	clusterReplicationConfigs := []map[string]interface{}{}
-	for index := range request.ReplicationConfig.Clusters {
-		clusterReplicationConfigs = append(clusterReplicationConfigs, request.ReplicationConfig.Clusters[index].serialize())
-	}
-
 	var nextVersion int64 = 1
 	var currentVersion *int64
 	if request.Version > 0 {
@@ -286,7 +272,7 @@ func (m *cassandraMetadataPersistence) UpdateDomain(request *UpdateDomainRequest
 		request.Config.EmitMetric,
 		request.ReplicationConfig.ActiveClusterName,
 		request.ReplicationConfig.FailoverVersion,
-		clusterReplicationConfigs,
+		serializeClusterConfigs(request.ReplicationConfig.Clusters),
 		nextVersion,
 		request.Info.Name,
 		currentVersion,
@@ -344,4 +330,22 @@ func (m *cassandraMetadataPersistence) deleteDomain(name, ID string) error {
 	}
 
 	return nil
+}
+
+func serializeClusterConfigs(replicationConfigs []*ClusterReplicationConfig) []map[string]interface{} {
+	seriaizedReplicationConfigs := []map[string]interface{}{}
+	for index := range replicationConfigs {
+		seriaizedReplicationConfigs = append(seriaizedReplicationConfigs, replicationConfigs[index].serialize())
+	}
+	return seriaizedReplicationConfigs
+}
+
+func deserializeClusterConfigs(replicationConfigs []map[string]interface{}) []*ClusterReplicationConfig {
+	deseriaizedReplicationConfigs := []*ClusterReplicationConfig{}
+	for index := range replicationConfigs {
+		deseriaizedReplicationConfig := &ClusterReplicationConfig{}
+		deseriaizedReplicationConfig.deserialize(replicationConfigs[index])
+		deseriaizedReplicationConfigs = append(deseriaizedReplicationConfigs, deseriaizedReplicationConfig)
+	}
+	return deseriaizedReplicationConfigs
 }

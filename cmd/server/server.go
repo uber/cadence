@@ -24,9 +24,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/uber/cadence/common/persistence"
-
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/service/frontend"
@@ -105,7 +104,7 @@ func (s *server) startService() common.Daemon {
 	params.MetricScope = svcCfg.Metrics.NewScope()
 	params.RPCFactory = svcCfg.RPC.NewFactory(params.Name, params.Logger)
 	params.PProfInitializer = svcCfg.PProf.NewInitializer(params.Logger)
-	params.ClusterMetadata = persistence.NewClusterMetadata(
+	params.ClusterMetadata = cluster.NewMetadata(
 		s.cfg.ClustersInfo.InitialFailoverVersion,
 		s.cfg.ClustersInfo.FailoverVersionIncrement,
 		s.cfg.ClustersInfo.CurrentClusterName,

@@ -34,6 +34,7 @@ import (
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/logging"
 )
 
@@ -85,7 +86,7 @@ type (
 		VisibilityMgr       VisibilityManager
 		ShardInfo           *ShardInfo
 		TaskIDGenerator     TransferTaskIDGenerator
-		ClusterMetadata     ClusterMetadata
+		ClusterMetadata     cluster.Metadata
 		readLevel           int64
 		CassandraTestCluster
 	}
@@ -115,7 +116,7 @@ func (g *testTransferTaskIDGenerator) GetNextTransferTaskID() (int64, error) {
 // SetupWorkflowStoreWithOptions to setup workflow test base
 func (s *TestBase) SetupWorkflowStoreWithOptions(options TestBaseOptions) {
 	log := bark.NewLoggerFromLogrus(log.New())
-	s.ClusterMetadata = NewClusterMetadata(
+	s.ClusterMetadata = cluster.NewMetadata(
 		testInitialFailoverVersion,
 		testFailoverVersionIncrement,
 		testCurrentClusterName,
@@ -154,7 +155,7 @@ func (s *TestBase) SetupWorkflowStoreWithOptions(options TestBaseOptions) {
 	}
 
 	s.MetadataManager, err = NewCassandraMetadataPersistence(options.ClusterHost, options.ClusterPort, options.ClusterUser,
-		options.ClusterPassword, options.Datacenter, s.CassandraTestCluster.keyspace, s.ClusterMetadata, log)
+		options.ClusterPassword, options.Datacenter, s.CassandraTestCluster.keyspace, s.ClusterMetadata.GetCurrentClusterName(), log)
 	if err != nil {
 		log.Fatal(err)
 	}

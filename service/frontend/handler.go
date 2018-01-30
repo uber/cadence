@@ -174,7 +174,7 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 		}
 		clusters = append(clusters, &persistence.ClusterReplicationConfig{ClusterName: clusterName})
 	}
-	clusters = clusterMetadata.GetOrUseDefaultClusters(clusters)
+	clusters = persistence.GetOrUseDefaultClusters(activeClusterName, clusters)
 
 	// validate active cluster is also specified in all clusters
 	activeClusterInClusters := false

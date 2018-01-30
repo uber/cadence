@@ -33,6 +33,7 @@ import (
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	fecli "github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/config"
@@ -67,7 +68,7 @@ type (
 		numberOfHistoryShards int
 		numberOfHistoryHosts  int
 		logger                bark.Logger
-		clusterMetadata       persistence.ClusterMetadata
+		clusterMetadata       cluster.Metadata
 		metadataMgr           persistence.MetadataManager
 		shardMgr              persistence.ShardManager
 		historyMgr            persistence.HistoryManager
@@ -86,7 +87,7 @@ type (
 )
 
 // NewCadence returns an instance that hosts full cadence in one process
-func NewCadence(clusterMetadata persistence.ClusterMetadata, metadataMgr persistence.MetadataManager, shardMgr persistence.ShardManager,
+func NewCadence(clusterMetadata cluster.Metadata, metadataMgr persistence.MetadataManager, shardMgr persistence.ShardManager,
 	historyMgr persistence.HistoryManager, executionMgrFactory persistence.ExecutionManagerFactory,
 	taskMgr persistence.TaskManager, visibilityMgr persistence.VisibilityManager,
 	numberOfHistoryShards, numberOfHistoryHosts int, logger bark.Logger) Cadence {

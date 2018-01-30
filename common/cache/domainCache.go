@@ -34,7 +34,7 @@ const (
 	domainCacheInitialSize     = 1024
 	domainCacheMaxSize         = 16 * 1024
 	domainCacheTTL             = time.Hour
-	domainEntryRefreshInterval = int64(10 * time.Second)
+	domainEntryRefreshInterval = 10 * time.Second
 )
 
 type (
@@ -61,7 +61,7 @@ type (
 		Info              *persistence.DomainInfo
 		Config            *persistence.DomainConfig
 		ReplicationConfig *persistence.DomainReplicationConfig
-		expiry            int64
+		expiry            time.Time
 		sync.RWMutex
 	}
 )
@@ -109,25 +109,15 @@ func (c *domainCache) GetDomainID(name string) (string, error) {
 // GetDomain retrieves the information from the cache if it exists, otherwise retrieves the information from metadata
 // store and writes it to the cache with an expiry before returning back
 func (c *domainCache) getDomain(key, id, name string, cache Cache) (*domainCacheEntry, error) {
-	now := c.timeSource.Now().UnixNano()
+	now := c.timeSource.Now()
 	var result *domainCacheEntry
-
-	copyEntry := func(input *domainCacheEntry) *domainCacheEntry {
-		output := newDomainCacheEntry()
-		output.Info = input.Info
-		output.Config = input.Config
-		output.ReplicationConfig = input.ReplicationConfig
-		return output
-	}
-
-	isCacheExpired := func(entry *domainCacheEntry) bool { return entry.expiry == 0 || now >= entry.expiry }
 
 	entry, cacheHit := cache.Get(key).(*domainCacheEntry)
 	if cacheHit {
 		// Found the information in the cache, lets check if it needs to be refreshed before returning back
 		entry.RLock()
-		if !isCacheExpired(entry) {
-			result = copyEntry(entry)
+		if !entry.isExpired(now) {
+			result = entry.duplicate()
 			entry.RUnlock()
 			return result, nil
 		}
@@ -146,7 +136,7 @@ func (c *domainCache) getDomain(key, id, name string, cache Cache) (*domainCache
 	defer entry.Unlock()
 
 	// Check again under the lock to make sure someone else did not update the entry
-	if isCacheExpired(entry) {
+	if entry.isExpired(now) {
 		response, err := c.metadataMgr.GetDomain(&persistence.GetDomainRequest{
 			Name: name,
 			ID:   id,
@@ -154,7 +144,7 @@ func (c *domainCache) getDomain(key, id, name string, cache Cache) (*domainCache
 
 		// Failed to get domain.  Return stale entry if we have one, otherwise just return error
 		if err != nil {
-			if entry.expiry > 0 {
+			if !entry.expiry.IsZero() {
 				return entry, nil
 			}
 
@@ -164,8 +154,20 @@ func (c *domainCache) getDomain(key, id, name string, cache Cache) (*domainCache
 		entry.Info = response.Info
 		entry.Config = response.Config
 		entry.ReplicationConfig = response.ReplicationConfig
-		entry.expiry = now + domainEntryRefreshInterval
+		entry.expiry = now.Add(domainEntryRefreshInterval)
 	}
 
-	return copyEntry(entry), nil
+	return entry.duplicate(), nil
+}
+
+func (entry *domainCacheEntry) duplicate() *domainCacheEntry {
+	result := newDomainCacheEntry()
+	result.Info = entry.Info
+	result.Config = entry.Config
+	result.ReplicationConfig = entry.ReplicationConfig
+	return result
+}
+
+func (entry *domainCacheEntry) isExpired(now time.Time) bool {
+	return entry.expiry.IsZero() || now.After(entry.expiry)
 }
