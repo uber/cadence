@@ -613,7 +613,7 @@ func (t *transferQueueProcessorImpl) processSignalExecution(task *persistence.Tr
 
 	var msBuilder *mutableStateBuilder
 	msBuilder, err = context.loadWorkflowExecution()
-	if err != nil {
+	if err != nil || !msBuilder.isWorkflowExecutionRunning() {
 		if _, ok := err.(*workflow.EntityNotExistsError); ok {
 			// this could happen if this is a duplicate processing of the task, and the execution has already completed.
 			return nil
@@ -739,7 +739,7 @@ func (t *transferQueueProcessorImpl) processStartChildExecution(task *persistenc
 	// First step is to load workflow execution so we can retrieve the initiated event
 	var msBuilder *mutableStateBuilder
 	msBuilder, err = context.loadWorkflowExecution()
-	if err != nil {
+	if err != nil || !msBuilder.isWorkflowExecutionRunning() {
 		if _, ok := err.(*workflow.EntityNotExistsError); ok {
 			// this could happen if this is a duplicate processing of the task, and the execution has already completed.
 			return nil
