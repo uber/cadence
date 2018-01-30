@@ -630,6 +630,28 @@ func (t *transferQueueProcessorImpl) processSignalExecution(task *persistence.Tr
 		return nil
 	}
 
+	// handle workflow signal itself
+	if domainID == targetDomainID && task.WorkflowID == task.TargetWorkflowID {
+		signalRequest := &history.SignalWorkflowExecutionRequest{
+			DomainUUID: common.StringPtr(domainID),
+			SignalRequest: &workflow.SignalWorkflowExecutionRequest{
+				Domain: common.StringPtr(domainID),
+				WorkflowExecution: &workflow.WorkflowExecution{
+					WorkflowId: common.StringPtr(task.WorkflowID),
+					RunId:      common.StringPtr(task.RunID),
+				},
+				Identity: common.StringPtr(identityHistoryService),
+				Control:  ri.Control,
+			},
+		}
+		err = t.requestSignalFailed(task, context, signalRequest)
+		if _, ok := err.(*workflow.EntityNotExistsError); ok {
+			// this could happen if this is a duplicate processing of the task, and the execution has already completed.
+			return nil
+		}
+		return err
+	}
+
 	targetRunID := task.TargetRunID
 	if targetRunID == persistence.GetTransferTaskTypeTransferTargetRunID() {
 		// when signal decision has empty runID, db will save default runID to transfer task.
