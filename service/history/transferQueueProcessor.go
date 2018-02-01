@@ -479,7 +479,7 @@ func (t *transferQueueProcessorImpl) processCloseExecution(task *persistence.Tra
 
 	// Record closing in visibility store
 	retentionSeconds := int64(0)
-	_, domainConfig, err := t.domainCache.GetDomainByID(task.DomainID)
+	domainEntry, err := t.domainCache.GetDomainByID(task.DomainID)
 	if err != nil {
 		if _, ok := err.(*workflow.EntityNotExistsError); !ok {
 			return err
@@ -487,7 +487,7 @@ func (t *transferQueueProcessorImpl) processCloseExecution(task *persistence.Tra
 		// it is possible that the domain got deleted. Use default retention.
 	} else {
 		// retention in domain config is in days, convert to seconds
-		retentionSeconds = int64(domainConfig.Retention) * 24 * 60 * 60
+		retentionSeconds = int64(domainEntry.Config.Retention) * 24 * 60 * 60
 	}
 
 	return t.visibilityManager.RecordWorkflowExecutionClosed(&persistence.RecordWorkflowExecutionClosedRequest{
@@ -606,14 +606,14 @@ func (t *transferQueueProcessorImpl) processSignalExecution(task *persistence.Tr
 	var context *workflowExecutionContext
 	var release releaseWorkflowExecutionFunc
 	context, release, err = t.cache.getOrCreateWorkflowExecution(domainID, execution)
-	defer release()
 	if err != nil {
 		return err
 	}
+	defer release()
 
 	var msBuilder *mutableStateBuilder
 	msBuilder, err = context.loadWorkflowExecution()
-	if err != nil {
+	if err != nil || !msBuilder.isWorkflowExecutionRunning() {
 		if _, ok := err.(*workflow.EntityNotExistsError); ok {
 			// this could happen if this is a duplicate processing of the task, and the execution has already completed.
 			return nil
@@ -628,6 +628,28 @@ func (t *transferQueueProcessorImpl) processSignalExecution(task *persistence.Tr
 		// Otherwise, target SignalRequestID still can leak if shard restart after requestSignalCompleted
 		// To do that, probably need to add the SignalRequestID in transfer task.
 		return nil
+	}
+
+	// handle workflow signal itself
+	if domainID == targetDomainID && task.WorkflowID == task.TargetWorkflowID {
+		signalRequest := &history.SignalWorkflowExecutionRequest{
+			DomainUUID: common.StringPtr(domainID),
+			SignalRequest: &workflow.SignalWorkflowExecutionRequest{
+				Domain: common.StringPtr(domainID),
+				WorkflowExecution: &workflow.WorkflowExecution{
+					WorkflowId: common.StringPtr(task.WorkflowID),
+					RunId:      common.StringPtr(task.RunID),
+				},
+				Identity: common.StringPtr(identityHistoryService),
+				Control:  ri.Control,
+			},
+		}
+		err = t.requestSignalFailed(task, context, signalRequest)
+		if _, ok := err.(*workflow.EntityNotExistsError); ok {
+			// this could happen if this is a duplicate processing of the task, and the execution has already completed.
+			return nil
+		}
+		return err
 	}
 
 	targetRunID := task.TargetRunID
@@ -717,7 +739,7 @@ func (t *transferQueueProcessorImpl) processStartChildExecution(task *persistenc
 	// First step is to load workflow execution so we can retrieve the initiated event
 	var msBuilder *mutableStateBuilder
 	msBuilder, err = context.loadWorkflowExecution()
-	if err != nil {
+	if err != nil || !msBuilder.isWorkflowExecutionRunning() {
 		if _, ok := err.(*workflow.EntityNotExistsError); ok {
 			// this could happen if this is a duplicate processing of the task, and the execution has already completed.
 			return nil
