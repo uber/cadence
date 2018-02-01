@@ -152,13 +152,6 @@ func (m *cassandraMetadataPersistence) CreateDomain(request *CreateDomainRequest
 	previous := make(map[string]interface{})
 	applied, err := query.MapScanCAS(previous)
 
-	if !applied || err != nil {
-		// Domain already exist.  Delete orphan domain record before returning back to user
-		if errDelete := m.session.Query(templateDeleteDomainQuery, domainUUID).Exec(); errDelete != nil {
-			m.logger.Warnf("Unable to delete orphan domain record. Error: %v", errDelete)
-		}
-	}
-
 	if err != nil {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("CreateDomain operation failed. Inserting into domains_by_name table. Error: %v", err),
@@ -166,6 +159,11 @@ func (m *cassandraMetadataPersistence) CreateDomain(request *CreateDomainRequest
 	}
 
 	if !applied {
+		// Domain already exist.  Delete orphan domain record before returning back to user
+		if errDelete := m.session.Query(templateDeleteDomainQuery, domainUUID).Exec(); errDelete != nil {
+			m.logger.Warnf("Unable to delete orphan domain record. Error: %v", errDelete)
+		}
+
 		if domain, ok := previous["domain"].(map[string]interface{}); ok {
 			msg := fmt.Sprintf("Domain already exists.  DomainId: %v", domain["id"])
 			return nil, &workflow.DomainAlreadyExistsError{
