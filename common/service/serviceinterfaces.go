@@ -56,7 +56,5 @@ type (
 
 		// GetClusterMetadata returns the service cluster metadata
 		GetClusterMetadata() cluster.Metadata
-
-		GetDynamicConfig() dynamicconfig.Client
 	}
 )

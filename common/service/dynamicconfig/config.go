@@ -71,3 +71,22 @@ const (
 	// TaskListName is the tasklist name
 	TaskListName
 )
+
+// NewCollection creates a new collection
+func NewCollection(client Client) *Collection {
+	return &Collection{client}
+}
+
+// Collection of values that are in dynamic config
+type Collection struct {
+	client Client
+}
+
+// TaskListActivitiesPerSecond represents number of activities allowed per tasklist
+func (c *Collection) TaskListActivitiesPerSecond(defaultVal float64) float64 {
+	val, err := c.client.GetValue(TaskListActivitiesPerSecond)
+	if err != nil {
+		return defaultVal
+	}
+	return val.(float64)
+}

@@ -89,7 +89,7 @@ type (
 		runtimeMetricsReporter *metrics.RuntimeMetricsReporter
 		metricsClient          metrics.Client
 		clusterMetadata        cluster.Metadata
-		dynamicConfig          dynamicconfig.Client
+		dynamicCollection      *dynamicconfig.Collection
 	}
 )
 
@@ -105,7 +105,7 @@ func New(params *BootstrapParams) Service {
 		metricsScope:          params.MetricScope,
 		numberOfHistoryShards: params.CassandraConfig.NumHistoryShards,
 		clusterMetadata:       params.ClusterMetadata,
-		dynamicConfig:         params.DynamicConfig,
+		dynamicCollection:     dynamicconfig.NewCollection(params.DynamicConfig),
 	}
 	sVice.runtimeMetricsReporter = metrics.NewRuntimeMetricsReporter(params.MetricScope, time.Minute, sVice.logger)
 	sVice.metricsClient = metrics.NewClient(params.MetricScope, getMetricsServiceIdx(params.Name, params.Logger))
@@ -227,8 +227,8 @@ func (h *serviceImpl) GetClusterMetadata() cluster.Metadata {
 	return h.clusterMetadata
 }
 
-func (h *serviceImpl) GetDynamicConfig() dynamicconfig.Client {
-	return h.dynamicConfig
+func (h *serviceImpl) GetDynamicCollection() *dynamicconfig.Collection {
+	return h.dynamicCollection
 }
 
 func getMetricsServiceIdx(serviceName string, logger bark.Logger) metrics.ServiceIdx {
