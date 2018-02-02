@@ -26,7 +26,7 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/service/dynamic"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 	"go.uber.org/yarpc"
 )
 

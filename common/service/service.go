@@ -33,7 +33,7 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/service/config"
-	"github.com/uber/cadence/common/service/dynamic"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 
 	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
