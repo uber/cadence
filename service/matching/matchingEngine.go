@@ -26,6 +26,8 @@ import (
 	"math"
 	"sync"
 
+	"github.com/uber/cadence/common/service/dynamic"
+
 	"github.com/pborman/uuid"
 	"github.com/uber-common/bark"
 	h "github.com/uber/cadence/.gen/go/history"
@@ -48,6 +50,7 @@ type matchingEngineImpl struct {
 	tokenSerializer common.TaskTokenSerializer
 	logger          bark.Logger
 	metricsClient   metrics.Client
+	dynamicConfig   dynamicconfig.Client
 	taskListsLock   sync.RWMutex                   // locks mutation of taskLists
 	taskLists       map[taskListID]taskListManager // Convert to LRU cache
 	config          *Config
@@ -103,7 +106,9 @@ func NewEngine(taskManager persistence.TaskManager,
 	historyService history.Client,
 	config *Config,
 	logger bark.Logger,
-	metricsClient metrics.Client) Engine {
+	metricsClient metrics.Client,
+	dynamicConfig dynamicconfig.Client,
+) Engine {
 
 	return &matchingEngineImpl{
 		taskManager:     taskManager,
@@ -114,6 +119,7 @@ func NewEngine(taskManager persistence.TaskManager,
 			logging.TagWorkflowComponent: logging.TagValueMatchingEngineComponent,
 		}),
 		metricsClient: metricsClient,
+		dynamicConfig: dynamicConfig,
 		config:        config,
 		queryTaskMap:  make(map[string]chan *workflow.RespondQueryTaskCompletedRequest),
 	}
@@ -361,7 +367,13 @@ pollLoop:
 		taskList := newTaskListID(domainID, taskListName, persistence.TaskListTypeActivity)
 		var maxDispatch *float64
 		if request.TaskListMetadata != nil {
-			maxDispatch = request.TaskListMetadata.MaxTasksPerSecond
+			val, err := e.dynamicConfig.GetValue(dynamicconfig.TaskListActivitiesPerSecond)
+			if err != nil {
+				maxDispatch = request.TaskListMetadata.MaxTasksPerSecond
+			} else {
+				valfloat := val.(float64)
+				maxDispatch = &valfloat
+			}
 		}
 		// Add frontend generated pollerID to context so tasklistMgr can support cancellation of
 		// long-poll when frontend calls CancelOutstandingPoll API

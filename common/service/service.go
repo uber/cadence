@@ -227,6 +227,10 @@ func (h *serviceImpl) GetClusterMetadata() cluster.Metadata {
 	return h.clusterMetadata
 }
 
+func (h *serviceImpl) GetDynamicConfig() dynamicconfig.Client {
+	return h.dynamicConfig
+}
+
 func getMetricsServiceIdx(serviceName string, logger bark.Logger) metrics.ServiceIdx {
 	switch serviceName {
 	case common.FrontendServiceName:

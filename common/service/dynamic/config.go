@@ -20,26 +20,54 @@
 
 package dynamicconfig
 
-// Client allows fetching values from a dynamic configuration system
+// Client allows fetching values from a dynamic configuration system NOTE: This does not have async
+// options right now. In the interest of keeping it minimal, we can add when requirement arises.
 type Client interface {
 	GetValue(name Key) (interface{}, error)
 	GetValueWithConstraints(name Key, constraints map[ConstraintKey]interface{}) (interface{}, error)
 }
 
 // Key represents a key/property stored in dynamic config
-type Key string
+type Key int
+
+func (k Key) String() string {
+	keys := []string{
+		"unknownKey",
+		"taskListActivitiesPerSecond",
+	}
+	if k <= unknownKey || k > TaskListActivitiesPerSecond {
+		return keys[unknownKey]
+	}
+	return keys[k]
+}
 
 const (
+	// Matching keys
+
+	unknownKey Key = iota
 	// TaskListActivitiesPerSecond represents number of activities allowed per tasklist
-	TaskListActivitiesPerSecond Key = "taskListActivitiesPerSecond"
+	TaskListActivitiesPerSecond
 )
 
 // ConstraintKey represents a key for a constraint on the dynamic config key
-type ConstraintKey string
+type ConstraintKey int
+
+func (k ConstraintKey) String() string {
+	keys := []string{
+		"unknownConstraintKey",
+		"domainName",
+		"taskListName",
+	}
+	if k <= unknownConstraintKey || k > TaskListName {
+		return keys[unknownConstraintKey]
+	}
+	return keys[k]
+}
 
 const (
+	unknownConstraintKey ConstraintKey = iota
 	// DomainName is the domain name
-	DomainName ConstraintKey = "domainName"
+	DomainName
 	// TaskListName is the tasklist name
-	TaskListName ConstraintKey = "taskListName"
+	TaskListName
 )
