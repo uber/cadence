@@ -82,11 +82,13 @@ type Collection struct {
 	client Client
 }
 
-// TaskListActivitiesPerSecond represents number of activities allowed per tasklist
-func (c *Collection) TaskListActivitiesPerSecond(defaultVal float64) float64 {
-	val, err := c.client.GetValue(TaskListActivitiesPerSecond)
-	if err != nil {
-		return defaultVal
+// GetProperty represents
+func (c *Collection) GetProperty(key Key) func(float64) float64 {
+	return func(defaultVal float64) float64 {
+		val, err := c.client.GetValue(key)
+		if err != nil {
+			return defaultVal
+		}
+		return val.(float64)
 	}
-	return val.(float64)
 }

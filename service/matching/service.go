@@ -23,6 +23,8 @@ package matching
 import (
 	"time"
 
+	"github.com/uber/cadence/common/service/dynamicconfig"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
@@ -35,11 +37,12 @@ type Config struct {
 	LongPollExpirationInterval time.Duration
 
 	// taskListManager configuration
-	RangeSize                  int64
-	GetTasksBatchSize          int
-	UpdateAckInterval          time.Duration
-	IdleTasklistCheckInterval  time.Duration
-	MinTaskThrottlingBurstSize int
+	RangeSize                   int64
+	GetTasksBatchSize           int
+	UpdateAckInterval           time.Duration
+	IdleTasklistCheckInterval   time.Duration
+	MinTaskThrottlingBurstSize  int
+	TaskListActivitiesPerSecond func(float64) float64
 
 	// taskWriter configuration
 	OutstandingTaskAppendsThreshold int
@@ -47,7 +50,7 @@ type Config struct {
 }
 
 // NewConfig returns new service config with default values
-func NewConfig() *Config {
+func NewConfig(dc *dynamicconfig.Collection) *Config {
 	return &Config{
 		EnableSyncMatch:                 true,
 		LongPollExpirationInterval:      time.Minute,
@@ -58,6 +61,7 @@ func NewConfig() *Config {
 		OutstandingTaskAppendsThreshold: 250,
 		MaxTaskBatchSize:                100,
 		MinTaskThrottlingBurstSize:      1,
+		TaskListActivitiesPerSecond:     dc.GetProperty(dynamicconfig.TaskListActivitiesPerSecond),
 	}
 }
 

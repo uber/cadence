@@ -35,7 +35,6 @@ import (
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 
 	"github.com/pborman/uuid"
 	"github.com/uber-common/bark"
@@ -45,16 +44,15 @@ import (
 // TODO: Switch implementation from lock/channel based to a partitioned agent
 // to simplify code and reduce possiblity of synchronization errors.
 type matchingEngineImpl struct {
-	taskManager       persistence.TaskManager
-	historyService    history.Client
-	tokenSerializer   common.TaskTokenSerializer
-	logger            bark.Logger
-	metricsClient     metrics.Client
-	dynamicCollection *dynamicconfig.Collection
-	taskListsLock     sync.RWMutex                   // locks mutation of taskLists
-	taskLists         map[taskListID]taskListManager // Convert to LRU cache
-	config            *Config
-	queryMapLock      sync.Mutex
+	taskManager     persistence.TaskManager
+	historyService  history.Client
+	tokenSerializer common.TaskTokenSerializer
+	logger          bark.Logger
+	metricsClient   metrics.Client
+	taskListsLock   sync.RWMutex                   // locks mutation of taskLists
+	taskLists       map[taskListID]taskListManager // Convert to LRU cache
+	config          *Config
+	queryMapLock    sync.Mutex
 	// map from query TaskID (which is a UUID generated in QueryWorkflow() call) to a channel that QueryWorkflow()
 	// will block and wait for. The RespondQueryTaskCompleted() call will send the data through that channel which will
 	// unblock QueryWorkflow() call.
@@ -107,7 +105,6 @@ func NewEngine(taskManager persistence.TaskManager,
 	config *Config,
 	logger bark.Logger,
 	metricsClient metrics.Client,
-	dynamicCollection *dynamicconfig.Collection,
 ) Engine {
 
 	return &matchingEngineImpl{
@@ -118,10 +115,9 @@ func NewEngine(taskManager persistence.TaskManager,
 		logger: logger.WithFields(bark.Fields{
 			logging.TagWorkflowComponent: logging.TagValueMatchingEngineComponent,
 		}),
-		metricsClient:     metricsClient,
-		dynamicCollection: dynamicCollection,
-		config:            config,
-		queryTaskMap:      make(map[string]chan *workflow.RespondQueryTaskCompletedRequest),
+		metricsClient: metricsClient,
+		config:        config,
+		queryTaskMap:  make(map[string]chan *workflow.RespondQueryTaskCompletedRequest),
 	}
 }
 
@@ -367,7 +363,7 @@ pollLoop:
 		taskList := newTaskListID(domainID, taskListName, persistence.TaskListTypeActivity)
 		var maxDispatch *float64
 		if request.TaskListMetadata != nil {
-			a := e.dynamicCollection.TaskListActivitiesPerSecond(*request.TaskListMetadata.MaxTasksPerSecond)
+			a := e.config.TaskListActivitiesPerSecond(*request.TaskListMetadata.MaxTasksPerSecond)
 			maxDispatch = &a
 		}
 		// Add frontend generated pollerID to context so tasklistMgr can support cancellation of
