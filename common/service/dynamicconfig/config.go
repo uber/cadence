@@ -20,6 +20,8 @@
 
 package dynamicconfig
 
+import "errors"
+
 // Client allows fetching values from a dynamic configuration system NOTE: This does not have async
 // options right now. In the interest of keeping it minimal, we can add when requirement arises.
 type Client interface {
@@ -27,50 +29,22 @@ type Client interface {
 	GetValueWithConstraints(name Key, constraints map[ConstraintKey]interface{}) (interface{}, error)
 }
 
-// Key represents a key/property stored in dynamic config
-type Key int
-
-func (k Key) String() string {
-	keys := []string{
-		"unknownKey",
-		"taskListActivitiesPerSecond",
-	}
-	if k <= unknownKey || k > TaskListActivitiesPerSecond {
-		return keys[unknownKey]
-	}
-	return keys[k]
+// NewNopClient creates a new noop client
+func NewNopClient() Client {
+	return &nopClient{}
 }
 
-const (
-	// Matching keys
+type nopClient struct{}
 
-	unknownKey Key = iota
-	// TaskListActivitiesPerSecond represents number of activities allowed per tasklist
-	TaskListActivitiesPerSecond
-)
-
-// ConstraintKey represents a key for a constraint on the dynamic config key
-type ConstraintKey int
-
-func (k ConstraintKey) String() string {
-	keys := []string{
-		"unknownConstraintKey",
-		"domainName",
-		"taskListName",
-	}
-	if k <= unknownConstraintKey || k > TaskListName {
-		return keys[unknownConstraintKey]
-	}
-	return keys[k]
+func (mc *nopClient) GetValue(name Key) (interface{}, error) {
+	return nil, errors.New("unable to find key")
 }
 
-const (
-	unknownConstraintKey ConstraintKey = iota
-	// DomainName is the domain name
-	DomainName
-	// TaskListName is the tasklist name
-	TaskListName
-)
+func (mc *nopClient) GetValueWithConstraints(
+	name Key, constraints map[ConstraintKey]interface{},
+) (interface{}, error) {
+	return nil, errors.New("unable to find key")
+}
 
 // NewCollection creates a new collection
 func NewCollection(client Client) *Collection {
@@ -82,13 +56,35 @@ type Collection struct {
 	client Client
 }
 
-// GetProperty represents
-func (c *Collection) GetProperty(key Key) func(float64) float64 {
-	return func(defaultVal float64) float64 {
+// GetIntProperty represents
+func (c *Collection) GetIntProperty(key Key, defaultVal int) func() int {
+	return func() int {
+		val, err := c.client.GetValue(key)
+		if err != nil {
+			return defaultVal
+		}
+		return val.(int)
+	}
+}
+
+// GetFloat64Property represents
+func (c *Collection) GetFloat64Property(key Key, defaultVal float64) func() float64 {
+	return func() float64 {
 		val, err := c.client.GetValue(key)
 		if err != nil {
 			return defaultVal
 		}
 		return val.(float64)
+	}
+}
+
+// GetBoolProperty represents
+func (c *Collection) GetBoolProperty(key Key, defaultVal bool) func() bool {
+	return func() bool {
+		val, err := c.client.GetValue(key)
+		if err != nil {
+			return defaultVal
+		}
+		return val.(bool)
 	}
 }

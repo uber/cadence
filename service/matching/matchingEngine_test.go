@@ -31,22 +31,23 @@ import (
 	"testing"
 	"time"
 
+	gohistory "github.com/uber/cadence/.gen/go/history"
+	"github.com/uber/cadence/.gen/go/matching"
+	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client/history"
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/mocks"
+	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/service/dynamicconfig"
+
 	"github.com/davecgh/go-spew/spew"
 	"github.com/emirpasic/gods/maps/treemap"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-common/bark"
-	"github.com/uber/cadence/client/history"
-
 	"github.com/uber-go/tally"
-	gohistory "github.com/uber/cadence/.gen/go/history"
-	"github.com/uber/cadence/.gen/go/matching"
-	workflow "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/mocks"
-	"github.com/uber/cadence/common/persistence"
 )
 
 type (
@@ -1656,7 +1657,7 @@ func validateTimeRange(t time.Time, expectedDuration time.Duration) bool {
 }
 
 func defaultTestConfig() *Config {
-	config := NewConfig()
+	config := NewConfig(dynamicconfig.NewCollection(dynamicconfig.NewNopClient()))
 	config.LongPollExpirationInterval = 100 * time.Millisecond
 	return config
 }

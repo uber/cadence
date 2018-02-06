@@ -37,12 +37,11 @@ type Config struct {
 	LongPollExpirationInterval time.Duration
 
 	// taskListManager configuration
-	RangeSize                   int64
-	GetTasksBatchSize           int
-	UpdateAckInterval           time.Duration
-	IdleTasklistCheckInterval   time.Duration
-	MinTaskThrottlingBurstSize  int
-	TaskListActivitiesPerSecond func(float64) float64
+	RangeSize                  int64
+	GetTasksBatchSize          int
+	UpdateAckInterval          time.Duration
+	IdleTasklistCheckInterval  time.Duration
+	MinTaskThrottlingBurstSize func() int
 
 	// taskWriter configuration
 	OutstandingTaskAppendsThreshold int
@@ -60,8 +59,7 @@ func NewConfig(dc *dynamicconfig.Collection) *Config {
 		IdleTasklistCheckInterval:       5 * time.Minute,
 		OutstandingTaskAppendsThreshold: 250,
 		MaxTaskBatchSize:                100,
-		MinTaskThrottlingBurstSize:      1,
-		TaskListActivitiesPerSecond:     dc.GetProperty(dynamicconfig.TaskListActivitiesPerSecond),
+		MinTaskThrottlingBurstSize:      dc.GetIntProperty(dynamicconfig.MinTaskThrottlingBurstSize, 1),
 	}
 }
 

@@ -138,7 +138,7 @@ func newTaskListManager(
 	e *matchingEngineImpl, taskList *taskListID, taskListKind *s.TaskListKind, config *Config,
 ) taskListManager {
 	dPtr := _defaultTaskDispatchRPS
-	rl := newRateLimiter(&dPtr, _defaultTaskDispatchRPSTTL, config.MinTaskThrottlingBurstSize)
+	rl := newRateLimiter(&dPtr, _defaultTaskDispatchRPSTTL, config.MinTaskThrottlingBurstSize())
 	return newTaskListManagerWithRateLimiter(e, taskList, taskListKind, config, rl)
 }
 
