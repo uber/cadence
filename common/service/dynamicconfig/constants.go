@@ -27,8 +27,11 @@ func (k Key) String() string {
 	keys := []string{
 		"unknownKey",
 		"minTaskThrottlingBurstSize",
+		"maxTaskBatchSize",
+		"matchingLongPollExpirationInterval",
+		"historyLongPollExpirationInterval",
 	}
-	if k <= unknownKey || k > MinTaskThrottlingBurstSize {
+	if k <= unknownKey || int(k) >= len(keys) {
 		return keys[unknownKey]
 	}
 	return keys[k]
@@ -38,8 +41,14 @@ const (
 	// Matching keys
 
 	unknownKey Key = iota
-	// MinTaskThrottlingBurstSize represents the minimum burst size for task list throttling
+	// MinTaskThrottlingBurstSize is the minimum burst size for task list throttling
 	MinTaskThrottlingBurstSize
+	// MaxTaskBatchSize is the maximum batch size to fetch from the task buffer
+	MaxTaskBatchSize
+	// MatchingLongPollExpirationInterval is the long poll expiration interval in the matching service
+	MatchingLongPollExpirationInterval
+	// HistoryLongPollExpirationInterval is the long poll expiration interval in the history service
+	HistoryLongPollExpirationInterval
 )
 
 // ConstraintKey represents a key for a constraint on the dynamic config key

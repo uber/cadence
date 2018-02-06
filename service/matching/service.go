@@ -23,18 +23,17 @@ package matching
 import (
 	"time"
 
-	"github.com/uber/cadence/common/service/dynamicconfig"
-
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 // Config represents configuration for cadence-matching service
 type Config struct {
 	EnableSyncMatch bool
 	// Time to hold a poll request before returning an empty response if there are no tasks
-	LongPollExpirationInterval time.Duration
+	LongPollExpirationInterval func() time.Duration
 
 	// taskListManager configuration
 	RangeSize                  int64
@@ -51,8 +50,10 @@ type Config struct {
 // NewConfig returns new service config with default values
 func NewConfig(dc *dynamicconfig.Collection) *Config {
 	return &Config{
-		EnableSyncMatch:                 true,
-		LongPollExpirationInterval:      time.Minute,
+		EnableSyncMatch: true,
+		LongPollExpirationInterval: dc.GetDurationProperty(
+			dynamicconfig.MatchingLongPollExpirationInterval, time.Minute,
+		),
 		RangeSize:                       100000,
 		GetTasksBatchSize:               1000,
 		UpdateAckInterval:               10 * time.Second,

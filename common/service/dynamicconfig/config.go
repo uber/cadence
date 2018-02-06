@@ -20,18 +20,16 @@
 
 package dynamicconfig
 
-import "errors"
+import (
+	"errors"
+	"time"
+)
 
 // Client allows fetching values from a dynamic configuration system NOTE: This does not have async
 // options right now. In the interest of keeping it minimal, we can add when requirement arises.
 type Client interface {
 	GetValue(name Key) (interface{}, error)
 	GetValueWithConstraints(name Key, constraints map[ConstraintKey]interface{}) (interface{}, error)
-}
-
-// NewNopClient creates a new noop client
-func NewNopClient() Client {
-	return &nopClient{}
 }
 
 type nopClient struct{}
@@ -46,6 +44,11 @@ func (mc *nopClient) GetValueWithConstraints(
 	return nil, errors.New("unable to find key")
 }
 
+// NewNopCollection creates a new nop collection
+func NewNopCollection() *Collection {
+	return NewCollection(&nopClient{})
+}
+
 // NewCollection creates a new collection
 func NewCollection(client Client) *Collection {
 	return &Collection{client}
@@ -56,7 +59,7 @@ type Collection struct {
 	client Client
 }
 
-// GetIntProperty represents
+// GetIntProperty gets property and asserts that it's an integer
 func (c *Collection) GetIntProperty(key Key, defaultVal int) func() int {
 	return func() int {
 		val, err := c.client.GetValue(key)
@@ -67,7 +70,7 @@ func (c *Collection) GetIntProperty(key Key, defaultVal int) func() int {
 	}
 }
 
-// GetFloat64Property represents
+// GetFloat64Property gets property and asserts that it's a float64
 func (c *Collection) GetFloat64Property(key Key, defaultVal float64) func() float64 {
 	return func() float64 {
 		val, err := c.client.GetValue(key)
@@ -78,7 +81,18 @@ func (c *Collection) GetFloat64Property(key Key, defaultVal float64) func() floa
 	}
 }
 
-// GetBoolProperty represents
+// GetDurationProperty gets property and asserts that it's a duration
+func (c *Collection) GetDurationProperty(key Key, defaultVal time.Duration) func() time.Duration {
+	return func() time.Duration {
+		val, err := c.client.GetValue(key)
+		if err != nil {
+			return defaultVal
+		}
+		return val.(time.Duration)
+	}
+}
+
+// GetBoolProperty gets property and asserts that it's an bool
 func (c *Collection) GetBoolProperty(key Key, defaultVal bool) func() bool {
 	return func() bool {
 		val, err := c.client.GetValue(key)

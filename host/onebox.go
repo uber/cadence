@@ -26,8 +26,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/uber/cadence/common/service/dynamicconfig"
-
 	"errors"
 
 	"github.com/uber-common/bark"
@@ -39,6 +37,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/frontend"
 	"github.com/uber/cadence/service/history"
 	"github.com/uber/cadence/service/matching"
@@ -226,7 +225,7 @@ func (c *cadenceImpl) startHistory(logger bark.Logger, shardMgr persistence.Shar
 		params.ClusterMetadata = c.clusterMetadata
 		params.CassandraConfig.NumHistoryShards = c.numberOfHistoryShards
 		service := service.New(params)
-		historyConfig := history.NewConfig(c.numberOfHistoryShards)
+		historyConfig := history.NewConfig(dynamicconfig.NewNopCollection(), c.numberOfHistoryShards)
 		historyConfig.HistoryMgrNumConns = c.numberOfHistoryShards
 		historyConfig.ExecutionMgrNumConns = c.numberOfHistoryShards
 		handler := history.NewHandler(service, historyConfig, shardMgr, metadataMgr,
@@ -253,7 +252,7 @@ func (c *cadenceImpl) startMatching(logger bark.Logger, taskMgr persistence.Task
 	params.CassandraConfig.NumHistoryShards = c.numberOfHistoryShards
 	service := service.New(params)
 	c.matchingHandler = matching.NewHandler(
-		service, matching.NewConfig(dynamicconfig.NewCollection(dynamicconfig.NewNopClient())), taskMgr,
+		service, matching.NewConfig(dynamicconfig.NewNopCollection()), taskMgr,
 	)
 	c.matchingHandler.Start()
 	startWG.Done()

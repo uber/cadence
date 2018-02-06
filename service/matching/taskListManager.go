@@ -436,7 +436,7 @@ func (c *taskListManagerImpl) completeTaskPoll(taskID int64) (ackLevel int64) {
 // Loads task from taskBuffer (which is populated from persistence) or from sync match to add task call
 func (c *taskListManagerImpl) getTask(ctx context.Context) (*getTaskResult, error) {
 	scope := metrics.MatchingTaskListMgrScope
-	timer := time.NewTimer(c.config.LongPollExpirationInterval)
+	timer := time.NewTimer(c.config.LongPollExpirationInterval())
 	defer timer.Stop()
 
 	pollerID, ok := ctx.Value(pollerIDKey).(string)
