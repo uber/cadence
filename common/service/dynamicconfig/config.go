@@ -59,6 +59,19 @@ type Collection struct {
 	client Client
 }
 
+// GetIntPropertyWithConstraints gets property based on constraints and asserts that it's an integer
+func (c *Collection) GetIntPropertyWithConstraints(
+	key Key, defaultVal int,
+) func(map[ConstraintKey]interface{}) int {
+	return func(constraints map[ConstraintKey]interface{}) int {
+		val, err := c.client.GetValue(key)
+		if err != nil {
+			return defaultVal
+		}
+		return val.(int)
+	}
+}
+
 // GetIntProperty gets property and asserts that it's an integer
 func (c *Collection) GetIntProperty(key Key, defaultVal int) func() int {
 	return func() int {
