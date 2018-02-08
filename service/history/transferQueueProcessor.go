@@ -42,7 +42,12 @@ import (
 	"github.com/uber/cadence/common/persistence"
 )
 
-const identityHistoryService = "history-service"
+const (
+	identityHistoryService = "history-service"
+
+	initialRetryDelay = 100 * time.Millisecond
+	maxRetryDelay     = 1 * time.Second
+)
 
 type (
 	transferQueueProcessorImpl struct {
@@ -225,15 +230,11 @@ func (t *transferQueueProcessorImpl) processTransferTasks(tasksCh chan<- *persis
 		return
 	}
 
-	if len(tasks) == 0 {
-		return
-	}
-
 	for _, tsk := range tasks {
 		tasksCh <- tsk
 	}
 
-	if len(tasks) == t.config.TransferTaskBatchSize {
+	if len(tasks) >= t.config.TransferTaskBatchSize {
 		// There might be more task
 		// We return now to yield, but enqueue an event to poll later
 		t.NotifyNewTask()
@@ -289,8 +290,11 @@ ProcessRetryLoop:
 			if err != nil {
 				logging.LogTransferTaskProcessingFailedEvent(t.logger, task.TaskID, task.TaskType, err)
 				t.metricsClient.IncCounter(scope, metrics.TaskFailures)
-				backoff := time.Duration(retryCount * 100)
-				time.Sleep(backoff * time.Millisecond)
+				backoff := retryCount * initialRetryDelay
+				if backoff > maxRetryDelay {
+					backoff = maxRetryDelay
+				}
+				time.Sleep(backoff)
 				continue ProcessRetryLoop
 			}
 
