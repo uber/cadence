@@ -848,8 +848,10 @@ func (s *CassandraTestCluster) setupTestCluster(options TestBaseOptions) {
 	if keySpace == "" {
 		keySpace = generateRandomKeyspace(10)
 	}
-	s.createCluster(testWorkflowClusterHosts, options.ClusterPort, testUser, testPassword, testDatacenter, gocql.Consistency(1),
-		keySpace)
+	s.createCluster(
+		testWorkflowClusterHosts, options.ClusterPort, testUser, testPassword, testDatacenter,
+		gocql.Consistency(1), keySpace,
+	)
 	s.createKeyspace(1, options.DropKeySpace)
 	s.loadSchema([]string{"schema.cql"}, options.SchemaDir)
 	s.loadVisibilitySchema([]string{"schema.cql"}, options.SchemaDir)
