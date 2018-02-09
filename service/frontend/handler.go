@@ -1678,6 +1678,7 @@ func (wh *WorkflowHandler) startRequestProfile(scope int) tally.Stopwatch {
 func (wh *WorkflowHandler) error(err error, scope int) error {
 	switch err.(type) {
 	case *gen.InternalServiceError:
+		wh.Service.GetLogger().Errorf("Internal service error: %v", err)
 		wh.metricsClient.IncCounter(scope, metrics.CadenceFailures)
 		return err
 	case *gen.BadRequestError:
@@ -1702,6 +1703,7 @@ func (wh *WorkflowHandler) error(err error, scope int) error {
 		wh.metricsClient.IncCounter(scope, metrics.CadenceErrQueryFailedCounter)
 		return err
 	default:
+		wh.Service.GetLogger().Errorf("Uncategorized error: %v", err)
 		wh.metricsClient.IncCounter(scope, metrics.CadenceFailures)
 		return &gen.InternalServiceError{Message: err.Error()}
 	}
