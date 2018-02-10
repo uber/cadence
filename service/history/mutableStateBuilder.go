@@ -55,8 +55,8 @@ type (
 		deleteChildExecutionInfo     *int64                                    // Deleted ChildExecution Info since last update
 
 		pendingRequestCancelInfoIDs map[int64]*persistence.RequestCancelInfo // Initiated Event ID -> RequestCancelInfo
-		updateRequestCancelInfos    []*persistence.RequestCancelInfo         // Modified RequestCancel Infos since last update
-		deleteRequestCancelInfo     *int64                                   // Deleted RequestCancel Info since last update
+		updateRequestCancelInfos    []*persistence.RequestCancelInfo         // Modified RequestCancel Infos since last update, for persistence update
+		deleteRequestCancelInfo     *int64                                   // Deleted RequestCancel Info since last update, for persistence update
 
 		pendingSignalInfoIDs map[int64]*persistence.SignalInfo // Initiated Event ID -> SignalInfo
 		updateSignalInfos    []*persistence.SignalInfo         // Modified SignalInfo since last update
@@ -79,22 +79,22 @@ type (
 	}
 
 	mutableStateSessionUpdates struct {
-		newEventsBuilder          *historyBuilder
-		updateActivityInfos       []*persistence.ActivityInfo
-		deleteActivityInfo        *int64
-		updateTimerInfos          []*persistence.TimerInfo
-		deleteTimerInfos          []string
-		updateChildExecutionInfos []*persistence.ChildExecutionInfo
-		deleteChildExecutionInfo  *int64
-		//updateCancelExecutionInfos []*persistence.RequestCancelInfo
-		//deleteCancelExecutionInfo  *int64
-		updateSignalInfos        []*persistence.SignalInfo
-		deleteSignalInfo         *int64
-		updateSignalRequestedIDs []string
-		deleteSignalRequestedID  string
-		continueAsNew            *persistence.CreateWorkflowExecutionRequest
-		newBufferedEvents        *persistence.SerializedHistoryEventBatch
-		clearBufferedEvents      bool
+		newEventsBuilder           *historyBuilder
+		updateActivityInfos        []*persistence.ActivityInfo
+		deleteActivityInfo         *int64
+		updateTimerInfos           []*persistence.TimerInfo
+		deleteTimerInfos           []string
+		updateChildExecutionInfos  []*persistence.ChildExecutionInfo
+		deleteChildExecutionInfo   *int64
+		updateCancelExecutionInfos []*persistence.RequestCancelInfo
+		deleteCancelExecutionInfo  *int64
+		updateSignalInfos          []*persistence.SignalInfo
+		deleteSignalInfo           *int64
+		updateSignalRequestedIDs   []string
+		deleteSignalRequestedID    string
+		continueAsNew              *persistence.CreateWorkflowExecutionRequest
+		newBufferedEvents          *persistence.SerializedHistoryEventBatch
+		clearBufferedEvents        bool
 	}
 
 	// TODO: This should be part of persistence layer
@@ -232,22 +232,22 @@ func (e *mutableStateBuilder) CloseUpdateSession() (*mutableStateSessionUpdates,
 	}
 
 	updates := &mutableStateSessionUpdates{
-		newEventsBuilder:          e.hBuilder,
-		updateActivityInfos:       e.updateActivityInfos,
-		deleteActivityInfo:        e.deleteActivityInfo,
-		updateTimerInfos:          e.updateTimerInfos,
-		deleteTimerInfos:          e.deleteTimerInfos,
-		updateChildExecutionInfos: e.updateChildExecutionInfos,
-		deleteChildExecutionInfo:  e.deleteChildExecutionInfo,
-		//updateCancelExecutionInfos: e.updateRequestCancelInfos,
-		//deleteCancelExecutionInfo:  e.deleteRequestCancelInfo,
-		updateSignalInfos:        e.updateSignalInfos,
-		deleteSignalInfo:         e.deleteSignalInfo,
-		updateSignalRequestedIDs: getSignalRequestedIDs(e.updateSignalRequestedIDs),
-		deleteSignalRequestedID:  e.deleteSignalRequestedID,
-		continueAsNew:            e.continueAsNew,
-		newBufferedEvents:        e.updateBufferedEvents,
-		clearBufferedEvents:      e.clearBufferedEvents,
+		newEventsBuilder:           e.hBuilder,
+		updateActivityInfos:        e.updateActivityInfos,
+		deleteActivityInfo:         e.deleteActivityInfo,
+		updateTimerInfos:           e.updateTimerInfos,
+		deleteTimerInfos:           e.deleteTimerInfos,
+		updateChildExecutionInfos:  e.updateChildExecutionInfos,
+		deleteChildExecutionInfo:   e.deleteChildExecutionInfo,
+		updateCancelExecutionInfos: e.updateRequestCancelInfos,
+		deleteCancelExecutionInfo:  e.deleteRequestCancelInfo,
+		updateSignalInfos:          e.updateSignalInfos,
+		deleteSignalInfo:           e.deleteSignalInfo,
+		updateSignalRequestedIDs:   getSignalRequestedIDs(e.updateSignalRequestedIDs),
+		deleteSignalRequestedID:    e.deleteSignalRequestedID,
+		continueAsNew:              e.continueAsNew,
+		newBufferedEvents:          e.updateBufferedEvents,
+		clearBufferedEvents:        e.clearBufferedEvents,
 	}
 
 	// Clear all updates to prepare for the next session
@@ -258,8 +258,8 @@ func (e *mutableStateBuilder) CloseUpdateSession() (*mutableStateSessionUpdates,
 	e.deleteTimerInfos = []string{}
 	e.updateChildExecutionInfos = []*persistence.ChildExecutionInfo{}
 	e.deleteChildExecutionInfo = nil
-	//e.updateRequestCancelInfos = []*persistence.RequestCancelInfo{}
-	//e.deleteRequestCancelInfo = nil
+	e.updateRequestCancelInfos = []*persistence.RequestCancelInfo{}
+	e.deleteRequestCancelInfo = nil
 	e.updateSignalInfos = []*persistence.SignalInfo{}
 	e.deleteSignalInfo = nil
 	e.updateSignalRequestedIDs = make(map[string]struct{})
@@ -1317,10 +1317,9 @@ func (e *mutableStateBuilder) AddWorkflowExecutionCanceledEvent(decisionTaskComp
 	return event
 }
 
-func (e *mutableStateBuilder) AddRequestCancelExternalWorkflowExecutionInitiatedEvent(decisionCompletedEventID int64,
-	cancelRequestID string,
-	request *workflow.RequestCancelExternalWorkflowExecutionDecisionAttributes) (*workflow.HistoryEvent,
-	*persistence.RequestCancelInfo) {
+func (e *mutableStateBuilder) AddRequestCancelExternalWorkflowExecutionInitiatedEvent(
+	decisionCompletedEventID int64, cancelRequestID string,
+	request *workflow.RequestCancelExternalWorkflowExecutionDecisionAttributes) (*workflow.HistoryEvent, *persistence.RequestCancelInfo) {
 	event := e.hBuilder.AddRequestCancelExternalWorkflowExecutionInitiatedEvent(decisionCompletedEventID, request)
 	if event == nil {
 		return nil, nil
@@ -1330,6 +1329,7 @@ func (e *mutableStateBuilder) AddRequestCancelExternalWorkflowExecutionInitiated
 	ri := &persistence.RequestCancelInfo{
 		InitiatedID:     initiatedEventID,
 		CancelRequestID: cancelRequestID,
+		Control:         request.Control,
 	}
 
 	e.pendingRequestCancelInfoIDs[initiatedEventID] = ri
@@ -1339,7 +1339,7 @@ func (e *mutableStateBuilder) AddRequestCancelExternalWorkflowExecutionInitiated
 }
 
 func (e *mutableStateBuilder) AddExternalWorkflowExecutionCancelRequested(initiatedID int64,
-	domain, workflowID, runID string) *workflow.HistoryEvent {
+	domain, workflowID, runID string, control []byte) *workflow.HistoryEvent {
 	_, ok := e.GetRequestCancelInfo(initiatedID)
 	if !ok {
 		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionWorkflowCancelRequested, e.GetNextEventID(),
@@ -1349,7 +1349,7 @@ func (e *mutableStateBuilder) AddExternalWorkflowExecutionCancelRequested(initia
 	}
 
 	if e.DeletePendingRequestCancel(initiatedID) == nil {
-		return e.hBuilder.AddExternalWorkflowExecutionCancelRequested(initiatedID, domain, workflowID, runID)
+		return e.hBuilder.AddExternalWorkflowExecutionCancelRequested(initiatedID, domain, workflowID, runID, control)
 	}
 
 	return nil
@@ -1357,7 +1357,7 @@ func (e *mutableStateBuilder) AddExternalWorkflowExecutionCancelRequested(initia
 
 func (e *mutableStateBuilder) AddRequestCancelExternalWorkflowExecutionFailedEvent(
 	decisionTaskCompletedEventID, initiatedID int64,
-	domain, workflowID, runID string, cause workflow.CancelExternalWorkflowExecutionFailedCause) *workflow.HistoryEvent {
+	domain, workflowID, runID string, control []byte, cause workflow.CancelExternalWorkflowExecutionFailedCause) *workflow.HistoryEvent {
 	_, ok := e.GetRequestCancelInfo(initiatedID)
 	if !ok {
 		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionWorkflowCancelFailed, e.GetNextEventID(),
@@ -1368,7 +1368,7 @@ func (e *mutableStateBuilder) AddRequestCancelExternalWorkflowExecutionFailedEve
 
 	if e.DeletePendingRequestCancel(initiatedID) == nil {
 		return e.hBuilder.AddRequestCancelExternalWorkflowExecutionFailedEvent(decisionTaskCompletedEventID, initiatedID,
-			domain, workflowID, runID, cause)
+			domain, workflowID, runID, control, cause)
 	}
 
 	return nil

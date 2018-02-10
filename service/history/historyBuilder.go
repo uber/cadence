@@ -295,17 +295,17 @@ func (b *historyBuilder) AddRequestCancelExternalWorkflowExecutionInitiatedEvent
 }
 
 func (b *historyBuilder) AddRequestCancelExternalWorkflowExecutionFailedEvent(decisionTaskCompletedEventID, initiatedEventID int64,
-	domain, workflowID, runID string, cause workflow.CancelExternalWorkflowExecutionFailedCause) *workflow.HistoryEvent {
+	domain, workflowID, runID string, control []byte, cause workflow.CancelExternalWorkflowExecutionFailedCause) *workflow.HistoryEvent {
 	event := b.newRequestCancelExternalWorkflowExecutionFailedEvent(decisionTaskCompletedEventID, initiatedEventID,
-		domain, workflowID, runID, cause)
+		domain, workflowID, runID, control, cause)
 
 	return b.addEventToHistory(event)
 }
 
 func (b *historyBuilder) AddExternalWorkflowExecutionCancelRequested(initiatedEventID int64,
-	domain, workflowID, runID string) *workflow.HistoryEvent {
+	domain, workflowID, runID string, control []byte) *workflow.HistoryEvent {
 	event := b.newExternalWorkflowExecutionCancelRequestedEvent(initiatedEventID,
-		domain, workflowID, runID)
+		domain, workflowID, runID, control)
 
 	return b.addEventToHistory(event)
 }
@@ -659,17 +659,18 @@ func (b *historyBuilder) newRequestCancelExternalWorkflowExecutionInitiatedEvent
 	attributes.DecisionTaskCompletedEventId = common.Int64Ptr(decisionTaskCompletedEventID)
 	attributes.Domain = common.StringPtr(*request.Domain)
 	attributes.WorkflowExecution = &workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(*request.WorkflowId),
-		RunId:      common.StringPtr(*request.RunId),
+		WorkflowId: common.StringPtr(request.GetWorkflowId()),
+		RunId:      common.StringPtr(request.GetRunId()),
 	}
 	attributes.Control = request.Control
+	attributes.ChildWorkflowOnly = request.ChildWorkflowOnly
 	event.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes = attributes
 
 	return event
 }
 
 func (b *historyBuilder) newRequestCancelExternalWorkflowExecutionFailedEvent(decisionTaskCompletedEventID, initiatedEventID int64,
-	domain, workflowID, runID string, cause workflow.CancelExternalWorkflowExecutionFailedCause) *workflow.HistoryEvent {
+	domain, workflowID, runID string, control []byte, cause workflow.CancelExternalWorkflowExecutionFailedCause) *workflow.HistoryEvent {
 	event := b.msBuilder.createNewHistoryEvent(workflow.EventTypeRequestCancelExternalWorkflowExecutionFailed)
 	attributes := &workflow.RequestCancelExternalWorkflowExecutionFailedEventAttributes{}
 	attributes.DecisionTaskCompletedEventId = common.Int64Ptr(decisionTaskCompletedEventID)
@@ -679,6 +680,7 @@ func (b *historyBuilder) newRequestCancelExternalWorkflowExecutionFailedEvent(de
 		WorkflowId: common.StringPtr(workflowID),
 		RunId:      common.StringPtr(runID),
 	}
+	attributes.Control = control
 	attributes.Cause = common.CancelExternalWorkflowExecutionFailedCausePtr(cause)
 	event.RequestCancelExternalWorkflowExecutionFailedEventAttributes = attributes
 
@@ -686,7 +688,7 @@ func (b *historyBuilder) newRequestCancelExternalWorkflowExecutionFailedEvent(de
 }
 
 func (b *historyBuilder) newExternalWorkflowExecutionCancelRequestedEvent(initiatedEventID int64,
-	domain, workflowID, runID string) *workflow.HistoryEvent {
+	domain, workflowID, runID string, control []byte) *workflow.HistoryEvent {
 	event := b.msBuilder.createNewHistoryEvent(workflow.EventTypeExternalWorkflowExecutionCancelRequested)
 	attributes := &workflow.ExternalWorkflowExecutionCancelRequestedEventAttributes{}
 	attributes.InitiatedEventId = common.Int64Ptr(initiatedEventID)
@@ -695,6 +697,7 @@ func (b *historyBuilder) newExternalWorkflowExecutionCancelRequestedEvent(initia
 		WorkflowId: common.StringPtr(workflowID),
 		RunId:      common.StringPtr(runID),
 	}
+	attributes.Control = control
 	event.ExternalWorkflowExecutionCancelRequestedEventAttributes = attributes
 
 	return event
@@ -713,6 +716,7 @@ func (b *historyBuilder) newSignalExternalWorkflowExecutionInitiatedEvent(decisi
 	attributes.SignalName = common.StringPtr(request.GetSignalName())
 	attributes.Input = request.Input
 	attributes.Control = request.Control
+	attributes.ChildWorkflowOnly = request.ChildWorkflowOnly
 	event.SignalExternalWorkflowExecutionInitiatedEventAttributes = attributes
 
 	return event
