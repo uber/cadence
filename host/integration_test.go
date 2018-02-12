@@ -3912,7 +3912,7 @@ func (s *integrationSuite) TestChildWorkflowWithContinueAsNew() {
 				return []byte(strconv.Itoa(int(continueAsNewCounter))), []*workflow.Decision{{
 					DecisionType: common.DecisionTypePtr(workflow.DecisionTypeContinueAsNewWorkflowExecution),
 					ContinueAsNewWorkflowExecutionDecisionAttributes: &workflow.ContinueAsNewWorkflowExecutionDecisionAttributes{
-						Input:        buf.Bytes(),
+						Input: buf.Bytes(),
 					},
 				}}, nil
 			}
