@@ -981,10 +981,16 @@ Update_History_Loop:
 					break Process_Decision_Loop
 				}
 
-				foreignDomainEntry, err := e.domainCache.GetDomain(attributes.GetDomain())
-				if err != nil {
-					return &workflow.InternalServiceError{
-						Message: fmt.Sprintf("Unable to cancel workflow across domain: %v.", attributes.GetDomain())}
+				foreignDomainID := ""
+				if attributes.GetDomain() == "" {
+					foreignDomainID = msBuilder.executionInfo.DomainID
+				} else {
+					foreignDomainEntry, err := e.domainCache.GetDomain(attributes.GetDomain())
+					if err != nil {
+						return &workflow.InternalServiceError{
+							Message: fmt.Sprintf("Unable to cancel workflow across domain: %v.", attributes.GetDomain())}
+					}
+					foreignDomainID = foreignDomainEntry.Info.ID
 				}
 
 				cancelRequestID := uuid.New()
@@ -995,7 +1001,7 @@ Update_History_Loop:
 				}
 
 				transferTasks = append(transferTasks, &persistence.CancelExecutionTask{
-					TargetDomainID:          foreignDomainEntry.Info.ID,
+					TargetDomainID:          foreignDomainID,
 					TargetWorkflowID:        attributes.GetWorkflowId(),
 					TargetRunID:             attributes.GetRunId(),
 					TargetChildWorkflowOnly: attributes.GetChildWorkflowOnly(),
@@ -1013,11 +1019,16 @@ Update_History_Loop:
 					break Process_Decision_Loop
 				}
 
-				foreignDomainEntry, err := e.domainCache.GetDomain(attributes.GetDomain())
-				if err != nil {
-					return &workflow.InternalServiceError{
-						Message: fmt.Sprintf("Unable to signal workflow across domain: %v.",
-							attributes.GetDomain())}
+				foreignDomainID := ""
+				if attributes.GetDomain() == "" {
+					foreignDomainID = msBuilder.executionInfo.DomainID
+				} else {
+					foreignDomainEntry, err := e.domainCache.GetDomain(attributes.GetDomain())
+					if err != nil {
+						return &workflow.InternalServiceError{
+							Message: fmt.Sprintf("Unable to signal workflow across domain: %v.", attributes.GetDomain())}
+					}
+					foreignDomainID = foreignDomainEntry.Info.ID
 				}
 
 				signalRequestID := uuid.New() // for deduplicate
@@ -1028,7 +1039,7 @@ Update_History_Loop:
 				}
 
 				transferTasks = append(transferTasks, &persistence.SignalExecutionTask{
-					TargetDomainID:          foreignDomainEntry.Info.ID,
+					TargetDomainID:          foreignDomainID,
 					TargetWorkflowID:        attributes.Execution.GetWorkflowId(),
 					TargetRunID:             attributes.Execution.GetRunId(),
 					TargetChildWorkflowOnly: attributes.GetChildWorkflowOnly(),

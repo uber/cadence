@@ -657,10 +657,10 @@ func (b *historyBuilder) newRequestCancelExternalWorkflowExecutionInitiatedEvent
 	event := b.msBuilder.createNewHistoryEvent(workflow.EventTypeRequestCancelExternalWorkflowExecutionInitiated)
 	attributes := &workflow.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes{}
 	attributes.DecisionTaskCompletedEventId = common.Int64Ptr(decisionTaskCompletedEventID)
-	attributes.Domain = common.StringPtr(*request.Domain)
+	attributes.Domain = request.Domain
 	attributes.WorkflowExecution = &workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(request.GetWorkflowId()),
-		RunId:      common.StringPtr(request.GetRunId()),
+		WorkflowId: request.WorkflowId,
+		RunId:      request.RunId,
 	}
 	attributes.Control = request.Control
 	attributes.ChildWorkflowOnly = request.ChildWorkflowOnly
@@ -708,10 +708,10 @@ func (b *historyBuilder) newSignalExternalWorkflowExecutionInitiatedEvent(decisi
 	event := b.msBuilder.createNewHistoryEvent(workflow.EventTypeSignalExternalWorkflowExecutionInitiated)
 	attributes := &workflow.SignalExternalWorkflowExecutionInitiatedEventAttributes{}
 	attributes.DecisionTaskCompletedEventId = common.Int64Ptr(decisionTaskCompletedEventID)
-	attributes.Domain = common.StringPtr(request.GetDomain())
+	attributes.Domain = request.Domain
 	attributes.WorkflowExecution = &workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(request.Execution.GetWorkflowId()),
-		RunId:      common.StringPtr(request.Execution.GetRunId()),
+		WorkflowId: request.Execution.WorkflowId,
+		RunId:      request.Execution.RunId,
 	}
 	attributes.SignalName = common.StringPtr(request.GetSignalName())
 	attributes.Input = request.Input
