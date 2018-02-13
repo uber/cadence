@@ -119,7 +119,6 @@ func (s *server) startService() common.Daemon {
 
 	var daemon common.Daemon
 
-	dc := dynamicconfig.NewCollection(params.DynamicConfig)
 	switch s.name {
 	case frontendService:
 		daemon = frontend.NewService(&params)
