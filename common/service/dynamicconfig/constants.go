@@ -51,23 +51,23 @@ const (
 	HistoryLongPollExpirationInterval
 )
 
-// ConstraintKey represents a key for a constraint on the dynamic config key
-type ConstraintKey int
+// Filter represents a filter on the dynamic config key
+type Filter int
 
-func (k ConstraintKey) String() string {
+func (k Filter) String() string {
 	keys := []string{
-		"unknownConstraintKey",
+		"unknownFilter",
 		"domainName",
 		"taskListName",
 	}
-	if k <= unknownConstraintKey || k > TaskListName {
-		return keys[unknownConstraintKey]
+	if k <= unknownFilter || k > TaskListName {
+		return keys[unknownFilter]
 	}
 	return keys[k]
 }
 
 const (
-	unknownConstraintKey ConstraintKey = iota
+	unknownFilter Filter = iota
 	// DomainName is the domain name
 	DomainName
 	// TaskListName is the tasklist name

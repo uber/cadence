@@ -40,7 +40,7 @@ type Config struct {
 	GetTasksBatchSize          int
 	UpdateAckInterval          time.Duration
 	IdleTasklistCheckInterval  time.Duration
-	MinTaskThrottlingBurstSize func(map[dynamicconfig.ConstraintKey]interface{}) int
+	MinTaskThrottlingBurstSize func(string) int
 
 	// taskWriter configuration
 	OutstandingTaskAppendsThreshold int
@@ -60,7 +60,7 @@ func NewConfig(dc *dynamicconfig.Collection) *Config {
 		IdleTasklistCheckInterval:       5 * time.Minute,
 		OutstandingTaskAppendsThreshold: 250,
 		MaxTaskBatchSize:                100,
-		MinTaskThrottlingBurstSize: dc.GetIntPropertyWithConstraints(
+		MinTaskThrottlingBurstSize: dc.GetIntPropertyWithTaskList(
 			dynamicconfig.MinTaskThrottlingBurstSize, 1,
 		),
 	}

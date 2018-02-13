@@ -47,8 +47,8 @@ func (mc *inMemoryClient) GetValue(key Key) (interface{}, error) {
 	return nil, errors.New("unable to find key")
 }
 
-func (mc *inMemoryClient) GetValueWithConstraints(
-	name Key, constraints map[ConstraintKey]interface{},
+func (mc *inMemoryClient) GetValueWithFilters(
+	name Key, filters map[Filter]interface{},
 ) (interface{}, error) {
 	return mc.GetValue(name)
 }

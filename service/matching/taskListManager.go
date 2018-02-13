@@ -29,8 +29,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/uber/cadence/common/service/dynamicconfig"
-
 	h "github.com/uber/cadence/.gen/go/history"
 	m "github.com/uber/cadence/.gen/go/matching"
 	s "github.com/uber/cadence/.gen/go/shared"
@@ -140,9 +138,9 @@ func newTaskListManager(
 	e *matchingEngineImpl, taskList *taskListID, taskListKind *s.TaskListKind, config *Config,
 ) taskListManager {
 	dPtr := _defaultTaskDispatchRPS
-	cnst := make(map[dynamicconfig.ConstraintKey]interface{})
-	cnst[dynamicconfig.TaskListName] = taskList.taskListName
-	rl := newRateLimiter(&dPtr, _defaultTaskDispatchRPSTTL, config.MinTaskThrottlingBurstSize(cnst))
+	rl := newRateLimiter(
+		&dPtr, _defaultTaskDispatchRPSTTL, config.MinTaskThrottlingBurstSize(taskList.taskListName),
+	)
 	return newTaskListManagerWithRateLimiter(e, taskList, taskListKind, config, rl)
 }
 

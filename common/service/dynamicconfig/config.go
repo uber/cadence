@@ -29,7 +29,7 @@ import (
 // options right now. In the interest of keeping it minimal, we can add when requirement arises.
 type Client interface {
 	GetValue(name Key) (interface{}, error)
-	GetValueWithConstraints(name Key, constraints map[ConstraintKey]interface{}) (interface{}, error)
+	GetValueWithFilters(name Key, filters map[Filter]interface{}) (interface{}, error)
 }
 
 type nopClient struct{}
@@ -38,8 +38,8 @@ func (mc *nopClient) GetValue(name Key) (interface{}, error) {
 	return nil, errors.New("unable to find key")
 }
 
-func (mc *nopClient) GetValueWithConstraints(
-	name Key, constraints map[ConstraintKey]interface{},
+func (mc *nopClient) GetValueWithFilters(
+	name Key, filters map[Filter]interface{},
 ) (interface{}, error) {
 	return nil, errors.New("unable to find key")
 }
@@ -59,12 +59,12 @@ type Collection struct {
 	client Client
 }
 
-// GetIntPropertyWithConstraints gets property based on constraints and asserts that it's an integer
-func (c *Collection) GetIntPropertyWithConstraints(
-	key Key, defaultVal int,
-) func(map[ConstraintKey]interface{}) int {
-	return func(constraints map[ConstraintKey]interface{}) int {
-		val, err := c.client.GetValue(key)
+// GetIntPropertyWithTaskList gets property with taskList filter and asserts that it's an integer
+func (c *Collection) GetIntPropertyWithTaskList(key Key, defaultVal int) func(string) int {
+	return func(taskList string) int {
+		filters := make(map[Filter]interface{})
+		filters[TaskListName] = taskList
+		val, err := c.client.GetValueWithFilters(key, filters)
 		if err != nil {
 			return defaultVal
 		}
