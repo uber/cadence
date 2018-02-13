@@ -120,11 +120,13 @@ type Service struct {
 }
 
 // NewService builds a new cadence-history service
-func NewService(params *service.BootstrapParams, config *Config) common.Daemon {
+func NewService(params *service.BootstrapParams) common.Daemon {
 	return &Service{
 		params: params,
 		stopC:  make(chan struct{}),
-		config: config,
+		config: NewConfig(
+			dynamicconfig.NewCollection(params.DynamicConfig), params.CassandraConfig.NumHistoryShards,
+		),
 	}
 }
 

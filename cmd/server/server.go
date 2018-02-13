@@ -122,11 +122,11 @@ func (s *server) startService() common.Daemon {
 	dc := dynamicconfig.NewCollection(params.DynamicConfig)
 	switch s.name {
 	case frontendService:
-		daemon = frontend.NewService(&params, frontend.NewConfig())
+		daemon = frontend.NewService(&params)
 	case historyService:
-		daemon = history.NewService(&params, history.NewConfig(dc, s.cfg.Cassandra.NumHistoryShards))
+		daemon = history.NewService(&params)
 	case matchingService:
-		daemon = matching.NewService(&params, matching.NewConfig())
+		daemon = matching.NewService(&params)
 	case workerService:
 		daemon = worker.NewService(&params, worker.NewConfig())
 	}

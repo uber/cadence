@@ -74,10 +74,10 @@ type Service struct {
 }
 
 // NewService builds a new cadence-matching service
-func NewService(params *service.BootstrapParams, config *Config) common.Daemon {
+func NewService(params *service.BootstrapParams) common.Daemon {
 	return &Service{
 		params: params,
-		config: config,
+		config: NewConfig(dynamicconfig.NewCollection(params.DynamicConfig)),
 		stopC:  make(chan struct{}),
 	}
 }
