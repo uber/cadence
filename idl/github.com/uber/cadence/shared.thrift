@@ -553,7 +553,6 @@ struct ExternalWorkflowExecutionCancelRequestedEventAttributes {
   10: optional i64 (js.type = "Long") initiatedEventId
   20: optional string domain
   30: optional WorkflowExecution workflowExecution
-  40: optional binary control
 }
 
 struct SignalExternalWorkflowExecutionInitiatedEventAttributes {
@@ -924,7 +923,6 @@ struct RequestCancelWorkflowExecutionRequest {
   20: optional WorkflowExecution workflowExecution
   30: optional string identity
   40: optional string requestId
-  50: optional binary control
 }
 
 struct GetWorkflowExecutionHistoryRequest {

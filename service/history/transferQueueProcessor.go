@@ -559,7 +559,6 @@ func (t *transferQueueProcessorImpl) processCancelExecution(task *persistence.Tr
 			Identity: common.StringPtr(identityHistoryService),
 			// Use the same request ID to dedupe RequestCancelWorkflowExecution calls
 			RequestId: common.StringPtr(ri.CancelRequestID),
-			Control:   ri.Control,
 		},
 		ExternalInitiatedEventId: common.Int64Ptr(task.ScheduleID),
 		ExternalWorkflowExecution: &workflow.WorkflowExecution{
@@ -935,7 +934,6 @@ func (t *transferQueueProcessorImpl) requestCancelCompleted(task *persistence.Tr
 				*request.DomainUUID,
 				*request.CancelRequest.WorkflowExecution.WorkflowId,
 				common.StringDefault(request.CancelRequest.WorkflowExecution.RunId),
-				request.CancelRequest.Control,
 			)
 
 			return nil
@@ -991,7 +989,6 @@ func (t *transferQueueProcessorImpl) requestCancelFailed(task *persistence.Trans
 				*request.DomainUUID,
 				*request.CancelRequest.WorkflowExecution.WorkflowId,
 				common.StringDefault(request.CancelRequest.WorkflowExecution.RunId),
-				request.CancelRequest.Control,
 				workflow.CancelExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution)
 
 			return nil

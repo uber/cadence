@@ -358,7 +358,6 @@ type (
 	RequestCancelInfo struct {
 		InitiatedID     int64
 		CancelRequestID string
-		Control         []byte
 	}
 
 	// SignalInfo has details for pending external workflow signal
