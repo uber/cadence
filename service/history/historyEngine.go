@@ -89,7 +89,7 @@ var (
 	// ErrWorkflowCompleted is the error to indicate workflow execution already completed
 	ErrWorkflowCompleted = &workflow.EntityNotExistsError{Message: "Workflow execution already completed."}
 	// ErrWorkflowParent is the error to parent execution is given and mismatch
-	ErrWorkflowParent = &workflow.BadRequestError{Message: "Workflow parent does not match."}
+	ErrWorkflowParent = &workflow.EntityNotExistsError{Message: "Workflow parent does not match."}
 	// ErrDeserializingToken is the error to indicate task token is invalid
 	ErrDeserializingToken = &workflow.BadRequestError{Message: "Error deserializing task token."}
 	// ErrCancellationAlreadyRequested is the error indicating cancellation for target workflow is already requested
