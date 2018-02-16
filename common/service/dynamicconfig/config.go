@@ -72,46 +72,41 @@ func (c *Collection) GetIntPropertyWithTaskList(key Key, defaultVal int) func(st
 	}
 }
 
-// GetIntProperty gets property and asserts that it's an integer
-func (c *Collection) GetIntProperty(key Key, defaultVal int) func() int {
-	return func() int {
+// GetProperty gets a eface property and returns defaultVal if property is not found
+func (c *Collection) GetProperty(key Key, defaultVal interface{}) func() interface{} {
+	return func() interface{} {
 		val, err := c.client.GetValue(key)
 		if err != nil {
 			return defaultVal
 		}
-		return val.(int)
+		return val
+	}
+}
+
+// GetIntProperty gets property and asserts that it's an integer
+func (c *Collection) GetIntProperty(key Key, defaultVal int) func() int {
+	return func() int {
+		return c.GetProperty(key, defaultVal)().(int)
 	}
 }
 
 // GetFloat64Property gets property and asserts that it's a float64
 func (c *Collection) GetFloat64Property(key Key, defaultVal float64) func() float64 {
 	return func() float64 {
-		val, err := c.client.GetValue(key)
-		if err != nil {
-			return defaultVal
-		}
-		return val.(float64)
+		return c.GetProperty(key, defaultVal)().(float64)
 	}
 }
 
 // GetDurationProperty gets property and asserts that it's a duration
 func (c *Collection) GetDurationProperty(key Key, defaultVal time.Duration) func() time.Duration {
 	return func() time.Duration {
-		val, err := c.client.GetValue(key)
-		if err != nil {
-			return defaultVal
-		}
-		return val.(time.Duration)
+		return c.GetProperty(key, defaultVal)().(time.Duration)
 	}
 }
 
 // GetBoolProperty gets property and asserts that it's an bool
 func (c *Collection) GetBoolProperty(key Key, defaultVal bool) func() bool {
 	return func() bool {
-		val, err := c.client.GetValue(key)
-		if err != nil {
-			return defaultVal
-		}
-		return val.(bool)
+		return c.GetProperty(key, defaultVal)().(bool)
 	}
 }
