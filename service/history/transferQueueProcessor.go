@@ -229,14 +229,11 @@ func (t *transferQueueProcessorImpl) processTransferTasks(tasksCh chan<- *persis
 		return
 	}
 
-	// here we may have a serious bug
 	// the transfer tasks are not guaranteed to be executed in serious.
 	// since there are multiple workers polling from this task channel
-	// so if one workflow, reports a serious of decitions, one depend on another,
+	// so if one workflow, reports a series of decitions, one depend on another,
 	// e.g. 1. start child workflow; 2. signal this workflow, the execution order
-	// is not guatanteed. so, client can experience weird situation.
-	// one way of solving this is to send all tasks of a workflow to one worker,
-	// i.e. do a workflow ID -> worker mapping
+	// is not guatanteed.
 	for _, tsk := range tasks {
 		tasksCh <- tsk
 	}
