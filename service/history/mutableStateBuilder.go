@@ -1633,7 +1633,7 @@ func (e *mutableStateBuilder) AddStartChildWorkflowExecutionInitiatedEvent(decis
 	return event, ci
 }
 
-func (e *mutableStateBuilder) AddChildWorkflowExecutionStartedEvent(domain string, execution *workflow.WorkflowExecution,
+func (e *mutableStateBuilder) AddChildWorkflowExecutionStartedEvent(domain *string, execution *workflow.WorkflowExecution,
 	workflowType *workflow.WorkflowType, initiatedID int64) *workflow.HistoryEvent {
 	ci, ok := e.GetChildExecutionInfo(initiatedID)
 	if !ok || ci.StartedID != emptyEventID {
@@ -1685,7 +1685,7 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionCompletedEvent(initiatedI
 
 	startedEvent, _ := e.getHistoryEvent(ci.StartedEvent)
 
-	domain := *startedEvent.ChildWorkflowExecutionStartedEventAttributes.Domain
+	domain := startedEvent.ChildWorkflowExecutionStartedEventAttributes.Domain
 	workflowType := startedEvent.ChildWorkflowExecutionStartedEventAttributes.WorkflowType
 
 	if err := e.DeletePendingChildExecution(initiatedID); err == nil {
@@ -1708,7 +1708,7 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionFailedEvent(initiatedID i
 
 	startedEvent, _ := e.getHistoryEvent(ci.StartedEvent)
 
-	domain := *startedEvent.ChildWorkflowExecutionStartedEventAttributes.Domain
+	domain := startedEvent.ChildWorkflowExecutionStartedEventAttributes.Domain
 	workflowType := startedEvent.ChildWorkflowExecutionStartedEventAttributes.WorkflowType
 
 	if err := e.DeletePendingChildExecution(initiatedID); err == nil {
@@ -1731,7 +1731,7 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionCanceledEvent(initiatedID
 
 	startedEvent, _ := e.getHistoryEvent(ci.StartedEvent)
 
-	domain := *startedEvent.ChildWorkflowExecutionStartedEventAttributes.Domain
+	domain := startedEvent.ChildWorkflowExecutionStartedEventAttributes.Domain
 	workflowType := startedEvent.ChildWorkflowExecutionStartedEventAttributes.WorkflowType
 
 	if err := e.DeletePendingChildExecution(initiatedID); err == nil {
@@ -1754,7 +1754,7 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionTerminatedEvent(initiated
 
 	startedEvent, _ := e.getHistoryEvent(ci.StartedEvent)
 
-	domain := *startedEvent.ChildWorkflowExecutionStartedEventAttributes.Domain
+	domain := startedEvent.ChildWorkflowExecutionStartedEventAttributes.Domain
 	workflowType := startedEvent.ChildWorkflowExecutionStartedEventAttributes.WorkflowType
 
 	if err := e.DeletePendingChildExecution(initiatedID); err == nil {
@@ -1777,7 +1777,7 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionTimedOutEvent(initiatedID
 
 	startedEvent, _ := e.getHistoryEvent(ci.StartedEvent)
 
-	domain := *startedEvent.ChildWorkflowExecutionStartedEventAttributes.Domain
+	domain := startedEvent.ChildWorkflowExecutionStartedEventAttributes.Domain
 	workflowType := startedEvent.ChildWorkflowExecutionStartedEventAttributes.WorkflowType
 
 	if err := e.DeletePendingChildExecution(initiatedID); err == nil {
