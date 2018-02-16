@@ -62,13 +62,21 @@ type Collection struct {
 // GetIntPropertyWithTaskList gets property with taskList filter and asserts that it's an integer
 func (c *Collection) GetIntPropertyWithTaskList(key Key, defaultVal int) func(string) int {
 	return func(taskList string) int {
+		return c.getPropertyWithStringFilter(key, defaultVal, TaskListName)(taskList).(int)
+	}
+}
+
+func (c *Collection) getPropertyWithStringFilter(
+	key Key, defaultVal interface{}, filter Filter,
+) func(string) interface{} {
+	return func(filterVal string) interface{} {
 		filters := make(map[Filter]interface{})
-		filters[TaskListName] = taskList
+		filters[filter] = filterVal
 		val, err := c.client.GetValueWithFilters(key, filters)
 		if err != nil {
 			return defaultVal
 		}
-		return val.(int)
+		return val
 	}
 }
 
@@ -87,6 +95,17 @@ func (c *Collection) GetProperty(key Key, defaultVal interface{}) func() interfa
 func (c *Collection) GetIntProperty(key Key, defaultVal int) func() int {
 	return func() int {
 		return c.GetProperty(key, defaultVal)().(int)
+	}
+}
+
+// GetIntPropertyOld gets property and asserts that it's an integer
+func (c *Collection) GetIntPropertyOld(key Key, defaultVal int) func() int {
+	return func() int {
+		val, err := c.client.GetValue(key)
+		if err != nil {
+			return defaultVal
+		}
+		return val.(int)
 	}
 }
 
