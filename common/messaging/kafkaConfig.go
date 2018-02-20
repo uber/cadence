@@ -47,7 +47,7 @@ type (
 )
 
 // NewKafkaClient is used to create an instance of KafkaClient
-func (k *KafkaConfig) NewKafkaClient() Client {
+func (k *KafkaConfig) NewKafkaClient(logger *zap.Logger, metricScope tally.Scope) Client {
 	// mapping from cluster name to list of broker ip addresses
 	brokers := map[string][]string{}
 	for cluster, cfg := range k.Clusters {

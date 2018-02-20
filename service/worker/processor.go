@@ -21,6 +21,8 @@
 package worker
 
 import (
+	"errors"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -32,25 +34,34 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/messaging"
+	"github.com/uber/cadence/common/metrics"
 )
 
 type (
 	replicationTaskProcessor struct {
-		topicName    string
-		consumerName string
-		client       messaging.Client
-		consumer     kafka.Consumer
-		isStarted    int32
-		isStopped    int32
-		shutdownWG   sync.WaitGroup
-		shutdownCh   chan struct{}
-		config       *Config
-		logger       bark.Logger
+		topicName     string
+		consumerName  string
+		client        messaging.Client
+		consumer      kafka.Consumer
+		isStarted     int32
+		isStopped     int32
+		shutdownWG    sync.WaitGroup
+		shutdownCh    chan struct{}
+		config        *Config
+		logger        bark.Logger
+		metricsClient metrics.Client
 	}
 )
 
+var (
+	// ErrEmptyReplicationTask is the error to indicate empty replication task
+	ErrEmptyReplicationTask = errors.New("empty replication task")
+	// ErrUnknownReplicationTask is the error to indicate unknown replication task type
+	ErrUnknownReplicationTask = errors.New("unknown replication task")
+)
+
 func newReplicationTaskProcessor(topic, consumer string, client messaging.Client, config *Config,
-	logger bark.Logger) *replicationTaskProcessor {
+	logger bark.Logger, metricsClient metrics.Client) *replicationTaskProcessor {
 	return &replicationTaskProcessor{
 		topicName:    topic,
 		consumerName: consumer,
@@ -62,6 +73,7 @@ func newReplicationTaskProcessor(topic, consumer string, client messaging.Client
 			logging.TagTopicName:         topic,
 			logging.TagConsumerName:      consumer,
 		}),
+		metricsClient: metricsClient,
 	}
 }
 
@@ -116,14 +128,10 @@ func (p *replicationTaskProcessor) processorPump() {
 		go p.worker(&workerWG)
 	}
 
-processorPumpLoop:
-	for {
-		select {
-		case <-p.shutdownCh:
-			// Processor is shutting down, close the underlying consumer
-			p.consumer.Stop()
-			break processorPumpLoop
-		}
+	select {
+	case <-p.shutdownCh:
+		// Processor is shutting down, close the underlying consumer
+		p.consumer.Stop()
 	}
 
 	p.logger.Info("Replication task processor pump shutting down.")
@@ -143,24 +151,35 @@ func (p *replicationTaskProcessor) worker(workerWG *sync.WaitGroup) {
 				return // channel closed
 			}
 
-			if task, err := deserialize(msg.Value()); err != nil {
-				p.logger.Errorf("Deserialize Error. Value: %v, Error: %v", string(msg.Value()), err)
+			p.metricsClient.IncCounter(metrics.ReplicatorScope, metrics.ReplicatorMessages)
+			sw := p.metricsClient.StartTimer(metrics.ReplicatorScope, metrics.ReplicatorLatency)
+
+			// TODO: We skip over any messages which cannot be deserialized.  Figure out DLQ story for corrupted messages.
+			task, err := deserialize(msg.Value())
+			if err != nil {
+				err = fmt.Errorf("Deserialize Error. Value: %v, Error: %v", string(msg.Value()), err)
 			} else {
 
+				// TODO: We need to figure out DLQ story for corrupted payload
 				if task.TaskType == nil {
-					p.logger.Warn("Empty replication task.")
-				}
-
-				switch task.GetTaskType() {
-				case replicator.ReplicationTaskTypeDomain:
-					p.logger.Info("Recieved replication task for domain.")
-				case replicator.ReplicationTaskTypeHistory:
-					p.logger.Info("Recieved replication task for history.")
-				default:
-					p.logger.Errorf("Unknown replication task: %v", task.TaskType)
+					err = ErrEmptyReplicationTask
+				} else {
+					switch task.GetTaskType() {
+					case replicator.ReplicationTaskTypeDomain:
+						p.logger.Info("Recieved replication task for domain.")
+					case replicator.ReplicationTaskTypeHistory:
+						p.logger.Info("Recieved replication task for history.")
+					default:
+						err = ErrUnknownReplicationTask
+					}
 				}
 			}
 
+			if err != nil {
+				p.logger.WithField(logging.TagErr, err).Error("Error processing replication task.")
+				p.metricsClient.IncCounter(metrics.ReplicatorScope, metrics.ReplicatorFailures)
+			}
+			sw.Stop()
 			msg.Ack()
 		case <-p.consumer.Closed():
 			p.logger.Info("Consumer closed. Processor shutting down.")

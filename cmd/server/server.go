@@ -32,6 +32,8 @@ import (
 	"github.com/uber/cadence/service/history"
 	"github.com/uber/cadence/service/matching"
 	"github.com/uber/cadence/service/worker"
+
+	"go.uber.org/zap"
 )
 
 type (
@@ -96,7 +98,6 @@ func (s *server) startService() common.Daemon {
 	params.Name = "cadence-" + s.name
 	params.Logger = s.cfg.Log.NewBarkLogger()
 	params.CassandraConfig = s.cfg.Cassandra
-	params.MessagingClient = s.cfg.Kafka.NewKafkaClient()
 
 	params.RingpopFactory, err = s.cfg.Ringpop.NewFactory()
 	if err != nil {
@@ -113,6 +114,8 @@ func (s *server) startService() common.Daemon {
 		s.cfg.ClustersInfo.CurrentClusterName,
 		s.cfg.ClustersInfo.ClusterNames,
 	)
+	// TODO: We need to switch Cadence to use zap logger, until then just pass zap.NewNop
+	params.MessagingClient = s.cfg.Kafka.NewKafkaClient(zap.NewNop(), params.MetricScope)
 
 	var daemon common.Daemon
 
