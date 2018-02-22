@@ -661,10 +661,7 @@ type (
 
 	// CreateDomainRequest is used to create the domain
 	CreateDomainRequest struct {
-		Name              string
-		Status            int
-		Description       string
-		OwnerEmail        string
+		Info              *DomainInfo
 		Config            *DomainConfig
 		ReplicationConfig *DomainReplicationConfig
 		FailoverVersion   int64

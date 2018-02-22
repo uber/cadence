@@ -24,7 +24,6 @@ import (
 	"fmt"
 
 	"github.com/gocql/gocql"
-	"github.com/pborman/uuid"
 	"github.com/uber-common/bark"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -129,20 +128,19 @@ func (m *cassandraMetadataPersistence) Close() {
 // delete the orphaned entry from domains table.  There is a chance delete entry could fail and we never delete the
 // orphaned entry from domains table.  We might need a background job to delete those orphaned record.
 func (m *cassandraMetadataPersistence) CreateDomain(request *CreateDomainRequest) (*CreateDomainResponse, error) {
-	domainUUID := uuid.New()
-	if err := m.session.Query(templateCreateDomainQuery, domainUUID, request.Name).Exec(); err != nil {
+	if err := m.session.Query(templateCreateDomainQuery, request.Info.ID, request.Info.Name).Exec(); err != nil {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("CreateDomain operation failed. Inserting into domains table. Error: %v", err),
 		}
 	}
 
 	query := m.session.Query(templateCreateDomainByNameQuery,
-		request.Name,
-		domainUUID,
-		request.Name,
-		request.Status,
-		request.Description,
-		request.OwnerEmail,
+		request.Info.Name,
+		request.Info.ID,
+		request.Info.Name,
+		request.Info.Status,
+		request.Info.Description,
+		request.Info.OwnerEmail,
 		request.Config.Retention,
 		request.Config.EmitMetric,
 		request.ReplicationConfig.ActiveClusterName,
@@ -161,7 +159,7 @@ func (m *cassandraMetadataPersistence) CreateDomain(request *CreateDomainRequest
 
 	if !applied {
 		// Domain already exist.  Delete orphan domain record before returning back to user
-		if errDelete := m.session.Query(templateDeleteDomainQuery, domainUUID).Exec(); errDelete != nil {
+		if errDelete := m.session.Query(templateDeleteDomainQuery, request.Info.ID).Exec(); errDelete != nil {
 			m.logger.Warnf("Unable to delete orphan domain record. Error: %v", errDelete)
 		}
 
@@ -177,7 +175,7 @@ func (m *cassandraMetadataPersistence) CreateDomain(request *CreateDomainRequest
 		}
 	}
 
-	return &CreateDomainResponse{ID: domainUUID}, nil
+	return &CreateDomainResponse{ID: request.Info.ID}, nil
 }
 
 func (m *cassandraMetadataPersistence) GetDomain(request *GetDomainRequest) (*GetDomainResponse, error) {
