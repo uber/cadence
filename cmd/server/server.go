@@ -127,7 +127,7 @@ func (s *server) startService() common.Daemon {
 	case matchingService:
 		daemon = matching.NewService(&params)
 	case workerService:
-		daemon = worker.NewService(&params, worker.NewConfig())
+		daemon = worker.NewService(&params)
 	}
 
 	go execute(daemon, s.doneC)

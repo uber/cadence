@@ -32,14 +32,14 @@ import (
 // Config represents configuration for cadence-matching service
 type Config struct {
 	EnableSyncMatch bool
-	// Time to hold a poll request before returning an empty response if there are no tasks
-	LongPollExpirationInterval func(string) time.Duration
 
 	// taskListManager configuration
-	RangeSize                  int64
-	GetTasksBatchSize          int
-	UpdateAckInterval          time.Duration
-	IdleTasklistCheckInterval  time.Duration
+	RangeSize                 int64
+	GetTasksBatchSize         int
+	UpdateAckInterval         time.Duration
+	IdleTasklistCheckInterval time.Duration
+	// Time to hold a poll request before returning an empty response if there are no tasks
+	LongPollExpirationInterval func(string) time.Duration
 	MinTaskThrottlingBurstSize func(string) int
 
 	// taskWriter configuration
@@ -50,14 +50,14 @@ type Config struct {
 // NewConfig returns new service config with default values
 func NewConfig(dc *dynamicconfig.Collection) *Config {
 	return &Config{
-		EnableSyncMatch: true,
-		LongPollExpirationInterval: dc.GetDurationPropertyWithTaskList(
-			dynamicconfig.MatchingLongPollExpirationInterval, time.Minute,
-		),
+		EnableSyncMatch:           true,
 		RangeSize:                 100000,
 		GetTasksBatchSize:         1000,
 		UpdateAckInterval:         10 * time.Second,
 		IdleTasklistCheckInterval: 5 * time.Minute,
+		LongPollExpirationInterval: dc.GetDurationPropertyWithTaskList(
+			dynamicconfig.MatchingLongPollExpirationInterval, time.Minute,
+		),
 		MinTaskThrottlingBurstSize: dc.GetIntPropertyWithTaskList(
 			dynamicconfig.MinTaskThrottlingBurstSize, 1,
 		),
