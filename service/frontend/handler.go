@@ -191,17 +191,21 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 	}
 
 	response, err := wh.metadataMgr.CreateDomain(&persistence.CreateDomainRequest{
-		Name:        *registerRequest.Name,
-		Status:      persistence.DomainStatusRegistered,
-		OwnerEmail:  common.StringDefault(registerRequest.OwnerEmail),
-		Description: common.StringDefault(registerRequest.Description),
+		Info: &persistence.DomainInfo{
+			ID:          uuid.New(),
+			Name:        registerRequest.GetName(),
+			Status:      persistence.DomainStatusRegistered,
+			OwnerEmail:  registerRequest.GetOwnerEmail(),
+			Description: registerRequest.GetDescription(),
+		},
 		Config: &persistence.DomainConfig{
-			Retention:  common.Int32Default(registerRequest.WorkflowExecutionRetentionPeriodInDays),
-			EmitMetric: common.BoolDefault(registerRequest.EmitMetric),
+			Retention:  registerRequest.GetWorkflowExecutionRetentionPeriodInDays(),
+			EmitMetric: registerRequest.GetEmitMetric(),
 		},
 		ReplicationConfig: &persistence.DomainReplicationConfig{
 			ActiveClusterName: activeClusterName,
 			Clusters:          clusters,
+			FailoverVersion:   clusterMetadata.GetNextFailoverVersion(0),
 		},
 	})
 
