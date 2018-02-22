@@ -24,6 +24,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/pborman/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -64,6 +65,7 @@ func (m *metadataPersistenceSuite) TearDownSuite() {
 }
 
 func (m *metadataPersistenceSuite) TestCreateDomain() {
+	id := uuid.New()
 	name := "create-domain-test-name"
 	status := DomainStatusRegistered
 	description := "create-domain-test-description"
@@ -73,6 +75,7 @@ func (m *metadataPersistenceSuite) TestCreateDomain() {
 
 	resp0, err0 := m.CreateDomain(
 		&DomainInfo{
+			ID:          id,
 			Name:        name,
 			Status:      status,
 			Description: description,
@@ -87,9 +90,7 @@ func (m *metadataPersistenceSuite) TestCreateDomain() {
 
 	m.Nil(err0)
 	m.NotNil(resp0)
-
-	id := resp0.ID
-	m.True(len(id) > 0)
+	m.Equal(id, resp0.ID)
 
 	// for domain which do not have replication config set, will default to
 	// use current cluster as active, with current cluster as all clusters
@@ -111,6 +112,7 @@ func (m *metadataPersistenceSuite) TestCreateDomain() {
 
 	resp2, err2 := m.CreateDomain(
 		&DomainInfo{
+			ID:          uuid.New(),
 			Name:        name,
 			Status:      status,
 			Description: "fail",
@@ -128,6 +130,7 @@ func (m *metadataPersistenceSuite) TestCreateDomain() {
 }
 
 func (m *metadataPersistenceSuite) TestGetDomain() {
+	id := uuid.New()
 	name := "get-domain-test-name"
 	status := DomainStatusRegistered
 	description := "get-domain-test-description"
@@ -154,6 +157,7 @@ func (m *metadataPersistenceSuite) TestGetDomain() {
 
 	resp1, err1 := m.CreateDomain(
 		&DomainInfo{
+			ID:          id,
 			Name:        name,
 			Status:      status,
 			Description: description,
@@ -171,9 +175,7 @@ func (m *metadataPersistenceSuite) TestGetDomain() {
 	)
 	m.Nil(err1)
 	m.NotNil(resp1)
-
-	id := resp1.ID
-	m.True(len(id) > 0)
+	m.Equal(id, resp1.ID)
 
 	resp2, err2 := m.GetDomain(id, "")
 	m.Nil(err2)
@@ -218,6 +220,7 @@ func (m *metadataPersistenceSuite) TestGetDomain() {
 }
 
 func (m *metadataPersistenceSuite) TestUpdateDomain() {
+	id := uuid.New()
 	name := "update-domain-test-name"
 	status := DomainStatusRegistered
 	description := "update-domain-test-description"
@@ -239,6 +242,7 @@ func (m *metadataPersistenceSuite) TestUpdateDomain() {
 
 	resp1, err1 := m.CreateDomain(
 		&DomainInfo{
+			ID:          id,
 			Name:        name,
 			Status:      status,
 			Description: description,
@@ -255,9 +259,7 @@ func (m *metadataPersistenceSuite) TestUpdateDomain() {
 		},
 	)
 	m.Nil(err1)
-
-	id := resp1.ID
-	m.True(len(id) > 0)
+	m.Equal(id, resp1.ID)
 
 	resp2, err2 := m.GetDomain(id, "")
 	m.Nil(err2)
@@ -339,6 +341,7 @@ func (m *metadataPersistenceSuite) TestUpdateDomain() {
 }
 
 func (m *metadataPersistenceSuite) TestDeleteDomain() {
+	id := uuid.New()
 	name := "delete-domain-test-name"
 	status := DomainStatusRegistered
 	description := "delete-domain-test-description"
@@ -360,6 +363,7 @@ func (m *metadataPersistenceSuite) TestDeleteDomain() {
 
 	resp1, err1 := m.CreateDomain(
 		&DomainInfo{
+			ID:          id,
 			Name:        name,
 			Status:      status,
 			Description: description,
@@ -376,8 +380,7 @@ func (m *metadataPersistenceSuite) TestDeleteDomain() {
 		},
 	)
 	m.Nil(err1)
-	id := resp1.ID
-	m.True(len(id) > 0)
+	m.Equal(id, resp1.ID)
 
 	resp2, err2 := m.GetDomain("", name)
 	m.Nil(err2)
@@ -398,6 +401,7 @@ func (m *metadataPersistenceSuite) TestDeleteDomain() {
 
 	resp6, err6 := m.CreateDomain(
 		&DomainInfo{
+			ID:          id,
 			Name:        name,
 			Status:      status,
 			Description: description,
@@ -414,8 +418,7 @@ func (m *metadataPersistenceSuite) TestDeleteDomain() {
 		},
 	)
 	m.Nil(err6)
-	id = resp6.ID
-	m.True(len(id) > 0)
+	m.Equal(id, resp6.ID)
 
 	err7 := m.DeleteDomain(id, "")
 	m.Nil(err7)
@@ -433,10 +436,7 @@ func (m *metadataPersistenceSuite) TestDeleteDomain() {
 
 func (m *metadataPersistenceSuite) CreateDomain(info *DomainInfo, config *DomainConfig, replicationConfig *DomainReplicationConfig) (*CreateDomainResponse, error) {
 	return m.MetadataManager.CreateDomain(&CreateDomainRequest{
-		Name:              info.Name,
-		Status:            info.Status,
-		Description:       info.Description,
-		OwnerEmail:        info.OwnerEmail,
+		Info:              info,
 		Config:            config,
 		ReplicationConfig: replicationConfig,
 	})

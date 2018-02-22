@@ -138,9 +138,12 @@ func (s *integrationSuite) SetupTest() {
 	s.engine = s.host.GetFrontendClient()
 	s.domainName = "integration-test-domain"
 	s.MetadataManager.CreateDomain(&persistence.CreateDomainRequest{
-		Name:        s.domainName,
-		Status:      persistence.DomainStatusRegistered,
-		Description: "Test domain for integration test",
+		Info: &persistence.DomainInfo{
+			ID:          uuid.New(),
+			Name:        s.domainName,
+			Status:      persistence.DomainStatusRegistered,
+			Description: "Test domain for integration test",
+		},
 		Config: &persistence.DomainConfig{
 			Retention:  1,
 			EmitMetric: false,
@@ -149,9 +152,12 @@ func (s *integrationSuite) SetupTest() {
 	})
 	s.foreignDomainName = "integration-foreign-test-domain"
 	s.MetadataManager.CreateDomain(&persistence.CreateDomainRequest{
-		Name:        s.foreignDomainName,
-		Status:      persistence.DomainStatusRegistered,
-		Description: "Test foreign domain for integration test",
+		Info: &persistence.DomainInfo{
+			ID:          uuid.New(),
+			Name:        s.foreignDomainName,
+			Status:      persistence.DomainStatusRegistered,
+			Description: "Test foreign domain for integration test",
+		},
 		Config: &persistence.DomainConfig{
 			Retention:  1,
 			EmitMetric: false,
@@ -363,10 +369,13 @@ func (s *integrationSuite) TestIntegrationUpdateGetDomain_Failover() {
 
 	// create a domain which is not currently active
 	s.MetadataManager.CreateDomain(&persistence.CreateDomainRequest{
-		Name:        domainName,
-		Status:      persistence.DomainStatusRegistered,
-		Description: description,
-		OwnerEmail:  email,
+		Info: &persistence.DomainInfo{
+			ID:          uuid.New(),
+			Name:        domainName,
+			Status:      persistence.DomainStatusRegistered,
+			Description: description,
+			OwnerEmail:  email,
+		},
 		Config: &persistence.DomainConfig{
 			Retention:  retention,
 			EmitMetric: emitMetric,
