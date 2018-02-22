@@ -33,7 +33,7 @@ import (
 type Config struct {
 	EnableSyncMatch bool
 	// Time to hold a poll request before returning an empty response if there are no tasks
-	LongPollExpirationInterval func() time.Duration
+	LongPollExpirationInterval func(string) time.Duration
 
 	// taskListManager configuration
 	RangeSize                  int64
@@ -51,18 +51,18 @@ type Config struct {
 func NewConfig(dc *dynamicconfig.Collection) *Config {
 	return &Config{
 		EnableSyncMatch: true,
-		LongPollExpirationInterval: dc.GetDurationProperty(
+		LongPollExpirationInterval: dc.GetDurationPropertyWithTaskList(
 			dynamicconfig.MatchingLongPollExpirationInterval, time.Minute,
 		),
-		RangeSize:                       100000,
-		GetTasksBatchSize:               1000,
-		UpdateAckInterval:               10 * time.Second,
-		IdleTasklistCheckInterval:       5 * time.Minute,
-		OutstandingTaskAppendsThreshold: 250,
-		MaxTaskBatchSize:                100,
+		RangeSize:                 100000,
+		GetTasksBatchSize:         1000,
+		UpdateAckInterval:         10 * time.Second,
+		IdleTasklistCheckInterval: 5 * time.Minute,
 		MinTaskThrottlingBurstSize: dc.GetIntPropertyWithTaskList(
 			dynamicconfig.MinTaskThrottlingBurstSize, 1,
 		),
+		OutstandingTaskAppendsThreshold: 250,
+		MaxTaskBatchSize:                100,
 	}
 }
 

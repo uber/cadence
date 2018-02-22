@@ -66,6 +66,13 @@ func (c *Collection) GetIntPropertyWithTaskList(key Key, defaultVal int) func(st
 	}
 }
 
+// GetDurationPropertyWithTaskList gets property with taskList filter and asserts that it's time.Duration
+func (c *Collection) GetDurationPropertyWithTaskList(key Key, defaultVal time.Duration) func(string) time.Duration {
+	return func(taskList string) time.Duration {
+		return c.getPropertyWithStringFilter(key, defaultVal, TaskListName)(taskList).(time.Duration)
+	}
+}
+
 func (c *Collection) getPropertyWithStringFilter(
 	key Key, defaultVal interface{}, filter Filter,
 ) func(string) interface{} {
@@ -95,17 +102,6 @@ func (c *Collection) GetProperty(key Key, defaultVal interface{}) func() interfa
 func (c *Collection) GetIntProperty(key Key, defaultVal int) func() int {
 	return func() int {
 		return c.GetProperty(key, defaultVal)().(int)
-	}
-}
-
-// GetIntPropertyOld gets property and asserts that it's an integer
-func (c *Collection) GetIntPropertyOld(key Key, defaultVal int) func() int {
-	return func() int {
-		val, err := c.client.GetValue(key)
-		if err != nil {
-			return defaultVal
-		}
-		return val.(int)
 	}
 }
 

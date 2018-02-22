@@ -35,12 +35,3 @@ func BenchmarkGetIntProperty(b *testing.B) {
 		assert.Equal(b, 10, size())
 	}
 }
-func BenchmarkGetIntPropertyOld(b *testing.B) {
-	client := newInMemoryClient()
-	cln := NewCollection(client)
-	key := MaxTaskBatchSize
-	for i := 0; i < b.N; i++ {
-		size := cln.GetIntPropertyOld(key, 10)
-		assert.Equal(b, 10, size())
-	}
-}

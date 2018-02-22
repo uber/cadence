@@ -65,6 +65,38 @@ type taskListManager interface {
 	String() string
 }
 
+type taskListConfig struct {
+	EnableSyncMatch bool
+	// Time to hold a poll request before returning an empty response if there are no tasks
+	LongPollExpirationInterval func() time.Duration
+	RangeSize                  int64
+	GetTasksBatchSize          int
+	UpdateAckInterval          time.Duration
+	IdleTasklistCheckInterval  time.Duration
+	MinTaskThrottlingBurstSize func() int
+
+	// taskWriter configuration
+	OutstandingTaskAppendsThreshold int
+	MaxTaskBatchSize                int
+}
+
+func newTaskListConfig(id *taskListID, config *Config) *taskListConfig {
+	taskListName := id.taskListName
+	return &taskListConfig{
+		RangeSize:                 config.RangeSize,
+		GetTasksBatchSize:         config.GetTasksBatchSize,
+		UpdateAckInterval:         config.UpdateAckInterval,
+		IdleTasklistCheckInterval: config.IdleTasklistCheckInterval,
+		MinTaskThrottlingBurstSize: func() int {
+			return config.MinTaskThrottlingBurstSize(taskListName)
+		},
+		EnableSyncMatch: config.EnableSyncMatch,
+		LongPollExpirationInterval: func() time.Duration {
+			return config.LongPollExpirationInterval(taskListName)
+		},
+	}
+}
+
 type rateLimiter struct {
 	sync.RWMutex
 	maxDispatchPerSecond *float64
@@ -141,11 +173,14 @@ func newTaskListManager(
 	rl := newRateLimiter(
 		&dPtr, _defaultTaskDispatchRPSTTL, config.MinTaskThrottlingBurstSize(taskList.taskListName),
 	)
-	return newTaskListManagerWithRateLimiter(e, taskList, taskListKind, config, rl)
+	return newTaskListManagerWithRateLimiter(
+		e, taskList, taskListKind, newTaskListConfig(taskList, config), rl,
+	)
 }
 
 func newTaskListManagerWithRateLimiter(
-	e *matchingEngineImpl, taskList *taskListID, taskListKind *s.TaskListKind, config *Config, rl rateLimiter,
+	e *matchingEngineImpl, taskList *taskListID, taskListKind *s.TaskListKind, config *taskListConfig,
+	rl rateLimiter,
 ) taskListManager {
 	// To perform one db operation if there are no pollers
 	taskBufferSize := config.GetTasksBatchSize - 1
@@ -198,7 +233,7 @@ type taskListManagerImpl struct {
 	logger        bark.Logger
 	metricsClient metrics.Client
 	engine        *matchingEngineImpl
-	config        *Config
+	config        *taskListConfig
 
 	// pollerHistory stores poller which poll from this tasklist in last few minutes
 	pollerHistory *pollerHistory
@@ -576,8 +611,8 @@ func (c *taskListManagerImpl) updateRangeIfNeededLocked(e *matchingEngineImpl) e
 	tli := resp.TaskListInfo
 	c.rangeID = tli.RangeID // Starts from 1
 	c.taskAckManager.setAckLevel(tli.AckLevel)
-	c.taskSequenceNumber = (tli.RangeID-1)*e.config.RangeSize + 1
-	c.nextRangeSequenceNumber = (tli.RangeID)*e.config.RangeSize + 1
+	c.taskSequenceNumber = (tli.RangeID-1)*c.config.RangeSize + 1
+	c.nextRangeSequenceNumber = (tli.RangeID)*c.config.RangeSize + 1
 	c.logger.Debugf("updateRangeLocked rangeID=%v, c.taskSequenceNumber=%v, c.nextRangeSequenceNumber=%v",
 		c.rangeID, c.taskSequenceNumber, c.nextRangeSequenceNumber)
 	return nil

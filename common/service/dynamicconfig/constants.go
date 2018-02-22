@@ -24,13 +24,6 @@ package dynamicconfig
 type Key int
 
 func (k Key) String() string {
-	keys := []string{
-		"unknownKey",
-		"minTaskThrottlingBurstSize",
-		"maxTaskBatchSize",
-		"matchingLongPollExpirationInterval",
-		"historyLongPollExpirationInterval",
-	}
 	if k <= unknownKey || int(k) >= len(keys) {
 		return keys[unknownKey]
 	}
@@ -38,9 +31,23 @@ func (k Key) String() string {
 }
 
 const (
+	_matchingRoot         = "matching."
+	_matchingTaskListRoot = "taskList."
+	_historyRoot          = "history."
+)
+
+var keys = []string{
+	"unknownKey",
+	_matchingTaskListRoot + "MinTaskThrottlingBurstSize",
+	_matchingTaskListRoot + "MaxTaskBatchSize",
+	_matchingTaskListRoot + "LongPollExpirationInterval",
+	_historyRoot + "LongPollExpirationInterval",
+}
+
+const (
+	unknownKey Key = iota
 	// Matching keys
 
-	unknownKey Key = iota
 	// MinTaskThrottlingBurstSize is the minimum burst size for task list throttling
 	MinTaskThrottlingBurstSize
 	// MaxTaskBatchSize is the maximum batch size to fetch from the task buffer
