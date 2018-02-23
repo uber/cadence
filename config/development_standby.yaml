@@ -54,7 +54,7 @@ services:
         hostPort: "127.0.0.1:8125"
         prefix: "cadence_standby"
     pprof:
-      port: 7941
+      port: 8941
 
 clustersInfo:
   initialFailoverVersion: 1
