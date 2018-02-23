@@ -321,6 +321,39 @@ func (mr *_MockClientRecorder) RequestCancelWorkflowExecution(
 	return mr.mock.ctrl.RecordCall(mr.mock, "RequestCancelWorkflowExecution", args...)
 }
 
+// ResetMutableState responds to a ResetMutableState call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().ResetMutableState(gomock.Any(), ...).Return(...)
+// 	... := client.ResetMutableState(...)
+func (m *MockClient) ResetMutableState(
+	ctx context.Context,
+	_ResetRequest *history.ResetMutableStateRequest,
+	opts ...yarpc.CallOption,
+) (success *history.ResetMutableStateResponse, err error) {
+
+	args := []interface{}{ctx, _ResetRequest}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "ResetMutableState", args...)
+	success, _ = ret[i].(*history.ResetMutableStateResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) ResetMutableState(
+	ctx interface{},
+	_ResetRequest interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _ResetRequest}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "ResetMutableState", args...)
+}
+
 // RespondActivityTaskCanceled responds to a RespondActivityTaskCanceled call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.

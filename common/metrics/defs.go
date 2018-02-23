@@ -198,6 +198,8 @@ const (
 	HistoryClientRespondActivityTaskCanceledScope
 	// HistoryClientGetMutableStateScope tracks RPC calls to history service
 	HistoryClientGetMutableStateScope
+	// HistoryClientResetMutableStateScope tracks RPC calls to history service
+	HistoryClientResetMutableStateScope
 	// HistoryClientDescribeWorkflowExecutionScope tracks RPC calls to history service
 	HistoryClientDescribeWorkflowExecutionScope
 	// HistoryClientRecordDecisionTaskStartedScope tracks RPC calls to history service
@@ -310,8 +312,10 @@ const (
 	HistoryRespondActivityTaskFailedScope
 	// HistoryRespondActivityTaskCanceledScope tracks RespondActivityTaskCanceled API calls received by service
 	HistoryRespondActivityTaskCanceledScope
-	// HistoryGetMutableStateScope tracks GetWorkflowExecutionHistory API calls received by service
+	// HistoryGetMutableStateScope tracks GetMutableStateScope API calls received by service
 	HistoryGetMutableStateScope
+	// HistoryResetMutableStateScope tracks ResetMutableStateScope API calls received by service
+	HistoryResetMutableStateScope
 	// HistoryDescribeWorkflowExecutionScope tracks DescribeWorkflowExecution API calls received by service
 	HistoryDescribeWorkflowExecutionScope
 	// HistoryRecordDecisionTaskStartedScope tracks RecordDecisionTaskStarted API calls received by service
@@ -444,6 +448,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryClientRespondActivityTaskFailedScope:      {operation: "HistoryClientRespondActivityTaskFailed"},
 		HistoryClientRespondActivityTaskCanceledScope:    {operation: "HistoryClientRespondActivityTaskCanceled"},
 		HistoryClientGetMutableStateScope:                {operation: "HistoryClientGetMutableState"},
+		HistoryClientResetMutableStateScope:              {operation: "HistoryClientResetMutableStateScope"},
 		HistoryClientDescribeWorkflowExecutionScope:      {operation: "HistoryClientDescribeWorkflowExecution"},
 		HistoryClientRecordDecisionTaskStartedScope:      {operation: "HistoryClientRecordDecisionTaskStarted"},
 		HistoryClientRecordActivityTaskStartedScope:      {operation: "HistoryClientRecordActivityTaskStarted"},
@@ -501,6 +506,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryRespondActivityTaskFailedScope:      {operation: "RespondActivityTaskFailed"},
 		HistoryRespondActivityTaskCanceledScope:    {operation: "RespondActivityTaskCanceled"},
 		HistoryGetMutableStateScope:                {operation: "GetMutableState"},
+		HistoryResetMutableStateScope:              {operation: "ResetMutableStateScope"},
 		HistoryDescribeWorkflowExecutionScope:      {operation: "DescribeWorkflowExecution"},
 		HistoryRecordDecisionTaskStartedScope:      {operation: "RecordDecisionTaskStarted"},
 		HistoryRecordActivityTaskStartedScope:      {operation: "RecordActivityTaskStarted"},

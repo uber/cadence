@@ -84,6 +84,12 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) error
 
+	ResetMutableState(
+		ctx context.Context,
+		ResetRequest *history.ResetMutableStateRequest,
+		opts ...yarpc.CallOption,
+	) (*history.ResetMutableStateResponse, error)
+
 	RespondActivityTaskCanceled(
 		ctx context.Context,
 		CanceledRequest *history.RespondActivityTaskCanceledRequest,
@@ -344,6 +350,29 @@ func (c client) RequestCancelWorkflowExecution(
 	}
 
 	err = history.HistoryService_RequestCancelWorkflowExecution_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) ResetMutableState(
+	ctx context.Context,
+	_ResetRequest *history.ResetMutableStateRequest,
+	opts ...yarpc.CallOption,
+) (success *history.ResetMutableStateResponse, err error) {
+
+	args := history.HistoryService_ResetMutableState_Helper.Args(_ResetRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result history.HistoryService_ResetMutableState_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = history.HistoryService_ResetMutableState_Helper.UnwrapResponse(&result)
 	return
 }
 

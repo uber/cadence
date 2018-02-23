@@ -74,6 +74,11 @@ type Interface interface {
 		CancelRequest *history.RequestCancelWorkflowExecutionRequest,
 	) error
 
+	ResetMutableState(
+		ctx context.Context,
+		ResetRequest *history.ResetMutableStateRequest,
+	) (*history.ResetMutableStateResponse, error)
+
 	RespondActivityTaskCanceled(
 		ctx context.Context,
 		CanceledRequest *history.RespondActivityTaskCanceledRequest,
@@ -220,6 +225,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
+				Name: "ResetMutableState",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.ResetMutableState),
+				},
+				Signature:    "ResetMutableState(ResetRequest *history.ResetMutableStateRequest) (*history.ResetMutableStateResponse)",
+				ThriftModule: history.ThriftModule,
+			},
+
+			thrift.Method{
 				Name: "RespondActivityTaskCanceled",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -320,7 +336,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 17)
+	procedures := make([]transport.Procedure, 0, 18)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
@@ -470,6 +486,25 @@ func (h handler) RequestCancelWorkflowExecution(ctx context.Context, body wire.V
 
 	hadError := err != nil
 	result, err := history.HistoryService_RequestCancelWorkflowExecution_Helper.WrapResponse(err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) ResetMutableState(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args history.HistoryService_ResetMutableState_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.ResetMutableState(ctx, args.ResetRequest)
+
+	hadError := err != nil
+	result, err := history.HistoryService_ResetMutableState_Helper.WrapResponse(success, err)
 
 	var response thrift.Response
 	if err == nil {

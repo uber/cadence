@@ -54,6 +54,29 @@ func (_m *HistoryClient) GetMutableState(ctx context.Context, getRequest *histor
 	return r0, r1
 }
 
+// ResetMutableState provides a mock function with given fields: ctx, getRequest
+func (_m *HistoryClient) ResetMutableState(ctx context.Context, request *history.ResetMutableStateRequest, opts ...yarpc.CallOption) (*history.ResetMutableStateResponse, error) {
+	ret := _m.Called(ctx, request)
+
+	var r0 *history.ResetMutableStateResponse
+	if rf, ok := ret.Get(0).(func(context.Context, *history.ResetMutableStateRequest) *history.ResetMutableStateResponse); ok {
+		r0 = rf(ctx, request)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*history.ResetMutableStateResponse)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *history.ResetMutableStateRequest) error); ok {
+		r1 = rf(ctx, request)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // DescribeWorkflowExecution provides a mock function with given fields: ctx, request
 func (_m *HistoryClient) DescribeWorkflowExecution(ctx context.Context, request *history.DescribeWorkflowExecutionRequest, opts ...yarpc.CallOption) (*shared.DescribeWorkflowExecutionResponse, error) {
 	ret := _m.Called(ctx, request)

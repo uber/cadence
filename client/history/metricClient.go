@@ -78,6 +78,23 @@ func (c *metricClient) GetMutableState(
 	return resp, err
 }
 
+func (c *metricClient) ResetMutableState(
+	context context.Context,
+	request *h.ResetMutableStateRequest,
+	opts ...yarpc.CallOption) (*h.ResetMutableStateResponse, error) {
+	c.metricsClient.IncCounter(metrics.HistoryClientResetMutableStateScope, metrics.CadenceRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.HistoryClientResetMutableStateScope, metrics.CadenceLatency)
+	resp, err := c.client.ResetMutableState(context, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.HistoryClientResetMutableStateScope, metrics.HistoryClientFailures)
+	}
+
+	return resp, err
+}
+
 func (c *metricClient) DescribeWorkflowExecution(
 	context context.Context,
 	request *h.DescribeWorkflowExecutionRequest,

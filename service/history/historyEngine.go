@@ -444,19 +444,49 @@ func (e *historyEngineImpl) getMutableState(
 
 	execution.RunId = context.workflowExecution.RunId
 	result := &h.GetMutableStateResponse{
-		Execution:            &execution,
-		WorkflowType:         &workflow.WorkflowType{Name: common.StringPtr(msBuilder.executionInfo.WorkflowTypeName)},
-		LastFirstEventId:     common.Int64Ptr(msBuilder.GetLastFirstEventID()),
-		NextEventId:          common.Int64Ptr(msBuilder.GetNextEventID()),
-		TaskList:             &workflow.TaskList{Name: common.StringPtr(context.msBuilder.executionInfo.TaskList)},
-		StickyTaskList:       &workflow.TaskList{Name: common.StringPtr(msBuilder.executionInfo.StickyTaskList)},
-		ClientLibraryVersion: common.StringPtr(msBuilder.executionInfo.ClientLibraryVersion),
-		ClientFeatureVersion: common.StringPtr(msBuilder.executionInfo.ClientFeatureVersion),
-		ClientImpl:           common.StringPtr(msBuilder.executionInfo.ClientImpl),
-		IsWorkflowRunning:    common.BoolPtr(msBuilder.isWorkflowExecutionRunning()),
+		Execution:                            &execution,
+		WorkflowType:                         &workflow.WorkflowType{Name: common.StringPtr(msBuilder.executionInfo.WorkflowTypeName)},
+		LastFirstEventId:                     common.Int64Ptr(msBuilder.GetLastFirstEventID()),
+		NextEventId:                          common.Int64Ptr(msBuilder.GetNextEventID()),
+		TaskList:                             &workflow.TaskList{Name: common.StringPtr(context.msBuilder.executionInfo.TaskList)},
+		StickyTaskList:                       &workflow.TaskList{Name: common.StringPtr(msBuilder.executionInfo.StickyTaskList)},
+		ClientLibraryVersion:                 common.StringPtr(msBuilder.executionInfo.ClientLibraryVersion),
+		ClientFeatureVersion:                 common.StringPtr(msBuilder.executionInfo.ClientFeatureVersion),
+		ClientImpl:                           common.StringPtr(msBuilder.executionInfo.ClientImpl),
+		IsWorkflowRunning:                    common.BoolPtr(msBuilder.isWorkflowExecutionRunning()),
+		StickyTaskListScheduleToStartTimeout: common.Int32Ptr(msBuilder.executionInfo.StickyScheduleToStartTimeout),
 	}
 
 	return result, nil
+}
+
+// ResetMutableState reset the volatile information in mutable state of a given workflow.
+// Volatile information are the information related to client, such as:
+// 1. StickyTaskList
+// 2. StickyScheduleToStartTimeout
+// 3. ClientLibraryVersion
+// 4. ClientFeatureVersion
+// 5. ClientImpl
+func (e *historyEngineImpl) ResetMutableState(resetRequest *h.ResetMutableStateRequest) (*h.ResetMutableStateResponse, error) {
+	domainID, err := getDomainUUID(resetRequest.DomainUUID)
+	if err != nil {
+		return nil, err
+	}
+
+	context, release, err := e.historyCache.getOrCreateWorkflowExecution(domainID, *resetRequest.Execution)
+	if err != nil {
+		return nil, err
+	}
+	defer release()
+
+	msBuilder, err := context.loadWorkflowExecution()
+	if err != nil {
+		return nil, err
+	}
+
+	msBuilder.clearStickyness()
+
+	return &h.ResetMutableStateResponse{}, nil
 }
 
 // DescribeWorkflowExecution returns information about the specified workflow execution.
