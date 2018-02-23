@@ -32,7 +32,7 @@ func (k Key) String() string {
 
 const (
 	_matchingRoot         = "matching."
-	_matchingTaskListRoot = "taskList."
+	_matchingTaskListRoot = _matchingRoot + "taskList."
 	_historyRoot          = "history."
 )
 
@@ -45,6 +45,7 @@ var keys = []string{
 }
 
 const (
+	// The order of constants is important. It should match the order in the keys array above.
 	unknownKey Key = iota
 	// Matching keys
 

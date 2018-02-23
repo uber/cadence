@@ -22,6 +22,7 @@ package dynamicconfig
 
 import (
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -30,17 +31,22 @@ import (
 
 type inMemoryClient struct {
 	values map[Key]interface{}
+	sync.RWMutex
 }
 
 func newInMemoryClient() *inMemoryClient {
-	return &inMemoryClient{make(map[Key]interface{})}
+	return &inMemoryClient{values: make(map[Key]interface{})}
 }
 
 func (mc *inMemoryClient) SetValue(key Key, value interface{}) {
+	mc.Lock()
+	defer mc.Unlock()
 	mc.values[key] = value
 }
 
 func (mc *inMemoryClient) GetValue(key Key) (interface{}, error) {
+	mc.RLock()
+	defer mc.RUnlock()
 	if val, ok := mc.values[key]; ok {
 		return val, nil
 	}

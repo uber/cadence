@@ -54,7 +54,9 @@ func NewCollection(client Client) *Collection {
 	return &Collection{client}
 }
 
-// Collection of values that are in dynamic config
+// Collection wraps dynamic config client with a closure so that across the code, the config values
+// can be directly accessed by calling the function without propagating the client everywhere in
+// code
 type Collection struct {
 	client Client
 }
@@ -67,7 +69,9 @@ func (c *Collection) GetIntPropertyWithTaskList(key Key, defaultVal int) func(st
 }
 
 // GetDurationPropertyWithTaskList gets property with taskList filter and asserts that it's time.Duration
-func (c *Collection) GetDurationPropertyWithTaskList(key Key, defaultVal time.Duration) func(string) time.Duration {
+func (c *Collection) GetDurationPropertyWithTaskList(
+	key Key, defaultVal time.Duration,
+) func(string) time.Duration {
 	return func(taskList string) time.Duration {
 		return c.getPropertyWithStringFilter(key, defaultVal, TaskListName)(taskList).(time.Duration)
 	}
