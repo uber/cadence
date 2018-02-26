@@ -247,8 +247,8 @@ CREATE TABLE domains_by_name (
   domain             frozen<domain>,
   config             frozen<domain_config>,
   replication_config frozen<domain_replication_config>, -- indicating active cluster and standby cluster used for replication
-  failover_version   bigint,
-  db_version         bigint, --indicate the version of the record, used for update
+  failover_version   bigint, -- indicating the version of active domain only, used for domain failover
+  db_version         bigint, -- indicate the version of the record, used for update
   PRIMARY KEY (name)
 )  WITH COMPACTION = {
      'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'
