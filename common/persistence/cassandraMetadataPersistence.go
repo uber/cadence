@@ -54,8 +54,8 @@ const (
 		`VALUES(?, {name: ?}) IF NOT EXISTS`
 
 	templateCreateDomainByNameQuery = `INSERT INTO domains_by_name (` +
-		`name, domain, config, replication_config, failover_version) ` +
-		`VALUES(?, ` + templateDomainType + `, ` + templateDomainConfigType + `, ` + templateDomainReplicationConfigType + `, ?) IF NOT EXISTS`
+		`name, domain, config, replication_config, is_global_domain, failover_version) ` +
+		`VALUES(?, ` + templateDomainType + `, ` + templateDomainConfigType + `, ` + templateDomainReplicationConfigType + `, ?, ?) IF NOT EXISTS`
 
 	templateGetDomainQuery = `SELECT domain.name ` +
 		`FROM domains ` +
@@ -64,6 +64,8 @@ const (
 	templateGetDomainByNameQuery = `SELECT domain.id, domain.name, domain.status, domain.description, ` +
 		`domain.owner_email, config.retention, config.emit_metric, ` +
 		`replication_config.active_cluster_name, replication_config.clusters, ` +
+		`is_global_domain, ` +
+		`config_version, ` +
 		`failover_version, ` +
 		`db_version ` +
 		`FROM domains_by_name ` +
@@ -73,6 +75,7 @@ const (
 		`SET domain = ` + templateDomainType + `, ` +
 		`config = ` + templateDomainConfigType + `, ` +
 		`replication_config = ` + templateDomainReplicationConfigType + `, ` +
+		`config_version = ? ,` +
 		`failover_version = ? ,` +
 		`db_version = ? ` +
 		`WHERE name = ? ` +
@@ -145,6 +148,7 @@ func (m *cassandraMetadataPersistence) CreateDomain(request *CreateDomainRequest
 		request.Config.EmitMetric,
 		request.ReplicationConfig.ActiveClusterName,
 		serializeClusterConfigs(request.ReplicationConfig.Clusters),
+		request.IsGlobalDomain,
 		request.FailoverVersion,
 	)
 
@@ -187,6 +191,8 @@ func (m *cassandraMetadataPersistence) GetDomain(request *GetDomainRequest) (*Ge
 	var replicationClusters []map[string]interface{}
 	var dbVersion int64
 	var failoverVersion int64
+	var configVersion int64
+	var isGlobalDomain bool
 
 	if len(request.ID) > 0 && len(request.Name) > 0 {
 		return nil, &workflow.BadRequestError{
@@ -233,6 +239,8 @@ func (m *cassandraMetadataPersistence) GetDomain(request *GetDomainRequest) (*Ge
 		&config.EmitMetric,
 		&replicationConfig.ActiveClusterName,
 		&replicationClusters,
+		&isGlobalDomain,
+		&configVersion,
 		&failoverVersion,
 		&dbVersion,
 	)
@@ -249,6 +257,8 @@ func (m *cassandraMetadataPersistence) GetDomain(request *GetDomainRequest) (*Ge
 		Info:              info,
 		Config:            config,
 		ReplicationConfig: replicationConfig,
+		IsGlobalDomain:    isGlobalDomain,
+		ConfigVersion:     configVersion,
 		FailoverVersion:   failoverVersion,
 		DBVersion:         dbVersion,
 	}, nil
@@ -271,6 +281,7 @@ func (m *cassandraMetadataPersistence) UpdateDomain(request *UpdateDomainRequest
 		request.Config.EmitMetric,
 		request.ReplicationConfig.ActiveClusterName,
 		serializeClusterConfigs(request.ReplicationConfig.Clusters),
+		request.ConfigVersion,
 		request.FailoverVersion,
 		nextVersion,
 		request.Info.Name,
@@ -303,7 +314,7 @@ func (m *cassandraMetadataPersistence) DeleteDomain(request *DeleteDomainRequest
 func (m *cassandraMetadataPersistence) DeleteDomainByName(request *DeleteDomainByNameRequest) error {
 	var ID string
 	query := m.session.Query(templateGetDomainByNameQuery, request.Name)
-	err := query.Scan(&ID, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	err := query.Scan(&ID, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	if err != nil {
 		if err == gocql.ErrNotFound {
 			return nil

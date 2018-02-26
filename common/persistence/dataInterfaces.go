@@ -664,6 +664,7 @@ type (
 		Info              *DomainInfo
 		Config            *DomainConfig
 		ReplicationConfig *DomainReplicationConfig
+		IsGlobalDomain    bool
 		FailoverVersion   int64
 	}
 
@@ -683,6 +684,8 @@ type (
 		Info              *DomainInfo
 		Config            *DomainConfig
 		ReplicationConfig *DomainReplicationConfig
+		IsGlobalDomain    bool
+		ConfigVersion     int64
 		FailoverVersion   int64
 		DBVersion         int64
 	}
@@ -692,6 +695,7 @@ type (
 		Info              *DomainInfo
 		Config            *DomainConfig
 		ReplicationConfig *DomainReplicationConfig
+		ConfigVersion     int64
 		FailoverVersion   int64
 		DBVersion         int64
 	}
