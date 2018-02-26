@@ -52,7 +52,7 @@ func NewReplicator(clusterMetadata cluster.Metadata, metadataManager persistence
 	})
 	return &Replicator{
 		clusterMetadata:  clusterMetadata,
-		domainReplicator: newDomainReplicator(metadataManager, logger),
+		domainReplicator: NewDomainReplicator(metadataManager, logger),
 		config:           config,
 		client:           client,
 		logger:           logger,

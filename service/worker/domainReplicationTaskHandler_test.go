@@ -52,24 +52,25 @@ func (s *domainReplicatorSuite) SetupSuite() {
 	if testing.Verbose() {
 		log.SetOutput(os.Stdout)
 	}
-	s.SetupWorkflowStore()
 }
 
 func (s *domainReplicatorSuite) TearDownSuite() {
-	s.TearDownWorkflowStore()
+
 }
 
 func (s *domainReplicatorSuite) SetupTest() {
-	s.domainReplicator = newDomainReplicator(
+	s.SetupWorkflowStore()
+	s.domainReplicator = NewDomainReplicator(
 		s.MetadataManager,
 		bark.NewLoggerFromLogrus(logrus.New()),
 	).(*domainReplicatorImpl)
 }
 
 func (s *domainReplicatorSuite) TearDownTest() {
+	s.TearDownWorkflowStore()
 }
 
-func (s *domainReplicatorSuite) TearReplicateRegisterDomainTask() {
+func (s *domainReplicatorSuite) TestReplicateRegisterDomainTask() {
 	operation := replicator.DomainOperationCreate
 	id := uuid.New()
 	name := "some random domain test name"
@@ -80,6 +81,7 @@ func (s *domainReplicatorSuite) TearReplicateRegisterDomainTask() {
 	emitMetric := true
 	clusterActive := "some random active cluster name"
 	clusterStandby := "some random standby cluster name"
+	configVersion := int64(0)
 	failoverVersion := int64(59)
 	clusters := []*shared.ClusterReplicationConfiguration{
 		&shared.ClusterReplicationConfiguration{
@@ -107,6 +109,7 @@ func (s *domainReplicatorSuite) TearReplicateRegisterDomainTask() {
 			ActiveClusterName: common.StringPtr(clusterActive),
 			Clusters:          clusters,
 		},
+		ConfigVersion:   common.Int64Ptr(configVersion),
 		FailoverVersion: common.Int64Ptr(failoverVersion),
 	}
 
@@ -124,12 +127,13 @@ func (s *domainReplicatorSuite) TearReplicateRegisterDomainTask() {
 	s.Equal(retention, resp.Config.Retention)
 	s.Equal(emitMetric, resp.Config.EmitMetric)
 	s.Equal(clusterActive, resp.ReplicationConfig.ActiveClusterName)
-	s.Equal(failoverVersion, resp.ReplicationConfig.FailoverVersion)
 	s.Equal(s.domainReplicator.convertClusterReplicationConfig(clusters), resp.ReplicationConfig.Clusters)
-	s.Equal(int64(0), resp.Version)
+	s.Equal(configVersion, resp.ConfigVersion)
+	s.Equal(failoverVersion, resp.FailoverVersion)
+	s.Equal(int64(0), resp.DBVersion)
 }
 
-func (s *domainReplicatorSuite) TearReplicateUpdateDomainTask() {
+func (s *domainReplicatorSuite) TestReplicateUpdateDomainTask_UpdateConfig_UpdateActiveCluster() {
 	operation := replicator.DomainOperationCreate
 	id := uuid.New()
 	name := "some random domain test name"
@@ -140,6 +144,7 @@ func (s *domainReplicatorSuite) TearReplicateUpdateDomainTask() {
 	emitMetric := true
 	clusterActive := "some random active cluster name"
 	clusterStandby := "some random standby cluster name"
+	configVersion := int64(0)
 	failoverVersion := int64(59)
 	clusters := []*shared.ClusterReplicationConfiguration{
 		&shared.ClusterReplicationConfiguration{
@@ -167,6 +172,7 @@ func (s *domainReplicatorSuite) TearReplicateUpdateDomainTask() {
 			ActiveClusterName: common.StringPtr(clusterActive),
 			Clusters:          clusters,
 		},
+		ConfigVersion:   common.Int64Ptr(configVersion),
 		FailoverVersion: common.Int64Ptr(failoverVersion),
 	}
 
@@ -174,16 +180,77 @@ func (s *domainReplicatorSuite) TearReplicateUpdateDomainTask() {
 	s.Nil(err)
 
 	// success update case
-	operation = replicator.DomainOperationUpdate
-	status = shared.DomainStatusDeprecated
-	description = "other random domain test description"
-	ownerEmail = "other random domain test owner"
-	retention = int32(122)
-	emitMetric = true
-	clusterActive = "other random active cluster name"
-	clusterStandby = "other random standby cluster name"
-	failoverVersion = int64(100)
-	clusters = []*shared.ClusterReplicationConfiguration{
+	updateOperation := replicator.DomainOperationUpdate
+	updateStatus := shared.DomainStatusDeprecated
+	updateDescription := "other random domain test description"
+	updateOwnerEmail := "other random domain test owner"
+	updateRetention := int32(122)
+	updateEmitMetric := true
+	updateClusterActive := "other random active cluster name"
+	updateClusterStandby := "other random standby cluster name"
+	updateConfigVersion := configVersion + 1
+	updateFailoverVersion := failoverVersion + 1
+	updateClusters := []*shared.ClusterReplicationConfiguration{
+		&shared.ClusterReplicationConfiguration{
+			ClusterName: common.StringPtr(updateClusterActive),
+		},
+		&shared.ClusterReplicationConfiguration{
+			ClusterName: common.StringPtr(updateClusterStandby),
+		},
+	}
+	updateTask := &replicator.DomainTaskAttributes{
+		DomainOperation: &updateOperation,
+		ID:              common.StringPtr(id),
+		Info: &shared.DomainInfo{
+			Name:        common.StringPtr(name),
+			Status:      &updateStatus,
+			Description: common.StringPtr(updateDescription),
+			OwnerEmail:  common.StringPtr(updateOwnerEmail),
+		},
+		Config: &shared.DomainConfiguration{
+			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(updateRetention),
+			EmitMetric:                             common.BoolPtr(updateEmitMetric),
+		},
+		ReplicationConfig: &shared.DomainReplicationConfiguration{
+			ActiveClusterName: common.StringPtr(updateClusterActive),
+			Clusters:          updateClusters,
+		},
+		ConfigVersion:   common.Int64Ptr(updateConfigVersion),
+		FailoverVersion: common.Int64Ptr(updateFailoverVersion),
+	}
+	err = s.domainReplicator.HandleReceiveTask(updateTask)
+	s.Nil(err)
+	resp, err := s.MetadataManager.GetDomain(&persistence.GetDomainRequest{Name: name})
+	s.Nil(err)
+	s.NotNil(resp)
+	s.Equal(id, resp.Info.ID)
+	s.Equal(name, resp.Info.Name)
+	s.Equal(persistence.DomainStatusDeprecated, resp.Info.Status)
+	s.Equal(updateDescription, resp.Info.Description)
+	s.Equal(updateOwnerEmail, resp.Info.OwnerEmail)
+	s.Equal(updateRetention, resp.Config.Retention)
+	s.Equal(updateEmitMetric, resp.Config.EmitMetric)
+	s.Equal(updateClusterActive, resp.ReplicationConfig.ActiveClusterName)
+	s.Equal(s.domainReplicator.convertClusterReplicationConfig(updateClusters), resp.ReplicationConfig.Clusters)
+	s.Equal(updateConfigVersion, resp.ConfigVersion)
+	s.Equal(updateFailoverVersion, resp.FailoverVersion)
+	s.Equal(int64(1), resp.DBVersion)
+}
+
+func (s *domainReplicatorSuite) TestReplicateUpdateDomainTask_UpdateConfig_NoUpdateActiveCluster() {
+	operation := replicator.DomainOperationCreate
+	id := uuid.New()
+	name := "some random domain test name"
+	status := shared.DomainStatusRegistered
+	description := "some random test description"
+	ownerEmail := "some random test owner"
+	retention := int32(10)
+	emitMetric := true
+	clusterActive := "some random active cluster name"
+	clusterStandby := "some random standby cluster name"
+	configVersion := int64(0)
+	failoverVersion := int64(59)
+	clusters := []*shared.ClusterReplicationConfiguration{
 		&shared.ClusterReplicationConfiguration{
 			ClusterName: common.StringPtr(clusterActive),
 		},
@@ -191,7 +258,8 @@ func (s *domainReplicatorSuite) TearReplicateUpdateDomainTask() {
 			ClusterName: common.StringPtr(clusterStandby),
 		},
 	}
-	updateTask := &replicator.DomainTaskAttributes{
+
+	createTask := &replicator.DomainTaskAttributes{
 		DomainOperation: &operation,
 		ID:              common.StringPtr(id),
 		Info: &shared.DomainInfo{
@@ -208,7 +276,259 @@ func (s *domainReplicatorSuite) TearReplicateUpdateDomainTask() {
 			ActiveClusterName: common.StringPtr(clusterActive),
 			Clusters:          clusters,
 		},
+		ConfigVersion:   common.Int64Ptr(configVersion),
 		FailoverVersion: common.Int64Ptr(failoverVersion),
+	}
+
+	err := s.domainReplicator.HandleReceiveTask(createTask)
+	s.Nil(err)
+
+	// success update case
+	updateOperation := replicator.DomainOperationUpdate
+	updateStatus := shared.DomainStatusDeprecated
+	updateDescription := "other random domain test description"
+	updateOwnerEmail := "other random domain test owner"
+	updateRetention := int32(122)
+	updateEmitMetric := true
+	updateClusterActive := "other random active cluster name"
+	updateClusterStandby := "other random standby cluster name"
+	updateConfigVersion := configVersion + 1
+	updateFailoverVersion := failoverVersion - 1
+	updateClusters := []*shared.ClusterReplicationConfiguration{
+		&shared.ClusterReplicationConfiguration{
+			ClusterName: common.StringPtr(updateClusterActive),
+		},
+		&shared.ClusterReplicationConfiguration{
+			ClusterName: common.StringPtr(updateClusterStandby),
+		},
+	}
+	updateTask := &replicator.DomainTaskAttributes{
+		DomainOperation: &updateOperation,
+		ID:              common.StringPtr(id),
+		Info: &shared.DomainInfo{
+			Name:        common.StringPtr(name),
+			Status:      &updateStatus,
+			Description: common.StringPtr(updateDescription),
+			OwnerEmail:  common.StringPtr(updateOwnerEmail),
+		},
+		Config: &shared.DomainConfiguration{
+			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(updateRetention),
+			EmitMetric:                             common.BoolPtr(updateEmitMetric),
+		},
+		ReplicationConfig: &shared.DomainReplicationConfiguration{
+			ActiveClusterName: common.StringPtr(updateClusterActive),
+			Clusters:          updateClusters,
+		},
+		ConfigVersion:   common.Int64Ptr(updateConfigVersion),
+		FailoverVersion: common.Int64Ptr(updateFailoverVersion),
+	}
+	err = s.domainReplicator.HandleReceiveTask(updateTask)
+	s.Nil(err)
+	resp, err := s.MetadataManager.GetDomain(&persistence.GetDomainRequest{Name: name})
+	s.Nil(err)
+	s.NotNil(resp)
+	s.Equal(id, resp.Info.ID)
+	s.Equal(name, resp.Info.Name)
+	s.Equal(persistence.DomainStatusDeprecated, resp.Info.Status)
+	s.Equal(updateDescription, resp.Info.Description)
+	s.Equal(updateOwnerEmail, resp.Info.OwnerEmail)
+	s.Equal(updateRetention, resp.Config.Retention)
+	s.Equal(updateEmitMetric, resp.Config.EmitMetric)
+	s.Equal(clusterActive, resp.ReplicationConfig.ActiveClusterName)
+	s.Equal(s.domainReplicator.convertClusterReplicationConfig(updateClusters), resp.ReplicationConfig.Clusters)
+	s.Equal(updateConfigVersion, resp.ConfigVersion)
+	s.Equal(failoverVersion, resp.FailoverVersion)
+	s.Equal(int64(1), resp.DBVersion)
+}
+
+func (s *domainReplicatorSuite) TestReplicateUpdateDomainTask_NoUpdateConfig_UpdateActiveCluster() {
+	operation := replicator.DomainOperationCreate
+	id := uuid.New()
+	name := "some random domain test name"
+	status := shared.DomainStatusRegistered
+	description := "some random test description"
+	ownerEmail := "some random test owner"
+	retention := int32(10)
+	emitMetric := true
+	clusterActive := "some random active cluster name"
+	clusterStandby := "some random standby cluster name"
+	configVersion := int64(0)
+	failoverVersion := int64(59)
+	clusters := []*shared.ClusterReplicationConfiguration{
+		&shared.ClusterReplicationConfiguration{
+			ClusterName: common.StringPtr(clusterActive),
+		},
+		&shared.ClusterReplicationConfiguration{
+			ClusterName: common.StringPtr(clusterStandby),
+		},
+	}
+
+	createTask := &replicator.DomainTaskAttributes{
+		DomainOperation: &operation,
+		ID:              common.StringPtr(id),
+		Info: &shared.DomainInfo{
+			Name:        common.StringPtr(name),
+			Status:      &status,
+			Description: common.StringPtr(description),
+			OwnerEmail:  common.StringPtr(ownerEmail),
+		},
+		Config: &shared.DomainConfiguration{
+			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
+			EmitMetric:                             common.BoolPtr(emitMetric),
+		},
+		ReplicationConfig: &shared.DomainReplicationConfiguration{
+			ActiveClusterName: common.StringPtr(clusterActive),
+			Clusters:          clusters,
+		},
+		ConfigVersion:   common.Int64Ptr(configVersion),
+		FailoverVersion: common.Int64Ptr(failoverVersion),
+	}
+
+	err := s.domainReplicator.HandleReceiveTask(createTask)
+	s.Nil(err)
+
+	// success update case
+	updateOperation := replicator.DomainOperationUpdate
+	updateStatus := shared.DomainStatusDeprecated
+	updateDescription := "other random domain test description"
+	updateOwnerEmail := "other random domain test owner"
+	updateRetention := int32(122)
+	updateEmitMetric := true
+	updateClusterActive := "other random active cluster name"
+	updateClusterStandby := "other random standby cluster name"
+	updateConfigVersion := configVersion - 1
+	updateFailoverVersion := failoverVersion + 1
+	updateClusters := []*shared.ClusterReplicationConfiguration{
+		&shared.ClusterReplicationConfiguration{
+			ClusterName: common.StringPtr(updateClusterActive),
+		},
+		&shared.ClusterReplicationConfiguration{
+			ClusterName: common.StringPtr(updateClusterStandby),
+		},
+	}
+	updateTask := &replicator.DomainTaskAttributes{
+		DomainOperation: &updateOperation,
+		ID:              common.StringPtr(id),
+		Info: &shared.DomainInfo{
+			Name:        common.StringPtr(name),
+			Status:      &updateStatus,
+			Description: common.StringPtr(updateDescription),
+			OwnerEmail:  common.StringPtr(updateOwnerEmail),
+		},
+		Config: &shared.DomainConfiguration{
+			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(updateRetention),
+			EmitMetric:                             common.BoolPtr(updateEmitMetric),
+		},
+		ReplicationConfig: &shared.DomainReplicationConfiguration{
+			ActiveClusterName: common.StringPtr(updateClusterActive),
+			Clusters:          updateClusters,
+		},
+		ConfigVersion:   common.Int64Ptr(updateConfigVersion),
+		FailoverVersion: common.Int64Ptr(updateFailoverVersion),
+	}
+	err = s.domainReplicator.HandleReceiveTask(updateTask)
+	s.Nil(err)
+	resp, err := s.MetadataManager.GetDomain(&persistence.GetDomainRequest{Name: name})
+	s.Nil(err)
+	s.NotNil(resp)
+	s.Equal(id, resp.Info.ID)
+	s.Equal(name, resp.Info.Name)
+	s.Equal(persistence.DomainStatusRegistered, resp.Info.Status)
+	s.Equal(description, resp.Info.Description)
+	s.Equal(ownerEmail, resp.Info.OwnerEmail)
+	s.Equal(retention, resp.Config.Retention)
+	s.Equal(emitMetric, resp.Config.EmitMetric)
+	s.Equal(updateClusterActive, resp.ReplicationConfig.ActiveClusterName)
+	s.Equal(s.domainReplicator.convertClusterReplicationConfig(clusters), resp.ReplicationConfig.Clusters)
+	s.Equal(configVersion, resp.ConfigVersion)
+	s.Equal(updateFailoverVersion, resp.FailoverVersion)
+	s.Equal(int64(1), resp.DBVersion)
+}
+
+func (s *domainReplicatorSuite) TestReplicateUpdateDomainTask_NoUpdateConfig_NoUpdateActiveCluster() {
+	operation := replicator.DomainOperationCreate
+	id := uuid.New()
+	name := "some random domain test name"
+	status := shared.DomainStatusRegistered
+	description := "some random test description"
+	ownerEmail := "some random test owner"
+	retention := int32(10)
+	emitMetric := true
+	clusterActive := "some random active cluster name"
+	clusterStandby := "some random standby cluster name"
+	configVersion := int64(0)
+	failoverVersion := int64(59)
+	clusters := []*shared.ClusterReplicationConfiguration{
+		&shared.ClusterReplicationConfiguration{
+			ClusterName: common.StringPtr(clusterActive),
+		},
+		&shared.ClusterReplicationConfiguration{
+			ClusterName: common.StringPtr(clusterStandby),
+		},
+	}
+
+	createTask := &replicator.DomainTaskAttributes{
+		DomainOperation: &operation,
+		ID:              common.StringPtr(id),
+		Info: &shared.DomainInfo{
+			Name:        common.StringPtr(name),
+			Status:      &status,
+			Description: common.StringPtr(description),
+			OwnerEmail:  common.StringPtr(ownerEmail),
+		},
+		Config: &shared.DomainConfiguration{
+			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
+			EmitMetric:                             common.BoolPtr(emitMetric),
+		},
+		ReplicationConfig: &shared.DomainReplicationConfiguration{
+			ActiveClusterName: common.StringPtr(clusterActive),
+			Clusters:          clusters,
+		},
+		ConfigVersion:   common.Int64Ptr(configVersion),
+		FailoverVersion: common.Int64Ptr(failoverVersion),
+	}
+
+	err := s.domainReplicator.HandleReceiveTask(createTask)
+	s.Nil(err)
+
+	// success update case
+	updateOperation := replicator.DomainOperationUpdate
+	updateStatus := shared.DomainStatusDeprecated
+	updateDescription := "other random domain test description"
+	updateOwnerEmail := "other random domain test owner"
+	updateRetention := int32(122)
+	updateEmitMetric := true
+	updateClusterActive := "other random active cluster name"
+	updateClusterStandby := "other random standby cluster name"
+	updateConfigVersion := configVersion - 1
+	updateFailoverVersion := failoverVersion - 1
+	updateClusters := []*shared.ClusterReplicationConfiguration{
+		&shared.ClusterReplicationConfiguration{
+			ClusterName: common.StringPtr(updateClusterActive),
+		},
+		&shared.ClusterReplicationConfiguration{
+			ClusterName: common.StringPtr(updateClusterStandby),
+		},
+	}
+	updateTask := &replicator.DomainTaskAttributes{
+		DomainOperation: &updateOperation,
+		ID:              common.StringPtr(id),
+		Info: &shared.DomainInfo{
+			Name:        common.StringPtr(name),
+			Status:      &updateStatus,
+			Description: common.StringPtr(updateDescription),
+			OwnerEmail:  common.StringPtr(updateOwnerEmail),
+		},
+		Config: &shared.DomainConfiguration{
+			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(updateRetention),
+			EmitMetric:                             common.BoolPtr(updateEmitMetric),
+		},
+		ReplicationConfig: &shared.DomainReplicationConfiguration{
+			ActiveClusterName: common.StringPtr(updateClusterActive),
+			Clusters:          updateClusters,
+		},
+		ConfigVersion:   common.Int64Ptr(updateConfigVersion),
+		FailoverVersion: common.Int64Ptr(updateFailoverVersion),
 	}
 	err = s.domainReplicator.HandleReceiveTask(updateTask)
 	s.Nil(err)
@@ -223,26 +543,8 @@ func (s *domainReplicatorSuite) TearReplicateUpdateDomainTask() {
 	s.Equal(retention, resp.Config.Retention)
 	s.Equal(emitMetric, resp.Config.EmitMetric)
 	s.Equal(clusterActive, resp.ReplicationConfig.ActiveClusterName)
-	s.Equal(failoverVersion, resp.ReplicationConfig.FailoverVersion)
 	s.Equal(s.domainReplicator.convertClusterReplicationConfig(clusters), resp.ReplicationConfig.Clusters)
-	s.Equal(int64(1), resp.Version)
-
-	// ignored update case, since failover version is smaller
-	updateTask.FailoverVersion = common.Int64Ptr(failoverVersion - 1)
-	err = s.domainReplicator.HandleReceiveTask(updateTask)
-	s.NotNil(err)
-	resp, err = s.MetadataManager.GetDomain(&persistence.GetDomainRequest{Name: name})
-	s.Nil(err)
-	s.NotNil(resp)
-	s.Equal(id, resp.Info.ID)
-	s.Equal(name, resp.Info.Name)
-	s.Equal(persistence.DomainStatusRegistered, resp.Info.Status)
-	s.Equal(description, resp.Info.Description)
-	s.Equal(ownerEmail, resp.Info.OwnerEmail)
-	s.Equal(retention, resp.Config.Retention)
-	s.Equal(emitMetric, resp.Config.EmitMetric)
-	s.Equal(clusterActive, resp.ReplicationConfig.ActiveClusterName)
-	s.Equal(failoverVersion, resp.ReplicationConfig.FailoverVersion)
-	s.Equal(s.domainReplicator.convertClusterReplicationConfig(clusters), resp.ReplicationConfig.Clusters)
-	s.Equal(int64(1), resp.Version)
+	s.Equal(configVersion, resp.ConfigVersion)
+	s.Equal(failoverVersion, resp.FailoverVersion)
+	s.Equal(int64(0), resp.DBVersion)
 }

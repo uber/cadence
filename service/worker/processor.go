@@ -39,6 +39,7 @@ import (
 )
 
 type (
+
 	// DomainReplicator is the interface which can replicate the domain
 	DomainReplicator interface {
 		HandleReceiveTask(task *replicator.DomainTaskAttributes) error

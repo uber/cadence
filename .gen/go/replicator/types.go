@@ -175,6 +175,7 @@ type DomainTaskAttributes struct {
 	Info              *shared.DomainInfo                     `json:"info,omitempty"`
 	Config            *shared.DomainConfiguration            `json:"config,omitempty"`
 	ReplicationConfig *shared.DomainReplicationConfiguration `json:"replicationConfig,omitempty"`
+	ConfigVersion     *int64                                 `json:"configVersion,omitempty"`
 	FailoverVersion   *int64                                 `json:"failoverVersion,omitempty"`
 }
 
@@ -195,7 +196,7 @@ type DomainTaskAttributes struct {
 //   }
 func (v *DomainTaskAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [6]wire.Field
+		fields [7]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -241,12 +242,20 @@ func (v *DomainTaskAttributes) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 40, Value: w}
 		i++
 	}
+	if v.ConfigVersion != nil {
+		w, err = wire.NewValueI64(*(v.ConfigVersion)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 50, Value: w}
+		i++
+	}
 	if v.FailoverVersion != nil {
 		w, err = wire.NewValueI64(*(v.FailoverVersion)), error(nil)
 		if err != nil {
 			return w, err
 		}
-		fields[i] = wire.Field{ID: 50, Value: w}
+		fields[i] = wire.Field{ID: 60, Value: w}
 		i++
 	}
 
@@ -347,6 +356,16 @@ func (v *DomainTaskAttributes) FromWire(w wire.Value) error {
 			if field.Value.Type() == wire.TI64 {
 				var x int64
 				x, err = field.Value.GetI64(), error(nil)
+				v.ConfigVersion = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 60:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
 				v.FailoverVersion = &x
 				if err != nil {
 					return err
@@ -366,7 +385,7 @@ func (v *DomainTaskAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [6]string
+	var fields [7]string
 	i := 0
 	if v.DomainOperation != nil {
 		fields[i] = fmt.Sprintf("DomainOperation: %v", *(v.DomainOperation))
@@ -386,6 +405,10 @@ func (v *DomainTaskAttributes) String() string {
 	}
 	if v.ReplicationConfig != nil {
 		fields[i] = fmt.Sprintf("ReplicationConfig: %v", v.ReplicationConfig)
+		i++
+	}
+	if v.ConfigVersion != nil {
+		fields[i] = fmt.Sprintf("ConfigVersion: %v", *(v.ConfigVersion))
 		i++
 	}
 	if v.FailoverVersion != nil {
@@ -446,6 +469,9 @@ func (v *DomainTaskAttributes) Equals(rhs *DomainTaskAttributes) bool {
 	if !((v.ReplicationConfig == nil && rhs.ReplicationConfig == nil) || (v.ReplicationConfig != nil && rhs.ReplicationConfig != nil && v.ReplicationConfig.Equals(rhs.ReplicationConfig))) {
 		return false
 	}
+	if !_I64_EqualsPtr(v.ConfigVersion, rhs.ConfigVersion) {
+		return false
+	}
 	if !_I64_EqualsPtr(v.FailoverVersion, rhs.FailoverVersion) {
 		return false
 	}
@@ -468,6 +494,16 @@ func (v *DomainTaskAttributes) GetDomainOperation() (o DomainOperation) {
 func (v *DomainTaskAttributes) GetID() (o string) {
 	if v.ID != nil {
 		return *v.ID
+	}
+
+	return
+}
+
+// GetConfigVersion returns the value of ConfigVersion if it is set or its
+// zero value if it is unset.
+func (v *DomainTaskAttributes) GetConfigVersion() (o int64) {
+	if v.ConfigVersion != nil {
+		return *v.ConfigVersion
 	}
 
 	return

@@ -38,7 +38,8 @@ struct DomainTaskAttributes {
   20: optional shared.DomainInfo info
   30: optional shared.DomainConfiguration config
   40: optional shared.DomainReplicationConfiguration replicationConfig
-  50: optional i64 (js.type = "Long") failoverVersion
+  50: optional i64 (js.type = "Long") configVersion
+  60: optional i64 (js.type = "Long") failoverVersion
 }
 
 struct HistoryTaskAttributes {

@@ -42,6 +42,8 @@ var (
 	ErrInvalidDomainConfig = errors.New("invalid domain config attribute")
 	// ErrInvalidDomainReplicationConfig is the error to indicate empty replication config attribute
 	ErrInvalidDomainReplicationConfig = errors.New("invalid domain replication config attribute")
+	// ErrInvalidDomainConfigVersion is the error to indicate empty config version attribute
+	ErrInvalidDomainConfigVersion = errors.New("invalid domain config version attribute")
 	// ErrInvalidDomainFailoverVersion is the error to indicate empty failover version attribute
 	ErrInvalidDomainFailoverVersion = errors.New("invalid domain failover version attribute")
 	// ErrInvalidDomainStatus is the error to indicate invalid domain status
@@ -55,8 +57,8 @@ type (
 	}
 )
 
-// newDomainReplicator create a new instance odf domain replicator
-func newDomainReplicator(metadataManager persistence.MetadataManager, logger bark.Logger) DomainReplicator {
+// NewDomainReplicator create a new instance odf domain replicator
+func NewDomainReplicator(metadataManager persistence.MetadataManager, logger bark.Logger) DomainReplicator {
 	return &domainReplicatorImpl{
 		metadataManager: metadataManager,
 		logger:          logger,
@@ -82,7 +84,6 @@ func (domainReplicator *domainReplicatorImpl) HandleReceiveTask(task *replicator
 // handleDomainCreationReplicationTask handle the domain creation replication task
 func (domainReplicator *domainReplicatorImpl) handleDomainCreationReplicationTask(task *replicator.DomainTaskAttributes) error {
 	// task already validated
-
 	status, err := domainReplicator.convertDomainStatus(task.Info.Status)
 	if err != nil {
 		return err
@@ -102,9 +103,10 @@ func (domainReplicator *domainReplicatorImpl) handleDomainCreationReplicationTas
 		},
 		ReplicationConfig: &persistence.DomainReplicationConfig{
 			ActiveClusterName: task.ReplicationConfig.GetActiveClusterName(),
-			FailoverVersion:   task.GetFailoverVersion(),
 			Clusters:          domainReplicator.convertClusterReplicationConfig(task.ReplicationConfig.Clusters),
 		},
+		IsGlobalDomain:  true, // local domain will not be replicated
+		FailoverVersion: task.GetFailoverVersion(),
 	}
 
 	_, err = domainReplicator.metadataManager.CreateDomain(request)
@@ -114,8 +116,13 @@ func (domainReplicator *domainReplicatorImpl) handleDomainCreationReplicationTas
 // handleDomainUpdateReplicationTask handle the domain update replication task
 func (domainReplicator *domainReplicatorImpl) handleDomainUpdateReplicationTask(task *replicator.DomainTaskAttributes) error {
 	// task already validated
+	status, err := domainReplicator.convertDomainStatus(task.Info.Status)
+	if err != nil {
+		return err
+	}
 
 	// first we need to get the current record since we need to DB version for conditional update
+	// plus, we need to check whether the config version is <= the config version set in the input
 	// plus, we need to check whether the failover version is <= the failover version set in the input
 	resp, err := domainReplicator.metadataManager.GetDomain(&persistence.GetDomainRequest{
 		Name: task.Info.GetName(),
@@ -123,37 +130,43 @@ func (domainReplicator *domainReplicatorImpl) handleDomainUpdateReplicationTask(
 	if err != nil {
 		return err
 	}
-	if resp.ReplicationConfig.FailoverVersion > task.GetFailoverVersion() {
-		// the fail over varion on DB is acrually more current, so just drop this message
 
-		domainReplicator.logger.Infof("Local domain %v has larger failover version then foreign domain to be replicated %v.", resp, task)
-		return nil
-	}
-
-	status, err := domainReplicator.convertDomainStatus(task.Info.Status)
-	if err != nil {
-		return err
-	}
-
+	recordUpdated := false
 	request := &persistence.UpdateDomainRequest{
-		Info: &persistence.DomainInfo{
+		Info:              resp.Info,
+		Config:            resp.Config,
+		ReplicationConfig: resp.ReplicationConfig,
+		ConfigVersion:     resp.ConfigVersion,
+		FailoverVersion:   resp.FailoverVersion,
+		DBVersion:         resp.DBVersion,
+	}
+
+	if resp.ConfigVersion < task.GetConfigVersion() {
+		recordUpdated = true
+		request.Info = &persistence.DomainInfo{
 			ID:          task.GetID(),
 			Name:        task.Info.GetName(),
 			Status:      status,
 			Description: task.Info.GetDescription(),
 			OwnerEmail:  task.Info.GetOwnerEmail(),
-		},
-		Config: &persistence.DomainConfig{
+		}
+		request.Config = &persistence.DomainConfig{
 			Retention:  task.Config.GetWorkflowExecutionRetentionPeriodInDays(),
 			EmitMetric: task.Config.GetEmitMetric(),
-		},
-		ReplicationConfig: &persistence.DomainReplicationConfig{
-			ActiveClusterName: task.ReplicationConfig.GetActiveClusterName(),
-			FailoverVersion:   task.GetFailoverVersion(),
-			Clusters:          domainReplicator.convertClusterReplicationConfig(task.ReplicationConfig.Clusters),
-		},
-		Version: resp.Version,
+		}
+		request.ReplicationConfig.Clusters = domainReplicator.convertClusterReplicationConfig(task.ReplicationConfig.Clusters)
+		request.ConfigVersion = task.GetConfigVersion()
 	}
+	if resp.FailoverVersion < task.GetFailoverVersion() {
+		recordUpdated = true
+		request.ReplicationConfig.ActiveClusterName = task.ReplicationConfig.GetActiveClusterName()
+		request.FailoverVersion = task.GetFailoverVersion()
+	}
+
+	if !recordUpdated {
+		return nil
+	}
+
 	return domainReplicator.metadataManager.UpdateDomain(request)
 }
 
@@ -172,6 +185,8 @@ func (domainReplicator *domainReplicatorImpl) validateDomainReplicationTask(task
 		return ErrInvalidDomainConfig
 	} else if task.ReplicationConfig == nil {
 		return ErrInvalidDomainReplicationConfig
+	} else if task.ConfigVersion == nil {
+		return ErrInvalidDomainConfigVersion
 	} else if task.FailoverVersion == nil {
 		return ErrInvalidDomainFailoverVersion
 	}
