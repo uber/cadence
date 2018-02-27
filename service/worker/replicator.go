@@ -23,6 +23,7 @@ package worker
 import (
 	"fmt"
 	"github.com/uber-common/bark"
+	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/messaging"
@@ -73,6 +74,8 @@ func (r *Replicator) Start() error {
 		}
 	}
 
+	r.sendTestMessages()
+
 	return nil
 }
 
@@ -89,4 +92,29 @@ func getConsumerName(currentCluster, remoteCluster string) string {
 
 func getTopicName(sourceCluster string) string {
 	return sourceCluster
+}
+
+func (r *Replicator) sendTestMessages() {
+	currentClusterName := r.metadata.GetCurrentClusterName()
+	for cluster := range r.metadata.GetAllClusterNames() {
+		if cluster != currentClusterName {
+			topicName := getTopicName(cluster)
+			producer, err := r.client.NewProducer(topicName)
+			if err != nil {
+				r.logger.Fatalf("Failed to create producer: %v", err)
+			}
+			defer producer.Close()
+
+			for i := 0; i < 10; i++ {
+				if err := producer.Publish(&replicator.ReplicationTask{
+					TaskType:             replicator.ReplicationTaskTypeDomain.Ptr(),
+					DomainTaskAttributes: &replicator.DomainTaskAttributes{},
+				}); err != nil {
+					r.logger.Errorf("Error sending message to replicator. Error: %v", err)
+				} else {
+					r.logger.Infof("Msg '%v' successfully sent to replicator.", i)
+				}
+			}
+		}
+	}
 }
