@@ -51,7 +51,7 @@ type (
 		StartWorkflowExecution(request *h.StartWorkflowExecutionRequest) (*workflow.StartWorkflowExecutionResponse,
 			error)
 		GetMutableState(ctx context.Context, request *h.GetMutableStateRequest) (*h.GetMutableStateResponse, error)
-		ResetMutableState(resetRequest *h.ResetMutableStateRequest) (*h.ResetMutableStateResponse, error)
+		ResetMutableStateStickyness(resetRequest *h.ResetMutableStateStickynessRequest) (*h.ResetMutableStateStickynessResponse, error)
 		DescribeWorkflowExecution(
 			request *h.DescribeWorkflowExecutionRequest) (*workflow.DescribeWorkflowExecutionResponse, error)
 		RecordDecisionTaskStarted(request *h.RecordDecisionTaskStartedRequest) (*h.RecordDecisionTaskStartedResponse, error)

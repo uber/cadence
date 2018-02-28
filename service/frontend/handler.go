@@ -1535,7 +1535,7 @@ func (wh *WorkflowHandler) QueryWorkflow(ctx context.Context,
 		}
 		// this means sticky timeout, should try using the normal tasklist
 		// we should clear the stickyness of this workflow
-		_, err = wh.history.ResetMutableState(ctx, &h.ResetMutableStateRequest{
+		_, err = wh.history.ResetMutableStateStickyness(ctx, &h.ResetMutableStateStickynessRequest{
 			DomainUUID: common.StringPtr(domainID),
 			Execution:  queryRequest.Execution,
 		})

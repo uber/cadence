@@ -460,33 +460,33 @@ func (e *historyEngineImpl) getMutableState(
 	return result, nil
 }
 
-// ResetMutableState reset the volatile information in mutable state of a given workflow.
+// ResetMutableStateStickyness reset the volatile information in mutable state of a given workflow.
 // Volatile information are the information related to client, such as:
 // 1. StickyTaskList
 // 2. StickyScheduleToStartTimeout
 // 3. ClientLibraryVersion
 // 4. ClientFeatureVersion
 // 5. ClientImpl
-func (e *historyEngineImpl) ResetMutableState(resetRequest *h.ResetMutableStateRequest) (*h.ResetMutableStateResponse, error) {
+func (e *historyEngineImpl) ResetMutableStateStickyness(resetRequest *h.ResetMutableStateStickynessRequest) (*h.ResetMutableStateStickynessResponse, error) {
 	domainID, err := getDomainUUID(resetRequest.DomainUUID)
 	if err != nil {
 		return nil, err
 	}
 
-	context, release, err := e.historyCache.getOrCreateWorkflowExecution(domainID, *resetRequest.Execution)
+	err = e.updateWorkflowExecution(domainID, *resetRequest.Execution, false, false,
+		func(msBuilder *mutableStateBuilder, tBuilder *timerBuilder) ([]persistence.Task, error) {
+			if !msBuilder.isWorkflowExecutionRunning() {
+				return nil, nil
+			}
+			msBuilder.clearStickyness()
+			return nil, nil
+		},
+	)
+
 	if err != nil {
 		return nil, err
 	}
-	defer release()
-
-	msBuilder, err := context.loadWorkflowExecution()
-	if err != nil {
-		return nil, err
-	}
-
-	msBuilder.clearStickyness()
-
-	return &h.ResetMutableStateResponse{}, nil
+	return &h.ResetMutableStateStickynessResponse{}, nil
 }
 
 // DescribeWorkflowExecution returns information about the specified workflow execution.

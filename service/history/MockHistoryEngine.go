@@ -89,21 +89,21 @@ func (_m *MockHistoryEngine) GetMutableState(ctx context.Context, request *gohis
 	return r0, r1
 }
 
-// ResetMutableState is mock implementation for ResetMutableState of HistoryEngine
-func (_m *MockHistoryEngine) ResetMutableState(request *gohistory.ResetMutableStateRequest) (*gohistory.ResetMutableStateResponse, error) {
+// ResetMutableStateStickyness is mock implementation for ResetMutableStateStickyness of HistoryEngine
+func (_m *MockHistoryEngine) ResetMutableStateStickyness(request *gohistory.ResetMutableStateStickynessRequest) (*gohistory.ResetMutableStateStickynessResponse, error) {
 	ret := _m.Called(request)
 
-	var r0 *gohistory.ResetMutableStateResponse
-	if rf, ok := ret.Get(0).(func(*gohistory.ResetMutableStateRequest) *gohistory.ResetMutableStateResponse); ok {
+	var r0 *gohistory.ResetMutableStateStickynessResponse
+	if rf, ok := ret.Get(0).(func(*gohistory.ResetMutableStateStickynessRequest) *gohistory.ResetMutableStateStickynessResponse); ok {
 		r0 = rf(request)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*gohistory.ResetMutableStateResponse)
+			r0 = ret.Get(0).(*gohistory.ResetMutableStateStickynessResponse)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(*gohistory.ResetMutableStateRequest) error); ok {
+	if rf, ok := ret.Get(1).(func(*gohistory.ResetMutableStateStickynessRequest) error); ok {
 		r1 = rf(request)
 	} else {
 		r1 = ret.Error(1)

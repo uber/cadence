@@ -2958,12 +2958,12 @@ func (v *RequestCancelWorkflowExecutionRequest) GetChildWorkflowOnly() (o bool) 
 	return
 }
 
-type ResetMutableStateRequest struct {
+type ResetMutableStateStickynessRequest struct {
 	DomainUUID *string                   `json:"domainUUID,omitempty"`
 	Execution  *shared.WorkflowExecution `json:"execution,omitempty"`
 }
 
-// ToWire translates a ResetMutableStateRequest struct into a Thrift-level intermediate
+// ToWire translates a ResetMutableStateStickynessRequest struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
 // into bytes using a ThriftRW protocol implementation.
 //
@@ -2978,7 +2978,7 @@ type ResetMutableStateRequest struct {
 //   if err := binaryProtocol.Encode(x, writer); err != nil {
 //     return err
 //   }
-func (v *ResetMutableStateRequest) ToWire() (wire.Value, error) {
+func (v *ResetMutableStateStickynessRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
 		i      int = 0
@@ -3006,11 +3006,11 @@ func (v *ResetMutableStateRequest) ToWire() (wire.Value, error) {
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-// FromWire deserializes a ResetMutableStateRequest struct from its Thrift-level
+// FromWire deserializes a ResetMutableStateStickynessRequest struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.
 //
-// An error is returned if we were unable to build a ResetMutableStateRequest struct
+// An error is returned if we were unable to build a ResetMutableStateStickynessRequest struct
 // from the provided intermediate representation.
 //
 //   x, err := binaryProtocol.Decode(reader, wire.TStruct)
@@ -3018,12 +3018,12 @@ func (v *ResetMutableStateRequest) ToWire() (wire.Value, error) {
 //     return nil, err
 //   }
 //
-//   var v ResetMutableStateRequest
+//   var v ResetMutableStateStickynessRequest
 //   if err := v.FromWire(x); err != nil {
 //     return nil, err
 //   }
 //   return &v, nil
-func (v *ResetMutableStateRequest) FromWire(w wire.Value) error {
+func (v *ResetMutableStateStickynessRequest) FromWire(w wire.Value) error {
 	var err error
 
 	for _, field := range w.GetStruct().Fields {
@@ -3052,9 +3052,9 @@ func (v *ResetMutableStateRequest) FromWire(w wire.Value) error {
 	return nil
 }
 
-// String returns a readable string representation of a ResetMutableStateRequest
+// String returns a readable string representation of a ResetMutableStateStickynessRequest
 // struct.
-func (v *ResetMutableStateRequest) String() string {
+func (v *ResetMutableStateStickynessRequest) String() string {
 	if v == nil {
 		return "<nil>"
 	}
@@ -3070,14 +3070,14 @@ func (v *ResetMutableStateRequest) String() string {
 		i++
 	}
 
-	return fmt.Sprintf("ResetMutableStateRequest{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("ResetMutableStateStickynessRequest{%v}", strings.Join(fields[:i], ", "))
 }
 
-// Equals returns true if all the fields of this ResetMutableStateRequest match the
-// provided ResetMutableStateRequest.
+// Equals returns true if all the fields of this ResetMutableStateStickynessRequest match the
+// provided ResetMutableStateStickynessRequest.
 //
 // This function performs a deep comparison.
-func (v *ResetMutableStateRequest) Equals(rhs *ResetMutableStateRequest) bool {
+func (v *ResetMutableStateStickynessRequest) Equals(rhs *ResetMutableStateStickynessRequest) bool {
 	if !_String_EqualsPtr(v.DomainUUID, rhs.DomainUUID) {
 		return false
 	}
@@ -3090,7 +3090,7 @@ func (v *ResetMutableStateRequest) Equals(rhs *ResetMutableStateRequest) bool {
 
 // GetDomainUUID returns the value of DomainUUID if it is set or its
 // zero value if it is unset.
-func (v *ResetMutableStateRequest) GetDomainUUID() (o string) {
+func (v *ResetMutableStateStickynessRequest) GetDomainUUID() (o string) {
 	if v.DomainUUID != nil {
 		return *v.DomainUUID
 	}
@@ -3098,10 +3098,10 @@ func (v *ResetMutableStateRequest) GetDomainUUID() (o string) {
 	return
 }
 
-type ResetMutableStateResponse struct {
+type ResetMutableStateStickynessResponse struct {
 }
 
-// ToWire translates a ResetMutableStateResponse struct into a Thrift-level intermediate
+// ToWire translates a ResetMutableStateStickynessResponse struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
 // into bytes using a ThriftRW protocol implementation.
 //
@@ -3116,7 +3116,7 @@ type ResetMutableStateResponse struct {
 //   if err := binaryProtocol.Encode(x, writer); err != nil {
 //     return err
 //   }
-func (v *ResetMutableStateResponse) ToWire() (wire.Value, error) {
+func (v *ResetMutableStateStickynessResponse) ToWire() (wire.Value, error) {
 	var (
 		fields [0]wire.Field
 		i      int = 0
@@ -3125,11 +3125,11 @@ func (v *ResetMutableStateResponse) ToWire() (wire.Value, error) {
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-// FromWire deserializes a ResetMutableStateResponse struct from its Thrift-level
+// FromWire deserializes a ResetMutableStateStickynessResponse struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.
 //
-// An error is returned if we were unable to build a ResetMutableStateResponse struct
+// An error is returned if we were unable to build a ResetMutableStateStickynessResponse struct
 // from the provided intermediate representation.
 //
 //   x, err := binaryProtocol.Decode(reader, wire.TStruct)
@@ -3137,12 +3137,12 @@ func (v *ResetMutableStateResponse) ToWire() (wire.Value, error) {
 //     return nil, err
 //   }
 //
-//   var v ResetMutableStateResponse
+//   var v ResetMutableStateStickynessResponse
 //   if err := v.FromWire(x); err != nil {
 //     return nil, err
 //   }
 //   return &v, nil
-func (v *ResetMutableStateResponse) FromWire(w wire.Value) error {
+func (v *ResetMutableStateStickynessResponse) FromWire(w wire.Value) error {
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
@@ -3152,9 +3152,9 @@ func (v *ResetMutableStateResponse) FromWire(w wire.Value) error {
 	return nil
 }
 
-// String returns a readable string representation of a ResetMutableStateResponse
+// String returns a readable string representation of a ResetMutableStateStickynessResponse
 // struct.
-func (v *ResetMutableStateResponse) String() string {
+func (v *ResetMutableStateStickynessResponse) String() string {
 	if v == nil {
 		return "<nil>"
 	}
@@ -3162,14 +3162,14 @@ func (v *ResetMutableStateResponse) String() string {
 	var fields [0]string
 	i := 0
 
-	return fmt.Sprintf("ResetMutableStateResponse{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("ResetMutableStateStickynessResponse{%v}", strings.Join(fields[:i], ", "))
 }
 
-// Equals returns true if all the fields of this ResetMutableStateResponse match the
-// provided ResetMutableStateResponse.
+// Equals returns true if all the fields of this ResetMutableStateStickynessResponse match the
+// provided ResetMutableStateStickynessResponse.
 //
 // This function performs a deep comparison.
-func (v *ResetMutableStateResponse) Equals(rhs *ResetMutableStateResponse) bool {
+func (v *ResetMutableStateStickynessResponse) Equals(rhs *ResetMutableStateStickynessResponse) bool {
 
 	return true
 }

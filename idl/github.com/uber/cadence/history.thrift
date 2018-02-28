@@ -63,12 +63,12 @@ struct GetMutableStateResponse {
   110: optional i32 stickyTaskListScheduleToStartTimeout
 }
 
-struct ResetMutableStateRequest {
+struct ResetMutableStateStickynessRequest {
   10: optional string domainUUID
   20: optional shared.WorkflowExecution execution
 }
 
-struct ResetMutableStateResponse {
+struct ResetMutableStateStickynessResponse {
   // The reason to keep this response is to allow returning
   // information in the future.
 }
@@ -228,7 +228,7 @@ service HistoryService {
   * 4. ClientFeatureVersion
   * 5. ClientImpl
   **/
-  ResetMutableStateResponse ResetMutableState(1: ResetMutableStateRequest resetRequest)
+  ResetMutableStateStickynessResponse ResetMutableStateStickyness(1: ResetMutableStateStickynessRequest resetRequest)
     throws (
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,

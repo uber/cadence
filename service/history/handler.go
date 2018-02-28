@@ -723,18 +723,18 @@ func (h *Handler) RecordChildExecutionCompleted(ctx context.Context, request *hi
 	return nil
 }
 
-// ResetMutableState reset the volatile information in mutable state of a given workflow.
+// ResetMutableStateStickyness reset the volatile information in mutable state of a given workflow.
 // Volatile information are the information related to client, such as:
 // 1. StickyTaskList
 // 2. StickyScheduleToStartTimeout
 // 3. ClientLibraryVersion
 // 4. ClientFeatureVersion
 // 5. ClientImpl
-func (h *Handler) ResetMutableState(ctx context.Context, resetRequest *hist.ResetMutableStateRequest) (*hist.ResetMutableStateResponse, error) {
+func (h *Handler) ResetMutableStateStickyness(ctx context.Context, resetRequest *hist.ResetMutableStateStickynessRequest) (*hist.ResetMutableStateStickynessResponse, error) {
 	h.startWG.Wait()
 
-	h.metricsClient.IncCounter(metrics.HistoryResetMutableStateScope, metrics.CadenceRequests)
-	sw := h.metricsClient.StartTimer(metrics.HistoryResetMutableStateScope, metrics.CadenceLatency)
+	h.metricsClient.IncCounter(metrics.HistoryResetMutableStateStickynessScope, metrics.CadenceRequests)
+	sw := h.metricsClient.StartTimer(metrics.HistoryResetMutableStateStickynessScope, metrics.CadenceLatency)
 	defer sw.Stop()
 
 	if resetRequest.DomainUUID == nil {
@@ -743,13 +743,13 @@ func (h *Handler) ResetMutableState(ctx context.Context, resetRequest *hist.Rese
 
 	engine, err := h.controller.GetEngine(resetRequest.Execution.GetWorkflowId())
 	if err != nil {
-		h.updateErrorMetric(metrics.HistoryResetMutableStateScope, err)
+		h.updateErrorMetric(metrics.HistoryResetMutableStateStickynessScope, err)
 		return nil, err
 	}
 
-	resp, err := engine.ResetMutableState(resetRequest)
+	resp, err := engine.ResetMutableStateStickyness(resetRequest)
 	if err != nil {
-		h.updateErrorMetric(metrics.HistoryResetMutableStateScope, h.convertError(err))
+		h.updateErrorMetric(metrics.HistoryResetMutableStateStickynessScope, h.convertError(err))
 		return nil, h.convertError(err)
 	}
 

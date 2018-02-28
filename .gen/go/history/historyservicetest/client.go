@@ -321,37 +321,37 @@ func (mr *_MockClientRecorder) RequestCancelWorkflowExecution(
 	return mr.mock.ctrl.RecordCall(mr.mock, "RequestCancelWorkflowExecution", args...)
 }
 
-// ResetMutableState responds to a ResetMutableState call based on the mock expectations. This
+// ResetMutableStateStickyness responds to a ResetMutableStateStickyness call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().ResetMutableState(gomock.Any(), ...).Return(...)
-// 	... := client.ResetMutableState(...)
-func (m *MockClient) ResetMutableState(
+// 	client.EXPECT().ResetMutableStateStickyness(gomock.Any(), ...).Return(...)
+// 	... := client.ResetMutableStateStickyness(...)
+func (m *MockClient) ResetMutableStateStickyness(
 	ctx context.Context,
-	_ResetRequest *history.ResetMutableStateRequest,
+	_ResetRequest *history.ResetMutableStateStickynessRequest,
 	opts ...yarpc.CallOption,
-) (success *history.ResetMutableStateResponse, err error) {
+) (success *history.ResetMutableStateStickynessResponse, err error) {
 
 	args := []interface{}{ctx, _ResetRequest}
 	for _, o := range opts {
 		args = append(args, o)
 	}
 	i := 0
-	ret := m.ctrl.Call(m, "ResetMutableState", args...)
-	success, _ = ret[i].(*history.ResetMutableStateResponse)
+	ret := m.ctrl.Call(m, "ResetMutableStateStickyness", args...)
+	success, _ = ret[i].(*history.ResetMutableStateStickynessResponse)
 	i++
 	err, _ = ret[i].(error)
 	return
 }
 
-func (mr *_MockClientRecorder) ResetMutableState(
+func (mr *_MockClientRecorder) ResetMutableStateStickyness(
 	ctx interface{},
 	_ResetRequest interface{},
 	opts ...interface{},
 ) *gomock.Call {
 	args := append([]interface{}{ctx, _ResetRequest}, opts...)
-	return mr.mock.ctrl.RecordCall(mr.mock, "ResetMutableState", args...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "ResetMutableStateStickyness", args...)
 }
 
 // RespondActivityTaskCanceled responds to a RespondActivityTaskCanceled call based on the mock expectations. This

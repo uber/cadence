@@ -74,10 +74,10 @@ type Interface interface {
 		CancelRequest *history.RequestCancelWorkflowExecutionRequest,
 	) error
 
-	ResetMutableState(
+	ResetMutableStateStickyness(
 		ctx context.Context,
-		ResetRequest *history.ResetMutableStateRequest,
-	) (*history.ResetMutableStateResponse, error)
+		ResetRequest *history.ResetMutableStateStickynessRequest,
+	) (*history.ResetMutableStateStickynessResponse, error)
 
 	RespondActivityTaskCanceled(
 		ctx context.Context,
@@ -225,13 +225,13 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
-				Name: "ResetMutableState",
+				Name: "ResetMutableStateStickyness",
 				HandlerSpec: thrift.HandlerSpec{
 
 					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.ResetMutableState),
+					Unary: thrift.UnaryHandler(h.ResetMutableStateStickyness),
 				},
-				Signature:    "ResetMutableState(ResetRequest *history.ResetMutableStateRequest) (*history.ResetMutableStateResponse)",
+				Signature:    "ResetMutableStateStickyness(ResetRequest *history.ResetMutableStateStickynessRequest) (*history.ResetMutableStateStickynessResponse)",
 				ThriftModule: history.ThriftModule,
 			},
 
@@ -495,16 +495,16 @@ func (h handler) RequestCancelWorkflowExecution(ctx context.Context, body wire.V
 	return response, err
 }
 
-func (h handler) ResetMutableState(ctx context.Context, body wire.Value) (thrift.Response, error) {
-	var args history.HistoryService_ResetMutableState_Args
+func (h handler) ResetMutableStateStickyness(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args history.HistoryService_ResetMutableStateStickyness_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	success, err := h.impl.ResetMutableState(ctx, args.ResetRequest)
+	success, err := h.impl.ResetMutableStateStickyness(ctx, args.ResetRequest)
 
 	hadError := err != nil
-	result, err := history.HistoryService_ResetMutableState_Helper.WrapResponse(success, err)
+	result, err := history.HistoryService_ResetMutableStateStickyness_Helper.WrapResponse(success, err)
 
 	var response thrift.Response
 	if err == nil {

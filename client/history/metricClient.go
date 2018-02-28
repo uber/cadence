@@ -78,18 +78,18 @@ func (c *metricClient) GetMutableState(
 	return resp, err
 }
 
-func (c *metricClient) ResetMutableState(
+func (c *metricClient) ResetMutableStateStickyness(
 	context context.Context,
-	request *h.ResetMutableStateRequest,
-	opts ...yarpc.CallOption) (*h.ResetMutableStateResponse, error) {
-	c.metricsClient.IncCounter(metrics.HistoryClientResetMutableStateScope, metrics.CadenceRequests)
+	request *h.ResetMutableStateStickynessRequest,
+	opts ...yarpc.CallOption) (*h.ResetMutableStateStickynessResponse, error) {
+	c.metricsClient.IncCounter(metrics.HistoryClientResetMutableStateStickynessScope, metrics.CadenceRequests)
 
-	sw := c.metricsClient.StartTimer(metrics.HistoryClientResetMutableStateScope, metrics.CadenceLatency)
-	resp, err := c.client.ResetMutableState(context, request, opts...)
+	sw := c.metricsClient.StartTimer(metrics.HistoryClientResetMutableStateStickynessScope, metrics.CadenceLatency)
+	resp, err := c.client.ResetMutableStateStickyness(context, request, opts...)
 	sw.Stop()
 
 	if err != nil {
-		c.metricsClient.IncCounter(metrics.HistoryClientResetMutableStateScope, metrics.HistoryClientFailures)
+		c.metricsClient.IncCounter(metrics.HistoryClientResetMutableStateStickynessScope, metrics.HistoryClientFailures)
 	}
 
 	return resp, err

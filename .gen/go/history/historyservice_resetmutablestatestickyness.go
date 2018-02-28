@@ -31,14 +31,14 @@ import (
 	"strings"
 )
 
-// HistoryService_ResetMutableState_Args represents the arguments for the HistoryService.ResetMutableState function.
+// HistoryService_ResetMutableStateStickyness_Args represents the arguments for the HistoryService.ResetMutableStateStickyness function.
 //
-// The arguments for ResetMutableState are sent and received over the wire as this struct.
-type HistoryService_ResetMutableState_Args struct {
-	ResetRequest *ResetMutableStateRequest `json:"resetRequest,omitempty"`
+// The arguments for ResetMutableStateStickyness are sent and received over the wire as this struct.
+type HistoryService_ResetMutableStateStickyness_Args struct {
+	ResetRequest *ResetMutableStateStickynessRequest `json:"resetRequest,omitempty"`
 }
 
-// ToWire translates a HistoryService_ResetMutableState_Args struct into a Thrift-level intermediate
+// ToWire translates a HistoryService_ResetMutableStateStickyness_Args struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
 // into bytes using a ThriftRW protocol implementation.
 //
@@ -53,7 +53,7 @@ type HistoryService_ResetMutableState_Args struct {
 //   if err := binaryProtocol.Encode(x, writer); err != nil {
 //     return err
 //   }
-func (v *HistoryService_ResetMutableState_Args) ToWire() (wire.Value, error) {
+func (v *HistoryService_ResetMutableStateStickyness_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
 		i      int = 0
@@ -73,17 +73,17 @@ func (v *HistoryService_ResetMutableState_Args) ToWire() (wire.Value, error) {
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _ResetMutableStateRequest_Read(w wire.Value) (*ResetMutableStateRequest, error) {
-	var v ResetMutableStateRequest
+func _ResetMutableStateStickynessRequest_Read(w wire.Value) (*ResetMutableStateStickynessRequest, error) {
+	var v ResetMutableStateStickynessRequest
 	err := v.FromWire(w)
 	return &v, err
 }
 
-// FromWire deserializes a HistoryService_ResetMutableState_Args struct from its Thrift-level
+// FromWire deserializes a HistoryService_ResetMutableStateStickyness_Args struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.
 //
-// An error is returned if we were unable to build a HistoryService_ResetMutableState_Args struct
+// An error is returned if we were unable to build a HistoryService_ResetMutableStateStickyness_Args struct
 // from the provided intermediate representation.
 //
 //   x, err := binaryProtocol.Decode(reader, wire.TStruct)
@@ -91,19 +91,19 @@ func _ResetMutableStateRequest_Read(w wire.Value) (*ResetMutableStateRequest, er
 //     return nil, err
 //   }
 //
-//   var v HistoryService_ResetMutableState_Args
+//   var v HistoryService_ResetMutableStateStickyness_Args
 //   if err := v.FromWire(x); err != nil {
 //     return nil, err
 //   }
 //   return &v, nil
-func (v *HistoryService_ResetMutableState_Args) FromWire(w wire.Value) error {
+func (v *HistoryService_ResetMutableStateStickyness_Args) FromWire(w wire.Value) error {
 	var err error
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
 		case 1:
 			if field.Value.Type() == wire.TStruct {
-				v.ResetRequest, err = _ResetMutableStateRequest_Read(field.Value)
+				v.ResetRequest, err = _ResetMutableStateStickynessRequest_Read(field.Value)
 				if err != nil {
 					return err
 				}
@@ -115,9 +115,9 @@ func (v *HistoryService_ResetMutableState_Args) FromWire(w wire.Value) error {
 	return nil
 }
 
-// String returns a readable string representation of a HistoryService_ResetMutableState_Args
+// String returns a readable string representation of a HistoryService_ResetMutableStateStickyness_Args
 // struct.
-func (v *HistoryService_ResetMutableState_Args) String() string {
+func (v *HistoryService_ResetMutableStateStickyness_Args) String() string {
 	if v == nil {
 		return "<nil>"
 	}
@@ -129,14 +129,14 @@ func (v *HistoryService_ResetMutableState_Args) String() string {
 		i++
 	}
 
-	return fmt.Sprintf("HistoryService_ResetMutableState_Args{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("HistoryService_ResetMutableStateStickyness_Args{%v}", strings.Join(fields[:i], ", "))
 }
 
-// Equals returns true if all the fields of this HistoryService_ResetMutableState_Args match the
-// provided HistoryService_ResetMutableState_Args.
+// Equals returns true if all the fields of this HistoryService_ResetMutableStateStickyness_Args match the
+// provided HistoryService_ResetMutableStateStickyness_Args.
 //
 // This function performs a deep comparison.
-func (v *HistoryService_ResetMutableState_Args) Equals(rhs *HistoryService_ResetMutableState_Args) bool {
+func (v *HistoryService_ResetMutableStateStickyness_Args) Equals(rhs *HistoryService_ResetMutableStateStickyness_Args) bool {
 	if !((v.ResetRequest == nil && rhs.ResetRequest == nil) || (v.ResetRequest != nil && rhs.ResetRequest != nil && v.ResetRequest.Equals(rhs.ResetRequest))) {
 		return false
 	}
@@ -147,73 +147,73 @@ func (v *HistoryService_ResetMutableState_Args) Equals(rhs *HistoryService_Reset
 // MethodName returns the name of the Thrift function as specified in
 // the IDL, for which this struct represent the arguments.
 //
-// This will always be "ResetMutableState" for this struct.
-func (v *HistoryService_ResetMutableState_Args) MethodName() string {
-	return "ResetMutableState"
+// This will always be "ResetMutableStateStickyness" for this struct.
+func (v *HistoryService_ResetMutableStateStickyness_Args) MethodName() string {
+	return "ResetMutableStateStickyness"
 }
 
 // EnvelopeType returns the kind of value inside this struct.
 //
 // This will always be Call for this struct.
-func (v *HistoryService_ResetMutableState_Args) EnvelopeType() wire.EnvelopeType {
+func (v *HistoryService_ResetMutableStateStickyness_Args) EnvelopeType() wire.EnvelopeType {
 	return wire.Call
 }
 
-// HistoryService_ResetMutableState_Helper provides functions that aid in handling the
-// parameters and return values of the HistoryService.ResetMutableState
+// HistoryService_ResetMutableStateStickyness_Helper provides functions that aid in handling the
+// parameters and return values of the HistoryService.ResetMutableStateStickyness
 // function.
-var HistoryService_ResetMutableState_Helper = struct {
-	// Args accepts the parameters of ResetMutableState in-order and returns
+var HistoryService_ResetMutableStateStickyness_Helper = struct {
+	// Args accepts the parameters of ResetMutableStateStickyness in-order and returns
 	// the arguments struct for the function.
 	Args func(
-		resetRequest *ResetMutableStateRequest,
-	) *HistoryService_ResetMutableState_Args
+		resetRequest *ResetMutableStateStickynessRequest,
+	) *HistoryService_ResetMutableStateStickyness_Args
 
 	// IsException returns true if the given error can be thrown
-	// by ResetMutableState.
+	// by ResetMutableStateStickyness.
 	//
-	// An error can be thrown by ResetMutableState only if the
+	// An error can be thrown by ResetMutableStateStickyness only if the
 	// corresponding exception type was mentioned in the 'throws'
 	// section for it in the Thrift file.
 	IsException func(error) bool
 
-	// WrapResponse returns the result struct for ResetMutableState
+	// WrapResponse returns the result struct for ResetMutableStateStickyness
 	// given its return value and error.
 	//
 	// This allows mapping values and errors returned by
-	// ResetMutableState into a serializable result struct.
+	// ResetMutableStateStickyness into a serializable result struct.
 	// WrapResponse returns a non-nil error if the provided
-	// error cannot be thrown by ResetMutableState
+	// error cannot be thrown by ResetMutableStateStickyness
 	//
-	//   value, err := ResetMutableState(args)
-	//   result, err := HistoryService_ResetMutableState_Helper.WrapResponse(value, err)
+	//   value, err := ResetMutableStateStickyness(args)
+	//   result, err := HistoryService_ResetMutableStateStickyness_Helper.WrapResponse(value, err)
 	//   if err != nil {
-	//     return fmt.Errorf("unexpected error from ResetMutableState: %v", err)
+	//     return fmt.Errorf("unexpected error from ResetMutableStateStickyness: %v", err)
 	//   }
 	//   serialize(result)
-	WrapResponse func(*ResetMutableStateResponse, error) (*HistoryService_ResetMutableState_Result, error)
+	WrapResponse func(*ResetMutableStateStickynessResponse, error) (*HistoryService_ResetMutableStateStickyness_Result, error)
 
-	// UnwrapResponse takes the result struct for ResetMutableState
+	// UnwrapResponse takes the result struct for ResetMutableStateStickyness
 	// and returns the value or error returned by it.
 	//
-	// The error is non-nil only if ResetMutableState threw an
+	// The error is non-nil only if ResetMutableStateStickyness threw an
 	// exception.
 	//
 	//   result := deserialize(bytes)
-	//   value, err := HistoryService_ResetMutableState_Helper.UnwrapResponse(result)
-	UnwrapResponse func(*HistoryService_ResetMutableState_Result) (*ResetMutableStateResponse, error)
+	//   value, err := HistoryService_ResetMutableStateStickyness_Helper.UnwrapResponse(result)
+	UnwrapResponse func(*HistoryService_ResetMutableStateStickyness_Result) (*ResetMutableStateStickynessResponse, error)
 }{}
 
 func init() {
-	HistoryService_ResetMutableState_Helper.Args = func(
-		resetRequest *ResetMutableStateRequest,
-	) *HistoryService_ResetMutableState_Args {
-		return &HistoryService_ResetMutableState_Args{
+	HistoryService_ResetMutableStateStickyness_Helper.Args = func(
+		resetRequest *ResetMutableStateStickynessRequest,
+	) *HistoryService_ResetMutableStateStickyness_Args {
+		return &HistoryService_ResetMutableStateStickyness_Args{
 			ResetRequest: resetRequest,
 		}
 	}
 
-	HistoryService_ResetMutableState_Helper.IsException = func(err error) bool {
+	HistoryService_ResetMutableStateStickyness_Helper.IsException = func(err error) bool {
 		switch err.(type) {
 		case *shared.BadRequestError:
 			return true
@@ -228,37 +228,37 @@ func init() {
 		}
 	}
 
-	HistoryService_ResetMutableState_Helper.WrapResponse = func(success *ResetMutableStateResponse, err error) (*HistoryService_ResetMutableState_Result, error) {
+	HistoryService_ResetMutableStateStickyness_Helper.WrapResponse = func(success *ResetMutableStateStickynessResponse, err error) (*HistoryService_ResetMutableStateStickyness_Result, error) {
 		if err == nil {
-			return &HistoryService_ResetMutableState_Result{Success: success}, nil
+			return &HistoryService_ResetMutableStateStickyness_Result{Success: success}, nil
 		}
 
 		switch e := err.(type) {
 		case *shared.BadRequestError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for HistoryService_ResetMutableState_Result.BadRequestError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for HistoryService_ResetMutableStateStickyness_Result.BadRequestError")
 			}
-			return &HistoryService_ResetMutableState_Result{BadRequestError: e}, nil
+			return &HistoryService_ResetMutableStateStickyness_Result{BadRequestError: e}, nil
 		case *shared.InternalServiceError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for HistoryService_ResetMutableState_Result.InternalServiceError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for HistoryService_ResetMutableStateStickyness_Result.InternalServiceError")
 			}
-			return &HistoryService_ResetMutableState_Result{InternalServiceError: e}, nil
+			return &HistoryService_ResetMutableStateStickyness_Result{InternalServiceError: e}, nil
 		case *shared.EntityNotExistsError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for HistoryService_ResetMutableState_Result.EntityNotExistError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for HistoryService_ResetMutableStateStickyness_Result.EntityNotExistError")
 			}
-			return &HistoryService_ResetMutableState_Result{EntityNotExistError: e}, nil
+			return &HistoryService_ResetMutableStateStickyness_Result{EntityNotExistError: e}, nil
 		case *ShardOwnershipLostError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for HistoryService_ResetMutableState_Result.ShardOwnershipLostError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for HistoryService_ResetMutableStateStickyness_Result.ShardOwnershipLostError")
 			}
-			return &HistoryService_ResetMutableState_Result{ShardOwnershipLostError: e}, nil
+			return &HistoryService_ResetMutableStateStickyness_Result{ShardOwnershipLostError: e}, nil
 		}
 
 		return nil, err
 	}
-	HistoryService_ResetMutableState_Helper.UnwrapResponse = func(result *HistoryService_ResetMutableState_Result) (success *ResetMutableStateResponse, err error) {
+	HistoryService_ResetMutableStateStickyness_Helper.UnwrapResponse = func(result *HistoryService_ResetMutableStateStickyness_Result) (success *ResetMutableStateStickynessResponse, err error) {
 		if result.BadRequestError != nil {
 			err = result.BadRequestError
 			return
@@ -287,21 +287,21 @@ func init() {
 
 }
 
-// HistoryService_ResetMutableState_Result represents the result of a HistoryService.ResetMutableState function call.
+// HistoryService_ResetMutableStateStickyness_Result represents the result of a HistoryService.ResetMutableStateStickyness function call.
 //
-// The result of a ResetMutableState execution is sent and received over the wire as this struct.
+// The result of a ResetMutableStateStickyness execution is sent and received over the wire as this struct.
 //
 // Success is set only if the function did not throw an exception.
-type HistoryService_ResetMutableState_Result struct {
-	// Value returned by ResetMutableState after a successful execution.
-	Success                 *ResetMutableStateResponse   `json:"success,omitempty"`
-	BadRequestError         *shared.BadRequestError      `json:"badRequestError,omitempty"`
-	InternalServiceError    *shared.InternalServiceError `json:"internalServiceError,omitempty"`
-	EntityNotExistError     *shared.EntityNotExistsError `json:"entityNotExistError,omitempty"`
-	ShardOwnershipLostError *ShardOwnershipLostError     `json:"shardOwnershipLostError,omitempty"`
+type HistoryService_ResetMutableStateStickyness_Result struct {
+	// Value returned by ResetMutableStateStickyness after a successful execution.
+	Success                 *ResetMutableStateStickynessResponse `json:"success,omitempty"`
+	BadRequestError         *shared.BadRequestError              `json:"badRequestError,omitempty"`
+	InternalServiceError    *shared.InternalServiceError         `json:"internalServiceError,omitempty"`
+	EntityNotExistError     *shared.EntityNotExistsError         `json:"entityNotExistError,omitempty"`
+	ShardOwnershipLostError *ShardOwnershipLostError             `json:"shardOwnershipLostError,omitempty"`
 }
 
-// ToWire translates a HistoryService_ResetMutableState_Result struct into a Thrift-level intermediate
+// ToWire translates a HistoryService_ResetMutableStateStickyness_Result struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
 // into bytes using a ThriftRW protocol implementation.
 //
@@ -316,7 +316,7 @@ type HistoryService_ResetMutableState_Result struct {
 //   if err := binaryProtocol.Encode(x, writer); err != nil {
 //     return err
 //   }
-func (v *HistoryService_ResetMutableState_Result) ToWire() (wire.Value, error) {
+func (v *HistoryService_ResetMutableStateStickyness_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [5]wire.Field
 		i      int = 0
@@ -366,23 +366,23 @@ func (v *HistoryService_ResetMutableState_Result) ToWire() (wire.Value, error) {
 	}
 
 	if i != 1 {
-		return wire.Value{}, fmt.Errorf("HistoryService_ResetMutableState_Result should have exactly one field: got %v fields", i)
+		return wire.Value{}, fmt.Errorf("HistoryService_ResetMutableStateStickyness_Result should have exactly one field: got %v fields", i)
 	}
 
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _ResetMutableStateResponse_Read(w wire.Value) (*ResetMutableStateResponse, error) {
-	var v ResetMutableStateResponse
+func _ResetMutableStateStickynessResponse_Read(w wire.Value) (*ResetMutableStateStickynessResponse, error) {
+	var v ResetMutableStateStickynessResponse
 	err := v.FromWire(w)
 	return &v, err
 }
 
-// FromWire deserializes a HistoryService_ResetMutableState_Result struct from its Thrift-level
+// FromWire deserializes a HistoryService_ResetMutableStateStickyness_Result struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.
 //
-// An error is returned if we were unable to build a HistoryService_ResetMutableState_Result struct
+// An error is returned if we were unable to build a HistoryService_ResetMutableStateStickyness_Result struct
 // from the provided intermediate representation.
 //
 //   x, err := binaryProtocol.Decode(reader, wire.TStruct)
@@ -390,19 +390,19 @@ func _ResetMutableStateResponse_Read(w wire.Value) (*ResetMutableStateResponse, 
 //     return nil, err
 //   }
 //
-//   var v HistoryService_ResetMutableState_Result
+//   var v HistoryService_ResetMutableStateStickyness_Result
 //   if err := v.FromWire(x); err != nil {
 //     return nil, err
 //   }
 //   return &v, nil
-func (v *HistoryService_ResetMutableState_Result) FromWire(w wire.Value) error {
+func (v *HistoryService_ResetMutableStateStickyness_Result) FromWire(w wire.Value) error {
 	var err error
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
 		case 0:
 			if field.Value.Type() == wire.TStruct {
-				v.Success, err = _ResetMutableStateResponse_Read(field.Value)
+				v.Success, err = _ResetMutableStateStickynessResponse_Read(field.Value)
 				if err != nil {
 					return err
 				}
@@ -460,15 +460,15 @@ func (v *HistoryService_ResetMutableState_Result) FromWire(w wire.Value) error {
 		count++
 	}
 	if count != 1 {
-		return fmt.Errorf("HistoryService_ResetMutableState_Result should have exactly one field: got %v fields", count)
+		return fmt.Errorf("HistoryService_ResetMutableStateStickyness_Result should have exactly one field: got %v fields", count)
 	}
 
 	return nil
 }
 
-// String returns a readable string representation of a HistoryService_ResetMutableState_Result
+// String returns a readable string representation of a HistoryService_ResetMutableStateStickyness_Result
 // struct.
-func (v *HistoryService_ResetMutableState_Result) String() string {
+func (v *HistoryService_ResetMutableStateStickyness_Result) String() string {
 	if v == nil {
 		return "<nil>"
 	}
@@ -496,14 +496,14 @@ func (v *HistoryService_ResetMutableState_Result) String() string {
 		i++
 	}
 
-	return fmt.Sprintf("HistoryService_ResetMutableState_Result{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("HistoryService_ResetMutableStateStickyness_Result{%v}", strings.Join(fields[:i], ", "))
 }
 
-// Equals returns true if all the fields of this HistoryService_ResetMutableState_Result match the
-// provided HistoryService_ResetMutableState_Result.
+// Equals returns true if all the fields of this HistoryService_ResetMutableStateStickyness_Result match the
+// provided HistoryService_ResetMutableStateStickyness_Result.
 //
 // This function performs a deep comparison.
-func (v *HistoryService_ResetMutableState_Result) Equals(rhs *HistoryService_ResetMutableState_Result) bool {
+func (v *HistoryService_ResetMutableStateStickyness_Result) Equals(rhs *HistoryService_ResetMutableStateStickyness_Result) bool {
 	if !((v.Success == nil && rhs.Success == nil) || (v.Success != nil && rhs.Success != nil && v.Success.Equals(rhs.Success))) {
 		return false
 	}
@@ -526,14 +526,14 @@ func (v *HistoryService_ResetMutableState_Result) Equals(rhs *HistoryService_Res
 // MethodName returns the name of the Thrift function as specified in
 // the IDL, for which this struct represent the result.
 //
-// This will always be "ResetMutableState" for this struct.
-func (v *HistoryService_ResetMutableState_Result) MethodName() string {
-	return "ResetMutableState"
+// This will always be "ResetMutableStateStickyness" for this struct.
+func (v *HistoryService_ResetMutableStateStickyness_Result) MethodName() string {
+	return "ResetMutableStateStickyness"
 }
 
 // EnvelopeType returns the kind of value inside this struct.
 //
 // This will always be Reply for this struct.
-func (v *HistoryService_ResetMutableState_Result) EnvelopeType() wire.EnvelopeType {
+func (v *HistoryService_ResetMutableStateStickyness_Result) EnvelopeType() wire.EnvelopeType {
 	return wire.Reply
 }
