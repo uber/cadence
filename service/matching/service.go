@@ -31,16 +31,16 @@ import (
 
 // Config represents configuration for cadence-matching service
 type Config struct {
-	EnableSyncMatch bool
+	EnableSyncMatch func(...dynamicconfig.FilterOption) bool
 
 	// taskListManager configuration
 	RangeSize                 int64
-	GetTasksBatchSize         int
-	UpdateAckInterval         time.Duration
-	IdleTasklistCheckInterval time.Duration
+	GetTasksBatchSize         func(...dynamicconfig.FilterOption) int
+	UpdateAckInterval         func(...dynamicconfig.FilterOption) time.Duration
+	IdleTasklistCheckInterval func(...dynamicconfig.FilterOption) time.Duration
 	// Time to hold a poll request before returning an empty response if there are no tasks
-	LongPollExpirationInterval func(string) time.Duration
-	MinTaskThrottlingBurstSize func(string) int
+	LongPollExpirationInterval func(...dynamicconfig.FilterOption) time.Duration
+	MinTaskThrottlingBurstSize func(...dynamicconfig.FilterOption) int
 
 	// taskWriter configuration
 	OutstandingTaskAppendsThreshold int
@@ -50,15 +50,23 @@ type Config struct {
 // NewConfig returns new service config with default values
 func NewConfig(dc *dynamicconfig.Collection) *Config {
 	return &Config{
-		EnableSyncMatch:           true,
-		RangeSize:                 100000,
-		GetTasksBatchSize:         1000,
-		UpdateAckInterval:         10 * time.Second,
-		IdleTasklistCheckInterval: 5 * time.Minute,
-		LongPollExpirationInterval: dc.GetDurationPropertyWithTaskList(
+		EnableSyncMatch: dc.GetBoolProperty(
+			dynamicconfig.MatchingEnableSyncMatch, true,
+		),
+		RangeSize: 100000,
+		GetTasksBatchSize: dc.GetIntProperty(
+			dynamicconfig.MaxTaskBatchSize, 1000,
+		),
+		UpdateAckInterval: dc.GetDurationProperty(
+			dynamicconfig.MatchingUpdateAckInterval, 10*time.Second,
+		),
+		IdleTasklistCheckInterval: dc.GetDurationProperty(
+			dynamicconfig.MatchingIdleTasklistCheckInterval, 5*time.Minute,
+		),
+		LongPollExpirationInterval: dc.GetDurationProperty(
 			dynamicconfig.MatchingLongPollExpirationInterval, time.Minute,
 		),
-		MinTaskThrottlingBurstSize: dc.GetIntPropertyWithTaskList(
+		MinTaskThrottlingBurstSize: dc.GetIntProperty(
 			dynamicconfig.MinTaskThrottlingBurstSize, 1,
 		),
 		OutstandingTaskAppendsThreshold: 250,

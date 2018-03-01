@@ -38,10 +38,13 @@ const (
 
 var keys = []string{
 	"unknownKey",
-	_matchingTaskListRoot + "MinTaskThrottlingBurstSize",
-	_matchingTaskListRoot + "MaxTaskBatchSize",
-	_matchingTaskListRoot + "LongPollExpirationInterval",
-	_historyRoot + "LongPollExpirationInterval",
+	_matchingTaskListRoot + "minTaskThrottlingBurstSize",
+	_matchingTaskListRoot + "maxTaskBatchSize",
+	_matchingTaskListRoot + "longPollExpirationInterval",
+	_matchingTaskListRoot + "enableSyncMatch",
+	_matchingTaskListRoot + "updateAckInterval",
+	_matchingTaskListRoot + "idleTasklistCheckInterval",
+	_historyRoot + "longPollExpirationInterval",
 }
 
 const (
@@ -55,6 +58,12 @@ const (
 	MaxTaskBatchSize
 	// MatchingLongPollExpirationInterval is the long poll expiration interval in the matching service
 	MatchingLongPollExpirationInterval
+	// MatchingEnableSyncMatch is to enable sync match
+	MatchingEnableSyncMatch
+	// MatchingUpdateAckInterval is the interval for update ack
+	MatchingUpdateAckInterval
+	// MatchingIdleTasklistCheckInterval is the IdleTasklistCheckInterval
+	MatchingIdleTasklistCheckInterval
 	// HistoryLongPollExpirationInterval is the long poll expiration interval in the history service
 	HistoryLongPollExpirationInterval
 )
@@ -81,3 +90,20 @@ const (
 	// TaskListName is the tasklist name
 	TaskListName
 )
+
+// FilterOption is used to provide filters for dynamic config keys
+type FilterOption func(filterMap map[Filter]interface{})
+
+// TaskListFilter filters by task list name
+func TaskListFilter(name string) FilterOption {
+	return func(filterMap map[Filter]interface{}) {
+		filterMap[TaskListName] = name
+	}
+}
+
+// DomainFilter filters by domain name
+func DomainFilter(name string) FilterOption {
+	return func(filterMap map[Filter]interface{}) {
+		filterMap[DomainName] = name
+	}
+}

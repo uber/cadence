@@ -21,33 +21,8 @@
 package dynamicconfig
 
 import (
-	"errors"
 	"time"
 )
-
-// Client allows fetching values from a dynamic configuration system NOTE: This does not have async
-// options right now. In the interest of keeping it minimal, we can add when requirement arises.
-type Client interface {
-	GetValue(name Key) (interface{}, error)
-	GetValueWithFilters(name Key, filters map[Filter]interface{}) (interface{}, error)
-}
-
-type nopClient struct{}
-
-func (mc *nopClient) GetValue(name Key) (interface{}, error) {
-	return nil, errors.New("unable to find key")
-}
-
-func (mc *nopClient) GetValueWithFilters(
-	name Key, filters map[Filter]interface{},
-) (interface{}, error) {
-	return nil, errors.New("unable to find key")
-}
-
-// NewNopCollection creates a new nop collection
-func NewNopCollection() *Collection {
-	return NewCollection(&nopClient{})
-}
 
 // NewCollection creates a new collection
 func NewCollection(client Client) *Collection {
@@ -61,71 +36,51 @@ type Collection struct {
 	client Client
 }
 
-// GetIntPropertyWithTaskList gets property with taskList filter and asserts that it's an integer
-func (c *Collection) GetIntPropertyWithTaskList(key Key, defaultVal int) func(string) int {
-	return func(taskList string) int {
-		return c.getPropertyWithStringFilter(key, defaultVal, TaskListName)(taskList).(int)
-	}
-}
-
-// GetDurationPropertyWithTaskList gets property with taskList filter and asserts that it's time.Duration
-func (c *Collection) GetDurationPropertyWithTaskList(
-	key Key, defaultVal time.Duration,
-) func(string) time.Duration {
-	return func(taskList string) time.Duration {
-		return c.getPropertyWithStringFilter(key, defaultVal, TaskListName)(taskList).(time.Duration)
-	}
-}
-
-func (c *Collection) getPropertyWithStringFilter(
-	key Key, defaultVal interface{}, filter Filter,
-) func(string) interface{} {
-	return func(filterVal string) interface{} {
-		filters := make(map[Filter]interface{})
-		filters[filter] = filterVal
-		val, err := c.client.GetValueWithFilters(key, filters)
-		if err != nil {
-			return defaultVal
-		}
-		return val
-	}
-}
-
-// GetProperty gets a eface property and returns defaultVal if property is not found
-func (c *Collection) GetProperty(key Key, defaultVal interface{}) func() interface{} {
+// GetProperty gets a eface property and returns defaultValue if property is not found
+func (c *Collection) GetProperty(key Key, defaultValue interface{}) func() interface{} {
 	return func() interface{} {
-		val, err := c.client.GetValue(key)
-		if err != nil {
-			return defaultVal
-		}
+		val, _ := c.client.GetValue(key, defaultValue)
 		return val
 	}
+}
+
+func getFilterMap(opts ...FilterOption) map[Filter]interface{} {
+	l := len(opts)
+	m := make(map[Filter]interface{}, l)
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
 }
 
 // GetIntProperty gets property and asserts that it's an integer
-func (c *Collection) GetIntProperty(key Key, defaultVal int) func() int {
-	return func() int {
-		return c.GetProperty(key, defaultVal)().(int)
+func (c *Collection) GetIntProperty(key Key, defaultValue int) func(opts ...FilterOption) int {
+	return func(opts ...FilterOption) int {
+		val, _ := c.client.GetIntValue(key, getFilterMap(opts...), defaultValue)
+		return val
 	}
 }
 
 // GetFloat64Property gets property and asserts that it's a float64
-func (c *Collection) GetFloat64Property(key Key, defaultVal float64) func() float64 {
-	return func() float64 {
-		return c.GetProperty(key, defaultVal)().(float64)
+func (c *Collection) GetFloat64Property(key Key, defaultValue float64) func(opts ...FilterOption) float64 {
+	return func(opts ...FilterOption) float64 {
+		val, _ := c.client.GetFloatValue(key, getFilterMap(opts...), defaultValue)
+		return val
 	}
 }
 
 // GetDurationProperty gets property and asserts that it's a duration
-func (c *Collection) GetDurationProperty(key Key, defaultVal time.Duration) func() time.Duration {
-	return func() time.Duration {
-		return c.GetProperty(key, defaultVal)().(time.Duration)
+func (c *Collection) GetDurationProperty(key Key, defaultValue time.Duration) func(opts ...FilterOption) time.Duration {
+	return func(opts ...FilterOption) time.Duration {
+		val, _ := c.client.GetDurationValue(key, getFilterMap(opts...), defaultValue)
+		return val
 	}
 }
 
 // GetBoolProperty gets property and asserts that it's an bool
-func (c *Collection) GetBoolProperty(key Key, defaultVal bool) func() bool {
-	return func() bool {
-		return c.GetProperty(key, defaultVal)().(bool)
+func (c *Collection) GetBoolProperty(key Key, defaultValue bool) func(opts ...FilterOption) bool {
+	return func(opts ...FilterOption) bool {
+		val, _ := c.client.GetBoolValue(key, getFilterMap(opts...), defaultValue)
+		return val
 	}
 }
