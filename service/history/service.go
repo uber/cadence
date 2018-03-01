@@ -125,7 +125,8 @@ func NewService(params *service.BootstrapParams) common.Daemon {
 		params: params,
 		stopC:  make(chan struct{}),
 		config: NewConfig(
-			dynamicconfig.NewCollection(params.DynamicConfig), params.CassandraConfig.NumHistoryShards,
+			dynamicconfig.NewCollection(params.DynamicConfig, params.Logger),
+			params.CassandraConfig.NumHistoryShards,
 		),
 	}
 }

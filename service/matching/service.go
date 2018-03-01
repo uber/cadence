@@ -85,7 +85,7 @@ type Service struct {
 func NewService(params *service.BootstrapParams) common.Daemon {
 	return &Service{
 		params: params,
-		config: NewConfig(dynamicconfig.NewCollection(params.DynamicConfig)),
+		config: NewConfig(dynamicconfig.NewCollection(params.DynamicConfig, params.Logger)),
 		stopC:  make(chan struct{}),
 	}
 }
