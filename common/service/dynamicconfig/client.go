@@ -56,32 +56,31 @@ func (mc *nopClient) GetValueWithFilters(
 }
 
 func (mc *nopClient) GetIntValue(name Key, filters map[Filter]interface{}, defaultValue int) (int, error) {
-	return 0, errors.New("unable to find key")
+	return defaultValue, errors.New("unable to find key")
 }
 
 func (mc *nopClient) GetFloatValue(name Key, filters map[Filter]interface{}, defaultValue float64) (float64, error) {
-	return 0.0, errors.New("unable to find key")
+	return defaultValue, errors.New("unable to find key")
 }
 
 func (mc *nopClient) GetBoolValue(name Key, filters map[Filter]interface{}, defaultValue bool) (bool, error) {
-	return false, errors.New("unable to find key")
+	return defaultValue, errors.New("unable to find key")
 }
 
 func (mc *nopClient) GetStringValue(name Key, filters map[Filter]interface{}, defaultValue string) (string, error) {
-	return "", errors.New("unable to find key")
+	return defaultValue, errors.New("unable to find key")
 }
 
 func (mc *nopClient) GetMapValue(
 	name Key, filters map[Filter]interface{}, defaultValue map[string]interface{},
 ) (map[string]interface{}, error) {
-	return make(map[string]interface{}), errors.New("unable to find key")
+	return defaultValue, errors.New("unable to find key")
 }
 
 func (mc *nopClient) GetDurationValue(
 	name Key, filters map[Filter]interface{}, defaultValue time.Duration,
 ) (time.Duration, error) {
-	var def time.Duration
-	return def, errors.New("unable to find key")
+	return defaultValue, errors.New("unable to find key")
 }
 
 // NewNopCollection creates a new nop collection
