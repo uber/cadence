@@ -164,7 +164,6 @@ CREATE TYPE cluster_replication_config (
 
 CREATE TYPE domain_replication_config (
   active_cluster_name text,
-  failover_version    bigint,
   clusters            list<frozen<cluster_replication_config>>
 );
 
@@ -248,7 +247,10 @@ CREATE TABLE domains_by_name (
   domain             frozen<domain>,
   config             frozen<domain_config>,
   replication_config frozen<domain_replication_config>, -- indicating active cluster and standby cluster used for replication
-  version            bigint, --indicate the version of the record, used for update
+  is_global_domain   boolean, -- indicating whether a domain is a global domain
+  config_version     bigint, -- indicating the version of domain config, excluding the failover / change of active cluster name
+  failover_version   bigint, -- indicating the version of active domain only, used for domain failover
+  db_version         bigint, -- indicate the version of the record, used for update
   PRIMARY KEY (name)
 )  WITH COMPACTION = {
      'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'

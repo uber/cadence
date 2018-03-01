@@ -24,6 +24,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/pborman/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -64,15 +65,19 @@ func (m *metadataPersistenceSuite) TearDownSuite() {
 }
 
 func (m *metadataPersistenceSuite) TestCreateDomain() {
+	id := uuid.New()
 	name := "create-domain-test-name"
 	status := DomainStatusRegistered
 	description := "create-domain-test-description"
 	owner := "create-domain-test-owner"
 	retention := int32(10)
 	emitMetric := true
+	isGlobalDomain := false
+	failoverVersion := int64(0)
 
 	resp0, err0 := m.CreateDomain(
 		&DomainInfo{
+			ID:          id,
 			Name:        name,
 			Status:      status,
 			Description: description,
@@ -83,13 +88,13 @@ func (m *metadataPersistenceSuite) TestCreateDomain() {
 			EmitMetric: emitMetric,
 		},
 		&DomainReplicationConfig{},
+		isGlobalDomain,
+		failoverVersion,
 	)
 
 	m.Nil(err0)
 	m.NotNil(resp0)
-
-	id := resp0.ID
-	m.True(len(id) > 0)
+	m.Equal(id, resp0.ID)
 
 	// for domain which do not have replication config set, will default to
 	// use current cluster as active, with current cluster as all clusters
@@ -104,13 +109,16 @@ func (m *metadataPersistenceSuite) TestCreateDomain() {
 	m.Equal(retention, resp1.Config.Retention)
 	m.Equal(emitMetric, resp1.Config.EmitMetric)
 	m.Equal(testCurrentClusterName, resp1.ReplicationConfig.ActiveClusterName)
-	m.Equal(int64(0), resp1.ReplicationConfig.FailoverVersion)
 	m.Equal(1, len(resp1.ReplicationConfig.Clusters))
+	m.Equal(isGlobalDomain, resp1.IsGlobalDomain)
+	m.Equal(int64(0), resp1.ConfigVersion)
+	m.Equal(failoverVersion, resp1.FailoverVersion)
 	m.True(resp1.ReplicationConfig.Clusters[0].ClusterName == testCurrentClusterName)
-	m.Equal(int64(0), resp1.Version)
+	m.Equal(int64(0), resp1.DBVersion)
 
 	resp2, err2 := m.CreateDomain(
 		&DomainInfo{
+			ID:          uuid.New(),
 			Name:        name,
 			Status:      status,
 			Description: "fail",
@@ -121,6 +129,8 @@ func (m *metadataPersistenceSuite) TestCreateDomain() {
 			EmitMetric: false,
 		},
 		&DomainReplicationConfig{},
+		isGlobalDomain,
+		failoverVersion,
 	)
 	m.NotNil(err2)
 	m.IsType(&gen.DomainAlreadyExistsError{}, err2)
@@ -128,6 +138,7 @@ func (m *metadataPersistenceSuite) TestCreateDomain() {
 }
 
 func (m *metadataPersistenceSuite) TestGetDomain() {
+	id := uuid.New()
 	name := "get-domain-test-name"
 	status := DomainStatusRegistered
 	description := "get-domain-test-description"
@@ -138,6 +149,7 @@ func (m *metadataPersistenceSuite) TestGetDomain() {
 	clusterActive := "some random active cluster name"
 	clusterStandby := "some random standby cluster name"
 	failoverVersion := int64(59)
+	isGlobalDomain := true
 	clusters := []*ClusterReplicationConfig{
 		&ClusterReplicationConfig{
 			ClusterName: clusterActive,
@@ -154,6 +166,7 @@ func (m *metadataPersistenceSuite) TestGetDomain() {
 
 	resp1, err1 := m.CreateDomain(
 		&DomainInfo{
+			ID:          id,
 			Name:        name,
 			Status:      status,
 			Description: description,
@@ -165,15 +178,14 @@ func (m *metadataPersistenceSuite) TestGetDomain() {
 		},
 		&DomainReplicationConfig{
 			ActiveClusterName: clusterActive,
-			FailoverVersion:   failoverVersion,
 			Clusters:          clusters,
 		},
+		isGlobalDomain,
+		failoverVersion,
 	)
 	m.Nil(err1)
 	m.NotNil(resp1)
-
-	id := resp1.ID
-	m.True(len(id) > 0)
+	m.Equal(id, resp1.ID)
 
 	resp2, err2 := m.GetDomain(id, "")
 	m.Nil(err2)
@@ -186,12 +198,14 @@ func (m *metadataPersistenceSuite) TestGetDomain() {
 	m.Equal(retention, resp2.Config.Retention)
 	m.Equal(emitMetric, resp2.Config.EmitMetric)
 	m.Equal(clusterActive, resp2.ReplicationConfig.ActiveClusterName)
-	m.Equal(failoverVersion, resp2.ReplicationConfig.FailoverVersion)
 	m.Equal(len(clusters), len(resp2.ReplicationConfig.Clusters))
 	for index := range clusters {
 		m.Equal(clusters[index], resp2.ReplicationConfig.Clusters[index])
 	}
-	m.Equal(int64(0), resp2.Version)
+	m.Equal(isGlobalDomain, resp2.IsGlobalDomain)
+	m.Equal(int64(0), resp2.ConfigVersion)
+	m.Equal(failoverVersion, resp2.FailoverVersion)
+	m.Equal(int64(0), resp2.DBVersion)
 
 	resp3, err3 := m.GetDomain("", name)
 	m.Nil(err3)
@@ -204,12 +218,14 @@ func (m *metadataPersistenceSuite) TestGetDomain() {
 	m.Equal(retention, resp3.Config.Retention)
 	m.Equal(emitMetric, resp3.Config.EmitMetric)
 	m.Equal(clusterActive, resp3.ReplicationConfig.ActiveClusterName)
-	m.Equal(failoverVersion, resp3.ReplicationConfig.FailoverVersion)
 	m.Equal(len(clusters), len(resp3.ReplicationConfig.Clusters))
 	for index := range clusters {
 		m.Equal(clusters[index], resp3.ReplicationConfig.Clusters[index])
 	}
-	m.Equal(int64(0), resp3.Version)
+	m.Equal(isGlobalDomain, resp2.IsGlobalDomain)
+	m.Equal(int64(0), resp2.ConfigVersion)
+	m.Equal(failoverVersion, resp3.FailoverVersion)
+	m.Equal(int64(0), resp3.DBVersion)
 
 	resp4, err4 := m.GetDomain(id, name)
 	m.NotNil(err4)
@@ -218,6 +234,7 @@ func (m *metadataPersistenceSuite) TestGetDomain() {
 }
 
 func (m *metadataPersistenceSuite) TestUpdateDomain() {
+	id := uuid.New()
 	name := "update-domain-test-name"
 	status := DomainStatusRegistered
 	description := "update-domain-test-description"
@@ -228,6 +245,7 @@ func (m *metadataPersistenceSuite) TestUpdateDomain() {
 	clusterActive := "some random active cluster name"
 	clusterStandby := "some random standby cluster name"
 	failoverVersion := int64(59)
+	isGlobalDomain := true
 	clusters := []*ClusterReplicationConfig{
 		&ClusterReplicationConfig{
 			ClusterName: clusterActive,
@@ -239,6 +257,7 @@ func (m *metadataPersistenceSuite) TestUpdateDomain() {
 
 	resp1, err1 := m.CreateDomain(
 		&DomainInfo{
+			ID:          id,
 			Name:        name,
 			Status:      status,
 			Description: description,
@@ -250,14 +269,13 @@ func (m *metadataPersistenceSuite) TestUpdateDomain() {
 		},
 		&DomainReplicationConfig{
 			ActiveClusterName: clusterActive,
-			FailoverVersion:   failoverVersion,
 			Clusters:          clusters,
 		},
+		isGlobalDomain,
+		failoverVersion,
 	)
 	m.Nil(err1)
-
-	id := resp1.ID
-	m.True(len(id) > 0)
+	m.Equal(id, resp1.ID)
 
 	resp2, err2 := m.GetDomain(id, "")
 	m.Nil(err2)
@@ -269,6 +287,7 @@ func (m *metadataPersistenceSuite) TestUpdateDomain() {
 
 	updateClusterActive := "other random active cluster name"
 	updateClusterStandby := "other random standby cluster name"
+	updateConfigVersion := int64(12)
 	updateFailoverVersion := int64(28)
 	updateClusters := []*ClusterReplicationConfig{
 		&ClusterReplicationConfig{
@@ -293,10 +312,11 @@ func (m *metadataPersistenceSuite) TestUpdateDomain() {
 		},
 		&DomainReplicationConfig{
 			ActiveClusterName: updateClusterActive,
-			FailoverVersion:   updateFailoverVersion,
 			Clusters:          updateClusters,
 		},
-		resp2.Version,
+		updateConfigVersion,
+		updateFailoverVersion,
+		resp2.DBVersion,
 	)
 
 	m.Nil(err3)
@@ -312,12 +332,13 @@ func (m *metadataPersistenceSuite) TestUpdateDomain() {
 	m.Equal(updatedRetention, resp4.Config.Retention)
 	m.Equal(updatedEmitMetric, resp4.Config.EmitMetric)
 	m.Equal(updateClusterActive, resp4.ReplicationConfig.ActiveClusterName)
-	m.Equal(updateFailoverVersion, resp4.ReplicationConfig.FailoverVersion)
 	m.Equal(len(updateClusters), len(resp4.ReplicationConfig.Clusters))
 	for index := range clusters {
 		m.Equal(updateClusters[index], resp4.ReplicationConfig.Clusters[index])
 	}
-	m.Equal(resp2.Version+1, resp4.Version)
+	m.Equal(updateConfigVersion, resp4.ConfigVersion)
+	m.Equal(updateFailoverVersion, resp4.FailoverVersion)
+	m.Equal(resp2.DBVersion+1, resp4.DBVersion)
 
 	resp5, err5 := m.GetDomain("", name)
 	m.Nil(err5)
@@ -330,15 +351,17 @@ func (m *metadataPersistenceSuite) TestUpdateDomain() {
 	m.Equal(updatedRetention, resp5.Config.Retention)
 	m.Equal(updatedEmitMetric, resp5.Config.EmitMetric)
 	m.Equal(updateClusterActive, resp5.ReplicationConfig.ActiveClusterName)
-	m.Equal(updateFailoverVersion, resp5.ReplicationConfig.FailoverVersion)
 	m.Equal(len(updateClusters), len(resp5.ReplicationConfig.Clusters))
 	for index := range clusters {
 		m.Equal(updateClusters[index], resp5.ReplicationConfig.Clusters[index])
 	}
-	m.Equal(resp2.Version+1, resp5.Version)
+	m.Equal(updateConfigVersion, resp5.ConfigVersion)
+	m.Equal(updateFailoverVersion, resp5.FailoverVersion)
+	m.Equal(resp2.DBVersion+1, resp5.DBVersion)
 }
 
 func (m *metadataPersistenceSuite) TestDeleteDomain() {
+	id := uuid.New()
 	name := "delete-domain-test-name"
 	status := DomainStatusRegistered
 	description := "delete-domain-test-description"
@@ -349,6 +372,7 @@ func (m *metadataPersistenceSuite) TestDeleteDomain() {
 	clusterActive := "some random active cluster name"
 	clusterStandby := "some random standby cluster name"
 	failoverVersion := int64(59)
+	isGlobalDomain := true
 	clusters := []*ClusterReplicationConfig{
 		&ClusterReplicationConfig{
 			ClusterName: clusterActive,
@@ -360,6 +384,7 @@ func (m *metadataPersistenceSuite) TestDeleteDomain() {
 
 	resp1, err1 := m.CreateDomain(
 		&DomainInfo{
+			ID:          id,
 			Name:        name,
 			Status:      status,
 			Description: description,
@@ -371,13 +396,13 @@ func (m *metadataPersistenceSuite) TestDeleteDomain() {
 		},
 		&DomainReplicationConfig{
 			ActiveClusterName: clusterActive,
-			FailoverVersion:   failoverVersion,
 			Clusters:          clusters,
 		},
+		isGlobalDomain,
+		failoverVersion,
 	)
 	m.Nil(err1)
-	id := resp1.ID
-	m.True(len(id) > 0)
+	m.Equal(id, resp1.ID)
 
 	resp2, err2 := m.GetDomain("", name)
 	m.Nil(err2)
@@ -398,6 +423,7 @@ func (m *metadataPersistenceSuite) TestDeleteDomain() {
 
 	resp6, err6 := m.CreateDomain(
 		&DomainInfo{
+			ID:          id,
 			Name:        name,
 			Status:      status,
 			Description: description,
@@ -409,13 +435,13 @@ func (m *metadataPersistenceSuite) TestDeleteDomain() {
 		},
 		&DomainReplicationConfig{
 			ActiveClusterName: clusterActive,
-			FailoverVersion:   failoverVersion,
 			Clusters:          clusters,
 		},
+		isGlobalDomain,
+		failoverVersion,
 	)
 	m.Nil(err6)
-	id = resp6.ID
-	m.True(len(id) > 0)
+	m.Equal(id, resp6.ID)
 
 	err7 := m.DeleteDomain(id, "")
 	m.Nil(err7)
@@ -431,14 +457,14 @@ func (m *metadataPersistenceSuite) TestDeleteDomain() {
 	m.Nil(resp9)
 }
 
-func (m *metadataPersistenceSuite) CreateDomain(info *DomainInfo, config *DomainConfig, replicationConfig *DomainReplicationConfig) (*CreateDomainResponse, error) {
+func (m *metadataPersistenceSuite) CreateDomain(info *DomainInfo, config *DomainConfig,
+	replicationConfig *DomainReplicationConfig, isGlobaldomain bool, failoverVersion int64) (*CreateDomainResponse, error) {
 	return m.MetadataManager.CreateDomain(&CreateDomainRequest{
-		Name:              info.Name,
-		Status:            info.Status,
-		Description:       info.Description,
-		OwnerEmail:        info.OwnerEmail,
+		Info:              info,
 		Config:            config,
 		ReplicationConfig: replicationConfig,
+		IsGlobalDomain:    isGlobaldomain,
+		FailoverVersion:   failoverVersion,
 	})
 }
 
@@ -449,12 +475,15 @@ func (m *metadataPersistenceSuite) GetDomain(id, name string) (*GetDomainRespons
 	})
 }
 
-func (m *metadataPersistenceSuite) UpdateDomain(info *DomainInfo, config *DomainConfig, replicationConfig *DomainReplicationConfig, version int64) error {
+func (m *metadataPersistenceSuite) UpdateDomain(info *DomainInfo, config *DomainConfig, replicationConfig *DomainReplicationConfig,
+	configVersion int64, failoverVersion int64, dbVersion int64) error {
 	return m.MetadataManager.UpdateDomain(&UpdateDomainRequest{
 		Info:              info,
 		Config:            config,
 		ReplicationConfig: replicationConfig,
-		Version:           version,
+		ConfigVersion:     configVersion,
+		FailoverVersion:   failoverVersion,
+		DBVersion:         dbVersion,
 	})
 }
 

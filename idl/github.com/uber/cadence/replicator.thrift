@@ -20,12 +20,26 @@
 
 namespace java com.uber.cadence.replicator
 
+include "shared.thrift"
+
 enum ReplicationTaskType {
   Domain
   History
 }
 
+enum DomainOperation {
+  Create
+  Update
+}
+
 struct DomainTaskAttributes {
+  05: optional DomainOperation domainOperation
+  10: optional string id
+  20: optional shared.DomainInfo info
+  30: optional shared.DomainConfiguration config
+  40: optional shared.DomainReplicationConfiguration replicationConfig
+  50: optional i64 (js.type = "Long") configVersion
+  60: optional i64 (js.type = "Long") failoverVersion
 }
 
 struct HistoryTaskAttributes {

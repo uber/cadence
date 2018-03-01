@@ -651,7 +651,6 @@ type (
 	// DomainReplicationConfig describes the cross DC domain replication configuration
 	DomainReplicationConfig struct {
 		ActiveClusterName string
-		FailoverVersion   int64
 		Clusters          []*ClusterReplicationConfig
 	}
 
@@ -662,12 +661,11 @@ type (
 
 	// CreateDomainRequest is used to create the domain
 	CreateDomainRequest struct {
-		Name              string
-		Status            int
-		Description       string
-		OwnerEmail        string
+		Info              *DomainInfo
 		Config            *DomainConfig
 		ReplicationConfig *DomainReplicationConfig
+		IsGlobalDomain    bool
+		FailoverVersion   int64
 	}
 
 	// CreateDomainResponse is the response for CreateDomain
@@ -686,7 +684,10 @@ type (
 		Info              *DomainInfo
 		Config            *DomainConfig
 		ReplicationConfig *DomainReplicationConfig
-		Version           int64
+		IsGlobalDomain    bool
+		ConfigVersion     int64
+		FailoverVersion   int64
+		DBVersion         int64
 	}
 
 	// UpdateDomainRequest is used to update domain
@@ -694,7 +695,9 @@ type (
 		Info              *DomainInfo
 		Config            *DomainConfig
 		ReplicationConfig *DomainReplicationConfig
-		Version           int64
+		ConfigVersion     int64
+		FailoverVersion   int64
+		DBVersion         int64
 	}
 
 	// DeleteDomainRequest is used to delete domain entry from domains table
