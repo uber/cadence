@@ -24,11 +24,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/uber-common/bark"
 )
 
 func BenchmarkGetIntProperty(b *testing.B) {
 	client := newInMemoryClient()
-	cln := NewCollection(client)
+	cln := NewCollection(client, bark.NewNopLogger())
 	key := MaxTaskBatchSize
 	for i := 0; i < b.N; i++ {
 		size := cln.GetIntProperty(key, 10)

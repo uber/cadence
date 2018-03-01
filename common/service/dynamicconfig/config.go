@@ -22,11 +22,13 @@ package dynamicconfig
 
 import (
 	"time"
+
+	"github.com/uber-common/bark"
 )
 
 // NewCollection creates a new collection
-func NewCollection(client Client) *Collection {
-	return &Collection{client}
+func NewCollection(client Client, logger bark.Logger) *Collection {
+	return &Collection{client, logger}
 }
 
 // Collection wraps dynamic config client with a closure so that across the code, the config values
@@ -34,12 +36,20 @@ func NewCollection(client Client) *Collection {
 // code
 type Collection struct {
 	client Client
+	logger bark.Logger
+}
+
+func (c *Collection) logNoValue(key Key, err error) {
+	c.logger.Debugf("Failed to fetch key: %s from dynamic config with err: %s", key.String(), err.Error())
 }
 
 // GetProperty gets a eface property and returns defaultValue if property is not found
 func (c *Collection) GetProperty(key Key, defaultValue interface{}) func() interface{} {
 	return func() interface{} {
-		val, _ := c.client.GetValue(key, defaultValue)
+		val, err := c.client.GetValue(key, defaultValue)
+		if err != nil {
+			c.logNoValue(key, err)
+		}
 		return val
 	}
 }
@@ -56,7 +66,10 @@ func getFilterMap(opts ...FilterOption) map[Filter]interface{} {
 // GetIntProperty gets property and asserts that it's an integer
 func (c *Collection) GetIntProperty(key Key, defaultValue int) func(opts ...FilterOption) int {
 	return func(opts ...FilterOption) int {
-		val, _ := c.client.GetIntValue(key, getFilterMap(opts...), defaultValue)
+		val, err := c.client.GetIntValue(key, getFilterMap(opts...), defaultValue)
+		if err != nil {
+			c.logNoValue(key, err)
+		}
 		return val
 	}
 }
@@ -64,7 +77,10 @@ func (c *Collection) GetIntProperty(key Key, defaultValue int) func(opts ...Filt
 // GetFloat64Property gets property and asserts that it's a float64
 func (c *Collection) GetFloat64Property(key Key, defaultValue float64) func(opts ...FilterOption) float64 {
 	return func(opts ...FilterOption) float64 {
-		val, _ := c.client.GetFloatValue(key, getFilterMap(opts...), defaultValue)
+		val, err := c.client.GetFloatValue(key, getFilterMap(opts...), defaultValue)
+		if err != nil {
+			c.logNoValue(key, err)
+		}
 		return val
 	}
 }
@@ -72,7 +88,10 @@ func (c *Collection) GetFloat64Property(key Key, defaultValue float64) func(opts
 // GetDurationProperty gets property and asserts that it's a duration
 func (c *Collection) GetDurationProperty(key Key, defaultValue time.Duration) func(opts ...FilterOption) time.Duration {
 	return func(opts ...FilterOption) time.Duration {
-		val, _ := c.client.GetDurationValue(key, getFilterMap(opts...), defaultValue)
+		val, err := c.client.GetDurationValue(key, getFilterMap(opts...), defaultValue)
+		if err != nil {
+			c.logNoValue(key, err)
+		}
 		return val
 	}
 }
@@ -80,7 +99,10 @@ func (c *Collection) GetDurationProperty(key Key, defaultValue time.Duration) fu
 // GetBoolProperty gets property and asserts that it's an bool
 func (c *Collection) GetBoolProperty(key Key, defaultValue bool) func(opts ...FilterOption) bool {
 	return func(opts ...FilterOption) bool {
-		val, _ := c.client.GetBoolValue(key, getFilterMap(opts...), defaultValue)
+		val, err := c.client.GetBoolValue(key, getFilterMap(opts...), defaultValue)
+		if err != nil {
+			c.logNoValue(key, err)
+		}
 		return val
 	}
 }

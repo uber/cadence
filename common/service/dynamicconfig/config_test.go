@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/suite"
+	"github.com/uber-common/bark"
 )
 
 type inMemoryClient struct {
@@ -100,7 +101,7 @@ func TestConfigSuite(t *testing.T) {
 
 func (s *configSuite) SetupSuite() {
 	s.client = newInMemoryClient()
-	s.cln = NewCollection(s.client)
+	s.cln = NewCollection(s.client, bark.NewNopLogger())
 }
 
 func (s *configSuite) TestGetPropertyInt() {

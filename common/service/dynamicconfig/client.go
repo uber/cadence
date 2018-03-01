@@ -23,6 +23,8 @@ package dynamicconfig
 import (
 	"errors"
 	"time"
+
+	"github.com/uber-common/bark"
 )
 
 // Client allows fetching values from a dynamic configuration system NOTE: This does not have async
@@ -85,5 +87,5 @@ func (mc *nopClient) GetDurationValue(
 
 // NewNopCollection creates a new nop collection
 func NewNopCollection() *Collection {
-	return NewCollection(&nopClient{})
+	return NewCollection(&nopClient{}, bark.NewNopLogger())
 }
