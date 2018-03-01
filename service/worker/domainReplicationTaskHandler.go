@@ -26,6 +26,8 @@ import (
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/persistence"
 )
 
@@ -65,8 +67,45 @@ func NewDomainReplicator(metadataManager persistence.MetadataManager, logger bar
 	}
 }
 
-// handleDomainReplicationTask handle the domain replication task
-func (domainReplicator *domainReplicatorImpl) HandleReceiveTask(task *replicator.DomainTaskAttributes) error {
+// HandleTransmissionTask handle transmission of the domain replication task
+func (domainReplicator *domainReplicatorImpl) HandleTransmissionTask(kafka messaging.Producer, domainOperation replicator.DomainOperation,
+	info *persistence.DomainInfo, config *persistence.DomainConfig, replicationConfig *persistence.DomainReplicationConfig,
+	configVersion int64, failoverVersion int64) error {
+	status, err := domainReplicator.convertDomainStatusToThrift(info.Status)
+	if err != nil {
+		return err
+	}
+
+	taskType := replicator.ReplicationTaskTypeDomain
+	task := &replicator.DomainTaskAttributes{
+		DomainOperation: &domainOperation,
+		ID:              common.StringPtr(info.ID),
+		Info: &shared.DomainInfo{
+			Name:        common.StringPtr(info.Name),
+			Status:      status,
+			Description: common.StringPtr(info.Description),
+			OwnerEmail:  common.StringPtr(info.OwnerEmail),
+		},
+		Config: &shared.DomainConfiguration{
+			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(config.Retention),
+			EmitMetric:                             common.BoolPtr(config.EmitMetric),
+		},
+		ReplicationConfig: &shared.DomainReplicationConfiguration{
+			ActiveClusterName: common.StringPtr(replicationConfig.ActiveClusterName),
+			Clusters:          domainReplicator.convertClusterReplicationConfigToThrift(replicationConfig.Clusters),
+		},
+		ConfigVersion:   common.Int64Ptr(configVersion),
+		FailoverVersion: common.Int64Ptr(failoverVersion),
+	}
+
+	return kafka.Publish(&replicator.ReplicationTask{
+		TaskType:             &taskType,
+		DomainTaskAttributes: task,
+	})
+}
+
+// HandleReceiveTask handle receiving of the domain replication task
+func (domainReplicator *domainReplicatorImpl) HandleReceivingTask(task *replicator.DomainTaskAttributes) error {
 	if err := domainReplicator.validateDomainReplicationTask(task); err != nil {
 		return err
 	}
@@ -84,7 +123,7 @@ func (domainReplicator *domainReplicatorImpl) HandleReceiveTask(task *replicator
 // handleDomainCreationReplicationTask handle the domain creation replication task
 func (domainReplicator *domainReplicatorImpl) handleDomainCreationReplicationTask(task *replicator.DomainTaskAttributes) error {
 	// task already validated
-	status, err := domainReplicator.convertDomainStatus(task.Info.Status)
+	status, err := domainReplicator.convertDomainStatusFromThrift(task.Info.Status)
 	if err != nil {
 		return err
 	}
@@ -103,7 +142,7 @@ func (domainReplicator *domainReplicatorImpl) handleDomainCreationReplicationTas
 		},
 		ReplicationConfig: &persistence.DomainReplicationConfig{
 			ActiveClusterName: task.ReplicationConfig.GetActiveClusterName(),
-			Clusters:          domainReplicator.convertClusterReplicationConfig(task.ReplicationConfig.Clusters),
+			Clusters:          domainReplicator.convertClusterReplicationConfigFromThrift(task.ReplicationConfig.Clusters),
 		},
 		IsGlobalDomain:  true, // local domain will not be replicated
 		FailoverVersion: task.GetFailoverVersion(),
@@ -116,7 +155,7 @@ func (domainReplicator *domainReplicatorImpl) handleDomainCreationReplicationTas
 // handleDomainUpdateReplicationTask handle the domain update replication task
 func (domainReplicator *domainReplicatorImpl) handleDomainUpdateReplicationTask(task *replicator.DomainTaskAttributes) error {
 	// task already validated
-	status, err := domainReplicator.convertDomainStatus(task.Info.Status)
+	status, err := domainReplicator.convertDomainStatusFromThrift(task.Info.Status)
 	if err != nil {
 		return err
 	}
@@ -154,7 +193,7 @@ func (domainReplicator *domainReplicatorImpl) handleDomainUpdateReplicationTask(
 			Retention:  task.Config.GetWorkflowExecutionRetentionPeriodInDays(),
 			EmitMetric: task.Config.GetEmitMetric(),
 		}
-		request.ReplicationConfig.Clusters = domainReplicator.convertClusterReplicationConfig(task.ReplicationConfig.Clusters)
+		request.ReplicationConfig.Clusters = domainReplicator.convertClusterReplicationConfigFromThrift(task.ReplicationConfig.Clusters)
 		request.ConfigVersion = task.GetConfigVersion()
 	}
 	if resp.FailoverVersion < task.GetFailoverVersion() {
@@ -193,7 +232,7 @@ func (domainReplicator *domainReplicatorImpl) validateDomainReplicationTask(task
 	return nil
 }
 
-func (domainReplicator *domainReplicatorImpl) convertClusterReplicationConfig(
+func (domainReplicator *domainReplicatorImpl) convertClusterReplicationConfigFromThrift(
 	input []*shared.ClusterReplicationConfiguration) []*persistence.ClusterReplicationConfig {
 	output := []*persistence.ClusterReplicationConfig{}
 	for _, cluster := range input {
@@ -203,12 +242,22 @@ func (domainReplicator *domainReplicatorImpl) convertClusterReplicationConfig(
 	return output
 }
 
-func (domainReplicator *domainReplicatorImpl) convertDomainStatus(status *shared.DomainStatus) (int, error) {
-	if status == nil {
+func (domainReplicator *domainReplicatorImpl) convertClusterReplicationConfigToThrift(
+	input []*persistence.ClusterReplicationConfig) []*shared.ClusterReplicationConfiguration {
+	output := []*shared.ClusterReplicationConfiguration{}
+	for _, cluster := range input {
+		clusterName := common.StringPtr(cluster.ClusterName)
+		output = append(output, &shared.ClusterReplicationConfiguration{ClusterName: clusterName})
+	}
+	return output
+}
+
+func (domainReplicator *domainReplicatorImpl) convertDomainStatusFromThrift(input *shared.DomainStatus) (int, error) {
+	if input == nil {
 		return 0, ErrInvalidDomainStatus
 	}
 
-	switch *status {
+	switch *input {
 	case shared.DomainStatusRegistered:
 		return persistence.DomainStatusRegistered, nil
 	case shared.DomainStatusDeprecated:
@@ -216,4 +265,18 @@ func (domainReplicator *domainReplicatorImpl) convertDomainStatus(status *shared
 	default:
 		return 0, ErrInvalidDomainStatus
 	}
+}
+
+func (domainReplicator *domainReplicatorImpl) convertDomainStatusToThrift(input int) (*shared.DomainStatus, error) {
+	switch input {
+	case persistence.DomainStatusRegistered:
+		output := shared.DomainStatusRegistered
+		return &output, nil
+	case persistence.DomainStatusDeprecated:
+		output := shared.DomainStatusDeprecated
+		return &output, nil
+	default:
+		return nil, ErrInvalidDomainStatus
+	}
+
 }
