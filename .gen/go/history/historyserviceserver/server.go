@@ -74,10 +74,10 @@ type Interface interface {
 		CancelRequest *history.RequestCancelWorkflowExecutionRequest,
 	) error
 
-	ResetMutableStateStickyness(
+	ResetStickyTaskList(
 		ctx context.Context,
-		ResetRequest *history.ResetMutableStateStickynessRequest,
-	) (*history.ResetMutableStateStickynessResponse, error)
+		ResetRequest *history.ResetStickyTaskListRequest,
+	) (*history.ResetStickyTaskListResponse, error)
 
 	RespondActivityTaskCanceled(
 		ctx context.Context,
@@ -225,13 +225,13 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
-				Name: "ResetMutableStateStickyness",
+				Name: "ResetStickyTaskList",
 				HandlerSpec: thrift.HandlerSpec{
 
 					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.ResetMutableStateStickyness),
+					Unary: thrift.UnaryHandler(h.ResetStickyTaskList),
 				},
-				Signature:    "ResetMutableStateStickyness(ResetRequest *history.ResetMutableStateStickynessRequest) (*history.ResetMutableStateStickynessResponse)",
+				Signature:    "ResetStickyTaskList(ResetRequest *history.ResetStickyTaskListRequest) (*history.ResetStickyTaskListResponse)",
 				ThriftModule: history.ThriftModule,
 			},
 
@@ -495,16 +495,16 @@ func (h handler) RequestCancelWorkflowExecution(ctx context.Context, body wire.V
 	return response, err
 }
 
-func (h handler) ResetMutableStateStickyness(ctx context.Context, body wire.Value) (thrift.Response, error) {
-	var args history.HistoryService_ResetMutableStateStickyness_Args
+func (h handler) ResetStickyTaskList(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args history.HistoryService_ResetStickyTaskList_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	success, err := h.impl.ResetMutableStateStickyness(ctx, args.ResetRequest)
+	success, err := h.impl.ResetStickyTaskList(ctx, args.ResetRequest)
 
 	hadError := err != nil
-	result, err := history.HistoryService_ResetMutableStateStickyness_Helper.WrapResponse(success, err)
+	result, err := history.HistoryService_ResetStickyTaskList_Helper.WrapResponse(success, err)
 
 	var response thrift.Response
 	if err == nil {

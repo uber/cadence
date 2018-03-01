@@ -723,18 +723,18 @@ func (h *Handler) RecordChildExecutionCompleted(ctx context.Context, request *hi
 	return nil
 }
 
-// ResetMutableStateStickyness reset the volatile information in mutable state of a given workflow.
+// ResetStickyTaskList reset the volatile information in mutable state of a given workflow.
 // Volatile information are the information related to client, such as:
 // 1. StickyTaskList
 // 2. StickyScheduleToStartTimeout
 // 3. ClientLibraryVersion
 // 4. ClientFeatureVersion
 // 5. ClientImpl
-func (h *Handler) ResetMutableStateStickyness(ctx context.Context, resetRequest *hist.ResetMutableStateStickynessRequest) (*hist.ResetMutableStateStickynessResponse, error) {
+func (h *Handler) ResetStickyTaskList(ctx context.Context, resetRequest *hist.ResetStickyTaskListRequest) (*hist.ResetStickyTaskListResponse, error) {
 	h.startWG.Wait()
 
-	h.metricsClient.IncCounter(metrics.HistoryResetMutableStateStickynessScope, metrics.CadenceRequests)
-	sw := h.metricsClient.StartTimer(metrics.HistoryResetMutableStateStickynessScope, metrics.CadenceLatency)
+	h.metricsClient.IncCounter(metrics.HistoryResetStickyTaskListScope, metrics.CadenceRequests)
+	sw := h.metricsClient.StartTimer(metrics.HistoryResetStickyTaskListScope, metrics.CadenceLatency)
 	defer sw.Stop()
 
 	if resetRequest.DomainUUID == nil {
@@ -743,13 +743,13 @@ func (h *Handler) ResetMutableStateStickyness(ctx context.Context, resetRequest 
 
 	engine, err := h.controller.GetEngine(resetRequest.Execution.GetWorkflowId())
 	if err != nil {
-		h.updateErrorMetric(metrics.HistoryResetMutableStateStickynessScope, err)
+		h.updateErrorMetric(metrics.HistoryResetStickyTaskListScope, err)
 		return nil, err
 	}
 
-	resp, err := engine.ResetMutableStateStickyness(resetRequest)
+	resp, err := engine.ResetStickyTaskList(resetRequest)
 	if err != nil {
-		h.updateErrorMetric(metrics.HistoryResetMutableStateStickynessScope, h.convertError(err))
+		h.updateErrorMetric(metrics.HistoryResetStickyTaskListScope, h.convertError(err))
 		return nil, h.convertError(err)
 	}
 

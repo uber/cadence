@@ -84,11 +84,11 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) error
 
-	ResetMutableStateStickyness(
+	ResetStickyTaskList(
 		ctx context.Context,
-		ResetRequest *history.ResetMutableStateStickynessRequest,
+		ResetRequest *history.ResetStickyTaskListRequest,
 		opts ...yarpc.CallOption,
-	) (*history.ResetMutableStateStickynessResponse, error)
+	) (*history.ResetStickyTaskListResponse, error)
 
 	RespondActivityTaskCanceled(
 		ctx context.Context,
@@ -353,13 +353,13 @@ func (c client) RequestCancelWorkflowExecution(
 	return
 }
 
-func (c client) ResetMutableStateStickyness(
+func (c client) ResetStickyTaskList(
 	ctx context.Context,
-	_ResetRequest *history.ResetMutableStateStickynessRequest,
+	_ResetRequest *history.ResetStickyTaskListRequest,
 	opts ...yarpc.CallOption,
-) (success *history.ResetMutableStateStickynessResponse, err error) {
+) (success *history.ResetStickyTaskListResponse, err error) {
 
-	args := history.HistoryService_ResetMutableStateStickyness_Helper.Args(_ResetRequest)
+	args := history.HistoryService_ResetStickyTaskList_Helper.Args(_ResetRequest)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)
@@ -367,12 +367,12 @@ func (c client) ResetMutableStateStickyness(
 		return
 	}
 
-	var result history.HistoryService_ResetMutableStateStickyness_Result
+	var result history.HistoryService_ResetStickyTaskList_Result
 	if err = result.FromWire(body); err != nil {
 		return
 	}
 
-	success, err = history.HistoryService_ResetMutableStateStickyness_Helper.UnwrapResponse(&result)
+	success, err = history.HistoryService_ResetStickyTaskList_Helper.UnwrapResponse(&result)
 	return
 }
 

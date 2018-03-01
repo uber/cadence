@@ -63,12 +63,12 @@ struct GetMutableStateResponse {
   110: optional i32 stickyTaskListScheduleToStartTimeout
 }
 
-struct ResetMutableStateStickynessRequest {
+struct ResetStickyTaskListRequest {
   10: optional string domainUUID
   20: optional shared.WorkflowExecution execution
 }
 
-struct ResetMutableStateStickynessResponse {
+struct ResetStickyTaskListResponse {
   // The reason to keep this response is to allow returning
   // information in the future.
 }
@@ -220,15 +220,15 @@ service HistoryService {
     )
 
   /**
-  * Reset the volatile information in mutable state of a given workflow.
-  * Volatile information are the information related to client, such as:
+  * Reset the sticky tasklist related information in mutable state of a given workflow.
+  * Things cleared are:
   * 1. StickyTaskList
   * 2. StickyScheduleToStartTimeout
   * 3. ClientLibraryVersion
   * 4. ClientFeatureVersion
   * 5. ClientImpl
   **/
-  ResetMutableStateStickynessResponse ResetMutableStateStickyness(1: ResetMutableStateStickynessRequest resetRequest)
+  ResetStickyTaskListResponse ResetStickyTaskList(1: ResetStickyTaskListRequest resetRequest)
     throws (
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,

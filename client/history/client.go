@@ -110,21 +110,21 @@ func (c *clientImpl) GetMutableState(
 	return response, nil
 }
 
-func (c *clientImpl) ResetMutableStateStickyness(
+func (c *clientImpl) ResetStickyTaskList(
 	ctx context.Context,
-	request *h.ResetMutableStateStickynessRequest,
-	opts ...yarpc.CallOption) (*h.ResetMutableStateStickynessResponse, error) {
+	request *h.ResetStickyTaskListRequest,
+	opts ...yarpc.CallOption) (*h.ResetStickyTaskListResponse, error) {
 	client, err := c.getHostForRequest(*request.Execution.WorkflowId)
 	if err != nil {
 		return nil, err
 	}
 	opts = common.AggregateYarpcOptions(ctx, opts...)
-	var response *h.ResetMutableStateStickynessResponse
+	var response *h.ResetStickyTaskListResponse
 	op := func(ctx context.Context, client historyserviceclient.Interface) error {
 		var err error
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
-		response, err = client.ResetMutableStateStickyness(ctx, request, opts...)
+		response, err = client.ResetStickyTaskList(ctx, request, opts...)
 		return err
 	}
 	err = c.executeWithRedirect(ctx, client, op)

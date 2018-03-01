@@ -54,21 +54,21 @@ func (_m *HistoryClient) GetMutableState(ctx context.Context, getRequest *histor
 	return r0, r1
 }
 
-// ResetMutableStateStickyness provides a mock function with given fields: ctx, getRequest
-func (_m *HistoryClient) ResetMutableStateStickyness(ctx context.Context, request *history.ResetMutableStateStickynessRequest, opts ...yarpc.CallOption) (*history.ResetMutableStateStickynessResponse, error) {
+// ResetStickyTaskList provides a mock function with given fields: ctx, getRequest
+func (_m *HistoryClient) ResetStickyTaskList(ctx context.Context, request *history.ResetStickyTaskListRequest, opts ...yarpc.CallOption) (*history.ResetStickyTaskListResponse, error) {
 	ret := _m.Called(ctx, request)
 
-	var r0 *history.ResetMutableStateStickynessResponse
-	if rf, ok := ret.Get(0).(func(context.Context, *history.ResetMutableStateStickynessRequest) *history.ResetMutableStateStickynessResponse); ok {
+	var r0 *history.ResetStickyTaskListResponse
+	if rf, ok := ret.Get(0).(func(context.Context, *history.ResetStickyTaskListRequest) *history.ResetStickyTaskListResponse); ok {
 		r0 = rf(ctx, request)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*history.ResetMutableStateStickynessResponse)
+			r0 = ret.Get(0).(*history.ResetStickyTaskListResponse)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *history.ResetMutableStateStickynessRequest) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *history.ResetStickyTaskListRequest) error); ok {
 		r1 = rf(ctx, request)
 	} else {
 		r1 = ret.Error(1)
