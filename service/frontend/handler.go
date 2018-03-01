@@ -350,10 +350,11 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 
 		// validate active cluster is also specified in all clusters
 		activeClusterInClusters := false
+	CheckActiveClusterNameInClusters:
 		for _, cluster := range replicationConfig.Clusters {
 			if cluster.ClusterName == replicationConfig.ActiveClusterName {
 				activeClusterInClusters = true
-				break
+				break CheckActiveClusterNameInClusters
 			}
 		}
 		if !activeClusterInClusters {

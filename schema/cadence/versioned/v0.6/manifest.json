@@ -1,8 +1,0 @@
-{
-  "CurrVersion": "0.6",
-  "MinCompatibleVersion": "0.6",
-  "Description": "add cross DC domain config verion, as a sequency ID to prevent out of order domain update, add flag indicatint whether a domain is a global domain",
-  "SchemaUpdateCqlFiles": [
-    "add_domain_config_version.cql"
-  ]
-}
