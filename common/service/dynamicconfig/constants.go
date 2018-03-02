@@ -31,19 +31,19 @@ func (k Key) String() string {
 }
 
 const (
-	_matchingRoot         = "matching."
-	_matchingTaskListRoot = _matchingRoot + "taskList."
-	_historyRoot          = "history."
+	_matchingRoot               = "matching."
+	_matchingDomainTaskListRoot = _matchingRoot + "domain." + "taskList."
+	_historyRoot                = "history."
 )
 
 var keys = []string{
 	"unknownKey",
-	_matchingTaskListRoot + "minTaskThrottlingBurstSize",
-	_matchingTaskListRoot + "maxTaskBatchSize",
-	_matchingTaskListRoot + "longPollExpirationInterval",
-	_matchingTaskListRoot + "enableSyncMatch",
-	_matchingTaskListRoot + "updateAckInterval",
-	_matchingTaskListRoot + "idleTasklistCheckInterval",
+	_matchingDomainTaskListRoot + "minTaskThrottlingBurstSize",
+	_matchingDomainTaskListRoot + "maxTaskBatchSize",
+	_matchingDomainTaskListRoot + "longPollExpirationInterval",
+	_matchingDomainTaskListRoot + "enableSyncMatch",
+	_matchingDomainTaskListRoot + "updateAckInterval",
+	_matchingDomainTaskListRoot + "idleTasklistCheckInterval",
 	_historyRoot + "longPollExpirationInterval",
 }
 
@@ -52,10 +52,10 @@ const (
 	unknownKey Key = iota
 	// Matching keys
 
-	// MinTaskThrottlingBurstSize is the minimum burst size for task list throttling
-	MinTaskThrottlingBurstSize
-	// MaxTaskBatchSize is the maximum batch size to fetch from the task buffer
-	MaxTaskBatchSize
+	// MatchingMinTaskThrottlingBurstSize is the minimum burst size for task list throttling
+	MatchingMinTaskThrottlingBurstSize
+	// MatchingMaxTaskBatchSize is the maximum batch size to fetch from the task buffer
+	MatchingMaxTaskBatchSize
 	// MatchingLongPollExpirationInterval is the long poll expiration interval in the matching service
 	MatchingLongPollExpirationInterval
 	// MatchingEnableSyncMatch is to enable sync match

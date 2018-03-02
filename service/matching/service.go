@@ -55,7 +55,7 @@ func NewConfig(dc *dynamicconfig.Collection) *Config {
 		),
 		RangeSize: 100000,
 		GetTasksBatchSize: dc.GetIntProperty(
-			dynamicconfig.MaxTaskBatchSize, 1000,
+			dynamicconfig.MatchingMaxTaskBatchSize, 1000,
 		),
 		UpdateAckInterval: dc.GetDurationProperty(
 			dynamicconfig.MatchingUpdateAckInterval, 10*time.Second,
@@ -67,7 +67,7 @@ func NewConfig(dc *dynamicconfig.Collection) *Config {
 			dynamicconfig.MatchingLongPollExpirationInterval, time.Minute,
 		),
 		MinTaskThrottlingBurstSize: dc.GetIntProperty(
-			dynamicconfig.MinTaskThrottlingBurstSize, 1,
+			dynamicconfig.MatchingMinTaskThrottlingBurstSize, 1,
 		),
 		OutstandingTaskAppendsThreshold: 250,
 		MaxTaskBatchSize:                100,
