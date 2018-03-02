@@ -1,10 +1,8 @@
-hash: 692b6e00919597293746e2c2a0b2c645fc550be9be89951aa10afafd1a4e5c6b
-updated: 2018-03-02T13:52:46.231449-08:00
+hash: fecd71da97a76be6a458d1d0e8a1e37f137bb9999dfffb8a611dd95e4741615d
+updated: 2018-03-02T15:09:09.010606-08:00
 imports:
 - name: github.com/apache/thrift
-  version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
-  repo: git://git.apache.org/thrift.git
-  vcs: git
+  version: 6aa4c0f448d8f2573d2abcc8c3724bd18b3f8d1d
   subpackages:
   - lib/go/thrift
 - name: github.com/benbjohnson/clock
@@ -130,7 +128,7 @@ imports:
   - require
   - suite
 - name: github.com/uber-common/bark
-  version: 02d883c81a4e7b76904d97efb176efdf4be791bd
+  version: dbf558e8a7b65e2b54e1e01c14ee0e4207a865f5
 - name: github.com/uber-go/atomic
   version: 8474b86a5a6f79c443ce4b2992817ff32cf208b8
   subpackages:

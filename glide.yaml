@@ -45,6 +45,9 @@ import:
   - transport/http
   - transport/tchannel
 - package: github.com/uber-go/kafka-client
+# the commit after has a race condition, remove pin after it's fixed
+- package: github.com/uber-common/bark
+  version: dbf558e8a7b65e2b54e1e01c14ee0e4207a865f5
 
 # Added excludeDirs to prevent build from failing on the yarpc generated code.
 excludeDirs:
