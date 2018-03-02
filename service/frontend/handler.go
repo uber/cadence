@@ -48,7 +48,6 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
-	"github.com/uber/cadence/service/worker"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -69,8 +68,7 @@ type (
 		startWG            sync.WaitGroup
 		rateLimiter        common.TokenBucket
 		config             *Config
-		kafkaProducer      messaging.Producer
-		domainReplicator   worker.DomainReplicator
+		domainReplicator   DomainReplicator
 		service.Service
 	}
 
@@ -124,8 +122,7 @@ func NewWorkflowHandler(
 		hSerializerFactory: persistence.NewHistorySerializerFactory(),
 		domainCache:        cache.NewDomainCache(metadataMgr, sVice.GetLogger()),
 		rateLimiter:        common.NewTokenBucket(config.RPS, common.NewRealTimeSource()),
-		kafkaProducer:      kafkaProducer,
-		domainReplicator:   worker.NewDomainReplicator(metadataMgr, sVice.GetLogger()),
+		domainReplicator:   NewDomainReplicator(kafkaProducer, sVice.GetLogger()),
 	}
 	// prevent us from trying to serve requests before handler's Start() is complete
 	handler.startWG.Add(1)
@@ -250,7 +247,7 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 
 	// TODO remove the IsGlobalDomainEnabled check once cross DC is public
 	if clusterMetadata.IsGlobalDomainEnabled() {
-		err = wh.domainReplicator.HandleTransmissionTask(wh.kafkaProducer, replicator.DomainOperationCreate,
+		err = wh.domainReplicator.HandleTransmissionTask(replicator.DomainOperationCreate,
 			domainRequest.Info, domainRequest.Config, domainRequest.ReplicationConfig, 0, domainRequest.FailoverVersion)
 		if err != nil {
 			return wh.error(err, scope)
@@ -445,7 +442,7 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 		}
 		// TODO remove the IsGlobalDomainEnabled check once cross DC is public
 		if clusterMetadata.IsGlobalDomainEnabled() {
-			err = wh.domainReplicator.HandleTransmissionTask(wh.kafkaProducer, replicator.DomainOperationUpdate,
+			err = wh.domainReplicator.HandleTransmissionTask(replicator.DomainOperationUpdate,
 				info, config, replicationConfig, configVersion, failoverVersion)
 			if err != nil {
 				return nil, wh.error(err, scope)

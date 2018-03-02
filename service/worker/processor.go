@@ -36,16 +36,12 @@ import (
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/persistence"
 )
 
 type (
 
 	// DomainReplicator is the interface which can replicate the domain
 	DomainReplicator interface {
-		HandleTransmissionTask(producer messaging.Producer, domainOperation replicator.DomainOperation,
-			info *persistence.DomainInfo, config *persistence.DomainConfig, replicationConfig *persistence.DomainReplicationConfig,
-			configVersion int64, failoverVersion int64) error
 		HandleReceivingTask(task *replicator.DomainTaskAttributes) error
 	}
 

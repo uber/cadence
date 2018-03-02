@@ -27,7 +27,6 @@ import (
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/persistence"
 )
 
@@ -52,6 +51,8 @@ var (
 	ErrInvalidDomainStatus = errors.New("invalid domain status attribute")
 )
 
+// NOTE: the counterpart of domain replication transmission logic is in service/fropntend package
+
 type (
 	domainReplicatorImpl struct {
 		metadataManager persistence.MetadataManager
@@ -65,43 +66,6 @@ func NewDomainReplicator(metadataManager persistence.MetadataManager, logger bar
 		metadataManager: metadataManager,
 		logger:          logger,
 	}
-}
-
-// HandleTransmissionTask handle transmission of the domain replication task
-func (domainReplicator *domainReplicatorImpl) HandleTransmissionTask(kafka messaging.Producer, domainOperation replicator.DomainOperation,
-	info *persistence.DomainInfo, config *persistence.DomainConfig, replicationConfig *persistence.DomainReplicationConfig,
-	configVersion int64, failoverVersion int64) error {
-	status, err := domainReplicator.convertDomainStatusToThrift(info.Status)
-	if err != nil {
-		return err
-	}
-
-	taskType := replicator.ReplicationTaskTypeDomain
-	task := &replicator.DomainTaskAttributes{
-		DomainOperation: &domainOperation,
-		ID:              common.StringPtr(info.ID),
-		Info: &shared.DomainInfo{
-			Name:        common.StringPtr(info.Name),
-			Status:      status,
-			Description: common.StringPtr(info.Description),
-			OwnerEmail:  common.StringPtr(info.OwnerEmail),
-		},
-		Config: &shared.DomainConfiguration{
-			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(config.Retention),
-			EmitMetric:                             common.BoolPtr(config.EmitMetric),
-		},
-		ReplicationConfig: &shared.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(replicationConfig.ActiveClusterName),
-			Clusters:          domainReplicator.convertClusterReplicationConfigToThrift(replicationConfig.Clusters),
-		},
-		ConfigVersion:   common.Int64Ptr(configVersion),
-		FailoverVersion: common.Int64Ptr(failoverVersion),
-	}
-
-	return kafka.Publish(&replicator.ReplicationTask{
-		TaskType:             &taskType,
-		DomainTaskAttributes: task,
-	})
 }
 
 // HandleReceiveTask handle receiving of the domain replication task
