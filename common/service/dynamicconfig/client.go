@@ -24,6 +24,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"github.com/uber-common/bark"
 )
 
@@ -92,5 +93,5 @@ func NewNopClient() Client {
 
 // NewNopCollection creates a new nop collection
 func NewNopCollection() *Collection {
-	return NewCollection(&nopClient{}, bark.NewNopLogger())
+	return NewCollection(&nopClient{}, bark.NewLoggerFromLogrus(logrus.New()))
 }

@@ -45,7 +45,6 @@ import:
   - transport/http
   - transport/tchannel
 - package: github.com/uber-go/kafka-client
-- package: github.com/uber-common/bark
 
 # Added excludeDirs to prevent build from failing on the yarpc generated code.
 excludeDirs:

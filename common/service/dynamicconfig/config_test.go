@@ -26,6 +26,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-common/bark"
 )
@@ -101,7 +102,7 @@ func TestConfigSuite(t *testing.T) {
 
 func (s *configSuite) SetupSuite() {
 	s.client = newInMemoryClient()
-	s.cln = NewCollection(s.client, bark.NewNopLogger())
+	s.cln = NewCollection(s.client, bark.NewLoggerFromLogrus(logrus.New()))
 }
 
 func (s *configSuite) TestGetPropertyInt() {
