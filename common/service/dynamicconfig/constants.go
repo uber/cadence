@@ -71,16 +71,17 @@ const (
 // Filter represents a filter on the dynamic config key
 type Filter int
 
-func (k Filter) String() string {
-	keys := []string{
-		"unknownFilter",
-		"domainName",
-		"taskListName",
+func (f Filter) String() string {
+	if f <= unknownFilter || f > TaskListName {
+		return filters[unknownFilter]
 	}
-	if k <= unknownFilter || k > TaskListName {
-		return keys[unknownFilter]
-	}
-	return keys[k]
+	return filters[f]
+}
+
+var filters = []string{
+	"unknownFilter",
+	"domainName",
+	"taskListName",
 }
 
 const (

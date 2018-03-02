@@ -85,6 +85,11 @@ func (mc *nopClient) GetDurationValue(
 	return defaultValue, errors.New("unable to find key")
 }
 
+// NewNopClient creates a nop client
+func NewNopClient() Client {
+	return &nopClient{}
+}
+
 // NewNopCollection creates a new nop collection
 func NewNopCollection() *Collection {
 	return NewCollection(&nopClient{}, bark.NewNopLogger())
