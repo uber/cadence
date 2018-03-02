@@ -2,7 +2,7 @@ hash: fecd71da97a76be6a458d1d0e8a1e37f137bb9999dfffb8a611dd95e4741615d
 updated: 2018-03-02T15:09:09.010606-08:00
 imports:
 - name: github.com/apache/thrift
-  version: 6aa4c0f448d8f2573d2abcc8c3724bd18b3f8d1d
+  version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
   subpackages:
   - lib/go/thrift
 - name: github.com/benbjohnson/clock
