@@ -106,7 +106,7 @@ func (s *configSuite) SetupSuite() {
 }
 
 func (s *configSuite) TestGetPropertyInt() {
-	key := MaxTaskBatchSize
+	key := MatchingMaxTaskBatchSize
 	size := s.cln.GetProperty(key, 10)
 	s.Equal(10, size())
 	s.client.SetValue(key, 50)

@@ -31,7 +31,7 @@ import (
 func BenchmarkGetIntProperty(b *testing.B) {
 	client := newInMemoryClient()
 	cln := NewCollection(client, bark.NewLoggerFromLogrus(logrus.New()))
-	key := MaxTaskBatchSize
+	key := MatchingMaxTaskBatchSize
 	for i := 0; i < b.N; i++ {
 		size := cln.GetIntProperty(key, 10)
 		assert.Equal(b, 10, size())
