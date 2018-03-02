@@ -31,16 +31,16 @@ import (
 
 // Config represents configuration for cadence-matching service
 type Config struct {
-	EnableSyncMatch func(...dynamicconfig.FilterOption) bool
+	EnableSyncMatch dynamicconfig.BoolPropertyFn
 
 	// taskListManager configuration
 	RangeSize                 int64
-	GetTasksBatchSize         func(...dynamicconfig.FilterOption) int
-	UpdateAckInterval         func(...dynamicconfig.FilterOption) time.Duration
-	IdleTasklistCheckInterval func(...dynamicconfig.FilterOption) time.Duration
+	GetTasksBatchSize         dynamicconfig.IntPropertyFn
+	UpdateAckInterval         dynamicconfig.DurationPropertyFn
+	IdleTasklistCheckInterval dynamicconfig.DurationPropertyFn
 	// Time to hold a poll request before returning an empty response if there are no tasks
-	LongPollExpirationInterval func(...dynamicconfig.FilterOption) time.Duration
-	MinTaskThrottlingBurstSize func(...dynamicconfig.FilterOption) int
+	LongPollExpirationInterval dynamicconfig.DurationPropertyFn
+	MinTaskThrottlingBurstSize dynamicconfig.IntPropertyFn
 
 	// taskWriter configuration
 	OutstandingTaskAppendsThreshold int

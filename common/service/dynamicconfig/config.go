@@ -43,8 +43,23 @@ func (c *Collection) logNoValue(key Key, err error) {
 	c.logger.Debugf("Failed to fetch key: %s from dynamic config with err: %s", key.String(), err.Error())
 }
 
+// PropertyFn is a wrapper to get property from dynamic config
+type PropertyFn func() interface{}
+
+// IntPropertyFn is a wrapper to get int property from dynamic config
+type IntPropertyFn func(opts ...FilterOption) int
+
+// FloatPropertyFn is a wrapper to get float property from dynamic config
+type FloatPropertyFn func(opts ...FilterOption) float64
+
+// DurationPropertyFn is a wrapper to get duration property from dynamic config
+type DurationPropertyFn func(opts ...FilterOption) time.Duration
+
+// BoolPropertyFn is a wrapper to get bool property from dynamic config
+type BoolPropertyFn func(opts ...FilterOption) bool
+
 // GetProperty gets a eface property and returns defaultValue if property is not found
-func (c *Collection) GetProperty(key Key, defaultValue interface{}) func() interface{} {
+func (c *Collection) GetProperty(key Key, defaultValue interface{}) PropertyFn {
 	return func() interface{} {
 		val, err := c.client.GetValue(key, defaultValue)
 		if err != nil {
@@ -64,7 +79,7 @@ func getFilterMap(opts ...FilterOption) map[Filter]interface{} {
 }
 
 // GetIntProperty gets property and asserts that it's an integer
-func (c *Collection) GetIntProperty(key Key, defaultValue int) func(opts ...FilterOption) int {
+func (c *Collection) GetIntProperty(key Key, defaultValue int) IntPropertyFn {
 	return func(opts ...FilterOption) int {
 		val, err := c.client.GetIntValue(key, getFilterMap(opts...), defaultValue)
 		if err != nil {
@@ -75,7 +90,7 @@ func (c *Collection) GetIntProperty(key Key, defaultValue int) func(opts ...Filt
 }
 
 // GetFloat64Property gets property and asserts that it's a float64
-func (c *Collection) GetFloat64Property(key Key, defaultValue float64) func(opts ...FilterOption) float64 {
+func (c *Collection) GetFloat64Property(key Key, defaultValue float64) FloatPropertyFn {
 	return func(opts ...FilterOption) float64 {
 		val, err := c.client.GetFloatValue(key, getFilterMap(opts...), defaultValue)
 		if err != nil {
@@ -86,7 +101,7 @@ func (c *Collection) GetFloat64Property(key Key, defaultValue float64) func(opts
 }
 
 // GetDurationProperty gets property and asserts that it's a duration
-func (c *Collection) GetDurationProperty(key Key, defaultValue time.Duration) func(opts ...FilterOption) time.Duration {
+func (c *Collection) GetDurationProperty(key Key, defaultValue time.Duration) DurationPropertyFn {
 	return func(opts ...FilterOption) time.Duration {
 		val, err := c.client.GetDurationValue(key, getFilterMap(opts...), defaultValue)
 		if err != nil {
@@ -97,7 +112,7 @@ func (c *Collection) GetDurationProperty(key Key, defaultValue time.Duration) fu
 }
 
 // GetBoolProperty gets property and asserts that it's an bool
-func (c *Collection) GetBoolProperty(key Key, defaultValue bool) func(opts ...FilterOption) bool {
+func (c *Collection) GetBoolProperty(key Key, defaultValue bool) BoolPropertyFn {
 	return func(opts ...FilterOption) bool {
 		val, err := c.client.GetBoolValue(key, getFilterMap(opts...), defaultValue)
 		if err != nil {

@@ -70,7 +70,7 @@ type Config struct {
 
 	// Time to hold a poll request before returning an empty response
 	// right now only used by GetMutableState
-	LongPollExpirationInterval func(...dynamicconfig.FilterOption) time.Duration
+	LongPollExpirationInterval dynamicconfig.DurationPropertyFn
 }
 
 // NewConfig returns new service config with default values
