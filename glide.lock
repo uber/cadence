@@ -117,7 +117,7 @@ imports:
 - name: github.com/Shopify/sarama
   version: eae91468c24263f06ae73dce45eb26252c73b1d6
 - name: github.com/sirupsen/logrus
-  version: f4ee69125072b22721efbe639bd0da9c9d19b8cc
+  version: 3d4380f53a34dcdc95f0c1db702615992b38d9a4
 - name: github.com/stretchr/objx
   version: 8a3f7159479fbc75b30357fbc48f380b7320f08e
 - name: github.com/stretchr/testify
