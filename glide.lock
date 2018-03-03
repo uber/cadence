@@ -1,8 +1,8 @@
-hash: fecd71da97a76be6a458d1d0e8a1e37f137bb9999dfffb8a611dd95e4741615d
-updated: 2018-03-02T15:09:09.010606-08:00
+hash: 692b6e00919597293746e2c2a0b2c645fc550be9be89951aa10afafd1a4e5c6b
+updated: 2018-02-20T18:14:25.806846-08:00
 imports:
 - name: github.com/apache/thrift
-  version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
+  version: b2a4d4ae21c789b689dd162deb819665567f481c
   subpackages:
   - lib/go/thrift
 - name: github.com/benbjohnson/clock
@@ -18,21 +18,21 @@ imports:
   subpackages:
   - statsd
 - name: github.com/davecgh/go-spew
-  version: 8991bc29aa16c548c550c7ff78260e27b9ab7c73
+  version: 04cdfd42973bb9c8589fd6a731800cf222fde1a9
   subpackages:
   - spew
 - name: github.com/dgryski/go-farm
-  version: 2de33835d10275975374b37b2dcfd22c9020a1f5
+  version: e2d0fe22b456fa0a35cd883ba355ecfcf1881490
 - name: github.com/eapache/go-resiliency
-  version: ef9aaa7ea8bd2448429af1a77cf41b2b3b34bdd6
+  version: b1fe83b5b03f624450823b751b662259ffc6af70
   subpackages:
   - breaker
 - name: github.com/eapache/go-xerial-snappy
   version: bb955e01b9346ac19dc29eb16586c90ded99a98c
 - name: github.com/eapache/queue
-  version: 093482f3f8ce946c05bcba64badd2c82369e084d
+  version: 44cc805cf13205b55f69e14bcb69867d1ae92f98
 - name: github.com/emirpasic/gods
-  version: b2394dfbb6314eeb616db55d1e01928f287da4b4
+  version: f6c17b524822278a87e3b3bd809fec33b51f5b46
   subpackages:
   - containers
   - maps
@@ -45,7 +45,7 @@ imports:
 - name: github.com/fatih/color
   version: 507f6050b8568533fb3f5504de8e5205fa62a114
 - name: github.com/gocql/gocql
-  version: 2e9f2912ba58e37f34af3554659b576eac655760
+  version: ca7d33956650d92d29e6db7fe901e23d0f0e3359
   subpackages:
   - internal/lru
   - internal/murmur
@@ -62,10 +62,6 @@ imports:
   version: 553a641470496b2327abcac10b36396bd98e45c9
 - name: github.com/hailocab/go-hostpool
   version: e80d13ce29ede4452c43dea11e79b9bc8a15b478
-- name: github.com/mattn/go-colorable
-  version: 7dc3415be66d7cc68bf0182f35c8d31f8d2ad8a7
-- name: github.com/mattn/go-isatty
-  version: 6ca4dbf54d38eea1a992b3c722a76a5d1c4cb25c
 - name: github.com/mattn/go-runewidth
   version: 97311d9f7767e3d6f422ea06661bc2c7a19e8a5d
 - name: github.com/matttproud/golang_protobuf_extensions
@@ -80,15 +76,15 @@ imports:
   - ext
   - log
 - name: github.com/pborman/uuid
-  version: c65b2f87fee37d1c7854c9164a450713c28d50cd
+  version: e790cca94e6cc75c7064b1332e63811d4aae1a53
 - name: github.com/pierrec/lz4
-  version: ed8d4cc3b461464e69798080a0092bd028910298
+  version: 2fcda4cb7018ce05a25959d2fe08c83e3329f169
 - name: github.com/pierrec/xxHash
   version: a0006b13c722f7f12368c00a3d3c2ae8a999a0c6
   subpackages:
   - xxHash32
 - name: github.com/pmezard/go-difflib
-  version: 792786c7400a136282c1664665ae0a8db921c6c2
+  version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
   subpackages:
   - difflib
 - name: github.com/prometheus/client_golang
@@ -97,31 +93,29 @@ imports:
   - prometheus
   - prometheus/promhttp
 - name: github.com/prometheus/client_model
-  version: 99fa1f4be8e564e8a6b613da7fa6f46c9edafc6c
+  version: 6f3806018612930941127f2a7c6c453ba2c527d2
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 6fb6fce6f8b75884b92e1889c150403fc0872c5e
+  version: 49fee292b27bfff7f354ee0f64e1bc4850462edf
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: d274e363d5759d1c916232217be421f1cc89c5fe
+  version: a1dba9ce8baed984a2495b658c82687f8157b98f
   subpackages:
-  - internal/util
-  - nfs
   - xfs
 - name: github.com/rcrowley/go-metrics
-  version: 8732c616f52954686704c8645fe1a9d59e9df7c1
+  version: 1f30fe9094a513ce4c700b9a54458bbb0c96996c
 - name: github.com/Shopify/sarama
-  version: eae91468c24263f06ae73dce45eb26252c73b1d6
+  version: f7be6aa2bc7b2e38edf816b08b582782194a1c02
 - name: github.com/sirupsen/logrus
   version: 3d4380f53a34dcdc95f0c1db702615992b38d9a4
 - name: github.com/stretchr/objx
-  version: 8a3f7159479fbc75b30357fbc48f380b7320f08e
+  version: cbeaeb16a013161a98496fad62933b1d21786672
 - name: github.com/stretchr/testify
-  version: be8372ae8ec5c6daaed3cc28ebf73c54b737c240
+  version: 890a5c3458b43e6104ff5da8dfa139d013d77544
   subpackages:
   - assert
   - mock
@@ -182,25 +176,11 @@ imports:
   - trand
   - typed
 - name: github.com/urfave/cli
-  version: 8e01ec4cd3e2d84ab2fe90d8210528ffbb06d8ff
+  version: cf33a9befefdd6c6ea1a236ab6d546e797a62cbf
 - name: go.uber.org/atomic
   version: 8474b86a5a6f79c443ce4b2992817ff32cf208b8
 - name: go.uber.org/cadence
-  version: c589fb8cbc2ec41f0e620ec2ccb87497d9d8bada
-  subpackages:
-  - .gen/go/cadence
-  - .gen/go/cadence/workflowserviceclient
-  - .gen/go/cadence/workflowservicetest
-  - .gen/go/shared
-  - client
-  - encoded
-  - internal
-  - internal/common
-  - internal/common/backoff
-  - internal/common/cache
-  - internal/common/metrics
-  - internal/common/util
-  - workflow
+  version: 570324de7bb1008983846c97ee4d80d24e277854
 - name: go.uber.org/multierr
   version: 3c4937480c32f4c13a875a1829af76c98ca3d40a
 - name: go.uber.org/net/metrics
@@ -212,13 +192,7 @@ imports:
 - name: go.uber.org/thriftrw
   version: 6216e5bb19132c14e979cf9c62abae6f022a0c0d
   subpackages:
-  - envelope
-  - internal/envelope/exception
-  - protocol
-  - protocol/binary
-  - thriftreflect
   - version
-  - wire
 - name: go.uber.org/yarpc
   version: 112080bb21323a681a9b269fa7b5a1489558aab0
   subpackages:
@@ -227,8 +201,6 @@ imports:
   - api/middleware
   - api/peer
   - api/transport
-  - encoding/thrift
-  - encoding/thrift/internal
   - encoding/thrift/thriftrw-plugin-yarpc
   - internal
   - internal/backoff
@@ -247,10 +219,8 @@ imports:
   - internal/yarpcerrors
   - peer
   - peer/hostport
-  - pkg/encoding
   - pkg/errors
   - pkg/lifecycle
-  - pkg/procedure
   - transport/http
   - transport/tchannel
   - transport/tchannel/internal
@@ -264,12 +234,8 @@ imports:
   - internal/color
   - internal/exit
   - zapcore
-- name: golang.org/x/crypto
-  version: 91a49db82a88618983a78a06c1cbd4e00ab749ab
-  subpackages:
-  - ssh/terminal
 - name: golang.org/x/net
-  version: 22ae77b79946ea320088417e4d50825671d82d57
+  version: cbe0f9307d0156177f9dd5dc85da1a31abc5f2fb
   repo: https://github.com/golang/net
   subpackages:
   - bpf
@@ -279,11 +245,10 @@ imports:
   - ipv4
   - ipv6
 - name: golang.org/x/sys
-  version: dd2ff4accc098aceecb86b36eaa7829b2a17b1c9
+  version: 9a7256cb28ed514b4e1e5f68959914c4c28a92e0
   repo: https://github.com/golang/sys
   subpackages:
   - unix
-  - windows
 - name: golang.org/x/time
   version: 6dc17368e09b0e8634d71cac8168d853e869a0c7
   subpackages:
@@ -291,7 +256,7 @@ imports:
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/validator.v2
-  version: 59c90c7046f643cbe0d4e7c8776c42a84ce75910
+  version: 07ffaad256c8e957050ad83d6472eb97d785013d
 - name: gopkg.in/yaml.v2
-  version: 7f97868eec74b32b0982dd158a51a446d1da7eb5
+  version: eb3733d160e74a9c7e442f435eb3bea458e1d19f
 testImports: []
