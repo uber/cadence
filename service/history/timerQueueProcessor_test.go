@@ -128,7 +128,10 @@ func (s *timerQueueProcessorSuite) createExecutionWithTimers(domainID string, we
 	builder = newMutableStateBuilder(s.ShardContext.GetConfig(), s.logger)
 	builder.Load(state0)
 	startedEvent := addDecisionTaskStartedEvent(builder, di.ScheduleID, tl, identity)
-	addDecisionTaskCompletedEvent(builder, di.ScheduleID, *startedEvent.EventId, nil, identity)
+	_, finishDecisionFn := addDecisionTaskCompletedEvent(builder, di.ScheduleID, *startedEvent.EventId, nil, identity)
+	// idealy, this finishDecisionFn should be called after decisions are converted to history events
+	// however, for the sake of simplicity of testing, call it here
+	finishDecisionFn()
 	timerTasks := []persistence.Task{}
 	timerInfos := []*persistence.TimerInfo{}
 	decisionCompletedID := int64(4)

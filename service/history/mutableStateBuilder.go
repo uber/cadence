@@ -76,6 +76,12 @@ type (
 		eventSerializer historyEventSerializer
 		config          *Config
 		logger          bark.Logger
+
+		// this flag is set to true when the history engine is processing the decision,
+		// so we can actually do proper event reording, making sure no irrelevant event
+		// is inserted between decisions.
+		// due to the nature of processing decision, this attribute does not require persistence
+		isProcessingDecision bool
 	}
 
 	mutableStateSessionUpdates struct {
@@ -378,7 +384,34 @@ func (e *mutableStateBuilder) createNewHistoryEvent(eventType workflow.EventType
 }
 
 func (e *mutableStateBuilder) shouldBufferEvent(eventType workflow.EventType) bool {
-	if !e.HasInFlightDecisionTask() {
+	if e.isProcessingDecision {
+		// for events not generated directly by decisions, we do event buffer
+		switch eventType {
+		case workflow.EventTypeActivityTaskScheduled,
+			workflow.EventTypeActivityTaskCancelRequested,
+			workflow.EventTypeTimerStarted,
+			workflow.EventTypeWorkflowExecutionCompleted,
+			workflow.EventTypeWorkflowExecutionFailed,
+			// DecisionTypeCancelTimer is an excption. This decision will be mapped
+			// to either workflow.EventTypeTimerCanceled, or workflow.EventTypeCancelTimerFailed.
+			// So both should not be buffered. Ref: historyEngine, search for "workflow.DecisionTypeCancelTimer"
+			workflow.EventTypeTimerCanceled,
+			workflow.EventTypeCancelTimerFailed,
+			workflow.EventTypeWorkflowExecutionCanceled,
+			workflow.EventTypeRequestCancelExternalWorkflowExecutionInitiated,
+			workflow.EventTypeMarkerRecorded,
+			workflow.EventTypeWorkflowExecutionContinuedAsNew,
+			workflow.EventTypeStartChildWorkflowExecutionInitiated,
+			workflow.EventTypeSignalExternalWorkflowExecutionInitiated:
+			return false
+		case workflow.EventTypeDecisionTaskScheduled:
+			// decision event should not be buffered, since history engine
+			// can schedule decision during processing decision
+			return false
+		default:
+			return true
+		}
+	} else if !e.HasInFlightDecisionTask() {
 		// do not buffer event if there is no in-flight decision
 		return false
 	}
@@ -674,6 +707,11 @@ func (e *mutableStateBuilder) GetPendingDecision(scheduleEventID int64) (*decisi
 	return nil, false
 }
 
+func (e *mutableStateBuilder) completeDecisionProcessing() {
+	e.isProcessingDecision = false
+	e.FlushBufferedEvents()
+}
+
 func (e *mutableStateBuilder) HasPendingDecisionTask() bool {
 	return e.executionInfo.DecisionScheduleID != emptyEventID
 }
@@ -963,14 +1001,14 @@ func (e *mutableStateBuilder) createTransientDecisionEvents(di *decisionInfo, id
 }
 
 func (e *mutableStateBuilder) AddDecisionTaskCompletedEvent(scheduleEventID, startedEventID int64,
-	request *workflow.RespondDecisionTaskCompletedRequest) *workflow.HistoryEvent {
+	request *workflow.RespondDecisionTaskCompletedRequest) (*workflow.HistoryEvent, func()) {
 	hasPendingDecision := e.HasPendingDecisionTask()
 	di, ok := e.GetPendingDecision(scheduleEventID)
 	if !hasPendingDecision || !ok || di.StartedID != startedEventID {
 		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionDecisionTaskCompleted, e.GetNextEventID(), fmt.Sprintf(
 			"{HasPending: %v, ScheduleID: %v, StartedID: %v, Exist: %v}", hasPendingDecision, scheduleEventID,
 			startedEventID, ok))
-		return nil
+		return nil, e.completeDecisionProcessing
 	}
 
 	// Make sure to delete decision before adding events.  Otherwise they are buffered rather than getting appended
@@ -987,7 +1025,10 @@ func (e *mutableStateBuilder) AddDecisionTaskCompletedEvent(scheduleEventID, sta
 	event := e.hBuilder.AddDecisionTaskCompletedEvent(scheduleEventID, startedEventID, request)
 
 	e.executionInfo.LastProcessedEvent = startedEventID
-	return event
+
+	// set the isProcessingDecision to true for event reordering during the processing of decisions
+	e.isProcessingDecision = true
+	return event, e.completeDecisionProcessing
 }
 
 func (e *mutableStateBuilder) AddDecisionTaskTimedOutEvent(scheduleEventID int64,
