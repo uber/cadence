@@ -575,7 +575,7 @@ func (t *transferQueueProcessorImpl) processCancelExecution(task *persistence.Tr
 		// Check to see if the error is non-transient, in which case add RequestCancelFailed
 		// event and complete transfer task by setting the err = nil
 		if common.IsServiceNonRetryableError(err) {
-			err = t.requestCancelFailed(task, context, cancelRequest)
+			err = t.requestCancelFailed(task, context, cancelRequest, ri.Control)
 			if _, ok := err.(*workflow.EntityNotExistsError); ok {
 				// this could happen if this is a duplicate processing of the task, and the execution has already completed.
 				return nil
@@ -592,7 +592,7 @@ func (t *transferQueueProcessorImpl) processCancelExecution(task *persistence.Tr
 		task.TargetWorkflowID, task.TargetRunID)
 
 	// Record ExternalWorkflowExecutionCancelRequested in source execution
-	err = t.requestCancelCompleted(task, context, cancelRequest)
+	err = t.requestCancelCompleted(task, context, cancelRequest, ri.Control)
 	if _, ok := err.(*workflow.EntityNotExistsError); ok {
 		// this could happen if this is a duplicate processing of the task, and the execution has already completed.
 		return nil
@@ -911,8 +911,7 @@ func (t *transferQueueProcessorImpl) createFirstDecisionTask(domainID string,
 }
 
 func (t *transferQueueProcessorImpl) requestCancelCompleted(task *persistence.TransferTaskInfo,
-	context *workflowExecutionContext,
-	request *history.RequestCancelWorkflowExecutionRequest) error {
+	context *workflowExecutionContext, request *history.RequestCancelWorkflowExecutionRequest, control []byte) error {
 
 	return t.updateWorkflowExecution(task.DomainID, context, true,
 		func(msBuilder *mutableStateBuilder) error {
@@ -931,6 +930,7 @@ func (t *transferQueueProcessorImpl) requestCancelCompleted(task *persistence.Tr
 				*request.DomainUUID,
 				*request.CancelRequest.WorkflowExecution.WorkflowId,
 				common.StringDefault(request.CancelRequest.WorkflowExecution.RunId),
+				control,
 			)
 
 			return nil
@@ -965,8 +965,7 @@ func (t *transferQueueProcessorImpl) requestSignalCompleted(task *persistence.Tr
 }
 
 func (t *transferQueueProcessorImpl) requestCancelFailed(task *persistence.TransferTaskInfo,
-	context *workflowExecutionContext,
-	request *history.RequestCancelWorkflowExecutionRequest) error {
+	context *workflowExecutionContext, request *history.RequestCancelWorkflowExecutionRequest, control []byte) error {
 
 	return t.updateWorkflowExecution(task.DomainID, context, true,
 		func(msBuilder *mutableStateBuilder) error {
@@ -986,6 +985,7 @@ func (t *transferQueueProcessorImpl) requestCancelFailed(task *persistence.Trans
 				*request.DomainUUID,
 				*request.CancelRequest.WorkflowExecution.WorkflowId,
 				common.StringDefault(request.CancelRequest.WorkflowExecution.RunId),
+				control,
 				workflow.CancelExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution)
 
 			return nil

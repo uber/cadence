@@ -1329,6 +1329,7 @@ func (e *mutableStateBuilder) AddRequestCancelExternalWorkflowExecutionInitiated
 	ri := &persistence.RequestCancelInfo{
 		InitiatedID:     initiatedEventID,
 		CancelRequestID: cancelRequestID,
+		Control:         request.Control,
 	}
 
 	e.pendingRequestCancelInfoIDs[initiatedEventID] = ri
@@ -1338,7 +1339,7 @@ func (e *mutableStateBuilder) AddRequestCancelExternalWorkflowExecutionInitiated
 }
 
 func (e *mutableStateBuilder) AddExternalWorkflowExecutionCancelRequested(initiatedID int64,
-	domain, workflowID, runID string) *workflow.HistoryEvent {
+	domain, workflowID, runID string, control []byte) *workflow.HistoryEvent {
 	_, ok := e.GetRequestCancelInfo(initiatedID)
 	if !ok {
 		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionWorkflowCancelRequested, e.GetNextEventID(),
@@ -1348,7 +1349,7 @@ func (e *mutableStateBuilder) AddExternalWorkflowExecutionCancelRequested(initia
 	}
 
 	if e.DeletePendingRequestCancel(initiatedID) == nil {
-		return e.hBuilder.AddExternalWorkflowExecutionCancelRequested(initiatedID, domain, workflowID, runID)
+		return e.hBuilder.AddExternalWorkflowExecutionCancelRequested(initiatedID, domain, workflowID, runID, control)
 	}
 
 	return nil
@@ -1356,7 +1357,7 @@ func (e *mutableStateBuilder) AddExternalWorkflowExecutionCancelRequested(initia
 
 func (e *mutableStateBuilder) AddRequestCancelExternalWorkflowExecutionFailedEvent(
 	decisionTaskCompletedEventID, initiatedID int64,
-	domain, workflowID, runID string, cause workflow.CancelExternalWorkflowExecutionFailedCause) *workflow.HistoryEvent {
+	domain, workflowID, runID string, control []byte, cause workflow.CancelExternalWorkflowExecutionFailedCause) *workflow.HistoryEvent {
 	_, ok := e.GetRequestCancelInfo(initiatedID)
 	if !ok {
 		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionWorkflowCancelFailed, e.GetNextEventID(),
@@ -1367,7 +1368,7 @@ func (e *mutableStateBuilder) AddRequestCancelExternalWorkflowExecutionFailedEve
 
 	if e.DeletePendingRequestCancel(initiatedID) == nil {
 		return e.hBuilder.AddRequestCancelExternalWorkflowExecutionFailedEvent(decisionTaskCompletedEventID, initiatedID,
-			domain, workflowID, runID, cause)
+			domain, workflowID, runID, control, cause)
 	}
 
 	return nil

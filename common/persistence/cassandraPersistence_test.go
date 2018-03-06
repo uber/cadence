@@ -1086,9 +1086,11 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_RequestCancel() {
 	updatedInfo.NextEventID = int64(5)
 	updatedInfo.LastProcessedEvent = int64(2)
 	cancelRequestID := uuid.New()
+	control := []byte("some random control information")
 	requestCancelInfos := []*RequestCancelInfo{{
 		InitiatedID:     1,
 		CancelRequestID: cancelRequestID,
+		Control:         control,
 	}}
 	err2 := s.UpsertRequestCancelState(updatedInfo, int64(3), requestCancelInfos)
 	s.Nil(err2, "No error expected.")
@@ -1102,6 +1104,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_RequestCancel() {
 	s.NotNil(ri)
 	s.Equal(int64(1), ri.InitiatedID)
 	s.Equal(cancelRequestID, ri.CancelRequestID)
+	s.Equal(control, ri.Control)
 
 	err2 = s.DeleteCancelState(updatedInfo, int64(5), int64(1))
 	s.Nil(err2, "No error expected.")

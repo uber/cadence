@@ -204,7 +204,8 @@ const (
 
 	templateRequestCancelInfoType = `{` +
 		`initiated_id: ?, ` +
-		`cancel_request_id: ? ` +
+		`cancel_request_id: ?, ` +
+		`control: ?` +
 		`}`
 
 	templateSignalInfoType = `{` +
@@ -2042,6 +2043,7 @@ func (d *cassandraPersistence) updateRequestCancelInfos(batch *gocql.Batch, requ
 			c.InitiatedID,
 			c.InitiatedID,
 			c.CancelRequestID,
+			c.Control,
 			d.shardID,
 			rowTypeExecution,
 			domainID,
@@ -2392,6 +2394,8 @@ func createRequestCancelInfo(result map[string]interface{}) *RequestCancelInfo {
 			info.InitiatedID = v.(int64)
 		case "cancel_request_id":
 			info.CancelRequestID = v.(string)
+		case "control":
+			info.Control = v.([]byte)
 		}
 	}
 
