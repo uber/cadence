@@ -118,7 +118,6 @@ CREATE TYPE child_execution_info (
 CREATE TYPE request_cancel_info (
   initiated_id      bigint,
   cancel_request_id text,
-  control           blob,
 );
 
 -- External workflow signal in progress mutable state

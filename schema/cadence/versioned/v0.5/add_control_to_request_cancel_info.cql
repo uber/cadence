@@ -1,1 +1,0 @@
-ALTER TYPE request_cancel_info ADD control blob;
