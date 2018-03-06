@@ -32,6 +32,7 @@ import (
 	"os"
 	"runtime/debug"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/fatih/color"
@@ -43,7 +44,6 @@ import (
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	s "go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/client"
-	"strings"
 )
 
 /**
