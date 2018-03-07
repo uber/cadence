@@ -37,14 +37,14 @@ const (
 
 // Workflow execution states
 const (
-	WorkflowStateCreated = iota
+	WorkflowStateCreated   = iota
 	WorkflowStateRunning
 	WorkflowStateCompleted
 )
 
 // Workflow execution close status
 const (
-	WorkflowCloseStatusNone = iota
+	WorkflowCloseStatusNone           = iota
 	WorkflowCloseStatusCompleted
 	WorkflowCloseStatusFailed
 	WorkflowCloseStatusCanceled
@@ -67,17 +67,18 @@ const (
 
 // Transfer task types
 const (
-	TransferTaskTypeDecisionTask = iota
+	TransferTaskTypeDecisionTask        = iota
 	TransferTaskTypeActivityTask
 	TransferTaskTypeCloseExecution
 	TransferTaskTypeCancelExecution
 	TransferTaskTypeStartChildExecution
 	TransferTaskTypeSignalExecution
+	TransferTaskTypeReplicationTask
 )
 
 // Types of timers
 const (
-	TaskTypeDecisionTimeout = iota
+	TaskTypeDecisionTimeout    = iota
 	TaskTypeActivityTimeout
 	TaskTypeUserTimer
 	TaskTypeWorkflowTimeout
@@ -164,6 +165,15 @@ type (
 		ClientImpl                   string
 	}
 
+	// ReplicationState represents
+	ReplicationState struct {
+		CurrentVersion   int64
+		StartVersion     int64
+		LastWriteVersion int64
+		LastWriteEventID int64
+		LastReplicationInfo map[string]*ReplicationInfo
+	}
+
 	// TransferTaskInfo describes a transfer task
 	TransferTaskInfo struct {
 		DomainID                string
@@ -177,6 +187,10 @@ type (
 		TaskList                string
 		TaskType                int
 		ScheduleID              int64
+		FirstEventID            int64
+		NextEventID             int64
+		Version                 int64
+		LastReplicationInfo     map[string]*ReplicationInfo
 	}
 
 	// TimerTaskInfo describes a timer task.
@@ -304,6 +318,22 @@ type (
 		EventID             int64
 	}
 
+	// ReplicationTask is the transfer task created for shipping history replication events to other clusters
+	ReplicationTask struct {
+		TaskID              int64
+		DomainID            string
+		FirstEventID        int64
+		NextEventID         int64
+		Version             int64
+		LastReplicationInfo map[string]*ReplicationInfo
+	}
+
+	// ReplicationInfo represents the information stored for last replication event details per cluster
+	ReplicationInfo struct {
+		Version     int64
+		LastEventID int64
+	}
+
 	// WorkflowMutableState indicates workflow related state
 	WorkflowMutableState struct {
 		ActivitInfos        map[int64]*ActivityInfo
@@ -313,6 +343,7 @@ type (
 		SignalInfos         map[int64]*SignalInfo
 		SignalRequestedIDs  map[string]struct{}
 		ExecutionInfo       *WorkflowExecutionInfo
+		ReplicationState    *ReplicationState
 		BufferedEvents      []*SerializedHistoryEventBatch
 	}
 
@@ -414,6 +445,7 @@ type (
 		ContinueAsNew               bool
 		PreviousRunID               string
 		ExecutionInfo               *WorkflowExecutionInfo
+		ReplicationState            *ReplicationState
 	}
 
 	// CreateWorkflowExecutionResponse is the response to CreateWorkflowExecutionRequest
@@ -449,6 +481,7 @@ type (
 	// UpdateWorkflowExecutionRequest is used to update a workflow execution
 	UpdateWorkflowExecutionRequest struct {
 		ExecutionInfo        *WorkflowExecutionInfo
+		ReplicationState     *ReplicationState
 		TransferTasks        []Task
 		TimerTasks           []Task
 		DeleteTimerTask      Task
@@ -999,6 +1032,21 @@ func (u *StartChildExecutionTask) GetTaskID() int64 {
 // SetTaskID sets the sequence ID of the cancel transfer task.
 func (u *StartChildExecutionTask) SetTaskID(id int64) {
 	u.TaskID = id
+}
+
+// GetType returns the type of the activity task
+func (a *ReplicationTask) GetType() int {
+	return TransferTaskTypeReplicationTask
+}
+
+// GetTaskID returns the sequence ID of the activity task
+func (a *ReplicationTask) GetTaskID() int64 {
+	return a.TaskID
+}
+
+// SetTaskID sets the sequence ID of the activity task
+func (a *ReplicationTask) SetTaskID(id int64) {
+	a.TaskID = id
 }
 
 // NewHistoryEventBatch returns a new instance of HistoryEventBatch

@@ -692,6 +692,79 @@ func (s *cassandraPersistenceSuite) TestSignalTransferTaskTasks() {
 	s.Nil(err)
 }
 
+func (s *cassandraPersistenceSuite) TestReplicationTransferTaskTasks() {
+	domainID := "2466d7de-6602-4ad8-b939-fb8f8c36c711"
+	workflowExecution := gen.WorkflowExecution{
+		WorkflowId: common.StringPtr("replication-transfer-task-test"),
+		RunId:      common.StringPtr("dcde9d85-5d7a-43c7-8b18-cb2cae0e29e0"),
+	}
+
+	task0, err := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType", 20, 13, nil, 3, 0, 2, nil)
+	s.Nil(err, "No error expected.")
+	s.NotEmpty(task0, "Expected non empty task identifier.")
+
+	taskD, err := s.GetTransferTasks(1)
+	s.Equal(1, len(taskD), "Expected 1 decision task.")
+	err = s.CompleteTransferTask(taskD[0].TaskID)
+	s.Nil(err)
+
+	state1, err := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
+	s.Nil(err, "No error expected.")
+	info1 := state1.ExecutionInfo
+	s.NotNil(info1, "Valid Workflow info expected.")
+	updatedInfo1 := copyWorkflowExecutionInfo(info1)
+
+	transferTasks := []Task{&ReplicationTask{
+		TaskID:   s.GetNextSequenceNumber(),
+		DomainID: domainID,
+		FirstEventID: int64(1),
+		NextEventID: int64(3),
+		Version: int64(9),
+		LastReplicationInfo: map[string]*ReplicationInfo {
+			"dc1": &ReplicationInfo{
+				Version: int64(3),
+				LastEventID: int64(1),
+			},
+			"dc2": &ReplicationInfo{
+				Version: int64(5),
+				LastEventID: int64(2),
+			},
+		},
+	}}
+	err = s.UpdateWorkflowExecutionWithTransferTasks(updatedInfo1, int64(3), transferTasks, nil)
+	s.Nil(err, "No error expected.")
+
+	tasks1, err := s.GetTransferTasks(1)
+	s.Nil(err, "No error expected.")
+	s.NotNil(tasks1, "expected valid list of tasks.")
+	s.Equal(1, len(tasks1), "Expected 1 replication task.")
+	task1 := tasks1[0]
+	s.Equal(TransferTaskTypeReplicationTask, task1.TaskType)
+	s.Equal(domainID, task1.DomainID)
+	s.Equal(*workflowExecution.WorkflowId, task1.WorkflowID)
+	s.Equal(*workflowExecution.RunId, task1.RunID)
+	s.Equal(int64(1), task1.FirstEventID)
+	s.Equal(int64(3), task1.NextEventID)
+	s.Equal(int64(9), task1.Version)
+	s.Equal(2, len(task1.LastReplicationInfo))
+	for k, v := range task1.LastReplicationInfo {
+		log.Infof("ReplicationInfo for %v: {Version: %v, LastEventID: %v}", k, v.Version, v.LastEventID)
+		switch k {
+		case "dc1":
+			s.Equal(int64(3), v.Version)
+			s.Equal(int64(1), v.LastEventID)
+		case "dc2":
+			s.Equal(int64(5), v.Version)
+			s.Equal(int64(2), v.LastEventID)
+		default:
+			s.Fail("Unexpected key")
+		}
+	}
+
+	err = s.CompleteTransferTask(task1.TaskID)
+	s.Nil(err)
+}
+
 func (s *cassandraPersistenceSuite) TestCreateTask() {
 	domainID := "11adbd1b-f164-4ea7-b2f3-2e857a5048f1"
 	workflowExecution := gen.WorkflowExecution{WorkflowId: common.StringPtr("create-task-test"),
