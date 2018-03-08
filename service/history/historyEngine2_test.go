@@ -242,7 +242,8 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedIfTaskAlreadyCompleted() {
 	tl := "testTaskList"
 
 	msBuilder := s.createExecutionStartedState(workflowExecution, tl, identity, true)
-	addDecisionTaskCompletedEvent(msBuilder, int64(2), int64(3), nil, identity)
+	_, finishDecisionFn := addDecisionTaskCompletedEvent(msBuilder, int64(2), int64(3), nil, identity)
+	finishDecisionFn()
 
 	ms := createMutableState(msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
@@ -524,9 +525,10 @@ func (s *engine2Suite) TestRecordActivityTaskStartedSuccess() {
 	activityInput := []byte("input1")
 
 	msBuilder := s.createExecutionStartedState(workflowExecution, tl, identity, true)
-	decisionCompletedEvent := addDecisionTaskCompletedEvent(msBuilder, int64(2), int64(3), nil, identity)
+	decisionCompletedEvent, finishDecisionFn := addDecisionTaskCompletedEvent(msBuilder, int64(2), int64(3), nil, identity)
 	scheduledEvent, _ := addActivityTaskScheduledEvent(msBuilder, *decisionCompletedEvent.EventId, activityID,
 		activityType, tl, activityInput, 100, 10, 5)
+	finishDecisionFn()
 
 	ms1 := createMutableState(msBuilder)
 	gwmsResponse1 := &persistence.GetWorkflowExecutionResponse{State: ms1}

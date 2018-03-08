@@ -795,10 +795,11 @@ Update_History_Loop:
 		}
 
 		startedID := di.StartedID
-		completedEvent := msBuilder.AddDecisionTaskCompletedEvent(scheduleID, startedID, request)
+		completedEvent, finishDecisionFn := msBuilder.AddDecisionTaskCompletedEvent(scheduleID, startedID, request)
 		if completedEvent == nil {
 			return &workflow.InternalServiceError{Message: "Unable to add DecisionTaskCompleted event to history."}
 		}
+		defer finishDecisionFn()
 
 		failDecision := false
 		var failCause workflow.DecisionTaskFailedCause
@@ -987,6 +988,7 @@ Update_History_Loop:
 					break Process_Decision_Loop
 				}
 				if msBuilder.AddTimerCanceledEvent(completedID, attributes, common.StringDefault(request.Identity)) == nil {
+					// the above statement will return nil if the timer canceled event is NOT added to history
 					msBuilder.AddCancelTimerFailedEvent(completedID, attributes, common.StringDefault(request.Identity))
 				}
 

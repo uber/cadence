@@ -154,7 +154,7 @@ func (s *transferQueueProcessorSuite) TestManyTransferTasks() {
 	info, _ := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	builder.Load(info)
 	addDecisionTaskStartedEvent(builder, int64(1), taskList, "identity")
-	addDecisionTaskCompletedEvent(builder, int64(1), int64(2), nil, "identity")
+	_, finishDecisionFn := addDecisionTaskCompletedEvent(builder, int64(1), int64(2), nil, "identity")
 
 	transferTasks := []persistence.Task{}
 	for i := 0; i < activityCount; i++ {
@@ -168,6 +168,7 @@ func (s *transferQueueProcessorSuite) TestManyTransferTasks() {
 			})
 		s.Equal(ai.ScheduleToCloseTimeout, timeoutSeconds)
 	}
+	finishDecisionFn()
 	updatedInfo := copyWorkflowExecutionInfo(builder.executionInfo)
 	err1 := s.UpdateWorkflowExecutionWithTransferTasks(updatedInfo, int64(2), transferTasks, builder.updateActivityInfos)
 	s.Nil(err1)
@@ -209,8 +210,9 @@ func (s *transferQueueProcessorSuite) TestDeleteExecutionTransferTasks() {
 	info1, _ := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	builder.Load(info1)
 	startedEvent := addDecisionTaskStartedEvent(builder, int64(2), taskList, identity)
-	completeDecisionEvent := addDecisionTaskCompletedEvent(builder, int64(2), *startedEvent.EventId, nil, identity)
+	completeDecisionEvent, finishDecisionFn := addDecisionTaskCompletedEvent(builder, int64(2), *startedEvent.EventId, nil, identity)
 	addCompleteWorkflowEvent(builder, *completeDecisionEvent.EventId, []byte("result"))
+	finishDecisionFn()
 
 	updatedInfo1 := copyWorkflowExecutionInfo(builder.executionInfo)
 	err1 := s.UpdateWorkflowExecutionAndFinish(updatedInfo1, int64(3))
@@ -272,8 +274,9 @@ func (s *transferQueueProcessorSuite) TestDeleteExecutionTransferTasksDomainNotE
 	info1, _ := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	builder.Load(info1)
 	startedEvent := addDecisionTaskStartedEvent(builder, int64(2), taskList, identity)
-	completeDecisionEvent := addDecisionTaskCompletedEvent(builder, int64(2), *startedEvent.EventId, nil, identity)
+	completeDecisionEvent, finishDecisionFn := addDecisionTaskCompletedEvent(builder, int64(2), *startedEvent.EventId, nil, identity)
 	addCompleteWorkflowEvent(builder, *completeDecisionEvent.EventId, []byte("result"))
+	finishDecisionFn()
 
 	updatedInfo1 := copyWorkflowExecutionInfo(builder.executionInfo)
 	err1 := s.UpdateWorkflowExecutionAndFinish(updatedInfo1, int64(3))
@@ -327,9 +330,10 @@ func (s *transferQueueProcessorSuite) TestCancelRemoteExecutionTransferTasks() {
 	info, _ := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	builder.Load(info)
 	startedEvent := addDecisionTaskStartedEvent(builder, int64(2), taskList, identity)
-	completeDecisionEvent := addDecisionTaskCompletedEvent(builder, int64(2), *startedEvent.EventId, nil, identity)
+	completeDecisionEvent, finishDecisionFn := addDecisionTaskCompletedEvent(builder, int64(2), *startedEvent.EventId, nil, identity)
 	initiatedEvent := addRequestCancelInitiatedEvent(builder, *completeDecisionEvent.EventId, "request-id",
 		targetDomain, targetWorkflowID, targetRunID)
+	finishDecisionFn()
 
 	transferTasks := []persistence.Task{&persistence.CancelExecutionTask{
 		TaskID:           s.GetNextSequenceNumber(),
@@ -389,9 +393,10 @@ func (s *transferQueueProcessorSuite) TestCancelRemoteExecutionTransferTask_Requ
 	info, _ := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	builder.Load(info)
 	startedEvent := addDecisionTaskStartedEvent(builder, int64(2), taskList, identity)
-	completeDecisionEvent := addDecisionTaskCompletedEvent(builder, int64(2), *startedEvent.EventId, nil, identity)
+	completeDecisionEvent, finishDecisionFn := addDecisionTaskCompletedEvent(builder, int64(2), *startedEvent.EventId, nil, identity)
 	initiatedEvent := addRequestCancelInitiatedEvent(builder, *completeDecisionEvent.EventId, "request-id",
 		targetDomain, targetWorkflowID, targetRunID)
+	finishDecisionFn()
 
 	transferTasks := []persistence.Task{&persistence.CancelExecutionTask{
 		TaskID:           s.GetNextSequenceNumber(),
@@ -453,9 +458,10 @@ func (s *transferQueueProcessorSuite) TestSignalExecutionTransferTask() {
 	info, _ := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	builder.Load(info)
 	startedEvent := addDecisionTaskStartedEvent(builder, int64(2), taskList, identity)
-	completeDecisionEvent := addDecisionTaskCompletedEvent(builder, int64(2), *startedEvent.EventId, nil, identity)
+	completeDecisionEvent, finishDecisionFn := addDecisionTaskCompletedEvent(builder, int64(2), *startedEvent.EventId, nil, identity)
 	initiatedEvent := addRequestSignalInitiatedEvent(builder, *completeDecisionEvent.EventId, signalRequestID,
 		targetDomain, targetWorkflowID, targetRunID, signalName, input, control)
+	finishDecisionFn()
 
 	transferTasks := []persistence.Task{&persistence.SignalExecutionTask{
 		TaskID:           s.GetNextSequenceNumber(),
@@ -518,9 +524,10 @@ func (s *transferQueueProcessorSuite) TestSignalExecutionTransferTask_Failed() {
 	info, _ := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	builder.Load(info)
 	startedEvent := addDecisionTaskStartedEvent(builder, int64(2), taskList, identity)
-	completeDecisionEvent := addDecisionTaskCompletedEvent(builder, int64(2), *startedEvent.EventId, nil, identity)
+	completeDecisionEvent, finishDecisionFn := addDecisionTaskCompletedEvent(builder, int64(2), *startedEvent.EventId, nil, identity)
 	initiatedEvent := addRequestSignalInitiatedEvent(builder, *completeDecisionEvent.EventId, signalRequestID,
 		targetDomain, targetWorkflowID, targetRunID, signalName, input, control)
+	finishDecisionFn()
 
 	transferTasks := []persistence.Task{&persistence.SignalExecutionTask{
 		TaskID:           s.GetNextSequenceNumber(),
@@ -660,7 +667,7 @@ func (s *transferQueueProcessorSuite) createChildExecutionState(domain, domainID
 	info1, _ := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	builder.Load(info1)
 	startedEvent := addDecisionTaskStartedEvent(builder, int64(2), taskList, identity)
-	completedEvent := addDecisionTaskCompletedEvent(builder, int64(2), *startedEvent.EventId, nil, identity)
+	completedEvent, finishDecisionFn := addDecisionTaskCompletedEvent(builder, int64(2), *startedEvent.EventId, nil, identity)
 
 	transferTasks := []persistence.Task{}
 	createRequestID := uuid.New()
@@ -669,6 +676,7 @@ func (s *transferQueueProcessorSuite) createChildExecutionState(domain, domainID
 	childWorkflowType := "child-workflow-type"
 	_, ci := addStartChildWorkflowExecutionInitiatedEvent(builder, *completedEvent.EventId, createRequestID,
 		domain, childWorkflowID, childWorkflowType, taskList, nil, int32(100), int32(10))
+	finishDecisionFn()
 	transferTasks = append(transferTasks, &persistence.StartChildExecutionTask{
 		TargetDomainID:   domainID,
 		TargetWorkflowID: childWorkflowID,
