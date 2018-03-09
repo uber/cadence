@@ -51,6 +51,7 @@ type Config struct {
 	// TimerQueueProcessor settings
 	TimerTaskBatchSize                    int
 	ProcessTimerTaskWorkerCount           int
+	TimerProcessorTimerChanSize           int
 	TimerProcessorUpdateFailureRetryCount int
 	TimerProcessorGetFailureRetryCount    int
 	TimerProcessorUpdateAckInterval       time.Duration
@@ -78,7 +79,7 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int) *Config {
 	return &Config{
 		NumberOfShards:                              numberOfShards,
 		HistoryCacheInitialSize:                     128,
-		HistoryCacheMaxSize:                         256,
+		HistoryCacheMaxSize:                         512,
 		HistoryCacheTTL:                             time.Hour,
 		RangeSizeBits:                               20, // 20 bits for sequencer, 2^20 sequence number for any range
 		AcquireShardInterval:                        time.Minute,
@@ -87,6 +88,7 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int) *Config {
 		DefaultStartToCloseActivityTimeoutInSecs:    10,
 		TimerTaskBatchSize:                          100,
 		ProcessTimerTaskWorkerCount:                 30,
+		TimerProcessorTimerChanSize:                 1024,
 		TimerProcessorUpdateFailureRetryCount:       5,
 		TimerProcessorGetFailureRetryCount:          5,
 		TimerProcessorUpdateAckInterval:             10 * time.Second,

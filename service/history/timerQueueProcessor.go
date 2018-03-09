@@ -54,21 +54,12 @@ type (
 		isStopped        int32
 		shutdownWG       sync.WaitGroup
 		shutdownCh       chan struct{}
-		newTimerCh       chan struct{}
+		newTimerCh       chan time.Time
 		config           *Config
 		logger           bark.Logger
 		metricsClient    metrics.Client
 		timerFiredCount  uint64
-		lock             sync.Mutex // Used to synchronize pending timers.
 		ackMgr           *timerAckMgr
-		minPendingTimer  time.Time // Track the minimum timer ID in memory.
-	}
-
-	timeGate struct {
-		tNextNanos, tNowNanos int64
-		timer                 *time.Timer // timer used to wake us up when the next message is ready to deliver
-		gateC                 chan struct{}
-		closeC                chan struct{}
 	}
 
 	timerAckMgr struct {
@@ -86,81 +77,6 @@ type (
 	}
 )
 
-func newTimeGate() *timeGate {
-	tNow := time.Now()
-
-	// Initialize timeGate to fire immediately to check for any outstanding timer which needs to be fired immediately
-	t := &timeGate{
-		tNowNanos: tNow.UnixNano(),
-		gateC:     make(chan struct{}),
-		closeC:    make(chan struct{}),
-		timer:     time.NewTimer(0),
-	}
-
-	// "Cast" chan Time to chan struct{}.
-	// Unfortunately go doesn't have a common channel supertype.
-	go func() {
-		defer close(t.gateC)
-		defer t.timer.Stop()
-	loop:
-		for {
-			select {
-			case <-t.timer.C:
-				// re-transmit on gateC
-				t.gateC <- struct{}{}
-
-			case <-t.closeC:
-				// closed; cleanup and quit
-				break loop
-			}
-		}
-	}()
-
-	return t
-}
-
-func (t *timeGate) beforeSleep() <-chan struct{} {
-	// update current time on gate
-	tNow := time.Now()
-	t.tNowNanos = tNow.UnixNano()
-
-	return t.gateC
-}
-
-func (t *timeGate) engaged(now int64) bool {
-	return t.tNextNanos > now
-}
-
-// setNext is called by processor in following 2 conditions:
-// 1. Processor is woken up by new timer creation and new timer is scheduled to fire before current tNextNanos
-// 2. Processor finds a lockAheadTask from cassandra and calls it using the visibility time of the task
-func (t *timeGate) setNext(next time.Time) bool {
-	newNext := next.UnixNano()
-
-	tNow := time.Now()
-	t.tNowNanos = tNow.UnixNano()
-	// Check to see if passed in next should become the next time timeGate notifies processor
-	if !t.engaged(t.tNowNanos) || t.tNextNanos > newNext {
-		t.tNextNanos = newNext
-		// reset timer to fire when the next message should be made 'visible'
-		t.timer.Reset(time.Unix(0, t.tNextNanos).Sub(tNow))
-
-		// Notifies caller that next notification is reset to fire at passed in 'next' visibility time
-		return true
-	}
-
-	return false
-}
-
-func (t *timeGate) close() {
-	close(t.closeC)
-}
-
-func (t *timeGate) String() string {
-	return fmt.Sprintf("timeGate [engaged=%v tNextNanos=%v tNowNanos=%v]",
-		t.engaged(time.Now().UnixNano()), time.Unix(0, t.tNextNanos), time.Unix(0, t.tNowNanos))
-}
-
 func newTimerQueueProcessor(shard ShardContext, historyService *historyEngineImpl, executionManager persistence.ExecutionManager,
 	logger bark.Logger) timerQueueProcessor {
 	l := logger.WithFields(bark.Fields{
@@ -171,7 +87,7 @@ func newTimerQueueProcessor(shard ShardContext, historyService *historyEngineImp
 		cache:            historyService.historyCache,
 		executionManager: executionManager,
 		shutdownCh:       make(chan struct{}),
-		newTimerCh:       make(chan struct{}, 1),
+		newTimerCh:       make(chan time.Time, shard.GetConfig().TimerProcessorTimerChanSize),
 		config:           shard.GetConfig(),
 		logger:           l,
 		metricsClient:    historyService.metricsClient,
@@ -215,14 +131,11 @@ func (t *timerQueueProcessorImpl) NotifyNewTimer(timerTasks []persistence.Task) 
 	}
 	t.metricsClient.AddCounter(metrics.TimerQueueProcessorScope, metrics.NewTimerCounter, int64(len(timerTasks)))
 
-	updatedMinTimer := false
-	t.lock.Lock()
+	newEarlistTime := persistence.GetVisibilityTSFrom(timerTasks[0])
 	for _, task := range timerTasks {
 		ts := persistence.GetVisibilityTSFrom(task)
-		if t.minPendingTimer.IsZero() || ts.Before(t.minPendingTimer) {
-			// TODO: We should just send the visibility time through channel instead setting minPendingTimer
-			t.minPendingTimer = ts
-			updatedMinTimer = true
+		if ts.Before(newEarlistTime) {
+			newEarlistTime = ts
 		}
 
 		switch task.GetType() {
@@ -238,16 +151,12 @@ func (t *timerQueueProcessorImpl) NotifyNewTimer(timerTasks []persistence.Task) 
 			t.metricsClient.IncCounter(metrics.TimerTaskDeleteHistoryEvent, metrics.NewTimerCounter)
 		}
 	}
-	t.lock.Unlock()
 
-	if updatedMinTimer {
-		select {
-		case t.newTimerCh <- struct{}{}:
-			// Notified about new timer.
-
-		default:
-			// Channel "full" -> drop and move on, since we are using it as an event.
-		}
+	select {
+	case t.newTimerCh <- newEarlistTime:
+		// Notified about new timer.
+	default:
+		// Channel "full" -> drop and move on, this will happen only if service is in high load.
 	}
 }
 
@@ -283,18 +192,18 @@ RetryProcessor:
 }
 
 func (t *timerQueueProcessorImpl) internalProcessor(tasksCh chan<- *persistence.TimerTaskInfo) error {
-	gate := newTimeGate()
-	defer gate.close()
+	timer := NewTimer()
+	defer timer.Close()
 
 	updateAckChan := time.NewTicker(t.config.TimerProcessorUpdateAckInterval).C
 	var nextKeyTask *persistence.TimerTaskInfo
 
 continueProcessor:
 	for {
-		isWokeByNewTimer := false
+		var newEarlistTime time.Time
 
-		if nextKeyTask == nil || gate.engaged(time.Now().UnixNano()) {
-			gateC := gate.beforeSleep()
+		if nextKeyTask == nil || timer.WillFireAfter(time.Now()) {
+			timerChan := timer.GetTimerChan()
 
 			// Wait until one of four things occurs:
 			// 1. we get notified of a new message
@@ -308,12 +217,11 @@ continueProcessor:
 				t.logger.Debug("Timer queue processor pump shutting down.")
 				return nil
 
-			case <-gateC:
+			case <-timerChan:
 				// Timer Fired.
 
-			case <-t.newTimerCh:
+			case newEarlistTime = <-t.newTimerCh:
 				// New Timer has arrived.
-				isWokeByNewTimer = true
 
 			case <-updateAckChan:
 				t.ackMgr.updateAckLevel()
@@ -321,23 +229,19 @@ continueProcessor:
 			}
 		}
 
-		if isWokeByNewTimer {
+		if !newEarlistTime.IsZero() {
 			t.metricsClient.IncCounter(metrics.TimerQueueProcessorScope, metrics.NewTimerNotifyCounter)
 			t.logger.Debugf("Woke up by the timer")
 
-			t.lock.Lock()
-			newMinTimestamp := t.minPendingTimer
-			if gate.setNext(newMinTimestamp) {
+			if timer.UpdateTimer(newEarlistTime) {
+				// this means timer is updated, to the new earltest time
 				// reset the nextKeyTask as the new timer is expected to fire before previously read nextKeyTask
 				nextKeyTask = nil
 			}
-			t.minPendingTimer = time.Time{}
-			t.lock.Unlock()
 
-			t.logger.Debugf("%v: Next key after woke up by timer: %v",
-				time.Now().UTC(), newMinTimestamp.UTC())
+			t.logger.Debugf("%v: Next key after woke up by timer: %v", time.Now().UTC(), newEarlistTime.UTC())
 
-			if !t.isProcessNow(time.Unix(0, gate.tNextNanos)) {
+			if timer.WillFireAfter(time.Now()) {
 				continue continueProcessor
 			}
 		}
@@ -367,7 +271,7 @@ continueProcessor:
 			nextKey := SequenceID{VisibilityTimestamp: nextKeyTask.VisibilityTimestamp, TaskID: nextKeyTask.TaskID}
 			t.logger.Debugf("%s: GetNextKey: %s", time.Now().UTC(), nextKey)
 
-			gate.setNext(nextKey.VisibilityTimestamp)
+			timer.UpdateTimer(nextKey.VisibilityTimestamp)
 		}
 	}
 }
