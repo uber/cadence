@@ -410,7 +410,6 @@ func (e *mutableStateBuilder) shouldBufferEvent(eventType workflow.EventType) bo
 		// So both should not be buffered. Ref: historyEngine, search for "workflow.DecisionTypeCancelTimer"
 		workflow.EventTypeTimerCanceled,
 		workflow.EventTypeCancelTimerFailed,
-		// workflow.EventTypeWorkflowExecutionFailed,
 		workflow.EventTypeRequestCancelExternalWorkflowExecutionInitiated,
 		workflow.EventTypeMarkerRecorded,
 		workflow.EventTypeStartChildWorkflowExecutionInitiated,
