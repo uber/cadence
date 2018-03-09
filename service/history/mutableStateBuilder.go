@@ -415,6 +415,13 @@ func (e *mutableStateBuilder) shouldBufferEvent(eventType workflow.EventType) bo
 		workflow.EventTypeStartChildWorkflowExecutionInitiated,
 		workflow.EventTypeSignalExternalWorkflowExecutionInitiated:
 		// do not buffer event if event is directly generated from a corresponding decision
+
+		// sanity check there is no decision on the fly
+		if e.HasInFlightDecisionTask() {
+			msg := fmt.Sprintf("history mutable state is processing event: %v while there is decision pending. "+
+				"domainID: %v, workflow ID: %v, run ID: %v.", eventType, e.executionInfo.DomainID, e.executionInfo.WorkflowID, e.executionInfo.RunID)
+			panic(msg)
+		}
 		return false
 	default:
 		return true
