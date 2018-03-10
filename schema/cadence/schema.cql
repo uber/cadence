@@ -77,10 +77,10 @@ CREATE TYPE transfer_task (
   task_list                  text,
   type                       int,    -- enum TaskType {ActivityTask, DecisionTask, DeleteExecution, CancelExecution, StartChildExecution, ReplicationTask}
   schedule_id                bigint,
-  first_event_id             bigint,
-  next_event_id              bigint,
-  version                    bigint,
-  last_replication_info      map<text, frozen<replication_info>>,
+  first_event_id             bigint,  -- Used by ReplicationTask to set the first event ID of the applied transaction
+  next_event_id              bigint,  -- Used by ReplicationTask to set the next event ID of the applied transaction
+  version                    bigint,  -- Used by ReplicationTask to set the failover version of the applied transaction
+  last_replication_info      map<text, frozen<replication_info>>, -- Used by replication task to snapshot replication information when the transaction was applied
 );
 
 CREATE TYPE timer_task (

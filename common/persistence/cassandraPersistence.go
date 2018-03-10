@@ -76,7 +76,7 @@ const (
 
 const (
 	// Row types for table executions
-	rowTypeShard        = iota
+	rowTypeShard = iota
 	rowTypeExecution
 	rowTypeTransferTask
 	rowTypeTimerTask
@@ -84,7 +84,7 @@ const (
 
 const (
 	// Row types for table tasks
-	rowTypeTask     = iota
+	rowTypeTask = iota
 	rowTypeTaskList
 )
 
@@ -1856,7 +1856,7 @@ func (d *cassandraPersistence) GetTimerIndexTasks(request *GetTimerIndexTasksReq
 }
 
 func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferTasks []Task, domainID, workflowID,
-runID string, cqlNowTimestamp int64) {
+	runID string, cqlNowTimestamp int64) {
 	targetDomainID := domainID
 	for _, task := range transferTasks {
 		var taskList string

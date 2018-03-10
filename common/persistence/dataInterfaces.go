@@ -37,14 +37,14 @@ const (
 
 // Workflow execution states
 const (
-	WorkflowStateCreated   = iota
+	WorkflowStateCreated = iota
 	WorkflowStateRunning
 	WorkflowStateCompleted
 )
 
 // Workflow execution close status
 const (
-	WorkflowCloseStatusNone           = iota
+	WorkflowCloseStatusNone = iota
 	WorkflowCloseStatusCompleted
 	WorkflowCloseStatusFailed
 	WorkflowCloseStatusCanceled
@@ -67,7 +67,7 @@ const (
 
 // Transfer task types
 const (
-	TransferTaskTypeDecisionTask        = iota
+	TransferTaskTypeDecisionTask = iota
 	TransferTaskTypeActivityTask
 	TransferTaskTypeCloseExecution
 	TransferTaskTypeCancelExecution
@@ -78,7 +78,7 @@ const (
 
 // Types of timers
 const (
-	TaskTypeDecisionTimeout    = iota
+	TaskTypeDecisionTimeout = iota
 	TaskTypeActivityTimeout
 	TaskTypeUserTimer
 	TaskTypeWorkflowTimeout
@@ -165,12 +165,13 @@ type (
 		ClientImpl                   string
 	}
 
-	// ReplicationState represents
+	// ReplicationState represents mutable state information for global domains.
+	// This information is used by replication protocol when applying events from remote clusters
 	ReplicationState struct {
-		CurrentVersion   int64
-		StartVersion     int64
-		LastWriteVersion int64
-		LastWriteEventID int64
+		CurrentVersion      int64
+		StartVersion        int64
+		LastWriteVersion    int64
+		LastWriteEventID    int64
 		LastReplicationInfo map[string]*ReplicationInfo
 	}
 
@@ -321,7 +322,6 @@ type (
 	// ReplicationTask is the transfer task created for shipping history replication events to other clusters
 	ReplicationTask struct {
 		TaskID              int64
-		DomainID            string
 		FirstEventID        int64
 		NextEventID         int64
 		Version             int64

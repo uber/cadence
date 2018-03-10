@@ -1311,7 +1311,6 @@ func (s *cassandraPersistenceSuite) TestReplicationTransferTaskTasks() {
 
 	transferTasks := []Task{&ReplicationTask{
 		TaskID:       s.GetNextSequenceNumber(),
-		DomainID:     domainID,
 		FirstEventID: int64(1),
 		NextEventID:  int64(3),
 		Version:      int64(9),
@@ -1370,7 +1369,6 @@ func (s *cassandraPersistenceSuite) TestWorkflowReplicationState() {
 
 	replicationTasks := []Task{&ReplicationTask{
 		TaskID:       s.GetNextSequenceNumber(),
-		DomainID:     domainID,
 		FirstEventID: int64(1),
 		NextEventID:  int64(3),
 		Version:      int64(9),
@@ -1484,7 +1482,6 @@ func (s *cassandraPersistenceSuite) TestWorkflowReplicationState() {
 
 	replicationTasks1 := []Task{&ReplicationTask{
 		TaskID:       s.GetNextSequenceNumber(),
-		DomainID:     domainID,
 		FirstEventID: int64(3),
 		NextEventID:  int64(5),
 		Version:      int64(10),
