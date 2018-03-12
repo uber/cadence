@@ -109,7 +109,7 @@ const (
 	localHostPort = "127.0.0.1:7933"
 
 	maxOutputStringLength = 200 // max length for output string
-	maxWorkflowTypeLength = 32 // max item length for output workflow type in table
+	maxWorkflowTypeLength = 32  // max item length for output workflow type in table
 
 	defaultTimeFormat                = time.RFC3339 // used for converting UnixNano to string like 2018-02-15T16:16:36-08:00
 	defaultDomainRetentionDays       = 3
@@ -946,9 +946,9 @@ func trimWorkflowType(str string) string {
 	res := str
 	if len(str) >= maxWorkflowTypeLength {
 		items := strings.Split(str, "/")
-		res = items[len(items) - 1]
+		res = items[len(items)-1]
 		if len(res) >= maxWorkflowTypeLength {
-			res = "..." + res[len(res) - maxWorkflowTypeLength:]
+			res = "..." + res[len(res)-maxWorkflowTypeLength:]
 		} else {
 			res = ".../" + res
 		}
