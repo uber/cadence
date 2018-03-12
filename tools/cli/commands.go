@@ -21,7 +21,6 @@
 package cli
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -78,6 +77,8 @@ const (
 	FlagReasonWithAlias           = FlagReason + ", re"
 	FlagOpen                      = "open"
 	FlagOpenWithAlias             = FlagOpen + ", op"
+	FlagMore                      = "more"
+	FlagMoreWithAlias             = FlagMore + ", m"
 	FlagPageSize                  = "pagesize"
 	FlagPageSizeWithAlias         = FlagPageSize + ", ps"
 	FlagEarliestTime              = "earliest_time"
@@ -108,6 +109,7 @@ const (
 	localHostPort = "127.0.0.1:7933"
 
 	maxOutputStringLength = 200 // max length for output string
+	maxWorkflowTypeLength = 32 // max item length for output workflow type in table
 
 	defaultTimeFormat                = time.RFC3339 // used for converting UnixNano to string like 2018-02-15T16:16:36-08:00
 	defaultDomainRetentionDays       = 3
@@ -120,6 +122,8 @@ var (
 	colorRed     = color.New(color.FgRed).SprintFunc()
 	colorMagenta = color.New(color.FgMagenta).SprintFunc()
 	colorGreen   = color.New(color.FgGreen).SprintFunc()
+
+	tableHeaderBlue = tablewriter.Colors{tablewriter.FgHiBlueColor}
 )
 
 // cBuilder is used to create cadence clients
@@ -610,6 +614,7 @@ func ListWorkflow(c *cli.Context) {
 	wfClient := getWorkflowClient(c)
 
 	queryOpen := c.Bool(FlagOpen)
+	more := c.Bool(FlagMore)
 	pageSize := c.Int(FlagPageSize)
 	earliestTime := parseTime(c.String(FlagEarliestTime), 0)
 	latestTime := parseTime(c.String(FlagLatestTime), time.Now().UnixNano())
@@ -621,36 +626,57 @@ func ListWorkflow(c *cli.Context) {
 		ExitIfError(errors.New("you can filter on workflow_id or workflow_type, but not on both"))
 	}
 
-	reader := bufio.NewReader(os.Stdin)
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetBorder(false)
+	table.SetColumnSeparator("|")
+	table.SetHeader([]string{"Workflow Type", "Workflow ID", "Run ID", "Start Time", "End Time"})
+	table.SetHeaderColor(tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue)
+	table.SetHeaderLine(false)
+
 	var result []*s.WorkflowExecutionInfo
 	var nextPageToken []byte
-	for {
+	prepareTable := func(next []byte) {
 		if queryOpen {
-			result, nextPageToken = listOpenWorkflow(wfClient, pageSize, earliestTime, latestTime, workflowID, workflowType, nextPageToken)
+			result, nextPageToken = listOpenWorkflow(wfClient, pageSize, earliestTime, latestTime, workflowID, workflowType, next)
 		} else {
-			result, nextPageToken = listClosedWorkflow(wfClient, pageSize, earliestTime, latestTime, workflowID, workflowType, nextPageToken)
+			result, nextPageToken = listClosedWorkflow(wfClient, pageSize, earliestTime, latestTime, workflowID, workflowType, next)
 		}
 
 		for _, e := range result {
-			fmt.Printf("%s, -w %s -r %s", e.Type.GetName(), e.Execution.GetWorkflowId(), e.Execution.GetRunId())
+			var startTime, closeTime string
 			if printRawTime {
-				fmt.Printf(" [%d, %d]\n", e.GetStartTime(), e.GetCloseTime())
+				startTime = fmt.Sprintf("%d", e.GetStartTime())
+				closeTime = fmt.Sprintf("%d", e.GetCloseTime())
 			} else {
-				fmt.Printf(" [%s, %s]\n", convertTime(e.GetStartTime()), convertTime(e.GetCloseTime()))
+				startTime = convertTime(e.GetStartTime())
+				closeTime = convertTime(e.GetCloseTime())
 			}
+			table.Append([]string{trimWorkflowType(e.Type.GetName()), e.Execution.GetWorkflowId(), e.Execution.GetRunId(), startTime, closeTime})
 		}
+	}
 
-		if len(result) < pageSize {
-			break
-		}
+	if !more { // default mode only show one page items
+		prepareTable(nil)
+		table.Render()
+	} else { // require input Enter to view next page
+		for {
+			prepareTable(nextPageToken)
+			table.Render()
+			table.ClearRows()
 
-		fmt.Println("Press C then Enter to show more result, press any other key then Enter to quit: ")
-		input, _ := reader.ReadString('\n')
-		c := []byte(input)[0]
-		if c == 'C' || c == 'c' {
-			continue
-		} else {
-			break
+			if len(result) < pageSize {
+				break
+			}
+
+			fmt.Printf("Press %s to show next page, press %s to quit: ",
+				color.GreenString("Enter"), color.RedString("any other key then Enter"))
+			var input string
+			fmt.Scanln(&input)
+			if strings.Trim(input, " ") == "" {
+				continue
+			} else {
+				break
+			}
 		}
 	}
 }
@@ -728,6 +754,8 @@ func DescribeTaskList(c *cli.Context) {
 	table.SetBorder(false)
 	table.SetColumnSeparator("|")
 	table.SetHeader([]string{"Poller Identity", "Last Access Time"})
+	table.SetHeaderLine(false)
+	table.SetHeaderColor(tableHeaderBlue, tableHeaderBlue)
 	for _, poller := range pollers {
 		table.Append([]string{poller.GetIdentity(), convertTime(poller.GetLastAccessTime())})
 	}
@@ -911,4 +939,19 @@ func printRunStatus(event *s.HistoryEvent) {
 		fmt.Printf("  Status: %s\n", colorRed("CANCELED"))
 		fmt.Printf("  Detail: %s\n", string(event.WorkflowExecutionCanceledEventAttributes.Details))
 	}
+}
+
+// in case workflow type is too long to show in table, trim it like .../example.Workflow
+func trimWorkflowType(str string) string {
+	res := str
+	if len(str) >= maxWorkflowTypeLength {
+		items := strings.Split(str, "/")
+		res = items[len(items) - 1]
+		if len(res) >= maxWorkflowTypeLength {
+			res = "..." + res[len(res) - maxWorkflowTypeLength:]
+		} else {
+			res = ".../" + res
+		}
+	}
+	return res
 }

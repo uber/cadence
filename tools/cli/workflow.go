@@ -228,12 +228,17 @@ func newWorkflowCommands() []cli.Command {
 			},
 		},
 		{
-			Name:  "list",
-			Usage: "list open or closed workflow executions",
+			Name:        "list",
+			Usage:       "list open or closed workflow executions",
+			Description: "list one page (default size 10 items) by default, use flag --pagesize to change page size",
 			Flags: []cli.Flag{
 				cli.BoolFlag{
 					Name:  FlagOpenWithAlias,
-					Usage: "list for open workflow executions, default is to list for closed ones",
+					Usage: "List for open workflow executions, default is to list for closed ones",
+				},
+				cli.BoolFlag{
+					Name:  FlagMoreWithAlias,
+					Usage: "List more pages, default is to list one page of default page size 10",
 				},
 				cli.IntFlag{
 					Name:  FlagPageSizeWithAlias,
