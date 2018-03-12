@@ -18,22 +18,30 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package dynamicconfig
+package cli
 
-import (
-	"testing"
+import "github.com/urfave/cli"
 
-	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
-	"github.com/uber-common/bark"
-)
-
-func BenchmarkGetIntProperty(b *testing.B) {
-	client := newInMemoryClient()
-	cln := NewCollection(client, bark.NewLoggerFromLogrus(logrus.New()))
-	key := MatchingMaxTaskBatchSize
-	for i := 0; i < b.N; i++ {
-		size := cln.GetIntProperty(key, 10)
-		assert.Equal(b, 10, size())
+func newTaskListCommands() []cli.Command {
+	return []cli.Command{
+		{
+			Name:    "describe",
+			Aliases: []string{"desc"},
+			Usage:   "Describe pollers info of tasklist",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagTaskListWithAlias,
+					Usage: "TaskList description",
+				},
+				cli.StringFlag{
+					Name:  FlagTaskListTypeWithAlias,
+					Value: "decision",
+					Usage: "Optional TaskList type [decision|activity]",
+				},
+			},
+			Action: func(c *cli.Context) {
+				DescribeTaskList(c)
+			},
+		},
 	}
 }
