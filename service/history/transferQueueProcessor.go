@@ -347,6 +347,8 @@ func (t *transferQueueProcessorImpl) processActivityTask(task *persistence.Trans
 		logging.LogDuplicateTransferTaskEvent(t.logger, persistence.TransferTaskTypeActivityTask, task.TaskID, task.ScheduleID)
 	}
 
+	// release the context lock since we no longer need mutable state builder and
+	// the rest of logic is making RPC call, which takes time.
 	release()
 	if timeout != 0 {
 		err = t.matchingClient.AddActivityTask(nil, &m.AddActivityTaskRequest{
@@ -403,6 +405,8 @@ func (t *transferQueueProcessorImpl) processDecisionTask(task *persistence.Trans
 		timeout = msBuilder.executionInfo.StickyScheduleToStartTimeout
 	}
 
+	// release the context lock since we no longer need mutable state builder and
+	// the rest of logic is making RPC call, which takes time.
 	release()
 	err = t.matchingClient.AddDecisionTask(nil, &m.AddDecisionTaskRequest{
 		DomainUUID:                    common.StringPtr(domainID),
@@ -456,9 +460,11 @@ func (t *transferQueueProcessorImpl) processCloseExecution(task *persistence.Tra
 		return err
 	}
 
-	isChildWorkflow := msBuilder.hasParentExecution()
-	workflowCloseStatus := msBuilder.executionInfo.CloseStatus
-	completionEvent, _ := msBuilder.GetCompletionEvent()
+	replyToParentWorkflow := msBuilder.hasParentExecution() && msBuilder.executionInfo.CloseStatus != persistence.WorkflowCloseStatusContinuedAsNew
+	var completionEvent *workflow.HistoryEvent
+	if replyToParentWorkflow {
+		completionEvent, _ = msBuilder.GetCompletionEvent()
+	}
 	parentDomainID := msBuilder.executionInfo.ParentDomainID
 	parentWorkflowID := msBuilder.executionInfo.ParentWorkflowID
 	parentRunID := msBuilder.executionInfo.ParentRunID
@@ -467,12 +473,14 @@ func (t *transferQueueProcessorImpl) processCloseExecution(task *persistence.Tra
 	workflowTypeName := msBuilder.executionInfo.WorkflowTypeName
 	workflowStartTimestamp := msBuilder.executionInfo.StartTimestamp.UnixNano()
 	workflowCloseTimestamp := msBuilder.getLastUpdatedTimestamp()
-	workflowStatue := getWorkflowExecutionCloseStatus(msBuilder.executionInfo.CloseStatus)
+	workflowCloseStatus := getWorkflowExecutionCloseStatus(msBuilder.executionInfo.CloseStatus)
 	workflowHistoryLength := msBuilder.GetNextEventID()
 
+	// release the context lock since we no longer need mutable state builder and
+	// the rest of logic is making RPC call, which takes time.
 	release()
 	// Communicate the result to parent execution if this is Child Workflow execution
-	if isChildWorkflow && workflowCloseStatus != persistence.WorkflowCloseStatusContinuedAsNew {
+	if replyToParentWorkflow {
 		err = t.historyClient.RecordChildExecutionCompleted(nil, &history.RecordChildExecutionCompletedRequest{
 			DomainUUID: common.StringPtr(parentDomainID),
 			WorkflowExecution: &workflow.WorkflowExecution{
@@ -515,7 +523,7 @@ func (t *transferQueueProcessorImpl) processCloseExecution(task *persistence.Tra
 		WorkflowTypeName: workflowTypeName,
 		StartTimestamp:   workflowStartTimestamp,
 		CloseTimestamp:   workflowCloseTimestamp,
-		Status:           workflowStatue,
+		Status:           workflowCloseStatus,
 		HistoryLength:    workflowHistoryLength,
 		RetentionSeconds: retentionSeconds,
 	})
@@ -749,6 +757,8 @@ func (t *transferQueueProcessorImpl) processSignalExecution(task *persistence.Tr
 		return nil
 	}
 
+	// release the context lock since we no longer need mutable state builder and
+	// the rest of logic is making RPC call, which takes time.
 	release()
 	// remove signalRequestedID from target workflow, after Signal detail is removed from source workflow
 	removeRequest := &history.RemoveSignalMutableStateRequest{
