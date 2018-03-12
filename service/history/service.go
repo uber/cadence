@@ -55,6 +55,7 @@ type Config struct {
 	TimerProcessorGetFailureRetryCount    int
 	TimerProcessorUpdateAckInterval       time.Duration
 	TimerProcessorForceUpdateInterval     time.Duration
+	TimerCreationTolerance                time.Duration
 
 	// TransferQueueProcessor settings
 	TransferTaskBatchSize                int
@@ -91,6 +92,7 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int) *Config {
 		TimerProcessorGetFailureRetryCount:          5,
 		TimerProcessorUpdateAckInterval:             10 * time.Second,
 		TimerProcessorForceUpdateInterval:           10 * time.Minute,
+		TimerCreationTolerance:                      10 * time.Second,
 		TransferTaskBatchSize:                       10,
 		TransferProcessorMaxPollRPS:                 100,
 		TransferProcessorMaxPollInterval:            60 * time.Second,
