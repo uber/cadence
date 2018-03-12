@@ -37,6 +37,10 @@ func newWorkflowCommands() []cli.Command {
 					Usage: "RunID",
 				},
 				cli.BoolFlag{
+					Name:  FlagPrintDateTimeWithAlias,
+					Usage: "Print time stamp",
+				},
+				cli.BoolFlag{
 					Name:  FlagPrintRawTimeWithAlias,
 					Usage: "Print raw time stamp",
 				},
@@ -53,6 +57,20 @@ func newWorkflowCommands() []cli.Command {
 			Name:        "showid",
 			Usage:       "show workflow history with given workflow_id and optional run_id (a shortcut of `show -w <wid> -r <rid>`)",
 			Description: "cadence workflow showid <workflow_id> <run_id>. workflow_id is required; run_id is optional",
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name:  FlagPrintDateTimeWithAlias,
+					Usage: "Print time stamp",
+				},
+				cli.BoolFlag{
+					Name:  FlagPrintRawTimeWithAlias,
+					Usage: "Print raw time stamp",
+				},
+				cli.StringFlag{
+					Name:  FlagOutputFilenameWithAlias,
+					Usage: "Serialize history event to a file",
+				},
+			},
 			Action: func(c *cli.Context) {
 				ShowHistoryWithWID(c)
 			},

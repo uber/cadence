@@ -86,6 +86,8 @@ const (
 	FlagLatestTimeWithAlias       = FlagLatestTime + ", lt"
 	FlagPrintRawTime              = "print_raw_time"
 	FlagPrintRawTimeWithAlias     = FlagPrintRawTime + ", prt"
+	FlagPrintDateTime             = "print_datetime"
+	FlagPrintDateTimeWithAlias    = FlagPrintDateTime + ", pdt"
 	FlagDescription               = "description"
 	FlagDescriptionWithAlias      = FlagDescription + ", desc"
 	FlagOwnerEmail                = "owner_email"
@@ -297,6 +299,7 @@ func ShowHistoryWithWID(c *cli.Context) {
 func showHistoryHelper(c *cli.Context, wid, rid string) {
 	wfClient := getWorkflowClient(c)
 
+	printDateTime := c.Bool(FlagPrintDateTime)
 	printRawTime := c.Bool(FlagPrintRawTime)
 	outputFileName := c.String(FlagOutputFilename)
 
@@ -307,13 +310,19 @@ func showHistoryHelper(c *cli.Context, wid, rid string) {
 		ExitIfError(err)
 	}
 
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetBorder(false)
+	table.SetColumnSeparator("")
 	for _, e := range history.Events {
 		if printRawTime {
-			fmt.Printf("%d, %d, %s\n", e.GetEventId(), e.GetTimestamp(), HistoryEventToString(e))
+			table.Append([]string{strconv.FormatInt(e.GetEventId(), 10), strconv.FormatInt(e.GetTimestamp(), 10), ColorEvent(e), HistoryEventToString(e)})
+		} else if printDateTime {
+			table.Append([]string{strconv.FormatInt(e.GetEventId(), 10), convertTime(e.GetTimestamp()), ColorEvent(e), HistoryEventToString(e)})
 		} else {
-			fmt.Printf("%d, %s, %s\n", e.GetEventId(), convertTime(e.GetTimestamp()), HistoryEventToString(e))
+			table.Append([]string{strconv.FormatInt(e.GetEventId(), 10), ColorEvent(e), HistoryEventToString(e)})
 		}
 	}
+	table.Render()
 
 	if outputFileName != "" {
 		serializer := &JSONHistorySerializer{}
@@ -718,7 +727,7 @@ func DescribeTaskList(c *cli.Context) {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetBorder(false)
 	table.SetColumnSeparator("|")
-	table.Append([]string{"Poller Identity", "Last Access Time"})
+	table.SetHeader([]string{"Poller Identity", "Last Access Time"})
 	for _, poller := range pollers {
 		table.Append([]string{poller.GetIdentity(), convertTime(poller.GetLastAccessTime())})
 	}
