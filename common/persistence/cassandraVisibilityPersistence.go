@@ -117,9 +117,8 @@ const (
 
 type (
 	cassandraVisibilityPersistence struct {
-		session      *gocql.Session
-		lowConslevel gocql.Consistency
-		logger       bark.Logger
+		session *gocql.Session
+		logger  bark.Logger
 	}
 )
 
@@ -138,7 +137,7 @@ func NewCassandraVisibilityPersistence(
 		return nil, err
 	}
 
-	return &cassandraVisibilityPersistence{session: session, lowConslevel: gocql.One, logger: logger}, nil
+	return &cassandraVisibilityPersistence{session: session, logger: logger}, nil
 }
 
 // Close releases the resources held by this object
@@ -230,7 +229,7 @@ func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutions(
 		request.DomainUUID,
 		domainPartition,
 		common.UnixNanoToCQLTimestamp(request.EarliestStartTime),
-		common.UnixNanoToCQLTimestamp(request.LatestStartTime)).Consistency(v.lowConslevel)
+		common.UnixNanoToCQLTimestamp(request.LatestStartTime))
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
 		// TODO: should return a bad request error if the token is invalid
@@ -270,7 +269,7 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutions(
 		request.DomainUUID,
 		domainPartition,
 		common.UnixNanoToCQLTimestamp(request.EarliestStartTime),
-		common.UnixNanoToCQLTimestamp(request.LatestStartTime)).Consistency(v.lowConslevel)
+		common.UnixNanoToCQLTimestamp(request.LatestStartTime))
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
 		// TODO: should return a bad request error if the token is invalid
@@ -311,7 +310,7 @@ func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutionsByType(
 		domainPartition,
 		common.UnixNanoToCQLTimestamp(request.EarliestStartTime),
 		common.UnixNanoToCQLTimestamp(request.LatestStartTime),
-		request.WorkflowTypeName).Consistency(v.lowConslevel)
+		request.WorkflowTypeName)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
 		// TODO: should return a bad request error if the token is invalid
@@ -352,7 +351,7 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByType(
 		domainPartition,
 		common.UnixNanoToCQLTimestamp(request.EarliestStartTime),
 		common.UnixNanoToCQLTimestamp(request.LatestStartTime),
-		request.WorkflowTypeName).Consistency(v.lowConslevel)
+		request.WorkflowTypeName)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
 		// TODO: should return a bad request error if the token is invalid
@@ -393,7 +392,7 @@ func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutionsByWorkflowID(
 		domainPartition,
 		common.UnixNanoToCQLTimestamp(request.EarliestStartTime),
 		common.UnixNanoToCQLTimestamp(request.LatestStartTime),
-		request.WorkflowID).Consistency(v.lowConslevel)
+		request.WorkflowID)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
 		// TODO: should return a bad request error if the token is invalid
@@ -434,7 +433,7 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByWorkflowI
 		domainPartition,
 		common.UnixNanoToCQLTimestamp(request.EarliestStartTime),
 		common.UnixNanoToCQLTimestamp(request.LatestStartTime),
-		request.WorkflowID).Consistency(v.lowConslevel)
+		request.WorkflowID)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
 		// TODO: should return a bad request error if the token is invalid
@@ -475,7 +474,7 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByStatus(
 		domainPartition,
 		common.UnixNanoToCQLTimestamp(request.EarliestStartTime),
 		common.UnixNanoToCQLTimestamp(request.LatestStartTime),
-		request.Status).Consistency(v.lowConslevel)
+		request.Status)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
 		// TODO: should return a bad request error if the token is invalid
