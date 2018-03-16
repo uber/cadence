@@ -198,8 +198,13 @@ func (tb *timerBuilder) GetUserTimerTaskIfNeeded(msBuilder *mutableStateBuilder)
 	if timerTask != nil {
 		// Update the task ID tracking if it has created timer task or not.
 		ti := tb.pendingUserTimers[tb.userTimers[0].TimerID]
-		ti.TaskID = 1
+		// TODO figure out why we use `TaskID` for timer status
+		// Ref: AddTimerStartedEvent in mutable state builder
+		ti.TaskID = TimerTaskStatusCreated
+
 		// TODO: We append updates to timer tasks twice.  Why?
+		// the function below also append update to mutable state builder updateTimerInfos
+		// so the update is necessary for Cassandra update
 		msBuilder.UpdateUserTimer(ti.TimerID, ti)
 	}
 	return timerTask

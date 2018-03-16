@@ -1483,7 +1483,8 @@ func (e *mutableStateBuilder) AddTimerStartedEvent(decisionCompletedEventID int6
 		TimerID:    timerID,
 		ExpiryTime: expiryTime,
 		StartedID:  *event.EventId,
-		TaskID:     TimerTaskStatusNone,
+		// TODO figure out why we use `TaskID` for timer status
+		TaskID: TimerTaskStatusNone,
 	}
 
 	e.pendingTimerInfoIDs[timerID] = ti
