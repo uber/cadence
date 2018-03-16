@@ -32,7 +32,7 @@ import (
 type (
 	timerSuite struct {
 		suite.Suite
-		timer Timer
+		timerGate TimerGate
 	}
 )
 
@@ -53,21 +53,21 @@ func (s *timerSuite) TearDownSuite() {
 }
 
 func (s *timerSuite) SetupTest() {
-	s.timer = NewTimer()
+	s.timerGate = NewTimerGate()
 }
 
 func (s *timerSuite) TearDownTest() {
-	s.timer.Close()
+	s.timerGate.Close()
 }
 
 func (s *timerSuite) TestTimerFire() {
 	now := time.Now()
 	timerDelay := now.Add(1 * time.Second)
 	deadlineDelay := now.Add(2 * time.Second)
-	s.timer.UpdateTimer(timerDelay)
+	s.timerGate.Update(timerDelay)
 
 	select {
-	case <-s.timer.GetTimerChan():
+	case <-s.timerGate.FireChan():
 	case <-time.NewTimer(deadlineDelay.Sub(now)).C:
 		s.Fail("timer should fire before test deadline")
 	}
@@ -78,11 +78,11 @@ func (s *timerSuite) TestTimerFireAfterUpdate_Updated() {
 	timerDelay := now.Add(5 * time.Second)
 	updatedTimerDelay := now.Add(1 * time.Second)
 	deadlineDelay := now.Add(3 * time.Second)
-	s.timer.UpdateTimer(timerDelay)
-	s.True(s.timer.UpdateTimer(updatedTimerDelay))
+	s.timerGate.Update(timerDelay)
+	s.True(s.timerGate.Update(updatedTimerDelay))
 
 	select {
-	case <-s.timer.GetTimerChan():
+	case <-s.timerGate.FireChan():
 	case <-time.NewTimer(deadlineDelay.Sub(now)).C:
 		s.Fail("timer should fire before test deadline")
 	}
@@ -93,11 +93,11 @@ func (s *timerSuite) TestTimerFireAfterUpdate_NotUpdated() {
 	timerDelay := now.Add(1 * time.Second)
 	updatedTimerDelay := now.Add(3 * time.Second)
 	deadlineDelay := now.Add(2 * time.Second)
-	s.timer.UpdateTimer(timerDelay)
-	s.False(s.timer.UpdateTimer(updatedTimerDelay))
+	s.timerGate.Update(timerDelay)
+	s.False(s.timerGate.Update(updatedTimerDelay))
 
 	select {
-	case <-s.timer.GetTimerChan():
+	case <-s.timerGate.FireChan():
 	case <-time.NewTimer(deadlineDelay.Sub(now)).C:
 		s.Fail("timer should fire before test deadline")
 	}
@@ -108,7 +108,7 @@ func (s *timerSuite) TestTimerWillFire() {
 	timerDelay := now.Add(2 * time.Second)
 	timeBeforeTimer := now.Add(1 * time.Second)
 	timeAfterTimer := now.Add(3 * time.Second)
-	s.timer.UpdateTimer(timerDelay)
-	s.True(s.timer.WillFireAfter(timeBeforeTimer))
-	s.False(s.timer.WillFireAfter(timeAfterTimer))
+	s.timerGate.Update(timerDelay)
+	s.True(s.timerGate.FireAfter(timeBeforeTimer))
+	s.False(s.timerGate.FireAfter(timeAfterTimer))
 }

@@ -54,12 +54,15 @@ type (
 		isStopped        int32
 		shutdownWG       sync.WaitGroup
 		shutdownCh       chan struct{}
-		newTimerCh       chan time.Time
+		newTimerCh       chan struct{}
 		config           *Config
 		logger           bark.Logger
 		metricsClient    metrics.Client
 		timerFiredCount  uint64
 		ackMgr           *timerAckMgr
+
+		newTimeLock sync.Mutex
+		newTime     time.Time
 	}
 
 	timerAckMgr struct {
@@ -87,7 +90,7 @@ func newTimerQueueProcessor(shard ShardContext, historyService *historyEngineImp
 		cache:            historyService.historyCache,
 		executionManager: executionManager,
 		shutdownCh:       make(chan struct{}),
-		newTimerCh:       make(chan time.Time, shard.GetConfig().TimerProcessorTimerChanSize),
+		newTimerCh:       make(chan struct{}, 1),
 		config:           shard.GetConfig(),
 		logger:           l,
 		metricsClient:    historyService.metricsClient,
@@ -131,11 +134,11 @@ func (t *timerQueueProcessorImpl) NotifyNewTimer(timerTasks []persistence.Task) 
 	}
 	t.metricsClient.AddCounter(metrics.TimerQueueProcessorScope, metrics.NewTimerCounter, int64(len(timerTasks)))
 
-	newEarlistTime := persistence.GetVisibilityTSFrom(timerTasks[0])
+	newTime := persistence.GetVisibilityTSFrom(timerTasks[0])
 	for _, task := range timerTasks {
 		ts := persistence.GetVisibilityTSFrom(task)
-		if ts.Before(newEarlistTime) {
-			newEarlistTime = ts
+		if ts.Before(newTime) {
+			newTime = ts
 		}
 
 		switch task.GetType() {
@@ -152,11 +155,16 @@ func (t *timerQueueProcessorImpl) NotifyNewTimer(timerTasks []persistence.Task) 
 		}
 	}
 
-	select {
-	case t.newTimerCh <- newEarlistTime:
-		// Notified about new timer.
-	default:
-		// Channel "full" -> drop and move on, this will happen only if service is in high load.
+	t.newTimeLock.Lock()
+	defer t.newTimeLock.Unlock()
+	if t.newTime.IsZero() || newTime.Before(t.newTime) {
+		t.newTime = newTime
+		select {
+		case t.newTimerCh <- struct{}{}:
+			// Notified about new time.
+		default:
+			// Channel "full" -> drop and move on, this will happen only if service is in high load.
+		}
 	}
 }
 
@@ -192,22 +200,18 @@ RetryProcessor:
 }
 
 func (t *timerQueueProcessorImpl) internalProcessor(tasksCh chan<- *persistence.TimerTaskInfo) error {
-	timer := NewTimer()
-	defer timer.Close()
+	timerGate := NewTimerGate()
+	defer timerGate.Close()
 
 	updateAckChan := time.NewTicker(t.config.TimerProcessorUpdateAckInterval).C
 	var nextKeyTask *persistence.TimerTaskInfo
 
 continueProcessor:
 	for {
-		var newEarlistTime time.Time
-
-		if nextKeyTask == nil || timer.WillFireAfter(time.Now()) {
-			timerChan := timer.GetTimerChan()
-
+		if nextKeyTask == nil || timerGate.FireAfter(time.Now()) {
 			// Wait until one of four things occurs:
 			// 1. we get notified of a new message
-			// 2. the timer fires (message scheduled to be delivered)
+			// 2. the timer gate fires (message scheduled to be delivered)
 			// 3. shutdown was triggered.
 			// 4. updating ack level
 			//
@@ -217,32 +221,33 @@ continueProcessor:
 				t.logger.Debug("Timer queue processor pump shutting down.")
 				return nil
 
-			case <-timerChan:
+			case <-timerGate.FireChan():
 				// Timer Fired.
-
-			case newEarlistTime = <-t.newTimerCh:
-				// New Timer has arrived.
 
 			case <-updateAckChan:
 				t.ackMgr.updateAckLevel()
 				continue continueProcessor
-			}
-		}
 
-		if !newEarlistTime.IsZero() {
-			t.metricsClient.IncCounter(metrics.TimerQueueProcessorScope, metrics.NewTimerNotifyCounter)
-			t.logger.Debugf("Woke up by the timer")
+			case <-t.newTimerCh:
+				t.newTimeLock.Lock()
+				newTime := t.newTime
+				t.newTime = time.Time{}
+				t.newTimeLock.Unlock()
+				// New Timer has arrived.
+				t.metricsClient.IncCounter(metrics.TimerQueueProcessorScope, metrics.NewTimerNotifyCounter)
+				t.logger.Debugf("Woke up by the timer")
 
-			if timer.UpdateTimer(newEarlistTime) {
-				// this means timer is updated, to the new earltest time
-				// reset the nextKeyTask as the new timer is expected to fire before previously read nextKeyTask
-				nextKeyTask = nil
-			}
+				if timerGate.Update(newTime) {
+					// this means timer is updated, to the new time provided
+					// reset the nextKeyTask as the new timer is expected to fire before previously read nextKeyTask
+					nextKeyTask = nil
+				}
 
-			t.logger.Debugf("%v: Next key after woke up by timer: %v", time.Now().UTC(), newEarlistTime.UTC())
+				t.logger.Debugf("%v: Next key after woke up by timer: %v", time.Now().UTC(), newTime.UTC())
 
-			if timer.WillFireAfter(time.Now()) {
-				continue continueProcessor
+				if timerGate.FireAfter(time.Now()) {
+					continue continueProcessor
+				}
 			}
 		}
 
@@ -271,7 +276,7 @@ continueProcessor:
 			nextKey := SequenceID{VisibilityTimestamp: nextKeyTask.VisibilityTimestamp, TaskID: nextKeyTask.TaskID}
 			t.logger.Debugf("%s: GetNextKey: %s", time.Now().UTC(), nextKey)
 
-			timer.UpdateTimer(nextKey.VisibilityTimestamp)
+			timerGate.Update(nextKey.VisibilityTimestamp)
 		}
 	}
 }

@@ -51,7 +51,6 @@ type Config struct {
 	// TimerQueueProcessor settings
 	TimerTaskBatchSize                    int
 	ProcessTimerTaskWorkerCount           int
-	TimerProcessorTimerChanSize           int
 	TimerProcessorUpdateFailureRetryCount int
 	TimerProcessorGetFailureRetryCount    int
 	TimerProcessorUpdateAckInterval       time.Duration
@@ -88,7 +87,6 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int) *Config {
 		DefaultStartToCloseActivityTimeoutInSecs:    10,
 		TimerTaskBatchSize:                          100,
 		ProcessTimerTaskWorkerCount:                 30,
-		TimerProcessorTimerChanSize:                 1024,
 		TimerProcessorUpdateFailureRetryCount:       5,
 		TimerProcessorGetFailureRetryCount:          5,
 		TimerProcessorUpdateAckInterval:             10 * time.Second,

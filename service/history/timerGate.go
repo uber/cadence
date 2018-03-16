@@ -26,26 +26,26 @@ import (
 )
 
 type (
-	// Timer interface
-	Timer interface {
-		// GetTimerChan return the channel which will be fired when time is up
-		GetTimerChan() <-chan bool
-		// WillFireAfter check will the timer get fired after a certain time
-		WillFireAfter(now time.Time) bool
-		// UpdateTimer update the timer, return true if update is a success
+	// TimerGate interface
+	TimerGate interface {
+		// FireChan return the channel which will be fired when time is up
+		FireChan() <-chan struct{}
+		// FireAfter check will the timer get fired after a certain time
+		FireAfter(now time.Time) bool
+		// Update update the timer gate, return true if update is a success
 		// success means timer is idle or timer is set with a sooner time to fire
-		UpdateTimer(nextTime time.Time) bool
+		Update(nextTime time.Time) bool
 		// Close shutdown the timer
 		Close()
 	}
 
-	// TimerImpl is an timer implementation,
+	// TimerGateImpl is an timer implementation,
 	// which basically is an wrrapper of golang's timer and
 	// additional feature
-	TimerImpl struct {
+	TimerGateImpl struct {
 		// the channel which will be used to proxy the fired timer
-		timerChan chan bool
-		closeChan chan bool
+		fireChan  chan struct{}
+		closeChan chan struct{}
 
 		// lock for timer and next wake up time
 		sync.Mutex
@@ -56,24 +56,24 @@ type (
 	}
 )
 
-// NewTimer create a new timer instance
-func NewTimer() Timer {
-	timer := &TimerImpl{
+// NewTimerGate create a new timer gate instance
+func NewTimerGate() TimerGate {
+	timer := &TimerGateImpl{
 		timer:          time.NewTimer(0),
 		nextWakeupTime: time.Time{},
-		timerChan:      make(chan bool),
-		closeChan:      make(chan bool),
+		fireChan:       make(chan struct{}),
+		closeChan:      make(chan struct{}),
 	}
 
 	go func() {
-		defer close(timer.timerChan)
+		defer close(timer.fireChan)
 		defer timer.timer.Stop()
 	loop:
 		for {
 			select {
 			case <-timer.timer.C:
 				// re-transmit on gateC
-				timer.timerChan <- true
+				timer.fireChan <- struct{}{}
 
 			case <-timer.closeChan:
 				// closed; cleanup and quit
@@ -85,29 +85,29 @@ func NewTimer() Timer {
 	return timer
 }
 
-// GetTimerChan return the channel which will be fired when time is up
-func (timer *TimerImpl) GetTimerChan() <-chan bool {
-	return timer.timerChan
+// FireChan return the channel which will be fired when time is up
+func (timerGate *TimerGateImpl) FireChan() <-chan struct{} {
+	return timerGate.fireChan
 }
 
-// WillFireAfter check will the timer get fired after a certain time
-func (timer *TimerImpl) WillFireAfter(now time.Time) bool {
-	return timer.nextWakeupTime.After(now)
+// FireAfter check will the timer get fired after a certain time
+func (timerGate *TimerGateImpl) FireAfter(now time.Time) bool {
+	return timerGate.nextWakeupTime.After(now)
 }
 
-// UpdateTimer update the timer, return true if update is a success
+// Update update the timer gate, return true if update is a success
 // success means timer is idle or timer is set with a sooner time to fire
-func (timer *TimerImpl) UpdateTimer(nextTime time.Time) bool {
+func (timerGate *TimerGateImpl) Update(nextTime time.Time) bool {
 	now := time.Now()
 
-	timer.Lock()
-	defer timer.Unlock()
-	if !timer.WillFireAfter(now) || timer.nextWakeupTime.After(nextTime) {
+	timerGate.Lock()
+	defer timerGate.Unlock()
+	if !timerGate.FireAfter(now) || timerGate.nextWakeupTime.After(nextTime) {
 		// if timer will not fire or next wake time is after the "next"
 		// then we need to update the timer to fire
-		timer.nextWakeupTime = nextTime
+		timerGate.nextWakeupTime = nextTime
 		// reset timer to fire when the next message should be made 'visible'
-		timer.timer.Reset(nextTime.Sub(now))
+		timerGate.timer.Reset(nextTime.Sub(now))
 
 		// Notifies caller that next notification is reset to fire at passed in 'next' visibility time
 		return true
@@ -117,6 +117,6 @@ func (timer *TimerImpl) UpdateTimer(nextTime time.Time) bool {
 }
 
 // Close shutdown the timer
-func (timer *TimerImpl) Close() {
-	close(timer.closeChan)
+func (timerGate *TimerGateImpl) Close() {
+	close(timerGate.closeChan)
 }
