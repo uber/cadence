@@ -42,6 +42,7 @@ var (
 	errTimerTaskNotFound          = errors.New("Timer task not found")
 	errFailedToAddTimeoutEvent    = errors.New("Failed to add timeout event")
 	errFailedToAddTimerFiredEvent = errors.New("Failed to add timer fired event")
+	emptyTime                     = time.Time{}
 	maxTimestamp                  = time.Unix(0, math.MaxInt64)
 )
 
@@ -231,7 +232,7 @@ continueProcessor:
 			case <-t.newTimerCh:
 				t.newTimeLock.Lock()
 				newTime := t.newTime
-				t.newTime = time.Time{}
+				t.newTime = emptyTime
 				t.newTimeLock.Unlock()
 				// New Timer has arrived.
 				t.metricsClient.IncCounter(metrics.TimerQueueProcessorScope, metrics.NewTimerNotifyCounter)
