@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/cluster"
 
 	"github.com/uber-common/bark"
 
@@ -50,6 +51,7 @@ type (
 		historyMgr          persistence.HistoryManager
 		metadataMgr         persistence.MetadataManager
 		executionMgrFactory persistence.ExecutionManagerFactory
+		clusterMetadata     cluster.Metadata
 		engineFactory       EngineFactory
 		shardClosedCh       chan int
 		isStarted           int32
@@ -83,8 +85,8 @@ type (
 
 func newShardController(host *membership.HostInfo, resolver membership.ServiceResolver,
 	shardMgr persistence.ShardManager, historyMgr persistence.HistoryManager, metadataMgr persistence.MetadataManager,
-	executionMgrFactory persistence.ExecutionManagerFactory, factory EngineFactory, config *Config,
-	logger bark.Logger, reporter metrics.Client) *shardController {
+	executionMgrFactory persistence.ExecutionManagerFactory, clusterMetadata cluster.Metadata, factory EngineFactory,
+	config *Config, logger bark.Logger, reporter metrics.Client) *shardController {
 	return &shardController{
 		host:                host,
 		hServiceResolver:    resolver,
@@ -93,6 +95,7 @@ func newShardController(host *membership.HostInfo, resolver membership.ServiceRe
 		historyMgr:          historyMgr,
 		metadataMgr:         metadataMgr,
 		executionMgrFactory: executionMgrFactory,
+		clusterMetadata:     clusterMetadata,
 		engineFactory:       factory,
 		historyShards:       make(map[int]*historyShardsItem),
 		shardClosedCh:       make(chan int, config.NumberOfShards),
@@ -106,15 +109,15 @@ func newShardController(host *membership.HostInfo, resolver membership.ServiceRe
 }
 
 func newHistoryShardsItem(shardID int, shardMgr persistence.ShardManager, historyMgr persistence.HistoryManager,
-	metadataMgr persistence.MetadataManager, executionMgrFactory persistence.ExecutionManagerFactory, factory EngineFactory,
-	host *membership.HostInfo, config *Config, logger bark.Logger, metricsClient metrics.Client) (*historyShardsItem, error) {
+	metadataMgr persistence.MetadataManager, executionMgrFactory persistence.ExecutionManagerFactory, clusterMetadata cluster.Metadata,
+	factory EngineFactory, host *membership.HostInfo, config *Config, logger bark.Logger, metricsClient metrics.Client) (*historyShardsItem, error) {
 
 	executionMgr, err := executionMgrFactory.CreateExecutionManager(shardID)
 	if err != nil {
 		return nil, err
 	}
 
-	domainCache := cache.NewDomainCache(metadataMgr, logger)
+	domainCache := cache.NewDomainCache(metadataMgr, clusterMetadata, logger)
 
 	return &historyShardsItem{
 		shardID:       shardID,
@@ -218,7 +221,7 @@ func (c *shardController) getOrCreateHistoryShardItem(shardID int) (*historyShar
 
 	if info.Identity() == c.host.Identity() {
 		shardItem, err := newHistoryShardsItem(shardID, c.shardMgr, c.historyMgr, c.metadataMgr,
-			c.executionMgrFactory, c.engineFactory, c.host, c.config, c.logger, c.metricsClient)
+			c.executionMgrFactory, c.clusterMetadata, c.engineFactory, c.host, c.config, c.logger, c.metricsClient)
 		if err != nil {
 			return nil, err
 		}
