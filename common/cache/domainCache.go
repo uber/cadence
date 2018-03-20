@@ -21,12 +21,14 @@
 package cache
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
+	workflow "github.com/uber/cadence/.gen/go/shared"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/persistence"
 
 	"github.com/uber-common/bark"
@@ -70,12 +72,6 @@ type (
 		isGlobalDomain    bool
 		expiry            time.Time
 		sync.RWMutex
-	}
-
-	domainNotActiveErr struct {
-		domainName     string
-		currentCluster string
-		activeCluster  string
 	}
 )
 
@@ -231,31 +227,10 @@ func (entry *domainCacheEntry) ShouldReplicateEvent() bool {
 		entry.isGlobalDomain && len(entry.replicationConfig.Clusters) > 1
 }
 
-func (entry *domainCacheEntry) GetDomainNotActiveErr() *domainNotActiveErr {
+func (entry *domainCacheEntry) GetDomainNotActiveErr() *workflow.DomainNotActiveError {
 	if entry.IsDomainActive() {
 		// domain is consider active
 		return nil
 	}
-	return newDomainNotActiveErr(entry.info.Name, entry.clusterMetadata.GetCurrentClusterName(), entry.replicationConfig.ActiveClusterName)
-}
-
-func newDomainNotActiveErr(domainName string, currentCluster string, activeCluster string) *domainNotActiveErr {
-	return &domainNotActiveErr{
-		domainName:     domainName,
-		currentCluster: currentCluster,
-		activeCluster:  activeCluster,
-	}
-}
-
-func (err *domainNotActiveErr) Error() string {
-	return fmt.Sprintf("Domain: %s is active in cluster: %s, while current cluster %s is a standby cluster.",
-		err.domainName, err.activeCluster, err.currentCluster)
-}
-
-func (err *domainNotActiveErr) GetCurrentCluster() string {
-	return err.currentCluster
-}
-
-func (err *domainNotActiveErr) GetActiveCluster() string {
-	return err.activeCluster
+	return errors.NewDomainNotActiveError(entry.info.Name, entry.clusterMetadata.GetCurrentClusterName(), entry.replicationConfig.ActiveClusterName)
 }
