@@ -111,7 +111,8 @@ const (
 	maxOutputStringLength = 200 // max length for output string
 	maxWorkflowTypeLength = 32  // max item length for output workflow type in table
 
-	defaultTimeFormat                = time.RFC3339 // used for converting UnixNano to string like 2018-02-15T16:16:36-08:00
+	defaultTimeFormat                = "15:04:05"   // used for converting UnixNano to string like 16:16:36 (only time)
+	defaultDateTimeFormat            = time.RFC3339 // used for converting UnixNano to string like 2018-02-15T16:16:36-08:00
 	defaultDomainRetentionDays       = 3
 	defaultContextTimeoutForLongPoll = 2 * time.Minute
 	defaultDecisionTimeoutInSeconds  = 10
@@ -321,7 +322,7 @@ func showHistoryHelper(c *cli.Context, wid, rid string) {
 		if printRawTime {
 			table.Append([]string{strconv.FormatInt(e.GetEventId(), 10), strconv.FormatInt(e.GetTimestamp(), 10), ColorEvent(e), HistoryEventToString(e)})
 		} else if printDateTime {
-			table.Append([]string{strconv.FormatInt(e.GetEventId(), 10), convertTime(e.GetTimestamp()), ColorEvent(e), HistoryEventToString(e)})
+			table.Append([]string{strconv.FormatInt(e.GetEventId(), 10), convertTime(e.GetTimestamp(), false), ColorEvent(e), HistoryEventToString(e)})
 		} else {
 			table.Append([]string{strconv.FormatInt(e.GetEventId(), 10), ColorEvent(e), HistoryEventToString(e)})
 		}
@@ -469,7 +470,7 @@ func RunWorkflow(c *cli.Context) {
 				removePrevious2LinesFromTerminal()
 				isTimeElapseExist = false
 			}
-			fmt.Printf("  %d, %s, %v\n", event.GetEventId(), convertTime(event.GetTimestamp()), event.GetEventType())
+			fmt.Printf("  %d, %s, %v\n", event.GetEventId(), convertTime(event.GetTimestamp(), false), event.GetEventType())
 			lastEvent = event
 		}
 		doneChan <- true
@@ -621,6 +622,7 @@ func ListWorkflow(c *cli.Context) {
 	workflowID := c.String(FlagWorkflowID)
 	workflowType := c.String(FlagWorkflowType)
 	printRawTime := c.Bool(FlagPrintRawTime)
+	printDateTime := c.Bool(FlagPrintDateTime)
 
 	if len(workflowID) > 0 && len(workflowType) > 0 {
 		ExitIfError(errors.New("you can filter on workflow_id or workflow_type, but not on both"))
@@ -648,8 +650,8 @@ func ListWorkflow(c *cli.Context) {
 				startTime = fmt.Sprintf("%d", e.GetStartTime())
 				closeTime = fmt.Sprintf("%d", e.GetCloseTime())
 			} else {
-				startTime = convertTime(e.GetStartTime())
-				closeTime = convertTime(e.GetCloseTime())
+				startTime = convertTime(e.GetStartTime(), !printDateTime)
+				closeTime = convertTime(e.GetCloseTime(), !printDateTime)
 			}
 			table.Append([]string{trimWorkflowType(e.Type.GetName()), e.Execution.GetWorkflowId(), e.Execution.GetRunId(), startTime, closeTime})
 		}
@@ -757,7 +759,7 @@ func DescribeTaskList(c *cli.Context) {
 	table.SetHeaderLine(false)
 	table.SetHeaderColor(tableHeaderBlue, tableHeaderBlue)
 	for _, poller := range pollers {
-		table.Append([]string{poller.GetIdentity(), convertTime(poller.GetLastAccessTime())})
+		table.Append([]string{poller.GetIdentity(), convertTime(poller.GetLastAccessTime(), false)})
 	}
 	table.Render()
 }
@@ -816,9 +818,15 @@ func getRequiredGlobalOption(c *cli.Context, optionName string) string {
 	return value
 }
 
-func convertTime(unixNano int64) string {
-	t2 := time.Unix(0, unixNano)
-	return t2.Format(defaultTimeFormat)
+func convertTime(unixNano int64, onlyTime bool) string {
+	t := time.Unix(0, unixNano)
+	var result string
+	if onlyTime {
+		result = t.Format(defaultTimeFormat)
+	} else {
+		result = t.Format(defaultDateTimeFormat)
+	}
+	return result
 }
 
 func parseTime(timeStr string, defaultValue int64) int64 {

@@ -265,6 +265,10 @@ func newWorkflowCommands() []cli.Command {
 					Name:  FlagPrintRawTimeWithAlias,
 					Usage: "Print raw time stamp",
 				},
+				cli.BoolFlag{
+					Name:  FlagPrintDateTimeWithAlias,
+					Usage: "Print full date time in '2006-01-02T15:04:05Z07:00' format",
+				},
 			},
 			Action: func(c *cli.Context) {
 				ListWorkflow(c)
