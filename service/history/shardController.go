@@ -52,6 +52,7 @@ type (
 		metadataMgr         persistence.MetadataManager
 		executionMgrFactory persistence.ExecutionManagerFactory
 		clusterMetadata     cluster.Metadata
+		domainCache         cache.DomainCache
 		engineFactory       EngineFactory
 		shardClosedCh       chan int
 		isStarted           int32
@@ -87,6 +88,9 @@ func newShardController(host *membership.HostInfo, resolver membership.ServiceRe
 	shardMgr persistence.ShardManager, historyMgr persistence.HistoryManager, metadataMgr persistence.MetadataManager,
 	executionMgrFactory persistence.ExecutionManagerFactory, clusterMetadata cluster.Metadata, factory EngineFactory,
 	config *Config, logger bark.Logger, reporter metrics.Client) *shardController {
+	logger = logger.WithFields(bark.Fields{
+		logging.TagWorkflowComponent: logging.TagValueShardController,
+	})
 	return &shardController{
 		host:                host,
 		hServiceResolver:    resolver,
@@ -96,28 +100,25 @@ func newShardController(host *membership.HostInfo, resolver membership.ServiceRe
 		metadataMgr:         metadataMgr,
 		executionMgrFactory: executionMgrFactory,
 		clusterMetadata:     clusterMetadata,
+		domainCache:         cache.NewDomainCache(metadataMgr, clusterMetadata, logger),
 		engineFactory:       factory,
 		historyShards:       make(map[int]*historyShardsItem),
 		shardClosedCh:       make(chan int, config.NumberOfShards),
 		shutdownCh:          make(chan struct{}),
-		logger: logger.WithFields(bark.Fields{
-			logging.TagWorkflowComponent: logging.TagValueShardController,
-		}),
-		config:        config,
-		metricsClient: reporter,
+		logger:              logger,
+		config:              config,
+		metricsClient:       reporter,
 	}
 }
 
 func newHistoryShardsItem(shardID int, shardMgr persistence.ShardManager, historyMgr persistence.HistoryManager,
-	metadataMgr persistence.MetadataManager, executionMgrFactory persistence.ExecutionManagerFactory, clusterMetadata cluster.Metadata,
+	domainCache cache.DomainCache, executionMgrFactory persistence.ExecutionManagerFactory, clusterMetadata cluster.Metadata,
 	factory EngineFactory, host *membership.HostInfo, config *Config, logger bark.Logger, metricsClient metrics.Client) (*historyShardsItem, error) {
 
 	executionMgr, err := executionMgrFactory.CreateExecutionManager(shardID)
 	if err != nil {
 		return nil, err
 	}
-
-	domainCache := cache.NewDomainCache(metadataMgr, clusterMetadata, logger)
 
 	return &historyShardsItem{
 		shardID:       shardID,
@@ -220,7 +221,7 @@ func (c *shardController) getOrCreateHistoryShardItem(shardID int) (*historyShar
 	}
 
 	if info.Identity() == c.host.Identity() {
-		shardItem, err := newHistoryShardsItem(shardID, c.shardMgr, c.historyMgr, c.metadataMgr,
+		shardItem, err := newHistoryShardsItem(shardID, c.shardMgr, c.historyMgr, c.domainCache,
 			c.executionMgrFactory, c.clusterMetadata, c.engineFactory, c.host, c.config, c.logger, c.metricsClient)
 		if err != nil {
 			return nil, err
