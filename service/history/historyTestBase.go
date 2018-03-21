@@ -33,8 +33,10 @@ import (
 	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
@@ -48,11 +50,13 @@ type (
 	// TestShardContext shard context for testing.
 	TestShardContext struct {
 		sync.RWMutex
+		service                service.Service
 		shardInfo              *persistence.ShardInfo
 		transferSequenceNumber int64
 		historyMgr             persistence.HistoryManager
 		executionMgr           persistence.ExecutionManager
 		domainCache            cache.DomainCache
+		clusterMetadata        cluster.Metadata
 		config                 *Config
 		logger                 bark.Logger
 		metricsClient          metrics.Client
@@ -69,7 +73,10 @@ var _ ShardContext = (*TestShardContext)(nil)
 
 func newTestShardContext(shardInfo *persistence.ShardInfo, transferSequenceNumber int64, historyMgr persistence.HistoryManager,
 	executionMgr persistence.ExecutionManager, domainCache cache.DomainCache, config *Config, logger bark.Logger) *TestShardContext {
+	clusterMetadata := cluster.GetTestClusterMetadata(false, false)
+	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	return &TestShardContext{
+		service:                service.NewTestService(clusterMetadata, nil, metricsClient, logger),
 		shardInfo:              shardInfo,
 		transferSequenceNumber: transferSequenceNumber,
 		historyMgr:             historyMgr,
@@ -77,8 +84,13 @@ func newTestShardContext(shardInfo *persistence.ShardInfo, transferSequenceNumbe
 		domainCache:            domainCache,
 		config:                 config,
 		logger:                 logger,
-		metricsClient:          metrics.NewClient(tally.NoopScope, metrics.History),
+		metricsClient:          metricsClient,
 	}
+}
+
+// GetService test implementation
+func (s *TestShardContext) GetService() service.Service {
+	return s.service
 }
 
 // GetExecutionManager test implementation
