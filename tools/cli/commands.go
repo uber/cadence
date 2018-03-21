@@ -116,6 +116,7 @@ const (
 	defaultDomainRetentionDays       = 3
 	defaultContextTimeoutForLongPoll = 2 * time.Minute
 	defaultDecisionTimeoutInSeconds  = 10
+	defaultPageSizeForList           = 500
 )
 
 // For color output to terminal
@@ -612,32 +613,89 @@ func queryWorkflowHelper(c *cli.Context, queryType string) {
 
 // ListWorkflow list workflow executions based on filters
 func ListWorkflow(c *cli.Context) {
+	more := c.Bool(FlagMore)
+	pageSize := c.Int(FlagPageSize)
+
+	table := createTableForListWorkflow(false)
+	prepareTable := listWorkflow(c, table)
+
+	if !more { // default mode only show one page items
+		prepareTable(nil)
+		table.Render()
+	} else { // require input Enter to view next page
+		var resultSize int
+		var nextPageToken []byte
+		for {
+			nextPageToken, resultSize = prepareTable(nextPageToken)
+			table.Render()
+			table.ClearRows()
+
+			if resultSize < pageSize {
+				break
+			}
+
+			fmt.Printf("Press %s to show next page, press %s to quit: ",
+				color.GreenString("Enter"), color.RedString("any other key then Enter"))
+			var input string
+			fmt.Scanln(&input)
+			if strings.Trim(input, " ") == "" {
+				continue
+			} else {
+				break
+			}
+		}
+	}
+}
+
+// ListAllWorkflow list all workflow executions based on filters
+func ListAllWorkflow(c *cli.Context) {
+	table := createTableForListWorkflow(true)
+	prepareTable := listWorkflow(c, table)
+	var resultSize int
+	var nextPageToken []byte
+	for {
+		nextPageToken, resultSize = prepareTable(nextPageToken)
+		if resultSize < defaultPageSizeForList {
+			break
+		}
+	}
+	table.Render()
+}
+
+func createTableForListWorkflow(listAll bool) *tablewriter.Table {
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetBorder(false)
+	table.SetColumnSeparator("|")
+	table.SetHeader([]string{"Workflow Type", "Workflow ID", "Run ID", "Start Time", "End Time"})
+	if !listAll { // color is only friendly to ANSI terminal
+		table.SetHeaderColor(tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue)
+	}
+	table.SetHeaderLine(false)
+	return table
+}
+
+func listWorkflow(c *cli.Context, table *tablewriter.Table) func([]byte) ([]byte, int) {
 	wfClient := getWorkflowClient(c)
 
 	queryOpen := c.Bool(FlagOpen)
-	more := c.Bool(FlagMore)
-	pageSize := c.Int(FlagPageSize)
 	earliestTime := parseTime(c.String(FlagEarliestTime), 0)
 	latestTime := parseTime(c.String(FlagLatestTime), time.Now().UnixNano())
 	workflowID := c.String(FlagWorkflowID)
 	workflowType := c.String(FlagWorkflowType)
 	printRawTime := c.Bool(FlagPrintRawTime)
 	printDateTime := c.Bool(FlagPrintDateTime)
+	pageSize := c.Int(FlagPageSize)
+	if pageSize <= 0 {
+		pageSize = defaultPageSizeForList
+	}
 
 	if len(workflowID) > 0 && len(workflowType) > 0 {
 		ExitIfError(errors.New("you can filter on workflow_id or workflow_type, but not on both"))
 	}
 
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetBorder(false)
-	table.SetColumnSeparator("|")
-	table.SetHeader([]string{"Workflow Type", "Workflow ID", "Run ID", "Start Time", "End Time"})
-	table.SetHeaderColor(tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue)
-	table.SetHeaderLine(false)
-
-	var result []*s.WorkflowExecutionInfo
-	var nextPageToken []byte
-	prepareTable := func(next []byte) {
+	prepareTable := func(next []byte) ([]byte, int) {
+		var result []*s.WorkflowExecutionInfo
+		var nextPageToken []byte
 		if queryOpen {
 			result, nextPageToken = listOpenWorkflow(wfClient, pageSize, earliestTime, latestTime, workflowID, workflowType, next)
 		} else {
@@ -655,32 +713,10 @@ func ListWorkflow(c *cli.Context) {
 			}
 			table.Append([]string{trimWorkflowType(e.Type.GetName()), e.Execution.GetWorkflowId(), e.Execution.GetRunId(), startTime, closeTime})
 		}
+
+		return nextPageToken, len(result)
 	}
-
-	if !more { // default mode only show one page items
-		prepareTable(nil)
-		table.Render()
-	} else { // require input Enter to view next page
-		for {
-			prepareTable(nextPageToken)
-			table.Render()
-			table.ClearRows()
-
-			if len(result) < pageSize {
-				break
-			}
-
-			fmt.Printf("Press %s to show next page, press %s to quit: ",
-				color.GreenString("Enter"), color.RedString("any other key then Enter"))
-			var input string
-			fmt.Scanln(&input)
-			if strings.Trim(input, " ") == "" {
-				continue
-			} else {
-				break
-			}
-		}
-	}
+	return prepareTable
 }
 
 func listOpenWorkflow(client client.Client, pageSize int, earliestTime, latestTime int64, workflowID, workflowType string, nextPageToken []byte) ([]*s.WorkflowExecutionInfo, []byte) {

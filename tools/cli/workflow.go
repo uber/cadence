@@ -275,6 +275,43 @@ func newWorkflowCommands() []cli.Command {
 			},
 		},
 		{
+			Name:  "listall",
+			Usage: "list all open or closed workflow executions",
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name:  FlagOpenWithAlias,
+					Usage: "List for open workflow executions, default is to list for closed ones",
+				},
+				cli.StringFlag{
+					Name:  FlagEarliestTimeWithAlias,
+					Usage: "EarliestTime of start time, supported formats are '2006-01-02T15:04:05Z07:00' and raw UnixNano",
+				},
+				cli.StringFlag{
+					Name:  FlagLatestTimeWithAlias,
+					Usage: "LatestTime of start time, supported formats are '2006-01-02T15:04:05Z07:00' and raw UnixNano",
+				},
+				cli.StringFlag{
+					Name:  FlagWorkflowIDWithAlias,
+					Usage: "WorkflowID",
+				},
+				cli.StringFlag{
+					Name:  FlagWorkflowTypeWithAlias,
+					Usage: "WorkflowTypeName",
+				},
+				cli.BoolFlag{
+					Name:  FlagPrintRawTimeWithAlias,
+					Usage: "Print raw time stamp",
+				},
+				cli.BoolFlag{
+					Name:  FlagPrintDateTimeWithAlias,
+					Usage: "Print full date time in '2006-01-02T15:04:05Z07:00' format",
+				},
+			},
+			Action: func(c *cli.Context) {
+				ListAllWorkflow(c)
+			},
+		},
+		{
 			Name:  "query",
 			Usage: "query workflow execution",
 			Flags: []cli.Flag{
