@@ -33,7 +33,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/membership"
-	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
@@ -55,7 +54,6 @@ type (
 		executionMgrFactory persistence.ExecutionManagerFactory
 		domainCache         cache.DomainCache
 		engineFactory       EngineFactory
-		messagingClient     messaging.Client
 		shardClosedCh       chan int
 		isStarted           int32
 		isStopped           int32

@@ -700,12 +700,11 @@ type (
 
 	// DomainInfo describes the domain entity
 	DomainInfo struct {
-		ID             string
-		Name           string
-		Status         int
-		Description    string
-		OwnerEmail     string
-		IsGlobalDomain bool
+		ID          string
+		Name        string
+		Status      int
+		Description string
+		OwnerEmail  string
 	}
 
 	// DomainConfig describes the domain configuration
