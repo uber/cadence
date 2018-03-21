@@ -45,6 +45,12 @@ var cadenceServices = []string{
 	common.FrontendServiceName,
 	common.HistoryServiceName,
 	common.MatchingServiceName,
+}
+
+var cadenceServicesWithWorker = []string{
+	common.FrontendServiceName,
+	common.HistoryServiceName,
+	common.MatchingServiceName,
 	common.WorkerServiceName,
 }
 
@@ -160,7 +166,12 @@ func (h *serviceImpl) Start() {
 		h.logger.WithFields(bark.Fields{logging.TagErr: err}).Fatal("Ringpop setting role label failed")
 	}
 
-	h.membershipMonitor = membership.NewRingpopMonitor(cadenceServices, h.rp, h.logger)
+	// TODO when global domain is public remove this and corresponding "cadenceServices"
+	services := cadenceServices
+	if h.GetClusterMetadata().IsGlobalDomainEnabled() {
+		services = cadenceServicesWithWorker
+	}
+	h.membershipMonitor = membership.NewRingpopMonitor(services, h.rp, h.logger)
 	err = h.membershipMonitor.Start()
 	if err != nil {
 		h.logger.WithFields(bark.Fields{logging.TagErr: err}).Fatal("starting membership monitor failed")
