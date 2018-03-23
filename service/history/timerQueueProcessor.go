@@ -60,7 +60,7 @@ type (
 		logger           bark.Logger
 		metricsClient    metrics.Client
 		timerFiredCount  uint64
-		ackMgr           *timerAckMgr
+		ackMgr           timerQueueAckMgr
 
 		newTimeLock sync.Mutex
 		newTime     time.Time
@@ -72,8 +72,8 @@ type (
 		shard            ShardContext
 		executionMgr     persistence.ExecutionManager
 		logger           bark.Logger
-		outstandingTasks map[SequenceID]bool
-		readLevel        SequenceID
+		outstandingTasks map[TimerSequenceID]bool
+		readLevel        TimerSequenceID
 		ackLevel         time.Time
 		metricsClient    metrics.Client
 		lastUpdated      time.Time
@@ -274,7 +274,7 @@ continueProcessor:
 		}
 
 		if nextKeyTask != nil {
-			nextKey := SequenceID{VisibilityTimestamp: nextKeyTask.VisibilityTimestamp, TaskID: nextKeyTask.TaskID}
+			nextKey := TimerSequenceID{VisibilityTimestamp: nextKeyTask.VisibilityTimestamp, TaskID: nextKeyTask.TaskID}
 			t.logger.Debugf("%s: GetNextKey: %s", time.Now().UTC(), nextKey)
 
 			timerGate.Update(nextKey.VisibilityTimestamp)
@@ -328,11 +328,11 @@ func (t *timerQueueProcessorImpl) processTaskWorker(tasksCh <-chan *persistence.
 
 		UpdateFailureLoop:
 			for attempt := 1; attempt <= t.config.TimerProcessorUpdateFailureRetryCount; attempt++ {
-				taskID := SequenceID{VisibilityTimestamp: task.VisibilityTimestamp, TaskID: task.TaskID}
+				taskID := TimerSequenceID{VisibilityTimestamp: task.VisibilityTimestamp, TaskID: task.TaskID}
 				err = t.processTimerTask(task)
 				if err != nil && err != errTimerTaskNotFound {
 					// We will retry until we don't find the timer task any more.
-					t.logger.Infof("Failed to process timer with SequenceID: %s with error: %v",
+					t.logger.Infof("Failed to process timer with TimerSequenceID: %s with error: %v",
 						taskID, err)
 					backoff := time.Duration(attempt * 100)
 					time.Sleep(backoff * time.Millisecond)
@@ -347,7 +347,7 @@ func (t *timerQueueProcessorImpl) processTaskWorker(tasksCh <-chan *persistence.
 }
 
 func (t *timerQueueProcessorImpl) processTimerTask(timerTask *persistence.TimerTaskInfo) error {
-	taskID := SequenceID{VisibilityTimestamp: timerTask.VisibilityTimestamp, TaskID: timerTask.TaskID}
+	taskID := TimerSequenceID{VisibilityTimestamp: timerTask.VisibilityTimestamp, TaskID: timerTask.TaskID}
 	t.logger.Debugf("Processing timer: (%s), for WorkflowID: %v, RunID: %v, Type: %v, TimeoutType: %v, EventID: %v",
 		taskID, timerTask.WorkflowID, timerTask.RunID, t.getTimerTaskType(timerTask.TaskType),
 		workflow.TimeoutType(timerTask.TimeoutType).String(), timerTask.EventID)
@@ -836,7 +836,7 @@ func (t *timerQueueProcessorImpl) getTimerTaskType(taskType int) string {
 	return "UnKnown"
 }
 
-type timerTaskIDs []SequenceID
+type timerTaskIDs []TimerSequenceID
 
 // Len implements sort.Interace
 func (t timerTaskIDs) Len() int {
@@ -861,8 +861,8 @@ func newTimerAckMgr(processor *timerQueueProcessorImpl, shard ShardContext, exec
 		processor:        processor,
 		shard:            shard,
 		executionMgr:     executionMgr,
-		outstandingTasks: make(map[SequenceID]bool),
-		readLevel:        SequenceID{VisibilityTimestamp: ackLevel},
+		outstandingTasks: make(map[TimerSequenceID]bool),
+		readLevel:        TimerSequenceID{VisibilityTimestamp: ackLevel},
 		ackLevel:         ackLevel,
 		metricsClient:    processor.metricsClient,
 		logger:           logger,
@@ -893,7 +893,7 @@ func (t *timerAckMgr) readTimerTasks() ([]*persistence.TimerTaskInfo, *persisten
 
 	t.Lock()
 	for _, task := range tasks {
-		taskSeq := SequenceID{VisibilityTimestamp: task.VisibilityTimestamp, TaskID: task.TaskID}
+		taskSeq := TimerSequenceID{VisibilityTimestamp: task.VisibilityTimestamp, TaskID: task.TaskID}
 		if _, ok := t.outstandingTasks[taskSeq]; ok {
 			t.logger.Infof("Skipping task: %v.  WorkflowID: %v, RunID: %v, Type: %v", taskSeq.String(), task.WorkflowID,
 				task.RunID, task.TaskType)
@@ -924,7 +924,7 @@ func (t *timerAckMgr) readTimerTasks() ([]*persistence.TimerTaskInfo, *persisten
 	return filteredTasks, lookAheadTask, moreTasks, nil
 }
 
-func (t *timerAckMgr) completeTimerTask(taskID SequenceID) {
+func (t *timerAckMgr) completeTimerTask(taskID TimerSequenceID) {
 	t.Lock()
 	if _, ok := t.outstandingTasks[taskID]; ok {
 		t.outstandingTasks[taskID] = true

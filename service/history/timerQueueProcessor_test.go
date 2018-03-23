@@ -109,7 +109,7 @@ func (s *timerQueueProcessorSuite) updateTimerSeqNumbers(timerTasks []persistenc
 		}
 		task.SetTaskID(taskID)
 		s.logger.Infof("%v: TestTimerQueueProcessorSuite: Assigning timer: %s",
-			time.Now().UTC(), SequenceID{VisibilityTimestamp: persistence.GetVisibilityTSFrom(task), TaskID: task.GetTaskID()})
+			time.Now().UTC(), TimerSequenceID{VisibilityTimestamp: persistence.GetVisibilityTSFrom(task), TaskID: task.GetTaskID()})
 	}
 }
 
