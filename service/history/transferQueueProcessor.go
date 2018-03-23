@@ -26,6 +26,7 @@ import (
 	"github.com/uber-common/bark"
 
 	"errors"
+
 	"github.com/uber/cadence/.gen/go/history"
 	m "github.com/uber/cadence/.gen/go/matching"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -354,7 +355,7 @@ func (t *transferQueueProcessorImpl) processCloseExecution(task *persistence.Tra
 
 	// Record closing in visibility store
 	retentionSeconds := int64(0)
-	domainEntry, err := t.domainCache.GetDomainByID(task.DomainID)
+	domainEntry, err := t.shard.GetDomainCache().GetDomainByID(task.DomainID)
 	if err != nil {
 		if _, ok := err.(*workflow.EntityNotExistsError); !ok {
 			return err
