@@ -81,7 +81,7 @@ func newTimerQueueProcessor(shard ShardContext, historyService *historyEngineImp
 		config:           shard.GetConfig(),
 		logger:           log,
 		metricsClient:    historyService.metricsClient,
-		timerQueueAckMgr: newTimerQueueAckMgr(shard, historyService.metricsClient, executionManager, log),
+		timerQueueAckMgr: newTimerQueueAckMgr(shard, historyService.metricsClient, executionManager, shard.GetService().GetClusterMetadata().GetCurrentClusterName(), log),
 	}
 	return timerQueueProcessor
 }
@@ -219,7 +219,7 @@ continueProcessor:
 				// Timer Fired.
 
 			case <-updateAckChan:
-				t.timerQueueAckMgr.updateAckLevel(t.shard.GetService().GetClusterMetadata().GetCurrentClusterName())
+				t.timerQueueAckMgr.updateAckLevel()
 				continue continueProcessor
 
 			case <-t.newTimerCh:
@@ -249,7 +249,7 @@ continueProcessor:
 	ProcessPendingTimers:
 		for {
 			// Get next set of timer tasks.
-			timerTasks, lookAheadTask, moreTasks, err := t.timerQueueAckMgr.readTimerTasks(t.shard.GetService().GetClusterMetadata().GetCurrentClusterName())
+			timerTasks, lookAheadTask, moreTasks, err := t.timerQueueAckMgr.readTimerTasks()
 			if err != nil {
 				return err
 			}

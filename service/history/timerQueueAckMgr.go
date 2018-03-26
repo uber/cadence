@@ -39,6 +39,7 @@ type (
 	timerSequenceIDs []TimerSequenceID
 
 	timerQueueAckMgrImpl struct {
+		clusterName   string
 		shard         ShardContext
 		executionMgr  persistence.ExecutionManager
 		logger        bark.Logger
@@ -47,16 +48,14 @@ type (
 		config        *Config
 
 		sync.Mutex
-		// outstanding tasks, key cluster name, value map of outstanding timer task -> finished (true)
-		clusterOutstandingTasks map[string]map[TimerSequenceID]bool
-		// outstanding tasks, which cannot be processed right now
-		clusterRetryTasks map[string][]*persistence.TimerTaskInfo
-		// cluster -> task read level
-		clusterReadLevel map[string]TimerSequenceID
-		// cluster -> task ack level
-		clusterAckLevel map[string]time.Time
-		// task -> corresponding cluster name
-		taskToCluster map[TimerSequenceID]string
+		// outstanding timer task -> finished (true)
+		outstandingTasks map[TimerSequenceID]bool
+		// outstanding timer tasks, which cannot be processed right now
+		retryTasks []*persistence.TimerTaskInfo
+		// timer task read level
+		readLevel TimerSequenceID
+		// timer task ack level
+		ackLevel time.Time
 	}
 	// for each cluster, the ack level is the point in time when
 	// all timers before the ack level are processed.
@@ -81,40 +80,30 @@ func (t timerSequenceIDs) Less(i, j int) bool {
 	return compareTimerIDLess(&t[i], &t[j])
 }
 
-func newTimerQueueAckMgr(shard ShardContext, metricsClient metrics.Client, executionMgr persistence.ExecutionManager, logger bark.Logger) *timerQueueAckMgrImpl {
+func newTimerQueueAckMgr(shard ShardContext, metricsClient metrics.Client, executionMgr persistence.ExecutionManager, clusterName string, logger bark.Logger) *timerQueueAckMgrImpl {
 	config := shard.GetConfig()
+	ackLevel := shard.GetTimerAckLevel(clusterName)
 	timerQueueAckMgrImpl := &timerQueueAckMgrImpl{
-		shard:                   shard,
-		executionMgr:            executionMgr,
-		metricsClient:           metricsClient,
-		logger:                  logger,
-		lastUpdated:             time.Now(),
-		config:                  config,
-		clusterOutstandingTasks: make(map[string]map[TimerSequenceID]bool),
-		clusterRetryTasks:       make(map[string][]*persistence.TimerTaskInfo),
-		clusterReadLevel:        make(map[string]TimerSequenceID),
-		clusterAckLevel:         make(map[string]time.Time),
-		taskToCluster:           make(map[TimerSequenceID]string),
-	}
-	// initialize all cluster read level to initial ack level, provided by shard
-	for cluster := range timerQueueAckMgrImpl.shard.GetService().GetClusterMetadata().GetAllClusterNames() {
-		ackLevel := shard.GetTimerAckLevel(cluster)
-		timerQueueAckMgrImpl.clusterOutstandingTasks[cluster] = make(map[TimerSequenceID]bool)
-		timerQueueAckMgrImpl.clusterRetryTasks[cluster] = []*persistence.TimerTaskInfo{}
-		timerQueueAckMgrImpl.clusterReadLevel[cluster] = TimerSequenceID{VisibilityTimestamp: ackLevel}
-		timerQueueAckMgrImpl.clusterAckLevel[cluster] = ackLevel
+		clusterName:      clusterName,
+		shard:            shard,
+		executionMgr:     executionMgr,
+		metricsClient:    metricsClient,
+		logger:           logger,
+		lastUpdated:      time.Now(),
+		config:           config,
+		outstandingTasks: make(map[TimerSequenceID]bool),
+		retryTasks:       []*persistence.TimerTaskInfo{},
+		readLevel:        TimerSequenceID{VisibilityTimestamp: ackLevel},
+		ackLevel:         ackLevel,
 	}
 
 	return timerQueueAckMgrImpl
 }
 
-func (t *timerQueueAckMgrImpl) readTimerTasks(clusterName string) ([]*persistence.TimerTaskInfo, *persistence.TimerTaskInfo, bool, error) {
+func (t *timerQueueAckMgrImpl) readTimerTasks() ([]*persistence.TimerTaskInfo, *persistence.TimerTaskInfo, bool, error) {
 	t.Lock()
-	readLevel, ok := t.clusterReadLevel[clusterName]
-	if !ok {
-		t.panicUnknownCluster(clusterName)
-	}
-	timerTaskRetrySize := len(t.clusterRetryTasks[clusterName])
+	readLevel := t.readLevel
+	timerTaskRetrySize := len(t.retryTasks)
 	t.Unlock()
 
 	var tasks []*persistence.TimerTaskInfo
@@ -138,17 +127,17 @@ func (t *timerQueueAckMgrImpl) readTimerTasks(clusterName string) ([]*persistenc
 	t.Lock()
 	defer t.Unlock()
 	// fillin the retry task
-	filteredTasks := t.clusterRetryTasks[clusterName]
-	t.clusterRetryTasks[clusterName] = []*persistence.TimerTaskInfo{}
+	filteredTasks := t.retryTasks
+	t.retryTasks = []*persistence.TimerTaskInfo{}
 
 	// since we have already checked that the clusterName is a valid key of clusterReadLevel
 	// there shall be no validation
-	readLevel = t.clusterReadLevel[clusterName]
-	outstandingTasks := t.clusterOutstandingTasks[clusterName]
+	readLevel = t.readLevel
+	outstandingTasks := t.outstandingTasks
 TaskFilterLoop:
 	for _, task := range tasks {
 		timerSequenceID := TimerSequenceID{VisibilityTimestamp: task.VisibilityTimestamp, TaskID: task.TaskID}
-		_, isLoaded := t.taskToCluster[timerSequenceID]
+		_, isLoaded := outstandingTasks[timerSequenceID]
 		if isLoaded {
 			// timer already loaded
 			t.logger.Infof("Skipping task: %v. WorkflowID: %v, RunID: %v, Type: %v",
@@ -160,7 +149,7 @@ TaskFilterLoop:
 		if err != nil {
 			return nil, nil, false, err
 		}
-		if domainEntry.GetReplicationConfig().ActiveClusterName != clusterName {
+		if domainEntry.GetReplicationConfig().ActiveClusterName != t.clusterName {
 			// timer task does not belong to cluster name
 			continue TaskFilterLoop
 		}
@@ -182,11 +171,10 @@ TaskFilterLoop:
 
 		t.logger.Debugf("Moving timer read level: (%s)", timerSequenceID)
 		readLevel = timerSequenceID
-		t.taskToCluster[timerSequenceID] = clusterName
 		outstandingTasks[timerSequenceID] = false
 		filteredTasks = append(filteredTasks, task)
 	}
-	t.clusterReadLevel[clusterName] = readLevel
+	t.readLevel = readLevel
 
 	// We may have large number of timers which need to be fired immediately.  Return true in such case so the pump
 	// can call back immediately to retrieve more tasks
@@ -196,43 +184,26 @@ TaskFilterLoop:
 }
 
 func (t *timerQueueAckMgrImpl) retryTimerTask(timerTask *persistence.TimerTaskInfo) {
-	timerSequenceID := TimerSequenceID{VisibilityTimestamp: timerTask.VisibilityTimestamp, TaskID: timerTask.TaskID}
 	t.Lock()
 	defer t.Unlock()
-	clusterName, ok := t.taskToCluster[timerSequenceID]
-	if !ok {
-		t.panicMissingTaskMetadata(timerSequenceID)
-	}
 
-	t.clusterRetryTasks[clusterName] = append(t.clusterRetryTasks[clusterName], timerTask)
+	t.retryTasks = append(t.retryTasks, timerTask)
 }
 
 func (t *timerQueueAckMgrImpl) completeTimerTask(timerSequenceID TimerSequenceID) {
 	t.Lock()
 	defer t.Unlock()
-	clusterName, ok := t.taskToCluster[timerSequenceID]
-	if !ok {
-		t.panicMissingTaskMetadata(timerSequenceID)
-	}
 
-	outstandingTasks, ok := t.clusterOutstandingTasks[clusterName]
-	if !ok {
-		t.panicUnknownCluster(clusterName)
-	}
-	outstandingTasks[timerSequenceID] = true
+	t.outstandingTasks[timerSequenceID] = true
 }
 
-func (t *timerQueueAckMgrImpl) updateAckLevel(clusterName string) {
+func (t *timerQueueAckMgrImpl) updateAckLevel() {
 	t.metricsClient.IncCounter(metrics.TimerQueueProcessorScope, metrics.AckLevelUpdateCounter)
 
 	t.Lock()
-	ackLevel, ok := t.clusterAckLevel[clusterName]
-	if !ok {
-		t.panicUnknownCluster(clusterName)
-	}
-	outstandingTasks := t.clusterOutstandingTasks[clusterName]
-	initialAckLevel := ackLevel
-	updatedAckLevel := ackLevel
+	initialAckLevel := t.ackLevel
+	updatedAckLevel := t.ackLevel
+	outstandingTasks := t.outstandingTasks
 
 	// Timer Sequence IDs can have holes in the middle. So we sort the map to get the order to
 	// check. TODO: we can maintain a sorted slice as well.
@@ -247,13 +218,12 @@ MoveAckLevelLoop:
 		acked := outstandingTasks[current]
 		if acked {
 			updatedAckLevel = current.VisibilityTimestamp
-			delete(t.taskToCluster, current)
 			delete(outstandingTasks, current)
 		} else {
 			break MoveAckLevelLoop
 		}
 	}
-	t.clusterAckLevel[clusterName] = updatedAckLevel
+	t.ackLevel = updatedAckLevel
 	t.Unlock()
 
 	// Do not update Acklevel if nothing changed upto force update interval
@@ -264,7 +234,7 @@ MoveAckLevelLoop:
 	t.logger.Debugf("Updating timer ack level: %v", updatedAckLevel)
 
 	// Always update ackLevel to detect if the shared is stolen
-	if err := t.shard.UpdateTimerAckLevel(clusterName, updatedAckLevel); err != nil {
+	if err := t.shard.UpdateTimerAckLevel(t.clusterName, updatedAckLevel); err != nil {
 		t.metricsClient.IncCounter(metrics.TimerQueueProcessorScope, metrics.AckLevelUpdateFailedCounter)
 		t.logger.Errorf("Error updating timer ack level for shard: %v", err)
 	} else {
@@ -295,12 +265,4 @@ func (t *timerQueueAckMgrImpl) getTimerTasks(minTimestamp time.Time, maxTimestam
 
 func (t *timerQueueAckMgrImpl) isProcessNow(expiryTime time.Time) bool {
 	return !expiryTime.IsZero() && expiryTime.UnixNano() <= time.Now().UnixNano()
-}
-
-func (t *timerQueueAckMgrImpl) panicMissingTaskMetadata(timerSequenceID TimerSequenceID) {
-	t.logger.Fatalf("Cannot find information about timer sequence ID: %v.", timerSequenceID)
-}
-
-func (t *timerQueueAckMgrImpl) panicUnknownCluster(clusterName string) {
-	t.logger.Fatalf("Cannot find target cluster: %v, all known clusters %v.", clusterName, t.shard.GetService().GetClusterMetadata().GetAllClusterNames())
 }

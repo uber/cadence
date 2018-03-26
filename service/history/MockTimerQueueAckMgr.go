@@ -33,12 +33,12 @@ type MockTimerQueueAckMgr struct {
 }
 
 // readTimerTasks is mock implementation for readTimerTasks of TimerQueueAckMgr
-func (_m *MockTimerQueueAckMgr) readTimerTasks(clusterName string) ([]*persistence.TimerTaskInfo, *persistence.TimerTaskInfo, bool, error) {
-	ret := _m.Called(clusterName)
+func (_m *MockTimerQueueAckMgr) readTimerTasks() ([]*persistence.TimerTaskInfo, *persistence.TimerTaskInfo, bool, error) {
+	ret := _m.Called()
 
 	var r0 []*persistence.TimerTaskInfo
-	if rf, ok := ret.Get(0).(func(string) []*persistence.TimerTaskInfo); ok {
-		r0 = rf(clusterName)
+	if rf, ok := ret.Get(0).(func() []*persistence.TimerTaskInfo); ok {
+		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*persistence.TimerTaskInfo)
@@ -46,8 +46,8 @@ func (_m *MockTimerQueueAckMgr) readTimerTasks(clusterName string) ([]*persisten
 	}
 
 	var r1 *persistence.TimerTaskInfo
-	if rf, ok := ret.Get(1).(func(string) *persistence.TimerTaskInfo); ok {
-		r1 = rf(clusterName)
+	if rf, ok := ret.Get(1).(func() *persistence.TimerTaskInfo); ok {
+		r1 = rf()
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).(*persistence.TimerTaskInfo)
@@ -55,15 +55,15 @@ func (_m *MockTimerQueueAckMgr) readTimerTasks(clusterName string) ([]*persisten
 	}
 
 	var r2 bool
-	if rf, ok := ret.Get(2).(func(string) bool); ok {
-		r2 = rf(clusterName)
+	if rf, ok := ret.Get(2).(func() bool); ok {
+		r2 = rf()
 	} else {
 		r2 = ret.Get(2).(bool)
 	}
 
 	var r3 error
-	if rf, ok := ret.Get(3).(func(string) error); ok {
-		r3 = rf(clusterName)
+	if rf, ok := ret.Get(3).(func() error); ok {
+		r3 = rf()
 	} else {
 		r3 = ret.Error(3)
 	}
@@ -79,8 +79,8 @@ func (_m *MockTimerQueueAckMgr) completeTimerTask(taskID TimerSequenceID) {
 	_m.Called(taskID)
 }
 
-func (_m *MockTimerQueueAckMgr) updateAckLevel(clusterName string) {
-	_m.Called(clusterName)
+func (_m *MockTimerQueueAckMgr) updateAckLevel() {
+	_m.Called()
 }
 
 func (_m *MockTimerQueueAckMgr) isProcessNow(expiryTime time.Time) bool {

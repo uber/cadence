@@ -108,10 +108,10 @@ type (
 	}
 
 	timerQueueAckMgr interface {
-		readTimerTasks(clusterName string) ([]*persistence.TimerTaskInfo, *persistence.TimerTaskInfo, bool, error)
+		readTimerTasks() ([]*persistence.TimerTaskInfo, *persistence.TimerTaskInfo, bool, error)
 		retryTimerTask(timerTask *persistence.TimerTaskInfo)
 		completeTimerTask(taskID TimerSequenceID)
-		updateAckLevel(clusterName string)
+		updateAckLevel()
 		isProcessNow(time.Time) bool
 	}
 

@@ -141,9 +141,8 @@ func (s *engine2Suite) SetupTest() {
 		hSerializerFactory: persistence.NewHistorySerializerFactory(),
 	}
 
-	// setup the basics of cluster metadata, since during the initialization of * queue processor, those cluster metadata will be used
+	// this is used by shard context, not relevent to this test, so we do not care how many times "GetCurrentClusterName" os called
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
-	s.mockClusterMetadata.On("GetAllClusterNames").Return(cluster.TestAllClusterNamesMap)
 	h.txProcessor = newTransferQueueProcessor(mockShard, h, s.mockVisibilityMgr, s.mockMatchingClient, s.mockHistoryClient)
 	h.timerProcessor = newTimerQueueProcessor(mockShard, h, s.mockExecutionMgr, s.logger)
 	s.historyEngine = h
