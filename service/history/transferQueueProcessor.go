@@ -70,6 +70,7 @@ func newTransferQueueProcessor(shard ShardContext, historyService *historyEngine
 		MaxPollInterval:     config.TransferProcessorMaxPollInterval,
 		UpdateAckInterval:   config.TransferProcessorUpdateAckInterval,
 		ForceUpdateInterval: config.TransferProcessorForceUpdateInterval,
+		MaxRetryCount:       config.TransferTaskMaxRetryCount,
 		MetricScope:         metrics.TransferQueueProcessorScope,
 	}
 

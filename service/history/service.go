@@ -63,6 +63,7 @@ type Config struct {
 	TransferProcessorUpdateAckInterval   time.Duration
 	TransferProcessorForceUpdateInterval time.Duration
 	TransferTaskWorkerCount              int
+	TransferTaskMaxRetryCount            int
 
 	// ReplicatorQueueProcessor settings
 	ReplicatorTaskBatchSize                int
@@ -71,6 +72,7 @@ type Config struct {
 	ReplicatorProcessorUpdateAckInterval   time.Duration
 	ReplicatorProcessorForceUpdateInterval time.Duration
 	ReplicatorTaskWorkerCount              int
+	ReplicatorTaskMaxRetryCount            int
 
 	// Persistence settings
 	ExecutionMgrNumConns int
@@ -105,12 +107,14 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int) *Config {
 		TransferProcessorUpdateAckInterval:          10 * time.Second,
 		TransferProcessorForceUpdateInterval:        10 * time.Minute,
 		TransferTaskWorkerCount:                     10,
+		TransferTaskMaxRetryCount:                   100,
 		ReplicatorTaskBatchSize:                     10,
 		ReplicatorProcessorMaxPollRPS:               100,
 		ReplicatorProcessorMaxPollInterval:          60 * time.Second,
 		ReplicatorProcessorUpdateAckInterval:        10 * time.Second,
 		ReplicatorProcessorForceUpdateInterval:      10 * time.Minute,
 		ReplicatorTaskWorkerCount:                   10,
+		ReplicatorTaskMaxRetryCount:                 100,
 		ExecutionMgrNumConns:                        100,
 		HistoryMgrNumConns:                          100,
 		// history client: client/history/client.go set the client timeout 30s

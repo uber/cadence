@@ -282,7 +282,7 @@ func (s *shardContextImpl) UpdateWorkflowExecution(request *persistence.UpdateWo
 			if err != nil {
 				return err
 			}
-			s.logger.Debugf("Assigning transfer task ID: %v", id)
+			s.logger.Debugf("Assigning replication task ID: %v", id)
 			task.SetTaskID(id)
 			transferMaxReadLevel = id
 		}

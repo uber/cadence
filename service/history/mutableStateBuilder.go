@@ -233,6 +233,7 @@ func (e *mutableStateBuilder) FlushBufferedEvents() error {
 func (e *mutableStateBuilder) ApplyReplicationStateUpdates(failoverVersion int64) {
 	e.replicationState.CurrentVersion = failoverVersion
 	e.replicationState.LastWriteVersion = failoverVersion
+	// TODO: Rename this to NextEventID to stay consistent naming convention with rest of code base
 	e.replicationState.LastWriteEventID = e.hBuilder.nextEventID - 1
 }
 

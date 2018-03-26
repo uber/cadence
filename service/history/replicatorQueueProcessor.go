@@ -60,6 +60,7 @@ func newReplicatorQueueProcessor(shard ShardContext, replicator messaging.Produc
 		MaxPollInterval:     config.ReplicatorProcessorMaxPollInterval,
 		UpdateAckInterval:   config.ReplicatorProcessorUpdateAckInterval,
 		ForceUpdateInterval: config.ReplicatorProcessorForceUpdateInterval,
+		MaxRetryCount:       config.ReplicatorTaskMaxRetryCount,
 		MetricScope:         metrics.ReplicatorQueueProcessorScope,
 	}
 

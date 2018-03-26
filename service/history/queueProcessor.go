@@ -44,6 +44,7 @@ type (
 		MaxPollInterval     time.Duration
 		UpdateAckInterval   time.Duration
 		ForceUpdateInterval time.Duration
+		MaxRetryCount       int
 		MetricScope         int
 	}
 
@@ -63,6 +64,7 @@ type (
 		shutdownCh chan struct{}
 	}
 
+	// TODO: Move AckManager to its own file
 	// ackManager is created by QueueProcessor to keep track of the queue ackLevel for the shard.
 	// It keeps track of read level when dispatching tasks to processor and maintains a map of outstanding tasks.
 	// Outstanding tasks map uses the task id sequencer as the key, which is used by updateAckLevel to move the ack level
@@ -84,7 +86,7 @@ type (
 )
 
 var (
-	errUnexpectedQueueTask = errors.New("Unexpected Queue Task.")
+	errUnexpectedQueueTask = errors.New("unexpected queue task")
 )
 
 func newQueueProcessor(shard ShardContext, options *QueueProcessorOptions, processor processor,
@@ -252,7 +254,7 @@ func (p *queueProcessorBase) taskWorker(tasksCh <-chan queueTaskInfo, workerWG *
 func (p *queueProcessorBase) processWithRetry(task queueTaskInfo) {
 	p.logger.Debugf("Processing task: %v, type: %v", task.GetTaskID(), task.GetTaskType())
 ProcessRetryLoop:
-	for retryCount := 1; retryCount <= 100; retryCount++ {
+	for retryCount := 1; retryCount <= p.options.MaxRetryCount; retryCount++ {
 		select {
 		case <-p.shutdownCh:
 			return
@@ -327,6 +329,7 @@ func (a *ackManager) updateAckLevel() {
 	a.Lock()
 MoveAckLevelLoop:
 	for current := a.ackLevel + 1; current <= a.readLevel; current++ {
+		// TODO: What happens if !ok?
 		if acked, ok := a.outstandingTasks[current]; ok {
 			if acked {
 				err := a.processor.CompleteTask(current)
