@@ -24,6 +24,7 @@ import (
 	"math"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/uber-common/bark"
@@ -149,13 +150,22 @@ TaskFilterLoop:
 		if err != nil {
 			return nil, nil, false, err
 		}
-		if domainEntry.GetReplicationConfig().ActiveClusterName != t.clusterName {
-			// timer task does not belong to cluster name
-			continue TaskFilterLoop
+		if !domainEntry.GetIsGlobalDomain() {
+			if t.clusterName != t.shard.GetService().GetClusterMetadata().GetCurrentClusterName() {
+				// timer task does not belong to cluster name
+				continue TaskFilterLoop
+			}
+		} else {
+			// global domain we need to check the cluster name
+			clusterName := t.shard.GetService().GetClusterMetadata().ClusterNameForFailoverVersion(task.Version)
+			if clusterName != t.clusterName {
+				// timer task does not belong here
+				continue TaskFilterLoop
+			}
 		}
 
 		// TODO potential bug here
-		// there can be several case when this readTimerTasks is called multiple times
+		// there can be severe case when this readTimerTasks is called multiple times
 		// and one of the call is really slow, causing the read level updated by other threads,
 		// leading the if below to be true
 		if task.VisibilityTimestamp.Before(readLevel.VisibilityTimestamp) {
@@ -190,11 +200,18 @@ func (t *timerQueueAckMgrImpl) retryTimerTask(timerTask *persistence.TimerTaskIn
 	t.retryTasks = append(t.retryTasks, timerTask)
 }
 
-func (t *timerQueueAckMgrImpl) completeTimerTask(timerSequenceID TimerSequenceID) {
+func (t *timerQueueAckMgrImpl) completeTimerTask(timerTask *persistence.TimerTaskInfo) {
+	timerSequenceID := TimerSequenceID{VisibilityTimestamp: timerTask.VisibilityTimestamp, TaskID: timerTask.TaskID}
 	t.Lock()
 	defer t.Unlock()
 
 	t.outstandingTasks[timerSequenceID] = true
+	atomic.AddUint64(&t.timerFiredCount, 1)
+	if err := t.executionMgr.CompleteTimerTask(&persistence.CompleteTimerTaskRequest{
+		VisibilityTimestamp: timerTask.VisibilityTimestamp,
+		TaskID:              timerTask.TaskID}); err != nil {
+		t.logger.Warnf("Timer queue ack manager unable to complete timer task: %v; %v", timerSequenceID, err)
+	}
 }
 
 func (t *timerQueueAckMgrImpl) updateAckLevel() {
