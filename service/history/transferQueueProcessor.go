@@ -83,7 +83,7 @@ func newTransferQueueProcessor(shard ShardContext, historyService *historyEngine
 		historyClient:     historyClient,
 		visibilityManager: visibilityMgr,
 		cache:             historyService.historyCache,
-		domainCache:       historyService.domainCache,
+		domainCache:       shard.GetDomainCache(),
 	}
 	baseProcessor := newQueueProcessor(shard, options, processor, shard.GetTransferAckLevel())
 	processor.queueProcessorBase = baseProcessor

@@ -115,13 +115,14 @@ func (s *shardContextImpl) GetTransferAckLevel() int64 {
 	s.RLock()
 	defer s.RUnlock()
 
-	// TODO change make this cluster input parameter
+	// TODO cluster should be an input parameter
 	cluster := s.GetService().GetClusterMetadata().GetCurrentClusterName()
-	// if can find corresponding ack level in the cluster to timer ack level map
+	// if we can find corresponding ack level
 	if ackLevel, ok := s.shardInfo.ClusterTransferAckLevel[cluster]; ok {
 		return ackLevel
 	}
 	// otherwise, default to existing ack level, which belongs to local cluster
+	// this can happen if you add more cluster
 	return s.shardInfo.TransferAckLevel
 }
 
@@ -135,7 +136,7 @@ func (s *shardContextImpl) UpdateTransferAckLevel(ackLevel int64) error {
 	s.Lock()
 	defer s.Unlock()
 
-	// TODO change make this cluster input parameter
+	// TODO cluster should be an input parameter
 	cluster := s.GetService().GetClusterMetadata().GetCurrentClusterName()
 	if cluster == s.GetService().GetClusterMetadata().GetCurrentClusterName() {
 		s.shardInfo.TransferAckLevel = ackLevel
@@ -164,11 +165,12 @@ func (s *shardContextImpl) GetTimerAckLevel(cluster string) time.Time {
 	s.RLock()
 	defer s.RUnlock()
 
-	// if can find corresponding ack level in the cluster to timer ack level map
+	// if we can find corresponding ack level
 	if ackLevel, ok := s.shardInfo.ClusterTimerAckLevel[cluster]; ok {
 		return ackLevel
 	}
 	// otherwise, default to existing ack level, which belongs to local cluster
+	// this can happen if you add more cluster
 	return s.shardInfo.TimerAckLevel
 }
 
