@@ -369,5 +369,42 @@ func newWorkflowCommands() []cli.Command {
 				QueryWorkflowUsingStackTrace(c)
 			},
 		},
+		{
+			Name:    "describe",
+			Aliases: []string{"desc"},
+			Usage:   "show information of workflow execution",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagWorkflowIDWithAlias,
+					Usage: "WorkflowID",
+				},
+				cli.StringFlag{
+					Name:  FlagRunIDWithAlias,
+					Usage: "RunID",
+				},
+				cli.BoolFlag{
+					Name:  FlagPrintRawTimeWithAlias,
+					Usage: "Print raw time stamp",
+				},
+			},
+			Action: func(c *cli.Context) {
+				DescribeWorkflow(c)
+			},
+		},
+		{
+			Name:        "describeid",
+			Aliases:     []string{"descid"},
+			Usage:       "show information of workflow execution (a shortcut of `describe -w <wid> -r <rid>`)",
+			Description: "cadence workflow describeid <workflow_id> <run_id>. Both workflow_id and run_id are required",
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name:  FlagPrintRawTimeWithAlias,
+					Usage: "Print raw time stamp",
+				},
+			},
+			Action: func(c *cli.Context) {
+				DescribeWorkflowWithID(c)
+			},
+		},
 	}
 }

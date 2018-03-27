@@ -324,7 +324,7 @@ func showHistoryHelper(c *cli.Context, wid, rid string) {
 			table.Append([]string{strconv.FormatInt(e.GetEventId(), 10), strconv.FormatInt(e.GetTimestamp(), 10), ColorEvent(e), HistoryEventToString(e)})
 		} else if printDateTime {
 			table.Append([]string{strconv.FormatInt(e.GetEventId(), 10), convertTime(e.GetTimestamp(), false), ColorEvent(e), HistoryEventToString(e)})
-		} else {
+		} else { // default not show time
 			table.Append([]string{strconv.FormatInt(e.GetEventId(), 10), ColorEvent(e), HistoryEventToString(e)})
 		}
 	}
@@ -660,6 +660,90 @@ func ListAllWorkflow(c *cli.Context) {
 		}
 	}
 	table.Render()
+}
+
+// DescribeWorkflow show information about the specified workflow execution
+func DescribeWorkflow(c *cli.Context) {
+	wid := getRequiredOption(c, FlagWorkflowID)
+	rid := c.String(FlagRunID)
+
+	describeWorkflowHelper(c, wid, rid)
+}
+
+// DescribeWorkflowWithID show information about the specified workflow execution
+func DescribeWorkflowWithID(c *cli.Context) {
+	if !c.Args().Present() || c.NArg() != 2 {
+		ExitIfError(errors.New("workflow_id and run_id are required"))
+	}
+	wid := c.Args().First()
+	rid := c.Args().Get(1)
+
+	describeWorkflowHelper(c, wid, rid)
+}
+
+func describeWorkflowHelper(c *cli.Context, wid, rid string) {
+	wfClient := getWorkflowClient(c)
+
+	printRawTime := c.Bool(FlagPrintRawTime) // default show datetime instead of raw time
+
+	ctx, cancel := newContext()
+	defer cancel()
+
+	resp, err := wfClient.DescribeWorkflowExecution(ctx, wid, rid)
+	if err != nil {
+		ErrorAndExit("Describe workflow execution failed", err)
+	}
+	var o interface{}
+	if printRawTime {
+		o = resp
+	} else {
+		o = convertDescribeWorkflowExecutionResponse(resp)
+	}
+	prettyPrintJSONObject(o)
+}
+
+func prettyPrintJSONObject(o interface{}) {
+	b, err := json.MarshalIndent(o, "", "  ")
+	if err != nil {
+		fmt.Printf("Error when try to print pretty: %v\n", err)
+		fmt.Println(o)
+	}
+	os.Stdout.Write(b)
+	fmt.Println()
+}
+
+// describeWorkflowExecutionResponse is used to print datetime instead of print raw time
+type describeWorkflowExecutionResponse struct {
+	ExecutionConfiguration *s.WorkflowExecutionConfiguration
+	WorkflowExecutionInfo  workflowExecutionInfo
+	PendingActivities      []*s.PendingActivityInfo
+}
+
+// workflowExecutionInfo has same field with shared.WorkflowExecutionInfo, but has datetime instead of raw time
+type workflowExecutionInfo struct {
+	Execution     *s.WorkflowExecution
+	Type          *s.WorkflowType
+	StartTime     *string
+	CloseTime     *string
+	CloseStatus   *s.WorkflowExecutionCloseStatus
+	HistoryLength *int64
+}
+
+func convertDescribeWorkflowExecutionResponse(resp *s.DescribeWorkflowExecutionResponse) *describeWorkflowExecutionResponse {
+	info := resp.WorkflowExecutionInfo
+	executionInfo := workflowExecutionInfo{
+		Execution:     info.Execution,
+		Type:          info.Type,
+		StartTime:     common.StringPtr(convertTime(info.GetStartTime(), false)),
+		CloseTime:     common.StringPtr(convertTime(info.GetCloseTime(), false)),
+		CloseStatus:   info.CloseStatus,
+		HistoryLength: info.HistoryLength,
+	}
+	return &describeWorkflowExecutionResponse{
+		ExecutionConfiguration: resp.ExecutionConfiguration,
+		WorkflowExecutionInfo:  executionInfo,
+		PendingActivities:      resp.PendingActivities,
+	}
 }
 
 func createTableForListWorkflow(listAll bool) *tablewriter.Table {
