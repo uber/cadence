@@ -394,8 +394,8 @@ func newWorkflowCommands() []cli.Command {
 		{
 			Name:        "describeid",
 			Aliases:     []string{"descid"},
-			Usage:       "show information of workflow execution (a shortcut of `describe -w <wid> -r <rid>`)",
-			Description: "cadence workflow describeid <workflow_id> <run_id>. Both workflow_id and run_id are required",
+			Usage:       "show information of workflow execution with given workflow_id and optional run_id (a shortcut of `describe -w <wid> -r <rid>`)",
+			Description: "cadence workflow describeid <workflow_id> <run_id>. workflow_id is required; run_id is optional",
 			Flags: []cli.Flag{
 				cli.BoolFlag{
 					Name:  FlagPrintRawTimeWithAlias,

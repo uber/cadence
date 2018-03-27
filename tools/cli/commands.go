@@ -672,11 +672,14 @@ func DescribeWorkflow(c *cli.Context) {
 
 // DescribeWorkflowWithID show information about the specified workflow execution
 func DescribeWorkflowWithID(c *cli.Context) {
-	if !c.Args().Present() || c.NArg() != 2 {
-		ExitIfError(errors.New("workflow_id and run_id are required"))
+	if !c.Args().Present() {
+		ExitIfError(errors.New("workflow_id is required"))
 	}
 	wid := c.Args().First()
-	rid := c.Args().Get(1)
+	rid := ""
+	if c.NArg() >= 2 {
+		rid = c.Args().Get(1)
+	}
 
 	describeWorkflowHelper(c, wid, rid)
 }
