@@ -37,21 +37,19 @@ const (
 
 type (
 	historyBuilder struct {
-		firstEventID int64
-		serializer   persistence.HistorySerializer
-		history      []*workflow.HistoryEvent
-		msBuilder    *mutableStateBuilder
-		logger       bark.Logger
+		serializer persistence.HistorySerializer
+		history    []*workflow.HistoryEvent
+		msBuilder  *mutableStateBuilder
+		logger     bark.Logger
 	}
 )
 
 func newHistoryBuilder(msBuilder *mutableStateBuilder, logger bark.Logger) *historyBuilder {
 	return &historyBuilder{
-		firstEventID: msBuilder.GetNextEventID(),
-		serializer:   persistence.NewJSONHistorySerializer(),
-		history:      []*workflow.HistoryEvent{},
-		msBuilder:    msBuilder,
-		logger:       logger.WithField(logging.TagWorkflowComponent, logging.TagValueHistoryBuilderComponent),
+		serializer: persistence.NewJSONHistorySerializer(),
+		history:    []*workflow.HistoryEvent{},
+		msBuilder:  msBuilder,
+		logger:     logger.WithField(logging.TagWorkflowComponent, logging.TagValueHistoryBuilderComponent),
 	}
 }
 

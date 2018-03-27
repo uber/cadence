@@ -156,7 +156,6 @@ func (e *mutableStateBuilder) Load(state *persistence.WorkflowMutableState) {
 	for _, ai := range state.ActivitInfos {
 		e.pendingActivityInfoByActivityID[ai.ActivityID] = ai.ScheduleID
 	}
-	e.hBuilder.firstEventID = state.ExecutionInfo.NextEventID
 }
 
 func (e *mutableStateBuilder) FlushBufferedEvents() error {
@@ -292,7 +291,7 @@ func (e *mutableStateBuilder) CloseUpdateSession(createReplicationTask bool) (*m
 
 func (e *mutableStateBuilder) createReplicationTask() *persistence.HistoryReplicationTask {
 	return &persistence.HistoryReplicationTask{
-		FirstEventID:        e.hBuilder.firstEventID,
+		FirstEventID:        e.GetLastFirstEventID(),
 		NextEventID:         e.GetNextEventID(),
 		Version:             e.replicationState.CurrentVersion,
 		LastReplicationInfo: e.replicationState.LastReplicationInfo,
@@ -1645,7 +1644,7 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(decisionCompletedEventID int
 		}
 
 		replicationTask := &persistence.HistoryReplicationTask{
-			FirstEventID:        newStateBuilder.hBuilder.firstEventID,
+			FirstEventID:        firstEventID,
 			NextEventID:         newStateBuilder.GetNextEventID(),
 			Version:             failoverVersion,
 			LastReplicationInfo: nil,

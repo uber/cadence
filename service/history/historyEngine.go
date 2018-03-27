@@ -292,7 +292,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 		}
 
 		replicationTask := &persistence.HistoryReplicationTask{
-			FirstEventID:        msBuilder.hBuilder.firstEventID,
+			FirstEventID:        firstEventID,
 			NextEventID:         msBuilder.GetNextEventID(),
 			Version:             failoverVersion,
 			LastReplicationInfo: nil,
