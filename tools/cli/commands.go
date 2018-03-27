@@ -719,17 +719,26 @@ func prettyPrintJSONObject(o interface{}) {
 type describeWorkflowExecutionResponse struct {
 	ExecutionConfiguration *s.WorkflowExecutionConfiguration
 	WorkflowExecutionInfo  workflowExecutionInfo
-	PendingActivities      []*s.PendingActivityInfo
+	PendingActivities      []*pendingActivityInfo
 }
 
-// workflowExecutionInfo has same field with shared.WorkflowExecutionInfo, but has datetime instead of raw time
+// workflowExecutionInfo has same fields as shared.WorkflowExecutionInfo, but has datetime instead of raw time
 type workflowExecutionInfo struct {
 	Execution     *s.WorkflowExecution
 	Type          *s.WorkflowType
-	StartTime     *string
-	CloseTime     *string
+	StartTime     *string // change from *int64
+	CloseTime     *string // change from *int64
 	CloseStatus   *s.WorkflowExecutionCloseStatus
 	HistoryLength *int64
+}
+
+// pendingActivityInfo has same fields as shared.PendingActivityInfo, but different field type for better display
+type pendingActivityInfo struct {
+	ActivityID             *string
+	ActivityType           *s.ActivityType
+	State                  *s.PendingActivityState
+	HeartbeatDetails       *string // change from byte[]
+	LastHeartbeatTimestamp *string // change from *int64
 }
 
 func convertDescribeWorkflowExecutionResponse(resp *s.DescribeWorkflowExecutionResponse) *describeWorkflowExecutionResponse {
@@ -742,10 +751,23 @@ func convertDescribeWorkflowExecutionResponse(resp *s.DescribeWorkflowExecutionR
 		CloseStatus:   info.CloseStatus,
 		HistoryLength: info.HistoryLength,
 	}
+	var pendingActs []*pendingActivityInfo
+	var tmpAct *pendingActivityInfo
+	for _, pa := range resp.PendingActivities {
+		tmpAct = &pendingActivityInfo{
+			ActivityID:             pa.ActivityID,
+			ActivityType:           pa.ActivityType,
+			State:                  pa.State,
+			HeartbeatDetails:       common.StringPtr(string(pa.HeartbeatDetails)),
+			LastHeartbeatTimestamp: common.StringPtr(convertTime(pa.GetLastHeartbeatTimestamp(), false)),
+		}
+		pendingActs = append(pendingActs, tmpAct)
+	}
+
 	return &describeWorkflowExecutionResponse{
 		ExecutionConfiguration: resp.ExecutionConfiguration,
 		WorkflowExecutionInfo:  executionInfo,
-		PendingActivities:      resp.PendingActivities,
+		PendingActivities:      pendingActs,
 	}
 }
 
