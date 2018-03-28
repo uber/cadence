@@ -1001,6 +1001,7 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_JustSignal() {
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gwmsResponse, nil).Once()
 	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(nil).Once()
+	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false).Once()
 
 	resp, err := s.historyEngine.SignalWithStartWorkflowExecution(sRequest)
 	s.Nil(err)
