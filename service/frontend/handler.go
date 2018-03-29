@@ -1701,12 +1701,8 @@ func (wh *WorkflowHandler) QueryWorkflow(ctx context.Context,
 		return nil, wh.error(errExecutionNotSet, scope)
 	}
 
-	if queryRequest.Execution.WorkflowId == nil {
-		return nil, wh.error(errWorkflowIDNotSet, scope)
-	}
-
-	if queryRequest.Execution.RunId != nil && uuid.Parse(queryRequest.Execution.GetRunId()) == nil {
-		return nil, wh.error(errInvalidRunID, scope)
+	if err := wh.validateExecution(queryRequest.Execution, scope); err != nil {
+		return nil, err
 	}
 
 	if queryRequest.Query == nil {
