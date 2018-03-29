@@ -276,7 +276,7 @@ func (wh *WorkflowHandler) DescribeDomain(ctx context.Context,
 	}
 
 	resp, err := wh.metadataMgr.GetDomain(&persistence.GetDomainRequest{
-		Name: *describeRequest.Name,
+		Name: describeRequest.GetName(),
 	})
 
 	if err != nil {
@@ -554,7 +554,7 @@ func (wh *WorkflowHandler) PollForActivityTask(
 		if err != nil {
 			// For all other errors log an error and return it back to client.
 			wh.Service.GetLogger().Errorf(
-				"PollForActivityTask failed. TaskList: %v, Error: %v", *pollRequest.TaskList.Name, err)
+				"PollForActivityTask failed. TaskList: %v, Error: %v", pollRequest.TaskList.GetName(), err)
 			return nil, wh.error(err, scope)
 		}
 	}
@@ -609,7 +609,7 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 		if err != nil {
 			// For all other errors log an error and return it back to client.
 			wh.Service.GetLogger().Errorf(
-				"PollForDecisionTask failed. TaskList: %v, Error: %v", *pollRequest.TaskList.Name, err)
+				"PollForDecisionTask failed. TaskList: %v, Error: %v", pollRequest.TaskList.GetName(), err)
 			return nil, wh.error(err, scope)
 		}
 
@@ -1142,7 +1142,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 
 	wh.Service.GetLogger().Debugf(
 		"Received StartWorkflowExecution. WorkflowID: %v",
-		*startRequest.WorkflowId)
+		startRequest.GetWorkflowId())
 
 	if startRequest.WorkflowType == nil ||
 		startRequest.WorkflowType.Name == nil || *startRequest.WorkflowType.Name == "" {
@@ -1154,13 +1154,13 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 	}
 
 	if startRequest.ExecutionStartToCloseTimeoutSeconds == nil ||
-		*startRequest.ExecutionStartToCloseTimeoutSeconds <= 0 {
+		startRequest.GetExecutionStartToCloseTimeoutSeconds() <= 0 {
 		return nil, wh.error(&gen.BadRequestError{
 			Message: "A valid ExecutionStartToCloseTimeoutSeconds is not set on request."}, scope)
 	}
 
 	if startRequest.TaskStartToCloseTimeoutSeconds == nil ||
-		*startRequest.TaskStartToCloseTimeoutSeconds <= 0 {
+		startRequest.GetTaskStartToCloseTimeoutSeconds() <= 0 {
 		return nil, wh.error(&gen.BadRequestError{
 			Message: "A valid TaskStartToCloseTimeoutSeconds is not set on request."}, scope)
 	}
@@ -1205,7 +1205,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		return nil, err
 	}
 
-	if getRequest.MaximumPageSize == nil || *getRequest.MaximumPageSize == 0 {
+	if getRequest.MaximumPageSize == nil || getRequest.GetMaximumPageSize() == 0 {
 		getRequest.MaximumPageSize = common.Int32Ptr(wh.config.DefaultHistoryMaxPageSize)
 	}
 
@@ -1250,7 +1250,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		if err != nil {
 			return nil, wh.error(errInvalidNextPageToken, scope)
 		}
-		if execution.RunId != nil && *execution.RunId != token.RunID {
+		if execution.RunId != nil && execution.GetRunId() != token.RunID {
 			return nil, wh.error(errNextPageTokenRunIDMismatch, scope)
 		}
 
@@ -1317,7 +1317,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		} else {
 			history, token.PersistenceToken, err =
 				wh.getHistory(domainID, *execution, token.FirstEventID, token.NextEventID,
-					*getRequest.MaximumPageSize, token.PersistenceToken, token.TransientDecision)
+					getRequest.GetMaximumPageSize(), token.PersistenceToken, token.TransientDecision)
 			if err != nil {
 				return nil, wh.error(err, scope)
 			}
@@ -1550,7 +1550,7 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx context.Context,
 			Message: "Only one of ExecutionFilter or TypeFilter is allowed"}, scope)
 	}
 
-	if listRequest.MaximumPageSize == nil || *listRequest.MaximumPageSize == 0 {
+	if listRequest.MaximumPageSize == nil || listRequest.GetMaximumPageSize() == 0 {
 		listRequest.MaximumPageSize = common.Int32Ptr(wh.config.DefaultVisibilityMaxPageSize)
 	}
 
@@ -1637,7 +1637,7 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx context.Context,
 			Message: "Only one of ExecutionFilter, TypeFilter or StatusFilter is allowed"}, scope)
 	}
 
-	if listRequest.MaximumPageSize == nil || *listRequest.MaximumPageSize == 0 {
+	if listRequest.MaximumPageSize == nil || listRequest.GetMaximumPageSize() == 0 {
 		listRequest.MaximumPageSize = common.Int32Ptr(wh.config.DefaultVisibilityMaxPageSize)
 	}
 
@@ -1971,7 +1971,7 @@ func (wh *WorkflowHandler) validateTaskListType(t *gen.TaskListType, scope int) 
 }
 
 func (wh *WorkflowHandler) validateTaskList(t *gen.TaskList, scope int) error {
-	if t == nil || t.Name == nil || *t.Name == "" {
+	if t == nil || t.Name == nil || t.GetName() == "" {
 		return wh.error(errTaskListNotSet, scope)
 	}
 	return nil
