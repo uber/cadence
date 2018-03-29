@@ -99,6 +99,7 @@ var (
 	errNextPageTokenRunIDMismatch = &gen.BadRequestError{Message: "RunID in the request does not match the NextPageToken."}
 	errQueryNotSet                = &gen.BadRequestError{Message: "WorkflowQuery is not set on request."}
 	errQueryTypeNotSet            = &gen.BadRequestError{Message: "QueryType is not set on request."}
+	errRequestNotSet              = &gen.BadRequestError{Message: "Request is nil."}
 
 	// err indicating that this cluster is not the master, so cannot do domain registration or update
 	errNotMasterCluster                = &gen.BadRequestError{Message: "Cluster is not master cluster, cannot do domain registration or domain update."}
@@ -172,10 +173,13 @@ func (wh *WorkflowHandler) Health(ctx context.Context) (*health.HealthStatus, er
 // acts as a sandbox and provides isolation for all resources within the domain.  All resources belongs to exactly one
 // domain.
 func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *gen.RegisterDomainRequest) error {
-
 	scope := metrics.FrontendRegisterDomainScope
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
+
+	if registerRequest == nil {
+		return wh.error(errRequestNotSet, scope)
+	}
 
 	clusterMetadata := wh.GetClusterMetadata()
 	// TODO remove the IsGlobalDomainEnabled check once cross DC is public
@@ -271,6 +275,10 @@ func (wh *WorkflowHandler) DescribeDomain(ctx context.Context,
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
 
+	if describeRequest == nil {
+		return nil, wh.error(errRequestNotSet, scope)
+	}
+
 	if describeRequest.Name == nil {
 		return nil, wh.error(errDomainNotSet, scope)
 	}
@@ -300,6 +308,10 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 	scope := metrics.FrontendUpdateDomainScope
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
+
+	if updateRequest == nil {
+		return nil, wh.error(errRequestNotSet, scope)
+	}
 
 	clusterMetadata := wh.GetClusterMetadata()
 	// TODO remove the IsGlobalDomainEnabled check once cross DC is public
@@ -475,6 +487,10 @@ func (wh *WorkflowHandler) DeprecateDomain(ctx context.Context, deprecateRequest
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
 
+	if deprecateRequest == nil {
+		return wh.error(errRequestNotSet, scope)
+	}
+
 	clusterMetadata := wh.GetClusterMetadata()
 	// TODO remove the IsGlobalDomainEnabled check once cross DC is public
 	if clusterMetadata.IsGlobalDomainEnabled() && !clusterMetadata.IsMasterCluster() {
@@ -517,6 +533,10 @@ func (wh *WorkflowHandler) PollForActivityTask(
 	scope := metrics.FrontendPollForActivityTaskScope
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
+
+	if pollRequest == nil {
+		return nil, wh.error(errRequestNotSet, scope)
+	}
 
 	if ok, _ := wh.rateLimiter.TryConsume(1); !ok {
 		return nil, wh.error(createServiceBusyError(), scope)
@@ -569,6 +589,10 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	scope := metrics.FrontendPollForDecisionTaskScope
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
+
+	if pollRequest == nil {
+		return nil, wh.error(errRequestNotSet, scope)
+	}
 
 	if ok, _ := wh.rateLimiter.TryConsume(1); !ok {
 		return nil, wh.error(createServiceBusyError(), scope)
@@ -658,6 +682,10 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeat(
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
 
+	if heartbeatRequest == nil {
+		return nil, wh.error(errRequestNotSet, scope)
+	}
+
 	// Count the request in the RPS, but we still accept it even if RPS is exceeded
 	wh.rateLimiter.TryConsume(1)
 
@@ -691,6 +719,10 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeatByID(
 	scope := metrics.FrontendRecordActivityTaskHeartbeatByIDScope
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
+
+	if heartbeatRequest == nil {
+		return nil, wh.error(errRequestNotSet, scope)
+	}
 
 	// Count the request in the RPS, but we still accept it even if RPS is exceeded
 	wh.rateLimiter.TryConsume(1)
@@ -751,6 +783,10 @@ func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
 
+	if completeRequest == nil {
+		return wh.error(errRequestNotSet, scope)
+	}
+
 	// Count the request in the RPS, but we still accept it even if RPS is exceeded
 	wh.rateLimiter.TryConsume(1)
 
@@ -783,6 +819,10 @@ func (wh *WorkflowHandler) RespondActivityTaskCompletedByID(
 	scope := metrics.FrontendRespondActivityTaskCompletedByIDScope
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
+
+	if completeRequest == nil {
+		return wh.error(errRequestNotSet, scope)
+	}
 
 	// Count the request in the RPS, but we still accept it even if RPS is exceeded
 	wh.rateLimiter.TryConsume(1)
@@ -842,6 +882,10 @@ func (wh *WorkflowHandler) RespondActivityTaskFailed(
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
 
+	if failedRequest == nil {
+		return wh.error(errRequestNotSet, scope)
+	}
+
 	// Count the request in the RPS, but we still accept it even if RPS is exceeded
 	wh.rateLimiter.TryConsume(1)
 
@@ -874,6 +918,10 @@ func (wh *WorkflowHandler) RespondActivityTaskFailedByID(
 	scope := metrics.FrontendRespondActivityTaskFailedByIDScope
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
+
+	if failedRequest == nil {
+		return wh.error(errRequestNotSet, scope)
+	}
 
 	// Count the request in the RPS, but we still accept it even if RPS is exceeded
 	wh.rateLimiter.TryConsume(1)
@@ -934,6 +982,10 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
 
+	if cancelRequest == nil {
+		return wh.error(errRequestNotSet, scope)
+	}
+
 	// Count the request in the RPS, but we still accept it even if RPS is exceeded
 	wh.rateLimiter.TryConsume(1)
 
@@ -966,6 +1018,10 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceledByID(
 	scope := metrics.FrontendRespondActivityTaskCanceledScope
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
+
+	if cancelRequest == nil {
+		return wh.error(errRequestNotSet, scope)
+	}
 
 	// Count the request in the RPS, but we still accept it even if RPS is exceeded
 	wh.rateLimiter.TryConsume(1)
@@ -1025,6 +1081,10 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
 
+	if completeRequest == nil {
+		return wh.error(errRequestNotSet, scope)
+	}
+
 	// Count the request in the RPS, but we still accept it even if RPS is exceeded
 	wh.rateLimiter.TryConsume(1)
 
@@ -1058,6 +1118,10 @@ func (wh *WorkflowHandler) RespondDecisionTaskFailed(
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
 
+	if failedRequest == nil {
+		return wh.error(errRequestNotSet, scope)
+	}
+
 	// Count the request in the RPS, but we still accept it even if RPS is exceeded
 	wh.rateLimiter.TryConsume(1)
 
@@ -1090,6 +1154,10 @@ func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 	scope := metrics.FrontendRespondQueryTaskCompletedScope
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
+
+	if completeRequest == nil {
+		return wh.error(errRequestNotSet, scope)
+	}
 
 	// Count the request in the RPS, but we still accept it even if RPS is exceeded
 	wh.rateLimiter.TryConsume(1)
@@ -1127,6 +1195,10 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 	scope := metrics.FrontendStartWorkflowExecutionScope
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
+
+	if startRequest == nil {
+		return nil, wh.error(errRequestNotSet, scope)
+	}
 
 	if ok, _ := wh.rateLimiter.TryConsume(1); !ok {
 		return nil, wh.error(createServiceBusyError(), scope)
@@ -1192,6 +1264,10 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	scope := metrics.FrontendGetWorkflowExecutionHistoryScope
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
+
+	if getRequest == nil {
+		return nil, wh.error(errRequestNotSet, scope)
+	}
 
 	if ok, _ := wh.rateLimiter.TryConsume(1); !ok {
 		return nil, wh.error(createServiceBusyError(), scope)
@@ -1347,6 +1423,10 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(ctx context.Context,
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
 
+	if signalRequest == nil {
+		return wh.error(errRequestNotSet, scope)
+	}
+
 	if ok, _ := wh.rateLimiter.TryConsume(1); !ok {
 		return wh.error(createServiceBusyError(), scope)
 	}
@@ -1386,9 +1466,14 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(ctx context.Context,
 // event recorded in history, and a decision task being created for the execution
 func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(ctx context.Context,
 	signalWithStartRequest *gen.SignalWithStartWorkflowExecutionRequest) (*gen.StartWorkflowExecutionResponse, error) {
+
 	scope := metrics.FrontendSignalWithStartWorkflowExecutionScope
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
+
+	if signalWithStartRequest == nil {
+		return nil, wh.error(errRequestNotSet, scope)
+	}
 
 	if ok, _ := wh.rateLimiter.TryConsume(1); !ok {
 		return nil, wh.error(createServiceBusyError(), scope)
@@ -1452,6 +1537,10 @@ func (wh *WorkflowHandler) TerminateWorkflowExecution(ctx context.Context,
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
 
+	if terminateRequest == nil {
+		return wh.error(errRequestNotSet, scope)
+	}
+
 	if ok, _ := wh.rateLimiter.TryConsume(1); !ok {
 		return wh.error(createServiceBusyError(), scope)
 	}
@@ -1489,6 +1578,10 @@ func (wh *WorkflowHandler) RequestCancelWorkflowExecution(
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
 
+	if cancelRequest == nil {
+		return wh.error(errRequestNotSet, scope)
+	}
+
 	if ok, _ := wh.rateLimiter.TryConsume(1); !ok {
 		return wh.error(createServiceBusyError(), scope)
 	}
@@ -1524,6 +1617,10 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx context.Context,
 	scope := metrics.FrontendListOpenWorkflowExecutionsScope
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
+
+	if listRequest == nil {
+		return nil, wh.error(errRequestNotSet, scope)
+	}
 
 	if ok, _ := wh.rateLimiter.TryConsume(1); !ok {
 		return nil, wh.error(createServiceBusyError(), scope)
@@ -1600,6 +1697,10 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx context.Context,
 	scope := metrics.FrontendListClosedWorkflowExecutionsScope
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
+
+	if listRequest == nil {
+		return nil, wh.error(errRequestNotSet, scope)
+	}
 
 	if ok, _ := wh.rateLimiter.TryConsume(1); !ok {
 		return nil, wh.error(createServiceBusyError(), scope)
@@ -1692,6 +1793,10 @@ func (wh *WorkflowHandler) QueryWorkflow(ctx context.Context,
 	scope := metrics.FrontendQueryWorkflowScope
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
+
+	if queryRequest == nil {
+		return nil, wh.error(errRequestNotSet, scope)
+	}
 
 	if queryRequest.Domain == nil {
 		return nil, wh.error(errDomainNotSet, scope)
@@ -1790,6 +1895,10 @@ func (wh *WorkflowHandler) DescribeWorkflowExecution(ctx context.Context, reques
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
 
+	if request == nil {
+		return nil, wh.error(errRequestNotSet, scope)
+	}
+
 	if ok, _ := wh.rateLimiter.TryConsume(1); !ok {
 		return nil, wh.error(createServiceBusyError(), scope)
 	}
@@ -1825,6 +1934,10 @@ func (wh *WorkflowHandler) DescribeTaskList(ctx context.Context, request *gen.De
 	scope := metrics.FrontendDescribeTaskListScope
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
+
+	if request == nil {
+		return nil, wh.error(errRequestNotSet, scope)
+	}
 
 	if ok, _ := wh.rateLimiter.TryConsume(1); !ok {
 		return nil, wh.error(createServiceBusyError(), scope)
