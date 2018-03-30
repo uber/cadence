@@ -191,7 +191,7 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 		registerRequest.Clusters = nil
 	}
 
-	if len(registerRequest.GetName()) == 0 {
+	if registerRequest.GetName() == "" {
 		return wh.error(errDomainNotSet, scope)
 	}
 
@@ -279,7 +279,7 @@ func (wh *WorkflowHandler) DescribeDomain(ctx context.Context,
 		return nil, wh.error(errRequestNotSet, scope)
 	}
 
-	if describeRequest.Name == nil {
+	if describeRequest.GetName() == "" {
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
@@ -319,12 +319,12 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 		updateRequest.ReplicationConfiguration = nil
 	}
 
-	if updateRequest.Name == nil {
+	if updateRequest.GetName() == "" {
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
 	getResponse, err0 := wh.metadataMgr.GetDomain(&persistence.GetDomainRequest{
-		Name: *updateRequest.Name,
+		Name: updateRequest.GetName(),
 	})
 
 	if err0 != nil {
@@ -497,7 +497,7 @@ func (wh *WorkflowHandler) DeprecateDomain(ctx context.Context, deprecateRequest
 		return wh.error(errNotMasterCluster, scope)
 	}
 
-	if deprecateRequest.Name == nil {
+	if deprecateRequest.GetName() == "" {
 		return wh.error(errDomainNotSet, scope)
 	}
 
@@ -1204,11 +1204,11 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, wh.error(createServiceBusyError(), scope)
 	}
 
-	if startRequest.Domain == nil || startRequest.GetDomain() == "" {
+	if startRequest.GetDomain() == "" {
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	if startRequest.WorkflowId == nil || startRequest.GetWorkflowId() == "" {
+	if startRequest.GetWorkflowId() == "" {
 		return nil, wh.error(&gen.BadRequestError{Message: "WorkflowId is not set on request."}, scope)
 	}
 
@@ -1216,8 +1216,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		"Received StartWorkflowExecution. WorkflowID: %v",
 		startRequest.GetWorkflowId())
 
-	if startRequest.WorkflowType == nil ||
-		startRequest.WorkflowType.Name == nil || *startRequest.WorkflowType.Name == "" {
+	if startRequest.WorkflowType == nil || startRequest.WorkflowType.GetName() == "" {
 		return nil, wh.error(&gen.BadRequestError{Message: "WorkflowType is not set on request."}, scope)
 	}
 
@@ -1225,14 +1224,12 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, err
 	}
 
-	if startRequest.ExecutionStartToCloseTimeoutSeconds == nil ||
-		startRequest.GetExecutionStartToCloseTimeoutSeconds() <= 0 {
+	if startRequest.GetExecutionStartToCloseTimeoutSeconds() <= 0 {
 		return nil, wh.error(&gen.BadRequestError{
 			Message: "A valid ExecutionStartToCloseTimeoutSeconds is not set on request."}, scope)
 	}
 
-	if startRequest.TaskStartToCloseTimeoutSeconds == nil ||
-		startRequest.GetTaskStartToCloseTimeoutSeconds() <= 0 {
+	if startRequest.GetTaskStartToCloseTimeoutSeconds() <= 0 {
 		return nil, wh.error(&gen.BadRequestError{
 			Message: "A valid TaskStartToCloseTimeoutSeconds is not set on request."}, scope)
 	}
@@ -1273,7 +1270,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		return nil, wh.error(createServiceBusyError(), scope)
 	}
 
-	if getRequest.Domain == nil {
+	if getRequest.GetDomain() == "" {
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
@@ -1281,7 +1278,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		return nil, err
 	}
 
-	if getRequest.MaximumPageSize == nil || getRequest.GetMaximumPageSize() == 0 {
+	if getRequest.GetMaximumPageSize() == 0 {
 		getRequest.MaximumPageSize = common.Int32Ptr(wh.config.DefaultHistoryMaxPageSize)
 	}
 
@@ -1369,7 +1366,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	if isCloseEventOnly {
 		if !isWorkflowRunning {
 			history, _, err = wh.getHistory(domainID, *execution, lastFirstEventID, nextEventID,
-				*getRequest.MaximumPageSize, nil, token.TransientDecision)
+				getRequest.GetMaximumPageSize(), nil, token.TransientDecision)
 			if err != nil {
 				return nil, wh.error(err, scope)
 			}
@@ -1431,7 +1428,7 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(ctx context.Context,
 		return wh.error(createServiceBusyError(), scope)
 	}
 
-	if signalRequest.Domain == nil || signalRequest.GetDomain() == "" {
+	if signalRequest.GetDomain() == "" {
 		return wh.error(errDomainNotSet, scope)
 	}
 
@@ -1439,7 +1436,7 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(ctx context.Context,
 		return err
 	}
 
-	if signalRequest.SignalName == nil || signalRequest.GetSignalName() == "" {
+	if signalRequest.GetSignalName() == "" {
 		return wh.error(&gen.BadRequestError{Message: "SignalName is not set on request."}, scope)
 	}
 
@@ -1479,20 +1476,19 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(ctx context.Context,
 		return nil, wh.error(createServiceBusyError(), scope)
 	}
 
-	if signalWithStartRequest.Domain == nil || signalWithStartRequest.GetDomain() == "" {
+	if signalWithStartRequest.GetDomain() == "" {
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	if signalWithStartRequest.WorkflowId == nil || signalWithStartRequest.GetWorkflowId() == "" {
+	if signalWithStartRequest.GetWorkflowId() == "" {
 		return nil, wh.error(&gen.BadRequestError{Message: "WorkflowId is not set on request."}, scope)
 	}
 
-	if signalWithStartRequest.SignalName == nil || signalWithStartRequest.GetSignalName() == "" {
+	if signalWithStartRequest.GetSignalName() == "" {
 		return nil, wh.error(&gen.BadRequestError{Message: "SignalName is not set on request."}, scope)
 	}
 
-	if signalWithStartRequest.WorkflowType == nil ||
-		signalWithStartRequest.WorkflowType.Name == nil || signalWithStartRequest.WorkflowType.GetName() == "" {
+	if signalWithStartRequest.WorkflowType == nil || signalWithStartRequest.WorkflowType.GetName() == "" {
 		return nil, wh.error(&gen.BadRequestError{Message: "WorkflowType is not set on request."}, scope)
 	}
 
@@ -1500,14 +1496,12 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(ctx context.Context,
 		return nil, err
 	}
 
-	if signalWithStartRequest.ExecutionStartToCloseTimeoutSeconds == nil ||
-		signalWithStartRequest.GetExecutionStartToCloseTimeoutSeconds() <= 0 {
+	if signalWithStartRequest.GetExecutionStartToCloseTimeoutSeconds() <= 0 {
 		return nil, wh.error(&gen.BadRequestError{
 			Message: "A valid ExecutionStartToCloseTimeoutSeconds is not set on request."}, scope)
 	}
 
-	if signalWithStartRequest.TaskStartToCloseTimeoutSeconds == nil ||
-		signalWithStartRequest.GetTaskStartToCloseTimeoutSeconds() <= 0 {
+	if signalWithStartRequest.GetTaskStartToCloseTimeoutSeconds() <= 0 {
 		return nil, wh.error(&gen.BadRequestError{
 			Message: "A valid TaskStartToCloseTimeoutSeconds is not set on request."}, scope)
 	}
@@ -1545,7 +1539,7 @@ func (wh *WorkflowHandler) TerminateWorkflowExecution(ctx context.Context,
 		return wh.error(createServiceBusyError(), scope)
 	}
 
-	if terminateRequest.Domain == nil {
+	if terminateRequest.GetDomain() == "" {
 		return wh.error(errDomainNotSet, scope)
 	}
 
@@ -1586,7 +1580,7 @@ func (wh *WorkflowHandler) RequestCancelWorkflowExecution(
 		return wh.error(createServiceBusyError(), scope)
 	}
 
-	if cancelRequest.Domain == nil {
+	if cancelRequest.GetDomain() == "" {
 		return wh.error(errDomainNotSet, scope)
 	}
 
@@ -1626,7 +1620,7 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx context.Context,
 		return nil, wh.error(createServiceBusyError(), scope)
 	}
 
-	if listRequest.Domain == nil {
+	if listRequest.GetDomain() == "" {
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
@@ -1634,11 +1628,11 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx context.Context,
 		return nil, wh.error(&gen.BadRequestError{Message: "StartTimeFilter is required"}, scope)
 	}
 
-	if listRequest.StartTimeFilter.EarliestTime == nil {
+	if listRequest.StartTimeFilter.GetEarliestTime() == 0 {
 		return nil, wh.error(&gen.BadRequestError{Message: "EarliestTime in StartTimeFilter is required"}, scope)
 	}
 
-	if listRequest.StartTimeFilter.LatestTime == nil {
+	if listRequest.StartTimeFilter.GetLatestTime() == 0 {
 		return nil, wh.error(&gen.BadRequestError{Message: "LatestTime in StartTimeFilter is required"}, scope)
 	}
 
@@ -1647,7 +1641,7 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx context.Context,
 			Message: "Only one of ExecutionFilter or TypeFilter is allowed"}, scope)
 	}
 
-	if listRequest.MaximumPageSize == nil || listRequest.GetMaximumPageSize() == 0 {
+	if listRequest.GetMaximumPageSize() == 0 {
 		listRequest.MaximumPageSize = common.Int32Ptr(wh.config.DefaultVisibilityMaxPageSize)
 	}
 
@@ -1706,7 +1700,7 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx context.Context,
 		return nil, wh.error(createServiceBusyError(), scope)
 	}
 
-	if listRequest.Domain == nil {
+	if listRequest.GetDomain() == "" {
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
@@ -1714,11 +1708,11 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx context.Context,
 		return nil, wh.error(&gen.BadRequestError{Message: "StartTimeFilter is required"}, scope)
 	}
 
-	if listRequest.StartTimeFilter.EarliestTime == nil {
+	if listRequest.StartTimeFilter.GetLatestTime() == 0 {
 		return nil, wh.error(&gen.BadRequestError{Message: "EarliestTime in StartTimeFilter is required"}, scope)
 	}
 
-	if listRequest.StartTimeFilter.LatestTime == nil {
+	if listRequest.StartTimeFilter.GetEarliestTime() == 0 {
 		return nil, wh.error(&gen.BadRequestError{Message: "LatestTime in StartTimeFilter is required"}, scope)
 	}
 
@@ -1738,7 +1732,7 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx context.Context,
 			Message: "Only one of ExecutionFilter, TypeFilter or StatusFilter is allowed"}, scope)
 	}
 
-	if listRequest.MaximumPageSize == nil || listRequest.GetMaximumPageSize() == 0 {
+	if listRequest.GetMaximumPageSize() == 0 {
 		listRequest.MaximumPageSize = common.Int32Ptr(wh.config.DefaultVisibilityMaxPageSize)
 	}
 
@@ -1798,12 +1792,8 @@ func (wh *WorkflowHandler) QueryWorkflow(ctx context.Context,
 		return nil, wh.error(errRequestNotSet, scope)
 	}
 
-	if queryRequest.Domain == nil {
+	if queryRequest.GetDomain() == "" {
 		return nil, wh.error(errDomainNotSet, scope)
-	}
-
-	if queryRequest.Execution == nil {
-		return nil, wh.error(errExecutionNotSet, scope)
 	}
 
 	if err := wh.validateExecution(queryRequest.Execution, scope); err != nil {
@@ -1814,7 +1804,7 @@ func (wh *WorkflowHandler) QueryWorkflow(ctx context.Context,
 		return nil, wh.error(errQueryNotSet, scope)
 	}
 
-	if queryRequest.Query.QueryType == nil {
+	if queryRequest.Query.GetQueryType() == "" {
 		return nil, wh.error(errQueryTypeNotSet, scope)
 	}
 
@@ -1903,7 +1893,7 @@ func (wh *WorkflowHandler) DescribeWorkflowExecution(ctx context.Context, reques
 		return nil, wh.error(createServiceBusyError(), scope)
 	}
 
-	if request.Domain == nil {
+	if request.GetDomain() == "" {
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 	domainID, err := wh.domainCache.GetDomainID(request.GetDomain())
@@ -1943,7 +1933,7 @@ func (wh *WorkflowHandler) DescribeTaskList(ctx context.Context, request *gen.De
 		return nil, wh.error(createServiceBusyError(), scope)
 	}
 
-	if request.Domain == nil {
+	if request.GetDomain() == "" {
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 	domainID, err := wh.domainCache.GetDomainID(request.GetDomain())
