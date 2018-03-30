@@ -114,7 +114,7 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) error
 
 		case shared.EventTypeDecisionTaskStarted:
 			attributes := event.DecisionTaskStartedEventAttributes
-			di := msBuilder.ReplicateDecisionTaskStartedEvent(attributes.GetScheduledEventId(), event.GetEventId(),
+			di := msBuilder.ReplicateDecisionTaskStartedEvent(nil, attributes.GetScheduledEventId(), event.GetEventId(),
 				attributes.GetRequestId(), event.GetTimestamp())
 
 			decisionScheduleID = di.ScheduleID
