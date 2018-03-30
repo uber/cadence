@@ -156,6 +156,7 @@ func (p *replicatorQueueProcessorImpl) CompleteTask(taskID int64) error {
 
 func (p *replicatorQueueProcessorImpl) getHistory(task *persistence.ReplicationTaskInfo) (*shared.History, error) {
 
+	p.logger.Warnf("Received replication task: %v", task)
 	var nextPageToken []byte
 	historyEvents := []*shared.HistoryEvent{}
 	for hasMore := true; hasMore; hasMore = len(nextPageToken) > 0 {
