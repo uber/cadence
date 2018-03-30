@@ -29107,12 +29107,17 @@ func (v *WorkflowExecutionSignaledEventAttributes) GetIdentity() (o string) {
 }
 
 type WorkflowExecutionStartedEventAttributes struct {
-	WorkflowType                        *WorkflowType `json:"workflowType,omitempty"`
-	TaskList                            *TaskList     `json:"taskList,omitempty"`
-	Input                               []byte        `json:"input,omitempty"`
-	ExecutionStartToCloseTimeoutSeconds *int32        `json:"executionStartToCloseTimeoutSeconds,omitempty"`
-	TaskStartToCloseTimeoutSeconds      *int32        `json:"taskStartToCloseTimeoutSeconds,omitempty"`
-	Identity                            *string       `json:"identity,omitempty"`
+	WorkflowType                        *WorkflowType      `json:"workflowType,omitempty"`
+	ParentWorkflowDomain                *string            `json:"parentWorkflowDomain,omitempty"`
+	ParentWorkflowExecution             *WorkflowExecution `json:"parentWorkflowExecution,omitempty"`
+	ParentInitiatedEventId              *int64             `json:"parentInitiatedEventId,omitempty"`
+	TaskList                            *TaskList          `json:"taskList,omitempty"`
+	Input                               []byte             `json:"input,omitempty"`
+	ExecutionStartToCloseTimeoutSeconds *int32             `json:"executionStartToCloseTimeoutSeconds,omitempty"`
+	TaskStartToCloseTimeoutSeconds      *int32             `json:"taskStartToCloseTimeoutSeconds,omitempty"`
+	ChildPolicy                         *ChildPolicy       `json:"childPolicy,omitempty"`
+	ContinuedExecutionRunId             *int64             `json:"continuedExecutionRunId,omitempty"`
+	Identity                            *string            `json:"identity,omitempty"`
 }
 
 // ToWire translates a WorkflowExecutionStartedEventAttributes struct into a Thrift-level intermediate
@@ -29132,7 +29137,7 @@ type WorkflowExecutionStartedEventAttributes struct {
 //   }
 func (v *WorkflowExecutionStartedEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [6]wire.Field
+		fields [11]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -29144,6 +29149,30 @@ func (v *WorkflowExecutionStartedEventAttributes) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.ParentWorkflowDomain != nil {
+		w, err = wire.NewValueString(*(v.ParentWorkflowDomain)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 12, Value: w}
+		i++
+	}
+	if v.ParentWorkflowExecution != nil {
+		w, err = v.ParentWorkflowExecution.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 14, Value: w}
+		i++
+	}
+	if v.ParentInitiatedEventId != nil {
+		w, err = wire.NewValueI64(*(v.ParentInitiatedEventId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 16, Value: w}
 		i++
 	}
 	if v.TaskList != nil {
@@ -29176,6 +29205,22 @@ func (v *WorkflowExecutionStartedEventAttributes) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 50, Value: w}
+		i++
+	}
+	if v.ChildPolicy != nil {
+		w, err = v.ChildPolicy.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 52, Value: w}
+		i++
+	}
+	if v.ContinuedExecutionRunId != nil {
+		w, err = wire.NewValueI64(*(v.ContinuedExecutionRunId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 54, Value: w}
 		i++
 	}
 	if v.Identity != nil {
@@ -29220,6 +29265,34 @@ func (v *WorkflowExecutionStartedEventAttributes) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 12:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.ParentWorkflowDomain = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 14:
+			if field.Value.Type() == wire.TStruct {
+				v.ParentWorkflowExecution, err = _WorkflowExecution_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 16:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.ParentInitiatedEventId = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 20:
 			if field.Value.Type() == wire.TStruct {
 				v.TaskList, err = _TaskList_Read(field.Value)
@@ -29256,6 +29329,26 @@ func (v *WorkflowExecutionStartedEventAttributes) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 52:
+			if field.Value.Type() == wire.TI32 {
+				var x ChildPolicy
+				x, err = _ChildPolicy_Read(field.Value)
+				v.ChildPolicy = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 54:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.ContinuedExecutionRunId = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 60:
 			if field.Value.Type() == wire.TBinary {
 				var x string
@@ -29279,10 +29372,22 @@ func (v *WorkflowExecutionStartedEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [6]string
+	var fields [11]string
 	i := 0
 	if v.WorkflowType != nil {
 		fields[i] = fmt.Sprintf("WorkflowType: %v", v.WorkflowType)
+		i++
+	}
+	if v.ParentWorkflowDomain != nil {
+		fields[i] = fmt.Sprintf("ParentWorkflowDomain: %v", *(v.ParentWorkflowDomain))
+		i++
+	}
+	if v.ParentWorkflowExecution != nil {
+		fields[i] = fmt.Sprintf("ParentWorkflowExecution: %v", v.ParentWorkflowExecution)
+		i++
+	}
+	if v.ParentInitiatedEventId != nil {
+		fields[i] = fmt.Sprintf("ParentInitiatedEventId: %v", *(v.ParentInitiatedEventId))
 		i++
 	}
 	if v.TaskList != nil {
@@ -29301,6 +29406,14 @@ func (v *WorkflowExecutionStartedEventAttributes) String() string {
 		fields[i] = fmt.Sprintf("TaskStartToCloseTimeoutSeconds: %v", *(v.TaskStartToCloseTimeoutSeconds))
 		i++
 	}
+	if v.ChildPolicy != nil {
+		fields[i] = fmt.Sprintf("ChildPolicy: %v", *(v.ChildPolicy))
+		i++
+	}
+	if v.ContinuedExecutionRunId != nil {
+		fields[i] = fmt.Sprintf("ContinuedExecutionRunId: %v", *(v.ContinuedExecutionRunId))
+		i++
+	}
 	if v.Identity != nil {
 		fields[i] = fmt.Sprintf("Identity: %v", *(v.Identity))
 		i++
@@ -29317,6 +29430,15 @@ func (v *WorkflowExecutionStartedEventAttributes) Equals(rhs *WorkflowExecutionS
 	if !((v.WorkflowType == nil && rhs.WorkflowType == nil) || (v.WorkflowType != nil && rhs.WorkflowType != nil && v.WorkflowType.Equals(rhs.WorkflowType))) {
 		return false
 	}
+	if !_String_EqualsPtr(v.ParentWorkflowDomain, rhs.ParentWorkflowDomain) {
+		return false
+	}
+	if !((v.ParentWorkflowExecution == nil && rhs.ParentWorkflowExecution == nil) || (v.ParentWorkflowExecution != nil && rhs.ParentWorkflowExecution != nil && v.ParentWorkflowExecution.Equals(rhs.ParentWorkflowExecution))) {
+		return false
+	}
+	if !_I64_EqualsPtr(v.ParentInitiatedEventId, rhs.ParentInitiatedEventId) {
+		return false
+	}
 	if !((v.TaskList == nil && rhs.TaskList == nil) || (v.TaskList != nil && rhs.TaskList != nil && v.TaskList.Equals(rhs.TaskList))) {
 		return false
 	}
@@ -29329,11 +29451,37 @@ func (v *WorkflowExecutionStartedEventAttributes) Equals(rhs *WorkflowExecutionS
 	if !_I32_EqualsPtr(v.TaskStartToCloseTimeoutSeconds, rhs.TaskStartToCloseTimeoutSeconds) {
 		return false
 	}
+	if !_ChildPolicy_EqualsPtr(v.ChildPolicy, rhs.ChildPolicy) {
+		return false
+	}
+	if !_I64_EqualsPtr(v.ContinuedExecutionRunId, rhs.ContinuedExecutionRunId) {
+		return false
+	}
 	if !_String_EqualsPtr(v.Identity, rhs.Identity) {
 		return false
 	}
 
 	return true
+}
+
+// GetParentWorkflowDomain returns the value of ParentWorkflowDomain if it is set or its
+// zero value if it is unset.
+func (v *WorkflowExecutionStartedEventAttributes) GetParentWorkflowDomain() (o string) {
+	if v.ParentWorkflowDomain != nil {
+		return *v.ParentWorkflowDomain
+	}
+
+	return
+}
+
+// GetParentInitiatedEventId returns the value of ParentInitiatedEventId if it is set or its
+// zero value if it is unset.
+func (v *WorkflowExecutionStartedEventAttributes) GetParentInitiatedEventId() (o int64) {
+	if v.ParentInitiatedEventId != nil {
+		return *v.ParentInitiatedEventId
+	}
+
+	return
 }
 
 // GetExecutionStartToCloseTimeoutSeconds returns the value of ExecutionStartToCloseTimeoutSeconds if it is set or its
@@ -29351,6 +29499,26 @@ func (v *WorkflowExecutionStartedEventAttributes) GetExecutionStartToCloseTimeou
 func (v *WorkflowExecutionStartedEventAttributes) GetTaskStartToCloseTimeoutSeconds() (o int32) {
 	if v.TaskStartToCloseTimeoutSeconds != nil {
 		return *v.TaskStartToCloseTimeoutSeconds
+	}
+
+	return
+}
+
+// GetChildPolicy returns the value of ChildPolicy if it is set or its
+// zero value if it is unset.
+func (v *WorkflowExecutionStartedEventAttributes) GetChildPolicy() (o ChildPolicy) {
+	if v.ChildPolicy != nil {
+		return *v.ChildPolicy
+	}
+
+	return
+}
+
+// GetContinuedExecutionRunId returns the value of ContinuedExecutionRunId if it is set or its
+// zero value if it is unset.
+func (v *WorkflowExecutionStartedEventAttributes) GetContinuedExecutionRunId() (o int64) {
+	if v.ContinuedExecutionRunId != nil {
+		return *v.ContinuedExecutionRunId
 	}
 
 	return

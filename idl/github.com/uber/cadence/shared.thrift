@@ -365,10 +365,15 @@ struct Decision {
 
 struct WorkflowExecutionStartedEventAttributes {
   10: optional WorkflowType workflowType
+  12: optional string parentWorkflowDomain
+  14: optional WorkflowExecution parentWorkflowExecution
+  16: optional i64 (js.type = "Long") parentInitiatedEventId
   20: optional TaskList taskList
   30: optional binary input
   40: optional i32 executionStartToCloseTimeoutSeconds
   50: optional i32 taskStartToCloseTimeoutSeconds
+  52: optional ChildPolicy childPolicy
+  54: optional i64 (js.type = "Long") continuedExecutionRunId
   60: optional string identity
 }
 
