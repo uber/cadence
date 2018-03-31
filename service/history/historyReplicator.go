@@ -65,10 +65,7 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) error
 	if err != nil {
 		return err
 	}
-	execution := shared.WorkflowExecution{
-		WorkflowId: request.WorkflowExecution.WorkflowId,
-		RunId:      request.WorkflowExecution.RunId,
-	}
+	execution := *request.WorkflowExecution
 
 	var context *workflowExecutionContext
 	var msBuilder *mutableStateBuilder
