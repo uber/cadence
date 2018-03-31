@@ -481,7 +481,7 @@ func (c *clientImpl) ReplicateEvents(
 	ctx context.Context,
 	request *h.ReplicateEventsRequest,
 	opts ...yarpc.CallOption) error {
-	client, err := c.getHostForRequest(*request.WorkflowExecution.WorkflowId)
+	client, err := c.getHostForRequest(request.WorkflowExecution.GetWorkflowId())
 	if err != nil {
 		return err
 	}

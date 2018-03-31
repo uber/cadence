@@ -95,12 +95,45 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) error
 	decisionScheduleID := emptyEventID
 	decisionStartID := emptyEventID
 	decisionTimeout := int32(0)
+	var requestID string
+	// TODO: Add handling for following events:
+	// WorkflowExecutionFailed,
+	// WorkflowExecutionTimedOut,
+	// ActivityTaskFailed,
+	// ActivityTaskTimedOut,
+	// ActivityTaskCancelRequested,
+	// RequestCancelActivityTaskFailed,
+	// ActivityTaskCanceled,
+	// TimerStarted,
+	// TimerFired,
+	// CancelTimerFailed,
+	// TimerCanceled,
+	// WorkflowExecutionCancelRequested,
+	// WorkflowExecutionCanceled,
+	// RequestCancelExternalWorkflowExecutionInitiated,
+	// RequestCancelExternalWorkflowExecutionFailed,
+	// ExternalWorkflowExecutionCancelRequested,
+	// MarkerRecorded,
+	// WorkflowExecutionSignaled,
+	// WorkflowExecutionTerminated,
+	// WorkflowExecutionContinuedAsNew,
+	// StartChildWorkflowExecutionInitiated,
+	// StartChildWorkflowExecutionFailed,
+	// ChildWorkflowExecutionStarted,
+	// ChildWorkflowExecutionCompleted,
+	// ChildWorkflowExecutionFailed,
+	// ChildWorkflowExecutionCanceled,
+	// ChildWorkflowExecutionTimedOut,
+	// ChildWorkflowExecutionTerminated,
+	// SignalExternalWorkflowExecutionInitiated,
+	// SignalExternalWorkflowExecutionFailed,
+	// ExternalWorkflowExecutionSignaled,
 	for _, event := range request.History.Events {
 		lastEvent = event
 		switch event.GetEventType() {
 		case shared.EventTypeWorkflowExecutionStarted:
 			attributes := event.WorkflowExecutionStartedEventAttributes
-			requestID := uuid.New()
+			requestID = uuid.New()
 			msBuilder.ReplicateWorkflowExecutionStartedEvent(domainID, execution, requestID, attributes)
 
 		case shared.EventTypeDecisionTaskScheduled:
@@ -199,7 +232,7 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) error
 
 		createWorkflow := func(isBrandNew bool, prevRunID string) (string, error) {
 			_, err = r.shard.CreateWorkflowExecution(&persistence.CreateWorkflowExecutionRequest{
-				RequestID:                   uuid.New(),
+				RequestID:                   requestID,
 				DomainID:                    domainID,
 				Execution:                   execution,
 				ParentDomainID:              parentDomainID,

@@ -184,7 +184,6 @@ func (p *replicationTaskProcessor) worker(workerWG *sync.WaitGroup) {
 						p.logger.Debugf("Recieved domain replication task %v.", task.DomainTaskAttributes)
 						err = p.domainReplicator.HandleReceivingTask(task.DomainTaskAttributes)
 					case replicator.ReplicationTaskTypeHistory:
-						p.logger.Warn("Recieved history replication task %v.", task.HistoryTaskAttributes)
 						err = p.historyClient.ReplicateEvents(context.Background(), &h.ReplicateEventsRequest{
 							DomainUUID: task.HistoryTaskAttributes.DomainId,
 							WorkflowExecution: &shared.WorkflowExecution{
