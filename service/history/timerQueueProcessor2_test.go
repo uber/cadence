@@ -141,7 +141,7 @@ func (s *timerQueueProcessor2Suite) SetupTest() {
 		metricsClient:      s.mockShard.GetMetricsClient(),
 	}
 	h.txProcessor = newTransferQueueProcessor(s.mockShard, h, s.mockVisibilityMgr, s.mockMatchingClient, &mocks.HistoryClient{})
-	h.timerProcessor = newTimerQueueProcessor(s.mockShard, h, s.mockExecutionMgr, s.logger)
+	h.timerProcessor = newTimerQueueProcessor(s.mockShard, h, s.logger)
 	s.mockHistoryEngine = h
 }
 

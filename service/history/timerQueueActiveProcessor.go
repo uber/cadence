@@ -26,7 +26,6 @@ import (
 
 	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 )
@@ -44,20 +43,41 @@ type (
 	}
 )
 
-func newTimerQueueActiveProcessor(shard ShardContext, historyService *historyEngineImpl, executionManager persistence.ExecutionManager, logger bark.Logger) *timerQueueActiveProcessorImpl {
-	log := logger.WithFields(bark.Fields{
-		logging.TagWorkflowComponent: logging.TagValueTimerQueueComponent,
-	})
+func newTimerQueueActiveProcessor(shard ShardContext, historyService *historyEngineImpl, logger bark.Logger) *timerQueueActiveProcessorImpl {
 	clusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
-	timerQueueAckMgr := newTimerQueueAckMgr(shard, historyService.metricsClient, executionManager, clusterName, log)
+	timeNow := func() time.Time {
+		return shard.GetCurrentTime(clusterName)
+	}
+	timerQueueAckMgr := newTimerQueueAckMgr(shard, historyService.metricsClient, clusterName, logger)
 	processor := &timerQueueActiveProcessorImpl{
 		shard:                   shard,
 		historyService:          historyService,
 		cache:                   historyService.historyCache,
-		logger:                  log,
+		logger:                  logger,
 		metricsClient:           historyService.metricsClient,
 		timerGate:               NewLocalTimerGate(),
-		timerQueueProcessorBase: newTimerQueueProcessorBase(shard, historyService, executionManager, timerQueueAckMgr, clusterName, logger),
+		timerQueueProcessorBase: newTimerQueueProcessorBase(shard, historyService, timerQueueAckMgr, timeNow, logger),
+		timerQueueAckMgr:        timerQueueAckMgr,
+	}
+	processor.timerQueueProcessorBase.timerProcessor = processor
+	return processor
+}
+
+func newTimerQueueFailoverProcessor(shard ShardContext, historyService *historyEngineImpl, domainID string, standbyClusterName string, logger bark.Logger) *timerQueueActiveProcessorImpl {
+	clusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
+	timeNow := func() time.Time {
+		// should use current cluster's time when doing domain failover
+		return shard.GetCurrentTime(clusterName)
+	}
+	timerQueueAckMgr := newTimerQueueFailoverAckMgr(shard, historyService.metricsClient, domainID, standbyClusterName, logger)
+	processor := &timerQueueActiveProcessorImpl{
+		shard:                   shard,
+		historyService:          historyService,
+		cache:                   historyService.historyCache,
+		logger:                  logger,
+		metricsClient:           historyService.metricsClient,
+		timerGate:               NewLocalTimerGate(),
+		timerQueueProcessorBase: newTimerQueueProcessorBase(shard, historyService, timerQueueAckMgr, timeNow, logger),
 		timerQueueAckMgr:        timerQueueAckMgr,
 	}
 	processor.timerQueueProcessorBase.timerProcessor = processor

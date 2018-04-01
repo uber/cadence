@@ -57,7 +57,7 @@ type (
 		config           *Config
 		logger           bark.Logger
 		metricsClient    metrics.Client
-		clusterName      string
+		now              timeNow
 		timerFiredCount  uint64
 		timerProcessor   timerProcessor
 		timerQueueAckMgr timerQueueAckMgr
@@ -68,21 +68,20 @@ type (
 	}
 )
 
-func newTimerQueueProcessorBase(shard ShardContext, historyService *historyEngineImpl, executionManager persistence.ExecutionManager,
-	timerQueueAckMgr timerQueueAckMgr, clusterName string, logger bark.Logger) *timerQueueProcessorBase {
+func newTimerQueueProcessorBase(shard ShardContext, historyService *historyEngineImpl, timerQueueAckMgr timerQueueAckMgr, timeNow timeNow, logger bark.Logger) *timerQueueProcessorBase {
 	log := logger.WithFields(bark.Fields{
 		logging.TagWorkflowComponent: logging.TagValueTimerQueueComponent,
 	})
 	base := &timerQueueProcessorBase{
 		shard:            shard,
 		historyService:   historyService,
-		executionManager: executionManager,
+		executionManager: shard.GetExecutionManager(),
 		shutdownCh:       make(chan struct{}),
 		tasksCh:          make(chan *persistence.TimerTaskInfo, 10*shard.GetConfig().TimerTaskBatchSize),
 		config:           shard.GetConfig(),
 		logger:           log,
 		metricsClient:    historyService.metricsClient,
-		clusterName:      clusterName,
+		now:              timeNow,
 		timerQueueAckMgr: timerQueueAckMgr,
 		newTimerCh:       make(chan struct{}, 1),
 	}
@@ -224,7 +223,7 @@ func (t *timerQueueProcessorBase) internalProcessor() error {
 
 continueProcessor:
 	for {
-		now := t.shard.GetCurrentTime(t.clusterName)
+		now := t.now()
 		if nextKeyTask == nil || timerGate.FireAfter(now) {
 			// Wait until one of four things occurs:
 			// 1. we get notified of a new message
@@ -236,6 +235,12 @@ continueProcessor:
 
 			case <-t.shutdownCh:
 				t.logger.Debug("Timer queue processor pump shutting down.")
+				return nil
+
+			case <-t.timerQueueAckMgr.getFinishedChan():
+				// timer queue ack manager indicate that all task scanned
+				// are finished and no more tasks
+				t.Stop()
 				return nil
 
 			case <-timerGate.FireChan():
@@ -260,7 +265,7 @@ continueProcessor:
 					nextKeyTask = nil
 				}
 
-				now = t.shard.GetCurrentTime(t.clusterName)
+				now = t.now()
 				t.logger.Debugf("%v: Next key after woke up by timer: %v", now.UTC(), newTime.UTC())
 				if timerGate.FireAfter(now) {
 					continue continueProcessor
@@ -268,25 +273,10 @@ continueProcessor:
 			}
 		}
 
-		// Either we have new timer (or) we are gated on timer to query for it.
-	ProcessPendingTimers:
-		for {
-			// Get next set of timer tasks.
-			timerTasks, lookAheadTask, moreTasks, err := t.timerQueueAckMgr.readTimerTasks()
-			if err != nil {
-				return err
-			}
-
-			for _, task := range timerTasks {
-				// We have a timer to fire.
-				t.tasksCh <- task
-			}
-
-			if !moreTasks {
-				// We have processed all the tasks.
-				nextKeyTask = lookAheadTask
-				break ProcessPendingTimers
-			}
+		var err error
+		nextKeyTask, err = t.readAndFanoutTimerTasks()
+		if err != nil {
+			return err
 		}
 
 		if nextKeyTask != nil {
@@ -294,6 +284,25 @@ continueProcessor:
 			t.logger.Debugf("%s: GetNextKey: %s", time.Now(), nextKey)
 
 			timerGate.Update(nextKey.VisibilityTimestamp)
+		}
+	}
+}
+
+func (t *timerQueueProcessorBase) readAndFanoutTimerTasks() (*persistence.TimerTaskInfo, error) {
+	for {
+		// Get next set of timer tasks.
+		timerTasks, lookAheadTask, moreTasks, err := t.timerQueueAckMgr.readTimerTasks()
+		if err != nil {
+			return nil, err
+		}
+
+		for _, task := range timerTasks {
+			// We have a timer to fire.
+			t.tasksCh <- task
+		}
+
+		if !moreTasks {
+			return lookAheadTask, nil
 		}
 	}
 }

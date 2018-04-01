@@ -25,30 +25,41 @@ import (
 	"time"
 
 	"github.com/uber-common/bark"
+	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/persistence"
 )
 
 type (
+	timeNow func() time.Time
+
 	timerQueueProcessorImpl struct {
 		currentClusterName     string
 		shard                  ShardContext
+		historyService         *historyEngineImpl
+		logger                 bark.Logger
 		activeTimerProcessor   *timerQueueActiveProcessorImpl
 		standbyTimerProcessors map[string]*timerQueueStandbyProcessorImpl
 	}
 )
 
-func newTimerQueueProcessor(shard ShardContext, historyService *historyEngineImpl, executionManager persistence.ExecutionManager, logger bark.Logger) timerQueueProcessor {
+func newTimerQueueProcessor(shard ShardContext, historyService *historyEngineImpl, logger bark.Logger) timerQueueProcessor {
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
+	logger = logger.WithFields(bark.Fields{
+		logging.TagWorkflowComponent: logging.TagValueTimerQueueComponent,
+	})
 	standbyTimerProcessors := make(map[string]*timerQueueStandbyProcessorImpl)
 	for clusterName := range shard.GetService().GetClusterMetadata().GetAllClusterFailoverVersions() {
-		if clusterName != currentClusterName {
-			standbyTimerProcessors[clusterName] = newTimerQueueStandbyProcessor(shard, historyService, executionManager, clusterName, logger)
+		if clusterName != shard.GetService().GetClusterMetadata().GetCurrentClusterName() {
+			standbyTimerProcessors[clusterName] = newTimerQueueStandbyProcessor(shard, historyService, clusterName, logger)
 		}
 	}
+
 	return &timerQueueProcessorImpl{
 		currentClusterName:     currentClusterName,
 		shard:                  shard,
-		activeTimerProcessor:   newTimerQueueActiveProcessor(shard, historyService, executionManager, logger),
+		historyService:         historyService,
+		logger:                 logger,
+		activeTimerProcessor:   newTimerQueueActiveProcessor(shard, historyService, logger),
 		standbyTimerProcessors: standbyTimerProcessors,
 	}
 }
@@ -91,6 +102,13 @@ func (t *timerQueueProcessorImpl) SetCurrentTime(clusterName string, currentTime
 		panic(fmt.Sprintf("Cannot find timer processot for %s.", clusterName))
 	}
 	standbyTimerProcessor.setCurrentTime(currentTime)
+}
+
+func (t *timerQueueProcessorImpl) FailoverDomain(domainID string, standbyClusterName string) {
+	// we should consider make the failover idempotent
+	failoverTimerProcessor := newTimerQueueFailoverProcessor(t.shard, t.historyService, domainID, standbyClusterName, t.logger)
+	failoverTimerProcessor.Start()
+	failoverTimerProcessor.timerQueueProcessorBase.readAndFanoutTimerTasks()
 }
 
 func (t *timerQueueProcessorImpl) getTimerFiredCount(clusterName string) uint64 {

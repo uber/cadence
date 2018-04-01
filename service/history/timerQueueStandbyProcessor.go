@@ -22,13 +22,11 @@ package history
 
 import (
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 )
@@ -40,32 +38,27 @@ type (
 		cache                   *historyCache
 		logger                  bark.Logger
 		metricsClient           metrics.Client
-		newTimerCh              chan struct{}
 		clusterName             string
 		timerGate               RemoteTimerGate
 		timerQueueProcessorBase *timerQueueProcessorBase
 		timerQueueAckMgr        timerQueueAckMgr
-
-		timeLock sync.Mutex
-		newTime  time.Time // used to notify the earlist time of next batch of timers to be processed
 	}
 )
 
-func newTimerQueueStandbyProcessor(shard ShardContext, historyService *historyEngineImpl, executionManager persistence.ExecutionManager, clusterName string, logger bark.Logger) *timerQueueStandbyProcessorImpl {
-	log := logger.WithFields(bark.Fields{
-		logging.TagWorkflowComponent: logging.TagValueTimerQueueComponent,
-	})
-	timerQueueAckMgr := newTimerQueueAckMgr(shard, historyService.metricsClient, executionManager, clusterName, log)
+func newTimerQueueStandbyProcessor(shard ShardContext, historyService *historyEngineImpl, clusterName string, logger bark.Logger) *timerQueueStandbyProcessorImpl {
+	timeNow := func() time.Time {
+		return shard.GetCurrentTime(clusterName)
+	}
+	timerQueueAckMgr := newTimerQueueAckMgr(shard, historyService.metricsClient, clusterName, logger)
 	processor := &timerQueueStandbyProcessorImpl{
 		shard:                   shard,
 		historyService:          historyService,
 		cache:                   historyService.historyCache,
-		logger:                  log,
+		logger:                  logger,
 		metricsClient:           historyService.metricsClient,
-		newTimerCh:              make(chan struct{}, 1),
 		clusterName:             clusterName,
 		timerGate:               NewRemoteTimerGate(),
-		timerQueueProcessorBase: newTimerQueueProcessorBase(shard, historyService, executionManager, timerQueueAckMgr, clusterName, logger),
+		timerQueueProcessorBase: newTimerQueueProcessorBase(shard, historyService, timerQueueAckMgr, timeNow, logger),
 		timerQueueAckMgr:        timerQueueAckMgr,
 	}
 	processor.timerQueueProcessorBase.timerProcessor = processor
@@ -155,11 +148,15 @@ func (t *timerQueueStandbyProcessorImpl) processExpiredUserTimer(timerTask *pers
 			RunId:      common.StringPtr(msBuilder.executionInfo.RunID),
 		})
 
+	ExpireUserTimers:
 		for _, td := range tBuilder.GetUserTimers(msBuilder) {
 			hasTimer, _ := tBuilder.GetUserTimer(td.TimerID)
 			if !hasTimer {
 				t.logger.Debugf("Failed to find in memory user timer: %s", td.TimerID)
 				return fmt.Errorf("Failed to find in memory user timer: %s", td.TimerID)
+			}
+			if !td.TaskCreated {
+				break ExpireUserTimers
 			}
 
 			if isExpired := tBuilder.IsTimerExpired(td, timerTask.VisibilityTimestamp); isExpired {
@@ -172,6 +169,9 @@ func (t *timerQueueStandbyProcessorImpl) processExpiredUserTimer(timerTask *pers
 				t.timerQueueAckMgr.retryTimerTask(timerTask)
 				return nil
 			}
+			// since the user timer are already sorted, so if there is one timer which will not expired
+			// all user timer after this timer will not expired
+			break ExpireUserTimers
 		}
 		// if there is no user timer expired, then we are good
 		t.timerQueueAckMgr.completeTimerTask(timerTask)
@@ -197,6 +197,9 @@ func (t *timerQueueStandbyProcessorImpl) processActivityTimeout(timerTask *persi
 				//  We might have time out this activity already.
 				continue ExpireActivityTimers
 			}
+			if !td.TaskCreated {
+				break ExpireActivityTimers
+			}
 
 			if isExpired := tBuilder.IsTimerExpired(td, timerTask.VisibilityTimestamp); isExpired {
 				// active cluster will add an activity timeout event and schedule a decision if necessary
@@ -208,6 +211,9 @@ func (t *timerQueueStandbyProcessorImpl) processActivityTimeout(timerTask *persi
 				t.timerQueueAckMgr.retryTimerTask(timerTask)
 				return nil
 			}
+			// since the activity timer are already sorted, so if there is one timer which will not expired
+			// all activity timer after this timer will not expired
+			break ExpireActivityTimers
 		}
 		// if there is no user timer expired, then we are good
 		t.timerQueueAckMgr.completeTimerTask(timerTask)

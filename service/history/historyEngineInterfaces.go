@@ -105,6 +105,9 @@ type (
 		NotifyNewTask()
 	}
 
+	// TODO the timer quque processor and the one below, timer processor
+	// in combination are confusing, we should consider a better naming
+	// convention, or at least come with a better name for this case.
 	timerQueueProcessor interface {
 		common.Daemon
 		NotifyNewTimers(clusterName string, timerTask []persistence.Task)
@@ -118,12 +121,12 @@ type (
 	}
 
 	timerQueueAckMgr interface {
+		getFinishedChan() <-chan struct{}
 		readRetryTimerTasks() []*persistence.TimerTaskInfo
 		readTimerTasks() ([]*persistence.TimerTaskInfo, *persistence.TimerTaskInfo, bool, error)
 		retryTimerTask(timerTask *persistence.TimerTaskInfo)
 		completeTimerTask(timerTask *persistence.TimerTaskInfo)
 		updateAckLevel()
-		isProcessNow(time.Time) bool
 	}
 
 	historyEventNotifier interface {

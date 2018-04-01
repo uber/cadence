@@ -135,7 +135,7 @@ func NewEngineWithShardContext(shard ShardContext, visibilityMgr persistence.Vis
 		historyEventNotifier: historyEventNotifier,
 	}
 	txProcessor := newTransferQueueProcessor(shard, historyEngImpl, visibilityMgr, matching, historyClient)
-	historyEngImpl.timerProcessor = newTimerQueueProcessor(shard, historyEngImpl, executionManager, logger)
+	historyEngImpl.timerProcessor = newTimerQueueProcessor(shard, historyEngImpl, logger)
 	historyEngImpl.txProcessor = txProcessor
 	shardWrapper.txProcessor = txProcessor
 

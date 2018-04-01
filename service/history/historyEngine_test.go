@@ -158,7 +158,7 @@ func (s *engineSuite) SetupTest() {
 		historyEventNotifier: historyEventNotifier,
 	}
 	h.txProcessor = newTransferQueueProcessor(shardContextWrapper, h, s.mockVisibilityMgr, s.mockMatchingClient, s.mockHistoryClient)
-	h.timerProcessor = newTimerQueueProcessor(shardContextWrapper, h, s.mockExecutionMgr, s.logger)
+	h.timerProcessor = newTimerQueueProcessor(shardContextWrapper, h, s.logger)
 	h.historyEventNotifier.Start()
 	shardContextWrapper.txProcessor = h.txProcessor
 	s.mockHistoryEngine = h
@@ -3546,6 +3546,10 @@ func addTimerStartedEvent(builder *mutableStateBuilder, decisionCompletedEventID
 		})
 }
 
+func addTimerFiredEvent(builder *mutableStateBuilder, scheduleID int64, timerID string) *workflow.HistoryEvent {
+	return builder.AddTimerFiredEvent(scheduleID, timerID)
+}
+
 func addRequestCancelInitiatedEvent(builder *mutableStateBuilder, decisionCompletedEventID int64,
 	cancelRequestID, domain, workflowID, runID string) *workflow.HistoryEvent {
 	event, _ := builder.AddRequestCancelExternalWorkflowExecutionInitiatedEvent(decisionCompletedEventID,
@@ -3675,6 +3679,7 @@ func copyActivityInfo(sourceInfo *persistence.ActivityInfo) *persistence.Activit
 		HeartbeatTimeout:       sourceInfo.HeartbeatTimeout,
 		CancelRequested:        sourceInfo.CancelRequested,
 		CancelRequestID:        sourceInfo.CancelRequestID,
+		TimerTaskStatus:        sourceInfo.TimerTaskStatus,
 	}
 }
 
