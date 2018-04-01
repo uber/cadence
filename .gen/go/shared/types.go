@@ -23987,6 +23987,7 @@ type StartWorkflowExecutionRequest struct {
 	Identity                            *string                `json:"identity,omitempty"`
 	RequestId                           *string                `json:"requestId,omitempty"`
 	WorkflowIdReusePolicy               *WorkflowIdReusePolicy `json:"workflowIdReusePolicy,omitempty"`
+	ChildPolicy                         *ChildPolicy           `json:"childPolicy,omitempty"`
 }
 
 // ToWire translates a StartWorkflowExecutionRequest struct into a Thrift-level intermediate
@@ -24006,7 +24007,7 @@ type StartWorkflowExecutionRequest struct {
 //   }
 func (v *StartWorkflowExecutionRequest) ToWire() (wire.Value, error) {
 	var (
-		fields [10]wire.Field
+		fields [11]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -24090,6 +24091,14 @@ func (v *StartWorkflowExecutionRequest) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 100, Value: w}
+		i++
+	}
+	if v.ChildPolicy != nil {
+		w, err = v.ChildPolicy.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 110, Value: w}
 		i++
 	}
 
@@ -24212,6 +24221,16 @@ func (v *StartWorkflowExecutionRequest) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 110:
+			if field.Value.Type() == wire.TI32 {
+				var x ChildPolicy
+				x, err = _ChildPolicy_Read(field.Value)
+				v.ChildPolicy = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -24225,7 +24244,7 @@ func (v *StartWorkflowExecutionRequest) String() string {
 		return "<nil>"
 	}
 
-	var fields [10]string
+	var fields [11]string
 	i := 0
 	if v.Domain != nil {
 		fields[i] = fmt.Sprintf("Domain: %v", *(v.Domain))
@@ -24267,6 +24286,10 @@ func (v *StartWorkflowExecutionRequest) String() string {
 		fields[i] = fmt.Sprintf("WorkflowIdReusePolicy: %v", *(v.WorkflowIdReusePolicy))
 		i++
 	}
+	if v.ChildPolicy != nil {
+		fields[i] = fmt.Sprintf("ChildPolicy: %v", *(v.ChildPolicy))
+		i++
+	}
 
 	return fmt.Sprintf("StartWorkflowExecutionRequest{%v}", strings.Join(fields[:i], ", "))
 }
@@ -24304,6 +24327,9 @@ func (v *StartWorkflowExecutionRequest) Equals(rhs *StartWorkflowExecutionReques
 		return false
 	}
 	if !_WorkflowIdReusePolicy_EqualsPtr(v.WorkflowIdReusePolicy, rhs.WorkflowIdReusePolicy) {
+		return false
+	}
+	if !_ChildPolicy_EqualsPtr(v.ChildPolicy, rhs.ChildPolicy) {
 		return false
 	}
 
@@ -24375,6 +24401,16 @@ func (v *StartWorkflowExecutionRequest) GetRequestId() (o string) {
 func (v *StartWorkflowExecutionRequest) GetWorkflowIdReusePolicy() (o WorkflowIdReusePolicy) {
 	if v.WorkflowIdReusePolicy != nil {
 		return *v.WorkflowIdReusePolicy
+	}
+
+	return
+}
+
+// GetChildPolicy returns the value of ChildPolicy if it is set or its
+// zero value if it is unset.
+func (v *StartWorkflowExecutionRequest) GetChildPolicy() (o ChildPolicy) {
+	if v.ChildPolicy != nil {
+		return *v.ChildPolicy
 	}
 
 	return
@@ -29116,7 +29152,7 @@ type WorkflowExecutionStartedEventAttributes struct {
 	ExecutionStartToCloseTimeoutSeconds *int32             `json:"executionStartToCloseTimeoutSeconds,omitempty"`
 	TaskStartToCloseTimeoutSeconds      *int32             `json:"taskStartToCloseTimeoutSeconds,omitempty"`
 	ChildPolicy                         *ChildPolicy       `json:"childPolicy,omitempty"`
-	ContinuedExecutionRunId             *int64             `json:"continuedExecutionRunId,omitempty"`
+	ContinuedExecutionRunId             *string            `json:"continuedExecutionRunId,omitempty"`
 	Identity                            *string            `json:"identity,omitempty"`
 }
 
@@ -29216,7 +29252,7 @@ func (v *WorkflowExecutionStartedEventAttributes) ToWire() (wire.Value, error) {
 		i++
 	}
 	if v.ContinuedExecutionRunId != nil {
-		w, err = wire.NewValueI64(*(v.ContinuedExecutionRunId)), error(nil)
+		w, err = wire.NewValueString(*(v.ContinuedExecutionRunId)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -29340,9 +29376,9 @@ func (v *WorkflowExecutionStartedEventAttributes) FromWire(w wire.Value) error {
 
 			}
 		case 54:
-			if field.Value.Type() == wire.TI64 {
-				var x int64
-				x, err = field.Value.GetI64(), error(nil)
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
 				v.ContinuedExecutionRunId = &x
 				if err != nil {
 					return err
@@ -29454,7 +29490,7 @@ func (v *WorkflowExecutionStartedEventAttributes) Equals(rhs *WorkflowExecutionS
 	if !_ChildPolicy_EqualsPtr(v.ChildPolicy, rhs.ChildPolicy) {
 		return false
 	}
-	if !_I64_EqualsPtr(v.ContinuedExecutionRunId, rhs.ContinuedExecutionRunId) {
+	if !_String_EqualsPtr(v.ContinuedExecutionRunId, rhs.ContinuedExecutionRunId) {
 		return false
 	}
 	if !_String_EqualsPtr(v.Identity, rhs.Identity) {
@@ -29516,7 +29552,7 @@ func (v *WorkflowExecutionStartedEventAttributes) GetChildPolicy() (o ChildPolic
 
 // GetContinuedExecutionRunId returns the value of ContinuedExecutionRunId if it is set or its
 // zero value if it is unset.
-func (v *WorkflowExecutionStartedEventAttributes) GetContinuedExecutionRunId() (o int64) {
+func (v *WorkflowExecutionStartedEventAttributes) GetContinuedExecutionRunId() (o string) {
 	if v.ContinuedExecutionRunId != nil {
 		return *v.ContinuedExecutionRunId
 	}

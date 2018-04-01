@@ -373,7 +373,7 @@ struct WorkflowExecutionStartedEventAttributes {
   40: optional i32 executionStartToCloseTimeoutSeconds
   50: optional i32 taskStartToCloseTimeoutSeconds
   52: optional ChildPolicy childPolicy
-  54: optional i64 (js.type = "Long") continuedExecutionRunId
+  54: optional string continuedExecutionRunId
   60: optional string identity
 }
 
@@ -817,6 +817,7 @@ struct StartWorkflowExecutionRequest {
   80: optional string identity
   90: optional string requestId
   100: optional WorkflowIdReusePolicy workflowIdReusePolicy
+  110: optional ChildPolicy childPolicy
 }
 
 struct StartWorkflowExecutionResponse {
