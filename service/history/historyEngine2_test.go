@@ -161,7 +161,7 @@ func (s *engine2Suite) TearDownTest() {
 func (s *engine2Suite) TestRecordDecisionTaskStartedIfNoExecution() {
 	workflowExecution := &workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(uuid.New()),
+		RunId:      common.StringPtr(validRunID),
 	}
 
 	identity := "testIdentity"
@@ -190,7 +190,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedIfNoExecution() {
 func (s *engine2Suite) TestRecordDecisionTaskStartedIfGetExecutionFailed() {
 	workflowExecution := &workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(uuid.New()),
+		RunId:      common.StringPtr(validRunID),
 	}
 
 	identity := "testIdentity"

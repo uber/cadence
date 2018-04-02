@@ -184,7 +184,7 @@ func (h *Handler) RecordActivityTaskHeartbeat(ctx context.Context,
 		return nil, err0
 	}
 
-	err0 = validateToken(token)
+	err0 = validateTaskToken(token)
 	if err0 != nil {
 		return nil, err0
 	}
@@ -295,7 +295,7 @@ func (h *Handler) RespondActivityTaskCompleted(ctx context.Context,
 		return err0
 	}
 
-	err0 = validateToken(token)
+	err0 = validateTaskToken(token)
 	if err0 != nil {
 		return err0
 	}
@@ -336,7 +336,7 @@ func (h *Handler) RespondActivityTaskFailed(ctx context.Context,
 		return err0
 	}
 
-	err0 = validateToken(token)
+	err0 = validateTaskToken(token)
 	if err0 != nil {
 		return err0
 	}
@@ -377,7 +377,7 @@ func (h *Handler) RespondActivityTaskCanceled(ctx context.Context,
 		return err0
 	}
 
-	err0 = validateToken(token)
+	err0 = validateTaskToken(token)
 	if err0 != nil {
 		return err0
 	}
@@ -424,7 +424,7 @@ func (h *Handler) RespondDecisionTaskCompleted(ctx context.Context,
 		token.RunID,
 		token.ScheduleID)
 
-	err0 = validateToken(token)
+	err0 = validateTaskToken(token)
 	if err0 != nil {
 		return err0
 	}
@@ -471,7 +471,7 @@ func (h *Handler) RespondDecisionTaskFailed(ctx context.Context,
 		token.RunID,
 		token.ScheduleID)
 
-	err0 = validateToken(token)
+	err0 = validateTaskToken(token)
 	if err0 != nil {
 		return err0
 	}
@@ -876,7 +876,7 @@ func createShardOwnershipLostError(currentHost, ownerHost string) *hist.ShardOwn
 	return shardLostErr
 }
 
-func validateToken(token *common.TaskToken) error {
+func validateTaskToken(token *common.TaskToken) error {
 	if token.WorkflowID == "" {
 		return errWorkflowIDNotSet
 	}
