@@ -52,8 +52,6 @@ type (
 		fireChan  chan struct{}
 		closeChan chan struct{}
 
-		// lock for timer and next wake up time
-		sync.Mutex
 		// the actual timer which will fire
 		timer *time.Timer
 		// variable indicating when the above timer will fire
@@ -121,8 +119,6 @@ func (timerGate *LocalTimerGateImpl) FireChan() <-chan struct{} {
 
 // FireAfter check will the timer get fired after a certain time
 func (timerGate *LocalTimerGateImpl) FireAfter(now time.Time) bool {
-	timerGate.Lock()
-	defer timerGate.Unlock()
 	return timerGate.nextWakeupTime.After(now)
 }
 
@@ -131,8 +127,6 @@ func (timerGate *LocalTimerGateImpl) FireAfter(now time.Time) bool {
 func (timerGate *LocalTimerGateImpl) Update(nextTime time.Time) bool {
 	now := time.Now()
 
-	timerGate.Lock()
-	defer timerGate.Unlock()
 	if !timerGate.nextWakeupTime.After(now) || timerGate.nextWakeupTime.After(nextTime) {
 		// if timer will not fire or next wake time is after the "next"
 		// then we need to update the timer to fire

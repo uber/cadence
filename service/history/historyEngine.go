@@ -50,6 +50,7 @@ const (
 
 type (
 	historyEngineImpl struct {
+		currentclusterName   string
 		shard                ShardContext
 		historyMgr           persistence.HistoryManager
 		executionManager     persistence.ExecutionManager
@@ -119,6 +120,7 @@ func NewEngineWithShardContext(shard ShardContext, visibilityMgr persistence.Vis
 	historyCache := newHistoryCache(shard, logger)
 	historySerializerFactory := persistence.NewHistorySerializerFactory()
 	historyEngImpl := &historyEngineImpl{
+		currentclusterName: shard.GetService().GetClusterMetadata().GetCurrentClusterName(),
 		shard:              shard,
 		historyMgr:         historyManager,
 		executionManager:   executionManager,
@@ -380,7 +382,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 	}
 
 	if err == nil {
-		e.timerProcessor.NotifyNewTimers(e.shard.GetService().GetClusterMetadata().GetCurrentClusterName(), timerTasks)
+		e.timerProcessor.NotifyNewTimers(e.currentclusterName, timerTasks)
 
 		return &workflow.StartWorkflowExecutionResponse{
 			RunId: common.StringPtr(resultRunID),
@@ -656,7 +658,7 @@ Update_History_Loop:
 		// Start a timer for the decision task.
 		timeOutTask := tBuilder.AddDecisionTimoutTask(scheduleID, di.Attempt, di.DecisionTimeout)
 		timerTasks := []persistence.Task{timeOutTask}
-		defer e.timerProcessor.NotifyNewTimers(e.shard.GetService().GetClusterMetadata().GetCurrentClusterName(), timerTasks)
+		defer e.timerProcessor.NotifyNewTimers(e.currentclusterName, timerTasks)
 
 		// Generate a transaction ID for appending events to history
 		transactionID, err2 := e.shard.GetNextTransferTaskID()
@@ -1254,7 +1256,7 @@ Update_History_Loop:
 		// add continueAsNewTimerTask
 		timerTasks = append(timerTasks, continueAsNewTimerTasks...)
 		// Inform timer about the new ones.
-		e.timerProcessor.NotifyNewTimers(e.shard.GetService().GetClusterMetadata().GetCurrentClusterName(), timerTasks)
+		e.timerProcessor.NotifyNewTimers(e.currentclusterName, timerTasks)
 
 		return err
 	}
@@ -1692,7 +1694,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(signalWithStartRequ
 				}
 				return nil, err
 			}
-			e.timerProcessor.NotifyNewTimers(e.shard.GetService().GetClusterMetadata().GetCurrentClusterName(), timerTasks)
+			e.timerProcessor.NotifyNewTimers(e.currentclusterName, timerTasks)
 			return &workflow.StartWorkflowExecutionResponse{RunId: context.workflowExecution.RunId}, nil
 		} // end for Just_Signal_Loop
 		if attempt == conditionalRetryCount {
@@ -1813,7 +1815,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(signalWithStartRequ
 	// try to create the workflow execution
 	resultRunID, err := createWorkflow(isBrandNew, prevRunID) // (true, "") or (false, "prevRunID")
 	if err == nil {
-		e.timerProcessor.NotifyNewTimers(e.shard.GetService().GetClusterMetadata().GetCurrentClusterName(), timerTasks)
+		e.timerProcessor.NotifyNewTimers(e.currentclusterName, timerTasks)
 
 		return &workflow.StartWorkflowExecutionResponse{
 			RunId: common.StringPtr(resultRunID),
@@ -2018,7 +2020,7 @@ Update_History_Loop:
 			}
 			return err
 		}
-		e.timerProcessor.NotifyNewTimers(e.shard.GetService().GetClusterMetadata().GetCurrentClusterName(), timerTasks)
+		e.timerProcessor.NotifyNewTimers(e.currentclusterName, timerTasks)
 		return nil
 	}
 	return ErrMaxAttemptsExceeded

@@ -71,6 +71,7 @@ func (s *timerQueueProcessorSuite) SetupSuite() {
 	historyCache := newHistoryCache(s.ShardContext, s.logger)
 	historyCache.disabled = true
 	s.engineImpl = &historyEngineImpl{
+		currentclusterName: s.ShardContext.GetService().GetClusterMetadata().GetCurrentClusterName(),
 		shard:              s.ShardContext,
 		historyMgr:         s.HistoryMgr,
 		historyCache:       historyCache,

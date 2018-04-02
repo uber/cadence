@@ -279,6 +279,8 @@ func (s *TestShardContext) GetTimeSource() common.TimeSource {
 
 // SetCurrentTime test implementation
 func (s *TestShardContext) SetCurrentTime(cluster string, currentTime time.Time) {
+	s.Lock()
+	defer s.Unlock()
 	if cluster != s.GetService().GetClusterMetadata().GetCurrentClusterName() {
 		prevTime := s.standbyClusterCurrentTime[cluster]
 		if prevTime.Before(currentTime) {
@@ -291,6 +293,8 @@ func (s *TestShardContext) SetCurrentTime(cluster string, currentTime time.Time)
 
 // GetCurrentTime test implementation
 func (s *TestShardContext) GetCurrentTime(cluster string) time.Time {
+	s.RLock()
+	defer s.RUnlock()
 	if cluster != s.GetService().GetClusterMetadata().GetCurrentClusterName() {
 		return s.standbyClusterCurrentTime[cluster]
 	}

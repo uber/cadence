@@ -30,6 +30,7 @@ import (
 
 type (
 	timerQueueProcessorImpl struct {
+		currentClusterName     string
 		shard                  ShardContext
 		activeTimerProcessor   *timerQueueActiveProcessorImpl
 		standbyTimerProcessors map[string]*timerQueueStandbyProcessorImpl
@@ -37,13 +38,15 @@ type (
 )
 
 func newTimerQueueProcessor(shard ShardContext, historyService *historyEngineImpl, executionManager persistence.ExecutionManager, logger bark.Logger) timerQueueProcessor {
+	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 	standbyTimerProcessors := make(map[string]*timerQueueStandbyProcessorImpl)
 	for clusterName := range shard.GetService().GetClusterMetadata().GetAllClusterFailoverVersions() {
-		if clusterName != shard.GetService().GetClusterMetadata().GetCurrentClusterName() {
+		if clusterName != currentClusterName {
 			standbyTimerProcessors[clusterName] = newTimerQueueStandbyProcessor(shard, historyService, executionManager, clusterName, logger)
 		}
 	}
 	return &timerQueueProcessorImpl{
+		currentClusterName:     currentClusterName,
 		shard:                  shard,
 		activeTimerProcessor:   newTimerQueueActiveProcessor(shard, historyService, executionManager, logger),
 		standbyTimerProcessors: standbyTimerProcessors,
@@ -67,7 +70,7 @@ func (t *timerQueueProcessorImpl) Stop() {
 // NotifyNewTimers - Notify the processor about the new active / standby timer arrival.
 // This should be called each time new timer arrives, otherwise timers maybe fired unexpected.
 func (t *timerQueueProcessorImpl) NotifyNewTimers(clusterName string, timerTasks []persistence.Task) {
-	if clusterName == t.shard.GetService().GetClusterMetadata().GetCurrentClusterName() {
+	if clusterName == t.currentClusterName {
 		t.activeTimerProcessor.notifyNewTimers(timerTasks)
 	} else {
 		standbyTimerProcessor, ok := t.standbyTimerProcessors[clusterName]
@@ -79,7 +82,7 @@ func (t *timerQueueProcessorImpl) NotifyNewTimers(clusterName string, timerTasks
 }
 
 func (t *timerQueueProcessorImpl) SetCurrentTime(clusterName string, currentTime time.Time) {
-	if clusterName == t.shard.GetService().GetClusterMetadata().GetCurrentClusterName() {
+	if clusterName == t.currentClusterName {
 		panic(fmt.Sprintf("Cannot change current time of current cluster: %s.", clusterName))
 	}
 
@@ -91,7 +94,7 @@ func (t *timerQueueProcessorImpl) SetCurrentTime(clusterName string, currentTime
 }
 
 func (t *timerQueueProcessorImpl) getTimerFiredCount(clusterName string) uint64 {
-	if clusterName == t.shard.GetService().GetClusterMetadata().GetCurrentClusterName() {
+	if clusterName == t.currentClusterName {
 		return t.activeTimerProcessor.getTimerFiredCount()
 	}
 

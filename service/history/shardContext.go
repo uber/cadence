@@ -526,6 +526,8 @@ func (s *shardContextImpl) GetTimeSource() common.TimeSource {
 }
 
 func (s *shardContextImpl) SetCurrentTime(cluster string, currentTime time.Time) {
+	s.Lock()
+	defer s.Unlock()
 	if cluster != s.GetService().GetClusterMetadata().GetCurrentClusterName() {
 		prevTime := s.standbyClusterCurrentTime[cluster]
 		if prevTime.Before(currentTime) {
@@ -537,6 +539,8 @@ func (s *shardContextImpl) SetCurrentTime(cluster string, currentTime time.Time)
 }
 
 func (s *shardContextImpl) GetCurrentTime(cluster string) time.Time {
+	s.RLock()
+	defer s.RUnlock()
 	if cluster != s.GetService().GetClusterMetadata().GetCurrentClusterName() {
 		return s.standbyClusterCurrentTime[cluster]
 	}

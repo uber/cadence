@@ -125,7 +125,11 @@ func (s *timerQueueProcessor2Suite) SetupTest() {
 	}
 
 	historyCache := newHistoryCache(s.mockShard, s.logger)
+	// this is used by shard context, not relevent to this test, so we do not care how many times "GetCurrentClusterName" os called
+	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
+	s.mockClusterMetadata.On("GetAllClusterFailoverVersions").Return(cluster.TestAllClusterFailoverVersions)
 	h := &historyEngineImpl{
+		currentclusterName: s.mockShard.GetService().GetClusterMetadata().GetCurrentClusterName(),
 		shard:              s.mockShard,
 		historyMgr:         s.mockHistoryMgr,
 		executionManager:   s.mockExecutionMgr,
@@ -135,9 +139,6 @@ func (s *timerQueueProcessor2Suite) SetupTest() {
 		hSerializerFactory: persistence.NewHistorySerializerFactory(),
 		metricsClient:      s.mockShard.GetMetricsClient(),
 	}
-	// this is used by shard context, not relevent to this test, so we do not care how many times "GetCurrentClusterName" os called
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
-	s.mockClusterMetadata.On("GetAllClusterFailoverVersions").Return(cluster.TestAllClusterFailoverVersions)
 	h.txProcessor = newTransferQueueProcessor(s.mockShard, h, s.mockVisibilityMgr, s.mockMatchingClient, &mocks.HistoryClient{})
 	h.timerProcessor = newTimerQueueProcessor(s.mockShard, h, s.mockExecutionMgr, s.logger)
 	s.mockHistoryEngine = h
