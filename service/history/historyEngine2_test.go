@@ -162,7 +162,7 @@ func (s *engine2Suite) TearDownTest() {
 func (s *engine2Suite) TestRecordDecisionTaskStartedIfNoExecution() {
 	workflowExecution := &workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr("rId"),
+		RunId:      common.StringPtr(validRunID),
 	}
 
 	identity := "testIdentity"
@@ -191,7 +191,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedIfNoExecution() {
 func (s *engine2Suite) TestRecordDecisionTaskStartedIfGetExecutionFailed() {
 	workflowExecution := &workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr("rId"),
+		RunId:      common.StringPtr(validRunID),
 	}
 
 	identity := "testIdentity"
@@ -220,7 +220,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedIfGetExecutionFailed() {
 func (s *engine2Suite) TestRecordDecisionTaskStartedIfTaskAlreadyStarted() {
 	workflowExecution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr("rId"),
+		RunId:      common.StringPtr(validRunID),
 	}
 
 	identity := "testIdentity"
@@ -253,7 +253,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedIfTaskAlreadyStarted() {
 func (s *engine2Suite) TestRecordDecisionTaskStartedIfTaskAlreadyCompleted() {
 	workflowExecution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr("rId"),
+		RunId:      common.StringPtr(validRunID),
 	}
 
 	identity := "testIdentity"
@@ -289,7 +289,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedIfTaskAlreadyCompleted() {
 func (s *engine2Suite) TestRecordDecisionTaskStartedConflictOnUpdate() {
 	workflowExecution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr("rId"),
+		RunId:      common.StringPtr(validRunID),
 	}
 
 	identity := "testIdentity"
@@ -336,7 +336,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedConflictOnUpdate() {
 func (s *engine2Suite) TestRecordDecisionTaskRetrySameRequest() {
 	workflowExecution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr("rId"),
+		RunId:      common.StringPtr(validRunID),
 	}
 
 	tl := "testTaskList"
@@ -381,7 +381,7 @@ func (s *engine2Suite) TestRecordDecisionTaskRetrySameRequest() {
 func (s *engine2Suite) TestRecordDecisionTaskRetryDifferentRequest() {
 	workflowExecution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr("rId"),
+		RunId:      common.StringPtr(validRunID),
 	}
 
 	tl := "testTaskList"
@@ -425,7 +425,7 @@ func (s *engine2Suite) TestRecordDecisionTaskRetryDifferentRequest() {
 func (s *engine2Suite) TestRecordDecisionTaskStartedMaxAttemptsExceeded() {
 	workflowExecution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr("rId"),
+		RunId:      common.StringPtr(validRunID),
 	}
 
 	tl := "testTaskList"
@@ -467,7 +467,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedMaxAttemptsExceeded() {
 func (s *engine2Suite) TestRecordDecisionTaskSuccess() {
 	workflowExecution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr("rId"),
+		RunId:      common.StringPtr(validRunID),
 	}
 
 	tl := "testTaskList"
@@ -505,7 +505,7 @@ func (s *engine2Suite) TestRecordDecisionTaskSuccess() {
 func (s *engine2Suite) TestRecordActivityTaskStartedIfNoExecution() {
 	workflowExecution := &workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr("rId"),
+		RunId:      common.StringPtr(validRunID),
 	}
 
 	identity := "testIdentity"
@@ -537,7 +537,7 @@ func (s *engine2Suite) TestRecordActivityTaskStartedIfNoExecution() {
 func (s *engine2Suite) TestRecordActivityTaskStartedSuccess() {
 	workflowExecution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr("rId"),
+		RunId:      common.StringPtr(validRunID),
 	}
 
 	identity := "testIdentity"
@@ -584,7 +584,7 @@ func (s *engine2Suite) TestRequestCancelWorkflowExecutionSuccess() {
 	domainID := "domainId"
 	workflowExecution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr("rId"),
+		RunId:      common.StringPtr(validRunID),
 	}
 
 	identity := "testIdentity"
@@ -619,7 +619,7 @@ func (s *engine2Suite) TestRequestCancelWorkflowExecutionFail() {
 	domainID := "domainId"
 	workflowExecution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr("rId"),
+		RunId:      common.StringPtr(validRunID),
 	}
 
 	identity := "testIdentity"
@@ -672,12 +672,12 @@ func (s *engine2Suite) TestRespondDecisionTaskCompletedRecordMarkerDecision() {
 	domainID := "domainId"
 	we := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr("rId"),
+		RunId:      common.StringPtr(validRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
 		WorkflowID: "wId",
-		RunID:      "rId",
+		RunID:      we.GetRunId(),
 		ScheduleID: 2,
 	})
 	identity := "testIdentity"
@@ -978,7 +978,7 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_JustSignal() {
 
 	domainID := "domainId"
 	workflowID := "wId"
-	runID := uuid.New()
+	runID := validRunID
 	identity := "testIdentity"
 	signalName := "my signal name"
 	input := []byte("test input")
@@ -1054,7 +1054,7 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotRunning()
 
 	domainID := "domainId"
 	workflowID := "wId"
-	runID := uuid.New()
+	runID := validRunID
 	workflowType := "workflowType"
 	taskList := "testTaskList"
 	identity := "testIdentity"

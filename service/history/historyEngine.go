@@ -56,6 +56,7 @@ type (
 		executionManager     persistence.ExecutionManager
 		txProcessor          transferQueueProcessor
 		timerProcessor       timerQueueProcessor
+		replicator           *historyReplicator
 		replicatorProcessor  queueProcessor
 		historyEventNotifier historyEventNotifier
 		tokenSerializer      common.TaskTokenSerializer
@@ -144,6 +145,8 @@ func NewEngineWithShardContext(shard ShardContext, visibilityMgr persistence.Vis
 			historySerializerFactory)
 		historyEngImpl.replicatorProcessor = replicatorProcessor
 		shardWrapper.replcatorProcessor = replicatorProcessor
+		historyEngImpl.replicator = newHistoryReplicator(shard, historyCache, shard.GetDomainCache(), historyManager,
+			logger)
 	}
 
 	return historyEngImpl
@@ -409,7 +412,7 @@ func (e *historyEngineImpl) GetMutableState(ctx context.Context,
 	if err != nil {
 		return nil, err
 	}
-	// set the run id in case query the current running workflwo
+	// set the run id in case query the current running workflow
 	execution.RunId = response.Execution.RunId
 
 	// expectedNextEventID is 0 when caller want to get the current next event ID without blocking
@@ -1942,6 +1945,10 @@ func (e *historyEngineImpl) RecordChildExecutionCompleted(completionRequest *h.R
 
 			return nil, nil
 		})
+}
+
+func (e *historyEngineImpl) ReplicateEvents(replicateRequest *h.ReplicateEventsRequest) error {
+	return e.replicator.ApplyEvents(replicateRequest)
 }
 
 func (e *historyEngineImpl) updateWorkflowExecution(domainID string, execution workflow.WorkflowExecution,
