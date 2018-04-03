@@ -1570,6 +1570,9 @@ func (d *cassandraPersistence) GetTransferTasks(request *GetTransferTasksRequest
 
 		response.Tasks = append(response.Tasks, t)
 	}
+	nextPageToken := iter.PageState()
+	response.NextPageToken = make([]byte, len(nextPageToken))
+	copy(response.NextPageToken, nextPageToken)
 
 	if err := iter.Close(); err != nil {
 		return nil, &workflow.InternalServiceError{

@@ -543,7 +543,8 @@ type (
 
 	// GetTransferTasksResponse is the response to GetTransferTasksRequest
 	GetTransferTasksResponse struct {
-		Tasks []*TransferTaskInfo
+		Tasks         []*TransferTaskInfo
+		NextPageToken []byte
 	}
 
 	// GetReplicationTasksRequest is used to read tasks from the replication task queue

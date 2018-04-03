@@ -47,8 +47,10 @@ type (
 		GetDomainCache() cache.DomainCache
 		GetNextTransferTaskID() (int64, error)
 		GetTransferMaxReadLevel() int64
-		GetTransferAckLevel() int64
-		UpdateTransferAckLevel(ackLevel int64) error
+		GetTransferAckLevel(cluster string) int64
+		UpdateTransferAckLevel(cluster string, ackLevel int64) error
+		GetTimerAckLevel(cluster string) time.Time
+		UpdateTimerAckLevel(cluster string, ackLevel time.Time) error
 		GetReplicatorAckLevel() int64
 		UpdateReplicatorAckLevel(ackLevel int64) error
 		CreateWorkflowExecution(request *persistence.CreateWorkflowExecutionRequest) (
@@ -59,8 +61,6 @@ type (
 		GetConfig() *Config
 		GetLogger() bark.Logger
 		GetMetricsClient() metrics.Client
-		GetTimerAckLevel(cluster string) time.Time
-		UpdateTimerAckLevel(cluster string, ackLevel time.Time) error
 		GetTimeSource() common.TimeSource
 		SetCurrentTime(cluster string, currentTime time.Time)
 		GetCurrentTime(cluster string) time.Time
@@ -114,12 +114,10 @@ func (s *shardContextImpl) GetNextTransferTaskID() (int64, error) {
 	return s.getNextTransferTaskIDLocked()
 }
 
-func (s *shardContextImpl) GetTransferAckLevel() int64 {
+func (s *shardContextImpl) GetTransferAckLevel(cluster string) int64 {
 	s.RLock()
 	defer s.RUnlock()
 
-	// TODO cluster should be an input parameter
-	cluster := s.GetService().GetClusterMetadata().GetCurrentClusterName()
 	// if we can find corresponding ack level
 	if ackLevel, ok := s.shardInfo.ClusterTransferAckLevel[cluster]; ok {
 		return ackLevel
@@ -135,12 +133,10 @@ func (s *shardContextImpl) GetTransferMaxReadLevel() int64 {
 	return s.transferMaxReadLevel
 }
 
-func (s *shardContextImpl) UpdateTransferAckLevel(ackLevel int64) error {
+func (s *shardContextImpl) UpdateTransferAckLevel(cluster string, ackLevel int64) error {
 	s.Lock()
 	defer s.Unlock()
 
-	// TODO cluster should be an input parameter
-	cluster := s.GetService().GetClusterMetadata().GetCurrentClusterName()
 	if cluster == s.GetService().GetClusterMetadata().GetCurrentClusterName() {
 		s.shardInfo.TransferAckLevel = ackLevel
 	}

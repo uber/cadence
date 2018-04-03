@@ -85,7 +85,8 @@ func newTransferQueueProcessor(shard ShardContext, historyService *historyEngine
 		cache:             historyService.historyCache,
 		domainCache:       shard.GetDomainCache(),
 	}
-	baseProcessor := newQueueProcessor(shard, options, processor, shard.GetTransferAckLevel())
+	clusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
+	baseProcessor := newQueueProcessor(shard, options, processor, shard.GetTransferAckLevel(clusterName))
 	processor.queueProcessorBase = baseProcessor
 
 	return processor
