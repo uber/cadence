@@ -43,18 +43,11 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/messaging"
+	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/history"
 	"github.com/uber/cadence/service/matching"
-)
-
-var (
-	integration = flag.Bool("integration", true, "run integration tests")
-)
-
-const (
-	testNumberOfHistoryShards = 4
-	testNumberOfHistoryHosts  = 1
 )
 
 type (
@@ -62,11 +55,13 @@ type (
 		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
 		// not merely log an error
 		*require.Assertions
-		domainName        string
-		foreignDomainName string
-		host              Cadence
-		engine            wsc.Interface
-		logger            bark.Logger
+		domainName          string
+		foreignDomainName   string
+		mockMessagingClient messaging.Client
+		mockProducer        messaging.Producer
+		host                Cadence
+		engine              wsc.Interface
+		logger              bark.Logger
 		suite.Suite
 		persistence.TestBase
 	}
@@ -114,22 +109,24 @@ func (s *integrationSuite) SetupSuite() {
 	logger.Formatter = formatter
 	//logger.Level = log.DebugLevel
 	s.logger = bark.NewLoggerFromLogrus(logger)
+	s.setupSuite(false, false)
 }
 
 func (s *integrationSuite) TearDownSuite() {
-}
-
-func (s *integrationSuite) SetupTest() {
-	s.setupTest(false, false)
-}
-
-func (s *integrationSuite) TearDownTest() {
 	s.host.Stop()
 	s.host = nil
 	s.TearDownWorkflowStore()
 }
 
-func (s *integrationSuite) setupTest(enableGlobalDomain bool, isMasterCluster bool) {
+func (s *integrationSuite) SetupTest() {
+
+}
+
+func (s *integrationSuite) TearDownTest() {
+
+}
+
+func (s *integrationSuite) setupSuite(enableGlobalDomain bool, isMasterCluster bool) {
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
 	options := persistence.TestBaseOptions{}
@@ -142,7 +139,11 @@ func (s *integrationSuite) setupTest(enableGlobalDomain bool, isMasterCluster bo
 
 	s.setupShards()
 
-	s.host = NewCadence(s.ClusterMetadata, s.MetadataManager, s.ShardMgr, s.HistoryMgr, s.ExecutionMgrFactory, s.TaskMgr,
+	// TODO: Use mock messaging client until we support kafka setup onebox to write end-to-end integration test
+	s.mockProducer = &mocks.KafkaProducer{}
+	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
+
+	s.host = NewCadence(s.ClusterMetadata, s.mockMessagingClient, s.MetadataManager, s.ShardMgr, s.HistoryMgr, s.ExecutionMgrFactory, s.TaskMgr,
 		s.VisibilityMgr, testNumberOfHistoryShards, testNumberOfHistoryHosts, s.logger)
 
 	s.host.Start()
@@ -176,673 +177,6 @@ func (s *integrationSuite) setupTest(enableGlobalDomain bool, isMasterCluster bo
 		},
 		ReplicationConfig: &persistence.DomainReplicationConfig{},
 	})
-}
-
-// Note: if the global domain is not enabled, active clusters and clusters
-// will be ignored on the server side
-func (s *integrationSuite) TestIntegrationRegisterGetDomain_GlobalDomainDisabled_AllDefault() {
-	testFn := func(isMasterCluster bool) {
-		// re-initialize to enable global domain
-		s.TearDownTest()
-		s.setupTest(false, isMasterCluster)
-
-		domainName := "some random domain name"
-		clusters := []*workflow.ClusterReplicationConfiguration{}
-		for _, replicationConfig := range persistence.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
-			clusters = append(clusters, &workflow.ClusterReplicationConfiguration{
-				ClusterName: common.StringPtr(replicationConfig.ClusterName),
-			})
-		}
-
-		err := s.engine.RegisterDomain(createContext(), &workflow.RegisterDomainRequest{
-			Name: common.StringPtr(domainName),
-		})
-		s.Nil(err)
-
-		resp, err := s.engine.DescribeDomain(createContext(), &workflow.DescribeDomainRequest{
-			Name: common.StringPtr(domainName),
-		})
-		s.Nil(err)
-		s.Equal(domainName, resp.DomainInfo.GetName())
-		s.Equal(workflow.DomainStatusRegistered, *resp.DomainInfo.Status)
-		s.Empty(resp.DomainInfo.GetDescription())
-		s.Empty(resp.DomainInfo.GetOwnerEmail())
-		s.Equal(int32(0), resp.Configuration.GetWorkflowExecutionRetentionPeriodInDays())
-		s.Equal(false, resp.Configuration.GetEmitMetric())
-		s.Equal(s.ClusterMetadata.GetCurrentClusterName(), resp.ReplicationConfiguration.GetActiveClusterName())
-		s.Equal(clusters, resp.ReplicationConfiguration.Clusters)
-	}
-
-	testFn(false)
-	testFn(true)
-}
-
-func (s *integrationSuite) TestIntegrationRegisterGetDomain_GlobalDomainEnabled_NotMaster_AllDefault() {
-	// re-initialize to enable global domain
-	s.TearDownTest()
-	s.setupTest(true, false)
-
-	domainName := "some random domain name"
-	err := s.engine.RegisterDomain(createContext(), &workflow.RegisterDomainRequest{
-		Name: common.StringPtr(domainName),
-	})
-	s.NotNil(err)
-}
-
-func (s *integrationSuite) TestIntegrationRegisterGetDomain_GlobalDomainEnabled_IsMaster_AllDefault() {
-	// re-initialize to enable global domain
-	s.TearDownTest()
-	s.setupTest(true, true)
-
-	domainName := "some random domain name"
-	clusters := []*workflow.ClusterReplicationConfiguration{}
-	for _, replicationConfig := range persistence.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
-		clusters = append(clusters, &workflow.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(replicationConfig.ClusterName),
-		})
-	}
-
-	err := s.engine.RegisterDomain(createContext(), &workflow.RegisterDomainRequest{
-		Name: common.StringPtr(domainName),
-	})
-	s.Nil(err)
-
-	resp, err := s.engine.DescribeDomain(createContext(), &workflow.DescribeDomainRequest{
-		Name: common.StringPtr(domainName),
-	})
-	s.Nil(err)
-	s.Equal(domainName, resp.DomainInfo.GetName())
-	s.Equal(workflow.DomainStatusRegistered, *resp.DomainInfo.Status)
-	s.Empty(resp.DomainInfo.GetDescription())
-	s.Empty(resp.DomainInfo.GetOwnerEmail())
-	s.Equal(int32(0), resp.Configuration.GetWorkflowExecutionRetentionPeriodInDays())
-	s.Equal(false, resp.Configuration.GetEmitMetric())
-	s.Equal(s.ClusterMetadata.GetCurrentClusterName(), resp.ReplicationConfiguration.GetActiveClusterName())
-	s.Equal(clusters, resp.ReplicationConfiguration.Clusters)
-}
-
-// Note: if the global domain is not enabled, active clusters and clusters
-// will be ignored on the server side
-func (s *integrationSuite) TestIntegrationRegisterGetDomain_GlobalDomainDisabled_NoDefault() {
-	testFn := func(isMasterCluster bool) {
-		// re-initialize to enable global domain
-		s.TearDownTest()
-		s.setupTest(false, isMasterCluster)
-
-		domainName := "some random domain name"
-		description := "some random description"
-		email := "some random email"
-		retention := int32(7)
-		emitMetric := true
-		activeClusterName := ""
-		currentClusterName := s.ClusterMetadata.GetCurrentClusterName()
-		clusters := []*workflow.ClusterReplicationConfiguration{}
-		for clusterName := range s.ClusterMetadata.GetAllClusterNames() {
-			clusters = append(clusters, &workflow.ClusterReplicationConfiguration{
-				ClusterName: common.StringPtr(clusterName),
-			})
-			if clusterName != currentClusterName {
-				activeClusterName = clusterName
-			}
-		}
-
-		err := s.engine.RegisterDomain(createContext(), &workflow.RegisterDomainRequest{
-			Name:                                   common.StringPtr(domainName),
-			Description:                            common.StringPtr(description),
-			OwnerEmail:                             common.StringPtr(email),
-			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
-			EmitMetric:                             common.BoolPtr(emitMetric),
-			Clusters:                               clusters,
-			ActiveClusterName:                      common.StringPtr(activeClusterName),
-		})
-		s.Nil(err)
-
-		resp, err := s.engine.DescribeDomain(createContext(), &workflow.DescribeDomainRequest{
-			Name: common.StringPtr(domainName),
-		})
-		s.Nil(err)
-		s.Equal(domainName, resp.DomainInfo.GetName())
-		s.Equal(workflow.DomainStatusRegistered, *resp.DomainInfo.Status)
-		s.Equal(description, resp.DomainInfo.GetDescription())
-		s.Equal(email, resp.DomainInfo.GetOwnerEmail())
-		s.Equal(retention, resp.Configuration.GetWorkflowExecutionRetentionPeriodInDays())
-		s.Equal(emitMetric, resp.Configuration.GetEmitMetric())
-		s.Equal(currentClusterName, resp.ReplicationConfiguration.GetActiveClusterName())
-		s.Equal(1, len(resp.ReplicationConfiguration.Clusters))
-		s.Equal(currentClusterName, resp.ReplicationConfiguration.Clusters[0].GetClusterName())
-	}
-
-	testFn(false)
-	testFn(true)
-}
-
-func (s *integrationSuite) TestIntegrationRegisterGetDomain_GlobalDomainEnabled_NotMaster_NoDefault() {
-	// re-initialize to enable global domain
-	s.TearDownTest()
-	s.setupTest(true, false)
-
-	domainName := "some random domain name"
-	description := "some random description"
-	email := "some random email"
-	retention := int32(7)
-	emitMetric := true
-	activeClusterName := ""
-	clusters := []*workflow.ClusterReplicationConfiguration{}
-	for clusterName := range s.ClusterMetadata.GetAllClusterNames() {
-		clusters = append(clusters, &workflow.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(clusterName),
-		})
-		if clusterName != s.ClusterMetadata.GetCurrentClusterName() {
-			activeClusterName = clusterName
-		}
-	}
-
-	err := s.engine.RegisterDomain(createContext(), &workflow.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domainName),
-		Description:                            common.StringPtr(description),
-		OwnerEmail:                             common.StringPtr(email),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
-		EmitMetric:                             common.BoolPtr(emitMetric),
-		Clusters:                               clusters,
-		ActiveClusterName:                      common.StringPtr(activeClusterName),
-	})
-	s.NotNil(err)
-}
-
-func (s *integrationSuite) TestIntegrationRegisterGetDomain_GlobalDomainEnabled_IsMaster_NoDefault() {
-	// re-initialize to enable global domain
-	s.TearDownTest()
-	s.setupTest(true, true)
-
-	domainName := "some random domain name"
-	description := "some random description"
-	email := "some random email"
-	retention := int32(7)
-	emitMetric := true
-	activeClusterName := ""
-	clusters := []*workflow.ClusterReplicationConfiguration{}
-	for clusterName := range s.ClusterMetadata.GetAllClusterNames() {
-		clusters = append(clusters, &workflow.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(clusterName),
-		})
-		if clusterName != s.ClusterMetadata.GetCurrentClusterName() {
-			activeClusterName = clusterName
-		}
-	}
-
-	err := s.engine.RegisterDomain(createContext(), &workflow.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domainName),
-		Description:                            common.StringPtr(description),
-		OwnerEmail:                             common.StringPtr(email),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
-		EmitMetric:                             common.BoolPtr(emitMetric),
-		Clusters:                               clusters,
-		ActiveClusterName:                      common.StringPtr(activeClusterName),
-	})
-	s.Nil(err)
-
-	resp, err := s.engine.DescribeDomain(createContext(), &workflow.DescribeDomainRequest{
-		Name: common.StringPtr(domainName),
-	})
-	s.Nil(err)
-	s.Equal(domainName, resp.DomainInfo.GetName())
-	s.Equal(workflow.DomainStatusRegistered, *resp.DomainInfo.Status)
-	s.Equal(description, resp.DomainInfo.GetDescription())
-	s.Equal(email, resp.DomainInfo.GetOwnerEmail())
-	s.Equal(retention, resp.Configuration.GetWorkflowExecutionRetentionPeriodInDays())
-	s.Equal(emitMetric, resp.Configuration.GetEmitMetric())
-	s.Equal(activeClusterName, resp.ReplicationConfiguration.GetActiveClusterName())
-	s.Equal(clusters, resp.ReplicationConfiguration.Clusters)
-}
-
-// Note: if the global domain is not enabled, active clusters and clusters
-// will be ignored on the server side
-func (s *integrationSuite) TestIntegrationUpdateGetDomain_GlobalDomainDisabled_AllSet() {
-	testFn := func(isMasterCluster bool) {
-		// re-initialize to enable global domain
-		s.TearDownTest()
-		s.setupTest(false, isMasterCluster)
-
-		domainName := "some random domain name"
-		err := s.engine.RegisterDomain(createContext(), &workflow.RegisterDomainRequest{
-			Name: common.StringPtr(domainName),
-		})
-		s.Nil(err)
-
-		description := "some random description"
-		email := "some random email"
-		retention := int32(7)
-		emitMetric := true
-		currentClusterName := s.ClusterMetadata.GetCurrentClusterName()
-		clusters := []*workflow.ClusterReplicationConfiguration{}
-		for clusterName := range s.ClusterMetadata.GetAllClusterNames() {
-			clusters = append(clusters, &workflow.ClusterReplicationConfiguration{
-				ClusterName: common.StringPtr(clusterName),
-			})
-		}
-
-		updateResp, err := s.engine.UpdateDomain(createContext(), &workflow.UpdateDomainRequest{
-			Name: common.StringPtr(domainName),
-			UpdatedInfo: &workflow.UpdateDomainInfo{
-				Description: common.StringPtr(description),
-				OwnerEmail:  common.StringPtr(email),
-			},
-			Configuration: &workflow.DomainConfiguration{
-				WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
-				EmitMetric:                             common.BoolPtr(emitMetric),
-			},
-			ReplicationConfiguration: &workflow.DomainReplicationConfiguration{
-				Clusters: clusters,
-			},
-		})
-		s.Nil(err)
-		s.Equal(domainName, updateResp.DomainInfo.GetName())
-		s.Equal(workflow.DomainStatusRegistered, *updateResp.DomainInfo.Status)
-		s.Equal(description, updateResp.DomainInfo.GetDescription())
-		s.Equal(email, updateResp.DomainInfo.GetOwnerEmail())
-		s.Equal(retention, updateResp.Configuration.GetWorkflowExecutionRetentionPeriodInDays())
-		s.Equal(emitMetric, updateResp.Configuration.GetEmitMetric())
-		s.Equal(currentClusterName, updateResp.ReplicationConfiguration.GetActiveClusterName())
-		s.Equal(1, len(updateResp.ReplicationConfiguration.Clusters))
-		s.Equal(currentClusterName, updateResp.ReplicationConfiguration.Clusters[0].GetClusterName())
-
-		describeResp, err := s.engine.DescribeDomain(createContext(), &workflow.DescribeDomainRequest{
-			Name: common.StringPtr(domainName),
-		})
-		s.Nil(err)
-		s.Equal(domainName, describeResp.DomainInfo.GetName())
-		s.Equal(workflow.DomainStatusRegistered, *describeResp.DomainInfo.Status)
-		s.Equal(description, describeResp.DomainInfo.GetDescription())
-		s.Equal(email, describeResp.DomainInfo.GetOwnerEmail())
-		s.Equal(retention, describeResp.Configuration.GetWorkflowExecutionRetentionPeriodInDays())
-		s.Equal(emitMetric, describeResp.Configuration.GetEmitMetric())
-		s.Equal(currentClusterName, describeResp.ReplicationConfiguration.GetActiveClusterName())
-		s.Equal(1, len(describeResp.ReplicationConfiguration.Clusters))
-		s.Equal(currentClusterName, describeResp.ReplicationConfiguration.Clusters[0].GetClusterName())
-	}
-
-	testFn(false)
-	testFn(true)
-}
-
-func (s *integrationSuite) TestIntegrationUpdateGetDomain_GlobalDomainEnabled_NotMaster_AllSet() {
-	// re-initialize to enable global domain
-	s.TearDownTest()
-	s.setupTest(true, false)
-
-	domainName := "some random domain name"
-	// bypass to create a domain, since this cluster is not the master
-	// set all attr to default
-	_, err := s.MetadataManager.CreateDomain(&persistence.CreateDomainRequest{
-		Info: &persistence.DomainInfo{
-			ID:          uuid.New(),
-			Name:        domainName,
-			Status:      persistence.DomainStatusRegistered,
-			Description: "",
-			OwnerEmail:  "",
-		},
-		Config: &persistence.DomainConfig{
-			Retention:  0,
-			EmitMetric: false,
-		},
-		ReplicationConfig: &persistence.DomainReplicationConfig{
-			ActiveClusterName: s.ClusterMetadata.GetCurrentClusterName(),
-			Clusters: []*persistence.ClusterReplicationConfig{
-				&persistence.ClusterReplicationConfig{ClusterName: s.ClusterMetadata.GetCurrentClusterName()},
-			},
-		},
-		FailoverVersion: 0,
-	})
-	s.Nil(err)
-
-	description := "some random description"
-	email := "some random email"
-	retention := int32(7)
-	emitMetric := true
-	clusters := []*workflow.ClusterReplicationConfiguration{}
-	for clusterName := range s.ClusterMetadata.GetAllClusterNames() {
-		clusters = append(clusters, &workflow.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(clusterName),
-		})
-	}
-
-	_, err = s.engine.UpdateDomain(createContext(), &workflow.UpdateDomainRequest{
-		Name: common.StringPtr(domainName),
-		UpdatedInfo: &workflow.UpdateDomainInfo{
-			Description: common.StringPtr(description),
-			OwnerEmail:  common.StringPtr(email),
-		},
-		Configuration: &workflow.DomainConfiguration{
-			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
-			EmitMetric:                             common.BoolPtr(emitMetric),
-		},
-		ReplicationConfiguration: &workflow.DomainReplicationConfiguration{
-			Clusters: clusters,
-		},
-	})
-	s.NotNil(err)
-}
-
-func (s *integrationSuite) TestIntegrationUpdateGetDomain_GlobalDomainEnabled_IsMaster_AllSet() {
-	// re-initialize to enable global domain
-	s.TearDownTest()
-	s.setupTest(true, true)
-
-	domainName := "some random domain name"
-	err := s.engine.RegisterDomain(createContext(), &workflow.RegisterDomainRequest{
-		Name: common.StringPtr(domainName),
-	})
-	s.Nil(err)
-
-	description := "some random description"
-	email := "some random email"
-	retention := int32(7)
-	emitMetric := true
-	clusters := []*workflow.ClusterReplicationConfiguration{}
-	for clusterName := range s.ClusterMetadata.GetAllClusterNames() {
-		clusters = append(clusters, &workflow.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(clusterName),
-		})
-	}
-
-	updateResp, err := s.engine.UpdateDomain(createContext(), &workflow.UpdateDomainRequest{
-		Name: common.StringPtr(domainName),
-		UpdatedInfo: &workflow.UpdateDomainInfo{
-			Description: common.StringPtr(description),
-			OwnerEmail:  common.StringPtr(email),
-		},
-		Configuration: &workflow.DomainConfiguration{
-			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
-			EmitMetric:                             common.BoolPtr(emitMetric),
-		},
-		ReplicationConfiguration: &workflow.DomainReplicationConfiguration{
-			Clusters: clusters,
-		},
-	})
-	s.Nil(err)
-	s.Equal(domainName, updateResp.DomainInfo.GetName())
-	s.Equal(workflow.DomainStatusRegistered, *updateResp.DomainInfo.Status)
-	s.Equal(description, updateResp.DomainInfo.GetDescription())
-	s.Equal(email, updateResp.DomainInfo.GetOwnerEmail())
-	s.Equal(retention, updateResp.Configuration.GetWorkflowExecutionRetentionPeriodInDays())
-	s.Equal(emitMetric, updateResp.Configuration.GetEmitMetric())
-	s.Equal(s.ClusterMetadata.GetCurrentClusterName(), updateResp.ReplicationConfiguration.GetActiveClusterName())
-	s.Equal(clusters, updateResp.ReplicationConfiguration.Clusters)
-
-	describeResp, err := s.engine.DescribeDomain(createContext(), &workflow.DescribeDomainRequest{
-		Name: common.StringPtr(domainName),
-	})
-	s.Nil(err)
-	s.Equal(domainName, describeResp.DomainInfo.GetName())
-	s.Equal(workflow.DomainStatusRegistered, *describeResp.DomainInfo.Status)
-	s.Equal(description, describeResp.DomainInfo.GetDescription())
-	s.Equal(email, describeResp.DomainInfo.GetOwnerEmail())
-	s.Equal(retention, describeResp.Configuration.GetWorkflowExecutionRetentionPeriodInDays())
-	s.Equal(emitMetric, describeResp.Configuration.GetEmitMetric())
-	s.Equal(s.ClusterMetadata.GetCurrentClusterName(), describeResp.ReplicationConfiguration.GetActiveClusterName())
-	s.Equal(clusters, describeResp.ReplicationConfiguration.Clusters)
-
-	// update domain with less replicated regions is not allowed
-	_, err = s.engine.UpdateDomain(createContext(), &workflow.UpdateDomainRequest{
-		Name: common.StringPtr(domainName),
-		ReplicationConfiguration: &workflow.DomainReplicationConfiguration{
-			Clusters: []*workflow.ClusterReplicationConfiguration{
-				&workflow.ClusterReplicationConfiguration{
-					ClusterName: common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
-				},
-			},
-		},
-	})
-	s.NotNil(err)
-}
-
-// Note: if the global domain is not enabled, active clusters and clusters
-// will be ignored on the server side
-func (s *integrationSuite) TestIntegrationUpdateGetDomain_GlobalDomainDisabled_NoSet() {
-	testFn := func(isMasterCluster bool) {
-		// re-initialize to enable global domain
-		s.TearDownTest()
-		s.setupTest(false, isMasterCluster)
-
-		domainName := "some random domain name"
-		description := "some random description"
-		email := "some random email"
-		retention := int32(7)
-		emitMetric := true
-		currentClusterName := s.ClusterMetadata.GetCurrentClusterName()
-
-		err := s.engine.RegisterDomain(createContext(), &workflow.RegisterDomainRequest{
-			Name:                                   common.StringPtr(domainName),
-			Description:                            common.StringPtr(description),
-			OwnerEmail:                             common.StringPtr(email),
-			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
-			EmitMetric:                             common.BoolPtr(emitMetric),
-		})
-		s.Nil(err)
-
-		updateResp, err := s.engine.UpdateDomain(createContext(), &workflow.UpdateDomainRequest{
-			Name: common.StringPtr(domainName),
-		})
-		s.Nil(err)
-		s.Equal(domainName, updateResp.DomainInfo.GetName())
-		s.Equal(workflow.DomainStatusRegistered, *updateResp.DomainInfo.Status)
-		s.Equal(description, updateResp.DomainInfo.GetDescription())
-		s.Equal(email, updateResp.DomainInfo.GetOwnerEmail())
-		s.Equal(retention, updateResp.Configuration.GetWorkflowExecutionRetentionPeriodInDays())
-		s.Equal(emitMetric, updateResp.Configuration.GetEmitMetric())
-		s.Equal(currentClusterName, updateResp.ReplicationConfiguration.GetActiveClusterName())
-		s.Equal(1, len(updateResp.ReplicationConfiguration.Clusters))
-		s.Equal(currentClusterName, updateResp.ReplicationConfiguration.Clusters[0].GetClusterName())
-
-		describeResp, err := s.engine.DescribeDomain(createContext(), &workflow.DescribeDomainRequest{
-			Name: common.StringPtr(domainName),
-		})
-		s.Nil(err)
-		s.Equal(domainName, describeResp.DomainInfo.GetName())
-		s.Equal(workflow.DomainStatusRegistered, *describeResp.DomainInfo.Status)
-		s.Equal(description, describeResp.DomainInfo.GetDescription())
-		s.Equal(email, describeResp.DomainInfo.GetOwnerEmail())
-		s.Equal(retention, describeResp.Configuration.GetWorkflowExecutionRetentionPeriodInDays())
-		s.Equal(emitMetric, describeResp.Configuration.GetEmitMetric())
-		s.Equal(currentClusterName, describeResp.ReplicationConfiguration.GetActiveClusterName())
-		s.Equal(1, len(describeResp.ReplicationConfiguration.Clusters))
-		s.Equal(currentClusterName, describeResp.ReplicationConfiguration.Clusters[0].GetClusterName())
-	}
-
-	testFn(false)
-	testFn(true)
-}
-
-func (s *integrationSuite) TestIntegrationUpdateGetDomain_GlobalDomainEnabled_NotMaster_NoSet() {
-	// re-initialize to enable global domain
-	s.TearDownTest()
-	s.setupTest(true, false)
-
-	domainName := "some random domain name"
-	// bypass to create a domain, since this cluster is not the master
-	// set all attr to default
-	_, err := s.MetadataManager.CreateDomain(&persistence.CreateDomainRequest{
-		Info: &persistence.DomainInfo{
-			ID:          uuid.New(),
-			Name:        domainName,
-			Status:      persistence.DomainStatusRegistered,
-			Description: "",
-			OwnerEmail:  "",
-		},
-		Config: &persistence.DomainConfig{
-			Retention:  0,
-			EmitMetric: false,
-		},
-		ReplicationConfig: &persistence.DomainReplicationConfig{
-			ActiveClusterName: s.ClusterMetadata.GetCurrentClusterName(),
-			Clusters: []*persistence.ClusterReplicationConfig{
-				&persistence.ClusterReplicationConfig{ClusterName: s.ClusterMetadata.GetCurrentClusterName()},
-			},
-		},
-		FailoverVersion: 0,
-	})
-	s.Nil(err)
-
-	_, err = s.engine.UpdateDomain(createContext(), &workflow.UpdateDomainRequest{
-		Name: common.StringPtr(domainName),
-	})
-	s.NotNil(err)
-}
-
-func (s *integrationSuite) TestIntegrationUpdateGetDomain_GlobalDomainEnabled_IsMaster_NoSet() {
-	// re-initialize to enable global domain
-	s.TearDownTest()
-	s.setupTest(true, true)
-
-	domainName := "some random domain name"
-	description := "some random description"
-	email := "some random email"
-	retention := int32(7)
-	emitMetric := true
-	clusters := []*workflow.ClusterReplicationConfiguration{}
-	for clusterName := range s.ClusterMetadata.GetAllClusterNames() {
-		clusters = append(clusters, &workflow.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(clusterName),
-		})
-	}
-
-	err := s.engine.RegisterDomain(createContext(), &workflow.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domainName),
-		Description:                            common.StringPtr(description),
-		OwnerEmail:                             common.StringPtr(email),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
-		EmitMetric:                             common.BoolPtr(emitMetric),
-		Clusters:                               clusters,
-	})
-	s.Nil(err)
-
-	updateResp, err := s.engine.UpdateDomain(createContext(), &workflow.UpdateDomainRequest{
-		Name: common.StringPtr(domainName),
-	})
-	s.Nil(err)
-	s.Equal(domainName, updateResp.DomainInfo.GetName())
-	s.Equal(workflow.DomainStatusRegistered, *updateResp.DomainInfo.Status)
-	s.Equal(description, updateResp.DomainInfo.GetDescription())
-	s.Equal(email, updateResp.DomainInfo.GetOwnerEmail())
-	s.Equal(retention, updateResp.Configuration.GetWorkflowExecutionRetentionPeriodInDays())
-	s.Equal(emitMetric, updateResp.Configuration.GetEmitMetric())
-	s.Equal(s.ClusterMetadata.GetCurrentClusterName(), updateResp.ReplicationConfiguration.GetActiveClusterName())
-	s.Equal(clusters, updateResp.ReplicationConfiguration.Clusters)
-
-	describeResp, err := s.engine.DescribeDomain(createContext(), &workflow.DescribeDomainRequest{
-		Name: common.StringPtr(domainName),
-	})
-	s.Nil(err)
-	s.Equal(domainName, describeResp.DomainInfo.GetName())
-	s.Equal(workflow.DomainStatusRegistered, *describeResp.DomainInfo.Status)
-	s.Equal(description, describeResp.DomainInfo.GetDescription())
-	s.Equal(email, describeResp.DomainInfo.GetOwnerEmail())
-	s.Equal(retention, describeResp.Configuration.GetWorkflowExecutionRetentionPeriodInDays())
-	s.Equal(emitMetric, describeResp.Configuration.GetEmitMetric())
-	s.Equal(s.ClusterMetadata.GetCurrentClusterName(), describeResp.ReplicationConfiguration.GetActiveClusterName())
-	s.Equal(clusters, describeResp.ReplicationConfiguration.Clusters)
-}
-
-func (s *integrationSuite) TestIntegrationUpdateGetDomain_GlobalDomainEnabled_Failover() {
-	testFn := func(isMasterCluster bool) {
-		// re-initialize to enable global domain
-		s.TearDownTest()
-		s.setupTest(true, isMasterCluster)
-
-		domainName := "some random domain name"
-		description := "some random description"
-		email := "some random email"
-		retention := int32(7)
-		emitMetric := true
-		clusters := []*workflow.ClusterReplicationConfiguration{}
-
-		activeClusterName := ""
-		failoverVersion := int64(59)
-		persistenceClusters := []*persistence.ClusterReplicationConfig{}
-		for clusterName := range s.ClusterMetadata.GetAllClusterNames() {
-			clusters = append(clusters, &workflow.ClusterReplicationConfiguration{
-				ClusterName: common.StringPtr(clusterName),
-			})
-
-			persistenceClusters = append(persistenceClusters, &persistence.ClusterReplicationConfig{
-				ClusterName: clusterName,
-			})
-			if clusterName != s.ClusterMetadata.GetCurrentClusterName() {
-				activeClusterName = clusterName
-			}
-		}
-
-		// create a domain which is not currently active
-		s.MetadataManager.CreateDomain(&persistence.CreateDomainRequest{
-			Info: &persistence.DomainInfo{
-				ID:          uuid.New(),
-				Name:        domainName,
-				Status:      persistence.DomainStatusRegistered,
-				Description: description,
-				OwnerEmail:  email,
-			},
-			Config: &persistence.DomainConfig{
-				Retention:  retention,
-				EmitMetric: emitMetric,
-			},
-			ReplicationConfig: &persistence.DomainReplicationConfig{
-				ActiveClusterName: activeClusterName,
-				Clusters:          persistenceClusters,
-			},
-			FailoverVersion: failoverVersion,
-		})
-
-		// when doing the failover, the only thing can be updated is the active cluster
-		updateResp, err := s.engine.UpdateDomain(createContext(), &workflow.UpdateDomainRequest{
-			Name: common.StringPtr(domainName),
-			UpdatedInfo: &workflow.UpdateDomainInfo{
-				Description: common.StringPtr(description),
-				OwnerEmail:  common.StringPtr(email),
-			},
-			Configuration: &workflow.DomainConfiguration{
-				WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
-				EmitMetric:                             common.BoolPtr(emitMetric),
-			},
-			ReplicationConfiguration: &workflow.DomainReplicationConfiguration{
-				ActiveClusterName: common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
-				Clusters:          clusters,
-			},
-		})
-		s.Nil(updateResp)
-		s.NotNil(err)
-
-		updateResp, err = s.engine.UpdateDomain(createContext(), &workflow.UpdateDomainRequest{
-			Name: common.StringPtr(domainName),
-			ReplicationConfiguration: &workflow.DomainReplicationConfiguration{
-				ActiveClusterName: common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
-			},
-		})
-		s.Nil(err)
-		s.Equal(domainName, updateResp.DomainInfo.GetName())
-		s.Equal(workflow.DomainStatusRegistered, *updateResp.DomainInfo.Status)
-		s.Equal(description, updateResp.DomainInfo.GetDescription())
-		s.Equal(email, updateResp.DomainInfo.GetOwnerEmail())
-		s.Equal(retention, updateResp.Configuration.GetWorkflowExecutionRetentionPeriodInDays())
-		s.Equal(emitMetric, updateResp.Configuration.GetEmitMetric())
-		s.Equal(s.ClusterMetadata.GetCurrentClusterName(), updateResp.ReplicationConfiguration.GetActiveClusterName())
-		s.Equal(clusters, updateResp.ReplicationConfiguration.Clusters)
-
-		describeResp, err := s.engine.DescribeDomain(createContext(), &workflow.DescribeDomainRequest{
-			Name: common.StringPtr(domainName),
-		})
-		s.Nil(err)
-		s.Equal(domainName, describeResp.DomainInfo.GetName())
-		s.Equal(workflow.DomainStatusRegistered, *describeResp.DomainInfo.Status)
-		s.Equal(description, describeResp.DomainInfo.GetDescription())
-		s.Equal(email, describeResp.DomainInfo.GetOwnerEmail())
-		s.Equal(retention, describeResp.Configuration.GetWorkflowExecutionRetentionPeriodInDays())
-		s.Equal(emitMetric, describeResp.Configuration.GetEmitMetric())
-		s.Equal(s.ClusterMetadata.GetCurrentClusterName(), describeResp.ReplicationConfiguration.GetActiveClusterName())
-		s.Equal(clusters, describeResp.ReplicationConfiguration.Clusters)
-	}
-
-	testFn(true)
-	testFn(false)
 }
 
 func (s *integrationSuite) TestIntegrationStartWorkflowExecution() {
@@ -924,7 +258,6 @@ func (s *integrationSuite) TestTerminateWorkflow() {
 
 	s.logger.Infof("StartWorkflowExecution: response: %v \n", *we.RunId)
 
-	workflowComplete := false
 	activityCount := int32(1)
 	activityCounter := int32(0)
 	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
@@ -949,7 +282,6 @@ func (s *integrationSuite) TestTerminateWorkflow() {
 			}}, nil
 		}
 
-		workflowComplete = true
 		return []byte(strconv.Itoa(int(activityCounter))), []*workflow.Decision{{
 			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
 			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
@@ -2107,10 +1439,10 @@ func (s *integrationSuite) TestSequential_UserTimers() {
 	s.True(workflowComplete)
 }
 
-func (s *integrationSuite) TestActivityCancelation() {
-	id := "integration-activity-cancelation-test"
-	wt := "integration-activity-cancelation-test-type"
-	tl := "integration-activity-cancelation-test-tasklist"
+func (s *integrationSuite) TestActivityCancellation() {
+	id := "integration-activity-cancellation-test"
+	wt := "integration-activity-cancellation-test-type"
+	tl := "integration-activity-cancellation-test-tasklist"
 	identity := "worker1"
 	activityName := "activity_timer"
 
@@ -2135,7 +1467,7 @@ func (s *integrationSuite) TestActivityCancelation() {
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
-	s.logger.Infof("StartWorkflowExecution: response: %v \n", *we.RunId)
+	s.logger.Infof("StartWorkflowExecution: response: %v \n", we.GetRunId())
 
 	activityCounter := int32(0)
 	scheduleActivity := true
@@ -2186,7 +1518,7 @@ func (s *integrationSuite) TestActivityCancelation() {
 	atHandler := func(execution *workflow.WorkflowExecution, activityType *workflow.ActivityType,
 		activityID string, input []byte, taskToken []byte) ([]byte, bool, error) {
 		s.Equal(id, *execution.WorkflowId)
-		s.Equal(activityName, *activityType.Name)
+		s.Equal(activityName, activityType.GetName())
 		for i := 0; i < 10; i++ {
 			s.logger.Infof("Heartbeating for activity: %s, count: %d", activityID, i)
 			response, err := s.engine.RecordActivityTaskHeartbeat(createContext(),
@@ -2235,9 +1567,9 @@ func (s *integrationSuite) TestActivityCancelation() {
 }
 
 func (s *integrationSuite) TestSignalWorkflow() {
-	id := "interation-signal-workflow-test"
-	wt := "interation-signal-workflow-test-type"
-	tl := "interation-signal-workflow-test-tasklist"
+	id := "integration-signal-workflow-test"
+	wt := "integration-signal-workflow-test-type"
+	tl := "integration-signal-workflow-test-tasklist"
 	identity := "worker1"
 	activityName := "activity_type1"
 
@@ -2247,7 +1579,7 @@ func (s *integrationSuite) TestSignalWorkflow() {
 	taskList := &workflow.TaskList{}
 	taskList.Name = common.StringPtr(tl)
 
-	// Send a signal to non-existant workflow
+	// Send a signal to non-exist workflow
 	err0 := s.engine.SignalWorkflowExecution(createContext(), &workflow.SignalWorkflowExecutionRequest{
 		Domain: common.StringPtr(s.domainName),
 		WorkflowExecution: &workflow.WorkflowExecution{
@@ -2425,9 +1757,9 @@ func (s *integrationSuite) TestSignalWorkflow() {
 }
 
 func (s *integrationSuite) TestSignalWorkflow_DuplicateRequest() {
-	id := "interation-signal-workflow-test"
-	wt := "interation-signal-workflow-test-type"
-	tl := "interation-signal-workflow-test-tasklist"
+	id := "interation-signal-workflow-test-duplicate"
+	wt := "interation-signal-workflow-test-duplicate-type"
+	tl := "interation-signal-workflow-test-duplicate-tasklist"
 	identity := "worker1"
 	activityName := "activity_type1"
 
@@ -2689,10 +2021,10 @@ func (s *integrationSuite) TestBufferedEvents() {
 }
 
 func (s *integrationSuite) TestQueryWorkflow_Sticky() {
-	id := "interation-query-workflow-test"
-	wt := "interation-query-workflow-test-type"
-	tl := "interation-query-workflow-test-tasklist"
-	stl := "interation-query-workflow-test-tasklist-sticky"
+	id := "interation-query-workflow-test-sticky"
+	wt := "interation-query-workflow-test-sticky-type"
+	tl := "interation-query-workflow-test-sticky-tasklist"
+	stl := "interation-query-workflow-test-sticky-tasklist-sticky"
 	identity := "worker1"
 	activityName := "activity_type1"
 	queryType := "test-query"
@@ -2726,7 +2058,6 @@ func (s *integrationSuite) TestQueryWorkflow_Sticky() {
 	s.logger.Infof("StartWorkflowExecution: response: %v \n", *we.RunId)
 
 	// decider logic
-	workflowComplete := false
 	activityScheduled := false
 	activityData := int32(1)
 	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
@@ -2752,7 +2083,6 @@ func (s *integrationSuite) TestQueryWorkflow_Sticky() {
 			}}, nil
 		}
 
-		workflowComplete = true
 		return nil, []*workflow.Decision{{
 			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
 			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
@@ -2854,10 +2184,10 @@ func (s *integrationSuite) TestQueryWorkflow_Sticky() {
 }
 
 func (s *integrationSuite) TestQueryWorkflow_StickyTimeout() {
-	id := "interation-query-workflow-test"
-	wt := "interation-query-workflow-test-type"
-	tl := "interation-query-workflow-test-tasklist"
-	stl := "interation-query-workflow-test-tasklist-sticky"
+	id := "interation-query-workflow-test-sticky-timeout"
+	wt := "interation-query-workflow-test-sticky-timeout-type"
+	tl := "interation-query-workflow-test-sticky-timeout-tasklist"
+	stl := "interation-query-workflow-test-sticky-timeout-tasklist-sticky"
 	identity := "worker1"
 	activityName := "activity_type1"
 	queryType := "test-query"
@@ -2891,7 +2221,6 @@ func (s *integrationSuite) TestQueryWorkflow_StickyTimeout() {
 	s.logger.Infof("StartWorkflowExecution: response: %v \n", *we.RunId)
 
 	// decider logic
-	workflowComplete := false
 	activityScheduled := false
 	activityData := int32(1)
 	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
@@ -2917,7 +2246,6 @@ func (s *integrationSuite) TestQueryWorkflow_StickyTimeout() {
 			}}, nil
 		}
 
-		workflowComplete = true
 		return nil, []*workflow.Decision{{
 			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
 			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
@@ -3005,9 +2333,9 @@ func (s *integrationSuite) TestQueryWorkflow_StickyTimeout() {
 }
 
 func (s *integrationSuite) TestQueryWorkflow_NonSticky() {
-	id := "interation-query-workflow-test"
-	wt := "interation-query-workflow-test-type"
-	tl := "interation-query-workflow-test-tasklist"
+	id := "interation-query-workflow-test-non-sticky"
+	wt := "interation-query-workflow-test-non-sticky-type"
+	tl := "interation-query-workflow-test-non-sticky-tasklist"
 	identity := "worker1"
 	activityName := "activity_type1"
 	queryType := "test-query"
@@ -3037,7 +2365,6 @@ func (s *integrationSuite) TestQueryWorkflow_NonSticky() {
 	s.logger.Infof("StartWorkflowExecution: response: %v \n", *we.RunId)
 
 	// decider logic
-	workflowComplete := false
 	activityScheduled := false
 	activityData := int32(1)
 	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
@@ -3063,7 +2390,6 @@ func (s *integrationSuite) TestQueryWorkflow_NonSticky() {
 			}}, nil
 		}
 
-		workflowComplete = true
 		return nil, []*workflow.Decision{{
 			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
 			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
@@ -3316,9 +2642,12 @@ func (s *integrationSuite) TestContinueAsNewWorkflow() {
 	workflowComplete := false
 	continueAsNewCount := int32(10)
 	continueAsNewCounter := int32(0)
+	var previousRunID string
+	var lastRunStartedEvent *workflow.HistoryEvent
 	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
 		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
 		if continueAsNewCounter < continueAsNewCount {
+			previousRunID = execution.GetRunId()
 			continueAsNewCounter++
 			buf := new(bytes.Buffer)
 			s.Nil(binary.Write(buf, binary.LittleEndian, continueAsNewCounter))
@@ -3335,6 +2664,7 @@ func (s *integrationSuite) TestContinueAsNewWorkflow() {
 			}}, nil
 		}
 
+		lastRunStartedEvent = history.Events[0]
 		workflowComplete = true
 		return []byte(strconv.Itoa(int(continueAsNewCounter))), []*workflow.Decision{{
 			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
@@ -3364,6 +2694,7 @@ func (s *integrationSuite) TestContinueAsNewWorkflow() {
 	_, err := poller.pollAndProcessDecisionTask(true, false)
 	s.Nil(err)
 	s.True(workflowComplete)
+	s.Equal(previousRunID, lastRunStartedEvent.WorkflowExecutionStartedEventAttributes.GetContinuedExecutionRunId())
 }
 
 func (s *integrationSuite) TestContinueAsNewWorkflow_Timeout() {
@@ -4246,8 +3577,8 @@ func (s *integrationSuite) TestHistoryVersionCompatibilityCheck() {
 }
 
 func (s *integrationSuite) TestChildWorkflowExecution() {
-	parentID := "integration-child-workflow-parent-test"
-	childID := "integration-child-workflow-child-test"
+	parentID := "integration-child-workflow-test-parent"
+	childID := "integration-child-workflow-test-child"
 	wtParent := "integration-child-workflow-test-parent-type"
 	wtChild := "integration-child-workflow-test-child-type"
 	tlParent := "integration-child-workflow-test-parent-tasklist"
@@ -4274,6 +3605,7 @@ func (s *integrationSuite) TestChildWorkflowExecution() {
 		Input:        nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		ChildPolicy:                         common.ChildPolicyPtr(workflow.ChildPolicyRequestCancel),
 		Identity:                            common.StringPtr(identity),
 	}
 
@@ -4282,9 +3614,9 @@ func (s *integrationSuite) TestChildWorkflowExecution() {
 	s.logger.Infof("StartWorkflowExecution: response: %v \n", *we.RunId)
 
 	// decider logic
-	workflowComplete := false
 	childComplete := false
 	childExecutionStarted := false
+	var parentStartedEvent *workflow.HistoryEvent
 	var startedEvent *workflow.HistoryEvent
 	var completedEvent *workflow.HistoryEvent
 
@@ -4297,6 +3629,7 @@ func (s *integrationSuite) TestChildWorkflowExecution() {
 			if !childExecutionStarted {
 				s.logger.Info("Starting child execution.")
 				childExecutionStarted = true
+				parentStartedEvent = history.Events[0]
 
 				return nil, []*workflow.Decision{{
 					DecisionType: common.DecisionTypePtr(workflow.DecisionTypeStartChildWorkflowExecution),
@@ -4307,7 +3640,7 @@ func (s *integrationSuite) TestChildWorkflowExecution() {
 						Input:        []byte("child-workflow-input"),
 						ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(200),
 						TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
-						ChildPolicy:                         common.ChildPolicyPtr(workflow.ChildPolicyTerminate),
+						ChildPolicy:                         common.ChildPolicyPtr(workflow.ChildPolicyRequestCancel),
 						Control:                             nil,
 					},
 				}}, nil
@@ -4320,7 +3653,6 @@ func (s *integrationSuite) TestChildWorkflowExecution() {
 
 					if *event.EventType == workflow.EventTypeChildWorkflowExecutionCompleted {
 						completedEvent = event
-						workflowComplete = true
 						return nil, []*workflow.Decision{{
 							DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
 							CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
@@ -4335,9 +3667,13 @@ func (s *integrationSuite) TestChildWorkflowExecution() {
 		return nil, nil, nil
 	}
 
+	var childStartedEvent *workflow.HistoryEvent
 	// Child Decider Logic
 	dtHandlerChild := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
 		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
+		if previousStartedEventID <= 0 {
+			childStartedEvent = history.Events[0]
+		}
 
 		s.logger.Infof("Processing decision task for Child WorkflowID: %v", *execution.WorkflowId)
 		childComplete = true
@@ -4374,16 +3710,27 @@ func (s *integrationSuite) TestChildWorkflowExecution() {
 	s.logger.Infof("pollAndProcessDecisionTask: %v", err)
 	s.Nil(err)
 	s.True(childExecutionStarted)
+	s.Equal(workflow.ChildPolicyRequestCancel,
+		parentStartedEvent.WorkflowExecutionStartedEventAttributes.GetChildPolicy())
 
 	// Process ChildExecution Started event and Process Child Execution and complete it
 	_, err = pollerParent.pollAndProcessDecisionTask(false, false)
 	s.logger.Infof("pollAndProcessDecisionTask: %v", err)
 	s.Nil(err)
+
 	_, err = pollerChild.pollAndProcessDecisionTask(false, false)
 	s.logger.Infof("pollAndProcessDecisionTask: %v", err)
 	s.Nil(err)
 	s.NotNil(startedEvent)
 	s.True(childComplete)
+	s.NotNil(childStartedEvent)
+	s.Equal(workflow.EventTypeWorkflowExecutionStarted, childStartedEvent.GetEventType())
+	s.Equal(s.domainName, childStartedEvent.WorkflowExecutionStartedEventAttributes.GetParentWorkflowDomain())
+	s.Equal(parentID, childStartedEvent.WorkflowExecutionStartedEventAttributes.ParentWorkflowExecution.GetWorkflowId())
+	s.Equal(we.GetRunId(), childStartedEvent.WorkflowExecutionStartedEventAttributes.ParentWorkflowExecution.GetRunId())
+	s.Equal(startedEvent.ChildWorkflowExecutionStartedEventAttributes.GetInitiatedEventId(),
+		childStartedEvent.WorkflowExecutionStartedEventAttributes.GetParentInitiatedEventId())
+	s.Equal(workflow.ChildPolicyRequestCancel, childStartedEvent.WorkflowExecutionStartedEventAttributes.GetChildPolicy())
 
 	// Process ChildExecution completed event and complete parent execution
 	_, err = pollerParent.pollAndProcessDecisionTask(false, false)
@@ -4408,8 +3755,8 @@ func (s *integrationSuite) TestChildWorkflowExecution() {
 }
 
 func (s *integrationSuite) TestChildWorkflowWithContinueAsNew() {
-	parentID := "integration-child-workflow-with-continue-as-new-parent-test"
-	childID := "integration-child-workflow-with-continue-as-new-child-test"
+	parentID := "integration-child-workflow-with-continue-as-new-test-parent"
+	childID := "integration-child-workflow-with-continue-as-new-test-child"
 	wtParent := "integration-child-workflow-with-continue-as-new-test-parent-type"
 	wtChild := "integration-child-workflow-with-continue-as-new-test-child-type"
 	tl := "integration-child-workflow-with-continue-as-new-test-tasklist"
@@ -4441,7 +3788,6 @@ func (s *integrationSuite) TestChildWorkflowWithContinueAsNew() {
 	s.logger.Infof("StartWorkflowExecution: response: %v \n", *we.RunId)
 
 	// decider logic
-	workflowComplete := false
 	childComplete := false
 	childExecutionStarted := false
 	childData := int32(1)
@@ -4504,7 +3850,6 @@ func (s *integrationSuite) TestChildWorkflowWithContinueAsNew() {
 
 					if *event.EventType == workflow.EventTypeChildWorkflowExecutionCompleted {
 						completedEvent = event
-						workflowComplete = true
 						return nil, []*workflow.Decision{{
 							DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
 							CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
@@ -4578,7 +3923,7 @@ func (s *integrationSuite) TestChildWorkflowWithContinueAsNew() {
 func (s *integrationSuite) TestWorkflowTimeout() {
 	startTime := time.Now().UnixNano()
 
-	id := "integration-workflow-timeout-test"
+	id := "integration-workflow-timeout"
 	wt := "integration-workflow-timeout-type"
 	tl := "integration-workflow-timeout-tasklist"
 	identity := "worker1"
@@ -4841,15 +4186,17 @@ func (s *integrationSuite) TestDecisionTaskFailed() {
 }
 
 func (s *integrationSuite) TestGetWorkflowExecutionHistory_All() {
-	workflowID := "interation-get-workflow-history-events-long-poll-test"
+	workflowID := "interation-get-workflow-history-events-long-poll-test-all"
+	workflowTypeName := "interation-get-workflow-history-events-long-poll-test-all-type"
+	tasklistName := "interation-get-workflow-history-events-long-poll-test-all-tasklist"
 	identity := "worker1"
 	activityName := "activity_type1"
 
 	workflowType := &workflow.WorkflowType{}
-	workflowType.Name = common.StringPtr("interation-get-workflow-history-events-long-poll-test-type")
+	workflowType.Name = common.StringPtr(workflowTypeName)
 
 	taskList := &workflow.TaskList{}
-	taskList.Name = common.StringPtr("interation-get-workflow-history-events-long-poll-test-tasklist")
+	taskList.Name = common.StringPtr(tasklistName)
 
 	// Start workflow execution
 	request := &workflow.StartWorkflowExecutionRequest{
@@ -4870,7 +4217,6 @@ func (s *integrationSuite) TestGetWorkflowExecutionHistory_All() {
 	s.logger.Infof("StartWorkflowExecution: response: %v \n", *we.RunId)
 
 	// decider logic
-	workflowComplete := false
 	activityScheduled := false
 	activityData := int32(1)
 	// var signalEvent *workflow.HistoryEvent
@@ -4897,7 +4243,6 @@ func (s *integrationSuite) TestGetWorkflowExecutionHistory_All() {
 			}}, nil
 		}
 
-		workflowComplete = true
 		return nil, []*workflow.Decision{{
 			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
 			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
@@ -5007,15 +4352,17 @@ func (s *integrationSuite) TestGetWorkflowExecutionHistory_All() {
 }
 
 func (s *integrationSuite) TestGetWorkflowExecutionHistory_Close() {
-	workflowID := "interation-get-workflow-history-events-long-poll-test"
+	workflowID := "interation-get-workflow-history-events-long-poll-test-close"
+	workflowTypeName := "interation-get-workflow-history-events-long-poll-test-close-type"
+	tasklistName := "interation-get-workflow-history-events-long-poll-test-close-tasklist"
 	identity := "worker1"
 	activityName := "activity_type1"
 
 	workflowType := &workflow.WorkflowType{}
-	workflowType.Name = common.StringPtr("interation-get-workflow-history-events-long-poll-test-type")
+	workflowType.Name = common.StringPtr(workflowTypeName)
 
 	taskList := &workflow.TaskList{}
-	taskList.Name = common.StringPtr("interation-get-workflow-history-events-long-poll-test-tasklist")
+	taskList.Name = common.StringPtr(tasklistName)
 
 	// Start workflow execution
 	request := &workflow.StartWorkflowExecutionRequest{
@@ -5036,7 +4383,6 @@ func (s *integrationSuite) TestGetWorkflowExecutionHistory_Close() {
 	s.logger.Infof("StartWorkflowExecution: response: %v \n", *we.RunId)
 
 	// decider logic
-	workflowComplete := false
 	activityScheduled := false
 	activityData := int32(1)
 	// var signalEvent *workflow.HistoryEvent
@@ -5063,7 +4409,6 @@ func (s *integrationSuite) TestGetWorkflowExecutionHistory_Close() {
 			}}, nil
 		}
 
-		workflowComplete = true
 		return nil, []*workflow.Decision{{
 			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
 			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
@@ -5167,14 +4512,16 @@ func (s *integrationSuite) TestGetWorkflowExecutionHistory_Close() {
 
 func (s *integrationSuite) TestDescribeTaskList() {
 	workflowID := "interation-get-poller-history"
+	workflowTypeName := "interation-get-poller-history-type"
+	tasklistName := "interation-get-poller-history-tasklist"
 	identity := "worker1"
 	activityName := "activity_type1"
 
 	workflowType := &workflow.WorkflowType{}
-	workflowType.Name = common.StringPtr("interation-get-poller-history-type")
+	workflowType.Name = common.StringPtr(workflowTypeName)
 
 	taskList := &workflow.TaskList{}
-	taskList.Name = common.StringPtr("interation-get-poller-history-tasklist")
+	taskList.Name = common.StringPtr(tasklistName)
 
 	// Start workflow execution
 	request := &workflow.StartWorkflowExecutionRequest{
@@ -5195,7 +4542,6 @@ func (s *integrationSuite) TestDescribeTaskList() {
 	s.logger.Infof("StartWorkflowExecution: response: %v \n", *we.RunId)
 
 	// decider logic
-	workflowComplete := false
 	activityScheduled := false
 	activityData := int32(1)
 	// var signalEvent *workflow.HistoryEvent
@@ -5222,7 +4568,6 @@ func (s *integrationSuite) TestDescribeTaskList() {
 			}}, nil
 		}
 
-		workflowComplete = true
 		return nil, []*workflow.Decision{{
 			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
 			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
@@ -5486,6 +4831,7 @@ CheckHistoryLoopForSignalSent:
 		}
 
 		ewfeAttributes := signalRequestedEvent.ExternalWorkflowExecutionSignaledEventAttributes
+		s.NotNil(ewfeAttributes)
 		s.Equal(int64(intiatedEventID), ewfeAttributes.GetInitiatedEventId())
 		s.Equal(id, ewfeAttributes.WorkflowExecution.GetWorkflowId())
 		s.Equal(we2.RunId, ewfeAttributes.WorkflowExecution.RunId)
@@ -5509,9 +4855,9 @@ CheckHistoryLoopForSignalSent:
 }
 
 func (s *integrationSuite) TestSignalExternalWorkflowDecision_WithoutRunID() {
-	id := "integration-signal-external-workflow-test"
-	wt := "integration-signal-external-workflow-test-type"
-	tl := "integration-signal-external-workflow-test-tasklist"
+	id := "integration-signal-external-workflow-test-without-run-id"
+	wt := "integration-signal-external-workflow-test-without-run-id-type"
+	tl := "integration-signal-external-workflow-test-without-run-id-tasklist"
 	identity := "worker1"
 	activityName := "activity_type1"
 
@@ -5703,6 +5049,7 @@ CheckHistoryLoopForSignalSent:
 		}
 
 		ewfeAttributes := signalRequestedEvent.ExternalWorkflowExecutionSignaledEventAttributes
+		s.NotNil(ewfeAttributes)
 		s.Equal(int64(intiatedEventID), ewfeAttributes.GetInitiatedEventId())
 		s.Equal(id, ewfeAttributes.WorkflowExecution.GetWorkflowId())
 		s.Equal("", ewfeAttributes.WorkflowExecution.GetRunId())
@@ -5980,6 +5327,204 @@ CheckHistoryLoopForCancelSent:
 
 	s.True(signalSentFailed)
 
+}
+
+func (s *integrationSuite) TestSignalWithStartWorkflow() {
+	id := "integration-signal-with-start-workflow-test"
+	wt := "integration-signal-with-start-workflow-test-type"
+	tl := "integration-signal-with-start-workflow-test-tasklist"
+	identity := "worker1"
+	activityName := "activity_type1"
+
+	workflowType := &workflow.WorkflowType{}
+	workflowType.Name = common.StringPtr(wt)
+
+	taskList := &workflow.TaskList{}
+	taskList.Name = common.StringPtr(tl)
+
+	// Start a workflow
+	request := &workflow.StartWorkflowExecutionRequest{
+		RequestId:    common.StringPtr(uuid.New()),
+		Domain:       common.StringPtr(s.domainName),
+		WorkflowId:   common.StringPtr(id),
+		WorkflowType: workflowType,
+		TaskList:     taskList,
+		Input:        nil,
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		Identity:                            common.StringPtr(identity),
+	}
+
+	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
+	s.Nil(err0)
+
+	s.logger.Infof("StartWorkflowExecution: response: %v \n", *we.RunId)
+
+	// decider logic
+	workflowComplete := false
+	activityScheduled := false
+	activityData := int32(1)
+	newWorkflowStarted := false
+	var signalEvent *workflow.HistoryEvent
+	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
+		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
+
+		if !activityScheduled {
+			activityScheduled = true
+			buf := new(bytes.Buffer)
+			s.Nil(binary.Write(buf, binary.LittleEndian, activityData))
+
+			return nil, []*workflow.Decision{{
+				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeScheduleActivityTask),
+				ScheduleActivityTaskDecisionAttributes: &workflow.ScheduleActivityTaskDecisionAttributes{
+					ActivityId:   common.StringPtr(strconv.Itoa(int(1))),
+					ActivityType: &workflow.ActivityType{Name: common.StringPtr(activityName)},
+					TaskList:     &workflow.TaskList{Name: &tl},
+					Input:        buf.Bytes(),
+					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
+					ScheduleToStartTimeoutSeconds: common.Int32Ptr(2),
+					StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
+					HeartbeatTimeoutSeconds:       common.Int32Ptr(5),
+				},
+			}}, nil
+		} else if previousStartedEventID > 0 {
+			for _, event := range history.Events[previousStartedEventID:] {
+				if *event.EventType == workflow.EventTypeWorkflowExecutionSignaled {
+					signalEvent = event
+					return nil, []*workflow.Decision{}, nil
+				}
+			}
+		} else if newWorkflowStarted {
+			newWorkflowStarted = false
+			for _, event := range history.Events {
+				if *event.EventType == workflow.EventTypeWorkflowExecutionSignaled {
+					signalEvent = event
+					return nil, []*workflow.Decision{}, nil
+				}
+			}
+		}
+
+		workflowComplete = true
+		return nil, []*workflow.Decision{{
+			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
+			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
+				Result: []byte("Done."),
+			},
+		}}, nil
+	}
+
+	// activity handler
+	atHandler := func(execution *workflow.WorkflowExecution, activityType *workflow.ActivityType,
+		activityID string, input []byte, taskToken []byte) ([]byte, bool, error) {
+
+		return []byte("Activity Result."), false, nil
+	}
+
+	poller := &taskPoller{
+		engine:          s.engine,
+		domain:          s.domainName,
+		taskList:        taskList,
+		identity:        identity,
+		decisionHandler: dtHandler,
+		activityHandler: atHandler,
+		logger:          s.logger,
+		suite:           s,
+	}
+
+	// Make first decision to schedule activity
+	_, err := poller.pollAndProcessDecisionTask(false, false)
+	s.logger.Infof("pollAndProcessDecisionTask: %v", err)
+	s.Nil(err)
+
+	// Send a signal
+	signalName := "my signal"
+	signalInput := []byte("my signal input.")
+	sRequest := &workflow.SignalWithStartWorkflowExecutionRequest{
+		RequestId:    common.StringPtr(uuid.New()),
+		Domain:       common.StringPtr(s.domainName),
+		WorkflowId:   common.StringPtr(id),
+		WorkflowType: workflowType,
+		TaskList:     taskList,
+		Input:        nil,
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		SignalName:                          common.StringPtr(signalName),
+		SignalInput:                         signalInput,
+		Identity:                            common.StringPtr(identity),
+	}
+	resp, err := s.engine.SignalWithStartWorkflowExecution(createContext(), sRequest)
+	s.Nil(err)
+	s.Equal(we.GetRunId(), resp.GetRunId())
+
+	// Process signal in decider
+	_, err = poller.pollAndProcessDecisionTask(true, false)
+	s.logger.Infof("pollAndProcessDecisionTask: %v", err)
+	s.Nil(err)
+
+	s.False(workflowComplete)
+	s.True(signalEvent != nil)
+	s.Equal(signalName, *signalEvent.WorkflowExecutionSignaledEventAttributes.SignalName)
+	s.Equal(signalInput, signalEvent.WorkflowExecutionSignaledEventAttributes.Input)
+	s.Equal(identity, *signalEvent.WorkflowExecutionSignaledEventAttributes.Identity)
+
+	// Terminate workflow execution
+	err = s.engine.TerminateWorkflowExecution(createContext(), &workflow.TerminateWorkflowExecutionRequest{
+		Domain: common.StringPtr(s.domainName),
+		WorkflowExecution: &workflow.WorkflowExecution{
+			WorkflowId: common.StringPtr(id),
+		},
+		Reason:   common.StringPtr("test signal"),
+		Details:  nil,
+		Identity: common.StringPtr(identity),
+	})
+	s.Nil(err)
+
+	// Send signal to terminated workflow
+	signalName = "signal to terminate"
+	signalInput = []byte("signal to terminate input.")
+	sRequest.SignalName = common.StringPtr(signalName)
+	sRequest.SignalInput = signalInput
+	sRequest.WorkflowId = common.StringPtr(id)
+
+	resp, err = s.engine.SignalWithStartWorkflowExecution(createContext(), sRequest)
+	s.Nil(err)
+	s.NotNil(resp.GetRunId())
+	s.NotEqual(we.GetRunId(), resp.GetRunId())
+	newWorkflowStarted = true
+
+	// Process signal in decider
+	_, err = poller.pollAndProcessDecisionTask(true, false)
+	s.logger.Infof("pollAndProcessDecisionTask: %v", err)
+	s.Nil(err)
+
+	s.False(workflowComplete)
+	s.True(signalEvent != nil)
+	s.Equal(signalName, *signalEvent.WorkflowExecutionSignaledEventAttributes.SignalName)
+	s.Equal(signalInput, signalEvent.WorkflowExecutionSignaledEventAttributes.Input)
+	s.Equal(identity, *signalEvent.WorkflowExecutionSignaledEventAttributes.Identity)
+
+	// Send signal to not existed workflow
+	id = "integration-signal-with-start-workflow-test-non-exist"
+	signalName = "signal to non exist"
+	signalInput = []byte("signal to non exist input.")
+	sRequest.SignalName = common.StringPtr(signalName)
+	sRequest.SignalInput = signalInput
+	sRequest.WorkflowId = common.StringPtr(id)
+	resp, err = s.engine.SignalWithStartWorkflowExecution(createContext(), sRequest)
+	s.Nil(err)
+	s.NotNil(resp.GetRunId())
+	newWorkflowStarted = true
+
+	// Process signal in decider
+	_, err = poller.pollAndProcessDecisionTask(true, false)
+	s.logger.Infof("pollAndProcessDecisionTask: %v", err)
+	s.Nil(err)
+
+	s.False(workflowComplete)
+	s.True(signalEvent != nil)
+	s.Equal(signalName, *signalEvent.WorkflowExecutionSignaledEventAttributes.SignalName)
+	s.Equal(signalInput, signalEvent.WorkflowExecutionSignaledEventAttributes.Input)
+	s.Equal(identity, *signalEvent.WorkflowExecutionSignaledEventAttributes.Identity)
 }
 
 func (s *integrationSuite) setupShards() {

@@ -40,6 +40,7 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
@@ -129,12 +130,15 @@ func (s *engine2Suite) SetupTest() {
 	}
 
 	historyCache := newHistoryCache(mockShard, s.logger)
+	// this is used by shard context, not relevent to this test, so we do not care how many times "GetCurrentClusterName" os called
+	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
+	s.mockClusterMetadata.On("GetAllClusterFailoverVersions").Return(cluster.TestAllClusterFailoverVersions)
 	h := &historyEngineImpl{
+		currentclusterName: mockShard.GetService().GetClusterMetadata().GetCurrentClusterName(),
 		shard:              mockShard,
 		executionManager:   s.mockExecutionMgr,
 		historyMgr:         s.mockHistoryMgr,
 		historyCache:       historyCache,
-		domainCache:        domainCache,
 		logger:             s.logger,
 		metricsClient:      metrics.NewClient(tally.NoopScope, metrics.History),
 		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
@@ -158,7 +162,7 @@ func (s *engine2Suite) TearDownTest() {
 func (s *engine2Suite) TestRecordDecisionTaskStartedIfNoExecution() {
 	workflowExecution := &workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr("rId"),
+		RunId:      common.StringPtr(validRunID),
 	}
 
 	identity := "testIdentity"
@@ -187,7 +191,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedIfNoExecution() {
 func (s *engine2Suite) TestRecordDecisionTaskStartedIfGetExecutionFailed() {
 	workflowExecution := &workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr("rId"),
+		RunId:      common.StringPtr(validRunID),
 	}
 
 	identity := "testIdentity"
@@ -216,7 +220,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedIfGetExecutionFailed() {
 func (s *engine2Suite) TestRecordDecisionTaskStartedIfTaskAlreadyStarted() {
 	workflowExecution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr("rId"),
+		RunId:      common.StringPtr(validRunID),
 	}
 
 	identity := "testIdentity"
@@ -249,7 +253,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedIfTaskAlreadyStarted() {
 func (s *engine2Suite) TestRecordDecisionTaskStartedIfTaskAlreadyCompleted() {
 	workflowExecution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr("rId"),
+		RunId:      common.StringPtr(validRunID),
 	}
 
 	identity := "testIdentity"
@@ -285,7 +289,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedIfTaskAlreadyCompleted() {
 func (s *engine2Suite) TestRecordDecisionTaskStartedConflictOnUpdate() {
 	workflowExecution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr("rId"),
+		RunId:      common.StringPtr(validRunID),
 	}
 
 	identity := "testIdentity"
@@ -332,7 +336,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedConflictOnUpdate() {
 func (s *engine2Suite) TestRecordDecisionTaskRetrySameRequest() {
 	workflowExecution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr("rId"),
+		RunId:      common.StringPtr(validRunID),
 	}
 
 	tl := "testTaskList"
@@ -377,7 +381,7 @@ func (s *engine2Suite) TestRecordDecisionTaskRetrySameRequest() {
 func (s *engine2Suite) TestRecordDecisionTaskRetryDifferentRequest() {
 	workflowExecution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr("rId"),
+		RunId:      common.StringPtr(validRunID),
 	}
 
 	tl := "testTaskList"
@@ -421,7 +425,7 @@ func (s *engine2Suite) TestRecordDecisionTaskRetryDifferentRequest() {
 func (s *engine2Suite) TestRecordDecisionTaskStartedMaxAttemptsExceeded() {
 	workflowExecution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr("rId"),
+		RunId:      common.StringPtr(validRunID),
 	}
 
 	tl := "testTaskList"
@@ -463,7 +467,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedMaxAttemptsExceeded() {
 func (s *engine2Suite) TestRecordDecisionTaskSuccess() {
 	workflowExecution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr("rId"),
+		RunId:      common.StringPtr(validRunID),
 	}
 
 	tl := "testTaskList"
@@ -501,7 +505,7 @@ func (s *engine2Suite) TestRecordDecisionTaskSuccess() {
 func (s *engine2Suite) TestRecordActivityTaskStartedIfNoExecution() {
 	workflowExecution := &workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr("rId"),
+		RunId:      common.StringPtr(validRunID),
 	}
 
 	identity := "testIdentity"
@@ -533,7 +537,7 @@ func (s *engine2Suite) TestRecordActivityTaskStartedIfNoExecution() {
 func (s *engine2Suite) TestRecordActivityTaskStartedSuccess() {
 	workflowExecution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr("rId"),
+		RunId:      common.StringPtr(validRunID),
 	}
 
 	identity := "testIdentity"
@@ -580,7 +584,7 @@ func (s *engine2Suite) TestRequestCancelWorkflowExecutionSuccess() {
 	domainID := "domainId"
 	workflowExecution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr("rId"),
+		RunId:      common.StringPtr(validRunID),
 	}
 
 	identity := "testIdentity"
@@ -615,7 +619,7 @@ func (s *engine2Suite) TestRequestCancelWorkflowExecutionFail() {
 	domainID := "domainId"
 	workflowExecution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr("rId"),
+		RunId:      common.StringPtr(validRunID),
 	}
 
 	identity := "testIdentity"
@@ -668,12 +672,12 @@ func (s *engine2Suite) TestRespondDecisionTaskCompletedRecordMarkerDecision() {
 	domainID := "domainId"
 	we := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr("rId"),
+		RunId:      common.StringPtr(validRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
 		WorkflowID: "wId",
-		RunID:      "rId",
+		RunID:      we.GetRunId(),
 		ScheduleID: 2,
 	})
 	identity := "testIdentity"
@@ -965,6 +969,127 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevFail() {
 			}
 		}
 	}
+}
+
+func (s *engine2Suite) TestSignalWithStartWorkflowExecution_JustSignal() {
+	sRequest := &h.SignalWithStartWorkflowExecutionRequest{}
+	_, err := s.historyEngine.SignalWithStartWorkflowExecution(sRequest)
+	s.EqualError(err, "BadRequestError{Message: Missing domain UUID.}")
+
+	domainID := "domainId"
+	workflowID := "wId"
+	runID := validRunID
+	identity := "testIdentity"
+	signalName := "my signal name"
+	input := []byte("test input")
+	sRequest = &h.SignalWithStartWorkflowExecutionRequest{
+		DomainUUID: common.StringPtr(domainID),
+		SignalWithStartRequest: &workflow.SignalWithStartWorkflowExecutionRequest{
+			Domain:     common.StringPtr(domainID),
+			WorkflowId: common.StringPtr(workflowID),
+			Identity:   common.StringPtr(identity),
+			SignalName: common.StringPtr(signalName),
+			Input:      input,
+		},
+	}
+
+	msBuilder := newMutableStateBuilder(s.config, bark.NewLoggerFromLogrus(log.New()))
+	ms := createMutableState(msBuilder)
+	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
+	gceResponse := &persistence.GetCurrentExecutionResponse{RunID: runID}
+
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything).Return(gceResponse, nil).Once()
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gwmsResponse, nil).Once()
+	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(nil).Once()
+	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(nil).Once()
+	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false).Once()
+
+	resp, err := s.historyEngine.SignalWithStartWorkflowExecution(sRequest)
+	s.Nil(err)
+	s.Equal(runID, resp.GetRunId())
+}
+
+func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotExist() {
+	sRequest := &h.SignalWithStartWorkflowExecutionRequest{}
+	_, err := s.historyEngine.SignalWithStartWorkflowExecution(sRequest)
+	s.EqualError(err, "BadRequestError{Message: Missing domain UUID.}")
+
+	domainID := "domainId"
+	workflowID := "wId"
+	workflowType := "workflowType"
+	taskList := "testTaskList"
+	identity := "testIdentity"
+	signalName := "my signal name"
+	input := []byte("test input")
+	sRequest = &h.SignalWithStartWorkflowExecutionRequest{
+		DomainUUID: common.StringPtr(domainID),
+		SignalWithStartRequest: &workflow.SignalWithStartWorkflowExecutionRequest{
+			Domain:       common.StringPtr(domainID),
+			WorkflowId:   common.StringPtr(workflowID),
+			WorkflowType: &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
+			TaskList:     &workflow.TaskList{Name: common.StringPtr(taskList)},
+			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
+			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
+			Identity:                            common.StringPtr(identity),
+			SignalName:                          common.StringPtr(signalName),
+			Input:                               input,
+		},
+	}
+
+	notExistErr := &workflow.EntityNotExistsError{Message: "Workflow not exist"}
+
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything).Return(nil, notExistErr).Once()
+	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(nil).Once()
+	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(&persistence.CreateWorkflowExecutionResponse{TaskID: uuid.New()}, nil).Once()
+
+	resp, err := s.historyEngine.SignalWithStartWorkflowExecution(sRequest)
+	s.Nil(err)
+	s.NotNil(resp.GetRunId())
+}
+
+func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotRunning() {
+	sRequest := &h.SignalWithStartWorkflowExecutionRequest{}
+	_, err := s.historyEngine.SignalWithStartWorkflowExecution(sRequest)
+	s.EqualError(err, "BadRequestError{Message: Missing domain UUID.}")
+
+	domainID := "domainId"
+	workflowID := "wId"
+	runID := validRunID
+	workflowType := "workflowType"
+	taskList := "testTaskList"
+	identity := "testIdentity"
+	signalName := "my signal name"
+	input := []byte("test input")
+	sRequest = &h.SignalWithStartWorkflowExecutionRequest{
+		DomainUUID: common.StringPtr(domainID),
+		SignalWithStartRequest: &workflow.SignalWithStartWorkflowExecutionRequest{
+			Domain:       common.StringPtr(domainID),
+			WorkflowId:   common.StringPtr(workflowID),
+			WorkflowType: &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
+			TaskList:     &workflow.TaskList{Name: common.StringPtr(taskList)},
+			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
+			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
+			Identity:                            common.StringPtr(identity),
+			SignalName:                          common.StringPtr(signalName),
+			Input:                               input,
+		},
+	}
+
+	msBuilder := newMutableStateBuilder(s.config, bark.NewLoggerFromLogrus(log.New()))
+	ms := createMutableState(msBuilder)
+	ms.ExecutionInfo.State = persistence.WorkflowStateCompleted
+	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
+	gceResponse := &persistence.GetCurrentExecutionResponse{RunID: runID}
+
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything).Return(gceResponse, nil).Once()
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gwmsResponse, nil).Once()
+	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(nil).Once()
+	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(&persistence.CreateWorkflowExecutionResponse{TaskID: uuid.New()}, nil).Once()
+
+	resp, err := s.historyEngine.SignalWithStartWorkflowExecution(sRequest)
+	s.Nil(err)
+	s.NotNil(resp.GetRunId())
+	s.NotEqual(runID, resp.GetRunId())
 }
 
 func (s *engine2Suite) getBuilder(domainID string, we workflow.WorkflowExecution) *mutableStateBuilder {

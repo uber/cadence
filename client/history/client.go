@@ -380,6 +380,31 @@ func (c *clientImpl) SignalWorkflowExecution(
 	return err
 }
 
+func (c *clientImpl) SignalWithStartWorkflowExecution(
+	ctx context.Context,
+	request *h.SignalWithStartWorkflowExecutionRequest,
+	opts ...yarpc.CallOption) (*workflow.StartWorkflowExecutionResponse, error) {
+	client, err := c.getHostForRequest(*request.SignalWithStartRequest.WorkflowId)
+	if err != nil {
+		return nil, err
+	}
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+	var response *workflow.StartWorkflowExecutionResponse
+	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+		var err error
+		ctx, cancel := c.createContext(ctx)
+		defer cancel()
+		response, err = client.SignalWithStartWorkflowExecution(ctx, request, opts...)
+		return err
+	}
+	err = c.executeWithRedirect(ctx, client, op)
+	if err != nil {
+		return nil, err
+	}
+
+	return response, err
+}
+
 func (c *clientImpl) RemoveSignalMutableState(
 	ctx context.Context,
 	request *h.RemoveSignalMutableStateRequest,
@@ -447,6 +472,24 @@ func (c *clientImpl) RecordChildExecutionCompleted(
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
 		return client.RecordChildExecutionCompleted(ctx, request, opts...)
+	}
+	err = c.executeWithRedirect(ctx, client, op)
+	return err
+}
+
+func (c *clientImpl) ReplicateEvents(
+	ctx context.Context,
+	request *h.ReplicateEventsRequest,
+	opts ...yarpc.CallOption) error {
+	client, err := c.getHostForRequest(request.WorkflowExecution.GetWorkflowId())
+	if err != nil {
+		return err
+	}
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+		ctx, cancel := c.createContext(ctx)
+		defer cancel()
+		return client.ReplicateEvents(ctx, request, opts...)
 	}
 	err = c.executeWithRedirect(ctx, client, op)
 	return err

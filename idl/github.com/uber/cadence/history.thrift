@@ -33,6 +33,7 @@ exception ShardOwnershipLostError {
 
 struct ParentExecutionInfo {
   10: optional string domainUUID
+  15: optional string domain
   20: optional shared.WorkflowExecution execution
   30: optional i64 (js.type = "Long") initiatedId
 }
@@ -144,6 +145,11 @@ struct SignalWorkflowExecutionRequest {
   40: optional bool childWorkflowOnly
 }
 
+struct SignalWithStartWorkflowExecutionRequest {
+  10: optional string domainUUID
+  20: optional shared.SignalWithStartWorkflowExecutionRequest signalWithStartRequest
+}
+
 struct RemoveSignalMutableStateRequest {
   10: optional string domainUUID
   20: optional shared.WorkflowExecution workflowExecution
@@ -186,6 +192,15 @@ struct RecordChildExecutionCompletedRequest {
   30: optional i64 (js.type = "Long") initiatedId
   40: optional shared.WorkflowExecution completedExecution
   50: optional shared.HistoryEvent completionEvent
+}
+
+struct ReplicateEventsRequest {
+  10: optional string domainUUID
+  20: optional shared.WorkflowExecution workflowExecution
+  30: optional i64 (js.type = "Long") firstEventId
+  40: optional i64 (js.type = "Long") nextEventId
+  50: optional i64 (js.type = "Long") version
+  60: optional shared.History history
 }
 
 /**
@@ -365,6 +380,20 @@ service HistoryService {
     )
 
   /**
+  * SignalWithStartWorkflowExecution is used to ensure sending a signal event to a workflow execution.
+  * If workflow is running, this results in WorkflowExecutionSignaled event recorded in the history
+  * and a decision task being created for the execution.
+  * If workflow is not running or not found, this results in WorkflowExecutionStarted and WorkflowExecutionSignaled
+  * event recorded in history, and a decision task being created for the execution
+  **/
+  shared.StartWorkflowExecutionResponse SignalWithStartWorkflowExecution(1: SignalWithStartWorkflowExecutionRequest signalWithStartRequest)
+    throws (
+      1: shared.BadRequestError badRequestError,
+      2: shared.InternalServiceError internalServiceError,
+      3: ShardOwnershipLostError shardOwnershipLostError,
+    )
+
+  /**
   * RemoveSignalMutableState is used to remove a signal request ID that was previously recorded.  This is currently
   * used to clean execution info when signal decision finished.
   **/
@@ -433,6 +462,14 @@ service HistoryService {
   * DescribeWorkflowExecution returns information about the specified workflow execution.
   **/
   shared.DescribeWorkflowExecutionResponse DescribeWorkflowExecution(1: DescribeWorkflowExecutionRequest describeRequest)
+    throws (
+      1: shared.BadRequestError badRequestError,
+      2: shared.InternalServiceError internalServiceError,
+      3: shared.EntityNotExistsError entityNotExistError,
+      4: ShardOwnershipLostError shardOwnershipLostError,
+    )
+
+  void ReplicateEvents(1: ReplicateEventsRequest replicateRequest)
     throws (
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,

@@ -282,6 +282,23 @@ func (c *metricClient) SignalWorkflowExecution(
 	return err
 }
 
+func (c *metricClient) SignalWithStartWorkflowExecution(
+	context context.Context,
+	request *h.SignalWithStartWorkflowExecutionRequest,
+	opts ...yarpc.CallOption) (*shared.StartWorkflowExecutionResponse, error) {
+	c.metricsClient.IncCounter(metrics.HistoryClientSignalWithStartWorkflowExecutionScope, metrics.CadenceRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.HistoryClientSignalWithStartWorkflowExecutionScope, metrics.CadenceLatency)
+	resp, err := c.client.SignalWithStartWorkflowExecution(context, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.HistoryClientSignalWithStartWorkflowExecutionScope, metrics.HistoryClientFailures)
+	}
+
+	return resp, err
+}
+
 func (c *metricClient) RemoveSignalMutableState(
 	context context.Context,
 	request *h.RemoveSignalMutableStateRequest,
@@ -345,6 +362,23 @@ func (c *metricClient) RecordChildExecutionCompleted(
 
 	if err != nil {
 		c.metricsClient.IncCounter(metrics.HistoryClientRecordChildExecutionCompletedScope, metrics.HistoryClientFailures)
+	}
+
+	return err
+}
+
+func (c *metricClient) ReplicateEvents(
+	context context.Context,
+	request *h.ReplicateEventsRequest,
+	opts ...yarpc.CallOption) error {
+	c.metricsClient.IncCounter(metrics.HistoryClientReplicateEventsScope, metrics.CadenceRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.HistoryClientReplicateEventsScope, metrics.CadenceLatency)
+	err := c.client.ReplicateEvents(context, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.HistoryClientReplicateEventsScope, metrics.HistoryClientFailures)
 	}
 
 	return err

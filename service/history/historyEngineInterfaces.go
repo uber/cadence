@@ -64,10 +64,13 @@ type (
 		RecordActivityTaskHeartbeat(request *h.RecordActivityTaskHeartbeatRequest) (*workflow.RecordActivityTaskHeartbeatResponse, error)
 		RequestCancelWorkflowExecution(request *h.RequestCancelWorkflowExecutionRequest) error
 		SignalWorkflowExecution(request *h.SignalWorkflowExecutionRequest) error
+		SignalWithStartWorkflowExecution(request *h.SignalWithStartWorkflowExecutionRequest) (
+			*workflow.StartWorkflowExecutionResponse, error)
 		RemoveSignalMutableState(request *h.RemoveSignalMutableStateRequest) error
 		TerminateWorkflowExecution(request *h.TerminateWorkflowExecutionRequest) error
 		ScheduleDecisionTask(request *h.ScheduleDecisionTaskRequest) error
 		RecordChildExecutionCompleted(request *h.RecordChildExecutionCompletedRequest) error
+		ReplicateEvents(request *h.ReplicateEventsRequest) error
 	}
 
 	// EngineFactory is used to create an instance of sharded history engine
@@ -80,6 +83,23 @@ type (
 		Deserialize(data []byte) (*workflow.HistoryEvent, error)
 	}
 
+	queueProcessor interface {
+		common.Daemon
+		NotifyNewTask()
+	}
+
+	queueTaskInfo interface {
+		GetTaskID() int64
+		GetTaskType() int
+	}
+
+	processor interface {
+		GetName() string
+		Process(task queueTaskInfo) error
+		ReadTasks(readLevel int64) ([]queueTaskInfo, error)
+		CompleteTask(taskID int64) error
+	}
+
 	transferQueueProcessor interface {
 		common.Daemon
 		NotifyNewTask()
@@ -87,7 +107,23 @@ type (
 
 	timerQueueProcessor interface {
 		common.Daemon
-		NotifyNewTimer(timerTask []persistence.Task)
+		NotifyNewTimers(clusterName string, timerTask []persistence.Task)
+		SetCurrentTime(clusterName string, currentTime time.Time)
+	}
+
+	timerProcessor interface {
+		notifyNewTimers(timerTask []persistence.Task)
+		process(task *persistence.TimerTaskInfo) error
+		getTimerGate() TimerGate
+	}
+
+	timerQueueAckMgr interface {
+		readRetryTimerTasks() []*persistence.TimerTaskInfo
+		readTimerTasks() ([]*persistence.TimerTaskInfo, *persistence.TimerTaskInfo, bool, error)
+		retryTimerTask(timerTask *persistence.TimerTaskInfo)
+		completeTimerTask(timerTask *persistence.TimerTaskInfo)
+		updateAckLevel()
+		isProcessNow(time.Time) bool
 	}
 
 	historyEventNotifier interface {

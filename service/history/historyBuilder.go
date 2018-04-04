@@ -37,22 +37,27 @@ const (
 
 type (
 	historyBuilder struct {
-		firstEventID int64
-		nextEventID  int64
-		serializer   persistence.HistorySerializer
-		history      []*workflow.HistoryEvent
-		msBuilder    *mutableStateBuilder
-		logger       bark.Logger
+		serializer persistence.HistorySerializer
+		history    []*workflow.HistoryEvent
+		msBuilder  *mutableStateBuilder
+		logger     bark.Logger
 	}
 )
 
 func newHistoryBuilder(msBuilder *mutableStateBuilder, logger bark.Logger) *historyBuilder {
 	return &historyBuilder{
-		firstEventID: msBuilder.GetNextEventID(),
-		serializer:   persistence.NewJSONHistorySerializer(),
-		history:      []*workflow.HistoryEvent{},
-		msBuilder:    msBuilder,
-		logger:       logger.WithField(logging.TagWorkflowComponent, logging.TagValueHistoryBuilderComponent),
+		serializer: persistence.NewJSONHistorySerializer(),
+		history:    []*workflow.HistoryEvent{},
+		msBuilder:  msBuilder,
+		logger:     logger.WithField(logging.TagWorkflowComponent, logging.TagValueHistoryBuilderComponent),
+	}
+}
+
+func newHistoryBuilderFromEvents(history []*workflow.HistoryEvent, logger bark.Logger) *historyBuilder {
+	return &historyBuilder{
+		serializer: persistence.NewJSONHistorySerializer(),
+		history:    history,
+		logger:     logger.WithField(logging.TagWorkflowComponent, logging.TagValueHistoryBuilderComponent),
 	}
 }
 
@@ -65,9 +70,9 @@ func (b *historyBuilder) Serialize() (*persistence.SerializedHistoryEventBatch, 
 	return history, nil
 }
 
-func (b *historyBuilder) AddWorkflowExecutionStartedEvent(
-	request *workflow.StartWorkflowExecutionRequest) *workflow.HistoryEvent {
-	event := b.newWorkflowExecutionStartedEvent(request)
+func (b *historyBuilder) AddWorkflowExecutionStartedEvent(request *h.StartWorkflowExecutionRequest,
+	previousRunID *string) *workflow.HistoryEvent {
+	event := b.newWorkflowExecutionStartedEvent(request, previousRunID)
 
 	return b.addEventToHistory(event)
 }
@@ -419,12 +424,12 @@ func (b *historyBuilder) AddChildWorkflowExecutionTimedOutEvent(domain *string, 
 
 func (b *historyBuilder) addEventToHistory(event *workflow.HistoryEvent) *workflow.HistoryEvent {
 	b.history = append(b.history, event)
-	b.nextEventID = b.msBuilder.GetNextEventID() // Keep track of nextEventID for generating replication task
 	return event
 }
 
 func (b *historyBuilder) newWorkflowExecutionStartedEvent(
-	request *workflow.StartWorkflowExecutionRequest) *workflow.HistoryEvent {
+	startRequest *h.StartWorkflowExecutionRequest, previousRunID *string) *workflow.HistoryEvent {
+	request := startRequest.StartRequest
 	historyEvent := b.msBuilder.createNewHistoryEvent(workflow.EventTypeWorkflowExecutionStarted)
 	attributes := &workflow.WorkflowExecutionStartedEventAttributes{}
 	attributes.WorkflowType = request.WorkflowType
@@ -432,7 +437,15 @@ func (b *historyBuilder) newWorkflowExecutionStartedEvent(
 	attributes.Input = request.Input
 	attributes.ExecutionStartToCloseTimeoutSeconds = common.Int32Ptr(*request.ExecutionStartToCloseTimeoutSeconds)
 	attributes.TaskStartToCloseTimeoutSeconds = common.Int32Ptr(*request.TaskStartToCloseTimeoutSeconds)
+	attributes.ChildPolicy = request.ChildPolicy
+	attributes.ContinuedExecutionRunId = previousRunID
 	attributes.Identity = common.StringPtr(common.StringDefault(request.Identity))
+	parentInfo := startRequest.ParentExecutionInfo
+	if parentInfo != nil {
+		attributes.ParentWorkflowDomain = parentInfo.Domain
+		attributes.ParentWorkflowExecution = parentInfo.Execution
+		attributes.ParentInitiatedEventId = parentInfo.InitiatedId
+	}
 	historyEvent.WorkflowExecutionStartedEventAttributes = attributes
 
 	return historyEvent

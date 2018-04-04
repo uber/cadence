@@ -78,6 +78,12 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) error
 
+	ReplicateEvents(
+		ctx context.Context,
+		ReplicateRequest *history.ReplicateEventsRequest,
+		opts ...yarpc.CallOption,
+	) error
+
 	RequestCancelWorkflowExecution(
 		ctx context.Context,
 		CancelRequest *history.RequestCancelWorkflowExecutionRequest,
@@ -125,6 +131,12 @@ type Interface interface {
 		ScheduleRequest *history.ScheduleDecisionTaskRequest,
 		opts ...yarpc.CallOption,
 	) error
+
+	SignalWithStartWorkflowExecution(
+		ctx context.Context,
+		SignalWithStartRequest *history.SignalWithStartWorkflowExecutionRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.StartWorkflowExecutionResponse, error)
 
 	SignalWorkflowExecution(
 		ctx context.Context,
@@ -330,6 +342,29 @@ func (c client) RemoveSignalMutableState(
 	return
 }
 
+func (c client) ReplicateEvents(
+	ctx context.Context,
+	_ReplicateRequest *history.ReplicateEventsRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := history.HistoryService_ReplicateEvents_Helper.Args(_ReplicateRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result history.HistoryService_ReplicateEvents_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	err = history.HistoryService_ReplicateEvents_Helper.UnwrapResponse(&result)
+	return
+}
+
 func (c client) RequestCancelWorkflowExecution(
 	ctx context.Context,
 	_CancelRequest *history.RequestCancelWorkflowExecutionRequest,
@@ -511,6 +546,29 @@ func (c client) ScheduleDecisionTask(
 	}
 
 	err = history.HistoryService_ScheduleDecisionTask_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) SignalWithStartWorkflowExecution(
+	ctx context.Context,
+	_SignalWithStartRequest *history.SignalWithStartWorkflowExecutionRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.StartWorkflowExecutionResponse, err error) {
+
+	args := history.HistoryService_SignalWithStartWorkflowExecution_Helper.Args(_SignalWithStartRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result history.HistoryService_SignalWithStartWorkflowExecution_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = history.HistoryService_SignalWithStartWorkflowExecution_Helper.UnwrapResponse(&result)
 	return
 }
 

@@ -253,6 +253,31 @@ func (_m *HistoryClient) SignalWorkflowExecution(ctx context.Context, signalRequ
 	return r0
 }
 
+// SignalWithStartWorkflowExecution provides a mock function with given fields: ctx, signalWithStartRequest
+func (_m *HistoryClient) SignalWithStartWorkflowExecution(ctx context.Context,
+	signalWithStartRequest *history.SignalWithStartWorkflowExecutionRequest,
+	opts ...yarpc.CallOption) (*shared.StartWorkflowExecutionResponse, error) {
+	ret := _m.Called(ctx, signalWithStartRequest)
+
+	var r0 *shared.StartWorkflowExecutionResponse
+	if rf, ok := ret.Get(0).(func(context.Context, *history.SignalWithStartWorkflowExecutionRequest) *shared.StartWorkflowExecutionResponse); ok {
+		r0 = rf(ctx, signalWithStartRequest)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*shared.StartWorkflowExecutionResponse)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *history.SignalWithStartWorkflowExecutionRequest) error); ok {
+		r1 = rf(ctx, signalWithStartRequest)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // RemoveSignalMutableState provides a mock function with given fields: ctx, removeRequest
 func (_m *HistoryClient) RemoveSignalMutableState(ctx context.Context, removeRequest *history.RemoveSignalMutableStateRequest, opts ...yarpc.CallOption) error {
 	ret := _m.Called(ctx, removeRequest)
@@ -338,6 +363,20 @@ func (_m *HistoryClient) RecordChildExecutionCompleted(ctx context.Context, requ
 
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, *history.RecordChildExecutionCompletedRequest) error); ok {
+		r0 = rf(ctx, request)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// RecordChildExecutionCompleted provides a mock function with given fields: ctx, request
+func (_m *HistoryClient) ReplicateEvents(ctx context.Context, request *history.ReplicateEventsRequest, opts ...yarpc.CallOption) error {
+	ret := _m.Called(ctx, request)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *history.ReplicateEventsRequest) error); ok {
 		r0 = rf(ctx, request)
 	} else {
 		r0 = ret.Error(0)

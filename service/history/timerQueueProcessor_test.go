@@ -32,7 +32,6 @@ import (
 	"github.com/uber-go/tally"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
@@ -43,10 +42,9 @@ type (
 	timerQueueProcessorSuite struct {
 		suite.Suite
 		TestBase
-		engineImpl       *historyEngineImpl
-		mockShardManager *mocks.ShardManager
-		shardClosedCh    chan int
-		logger           bark.Logger
+		engineImpl    *historyEngineImpl
+		shardClosedCh chan int
+		logger        bark.Logger
 
 		mockMetadataMgr   *mocks.MetadataManager
 		mockVisibilityMgr *mocks.VisibilityManager
@@ -64,36 +62,36 @@ func (s *timerQueueProcessorSuite) SetupSuite() {
 	}
 
 	s.SetupWorkflowStore()
+	s.SetupDomains()
 
 	log2 := log.New()
 	log2.Level = log.DebugLevel
 	s.logger = bark.NewLoggerFromLogrus(log2)
 
-	s.mockShardManager = &mocks.ShardManager{}
-	s.mockMetadataMgr = &mocks.MetadataManager{}
 	historyCache := newHistoryCache(s.ShardContext, s.logger)
 	historyCache.disabled = true
-	domainCache := cache.NewDomainCache(s.mockMetadataMgr, cluster.GetTestClusterMetadata(false, false), s.logger)
 	s.engineImpl = &historyEngineImpl{
+		currentclusterName: s.ShardContext.GetService().GetClusterMetadata().GetCurrentClusterName(),
 		shard:              s.ShardContext,
 		historyMgr:         s.HistoryMgr,
 		historyCache:       historyCache,
-		domainCache:        domainCache,
 		logger:             s.logger,
 		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
 		hSerializerFactory: persistence.NewHistorySerializerFactory(),
 		metricsClient:      metrics.NewClient(tally.NoopScope, metrics.History),
 	}
-	s.engineImpl.txProcessor = newTransferQueueProcessor(s.ShardContext, s.engineImpl, s.mockVisibilityMgr, &mocks.MatchingClient{}, &mocks.HistoryClient{})
-
+	s.engineImpl.txProcessor = newTransferQueueProcessor(
+		s.ShardContext, s.engineImpl, s.mockVisibilityMgr, &mocks.MatchingClient{}, &mocks.HistoryClient{},
+	)
 }
 
 func (s *timerQueueProcessorSuite) TearDownSuite() {
+	s.TeardownDomains()
 	s.TearDownWorkflowStore()
 }
 
 func (s *timerQueueProcessorSuite) TearDownTest() {
-	s.mockShardManager.AssertExpectations(s.T())
+
 }
 
 func (s *timerQueueProcessorSuite) updateTimerSeqNumbers(timerTasks []persistence.Task) {
@@ -104,7 +102,7 @@ func (s *timerQueueProcessorSuite) updateTimerSeqNumbers(timerTasks []persistenc
 		}
 		task.SetTaskID(taskID)
 		s.logger.Infof("%v: TestTimerQueueProcessorSuite: Assigning timer: %s",
-			time.Now().UTC(), SequenceID{VisibilityTimestamp: persistence.GetVisibilityTSFrom(task), TaskID: task.GetTaskID()})
+			time.Now().UTC(), TimerSequenceID{VisibilityTimestamp: persistence.GetVisibilityTSFrom(task), TaskID: task.GetTaskID()})
 	}
 }
 
@@ -235,26 +233,27 @@ func (s *timerQueueProcessorSuite) closeWorkflow(domainID string, we workflow.Wo
 }
 
 func (s *timerQueueProcessorSuite) TestSingleTimerTask() {
-	domainID := "7b3fe0f6-e98f-4960-bdb7-220d0fb3f521"
+	domainID := testDomainActiveID
 	workflowExecution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("single-timer-test"),
-		RunId:      common.StringPtr("6cc028d3-b4be-4038-80c9-bbcf99f7f109"),
+		RunId:      common.StringPtr(validRunID),
 	}
 	taskList := "single-timer-queue"
 	identity := "testIdentity"
 	_, tt := s.createExecutionWithTimers(domainID, workflowExecution, taskList, identity, []int32{1})
 
-	timerInfo, err := s.GetTimerIndexTasks()
+	timerInfo, nextToken, err := s.GetTimerIndexTasks()
 	s.Nil(err, "No error expected.")
 	s.NotEmpty(timerInfo, "Expected non empty timers list")
+	s.Equal(0, len(nextToken))
 	s.Equal(1, len(timerInfo))
 
 	processor := newTimerQueueProcessor(s.ShardContext, s.engineImpl, s.WorkflowMgr, s.logger).(*timerQueueProcessorImpl)
 	processor.Start()
-	processor.NotifyNewTimer(tt)
+	processor.NotifyNewTimers(cluster.TestCurrentClusterName, tt)
 
 	for {
-		timerInfo, err := s.GetTimerIndexTasks()
+		timerInfo, _, err := s.GetTimerIndexTasks()
 		s.Nil(err, "No error expected.")
 		if len(timerInfo) == 0 {
 			processor.Stop()
@@ -263,32 +262,34 @@ func (s *timerQueueProcessorSuite) TestSingleTimerTask() {
 		time.Sleep(10 * time.Millisecond)
 	}
 
-	timerInfo, err = s.GetTimerIndexTasks()
+	timerInfo, nextToken, err = s.GetTimerIndexTasks()
 	s.Nil(err, "No error expected.")
 	s.Equal(0, len(timerInfo))
+	s.Equal(0, len(nextToken))
 }
 
 func (s *timerQueueProcessorSuite) TestManyTimerTasks() {
-	domainID := "5bb49df8-71bc-4c63-b57f-05f2a508e7b5"
+	domainID := testDomainActiveID
 	workflowExecution := workflow.WorkflowExecution{WorkflowId: common.StringPtr("multiple-timer-test"),
-		RunId: common.StringPtr("0d00698f-08e1-4d36-a3e2-3bf109f5d2d6")}
+		RunId: common.StringPtr(validRunID)}
 
 	taskList := "multiple-timer-queue"
 	identity := "testIdentity"
 	_, tt := s.createExecutionWithTimers(domainID, workflowExecution, taskList, identity, []int32{1, 2, 3})
 
-	timerInfo, err := s.GetTimerIndexTasks()
+	timerInfo, nextToken, err := s.GetTimerIndexTasks()
 	s.Nil(err, "No error expected.")
 	s.NotEmpty(timerInfo, "Expected non empty timers list")
 	s.Equal(1, len(timerInfo))
+	s.Equal(0, len(nextToken))
 
 	processor := newTimerQueueProcessor(s.ShardContext, s.engineImpl, s.WorkflowMgr, s.logger).(*timerQueueProcessorImpl)
 	processor.Start()
 
-	processor.NotifyNewTimer(tt)
+	processor.NotifyNewTimers(cluster.TestCurrentClusterName, tt)
 
 	for {
-		timerInfo, err := s.GetTimerIndexTasks()
+		timerInfo, _, err := s.GetTimerIndexTasks()
 		s.logger.Infof("TestManyTimerTasks: GetTimerIndexTasks: Response Count: %d \n", len(timerInfo))
 		s.Nil(err, "No error expected.")
 		if len(timerInfo) == 0 {
@@ -298,46 +299,49 @@ func (s *timerQueueProcessorSuite) TestManyTimerTasks() {
 		time.Sleep(1000 * time.Millisecond)
 	}
 
-	timerInfo, err = s.GetTimerIndexTasks()
+	timerInfo, nextToken, err = s.GetTimerIndexTasks()
 	s.Nil(err, "No error expected.")
 	s.Equal(0, len(timerInfo))
+	s.Equal(0, len(nextToken))
 
-	s.Equal(uint64(3), processor.timerFiredCount)
+	s.Equal(uint64(3), processor.getTimerFiredCount(cluster.TestCurrentClusterName))
 }
 
 func (s *timerQueueProcessorSuite) TestTimerTaskAfterProcessorStart() {
-	domainID := "5bb49df8-71bc-4c63-b57f-05f2a508e7b5"
+	domainID := testDomainActiveID
 	workflowExecution := workflow.WorkflowExecution{WorkflowId: common.StringPtr("After-timer-test"),
-		RunId: common.StringPtr("0d00698f-08e1-4d36-a3e2-3bf109f5d2d6")}
+		RunId: common.StringPtr(validRunID)}
 
 	taskList := "After-timer-queue"
 	identity := "testIdentity"
 
 	s.createExecutionWithTimers(domainID, workflowExecution, taskList, identity, []int32{})
 
-	timerInfo, err := s.GetTimerIndexTasks()
+	timerInfo, nextToken, err := s.GetTimerIndexTasks()
 	s.Nil(err, "No error expected.")
 	s.Empty(timerInfo, "Expected empty timers list")
+	s.Equal(0, len(nextToken))
 
 	processor := newTimerQueueProcessor(s.ShardContext, s.engineImpl, s.WorkflowMgr, s.logger).(*timerQueueProcessorImpl)
 	processor.Start()
 
 	tBuilder := newTimerBuilder(s.ShardContext.GetConfig(), s.logger, &mockTimeSource{currTime: time.Now()})
 	tt := s.addDecisionTimer(domainID, workflowExecution, tBuilder)
-	processor.NotifyNewTimer(tt)
+	processor.NotifyNewTimers(cluster.TestCurrentClusterName, tt)
 
 	s.waitForTimerTasksToProcess(processor)
 
-	timerInfo, err = s.GetTimerIndexTasks()
+	timerInfo, nextToken, err = s.GetTimerIndexTasks()
 	s.Nil(err, "No error expected.")
 	s.Equal(0, len(timerInfo))
+	s.Equal(0, len(nextToken))
 
-	s.Equal(uint64(1), processor.timerFiredCount)
+	s.Equal(uint64(1), processor.getTimerFiredCount(cluster.TestCurrentClusterName))
 }
 
 func (s *timerQueueProcessorSuite) waitForTimerTasksToProcess(p timerQueueProcessor) {
 	for i := 0; i < 10; i++ {
-		timerInfo, err := s.GetTimerIndexTasks()
+		timerInfo, _, err := s.GetTimerIndexTasks()
 		s.Nil(err, "No error expected.")
 		if len(timerInfo) == 0 {
 			p.Stop()
@@ -388,9 +392,9 @@ func (s *timerQueueProcessorSuite) updateHistoryAndTimers(ms *mutableStateBuilde
 }
 
 func (s *timerQueueProcessorSuite) TestTimerActivityTaskScheduleToStart_WithOutStart() {
-	domainID := "5bb49df8-71bc-4c63-b57f-05f2a508e7b5"
+	domainID := testDomainActiveID
 	workflowExecution := workflow.WorkflowExecution{WorkflowId: common.StringPtr("activity-timer-SCHEDULE_TO_START-test"),
-		RunId: common.StringPtr("0d00698f-08e1-4d36-a3e2-3bf109f5d2d6")}
+		RunId: common.StringPtr(validRunID)}
 
 	taskList := "activity-timer-queue"
 
@@ -420,18 +424,18 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTaskScheduleToStart_WithOutS
 	timerTasks := []persistence.Task{tt}
 
 	s.updateHistoryAndTimers(builder, timerTasks, condition)
-	processor.NotifyNewTimer(timerTasks)
+	processor.NotifyNewTimers(cluster.TestCurrentClusterName, timerTasks)
 
 	s.waitForTimerTasksToProcess(processor)
-	s.Equal(uint64(1), processor.timerFiredCount)
+	s.Equal(uint64(1), processor.getTimerFiredCount(cluster.TestCurrentClusterName))
 	running := s.checkTimedOutEventFor(domainID, workflowExecution, *activityScheduledEvent.EventId)
 	s.False(running)
 }
 
 func (s *timerQueueProcessorSuite) TestTimerActivityTaskScheduleToStart_WithStart() {
-	domainID := "5bb49df8-71bc-4c63-b57f-05f2a508e7b5"
+	domainID := testDomainActiveID
 	workflowExecution := workflow.WorkflowExecution{WorkflowId: common.StringPtr("activity-timer-SCHEDULE_TO_START-Started-test"),
-		RunId: common.StringPtr("0d00698f-08e1-4d36-a3e2-3bf109f5d2d6")}
+		RunId: common.StringPtr(validRunID)}
 
 	taskList := "activity-timer-queue"
 
@@ -463,18 +467,18 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTaskScheduleToStart_WithStar
 	timerTasks := []persistence.Task{tt}
 
 	s.updateHistoryAndTimers(builder, timerTasks, condition)
-	p.NotifyNewTimer(timerTasks)
+	p.NotifyNewTimers(cluster.TestCurrentClusterName, timerTasks)
 
 	s.waitForTimerTasksToProcess(p)
-	s.Equal(uint64(1), p.timerFiredCount)
+	s.Equal(uint64(1), p.getTimerFiredCount(cluster.TestCurrentClusterName))
 	running := s.checkTimedOutEventFor(domainID, workflowExecution, *ase.EventId)
 	s.False(running)
 }
 
 func (s *timerQueueProcessorSuite) TestTimerActivityTaskScheduleToStart_MoreThanStartToClose() {
-	domainID := "5bb49df8-71bc-4c63-b57f-05f2a508e7b5"
+	domainID := testDomainActiveID
 	workflowExecution := workflow.WorkflowExecution{WorkflowId: common.StringPtr("activity-timer-SCHEDULE_TO_START-more-than-start2close"),
-		RunId: common.StringPtr("0d00698f-08e1-4d36-a3e2-3bf109f5d2d6")}
+		RunId: common.StringPtr(validRunID)}
 
 	taskList := "activity-timer-queue"
 
@@ -505,18 +509,18 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTaskScheduleToStart_MoreThan
 	timerTasks := []persistence.Task{tt}
 
 	s.updateHistoryAndTimers(builder, timerTasks, condition)
-	processor.NotifyNewTimer(timerTasks)
+	processor.NotifyNewTimers(cluster.TestCurrentClusterName, timerTasks)
 
 	s.waitForTimerTasksToProcess(processor)
-	s.Equal(uint64(1), processor.timerFiredCount)
+	s.Equal(uint64(1), processor.getTimerFiredCount(cluster.TestCurrentClusterName))
 	running := s.checkTimedOutEventFor(domainID, workflowExecution, *activityScheduledEvent.EventId)
 	s.False(running)
 }
 
 func (s *timerQueueProcessorSuite) TestTimerActivityTaskStartToClose_WithStart() {
-	domainID := "5bb49df8-71bc-4c63-b57f-05f2a508e123"
+	domainID := testDomainActiveID
 	workflowExecution := workflow.WorkflowExecution{WorkflowId: common.StringPtr("activity-timer-START_TO_CLOSE-Started-test"),
-		RunId: common.StringPtr("0d00698f-08e1-4d36-a3e2-3bf109f5d2d6")}
+		RunId: common.StringPtr(validRunID)}
 
 	taskList := "activity-timer-queue"
 
@@ -547,18 +551,18 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTaskStartToClose_WithStart()
 	timerTasks := []persistence.Task{tt}
 
 	s.updateHistoryAndTimers(builder, timerTasks, condition)
-	p.NotifyNewTimer(timerTasks)
+	p.NotifyNewTimers(cluster.TestCurrentClusterName, timerTasks)
 
 	s.waitForTimerTasksToProcess(p)
-	s.Equal(uint64(1), p.timerFiredCount)
+	s.Equal(uint64(1), p.getTimerFiredCount(cluster.TestCurrentClusterName))
 	running := s.checkTimedOutEventFor(domainID, workflowExecution, *ase.EventId)
 	s.False(running)
 }
 
 func (s *timerQueueProcessorSuite) TestTimerActivityTaskStartToClose_CompletedActivity() {
-	domainID := "5bb49df8-71bc-4c63-b57f-05f2a508e7b5"
+	domainID := testDomainActiveID
 	workflowExecution := workflow.WorkflowExecution{WorkflowId: common.StringPtr("activity-timer-START_TO_CLOSE-Completed-test"),
-		RunId: common.StringPtr("0d00698f-08e1-4d36-a3e2-3bf109f5d2d6")}
+		RunId: common.StringPtr(validRunID)}
 
 	taskList := "activity-timer-queue"
 	s.createExecutionWithTimers(domainID, workflowExecution, taskList, "identity", []int32{})
@@ -593,18 +597,18 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTaskStartToClose_CompletedAc
 	timerTasks := []persistence.Task{t}
 
 	s.updateHistoryAndTimers(builder, timerTasks, condition)
-	p.NotifyNewTimer(timerTasks)
+	p.NotifyNewTimers(cluster.TestCurrentClusterName, timerTasks)
 
 	s.waitForTimerTasksToProcess(p)
-	s.Equal(uint64(1), p.timerFiredCount)
+	s.Equal(uint64(1), p.getTimerFiredCount(cluster.TestCurrentClusterName))
 	running := s.checkTimedOutEventFor(domainID, workflowExecution, *ase.EventId)
 	s.False(running)
 }
 
 func (s *timerQueueProcessorSuite) TestTimerActivityTaskScheduleToClose_JustScheduled() {
-	domainID := "5bb49df8-71bc-4c63-b57f-05f2a508e7b5"
+	domainID := testDomainActiveID
 	workflowExecution := workflow.WorkflowExecution{WorkflowId: common.StringPtr("activity-timer-SCHEDULE_TO_CLOSE-Scheduled-test"),
-		RunId: common.StringPtr("0d00698f-08e1-4d36-a3e2-3bf109f5d2d6")}
+		RunId: common.StringPtr(validRunID)}
 
 	taskList := "activity-timer-queue"
 	s.createExecutionWithTimers(domainID, workflowExecution, taskList, "identity", []int32{})
@@ -634,18 +638,18 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTaskScheduleToClose_JustSche
 	timerTasks := []persistence.Task{tt}
 
 	s.updateHistoryAndTimers(builder, timerTasks, condition)
-	p.NotifyNewTimer(timerTasks)
+	p.NotifyNewTimers(cluster.TestCurrentClusterName, timerTasks)
 
 	s.waitForTimerTasksToProcess(p)
-	s.Equal(uint64(1), p.timerFiredCount)
+	s.Equal(uint64(1), p.getTimerFiredCount(cluster.TestCurrentClusterName))
 	running := s.checkTimedOutEventFor(domainID, workflowExecution, *ase.EventId)
 	s.False(running)
 }
 
 func (s *timerQueueProcessorSuite) TestTimerActivityTaskScheduleToClose_Started() {
-	domainID := "5bb49df8-71bc-4c63-b57f-05f2a508e7b5"
+	domainID := testDomainActiveID
 	workflowExecution := workflow.WorkflowExecution{WorkflowId: common.StringPtr("activity-timer-SCHEDULE_TO_CLOSE-Started-test"),
-		RunId: common.StringPtr("0d00698f-08e1-4d36-a3e2-3bf109f5d2d6")}
+		RunId: common.StringPtr(validRunID)}
 
 	taskList := "activity-timer-queue"
 	s.createExecutionWithTimers(domainID, workflowExecution, taskList, "identity", []int32{})
@@ -677,18 +681,18 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTaskScheduleToClose_Started(
 	timerTasks := []persistence.Task{tt}
 
 	s.updateHistoryAndTimers(builder, timerTasks, condition)
-	p.NotifyNewTimer(timerTasks)
+	p.NotifyNewTimers(cluster.TestCurrentClusterName, timerTasks)
 
 	s.waitForTimerTasksToProcess(p)
-	s.Equal(uint64(1), p.timerFiredCount)
+	s.Equal(uint64(1), p.getTimerFiredCount(cluster.TestCurrentClusterName))
 	running := s.checkTimedOutEventFor(domainID, workflowExecution, *ase.EventId)
 	s.False(running)
 }
 
 func (s *timerQueueProcessorSuite) TestTimerActivityTaskScheduleToClose_Completed() {
-	domainID := "5bb49df8-71bc-4c63-b57f-05f2a508e7b5"
+	domainID := testDomainActiveID
 	workflowExecution := workflow.WorkflowExecution{WorkflowId: common.StringPtr("activity-timer-SCHEDULE_TO_CLOSE-Completed-test"),
-		RunId: common.StringPtr("0d00698f-08e1-4d36-a3e2-3bf109f5d2d6")}
+		RunId: common.StringPtr(validRunID)}
 
 	taskList := "activity-timer-queue"
 	s.createExecutionWithTimers(domainID, workflowExecution, taskList, "identity", []int32{})
@@ -724,18 +728,18 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTaskScheduleToClose_Complete
 	timerTasks := []persistence.Task{t}
 
 	s.updateHistoryAndTimers(builder, timerTasks, condition)
-	p.NotifyNewTimer(timerTasks)
+	p.NotifyNewTimers(cluster.TestCurrentClusterName, timerTasks)
 
 	s.waitForTimerTasksToProcess(p)
-	s.Equal(uint64(1), p.timerFiredCount)
+	s.Equal(uint64(1), p.getTimerFiredCount(cluster.TestCurrentClusterName))
 	running := s.checkTimedOutEventFor(domainID, workflowExecution, *ase.EventId)
 	s.False(running)
 }
 
 func (s *timerQueueProcessorSuite) TestTimerActivityTaskHeartBeat_JustStarted() {
-	domainID := "5bb49df8-71bc-4c63-b57f-05f2a508e7b5"
+	domainID := testDomainActiveID
 	workflowExecution := workflow.WorkflowExecution{WorkflowId: common.StringPtr("activity-timer-hb-started-test"),
-		RunId: common.StringPtr("0d00698f-08e1-4d36-a3e2-3bf109f5d2d6")}
+		RunId: common.StringPtr(validRunID)}
 
 	taskList := "activity-timer-queue"
 
@@ -748,17 +752,17 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTaskHeartBeat_JustStarted() 
 	tBuilder := newTimerBuilder(s.ShardContext.GetConfig(), s.logger, &mockTimeSource{currTime: time.Now()})
 	ase, timerTasks := s.addHeartBeatTimer(domainID, workflowExecution, tBuilder)
 
-	p.NotifyNewTimer(timerTasks)
+	p.NotifyNewTimers(cluster.TestCurrentClusterName, timerTasks)
 	s.waitForTimerTasksToProcess(p)
-	s.Equal(uint64(1), p.timerFiredCount)
+	s.Equal(uint64(1), p.getTimerFiredCount(cluster.TestCurrentClusterName))
 	running := s.checkTimedOutEventFor(domainID, workflowExecution, *ase.EventId)
 	s.False(running)
 }
 
 func (s *timerQueueProcessorSuite) TestTimerUserTimers() {
-	domainID := "5bb49df8-71bc-4c63-b57f-05f2a508e7b5"
+	domainID := testDomainActiveID
 	workflowExecution := workflow.WorkflowExecution{WorkflowId: common.StringPtr("user-timer-test"),
-		RunId: common.StringPtr("0d00698f-08e1-4d36-a3e2-3bf109f5d2d6")}
+		RunId: common.StringPtr(validRunID)}
 
 	taskList := "user-timer-queue"
 	s.createExecutionWithTimers(domainID, workflowExecution, taskList, "identity", []int32{})
@@ -770,17 +774,17 @@ func (s *timerQueueProcessorSuite) TestTimerUserTimers() {
 	tBuilder := newTimerBuilder(s.ShardContext.GetConfig(), s.logger, &mockTimeSource{currTime: time.Now()})
 	timerID := "tid1"
 	timerTasks := s.addUserTimer(domainID, workflowExecution, timerID, tBuilder)
-	p.NotifyNewTimer(timerTasks)
+	p.NotifyNewTimers(cluster.TestCurrentClusterName, timerTasks)
 	s.waitForTimerTasksToProcess(p)
-	s.Equal(uint64(1), p.timerFiredCount)
+	s.Equal(uint64(1), p.getTimerFiredCount(cluster.TestCurrentClusterName))
 	running := s.checkTimedOutEventForUserTimer(domainID, workflowExecution, timerID)
 	s.False(running)
 }
 
 func (s *timerQueueProcessorSuite) TestTimerUserTimersSameExpiry() {
-	domainID := "5bb49df8-71bc-4c63-b57f-05f2a508e7b5"
+	domainID := testDomainActiveID
 	workflowExecution := workflow.WorkflowExecution{WorkflowId: common.StringPtr("user-timer-same-expiry-test"),
-		RunId: common.StringPtr("0d00698f-08e1-4d36-a3e2-3bf109f5d2d6")}
+		RunId: common.StringPtr(validRunID)}
 
 	taskList := "user-timer-same-expiry-queue"
 	s.createExecutionWithTimers(domainID, workflowExecution, taskList, "identity", []int32{})
@@ -811,10 +815,10 @@ func (s *timerQueueProcessorSuite) TestTimerUserTimersSameExpiry() {
 	timerTasks = append(timerTasks, t)
 
 	s.updateHistoryAndTimers(builder, timerTasks, condition)
-	p.NotifyNewTimer(timerTasks)
+	p.NotifyNewTimers(cluster.TestCurrentClusterName, timerTasks)
 
 	s.waitForTimerTasksToProcess(p)
-	s.Equal(uint64(len(timerTasks)), p.timerFiredCount)
+	s.Equal(uint64(len(timerTasks)), p.getTimerFiredCount(cluster.TestCurrentClusterName))
 	running := s.checkTimedOutEventForUserTimer(domainID, workflowExecution, ti.TimerID)
 	s.False(running)
 	running = s.checkTimedOutEventForUserTimer(domainID, workflowExecution, ti2.TimerID)
@@ -822,9 +826,9 @@ func (s *timerQueueProcessorSuite) TestTimerUserTimersSameExpiry() {
 }
 
 func (s *timerQueueProcessorSuite) TestTimersOnClosedWorkflow() {
-	domainID := "5bb49df8-71bc-4c63-b57f-05f2a508e7b5"
-	workflowExecution := workflow.WorkflowExecution{WorkflowId: common.StringPtr("closed-workflow-test"),
-		RunId: common.StringPtr("0d00698f-08e1-4d36-a3e2-3bf109f5d2d6")}
+	domainID := testDomainActiveID
+	workflowExecution := workflow.WorkflowExecution{WorkflowId: common.StringPtr("closed-workflow-test-desicion-timer"),
+		RunId: common.StringPtr(validRunID)}
 
 	taskList := "closed-workflow-queue"
 	s.createExecutionWithTimers(domainID, workflowExecution, taskList, "identity", []int32{})
@@ -846,9 +850,9 @@ func (s *timerQueueProcessorSuite) TestTimersOnClosedWorkflow() {
 	// close workflow
 	s.closeWorkflow(domainID, workflowExecution)
 
-	p.NotifyNewTimer(tt)
+	p.NotifyNewTimers(cluster.TestCurrentClusterName, tt)
 	s.waitForTimerTasksToProcess(p)
-	s.Equal(uint64(3), p.timerFiredCount)
+	s.Equal(uint64(3), p.getTimerFiredCount(cluster.TestCurrentClusterName))
 
 	// Verify that no new events are added to workflow.
 	state1, err := s.GetWorkflowExecutionInfo(domainID, workflowExecution)

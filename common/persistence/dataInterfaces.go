@@ -123,14 +123,16 @@ type (
 
 	// ShardInfo describes a shard
 	ShardInfo struct {
-		ShardID             int
-		Owner               string
-		RangeID             int64
-		StolenSinceRenew    int
-		UpdatedAt           time.Time
-		TransferAckLevel    int64
-		ReplicationAckLevel int64
-		TimerAckLevel       time.Time
+		ShardID                 int
+		Owner                   string
+		RangeID                 int64
+		StolenSinceRenew        int
+		UpdatedAt               time.Time
+		ReplicationAckLevel     int64
+		TransferAckLevel        int64     // TO BE DEPRECATED IN FAVOR OF ClusterTransferAckLevel
+		TimerAckLevel           time.Time // TO BE DEPRECATED IN FAVOR OF ClusteerTimerAckLevel
+		ClusterTransferAckLevel map[string]int64
+		ClusterTimerAckLevel    map[string]time.Time
 	}
 
 	// WorkflowExecutionInfo describes a workflow execution
@@ -220,6 +222,7 @@ type (
 		TimeoutType         int
 		EventID             int64
 		ScheduleAttempt     int64
+		Version             int64
 	}
 
 	// TaskListInfo describes a state of a task list implementation.
@@ -642,7 +645,8 @@ type (
 
 	// GetTimerIndexTasksResponse is the response for GetTimerIndexTasks
 	GetTimerIndexTasksResponse struct {
-		Timers []*TimerTaskInfo
+		Timers        []*TimerTaskInfo
+		NextPageToken []byte
 	}
 
 	// SerializedHistoryEventBatch represents a serialized batch of history events
@@ -1087,6 +1091,26 @@ func (a *HistoryReplicationTask) SetTaskID(id int64) {
 	a.TaskID = id
 }
 
+// GetTaskID returns the task ID for transfer task
+func (t *TransferTaskInfo) GetTaskID() int64 {
+	return t.TaskID
+}
+
+// GetTaskType returns the task type for transfer task
+func (t *TransferTaskInfo) GetTaskType() int {
+	return t.TaskType
+}
+
+// GetTaskID returns the task ID for replication task
+func (t *ReplicationTaskInfo) GetTaskID() int64 {
+	return t.TaskID
+}
+
+// GetTaskType returns the task type for replication task
+func (t *ReplicationTaskInfo) GetTaskType() int {
+	return t.TaskType
+}
+
 // NewHistoryEventBatch returns a new instance of HistoryEventBatch
 func NewHistoryEventBatch(version int, events []*workflow.HistoryEvent) *HistoryEventBatch {
 	return &HistoryEventBatch{
@@ -1121,4 +1145,15 @@ func (config *ClusterReplicationConfig) serialize() map[string]interface{} {
 
 func (config *ClusterReplicationConfig) deserialize(input map[string]interface{}) {
 	config.ClusterName = input["cluster_name"].(string)
+}
+
+// SetSerializedHistoryDefaults  sets the version and encoding types to defaults if they
+// are missing from persistence. This is purely for backwards compatibility
+func SetSerializedHistoryDefaults(history *SerializedHistoryEventBatch) {
+	if history.Version == 0 {
+		history.Version = GetDefaultHistoryVersion()
+	}
+	if len(history.EncodingType) == 0 {
+		history.EncodingType = DefaultEncodingType
+	}
 }

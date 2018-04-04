@@ -46,10 +46,11 @@ type (
 		GetHistoryManager() persistence.HistoryManager
 		GetDomainCache() cache.DomainCache
 		GetNextTransferTaskID() (int64, error)
-		GetTransferSequenceNumber() int64
 		GetTransferMaxReadLevel() int64
 		GetTransferAckLevel() int64
 		UpdateTransferAckLevel(ackLevel int64) error
+		GetReplicatorAckLevel() int64
+		UpdateReplicatorAckLevel(ackLevel int64) error
 		CreateWorkflowExecution(request *persistence.CreateWorkflowExecutionRequest) (
 			*persistence.CreateWorkflowExecutionResponse, error)
 		UpdateWorkflowExecution(request *persistence.UpdateWorkflowExecutionRequest) error
@@ -58,9 +59,11 @@ type (
 		GetConfig() *Config
 		GetLogger() bark.Logger
 		GetMetricsClient() metrics.Client
-		GetTimerAckLevel() time.Time
-		UpdateTimerAckLevel(ackLevel time.Time) error
+		GetTimerAckLevel(cluster string) time.Time
+		UpdateTimerAckLevel(cluster string, ackLevel time.Time) error
 		GetTimeSource() common.TimeSource
+		SetCurrentTime(cluster string, currentTime time.Time)
+		GetCurrentTime(cluster string) time.Time
 	}
 
 	shardContextImpl struct {
@@ -82,6 +85,7 @@ type (
 		transferSequenceNumber    int64
 		maxTransferSequenceNumber int64
 		transferMaxReadLevel      int64
+		standbyClusterCurrentTime map[string]time.Time
 	}
 )
 
@@ -110,17 +114,18 @@ func (s *shardContextImpl) GetNextTransferTaskID() (int64, error) {
 	return s.getNextTransferTaskIDLocked()
 }
 
-func (s *shardContextImpl) GetTransferSequenceNumber() int64 {
-	s.RLock()
-	defer s.RUnlock()
-
-	return s.transferSequenceNumber - 1
-}
-
 func (s *shardContextImpl) GetTransferAckLevel() int64 {
 	s.RLock()
 	defer s.RUnlock()
 
+	// TODO cluster should be an input parameter
+	cluster := s.GetService().GetClusterMetadata().GetCurrentClusterName()
+	// if we can find corresponding ack level
+	if ackLevel, ok := s.shardInfo.ClusterTransferAckLevel[cluster]; ok {
+		return ackLevel
+	}
+	// otherwise, default to existing ack level, which belongs to local cluster
+	// this can happen if you add more cluster
 	return s.shardInfo.TransferAckLevel
 }
 
@@ -133,22 +138,53 @@ func (s *shardContextImpl) GetTransferMaxReadLevel() int64 {
 func (s *shardContextImpl) UpdateTransferAckLevel(ackLevel int64) error {
 	s.Lock()
 	defer s.Unlock()
-	s.shardInfo.TransferAckLevel = ackLevel
+
+	// TODO cluster should be an input parameter
+	cluster := s.GetService().GetClusterMetadata().GetCurrentClusterName()
+	if cluster == s.GetService().GetClusterMetadata().GetCurrentClusterName() {
+		s.shardInfo.TransferAckLevel = ackLevel
+	}
+	s.shardInfo.ClusterTransferAckLevel[cluster] = ackLevel
 	s.shardInfo.StolenSinceRenew = 0
 	return s.updateShardInfoLocked()
 }
 
-func (s *shardContextImpl) GetTimerAckLevel() time.Time {
+func (s *shardContextImpl) GetReplicatorAckLevel() int64 {
 	s.RLock()
 	defer s.RUnlock()
+
+	return s.shardInfo.ReplicationAckLevel
+}
+
+func (s *shardContextImpl) UpdateReplicatorAckLevel(ackLevel int64) error {
+	s.Lock()
+	defer s.Unlock()
+	s.shardInfo.ReplicationAckLevel = ackLevel
+	s.shardInfo.StolenSinceRenew = 0
+	return s.updateShardInfoLocked()
+}
+
+func (s *shardContextImpl) GetTimerAckLevel(cluster string) time.Time {
+	s.RLock()
+	defer s.RUnlock()
+
+	// if we can find corresponding ack level
+	if ackLevel, ok := s.shardInfo.ClusterTimerAckLevel[cluster]; ok {
+		return ackLevel
+	}
+	// otherwise, default to existing ack level, which belongs to local cluster
+	// this can happen if you add more cluster
 	return s.shardInfo.TimerAckLevel
 }
 
-func (s *shardContextImpl) UpdateTimerAckLevel(ackLevel time.Time) error {
+func (s *shardContextImpl) UpdateTimerAckLevel(cluster string, ackLevel time.Time) error {
 	s.Lock()
 	defer s.Unlock()
 
-	s.shardInfo.TimerAckLevel = ackLevel
+	if cluster == s.GetService().GetClusterMetadata().GetCurrentClusterName() {
+		s.shardInfo.TimerAckLevel = ackLevel
+	}
+	s.shardInfo.ClusterTimerAckLevel[cluster] = ackLevel
 	s.shardInfo.StolenSinceRenew = 0
 	return s.updateShardInfoLocked()
 }
@@ -171,6 +207,17 @@ func (s *shardContextImpl) CreateWorkflowExecution(request *persistence.CreateWo
 		task.SetTaskID(id)
 		transferMaxReadLevel = id
 	}
+
+	for _, task := range request.ReplicationTasks {
+		id, err := s.getNextTransferTaskIDLocked()
+		if err != nil {
+			return nil, err
+		}
+		s.logger.Debugf("Assigning replication task ID: %v", id)
+		task.SetTaskID(id)
+		transferMaxReadLevel = id
+	}
+
 	defer s.updateMaxReadLevelLocked(transferMaxReadLevel)
 
 	s.allocateTimerIDsLocked(request.TimerTasks)
@@ -236,6 +283,16 @@ func (s *shardContextImpl) UpdateWorkflowExecution(request *persistence.UpdateWo
 		transferMaxReadLevel = id
 	}
 
+	for _, task := range request.ReplicationTasks {
+		id, err := s.getNextTransferTaskIDLocked()
+		if err != nil {
+			return err
+		}
+		s.logger.Debugf("Assigning replication task ID: %v", id)
+		task.SetTaskID(id)
+		transferMaxReadLevel = id
+	}
+
 	if request.ContinueAsNew != nil {
 		for _, task := range request.ContinueAsNew.TransferTasks {
 			id, err := s.getNextTransferTaskIDLocked()
@@ -243,6 +300,16 @@ func (s *shardContextImpl) UpdateWorkflowExecution(request *persistence.UpdateWo
 				return err
 			}
 			s.logger.Debugf("Assigning transfer task ID: %v", id)
+			task.SetTaskID(id)
+			transferMaxReadLevel = id
+		}
+
+		for _, task := range request.ContinueAsNew.ReplicationTasks {
+			id, err := s.getNextTransferTaskIDLocked()
+			if err != nil {
+				return err
+			}
+			s.logger.Debugf("Assigning replication task ID: %v", id)
 			task.SetTaskID(id)
 			transferMaxReadLevel = id
 		}
@@ -458,6 +525,28 @@ func (s *shardContextImpl) GetTimeSource() common.TimeSource {
 	return common.NewRealTimeSource()
 }
 
+func (s *shardContextImpl) SetCurrentTime(cluster string, currentTime time.Time) {
+	s.Lock()
+	defer s.Unlock()
+	if cluster != s.GetService().GetClusterMetadata().GetCurrentClusterName() {
+		prevTime := s.standbyClusterCurrentTime[cluster]
+		if prevTime.Before(currentTime) {
+			s.standbyClusterCurrentTime[cluster] = currentTime
+		}
+	} else {
+		panic("Cannot set current time for current cluster")
+	}
+}
+
+func (s *shardContextImpl) GetCurrentTime(cluster string) time.Time {
+	s.RLock()
+	defer s.RUnlock()
+	if cluster != s.GetService().GetClusterMetadata().GetCurrentClusterName() {
+		return s.standbyClusterCurrentTime[cluster]
+	}
+	return time.Now()
+}
+
 // TODO: This method has too many parameters.  Clean it up.  Maybe create a struct to pass in as parameter.
 func acquireShard(shardID int, svc service.Service, shardManager persistence.ShardManager,
 	historyMgr persistence.HistoryManager, executionMgr persistence.ExecutionManager, domainCache cache.DomainCache,
@@ -472,6 +561,18 @@ func acquireShard(shardID int, svc service.Service, shardManager persistence.Sha
 	updatedShardInfo := copyShardInfo(shardInfo)
 	updatedShardInfo.Owner = owner
 
+	// initialize the cluster current time to be the same as ack level
+	standbyClusterCurrentTime := make(map[string]time.Time)
+	for clusterName := range svc.GetClusterMetadata().GetAllClusterFailoverVersions() {
+		if clusterName != svc.GetClusterMetadata().GetCurrentClusterName() {
+			if currentTime, ok := shardInfo.ClusterTimerAckLevel[clusterName]; ok {
+				standbyClusterCurrentTime[clusterName] = currentTime
+			} else {
+				standbyClusterCurrentTime[clusterName] = shardInfo.TimerAckLevel
+			}
+		}
+	}
+
 	context := &shardContextImpl{
 		shardID:          shardID,
 		service:          svc,
@@ -483,6 +584,7 @@ func acquireShard(shardID int, svc service.Service, shardManager persistence.Sha
 		closeCh:          closeCh,
 		metricsClient:    metricsClient,
 		config:           config,
+		standbyClusterCurrentTime: standbyClusterCurrentTime,
 	}
 	context.logger = logger.WithFields(bark.Fields{
 		logging.TagHistoryShardID: shardID,
@@ -497,13 +599,24 @@ func acquireShard(shardID int, svc service.Service, shardManager persistence.Sha
 }
 
 func copyShardInfo(shardInfo *persistence.ShardInfo) *persistence.ShardInfo {
+	clusterTransferAckLevel := make(map[string]int64)
+	for k, v := range shardInfo.ClusterTransferAckLevel {
+		clusterTransferAckLevel[k] = v
+	}
+	clusterTimerAckLevel := make(map[string]time.Time)
+	for k, v := range shardInfo.ClusterTimerAckLevel {
+		clusterTimerAckLevel[k] = v
+	}
 	shardInfoCopy := &persistence.ShardInfo{
-		ShardID:          shardInfo.ShardID,
-		Owner:            shardInfo.Owner,
-		RangeID:          shardInfo.RangeID,
-		StolenSinceRenew: shardInfo.StolenSinceRenew,
-		TransferAckLevel: atomic.LoadInt64(&shardInfo.TransferAckLevel),
-		TimerAckLevel:    shardInfo.TimerAckLevel,
+		ShardID:                 shardInfo.ShardID,
+		Owner:                   shardInfo.Owner,
+		RangeID:                 shardInfo.RangeID,
+		StolenSinceRenew:        shardInfo.StolenSinceRenew,
+		ReplicationAckLevel:     shardInfo.ReplicationAckLevel,
+		TransferAckLevel:        atomic.LoadInt64(&shardInfo.TransferAckLevel), // TODO the meaning of atomic load is unclear
+		TimerAckLevel:           shardInfo.TimerAckLevel,
+		ClusterTransferAckLevel: clusterTransferAckLevel,
+		ClusterTimerAckLevel:    clusterTimerAckLevel,
 	}
 
 	return shardInfoCopy
