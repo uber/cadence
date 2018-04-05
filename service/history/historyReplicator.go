@@ -95,8 +95,8 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 	decisionTimeout := int32(0)
 	var requestID string
 	// TODO: Add handling for following events:
-	// WorkflowExecutionFailed,
-	// WorkflowExecutionTimedOut,
+	// WorkflowExecutionFailed, DONE
+	// WorkflowExecutionTimedOut, DONE
 	// ActivityTaskFailed,
 	// ActivityTaskTimedOut,
 	// ActivityTaskCancelRequested,
@@ -106,11 +106,11 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 	// TimerFired,
 	// CancelTimerFailed,
 	// TimerCanceled,
-	// WorkflowExecutionCancelRequested,
-	// WorkflowExecutionCanceled,
-	// RequestCancelExternalWorkflowExecutionInitiated,
-	// RequestCancelExternalWorkflowExecutionFailed,
-	// ExternalWorkflowExecutionCancelRequested,
+	// WorkflowExecutionCancelRequested, DONE
+	// WorkflowExecutionCanceled, DONE
+	// RequestCancelExternalWorkflowExecutionInitiated, DONE
+	// RequestCancelExternalWorkflowExecutionFailed, DONE
+	// ExternalWorkflowExecutionCancelRequested, DONE
 	// MarkerRecorded,
 	// WorkflowExecutionSignaled,
 	// WorkflowExecutionTerminated,
@@ -123,9 +123,9 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 	// ChildWorkflowExecutionCanceled,
 	// ChildWorkflowExecutionTimedOut,
 	// ChildWorkflowExecutionTerminated,
-	// SignalExternalWorkflowExecutionInitiated,
-	// SignalExternalWorkflowExecutionFailed,
-	// ExternalWorkflowExecutionSignaled,
+	// SignalExternalWorkflowExecutionInitiated, DONE
+	// SignalExternalWorkflowExecutionFailed, DONE
+	// ExternalWorkflowExecutionSignaled, DONE
 	for _, event := range request.History.Events {
 		lastEvent = event
 		switch event.GetEventType() {
