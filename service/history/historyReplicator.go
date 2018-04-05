@@ -97,32 +97,32 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 	// TODO: Add handling for following events:
 	// WorkflowExecutionFailed, DONE
 	// WorkflowExecutionTimedOut, DONE
-	// ActivityTaskFailed,
-	// ActivityTaskTimedOut,
-	// ActivityTaskCancelRequested,
-	// RequestCancelActivityTaskFailed,
-	// ActivityTaskCanceled,
-	// TimerStarted,
-	// TimerFired,
-	// CancelTimerFailed,
-	// TimerCanceled,
+	// ActivityTaskFailed, DONE
+	// ActivityTaskTimedOut, DONE
+	// ActivityTaskCancelRequested, DONE
+	// RequestCancelActivityTaskFailed, NO Mutable State Action is needed
+	// ActivityTaskCanceled, DONE
+	// TimerStarted, DONE
+	// TimerFired, DONE
+	// CancelTimerFailed, NO Mutable State Action is needed
+	// TimerCanceled, DONE
 	// WorkflowExecutionCancelRequested, DONE
 	// WorkflowExecutionCanceled, DONE
 	// RequestCancelExternalWorkflowExecutionInitiated, DONE
 	// RequestCancelExternalWorkflowExecutionFailed, DONE
 	// ExternalWorkflowExecutionCancelRequested, DONE
-	// MarkerRecorded,
-	// WorkflowExecutionSignaled,
-	// WorkflowExecutionTerminated,
+	// MarkerRecorded, NO Mutable State Action is needed
+	// WorkflowExecutionSignaled, NO Mutable State Action is needed
+	// WorkflowExecutionTerminated, DONE
 	// WorkflowExecutionContinuedAsNew,
-	// StartChildWorkflowExecutionInitiated,
-	// StartChildWorkflowExecutionFailed,
-	// ChildWorkflowExecutionStarted,
-	// ChildWorkflowExecutionCompleted,
-	// ChildWorkflowExecutionFailed,
-	// ChildWorkflowExecutionCanceled,
+	// StartChildWorkflowExecutionInitiated, DONE
+	// StartChildWorkflowExecutionFailed, DONE
+	// ChildWorkflowExecutionStarted, DONE
+	// ChildWorkflowExecutionCompleted, DONE
+	// ChildWorkflowExecutionFailed, DONE
+	// ChildWorkflowExecutionCanceled, DONE
 	// ChildWorkflowExecutionTimedOut,
-	// ChildWorkflowExecutionTerminated,
+	// ChildWorkflowExecutionTerminated, DONE
 	// SignalExternalWorkflowExecutionInitiated, DONE
 	// SignalExternalWorkflowExecutionFailed, DONE
 	// ExternalWorkflowExecutionSignaled, DONE
