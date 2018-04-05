@@ -1402,12 +1402,12 @@ func (e *mutableStateBuilder) AddFailWorkflowEvent(decisionCompletedEventID int6
 	}
 
 	event := e.hBuilder.AddFailWorkflowEvent(decisionCompletedEventID, attributes)
-	e.ReplicatedWorkflowExecutionFailedEvent(event)
+	e.ReplicateWorkflowExecutionFailedEvent(event)
 
 	return event
 }
 
-func (e *mutableStateBuilder) ReplicatedWorkflowExecutionFailedEvent(event *workflow.HistoryEvent) {
+func (e *mutableStateBuilder) ReplicateWorkflowExecutionFailedEvent(event *workflow.HistoryEvent) {
 	e.executionInfo.State = persistence.WorkflowStateCompleted
 	e.executionInfo.CloseStatus = persistence.WorkflowCloseStatusFailed
 	e.writeCompletionEventToMutableState(event)
