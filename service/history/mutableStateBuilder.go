@@ -817,21 +817,21 @@ func (e *mutableStateBuilder) AddWorkflowExecutionStartedEventForContinueAsNew(d
 	attributes *workflow.ContinueAsNewWorkflowExecutionDecisionAttributes) *workflow.HistoryEvent {
 	taskList := previousExecutionState.executionInfo.TaskList
 	if attributes.TaskList != nil {
-		taskList = *attributes.TaskList.Name
+		taskList = attributes.TaskList.GetName()
 	}
 	tl := &workflow.TaskList{}
 	tl.Name = common.StringPtr(taskList)
 
 	workflowType := previousExecutionState.executionInfo.WorkflowTypeName
 	if attributes.WorkflowType != nil {
-		workflowType = *attributes.WorkflowType.Name
+		workflowType = attributes.WorkflowType.GetName()
 	}
 	wType := &workflow.WorkflowType{}
 	wType.Name = common.StringPtr(workflowType)
 
 	decisionTimeout := previousExecutionState.executionInfo.DecisionTimeoutValue
 	if attributes.TaskStartToCloseTimeoutSeconds != nil {
-		decisionTimeout = *attributes.TaskStartToCloseTimeoutSeconds
+		decisionTimeout = attributes.GetTaskStartToCloseTimeoutSeconds()
 	}
 
 	createRequest := &workflow.StartWorkflowExecutionRequest{
@@ -1310,6 +1310,8 @@ func (e *mutableStateBuilder) ReplicateActivityTaskTimedOutEvent(event *workflow
 
 func (e *mutableStateBuilder) AddActivityTaskCancelRequestedEvent(decisionCompletedEventID int64,
 	activityID, identity string) (*workflow.HistoryEvent, *persistence.ActivityInfo, bool) {
+	actCancelReqEvent := e.hBuilder.AddActivityTaskCancelRequestedEvent(decisionCompletedEventID, activityID)
+
 	ai, isRunning := e.GetActivityByActivityID(activityID)
 	if !isRunning || ai.CancelRequested {
 		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionActivityTaskCancelRequest, e.GetNextEventID(), fmt.Sprintf(
@@ -1317,7 +1319,6 @@ func (e *mutableStateBuilder) AddActivityTaskCancelRequestedEvent(decisionComple
 		return nil, nil, false
 	}
 
-	actCancelReqEvent := e.hBuilder.AddActivityTaskCancelRequestedEvent(decisionCompletedEventID, activityID)
 	e.ReplicateActivityTaskCancelRequestedEvent(actCancelReqEvent)
 
 	return actCancelReqEvent, ai, isRunning
@@ -1670,7 +1671,7 @@ func (e *mutableStateBuilder) AddTimerFiredEvent(startedEventID int64, timerID s
 }
 
 func (e *mutableStateBuilder) ReplicateTimerFiredEvent(event *workflow.HistoryEvent) {
-	attributes := event.TimerStartedEventAttributes
+	attributes := event.TimerFiredEventAttributes
 	timerID := attributes.GetTimerId()
 
 	e.DeleteUserTimer(timerID)
@@ -1754,13 +1755,13 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(decisionCompletedEventID int
 			"{OutStandingActivityTasks: %v, HasPendingDecision: %v}", len(e.pendingActivityInfoIDs),
 			e.HasPendingDecisionTask()))
 	}
-	prevRunID := e.executionInfo.RunID
-	e.executionInfo.State = persistence.WorkflowStateCompleted
-	e.executionInfo.CloseStatus = persistence.WorkflowCloseStatusContinuedAsNew
+
 	newExecution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr(e.executionInfo.WorkflowID),
 		RunId:      common.StringPtr(newRunID),
 	}
+
+	continueAsNewEvent := e.hBuilder.AddContinuedAsNewEvent(decisionCompletedEventID, newRunID, attributes)
 
 	newStateBuilder := newMutableStateBuilder(e.config, e.logger)
 	startedEvent := newStateBuilder.AddWorkflowExecutionStartedEventForContinueAsNew(domainID, domainName,
@@ -1768,11 +1769,39 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(decisionCompletedEventID int
 	if startedEvent == nil {
 		return nil, nil, &workflow.InternalServiceError{Message: "Failed to add workflow execution started event."}
 	}
-
 	di := newStateBuilder.AddDecisionTaskScheduledEvent()
 	if di == nil {
 		return nil, nil, &workflow.InternalServiceError{Message: "Failed to add decision started event."}
 	}
+
+	e.ReplicateWorkflowExecutionContinuedAsNewEvent(domainID, domainName, continueAsNewEvent,
+		startedEvent, di.ScheduleID, di.Tasklist, di.DecisionTimeout)
+
+	return continueAsNewEvent, newStateBuilder, nil
+}
+
+func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(domainID, domainName string,
+	continueAsNewEvent *workflow.HistoryEvent, startedEvent *workflow.HistoryEvent, dtEventID int64, dtTaskList string,
+	dtTimeout int32) *mutableStateBuilder {
+	continueAsNewAttributes := continueAsNewEvent.WorkflowExecutionContinuedAsNewEventAttributes
+	startedAttributes := startedEvent.WorkflowExecutionStartedEventAttributes
+	newRunID := continueAsNewAttributes.GetNewExecutionRunId()
+	newExecution := workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr(e.executionInfo.WorkflowID),
+		RunId:      common.StringPtr(newRunID),
+	}
+
+	prevRunID := startedAttributes.GetContinuedExecutionRunId()
+	e.executionInfo.State = persistence.WorkflowStateCompleted
+	e.executionInfo.CloseStatus = persistence.WorkflowCloseStatusContinuedAsNew
+
+	newStateBuilder := newMutableStateBuilder(e.config, e.logger)
+	newStateBuilder.ReplicateWorkflowExecutionStartedEvent(domainID, nil, newExecution, uuid.New(), startedAttributes)
+	di := newStateBuilder.ReplicateDecisionTaskScheduledEvent(dtEventID, dtTaskList, dtTimeout)
+
+	nextEventID := dtEventID + 1
+	newStateBuilder.executionInfo.NextEventID = nextEventID
+	newStateBuilder.executionInfo.LastFirstEventID = startedEvent.GetEventId()
 
 	parentDomainID := ""
 	var parentExecution *workflow.WorkflowExecution
@@ -1819,7 +1848,7 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(decisionCompletedEventID int
 		DecisionTimeoutValue: newStateBuilder.executionInfo.DecisionTimeoutValue,
 		ExecutionContext:     nil,
 		NextEventID:          newStateBuilder.GetNextEventID(),
-		LastProcessedEvent:   common.EmptyEventID,
+		LastProcessedEvent:   emptyEventID,
 		TransferTasks: []persistence.Task{&persistence.DecisionTask{
 			DomainID:   domainID,
 			TaskList:   newStateBuilder.executionInfo.TaskList,
@@ -1834,7 +1863,7 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(decisionCompletedEventID int
 		ReplicationTasks:            replicationTasks,
 	}
 
-	return e.hBuilder.AddContinuedAsNewEvent(decisionCompletedEventID, newRunID, attributes), newStateBuilder, nil
+	return newStateBuilder
 }
 
 func (e *mutableStateBuilder) AddStartChildWorkflowExecutionInitiatedEvent(decisionCompletedEventID int64,
