@@ -149,12 +149,10 @@ func (s *TestShardContext) GetTransferMaxReadLevel() int64 {
 }
 
 // GetTransferAckLevel test implementation
-func (s *TestShardContext) GetTransferAckLevel() int64 {
+func (s *TestShardContext) GetTransferAckLevel(cluster string) int64 {
 	s.RLock()
 	defer s.RUnlock()
 
-	// TODO cluster should be an input parameter
-	cluster := s.GetService().GetClusterMetadata().GetCurrentClusterName()
 	// if we can find corresponding ack level
 	if ackLevel, ok := s.shardInfo.ClusterTransferAckLevel[cluster]; ok {
 		return ackLevel
@@ -165,12 +163,10 @@ func (s *TestShardContext) GetTransferAckLevel() int64 {
 }
 
 // UpdateTransferAckLevel test implementation
-func (s *TestShardContext) UpdateTransferAckLevel(ackLevel int64) error {
-	s.RLock()
-	defer s.RUnlock()
+func (s *TestShardContext) UpdateTransferAckLevel(cluster string, ackLevel int64) error {
+	s.Lock()
+	defer s.Unlock()
 
-	// TODO cluster should be an input parameter
-	cluster := s.GetService().GetClusterMetadata().GetCurrentClusterName()
 	if cluster == s.GetService().GetClusterMetadata().GetCurrentClusterName() {
 		s.shardInfo.TransferAckLevel = ackLevel
 	}

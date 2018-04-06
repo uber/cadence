@@ -355,7 +355,8 @@ MoveAckLevelLoop:
 	}
 
 	// Always update ackLevel to detect if the shared is stolen
-	if err := a.shard.UpdateTransferAckLevel(updatedAckLevel); err != nil {
+	clusterName := a.shard.GetService().GetClusterMetadata().GetCurrentClusterName()
+	if err := a.shard.UpdateTransferAckLevel(clusterName, updatedAckLevel); err != nil {
 		a.metricsClient.IncCounter(a.options.MetricScope, metrics.AckLevelUpdateFailedCounter)
 		logging.LogOperationFailedEvent(a.logger, "Error updating ack level for shard", err)
 	} else {
