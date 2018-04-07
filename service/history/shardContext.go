@@ -499,15 +499,34 @@ func (s *shardContextImpl) updateShardInfoLocked() error {
 
 func (s *shardContextImpl) allocateTimerIDsLocked(timerTasks []persistence.Task) error {
 	// assign IDs for the timer tasks. They need to be assigned under shard lock.
+
+	// set a time limit, any timer to be fired before this time limit
+	// will be reset to this time limit, for more detaile, see below.
+	timeLimit := time.Now()
+	if timeLimit.Before(s.shardInfo.TimerAckLevel) {
+		timeLimit = s.shardInfo.TimerAckLevel
+	}
+	timeLimit.Add(s.config.TimerCreationTolerance)
 	for _, task := range timerTasks {
 		ts := persistence.GetVisibilityTSFrom(task)
-		if ts.Before(s.shardInfo.TimerAckLevel) {
-			// This is not a common scenario, the shard can move and new host might have a time SKU.
-			// We generate a new timer ID that is above the ack level with an offset.
-			s.logger.Warnf("%v: New timer generated is less than ack level. timestamp: %v, ackLevel: %v",
+		if ts.Before(timeLimit) {
+			// the idea here is to prevent creating a timer which will fire in the "past"
+
+			// previously, the comparison is done by ts.Before(s.shardInfo.TimerAckLevel), however
+			// the timer ack level is not a reliable source for comparison.
+			// i.e. the timer processor can hold an ack level, say ack1, which is far behaind current
+			// time, say time1, and timer processor is processing a lot of timer; here when an timer
+			// is created by creating or updating a workflow execution, we do the check above, and
+			// set the timer to be ack1.Add(time.Second), which can be in the "past" if timer queue
+			// processor decided to update the ack level to ack2 (ack2 > ack1.Add(time.Second) && ack2 < time1)
+			// so conclusion, we cannot use s.shardInfo.TimerAckLevel as reliable time source
+			// we cannot use time.Now() as reliable source, neither, since different host can acruire
+			// this shard and there can be time difference.
+			// so we must use the max(time.Now(), s.shardInfo.TimerAckLevel) + tolerance
+
+			s.logger.Warnf("%v: New timer generated is less than time limit. timestamp: %v, ackLevel: %v",
 				time.Now(), ts, s.shardInfo.TimerAckLevel)
-			newTimestamp := s.shardInfo.TimerAckLevel
-			persistence.SetVisibilityTSFrom(task, newTimestamp.Add(time.Second))
+			persistence.SetVisibilityTSFrom(task, timeLimit)
 		}
 
 		seqNum, err := s.getNextTransferTaskIDLocked()
