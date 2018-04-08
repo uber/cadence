@@ -27,6 +27,7 @@ import (
 	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 )
@@ -36,6 +37,7 @@ type (
 		shard                   ShardContext
 		historyService          *historyEngineImpl
 		cache                   *historyCache
+		timerTaskFilter         timerTaskFilter
 		logger                  bark.Logger
 		metricsClient           metrics.Client
 		clusterName             string
@@ -49,11 +51,31 @@ func newTimerQueueStandbyProcessor(shard ShardContext, historyService *historyEn
 	timeNow := func() time.Time {
 		return shard.GetCurrentTime(clusterName)
 	}
+	logger = logger.WithFields(bark.Fields{
+		logging.TagWorkflowCluster: clusterName,
+	})
+	timerTaskFilter := func(timer *persistence.TimerTaskInfo) (bool, error) {
+		domainEntry, err := shard.GetDomainCache().GetDomainByID(timer.DomainID)
+		if err != nil {
+			return false, err
+		}
+		if !domainEntry.GetIsGlobalDomain() {
+			// non global domain, timer task does not belong here
+			return false, nil
+		} else if domainEntry.GetIsGlobalDomain() &&
+			domainEntry.GetReplicationConfig().ActiveClusterName != clusterName {
+			// timer task does not belong here
+			return false, nil
+		}
+		return true, nil
+	}
+
 	timerQueueAckMgr := newTimerQueueAckMgr(shard, historyService.metricsClient, clusterName, logger)
 	processor := &timerQueueStandbyProcessorImpl{
 		shard:                   shard,
 		historyService:          historyService,
 		cache:                   historyService.historyCache,
+		timerTaskFilter:         timerTaskFilter,
 		logger:                  logger,
 		metricsClient:           historyService.metricsClient,
 		clusterName:             clusterName,
@@ -83,7 +105,7 @@ func (t *timerQueueStandbyProcessorImpl) getTimerGate() TimerGate {
 
 func (t *timerQueueStandbyProcessorImpl) setCurrentTime(currentTime time.Time) {
 	t.timerGate.SetCurrentTime(currentTime)
-	t.timerQueueProcessorBase.retryTimerTasks()
+	t.timerQueueProcessorBase.retryTasks()
 }
 
 // NotifyNewTimers - Notify the processor about the new standby timer events arrival.
@@ -93,12 +115,19 @@ func (t *timerQueueStandbyProcessorImpl) notifyNewTimers(timerTasks []persistenc
 }
 
 func (t *timerQueueStandbyProcessorImpl) process(timerTask *persistence.TimerTaskInfo) error {
+	ok, err := t.timerTaskFilter(timerTask)
+	if err != nil {
+		return err
+	} else if !ok {
+		t.timerQueueAckMgr.completeTimerTask(timerTask)
+		return nil
+	}
+
 	taskID := TimerSequenceID{VisibilityTimestamp: timerTask.VisibilityTimestamp, TaskID: timerTask.TaskID}
 	t.logger.Debugf("Processing timer: (%s), for WorkflowID: %v, RunID: %v, Type: %v, TimeoutType: %v, EventID: %v",
 		taskID, timerTask.WorkflowID, timerTask.RunID, t.timerQueueProcessorBase.getTimerTaskType(timerTask.TaskType),
 		workflow.TimeoutType(timerTask.TimeoutType).String(), timerTask.EventID)
 
-	var err error
 	scope := metrics.TimerQueueProcessorScope
 	switch timerTask.TaskType {
 	case persistence.TaskTypeUserTimer:
@@ -132,6 +161,8 @@ func (t *timerQueueStandbyProcessorImpl) process(timerTask *persistence.TimerTas
 		if err != nil {
 			t.metricsClient.IncCounter(scope, metrics.TaskFailures)
 		}
+	} else {
+		t.timerQueueAckMgr.completeTimerTask(timerTask)
 	}
 
 	return err
@@ -166,15 +197,13 @@ func (t *timerQueueStandbyProcessorImpl) processExpiredUserTimer(timerTask *pers
 				//
 				// we do not need to notity new timer to base, since if there is no new event being replicated
 				// checking again if the timer can be completed is meaningless
-				t.timerQueueAckMgr.retryTimerTask(timerTask)
-				return nil
+				return newTaskRetryError()
 			}
 			// since the user timer are already sorted, so if there is one timer which will not expired
 			// all user timer after this timer will not expired
 			break ExpireUserTimers
 		}
 		// if there is no user timer expired, then we are good
-		t.timerQueueAckMgr.completeTimerTask(timerTask)
 		return nil
 	})
 }
@@ -208,15 +237,13 @@ func (t *timerQueueStandbyProcessorImpl) processActivityTimeout(timerTask *persi
 				//
 				// we do not need to notity new timer to base, since if there is no new event being replicated
 				// checking again if the timer can be completed is meaningless
-				t.timerQueueAckMgr.retryTimerTask(timerTask)
-				return nil
+				return newTaskRetryError()
 			}
 			// since the activity timer are already sorted, so if there is one timer which will not expired
 			// all activity timer after this timer will not expired
 			break ExpireActivityTimers
 		}
 		// if there is no user timer expired, then we are good
-		t.timerQueueAckMgr.completeTimerTask(timerTask)
 		return nil
 	})
 }
@@ -235,10 +262,8 @@ func (t *timerQueueStandbyProcessorImpl) processDecisionTimeout(timerTask *persi
 			//
 			// we do not need to notity new timer to base, since if there is no new event being replicated
 			// checking again if the timer can be completed is meaningless
-			t.timerQueueAckMgr.retryTimerTask(timerTask)
-			return nil
+			return newTaskRetryError()
 		}
-		t.timerQueueAckMgr.completeTimerTask(timerTask)
 		return nil
 	})
 }
@@ -251,8 +276,7 @@ func (t *timerQueueStandbyProcessorImpl) processWorkflowTimeout(timerTask *persi
 	return t.processTimer(timerTask, func(msBuilder *mutableStateBuilder) error {
 		// we do not need to notity new timer to base, since if there is no new event being replicated
 		// checking again if the timer can be completed is meaningless
-		t.timerQueueAckMgr.retryTimerTask(timerTask)
-		return nil
+		return newTaskRetryError()
 	})
 }
 
@@ -282,7 +306,6 @@ Process_Loop:
 
 		if !msBuilder.isWorkflowExecutionRunning() {
 			// workflow already finished, no need to process the timer
-			t.timerQueueAckMgr.completeTimerTask(timerTask)
 			return nil
 		}
 

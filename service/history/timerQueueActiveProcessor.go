@@ -26,6 +26,7 @@ import (
 
 	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 )
@@ -35,8 +36,10 @@ type (
 		shard                   ShardContext
 		historyService          *historyEngineImpl
 		cache                   *historyCache
+		timerTaskFilter         timerTaskFilter
 		logger                  bark.Logger
 		metricsClient           metrics.Client
+		currentClusterName      string
 		timerGate               LocalTimerGate
 		timerQueueProcessorBase *timerQueueProcessorBase
 		timerQueueAckMgr        timerQueueAckMgr
@@ -48,13 +51,36 @@ func newTimerQueueActiveProcessor(shard ShardContext, historyService *historyEng
 	timeNow := func() time.Time {
 		return shard.GetCurrentTime(clusterName)
 	}
+	logger = logger.WithFields(bark.Fields{
+		logging.TagWorkflowCluster: clusterName,
+	})
+	timerTaskFilter := func(timer *persistence.TimerTaskInfo) (bool, error) {
+		domainEntry, err := shard.GetDomainCache().GetDomainByID(timer.DomainID)
+		if err != nil {
+			// it is possible that domain is deleted,
+			// we should treat that domain being active
+			if _, ok := err.(*workflow.EntityNotExistsError); !ok {
+				return false, err
+			}
+			return true, nil
+		}
+		if domainEntry.GetIsGlobalDomain() &&
+			clusterName != domainEntry.GetReplicationConfig().ActiveClusterName {
+			// timer task does not belong to cluster name
+			return false, nil
+		}
+		return true, nil
+	}
+
 	timerQueueAckMgr := newTimerQueueAckMgr(shard, historyService.metricsClient, clusterName, logger)
 	processor := &timerQueueActiveProcessorImpl{
 		shard:                   shard,
 		historyService:          historyService,
 		cache:                   historyService.historyCache,
+		timerTaskFilter:         timerTaskFilter,
 		logger:                  logger,
 		metricsClient:           historyService.metricsClient,
+		currentClusterName:      clusterName,
 		timerGate:               NewLocalTimerGate(),
 		timerQueueProcessorBase: newTimerQueueProcessorBase(shard, historyService, timerQueueAckMgr, timeNow, logger),
 		timerQueueAckMgr:        timerQueueAckMgr,
@@ -69,11 +95,22 @@ func newTimerQueueFailoverProcessor(shard ShardContext, historyService *historyE
 		// should use current cluster's time when doing domain failover
 		return shard.GetCurrentTime(clusterName)
 	}
-	timerQueueAckMgr := newTimerQueueFailoverAckMgr(shard, historyService.metricsClient, domainID, standbyClusterName, logger)
+	logger = logger.WithFields(bark.Fields{
+		logging.TagWorkflowCluster: clusterName,
+	})
+	timerTaskFilter := func(timer *persistence.TimerTaskInfo) (bool, error) {
+		if timer.DomainID == domainID {
+			return true, nil
+		}
+		return false, nil
+	}
+
+	timerQueueAckMgr := newTimerQueueFailoverAckMgr(shard, historyService.metricsClient, standbyClusterName, logger)
 	processor := &timerQueueActiveProcessorImpl{
 		shard:                   shard,
 		historyService:          historyService,
 		cache:                   historyService.historyCache,
+		timerTaskFilter:         timerTaskFilter,
 		logger:                  logger,
 		metricsClient:           historyService.metricsClient,
 		timerGate:               NewLocalTimerGate(),
@@ -108,12 +145,19 @@ func (t *timerQueueActiveProcessorImpl) notifyNewTimers(timerTasks []persistence
 }
 
 func (t *timerQueueActiveProcessorImpl) process(timerTask *persistence.TimerTaskInfo) error {
+	ok, err := t.timerTaskFilter(timerTask)
+	if err != nil {
+		return err
+	} else if !ok {
+		t.timerQueueAckMgr.completeTimerTask(timerTask)
+		return nil
+	}
+
 	taskID := TimerSequenceID{VisibilityTimestamp: timerTask.VisibilityTimestamp, TaskID: timerTask.TaskID}
 	t.logger.Debugf("Processing timer: (%s), for WorkflowID: %v, RunID: %v, Type: %v, TimeoutType: %v, EventID: %v",
 		taskID, timerTask.WorkflowID, timerTask.RunID, t.timerQueueProcessorBase.getTimerTaskType(timerTask.TaskType),
 		workflow.TimeoutType(timerTask.TimeoutType).String(), timerTask.EventID)
 
-	var err error
 	scope := metrics.TimerQueueProcessorScope
 	switch timerTask.TaskType {
 	case persistence.TaskTypeUserTimer:

@@ -203,8 +203,6 @@ func (s *timerQueueProcessor2Suite) TestTimerUpdateTimesOut() {
 	s.mockExecutionMgr.On("GetTimerIndexTasks", mock.Anything).Return(
 		&persistence.GetTimerIndexTasksResponse{Timers: []*persistence.TimerTaskInfo{}}, nil)
 
-	s.mockExecutionMgr.On("CompleteTimerTask", mock.Anything).Return(nil).Once()
-
 	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(errors.New("FAILED")).Once()
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false).Once()
@@ -269,7 +267,6 @@ func (s *timerQueueProcessor2Suite) TestWorkflowTimeout() {
 	wfResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(wfResponse, nil).Once()
 
-	s.mockExecutionMgr.On("CompleteTimerTask", mock.Anything).Return(nil).Once()
 	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(nil).Run(func(arguments mock.Arguments) {
 		// Done.

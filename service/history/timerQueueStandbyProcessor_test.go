@@ -93,9 +93,10 @@ func (s *timerQueueStandbyProcessorSuite) SetupTest() {
 	// ack manager will use the domain information
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(&persistence.GetDomainResponse{
 		// only thing used is the replication config
-		Config: &persistence.DomainConfig{Retention: 1},
+		Config:         &persistence.DomainConfig{Retention: 1},
+		IsGlobalDomain: true,
 		ReplicationConfig: &persistence.DomainReplicationConfig{
-			ActiveClusterName: cluster.TestCurrentClusterName,
+			ActiveClusterName: cluster.TestAlternativeClusterName,
 			// Clusters attr is not used.
 		},
 	}, nil).Once()
@@ -132,11 +133,8 @@ func (s *timerQueueStandbyProcessorSuite) SetupTest() {
 		hSerializerFactory: persistence.NewHistorySerializerFactory(),
 		metricsClient:      s.mockShard.GetMetricsClient(),
 	}
-	// // this is used by shard context, not relevent to this test, so we do not care how many times "GetCurrentClusterName" os called
-	// s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
-	// s.mockClusterMetadata.On("GetAllClusterFailoverVersions").Return(cluster.TestAllClusterFailoverVersions)
 	s.mockHistoryEngine = h
-
+	s.clusterName = cluster.TestAlternativeClusterName
 	s.timerQueueStandbyProcessor = newTimerQueueStandbyProcessor(s.mockShard, h, s.clusterName, s.logger)
 	s.mocktimerQueueAckMgr = &MockTimerQueueAckMgr{}
 	s.timerQueueStandbyProcessor.timerQueueAckMgr = s.mocktimerQueueAckMgr
@@ -149,6 +147,7 @@ func (s *timerQueueStandbyProcessorSuite) TearDownTest() {
 	s.mockVisibilityMgr.AssertExpectations(s.T())
 	s.mockClusterMetadata.AssertExpectations(s.T())
 	s.mockProducer.AssertExpectations(s.T())
+	s.mocktimerQueueAckMgr.AssertExpectations(s.T())
 }
 
 func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Pending() {
@@ -197,9 +196,10 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Pending() 
 
 	persistenceMutableState := createMutableState(msBuilder)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
-	s.mocktimerQueueAckMgr.On("retryTimerTask", timerTask).Return(nil).Once()
 
-	s.timerQueueStandbyProcessor.process(timerTask)
+	err := s.timerQueueStandbyProcessor.process(timerTask)
+	_, ok := err.(*taskRetryError)
+	s.True(ok)
 }
 
 func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Success() {
@@ -252,7 +252,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Success() 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil).Once()
 	s.mocktimerQueueAckMgr.On("completeTimerTask", timerTask).Return(nil).Once()
 
-	s.timerQueueStandbyProcessor.process(timerTask)
+	s.Nil(s.timerQueueStandbyProcessor.process(timerTask))
 }
 
 func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Multiple() {
@@ -311,7 +311,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Multiple()
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil).Once()
 	s.mocktimerQueueAckMgr.On("completeTimerTask", timerTask).Return(nil).Once()
 
-	s.timerQueueStandbyProcessor.process(timerTask)
+	s.Nil(s.timerQueueStandbyProcessor.process(timerTask))
 }
 
 func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Pending() {
@@ -363,9 +363,10 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Pending() {
 
 	persistenceMutableState := createMutableState(msBuilder)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil).Once()
-	s.mocktimerQueueAckMgr.On("retryTimerTask", timerTask).Return(nil).Once()
 
-	s.timerQueueStandbyProcessor.process(timerTask)
+	err := s.timerQueueStandbyProcessor.process(timerTask)
+	_, ok := err.(*taskRetryError)
+	s.True(ok)
 }
 
 func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Success() {
@@ -424,7 +425,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Success() {
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil).Once()
 	s.mocktimerQueueAckMgr.On("completeTimerTask", timerTask).Return(nil).Once()
 
-	s.timerQueueStandbyProcessor.process(timerTask)
+	s.Nil(s.timerQueueStandbyProcessor.process(timerTask))
 }
 
 func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Multiple() {
@@ -490,7 +491,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Multiple() 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil).Once()
 	s.mocktimerQueueAckMgr.On("completeTimerTask", timerTask).Return(nil).Once()
 
-	s.timerQueueStandbyProcessor.process(timerTask)
+	s.Nil(s.timerQueueStandbyProcessor.process(timerTask))
 }
 
 func (s *timerQueueStandbyProcessorSuite) TestProcessDecisionTimeout_Pending() {
@@ -531,9 +532,10 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessDecisionTimeout_Pending() {
 
 	persistenceMutableState := createMutableState(msBuilder)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil).Once()
-	s.mocktimerQueueAckMgr.On("retryTimerTask", timerTask).Return(nil).Once()
 
-	s.timerQueueStandbyProcessor.process(timerTask)
+	err := s.timerQueueStandbyProcessor.process(timerTask)
+	_, ok := err.(*taskRetryError)
+	s.True(ok)
 }
 
 func (s *timerQueueStandbyProcessorSuite) TestProcessDecisionTimeout_Success() {
@@ -578,7 +580,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessDecisionTimeout_Success() {
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil).Once()
 	s.mocktimerQueueAckMgr.On("completeTimerTask", timerTask).Return(nil).Once()
 
-	s.timerQueueStandbyProcessor.process(timerTask)
+	s.Nil(s.timerQueueStandbyProcessor.process(timerTask))
 }
 
 func (s *timerQueueStandbyProcessorSuite) TestProcessWorkflowTimeout_Pending() {
@@ -620,9 +622,10 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessWorkflowTimeout_Pending() {
 
 	persistenceMutableState := createMutableState(msBuilder)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil).Once()
-	s.mocktimerQueueAckMgr.On("retryTimerTask", timerTask).Return(nil).Once()
 
-	s.timerQueueStandbyProcessor.process(timerTask)
+	err := s.timerQueueStandbyProcessor.process(timerTask)
+	_, ok := err.(*taskRetryError)
+	s.True(ok)
 }
 
 func (s *timerQueueStandbyProcessorSuite) TestProcessWorkflowTimeout_Success() {
@@ -667,5 +670,5 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessWorkflowTimeout_Success() {
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil).Once()
 	s.mocktimerQueueAckMgr.On("completeTimerTask", timerTask).Return(nil).Once()
 
-	s.timerQueueStandbyProcessor.process(timerTask)
+	s.Nil(s.timerQueueStandbyProcessor.process(timerTask))
 }
