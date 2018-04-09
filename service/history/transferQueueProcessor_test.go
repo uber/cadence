@@ -44,7 +44,7 @@ type (
 	transferQueueProcessorSuite struct {
 		suite.Suite
 		TestBase
-		processor         *transferQueueProcessorImpl
+		processor         *transferQueueActiveProcessorImpl
 		mockMatching      *mocks.MatchingClient
 		mockHistoryClient *mocks.HistoryClient
 		mockVisibilityMgr *mocks.VisibilityManager
@@ -91,7 +91,7 @@ func (s *transferQueueProcessorSuite) SetupTest() {
 
 	historyCache := newHistoryCache(s.ShardContext, s.logger)
 	h := &historyEngineImpl{
-		currentclusterName: s.ShardContext.GetService().GetClusterMetadata().GetCurrentClusterName(),
+		currentClusterName: s.ShardContext.GetService().GetClusterMetadata().GetCurrentClusterName(),
 		shard:              s.ShardContext,
 		historyMgr:         s.HistoryMgr,
 		historyCache:       historyCache,
@@ -101,10 +101,9 @@ func (s *transferQueueProcessorSuite) SetupTest() {
 		metricsClient:      metrics.NewClient(tally.NoopScope, metrics.History),
 	}
 
-	mockExecutionMgr := &mocks.ExecutionManager{}
-	txProcesser := newTransferQueueProcessor(s.ShardContext, h, s.mockVisibilityMgr, s.mockMatching, s.mockHistoryClient).(*transferQueueProcessorImpl)
-	timerProcessor := newTimerQueueProcessor(s.ShardContext, h, mockExecutionMgr, s.logger)
-	s.processor = txProcesser
+	txProcesser := newTransferQueueProcessor(s.ShardContext, h, s.mockVisibilityMgr, s.mockMatching, s.mockHistoryClient, s.logger)
+	timerProcessor := newTimerQueueProcessor(s.ShardContext, h, s.logger)
+	s.processor = txProcesser.activeTaskProcessor
 	h.txProcessor = txProcesser
 	h.timerProcessor = timerProcessor
 
@@ -130,7 +129,7 @@ workerPump:
 			if task.ScheduleID == firstEventID+1 {
 				s.mockVisibilityMgr.On("RecordWorkflowExecutionStarted", mock.Anything).Once().Return(nil)
 			}
-			s.processor.processWithRetry(task)
+			s.processor.processWithRetry(nil, task)
 		default:
 			break workerPump
 		}
@@ -181,7 +180,7 @@ workerPump:
 			if task.TaskType == persistence.TransferTaskTypeActivityTask {
 				s.mockMatching.On("AddActivityTask", mock.Anything, createAddRequestFromTask(task, timeoutSeconds)).Once().Return(nil)
 			}
-			s.processor.processWithRetry(task)
+			s.processor.processWithRetry(nil, task)
 		default:
 			break workerPump
 		}
@@ -238,7 +237,7 @@ workerPump:
 			} else if task.TaskType == persistence.TransferTaskTypeCloseExecution {
 				s.mockVisibilityMgr.On("RecordWorkflowExecutionClosed", mock.Anything).Once().Return(nil)
 			}
-			s.processor.processWithRetry(task)
+			s.processor.processWithRetry(nil, task)
 		default:
 			break workerPump
 		}
@@ -300,7 +299,7 @@ workerPump:
 				)
 				s.mockVisibilityMgr.On("RecordWorkflowExecutionClosed", mock.Anything).Once().Return(nil)
 			}
-			s.processor.processWithRetry(task)
+			s.processor.processWithRetry(nil, task)
 		default:
 			break workerPump
 		}
@@ -365,7 +364,7 @@ workerPump:
 					task.TargetDomainID, task.TargetWorkflowID, task.TargetRunID)
 				s.mockHistoryClient.On("RequestCancelWorkflowExecution", mock.Anything, mock.Anything).Return(nil).Once()
 			}
-			s.processor.processWithRetry(task)
+			s.processor.processWithRetry(nil, task)
 		default:
 			break workerPump
 		}
@@ -428,7 +427,7 @@ workerPump:
 				s.mockHistoryClient.On("RequestCancelWorkflowExecution", mock.Anything, mock.Anything).
 					Return(&workflow.EntityNotExistsError{}).Once()
 			}
-			s.processor.processWithRetry(task)
+			s.processor.processWithRetry(nil, task)
 		default:
 			break workerPump
 		}
@@ -494,7 +493,7 @@ workerPump:
 				s.mockHistoryClient.On("SignalWorkflowExecution", mock.Anything, mock.Anything).Return(nil).Once()
 				s.mockHistoryClient.On("RemoveSignalMutableState", mock.Anything, mock.Anything).Return(nil).Once()
 			}
-			s.processor.processWithRetry(task)
+			s.processor.processWithRetry(nil, task)
 		default:
 			break workerPump
 		}
@@ -559,7 +558,7 @@ workerPump:
 					task.TargetDomainID, task.TargetWorkflowID, task.TargetRunID)
 				s.mockHistoryClient.On("SignalWorkflowExecution", mock.Anything, mock.Anything).Return(&workflow.EntityNotExistsError{}).Once()
 			}
-			s.processor.processWithRetry(task)
+			s.processor.processWithRetry(nil, task)
 		default:
 			break workerPump
 		}
@@ -586,7 +585,7 @@ workerPump:
 				s.mockMatching.On("AddDecisionTask", mock.Anything, mock.Anything).Once().Return(nil)
 				s.mockVisibilityMgr.On("RecordWorkflowExecutionStarted", mock.Anything).Once().Return(&workflow.EntityNotExistsError{})
 			}
-			s.processor.processWithRetry(task)
+			s.processor.processWithRetry(nil, task)
 		default:
 			break workerPump
 		}
@@ -619,7 +618,7 @@ workerPump:
 					}, nil)
 				s.mockHistoryClient.On("ScheduleDecisionTask", mock.Anything, mock.Anything).Once().Return(nil)
 			}
-			s.processor.processWithRetry(task)
+			s.processor.processWithRetry(nil, task)
 		default:
 			break workerPump
 		}
@@ -653,7 +652,7 @@ workerPump:
 				s.mockHistoryClient.On("ScheduleDecisionTask", mock.Anything, mock.Anything).Once().Return(
 					&workflow.EntityNotExistsError{})
 			}
-			s.processor.processWithRetry(task)
+			s.processor.processWithRetry(nil, task)
 		default:
 			break workerPump
 		}

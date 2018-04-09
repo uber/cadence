@@ -44,6 +44,11 @@ type (
 		isWorkflowRunning bool
 		timestamp         time.Time
 	}
+
+	// error which will be thrown if the timer / transfer task should be
+	// retries due to various of reasons
+	taskRetryError struct{}
+
 	// Engine represents an interface for managing workflow execution history.
 	Engine interface {
 		common.Daemon
@@ -94,15 +99,16 @@ type (
 	}
 
 	processor interface {
-		GetName() string
-		Process(task queueTaskInfo) error
-		ReadTasks(readLevel int64) ([]queueTaskInfo, error)
-		CompleteTask(taskID int64) error
+		process(task queueTaskInfo) error
+		readTasks(readLevel int64) ([]queueTaskInfo, bool, error)
+		completeTask(taskID int64) error
+		updateAckLevel(taskID int64) error
 	}
 
 	transferQueueProcessor interface {
 		common.Daemon
-		NotifyNewTask()
+		NotifyNewTask(clusterName string)
+		SetCurrentTime(clusterName string, currentTime time.Time)
 	}
 
 	timerQueueProcessor interface {
@@ -118,12 +124,11 @@ type (
 	}
 
 	timerQueueAckMgr interface {
-		readRetryTimerTasks() []*persistence.TimerTaskInfo
+		getFinishedChan() <-chan struct{}
 		readTimerTasks() ([]*persistence.TimerTaskInfo, *persistence.TimerTaskInfo, bool, error)
-		retryTimerTask(timerTask *persistence.TimerTaskInfo)
 		completeTimerTask(timerTask *persistence.TimerTaskInfo)
+		getAckLevel() TimerSequenceID
 		updateAckLevel()
-		isProcessNow(time.Time) bool
 	}
 
 	historyEventNotifier interface {
@@ -133,3 +138,12 @@ type (
 		UnwatchHistoryEvent(identifier *workflowIdentifier, subscriberID string) error
 	}
 )
+
+// newTaskRetryError create a error which indicate the task should be retry
+func newTaskRetryError() *taskRetryError {
+	return &taskRetryError{}
+}
+
+func (e *taskRetryError) Error() string {
+	return "passive task should retry due to condition in mutable state is not met."
+}

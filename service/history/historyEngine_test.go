@@ -114,6 +114,8 @@ func (s *engineSuite) SetupTest() {
 	s.mockMetricClient = metrics.NewClient(tally.NoopScope, metrics.History)
 	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
 	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.logger)
+	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
+	s.mockClusterMetadata.On("GetAllClusterFailoverVersions").Return(cluster.TestAllClusterFailoverVersions)
 
 	historyEventNotifier := newHistoryEventNotifier(
 		s.mockMetricClient,
@@ -136,17 +138,16 @@ func (s *engineSuite) SetupTest() {
 		logger:                    s.logger,
 		metricsClient:             metrics.NewClient(tally.NoopScope, metrics.History),
 	}
+	currentClusterName := s.mockService.GetClusterMetadata().GetCurrentClusterName()
 	shardContextWrapper := &shardContextWrapper{
+		currentClusterName:   currentClusterName,
 		ShardContext:         mockShard,
 		historyEventNotifier: historyEventNotifier,
 	}
 
 	historyCache := newHistoryCache(shardContextWrapper, s.logger)
-	// this is used by shard context, not relevent to this test, so we do not care how many times "GetCurrentClusterName" os called
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
-	s.mockClusterMetadata.On("GetAllClusterFailoverVersions").Return(cluster.TestAllClusterFailoverVersions)
 	h := &historyEngineImpl{
-		currentclusterName:   shardContextWrapper.GetService().GetClusterMetadata().GetCurrentClusterName(),
+		currentClusterName:   currentClusterName,
 		shard:                shardContextWrapper,
 		executionManager:     s.mockExecutionMgr,
 		historyMgr:           s.mockHistoryMgr,
@@ -157,8 +158,8 @@ func (s *engineSuite) SetupTest() {
 		hSerializerFactory:   persistence.NewHistorySerializerFactory(),
 		historyEventNotifier: historyEventNotifier,
 	}
-	h.txProcessor = newTransferQueueProcessor(shardContextWrapper, h, s.mockVisibilityMgr, s.mockMatchingClient, s.mockHistoryClient)
-	h.timerProcessor = newTimerQueueProcessor(shardContextWrapper, h, s.mockExecutionMgr, s.logger)
+	h.txProcessor = newTransferQueueProcessor(shardContextWrapper, h, s.mockVisibilityMgr, s.mockMatchingClient, s.mockHistoryClient, s.logger)
+	h.timerProcessor = newTimerQueueProcessor(shardContextWrapper, h, s.logger)
 	h.historyEventNotifier.Start()
 	shardContextWrapper.txProcessor = h.txProcessor
 	s.mockHistoryEngine = h
