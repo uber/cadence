@@ -320,7 +320,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 			LastProcessedEvent:          emptyEventID,
 			TransferTasks:               transferTasks,
 			ReplicationTasks:            replicationTasks,
-			DecisionScheduleID:          decisionScheduleID,
+			DecisionScheduleID:          decisionScheduleID, // TODO add decision version, when doing crodd DC
 			DecisionStartedID:           decisionStartID,
 			DecisionStartToCloseTimeout: decisionTimeout,
 			TimerTasks:                  timerTasks,
@@ -1859,7 +1859,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(signalWithStartRequ
 			NextEventID:                 msBuilder.GetNextEventID(),
 			LastProcessedEvent:          emptyEventID,
 			TransferTasks:               transferTasks,
-			DecisionScheduleID:          decisionScheduleID,
+			DecisionScheduleID:          decisionScheduleID, // TODO add decision version, when doing crodd DC
 			DecisionStartedID:           decisionStartID,
 			DecisionStartToCloseTimeout: decisionTimeout,
 			TimerTasks:                  timerTasks,

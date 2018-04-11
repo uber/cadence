@@ -134,6 +134,7 @@ const (
 		`start_time: ?, ` +
 		`last_updated_time: ?, ` +
 		`create_request_id: ?, ` +
+		`decision_version: ?, ` +
 		`decision_schedule_id: ?, ` +
 		`decision_started_id: ?, ` +
 		`decision_request_id: ?, ` +
@@ -168,7 +169,8 @@ const (
 		`target_child_workflow_only: ?, ` +
 		`task_list: ?, ` +
 		`type: ?, ` +
-		`schedule_id: ?` +
+		`schedule_id: ?, ` +
+		`version: ?` +
 		`}`
 
 	templateReplicationTaskType = `{` +
@@ -192,10 +194,12 @@ const (
 		`type: ?, ` +
 		`timeout_type: ?, ` +
 		`event_id: ?, ` +
-		`schedule_attempt: ?` +
+		`schedule_attempt: ?, ` +
+		`version: ?` +
 		`}`
 
 	templateActivityInfoType = `{` +
+		`version: ?,` +
 		`schedule_id: ?, ` +
 		`scheduled_event: ?, ` +
 		`scheduled_time: ?, ` +
@@ -216,6 +220,7 @@ const (
 		`}`
 
 	templateTimerInfoType = `{` +
+		`version: ?,` +
 		`timer_id: ?, ` +
 		`started_id: ?, ` +
 		`expiry_time: ?, ` +
@@ -223,6 +228,7 @@ const (
 		`}`
 
 	templateChildExecutionInfoType = `{` +
+		`version: ?,` +
 		`initiated_id: ?, ` +
 		`initiated_event: ?, ` +
 		`started_id: ?, ` +
@@ -231,11 +237,13 @@ const (
 		`}`
 
 	templateRequestCancelInfoType = `{` +
+		`version: ?,` +
 		`initiated_id: ?, ` +
 		`cancel_request_id: ? ` +
 		`}`
 
 	templateSignalInfoType = `{` +
+		`version: ?,` +
 		`initiated_id: ?, ` +
 		`signal_request_id: ?, ` +
 		`signal_name: ?, ` +
@@ -1103,6 +1111,7 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *Creat
 			cqlNowTimestamp,
 			cqlNowTimestamp,
 			request.RequestID,
+			request.DecisionVersion,
 			request.DecisionScheduleID,
 			request.DecisionStartedID,
 			"", // Decision Start Request ID
@@ -1152,6 +1161,7 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *Creat
 			cqlNowTimestamp,
 			cqlNowTimestamp,
 			request.RequestID,
+			request.DecisionVersion,
 			request.DecisionScheduleID,
 			request.DecisionStartedID,
 			"", // Decision Start Request ID
@@ -1309,6 +1319,7 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 			executionInfo.StartTimestamp,
 			cqlNowTimestamp,
 			executionInfo.CreateRequestID,
+			executionInfo.DecisionVersion,
 			executionInfo.DecisionScheduleID,
 			executionInfo.DecisionStartedID,
 			executionInfo.DecisionRequestID,
@@ -1359,6 +1370,7 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 			executionInfo.StartTimestamp,
 			cqlNowTimestamp,
 			executionInfo.CreateRequestID,
+			executionInfo.DecisionVersion,
 			executionInfo.DecisionScheduleID,
 			executionInfo.DecisionStartedID,
 			executionInfo.DecisionRequestID,
@@ -2187,6 +2199,7 @@ func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferT
 			taskList,
 			task.GetType(),
 			scheduleID,
+			task.GetVersion(),
 			defaultVisibilityTimestamp,
 			task.GetTaskID())
 	}
@@ -2206,7 +2219,7 @@ func (d *cassandraPersistence) createReplicationTasks(batch *gocql.Batch, replic
 		case ReplicationTaskTypeHistory:
 			firstEventID = task.(*HistoryReplicationTask).FirstEventID
 			nextEventID = task.(*HistoryReplicationTask).NextEventID
-			version = task.(*HistoryReplicationTask).Version
+			version = task.GetVersion()
 			lastReplicationInfo = make(map[string]map[string]interface{})
 			for k, v := range task.(*HistoryReplicationTask).LastReplicationInfo {
 				lastReplicationInfo[k] = createReplicationInfoMap(v)
@@ -2274,6 +2287,7 @@ func (d *cassandraPersistence) createTimerTasks(batch *gocql.Batch, timerTasks [
 			timeoutType,
 			eventID,
 			attempt,
+			task.GetVersion(),
 			ts,
 			task.GetTaskID())
 	}
@@ -2297,6 +2311,7 @@ func (d *cassandraPersistence) updateActivityInfos(batch *gocql.Batch, activityI
 	for _, a := range activityInfos {
 		batch.Query(templateUpdateActivityInfoQuery,
 			a.ScheduleID,
+			a.Version,
 			a.ScheduleID,
 			a.ScheduledEvent,
 			a.ScheduledTime,
@@ -2344,6 +2359,7 @@ func (d *cassandraPersistence) updateTimerInfos(batch *gocql.Batch, timerInfos [
 	for _, a := range timerInfos {
 		batch.Query(templateUpdateTimerInfoQuery,
 			a.TimerID,
+			a.Version,
 			a.TimerID,
 			a.StartedID,
 			a.ExpiryTime,
@@ -2378,6 +2394,7 @@ func (d *cassandraPersistence) updateChildExecutionInfos(batch *gocql.Batch, chi
 	for _, c := range childExecutionInfos {
 		batch.Query(templateUpdateChildExecutionInfoQuery,
 			c.InitiatedID,
+			c.Version,
 			c.InitiatedID,
 			c.InitiatedEvent,
 			c.StartedID,
@@ -2414,6 +2431,7 @@ func (d *cassandraPersistence) updateRequestCancelInfos(batch *gocql.Batch, requ
 	for _, c := range requestCancelInfos {
 		batch.Query(templateUpdateRequestCancelInfoQuery,
 			c.InitiatedID,
+			c.Version,
 			c.InitiatedID,
 			c.CancelRequestID,
 			d.shardID,
@@ -2447,6 +2465,7 @@ func (d *cassandraPersistence) updateSignalInfos(batch *gocql.Batch, signalInfos
 	for _, c := range signalInfos {
 		batch.Query(templateUpdateSignalInfoQuery,
 			c.InitiatedID,
+			c.Version,
 			c.InitiatedID,
 			c.SignalRequestID,
 			c.SignalName,
@@ -2686,6 +2705,8 @@ func createWorkflowExecutionInfo(result map[string]interface{}) *WorkflowExecuti
 			info.LastUpdatedTimestamp = v.(time.Time)
 		case "create_request_id":
 			info.CreateRequestID = v.(gocql.UUID).String()
+		case "decision_version":
+			info.DecisionVersion = v.(int64)
 		case "decision_schedule_id":
 			info.DecisionScheduleID = v.(int64)
 		case "decision_started_id":
@@ -2775,6 +2796,8 @@ func createTransferTaskInfo(result map[string]interface{}) *TransferTaskInfo {
 			info.TaskType = v.(int)
 		case "schedule_id":
 			info.ScheduleID = v.(int64)
+		case "version":
+			info.Version = v.(int64)
 		}
 	}
 
@@ -2817,6 +2840,8 @@ func createActivityInfo(result map[string]interface{}) *ActivityInfo {
 	info := &ActivityInfo{}
 	for k, v := range result {
 		switch k {
+		case "version":
+			info.Version = v.(int64)
 		case "schedule_id":
 			info.ScheduleID = v.(int64)
 		case "scheduled_event":
@@ -2861,6 +2886,8 @@ func createTimerInfo(result map[string]interface{}) *TimerInfo {
 	info := &TimerInfo{}
 	for k, v := range result {
 		switch k {
+		case "version":
+			info.Version = v.(int64)
 		case "timer_id":
 			info.TimerID = v.(string)
 		case "started_id":
@@ -2878,6 +2905,8 @@ func createChildExecutionInfo(result map[string]interface{}) *ChildExecutionInfo
 	info := &ChildExecutionInfo{}
 	for k, v := range result {
 		switch k {
+		case "version":
+			info.Version = v.(int64)
 		case "initiated_id":
 			info.InitiatedID = v.(int64)
 		case "initiated_event":
@@ -2898,6 +2927,8 @@ func createRequestCancelInfo(result map[string]interface{}) *RequestCancelInfo {
 	info := &RequestCancelInfo{}
 	for k, v := range result {
 		switch k {
+		case "version":
+			info.Version = v.(int64)
 		case "initiated_id":
 			info.InitiatedID = v.(int64)
 		case "cancel_request_id":
@@ -2912,6 +2943,8 @@ func createSignalInfo(result map[string]interface{}) *SignalInfo {
 	info := &SignalInfo{}
 	for k, v := range result {
 		switch k {
+		case "version":
+			info.Version = v.(int64)
 		case "initiated_id":
 			info.InitiatedID = v.(int64)
 		case "signal_request_id":
@@ -3005,6 +3038,8 @@ func createTimerTaskInfo(result map[string]interface{}) *TimerTaskInfo {
 			info.EventID = v.(int64)
 		case "schedule_attempt":
 			info.ScheduleAttempt = v.(int64)
+		case "version":
+			info.Version = v.(int64)
 		}
 	}
 
