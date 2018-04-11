@@ -37,7 +37,7 @@ type (
 	// It keeps track of read level when dispatching tasks to processor and maintains a map of outstanding tasks.
 	// Outstanding tasks map uses the task id sequencer as the key, which is used by updateAckLevel to move the ack level
 	// for the shard when all preceding tasks are acknowledged.
-	queueAckMgr struct {
+	queueAckMgrImpl struct {
 		isFailover    bool
 		shard         ShardContext
 		options       *QueueProcessorOptions
@@ -56,9 +56,9 @@ type (
 	}
 )
 
-func newQueueAckMgr(shard ShardContext, options *QueueProcessorOptions, processor processor, ackLevel int64, logger bark.Logger) *queueAckMgr {
+func newQueueAckMgr(shard ShardContext, options *QueueProcessorOptions, processor processor, ackLevel int64, logger bark.Logger) *queueAckMgrImpl {
 
-	return &queueAckMgr{
+	return &queueAckMgrImpl{
 		isFailover:       false,
 		shard:            shard,
 		options:          options,
@@ -73,9 +73,9 @@ func newQueueAckMgr(shard ShardContext, options *QueueProcessorOptions, processo
 	}
 }
 
-func newQueueFailoverAckMgr(shard ShardContext, options *QueueProcessorOptions, processor processor, ackLevel int64, logger bark.Logger) *queueAckMgr {
+func newQueueFailoverAckMgr(shard ShardContext, options *QueueProcessorOptions, processor processor, ackLevel int64, logger bark.Logger) *queueAckMgrImpl {
 
-	return &queueAckMgr{
+	return &queueAckMgrImpl{
 		isFailover:       true,
 		shard:            shard,
 		options:          options,
@@ -90,7 +90,7 @@ func newQueueFailoverAckMgr(shard ShardContext, options *QueueProcessorOptions, 
 	}
 }
 
-func (a *queueAckMgr) readQueueTasks() ([]queueTaskInfo, bool, error) {
+func (a *queueAckMgrImpl) readQueueTasks() ([]queueTaskInfo, bool, error) {
 	a.RLock()
 	readLevel := a.readLevel
 	a.RUnlock()
@@ -119,7 +119,7 @@ TaskFilterLoop:
 		_, isLoaded := a.outstandingTasks[task.GetTaskID()]
 		if isLoaded {
 			// timer already loaded
-			a.logger.Infof("Skipping transfer task: %v.", task)
+			a.logger.Debugf("Skipping transfer task: %v.", task)
 			continue TaskFilterLoop
 		}
 
@@ -135,7 +135,7 @@ TaskFilterLoop:
 	return tasks, morePage, nil
 }
 
-func (a *queueAckMgr) completeTask(taskID int64) {
+func (a *queueAckMgrImpl) completeTask(taskID int64) {
 	a.Lock()
 	if _, ok := a.outstandingTasks[taskID]; ok {
 		a.outstandingTasks[taskID] = true
@@ -143,17 +143,17 @@ func (a *queueAckMgr) completeTask(taskID int64) {
 	a.Unlock()
 }
 
-func (a *queueAckMgr) getAckLevel() int64 {
+func (a *queueAckMgrImpl) getAckLevel() int64 {
 	a.Lock()
 	defer a.Unlock()
 	return a.ackLevel
 }
 
-func (a *queueAckMgr) getFinishedChan() <-chan struct{} {
+func (a *queueAckMgrImpl) getFinishedChan() <-chan struct{} {
 	return a.finishedChan
 }
 
-func (a *queueAckMgr) updateAckLevel() {
+func (a *queueAckMgrImpl) updateAckLevel() {
 	a.metricsClient.IncCounter(a.options.MetricScope, metrics.AckLevelUpdateCounter)
 
 	a.Lock()

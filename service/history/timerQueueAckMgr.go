@@ -183,7 +183,7 @@ TaskFilterLoop:
 		_, isLoaded := outstandingTasks[timerSequenceID]
 		if isLoaded {
 			// timer already loaded
-			t.logger.Infof("Skipping task: %v. WorkflowID: %v, RunID: %v, Type: %v",
+			t.logger.Debugf("Skipping timer task: %v. WorkflowID: %v, RunID: %v, Type: %v",
 				timerSequenceID.String(), task.WorkflowID, task.RunID, task.TaskType)
 			continue TaskFilterLoop
 		}

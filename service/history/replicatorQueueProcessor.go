@@ -44,7 +44,7 @@ type (
 		options            *QueueProcessorOptions
 		logger             bark.Logger
 		*queueProcessorBase
-		*queueAckMgr
+		queueAckMgr
 	}
 )
 

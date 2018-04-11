@@ -42,7 +42,7 @@ type (
 		logger             bark.Logger
 		metricsClient      metrics.Client
 		*queueProcessorBase
-		*queueAckMgr
+		queueAckMgr
 	}
 )
 
@@ -190,7 +190,8 @@ func (t *transferQueueStandbyProcessorImpl) processActivityTask(transferTask *pe
 	sw := t.metricsClient.StartTimer(metrics.TransferTaskActivityScope, metrics.TaskLatency)
 	defer sw.Stop()
 
-	return t.processTransfer(transferTask, func(msBuilder *mutableStateBuilder) error {
+	processTaskIfClosed := false
+	return t.processTransfer(processTaskIfClosed, transferTask, func(msBuilder *mutableStateBuilder) error {
 		activityInfo, isPending := msBuilder.GetActivityInfo(transferTask.ScheduleID)
 		if isPending && activityInfo.StartedID == emptyEventID {
 			return newTaskRetryError()
@@ -204,7 +205,8 @@ func (t *transferQueueStandbyProcessorImpl) processDecisionTask(transferTask *pe
 	sw := t.metricsClient.StartTimer(metrics.TransferTaskDecisionScope, metrics.TaskLatency)
 	defer sw.Stop()
 
-	return t.processTransfer(transferTask, func(msBuilder *mutableStateBuilder) error {
+	processTaskIfClosed := false
+	return t.processTransfer(processTaskIfClosed, transferTask, func(msBuilder *mutableStateBuilder) error {
 		decisionInfo, isPending := msBuilder.GetPendingDecision(transferTask.ScheduleID)
 		if isPending && decisionInfo.StartedID == emptyEventID {
 			return newTaskRetryError()
@@ -218,23 +220,38 @@ func (t *transferQueueStandbyProcessorImpl) processCloseExecution(transferTask *
 	sw := t.metricsClient.StartTimer(metrics.TransferTaskCloseExecutionScope, metrics.TaskLatency)
 	defer sw.Stop()
 
-	return t.processTransfer(transferTask, func(msBuilder *mutableStateBuilder) error {
-		// here we actually grab a lock while doing a RPC call to database,
-		// this is OK since this workflow is supposed to be closed (nobody is accessing this workflow)
-		_, err := t.visibilityMgr.GetClosedWorkflowExecution(&persistence.GetClosedWorkflowExecutionRequest{
+	processTaskIfClosed := true
+	return t.processTransfer(processTaskIfClosed, transferTask, func(msBuilder *mutableStateBuilder) error {
+
+		// DO NOT REPLY TO PARENT
+		// since event replication should be done by active cluster
+
+		// Record closing in visibility store
+		retentionSeconds := int64(0)
+		domainEntry, err := t.shard.GetDomainCache().GetDomainByID(transferTask.DomainID)
+		if err != nil {
+			if _, ok := err.(*workflow.EntityNotExistsError); !ok {
+				return err
+			}
+			// it is possible that the domain got deleted. Use default retention.
+		} else {
+			// retention in domain config is in days, convert to seconds
+			retentionSeconds = int64(domainEntry.GetConfig().Retention) * 24 * 60 * 60
+		}
+
+		return t.visibilityMgr.RecordWorkflowExecutionClosed(&persistence.RecordWorkflowExecutionClosedRequest{
 			DomainUUID: transferTask.DomainID,
 			Execution: workflow.WorkflowExecution{
 				WorkflowId: common.StringPtr(transferTask.WorkflowID),
 				RunId:      common.StringPtr(transferTask.RunID),
 			},
+			WorkflowTypeName: msBuilder.executionInfo.WorkflowTypeName,
+			StartTimestamp:   msBuilder.executionInfo.StartTimestamp.UnixNano(),
+			CloseTimestamp:   msBuilder.getLastUpdatedTimestamp(),
+			Status:           getWorkflowExecutionCloseStatus(msBuilder.executionInfo.CloseStatus),
+			HistoryLength:    msBuilder.GetNextEventID(),
+			RetentionSeconds: retentionSeconds,
 		})
-		if err != nil {
-			if _, ok := err.(*workflow.EntityNotExistsError); ok {
-				return newTaskRetryError()
-			}
-		}
-
-		return err
 	})
 }
 
@@ -243,7 +260,8 @@ func (t *transferQueueStandbyProcessorImpl) processCancelExecution(transferTask 
 	sw := t.metricsClient.StartTimer(metrics.TransferTaskCancelExecutionScope, metrics.TaskLatency)
 	defer sw.Stop()
 
-	return t.processTransfer(transferTask, func(msBuilder *mutableStateBuilder) error {
+	processTaskIfClosed := false
+	return t.processTransfer(processTaskIfClosed, transferTask, func(msBuilder *mutableStateBuilder) error {
 		_, isPending := msBuilder.GetRequestCancelInfo(transferTask.ScheduleID)
 		if isPending {
 			return newTaskRetryError()
@@ -257,7 +275,8 @@ func (t *transferQueueStandbyProcessorImpl) processSignalExecution(transferTask 
 	sw := t.metricsClient.StartTimer(metrics.TransferTaskSignalExecutionScope, metrics.TaskLatency)
 	defer sw.Stop()
 
-	return t.processTransfer(transferTask, func(msBuilder *mutableStateBuilder) error {
+	processTaskIfClosed := false
+	return t.processTransfer(processTaskIfClosed, transferTask, func(msBuilder *mutableStateBuilder) error {
 		_, isPending := msBuilder.GetSignalInfo(transferTask.ScheduleID)
 		if isPending {
 			return newTaskRetryError()
@@ -271,7 +290,8 @@ func (t *transferQueueStandbyProcessorImpl) processStartChildExecution(transferT
 	sw := t.metricsClient.StartTimer(metrics.TransferTaskStartChildExecutionScope, metrics.TaskLatency)
 	defer sw.Stop()
 
-	return t.processTransfer(transferTask, func(msBuilder *mutableStateBuilder) error {
+	processTaskIfClosed := false
+	return t.processTransfer(processTaskIfClosed, transferTask, func(msBuilder *mutableStateBuilder) error {
 		childWorkflowInfo, isPending := msBuilder.GetChildExecutionInfo(transferTask.ScheduleID)
 		if isPending && childWorkflowInfo.StartedID == emptyEventID {
 			return newTaskRetryError()
@@ -280,7 +300,7 @@ func (t *transferQueueStandbyProcessorImpl) processStartChildExecution(transferT
 	})
 }
 
-func (t *transferQueueStandbyProcessorImpl) processTransfer(transferTask *persistence.TransferTaskInfo, fn func(*mutableStateBuilder) error) error {
+func (t *transferQueueStandbyProcessorImpl) processTransfer(processTaskIfClosed bool, transferTask *persistence.TransferTaskInfo, fn func(*mutableStateBuilder) error) error {
 	context, release, err := t.cache.getOrCreateWorkflowExecution(t.getDomainIDAndWorkflowExecution(transferTask))
 	if err != nil {
 		return err
@@ -304,7 +324,7 @@ Process_Loop:
 			continue Process_Loop
 		}
 
-		if !msBuilder.isWorkflowExecutionRunning() {
+		if !processTaskIfClosed && !msBuilder.isWorkflowExecutionRunning() {
 			// workflow already finished, no need to process the timer
 			return nil
 		}

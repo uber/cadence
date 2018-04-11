@@ -99,12 +99,7 @@ func (s *timerQueueAckMgrSuite) SetupSuite() {
 }
 
 func (s *timerQueueAckMgrSuite) TearDownSuite() {
-	s.mockExecutionMgr.AssertExpectations(s.T())
-	s.mockShardMgr.AssertExpectations(s.T())
-	s.mockMetadataMgr.AssertExpectations(s.T())
-	s.mockHistoryMgr.AssertExpectations(s.T())
-	s.mockProducer.AssertExpectations(s.T())
-	s.mockClusterMetadata.AssertExpectations(s.T())
+
 }
 
 func (s *timerQueueAckMgrSuite) SetupTest() {
@@ -141,18 +136,23 @@ func (s *timerQueueAckMgrSuite) SetupTest() {
 	}
 
 	// this is used by shard context, not relevent to this test, so we do not care how many times "GetCurrentClusterName" os called
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	s.clusterName = cluster.TestCurrentClusterName
 	s.timerQueueAckMgr = newTimerQueueAckMgr(s.mockShard, s.metricsClient, s.clusterName, s.logger)
 }
 
 func (s *timerQueueAckMgrSuite) TearDownTest() {
-
+	s.mockExecutionMgr.AssertExpectations(s.T())
+	s.mockShardMgr.AssertExpectations(s.T())
+	s.mockMetadataMgr.AssertExpectations(s.T())
+	s.mockHistoryMgr.AssertExpectations(s.T())
+	s.mockProducer.AssertExpectations(s.T())
+	s.mockClusterMetadata.AssertExpectations(s.T())
 }
 
 // Test for normal ack manager
 
 func (s *timerQueueAckMgrSuite) TestIsProcessNow() {
+	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	now := s.mockShard.GetCurrentTime(s.clusterName)
 	timeBefore := now.Add(-10 * time.Second)
 	s.True(s.timerQueueAckMgr.isProcessNow(timeBefore))
@@ -261,6 +261,7 @@ func (s *timerQueueAckMgrSuite) TestReadTimerTasks_NoLookAhead_NoNextPage() {
 	response := &persistence.GetTimerIndexTasksResponse{
 		Timers: []*persistence.TimerTaskInfo{timer},
 	}
+	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	s.mockExecutionMgr.On("GetTimerIndexTasks", request).Return(response, nil).Once()
 	filteredTasks, lookAheadTask, moreTasks, err := s.timerQueueAckMgr.readTimerTasks()
 	s.Nil(err)
@@ -306,6 +307,7 @@ func (s *timerQueueAckMgrSuite) TestReadTimerTasks_NoLookAhead_HasNextPage() {
 	response := &persistence.GetTimerIndexTasksResponse{
 		Timers: []*persistence.TimerTaskInfo{timer},
 	}
+	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	s.mockExecutionMgr.On("GetTimerIndexTasks", request).Return(response, nil).Once()
 	filteredTasks, lookAheadTask, moreTasks, err := s.timerQueueAckMgr.readTimerTasks()
 	s.Nil(err)
@@ -349,6 +351,7 @@ func (s *timerQueueAckMgrSuite) TestReadTimerTasks_HasLookAhead_NoNextPage() {
 	response := &persistence.GetTimerIndexTasksResponse{
 		Timers: []*persistence.TimerTaskInfo{timer},
 	}
+	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	s.mockExecutionMgr.On("GetTimerIndexTasks", request).Return(response, nil).Once()
 	filteredTasks, lookAheadTask, moreTasks, err := s.timerQueueAckMgr.readTimerTasks()
 	s.Nil(err)
@@ -394,6 +397,7 @@ func (s *timerQueueAckMgrSuite) TestReadTimerTasks_HasLookAhead_HasNextPage() {
 	response := &persistence.GetTimerIndexTasksResponse{
 		Timers: []*persistence.TimerTaskInfo{timer},
 	}
+	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	s.mockExecutionMgr.On("GetTimerIndexTasks", request).Return(response, nil).Once()
 	filteredTasks, lookAheadTask, moreTasks, err := s.timerQueueAckMgr.readTimerTasks()
 	s.Nil(err)
@@ -439,6 +443,7 @@ func (s *timerQueueAckMgrSuite) TestReadTimerTasks_AnyTask_ReadLevel() {
 	response := &persistence.GetTimerIndexTasksResponse{
 		Timers: []*persistence.TimerTaskInfo{timer},
 	}
+	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	s.mockExecutionMgr.On("GetTimerIndexTasks", request).Return(response, nil).Once()
 	filteredTasks, lookAheadTask, moreTasks, err := s.timerQueueAckMgr.readTimerTasks()
 	s.Nil(err)
@@ -498,6 +503,7 @@ func (s *timerQueueAckMgrSuite) TestReadCompleteUpdateTimerTasks() {
 	response := &persistence.GetTimerIndexTasksResponse{
 		Timers: []*persistence.TimerTaskInfo{timer1, timer2, timer3},
 	}
+	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	s.mockExecutionMgr.On("GetTimerIndexTasks", request).Return(response, nil).Once()
 	filteredTasks, lookAheadTask, moreTasks, err := s.timerQueueAckMgr.readTimerTasks()
 	s.Nil(err)
@@ -539,12 +545,7 @@ func (s *timerQueueFailoverAckMgrSuite) SetupSuite() {
 }
 
 func (s *timerQueueFailoverAckMgrSuite) TearDownSuite() {
-	s.mockExecutionMgr.AssertExpectations(s.T())
-	s.mockShardMgr.AssertExpectations(s.T())
-	s.mockMetadataMgr.AssertExpectations(s.T())
-	s.mockHistoryMgr.AssertExpectations(s.T())
-	s.mockProducer.AssertExpectations(s.T())
-	s.mockClusterMetadata.AssertExpectations(s.T())
+
 }
 
 func (s *timerQueueFailoverAckMgrSuite) SetupTest() {
@@ -580,14 +581,18 @@ func (s *timerQueueFailoverAckMgrSuite) SetupTest() {
 		metricsClient:             s.metricsClient,
 	}
 
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	s.domainID = "some random domain ID"
 	s.standbyClusterName = cluster.TestAlternativeClusterName
 	s.timerQueueFailoverAckMgr = newTimerQueueFailoverAckMgr(s.mockShard, s.metricsClient, s.standbyClusterName, s.logger)
 }
 
 func (s *timerQueueFailoverAckMgrSuite) TearDownTest() {
-
+	s.mockExecutionMgr.AssertExpectations(s.T())
+	s.mockShardMgr.AssertExpectations(s.T())
+	s.mockMetadataMgr.AssertExpectations(s.T())
+	s.mockHistoryMgr.AssertExpectations(s.T())
+	s.mockProducer.AssertExpectations(s.T())
+	s.mockClusterMetadata.AssertExpectations(s.T())
 }
 
 func (s *timerQueueFailoverAckMgrSuite) TestIsProcessNow() {
@@ -675,7 +680,7 @@ func (s *timerQueueFailoverAckMgrSuite) TestReadTimerTasks_NoNextPage() {
 	response := &persistence.GetTimerIndexTasksResponse{
 		Timers: []*persistence.TimerTaskInfo{},
 	}
-
+	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	s.mockExecutionMgr.On("GetTimerIndexTasks", request).Return(response, nil).Once()
 
 	timers, lookAheadTimer, more, err := s.timerQueueFailoverAckMgr.readTimerTasks()
@@ -751,6 +756,7 @@ func (s *timerQueueFailoverAckMgrSuite) TestReadCompleteUpdateTimerTasks() {
 	response := &persistence.GetTimerIndexTasksResponse{
 		Timers: []*persistence.TimerTaskInfo{timer1, timer3},
 	}
+	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	s.mockExecutionMgr.On("GetTimerIndexTasks", request).Return(response, nil).Once()
 	filteredTasks, lookAheadTask, moreTasks, err := s.timerQueueFailoverAckMgr.readTimerTasks()
 	s.Nil(err)

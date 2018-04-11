@@ -93,6 +93,14 @@ type (
 		NotifyNewTask()
 	}
 
+	queueAckMgr interface {
+		getFinishedChan() <-chan struct{}
+		readQueueTasks() ([]queueTaskInfo, bool, error)
+		completeTask(taskID int64)
+		getAckLevel() int64
+		updateAckLevel()
+	}
+
 	queueTaskInfo interface {
 		GetTaskID() int64
 		GetTaskType() int

@@ -54,7 +54,7 @@ type (
 		logger        bark.Logger
 		metricsClient metrics.Client
 		rateLimiter   common.TokenBucket // Read rate limiter
-		ackMgr        *queueAckMgr
+		ackMgr        queueAckMgr
 
 		// worker coroutines notification
 		workerNotificationChans []chan struct{}
@@ -71,7 +71,7 @@ var (
 	errUnexpectedQueueTask = errors.New("unexpected queue task")
 )
 
-func newQueueProcessorBase(shard ShardContext, options *QueueProcessorOptions, processor processor, queueAckMgr *queueAckMgr, logger bark.Logger) *queueProcessorBase {
+func newQueueProcessorBase(shard ShardContext, options *QueueProcessorOptions, processor processor, queueAckMgr queueAckMgr, logger bark.Logger) *queueProcessorBase {
 	workerNotificationChans := []chan struct{}{}
 	for index := 0; index < options.WorkerCount; index++ {
 		workerNotificationChans = append(workerNotificationChans, make(chan struct{}, 1))
@@ -156,7 +156,7 @@ processorPumpLoop:
 			p.processBatch(tasksCh)
 		case <-pollTimer.C:
 			p.processBatch(tasksCh)
-			pollTimer = time.NewTimer(p.options.MaxPollInterval)
+			pollTimer.Reset(p.options.MaxPollInterval)
 		case <-updateAckTimer.C:
 			p.ackMgr.updateAckLevel()
 			updateAckTimer = time.NewTimer(p.options.UpdateAckInterval)

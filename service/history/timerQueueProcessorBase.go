@@ -243,6 +243,7 @@ func (t *timerQueueProcessorBase) notifyNewTimers(timerTasks []persistence.Task,
 func (t *timerQueueProcessorBase) internalProcessor() error {
 	timerGate := t.timerProcessor.getTimerGate()
 	pollTimer := time.NewTimer(t.config.TimerProcessorMaxPollInterval)
+	defer pollTimer.Stop()
 
 	updateAckChan := time.NewTicker(t.shard.GetConfig().TimerProcessorUpdateAckInterval).C
 	var nextKeyTask *persistence.TimerTaskInfo
@@ -274,7 +275,7 @@ continueProcessor:
 
 			case <-pollTimer.C:
 				// forced timer scan
-				pollTimer = time.NewTimer(t.config.TimerProcessorMaxPollInterval)
+				pollTimer.Reset(t.config.TimerProcessorMaxPollInterval)
 
 			case <-updateAckChan:
 				t.timerQueueAckMgr.updateAckLevel()

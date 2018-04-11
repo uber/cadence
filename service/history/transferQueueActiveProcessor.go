@@ -59,7 +59,7 @@ type (
 		metricsClient      metrics.Client
 		maxReadAckLevel    maxReadAckLevel
 		*queueProcessorBase
-		*queueAckMgr
+		queueAckMgr
 	}
 )
 
