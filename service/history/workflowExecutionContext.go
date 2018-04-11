@@ -196,6 +196,15 @@ func (c *workflowExecutionContext) updateHelper(builder *historyBuilder, transfe
 	}
 
 	continueAsNew := updates.continueAsNew
+	if continueAsNew != nil && createReplicationTask {
+		currentVersion := c.msBuilder.replicationState.CurrentVersion
+		continueAsNew.ReplicationState = &persistence.ReplicationState{
+			CurrentVersion:   currentVersion,
+			StartVersion:     currentVersion,
+			LastWriteVersion: currentVersion,
+			LastWriteEventID: firstEventID + 1,
+		}
+	}
 	finishExecution := false
 	var finishExecutionTTL int32
 	if c.msBuilder.executionInfo.State == persistence.WorkflowStateCompleted {

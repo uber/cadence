@@ -813,7 +813,7 @@ func (e *mutableStateBuilder) getHistoryEvent(serializedEvent []byte) (*workflow
 }
 
 func (e *mutableStateBuilder) AddWorkflowExecutionStartedEventForContinueAsNew(domainID, domainName string,
-	parentDomainID *string, execution workflow.WorkflowExecution, previousExecutionState *mutableStateBuilder,
+	parentExecutionInfo *h.ParentExecutionInfo, execution workflow.WorkflowExecution, previousExecutionState *mutableStateBuilder,
 	attributes *workflow.ContinueAsNewWorkflowExecutionDecisionAttributes) *workflow.HistoryEvent {
 	taskList := previousExecutionState.executionInfo.TaskList
 	if attributes.TaskList != nil {
@@ -847,8 +847,14 @@ func (e *mutableStateBuilder) AddWorkflowExecutionStartedEventForContinueAsNew(d
 	}
 
 	req := &h.StartWorkflowExecutionRequest{
-		DomainUUID:   common.StringPtr(domainID),
-		StartRequest: createRequest,
+		DomainUUID:          common.StringPtr(domainID),
+		StartRequest:        createRequest,
+		ParentExecutionInfo: parentExecutionInfo,
+	}
+
+	var parentDomainID *string
+	if parentExecutionInfo != nil {
+		parentDomainID = parentExecutionInfo.DomainUUID
 	}
 
 	event := e.hBuilder.AddWorkflowExecutionStartedEvent(req, &previousExecutionState.executionInfo.RunID)
@@ -1748,7 +1754,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionSignaled(
 }
 
 func (e *mutableStateBuilder) AddContinueAsNewEvent(decisionCompletedEventID int64, domainID, domainName, newRunID string,
-	attributes *workflow.ContinueAsNewWorkflowExecutionDecisionAttributes) (*workflow.HistoryEvent, *mutableStateBuilder,
+	parentDomainName string, attributes *workflow.ContinueAsNewWorkflowExecutionDecisionAttributes) (*workflow.HistoryEvent, *mutableStateBuilder,
 	error) {
 	if e.hasPendingTasks() || e.HasPendingDecisionTask() {
 		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionContinueAsNew, e.GetNextEventID(), fmt.Sprintf(
@@ -1761,11 +1767,24 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(decisionCompletedEventID int
 		RunId:      common.StringPtr(newRunID),
 	}
 
+	var parentInfo *h.ParentExecutionInfo
+	if e.hasParentExecution() {
+		parentInfo = &h.ParentExecutionInfo{
+			DomainUUID: common.StringPtr(e.executionInfo.ParentDomainID),
+			Domain:     common.StringPtr(domainName),
+			Execution: &workflow.WorkflowExecution{
+				WorkflowId: common.StringPtr(e.executionInfo.ParentWorkflowID),
+				RunId:      common.StringPtr(e.executionInfo.ParentRunID),
+			},
+			InitiatedId: common.Int64Ptr(e.executionInfo.InitiatedID),
+		}
+	}
+
 	continueAsNewEvent := e.hBuilder.AddContinuedAsNewEvent(decisionCompletedEventID, newRunID, attributes)
 
 	newStateBuilder := newMutableStateBuilder(e.config, e.logger)
 	startedEvent := newStateBuilder.AddWorkflowExecutionStartedEventForContinueAsNew(domainID, domainName,
-		&e.executionInfo.ParentDomainID, newExecution, e, attributes)
+		parentInfo, newExecution, e, attributes)
 	if startedEvent == nil {
 		return nil, nil, &workflow.InternalServiceError{Message: "Failed to add workflow execution started event."}
 	}
@@ -1774,66 +1793,42 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(decisionCompletedEventID int
 		return nil, nil, &workflow.InternalServiceError{Message: "Failed to add decision started event."}
 	}
 
-	e.ReplicateWorkflowExecutionContinuedAsNewEvent(domainID, domainName, continueAsNewEvent,
-		startedEvent, di.ScheduleID, di.Tasklist, di.DecisionTimeout)
+	e.ReplicateWorkflowExecutionContinuedAsNewEvent(domainID, domainName, continueAsNewEvent, startedEvent, di,
+		newStateBuilder)
 
 	return continueAsNewEvent, newStateBuilder, nil
 }
 
 func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(domainID, domainName string,
-	continueAsNewEvent *workflow.HistoryEvent, startedEvent *workflow.HistoryEvent, dtEventID int64, dtTaskList string,
-	dtTimeout int32) *mutableStateBuilder {
+	continueAsNewEvent *workflow.HistoryEvent, startedEvent *workflow.HistoryEvent, di *decisionInfo,
+	newStateBuilder *mutableStateBuilder) {
+	e.logger.Warnf("DomainID: %v", domainID)
 	continueAsNewAttributes := continueAsNewEvent.WorkflowExecutionContinuedAsNewEventAttributes
 	startedAttributes := startedEvent.WorkflowExecutionStartedEventAttributes
+
 	newRunID := continueAsNewAttributes.GetNewExecutionRunId()
+	prevRunID := startedAttributes.GetContinuedExecutionRunId()
 	newExecution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr(e.executionInfo.WorkflowID),
 		RunId:      common.StringPtr(newRunID),
 	}
 
-	prevRunID := startedAttributes.GetContinuedExecutionRunId()
 	e.executionInfo.State = persistence.WorkflowStateCompleted
 	e.executionInfo.CloseStatus = persistence.WorkflowCloseStatusContinuedAsNew
-
-	newStateBuilder := newMutableStateBuilder(e.config, e.logger)
-	newStateBuilder.ReplicateWorkflowExecutionStartedEvent(domainID, nil, newExecution, uuid.New(), startedAttributes)
-	di := newStateBuilder.ReplicateDecisionTaskScheduledEvent(dtEventID, dtTaskList, dtTimeout)
-
-	nextEventID := dtEventID + 1
-	newStateBuilder.executionInfo.NextEventID = nextEventID
-	newStateBuilder.executionInfo.LastFirstEventID = startedEvent.GetEventId()
 
 	parentDomainID := ""
 	var parentExecution *workflow.WorkflowExecution
 	initiatedID := emptyEventID
-	if e.hasParentExecution() {
-		parentDomainID = e.executionInfo.ParentDomainID
+	if newStateBuilder.hasParentExecution() {
+		parentDomainID = newStateBuilder.executionInfo.ParentDomainID
 		parentExecution = &workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(e.executionInfo.ParentWorkflowID),
-			RunId:      common.StringPtr(e.executionInfo.ParentRunID),
+			WorkflowId: common.StringPtr(newStateBuilder.executionInfo.ParentWorkflowID),
+			RunId:      common.StringPtr(newStateBuilder.executionInfo.ParentRunID),
 		}
-		initiatedID = e.executionInfo.InitiatedID
+		initiatedID = newStateBuilder.executionInfo.InitiatedID
 	}
 
-	var replicationState *persistence.ReplicationState
-	var replicationTasks []persistence.Task
-	if e.replicationState != nil {
-		failoverVersion := e.replicationState.CurrentVersion
-		replicationState = &persistence.ReplicationState{
-			CurrentVersion:   failoverVersion,
-			StartVersion:     failoverVersion,
-			LastWriteVersion: failoverVersion,
-			LastWriteEventID: di.ScheduleID,
-		}
-
-		replicationTask := &persistence.HistoryReplicationTask{
-			FirstEventID:        firstEventID,
-			NextEventID:         newStateBuilder.GetNextEventID(),
-			Version:             failoverVersion,
-			LastReplicationInfo: nil,
-		}
-		replicationTasks = append(replicationTasks, replicationTask)
-	}
+	e.logger.Warnf("Parent Execution: %v", parentExecution)
 
 	e.continueAsNew = &persistence.CreateWorkflowExecutionRequest{
 		RequestID:            uuid.New(),
@@ -1859,11 +1854,9 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(doma
 		DecisionStartToCloseTimeout: di.DecisionTimeout,
 		ContinueAsNew:               true,
 		PreviousRunID:               prevRunID,
-		ReplicationState:            replicationState,
-		ReplicationTasks:            replicationTasks,
 	}
 
-	return newStateBuilder
+	//e.logger.Warnf("ContinueAsNewRequest: %v", e.continueAsNew)
 }
 
 func (e *mutableStateBuilder) AddStartChildWorkflowExecutionInitiatedEvent(decisionCompletedEventID int64,

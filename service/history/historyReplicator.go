@@ -27,6 +27,7 @@ import (
 	"github.com/uber-common/bark"
 	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/persistence"
@@ -94,8 +95,6 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 	decisionStartID := emptyEventID
 	decisionTimeout := int32(0)
 	var requestID string
-	// TODO: Add handling for following events:
-	// WorkflowExecutionContinuedAsNew,
 	for _, event := range request.History.Events {
 		lastEvent = event
 		switch event.GetEventType() {
@@ -254,6 +253,57 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 
 		case shared.EventTypeWorkflowExecutionTerminated:
 			msBuilder.ReplicateWorkflowExecutionTerminatedEvent(event)
+
+		case shared.EventTypeWorkflowExecutionContinuedAsNew:
+			newRunHistory := request.NewRunHistory
+			startedEvent := newRunHistory.Events[0]
+			startedAttributes := startedEvent.WorkflowExecutionStartedEventAttributes
+			dtScheduledEvent := newRunHistory.Events[1]
+			domainEntry, err := r.shard.GetDomainCache().GetDomainByID(domainID)
+			if err != nil {
+				return err
+			}
+			domainName := domainEntry.GetInfo().Name
+
+			var parentDomainID *string
+			if startedAttributes.ParentWorkflowDomain != nil {
+				parentDomainEntry, err := r.shard.GetDomainCache().GetDomain(startedAttributes.GetParentWorkflowDomain())
+				if err != nil {
+					return err
+				}
+				parentDomainID = &parentDomainEntry.GetInfo().ID
+			}
+
+			newRunID := event.WorkflowExecutionContinuedAsNewEventAttributes.GetNewExecutionRunId()
+
+			newExecution := shared.WorkflowExecution{
+				WorkflowId: request.WorkflowExecution.WorkflowId,
+				RunId:      common.StringPtr(newRunID),
+			}
+
+			newStateBuilder := newMutableStateBuilder(r.shard.GetConfig(), r.logger)
+			newStateBuilder.ReplicateWorkflowExecutionStartedEvent(domainID, parentDomainID, newExecution, uuid.New(), startedAttributes)
+			di := newStateBuilder.ReplicateDecisionTaskScheduledEvent(dtScheduledEvent.GetEventId(),
+				dtScheduledEvent.DecisionTaskScheduledEventAttributes.TaskList.GetName(),
+				dtScheduledEvent.DecisionTaskScheduledEventAttributes.GetStartToCloseTimeoutSeconds())
+			nextEventID := di.ScheduleID + 1
+			newStateBuilder.ApplyReplicationStateUpdates(request.GetVersion(), di.ScheduleID)
+			newStateBuilder.executionInfo.NextEventID = nextEventID
+			newStateBuilder.executionInfo.LastFirstEventID = startedEvent.GetEventId()
+			newStateBuilder.hBuilder = newHistoryBuilderFromEvents(newRunHistory.Events, r.logger)
+
+			msBuilder.ReplicateWorkflowExecutionContinuedAsNewEvent(domainID, domainName, event, startedEvent, di,
+				newStateBuilder)
+
+			// Generate a transaction ID for appending events to history
+			transactionID, err := r.shard.GetNextTransferTaskID()
+			if err != nil {
+				return err
+			}
+			err = context.continueAsNewWorkflowExecution(nil, newStateBuilder, nil, nil, transactionID)
+			if err != nil {
+				return err
+			}
 
 		}
 	}
