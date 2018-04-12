@@ -852,6 +852,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionStartedEventForContinueAsNew(d
 		ParentExecutionInfo: parentExecutionInfo,
 	}
 
+	// History event only has domainName so domainID has to be passed in explicitly to update the mutable state
 	var parentDomainID *string
 	if parentExecutionInfo != nil {
 		parentDomainID = parentExecutionInfo.DomainUUID
@@ -1767,6 +1768,7 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(decisionCompletedEventID int
 		RunId:      common.StringPtr(newRunID),
 	}
 
+	// Extract ParentExecutionInfo from current run so it can be passed down to the next
 	var parentInfo *h.ParentExecutionInfo
 	if e.hasParentExecution() {
 		parentInfo = &h.ParentExecutionInfo{
@@ -1802,7 +1804,6 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(decisionCompletedEventID int
 func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(domainID, domainName string,
 	continueAsNewEvent *workflow.HistoryEvent, startedEvent *workflow.HistoryEvent, di *decisionInfo,
 	newStateBuilder *mutableStateBuilder) {
-	e.logger.Warnf("DomainID: %v", domainID)
 	continueAsNewAttributes := continueAsNewEvent.WorkflowExecutionContinuedAsNewEventAttributes
 	startedAttributes := startedEvent.WorkflowExecutionStartedEventAttributes
 
@@ -1827,8 +1828,6 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(doma
 		}
 		initiatedID = newStateBuilder.executionInfo.InitiatedID
 	}
-
-	e.logger.Warnf("Parent Execution: %v", parentExecution)
 
 	e.continueAsNew = &persistence.CreateWorkflowExecutionRequest{
 		RequestID:            uuid.New(),
@@ -1855,8 +1854,6 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(doma
 		ContinueAsNew:               true,
 		PreviousRunID:               prevRunID,
 	}
-
-	//e.logger.Warnf("ContinueAsNewRequest: %v", e.continueAsNew)
 }
 
 func (e *mutableStateBuilder) AddStartChildWorkflowExecutionInitiatedEvent(decisionCompletedEventID int64,

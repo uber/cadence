@@ -113,14 +113,17 @@ func (p *replicatorQueueProcessorImpl) processHistoryReplicationTask(task *persi
 		return err
 	}
 
+	// Check if this is replication task for ContinueAsNew event, then retrieve the history for new execution
 	var newRunHistory *shared.History
 	events := history.Events
-	lastEvent := events[len(events)-1]
-	if lastEvent.GetEventType() == shared.EventTypeWorkflowExecutionContinuedAsNew {
-		newRunID := lastEvent.WorkflowExecutionContinuedAsNewEventAttributes.GetNewExecutionRunId()
-		newRunHistory, err = p.getHistory(task.DomainID, task.WorkflowID, newRunID, firstEventID, int64(3))
-		if err != nil {
-			return err
+	if len(events) > 0 {
+		lastEvent := events[len(events)-1]
+		if lastEvent.GetEventType() == shared.EventTypeWorkflowExecutionContinuedAsNew {
+			newRunID := lastEvent.WorkflowExecutionContinuedAsNewEventAttributes.GetNewExecutionRunId()
+			newRunHistory, err = p.getHistory(task.DomainID, task.WorkflowID, newRunID, firstEventID, int64(3))
+			if err != nil {
+				return err
+			}
 		}
 	}
 

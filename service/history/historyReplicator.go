@@ -255,6 +255,7 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 			msBuilder.ReplicateWorkflowExecutionTerminatedEvent(event)
 
 		case shared.EventTypeWorkflowExecutionContinuedAsNew:
+			// ContinuedAsNew event also has history for first 2 events for next run as they are created transactionally
 			newRunHistory := request.NewRunHistory
 			startedEvent := newRunHistory.Events[0]
 			startedAttributes := startedEvent.WorkflowExecutionStartedEventAttributes
@@ -265,6 +266,7 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 			}
 			domainName := domainEntry.GetInfo().Name
 
+			// History event only have the parentDomainName.  Lookup the domain ID from cache
 			var parentDomainID *string
 			if startedAttributes.ParentWorkflowDomain != nil {
 				parentDomainEntry, err := r.shard.GetDomainCache().GetDomain(startedAttributes.GetParentWorkflowDomain())
@@ -281,15 +283,17 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 				RunId:      common.StringPtr(newRunID),
 			}
 
+			// Create mutable state updates for the new run
 			newStateBuilder := newMutableStateBuilder(r.shard.GetConfig(), r.logger)
-			newStateBuilder.ReplicateWorkflowExecutionStartedEvent(domainID, parentDomainID, newExecution, uuid.New(), startedAttributes)
+			newStateBuilder.ReplicateWorkflowExecutionStartedEvent(domainID, parentDomainID, newExecution, uuid.New(),
+				startedAttributes)
 			di := newStateBuilder.ReplicateDecisionTaskScheduledEvent(dtScheduledEvent.GetEventId(),
 				dtScheduledEvent.DecisionTaskScheduledEventAttributes.TaskList.GetName(),
 				dtScheduledEvent.DecisionTaskScheduledEventAttributes.GetStartToCloseTimeoutSeconds())
 			nextEventID := di.ScheduleID + 1
-			newStateBuilder.ApplyReplicationStateUpdates(request.GetVersion(), di.ScheduleID)
 			newStateBuilder.executionInfo.NextEventID = nextEventID
 			newStateBuilder.executionInfo.LastFirstEventID = startedEvent.GetEventId()
+			// Set the history from replication task on the newStateBuilder
 			newStateBuilder.hBuilder = newHistoryBuilderFromEvents(newRunHistory.Events, r.logger)
 
 			msBuilder.ReplicateWorkflowExecutionContinuedAsNewEvent(domainID, domainName, event, startedEvent, di,
@@ -304,7 +308,6 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 			if err != nil {
 				return err
 			}
-
 		}
 	}
 

@@ -1139,6 +1139,7 @@ Update_History_Loop:
 				}
 				domainName := domainEntry.GetInfo().Name
 
+				// Extract parentDomainName so it can be passed down to next run of workflow execution
 				var parentDomainName string
 				if msBuilder.hasParentExecution() {
 					parentDomainID := msBuilder.executionInfo.ParentDomainID
