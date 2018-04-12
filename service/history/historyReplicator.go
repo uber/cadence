@@ -293,6 +293,7 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 			nextEventID := di.ScheduleID + 1
 			newStateBuilder.executionInfo.NextEventID = nextEventID
 			newStateBuilder.executionInfo.LastFirstEventID = startedEvent.GetEventId()
+			newStateBuilder.ApplyReplicationStateUpdates(request.GetVersion(), di.ScheduleID)
 			// Set the history from replication task on the newStateBuilder
 			newStateBuilder.hBuilder = newHistoryBuilderFromEvents(newRunHistory.Events, r.logger)
 
@@ -304,7 +305,7 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 			if err != nil {
 				return err
 			}
-			err = context.continueAsNewWorkflowExecution(nil, newStateBuilder, nil, nil, transactionID)
+			err = context.replicateContinueAsNewWorkflowExecution(newStateBuilder, nil, nil, transactionID)
 			if err != nil {
 				return err
 			}
