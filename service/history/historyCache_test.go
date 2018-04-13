@@ -21,6 +21,8 @@
 package history
 
 import (
+	"errors"
+	"os"
 	"testing"
 
 	"github.com/pborman/uuid"
@@ -57,6 +59,16 @@ func TestHistoryCacheSuite(t *testing.T) {
 	suite.Run(t, s)
 }
 
+func (s *historyCacheSuite) SetupSuite() {
+	if testing.Verbose() {
+		log.SetOutput(os.Stdout)
+	}
+}
+
+func (s *historyCacheSuite) TearDownSuite() {
+
+}
+
 func (s *historyCacheSuite) SetupTest() {
 	s.logger = bark.NewLoggerFromLogrus(log.New())
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
@@ -76,37 +88,72 @@ func (s *historyCacheSuite) SetupTest() {
 	s.cache = newHistoryCache(s.mockShard, s.logger)
 }
 
+func (s *historyCacheSuite) TearDownTest() {
+	s.mockExecutionMgr.AssertExpectations(s.T())
+}
+
 func (s *historyCacheSuite) TestHistoryCachePinning() {
 	s.mockShard.GetConfig().HistoryCacheMaxSize = 2
-	domain := "test_domain"
+	domainID := "test_domain_id"
 	s.cache = newHistoryCache(s.mockShard, s.logger)
 	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wf-cache-test"),
+		WorkflowId: common.StringPtr("wf-cache-test-pinning"),
 		RunId:      common.StringPtr(uuid.New()),
 	}
 
-	context, release, err := s.cache.getOrCreateWorkflowExecution(domain, we)
+	context, release, err := s.cache.getOrCreateWorkflowExecution(domainID, we)
 	s.Nil(err)
 
 	we2 := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wf-cache-test"),
+		WorkflowId: common.StringPtr("wf-cache-test-pinning"),
 		RunId:      common.StringPtr(uuid.New()),
 	}
 
 	// Cache is full because context is pinned, should get an error now
-	_, _, err2 := s.cache.getOrCreateWorkflowExecution(domain, we2)
+	_, _, err2 := s.cache.getOrCreateWorkflowExecution(domainID, we2)
 	s.NotNil(err2)
 
 	// Now release the context, this should unpin it.
-	release()
+	release(err2)
 
-	_, release2, err3 := s.cache.getOrCreateWorkflowExecution(domain, we2)
+	_, release2, err3 := s.cache.getOrCreateWorkflowExecution(domainID, we2)
 	s.Nil(err3)
-	release2()
+	release2(err3)
 
 	// Old context should be evicted.
-	newContext, release, err4 := s.cache.getOrCreateWorkflowExecution(domain, we)
+	newContext, release, err4 := s.cache.getOrCreateWorkflowExecution(domainID, we)
 	s.Nil(err4)
 	s.False(context == newContext)
-	release()
+	release(err4)
+}
+
+func (s *historyCacheSuite) TestHistoryCacheClear() {
+	s.mockShard.GetConfig().HistoryCacheMaxSize = 20
+	domainID := "test_domain_id"
+	s.cache = newHistoryCache(s.mockShard, s.logger)
+	we := workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr("wf-cache-test-clear"),
+		RunId:      common.StringPtr(uuid.New()),
+	}
+
+	context, release, err := s.cache.getOrCreateWorkflowExecution(domainID, we)
+	s.Nil(err)
+	// since we are just testing whether the release function will clear the cache
+	// all we need is a fake msBuilder
+	context.msBuilder = &mutableStateBuilder{}
+	release(nil)
+
+	// since last time, the release function receive a nil error
+	// the ms builder will not be cleared
+	context, release, err = s.cache.getOrCreateWorkflowExecution(domainID, we)
+	s.Nil(err)
+	s.NotNil(context.msBuilder)
+	release(errors.New("some random error message"))
+
+	// since last time, the release function receive a non-nil error
+	// the ms builder will be cleared
+	context, release, err = s.cache.getOrCreateWorkflowExecution(domainID, we)
+	s.Nil(err)
+	s.Nil(context.msBuilder)
+	release(nil)
 }
