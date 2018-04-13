@@ -23,6 +23,7 @@ package history
 import (
 	"errors"
 	"os"
+	"sync"
 	"testing"
 
 	"github.com/pborman/uuid"
@@ -154,6 +155,46 @@ func (s *historyCacheSuite) TestHistoryCacheClear() {
 	// the ms builder will be cleared
 	context, release, err = s.cache.getOrCreateWorkflowExecution(domainID, we)
 	s.Nil(err)
+	s.Nil(context.msBuilder)
+	release(nil)
+}
+
+func (s *historyCacheSuite) TestHistoryCacheConcurrentAccess() {
+	s.mockShard.GetConfig().HistoryCacheMaxSize = 20
+	domainID := "test_domain_id"
+	s.cache = newHistoryCache(s.mockShard, s.logger)
+	we := workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr("wf-cache-test-pinning"),
+		RunId:      common.StringPtr(uuid.New()),
+	}
+
+	coroutineCount := 50
+	waitGroup := &sync.WaitGroup{}
+	stopChan := make(chan struct{})
+	testFn := func() {
+		<-stopChan
+		context, release, err := s.cache.getOrCreateWorkflowExecution(domainID, we)
+		s.Nil(err)
+		// since each time the builder is reset to nil
+		s.Nil(context.msBuilder)
+		// since we are just testing whether the release function will clear the cache
+		// all we need is a fake msBuilder
+		context.msBuilder = &mutableStateBuilder{}
+		release(errors.New("some random error message"))
+		waitGroup.Done()
+	}
+
+	for i := 0; i < coroutineCount; i++ {
+		waitGroup.Add(1)
+		go testFn()
+	}
+	close(stopChan)
+	waitGroup.Wait()
+
+	context, release, err := s.cache.getOrCreateWorkflowExecution(domainID, we)
+	s.Nil(err)
+	// since we are just testing whether the release function will clear the cache
+	// all we need is a fake msBuilder
 	s.Nil(context.msBuilder)
 	release(nil)
 }
