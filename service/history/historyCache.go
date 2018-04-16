@@ -23,6 +23,7 @@ package history
 import (
 	"sync/atomic"
 
+	h "github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
@@ -121,7 +122,21 @@ func (c *historyCache) getOrCreateWorkflowExecution(domainID string,
 	releaseFunc := func(err error) {
 		if atomic.CompareAndSwapInt32(&status, cacheNotReleased, cacheReleased) {
 			if err != nil {
-				context.clear()
+				switch err.(type) {
+				case *workflow.EntityNotExistsError:
+					// do not clear cache for this type: EntityNotExistsError
+				case *workflow.CancellationAlreadyRequestedError:
+					// do not clear cache for this type: CancellationAlreadyRequestedError
+				case *workflow.WorkflowExecutionAlreadyStartedError:
+					// do not clear cache for this type: WorkflowExecutionAlreadyStartedError
+				case *h.EventAlreadyStartedError:
+					// do not clear cache for this type: EventAlreadyStartedError
+				// we cannot skip the clear of mutable state if there is a bad request,
+				// since the decision is translated to history events in a loop and we do not do the check
+				// at the very begining.
+				default:
+					context.clear()
+				}
 			}
 			context.Unlock()
 			c.Release(key)

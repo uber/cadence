@@ -1142,7 +1142,7 @@ Update_History_Loop:
 				runID := uuid.New()
 				_, newStateBuilder, err := msBuilder.AddContinueAsNewEvent(completedID, domainID, domainName, runID, attributes)
 				if err != nil {
-					return nil
+					return err
 				}
 
 				// add timer task to new workflow
