@@ -44,20 +44,22 @@ const identityHistoryService = "history-service"
 type (
 	maxReadAckLevel func() int64
 
+	updateClusterAckLevel            func(ackLevel int64) error
 	transferQueueActiveProcessorImpl struct {
-		currentClusterName string
-		shard              ShardContext
-		historyService     *historyEngineImpl
-		options            *QueueProcessorOptions
-		executionManager   persistence.ExecutionManager
-		visibilityManager  persistence.VisibilityManager
-		matchingClient     matching.Client
-		historyClient      history.Client
-		cache              *historyCache
-		transferTaskFilter transferTaskFilter
-		logger             bark.Logger
-		metricsClient      metrics.Client
-		maxReadAckLevel    maxReadAckLevel
+		currentClusterName    string
+		shard                 ShardContext
+		historyService        *historyEngineImpl
+		options               *QueueProcessorOptions
+		executionManager      persistence.ExecutionManager
+		visibilityManager     persistence.VisibilityManager
+		matchingClient        matching.Client
+		historyClient         history.Client
+		cache                 *historyCache
+		transferTaskFilter    transferTaskFilter
+		logger                bark.Logger
+		metricsClient         metrics.Client
+		maxReadAckLevel       maxReadAckLevel
+		updateClusterAckLevel updateClusterAckLevel
 		*queueProcessorBase
 		queueAckMgr
 	}
@@ -104,21 +106,25 @@ func newTransferQueueActiveProcessor(shard ShardContext, historyService *history
 	maxReadAckLevel := func() int64 {
 		return shard.GetTransferMaxReadLevel()
 	}
+	updateClusterAckLevel := func(ackLevel int64) error {
+		return shard.UpdateTransferClusterAckLevel(currentClusterName, ackLevel)
+	}
 
 	processor := &transferQueueActiveProcessorImpl{
-		currentClusterName: currentClusterName,
-		shard:              shard,
-		historyService:     historyService,
-		options:            options,
-		executionManager:   shard.GetExecutionManager(),
-		visibilityManager:  visibilityMgr,
-		matchingClient:     matchingClient,
-		historyClient:      historyClient,
-		logger:             logger,
-		metricsClient:      historyService.metricsClient,
-		cache:              historyService.historyCache,
-		transferTaskFilter: transferTaskFilter,
-		maxReadAckLevel:    maxReadAckLevel,
+		currentClusterName:    currentClusterName,
+		shard:                 shard,
+		historyService:        historyService,
+		options:               options,
+		executionManager:      shard.GetExecutionManager(),
+		visibilityManager:     visibilityMgr,
+		matchingClient:        matchingClient,
+		historyClient:         historyClient,
+		logger:                logger,
+		metricsClient:         historyService.metricsClient,
+		cache:                 historyService.historyCache,
+		transferTaskFilter:    transferTaskFilter,
+		maxReadAckLevel:       maxReadAckLevel,
+		updateClusterAckLevel: updateClusterAckLevel,
 	}
 
 	queueAckMgr := newQueueAckMgr(shard, options, processor, shard.GetTransferClusterAckLevel(currentClusterName), logger)
@@ -156,21 +162,26 @@ func newTransferQueueFailoverProcessor(shard ShardContext, historyService *histo
 	maxReadAckLevel := func() int64 {
 		return maxAck // this is a const
 	}
+	updateClusterAckLevel := func(ackLevel int64) error {
+		// TODO, the failover processor should have the ability to persist the ack level progress, #646
+		return nil
+	}
 
 	processor := &transferQueueActiveProcessorImpl{
-		currentClusterName: currentClusterName,
-		shard:              shard,
-		historyService:     historyService,
-		options:            options,
-		executionManager:   shard.GetExecutionManager(),
-		visibilityManager:  visibilityMgr,
-		matchingClient:     matchingClient,
-		historyClient:      historyClient,
-		logger:             logger,
-		metricsClient:      historyService.metricsClient,
-		cache:              historyService.historyCache,
-		transferTaskFilter: transferTaskFilter,
-		maxReadAckLevel:    maxReadAckLevel,
+		currentClusterName:    currentClusterName,
+		shard:                 shard,
+		historyService:        historyService,
+		options:               options,
+		executionManager:      shard.GetExecutionManager(),
+		visibilityManager:     visibilityMgr,
+		matchingClient:        matchingClient,
+		historyClient:         historyClient,
+		logger:                logger,
+		metricsClient:         historyService.metricsClient,
+		cache:                 historyService.historyCache,
+		transferTaskFilter:    transferTaskFilter,
+		maxReadAckLevel:       maxReadAckLevel,
+		updateClusterAckLevel: updateClusterAckLevel,
 	}
 	queueAckMgr := newQueueFailoverAckMgr(shard, options, processor, shard.GetTransferClusterAckLevel(standbyClusterName), logger)
 	queueProcessorBase := newQueueProcessorBase(shard, options, processor, queueAckMgr, logger)
@@ -210,7 +221,7 @@ func (t *transferQueueActiveProcessorImpl) completeTask(taskID int64) error {
 }
 
 func (t *transferQueueActiveProcessorImpl) updateAckLevel(ackLevel int64) error {
-	return t.shard.UpdateTransferClusterAckLevel(t.currentClusterName, ackLevel)
+	return t.updateClusterAckLevel(ackLevel)
 }
 
 func (t *transferQueueActiveProcessorImpl) process(qTask queueTaskInfo) error {

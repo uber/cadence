@@ -167,23 +167,6 @@ func (e *historyEngineImpl) Start() {
 	if e.replicatorProcessor != nil {
 		e.replicatorProcessor.Start()
 	}
-
-	// TODO delete this temporary logic
-	// This logic is used for local development to update the "time"
-	// of standby cluster, so standby timer / transfer tasks can be skipped
-	// and deleted in DB
-	go func() {
-		for {
-			for clusterName := range e.shard.GetService().GetClusterMetadata().GetAllClusterFailoverVersions() {
-				if clusterName != e.shard.GetService().GetClusterMetadata().GetCurrentClusterName() {
-					e.shard.SetCurrentTime(clusterName, time.Now())
-					e.timerProcessor.SetCurrentTime(clusterName, time.Now())
-					e.txProcessor.SetCurrentTime(clusterName, time.Now())
-				}
-			}
-			time.Sleep(1 * time.Second)
-		}
-	}()
 }
 
 // Stop the service.
