@@ -70,6 +70,9 @@ type (
 		updateBufferedEvents *persistence.SerializedHistoryEventBatch   // buffered history events that needs to be persisted
 		clearBufferedEvents  bool                                       // delete buffered events from persistence
 
+		bufferedReplicationTasks       map[int64]*persistence.BufferedReplicationTask // Storage for out of order events
+		updateBufferedReplicationTasks *persistence.BufferedReplicationTask
+
 		executionInfo    *persistence.WorkflowExecutionInfo // Workflow mutable state info.
 		replicationState *persistence.ReplicationState
 		continueAsNew    *persistence.CreateWorkflowExecutionRequest
@@ -80,22 +83,23 @@ type (
 	}
 
 	mutableStateSessionUpdates struct {
-		newEventsBuilder           *historyBuilder
-		updateActivityInfos        []*persistence.ActivityInfo
-		deleteActivityInfos        []int64
-		updateTimerInfos           []*persistence.TimerInfo
-		deleteTimerInfos           []string
-		updateChildExecutionInfos  []*persistence.ChildExecutionInfo
-		deleteChildExecutionInfo   *int64
-		updateCancelExecutionInfos []*persistence.RequestCancelInfo
-		deleteCancelExecutionInfo  *int64
-		updateSignalInfos          []*persistence.SignalInfo
-		deleteSignalInfo           *int64
-		updateSignalRequestedIDs   []string
-		deleteSignalRequestedID    string
-		continueAsNew              *persistence.CreateWorkflowExecutionRequest
-		newBufferedEvents          *persistence.SerializedHistoryEventBatch
-		clearBufferedEvents        bool
+		newEventsBuilder                 *historyBuilder
+		updateActivityInfos              []*persistence.ActivityInfo
+		deleteActivityInfos              []int64
+		updateTimerInfos                 []*persistence.TimerInfo
+		deleteTimerInfos                 []string
+		updateChildExecutionInfos        []*persistence.ChildExecutionInfo
+		deleteChildExecutionInfo         *int64
+		updateCancelExecutionInfos       []*persistence.RequestCancelInfo
+		deleteCancelExecutionInfo        *int64
+		updateSignalInfos                []*persistence.SignalInfo
+		deleteSignalInfo                 *int64
+		updateSignalRequestedIDs         []string
+		deleteSignalRequestedID          string
+		continueAsNew                    *persistence.CreateWorkflowExecutionRequest
+		newBufferedEvents                *persistence.SerializedHistoryEventBatch
+		clearBufferedEvents              bool
+		newBufferedReplicationEventsInfo *persistence.BufferedReplicationTask
 	}
 
 	// TODO: This should be part of persistence layer
@@ -238,6 +242,11 @@ func (e *mutableStateBuilder) FlushBufferedEvents() error {
 	}
 
 	return nil
+}
+
+func (e *mutableStateBuilder) AddBufferedReplicationTask(task *persistence.BufferedReplicationTask) {
+	e.bufferedReplicationTasks[task.FirstEventID] = task
+	e.updateBufferedReplicationTasks = task
 }
 
 func (e *mutableStateBuilder) ApplyReplicationStateUpdates(failoverVersion, lastEventID int64) {

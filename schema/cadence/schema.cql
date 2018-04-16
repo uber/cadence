@@ -205,6 +205,15 @@ CREATE TYPE serialized_event_batch (
   data          blob,
 );
 
+-- Storage for out of order replication tasks for an execution
+CREATE TYPE buffered_replication_task_info (
+  first_event_id  bigint,
+  next_event_id   bigint,
+  version         bigint,
+  history         frozen<serialized_event_batch>,
+  new_run_history frozen<serialized_event_batch>,
+);
+
 CREATE TABLE executions (
   shard_id             int,
   type                 int, -- enum RowType { Shard, Execution, TransferTask, TimerTask, ReplicationTask}
@@ -229,6 +238,7 @@ CREATE TABLE executions (
   signal_requested     set<uuid>,
   buffered_events_list list<frozen<serialized_event_batch>>,
   replication_state    frozen<replication_state>, -- Replication information part of mutable state
+  buffered_replication_tasks_map map<bigint, frozen<buffered_replication_task_info>>,
   PRIMARY KEY  (shard_id, type, domain_id, workflow_id, run_id, visibility_ts, task_id)
 ) WITH COMPACTION = {
     'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'

@@ -88,6 +88,11 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 		if err != nil {
 			return err
 		}
+
+		// Check for out of order replication event
+		if firstEvent.GetEventId() > msBuilder.GetNextEventID() {
+
+		}
 	}
 
 	var lastEvent *shared.HistoryEvent
