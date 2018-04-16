@@ -35,6 +35,7 @@ type (
 
 	timerTaskFilter         func(timer *persistence.TimerTaskInfo) (bool, error)
 	timerQueueProcessorImpl struct {
+		isGlobalDomainEnabled  bool
 		currentClusterName     string
 		shard                  ShardContext
 		config                 *Config
@@ -62,6 +63,7 @@ func newTimerQueueProcessor(shard ShardContext, historyService *historyEngineImp
 	}
 
 	return &timerQueueProcessorImpl{
+		isGlobalDomainEnabled:  shard.GetService().GetClusterMetadata().IsGlobalDomainEnabled(),
 		currentClusterName:     currentClusterName,
 		shard:                  shard,
 		config:                 shard.GetConfig(),
@@ -79,10 +81,11 @@ func (t *timerQueueProcessorImpl) Start() {
 		return
 	}
 	t.activeTimerProcessor.Start()
-	for _, standbyTimerProcessor := range t.standbyTimerProcessors {
-		standbyTimerProcessor.Start()
+	if t.isGlobalDomainEnabled {
+		for _, standbyTimerProcessor := range t.standbyTimerProcessors {
+			standbyTimerProcessor.Start()
+		}
 	}
-
 	go t.completeTimersLoop()
 }
 
@@ -91,8 +94,10 @@ func (t *timerQueueProcessorImpl) Stop() {
 		return
 	}
 	t.activeTimerProcessor.Stop()
-	for _, standbyTimerProcessor := range t.standbyTimerProcessors {
-		standbyTimerProcessor.Stop()
+	if t.isGlobalDomainEnabled {
+		for _, standbyTimerProcessor := range t.standbyTimerProcessors {
+			standbyTimerProcessor.Stop()
+		}
 	}
 	close(t.shutdownChan)
 }
@@ -144,6 +149,7 @@ func (t *timerQueueProcessorImpl) getTimerFiredCount(clusterName string) uint64 
 
 func (t *timerQueueProcessorImpl) completeTimersLoop() {
 	timer := time.NewTimer(t.config.TimerProcessorCompleteTimerInterval)
+	defer timer.Stop()
 	for {
 		select {
 		case <-t.shutdownChan:
@@ -171,10 +177,12 @@ func (t *timerQueueProcessorImpl) completeTimers() error {
 	lowerAckLevel := t.ackLevel
 
 	upperAckLevel := t.activeTimerProcessor.timerQueueAckMgr.getAckLevel()
-	for _, standbyTimerProcessor := range t.standbyTimerProcessors {
-		ackLevel := standbyTimerProcessor.timerQueueAckMgr.getAckLevel()
-		if !compareTimerIDLess(&upperAckLevel, &ackLevel) {
-			upperAckLevel = ackLevel
+	if t.isGlobalDomainEnabled {
+		for _, standbyTimerProcessor := range t.standbyTimerProcessors {
+			ackLevel := standbyTimerProcessor.timerQueueAckMgr.getAckLevel()
+			if !compareTimerIDLess(&upperAckLevel, &ackLevel) {
+				upperAckLevel = ackLevel
+			}
 		}
 	}
 
