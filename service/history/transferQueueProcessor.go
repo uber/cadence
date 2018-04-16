@@ -197,7 +197,7 @@ func (t *transferQueueProcessorImpl) processActivityTask(task *persistence.Trans
 
 	// release the context lock since we no longer need mutable state builder and
 	// the rest of logic is making RPC call, which takes time.
-	release(retError)
+	release(nil)
 	if timeout != 0 {
 		err = t.matchingClient.AddActivityTask(nil, &m.AddActivityTaskRequest{
 			DomainUUID:                    common.StringPtr(targetDomainID),
@@ -255,7 +255,7 @@ func (t *transferQueueProcessorImpl) processDecisionTask(task *persistence.Trans
 
 	// release the context lock since we no longer need mutable state builder and
 	// the rest of logic is making RPC call, which takes time.
-	release(retError)
+	release(nil)
 	err = t.matchingClient.AddDecisionTask(nil, &m.AddDecisionTaskRequest{
 		DomainUUID:                    common.StringPtr(domainID),
 		Execution:                     &execution,
@@ -326,7 +326,7 @@ func (t *transferQueueProcessorImpl) processCloseExecution(task *persistence.Tra
 
 	// release the context lock since we no longer need mutable state builder and
 	// the rest of logic is making RPC call, which takes time.
-	release(retError)
+	release(nil)
 	// Communicate the result to parent execution if this is Child Workflow execution
 	if replyToParentWorkflow {
 		err = t.historyClient.RecordChildExecutionCompleted(nil, &history.RecordChildExecutionCompletedRequest{
