@@ -37,6 +37,7 @@ type (
 	transferTaskFilter func(timer *persistence.TransferTaskInfo) (bool, error)
 
 	transferQueueProcessorImpl struct {
+		isGlobalDomainEnabled bool
 		currentClusterName    string
 		shard                 ShardContext
 		config                *Config
@@ -67,6 +68,7 @@ func newTransferQueueProcessor(shard ShardContext, historyService *historyEngine
 	}
 
 	return &transferQueueProcessorImpl{
+		isGlobalDomainEnabled: shard.GetService().GetClusterMetadata().IsGlobalDomainEnabled(),
 		currentClusterName:    currentClusterName,
 		shard:                 shard,
 		config:                shard.GetConfig(),
@@ -86,8 +88,10 @@ func (t *transferQueueProcessorImpl) Start() {
 		return
 	}
 	t.activeTaskProcessor.Start()
-	for _, standbyTaskProcessor := range t.standbyTaskProcessors {
-		standbyTaskProcessor.Start()
+	if t.isGlobalDomainEnabled {
+		for _, standbyTaskProcessor := range t.standbyTaskProcessors {
+			standbyTaskProcessor.Start()
+		}
 	}
 
 	go t.completeTransferLoop()
@@ -98,8 +102,10 @@ func (t *transferQueueProcessorImpl) Stop() {
 		return
 	}
 	t.activeTaskProcessor.Stop()
-	for _, standbyTaskProcessor := range t.standbyTaskProcessors {
-		standbyTaskProcessor.Stop()
+	if t.isGlobalDomainEnabled {
+		for _, standbyTaskProcessor := range t.standbyTaskProcessors {
+			standbyTaskProcessor.Stop()
+		}
 	}
 	close(t.shutdownChan)
 }
@@ -137,6 +143,8 @@ func (t *transferQueueProcessorImpl) FailoverDomain(domainID string, standbyClus
 
 func (t *transferQueueProcessorImpl) completeTransferLoop() {
 	timer := time.NewTimer(t.config.TransferProcessorCompleteTransferInterval)
+	defer timer.Stop()
+
 	for {
 		select {
 		case <-t.shutdownChan:
@@ -164,10 +172,12 @@ func (t *transferQueueProcessorImpl) completeTransfer() error {
 	lowerAckLevel := t.shard.GetTransferAckLevel()
 	upperAckLevel := t.activeTaskProcessor.queueAckMgr.getAckLevel()
 
-	for _, standbyTaskProcessor := range t.standbyTaskProcessors {
-		ackLevel := standbyTaskProcessor.queueAckMgr.getAckLevel()
-		if upperAckLevel > ackLevel {
-			upperAckLevel = ackLevel
+	if t.isGlobalDomainEnabled {
+		for _, standbyTaskProcessor := range t.standbyTaskProcessors {
+			ackLevel := standbyTaskProcessor.queueAckMgr.getAckLevel()
+			if upperAckLevel > ackLevel {
+				upperAckLevel = ackLevel
+			}
 		}
 	}
 
