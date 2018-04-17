@@ -286,7 +286,7 @@ func (t *timerQueueAckMgrImpl) getTimerTasks(minTimestamp time.Time, maxTimestam
 	for attempt := 0; attempt < retryCount; attempt++ {
 		response, err := t.executionMgr.GetTimerIndexTasks(request)
 		if err == nil {
-			return response.Timers, len(response.Timers) >= batchSize, nil
+			return response.Timers, len(response.NextPageToken) != 0, nil
 		}
 		backoff := time.Duration(attempt * 100)
 		time.Sleep(backoff * time.Millisecond)

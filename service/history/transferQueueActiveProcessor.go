@@ -211,7 +211,7 @@ func (t *transferQueueActiveProcessorImpl) readTasks(readLevel int64) ([]queueTa
 		tasks[i] = response.Tasks[i]
 	}
 
-	return tasks, len(tasks) >= batchSize, nil
+	return tasks, len(response.NextPageToken) != 0, nil
 }
 
 func (t *transferQueueActiveProcessorImpl) completeTask(taskID int64) error {

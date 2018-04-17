@@ -164,7 +164,7 @@ func (s *timerQueueAckMgrSuite) TestIsProcessNow() {
 func (s *timerQueueAckMgrSuite) TestGetTimerTasks_More() {
 	minTimestamp := time.Now().Add(-10 * time.Second)
 	maxTimestamp := time.Now().Add(10 * time.Second)
-	batchSize := 1
+	batchSize := 10
 
 	request := &persistence.GetTimerIndexTasksRequest{
 		MinTimestamp: minTimestamp,
@@ -186,6 +186,7 @@ func (s *timerQueueAckMgrSuite) TestGetTimerTasks_More() {
 				ScheduleAttempt:     0,
 			},
 		},
+		NextPageToken: []byte("some random next page token"),
 	}
 
 	s.mockExecutionMgr.On("GetTimerIndexTasks", request).Return(response, nil).Once()
@@ -221,6 +222,7 @@ func (s *timerQueueAckMgrSuite) TestGetTimerTasks_NoMore() {
 				ScheduleAttempt:     0,
 			},
 		},
+		NextPageToken: nil,
 	}
 
 	s.mockExecutionMgr.On("GetTimerIndexTasks", request).Return(response, nil).Once()
@@ -259,7 +261,8 @@ func (s *timerQueueAckMgrSuite) TestReadTimerTasks_NoLookAhead_NoNextPage() {
 		BatchSize:    s.mockShard.GetConfig().TimerTaskBatchSize,
 	}
 	response := &persistence.GetTimerIndexTasksResponse{
-		Timers: []*persistence.TimerTaskInfo{timer},
+		Timers:        []*persistence.TimerTaskInfo{timer},
+		NextPageToken: nil,
 	}
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	s.mockExecutionMgr.On("GetTimerIndexTasks", request).Return(response, nil).Once()
@@ -297,15 +300,15 @@ func (s *timerQueueAckMgrSuite) TestReadTimerTasks_NoLookAhead_HasNextPage() {
 		ScheduleAttempt:     0,
 		Version:             int64(79),
 	}
-	// make the batch size == return size to there will be a next page
-	s.mockShard.config.TimerTaskBatchSize = 1
+
 	request := &persistence.GetTimerIndexTasksRequest{
 		MinTimestamp: readLevel.VisibilityTimestamp,
 		MaxTimestamp: macAckLevel,
 		BatchSize:    s.mockShard.GetConfig().TimerTaskBatchSize,
 	}
 	response := &persistence.GetTimerIndexTasksResponse{
-		Timers: []*persistence.TimerTaskInfo{timer},
+		Timers:        []*persistence.TimerTaskInfo{timer},
+		NextPageToken: []byte("some random next page token"),
 	}
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	s.mockExecutionMgr.On("GetTimerIndexTasks", request).Return(response, nil).Once()
@@ -349,7 +352,8 @@ func (s *timerQueueAckMgrSuite) TestReadTimerTasks_HasLookAhead_NoNextPage() {
 		BatchSize:    s.mockShard.GetConfig().TimerTaskBatchSize,
 	}
 	response := &persistence.GetTimerIndexTasksResponse{
-		Timers: []*persistence.TimerTaskInfo{timer},
+		Timers:        []*persistence.TimerTaskInfo{timer},
+		NextPageToken: nil,
 	}
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	s.mockExecutionMgr.On("GetTimerIndexTasks", request).Return(response, nil).Once()
@@ -387,15 +391,15 @@ func (s *timerQueueAckMgrSuite) TestReadTimerTasks_HasLookAhead_HasNextPage() {
 		ScheduleAttempt:     0,
 		Version:             int64(79),
 	}
-	// make the batch size == return size to there will be a next page
-	s.mockShard.config.TimerTaskBatchSize = 1
+
 	request := &persistence.GetTimerIndexTasksRequest{
 		MinTimestamp: readLevel.VisibilityTimestamp,
 		MaxTimestamp: macAckLevel,
 		BatchSize:    s.mockShard.GetConfig().TimerTaskBatchSize,
 	}
 	response := &persistence.GetTimerIndexTasksResponse{
-		Timers: []*persistence.TimerTaskInfo{timer},
+		Timers:        []*persistence.TimerTaskInfo{timer},
+		NextPageToken: []byte("some random next page token"),
 	}
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	s.mockExecutionMgr.On("GetTimerIndexTasks", request).Return(response, nil).Once()
@@ -433,15 +437,15 @@ func (s *timerQueueAckMgrSuite) TestReadTimerTasks_AnyTask_ReadLevel() {
 		ScheduleAttempt:     0,
 		Version:             int64(79),
 	}
-	// make the batch size == return size to there will be a next page
-	s.mockShard.config.TimerTaskBatchSize = 1
+
 	request := &persistence.GetTimerIndexTasksRequest{
 		MinTimestamp: readLevel.VisibilityTimestamp,
 		MaxTimestamp: macAckLevel,
 		BatchSize:    s.mockShard.GetConfig().TimerTaskBatchSize,
 	}
 	response := &persistence.GetTimerIndexTasksResponse{
-		Timers: []*persistence.TimerTaskInfo{timer},
+		Timers:        []*persistence.TimerTaskInfo{timer},
+		NextPageToken: []byte("some random next page token"),
 	}
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	s.mockExecutionMgr.On("GetTimerIndexTasks", request).Return(response, nil).Once()
@@ -501,7 +505,8 @@ func (s *timerQueueAckMgrSuite) TestReadCompleteUpdateTimerTasks() {
 		BatchSize:    s.mockShard.GetConfig().TimerTaskBatchSize,
 	}
 	response := &persistence.GetTimerIndexTasksResponse{
-		Timers: []*persistence.TimerTaskInfo{timer1, timer2, timer3},
+		Timers:        []*persistence.TimerTaskInfo{timer1, timer2, timer3},
+		NextPageToken: nil,
 	}
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	s.mockExecutionMgr.On("GetTimerIndexTasks", request).Return(response, nil).Once()
@@ -615,8 +620,6 @@ func (s *timerQueueFailoverAckMgrSuite) TestReadTimerTasks_HasNextPage() {
 	s.Equal(s.mockShard.GetTimerClusterAckLevel(s.standbyClusterName), readLevel.VisibilityTimestamp)
 	s.Equal(s.mockShard.GetTimerClusterAckLevel(s.mockShard.GetService().GetClusterMetadata().GetCurrentClusterName()), macAckLevel)
 
-	// make the batch size == return size to there will be a next page
-	s.mockShard.config.TimerTaskBatchSize = 1
 	request := &persistence.GetTimerIndexTasksRequest{
 		MinTimestamp: readLevel.VisibilityTimestamp,
 		MaxTimestamp: macAckLevel,
@@ -648,7 +651,8 @@ func (s *timerQueueFailoverAckMgrSuite) TestReadTimerTasks_HasNextPage() {
 	}
 
 	response := &persistence.GetTimerIndexTasksResponse{
-		Timers: []*persistence.TimerTaskInfo{timer1, timer2},
+		Timers:        []*persistence.TimerTaskInfo{timer1, timer2},
+		NextPageToken: []byte("some random next page token"),
 	}
 
 	s.mockExecutionMgr.On("GetTimerIndexTasks", request).Return(response, nil).Once()
@@ -678,7 +682,8 @@ func (s *timerQueueFailoverAckMgrSuite) TestReadTimerTasks_NoNextPage() {
 	}
 
 	response := &persistence.GetTimerIndexTasksResponse{
-		Timers: []*persistence.TimerTaskInfo{},
+		Timers:        []*persistence.TimerTaskInfo{},
+		NextPageToken: nil,
 	}
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	s.mockExecutionMgr.On("GetTimerIndexTasks", request).Return(response, nil).Once()
@@ -754,7 +759,8 @@ func (s *timerQueueFailoverAckMgrSuite) TestReadCompleteUpdateTimerTasks() {
 		BatchSize:    s.mockShard.GetConfig().TimerTaskBatchSize,
 	}
 	response := &persistence.GetTimerIndexTasksResponse{
-		Timers: []*persistence.TimerTaskInfo{timer1, timer3},
+		Timers:        []*persistence.TimerTaskInfo{timer1, timer3},
+		NextPageToken: nil,
 	}
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	s.mockExecutionMgr.On("GetTimerIndexTasks", request).Return(response, nil).Once()

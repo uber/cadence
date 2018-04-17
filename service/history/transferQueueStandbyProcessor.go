@@ -118,7 +118,7 @@ func (t *transferQueueStandbyProcessorImpl) readTasks(readLevel int64) ([]queueT
 		tasks[i] = response.Tasks[i]
 	}
 
-	return tasks, len(tasks) >= batchSize, nil
+	return tasks, len(response.NextPageToken) != 0, nil
 }
 
 func (t *transferQueueStandbyProcessorImpl) completeTask(taskID int64) error {

@@ -183,20 +183,20 @@ func (t *transferQueueProcessorImpl) completeTransfer() error {
 	executionMgr := t.shard.GetExecutionManager()
 	maxLevel := upperAckLevel + 1
 	batchSize := t.config.TransferTaskBatchSize
+	request := &persistence.GetTransferTasksRequest{
+		ReadLevel:    lowerAckLevel,
+		MaxReadLevel: maxLevel,
+		BatchSize:    batchSize,
+	}
 
 LoadCompleteLoop:
 	for {
-		request := &persistence.GetTransferTasksRequest{
-			ReadLevel:    lowerAckLevel,
-			MaxReadLevel: maxLevel,
-			BatchSize:    batchSize,
-		}
 		response, err := executionMgr.GetTransferTasks(request)
 		if err != nil {
 			return err
 		}
+		request.NextPageToken = response.NextPageToken
 
-		more := len(response.Tasks) >= batchSize
 		for _, task := range response.Tasks {
 			if upperAckLevel < task.GetTaskID() {
 				break LoadCompleteLoop
@@ -207,7 +207,7 @@ LoadCompleteLoop:
 			}
 		}
 
-		if !more {
+		if len(response.NextPageToken) == 0 {
 			break LoadCompleteLoop
 		}
 	}

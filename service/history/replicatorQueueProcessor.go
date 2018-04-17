@@ -173,7 +173,7 @@ func (p *replicatorQueueProcessorImpl) readTasks(readLevel int64) ([]queueTaskIn
 		tasks[i] = response.Tasks[i]
 	}
 
-	return tasks, len(tasks) >= batchSize, nil
+	return tasks, len(response.NextPageToken) != 0, nil
 }
 
 func (p *replicatorQueueProcessorImpl) completeTask(taskID int64) error {
