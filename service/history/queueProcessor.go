@@ -245,7 +245,7 @@ ProcessRetryLoop:
 
 			err := p.processor.process(task)
 			if err != nil {
-				if _, ok := err.(*taskRetryError); ok {
+				if err == ErrTaskRetry {
 					<-notificationChan
 				} else {
 					logging.LogTaskProcessingFailedEvent(p.logger, task.GetTaskID(), task.GetTaskType(), err)

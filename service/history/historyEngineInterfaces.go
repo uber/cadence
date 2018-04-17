@@ -45,10 +45,6 @@ type (
 		timestamp         time.Time
 	}
 
-	// error which will be thrown if the timer / transfer task should be
-	// retries due to various of reasons
-	taskRetryError struct{}
-
 	// Engine represents an interface for managing workflow execution history.
 	Engine interface {
 		common.Daemon
@@ -146,12 +142,3 @@ type (
 		UnwatchHistoryEvent(identifier *workflowIdentifier, subscriberID string) error
 	}
 )
-
-// newTaskRetryError create a error which indicate the task should be retry
-func newTaskRetryError() *taskRetryError {
-	return &taskRetryError{}
-}
-
-func (e *taskRetryError) Error() string {
-	return "passive task should retry due to condition in mutable state is not met."
-}

@@ -191,13 +191,15 @@ func (t *timerQueueProcessorImpl) completeTimers() error {
 
 	executionMgr := t.shard.GetExecutionManager()
 	minTimestamp := lowerAckLevel.VisibilityTimestamp
+	// releax the upper limit for scan since the query is [minTimestamp, minTimestamp)
+	maxTimestamp := upperAckLevel.VisibilityTimestamp.Add(1 * time.Second)
 	batchSize := t.config.TimerTaskBatchSize
 
 LoadCompleteLoop:
 	for {
 		request := &persistence.GetTimerIndexTasksRequest{
 			MinTimestamp: minTimestamp,
-			MaxTimestamp: timerQueueAckMgrMaxTimestamp,
+			MaxTimestamp: maxTimestamp,
 			BatchSize:    batchSize,
 		}
 		response, err := executionMgr.GetTimerIndexTasks(request)

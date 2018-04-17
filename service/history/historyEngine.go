@@ -80,6 +80,8 @@ type (
 var _ Engine = (*historyEngineImpl)(nil)
 
 var (
+	// ErrTaskRetry is the error indicating that the timer / transfer task should be retried.
+	ErrTaskRetry = errors.New("passive task should retry due to condition in mutable state is not met")
 	// ErrDuplicate is exported temporarily for integration test
 	ErrDuplicate = errors.New("Duplicate task, completing it")
 	// ErrConflict is exported temporarily for integration test

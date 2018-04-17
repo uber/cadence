@@ -197,7 +197,7 @@ func (t *timerQueueStandbyProcessorImpl) processExpiredUserTimer(timerTask *pers
 				//
 				// we do not need to notity new timer to base, since if there is no new event being replicated
 				// checking again if the timer can be completed is meaningless
-				return newTaskRetryError()
+				return ErrTaskRetry
 			}
 			// since the user timer are already sorted, so if there is one timer which will not expired
 			// all user timer after this timer will not expired
@@ -237,7 +237,7 @@ func (t *timerQueueStandbyProcessorImpl) processActivityTimeout(timerTask *persi
 				//
 				// we do not need to notity new timer to base, since if there is no new event being replicated
 				// checking again if the timer can be completed is meaningless
-				return newTaskRetryError()
+				return ErrTaskRetry
 			}
 			// since the activity timer are already sorted, so if there is one timer which will not expired
 			// all activity timer after this timer will not expired
@@ -262,7 +262,7 @@ func (t *timerQueueStandbyProcessorImpl) processDecisionTimeout(timerTask *persi
 			//
 			// we do not need to notity new timer to base, since if there is no new event being replicated
 			// checking again if the timer can be completed is meaningless
-			return newTaskRetryError()
+			return ErrTaskRetry
 		}
 		return nil
 	})
@@ -276,7 +276,7 @@ func (t *timerQueueStandbyProcessorImpl) processWorkflowTimeout(timerTask *persi
 	return t.processTimer(timerTask, func(msBuilder *mutableStateBuilder) error {
 		// we do not need to notity new timer to base, since if there is no new event being replicated
 		// checking again if the timer can be completed is meaningless
-		return newTaskRetryError()
+		return ErrTaskRetry
 	})
 }
 

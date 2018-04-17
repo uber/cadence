@@ -179,7 +179,7 @@ func (t *timerQueueProcessorBase) processTaskWorker(workerWG *sync.WaitGroup, no
 
 				err := t.timerProcessor.process(task)
 				if err != nil {
-					if _, ok := err.(*taskRetryError); ok {
+					if err == ErrTaskRetry {
 						<-notificationChan
 					} else {
 						// We will retry until we don't find the timer task any more.

@@ -194,9 +194,7 @@ func (s *transferQueueStandbyProcessorSuite) TestProcessActivityTask_Pending() {
 	persistenceMutableState := createMutableState(msBuilder)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 
-	err := s.transferQueueStandbyProcessor.process(transferTask)
-	_, ok := err.(*taskRetryError)
-	s.True(ok)
+	s.Equal(ErrTaskRetry, s.transferQueueStandbyProcessor.process(transferTask))
 }
 
 func (s *transferQueueStandbyProcessorSuite) TestProcessActivityTask_Success() {
@@ -290,9 +288,7 @@ func (s *transferQueueStandbyProcessorSuite) TestProcessDecisionTask_Pending() {
 	persistenceMutableState := createMutableState(msBuilder)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 
-	err := s.transferQueueStandbyProcessor.process(transferTask)
-	_, ok := err.(*taskRetryError)
-	s.True(ok)
+	s.Equal(ErrTaskRetry, s.transferQueueStandbyProcessor.process(transferTask))
 }
 
 func (s *transferQueueStandbyProcessorSuite) TestProcessDecisionTask_Success() {
@@ -443,9 +439,7 @@ func (s *transferQueueStandbyProcessorSuite) TestProcessCancelExecution_Pending(
 	persistenceMutableState := createMutableState(msBuilder)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 
-	err := s.transferQueueStandbyProcessor.process(transferTask)
-	_, ok := err.(*taskRetryError)
-	s.True(ok)
+	s.Equal(ErrTaskRetry, s.transferQueueStandbyProcessor.process(transferTask))
 }
 
 func (s *transferQueueStandbyProcessorSuite) TestProcessCancelExecution_Success() {
@@ -562,9 +556,7 @@ func (s *transferQueueStandbyProcessorSuite) TestProcessSignalExecution_Pending(
 	persistenceMutableState := createMutableState(msBuilder)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 
-	err := s.transferQueueStandbyProcessor.process(transferTask)
-	_, ok := err.(*taskRetryError)
-	s.True(ok)
+	s.Equal(ErrTaskRetry, s.transferQueueStandbyProcessor.process(transferTask))
 }
 
 func (s *transferQueueStandbyProcessorSuite) TestProcessSignalExecution_Success() {
@@ -681,9 +673,7 @@ func (s *transferQueueStandbyProcessorSuite) TestProcessStartChildExecution_Pend
 	persistenceMutableState := createMutableState(msBuilder)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 
-	err := s.transferQueueStandbyProcessor.process(transferTask)
-	_, ok := err.(*taskRetryError)
-	s.True(ok)
+	s.Equal(ErrTaskRetry, s.transferQueueStandbyProcessor.process(transferTask))
 }
 
 func (s *transferQueueStandbyProcessorSuite) TestProcessStartChildExecution_Success() {

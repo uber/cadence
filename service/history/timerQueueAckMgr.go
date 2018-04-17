@@ -170,7 +170,6 @@ func (t *timerQueueAckMgrImpl) readTimerTasks() ([]*persistence.TimerTaskInfo, *
 		t.isReadFinished = true
 	}
 
-	// fillin the retry task
 	filteredTasks := []*persistence.TimerTaskInfo{}
 
 	// since we have already checked that the clusterName is a valid key of clusterReadLevel

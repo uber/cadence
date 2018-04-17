@@ -194,7 +194,7 @@ func (t *transferQueueStandbyProcessorImpl) processActivityTask(transferTask *pe
 	return t.processTransfer(processTaskIfClosed, transferTask, func(msBuilder *mutableStateBuilder) error {
 		activityInfo, isPending := msBuilder.GetActivityInfo(transferTask.ScheduleID)
 		if isPending && activityInfo.StartedID == emptyEventID {
-			return newTaskRetryError()
+			return ErrTaskRetry
 		}
 		return nil
 	})
@@ -209,7 +209,7 @@ func (t *transferQueueStandbyProcessorImpl) processDecisionTask(transferTask *pe
 	return t.processTransfer(processTaskIfClosed, transferTask, func(msBuilder *mutableStateBuilder) error {
 		decisionInfo, isPending := msBuilder.GetPendingDecision(transferTask.ScheduleID)
 		if isPending && decisionInfo.StartedID == emptyEventID {
-			return newTaskRetryError()
+			return ErrTaskRetry
 		}
 		return nil
 	})
@@ -264,7 +264,7 @@ func (t *transferQueueStandbyProcessorImpl) processCancelExecution(transferTask 
 	return t.processTransfer(processTaskIfClosed, transferTask, func(msBuilder *mutableStateBuilder) error {
 		_, isPending := msBuilder.GetRequestCancelInfo(transferTask.ScheduleID)
 		if isPending {
-			return newTaskRetryError()
+			return ErrTaskRetry
 		}
 		return nil
 	})
@@ -279,7 +279,7 @@ func (t *transferQueueStandbyProcessorImpl) processSignalExecution(transferTask 
 	return t.processTransfer(processTaskIfClosed, transferTask, func(msBuilder *mutableStateBuilder) error {
 		_, isPending := msBuilder.GetSignalInfo(transferTask.ScheduleID)
 		if isPending {
-			return newTaskRetryError()
+			return ErrTaskRetry
 		}
 		return nil
 	})
@@ -294,7 +294,7 @@ func (t *transferQueueStandbyProcessorImpl) processStartChildExecution(transferT
 	return t.processTransfer(processTaskIfClosed, transferTask, func(msBuilder *mutableStateBuilder) error {
 		childWorkflowInfo, isPending := msBuilder.GetChildExecutionInfo(transferTask.ScheduleID)
 		if isPending && childWorkflowInfo.StartedID == emptyEventID {
-			return newTaskRetryError()
+			return ErrTaskRetry
 		}
 		return nil
 	})

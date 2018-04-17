@@ -186,7 +186,7 @@ func (t *transferQueueProcessorImpl) completeTransfer() error {
 	}
 
 	executionMgr := t.shard.GetExecutionManager()
-	maxLevel := t.shard.GetTransferMaxReadLevel()
+	maxLevel := upperAckLevel + 1
 	batchSize := t.config.TransferTaskBatchSize
 
 LoadCompleteLoop:
