@@ -35,6 +35,7 @@ import (
 )
 
 type ActivityTaskCancelRequestedEventAttributes struct {
+	Version                      *int64  `json:"version,omitempty"`
 	ActivityId                   *string `json:"activityId,omitempty"`
 	DecisionTaskCompletedEventId *int64  `json:"decisionTaskCompletedEventId,omitempty"`
 }
@@ -56,12 +57,20 @@ type ActivityTaskCancelRequestedEventAttributes struct {
 //   }
 func (v *ActivityTaskCancelRequestedEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [2]wire.Field
+		fields [3]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.ActivityId != nil {
 		w, err = wire.NewValueString(*(v.ActivityId)), error(nil)
 		if err != nil {
@@ -104,6 +113,16 @@ func (v *ActivityTaskCancelRequestedEventAttributes) FromWire(w wire.Value) erro
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TBinary {
 				var x string
@@ -137,8 +156,12 @@ func (v *ActivityTaskCancelRequestedEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [2]string
+	var fields [3]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.ActivityId != nil {
 		fields[i] = fmt.Sprintf("ActivityId: %v", *(v.ActivityId))
 		i++
@@ -151,7 +174,7 @@ func (v *ActivityTaskCancelRequestedEventAttributes) String() string {
 	return fmt.Sprintf("ActivityTaskCancelRequestedEventAttributes{%v}", strings.Join(fields[:i], ", "))
 }
 
-func _String_EqualsPtr(lhs, rhs *string) bool {
+func _I64_EqualsPtr(lhs, rhs *int64) bool {
 	if lhs != nil && rhs != nil {
 
 		x := *lhs
@@ -161,7 +184,7 @@ func _String_EqualsPtr(lhs, rhs *string) bool {
 	return lhs == nil && rhs == nil
 }
 
-func _I64_EqualsPtr(lhs, rhs *int64) bool {
+func _String_EqualsPtr(lhs, rhs *string) bool {
 	if lhs != nil && rhs != nil {
 
 		x := *lhs
@@ -176,6 +199,9 @@ func _I64_EqualsPtr(lhs, rhs *int64) bool {
 //
 // This function performs a deep comparison.
 func (v *ActivityTaskCancelRequestedEventAttributes) Equals(rhs *ActivityTaskCancelRequestedEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !_String_EqualsPtr(v.ActivityId, rhs.ActivityId) {
 		return false
 	}
@@ -184,6 +210,16 @@ func (v *ActivityTaskCancelRequestedEventAttributes) Equals(rhs *ActivityTaskCan
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *ActivityTaskCancelRequestedEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetActivityId returns the value of ActivityId if it is set or its
@@ -207,6 +243,7 @@ func (v *ActivityTaskCancelRequestedEventAttributes) GetDecisionTaskCompletedEve
 }
 
 type ActivityTaskCanceledEventAttributes struct {
+	Version                      *int64  `json:"version,omitempty"`
 	Details                      []byte  `json:"details,omitempty"`
 	LatestCancelRequestedEventId *int64  `json:"latestCancelRequestedEventId,omitempty"`
 	ScheduledEventId             *int64  `json:"scheduledEventId,omitempty"`
@@ -231,12 +268,20 @@ type ActivityTaskCanceledEventAttributes struct {
 //   }
 func (v *ActivityTaskCanceledEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [5]wire.Field
+		fields [6]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.Details != nil {
 		w, err = wire.NewValueBinary(v.Details), error(nil)
 		if err != nil {
@@ -303,6 +348,16 @@ func (v *ActivityTaskCanceledEventAttributes) FromWire(w wire.Value) error {
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TBinary {
 				v.Details, err = field.Value.GetBinary(), error(nil)
@@ -364,8 +419,12 @@ func (v *ActivityTaskCanceledEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [5]string
+	var fields [6]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.Details != nil {
 		fields[i] = fmt.Sprintf("Details: %v", v.Details)
 		i++
@@ -395,6 +454,9 @@ func (v *ActivityTaskCanceledEventAttributes) String() string {
 //
 // This function performs a deep comparison.
 func (v *ActivityTaskCanceledEventAttributes) Equals(rhs *ActivityTaskCanceledEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !((v.Details == nil && rhs.Details == nil) || (v.Details != nil && rhs.Details != nil && bytes.Equal(v.Details, rhs.Details))) {
 		return false
 	}
@@ -412,6 +474,16 @@ func (v *ActivityTaskCanceledEventAttributes) Equals(rhs *ActivityTaskCanceledEv
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *ActivityTaskCanceledEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetLatestCancelRequestedEventId returns the value of LatestCancelRequestedEventId if it is set or its
@@ -455,6 +527,7 @@ func (v *ActivityTaskCanceledEventAttributes) GetIdentity() (o string) {
 }
 
 type ActivityTaskCompletedEventAttributes struct {
+	Version          *int64  `json:"version,omitempty"`
 	Result           []byte  `json:"result,omitempty"`
 	ScheduledEventId *int64  `json:"scheduledEventId,omitempty"`
 	StartedEventId   *int64  `json:"startedEventId,omitempty"`
@@ -478,12 +551,20 @@ type ActivityTaskCompletedEventAttributes struct {
 //   }
 func (v *ActivityTaskCompletedEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [4]wire.Field
+		fields [5]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.Result != nil {
 		w, err = wire.NewValueBinary(v.Result), error(nil)
 		if err != nil {
@@ -542,6 +623,16 @@ func (v *ActivityTaskCompletedEventAttributes) FromWire(w wire.Value) error {
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TBinary {
 				v.Result, err = field.Value.GetBinary(), error(nil)
@@ -593,8 +684,12 @@ func (v *ActivityTaskCompletedEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [4]string
+	var fields [5]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.Result != nil {
 		fields[i] = fmt.Sprintf("Result: %v", v.Result)
 		i++
@@ -620,6 +715,9 @@ func (v *ActivityTaskCompletedEventAttributes) String() string {
 //
 // This function performs a deep comparison.
 func (v *ActivityTaskCompletedEventAttributes) Equals(rhs *ActivityTaskCompletedEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !((v.Result == nil && rhs.Result == nil) || (v.Result != nil && rhs.Result != nil && bytes.Equal(v.Result, rhs.Result))) {
 		return false
 	}
@@ -634,6 +732,16 @@ func (v *ActivityTaskCompletedEventAttributes) Equals(rhs *ActivityTaskCompleted
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *ActivityTaskCompletedEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetScheduledEventId returns the value of ScheduledEventId if it is set or its
@@ -667,6 +775,7 @@ func (v *ActivityTaskCompletedEventAttributes) GetIdentity() (o string) {
 }
 
 type ActivityTaskFailedEventAttributes struct {
+	Version          *int64  `json:"version,omitempty"`
 	Reason           *string `json:"reason,omitempty"`
 	Details          []byte  `json:"details,omitempty"`
 	ScheduledEventId *int64  `json:"scheduledEventId,omitempty"`
@@ -691,12 +800,20 @@ type ActivityTaskFailedEventAttributes struct {
 //   }
 func (v *ActivityTaskFailedEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [5]wire.Field
+		fields [6]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.Reason != nil {
 		w, err = wire.NewValueString(*(v.Reason)), error(nil)
 		if err != nil {
@@ -763,6 +880,16 @@ func (v *ActivityTaskFailedEventAttributes) FromWire(w wire.Value) error {
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TBinary {
 				var x string
@@ -824,8 +951,12 @@ func (v *ActivityTaskFailedEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [5]string
+	var fields [6]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.Reason != nil {
 		fields[i] = fmt.Sprintf("Reason: %v", *(v.Reason))
 		i++
@@ -855,6 +986,9 @@ func (v *ActivityTaskFailedEventAttributes) String() string {
 //
 // This function performs a deep comparison.
 func (v *ActivityTaskFailedEventAttributes) Equals(rhs *ActivityTaskFailedEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !_String_EqualsPtr(v.Reason, rhs.Reason) {
 		return false
 	}
@@ -872,6 +1006,16 @@ func (v *ActivityTaskFailedEventAttributes) Equals(rhs *ActivityTaskFailedEventA
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *ActivityTaskFailedEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetReason returns the value of Reason if it is set or its
@@ -915,6 +1059,7 @@ func (v *ActivityTaskFailedEventAttributes) GetIdentity() (o string) {
 }
 
 type ActivityTaskScheduledEventAttributes struct {
+	Version                       *int64        `json:"version,omitempty"`
 	ActivityId                    *string       `json:"activityId,omitempty"`
 	ActivityType                  *ActivityType `json:"activityType,omitempty"`
 	Domain                        *string       `json:"domain,omitempty"`
@@ -944,12 +1089,20 @@ type ActivityTaskScheduledEventAttributes struct {
 //   }
 func (v *ActivityTaskScheduledEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [10]wire.Field
+		fields [11]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.ActivityId != nil {
 		w, err = wire.NewValueString(*(v.ActivityId)), error(nil)
 		if err != nil {
@@ -1068,6 +1221,16 @@ func (v *ActivityTaskScheduledEventAttributes) FromWire(w wire.Value) error {
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TBinary {
 				var x string
@@ -1175,8 +1338,12 @@ func (v *ActivityTaskScheduledEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [10]string
+	var fields [11]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.ActivityId != nil {
 		fields[i] = fmt.Sprintf("ActivityId: %v", *(v.ActivityId))
 		i++
@@ -1236,6 +1403,9 @@ func _I32_EqualsPtr(lhs, rhs *int32) bool {
 //
 // This function performs a deep comparison.
 func (v *ActivityTaskScheduledEventAttributes) Equals(rhs *ActivityTaskScheduledEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !_String_EqualsPtr(v.ActivityId, rhs.ActivityId) {
 		return false
 	}
@@ -1268,6 +1438,16 @@ func (v *ActivityTaskScheduledEventAttributes) Equals(rhs *ActivityTaskScheduled
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *ActivityTaskScheduledEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetActivityId returns the value of ActivityId if it is set or its
@@ -1341,6 +1521,7 @@ func (v *ActivityTaskScheduledEventAttributes) GetDecisionTaskCompletedEventId()
 }
 
 type ActivityTaskStartedEventAttributes struct {
+	Version          *int64  `json:"version,omitempty"`
 	ScheduledEventId *int64  `json:"scheduledEventId,omitempty"`
 	Identity         *string `json:"identity,omitempty"`
 	RequestId        *string `json:"requestId,omitempty"`
@@ -1363,12 +1544,20 @@ type ActivityTaskStartedEventAttributes struct {
 //   }
 func (v *ActivityTaskStartedEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [3]wire.Field
+		fields [4]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.ScheduledEventId != nil {
 		w, err = wire.NewValueI64(*(v.ScheduledEventId)), error(nil)
 		if err != nil {
@@ -1419,6 +1608,16 @@ func (v *ActivityTaskStartedEventAttributes) FromWire(w wire.Value) error {
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TI64 {
 				var x int64
@@ -1462,8 +1661,12 @@ func (v *ActivityTaskStartedEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [3]string
+	var fields [4]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.ScheduledEventId != nil {
 		fields[i] = fmt.Sprintf("ScheduledEventId: %v", *(v.ScheduledEventId))
 		i++
@@ -1485,6 +1688,9 @@ func (v *ActivityTaskStartedEventAttributes) String() string {
 //
 // This function performs a deep comparison.
 func (v *ActivityTaskStartedEventAttributes) Equals(rhs *ActivityTaskStartedEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !_I64_EqualsPtr(v.ScheduledEventId, rhs.ScheduledEventId) {
 		return false
 	}
@@ -1496,6 +1702,16 @@ func (v *ActivityTaskStartedEventAttributes) Equals(rhs *ActivityTaskStartedEven
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *ActivityTaskStartedEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetScheduledEventId returns the value of ScheduledEventId if it is set or its
@@ -1529,6 +1745,7 @@ func (v *ActivityTaskStartedEventAttributes) GetRequestId() (o string) {
 }
 
 type ActivityTaskTimedOutEventAttributes struct {
+	Version          *int64       `json:"version,omitempty"`
 	Details          []byte       `json:"details,omitempty"`
 	ScheduledEventId *int64       `json:"scheduledEventId,omitempty"`
 	StartedEventId   *int64       `json:"startedEventId,omitempty"`
@@ -1552,12 +1769,20 @@ type ActivityTaskTimedOutEventAttributes struct {
 //   }
 func (v *ActivityTaskTimedOutEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [4]wire.Field
+		fields [5]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.Details != nil {
 		w, err = wire.NewValueBinary(v.Details), error(nil)
 		if err != nil {
@@ -1622,6 +1847,16 @@ func (v *ActivityTaskTimedOutEventAttributes) FromWire(w wire.Value) error {
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 5:
 			if field.Value.Type() == wire.TBinary {
 				v.Details, err = field.Value.GetBinary(), error(nil)
@@ -1673,8 +1908,12 @@ func (v *ActivityTaskTimedOutEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [4]string
+	var fields [5]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.Details != nil {
 		fields[i] = fmt.Sprintf("Details: %v", v.Details)
 		i++
@@ -1710,6 +1949,9 @@ func _TimeoutType_EqualsPtr(lhs, rhs *TimeoutType) bool {
 //
 // This function performs a deep comparison.
 func (v *ActivityTaskTimedOutEventAttributes) Equals(rhs *ActivityTaskTimedOutEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !((v.Details == nil && rhs.Details == nil) || (v.Details != nil && rhs.Details != nil && bytes.Equal(v.Details, rhs.Details))) {
 		return false
 	}
@@ -1724,6 +1966,16 @@ func (v *ActivityTaskTimedOutEventAttributes) Equals(rhs *ActivityTaskTimedOutEv
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *ActivityTaskTimedOutEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetScheduledEventId returns the value of ScheduledEventId if it is set or its
@@ -2225,6 +2477,7 @@ func (v *CancelTimerDecisionAttributes) GetTimerId() (o string) {
 }
 
 type CancelTimerFailedEventAttributes struct {
+	Version                      *int64  `json:"version,omitempty"`
 	TimerId                      *string `json:"timerId,omitempty"`
 	Cause                        *string `json:"cause,omitempty"`
 	DecisionTaskCompletedEventId *int64  `json:"decisionTaskCompletedEventId,omitempty"`
@@ -2248,12 +2501,20 @@ type CancelTimerFailedEventAttributes struct {
 //   }
 func (v *CancelTimerFailedEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [4]wire.Field
+		fields [5]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.TimerId != nil {
 		w, err = wire.NewValueString(*(v.TimerId)), error(nil)
 		if err != nil {
@@ -2312,6 +2573,16 @@ func (v *CancelTimerFailedEventAttributes) FromWire(w wire.Value) error {
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TBinary {
 				var x string
@@ -2365,8 +2636,12 @@ func (v *CancelTimerFailedEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [4]string
+	var fields [5]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.TimerId != nil {
 		fields[i] = fmt.Sprintf("TimerId: %v", *(v.TimerId))
 		i++
@@ -2392,6 +2667,9 @@ func (v *CancelTimerFailedEventAttributes) String() string {
 //
 // This function performs a deep comparison.
 func (v *CancelTimerFailedEventAttributes) Equals(rhs *CancelTimerFailedEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !_String_EqualsPtr(v.TimerId, rhs.TimerId) {
 		return false
 	}
@@ -2406,6 +2684,16 @@ func (v *CancelTimerFailedEventAttributes) Equals(rhs *CancelTimerFailedEventAtt
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *CancelTimerFailedEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetTimerId returns the value of TimerId if it is set or its
@@ -2807,6 +3095,7 @@ func (v *ChildPolicy) UnmarshalJSON(text []byte) error {
 }
 
 type ChildWorkflowExecutionCanceledEventAttributes struct {
+	Version           *int64             `json:"version,omitempty"`
 	Details           []byte             `json:"details,omitempty"`
 	Domain            *string            `json:"domain,omitempty"`
 	WorkflowExecution *WorkflowExecution `json:"workflowExecution,omitempty"`
@@ -2832,12 +3121,20 @@ type ChildWorkflowExecutionCanceledEventAttributes struct {
 //   }
 func (v *ChildWorkflowExecutionCanceledEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [6]wire.Field
+		fields [7]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.Details != nil {
 		w, err = wire.NewValueBinary(v.Details), error(nil)
 		if err != nil {
@@ -2924,6 +3221,16 @@ func (v *ChildWorkflowExecutionCanceledEventAttributes) FromWire(w wire.Value) e
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TBinary {
 				v.Details, err = field.Value.GetBinary(), error(nil)
@@ -2991,8 +3298,12 @@ func (v *ChildWorkflowExecutionCanceledEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [6]string
+	var fields [7]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.Details != nil {
 		fields[i] = fmt.Sprintf("Details: %v", v.Details)
 		i++
@@ -3026,6 +3337,9 @@ func (v *ChildWorkflowExecutionCanceledEventAttributes) String() string {
 //
 // This function performs a deep comparison.
 func (v *ChildWorkflowExecutionCanceledEventAttributes) Equals(rhs *ChildWorkflowExecutionCanceledEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !((v.Details == nil && rhs.Details == nil) || (v.Details != nil && rhs.Details != nil && bytes.Equal(v.Details, rhs.Details))) {
 		return false
 	}
@@ -3046,6 +3360,16 @@ func (v *ChildWorkflowExecutionCanceledEventAttributes) Equals(rhs *ChildWorkflo
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *ChildWorkflowExecutionCanceledEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetDomain returns the value of Domain if it is set or its
@@ -3079,6 +3403,7 @@ func (v *ChildWorkflowExecutionCanceledEventAttributes) GetStartedEventId() (o i
 }
 
 type ChildWorkflowExecutionCompletedEventAttributes struct {
+	Version           *int64             `json:"version,omitempty"`
 	Result            []byte             `json:"result,omitempty"`
 	Domain            *string            `json:"domain,omitempty"`
 	WorkflowExecution *WorkflowExecution `json:"workflowExecution,omitempty"`
@@ -3104,12 +3429,20 @@ type ChildWorkflowExecutionCompletedEventAttributes struct {
 //   }
 func (v *ChildWorkflowExecutionCompletedEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [6]wire.Field
+		fields [7]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.Result != nil {
 		w, err = wire.NewValueBinary(v.Result), error(nil)
 		if err != nil {
@@ -3184,6 +3517,16 @@ func (v *ChildWorkflowExecutionCompletedEventAttributes) FromWire(w wire.Value) 
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TBinary {
 				v.Result, err = field.Value.GetBinary(), error(nil)
@@ -3251,8 +3594,12 @@ func (v *ChildWorkflowExecutionCompletedEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [6]string
+	var fields [7]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.Result != nil {
 		fields[i] = fmt.Sprintf("Result: %v", v.Result)
 		i++
@@ -3286,6 +3633,9 @@ func (v *ChildWorkflowExecutionCompletedEventAttributes) String() string {
 //
 // This function performs a deep comparison.
 func (v *ChildWorkflowExecutionCompletedEventAttributes) Equals(rhs *ChildWorkflowExecutionCompletedEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !((v.Result == nil && rhs.Result == nil) || (v.Result != nil && rhs.Result != nil && bytes.Equal(v.Result, rhs.Result))) {
 		return false
 	}
@@ -3306,6 +3656,16 @@ func (v *ChildWorkflowExecutionCompletedEventAttributes) Equals(rhs *ChildWorkfl
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *ChildWorkflowExecutionCompletedEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetDomain returns the value of Domain if it is set or its
@@ -3465,6 +3825,7 @@ func (v *ChildWorkflowExecutionFailedCause) UnmarshalJSON(text []byte) error {
 }
 
 type ChildWorkflowExecutionFailedEventAttributes struct {
+	Version           *int64             `json:"version,omitempty"`
 	Reason            *string            `json:"reason,omitempty"`
 	Details           []byte             `json:"details,omitempty"`
 	Domain            *string            `json:"domain,omitempty"`
@@ -3491,12 +3852,20 @@ type ChildWorkflowExecutionFailedEventAttributes struct {
 //   }
 func (v *ChildWorkflowExecutionFailedEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [7]wire.Field
+		fields [8]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.Reason != nil {
 		w, err = wire.NewValueString(*(v.Reason)), error(nil)
 		if err != nil {
@@ -3579,6 +3948,16 @@ func (v *ChildWorkflowExecutionFailedEventAttributes) FromWire(w wire.Value) err
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TBinary {
 				var x string
@@ -3656,8 +4035,12 @@ func (v *ChildWorkflowExecutionFailedEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [7]string
+	var fields [8]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.Reason != nil {
 		fields[i] = fmt.Sprintf("Reason: %v", *(v.Reason))
 		i++
@@ -3695,6 +4078,9 @@ func (v *ChildWorkflowExecutionFailedEventAttributes) String() string {
 //
 // This function performs a deep comparison.
 func (v *ChildWorkflowExecutionFailedEventAttributes) Equals(rhs *ChildWorkflowExecutionFailedEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !_String_EqualsPtr(v.Reason, rhs.Reason) {
 		return false
 	}
@@ -3718,6 +4104,16 @@ func (v *ChildWorkflowExecutionFailedEventAttributes) Equals(rhs *ChildWorkflowE
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *ChildWorkflowExecutionFailedEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetReason returns the value of Reason if it is set or its
@@ -3761,6 +4157,7 @@ func (v *ChildWorkflowExecutionFailedEventAttributes) GetStartedEventId() (o int
 }
 
 type ChildWorkflowExecutionStartedEventAttributes struct {
+	Version           *int64             `json:"version,omitempty"`
 	Domain            *string            `json:"domain,omitempty"`
 	InitiatedEventId  *int64             `json:"initiatedEventId,omitempty"`
 	WorkflowExecution *WorkflowExecution `json:"workflowExecution,omitempty"`
@@ -3784,12 +4181,20 @@ type ChildWorkflowExecutionStartedEventAttributes struct {
 //   }
 func (v *ChildWorkflowExecutionStartedEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [4]wire.Field
+		fields [5]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.Domain != nil {
 		w, err = wire.NewValueString(*(v.Domain)), error(nil)
 		if err != nil {
@@ -3848,6 +4253,16 @@ func (v *ChildWorkflowExecutionStartedEventAttributes) FromWire(w wire.Value) er
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TBinary {
 				var x string
@@ -3897,8 +4312,12 @@ func (v *ChildWorkflowExecutionStartedEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [4]string
+	var fields [5]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.Domain != nil {
 		fields[i] = fmt.Sprintf("Domain: %v", *(v.Domain))
 		i++
@@ -3924,6 +4343,9 @@ func (v *ChildWorkflowExecutionStartedEventAttributes) String() string {
 //
 // This function performs a deep comparison.
 func (v *ChildWorkflowExecutionStartedEventAttributes) Equals(rhs *ChildWorkflowExecutionStartedEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !_String_EqualsPtr(v.Domain, rhs.Domain) {
 		return false
 	}
@@ -3938,6 +4360,16 @@ func (v *ChildWorkflowExecutionStartedEventAttributes) Equals(rhs *ChildWorkflow
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *ChildWorkflowExecutionStartedEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetDomain returns the value of Domain if it is set or its
@@ -3961,6 +4393,7 @@ func (v *ChildWorkflowExecutionStartedEventAttributes) GetInitiatedEventId() (o 
 }
 
 type ChildWorkflowExecutionTerminatedEventAttributes struct {
+	Version           *int64             `json:"version,omitempty"`
 	Domain            *string            `json:"domain,omitempty"`
 	WorkflowExecution *WorkflowExecution `json:"workflowExecution,omitempty"`
 	WorkflowType      *WorkflowType      `json:"workflowType,omitempty"`
@@ -3985,12 +4418,20 @@ type ChildWorkflowExecutionTerminatedEventAttributes struct {
 //   }
 func (v *ChildWorkflowExecutionTerminatedEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [5]wire.Field
+		fields [6]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.Domain != nil {
 		w, err = wire.NewValueString(*(v.Domain)), error(nil)
 		if err != nil {
@@ -4057,6 +4498,16 @@ func (v *ChildWorkflowExecutionTerminatedEventAttributes) FromWire(w wire.Value)
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TBinary {
 				var x string
@@ -4116,8 +4567,12 @@ func (v *ChildWorkflowExecutionTerminatedEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [5]string
+	var fields [6]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.Domain != nil {
 		fields[i] = fmt.Sprintf("Domain: %v", *(v.Domain))
 		i++
@@ -4147,6 +4602,9 @@ func (v *ChildWorkflowExecutionTerminatedEventAttributes) String() string {
 //
 // This function performs a deep comparison.
 func (v *ChildWorkflowExecutionTerminatedEventAttributes) Equals(rhs *ChildWorkflowExecutionTerminatedEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !_String_EqualsPtr(v.Domain, rhs.Domain) {
 		return false
 	}
@@ -4164,6 +4622,16 @@ func (v *ChildWorkflowExecutionTerminatedEventAttributes) Equals(rhs *ChildWorkf
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *ChildWorkflowExecutionTerminatedEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetDomain returns the value of Domain if it is set or its
@@ -4197,6 +4665,7 @@ func (v *ChildWorkflowExecutionTerminatedEventAttributes) GetStartedEventId() (o
 }
 
 type ChildWorkflowExecutionTimedOutEventAttributes struct {
+	Version           *int64             `json:"version,omitempty"`
 	TimeoutType       *TimeoutType       `json:"timeoutType,omitempty"`
 	Domain            *string            `json:"domain,omitempty"`
 	WorkflowExecution *WorkflowExecution `json:"workflowExecution,omitempty"`
@@ -4222,12 +4691,20 @@ type ChildWorkflowExecutionTimedOutEventAttributes struct {
 //   }
 func (v *ChildWorkflowExecutionTimedOutEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [6]wire.Field
+		fields [7]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.TimeoutType != nil {
 		w, err = v.TimeoutType.ToWire()
 		if err != nil {
@@ -4302,6 +4779,16 @@ func (v *ChildWorkflowExecutionTimedOutEventAttributes) FromWire(w wire.Value) e
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TI32 {
 				var x TimeoutType
@@ -4371,8 +4858,12 @@ func (v *ChildWorkflowExecutionTimedOutEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [6]string
+	var fields [7]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.TimeoutType != nil {
 		fields[i] = fmt.Sprintf("TimeoutType: %v", *(v.TimeoutType))
 		i++
@@ -4406,6 +4897,9 @@ func (v *ChildWorkflowExecutionTimedOutEventAttributes) String() string {
 //
 // This function performs a deep comparison.
 func (v *ChildWorkflowExecutionTimedOutEventAttributes) Equals(rhs *ChildWorkflowExecutionTimedOutEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !_TimeoutType_EqualsPtr(v.TimeoutType, rhs.TimeoutType) {
 		return false
 	}
@@ -4426,6 +4920,16 @@ func (v *ChildWorkflowExecutionTimedOutEventAttributes) Equals(rhs *ChildWorkflo
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *ChildWorkflowExecutionTimedOutEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetTimeoutType returns the value of TimeoutType if it is set or its
@@ -5405,6 +5909,7 @@ func (v *Decision) GetDecisionType() (o DecisionType) {
 }
 
 type DecisionTaskCompletedEventAttributes struct {
+	Version          *int64  `json:"version,omitempty"`
 	ExecutionContext []byte  `json:"executionContext,omitempty"`
 	ScheduledEventId *int64  `json:"scheduledEventId,omitempty"`
 	StartedEventId   *int64  `json:"startedEventId,omitempty"`
@@ -5428,12 +5933,20 @@ type DecisionTaskCompletedEventAttributes struct {
 //   }
 func (v *DecisionTaskCompletedEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [4]wire.Field
+		fields [5]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.ExecutionContext != nil {
 		w, err = wire.NewValueBinary(v.ExecutionContext), error(nil)
 		if err != nil {
@@ -5492,6 +6005,16 @@ func (v *DecisionTaskCompletedEventAttributes) FromWire(w wire.Value) error {
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TBinary {
 				v.ExecutionContext, err = field.Value.GetBinary(), error(nil)
@@ -5543,8 +6066,12 @@ func (v *DecisionTaskCompletedEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [4]string
+	var fields [5]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.ExecutionContext != nil {
 		fields[i] = fmt.Sprintf("ExecutionContext: %v", v.ExecutionContext)
 		i++
@@ -5570,6 +6097,9 @@ func (v *DecisionTaskCompletedEventAttributes) String() string {
 //
 // This function performs a deep comparison.
 func (v *DecisionTaskCompletedEventAttributes) Equals(rhs *DecisionTaskCompletedEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !((v.ExecutionContext == nil && rhs.ExecutionContext == nil) || (v.ExecutionContext != nil && rhs.ExecutionContext != nil && bytes.Equal(v.ExecutionContext, rhs.ExecutionContext))) {
 		return false
 	}
@@ -5584,6 +6114,16 @@ func (v *DecisionTaskCompletedEventAttributes) Equals(rhs *DecisionTaskCompleted
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *DecisionTaskCompletedEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetScheduledEventId returns the value of ScheduledEventId if it is set or its
@@ -5878,6 +6418,7 @@ func (v *DecisionTaskFailedCause) UnmarshalJSON(text []byte) error {
 }
 
 type DecisionTaskFailedEventAttributes struct {
+	Version          *int64                   `json:"version,omitempty"`
 	ScheduledEventId *int64                   `json:"scheduledEventId,omitempty"`
 	StartedEventId   *int64                   `json:"startedEventId,omitempty"`
 	Cause            *DecisionTaskFailedCause `json:"cause,omitempty"`
@@ -5902,12 +6443,20 @@ type DecisionTaskFailedEventAttributes struct {
 //   }
 func (v *DecisionTaskFailedEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [5]wire.Field
+		fields [6]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.ScheduledEventId != nil {
 		w, err = wire.NewValueI64(*(v.ScheduledEventId)), error(nil)
 		if err != nil {
@@ -5980,6 +6529,16 @@ func (v *DecisionTaskFailedEventAttributes) FromWire(w wire.Value) error {
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TI64 {
 				var x int64
@@ -6041,8 +6600,12 @@ func (v *DecisionTaskFailedEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [5]string
+	var fields [6]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.ScheduledEventId != nil {
 		fields[i] = fmt.Sprintf("ScheduledEventId: %v", *(v.ScheduledEventId))
 		i++
@@ -6082,6 +6645,9 @@ func _DecisionTaskFailedCause_EqualsPtr(lhs, rhs *DecisionTaskFailedCause) bool 
 //
 // This function performs a deep comparison.
 func (v *DecisionTaskFailedEventAttributes) Equals(rhs *DecisionTaskFailedEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !_I64_EqualsPtr(v.ScheduledEventId, rhs.ScheduledEventId) {
 		return false
 	}
@@ -6099,6 +6665,16 @@ func (v *DecisionTaskFailedEventAttributes) Equals(rhs *DecisionTaskFailedEventA
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *DecisionTaskFailedEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetScheduledEventId returns the value of ScheduledEventId if it is set or its
@@ -6142,6 +6718,7 @@ func (v *DecisionTaskFailedEventAttributes) GetIdentity() (o string) {
 }
 
 type DecisionTaskScheduledEventAttributes struct {
+	Version                    *int64    `json:"version,omitempty"`
 	TaskList                   *TaskList `json:"taskList,omitempty"`
 	StartToCloseTimeoutSeconds *int32    `json:"startToCloseTimeoutSeconds,omitempty"`
 	Attempt                    *int64    `json:"attempt,omitempty"`
@@ -6164,12 +6741,20 @@ type DecisionTaskScheduledEventAttributes struct {
 //   }
 func (v *DecisionTaskScheduledEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [3]wire.Field
+		fields [4]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.TaskList != nil {
 		w, err = v.TaskList.ToWire()
 		if err != nil {
@@ -6220,6 +6805,16 @@ func (v *DecisionTaskScheduledEventAttributes) FromWire(w wire.Value) error {
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TStruct {
 				v.TaskList, err = _TaskList_Read(field.Value)
@@ -6261,8 +6856,12 @@ func (v *DecisionTaskScheduledEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [3]string
+	var fields [4]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.TaskList != nil {
 		fields[i] = fmt.Sprintf("TaskList: %v", v.TaskList)
 		i++
@@ -6284,6 +6883,9 @@ func (v *DecisionTaskScheduledEventAttributes) String() string {
 //
 // This function performs a deep comparison.
 func (v *DecisionTaskScheduledEventAttributes) Equals(rhs *DecisionTaskScheduledEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !((v.TaskList == nil && rhs.TaskList == nil) || (v.TaskList != nil && rhs.TaskList != nil && v.TaskList.Equals(rhs.TaskList))) {
 		return false
 	}
@@ -6295,6 +6897,16 @@ func (v *DecisionTaskScheduledEventAttributes) Equals(rhs *DecisionTaskScheduled
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *DecisionTaskScheduledEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetStartToCloseTimeoutSeconds returns the value of StartToCloseTimeoutSeconds if it is set or its
@@ -6318,6 +6930,7 @@ func (v *DecisionTaskScheduledEventAttributes) GetAttempt() (o int64) {
 }
 
 type DecisionTaskStartedEventAttributes struct {
+	Version          *int64  `json:"version,omitempty"`
 	ScheduledEventId *int64  `json:"scheduledEventId,omitempty"`
 	Identity         *string `json:"identity,omitempty"`
 	RequestId        *string `json:"requestId,omitempty"`
@@ -6340,12 +6953,20 @@ type DecisionTaskStartedEventAttributes struct {
 //   }
 func (v *DecisionTaskStartedEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [3]wire.Field
+		fields [4]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.ScheduledEventId != nil {
 		w, err = wire.NewValueI64(*(v.ScheduledEventId)), error(nil)
 		if err != nil {
@@ -6396,6 +7017,16 @@ func (v *DecisionTaskStartedEventAttributes) FromWire(w wire.Value) error {
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TI64 {
 				var x int64
@@ -6439,8 +7070,12 @@ func (v *DecisionTaskStartedEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [3]string
+	var fields [4]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.ScheduledEventId != nil {
 		fields[i] = fmt.Sprintf("ScheduledEventId: %v", *(v.ScheduledEventId))
 		i++
@@ -6462,6 +7097,9 @@ func (v *DecisionTaskStartedEventAttributes) String() string {
 //
 // This function performs a deep comparison.
 func (v *DecisionTaskStartedEventAttributes) Equals(rhs *DecisionTaskStartedEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !_I64_EqualsPtr(v.ScheduledEventId, rhs.ScheduledEventId) {
 		return false
 	}
@@ -6473,6 +7111,16 @@ func (v *DecisionTaskStartedEventAttributes) Equals(rhs *DecisionTaskStartedEven
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *DecisionTaskStartedEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetScheduledEventId returns the value of ScheduledEventId if it is set or its
@@ -6506,6 +7154,7 @@ func (v *DecisionTaskStartedEventAttributes) GetRequestId() (o string) {
 }
 
 type DecisionTaskTimedOutEventAttributes struct {
+	Version          *int64       `json:"version,omitempty"`
 	ScheduledEventId *int64       `json:"scheduledEventId,omitempty"`
 	StartedEventId   *int64       `json:"startedEventId,omitempty"`
 	TimeoutType      *TimeoutType `json:"timeoutType,omitempty"`
@@ -6528,12 +7177,20 @@ type DecisionTaskTimedOutEventAttributes struct {
 //   }
 func (v *DecisionTaskTimedOutEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [3]wire.Field
+		fields [4]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.ScheduledEventId != nil {
 		w, err = wire.NewValueI64(*(v.ScheduledEventId)), error(nil)
 		if err != nil {
@@ -6584,6 +7241,16 @@ func (v *DecisionTaskTimedOutEventAttributes) FromWire(w wire.Value) error {
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TI64 {
 				var x int64
@@ -6627,8 +7294,12 @@ func (v *DecisionTaskTimedOutEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [3]string
+	var fields [4]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.ScheduledEventId != nil {
 		fields[i] = fmt.Sprintf("ScheduledEventId: %v", *(v.ScheduledEventId))
 		i++
@@ -6650,6 +7321,9 @@ func (v *DecisionTaskTimedOutEventAttributes) String() string {
 //
 // This function performs a deep comparison.
 func (v *DecisionTaskTimedOutEventAttributes) Equals(rhs *DecisionTaskTimedOutEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !_I64_EqualsPtr(v.ScheduledEventId, rhs.ScheduledEventId) {
 		return false
 	}
@@ -6661,6 +7335,16 @@ func (v *DecisionTaskTimedOutEventAttributes) Equals(rhs *DecisionTaskTimedOutEv
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *DecisionTaskTimedOutEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetScheduledEventId returns the value of ScheduledEventId if it is set or its
@@ -9777,6 +10461,7 @@ func (v *EventType) UnmarshalJSON(text []byte) error {
 }
 
 type ExternalWorkflowExecutionCancelRequestedEventAttributes struct {
+	Version           *int64             `json:"version,omitempty"`
 	InitiatedEventId  *int64             `json:"initiatedEventId,omitempty"`
 	Domain            *string            `json:"domain,omitempty"`
 	WorkflowExecution *WorkflowExecution `json:"workflowExecution,omitempty"`
@@ -9799,12 +10484,20 @@ type ExternalWorkflowExecutionCancelRequestedEventAttributes struct {
 //   }
 func (v *ExternalWorkflowExecutionCancelRequestedEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [3]wire.Field
+		fields [4]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.InitiatedEventId != nil {
 		w, err = wire.NewValueI64(*(v.InitiatedEventId)), error(nil)
 		if err != nil {
@@ -9855,6 +10548,16 @@ func (v *ExternalWorkflowExecutionCancelRequestedEventAttributes) FromWire(w wir
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TI64 {
 				var x int64
@@ -9896,8 +10599,12 @@ func (v *ExternalWorkflowExecutionCancelRequestedEventAttributes) String() strin
 		return "<nil>"
 	}
 
-	var fields [3]string
+	var fields [4]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.InitiatedEventId != nil {
 		fields[i] = fmt.Sprintf("InitiatedEventId: %v", *(v.InitiatedEventId))
 		i++
@@ -9919,6 +10626,9 @@ func (v *ExternalWorkflowExecutionCancelRequestedEventAttributes) String() strin
 //
 // This function performs a deep comparison.
 func (v *ExternalWorkflowExecutionCancelRequestedEventAttributes) Equals(rhs *ExternalWorkflowExecutionCancelRequestedEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !_I64_EqualsPtr(v.InitiatedEventId, rhs.InitiatedEventId) {
 		return false
 	}
@@ -9930,6 +10640,16 @@ func (v *ExternalWorkflowExecutionCancelRequestedEventAttributes) Equals(rhs *Ex
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *ExternalWorkflowExecutionCancelRequestedEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetInitiatedEventId returns the value of InitiatedEventId if it is set or its
@@ -9953,6 +10673,7 @@ func (v *ExternalWorkflowExecutionCancelRequestedEventAttributes) GetDomain() (o
 }
 
 type ExternalWorkflowExecutionSignaledEventAttributes struct {
+	Version           *int64             `json:"version,omitempty"`
 	InitiatedEventId  *int64             `json:"initiatedEventId,omitempty"`
 	Domain            *string            `json:"domain,omitempty"`
 	WorkflowExecution *WorkflowExecution `json:"workflowExecution,omitempty"`
@@ -9976,12 +10697,20 @@ type ExternalWorkflowExecutionSignaledEventAttributes struct {
 //   }
 func (v *ExternalWorkflowExecutionSignaledEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [4]wire.Field
+		fields [5]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.InitiatedEventId != nil {
 		w, err = wire.NewValueI64(*(v.InitiatedEventId)), error(nil)
 		if err != nil {
@@ -10040,6 +10769,16 @@ func (v *ExternalWorkflowExecutionSignaledEventAttributes) FromWire(w wire.Value
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TI64 {
 				var x int64
@@ -10089,8 +10828,12 @@ func (v *ExternalWorkflowExecutionSignaledEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [4]string
+	var fields [5]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.InitiatedEventId != nil {
 		fields[i] = fmt.Sprintf("InitiatedEventId: %v", *(v.InitiatedEventId))
 		i++
@@ -10116,6 +10859,9 @@ func (v *ExternalWorkflowExecutionSignaledEventAttributes) String() string {
 //
 // This function performs a deep comparison.
 func (v *ExternalWorkflowExecutionSignaledEventAttributes) Equals(rhs *ExternalWorkflowExecutionSignaledEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !_I64_EqualsPtr(v.InitiatedEventId, rhs.InitiatedEventId) {
 		return false
 	}
@@ -10130,6 +10876,16 @@ func (v *ExternalWorkflowExecutionSignaledEventAttributes) Equals(rhs *ExternalW
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *ExternalWorkflowExecutionSignaledEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetInitiatedEventId returns the value of InitiatedEventId if it is set or its
@@ -13450,6 +14206,7 @@ func (v *ListOpenWorkflowExecutionsResponse) Equals(rhs *ListOpenWorkflowExecuti
 }
 
 type MarkerRecordedEventAttributes struct {
+	Version                      *int64  `json:"version,omitempty"`
 	MarkerName                   *string `json:"markerName,omitempty"`
 	Details                      []byte  `json:"details,omitempty"`
 	DecisionTaskCompletedEventId *int64  `json:"decisionTaskCompletedEventId,omitempty"`
@@ -13472,12 +14229,20 @@ type MarkerRecordedEventAttributes struct {
 //   }
 func (v *MarkerRecordedEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [3]wire.Field
+		fields [4]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.MarkerName != nil {
 		w, err = wire.NewValueString(*(v.MarkerName)), error(nil)
 		if err != nil {
@@ -13528,6 +14293,16 @@ func (v *MarkerRecordedEventAttributes) FromWire(w wire.Value) error {
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TBinary {
 				var x string
@@ -13569,8 +14344,12 @@ func (v *MarkerRecordedEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [3]string
+	var fields [4]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.MarkerName != nil {
 		fields[i] = fmt.Sprintf("MarkerName: %v", *(v.MarkerName))
 		i++
@@ -13592,6 +14371,9 @@ func (v *MarkerRecordedEventAttributes) String() string {
 //
 // This function performs a deep comparison.
 func (v *MarkerRecordedEventAttributes) Equals(rhs *MarkerRecordedEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !_String_EqualsPtr(v.MarkerName, rhs.MarkerName) {
 		return false
 	}
@@ -13603,6 +14385,16 @@ func (v *MarkerRecordedEventAttributes) Equals(rhs *MarkerRecordedEventAttribute
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *MarkerRecordedEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetMarkerName returns the value of MarkerName if it is set or its
@@ -16975,6 +17767,7 @@ func (v *RequestCancelActivityTaskDecisionAttributes) GetActivityId() (o string)
 }
 
 type RequestCancelActivityTaskFailedEventAttributes struct {
+	Version                      *int64  `json:"version,omitempty"`
 	ActivityId                   *string `json:"activityId,omitempty"`
 	Cause                        *string `json:"cause,omitempty"`
 	DecisionTaskCompletedEventId *int64  `json:"decisionTaskCompletedEventId,omitempty"`
@@ -16997,12 +17790,20 @@ type RequestCancelActivityTaskFailedEventAttributes struct {
 //   }
 func (v *RequestCancelActivityTaskFailedEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [3]wire.Field
+		fields [4]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.ActivityId != nil {
 		w, err = wire.NewValueString(*(v.ActivityId)), error(nil)
 		if err != nil {
@@ -17053,6 +17854,16 @@ func (v *RequestCancelActivityTaskFailedEventAttributes) FromWire(w wire.Value) 
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TBinary {
 				var x string
@@ -17096,8 +17907,12 @@ func (v *RequestCancelActivityTaskFailedEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [3]string
+	var fields [4]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.ActivityId != nil {
 		fields[i] = fmt.Sprintf("ActivityId: %v", *(v.ActivityId))
 		i++
@@ -17119,6 +17934,9 @@ func (v *RequestCancelActivityTaskFailedEventAttributes) String() string {
 //
 // This function performs a deep comparison.
 func (v *RequestCancelActivityTaskFailedEventAttributes) Equals(rhs *RequestCancelActivityTaskFailedEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !_String_EqualsPtr(v.ActivityId, rhs.ActivityId) {
 		return false
 	}
@@ -17130,6 +17948,16 @@ func (v *RequestCancelActivityTaskFailedEventAttributes) Equals(rhs *RequestCanc
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *RequestCancelActivityTaskFailedEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetActivityId returns the value of ActivityId if it is set or its
@@ -17411,6 +18239,7 @@ func (v *RequestCancelExternalWorkflowExecutionDecisionAttributes) GetChildWorkf
 }
 
 type RequestCancelExternalWorkflowExecutionFailedEventAttributes struct {
+	Version                      *int64                                      `json:"version,omitempty"`
 	Cause                        *CancelExternalWorkflowExecutionFailedCause `json:"cause,omitempty"`
 	DecisionTaskCompletedEventId *int64                                      `json:"decisionTaskCompletedEventId,omitempty"`
 	Domain                       *string                                     `json:"domain,omitempty"`
@@ -17436,12 +18265,20 @@ type RequestCancelExternalWorkflowExecutionFailedEventAttributes struct {
 //   }
 func (v *RequestCancelExternalWorkflowExecutionFailedEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [6]wire.Field
+		fields [7]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.Cause != nil {
 		w, err = v.Cause.ToWire()
 		if err != nil {
@@ -17522,6 +18359,16 @@ func (v *RequestCancelExternalWorkflowExecutionFailedEventAttributes) FromWire(w
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TI32 {
 				var x CancelExternalWorkflowExecutionFailedCause
@@ -17591,8 +18438,12 @@ func (v *RequestCancelExternalWorkflowExecutionFailedEventAttributes) String() s
 		return "<nil>"
 	}
 
-	var fields [6]string
+	var fields [7]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.Cause != nil {
 		fields[i] = fmt.Sprintf("Cause: %v", *(v.Cause))
 		i++
@@ -17636,6 +18487,9 @@ func _CancelExternalWorkflowExecutionFailedCause_EqualsPtr(lhs, rhs *CancelExter
 //
 // This function performs a deep comparison.
 func (v *RequestCancelExternalWorkflowExecutionFailedEventAttributes) Equals(rhs *RequestCancelExternalWorkflowExecutionFailedEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !_CancelExternalWorkflowExecutionFailedCause_EqualsPtr(v.Cause, rhs.Cause) {
 		return false
 	}
@@ -17656,6 +18510,16 @@ func (v *RequestCancelExternalWorkflowExecutionFailedEventAttributes) Equals(rhs
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *RequestCancelExternalWorkflowExecutionFailedEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetCause returns the value of Cause if it is set or its
@@ -17699,6 +18563,7 @@ func (v *RequestCancelExternalWorkflowExecutionFailedEventAttributes) GetInitiat
 }
 
 type RequestCancelExternalWorkflowExecutionInitiatedEventAttributes struct {
+	Version                      *int64             `json:"version,omitempty"`
 	DecisionTaskCompletedEventId *int64             `json:"decisionTaskCompletedEventId,omitempty"`
 	Domain                       *string            `json:"domain,omitempty"`
 	WorkflowExecution            *WorkflowExecution `json:"workflowExecution,omitempty"`
@@ -17723,12 +18588,20 @@ type RequestCancelExternalWorkflowExecutionInitiatedEventAttributes struct {
 //   }
 func (v *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [5]wire.Field
+		fields [6]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.DecisionTaskCompletedEventId != nil {
 		w, err = wire.NewValueI64(*(v.DecisionTaskCompletedEventId)), error(nil)
 		if err != nil {
@@ -17795,6 +18668,16 @@ func (v *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) FromWir
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TI64 {
 				var x int64
@@ -17854,8 +18737,12 @@ func (v *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) String(
 		return "<nil>"
 	}
 
-	var fields [5]string
+	var fields [6]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.DecisionTaskCompletedEventId != nil {
 		fields[i] = fmt.Sprintf("DecisionTaskCompletedEventId: %v", *(v.DecisionTaskCompletedEventId))
 		i++
@@ -17885,6 +18772,9 @@ func (v *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) String(
 //
 // This function performs a deep comparison.
 func (v *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) Equals(rhs *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !_I64_EqualsPtr(v.DecisionTaskCompletedEventId, rhs.DecisionTaskCompletedEventId) {
 		return false
 	}
@@ -17902,6 +18792,16 @@ func (v *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) Equals(
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetDecisionTaskCompletedEventId returns the value of DecisionTaskCompletedEventId if it is set or its
@@ -21129,6 +22029,7 @@ func (v *SignalExternalWorkflowExecutionFailedCause) UnmarshalJSON(text []byte) 
 }
 
 type SignalExternalWorkflowExecutionFailedEventAttributes struct {
+	Version                      *int64                                      `json:"version,omitempty"`
 	Cause                        *SignalExternalWorkflowExecutionFailedCause `json:"cause,omitempty"`
 	DecisionTaskCompletedEventId *int64                                      `json:"decisionTaskCompletedEventId,omitempty"`
 	Domain                       *string                                     `json:"domain,omitempty"`
@@ -21154,12 +22055,20 @@ type SignalExternalWorkflowExecutionFailedEventAttributes struct {
 //   }
 func (v *SignalExternalWorkflowExecutionFailedEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [6]wire.Field
+		fields [7]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.Cause != nil {
 		w, err = v.Cause.ToWire()
 		if err != nil {
@@ -21240,6 +22149,16 @@ func (v *SignalExternalWorkflowExecutionFailedEventAttributes) FromWire(w wire.V
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TI32 {
 				var x SignalExternalWorkflowExecutionFailedCause
@@ -21309,8 +22228,12 @@ func (v *SignalExternalWorkflowExecutionFailedEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [6]string
+	var fields [7]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.Cause != nil {
 		fields[i] = fmt.Sprintf("Cause: %v", *(v.Cause))
 		i++
@@ -21354,6 +22277,9 @@ func _SignalExternalWorkflowExecutionFailedCause_EqualsPtr(lhs, rhs *SignalExter
 //
 // This function performs a deep comparison.
 func (v *SignalExternalWorkflowExecutionFailedEventAttributes) Equals(rhs *SignalExternalWorkflowExecutionFailedEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !_SignalExternalWorkflowExecutionFailedCause_EqualsPtr(v.Cause, rhs.Cause) {
 		return false
 	}
@@ -21374,6 +22300,16 @@ func (v *SignalExternalWorkflowExecutionFailedEventAttributes) Equals(rhs *Signa
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *SignalExternalWorkflowExecutionFailedEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetCause returns the value of Cause if it is set or its
@@ -21417,6 +22353,7 @@ func (v *SignalExternalWorkflowExecutionFailedEventAttributes) GetInitiatedEvent
 }
 
 type SignalExternalWorkflowExecutionInitiatedEventAttributes struct {
+	Version                      *int64             `json:"version,omitempty"`
 	DecisionTaskCompletedEventId *int64             `json:"decisionTaskCompletedEventId,omitempty"`
 	Domain                       *string            `json:"domain,omitempty"`
 	WorkflowExecution            *WorkflowExecution `json:"workflowExecution,omitempty"`
@@ -21443,12 +22380,20 @@ type SignalExternalWorkflowExecutionInitiatedEventAttributes struct {
 //   }
 func (v *SignalExternalWorkflowExecutionInitiatedEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [7]wire.Field
+		fields [8]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.DecisionTaskCompletedEventId != nil {
 		w, err = wire.NewValueI64(*(v.DecisionTaskCompletedEventId)), error(nil)
 		if err != nil {
@@ -21531,6 +22476,16 @@ func (v *SignalExternalWorkflowExecutionInitiatedEventAttributes) FromWire(w wir
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TI64 {
 				var x int64
@@ -21608,8 +22563,12 @@ func (v *SignalExternalWorkflowExecutionInitiatedEventAttributes) String() strin
 		return "<nil>"
 	}
 
-	var fields [7]string
+	var fields [8]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.DecisionTaskCompletedEventId != nil {
 		fields[i] = fmt.Sprintf("DecisionTaskCompletedEventId: %v", *(v.DecisionTaskCompletedEventId))
 		i++
@@ -21647,6 +22606,9 @@ func (v *SignalExternalWorkflowExecutionInitiatedEventAttributes) String() strin
 //
 // This function performs a deep comparison.
 func (v *SignalExternalWorkflowExecutionInitiatedEventAttributes) Equals(rhs *SignalExternalWorkflowExecutionInitiatedEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !_I64_EqualsPtr(v.DecisionTaskCompletedEventId, rhs.DecisionTaskCompletedEventId) {
 		return false
 	}
@@ -21670,6 +22632,16 @@ func (v *SignalExternalWorkflowExecutionInitiatedEventAttributes) Equals(rhs *Si
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *SignalExternalWorkflowExecutionInitiatedEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetDecisionTaskCompletedEventId returns the value of DecisionTaskCompletedEventId if it is set or its
@@ -22921,6 +23893,7 @@ func (v *StartChildWorkflowExecutionDecisionAttributes) GetWorkflowIdReusePolicy
 }
 
 type StartChildWorkflowExecutionFailedEventAttributes struct {
+	Version                      *int64                             `json:"version,omitempty"`
 	Domain                       *string                            `json:"domain,omitempty"`
 	WorkflowId                   *string                            `json:"workflowId,omitempty"`
 	WorkflowType                 *WorkflowType                      `json:"workflowType,omitempty"`
@@ -22947,12 +23920,20 @@ type StartChildWorkflowExecutionFailedEventAttributes struct {
 //   }
 func (v *StartChildWorkflowExecutionFailedEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [7]wire.Field
+		fields [8]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.Domain != nil {
 		w, err = wire.NewValueString(*(v.Domain)), error(nil)
 		if err != nil {
@@ -23041,6 +24022,16 @@ func (v *StartChildWorkflowExecutionFailedEventAttributes) FromWire(w wire.Value
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TBinary {
 				var x string
@@ -23120,8 +24111,12 @@ func (v *StartChildWorkflowExecutionFailedEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [7]string
+	var fields [8]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.Domain != nil {
 		fields[i] = fmt.Sprintf("Domain: %v", *(v.Domain))
 		i++
@@ -23169,6 +24164,9 @@ func _ChildWorkflowExecutionFailedCause_EqualsPtr(lhs, rhs *ChildWorkflowExecuti
 //
 // This function performs a deep comparison.
 func (v *StartChildWorkflowExecutionFailedEventAttributes) Equals(rhs *StartChildWorkflowExecutionFailedEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !_String_EqualsPtr(v.Domain, rhs.Domain) {
 		return false
 	}
@@ -23192,6 +24190,16 @@ func (v *StartChildWorkflowExecutionFailedEventAttributes) Equals(rhs *StartChil
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *StartChildWorkflowExecutionFailedEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetDomain returns the value of Domain if it is set or its
@@ -23245,6 +24253,7 @@ func (v *StartChildWorkflowExecutionFailedEventAttributes) GetDecisionTaskComple
 }
 
 type StartChildWorkflowExecutionInitiatedEventAttributes struct {
+	Version                             *int64                 `json:"version,omitempty"`
 	Domain                              *string                `json:"domain,omitempty"`
 	WorkflowId                          *string                `json:"workflowId,omitempty"`
 	WorkflowType                        *WorkflowType          `json:"workflowType,omitempty"`
@@ -23275,12 +24284,20 @@ type StartChildWorkflowExecutionInitiatedEventAttributes struct {
 //   }
 func (v *StartChildWorkflowExecutionInitiatedEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [11]wire.Field
+		fields [12]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.Domain != nil {
 		w, err = wire.NewValueString(*(v.Domain)), error(nil)
 		if err != nil {
@@ -23395,6 +24412,16 @@ func (v *StartChildWorkflowExecutionInitiatedEventAttributes) FromWire(w wire.Va
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TBinary {
 				var x string
@@ -23510,8 +24537,12 @@ func (v *StartChildWorkflowExecutionInitiatedEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [11]string
+	var fields [12]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.Domain != nil {
 		fields[i] = fmt.Sprintf("Domain: %v", *(v.Domain))
 		i++
@@ -23565,6 +24596,9 @@ func (v *StartChildWorkflowExecutionInitiatedEventAttributes) String() string {
 //
 // This function performs a deep comparison.
 func (v *StartChildWorkflowExecutionInitiatedEventAttributes) Equals(rhs *StartChildWorkflowExecutionInitiatedEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !_String_EqualsPtr(v.Domain, rhs.Domain) {
 		return false
 	}
@@ -23600,6 +24634,16 @@ func (v *StartChildWorkflowExecutionInitiatedEventAttributes) Equals(rhs *StartC
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *StartChildWorkflowExecutionInitiatedEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetDomain returns the value of Domain if it is set or its
@@ -25626,6 +26670,7 @@ func (v *TimeoutType) UnmarshalJSON(text []byte) error {
 }
 
 type TimerCanceledEventAttributes struct {
+	Version                      *int64  `json:"version,omitempty"`
 	TimerId                      *string `json:"timerId,omitempty"`
 	StartedEventId               *int64  `json:"startedEventId,omitempty"`
 	DecisionTaskCompletedEventId *int64  `json:"decisionTaskCompletedEventId,omitempty"`
@@ -25649,12 +26694,20 @@ type TimerCanceledEventAttributes struct {
 //   }
 func (v *TimerCanceledEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [4]wire.Field
+		fields [5]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.TimerId != nil {
 		w, err = wire.NewValueString(*(v.TimerId)), error(nil)
 		if err != nil {
@@ -25713,6 +26766,16 @@ func (v *TimerCanceledEventAttributes) FromWire(w wire.Value) error {
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TBinary {
 				var x string
@@ -25766,8 +26829,12 @@ func (v *TimerCanceledEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [4]string
+	var fields [5]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.TimerId != nil {
 		fields[i] = fmt.Sprintf("TimerId: %v", *(v.TimerId))
 		i++
@@ -25793,6 +26860,9 @@ func (v *TimerCanceledEventAttributes) String() string {
 //
 // This function performs a deep comparison.
 func (v *TimerCanceledEventAttributes) Equals(rhs *TimerCanceledEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !_String_EqualsPtr(v.TimerId, rhs.TimerId) {
 		return false
 	}
@@ -25807,6 +26877,16 @@ func (v *TimerCanceledEventAttributes) Equals(rhs *TimerCanceledEventAttributes)
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *TimerCanceledEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetTimerId returns the value of TimerId if it is set or its
@@ -25850,6 +26930,7 @@ func (v *TimerCanceledEventAttributes) GetIdentity() (o string) {
 }
 
 type TimerFiredEventAttributes struct {
+	Version        *int64  `json:"version,omitempty"`
 	TimerId        *string `json:"timerId,omitempty"`
 	StartedEventId *int64  `json:"startedEventId,omitempty"`
 }
@@ -25871,12 +26952,20 @@ type TimerFiredEventAttributes struct {
 //   }
 func (v *TimerFiredEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [2]wire.Field
+		fields [3]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.TimerId != nil {
 		w, err = wire.NewValueString(*(v.TimerId)), error(nil)
 		if err != nil {
@@ -25919,6 +27008,16 @@ func (v *TimerFiredEventAttributes) FromWire(w wire.Value) error {
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TBinary {
 				var x string
@@ -25952,8 +27051,12 @@ func (v *TimerFiredEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [2]string
+	var fields [3]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.TimerId != nil {
 		fields[i] = fmt.Sprintf("TimerId: %v", *(v.TimerId))
 		i++
@@ -25971,6 +27074,9 @@ func (v *TimerFiredEventAttributes) String() string {
 //
 // This function performs a deep comparison.
 func (v *TimerFiredEventAttributes) Equals(rhs *TimerFiredEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !_String_EqualsPtr(v.TimerId, rhs.TimerId) {
 		return false
 	}
@@ -25979,6 +27085,16 @@ func (v *TimerFiredEventAttributes) Equals(rhs *TimerFiredEventAttributes) bool 
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *TimerFiredEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetTimerId returns the value of TimerId if it is set or its
@@ -26002,6 +27118,7 @@ func (v *TimerFiredEventAttributes) GetStartedEventId() (o int64) {
 }
 
 type TimerStartedEventAttributes struct {
+	Version                      *int64  `json:"version,omitempty"`
 	TimerId                      *string `json:"timerId,omitempty"`
 	StartToFireTimeoutSeconds    *int64  `json:"startToFireTimeoutSeconds,omitempty"`
 	DecisionTaskCompletedEventId *int64  `json:"decisionTaskCompletedEventId,omitempty"`
@@ -26024,12 +27141,20 @@ type TimerStartedEventAttributes struct {
 //   }
 func (v *TimerStartedEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [3]wire.Field
+		fields [4]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.TimerId != nil {
 		w, err = wire.NewValueString(*(v.TimerId)), error(nil)
 		if err != nil {
@@ -26080,6 +27205,16 @@ func (v *TimerStartedEventAttributes) FromWire(w wire.Value) error {
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TBinary {
 				var x string
@@ -26123,8 +27258,12 @@ func (v *TimerStartedEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [3]string
+	var fields [4]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.TimerId != nil {
 		fields[i] = fmt.Sprintf("TimerId: %v", *(v.TimerId))
 		i++
@@ -26146,6 +27285,9 @@ func (v *TimerStartedEventAttributes) String() string {
 //
 // This function performs a deep comparison.
 func (v *TimerStartedEventAttributes) Equals(rhs *TimerStartedEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !_String_EqualsPtr(v.TimerId, rhs.TimerId) {
 		return false
 	}
@@ -26157,6 +27299,16 @@ func (v *TimerStartedEventAttributes) Equals(rhs *TimerStartedEventAttributes) b
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *TimerStartedEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetTimerId returns the value of TimerId if it is set or its
@@ -27232,6 +28384,7 @@ func (v *WorkflowExecutionAlreadyStartedError) Error() string {
 }
 
 type WorkflowExecutionCancelRequestedEventAttributes struct {
+	Version                   *int64             `json:"version,omitempty"`
 	Cause                     *string            `json:"cause,omitempty"`
 	ExternalInitiatedEventId  *int64             `json:"externalInitiatedEventId,omitempty"`
 	ExternalWorkflowExecution *WorkflowExecution `json:"externalWorkflowExecution,omitempty"`
@@ -27255,12 +28408,20 @@ type WorkflowExecutionCancelRequestedEventAttributes struct {
 //   }
 func (v *WorkflowExecutionCancelRequestedEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [4]wire.Field
+		fields [5]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.Cause != nil {
 		w, err = wire.NewValueString(*(v.Cause)), error(nil)
 		if err != nil {
@@ -27319,6 +28480,16 @@ func (v *WorkflowExecutionCancelRequestedEventAttributes) FromWire(w wire.Value)
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TBinary {
 				var x string
@@ -27370,8 +28541,12 @@ func (v *WorkflowExecutionCancelRequestedEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [4]string
+	var fields [5]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.Cause != nil {
 		fields[i] = fmt.Sprintf("Cause: %v", *(v.Cause))
 		i++
@@ -27397,6 +28572,9 @@ func (v *WorkflowExecutionCancelRequestedEventAttributes) String() string {
 //
 // This function performs a deep comparison.
 func (v *WorkflowExecutionCancelRequestedEventAttributes) Equals(rhs *WorkflowExecutionCancelRequestedEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !_String_EqualsPtr(v.Cause, rhs.Cause) {
 		return false
 	}
@@ -27411,6 +28589,16 @@ func (v *WorkflowExecutionCancelRequestedEventAttributes) Equals(rhs *WorkflowEx
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *WorkflowExecutionCancelRequestedEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetCause returns the value of Cause if it is set or its
@@ -27444,6 +28632,7 @@ func (v *WorkflowExecutionCancelRequestedEventAttributes) GetIdentity() (o strin
 }
 
 type WorkflowExecutionCanceledEventAttributes struct {
+	Version                      *int64 `json:"version,omitempty"`
 	DecisionTaskCompletedEventId *int64 `json:"decisionTaskCompletedEventId,omitempty"`
 	Details                      []byte `json:"details,omitempty"`
 }
@@ -27465,12 +28654,20 @@ type WorkflowExecutionCanceledEventAttributes struct {
 //   }
 func (v *WorkflowExecutionCanceledEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [2]wire.Field
+		fields [3]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.DecisionTaskCompletedEventId != nil {
 		w, err = wire.NewValueI64(*(v.DecisionTaskCompletedEventId)), error(nil)
 		if err != nil {
@@ -27513,6 +28710,16 @@ func (v *WorkflowExecutionCanceledEventAttributes) FromWire(w wire.Value) error 
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TI64 {
 				var x int64
@@ -27544,8 +28751,12 @@ func (v *WorkflowExecutionCanceledEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [2]string
+	var fields [3]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.DecisionTaskCompletedEventId != nil {
 		fields[i] = fmt.Sprintf("DecisionTaskCompletedEventId: %v", *(v.DecisionTaskCompletedEventId))
 		i++
@@ -27563,6 +28774,9 @@ func (v *WorkflowExecutionCanceledEventAttributes) String() string {
 //
 // This function performs a deep comparison.
 func (v *WorkflowExecutionCanceledEventAttributes) Equals(rhs *WorkflowExecutionCanceledEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !_I64_EqualsPtr(v.DecisionTaskCompletedEventId, rhs.DecisionTaskCompletedEventId) {
 		return false
 	}
@@ -27571,6 +28785,16 @@ func (v *WorkflowExecutionCanceledEventAttributes) Equals(rhs *WorkflowExecution
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *WorkflowExecutionCanceledEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetDecisionTaskCompletedEventId returns the value of DecisionTaskCompletedEventId if it is set or its
@@ -27755,6 +28979,7 @@ func (v *WorkflowExecutionCloseStatus) UnmarshalJSON(text []byte) error {
 }
 
 type WorkflowExecutionCompletedEventAttributes struct {
+	Version                      *int64 `json:"version,omitempty"`
 	Result                       []byte `json:"result,omitempty"`
 	DecisionTaskCompletedEventId *int64 `json:"decisionTaskCompletedEventId,omitempty"`
 }
@@ -27776,12 +29001,20 @@ type WorkflowExecutionCompletedEventAttributes struct {
 //   }
 func (v *WorkflowExecutionCompletedEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [2]wire.Field
+		fields [3]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.Result != nil {
 		w, err = wire.NewValueBinary(v.Result), error(nil)
 		if err != nil {
@@ -27824,6 +29057,16 @@ func (v *WorkflowExecutionCompletedEventAttributes) FromWire(w wire.Value) error
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TBinary {
 				v.Result, err = field.Value.GetBinary(), error(nil)
@@ -27855,8 +29098,12 @@ func (v *WorkflowExecutionCompletedEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [2]string
+	var fields [3]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.Result != nil {
 		fields[i] = fmt.Sprintf("Result: %v", v.Result)
 		i++
@@ -27874,6 +29121,9 @@ func (v *WorkflowExecutionCompletedEventAttributes) String() string {
 //
 // This function performs a deep comparison.
 func (v *WorkflowExecutionCompletedEventAttributes) Equals(rhs *WorkflowExecutionCompletedEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !((v.Result == nil && rhs.Result == nil) || (v.Result != nil && rhs.Result != nil && bytes.Equal(v.Result, rhs.Result))) {
 		return false
 	}
@@ -27882,6 +29132,16 @@ func (v *WorkflowExecutionCompletedEventAttributes) Equals(rhs *WorkflowExecutio
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *WorkflowExecutionCompletedEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetDecisionTaskCompletedEventId returns the value of DecisionTaskCompletedEventId if it is set or its
@@ -28107,6 +29367,7 @@ func (v *WorkflowExecutionConfiguration) GetChildPolicy() (o ChildPolicy) {
 }
 
 type WorkflowExecutionContinuedAsNewEventAttributes struct {
+	Version                             *int64        `json:"version,omitempty"`
 	NewExecutionRunId                   *string       `json:"newExecutionRunId,omitempty"`
 	WorkflowType                        *WorkflowType `json:"workflowType,omitempty"`
 	TaskList                            *TaskList     `json:"taskList,omitempty"`
@@ -28133,12 +29394,20 @@ type WorkflowExecutionContinuedAsNewEventAttributes struct {
 //   }
 func (v *WorkflowExecutionContinuedAsNewEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [7]wire.Field
+		fields [8]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.NewExecutionRunId != nil {
 		w, err = wire.NewValueString(*(v.NewExecutionRunId)), error(nil)
 		if err != nil {
@@ -28221,6 +29490,16 @@ func (v *WorkflowExecutionContinuedAsNewEventAttributes) FromWire(w wire.Value) 
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TBinary {
 				var x string
@@ -28298,8 +29577,12 @@ func (v *WorkflowExecutionContinuedAsNewEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [7]string
+	var fields [8]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.NewExecutionRunId != nil {
 		fields[i] = fmt.Sprintf("NewExecutionRunId: %v", *(v.NewExecutionRunId))
 		i++
@@ -28337,6 +29620,9 @@ func (v *WorkflowExecutionContinuedAsNewEventAttributes) String() string {
 //
 // This function performs a deep comparison.
 func (v *WorkflowExecutionContinuedAsNewEventAttributes) Equals(rhs *WorkflowExecutionContinuedAsNewEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !_String_EqualsPtr(v.NewExecutionRunId, rhs.NewExecutionRunId) {
 		return false
 	}
@@ -28360,6 +29646,16 @@ func (v *WorkflowExecutionContinuedAsNewEventAttributes) Equals(rhs *WorkflowExe
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *WorkflowExecutionContinuedAsNewEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetNewExecutionRunId returns the value of NewExecutionRunId if it is set or its
@@ -28403,6 +29699,7 @@ func (v *WorkflowExecutionContinuedAsNewEventAttributes) GetDecisionTaskComplete
 }
 
 type WorkflowExecutionFailedEventAttributes struct {
+	Version                      *int64  `json:"version,omitempty"`
 	Reason                       *string `json:"reason,omitempty"`
 	Details                      []byte  `json:"details,omitempty"`
 	DecisionTaskCompletedEventId *int64  `json:"decisionTaskCompletedEventId,omitempty"`
@@ -28425,12 +29722,20 @@ type WorkflowExecutionFailedEventAttributes struct {
 //   }
 func (v *WorkflowExecutionFailedEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [3]wire.Field
+		fields [4]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.Reason != nil {
 		w, err = wire.NewValueString(*(v.Reason)), error(nil)
 		if err != nil {
@@ -28481,6 +29786,16 @@ func (v *WorkflowExecutionFailedEventAttributes) FromWire(w wire.Value) error {
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TBinary {
 				var x string
@@ -28522,8 +29837,12 @@ func (v *WorkflowExecutionFailedEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [3]string
+	var fields [4]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.Reason != nil {
 		fields[i] = fmt.Sprintf("Reason: %v", *(v.Reason))
 		i++
@@ -28545,6 +29864,9 @@ func (v *WorkflowExecutionFailedEventAttributes) String() string {
 //
 // This function performs a deep comparison.
 func (v *WorkflowExecutionFailedEventAttributes) Equals(rhs *WorkflowExecutionFailedEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !_String_EqualsPtr(v.Reason, rhs.Reason) {
 		return false
 	}
@@ -28556,6 +29878,16 @@ func (v *WorkflowExecutionFailedEventAttributes) Equals(rhs *WorkflowExecutionFa
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *WorkflowExecutionFailedEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetReason returns the value of Reason if it is set or its
@@ -28967,6 +30299,7 @@ func (v *WorkflowExecutionInfo) GetHistoryLength() (o int64) {
 }
 
 type WorkflowExecutionSignaledEventAttributes struct {
+	Version    *int64  `json:"version,omitempty"`
 	SignalName *string `json:"signalName,omitempty"`
 	Input      []byte  `json:"input,omitempty"`
 	Identity   *string `json:"identity,omitempty"`
@@ -28989,12 +30322,20 @@ type WorkflowExecutionSignaledEventAttributes struct {
 //   }
 func (v *WorkflowExecutionSignaledEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [3]wire.Field
+		fields [4]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.SignalName != nil {
 		w, err = wire.NewValueString(*(v.SignalName)), error(nil)
 		if err != nil {
@@ -29045,6 +30386,16 @@ func (v *WorkflowExecutionSignaledEventAttributes) FromWire(w wire.Value) error 
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TBinary {
 				var x string
@@ -29086,8 +30437,12 @@ func (v *WorkflowExecutionSignaledEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [3]string
+	var fields [4]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.SignalName != nil {
 		fields[i] = fmt.Sprintf("SignalName: %v", *(v.SignalName))
 		i++
@@ -29109,6 +30464,9 @@ func (v *WorkflowExecutionSignaledEventAttributes) String() string {
 //
 // This function performs a deep comparison.
 func (v *WorkflowExecutionSignaledEventAttributes) Equals(rhs *WorkflowExecutionSignaledEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !_String_EqualsPtr(v.SignalName, rhs.SignalName) {
 		return false
 	}
@@ -29120,6 +30478,16 @@ func (v *WorkflowExecutionSignaledEventAttributes) Equals(rhs *WorkflowExecution
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *WorkflowExecutionSignaledEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetSignalName returns the value of SignalName if it is set or its
@@ -29143,6 +30511,7 @@ func (v *WorkflowExecutionSignaledEventAttributes) GetIdentity() (o string) {
 }
 
 type WorkflowExecutionStartedEventAttributes struct {
+	Version                             *int64             `json:"version,omitempty"`
 	WorkflowType                        *WorkflowType      `json:"workflowType,omitempty"`
 	ParentWorkflowDomain                *string            `json:"parentWorkflowDomain,omitempty"`
 	ParentWorkflowExecution             *WorkflowExecution `json:"parentWorkflowExecution,omitempty"`
@@ -29173,12 +30542,20 @@ type WorkflowExecutionStartedEventAttributes struct {
 //   }
 func (v *WorkflowExecutionStartedEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [11]wire.Field
+		fields [12]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.WorkflowType != nil {
 		w, err = v.WorkflowType.ToWire()
 		if err != nil {
@@ -29293,6 +30670,16 @@ func (v *WorkflowExecutionStartedEventAttributes) FromWire(w wire.Value) error {
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TStruct {
 				v.WorkflowType, err = _WorkflowType_Read(field.Value)
@@ -29408,8 +30795,12 @@ func (v *WorkflowExecutionStartedEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [11]string
+	var fields [12]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.WorkflowType != nil {
 		fields[i] = fmt.Sprintf("WorkflowType: %v", v.WorkflowType)
 		i++
@@ -29463,6 +30854,9 @@ func (v *WorkflowExecutionStartedEventAttributes) String() string {
 //
 // This function performs a deep comparison.
 func (v *WorkflowExecutionStartedEventAttributes) Equals(rhs *WorkflowExecutionStartedEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !((v.WorkflowType == nil && rhs.WorkflowType == nil) || (v.WorkflowType != nil && rhs.WorkflowType != nil && v.WorkflowType.Equals(rhs.WorkflowType))) {
 		return false
 	}
@@ -29498,6 +30892,16 @@ func (v *WorkflowExecutionStartedEventAttributes) Equals(rhs *WorkflowExecutionS
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *WorkflowExecutionStartedEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetParentWorkflowDomain returns the value of ParentWorkflowDomain if it is set or its
@@ -29571,6 +30975,7 @@ func (v *WorkflowExecutionStartedEventAttributes) GetIdentity() (o string) {
 }
 
 type WorkflowExecutionTerminatedEventAttributes struct {
+	Version  *int64  `json:"version,omitempty"`
 	Reason   *string `json:"reason,omitempty"`
 	Details  []byte  `json:"details,omitempty"`
 	Identity *string `json:"identity,omitempty"`
@@ -29593,12 +30998,20 @@ type WorkflowExecutionTerminatedEventAttributes struct {
 //   }
 func (v *WorkflowExecutionTerminatedEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [3]wire.Field
+		fields [4]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.Reason != nil {
 		w, err = wire.NewValueString(*(v.Reason)), error(nil)
 		if err != nil {
@@ -29649,6 +31062,16 @@ func (v *WorkflowExecutionTerminatedEventAttributes) FromWire(w wire.Value) erro
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TBinary {
 				var x string
@@ -29690,8 +31113,12 @@ func (v *WorkflowExecutionTerminatedEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [3]string
+	var fields [4]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.Reason != nil {
 		fields[i] = fmt.Sprintf("Reason: %v", *(v.Reason))
 		i++
@@ -29713,6 +31140,9 @@ func (v *WorkflowExecutionTerminatedEventAttributes) String() string {
 //
 // This function performs a deep comparison.
 func (v *WorkflowExecutionTerminatedEventAttributes) Equals(rhs *WorkflowExecutionTerminatedEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !_String_EqualsPtr(v.Reason, rhs.Reason) {
 		return false
 	}
@@ -29724,6 +31154,16 @@ func (v *WorkflowExecutionTerminatedEventAttributes) Equals(rhs *WorkflowExecuti
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *WorkflowExecutionTerminatedEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetReason returns the value of Reason if it is set or its
@@ -29747,6 +31187,7 @@ func (v *WorkflowExecutionTerminatedEventAttributes) GetIdentity() (o string) {
 }
 
 type WorkflowExecutionTimedOutEventAttributes struct {
+	Version     *int64       `json:"version,omitempty"`
 	TimeoutType *TimeoutType `json:"timeoutType,omitempty"`
 }
 
@@ -29767,12 +31208,20 @@ type WorkflowExecutionTimedOutEventAttributes struct {
 //   }
 func (v *WorkflowExecutionTimedOutEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [1]wire.Field
+		fields [2]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
 	if v.TimeoutType != nil {
 		w, err = v.TimeoutType.ToWire()
 		if err != nil {
@@ -29807,6 +31256,16 @@ func (v *WorkflowExecutionTimedOutEventAttributes) FromWire(w wire.Value) error 
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 10:
 			if field.Value.Type() == wire.TI32 {
 				var x TimeoutType
@@ -29830,8 +31289,12 @@ func (v *WorkflowExecutionTimedOutEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [1]string
+	var fields [2]string
 	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
 	if v.TimeoutType != nil {
 		fields[i] = fmt.Sprintf("TimeoutType: %v", *(v.TimeoutType))
 		i++
@@ -29845,11 +31308,24 @@ func (v *WorkflowExecutionTimedOutEventAttributes) String() string {
 //
 // This function performs a deep comparison.
 func (v *WorkflowExecutionTimedOutEventAttributes) Equals(rhs *WorkflowExecutionTimedOutEventAttributes) bool {
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
 	if !_TimeoutType_EqualsPtr(v.TimeoutType, rhs.TimeoutType) {
 		return false
 	}
 
 	return true
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *WorkflowExecutionTimedOutEventAttributes) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
 }
 
 // GetTimeoutType returns the value of TimeoutType if it is set or its
