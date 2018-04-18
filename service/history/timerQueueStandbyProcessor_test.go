@@ -123,7 +123,7 @@ func (s *timerQueueStandbyProcessorSuite) SetupTest() {
 
 	historyCache := newHistoryCache(s.mockShard, s.logger)
 	h := &historyEngineImpl{
-		currentclusterName: s.mockShard.GetService().GetClusterMetadata().GetCurrentClusterName(),
+		currentClusterName: s.mockShard.GetService().GetClusterMetadata().GetCurrentClusterName(),
 		shard:              s.mockShard,
 		historyMgr:         s.mockHistoryMgr,
 		executionManager:   s.mockExecutionMgr,
