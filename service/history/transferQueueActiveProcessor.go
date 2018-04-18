@@ -269,7 +269,7 @@ func (t *transferQueueActiveProcessorImpl) process(qTask queueTaskInfo) error {
 			err = nil
 		}
 		if err != nil {
-			t.metricsClient.IncCounter(scope, metrics.TaskRequests)
+			t.metricsClient.IncCounter(scope, metrics.TaskFailures)
 		}
 	} else {
 		t.queueAckMgr.completeTask(task.TaskID)
