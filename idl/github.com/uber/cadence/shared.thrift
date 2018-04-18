@@ -676,6 +676,7 @@ struct ChildWorkflowExecutionTerminatedEventAttributes {
 }
 
 struct HistoryEvent {
+  01:  optional i64 (js.type = "Long") version
   10:  optional i64 (js.type = "Long") eventId
   20:  optional i64 (js.type = "Long") timestamp
   30:  optional EventType eventType
