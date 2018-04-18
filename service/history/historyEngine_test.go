@@ -146,7 +146,7 @@ func (s *engineSuite) SetupTest() {
 	}
 
 	historyCache := newHistoryCache(shardContextWrapper, s.logger)
-	// this is used by shard context, not relevent to this test, so we do not care how many times "GetCurrentClusterName" os called
+	// this is used by shard context, not relevant to this test, so we do not care how many times "GetCurrentClusterName" os called
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	s.mockClusterMetadata.On("GetAllClusterFailoverVersions").Return(cluster.TestAllClusterFailoverVersions)
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
@@ -3344,7 +3344,7 @@ func (s *engineSuite) getBuilder(domainID string, we workflow.WorkflowExecution)
 	if err != nil {
 		return nil
 	}
-	defer release()
+	defer release(nil)
 
 	return context.msBuilder
 }
@@ -3505,6 +3505,10 @@ func addTimerStartedEvent(builder *mutableStateBuilder, decisionCompletedEventID
 			TimerId:                   common.StringPtr(timerID),
 			StartToFireTimeoutSeconds: common.Int64Ptr(timeOut),
 		})
+}
+
+func addTimerFiredEvent(builder *mutableStateBuilder, scheduleID int64, timerID string) *workflow.HistoryEvent {
+	return builder.AddTimerFiredEvent(scheduleID, timerID)
 }
 
 func addRequestCancelInitiatedEvent(builder *mutableStateBuilder, decisionCompletedEventID int64,
@@ -3674,6 +3678,7 @@ func copyActivityInfo(sourceInfo *persistence.ActivityInfo) *persistence.Activit
 		HeartbeatTimeout:       sourceInfo.HeartbeatTimeout,
 		CancelRequested:        sourceInfo.CancelRequested,
 		CancelRequestID:        sourceInfo.CancelRequestID,
+		TimerTaskStatus:        sourceInfo.TimerTaskStatus,
 	}
 }
 

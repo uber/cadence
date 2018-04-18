@@ -110,7 +110,7 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int) *Config {
 		TimerProcessorForceUpdateInterval:                  10 * time.Minute,
 		TimerProcessorCompleteTimerInterval:                1 * time.Second,
 		TimerProcessorMaxPollInterval:                      60 * time.Second,
-		TransferTaskBatchSize:                              1,
+		TransferTaskBatchSize:                              10,
 		TransferProcessorMaxPollRPS:                        100,
 		TransferProcessorMaxPollInterval:                   60 * time.Second,
 		TransferProcessorUpdateAckInterval:                 10 * time.Second,

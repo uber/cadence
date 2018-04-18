@@ -34,7 +34,7 @@ type MockTimerQueueAckMgr struct {
 
 var _ timerQueueAckMgr = (*MockTimerQueueAckMgr)(nil)
 
-// getFinishedChan is mock implementation for getFinishedChan of TimerQueueAckMgr
+// getFinishedChan is mock implementation for readTimerTasks of TimerQueueAckMgr
 func (_m *MockTimerQueueAckMgr) getFinishedChan() <-chan struct{} {
 	ret := _m.Called()
 

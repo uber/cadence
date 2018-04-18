@@ -132,7 +132,7 @@ func (s *engine2Suite) SetupTest() {
 	}
 
 	historyCache := newHistoryCache(mockShard, s.logger)
-	// this is used by shard context, not relevent to this test, so we do not care how many times "GetCurrentClusterName" os called
+	// this is used by shard context, not relevant to this test, so we do not care how many times "GetCurrentClusterName" os called
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	s.mockClusterMetadata.On("GetAllClusterFailoverVersions").Return(cluster.TestAllClusterFailoverVersions)
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
@@ -1085,7 +1085,7 @@ func (s *engine2Suite) getBuilder(domainID string, we workflow.WorkflowExecution
 	if err != nil {
 		return nil
 	}
-	defer release()
+	defer release(nil)
 
 	return context.msBuilder
 }

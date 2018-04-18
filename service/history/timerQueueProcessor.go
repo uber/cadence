@@ -175,6 +175,7 @@ func (t *timerQueueProcessorImpl) completeTimersLoop() {
 
 func (t *timerQueueProcessorImpl) completeTimers() error {
 	lowerAckLevel := t.ackLevel
+
 	upperAckLevel := t.activeTimerProcessor.timerQueueAckMgr.getAckLevel()
 	if t.isGlobalDomainEnabled {
 		for _, standbyTimerProcessor := range t.standbyTimerProcessors {

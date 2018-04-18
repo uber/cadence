@@ -115,6 +115,9 @@ type (
 		SetCurrentTime(clusterName string, currentTime time.Time)
 	}
 
+	// TODO the timer quque processor and the one below, timer processor
+	// in combination are confusing, we should consider a better naming
+	// convention, or at least come with a better name for this case.
 	timerQueueProcessor interface {
 		common.Daemon
 		NotifyNewTimers(clusterName string, timerTask []persistence.Task)
