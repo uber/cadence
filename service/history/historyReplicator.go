@@ -74,7 +74,7 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 	firstEvent := request.History.Events[0]
 	switch firstEvent.GetEventType() {
 	case shared.EventTypeWorkflowExecutionStarted:
-		msBuilder = newMutableStateBuilder(r.shard.GetConfig(), r.logger)
+		msBuilder = newMutableStateBuilderWithReplicationState(r.shard.GetConfig(), r.logger, request.GetVersion())
 
 	default:
 		var release releaseWorkflowExecutionFunc
@@ -88,6 +88,7 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 		if err != nil {
 			return err
 		}
+		// TODO add comparison of failover version
 	}
 
 	var lastEvent *shared.HistoryEvent
@@ -284,7 +285,7 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 			}
 
 			// Create mutable state updates for the new run
-			newStateBuilder := newMutableStateBuilder(r.shard.GetConfig(), r.logger)
+			newStateBuilder := newMutableStateBuilderWithReplicationState(r.shard.GetConfig(), r.logger, request.GetVersion())
 			newStateBuilder.ReplicateWorkflowExecutionStartedEvent(domainID, parentDomainID, newExecution, uuid.New(),
 				startedAttributes)
 			di := newStateBuilder.ReplicateDecisionTaskScheduledEvent(dtScheduledEvent.GetEventId(),
@@ -293,13 +294,7 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 			nextEventID := di.ScheduleID + 1
 			newStateBuilder.executionInfo.NextEventID = nextEventID
 			newStateBuilder.executionInfo.LastFirstEventID = startedEvent.GetEventId()
-			failoverVersion := request.GetVersion()
-			newStateBuilder.replicationState = &persistence.ReplicationState{
-				CurrentVersion:   failoverVersion,
-				StartVersion:     failoverVersion,
-				LastWriteVersion: failoverVersion,
-				LastWriteEventID: di.ScheduleID,
-			}
+			newStateBuilder.updateReplicationStateLastEventID(di.ScheduleID)
 			// Set the history from replication task on the newStateBuilder
 			newStateBuilder.hBuilder = newHistoryBuilderFromEvents(newRunHistory.Events, r.logger)
 

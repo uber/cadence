@@ -3623,6 +3623,10 @@ func createMutableState(builder *mutableStateBuilder) *persistence.WorkflowMutab
 	if builder.updateBufferedEvents != nil {
 		bufferedEvents = append(bufferedEvents, builder.updateBufferedEvents)
 	}
+	var replicationState *persistence.ReplicationState
+	if builder.replicationState != nil {
+		replicationState = copyReplicationState(builder.replicationState)
+	}
 
 	return &persistence.WorkflowMutableState{
 		ExecutionInfo:       info,
@@ -3632,6 +3636,7 @@ func createMutableState(builder *mutableStateBuilder) *persistence.WorkflowMutab
 		SignalInfos:         signalInfos,
 		RequestCancelInfos:  cancellationInfos,
 		ChildExecutionInfos: childInfos,
+		ReplicationState:    replicationState,
 	}
 }
 
@@ -3720,4 +3725,12 @@ func copyChildInfo(sourceInfo *persistence.ChildExecutionInfo) *persistence.Chil
 	copy(result.InitiatedEvent, sourceInfo.InitiatedEvent)
 	copy(result.StartedEvent, sourceInfo.StartedEvent)
 	return result
+}
+
+func copyReplicationState(source *persistence.ReplicationState) *persistence.ReplicationState {
+	return &persistence.ReplicationState{
+		CurrentVersion:   source.CurrentVersion,
+		LastWriteVersion: source.LastWriteVersion,
+		LastWriteEventID: source.LastWriteEventID,
+	}
 }

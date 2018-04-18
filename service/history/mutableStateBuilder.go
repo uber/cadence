@@ -152,6 +152,15 @@ func newMutableStateBuilder(config *Config, logger bark.Logger) *mutableStateBui
 	return s
 }
 
+func newMutableStateBuilderWithReplicationState(config *Config, logger bark.Logger, version int64) *mutableStateBuilder {
+	s := newMutableStateBuilder(config, logger)
+	s.replicationState = &persistence.ReplicationState{
+		StartVersion:   version,
+		CurrentVersion: version,
+	}
+	return s
+}
+
 func (e *mutableStateBuilder) Load(state *persistence.WorkflowMutableState) {
 	e.pendingActivityInfoIDs = state.ActivitInfos
 	e.pendingTimerInfoIDs = state.TimerInfos
@@ -240,9 +249,12 @@ func (e *mutableStateBuilder) FlushBufferedEvents() error {
 	return nil
 }
 
-func (e *mutableStateBuilder) ApplyReplicationStateUpdates(failoverVersion, lastEventID int64) {
-	e.replicationState.CurrentVersion = failoverVersion
-	e.replicationState.LastWriteVersion = failoverVersion
+func (e *mutableStateBuilder) updateReplicationStateVersion(version int64) {
+	e.replicationState.CurrentVersion = version
+}
+
+func (e *mutableStateBuilder) updateReplicationStateLastEventID(lastEventID int64) {
+	e.replicationState.LastWriteVersion = e.replicationState.CurrentVersion
 	// TODO: Rename this to NextEventID to stay consistent naming convention with rest of code base
 	e.replicationState.LastWriteEventID = lastEventID
 }

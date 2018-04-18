@@ -214,6 +214,8 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 
 	// Generate first decision task event.
 	taskList := request.TaskList.GetName()
+	// TODO when the workflow is going to be replicated, use the
+	// newMutableStateBuilderWithReplicationState
 	msBuilder := newMutableStateBuilder(e.shard.GetConfig(), e.logger)
 	startedEvent := msBuilder.AddWorkflowExecutionStartedEvent(execution, startRequest)
 	if startedEvent == nil {
@@ -1750,6 +1752,8 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(signalWithStartRequ
 
 	// Generate first decision task event.
 	taskList := request.TaskList.GetName()
+	// TODO when the workflow is going to be replicated, use the
+	// newMutableStateBuilderWithReplicationState
 	msBuilder := newMutableStateBuilder(e.shard.GetConfig(), e.logger)
 	startedEvent := msBuilder.AddWorkflowExecutionStartedEvent(execution, startRequest)
 	if startedEvent == nil {

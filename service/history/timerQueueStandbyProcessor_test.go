@@ -159,7 +159,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Pending() 
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	msBuilder := newMutableStateBuilder(s.mockShard.GetConfig(), s.logger)
+	msBuilder := newMutableStateBuilderWithReplicationState(s.mockShard.GetConfig(), s.logger, 0)
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
@@ -209,7 +209,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Success() 
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	msBuilder := newMutableStateBuilder(s.mockShard.GetConfig(), s.logger)
+	msBuilder := newMutableStateBuilderWithReplicationState(s.mockShard.GetConfig(), s.logger, 0)
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
@@ -262,7 +262,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Multiple()
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	msBuilder := newMutableStateBuilder(s.mockShard.GetConfig(), s.logger)
+	msBuilder := newMutableStateBuilderWithReplicationState(s.mockShard.GetConfig(), s.logger, 0)
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
@@ -321,7 +321,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Pending() {
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	msBuilder := newMutableStateBuilder(s.mockShard.GetConfig(), s.logger)
+	msBuilder := newMutableStateBuilderWithReplicationState(s.mockShard.GetConfig(), s.logger, 0)
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
@@ -374,7 +374,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Success() {
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	msBuilder := newMutableStateBuilder(s.mockShard.GetConfig(), s.logger)
+	msBuilder := newMutableStateBuilderWithReplicationState(s.mockShard.GetConfig(), s.logger, 0)
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
@@ -433,7 +433,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Multiple() 
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	msBuilder := newMutableStateBuilder(s.mockShard.GetConfig(), s.logger)
+	msBuilder := newMutableStateBuilderWithReplicationState(s.mockShard.GetConfig(), s.logger, 0)
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
@@ -499,7 +499,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessDecisionTimeout_Pending() {
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	msBuilder := newMutableStateBuilder(s.mockShard.GetConfig(), s.logger)
+	msBuilder := newMutableStateBuilderWithReplicationState(s.mockShard.GetConfig(), s.logger, 0)
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
@@ -541,7 +541,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessDecisionTimeout_Success() {
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	msBuilder := newMutableStateBuilder(s.mockShard.GetConfig(), s.logger)
+	msBuilder := newMutableStateBuilderWithReplicationState(s.mockShard.GetConfig(), s.logger, 0)
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
@@ -586,7 +586,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessWorkflowTimeout_Pending() {
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	msBuilder := newMutableStateBuilder(s.mockShard.GetConfig(), s.logger)
+	msBuilder := newMutableStateBuilderWithReplicationState(s.mockShard.GetConfig(), s.logger, 0)
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
@@ -629,7 +629,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessWorkflowTimeout_Success() {
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	msBuilder := newMutableStateBuilder(s.mockShard.GetConfig(), s.logger)
+	msBuilder := newMutableStateBuilderWithReplicationState(s.mockShard.GetConfig(), s.logger, 0)
 	msBuilder.AddWorkflowExecutionStartedEvent(
 		execution,
 		&history.StartWorkflowExecutionRequest{
