@@ -45,8 +45,8 @@ type (
 	}
 )
 
-// Cassandra only provides miliseconds timestamp precision, so
-// we need to use tolerance when doing comparision
+// Cassandra only provides milliseconds timestamp precision, so
+// we need to use tolerance when doing comparison
 var timePrecision = 2 * time.Millisecond
 
 func TestCassandraPersistenceSuite(t *testing.T) {
@@ -877,10 +877,9 @@ func (s *cassandraPersistenceSuite) TestTimerTasks() {
 	err2 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(4)}, nil, int64(3), tasks, nil, nil, nil, nil, nil)
 	s.Nil(err2, "No error expected.")
 
-	timerTasks, nextToken, err1 := s.GetTimerIndexTasks()
+	timerTasks, err1 := s.GetTimerIndexTasks()
 	s.Nil(err1, "No error expected.")
 	s.NotNil(timerTasks, "expected valid list of tasks.")
-	s.Equal(0, len(nextToken))
 	s.Equal(3, len(timerTasks))
 	s.Equal(TaskTypeWorkflowTimeout, timerTasks[1].TaskType)
 	s.Equal(TaskTypeDeleteHistoryEvent, timerTasks[2].TaskType)
@@ -895,10 +894,9 @@ func (s *cassandraPersistenceSuite) TestTimerTasks() {
 	err2 = s.CompleteTimerTask(timerTasks[2].VisibilityTimestamp, timerTasks[2].TaskID)
 	s.Nil(err2, "No error expected.")
 
-	timerTasks2, nextToken, err2 := s.GetTimerIndexTasks()
+	timerTasks2, err2 := s.GetTimerIndexTasks()
 	s.Nil(err2, "No error expected.")
 	s.Empty(timerTasks2, "expected empty task list.")
-	s.Equal(0, len(nextToken))
 }
 
 func (s *cassandraPersistenceSuite) TestWorkflowMutableState_Activities() {
@@ -1715,9 +1713,9 @@ func (s *cassandraPersistenceSuite) TestCreateGetUpdateGetShard() {
 	s.Equal(shardInfo, resp.ShardInfo)
 }
 
-// Note: cassandra only provide milisecond precision timestamp
+// Note: cassandra only provide millisecond precision timestamp
 // ref: https://docs.datastax.com/en/cql/3.3/cql/cql_reference/timestamp_type_r.html
-// so to use equal function, we need to do conversion, getting rid of sub miliseconds
+// so to use equal function, we need to do conversion, getting rid of sub milliseconds
 func timestampConvertor(t time.Time) time.Time {
 	return time.Unix(
 		0,

@@ -181,7 +181,7 @@ func (p *replicationTaskProcessor) worker(workerWG *sync.WaitGroup) {
 				} else {
 					switch task.GetTaskType() {
 					case replicator.ReplicationTaskTypeDomain:
-						p.logger.Debugf("Recieved domain replication task %v.", task.DomainTaskAttributes)
+						p.logger.Debugf("Received domain replication task %v.", task.DomainTaskAttributes)
 						err = p.domainReplicator.HandleReceivingTask(task.DomainTaskAttributes)
 					case replicator.ReplicationTaskTypeHistory:
 						err = p.historyClient.ReplicateEvents(context.Background(), &h.ReplicateEventsRequest{
@@ -190,10 +190,11 @@ func (p *replicationTaskProcessor) worker(workerWG *sync.WaitGroup) {
 								WorkflowId: task.HistoryTaskAttributes.WorkflowId,
 								RunId:      task.HistoryTaskAttributes.RunId,
 							},
-							FirstEventId: task.HistoryTaskAttributes.FirstEventId,
-							NextEventId:  task.HistoryTaskAttributes.NextEventId,
-							Version:      task.HistoryTaskAttributes.Version,
-							History:      task.HistoryTaskAttributes.History,
+							FirstEventId:  task.HistoryTaskAttributes.FirstEventId,
+							NextEventId:   task.HistoryTaskAttributes.NextEventId,
+							Version:       task.HistoryTaskAttributes.Version,
+							History:       task.HistoryTaskAttributes.History,
+							NewRunHistory: task.HistoryTaskAttributes.NewRunHistory,
 						})
 
 					default:
