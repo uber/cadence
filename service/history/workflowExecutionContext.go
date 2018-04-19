@@ -187,7 +187,7 @@ func (c *workflowExecutionContext) updateHelper(builder *historyBuilder, transfe
 			case *persistence.ConditionFailedError:
 				return ErrConflict
 			}
-
+			
 			logging.LogPersistantStoreErrorEvent(c.logger, logging.TagValueStoreOperationUpdateWorkflowExecution, err0,
 				fmt.Sprintf("{updateCondition: %v}", c.updateCondition))
 			return err0
