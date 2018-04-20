@@ -129,6 +129,7 @@ func (s *timerQueueProcessor2Suite) SetupTest() {
 	// this is used by shard context, not relevent to this test, so we do not care how many times "GetCurrentClusterName" os called
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	s.mockClusterMetadata.On("GetAllClusterFailoverVersions").Return(cluster.TestAllClusterFailoverVersions)
+	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false)
 	h := &historyEngineImpl{
 		currentclusterName: s.mockShard.GetService().GetClusterMetadata().GetCurrentClusterName(),
 		shard:              s.mockShard,
@@ -141,7 +142,7 @@ func (s *timerQueueProcessor2Suite) SetupTest() {
 		metricsClient:      s.mockShard.GetMetricsClient(),
 	}
 	h.txProcessor = newTransferQueueProcessor(s.mockShard, h, s.mockVisibilityMgr, s.mockMatchingClient, &mocks.HistoryClient{})
-	h.timerProcessor = newTimerQueueProcessor(s.mockShard, h, s.mockExecutionMgr, s.logger)
+	h.timerProcessor = newTimerQueueProcessor(s.mockShard, h, s.logger)
 	s.mockHistoryEngine = h
 }
 
@@ -203,11 +204,8 @@ func (s *timerQueueProcessor2Suite) TestTimerUpdateTimesOut() {
 	s.mockExecutionMgr.On("GetTimerIndexTasks", mock.Anything).Return(
 		&persistence.GetTimerIndexTasksResponse{Timers: []*persistence.TimerTaskInfo{}}, nil)
 
-	s.mockExecutionMgr.On("CompleteTimerTask", mock.Anything).Return(nil).Once()
-
 	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(errors.New("FAILED")).Once()
-	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false).Once()
 	s.mockShardManager.On("UpdateShard", mock.Anything).Return(nil)
 
 	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(nil).Once()
@@ -215,7 +213,6 @@ func (s *timerQueueProcessor2Suite) TestTimerUpdateTimesOut() {
 		// Done.
 		waitCh <- struct{}{}
 	}).Once()
-	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false).Once()
 
 	// Start timer Processor.
 	s.mockHistoryEngine.timerProcessor.(*timerQueueProcessorImpl).activeTimerProcessor.Start()
@@ -269,13 +266,11 @@ func (s *timerQueueProcessor2Suite) TestWorkflowTimeout() {
 	wfResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(wfResponse, nil).Once()
 
-	s.mockExecutionMgr.On("CompleteTimerTask", mock.Anything).Return(nil).Once()
 	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(nil).Run(func(arguments mock.Arguments) {
 		// Done.
 		waitCh <- struct{}{}
 	}).Once()
-	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(false).Once()
 
 	// Start timer Processor.
 	emptyResponse := &persistence.GetTimerIndexTasksResponse{Timers: []*persistence.TimerTaskInfo{}}
