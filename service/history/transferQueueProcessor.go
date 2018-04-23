@@ -112,21 +112,16 @@ func (t *transferQueueProcessorImpl) Stop() {
 
 // NotifyNewTask - Notify the processor about the new active / standby transfer task arrival.
 // This should be called each time new transfer task arrives, otherwise tasks maybe delayed.
-func (t *transferQueueProcessorImpl) NotifyNewTask(clusterName string) {
+func (t *transferQueueProcessorImpl) NotifyNewTask(clusterName string, currentTime time.Time) {
 	if clusterName == t.currentClusterName {
+		// we will ignore the current time passed in, since the active processor process task immediately
 		t.activeTaskProcessor.notifyNewTask()
-	}
-	// standby task processor is triggered by setting event time
-}
-
-func (t *transferQueueProcessorImpl) SetCurrentTime(clusterName string, currentTime time.Time) {
-	if clusterName == t.currentClusterName {
-		panic(fmt.Sprintf("Cannot change current time of current cluster: %s.", clusterName))
+		return
 	}
 
 	standbyTaskProcessor, ok := t.standbyTaskProcessors[clusterName]
 	if !ok {
-		panic(fmt.Sprintf("Cannot find transfer processot for %s.", clusterName))
+		panic(fmt.Sprintf("Cannot find transfer processor for %s.", clusterName))
 	}
 	currentClusterTime := t.shard.GetCurrentTime(t.currentClusterName)
 	if currentClusterTime.Sub(currentTime) > t.config.TransferProcessorStandbyTaskDelay {
@@ -138,7 +133,7 @@ func (t *transferQueueProcessorImpl) FailoverDomain(domainID string, standbyClus
 	// we should consider make the failover idempotent
 	failoverTaskProcessor := newTransferQueueFailoverProcessor(t.shard, t.historyService, t.visibilityMgr, t.matchingClient, t.historyClient, domainID, standbyClusterName, t.logger)
 	failoverTaskProcessor.Start()
-	failoverTaskProcessor.NotifyNewTask()
+	failoverTaskProcessor.notifyNewTask()
 }
 
 func (t *transferQueueProcessorImpl) completeTransferLoop() {

@@ -192,7 +192,7 @@ func newTransferQueueFailoverProcessor(shard ShardContext, historyService *histo
 }
 
 func (t *transferQueueActiveProcessorImpl) notifyNewTask() {
-	t.queueProcessorBase.NotifyNewTask()
+	t.queueProcessorBase.notifyNewTask()
 }
 
 func (t *transferQueueActiveProcessorImpl) readTasks(readLevel int64) ([]queueTaskInfo, bool, error) {

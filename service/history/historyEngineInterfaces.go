@@ -86,7 +86,7 @@ type (
 
 	queueProcessor interface {
 		common.Daemon
-		NotifyNewTask()
+		notifyNewTask()
 	}
 
 	queueAckMgr interface {
@@ -111,8 +111,7 @@ type (
 
 	transferQueueProcessor interface {
 		common.Daemon
-		NotifyNewTask(clusterName string)
-		SetCurrentTime(clusterName string, currentTime time.Time)
+		NotifyNewTask(clusterName string, currentTime time.Time)
 	}
 
 	// TODO the timer quque processor and the one below, timer processor

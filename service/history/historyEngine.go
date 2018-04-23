@@ -2149,10 +2149,10 @@ func (s *shardContextWrapper) UpdateWorkflowExecution(request *persistence.Updat
 	err := s.ShardContext.UpdateWorkflowExecution(request)
 	if err == nil {
 		if len(request.TransferTasks) > 0 {
-			s.txProcessor.NotifyNewTask(s.currentClusterName)
+			s.txProcessor.NotifyNewTask(s.currentClusterName, s.GetCurrentTime(s.currentClusterName))
 		}
 		if len(request.ReplicationTasks) > 0 {
-			s.replcatorProcessor.NotifyNewTask()
+			s.replcatorProcessor.notifyNewTask()
 		}
 	}
 	return err
@@ -2163,10 +2163,10 @@ func (s *shardContextWrapper) CreateWorkflowExecution(request *persistence.Creat
 	resp, err := s.ShardContext.CreateWorkflowExecution(request)
 	if err == nil {
 		if len(request.TransferTasks) > 0 {
-			s.txProcessor.NotifyNewTask(s.currentClusterName)
+			s.txProcessor.NotifyNewTask(s.currentClusterName, s.GetCurrentTime(s.currentClusterName))
 		}
 		if len(request.ReplicationTasks) > 0 {
-			s.replcatorProcessor.NotifyNewTask()
+			s.replcatorProcessor.notifyNewTask()
 		}
 	}
 	return resp, err

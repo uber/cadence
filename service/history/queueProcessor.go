@@ -102,7 +102,7 @@ func (p *queueProcessorBase) Start() {
 	defer logging.LogQueueProcesorStartedEvent(p.logger)
 
 	p.shutdownWG.Add(1)
-	p.NotifyNewTask()
+	p.notifyNewTask()
 	go p.processorPump()
 }
 
@@ -123,7 +123,7 @@ func (p *queueProcessorBase) Stop() {
 	}
 }
 
-func (p *queueProcessorBase) NotifyNewTask() {
+func (p *queueProcessorBase) notifyNewTask() {
 	var event struct{}
 	select {
 	case p.notifyCh <- event:
@@ -176,7 +176,7 @@ processorPumpLoop:
 func (p *queueProcessorBase) processBatch(tasksCh chan<- queueTaskInfo) {
 
 	if !p.rateLimiter.Consume(1, p.options.MaxPollInterval) {
-		p.NotifyNewTask() // re-enqueue the event
+		p.notifyNewTask() // re-enqueue the event
 		return
 	}
 
@@ -184,7 +184,7 @@ func (p *queueProcessorBase) processBatch(tasksCh chan<- queueTaskInfo) {
 
 	if err != nil {
 		p.logger.Warnf("Processor unable to retrieve tasks: %v", err)
-		p.NotifyNewTask() // re-enqueue the event
+		p.notifyNewTask() // re-enqueue the event
 		return
 	}
 
@@ -199,7 +199,7 @@ func (p *queueProcessorBase) processBatch(tasksCh chan<- queueTaskInfo) {
 	if more {
 		// There might be more task
 		// We return now to yield, but enqueue an event to poll later
-		p.NotifyNewTask()
+		p.notifyNewTask()
 	}
 
 	return

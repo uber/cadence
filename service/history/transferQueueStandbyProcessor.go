@@ -99,7 +99,7 @@ func newTransferQueueStandbyProcessor(clusterName string, shard ShardContext, hi
 }
 
 func (t *transferQueueStandbyProcessorImpl) notifyNewTask() {
-	t.queueProcessorBase.NotifyNewTask()
+	t.queueProcessorBase.notifyNewTask()
 }
 
 func (t *transferQueueStandbyProcessorImpl) readTasks(readLevel int64) ([]queueTaskInfo, bool, error) {
