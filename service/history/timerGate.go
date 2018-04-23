@@ -133,21 +133,14 @@ func (timerGate *LocalTimerGateImpl) Update(nextTime time.Time) bool {
 	// NOTE: negative duration will make the timer fire immediately
 	now := time.Now()
 
-	if timerGate.timer.Stop() {
-		// this means the timer, before stopped, is active
-
-		if timerGate.nextWakeupTime.Before(nextTime) {
-			timerGate.timer.Reset(timerGate.nextWakeupTime.Sub(now))
-			return false
-		}
-
-		timerGate.nextWakeupTime = nextTime
-		timerGate.timer.Reset(nextTime.Sub(now))
-		// Notifies caller that next notification is reset to fire at passed in 'next' visibility time
-		return true
+	if timerGate.timer.Stop() && timerGate.nextWakeupTime.Before(nextTime) {
+		// this means the timer, before stopped, is active && next wake up time do not have to be upddated
+		timerGate.timer.Reset(timerGate.nextWakeupTime.Sub(now))
+		return false
 	}
 
-	// this means the timer, before stopped, is already fired / never active
+	// this means the timer, before stopped, is active && next wake up time has to be upddated
+	// or this means the timer, before stopped, is already fired / never active
 	timerGate.nextWakeupTime = nextTime
 	timerGate.timer.Reset(nextTime.Sub(now))
 	// Notifies caller that next notification is reset to fire at passed in 'next' visibility time
