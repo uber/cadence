@@ -1256,32 +1256,11 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_BufferedReplication
 		},
 	}
 
-	/*newRunEvents := []*gen.HistoryEvent{
-		&gen.HistoryEvent{
-			EventId:   common.Int64Ptr(1),
-			EventType: gen.EventTypeWorkflowExecutionStarted.Ptr(),
-			WorkflowExecutionStartedEventAttributes: &gen.WorkflowExecutionStartedEventAttributes{
-				WorkflowType: &gen.WorkflowType{Name: common.StringPtr("Test_Workflow")},
-				TaskList:     &gen.TaskList{Name: common.StringPtr("TestTasklist")},
-			},
-		},
-		&gen.HistoryEvent{
-			EventId:   common.Int64Ptr(2),
-			EventType: gen.EventTypeDecisionTaskScheduled.Ptr(),
-			DecisionTaskScheduledEventAttributes: &gen.DecisionTaskScheduledEventAttributes{
-				TaskList:                   &gen.TaskList{Name: common.StringPtr("TestTasklist")},
-				StartToCloseTimeoutSeconds: common.Int32Ptr(201),
-				Attempt:                    common.Int64Ptr(1),
-			},
-		},
-	}*/
-
 	bufferedTask := &BufferedReplicationTask{
 		FirstEventID: int64(5),
 		NextEventID:  int64(7),
 		Version:      int64(11),
 		History:      serializeHistoryEvents(events),
-		//NewRunHistory: serializeHistoryEvents(newRunEvents),
 	}
 	err2 := s.UpdateWorklowStateAndReplication(updatedInfo, nil, bufferedTask, nil, int64(3), nil)
 	s.Nil(err2, "No error expected.")
@@ -1290,6 +1269,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_BufferedReplication
 	s.Nil(err1, "No error expected.")
 	s.NotNil(state1, "expected valid state.")
 	s.Equal(1, len(state1.BufferedReplicationTasks))
+
 	bufferedTask, ok := state1.BufferedReplicationTasks[5]
 	s.True(ok)
 	s.NotNil(bufferedTask)
@@ -1310,26 +1290,120 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_BufferedReplication
 	s.Equal(int64(101), bufferedEvents.Events[1].TimerStartedEventAttributes.GetStartToFireTimeoutSeconds())
 	s.Equal(int64(5), bufferedEvents.Events[1].TimerStartedEventAttributes.GetDecisionTaskCompletedEventId())
 
-	/*bufferedNewRunEvents := deserializedHistoryEvents(bufferedTask.NewRunHistory)
+	newExecutionRunID := "d83db48f-a63c-413d-a05a-bbf5a1ac1098"
+	info1 := state1.ExecutionInfo
+	updatedInfo = copyWorkflowExecutionInfo(info1)
+	completionEvents := []*gen.HistoryEvent{
+		&gen.HistoryEvent{
+			EventId:   common.Int64Ptr(10),
+			EventType: gen.EventTypeDecisionTaskCompleted.Ptr(),
+			DecisionTaskCompletedEventAttributes: &gen.DecisionTaskCompletedEventAttributes{
+				ScheduledEventId: common.Int64Ptr(8),
+				StartedEventId:   common.Int64Ptr(9),
+				Identity:         common.StringPtr("test_worker"),
+			},
+		},
+		&gen.HistoryEvent{
+			EventId:   common.Int64Ptr(11),
+			EventType: gen.EventTypeWorkflowExecutionContinuedAsNew.Ptr(),
+			WorkflowExecutionContinuedAsNewEventAttributes: &gen.WorkflowExecutionContinuedAsNewEventAttributes{
+				NewExecutionRunId: common.StringPtr(newExecutionRunID),
+				WorkflowType:    &gen.WorkflowType{Name: common.StringPtr("wType")},
+				TaskList: &gen.TaskList{Name: common.StringPtr("taskList")},
+				TaskStartToCloseTimeoutSeconds: common.Int32Ptr(212),
+				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(312),
+				DecisionTaskCompletedEventId: common.Int64Ptr(10),
+			},
+		},
+	}
+
+	newRunEvents := []*gen.HistoryEvent{
+		&gen.HistoryEvent{
+			EventId:   common.Int64Ptr(1),
+			EventType: gen.EventTypeWorkflowExecutionStarted.Ptr(),
+			WorkflowExecutionStartedEventAttributes: &gen.WorkflowExecutionStartedEventAttributes{
+				WorkflowType: &gen.WorkflowType{Name: common.StringPtr("wType")},
+				TaskList:     &gen.TaskList{Name: common.StringPtr("taskList")},
+			},
+		},
+		&gen.HistoryEvent{
+			EventId:   common.Int64Ptr(2),
+			EventType: gen.EventTypeDecisionTaskScheduled.Ptr(),
+			DecisionTaskScheduledEventAttributes: &gen.DecisionTaskScheduledEventAttributes{
+				TaskList:                   &gen.TaskList{Name: common.StringPtr("taskList")},
+				StartToCloseTimeoutSeconds: common.Int32Ptr(201),
+				Attempt:                    common.Int64Ptr(1),
+			},
+		},
+	}
+
+	bufferedTask = &BufferedReplicationTask{
+		FirstEventID: int64(10),
+		NextEventID:  int64(12),
+		Version:      int64(12),
+		History:      serializeHistoryEvents(completionEvents),
+		NewRunHistory: serializeHistoryEvents(newRunEvents),
+	}
+	err3 := s.UpdateWorklowStateAndReplication(updatedInfo, nil, bufferedTask, nil, int64(3), nil)
+	s.Nil(err3, "No error expected.")
+
+	state2, err4 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
+	s.Nil(err4, "No error expected.")
+	s.NotNil(state2, "expected valid state.")
+	s.Equal(2, len(state2.BufferedReplicationTasks))
+
+	bufferedTask, ok = state2.BufferedReplicationTasks[10]
+	s.True(ok)
+	s.NotNil(bufferedTask)
+	s.Equal(int64(10), bufferedTask.FirstEventID)
+	s.Equal(int64(12), bufferedTask.NextEventID)
+	s.Equal(int64(12), bufferedTask.Version)
+
+	bufferedEvents = deserializedHistoryEvents(bufferedTask.History)
+	s.Equal(2, len(bufferedEvents.Events))
+	s.Equal(int64(10), bufferedEvents.Events[0].GetEventId())
+	s.Equal(gen.EventTypeDecisionTaskCompleted, bufferedEvents.Events[0].GetEventType())
+	s.Equal(int64(8), bufferedEvents.Events[0].DecisionTaskCompletedEventAttributes.GetScheduledEventId())
+	s.Equal(int64(9), bufferedEvents.Events[0].DecisionTaskCompletedEventAttributes.GetStartedEventId())
+	s.Equal("test_worker", bufferedEvents.Events[0].DecisionTaskCompletedEventAttributes.GetIdentity())
+	s.Equal(int64(11), bufferedEvents.Events[1].GetEventId())
+	s.Equal(gen.EventTypeWorkflowExecutionContinuedAsNew, bufferedEvents.Events[1].GetEventType())
+	s.Equal(newExecutionRunID, bufferedEvents.Events[1].WorkflowExecutionContinuedAsNewEventAttributes.GetNewExecutionRunId())
+	s.Equal("wType", bufferedEvents.Events[1].WorkflowExecutionContinuedAsNewEventAttributes.WorkflowType.GetName())
+	s.Equal("taskList", bufferedEvents.Events[1].WorkflowExecutionContinuedAsNewEventAttributes.TaskList.GetName())
+	s.Equal(int32(212), bufferedEvents.Events[1].WorkflowExecutionContinuedAsNewEventAttributes.GetTaskStartToCloseTimeoutSeconds())
+	s.Equal(int32(312), bufferedEvents.Events[1].WorkflowExecutionContinuedAsNewEventAttributes.GetExecutionStartToCloseTimeoutSeconds())
+	s.Equal(int64(10), bufferedEvents.Events[1].WorkflowExecutionContinuedAsNewEventAttributes.GetDecisionTaskCompletedEventId())
+
+	bufferedNewRunEvents := deserializedHistoryEvents(bufferedTask.NewRunHistory)
 	s.Equal(2, len(bufferedNewRunEvents.Events))
 	s.Equal(int64(1), bufferedNewRunEvents.Events[0].GetEventId())
 	s.Equal(gen.EventTypeWorkflowExecutionStarted, bufferedNewRunEvents.Events[0].GetEventType())
-	s.Equal("Test_Workflow", bufferedNewRunEvents.Events[0].WorkflowExecutionStartedEventAttributes.WorkflowType.GetName())
-	s.Equal("TestTasklist", bufferedNewRunEvents.Events[0].WorkflowExecutionStartedEventAttributes.TaskList.GetName())
+	s.Equal("wType", bufferedNewRunEvents.Events[0].WorkflowExecutionStartedEventAttributes.WorkflowType.GetName())
+	s.Equal("taskList", bufferedNewRunEvents.Events[0].WorkflowExecutionStartedEventAttributes.TaskList.GetName())
 	s.Equal(int64(2), bufferedNewRunEvents.Events[1].GetEventId())
 	s.Equal(gen.EventTypeDecisionTaskScheduled, bufferedNewRunEvents.Events[1].GetEventType())
-	s.Equal("TestTasklist", bufferedNewRunEvents.Events[1].DecisionTaskScheduledEventAttributes.TaskList.GetName())
+	s.Equal("taskList", bufferedNewRunEvents.Events[1].DecisionTaskScheduledEventAttributes.TaskList.GetName())
 	s.Equal(int32(201), bufferedNewRunEvents.Events[1].DecisionTaskScheduledEventAttributes.GetStartToCloseTimeoutSeconds())
-	s.Equal(int64(1), bufferedNewRunEvents.Events[1].DecisionTaskScheduledEventAttributes.GetAttempt())*/
+	s.Equal(int64(1), bufferedNewRunEvents.Events[1].DecisionTaskScheduledEventAttributes.GetAttempt())
 
 	deleteBufferedReplicationTask := int64(5)
-	err3 := s.UpdateWorklowStateAndReplication(updatedInfo, nil, nil, &deleteBufferedReplicationTask, int64(3), nil)
-	s.Nil(err3, "No error expected.")
+	err5 := s.UpdateWorklowStateAndReplication(updatedInfo, nil, nil, &deleteBufferedReplicationTask, int64(3), nil)
+	s.Nil(err5, "No error expected.")
 
-	state2, err1 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
-	s.Nil(err2, "No error expected.")
-	s.NotNil(state2, "expected valid state.")
-	s.Equal(0, len(state2.BufferedReplicationTasks))
+	state3, err6 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
+	s.Nil(err6, "No error expected.")
+	s.NotNil(state3, "expected valid state.")
+	s.Equal(1, len(state3.BufferedReplicationTasks))
+
+	deleteBufferedReplicationTask2 := int64(10)
+	err7 := s.UpdateWorklowStateAndReplication(updatedInfo, nil, nil, &deleteBufferedReplicationTask2, int64(3), nil)
+	s.Nil(err7, "No error expected.")
+
+	state4, err8 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
+	s.Nil(err8, "No error expected.")
+	s.NotNil(state4, "expected valid state.")
+	s.Equal(0, len(state4.BufferedReplicationTasks))
 }
 
 func (s *cassandraPersistenceSuite) TestWorkflowMutableStateInfo() {
