@@ -20,11 +20,11 @@ cd $GOPATH/src/github.com/uber/cadence
 
 ## Dependency management
 
-Dependencies are tracked via `glide.yaml`. If you're not familiar with `glide`,
-read the [docs](https://github.com/Masterminds/glide#usage).
-After you install gide, run below command to get all dependencies into vendor folder.
+Dependencies are tracked via `Gopkg.toml`. If you're not familiar with `dep`,
+read the [docs](https://github.com/golang/dep).
+After you install dep, run below command to get all dependencies into vendor folder.
 ```bash
-glide up
+dep ensure
 ```
 
 ## Licence headers
@@ -68,7 +68,7 @@ Run all the tests:
 make test
 
 # or go to folder with *_test.go, e.g
-cd service/history/ 
+cd service/history/
 go test -v
 # run single test
 go test -v <path> -run <TestSuite> -testify.m <TestSpercificTaskName>
