@@ -398,12 +398,6 @@ func _StartWorkflowExecutionResponse_Read(w wire.Value) (*shared.StartWorkflowEx
 	return &v, err
 }
 
-func _DomainNotActiveError_Read(w wire.Value) (*shared.DomainNotActiveError, error) {
-	var v shared.DomainNotActiveError
-	err := v.FromWire(w)
-	return &v, err
-}
-
 // FromWire deserializes a WorkflowService_SignalWithStartWorkflowExecution_Result struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.

@@ -148,8 +148,8 @@ func (c *workflowExecutionContext) updateVersion() error {
 func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persistence.Task,
 	timerTasks []persistence.Task, transactionID int64) error {
 
-	createReplicationTask := c.msBuilder.replicationState != nil
-	if createReplicationTask {
+	crossDCEnabled := c.msBuilder.replicationState != nil
+	if crossDCEnabled {
 		lastEventID := c.msBuilder.GetNextEventID() - 1
 		c.msBuilder.updateReplicationStateLastEventID(lastEventID)
 	}

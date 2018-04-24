@@ -265,6 +265,7 @@ service HistoryService {
       3: EventAlreadyStartedError eventAlreadyStartedError,
       4: shared.EntityNotExistsError entityNotExistError,
       5: ShardOwnershipLostError shardOwnershipLostError,
+      6: shared.DomainNotActiveError domainNotActiveError,
     )
 
   /**
@@ -279,6 +280,7 @@ service HistoryService {
       3: EventAlreadyStartedError eventAlreadyStartedError,
       4: shared.EntityNotExistsError entityNotExistError,
       5: ShardOwnershipLostError shardOwnershipLostError,
+      6: shared.DomainNotActiveError domainNotActiveError,
     )
 
   /**
@@ -294,6 +296,7 @@ service HistoryService {
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
+      5: shared.DomainNotActiveError domainNotActiveError,
     )
 
   /**
@@ -307,6 +310,7 @@ service HistoryService {
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
+      5: shared.DomainNotActiveError domainNotActiveError,
     )
 
   /**
@@ -322,6 +326,7 @@ service HistoryService {
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
+      5: shared.DomainNotActiveError domainNotActiveError,
     )
 
   /**
@@ -337,6 +342,7 @@ service HistoryService {
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
+      5: shared.DomainNotActiveError domainNotActiveError,
     )
 
   /**
@@ -352,6 +358,7 @@ service HistoryService {
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
+      5: shared.DomainNotActiveError domainNotActiveError,
     )
 
   /**
@@ -367,6 +374,7 @@ service HistoryService {
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
+      5: shared.DomainNotActiveError domainNotActiveError,
     )
 
   /**
@@ -379,6 +387,7 @@ service HistoryService {
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
+      5: shared.DomainNotActiveError domainNotActiveError,
     )
 
   /**
@@ -406,6 +415,7 @@ service HistoryService {
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
+      5: shared.DomainNotActiveError domainNotActiveError,
     )
 
   /**
@@ -418,6 +428,7 @@ service HistoryService {
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
+      5: shared.DomainNotActiveError domainNotActiveError,
     )
 
   /**
@@ -433,6 +444,7 @@ service HistoryService {
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
       5: shared.CancellationAlreadyRequestedError cancellationAlreadyRequestedError,
+      6: shared.DomainNotActiveError domainNotActiveError,
     )
 
   /**
@@ -447,6 +459,7 @@ service HistoryService {
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
+      5: shared.DomainNotActiveError domainNotActiveError,
     )
 
   /**
@@ -459,6 +472,7 @@ service HistoryService {
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
+      5: shared.DomainNotActiveError domainNotActiveError,
     )
 
   /**

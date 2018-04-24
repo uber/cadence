@@ -129,6 +129,7 @@ service WorkflowService {
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
+      4: shared.DomainNotActiveError domainNotActiveError,
     )
 
   /**
@@ -142,6 +143,7 @@ service WorkflowService {
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
+      4: shared.DomainNotActiveError domainNotActiveError,
     )
 
   /**
@@ -172,6 +174,7 @@ service WorkflowService {
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
+      4: shared.DomainNotActiveError domainNotActiveError,
     )
 
   /**
@@ -186,6 +189,7 @@ service WorkflowService {
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
+      4: shared.DomainNotActiveError domainNotActiveError,
     )
 
   /**
@@ -200,6 +204,7 @@ service WorkflowService {
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
+      4: shared.DomainNotActiveError domainNotActiveError,
     )
 
   /**
@@ -214,6 +219,7 @@ service WorkflowService {
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
+      4: shared.DomainNotActiveError domainNotActiveError,
     )
 
   /**
@@ -228,6 +234,7 @@ service WorkflowService {
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
+      4: shared.DomainNotActiveError domainNotActiveError,
     )
 
   /**
@@ -242,6 +249,7 @@ service WorkflowService {
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
+      4: shared.DomainNotActiveError domainNotActiveError,
     )
 
   /**
@@ -256,6 +264,7 @@ service WorkflowService {
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
+      4: shared.DomainNotActiveError domainNotActiveError,
     )
 
   /**
@@ -270,6 +279,7 @@ service WorkflowService {
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
+      4: shared.DomainNotActiveError domainNotActiveError,
     )
 
   /**
@@ -285,6 +295,7 @@ service WorkflowService {
       3: shared.EntityNotExistsError entityNotExistError,
       4: shared.CancellationAlreadyRequestedError cancellationAlreadyRequestedError,
       5: shared.ServiceBusyError serviceBusyError,
+      6: shared.DomainNotActiveError domainNotActiveError,
     )
 
   /**
@@ -297,6 +308,7 @@ service WorkflowService {
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
       4: shared.ServiceBusyError serviceBusyError,
+      5: shared.DomainNotActiveError domainNotActiveError,
     )
 
   /**
@@ -325,6 +337,7 @@ service WorkflowService {
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
       4: shared.ServiceBusyError serviceBusyError,
+      5: shared.DomainNotActiveError domainNotActiveError,
     )
 
   /**
