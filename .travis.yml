@@ -2,8 +2,6 @@ dist: trusty
 sudo: required
 
 language: go
-directories:
-    - $HOME/.glide/cache
 go:
   - "1.10"
 
@@ -21,9 +19,8 @@ before_install:
   - pip install --user ccm
 
 install:
-  - go get -u github.com/Masterminds/glide
-  # remove the mkdir and git checkout part when https://github.com/golang/lint/issues/397 is fixed
-  - mkdir -p $GOPATH/src/golang.org/x && git clone https://github.com/golang/lint.git $GOPATH/src/golang.org/x/lint && go get -u golang.org/x/lint/golint
+  - go get -u github.com/golang/dep/cmd/dep
+  - go get -u golang.org/x/lint/golint
   - go get github.com/axw/gocov/gocov
   - go get github.com/mattn/goveralls
   - go get golang.org/x/tools/cmd/cover

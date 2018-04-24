@@ -62,9 +62,9 @@ PKG_TEST_DIRS := $(filter-out $(INTEG_TEST_ROOT)%,$(TEST_DIRS))
 #   Packages are specified as import paths.
 GOCOVERPKG_ARG := -coverpkg="$(PROJECT_ROOT)/common/...,$(PROJECT_ROOT)/service/...,$(PROJECT_ROOT)/client/...,$(PROJECT_ROOT)/tools/..."
 
-vendor/glide.updated: glide.lock glide.yaml
-	glide install
-	touch vendor/glide.updated
+vendor/dep.updated: Gopkg.lock Gopkg.toml
+	dep ensure
+	touch vendor/dep.updated
 
 yarpc-install:
 	go get './vendor/go.uber.org/thriftrw'
@@ -78,20 +78,20 @@ thriftc: yarpc-install $(THRIFTRW_GEN_SRC)
 copyright: cmd/tools/copyright/licensegen.go
 	go run ./cmd/tools/copyright/licensegen.go --verifyOnly
 
-cadence-cassandra-tool: vendor/glide.updated $(TOOLS_SRC)
+cadence-cassandra-tool: vendor/dep.updated $(TOOLS_SRC)
 	go build -i -o cadence-cassandra-tool cmd/tools/cassandra/main.go
 
-cadence: vendor/glide.updated $(TOOLS_SRC)
+cadence: vendor/dep.updated $(TOOLS_SRC)
 	go build -i -o cadence cmd/tools/cli/main.go
 
-cadence-server: vendor/glide.updated $(ALL_SRC)
+cadence-server: vendor/dep.updated $(ALL_SRC)
 	go build -i -o cadence-server cmd/server/cadence.go cmd/server/server.go
 
 bins_nothrift: lint copyright cadence-cassandra-tool cadence cadence-server
 
 bins: thriftc bins_nothrift
 
-test: vendor/glide.updated bins
+test: vendor/dep.updated bins
 	@rm -f test
 	@rm -f test.log
 	@for dir in $(TEST_DIRS); do \
@@ -120,7 +120,7 @@ cover: cover_profile
 cover_ci: cover_profile
 	goveralls -coverprofile=$(BUILD)/cover.out -service=travis-ci || echo -e "\x1b[31mCoveralls failed\x1b[m"; \
 
-lint: vendor/glide.updated
+lint: vendor/dep.updated
 	@echo Running linter
 	@lintFail=0; for file in $(ALL_SRC); do \
 		golint "$$file"; \

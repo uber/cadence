@@ -61,7 +61,7 @@ RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" && chmod -R 777 "$GOPATH"
 # get and compile cadence-server
 ENV CADENCE_HOME $GOPATH/src/github.com/uber/cadence
 
-RUN go get -u github.com/Masterminds/glide
+RUN go get -u github.com/golang/dep/cmd/dep
 RUN go get -u github.com/golang/lint/golint
 
 RUN git clone https://github.com/uber/cadence.git $CADENCE_HOME
