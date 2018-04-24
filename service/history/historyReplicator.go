@@ -90,7 +90,7 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 			return err
 		}
 
-		// Check for out of order replication event
+		// Check for out of order replication task and store it in the buffer
 		if firstEvent.GetEventId() > msBuilder.GetNextEventID() {
 			if t := msBuilder.BufferReplicationTask(request); t == nil {
 				return errors.New("failed to add buffered replication task")
@@ -100,11 +100,20 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 		}
 	}
 
-	err = r.ApplyReplicationTask(context, msBuilder, request)
-
-	if err == nil {
-		err = r.FlushBuffer(context, msBuilder, request)
+	// First check if there are events which needs to be flushed before applying the update
+	err = r.FlushBuffer(context, msBuilder, request)
+	if err != nil {
+		return err
 	}
+
+	// Apply the replication task
+	err = r.ApplyReplicationTask(context, msBuilder, request)
+	if err != nil {
+		return err
+	}
+
+	// Flush buffered replication tasks after applying the update
+	err = r.FlushBuffer(context, msBuilder, request)
 
 	return err
 }
@@ -448,17 +457,17 @@ func (r *historyReplicator) ApplyReplicationTask(context *workflowExecutionConte
 func (r *historyReplicator) FlushBuffer(context *workflowExecutionContext, msBuilder *mutableStateBuilder,
 	request *h.ReplicateEventsRequest) error {
 
-	if !msBuilder.HasBufferedReplicationTasks() {
-		return nil
-	}
-
-	for {
+	// Keep on applying on applying buffered replication tasks in a loop
+	for msBuilder.HasBufferedReplicationTasks() {
 		nextEventID := msBuilder.GetNextEventID()
 		bt, ok := msBuilder.GetBufferedReplicationTask(nextEventID)
 		if !ok {
+			// Bail out if nextEventID is not in the buffer
 			return nil
 		}
 
+		// We need to delete the task from buffer first to make sure delete update is queued up
+		// Applying replication task commits the transaction along with the delete
 		msBuilder.DeleteBufferedReplicationTask(nextEventID)
 
 		req := &h.ReplicateEventsRequest{
@@ -471,6 +480,7 @@ func (r *historyReplicator) FlushBuffer(context *workflowExecutionContext, msBui
 			NewRunHistory:     msBuilder.GetBufferedHistory(bt.NewRunHistory),
 		}
 
+		// Apply replication task to workflow execution
 		if err := r.ApplyReplicationTask(context, msBuilder, req); err != nil {
 			return err
 		}
