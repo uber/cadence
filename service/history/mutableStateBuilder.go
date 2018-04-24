@@ -28,6 +28,7 @@ import (
 	h "github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/persistence"
 
@@ -1836,7 +1837,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionSignaled(
 	return e.hBuilder.AddWorkflowExecutionSignaledEvent(request)
 }
 
-func (e *mutableStateBuilder) AddContinueAsNewEvent(decisionCompletedEventID int64, domainID, domainName, newRunID string,
+func (e *mutableStateBuilder) AddContinueAsNewEvent(decisionCompletedEventID int64, domainEntry *cache.DomainCacheEntry, newRunID string,
 	parentDomainName string, attributes *workflow.ContinueAsNewWorkflowExecutionDecisionAttributes) (*workflow.HistoryEvent, *mutableStateBuilder,
 	error) {
 	if e.hasPendingTasks() || e.HasPendingDecisionTask() {
@@ -1855,7 +1856,7 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(decisionCompletedEventID int
 	if e.hasParentExecution() {
 		parentInfo = &h.ParentExecutionInfo{
 			DomainUUID: common.StringPtr(e.executionInfo.ParentDomainID),
-			Domain:     common.StringPtr(domainName),
+			Domain:     common.StringPtr(domainEntry.GetInfo().Name),
 			Execution: &workflow.WorkflowExecution{
 				WorkflowId: common.StringPtr(e.executionInfo.ParentWorkflowID),
 				RunId:      common.StringPtr(e.executionInfo.ParentRunID),
@@ -1866,7 +1867,16 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(decisionCompletedEventID int
 
 	continueAsNewEvent := e.hBuilder.AddContinuedAsNewEvent(decisionCompletedEventID, newRunID, attributes)
 
-	newStateBuilder := newMutableStateBuilder(e.config, e.logger)
+	var newStateBuilder *mutableStateBuilder
+	if domainEntry.IsGlobalDomain() {
+		// all workflows within a global domain should have replication state, no matter whether it will be replicated to multiple
+		// target clusters or not
+		newStateBuilder = newMutableStateBuilderWithReplicationState(e.config, e.logger, domainEntry.GetFailoverVersion())
+	} else {
+		newStateBuilder = newMutableStateBuilder(e.config, e.logger)
+	}
+	domainID := domainEntry.GetInfo().ID
+	domainName := domainEntry.GetInfo().Name
 	startedEvent := newStateBuilder.AddWorkflowExecutionStartedEventForContinueAsNew(domainID, domainName,
 		parentInfo, newExecution, e, attributes)
 	if startedEvent == nil {
