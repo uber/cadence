@@ -214,7 +214,7 @@ func (entry *domainCacheEntry) GetFailoverVersion() int64 {
 	return entry.failoverVersion
 }
 
-func (entry *domainCacheEntry) GetIsGlobalDomain() bool {
+func (entry *domainCacheEntry) IsGlobalDomain() bool {
 	return entry.isGlobalDomain
 }
 

@@ -221,6 +221,7 @@ service HistoryService {
       2: shared.InternalServiceError internalServiceError,
       3: shared.WorkflowExecutionAlreadyStartedError sessionAlreadyExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
+      5: shared.DomainNotActiveError domainNotActiveError,
     )
 
   /**
@@ -392,6 +393,7 @@ service HistoryService {
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,
       3: ShardOwnershipLostError shardOwnershipLostError,
+      4: shared.DomainNotActiveError domainNotActiveError,
     )
 
   /**

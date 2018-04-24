@@ -190,6 +190,13 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 	if err != nil {
 		return nil, err
 	}
+	domainEntry, err := e.shard.GetDomainCache().GetDomainByID(domainID)
+	if err != nil {
+		return nil, err
+	}
+	if err = domainEntry.GetDomainNotActiveErr(); err != nil {
+		return nil, err
+	}
 
 	request := startRequest.StartRequest
 	err = validateStartWorkflowExecutionRequest(request)
@@ -215,8 +222,14 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 	// Generate first decision task event.
 	taskList := request.TaskList.GetName()
 	// TODO when the workflow is going to be replicated, use the
-	// newMutableStateBuilderWithReplicationState
-	msBuilder := newMutableStateBuilder(e.shard.GetConfig(), e.logger)
+	var msBuilder *mutableStateBuilder
+	if domainEntry.IsGlobalDomain() {
+		// all workflows within a global domain should have replication state, no matter whether it will be replicated to multiple
+		// target clusters or not
+		msBuilder = newMutableStateBuilderWithReplicationState(e.shard.GetConfig(), e.logger, domainEntry.GetFailoverVersion())
+	} else {
+		msBuilder = newMutableStateBuilder(e.shard.GetConfig(), e.logger)
+	}
 	startedEvent := msBuilder.AddWorkflowExecutionStartedEvent(execution, startRequest)
 	if startedEvent == nil {
 		return nil, &workflow.InternalServiceError{Message: "Failed to add workflow execution started event."}
@@ -1660,6 +1673,14 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(signalWithStartRequ
 	if err != nil {
 		return nil, err
 	}
+	domainEntry, err := e.shard.GetDomainCache().GetDomainByID(domainID)
+	if err != nil {
+		return nil, err
+	}
+	if err = domainEntry.GetDomainNotActiveErr(); err != nil {
+		return nil, err
+	}
+
 	sRequest := signalWithStartRequest.SignalWithStartRequest
 	execution := workflow.WorkflowExecution{
 		WorkflowId: sRequest.WorkflowId,
@@ -1753,8 +1774,14 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(signalWithStartRequ
 	// Generate first decision task event.
 	taskList := request.TaskList.GetName()
 	// TODO when the workflow is going to be replicated, use the
-	// newMutableStateBuilderWithReplicationState
-	msBuilder := newMutableStateBuilder(e.shard.GetConfig(), e.logger)
+	var msBuilder *mutableStateBuilder
+	if domainEntry.IsGlobalDomain() {
+		// all workflows within a global domain should have replication state, no matter whether it will be replicated to multiple
+		// target clusters or not
+		msBuilder = newMutableStateBuilderWithReplicationState(e.shard.GetConfig(), e.logger, domainEntry.GetFailoverVersion())
+	} else {
+		msBuilder = newMutableStateBuilder(e.shard.GetConfig(), e.logger)
+	}
 	startedEvent := msBuilder.AddWorkflowExecutionStartedEvent(execution, startRequest)
 	if startedEvent == nil {
 		return nil, &workflow.InternalServiceError{Message: "Failed to add workflow execution started event."}

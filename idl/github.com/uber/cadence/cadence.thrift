@@ -88,6 +88,7 @@ service WorkflowService {
       2: shared.InternalServiceError internalServiceError,
       3: shared.WorkflowExecutionAlreadyStartedError sessionAlreadyExistError,
       4: shared.ServiceBusyError serviceBusyError,
+      5: shared.DomainNotActiveError domainNotActiveError,
     )
 
   /**
@@ -311,6 +312,7 @@ service WorkflowService {
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
       4: shared.ServiceBusyError serviceBusyError,
+      5: shared.DomainNotActiveError domainNotActiveError,
     )
 
   /**
