@@ -1307,12 +1307,12 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_BufferedReplication
 			EventId:   common.Int64Ptr(11),
 			EventType: gen.EventTypeWorkflowExecutionContinuedAsNew.Ptr(),
 			WorkflowExecutionContinuedAsNewEventAttributes: &gen.WorkflowExecutionContinuedAsNewEventAttributes{
-				NewExecutionRunId: common.StringPtr(newExecutionRunID),
-				WorkflowType:    &gen.WorkflowType{Name: common.StringPtr("wType")},
-				TaskList: &gen.TaskList{Name: common.StringPtr("taskList")},
-				TaskStartToCloseTimeoutSeconds: common.Int32Ptr(212),
+				NewExecutionRunId:                   common.StringPtr(newExecutionRunID),
+				WorkflowType:                        &gen.WorkflowType{Name: common.StringPtr("wType")},
+				TaskList:                            &gen.TaskList{Name: common.StringPtr("taskList")},
+				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(212),
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(312),
-				DecisionTaskCompletedEventId: common.Int64Ptr(10),
+				DecisionTaskCompletedEventId:        common.Int64Ptr(10),
 			},
 		},
 	}
@@ -1338,10 +1338,10 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_BufferedReplication
 	}
 
 	bufferedTask = &BufferedReplicationTask{
-		FirstEventID: int64(10),
-		NextEventID:  int64(12),
-		Version:      int64(12),
-		History:      serializeHistoryEvents(completionEvents),
+		FirstEventID:  int64(10),
+		NextEventID:   int64(12),
+		Version:       int64(12),
+		History:       serializeHistoryEvents(completionEvents),
 		NewRunHistory: serializeHistoryEvents(newRunEvents),
 	}
 	err3 := s.UpdateWorklowStateAndReplication(updatedInfo, nil, bufferedTask, nil, int64(3), nil)

@@ -21,9 +21,9 @@
 package history
 
 import (
+	"errors"
 	"fmt"
 
-	"code.uber.internal/devexp/samar_demo/go-build/.go/src/gb2/src/github.com/pkg/errors"
 	"github.com/pborman/uuid"
 	"github.com/uber-common/bark"
 	h "github.com/uber/cadence/.gen/go/history"
