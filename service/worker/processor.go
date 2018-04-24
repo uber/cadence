@@ -184,18 +184,32 @@ func (p *replicationTaskProcessor) worker(workerWG *sync.WaitGroup) {
 						p.logger.Debugf("Received domain replication task %v.", task.DomainTaskAttributes)
 						err = p.domainReplicator.HandleReceivingTask(task.DomainTaskAttributes)
 					case replicator.ReplicationTaskTypeHistory:
-						err = p.historyClient.ReplicateEvents(context.Background(), &h.ReplicateEventsRequest{
-							DomainUUID: task.HistoryTaskAttributes.DomainId,
-							WorkflowExecution: &shared.WorkflowExecution{
-								WorkflowId: task.HistoryTaskAttributes.WorkflowId,
-								RunId:      task.HistoryTaskAttributes.RunId,
-							},
-							FirstEventId:  task.HistoryTaskAttributes.FirstEventId,
-							NextEventId:   task.HistoryTaskAttributes.NextEventId,
-							Version:       task.HistoryTaskAttributes.Version,
-							History:       task.HistoryTaskAttributes.History,
-							NewRunHistory: task.HistoryTaskAttributes.NewRunHistory,
-						})
+						applyAgain := true
+					ApplyAgain:
+						for applyAgain {
+							err = p.historyClient.ReplicateEvents(context.Background(), &h.ReplicateEventsRequest{
+								DomainUUID: task.HistoryTaskAttributes.DomainId,
+								WorkflowExecution: &shared.WorkflowExecution{
+									WorkflowId: task.HistoryTaskAttributes.WorkflowId,
+									RunId:      task.HistoryTaskAttributes.RunId,
+								},
+								FirstEventId:  task.HistoryTaskAttributes.FirstEventId,
+								NextEventId:   task.HistoryTaskAttributes.NextEventId,
+								Version:       task.HistoryTaskAttributes.Version,
+								History:       task.HistoryTaskAttributes.History,
+								NewRunHistory: task.HistoryTaskAttributes.NewRunHistory,
+							})
+
+							if err == nil {
+								break ApplyAgain
+							}
+
+							if _, ok := err.(*shared.EntityNotExistsError); !ok {
+								break ApplyAgain
+							}
+
+							time.Sleep(20 * time.Millisecond)
+						}
 
 					default:
 						err = ErrUnknownReplicationTask

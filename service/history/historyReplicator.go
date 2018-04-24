@@ -23,6 +23,7 @@ package history
 import (
 	"fmt"
 
+	"code.uber.internal/devexp/samar_demo/go-build/.go/src/gb2/src/github.com/pkg/errors"
 	"github.com/pborman/uuid"
 	"github.com/uber-common/bark"
 	h "github.com/uber/cadence/.gen/go/history"
@@ -91,9 +92,30 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 
 		// Check for out of order replication event
 		if firstEvent.GetEventId() > msBuilder.GetNextEventID() {
+			if t := msBuilder.BufferReplicationTask(request); t == nil {
+				return errors.New("failed to add buffered replication task")
+			}
 
+			return nil
 		}
 	}
+
+	err = r.ApplyReplicationTask(context, msBuilder, request)
+
+	if err == nil {
+		err = r.FlushBuffer(context, msBuilder, request)
+	}
+
+	return err
+}
+
+func (r *historyReplicator) ApplyReplicationTask(context *workflowExecutionContext, msBuilder *mutableStateBuilder,
+	request *h.ReplicateEventsRequest) error {
+	domainID, err := getDomainUUID(request.DomainUUID)
+	if err != nil {
+		return err
+	}
+	execution := *request.WorkflowExecution
 
 	var lastEvent *shared.HistoryEvent
 	decisionScheduleID := emptyEventID
@@ -323,6 +345,7 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 		}
 	}
 
+	firstEvent := request.History.Events[0]
 	switch firstEvent.GetEventType() {
 	case shared.EventTypeWorkflowExecutionStarted:
 		// TODO: Support for child execution
@@ -420,6 +443,40 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 	}
 
 	return err
+}
+
+func (r *historyReplicator) FlushBuffer(context *workflowExecutionContext, msBuilder *mutableStateBuilder,
+	request *h.ReplicateEventsRequest) error {
+
+	if !msBuilder.HasBufferedReplicationTasks() {
+		return nil
+	}
+
+	for {
+		nextEventID := msBuilder.GetNextEventID()
+		bt, ok := msBuilder.GetBufferedReplicationTask(nextEventID)
+		if !ok {
+			return nil
+		}
+
+		msBuilder.DeleteBufferedReplicationTask(nextEventID)
+
+		req := &h.ReplicateEventsRequest{
+			DomainUUID:        request.DomainUUID,
+			WorkflowExecution: request.WorkflowExecution,
+			FirstEventId:      common.Int64Ptr(bt.FirstEventID),
+			NextEventId:       common.Int64Ptr(bt.NextEventID),
+			Version:           common.Int64Ptr(bt.Version),
+			History:           msBuilder.GetBufferedHistory(bt.History),
+			NewRunHistory:     msBuilder.GetBufferedHistory(bt.NewRunHistory),
+		}
+
+		if err := r.ApplyReplicationTask(context, msBuilder, req); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (r *historyReplicator) Serialize(history *shared.History) (*persistence.SerializedHistoryEventBatch, error) {

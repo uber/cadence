@@ -251,6 +251,13 @@ const (
 		`new_run_history: ` + templateSerializedEventBatch + ` ` +
 		`}`
 
+	templateBufferedReplicationTaskInfoNoNewRunHistoryType = `{` +
+		`first_event_id: ?, ` +
+		`next_event_id: ?, ` +
+		`version: ?, ` +
+		`history: ` + templateSerializedEventBatch + ` ` +
+		`}`
+
 	templateReplicationInfoType = `{` +
 		`version: ?, ` +
 		`last_event_id: ?` +
@@ -539,6 +546,17 @@ const (
 
 	templateUpdateBufferedReplicationTasksQuery = `UPDATE executions ` +
 		`SET buffered_replication_tasks_map[ ? ] =` + templateBufferedReplicationTaskInfoType + ` ` +
+		`WHERE shard_id = ? ` +
+		`and type = ? ` +
+		`and domain_id = ? ` +
+		`and workflow_id = ? ` +
+		`and run_id = ? ` +
+		`and visibility_ts = ? ` +
+		`and task_id = ? ` +
+		`IF next_event_id = ?`
+
+	templateUpdateBufferedReplicationTasksNoNewRunHistoryQuery = `UPDATE executions ` +
+		`SET buffered_replication_tasks_map[ ? ] =` + templateBufferedReplicationTaskInfoNoNewRunHistoryType + ` ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
 		`and domain_id = ? ` +
@@ -2526,25 +2544,44 @@ func (d *cassandraPersistence) updateBufferedReplicationTasks(batch *gocql.Batch
 	deleteInfo *int64, domainID, workflowID, runID string, condition int64, rangeID int64) {
 
 	if newBufferedReplicationTask != nil {
-		batch.Query(templateUpdateBufferedReplicationTasksQuery,
-			newBufferedReplicationTask.FirstEventID,
-			newBufferedReplicationTask.FirstEventID,
-			newBufferedReplicationTask.NextEventID,
-			newBufferedReplicationTask.Version,
-			newBufferedReplicationTask.History.EncodingType,
-			newBufferedReplicationTask.History.Version,
-			newBufferedReplicationTask.History.Data,
-			newBufferedReplicationTask.NewRunHistory.EncodingType,
-			newBufferedReplicationTask.NewRunHistory.Version,
-			newBufferedReplicationTask.NewRunHistory.Data,
-			d.shardID,
-			rowTypeExecution,
-			domainID,
-			workflowID,
-			runID,
-			defaultVisibilityTimestamp,
-			rowTypeExecutionTaskID,
-			condition)
+		if newBufferedReplicationTask.NewRunHistory != nil {
+			batch.Query(templateUpdateBufferedReplicationTasksQuery,
+				newBufferedReplicationTask.FirstEventID,
+				newBufferedReplicationTask.FirstEventID,
+				newBufferedReplicationTask.NextEventID,
+				newBufferedReplicationTask.Version,
+				newBufferedReplicationTask.History.EncodingType,
+				newBufferedReplicationTask.History.Version,
+				newBufferedReplicationTask.History.Data,
+				newBufferedReplicationTask.NewRunHistory.EncodingType,
+				newBufferedReplicationTask.NewRunHistory.Version,
+				newBufferedReplicationTask.NewRunHistory.Data,
+				d.shardID,
+				rowTypeExecution,
+				domainID,
+				workflowID,
+				runID,
+				defaultVisibilityTimestamp,
+				rowTypeExecutionTaskID,
+				condition)
+		} else {
+			batch.Query(templateUpdateBufferedReplicationTasksNoNewRunHistoryQuery,
+				newBufferedReplicationTask.FirstEventID,
+				newBufferedReplicationTask.FirstEventID,
+				newBufferedReplicationTask.NextEventID,
+				newBufferedReplicationTask.Version,
+				newBufferedReplicationTask.History.EncodingType,
+				newBufferedReplicationTask.History.Version,
+				newBufferedReplicationTask.History.Data,
+				d.shardID,
+				rowTypeExecution,
+				domainID,
+				workflowID,
+				runID,
+				defaultVisibilityTimestamp,
+				rowTypeExecutionTaskID,
+				condition)
+		}
 	}
 
 	// deleteInfo is the FirstEventID for the history batch being deleted

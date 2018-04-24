@@ -1256,7 +1256,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_BufferedReplication
 		},
 	}
 
-	newRunEvents := []*gen.HistoryEvent{
+	/*newRunEvents := []*gen.HistoryEvent{
 		&gen.HistoryEvent{
 			EventId:   common.Int64Ptr(1),
 			EventType: gen.EventTypeWorkflowExecutionStarted.Ptr(),
@@ -1274,14 +1274,14 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_BufferedReplication
 				Attempt:                    common.Int64Ptr(1),
 			},
 		},
-	}
+	}*/
 
 	bufferedTask := &BufferedReplicationTask{
-		FirstEventID:  int64(5),
-		NextEventID:   int64(7),
-		Version:       int64(11),
-		History:       serializeHistoryEvents(events),
-		NewRunHistory: serializeHistoryEvents(newRunEvents),
+		FirstEventID: int64(5),
+		NextEventID:  int64(7),
+		Version:      int64(11),
+		History:      serializeHistoryEvents(events),
+		//NewRunHistory: serializeHistoryEvents(newRunEvents),
 	}
 	err2 := s.UpdateWorklowStateAndReplication(updatedInfo, nil, bufferedTask, nil, int64(3), nil)
 	s.Nil(err2, "No error expected.")
@@ -1310,7 +1310,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_BufferedReplication
 	s.Equal(int64(101), bufferedEvents.Events[1].TimerStartedEventAttributes.GetStartToFireTimeoutSeconds())
 	s.Equal(int64(5), bufferedEvents.Events[1].TimerStartedEventAttributes.GetDecisionTaskCompletedEventId())
 
-	bufferedNewRunEvents := deserializedHistoryEvents(bufferedTask.NewRunHistory)
+	/*bufferedNewRunEvents := deserializedHistoryEvents(bufferedTask.NewRunHistory)
 	s.Equal(2, len(bufferedNewRunEvents.Events))
 	s.Equal(int64(1), bufferedNewRunEvents.Events[0].GetEventId())
 	s.Equal(gen.EventTypeWorkflowExecutionStarted, bufferedNewRunEvents.Events[0].GetEventType())
@@ -1320,7 +1320,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_BufferedReplication
 	s.Equal(gen.EventTypeDecisionTaskScheduled, bufferedNewRunEvents.Events[1].GetEventType())
 	s.Equal("TestTasklist", bufferedNewRunEvents.Events[1].DecisionTaskScheduledEventAttributes.TaskList.GetName())
 	s.Equal(int32(201), bufferedNewRunEvents.Events[1].DecisionTaskScheduledEventAttributes.GetStartToCloseTimeoutSeconds())
-	s.Equal(int64(1), bufferedNewRunEvents.Events[1].DecisionTaskScheduledEventAttributes.GetAttempt())
+	s.Equal(int64(1), bufferedNewRunEvents.Events[1].DecisionTaskScheduledEventAttributes.GetAttempt())*/
 
 	deleteBufferedReplicationTask := int64(5)
 	err3 := s.UpdateWorklowStateAndReplication(updatedInfo, nil, nil, &deleteBufferedReplicationTask, int64(3), nil)
