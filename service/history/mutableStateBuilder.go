@@ -2081,7 +2081,8 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(doma
 			TaskList:   newStateBuilder.executionInfo.TaskList,
 			ScheduleID: di.ScheduleID,
 		}},
-		DecisionScheduleID:          di.ScheduleID, // TODO add decision version, when doing crodd DC
+		DecisionVersion:             di.Version,
+		DecisionScheduleID:          di.ScheduleID,
 		DecisionStartedID:           di.StartedID,
 		DecisionStartToCloseTimeout: di.DecisionTimeout,
 		ContinueAsNew:               true,

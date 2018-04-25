@@ -1863,7 +1863,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(signalWithStartRequ
 			LastProcessedEvent:          emptyEventID,
 			TransferTasks:               transferTasks,
 			DecisionVersion:             decisionVersion,
-			DecisionScheduleID:          decisionScheduleID, // TODO add decision version, when doing crodd DC
+			DecisionScheduleID:          decisionScheduleID,
 			DecisionStartedID:           decisionStartID,
 			DecisionStartToCloseTimeout: decisionTimeout,
 			TimerTasks:                  timerTasks,

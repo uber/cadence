@@ -240,10 +240,7 @@ func (c *workflowExecutionContext) updateHelper(builder *historyBuilder, transfe
 	}
 
 	// this is the current failover version
-	var version int64
-	if c.msBuilder.replicationState != nil {
-		version = c.msBuilder.replicationState.CurrentVersion
-	}
+	version := c.msBuilder.getVersion()
 	for _, task := range transferTasks {
 		task.SetVersion(version)
 	}

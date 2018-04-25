@@ -941,7 +941,7 @@ func (s *cassandraPersistenceSuite) TestTimerTasks() {
 		&DecisionTimeoutTask{time.Now(), 1, 2, 3, int(gen.TimeoutTypeStartToClose), 11},
 		&WorkflowTimeoutTask{time.Now(), 2, 12},
 		&DeleteHistoryEventTask{time.Now(), 3, 13},
-		&ActivityTimeoutTask{time.Now(), 4, int(gen.TimeoutTypeStartToClose), 7, 14},
+		&ActivityTimeoutTask{time.Now(), 4, int(gen.TimeoutTypeStartToClose), 7, 0, 14},
 		&UserTimerTask{time.Now(), 5, 7, 15},
 	}
 	err2 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(4)}, nil, int64(3), tasks, nil, nil, nil, nil, nil)

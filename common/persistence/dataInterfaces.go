@@ -342,8 +342,8 @@ type (
 		TaskID              int64
 		TimeoutType         int
 		EventID             int64
-		Version             int64
 		Attempt             int64
+		Version             int64
 	}
 
 	// UserTimerTask identifies a timeout task.
@@ -359,6 +359,7 @@ type (
 		VisibilityTimestamp time.Time
 		TaskID              int64
 		EventID             int64
+		Version             int64
 		Attempt             int32
 	}
 
@@ -1130,9 +1131,19 @@ func (u *UserTimerTask) SetVisibilityTimestamp(t time.Time) {
 	u.VisibilityTimestamp = t
 }
 
-// GetType returns the type of the timer task
+// GetType returns the type of the retry timer task
 func (r *RetryTimerTask) GetType() int {
 	return TaskTypeRetryTimer
+}
+
+// GetVersion returns the version of the retry timer task
+func (r *RetryTimerTask) GetVersion() int64 {
+	return r.Version
+}
+
+// SetVersion returns the version of the retry timer task
+func (r *RetryTimerTask) SetVersion(version int64) {
+	r.Version = version
 }
 
 // GetTaskID returns the sequence ID.
