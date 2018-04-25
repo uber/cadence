@@ -92,8 +92,8 @@ func NewDomainCache(metadataMgr persistence.MetadataManager, clusterMetadata clu
 	}
 }
 
-func newDomainCacheEntry() *DomainCacheEntry {
-	return &DomainCacheEntry{}
+func newDomainCacheEntry(clusterMetadata cluster.Metadata) *DomainCacheEntry {
+	return &DomainCacheEntry{clusterMetadata: clusterMetadata}
 }
 
 // GetDomain retrieves the information from the cache if it exists, otherwise retrieves the information from metadata
@@ -144,7 +144,7 @@ func (c *domainCache) getDomain(key, id, name string, cache Cache) (*DomainCache
 
 	// Cache entry not found, Let's create an entry and add it to cache
 	if !cacheHit {
-		elem, _ := cache.PutIfNotExist(key, newDomainCacheEntry())
+		elem, _ := cache.PutIfNotExist(key, newDomainCacheEntry(c.clusterMetadata))
 		entry = elem.(*DomainCacheEntry)
 	}
 
@@ -181,7 +181,7 @@ func (c *domainCache) getDomain(key, id, name string, cache Cache) (*DomainCache
 }
 
 func (entry *DomainCacheEntry) duplicate() *DomainCacheEntry {
-	result := newDomainCacheEntry()
+	result := newDomainCacheEntry(entry.clusterMetadata)
 	result.info = entry.info
 	result.config = entry.config
 	result.replicationConfig = entry.replicationConfig
