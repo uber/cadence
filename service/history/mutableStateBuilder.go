@@ -258,6 +258,13 @@ func (e *mutableStateBuilder) FlushBufferedEvents() error {
 	return nil
 }
 
+func (e *mutableStateBuilder) getVersion() int64 {
+	if e.replicationState == nil {
+		return emptyVersion
+	}
+	return e.replicationState.CurrentVersion
+}
+
 func (e *mutableStateBuilder) updateReplicationStateVersion(version int64) {
 	e.replicationState.CurrentVersion = version
 }
@@ -902,7 +909,7 @@ func (e *mutableStateBuilder) UpdateDecision(di *decisionInfo) {
 // DeleteDecision deletes a decision task.
 func (e *mutableStateBuilder) DeleteDecision() {
 	emptyDecisionInfo := &decisionInfo{
-		Version:         0,
+		Version:         emptyVersion,
 		ScheduleID:      emptyEventID,
 		StartedID:       emptyEventID,
 		RequestID:       emptyUUID,
@@ -918,6 +925,7 @@ func (e *mutableStateBuilder) FailDecision() {
 	e.clearStickyness()
 
 	failDecisionInfo := &decisionInfo{
+		Version:         emptyVersion,
 		ScheduleID:      emptyEventID,
 		StartedID:       emptyEventID,
 		RequestID:       emptyUUID,
@@ -1124,12 +1132,13 @@ func (e *mutableStateBuilder) AddDecisionTaskScheduledEvent() *decisionInfo {
 		scheduleID = newDecisionEvent.GetEventId()
 	}
 
-	return e.ReplicateDecisionTaskScheduledEvent(scheduleID, taskList, startToCloseTimeoutSeconds)
+	return e.ReplicateDecisionTaskScheduledEvent(e.getVersion(), scheduleID, taskList, startToCloseTimeoutSeconds)
 }
 
-func (e *mutableStateBuilder) ReplicateDecisionTaskScheduledEvent(scheduleID int64, taskList string,
+func (e *mutableStateBuilder) ReplicateDecisionTaskScheduledEvent(version, scheduleID int64, taskList string,
 	startToCloseTimeoutSeconds int32) *decisionInfo {
 	di := &decisionInfo{
+		Version:         version,
 		ScheduleID:      scheduleID,
 		StartedID:       emptyEventID,
 		RequestID:       emptyUUID,
@@ -1173,11 +1182,11 @@ func (e *mutableStateBuilder) AddDecisionTaskStartedEvent(scheduleEventID int64,
 		timestamp = int64(0)
 	}
 
-	di = e.ReplicateDecisionTaskStartedEvent(di, scheduleID, startedID, requestID, timestamp)
+	di = e.ReplicateDecisionTaskStartedEvent(di, e.getVersion(), scheduleID, startedID, requestID, timestamp)
 	return event, di
 }
 
-func (e *mutableStateBuilder) ReplicateDecisionTaskStartedEvent(di *decisionInfo, scheduleID, startedID int64,
+func (e *mutableStateBuilder) ReplicateDecisionTaskStartedEvent(di *decisionInfo, version, scheduleID, startedID int64,
 	requestID string, timestamp int64) *decisionInfo {
 	// Replicator calls it with a nil decision info, and it is safe to always lookup the decision in this case as it
 	// does not have to deal with transient decision case.
@@ -1188,6 +1197,7 @@ func (e *mutableStateBuilder) ReplicateDecisionTaskStartedEvent(di *decisionInfo
 	e.executionInfo.State = persistence.WorkflowStateRunning
 	// Update mutable decision state
 	di = &decisionInfo{
+		Version:         version,
 		ScheduleID:      scheduleID,
 		StartedID:       startedID,
 		RequestID:       requestID,
