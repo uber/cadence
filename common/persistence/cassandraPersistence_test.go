@@ -875,7 +875,7 @@ func (s *cassandraPersistenceSuite) TestTransferTasks() {
 		&SignalExecutionTask{currentTransferID + 10005, targetDomainID, targetWorkflowID, targetRunID, true, scheduleID, 555},
 		&StartChildExecutionTask{currentTransferID + 10006, targetDomainID, targetWorkflowID, scheduleID, 666},
 	}
-	err2 := s.UpdateWorklowStateAndReplication(updatedInfo, nil, int64(3), tasks)
+	err2 := s.UpdateWorklowStateAndReplication(updatedInfo, nil, nil, nil, int64(3), tasks)
 	s.Nil(err2, "No error expected.")
 
 	txTasks, err1 := s.GetTransferTasks(100)
