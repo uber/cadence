@@ -134,7 +134,7 @@ func (c *workflowExecutionContext) replicateWorkflowExecution(request *h.Replica
 }
 
 func (c *workflowExecutionContext) updateVersion() error {
-	if c.msBuilder.replicationState != nil {
+	if c.shard.GetService().GetClusterMetadata().IsGlobalDomainEnabled() && c.msBuilder.replicationState != nil {
 		// Support for global domains is enabled and we are performing an update for global domain
 		domainEntry, err := c.shard.GetDomainCache().GetDomainByID(c.msBuilder.executionInfo.DomainID)
 		if err != nil {
@@ -209,7 +209,7 @@ func (c *workflowExecutionContext) updateHelper(builder *historyBuilder, transfe
 	}
 
 	continueAsNew := updates.continueAsNew
-	if continueAsNew != nil && updateReplicationState {
+	if continueAsNew != nil && updateReplicationState && c.shard.GetService().GetClusterMetadata().IsGlobalDomainEnabled() {
 		currentVersion := c.msBuilder.replicationState.CurrentVersion
 		continueAsNew.ReplicationState = &persistence.ReplicationState{
 			CurrentVersion:   currentVersion,

@@ -101,6 +101,7 @@ func (s *timerQueueStandbyProcessorSuite) SetupTest() {
 		},
 	}, nil).Once()
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
+	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(true)
 	s.mockProducer = &mocks.KafkaProducer{}
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)

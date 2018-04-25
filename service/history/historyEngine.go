@@ -219,7 +219,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 	taskList := request.TaskList.GetName()
 	// TODO when the workflow is going to be replicated, use the
 	var msBuilder *mutableStateBuilder
-	if domainEntry.IsGlobalDomain() {
+	if e.shard.GetService().GetClusterMetadata().IsGlobalDomainEnabled() && domainEntry.IsGlobalDomain() {
 		// all workflows within a global domain should have replication state, no matter whether it will be replicated to multiple
 		// target clusters or not
 		msBuilder = newMutableStateBuilderWithReplicationState(e.shard.GetConfig(), e.logger, domainEntry.GetFailoverVersion())
@@ -1786,7 +1786,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(signalWithStartRequ
 	taskList := request.TaskList.GetName()
 	// TODO when the workflow is going to be replicated, use the
 	var msBuilder *mutableStateBuilder
-	if domainEntry.IsGlobalDomain() {
+	if e.shard.GetService().GetClusterMetadata().IsGlobalDomainEnabled() && domainEntry.IsGlobalDomain() {
 		// all workflows within a global domain should have replication state, no matter whether it will be replicated to multiple
 		// target clusters or not
 		msBuilder = newMutableStateBuilderWithReplicationState(e.shard.GetConfig(), e.logger, domainEntry.GetFailoverVersion())
