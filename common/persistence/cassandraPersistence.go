@@ -675,7 +675,7 @@ const (
 		`and task_list_type = ? ` +
 		`and type = ? ` +
 		`and task_id > ? ` +
-		`and task_id <= ? LIMIT ?`
+		`and task_id <= ?`
 
 	templateCompleteTaskQuery = `DELETE FROM tasks ` +
 		`WHERE domain_id = ? ` +
@@ -2034,7 +2034,7 @@ func (d *cassandraPersistence) GetTasks(request *GetTasksRequest) (*GetTasksResp
 		rowTypeTask,
 		request.ReadLevel,
 		request.MaxReadLevel,
-		request.BatchSize)
+	).PageSize(request.BatchSize)
 
 	iter := query.Iter()
 	if iter == nil {
