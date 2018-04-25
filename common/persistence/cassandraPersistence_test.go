@@ -1260,7 +1260,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_BufferedReplication
 		FirstEventID: int64(5),
 		NextEventID:  int64(7),
 		Version:      int64(11),
-		History:      serializeHistoryEvents(events),
+		History:      s.serializeHistoryEvents(events),
 	}
 	err2 := s.UpdateWorklowStateAndReplication(updatedInfo, nil, bufferedTask, nil, int64(3), nil)
 	s.Nil(err2, "No error expected.")
@@ -1277,7 +1277,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_BufferedReplication
 	s.Equal(int64(7), bufferedTask.NextEventID)
 	s.Equal(int64(11), bufferedTask.Version)
 
-	bufferedEvents := deserializedHistoryEvents(bufferedTask.History)
+	bufferedEvents := s.deserializedHistoryEvents(bufferedTask.History)
 	s.Equal(2, len(bufferedEvents.Events))
 	s.Equal(int64(5), bufferedEvents.Events[0].GetEventId())
 	s.Equal(gen.EventTypeDecisionTaskCompleted, bufferedEvents.Events[0].GetEventType())
@@ -1341,8 +1341,8 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_BufferedReplication
 		FirstEventID:  int64(10),
 		NextEventID:   int64(12),
 		Version:       int64(12),
-		History:       serializeHistoryEvents(completionEvents),
-		NewRunHistory: serializeHistoryEvents(newRunEvents),
+		History:       s.serializeHistoryEvents(completionEvents),
+		NewRunHistory: s.serializeHistoryEvents(newRunEvents),
 	}
 	err3 := s.UpdateWorklowStateAndReplication(updatedInfo, nil, bufferedTask, nil, int64(3), nil)
 	s.Nil(err3, "No error expected.")
@@ -1359,7 +1359,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_BufferedReplication
 	s.Equal(int64(12), bufferedTask.NextEventID)
 	s.Equal(int64(12), bufferedTask.Version)
 
-	bufferedEvents = deserializedHistoryEvents(bufferedTask.History)
+	bufferedEvents = s.deserializedHistoryEvents(bufferedTask.History)
 	s.Equal(2, len(bufferedEvents.Events))
 	s.Equal(int64(10), bufferedEvents.Events[0].GetEventId())
 	s.Equal(gen.EventTypeDecisionTaskCompleted, bufferedEvents.Events[0].GetEventType())
@@ -1375,7 +1375,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_BufferedReplication
 	s.Equal(int32(312), bufferedEvents.Events[1].WorkflowExecutionContinuedAsNewEventAttributes.GetExecutionStartToCloseTimeoutSeconds())
 	s.Equal(int64(10), bufferedEvents.Events[1].WorkflowExecutionContinuedAsNewEventAttributes.GetDecisionTaskCompletedEventId())
 
-	bufferedNewRunEvents := deserializedHistoryEvents(bufferedTask.NewRunHistory)
+	bufferedNewRunEvents := s.deserializedHistoryEvents(bufferedTask.NewRunHistory)
 	s.Equal(2, len(bufferedNewRunEvents.Events))
 	s.Equal(int64(1), bufferedNewRunEvents.Events[0].GetEventId())
 	s.Equal(gen.EventTypeWorkflowExecutionStarted, bufferedNewRunEvents.Events[0].GetEventType())
@@ -1944,7 +1944,7 @@ func copyReplicationInfo(sourceInfo *ReplicationInfo) *ReplicationInfo {
 	}
 }
 
-func serializeHistoryEvents(events []*gen.HistoryEvent) *SerializedHistoryEventBatch {
+func (s *cassandraPersistenceSuite) serializeHistoryEvents(events []*gen.HistoryEvent) *SerializedHistoryEventBatch {
 	historySerializer := NewJSONHistorySerializer()
 	bufferedBatch := NewHistoryEventBatch(GetDefaultHistoryVersion(), events)
 	serializedEvents, _ := historySerializer.Serialize(bufferedBatch)
@@ -1952,7 +1952,7 @@ func serializeHistoryEvents(events []*gen.HistoryEvent) *SerializedHistoryEventB
 	return serializedEvents
 }
 
-func deserializedHistoryEvents(batch *SerializedHistoryEventBatch) *HistoryEventBatch {
+func (s *cassandraPersistenceSuite) deserializedHistoryEvents(batch *SerializedHistoryEventBatch) *HistoryEventBatch {
 	historySerializer := NewJSONHistorySerializer()
 	events, err := historySerializer.Deserialize(batch)
 	if err != nil {
