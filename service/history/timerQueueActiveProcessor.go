@@ -663,7 +663,7 @@ func (t *timerQueueActiveProcessorImpl) updateWorkflowExecution(
 		di := msBuilder.AddDecisionTaskScheduledEvent()
 		transferTasks = []persistence.Task{&persistence.DecisionTask{
 			DomainID:   msBuilder.executionInfo.DomainID,
-			TaskList:   di.Tasklist,
+			TaskList:   di.TaskList,
 			ScheduleID: di.ScheduleID,
 		}}
 		if msBuilder.isStickyTaskListEnabled() {

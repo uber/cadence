@@ -112,7 +112,7 @@ type (
 		StartedID       int64
 		RequestID       string
 		DecisionTimeout int32
-		Tasklist        string // This is only needed to communicate tasklist used after AddDecisionTaskScheduledEvent
+		TaskList        string // This is only needed to communicate tasklist used after AddDecisionTaskScheduledEvent
 		Attempt         int64
 		Timestamp       int64
 	}
@@ -1162,7 +1162,7 @@ func (e *mutableStateBuilder) ReplicateDecisionTaskScheduledEvent(version, sched
 		StartedID:       emptyEventID,
 		RequestID:       emptyUUID,
 		DecisionTimeout: startToCloseTimeoutSeconds,
-		Tasklist:        taskList,
+		TaskList:        taskList,
 		Attempt:         e.executionInfo.DecisionAttempt,
 	}
 
@@ -1807,11 +1807,11 @@ func (e *mutableStateBuilder) AddSignalExternalWorkflowExecutionInitiatedEvent(d
 }
 
 func (e *mutableStateBuilder) ReplicateSignalExternalWorkflowExecutionInitiatedEvent(event *workflow.HistoryEvent,
-	signalRequestID string) {
+	signalRequestID string) *persistence.SignalInfo {
 	// TODO: Consider also writing signalRequestID to history event
 	initiatedEventID := event.GetEventId()
 	attributes := event.SignalExternalWorkflowExecutionInitiatedEventAttributes
-	ri := &persistence.SignalInfo{
+	si := &persistence.SignalInfo{
 		Version:         event.GetVersion(),
 		InitiatedID:     initiatedEventID,
 		SignalRequestID: signalRequestID,
@@ -1820,8 +1820,9 @@ func (e *mutableStateBuilder) ReplicateSignalExternalWorkflowExecutionInitiatedE
 		Control:         attributes.Control,
 	}
 
-	e.pendingSignalInfoIDs[initiatedEventID] = ri
-	e.updateSignalInfos[ri] = struct{}{}
+	e.pendingSignalInfoIDs[initiatedEventID] = si
+	e.updateSignalInfos[si] = struct{}{}
+	return si
 }
 
 func (e *mutableStateBuilder) AddExternalWorkflowExecutionSignaled(initiatedID int64,

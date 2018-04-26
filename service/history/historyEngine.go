@@ -1239,7 +1239,7 @@ Update_History_Loop:
 			di := msBuilder.AddDecisionTaskScheduledEvent()
 			transferTasks = append(transferTasks, &persistence.DecisionTask{
 				DomainID:   domainID,
-				TaskList:   di.Tasklist,
+				TaskList:   di.TaskList,
 				ScheduleID: di.ScheduleID,
 			})
 			if msBuilder.isStickyTaskListEnabled() {
@@ -1736,7 +1736,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(signalWithStartRequ
 				di := msBuilder.AddDecisionTaskScheduledEvent()
 				transferTasks = append(transferTasks, &persistence.DecisionTask{
 					DomainID:   domainID,
-					TaskList:   di.Tasklist,
+					TaskList:   di.TaskList,
 					ScheduleID: di.ScheduleID,
 				})
 				if msBuilder.isStickyTaskListEnabled() {
@@ -2087,7 +2087,7 @@ Update_History_Loop:
 				di := msBuilder.AddDecisionTaskScheduledEvent()
 				transferTasks = append(transferTasks, &persistence.DecisionTask{
 					DomainID:   domainID,
-					TaskList:   di.Tasklist,
+					TaskList:   di.TaskList,
 					ScheduleID: di.ScheduleID,
 				})
 				if msBuilder.isStickyTaskListEnabled() {

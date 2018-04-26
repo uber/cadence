@@ -123,14 +123,14 @@ func (c *workflowExecutionContext) updateWorkflowExecutionWithDeleteTask(transfe
 }
 
 func (c *workflowExecutionContext) replicateWorkflowExecution(request *h.ReplicateEventsRequest,
-	lastEventID, transactionID int64) error {
+	transferTasks []persistence.Task, timerTasks []persistence.Task, lastEventID, transactionID int64) error {
 
 	nextEventID := lastEventID + 1
 	c.msBuilder.updateReplicationStateLastEventID(request.GetSourceCluster(), lastEventID)
 	c.msBuilder.executionInfo.NextEventID = nextEventID
 
 	builder := newHistoryBuilderFromEvents(request.History.Events, c.logger)
-	return c.updateHelper(builder, nil, nil, false, transactionID)
+	return c.updateHelper(builder, transferTasks, timerTasks, false, transactionID)
 }
 
 func (c *workflowExecutionContext) updateVersion() error {
