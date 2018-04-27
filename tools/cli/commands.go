@@ -229,52 +229,83 @@ func UpdateDomain(c *cli.Context) {
 	domainClient := getDomainClient(c)
 	domain := getRequiredGlobalOption(c, FlagDomain)
 
+	var updateRequest *s.UpdateDomainRequest
 	ctx, cancel := newContext()
 	defer cancel()
-	resp, err := domainClient.Describe(ctx, domain)
-	if err != nil {
-		if _, ok := err.(*s.EntityNotExistsError); !ok {
-			fmt.Printf("Operation failed: %v.\n", err.Error())
-		} else {
-			fmt.Printf("Domain %s does not exist.\n", domain)
-		}
-	}
 
-	description := resp.DomainInfo.GetDescription()
-	if c.IsSet(FlagDescription) {
-		description = c.String(FlagDescription)
-	}
-	ownerEmail := resp.DomainInfo.GetOwnerEmail()
-	if c.IsSet(FlagOwnerEmail) {
-		ownerEmail = c.String(FlagOwnerEmail)
-	}
-	retentionDays := resp.Configuration.GetWorkflowExecutionRetentionPeriodInDays()
-	if c.IsSet(FlagRetentionDays) {
-		retentionDays = int32(c.Int(FlagRetentionDays))
-	}
-	emitMetric := resp.Configuration.GetEmitMetric()
-	if c.IsSet(FlagEmitMetric) {
-		emitMetric, err = strconv.ParseBool(c.String(FlagEmitMetric))
+	if c.IsSet(FlagActiveClusterName) {
+		activeCluster := c.String(FlagActiveClusterName)
+		fmt.Printf("Will set active cluster name to: %s, other flag will be omitted.\n", activeCluster)
+		replicationConfig := &s.DomainReplicationConfiguration{
+			ActiveClusterName: common.StringPtr(activeCluster),
+		}
+		updateRequest = &s.UpdateDomainRequest{
+			Name: common.StringPtr(domain),
+			ReplicationConfiguration: replicationConfig,
+		}
+	} else {
+		resp, err := domainClient.Describe(ctx, domain)
 		if err != nil {
-			ErrorAndExit("Update Domain failed", err)
+			if _, ok := err.(*s.EntityNotExistsError); !ok {
+				fmt.Printf("Operation failed: %v.\n", err.Error())
+			} else {
+				fmt.Printf("Domain %s does not exist.\n", domain)
+			}
+		}
+
+		description := resp.DomainInfo.GetDescription()
+		ownerEmail := resp.DomainInfo.GetOwnerEmail()
+		retentionDays := resp.Configuration.GetWorkflowExecutionRetentionPeriodInDays()
+		emitMetric := resp.Configuration.GetEmitMetric()
+		var clusters []*s.ClusterReplicationConfiguration
+
+		if c.IsSet(FlagDescription) {
+			description = c.String(FlagDescription)
+		}
+		if c.IsSet(FlagOwnerEmail) {
+			ownerEmail = c.String(FlagOwnerEmail)
+		}
+		if c.IsSet(FlagRetentionDays) {
+			retentionDays = int32(c.Int(FlagRetentionDays))
+		}
+		if c.IsSet(FlagEmitMetric) {
+			emitMetric, err = strconv.ParseBool(c.String(FlagEmitMetric))
+			if err != nil {
+				ErrorAndExit("Update Domain failed", err)
+			}
+		}
+		if c.IsSet(FlagClusters) {
+			clusterStr := c.String(FlagClusters)
+			clusters = append(clusters, &s.ClusterReplicationConfiguration{
+				ClusterName: common.StringPtr(clusterStr),
+			})
+			for _, clusterStr := range c.Args() {
+				clusters = append(clusters, &s.ClusterReplicationConfiguration{
+					ClusterName: common.StringPtr(clusterStr),
+				})
+			}
+		}
+
+		updateInfo := &s.UpdateDomainInfo{
+			Description: common.StringPtr(description),
+			OwnerEmail:  common.StringPtr(ownerEmail),
+		}
+		updateConfig := &s.DomainConfiguration{
+			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(int32(retentionDays)),
+			EmitMetric:                             common.BoolPtr(emitMetric),
+		}
+		replicationConfig := &s.DomainReplicationConfiguration{
+			Clusters: clusters,
+		}
+		updateRequest = &s.UpdateDomainRequest{
+			Name:                     common.StringPtr(domain),
+			UpdatedInfo:              updateInfo,
+			Configuration:            updateConfig,
+			ReplicationConfiguration: replicationConfig,
 		}
 	}
 
-	updateInfo := &s.UpdateDomainInfo{
-		Description: common.StringPtr(description),
-		OwnerEmail:  common.StringPtr(ownerEmail),
-	}
-	updateConfig := &s.DomainConfiguration{
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(int32(retentionDays)),
-		EmitMetric:                             common.BoolPtr(emitMetric),
-	}
-	updateRequest := &s.UpdateDomainRequest{
-		Name:          common.StringPtr(domain),
-		UpdatedInfo:   updateInfo,
-		Configuration: updateConfig,
-	}
-
-	err = domainClient.Update(ctx, updateRequest)
+	err := domainClient.Update(ctx, updateRequest)
 	if err != nil {
 		if _, ok := err.(*s.EntityNotExistsError); !ok {
 			fmt.Printf("Operation failed: %v.\n", err.Error())
@@ -301,13 +332,16 @@ func DescribeDomain(c *cli.Context) {
 			fmt.Printf("Domain %s does not exist.\n", domain)
 		}
 	} else {
-		fmt.Printf("Name:%v, Description:%v, OwnerEmail:%v, Status:%v, RetentionInDays:%v, EmitMetrics:%v\n",
+		fmt.Printf("Name: %v\nDescription: %v\nOwnerEmail: %v\nStatus: %v\nRetentionInDays: %v\n"+
+			"EmitMetrics: %v\nActiveClusterName: %v\nClusters: %v\n",
 			resp.DomainInfo.GetName(),
 			resp.DomainInfo.GetDescription(),
 			resp.DomainInfo.GetOwnerEmail(),
 			resp.DomainInfo.GetStatus(),
 			resp.Configuration.GetWorkflowExecutionRetentionPeriodInDays(),
-			resp.Configuration.GetEmitMetric())
+			resp.Configuration.GetEmitMetric(),
+			resp.ReplicationConfiguration.GetActiveClusterName(),
+			clustersToString(resp.ReplicationConfiguration.Clusters))
 	}
 }
 
@@ -1177,6 +1211,18 @@ func trimWorkflowType(str string) string {
 			res = "..." + res[len(res)-maxWorkflowTypeLength:]
 		} else {
 			res = ".../" + res
+		}
+	}
+	return res
+}
+
+func clustersToString(clusters []*s.ClusterReplicationConfiguration) string {
+	var res string
+	for i, cluster := range clusters {
+		if i == 0 {
+			res = res + cluster.GetClusterName()
+		} else {
+			res = res + ", " + cluster.GetClusterName()
 		}
 	}
 	return res

@@ -79,6 +79,14 @@ func newDomainCommands() []cli.Command {
 					Name:  FlagEmitMetricWithAlias,
 					Usage: "Flag to emit metric",
 				},
+				cli.StringFlag{
+					Name:  FlagActiveClusterNameWithAlias,
+					Usage: "Active cluster name",
+				},
+				cli.StringFlag{ // use StringFlag instead of buggy StringSliceFlag
+					Name:  FlagClustersWithAlias,
+					Usage: "Clusters",
+				},
 			},
 			Action: func(c *cli.Context) {
 				UpdateDomain(c)
