@@ -231,7 +231,7 @@ func UpdateDomain(c *cli.Context) {
 
 	ctx, cancel := newContext()
 	defer cancel()
-	info, config, err := domainClient.Describe(ctx, domain)
+	resp, err := domainClient.Describe(ctx, domain)
 	if err != nil {
 		if _, ok := err.(*s.EntityNotExistsError); !ok {
 			fmt.Printf("Operation failed: %v.\n", err.Error())
@@ -240,19 +240,19 @@ func UpdateDomain(c *cli.Context) {
 		}
 	}
 
-	description := info.GetDescription()
+	description := resp.DomainInfo.GetDescription()
 	if c.IsSet(FlagDescription) {
 		description = c.String(FlagDescription)
 	}
-	ownerEmail := info.GetOwnerEmail()
+	ownerEmail := resp.DomainInfo.GetOwnerEmail()
 	if c.IsSet(FlagOwnerEmail) {
 		ownerEmail = c.String(FlagOwnerEmail)
 	}
-	retentionDays := config.GetWorkflowExecutionRetentionPeriodInDays()
+	retentionDays := resp.Configuration.GetWorkflowExecutionRetentionPeriodInDays()
 	if c.IsSet(FlagRetentionDays) {
 		retentionDays = int32(c.Int(FlagRetentionDays))
 	}
-	emitMetric := config.GetEmitMetric()
+	emitMetric := resp.Configuration.GetEmitMetric()
 	if c.IsSet(FlagEmitMetric) {
 		emitMetric, err = strconv.ParseBool(c.String(FlagEmitMetric))
 		if err != nil {
@@ -268,8 +268,13 @@ func UpdateDomain(c *cli.Context) {
 		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(int32(retentionDays)),
 		EmitMetric:                             common.BoolPtr(emitMetric),
 	}
+	updateRequest := &s.UpdateDomainRequest{
+		Name:          common.StringPtr(domain),
+		UpdatedInfo:   updateInfo,
+		Configuration: updateConfig,
+	}
 
-	err = domainClient.Update(ctx, domain, updateInfo, updateConfig)
+	err = domainClient.Update(ctx, updateRequest)
 	if err != nil {
 		if _, ok := err.(*s.EntityNotExistsError); !ok {
 			fmt.Printf("Operation failed: %v.\n", err.Error())
@@ -288,7 +293,7 @@ func DescribeDomain(c *cli.Context) {
 
 	ctx, cancel := newContext()
 	defer cancel()
-	info, config, err := domainClient.Describe(ctx, domain)
+	resp, err := domainClient.Describe(ctx, domain)
 	if err != nil {
 		if _, ok := err.(*s.EntityNotExistsError); !ok {
 			fmt.Printf("Operation failed: %v.\n", err.Error())
@@ -297,12 +302,12 @@ func DescribeDomain(c *cli.Context) {
 		}
 	} else {
 		fmt.Printf("Name:%v, Description:%v, OwnerEmail:%v, Status:%v, RetentionInDays:%v, EmitMetrics:%v\n",
-			info.GetName(),
-			info.GetDescription(),
-			info.GetOwnerEmail(),
-			info.GetStatus(),
-			config.GetWorkflowExecutionRetentionPeriodInDays(),
-			config.GetEmitMetric())
+			resp.DomainInfo.GetName(),
+			resp.DomainInfo.GetDescription(),
+			resp.DomainInfo.GetOwnerEmail(),
+			resp.DomainInfo.GetStatus(),
+			resp.Configuration.GetWorkflowExecutionRetentionPeriodInDays(),
+			resp.Configuration.GetEmitMetric())
 	}
 }
 
