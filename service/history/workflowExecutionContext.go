@@ -33,6 +33,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 
 	"github.com/uber-common/bark"
+	"github.com/uber/cadence/common/cluster"
 )
 
 const (
@@ -44,6 +45,7 @@ type (
 		domainID          string
 		workflowExecution workflow.WorkflowExecution
 		shard             ShardContext
+		metadataMgr       cluster.Metadata
 		executionManager  persistence.ExecutionManager
 		logger            bark.Logger
 
@@ -69,6 +71,7 @@ func newWorkflowExecutionContext(domainID string, execution workflow.WorkflowExe
 		domainID:          domainID,
 		workflowExecution: execution,
 		shard:             shard,
+		metadataMgr:       shard.GetService().GetClusterMetadata(),
 		executionManager:  executionManager,
 		logger:            lg,
 	}
@@ -126,11 +129,12 @@ func (c *workflowExecutionContext) replicateWorkflowExecution(request *h.Replica
 	lastEventID, transactionID int64) error {
 
 	nextEventID := lastEventID + 1
-	c.msBuilder.updateReplicationStateLastEventID(lastEventID)
+	sourceClusterName := c.metadataMgr.ClusterNameForFailoverVersion(request.GetVersion())
+	c.msBuilder.updateReplicationStateLastEventID(sourceClusterName, lastEventID)
 	c.msBuilder.executionInfo.NextEventID = nextEventID
 
 	builder := newHistoryBuilderFromEvents(request.History.Events, c.logger)
-	return c.updateHelper(builder, nil, nil, false, true, transactionID)
+	return c.updateHelper(builder, nil, nil, false, transactionID)
 }
 
 func (c *workflowExecutionContext) updateVersion() error {
@@ -151,14 +155,14 @@ func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persi
 	crossDCEnabled := c.msBuilder.replicationState != nil
 	if crossDCEnabled {
 		lastEventID := c.msBuilder.GetNextEventID() - 1
-		c.msBuilder.updateReplicationStateLastEventID(lastEventID)
+		c.msBuilder.updateReplicationStateLastEventID("", lastEventID)
 	}
 
-	return c.updateHelper(nil, transferTasks, timerTasks, crossDCEnabled, crossDCEnabled, transactionID)
+	return c.updateHelper(nil, transferTasks, timerTasks, crossDCEnabled, transactionID)
 }
 
 func (c *workflowExecutionContext) updateHelper(builder *historyBuilder, transferTasks []persistence.Task,
-	timerTasks []persistence.Task, createReplicationTask, updateReplicationState bool,
+	timerTasks []persistence.Task, createReplicationTask bool,
 	transactionID int64) (errRet error) {
 
 	defer func() {
@@ -209,15 +213,6 @@ func (c *workflowExecutionContext) updateHelper(builder *historyBuilder, transfe
 	}
 
 	continueAsNew := updates.continueAsNew
-	if continueAsNew != nil && updateReplicationState && c.shard.GetService().GetClusterMetadata().IsGlobalDomainEnabled() {
-		currentVersion := c.msBuilder.replicationState.CurrentVersion
-		continueAsNew.ReplicationState = &persistence.ReplicationState{
-			CurrentVersion:   currentVersion,
-			StartVersion:     currentVersion,
-			LastWriteVersion: currentVersion,
-			LastWriteEventID: firstEventID + 1,
-		}
-	}
 	finishExecution := false
 	var finishExecutionTTL int32
 	if c.msBuilder.executionInfo.State == persistence.WorkflowStateCompleted {
