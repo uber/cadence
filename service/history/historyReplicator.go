@@ -369,6 +369,8 @@ func (r *historyReplicator) ApplyReplicationTask(context *workflowExecutionConte
 
 		case shared.EventTypeWorkflowExecutionContinuedAsNew:
 			// ContinuedAsNew event also has history for first 2 events for next run as they are created transactionally
+			newTransferTasks := []persistence.Task{}
+			newTimerTasks := []persistence.Task{}
 			newRunHistory := request.NewRunHistory
 			startedEvent := newRunHistory.Events[0]
 			startedAttributes := startedEvent.WorkflowExecutionStartedEventAttributes
@@ -412,6 +414,11 @@ func (r *historyReplicator) ApplyReplicationTask(context *workflowExecutionConte
 			// Set the history from replication task on the newStateBuilder
 			newStateBuilder.hBuilder = newHistoryBuilderFromEvents(newRunHistory.Events, r.logger)
 
+			newTransferTasks = append(newTransferTasks, r.scheduleDecisionTransferTask(domainID, r.getTaskList(newStateBuilder), di.ScheduleID))
+			now := time.Unix(0, event.GetTimestamp())
+			timeout := now.Add(time.Duration(newStateBuilder.executionInfo.WorkflowTimeout) * time.Second)
+			newTimerTasks = append(newTimerTasks, r.scheduleWorkflowTimerTask(timeout))
+
 			msBuilder.ReplicateWorkflowExecutionContinuedAsNewEvent(request.GetSourceCluster(), domainID, domainName, event,
 				startedEvent, di, newStateBuilder)
 
@@ -420,7 +427,7 @@ func (r *historyReplicator) ApplyReplicationTask(context *workflowExecutionConte
 			if err != nil {
 				return err
 			}
-			err = context.replicateContinueAsNewWorkflowExecution(newStateBuilder, nil, nil, transactionID)
+			err = context.replicateContinueAsNewWorkflowExecution(newStateBuilder, newTransferTasks, newTimerTasks, transactionID)
 			if err != nil {
 				return err
 			}
