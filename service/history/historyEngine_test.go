@@ -3955,15 +3955,15 @@ func addTimerFiredEvent(builder *mutableStateBuilder, scheduleID int64, timerID 
 }
 
 func addRequestCancelInitiatedEvent(builder *mutableStateBuilder, decisionCompletedEventID int64,
-	cancelRequestID, domain, workflowID, runID string) *workflow.HistoryEvent {
-	event, _ := builder.AddRequestCancelExternalWorkflowExecutionInitiatedEvent(decisionCompletedEventID,
+	cancelRequestID, domain, workflowID, runID string) (*workflow.HistoryEvent, *persistence.RequestCancelInfo) {
+	event, rci := builder.AddRequestCancelExternalWorkflowExecutionInitiatedEvent(decisionCompletedEventID,
 		cancelRequestID, &workflow.RequestCancelExternalWorkflowExecutionDecisionAttributes{
 			Domain:     common.StringPtr(domain),
 			WorkflowId: common.StringPtr(workflowID),
 			RunId:      common.StringPtr(runID),
 		})
 
-	return event
+	return event, rci
 }
 
 func addCancelRequestedEvent(builder *mutableStateBuilder, initiatedID int64, domain, workflowID, runID string) *workflow.HistoryEvent {
@@ -3972,8 +3972,8 @@ func addCancelRequestedEvent(builder *mutableStateBuilder, initiatedID int64, do
 }
 
 func addRequestSignalInitiatedEvent(builder *mutableStateBuilder, decisionCompletedEventID int64,
-	signalRequestID, domain, workflowID, runID, signalName string, input, control []byte) *workflow.HistoryEvent {
-	event := builder.AddSignalExternalWorkflowExecutionInitiatedEvent(decisionCompletedEventID, signalRequestID,
+	signalRequestID, domain, workflowID, runID, signalName string, input, control []byte) (*workflow.HistoryEvent, *persistence.SignalInfo) {
+	event, si := builder.AddSignalExternalWorkflowExecutionInitiatedEvent(decisionCompletedEventID, signalRequestID,
 		&workflow.SignalExternalWorkflowExecutionDecisionAttributes{
 			Domain: common.StringPtr(domain),
 			Execution: &workflow.WorkflowExecution{
@@ -3985,7 +3985,7 @@ func addRequestSignalInitiatedEvent(builder *mutableStateBuilder, decisionComple
 			Control:    control,
 		})
 
-	return event
+	return event, si
 }
 
 func addSignaledEvent(builder *mutableStateBuilder, initiatedID int64, domain, workflowID, runID string, control []byte) *workflow.HistoryEvent {
@@ -4022,6 +4022,12 @@ func addChildWorkflowExecutionStartedEvent(builder *mutableStateBuilder, initiat
 		&workflow.WorkflowType{Name: common.StringPtr(workflowType)},
 		initiatedID,
 	)
+	return event
+}
+
+func addChildWorkflowExecutionCompletedEvent(builder *mutableStateBuilder, initiatedID int64, childExecution *workflow.WorkflowExecution,
+	attributes *workflow.WorkflowExecutionCompletedEventAttributes) *workflow.HistoryEvent {
+	event := builder.AddChildWorkflowExecutionCompletedEvent(initiatedID, childExecution, attributes)
 	return event
 }
 
@@ -4085,34 +4091,38 @@ func createMutableState(builder *mutableStateBuilder) *persistence.WorkflowMutab
 
 func copyWorkflowExecutionInfo(sourceInfo *persistence.WorkflowExecutionInfo) *persistence.WorkflowExecutionInfo {
 	return &persistence.WorkflowExecutionInfo{
-		DomainID:             sourceInfo.DomainID,
-		WorkflowID:           sourceInfo.WorkflowID,
-		RunID:                sourceInfo.RunID,
-		ParentDomainID:       sourceInfo.ParentDomainID,
-		ParentWorkflowID:     sourceInfo.ParentWorkflowID,
-		ParentRunID:          sourceInfo.ParentRunID,
-		InitiatedID:          sourceInfo.InitiatedID,
-		CompletionEvent:      sourceInfo.CompletionEvent,
-		TaskList:             sourceInfo.TaskList,
-		WorkflowTypeName:     sourceInfo.WorkflowTypeName,
-		WorkflowTimeout:      sourceInfo.WorkflowTimeout,
-		DecisionTimeoutValue: sourceInfo.DecisionTimeoutValue,
-		ExecutionContext:     sourceInfo.ExecutionContext,
-		State:                sourceInfo.State,
-		CloseStatus:          sourceInfo.CloseStatus,
-		NextEventID:          sourceInfo.NextEventID,
-		LastProcessedEvent:   sourceInfo.LastProcessedEvent,
-		LastUpdatedTimestamp: sourceInfo.LastUpdatedTimestamp,
-		CreateRequestID:      sourceInfo.CreateRequestID,
-		DecisionScheduleID:   sourceInfo.DecisionScheduleID,
-		DecisionStartedID:    sourceInfo.DecisionStartedID,
-		DecisionRequestID:    sourceInfo.DecisionRequestID,
-		DecisionTimeout:      sourceInfo.DecisionTimeout,
+		DomainID:                     sourceInfo.DomainID,
+		WorkflowID:                   sourceInfo.WorkflowID,
+		RunID:                        sourceInfo.RunID,
+		ParentDomainID:               sourceInfo.ParentDomainID,
+		ParentWorkflowID:             sourceInfo.ParentWorkflowID,
+		ParentRunID:                  sourceInfo.ParentRunID,
+		InitiatedID:                  sourceInfo.InitiatedID,
+		CompletionEvent:              sourceInfo.CompletionEvent,
+		TaskList:                     sourceInfo.TaskList,
+		StickyTaskList:               sourceInfo.StickyTaskList,
+		StickyScheduleToStartTimeout: sourceInfo.StickyScheduleToStartTimeout,
+		WorkflowTypeName:             sourceInfo.WorkflowTypeName,
+		WorkflowTimeout:              sourceInfo.WorkflowTimeout,
+		DecisionTimeoutValue:         sourceInfo.DecisionTimeoutValue,
+		ExecutionContext:             sourceInfo.ExecutionContext,
+		State:                        sourceInfo.State,
+		CloseStatus:                  sourceInfo.CloseStatus,
+		NextEventID:                  sourceInfo.NextEventID,
+		LastProcessedEvent:           sourceInfo.LastProcessedEvent,
+		LastUpdatedTimestamp:         sourceInfo.LastUpdatedTimestamp,
+		CreateRequestID:              sourceInfo.CreateRequestID,
+		DecisionVersion:              sourceInfo.DecisionVersion,
+		DecisionScheduleID:           sourceInfo.DecisionScheduleID,
+		DecisionStartedID:            sourceInfo.DecisionStartedID,
+		DecisionRequestID:            sourceInfo.DecisionRequestID,
+		DecisionTimeout:              sourceInfo.DecisionTimeout,
 	}
 }
 
 func copyActivityInfo(sourceInfo *persistence.ActivityInfo) *persistence.ActivityInfo {
 	return &persistence.ActivityInfo{
+		Version:                sourceInfo.Version,
 		ScheduleID:             sourceInfo.ScheduleID,
 		ScheduledEvent:         sourceInfo.ScheduledEvent,
 		StartedID:              sourceInfo.StartedID,
@@ -4142,6 +4152,7 @@ func copyActivityInfo(sourceInfo *persistence.ActivityInfo) *persistence.Activit
 
 func copyTimerInfo(sourceInfo *persistence.TimerInfo) *persistence.TimerInfo {
 	return &persistence.TimerInfo{
+		Version:    sourceInfo.Version,
 		TimerID:    sourceInfo.TimerID,
 		StartedID:  sourceInfo.StartedID,
 		ExpiryTime: sourceInfo.ExpiryTime,
@@ -4151,6 +4162,7 @@ func copyTimerInfo(sourceInfo *persistence.TimerInfo) *persistence.TimerInfo {
 
 func copyCancellationInfo(sourceInfo *persistence.RequestCancelInfo) *persistence.RequestCancelInfo {
 	return &persistence.RequestCancelInfo{
+		Version:         sourceInfo.Version,
 		InitiatedID:     sourceInfo.InitiatedID,
 		CancelRequestID: sourceInfo.CancelRequestID,
 	}
@@ -4158,32 +4170,39 @@ func copyCancellationInfo(sourceInfo *persistence.RequestCancelInfo) *persistenc
 
 func copySignalInfo(sourceInfo *persistence.SignalInfo) *persistence.SignalInfo {
 	result := &persistence.SignalInfo{
+		Version:         sourceInfo.Version,
 		InitiatedID:     sourceInfo.InitiatedID,
 		SignalRequestID: sourceInfo.SignalRequestID,
 		SignalName:      sourceInfo.SignalName,
 	}
-
+	result.Input = make([]byte, len(sourceInfo.Input))
 	copy(result.Input, sourceInfo.Input)
+	result.Control = make([]byte, len(sourceInfo.Control))
 	copy(result.Control, sourceInfo.Control)
 	return result
 }
 
 func copyChildInfo(sourceInfo *persistence.ChildExecutionInfo) *persistence.ChildExecutionInfo {
 	result := &persistence.ChildExecutionInfo{
+		Version:         sourceInfo.Version,
 		InitiatedID:     sourceInfo.InitiatedID,
 		StartedID:       sourceInfo.StartedID,
 		CreateRequestID: sourceInfo.CreateRequestID,
 	}
 
+	result.InitiatedEvent = make([]byte, len(sourceInfo.InitiatedEvent))
 	copy(result.InitiatedEvent, sourceInfo.InitiatedEvent)
+	result.StartedEvent = make([]byte, len(sourceInfo.StartedEvent))
 	copy(result.StartedEvent, sourceInfo.StartedEvent)
 	return result
 }
 
 func copyReplicationState(source *persistence.ReplicationState) *persistence.ReplicationState {
 	return &persistence.ReplicationState{
-		CurrentVersion:   source.CurrentVersion,
-		LastWriteVersion: source.LastWriteVersion,
-		LastWriteEventID: source.LastWriteEventID,
+		CurrentVersion:      source.CurrentVersion,
+		StartVersion:        source.StartVersion,
+		LastWriteVersion:    source.LastWriteVersion,
+		LastWriteEventID:    source.LastWriteEventID,
+		LastReplicationInfo: source.LastReplicationInfo,
 	}
 }

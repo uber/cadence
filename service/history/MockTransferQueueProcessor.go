@@ -18,37 +18,30 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package mocks
+package history
 
 import (
-	"github.com/uber-go/kafka-client/kafka"
-	"github.com/uber/cadence/common/messaging"
+	"time"
+
+	"github.com/stretchr/testify/mock"
 )
 
-type (
-	// MessagingClient is the mock implementation for Service interface
-	MessagingClient struct {
-		consumerMock  kafka.Consumer
-		publisherMock messaging.Producer
-	}
-)
-
-var _ messaging.Client = (*MessagingClient)(nil)
-
-// NewMockMessagingClient generate a dummy implementation of messaging client
-func NewMockMessagingClient(publisher messaging.Producer, consumer kafka.Consumer) messaging.Client {
-	return &MessagingClient{
-		publisherMock: publisher,
-		consumerMock:  consumer,
-	}
+// MockTransferQueueProcessor is used as mock implementation for Processor
+type MockTransferQueueProcessor struct {
+	mock.Mock
 }
 
-// NewConsumer generates a dummy implementation of kafka consumer
-func (c *MessagingClient) NewConsumer(topicName, consumerName string, concurrency int) (kafka.Consumer, error) {
-	return c.consumerMock, nil
+// Start is mock implementation for Start of Processor
+func (_m *MockTransferQueueProcessor) Start() {
+	_m.Called()
 }
 
-// NewProducer generates a dummy implementation of kafka producer
-func (c *MessagingClient) NewProducer(topicName string) (messaging.Producer, error) {
-	return c.publisherMock, nil
+// Stop is mock implementation for Stop of Processor
+func (_m *MockTransferQueueProcessor) Stop() {
+	_m.Called()
+}
+
+// NotifyNewTask is mock implementation for NotifyNewTask of Processor
+func (_m *MockTransferQueueProcessor) NotifyNewTask(clusterName string, currentTime time.Time) {
+	_m.Called(clusterName, currentTime)
 }

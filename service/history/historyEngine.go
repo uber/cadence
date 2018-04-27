@@ -151,7 +151,7 @@ func NewEngineWithShardContext(shard ShardContext, visibilityMgr persistence.Vis
 			historySerializerFactory, logger)
 		historyEngImpl.replicatorProcessor = replicatorProcessor
 		shardWrapper.replcatorProcessor = replicatorProcessor
-		historyEngImpl.replicator = newHistoryReplicator(shard, historyCache, shard.GetDomainCache(), historyManager,
+		historyEngImpl.replicator = newHistoryReplicator(shard, historyEngImpl, historyCache, shard.GetDomainCache(), historyManager,
 			logger)
 	}
 
@@ -1114,7 +1114,7 @@ Update_History_Loop:
 				}
 
 				signalRequestID := uuid.New() // for deduplicate
-				wfSignalReqEvent := msBuilder.AddSignalExternalWorkflowExecutionInitiatedEvent(completedID,
+				wfSignalReqEvent, _ := msBuilder.AddSignalExternalWorkflowExecutionInitiatedEvent(completedID,
 					signalRequestID, attributes)
 				if wfSignalReqEvent == nil {
 					return &workflow.InternalServiceError{Message: "Unable to add external signal workflow request."}

@@ -98,6 +98,7 @@ type (
 	}
 
 	queueTaskInfo interface {
+		GetVersion() int64
 		GetTaskID() int64
 		GetTaskType() int
 	}

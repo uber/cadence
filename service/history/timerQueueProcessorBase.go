@@ -48,6 +48,7 @@ type (
 	timerQueueProcessorBase struct {
 		shard            ShardContext
 		historyService   *historyEngineImpl
+		cache            *historyCache
 		executionManager persistence.ExecutionManager
 		isStarted        int32
 		isStopped        int32
@@ -85,6 +86,7 @@ func newTimerQueueProcessorBase(shard ShardContext, historyService *historyEngin
 	base := &timerQueueProcessorBase{
 		shard:                   shard,
 		historyService:          historyService,
+		cache:                   historyService.historyCache,
 		executionManager:        shard.GetExecutionManager(),
 		shutdownCh:              make(chan struct{}),
 		tasksCh:                 make(chan *persistence.TimerTaskInfo, 10*shard.GetConfig().TimerTaskBatchSize),
@@ -360,10 +362,27 @@ func (t *timerQueueProcessorBase) getDomainIDAndWorkflowExecution(task *persiste
 	}
 }
 
-func (t *timerQueueProcessorBase) processDeleteHistoryEvent(task *persistence.TimerTaskInfo) error {
+func (t *timerQueueProcessorBase) processDeleteHistoryEvent(task *persistence.TimerTaskInfo) (retError error) {
 	t.metricsClient.IncCounter(metrics.TimerTaskDeleteHistoryEvent, metrics.TaskRequests)
 	sw := t.metricsClient.StartTimer(metrics.TimerTaskDeleteHistoryEvent, metrics.TaskLatency)
 	defer sw.Stop()
+
+	context, release, err := t.cache.getOrCreateWorkflowExecution(t.getDomainIDAndWorkflowExecution(task))
+	if err != nil {
+		return err
+	}
+	defer func() { release(retError) }()
+
+	msBuilder, err := context.loadWorkflowExecution()
+	if err != nil {
+		return err
+	}
+	ok, err := t.verifyVersion(task.DomainID, msBuilder.GetCurrentVersion(), task)
+	if err != nil {
+		return err
+	} else if !ok {
+		return nil
+	}
 
 	op := func() error {
 		return t.executionManager.DeleteWorkflowExecution(&persistence.DeleteWorkflowExecutionRequest{
@@ -373,7 +392,7 @@ func (t *timerQueueProcessorBase) processDeleteHistoryEvent(task *persistence.Ti
 		})
 	}
 
-	err := backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
+	err = backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
 	if err != nil {
 		return err
 	}
@@ -388,6 +407,21 @@ func (t *timerQueueProcessorBase) processDeleteHistoryEvent(task *persistence.Ti
 	}
 
 	return backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
+}
+
+func (t *timerQueueProcessorBase) verifyVersion(domainID string, version int64, task *persistence.TimerTaskInfo) (bool, error) {
+	// the first return value is whether this task is valid for further processing
+	domainEntry, err := t.shard.GetDomainCache().GetDomainByID(domainID)
+	if err != nil {
+		return false, err
+	}
+	if !domainEntry.IsGlobalDomain() {
+		return true, nil
+	} else if version != task.Version {
+		t.logger.Infof("Encounter mismatch verion: task: %v, task info version: %v.\n", version, task.Version)
+		return false, nil
+	}
+	return true, nil
 }
 
 func (t *timerQueueProcessorBase) getTimerTaskType(taskType int) string {

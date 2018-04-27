@@ -258,7 +258,14 @@ func (e *mutableStateBuilder) FlushBufferedEvents() error {
 	return nil
 }
 
-func (e *mutableStateBuilder) getVersion() int64 {
+func (e *mutableStateBuilder) GetStartVersion() int64 {
+	if e.replicationState == nil {
+		return emptyVersion
+	}
+	return e.replicationState.StartVersion
+}
+
+func (e *mutableStateBuilder) GetCurrentVersion() int64 {
 	if e.replicationState == nil {
 		return emptyVersion
 	}
@@ -914,6 +921,7 @@ func (e *mutableStateBuilder) HasBufferedReplicationTasks() bool {
 
 // UpdateDecision updates a decision task.
 func (e *mutableStateBuilder) UpdateDecision(di *decisionInfo) {
+	e.executionInfo.DecisionVersion = di.Version
 	e.executionInfo.DecisionScheduleID = di.ScheduleID
 	e.executionInfo.DecisionStartedID = di.StartedID
 	e.executionInfo.DecisionRequestID = di.RequestID
@@ -1151,7 +1159,7 @@ func (e *mutableStateBuilder) AddDecisionTaskScheduledEvent() *decisionInfo {
 		scheduleID = newDecisionEvent.GetEventId()
 	}
 
-	return e.ReplicateDecisionTaskScheduledEvent(e.getVersion(), scheduleID, taskList, startToCloseTimeoutSeconds)
+	return e.ReplicateDecisionTaskScheduledEvent(e.GetCurrentVersion(), scheduleID, taskList, startToCloseTimeoutSeconds)
 }
 
 func (e *mutableStateBuilder) ReplicateDecisionTaskScheduledEvent(version, scheduleID int64, taskList string,
@@ -1201,7 +1209,7 @@ func (e *mutableStateBuilder) AddDecisionTaskStartedEvent(scheduleEventID int64,
 		timestamp = int64(0)
 	}
 
-	di = e.ReplicateDecisionTaskStartedEvent(di, e.getVersion(), scheduleID, startedID, requestID, timestamp)
+	di = e.ReplicateDecisionTaskStartedEvent(di, e.GetCurrentVersion(), scheduleID, startedID, requestID, timestamp)
 	return event, di
 }
 
@@ -1729,8 +1737,8 @@ func (e *mutableStateBuilder) AddRequestCancelExternalWorkflowExecutionInitiated
 		return nil, nil
 	}
 
-	ri := e.ReplicateRequestCancelExternalWorkflowExecutionInitiatedEvent(event, cancelRequestID)
-	return event, ri
+	rci := e.ReplicateRequestCancelExternalWorkflowExecutionInitiatedEvent(event, cancelRequestID)
+	return event, rci
 }
 
 func (e *mutableStateBuilder) ReplicateRequestCancelExternalWorkflowExecutionInitiatedEvent(
@@ -1794,16 +1802,16 @@ func (e *mutableStateBuilder) ReplicateRequestCancelExternalWorkflowExecutionFai
 }
 
 func (e *mutableStateBuilder) AddSignalExternalWorkflowExecutionInitiatedEvent(decisionCompletedEventID int64,
-	signalRequestID string, request *workflow.SignalExternalWorkflowExecutionDecisionAttributes) *workflow.HistoryEvent {
+	signalRequestID string, request *workflow.SignalExternalWorkflowExecutionDecisionAttributes) (*workflow.HistoryEvent, *persistence.SignalInfo) {
 
 	event := e.hBuilder.AddSignalExternalWorkflowExecutionInitiatedEvent(decisionCompletedEventID, request)
 	if event == nil {
-		return nil
+		return nil, nil
 	}
 
-	e.ReplicateSignalExternalWorkflowExecutionInitiatedEvent(event, signalRequestID)
+	si := e.ReplicateSignalExternalWorkflowExecutionInitiatedEvent(event, signalRequestID)
 
-	return event
+	return event, si
 }
 
 func (e *mutableStateBuilder) ReplicateSignalExternalWorkflowExecutionInitiatedEvent(event *workflow.HistoryEvent,
