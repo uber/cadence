@@ -30,7 +30,6 @@ import (
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/persistence"
 )
@@ -40,7 +39,6 @@ type (
 		shard             ShardContext
 		historyCache      *historyCache
 		domainCache       cache.DomainCache
-		metadataMgr       cluster.Metadata
 		historyMgr        persistence.HistoryManager
 		historySerializer persistence.HistorySerializer
 		logger            bark.Logger
@@ -53,7 +51,6 @@ func newHistoryReplicator(shard ShardContext, historyCache *historyCache, domain
 		shard:             shard,
 		historyCache:      historyCache,
 		domainCache:       domainCache,
-		metadataMgr:       shard.GetService().GetClusterMetadata(),
 		historyMgr:        historyMgr,
 		historySerializer: persistence.NewJSONHistorySerializer(),
 		logger:            logger,
@@ -341,8 +338,7 @@ func (r *historyReplicator) ApplyReplicationTask(context *workflowExecutionConte
 			// Set the history from replication task on the newStateBuilder
 			newStateBuilder.hBuilder = newHistoryBuilderFromEvents(newRunHistory.Events, r.logger)
 
-			sourceClusterName := r.metadataMgr.ClusterNameForFailoverVersion(request.GetVersion())
-			msBuilder.ReplicateWorkflowExecutionContinuedAsNewEvent(sourceClusterName, domainID, domainName, event,
+			msBuilder.ReplicateWorkflowExecutionContinuedAsNewEvent(request.GetSourceCluster(), domainID, domainName, event,
 				startedEvent, di, newStateBuilder)
 
 			// Generate a transaction ID for appending events to history

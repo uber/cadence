@@ -33,7 +33,6 @@ import (
 	"github.com/uber/cadence/common/persistence"
 
 	"github.com/uber-common/bark"
-	"github.com/uber/cadence/common/cluster"
 )
 
 const (
@@ -45,7 +44,6 @@ type (
 		domainID          string
 		workflowExecution workflow.WorkflowExecution
 		shard             ShardContext
-		metadataMgr       cluster.Metadata
 		executionManager  persistence.ExecutionManager
 		logger            bark.Logger
 
@@ -71,7 +69,6 @@ func newWorkflowExecutionContext(domainID string, execution workflow.WorkflowExe
 		domainID:          domainID,
 		workflowExecution: execution,
 		shard:             shard,
-		metadataMgr:       shard.GetService().GetClusterMetadata(),
 		executionManager:  executionManager,
 		logger:            lg,
 	}
@@ -129,8 +126,7 @@ func (c *workflowExecutionContext) replicateWorkflowExecution(request *h.Replica
 	lastEventID, transactionID int64) error {
 
 	nextEventID := lastEventID + 1
-	sourceClusterName := c.metadataMgr.ClusterNameForFailoverVersion(request.GetVersion())
-	c.msBuilder.updateReplicationStateLastEventID(sourceClusterName, lastEventID)
+	c.msBuilder.updateReplicationStateLastEventID(request.GetSourceCluster(), lastEventID)
 	c.msBuilder.executionInfo.NextEventID = nextEventID
 
 	builder := newHistoryBuilderFromEvents(request.History.Events, c.logger)
