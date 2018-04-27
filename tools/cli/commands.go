@@ -49,62 +49,66 @@ import (
 Flags used to specify cli command line arguments
 */
 const (
-	FlagAddress                   = "address"
-	FlagAddressWithAlias          = FlagAddress + ", ad"
-	FlagDomain                    = "domain"
-	FlagDomainWithAlias           = FlagDomain + ", do"
-	FlagWorkflowID                = "workflow_id"
-	FlagWorkflowIDWithAlias       = FlagWorkflowID + ", wid, w"
-	FlagRunID                     = "run_id"
-	FlagRunIDWithAlias            = FlagRunID + ", rid, r"
-	FlagTaskList                  = "tasklist"
-	FlagTaskListWithAlias         = FlagTaskList + ", tl"
-	FlagTaskListType              = "tasklisttype"
-	FlagTaskListTypeWithAlias     = FlagTaskListType + ", tlt"
-	FlagWorkflowType              = "workflow_type"
-	FlagWorkflowTypeWithAlias     = FlagWorkflowType + ", wt"
-	FlagExecutionTimeout          = "execution_timeout"
-	FlagExecutionTimeoutWithAlias = FlagExecutionTimeout + ", et"
-	FlagDecisionTimeout           = "decision_timeout"
-	FlagDecisionTimeoutWithAlias  = FlagDecisionTimeout + ", dt"
-	FlagContextTimeout            = "context_timeout"
-	FlagContextTimeoutWithAlias   = FlagContextTimeout + ", ct"
-	FlagInput                     = "input"
-	FlagInputWithAlias            = FlagInput + ", i"
-	FlagInputFile                 = "input_file"
-	FlagInputFileWithAlias        = FlagInputFile + ", if"
-	FlagReason                    = "reason"
-	FlagReasonWithAlias           = FlagReason + ", re"
-	FlagOpen                      = "open"
-	FlagOpenWithAlias             = FlagOpen + ", op"
-	FlagMore                      = "more"
-	FlagMoreWithAlias             = FlagMore + ", m"
-	FlagPageSize                  = "pagesize"
-	FlagPageSizeWithAlias         = FlagPageSize + ", ps"
-	FlagEarliestTime              = "earliest_time"
-	FlagEarliestTimeWithAlias     = FlagEarliestTime + ", et"
-	FlagLatestTime                = "latest_time"
-	FlagLatestTimeWithAlias       = FlagLatestTime + ", lt"
-	FlagPrintRawTime              = "print_raw_time"
-	FlagPrintRawTimeWithAlias     = FlagPrintRawTime + ", prt"
-	FlagPrintDateTime             = "print_datetime"
-	FlagPrintDateTimeWithAlias    = FlagPrintDateTime + ", pdt"
-	FlagDescription               = "description"
-	FlagDescriptionWithAlias      = FlagDescription + ", desc"
-	FlagOwnerEmail                = "owner_email"
-	FlagOwnerEmailWithAlias       = FlagOwnerEmail + ", oe"
-	FlagRetentionDays             = "retention_days"
-	FlagRetentionDaysWithAlias    = FlagRetentionDays + ", rd"
-	FlagEmitMetric                = "emit_metric"
-	FlagEmitMetricWithAlias       = FlagEmitMetric + ", em"
-	FlagName                      = "name"
-	FlagNameWithAlias             = FlagName + ", n"
-	FlagOutputFilename            = "output_filename"
-	FlagOutputFilenameWithAlias   = FlagOutputFilename + ", of"
-	FlagQueryType                 = "query_type"
-	FlagQueryTypeWithAlias        = FlagQueryType + ", qt"
-	FlagShowDetail                = "show_detail"
-	FlagShowDetailWithAlias       = FlagShowDetail + ", sd"
+	FlagAddress                    = "address"
+	FlagAddressWithAlias           = FlagAddress + ", ad"
+	FlagDomain                     = "domain"
+	FlagDomainWithAlias            = FlagDomain + ", do"
+	FlagWorkflowID                 = "workflow_id"
+	FlagWorkflowIDWithAlias        = FlagWorkflowID + ", wid, w"
+	FlagRunID                      = "run_id"
+	FlagRunIDWithAlias             = FlagRunID + ", rid, r"
+	FlagTaskList                   = "tasklist"
+	FlagTaskListWithAlias          = FlagTaskList + ", tl"
+	FlagTaskListType               = "tasklisttype"
+	FlagTaskListTypeWithAlias      = FlagTaskListType + ", tlt"
+	FlagWorkflowType               = "workflow_type"
+	FlagWorkflowTypeWithAlias      = FlagWorkflowType + ", wt"
+	FlagExecutionTimeout           = "execution_timeout"
+	FlagExecutionTimeoutWithAlias  = FlagExecutionTimeout + ", et"
+	FlagDecisionTimeout            = "decision_timeout"
+	FlagDecisionTimeoutWithAlias   = FlagDecisionTimeout + ", dt"
+	FlagContextTimeout             = "context_timeout"
+	FlagContextTimeoutWithAlias    = FlagContextTimeout + ", ct"
+	FlagInput                      = "input"
+	FlagInputWithAlias             = FlagInput + ", i"
+	FlagInputFile                  = "input_file"
+	FlagInputFileWithAlias         = FlagInputFile + ", if"
+	FlagReason                     = "reason"
+	FlagReasonWithAlias            = FlagReason + ", re"
+	FlagOpen                       = "open"
+	FlagOpenWithAlias              = FlagOpen + ", op"
+	FlagMore                       = "more"
+	FlagMoreWithAlias              = FlagMore + ", m"
+	FlagPageSize                   = "pagesize"
+	FlagPageSizeWithAlias          = FlagPageSize + ", ps"
+	FlagEarliestTime               = "earliest_time"
+	FlagEarliestTimeWithAlias      = FlagEarliestTime + ", et"
+	FlagLatestTime                 = "latest_time"
+	FlagLatestTimeWithAlias        = FlagLatestTime + ", lt"
+	FlagPrintRawTime               = "print_raw_time"
+	FlagPrintRawTimeWithAlias      = FlagPrintRawTime + ", prt"
+	FlagPrintDateTime              = "print_datetime"
+	FlagPrintDateTimeWithAlias     = FlagPrintDateTime + ", pdt"
+	FlagDescription                = "description"
+	FlagDescriptionWithAlias       = FlagDescription + ", desc"
+	FlagOwnerEmail                 = "owner_email"
+	FlagOwnerEmailWithAlias        = FlagOwnerEmail + ", oe"
+	FlagRetentionDays              = "retention_days"
+	FlagRetentionDaysWithAlias     = FlagRetentionDays + ", rd"
+	FlagEmitMetric                 = "emit_metric"
+	FlagEmitMetricWithAlias        = FlagEmitMetric + ", em"
+	FlagName                       = "name"
+	FlagNameWithAlias              = FlagName + ", n"
+	FlagOutputFilename             = "output_filename"
+	FlagOutputFilenameWithAlias    = FlagOutputFilename + ", of"
+	FlagQueryType                  = "query_type"
+	FlagQueryTypeWithAlias         = FlagQueryType + ", qt"
+	FlagShowDetail                 = "show_detail"
+	FlagShowDetailWithAlias        = FlagShowDetail + ", sd"
+	FlagActiveClusterName          = "active_cluster"
+	FlagActiveClusterNameWithAlias = FlagActiveClusterName + ", ac"
+	FlagClusters                   = "clusters"
+	FlagClustersWithAlias          = FlagClusters + ", cl"
 )
 
 const (
@@ -179,6 +183,22 @@ func RegisterDomain(c *cli.Context) {
 			return
 		}
 	}
+	var activeClusterName string
+	if c.IsSet(FlagActiveClusterName) {
+		activeClusterName = c.String(FlagActiveClusterName)
+	}
+	var clusters []*s.ClusterReplicationConfiguration
+	if c.IsSet(FlagClusters) {
+		clusterStr := c.String(FlagClusters)
+		clusters = append(clusters, &s.ClusterReplicationConfiguration{
+			ClusterName: common.StringPtr(clusterStr),
+		})
+		for _, clusterStr := range c.Args() {
+			clusters = append(clusters, &s.ClusterReplicationConfiguration{
+				ClusterName: common.StringPtr(clusterStr),
+			})
+		}
+	}
 
 	request := &s.RegisterDomainRequest{
 		Name:                                   common.StringPtr(domain),
@@ -186,6 +206,8 @@ func RegisterDomain(c *cli.Context) {
 		OwnerEmail:                             common.StringPtr(ownerEmail),
 		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(int32(retentionDays)),
 		EmitMetric:                             common.BoolPtr(emitMetric),
+		Clusters:                               clusters,
+		ActiveClusterName:                      common.StringPtr(activeClusterName),
 	}
 
 	ctx, cancel := newContext()
