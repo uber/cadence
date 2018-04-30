@@ -379,13 +379,14 @@ func (t *transferQueueActiveProcessorImpl) processDecisionTask(task *persistence
 		return nil
 	}
 
-	timeout := msBuilder.executionInfo.WorkflowTimeout
+	workflowTimeout := msBuilder.executionInfo.WorkflowTimeout
+	decisionTimeout := workflowTimeout
 	wfTypeName := msBuilder.executionInfo.WorkflowTypeName
 	startTimestamp := msBuilder.executionInfo.StartTimestamp
 	if msBuilder.isStickyTaskListEnabled() {
 		taskList.Name = common.StringPtr(msBuilder.executionInfo.StickyTaskList)
 		taskList.Kind = common.TaskListKindPtr(workflow.TaskListKindSticky)
-		timeout = msBuilder.executionInfo.StickyScheduleToStartTimeout
+		decisionTimeout = msBuilder.executionInfo.StickyScheduleToStartTimeout
 	}
 
 	// release the context lock since we no longer need mutable state builder and
@@ -396,7 +397,7 @@ func (t *transferQueueActiveProcessorImpl) processDecisionTask(task *persistence
 		Execution:                     &execution,
 		TaskList:                      taskList,
 		ScheduleId:                    &task.ScheduleID,
-		ScheduleToStartTimeoutSeconds: common.Int32Ptr(timeout),
+		ScheduleToStartTimeoutSeconds: common.Int32Ptr(decisionTimeout),
 	})
 
 	if err != nil {
@@ -404,7 +405,7 @@ func (t *transferQueueActiveProcessorImpl) processDecisionTask(task *persistence
 	}
 
 	if task.ScheduleID == firstEventID+1 {
-		err = t.recordWorkflowExecutionStarted(execution, task, wfTypeName, startTimestamp, timeout)
+		err = t.recordWorkflowExecutionStarted(execution, task, wfTypeName, startTimestamp, workflowTimeout)
 	}
 
 	if err != nil {
@@ -1161,7 +1162,7 @@ Update_History_Loop:
 			return err
 		}
 
-		t.historyService.timerProcessor.NotifyNewTimers(t.shard.GetService().GetClusterMetadata().GetCurrentClusterName(), timerTasks)
+		t.historyService.timerProcessor.NotifyNewTimers(t.currentClusterName, t.shard.GetCurrentTime(t.currentClusterName), timerTasks)
 
 		return nil
 	}

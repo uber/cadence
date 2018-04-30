@@ -43,11 +43,6 @@ func (_m *MockTimerQueueProcessor) Stop() {
 }
 
 // NotifyNewTimers is mock implementation for NotifyNewTimers of Processor
-func (_m *MockTimerQueueProcessor) NotifyNewTimers(clusterName string, timerTask []persistence.Task) {
+func (_m *MockTimerQueueProcessor) NotifyNewTimers(clusterName string, currentTime time.Time, timerTask []persistence.Task) {
 	_m.Called(clusterName, timerTask)
-}
-
-// SetCurrentTime is mock implementation for SetCurrentTime of Processor
-func (_m *MockTimerQueueProcessor) SetCurrentTime(clusterName string, currentTime time.Time) {
-	_m.Called(clusterName, currentTime)
 }

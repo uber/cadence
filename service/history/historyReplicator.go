@@ -67,7 +67,7 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 		return nil
 	}
 
-	domainID, err := getDomainUUID(request.DomainUUID)
+	domainID, err := validateDomainUUID(request.DomainUUID)
 	if err != nil {
 		return err
 	}
@@ -124,9 +124,12 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 func (r *historyReplicator) ApplyReplicationTask(context *workflowExecutionContext, msBuilder *mutableStateBuilder,
 	request *h.ReplicateEventsRequest) error {
 
-	domainID, err := getDomainUUID(request.DomainUUID)
+	domainID, err := validateDomainUUID(request.DomainUUID)
 	if err != nil {
 		return err
+	}
+	if len(request.History.Events) == 0 {
+		return nil
 	}
 
 	execution := *request.WorkflowExecution
@@ -142,10 +145,6 @@ func (r *historyReplicator) ApplyReplicationTask(context *workflowExecutionConte
 	var requestID string
 	for _, event := range request.History.Events {
 		lastEvent = event
-		now := time.Unix(0, event.GetTimestamp())
-		r.shard.SetCurrentTime(request.GetSourceCluster(), now)
-		r.historyEngine.timerProcessor.SetCurrentTime(request.GetSourceCluster(), now)
-
 		switch event.GetEventType() {
 		case shared.EventTypeWorkflowExecutionStarted:
 			attributes := event.WorkflowExecutionStartedEventAttributes
@@ -256,7 +255,11 @@ func (r *historyReplicator) ApplyReplicationTask(context *workflowExecutionConte
 			cei := msBuilder.ReplicateStartChildWorkflowExecutionInitiatedEvent(event, createRequestID)
 
 			attributes := event.StartChildWorkflowExecutionInitiatedEventAttributes
-			transferTasks = append(transferTasks, r.scheduleStartChildWorkflowTransferTask(attributes.GetDomain(), attributes.GetWorkflowId(), cei.InitiatedID))
+			childDomainEntry, err := r.shard.GetDomainCache().GetDomain(attributes.GetDomain())
+			if err != nil {
+				return err
+			}
+			transferTasks = append(transferTasks, r.scheduleStartChildWorkflowTransferTask(childDomainEntry.GetInfo().ID, attributes.GetWorkflowId(), cei.InitiatedID))
 
 		case shared.EventTypeStartChildWorkflowExecutionFailed:
 			msBuilder.ReplicateStartChildWorkflowExecutionFailedEvent(event)
@@ -381,11 +384,6 @@ func (r *historyReplicator) ApplyReplicationTask(context *workflowExecutionConte
 			startedEvent := newRunHistory.Events[0]
 			startedAttributes := startedEvent.WorkflowExecutionStartedEventAttributes
 			dtScheduledEvent := newRunHistory.Events[1]
-			domainEntry, err := r.shard.GetDomainCache().GetDomainByID(domainID)
-			if err != nil {
-				return err
-			}
-			domainName := domainEntry.GetInfo().Name
 
 			// History event only have the parentDomainName.  Lookup the domain ID from cache
 			var parentDomainID *string
@@ -425,8 +423,7 @@ func (r *historyReplicator) ApplyReplicationTask(context *workflowExecutionConte
 			timeout := now.Add(time.Duration(newStateBuilder.executionInfo.WorkflowTimeout) * time.Second)
 			newTimerTasks = append(newTimerTasks, r.scheduleWorkflowTimerTask(timeout))
 
-			msBuilder.ReplicateWorkflowExecutionContinuedAsNewEvent(request.GetSourceCluster(), domainID, domainName, event,
-				startedEvent, di, newStateBuilder)
+			msBuilder.ReplicateWorkflowExecutionContinuedAsNewEvent(request.GetSourceCluster(), domainID, event, startedEvent, di, newStateBuilder)
 
 			// Generate a transaction ID for appending events to history
 			transactionID, err := r.shard.GetNextTransferTaskID()
@@ -540,7 +537,8 @@ func (r *historyReplicator) ApplyReplicationTask(context *workflowExecutionConte
 	}
 
 	if err != nil {
-		r.notify(request.GetSourceCluster(), transferTasks, timerTasks)
+		now := time.Unix(0, lastEvent.GetTimestamp())
+		r.notify(request.GetSourceCluster(), now, transferTasks, timerTasks)
 	}
 
 	return err
@@ -563,6 +561,7 @@ func (r *historyReplicator) FlushBuffer(context *workflowExecutionContext, msBui
 		msBuilder.DeleteBufferedReplicationTask(nextEventID)
 
 		req := &h.ReplicateEventsRequest{
+			SourceCluster:     request.SourceCluster,
 			DomainUUID:        request.DomainUUID,
 			WorkflowExecution: request.WorkflowExecution,
 			FirstEventId:      common.Int64Ptr(bt.FirstEventID),
@@ -641,7 +640,7 @@ func (r *historyReplicator) scheduleDeleteHistoryTransferTask() persistence.Task
 }
 
 func (r *historyReplicator) scheduleDecisionTimerTask(clusterName string, scheduleID int64, attempt int64, timeoutSecond int32) persistence.Task {
-	return r.getTimerBuilder(clusterName).AddDecisionTimoutTask(scheduleID, attempt, timeoutSecond)
+	return r.getTimerBuilder(clusterName).AddStartToCloseDecisionTimoutTask(scheduleID, attempt, timeoutSecond)
 }
 
 func (r *historyReplicator) scheduleUserTimerTask(clusterName string, msBuilder *mutableStateBuilder) persistence.Task {
@@ -658,7 +657,7 @@ func (r *historyReplicator) scheduleWorkflowTimerTask(timeout time.Time) persist
 
 func (r *historyReplicator) scheduleDeleteHistoryTimerTask(clusterName string, domainID string) (persistence.Task, error) {
 	var retentionInDays int32
-	domainEntry, err := r.getDomainEntry(domainID)
+	domainEntry, err := r.shard.GetDomainCache().GetDomainByID(domainID)
 	if err != nil {
 		if _, ok := err.(*shared.EntityNotExistsError); !ok {
 			return nil, err
@@ -679,19 +678,12 @@ func (r *historyReplicator) getTimerBuilder(clusterName string) *timerBuilder {
 	return newTimerBuilder(r.shard.GetConfig(), r.logger, timeSource)
 }
 
-func (r *historyReplicator) getDomainEntry(domainID string) (*cache.DomainCacheEntry, error) {
-	domainEntry, err := r.shard.GetDomainCache().GetDomainByID(domainID)
-	if err != nil {
-		return nil, err
-	}
-	return domainEntry, nil
-}
-
-func (r *historyReplicator) notify(clusterName string, transferTasks []persistence.Task, timerTasks []persistence.Task) {
+func (r *historyReplicator) notify(clusterName string, now time.Time, transferTasks []persistence.Task, timerTasks []persistence.Task) {
+	r.shard.SetCurrentTime(clusterName, now)
 	if len(transferTasks) != 0 {
-		r.historyEngine.txProcessor.NotifyNewTask(clusterName, r.shard.GetCurrentTime(clusterName))
+		r.historyEngine.txProcessor.NotifyNewTask(clusterName, now)
 	}
 	if len(timerTasks) != 0 {
-		r.historyEngine.timerProcessor.NotifyNewTimers(clusterName, timerTasks)
+		r.historyEngine.timerProcessor.NotifyNewTimers(clusterName, now, timerTasks)
 	}
 }

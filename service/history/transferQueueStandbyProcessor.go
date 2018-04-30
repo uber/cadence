@@ -220,6 +220,9 @@ func (t *transferQueueStandbyProcessorImpl) processDecisionTask(transferTask *pe
 		decisionInfo, isPending := msBuilder.GetPendingDecision(transferTask.ScheduleID)
 
 		if !isPending {
+			if transferTask.ScheduleID == firstEventID+1 {
+				return t.recordWorkflowStarted(msBuilder)
+			}
 			return nil
 		}
 		ok, err := t.verifyVersion(transferTask.DomainID, decisionInfo.Version, transferTask)
@@ -232,6 +235,11 @@ func (t *transferQueueStandbyProcessorImpl) processDecisionTask(transferTask *pe
 		if decisionInfo.StartedID == emptyEventID {
 			return ErrTaskRetry
 		}
+
+		if transferTask.ScheduleID == firstEventID+1 {
+			return t.recordWorkflowStarted(msBuilder)
+		}
+
 		return nil
 	})
 }
@@ -267,19 +275,7 @@ func (t *transferQueueStandbyProcessorImpl) processCloseExecution(transferTask *
 			retentionSeconds = int64(domainEntry.GetConfig().Retention) * 24 * 60 * 60
 		}
 
-		return t.visibilityMgr.RecordWorkflowExecutionClosed(&persistence.RecordWorkflowExecutionClosedRequest{
-			DomainUUID: transferTask.DomainID,
-			Execution: workflow.WorkflowExecution{
-				WorkflowId: common.StringPtr(transferTask.WorkflowID),
-				RunId:      common.StringPtr(transferTask.RunID),
-			},
-			WorkflowTypeName: msBuilder.executionInfo.WorkflowTypeName,
-			StartTimestamp:   msBuilder.executionInfo.StartTimestamp.UnixNano(),
-			CloseTimestamp:   msBuilder.getLastUpdatedTimestamp(),
-			Status:           getWorkflowExecutionCloseStatus(msBuilder.executionInfo.CloseStatus),
-			HistoryLength:    msBuilder.GetNextEventID(),
-			RetentionSeconds: retentionSeconds,
-		})
+		return t.recordWorkflowClosed(msBuilder, retentionSeconds)
 	})
 }
 
@@ -415,4 +411,33 @@ func (t *transferQueueStandbyProcessorImpl) verifyVersion(domainID string, versi
 		return false, nil
 	}
 	return true, nil
+}
+
+func (t *transferQueueStandbyProcessorImpl) recordWorkflowStarted(msBuilder *mutableStateBuilder) error {
+	return t.visibilityMgr.RecordWorkflowExecutionStarted(&persistence.RecordWorkflowExecutionStartedRequest{
+		DomainUUID: msBuilder.executionInfo.DomainID,
+		Execution: workflow.WorkflowExecution{
+			WorkflowId: common.StringPtr(msBuilder.executionInfo.WorkflowID),
+			RunId:      common.StringPtr(msBuilder.executionInfo.RunID),
+		},
+		WorkflowTypeName: msBuilder.executionInfo.WorkflowTypeName,
+		StartTimestamp:   msBuilder.executionInfo.StartTimestamp.UnixNano(),
+		WorkflowTimeout:  int64(msBuilder.executionInfo.WorkflowTimeout),
+	})
+}
+
+func (t *transferQueueStandbyProcessorImpl) recordWorkflowClosed(msBuilder *mutableStateBuilder, retentionSeconds int64) error {
+	return t.visibilityMgr.RecordWorkflowExecutionClosed(&persistence.RecordWorkflowExecutionClosedRequest{
+		DomainUUID: msBuilder.executionInfo.DomainID,
+		Execution: workflow.WorkflowExecution{
+			WorkflowId: common.StringPtr(msBuilder.executionInfo.WorkflowID),
+			RunId:      common.StringPtr(msBuilder.executionInfo.RunID),
+		},
+		WorkflowTypeName: msBuilder.executionInfo.WorkflowTypeName,
+		StartTimestamp:   msBuilder.executionInfo.StartTimestamp.UnixNano(),
+		CloseTimestamp:   msBuilder.getLastUpdatedTimestamp(),
+		Status:           getWorkflowExecutionCloseStatus(msBuilder.executionInfo.CloseStatus),
+		HistoryLength:    msBuilder.GetNextEventID(),
+		RetentionSeconds: retentionSeconds,
+	})
 }

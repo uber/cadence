@@ -120,8 +120,7 @@ type (
 	// convention, or at least come with a better name for this case.
 	timerQueueProcessor interface {
 		common.Daemon
-		NotifyNewTimers(clusterName string, timerTask []persistence.Task)
-		SetCurrentTime(clusterName string, currentTime time.Time)
+		NotifyNewTimers(clusterName string, currentTime time.Time, timerTask []persistence.Task)
 	}
 
 	timerProcessor interface {

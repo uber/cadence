@@ -79,7 +79,7 @@ func newTimerQueueProcessorBase(shard ShardContext, historyService *historyEngin
 	})
 
 	workerNotificationChans := []chan struct{}{}
-	for index := 0; index < shard.GetConfig().TimerProcessorTaskWorkerCount; index++ {
+	for index := 0; index < shard.GetConfig().TimerTaskWorkerCount; index++ {
 		workerNotificationChans = append(workerNotificationChans, make(chan struct{}, 1))
 	}
 
@@ -135,7 +135,7 @@ func (t *timerQueueProcessorBase) processorPump() {
 	// Workers to process timer tasks that are expired.
 
 	var workerWG sync.WaitGroup
-	for i := 0; i < t.config.TimerProcessorTaskWorkerCount; i++ {
+	for i := 0; i < t.config.TimerTaskWorkerCount; i++ {
 		workerWG.Add(1)
 		notificationChan := t.workerNotificationChans[i]
 		go t.processTaskWorker(&workerWG, notificationChan)
@@ -171,7 +171,7 @@ func (t *timerQueueProcessorBase) processTaskWorker(workerWG *sync.WaitGroup, no
 			}
 
 		UpdateFailureLoop:
-			for attempt := 1; attempt <= t.config.TimerProcessorUpdateFailureRetryCount; {
+			for attempt := 1; attempt <= t.config.TimerTaskMaxRetryCount; {
 
 				// clear the existing notification
 				select {
