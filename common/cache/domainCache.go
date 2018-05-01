@@ -42,12 +42,16 @@ const (
 )
 
 type (
+	callbackFn func(domainID string, prevActiveDomain string)
+
 	// DomainCache is used the cache domain information and configuration to avoid making too many calls to cassandra.
 	// This cache is mainly used by frontend for resolving domain names to domain uuids which are used throughout the
 	// system.  Each domain entry is kept in the cache for one hour but also has an expiry of 10 seconds.  This results
 	// in updating the domain entry every 10 seconds but in the case of a cassandra failure we can still keep on serving
 	// requests using the stale entry from cache upto an hour
 	DomainCache interface {
+		SetDomainFailoverCallback(shard int, fn callbackFn)
+		DeleteDomainFailoverCallback(shard int)
 		GetDomain(name string) (*DomainCacheEntry, error)
 		GetDomainByID(id string) (*DomainCacheEntry, error)
 		GetDomainID(name string) (string, error)
@@ -60,11 +64,16 @@ type (
 		clusterMetadata cluster.Metadata
 		timeSource      common.TimeSource
 		logger          bark.Logger
+
+		sync.RWMutex
+		callbacks map[int]callbackFn
 	}
 
 	// DomainCacheEntry contains the info and config for a domain
 	DomainCacheEntry struct {
-		clusterMetadata   cluster.Metadata
+		clusterMetadata cluster.Metadata
+
+		sync.RWMutex
 		info              *persistence.DomainInfo
 		config            *persistence.DomainConfig
 		replicationConfig *persistence.DomainReplicationConfig
@@ -72,7 +81,6 @@ type (
 		failoverVersion   int64
 		isGlobalDomain    bool
 		expiry            time.Time
-		sync.RWMutex
 	}
 )
 
@@ -89,11 +97,28 @@ func NewDomainCache(metadataMgr persistence.MetadataManager, clusterMetadata clu
 		clusterMetadata: clusterMetadata,
 		timeSource:      common.NewRealTimeSource(),
 		logger:          logger,
+		callbacks:       make(map[int]callbackFn),
 	}
 }
 
 func newDomainCacheEntry(clusterMetadata cluster.Metadata) *DomainCacheEntry {
 	return &DomainCacheEntry{clusterMetadata: clusterMetadata}
+}
+
+// SetDomainFailoverCallback set a domain failover callback, which will be when active domain for a domain changes
+func (c *domainCache) SetDomainFailoverCallback(shard int, fn callbackFn) {
+	c.Lock()
+	defer c.Unlock()
+
+	c.callbacks[shard] = fn
+}
+
+// DeleteDomainFailoverCallback delete a domain failover callback
+func (c *domainCache) DeleteDomainFailoverCallback(shard int) {
+	c.Lock()
+	defer c.Unlock()
+
+	delete(c.callbacks, shard)
 }
 
 // GetDomain retrieves the information from the cache if it exists, otherwise retrieves the information from metadata
@@ -162,10 +187,15 @@ func (c *domainCache) getDomain(key, id, name string, cache Cache) (*DomainCache
 		// Failed to get domain.  Return stale entry if we have one, otherwise just return error
 		if err != nil {
 			if !entry.expiry.IsZero() {
-				return entry, nil
+				return entry.duplicate(), nil
 			}
 
 			return nil, err
+		}
+
+		// expiry will be non zero when the entry is initialized / valid
+		if c.clusterMetadata.IsGlobalDomainEnabled() && !entry.expiry.IsZero() {
+			c.triggerDomainFailoverCallback(entry.GetInfo().ID, entry.replicationConfig, response.ReplicationConfig)
 		}
 
 		entry.info = response.Info
@@ -178,6 +208,26 @@ func (c *domainCache) getDomain(key, id, name string, cache Cache) (*DomainCache
 	}
 
 	return entry.duplicate(), nil
+}
+
+func (c *domainCache) triggerDomainFailoverCallback(domainID string, prevReplicationConfig *persistence.DomainReplicationConfig,
+	nextReplicationConfig *persistence.DomainReplicationConfig) {
+
+	if prevReplicationConfig == nil || nextReplicationConfig == nil {
+		return
+	}
+	prevActiveDomain := prevReplicationConfig.ActiveClusterName
+	nextActiveDomain := nextReplicationConfig.ActiveClusterName
+
+	if prevActiveDomain == nextActiveDomain || nextActiveDomain != c.clusterMetadata.GetCurrentClusterName() {
+		return
+	}
+
+	c.RLock()
+	defer c.RUnlock()
+	for _, callback := range c.callbacks {
+		callback(domainID, prevActiveDomain)
+	}
 }
 
 func (entry *DomainCacheEntry) duplicate() *DomainCacheEntry {
