@@ -313,7 +313,7 @@ func (t *transferQueueActiveProcessorImpl) processActivityTask(task *persistence
 		logging.LogDuplicateTransferTaskEvent(t.logger, persistence.TransferTaskTypeActivityTask, task.TaskID, task.ScheduleID)
 		return
 	}
-	ok, err := t.verifyVersion(domainID, ai.Version, task)
+	ok, err := verifyTransferTaskVersion(t.shard, domainID, ai.Version, task)
 	if err != nil {
 		return err
 	} else if !ok {
@@ -372,7 +372,7 @@ func (t *transferQueueActiveProcessorImpl) processDecisionTask(task *persistence
 		logging.LogDuplicateTransferTaskEvent(t.logger, persistence.TaskTypeDecisionTimeout, task.TaskID, task.ScheduleID)
 		return nil
 	}
-	ok, err := t.verifyVersion(domainID, di.Version, task)
+	ok, err := verifyTransferTaskVersion(t.shard, domainID, di.Version, task)
 	if err != nil {
 		return err
 	} else if !ok {
@@ -444,7 +444,7 @@ func (t *transferQueueActiveProcessorImpl) processCloseExecution(task *persisten
 		}
 		return err
 	}
-	ok, err := t.verifyVersion(domainID, msBuilder.GetCurrentVersion(), task)
+	ok, err := verifyTransferTaskVersion(t.shard, domainID, msBuilder.GetCurrentVersion(), task)
 	if err != nil {
 		return err
 	} else if !ok {
@@ -559,7 +559,7 @@ func (t *transferQueueActiveProcessorImpl) processCancelExecution(task *persiste
 		logging.LogDuplicateTransferTaskEvent(t.logger, persistence.TransferTaskTypeCancelExecution, task.TaskID, task.ScheduleID)
 		return nil
 	}
-	ok, err := t.verifyVersion(domainID, ri.Version, task)
+	ok, err := verifyTransferTaskVersion(t.shard, domainID, ri.Version, task)
 	if err != nil {
 		return err
 	} else if !ok {
@@ -684,7 +684,7 @@ func (t *transferQueueActiveProcessorImpl) processSignalExecution(task *persiste
 		logging.LogDuplicateTransferTaskEvent(t.logger, persistence.TransferTaskTypeCancelExecution, task.TaskID, task.ScheduleID)
 		return nil
 	}
-	ok, err := t.verifyVersion(domainID, si.Version, task)
+	ok, err := verifyTransferTaskVersion(t.shard, domainID, si.Version, task)
 	if err != nil {
 		return err
 	} else if !ok {
@@ -840,7 +840,7 @@ func (t *transferQueueActiveProcessorImpl) processStartChildExecution(task *pers
 		logging.LogDuplicateTransferTaskEvent(t.logger, persistence.TransferTaskTypeStartChildExecution, task.TaskID, task.ScheduleID)
 		return nil
 	}
-	ok, err := t.verifyVersion(domainID, ci.Version, task)
+	ok, err := verifyTransferTaskVersion(t.shard, domainID, ci.Version, task)
 	if err != nil {
 		return err
 	} else if !ok {
@@ -1195,19 +1195,4 @@ func getWorkflowExecutionCloseStatus(status int) workflow.WorkflowExecutionClose
 	default:
 		panic("Invalid value for enum WorkflowExecutionCloseStatus")
 	}
-}
-
-func (t *transferQueueActiveProcessorImpl) verifyVersion(domainID string, version int64, task queueTaskInfo) (bool, error) {
-	// the first return value is whether this task is valid for further processing
-	domainEntry, err := t.shard.GetDomainCache().GetDomainByID(domainID)
-	if err != nil {
-		return false, err
-	}
-	if !domainEntry.IsGlobalDomain() {
-		return true, nil
-	} else if version != task.GetVersion() {
-		t.logger.Infof("Encounter mismatch verion: task: %v, task info version: %v.\n", version, task.GetVersion())
-		return false, nil
-	}
-	return true, nil
 }

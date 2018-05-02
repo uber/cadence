@@ -494,7 +494,7 @@ Update_History_Loop:
 			logging.LogDuplicateTransferTaskEvent(t.logger, persistence.TaskTypeDecisionTimeout, task.TaskID, scheduleID)
 			return nil
 		}
-		ok, err := t.timerQueueProcessorBase.verifyVersion(task.DomainID, di.Version, task)
+		ok, err := verifyTimerTaskVersion(t.shard, task.DomainID, di.Version, task)
 		if err != nil {
 			return err
 		} else if !ok {
@@ -574,7 +574,7 @@ func (t *timerQueueActiveProcessorImpl) processRetryTimer(task *persistence.Time
 		if !running || task.ScheduleAttempt < int64(ai.Attempt) {
 			return nil
 		}
-		ok, err := t.timerQueueProcessorBase.verifyVersion(task.DomainID, ai.Version, task)
+		ok, err := verifyTimerTaskVersion(t.shard, task.DomainID, ai.Version, task)
 		if err != nil {
 			return err
 		} else if !ok {
@@ -647,7 +647,7 @@ Update_History_Loop:
 			return nil
 		}
 
-		ok, err := t.timerQueueProcessorBase.verifyVersion(task.DomainID, msBuilder.GetStartVersion(), task)
+		ok, err := verifyTimerTaskVersion(t.shard, task.DomainID, msBuilder.GetStartVersion(), task)
 		if err != nil {
 			return err
 		} else if !ok {

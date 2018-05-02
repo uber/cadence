@@ -58,7 +58,7 @@ func NewFakeTimeSource() *FakeTimeSource {
 
 // Now return the fake current time
 func (ts *FakeTimeSource) Now() time.Time {
-	return time.Now()
+	return ts.now
 }
 
 // Update update the fake current time

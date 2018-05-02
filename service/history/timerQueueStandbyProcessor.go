@@ -267,7 +267,7 @@ func (t *timerQueueStandbyProcessorImpl) processDecisionTimeout(timerTask *persi
 			return nil
 		}
 
-		ok, err := t.timerQueueProcessorBase.verifyVersion(timerTask.DomainID, di.Version, timerTask)
+		ok, err := verifyTimerTaskVersion(t.shard, timerTask.DomainID, di.Version, timerTask)
 		if err != nil {
 			return err
 		} else if !ok {
@@ -293,7 +293,7 @@ func (t *timerQueueStandbyProcessorImpl) processWorkflowTimeout(timerTask *persi
 		// we do not need to notity new timer to base, since if there is no new event being replicated
 		// checking again if the timer can be completed is meaningless
 
-		ok, err := t.timerQueueProcessorBase.verifyVersion(timerTask.DomainID, msBuilder.GetStartVersion(), timerTask)
+		ok, err := verifyTimerTaskVersion(t.shard, timerTask.DomainID, msBuilder.GetStartVersion(), timerTask)
 		if err != nil {
 			return err
 		} else if !ok {

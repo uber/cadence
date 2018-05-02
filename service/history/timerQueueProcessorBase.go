@@ -377,7 +377,7 @@ func (t *timerQueueProcessorBase) processDeleteHistoryEvent(task *persistence.Ti
 	if err != nil {
 		return err
 	}
-	ok, err := t.verifyVersion(task.DomainID, msBuilder.GetCurrentVersion(), task)
+	ok, err := verifyTimerTaskVersion(t.shard, task.DomainID, msBuilder.GetCurrentVersion(), task)
 	if err != nil {
 		return err
 	} else if !ok {
@@ -407,21 +407,6 @@ func (t *timerQueueProcessorBase) processDeleteHistoryEvent(task *persistence.Ti
 	}
 
 	return backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
-}
-
-func (t *timerQueueProcessorBase) verifyVersion(domainID string, version int64, task *persistence.TimerTaskInfo) (bool, error) {
-	// the first return value is whether this task is valid for further processing
-	domainEntry, err := t.shard.GetDomainCache().GetDomainByID(domainID)
-	if err != nil {
-		return false, err
-	}
-	if !domainEntry.IsGlobalDomain() {
-		return true, nil
-	} else if version != task.Version {
-		t.logger.Infof("Encounter mismatch verion: task: %v, task info version: %v.\n", version, task.Version)
-		return false, nil
-	}
-	return true, nil
 }
 
 func (t *timerQueueProcessorBase) getTimerTaskType(taskType int) string {

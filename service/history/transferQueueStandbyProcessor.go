@@ -196,7 +196,7 @@ func (t *transferQueueStandbyProcessorImpl) processActivityTask(transferTask *pe
 		if !isPending {
 			return nil
 		}
-		ok, err := t.verifyVersion(transferTask.DomainID, activityInfo.Version, transferTask)
+		ok, err := verifyTransferTaskVersion(t.shard, transferTask.DomainID, activityInfo.Version, transferTask)
 		if err != nil {
 			return err
 		} else if !ok {
@@ -225,7 +225,7 @@ func (t *transferQueueStandbyProcessorImpl) processDecisionTask(transferTask *pe
 			}
 			return nil
 		}
-		ok, err := t.verifyVersion(transferTask.DomainID, decisionInfo.Version, transferTask)
+		ok, err := verifyTransferTaskVersion(t.shard, transferTask.DomainID, decisionInfo.Version, transferTask)
 		if err != nil {
 			return err
 		} else if !ok {
@@ -252,7 +252,7 @@ func (t *transferQueueStandbyProcessorImpl) processCloseExecution(transferTask *
 	processTaskIfClosed := true
 	return t.processTransfer(processTaskIfClosed, transferTask, func(msBuilder *mutableStateBuilder) error {
 
-		ok, err := t.verifyVersion(transferTask.DomainID, msBuilder.GetCurrentVersion(), transferTask)
+		ok, err := verifyTransferTaskVersion(t.shard, transferTask.DomainID, msBuilder.GetCurrentVersion(), transferTask)
 		if err != nil {
 			return err
 		} else if !ok {
@@ -291,7 +291,7 @@ func (t *transferQueueStandbyProcessorImpl) processCancelExecution(transferTask 
 		if !isPending {
 			return nil
 		}
-		ok, err := t.verifyVersion(transferTask.DomainID, requestCancelInfo.Version, transferTask)
+		ok, err := verifyTransferTaskVersion(t.shard, transferTask.DomainID, requestCancelInfo.Version, transferTask)
 		if err != nil {
 			return err
 		} else if !ok {
@@ -314,7 +314,7 @@ func (t *transferQueueStandbyProcessorImpl) processSignalExecution(transferTask 
 		if !isPending {
 			return nil
 		}
-		ok, err := t.verifyVersion(transferTask.DomainID, signalInfo.Version, transferTask)
+		ok, err := verifyTransferTaskVersion(t.shard, transferTask.DomainID, signalInfo.Version, transferTask)
 		if err != nil {
 			return err
 		} else if !ok {
@@ -337,7 +337,7 @@ func (t *transferQueueStandbyProcessorImpl) processStartChildExecution(transferT
 		if !isPending {
 			return nil
 		}
-		ok, err := t.verifyVersion(transferTask.DomainID, childWorkflowInfo.Version, transferTask)
+		ok, err := verifyTransferTaskVersion(t.shard, transferTask.DomainID, childWorkflowInfo.Version, transferTask)
 		if err != nil {
 			return err
 		} else if !ok {
@@ -396,21 +396,6 @@ func (t *transferQueueStandbyProcessorImpl) getDomainIDAndWorkflowExecution(tran
 		WorkflowId: common.StringPtr(transferTask.WorkflowID),
 		RunId:      common.StringPtr(transferTask.RunID),
 	}
-}
-
-func (t *transferQueueStandbyProcessorImpl) verifyVersion(domainID string, version int64, task queueTaskInfo) (bool, error) {
-	// the first return value is whether this task is valid for further processing
-	domainEntry, err := t.shard.GetDomainCache().GetDomainByID(domainID)
-	if err != nil {
-		return false, err
-	}
-	if !domainEntry.IsGlobalDomain() {
-		return true, nil
-	} else if version != task.GetVersion() {
-		t.logger.Infof("Encounter mismatch verion: task: %v, task info version: %v.\n", version, task.GetVersion())
-		return false, nil
-	}
-	return true, nil
 }
 
 func (t *transferQueueStandbyProcessorImpl) recordWorkflowStarted(msBuilder *mutableStateBuilder) error {
