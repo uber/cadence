@@ -1331,6 +1331,21 @@ func (t *ReplicationTaskInfo) GetTaskType() int {
 	return t.TaskType
 }
 
+// GetTaskID returns the task ID for timer task
+func (t *TimerTaskInfo) GetTaskID() int64 {
+	return t.TaskID
+}
+
+// GetVersion returns the task version for timer task
+func (t *TimerTaskInfo) GetVersion() int64 {
+	return t.Version
+}
+
+// GetTaskType returns the task type for timer task
+func (t *TimerTaskInfo) GetTaskType() int {
+	return t.TaskType
+}
+
 // NewHistoryEventBatch returns a new instance of HistoryEventBatch
 func NewHistoryEventBatch(version int, events []*workflow.HistoryEvent) *HistoryEventBatch {
 	return &HistoryEventBatch{
