@@ -133,7 +133,7 @@ func (h *Handler) Start() error {
 	h.domainCache = cache.NewDomainCache(h.metadataMgr, h.GetClusterMetadata(), h.GetLogger())
 	h.domainCache.Start()
 	h.controller = newShardController(h.Service, h.GetHostInfo(), hServiceResolver, h.shardManager, h.historyMgr,
-		h.domainCache, h.executionMgrFactory, h, h.config, h.GetLogger(), h.GetMetricsClient())
+		h.domainCache, h.executionMgrFactory, h, h.config, h.GetLogger(), h.GetMetricsClient(), h.publisher)
 	h.metricsClient = h.GetMetricsClient()
 	h.historyEventNotifier = newHistoryEventNotifier(h.GetMetricsClient(), h.config.GetShardID)
 	// events notifier must starts before controller
@@ -919,6 +919,30 @@ func (h *Handler) ReplicateEvents(ctx context.Context, replicateRequest *hist.Re
 	if err2 != nil {
 		h.updateErrorMetric(metrics.HistoryReplicateEventsScope, h.convertError(err2))
 		return h.convertError(err2)
+	}
+
+	return nil
+}
+
+// SyncShardStatus is called by processor to sync history shrad information from another cluster
+func (h *Handler) SyncShardStatus(ctx context.Context, syncShardStatusRequest *hist.SyncShardStatusRequest) error {
+	h.startWG.Wait()
+
+	h.metricsClient.IncCounter(metrics.HistorySyncShardStatusScope, metrics.CadenceRequests)
+	sw := h.metricsClient.StartTimer(metrics.HistorySyncShardStatusScope, metrics.CadenceLatency)
+	defer sw.Stop()
+
+	// shard ID is already provided in the request
+	engine, err := h.controller.getEngineForShard(int(syncShardStatusRequest.GetShardId()))
+	if err != nil {
+		h.updateErrorMetric(metrics.HistoryReplicateEventsScope, err)
+		return err
+	}
+
+	err = engine.SyncShardStatus(ctx, syncShardStatusRequest)
+	if err != nil {
+		h.updateErrorMetric(metrics.HistorySyncShardStatusScope, h.convertError(err))
+		return h.convertError(err)
 	}
 
 	return nil

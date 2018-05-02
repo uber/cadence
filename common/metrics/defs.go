@@ -232,6 +232,8 @@ const (
 	HistoryClientRecordChildExecutionCompletedScope
 	// HistoryClientReplicateEventsScope tracks RPC calls to history service
 	HistoryClientReplicateEventsScope
+	// HistoryClientSyncShardStatusScope tracks RPC calls to history service
+	HistoryClientSyncShardStatusScope
 	// MatchingClientPollForDecisionTaskScope tracks RPC calls to matching service
 	MatchingClientPollForDecisionTaskScope
 	// MatchingClientPollForActivityTaskScope tracks RPC calls to matching service
@@ -360,6 +362,8 @@ const (
 	HistoryRequestCancelWorkflowExecutionScope
 	// HistoryReplicateEventsScope tracks ReplicateEvents API calls received by service
 	HistoryReplicateEventsScope
+	// HistorySyncShardStatusScope tracks ReplicateEvents API calls received by service
+	HistorySyncShardStatusScope
 	// HistoryShardControllerScope is the scope used by shard controller
 	HistoryShardControllerScope
 	// TransferQueueProcessorScope is the scope used by all metric emitted by transfer queue processor
@@ -466,6 +470,8 @@ const (
 	DomainReplicationTaskScope
 	// HistoryReplicationTaskScope is the scope used by history task replication processing
 	HistoryReplicationTaskScope
+	// SyncShardTaskScope is the scope used by sync shrad information processing
+	SyncShardTaskScope
 
 	NumWorkerScopes
 )
@@ -535,6 +541,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryClientScheduleDecisionTaskScope:             {operation: "HistoryClientScheduleDecisionTask"},
 		HistoryClientRecordChildExecutionCompletedScope:    {operation: "HistoryClientRecordChildExecutionCompleted"},
 		HistoryClientReplicateEventsScope:                  {operation: "HistoryClientReplicateEvents"},
+		HistoryClientSyncShardStatusScope:                  {operation: "HistoryClientSyncShardStatusScope"},
 		MatchingClientPollForDecisionTaskScope:             {operation: "MatchingClientPollForDecisionTask"},
 		MatchingClientPollForActivityTaskScope:             {operation: "MatchingClientPollForActivityTask"},
 		MatchingClientAddActivityTaskScope:                 {operation: "MatchingClientAddActivityTask"},
@@ -598,6 +605,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryRecordChildExecutionCompletedScope:    {operation: "RecordChildExecutionCompleted"},
 		HistoryRequestCancelWorkflowExecutionScope:   {operation: "RequestCancelWorkflowExecution"},
 		HistoryReplicateEventsScope:                  {operation: "ReplicateEvents"},
+		HistorySyncShardStatusScope:                  {operation: "SyncShardStatus"},
 		HistoryShardControllerScope:                  {operation: "ShardController"},
 		TransferQueueProcessorScope:                  {operation: "TransferQueueProcessor"},
 		TransferActiveQueueProcessorScope:            {operation: "TransferActiveQueueProcessor"},
@@ -651,6 +659,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		ReplicatorScope:             {operation: "Replicator"},
 		DomainReplicationTaskScope:  {operation: "DomainReplicationTask"},
 		HistoryReplicationTaskScope: {operation: "HistoryReplicationTask"},
+		SyncShardTaskScope:          {operation: "SyncShardTask"},
 	},
 }
 

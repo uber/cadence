@@ -2194,6 +2194,16 @@ func (e *historyEngineImpl) ReplicateEvents(replicateRequest *h.ReplicateEventsR
 	return e.replicator.ApplyEvents(replicateRequest)
 }
 
+func (e *historyEngineImpl) SyncShardStatus(ctx context.Context, request *h.SyncShardStatusRequest) error {
+	clusterName := request.GetSourceCluster()
+	now := time.Unix(0, request.GetTimestamp())
+
+	e.shard.SetCurrentTime(clusterName, now)
+	e.txProcessor.NotifyNewTask(clusterName, now, []persistence.Task{})
+	e.timerProcessor.NotifyNewTimers(clusterName, now, []persistence.Task{})
+	return nil
+}
+
 type updateWorkflowAction struct {
 	deleteWorkflow bool
 	createDecision bool
