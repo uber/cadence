@@ -74,7 +74,7 @@ func (s *timerQueueProcessorSuite) SetupSuite() {
 	historyCache.disabled = true
 	// set the standby cluster's timer ack level to max since we are not testing it
 	// but we are testing the complete timer functionality
-	s.ShardContext.UpdateTimerClusterAckLevel(cluster.TestAlternativeClusterName, timerQueueAckMgrMaxTimestamp)
+	s.ShardContext.UpdateTimerClusterAckLevel(cluster.TestAlternativeClusterName, timerQueueAckMgrMaxQueryLevel)
 	s.matchingClient = &mocks.MatchingClient{}
 	s.engineImpl = &historyEngineImpl{
 		currentClusterName: s.ShardContext.GetService().GetClusterMetadata().GetCurrentClusterName(),
