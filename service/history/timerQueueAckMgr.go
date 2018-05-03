@@ -111,12 +111,12 @@ func (t *timerQueueAckMgrImpl) readTimerTasks() ([]*persistence.TimerTaskInfo, *
 	var err error
 	if timerTaskRetrySize < t.config.TimerTaskBatchSize {
 		var token []byte
-		tasks, token, err = t.getTimerTasks(readLevel.VisibilityTimestamp, timerQueueAckMgrMaxTimestamp, t.config.TimerTaskBatchSize)
+		tasks, err = t.getTimerTasks(readLevel.VisibilityTimestamp, timerQueueAckMgrMaxTimestamp, t.config.TimerTaskBatchSize)
 		if err != nil {
 			return nil, nil, false, err
 		}
 		t.logger.Debugf("readTimerTasks: ReadLevel: (%s) count: %v, next token: %v", readLevel, len(tasks), token)
-		morePage = len(token) > 0
+		morePage = len(tasks) >= t.config.TimerTaskBatchSize
 	}
 
 	// We filter tasks so read only moves to desired timer tasks.
@@ -268,7 +268,7 @@ MoveAckLevelLoop:
 
 // this function does not take cluster name as parameter, due to we only have one timer queue on Cassandra
 // all timer tasks are in this queue and filter will be applied.
-func (t *timerQueueAckMgrImpl) getTimerTasks(minTimestamp time.Time, maxTimestamp time.Time, batchSize int) ([]*persistence.TimerTaskInfo, []byte, error) {
+func (t *timerQueueAckMgrImpl) getTimerTasks(minTimestamp time.Time, maxTimestamp time.Time, batchSize int) ([]*persistence.TimerTaskInfo, error) {
 	request := &persistence.GetTimerIndexTasksRequest{
 		MinTimestamp: minTimestamp,
 		MaxTimestamp: maxTimestamp,
@@ -279,12 +279,12 @@ func (t *timerQueueAckMgrImpl) getTimerTasks(minTimestamp time.Time, maxTimestam
 	for attempt := 0; attempt < retryCount; attempt++ {
 		response, err := t.executionMgr.GetTimerIndexTasks(request)
 		if err == nil {
-			return response.Timers, response.NextPageToken, nil
+			return response.Timers, nil
 		}
 		backoff := time.Duration(attempt * 100)
 		time.Sleep(backoff * time.Millisecond)
 	}
-	return nil, nil, ErrMaxAttemptsExceeded
+	return nil, ErrMaxAttemptsExceeded
 }
 
 func (t *timerQueueAckMgrImpl) isProcessNow(expiryTime time.Time) bool {

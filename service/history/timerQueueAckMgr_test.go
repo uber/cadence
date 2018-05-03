@@ -126,12 +126,13 @@ func (s *timerQueueAckMgrSuite) TestGetTimerTasks() {
 	maxTimestamp := time.Now().Add(10 * time.Second)
 	batchSize := 10
 
+	// make the batch size small so to trigger a next page call
+	s.timerQueueAckMgr.config.TimerTaskBatchSize = 1
 	request := &persistence.GetTimerIndexTasksRequest{
 		MinTimestamp: minTimestamp,
 		MaxTimestamp: maxTimestamp,
 		BatchSize:    batchSize,
 	}
-
 	response := &persistence.GetTimerIndexTasksResponse{
 		Timers: []*persistence.TimerTaskInfo{
 			&persistence.TimerTaskInfo{
@@ -146,15 +147,13 @@ func (s *timerQueueAckMgrSuite) TestGetTimerTasks() {
 				ScheduleAttempt:     0,
 			},
 		},
-		NextPageToken: []byte("some random next page token"),
 	}
 
 	s.mockExecutionMgr.On("GetTimerIndexTasks", request).Return(response, nil).Once()
 
-	timers, token, err := s.timerQueueAckMgr.getTimerTasks(minTimestamp, maxTimestamp, batchSize)
+	timers, err := s.timerQueueAckMgr.getTimerTasks(minTimestamp, maxTimestamp, batchSize)
 	s.Nil(err)
 	s.Equal(response.Timers, timers)
-	s.Equal(response.NextPageToken, token)
 }
 
 func (s *timerQueueAckMgrSuite) TestReadTimerTasks_NoLookAhead_NoNextPage() {
@@ -192,8 +191,7 @@ func (s *timerQueueAckMgrSuite) TestReadTimerTasks_NoLookAhead_NoNextPage() {
 		BatchSize:    s.mockShard.GetConfig().TimerTaskBatchSize,
 	}
 	response := &persistence.GetTimerIndexTasksResponse{
-		Timers:        []*persistence.TimerTaskInfo{timer},
-		NextPageToken: nil,
+		Timers: []*persistence.TimerTaskInfo{timer},
 	}
 	s.mockExecutionMgr.On("GetTimerIndexTasks", request).Return(response, nil).Once()
 	filteredTasks, lookAheadTask, moreTasks, err := s.timerQueueAckMgr.readTimerTasks()
@@ -239,14 +237,15 @@ func (s *timerQueueAckMgrSuite) TestReadTimerTasks_NoLookAhead_HasNextPage() {
 		ScheduleAttempt:     0,
 		Version:             failoverVersion,
 	}
+	// make the batch size small so to trigger a next page call
+	s.timerQueueAckMgr.config.TimerTaskBatchSize = 1
 	request := &persistence.GetTimerIndexTasksRequest{
 		MinTimestamp: readLevel.VisibilityTimestamp,
 		MaxTimestamp: timerQueueAckMgrMaxTimestamp,
 		BatchSize:    s.mockShard.GetConfig().TimerTaskBatchSize,
 	}
 	response := &persistence.GetTimerIndexTasksResponse{
-		Timers:        []*persistence.TimerTaskInfo{timer},
-		NextPageToken: []byte("some random next page token"),
+		Timers: []*persistence.TimerTaskInfo{timer},
 	}
 	s.mockExecutionMgr.On("GetTimerIndexTasks", request).Return(response, nil).Once()
 	filteredTasks, lookAheadTask, moreTasks, err := s.timerQueueAckMgr.readTimerTasks()
@@ -296,8 +295,7 @@ func (s *timerQueueAckMgrSuite) TestReadTimerTasks_HasLookAhead_NoNextPage() {
 		BatchSize:    s.mockShard.GetConfig().TimerTaskBatchSize,
 	}
 	response := &persistence.GetTimerIndexTasksResponse{
-		Timers:        []*persistence.TimerTaskInfo{timer},
-		NextPageToken: nil,
+		Timers: []*persistence.TimerTaskInfo{timer},
 	}
 	s.mockExecutionMgr.On("GetTimerIndexTasks", request).Return(response, nil).Once()
 	filteredTasks, lookAheadTask, moreTasks, err := s.timerQueueAckMgr.readTimerTasks()
@@ -343,14 +341,15 @@ func (s *timerQueueAckMgrSuite) TestReadTimerTasks_HasLookAhead_HasNextPage() {
 		ScheduleAttempt:     0,
 		Version:             failoverVersion,
 	}
+	// make the batch size small so to trigger a next page call
+	s.timerQueueAckMgr.config.TimerTaskBatchSize = 1
 	request := &persistence.GetTimerIndexTasksRequest{
 		MinTimestamp: readLevel.VisibilityTimestamp,
 		MaxTimestamp: timerQueueAckMgrMaxTimestamp,
 		BatchSize:    s.mockShard.GetConfig().TimerTaskBatchSize,
 	}
 	response := &persistence.GetTimerIndexTasksResponse{
-		Timers:        []*persistence.TimerTaskInfo{timer},
-		NextPageToken: []byte("some random next page token"),
+		Timers: []*persistence.TimerTaskInfo{timer},
 	}
 	s.mockExecutionMgr.On("GetTimerIndexTasks", request).Return(response, nil).Once()
 	filteredTasks, lookAheadTask, moreTasks, err := s.timerQueueAckMgr.readTimerTasks()
@@ -417,8 +416,7 @@ func (s *timerQueueAckMgrSuite) TestReadCompleteUpdateTimerTasks() {
 		BatchSize:    s.mockShard.GetConfig().TimerTaskBatchSize,
 	}
 	response := &persistence.GetTimerIndexTasksResponse{
-		Timers:        []*persistence.TimerTaskInfo{timer1, timer2, timer3},
-		NextPageToken: nil,
+		Timers: []*persistence.TimerTaskInfo{timer1, timer2, timer3},
 	}
 	s.mockExecutionMgr.On("GetTimerIndexTasks", request).Return(response, nil).Once()
 	filteredTasks, lookAheadTask, moreTasks, err := s.timerQueueAckMgr.readTimerTasks()
@@ -493,8 +491,7 @@ func (s *timerQueueAckMgrSuite) TestReadRetryCompleteUpdateTimerTasks() {
 		BatchSize:    s.mockShard.GetConfig().TimerTaskBatchSize,
 	}
 	response := &persistence.GetTimerIndexTasksResponse{
-		Timers:        []*persistence.TimerTaskInfo{timer},
-		NextPageToken: nil,
+		Timers: []*persistence.TimerTaskInfo{timer},
 	}
 	s.mockExecutionMgr.On("GetTimerIndexTasks", request).Return(response, nil).Once()
 	filteredTasks, lookAheadTask, moreTasks, err := s.timerQueueAckMgr.readTimerTasks()
@@ -518,8 +515,7 @@ func (s *timerQueueAckMgrSuite) TestReadRetryCompleteUpdateTimerTasks() {
 		BatchSize:    s.mockShard.GetConfig().TimerTaskBatchSize,
 	}
 	response = &persistence.GetTimerIndexTasksResponse{
-		Timers:        []*persistence.TimerTaskInfo{},
-		NextPageToken: nil,
+		Timers: []*persistence.TimerTaskInfo{},
 	}
 	s.mockExecutionMgr.On("GetTimerIndexTasks", request).Return(response, nil).Once()
 	filteredTasks, lookAheadTask, moreTasks, err = s.timerQueueAckMgr.readTimerTasks()

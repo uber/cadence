@@ -242,10 +242,9 @@ func (s *timerQueueProcessorSuite) TestSingleTimerTask() {
 	identity := "testIdentity"
 	_, tt := s.createExecutionWithTimers(domainID, workflowExecution, taskList, identity, []int32{1})
 
-	timerInfo, nextToken, err := s.GetTimerIndexTasks()
+	timerInfo, err := s.GetTimerIndexTasks()
 	s.Nil(err, "No error expected.")
 	s.NotEmpty(timerInfo, "Expected non empty timers list")
-	s.Equal(0, len(nextToken))
 	s.Equal(1, len(timerInfo))
 
 	processor := newTimerQueueProcessor(s.ShardContext, s.engineImpl, s.WorkflowMgr, s.logger).(*timerQueueProcessorImpl)
@@ -253,7 +252,7 @@ func (s *timerQueueProcessorSuite) TestSingleTimerTask() {
 	processor.NotifyNewTimers(cluster.TestCurrentClusterName, tt)
 
 	for {
-		timerInfo, _, err := s.GetTimerIndexTasks()
+		timerInfo, err := s.GetTimerIndexTasks()
 		s.Nil(err, "No error expected.")
 		if len(timerInfo) == 0 {
 			processor.Stop()
@@ -262,10 +261,9 @@ func (s *timerQueueProcessorSuite) TestSingleTimerTask() {
 		time.Sleep(10 * time.Millisecond)
 	}
 
-	timerInfo, nextToken, err = s.GetTimerIndexTasks()
+	timerInfo, err = s.GetTimerIndexTasks()
 	s.Nil(err, "No error expected.")
 	s.Equal(0, len(timerInfo))
-	s.Equal(0, len(nextToken))
 }
 
 func (s *timerQueueProcessorSuite) TestManyTimerTasks() {
@@ -277,11 +275,10 @@ func (s *timerQueueProcessorSuite) TestManyTimerTasks() {
 	identity := "testIdentity"
 	_, tt := s.createExecutionWithTimers(domainID, workflowExecution, taskList, identity, []int32{1, 2, 3})
 
-	timerInfo, nextToken, err := s.GetTimerIndexTasks()
+	timerInfo, err := s.GetTimerIndexTasks()
 	s.Nil(err, "No error expected.")
 	s.NotEmpty(timerInfo, "Expected non empty timers list")
 	s.Equal(1, len(timerInfo))
-	s.Equal(0, len(nextToken))
 
 	processor := newTimerQueueProcessor(s.ShardContext, s.engineImpl, s.WorkflowMgr, s.logger).(*timerQueueProcessorImpl)
 	processor.Start()
@@ -289,7 +286,7 @@ func (s *timerQueueProcessorSuite) TestManyTimerTasks() {
 	processor.NotifyNewTimers(cluster.TestCurrentClusterName, tt)
 
 	for {
-		timerInfo, _, err := s.GetTimerIndexTasks()
+		timerInfo, err := s.GetTimerIndexTasks()
 		s.logger.Infof("TestManyTimerTasks: GetTimerIndexTasks: Response Count: %d \n", len(timerInfo))
 		s.Nil(err, "No error expected.")
 		if len(timerInfo) == 0 {
@@ -299,10 +296,9 @@ func (s *timerQueueProcessorSuite) TestManyTimerTasks() {
 		time.Sleep(1000 * time.Millisecond)
 	}
 
-	timerInfo, nextToken, err = s.GetTimerIndexTasks()
+	timerInfo, err = s.GetTimerIndexTasks()
 	s.Nil(err, "No error expected.")
 	s.Equal(0, len(timerInfo))
-	s.Equal(0, len(nextToken))
 
 	s.Equal(uint64(3), processor.getTimerFiredCount(cluster.TestCurrentClusterName))
 }
@@ -317,10 +313,9 @@ func (s *timerQueueProcessorSuite) TestTimerTaskAfterProcessorStart() {
 
 	s.createExecutionWithTimers(domainID, workflowExecution, taskList, identity, []int32{})
 
-	timerInfo, nextToken, err := s.GetTimerIndexTasks()
+	timerInfo, err := s.GetTimerIndexTasks()
 	s.Nil(err, "No error expected.")
 	s.Empty(timerInfo, "Expected empty timers list")
-	s.Equal(0, len(nextToken))
 
 	processor := newTimerQueueProcessor(s.ShardContext, s.engineImpl, s.WorkflowMgr, s.logger).(*timerQueueProcessorImpl)
 	processor.Start()
@@ -331,17 +326,16 @@ func (s *timerQueueProcessorSuite) TestTimerTaskAfterProcessorStart() {
 
 	s.waitForTimerTasksToProcess(processor)
 
-	timerInfo, nextToken, err = s.GetTimerIndexTasks()
+	timerInfo, err = s.GetTimerIndexTasks()
 	s.Nil(err, "No error expected.")
 	s.Equal(0, len(timerInfo))
-	s.Equal(0, len(nextToken))
 
 	s.Equal(uint64(1), processor.getTimerFiredCount(cluster.TestCurrentClusterName))
 }
 
 func (s *timerQueueProcessorSuite) waitForTimerTasksToProcess(p timerQueueProcessor) {
 	for i := 0; i < 10; i++ {
-		timerInfo, _, err := s.GetTimerIndexTasks()
+		timerInfo, err := s.GetTimerIndexTasks()
 		s.Nil(err, "No error expected.")
 		if len(timerInfo) == 0 {
 			p.Stop()
