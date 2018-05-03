@@ -223,6 +223,7 @@ func (s *queueAckMgrSuite) TestReadCompleteTimerTasks() {
 	s.Equal(moreOutput, moreInput)
 	s.Equal(map[int64]bool{taskID: false}, s.queueAckMgr.outstandingTasks)
 
+	s.mockProcessor.On("completeTask", taskID).Return(nil).Once()
 	s.queueAckMgr.completeQueueTask(taskID)
 	s.Equal(map[int64]bool{taskID: true}, s.queueAckMgr.outstandingTasks)
 }
@@ -275,15 +276,18 @@ func (s *queueAckMgrSuite) TestReadCompleteUpdateTimerTasks() {
 	s.Equal(map[int64]bool{taskID1: false, taskID2: false, taskID3: false}, s.queueAckMgr.outstandingTasks)
 
 	s.mockProcessor.On("updateAckLevel", taskID1).Return(nil)
+	s.mockProcessor.On("completeTask", taskID1).Return(nil).Once()
 	s.queueAckMgr.completeQueueTask(taskID1)
 	s.queueAckMgr.updateQueueAckLevel()
 	s.Equal(taskID1, s.queueAckMgr.getQueueAckLevel())
 
+	s.mockProcessor.On("completeTask", taskID3).Return(nil).Once()
 	s.queueAckMgr.completeQueueTask(taskID3)
 	s.queueAckMgr.updateQueueAckLevel()
 	s.Equal(taskID1, s.queueAckMgr.getQueueAckLevel())
 
 	s.mockProcessor.On("updateAckLevel", taskID3).Return(nil)
+	s.mockProcessor.On("completeTask", taskID2).Return(nil).Once()
 	s.queueAckMgr.completeQueueTask(taskID2)
 	s.queueAckMgr.updateQueueAckLevel()
 	s.Equal(taskID3, s.queueAckMgr.getQueueAckLevel())
@@ -436,6 +440,7 @@ func (s *queueFailoverAckMgrSuite) TestReadCompleteTimerTasks() {
 	s.Equal(moreOutput, moreInput)
 	s.Equal(map[int64]bool{taskID1: false, taskID2: false}, s.queueFailoverAckMgr.outstandingTasks)
 
+	s.mockProcessor.On("completeTask", taskID2).Return(nil).Once()
 	s.queueFailoverAckMgr.completeQueueTask(taskID2)
 	s.Equal(map[int64]bool{taskID1: false, taskID2: true}, s.queueFailoverAckMgr.outstandingTasks)
 	s.queueFailoverAckMgr.updateQueueAckLevel()
@@ -445,6 +450,7 @@ func (s *queueFailoverAckMgrSuite) TestReadCompleteTimerTasks() {
 	default:
 	}
 
+	s.mockProcessor.On("completeTask", taskID1).Return(nil).Once()
 	s.queueFailoverAckMgr.completeQueueTask(taskID1)
 	s.Equal(map[int64]bool{taskID1: true, taskID2: true}, s.queueFailoverAckMgr.outstandingTasks)
 	s.queueFailoverAckMgr.updateQueueAckLevel()

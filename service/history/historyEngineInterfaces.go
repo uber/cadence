@@ -92,7 +92,7 @@ type (
 	queueAckMgr interface {
 		getFinishedChan() <-chan struct{}
 		readQueueTasks() ([]queueTaskInfo, bool, error)
-		completeQueueTask(taskID int64)
+		completeQueueTask(taskID int64) error
 		getQueueAckLevel() int64
 		updateQueueAckLevel()
 	}
