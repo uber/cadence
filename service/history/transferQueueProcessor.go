@@ -165,11 +165,11 @@ func (t *transferQueueProcessorImpl) completeTransferLoop() {
 
 func (t *transferQueueProcessorImpl) completeTransfer() error {
 	lowerAckLevel := t.shard.GetTransferAckLevel()
-	upperAckLevel := t.activeTaskProcessor.queueAckMgr.getAckLevel()
+	upperAckLevel := t.activeTaskProcessor.queueAckMgr.getQueueAckLevel()
 
 	if t.isGlobalDomainEnabled {
 		for _, standbyTaskProcessor := range t.standbyTaskProcessors {
-			ackLevel := standbyTaskProcessor.queueAckMgr.getAckLevel()
+			ackLevel := standbyTaskProcessor.queueAckMgr.getQueueAckLevel()
 			if upperAckLevel > ackLevel {
 				upperAckLevel = ackLevel
 			}

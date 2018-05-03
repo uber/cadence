@@ -149,7 +149,7 @@ func (s *queueAckMgrSuite) TearDownTest() {
 func (s *queueAckMgrSuite) TestReadTimerTasks() {
 	readLevel := s.queueAckMgr.readLevel
 	// when the ack manager is first initialized, read == ack level
-	s.Equal(s.queueAckMgr.getAckLevel(), readLevel)
+	s.Equal(s.queueAckMgr.getQueueAckLevel(), readLevel)
 
 	moreInput := false
 	taskID1 := int64(59)
@@ -199,7 +199,7 @@ func (s *queueAckMgrSuite) TestReadTimerTasks() {
 func (s *queueAckMgrSuite) TestReadCompleteTimerTasks() {
 	readLevel := s.queueAckMgr.readLevel
 	// when the ack manager is first initialized, read == ack level
-	s.Equal(s.queueAckMgr.getAckLevel(), readLevel)
+	s.Equal(s.queueAckMgr.getQueueAckLevel(), readLevel)
 
 	moreInput := false
 	taskID := int64(59)
@@ -223,14 +223,14 @@ func (s *queueAckMgrSuite) TestReadCompleteTimerTasks() {
 	s.Equal(moreOutput, moreInput)
 	s.Equal(map[int64]bool{taskID: false}, s.queueAckMgr.outstandingTasks)
 
-	s.queueAckMgr.completeTask(taskID)
+	s.queueAckMgr.completeQueueTask(taskID)
 	s.Equal(map[int64]bool{taskID: true}, s.queueAckMgr.outstandingTasks)
 }
 
 func (s *queueAckMgrSuite) TestReadCompleteUpdateTimerTasks() {
 	readLevel := s.queueAckMgr.readLevel
 	// when the ack manager is first initialized, read == ack level
-	s.Equal(s.queueAckMgr.getAckLevel(), readLevel)
+	s.Equal(s.queueAckMgr.getQueueAckLevel(), readLevel)
 
 	moreInput := true
 	taskID1 := int64(59)
@@ -275,18 +275,18 @@ func (s *queueAckMgrSuite) TestReadCompleteUpdateTimerTasks() {
 	s.Equal(map[int64]bool{taskID1: false, taskID2: false, taskID3: false}, s.queueAckMgr.outstandingTasks)
 
 	s.mockProcessor.On("updateAckLevel", taskID1).Return(nil)
-	s.queueAckMgr.completeTask(taskID1)
-	s.queueAckMgr.updateAckLevel()
-	s.Equal(taskID1, s.queueAckMgr.getAckLevel())
+	s.queueAckMgr.completeQueueTask(taskID1)
+	s.queueAckMgr.updateQueueAckLevel()
+	s.Equal(taskID1, s.queueAckMgr.getQueueAckLevel())
 
-	s.queueAckMgr.completeTask(taskID3)
-	s.queueAckMgr.updateAckLevel()
-	s.Equal(taskID1, s.queueAckMgr.getAckLevel())
+	s.queueAckMgr.completeQueueTask(taskID3)
+	s.queueAckMgr.updateQueueAckLevel()
+	s.Equal(taskID1, s.queueAckMgr.getQueueAckLevel())
 
 	s.mockProcessor.On("updateAckLevel", taskID3).Return(nil)
-	s.queueAckMgr.completeTask(taskID2)
-	s.queueAckMgr.updateAckLevel()
-	s.Equal(taskID3, s.queueAckMgr.getAckLevel())
+	s.queueAckMgr.completeQueueTask(taskID2)
+	s.queueAckMgr.updateQueueAckLevel()
+	s.Equal(taskID3, s.queueAckMgr.getQueueAckLevel())
 }
 
 // Tests for failover ack manager
@@ -350,7 +350,7 @@ func (s *queueFailoverAckMgrSuite) TearDownTest() {
 func (s *queueFailoverAckMgrSuite) TestReadTimerTasks() {
 	readLevel := s.queueFailoverAckMgr.readLevel
 	// when the ack manager is first initialized, read == ack level
-	s.Equal(s.queueFailoverAckMgr.getAckLevel(), readLevel)
+	s.Equal(s.queueFailoverAckMgr.getQueueAckLevel(), readLevel)
 
 	moreInput := true
 	taskID1 := int64(59)
@@ -402,7 +402,7 @@ func (s *queueFailoverAckMgrSuite) TestReadTimerTasks() {
 func (s *queueFailoverAckMgrSuite) TestReadCompleteTimerTasks() {
 	readLevel := s.queueFailoverAckMgr.readLevel
 	// when the ack manager is first initialized, read == ack level
-	s.Equal(s.queueFailoverAckMgr.getAckLevel(), readLevel)
+	s.Equal(s.queueFailoverAckMgr.getQueueAckLevel(), readLevel)
 
 	moreInput := false
 	taskID1 := int64(59)
@@ -436,18 +436,18 @@ func (s *queueFailoverAckMgrSuite) TestReadCompleteTimerTasks() {
 	s.Equal(moreOutput, moreInput)
 	s.Equal(map[int64]bool{taskID1: false, taskID2: false}, s.queueFailoverAckMgr.outstandingTasks)
 
-	s.queueFailoverAckMgr.completeTask(taskID2)
+	s.queueFailoverAckMgr.completeQueueTask(taskID2)
 	s.Equal(map[int64]bool{taskID1: false, taskID2: true}, s.queueFailoverAckMgr.outstandingTasks)
-	s.queueFailoverAckMgr.updateAckLevel()
+	s.queueFailoverAckMgr.updateQueueAckLevel()
 	select {
 	case <-s.queueFailoverAckMgr.getFinishedChan():
 		s.Fail("finished channel should not fire")
 	default:
 	}
 
-	s.queueFailoverAckMgr.completeTask(taskID1)
+	s.queueFailoverAckMgr.completeQueueTask(taskID1)
 	s.Equal(map[int64]bool{taskID1: true, taskID2: true}, s.queueFailoverAckMgr.outstandingTasks)
-	s.queueFailoverAckMgr.updateAckLevel()
+	s.queueFailoverAckMgr.updateQueueAckLevel()
 	select {
 	case <-s.queueFailoverAckMgr.getFinishedChan():
 	default:

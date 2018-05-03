@@ -50,7 +50,6 @@ type (
 		sync.RWMutex
 		outstandingTasks map[int64]bool
 		readLevel        int64
-		maxReadLevel     int64
 		ackLevel         int64
 		isReadFinished   bool
 	}
@@ -135,7 +134,7 @@ TaskFilterLoop:
 	return tasks, morePage, nil
 }
 
-func (a *queueAckMgrImpl) completeTask(taskID int64) {
+func (a *queueAckMgrImpl) completeQueueTask(taskID int64) {
 	a.Lock()
 	if _, ok := a.outstandingTasks[taskID]; ok {
 		a.outstandingTasks[taskID] = true
@@ -143,7 +142,7 @@ func (a *queueAckMgrImpl) completeTask(taskID int64) {
 	a.Unlock()
 }
 
-func (a *queueAckMgrImpl) getAckLevel() int64 {
+func (a *queueAckMgrImpl) getQueueAckLevel() int64 {
 	a.Lock()
 	defer a.Unlock()
 	return a.ackLevel
@@ -153,7 +152,7 @@ func (a *queueAckMgrImpl) getFinishedChan() <-chan struct{} {
 	return a.finishedChan
 }
 
-func (a *queueAckMgrImpl) updateAckLevel() {
+func (a *queueAckMgrImpl) updateQueueAckLevel() {
 	a.metricsClient.IncCounter(a.options.MetricScope, metrics.AckLevelUpdateCounter)
 
 	a.Lock()
