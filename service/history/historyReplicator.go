@@ -138,7 +138,7 @@ func (r *historyReplicator) ApplyReplicationTask(context *workflowExecutionConte
 	timerTasks := []persistence.Task{}
 
 	var lastEvent *shared.HistoryEvent
-	decisionVersionID := emptyVersion
+	decisionVersionID := common.EmptyVersion
 	decisionScheduleID := emptyEventID
 	decisionStartID := emptyEventID
 	decisionTimeout := int32(0)

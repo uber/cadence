@@ -232,7 +232,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 	}
 
 	var transferTasks []persistence.Task
-	decisionVersion := emptyVersion
+	decisionVersion := common.EmptyVersion
 	decisionScheduleID := emptyEventID
 	decisionStartID := emptyEventID
 	decisionTimeout := int32(0)

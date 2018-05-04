@@ -260,14 +260,14 @@ func (e *mutableStateBuilder) FlushBufferedEvents() error {
 
 func (e *mutableStateBuilder) GetStartVersion() int64 {
 	if e.replicationState == nil {
-		return emptyVersion
+		return common.EmptyVersion
 	}
 	return e.replicationState.StartVersion
 }
 
 func (e *mutableStateBuilder) GetCurrentVersion() int64 {
 	if e.replicationState == nil {
-		return emptyVersion
+		return common.EmptyVersion
 	}
 	return e.replicationState.CurrentVersion
 }
@@ -936,7 +936,7 @@ func (e *mutableStateBuilder) UpdateDecision(di *decisionInfo) {
 // DeleteDecision deletes a decision task.
 func (e *mutableStateBuilder) DeleteDecision() {
 	emptyDecisionInfo := &decisionInfo{
-		Version:         emptyVersion,
+		Version:         common.EmptyVersion,
 		ScheduleID:      emptyEventID,
 		StartedID:       emptyEventID,
 		RequestID:       emptyUUID,
@@ -952,7 +952,7 @@ func (e *mutableStateBuilder) FailDecision() {
 	e.clearStickyness()
 
 	failDecisionInfo := &decisionInfo{
-		Version:         emptyVersion,
+		Version:         common.EmptyVersion,
 		ScheduleID:      emptyEventID,
 		StartedID:       emptyEventID,
 		RequestID:       emptyUUID,
