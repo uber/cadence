@@ -420,7 +420,7 @@ Update_History_Loop:
 				// for activity in the timertask.  But we still need to check if the ID matches Started eventID or
 				// bufferedEventID due to the heartbeat timers created before the bugfix.
 				if !td.TaskCreated || (isHeartBeatTask && (scheduleID == td.EventID || scheduleID == ai.StartedID ||
-					scheduleID == bufferedEventID) && int64(td.Attempt) == timerTask.ScheduleAttempt) {
+					scheduleID == common.BufferedEventID) && int64(td.Attempt) == timerTask.ScheduleAttempt) {
 					nextTask := tBuilder.createNewTask(td)
 					timerTasks = append(timerTasks, nextTask)
 					at := nextTask.(*persistence.ActivityTimeoutTask)

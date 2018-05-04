@@ -193,7 +193,7 @@ func (e *mutableStateBuilder) FlushBufferedEvents() error {
 	var newBufferedEvents []*workflow.HistoryEvent
 	var newCommittedEvents []*workflow.HistoryEvent
 	for _, event := range e.hBuilder.history {
-		if event.GetEventId() == bufferedEventID {
+		if event.GetEventId() == common.BufferedEventID {
 			newBufferedEvents = append(newBufferedEvents, event)
 		} else {
 			newCommittedEvents = append(newCommittedEvents, event)
@@ -505,7 +505,7 @@ func (e *mutableStateBuilder) assignEventIDToBufferedEvents() {
 
 	scheduledIDToStartedID := make(map[int64]int64)
 	for _, event := range newCommittedEvents {
-		if event.GetEventId() != bufferedEventID {
+		if event.GetEventId() != common.BufferedEventID {
 			continue
 		}
 
@@ -586,7 +586,7 @@ func (e *mutableStateBuilder) isStickyTaskListEnabled() bool {
 func (e *mutableStateBuilder) createNewHistoryEvent(eventType workflow.EventType) *workflow.HistoryEvent {
 	eventID := e.executionInfo.NextEventID
 	if e.shouldBufferEvent(eventType) {
-		eventID = bufferedEventID
+		eventID = common.BufferedEventID
 	} else {
 		// only increase NextEventID if event is not buffered
 		e.executionInfo.NextEventID++
@@ -903,7 +903,7 @@ func (e *mutableStateBuilder) HasBufferedEvents() bool {
 	}
 
 	for _, event := range e.hBuilder.history {
-		if event.GetEventId() == bufferedEventID {
+		if event.GetEventId() == common.BufferedEventID {
 			return true
 		}
 	}
