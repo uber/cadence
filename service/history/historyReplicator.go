@@ -532,7 +532,7 @@ func (r *historyReplicator) ApplyReplicationTask(context *workflowExecutionConte
 		err = context.replicateWorkflowExecution(request, transferTasks, timerTasks, lastEvent.GetEventId(), transactionID)
 	}
 
-	if err != nil {
+	if err == nil {
 		now := time.Unix(0, lastEvent.GetTimestamp())
 		r.notify(request.GetSourceCluster(), now, transferTasks, timerTasks)
 	}
@@ -685,4 +685,7 @@ func (r *historyReplicator) notify(clusterName string, now time.Time, transferTa
 	if len(timerTasks) != 0 {
 		r.historyEngine.timerProcessor.NotifyNewTimers(clusterName, now, timerTasks)
 	}
+
+	r.historyEngine.txProcessor.RetryTask(clusterName)
+	r.historyEngine.timerProcessor.RetryTask(clusterName)
 }

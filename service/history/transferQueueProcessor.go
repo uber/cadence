@@ -129,6 +129,19 @@ func (t *transferQueueProcessorImpl) NotifyNewTask(clusterName string, currentTi
 	}
 }
 
+// RetryTask - Notify the processor that standby transfer task should be retried.
+func (t *transferQueueProcessorImpl) RetryTask(clusterName string) {
+	if clusterName == t.currentClusterName {
+		panic(fmt.Sprintf("Cannot retry transfer task on %s.", clusterName))
+	}
+
+	standbyTaskProcessor, ok := t.standbyTaskProcessors[clusterName]
+	if !ok {
+		panic(fmt.Sprintf("Cannot find transfer processor for %s.", clusterName))
+	}
+	standbyTaskProcessor.retryTasks()
+}
+
 func (t *transferQueueProcessorImpl) FailoverDomain(domainID string, standbyClusterName string) {
 	// we should consider make the failover idempotent
 	failoverTaskProcessor := newTransferQueueFailoverProcessor(t.shard, t.historyService, t.visibilityMgr, t.matchingClient, t.historyClient, domainID, standbyClusterName, t.logger)

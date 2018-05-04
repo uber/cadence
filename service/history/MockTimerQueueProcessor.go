@@ -44,5 +44,10 @@ func (_m *MockTimerQueueProcessor) Stop() {
 
 // NotifyNewTimers is mock implementation for NotifyNewTimers of Processor
 func (_m *MockTimerQueueProcessor) NotifyNewTimers(clusterName string, currentTime time.Time, timerTask []persistence.Task) {
-	_m.Called(clusterName, timerTask)
+	_m.Called(clusterName, currentTime, timerTask)
+}
+
+// RetryTask is mock implementation for RetryTask of Processor
+func (_m *MockTimerQueueProcessor) RetryTask(clusterName string) {
+	_m.Called(clusterName)
 }

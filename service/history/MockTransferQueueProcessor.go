@@ -45,3 +45,8 @@ func (_m *MockTransferQueueProcessor) Stop() {
 func (_m *MockTransferQueueProcessor) NotifyNewTask(clusterName string, currentTime time.Time) {
 	_m.Called(clusterName, currentTime)
 }
+
+// RetryTask is mock implementation for RetryTask of Processor
+func (_m *MockTransferQueueProcessor) RetryTask(clusterName string) {
+	_m.Called(clusterName)
+}

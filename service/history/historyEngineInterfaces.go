@@ -113,6 +113,7 @@ type (
 	transferQueueProcessor interface {
 		common.Daemon
 		NotifyNewTask(clusterName string, currentTime time.Time)
+		RetryTask(clusterName string)
 	}
 
 	// TODO the timer quque processor and the one below, timer processor
@@ -121,6 +122,7 @@ type (
 	timerQueueProcessor interface {
 		common.Daemon
 		NotifyNewTimers(clusterName string, currentTime time.Time, timerTask []persistence.Task)
+		RetryTask(clusterName string)
 	}
 
 	timerProcessor interface {
