@@ -30,7 +30,7 @@ const (
 	// EndEventID is the id of the end event, here we use the int64 max
 	EndEventID int64 = 1<<63 - 1
 	// BufferedEventID is the id of the buffered event
-	BufferedEventID  int64 = -123
+	BufferedEventID int64 = -123
 	// TransientEventID is the id of the transient event
 	TransientEventID int64 = -124
 )

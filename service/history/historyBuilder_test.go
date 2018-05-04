@@ -766,7 +766,7 @@ func (s *historyBuilderSuite) validateWorkflowExecutionStartedEvent(event *workf
 	taskList string, input []byte, executionStartToCloseTimeout, taskStartToCloseTimeout int32, identity string) {
 	s.NotNil(event)
 	s.Equal(workflow.EventTypeWorkflowExecutionStarted, *event.EventType)
-	s.Equal(firstEventID, *event.EventId)
+	s.Equal(common.FirstEventID, *event.EventId)
 	attributes := event.WorkflowExecutionStartedEventAttributes
 	s.NotNil(attributes)
 	s.Equal(workflowType, *attributes.WorkflowType.Name)

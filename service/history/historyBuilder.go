@@ -29,10 +29,6 @@ import (
 	"github.com/uber/cadence/common/persistence"
 )
 
-const (
-	firstEventID     int64 = 1
-)
-
 type (
 	historyBuilder struct {
 		serializer persistence.HistorySerializer

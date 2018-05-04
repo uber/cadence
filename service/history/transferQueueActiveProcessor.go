@@ -404,7 +404,7 @@ func (t *transferQueueActiveProcessorImpl) processDecisionTask(task *persistence
 		return err
 	}
 
-	if task.ScheduleID == firstEventID+1 {
+	if task.ScheduleID == common.FirstEventID+1 {
 		err = t.recordWorkflowExecutionStarted(execution, task, wfTypeName, startTimestamp, workflowTimeout)
 	}
 

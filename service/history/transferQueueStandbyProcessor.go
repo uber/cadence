@@ -220,7 +220,7 @@ func (t *transferQueueStandbyProcessorImpl) processDecisionTask(transferTask *pe
 		decisionInfo, isPending := msBuilder.GetPendingDecision(transferTask.ScheduleID)
 
 		if !isPending {
-			if transferTask.ScheduleID == firstEventID+1 {
+			if transferTask.ScheduleID == common.FirstEventID+1 {
 				return t.recordWorkflowStarted(msBuilder)
 			}
 			return nil
@@ -236,7 +236,7 @@ func (t *transferQueueStandbyProcessorImpl) processDecisionTask(transferTask *pe
 			return ErrTaskRetry
 		}
 
-		if transferTask.ScheduleID == firstEventID+1 {
+		if transferTask.ScheduleID == common.FirstEventID+1 {
 			return t.recordWorkflowStarted(msBuilder)
 		}
 

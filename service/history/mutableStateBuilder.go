@@ -150,7 +150,7 @@ func newMutableStateBuilder(config *Config, logger bark.Logger) *mutableStateBui
 		logger:          logger,
 	}
 	s.executionInfo = &persistence.WorkflowExecutionInfo{
-		NextEventID:        firstEventID,
+		NextEventID:        common.FirstEventID,
 		State:              persistence.WorkflowStateCreated,
 		CloseStatus:        persistence.WorkflowCloseStatusNone,
 		LastProcessedEvent: common.EmptyEventID,
@@ -1082,7 +1082,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionStartedEvent(execution workflo
 	startRequest *h.StartWorkflowExecutionRequest) *workflow.HistoryEvent {
 	request := startRequest.StartRequest
 	eventID := e.GetNextEventID()
-	if eventID != firstEventID {
+	if eventID != common.FirstEventID {
 		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionWorkflowStarted, eventID, "")
 		return nil
 	}
