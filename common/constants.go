@@ -29,6 +29,8 @@ const (
 	EmptyVersion int64 = -24
 	// EndEventID is the id of the end event, here we use the int64 max
 	EndEventID int64 = 1<<63 - 1
+	// TransientEventID is the id of the transient event
+	TransientEventID int64 = -124
 )
 
 const (

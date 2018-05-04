@@ -1445,7 +1445,7 @@ func (e *mutableStateBuilder) ReplicateActivityTaskScheduledEvent(
 }
 
 func (e *mutableStateBuilder) addTransientActivityStartedEvent(scheduleEventID int64) {
-	if ai, ok := e.GetActivityInfo(scheduleEventID); ok && ai.StartedID == transientEventID {
+	if ai, ok := e.GetActivityInfo(scheduleEventID); ok && ai.StartedID == common.TransientEventID {
 		// activity task was started (as transient event), we need to add it now.
 		event := e.hBuilder.AddActivityTaskStartedEvent(scheduleEventID, ai.Attempt, ai.RequestID, ai.StartedIdentity)
 		if !ai.StartedTime.IsZero() {
@@ -1467,7 +1467,7 @@ func (e *mutableStateBuilder) AddActivityTaskStartedEvent(ai *persistence.Activi
 
 	// we might need to retry, so do not append started event just yet,
 	// instead update mutable state and will record started event when activity task is closed
-	ai.StartedID = transientEventID
+	ai.StartedID = common.TransientEventID
 	ai.RequestID = requestID
 	ai.StartedTime = time.Now()
 	ai.StartedIdentity = identity
