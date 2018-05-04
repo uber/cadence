@@ -118,17 +118,18 @@ func (t *transferQueueProcessorImpl) NotifyNewTask(clusterName string, currentTi
 		if len(transferTasks) != 0 {
 			t.activeTaskProcessor.notifyNewTask()
 		}
-	} else {
-		standbyTaskProcessor, ok := t.standbyTaskProcessors[clusterName]
-		if !ok {
-			panic(fmt.Sprintf("Cannot find transfer processor for %s.", clusterName))
-		}
-		currentClusterTime := t.shard.GetCurrentTime(t.currentClusterName)
-		if currentClusterTime.Sub(currentTime) >= t.config.TransferProcessorStandbyTaskDelay && len(transferTasks) != 0 {
-			standbyTaskProcessor.notifyNewTask()
-		}
-		standbyTaskProcessor.retryTasks()
+		return
 	}
+
+	standbyTaskProcessor, ok := t.standbyTaskProcessors[clusterName]
+	if !ok {
+		panic(fmt.Sprintf("Cannot find transfer processor for %s.", clusterName))
+	}
+	currentClusterTime := t.shard.GetCurrentTime(t.currentClusterName)
+	if currentClusterTime.Sub(currentTime) >= t.config.TransferProcessorStandbyTaskDelay && len(transferTasks) != 0 {
+		standbyTaskProcessor.notifyNewTask()
+	}
+	standbyTaskProcessor.retryTasks()
 }
 
 func (t *transferQueueProcessorImpl) FailoverDomain(domainID string, standbyClusterName string) {
