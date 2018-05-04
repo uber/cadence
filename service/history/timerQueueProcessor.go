@@ -128,7 +128,7 @@ func (t *timerQueueProcessorImpl) RetryTask(clusterName string) {
 
 	standbyTaskProcessor, ok := t.standbyTimerProcessors[clusterName]
 	if !ok {
-		panic(fmt.Sprintf("Cannot find transfer processor for %s.", clusterName))
+		panic(fmt.Sprintf("Cannot timer transfer processor for %s.", clusterName))
 	}
 	standbyTaskProcessor.retryTasks()
 }
