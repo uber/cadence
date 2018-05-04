@@ -25,8 +25,8 @@ import (
 	"time"
 
 	"github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/persistence"
 )
 
 func prepareNextRetry(a *persistence.ActivityInfo, errReason string) persistence.Task {
