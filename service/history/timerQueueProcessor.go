@@ -117,20 +117,8 @@ func (t *timerQueueProcessorImpl) NotifyNewTimers(clusterName string, currentTim
 		}
 		standbyTimerProcessor.setCurrentTime(currentTime.Add(-t.config.TimerProcessorStandbyTaskDelay))
 		standbyTimerProcessor.notifyNewTimers(timerTasks)
+		standbyTimerProcessor.retryTasks()
 	}
-}
-
-// RetryTask - Notify the processor that standby timer task should be retried.
-func (t *timerQueueProcessorImpl) RetryTask(clusterName string) {
-	if clusterName == t.currentClusterName {
-		panic(fmt.Sprintf("Cannot retry transfer task on %s.", clusterName))
-	}
-
-	standbyTaskProcessor, ok := t.standbyTimerProcessors[clusterName]
-	if !ok {
-		panic(fmt.Sprintf("Cannot timer transfer processor for %s.", clusterName))
-	}
-	standbyTaskProcessor.retryTasks()
 }
 
 func (t *timerQueueProcessorImpl) FailoverDomain(domainID string, standbyClusterName string) {

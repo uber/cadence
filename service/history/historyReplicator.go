@@ -679,13 +679,6 @@ func (r *historyReplicator) getTimerBuilder(event *shared.HistoryEvent) *timerBu
 
 func (r *historyReplicator) notify(clusterName string, now time.Time, transferTasks []persistence.Task, timerTasks []persistence.Task) {
 	r.shard.SetCurrentTime(clusterName, now)
-	if len(transferTasks) != 0 {
-		r.historyEngine.txProcessor.NotifyNewTask(clusterName, now)
-	}
-	if len(timerTasks) != 0 {
-		r.historyEngine.timerProcessor.NotifyNewTimers(clusterName, now, timerTasks)
-	}
-
-	r.historyEngine.txProcessor.RetryTask(clusterName)
-	r.historyEngine.timerProcessor.RetryTask(clusterName)
+	r.historyEngine.txProcessor.NotifyNewTask(clusterName, now, transferTasks)
+	r.historyEngine.timerProcessor.NotifyNewTimers(clusterName, now, timerTasks)
 }
