@@ -139,8 +139,8 @@ func (r *historyReplicator) ApplyReplicationTask(context *workflowExecutionConte
 
 	var lastEvent *shared.HistoryEvent
 	decisionVersionID := common.EmptyVersion
-	decisionScheduleID := emptyEventID
-	decisionStartID := emptyEventID
+	decisionScheduleID := common.EmptyEventID
+	decisionStartID := common.EmptyEventID
 	decisionTimeout := int32(0)
 	var requestID string
 	for _, event := range request.History.Events {
@@ -438,7 +438,7 @@ func (r *historyReplicator) ApplyReplicationTask(context *workflowExecutionConte
 	case shared.EventTypeWorkflowExecutionStarted:
 		// TODO: Support for child execution
 		var parentExecution *shared.WorkflowExecution
-		initiatedID := emptyEventID
+		initiatedID := common.EmptyEventID
 		parentDomainID := ""
 
 		// Serialize the history
@@ -493,7 +493,7 @@ func (r *historyReplicator) ApplyReplicationTask(context *workflowExecutionConte
 				DecisionTimeoutValue:        msBuilder.executionInfo.DecisionTimeoutValue,
 				ExecutionContext:            nil,
 				NextEventID:                 msBuilder.GetNextEventID(),
-				LastProcessedEvent:          emptyEventID,
+				LastProcessedEvent:          common.EmptyEventID,
 				TransferTasks:               transferTasks, // TODO: Generate transfer task
 				DecisionVersion:             decisionVersionID,
 				DecisionScheduleID:          decisionScheduleID,

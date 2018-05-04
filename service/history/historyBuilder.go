@@ -31,7 +31,6 @@ import (
 
 const (
 	firstEventID     int64 = 1
-	emptyEventID     int64 = -23
 )
 
 type (

@@ -1763,7 +1763,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedConflictOnUpdate() {
 	s.True(ok)
 	s.Equal(int32(200), di.DecisionTimeout)
 	s.Equal(int64(10), di.ScheduleID)
-	s.Equal(emptyEventID, di.StartedID)
+	s.Equal(common.EmptyEventID, di.StartedID)
 }
 
 func (s *engineSuite) TestRespondActivityTaskCompletedMaxAttemptsExceeded() {
@@ -1882,7 +1882,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedSuccess() {
 	s.True(ok)
 	s.Equal(int32(200), di.DecisionTimeout)
 	s.Equal(int64(8), di.ScheduleID)
-	s.Equal(emptyEventID, di.StartedID)
+	s.Equal(common.EmptyEventID, di.StartedID)
 }
 
 func (s *engineSuite) TestRespondActivityTaskCompletedByIdSuccess() {
@@ -1949,7 +1949,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedByIdSuccess() {
 	s.True(ok)
 	s.Equal(int32(200), di.DecisionTimeout)
 	s.Equal(int64(8), di.ScheduleID)
-	s.Equal(emptyEventID, di.StartedID)
+	s.Equal(common.EmptyEventID, di.StartedID)
 }
 
 func (s *engineSuite) TestRespondActivityTaskFailedInvalidToken() {
@@ -2370,7 +2370,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedConflictOnUpdate() {
 	s.True(ok)
 	s.Equal(int32(200), di.DecisionTimeout)
 	s.Equal(int64(10), di.ScheduleID)
-	s.Equal(emptyEventID, di.StartedID)
+	s.Equal(common.EmptyEventID, di.StartedID)
 }
 
 func (s *engineSuite) TestRespondActivityTaskFailedMaxAttemptsExceeded() {
@@ -2489,7 +2489,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedSuccess() {
 	s.True(ok)
 	s.Equal(int32(200), di.DecisionTimeout)
 	s.Equal(int64(8), di.ScheduleID)
-	s.Equal(emptyEventID, di.StartedID)
+	s.Equal(common.EmptyEventID, di.StartedID)
 }
 
 func (s *engineSuite) TestRespondActivityTaskFailedByIDSuccess() {
@@ -2558,7 +2558,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedByIDSuccess() {
 	s.True(ok)
 	s.Equal(int32(200), di.DecisionTimeout)
 	s.Equal(int64(8), di.ScheduleID)
-	s.Equal(emptyEventID, di.StartedID)
+	s.Equal(common.EmptyEventID, di.StartedID)
 }
 
 func (s *engineSuite) TestRecordActivityTaskHeartBeatSuccess_NoTimer() {
@@ -2838,7 +2838,7 @@ func (s *engineSuite) TestRespondActivityTaskCanceled_Started() {
 	s.True(ok)
 	s.Equal(int32(200), di.DecisionTimeout)
 	s.Equal(int64(9), di.ScheduleID)
-	s.Equal(emptyEventID, di.StartedID)
+	s.Equal(common.EmptyEventID, di.StartedID)
 }
 
 func (s *engineSuite) TestRespondActivityTaskCanceledByID_Started() {
@@ -2904,7 +2904,7 @@ func (s *engineSuite) TestRespondActivityTaskCanceledByID_Started() {
 	s.True(ok)
 	s.Equal(int32(200), di.DecisionTimeout)
 	s.Equal(int64(9), di.ScheduleID)
-	s.Equal(emptyEventID, di.StartedID)
+	s.Equal(common.EmptyEventID, di.StartedID)
 }
 
 func (s *engineSuite) TestRespondActivityTaskCanceledIfNoRunID() {

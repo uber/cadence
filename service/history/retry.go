@@ -26,6 +26,7 @@ import (
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common"
 )
 
 func prepareNextRetry(a *persistence.ActivityInfo, errReason string) persistence.Task {
@@ -78,7 +79,7 @@ func prepareNextRetryWithNowTime(a *persistence.ActivityInfo, errReason string, 
 	// a retry is needed, update activity info for next retry
 	a.Attempt++
 	a.ScheduledTime = nextScheduleTime // update to next schedule time
-	a.StartedID = emptyEventID
+	a.StartedID = common.EmptyEventID
 	a.RequestID = ""
 	a.StartedTime = time.Time{}
 	a.LastHeartBeatUpdatedTime = time.Time{}

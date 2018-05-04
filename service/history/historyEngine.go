@@ -206,7 +206,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 	}
 
 	var parentExecution *workflow.WorkflowExecution
-	initiatedID := emptyEventID
+	initiatedID := common.EmptyEventID
 	parentDomainID := ""
 	parentInfo := startRequest.ParentExecutionInfo
 	if parentInfo != nil {
@@ -233,8 +233,8 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 
 	var transferTasks []persistence.Task
 	decisionVersion := common.EmptyVersion
-	decisionScheduleID := emptyEventID
-	decisionStartID := emptyEventID
+	decisionScheduleID := common.EmptyEventID
+	decisionStartID := common.EmptyEventID
 	decisionTimeout := int32(0)
 	if parentInfo == nil {
 		// DecisionTask is only created when it is not a Child Workflow Execution
@@ -315,7 +315,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 			DecisionTimeoutValue:        *request.TaskStartToCloseTimeoutSeconds,
 			ExecutionContext:            nil,
 			NextEventID:                 msBuilder.GetNextEventID(),
-			LastProcessedEvent:          emptyEventID,
+			LastProcessedEvent:          common.EmptyEventID,
 			TransferTasks:               transferTasks,
 			ReplicationTasks:            replicationTasks,
 			DecisionVersion:             decisionVersion,
@@ -588,7 +588,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 			state := workflow.PendingActivityStateScheduled
 			if pi.CancelRequested {
 				state = workflow.PendingActivityStateCancelRequested
-			} else if pi.StartedID != emptyEventID {
+			} else if pi.StartedID != common.EmptyEventID {
 				state = workflow.PendingActivityStateStarted
 			}
 			ai.State = &state
@@ -650,12 +650,12 @@ Update_History_Loop:
 			// Looks like DecisionTask already completed as a result of another call.
 			// It is OK to drop the task at this point.
 			logging.LogDuplicateTaskEvent(context.logger, persistence.TransferTaskTypeDecisionTask, common.Int64Default(request.TaskId), requestID,
-				scheduleID, emptyEventID, isRunning)
+				scheduleID, common.EmptyEventID, isRunning)
 
 			return nil, &workflow.EntityNotExistsError{Message: "Decision task not found."}
 		}
 
-		if di.StartedID != emptyEventID {
+		if di.StartedID != common.EmptyEventID {
 			// If decision is started as part of the current request scope then return a positive response
 			if di.RequestID == requestID {
 				return e.createRecordDecisionTaskStartedResponse(domainID, msBuilder, di, request.PollRequest.GetIdentity()), nil
@@ -741,7 +741,7 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 				// Looks like ActivityTask already completed as a result of another call.
 				// It is OK to drop the task at this point.
 				logging.LogDuplicateTaskEvent(e.logger, persistence.TransferTaskTypeActivityTask,
-					common.Int64Default(request.TaskId), requestID, scheduleID, emptyEventID, isRunning)
+					common.Int64Default(request.TaskId), requestID, scheduleID, common.EmptyEventID, isRunning)
 
 				return nil, ErrActivityTaskNotFound
 			}
@@ -753,7 +753,7 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 			response.ScheduledEvent = scheduledEvent
 			response.ScheduledTimestampOfThisAttempt = common.Int64Ptr(ai.ScheduledTime.UnixNano())
 
-			if ai.StartedID != emptyEventID {
+			if ai.StartedID != common.EmptyEventID {
 				// If activity is started as part of the current request scope then return a positive response
 				if ai.RequestID == requestID {
 					response.StartedTimestamp = common.Int64Ptr(ai.StartedTime.UnixNano())
@@ -842,7 +842,7 @@ Update_History_Loop:
 		}
 
 		if !msBuilder.isWorkflowExecutionRunning() || !isRunning || di.Attempt != token.ScheduleAttempt ||
-			di.StartedID == emptyEventID {
+			di.StartedID == common.EmptyEventID {
 			return &workflow.EntityNotExistsError{Message: "Decision task not found."}
 		}
 
@@ -1023,7 +1023,7 @@ Update_History_Loop:
 					continue Process_Decision_Loop
 				}
 
-				if ai.StartedID == emptyEventID {
+				if ai.StartedID == common.EmptyEventID {
 					// We haven't started the activity yet, we can cancel the activity right away.
 					msBuilder.AddActivityTaskCanceledEvent(ai.ScheduleID, ai.StartedID, *actCancelReqEvent.EventId,
 						[]byte(activityCancelationMsgActivityNotStarted), common.StringDefault(request.Identity))
@@ -1324,7 +1324,7 @@ func (e *historyEngineImpl) RespondDecisionTaskFailed(req *h.RespondDecisionTask
 
 			scheduleID := token.ScheduleID
 			di, isRunning := msBuilder.GetPendingDecision(scheduleID)
-			if !isRunning || di.Attempt != token.ScheduleAttempt || di.StartedID == emptyEventID {
+			if !isRunning || di.Attempt != token.ScheduleAttempt || di.StartedID == common.EmptyEventID {
 				return nil, &workflow.EntityNotExistsError{Message: "Decision task not found."}
 			}
 
@@ -1377,7 +1377,7 @@ func (e *historyEngineImpl) RespondActivityTaskCompleted(req *h.RespondActivityT
 				return nil, ErrStaleState
 			}
 
-			if !isRunning || ai.StartedID == emptyEventID ||
+			if !isRunning || ai.StartedID == common.EmptyEventID ||
 				(token.ScheduleAttempt != 0 && int64(ai.Attempt) != token.ScheduleAttempt) {
 				return nil, ErrActivityTaskNotFound
 			}
@@ -1433,8 +1433,8 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(req *h.RespondActivityTask
 				return nil, ErrStaleState
 			}
 
-			if !isRunning || ai.StartedID == emptyEventID ||
-				(token.ScheduleID != emptyEventID && token.ScheduleAttempt != int64(ai.Attempt)) {
+			if !isRunning || ai.StartedID == common.EmptyEventID ||
+				(token.ScheduleID != common.EmptyEventID && token.ScheduleAttempt != int64(ai.Attempt)) {
 				return nil, ErrActivityTaskNotFound
 			}
 
@@ -1497,8 +1497,8 @@ func (e *historyEngineImpl) RespondActivityTaskCanceled(req *h.RespondActivityTa
 				return nil, ErrStaleState
 			}
 
-			if !isRunning || ai.StartedID == emptyEventID ||
-				(token.ScheduleID != emptyEventID && token.ScheduleAttempt != int64(ai.Attempt)) {
+			if !isRunning || ai.StartedID == common.EmptyEventID ||
+				(token.ScheduleID != common.EmptyEventID && token.ScheduleAttempt != int64(ai.Attempt)) {
 				return nil, ErrActivityTaskNotFound
 			}
 
@@ -1561,8 +1561,8 @@ func (e *historyEngineImpl) RecordActivityTaskHeartbeat(
 				return nil, ErrStaleState
 			}
 
-			if !isRunning || ai.StartedID == emptyEventID ||
-				(token.ScheduleID != emptyEventID && token.ScheduleAttempt != int64(ai.Attempt)) {
+			if !isRunning || ai.StartedID == common.EmptyEventID ||
+				(token.ScheduleID != common.EmptyEventID && token.ScheduleAttempt != int64(ai.Attempt)) {
 				e.logger.Debugf("Activity HeartBeat: scheduleEventID: %v, ActivityInfo: %+v, Exist: %v", scheduleID, ai,
 					isRunning)
 				return nil, ErrActivityTaskNotFound
@@ -1853,14 +1853,14 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(signalWithStartRequ
 			RequestID:                   common.StringDefault(request.RequestId),
 			DomainID:                    domainID,
 			Execution:                   execution,
-			InitiatedID:                 emptyEventID,
+			InitiatedID:                 common.EmptyEventID,
 			TaskList:                    *request.TaskList.Name,
 			WorkflowTypeName:            *request.WorkflowType.Name,
 			WorkflowTimeout:             *request.ExecutionStartToCloseTimeoutSeconds,
 			DecisionTimeoutValue:        *request.TaskStartToCloseTimeoutSeconds,
 			ExecutionContext:            nil,
 			NextEventID:                 msBuilder.GetNextEventID(),
-			LastProcessedEvent:          emptyEventID,
+			LastProcessedEvent:          common.EmptyEventID,
 			TransferTasks:               transferTasks,
 			DecisionVersion:             decisionVersion,
 			DecisionScheduleID:          decisionScheduleID,
@@ -2004,7 +2004,7 @@ func (e *historyEngineImpl) RecordChildExecutionCompleted(completionRequest *h.R
 
 			// Check mutable state to make sure child execution is in pending child executions
 			ci, isRunning := msBuilder.GetChildExecutionInfo(initiatedID)
-			if !isRunning || ci.StartedID == emptyEventID {
+			if !isRunning || ci.StartedID == common.EmptyEventID {
 				return nil, &workflow.EntityNotExistsError{Message: "Pending child execution not found."}
 			}
 
@@ -2164,7 +2164,7 @@ func (e *historyEngineImpl) createRecordDecisionTaskStartedResponse(domainID str
 	di *decisionInfo, identity string) *h.RecordDecisionTaskStartedResponse {
 	response := &h.RecordDecisionTaskStartedResponse{}
 	response.WorkflowType = msBuilder.getWorkflowType()
-	if msBuilder.previousDecisionStartedEvent() != emptyEventID {
+	if msBuilder.previousDecisionStartedEvent() != common.EmptyEventID {
 		response.PreviousStartedEventId = common.Int64Ptr(msBuilder.previousDecisionStartedEvent())
 	}
 
