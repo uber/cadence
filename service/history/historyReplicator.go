@@ -93,9 +93,17 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 			return err
 		}
 
+		// TODO
+		// WARNING
+		// CODE SHOULD BE REMOVE WHEN IN PROD
+		// TEMP CODE LOGIC FOR TESTING ONLY
+		if firstEvent.GetEventId() < msBuilder.GetNextEventID() {
+			return nil
+		}
+
 		// Check for out of order replication task and store it in the buffer
 		if firstEvent.GetEventId() > msBuilder.GetNextEventID() {
-			if t := msBuilder.BufferReplicationTask(request); t == nil {
+			if err := msBuilder.BufferReplicationTask(request); err != nil {
 				return errors.New("failed to add buffered replication task")
 			}
 
@@ -284,10 +292,13 @@ func (r *historyReplicator) ApplyReplicationTask(context *workflowExecutionConte
 			// Create a new request ID which is used by transfer queue processor if domain is failed over at this point
 			cancelRequestID := uuid.New()
 			rci := msBuilder.ReplicateRequestCancelExternalWorkflowExecutionInitiatedEvent(event, cancelRequestID)
-
 			attributes := event.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes
+			targetDomainEntry, err := r.shard.GetDomainCache().GetDomain(attributes.GetDomain())
+			if err != nil {
+				return err
+			}
 			transferTasks = append(transferTasks, r.scheduleCancelExternalWorkflowTransferTask(
-				attributes.GetDomain(),
+				targetDomainEntry.GetInfo().ID,
 				attributes.WorkflowExecution.GetWorkflowId(),
 				attributes.WorkflowExecution.GetRunId(),
 				attributes.GetChildWorkflowOnly(),
@@ -304,10 +315,13 @@ func (r *historyReplicator) ApplyReplicationTask(context *workflowExecutionConte
 			// Create a new request ID which is used by transfer queue processor if domain is failed over at this point
 			signalRequestID := uuid.New()
 			si := msBuilder.ReplicateSignalExternalWorkflowExecutionInitiatedEvent(event, signalRequestID)
-
 			attributes := event.SignalExternalWorkflowExecutionInitiatedEventAttributes
+			targetDomainEntry, err := r.shard.GetDomainCache().GetDomain(attributes.GetDomain())
+			if err != nil {
+				return err
+			}
 			transferTasks = append(transferTasks, r.scheduleSignalWorkflowTransferTask(
-				attributes.GetDomain(),
+				targetDomainEntry.GetInfo().ID,
 				attributes.WorkflowExecution.GetWorkflowId(),
 				attributes.WorkflowExecution.GetRunId(),
 				attributes.GetChildWorkflowOnly(),
@@ -420,6 +434,12 @@ func (r *historyReplicator) ApplyReplicationTask(context *workflowExecutionConte
 			newTimerTasks = append(newTimerTasks, r.scheduleWorkflowTimerTask(event, newStateBuilder))
 
 			msBuilder.ReplicateWorkflowExecutionContinuedAsNewEvent(request.GetSourceCluster(), domainID, event, startedEvent, di, newStateBuilder)
+			transferTasks = append(transferTasks, r.scheduleDeleteHistoryTransferTask())
+			timerTask, err := r.scheduleDeleteHistoryTimerTask(event, domainID)
+			if err != nil {
+				return err
+			}
+			timerTasks = append(timerTasks, timerTask)
 
 			// Generate a transaction ID for appending events to history
 			transactionID, err := r.shard.GetNextTransferTaskID()
@@ -532,7 +552,7 @@ func (r *historyReplicator) ApplyReplicationTask(context *workflowExecutionConte
 		err = context.replicateWorkflowExecution(request, transferTasks, timerTasks, lastEvent.GetEventId(), transactionID)
 	}
 
-	if err != nil {
+	if err == nil {
 		now := time.Unix(0, lastEvent.GetTimestamp())
 		r.notify(request.GetSourceCluster(), now, transferTasks, timerTasks)
 	}
@@ -679,10 +699,6 @@ func (r *historyReplicator) getTimerBuilder(event *shared.HistoryEvent) *timerBu
 
 func (r *historyReplicator) notify(clusterName string, now time.Time, transferTasks []persistence.Task, timerTasks []persistence.Task) {
 	r.shard.SetCurrentTime(clusterName, now)
-	if len(transferTasks) != 0 {
-		r.historyEngine.txProcessor.NotifyNewTask(clusterName, now)
-	}
-	if len(timerTasks) != 0 {
-		r.historyEngine.timerProcessor.NotifyNewTimers(clusterName, now, timerTasks)
-	}
+	r.historyEngine.txProcessor.NotifyNewTask(clusterName, now, transferTasks)
+	r.historyEngine.timerProcessor.NotifyNewTimers(clusterName, now, timerTasks)
 }
