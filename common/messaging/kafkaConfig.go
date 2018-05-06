@@ -21,6 +21,8 @@
 package messaging
 
 import (
+	"strings"
+
 	"github.com/uber-common/bark"
 	"github.com/uber-go/kafka-client"
 	"github.com/uber-go/kafka-client/kafka"
@@ -31,8 +33,9 @@ import (
 type (
 	// KafkaConfig describes the configuration needed to connect to all kafka clusters
 	KafkaConfig struct {
-		Clusters map[string]ClusterConfig `yaml:"clusters"`
-		Topics   map[string]TopicConfig   `yaml:"topics"`
+		Clusters       map[string]ClusterConfig `yaml:"clusters"`
+		Topics         map[string]TopicConfig   `yaml:"topics"`
+		ClusterToTopic map[string]string        `yaml:"cadence-cluster-to-topic"`
 	}
 
 	// ClusterConfig describes the configuration for a single Kafka cluster
@@ -52,6 +55,11 @@ func (k *KafkaConfig) NewKafkaClient(zLogger *zap.Logger, logger bark.Logger, me
 	brokers := map[string][]string{}
 	for cluster, cfg := range k.Clusters {
 		brokers[cluster] = cfg.Brokers
+		for i := range brokers[cluster] {
+			if !strings.Contains(cfg.Brokers[i], ":") {
+				cfg.Brokers[i] += ":9092"
+			}
+		}
 	}
 
 	// mapping from topic name to cluster that has that topic
@@ -67,6 +75,10 @@ func (k *KafkaConfig) NewKafkaClient(zLogger *zap.Logger, logger bark.Logger, me
 		client: client,
 		logger: logger,
 	}
+}
+
+func (k *KafkaConfig) getTopicForCadenceCluster(cluster string) string {
+	return k.ClusterToTopic[cluster]
 }
 
 func (k *KafkaConfig) getClusterForTopic(topic string) string {

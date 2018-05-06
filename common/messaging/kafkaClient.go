@@ -21,11 +21,12 @@
 package messaging
 
 import (
+	"strings"
+
 	"github.com/Shopify/sarama"
 	"github.com/uber-common/bark"
 	"github.com/uber-go/kafka-client"
 	"github.com/uber-go/kafka-client/kafka"
-	"strings"
 )
 
 type (
@@ -37,7 +38,8 @@ type (
 )
 
 // NewConsumer is used to create a Kafka consumer
-func (c *kafkaClient) NewConsumer(topicName, consumerName string, concurrency int) (kafka.Consumer, error) {
+func (c *kafkaClient) NewConsumer(cadenceCluster, consumerName string, concurrency int) (kafka.Consumer, error) {
+	topicName := c.config.getTopicForCadenceCluster(cadenceCluster)
 	clusterName := c.config.getClusterForTopic(topicName)
 	brokers := c.config.getBrokersForCluster(clusterName)
 
@@ -70,7 +72,8 @@ func (c *kafkaClient) NewConsumer(topicName, consumerName string, concurrency in
 }
 
 // NewProducer is used to create a Kafka producer for shipping replication tasks
-func (c *kafkaClient) NewProducer(topicName string) (Producer, error) {
+func (c *kafkaClient) NewProducer(cadenceCluster string) (Producer, error) {
+	topicName := c.config.getTopicForCadenceCluster(cadenceCluster)
 	clusterName := c.config.getClusterForTopic(topicName)
 	brokers := c.config.getBrokersForCluster(clusterName)
 
