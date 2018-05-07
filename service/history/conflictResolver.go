@@ -20,8 +20,8 @@
 
 package history
 
-/*
 import (
+	"github.com/pborman/uuid"
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -31,36 +31,65 @@ import (
 type (
 	conflictResolver struct {
 		shard              ShardContext
-		executionMgr       persistence.ExecutionManager
+		context            *workflowExecutionContext
 		historyMgr         persistence.HistoryManager
 		hSerializerFactory persistence.HistorySerializerFactory
 		logger             bark.Logger
 	}
 )
 
-func newConflictResolver(shard ShardContext, historyCache *historyCache, domainCache cache.DomainCache,
-	historyMgr persistence.HistoryManager, logger bark.Logger) *historyReplicator {
-	replicator := &historyReplicator{
-		shard:             shard,
-		historyCache:      historyCache,
-		domainCache:       domainCache,
-		historyMgr:        historyMgr,
-		historySerializer: persistence.NewJSONHistorySerializer(),
-		logger:            logger,
-	}
+func newConflictResolver(shard ShardContext, context *workflowExecutionContext, historyMgr persistence.HistoryManager,
+	logger bark.Logger) *conflictResolver {
 
-	return replicator
+	return &conflictResolver{
+		shard:      shard,
+		context:    context,
+		historyMgr: historyMgr,
+		logger:     logger,
+	}
 }
 
-func (r *conflictResolver) getHistory(domainID, workflowID, runID string, firstEventID, nextEventID int64,
-	nextPageToken []byte) (*shared.History, []byte, error) {
+func (r *conflictResolver) reset(replayEventID int64) (*mutableStateBuilder, error) {
+	domainID := r.context.domainID
+	execution := r.context.workflowExecution
+	replayNextEventID := replayEventID + 1
+	var nextPageToken []byte
+	var history *shared.History
+	var err error
+	var resetMutableStateBuilder *mutableStateBuilder
+	var sBuilder *stateBuilder
+	requestID := uuid.New()
+	for hasMore := true; hasMore; hasMore = len(nextPageToken) > 0 {
+		history, nextPageToken, err = r.getHistory(domainID, execution, common.FirstEventID, replayNextEventID,
+			nextPageToken)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, event := range history.Events {
+			if event.GetEventId() == common.FirstEventID {
+				resetMutableStateBuilder = newMutableStateBuilderWithReplicationState(r.shard.GetConfig(), r.logger,
+					event.GetVersion())
+
+				sBuilder = newStateBuilder(r.shard, resetMutableStateBuilder, r.logger)
+			}
+
+			_, _, _, err = sBuilder.applyEvents(common.EmptyVersion, "", domainID, requestID, execution, history, nil)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return r.context.resetWorkflowExecution(resetMutableStateBuilder)
+}
+
+func (r *conflictResolver) getHistory(domainID string, execution shared.WorkflowExecution, firstEventID,
+	nextEventID int64, nextPageToken []byte) (*shared.History, []byte, error) {
 
 	response, err := r.historyMgr.GetWorkflowExecutionHistory(&persistence.GetWorkflowExecutionHistoryRequest{
-		DomainID: domainID,
-		Execution: shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
-		},
+		DomainID:      domainID,
+		Execution:     execution,
 		FirstEventID:  firstEventID,
 		NextEventID:   nextEventID,
 		PageSize:      defaultHistoryPageSize,
@@ -86,4 +115,3 @@ func (r *conflictResolver) getHistory(domainID, workflowID, runID string, firstE
 	executionHistory.Events = historyEvents
 	return executionHistory, nextPageToken, nil
 }
-*/
