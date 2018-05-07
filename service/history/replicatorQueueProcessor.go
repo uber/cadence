@@ -219,6 +219,8 @@ func (p *replicatorQueueProcessorImpl) getHistory(domainID, workflowID, runID st
 			}
 			historyEvents = append(historyEvents, history.Events...)
 		}
+
+		nextPageToken = response.NextPageToken
 	}
 
 	executionHistory := &shared.History{}

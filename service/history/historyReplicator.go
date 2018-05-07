@@ -64,6 +64,7 @@ func newHistoryReplicator(shard ShardContext, historyEngine *historyEngineImpl, 
 
 func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retError error) {
 	if request == nil || request.History == nil || len(request.History.Events) == 0 {
+		r.logger.Warn("Dropping empty replication task")
 		return nil
 	}
 
@@ -99,6 +100,33 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 		// TEMP CODE LOGIC FOR TESTING ONLY
 		if firstEvent.GetEventId() < msBuilder.GetNextEventID() {
 			return nil
+		}
+
+		rState := msBuilder.replicationState
+		// Check if this is a stale event
+		if rState.CurrentVersion > request.GetVersion() {
+			// Replication state is already on a higher version, we can drop this event
+			// TODO: We need to replay external events like signal to the new version
+			r.logger.Warnf("Dropping stale replication task.  Current Version: %v, Task Version: %v", rState.CurrentVersion,
+				request.GetVersion())
+			return nil
+		}
+
+		// Check if this is the first event after failover
+		if rState.CurrentVersion < request.GetVersion() {
+			previousActiveCluster := ""
+			ri, ok := request.ReplicationInfo[previousActiveCluster]
+			if !ok {
+				// TODO: Fatal error condition
+			}
+
+			// Detect conflict
+			if ri.GetLastEventId() != rState.LastWriteEventID {
+				r.logger.Infof("Conflict detected.  State: {Version: %, LastWriteEventID: %v}, Task: {SourceCluster: %v, Version: %v, LastEventID: %v}",
+					rState.CurrentVersion, rState.LastWriteEventID, request.GetSourceCluster(), ri.GetVersion(),
+					ri.GetLastEventId())
+
+			}
 		}
 
 		// Check for out of order replication task and store it in the buffer
