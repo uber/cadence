@@ -22,6 +22,7 @@ package cache
 
 import (
 	"sync"
+	"sync/atomic"
 	"time"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -39,10 +40,13 @@ const (
 	domainCacheMaxSize         = 16 * 1024
 	domainCacheTTL             = time.Hour
 	domainEntryRefreshInterval = 10 * time.Second
+
+	domainCacheLocked   int32 = 0
+	domainCacheReleased int32 = 1
 )
 
 type (
-	callbackFn func(domainID string, prevActiveDomain string)
+	callbackFn func(prevDomain *DomainCacheEntry, nextDomain *DomainCacheEntry)
 
 	// DomainCache is used the cache domain information and configuration to avoid making too many calls to cassandra.
 	// This cache is mainly used by frontend for resolving domain names to domain uuids which are used throughout the
@@ -50,8 +54,8 @@ type (
 	// in updating the domain entry every 10 seconds but in the case of a cassandra failure we can still keep on serving
 	// requests using the stale entry from cache upto an hour
 	DomainCache interface {
-		SetDomainFailoverCallback(shard int, fn callbackFn)
-		DeleteDomainFailoverCallback(shard int)
+		RegisterDomainChangeCallback(shard int, fn callbackFn)
+		UnregisterDomainChangeCallback(shard int)
 		GetDomain(name string) (*DomainCacheEntry, error)
 		GetDomainByID(id string) (*DomainCacheEntry, error)
 		GetDomainID(name string) (string, error)
@@ -105,16 +109,16 @@ func newDomainCacheEntry(clusterMetadata cluster.Metadata) *DomainCacheEntry {
 	return &DomainCacheEntry{clusterMetadata: clusterMetadata}
 }
 
-// SetDomainFailoverCallback set a domain failover callback, which will be when active domain for a domain changes
-func (c *domainCache) SetDomainFailoverCallback(shard int, fn callbackFn) {
+// RegisterDomainChangeCallback set a domain failover callback, which will be when active domain for a domain changes
+func (c *domainCache) RegisterDomainChangeCallback(shard int, fn callbackFn) {
 	c.Lock()
 	defer c.Unlock()
 
 	c.callbacks[shard] = fn
 }
 
-// DeleteDomainFailoverCallback delete a domain failover callback
-func (c *domainCache) DeleteDomainFailoverCallback(shard int) {
+// UnregisterDomainChangeCallback delete a domain failover callback
+func (c *domainCache) UnregisterDomainChangeCallback(shard int) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -175,58 +179,62 @@ func (c *domainCache) getDomain(key, id, name string, cache Cache) (*DomainCache
 
 	// Now take a lock to update the entry
 	entry.Lock()
-	defer entry.Unlock()
+	lockReleased := domainCacheLocked
+	release := func() {
+		if atomic.CompareAndSwapInt32(&lockReleased, domainCacheLocked, domainCacheReleased) {
+			entry.Unlock()
+		}
+	}
+	defer release()
 
 	// Check again under the lock to make sure someone else did not update the entry
-	if entry.isExpired(now) {
-		response, err := c.metadataMgr.GetDomain(&persistence.GetDomainRequest{
-			Name: name,
-			ID:   id,
-		})
-
-		// Failed to get domain.  Return stale entry if we have one, otherwise just return error
-		if err != nil {
-			if !entry.expiry.IsZero() {
-				return entry.duplicate(), nil
-			}
-
-			return nil, err
-		}
-
-		// expiry will be non zero when the entry is initialized / valid
-		if c.clusterMetadata.IsGlobalDomainEnabled() && !entry.expiry.IsZero() {
-			c.triggerDomainFailoverCallback(entry.GetInfo().ID, entry.replicationConfig, response.ReplicationConfig)
-		}
-
-		entry.info = response.Info
-		entry.config = response.Config
-		entry.replicationConfig = response.ReplicationConfig
-		entry.configVersion = response.ConfigVersion
-		entry.failoverVersion = response.FailoverVersion
-		entry.isGlobalDomain = response.IsGlobalDomain
-		entry.expiry = now.Add(domainEntryRefreshInterval)
+	if !entry.isExpired(now) {
+		return entry.duplicate(), nil
 	}
 
-	return entry.duplicate(), nil
+	response, err := c.metadataMgr.GetDomain(&persistence.GetDomainRequest{Name: name, ID: id})
+	// Failed to get domain.  Return stale entry if we have one, otherwise just return error
+	if err != nil {
+		if !entry.expiry.IsZero() {
+			return entry.duplicate(), nil
+		}
+
+		return nil, err
+	}
+
+	var prevDomain *DomainCacheEntry
+	// expiry will be non zero when the entry is initialized / valid
+	if c.clusterMetadata.IsGlobalDomainEnabled() && !entry.expiry.IsZero() {
+		prevDomain = entry.duplicate()
+	}
+
+	entry.info = response.Info
+	entry.config = response.Config
+	entry.replicationConfig = response.ReplicationConfig
+	entry.configVersion = response.ConfigVersion
+	entry.failoverVersion = response.FailoverVersion
+	entry.isGlobalDomain = response.IsGlobalDomain
+	entry.expiry = now.Add(domainEntryRefreshInterval)
+	nextDomain := entry.duplicate()
+
+	release()
+	if prevDomain != nil {
+		c.triggerDomainChangeCallback(prevDomain, nextDomain)
+	}
+
+	return nextDomain, nil
 }
 
-func (c *domainCache) triggerDomainFailoverCallback(domainID string, prevReplicationConfig *persistence.DomainReplicationConfig,
-	nextReplicationConfig *persistence.DomainReplicationConfig) {
+func (c *domainCache) triggerDomainChangeCallback(prevDomain *DomainCacheEntry, nextDomain *DomainCacheEntry) {
 
-	if prevReplicationConfig == nil || nextReplicationConfig == nil {
-		return
-	}
-	prevActiveDomain := prevReplicationConfig.ActiveClusterName
-	nextActiveDomain := nextReplicationConfig.ActiveClusterName
-
-	if prevActiveDomain == nextActiveDomain || nextActiveDomain != c.clusterMetadata.GetCurrentClusterName() {
+	if ContentEqual(prevDomain, nextDomain) {
 		return
 	}
 
 	c.RLock()
 	defer c.RUnlock()
 	for _, callback := range c.callbacks {
-		callback(domainID, prevActiveDomain)
+		callback(prevDomain, nextDomain)
 	}
 }
 
@@ -299,4 +307,34 @@ func (entry *DomainCacheEntry) GetDomainNotActiveErr() error {
 		return nil
 	}
 	return errors.NewDomainNotActiveError(entry.info.Name, entry.clusterMetadata.GetCurrentClusterName(), entry.replicationConfig.ActiveClusterName)
+}
+
+// ContentEqual return true if 2 domain cache entry have the same content
+func ContentEqual(this *DomainCacheEntry, that *DomainCacheEntry) bool {
+	// we do not check the mutex or expiry
+	if *this.info != *that.info {
+		return false
+	} else if *this.config != *that.config {
+		return false
+	} else if this.configVersion != that.configVersion {
+		return false
+	} else if this.failoverVersion != that.failoverVersion {
+		return false
+	} else if this.isGlobalDomain != that.isGlobalDomain {
+		return false
+	}
+
+	// finally check the replication config
+	if this.replicationConfig.ActiveClusterName != that.replicationConfig.ActiveClusterName {
+		return false
+	} else if len(this.replicationConfig.Clusters) != len(that.replicationConfig.Clusters) {
+		return false
+	}
+	for index, cluster := range this.replicationConfig.Clusters {
+		if cluster != that.replicationConfig.Clusters[index] {
+			return false
+		}
+	}
+
+	return true
 }
