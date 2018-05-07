@@ -151,7 +151,7 @@ func NewEngineWithShardContext(shard ShardContext, visibilityMgr persistence.Vis
 			historySerializerFactory, logger)
 		historyEngImpl.replicatorProcessor = replicatorProcessor
 		shardWrapper.replcatorProcessor = replicatorProcessor
-		historyEngImpl.replicator = newHistoryReplicator(shard, historyCache, shard.GetDomainCache(), historyManager,
+		historyEngImpl.replicator = newHistoryReplicator(shard, historyEngImpl, historyCache, shard.GetDomainCache(), historyManager,
 			logger)
 	}
 
@@ -419,7 +419,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 	}
 
 	if err == nil {
-		e.timerProcessor.NotifyNewTimers(e.currentClusterName, timerTasks)
+		e.timerProcessor.NotifyNewTimers(e.currentClusterName, e.shard.GetCurrentTime(e.currentClusterName), timerTasks)
 
 		return &workflow.StartWorkflowExecutionResponse{
 			RunId: common.StringPtr(resultRunID),
@@ -432,7 +432,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 func (e *historyEngineImpl) GetMutableState(ctx context.Context,
 	request *h.GetMutableStateRequest) (*h.GetMutableStateResponse, error) {
 
-	domainID, err := getDomainUUID(request.DomainUUID)
+	domainID, err := validateDomainUUID(request.DomainUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -536,7 +536,7 @@ func (e *historyEngineImpl) getMutableState(
 // 4. ClientFeatureVersion
 // 5. ClientImpl
 func (e *historyEngineImpl) ResetStickyTaskList(resetRequest *h.ResetStickyTaskListRequest) (*h.ResetStickyTaskListResponse, error) {
-	domainID, err := getDomainUUID(resetRequest.DomainUUID)
+	domainID, err := validateDomainUUID(resetRequest.DomainUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -560,7 +560,7 @@ func (e *historyEngineImpl) ResetStickyTaskList(resetRequest *h.ResetStickyTaskL
 // DescribeWorkflowExecution returns information about the specified workflow execution.
 func (e *historyEngineImpl) DescribeWorkflowExecution(
 	request *h.DescribeWorkflowExecutionRequest) (retResp *workflow.DescribeWorkflowExecutionResponse, retError error) {
-	domainID, err := getDomainUUID(request.DomainUUID)
+	domainID, err := validateDomainUUID(request.DomainUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -695,9 +695,9 @@ Update_History_Loop:
 		}
 
 		// Start a timer for the decision task.
-		timeOutTask := tBuilder.AddDecisionTimoutTask(scheduleID, di.Attempt, di.DecisionTimeout)
+		timeOutTask := tBuilder.AddStartToCloseDecisionTimoutTask(scheduleID, di.Attempt, di.DecisionTimeout)
 		timerTasks := []persistence.Task{timeOutTask}
-		defer e.timerProcessor.NotifyNewTimers(e.currentClusterName, timerTasks)
+		defer e.timerProcessor.NotifyNewTimers(e.currentClusterName, e.shard.GetCurrentTime(e.currentClusterName), timerTasks)
 
 		// Generate a transaction ID for appending events to history
 		transactionID, err2 := e.shard.GetNextTransferTaskID()
@@ -1133,7 +1133,7 @@ Update_History_Loop:
 				}
 
 				signalRequestID := uuid.New() // for deduplicate
-				wfSignalReqEvent := msBuilder.AddSignalExternalWorkflowExecutionInitiatedEvent(completedID,
+				wfSignalReqEvent, _ := msBuilder.AddSignalExternalWorkflowExecutionInitiatedEvent(completedID,
 					signalRequestID, attributes)
 				if wfSignalReqEvent == nil {
 					return &workflow.InternalServiceError{Message: "Unable to add external signal workflow request."}
@@ -1258,7 +1258,7 @@ Update_History_Loop:
 			di := msBuilder.AddDecisionTaskScheduledEvent()
 			transferTasks = append(transferTasks, &persistence.DecisionTask{
 				DomainID:   domainID,
-				TaskList:   di.Tasklist,
+				TaskList:   di.TaskList,
 				ScheduleID: di.ScheduleID,
 			})
 			if msBuilder.isStickyTaskListEnabled() {
@@ -1308,7 +1308,7 @@ Update_History_Loop:
 		// add continueAsNewTimerTask
 		timerTasks = append(timerTasks, continueAsNewTimerTasks...)
 		// Inform timer about the new ones.
-		e.timerProcessor.NotifyNewTimers(e.currentClusterName, timerTasks)
+		e.timerProcessor.NotifyNewTimers(e.currentClusterName, e.shard.GetCurrentTime(e.currentClusterName), timerTasks)
 
 		return err
 	}
@@ -1755,7 +1755,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(signalWithStartRequ
 				di := msBuilder.AddDecisionTaskScheduledEvent()
 				transferTasks = append(transferTasks, &persistence.DecisionTask{
 					DomainID:   domainID,
-					TaskList:   di.Tasklist,
+					TaskList:   di.TaskList,
 					ScheduleID: di.ScheduleID,
 				})
 				if msBuilder.isStickyTaskListEnabled() {
@@ -1779,7 +1779,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(signalWithStartRequ
 				}
 				return nil, err
 			}
-			e.timerProcessor.NotifyNewTimers(e.currentClusterName, timerTasks)
+			e.timerProcessor.NotifyNewTimers(e.currentClusterName, e.shard.GetCurrentTime(e.currentClusterName), timerTasks)
 			return &workflow.StartWorkflowExecutionResponse{RunId: context.workflowExecution.RunId}, nil
 		} // end for Just_Signal_Loop
 		if attempt == conditionalRetryCount {
@@ -1908,7 +1908,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(signalWithStartRequ
 	// try to create the workflow execution
 	resultRunID, err := createWorkflow(isBrandNew, prevRunID) // (true, "") or (false, "prevRunID")
 	if err == nil {
-		e.timerProcessor.NotifyNewTimers(e.currentClusterName, timerTasks)
+		e.timerProcessor.NotifyNewTimers(e.currentClusterName, e.shard.GetCurrentTime(e.currentClusterName), timerTasks)
 
 		return &workflow.StartWorkflowExecutionResponse{
 			RunId: common.StringPtr(resultRunID),
@@ -2106,7 +2106,7 @@ Update_History_Loop:
 				di := msBuilder.AddDecisionTaskScheduledEvent()
 				transferTasks = append(transferTasks, &persistence.DecisionTask{
 					DomainID:   domainID,
-					TaskList:   di.Tasklist,
+					TaskList:   di.TaskList,
 					ScheduleID: di.ScheduleID,
 				})
 				if msBuilder.isStickyTaskListEnabled() {
@@ -2132,7 +2132,7 @@ Update_History_Loop:
 			}
 			return err
 		}
-		e.timerProcessor.NotifyNewTimers(e.currentClusterName, timerTasks)
+		e.timerProcessor.NotifyNewTimers(e.currentClusterName, e.shard.GetCurrentTime(e.currentClusterName), timerTasks)
 		return nil
 	}
 	return ErrMaxAttemptsExceeded
@@ -2246,9 +2246,7 @@ func (e *historyEngineImpl) getTimerBuilder(we *workflow.WorkflowExecution) *tim
 func (s *shardContextWrapper) UpdateWorkflowExecution(request *persistence.UpdateWorkflowExecutionRequest) error {
 	err := s.ShardContext.UpdateWorkflowExecution(request)
 	if err == nil {
-		if len(request.TransferTasks) > 0 {
-			s.txProcessor.NotifyNewTask(s.currentClusterName, s.GetCurrentTime(s.currentClusterName))
-		}
+		s.txProcessor.NotifyNewTask(s.currentClusterName, s.GetCurrentTime(s.currentClusterName), request.TransferTasks)
 		if len(request.ReplicationTasks) > 0 {
 			s.replcatorProcessor.notifyNewTask()
 		}
@@ -2260,9 +2258,7 @@ func (s *shardContextWrapper) CreateWorkflowExecution(request *persistence.Creat
 	*persistence.CreateWorkflowExecutionResponse, error) {
 	resp, err := s.ShardContext.CreateWorkflowExecution(request)
 	if err == nil {
-		if len(request.TransferTasks) > 0 {
-			s.txProcessor.NotifyNewTask(s.currentClusterName, s.GetCurrentTime(s.currentClusterName))
-		}
+		s.txProcessor.NotifyNewTask(s.currentClusterName, s.GetCurrentTime(s.currentClusterName), request.TransferTasks)
 		if len(request.ReplicationTasks) > 0 {
 			s.replcatorProcessor.notifyNewTask()
 		}
@@ -2504,15 +2500,17 @@ func validateStartWorkflowExecutionRequest(request *workflow.StartWorkflowExecut
 	return nil
 }
 
-func getDomainUUID(domainUUID *string) (string, error) {
+func validateDomainUUID(domainUUID *string) (string, error) {
 	if domainUUID == nil {
 		return "", &workflow.BadRequestError{Message: "Missing domain UUID."}
+	} else if uuid.Parse(*domainUUID) == nil {
+		return "", &workflow.BadRequestError{Message: "Invalid domain UUID."}
 	}
 	return *domainUUID, nil
 }
 
 func (e *historyEngineImpl) getActiveDomainEntry(domainUUID *string) (*cache.DomainCacheEntry, error) {
-	domainID, err := getDomainUUID(domainUUID)
+	domainID, err := validateDomainUUID(domainUUID)
 	if err != nil {
 		return nil, err
 	}

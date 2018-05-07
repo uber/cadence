@@ -98,6 +98,7 @@ type (
 	}
 
 	queueTaskInfo interface {
+		GetVersion() int64
 		GetTaskID() int64
 		GetTaskType() int
 	}
@@ -112,7 +113,7 @@ type (
 	transferQueueProcessor interface {
 		common.Daemon
 		FailoverDomain(domainID string, standbyClusterName string)
-		NotifyNewTask(clusterName string, currentTime time.Time)
+		NotifyNewTask(clusterName string, currentTime time.Time, transferTasks []persistence.Task)
 	}
 
 	// TODO the timer quque processor and the one below, timer processor
@@ -121,8 +122,7 @@ type (
 	timerQueueProcessor interface {
 		common.Daemon
 		FailoverDomain(domainID string, standbyClusterName string)
-		NotifyNewTimers(clusterName string, timerTask []persistence.Task)
-		SetCurrentTime(clusterName string, currentTime time.Time)
+		NotifyNewTimers(clusterName string, currentTime time.Time, timerTask []persistence.Task)
 	}
 
 	timerProcessor interface {

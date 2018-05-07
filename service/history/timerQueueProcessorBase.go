@@ -48,6 +48,7 @@ type (
 	timerQueueProcessorBase struct {
 		shard            ShardContext
 		historyService   *historyEngineImpl
+		cache            *historyCache
 		executionManager persistence.ExecutionManager
 		isStarted        int32
 		isStopped        int32
@@ -78,13 +79,14 @@ func newTimerQueueProcessorBase(shard ShardContext, historyService *historyEngin
 	})
 
 	workerNotificationChans := []chan struct{}{}
-	for index := 0; index < shard.GetConfig().TimerProcessorTaskWorkerCount; index++ {
+	for index := 0; index < shard.GetConfig().TimerTaskWorkerCount; index++ {
 		workerNotificationChans = append(workerNotificationChans, make(chan struct{}, 1))
 	}
 
 	base := &timerQueueProcessorBase{
 		shard:                   shard,
 		historyService:          historyService,
+		cache:                   historyService.historyCache,
 		executionManager:        shard.GetExecutionManager(),
 		shutdownCh:              make(chan struct{}),
 		tasksCh:                 make(chan *persistence.TimerTaskInfo, 10*shard.GetConfig().TimerTaskBatchSize),
@@ -133,7 +135,7 @@ func (t *timerQueueProcessorBase) processorPump() {
 	// Workers to process timer tasks that are expired.
 
 	var workerWG sync.WaitGroup
-	for i := 0; i < t.config.TimerProcessorTaskWorkerCount; i++ {
+	for i := 0; i < t.config.TimerTaskWorkerCount; i++ {
 		workerWG.Add(1)
 		notificationChan := t.workerNotificationChans[i]
 		go t.processTaskWorker(&workerWG, notificationChan)
@@ -161,38 +163,45 @@ RetryProcessor:
 
 func (t *timerQueueProcessorBase) processTaskWorker(workerWG *sync.WaitGroup, notificationChan chan struct{}) {
 	defer workerWG.Done()
+
 	for {
 		select {
 		case task, ok := <-t.tasksCh:
 			if !ok {
 				return
 			}
+			t.processWithRetry(notificationChan, task)
+		}
+	}
+}
 
-		UpdateFailureLoop:
-			for attempt := 1; attempt <= t.config.TimerProcessorUpdateFailureRetryCount; {
-
-				// clear the existing notification
-				select {
-				case <-notificationChan:
-				default:
-				}
-
-				err := t.timerProcessor.process(task)
-				if err != nil {
-					if err == ErrTaskRetry {
-						<-notificationChan
-					} else {
-						// We will retry until we don't find the timer task any more.
-						t.logger.Infof("Failed to process timer: %v; %v.", task, err)
-						backoff := time.Duration(attempt * 100)
-						time.Sleep(backoff * time.Millisecond)
-						attempt++
-					}
-				} else {
-					atomic.AddUint64(&t.timerFiredCount, 1)
-					break UpdateFailureLoop
-				}
+func (t *timerQueueProcessorBase) processWithRetry(notificationChan <-chan struct{}, task *persistence.TimerTaskInfo) {
+ProcessRetryLoop:
+	for attempt := 1; attempt <= t.config.TimerTaskMaxRetryCount; {
+		select {
+		case <-t.shutdownCh:
+			return
+		default:
+			// clear the existing notification
+			select {
+			case <-notificationChan:
+			default:
 			}
+
+			err := t.timerProcessor.process(task)
+			if err != nil {
+				if err == ErrTaskRetry {
+					<-notificationChan
+				} else {
+					logging.LogTaskProcessingFailedEvent(t.logger, task.GetTaskID(), task.GetTaskType(), err)
+					backoff := time.Duration(attempt * 100)
+					time.Sleep(backoff * time.Millisecond)
+					attempt++
+				}
+				continue ProcessRetryLoop
+			}
+			atomic.AddUint64(&t.timerFiredCount, 1)
+			return
 		}
 	}
 }
@@ -360,10 +369,27 @@ func (t *timerQueueProcessorBase) getDomainIDAndWorkflowExecution(task *persiste
 	}
 }
 
-func (t *timerQueueProcessorBase) processDeleteHistoryEvent(task *persistence.TimerTaskInfo) error {
+func (t *timerQueueProcessorBase) processDeleteHistoryEvent(task *persistence.TimerTaskInfo) (retError error) {
 	t.metricsClient.IncCounter(metrics.TimerTaskDeleteHistoryEvent, metrics.TaskRequests)
 	sw := t.metricsClient.StartTimer(metrics.TimerTaskDeleteHistoryEvent, metrics.TaskLatency)
 	defer sw.Stop()
+
+	context, release, err := t.cache.getOrCreateWorkflowExecution(t.getDomainIDAndWorkflowExecution(task))
+	if err != nil {
+		return err
+	}
+	defer func() { release(retError) }()
+
+	msBuilder, err := context.loadWorkflowExecution()
+	if err != nil {
+		return err
+	}
+	ok, err := verifyTimerTaskVersion(t.shard, task.DomainID, msBuilder.GetCurrentVersion(), task)
+	if err != nil {
+		return err
+	} else if !ok {
+		return nil
+	}
 
 	op := func() error {
 		return t.executionManager.DeleteWorkflowExecution(&persistence.DeleteWorkflowExecutionRequest{
@@ -373,7 +399,7 @@ func (t *timerQueueProcessorBase) processDeleteHistoryEvent(task *persistence.Ti
 		})
 	}
 
-	err := backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
+	err = backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
 	if err != nil {
 		return err
 	}
