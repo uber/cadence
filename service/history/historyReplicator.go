@@ -31,6 +31,7 @@ import (
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/persistence"
 )
@@ -43,6 +44,7 @@ type (
 		domainCache       cache.DomainCache
 		historyMgr        persistence.HistoryManager
 		historySerializer persistence.HistorySerializer
+		metadataMgr       cluster.Metadata
 		logger            bark.Logger
 	}
 )
@@ -56,6 +58,7 @@ func newHistoryReplicator(shard ShardContext, historyEngine *historyEngineImpl, 
 		domainCache:       domainCache,
 		historyMgr:        historyMgr,
 		historySerializer: persistence.NewJSONHistorySerializer(),
+		metadataMgr:       shard.GetService().GetClusterMetadata(),
 		logger:            logger,
 	}
 
@@ -72,6 +75,10 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 	if err != nil {
 		return err
 	}
+	if len(request.History.Events) == 0 {
+		return nil
+	}
+
 	execution := *request.WorkflowExecution
 
 	var context *workflowExecutionContext
@@ -94,14 +101,6 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 			return err
 		}
 
-		// TODO
-		// WARNING
-		// CODE SHOULD BE REMOVE WHEN IN PROD
-		// TEMP CODE LOGIC FOR TESTING ONLY
-		if firstEvent.GetEventId() < msBuilder.GetNextEventID() {
-			return nil
-		}
-
 		rState := msBuilder.replicationState
 		// Check if this is a stale event
 		if rState.CurrentVersion > request.GetVersion() {
@@ -114,10 +113,14 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 
 		// Check if this is the first event after failover
 		if rState.CurrentVersion < request.GetVersion() {
-			previousActiveCluster := ""
+			previousActiveCluster := r.metadataMgr.ClusterNameForFailoverVersion(rState.CurrentVersion)
 			ri, ok := request.ReplicationInfo[previousActiveCluster]
 			if !ok {
-				// TODO: Fatal error condition
+				r.logger.Errorf("No replication information found for previous active cluster.  Previous: %v, Current: %v",
+					previousActiveCluster, request.GetSourceCluster())
+
+				// TODO: Handle missing replication information
+				return nil
 			}
 
 			// Detect conflict
@@ -132,6 +135,11 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 					return err
 				}
 			}
+		}
+
+		// Check for duplicate processing of replication task
+		if firstEvent.GetEventId() < msBuilder.GetNextEventID() {
+			return nil
 		}
 
 		// Check for out of order replication task and store it in the buffer
@@ -190,7 +198,8 @@ func (r *historyReplicator) ApplyReplicationTask(context *workflowExecutionConte
 		if err != nil {
 			return err
 		}
-		err = context.replicateContinueAsNewWorkflowExecution(newRunStateBuilder, nil, nil, transactionID)
+		err = context.replicateContinueAsNewWorkflowExecution(newRunStateBuilder, sBuilder.newRunTransferTasks,
+			sBuilder.newRunTimerTasks, transactionID)
 		if err != nil {
 			return err
 		}
@@ -269,12 +278,12 @@ func (r *historyReplicator) ApplyReplicationTask(context *workflowExecutionConte
 				ExecutionContext:            nil,
 				NextEventID:                 msBuilder.GetNextEventID(),
 				LastProcessedEvent:          emptyEventID,
-				TransferTasks:               transferTasks, // TODO: Generate transfer task
+				TransferTasks:               sBuilder.transferTasks,
 				DecisionVersion:             decisionVersionID,
 				DecisionScheduleID:          decisionScheduleID,
 				DecisionStartedID:           decisionStartID,
 				DecisionStartToCloseTimeout: decisionTimeout,
-				TimerTasks:                  timerTasks, // TODO: Generate workflow timeout task
+				TimerTasks:                  sBuilder.timerTasks,
 				ContinueAsNew:               !isBrandNew,
 				PreviousRunID:               prevRunID,
 				ReplicationState:            replicationState,
@@ -304,12 +313,13 @@ func (r *historyReplicator) ApplyReplicationTask(context *workflowExecutionConte
 		if err2 != nil {
 			return err2
 		}
-		err = context.replicateWorkflowExecution(request, transferTasks, timerTasks, lastEvent.GetEventId(), transactionID)
+		err = context.replicateWorkflowExecution(request, sBuilder.transferTasks, sBuilder.timerTasks,
+			lastEvent.GetEventId(), transactionID)
 	}
 
 	if err == nil {
 		now := time.Unix(0, lastEvent.GetTimestamp())
-		r.notify(request.GetSourceCluster(), now, transferTasks, timerTasks)
+		r.notify(request.GetSourceCluster(), now, sBuilder.transferTasks, sBuilder.timerTasks)
 	}
 
 	return err
@@ -360,99 +370,8 @@ func (r *historyReplicator) Serialize(history *shared.History) (*persistence.Ser
 	return h, nil
 }
 
-func (r *historyReplicator) scheduleDecisionTransferTask(domainID string, tasklist string, scheduleID int64) persistence.Task {
-	return &persistence.DecisionTask{
-		DomainID:   domainID,
-		TaskList:   tasklist,
-		ScheduleID: scheduleID,
-	}
-}
-
-func (r *historyReplicator) scheduleActivityTransferTask(domainID string, tasklist string, scheduleID int64) persistence.Task {
-	return &persistence.ActivityTask{
-		DomainID:   domainID,
-		TaskList:   tasklist,
-		ScheduleID: scheduleID,
-	}
-}
-
-func (r *historyReplicator) scheduleStartChildWorkflowTransferTask(domainID string, workflowID string, initiatedID int64) persistence.Task {
-	return &persistence.StartChildExecutionTask{
-		TargetDomainID:   domainID,
-		TargetWorkflowID: workflowID,
-		InitiatedID:      initiatedID,
-	}
-}
-
-func (r *historyReplicator) scheduleCancelExternalWorkflowTransferTask(domainID string, workflowID string,
-	runID string, childWorkflowOnly bool, initiatedID int64) persistence.Task {
-	return &persistence.CancelExecutionTask{
-		TargetDomainID:          domainID,
-		TargetWorkflowID:        workflowID,
-		TargetRunID:             runID,
-		TargetChildWorkflowOnly: childWorkflowOnly,
-		InitiatedID:             initiatedID,
-	}
-}
-
-func (r *historyReplicator) scheduleSignalWorkflowTransferTask(domainID string, workflowID string,
-	runID string, childWorkflowOnly bool, initiatedID int64) persistence.Task {
-	return &persistence.SignalExecutionTask{
-		TargetDomainID:          domainID,
-		TargetWorkflowID:        workflowID,
-		TargetRunID:             runID,
-		TargetChildWorkflowOnly: childWorkflowOnly,
-		InitiatedID:             initiatedID,
-	}
-}
-
-func (r *historyReplicator) scheduleDeleteHistoryTransferTask() persistence.Task {
-	return &persistence.CloseExecutionTask{}
-}
-
-func (r *historyReplicator) scheduleDecisionTimerTask(event *shared.HistoryEvent, scheduleID int64, attempt int64, timeoutSecond int32) persistence.Task {
-	return r.getTimerBuilder(event).AddStartToCloseDecisionTimoutTask(scheduleID, attempt, timeoutSecond)
-}
-
-func (r *historyReplicator) scheduleUserTimerTask(event *shared.HistoryEvent, msBuilder *mutableStateBuilder) persistence.Task {
-	return r.getTimerBuilder(event).GetUserTimerTaskIfNeeded(msBuilder)
-}
-
-func (r *historyReplicator) scheduleActivityTimerTask(event *shared.HistoryEvent, msBuilder *mutableStateBuilder) persistence.Task {
-	return r.getTimerBuilder(event).GetActivityTimerTaskIfNeeded(msBuilder)
-}
-
-func (r *historyReplicator) scheduleWorkflowTimerTask(event *shared.HistoryEvent, msBuilder *mutableStateBuilder) persistence.Task {
-	now := time.Unix(0, event.GetTimestamp())
-	timeout := now.Add(time.Duration(msBuilder.executionInfo.WorkflowTimeout) * time.Second)
-	return &persistence.WorkflowTimeoutTask{VisibilityTimestamp: timeout}
-}
-
-func (r *historyReplicator) scheduleDeleteHistoryTimerTask(event *shared.HistoryEvent, domainID string) (persistence.Task, error) {
-	var retentionInDays int32
-	domainEntry, err := r.shard.GetDomainCache().GetDomainByID(domainID)
-	if err != nil {
-		if _, ok := err.(*shared.EntityNotExistsError); !ok {
-			return nil, err
-		}
-	}
-	retentionInDays = domainEntry.GetConfig().Retention
-	return r.getTimerBuilder(event).createDeleteHistoryEventTimerTask(time.Duration(retentionInDays) * time.Hour * 24), nil
-}
-
-func (r *historyReplicator) getTaskList(msBuilder *mutableStateBuilder) string {
-	// on the standby side, sticky tasklist is meaningless, so always use the normal tasklist
-	return msBuilder.executionInfo.TaskList
-}
-
-func (r *historyReplicator) getTimerBuilder(event *shared.HistoryEvent) *timerBuilder {
-	timeSource := common.NewFakeTimeSource()
-	now := time.Unix(0, event.GetTimestamp())
-	timeSource.Update(now)
-	return newTimerBuilder(r.shard.GetConfig(), r.logger, timeSource)
-}
-
-func (r *historyReplicator) notify(clusterName string, now time.Time, transferTasks []persistence.Task, timerTasks []persistence.Task) {
+func (r *historyReplicator) notify(clusterName string, now time.Time, transferTasks []persistence.Task,
+	timerTasks []persistence.Task) {
 	r.shard.SetCurrentTime(clusterName, now)
 	r.historyEngine.txProcessor.NotifyNewTask(clusterName, now, transferTasks)
 	r.historyEngine.timerProcessor.NotifyNewTimers(clusterName, now, timerTasks)
