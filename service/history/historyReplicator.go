@@ -75,9 +75,6 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 	if err != nil {
 		return err
 	}
-	if len(request.History.Events) == 0 {
-		return nil
-	}
 
 	execution := *request.WorkflowExecution
 
@@ -112,7 +109,7 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 		}
 
 		// Check if this is the first event after failover
-		if rState.CurrentVersion < request.GetVersion() {
+		if rState.LastWriteVersion < request.GetVersion() {
 			previousActiveCluster := r.metadataMgr.ClusterNameForFailoverVersion(rState.CurrentVersion)
 			ri, ok := request.ReplicationInfo[previousActiveCluster]
 			if !ok {
