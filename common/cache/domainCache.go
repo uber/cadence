@@ -227,7 +227,7 @@ func (c *domainCache) getDomain(key, id, name string, cache Cache) (*DomainCache
 
 func (c *domainCache) triggerDomainChangeCallback(prevDomain *DomainCacheEntry, nextDomain *DomainCacheEntry) {
 
-	if ContentEqual(prevDomain, nextDomain) {
+	if prevDomain.configVersion < nextDomain.configVersion {
 		return
 	}
 
@@ -307,34 +307,4 @@ func (entry *DomainCacheEntry) GetDomainNotActiveErr() error {
 		return nil
 	}
 	return errors.NewDomainNotActiveError(entry.info.Name, entry.clusterMetadata.GetCurrentClusterName(), entry.replicationConfig.ActiveClusterName)
-}
-
-// ContentEqual return true if 2 domain cache entry have the same content
-func ContentEqual(this *DomainCacheEntry, that *DomainCacheEntry) bool {
-	// we do not check the mutex or expiry
-	if *this.info != *that.info {
-		return false
-	} else if *this.config != *that.config {
-		return false
-	} else if this.configVersion != that.configVersion {
-		return false
-	} else if this.failoverVersion != that.failoverVersion {
-		return false
-	} else if this.isGlobalDomain != that.isGlobalDomain {
-		return false
-	}
-
-	// finally check the replication config
-	if this.replicationConfig.ActiveClusterName != that.replicationConfig.ActiveClusterName {
-		return false
-	} else if len(this.replicationConfig.Clusters) != len(that.replicationConfig.Clusters) {
-		return false
-	}
-	for index, cluster := range this.replicationConfig.Clusters {
-		if cluster != that.replicationConfig.Clusters[index] {
-			return false
-		}
-	}
-
-	return true
 }
