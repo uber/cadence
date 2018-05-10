@@ -81,10 +81,10 @@ func (k *KafkaConfig) getTopicForCadenceCluster(cluster string) string {
 	return k.ClusterToTopic[cluster]
 }
 
-func (k *KafkaConfig) getClusterForTopic(topic string) string {
+func (k *KafkaConfig) getKafkaClusterForTopic(topic string) string {
 	return k.Topics[topic].Cluster
 }
 
-func (k *KafkaConfig) getBrokersForCluster(cluster string) []string {
+func (k *KafkaConfig) getBrokersForKafkaCluster(cluster string) []string {
 	return k.Clusters[cluster].Brokers
 }
