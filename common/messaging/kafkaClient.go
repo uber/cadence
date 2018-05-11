@@ -32,7 +32,7 @@ import (
 type (
 	kafkaClient struct {
 		config *KafkaConfig
-		client *kafkaclient.Client
+		client kafkaclient.Client
 		logger bark.Logger
 	}
 )
@@ -53,12 +53,12 @@ func (c *kafkaClient) NewConsumer(cadenceCluster, consumerName string, concurren
 					BrokerList: brokers,
 				},
 				RetryQ: kafka.Topic{
-					Name:       strings.Join([]string{topicName, "retry"}, "-"),
+					Name:       strings.Join([]string{topicName, "RETRY"}, "-"),
 					Cluster:    kafkaClusterName,
 					BrokerList: brokers,
 				},
 				DLQ: kafka.Topic{
-					Name:       strings.Join([]string{topicName, "dlq"}, "-"),
+					Name:       strings.Join([]string{topicName, "DLQ"}, "-"),
 					Cluster:    kafkaClusterName,
 					BrokerList: brokers,
 				},
