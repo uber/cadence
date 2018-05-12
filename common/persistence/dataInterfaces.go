@@ -842,6 +842,18 @@ type (
 		DBVersion         int64
 	}
 
+	// ListDomainRequest is used to list domains
+	ListDomainRequest struct {
+		PageSize      int
+		NextPageToken []byte
+	}
+
+	// ListDomainResponse is the response for GetDomain
+	ListDomainResponse struct {
+		Domains       []*GetDomainResponse
+		NextPageToken []byte
+	}
+
 	// DeleteDomainRequest is used to delete domain entry from domains table
 	DeleteDomainRequest struct {
 		ID string
@@ -918,6 +930,7 @@ type (
 		CreateDomain(request *CreateDomainRequest) (*CreateDomainResponse, error)
 		GetDomain(request *GetDomainRequest) (*GetDomainResponse, error)
 		UpdateDomain(request *UpdateDomainRequest) error
+		ListDomain(request *ListDomainRequest) (*ListDomainResponse, error)
 		DeleteDomain(request *DeleteDomainRequest) error
 		DeleteDomainByName(request *DeleteDomainByNameRequest) error
 	}

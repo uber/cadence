@@ -164,6 +164,8 @@ const (
 	PersistenceGetDomainScope
 	// PersistenceUpdateDomainScope tracks UpdateDomain calls made by service to persistence layer
 	PersistenceUpdateDomainScope
+	// PersistenceListDomainScope tracks ListDomain calls made by service to persistence layer
+	PersistenceListDomainScope
 	// PersistenceDeleteDomainScope tracks DeleteDomain calls made by service to persistence layer
 	PersistenceDeleteDomainScope
 	// PersistenceDeleteDomainByNameScope tracks DeleteDomainByName calls made by service to persistence layer
@@ -454,6 +456,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceCreateDomainScope:                             {operation: "CreateDomain", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 		PersistenceGetDomainScope:                                {operation: "GetDomain", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 		PersistenceUpdateDomainScope:                             {operation: "UpdateDomain", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceListDomainScope:                               {operation: "ListDomain", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 		PersistenceDeleteDomainScope:                             {operation: "DeleteDomain", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 		PersistenceDeleteDomainByNameScope:                       {operation: "DeleteDomainByName", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 		PersistenceRecordWorkflowExecutionStartedScope:           {operation: "RecordWorkflowExecutionStarted"},

@@ -468,6 +468,106 @@ func (m *metadataPersistenceSuite) TestDeleteDomain() {
 	m.Nil(resp9)
 }
 
+func (m *metadataPersistenceSuite) TestListDomains() {
+
+	clusterActive1 := "some random active cluster name"
+	clusterStandby1 := "some random standby cluster name"
+	clusters1 := []*ClusterReplicationConfig{
+		&ClusterReplicationConfig{
+			ClusterName: clusterActive1,
+		},
+		&ClusterReplicationConfig{
+			ClusterName: clusterStandby1,
+		},
+	}
+
+	clusterActive2 := "other random active cluster name"
+	clusterStandby2 := "other random standby cluster name"
+	clusters2 := []*ClusterReplicationConfig{
+		&ClusterReplicationConfig{
+			ClusterName: clusterActive2,
+		},
+		&ClusterReplicationConfig{
+			ClusterName: clusterStandby2,
+		},
+	}
+
+	inputDomains := []*GetDomainResponse{
+		&GetDomainResponse{
+			Info: &DomainInfo{
+				ID:          uuid.New(),
+				Name:        "list-domain-test-name-1",
+				Status:      DomainStatusRegistered,
+				Description: "list-domain-test-description-1",
+				OwnerEmail:  "list-domain-test-owner-1",
+			},
+			Config: &DomainConfig{
+				Retention:  109,
+				EmitMetric: true,
+			},
+			ReplicationConfig: &DomainReplicationConfig{
+				ActiveClusterName: clusterActive1,
+				Clusters:          clusters1,
+			},
+			IsGlobalDomain:  true,
+			ConfigVersion:   133,
+			FailoverVersion: 266,
+		},
+		&GetDomainResponse{
+			Info: &DomainInfo{
+				ID:          uuid.New(),
+				Name:        "get-list-test-name-2",
+				Status:      DomainStatusRegistered,
+				Description: "list-domain-test-description-1",
+				OwnerEmail:  "list-domain-test-owner-2",
+			},
+			Config: &DomainConfig{
+				Retention:  326,
+				EmitMetric: false,
+			},
+			ReplicationConfig: &DomainReplicationConfig{
+				ActiveClusterName: clusterActive2,
+				Clusters:          clusters2,
+			},
+			IsGlobalDomain:  false,
+			ConfigVersion:   400,
+			FailoverVersion: 667,
+		},
+	}
+	for _, domain := range inputDomains {
+		_, err := m.CreateDomain(
+			domain.Info,
+			domain.Config,
+			domain.ReplicationConfig,
+			domain.IsGlobalDomain,
+			domain.ConfigVersion,
+			domain.FailoverVersion,
+		)
+		m.Nil(err)
+	}
+
+	var token []byte
+	pageSize := 1
+	outputDomains := make(map[string]*GetDomainResponse)
+ListLoop:
+	for {
+		resp, err := m.ListDomain(pageSize, token)
+		m.Nil(err)
+		token = resp.NextPageToken
+		for _, domain := range resp.Domains {
+			outputDomains[domain.Info.ID] = domain
+		}
+		if len(token) == 0 {
+			break ListLoop
+		}
+	}
+
+	m.Equal(len(inputDomains), len(outputDomains))
+	for _, domain := range inputDomains {
+		m.Equal(domain, outputDomains[domain.Info.ID])
+	}
+}
+
 func (m *metadataPersistenceSuite) CreateDomain(info *DomainInfo, config *DomainConfig,
 	replicationConfig *DomainReplicationConfig, isGlobaldomain bool, configVersion int64, failoverVersion int64) (*CreateDomainResponse, error) {
 	return m.MetadataManager.CreateDomain(&CreateDomainRequest{
@@ -496,6 +596,13 @@ func (m *metadataPersistenceSuite) UpdateDomain(info *DomainInfo, config *Domain
 		ConfigVersion:     configVersion,
 		FailoverVersion:   failoverVersion,
 		DBVersion:         dbVersion,
+	})
+}
+
+func (m *metadataPersistenceSuite) ListDomain(pageSize int, pageToken []byte) (*ListDomainResponse, error) {
+	return m.MetadataManager.ListDomain(&ListDomainRequest{
+		PageSize:      pageSize,
+		NextPageToken: pageToken,
 	})
 }
 

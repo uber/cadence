@@ -81,6 +81,15 @@ const (
 		`WHERE name = ? ` +
 		`IF db_version = ? `
 
+	templateListDomain = `SELECT domain.id, domain.name, domain.status, domain.description, ` +
+		`domain.owner_email, config.retention, config.emit_metric, ` +
+		`replication_config.active_cluster_name, replication_config.clusters, ` +
+		`is_global_domain, ` +
+		`config_version, ` +
+		`failover_version, ` +
+		`db_version ` +
+		`FROM domains_by_name`
+
 	templateDeleteDomainQuery = `DELETE FROM domains ` +
 		`WHERE id = ?`
 
@@ -296,6 +305,51 @@ func (m *cassandraMetadataPersistence) UpdateDomain(request *UpdateDomainRequest
 	}
 
 	return nil
+}
+
+func (m *cassandraMetadataPersistence) ListDomain(request *ListDomainRequest) (*ListDomainResponse, error) {
+	var query *gocql.Query
+
+	query = m.session.Query(templateListDomain)
+	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
+	if iter == nil {
+		return nil, &workflow.InternalServiceError{
+			Message: "ListDomains operation failed.  Not able to create query iterator.",
+		}
+	}
+
+	continueScan := true
+	response := &ListDomainResponse{}
+	for continueScan {
+		domain := &GetDomainResponse{
+			Info:              &DomainInfo{},
+			Config:            &DomainConfig{},
+			ReplicationConfig: &DomainReplicationConfig{},
+		}
+		var replicationClusters []map[string]interface{}
+
+		continueScan = iter.Scan(
+			&domain.Info.ID, &domain.Info.Name, &domain.Info.Status, &domain.Info.Description, &domain.Info.OwnerEmail,
+			&domain.Config.Retention, &domain.Config.EmitMetric,
+			&domain.ReplicationConfig.ActiveClusterName, &replicationClusters,
+			&domain.IsGlobalDomain, &domain.ConfigVersion, &domain.FailoverVersion, &domain.DBVersion,
+		)
+		domain.ReplicationConfig.ActiveClusterName = GetOrUseDefaultActiveCluster(m.currentClusterName, domain.ReplicationConfig.ActiveClusterName)
+		domain.ReplicationConfig.Clusters = deserializeClusterConfigs(replicationClusters)
+		domain.ReplicationConfig.Clusters = GetOrUseDefaultClusters(m.currentClusterName, domain.ReplicationConfig.Clusters)
+		response.Domains = append(response.Domains, domain)
+	}
+
+	nextPageToken := iter.PageState()
+	response.NextPageToken = make([]byte, len(nextPageToken))
+	copy(response.NextPageToken, nextPageToken)
+	if err := iter.Close(); err != nil {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("ListDomains operation failed. Error: %v", err),
+		}
+	}
+
+	return response, nil
 }
 
 func (m *cassandraMetadataPersistence) DeleteDomain(request *DeleteDomainRequest) error {
