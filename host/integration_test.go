@@ -120,7 +120,8 @@ func (s *integrationSuite) TearDownSuite() {
 }
 
 func (s *integrationSuite) SetupTest() {
-
+	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
+	s.Assertions = require.New(s.T())
 }
 
 func (s *integrationSuite) TearDownTest() {
