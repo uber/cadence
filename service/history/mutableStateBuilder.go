@@ -186,6 +186,49 @@ func (e *mutableStateBuilder) Load(state *persistence.WorkflowMutableState) {
 	}
 }
 
+func (e *mutableStateBuilder) ResetSnapshot() *persistence.ResetMutableStateRequest {
+	insertActivities := make([]*persistence.ActivityInfo, 0, len(e.pendingActivityInfoIDs))
+	for _, info := range e.pendingActivityInfoIDs {
+		insertActivities = append(insertActivities, info)
+	}
+
+	insertTimers := make([]*persistence.TimerInfo, 0, len(e.pendingTimerInfoIDs))
+	for _, info := range e.pendingTimerInfoIDs {
+		insertTimers = append(insertTimers, info)
+	}
+
+	insertChildExecutions := make([]*persistence.ChildExecutionInfo, 0, len(e.pendingChildExecutionInfoIDs))
+	for _, info := range e.pendingChildExecutionInfoIDs {
+		insertChildExecutions = append(insertChildExecutions, info)
+	}
+
+	insertRequestCancels := make([]*persistence.RequestCancelInfo, 0, len(e.pendingRequestCancelInfoIDs))
+	for _, info := range e.pendingRequestCancelInfoIDs {
+		insertRequestCancels = append(insertRequestCancels, info)
+	}
+
+	insertSignals := make([]*persistence.SignalInfo, 0, len(e.pendingSignalInfoIDs))
+	for _, info := range e.pendingSignalInfoIDs {
+		insertSignals = append(insertSignals, info)
+	}
+
+	insertSignalRequested := make([]string, 0, len(e.pendingSignalRequestedIDs))
+	for id := range e.pendingSignalRequestedIDs {
+		insertSignalRequested = append(insertSignalRequested, id)
+	}
+
+	return &persistence.ResetMutableStateRequest{
+		ExecutionInfo:             e.executionInfo,
+		ReplicationState:          e.replicationState,
+		InsertActivityInfos:       insertActivities,
+		InsertTimerInfos:          insertTimers,
+		InsertChildExecutionInfos: insertChildExecutions,
+		InsertRequestCancelInfos:  insertRequestCancels,
+		InsertSignalInfos:         insertSignals,
+		InsertSignalRequestedIDs:  insertSignalRequested,
+	}
+}
+
 func (e *mutableStateBuilder) FlushBufferedEvents() error {
 	// put new events into 2 buckets:
 	//  1) if the event was added while there was in-flight decision, then put it in buffered bucket
@@ -279,12 +322,10 @@ func (e *mutableStateBuilder) updateReplicationStateVersion(version int64) {
 // Assumption: It is expected CurrentVersion on replication state is updated at the start of transaction when
 // mutableState is loaded for this workflow execution.
 func (e *mutableStateBuilder) updateReplicationStateLastEventID(clusterName string, lastEventID int64) {
-	if clusterName == "" {
-		// ReplicationState update for active cluster
-		e.replicationState.LastWriteVersion = e.replicationState.CurrentVersion
-		// TODO: Rename this to NextEventID to stay consistent naming convention with rest of code base
-		e.replicationState.LastWriteEventID = lastEventID
-	} else {
+	e.replicationState.LastWriteVersion = e.replicationState.CurrentVersion
+	// TODO: Rename this to NextEventID to stay consistent naming convention with rest of code base
+	e.replicationState.LastWriteEventID = lastEventID
+	if clusterName != "" {
 		// ReplicationState update for passive cluster
 		if e.replicationState.LastReplicationInfo == nil {
 			e.replicationState.LastReplicationInfo = make(map[string]*persistence.ReplicationInfo)
@@ -2091,25 +2132,28 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(sour
 		newStateBuilder.updateReplicationStateLastEventID(sourceClusterName, di.ScheduleID)
 	}
 
+	newTransferTasks := []persistence.Task{&persistence.DecisionTask{
+		DomainID:   domainID,
+		TaskList:   newStateBuilder.executionInfo.TaskList,
+		ScheduleID: di.ScheduleID,
+	}}
+	setTaskVersion(newStateBuilder.GetCurrentVersion(), newTransferTasks, nil)
+
 	e.continueAsNew = &persistence.CreateWorkflowExecutionRequest{
-		RequestID:            uuid.New(),
-		DomainID:             domainID,
-		Execution:            newExecution,
-		ParentDomainID:       parentDomainID,
-		ParentExecution:      parentExecution,
-		InitiatedID:          initiatedID,
-		TaskList:             newStateBuilder.executionInfo.TaskList,
-		WorkflowTypeName:     newStateBuilder.executionInfo.WorkflowTypeName,
-		WorkflowTimeout:      newStateBuilder.executionInfo.WorkflowTimeout,
-		DecisionTimeoutValue: newStateBuilder.executionInfo.DecisionTimeoutValue,
-		ExecutionContext:     nil,
-		NextEventID:          newStateBuilder.GetNextEventID(),
-		LastProcessedEvent:   common.EmptyEventID,
-		TransferTasks: []persistence.Task{&persistence.DecisionTask{
-			DomainID:   domainID,
-			TaskList:   newStateBuilder.executionInfo.TaskList,
-			ScheduleID: di.ScheduleID,
-		}},
+		RequestID:                   uuid.New(),
+		DomainID:                    domainID,
+		Execution:                   newExecution,
+		ParentDomainID:              parentDomainID,
+		ParentExecution:             parentExecution,
+		InitiatedID:                 initiatedID,
+		TaskList:                    newStateBuilder.executionInfo.TaskList,
+		WorkflowTypeName:            newStateBuilder.executionInfo.WorkflowTypeName,
+		WorkflowTimeout:             newStateBuilder.executionInfo.WorkflowTimeout,
+		DecisionTimeoutValue:        newStateBuilder.executionInfo.DecisionTimeoutValue,
+		ExecutionContext:            nil,
+		NextEventID:                 newStateBuilder.GetNextEventID(),
+		LastProcessedEvent:          common.EmptyEventID,
+		TransferTasks:               newTransferTasks,
 		DecisionVersion:             di.Version,
 		DecisionScheduleID:          di.ScheduleID,
 		DecisionStartedID:           di.StartedID,
