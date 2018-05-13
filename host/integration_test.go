@@ -1500,7 +1500,7 @@ func (s *integrationSuite) TestActivityHeartbeatTimeouts() {
 		WorkflowType: workflowType,
 		TaskList:     taskList,
 		Input:        nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(300),
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(70),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 		Identity:                            common.StringPtr(identity),
 	}
@@ -1531,9 +1531,9 @@ func (s *integrationSuite) TestActivityHeartbeatTimeouts() {
 						ActivityType: &workflow.ActivityType{Name: common.StringPtr(activityName)},
 						TaskList:     &workflow.TaskList{Name: &tl},
 						Input:        []byte("Heartbeat"),
-						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(300),
+						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(60),
 						ScheduleToStartTimeoutSeconds: common.Int32Ptr(5),
-						StartToCloseTimeoutSeconds:    common.Int32Ptr(300),
+						StartToCloseTimeoutSeconds:    common.Int32Ptr(60),
 						HeartbeatTimeoutSeconds:       common.Int32Ptr(3),
 					},
 				}
@@ -1543,7 +1543,7 @@ func (s *integrationSuite) TestActivityHeartbeatTimeouts() {
 
 			return nil, decisions, nil
 		} else if previousStartedEventID > 0 {
-			ProcessLoop:
+		ProcessLoop:
 			for _, event := range history.Events[previousStartedEventID:] {
 				if event.GetEventType() == workflow.EventTypeActivityTaskScheduled {
 					lastHeartbeatMap[event.GetEventId()] = 0
@@ -1617,6 +1617,7 @@ func (s *integrationSuite) TestActivityHeartbeatTimeouts() {
 				}
 
 				secondsToSleep := rand.Intn(3)
+				s.logger.Infof("Activity ID '%v' sleeping for: %v seconds", activityID, secondsToSleep)
 				time.Sleep(time.Duration(secondsToSleep) * time.Second)
 			}
 		}
@@ -1666,8 +1667,12 @@ func (s *integrationSuite) TestActivityHeartbeatTimeouts() {
 	})
 	s.True(workflowComplete)
 	s.False(failWorkflow, failReason)
-	//s.True(activityATimedout)
-	//s.Equal(5, activityALastHeartbeat)
+	s.Equal(activityCount, activitiesTimedout)
+	s.Equal(activityCount, len(lastHeartbeatMap))
+	for aID, lastHeartbeat := range lastHeartbeatMap {
+		s.logger.Infof("Last heartbeat for activity with scheduleID '%v': %v", aID, lastHeartbeat)
+		s.Equal(9, lastHeartbeat)
+	}
 }
 
 func (s *integrationSuite) TestSequential_UserTimers() {
