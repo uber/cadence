@@ -3,7 +3,7 @@ cassandra:
   keyspace: "cadence_standby"
   visibilityKeyspace: "cadence_visibility_standby"
   consistency: "One"
-  numHistoryShards: 4
+  numHistoryShards: 1
 
 ringpop:
   name: cadence_standby
@@ -62,8 +62,8 @@ clustersInfo:
   masterClusterName: "active"
   currentClusterName: "standby"
   clusterInitialFailoverVersion:
-    active: 0
-    standby: 1
+    active: 1
+    standby: 0
 
 kafka:
   clusters:
@@ -75,3 +75,6 @@ kafka:
       cluster: test
     standby:
       cluster: test
+  cadence-cluster-to-topic:
+    active: active
+    standby: standby

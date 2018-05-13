@@ -108,6 +108,20 @@ func (c *workflowExecutionContext) loadWorkflowExecution() (*mutableStateBuilder
 	return msBuilder, nil
 }
 
+func (c *workflowExecutionContext) resetWorkflowExecution(resetBuilder *mutableStateBuilder) (*mutableStateBuilder,
+	error) {
+	snapshotRequest := resetBuilder.ResetSnapshot()
+	snapshotRequest.Condition = c.updateCondition
+
+	err := c.shard.ResetMutableState(snapshotRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	c.clear()
+	return c.loadWorkflowExecution()
+}
+
 func (c *workflowExecutionContext) updateWorkflowExecutionWithContext(context []byte, transferTasks []persistence.Task,
 	timerTasks []persistence.Task, transactionID int64) error {
 	c.msBuilder.executionInfo.ExecutionContext = context
@@ -235,14 +249,7 @@ func (c *workflowExecutionContext) updateHelper(builder *historyBuilder, transfe
 		replicationTasks = append(replicationTasks, c.msBuilder.createReplicationTask())
 	}
 
-	// this is the current failover version
-	version := c.msBuilder.GetCurrentVersion()
-	for _, task := range transferTasks {
-		task.SetVersion(version)
-	}
-	for _, task := range timerTasks {
-		task.SetVersion(version)
-	}
+	setTaskVersion(c.msBuilder.GetCurrentVersion(), transferTasks, timerTasks)
 
 	if err1 := c.updateWorkflowExecutionWithRetry(&persistence.UpdateWorkflowExecutionRequest{
 		ExecutionInfo:                 c.msBuilder.executionInfo,
