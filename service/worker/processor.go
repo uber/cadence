@@ -163,15 +163,10 @@ func (p *replicationTaskProcessor) worker(workerWG *sync.WaitGroup) {
 	for {
 		select {
 		case msg, ok := <-p.consumer.Messages():
-			print := func(value interface{}) string {
-				bytes, _ := json.MarshalIndent(value, "", "  ")
-				return string(bytes)
-			}
 			if !ok {
 				p.logger.Info("Worker for replication task processor shutting down.")
 				return // channel closed
 			}
-			fmt.Printf("----------\n%v\n----------\n", print(msg.Value()))
 
 			p.metricsClient.IncCounter(metrics.ReplicatorScope, metrics.ReplicatorMessages)
 			sw := p.metricsClient.StartTimer(metrics.ReplicatorScope, metrics.ReplicatorLatency)

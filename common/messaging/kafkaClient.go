@@ -21,8 +21,6 @@
 package messaging
 
 import (
-	"strings"
-
 	"github.com/Shopify/sarama"
 	"github.com/uber-common/bark"
 	"github.com/uber-go/kafka-client"
@@ -39,36 +37,34 @@ type (
 
 // NewConsumer is used to create a Kafka consumer
 func (c *kafkaClient) NewConsumer(cadenceCluster, consumerName string, concurrency int) (kafka.Consumer, error) {
-	topicName := c.config.getTopicForCadenceCluster(cadenceCluster)
-	kafkaClusterName := c.config.getKafkaClusterForTopic(topicName)
-	brokers := c.config.getBrokersForKafkaCluster(kafkaClusterName)
+	topics := c.config.getTopicsForCadenceCluster(cadenceCluster)
 
-	consumerConfig := &kafka.ConsumerConfig{
-		GroupName: consumerName,
-		TopicList: kafka.ConsumerTopicList{
-			kafka.ConsumerTopic{
-				Topic: kafka.Topic{
-					Name:       topicName,
-					Cluster:    kafkaClusterName,
-					BrokerList: brokers,
-				},
-				RetryQ: kafka.Topic{
-					Name:       strings.Join([]string{topicName, "RETRY"}, "-"),
-					Cluster:    kafkaClusterName,
-					BrokerList: brokers,
-				},
-				DLQ: kafka.Topic{
-					Name:       strings.Join([]string{topicName, "DLQ"}, "-"),
-					Cluster:    kafkaClusterName,
-					BrokerList: brokers,
-				},
+	topicKafkaCluster := c.config.getKafkaClusterForTopic(topics.Topic)
+	retryTopicKafkaCluster := c.config.getKafkaClusterForTopic(topics.RetryTopic)
+	dqlTopicKafkaCluster := c.config.getKafkaClusterForTopic(topics.DLQTopic)
+	topicList := kafka.ConsumerTopicList{
+		kafka.ConsumerTopic{
+			Topic: kafka.Topic{
+				Name:       topics.Topic,
+				Cluster:    topicKafkaCluster,
+				BrokerList: c.config.getBrokersForKafkaCluster(topicKafkaCluster),
+			},
+			RetryQ: kafka.Topic{
+				Name:       topics.RetryTopic,
+				Cluster:    retryTopicKafkaCluster,
+				BrokerList: c.config.getBrokersForKafkaCluster(retryTopicKafkaCluster),
+			},
+			DLQ: kafka.Topic{
+				Name:       topics.DLQTopic,
+				Cluster:    dqlTopicKafkaCluster,
+				BrokerList: c.config.getBrokersForKafkaCluster(dqlTopicKafkaCluster),
 			},
 		},
-		Concurrency: concurrency,
 	}
 
+	consumerConfig := kafka.NewConsumerConfig(consumerName, topicList)
+	consumerConfig.Concurrency = concurrency
 	consumerConfig.Offsets.Initial.Offset = kafka.OffsetNewest
-	consumerConfig.Offsets.Initial.Reset = true
 
 	consumer, err := c.client.NewConsumer(consumerConfig)
 	return consumer, err
@@ -76,8 +72,8 @@ func (c *kafkaClient) NewConsumer(cadenceCluster, consumerName string, concurren
 
 // NewProducer is used to create a Kafka producer for shipping replication tasks
 func (c *kafkaClient) NewProducer(cadenceCluster string) (Producer, error) {
-	topicName := c.config.getTopicForCadenceCluster(cadenceCluster)
-	kafkaClusterName := c.config.getKafkaClusterForTopic(topicName)
+	topics := c.config.getTopicsForCadenceCluster(cadenceCluster)
+	kafkaClusterName := c.config.getKafkaClusterForTopic(topics.Topic)
 	brokers := c.config.getBrokersForKafkaCluster(kafkaClusterName)
 
 	producer, err := sarama.NewSyncProducer(brokers, nil)
@@ -85,5 +81,5 @@ func (c *kafkaClient) NewProducer(cadenceCluster string) (Producer, error) {
 		return nil, err
 	}
 
-	return NewKafkaProducer(topicName, producer, c.logger), nil
+	return NewKafkaProducer(topics.Topic, producer, c.logger), nil
 }
