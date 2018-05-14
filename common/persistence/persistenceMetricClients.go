@@ -553,6 +553,20 @@ func (p *metadataPersistenceClient) UpdateDomain(request *UpdateDomainRequest) e
 	return err
 }
 
+func (p *metadataPersistenceClient) ListDomain(request *ListDomainRequest) (*ListDomainResponse, error) {
+	p.metricClient.IncCounter(metrics.PersistenceListDomainScope, metrics.PersistenceRequests)
+
+	sw := p.metricClient.StartTimer(metrics.PersistenceListDomainScope, metrics.PersistenceLatency)
+	response, err := p.persistence.ListDomain(request)
+	sw.Stop()
+
+	if err != nil {
+		p.updateErrorMetric(metrics.PersistenceListDomainScope, err)
+	}
+
+	return response, err
+}
+
 func (p *metadataPersistenceClient) DeleteDomain(request *DeleteDomainRequest) error {
 	p.metricClient.IncCounter(metrics.PersistenceDeleteDomainScope, metrics.PersistenceRequests)
 
