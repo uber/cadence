@@ -283,8 +283,6 @@ Update_History_Loop:
 				case workflow.TimeoutTypeHeartbeat:
 					{
 						t.metricsClient.IncCounter(metrics.TimerTaskActivityTimeoutScope, metrics.HeartbeatTimeoutCounter)
-						t.logger.Debugf("Activity Heartbeat expired: %+v", *ai)
-
 						if msBuilder.AddActivityTaskTimedOutEvent(ai.ScheduleID, ai.StartedID, timeoutType, ai.Details) == nil {
 							return errFailedToAddTimeoutEvent
 						}
