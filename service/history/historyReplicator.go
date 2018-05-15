@@ -207,7 +207,7 @@ func (r *historyReplicator) ApplyReplicationTask(context *workflowExecutionConte
 	case shared.EventTypeWorkflowExecutionStarted:
 		// TODO: Support for child execution
 		var parentExecution *shared.WorkflowExecution
-		initiatedID := emptyEventID
+		initiatedID := common.EmptyEventID
 		parentDomainID := ""
 
 		// Serialize the history
@@ -249,9 +249,9 @@ func (r *historyReplicator) ApplyReplicationTask(context *workflowExecutionConte
 		}
 
 		// Set decision attributes after replication of history events
-		decisionVersionID := emptyVersion
-		decisionScheduleID := emptyEventID
-		decisionStartID := emptyEventID
+		decisionVersionID := common.EmptyVersion
+		decisionScheduleID := common.EmptyEventID
+		decisionStartID := common.EmptyEventID
 		decisionTimeout := int32(0)
 		if di != nil {
 			decisionVersionID = di.Version
@@ -259,6 +259,7 @@ func (r *historyReplicator) ApplyReplicationTask(context *workflowExecutionConte
 			decisionStartID = di.StartedID
 			decisionTimeout = di.DecisionTimeout
 		}
+		setTaskVersion(msBuilder.GetCurrentVersion(), sBuilder.transferTasks, sBuilder.timerTasks)
 
 		createWorkflow := func(isBrandNew bool, prevRunID string) (string, error) {
 			_, err = r.shard.CreateWorkflowExecution(&persistence.CreateWorkflowExecutionRequest{
@@ -274,7 +275,7 @@ func (r *historyReplicator) ApplyReplicationTask(context *workflowExecutionConte
 				DecisionTimeoutValue:        msBuilder.executionInfo.DecisionTimeoutValue,
 				ExecutionContext:            nil,
 				NextEventID:                 msBuilder.GetNextEventID(),
-				LastProcessedEvent:          emptyEventID,
+				LastProcessedEvent:          common.EmptyEventID,
 				TransferTasks:               sBuilder.transferTasks,
 				DecisionVersion:             decisionVersionID,
 				DecisionScheduleID:          decisionScheduleID,
