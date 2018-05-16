@@ -242,6 +242,19 @@ Update_History_Loop:
 			return nil
 		}
 
+		ai, running := msBuilder.GetActivityInfo(scheduleID)
+		if running {
+			// If current one is HB task then we may need to create the next heartbeat timer.  Clear the create flag for this
+			// heartbeat timer so we can create it again if needed.
+			// NOTE: When record activity HB comes in we only update last heartbeat timestamp, this is the place
+			// where we create next timer task based on that new updated timestamp.
+			isHeartBeatTask := timerTask.TimeoutType == int(workflow.TimeoutTypeHeartbeat)
+			if isHeartBeatTask {
+				ai.TimerTaskStatus = ai.TimerTaskStatus &^ TimerTaskStatusCreatedHeartbeat
+				msBuilder.UpdateActivity(ai)
+			}
+		}
+
 		var timerTasks []persistence.Task
 		updateHistory := false
 		createNewTimer := false
@@ -302,17 +315,8 @@ Update_History_Loop:
 				}
 			} else {
 				// See if we have next timer in list to be created.
-				isHeartBeatTask := timerTask.TimeoutType == int(workflow.TimeoutTypeHeartbeat)
-
-				// Create next timer task if we don't have one (or)
-				// if current one is HB task and we need to create next HB task for the same.
-				// NOTE: When record activity HB comes in we only update last heartbeat timestamp, this is the place
-				// where we create next timer task based on that new updated timestamp.
-				// REMOVE IN NEXT RELEASE: PR #658 fixes an issue with heartbeat timers which require us to use scheduleID
-				// for activity in the timertask.  But we still need to check if the ID matches Started eventID or
-				// bufferedEventID due to the heartbeat timers created before the bugfix.
-				if !td.TaskCreated || (isHeartBeatTask && (scheduleID == td.EventID || scheduleID == ai.StartedID ||
-					scheduleID == bufferedEventID)) {
+				// Create next timer task if we don't have one
+				if !td.TaskCreated {
 					nextTask := tBuilder.createNewTask(td)
 					timerTasks = []persistence.Task{nextTask}
 					at := nextTask.(*persistence.ActivityTimeoutTask)
