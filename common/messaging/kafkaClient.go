@@ -36,26 +36,27 @@ type (
 )
 
 // NewConsumer is used to create a Kafka consumer
-func (c *kafkaClient) NewConsumer(cadenceCluster, consumerName string, concurrency int) (kafka.Consumer, error) {
-	topics := c.config.getTopicsForCadenceCluster(cadenceCluster)
+func (c *kafkaClient) NewConsumer(currentCluster, sourceCluster, consumerName string, concurrency int) (kafka.Consumer, error) {
+	currentTopics := c.config.getTopicsForCadenceCluster(currentCluster)
+	sourceTopics := c.config.getTopicsForCadenceCluster(sourceCluster)
 
-	topicKafkaCluster := c.config.getKafkaClusterForTopic(topics.Topic)
-	retryTopicKafkaCluster := c.config.getKafkaClusterForTopic(topics.RetryTopic)
-	dqlTopicKafkaCluster := c.config.getKafkaClusterForTopic(topics.DLQTopic)
+	topicKafkaCluster := c.config.getKafkaClusterForTopic(sourceTopics.Topic)
+	retryTopicKafkaCluster := c.config.getKafkaClusterForTopic(currentTopics.RetryTopic)
+	dqlTopicKafkaCluster := c.config.getKafkaClusterForTopic(currentTopics.DLQTopic)
 	topicList := kafka.ConsumerTopicList{
 		kafka.ConsumerTopic{
 			Topic: kafka.Topic{
-				Name:       topics.Topic,
+				Name:       sourceTopics.Topic,
 				Cluster:    topicKafkaCluster,
 				BrokerList: c.config.getBrokersForKafkaCluster(topicKafkaCluster),
 			},
 			RetryQ: kafka.Topic{
-				Name:       topics.RetryTopic,
+				Name:       currentTopics.RetryTopic,
 				Cluster:    retryTopicKafkaCluster,
 				BrokerList: c.config.getBrokersForKafkaCluster(retryTopicKafkaCluster),
 			},
 			DLQ: kafka.Topic{
-				Name:       topics.DLQTopic,
+				Name:       currentTopics.DLQTopic,
 				Cluster:    dqlTopicKafkaCluster,
 				BrokerList: c.config.getBrokersForKafkaCluster(dqlTopicKafkaCluster),
 			},
@@ -71,8 +72,8 @@ func (c *kafkaClient) NewConsumer(cadenceCluster, consumerName string, concurren
 }
 
 // NewProducer is used to create a Kafka producer for shipping replication tasks
-func (c *kafkaClient) NewProducer(cadenceCluster string) (Producer, error) {
-	topics := c.config.getTopicsForCadenceCluster(cadenceCluster)
+func (c *kafkaClient) NewProducer(sourceCluster string) (Producer, error) {
+	topics := c.config.getTopicsForCadenceCluster(sourceCluster)
 	kafkaClusterName := c.config.getKafkaClusterForTopic(topics.Topic)
 	brokers := c.config.getBrokersForKafkaCluster(kafkaClusterName)
 
