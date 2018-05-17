@@ -592,6 +592,7 @@ const (
 	CadenceFailures
 	CadenceLatency
 	CadenceErrBadRequestCounter
+	CadenceErrDomainNotActiveCounter
 	CadenceErrServiceBusyCounter
 	CadenceErrEntityNotExistsCounter
 	CadenceErrExecutionAlreadyStartedCounter
@@ -690,6 +691,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		CadenceFailures:                               {metricName: "cadence.errors", metricType: Counter},
 		CadenceLatency:                                {metricName: "cadence.latency", metricType: Timer},
 		CadenceErrBadRequestCounter:                   {metricName: "cadence.errors.bad-request", metricType: Counter},
+		CadenceErrDomainNotActiveCounter:              {metricName: "cadence.errors.domain-not-active", metricType: Counter},
 		CadenceErrServiceBusyCounter:                  {metricName: "cadence.errors.service-busy", metricType: Counter},
 		CadenceErrEntityNotExistsCounter:              {metricName: "cadence.errors.entity-not-exists", metricType: Counter},
 		CadenceErrExecutionAlreadyStartedCounter:      {metricName: "cadence.errors.execution-already-started", metricType: Counter},

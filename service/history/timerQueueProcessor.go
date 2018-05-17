@@ -125,8 +125,12 @@ func (t *timerQueueProcessorImpl) NotifyNewTimers(clusterName string, currentTim
 }
 
 func (t *timerQueueProcessorImpl) FailoverDomain(domainID string, standbyClusterName string) {
+	minLevel := t.shard.GetTimerClusterAckLevel(standbyClusterName)
+	// the ack manager is exclusive, so just add a cassandra min presicition
+	maxLevel := t.activeTimerProcessor.timerQueueAckMgr.getReadLevel().VisibilityTimestamp.Add(1 * time.Millisecond)
 	// we should consider make the failover idempotent
-	failoverTimerProcessor := newTimerQueueFailoverProcessor(t.shard, t.historyService, domainID, standbyClusterName, t.matchingClient, t.logger)
+	failoverTimerProcessor := newTimerQueueFailoverProcessor(t.shard, t.historyService, domainID,
+		standbyClusterName, minLevel, maxLevel, t.matchingClient, t.logger)
 	failoverTimerProcessor.Start()
 	failoverTimerProcessor.timerQueueProcessorBase.readAndFanoutTimerTasks()
 }

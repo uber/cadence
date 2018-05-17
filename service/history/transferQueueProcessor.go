@@ -137,8 +137,14 @@ func (t *transferQueueProcessorImpl) NotifyNewTask(clusterName string, currentTi
 }
 
 func (t *transferQueueProcessorImpl) FailoverDomain(domainID string, standbyClusterName string) {
-	// we should consider make the failover idempotent
-	failoverTaskProcessor := newTransferQueueFailoverProcessor(t.shard, t.historyService, t.visibilityMgr, t.matchingClient, t.historyClient, domainID, standbyClusterName, t.logger)
+	// TODO we should consider make the failover idempotent
+	minLevel := t.shard.GetTransferClusterAckLevel(standbyClusterName)
+	// the ack manager is exclusive, so add 1
+	maxLevel := t.activeTaskProcessor.getReadLevel() + 1
+	failoverTaskProcessor := newTransferQueueFailoverProcessor(
+		t.shard, t.historyService, t.visibilityMgr, t.matchingClient, t.historyClient,
+		domainID, standbyClusterName, minLevel, maxLevel, t.logger,
+	)
 	failoverTaskProcessor.Start()
 	failoverTaskProcessor.notifyNewTask()
 }
