@@ -26,6 +26,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
@@ -117,7 +118,12 @@ func (s *server) startService() common.Daemon {
 		s.cfg.ClustersInfo.ClusterInitialFailoverVersions,
 	)
 	// TODO: We need to switch Cadence to use zap logger, until then just pass zap.NewNop
-	params.MessagingClient = s.cfg.Kafka.NewKafkaClient(zap.NewNop(), params.Logger, params.MetricScope)
+	if params.ClusterMetadata.IsGlobalDomainEnabled() {
+		params.MessagingClient = s.cfg.Kafka.NewKafkaClient(zap.NewNop(), params.Logger, params.MetricScope)
+	} else {
+		params.MessagingClient = &mocks.MessagingClient{}
+	}
+
 	params.DynamicConfig = dynamicconfig.NewNopClient()
 
 	var daemon common.Daemon
