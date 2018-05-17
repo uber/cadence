@@ -26,7 +26,6 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
@@ -121,7 +120,7 @@ func (s *server) startService() common.Daemon {
 	if params.ClusterMetadata.IsGlobalDomainEnabled() {
 		params.MessagingClient = s.cfg.Kafka.NewKafkaClient(zap.NewNop(), params.Logger, params.MetricScope)
 	} else {
-		params.MessagingClient = &mocks.MessagingClient{}
+		params.MessagingClient = nil
 	}
 
 	params.DynamicConfig = dynamicconfig.NewNopClient()
