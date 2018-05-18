@@ -4587,39 +4587,11 @@ func (s *integrationSuite) TestDecisionTaskFailed() {
 
 	partialHistory, err := s.getHistoryFrom(s.domainID, *workflowExecution, lastDecisionStartedEvent.GetEventId()+1,
 		lastEvent.GetEventId()+1)
+	s.Nil(err)
+	s.Equal(2, len(partialHistory))
 	decisionCompletedEvent := partialHistory[0]
 	s.Equal(workflow.EventTypeDecisionTaskCompleted, decisionCompletedEvent.GetEventType())
 	s.Equal(lastDecisionStartedEvent.GetEventId()+1, decisionCompletedEvent.GetEventId())
-}
-
-func (s *integrationSuite) getHistoryFrom(domainID string, execution workflow.WorkflowExecution,
-	firstEventID, nextEventID int64) ([]*workflow.HistoryEvent, error) {
-
-	getRequest := &persistence.GetWorkflowExecutionHistoryRequest{
-		DomainID:     domainID,
-		Execution:    execution,
-		FirstEventID: firstEventID,
-		NextEventID:  nextEventID,
-		PageSize:     100,
-	}
-	resp, err := s.HistoryMgr.GetWorkflowExecutionHistory(getRequest)
-	if err != nil {
-		return nil, err
-	}
-
-	historyEvents := []*workflow.HistoryEvent{}
-	factory := persistence.NewHistorySerializerFactory()
-	for _, e := range resp.Events {
-		persistence.SetSerializedHistoryDefaults(&e)
-		s, _ := factory.Get(e.EncodingType)
-		history, err1 := s.Deserialize(&e)
-		if err1 != nil {
-			return nil, err1
-		}
-		historyEvents = append(historyEvents, history.Events...)
-	}
-
-	return historyEvents, nil
 }
 
 func (s *integrationSuite) TestGetWorkflowExecutionHistory_All() {
@@ -5994,6 +5966,36 @@ func (s *integrationSuite) getHistory(domain string, execution *workflow.Workflo
 	}
 
 	return events
+}
+
+func (s *integrationSuite) getHistoryFrom(domainID string, execution workflow.WorkflowExecution,
+	firstEventID, nextEventID int64) ([]*workflow.HistoryEvent, error) {
+
+	getRequest := &persistence.GetWorkflowExecutionHistoryRequest{
+		DomainID:     domainID,
+		Execution:    execution,
+		FirstEventID: firstEventID,
+		NextEventID:  nextEventID,
+		PageSize:     100,
+	}
+	resp, err := s.HistoryMgr.GetWorkflowExecutionHistory(getRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	historyEvents := []*workflow.HistoryEvent{}
+	factory := persistence.NewHistorySerializerFactory()
+	for _, e := range resp.Events {
+		persistence.SetSerializedHistoryDefaults(&e)
+		s, _ := factory.Get(e.EncodingType)
+		history, err1 := s.Deserialize(&e)
+		if err1 != nil {
+			return nil, err1
+		}
+		historyEvents = append(historyEvents, history.Events...)
+	}
+
+	return historyEvents, nil
 }
 
 func (s *integrationSuite) sendSignal(domainName string, execution *workflow.WorkflowExecution, signalName string,
