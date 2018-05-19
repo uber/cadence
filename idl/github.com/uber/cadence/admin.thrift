@@ -45,5 +45,4 @@ service AdminService {
 struct InquiryWorkflowExecutionResponse{
   10: optional string shardId
   20: optional string historyAddr
-  30: optional string matchingAddr
 }
