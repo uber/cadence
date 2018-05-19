@@ -137,6 +137,7 @@ func (c *historyCache) getOrCreateWorkflowExecutionWithTimeout(ctx context.Conte
 
 	if err := context.locker.Lock(ctx); err != nil {
 		// ctx is done before lock can be acquired
+		c.Release(key)
 		return nil, nil, err
 	}
 	return context, releaseFunc, nil
