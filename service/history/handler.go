@@ -40,6 +40,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 // Handler - Thrift handler inteface for history service
@@ -882,7 +883,7 @@ func (h *Handler) convertError(err error) error {
 }
 
 func (h *Handler) updateErrorMetric(scope int, err error) {
-	switch err.(type) {
+	switch err := err.(type) {
 	case *hist.ShardOwnershipLostError:
 		h.metricsClient.IncCounter(scope, metrics.CadenceErrShardOwnershipLostCounter)
 	case *hist.EventAlreadyStartedError:
@@ -895,6 +896,13 @@ func (h *Handler) updateErrorMetric(scope int, err error) {
 		h.metricsClient.IncCounter(scope, metrics.CadenceErrEntityNotExistsCounter)
 	case *gen.CancellationAlreadyRequestedError:
 		h.metricsClient.IncCounter(scope, metrics.CadenceErrCancellationAlreadyRequestedCounter)
+	case *gen.LimitExceededError:
+		h.metricsClient.IncCounter(scope, metrics.CadenceErrLimitExceededCounter)
+	case *yarpcerrors.Status:
+		if err.Code() == yarpcerrors.CodeDeadlineExceeded {
+			h.metricsClient.IncCounter(scope, metrics.CadenceErrContextTimeoutCounter)
+		}
+		h.metricsClient.IncCounter(scope, metrics.CadenceFailures)
 	default:
 		h.metricsClient.IncCounter(scope, metrics.CadenceFailures)
 	}
