@@ -599,6 +599,7 @@ const (
 	CadenceErrDomainAlreadyExistsCounter
 	CadenceErrCancellationAlreadyRequestedCounter
 	CadenceErrQueryFailedCounter
+	CadenceErrContextTimeout
 	PersistenceRequests
 	PersistenceFailures
 	PersistenceLatency
