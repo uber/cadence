@@ -898,6 +898,7 @@ func (h *Handler) updateErrorMetric(scope int, err error) {
 		if err.Code() == yarpcerrors.CodeDeadlineExceeded {
 			h.metricsClient.IncCounter(scope, metrics.CadenceErrContextTimeoutCounter)
 		}
+		h.metricsClient.IncCounter(scope, metrics.CadenceFailures)
 	default:
 		h.metricsClient.IncCounter(scope, metrics.CadenceFailures)
 	}
