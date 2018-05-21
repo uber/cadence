@@ -22,10 +22,6 @@ namespace java com.uber.cadence.admin
 
 include "shared.thrift"
 
-exception AccessDeniedError {
-  1: required string message
-}
-
 /**
 * AdminService provides advanced APIs for debugging and analysis with admin privillege
 **/
@@ -38,7 +34,7 @@ service AdminService {
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
-      4: AccessDeniedError accessDeniedError,
+      4: shared.AccessDeniedError accessDeniedError,
     )
 }
 
