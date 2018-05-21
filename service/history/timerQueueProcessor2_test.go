@@ -107,7 +107,7 @@ func (s *timerQueueProcessor2Suite) SetupTest() {
 			},
 		},
 		nil,
-	).Once()
+	)
 	s.mockProducer = &mocks.KafkaProducer{}
 	s.shardClosedCh = make(chan int, 100)
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)

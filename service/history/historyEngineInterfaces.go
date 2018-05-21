@@ -94,6 +94,7 @@ type (
 		readQueueTasks() ([]queueTaskInfo, bool, error)
 		completeTask(taskID int64)
 		getAckLevel() int64
+		getReadLevel() int64
 		updateAckLevel()
 	}
 
@@ -136,6 +137,7 @@ type (
 		readTimerTasks() ([]*persistence.TimerTaskInfo, *persistence.TimerTaskInfo, bool, error)
 		completeTimerTask(timerTask *persistence.TimerTaskInfo)
 		getAckLevel() TimerSequenceID
+		getReadLevel() TimerSequenceID
 		updateAckLevel()
 	}
 
