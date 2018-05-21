@@ -2161,7 +2161,7 @@ func (s *integrationSuite) TestRateLimitBufferedEvents() {
 		TaskList:     taskList,
 		Input:        nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
 		Identity:                            common.StringPtr(identity),
 	}
 
