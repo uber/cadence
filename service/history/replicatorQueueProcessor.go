@@ -24,6 +24,7 @@ import (
 	"errors"
 
 	"github.com/uber-common/bark"
+	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -59,14 +60,14 @@ func newReplicatorQueueProcessor(shard ShardContext, replicator messaging.Produc
 
 	config := shard.GetConfig()
 	options := &QueueProcessorOptions{
-		BatchSize:           config.ReplicatorTaskBatchSize,
-		WorkerCount:         config.ReplicatorTaskWorkerCount,
-		MaxPollRPS:          config.ReplicatorProcessorMaxPollRPS,
-		MaxPollInterval:     config.ReplicatorProcessorMaxPollInterval,
-		UpdateAckInterval:   config.ReplicatorProcessorUpdateAckInterval,
-		ForceUpdateInterval: config.ReplicatorProcessorForceUpdateInterval,
-		MaxRetryCount:       config.ReplicatorTaskMaxRetryCount,
-		MetricScope:         metrics.ReplicatorQueueProcessorScope,
+		BatchSize:            config.ReplicatorTaskBatchSize,
+		WorkerCount:          config.ReplicatorTaskWorkerCount,
+		MaxPollRPS:           config.ReplicatorProcessorMaxPollRPS,
+		MaxPollInterval:      config.ReplicatorProcessorMaxPollInterval,
+		UpdateAckInterval:    config.ReplicatorProcessorUpdateAckInterval,
+		MaxRetryCount:        config.ReplicatorTaskMaxRetryCount,
+		MetricScope:          metrics.ReplicatorQueueProcessorScope,
+		UpdateShardTaskCount: config.ReplicatorProcessorUpdateShardTaskCount,
 	}
 
 	logger = logger.WithFields(bark.Fields{
@@ -132,7 +133,7 @@ func (p *replicatorQueueProcessorImpl) processHistoryReplicationTask(task *persi
 		lastEvent := events[len(events)-1]
 		if lastEvent.GetEventType() == shared.EventTypeWorkflowExecutionContinuedAsNew {
 			newRunID := lastEvent.WorkflowExecutionContinuedAsNewEventAttributes.GetNewExecutionRunId()
-			newRunHistory, err = p.getHistory(task.DomainID, task.WorkflowID, newRunID, firstEventID, int64(3))
+			newRunHistory, err = p.getHistory(task.DomainID, task.WorkflowID, newRunID, common.FirstEventID, int64(3))
 			if err != nil {
 				return err
 			}
@@ -142,14 +143,15 @@ func (p *replicatorQueueProcessorImpl) processHistoryReplicationTask(task *persi
 	replicationTask := &replicator.ReplicationTask{
 		TaskType: replicator.ReplicationTaskType.Ptr(replicator.ReplicationTaskTypeHistory),
 		HistoryTaskAttributes: &replicator.HistoryTaskAttributes{
-			DomainId:      common.StringPtr(task.DomainID),
-			WorkflowId:    common.StringPtr(task.WorkflowID),
-			RunId:         common.StringPtr(task.RunID),
-			FirstEventId:  common.Int64Ptr(task.FirstEventID),
-			NextEventId:   common.Int64Ptr(task.NextEventID),
-			Version:       common.Int64Ptr(task.Version),
-			History:       history,
-			NewRunHistory: newRunHistory,
+			DomainId:        common.StringPtr(task.DomainID),
+			WorkflowId:      common.StringPtr(task.WorkflowID),
+			RunId:           common.StringPtr(task.RunID),
+			FirstEventId:    common.Int64Ptr(task.FirstEventID),
+			NextEventId:     common.Int64Ptr(task.NextEventID),
+			Version:         common.Int64Ptr(task.Version),
+			ReplicationInfo: convertLastReplicationInfo(task.LastReplicationInfo),
+			History:         history,
+			NewRunHistory:   newRunHistory,
 		},
 	}
 
@@ -217,9 +219,23 @@ func (p *replicatorQueueProcessorImpl) getHistory(domainID, workflowID, runID st
 			}
 			historyEvents = append(historyEvents, history.Events...)
 		}
+
+		nextPageToken = response.NextPageToken
 	}
 
 	executionHistory := &shared.History{}
 	executionHistory.Events = historyEvents
 	return executionHistory, nil
+}
+
+func convertLastReplicationInfo(info map[string]*persistence.ReplicationInfo) map[string]*h.ReplicationInfo {
+	replicationInfoMap := make(map[string]*h.ReplicationInfo)
+	for k, v := range info {
+		replicationInfoMap[k] = &h.ReplicationInfo{
+			Version:     common.Int64Ptr(v.Version),
+			LastEventId: common.Int64Ptr(v.LastEventID),
+		}
+	}
+
+	return replicationInfoMap
 }

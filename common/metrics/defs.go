@@ -124,6 +124,8 @@ const (
 	PersistenceGetWorkflowExecutionScope
 	// PersistenceUpdateWorkflowExecutionScope tracks UpdateWorkflowExecution calls made by service to persistence layer
 	PersistenceUpdateWorkflowExecutionScope
+	// PersistenceResetMutableStateScope tracks ResetMutableState calls made by service to persistence layer
+	PersistenceResetMutableStateScope
 	// PersistenceDeleteWorkflowExecutionScope tracks DeleteWorkflowExecution calls made by service to persistence layer
 	PersistenceDeleteWorkflowExecutionScope
 	// PersistenceGetCurrentExecutionScope tracks GetCurrentExecution calls made by service to persistence layer
@@ -432,6 +434,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceCreateWorkflowExecutionScope:                  {operation: "CreateWorkflowExecution"},
 		PersistenceGetWorkflowExecutionScope:                     {operation: "GetWorkflowExecution"},
 		PersistenceUpdateWorkflowExecutionScope:                  {operation: "UpdateWorkflowExecution"},
+		PersistenceResetMutableStateScope:                        {operation: "ResetMutableState"},
 		PersistenceDeleteWorkflowExecutionScope:                  {operation: "DeleteWorkflowExecution"},
 		PersistenceGetCurrentExecutionScope:                      {operation: "GetCurrentExecution"},
 		PersistenceGetTransferTasksScope:                         {operation: "GetTransferTasks"},
@@ -595,6 +598,8 @@ const (
 	CadenceErrDomainAlreadyExistsCounter
 	CadenceErrCancellationAlreadyRequestedCounter
 	CadenceErrQueryFailedCounter
+	CadenceErrLimitExceededCounter
+	CadenceErrContextTimeoutCounter
 	PersistenceRequests
 	PersistenceFailures
 	PersistenceLatency
@@ -693,6 +698,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		CadenceErrDomainAlreadyExistsCounter:          {metricName: "cadence.errors.domain-already-exists", metricType: Counter},
 		CadenceErrCancellationAlreadyRequestedCounter: {metricName: "cadence.errors.cancellation-already-requested", metricType: Counter},
 		CadenceErrQueryFailedCounter:                  {metricName: "cadence.errors.query-failed", metricType: Counter},
+		CadenceErrLimitExceededCounter:                {metricName: "cadence.errors.limit-exceeded", metricType: Counter},
+		CadenceErrContextTimeoutCounter:               {metricName: "cadence.errors.context-timeout", metricType: Counter},
 		PersistenceRequests:                           {metricName: "persistence.requests", metricType: Counter},
 		PersistenceFailures:                           {metricName: "persistence.errors", metricType: Counter},
 		PersistenceLatency:                            {metricName: "persistence.latency", metricType: Timer},

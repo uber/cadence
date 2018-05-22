@@ -63,6 +63,7 @@ var (
 type (
 	// TestShardContext shard context for testing.
 	TestShardContext struct {
+		shardID int
 		sync.RWMutex
 		service                   service.Service
 		shardInfo                 *persistence.ShardInfo
@@ -105,6 +106,7 @@ func newTestShardContext(shardInfo *persistence.ShardInfo, transferSequenceNumbe
 	}
 
 	return &TestShardContext{
+		shardID:                   0,
 		service:                   service.NewTestService(clusterMetadata, nil, metricsClient, logger),
 		shardInfo:                 shardInfo,
 		transferSequenceNumber:    transferSequenceNumber,
@@ -116,6 +118,11 @@ func newTestShardContext(shardInfo *persistence.ShardInfo, transferSequenceNumbe
 		metricsClient:             metricsClient,
 		standbyClusterCurrentTime: standbyClusterCurrentTime,
 	}
+}
+
+// GetShardID test implementation
+func (s *TestShardContext) GetShardID() int {
+	return s.shardID
 }
 
 // GetService test implementation
@@ -260,6 +267,11 @@ func (s *TestShardContext) UpdateWorkflowExecution(request *persistence.UpdateWo
 	return s.executionMgr.UpdateWorkflowExecution(request)
 }
 
+// ResetMutableState test implementation
+func (s *TestShardContext) ResetMutableState(request *persistence.ResetMutableStateRequest) error {
+	return s.executionMgr.ResetMutableState(request)
+}
+
 // AppendHistoryEvents test implementation
 func (s *TestShardContext) AppendHistoryEvents(request *persistence.AppendHistoryEventsRequest) error {
 	return s.historyMgr.AppendHistoryEvents(request)
@@ -327,7 +339,7 @@ func (s *TestShardContext) GetCurrentTime(cluster string) time.Time {
 
 // SetupWorkflowStoreWithOptions to setup workflow test base
 func (s *TestBase) SetupWorkflowStoreWithOptions(options persistence.TestBaseOptions) {
-	s.TestBase.SetupWorkflowStoreWithOptions(options)
+	s.TestBase.SetupWorkflowStoreWithOptions(options, nil)
 	log := bark.NewLoggerFromLogrus(log.New())
 	config := NewConfig(dynamicconfig.NewNopCollection(), 1)
 	clusterMetadata := cluster.GetTestClusterMetadata(options.EnableGlobalDomain, options.IsMasterCluster)

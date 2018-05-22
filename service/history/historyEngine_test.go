@@ -276,6 +276,12 @@ func (s *engineSuite) TestGetMutableStateLongPoll() {
 			&persistence.GetDomainResponse{
 				Info:   &persistence.DomainInfo{ID: domainID},
 				Config: &persistence.DomainConfig{Retention: 1},
+				ReplicationConfig: &persistence.DomainReplicationConfig{
+					ActiveClusterName: cluster.TestCurrentClusterName,
+					Clusters: []*persistence.ClusterReplicationConfig{
+						&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+					},
+				},
 			},
 			nil,
 		)
@@ -293,20 +299,20 @@ func (s *engineSuite) TestGetMutableStateLongPoll() {
 	response, err := s.mockHistoryEngine.GetMutableState(ctx, &history.GetMutableStateRequest{
 		DomainUUID:          common.StringPtr(domainID),
 		Execution:           &execution,
-		ExpectedNextEventId: common.Int64Ptr(4),
+		ExpectedNextEventId: common.Int64Ptr(3),
 	})
 	s.Nil(err)
 	s.Equal(int64(4), *response.NextEventId)
 
 	// long poll, new event happen before long poll timeout
-	go asycWorkflowUpdate(time.Second * 10)
+	go asycWorkflowUpdate(time.Second * 2)
 	start := time.Now()
 	response, err = s.mockHistoryEngine.GetMutableState(ctx, &history.GetMutableStateRequest{
 		DomainUUID:          common.StringPtr(domainID),
 		Execution:           &execution,
-		ExpectedNextEventId: common.Int64Ptr(5),
+		ExpectedNextEventId: common.Int64Ptr(4),
 	})
-	s.True(time.Now().After(start.Add(time.Second * 5)))
+	s.True(time.Now().After(start.Add(time.Second * 1)))
 	s.Nil(err)
 	s.Equal(int64(5), *response.NextEventId)
 }
@@ -334,7 +340,7 @@ func (s *engineSuite) TestGetMutableStateLongPollTimeout() {
 	response, err := s.mockHistoryEngine.GetMutableState(ctx, &history.GetMutableStateRequest{
 		DomainUUID:          common.StringPtr(domainID),
 		Execution:           &execution,
-		ExpectedNextEventId: common.Int64Ptr(5),
+		ExpectedNextEventId: common.Int64Ptr(4),
 	})
 	s.Nil(err)
 	s.Equal(int64(4), *response.NextEventId)
@@ -349,6 +355,12 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedInvalidToken() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
@@ -379,6 +391,12 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedIfNoExecution() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
@@ -408,6 +426,12 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedIfGetExecutionFailed() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
@@ -450,6 +474,12 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedUpdateExecutionFailed() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
@@ -496,6 +526,12 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedIfTaskCompleted() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
@@ -537,6 +573,12 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedIfTaskNotStarted() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
@@ -623,6 +665,12 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedConflictOnUpdate() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
@@ -715,6 +763,12 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedMaxAttemptsExceeded() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
@@ -795,6 +849,12 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedCompleteWorkflowFailed() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
@@ -886,6 +946,12 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedFailWorkflowFailed() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
@@ -963,6 +1029,12 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedBadDecisionAttributes() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
@@ -1025,6 +1097,12 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledDec
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
@@ -1095,6 +1173,12 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedCompleteWorkflowSuccess() 
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
@@ -1156,6 +1240,12 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedFailWorkflowSuccess() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
@@ -1220,6 +1310,12 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowSucc
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
@@ -1276,6 +1372,12 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowFail
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
@@ -1333,6 +1435,12 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowFail
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	).Once()
@@ -1361,10 +1469,16 @@ func (s *engineSuite) TestRespondActivityTaskCompletedInvalidToken() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
-	err := s.mockHistoryEngine.RespondActivityTaskCompleted(&history.RespondActivityTaskCompletedRequest{
+	err := s.mockHistoryEngine.RespondActivityTaskCompleted(context.Background(), &history.RespondActivityTaskCompletedRequest{
 		DomainUUID: common.StringPtr(domainID),
 		CompleteRequest: &workflow.RespondActivityTaskCompletedRequest{
 			TaskToken: invalidToken,
@@ -1390,12 +1504,18 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfNoExecution() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(nil, &workflow.EntityNotExistsError{}).Once()
 
-	err := s.mockHistoryEngine.RespondActivityTaskCompleted(&history.RespondActivityTaskCompletedRequest{
+	err := s.mockHistoryEngine.RespondActivityTaskCompleted(context.Background(), &history.RespondActivityTaskCompletedRequest{
 		DomainUUID: common.StringPtr(domainID),
 		CompleteRequest: &workflow.RespondActivityTaskCompletedRequest{
 			TaskToken: taskToken,
@@ -1418,12 +1538,18 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfNoRunID() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
 	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything).Return(nil, &workflow.EntityNotExistsError{}).Once()
 
-	err := s.mockHistoryEngine.RespondActivityTaskCompleted(&history.RespondActivityTaskCompletedRequest{
+	err := s.mockHistoryEngine.RespondActivityTaskCompleted(context.Background(), &history.RespondActivityTaskCompletedRequest{
 		DomainUUID: common.StringPtr(domainID),
 		CompleteRequest: &workflow.RespondActivityTaskCompletedRequest{
 			TaskToken: taskToken,
@@ -1447,12 +1573,18 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfGetExecutionFailed() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(nil, errors.New("FAILED")).Once()
 
-	err := s.mockHistoryEngine.RespondActivityTaskCompleted(&history.RespondActivityTaskCompletedRequest{
+	err := s.mockHistoryEngine.RespondActivityTaskCompleted(context.Background(), &history.RespondActivityTaskCompletedRequest{
 		DomainUUID: common.StringPtr(domainID),
 		CompleteRequest: &workflow.RespondActivityTaskCompletedRequest{
 			TaskToken: taskToken,
@@ -1479,13 +1611,19 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfNoAIdProvided() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
 	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything).Return(gceResponse, nil).Once()
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gwmsResponse, nil).Once()
 
-	err := s.mockHistoryEngine.RespondActivityTaskCompleted(&history.RespondActivityTaskCompletedRequest{
+	err := s.mockHistoryEngine.RespondActivityTaskCompleted(context.Background(), &history.RespondActivityTaskCompletedRequest{
 		DomainUUID: common.StringPtr(domainID),
 		CompleteRequest: &workflow.RespondActivityTaskCompletedRequest{
 			TaskToken: taskToken,
@@ -1513,13 +1651,19 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfNoAidFound() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
 	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything).Return(gceResponse, nil).Once()
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gwmsResponse, nil).Once()
 
-	err := s.mockHistoryEngine.RespondActivityTaskCompleted(&history.RespondActivityTaskCompletedRequest{
+	err := s.mockHistoryEngine.RespondActivityTaskCompleted(context.Background(), &history.RespondActivityTaskCompletedRequest{
 		DomainUUID: common.StringPtr(domainID),
 		CompleteRequest: &workflow.RespondActivityTaskCompletedRequest{
 			TaskToken: taskToken,
@@ -1564,6 +1708,12 @@ func (s *engineSuite) TestRespondActivityTaskCompletedUpdateExecutionFailed() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
@@ -1572,7 +1722,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedUpdateExecutionFailed() {
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(errors.New("FAILED")).Once()
 	s.mockShardManager.On("UpdateShard", mock.Anything).Return(nil).Once()
 
-	err := s.mockHistoryEngine.RespondActivityTaskCompleted(&history.RespondActivityTaskCompletedRequest{
+	err := s.mockHistoryEngine.RespondActivityTaskCompleted(context.Background(), &history.RespondActivityTaskCompletedRequest{
 		DomainUUID: common.StringPtr(domainID),
 		CompleteRequest: &workflow.RespondActivityTaskCompletedRequest{
 			TaskToken: taskToken,
@@ -1621,12 +1771,18 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfTaskCompleted() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gwmsResponse, nil).Once()
 
-	err := s.mockHistoryEngine.RespondActivityTaskCompleted(&history.RespondActivityTaskCompletedRequest{
+	err := s.mockHistoryEngine.RespondActivityTaskCompleted(context.Background(), &history.RespondActivityTaskCompletedRequest{
 		DomainUUID: common.StringPtr(domainID),
 		CompleteRequest: &workflow.RespondActivityTaskCompletedRequest{
 			TaskToken: taskToken,
@@ -1672,12 +1828,18 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfTaskNotStarted() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gwmsResponse, nil).Once()
 
-	err := s.mockHistoryEngine.RespondActivityTaskCompleted(&history.RespondActivityTaskCompletedRequest{
+	err := s.mockHistoryEngine.RespondActivityTaskCompleted(context.Background(), &history.RespondActivityTaskCompletedRequest{
 		DomainUUID: common.StringPtr(domainID),
 		CompleteRequest: &workflow.RespondActivityTaskCompletedRequest{
 			TaskToken: taskToken,
@@ -1741,10 +1903,16 @@ func (s *engineSuite) TestRespondActivityTaskCompletedConflictOnUpdate() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
-	err := s.mockHistoryEngine.RespondActivityTaskCompleted(&history.RespondActivityTaskCompletedRequest{
+	err := s.mockHistoryEngine.RespondActivityTaskCompleted(context.Background(), &history.RespondActivityTaskCompletedRequest{
 		DomainUUID: common.StringPtr(domainID),
 		CompleteRequest: &workflow.RespondActivityTaskCompletedRequest{
 			TaskToken: taskToken,
@@ -1763,7 +1931,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedConflictOnUpdate() {
 	s.True(ok)
 	s.Equal(int32(200), di.DecisionTimeout)
 	s.Equal(int64(10), di.ScheduleID)
-	s.Equal(emptyEventID, di.StartedID)
+	s.Equal(common.EmptyEventID, di.StartedID)
 }
 
 func (s *engineSuite) TestRespondActivityTaskCompletedMaxAttemptsExceeded() {
@@ -1807,10 +1975,16 @@ func (s *engineSuite) TestRespondActivityTaskCompletedMaxAttemptsExceeded() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
-	err := s.mockHistoryEngine.RespondActivityTaskCompleted(&history.RespondActivityTaskCompletedRequest{
+	err := s.mockHistoryEngine.RespondActivityTaskCompleted(context.Background(), &history.RespondActivityTaskCompletedRequest{
 		DomainUUID: common.StringPtr(domainID),
 		CompleteRequest: &workflow.RespondActivityTaskCompletedRequest{
 			TaskToken: taskToken,
@@ -1860,10 +2034,16 @@ func (s *engineSuite) TestRespondActivityTaskCompletedSuccess() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
-	err := s.mockHistoryEngine.RespondActivityTaskCompleted(&history.RespondActivityTaskCompletedRequest{
+	err := s.mockHistoryEngine.RespondActivityTaskCompleted(context.Background(), &history.RespondActivityTaskCompletedRequest{
 		DomainUUID: common.StringPtr(domainID),
 		CompleteRequest: &workflow.RespondActivityTaskCompletedRequest{
 			TaskToken: taskToken,
@@ -1882,7 +2062,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedSuccess() {
 	s.True(ok)
 	s.Equal(int32(200), di.DecisionTimeout)
 	s.Equal(int64(8), di.ScheduleID)
-	s.Equal(emptyEventID, di.StartedID)
+	s.Equal(common.EmptyEventID, di.StartedID)
 }
 
 func (s *engineSuite) TestRespondActivityTaskCompletedByIdSuccess() {
@@ -1927,10 +2107,16 @@ func (s *engineSuite) TestRespondActivityTaskCompletedByIdSuccess() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
-	err := s.mockHistoryEngine.RespondActivityTaskCompleted(&history.RespondActivityTaskCompletedRequest{
+	err := s.mockHistoryEngine.RespondActivityTaskCompleted(context.Background(), &history.RespondActivityTaskCompletedRequest{
 		DomainUUID: common.StringPtr(domainID),
 		CompleteRequest: &workflow.RespondActivityTaskCompletedRequest{
 			TaskToken: taskToken,
@@ -1949,7 +2135,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedByIdSuccess() {
 	s.True(ok)
 	s.Equal(int32(200), di.DecisionTimeout)
 	s.Equal(int64(8), di.ScheduleID)
-	s.Equal(emptyEventID, di.StartedID)
+	s.Equal(common.EmptyEventID, di.StartedID)
 }
 
 func (s *engineSuite) TestRespondActivityTaskFailedInvalidToken() {
@@ -1961,10 +2147,16 @@ func (s *engineSuite) TestRespondActivityTaskFailedInvalidToken() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
-	err := s.mockHistoryEngine.RespondActivityTaskFailed(&history.RespondActivityTaskFailedRequest{
+	err := s.mockHistoryEngine.RespondActivityTaskFailed(context.Background(), &history.RespondActivityTaskFailedRequest{
 		DomainUUID: common.StringPtr(domainID),
 		FailedRequest: &workflow.RespondActivityTaskFailedRequest{
 			TaskToken: invalidToken,
@@ -1989,13 +2181,19 @@ func (s *engineSuite) TestRespondActivityTaskFailedIfNoExecution() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(nil,
 		&workflow.EntityNotExistsError{}).Once()
 
-	err := s.mockHistoryEngine.RespondActivityTaskFailed(&history.RespondActivityTaskFailedRequest{
+	err := s.mockHistoryEngine.RespondActivityTaskFailed(context.Background(), &history.RespondActivityTaskFailedRequest{
 		DomainUUID: common.StringPtr(domainID),
 		FailedRequest: &workflow.RespondActivityTaskFailedRequest{
 			TaskToken: taskToken,
@@ -2018,13 +2216,19 @@ func (s *engineSuite) TestRespondActivityTaskFailedIfNoRunID() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
 	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything).Return(nil,
 		&workflow.EntityNotExistsError{}).Once()
 
-	err := s.mockHistoryEngine.RespondActivityTaskFailed(&history.RespondActivityTaskFailedRequest{
+	err := s.mockHistoryEngine.RespondActivityTaskFailed(context.Background(), &history.RespondActivityTaskFailedRequest{
 		DomainUUID: common.StringPtr(domainID),
 		FailedRequest: &workflow.RespondActivityTaskFailedRequest{
 			TaskToken: taskToken,
@@ -2048,13 +2252,19 @@ func (s *engineSuite) TestRespondActivityTaskFailedIfGetExecutionFailed() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(nil,
 		errors.New("FAILED")).Once()
 
-	err := s.mockHistoryEngine.RespondActivityTaskFailed(&history.RespondActivityTaskFailedRequest{
+	err := s.mockHistoryEngine.RespondActivityTaskFailed(context.Background(), &history.RespondActivityTaskFailedRequest{
 		DomainUUID: common.StringPtr(domainID),
 		FailedRequest: &workflow.RespondActivityTaskFailedRequest{
 			TaskToken: taskToken,
@@ -2081,13 +2291,19 @@ func (s *engineSuite) TestRespondActivityTaskFailededIfNoAIdProvided() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
 	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything).Return(gceResponse, nil).Once()
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gwmsResponse, nil).Once()
 
-	err := s.mockHistoryEngine.RespondActivityTaskFailed(&history.RespondActivityTaskFailedRequest{
+	err := s.mockHistoryEngine.RespondActivityTaskFailed(context.Background(), &history.RespondActivityTaskFailedRequest{
 		DomainUUID: common.StringPtr(domainID),
 		FailedRequest: &workflow.RespondActivityTaskFailedRequest{
 			TaskToken: taskToken,
@@ -2115,13 +2331,19 @@ func (s *engineSuite) TestRespondActivityTaskFailededIfNoAIdFound() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
 	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything).Return(gceResponse, nil).Once()
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gwmsResponse, nil).Once()
 
-	err := s.mockHistoryEngine.RespondActivityTaskFailed(&history.RespondActivityTaskFailedRequest{
+	err := s.mockHistoryEngine.RespondActivityTaskFailed(context.Background(), &history.RespondActivityTaskFailedRequest{
 		DomainUUID: common.StringPtr(domainID),
 		FailedRequest: &workflow.RespondActivityTaskFailedRequest{
 			TaskToken: taskToken,
@@ -2170,10 +2392,16 @@ func (s *engineSuite) TestRespondActivityTaskFailedUpdateExecutionFailed() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
-	err := s.mockHistoryEngine.RespondActivityTaskFailed(&history.RespondActivityTaskFailedRequest{
+	err := s.mockHistoryEngine.RespondActivityTaskFailed(context.Background(), &history.RespondActivityTaskFailedRequest{
 		DomainUUID: common.StringPtr(domainID),
 		FailedRequest: &workflow.RespondActivityTaskFailedRequest{
 			TaskToken: taskToken,
@@ -2222,12 +2450,18 @@ func (s *engineSuite) TestRespondActivityTaskFailedIfTaskCompleted() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gwmsResponse, nil).Once()
 
-	err := s.mockHistoryEngine.RespondActivityTaskFailed(&history.RespondActivityTaskFailedRequest{
+	err := s.mockHistoryEngine.RespondActivityTaskFailed(context.Background(), &history.RespondActivityTaskFailedRequest{
 		DomainUUID: common.StringPtr(domainID),
 		FailedRequest: &workflow.RespondActivityTaskFailedRequest{
 			TaskToken: taskToken,
@@ -2273,12 +2507,18 @@ func (s *engineSuite) TestRespondActivityTaskFailedIfTaskNotStarted() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gwmsResponse, nil).Once()
 
-	err := s.mockHistoryEngine.RespondActivityTaskFailed(&history.RespondActivityTaskFailedRequest{
+	err := s.mockHistoryEngine.RespondActivityTaskFailed(context.Background(), &history.RespondActivityTaskFailedRequest{
 		DomainUUID: common.StringPtr(domainID),
 		FailedRequest: &workflow.RespondActivityTaskFailedRequest{
 			TaskToken: taskToken,
@@ -2347,10 +2587,16 @@ func (s *engineSuite) TestRespondActivityTaskFailedConflictOnUpdate() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
-	err := s.mockHistoryEngine.RespondActivityTaskFailed(&history.RespondActivityTaskFailedRequest{
+	err := s.mockHistoryEngine.RespondActivityTaskFailed(context.Background(), &history.RespondActivityTaskFailedRequest{
 		DomainUUID: common.StringPtr(domainID),
 		FailedRequest: &workflow.RespondActivityTaskFailedRequest{
 			TaskToken: taskToken,
@@ -2370,7 +2616,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedConflictOnUpdate() {
 	s.True(ok)
 	s.Equal(int32(200), di.DecisionTimeout)
 	s.Equal(int64(10), di.ScheduleID)
-	s.Equal(emptyEventID, di.StartedID)
+	s.Equal(common.EmptyEventID, di.StartedID)
 }
 
 func (s *engineSuite) TestRespondActivityTaskFailedMaxAttemptsExceeded() {
@@ -2413,10 +2659,16 @@ func (s *engineSuite) TestRespondActivityTaskFailedMaxAttemptsExceeded() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
-	err := s.mockHistoryEngine.RespondActivityTaskFailed(&history.RespondActivityTaskFailedRequest{
+	err := s.mockHistoryEngine.RespondActivityTaskFailed(context.Background(), &history.RespondActivityTaskFailedRequest{
 		DomainUUID: common.StringPtr(domainID),
 		FailedRequest: &workflow.RespondActivityTaskFailedRequest{
 			TaskToken: taskToken,
@@ -2466,10 +2718,16 @@ func (s *engineSuite) TestRespondActivityTaskFailedSuccess() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
-	err := s.mockHistoryEngine.RespondActivityTaskFailed(&history.RespondActivityTaskFailedRequest{
+	err := s.mockHistoryEngine.RespondActivityTaskFailed(context.Background(), &history.RespondActivityTaskFailedRequest{
 		DomainUUID: common.StringPtr(domainID),
 		FailedRequest: &workflow.RespondActivityTaskFailedRequest{
 			TaskToken: taskToken,
@@ -2489,7 +2747,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedSuccess() {
 	s.True(ok)
 	s.Equal(int32(200), di.DecisionTimeout)
 	s.Equal(int64(8), di.ScheduleID)
-	s.Equal(emptyEventID, di.StartedID)
+	s.Equal(common.EmptyEventID, di.StartedID)
 }
 
 func (s *engineSuite) TestRespondActivityTaskFailedByIDSuccess() {
@@ -2535,10 +2793,16 @@ func (s *engineSuite) TestRespondActivityTaskFailedByIDSuccess() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
-	err := s.mockHistoryEngine.RespondActivityTaskFailed(&history.RespondActivityTaskFailedRequest{
+	err := s.mockHistoryEngine.RespondActivityTaskFailed(context.Background(), &history.RespondActivityTaskFailedRequest{
 		DomainUUID: common.StringPtr(domainID),
 		FailedRequest: &workflow.RespondActivityTaskFailedRequest{
 			TaskToken: taskToken,
@@ -2558,7 +2822,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedByIDSuccess() {
 	s.True(ok)
 	s.Equal(int32(200), di.DecisionTimeout)
 	s.Equal(int64(8), di.ScheduleID)
-	s.Equal(emptyEventID, di.StartedID)
+	s.Equal(common.EmptyEventID, di.StartedID)
 }
 
 func (s *engineSuite) TestRecordActivityTaskHeartBeatSuccess_NoTimer() {
@@ -2600,10 +2864,16 @@ func (s *engineSuite) TestRecordActivityTaskHeartBeatSuccess_NoTimer() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
-	_, err := s.mockHistoryEngine.RecordActivityTaskHeartbeat(&history.RecordActivityTaskHeartbeatRequest{
+	_, err := s.mockHistoryEngine.RecordActivityTaskHeartbeat(context.Background(), &history.RecordActivityTaskHeartbeatRequest{
 		DomainUUID: common.StringPtr(domainID),
 		HeartbeatRequest: &workflow.RecordActivityTaskHeartbeatRequest{
 			TaskToken: taskToken,
@@ -2654,10 +2924,16 @@ func (s *engineSuite) TestRecordActivityTaskHeartBeatSuccess_TimerRunning() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
-	_, err := s.mockHistoryEngine.RecordActivityTaskHeartbeat(&history.RecordActivityTaskHeartbeatRequest{
+	_, err := s.mockHistoryEngine.RecordActivityTaskHeartbeat(context.Background(), &history.RecordActivityTaskHeartbeatRequest{
 		DomainUUID: common.StringPtr(domainID),
 		HeartbeatRequest: &workflow.RecordActivityTaskHeartbeatRequest{
 			TaskToken: taskToken,
@@ -2713,10 +2989,16 @@ func (s *engineSuite) TestRecordActivityTaskHeartBeatByIDSuccess() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
-	_, err := s.mockHistoryEngine.RecordActivityTaskHeartbeat(&history.RecordActivityTaskHeartbeatRequest{
+	_, err := s.mockHistoryEngine.RecordActivityTaskHeartbeat(context.Background(), &history.RecordActivityTaskHeartbeatRequest{
 		DomainUUID: common.StringPtr(domainID),
 		HeartbeatRequest: &workflow.RecordActivityTaskHeartbeatRequest{
 			TaskToken: taskToken,
@@ -2762,10 +3044,16 @@ func (s *engineSuite) TestRespondActivityTaskCanceled_Scheduled() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
-	err := s.mockHistoryEngine.RespondActivityTaskCanceled(&history.RespondActivityTaskCanceledRequest{
+	err := s.mockHistoryEngine.RespondActivityTaskCanceled(context.Background(), &history.RespondActivityTaskCanceledRequest{
 		DomainUUID: common.StringPtr(domainID),
 		CancelRequest: &workflow.RespondActivityTaskCanceledRequest{
 			TaskToken: taskToken,
@@ -2816,10 +3104,16 @@ func (s *engineSuite) TestRespondActivityTaskCanceled_Started() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
-	err := s.mockHistoryEngine.RespondActivityTaskCanceled(&history.RespondActivityTaskCanceledRequest{
+	err := s.mockHistoryEngine.RespondActivityTaskCanceled(context.Background(), &history.RespondActivityTaskCanceledRequest{
 		DomainUUID: common.StringPtr(domainID),
 		CancelRequest: &workflow.RespondActivityTaskCanceledRequest{
 			TaskToken: taskToken,
@@ -2838,7 +3132,7 @@ func (s *engineSuite) TestRespondActivityTaskCanceled_Started() {
 	s.True(ok)
 	s.Equal(int32(200), di.DecisionTimeout)
 	s.Equal(int64(9), di.ScheduleID)
-	s.Equal(emptyEventID, di.StartedID)
+	s.Equal(common.EmptyEventID, di.StartedID)
 }
 
 func (s *engineSuite) TestRespondActivityTaskCanceledByID_Started() {
@@ -2882,10 +3176,16 @@ func (s *engineSuite) TestRespondActivityTaskCanceledByID_Started() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
-	err := s.mockHistoryEngine.RespondActivityTaskCanceled(&history.RespondActivityTaskCanceledRequest{
+	err := s.mockHistoryEngine.RespondActivityTaskCanceled(context.Background(), &history.RespondActivityTaskCanceledRequest{
 		DomainUUID: common.StringPtr(domainID),
 		CancelRequest: &workflow.RespondActivityTaskCanceledRequest{
 			TaskToken: taskToken,
@@ -2904,7 +3204,7 @@ func (s *engineSuite) TestRespondActivityTaskCanceledByID_Started() {
 	s.True(ok)
 	s.Equal(int32(200), di.DecisionTimeout)
 	s.Equal(int64(9), di.ScheduleID)
-	s.Equal(emptyEventID, di.StartedID)
+	s.Equal(common.EmptyEventID, di.StartedID)
 }
 
 func (s *engineSuite) TestRespondActivityTaskCanceledIfNoRunID() {
@@ -2921,10 +3221,16 @@ func (s *engineSuite) TestRespondActivityTaskCanceledIfNoRunID() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
-	err := s.mockHistoryEngine.RespondActivityTaskCanceled(&history.RespondActivityTaskCanceledRequest{
+	err := s.mockHistoryEngine.RespondActivityTaskCanceled(context.Background(), &history.RespondActivityTaskCanceledRequest{
 		DomainUUID: common.StringPtr(domainID),
 		CancelRequest: &workflow.RespondActivityTaskCanceledRequest{
 			TaskToken: taskToken,
@@ -2955,10 +3261,16 @@ func (s *engineSuite) TestRespondActivityTaskCanceledIfNoAIdProvided() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
-	err := s.mockHistoryEngine.RespondActivityTaskCanceled(&history.RespondActivityTaskCanceledRequest{
+	err := s.mockHistoryEngine.RespondActivityTaskCanceled(context.Background(), &history.RespondActivityTaskCanceledRequest{
 		DomainUUID: common.StringPtr(domainID),
 		CancelRequest: &workflow.RespondActivityTaskCanceledRequest{
 			TaskToken: taskToken,
@@ -2989,10 +3301,16 @@ func (s *engineSuite) TestRespondActivityTaskCanceledIfNoAidFound() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
-	err := s.mockHistoryEngine.RespondActivityTaskCanceled(&history.RespondActivityTaskCanceledRequest{
+	err := s.mockHistoryEngine.RespondActivityTaskCanceled(context.Background(), &history.RespondActivityTaskCanceledRequest{
 		DomainUUID: common.StringPtr(domainID),
 		CancelRequest: &workflow.RespondActivityTaskCanceledRequest{
 			TaskToken: taskToken,
@@ -3040,6 +3358,12 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_NotSchedule
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
@@ -3106,6 +3430,12 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Scheduled()
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
@@ -3174,6 +3504,12 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_NoHeartBeat
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
@@ -3203,7 +3539,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_NoHeartBeat
 		ScheduleID: 5,
 	})
 
-	hbResponse, err := s.mockHistoryEngine.RecordActivityTaskHeartbeat(&history.RecordActivityTaskHeartbeatRequest{
+	hbResponse, err := s.mockHistoryEngine.RecordActivityTaskHeartbeat(context.Background(), &history.RecordActivityTaskHeartbeatRequest{
 		DomainUUID: common.StringPtr(domainID),
 		HeartbeatRequest: &workflow.RecordActivityTaskHeartbeatRequest{
 			TaskToken: activityTaskToken,
@@ -3223,10 +3559,16 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_NoHeartBeat
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
-	err = s.mockHistoryEngine.RespondActivityTaskCanceled(&history.RespondActivityTaskCanceledRequest{
+	err = s.mockHistoryEngine.RespondActivityTaskCanceled(context.Background(), &history.RespondActivityTaskCanceledRequest{
 		DomainUUID: common.StringPtr(domainID),
 		CancelRequest: &workflow.RespondActivityTaskCanceledRequest{
 			TaskToken: activityTaskToken,
@@ -3290,6 +3632,12 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Success() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
@@ -3319,7 +3667,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Success() {
 		ScheduleID: 5,
 	})
 
-	hbResponse, err := s.mockHistoryEngine.RecordActivityTaskHeartbeat(&history.RecordActivityTaskHeartbeatRequest{
+	hbResponse, err := s.mockHistoryEngine.RecordActivityTaskHeartbeat(context.Background(), &history.RecordActivityTaskHeartbeatRequest{
 		DomainUUID: common.StringPtr(domainID),
 		HeartbeatRequest: &workflow.RecordActivityTaskHeartbeatRequest{
 			TaskToken: activityTaskToken,
@@ -3339,10 +3687,16 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Success() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
-	err = s.mockHistoryEngine.RespondActivityTaskCanceled(&history.RespondActivityTaskCanceledRequest{
+	err = s.mockHistoryEngine.RespondActivityTaskCanceled(context.Background(), &history.RespondActivityTaskCanceledRequest{
 		DomainUUID: common.StringPtr(domainID),
 		CancelRequest: &workflow.RespondActivityTaskCanceledRequest{
 			TaskToken: activityTaskToken,
@@ -3399,6 +3753,12 @@ func (s *engineSuite) TestStarTimer_DuplicateTimerID() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
@@ -3510,6 +3870,12 @@ func (s *engineSuite) TestUserTimer_RespondDecisionTaskCompleted() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
@@ -3531,69 +3897,75 @@ func (s *engineSuite) TestUserTimer_RespondDecisionTaskCompleted() {
 	s.False(executionBuilder.HasPendingDecisionTask())
 }
 
-// func (s *engineSuite) TestCancelTimer_RespondDecisionTaskCompleted_NoStartTimer() {
-// 	domainID := validDomainID
-// 	we := workflow.WorkflowExecution{
-// 		WorkflowId: common.StringPtr("wId"),
-// 		RunId:      common.StringPtr(validRunID),
-// 	}
-// 	tl := "testTaskList"
-// 	taskToken, _ := json.Marshal(&common.TaskToken{
-// 		WorkflowID: *we.WorkflowId,
-// 		RunID:      *we.RunId,
-// 		ScheduleID: 2,
-// 	})
-// 	identity := "testIdentity"
-// 	timerID := "t1"
+func (s *engineSuite) TestCancelTimer_RespondDecisionTaskCompleted_NoStartTimer() {
+	domainID := validDomainID
+	we := workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr("wId"),
+		RunId:      common.StringPtr(validRunID),
+	}
+	tl := "testTaskList"
+	taskToken, _ := json.Marshal(&common.TaskToken{
+		WorkflowID: *we.WorkflowId,
+		RunID:      *we.RunId,
+		ScheduleID: 2,
+	})
+	identity := "testIdentity"
+	timerID := "t1"
 
-// 	msBuilder := newMutableStateBuilder(s.config, bark.NewLoggerFromLogrus(log.New()))
-// 	// Verify cancel timer with a start event.
-// 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
-// 	di := addDecisionTaskScheduledEvent(msBuilder)
-// 	addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
+	msBuilder := newMutableStateBuilder(s.config, bark.NewLoggerFromLogrus(log.New()))
+	// Verify cancel timer with a start event.
+	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
+	di := addDecisionTaskScheduledEvent(msBuilder)
+	addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
 
-// 	ms := createMutableState(msBuilder)
-// 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
+	ms := createMutableState(msBuilder)
+	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
-// 	decisions := []*workflow.Decision{{
-// 		DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCancelTimer),
-// 		CancelTimerDecisionAttributes: &workflow.CancelTimerDecisionAttributes{
-// 			TimerId: common.StringPtr(timerID),
-// 		},
-// 	}}
+	decisions := []*workflow.Decision{{
+		DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCancelTimer),
+		CancelTimerDecisionAttributes: &workflow.CancelTimerDecisionAttributes{
+			TimerId: common.StringPtr(timerID),
+		},
+	}}
 
-// 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gwmsResponse, nil).Once()
-// 	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(nil).Once()
-// 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(nil).Once()
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gwmsResponse, nil).Once()
+	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(nil).Once()
+	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(nil).Once()
 
-// 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(
-// 		&persistence.GetDomainResponse{
-// 			Info:   &persistence.DomainInfo{ID: domainID},
-// 			Config: &persistence.DomainConfig{Retention: 1},
-// 		},
-// 		nil,
-// 	)
-// 	err := s.mockHistoryEngine.RespondDecisionTaskCompleted(context.Background(), &history.RespondDecisionTaskCompletedRequest{
-// 		DomainUUID: common.StringPtr(domainID),
-// 		CompleteRequest: &workflow.RespondDecisionTaskCompletedRequest{
-// 			TaskToken:        taskToken,
-// 			Decisions:        decisions,
-// 			ExecutionContext: []byte("context"),
-// 			Identity:         &identity,
-// 		},
-// 	})
-// 	s.Nil(err)
+	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(
+		&persistence.GetDomainResponse{
+			Info:   &persistence.DomainInfo{ID: domainID},
+			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
+		},
+		nil,
+	)
+	err := s.mockHistoryEngine.RespondDecisionTaskCompleted(context.Background(), &history.RespondDecisionTaskCompletedRequest{
+		DomainUUID: common.StringPtr(domainID),
+		CompleteRequest: &workflow.RespondDecisionTaskCompletedRequest{
+			TaskToken:        taskToken,
+			Decisions:        decisions,
+			ExecutionContext: []byte("context"),
+			Identity:         &identity,
+		},
+	})
+	s.Nil(err)
 
-// 	executionBuilder := s.getBuilder(domainID, we)
-// 	s.Equal(int64(6), executionBuilder.executionInfo.NextEventID)
-// 	s.Equal(int64(3), executionBuilder.executionInfo.LastProcessedEvent)
-// 	s.Equal(persistence.WorkflowStateRunning, executionBuilder.executionInfo.State)
-// 	s.False(executionBuilder.HasPendingDecisionTask())
-// }
+	executionBuilder := s.getBuilder(domainID, we)
+	s.Equal(int64(6), executionBuilder.executionInfo.NextEventID)
+	s.Equal(int64(3), executionBuilder.executionInfo.LastProcessedEvent)
+	s.Equal(persistence.WorkflowStateRunning, executionBuilder.executionInfo.State)
+	s.False(executionBuilder.HasPendingDecisionTask())
+}
 
 func (s *engineSuite) TestSignalWorkflowExecution() {
 	signalRequest := &history.SignalWorkflowExecutionRequest{}
-	err := s.mockHistoryEngine.SignalWorkflowExecution(signalRequest)
+	err := s.mockHistoryEngine.SignalWorkflowExecution(context.Background(), signalRequest)
 	s.EqualError(err, "BadRequestError{Message: Missing domain UUID.}")
 
 	domainID := validDomainID
@@ -3627,17 +3999,23 @@ func (s *engineSuite) TestSignalWorkflowExecution() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
-	err = s.mockHistoryEngine.SignalWorkflowExecution(signalRequest)
+	err = s.mockHistoryEngine.SignalWorkflowExecution(context.Background(), signalRequest)
 	s.Nil(err)
 }
 
 // Test signal decision by adding request ID
 func (s *engineSuite) TestSignalWorkflowExecution_DuplicateRequest() {
 	signalRequest := &history.SignalWorkflowExecutionRequest{}
-	err := s.mockHistoryEngine.SignalWorkflowExecution(signalRequest)
+	err := s.mockHistoryEngine.SignalWorkflowExecution(context.Background(), signalRequest)
 	s.EqualError(err, "BadRequestError{Message: Missing domain UUID.}")
 
 	domainID := validDomainID
@@ -3675,16 +4053,22 @@ func (s *engineSuite) TestSignalWorkflowExecution_DuplicateRequest() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
-	err = s.mockHistoryEngine.SignalWorkflowExecution(signalRequest)
+	err = s.mockHistoryEngine.SignalWorkflowExecution(context.Background(), signalRequest)
 	s.Nil(err)
 }
 
 func (s *engineSuite) TestSignalWorkflowExecution_Failed() {
 	signalRequest := &history.SignalWorkflowExecutionRequest{}
-	err := s.mockHistoryEngine.SignalWorkflowExecution(signalRequest)
+	err := s.mockHistoryEngine.SignalWorkflowExecution(context.Background(), signalRequest)
 	s.EqualError(err, "BadRequestError{Message: Missing domain UUID.}")
 
 	domainID := validDomainID
@@ -3717,16 +4101,22 @@ func (s *engineSuite) TestSignalWorkflowExecution_Failed() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
-	err = s.mockHistoryEngine.SignalWorkflowExecution(signalRequest)
+	err = s.mockHistoryEngine.SignalWorkflowExecution(context.Background(), signalRequest)
 	s.EqualError(err, "EntityNotExistsError{Message: Workflow execution already completed.}")
 }
 
 func (s *engineSuite) TestRemoveSignalMutableState() {
 	removeRequest := &history.RemoveSignalMutableStateRequest{}
-	err := s.mockHistoryEngine.RemoveSignalMutableState(removeRequest)
+	err := s.mockHistoryEngine.RemoveSignalMutableState(context.Background(), removeRequest)
 	s.EqualError(err, "BadRequestError{Message: Missing domain UUID.}")
 
 	domainID := validDomainID
@@ -3751,10 +4141,16 @@ func (s *engineSuite) TestRemoveSignalMutableState() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
-	err = s.mockHistoryEngine.RemoveSignalMutableState(removeRequest)
+	err = s.mockHistoryEngine.RemoveSignalMutableState(context.Background(), removeRequest)
 	s.Nil(err)
 }
 

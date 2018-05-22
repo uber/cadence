@@ -177,11 +177,17 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedIfNoExecution() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
 
-	response, err := s.historyEngine.RecordDecisionTaskStarted(&h.RecordDecisionTaskStartedRequest{
+	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &h.RecordDecisionTaskStartedRequest{
 		DomainUUID:        common.StringPtr(domainID),
 		WorkflowExecution: workflowExecution,
 		ScheduleId:        common.Int64Ptr(2),
@@ -214,11 +220,17 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedIfGetExecutionFailed() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
 
-	response, err := s.historyEngine.RecordDecisionTaskStarted(&h.RecordDecisionTaskStartedRequest{
+	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &h.RecordDecisionTaskStartedRequest{
 		DomainUUID:        common.StringPtr(domainID),
 		WorkflowExecution: workflowExecution,
 		ScheduleId:        common.Int64Ptr(2),
@@ -254,11 +266,17 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedIfTaskAlreadyStarted() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
 
-	response, err := s.historyEngine.RecordDecisionTaskStarted(&h.RecordDecisionTaskStartedRequest{
+	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &h.RecordDecisionTaskStartedRequest{
 		DomainUUID:        common.StringPtr(domainID),
 		WorkflowExecution: &workflowExecution,
 		ScheduleId:        common.Int64Ptr(2),
@@ -298,11 +316,17 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedIfTaskAlreadyCompleted() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
 
-	response, err := s.historyEngine.RecordDecisionTaskStarted(&h.RecordDecisionTaskStartedRequest{
+	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &h.RecordDecisionTaskStartedRequest{
 		DomainUUID:        common.StringPtr(domainID),
 		WorkflowExecution: &workflowExecution,
 		ScheduleId:        common.Int64Ptr(2),
@@ -350,11 +374,17 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedConflictOnUpdate() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
 
-	response, err := s.historyEngine.RecordDecisionTaskStarted(&h.RecordDecisionTaskStartedRequest{
+	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &h.RecordDecisionTaskStartedRequest{
 		DomainUUID:        common.StringPtr(domainID),
 		WorkflowExecution: &workflowExecution,
 		ScheduleId:        common.Int64Ptr(2),
@@ -401,11 +431,17 @@ func (s *engine2Suite) TestRecordDecisionTaskRetrySameRequest() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
 
-	response, err := s.historyEngine.RecordDecisionTaskStarted(&h.RecordDecisionTaskStartedRequest{
+	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &h.RecordDecisionTaskStartedRequest{
 		DomainUUID:        common.StringPtr(domainID),
 		WorkflowExecution: &workflowExecution,
 		ScheduleId:        common.Int64Ptr(2),
@@ -453,11 +489,17 @@ func (s *engine2Suite) TestRecordDecisionTaskRetryDifferentRequest() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
 
-	response, err := s.historyEngine.RecordDecisionTaskStarted(&h.RecordDecisionTaskStartedRequest{
+	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &h.RecordDecisionTaskStartedRequest{
 		DomainUUID:        common.StringPtr(domainID),
 		WorkflowExecution: &workflowExecution,
 		ScheduleId:        common.Int64Ptr(2),
@@ -503,11 +545,17 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedMaxAttemptsExceeded() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
 
-	response, err := s.historyEngine.RecordDecisionTaskStarted(&h.RecordDecisionTaskStartedRequest{
+	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &h.RecordDecisionTaskStartedRequest{
 		DomainUUID:        common.StringPtr(domainID),
 		WorkflowExecution: &workflowExecution,
 		ScheduleId:        common.Int64Ptr(2),
@@ -546,11 +594,17 @@ func (s *engine2Suite) TestRecordDecisionTaskSuccess() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
 
-	response, err := s.historyEngine.RecordDecisionTaskStarted(&h.RecordDecisionTaskStartedRequest{
+	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &h.RecordDecisionTaskStartedRequest{
 		DomainUUID:        common.StringPtr(domainID),
 		WorkflowExecution: &workflowExecution,
 		ScheduleId:        common.Int64Ptr(2),
@@ -586,11 +640,17 @@ func (s *engine2Suite) TestRecordActivityTaskStartedIfNoExecution() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
 
-	response, err := s.historyEngine.RecordActivityTaskStarted(&h.RecordActivityTaskStartedRequest{
+	response, err := s.historyEngine.RecordActivityTaskStarted(context.Background(), &h.RecordActivityTaskStartedRequest{
 		DomainUUID:        common.StringPtr(domainID),
 		WorkflowExecution: workflowExecution,
 		ScheduleId:        common.Int64Ptr(5),
@@ -640,11 +700,17 @@ func (s *engine2Suite) TestRecordActivityTaskStartedSuccess() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
 
-	response, err := s.historyEngine.RecordActivityTaskStarted(&h.RecordActivityTaskStartedRequest{
+	response, err := s.historyEngine.RecordActivityTaskStarted(context.Background(), &h.RecordActivityTaskStartedRequest{
 		DomainUUID:        common.StringPtr(domainID),
 		WorkflowExecution: &workflowExecution,
 		ScheduleId:        common.Int64Ptr(5),
@@ -683,11 +749,17 @@ func (s *engine2Suite) TestRequestCancelWorkflowExecutionSuccess() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
 
-	err := s.historyEngine.RequestCancelWorkflowExecution(&h.RequestCancelWorkflowExecutionRequest{
+	err := s.historyEngine.RequestCancelWorkflowExecution(context.Background(), &h.RequestCancelWorkflowExecutionRequest{
 		DomainUUID: common.StringPtr(domainID),
 		CancelRequest: &workflow.RequestCancelWorkflowExecutionRequest{
 			WorkflowExecution: &workflow.WorkflowExecution{
@@ -723,11 +795,17 @@ func (s *engine2Suite) TestRequestCancelWorkflowExecutionFail() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
 
-	err := s.historyEngine.RequestCancelWorkflowExecution(&h.RequestCancelWorkflowExecutionRequest{
+	err := s.historyEngine.RequestCancelWorkflowExecution(context.Background(), &h.RequestCancelWorkflowExecutionRequest{
 		DomainUUID: common.StringPtr(domainID),
 		CancelRequest: &workflow.RequestCancelWorkflowExecutionRequest{
 			WorkflowExecution: &workflow.WorkflowExecution{
@@ -802,6 +880,12 @@ func (s *engine2Suite) TestRespondDecisionTaskCompletedRecordMarkerDecision() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
@@ -836,6 +920,12 @@ func (s *engine2Suite) TestStartWorkflowExecution_BrandNew() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
@@ -879,6 +969,12 @@ func (s *engine2Suite) TestStartWorkflowExecution_StillRunning_Dedup() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
@@ -922,6 +1018,12 @@ func (s *engine2Suite) TestStartWorkflowExecution_StillRunning_NonDeDup() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
@@ -977,6 +1079,12 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevSuccess() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
@@ -1059,6 +1167,12 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevFail() {
 			&persistence.GetDomainResponse{
 				Info:   &persistence.DomainInfo{ID: domainID},
 				Config: &persistence.DomainConfig{Retention: 1},
+				ReplicationConfig: &persistence.DomainReplicationConfig{
+					ActiveClusterName: cluster.TestCurrentClusterName,
+					Clusters: []*persistence.ClusterReplicationConfig{
+						&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+					},
+				},
 			},
 			nil,
 		)
@@ -1104,7 +1218,7 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevFail() {
 
 func (s *engine2Suite) TestSignalWithStartWorkflowExecution_JustSignal() {
 	sRequest := &h.SignalWithStartWorkflowExecutionRequest{}
-	_, err := s.historyEngine.SignalWithStartWorkflowExecution(sRequest)
+	_, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
 	s.EqualError(err, "BadRequestError{Message: Missing domain UUID.}")
 
 	domainID := validDomainID
@@ -1137,18 +1251,24 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_JustSignal() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
 
-	resp, err := s.historyEngine.SignalWithStartWorkflowExecution(sRequest)
+	resp, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
 	s.Nil(err)
 	s.Equal(runID, resp.GetRunId())
 }
 
 func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotExist() {
 	sRequest := &h.SignalWithStartWorkflowExecutionRequest{}
-	_, err := s.historyEngine.SignalWithStartWorkflowExecution(sRequest)
+	_, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
 	s.EqualError(err, "BadRequestError{Message: Missing domain UUID.}")
 
 	domainID := validDomainID
@@ -1182,18 +1302,24 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotExist() {
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
 
-	resp, err := s.historyEngine.SignalWithStartWorkflowExecution(sRequest)
+	resp, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
 	s.Nil(err)
 	s.NotNil(resp.GetRunId())
 }
 
 func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotRunning() {
 	sRequest := &h.SignalWithStartWorkflowExecutionRequest{}
-	_, err := s.historyEngine.SignalWithStartWorkflowExecution(sRequest)
+	_, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
 	s.EqualError(err, "BadRequestError{Message: Missing domain UUID.}")
 
 	domainID := validDomainID
@@ -1233,11 +1359,17 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotRunning()
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
 		},
 		nil,
 	)
 
-	resp, err := s.historyEngine.SignalWithStartWorkflowExecution(sRequest)
+	resp, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
 	s.Nil(err)
 	s.NotNil(resp.GetRunId())
 	s.NotEqual(runID, resp.GetRunId())

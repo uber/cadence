@@ -25,59 +25,62 @@ import (
 	"github.com/uber-common/bark"
 	"github.com/uber-go/kafka-client"
 	"github.com/uber-go/kafka-client/kafka"
-	"strings"
 )
 
 type (
 	kafkaClient struct {
 		config *KafkaConfig
-		client *kafkaclient.Client
+		client kafkaclient.Client
 		logger bark.Logger
 	}
 )
 
 // NewConsumer is used to create a Kafka consumer
-func (c *kafkaClient) NewConsumer(topicName, consumerName string, concurrency int) (kafka.Consumer, error) {
-	clusterName := c.config.getClusterForTopic(topicName)
-	brokers := c.config.getBrokersForCluster(clusterName)
+func (c *kafkaClient) NewConsumer(currentCluster, sourceCluster, consumerName string, concurrency int) (kafka.Consumer, error) {
+	currentTopics := c.config.getTopicsForCadenceCluster(currentCluster)
+	sourceTopics := c.config.getTopicsForCadenceCluster(sourceCluster)
 
-	consumerConfig := &kafka.ConsumerConfig{
-		GroupName: consumerName,
-		TopicList: kafka.ConsumerTopicList{
-			kafka.ConsumerTopic{
-				Topic: kafka.Topic{
-					Name:       topicName,
-					Cluster:    clusterName,
-					BrokerList: brokers,
-				},
-				RetryQ: kafka.Topic{
-					Name:       strings.Join([]string{topicName, "retry"}, "-"),
-					Cluster:    clusterName,
-					BrokerList: brokers,
-				},
-				DLQ: kafka.Topic{
-					Name:       strings.Join([]string{topicName, "dlq"}, "-"),
-					Cluster:    clusterName,
-					BrokerList: brokers,
-				},
+	topicKafkaCluster := c.config.getKafkaClusterForTopic(sourceTopics.Topic)
+	retryTopicKafkaCluster := c.config.getKafkaClusterForTopic(currentTopics.RetryTopic)
+	dqlTopicKafkaCluster := c.config.getKafkaClusterForTopic(currentTopics.DLQTopic)
+	topicList := kafka.ConsumerTopicList{
+		kafka.ConsumerTopic{
+			Topic: kafka.Topic{
+				Name:       sourceTopics.Topic,
+				Cluster:    topicKafkaCluster,
+				BrokerList: c.config.getBrokersForKafkaCluster(topicKafkaCluster),
+			},
+			RetryQ: kafka.Topic{
+				Name:       currentTopics.RetryTopic,
+				Cluster:    retryTopicKafkaCluster,
+				BrokerList: c.config.getBrokersForKafkaCluster(retryTopicKafkaCluster),
+			},
+			DLQ: kafka.Topic{
+				Name:       currentTopics.DLQTopic,
+				Cluster:    dqlTopicKafkaCluster,
+				BrokerList: c.config.getBrokersForKafkaCluster(dqlTopicKafkaCluster),
 			},
 		},
-		Concurrency: concurrency,
 	}
+
+	consumerConfig := kafka.NewConsumerConfig(consumerName, topicList)
+	consumerConfig.Concurrency = concurrency
+	consumerConfig.Offsets.Initial.Offset = kafka.OffsetNewest
 
 	consumer, err := c.client.NewConsumer(consumerConfig)
 	return consumer, err
 }
 
 // NewProducer is used to create a Kafka producer for shipping replication tasks
-func (c *kafkaClient) NewProducer(topicName string) (Producer, error) {
-	clusterName := c.config.getClusterForTopic(topicName)
-	brokers := c.config.getBrokersForCluster(clusterName)
+func (c *kafkaClient) NewProducer(sourceCluster string) (Producer, error) {
+	topics := c.config.getTopicsForCadenceCluster(sourceCluster)
+	kafkaClusterName := c.config.getKafkaClusterForTopic(topics.Topic)
+	brokers := c.config.getBrokersForKafkaCluster(kafkaClusterName)
 
 	producer, err := sarama.NewSyncProducer(brokers, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewKafkaProducer(topicName, producer, c.logger), nil
+	return NewKafkaProducer(topics.Topic, producer, c.logger), nil
 }

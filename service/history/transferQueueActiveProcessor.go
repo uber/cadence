@@ -70,14 +70,14 @@ func newTransferQueueActiveProcessor(shard ShardContext, historyService *history
 	matchingClient matching.Client, historyClient history.Client, logger bark.Logger) *transferQueueActiveProcessorImpl {
 	config := shard.GetConfig()
 	options := &QueueProcessorOptions{
-		BatchSize:           config.TransferTaskBatchSize,
-		WorkerCount:         config.TransferTaskWorkerCount,
-		MaxPollRPS:          config.TransferProcessorMaxPollRPS,
-		MaxPollInterval:     config.TransferProcessorMaxPollInterval,
-		UpdateAckInterval:   config.TransferProcessorUpdateAckInterval,
-		ForceUpdateInterval: config.TransferProcessorForceUpdateInterval,
-		MaxRetryCount:       config.TransferTaskMaxRetryCount,
-		MetricScope:         metrics.TransferQueueProcessorScope,
+		BatchSize:            config.TransferTaskBatchSize,
+		WorkerCount:          config.TransferTaskWorkerCount,
+		MaxPollRPS:           config.TransferProcessorMaxPollRPS,
+		MaxPollInterval:      config.TransferProcessorMaxPollInterval,
+		UpdateAckInterval:    config.TransferProcessorUpdateAckInterval,
+		MaxRetryCount:        config.TransferTaskMaxRetryCount,
+		MetricScope:          metrics.TransferQueueProcessorScope,
+		UpdateShardTaskCount: config.TransferProcessorUpdateShardTaskCount,
 	}
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 	logger = logger.WithFields(bark.Fields{
@@ -133,14 +133,14 @@ func newTransferQueueFailoverProcessor(shard ShardContext, historyService *histo
 	matchingClient matching.Client, historyClient history.Client, domainID string, standbyClusterName string, logger bark.Logger) *transferQueueActiveProcessorImpl {
 	config := shard.GetConfig()
 	options := &QueueProcessorOptions{
-		BatchSize:           config.TransferTaskBatchSize,
-		WorkerCount:         config.TransferTaskWorkerCount,
-		MaxPollRPS:          config.TransferProcessorMaxPollRPS,
-		MaxPollInterval:     config.TransferProcessorMaxPollInterval,
-		UpdateAckInterval:   config.TransferProcessorUpdateAckInterval,
-		ForceUpdateInterval: config.TransferProcessorForceUpdateInterval,
-		MaxRetryCount:       config.TransferTaskMaxRetryCount,
-		MetricScope:         metrics.TransferQueueProcessorScope,
+		BatchSize:            config.TransferTaskBatchSize,
+		WorkerCount:          config.TransferTaskWorkerCount,
+		MaxPollRPS:           config.TransferProcessorMaxPollRPS,
+		MaxPollInterval:      config.TransferProcessorMaxPollInterval,
+		UpdateAckInterval:    config.TransferProcessorUpdateAckInterval,
+		MaxRetryCount:        config.TransferTaskMaxRetryCount,
+		MetricScope:          metrics.TransferQueueProcessorScope,
+		UpdateShardTaskCount: config.TransferProcessorUpdateShardTaskCount,
 	}
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 	logger = logger.WithFields(bark.Fields{
@@ -368,7 +368,7 @@ func (t *transferQueueActiveProcessorImpl) processDecisionTask(task *persistence
 		return err
 	}
 
-	if task.ScheduleID == firstEventID+1 {
+	if task.ScheduleID == common.FirstEventID+1 {
 		err = t.recordWorkflowExecutionStarted(execution, task, wfTypeName, startTimestamp, workflowTimeout)
 	}
 
@@ -813,7 +813,7 @@ func (t *transferQueueActiveProcessorImpl) processStartChildExecution(task *pers
 
 	initiatedEvent, ok := msBuilder.GetChildExecutionInitiatedEvent(initiatedEventID)
 	attributes := initiatedEvent.StartChildWorkflowExecutionInitiatedEventAttributes
-	if ok && ci.StartedID == emptyEventID {
+	if ok && ci.StartedID == common.EmptyEventID {
 		// Found pending child execution and it is not marked as started
 		// Let's try and start the child execution
 		startRequest := &h.StartWorkflowExecutionRequest{
@@ -908,7 +908,7 @@ func (t *transferQueueActiveProcessorImpl) recordChildExecutionStarted(task *per
 			domain := initiatedAttributes.Domain
 			initiatedEventID := task.ScheduleID
 			ci, isRunning := msBuilder.GetChildExecutionInfo(initiatedEventID)
-			if !isRunning || ci.StartedID != emptyEventID {
+			if !isRunning || ci.StartedID != common.EmptyEventID {
 				return &workflow.EntityNotExistsError{Message: "Pending child execution not found."}
 			}
 
@@ -934,7 +934,7 @@ func (t *transferQueueActiveProcessorImpl) recordStartChildExecutionFailed(task 
 
 			initiatedEventID := task.ScheduleID
 			ci, isRunning := msBuilder.GetChildExecutionInfo(initiatedEventID)
-			if !isRunning || ci.StartedID != emptyEventID {
+			if !isRunning || ci.StartedID != common.EmptyEventID {
 				return &workflow.EntityNotExistsError{Message: "Pending child execution not found."}
 			}
 
@@ -1034,7 +1034,7 @@ func (t *transferQueueActiveProcessorImpl) requestCancelFailed(task *persistence
 			}
 
 			msBuilder.AddRequestCancelExternalWorkflowExecutionFailedEvent(
-				emptyEventID,
+				common.EmptyEventID,
 				initiatedEventID,
 				request.GetDomainUUID(),
 				request.CancelRequest.WorkflowExecution.GetWorkflowId(),
@@ -1062,7 +1062,7 @@ func (t *transferQueueActiveProcessorImpl) requestSignalFailed(task *persistence
 			}
 
 			msBuilder.AddSignalExternalWorkflowExecutionFailedEvent(
-				emptyEventID,
+				common.EmptyEventID,
 				initiatedEventID,
 				request.GetDomainUUID(),
 				request.SignalRequest.WorkflowExecution.GetWorkflowId(),

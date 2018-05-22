@@ -29,30 +29,23 @@ import (
 	"github.com/uber/cadence/common/persistence"
 )
 
-const (
-	emptyVersion int64 = -2234
-
-	firstEventID     int64 = 1
-	emptyEventID     int64 = -23
-	bufferedEventID  int64 = -123
-	transientEventID int64 = -124
-)
-
 type (
 	historyBuilder struct {
-		serializer persistence.HistorySerializer
-		history    []*workflow.HistoryEvent
-		msBuilder  *mutableStateBuilder
-		logger     bark.Logger
+		serializer       persistence.HistorySerializer
+		transientHistory []*workflow.HistoryEvent
+		history          []*workflow.HistoryEvent
+		msBuilder        *mutableStateBuilder
+		logger           bark.Logger
 	}
 )
 
 func newHistoryBuilder(msBuilder *mutableStateBuilder, logger bark.Logger) *historyBuilder {
 	return &historyBuilder{
-		serializer: persistence.NewJSONHistorySerializer(),
-		history:    []*workflow.HistoryEvent{},
-		msBuilder:  msBuilder,
-		logger:     logger.WithField(logging.TagWorkflowComponent, logging.TagValueHistoryBuilderComponent),
+		serializer:       persistence.NewJSONHistorySerializer(),
+		transientHistory: []*workflow.HistoryEvent{},
+		history:          []*workflow.HistoryEvent{},
+		msBuilder:        msBuilder,
+		logger:           logger.WithField(logging.TagWorkflowComponent, logging.TagValueHistoryBuilderComponent),
 	}
 }
 
@@ -64,13 +57,35 @@ func newHistoryBuilderFromEvents(history []*workflow.HistoryEvent, logger bark.L
 	}
 }
 
-func (b *historyBuilder) Serialize() (*persistence.SerializedHistoryEventBatch, error) {
-	eventBatch := persistence.NewHistoryEventBatch(persistence.GetDefaultHistoryVersion(), b.history)
+func (b *historyBuilder) GetFirstEvent() *workflow.HistoryEvent {
+	// Transient decision events are always written before other events
+	if b.transientHistory != nil && len(b.transientHistory) > 0 {
+		return b.transientHistory[0]
+	}
+
+	if b.history != nil && len(b.history) > 0 {
+		return b.history[0]
+	}
+
+	return nil
+}
+
+func (b *historyBuilder) HasTransientEvents() bool {
+	return b.transientHistory != nil && len(b.transientHistory) > 0
+}
+
+func (b *historyBuilder) SerializeEvents(events []*workflow.HistoryEvent) (*persistence.SerializedHistoryEventBatch,
+	error) {
+	eventBatch := persistence.NewHistoryEventBatch(persistence.GetDefaultHistoryVersion(), events)
 	history, err := b.serializer.Serialize(eventBatch)
 	if err != nil {
 		return nil, err
 	}
 	return history, nil
+}
+
+func (b *historyBuilder) Serialize() (*persistence.SerializedHistoryEventBatch, error) {
+	return b.SerializeEvents(b.history)
 }
 
 func (b *historyBuilder) AddWorkflowExecutionStartedEvent(request *h.StartWorkflowExecutionRequest,
@@ -87,11 +102,25 @@ func (b *historyBuilder) AddDecisionTaskScheduledEvent(taskList string,
 	return b.addEventToHistory(event)
 }
 
+func (b *historyBuilder) AddTransientDecisionTaskScheduledEvent(taskList string,
+	startToCloseTimeoutSeconds int32, attempt int64, timestamp int64) *workflow.HistoryEvent {
+	event := b.newTransientDecisionTaskScheduledEvent(taskList, startToCloseTimeoutSeconds, attempt, timestamp)
+
+	return b.addTransientEvent(event)
+}
+
 func (b *historyBuilder) AddDecisionTaskStartedEvent(scheduleEventID int64, requestID string,
 	identity string) *workflow.HistoryEvent {
 	event := b.newDecisionTaskStartedEvent(scheduleEventID, requestID, identity)
 
 	return b.addEventToHistory(event)
+}
+
+func (b *historyBuilder) AddTransientDecisionTaskStartedEvent(scheduleEventID int64, requestID string,
+	identity string, timestamp int64) *workflow.HistoryEvent {
+	event := b.newTransientDecisionTaskStartedEvent(scheduleEventID, requestID, identity, timestamp)
+
+	return b.addTransientEvent(event)
 }
 
 func (b *historyBuilder) AddDecisionTaskCompletedEvent(scheduleEventID, startedEventID int64,
@@ -430,6 +459,11 @@ func (b *historyBuilder) addEventToHistory(event *workflow.HistoryEvent) *workfl
 	return event
 }
 
+func (b *historyBuilder) addTransientEvent(event *workflow.HistoryEvent) *workflow.HistoryEvent {
+	b.transientHistory = append(b.transientHistory, event)
+	return event
+}
+
 func (b *historyBuilder) newWorkflowExecutionStartedEvent(
 	startRequest *h.StartWorkflowExecutionRequest, previousRunID *string) *workflow.HistoryEvent {
 	request := startRequest.StartRequest
@@ -461,9 +495,23 @@ func (b *historyBuilder) newDecisionTaskScheduledEvent(taskList string, startToC
 	return setDecisionTaskScheduledEventInfo(historyEvent, taskList, startToCloseTimeoutSeconds, attempt)
 }
 
+func (b *historyBuilder) newTransientDecisionTaskScheduledEvent(taskList string, startToCloseTimeoutSeconds int32,
+	attempt int64, timestamp int64) *workflow.HistoryEvent {
+	historyEvent := b.msBuilder.createNewHistoryEventWithTimestamp(workflow.EventTypeDecisionTaskScheduled, timestamp)
+
+	return setDecisionTaskScheduledEventInfo(historyEvent, taskList, startToCloseTimeoutSeconds, attempt)
+}
+
 func (b *historyBuilder) newDecisionTaskStartedEvent(scheduledEventID int64, requestID string,
 	identity string) *workflow.HistoryEvent {
 	historyEvent := b.msBuilder.createNewHistoryEvent(workflow.EventTypeDecisionTaskStarted)
+
+	return setDecisionTaskStartedEventInfo(historyEvent, scheduledEventID, requestID, identity)
+}
+
+func (b *historyBuilder) newTransientDecisionTaskStartedEvent(scheduledEventID int64, requestID string,
+	identity string, timestamp int64) *workflow.HistoryEvent {
+	historyEvent := b.msBuilder.createNewHistoryEventWithTimestamp(workflow.EventTypeDecisionTaskStarted, timestamp)
 
 	return setDecisionTaskStartedEventInfo(historyEvent, scheduledEventID, requestID, identity)
 }

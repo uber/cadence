@@ -110,20 +110,26 @@ func (g *testTransferTaskIDGenerator) GetNextTransferTaskID() (int64, error) {
 }
 
 // SetupWorkflowStoreWithOptions to setup workflow test base
-func (s *TestBase) SetupWorkflowStoreWithOptions(options TestBaseOptions) {
+func (s *TestBase) SetupWorkflowStoreWithOptions(options TestBaseOptions, metadata cluster.Metadata) {
 	log := bark.NewLoggerFromLogrus(log.New())
 
-	s.ClusterMetadata = cluster.GetTestClusterMetadata(
-		options.EnableGlobalDomain,
-		options.IsMasterCluster,
-	)
+	if metadata == nil {
+		s.ClusterMetadata = cluster.GetTestClusterMetadata(
+			options.EnableGlobalDomain,
+			options.IsMasterCluster,
+		)
+	} else {
+		s.ClusterMetadata = metadata
+		log = log.WithField("Cluster", metadata.GetCurrentClusterName())
+	}
+	currentClusterName := s.ClusterMetadata.GetCurrentClusterName()
 
 	// Setup Workflow keyspace and deploy schema for tests
 	s.CassandraTestCluster.setupTestCluster(options)
 	shardID := 0
 	var err error
 	s.ShardMgr, err = NewCassandraShardPersistence(options.ClusterHost, options.ClusterPort, options.ClusterUser,
-		options.ClusterPassword, options.Datacenter, s.CassandraTestCluster.keyspace, s.ClusterMetadata.GetCurrentClusterName(), log)
+		options.ClusterPassword, options.Datacenter, s.CassandraTestCluster.keyspace, currentClusterName, log)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -151,7 +157,7 @@ func (s *TestBase) SetupWorkflowStoreWithOptions(options TestBaseOptions) {
 	}
 
 	s.MetadataManager, err = NewCassandraMetadataPersistence(options.ClusterHost, options.ClusterPort, options.ClusterUser,
-		options.ClusterPassword, options.Datacenter, s.CassandraTestCluster.keyspace, s.ClusterMetadata.GetCurrentClusterName(), log)
+		options.ClusterPassword, options.Datacenter, s.CassandraTestCluster.keyspace, currentClusterName, log)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -173,8 +179,8 @@ func (s *TestBase) SetupWorkflowStoreWithOptions(options TestBaseOptions) {
 		TransferAckLevel:        0,
 		ReplicationAckLevel:     0,
 		TimerAckLevel:           time.Time{},
-		ClusterTimerAckLevel:    map[string]time.Time{cluster.TestCurrentClusterName: time.Time{}},
-		ClusterTransferAckLevel: map[string]int64{cluster.TestCurrentClusterName: 0},
+		ClusterTimerAckLevel:    map[string]time.Time{currentClusterName: time.Time{}},
+		ClusterTransferAckLevel: map[string]int64{currentClusterName: 0},
 	}
 
 	err1 := s.ShardMgr.CreateShard(&CreateShardRequest{
@@ -689,6 +695,69 @@ func (s *TestBase) UpdateWorkflowExecutionForSignal(
 	})
 }
 
+// UpdateAllMutableState is a utility method to update workflow execution
+func (s *TestBase) UpdateAllMutableState(updatedMutableState *WorkflowMutableState, condition int64) error {
+	var aInfos []*ActivityInfo
+	for _, ai := range updatedMutableState.ActivitInfos {
+		aInfos = append(aInfos, ai)
+	}
+
+	var tInfos []*TimerInfo
+	for _, ti := range updatedMutableState.TimerInfos {
+		tInfos = append(tInfos, ti)
+	}
+
+	var cInfos []*ChildExecutionInfo
+	for _, ci := range updatedMutableState.ChildExecutionInfos {
+		cInfos = append(cInfos, ci)
+	}
+
+	var rcInfos []*RequestCancelInfo
+	for _, rci := range updatedMutableState.RequestCancelInfos {
+		rcInfos = append(rcInfos, rci)
+	}
+
+	var sInfos []*SignalInfo
+	for _, si := range updatedMutableState.SignalInfos {
+		sInfos = append(sInfos, si)
+	}
+
+	var srIDs []string
+	for id := range updatedMutableState.SignalRequestedIDs {
+		srIDs = append(srIDs, id)
+	}
+	return s.WorkflowMgr.UpdateWorkflowExecution(&UpdateWorkflowExecutionRequest{
+		ExecutionInfo:             updatedMutableState.ExecutionInfo,
+		ReplicationState:          updatedMutableState.ReplicationState,
+		Condition:                 condition,
+		RangeID:                   s.ShardInfo.RangeID,
+		UpsertActivityInfos:       aInfos,
+		UpserTimerInfos:           tInfos,
+		UpsertChildExecutionInfos: cInfos,
+		UpsertRequestCancelInfos:  rcInfos,
+		UpsertSignalInfos:         sInfos,
+		UpsertSignalRequestedIDs:  srIDs,
+	})
+}
+
+// ResetMutableState is  utility method to reset mutable state
+func (s *TestBase) ResetMutableState(info *WorkflowExecutionInfo, replicationState *ReplicationState, nextEventID int64,
+	activityInfos []*ActivityInfo, timerInfos []*TimerInfo, childExecutionInfos []*ChildExecutionInfo,
+	requestCancelInfos []*RequestCancelInfo, signalInfos []*SignalInfo, ids []string) error {
+	return s.WorkflowMgr.ResetMutableState(&ResetMutableStateRequest{
+		ExecutionInfo:             info,
+		ReplicationState:          replicationState,
+		Condition:                 nextEventID,
+		RangeID:                   s.ShardInfo.RangeID,
+		InsertActivityInfos:       activityInfos,
+		InsertTimerInfos:          timerInfos,
+		InsertChildExecutionInfos: childExecutionInfos,
+		InsertRequestCancelInfos:  requestCancelInfos,
+		InsertSignalInfos:         signalInfos,
+		InsertSignalRequestedIDs:  ids,
+	})
+}
+
 // DeleteWorkflowExecution is a utility method to delete a workflow execution
 func (s *TestBase) DeleteWorkflowExecution(info *WorkflowExecutionInfo) error {
 	return s.WorkflowMgr.DeleteWorkflowExecution(&DeleteWorkflowExecutionRequest{
@@ -953,7 +1022,7 @@ func (s *TestBase) SetupWorkflowStore() {
 		ClusterPassword:    testPassword,
 		DropKeySpace:       true,
 		EnableGlobalDomain: false,
-	})
+	}, nil)
 }
 
 // TearDownWorkflowStore to cleanup

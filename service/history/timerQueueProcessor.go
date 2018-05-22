@@ -46,6 +46,7 @@ type (
 		matchingClient         matching.Client
 		isStarted              int32
 		isStopped              int32
+		finishedTaskCounter    int
 		shutdownChan           chan struct{}
 		activeTimerProcessor   *timerQueueActiveProcessorImpl
 		standbyTimerProcessors map[string]*timerQueueStandbyProcessorImpl
@@ -73,6 +74,7 @@ func newTimerQueueProcessor(shard ShardContext, historyService *historyEngineImp
 		ackLevel:               TimerSequenceID{VisibilityTimestamp: shard.GetTimerAckLevel()},
 		logger:                 logger,
 		matchingClient:         matchingClient,
+		finishedTaskCounter:    0,
 		shutdownChan:           make(chan struct{}),
 		activeTimerProcessor:   newTimerQueueActiveProcessor(shard, historyService, matchingClient, logger),
 		standbyTimerProcessors: standbyTimerProcessors,
@@ -110,14 +112,16 @@ func (t *timerQueueProcessorImpl) Stop() {
 func (t *timerQueueProcessorImpl) NotifyNewTimers(clusterName string, currentTime time.Time, timerTasks []persistence.Task) {
 	if clusterName == t.currentClusterName {
 		t.activeTimerProcessor.notifyNewTimers(timerTasks)
-	} else {
-		standbyTimerProcessor, ok := t.standbyTimerProcessors[clusterName]
-		if !ok {
-			panic(fmt.Sprintf("Cannot find timer processor for %s.", clusterName))
-		}
-		standbyTimerProcessor.setCurrentTime(currentTime.Add(-t.config.TimerProcessorStandbyTaskDelay))
-		standbyTimerProcessor.notifyNewTimers(timerTasks)
+		return
 	}
+
+	standbyTimerProcessor, ok := t.standbyTimerProcessors[clusterName]
+	if !ok {
+		panic(fmt.Sprintf("Cannot find timer processor for %s.", clusterName))
+	}
+	standbyTimerProcessor.setCurrentTime(currentTime.Add(-t.config.TimerProcessorStandbyTaskDelay))
+	standbyTimerProcessor.notifyNewTimers(timerTasks)
+	standbyTimerProcessor.retryTasks()
 }
 
 func (t *timerQueueProcessorImpl) FailoverDomain(domainID string, standbyClusterName string) {
@@ -212,6 +216,7 @@ LoadCompleteLoop:
 				TaskID:              timer.TaskID}); err != nil {
 				t.logger.Warnf("Timer queue ack manager unable to complete timer task: %v; %v", timer, err)
 			}
+			t.finishedTaskCounter++
 		}
 
 		if len(response.NextPageToken) == 0 {
@@ -219,6 +224,10 @@ LoadCompleteLoop:
 		}
 	}
 	t.ackLevel = upperAckLevel
-	t.shard.UpdateTimerAckLevel(t.ackLevel.VisibilityTimestamp)
+
+	if t.finishedTaskCounter >= t.config.TimerProcessorUpdateShardTaskCount {
+		t.finishedTaskCounter = 0
+		t.shard.UpdateTimerAckLevel(t.ackLevel.VisibilityTimestamp)
+	}
 	return nil
 }

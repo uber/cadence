@@ -50,6 +50,7 @@ type (
 	}
 
 	replicationTaskProcessor struct {
+		currentCluster   string
 		sourceCluster    string
 		topicName        string
 		consumerName     string
@@ -74,20 +75,19 @@ var (
 	ErrUnknownReplicationTask = errors.New("unknown replication task")
 )
 
-func newReplicationTaskProcessor(sourceCluster, topic, consumer string, client messaging.Client, config *Config,
+func newReplicationTaskProcessor(currentCluster, sourceCluster, consumer string, client messaging.Client, config *Config,
 	logger bark.Logger, metricsClient metrics.Client, domainReplicator DomainReplicator,
 	historyClient history.Client) *replicationTaskProcessor {
 	return &replicationTaskProcessor{
-		sourceCluster: sourceCluster,
-		topicName:     topic,
-		consumerName:  consumer,
-		client:        client,
-		shutdownCh:    make(chan struct{}),
-		config:        config,
+		currentCluster: currentCluster,
+		sourceCluster:  sourceCluster,
+		consumerName:   consumer,
+		client:         client,
+		shutdownCh:     make(chan struct{}),
+		config:         config,
 		logger: logger.WithFields(bark.Fields{
 			logging.TagWorkflowComponent: logging.TagValueReplicationTaskProcessorComponent,
 			logging.TagSourceCluster:     sourceCluster,
-			logging.TagTopicName:         topic,
 			logging.TagConsumerName:      consumer,
 		}),
 		metricsClient:    metricsClient,
@@ -102,7 +102,7 @@ func (p *replicationTaskProcessor) Start() error {
 	}
 
 	logging.LogReplicationTaskProcessorStartingEvent(p.logger)
-	consumer, err := p.client.NewConsumer(p.topicName, p.consumerName, p.config.ReplicatorConcurrency)
+	consumer, err := p.client.NewConsumer(p.currentCluster, p.sourceCluster, p.consumerName, p.config.ReplicatorConcurrency)
 	if err != nil {
 		logging.LogReplicationTaskProcessorStartFailedEvent(p.logger, err)
 		return err
@@ -197,11 +197,12 @@ func (p *replicationTaskProcessor) worker(workerWG *sync.WaitGroup) {
 									WorkflowId: task.HistoryTaskAttributes.WorkflowId,
 									RunId:      task.HistoryTaskAttributes.RunId,
 								},
-								FirstEventId:  task.HistoryTaskAttributes.FirstEventId,
-								NextEventId:   task.HistoryTaskAttributes.NextEventId,
-								Version:       task.HistoryTaskAttributes.Version,
-								History:       task.HistoryTaskAttributes.History,
-								NewRunHistory: task.HistoryTaskAttributes.NewRunHistory,
+								FirstEventId:    task.HistoryTaskAttributes.FirstEventId,
+								NextEventId:     task.HistoryTaskAttributes.NextEventId,
+								Version:         task.HistoryTaskAttributes.Version,
+								ReplicationInfo: task.HistoryTaskAttributes.ReplicationInfo,
+								History:         task.HistoryTaskAttributes.History,
+								NewRunHistory:   task.HistoryTaskAttributes.NewRunHistory,
 							})
 
 							// ReplicateEvents succeeded, break out of the loop and complete task
