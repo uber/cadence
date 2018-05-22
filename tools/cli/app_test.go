@@ -400,11 +400,9 @@ var describeTaskListResponse = &shared.DescribeTaskListResponse{
 }
 
 func (s *cliAppSuite) TestAdminInquiryWorkflow() {
-	shardID := "test-shard-id"
-	addr := "ip:port"
 	resp := &admin.InquiryWorkflowExecutionResponse{
-		ShardId:     &shardID,
-		HistoryAddr: &addr,
+		ShardId:     common.StringPtr("test-shard-id"),
+		HistoryAddr: common.StringPtr("ip:port"),
 	}
 
 	s.adminService.EXPECT().InquiryWorkflowExecution(gomock.Any(), gomock.Any()).Return(resp, nil)

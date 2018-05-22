@@ -78,11 +78,11 @@ func (adh *AdminHandler) InquiryWorkflowExecution(ctx context.Context, request *
 	shardIDstr := string(shardID)
 
 	historyHost, err := adh.GetMembershipMonitor().Lookup(common.HistoryServiceName, shardIDstr)
-	historyAddr := historyHost.GetAddress()
-
 	if err != nil {
 		return nil, adh.error(err)
 	}
+
+	historyAddr := historyHost.GetAddress()
 
 	return &admin.InquiryWorkflowExecutionResponse{
 		ShardId:     &shardIDstr,

@@ -23,6 +23,7 @@ package cli
 import (
 	"github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 	s "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
 	"github.com/urfave/cli"
 )
 
@@ -48,10 +49,10 @@ func InquiryWorkflow(c *cli.Context) {
 	defer cancel()
 
 	resp, err := serviceClient.InquiryWorkflowExecution(ctx, &s.DescribeWorkflowExecutionRequest{
-		Domain: &domain,
+		Domain: common.StringPtr(domain),
 		Execution: &s.WorkflowExecution{
-			WorkflowId: &wid,
-			RunId:      &rid,
+			WorkflowId: common.StringPtr(wid),
+			RunId:      common.StringPtr(rid),
 		},
 	})
 	if err != nil {
