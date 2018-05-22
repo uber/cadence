@@ -23,6 +23,8 @@ package frontend
 import (
 	"context"
 
+	"strconv"
+
 	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/admin/adminserviceserver"
 	gen "github.com/uber/cadence/.gen/go/shared"
@@ -70,12 +72,12 @@ func (adh *AdminHandler) InquiryWorkflowExecution(ctx context.Context, request *
 	}
 
 	if err := validateExecution(request.Execution); err != nil {
-		adh.error(err)
-		return nil, err
+		return nil, adh.error(err)
 	}
 
 	shardID := common.WorkflowIDToHistoryShard(*request.Execution.WorkflowId, adh.numberOfHistoryShards)
 	shardIDstr := string(shardID)
+	shardIDForOutput := strconv.Itoa(shardID)
 
 	historyHost, err := adh.GetMembershipMonitor().Lookup(common.HistoryServiceName, shardIDstr)
 	if err != nil {
@@ -85,8 +87,8 @@ func (adh *AdminHandler) InquiryWorkflowExecution(ctx context.Context, request *
 	historyAddr := historyHost.GetAddress()
 
 	return &admin.InquiryWorkflowExecutionResponse{
-		ShardId:     &shardIDstr,
-		HistoryAddr: &historyAddr,
+		ShardId:     common.StringPtr(shardIDForOutput),
+		HistoryAddr: common.StringPtr(historyAddr),
 	}, nil
 }
 

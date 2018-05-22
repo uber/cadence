@@ -2079,7 +2079,7 @@ func (wh *WorkflowHandler) validateTaskList(t *gen.TaskList, scope int) error {
 func (wh *WorkflowHandler) validateExecutionAndEmitMetrics(w *gen.WorkflowExecution, scope int) error {
 	err := validateExecution(w)
 	if err != nil {
-		wh.error(err, scope)
+		return wh.error(err, scope)
 	}
 	return nil
 }
