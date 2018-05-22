@@ -221,7 +221,7 @@ func init() {
 			return true
 		case *shared.EntityNotExistsError:
 			return true
-		case *AccessDeniedError:
+		case *shared.AccessDeniedError:
 			return true
 		default:
 			return false
@@ -249,7 +249,7 @@ func init() {
 				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_InquiryWorkflowExecution_Result.EntityNotExistError")
 			}
 			return &AdminService_InquiryWorkflowExecution_Result{EntityNotExistError: e}, nil
-		case *AccessDeniedError:
+		case *shared.AccessDeniedError:
 			if e == nil {
 				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_InquiryWorkflowExecution_Result.AccessDeniedError")
 			}
@@ -298,7 +298,7 @@ type AdminService_InquiryWorkflowExecution_Result struct {
 	BadRequestError      *shared.BadRequestError           `json:"badRequestError,omitempty"`
 	InternalServiceError *shared.InternalServiceError      `json:"internalServiceError,omitempty"`
 	EntityNotExistError  *shared.EntityNotExistsError      `json:"entityNotExistError,omitempty"`
-	AccessDeniedError    *AccessDeniedError                `json:"accessDeniedError,omitempty"`
+	AccessDeniedError    *shared.AccessDeniedError         `json:"accessDeniedError,omitempty"`
 }
 
 // ToWire translates a AdminService_InquiryWorkflowExecution_Result struct into a Thrift-level intermediate
@@ -396,8 +396,8 @@ func _EntityNotExistsError_Read(w wire.Value) (*shared.EntityNotExistsError, err
 	return &v, err
 }
 
-func _AccessDeniedError_Read(w wire.Value) (*AccessDeniedError, error) {
-	var v AccessDeniedError
+func _AccessDeniedError_Read(w wire.Value) (*shared.AccessDeniedError, error) {
+	var v shared.AccessDeniedError
 	err := v.FromWire(w)
 	return &v, err
 }
