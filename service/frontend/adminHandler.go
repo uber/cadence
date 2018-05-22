@@ -23,7 +23,6 @@ package frontend
 import (
 	"context"
 
-	"github.com/pborman/uuid"
 	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/admin/adminserviceserver"
 	gen "github.com/uber/cadence/.gen/go/shared"
@@ -70,7 +69,8 @@ func (adh *AdminHandler) InquiryWorkflowExecution(ctx context.Context, request *
 		return nil, adh.error(errRequestNotSet)
 	}
 
-	if err := adh.validateExecution(request.Execution); err != nil {
+	if err := validateExecution(request.Execution); err != nil {
+		adh.error(err)
 		return nil, err
 	}
 
@@ -105,17 +105,4 @@ func (adh *AdminHandler) error(err error) error {
 		logging.LogUncategorizedError(adh.Service.GetLogger(), err)
 		return &gen.InternalServiceError{Message: err.Error()}
 	}
-}
-
-func (adh *AdminHandler) validateExecution(w *gen.WorkflowExecution) error {
-	if w == nil {
-		return adh.error(errExecutionNotSet)
-	}
-	if w.WorkflowId == nil || w.GetWorkflowId() == "" {
-		return adh.error(errWorkflowIDNotSet)
-	}
-	if w.GetRunId() != "" && uuid.Parse(w.GetRunId()) == nil {
-		return adh.error(errInvalidRunID)
-	}
-	return nil
 }
