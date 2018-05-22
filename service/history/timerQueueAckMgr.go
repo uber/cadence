@@ -151,19 +151,26 @@ func (t *timerQueueAckMgrImpl) getFinishedChan() <-chan struct{} {
 
 func (t *timerQueueAckMgrImpl) readTimerTasks() ([]*persistence.TimerTaskInfo, *persistence.TimerTaskInfo, bool, error) {
 	t.Lock()
-	defer t.Unlock()
+	minQueryLevel := t.minQueryLevel
+	maxQueryLevel := t.maxQueryLevel
+	pageToken := t.pageToken
+	t.Unlock()
 
 	var tasks []*persistence.TimerTaskInfo
 	morePage := false
 	var err error
-	if t.minQueryLevel.Before(t.maxQueryLevel) {
-		tasks, t.pageToken, err = t.getTimerTasks(t.minQueryLevel, t.maxQueryLevel, t.config.TimerTaskBatchSize, t.pageToken)
+	if minQueryLevel.Before(maxQueryLevel) {
+		tasks, pageToken, err = t.getTimerTasks(minQueryLevel, maxQueryLevel, t.config.TimerTaskBatchSize, pageToken)
 		if err != nil {
 			return nil, nil, false, err
 		}
-		morePage = len(t.pageToken) != 0
-		t.logger.Debugf("readTimerTasks: ReadLevel: (%s) count: %v, more timer: %v", t.minQueryLevel, len(tasks), morePage)
+		morePage = len(pageToken) != 0
+		t.logger.Debugf("readTimerTasks: ReadLevel: (%s) count: %v, more timer: %v", minQueryLevel, len(tasks), morePage)
 	}
+
+	t.Lock()
+	defer t.Unlock()
+	t.pageToken = pageToken
 	if t.isFailover && !morePage {
 		t.isReadFinished = true
 	}
