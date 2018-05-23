@@ -28,13 +28,12 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-
 	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/cluster"
 )
 
 type (
-	metadataPersistenceSuite struct {
+	metadataPersistenceSuiteV2 struct {
 		suite.Suite
 		TestBase
 		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
@@ -43,12 +42,12 @@ type (
 	}
 )
 
-func TestMetadataPersistenceSuite(t *testing.T) {
-	s := new(metadataPersistenceSuite)
+func TestMetadataPersistenceSuiteV2(t *testing.T) {
+	s := new(metadataPersistenceSuiteV2)
 	suite.Run(t, s)
 }
 
-func (m *metadataPersistenceSuite) SetupSuite() {
+func (m *metadataPersistenceSuiteV2) SetupSuite() {
 	if testing.Verbose() {
 		log.SetOutput(os.Stdout)
 	}
@@ -56,16 +55,36 @@ func (m *metadataPersistenceSuite) SetupSuite() {
 	m.SetupWorkflowStore()
 }
 
-func (m *metadataPersistenceSuite) SetupTest() {
+func (m *metadataPersistenceSuiteV2) SetupTest() {
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	m.Assertions = require.New(m.T())
+
+	// cleanup the domain created
+	var token []byte
+	pageSize := 10
+ListLoop:
+	for {
+		resp, err := m.ListDomainV2(pageSize, token)
+		m.Nil(err)
+		token = resp.NextPageToken
+		for _, domain := range resp.Domains {
+			m.DeleteDomain(domain.Info.ID, "")
+		}
+		if len(token) == 0 {
+			break ListLoop
+		}
+	}
 }
 
-func (m *metadataPersistenceSuite) TearDownSuite() {
+func (m *metadataPersistenceSuiteV2) TearDownTest() {
+
+}
+
+func (m *metadataPersistenceSuiteV2) TearDownSuite() {
 	m.TearDownWorkflowStore()
 }
 
-func (m *metadataPersistenceSuite) TestCreateDomain() {
+func (m *metadataPersistenceSuiteV2) TestCreateDomain() {
 	id := uuid.New()
 	name := "create-domain-test-name"
 	status := DomainStatusRegistered
@@ -94,7 +113,6 @@ func (m *metadataPersistenceSuite) TestCreateDomain() {
 		configVersion,
 		failoverVersion,
 	)
-
 	m.Nil(err0)
 	m.NotNil(resp0)
 	m.Equal(id, resp0.ID)
@@ -117,7 +135,7 @@ func (m *metadataPersistenceSuite) TestCreateDomain() {
 	m.Equal(configVersion, resp1.ConfigVersion)
 	m.Equal(failoverVersion, resp1.FailoverVersion)
 	m.True(resp1.ReplicationConfig.Clusters[0].ClusterName == cluster.TestCurrentClusterName)
-	m.Equal(int64(0), resp1.GlobalNotificationVersion)
+	m.Equal(initialFailoverGlobalNotificationVersion, resp1.FailoverGlobalNotificationVersion)
 
 	resp2, err2 := m.CreateDomain(
 		&DomainInfo{
@@ -141,7 +159,7 @@ func (m *metadataPersistenceSuite) TestCreateDomain() {
 	m.Nil(resp2)
 }
 
-func (m *metadataPersistenceSuite) TestGetDomain() {
+func (m *metadataPersistenceSuiteV2) TestGetDomain() {
 	id := uuid.New()
 	name := "get-domain-test-name"
 	status := DomainStatusRegistered
@@ -211,7 +229,7 @@ func (m *metadataPersistenceSuite) TestGetDomain() {
 	m.Equal(isGlobalDomain, resp2.IsGlobalDomain)
 	m.Equal(configVersion, resp2.ConfigVersion)
 	m.Equal(failoverVersion, resp2.FailoverVersion)
-	m.Equal(int64(0), resp2.GlobalNotificationVersion)
+	m.Equal(initialFailoverGlobalNotificationVersion, resp2.FailoverGlobalNotificationVersion)
 
 	resp3, err3 := m.GetDomain("", name)
 	m.Nil(err3)
@@ -231,7 +249,7 @@ func (m *metadataPersistenceSuite) TestGetDomain() {
 	m.Equal(isGlobalDomain, resp2.IsGlobalDomain)
 	m.Equal(configVersion, resp2.ConfigVersion)
 	m.Equal(failoverVersion, resp3.FailoverVersion)
-	m.Equal(int64(0), resp3.GlobalNotificationVersion)
+	m.Equal(initialFailoverGlobalNotificationVersion, resp3.FailoverGlobalNotificationVersion)
 
 	resp4, err4 := m.GetDomain(id, name)
 	m.NotNil(err4)
@@ -239,7 +257,7 @@ func (m *metadataPersistenceSuite) TestGetDomain() {
 	m.Nil(resp4)
 }
 
-func (m *metadataPersistenceSuite) TestUpdateDomain() {
+func (m *metadataPersistenceSuiteV2) TestUpdateDomain() {
 	id := uuid.New()
 	name := "update-domain-test-name"
 	status := DomainStatusRegistered
@@ -287,6 +305,9 @@ func (m *metadataPersistenceSuite) TestUpdateDomain() {
 
 	resp2, err2 := m.GetDomain(id, "")
 	m.Nil(err2)
+	globalNotificationVersion, err := m.MetadataManagerV2.GetMetadataV2()
+	m.Nil(err)
+
 	updatedStatus := DomainStatusDeprecated
 	updatedDescription := "description-updated"
 	updatedOwner := "owner-updated"
@@ -297,6 +318,7 @@ func (m *metadataPersistenceSuite) TestUpdateDomain() {
 	updateClusterStandby := "other random standby cluster name"
 	updateConfigVersion := int64(12)
 	updateFailoverVersion := int64(28)
+	updateFailoverGlobalNotificationVersion := int64(14)
 	updateClusters := []*ClusterReplicationConfig{
 		&ClusterReplicationConfig{
 			ClusterName: updateClusterActive,
@@ -324,9 +346,9 @@ func (m *metadataPersistenceSuite) TestUpdateDomain() {
 		},
 		updateConfigVersion,
 		updateFailoverVersion,
-		resp2.GlobalNotificationVersion,
+		updateFailoverGlobalNotificationVersion,
+		globalNotificationVersion,
 	)
-
 	m.Nil(err3)
 
 	resp4, err4 := m.GetDomain("", name)
@@ -346,7 +368,8 @@ func (m *metadataPersistenceSuite) TestUpdateDomain() {
 	}
 	m.Equal(updateConfigVersion, resp4.ConfigVersion)
 	m.Equal(updateFailoverVersion, resp4.FailoverVersion)
-	m.Equal(resp2.GlobalNotificationVersion+1, resp4.GlobalNotificationVersion)
+	m.Equal(updateFailoverGlobalNotificationVersion, resp4.FailoverGlobalNotificationVersion)
+	m.Equal(globalNotificationVersion, resp4.GlobalNotificationVersion)
 
 	resp5, err5 := m.GetDomain("", name)
 	m.Nil(err5)
@@ -365,10 +388,11 @@ func (m *metadataPersistenceSuite) TestUpdateDomain() {
 	}
 	m.Equal(updateConfigVersion, resp5.ConfigVersion)
 	m.Equal(updateFailoverVersion, resp5.FailoverVersion)
-	m.Equal(resp2.GlobalNotificationVersion+1, resp5.GlobalNotificationVersion)
+	m.Equal(updateFailoverGlobalNotificationVersion, resp5.FailoverGlobalNotificationVersion)
+	m.Equal(globalNotificationVersion, resp5.GlobalNotificationVersion)
 }
 
-func (m *metadataPersistenceSuite) TestDeleteDomain() {
+func (m *metadataPersistenceSuiteV2) TestDeleteDomain() {
 	id := uuid.New()
 	name := "delete-domain-test-name"
 	status := DomainStatusRegistered
@@ -469,9 +493,111 @@ func (m *metadataPersistenceSuite) TestDeleteDomain() {
 	m.Nil(resp9)
 }
 
-func (m *metadataPersistenceSuite) CreateDomain(info *DomainInfo, config *DomainConfig,
+func (m *metadataPersistenceSuiteV2) TestListDomains() {
+	clusterActive1 := "some random active cluster name"
+	clusterStandby1 := "some random standby cluster name"
+	clusters1 := []*ClusterReplicationConfig{
+		&ClusterReplicationConfig{
+			ClusterName: clusterActive1,
+		},
+		&ClusterReplicationConfig{
+			ClusterName: clusterStandby1,
+		},
+	}
+
+	clusterActive2 := "other random active cluster name"
+	clusterStandby2 := "other random standby cluster name"
+	clusters2 := []*ClusterReplicationConfig{
+		&ClusterReplicationConfig{
+			ClusterName: clusterActive2,
+		},
+		&ClusterReplicationConfig{
+			ClusterName: clusterStandby2,
+		},
+	}
+
+	inputDomains := []*GetDomainResponse{
+		&GetDomainResponse{
+			Info: &DomainInfo{
+				ID:          uuid.New(),
+				Name:        "list-domain-test-name-1",
+				Status:      DomainStatusRegistered,
+				Description: "list-domain-test-description-1",
+				OwnerEmail:  "list-domain-test-owner-1",
+			},
+			Config: &DomainConfig{
+				Retention:  109,
+				EmitMetric: true,
+			},
+			ReplicationConfig: &DomainReplicationConfig{
+				ActiveClusterName: clusterActive1,
+				Clusters:          clusters1,
+			},
+			IsGlobalDomain:  true,
+			ConfigVersion:   133,
+			FailoverVersion: 266,
+		},
+		&GetDomainResponse{
+			Info: &DomainInfo{
+				ID:          uuid.New(),
+				Name:        "list-domain-test-name-2",
+				Status:      DomainStatusRegistered,
+				Description: "list-domain-test-description-2",
+				OwnerEmail:  "list-domain-test-owner-2",
+			},
+			Config: &DomainConfig{
+				Retention:  326,
+				EmitMetric: false,
+			},
+			ReplicationConfig: &DomainReplicationConfig{
+				ActiveClusterName: clusterActive2,
+				Clusters:          clusters2,
+			},
+			IsGlobalDomain:  false,
+			ConfigVersion:   400,
+			FailoverVersion: 667,
+		},
+	}
+	for _, domain := range inputDomains {
+		_, err := m.CreateDomain(
+			domain.Info,
+			domain.Config,
+			domain.ReplicationConfig,
+			domain.IsGlobalDomain,
+			domain.ConfigVersion,
+			domain.FailoverVersion,
+		)
+		m.Nil(err)
+	}
+
+	var token []byte
+	pageSize := 1
+	outputDomains := make(map[string]*GetDomainResponse)
+ListLoop:
+	for {
+		resp, err := m.ListDomainV2(pageSize, token)
+		m.Nil(err)
+		token = resp.NextPageToken
+		for _, domain := range resp.Domains {
+			outputDomains[domain.Info.ID] = domain
+			// global notification version is already tested, so here we make it 0
+			// so we can test == easily
+			domain.GlobalNotificationVersion = 0
+		}
+		if len(token) == 0 {
+			break ListLoop
+		}
+	}
+
+	m.Equal(len(inputDomains), len(outputDomains))
+	for _, domain := range inputDomains {
+		m.Equal(domain, outputDomains[domain.Info.ID])
+	}
+}
+
+func (m *metadataPersistenceSuiteV2) CreateDomain(info *DomainInfo, config *DomainConfig,
 	replicationConfig *DomainReplicationConfig, isGlobaldomain bool, configVersion int64, failoverVersion int64) (*CreateDomainResponse, error) {
-	return m.MetadataManager.CreateDomain(&CreateDomainRequest{
+	return m.MetadataManagerV2.CreateDomainV2(&CreateDomainRequest{
 		Info:              info,
 		Config:            config,
 		ReplicationConfig: replicationConfig,
@@ -481,28 +607,36 @@ func (m *metadataPersistenceSuite) CreateDomain(info *DomainInfo, config *Domain
 	})
 }
 
-func (m *metadataPersistenceSuite) GetDomain(id, name string) (*GetDomainResponse, error) {
-	return m.MetadataManager.GetDomain(&GetDomainRequest{
+func (m *metadataPersistenceSuiteV2) GetDomain(id, name string) (*GetDomainResponse, error) {
+	return m.MetadataManagerV2.GetDomainV2(&GetDomainRequest{
 		ID:   id,
 		Name: name,
 	})
 }
 
-func (m *metadataPersistenceSuite) UpdateDomain(info *DomainInfo, config *DomainConfig, replicationConfig *DomainReplicationConfig,
-	configVersion int64, failoverVersion int64, dbVersion int64) error {
-	return m.MetadataManager.UpdateDomain(&UpdateDomainRequest{
-		Info:                      info,
-		Config:                    config,
-		ReplicationConfig:         replicationConfig,
-		ConfigVersion:             configVersion,
-		FailoverVersion:           failoverVersion,
-		GlobalNotificationVersion: dbVersion,
+func (m *metadataPersistenceSuiteV2) UpdateDomain(info *DomainInfo, config *DomainConfig, replicationConfig *DomainReplicationConfig,
+	configVersion int64, failoverVersion int64, failoverGlobalNotificationVersion int64, globalNotificationVersion int64) error {
+	return m.MetadataManagerV2.UpdateDomainV2(&UpdateDomainRequest{
+		Info:                              info,
+		Config:                            config,
+		ReplicationConfig:                 replicationConfig,
+		ConfigVersion:                     configVersion,
+		FailoverVersion:                   failoverVersion,
+		FailoverGlobalNotificationVersion: failoverGlobalNotificationVersion,
+		GlobalNotificationVersion:         globalNotificationVersion,
 	})
 }
 
-func (m *metadataPersistenceSuite) DeleteDomain(id, name string) error {
+func (m *metadataPersistenceSuiteV2) DeleteDomain(id, name string) error {
 	if len(id) > 0 {
-		return m.MetadataManager.DeleteDomain(&DeleteDomainRequest{ID: id})
+		return m.MetadataManagerV2.DeleteDomainV2(&DeleteDomainRequest{ID: id})
 	}
-	return m.MetadataManager.DeleteDomainByName(&DeleteDomainByNameRequest{Name: name})
+	return m.MetadataManagerV2.DeleteDomainByNameV2(&DeleteDomainByNameRequest{Name: name})
+}
+
+func (m *metadataPersistenceSuiteV2) ListDomainV2(pageSize int, pageToken []byte) (*ListDomainResponse, error) {
+	return m.MetadataManagerV2.ListDomainV2(&ListDomainRequest{
+		PageSize:      pageSize,
+		NextPageToken: pageToken,
+	})
 }

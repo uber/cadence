@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	templateDomainType = `{` +
+	templateDomainInfoType = `{` +
 		`id: ?, ` +
 		`name: ?, ` +
 		`status: ?, ` +
@@ -55,7 +55,7 @@ const (
 
 	templateCreateDomainByNameQuery = `INSERT INTO domains_by_name (` +
 		`name, domain, config, replication_config, is_global_domain, config_version, failover_version) ` +
-		`VALUES(?, ` + templateDomainType + `, ` + templateDomainConfigType + `, ` + templateDomainReplicationConfigType + `, ?, ?, ?) IF NOT EXISTS`
+		`VALUES(?, ` + templateDomainInfoType + `, ` + templateDomainConfigType + `, ` + templateDomainReplicationConfigType + `, ?, ?, ?) IF NOT EXISTS`
 
 	templateGetDomainQuery = `SELECT domain.name ` +
 		`FROM domains ` +
@@ -72,7 +72,7 @@ const (
 		`WHERE name = ?`
 
 	templateUpdateDomainByNameQuery = `UPDATE domains_by_name ` +
-		`SET domain = ` + templateDomainType + `, ` +
+		`SET domain = ` + templateDomainInfoType + `, ` +
 		`config = ` + templateDomainConfigType + `, ` +
 		`replication_config = ` + templateDomainReplicationConfigType + `, ` +
 		`config_version = ? ,` +
@@ -131,13 +131,20 @@ func (m *cassandraMetadataPersistence) Close() {
 // delete the orphaned entry from domains table.  There is a chance delete entry could fail and we never delete the
 // orphaned entry from domains table.  We might need a background job to delete those orphaned record.
 func (m *cassandraMetadataPersistence) CreateDomain(request *CreateDomainRequest) (*CreateDomainResponse, error) {
-	if err := m.session.Query(templateCreateDomainQuery, request.Info.ID, request.Info.Name).Exec(); err != nil {
+	query := m.session.Query(templateCreateDomainQuery, request.Info.ID, request.Info.Name)
+	applied, err := query.ScanCAS()
+	if err != nil {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("CreateDomain operation failed. Inserting into domains table. Error: %v", err),
 		}
 	}
+	if !applied {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("CreateDomain operation failed because of uuid collision."),
+		}
+	}
 
-	query := m.session.Query(templateCreateDomainByNameQuery,
+	query = m.session.Query(templateCreateDomainByNameQuery,
 		request.Info.Name,
 		request.Info.ID,
 		request.Info.Name,
@@ -154,7 +161,7 @@ func (m *cassandraMetadataPersistence) CreateDomain(request *CreateDomainRequest
 	)
 
 	previous := make(map[string]interface{})
-	applied, err := query.MapScanCAS(previous)
+	applied, err = query.MapScanCAS(previous)
 
 	if err != nil {
 		return nil, &workflow.InternalServiceError{
@@ -255,22 +262,22 @@ func (m *cassandraMetadataPersistence) GetDomain(request *GetDomainRequest) (*Ge
 	replicationConfig.Clusters = GetOrUseDefaultClusters(m.currentClusterName, replicationConfig.Clusters)
 
 	return &GetDomainResponse{
-		Info:              info,
-		Config:            config,
-		ReplicationConfig: replicationConfig,
-		IsGlobalDomain:    isGlobalDomain,
-		ConfigVersion:     configVersion,
-		FailoverVersion:   failoverVersion,
-		DBVersion:         dbVersion,
+		Info:                      info,
+		Config:                    config,
+		ReplicationConfig:         replicationConfig,
+		IsGlobalDomain:            isGlobalDomain,
+		ConfigVersion:             configVersion,
+		FailoverVersion:           failoverVersion,
+		GlobalNotificationVersion: dbVersion,
 	}, nil
 }
 
 func (m *cassandraMetadataPersistence) UpdateDomain(request *UpdateDomainRequest) error {
 	var nextVersion int64 = 1
 	var currentVersion *int64
-	if request.DBVersion > 0 {
-		nextVersion = request.DBVersion + 1
-		currentVersion = &request.DBVersion
+	if request.GlobalNotificationVersion > 0 {
+		nextVersion = request.GlobalNotificationVersion + 1
+		currentVersion = &request.GlobalNotificationVersion
 	}
 	query := m.session.Query(templateUpdateDomainByNameQuery,
 		request.Info.ID,

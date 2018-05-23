@@ -72,7 +72,7 @@ func (s *Service) Start() {
 
 	s.metricsClient = base.GetMetricsClient()
 
-	metadataManager, err := persistence.NewCassandraMetadataPersistence(p.CassandraConfig.Hosts,
+	metadataManagerV2, err := persistence.NewCassandraMetadataPersistenceV2(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,
 		p.CassandraConfig.User,
 		p.CassandraConfig.Password,
@@ -84,14 +84,14 @@ func (s *Service) Start() {
 	if err != nil {
 		log.Fatalf("failed to create metadata manager: %v", err)
 	}
-	metadataManager = persistence.NewMetadataPersistenceClient(metadataManager, base.GetMetricsClient())
+	metadataManagerV2 = persistence.NewMetadataPersistenceClientV2(metadataManagerV2, base.GetMetricsClient())
 
 	history, err := base.GetClientFactory().NewHistoryClient()
 	if err != nil {
 		log.Fatalf("failed to create history service client: %v", err)
 	}
 
-	replicator := NewReplicator(p.ClusterMetadata, metadataManager, history, s.config, p.MessagingClient, log,
+	replicator := NewReplicator(p.ClusterMetadata, metadataManagerV2, history, s.config, p.MessagingClient, log,
 		s.metricsClient)
 	if err := replicator.Start(); err != nil {
 		replicator.Stop()

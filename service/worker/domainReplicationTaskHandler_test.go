@@ -61,7 +61,7 @@ func (s *domainReplicatorSuite) TearDownSuite() {
 func (s *domainReplicatorSuite) SetupTest() {
 	s.SetupWorkflowStore()
 	s.domainReplicator = NewDomainReplicator(
-		s.MetadataManager,
+		s.MetadataManagerV2,
 		bark.NewLoggerFromLogrus(logrus.New()),
 	).(*domainReplicatorImpl)
 }
@@ -113,10 +113,12 @@ func (s *domainReplicatorSuite) TestHandleReceivingTask_RegisterDomainTask() {
 		FailoverVersion: common.Int64Ptr(failoverVersion),
 	}
 
-	err := s.domainReplicator.HandleReceivingTask(task)
+	globalNotificationVersion, err := s.MetadataManagerV2.GetMetadataV2()
+	s.Nil(err)
+	err = s.domainReplicator.HandleReceivingTask(task)
 	s.Nil(err)
 
-	resp, err := s.MetadataManager.GetDomain(&persistence.GetDomainRequest{ID: id})
+	resp, err := s.MetadataManagerV2.GetDomainV2(&persistence.GetDomainRequest{ID: id})
 	s.Nil(err)
 	s.NotNil(resp)
 	s.Equal(id, resp.Info.ID)
@@ -130,7 +132,8 @@ func (s *domainReplicatorSuite) TestHandleReceivingTask_RegisterDomainTask() {
 	s.Equal(s.domainReplicator.convertClusterReplicationConfigFromThrift(clusters), resp.ReplicationConfig.Clusters)
 	s.Equal(configVersion, resp.ConfigVersion)
 	s.Equal(failoverVersion, resp.FailoverVersion)
-	s.Equal(int64(0), resp.DBVersion)
+	s.Equal(int64(0), resp.FailoverGlobalNotificationVersion)
+	s.Equal(globalNotificationVersion, resp.GlobalNotificationVersion)
 }
 
 func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_DomainNotExist() {
@@ -176,10 +179,12 @@ func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_DomainN
 		FailoverVersion: common.Int64Ptr(failoverVersion),
 	}
 
-	err := s.domainReplicator.HandleReceivingTask(updateTask)
+	globalNotificationVersion, err := s.MetadataManagerV2.GetMetadataV2()
+	s.Nil(err)
+	err = s.domainReplicator.HandleReceivingTask(updateTask)
 	s.Nil(err)
 
-	resp, err := s.MetadataManager.GetDomain(&persistence.GetDomainRequest{Name: name})
+	resp, err := s.MetadataManagerV2.GetDomainV2(&persistence.GetDomainRequest{Name: name})
 	s.Nil(err)
 	s.NotNil(resp)
 	s.Equal(id, resp.Info.ID)
@@ -193,7 +198,8 @@ func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_DomainN
 	s.Equal(s.domainReplicator.convertClusterReplicationConfigFromThrift(clusters), resp.ReplicationConfig.Clusters)
 	s.Equal(configVersion, resp.ConfigVersion)
 	s.Equal(failoverVersion, resp.FailoverVersion)
-	s.Equal(int64(0), resp.DBVersion)
+	s.Equal(int64(0), resp.FailoverGlobalNotificationVersion)
+	s.Equal(globalNotificationVersion, resp.GlobalNotificationVersion)
 }
 
 func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_UpdateConfig_UpdateActiveCluster() {
@@ -281,9 +287,11 @@ func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_UpdateC
 		ConfigVersion:   common.Int64Ptr(updateConfigVersion),
 		FailoverVersion: common.Int64Ptr(updateFailoverVersion),
 	}
+	globalNotificationVersion, err := s.MetadataManagerV2.GetMetadataV2()
+	s.Nil(err)
 	err = s.domainReplicator.HandleReceivingTask(updateTask)
 	s.Nil(err)
-	resp, err := s.MetadataManager.GetDomain(&persistence.GetDomainRequest{Name: name})
+	resp, err := s.MetadataManagerV2.GetDomainV2(&persistence.GetDomainRequest{Name: name})
 	s.Nil(err)
 	s.NotNil(resp)
 	s.Equal(id, resp.Info.ID)
@@ -297,7 +305,8 @@ func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_UpdateC
 	s.Equal(s.domainReplicator.convertClusterReplicationConfigFromThrift(updateClusters), resp.ReplicationConfig.Clusters)
 	s.Equal(updateConfigVersion, resp.ConfigVersion)
 	s.Equal(updateFailoverVersion, resp.FailoverVersion)
-	s.Equal(int64(1), resp.DBVersion)
+	s.Equal(globalNotificationVersion, resp.FailoverGlobalNotificationVersion)
+	s.Equal(globalNotificationVersion, resp.GlobalNotificationVersion)
 }
 
 func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_UpdateConfig_NoUpdateActiveCluster() {
@@ -385,9 +394,11 @@ func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_UpdateC
 		ConfigVersion:   common.Int64Ptr(updateConfigVersion),
 		FailoverVersion: common.Int64Ptr(updateFailoverVersion),
 	}
+	globalNotificationVersion, err := s.MetadataManagerV2.GetMetadataV2()
+	s.Nil(err)
 	err = s.domainReplicator.HandleReceivingTask(updateTask)
 	s.Nil(err)
-	resp, err := s.MetadataManager.GetDomain(&persistence.GetDomainRequest{Name: name})
+	resp, err := s.MetadataManagerV2.GetDomainV2(&persistence.GetDomainRequest{Name: name})
 	s.Nil(err)
 	s.NotNil(resp)
 	s.Equal(id, resp.Info.ID)
@@ -401,7 +412,8 @@ func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_UpdateC
 	s.Equal(s.domainReplicator.convertClusterReplicationConfigFromThrift(updateClusters), resp.ReplicationConfig.Clusters)
 	s.Equal(updateConfigVersion, resp.ConfigVersion)
 	s.Equal(failoverVersion, resp.FailoverVersion)
-	s.Equal(int64(1), resp.DBVersion)
+	s.Equal(int64(0), resp.FailoverGlobalNotificationVersion)
+	s.Equal(globalNotificationVersion, resp.GlobalNotificationVersion)
 }
 
 func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_NoUpdateConfig_UpdateActiveCluster() {
@@ -489,9 +501,11 @@ func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_NoUpdat
 		ConfigVersion:   common.Int64Ptr(updateConfigVersion),
 		FailoverVersion: common.Int64Ptr(updateFailoverVersion),
 	}
+	globalNotificationVersion, err := s.MetadataManagerV2.GetMetadataV2()
+	s.Nil(err)
 	err = s.domainReplicator.HandleReceivingTask(updateTask)
 	s.Nil(err)
-	resp, err := s.MetadataManager.GetDomain(&persistence.GetDomainRequest{Name: name})
+	resp, err := s.MetadataManagerV2.GetDomainV2(&persistence.GetDomainRequest{Name: name})
 	s.Nil(err)
 	s.NotNil(resp)
 	s.Equal(id, resp.Info.ID)
@@ -505,7 +519,8 @@ func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_NoUpdat
 	s.Equal(s.domainReplicator.convertClusterReplicationConfigFromThrift(clusters), resp.ReplicationConfig.Clusters)
 	s.Equal(configVersion, resp.ConfigVersion)
 	s.Equal(updateFailoverVersion, resp.FailoverVersion)
-	s.Equal(int64(1), resp.DBVersion)
+	s.Equal(globalNotificationVersion, resp.FailoverGlobalNotificationVersion)
+	s.Equal(globalNotificationVersion, resp.GlobalNotificationVersion)
 }
 
 func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_NoUpdateConfig_NoUpdateActiveCluster() {
@@ -550,8 +565,9 @@ func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_NoUpdat
 		ConfigVersion:   common.Int64Ptr(configVersion),
 		FailoverVersion: common.Int64Ptr(failoverVersion),
 	}
-
-	err := s.domainReplicator.HandleReceivingTask(createTask)
+	globalNotificationVersion, err := s.MetadataManagerV2.GetMetadataV2()
+	s.Nil(err)
+	err = s.domainReplicator.HandleReceivingTask(createTask)
 	s.Nil(err)
 
 	// success update case
@@ -595,7 +611,7 @@ func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_NoUpdat
 	}
 	err = s.domainReplicator.HandleReceivingTask(updateTask)
 	s.Nil(err)
-	resp, err := s.MetadataManager.GetDomain(&persistence.GetDomainRequest{Name: name})
+	resp, err := s.MetadataManagerV2.GetDomainV2(&persistence.GetDomainRequest{Name: name})
 	s.Nil(err)
 	s.NotNil(resp)
 	s.Equal(id, resp.Info.ID)
@@ -609,5 +625,6 @@ func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_NoUpdat
 	s.Equal(s.domainReplicator.convertClusterReplicationConfigFromThrift(clusters), resp.ReplicationConfig.Clusters)
 	s.Equal(configVersion, resp.ConfigVersion)
 	s.Equal(failoverVersion, resp.FailoverVersion)
-	s.Equal(int64(0), resp.DBVersion)
+	s.Equal(int64(0), resp.FailoverGlobalNotificationVersion)
+	s.Equal(globalNotificationVersion, resp.GlobalNotificationVersion)
 }

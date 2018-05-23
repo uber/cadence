@@ -124,16 +124,17 @@ type (
 
 	// ShardInfo describes a shard
 	ShardInfo struct {
-		ShardID                 int
-		Owner                   string
-		RangeID                 int64
-		StolenSinceRenew        int
-		UpdatedAt               time.Time
-		ReplicationAckLevel     int64
-		TransferAckLevel        int64     // TO BE DEPRECATED IN FAVOR OF ClusterTransferAckLevel
-		TimerAckLevel           time.Time // TO BE DEPRECATED IN FAVOR OF ClusteerTimerAckLevel
-		ClusterTransferAckLevel map[string]int64
-		ClusterTimerAckLevel    map[string]time.Time
+		ShardID                   int
+		Owner                     string
+		RangeID                   int64
+		StolenSinceRenew          int
+		UpdatedAt                 time.Time
+		ReplicationAckLevel       int64
+		TransferAckLevel          int64     // TO BE DEPRECATED IN FAVOR OF ClusterTransferAckLevel
+		TimerAckLevel             time.Time // TO BE DEPRECATED IN FAVOR OF ClusteerTimerAckLevel
+		ClusterTransferAckLevel   map[string]int64
+		ClusterTimerAckLevel      map[string]time.Time
+		DomainNotificationVersion int64
 	}
 
 	// WorkflowExecutionInfo describes a workflow execution
@@ -823,23 +824,25 @@ type (
 
 	// GetDomainResponse is the response for GetDomain
 	GetDomainResponse struct {
-		Info              *DomainInfo
-		Config            *DomainConfig
-		ReplicationConfig *DomainReplicationConfig
-		IsGlobalDomain    bool
-		ConfigVersion     int64
-		FailoverVersion   int64
-		DBVersion         int64
+		Info                              *DomainInfo
+		Config                            *DomainConfig
+		ReplicationConfig                 *DomainReplicationConfig
+		IsGlobalDomain                    bool
+		ConfigVersion                     int64
+		FailoverVersion                   int64
+		FailoverGlobalNotificationVersion int64
+		GlobalNotificationVersion         int64
 	}
 
 	// UpdateDomainRequest is used to update domain
 	UpdateDomainRequest struct {
-		Info              *DomainInfo
-		Config            *DomainConfig
-		ReplicationConfig *DomainReplicationConfig
-		ConfigVersion     int64
-		FailoverVersion   int64
-		DBVersion         int64
+		Info                              *DomainInfo
+		Config                            *DomainConfig
+		ReplicationConfig                 *DomainReplicationConfig
+		ConfigVersion                     int64
+		FailoverVersion                   int64
+		FailoverGlobalNotificationVersion int64
+		GlobalNotificationVersion         int64
 	}
 
 	// DeleteDomainRequest is used to delete domain entry from domains table
@@ -850,6 +853,18 @@ type (
 	// DeleteDomainByNameRequest is used to delete domain entry from domains_by_name table
 	DeleteDomainByNameRequest struct {
 		Name string
+	}
+
+	// ListDomainRequest is used to list domains
+	ListDomainRequest struct {
+		PageSize      int
+		NextPageToken []byte
+	}
+
+	// ListDomainResponse is the response for GetDomain
+	ListDomainResponse struct {
+		Domains       []*GetDomainResponse
+		NextPageToken []byte
 	}
 
 	// Closeable is an interface for any entity that supports a close operation to release resources
@@ -912,7 +927,7 @@ type (
 		DeleteWorkflowExecutionHistory(request *DeleteWorkflowExecutionHistoryRequest) error
 	}
 
-	// MetadataManager is used to manage metadata CRUD for various entities
+	// MetadataManager is used to manage metadata CRUD for domain entities
 	MetadataManager interface {
 		Closeable
 		CreateDomain(request *CreateDomainRequest) (*CreateDomainResponse, error)
@@ -920,6 +935,18 @@ type (
 		UpdateDomain(request *UpdateDomainRequest) error
 		DeleteDomain(request *DeleteDomainRequest) error
 		DeleteDomainByName(request *DeleteDomainByNameRequest) error
+	}
+
+	// MetadataManagerV2 is used to manage metadata CRUD for domain entities, version 2
+	MetadataManagerV2 interface {
+		Closeable
+		CreateDomainV2(request *CreateDomainRequest) (*CreateDomainResponse, error)
+		GetDomainV2(request *GetDomainRequest) (*GetDomainResponse, error)
+		UpdateDomainV2(request *UpdateDomainRequest) error
+		DeleteDomainV2(request *DeleteDomainRequest) error
+		DeleteDomainByNameV2(request *DeleteDomainByNameRequest) error
+		ListDomainV2(request *ListDomainRequest) (*ListDomainResponse, error)
+		GetMetadataV2() (int64, error)
 	}
 )
 

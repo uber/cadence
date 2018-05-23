@@ -168,6 +168,10 @@ const (
 	PersistenceDeleteDomainScope
 	// PersistenceDeleteDomainByNameScope tracks DeleteDomainByName calls made by service to persistence layer
 	PersistenceDeleteDomainByNameScope
+	// PersistenceListDomainScope tracks DeleteDomainByName calls made by service to persistence layer
+	PersistenceListDomainScope
+	// PersistenceGetMetadataScope tracks DeleteDomainByName calls made by service to persistence layer
+	PersistenceGetMetadataScope
 	// PersistenceRecordWorkflowExecutionStartedScope tracks RecordWorkflowExecutionStarted calls made by service to persistence layer
 	PersistenceRecordWorkflowExecutionStartedScope
 	// PersistenceRecordWorkflowExecutionClosedScope tracks RecordWorkflowExecutionClosed calls made by service to persistence layer
@@ -456,6 +460,8 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceUpdateDomainScope:                             {operation: "UpdateDomain", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 		PersistenceDeleteDomainScope:                             {operation: "DeleteDomain", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 		PersistenceDeleteDomainByNameScope:                       {operation: "DeleteDomainByName", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceListDomainScope:                               {operation: "ListDomain", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceGetMetadataScope:                              {operation: "GetMetadata", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 		PersistenceRecordWorkflowExecutionStartedScope:           {operation: "RecordWorkflowExecutionStarted"},
 		PersistenceRecordWorkflowExecutionClosedScope:            {operation: "RecordWorkflowExecutionClosed"},
 		PersistenceListOpenWorkflowExecutionsScope:               {operation: "ListOpenWorkflowExecutions"},

@@ -54,16 +54,16 @@ var (
 
 type (
 	domainReplicatorImpl struct {
-		metadataManager persistence.MetadataManager
-		logger          bark.Logger
+		metadataManagerV2 persistence.MetadataManagerV2
+		logger            bark.Logger
 	}
 )
 
 // NewDomainReplicator create a new instance odf domain replicator
-func NewDomainReplicator(metadataManager persistence.MetadataManager, logger bark.Logger) DomainReplicator {
+func NewDomainReplicator(metadataManagerV2 persistence.MetadataManagerV2, logger bark.Logger) DomainReplicator {
 	return &domainReplicatorImpl{
-		metadataManager: metadataManager,
-		logger:          logger,
+		metadataManagerV2: metadataManagerV2,
+		logger:            logger,
 	}
 }
 
@@ -112,7 +112,7 @@ func (domainReplicator *domainReplicatorImpl) handleDomainCreationReplicationTas
 		FailoverVersion: task.GetFailoverVersion(),
 	}
 
-	_, err = domainReplicator.metadataManager.CreateDomain(request)
+	_, err = domainReplicator.metadataManagerV2.CreateDomainV2(request)
 	return err
 }
 
@@ -124,10 +124,15 @@ func (domainReplicator *domainReplicatorImpl) handleDomainUpdateReplicationTask(
 		return err
 	}
 
+	globalNotificationVersion, err := domainReplicator.metadataManagerV2.GetMetadataV2()
+	if err != nil {
+		return err
+	}
+
 	// first we need to get the current record since we need to DB version for conditional update
 	// plus, we need to check whether the config version is <= the config version set in the input
 	// plus, we need to check whether the failover version is <= the failover version set in the input
-	resp, err := domainReplicator.metadataManager.GetDomain(&persistence.GetDomainRequest{
+	resp, err := domainReplicator.metadataManagerV2.GetDomainV2(&persistence.GetDomainRequest{
 		Name: task.Info.GetName(),
 	})
 	if err != nil {
@@ -141,12 +146,12 @@ func (domainReplicator *domainReplicatorImpl) handleDomainUpdateReplicationTask(
 
 	recordUpdated := false
 	request := &persistence.UpdateDomainRequest{
-		Info:              resp.Info,
-		Config:            resp.Config,
-		ReplicationConfig: resp.ReplicationConfig,
-		ConfigVersion:     resp.ConfigVersion,
-		FailoverVersion:   resp.FailoverVersion,
-		DBVersion:         resp.DBVersion,
+		Info:                      resp.Info,
+		Config:                    resp.Config,
+		ReplicationConfig:         resp.ReplicationConfig,
+		ConfigVersion:             resp.ConfigVersion,
+		FailoverVersion:           resp.FailoverVersion,
+		GlobalNotificationVersion: globalNotificationVersion,
 	}
 
 	if resp.ConfigVersion < task.GetConfigVersion() {
@@ -169,13 +174,14 @@ func (domainReplicator *domainReplicatorImpl) handleDomainUpdateReplicationTask(
 		recordUpdated = true
 		request.ReplicationConfig.ActiveClusterName = task.ReplicationConfig.GetActiveClusterName()
 		request.FailoverVersion = task.GetFailoverVersion()
+		request.FailoverGlobalNotificationVersion = globalNotificationVersion
 	}
 
 	if !recordUpdated {
 		return nil
 	}
 
-	return domainReplicator.metadataManager.UpdateDomain(request)
+	return domainReplicator.metadataManagerV2.UpdateDomainV2(request)
 }
 
 func (domainReplicator *domainReplicatorImpl) validateDomainReplicationTask(task *replicator.DomainTaskAttributes) error {

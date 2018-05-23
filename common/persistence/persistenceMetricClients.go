@@ -51,6 +51,11 @@ type (
 		persistence  MetadataManager
 	}
 
+	metadataPersistenceClientV2 struct {
+		metricClient metrics.Client
+		persistence  MetadataManagerV2
+	}
+
 	visibilityPersistenceClient struct {
 		metricClient metrics.Client
 		persistence  VisibilityManager
@@ -99,6 +104,14 @@ func NewHistoryPersistenceClient(persistence HistoryManager, metricClient metric
 // NewMetadataPersistenceClient creates a MetadataManager client to manage metadata
 func NewMetadataPersistenceClient(persistence MetadataManager, metricClient metrics.Client) MetadataManager {
 	return &metadataPersistenceClient{
+		persistence:  persistence,
+		metricClient: metricClient,
+	}
+}
+
+// NewMetadataPersistenceClientV2 creates a MetadataManagerV2 client to manage metadata
+func NewMetadataPersistenceClientV2(persistence MetadataManagerV2, metricClient metrics.Client) MetadataManagerV2 {
+	return &metadataPersistenceClientV2{
 		persistence:  persistence,
 		metricClient: metricClient,
 	}
@@ -586,6 +599,121 @@ func (p *metadataPersistenceClient) Close() {
 }
 
 func (p *metadataPersistenceClient) updateErrorMetric(scope int, err error) {
+	switch err.(type) {
+	case *workflow.DomainAlreadyExistsError:
+		p.metricClient.IncCounter(scope, metrics.CadenceErrDomainAlreadyExistsCounter)
+	case *workflow.EntityNotExistsError:
+		p.metricClient.IncCounter(scope, metrics.CadenceErrEntityNotExistsCounter)
+	case *workflow.BadRequestError:
+		p.metricClient.IncCounter(scope, metrics.CadenceErrBadRequestCounter)
+	default:
+		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
+	}
+}
+
+func (p *metadataPersistenceClientV2) CreateDomainV2(request *CreateDomainRequest) (*CreateDomainResponse, error) {
+	p.metricClient.IncCounter(metrics.PersistenceCreateDomainScope, metrics.PersistenceRequests)
+
+	sw := p.metricClient.StartTimer(metrics.PersistenceCreateDomainScope, metrics.PersistenceLatency)
+	response, err := p.persistence.CreateDomainV2(request)
+	sw.Stop()
+
+	if err != nil {
+		p.updateErrorMetric(metrics.PersistenceCreateDomainScope, err)
+	}
+
+	return response, err
+}
+
+func (p *metadataPersistenceClientV2) GetDomainV2(request *GetDomainRequest) (*GetDomainResponse, error) {
+	p.metricClient.IncCounter(metrics.PersistenceGetDomainScope, metrics.PersistenceRequests)
+
+	sw := p.metricClient.StartTimer(metrics.PersistenceGetDomainScope, metrics.PersistenceLatency)
+	response, err := p.persistence.GetDomainV2(request)
+	sw.Stop()
+
+	if err != nil {
+		p.updateErrorMetric(metrics.PersistenceGetDomainScope, err)
+	}
+
+	return response, err
+}
+
+func (p *metadataPersistenceClientV2) UpdateDomainV2(request *UpdateDomainRequest) error {
+	p.metricClient.IncCounter(metrics.PersistenceUpdateDomainScope, metrics.PersistenceRequests)
+
+	sw := p.metricClient.StartTimer(metrics.PersistenceUpdateDomainScope, metrics.PersistenceLatency)
+	err := p.persistence.UpdateDomainV2(request)
+	sw.Stop()
+
+	if err != nil {
+		p.updateErrorMetric(metrics.PersistenceUpdateDomainScope, err)
+	}
+
+	return err
+}
+
+func (p *metadataPersistenceClientV2) DeleteDomainV2(request *DeleteDomainRequest) error {
+	p.metricClient.IncCounter(metrics.PersistenceDeleteDomainScope, metrics.PersistenceRequests)
+
+	sw := p.metricClient.StartTimer(metrics.PersistenceDeleteDomainScope, metrics.PersistenceLatency)
+	err := p.persistence.DeleteDomainV2(request)
+	sw.Stop()
+
+	if err != nil {
+		p.updateErrorMetric(metrics.PersistenceDeleteDomainScope, err)
+	}
+
+	return err
+}
+
+func (p *metadataPersistenceClientV2) DeleteDomainByNameV2(request *DeleteDomainByNameRequest) error {
+	p.metricClient.IncCounter(metrics.PersistenceDeleteDomainByNameScope, metrics.PersistenceRequests)
+
+	sw := p.metricClient.StartTimer(metrics.PersistenceDeleteDomainByNameScope, metrics.PersistenceLatency)
+	err := p.persistence.DeleteDomainByNameV2(request)
+	sw.Stop()
+
+	if err != nil {
+		p.updateErrorMetric(metrics.PersistenceDeleteDomainByNameScope, err)
+	}
+
+	return err
+}
+
+func (p *metadataPersistenceClientV2) ListDomainV2(request *ListDomainRequest) (*ListDomainResponse, error) {
+	p.metricClient.IncCounter(metrics.PersistenceListDomainScope, metrics.PersistenceRequests)
+
+	sw := p.metricClient.StartTimer(metrics.PersistenceListDomainScope, metrics.PersistenceLatency)
+	response, err := p.persistence.ListDomainV2(request)
+	sw.Stop()
+
+	if err != nil {
+		p.updateErrorMetric(metrics.PersistenceListDomainScope, err)
+	}
+
+	return response, err
+}
+
+func (p *metadataPersistenceClientV2) GetMetadataV2() (int64, error) {
+	p.metricClient.IncCounter(metrics.PersistenceGetMetadataScope, metrics.PersistenceRequests)
+
+	sw := p.metricClient.StartTimer(metrics.PersistenceGetMetadataScope, metrics.PersistenceLatency)
+	response, err := p.persistence.GetMetadataV2()
+	sw.Stop()
+
+	if err != nil {
+		p.updateErrorMetric(metrics.PersistenceGetMetadataScope, err)
+	}
+
+	return response, err
+}
+
+func (p *metadataPersistenceClientV2) Close() {
+	p.persistence.Close()
+}
+
+func (p *metadataPersistenceClientV2) updateErrorMetric(scope int, err error) {
 	switch err.(type) {
 	case *workflow.DomainAlreadyExistsError:
 		p.metricClient.IncCounter(scope, metrics.CadenceErrDomainAlreadyExistsCounter)
