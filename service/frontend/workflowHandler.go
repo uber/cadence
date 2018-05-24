@@ -126,7 +126,7 @@ func NewWorkflowHandler(
 		visibitiltyMgr:     visibilityMgr,
 		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
 		hSerializerFactory: persistence.NewHistorySerializerFactory(),
-		domainCache:        cache.NewDomainCache(metadataMgr, sVice.GetClusterMetadata(), sVice.GetLogger()),
+		domainCache:        cache.NewDomainCache(cache.NewMetadataManagerProxy(metadataMgr, metadataMgrV2), sVice.GetClusterMetadata(), sVice.GetLogger()),
 		rateLimiter:        common.NewTokenBucket(config.RPS, common.NewRealTimeSource()),
 		domainReplicator:   NewDomainReplicator(kafkaProducer, sVice.GetLogger()),
 	}
