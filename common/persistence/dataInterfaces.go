@@ -935,18 +935,8 @@ type (
 		UpdateDomain(request *UpdateDomainRequest) error
 		DeleteDomain(request *DeleteDomainRequest) error
 		DeleteDomainByName(request *DeleteDomainByNameRequest) error
-	}
-
-	// MetadataManagerV2 is used to manage metadata CRUD for domain entities, version 2
-	MetadataManagerV2 interface {
-		Closeable
-		CreateDomainV2(request *CreateDomainRequest) (*CreateDomainResponse, error)
-		GetDomainV2(request *GetDomainRequest) (*GetDomainResponse, error)
-		UpdateDomainV2(request *UpdateDomainRequest) error
-		DeleteDomainV2(request *DeleteDomainRequest) error
-		DeleteDomainByNameV2(request *DeleteDomainByNameRequest) error
-		ListDomainV2(request *ListDomainRequest) (*ListDomainResponse, error)
-		GetMetadataV2() (int64, error)
+		ListDomain(request *ListDomainRequest) (*ListDomainResponse, error)
+		GetMetadata() (int64, error)
 	}
 )
 

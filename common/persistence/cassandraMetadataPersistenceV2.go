@@ -90,7 +90,7 @@ const (
 )
 
 type (
-	cassandraMetadataPersistencev2 struct {
+	cassandraMetadataPersistenceV2 struct {
 		session            *gocql.Session
 		currentClusterName string
 		logger             bark.Logger
@@ -99,7 +99,7 @@ type (
 
 // NewCassandraMetadataPersistenceV2 is used to create an instance of HistoryManager implementation
 func NewCassandraMetadataPersistenceV2(hosts string, port int, user, password, dc string, keyspace string,
-	currentClusterName string, logger bark.Logger) (MetadataManagerV2, error) {
+	currentClusterName string, logger bark.Logger) (MetadataManager, error) {
 	cluster := common.NewCassandraCluster(hosts, port, user, password, dc)
 	cluster.Keyspace = keyspace
 	cluster.ProtoVersion = cassandraProtoVersion
@@ -112,7 +112,7 @@ func NewCassandraMetadataPersistenceV2(hosts string, port int, user, password, d
 		return nil, err
 	}
 
-	return &cassandraMetadataPersistencev2{
+	return &cassandraMetadataPersistenceV2{
 		session:            session,
 		currentClusterName: currentClusterName,
 		logger:             logger,
@@ -120,7 +120,7 @@ func NewCassandraMetadataPersistenceV2(hosts string, port int, user, password, d
 }
 
 // Close releases the resources held by this object
-func (m *cassandraMetadataPersistencev2) Close() {
+func (m *cassandraMetadataPersistenceV2) Close() {
 	if m.session != nil {
 		m.session.Close()
 	}
@@ -130,7 +130,7 @@ func (m *cassandraMetadataPersistencev2) Close() {
 // 'Domains' table and then do a conditional insert into domains_by_name table.  If the conditional write fails we
 // delete the orphaned entry from domains table.  There is a chance delete entry could fail and we never delete the
 // orphaned entry from domains table.  We might need a background job to delete those orphaned record.
-func (m *cassandraMetadataPersistencev2) CreateDomainV2(request *CreateDomainRequest) (*CreateDomainResponse, error) {
+func (m *cassandraMetadataPersistenceV2) CreateDomain(request *CreateDomainRequest) (*CreateDomainResponse, error) {
 	query := m.session.Query(templateCreateDomainQuery, request.Info.ID, request.Info.Name)
 	applied, err := query.ScanCAS()
 	if err != nil {
@@ -144,7 +144,7 @@ func (m *cassandraMetadataPersistencev2) CreateDomainV2(request *CreateDomainReq
 		}
 	}
 
-	globalNotificationVersion, err := m.GetMetadataV2()
+	globalNotificationVersion, err := m.GetMetadata()
 	if err != nil {
 		return nil, err
 	}
@@ -168,7 +168,7 @@ func (m *cassandraMetadataPersistencev2) CreateDomainV2(request *CreateDomainReq
 		initialFailoverGlobalNotificationVersion,
 		globalNotificationVersion,
 	)
-	m.updateMetadataBatchV2(batch, globalNotificationVersion)
+	m.updateMetadataBatch(batch, globalNotificationVersion)
 
 	previous := make(map[string]interface{})
 	applied, iter, err := m.session.MapExecuteBatchCAS(batch, previous)
@@ -205,7 +205,7 @@ func (m *cassandraMetadataPersistencev2) CreateDomainV2(request *CreateDomainReq
 	return &CreateDomainResponse{ID: request.Info.ID}, nil
 }
 
-func (m *cassandraMetadataPersistencev2) UpdateDomainV2(request *UpdateDomainRequest) error {
+func (m *cassandraMetadataPersistenceV2) UpdateDomain(request *UpdateDomainRequest) error {
 	batch := m.session.NewBatch(gocql.LoggedBatch)
 	batch.Query(templateUpdateDomainByNameQueryWithinBatchV2,
 		request.Info.ID,
@@ -224,7 +224,7 @@ func (m *cassandraMetadataPersistencev2) UpdateDomainV2(request *UpdateDomainReq
 		constDomainPartition,
 		request.Info.Name,
 	)
-	m.updateMetadataBatchV2(batch, request.GlobalNotificationVersion)
+	m.updateMetadataBatch(batch, request.GlobalNotificationVersion)
 
 	previous := make(map[string]interface{})
 	applied, iter, err := m.session.MapExecuteBatchCAS(batch, previous)
@@ -248,7 +248,7 @@ func (m *cassandraMetadataPersistencev2) UpdateDomainV2(request *UpdateDomainReq
 	return nil
 }
 
-func (m *cassandraMetadataPersistencev2) GetDomainV2(request *GetDomainRequest) (*GetDomainResponse, error) {
+func (m *cassandraMetadataPersistenceV2) GetDomain(request *GetDomainRequest) (*GetDomainResponse, error) {
 	var query *gocql.Query
 	var err error
 	info := &DomainInfo{}
@@ -333,7 +333,7 @@ func (m *cassandraMetadataPersistencev2) GetDomainV2(request *GetDomainRequest) 
 	}, nil
 }
 
-func (m *cassandraMetadataPersistencev2) ListDomainV2(request *ListDomainRequest) (*ListDomainResponse, error) {
+func (m *cassandraMetadataPersistenceV2) ListDomain(request *ListDomainRequest) (*ListDomainResponse, error) {
 	var query *gocql.Query
 
 	query = m.session.Query(templateListDomainQueryV2, constDomainPartition)
@@ -381,7 +381,7 @@ func (m *cassandraMetadataPersistencev2) ListDomainV2(request *ListDomainRequest
 	return response, nil
 }
 
-func (m *cassandraMetadataPersistencev2) DeleteDomainV2(request *DeleteDomainRequest) error {
+func (m *cassandraMetadataPersistenceV2) DeleteDomain(request *DeleteDomainRequest) error {
 	var name string
 	query := m.session.Query(templateGetDomainQuery, request.ID)
 	err := query.Scan(&name)
@@ -392,10 +392,10 @@ func (m *cassandraMetadataPersistencev2) DeleteDomainV2(request *DeleteDomainReq
 		return err
 	}
 
-	return m.deleteDomainV2(name, request.ID)
+	return m.deleteDomain(name, request.ID)
 }
 
-func (m *cassandraMetadataPersistencev2) DeleteDomainByNameV2(request *DeleteDomainByNameRequest) error {
+func (m *cassandraMetadataPersistenceV2) DeleteDomainByName(request *DeleteDomainByNameRequest) error {
 	var ID string
 	query := m.session.Query(templateGetDomainByNameQueryV2, constDomainPartition, request.Name)
 	err := query.Scan(&ID, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
@@ -405,10 +405,10 @@ func (m *cassandraMetadataPersistencev2) DeleteDomainByNameV2(request *DeleteDom
 		}
 		return err
 	}
-	return m.deleteDomainV2(request.Name, ID)
+	return m.deleteDomain(request.Name, ID)
 }
 
-func (m *cassandraMetadataPersistencev2) GetMetadataV2() (int64, error) {
+func (m *cassandraMetadataPersistenceV2) GetMetadata() (int64, error) {
 	var globalNotificationVersion int64
 	query := m.session.Query(templateGetMetadataQueryV2, constDomainPartition, domainMetadataRecordName)
 	err := query.Scan(&globalNotificationVersion)
@@ -424,7 +424,7 @@ func (m *cassandraMetadataPersistencev2) GetMetadataV2() (int64, error) {
 	return globalNotificationVersion, nil
 }
 
-func (m *cassandraMetadataPersistencev2) updateMetadataBatchV2(batch *gocql.Batch, globalNotificationVersion int64) {
+func (m *cassandraMetadataPersistenceV2) updateMetadataBatch(batch *gocql.Batch, globalNotificationVersion int64) {
 	var nextVersion int64 = 1
 	var currentVersion *int64
 	if globalNotificationVersion > 0 {
@@ -439,7 +439,7 @@ func (m *cassandraMetadataPersistencev2) updateMetadataBatchV2(batch *gocql.Batc
 	)
 }
 
-func (m *cassandraMetadataPersistencev2) deleteDomainV2(name, ID string) error {
+func (m *cassandraMetadataPersistenceV2) deleteDomain(name, ID string) error {
 	query := m.session.Query(templateDeleteDomainByNameQueryV2, constDomainPartition, name)
 	if err := query.Exec(); err != nil {
 		return &workflow.InternalServiceError{

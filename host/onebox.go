@@ -87,6 +87,7 @@ type (
 		clusterMetadata       cluster.Metadata
 		messagingClient       messaging.Client
 		metadataMgr           persistence.MetadataManager
+		metadataMgrV2         persistence.MetadataManager
 		shardMgr              persistence.ShardManager
 		historyMgr            persistence.HistoryManager
 		taskMgr               persistence.TaskManager
@@ -108,7 +109,8 @@ type (
 
 // NewCadence returns an instance that hosts full cadence in one process
 func NewCadence(clusterMetadata cluster.Metadata, messagingClient messaging.Client,
-	metadataMgr persistence.MetadataManager, shardMgr persistence.ShardManager, historyMgr persistence.HistoryManager,
+	metadataMgr persistence.MetadataManager, metadataMgrV2 persistence.MetadataManager,
+	shardMgr persistence.ShardManager, historyMgr persistence.HistoryManager,
 	executionMgrFactory persistence.ExecutionManagerFactory, taskMgr persistence.TaskManager,
 	visibilityMgr persistence.VisibilityManager, numberOfHistoryShards, numberOfHistoryHosts int,
 	logger bark.Logger, clusterNo int, enableWorker bool) Cadence {
@@ -120,6 +122,7 @@ func NewCadence(clusterMetadata cluster.Metadata, messagingClient messaging.Clie
 		clusterMetadata:       clusterMetadata,
 		messagingClient:       messagingClient,
 		metadataMgr:           metadataMgr,
+		metadataMgrV2:         metadataMgrV2,
 		visibilityMgr:         visibilityMgr,
 		shardMgr:              shardMgr,
 		historyMgr:            historyMgr,
@@ -146,8 +149,8 @@ func (c *cadenceImpl) Start() error {
 
 	var startWG sync.WaitGroup
 	startWG.Add(2)
-	go c.startHistory(c.shardMgr, c.metadataMgr, c.visibilityMgr, c.historyMgr, c.executionMgrFactory, rpHosts, &startWG)
-	go c.startMatching(c.taskMgr, rpHosts, &startWG)
+	go c.startHistory(rpHosts, &startWG)
+	go c.startMatching(rpHosts, &startWG)
 	startWG.Wait()
 
 	if c.enableWorker() {
@@ -290,7 +293,7 @@ func (c *cadenceImpl) startFrontend(rpHosts []string, startWG *sync.WaitGroup) {
 
 	c.frontEndService = service.New(params)
 	c.frontendHandler = frontend.NewWorkflowHandler(
-		c.frontEndService, frontend.NewConfig(), c.metadataMgr, c.historyMgr, c.visibilityMgr, kafkaProducer)
+		c.frontEndService, frontend.NewConfig(), c.metadataMgr, c.metadataMgrV2, c.historyMgr, c.visibilityMgr, kafkaProducer)
 	err = c.frontendHandler.Start()
 	if err != nil {
 		c.logger.WithField("error", err).Fatal("Failed to start frontend")
@@ -300,9 +303,7 @@ func (c *cadenceImpl) startFrontend(rpHosts []string, startWG *sync.WaitGroup) {
 	c.shutdownWG.Done()
 }
 
-func (c *cadenceImpl) startHistory(shardMgr persistence.ShardManager,
-	metadataMgr persistence.MetadataManager, visibilityMgr persistence.VisibilityManager, historyMgr persistence.HistoryManager,
-	executionMgrFactory persistence.ExecutionManagerFactory, rpHosts []string, startWG *sync.WaitGroup) {
+func (c *cadenceImpl) startHistory(rpHosts []string, startWG *sync.WaitGroup) {
 
 	pprofPorts := c.HistoryPProfPort()
 	for i, hostport := range c.HistoryServiceAddress() {
@@ -320,8 +321,8 @@ func (c *cadenceImpl) startHistory(shardMgr persistence.ShardManager,
 		historyConfig := history.NewConfig(dynamicconfig.NewNopCollection(), c.numberOfHistoryShards)
 		historyConfig.HistoryMgrNumConns = c.numberOfHistoryShards
 		historyConfig.ExecutionMgrNumConns = c.numberOfHistoryShards
-		handler := history.NewHandler(service, historyConfig, shardMgr, metadataMgr,
-			visibilityMgr, historyMgr, executionMgrFactory)
+		handler := history.NewHandler(service, historyConfig, c.shardMgr, c.metadataMgr, c.metadataMgrV2,
+			c.visibilityMgr, c.historyMgr, c.executionMgrFactory)
 		handler.Start()
 		c.historyHandlers = append(c.historyHandlers, handler)
 	}
@@ -330,8 +331,7 @@ func (c *cadenceImpl) startHistory(shardMgr persistence.ShardManager,
 	c.shutdownWG.Done()
 }
 
-func (c *cadenceImpl) startMatching(taskMgr persistence.TaskManager,
-	rpHosts []string, startWG *sync.WaitGroup) {
+func (c *cadenceImpl) startMatching(rpHosts []string, startWG *sync.WaitGroup) {
 
 	params := new(service.BootstrapParams)
 	params.Name = common.MatchingServiceName
@@ -344,7 +344,7 @@ func (c *cadenceImpl) startMatching(taskMgr persistence.TaskManager,
 	params.CassandraConfig.NumHistoryShards = c.numberOfHistoryShards
 	service := service.New(params)
 	c.matchingHandler = matching.NewHandler(
-		service, matching.NewConfig(dynamicconfig.NewNopCollection()), taskMgr,
+		service, matching.NewConfig(dynamicconfig.NewNopCollection()), c.taskMgr,
 	)
 	c.matchingHandler.Start()
 	startWG.Done()

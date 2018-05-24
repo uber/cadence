@@ -100,7 +100,7 @@ func (s *Service) Start() {
 	if err != nil {
 		log.Fatalf("failed to create metadata manager V2: %v", err)
 	}
-	metadataV2 = persistence.NewMetadataPersistenceClientV2(metadataV2, base.GetMetricsClient())
+	metadataV2 = persistence.NewMetadataPersistenceClient(metadataV2, base.GetMetricsClient())
 
 	visibility, err := persistence.NewCassandraVisibilityPersistence(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,

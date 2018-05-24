@@ -113,12 +113,12 @@ func (s *domainReplicatorSuite) TestHandleReceivingTask_RegisterDomainTask() {
 		FailoverVersion: common.Int64Ptr(failoverVersion),
 	}
 
-	globalNotificationVersion, err := s.MetadataManagerV2.GetMetadataV2()
+	globalNotificationVersion, err := s.MetadataManagerV2.GetMetadata()
 	s.Nil(err)
 	err = s.domainReplicator.HandleReceivingTask(task)
 	s.Nil(err)
 
-	resp, err := s.MetadataManagerV2.GetDomainV2(&persistence.GetDomainRequest{ID: id})
+	resp, err := s.MetadataManagerV2.GetDomain(&persistence.GetDomainRequest{ID: id})
 	s.Nil(err)
 	s.NotNil(resp)
 	s.Equal(id, resp.Info.ID)
@@ -179,12 +179,12 @@ func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_DomainN
 		FailoverVersion: common.Int64Ptr(failoverVersion),
 	}
 
-	globalNotificationVersion, err := s.MetadataManagerV2.GetMetadataV2()
+	globalNotificationVersion, err := s.MetadataManagerV2.GetMetadata()
 	s.Nil(err)
 	err = s.domainReplicator.HandleReceivingTask(updateTask)
 	s.Nil(err)
 
-	resp, err := s.MetadataManagerV2.GetDomainV2(&persistence.GetDomainRequest{Name: name})
+	resp, err := s.MetadataManagerV2.GetDomain(&persistence.GetDomainRequest{Name: name})
 	s.Nil(err)
 	s.NotNil(resp)
 	s.Equal(id, resp.Info.ID)
@@ -287,11 +287,11 @@ func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_UpdateC
 		ConfigVersion:   common.Int64Ptr(updateConfigVersion),
 		FailoverVersion: common.Int64Ptr(updateFailoverVersion),
 	}
-	globalNotificationVersion, err := s.MetadataManagerV2.GetMetadataV2()
+	globalNotificationVersion, err := s.MetadataManagerV2.GetMetadata()
 	s.Nil(err)
 	err = s.domainReplicator.HandleReceivingTask(updateTask)
 	s.Nil(err)
-	resp, err := s.MetadataManagerV2.GetDomainV2(&persistence.GetDomainRequest{Name: name})
+	resp, err := s.MetadataManagerV2.GetDomain(&persistence.GetDomainRequest{Name: name})
 	s.Nil(err)
 	s.NotNil(resp)
 	s.Equal(id, resp.Info.ID)
@@ -394,11 +394,11 @@ func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_UpdateC
 		ConfigVersion:   common.Int64Ptr(updateConfigVersion),
 		FailoverVersion: common.Int64Ptr(updateFailoverVersion),
 	}
-	globalNotificationVersion, err := s.MetadataManagerV2.GetMetadataV2()
+	globalNotificationVersion, err := s.MetadataManagerV2.GetMetadata()
 	s.Nil(err)
 	err = s.domainReplicator.HandleReceivingTask(updateTask)
 	s.Nil(err)
-	resp, err := s.MetadataManagerV2.GetDomainV2(&persistence.GetDomainRequest{Name: name})
+	resp, err := s.MetadataManagerV2.GetDomain(&persistence.GetDomainRequest{Name: name})
 	s.Nil(err)
 	s.NotNil(resp)
 	s.Equal(id, resp.Info.ID)
@@ -501,11 +501,11 @@ func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_NoUpdat
 		ConfigVersion:   common.Int64Ptr(updateConfigVersion),
 		FailoverVersion: common.Int64Ptr(updateFailoverVersion),
 	}
-	globalNotificationVersion, err := s.MetadataManagerV2.GetMetadataV2()
+	globalNotificationVersion, err := s.MetadataManagerV2.GetMetadata()
 	s.Nil(err)
 	err = s.domainReplicator.HandleReceivingTask(updateTask)
 	s.Nil(err)
-	resp, err := s.MetadataManagerV2.GetDomainV2(&persistence.GetDomainRequest{Name: name})
+	resp, err := s.MetadataManagerV2.GetDomain(&persistence.GetDomainRequest{Name: name})
 	s.Nil(err)
 	s.NotNil(resp)
 	s.Equal(id, resp.Info.ID)
@@ -565,7 +565,7 @@ func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_NoUpdat
 		ConfigVersion:   common.Int64Ptr(configVersion),
 		FailoverVersion: common.Int64Ptr(failoverVersion),
 	}
-	globalNotificationVersion, err := s.MetadataManagerV2.GetMetadataV2()
+	globalNotificationVersion, err := s.MetadataManagerV2.GetMetadata()
 	s.Nil(err)
 	err = s.domainReplicator.HandleReceivingTask(createTask)
 	s.Nil(err)
@@ -611,7 +611,7 @@ func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_NoUpdat
 	}
 	err = s.domainReplicator.HandleReceivingTask(updateTask)
 	s.Nil(err)
-	resp, err := s.MetadataManagerV2.GetDomainV2(&persistence.GetDomainRequest{Name: name})
+	resp, err := s.MetadataManagerV2.GetDomain(&persistence.GetDomainRequest{Name: name})
 	s.Nil(err)
 	s.NotNil(resp)
 	s.Equal(id, resp.Info.ID)

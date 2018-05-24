@@ -54,13 +54,13 @@ var (
 
 type (
 	domainReplicatorImpl struct {
-		metadataManagerV2 persistence.MetadataManagerV2
+		metadataManagerV2 persistence.MetadataManager
 		logger            bark.Logger
 	}
 )
 
 // NewDomainReplicator create a new instance odf domain replicator
-func NewDomainReplicator(metadataManagerV2 persistence.MetadataManagerV2, logger bark.Logger) DomainReplicator {
+func NewDomainReplicator(metadataManagerV2 persistence.MetadataManager, logger bark.Logger) DomainReplicator {
 	return &domainReplicatorImpl{
 		metadataManagerV2: metadataManagerV2,
 		logger:            logger,
@@ -112,7 +112,7 @@ func (domainReplicator *domainReplicatorImpl) handleDomainCreationReplicationTas
 		FailoverVersion: task.GetFailoverVersion(),
 	}
 
-	_, err = domainReplicator.metadataManagerV2.CreateDomainV2(request)
+	_, err = domainReplicator.metadataManagerV2.CreateDomain(request)
 	return err
 }
 
@@ -124,7 +124,7 @@ func (domainReplicator *domainReplicatorImpl) handleDomainUpdateReplicationTask(
 		return err
 	}
 
-	globalNotificationVersion, err := domainReplicator.metadataManagerV2.GetMetadataV2()
+	globalNotificationVersion, err := domainReplicator.metadataManagerV2.GetMetadata()
 	if err != nil {
 		return err
 	}
@@ -132,7 +132,7 @@ func (domainReplicator *domainReplicatorImpl) handleDomainUpdateReplicationTask(
 	// first we need to get the current record since we need to DB version for conditional update
 	// plus, we need to check whether the config version is <= the config version set in the input
 	// plus, we need to check whether the failover version is <= the failover version set in the input
-	resp, err := domainReplicator.metadataManagerV2.GetDomainV2(&persistence.GetDomainRequest{
+	resp, err := domainReplicator.metadataManagerV2.GetDomain(&persistence.GetDomainRequest{
 		Name: task.Info.GetName(),
 	})
 	if err != nil {
@@ -181,7 +181,7 @@ func (domainReplicator *domainReplicatorImpl) handleDomainUpdateReplicationTask(
 		return nil
 	}
 
-	return domainReplicator.metadataManagerV2.UpdateDomainV2(request)
+	return domainReplicator.metadataManagerV2.UpdateDomain(request)
 }
 
 func (domainReplicator *domainReplicatorImpl) validateDomainReplicationTask(task *replicator.DomainTaskAttributes) error {

@@ -77,7 +77,7 @@ type (
 		TaskMgr              TaskManager
 		HistoryMgr           HistoryManager
 		MetadataManager      MetadataManager
-		MetadataManagerV2    MetadataManagerV2
+		MetadataManagerV2    MetadataManager
 		VisibilityMgr        VisibilityManager
 		ShardInfo            *ShardInfo
 		TaskIDGenerator      TransferTaskIDGenerator

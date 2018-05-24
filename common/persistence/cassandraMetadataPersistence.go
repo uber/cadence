@@ -332,6 +332,14 @@ func (m *cassandraMetadataPersistence) DeleteDomainByName(request *DeleteDomainB
 	return m.deleteDomain(request.Name, ID)
 }
 
+func (m *cassandraMetadataPersistence) ListDomain(request *ListDomainRequest) (*ListDomainResponse, error) {
+	panic("cassandraMetadataPersistence do not support list domain operation.")
+}
+
+func (m *cassandraMetadataPersistence) GetMetadata() (int64, error) {
+	panic("cassandraMetadataPersistence do not supporgetsmetadatain operation.")
+}
+
 func (m *cassandraMetadataPersistence) deleteDomain(name, ID string) error {
 	query := m.session.Query(templateDeleteDomainByNameQuery, name)
 	if err := query.Exec(); err != nil {

@@ -47,7 +47,7 @@ type (
 )
 
 // NewReplicator creates a new replicator for processing replication tasks
-func NewReplicator(clusterMetadata cluster.Metadata, metadataManagerV2 persistence.MetadataManagerV2,
+func NewReplicator(clusterMetadata cluster.Metadata, metadataManagerV2 persistence.MetadataManager,
 	historyClient history.Client, config *Config, client messaging.Client, logger bark.Logger,
 	metricsClient metrics.Client) *Replicator {
 	logger = logger.WithFields(bark.Fields{

@@ -64,7 +64,7 @@ func (m *metadataPersistenceSuiteV2) SetupTest() {
 	pageSize := 10
 ListLoop:
 	for {
-		resp, err := m.ListDomainV2(pageSize, token)
+		resp, err := m.ListDomain(pageSize, token)
 		m.Nil(err)
 		token = resp.NextPageToken
 		for _, domain := range resp.Domains {
@@ -305,7 +305,7 @@ func (m *metadataPersistenceSuiteV2) TestUpdateDomain() {
 
 	resp2, err2 := m.GetDomain(id, "")
 	m.Nil(err2)
-	globalNotificationVersion, err := m.MetadataManagerV2.GetMetadataV2()
+	globalNotificationVersion, err := m.MetadataManagerV2.GetMetadata()
 	m.Nil(err)
 
 	updatedStatus := DomainStatusDeprecated
@@ -575,7 +575,7 @@ func (m *metadataPersistenceSuiteV2) TestListDomains() {
 	outputDomains := make(map[string]*GetDomainResponse)
 ListLoop:
 	for {
-		resp, err := m.ListDomainV2(pageSize, token)
+		resp, err := m.ListDomain(pageSize, token)
 		m.Nil(err)
 		token = resp.NextPageToken
 		for _, domain := range resp.Domains {
@@ -597,7 +597,7 @@ ListLoop:
 
 func (m *metadataPersistenceSuiteV2) CreateDomain(info *DomainInfo, config *DomainConfig,
 	replicationConfig *DomainReplicationConfig, isGlobaldomain bool, configVersion int64, failoverVersion int64) (*CreateDomainResponse, error) {
-	return m.MetadataManagerV2.CreateDomainV2(&CreateDomainRequest{
+	return m.MetadataManagerV2.CreateDomain(&CreateDomainRequest{
 		Info:              info,
 		Config:            config,
 		ReplicationConfig: replicationConfig,
@@ -608,7 +608,7 @@ func (m *metadataPersistenceSuiteV2) CreateDomain(info *DomainInfo, config *Doma
 }
 
 func (m *metadataPersistenceSuiteV2) GetDomain(id, name string) (*GetDomainResponse, error) {
-	return m.MetadataManagerV2.GetDomainV2(&GetDomainRequest{
+	return m.MetadataManagerV2.GetDomain(&GetDomainRequest{
 		ID:   id,
 		Name: name,
 	})
@@ -616,7 +616,7 @@ func (m *metadataPersistenceSuiteV2) GetDomain(id, name string) (*GetDomainRespo
 
 func (m *metadataPersistenceSuiteV2) UpdateDomain(info *DomainInfo, config *DomainConfig, replicationConfig *DomainReplicationConfig,
 	configVersion int64, failoverVersion int64, failoverGlobalNotificationVersion int64, globalNotificationVersion int64) error {
-	return m.MetadataManagerV2.UpdateDomainV2(&UpdateDomainRequest{
+	return m.MetadataManagerV2.UpdateDomain(&UpdateDomainRequest{
 		Info:                              info,
 		Config:                            config,
 		ReplicationConfig:                 replicationConfig,
@@ -629,13 +629,13 @@ func (m *metadataPersistenceSuiteV2) UpdateDomain(info *DomainInfo, config *Doma
 
 func (m *metadataPersistenceSuiteV2) DeleteDomain(id, name string) error {
 	if len(id) > 0 {
-		return m.MetadataManagerV2.DeleteDomainV2(&DeleteDomainRequest{ID: id})
+		return m.MetadataManagerV2.DeleteDomain(&DeleteDomainRequest{ID: id})
 	}
-	return m.MetadataManagerV2.DeleteDomainByNameV2(&DeleteDomainByNameRequest{Name: name})
+	return m.MetadataManagerV2.DeleteDomainByName(&DeleteDomainByNameRequest{Name: name})
 }
 
-func (m *metadataPersistenceSuiteV2) ListDomainV2(pageSize int, pageToken []byte) (*ListDomainResponse, error) {
-	return m.MetadataManagerV2.ListDomainV2(&ListDomainRequest{
+func (m *metadataPersistenceSuiteV2) ListDomain(pageSize int, pageToken []byte) (*ListDomainResponse, error) {
+	return m.MetadataManagerV2.ListDomain(&ListDomainRequest{
 		PageSize:      pageSize,
 		NextPageToken: pageToken,
 	})

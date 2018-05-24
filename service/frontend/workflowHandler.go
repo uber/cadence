@@ -59,7 +59,7 @@ type (
 	WorkflowHandler struct {
 		domainCache        cache.DomainCache
 		metadataMgr        persistence.MetadataManager
-		metadataMgrV2      persistence.MetadataManagerV2
+		metadataMgrV2      persistence.MetadataManager
 		historyMgr         persistence.HistoryManager
 		visibitiltyMgr     persistence.VisibilityManager
 		history            history.Client
@@ -114,7 +114,7 @@ var (
 
 // NewWorkflowHandler creates a thrift handler for the cadence service
 func NewWorkflowHandler(
-	sVice service.Service, config *Config, metadataMgr persistence.MetadataManager, metadataMgrV2 persistence.MetadataManagerV2,
+	sVice service.Service, config *Config, metadataMgr persistence.MetadataManager, metadataMgrV2 persistence.MetadataManager,
 	historyMgr persistence.HistoryManager, visibilityMgr persistence.VisibilityManager,
 	kafkaProducer messaging.Producer) *WorkflowHandler {
 	handler := &WorkflowHandler{
@@ -253,7 +253,7 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 	if !domainRequest.IsGlobalDomain {
 		domainResponse, err = wh.metadataMgr.CreateDomain(domainRequest)
 	} else {
-		domainResponse, err = wh.metadataMgrV2.CreateDomainV2(domainRequest)
+		domainResponse, err = wh.metadataMgrV2.CreateDomain(domainRequest)
 	}
 
 	if err != nil {
@@ -454,7 +454,7 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 
 		if globalNotificationVersion != nil {
 			updateReq.GlobalNotificationVersion = *globalNotificationVersion
-			err = wh.metadataMgrV2.UpdateDomainV2(updateReq)
+			err = wh.metadataMgrV2.UpdateDomain(updateReq)
 		} else {
 			updateReq.GlobalNotificationVersion = getResponse.GlobalNotificationVersion
 			err = wh.metadataMgr.UpdateDomain(updateReq)
@@ -528,7 +528,7 @@ func (wh *WorkflowHandler) DeprecateDomain(ctx context.Context, deprecateRequest
 	if globalNotificationVersion != nil {
 		updateReq.FailoverGlobalNotificationVersion = getResponse.FailoverGlobalNotificationVersion
 		updateReq.GlobalNotificationVersion = *globalNotificationVersion
-		err = wh.metadataMgrV2.UpdateDomainV2(updateReq)
+		err = wh.metadataMgrV2.UpdateDomain(updateReq)
 	} else {
 		updateReq.GlobalNotificationVersion = getResponse.GlobalNotificationVersion
 		err = wh.metadataMgr.UpdateDomain(updateReq)
@@ -548,12 +548,12 @@ func (wh *WorkflowHandler) getDomain(name string) (*persistence.GetDomainRespons
 
 	// we must get the global notification version first, this version
 	// should be treated as a lock
-	globalNotificationVersion, err := wh.metadataMgrV2.GetMetadataV2()
+	globalNotificationVersion, err := wh.metadataMgrV2.GetMetadata()
 	if err != nil {
 		return nil, nil, err
 	}
 	req := &persistence.GetDomainRequest{Name: name}
-	resp, err := wh.metadataMgrV2.GetDomainV2(req)
+	resp, err := wh.metadataMgrV2.GetDomain(req)
 	if err == nil {
 		return resp, &globalNotificationVersion, nil
 	}
