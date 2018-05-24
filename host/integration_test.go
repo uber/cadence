@@ -641,15 +641,16 @@ Loop:
 		p.logger.Infof("Completing Decision.  Decisions: %v", decisions)
 		if !respondStickyTaskList {
 			// non sticky tasklist
-			return false, p.engine.RespondDecisionTaskCompleted(createContext(), &workflow.RespondDecisionTaskCompletedRequest{
+			_, err := p.engine.RespondDecisionTaskCompleted(createContext(), &workflow.RespondDecisionTaskCompletedRequest{
 				TaskToken:        response.TaskToken,
 				Identity:         common.StringPtr(p.identity),
 				ExecutionContext: executionCtx,
 				Decisions:        decisions,
 			})
+			return false, err
 		}
 		// sticky tasklist
-		return false, p.engine.RespondDecisionTaskCompleted(
+		_, err = p.engine.RespondDecisionTaskCompleted(
 			createContext(),
 			&workflow.RespondDecisionTaskCompletedRequest{
 				TaskToken:        response.TaskToken,
@@ -665,6 +666,7 @@ Loop:
 			yarpc.WithHeader(common.FeatureVersionHeaderName, "1.0.0"),
 			yarpc.WithHeader(common.ClientImplHeaderName, "go"),
 		)
+		return false, err
 	}
 
 	return false, matching.ErrNoTasks
