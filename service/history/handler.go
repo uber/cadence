@@ -436,13 +436,13 @@ func (h *Handler) RespondDecisionTaskCompleted(ctx context.Context,
 		return nil, err1
 	}
 
-	err2 := engine.RespondDecisionTaskCompleted(ctx, wrappedRequest)
+	response, err2 := engine.RespondDecisionTaskCompleted(ctx, wrappedRequest)
 	if err2 != nil {
 		h.updateErrorMetric(metrics.HistoryRespondDecisionTaskCompletedScope, h.convertError(err2))
 		return nil, h.convertError(err2)
 	}
 
-	return &hist.RespondDecisionTaskCompletedResponse{}, nil
+	return response, nil
 }
 
 // RespondDecisionTaskFailed - failed response to decision task
