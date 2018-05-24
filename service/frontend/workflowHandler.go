@@ -59,6 +59,7 @@ type (
 	WorkflowHandler struct {
 		domainCache        cache.DomainCache
 		metadataMgr        persistence.MetadataManager
+		metadataMgrV2      persistence.MetadataManagerV2
 		historyMgr         persistence.HistoryManager
 		visibitiltyMgr     persistence.VisibilityManager
 		history            history.Client
@@ -113,13 +114,14 @@ var (
 
 // NewWorkflowHandler creates a thrift handler for the cadence service
 func NewWorkflowHandler(
-	sVice service.Service, config *Config, metadataMgr persistence.MetadataManager,
+	sVice service.Service, config *Config, metadataMgr persistence.MetadataManager, metadataMgrV2 persistence.MetadataManagerV2,
 	historyMgr persistence.HistoryManager, visibilityMgr persistence.VisibilityManager,
 	kafkaProducer messaging.Producer) *WorkflowHandler {
 	handler := &WorkflowHandler{
 		Service:            sVice,
 		config:             config,
 		metadataMgr:        metadataMgr,
+		metadataMgrV2:      metadataMgrV2,
 		historyMgr:         historyMgr,
 		visibitiltyMgr:     visibilityMgr,
 		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
@@ -245,7 +247,15 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 		FailoverVersion: clusterMetadata.GetNextFailoverVersion(activeClusterName, 0),
 	}
 
-	domainResponse, err := wh.metadataMgr.CreateDomain(domainRequest)
+	var domainResponse *persistence.CreateDomainResponse
+	var err error
+	// TODO, we should migrate the non global domain to new table, see #773
+	if !domainRequest.IsGlobalDomain {
+		domainResponse, err = wh.metadataMgr.CreateDomain(domainRequest)
+	} else {
+		domainResponse, err = wh.metadataMgrV2.CreateDomainV2(domainRequest)
+	}
+
 	if err != nil {
 		return wh.error(err, scope)
 	}
@@ -281,10 +291,8 @@ func (wh *WorkflowHandler) DescribeDomain(ctx context.Context,
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	resp, err := wh.metadataMgr.GetDomain(&persistence.GetDomainRequest{
-		Name: describeRequest.GetName(),
-	})
-
+	// TODO, we should migrate the non global domain to new table, see #773
+	resp, _, err := wh.getDomain(describeRequest.GetName())
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
@@ -321,14 +329,13 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	getResponse, err0 := wh.metadataMgr.GetDomain(&persistence.GetDomainRequest{
-		Name: updateRequest.GetName(),
-	})
-
+	// TODO, we should migrate the non global domain to new table, see #773
+	getResponse, globalNotificationVersion, err0 := wh.getDomain(updateRequest.GetName())
 	if err0 != nil {
 		return nil, wh.error(err0, scope)
 	}
 
+	var err error
 	info := getResponse.Info
 	config := getResponse.Config
 	replicationConfig := getResponse.ReplicationConfig
@@ -428,22 +435,31 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 			return nil, wh.error(errNotMasterCluster, scope)
 		}
 
-		// set the versions
-		if configurationChanged {
-			configVersion = configVersion + 1
-		}
-		if activeClusterChanged {
-			failoverVersion = clusterMetadata.GetNextFailoverVersion(replicationConfig.ActiveClusterName, failoverVersion)
-		}
-
-		err := wh.metadataMgr.UpdateDomain(&persistence.UpdateDomainRequest{
+		updateReq := &persistence.UpdateDomainRequest{
 			Info:              info,
 			Config:            config,
 			ReplicationConfig: replicationConfig,
 			ConfigVersion:     configVersion,
 			FailoverVersion:   failoverVersion,
-			DBVersion:         getResponse.DBVersion,
-		})
+		}
+
+		// set the versions
+		if configurationChanged {
+			updateReq.ConfigVersion++
+		}
+		if activeClusterChanged {
+			updateReq.FailoverVersion = clusterMetadata.GetNextFailoverVersion(replicationConfig.ActiveClusterName, updateReq.FailoverVersion)
+			updateReq.FailoverGlobalNotificationVersion = *globalNotificationVersion
+		}
+
+		if globalNotificationVersion != nil {
+			updateReq.GlobalNotificationVersion = *globalNotificationVersion
+			err = wh.metadataMgrV2.UpdateDomainV2(updateReq)
+		} else {
+			updateReq.GlobalNotificationVersion = getResponse.GlobalNotificationVersion
+			err = wh.metadataMgr.UpdateDomain(updateReq)
+		}
+
 		if err != nil {
 			return nil, wh.error(err, scope)
 		}
@@ -493,28 +509,65 @@ func (wh *WorkflowHandler) DeprecateDomain(ctx context.Context, deprecateRequest
 		return wh.error(errDomainNotSet, scope)
 	}
 
-	getResponse, err0 := wh.metadataMgr.GetDomain(&persistence.GetDomainRequest{
-		Name: *deprecateRequest.Name,
-	})
-
-	if err0 != nil {
-		return wh.error(err0, scope)
+	// TODO, we should migrate the non global domain to new table, see #773
+	getResponse, globalNotificationVersion, err := wh.getDomain(deprecateRequest.GetName())
+	if err != nil {
+		return wh.error(err, scope)
 	}
 
 	getResponse.ConfigVersion = getResponse.ConfigVersion + 1
 	getResponse.Info.Status = persistence.DomainStatusDeprecated
-	err := wh.metadataMgr.UpdateDomain(&persistence.UpdateDomainRequest{
+	updateReq := &persistence.UpdateDomainRequest{
 		Info:              getResponse.Info,
 		Config:            getResponse.Config,
 		ReplicationConfig: getResponse.ReplicationConfig,
+		ConfigVersion:     getResponse.ConfigVersion,
 		FailoverVersion:   getResponse.FailoverVersion,
-		DBVersion:         getResponse.DBVersion,
-	})
+	}
+
+	if globalNotificationVersion != nil {
+		updateReq.FailoverGlobalNotificationVersion = getResponse.FailoverGlobalNotificationVersion
+		updateReq.GlobalNotificationVersion = *globalNotificationVersion
+		err = wh.metadataMgrV2.UpdateDomainV2(updateReq)
+	} else {
+		updateReq.GlobalNotificationVersion = getResponse.GlobalNotificationVersion
+		err = wh.metadataMgr.UpdateDomain(updateReq)
+	}
 
 	if err != nil {
 		return wh.error(errDomainNotSet, scope)
 	}
 	return nil
+}
+
+// getDomain returns the information and configuration for a registered domain.
+// this is a temp wrapper over the old table and the new
+// the *int64 return value is not nil if the domain is from the new table
+func (wh *WorkflowHandler) getDomain(name string) (*persistence.GetDomainResponse, *int64, error) {
+	// TODO, we should migrate the non global domain to new table, see #773
+
+	// we must get the global notification version first, this version
+	// should be treated as a lock
+	globalNotificationVersion, err := wh.metadataMgrV2.GetMetadataV2()
+	if err != nil {
+		return nil, nil, err
+	}
+	req := &persistence.GetDomainRequest{Name: name}
+	resp, err := wh.metadataMgrV2.GetDomainV2(req)
+	if err == nil {
+		return resp, &globalNotificationVersion, nil
+	}
+
+	// if entity not exist, try the old table
+	if _, ok := err.(*gen.EntityNotExistsError); !ok {
+		return nil, nil, err
+	}
+
+	resp, err = wh.metadataMgr.GetDomain(req)
+	if err != nil {
+		return nil, nil, err
+	}
+	return resp, nil, nil
 }
 
 // PollForActivityTask - Poll for an activity task.

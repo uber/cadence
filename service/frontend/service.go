@@ -88,6 +88,20 @@ func (s *Service) Start() {
 	}
 	metadata = persistence.NewMetadataPersistenceClient(metadata, base.GetMetricsClient())
 
+	metadataV2, err := persistence.NewCassandraMetadataPersistenceV2(p.CassandraConfig.Hosts,
+		p.CassandraConfig.Port,
+		p.CassandraConfig.User,
+		p.CassandraConfig.Password,
+		p.CassandraConfig.Datacenter,
+		p.CassandraConfig.Keyspace,
+		p.ClusterMetadata.GetCurrentClusterName(),
+		p.Logger)
+
+	if err != nil {
+		log.Fatalf("failed to create metadata manager V2: %v", err)
+	}
+	metadataV2 = persistence.NewMetadataPersistenceClientV2(metadataV2, base.GetMetricsClient())
+
 	visibility, err := persistence.NewCassandraVisibilityPersistence(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,
 		p.CassandraConfig.User,
@@ -127,7 +141,7 @@ func (s *Service) Start() {
 		kafkaProducer = &mocks.KafkaProducer{}
 	}
 
-	wfHandler := NewWorkflowHandler(base, s.config, metadata, history, visibility, kafkaProducer)
+	wfHandler := NewWorkflowHandler(base, s.config, metadata, metadataV2, history, visibility, kafkaProducer)
 	wfHandler.Start()
 
 	adminHandler := NewAdminHandler(base, p.CassandraConfig.NumHistoryShards)
