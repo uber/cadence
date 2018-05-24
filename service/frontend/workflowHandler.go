@@ -2082,6 +2082,9 @@ func (wh *WorkflowHandler) error(err error, scope int) error {
 	case *gen.BadRequestError:
 		wh.metricsClient.IncCounter(scope, metrics.CadenceErrBadRequestCounter)
 		return err
+	case *gen.DomainNotActiveError:
+		wh.metricsClient.IncCounter(scope, metrics.CadenceErrBadRequestCounter)
+		return err
 	case *gen.ServiceBusyError:
 		wh.metricsClient.IncCounter(scope, metrics.CadenceErrServiceBusyCounter)
 		return err

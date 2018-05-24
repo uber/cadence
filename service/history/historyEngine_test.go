@@ -1408,6 +1408,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowFail
 	})
 	identity := "testIdentity"
 	executionContext := []byte("context")
+	foreignDomain := "unknown domain"
 
 	msBuilder := newMutableStateBuilder(s.config, bark.NewLoggerFromLogrus(log.New()))
 	addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
@@ -1417,7 +1418,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowFail
 	decisions := []*workflow.Decision{{
 		DecisionType: common.DecisionTypePtr(workflow.DecisionTypeSignalExternalWorkflowExecution),
 		SignalExternalWorkflowExecutionDecisionAttributes: &workflow.SignalExternalWorkflowExecutionDecisionAttributes{
-			Domain: common.StringPtr(domainID),
+			Domain: common.StringPtr(foreignDomain),
 			Execution: &workflow.WorkflowExecution{
 				WorkflowId: we.WorkflowId,
 				RunId:      we.RunId,
@@ -1431,7 +1432,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowFail
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gwmsResponse, nil).Once()
-	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(
+	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: domainID}).Return(
 		&persistence.GetDomainResponse{
 			Info:   &persistence.DomainInfo{ID: domainID},
 			Config: &persistence.DomainConfig{Retention: 1},
@@ -1444,7 +1445,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowFail
 		},
 		nil,
 	).Once()
-	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(
+	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{Name: foreignDomain}).Return(
 		nil, errors.New("get foreign domain error")).Once()
 
 	err := s.mockHistoryEngine.RespondDecisionTaskCompleted(context.Background(), &history.RespondDecisionTaskCompletedRequest{
