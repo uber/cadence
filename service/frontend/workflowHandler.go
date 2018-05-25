@@ -1101,7 +1101,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 
 	completedResp := &gen.RespondDecisionTaskCompletedResponse{}
 
-	if histResp != nil && histResp.StartedResponse != nil {
+	if completeRequest.GetReturnNewDecisionTask() && histResp != nil && histResp.StartedResponse != nil {
 		startedResponse := histResp.StartedResponse
 		matchingResp := &m.PollForDecisionTaskResponse{}
 		matchingResp.WorkflowExecution = &gen.WorkflowExecution{

@@ -1259,7 +1259,7 @@ Update_History_Loop:
 			}
 		}
 
-		// Schedule another decision task if new events came in during this decision or if request asked for
+		// Schedule another decision task if new events came in during this decision or if request forced to
 		createNewDecisionTask := hasUnhandledEvents || request.GetForceCreateNewDecisionTask()
 
 		var newDecisionTaskScheduledID int64
@@ -1331,7 +1331,7 @@ Update_History_Loop:
 		e.timerProcessor.NotifyNewTimers(e.currentClusterName, e.shard.GetCurrentTime(e.currentClusterName), timerTasks)
 
 		response = &h.RespondDecisionTaskCompletedResponse{}
-		if request.GetReturnNewDecisionTask() {
+		if request.GetReturnNewDecisionTask() && createNewDecisionTask {
 			di, _ := msBuilder.GetPendingDecision(newDecisionTaskScheduledID)
 			response.StartedResponse = e.createRecordDecisionTaskStartedResponse(domainID, msBuilder, di, request.GetIdentity())
 		}
