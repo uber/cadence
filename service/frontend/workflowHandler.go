@@ -140,6 +140,7 @@ func (wh *WorkflowHandler) Start() error {
 	wh.Service.GetDispatcher().Register(workflowserviceserver.New(wh))
 	wh.Service.GetDispatcher().Register(metaserver.New(wh))
 	wh.Service.Start()
+	wh.domainCache.Start()
 	var err error
 	wh.history, err = wh.Service.GetClientFactory().NewHistoryClient()
 	if err != nil {
@@ -156,6 +157,7 @@ func (wh *WorkflowHandler) Start() error {
 
 // Stop stops the handler
 func (wh *WorkflowHandler) Stop() {
+	wh.domainCache.Stop()
 	wh.metadataMgr.Close()
 	wh.visibitiltyMgr.Close()
 	wh.historyMgr.Close()

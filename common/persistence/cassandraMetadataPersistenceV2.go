@@ -416,7 +416,6 @@ func (m *cassandraMetadataPersistenceV2) GetMetadata() (int64, error) {
 		if err == gocql.ErrNotFound {
 			// this error can be thrown in the very begining,
 			// i.e. when domains_by_name_v2 is initialized
-			m.logger.Warn("Cannot find domain metadata record.")
 			return 0, nil
 		}
 		return 0, err

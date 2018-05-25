@@ -192,7 +192,24 @@ func (e *historyEngineImpl) Stop() {
 }
 
 func (e *historyEngineImpl) registerDomainFailoverCallback() {
-	// first check whether this shard should catch up
+	// first set the failover callback
+	e.shard.GetDomainCache().RegisterDomainChangeCallback(
+		e.shard.GetShardID(),
+		func(prevDomain *cache.DomainCacheEntry, nextDomain *cache.DomainCacheEntry) {
+			if prevDomain.GetFailoverVersion() < nextDomain.GetFailoverVersion() &&
+				nextDomain.GetReplicationConfig().ActiveClusterName == e.currentClusterName {
+				domainID := prevDomain.GetInfo().ID
+				e.txProcessor.FailoverDomain(domainID)
+				e.timerProcessor.FailoverDomain(domainID)
+			}
+			// v1 table domain cache entry will have this version being 0
+			if nextDomain.GetNotificationVersion() > 0 {
+				e.shard.UpdateDomainNotificationVersion(nextDomain.GetNotificationVersion())
+			}
+		},
+	)
+
+	// second check whether this shard should do catch up
 	domainNotificationVersion := e.shard.GetDomainCache().GetDomainNotificationVersion()
 	shardDomainNotificationVersion := e.shard.GetDomainNotificationVersion()
 	if domainNotificationVersion > shardDomainNotificationVersion {
@@ -209,25 +226,12 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 				e.timerProcessor.FailoverDomain(domainID)
 			}
 		}
-		e.shard.UpdateDomainNotificationVersion(domainNotificationVersion)
+		if domainNotificationVersion > e.shard.GetDomainNotificationVersion() {
+			// double check the version for update, because when doing catch up, the shard's
+			// domain notification version can change
+			e.shard.UpdateDomainNotificationVersion(domainNotificationVersion)
+		}
 	}
-
-	// set the failover callback
-	e.shard.GetDomainCache().RegisterDomainChangeCallback(
-		e.shard.GetShardID(),
-		func(prevDomain *cache.DomainCacheEntry, nextDomain *cache.DomainCacheEntry) {
-			if prevDomain.GetFailoverVersion() < nextDomain.GetFailoverVersion() &&
-				nextDomain.GetReplicationConfig().ActiveClusterName == e.currentClusterName {
-				domainID := prevDomain.GetInfo().ID
-				e.txProcessor.FailoverDomain(domainID)
-				e.timerProcessor.FailoverDomain(domainID)
-			}
-			// v1 table domain cache entry will have this version being 0
-			if nextDomain.GetNotificationVersion() > 0 {
-				e.shard.UpdateDomainNotificationVersion(nextDomain.GetNotificationVersion())
-			}
-		},
-	)
 }
 
 // StartWorkflowExecution starts a workflow execution
