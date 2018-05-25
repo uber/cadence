@@ -1100,33 +1100,20 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 	}
 
 	completedResp := &gen.RespondDecisionTaskCompletedResponse{}
-
 	if completeRequest.GetReturnNewDecisionTask() && histResp != nil && histResp.StartedResponse != nil {
-		startedResponse := histResp.StartedResponse
-		matchingResp := &m.PollForDecisionTaskResponse{}
-		matchingResp.WorkflowExecution = &gen.WorkflowExecution{
-			WorkflowId: common.StringPtr(taskToken.WorkflowID),
-			RunId:      common.StringPtr(taskToken.RunID),
-		}
-		token := &common.TaskToken{
+		taskToken := &common.TaskToken{
 			DomainID:        taskToken.DomainID,
 			WorkflowID:      taskToken.WorkflowID,
 			RunID:           taskToken.RunID,
-			ScheduleID:      startedResponse.GetScheduledEventId(),
-			ScheduleAttempt: startedResponse.GetAttempt(),
+			ScheduleID:      histResp.StartedResponse.GetScheduledEventId(),
+			ScheduleAttempt: histResp.StartedResponse.GetAttempt(),
 		}
-		matchingResp.TaskToken, _ = wh.tokenSerializer.Serialize(token)
-		matchingResp.WorkflowType = startedResponse.WorkflowType
-		matchingResp.Attempt = common.Int64Ptr(startedResponse.GetAttempt())
-
-		if startedResponse.GetPreviousStartedEventId() != common.EmptyEventID {
-			matchingResp.PreviousStartedEventId = startedResponse.PreviousStartedEventId
+		token, _ := wh.tokenSerializer.Serialize(taskToken)
+		workflowExecution := &gen.WorkflowExecution{
+			WorkflowId: common.StringPtr(taskToken.WorkflowID),
+			RunId:      common.StringPtr(taskToken.RunID),
 		}
-		matchingResp.WorkflowType = startedResponse.WorkflowType
-		matchingResp.StartedEventId = startedResponse.StartedEventId
-		matchingResp.StickyExecutionEnabled = startedResponse.StickyExecutionEnabled
-		matchingResp.NextEventId = startedResponse.NextEventId
-		matchingResp.DecisionInfo = startedResponse.DecisionInfo
+		matchingResp := common.CreateMatchingPollForDecisionTaskResponse(histResp.StartedResponse, workflowExecution, token)
 
 		newDecisionTask, err := wh.createPollForDecisionTaskResponse(ctx, taskToken.DomainID, matchingResp)
 		if err != nil {
