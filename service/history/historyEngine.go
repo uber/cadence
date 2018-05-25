@@ -1333,7 +1333,7 @@ Update_History_Loop:
 		response = &h.RespondDecisionTaskCompletedResponse{}
 		if request.GetReturnNewDecisionTask() {
 			di, _ := msBuilder.GetPendingDecision(newDecisionTaskScheduledID)
-			response.StartNewDecision = e.createRecordDecisionTaskStartedResponse(domainID, msBuilder, di, request.GetIdentity())
+			response.StartedResponse = e.createRecordDecisionTaskStartedResponse(domainID, msBuilder, di, request.GetIdentity())
 		}
 
 		return response, nil

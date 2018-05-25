@@ -4482,7 +4482,7 @@ func (v *RespondDecisionTaskCompletedRequest) GetDomainUUID() (o string) {
 }
 
 type RespondDecisionTaskCompletedResponse struct {
-	StartNewDecision *RecordDecisionTaskStartedResponse `json:"startNewDecision,omitempty"`
+	StartedResponse *RecordDecisionTaskStartedResponse `json:"startedResponse,omitempty"`
 }
 
 // ToWire translates a RespondDecisionTaskCompletedResponse struct into a Thrift-level intermediate
@@ -4508,8 +4508,8 @@ func (v *RespondDecisionTaskCompletedResponse) ToWire() (wire.Value, error) {
 		err    error
 	)
 
-	if v.StartNewDecision != nil {
-		w, err = v.StartNewDecision.ToWire()
+	if v.StartedResponse != nil {
+		w, err = v.StartedResponse.ToWire()
 		if err != nil {
 			return w, err
 		}
@@ -4550,7 +4550,7 @@ func (v *RespondDecisionTaskCompletedResponse) FromWire(w wire.Value) error {
 		switch field.ID {
 		case 10:
 			if field.Value.Type() == wire.TStruct {
-				v.StartNewDecision, err = _RecordDecisionTaskStartedResponse_Read(field.Value)
+				v.StartedResponse, err = _RecordDecisionTaskStartedResponse_Read(field.Value)
 				if err != nil {
 					return err
 				}
@@ -4571,8 +4571,8 @@ func (v *RespondDecisionTaskCompletedResponse) String() string {
 
 	var fields [1]string
 	i := 0
-	if v.StartNewDecision != nil {
-		fields[i] = fmt.Sprintf("StartNewDecision: %v", v.StartNewDecision)
+	if v.StartedResponse != nil {
+		fields[i] = fmt.Sprintf("StartedResponse: %v", v.StartedResponse)
 		i++
 	}
 
@@ -4584,7 +4584,7 @@ func (v *RespondDecisionTaskCompletedResponse) String() string {
 //
 // This function performs a deep comparison.
 func (v *RespondDecisionTaskCompletedResponse) Equals(rhs *RespondDecisionTaskCompletedResponse) bool {
-	if !((v.StartNewDecision == nil && rhs.StartNewDecision == nil) || (v.StartNewDecision != nil && rhs.StartNewDecision != nil && v.StartNewDecision.Equals(rhs.StartNewDecision))) {
+	if !((v.StartedResponse == nil && rhs.StartedResponse == nil) || (v.StartedResponse != nil && rhs.StartedResponse != nil && v.StartedResponse.Equals(rhs.StartedResponse))) {
 		return false
 	}
 

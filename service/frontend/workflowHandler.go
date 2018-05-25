@@ -1091,14 +1091,51 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	_, err = wh.history.RespondDecisionTaskCompleted(ctx, &h.RespondDecisionTaskCompletedRequest{
+	histResp, err := wh.history.RespondDecisionTaskCompleted(ctx, &h.RespondDecisionTaskCompletedRequest{
 		DomainUUID:      common.StringPtr(taskToken.DomainID),
 		CompleteRequest: completeRequest},
 	)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
-	return &gen.RespondDecisionTaskCompletedResponse{}, nil
+
+	completedResp := &gen.RespondDecisionTaskCompletedResponse{}
+
+	if histResp != nil && histResp.StartedResponse != nil {
+		startedResponse := histResp.StartedResponse
+		matchingResp := &m.PollForDecisionTaskResponse{}
+		matchingResp.WorkflowExecution = &gen.WorkflowExecution{
+			WorkflowId: common.StringPtr(taskToken.WorkflowID),
+			RunId:      common.StringPtr(taskToken.RunID),
+		}
+		token := &common.TaskToken{
+			DomainID:        taskToken.DomainID,
+			WorkflowID:      taskToken.WorkflowID,
+			RunID:           taskToken.RunID,
+			ScheduleID:      startedResponse.GetScheduledEventId(),
+			ScheduleAttempt: startedResponse.GetAttempt(),
+		}
+		matchingResp.TaskToken, _ = wh.tokenSerializer.Serialize(token)
+		matchingResp.WorkflowType = startedResponse.WorkflowType
+		matchingResp.Attempt = common.Int64Ptr(startedResponse.GetAttempt())
+
+		if startedResponse.GetPreviousStartedEventId() != common.EmptyEventID {
+			matchingResp.PreviousStartedEventId = startedResponse.PreviousStartedEventId
+		}
+		matchingResp.WorkflowType = startedResponse.WorkflowType
+		matchingResp.StartedEventId = startedResponse.StartedEventId
+		matchingResp.StickyExecutionEnabled = startedResponse.StickyExecutionEnabled
+		matchingResp.NextEventId = startedResponse.NextEventId
+		matchingResp.DecisionInfo = startedResponse.DecisionInfo
+
+		newDecisionTask, err := wh.createPollForDecisionTaskResponse(ctx, taskToken.DomainID, matchingResp)
+		if err != nil {
+			return nil, wh.error(err, scope)
+		}
+		completedResp.DecisionTask = newDecisionTask
+	}
+
+	return completedResp, nil
 }
 
 // RespondDecisionTaskFailed - failed response to a decision task

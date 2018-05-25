@@ -80,7 +80,7 @@ struct RespondDecisionTaskCompletedRequest {
 }
 
 struct RespondDecisionTaskCompletedResponse {
-  10: optional RecordDecisionTaskStartedResponse startNewDecision
+  10: optional RecordDecisionTaskStartedResponse startedResponse
 }
 
 struct RespondDecisionTaskFailedRequest {
