@@ -95,6 +95,13 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 				execution.GetWorkflowId(), execution.GetRunId(), request.GetVersion())
 			return nil
 		}
+
+		// GetWorkflowExecution failed with some transient error.  Return err so we can retry the task later
+		if _, ok := err.(*shared.EntityNotExistsError); !ok {
+			return err
+		}
+
+		// WorkflowExecution does not exist, lets proceed with processing of the task
 		msBuilder = newMutableStateBuilderWithReplicationState(r.shard.GetConfig(), r.logger, request.GetVersion())
 
 	default:
