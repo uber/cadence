@@ -565,7 +565,7 @@ func (s *integrationSuite) TestCompleteDecisionTaskAndCreateNewOne() {
 		suite:           s,
 	}
 
-	_, err, newTask := poller.pollAndProcessDecisionTaskWithAttemptAndRetryAndForceNewDecision(false, false, true, true, int64(0), 1, true)
+	_, newTask, err := poller.pollAndProcessDecisionTaskWithAttemptAndRetryAndForceNewDecision(false, false, true, true, int64(0), 1, true)
 	s.Nil(err)
 	s.NotNil(newTask)
 	s.NotNil(newTask.DecisionTask)
@@ -599,12 +599,12 @@ func (p *taskPoller) pollAndProcessDecisionTaskWithAttempt(dumpHistory bool, dro
 
 func (p *taskPoller) pollAndProcessDecisionTaskWithAttemptAndRetry(dumpHistory bool, dropTask bool,
 	pollStickyTaskList bool, respondStickyTaskList bool, decisionAttempt int64, retryCount int) (isQueryTask bool, err error) {
-	isQueryTask, err, _ = p.pollAndProcessDecisionTaskWithAttemptAndRetryAndForceNewDecision(dumpHistory, dropTask, pollStickyTaskList, respondStickyTaskList, decisionAttempt, retryCount, false)
+	isQueryTask, _, err = p.pollAndProcessDecisionTaskWithAttemptAndRetryAndForceNewDecision(dumpHistory, dropTask, pollStickyTaskList, respondStickyTaskList, decisionAttempt, retryCount, false)
 	return isQueryTask, err
 }
 
 func (p *taskPoller) pollAndProcessDecisionTaskWithAttemptAndRetryAndForceNewDecision(dumpHistory bool, dropTask bool,
-	pollStickyTaskList bool, respondStickyTaskList bool, decisionAttempt int64, retryCount int, forceCreateNewDecision bool) (isQueryTask bool, err error, newTask *workflow.RespondDecisionTaskCompletedResponse) {
+	pollStickyTaskList bool, respondStickyTaskList bool, decisionAttempt int64, retryCount int, forceCreateNewDecision bool) (isQueryTask bool, newTask *workflow.RespondDecisionTaskCompletedResponse, err error) {
 Loop:
 	for attempt := 0; attempt < retryCount; attempt++ {
 
@@ -624,7 +624,7 @@ Loop:
 		}
 
 		if err1 != nil {
-			return false, err1, nil
+			return false, nil, err1
 		}
 
 		if response == nil || len(response.TaskToken) == 0 {
@@ -655,7 +655,7 @@ Loop:
 				})
 
 				if err2 != nil {
-					return false, err2, nil
+					return false, nil, err2
 				}
 
 				events = append(events, resp.History.Events...)
@@ -696,7 +696,7 @@ Loop:
 				completeRequest.QueryResult = blob
 			}
 
-			return true, p.engine.RespondQueryTaskCompleted(createContext(), completeRequest), nil
+			return true, nil, p.engine.RespondQueryTaskCompleted(createContext(), completeRequest)
 		}
 
 		// handle normal decirsion task / non query task response
@@ -714,12 +714,12 @@ Loop:
 			common.Int64Default(response.PreviousStartedEventId), common.Int64Default(response.StartedEventId), response.History)
 		if err != nil {
 			p.logger.Infof("Failing Decision. Decision handler failed with error: %v", err)
-			return isQueryTask, p.engine.RespondDecisionTaskFailed(createContext(), &workflow.RespondDecisionTaskFailedRequest{
+			return isQueryTask, nil, p.engine.RespondDecisionTaskFailed(createContext(), &workflow.RespondDecisionTaskFailedRequest{
 				TaskToken: response.TaskToken,
 				Cause:     common.DecisionTaskFailedCausePtr(workflow.DecisionTaskFailedCauseWorkflowWorkerUnhandledFailure),
 				Details:   []byte(err.Error()),
 				Identity:  common.StringPtr(p.identity),
-			}), nil
+			})
 		}
 
 		p.logger.Infof("Completing Decision.  Decisions: %v", decisions)
@@ -733,7 +733,7 @@ Loop:
 				ReturnNewDecisionTask:      common.BoolPtr(forceCreateNewDecision),
 				ForceCreateNewDecisionTask: common.BoolPtr(forceCreateNewDecision),
 			})
-			return false, err, newTask
+			return false, newTask, err
 		}
 		// sticky tasklist
 		newTask, err := p.engine.RespondDecisionTaskCompleted(
@@ -755,10 +755,10 @@ Loop:
 			yarpc.WithHeader(common.ClientImplHeaderName, "go"),
 		)
 
-		return false, err, newTask
+		return false, newTask, err
 	}
 
-	return false, matching.ErrNoTasks, nil
+	return false, nil, matching.ErrNoTasks
 }
 
 func (p *taskPoller) pollAndProcessActivityTask(dropTask bool) error {
