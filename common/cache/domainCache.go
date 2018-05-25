@@ -237,8 +237,8 @@ func (c *domainCache) refreshLoop() {
 // the domains in the v1 table will be refreshed if cache is stale
 func (c *domainCache) refreshDomains() error {
 	// first load the metadata record, then load domains
-	// this can guarentee that domains in the cache is not stale
-	// since we are using domainNotificationVersion as indication
+	// this can guarentee that domains in the cache is not
+	// more update to date then the metadata record
 	domainNotificationVersion, err := c.metadataMgr.GetMetadata()
 	if err != nil {
 		return err
@@ -267,7 +267,20 @@ func (c *domainCache) refreshDomains() error {
 	// since history shard have to update the shard info
 	// with domain change version.
 	sort.Sort(domains)
+	c.RLock()
+	domainNotificationVersion = c.domainNotificationVersion
+	c.RUnlock()
+
+UpdateLoop:
 	for _, domain := range domains {
+		if domain.NotificationVersion >= domainNotificationVersion {
+			// this guarantee that domain change events before the
+			// domainNotificationVersion is loaded into the cache.
+
+			// the domain change events after the domainNotificationVersion
+			// will be loaded into cache in the next refresh
+			continue UpdateLoop
+		}
 		c.updateIDToDomainCache(domain.Info.ID, domain)
 		c.updateNameToIDCache(domain.Info.Name, domain.Info.ID)
 	}
@@ -409,9 +422,14 @@ func (c *domainCache) triggerDomainChangeCallback(prevDomain *DomainCacheEntry, 
 
 func (entry *DomainCacheEntry) duplicate() *DomainCacheEntry {
 	result := newDomainCacheEntry(entry.clusterMetadata)
-	result.info = entry.info
-	result.config = entry.config
-	result.replicationConfig = entry.replicationConfig
+	result.info = &*entry.info
+	result.config = &*entry.config
+	result.replicationConfig = &persistence.DomainReplicationConfig{
+		ActiveClusterName: entry.replicationConfig.ActiveClusterName,
+	}
+	for _, cluster := range entry.replicationConfig.Clusters {
+		result.replicationConfig.Clusters = append(result.replicationConfig.Clusters, &*cluster)
+	}
 	result.configVersion = entry.configVersion
 	result.failoverVersion = entry.failoverVersion
 	result.isGlobalDomain = entry.isGlobalDomain
