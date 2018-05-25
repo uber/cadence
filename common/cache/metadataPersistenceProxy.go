@@ -21,12 +21,12 @@
 package cache
 
 import (
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/persistence"
 )
 
 type (
 	// TODO, we should migrate the non global domain to new table, see #773
+	// WARN this struct should only be used by the domain cache ONLY
 	metadataManagerProxy struct {
 		metadataMgr   persistence.MetadataManager
 		metadataMgrV2 persistence.MetadataManager
@@ -42,17 +42,9 @@ func NewMetadataManagerProxy(metadataMgr persistence.MetadataManager, metadataMg
 }
 
 func (m *metadataManagerProxy) GetDomain(request *persistence.GetDomainRequest) (*persistence.GetDomainResponse, error) {
-	resp, err := m.metadataMgrV2.GetDomain(request)
-	if err == nil {
-		return resp, nil
-	}
-
-	// if entity not exist, try the old table
-	if _, ok := err.(*workflow.EntityNotExistsError); !ok {
-		return nil, err
-	}
-
-	resp, err = m.metadataMgr.GetDomain(request)
+	// the reason this function does not call the v2 get domain is domain cache will
+	// use the list domain function to get all domain in the v2 table
+	resp, err := m.metadataMgr.GetDomain(request)
 	if err != nil {
 		return nil, err
 	}

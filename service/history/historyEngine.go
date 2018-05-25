@@ -167,27 +167,13 @@ func (e *historyEngineImpl) Start() {
 	logging.LogHistoryEngineStartingEvent(e.logger)
 	defer logging.LogHistoryEngineStartedEvent(e.logger)
 
+	e.registerDomainFailoverCallback()
+
 	e.txProcessor.Start()
 	e.timerProcessor.Start()
 	if e.replicatorProcessor != nil {
 		e.replicatorProcessor.Start()
 	}
-
-	// set the failover callback
-	e.shard.GetDomainCache().RegisterDomainChangeCallback(
-		e.shard.GetShardID(),
-		func(prevDomain *cache.DomainCacheEntry, nextDomain *cache.DomainCacheEntry) {
-			if prevDomain.GetReplicationConfig() != nil && nextDomain.GetReplicationConfig() != nil {
-				prevActiveCluster := prevDomain.GetReplicationConfig().ActiveClusterName
-				nextActiveCluster := nextDomain.GetReplicationConfig().ActiveClusterName
-				if prevActiveCluster != nextActiveCluster && nextActiveCluster == e.currentClusterName {
-					domainID := prevDomain.GetInfo().ID
-					e.txProcessor.FailoverDomain(domainID, prevActiveCluster)
-					e.timerProcessor.FailoverDomain(domainID, prevActiveCluster)
-				}
-			}
-		},
-	)
 }
 
 // Stop the service.
@@ -203,6 +189,45 @@ func (e *historyEngineImpl) Stop() {
 
 	// unset the failover callback
 	e.shard.GetDomainCache().UnregisterDomainChangeCallback(e.shard.GetShardID())
+}
+
+func (e *historyEngineImpl) registerDomainFailoverCallback() {
+	// first check whether this shard should catch up
+	domainNotificationVersion := e.shard.GetDomainCache().GetDomainNotificationVersion()
+	shardDomainNotificationVersion := e.shard.GetDomainNotificationVersion()
+	if domainNotificationVersion > shardDomainNotificationVersion {
+		for _, domain := range e.shard.GetDomainCache().GetAllDomain() {
+			domainFailoverNotificationVersion := domain.GetFailoverNotificationVersion()
+			if domainFailoverNotificationVersion >= shardDomainNotificationVersion &&
+				domainFailoverNotificationVersion < domainNotificationVersion {
+				// it is possible that the domain cache entry is updated after
+				// we get the domainNotificationVersion
+				// to avoid duplication failover, do a check bwlow
+				// domainFailoverNotificationVersion < domainNotificationVersion
+				domainID := domain.GetInfo().ID
+				e.txProcessor.FailoverDomain(domainID)
+				e.timerProcessor.FailoverDomain(domainID)
+			}
+		}
+		e.shard.UpdateDomainNotificationVersion(domainNotificationVersion)
+	}
+
+	// set the failover callback
+	e.shard.GetDomainCache().RegisterDomainChangeCallback(
+		e.shard.GetShardID(),
+		func(prevDomain *cache.DomainCacheEntry, nextDomain *cache.DomainCacheEntry) {
+			if prevDomain.GetFailoverVersion() < nextDomain.GetFailoverVersion() &&
+				nextDomain.GetReplicationConfig().ActiveClusterName == e.currentClusterName {
+				domainID := prevDomain.GetInfo().ID
+				e.txProcessor.FailoverDomain(domainID)
+				e.timerProcessor.FailoverDomain(domainID)
+			}
+			// v1 table domain cache entry will have this version being 0
+			if nextDomain.GetNotificationVersion() > 0 {
+				e.shard.UpdateDomainNotificationVersion(nextDomain.GetNotificationVersion())
+			}
+		},
+	)
 }
 
 // StartWorkflowExecution starts a workflow execution

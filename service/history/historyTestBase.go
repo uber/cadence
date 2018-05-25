@@ -246,6 +246,23 @@ func (s *TestShardContext) UpdateTimerClusterAckLevel(cluster string, ackLevel t
 	return nil
 }
 
+// GetDomainNotificationVersion test implementation
+func (s *TestShardContext) GetDomainNotificationVersion() int64 {
+	s.RLock()
+	defer s.RUnlock()
+
+	return s.shardInfo.DomainNotificationVersion
+}
+
+// UpdateDomainNotificationVersion test implementation
+func (s *TestShardContext) UpdateDomainNotificationVersion(domainNotificationVersion int64) error {
+	s.Lock()
+	defer s.Unlock()
+
+	s.shardInfo.DomainNotificationVersion = domainNotificationVersion
+	return nil
+}
+
 // CreateWorkflowExecution test implementation
 func (s *TestShardContext) CreateWorkflowExecution(request *persistence.CreateWorkflowExecutionRequest) (
 	*persistence.CreateWorkflowExecutionResponse, error) {

@@ -113,7 +113,7 @@ type (
 
 	transferQueueProcessor interface {
 		common.Daemon
-		FailoverDomain(domainID string, standbyClusterName string)
+		FailoverDomain(domainID string)
 		NotifyNewTask(clusterName string, currentTime time.Time, transferTasks []persistence.Task)
 	}
 
@@ -122,7 +122,7 @@ type (
 	// convention, or at least come with a better name for this case.
 	timerQueueProcessor interface {
 		common.Daemon
-		FailoverDomain(domainID string, standbyClusterName string)
+		FailoverDomain(domainID string)
 		NotifyNewTimers(clusterName string, currentTime time.Time, timerTask []persistence.Task)
 	}
 

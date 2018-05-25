@@ -105,8 +105,9 @@ func (s *domainCacheSuite) TestListDomain() {
 	entry2 := s.buildEntryFromRecord(domainRecord2)
 
 	pageToken := []byte("some random page token")
+	domainNotificationVersion := int64(123)
 
-	s.metadataMgr.On("GetMetadata").Return(int64(123), nil)
+	s.metadataMgr.On("GetMetadata").Return(domainNotificationVersion, nil)
 	s.clusterMetadata.On("IsGlobalDomainEnabled").Return(true)
 	s.metadataMgr.On("ListDomain", &persistence.ListDomainRequest{
 		PageSize:      domainCacheRefreshPageSize,
@@ -126,6 +127,7 @@ func (s *domainCacheSuite) TestListDomain() {
 
 	// load domains
 	s.domainCache.Start()
+	s.Equal(domainNotificationVersion, s.domainCache.GetDomainNotificationVersion())
 
 	entryByName1, err := s.domainCache.GetDomain(domainRecord1.Info.Name)
 	s.Nil(err)
@@ -140,6 +142,11 @@ func (s *domainCacheSuite) TestListDomain() {
 	entryByID2, err := s.domainCache.GetDomainByID(domainRecord2.Info.ID)
 	s.Nil(err)
 	s.Equal(entry2, entryByID2)
+
+	s.Equal(map[string]*DomainCacheEntry{
+		entry1.GetInfo().ID: entry1,
+		entry2.GetInfo().ID: entry2,
+	}, s.domainCache.GetAllDomain())
 }
 
 func (s *domainCacheSuite) TestGetDomain_NonLoaded_GetByName() {
