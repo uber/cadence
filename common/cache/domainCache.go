@@ -39,7 +39,8 @@ const (
 	domainCacheInitialSize     = 10 * 1024
 	domainCacheMaxSize         = 16 * 1024
 	domainCacheTTL             = time.Hour
-	domainEntryRefreshInterval = 10 * time.Second
+	domainCacheRefreshInterval = 10 * time.Second
+	domainCacheRefreshPageSize = 100
 
 	domainCacheLocked   int32 = 0
 	domainCacheReleased int32 = 1
@@ -81,7 +82,8 @@ type (
 		logger          bark.Logger
 
 		sync.RWMutex
-		callbacks map[int]callbackFn
+		domainNotificationVersion int64
+		callbacks                 map[int]callbackFn
 	}
 
 	// DomainCacheEntry contains the info and config for a domain
@@ -127,6 +129,9 @@ func (c *domainCache) Start() {
 	if !atomic.CompareAndSwapInt32(&c.status, domainCacheInitialized, domainCacheStarted) {
 		return
 	}
+
+	// initialize the cache by initial scan
+	c.refreshDomains()
 	go c.refreshLoop()
 }
 
@@ -139,14 +144,14 @@ func (c *domainCache) Stop() {
 }
 
 func (c *domainCache) refreshLoop() {
-	timer := time.NewTimer(domainEntryRefreshInterval)
+	timer := time.NewTimer(domainCacheRefreshInterval)
 	defer timer.Stop()
 	for {
 		select {
 		case <-c.shutdownChan:
 			return
 		case <-timer.C:
-			timer.Reset(domainEntryRefreshInterval)
+			timer.Reset(domainCacheRefreshInterval)
 			err := c.refreshDomains()
 			if err != nil {
 				c.logger.Errorf("Error refreshing domain cache: %v", err)
@@ -155,25 +160,41 @@ func (c *domainCache) refreshLoop() {
 	}
 }
 
-func (c *domainCache) getIDs() []string {
-	ite := c.cacheByID.Iterator()
-	ids := []string{}
-	defer ite.Close()
-	for ite.HasNext() {
-		id := ite.Next().Key().(string)
-		ids = append(ids, id)
-	}
-	return ids
-}
-
+// this function only refresh the domains in the v2 table
+// the domains in the v1 table will be refreshed if cache is stale
 func (c *domainCache) refreshDomains() error {
-	ids := c.getIDs()
-	for _, id := range ids {
-		_, err := c.GetDomainByID(id)
+	// first load the metadata record, then load domains
+	// this can guarentee that domains in the cache is not stale
+	// since we are using domainNotificationVersion as indication
+	domainNotificationVersion, err := c.metadataMgr.GetMetadata()
+	if err != nil {
+		return err
+	}
+	c.Lock()
+	c.domainNotificationVersion = domainNotificationVersion
+	c.Unlock()
+
+	var token []byte
+	request := &persistence.ListDomainRequest{PageSize: domainCacheRefreshPageSize}
+	domains := []*persistence.GetDomainResponse{}
+	continuePage := true
+
+	for continuePage {
+		request.NextPageToken = token
+		response, err := c.metadataMgr.ListDomain(request)
 		if err != nil {
 			return err
 		}
+		token = response.NextPageToken
+		domains = append(domains, response.Domains...)
+		continuePage = len(token) != 0
 	}
+
+	for _, domain := range domains {
+		c.updateIDToDomainCache(domain.Info.ID, domain)
+		c.updateNameToIDCache(domain.Info.Name, domain.Info.ID)
+	}
+
 	return nil
 }
 
@@ -255,7 +276,7 @@ func (c *domainCache) updateIDToDomainCache(id string, record *persistence.GetDo
 	entry.configVersion = record.ConfigVersion
 	entry.failoverVersion = record.FailoverVersion
 	entry.isGlobalDomain = record.IsGlobalDomain
-	entry.expiry = c.timeSource.Now().Add(domainEntryRefreshInterval)
+	entry.expiry = c.timeSource.Now().Add(domainCacheRefreshInterval)
 
 	nextDomain := entry.duplicate()
 	if triggerCallback {
@@ -332,6 +353,7 @@ func (c *domainCache) getDomainByID(id string) (*DomainCacheEntry, error) {
 		}
 		return nil, err
 	}
+	c.updateNameToIDCache(newEntry.GetInfo().Name, id)
 	return newEntry, nil
 }
 

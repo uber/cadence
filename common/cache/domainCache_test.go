@@ -77,6 +77,71 @@ func (s *domainCacheSuite) TearDownTest() {
 	s.metadataMgr.AssertExpectations(s.T())
 }
 
+func (s *domainCacheSuite) TestListDomain() {
+	domainRecord1 := &persistence.GetDomainResponse{
+		Info:   &persistence.DomainInfo{ID: uuid.New(), Name: "some random domain name"},
+		Config: &persistence.DomainConfig{Retention: 1},
+		ReplicationConfig: &persistence.DomainReplicationConfig{
+			ActiveClusterName: cluster.TestCurrentClusterName,
+			Clusters: []*persistence.ClusterReplicationConfig{
+				&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				&persistence.ClusterReplicationConfig{ClusterName: cluster.TestAlternativeClusterName},
+			},
+		},
+	}
+	entry1 := s.buildEntryFromRecord(domainRecord1)
+
+	domainRecord2 := &persistence.GetDomainResponse{
+		Info:   &persistence.DomainInfo{ID: uuid.New(), Name: "another random domain name"},
+		Config: &persistence.DomainConfig{Retention: 2},
+		ReplicationConfig: &persistence.DomainReplicationConfig{
+			ActiveClusterName: cluster.TestAlternativeClusterName,
+			Clusters: []*persistence.ClusterReplicationConfig{
+				&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				&persistence.ClusterReplicationConfig{ClusterName: cluster.TestAlternativeClusterName},
+			},
+		},
+	}
+	entry2 := s.buildEntryFromRecord(domainRecord2)
+
+	pageToken := []byte("some random page token")
+
+	s.metadataMgr.On("GetMetadata").Return(int64(123), nil)
+	s.clusterMetadata.On("IsGlobalDomainEnabled").Return(true)
+	s.metadataMgr.On("ListDomain", &persistence.ListDomainRequest{
+		PageSize:      domainCacheRefreshPageSize,
+		NextPageToken: nil,
+	}).Return(&persistence.ListDomainResponse{
+		Domains:       []*persistence.GetDomainResponse{domainRecord1},
+		NextPageToken: pageToken,
+	}, nil).Once()
+
+	s.metadataMgr.On("ListDomain", &persistence.ListDomainRequest{
+		PageSize:      domainCacheRefreshPageSize,
+		NextPageToken: pageToken,
+	}).Return(&persistence.ListDomainResponse{
+		Domains:       []*persistence.GetDomainResponse{domainRecord2},
+		NextPageToken: nil,
+	}, nil).Once()
+
+	// load domains
+	s.domainCache.Start()
+
+	entryByName1, err := s.domainCache.GetDomain(domainRecord1.Info.Name)
+	s.Nil(err)
+	s.Equal(entry1, entryByName1)
+	entryByID1, err := s.domainCache.GetDomainByID(domainRecord1.Info.ID)
+	s.Nil(err)
+	s.Equal(entry1, entryByID1)
+
+	entryByName2, err := s.domainCache.GetDomain(domainRecord2.Info.Name)
+	s.Nil(err)
+	s.Equal(entry2, entryByName2)
+	entryByID2, err := s.domainCache.GetDomainByID(domainRecord2.Info.ID)
+	s.Nil(err)
+	s.Equal(entry2, entryByID2)
+}
+
 func (s *domainCacheSuite) TestGetDomain_NonLoaded_GetByName() {
 	s.clusterMetadata.On("IsGlobalDomainEnabled").Return(true)
 	domainRecord := &persistence.GetDomainResponse{
