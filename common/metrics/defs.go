@@ -28,14 +28,14 @@ type (
 	// MetricType is the type of the metric
 	MetricType int
 
-	// MetricDefinition contains the definition for a metric
-	MetricDefinition struct {
+	// metricDefinition contains the definition for a metric
+	metricDefinition struct {
 		metricType MetricType // metric type
-		MetricName MetricName // metric name
+		metricName MetricName // metric name
 	}
 
-	// ScopeDefinition holds the tag definitions for a scope
-	ScopeDefinition struct {
+	// scopeDefinition holds the tag definitions for a scope
+	scopeDefinition struct {
 		operation string            // 'operation' tag for scope
 		tags      map[string]string // additional tags for scope
 	}
@@ -427,7 +427,7 @@ const (
 )
 
 // ScopeDefs record the scopes for all services
-var ScopeDefs = map[ServiceIdx]map[int]ScopeDefinition{
+var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 	// common scope Names
 	Common: {
 		PersistenceCreateShardScope:                              {operation: "CreateShard", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
@@ -688,94 +688,94 @@ const (
 )
 
 // MetricDefs record the metrics for all services
-var MetricDefs = map[ServiceIdx]map[int]MetricDefinition{
+var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 	Common: {
-		CadenceRequests:                               {MetricName: "cadence.requests", metricType: Counter},
-		CadenceFailures:                               {MetricName: "cadence.errors", metricType: Counter},
-		CadenceLatency:                                {MetricName: "cadence.latency", metricType: Timer},
-		CadenceErrBadRequestCounter:                   {MetricName: "cadence.errors.bad-request", metricType: Counter},
-		CadenceErrServiceBusyCounter:                  {MetricName: "cadence.errors.service-busy", metricType: Counter},
-		CadenceErrEntityNotExistsCounter:              {MetricName: "cadence.errors.entity-not-exists", metricType: Counter},
-		CadenceErrExecutionAlreadyStartedCounter:      {MetricName: "cadence.errors.execution-already-started", metricType: Counter},
-		CadenceErrDomainAlreadyExistsCounter:          {MetricName: "cadence.errors.domain-already-exists", metricType: Counter},
-		CadenceErrCancellationAlreadyRequestedCounter: {MetricName: "cadence.errors.cancellation-already-requested", metricType: Counter},
-		CadenceErrQueryFailedCounter:                  {MetricName: "cadence.errors.query-failed", metricType: Counter},
-		CadenceErrLimitExceededCounter:                {MetricName: "cadence.errors.limit-exceeded", metricType: Counter},
-		CadenceErrContextTimeoutCounter:               {MetricName: "cadence.errors.context-timeout", metricType: Counter},
-		PersistenceRequests:                           {MetricName: "persistence.requests", metricType: Counter},
-		PersistenceFailures:                           {MetricName: "persistence.errors", metricType: Counter},
-		PersistenceLatency:                            {MetricName: "persistence.latency", metricType: Timer},
-		PersistenceErrShardExistsCounter:              {MetricName: "persistence.errors.shard-exists", metricType: Counter},
-		PersistenceErrShardOwnershipLostCounter:       {MetricName: "persistence.errors.shard-ownership-lost", metricType: Counter},
-		PersistenceErrConditionFailedCounter:          {MetricName: "persistence.errors.condition-failed", metricType: Counter},
-		PersistenceErrTimeoutCounter:                  {MetricName: "persistence.errors.timeout", metricType: Counter},
-		PersistenceErrBusyCounter:                     {MetricName: "persistence.errors.busy", metricType: Counter},
-		HistoryClientFailures:                         {MetricName: "client.history.errors", metricType: Counter},
-		MatchingClientFailures:                        {MetricName: "client.matching.errors", metricType: Counter},
+		CadenceRequests:                               {metricName: "cadence.requests", metricType: Counter},
+		CadenceFailures:                               {metricName: "cadence.errors", metricType: Counter},
+		CadenceLatency:                                {metricName: "cadence.latency", metricType: Timer},
+		CadenceErrBadRequestCounter:                   {metricName: "cadence.errors.bad-request", metricType: Counter},
+		CadenceErrServiceBusyCounter:                  {metricName: "cadence.errors.service-busy", metricType: Counter},
+		CadenceErrEntityNotExistsCounter:              {metricName: "cadence.errors.entity-not-exists", metricType: Counter},
+		CadenceErrExecutionAlreadyStartedCounter:      {metricName: "cadence.errors.execution-already-started", metricType: Counter},
+		CadenceErrDomainAlreadyExistsCounter:          {metricName: "cadence.errors.domain-already-exists", metricType: Counter},
+		CadenceErrCancellationAlreadyRequestedCounter: {metricName: "cadence.errors.cancellation-already-requested", metricType: Counter},
+		CadenceErrQueryFailedCounter:                  {metricName: "cadence.errors.query-failed", metricType: Counter},
+		CadenceErrLimitExceededCounter:                {metricName: "cadence.errors.limit-exceeded", metricType: Counter},
+		CadenceErrContextTimeoutCounter:               {metricName: "cadence.errors.context-timeout", metricType: Counter},
+		PersistenceRequests:                           {metricName: "persistence.requests", metricType: Counter},
+		PersistenceFailures:                           {metricName: "persistence.errors", metricType: Counter},
+		PersistenceLatency:                            {metricName: "persistence.latency", metricType: Timer},
+		PersistenceErrShardExistsCounter:              {metricName: "persistence.errors.shard-exists", metricType: Counter},
+		PersistenceErrShardOwnershipLostCounter:       {metricName: "persistence.errors.shard-ownership-lost", metricType: Counter},
+		PersistenceErrConditionFailedCounter:          {metricName: "persistence.errors.condition-failed", metricType: Counter},
+		PersistenceErrTimeoutCounter:                  {metricName: "persistence.errors.timeout", metricType: Counter},
+		PersistenceErrBusyCounter:                     {metricName: "persistence.errors.busy", metricType: Counter},
+		HistoryClientFailures:                         {metricName: "client.history.errors", metricType: Counter},
+		MatchingClientFailures:                        {metricName: "client.matching.errors", metricType: Counter},
 	},
 	Frontend: {},
 	History: {
-		TaskRequests:                                 {MetricName: "task.requests", metricType: Counter},
-		TaskFailures:                                 {MetricName: "task.errors", metricType: Counter},
-		TaskLatency:                                  {MetricName: "task.latency", metricType: Counter},
-		AckLevelUpdateCounter:                        {MetricName: "ack-level-update", metricType: Counter},
-		AckLevelUpdateFailedCounter:                  {MetricName: "ack-level-update-failed", metricType: Counter},
-		DecisionTypeScheduleActivityCounter:          {MetricName: "schedule-activity-decision", metricType: Counter},
-		DecisionTypeCompleteWorkflowCounter:          {MetricName: "complete-workflow-decision", metricType: Counter},
-		DecisionTypeFailWorkflowCounter:              {MetricName: "fail-workflow-decision", metricType: Counter},
-		DecisionTypeCancelWorkflowCounter:            {MetricName: "cancel-workflow-decision", metricType: Counter},
-		DecisionTypeStartTimerCounter:                {MetricName: "start-timer-decision", metricType: Counter},
-		DecisionTypeCancelActivityCounter:            {MetricName: "cancel-activity-decision", metricType: Counter},
-		DecisionTypeCancelTimerCounter:               {MetricName: "cancel-timer-decision", metricType: Counter},
-		DecisionTypeRecordMarkerCounter:              {MetricName: "record-marker-decision", metricType: Counter},
-		DecisionTypeCancelExternalWorkflowCounter:    {MetricName: "cancel-external-workflow-decision", metricType: Counter},
-		DecisionTypeContinueAsNewCounter:             {MetricName: "continue-as-new-decision", metricType: Counter},
-		DecisionTypeChildWorkflowCounter:             {MetricName: "child-workflow-decision", metricType: Counter},
-		MultipleCompletionDecisionsCounter:           {MetricName: "multiple-completion-decisions", metricType: Counter},
-		FailedDecisionsCounter:                       {MetricName: "failed-decisions", metricType: Counter},
-		StaleMutableStateCounter:                     {MetricName: "stale-mutable-state", metricType: Counter},
-		ConcurrencyUpdateFailureCounter:              {MetricName: "concurrency-update-failure", metricType: Counter},
-		CadenceErrShardOwnershipLostCounter:          {MetricName: "cadence.errors.shard-ownership-lost", metricType: Counter},
-		CadenceErrEventAlreadyStartedCounter:         {MetricName: "cadence.errors.event-already-started", metricType: Counter},
-		HeartbeatTimeoutCounter:                      {MetricName: "heartbeat-tiemout", metricType: Counter},
-		ScheduleToStartTimeoutCounter:                {MetricName: "schedule-to-start-timeout", metricType: Counter},
-		StartToCloseTimeoutCounter:                   {MetricName: "start-to-close-timeout", metricType: Counter},
-		ScheduleToCloseTimeoutCounter:                {MetricName: "schedule-to-close-timeout", metricType: Counter},
-		NewActiveTimerCounter:                        {MetricName: "new-active-timer", metricType: Counter},
-		NewStandbyTimerCounter:                       {MetricName: "new-standby-timer", metricType: Counter},
-		NewTimerNotifyCounter:                        {MetricName: "new-timer-notifications", metricType: Counter},
-		AcquireShardsCounter:                         {MetricName: "acquire-shards-count", metricType: Counter},
-		AcquireShardsLatency:                         {MetricName: "acquire-shards-latency", metricType: Timer},
-		ShardClosedCounter:                           {MetricName: "shard-closed-count", metricType: Counter},
-		ShardItemCreatedCounter:                      {MetricName: "sharditem-created-count", metricType: Counter},
-		ShardItemRemovedCounter:                      {MetricName: "sharditem-removed-count", metricType: Counter},
-		MembershipChangedCounter:                     {MetricName: "membership-changed-count", metricType: Counter},
-		NumShardsGauge:                               {MetricName: "numshards-gauge", metricType: Gauge},
-		GetEngineForShardErrorCounter:                {MetricName: "get-engine-for-shard-errors", metricType: Counter},
-		GetEngineForShardLatency:                     {MetricName: "get-engine-for-shard-latency", metricType: Timer},
-		RemoveEngineForShardLatency:                  {MetricName: "remove-engine-for-shard-latency", metricType: Timer},
-		CompleteDecisionWithStickyEnabledCounter:     {MetricName: "complete-decision-sticky-enabled-count", metricType: Counter},
-		CompleteDecisionWithStickyDisabledCounter:    {MetricName: "complete-decision-sticky-disabled-count", metricType: Counter},
-		HistoryEventNotificationQueueingLatency:      {MetricName: "history-event-notification-queueing-latency", metricType: Timer},
-		HistoryEventNotificationFanoutLatency:        {MetricName: "history-event-notification-fanout-latency", metricType: Timer},
-		HistoryEventNotificationInFlightMessageGauge: {MetricName: "history-event-notification-inflight-message-gauge", metricType: Gauge},
-		HistoryEventNotificationFailDeliveryCount:    {MetricName: "history-event-notification-fail-delivery-count", metricType: Counter},
+		TaskRequests:                                 {metricName: "task.requests", metricType: Counter},
+		TaskFailures:                                 {metricName: "task.errors", metricType: Counter},
+		TaskLatency:                                  {metricName: "task.latency", metricType: Counter},
+		AckLevelUpdateCounter:                        {metricName: "ack-level-update", metricType: Counter},
+		AckLevelUpdateFailedCounter:                  {metricName: "ack-level-update-failed", metricType: Counter},
+		DecisionTypeScheduleActivityCounter:          {metricName: "schedule-activity-decision", metricType: Counter},
+		DecisionTypeCompleteWorkflowCounter:          {metricName: "complete-workflow-decision", metricType: Counter},
+		DecisionTypeFailWorkflowCounter:              {metricName: "fail-workflow-decision", metricType: Counter},
+		DecisionTypeCancelWorkflowCounter:            {metricName: "cancel-workflow-decision", metricType: Counter},
+		DecisionTypeStartTimerCounter:                {metricName: "start-timer-decision", metricType: Counter},
+		DecisionTypeCancelActivityCounter:            {metricName: "cancel-activity-decision", metricType: Counter},
+		DecisionTypeCancelTimerCounter:               {metricName: "cancel-timer-decision", metricType: Counter},
+		DecisionTypeRecordMarkerCounter:              {metricName: "record-marker-decision", metricType: Counter},
+		DecisionTypeCancelExternalWorkflowCounter:    {metricName: "cancel-external-workflow-decision", metricType: Counter},
+		DecisionTypeContinueAsNewCounter:             {metricName: "continue-as-new-decision", metricType: Counter},
+		DecisionTypeChildWorkflowCounter:             {metricName: "child-workflow-decision", metricType: Counter},
+		MultipleCompletionDecisionsCounter:           {metricName: "multiple-completion-decisions", metricType: Counter},
+		FailedDecisionsCounter:                       {metricName: "failed-decisions", metricType: Counter},
+		StaleMutableStateCounter:                     {metricName: "stale-mutable-state", metricType: Counter},
+		ConcurrencyUpdateFailureCounter:              {metricName: "concurrency-update-failure", metricType: Counter},
+		CadenceErrShardOwnershipLostCounter:          {metricName: "cadence.errors.shard-ownership-lost", metricType: Counter},
+		CadenceErrEventAlreadyStartedCounter:         {metricName: "cadence.errors.event-already-started", metricType: Counter},
+		HeartbeatTimeoutCounter:                      {metricName: "heartbeat-tiemout", metricType: Counter},
+		ScheduleToStartTimeoutCounter:                {metricName: "schedule-to-start-timeout", metricType: Counter},
+		StartToCloseTimeoutCounter:                   {metricName: "start-to-close-timeout", metricType: Counter},
+		ScheduleToCloseTimeoutCounter:                {metricName: "schedule-to-close-timeout", metricType: Counter},
+		NewActiveTimerCounter:                        {metricName: "new-active-timer", metricType: Counter},
+		NewStandbyTimerCounter:                       {metricName: "new-standby-timer", metricType: Counter},
+		NewTimerNotifyCounter:                        {metricName: "new-timer-notifications", metricType: Counter},
+		AcquireShardsCounter:                         {metricName: "acquire-shards-count", metricType: Counter},
+		AcquireShardsLatency:                         {metricName: "acquire-shards-latency", metricType: Timer},
+		ShardClosedCounter:                           {metricName: "shard-closed-count", metricType: Counter},
+		ShardItemCreatedCounter:                      {metricName: "sharditem-created-count", metricType: Counter},
+		ShardItemRemovedCounter:                      {metricName: "sharditem-removed-count", metricType: Counter},
+		MembershipChangedCounter:                     {metricName: "membership-changed-count", metricType: Counter},
+		NumShardsGauge:                               {metricName: "numshards-gauge", metricType: Gauge},
+		GetEngineForShardErrorCounter:                {metricName: "get-engine-for-shard-errors", metricType: Counter},
+		GetEngineForShardLatency:                     {metricName: "get-engine-for-shard-latency", metricType: Timer},
+		RemoveEngineForShardLatency:                  {metricName: "remove-engine-for-shard-latency", metricType: Timer},
+		CompleteDecisionWithStickyEnabledCounter:     {metricName: "complete-decision-sticky-enabled-count", metricType: Counter},
+		CompleteDecisionWithStickyDisabledCounter:    {metricName: "complete-decision-sticky-disabled-count", metricType: Counter},
+		HistoryEventNotificationQueueingLatency:      {metricName: "history-event-notification-queueing-latency", metricType: Timer},
+		HistoryEventNotificationFanoutLatency:        {metricName: "history-event-notification-fanout-latency", metricType: Timer},
+		HistoryEventNotificationInFlightMessageGauge: {metricName: "history-event-notification-inflight-message-gauge", metricType: Gauge},
+		HistoryEventNotificationFailDeliveryCount:    {metricName: "history-event-notification-fail-delivery-count", metricType: Counter},
 	},
 	Matching: {
-		PollSuccessCounter:            {MetricName: "poll.success"},
-		PollTimeoutCounter:            {MetricName: "poll.timeouts"},
-		PollSuccessWithSyncCounter:    {MetricName: "poll.success.sync"},
-		LeaseRequestCounter:           {MetricName: "lease.requests"},
-		LeaseFailureCounter:           {MetricName: "lease.failures"},
-		ConditionFailedErrorCounter:   {MetricName: "condition-failed-errors"},
-		RespondQueryTaskFailedCounter: {MetricName: "respond-query-failed"},
-		SyncThrottleCounter:           {MetricName: "sync.throttle.count"},
-		BufferThrottleCounter:         {MetricName: "buffer.throttle.count"},
+		PollSuccessCounter:            {metricName: "poll.success"},
+		PollTimeoutCounter:            {metricName: "poll.timeouts"},
+		PollSuccessWithSyncCounter:    {metricName: "poll.success.sync"},
+		LeaseRequestCounter:           {metricName: "lease.requests"},
+		LeaseFailureCounter:           {metricName: "lease.failures"},
+		ConditionFailedErrorCounter:   {metricName: "condition-failed-errors"},
+		RespondQueryTaskFailedCounter: {metricName: "respond-query-failed"},
+		SyncThrottleCounter:           {metricName: "sync.throttle.count"},
+		BufferThrottleCounter:         {metricName: "buffer.throttle.count"},
 	},
 	Worker: {
-		ReplicatorMessages: {MetricName: "replicator.messages"},
-		ReplicatorFailures: {MetricName: "replicator.errors"},
-		ReplicatorLatency:  {MetricName: "replicator.latency"},
+		ReplicatorMessages: {metricName: "replicator.messages"},
+		ReplicatorFailures: {metricName: "replicator.errors"},
+		ReplicatorLatency:  {metricName: "replicator.latency"},
 	},
 }
 
