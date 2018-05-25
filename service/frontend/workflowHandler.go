@@ -341,6 +341,7 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 	replicationConfig := getResponse.ReplicationConfig
 	configVersion := getResponse.ConfigVersion
 	failoverVersion := getResponse.FailoverVersion
+	failoverGlobalNotificationVersion := getResponse.FailoverGlobalNotificationVersion
 
 	// whether active cluster is changed
 	activeClusterChanged := false
@@ -435,21 +436,22 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 			return nil, wh.error(errNotMasterCluster, scope)
 		}
 
-		updateReq := &persistence.UpdateDomainRequest{
-			Info:              info,
-			Config:            config,
-			ReplicationConfig: replicationConfig,
-			ConfigVersion:     configVersion,
-			FailoverVersion:   failoverVersion,
-		}
-
 		// set the versions
 		if configurationChanged {
-			updateReq.ConfigVersion++
+			configVersion++
 		}
 		if activeClusterChanged {
-			updateReq.FailoverVersion = clusterMetadata.GetNextFailoverVersion(replicationConfig.ActiveClusterName, updateReq.FailoverVersion)
-			updateReq.FailoverGlobalNotificationVersion = *globalNotificationVersion
+			failoverVersion = clusterMetadata.GetNextFailoverVersion(replicationConfig.ActiveClusterName, failoverVersion)
+			failoverGlobalNotificationVersion = *globalNotificationVersion
+		}
+
+		updateReq := &persistence.UpdateDomainRequest{
+			Info:                              info,
+			Config:                            config,
+			ReplicationConfig:                 replicationConfig,
+			ConfigVersion:                     configVersion,
+			FailoverVersion:                   failoverVersion,
+			FailoverGlobalNotificationVersion: failoverGlobalNotificationVersion,
 		}
 
 		if globalNotificationVersion != nil {
