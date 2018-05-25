@@ -124,12 +124,12 @@ func (domainReplicator *domainReplicatorImpl) handleDomainUpdateReplicationTask(
 		return err
 	}
 
+	// first we need to get the current notification verion since we need to it for conditional update
 	notificationVersion, err := domainReplicator.metadataManagerV2.GetMetadata()
 	if err != nil {
 		return err
 	}
 
-	// first we need to get the current record since we need to DB version for conditional update
 	// plus, we need to check whether the config version is <= the config version set in the input
 	// plus, we need to check whether the failover version is <= the failover version set in the input
 	resp, err := domainReplicator.metadataManagerV2.GetDomain(&persistence.GetDomainRequest{
@@ -146,12 +146,13 @@ func (domainReplicator *domainReplicatorImpl) handleDomainUpdateReplicationTask(
 
 	recordUpdated := false
 	request := &persistence.UpdateDomainRequest{
-		Info:                resp.Info,
-		Config:              resp.Config,
-		ReplicationConfig:   resp.ReplicationConfig,
-		ConfigVersion:       resp.ConfigVersion,
-		FailoverVersion:     resp.FailoverVersion,
-		NotificationVersion: notificationVersion,
+		Info:                        resp.Info,
+		Config:                      resp.Config,
+		ReplicationConfig:           resp.ReplicationConfig,
+		ConfigVersion:               resp.ConfigVersion,
+		FailoverVersion:             resp.FailoverVersion,
+		FailoverNotificationVersion: resp.FailoverNotificationVersion,
+		NotificationVersion:         notificationVersion,
 	}
 
 	if resp.ConfigVersion < task.GetConfigVersion() {
