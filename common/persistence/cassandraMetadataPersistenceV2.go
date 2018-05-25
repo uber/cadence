@@ -31,12 +31,12 @@ import (
 )
 
 const constDomainPartition = 0
-const initialFailoverGlobalNotificationVersion int64 = 0
+const initialFailoverNotificationVersion int64 = 0
 const domainMetadataRecordName = "cadence-domain-metadata"
 
 const (
 	templateCreateDomainByNameQueryWithinBatchV2 = `INSERT INTO domains_by_name_v2 (` +
-		`domains_partition, name, domain, config, replication_config, is_global_domain, config_version, failover_version, failover_global_notification_version, global_notification_version) ` +
+		`domains_partition, name, domain, config, replication_config, is_global_domain, config_version, failover_version, failover_notification_version, notification_version) ` +
 		`VALUES(?, ?, ` + templateDomainInfoType + `, ` + templateDomainConfigType + `, ` + templateDomainReplicationConfigType + `, ?, ?, ?, ?, ?) IF NOT EXISTS`
 
 	templateGetDomainByNameQueryV2 = `SELECT domain.id, domain.name, domain.status, domain.description, ` +
@@ -45,8 +45,8 @@ const (
 		`is_global_domain, ` +
 		`config_version, ` +
 		`failover_version, ` +
-		`failover_global_notification_version, ` +
-		`global_notification_version ` +
+		`failover_notification_version, ` +
+		`notification_version ` +
 		`FROM domains_by_name_v2 ` +
 		`WHERE domains_partition = ? ` +
 		`and name = ?`
@@ -57,21 +57,21 @@ const (
 		`replication_config = ` + templateDomainReplicationConfigType + `, ` +
 		`config_version = ? ,` +
 		`failover_version = ? ,` +
-		`failover_global_notification_version = ? , ` +
-		`global_notification_version = ? ` +
+		`failover_notification_version = ? , ` +
+		`notification_version = ? ` +
 		`WHERE domains_partition = ? ` +
 		`and name = ?`
 
-	templateGetMetadataQueryV2 = `SELECT global_notification_version ` +
+	templateGetMetadataQueryV2 = `SELECT notification_version ` +
 		`FROM domains_by_name_v2 ` +
 		`WHERE domains_partition = ? ` +
 		`and name = ? `
 
 	templateUpdateMetadataQueryWithinBatchV2 = `UPDATE domains_by_name_v2 ` +
-		`SET global_notification_version = ? ` +
+		`SET notification_version = ? ` +
 		`WHERE domains_partition = ? ` +
 		`and name = ? ` +
-		`IF global_notification_version = ? `
+		`IF notification_version = ? `
 
 	templateDeleteDomainByNameQueryV2 = `DELETE FROM domains_by_name_v2 ` +
 		`WHERE domains_partition = ? ` +
@@ -83,8 +83,8 @@ const (
 		`is_global_domain, ` +
 		`config_version, ` +
 		`failover_version, ` +
-		`failover_global_notification_version, ` +
-		`global_notification_version ` +
+		`failover_notification_version, ` +
+		`notification_version ` +
 		`FROM domains_by_name_v2 ` +
 		`WHERE domains_partition = ? `
 )
@@ -144,7 +144,7 @@ func (m *cassandraMetadataPersistenceV2) CreateDomain(request *CreateDomainReque
 		}
 	}
 
-	globalNotificationVersion, err := m.GetMetadata()
+	notificationVersion, err := m.GetMetadata()
 	if err != nil {
 		return nil, err
 	}
@@ -165,10 +165,10 @@ func (m *cassandraMetadataPersistenceV2) CreateDomain(request *CreateDomainReque
 		request.IsGlobalDomain,
 		request.ConfigVersion,
 		request.FailoverVersion,
-		initialFailoverGlobalNotificationVersion,
-		globalNotificationVersion,
+		initialFailoverNotificationVersion,
+		notificationVersion,
 	)
-	m.updateMetadataBatch(batch, globalNotificationVersion)
+	m.updateMetadataBatch(batch, notificationVersion)
 
 	previous := make(map[string]interface{})
 	applied, iter, err := m.session.MapExecuteBatchCAS(batch, previous)
@@ -219,12 +219,12 @@ func (m *cassandraMetadataPersistenceV2) UpdateDomain(request *UpdateDomainReque
 		serializeClusterConfigs(request.ReplicationConfig.Clusters),
 		request.ConfigVersion,
 		request.FailoverVersion,
-		request.FailoverGlobalNotificationVersion,
-		request.GlobalNotificationVersion,
+		request.FailoverNotificationVersion,
+		request.NotificationVersion,
 		constDomainPartition,
 		request.Info.Name,
 	)
-	m.updateMetadataBatch(batch, request.GlobalNotificationVersion)
+	m.updateMetadataBatch(batch, request.NotificationVersion)
 
 	previous := make(map[string]interface{})
 	applied, iter, err := m.session.MapExecuteBatchCAS(batch, previous)
@@ -255,8 +255,8 @@ func (m *cassandraMetadataPersistenceV2) GetDomain(request *GetDomainRequest) (*
 	config := &DomainConfig{}
 	replicationConfig := &DomainReplicationConfig{}
 	var replicationClusters []map[string]interface{}
-	var failoverGlobalNotificationVersion int64
-	var globalNotificationVersion int64
+	var failoverNotificationVersion int64
+	var notificationVersion int64
 	var failoverVersion int64
 	var configVersion int64
 	var isGlobalDomain bool
@@ -309,8 +309,8 @@ func (m *cassandraMetadataPersistenceV2) GetDomain(request *GetDomainRequest) (*
 		&isGlobalDomain,
 		&configVersion,
 		&failoverVersion,
-		&failoverGlobalNotificationVersion,
-		&globalNotificationVersion,
+		&failoverNotificationVersion,
+		&notificationVersion,
 	)
 
 	if err != nil {
@@ -322,14 +322,14 @@ func (m *cassandraMetadataPersistenceV2) GetDomain(request *GetDomainRequest) (*
 	replicationConfig.Clusters = GetOrUseDefaultClusters(m.currentClusterName, replicationConfig.Clusters)
 
 	return &GetDomainResponse{
-		Info:                              info,
-		Config:                            config,
-		ReplicationConfig:                 replicationConfig,
-		IsGlobalDomain:                    isGlobalDomain,
-		ConfigVersion:                     configVersion,
-		FailoverVersion:                   failoverVersion,
-		FailoverGlobalNotificationVersion: failoverGlobalNotificationVersion,
-		GlobalNotificationVersion:         globalNotificationVersion,
+		Info:                        info,
+		Config:                      config,
+		ReplicationConfig:           replicationConfig,
+		IsGlobalDomain:              isGlobalDomain,
+		ConfigVersion:               configVersion,
+		FailoverVersion:             failoverVersion,
+		FailoverNotificationVersion: failoverNotificationVersion,
+		NotificationVersion:         notificationVersion,
 	}, nil
 }
 
@@ -358,7 +358,7 @@ func (m *cassandraMetadataPersistenceV2) ListDomain(request *ListDomainRequest) 
 		&domain.Config.Retention, &domain.Config.EmitMetric,
 		&domain.ReplicationConfig.ActiveClusterName, &replicationClusters,
 		&domain.IsGlobalDomain, &domain.ConfigVersion, &domain.FailoverVersion,
-		&domain.FailoverGlobalNotificationVersion, &domain.GlobalNotificationVersion,
+		&domain.FailoverNotificationVersion, &domain.NotificationVersion,
 	) {
 		if name != domainMetadataRecordName {
 			// do not inlcude the metadata record
@@ -409,9 +409,9 @@ func (m *cassandraMetadataPersistenceV2) DeleteDomainByName(request *DeleteDomai
 }
 
 func (m *cassandraMetadataPersistenceV2) GetMetadata() (int64, error) {
-	var globalNotificationVersion int64
+	var notificationVersion int64
 	query := m.session.Query(templateGetMetadataQueryV2, constDomainPartition, domainMetadataRecordName)
-	err := query.Scan(&globalNotificationVersion)
+	err := query.Scan(&notificationVersion)
 	if err != nil {
 		if err == gocql.ErrNotFound {
 			// this error can be thrown in the very begining,
@@ -421,15 +421,15 @@ func (m *cassandraMetadataPersistenceV2) GetMetadata() (int64, error) {
 		}
 		return 0, err
 	}
-	return globalNotificationVersion, nil
+	return notificationVersion, nil
 }
 
-func (m *cassandraMetadataPersistenceV2) updateMetadataBatch(batch *gocql.Batch, globalNotificationVersion int64) {
+func (m *cassandraMetadataPersistenceV2) updateMetadataBatch(batch *gocql.Batch, notificationVersion int64) {
 	var nextVersion int64 = 1
 	var currentVersion *int64
-	if globalNotificationVersion > 0 {
-		nextVersion = globalNotificationVersion + 1
-		currentVersion = &globalNotificationVersion
+	if notificationVersion > 0 {
+		nextVersion = notificationVersion + 1
+		currentVersion = &notificationVersion
 	}
 	batch.Query(templateUpdateMetadataQueryWithinBatchV2,
 		nextVersion,

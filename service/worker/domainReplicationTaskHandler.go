@@ -124,7 +124,7 @@ func (domainReplicator *domainReplicatorImpl) handleDomainUpdateReplicationTask(
 		return err
 	}
 
-	globalNotificationVersion, err := domainReplicator.metadataManagerV2.GetMetadata()
+	notificationVersion, err := domainReplicator.metadataManagerV2.GetMetadata()
 	if err != nil {
 		return err
 	}
@@ -146,12 +146,12 @@ func (domainReplicator *domainReplicatorImpl) handleDomainUpdateReplicationTask(
 
 	recordUpdated := false
 	request := &persistence.UpdateDomainRequest{
-		Info:                      resp.Info,
-		Config:                    resp.Config,
-		ReplicationConfig:         resp.ReplicationConfig,
-		ConfigVersion:             resp.ConfigVersion,
-		FailoverVersion:           resp.FailoverVersion,
-		GlobalNotificationVersion: globalNotificationVersion,
+		Info:                resp.Info,
+		Config:              resp.Config,
+		ReplicationConfig:   resp.ReplicationConfig,
+		ConfigVersion:       resp.ConfigVersion,
+		FailoverVersion:     resp.FailoverVersion,
+		NotificationVersion: notificationVersion,
 	}
 
 	if resp.ConfigVersion < task.GetConfigVersion() {
@@ -174,7 +174,7 @@ func (domainReplicator *domainReplicatorImpl) handleDomainUpdateReplicationTask(
 		recordUpdated = true
 		request.ReplicationConfig.ActiveClusterName = task.ReplicationConfig.GetActiveClusterName()
 		request.FailoverVersion = task.GetFailoverVersion()
-		request.FailoverGlobalNotificationVersion = globalNotificationVersion
+		request.FailoverNotificationVersion = notificationVersion
 	}
 
 	if !recordUpdated {

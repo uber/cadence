@@ -262,22 +262,22 @@ func (m *cassandraMetadataPersistence) GetDomain(request *GetDomainRequest) (*Ge
 	replicationConfig.Clusters = GetOrUseDefaultClusters(m.currentClusterName, replicationConfig.Clusters)
 
 	return &GetDomainResponse{
-		Info:                      info,
-		Config:                    config,
-		ReplicationConfig:         replicationConfig,
-		IsGlobalDomain:            isGlobalDomain,
-		ConfigVersion:             configVersion,
-		FailoverVersion:           failoverVersion,
-		GlobalNotificationVersion: dbVersion,
+		Info:                info,
+		Config:              config,
+		ReplicationConfig:   replicationConfig,
+		IsGlobalDomain:      isGlobalDomain,
+		ConfigVersion:       configVersion,
+		FailoverVersion:     failoverVersion,
+		NotificationVersion: dbVersion,
 	}, nil
 }
 
 func (m *cassandraMetadataPersistence) UpdateDomain(request *UpdateDomainRequest) error {
 	var nextVersion int64 = 1
 	var currentVersion *int64
-	if request.GlobalNotificationVersion > 0 {
-		nextVersion = request.GlobalNotificationVersion + 1
-		currentVersion = &request.GlobalNotificationVersion
+	if request.NotificationVersion > 0 {
+		nextVersion = request.NotificationVersion + 1
+		currentVersion = &request.NotificationVersion
 	}
 	query := m.session.Query(templateUpdateDomainByNameQuery,
 		request.Info.ID,

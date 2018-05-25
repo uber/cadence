@@ -135,7 +135,7 @@ func (m *metadataPersistenceSuiteV2) TestCreateDomain() {
 	m.Equal(configVersion, resp1.ConfigVersion)
 	m.Equal(failoverVersion, resp1.FailoverVersion)
 	m.True(resp1.ReplicationConfig.Clusters[0].ClusterName == cluster.TestCurrentClusterName)
-	m.Equal(initialFailoverGlobalNotificationVersion, resp1.FailoverGlobalNotificationVersion)
+	m.Equal(initialFailoverNotificationVersion, resp1.FailoverNotificationVersion)
 
 	resp2, err2 := m.CreateDomain(
 		&DomainInfo{
@@ -229,7 +229,7 @@ func (m *metadataPersistenceSuiteV2) TestGetDomain() {
 	m.Equal(isGlobalDomain, resp2.IsGlobalDomain)
 	m.Equal(configVersion, resp2.ConfigVersion)
 	m.Equal(failoverVersion, resp2.FailoverVersion)
-	m.Equal(initialFailoverGlobalNotificationVersion, resp2.FailoverGlobalNotificationVersion)
+	m.Equal(initialFailoverNotificationVersion, resp2.FailoverNotificationVersion)
 
 	resp3, err3 := m.GetDomain("", name)
 	m.Nil(err3)
@@ -249,7 +249,7 @@ func (m *metadataPersistenceSuiteV2) TestGetDomain() {
 	m.Equal(isGlobalDomain, resp2.IsGlobalDomain)
 	m.Equal(configVersion, resp2.ConfigVersion)
 	m.Equal(failoverVersion, resp3.FailoverVersion)
-	m.Equal(initialFailoverGlobalNotificationVersion, resp3.FailoverGlobalNotificationVersion)
+	m.Equal(initialFailoverNotificationVersion, resp3.FailoverNotificationVersion)
 
 	resp4, err4 := m.GetDomain(id, name)
 	m.NotNil(err4)
@@ -305,7 +305,7 @@ func (m *metadataPersistenceSuiteV2) TestUpdateDomain() {
 
 	resp2, err2 := m.GetDomain(id, "")
 	m.Nil(err2)
-	globalNotificationVersion, err := m.MetadataManagerV2.GetMetadata()
+	notificationVersion, err := m.MetadataManagerV2.GetMetadata()
 	m.Nil(err)
 
 	updatedStatus := DomainStatusDeprecated
@@ -318,7 +318,7 @@ func (m *metadataPersistenceSuiteV2) TestUpdateDomain() {
 	updateClusterStandby := "other random standby cluster name"
 	updateConfigVersion := int64(12)
 	updateFailoverVersion := int64(28)
-	updateFailoverGlobalNotificationVersion := int64(14)
+	updateFailoverNotificationVersion := int64(14)
 	updateClusters := []*ClusterReplicationConfig{
 		&ClusterReplicationConfig{
 			ClusterName: updateClusterActive,
@@ -346,8 +346,8 @@ func (m *metadataPersistenceSuiteV2) TestUpdateDomain() {
 		},
 		updateConfigVersion,
 		updateFailoverVersion,
-		updateFailoverGlobalNotificationVersion,
-		globalNotificationVersion,
+		updateFailoverNotificationVersion,
+		notificationVersion,
 	)
 	m.Nil(err3)
 
@@ -368,8 +368,8 @@ func (m *metadataPersistenceSuiteV2) TestUpdateDomain() {
 	}
 	m.Equal(updateConfigVersion, resp4.ConfigVersion)
 	m.Equal(updateFailoverVersion, resp4.FailoverVersion)
-	m.Equal(updateFailoverGlobalNotificationVersion, resp4.FailoverGlobalNotificationVersion)
-	m.Equal(globalNotificationVersion, resp4.GlobalNotificationVersion)
+	m.Equal(updateFailoverNotificationVersion, resp4.FailoverNotificationVersion)
+	m.Equal(notificationVersion, resp4.NotificationVersion)
 
 	resp5, err5 := m.GetDomain("", name)
 	m.Nil(err5)
@@ -388,8 +388,8 @@ func (m *metadataPersistenceSuiteV2) TestUpdateDomain() {
 	}
 	m.Equal(updateConfigVersion, resp5.ConfigVersion)
 	m.Equal(updateFailoverVersion, resp5.FailoverVersion)
-	m.Equal(updateFailoverGlobalNotificationVersion, resp5.FailoverGlobalNotificationVersion)
-	m.Equal(globalNotificationVersion, resp5.GlobalNotificationVersion)
+	m.Equal(updateFailoverNotificationVersion, resp5.FailoverNotificationVersion)
+	m.Equal(notificationVersion, resp5.NotificationVersion)
 }
 
 func (m *metadataPersistenceSuiteV2) TestDeleteDomain() {
@@ -582,7 +582,7 @@ ListLoop:
 			outputDomains[domain.Info.ID] = domain
 			// global notification version is already tested, so here we make it 0
 			// so we can test == easily
-			domain.GlobalNotificationVersion = 0
+			domain.NotificationVersion = 0
 		}
 		if len(token) == 0 {
 			break ListLoop
@@ -615,15 +615,15 @@ func (m *metadataPersistenceSuiteV2) GetDomain(id, name string) (*GetDomainRespo
 }
 
 func (m *metadataPersistenceSuiteV2) UpdateDomain(info *DomainInfo, config *DomainConfig, replicationConfig *DomainReplicationConfig,
-	configVersion int64, failoverVersion int64, failoverGlobalNotificationVersion int64, globalNotificationVersion int64) error {
+	configVersion int64, failoverVersion int64, failoverNotificationVersion int64, notificationVersion int64) error {
 	return m.MetadataManagerV2.UpdateDomain(&UpdateDomainRequest{
-		Info:                              info,
-		Config:                            config,
-		ReplicationConfig:                 replicationConfig,
-		ConfigVersion:                     configVersion,
-		FailoverVersion:                   failoverVersion,
-		FailoverGlobalNotificationVersion: failoverGlobalNotificationVersion,
-		GlobalNotificationVersion:         globalNotificationVersion,
+		Info:                        info,
+		Config:                      config,
+		ReplicationConfig:           replicationConfig,
+		ConfigVersion:               configVersion,
+		FailoverVersion:             failoverVersion,
+		FailoverNotificationVersion: failoverNotificationVersion,
+		NotificationVersion:         notificationVersion,
 	})
 }
 

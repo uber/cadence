@@ -113,7 +113,7 @@ func (s *domainReplicatorSuite) TestHandleReceivingTask_RegisterDomainTask() {
 		FailoverVersion: common.Int64Ptr(failoverVersion),
 	}
 
-	globalNotificationVersion, err := s.MetadataManagerV2.GetMetadata()
+	notificationVersion, err := s.MetadataManagerV2.GetMetadata()
 	s.Nil(err)
 	err = s.domainReplicator.HandleReceivingTask(task)
 	s.Nil(err)
@@ -132,8 +132,8 @@ func (s *domainReplicatorSuite) TestHandleReceivingTask_RegisterDomainTask() {
 	s.Equal(s.domainReplicator.convertClusterReplicationConfigFromThrift(clusters), resp.ReplicationConfig.Clusters)
 	s.Equal(configVersion, resp.ConfigVersion)
 	s.Equal(failoverVersion, resp.FailoverVersion)
-	s.Equal(int64(0), resp.FailoverGlobalNotificationVersion)
-	s.Equal(globalNotificationVersion, resp.GlobalNotificationVersion)
+	s.Equal(int64(0), resp.FailoverNotificationVersion)
+	s.Equal(notificationVersion, resp.NotificationVersion)
 }
 
 func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_DomainNotExist() {
@@ -179,7 +179,7 @@ func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_DomainN
 		FailoverVersion: common.Int64Ptr(failoverVersion),
 	}
 
-	globalNotificationVersion, err := s.MetadataManagerV2.GetMetadata()
+	notificationVersion, err := s.MetadataManagerV2.GetMetadata()
 	s.Nil(err)
 	err = s.domainReplicator.HandleReceivingTask(updateTask)
 	s.Nil(err)
@@ -198,8 +198,8 @@ func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_DomainN
 	s.Equal(s.domainReplicator.convertClusterReplicationConfigFromThrift(clusters), resp.ReplicationConfig.Clusters)
 	s.Equal(configVersion, resp.ConfigVersion)
 	s.Equal(failoverVersion, resp.FailoverVersion)
-	s.Equal(int64(0), resp.FailoverGlobalNotificationVersion)
-	s.Equal(globalNotificationVersion, resp.GlobalNotificationVersion)
+	s.Equal(int64(0), resp.FailoverNotificationVersion)
+	s.Equal(notificationVersion, resp.NotificationVersion)
 }
 
 func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_UpdateConfig_UpdateActiveCluster() {
@@ -287,7 +287,7 @@ func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_UpdateC
 		ConfigVersion:   common.Int64Ptr(updateConfigVersion),
 		FailoverVersion: common.Int64Ptr(updateFailoverVersion),
 	}
-	globalNotificationVersion, err := s.MetadataManagerV2.GetMetadata()
+	notificationVersion, err := s.MetadataManagerV2.GetMetadata()
 	s.Nil(err)
 	err = s.domainReplicator.HandleReceivingTask(updateTask)
 	s.Nil(err)
@@ -305,8 +305,8 @@ func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_UpdateC
 	s.Equal(s.domainReplicator.convertClusterReplicationConfigFromThrift(updateClusters), resp.ReplicationConfig.Clusters)
 	s.Equal(updateConfigVersion, resp.ConfigVersion)
 	s.Equal(updateFailoverVersion, resp.FailoverVersion)
-	s.Equal(globalNotificationVersion, resp.FailoverGlobalNotificationVersion)
-	s.Equal(globalNotificationVersion, resp.GlobalNotificationVersion)
+	s.Equal(notificationVersion, resp.FailoverNotificationVersion)
+	s.Equal(notificationVersion, resp.NotificationVersion)
 }
 
 func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_UpdateConfig_NoUpdateActiveCluster() {
@@ -394,7 +394,7 @@ func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_UpdateC
 		ConfigVersion:   common.Int64Ptr(updateConfigVersion),
 		FailoverVersion: common.Int64Ptr(updateFailoverVersion),
 	}
-	globalNotificationVersion, err := s.MetadataManagerV2.GetMetadata()
+	notificationVersion, err := s.MetadataManagerV2.GetMetadata()
 	s.Nil(err)
 	err = s.domainReplicator.HandleReceivingTask(updateTask)
 	s.Nil(err)
@@ -412,8 +412,8 @@ func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_UpdateC
 	s.Equal(s.domainReplicator.convertClusterReplicationConfigFromThrift(updateClusters), resp.ReplicationConfig.Clusters)
 	s.Equal(updateConfigVersion, resp.ConfigVersion)
 	s.Equal(failoverVersion, resp.FailoverVersion)
-	s.Equal(int64(0), resp.FailoverGlobalNotificationVersion)
-	s.Equal(globalNotificationVersion, resp.GlobalNotificationVersion)
+	s.Equal(int64(0), resp.FailoverNotificationVersion)
+	s.Equal(notificationVersion, resp.NotificationVersion)
 }
 
 func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_NoUpdateConfig_UpdateActiveCluster() {
@@ -501,7 +501,7 @@ func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_NoUpdat
 		ConfigVersion:   common.Int64Ptr(updateConfigVersion),
 		FailoverVersion: common.Int64Ptr(updateFailoverVersion),
 	}
-	globalNotificationVersion, err := s.MetadataManagerV2.GetMetadata()
+	notificationVersion, err := s.MetadataManagerV2.GetMetadata()
 	s.Nil(err)
 	err = s.domainReplicator.HandleReceivingTask(updateTask)
 	s.Nil(err)
@@ -519,8 +519,8 @@ func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_NoUpdat
 	s.Equal(s.domainReplicator.convertClusterReplicationConfigFromThrift(clusters), resp.ReplicationConfig.Clusters)
 	s.Equal(configVersion, resp.ConfigVersion)
 	s.Equal(updateFailoverVersion, resp.FailoverVersion)
-	s.Equal(globalNotificationVersion, resp.FailoverGlobalNotificationVersion)
-	s.Equal(globalNotificationVersion, resp.GlobalNotificationVersion)
+	s.Equal(notificationVersion, resp.FailoverNotificationVersion)
+	s.Equal(notificationVersion, resp.NotificationVersion)
 }
 
 func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_NoUpdateConfig_NoUpdateActiveCluster() {
@@ -565,7 +565,7 @@ func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_NoUpdat
 		ConfigVersion:   common.Int64Ptr(configVersion),
 		FailoverVersion: common.Int64Ptr(failoverVersion),
 	}
-	globalNotificationVersion, err := s.MetadataManagerV2.GetMetadata()
+	notificationVersion, err := s.MetadataManagerV2.GetMetadata()
 	s.Nil(err)
 	err = s.domainReplicator.HandleReceivingTask(createTask)
 	s.Nil(err)
@@ -625,6 +625,6 @@ func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_NoUpdat
 	s.Equal(s.domainReplicator.convertClusterReplicationConfigFromThrift(clusters), resp.ReplicationConfig.Clusters)
 	s.Equal(configVersion, resp.ConfigVersion)
 	s.Equal(failoverVersion, resp.FailoverVersion)
-	s.Equal(int64(0), resp.FailoverGlobalNotificationVersion)
-	s.Equal(globalNotificationVersion, resp.GlobalNotificationVersion)
+	s.Equal(int64(0), resp.FailoverNotificationVersion)
+	s.Equal(notificationVersion, resp.NotificationVersion)
 }

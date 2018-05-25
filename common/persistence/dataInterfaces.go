@@ -824,25 +824,25 @@ type (
 
 	// GetDomainResponse is the response for GetDomain
 	GetDomainResponse struct {
-		Info                              *DomainInfo
-		Config                            *DomainConfig
-		ReplicationConfig                 *DomainReplicationConfig
-		IsGlobalDomain                    bool
-		ConfigVersion                     int64
-		FailoverVersion                   int64
-		FailoverGlobalNotificationVersion int64
-		GlobalNotificationVersion         int64
+		Info                        *DomainInfo
+		Config                      *DomainConfig
+		ReplicationConfig           *DomainReplicationConfig
+		IsGlobalDomain              bool
+		ConfigVersion               int64
+		FailoverVersion             int64
+		FailoverNotificationVersion int64
+		NotificationVersion         int64
 	}
 
 	// UpdateDomainRequest is used to update domain
 	UpdateDomainRequest struct {
-		Info                              *DomainInfo
-		Config                            *DomainConfig
-		ReplicationConfig                 *DomainReplicationConfig
-		ConfigVersion                     int64
-		FailoverVersion                   int64
-		FailoverGlobalNotificationVersion int64
-		GlobalNotificationVersion         int64
+		Info                        *DomainInfo
+		Config                      *DomainConfig
+		ReplicationConfig           *DomainReplicationConfig
+		ConfigVersion               int64
+		FailoverVersion             int64
+		FailoverNotificationVersion int64
+		NotificationVersion         int64
 	}
 
 	// DeleteDomainRequest is used to delete domain entry from domains table

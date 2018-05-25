@@ -330,7 +330,7 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 	}
 
 	// TODO, we should migrate the non global domain to new table, see #773
-	getResponse, globalNotificationVersion, err0 := wh.getDomain(updateRequest.GetName())
+	getResponse, notificationVersion, err0 := wh.getDomain(updateRequest.GetName())
 	if err0 != nil {
 		return nil, wh.error(err0, scope)
 	}
@@ -341,7 +341,7 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 	replicationConfig := getResponse.ReplicationConfig
 	configVersion := getResponse.ConfigVersion
 	failoverVersion := getResponse.FailoverVersion
-	failoverGlobalNotificationVersion := getResponse.FailoverGlobalNotificationVersion
+	failoverNotificationVersion := getResponse.FailoverNotificationVersion
 
 	// whether active cluster is changed
 	activeClusterChanged := false
@@ -442,23 +442,23 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 		}
 		if activeClusterChanged {
 			failoverVersion = clusterMetadata.GetNextFailoverVersion(replicationConfig.ActiveClusterName, failoverVersion)
-			failoverGlobalNotificationVersion = *globalNotificationVersion
+			failoverNotificationVersion = *notificationVersion
 		}
 
 		updateReq := &persistence.UpdateDomainRequest{
-			Info:                              info,
-			Config:                            config,
-			ReplicationConfig:                 replicationConfig,
-			ConfigVersion:                     configVersion,
-			FailoverVersion:                   failoverVersion,
-			FailoverGlobalNotificationVersion: failoverGlobalNotificationVersion,
+			Info:                        info,
+			Config:                      config,
+			ReplicationConfig:           replicationConfig,
+			ConfigVersion:               configVersion,
+			FailoverVersion:             failoverVersion,
+			FailoverNotificationVersion: failoverNotificationVersion,
 		}
 
-		if globalNotificationVersion != nil {
-			updateReq.GlobalNotificationVersion = *globalNotificationVersion
+		if notificationVersion != nil {
+			updateReq.NotificationVersion = *notificationVersion
 			err = wh.metadataMgrV2.UpdateDomain(updateReq)
 		} else {
-			updateReq.GlobalNotificationVersion = getResponse.GlobalNotificationVersion
+			updateReq.NotificationVersion = getResponse.NotificationVersion
 			err = wh.metadataMgr.UpdateDomain(updateReq)
 		}
 
@@ -512,7 +512,7 @@ func (wh *WorkflowHandler) DeprecateDomain(ctx context.Context, deprecateRequest
 	}
 
 	// TODO, we should migrate the non global domain to new table, see #773
-	getResponse, globalNotificationVersion, err := wh.getDomain(deprecateRequest.GetName())
+	getResponse, notificationVersion, err := wh.getDomain(deprecateRequest.GetName())
 	if err != nil {
 		return wh.error(err, scope)
 	}
@@ -527,12 +527,12 @@ func (wh *WorkflowHandler) DeprecateDomain(ctx context.Context, deprecateRequest
 		FailoverVersion:   getResponse.FailoverVersion,
 	}
 
-	if globalNotificationVersion != nil {
-		updateReq.FailoverGlobalNotificationVersion = getResponse.FailoverGlobalNotificationVersion
-		updateReq.GlobalNotificationVersion = *globalNotificationVersion
+	if notificationVersion != nil {
+		updateReq.FailoverNotificationVersion = getResponse.FailoverNotificationVersion
+		updateReq.NotificationVersion = *notificationVersion
 		err = wh.metadataMgrV2.UpdateDomain(updateReq)
 	} else {
-		updateReq.GlobalNotificationVersion = getResponse.GlobalNotificationVersion
+		updateReq.NotificationVersion = getResponse.NotificationVersion
 		err = wh.metadataMgr.UpdateDomain(updateReq)
 	}
 
@@ -550,14 +550,14 @@ func (wh *WorkflowHandler) getDomain(name string) (*persistence.GetDomainRespons
 
 	// we must get the global notification version first, this version
 	// should be treated as a lock
-	globalNotificationVersion, err := wh.metadataMgrV2.GetMetadata()
+	notificationVersion, err := wh.metadataMgrV2.GetMetadata()
 	if err != nil {
 		return nil, nil, err
 	}
 	req := &persistence.GetDomainRequest{Name: name}
 	resp, err := wh.metadataMgrV2.GetDomain(req)
 	if err == nil {
-		return resp, &globalNotificationVersion, nil
+		return resp, &notificationVersion, nil
 	}
 
 	// if entity not exist, try the old table

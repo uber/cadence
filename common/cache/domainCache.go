@@ -277,12 +277,12 @@ func (c *domainCache) refreshDomains() error {
 
 func (c *domainCache) loadDomain(name string, id string) (*persistence.GetDomainResponse, error) {
 	// this function guarantee to load domain from v1 table
-	// this means the FailoverGlobalNotificationVersion will be 0
-	// and GlobalNotificationVersion has complete different meaning
+	// this means the FailoverNotificationVersion will be 0
+	// and NotificationVersion has complete different meaning
 	resp, err := c.metadataMgr.GetDomain(&persistence.GetDomainRequest{Name: name, ID: id})
 	if err == nil {
-		resp.FailoverGlobalNotificationVersion = 0
-		resp.GlobalNotificationVersion = 0
+		resp.FailoverNotificationVersion = 0
+		resp.NotificationVersion = 0
 	}
 	return resp, err
 }
@@ -316,8 +316,8 @@ func (c *domainCache) updateIDToDomainCache(id string, record *persistence.GetDo
 	entry.configVersion = record.ConfigVersion
 	entry.failoverVersion = record.FailoverVersion
 	entry.isGlobalDomain = record.IsGlobalDomain
-	entry.failoverNotificationVersion = record.FailoverGlobalNotificationVersion
-	entry.notificationVersion = record.GlobalNotificationVersion
+	entry.failoverNotificationVersion = record.FailoverNotificationVersion
+	entry.notificationVersion = record.NotificationVersion
 	entry.expiry = c.timeSource.Now().Add(domainCacheRefreshInterval)
 
 	nextDomain := entry.duplicate()
@@ -500,5 +500,5 @@ func (t DomainCacheEntries) Swap(i, j int) {
 
 // Less implements sort.Interface
 func (t DomainCacheEntries) Less(i, j int) bool {
-	return t[i].GlobalNotificationVersion < t[j].GlobalNotificationVersion
+	return t[i].NotificationVersion < t[j].NotificationVersion
 }
