@@ -23,6 +23,7 @@ package persistence
 import (
 	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
 )
 
@@ -136,7 +137,10 @@ func (p *shardPersistenceClient) CreateShard(request *CreateShardRequest) error 
 		if _, ok := err.(*ShardAlreadyExistError); ok {
 			p.metricClient.IncCounter(metrics.PersistenceCreateShardScope, metrics.PersistenceErrShardExistsCounter)
 		} else {
-			p.logger.Errorf("CreateShard failed with internal error %v", err)
+			p.logger.WithFields(bark.Fields{
+				logging.TagStoreOperation: "CreateShard",
+				logging.TagErr:            err,
+			}).Error("Operation failed with internal error.")
 			p.metricClient.IncCounter(metrics.PersistenceCreateShardScope, metrics.PersistenceFailures)
 		}
 	}
@@ -157,7 +161,10 @@ func (p *shardPersistenceClient) GetShard(
 		case *workflow.EntityNotExistsError:
 			p.metricClient.IncCounter(metrics.PersistenceGetShardScope, metrics.CadenceErrEntityNotExistsCounter)
 		default:
-			p.logger.Errorf("GetShard failed with internal error %v", err)
+			p.logger.WithFields(bark.Fields{
+				logging.TagStoreOperation: "GetShard",
+				logging.TagErr:            err,
+			}).Error("Operation failed with internal error.")
 			p.metricClient.IncCounter(metrics.PersistenceGetShardScope, metrics.PersistenceFailures)
 		}
 	}
@@ -176,7 +183,10 @@ func (p *shardPersistenceClient) UpdateShard(request *UpdateShardRequest) error 
 		if _, ok := err.(*ShardOwnershipLostError); ok {
 			p.metricClient.IncCounter(metrics.PersistenceUpdateShardScope, metrics.PersistenceErrShardOwnershipLostCounter)
 		} else {
-			p.logger.Errorf("UpdateShard failed with internal error %v", err)
+			p.logger.WithFields(bark.Fields{
+				logging.TagStoreOperation: "UpdateShard",
+				logging.TagErr:            err,
+			}).Error("Operation failed with internal error.")
 			p.metricClient.IncCounter(metrics.PersistenceUpdateShardScope, metrics.PersistenceFailures)
 		}
 	}
@@ -371,7 +381,10 @@ func (p *workflowExecutionPersistenceClient) updateErrorMetric(scope int, err er
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrBusyCounter)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
 	default:
-		p.logger.Errorf("Operation %v failed with internal error %v", metrics.MetricDefs[metrics.Common][scope].MetricName, err)
+		p.logger.WithFields(bark.Fields{
+			logging.TagStoreOperation: metrics.MetricDefs[metrics.Common][scope].MetricName,
+			logging.TagErr:            err,
+		}).Error("Operation failed with internal error.")
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
 	}
 }
@@ -458,7 +471,10 @@ func (p *taskPersistenceClient) updateErrorMetric(scope int, err error) {
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrTimeoutCounter)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
 	default:
-		p.logger.Errorf("Operation %v failed with error %v", metrics.MetricDefs[metrics.Common][scope].MetricName, err)
+		p.logger.WithFields(bark.Fields{
+			logging.TagStoreOperation: metrics.MetricDefs[metrics.Common][scope].MetricName,
+			logging.TagErr:            err,
+		}).Error("Operation failed with internal error.")
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
 	}
 }
@@ -521,7 +537,10 @@ func (p *historyPersistenceClient) updateErrorMetric(scope int, err error) {
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrTimeoutCounter)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
 	default:
-		p.logger.Errorf("Operation %v failed with internal error %v", metrics.MetricDefs[metrics.Common][scope].MetricName, err)
+		p.logger.WithFields(bark.Fields{
+			logging.TagStoreOperation: metrics.MetricDefs[metrics.Common][scope].MetricName,
+			logging.TagErr:            err,
+		}).Error("Operation failed with internal error.")
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
 	}
 }
@@ -613,7 +632,10 @@ func (p *metadataPersistenceClient) updateErrorMetric(scope int, err error) {
 	case *workflow.BadRequestError:
 		p.metricClient.IncCounter(scope, metrics.CadenceErrBadRequestCounter)
 	default:
-		p.logger.Errorf("Operation %v failed with internal error %v", metrics.MetricDefs[metrics.Common][scope].MetricName, err)
+		p.logger.WithFields(bark.Fields{
+			logging.TagStoreOperation: metrics.MetricDefs[metrics.Common][scope].MetricName,
+			logging.TagErr:            err,
+		}).Error("Operation failed with internal error.")
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
 	}
 }
@@ -771,7 +793,10 @@ func (p *visibilityPersistenceClient) updateErrorMetric(scope int, err error) {
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrBusyCounter)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
 	default:
-		p.logger.Errorf("Operation %v failed with internal error %v", metrics.MetricDefs[metrics.Common][scope].MetricName, err)
+		p.logger.WithFields(bark.Fields{
+			logging.TagStoreOperation: metrics.MetricDefs[metrics.Common][scope].MetricName,
+			logging.TagErr:            err,
+		}).Error("Operation failed with internal error.")
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
 	}
 }
