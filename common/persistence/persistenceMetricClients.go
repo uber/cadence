@@ -21,6 +21,7 @@
 package persistence
 
 import (
+	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/metrics"
 )
@@ -29,31 +30,37 @@ type (
 	shardPersistenceClient struct {
 		metricClient metrics.Client
 		persistence  ShardManager
+		logger       bark.Logger
 	}
 
 	workflowExecutionPersistenceClient struct {
 		metricClient metrics.Client
 		persistence  ExecutionManager
+		logger       bark.Logger
 	}
 
 	taskPersistenceClient struct {
 		metricClient metrics.Client
 		persistence  TaskManager
+		logger       bark.Logger
 	}
 
 	historyPersistenceClient struct {
 		metricClient metrics.Client
 		persistence  HistoryManager
+		logger       bark.Logger
 	}
 
 	metadataPersistenceClient struct {
 		metricClient metrics.Client
 		persistence  MetadataManager
+		logger       bark.Logger
 	}
 
 	visibilityPersistenceClient struct {
 		metricClient metrics.Client
 		persistence  VisibilityManager
+		logger       bark.Logger
 	}
 )
 
@@ -65,50 +72,56 @@ var _ MetadataManager = (*metadataPersistenceClient)(nil)
 var _ VisibilityManager = (*visibilityPersistenceClient)(nil)
 
 // NewShardPersistenceClient creates a client to manage shards
-func NewShardPersistenceClient(persistence ShardManager, metricClient metrics.Client) ShardManager {
+func NewShardPersistenceClient(persistence ShardManager, metricClient metrics.Client, logger bark.Logger) ShardManager {
 	return &shardPersistenceClient{
 		persistence:  persistence,
 		metricClient: metricClient,
+		logger:       logger,
 	}
 }
 
 // NewWorkflowExecutionPersistenceClient creates a client to manage executions
-func NewWorkflowExecutionPersistenceClient(persistence ExecutionManager, metricClient metrics.Client) ExecutionManager {
+func NewWorkflowExecutionPersistenceClient(persistence ExecutionManager, metricClient metrics.Client, logger bark.Logger) ExecutionManager {
 	return &workflowExecutionPersistenceClient{
 		persistence:  persistence,
 		metricClient: metricClient,
+		logger:       logger,
 	}
 }
 
 // NewTaskPersistenceClient creates a client to manage tasks
-func NewTaskPersistenceClient(persistence TaskManager, metricClient metrics.Client) TaskManager {
+func NewTaskPersistenceClient(persistence TaskManager, metricClient metrics.Client, logger bark.Logger) TaskManager {
 	return &taskPersistenceClient{
 		persistence:  persistence,
 		metricClient: metricClient,
+		logger:       logger,
 	}
 }
 
 // NewHistoryPersistenceClient creates a HistoryManager client to manage workflow execution history
-func NewHistoryPersistenceClient(persistence HistoryManager, metricClient metrics.Client) HistoryManager {
+func NewHistoryPersistenceClient(persistence HistoryManager, metricClient metrics.Client, logger bark.Logger) HistoryManager {
 	return &historyPersistenceClient{
 		persistence:  persistence,
 		metricClient: metricClient,
+		logger:       logger,
 	}
 }
 
 // NewMetadataPersistenceClient creates a MetadataManager client to manage metadata
-func NewMetadataPersistenceClient(persistence MetadataManager, metricClient metrics.Client) MetadataManager {
+func NewMetadataPersistenceClient(persistence MetadataManager, metricClient metrics.Client, logger bark.Logger) MetadataManager {
 	return &metadataPersistenceClient{
 		persistence:  persistence,
 		metricClient: metricClient,
+		logger:       logger,
 	}
 }
 
 // NewVisibilityPersistenceClient creates a client to manage visibility
-func NewVisibilityPersistenceClient(persistence VisibilityManager, metricClient metrics.Client) VisibilityManager {
+func NewVisibilityPersistenceClient(persistence VisibilityManager, metricClient metrics.Client, logger bark.Logger) VisibilityManager {
 	return &visibilityPersistenceClient{
 		persistence:  persistence,
 		metricClient: metricClient,
+		logger:       logger,
 	}
 }
 
@@ -123,6 +136,7 @@ func (p *shardPersistenceClient) CreateShard(request *CreateShardRequest) error 
 		if _, ok := err.(*ShardAlreadyExistError); ok {
 			p.metricClient.IncCounter(metrics.PersistenceCreateShardScope, metrics.PersistenceErrShardExistsCounter)
 		} else {
+			p.logger.Errorf("CreateShard failed with internal error %v", err)
 			p.metricClient.IncCounter(metrics.PersistenceCreateShardScope, metrics.PersistenceFailures)
 		}
 	}
@@ -143,6 +157,7 @@ func (p *shardPersistenceClient) GetShard(
 		case *workflow.EntityNotExistsError:
 			p.metricClient.IncCounter(metrics.PersistenceGetShardScope, metrics.CadenceErrEntityNotExistsCounter)
 		default:
+			p.logger.Errorf("GetShard failed with internal error %v", err)
 			p.metricClient.IncCounter(metrics.PersistenceGetShardScope, metrics.PersistenceFailures)
 		}
 	}
@@ -161,6 +176,7 @@ func (p *shardPersistenceClient) UpdateShard(request *UpdateShardRequest) error 
 		if _, ok := err.(*ShardOwnershipLostError); ok {
 			p.metricClient.IncCounter(metrics.PersistenceUpdateShardScope, metrics.PersistenceErrShardOwnershipLostCounter)
 		} else {
+			p.logger.Errorf("UpdateShard failed with internal error %v", err)
 			p.metricClient.IncCounter(metrics.PersistenceUpdateShardScope, metrics.PersistenceFailures)
 		}
 	}
@@ -355,6 +371,7 @@ func (p *workflowExecutionPersistenceClient) updateErrorMetric(scope int, err er
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrBusyCounter)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
 	default:
+		p.logger.Errorf("Operation %v failed with internal error %v", metrics.MetricDefs[metrics.Common][scope].MetricName, err)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
 	}
 }
@@ -441,6 +458,7 @@ func (p *taskPersistenceClient) updateErrorMetric(scope int, err error) {
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrTimeoutCounter)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
 	default:
+		p.logger.Errorf("Operation %v failed with error %v", metrics.MetricDefs[metrics.Common][scope].MetricName, err)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
 	}
 }
@@ -503,6 +521,7 @@ func (p *historyPersistenceClient) updateErrorMetric(scope int, err error) {
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrTimeoutCounter)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
 	default:
+		p.logger.Errorf("Operation %v failed with internal error %v", metrics.MetricDefs[metrics.Common][scope].MetricName, err)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
 	}
 }
@@ -594,6 +613,7 @@ func (p *metadataPersistenceClient) updateErrorMetric(scope int, err error) {
 	case *workflow.BadRequestError:
 		p.metricClient.IncCounter(scope, metrics.CadenceErrBadRequestCounter)
 	default:
+		p.logger.Errorf("Operation %v failed with internal error %v", metrics.MetricDefs[metrics.Common][scope].MetricName, err)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
 	}
 }
@@ -751,6 +771,7 @@ func (p *visibilityPersistenceClient) updateErrorMetric(scope int, err error) {
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrBusyCounter)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
 	default:
+		p.logger.Errorf("Operation %v failed with internal error %v", metrics.MetricDefs[metrics.Common][scope].MetricName, err)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
 	}
 }
