@@ -17,6 +17,8 @@ The default Makefile sets up a replication factor of 1.  This should be used for
 cadence-cassandra-tool --ep $CASSANDRA_SEEDS create -k $KEYSPACE --rf $RF
 ```
 
+See https://www.ecyrd.com/cassandracalculator for an easy way to determine how many nodes and what replication factor you will want to use.  Note that Cadence by default uses `Quorum` for read and write consistency.
+
 ## Setting up schema on a new cluster manually
 ```
 ./cadence-cassandra-tool -ep 127.0.0.1 -k cadence setup-schema -v 0.0 -- this sets up just the schema version tables with initial version of 0.0
