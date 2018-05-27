@@ -34,6 +34,15 @@ You can only upgrade to a new version after the initial setup done above.
 There is a docker image for the `cadence-cassandra-tool` located at `ubercadence/cct`.  All the above commands could have the 
 `./cadence-cassandra-tool` part replaced with `docker run --rm -it ubercadence/cct:<cadence version>`.
 
+e.g. 
+```
+# old
+./cadence-cassandra-tool -ep 127.0.0.1 -k cadence setup-schema -v 0.0
+
+# new
+docker run --rm -it ubercadence/cct:<cadence version> -ep 127.0.0.1 -k cadence setup-schema -v 0.0
+```
+
 The docker image also contains the schema migrations and the Makefile for the project.  So to setup the schema for a new cluster 
 run:
 ```
