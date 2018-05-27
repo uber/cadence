@@ -2,6 +2,7 @@
 PROJECT_ROOT = github.com/uber/cadence
 
 export PATH := $(GOPATH)/bin:$(PATH)
+BUILD_BINS=true
 
 THRIFT_GENDIR=.gen
 
@@ -89,9 +90,13 @@ cadence: vendor/glide.updated $(TOOLS_SRC)
 cadence-server: vendor/glide.updated $(ALL_SRC)
 	go build -i -o cadence-server cmd/server/cadence.go cmd/server/server.go
 
+ifeq ($(BUILD_BINS), true)
 bins_nothrift: lint copyright cadence-cassandra-tool cadence cadence-server
-
 bins: thriftc bins_nothrift
+else
+bins_nothrift:
+bins:
+endif
 
 test: vendor/glide.updated bins
 	@rm -f test
@@ -158,32 +163,35 @@ clean:
 	rm -f cadence-server
 	rm -Rf $(BUILD)
 
+CASSANDRA_HOST=127.0.0.1
+CASSANDRA_REPLICATION_FACTOR=1
+
 install-schema: bins
-	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence --rf 1
-	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence setup-schema -v 0.0
-	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence update-schema -d ./schema/cadence/versioned
-	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence_visibility --rf 1
-	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence_visibility setup-schema -v 0.0
-	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence_visibility update-schema -d ./schema/visibility/versioned
+	./cadence-cassandra-tool --ep $(CASSANDRA_HOST) create -k cadence --rf $(CASSANDRA_REPLICATION_FACTOR)
+	./cadence-cassandra-tool -ep $(CASSANDRA_HOST) -k cadence setup-schema -v 0.0
+	./cadence-cassandra-tool -ep $(CASSANDRA_HOST) -k cadence update-schema -d ./schema/cadence/versioned
+	./cadence-cassandra-tool --ep $(CASSANDRA_HOST) create -k cadence_visibility --rf $(CASSANDRA_REPLICATION_FACTOR)
+	./cadence-cassandra-tool -ep $(CASSANDRA_HOST) -k cadence_visibility setup-schema -v 0.0
+	./cadence-cassandra-tool -ep $(CASSANDRA_HOST) -k cadence_visibility update-schema -d ./schema/visibility/versioned
 
 start: bins
 	./cadence-server start
 
 install-schema-cdc: bins
 	@echo Setting up cadence_active key space
-	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence_active --rf 1
-	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence_active setup-schema -v 0.0
-	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence_active update-schema -d ./schema/cadence/versioned
-	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence_visibility_active --rf 1
-	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence_visibility_active setup-schema -v 0.0
-	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence_visibility_active update-schema -d ./schema/visibility/versioned
+	./cadence-cassandra-tool --ep $(CASSANDRA_HOST) create -k cadence_active --rf $(CASSANDRA_REPLICATION_FACTOR)
+	./cadence-cassandra-tool -ep $(CASSANDRA_HOST) -k cadence_active setup-schema -v 0.0
+	./cadence-cassandra-tool -ep $(CASSANDRA_HOST) -k cadence_active update-schema -d ./schema/cadence/versioned
+	./cadence-cassandra-tool --ep $(CASSANDRA_HOST) create -k cadence_visibility_active --rf $(CASSANDRA_REPLICATION_FACTOR)
+	./cadence-cassandra-tool -ep $(CASSANDRA_HOST) -k cadence_visibility_active setup-schema -v 0.0
+	./cadence-cassandra-tool -ep $(CASSANDRA_HOST) -k cadence_visibility_active update-schema -d ./schema/visibility/versioned
 	@echo Setting up cadence_standby key space
-	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence_standby --rf 1
-	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence_standby setup-schema -v 0.0
-	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence_standby update-schema -d ./schema/cadence/versioned
-	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence_visibility_standby --rf 1
-	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence_visibility_standby setup-schema -v 0.0
-	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence_visibility_standby update-schema -d ./schema/visibility/versioned
+	./cadence-cassandra-tool --ep $(CASSANDRA_HOST) create -k cadence_standby --rf $(CASSANDRA_REPLICATION_FACTOR)
+	./cadence-cassandra-tool -ep $(CASSANDRA_HOST) -k cadence_standby setup-schema -v 0.0
+	./cadence-cassandra-tool -ep $(CASSANDRA_HOST) -k cadence_standby update-schema -d ./schema/cadence/versioned
+	./cadence-cassandra-tool --ep $(CASSANDRA_HOST) create -k cadence_visibility_standby --rf $(CASSANDRA_REPLICATION_FACTOR)
+	./cadence-cassandra-tool -ep $(CASSANDRA_HOST) -k cadence_visibility_standby setup-schema -v 0.0
+	./cadence-cassandra-tool -ep $(CASSANDRA_HOST) -k cadence_visibility_standby update-schema -d ./schema/visibility/versioned
 
 start-cdc-active: bins
 	./cadence-server --zone active start

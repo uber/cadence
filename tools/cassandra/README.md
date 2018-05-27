@@ -29,3 +29,13 @@ You can only upgrade to a new version after the initial setup done above.
 ./cadence-cassandra-tool -ep 127.0.0.1 -k cadence_visibility update-schema -d ./schema/visibility/versioned -v x.x -y -- executes a dryrun of upgrade to version x.x
 ./cadence-cassandra-tool -ep 127.0.0.1 -k cadence_visibility update-schema -d ./schema/visibility/versioned -v x.x    -- actually executes the upgrade to version x.x
 ```
+
+## Using Docker 
+There is a docker image for the `cadence-cassandra-tool` located at `ubercadence/cct`.  All the above commands could have the 
+`./cadence-cassandra-tool` part replaced with `docker run --rm -it ubercadence/cct:<cadence version>`.
+
+The docker image also contains the schema migrations and the Makefile for the project.  So to setup the schema for a new cluster 
+run:
+```
+docker run --rm -it --entrypoint /bin/bash ubercadence/cct:<cadence version> -c "make BUILD_BINS=false CASSANDRA_HOST=<cassandra host> CASSANDRA_REPLICATION_FACTOR=3 install-schema" 
+```
