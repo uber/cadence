@@ -1067,38 +1067,62 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceledByID(
 // RespondDecisionTaskCompleted - response to a decision task
 func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 	ctx context.Context,
-	completeRequest *gen.RespondDecisionTaskCompletedRequest) error {
+	completeRequest *gen.RespondDecisionTaskCompletedRequest) (*gen.RespondDecisionTaskCompletedResponse, error) {
 
 	scope := metrics.FrontendRespondDecisionTaskCompletedScope
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
 
 	if completeRequest == nil {
-		return wh.error(errRequestNotSet, scope)
+		return nil, wh.error(errRequestNotSet, scope)
 	}
 
 	// Count the request in the RPS, but we still accept it even if RPS is exceeded
 	wh.rateLimiter.TryConsume(1)
 
 	if completeRequest.TaskToken == nil {
-		return wh.error(errTaskTokenNotSet, scope)
+		return nil, wh.error(errTaskTokenNotSet, scope)
 	}
 	taskToken, err := wh.tokenSerializer.Deserialize(completeRequest.TaskToken)
 	if err != nil {
-		return wh.error(err, scope)
+		return nil, wh.error(err, scope)
 	}
 	if taskToken.DomainID == "" {
-		return wh.error(errDomainNotSet, scope)
+		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	err = wh.history.RespondDecisionTaskCompleted(ctx, &h.RespondDecisionTaskCompletedRequest{
+	histResp, err := wh.history.RespondDecisionTaskCompleted(ctx, &h.RespondDecisionTaskCompletedRequest{
 		DomainUUID:      common.StringPtr(taskToken.DomainID),
 		CompleteRequest: completeRequest},
 	)
 	if err != nil {
-		return wh.error(err, scope)
+		return nil, wh.error(err, scope)
 	}
-	return nil
+
+	completedResp := &gen.RespondDecisionTaskCompletedResponse{}
+	if completeRequest.GetReturnNewDecisionTask() && histResp != nil && histResp.StartedResponse != nil {
+		taskToken := &common.TaskToken{
+			DomainID:        taskToken.DomainID,
+			WorkflowID:      taskToken.WorkflowID,
+			RunID:           taskToken.RunID,
+			ScheduleID:      histResp.StartedResponse.GetScheduledEventId(),
+			ScheduleAttempt: histResp.StartedResponse.GetAttempt(),
+		}
+		token, _ := wh.tokenSerializer.Serialize(taskToken)
+		workflowExecution := &gen.WorkflowExecution{
+			WorkflowId: common.StringPtr(taskToken.WorkflowID),
+			RunId:      common.StringPtr(taskToken.RunID),
+		}
+		matchingResp := common.CreateMatchingPollForDecisionTaskResponse(histResp.StartedResponse, workflowExecution, token)
+
+		newDecisionTask, err := wh.createPollForDecisionTaskResponse(ctx, taskToken.DomainID, matchingResp)
+		if err != nil {
+			return nil, wh.error(err, scope)
+		}
+		completedResp.DecisionTask = newDecisionTask
+	}
+
+	return completedResp, nil
 }
 
 // RespondDecisionTaskFailed - failed response to a decision task
@@ -1266,7 +1290,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	if err := wh.validateExecution(getRequest.Execution, scope); err != nil {
+	if err := wh.validateExecutionAndEmitMetrics(getRequest.Execution, scope); err != nil {
 		return nil, err
 	}
 
@@ -1424,7 +1448,7 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(ctx context.Context,
 		return wh.error(errDomainNotSet, scope)
 	}
 
-	if err := wh.validateExecution(signalRequest.WorkflowExecution, scope); err != nil {
+	if err := wh.validateExecutionAndEmitMetrics(signalRequest.WorkflowExecution, scope); err != nil {
 		return err
 	}
 
@@ -1535,7 +1559,7 @@ func (wh *WorkflowHandler) TerminateWorkflowExecution(ctx context.Context,
 		return wh.error(errDomainNotSet, scope)
 	}
 
-	if err := wh.validateExecution(terminateRequest.WorkflowExecution, scope); err != nil {
+	if err := wh.validateExecutionAndEmitMetrics(terminateRequest.WorkflowExecution, scope); err != nil {
 		return err
 	}
 
@@ -1576,7 +1600,7 @@ func (wh *WorkflowHandler) RequestCancelWorkflowExecution(
 		return wh.error(errDomainNotSet, scope)
 	}
 
-	if err := wh.validateExecution(cancelRequest.WorkflowExecution, scope); err != nil {
+	if err := wh.validateExecutionAndEmitMetrics(cancelRequest.WorkflowExecution, scope); err != nil {
 		return err
 	}
 
@@ -1772,6 +1796,39 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx context.Context,
 	return resp, nil
 }
 
+// ResetStickyTaskList reset the volatile information in mutable state of a given workflow.
+func (wh *WorkflowHandler) ResetStickyTaskList(ctx context.Context, resetRequest *gen.ResetStickyTaskListRequest) (*gen.ResetStickyTaskListResponse, error) {
+	scope := metrics.FrontendResetStickyTaskListScope
+	sw := wh.startRequestProfile(scope)
+	defer sw.Stop()
+
+	if resetRequest == nil {
+		return nil, wh.error(errRequestNotSet, scope)
+	}
+
+	if resetRequest.GetDomain() == "" {
+		return nil, wh.error(errDomainNotSet, scope)
+	}
+
+	if err := wh.validateExecutionAndEmitMetrics(resetRequest.Execution, scope); err != nil {
+		return nil, err
+	}
+
+	domainID, err := wh.domainCache.GetDomainID(resetRequest.GetDomain())
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+
+	_, err = wh.history.ResetStickyTaskList(ctx, &h.ResetStickyTaskListRequest{
+		DomainUUID: common.StringPtr(domainID),
+		Execution:  resetRequest.Execution,
+	})
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+	return &gen.ResetStickyTaskListResponse{}, nil
+}
+
 // QueryWorkflow returns query result for a specified workflow execution
 func (wh *WorkflowHandler) QueryWorkflow(ctx context.Context,
 	queryRequest *gen.QueryWorkflowRequest) (*gen.QueryWorkflowResponse, error) {
@@ -1788,7 +1845,7 @@ func (wh *WorkflowHandler) QueryWorkflow(ctx context.Context,
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	if err := wh.validateExecution(queryRequest.Execution, scope); err != nil {
+	if err := wh.validateExecutionAndEmitMetrics(queryRequest.Execution, scope); err != nil {
 		return nil, err
 	}
 
@@ -1893,7 +1950,7 @@ func (wh *WorkflowHandler) DescribeWorkflowExecution(ctx context.Context, reques
 		return nil, wh.error(err, scope)
 	}
 
-	if err := wh.validateExecution(request.Execution, scope); err != nil {
+	if err := wh.validateExecutionAndEmitMetrics(request.Execution, scope); err != nil {
 		return nil, err
 	}
 
@@ -2021,12 +2078,15 @@ func (wh *WorkflowHandler) startRequestProfile(scope int) tally.Stopwatch {
 }
 
 func (wh *WorkflowHandler) error(err error, scope int) error {
-	switch err.(type) {
+	switch err := err.(type) {
 	case *gen.InternalServiceError:
 		logging.LogInternalServiceError(wh.Service.GetLogger(), err)
 		wh.metricsClient.IncCounter(scope, metrics.CadenceFailures)
 		return err
 	case *gen.BadRequestError:
+		wh.metricsClient.IncCounter(scope, metrics.CadenceErrBadRequestCounter)
+		return err
+	case *gen.DomainNotActiveError:
 		wh.metricsClient.IncCounter(scope, metrics.CadenceErrBadRequestCounter)
 		return err
 	case *gen.ServiceBusyError:
@@ -2047,11 +2107,19 @@ func (wh *WorkflowHandler) error(err error, scope int) error {
 	case *gen.QueryFailedError:
 		wh.metricsClient.IncCounter(scope, metrics.CadenceErrQueryFailedCounter)
 		return err
-	default:
-		logging.LogUncategorizedError(wh.Service.GetLogger(), err)
-		wh.metricsClient.IncCounter(scope, metrics.CadenceFailures)
-		return &gen.InternalServiceError{Message: err.Error()}
+	case *gen.LimitExceededError:
+		wh.metricsClient.IncCounter(scope, metrics.CadenceErrLimitExceededCounter)
+		return err
+	case *yarpcerrors.Status:
+		if err.Code() == yarpcerrors.CodeDeadlineExceeded {
+			wh.metricsClient.IncCounter(scope, metrics.CadenceErrContextTimeoutCounter)
+			return err
+		}
 	}
+
+	logging.LogUncategorizedError(wh.Service.GetLogger(), err)
+	wh.metricsClient.IncCounter(scope, metrics.CadenceFailures)
+	return &gen.InternalServiceError{Message: err.Error()}
 }
 
 func (wh *WorkflowHandler) validateTaskListType(t *gen.TaskListType, scope int) error {
@@ -2068,15 +2136,23 @@ func (wh *WorkflowHandler) validateTaskList(t *gen.TaskList, scope int) error {
 	return nil
 }
 
-func (wh *WorkflowHandler) validateExecution(w *gen.WorkflowExecution, scope int) error {
+func (wh *WorkflowHandler) validateExecutionAndEmitMetrics(w *gen.WorkflowExecution, scope int) error {
+	err := validateExecution(w)
+	if err != nil {
+		return wh.error(err, scope)
+	}
+	return nil
+}
+
+func validateExecution(w *gen.WorkflowExecution) error {
 	if w == nil {
-		return wh.error(errExecutionNotSet, scope)
+		return errExecutionNotSet
 	}
 	if w.WorkflowId == nil || w.GetWorkflowId() == "" {
-		return wh.error(errWorkflowIDNotSet, scope)
+		return errWorkflowIDNotSet
 	}
 	if w.GetRunId() != "" && uuid.Parse(w.GetRunId()) == nil {
-		return wh.error(errInvalidRunID, scope)
+		return errInvalidRunID
 	}
 	return nil
 }

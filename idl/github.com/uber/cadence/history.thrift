@@ -79,6 +79,10 @@ struct RespondDecisionTaskCompletedRequest {
   20: optional shared.RespondDecisionTaskCompletedRequest completeRequest
 }
 
+struct RespondDecisionTaskCompletedResponse {
+  10: optional RecordDecisionTaskStartedResponse startedResponse
+}
+
 struct RespondDecisionTaskFailedRequest {
   10: optional string domainUUID
   20: optional shared.RespondDecisionTaskFailedRequest failedRequest
@@ -231,6 +235,7 @@ service HistoryService {
       3: shared.WorkflowExecutionAlreadyStartedError sessionAlreadyExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
       5: shared.DomainNotActiveError domainNotActiveError,
+      6: shared.LimitExceededError limitExceededError,
     )
 
   /**
@@ -243,6 +248,7 @@ service HistoryService {
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
+      5: shared.LimitExceededError limitExceededError,
     )
 
   /**
@@ -260,6 +266,7 @@ service HistoryService {
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
+      5: shared.LimitExceededError limitExceededError,
     )
 
   /**
@@ -275,6 +282,7 @@ service HistoryService {
       4: shared.EntityNotExistsError entityNotExistError,
       5: ShardOwnershipLostError shardOwnershipLostError,
       6: shared.DomainNotActiveError domainNotActiveError,
+      7: shared.LimitExceededError limitExceededError,
     )
 
   /**
@@ -290,6 +298,7 @@ service HistoryService {
       4: shared.EntityNotExistsError entityNotExistError,
       5: ShardOwnershipLostError shardOwnershipLostError,
       6: shared.DomainNotActiveError domainNotActiveError,
+      7: shared.LimitExceededError limitExceededError,
     )
 
   /**
@@ -299,13 +308,14 @@ service HistoryService {
   * event in the history for that session.  Use the 'taskToken' provided as response of PollForDecisionTask API call
   * for completing the DecisionTask.
   **/
-  void RespondDecisionTaskCompleted(1: RespondDecisionTaskCompletedRequest completeRequest)
+  RespondDecisionTaskCompletedResponse RespondDecisionTaskCompleted(1: RespondDecisionTaskCompletedRequest completeRequest)
     throws (
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
       5: shared.DomainNotActiveError domainNotActiveError,
+      6: shared.LimitExceededError limitExceededError,
     )
 
   /**
@@ -320,6 +330,7 @@ service HistoryService {
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
       5: shared.DomainNotActiveError domainNotActiveError,
+      6: shared.LimitExceededError limitExceededError,
     )
 
   /**
@@ -336,6 +347,7 @@ service HistoryService {
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
       5: shared.DomainNotActiveError domainNotActiveError,
+      6: shared.LimitExceededError limitExceededError,
     )
 
   /**
@@ -352,6 +364,7 @@ service HistoryService {
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
       5: shared.DomainNotActiveError domainNotActiveError,
+      6: shared.LimitExceededError limitExceededError,
     )
 
   /**
@@ -368,6 +381,7 @@ service HistoryService {
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
       5: shared.DomainNotActiveError domainNotActiveError,
+      6: shared.LimitExceededError limitExceededError,
     )
 
   /**
@@ -384,6 +398,7 @@ service HistoryService {
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
       5: shared.DomainNotActiveError domainNotActiveError,
+      6: shared.LimitExceededError limitExceededError,
     )
 
   /**
@@ -397,6 +412,8 @@ service HistoryService {
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
       5: shared.DomainNotActiveError domainNotActiveError,
+      6: shared.ServiceBusyError serviceBusyError,
+      7: shared.LimitExceededError limitExceededError,
     )
 
   /**
@@ -412,6 +429,7 @@ service HistoryService {
       2: shared.InternalServiceError internalServiceError,
       3: ShardOwnershipLostError shardOwnershipLostError,
       4: shared.DomainNotActiveError domainNotActiveError,
+      5: shared.LimitExceededError limitExceededError,
     )
 
   /**
@@ -425,6 +443,7 @@ service HistoryService {
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
       5: shared.DomainNotActiveError domainNotActiveError,
+      6: shared.LimitExceededError limitExceededError,
     )
 
   /**
@@ -438,6 +457,7 @@ service HistoryService {
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
       5: shared.DomainNotActiveError domainNotActiveError,
+      6: shared.LimitExceededError limitExceededError,
     )
 
   /**
@@ -454,6 +474,7 @@ service HistoryService {
       4: ShardOwnershipLostError shardOwnershipLostError,
       5: shared.CancellationAlreadyRequestedError cancellationAlreadyRequestedError,
       6: shared.DomainNotActiveError domainNotActiveError,
+      7: shared.LimitExceededError limitExceededError,
     )
 
   /**
@@ -469,6 +490,7 @@ service HistoryService {
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
       5: shared.DomainNotActiveError domainNotActiveError,
+      6: shared.LimitExceededError limitExceededError,
     )
 
   /**
@@ -482,6 +504,7 @@ service HistoryService {
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
       5: shared.DomainNotActiveError domainNotActiveError,
+      6: shared.LimitExceededError limitExceededError,
     )
 
   /**
@@ -493,6 +516,7 @@ service HistoryService {
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
+      5: shared.LimitExceededError limitExceededError,
     )
 
   void ReplicateEvents(1: ReplicateEventsRequest replicateRequest)
@@ -501,5 +525,6 @@ service HistoryService {
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
+      5: shared.LimitExceededError limitExceededError,
     )
 }

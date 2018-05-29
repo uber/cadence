@@ -54,8 +54,8 @@ type Config struct {
 	TimerTaskMaxRetryCount                       int
 	TimerProcessorGetFailureRetryCount           int
 	TimerProcessorCompleteTimerFailureRetryCount int
+	TimerProcessorUpdateShardTaskCount           int
 	TimerProcessorUpdateAckInterval              time.Duration
-	TimerProcessorForceUpdateInterval            time.Duration
 	TimerProcessorCompleteTimerInterval          time.Duration
 	TimerProcessorMaxPollInterval                time.Duration
 	TimerProcessorStandbyTaskDelay               time.Duration
@@ -63,27 +63,33 @@ type Config struct {
 	// TransferQueueProcessor settings
 	TransferTaskBatchSize                              int
 	TransferProcessorMaxPollRPS                        int
-	TransferProcessorMaxPollInterval                   time.Duration
-	TransferProcessorUpdateAckInterval                 time.Duration
-	TransferProcessorForceUpdateInterval               time.Duration
-	TransferProcessorCompleteTransferInterval          time.Duration
-	TransferProcessorStandbyTaskDelay                  time.Duration
 	TransferTaskWorkerCount                            int
 	TransferTaskMaxRetryCount                          int
 	TransferProcessorCompleteTransferFailureRetryCount int
+	TransferProcessorUpdateShardTaskCount              int
+	TransferProcessorMaxPollInterval                   time.Duration
+	TransferProcessorUpdateAckInterval                 time.Duration
+	TransferProcessorCompleteTransferInterval          time.Duration
+	TransferProcessorStandbyTaskDelay                  time.Duration
 
 	// ReplicatorQueueProcessor settings
-	ReplicatorTaskBatchSize                int
-	ReplicatorProcessorMaxPollRPS          int
-	ReplicatorProcessorMaxPollInterval     time.Duration
-	ReplicatorProcessorUpdateAckInterval   time.Duration
-	ReplicatorProcessorForceUpdateInterval time.Duration
-	ReplicatorTaskWorkerCount              int
-	ReplicatorTaskMaxRetryCount            int
+	ReplicatorTaskBatchSize                 int
+	ReplicatorTaskWorkerCount               int
+	ReplicatorTaskMaxRetryCount             int
+	ReplicatorProcessorMaxPollRPS           int
+	ReplicatorProcessorUpdateShardTaskCount int
+	ReplicatorProcessorMaxPollInterval      time.Duration
+	ReplicatorProcessorUpdateAckInterval    time.Duration
 
 	// Persistence settings
 	ExecutionMgrNumConns int
 	HistoryMgrNumConns   int
+
+	// System Limits
+	MaximumBufferedEventsBatch int
+
+	// ShardUpdateMinInterval the minimal time interval which the shard info can be updated
+	ShardUpdateMinInterval time.Duration
 
 	// Time to hold a poll request before returning an empty response
 	// right now only used by GetMutableState
@@ -107,30 +113,32 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int) *Config {
 		TimerTaskMaxRetryCount:                             5,
 		TimerProcessorGetFailureRetryCount:                 5,
 		TimerProcessorCompleteTimerFailureRetryCount:       10,
-		TimerProcessorUpdateAckInterval:                    10 * time.Second,
-		TimerProcessorForceUpdateInterval:                  10 * time.Minute,
+		TimerProcessorUpdateShardTaskCount:                 100,
+		TimerProcessorUpdateAckInterval:                    1 * time.Minute,
 		TimerProcessorCompleteTimerInterval:                1 * time.Second,
 		TimerProcessorMaxPollInterval:                      60 * time.Second,
 		TimerProcessorStandbyTaskDelay:                     0 * time.Minute,
 		TransferTaskBatchSize:                              10,
 		TransferProcessorMaxPollRPS:                        100,
-		TransferProcessorMaxPollInterval:                   60 * time.Second,
-		TransferProcessorUpdateAckInterval:                 10 * time.Second,
-		TransferProcessorForceUpdateInterval:               10 * time.Minute,
-		TransferProcessorCompleteTransferInterval:          1 * time.Second,
-		TransferProcessorStandbyTaskDelay:                  0 * time.Minute,
 		TransferTaskWorkerCount:                            10,
 		TransferTaskMaxRetryCount:                          100,
 		TransferProcessorCompleteTransferFailureRetryCount: 10,
+		TransferProcessorUpdateShardTaskCount:              100,
+		TransferProcessorMaxPollInterval:                   60 * time.Second,
+		TransferProcessorUpdateAckInterval:                 1 * time.Minute,
+		TransferProcessorCompleteTransferInterval:          1 * time.Second,
+		TransferProcessorStandbyTaskDelay:                  0 * time.Minute,
 		ReplicatorTaskBatchSize:                            10,
-		ReplicatorProcessorMaxPollRPS:                      100,
-		ReplicatorProcessorMaxPollInterval:                 60 * time.Second,
-		ReplicatorProcessorUpdateAckInterval:               10 * time.Second,
-		ReplicatorProcessorForceUpdateInterval:             10 * time.Minute,
 		ReplicatorTaskWorkerCount:                          10,
 		ReplicatorTaskMaxRetryCount:                        100,
+		ReplicatorProcessorMaxPollRPS:                      100,
+		ReplicatorProcessorUpdateShardTaskCount:            100,
+		ReplicatorProcessorMaxPollInterval:                 60 * time.Second,
+		ReplicatorProcessorUpdateAckInterval:               1 * time.Minute,
 		ExecutionMgrNumConns:                               100,
 		HistoryMgrNumConns:                                 100,
+		MaximumBufferedEventsBatch:                         100,
+		ShardUpdateMinInterval:                             60 * time.Second,
 		// history client: client/history/client.go set the client timeout 30s
 		LongPollExpirationInterval: dc.GetDurationProperty(
 			dynamicconfig.HistoryLongPollExpirationInterval, time.Second*20,
@@ -187,7 +195,7 @@ func (s *Service) Start() {
 	if err != nil {
 		log.Fatalf("failed to create shard manager: %v", err)
 	}
-	shardMgr = persistence.NewShardPersistenceClient(shardMgr, base.GetMetricsClient())
+	shardMgr = persistence.NewShardPersistenceClient(shardMgr, base.GetMetricsClient(), log)
 
 	// Hack to create shards for bootstrap purposes
 	// TODO: properly pre-create all shards before deployment.
@@ -218,7 +226,7 @@ func (s *Service) Start() {
 	if err != nil {
 		log.Fatalf("failed to create metadata manager: %v", err)
 	}
-	metadata = persistence.NewMetadataPersistenceClient(metadata, base.GetMetricsClient())
+	metadata = persistence.NewMetadataPersistenceClient(metadata, base.GetMetricsClient(), log)
 
 	visibility, err := persistence.NewCassandraVisibilityPersistence(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,
@@ -231,7 +239,7 @@ func (s *Service) Start() {
 	if err != nil {
 		log.Fatalf("failed to create visiblity manager: %v", err)
 	}
-	visibility = persistence.NewVisibilityPersistenceClient(visibility, base.GetMetricsClient())
+	visibility = persistence.NewVisibilityPersistenceClient(visibility, base.GetMetricsClient(), log)
 
 	history, err := persistence.NewCassandraHistoryPersistence(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,
@@ -245,7 +253,7 @@ func (s *Service) Start() {
 	if err != nil {
 		log.Fatalf("Creating Cassandra history manager persistence failed: %v", err)
 	}
-	history = persistence.NewHistoryPersistenceClient(history, base.GetMetricsClient())
+	history = persistence.NewHistoryPersistenceClient(history, base.GetMetricsClient(), log)
 
 	execMgrFactory, err := persistence.NewCassandraPersistenceClientFactory(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,

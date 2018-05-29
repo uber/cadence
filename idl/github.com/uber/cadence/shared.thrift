@@ -61,6 +61,13 @@ exception DomainNotActiveError {
   4: required string activeCluster
 }
 
+exception LimitExceededError {
+  1: required string message
+}
+
+exception AccessDeniedError {
+  1: required string message
+}
 
 enum WorkflowIdReusePolicy {
   /*
@@ -858,6 +865,12 @@ struct RespondDecisionTaskCompletedRequest {
   30: optional binary executionContext
   40: optional string identity
   50: optional StickyExecutionAttributes stickyAttributes
+  60: optional bool returnNewDecisionTask
+  70: optional bool forceCreateNewDecisionTask
+}
+
+struct RespondDecisionTaskCompletedResponse {
+  10: optional PollForDecisionTaskResponse decisionTask
 }
 
 struct RespondDecisionTaskFailedRequest {
@@ -1052,6 +1065,16 @@ struct QueryWorkflowResponse {
 struct WorkflowQuery {
   10: optional string queryType
   20: optional binary queryArgs
+}
+
+struct ResetStickyTaskListRequest {
+  10: optional string domain
+  20: optional WorkflowExecution execution
+}
+
+struct ResetStickyTaskListResponse {
+    // The reason to keep this response is to allow returning
+    // information in the future.
 }
 
 struct RespondQueryTaskCompletedRequest {

@@ -120,6 +120,12 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) error
 
+	ResetStickyTaskList(
+		ctx context.Context,
+		ResetRequest *shared.ResetStickyTaskListRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.ResetStickyTaskListResponse, error)
+
 	RespondActivityTaskCanceled(
 		ctx context.Context,
 		CanceledRequest *shared.RespondActivityTaskCanceledRequest,
@@ -160,7 +166,7 @@ type Interface interface {
 		ctx context.Context,
 		CompleteRequest *shared.RespondDecisionTaskCompletedRequest,
 		opts ...yarpc.CallOption,
-	) error
+	) (*shared.RespondDecisionTaskCompletedResponse, error)
 
 	RespondDecisionTaskFailed(
 		ctx context.Context,
@@ -551,6 +557,29 @@ func (c client) RequestCancelWorkflowExecution(
 	return
 }
 
+func (c client) ResetStickyTaskList(
+	ctx context.Context,
+	_ResetRequest *shared.ResetStickyTaskListRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.ResetStickyTaskListResponse, err error) {
+
+	args := cadence.WorkflowService_ResetStickyTaskList_Helper.Args(_ResetRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result cadence.WorkflowService_ResetStickyTaskList_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = cadence.WorkflowService_ResetStickyTaskList_Helper.UnwrapResponse(&result)
+	return
+}
+
 func (c client) RespondActivityTaskCanceled(
 	ctx context.Context,
 	_CanceledRequest *shared.RespondActivityTaskCanceledRequest,
@@ -693,7 +722,7 @@ func (c client) RespondDecisionTaskCompleted(
 	ctx context.Context,
 	_CompleteRequest *shared.RespondDecisionTaskCompletedRequest,
 	opts ...yarpc.CallOption,
-) (err error) {
+) (success *shared.RespondDecisionTaskCompletedResponse, err error) {
 
 	args := cadence.WorkflowService_RespondDecisionTaskCompleted_Helper.Args(_CompleteRequest)
 
@@ -708,7 +737,7 @@ func (c client) RespondDecisionTaskCompleted(
 		return
 	}
 
-	err = cadence.WorkflowService_RespondDecisionTaskCompleted_Helper.UnwrapResponse(&result)
+	success, err = cadence.WorkflowService_RespondDecisionTaskCompleted_Helper.UnwrapResponse(&result)
 	return
 }
 

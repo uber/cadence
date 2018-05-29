@@ -78,21 +78,33 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 
 	execution := *request.WorkflowExecution
 
-	var context *workflowExecutionContext
+	context, release, err := r.historyCache.getOrCreateWorkflowExecution(domainID, execution)
+	if err != nil {
+		return err
+	}
+	defer func() { release(retError) }()
+
 	var msBuilder *mutableStateBuilder
 	firstEvent := request.History.Events[0]
 	switch firstEvent.GetEventType() {
 	case shared.EventTypeWorkflowExecutionStarted:
+		msBuilder, err = context.loadWorkflowExecution()
+		if err == nil {
+			// Workflow execution already exist, looks like a duplicate start event, it is safe to ignore it
+			r.logger.Infof("Dropping stale replication task for start event.  WorkflowID: %v, RunID: %v, Version: %v",
+				execution.GetWorkflowId(), execution.GetRunId(), request.GetVersion())
+			return nil
+		}
+
+		// GetWorkflowExecution failed with some transient error.  Return err so we can retry the task later
+		if _, ok := err.(*shared.EntityNotExistsError); !ok {
+			return err
+		}
+
+		// WorkflowExecution does not exist, lets proceed with processing of the task
 		msBuilder = newMutableStateBuilderWithReplicationState(r.shard.GetConfig(), r.logger, request.GetVersion())
 
 	default:
-		var release releaseWorkflowExecutionFunc
-		context, release, err = r.historyCache.getOrCreateWorkflowExecution(domainID, execution)
-		if err != nil {
-			return err
-		}
-		defer func() { release(retError) }()
-
 		msBuilder, err = context.loadWorkflowExecution()
 		if err != nil {
 			return err
@@ -110,7 +122,7 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 
 		// Check if this is the first event after failover
 		if rState.LastWriteVersion < request.GetVersion() {
-			previousActiveCluster := r.metadataMgr.ClusterNameForFailoverVersion(rState.CurrentVersion)
+			previousActiveCluster := r.metadataMgr.ClusterNameForFailoverVersion(rState.LastWriteVersion)
 			ri, ok := request.ReplicationInfo[previousActiveCluster]
 			if !ok {
 				r.logger.Errorf("No replication information found for previous active cluster.  Previous: %v, Current: %v",
@@ -205,10 +217,17 @@ func (r *historyReplicator) ApplyReplicationTask(context *workflowExecutionConte
 	firstEvent := request.History.Events[0]
 	switch firstEvent.GetEventType() {
 	case shared.EventTypeWorkflowExecutionStarted:
-		// TODO: Support for child execution
 		var parentExecution *shared.WorkflowExecution
 		initiatedID := common.EmptyEventID
 		parentDomainID := ""
+		if msBuilder.executionInfo.ParentDomainID != "" {
+			initiatedID = msBuilder.executionInfo.InitiatedID
+			parentDomainID = msBuilder.executionInfo.ParentDomainID
+			parentExecution = &shared.WorkflowExecution{
+				WorkflowId: common.StringPtr(msBuilder.executionInfo.ParentWorkflowID),
+				RunId:      common.StringPtr(msBuilder.executionInfo.ParentRunID),
+			}
+		}
 
 		// Serialize the history
 		serializedHistory, serializedError := r.Serialize(request.History)
@@ -294,16 +313,39 @@ func (r *historyReplicator) ApplyReplicationTask(context *workflowExecutionConte
 			return execution.GetRunId(), nil
 		}
 
+		// TODO
+		// The failover version checking && overwriting should be performed here: #675
+		// TODO
+
 		// try to create the workflow execution
 		isBrandNew := true
 		_, err = createWorkflow(isBrandNew, "")
 		// if err still non nil, see if retry
-		/*if errExist, ok := err.(*persistence.WorkflowExecutionAlreadyStartedError); ok {
-			if err = workflowExistsErrHandler(errExist); err == nil {
-				isBrandNew = false
-				_, err = createWorkflow(isBrandNew, errExist.RunID)
+		if errExist, ok := err.(*persistence.WorkflowExecutionAlreadyStartedError); ok {
+			prevRunID := errExist.RunID
+			prevState := errExist.State
+
+			// Check for duplicate processing of StartWorkflowExecution replication task
+			if prevRunID == execution.GetRunId() {
+				r.logger.Infof("Dropping stale replication task for start event.  WorkflowID: %v, RunID: %v, Version: %v",
+					execution.GetWorkflowId(), execution.GetRunId(), request.GetVersion())
+				return nil
 			}
-		}*/
+
+			// Some other workflow is running, for now let's keep on retrying this replication event by an error
+			// to wait for current run to finish so this event could be applied.
+			// TODO: We also need to deal with conflict resolution when workflow with same ID is started on 2 different
+			// clusters.
+			if prevState != persistence.WorkflowStateCompleted {
+				return err
+			}
+
+			// if the existing workflow is completed, ignore the worklow ID reuse policy
+			// since the policy should be applied by the active cluster,
+			// standby cluster should apply this event without question.
+			isBrandNew = false
+			_, err = createWorkflow(isBrandNew, errExist.RunID)
+		}
 
 	default:
 		// Generate a transaction ID for appending events to history

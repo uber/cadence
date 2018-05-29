@@ -104,6 +104,11 @@ type Interface interface {
 		CancelRequest *shared.RequestCancelWorkflowExecutionRequest,
 	) error
 
+	ResetStickyTaskList(
+		ctx context.Context,
+		ResetRequest *shared.ResetStickyTaskListRequest,
+	) (*shared.ResetStickyTaskListResponse, error)
+
 	RespondActivityTaskCanceled(
 		ctx context.Context,
 		CanceledRequest *shared.RespondActivityTaskCanceledRequest,
@@ -137,7 +142,7 @@ type Interface interface {
 	RespondDecisionTaskCompleted(
 		ctx context.Context,
 		CompleteRequest *shared.RespondDecisionTaskCompletedRequest,
-	) error
+	) (*shared.RespondDecisionTaskCompletedResponse, error)
 
 	RespondDecisionTaskFailed(
 		ctx context.Context,
@@ -341,6 +346,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
+				Name: "ResetStickyTaskList",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.ResetStickyTaskList),
+				},
+				Signature:    "ResetStickyTaskList(ResetRequest *shared.ResetStickyTaskListRequest) (*shared.ResetStickyTaskListResponse)",
+				ThriftModule: cadence.ThriftModule,
+			},
+
+			thrift.Method{
 				Name: "RespondActivityTaskCanceled",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -413,7 +429,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.RespondDecisionTaskCompleted),
 				},
-				Signature:    "RespondDecisionTaskCompleted(CompleteRequest *shared.RespondDecisionTaskCompletedRequest)",
+				Signature:    "RespondDecisionTaskCompleted(CompleteRequest *shared.RespondDecisionTaskCompletedRequest) (*shared.RespondDecisionTaskCompletedResponse)",
 				ThriftModule: cadence.ThriftModule,
 			},
 
@@ -496,7 +512,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 28)
+	procedures := make([]transport.Procedure, 0, 29)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
@@ -769,6 +785,25 @@ func (h handler) RequestCancelWorkflowExecution(ctx context.Context, body wire.V
 	return response, err
 }
 
+func (h handler) ResetStickyTaskList(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args cadence.WorkflowService_ResetStickyTaskList_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.ResetStickyTaskList(ctx, args.ResetRequest)
+
+	hadError := err != nil
+	result, err := cadence.WorkflowService_ResetStickyTaskList_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
 func (h handler) RespondActivityTaskCanceled(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args cadence.WorkflowService_RespondActivityTaskCanceled_Args
 	if err := args.FromWire(body); err != nil {
@@ -889,10 +924,10 @@ func (h handler) RespondDecisionTaskCompleted(ctx context.Context, body wire.Val
 		return thrift.Response{}, err
 	}
 
-	err := h.impl.RespondDecisionTaskCompleted(ctx, args.CompleteRequest)
+	success, err := h.impl.RespondDecisionTaskCompleted(ctx, args.CompleteRequest)
 
 	hadError := err != nil
-	result, err := cadence.WorkflowService_RespondDecisionTaskCompleted_Helper.WrapResponse(err)
+	result, err := cadence.WorkflowService_RespondDecisionTaskCompleted_Helper.WrapResponse(success, err)
 
 	var response thrift.Response
 	if err == nil {
