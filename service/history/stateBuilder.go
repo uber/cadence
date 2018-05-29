@@ -34,7 +34,7 @@ import (
 type (
 	stateBuilder struct {
 		shard       ShardContext
-		msBuilder   *mutableStateBuilder
+		msBuilder   mutableState
 		domainCache cache.DomainCache
 		logger      bark.Logger
 
@@ -45,7 +45,7 @@ type (
 	}
 )
 
-func newStateBuilder(shard ShardContext, msBuilder *mutableStateBuilder, logger bark.Logger) *stateBuilder {
+func newStateBuilder(shard ShardContext, msBuilder mutableState, logger bark.Logger) *stateBuilder {
 
 	return &stateBuilder{
 		shard:       shard,
@@ -57,10 +57,10 @@ func newStateBuilder(shard ShardContext, msBuilder *mutableStateBuilder, logger 
 
 func (b *stateBuilder) applyEvents(version int64, sourceClusterName string, domainID, requestID string,
 	execution shared.WorkflowExecution, history *shared.History, newRunHistory *shared.History) (*shared.HistoryEvent,
-	*decisionInfo, *mutableStateBuilder, error) {
+	*decisionInfo, mutableState, error) {
 	var lastEvent *shared.HistoryEvent
 	var lastDecision *decisionInfo
-	var newRunStateBuilder *mutableStateBuilder
+	var newRunStateBuilder mutableState
 	for _, event := range history.Events {
 		lastEvent = event
 		switch event.GetEventType() {
@@ -330,11 +330,12 @@ func (b *stateBuilder) applyEvents(version int64, sourceClusterName string, doma
 				dtScheduledEvent.DecisionTaskScheduledEventAttributes.TaskList.GetName(),
 				dtScheduledEvent.DecisionTaskScheduledEventAttributes.GetStartToCloseTimeoutSeconds(),
 			)
+			newRunExecutionInfo := newRunStateBuilder.GetExecutionInfo()
 			nextEventID := di.ScheduleID + 1
-			newRunStateBuilder.executionInfo.NextEventID = nextEventID
-			newRunStateBuilder.executionInfo.LastFirstEventID = startedEvent.GetEventId()
+			newRunExecutionInfo.NextEventID = nextEventID
+			newRunExecutionInfo.LastFirstEventID = startedEvent.GetEventId()
 			// Set the history from replication task on the newStateBuilder
-			newRunStateBuilder.hBuilder = newHistoryBuilderFromEvents(newRunHistory.Events, b.logger)
+			newRunStateBuilder.SetHistoryBuilder(newHistoryBuilderFromEvents(newRunHistory.Events, b.logger))
 
 			b.newRunTransferTasks = append(b.newRunTransferTasks, b.scheduleDecisionTransferTask(domainID,
 				b.getTaskList(newRunStateBuilder), di.ScheduleID))
@@ -414,21 +415,21 @@ func (b *stateBuilder) scheduleDecisionTimerTask(event *shared.HistoryEvent, sch
 }
 
 func (b *stateBuilder) scheduleUserTimerTask(event *shared.HistoryEvent,
-	ti *persistence.TimerInfo, msBuilder *mutableStateBuilder) persistence.Task {
+	ti *persistence.TimerInfo, msBuilder mutableState) persistence.Task {
 	timerBuilder := b.getTimerBuilder(event)
 	timerBuilder.AddUserTimer(ti, msBuilder)
 	return timerBuilder.GetUserTimerTaskIfNeeded(msBuilder)
 }
 
 func (b *stateBuilder) scheduleActivityTimerTask(event *shared.HistoryEvent,
-	msBuilder *mutableStateBuilder) persistence.Task {
+	msBuilder mutableState) persistence.Task {
 	return b.getTimerBuilder(event).GetActivityTimerTaskIfNeeded(msBuilder)
 }
 
 func (b *stateBuilder) scheduleWorkflowTimerTask(event *shared.HistoryEvent,
-	msBuilder *mutableStateBuilder) persistence.Task {
+	msBuilder mutableState) persistence.Task {
 	now := time.Unix(0, event.GetTimestamp())
-	timeout := now.Add(time.Duration(msBuilder.executionInfo.WorkflowTimeout) * time.Second)
+	timeout := now.Add(time.Duration(msBuilder.GetExecutionInfo().WorkflowTimeout) * time.Second)
 	return &persistence.WorkflowTimeoutTask{VisibilityTimestamp: timeout}
 }
 
@@ -444,9 +445,9 @@ func (b *stateBuilder) scheduleDeleteHistoryTimerTask(event *shared.HistoryEvent
 	return b.getTimerBuilder(event).createDeleteHistoryEventTimerTask(time.Duration(retentionInDays) * time.Hour * 24), nil
 }
 
-func (b *stateBuilder) getTaskList(msBuilder *mutableStateBuilder) string {
+func (b *stateBuilder) getTaskList(msBuilder mutableState) string {
 	// on the standby side, sticky tasklist is meaningless, so always use the normal tasklist
-	return msBuilder.executionInfo.TaskList
+	return msBuilder.GetExecutionInfo().TaskList
 }
 
 func (b *stateBuilder) getTimerBuilder(event *shared.HistoryEvent) *timerBuilder {

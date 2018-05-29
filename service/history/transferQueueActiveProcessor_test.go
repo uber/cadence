@@ -407,8 +407,9 @@ func (s *transferQueueActiveProcessorSuite) TestProcessDecisionTask_Sticky_NonFi
 	di.StartedID = event.GetEventId()
 	event = addDecisionTaskCompletedEvent(msBuilder, di.ScheduleID, di.StartedID, nil, "some random identity")
 	// set the sticky tasklist attr
-	msBuilder.executionInfo.StickyTaskList = stickyTaskListName
-	msBuilder.executionInfo.StickyScheduleToStartTimeout = stickyTaskListTimeout
+	executionInfo := msBuilder.GetExecutionInfo()
+	executionInfo.StickyTaskList = stickyTaskListName
+	executionInfo.StickyScheduleToStartTimeout = stickyTaskListTimeout
 
 	// make another round of decision
 	taskID := int64(59)
@@ -1317,16 +1318,17 @@ func (s *transferQueueActiveProcessorSuite) createAddActivityTaskRequest(task *p
 }
 
 func (s *transferQueueActiveProcessorSuite) createAddDecisionTaskRequest(task *persistence.TransferTaskInfo,
-	msBuilder *mutableStateBuilder) *matching.AddDecisionTaskRequest {
+	msBuilder mutableState) *matching.AddDecisionTaskRequest {
 	execution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr(task.WorkflowID),
 		RunId:      common.StringPtr(task.RunID),
 	}
 	taskList := &workflow.TaskList{Name: &task.TaskList}
-	timeout := msBuilder.executionInfo.WorkflowTimeout
-	if msBuilder.isStickyTaskListEnabled() {
+	executionInfo := msBuilder.GetExecutionInfo()
+	timeout := executionInfo.WorkflowTimeout
+	if msBuilder.IsStickyTaskListEnabled() {
 		taskList.Kind = common.TaskListKindPtr(workflow.TaskListKindSticky)
-		timeout = msBuilder.executionInfo.StickyScheduleToStartTimeout
+		timeout = executionInfo.StickyScheduleToStartTimeout
 	}
 
 	return &matching.AddDecisionTaskRequest{
@@ -1339,18 +1341,18 @@ func (s *transferQueueActiveProcessorSuite) createAddDecisionTaskRequest(task *p
 }
 
 func (s *transferQueueActiveProcessorSuite) createRecordWorkflowExecutionStartedRequest(task *persistence.TransferTaskInfo,
-	msBuilder *mutableStateBuilder) *persistence.RecordWorkflowExecutionStartedRequest {
+	msBuilder mutableState) *persistence.RecordWorkflowExecutionStartedRequest {
 	execution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr(task.WorkflowID),
 		RunId:      common.StringPtr(task.RunID),
 	}
-
+	executionInfo := msBuilder.GetExecutionInfo()
 	return &persistence.RecordWorkflowExecutionStartedRequest{
 		DomainUUID:       task.DomainID,
 		Execution:        execution,
-		WorkflowTypeName: msBuilder.executionInfo.WorkflowTypeName,
-		StartTimestamp:   msBuilder.executionInfo.StartTimestamp.UnixNano(),
-		WorkflowTimeout:  int64(msBuilder.executionInfo.WorkflowTimeout),
+		WorkflowTypeName: executionInfo.WorkflowTypeName,
+		StartTimestamp:   executionInfo.StartTimestamp.UnixNano(),
+		WorkflowTimeout:  int64(executionInfo.WorkflowTimeout),
 	}
 }
 
@@ -1409,7 +1411,7 @@ func (s *transferQueueActiveProcessorSuite) createSignallWorkflowExecutionReques
 }
 
 func (s *transferQueueActiveProcessorSuite) createChildWorkflowExecutionRequest(task *persistence.TransferTaskInfo,
-	msBuilder *mutableStateBuilder, ci *persistence.ChildExecutionInfo, domainName string, targetDomainName string) *history.StartWorkflowExecutionRequest {
+	msBuilder mutableState, ci *persistence.ChildExecutionInfo, domainName string, targetDomainName string) *history.StartWorkflowExecutionRequest {
 
 	event, ok := msBuilder.GetChildExecutionInitiatedEvent(task.ScheduleID)
 	if !ok {

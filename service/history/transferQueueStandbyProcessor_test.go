@@ -346,16 +346,17 @@ func (s *transferQueueStandbyProcessorSuite) TestProcessDecisionTask_Success_Fir
 	di.StartedID = event.GetEventId()
 
 	persistenceMutableState := createMutableState(msBuilder)
+	executionInfo := msBuilder.GetExecutionInfo()
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockVisibilityMgr.On("RecordWorkflowExecutionStarted", &persistence.RecordWorkflowExecutionStartedRequest{
-		DomainUUID: msBuilder.executionInfo.DomainID,
+		DomainUUID: executionInfo.DomainID,
 		Execution: workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(msBuilder.executionInfo.WorkflowID),
-			RunId:      common.StringPtr(msBuilder.executionInfo.RunID),
+			WorkflowId: common.StringPtr(executionInfo.WorkflowID),
+			RunId:      common.StringPtr(executionInfo.RunID),
 		},
-		WorkflowTypeName: msBuilder.executionInfo.WorkflowTypeName,
-		StartTimestamp:   msBuilder.executionInfo.StartTimestamp.UnixNano(),
-		WorkflowTimeout:  int64(msBuilder.executionInfo.WorkflowTimeout),
+		WorkflowTypeName: executionInfo.WorkflowTypeName,
+		StartTimestamp:   executionInfo.StartTimestamp.UnixNano(),
+		WorkflowTimeout:  int64(executionInfo.WorkflowTimeout),
 	}).Return(nil).Once()
 	s.mockQueueAckMgr.On("completeTask", taskID).Return(nil).Once()
 
