@@ -85,8 +85,8 @@ func loadMutableStateForTransferTask(context *workflowExecutionContext, transfer
 		msBuilder.executionInfo.DecisionAttempt > 0
 
 	if transferTask.ScheduleID >= msBuilder.GetNextEventID() && !isDecisionRetry {
-		metricsClient.IncCounter(metrics.TimerQueueProcessorScope, metrics.StaleMutableStateCounter)
-		logger.Debugf("Task Processor: task event ID: %v >= MS NextEventID: %v.", transferTask.ScheduleID, msBuilder.GetNextEventID())
+		metricsClient.IncCounter(metrics.TransferQueueProcessorScope, metrics.StaleMutableStateCounter)
+		logger.Debugf("Transfer Task Processor: task event ID: %v >= MS NextEventID: %v.", transferTask.ScheduleID, msBuilder.GetNextEventID())
 		context.clear()
 
 		msBuilder, err = context.loadWorkflowExecution()
@@ -95,7 +95,7 @@ func loadMutableStateForTransferTask(context *workflowExecutionContext, transfer
 		}
 		// after refresh, still mutable state's next event ID <= task ID
 		if transferTask.ScheduleID >= msBuilder.GetNextEventID() {
-			logger.Infof("Task Processor: task event ID: %v >= MS NextEventID: %v, skip.", transferTask.ScheduleID, msBuilder.GetNextEventID())
+			logger.Infof("Transfer Task Processor: task event ID: %v >= MS NextEventID: %v, skip.", transferTask.ScheduleID, msBuilder.GetNextEventID())
 			return nil, nil
 		}
 	}
@@ -123,7 +123,7 @@ func loadMutableStateForTimerTask(context *workflowExecutionContext, timerTask *
 
 	if timerTask.EventID >= msBuilder.GetNextEventID() && !isDecisionRetry {
 		metricsClient.IncCounter(metrics.TimerQueueProcessorScope, metrics.StaleMutableStateCounter)
-		logger.Debugf("Task Processor: task event ID: %v >= MS NextEventID: %v.", timerTask.EventID, msBuilder.GetNextEventID())
+		logger.Debugf("Timer Task Processor: task event ID: %v >= MS NextEventID: %v.", timerTask.EventID, msBuilder.GetNextEventID())
 		context.clear()
 
 		msBuilder, err = context.loadWorkflowExecution()
@@ -132,7 +132,7 @@ func loadMutableStateForTimerTask(context *workflowExecutionContext, timerTask *
 		}
 		// after refresh, still mutable state's next event ID <= task ID
 		if timerTask.EventID >= msBuilder.GetNextEventID() {
-			logger.Infof("Task Processor: task event ID: %v >= MS NextEventID: %v, skip.", timerTask.EventID, msBuilder.GetNextEventID())
+			logger.Infof("Timer Task Processor: task event ID: %v >= MS NextEventID: %v, skip.", timerTask.EventID, msBuilder.GetNextEventID())
 			return nil, nil
 		}
 	}
