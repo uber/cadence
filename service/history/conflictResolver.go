@@ -62,6 +62,7 @@ func (r *conflictResolver) reset(replayEventID int64, startTime time.Time) (*mut
 	var resetMutableStateBuilder *mutableStateBuilder
 	var sBuilder *stateBuilder
 	var lastFirstEventID int64
+	eventsToApply := replayNextEventID - common.FirstEventID
 	requestID := uuid.New()
 	for hasMore := true; hasMore; hasMore = len(nextPageToken) > 0 {
 		history, nextPageToken, lastFirstEventID, err = r.getHistory(domainID, execution, common.FirstEventID,
@@ -70,6 +71,17 @@ func (r *conflictResolver) reset(replayEventID int64, startTime time.Time) (*mut
 			len(history.Events), nextPageToken, err)
 		if err != nil {
 			return nil, err
+		}
+
+		batchSize := int64(len(history.Events))
+		// NextEventID could be in the middle of the batch.  Trim the history events to not have more events then what
+		// need to be applied
+		if batchSize > eventsToApply {
+			history.Events = history.Events[0:eventsToApply]
+		}
+
+		if len(history.Events) == 0 {
+			break
 		}
 
 		firstEvent := history.Events[0]
