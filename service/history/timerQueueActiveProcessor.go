@@ -104,6 +104,7 @@ func newTimerQueueFailoverProcessor(shard ShardContext, historyService *historyE
 	}
 	logger = logger.WithFields(bark.Fields{
 		logging.TagWorkflowCluster: clusterName,
+		logging.TagFailover:        "from: " + standbyClusterName,
 	})
 	timerTaskFilter := func(timer *persistence.TimerTaskInfo) (bool, error) {
 		if timer.DomainID == domainID {
