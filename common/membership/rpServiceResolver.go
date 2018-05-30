@@ -119,6 +119,8 @@ func (r *ringpopServiceResolver) Stop() error {
 	if success := common.AwaitWaitGroup(&r.shutdownWG, time.Minute); !success {
 		r.logger.Warn("service resolver timed out on shutdown.")
 	}
+
+	r.isStopped = true
 	return nil
 }
 
