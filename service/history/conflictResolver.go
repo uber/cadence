@@ -21,8 +21,6 @@
 package history
 
 import (
-	"time"
-
 	"github.com/pborman/uuid"
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/shared"
@@ -52,7 +50,7 @@ func newConflictResolver(shard ShardContext, context *workflowExecutionContext, 
 	}
 }
 
-func (r *conflictResolver) reset(replayEventID int64, startTime time.Time) (*mutableStateBuilder, error) {
+func (r *conflictResolver) reset(replayEventID int64) (*mutableStateBuilder, error) {
 	domainID := r.context.domainID
 	execution := r.context.workflowExecution
 	replayNextEventID := replayEventID + 1
@@ -62,44 +60,33 @@ func (r *conflictResolver) reset(replayEventID int64, startTime time.Time) (*mut
 	var resetMutableStateBuilder *mutableStateBuilder
 	var sBuilder *stateBuilder
 	requestID := uuid.New()
-
-	var lastFirstEventID int64
-	for remainingHistorySize := replayNextEventID - common.FirstEventID; remainingHistorySize > 0; {
-		history, nextPageToken, lastFirstEventID, err = r.getHistory(domainID, execution, common.FirstEventID, replayNextEventID,
+	for hasMore := true; hasMore; hasMore = len(nextPageToken) > 0 {
+		history, nextPageToken, err = r.getHistory(domainID, execution, common.FirstEventID, replayNextEventID,
 			nextPageToken)
 		if err != nil {
 			return nil, err
 		}
 
-		if int64(len(history.Events)) <= remainingHistorySize {
-			remainingHistorySize -= int64(len(history.Events))
-		} else {
-			history.Events = history.Events[0:remainingHistorySize]
-			remainingHistorySize = 0
-		}
+		for _, event := range history.Events {
+			if event.GetEventId() == common.FirstEventID {
+				resetMutableStateBuilder = newMutableStateBuilderWithReplicationState(r.shard.GetConfig(), r.logger,
+					event.GetVersion())
 
-		if history.Events[0].GetEventId() == common.FirstEventID {
-			resetMutableStateBuilder = newMutableStateBuilderWithReplicationState(r.shard.GetConfig(), r.logger,
-				history.Events[0].GetVersion())
+				sBuilder = newStateBuilder(r.shard, resetMutableStateBuilder, r.logger)
+			}
 
-			sBuilder = newStateBuilder(r.shard, resetMutableStateBuilder, r.logger)
-		}
-		resetMutableStateBuilder.executionInfo.LastFirstEventID = lastFirstEventID
-		_, _, _, err = sBuilder.applyEvents(common.EmptyVersion, "", domainID, requestID, execution, history, nil)
-		if err != nil {
-			return nil, err
+			_, _, _, err = sBuilder.applyEvents(common.EmptyVersion, "", domainID, requestID, execution, history, nil)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
-	resetMutableStateBuilder.executionInfo.NextEventID = replayNextEventID
-	resetMutableStateBuilder.executionInfo.StartTimestamp = startTime
-	// the last updated time is not important here, since this should be updated with event time afterwards
-	resetMutableStateBuilder.executionInfo.LastUpdatedTimestamp = startTime
 
 	return r.context.resetWorkflowExecution(resetMutableStateBuilder)
 }
 
 func (r *conflictResolver) getHistory(domainID string, execution shared.WorkflowExecution, firstEventID,
-	nextEventID int64, nextPageToken []byte) (*shared.History, []byte, int64, error) {
+	nextEventID int64, nextPageToken []byte) (*shared.History, []byte, error) {
 
 	response, err := r.historyMgr.GetWorkflowExecutionHistory(&persistence.GetWorkflowExecutionHistoryRequest{
 		DomainID:      domainID,
@@ -111,23 +98,21 @@ func (r *conflictResolver) getHistory(domainID string, execution shared.Workflow
 	})
 
 	if err != nil {
-		return nil, nil, 0, err
+		return nil, nil, err
 	}
 
-	var lastFirstEventID int64
 	historyEvents := []*shared.HistoryEvent{}
 	for _, e := range response.Events {
 		persistence.SetSerializedHistoryDefaults(&e)
 		s, _ := r.hSerializerFactory.Get(e.EncodingType)
 		history, err1 := s.Deserialize(&e)
 		if err1 != nil {
-			return nil, nil, 0, err1
+			return nil, nil, err1
 		}
-		lastFirstEventID = history.Events[0].GetEventId()
 		historyEvents = append(historyEvents, history.Events...)
 	}
 
 	executionHistory := &shared.History{}
 	executionHistory.Events = historyEvents
-	return executionHistory, nextPageToken, lastFirstEventID, nil
+	return executionHistory, nextPageToken, nil
 }

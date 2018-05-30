@@ -125,8 +125,8 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 			previousActiveCluster := r.metadataMgr.ClusterNameForFailoverVersion(rState.LastWriteVersion)
 			ri, ok := request.ReplicationInfo[previousActiveCluster]
 			if !ok {
-				r.logger.Errorf("No replication information found for previous active cluster.  Previous: %v, Current: %v, Replication Info: %v",
-					previousActiveCluster, request.GetSourceCluster(), request.ReplicationInfo)
+				r.logger.Errorf("No replication information found for previous active cluster.  Previous: %v, Current: %v",
+					previousActiveCluster, request.GetSourceCluster())
 
 				// TODO: Handle missing replication information
 				return nil
@@ -134,12 +134,12 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 
 			// Detect conflict
 			if ri.GetLastEventId() != rState.LastWriteEventID {
-				r.logger.Infof("Conflict detected.  State: {Version: %v, LastWriteEventID: %v}, Task: {SourceCluster: %v, Version: %v, LastEventID: %v}",
+				r.logger.Infof("Conflict detected.  State: {Version: %, LastWriteEventID: %v}, Task: {SourceCluster: %v, Version: %v, LastEventID: %v}",
 					rState.CurrentVersion, rState.LastWriteEventID, request.GetSourceCluster(), ri.GetVersion(),
 					ri.GetLastEventId())
 
 				resolver := newConflictResolver(r.shard, context, r.historyMgr, r.logger)
-				msBuilder, err = resolver.reset(ri.GetLastEventId(), msBuilder.executionInfo.StartTimestamp)
+				msBuilder, err = resolver.reset(ri.GetLastEventId())
 				if err != nil {
 					return err
 				}
