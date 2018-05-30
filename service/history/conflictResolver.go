@@ -80,6 +80,8 @@ func (r *conflictResolver) reset(replayEventID int64, startTime time.Time) (*mut
 			history.Events = history.Events[0:eventsToApply]
 		}
 
+		eventsToApply -= batchSize
+
 		if len(history.Events) == 0 {
 			break
 		}
