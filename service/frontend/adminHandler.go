@@ -27,7 +27,9 @@ import (
 
 	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/admin/adminserviceserver"
+	hist "github.com/uber/cadence/.gen/go/history"
 	gen "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/service"
@@ -40,6 +42,7 @@ type (
 	AdminHandler struct {
 		numberOfHistoryShards int
 		service.Service
+		history history.Client
 	}
 )
 
@@ -57,6 +60,11 @@ func NewAdminHandler(
 func (adh *AdminHandler) Start() error {
 	adh.Service.GetDispatcher().Register(adminserviceserver.New(adh))
 	adh.Service.Start()
+	var err error
+	adh.history, err = adh.Service.GetClientFactory().NewHistoryClient()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -85,11 +93,17 @@ func (adh *AdminHandler) InquireWorkflowExecution(ctx context.Context, request *
 	}
 
 	historyAddr := historyHost.GetAddress()
-
+	resp, err := adh.history.InquireMutableState(ctx, &hist.InquireMutableStateRequest{
+		DomainUUID: request.Domain,
+		Execution:  request.Execution,
+	})
 	return &admin.InquireWorkflowExecutionResponse{
-		ShardId:     common.StringPtr(shardIDForOutput),
-		HistoryAddr: common.StringPtr(historyAddr),
-	}, nil
+		ShardId:                common.StringPtr(shardIDForOutput),
+		HistoryAddr:            common.StringPtr(historyAddr),
+		OtherInfo:              resp.OtherInfo,
+		MutableStateInDatabase: resp.MutableStateInDatabase,
+		MutableStateInCache:    resp.MutableStateInCache,
+	}, err
 }
 
 func (adh *AdminHandler) error(err error) error {
