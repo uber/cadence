@@ -55,7 +55,7 @@ func newStateBuilder(shard ShardContext, msBuilder *mutableStateBuilder, logger 
 	}
 }
 
-func (b *stateBuilder) applyEvents(version int64, sourceClusterName string, domainID, requestID string,
+func (b *stateBuilder) applyEvents(sourceClusterName string, domainID, requestID string,
 	execution shared.WorkflowExecution, history *shared.History, newRunHistory *shared.History) (*shared.HistoryEvent,
 	*decisionInfo, *mutableStateBuilder, error) {
 	var lastEvent *shared.HistoryEvent
@@ -63,6 +63,8 @@ func (b *stateBuilder) applyEvents(version int64, sourceClusterName string, doma
 	var newRunStateBuilder *mutableStateBuilder
 	for _, event := range history.Events {
 		lastEvent = event
+		// must set the current version, since this is standby here, not active
+		b.msBuilder.updateReplicationStateVersion(event.GetVersion())
 		switch event.GetEventType() {
 		case shared.EventTypeWorkflowExecutionStarted:
 			attributes := event.WorkflowExecutionStartedEventAttributes
@@ -321,7 +323,7 @@ func (b *stateBuilder) applyEvents(version int64, sourceClusterName string, doma
 			}
 
 			// Create mutable state updates for the new run
-			newRunStateBuilder = newMutableStateBuilderWithReplicationState(b.shard.GetConfig(), b.logger, version)
+			newRunStateBuilder = newMutableStateBuilderWithReplicationState(b.shard.GetConfig(), b.logger, event.GetVersion())
 			newRunStateBuilder.ReplicateWorkflowExecutionStartedEvent(domainID, parentDomainID, newExecution, uuid.New(),
 				startedAttributes)
 			di := newRunStateBuilder.ReplicateDecisionTaskScheduledEvent(
