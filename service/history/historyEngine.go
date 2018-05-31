@@ -26,6 +26,8 @@ import (
 	"fmt"
 	"time"
 
+	"encoding/json"
+
 	"go.uber.org/yarpc"
 
 	"github.com/pborman/uuid"
@@ -501,19 +503,19 @@ func (e *historyEngineImpl) GetMutableState(ctx context.Context,
 func (e *historyEngineImpl) getMutableState(ctx context.Context,
 	domainID string, execution workflow.WorkflowExecution) (retResp *h.GetMutableStateResponse, retError error) {
 
-	context, release, err0 := e.historyCache.getOrCreateWorkflowExecutionWithTimeout(ctx, domainID, execution)
-	if err0 != nil {
-		return nil, err0
+	context, release, retError := e.historyCache.getOrCreateWorkflowExecutionWithTimeout(ctx, domainID, execution)
+	if retError != nil {
+		return
 	}
 	defer func() { release(retError) }()
 
-	msBuilder, err1 := context.loadWorkflowExecution()
-	if err1 != nil {
-		return nil, err1
+	msBuilder, retError := context.loadWorkflowExecution()
+	if retError != nil {
+		return
 	}
 
 	execution.RunId = context.workflowExecution.RunId
-	result := &h.GetMutableStateResponse{
+	retResp = &h.GetMutableStateResponse{
 		Execution:                            &execution,
 		WorkflowType:                         &workflow.WorkflowType{Name: common.StringPtr(msBuilder.executionInfo.WorkflowTypeName)},
 		LastFirstEventId:                     common.Int64Ptr(msBuilder.GetLastFirstEventID()),
@@ -527,7 +529,56 @@ func (e *historyEngineImpl) getMutableState(ctx context.Context,
 		StickyTaskListScheduleToStartTimeout: common.Int32Ptr(msBuilder.executionInfo.StickyScheduleToStartTimeout),
 	}
 
-	return result, nil
+	return
+}
+
+func (e *historyEngineImpl) InquireMutableState(ctx context.Context,
+	request *h.InquireMutableStateRequest) (retResp *h.InquireMutableStateResponse, retError error) {
+
+	domainID, err := validateDomainUUID(request.DomainUUID)
+	if err != nil {
+		return nil, err
+	}
+
+	execution := workflow.WorkflowExecution{
+		WorkflowId: request.Execution.WorkflowId,
+		RunId:      request.Execution.RunId,
+	}
+
+	cacheCtx, dbCtx, release, cacheHit, err := e.historyCache.getAndCreateWorkflowExecutionWithTimeout(ctx, domainID, execution)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { release(retError) }()
+	retResp = &h.InquireMutableStateResponse{}
+
+	if cacheHit && cacheCtx.msBuilder != nil {
+		msb := cacheCtx.msBuilder
+		retResp.MutableStateInCache, retError = e.toMutableStateJSON(msb)
+		otherInfo := ""
+		if len(msb.updateActivityInfos) > 0 {
+			otherInfo += "updateActivityInfos is not empty;"
+		}
+		if len(msb.deleteActivityInfos) > 0 {
+			otherInfo += "deleteActivityInfos is not empty;"
+		}
+		retResp.OtherInfo = &otherInfo
+	}
+
+	msb, retError := dbCtx.loadWorkflowExecution()
+	retResp.MutableStateInDatabase, retError = e.toMutableStateJSON(msb)
+
+	return
+}
+
+func (e *historyEngineImpl) toMutableStateJSON(msb *mutableStateBuilder) (*string, error) {
+	ms := msb.Unload()
+
+	jsonBytes, err := json.Marshal(ms)
+	if err != nil {
+		return nil, err
+	}
+	return common.StringPtr(string(jsonBytes)), nil
 }
 
 // ResetStickyTaskList reset the volatile information in mutable state of a given workflow.

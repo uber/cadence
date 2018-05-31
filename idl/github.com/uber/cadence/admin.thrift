@@ -27,9 +27,9 @@ include "shared.thrift"
 **/
 service AdminService {
   /**
-  * InquiryWorkflowExecution returns information about the internal states of workflow execution.
+  * InquireWorkflowExecution returns information about the internal states of workflow execution.
   **/
-  InquiryWorkflowExecutionResponse InquiryWorkflowExecution(1: shared.DescribeWorkflowExecutionRequest inquiryRequest)
+  InquireWorkflowExecutionResponse InquireWorkflowExecution(1: InquireWorkflowExecutionRequest inquireRequest)
     throws (
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,
@@ -38,7 +38,15 @@ service AdminService {
     )
 }
 
-struct InquiryWorkflowExecutionResponse{
+struct InquireWorkflowExecutionRequest {
+  10: optional string domain
+  20: optional shared.WorkflowExecution execution
+}
+
+struct InquireWorkflowExecutionResponse{
   10: optional string shardId
   20: optional string historyAddr
+  30: optional string otherInfo
+  40: optional string mutableStateInCache
+  50: optional string mutableStateInDatabase
 }

@@ -65,8 +65,8 @@ func (adh *AdminHandler) Stop() {
 	adh.Service.Stop()
 }
 
-// InquiryWorkflowExecution returns information about the specified workflow execution.
-func (adh *AdminHandler) InquiryWorkflowExecution(ctx context.Context, request *gen.DescribeWorkflowExecutionRequest) (*admin.InquiryWorkflowExecutionResponse, error) {
+// InquireWorkflowExecution returns information about the specified workflow execution.
+func (adh *AdminHandler) InquireWorkflowExecution(ctx context.Context, request *admin.InquireWorkflowExecutionRequest) (*admin.InquireWorkflowExecutionResponse, error) {
 	if request == nil {
 		return nil, adh.error(errRequestNotSet)
 	}
@@ -86,7 +86,7 @@ func (adh *AdminHandler) InquiryWorkflowExecution(ctx context.Context, request *
 
 	historyAddr := historyHost.GetAddress()
 
-	return &admin.InquiryWorkflowExecutionResponse{
+	return &admin.InquireWorkflowExecutionResponse{
 		ShardId:     common.StringPtr(shardIDForOutput),
 		HistoryAddr: common.StringPtr(historyAddr),
 	}, nil

@@ -522,6 +522,28 @@ func (h *Handler) StartWorkflowExecution(ctx context.Context,
 	return response, nil
 }
 
+// InquireMutableState - returns the internal analysis of workflow execution state
+func (h *Handler) InquireMutableState(ctx context.Context,
+	request *hist.InquireMutableStateRequest) (*hist.InquireMutableStateResponse, error) {
+	h.startWG.Wait()
+
+	if request.GetDomainUUID() == "" {
+		return nil, errDomainNotSet
+	}
+
+	workflowExecution := request.Execution
+	engine, err1 := h.controller.GetEngine(workflowExecution.GetWorkflowId())
+	if err1 != nil {
+		return nil, err1
+	}
+
+	resp, err2 := engine.InquireMutableState(ctx, request)
+	if err2 != nil {
+		return nil, h.convertError(err2)
+	}
+	return resp, nil
+}
+
 // GetMutableState - returns the id of the next event in the execution's history
 func (h *Handler) GetMutableState(ctx context.Context,
 	getRequest *hist.GetMutableStateRequest) (*hist.GetMutableStateResponse, error) {

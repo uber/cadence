@@ -61,6 +61,15 @@ func (c *metricClient) StartWorkflowExecution(
 	return resp, err
 }
 
+func (c *metricClient) InquireMutableState(
+	context context.Context,
+	request *h.InquireMutableStateRequest,
+	opts ...yarpc.CallOption) (*h.InquireMutableStateResponse, error) {
+	resp, err := c.client.InquireMutableState(context, request, opts...)
+
+	return resp, err
+}
+
 func (c *metricClient) GetMutableState(
 	context context.Context,
 	request *h.GetMutableStateRequest,

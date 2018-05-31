@@ -11,14 +11,14 @@ import (
 	"strings"
 )
 
-// HistoryService_GetMutableState_Args represents the arguments for the HistoryService.GetMutableState function.
+// HistoryService_InquireMutableState_Args represents the arguments for the HistoryService.InquireMutableState function.
 //
-// The arguments for GetMutableState are sent and received over the wire as this struct.
-type HistoryService_GetMutableState_Args struct {
-	GetRequest *GetMutableStateRequest `json:"getRequest,omitempty"`
+// The arguments for InquireMutableState are sent and received over the wire as this struct.
+type HistoryService_InquireMutableState_Args struct {
+	InquireRequest *InquireMutableStateRequest `json:"inquireRequest,omitempty"`
 }
 
-// ToWire translates a HistoryService_GetMutableState_Args struct into a Thrift-level intermediate
+// ToWire translates a HistoryService_InquireMutableState_Args struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
 // into bytes using a ThriftRW protocol implementation.
 //
@@ -33,7 +33,7 @@ type HistoryService_GetMutableState_Args struct {
 //   if err := binaryProtocol.Encode(x, writer); err != nil {
 //     return err
 //   }
-func (v *HistoryService_GetMutableState_Args) ToWire() (wire.Value, error) {
+func (v *HistoryService_InquireMutableState_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
 		i      int = 0
@@ -41,8 +41,8 @@ func (v *HistoryService_GetMutableState_Args) ToWire() (wire.Value, error) {
 		err    error
 	)
 
-	if v.GetRequest != nil {
-		w, err = v.GetRequest.ToWire()
+	if v.InquireRequest != nil {
+		w, err = v.InquireRequest.ToWire()
 		if err != nil {
 			return w, err
 		}
@@ -53,17 +53,17 @@ func (v *HistoryService_GetMutableState_Args) ToWire() (wire.Value, error) {
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _GetMutableStateRequest_Read(w wire.Value) (*GetMutableStateRequest, error) {
-	var v GetMutableStateRequest
+func _InquireMutableStateRequest_Read(w wire.Value) (*InquireMutableStateRequest, error) {
+	var v InquireMutableStateRequest
 	err := v.FromWire(w)
 	return &v, err
 }
 
-// FromWire deserializes a HistoryService_GetMutableState_Args struct from its Thrift-level
+// FromWire deserializes a HistoryService_InquireMutableState_Args struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.
 //
-// An error is returned if we were unable to build a HistoryService_GetMutableState_Args struct
+// An error is returned if we were unable to build a HistoryService_InquireMutableState_Args struct
 // from the provided intermediate representation.
 //
 //   x, err := binaryProtocol.Decode(reader, wire.TStruct)
@@ -71,19 +71,19 @@ func _GetMutableStateRequest_Read(w wire.Value) (*GetMutableStateRequest, error)
 //     return nil, err
 //   }
 //
-//   var v HistoryService_GetMutableState_Args
+//   var v HistoryService_InquireMutableState_Args
 //   if err := v.FromWire(x); err != nil {
 //     return nil, err
 //   }
 //   return &v, nil
-func (v *HistoryService_GetMutableState_Args) FromWire(w wire.Value) error {
+func (v *HistoryService_InquireMutableState_Args) FromWire(w wire.Value) error {
 	var err error
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
 		case 1:
 			if field.Value.Type() == wire.TStruct {
-				v.GetRequest, err = _GetMutableStateRequest_Read(field.Value)
+				v.InquireRequest, err = _InquireMutableStateRequest_Read(field.Value)
 				if err != nil {
 					return err
 				}
@@ -95,29 +95,29 @@ func (v *HistoryService_GetMutableState_Args) FromWire(w wire.Value) error {
 	return nil
 }
 
-// String returns a readable string representation of a HistoryService_GetMutableState_Args
+// String returns a readable string representation of a HistoryService_InquireMutableState_Args
 // struct.
-func (v *HistoryService_GetMutableState_Args) String() string {
+func (v *HistoryService_InquireMutableState_Args) String() string {
 	if v == nil {
 		return "<nil>"
 	}
 
 	var fields [1]string
 	i := 0
-	if v.GetRequest != nil {
-		fields[i] = fmt.Sprintf("GetRequest: %v", v.GetRequest)
+	if v.InquireRequest != nil {
+		fields[i] = fmt.Sprintf("InquireRequest: %v", v.InquireRequest)
 		i++
 	}
 
-	return fmt.Sprintf("HistoryService_GetMutableState_Args{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("HistoryService_InquireMutableState_Args{%v}", strings.Join(fields[:i], ", "))
 }
 
-// Equals returns true if all the fields of this HistoryService_GetMutableState_Args match the
-// provided HistoryService_GetMutableState_Args.
+// Equals returns true if all the fields of this HistoryService_InquireMutableState_Args match the
+// provided HistoryService_InquireMutableState_Args.
 //
 // This function performs a deep comparison.
-func (v *HistoryService_GetMutableState_Args) Equals(rhs *HistoryService_GetMutableState_Args) bool {
-	if !((v.GetRequest == nil && rhs.GetRequest == nil) || (v.GetRequest != nil && rhs.GetRequest != nil && v.GetRequest.Equals(rhs.GetRequest))) {
+func (v *HistoryService_InquireMutableState_Args) Equals(rhs *HistoryService_InquireMutableState_Args) bool {
+	if !((v.InquireRequest == nil && rhs.InquireRequest == nil) || (v.InquireRequest != nil && rhs.InquireRequest != nil && v.InquireRequest.Equals(rhs.InquireRequest))) {
 		return false
 	}
 
@@ -127,79 +127,81 @@ func (v *HistoryService_GetMutableState_Args) Equals(rhs *HistoryService_GetMuta
 // MethodName returns the name of the Thrift function as specified in
 // the IDL, for which this struct represent the arguments.
 //
-// This will always be "GetMutableState" for this struct.
-func (v *HistoryService_GetMutableState_Args) MethodName() string {
-	return "GetMutableState"
+// This will always be "InquireMutableState" for this struct.
+func (v *HistoryService_InquireMutableState_Args) MethodName() string {
+	return "InquireMutableState"
 }
 
 // EnvelopeType returns the kind of value inside this struct.
 //
 // This will always be Call for this struct.
-func (v *HistoryService_GetMutableState_Args) EnvelopeType() wire.EnvelopeType {
+func (v *HistoryService_InquireMutableState_Args) EnvelopeType() wire.EnvelopeType {
 	return wire.Call
 }
 
-// HistoryService_GetMutableState_Helper provides functions that aid in handling the
-// parameters and return values of the HistoryService.GetMutableState
+// HistoryService_InquireMutableState_Helper provides functions that aid in handling the
+// parameters and return values of the HistoryService.InquireMutableState
 // function.
-var HistoryService_GetMutableState_Helper = struct {
-	// Args accepts the parameters of GetMutableState in-order and returns
+var HistoryService_InquireMutableState_Helper = struct {
+	// Args accepts the parameters of InquireMutableState in-order and returns
 	// the arguments struct for the function.
 	Args func(
-		getRequest *GetMutableStateRequest,
-	) *HistoryService_GetMutableState_Args
+		inquireRequest *InquireMutableStateRequest,
+	) *HistoryService_InquireMutableState_Args
 
 	// IsException returns true if the given error can be thrown
-	// by GetMutableState.
+	// by InquireMutableState.
 	//
-	// An error can be thrown by GetMutableState only if the
+	// An error can be thrown by InquireMutableState only if the
 	// corresponding exception type was mentioned in the 'throws'
 	// section for it in the Thrift file.
 	IsException func(error) bool
 
-	// WrapResponse returns the result struct for GetMutableState
+	// WrapResponse returns the result struct for InquireMutableState
 	// given its return value and error.
 	//
 	// This allows mapping values and errors returned by
-	// GetMutableState into a serializable result struct.
+	// InquireMutableState into a serializable result struct.
 	// WrapResponse returns a non-nil error if the provided
-	// error cannot be thrown by GetMutableState
+	// error cannot be thrown by InquireMutableState
 	//
-	//   value, err := GetMutableState(args)
-	//   result, err := HistoryService_GetMutableState_Helper.WrapResponse(value, err)
+	//   value, err := InquireMutableState(args)
+	//   result, err := HistoryService_InquireMutableState_Helper.WrapResponse(value, err)
 	//   if err != nil {
-	//     return fmt.Errorf("unexpected error from GetMutableState: %v", err)
+	//     return fmt.Errorf("unexpected error from InquireMutableState: %v", err)
 	//   }
 	//   serialize(result)
-	WrapResponse func(*GetMutableStateResponse, error) (*HistoryService_GetMutableState_Result, error)
+	WrapResponse func(*InquireMutableStateResponse, error) (*HistoryService_InquireMutableState_Result, error)
 
-	// UnwrapResponse takes the result struct for GetMutableState
+	// UnwrapResponse takes the result struct for InquireMutableState
 	// and returns the value or error returned by it.
 	//
-	// The error is non-nil only if GetMutableState threw an
+	// The error is non-nil only if InquireMutableState threw an
 	// exception.
 	//
 	//   result := deserialize(bytes)
-	//   value, err := HistoryService_GetMutableState_Helper.UnwrapResponse(result)
-	UnwrapResponse func(*HistoryService_GetMutableState_Result) (*GetMutableStateResponse, error)
+	//   value, err := HistoryService_InquireMutableState_Helper.UnwrapResponse(result)
+	UnwrapResponse func(*HistoryService_InquireMutableState_Result) (*InquireMutableStateResponse, error)
 }{}
 
 func init() {
-	HistoryService_GetMutableState_Helper.Args = func(
-		getRequest *GetMutableStateRequest,
-	) *HistoryService_GetMutableState_Args {
-		return &HistoryService_GetMutableState_Args{
-			GetRequest: getRequest,
+	HistoryService_InquireMutableState_Helper.Args = func(
+		inquireRequest *InquireMutableStateRequest,
+	) *HistoryService_InquireMutableState_Args {
+		return &HistoryService_InquireMutableState_Args{
+			InquireRequest: inquireRequest,
 		}
 	}
 
-	HistoryService_GetMutableState_Helper.IsException = func(err error) bool {
+	HistoryService_InquireMutableState_Helper.IsException = func(err error) bool {
 		switch err.(type) {
 		case *shared.BadRequestError:
 			return true
 		case *shared.InternalServiceError:
 			return true
 		case *shared.EntityNotExistsError:
+			return true
+		case *shared.AccessDeniedError:
 			return true
 		case *ShardOwnershipLostError:
 			return true
@@ -210,42 +212,47 @@ func init() {
 		}
 	}
 
-	HistoryService_GetMutableState_Helper.WrapResponse = func(success *GetMutableStateResponse, err error) (*HistoryService_GetMutableState_Result, error) {
+	HistoryService_InquireMutableState_Helper.WrapResponse = func(success *InquireMutableStateResponse, err error) (*HistoryService_InquireMutableState_Result, error) {
 		if err == nil {
-			return &HistoryService_GetMutableState_Result{Success: success}, nil
+			return &HistoryService_InquireMutableState_Result{Success: success}, nil
 		}
 
 		switch e := err.(type) {
 		case *shared.BadRequestError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for HistoryService_GetMutableState_Result.BadRequestError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for HistoryService_InquireMutableState_Result.BadRequestError")
 			}
-			return &HistoryService_GetMutableState_Result{BadRequestError: e}, nil
+			return &HistoryService_InquireMutableState_Result{BadRequestError: e}, nil
 		case *shared.InternalServiceError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for HistoryService_GetMutableState_Result.InternalServiceError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for HistoryService_InquireMutableState_Result.InternalServiceError")
 			}
-			return &HistoryService_GetMutableState_Result{InternalServiceError: e}, nil
+			return &HistoryService_InquireMutableState_Result{InternalServiceError: e}, nil
 		case *shared.EntityNotExistsError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for HistoryService_GetMutableState_Result.EntityNotExistError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for HistoryService_InquireMutableState_Result.EntityNotExistError")
 			}
-			return &HistoryService_GetMutableState_Result{EntityNotExistError: e}, nil
+			return &HistoryService_InquireMutableState_Result{EntityNotExistError: e}, nil
+		case *shared.AccessDeniedError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for HistoryService_InquireMutableState_Result.AccessDeniedError")
+			}
+			return &HistoryService_InquireMutableState_Result{AccessDeniedError: e}, nil
 		case *ShardOwnershipLostError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for HistoryService_GetMutableState_Result.ShardOwnershipLostError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for HistoryService_InquireMutableState_Result.ShardOwnershipLostError")
 			}
-			return &HistoryService_GetMutableState_Result{ShardOwnershipLostError: e}, nil
+			return &HistoryService_InquireMutableState_Result{ShardOwnershipLostError: e}, nil
 		case *shared.LimitExceededError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for HistoryService_GetMutableState_Result.LimitExceededError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for HistoryService_InquireMutableState_Result.LimitExceededError")
 			}
-			return &HistoryService_GetMutableState_Result{LimitExceededError: e}, nil
+			return &HistoryService_InquireMutableState_Result{LimitExceededError: e}, nil
 		}
 
 		return nil, err
 	}
-	HistoryService_GetMutableState_Helper.UnwrapResponse = func(result *HistoryService_GetMutableState_Result) (success *GetMutableStateResponse, err error) {
+	HistoryService_InquireMutableState_Helper.UnwrapResponse = func(result *HistoryService_InquireMutableState_Result) (success *InquireMutableStateResponse, err error) {
 		if result.BadRequestError != nil {
 			err = result.BadRequestError
 			return
@@ -256,6 +263,10 @@ func init() {
 		}
 		if result.EntityNotExistError != nil {
 			err = result.EntityNotExistError
+			return
+		}
+		if result.AccessDeniedError != nil {
+			err = result.AccessDeniedError
 			return
 		}
 		if result.ShardOwnershipLostError != nil {
@@ -278,22 +289,23 @@ func init() {
 
 }
 
-// HistoryService_GetMutableState_Result represents the result of a HistoryService.GetMutableState function call.
+// HistoryService_InquireMutableState_Result represents the result of a HistoryService.InquireMutableState function call.
 //
-// The result of a GetMutableState execution is sent and received over the wire as this struct.
+// The result of a InquireMutableState execution is sent and received over the wire as this struct.
 //
 // Success is set only if the function did not throw an exception.
-type HistoryService_GetMutableState_Result struct {
-	// Value returned by GetMutableState after a successful execution.
-	Success                 *GetMutableStateResponse     `json:"success,omitempty"`
+type HistoryService_InquireMutableState_Result struct {
+	// Value returned by InquireMutableState after a successful execution.
+	Success                 *InquireMutableStateResponse `json:"success,omitempty"`
 	BadRequestError         *shared.BadRequestError      `json:"badRequestError,omitempty"`
 	InternalServiceError    *shared.InternalServiceError `json:"internalServiceError,omitempty"`
 	EntityNotExistError     *shared.EntityNotExistsError `json:"entityNotExistError,omitempty"`
+	AccessDeniedError       *shared.AccessDeniedError    `json:"accessDeniedError,omitempty"`
 	ShardOwnershipLostError *ShardOwnershipLostError     `json:"shardOwnershipLostError,omitempty"`
 	LimitExceededError      *shared.LimitExceededError   `json:"limitExceededError,omitempty"`
 }
 
-// ToWire translates a HistoryService_GetMutableState_Result struct into a Thrift-level intermediate
+// ToWire translates a HistoryService_InquireMutableState_Result struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
 // into bytes using a ThriftRW protocol implementation.
 //
@@ -308,9 +320,9 @@ type HistoryService_GetMutableState_Result struct {
 //   if err := binaryProtocol.Encode(x, writer); err != nil {
 //     return err
 //   }
-func (v *HistoryService_GetMutableState_Result) ToWire() (wire.Value, error) {
+func (v *HistoryService_InquireMutableState_Result) ToWire() (wire.Value, error) {
 	var (
-		fields [6]wire.Field
+		fields [7]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -348,12 +360,20 @@ func (v *HistoryService_GetMutableState_Result) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 3, Value: w}
 		i++
 	}
+	if v.AccessDeniedError != nil {
+		w, err = v.AccessDeniedError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 4, Value: w}
+		i++
+	}
 	if v.ShardOwnershipLostError != nil {
 		w, err = v.ShardOwnershipLostError.ToWire()
 		if err != nil {
 			return w, err
 		}
-		fields[i] = wire.Field{ID: 4, Value: w}
+		fields[i] = wire.Field{ID: 5, Value: w}
 		i++
 	}
 	if v.LimitExceededError != nil {
@@ -361,28 +381,34 @@ func (v *HistoryService_GetMutableState_Result) ToWire() (wire.Value, error) {
 		if err != nil {
 			return w, err
 		}
-		fields[i] = wire.Field{ID: 5, Value: w}
+		fields[i] = wire.Field{ID: 6, Value: w}
 		i++
 	}
 
 	if i != 1 {
-		return wire.Value{}, fmt.Errorf("HistoryService_GetMutableState_Result should have exactly one field: got %v fields", i)
+		return wire.Value{}, fmt.Errorf("HistoryService_InquireMutableState_Result should have exactly one field: got %v fields", i)
 	}
 
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _GetMutableStateResponse_Read(w wire.Value) (*GetMutableStateResponse, error) {
-	var v GetMutableStateResponse
+func _InquireMutableStateResponse_Read(w wire.Value) (*InquireMutableStateResponse, error) {
+	var v InquireMutableStateResponse
 	err := v.FromWire(w)
 	return &v, err
 }
 
-// FromWire deserializes a HistoryService_GetMutableState_Result struct from its Thrift-level
+func _AccessDeniedError_Read(w wire.Value) (*shared.AccessDeniedError, error) {
+	var v shared.AccessDeniedError
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a HistoryService_InquireMutableState_Result struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.
 //
-// An error is returned if we were unable to build a HistoryService_GetMutableState_Result struct
+// An error is returned if we were unable to build a HistoryService_InquireMutableState_Result struct
 // from the provided intermediate representation.
 //
 //   x, err := binaryProtocol.Decode(reader, wire.TStruct)
@@ -390,19 +416,19 @@ func _GetMutableStateResponse_Read(w wire.Value) (*GetMutableStateResponse, erro
 //     return nil, err
 //   }
 //
-//   var v HistoryService_GetMutableState_Result
+//   var v HistoryService_InquireMutableState_Result
 //   if err := v.FromWire(x); err != nil {
 //     return nil, err
 //   }
 //   return &v, nil
-func (v *HistoryService_GetMutableState_Result) FromWire(w wire.Value) error {
+func (v *HistoryService_InquireMutableState_Result) FromWire(w wire.Value) error {
 	var err error
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
 		case 0:
 			if field.Value.Type() == wire.TStruct {
-				v.Success, err = _GetMutableStateResponse_Read(field.Value)
+				v.Success, err = _InquireMutableStateResponse_Read(field.Value)
 				if err != nil {
 					return err
 				}
@@ -434,13 +460,21 @@ func (v *HistoryService_GetMutableState_Result) FromWire(w wire.Value) error {
 			}
 		case 4:
 			if field.Value.Type() == wire.TStruct {
-				v.ShardOwnershipLostError, err = _ShardOwnershipLostError_Read(field.Value)
+				v.AccessDeniedError, err = _AccessDeniedError_Read(field.Value)
 				if err != nil {
 					return err
 				}
 
 			}
 		case 5:
+			if field.Value.Type() == wire.TStruct {
+				v.ShardOwnershipLostError, err = _ShardOwnershipLostError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 6:
 			if field.Value.Type() == wire.TStruct {
 				v.LimitExceededError, err = _LimitExceededError_Read(field.Value)
 				if err != nil {
@@ -464,6 +498,9 @@ func (v *HistoryService_GetMutableState_Result) FromWire(w wire.Value) error {
 	if v.EntityNotExistError != nil {
 		count++
 	}
+	if v.AccessDeniedError != nil {
+		count++
+	}
 	if v.ShardOwnershipLostError != nil {
 		count++
 	}
@@ -471,20 +508,20 @@ func (v *HistoryService_GetMutableState_Result) FromWire(w wire.Value) error {
 		count++
 	}
 	if count != 1 {
-		return fmt.Errorf("HistoryService_GetMutableState_Result should have exactly one field: got %v fields", count)
+		return fmt.Errorf("HistoryService_InquireMutableState_Result should have exactly one field: got %v fields", count)
 	}
 
 	return nil
 }
 
-// String returns a readable string representation of a HistoryService_GetMutableState_Result
+// String returns a readable string representation of a HistoryService_InquireMutableState_Result
 // struct.
-func (v *HistoryService_GetMutableState_Result) String() string {
+func (v *HistoryService_InquireMutableState_Result) String() string {
 	if v == nil {
 		return "<nil>"
 	}
 
-	var fields [6]string
+	var fields [7]string
 	i := 0
 	if v.Success != nil {
 		fields[i] = fmt.Sprintf("Success: %v", v.Success)
@@ -502,6 +539,10 @@ func (v *HistoryService_GetMutableState_Result) String() string {
 		fields[i] = fmt.Sprintf("EntityNotExistError: %v", v.EntityNotExistError)
 		i++
 	}
+	if v.AccessDeniedError != nil {
+		fields[i] = fmt.Sprintf("AccessDeniedError: %v", v.AccessDeniedError)
+		i++
+	}
 	if v.ShardOwnershipLostError != nil {
 		fields[i] = fmt.Sprintf("ShardOwnershipLostError: %v", v.ShardOwnershipLostError)
 		i++
@@ -511,14 +552,14 @@ func (v *HistoryService_GetMutableState_Result) String() string {
 		i++
 	}
 
-	return fmt.Sprintf("HistoryService_GetMutableState_Result{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("HistoryService_InquireMutableState_Result{%v}", strings.Join(fields[:i], ", "))
 }
 
-// Equals returns true if all the fields of this HistoryService_GetMutableState_Result match the
-// provided HistoryService_GetMutableState_Result.
+// Equals returns true if all the fields of this HistoryService_InquireMutableState_Result match the
+// provided HistoryService_InquireMutableState_Result.
 //
 // This function performs a deep comparison.
-func (v *HistoryService_GetMutableState_Result) Equals(rhs *HistoryService_GetMutableState_Result) bool {
+func (v *HistoryService_InquireMutableState_Result) Equals(rhs *HistoryService_InquireMutableState_Result) bool {
 	if !((v.Success == nil && rhs.Success == nil) || (v.Success != nil && rhs.Success != nil && v.Success.Equals(rhs.Success))) {
 		return false
 	}
@@ -529,6 +570,9 @@ func (v *HistoryService_GetMutableState_Result) Equals(rhs *HistoryService_GetMu
 		return false
 	}
 	if !((v.EntityNotExistError == nil && rhs.EntityNotExistError == nil) || (v.EntityNotExistError != nil && rhs.EntityNotExistError != nil && v.EntityNotExistError.Equals(rhs.EntityNotExistError))) {
+		return false
+	}
+	if !((v.AccessDeniedError == nil && rhs.AccessDeniedError == nil) || (v.AccessDeniedError != nil && rhs.AccessDeniedError != nil && v.AccessDeniedError.Equals(rhs.AccessDeniedError))) {
 		return false
 	}
 	if !((v.ShardOwnershipLostError == nil && rhs.ShardOwnershipLostError == nil) || (v.ShardOwnershipLostError != nil && rhs.ShardOwnershipLostError != nil && v.ShardOwnershipLostError.Equals(rhs.ShardOwnershipLostError))) {
@@ -544,14 +588,14 @@ func (v *HistoryService_GetMutableState_Result) Equals(rhs *HistoryService_GetMu
 // MethodName returns the name of the Thrift function as specified in
 // the IDL, for which this struct represent the result.
 //
-// This will always be "GetMutableState" for this struct.
-func (v *HistoryService_GetMutableState_Result) MethodName() string {
-	return "GetMutableState"
+// This will always be "InquireMutableState" for this struct.
+func (v *HistoryService_InquireMutableState_Result) MethodName() string {
+	return "InquireMutableState"
 }
 
 // EnvelopeType returns the kind of value inside this struct.
 //
 // This will always be Reply for this struct.
-func (v *HistoryService_GetMutableState_Result) EnvelopeType() wire.EnvelopeType {
+func (v *HistoryService_InquireMutableState_Result) EnvelopeType() wire.EnvelopeType {
 	return wire.Reply
 }

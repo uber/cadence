@@ -39,10 +39,10 @@ type clientImpl struct {
 	resolver        membership.ServiceResolver
 	tokenSerializer common.TaskTokenSerializer
 	numberOfShards  int
-	// TODO: consider refactor thriftCache into a separate struct
-	thriftCacheLock sync.RWMutex
-	thriftCache     map[string]historyserviceclient.Interface
-	rpcFactory      common.RPCFactory
+	// TODO: consider refactor InquireCache into a separate struct
+	InquireCacheLock sync.RWMutex
+	InquireCache     map[string]historyserviceclient.Interface
+	rpcFactory       common.RPCFactory
 }
 
 // NewClient creates a new history service TChannel client
@@ -57,7 +57,7 @@ func NewClient(d common.RPCFactory, monitor membership.Monitor, numberOfShards i
 		resolver:        sResolver,
 		tokenSerializer: common.NewJSONTaskTokenSerializer(),
 		numberOfShards:  numberOfShards,
-		thriftCache:     make(map[string]historyserviceclient.Interface),
+		InquireCache:    make(map[string]historyserviceclient.Interface),
 	}
 	return client, nil
 }
@@ -101,6 +101,30 @@ func (c *clientImpl) GetMutableState(
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
 		response, err = client.GetMutableState(ctx, request, opts...)
+		return err
+	}
+	err = c.executeWithRedirect(ctx, client, op)
+	if err != nil {
+		return nil, err
+	}
+	return response, nil
+}
+
+func (c *clientImpl) InquireMutableState(
+	ctx context.Context,
+	request *h.InquireMutableStateRequest,
+	opts ...yarpc.CallOption) (*h.InquireMutableStateResponse, error) {
+	client, err := c.getHostForRequest(*request.Execution.WorkflowId)
+	if err != nil {
+		return nil, err
+	}
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+	var response *h.InquireMutableStateResponse
+	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+		var err error
+		ctx, cancel := c.createContext(ctx)
+		defer cancel()
+		response, err = client.InquireMutableState(ctx, request, opts...)
 		return err
 	}
 	err = c.executeWithRedirect(ctx, client, op)
@@ -517,24 +541,24 @@ func (c *clientImpl) createContext(parent context.Context) (context.Context, con
 }
 
 func (c *clientImpl) getThriftClient(hostPort string) historyserviceclient.Interface {
-	c.thriftCacheLock.RLock()
-	client, ok := c.thriftCache[hostPort]
-	c.thriftCacheLock.RUnlock()
+	c.InquireCacheLock.RLock()
+	client, ok := c.InquireCache[hostPort]
+	c.InquireCacheLock.RUnlock()
 	if ok {
 		return client
 	}
 
-	c.thriftCacheLock.Lock()
-	defer c.thriftCacheLock.Unlock()
+	c.InquireCacheLock.Lock()
+	defer c.InquireCacheLock.Unlock()
 
 	// check again if in the cache cause it might have been added
 	// before we acquired the lock
-	client, ok = c.thriftCache[hostPort]
+	client, ok = c.InquireCache[hostPort]
 	if !ok {
 		d := c.rpcFactory.CreateDispatcherForOutbound(
 			"history-service-client", common.HistoryServiceName, hostPort)
 		client = historyserviceclient.New(d.ClientConfig(common.HistoryServiceName))
-		c.thriftCache[hostPort] = client
+		c.InquireCache[hostPort] = client
 	}
 	return client
 }

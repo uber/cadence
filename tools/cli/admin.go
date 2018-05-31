@@ -25,9 +25,9 @@ import "github.com/urfave/cli"
 func newAdminWorkflowCommands() []cli.Command {
 	return []cli.Command{
 		{
-			Name:    "inquiry",
+			Name:    "inquire",
 			Aliases: []string{"inq"},
-			Usage:   "Inquiry internal information of workflow execution",
+			Usage:   "Inquire internal information of workflow execution",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  FlagWorkflowIDWithAlias,
