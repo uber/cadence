@@ -399,14 +399,14 @@ var describeTaskListResponse = &shared.DescribeTaskListResponse{
 	},
 }
 
-func (s *cliAppSuite) TestAdminInquiryWorkflow() {
-	resp := &admin.InquiryWorkflowExecutionResponse{
+func (s *cliAppSuite) TestAdminInquireWorkflow() {
+	resp := &admin.InquireWorkflowExecutionResponse{
 		ShardId:     common.StringPtr("test-shard-id"),
 		HistoryAddr: common.StringPtr("ip:port"),
 	}
 
-	s.adminService.EXPECT().InquiryWorkflowExecution(gomock.Any(), gomock.Any()).Return(resp, nil)
-	err := s.app.Run([]string{"", "--do", domainName, "admin", "wf", "inquiry", "-w", "test-wf-id"})
+	s.adminService.EXPECT().InquireWorkflowExecution(gomock.Any(), gomock.Any()).Return(resp, nil)
+	err := s.app.Run([]string{"", "--do", domainName, "admin", "wf", "inquire", "-w", "test-wf-id"})
 	s.Nil(err)
 }
 

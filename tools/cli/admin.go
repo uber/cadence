@@ -39,7 +39,7 @@ func newAdminWorkflowCommands() []cli.Command {
 				},
 			},
 			Action: func(c *cli.Context) {
-				InquiryWorkflow(c)
+				InquireWorkflow(c)
 			},
 		},
 	}
