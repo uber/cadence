@@ -305,13 +305,11 @@ func (t *transferQueueActiveProcessorImpl) processActivityTask(task *persistence
 	defer func() { release(retError) }()
 
 	var msBuilder *mutableStateBuilder
-	msBuilder, err = context.loadWorkflowExecution()
+	msBuilder, err = loadMutableStateForTransferTask(context, task, t.metricsClient, t.logger)
 	if err != nil {
-		if _, ok := err.(*workflow.EntityNotExistsError); ok {
-			// this could happen if this is a duplicate processing of the task, and the execution has already completed.
-			return nil
-		}
 		return err
+	} else if msBuilder == nil || !msBuilder.isWorkflowExecutionRunning() {
+		return nil
 	}
 
 	ai, found := msBuilder.GetActivityInfo(task.ScheduleID)
@@ -365,14 +363,13 @@ func (t *transferQueueActiveProcessorImpl) processDecisionTask(task *persistence
 	defer func() { release(retError) }()
 
 	var msBuilder *mutableStateBuilder
-	msBuilder, err = context.loadWorkflowExecution()
+	msBuilder, err = loadMutableStateForTransferTask(context, task, t.metricsClient, t.logger)
 	if err != nil {
-		if _, ok := err.(*workflow.EntityNotExistsError); ok {
-			// this could happen if this is a duplicate processing of the task, and the execution has already completed.
-			return nil
-		}
 		return err
+	} else if msBuilder == nil || !msBuilder.isWorkflowExecutionRunning() {
+		return nil
 	}
+
 	di, found := msBuilder.GetPendingDecision(task.ScheduleID)
 	if !found {
 		logging.LogDuplicateTransferTaskEvent(t.logger, persistence.TaskTypeDecisionTimeout, task.TaskID, task.ScheduleID)
@@ -441,15 +438,13 @@ func (t *transferQueueActiveProcessorImpl) processCloseExecution(task *persisten
 	defer func() { release(retError) }()
 
 	var msBuilder *mutableStateBuilder
-	msBuilder, err = context.loadWorkflowExecution()
+	msBuilder, err = loadMutableStateForTransferTask(context, task, t.metricsClient, t.logger)
 	if err != nil {
-		if _, ok := err.(*workflow.EntityNotExistsError); ok {
-			// this could happen if this is a duplicate processing of the task, but the mutable state was
-			// already deleted on a previous attempt to process the task.
-			return nil
-		}
 		return err
+	} else if msBuilder == nil {
+		return nil
 	}
+
 	ok, err := verifyTransferTaskVersion(t.shard, domainID, msBuilder.GetCurrentVersion(), task)
 	if err != nil {
 		return err
@@ -550,13 +545,11 @@ func (t *transferQueueActiveProcessorImpl) processCancelExecution(task *persiste
 
 	// First load the execution to validate if there is pending request cancellation for this transfer task
 	var msBuilder *mutableStateBuilder
-	msBuilder, err = context.loadWorkflowExecution()
+	msBuilder, err = loadMutableStateForTransferTask(context, task, t.metricsClient, t.logger)
 	if err != nil {
-		if _, ok := err.(*workflow.EntityNotExistsError); ok {
-			// this could happen if this is a duplicate processing of the task, and the execution has already completed.
-			return nil
-		}
 		return err
+	} else if msBuilder == nil || !msBuilder.isWorkflowExecutionRunning() {
+		return nil
 	}
 
 	initiatedEventID := task.ScheduleID
@@ -672,13 +665,11 @@ func (t *transferQueueActiveProcessorImpl) processSignalExecution(task *persiste
 	defer func() { release(retError) }()
 
 	var msBuilder *mutableStateBuilder
-	msBuilder, err = context.loadWorkflowExecution()
-	if err != nil || !msBuilder.isWorkflowExecutionRunning() {
-		if _, ok := err.(*workflow.EntityNotExistsError); ok {
-			// this could happen if this is a duplicate processing of the task, and the execution has already completed.
-			return nil
-		}
+	msBuilder, err = loadMutableStateForTransferTask(context, task, t.metricsClient, t.logger)
+	if err != nil {
 		return err
+	} else if msBuilder == nil || !msBuilder.isWorkflowExecutionRunning() {
+		return nil
 	}
 
 	initiatedEventID := task.ScheduleID
@@ -807,13 +798,11 @@ func (t *transferQueueActiveProcessorImpl) processStartChildExecution(task *pers
 
 	// First step is to load workflow execution so we can retrieve the initiated event
 	var msBuilder *mutableStateBuilder
-	msBuilder, err = context.loadWorkflowExecution()
-	if err != nil || !msBuilder.isWorkflowExecutionRunning() {
-		if _, ok := err.(*workflow.EntityNotExistsError); ok {
-			// this could happen if this is a duplicate processing of the task, and the execution has already completed.
-			return nil
-		}
+	msBuilder, err = loadMutableStateForTransferTask(context, task, t.metricsClient, t.logger)
+	if err != nil {
 		return err
+	} else if msBuilder == nil || !msBuilder.isWorkflowExecutionRunning() {
+		return nil
 	}
 
 	// Get parent domain name

@@ -310,6 +310,8 @@ const (
 	FrontendDescribeWorkflowExecutionScope
 	// FrontendDescribeTaskListScope is the metric scope for frontend.DescribeTaskList
 	FrontendDescribeTaskListScope
+	// FrontendResetStickyTaskListScope is the metric scope for frontend.ResetStickyTaskList
+	FrontendResetStickyTaskListScope
 
 	NumFrontendScopes
 )

@@ -195,7 +195,7 @@ func (s *Service) Start() {
 	if err != nil {
 		log.Fatalf("failed to create shard manager: %v", err)
 	}
-	shardMgr = persistence.NewShardPersistenceClient(shardMgr, base.GetMetricsClient())
+	shardMgr = persistence.NewShardPersistenceClient(shardMgr, base.GetMetricsClient(), log)
 
 	// Hack to create shards for bootstrap purposes
 	// TODO: properly pre-create all shards before deployment.
@@ -226,7 +226,7 @@ func (s *Service) Start() {
 	if err != nil {
 		log.Fatalf("failed to create metadata manager: %v", err)
 	}
-	metadata = persistence.NewMetadataPersistenceClient(metadata, base.GetMetricsClient())
+	metadata = persistence.NewMetadataPersistenceClient(metadata, base.GetMetricsClient(), log)
 
 	metadataV2, err := persistence.NewCassandraMetadataPersistenceV2(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,
@@ -240,7 +240,7 @@ func (s *Service) Start() {
 	if err != nil {
 		log.Fatalf("failed to create metadata manager: %v", err)
 	}
-	metadataV2 = persistence.NewMetadataPersistenceClient(metadataV2, base.GetMetricsClient())
+	metadataV2 = persistence.NewMetadataPersistenceClient(metadataV2, base.GetMetricsClient(), log)
 
 	visibility, err := persistence.NewCassandraVisibilityPersistence(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,
@@ -253,7 +253,7 @@ func (s *Service) Start() {
 	if err != nil {
 		log.Fatalf("failed to create visiblity manager: %v", err)
 	}
-	visibility = persistence.NewVisibilityPersistenceClient(visibility, base.GetMetricsClient())
+	visibility = persistence.NewVisibilityPersistenceClient(visibility, base.GetMetricsClient(), log)
 
 	history, err := persistence.NewCassandraHistoryPersistence(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,
@@ -267,7 +267,7 @@ func (s *Service) Start() {
 	if err != nil {
 		log.Fatalf("Creating Cassandra history manager persistence failed: %v", err)
 	}
-	history = persistence.NewHistoryPersistenceClient(history, base.GetMetricsClient())
+	history = persistence.NewHistoryPersistenceClient(history, base.GetMetricsClient(), log)
 
 	execMgrFactory, err := persistence.NewCassandraPersistenceClientFactory(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,

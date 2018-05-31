@@ -102,7 +102,6 @@ type (
 	}
 
 	ringpopFactoryImpl struct {
-		service string
 		rpHosts []string
 	}
 )
@@ -271,7 +270,7 @@ func (c *cadenceImpl) startFrontend(rpHosts []string, startWG *sync.WaitGroup) {
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.FrontendPProfPort())
 	params.RPCFactory = newRPCFactoryImpl(common.FrontendServiceName, c.FrontendAddress(), c.logger)
 	params.MetricScope = tally.NewTestScope(common.FrontendServiceName, make(map[string]string))
-	params.RingpopFactory = newRingpopFactory(common.FrontendServiceName, rpHosts)
+	params.RingpopFactory = newRingpopFactory(rpHosts)
 	params.ClusterMetadata = c.clusterMetadata
 	params.MessagingClient = c.messagingClient
 	params.CassandraConfig.NumHistoryShards = c.numberOfHistoryShards
@@ -313,7 +312,7 @@ func (c *cadenceImpl) startHistory(rpHosts []string, startWG *sync.WaitGroup) {
 		params.PProfInitializer = newPProfInitializerImpl(c.logger, pprofPorts[i])
 		params.RPCFactory = newRPCFactoryImpl(common.HistoryServiceName, hostport, c.logger)
 		params.MetricScope = tally.NewTestScope(common.HistoryServiceName, make(map[string]string))
-		params.RingpopFactory = newRingpopFactory(common.FrontendServiceName, rpHosts)
+		params.RingpopFactory = newRingpopFactory(rpHosts)
 		params.ClusterMetadata = c.clusterMetadata
 		params.MessagingClient = c.messagingClient
 		params.CassandraConfig.NumHistoryShards = c.numberOfHistoryShards
@@ -339,7 +338,7 @@ func (c *cadenceImpl) startMatching(rpHosts []string, startWG *sync.WaitGroup) {
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.MatchingPProfPort())
 	params.RPCFactory = newRPCFactoryImpl(common.MatchingServiceName, c.MatchingServiceAddress(), c.logger)
 	params.MetricScope = tally.NewTestScope(common.MatchingServiceName, make(map[string]string))
-	params.RingpopFactory = newRingpopFactory(common.FrontendServiceName, rpHosts)
+	params.RingpopFactory = newRingpopFactory(rpHosts)
 	params.ClusterMetadata = c.clusterMetadata
 	params.CassandraConfig.NumHistoryShards = c.numberOfHistoryShards
 	service := service.New(params)
@@ -359,7 +358,7 @@ func (c *cadenceImpl) startWorker(rpHosts []string, startWG *sync.WaitGroup) {
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.WorkerPProfPort())
 	params.RPCFactory = newRPCFactoryImpl(common.WorkerServiceName, c.WorkerServiceAddress(), c.logger)
 	params.MetricScope = tally.NewTestScope(common.WorkerServiceName, make(map[string]string))
-	params.RingpopFactory = newRingpopFactory(common.FrontendServiceName, rpHosts)
+	params.RingpopFactory = newRingpopFactory(rpHosts)
 	params.ClusterMetadata = c.clusterMetadata
 	params.CassandraConfig.NumHistoryShards = c.numberOfHistoryShards
 	service := service.New(params)
@@ -369,7 +368,7 @@ func (c *cadenceImpl) startWorker(rpHosts []string, startWG *sync.WaitGroup) {
 	if err != nil {
 		c.logger.WithField("error", err).Fatal("Failed to create history service client when start worker")
 	}
-	metadataManager := persistence.NewMetadataPersistenceClient(c.metadataMgr, service.GetMetricsClient())
+	metadataManager := persistence.NewMetadataPersistenceClient(c.metadataMgr, service.GetMetricsClient(), c.logger)
 
 	c.replicator = worker.NewReplicator(c.clusterMetadata, metadataManager, historyClient, worker.NewConfig(), c.messagingClient, c.logger,
 		service.GetMetricsClient())
@@ -382,9 +381,8 @@ func (c *cadenceImpl) startWorker(rpHosts []string, startWG *sync.WaitGroup) {
 	c.shutdownWG.Done()
 }
 
-func newRingpopFactory(service string, rpHosts []string) service.RingpopFactory {
+func newRingpopFactory(rpHosts []string) service.RingpopFactory {
 	return &ringpopFactoryImpl{
-		service: service,
 		rpHosts: rpHosts,
 	}
 }
