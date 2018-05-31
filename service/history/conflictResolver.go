@@ -26,12 +26,14 @@ import (
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/persistence"
 )
 
 type (
 	conflictResolver struct {
 		shard              ShardContext
+		clusterMetadata    cluster.Metadata
 		context            *workflowExecutionContext
 		historyMgr         persistence.HistoryManager
 		hSerializerFactory persistence.HistorySerializerFactory
@@ -44,6 +46,7 @@ func newConflictResolver(shard ShardContext, context *workflowExecutionContext, 
 
 	return &conflictResolver{
 		shard:              shard,
+		clusterMetadata:    shard.GetService().GetClusterMetadata(),
 		context:            context,
 		historyMgr:         historyMgr,
 		hSerializerFactory: persistence.NewHistorySerializerFactory(),
@@ -51,7 +54,7 @@ func newConflictResolver(shard ShardContext, context *workflowExecutionContext, 
 	}
 }
 
-func (r *conflictResolver) reset(requestID string, sourceCluster string, replayEventID int64, startTime time.Time) (*mutableStateBuilder, error) {
+func (r *conflictResolver) reset(requestID string, replayEventID int64, startTime time.Time) (*mutableStateBuilder, error) {
 	domainID := r.context.domainID
 	execution := r.context.workflowExecution
 	replayNextEventID := replayEventID + 1
@@ -92,7 +95,7 @@ func (r *conflictResolver) reset(requestID string, sourceCluster string, replayE
 			sBuilder = newStateBuilder(r.shard, resetMutableStateBuilder, r.logger)
 		}
 
-		_, _, _, err = sBuilder.applyEvents(sourceCluster, domainID, requestID, execution, history, nil)
+		_, _, _, err = sBuilder.applyEvents(domainID, requestID, execution, history, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -104,6 +107,9 @@ func (r *conflictResolver) reset(requestID string, sourceCluster string, replayE
 	resetMutableStateBuilder.executionInfo.StartTimestamp = startTime
 	// the last updated time is not important here, since this should be updated with event time afterwards
 	resetMutableStateBuilder.executionInfo.LastUpdatedTimestamp = startTime
+
+	sourceCluster := r.clusterMetadata.ClusterNameForFailoverVersion(resetMutableStateBuilder.GetCurrentVersion())
+	resetMutableStateBuilder.updateReplicationStateLastEventID(sourceCluster, replayEventID)
 
 	r.logger.Infof("All events applied for execution.  WorkflowID: %v, RunID: %v, NextEventID: %v",
 		execution.GetWorkflowId(), execution.GetRunId(), resetMutableStateBuilder.GetNextEventID())

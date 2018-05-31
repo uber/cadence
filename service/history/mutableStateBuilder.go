@@ -163,8 +163,11 @@ func newMutableStateBuilder(config *Config, logger bark.Logger) *mutableStateBui
 func newMutableStateBuilderWithReplicationState(config *Config, logger bark.Logger, version int64) *mutableStateBuilder {
 	s := newMutableStateBuilder(config, logger)
 	s.replicationState = &persistence.ReplicationState{
-		StartVersion:   version,
-		CurrentVersion: version,
+		StartVersion:        version,
+		CurrentVersion:      version,
+		LastWriteVersion:    common.EmptyVersion,
+		LastWriteEventID:    common.EmptyEventID,
+		LastReplicationInfo: make(map[string]*persistence.ReplicationInfo),
 	}
 	return s
 }

@@ -142,7 +142,7 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 					request.GetSourceCluster(), request.GetVersion(), request.GetFirstEventId(), request.GetNextEventId())
 
 				resolver := newConflictResolver(r.shard, context, r.historyMgr, r.logger)
-				msBuilder, err = resolver.reset(uuid.New(), request.GetSourceCluster(), ri.GetLastEventId(), msBuilder.executionInfo.StartTimestamp)
+				msBuilder, err = resolver.reset(uuid.New(), ri.GetLastEventId(), msBuilder.executionInfo.StartTimestamp)
 				r.logger.Infof("Completed Resetting of workflow execution: Err: %v", err)
 				if err != nil {
 					return err
@@ -198,8 +198,7 @@ func (r *historyReplicator) ApplyReplicationTask(context *workflowExecutionConte
 
 	requestID := uuid.New() // requestID used for start workflow execution request.  This is not on the history event.
 	sBuilder := newStateBuilder(r.shard, msBuilder, r.logger)
-	lastEvent, di, newRunStateBuilder, err := sBuilder.applyEvents(request.GetSourceCluster(),
-		domainID, requestID, execution, request.History, request.NewRunHistory)
+	lastEvent, di, newRunStateBuilder, err := sBuilder.applyEvents(domainID, requestID, execution, request.History, request.NewRunHistory)
 	if err != nil {
 		return err
 	}

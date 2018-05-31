@@ -211,6 +211,7 @@ func (s *conflictResolverSuite) TestReset() {
 	historySerializer := persistence.NewJSONHistorySerializer()
 	serializedBatch, _ := historySerializer.Serialize(persistence.NewHistoryEventBatch(persistence.GetDefaultHistoryVersion(), []*shared.HistoryEvent{event1, event2}))
 
+	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", event1.GetVersion()).Return(sourceCluster).Once()
 	s.mockHistoryMgr.On("GetWorkflowExecutionHistory", &persistence.GetWorkflowExecutionHistoryRequest{
 		DomainID:      domainID,
 		Execution:     execution,
@@ -294,6 +295,6 @@ func (s *conflictResolverSuite) TestReset() {
 		},
 		nil,
 	)
-	_, err := s.conflictResolver.reset(createRequestID, sourceCluster, nextEventID-1, startTime)
+	_, err := s.conflictResolver.reset(createRequestID, nextEventID-1, startTime)
 	s.Nil(err)
 }

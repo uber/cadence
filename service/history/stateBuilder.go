@@ -28,15 +28,17 @@ import (
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/persistence"
 )
 
 type (
 	stateBuilder struct {
-		shard       ShardContext
-		msBuilder   *mutableStateBuilder
-		domainCache cache.DomainCache
-		logger      bark.Logger
+		shard           ShardContext
+		clusterMetadata cluster.Metadata
+		msBuilder       *mutableStateBuilder
+		domainCache     cache.DomainCache
+		logger          bark.Logger
 
 		transferTasks       []persistence.Task
 		timerTasks          []persistence.Task
@@ -48,15 +50,16 @@ type (
 func newStateBuilder(shard ShardContext, msBuilder *mutableStateBuilder, logger bark.Logger) *stateBuilder {
 
 	return &stateBuilder{
-		shard:       shard,
-		msBuilder:   msBuilder,
-		domainCache: shard.GetDomainCache(),
-		logger:      logger,
+		shard:           shard,
+		clusterMetadata: shard.GetService().GetClusterMetadata(),
+		msBuilder:       msBuilder,
+		domainCache:     shard.GetDomainCache(),
+		logger:          logger,
 	}
 }
 
-func (b *stateBuilder) applyEvents(sourceClusterName string, domainID, requestID string,
-	execution shared.WorkflowExecution, history *shared.History, newRunHistory *shared.History) (*shared.HistoryEvent,
+func (b *stateBuilder) applyEvents(domainID, requestID string, execution shared.WorkflowExecution,
+	history *shared.History, newRunHistory *shared.History) (*shared.HistoryEvent,
 	*decisionInfo, *mutableStateBuilder, error) {
 	var lastEvent *shared.HistoryEvent
 	var lastDecision *decisionInfo
@@ -342,6 +345,7 @@ func (b *stateBuilder) applyEvents(sourceClusterName string, domainID, requestID
 				b.getTaskList(newRunStateBuilder), di.ScheduleID))
 			b.newRunTimerTasks = append(b.newRunTimerTasks, b.scheduleWorkflowTimerTask(event, newRunStateBuilder))
 
+			sourceClusterName := b.clusterMetadata.ClusterNameForFailoverVersion(event.GetVersion())
 			b.msBuilder.ReplicateWorkflowExecutionContinuedAsNewEvent(sourceClusterName, domainID, event,
 				startedEvent, di, newRunStateBuilder)
 			b.transferTasks = append(b.transferTasks, b.scheduleDeleteHistoryTransferTask())
