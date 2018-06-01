@@ -743,13 +743,10 @@ func (s *historyBuilderSuite) addActivityTaskFailedEvent(scheduleID, startedID i
 }
 
 func (s *historyBuilderSuite) addMarkerRecordedEvent(decisionCompletedEventID int64, markerName string, details []byte, header *map[string][]byte) *workflow.HistoryEvent {
-	var fields []*workflow.HeaderField
+	fields := make(map[string][]byte)
 	if header != nil {
 		for name, value := range *header {
-			fields = append(fields, &workflow.HeaderField{
-				Name:  common.StringPtr(name),
-				Value: value,
-			})
+			fields[name] = value
 		}
 	}
 	e := s.msBuilder.AddRecordMarkerEvent(decisionCompletedEventID, &workflow.RecordMarkerDecisionAttributes{
@@ -910,8 +907,8 @@ func (s *historyBuilderSuite) validateMarkerRecordedEvent(
 	s.Equal(markerName, attributes.GetMarkerName())
 	s.Equal(details, attributes.Details)
 	if header != nil {
-		for _, f := range attributes.Header.Fields {
-			s.Equal((*header)[f.GetName()], f.Value)
+		for name, value := range attributes.Header.Fields {
+			s.Equal((*header)[name], value)
 		}
 	} else {
 		s.Nil(attributes.Header)

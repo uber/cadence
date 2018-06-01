@@ -234,13 +234,8 @@ enum TaskListKind {
   STICKY,
 }
 
-struct HeaderField {
-    10: optional string name
-    20: optional binary value
-}
-
 struct Header {
-    10: optional list<HeaderField> fields
+    10: optional map<string, binary> fields
 }
 
 struct WorkflowType {
