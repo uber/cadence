@@ -1969,16 +1969,16 @@ func (e *mutableStateBuilder) ReplicateRequestCancelExternalWorkflowExecutionIni
 	event *workflow.HistoryEvent, cancelRequestID string) *persistence.RequestCancelInfo {
 	// TODO: Evaluate if we need cancelRequestID also part of history event
 	initiatedEventID := event.GetEventId()
-	ri := &persistence.RequestCancelInfo{
+	rci := &persistence.RequestCancelInfo{
 		Version:         event.GetVersion(),
 		InitiatedID:     initiatedEventID,
 		CancelRequestID: cancelRequestID,
 	}
 
-	e.pendingRequestCancelInfoIDs[initiatedEventID] = ri
-	e.updateRequestCancelInfos[ri] = struct{}{}
+	e.pendingRequestCancelInfoIDs[initiatedEventID] = rci
+	e.updateRequestCancelInfos[rci] = struct{}{}
 
-	return ri
+	return rci
 }
 
 func (e *mutableStateBuilder) AddExternalWorkflowExecutionCancelRequested(initiatedID int64,
@@ -2123,7 +2123,7 @@ func (e *mutableStateBuilder) ReplicateTimerStartedEvent(event *workflow.History
 	startToFireTimeout := attributes.GetStartToFireTimeoutSeconds()
 	fireTimeout := time.Duration(startToFireTimeout) * time.Second
 	// TODO: Time skew need to be taken in to account.
-	expiryTime := time.Now().Add(fireTimeout)
+	expiryTime := time.Unix(0, event.GetTimestamp()).Add(fireTimeout) // should use the event time, not now
 	ti := &persistence.TimerInfo{
 		Version:    event.GetVersion(),
 		TimerID:    timerID,

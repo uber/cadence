@@ -95,7 +95,7 @@ func (r *conflictResolver) reset(sourceCluster string, replayEventID int64, star
 			sBuilder = newStateBuilder(r.shard, resetMutableStateBuilder, r.logger)
 		}
 
-		_, _, _, err = sBuilder.applyEvents(common.EmptyVersion, "", domainID, requestID, execution, history, nil)
+		_, _, _, err = sBuilder.applyEvents("", domainID, requestID, execution, history, nil)
 		if err != nil {
 			return nil, err
 		}

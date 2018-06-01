@@ -201,7 +201,7 @@ func (r *historyReplicator) ApplyReplicationTask(context *workflowExecutionConte
 
 	requestID := uuid.New() // requestID used for start workflow execution request.  This is not on the history event.
 	sBuilder := newStateBuilder(r.shard, msBuilder, r.logger)
-	lastEvent, di, newRunStateBuilder, err := sBuilder.applyEvents(request.GetVersion(), request.GetSourceCluster(),
+	lastEvent, di, newRunStateBuilder, err := sBuilder.applyEvents(request.GetSourceCluster(),
 		domainID, requestID, execution, request.History, request.NewRunHistory)
 	if err != nil {
 		return err
