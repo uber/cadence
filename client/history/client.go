@@ -39,10 +39,10 @@ type clientImpl struct {
 	resolver        membership.ServiceResolver
 	tokenSerializer common.TaskTokenSerializer
 	numberOfShards  int
-	// TODO: consider refactor InquireCache into a separate struct
-	InquireCacheLock sync.RWMutex
-	InquireCache     map[string]historyserviceclient.Interface
-	rpcFactory       common.RPCFactory
+	// TODO: consider refactor thriftCache into a separate struct
+	thriftCacheLock sync.RWMutex
+	thriftCache     map[string]historyserviceclient.Interface
+	rpcFactory      common.RPCFactory
 }
 
 // NewClient creates a new history service TChannel client
@@ -57,7 +57,7 @@ func NewClient(d common.RPCFactory, monitor membership.Monitor, numberOfShards i
 		resolver:        sResolver,
 		tokenSerializer: common.NewJSONTaskTokenSerializer(),
 		numberOfShards:  numberOfShards,
-		InquireCache:    make(map[string]historyserviceclient.Interface),
+		thriftCache:     make(map[string]historyserviceclient.Interface),
 	}
 	return client, nil
 }
@@ -541,24 +541,24 @@ func (c *clientImpl) createContext(parent context.Context) (context.Context, con
 }
 
 func (c *clientImpl) getThriftClient(hostPort string) historyserviceclient.Interface {
-	c.InquireCacheLock.RLock()
-	client, ok := c.InquireCache[hostPort]
-	c.InquireCacheLock.RUnlock()
+	c.thriftCacheLock.RLock()
+	client, ok := c.thriftCache[hostPort]
+	c.thriftCacheLock.RUnlock()
 	if ok {
 		return client
 	}
 
-	c.InquireCacheLock.Lock()
-	defer c.InquireCacheLock.Unlock()
+	c.thriftCacheLock.Lock()
+	defer c.thriftCacheLock.Unlock()
 
 	// check again if in the cache cause it might have been added
 	// before we acquired the lock
-	client, ok = c.InquireCache[hostPort]
+	client, ok = c.thriftCache[hostPort]
 	if !ok {
 		d := c.rpcFactory.CreateDispatcherForOutbound(
 			"history-service-client", common.HistoryServiceName, hostPort)
 		client = historyserviceclient.New(d.ClientConfig(common.HistoryServiceName))
-		c.InquireCache[hostPort] = client
+		c.thriftCache[hostPort] = client
 	}
 	return client
 }
