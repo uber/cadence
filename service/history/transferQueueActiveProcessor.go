@@ -299,11 +299,11 @@ func (t *transferQueueActiveProcessorImpl) processActivityTask(task *persistence
 	}
 	defer func() { release(retError) }()
 
-	var msBuilder *mutableStateBuilder
+	var msBuilder mutableState
 	msBuilder, err = loadMutableStateForTransferTask(context, task, t.metricsClient, t.logger)
 	if err != nil {
 		return err
-	} else if msBuilder == nil || !msBuilder.isWorkflowExecutionRunning() {
+	} else if msBuilder == nil || !msBuilder.IsWorkflowExecutionRunning() {
 		return nil
 	}
 
@@ -357,11 +357,11 @@ func (t *transferQueueActiveProcessorImpl) processDecisionTask(task *persistence
 	}
 	defer func() { release(retError) }()
 
-	var msBuilder *mutableStateBuilder
+	var msBuilder mutableState
 	msBuilder, err = loadMutableStateForTransferTask(context, task, t.metricsClient, t.logger)
 	if err != nil {
 		return err
-	} else if msBuilder == nil || !msBuilder.isWorkflowExecutionRunning() {
+	} else if msBuilder == nil || !msBuilder.IsWorkflowExecutionRunning() {
 		return nil
 	}
 
@@ -377,14 +377,15 @@ func (t *transferQueueActiveProcessorImpl) processDecisionTask(task *persistence
 		return nil
 	}
 
-	workflowTimeout := msBuilder.executionInfo.WorkflowTimeout
+	executionInfo := msBuilder.GetExecutionInfo()
+	workflowTimeout := executionInfo.WorkflowTimeout
 	decisionTimeout := workflowTimeout
-	wfTypeName := msBuilder.executionInfo.WorkflowTypeName
-	startTimestamp := msBuilder.executionInfo.StartTimestamp
-	if msBuilder.isStickyTaskListEnabled() {
-		taskList.Name = common.StringPtr(msBuilder.executionInfo.StickyTaskList)
+	wfTypeName := executionInfo.WorkflowTypeName
+	startTimestamp := executionInfo.StartTimestamp
+	if msBuilder.IsStickyTaskListEnabled() {
+		taskList.Name = common.StringPtr(executionInfo.StickyTaskList)
 		taskList.Kind = common.TaskListKindPtr(workflow.TaskListKindSticky)
-		decisionTimeout = msBuilder.executionInfo.StickyScheduleToStartTimeout
+		decisionTimeout = executionInfo.StickyScheduleToStartTimeout
 	}
 
 	// release the context lock since we no longer need mutable state builder and
@@ -432,7 +433,7 @@ func (t *transferQueueActiveProcessorImpl) processCloseExecution(task *persisten
 	}
 	defer func() { release(retError) }()
 
-	var msBuilder *mutableStateBuilder
+	var msBuilder mutableState
 	msBuilder, err = loadMutableStateForTransferTask(context, task, t.metricsClient, t.logger)
 	if err != nil {
 		return err
@@ -447,20 +448,21 @@ func (t *transferQueueActiveProcessorImpl) processCloseExecution(task *persisten
 		return nil
 	}
 
-	replyToParentWorkflow := msBuilder.hasParentExecution() && msBuilder.executionInfo.CloseStatus != persistence.WorkflowCloseStatusContinuedAsNew
+	executionInfo := msBuilder.GetExecutionInfo()
+	replyToParentWorkflow := msBuilder.HasParentExecution() && executionInfo.CloseStatus != persistence.WorkflowCloseStatusContinuedAsNew
 	var completionEvent *workflow.HistoryEvent
 	if replyToParentWorkflow {
 		completionEvent, _ = msBuilder.GetCompletionEvent()
 	}
-	parentDomainID := msBuilder.executionInfo.ParentDomainID
-	parentWorkflowID := msBuilder.executionInfo.ParentWorkflowID
-	parentRunID := msBuilder.executionInfo.ParentRunID
-	initiatedID := msBuilder.executionInfo.InitiatedID
+	parentDomainID := executionInfo.ParentDomainID
+	parentWorkflowID := executionInfo.ParentWorkflowID
+	parentRunID := executionInfo.ParentRunID
+	initiatedID := executionInfo.InitiatedID
 
-	workflowTypeName := msBuilder.executionInfo.WorkflowTypeName
-	workflowStartTimestamp := msBuilder.executionInfo.StartTimestamp.UnixNano()
-	workflowCloseTimestamp := msBuilder.getLastUpdatedTimestamp()
-	workflowCloseStatus := getWorkflowExecutionCloseStatus(msBuilder.executionInfo.CloseStatus)
+	workflowTypeName := executionInfo.WorkflowTypeName
+	workflowStartTimestamp := executionInfo.StartTimestamp.UnixNano()
+	workflowCloseTimestamp := msBuilder.GetLastUpdatedTimestamp()
+	workflowCloseStatus := getWorkflowExecutionCloseStatus(executionInfo.CloseStatus)
 	workflowHistoryLength := msBuilder.GetNextEventID()
 
 	// release the context lock since we no longer need mutable state builder and
@@ -539,11 +541,11 @@ func (t *transferQueueActiveProcessorImpl) processCancelExecution(task *persiste
 	defer func() { release(retError) }()
 
 	// First load the execution to validate if there is pending request cancellation for this transfer task
-	var msBuilder *mutableStateBuilder
+	var msBuilder mutableState
 	msBuilder, err = loadMutableStateForTransferTask(context, task, t.metricsClient, t.logger)
 	if err != nil {
 		return err
-	} else if msBuilder == nil || !msBuilder.isWorkflowExecutionRunning() {
+	} else if msBuilder == nil || !msBuilder.IsWorkflowExecutionRunning() {
 		return nil
 	}
 
@@ -659,11 +661,11 @@ func (t *transferQueueActiveProcessorImpl) processSignalExecution(task *persiste
 	}
 	defer func() { release(retError) }()
 
-	var msBuilder *mutableStateBuilder
+	var msBuilder mutableState
 	msBuilder, err = loadMutableStateForTransferTask(context, task, t.metricsClient, t.logger)
 	if err != nil {
 		return err
-	} else if msBuilder == nil || !msBuilder.isWorkflowExecutionRunning() {
+	} else if msBuilder == nil || !msBuilder.IsWorkflowExecutionRunning() {
 		return nil
 	}
 
@@ -792,11 +794,11 @@ func (t *transferQueueActiveProcessorImpl) processStartChildExecution(task *pers
 	defer func() { release(retError) }()
 
 	// First step is to load workflow execution so we can retrieve the initiated event
-	var msBuilder *mutableStateBuilder
+	var msBuilder mutableState
 	msBuilder, err = loadMutableStateForTransferTask(context, task, t.metricsClient, t.logger)
 	if err != nil {
 		return err
-	} else if msBuilder == nil || !msBuilder.isWorkflowExecutionRunning() {
+	} else if msBuilder == nil || !msBuilder.IsWorkflowExecutionRunning() {
 		return nil
 	}
 
@@ -926,8 +928,8 @@ func (t *transferQueueActiveProcessorImpl) recordChildExecutionStarted(task *per
 	runID string) error {
 
 	return t.updateWorkflowExecution(task.DomainID, context, true,
-		func(msBuilder *mutableStateBuilder) error {
-			if !msBuilder.isWorkflowExecutionRunning() {
+		func(msBuilder mutableState) error {
+			if !msBuilder.IsWorkflowExecutionRunning() {
 				return &workflow.EntityNotExistsError{Message: "Workflow execution already completed."}
 			}
 
@@ -953,8 +955,8 @@ func (t *transferQueueActiveProcessorImpl) recordStartChildExecutionFailed(task 
 	initiatedAttributes *workflow.StartChildWorkflowExecutionInitiatedEventAttributes) error {
 
 	return t.updateWorkflowExecution(task.DomainID, context, true,
-		func(msBuilder *mutableStateBuilder) error {
-			if !msBuilder.isWorkflowExecutionRunning() {
+		func(msBuilder mutableState) error {
+			if !msBuilder.IsWorkflowExecutionRunning() {
 				return &workflow.EntityNotExistsError{Message: "Workflow execution already completed."}
 			}
 
@@ -995,8 +997,8 @@ func (t *transferQueueActiveProcessorImpl) requestCancelCompleted(task *persiste
 	context *workflowExecutionContext, request *h.RequestCancelWorkflowExecutionRequest) error {
 
 	return t.updateWorkflowExecution(task.DomainID, context, true,
-		func(msBuilder *mutableStateBuilder) error {
-			if !msBuilder.isWorkflowExecutionRunning() {
+		func(msBuilder mutableState) error {
+			if !msBuilder.IsWorkflowExecutionRunning() {
 				return &workflow.EntityNotExistsError{Message: "Workflow execution already completed."}
 			}
 
@@ -1022,8 +1024,8 @@ func (t *transferQueueActiveProcessorImpl) requestSignalCompleted(task *persiste
 	request *h.SignalWorkflowExecutionRequest) error {
 
 	return t.updateWorkflowExecution(task.DomainID, context, true,
-		func(msBuilder *mutableStateBuilder) error {
-			if !msBuilder.isWorkflowExecutionRunning() {
+		func(msBuilder mutableState) error {
+			if !msBuilder.IsWorkflowExecutionRunning() {
 				return &workflow.EntityNotExistsError{Message: "Workflow execution already completed."}
 			}
 
@@ -1048,8 +1050,8 @@ func (t *transferQueueActiveProcessorImpl) requestCancelFailed(task *persistence
 	context *workflowExecutionContext, request *h.RequestCancelWorkflowExecutionRequest) error {
 
 	return t.updateWorkflowExecution(task.DomainID, context, true,
-		func(msBuilder *mutableStateBuilder) error {
-			if !msBuilder.isWorkflowExecutionRunning() {
+		func(msBuilder mutableState) error {
+			if !msBuilder.IsWorkflowExecutionRunning() {
 				return &workflow.EntityNotExistsError{Message: "Workflow execution already completed."}
 			}
 
@@ -1076,8 +1078,8 @@ func (t *transferQueueActiveProcessorImpl) requestSignalFailed(task *persistence
 	request *h.SignalWorkflowExecutionRequest) error {
 
 	return t.updateWorkflowExecution(task.DomainID, context, true,
-		func(msBuilder *mutableStateBuilder) error {
-			if !msBuilder.isWorkflowExecutionRunning() {
+		func(msBuilder mutableState) error {
+			if !msBuilder.IsWorkflowExecutionRunning() {
 				return &workflow.EntityNotExistsError{Message: "Workflow is not running."}
 			}
 
@@ -1101,7 +1103,7 @@ func (t *transferQueueActiveProcessorImpl) requestSignalFailed(task *persistence
 }
 
 func (t *transferQueueActiveProcessorImpl) updateWorkflowExecution(domainID string, context *workflowExecutionContext,
-	createDecisionTask bool, action func(builder *mutableStateBuilder) error) error {
+	createDecisionTask bool, action func(builder mutableState) error) error {
 Update_History_Loop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
 		msBuilder, err1 := context.loadWorkflowExecution()
@@ -1114,6 +1116,7 @@ Update_History_Loop:
 		if err := action(msBuilder); err != nil {
 			return err
 		}
+		executionInfo := msBuilder.GetExecutionInfo()
 
 		if createDecisionTask {
 			// Create a transfer task to schedule a decision task
@@ -1124,14 +1127,14 @@ Update_History_Loop:
 					TaskList:   di.TaskList,
 					ScheduleID: di.ScheduleID,
 				})
-				if msBuilder.isStickyTaskListEnabled() {
+				if msBuilder.IsStickyTaskListEnabled() {
 					lg := t.logger.WithFields(bark.Fields{
 						logging.TagWorkflowExecutionID: context.workflowExecution.WorkflowId,
 						logging.TagWorkflowRunID:       context.workflowExecution.RunId,
 					})
 					tBuilder := newTimerBuilder(t.shard.GetConfig(), lg, common.NewRealTimeSource())
 					stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(di.ScheduleID, di.Attempt,
-						msBuilder.executionInfo.StickyScheduleToStartTimeout)
+						executionInfo.StickyScheduleToStartTimeout)
 					timerTasks = []persistence.Task{stickyTaskTimeoutTimer}
 				}
 			}
