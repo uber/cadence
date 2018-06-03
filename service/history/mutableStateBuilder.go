@@ -1336,6 +1336,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionStartedEvent(domainID st
 	e.executionInfo.CloseStatus = persistence.WorkflowCloseStatusNone
 	e.executionInfo.LastProcessedEvent = common.EmptyEventID
 	e.executionInfo.CreateRequestID = requestID
+	e.executionInfo.DecisionVersion = common.EmptyVersion
 	e.executionInfo.DecisionScheduleID = common.EmptyEventID
 	e.executionInfo.DecisionStartedID = common.EmptyEventID
 	e.executionInfo.DecisionRequestID = emptyUUID

@@ -85,7 +85,6 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 	defer func() { release(retError) }()
 
 	var msBuilder mutableState
-	var executionInfo *persistence.WorkflowExecutionInfo
 	firstEvent := request.History.Events[0]
 	switch firstEvent.GetEventType() {
 	case shared.EventTypeWorkflowExecutionStarted:
@@ -96,7 +95,6 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 				execution.GetWorkflowId(), execution.GetRunId(), request.GetVersion())
 			return nil
 		}
-		executionInfo = msBuilder.GetExecutionInfo()
 
 		// GetWorkflowExecution failed with some transient error.  Return err so we can retry the task later
 		if _, ok := err.(*shared.EntityNotExistsError); !ok {
@@ -111,7 +109,6 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 		if err != nil {
 			return err
 		}
-		executionInfo = msBuilder.GetExecutionInfo()
 		rState := msBuilder.GetReplicationState()
 
 		// Check if this is a stale event
@@ -145,7 +142,7 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 					request.GetSourceCluster(), request.GetVersion(), request.GetFirstEventId(), request.GetNextEventId())
 
 				resolver := newConflictResolver(r.shard, context, r.historyMgr, r.logger)
-				msBuilder, err = resolver.reset(request.GetSourceCluster(), ri.GetLastEventId(), executionInfo.StartTimestamp)
+				msBuilder, err = resolver.reset(uuid.New(), ri.GetLastEventId(), msBuilder.GetExecutionInfo().StartTimestamp)
 				r.logger.Infof("Completed Resetting of workflow execution: Err: %v", err)
 				if err != nil {
 					return err
@@ -201,8 +198,7 @@ func (r *historyReplicator) ApplyReplicationTask(context *workflowExecutionConte
 
 	requestID := uuid.New() // requestID used for start workflow execution request.  This is not on the history event.
 	sBuilder := newStateBuilder(r.shard, msBuilder, r.logger)
-	lastEvent, di, newRunStateBuilder, err := sBuilder.applyEvents(request.GetSourceCluster(),
-		domainID, requestID, execution, request.History, request.NewRunHistory)
+	lastEvent, di, newRunStateBuilder, err := sBuilder.applyEvents(domainID, requestID, execution, request.History, request.NewRunHistory)
 	if err != nil {
 		return err
 	}

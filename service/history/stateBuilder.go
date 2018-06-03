@@ -28,15 +28,17 @@ import (
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/persistence"
 )
 
 type (
 	stateBuilder struct {
-		shard       ShardContext
-		msBuilder   mutableState
-		domainCache cache.DomainCache
-		logger      bark.Logger
+		shard           ShardContext
+		clusterMetadata cluster.Metadata
+		msBuilder       mutableState
+		domainCache     cache.DomainCache
+		logger          bark.Logger
 
 		transferTasks       []persistence.Task
 		timerTasks          []persistence.Task
@@ -48,21 +50,23 @@ type (
 func newStateBuilder(shard ShardContext, msBuilder mutableState, logger bark.Logger) *stateBuilder {
 
 	return &stateBuilder{
-		shard:       shard,
-		msBuilder:   msBuilder,
-		domainCache: shard.GetDomainCache(),
-		logger:      logger,
+		shard:           shard,
+		clusterMetadata: shard.GetService().GetClusterMetadata(),
+		msBuilder:       msBuilder,
+		domainCache:     shard.GetDomainCache(),
+		logger:          logger,
 	}
 }
 
-func (b *stateBuilder) applyEvents(sourceClusterName string, domainID, requestID string,
-	execution shared.WorkflowExecution, history *shared.History, newRunHistory *shared.History) (*shared.HistoryEvent,
+func (b *stateBuilder) applyEvents(domainID, requestID string, execution shared.WorkflowExecution,
+	history *shared.History, newRunHistory *shared.History) (*shared.HistoryEvent,
 	*decisionInfo, mutableState, error) {
 	var lastEvent *shared.HistoryEvent
 	var lastDecision *decisionInfo
 	var newRunStateBuilder mutableState
 	for _, event := range history.Events {
 		lastEvent = event
+		// must set the current version, since this is standby here, not active
 		b.msBuilder.UpdateReplicationStateVersion(event.GetVersion())
 		switch event.GetEventType() {
 		case shared.EventTypeWorkflowExecutionStarted:
@@ -322,7 +326,7 @@ func (b *stateBuilder) applyEvents(sourceClusterName string, domainID, requestID
 			}
 
 			// Create mutable state updates for the new run
-			newRunStateBuilder = newMutableStateBuilderWithReplicationState(b.shard.GetConfig(), b.logger, event.GetVersion())
+			newRunStateBuilder = newMutableStateBuilderWithReplicationState(b.shard.GetConfig(), b.logger, startedEvent.GetVersion())
 			newRunStateBuilder.ReplicateWorkflowExecutionStartedEvent(domainID, parentDomainID, newExecution, uuid.New(),
 				startedAttributes)
 			di := newRunStateBuilder.ReplicateDecisionTaskScheduledEvent(
@@ -337,6 +341,8 @@ func (b *stateBuilder) applyEvents(sourceClusterName string, domainID, requestID
 			newRunExecutionInfo.LastFirstEventID = startedEvent.GetEventId()
 			// Set the history from replication task on the newStateBuilder
 			newRunStateBuilder.SetHistoryBuilder(newHistoryBuilderFromEvents(newRunHistory.Events, b.logger))
+			sourceClusterName := b.clusterMetadata.ClusterNameForFailoverVersion(event.GetVersion())
+			newRunStateBuilder.UpdateReplicationStateLastEventID(sourceClusterName, nextEventID-1)
 
 			b.newRunTransferTasks = append(b.newRunTransferTasks, b.scheduleDecisionTransferTask(domainID,
 				b.getTaskList(newRunStateBuilder), di.ScheduleID))

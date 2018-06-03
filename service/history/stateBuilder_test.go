@@ -59,8 +59,7 @@ type (
 		mockShard           *shardContextImpl
 		mockMutableState    *mockMutableState
 
-		stateBuilder  *stateBuilder
-		sourceCluster string
+		stateBuilder *stateBuilder
 	}
 )
 
@@ -133,7 +132,6 @@ func (s *stateBuilderSuite) toHistory(events ...*shared.HistoryEvent) *shared.Hi
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionStarted() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainID := validDomainID
@@ -178,7 +176,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionStarted() 
 	s.mockUpdateVersion(event)
 	s.mockMutableState.On("GetExecutionInfo").Return(executionInfo)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 	s.Equal(1, len(s.stateBuilder.timerTasks))
 	timerTask, ok := s.stateBuilder.timerTasks[0].(*persistence.WorkflowTimeoutTask)
 	s.True(ok)
@@ -190,7 +188,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionStarted() 
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionTimedOut() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainName := "some random domain name"
@@ -227,7 +224,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionTimedOut()
 	s.mockMutableState.On("ReplicateWorkflowExecutionTimedoutEvent", event).Once()
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 	s.Equal([]persistence.Task{&persistence.CloseExecutionTask{}}, s.stateBuilder.transferTasks)
 	s.Equal(1, len(s.stateBuilder.timerTasks))
 	timerTask, ok := s.stateBuilder.timerTasks[0].(*persistence.DeleteHistoryEventTask)
@@ -239,7 +236,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionTimedOut()
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionTerminated() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainName := "some random domain name"
@@ -276,7 +272,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionTerminated
 	s.mockMutableState.On("ReplicateWorkflowExecutionTerminatedEvent", event).Once()
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 	s.Equal([]persistence.Task{&persistence.CloseExecutionTask{}}, s.stateBuilder.transferTasks)
 	s.Equal(1, len(s.stateBuilder.timerTasks))
 	timerTask, ok := s.stateBuilder.timerTasks[0].(*persistence.DeleteHistoryEventTask)
@@ -288,7 +284,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionTerminated
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionSignaled() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainID := validDomainID
@@ -308,7 +303,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionSignaled()
 	}
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 
 	s.Empty(s.stateBuilder.timerTasks)
 	s.Empty(s.stateBuilder.transferTasks)
@@ -317,7 +312,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionSignaled()
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionFailed() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainName := "some random domain name"
@@ -354,7 +348,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionFailed() {
 	s.mockMutableState.On("ReplicateWorkflowExecutionFailedEvent", event).Once()
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 	s.Equal([]persistence.Task{&persistence.CloseExecutionTask{}}, s.stateBuilder.transferTasks)
 	s.Equal(1, len(s.stateBuilder.timerTasks))
 	timerTask, ok := s.stateBuilder.timerTasks[0].(*persistence.DeleteHistoryEventTask)
@@ -366,11 +360,161 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionFailed() {
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedAsNew() {
-	// TODO
+	sourceCluster := "some random source cluster"
+	version := int64(1)
+	requestID := uuid.New()
+	domainName := "some random domain name"
+	domainID := validDomainID
+	execution := shared.WorkflowExecution{
+		WorkflowId: common.StringPtr("some random workflow ID"),
+		RunId:      common.StringPtr(validRunID),
+	}
+	parentName := "some random parent domain names"
+	parentDomainID := uuid.New()
+	parentWorkflowID := "some random parent workflow ID"
+	parentRunID := uuid.New()
+	parentInitiatedEventID := int64(144)
+	retentionDays := int32(1)
+
+	now := time.Now()
+	tasklist := "some random tasklist"
+	workflowType := "some random workflow type"
+	workflowTimeoutSecond := int32(110)
+	decisionTimeoutSecond := int32(11)
+	newRunID := uuid.New()
+
+	continueAsNewEvenType := shared.EventTypeWorkflowExecutionContinuedAsNew
+	continueAsNewEvent := &shared.HistoryEvent{
+		Version:   common.Int64Ptr(version),
+		EventId:   common.Int64Ptr(130),
+		Timestamp: common.Int64Ptr(now.UnixNano()),
+		EventType: &continueAsNewEvenType,
+		WorkflowExecutionContinuedAsNewEventAttributes: &shared.WorkflowExecutionContinuedAsNewEventAttributes{
+			NewExecutionRunId: common.StringPtr(newRunID),
+		},
+	}
+
+	newRunStartedEvenType := shared.EventTypeWorkflowExecutionStarted
+	newRunStartedEvent := &shared.HistoryEvent{
+		Version:   common.Int64Ptr(version),
+		EventId:   common.Int64Ptr(1),
+		Timestamp: common.Int64Ptr(now.UnixNano()),
+		EventType: &newRunStartedEvenType,
+		WorkflowExecutionStartedEventAttributes: &shared.WorkflowExecutionStartedEventAttributes{
+			ParentWorkflowDomain: common.StringPtr(parentName),
+			ParentWorkflowExecution: &shared.WorkflowExecution{
+				WorkflowId: common.StringPtr(parentWorkflowID),
+				RunId:      common.StringPtr(parentRunID),
+			},
+			ParentInitiatedEventId:              common.Int64Ptr(parentInitiatedEventID),
+			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(workflowTimeoutSecond),
+			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(decisionTimeoutSecond),
+			TaskList:                            &shared.TaskList{Name: common.StringPtr(tasklist)},
+			WorkflowType:                        &shared.WorkflowType{Name: common.StringPtr(workflowType)},
+		},
+	}
+
+	newRunDecisionEvenType := shared.EventTypeDecisionTaskScheduled
+	newRunDecisionEvent := &shared.HistoryEvent{
+		Version:   common.Int64Ptr(version),
+		EventId:   common.Int64Ptr(2),
+		Timestamp: common.Int64Ptr(now.UnixNano()),
+		EventType: &newRunDecisionEvenType,
+		DecisionTaskScheduledEventAttributes: &shared.DecisionTaskScheduledEventAttributes{
+			TaskList:                   &shared.TaskList{Name: common.StringPtr(tasklist)},
+			StartToCloseTimeoutSeconds: common.Int32Ptr(decisionTimeoutSecond),
+		},
+	}
+
+	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: domainID}).Return(
+		&persistence.GetDomainResponse{
+			Info:   &persistence.DomainInfo{ID: domainID, Name: domainName},
+			Config: &persistence.DomainConfig{Retention: retentionDays},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
+			IsGlobalDomain: true,
+		}, nil,
+	).Once()
+	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{Name: parentName}).Return(
+		&persistence.GetDomainResponse{
+			Info:   &persistence.DomainInfo{ID: parentDomainID, Name: parentName},
+			Config: &persistence.DomainConfig{Retention: 1},
+			ReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters: []*persistence.ClusterReplicationConfig{
+					&persistence.ClusterReplicationConfig{ClusterName: cluster.TestCurrentClusterName},
+				},
+			},
+			IsGlobalDomain: true,
+		}, nil,
+	).Once()
+	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", continueAsNewEvent.GetVersion()).Return(sourceCluster).Once()
+	s.mockMutableState.On("ReplicateWorkflowExecutionContinuedAsNewEvent",
+		sourceCluster,
+		domainID,
+		continueAsNewEvent,
+		newRunStartedEvent,
+		&decisionInfo{
+			Version:         newRunDecisionEvent.GetVersion(),
+			ScheduleID:      newRunDecisionEvent.GetEventId(),
+			StartedID:       common.EmptyEventID,
+			RequestID:       emptyUUID,
+			DecisionTimeout: decisionTimeoutSecond,
+			TaskList:        tasklist,
+			Attempt:         0,
+		},
+		mock.Anything,
+	).Once()
+	s.mockUpdateVersion(continueAsNewEvent)
+
+	newRunHistory := &shared.History{Events: []*shared.HistoryEvent{newRunStartedEvent, newRunDecisionEvent}}
+	_, _, newRunStateBuilder, err := s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(continueAsNewEvent), newRunHistory)
+	s.Nil(err)
+	expectedNewRunStateBuilder := newMutableStateBuilderWithReplicationState(s.mockShard.GetConfig(), s.logger, newRunStartedEvent.GetVersion())
+	expectedNewRunStateBuilder.ReplicateWorkflowExecutionStartedEvent(
+		domainID,
+		common.StringPtr(parentDomainID),
+		shared.WorkflowExecution{
+			WorkflowId: execution.WorkflowId,
+			RunId:      common.StringPtr(newRunID),
+		},
+		newRunStateBuilder.GetExecutionInfo().CreateRequestID,
+		newRunStartedEvent.WorkflowExecutionStartedEventAttributes,
+	)
+	expectedNewRunStateBuilder.ReplicateDecisionTaskScheduledEvent(
+		newRunDecisionEvent.GetVersion(),
+		newRunDecisionEvent.GetEventId(),
+		tasklist,
+		decisionTimeoutSecond,
+	)
+	expectedNewRunStateBuilder.GetExecutionInfo().LastFirstEventID = newRunStartedEvent.GetEventId()
+	expectedNewRunStateBuilder.GetExecutionInfo().NextEventID = newRunDecisionEvent.GetEventId() + 1
+	expectedNewRunStateBuilder.SetHistoryBuilder(newHistoryBuilderFromEvents(newRunHistory.Events, s.logger))
+	expectedNewRunStateBuilder.UpdateReplicationStateLastEventID(sourceCluster, newRunDecisionEvent.GetEventId())
+	s.Equal(expectedNewRunStateBuilder, newRunStateBuilder)
+
+	s.Equal([]persistence.Task{&persistence.CloseExecutionTask{}}, s.stateBuilder.transferTasks)
+	s.Equal(1, len(s.stateBuilder.timerTasks))
+	timerTask, ok := s.stateBuilder.timerTasks[0].(*persistence.DeleteHistoryEventTask)
+	s.True(ok)
+	s.True(timerTask.VisibilityTimestamp.Equal(now.Add(time.Duration(retentionDays) * time.Hour * 24)))
+
+	s.Equal(1, len(s.stateBuilder.newRunTimerTasks))
+	newRunTimerTask, ok := s.stateBuilder.newRunTimerTasks[0].(*persistence.WorkflowTimeoutTask)
+	s.True(ok)
+	s.True(newRunTimerTask.VisibilityTimestamp.Equal(now.Add(time.Duration(workflowTimeoutSecond) * time.Second)))
+	s.Equal([]persistence.Task{&persistence.DecisionTask{
+		DomainID:   domainID,
+		TaskList:   tasklist,
+		ScheduleID: newRunDecisionEvent.GetEventId(),
+	}}, s.stateBuilder.newRunTransferTasks)
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionCompleted() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainName := "some random domain name"
@@ -407,7 +551,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionCompleted(
 	s.mockMutableState.On("ReplicateWorkflowExecutionCompletedEvent", event).Once()
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 	s.Equal([]persistence.Task{&persistence.CloseExecutionTask{}}, s.stateBuilder.transferTasks)
 	s.Equal(1, len(s.stateBuilder.timerTasks))
 	timerTask, ok := s.stateBuilder.timerTasks[0].(*persistence.DeleteHistoryEventTask)
@@ -419,7 +563,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionCompleted(
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionCanceled() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainName := "some random domain name"
@@ -456,7 +599,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionCanceled()
 	s.mockMutableState.On("ReplicateWorkflowExecutionCanceledEvent", event).Once()
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 	s.Equal([]persistence.Task{&persistence.CloseExecutionTask{}}, s.stateBuilder.transferTasks)
 	s.Equal(1, len(s.stateBuilder.timerTasks))
 	timerTask, ok := s.stateBuilder.timerTasks[0].(*persistence.DeleteHistoryEventTask)
@@ -468,7 +611,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionCanceled()
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionCancelRequested() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainID := validDomainID
@@ -489,7 +631,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionCancelRequ
 	s.mockMutableState.On("ReplicateWorkflowExecutionCancelRequestedEvent", event).Once()
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 
 	s.Empty(s.stateBuilder.timerTasks)
 	s.Empty(s.stateBuilder.transferTasks)
@@ -498,7 +640,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionCancelRequ
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeTimerStarted() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainID := validDomainID
@@ -533,7 +674,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeTimerStarted() {
 	s.mockMutableState.On("ReplicateTimerStartedEvent", event).Return(ti).Once()
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 	s.Equal(1, len(s.stateBuilder.timerTasks))
 	timerTask, ok := s.stateBuilder.timerTasks[0].(*persistence.UserTimerTask)
 	s.True(ok)
@@ -546,7 +687,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeTimerStarted() {
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeTimerFired() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainID := validDomainID
@@ -567,7 +707,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeTimerFired() {
 	s.mockMutableState.On("ReplicateTimerFiredEvent", event).Once()
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 
 	s.Empty(s.stateBuilder.timerTasks)
 	s.Empty(s.stateBuilder.transferTasks)
@@ -576,7 +716,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeTimerFired() {
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeTimerCanceled() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainID := validDomainID
@@ -597,7 +736,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeTimerCanceled() {
 	s.mockMutableState.On("ReplicateTimerCanceledEvent", event).Once()
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 
 	s.Empty(s.stateBuilder.timerTasks)
 	s.Empty(s.stateBuilder.transferTasks)
@@ -606,7 +745,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeTimerCanceled() {
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeStartChildWorkflowExecutionInitiated() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainID := validDomainID
@@ -659,7 +797,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeStartChildWorkflowExecution
 	).Once()
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 	s.Equal([]persistence.Task{&persistence.StartChildExecutionTask{
 		TargetDomainID:   targetDomainID,
 		TargetWorkflowID: targetWorkflowID,
@@ -672,7 +810,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeStartChildWorkflowExecution
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeStartChildWorkflowExecutionFailed() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainID := validDomainID
@@ -693,7 +830,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeStartChildWorkflowExecution
 	s.mockMutableState.On("ReplicateStartChildWorkflowExecutionFailedEvent", event).Once()
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 
 	s.Empty(s.stateBuilder.timerTasks)
 	s.Empty(s.stateBuilder.transferTasks)
@@ -702,7 +839,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeStartChildWorkflowExecution
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeSignalExternalWorkflowExecutionInitiated() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainID := validDomainID
@@ -764,7 +900,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeSignalExternalWorkflowExecu
 	).Once()
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 
 	s.Equal([]persistence.Task{&persistence.SignalExecutionTask{
 		TargetDomainID:          targetDomainID,
@@ -780,7 +916,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeSignalExternalWorkflowExecu
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeSignalExternalWorkflowExecutionFailed() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainID := validDomainID
@@ -801,7 +936,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeSignalExternalWorkflowExecu
 	s.mockMutableState.On("ReplicateSignalExternalWorkflowExecutionFailedEvent", event).Once()
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 
 	s.Empty(s.stateBuilder.timerTasks)
 	s.Empty(s.stateBuilder.transferTasks)
@@ -810,7 +945,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeSignalExternalWorkflowExecu
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeRequestCancelExternalWorkflowExecutionInitiated() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainID := validDomainID
@@ -866,7 +1000,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeRequestCancelExternalWorkfl
 	).Once()
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 
 	s.Equal([]persistence.Task{&persistence.CancelExecutionTask{
 		TargetDomainID:          targetDomainID,
@@ -882,7 +1016,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeRequestCancelExternalWorkfl
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeRequestCancelExternalWorkflowExecutionFailed() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainID := validDomainID
@@ -903,7 +1036,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeRequestCancelExternalWorkfl
 	s.mockMutableState.On("ReplicateRequestCancelExternalWorkflowExecutionFailedEvent", event).Once()
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 
 	s.Empty(s.stateBuilder.timerTasks)
 	s.Empty(s.stateBuilder.transferTasks)
@@ -912,7 +1045,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeRequestCancelExternalWorkfl
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeRequestCancelActivityTaskFailed() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainID := validDomainID
@@ -932,7 +1064,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeRequestCancelActivityTaskFa
 	}
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 
 	s.Empty(s.stateBuilder.timerTasks)
 	s.Empty(s.stateBuilder.transferTasks)
@@ -941,7 +1073,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeRequestCancelActivityTaskFa
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeMarkerRecorded() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainID := validDomainID
@@ -961,7 +1092,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeMarkerRecorded() {
 	}
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 
 	s.Empty(s.stateBuilder.timerTasks)
 	s.Empty(s.stateBuilder.transferTasks)
@@ -970,7 +1101,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeMarkerRecorded() {
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeExternalWorkflowExecutionSignaled() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainID := validDomainID
@@ -991,7 +1121,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeExternalWorkflowExecutionSi
 	s.mockMutableState.On("ReplicateExternalWorkflowExecutionSignaled", event).Once()
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 
 	s.Empty(s.stateBuilder.timerTasks)
 	s.Empty(s.stateBuilder.transferTasks)
@@ -1000,7 +1130,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeExternalWorkflowExecutionSi
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeExternalWorkflowExecutionCancelRequested() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainID := validDomainID
@@ -1021,7 +1150,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeExternalWorkflowExecutionCa
 	s.mockMutableState.On("ReplicateExternalWorkflowExecutionCancelRequested", event).Once()
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 
 	s.Empty(s.stateBuilder.timerTasks)
 	s.Empty(s.stateBuilder.transferTasks)
@@ -1030,7 +1159,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeExternalWorkflowExecutionCa
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskTimedOut() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainID := validDomainID
@@ -1056,7 +1184,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskTimedOut() {
 	s.mockMutableState.On("ReplicateDecisionTaskTimedOutEvent", scheduleID, startedID).Once()
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 
 	s.Empty(s.stateBuilder.timerTasks)
 	s.Empty(s.stateBuilder.transferTasks)
@@ -1065,7 +1193,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskTimedOut() {
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskStarted() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainID := validDomainID
@@ -1104,7 +1231,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskStarted() {
 	s.mockMutableState.On("UpdateDecision", di).Once()
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 
 	s.Equal(1, len(s.stateBuilder.timerTasks))
 	timerTask, ok := s.stateBuilder.timerTasks[0].(*persistence.DecisionTimeoutTask)
@@ -1118,7 +1245,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskStarted() {
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskScheduled() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainID := validDomainID
@@ -1158,7 +1284,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskScheduled() {
 	s.mockMutableState.On("UpdateDecision", di).Once()
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 
 	s.Equal([]persistence.Task{&persistence.DecisionTask{
 		DomainID:   domainID,
@@ -1172,7 +1298,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskScheduled() {
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskFailed() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainID := validDomainID
@@ -1198,7 +1323,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskFailed() {
 	s.mockMutableState.On("ReplicateDecisionTaskFailedEvent", scheduleID, startedID).Once()
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 
 	s.Empty(s.stateBuilder.timerTasks)
 	s.Empty(s.stateBuilder.transferTasks)
@@ -1207,7 +1332,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskFailed() {
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskCompleted() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainID := validDomainID
@@ -1233,7 +1357,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskCompleted() {
 	s.mockMutableState.On("ReplicateDecisionTaskCompletedEvent", scheduleID, startedID).Once()
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 
 	s.Empty(s.stateBuilder.timerTasks)
 	s.Empty(s.stateBuilder.transferTasks)
@@ -1242,7 +1366,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskCompleted() {
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeChildWorkflowExecutionTimedOut() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainID := validDomainID
@@ -1263,7 +1386,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeChildWorkflowExecutionTimed
 	s.mockMutableState.On("ReplicateChildWorkflowExecutionTimedOutEvent", event).Once()
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 
 	s.Empty(s.stateBuilder.timerTasks)
 	s.Empty(s.stateBuilder.transferTasks)
@@ -1272,7 +1395,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeChildWorkflowExecutionTimed
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeChildWorkflowExecutionTerminated() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainID := validDomainID
@@ -1293,7 +1415,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeChildWorkflowExecutionTermi
 	s.mockMutableState.On("ReplicateChildWorkflowExecutionTerminatedEvent", event).Once()
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 
 	s.Empty(s.stateBuilder.timerTasks)
 	s.Empty(s.stateBuilder.transferTasks)
@@ -1302,7 +1424,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeChildWorkflowExecutionTermi
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeChildWorkflowExecutionStarted() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainID := validDomainID
@@ -1323,7 +1444,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeChildWorkflowExecutionStart
 	s.mockMutableState.On("ReplicateChildWorkflowExecutionStartedEvent", event).Return(nil).Once()
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 
 	s.Empty(s.stateBuilder.timerTasks)
 	s.Empty(s.stateBuilder.transferTasks)
@@ -1332,7 +1453,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeChildWorkflowExecutionStart
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeChildWorkflowExecutionFailed() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainID := validDomainID
@@ -1353,7 +1473,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeChildWorkflowExecutionFaile
 	s.mockMutableState.On("ReplicateChildWorkflowExecutionFailedEvent", event).Once()
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 
 	s.Empty(s.stateBuilder.timerTasks)
 	s.Empty(s.stateBuilder.transferTasks)
@@ -1362,7 +1482,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeChildWorkflowExecutionFaile
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeChildWorkflowExecutionCompleted() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainID := validDomainID
@@ -1383,7 +1502,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeChildWorkflowExecutionCompl
 	s.mockMutableState.On("ReplicateChildWorkflowExecutionCompletedEvent", event).Once()
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 
 	s.Empty(s.stateBuilder.timerTasks)
 	s.Empty(s.stateBuilder.transferTasks)
@@ -1392,7 +1511,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeChildWorkflowExecutionCompl
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeChildWorkflowExecutionCanceled() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainID := validDomainID
@@ -1413,7 +1531,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeChildWorkflowExecutionCance
 	s.mockMutableState.On("ReplicateChildWorkflowExecutionCanceledEvent", event).Once()
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 
 	s.Empty(s.stateBuilder.timerTasks)
 	s.Empty(s.stateBuilder.transferTasks)
@@ -1422,7 +1540,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeChildWorkflowExecutionCance
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeCancelTimerFailed() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainID := validDomainID
@@ -1442,7 +1559,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeCancelTimerFailed() {
 	}
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 
 	s.Empty(s.stateBuilder.timerTasks)
 	s.Empty(s.stateBuilder.transferTasks)
@@ -1451,7 +1568,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeCancelTimerFailed() {
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskTimedOut() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainID := validDomainID
@@ -1472,7 +1588,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskTimedOut() {
 	s.mockMutableState.On("ReplicateActivityTaskTimedOutEvent", event).Return(nil).Once()
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 
 	s.Empty(s.stateBuilder.timerTasks)
 	s.Empty(s.stateBuilder.transferTasks)
@@ -1481,7 +1597,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskTimedOut() {
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskStarted() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainID := validDomainID
@@ -1502,7 +1617,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskStarted() {
 	s.mockMutableState.On("ReplicateActivityTaskStartedEvent", event).Once()
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 
 	s.Empty(s.stateBuilder.timerTasks)
 	s.Empty(s.stateBuilder.transferTasks)
@@ -1511,7 +1626,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskStarted() {
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskScheduled() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainID := validDomainID
@@ -1562,7 +1676,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskScheduled() {
 	s.mockMutableState.On("ReplicateActivityTaskScheduledEvent", event).Return(ai).Once()
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 	s.Equal(1, len(s.stateBuilder.timerTasks))
 	timerTask, ok := s.stateBuilder.timerTasks[0].(*persistence.ActivityTimeoutTask)
 	s.True(ok)
@@ -1579,7 +1693,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskScheduled() {
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskFailed() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainID := validDomainID
@@ -1600,7 +1713,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskFailed() {
 	s.mockMutableState.On("ReplicateActivityTaskFailedEvent", event).Return(nil).Once()
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 
 	s.Empty(s.stateBuilder.timerTasks)
 	s.Empty(s.stateBuilder.transferTasks)
@@ -1609,7 +1722,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskFailed() {
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskCompleted() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainID := validDomainID
@@ -1630,7 +1742,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskCompleted() {
 	s.mockMutableState.On("ReplicateActivityTaskCompletedEvent", event).Return(nil).Once()
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 
 	s.Empty(s.stateBuilder.timerTasks)
 	s.Empty(s.stateBuilder.transferTasks)
@@ -1639,7 +1751,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskCompleted() {
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskCanceled() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainID := validDomainID
@@ -1660,7 +1771,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskCanceled() {
 	s.mockMutableState.On("ReplicateActivityTaskCanceledEvent", event).Return(nil).Once()
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 
 	s.Empty(s.stateBuilder.timerTasks)
 	s.Empty(s.stateBuilder.transferTasks)
@@ -1669,7 +1780,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskCanceled() {
 }
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskCancelRequested() {
-	sourceCluster := "some random source cluster"
 	version := int64(1)
 	requestID := uuid.New()
 	domainID := validDomainID
@@ -1690,7 +1800,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskCancelRequested
 	s.mockMutableState.On("ReplicateActivityTaskCancelRequestedEvent", event).Once()
 	s.mockUpdateVersion(event)
 
-	s.stateBuilder.applyEvents(sourceCluster, domainID, requestID, execution, s.toHistory(event), nil)
+	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
 
 	s.Empty(s.stateBuilder.timerTasks)
 	s.Empty(s.stateBuilder.transferTasks)
