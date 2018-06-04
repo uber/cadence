@@ -100,7 +100,6 @@ func (adh *AdminHandler) InquireWorkflowExecution(ctx context.Context, request *
 	return &admin.InquireWorkflowExecutionResponse{
 		ShardId:                common.StringPtr(shardIDForOutput),
 		HistoryAddr:            common.StringPtr(historyAddr),
-		OtherInfo:              resp.OtherInfo,
 		MutableStateInDatabase: resp.MutableStateInDatabase,
 		MutableStateInCache:    resp.MutableStateInCache,
 	}, err

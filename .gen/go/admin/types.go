@@ -189,7 +189,6 @@ func (v *InquireWorkflowExecutionRequest) GetDomain() (o string) {
 type InquireWorkflowExecutionResponse struct {
 	ShardId                *string `json:"shardId,omitempty"`
 	HistoryAddr            *string `json:"historyAddr,omitempty"`
-	OtherInfo              *string `json:"otherInfo,omitempty"`
 	MutableStateInCache    *string `json:"mutableStateInCache,omitempty"`
 	MutableStateInDatabase *string `json:"mutableStateInDatabase,omitempty"`
 }
@@ -211,7 +210,7 @@ type InquireWorkflowExecutionResponse struct {
 //   }
 func (v *InquireWorkflowExecutionResponse) ToWire() (wire.Value, error) {
 	var (
-		fields [5]wire.Field
+		fields [4]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -231,14 +230,6 @@ func (v *InquireWorkflowExecutionResponse) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 20, Value: w}
-		i++
-	}
-	if v.OtherInfo != nil {
-		w, err = wire.NewValueString(*(v.OtherInfo)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 30, Value: w}
 		i++
 	}
 	if v.MutableStateInCache != nil {
@@ -303,16 +294,6 @@ func (v *InquireWorkflowExecutionResponse) FromWire(w wire.Value) error {
 				}
 
 			}
-		case 30:
-			if field.Value.Type() == wire.TBinary {
-				var x string
-				x, err = field.Value.GetString(), error(nil)
-				v.OtherInfo = &x
-				if err != nil {
-					return err
-				}
-
-			}
 		case 40:
 			if field.Value.Type() == wire.TBinary {
 				var x string
@@ -346,7 +327,7 @@ func (v *InquireWorkflowExecutionResponse) String() string {
 		return "<nil>"
 	}
 
-	var fields [5]string
+	var fields [4]string
 	i := 0
 	if v.ShardId != nil {
 		fields[i] = fmt.Sprintf("ShardId: %v", *(v.ShardId))
@@ -354,10 +335,6 @@ func (v *InquireWorkflowExecutionResponse) String() string {
 	}
 	if v.HistoryAddr != nil {
 		fields[i] = fmt.Sprintf("HistoryAddr: %v", *(v.HistoryAddr))
-		i++
-	}
-	if v.OtherInfo != nil {
-		fields[i] = fmt.Sprintf("OtherInfo: %v", *(v.OtherInfo))
 		i++
 	}
 	if v.MutableStateInCache != nil {
@@ -381,9 +358,6 @@ func (v *InquireWorkflowExecutionResponse) Equals(rhs *InquireWorkflowExecutionR
 		return false
 	}
 	if !_String_EqualsPtr(v.HistoryAddr, rhs.HistoryAddr) {
-		return false
-	}
-	if !_String_EqualsPtr(v.OtherInfo, rhs.OtherInfo) {
 		return false
 	}
 	if !_String_EqualsPtr(v.MutableStateInCache, rhs.MutableStateInCache) {
@@ -411,16 +385,6 @@ func (v *InquireWorkflowExecutionResponse) GetShardId() (o string) {
 func (v *InquireWorkflowExecutionResponse) GetHistoryAddr() (o string) {
 	if v.HistoryAddr != nil {
 		return *v.HistoryAddr
-	}
-
-	return
-}
-
-// GetOtherInfo returns the value of OtherInfo if it is set or its
-// zero value if it is unset.
-func (v *InquireWorkflowExecutionResponse) GetOtherInfo() (o string) {
-	if v.OtherInfo != nil {
-		return *v.OtherInfo
 	}
 
 	return

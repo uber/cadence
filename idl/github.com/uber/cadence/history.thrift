@@ -50,7 +50,6 @@ struct InquireMutableStateRequest{
 }
 
 struct InquireMutableStateResponse{
-  10: optional string otherInfo
   30: optional string mutableStateInCache
   40: optional string mutableStateInDatabase
 }

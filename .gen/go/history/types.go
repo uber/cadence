@@ -1090,7 +1090,6 @@ func (v *InquireMutableStateRequest) GetDomainUUID() (o string) {
 }
 
 type InquireMutableStateResponse struct {
-	OtherInfo              *string `json:"otherInfo,omitempty"`
 	MutableStateInCache    *string `json:"mutableStateInCache,omitempty"`
 	MutableStateInDatabase *string `json:"mutableStateInDatabase,omitempty"`
 }
@@ -1112,20 +1111,12 @@ type InquireMutableStateResponse struct {
 //   }
 func (v *InquireMutableStateResponse) ToWire() (wire.Value, error) {
 	var (
-		fields [3]wire.Field
+		fields [2]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
-	if v.OtherInfo != nil {
-		w, err = wire.NewValueString(*(v.OtherInfo)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 10, Value: w}
-		i++
-	}
 	if v.MutableStateInCache != nil {
 		w, err = wire.NewValueString(*(v.MutableStateInCache)), error(nil)
 		if err != nil {
@@ -1168,16 +1159,6 @@ func (v *InquireMutableStateResponse) FromWire(w wire.Value) error {
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
-		case 10:
-			if field.Value.Type() == wire.TBinary {
-				var x string
-				x, err = field.Value.GetString(), error(nil)
-				v.OtherInfo = &x
-				if err != nil {
-					return err
-				}
-
-			}
 		case 30:
 			if field.Value.Type() == wire.TBinary {
 				var x string
@@ -1211,12 +1192,8 @@ func (v *InquireMutableStateResponse) String() string {
 		return "<nil>"
 	}
 
-	var fields [3]string
+	var fields [2]string
 	i := 0
-	if v.OtherInfo != nil {
-		fields[i] = fmt.Sprintf("OtherInfo: %v", *(v.OtherInfo))
-		i++
-	}
 	if v.MutableStateInCache != nil {
 		fields[i] = fmt.Sprintf("MutableStateInCache: %v", *(v.MutableStateInCache))
 		i++
@@ -1234,9 +1211,6 @@ func (v *InquireMutableStateResponse) String() string {
 //
 // This function performs a deep comparison.
 func (v *InquireMutableStateResponse) Equals(rhs *InquireMutableStateResponse) bool {
-	if !_String_EqualsPtr(v.OtherInfo, rhs.OtherInfo) {
-		return false
-	}
 	if !_String_EqualsPtr(v.MutableStateInCache, rhs.MutableStateInCache) {
 		return false
 	}
@@ -1245,16 +1219,6 @@ func (v *InquireMutableStateResponse) Equals(rhs *InquireMutableStateResponse) b
 	}
 
 	return true
-}
-
-// GetOtherInfo returns the value of OtherInfo if it is set or its
-// zero value if it is unset.
-func (v *InquireMutableStateResponse) GetOtherInfo() (o string) {
-	if v.OtherInfo != nil {
-		return *v.OtherInfo
-	}
-
-	return
 }
 
 // GetMutableStateInCache returns the value of MutableStateInCache if it is set or its

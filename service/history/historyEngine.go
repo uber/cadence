@@ -555,14 +555,6 @@ func (e *historyEngineImpl) InquireMutableState(ctx context.Context,
 	if cacheHit && cacheCtx.msBuilder != nil {
 		msb := cacheCtx.msBuilder
 		retResp.MutableStateInCache, retError = e.toMutableStateJSON(msb)
-		otherInfo := ""
-		if len(msb.updateActivityInfos) > 0 {
-			otherInfo += "updateActivityInfos is not empty;"
-		}
-		if len(msb.deleteActivityInfos) > 0 {
-			otherInfo += "deleteActivityInfos is not empty;"
-		}
-		retResp.OtherInfo = &otherInfo
 	}
 
 	msb, retError := dbCtx.loadWorkflowExecution()

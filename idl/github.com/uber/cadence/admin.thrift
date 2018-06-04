@@ -46,7 +46,6 @@ struct InquireWorkflowExecutionRequest {
 struct InquireWorkflowExecutionResponse{
   10: optional string shardId
   20: optional string historyAddr
-  30: optional string otherInfo
   40: optional string mutableStateInCache
   50: optional string mutableStateInDatabase
 }
