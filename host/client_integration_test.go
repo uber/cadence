@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
+	"errors"
 	"flag"
 	"fmt"
 	"github.com/pborman/uuid"
@@ -42,6 +43,7 @@ import (
 	"go.uber.org/cadence/workflow"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/tchannel"
+	"go.uber.org/zap"
 	"os"
 	"reflect"
 	"testing"
@@ -83,7 +85,7 @@ func (s *clientIntegrationSuite) SetupSuite() {
 	formatter := &log.TextFormatter{}
 	formatter.FullTimestamp = true
 	logger.Formatter = formatter
-	logger.Level = log.DebugLevel
+	//logger.Level = log.DebugLevel
 	s.logger = bark.NewLoggerFromLogrus(logger)
 	s.setupSuite(false, false)
 
@@ -282,4 +284,89 @@ func (s *clientIntegrationSuite) TestClientDataConverter() {
 	err = we.Get(ctx, &res)
 	s.NoError(err)
 	s.Equal("hello_world,hello_world1", res)
+}
+
+var childTaskList = "client-integration-data-converter-child-tasklist"
+
+func testParentWorkflow(ctx workflow.Context) (string, error) {
+	logger := workflow.GetLogger(ctx)
+	execution := workflow.GetInfo(ctx).WorkflowExecution
+	childID := fmt.Sprintf("child_workflow:%v", execution.RunID)
+	cwo := workflow.ChildWorkflowOptions{
+		WorkflowID:                   childID,
+		ExecutionStartToCloseTimeout: time.Minute,
+	}
+	ctx = workflow.WithChildOptions(ctx, cwo)
+	var result string
+	err := workflow.ExecuteChildWorkflow(ctx, testChildWorkflow, 0, 3).Get(ctx, &result)
+	if err != nil {
+		logger.Error("Parent execution received child execution failure.", zap.Error(err))
+		return "", err
+	}
+
+	childID1 := fmt.Sprintf("child_workflow1:%v", execution.RunID)
+	cwo1 := workflow.ChildWorkflowOptions{
+		WorkflowID:                   childID1,
+		ExecutionStartToCloseTimeout: time.Minute,
+		TaskList:                     childTaskList,
+	}
+	ctx1 := workflow.WithChildOptions(ctx, cwo1)
+	ctx1 = workflow.WithDataConverter(ctx1, newTestDataConverter())
+	var result1 string
+	err1 := workflow.ExecuteChildWorkflow(ctx1, testChildWorkflow, 0, 3).Get(ctx1, &result1)
+	if err1 != nil {
+		logger.Error("Parent execution received child execution 1 failure.", zap.Error(err1))
+		return "", err1
+	}
+
+	logger.Info("Parent execution completed.", zap.String("Result", result+result1))
+	return "success", nil
+}
+
+func testChildWorkflow(ctx workflow.Context, totalCount, runCount int) (string, error) {
+	logger := workflow.GetLogger(ctx)
+	logger.Info("Child workflow execution started.")
+	if runCount <= 0 {
+		logger.Error("Invalid valid for run count.", zap.Int("RunCount", runCount))
+		return "", errors.New("invalid run count")
+	}
+
+	totalCount++
+	runCount--
+	if runCount == 0 {
+		result := fmt.Sprintf("Child workflow execution completed after %v runs", totalCount)
+		logger.Info("Child workflow completed.", zap.String("Result", result))
+		return result, nil
+	}
+
+	logger.Info("Child workflow starting new run.", zap.Int("RunCount", runCount), zap.Int("TotalCount",
+		totalCount))
+	return "", workflow.NewContinueAsNewError(ctx, testChildWorkflow, totalCount, runCount)
+}
+
+func (s *clientIntegrationSuite) TestClientDataConverter_WithChild() {
+	workflow.Register(testParentWorkflow)
+	workflow.Register(testChildWorkflow)
+
+	worker := s.startWorkerWithDataConverter(childTaskList)
+	defer worker.Stop()
+
+	id := "client-integration-data-converter-with-child-workflow"
+	workflowOptions := client.StartWorkflowOptions{
+		ID:                           id,
+		TaskList:                     s.taskList,
+		ExecutionStartToCloseTimeout: 60 * time.Second,
+	}
+	ctx, _ := context.WithTimeout(context.Background(), 60*time.Second)
+	we, err := s.wfClient.ExecuteWorkflow(ctx, workflowOptions, testParentWorkflow)
+	if err != nil {
+		s.logger.Fatalf("Start workflow with err: %v", err)
+	}
+	s.NotNil(we)
+	s.True(we.GetRunID() != "")
+
+	var res string
+	err = we.Get(ctx, &res)
+	s.NoError(err)
+	s.Equal("success", res)
 }
