@@ -564,7 +564,7 @@ func (e *historyEngineImpl) InquireMutableState(ctx context.Context,
 }
 
 func (e *historyEngineImpl) toMutableStateJSON(msb *mutableStateBuilder) (*string, error) {
-	ms := msb.Unload()
+	ms := msb.CopyTo()
 
 	jsonBytes, err := json.Marshal(ms)
 	if err != nil {

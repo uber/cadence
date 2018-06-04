@@ -169,7 +169,7 @@ func newMutableStateBuilderWithReplicationState(config *Config, logger bark.Logg
 	return s
 }
 
-func (e *mutableStateBuilder) Unload() *persistence.WorkflowMutableState {
+func (e *mutableStateBuilder) CopyTo() *persistence.WorkflowMutableState {
 	state := &persistence.WorkflowMutableState{}
 
 	state.ActivitInfos = e.pendingActivityInfoIDs
