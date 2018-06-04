@@ -64,6 +64,7 @@ func (r *conflictResolver) reset(requestID string, replayEventID int64, startTim
 	var resetMutableStateBuilder *mutableStateBuilder
 	var sBuilder *stateBuilder
 	var lastFirstEventID int64
+	var lastEvent *shared.HistoryEvent
 	eventsToApply := replayNextEventID - common.FirstEventID
 	for hasMore := true; hasMore; hasMore = len(nextPageToken) > 0 {
 		history, nextPageToken, lastFirstEventID, err = r.getHistory(domainID, execution, common.FirstEventID,
@@ -88,6 +89,7 @@ func (r *conflictResolver) reset(requestID string, replayEventID int64, startTim
 		}
 
 		firstEvent := history.Events[0]
+		lastEvent = history.Events[len(history.Events)-1]
 		if firstEvent.GetEventId() == common.FirstEventID {
 			resetMutableStateBuilder = newMutableStateBuilderWithReplicationState(r.shard.GetConfig(), r.logger,
 				firstEvent.GetVersion())
@@ -109,7 +111,7 @@ func (r *conflictResolver) reset(requestID string, replayEventID int64, startTim
 	resetMutableStateBuilder.executionInfo.LastUpdatedTimestamp = startTime
 
 	sourceCluster := r.clusterMetadata.ClusterNameForFailoverVersion(resetMutableStateBuilder.GetCurrentVersion())
-	resetMutableStateBuilder.updateReplicationStateLastEventID(sourceCluster, replayEventID)
+	resetMutableStateBuilder.updateReplicationStateLastEventID(sourceCluster, lastEvent.GetVersion(), replayEventID)
 
 	r.logger.Infof("All events applied for execution.  WorkflowID: %v, RunID: %v, NextEventID: %v",
 		execution.GetWorkflowId(), execution.GetRunId(), resetMutableStateBuilder.GetNextEventID())

@@ -58,16 +58,14 @@ func newStateBuilder(shard ShardContext, msBuilder *mutableStateBuilder, logger 
 	}
 }
 
-func (b *stateBuilder) applyEvents(domainID, requestID string, execution shared.WorkflowExecution,
-	history *shared.History, newRunHistory *shared.History) (*shared.HistoryEvent,
+func (b *stateBuilder) applyEvents(domainID, requestID string,
+	execution shared.WorkflowExecution, history *shared.History, newRunHistory *shared.History) (*shared.HistoryEvent,
 	*decisionInfo, *mutableStateBuilder, error) {
 	var lastEvent *shared.HistoryEvent
 	var lastDecision *decisionInfo
 	var newRunStateBuilder *mutableStateBuilder
 	for _, event := range history.Events {
 		lastEvent = event
-		// must set the current version, since this is standby here, not active
-		b.msBuilder.updateReplicationStateVersion(event.GetVersion())
 		switch event.GetEventType() {
 		case shared.EventTypeWorkflowExecutionStarted:
 			attributes := event.WorkflowExecutionStartedEventAttributes

@@ -324,7 +324,9 @@ func (e *mutableStateBuilder) updateReplicationStateVersion(version int64) {
 
 // Assumption: It is expected CurrentVersion on replication state is updated at the start of transaction when
 // mutableState is loaded for this workflow execution.
-func (e *mutableStateBuilder) updateReplicationStateLastEventID(clusterName string, lastEventID int64) {
+func (e *mutableStateBuilder) updateReplicationStateLastEventID(clusterName string, lastWriteVersion,
+	lastEventID int64) {
+	e.replicationState.LastWriteVersion = lastWriteVersion
 	e.replicationState.LastWriteVersion = e.replicationState.CurrentVersion
 	// TODO: Rename this to NextEventID to stay consistent naming convention with rest of code base
 	e.replicationState.LastWriteEventID = lastEventID
@@ -2137,7 +2139,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(sour
 	}
 
 	if newStateBuilder.replicationState != nil {
-		newStateBuilder.updateReplicationStateLastEventID(sourceClusterName, di.ScheduleID)
+		newStateBuilder.updateReplicationStateLastEventID(sourceClusterName, startedEvent.GetVersion(), di.ScheduleID)
 	}
 
 	newTransferTasks := []persistence.Task{&persistence.DecisionTask{
