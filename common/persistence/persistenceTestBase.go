@@ -78,6 +78,7 @@ type (
 		HistoryMgr           HistoryManager
 		MetadataManager      MetadataManager
 		MetadataManagerV2    MetadataManager
+		MetadataProxy        MetadataManager
 		VisibilityMgr        VisibilityManager
 		ShardInfo            *ShardInfo
 		TaskIDGenerator      TransferTaskIDGenerator
@@ -164,6 +165,12 @@ func (s *TestBase) SetupWorkflowStoreWithOptions(options TestBaseOptions, metada
 	}
 
 	s.MetadataManagerV2, err = NewCassandraMetadataPersistenceV2(options.ClusterHost, options.ClusterPort, options.ClusterUser,
+		options.ClusterPassword, options.Datacenter, s.CassandraTestCluster.keyspace, currentClusterName, log)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	s.MetadataProxy, err = NewMetadataManagerProxy(options.ClusterHost, options.ClusterPort, options.ClusterUser,
 		options.ClusterPassword, options.Datacenter, s.CassandraTestCluster.keyspace, currentClusterName, log)
 	if err != nil {
 		log.Fatal(err)

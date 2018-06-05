@@ -214,7 +214,7 @@ func (s *Service) Start() {
 		}
 	}
 
-	metadata, err := persistence.NewCassandraMetadataPersistence(p.CassandraConfig.Hosts,
+	metadata, err := persistence.NewMetadataManagerProxy(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,
 		p.CassandraConfig.User,
 		p.CassandraConfig.Password,
@@ -227,20 +227,6 @@ func (s *Service) Start() {
 		log.Fatalf("failed to create metadata manager: %v", err)
 	}
 	metadata = persistence.NewMetadataPersistenceClient(metadata, base.GetMetricsClient(), log)
-
-	metadataV2, err := persistence.NewCassandraMetadataPersistenceV2(p.CassandraConfig.Hosts,
-		p.CassandraConfig.Port,
-		p.CassandraConfig.User,
-		p.CassandraConfig.Password,
-		p.CassandraConfig.Datacenter,
-		p.CassandraConfig.Keyspace,
-		p.ClusterMetadata.GetCurrentClusterName(),
-		p.Logger)
-
-	if err != nil {
-		log.Fatalf("failed to create metadata manager: %v", err)
-	}
-	metadataV2 = persistence.NewMetadataPersistenceClient(metadataV2, base.GetMetricsClient(), log)
 
 	visibility, err := persistence.NewCassandraVisibilityPersistence(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,
@@ -287,7 +273,6 @@ func (s *Service) Start() {
 		s.config,
 		shardMgr,
 		metadata,
-		metadataV2,
 		visibility,
 		history,
 		execMgrFactory)

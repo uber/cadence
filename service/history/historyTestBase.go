@@ -90,7 +90,7 @@ func newTestShardContext(shardInfo *persistence.ShardInfo, transferSequenceNumbe
 	historyMgr persistence.HistoryManager, executionMgr persistence.ExecutionManager,
 	metadataMgr persistence.MetadataManager, metadataMgrV2 persistence.MetadataManager, clusterMetadata cluster.Metadata, config *Config,
 	logger bark.Logger) *TestShardContext {
-	domainCache := cache.NewDomainCache(cache.NewMetadataManagerProxy(metadataMgr, metadataMgrV2), clusterMetadata, logger)
+	domainCache := cache.NewDomainCache(metadataMgr, clusterMetadata, logger)
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 
 	// initialize the cluster current time to be the same as ack level

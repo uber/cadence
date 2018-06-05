@@ -195,43 +195,19 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 	// first set the failover callback
 	e.shard.GetDomainCache().RegisterDomainChangeCallback(
 		e.shard.GetShardID(),
+		e.shard.GetDomainCache().GetDomainNotificationVersion(),
 		func(prevDomain *cache.DomainCacheEntry, nextDomain *cache.DomainCacheEntry) {
-			if prevDomain.GetFailoverVersion() < nextDomain.GetFailoverVersion() &&
+			if nextDomain.IsGlobalDomain() &&
+				nextDomain.GetFailoverNotificationVersion() >= e.shard.GetDomainCache().GetDomainNotificationVersion() &&
 				nextDomain.GetReplicationConfig().ActiveClusterName == e.currentClusterName {
 				domainID := prevDomain.GetInfo().ID
 				e.txProcessor.FailoverDomain(domainID)
 				e.timerProcessor.FailoverDomain(domainID)
 			}
-			// v1 table domain cache entry will have this version being 0
-			if nextDomain.GetNotificationVersion() > 0 {
-				e.shard.UpdateDomainNotificationVersion(nextDomain.GetNotificationVersion())
-			}
+
+			e.shard.UpdateDomainNotificationVersion(nextDomain.GetNotificationVersion() + 1)
 		},
 	)
-
-	// second check whether this shard should do catch up
-	domainNotificationVersion := e.shard.GetDomainCache().GetDomainNotificationVersion()
-	shardDomainNotificationVersion := e.shard.GetDomainNotificationVersion()
-	if domainNotificationVersion > shardDomainNotificationVersion {
-		for _, domain := range e.shard.GetDomainCache().GetAllDomain() {
-			domainFailoverNotificationVersion := domain.GetFailoverNotificationVersion()
-			if domainFailoverNotificationVersion >= shardDomainNotificationVersion &&
-				domainFailoverNotificationVersion < domainNotificationVersion {
-				// it is possible that the domain cache entry is updated after
-				// we get the domainNotificationVersion
-				// to avoid duplication failover, do a check bwlow
-				// domainFailoverNotificationVersion < domainNotificationVersion
-				domainID := domain.GetInfo().ID
-				e.txProcessor.FailoverDomain(domainID)
-				e.timerProcessor.FailoverDomain(domainID)
-			}
-		}
-		if domainNotificationVersion > e.shard.GetDomainNotificationVersion() {
-			// double check the version for update, because when doing catch up, the shard's
-			// domain notification version can change
-			e.shard.UpdateDomainNotificationVersion(domainNotificationVersion)
-		}
-	}
 }
 
 // StartWorkflowExecution starts a workflow execution

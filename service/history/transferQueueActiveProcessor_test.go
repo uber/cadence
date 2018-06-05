@@ -111,6 +111,7 @@ func (s *transferQueueActiveProcessorSuite) SetupTest() {
 			ActiveClusterName: cluster.TestCurrentClusterName,
 			// Clusters attr is not used.
 		},
+		TableVersion: persistence.DomainTableVersionV1,
 	}, nil)
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(true)
@@ -1054,11 +1055,13 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Succe
 		Info:              &persistence.DomainInfo{Name: domainName},
 		Config:            &persistence.DomainConfig{},
 		ReplicationConfig: &persistence.DomainReplicationConfig{},
+		TableVersion:      persistence.DomainTableVersionV1,
 	}, nil).Once()
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: childDomainID}).Return(&persistence.GetDomainResponse{
 		Info:              &persistence.DomainInfo{Name: childDomainName},
 		Config:            &persistence.DomainConfig{},
 		ReplicationConfig: &persistence.DomainReplicationConfig{},
+		TableVersion:      persistence.DomainTableVersionV1,
 	}, nil).Once()
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockHistoryClient.On("StartWorkflowExecution", nil, s.createChildWorkflowExecutionRequest(
@@ -1143,11 +1146,13 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Failu
 		Info:              &persistence.DomainInfo{Name: domainName},
 		Config:            &persistence.DomainConfig{},
 		ReplicationConfig: &persistence.DomainReplicationConfig{},
+		TableVersion:      persistence.DomainTableVersionV1,
 	}, nil).Once()
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: childDomainID}).Return(&persistence.GetDomainResponse{
 		Info:              &persistence.DomainInfo{Name: childDomainName},
 		Config:            &persistence.DomainConfig{},
 		ReplicationConfig: &persistence.DomainReplicationConfig{},
+		TableVersion:      persistence.DomainTableVersionV1,
 	}, nil).Once()
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockHistoryClient.On("StartWorkflowExecution", nil, s.createChildWorkflowExecutionRequest(
@@ -1229,11 +1234,13 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Succe
 		Info:              &persistence.DomainInfo{Name: domainName},
 		Config:            &persistence.DomainConfig{},
 		ReplicationConfig: &persistence.DomainReplicationConfig{},
+		TableVersion:      persistence.DomainTableVersionV1,
 	}, nil).Once()
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: childDomainID}).Return(&persistence.GetDomainResponse{
 		Info:              &persistence.DomainInfo{Name: childDomainName},
 		Config:            &persistence.DomainConfig{},
 		ReplicationConfig: &persistence.DomainReplicationConfig{},
+		TableVersion:      persistence.DomainTableVersionV1,
 	}, nil).Once()
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockHistoryClient.On("ScheduleDecisionTask", nil, &history.ScheduleDecisionTaskRequest{
@@ -1318,11 +1325,13 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Dupli
 		Info:              &persistence.DomainInfo{Name: domainName},
 		Config:            &persistence.DomainConfig{},
 		ReplicationConfig: &persistence.DomainReplicationConfig{},
+		TableVersion:      persistence.DomainTableVersionV1,
 	}, nil).Once()
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: childDomainID}).Return(&persistence.GetDomainResponse{
 		Info:              &persistence.DomainInfo{Name: childDomainName},
 		Config:            &persistence.DomainConfig{},
 		ReplicationConfig: &persistence.DomainReplicationConfig{},
+		TableVersion:      persistence.DomainTableVersionV1,
 	}, nil).Once()
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockQueueAckMgr.On("completeTask", taskID).Return(nil).Once()

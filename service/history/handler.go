@@ -49,7 +49,6 @@ type (
 		numberOfShards        int
 		shardManager          persistence.ShardManager
 		metadataMgr           persistence.MetadataManager
-		metadataMgrV2         persistence.MetadataManager
 		visibilityMgr         persistence.VisibilityManager
 		historyMgr            persistence.HistoryManager
 		executionMgrFactory   persistence.ExecutionManagerFactory
@@ -81,14 +80,13 @@ var (
 
 // NewHandler creates a thrift handler for the history service
 func NewHandler(sVice service.Service, config *Config, shardManager persistence.ShardManager,
-	metadataMgr persistence.MetadataManager, metadataMgrV2 persistence.MetadataManager, visibilityMgr persistence.VisibilityManager,
+	metadataMgr persistence.MetadataManager, visibilityMgr persistence.VisibilityManager,
 	historyMgr persistence.HistoryManager, executionMgrFactory persistence.ExecutionManagerFactory) *Handler {
 	handler := &Handler{
 		Service:             sVice,
 		config:              config,
 		shardManager:        shardManager,
 		metadataMgr:         metadataMgr,
-		metadataMgrV2:       metadataMgrV2,
 		historyMgr:          historyMgr,
 		visibilityMgr:       visibilityMgr,
 		executionMgrFactory: executionMgrFactory,
@@ -132,7 +130,7 @@ func (h *Handler) Start() error {
 		}
 	}
 
-	h.domainCache = cache.NewDomainCache(cache.NewMetadataManagerProxy(h.metadataMgr, h.metadataMgrV2), h.GetClusterMetadata(), h.GetLogger())
+	h.domainCache = cache.NewDomainCache(h.metadataMgr, h.GetClusterMetadata(), h.GetLogger())
 	h.domainCache.Start()
 	h.controller = newShardController(h.Service, h.GetHostInfo(), hServiceResolver, h.shardManager, h.historyMgr,
 		h.domainCache, h.executionMgrFactory, h, h.config, h.GetLogger(), h.GetMetricsClient())
@@ -153,7 +151,6 @@ func (h *Handler) Stop() {
 	h.historyMgr.Close()
 	h.executionMgrFactory.Close()
 	h.metadataMgr.Close()
-	h.metadataMgrV2.Close()
 	h.visibilityMgr.Close()
 	h.Service.Stop()
 	h.historyEventNotifier.Stop()

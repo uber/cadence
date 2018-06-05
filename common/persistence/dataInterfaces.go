@@ -28,6 +28,14 @@ import (
 	"github.com/uber/cadence/common"
 )
 
+// TODO remove this table version
+// this is a temp version indicating where is the domain resides
+// either V1 or V2
+const (
+	DomainTableVersionV1 = 1
+	DomainTableVersionV2 = 2
+)
+
 // Domain status
 const (
 	DomainStatusRegistered = iota
@@ -832,6 +840,7 @@ type (
 		FailoverVersion             int64
 		FailoverNotificationVersion int64
 		NotificationVersion         int64
+		TableVersion                int
 	}
 
 	// UpdateDomainRequest is used to update domain
@@ -843,6 +852,7 @@ type (
 		FailoverVersion             int64
 		FailoverNotificationVersion int64
 		NotificationVersion         int64
+		TableVersion                int
 	}
 
 	// DeleteDomainRequest is used to delete domain entry from domains table
