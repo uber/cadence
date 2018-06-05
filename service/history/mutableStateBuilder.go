@@ -327,7 +327,6 @@ func (e *mutableStateBuilder) updateReplicationStateVersion(version int64) {
 func (e *mutableStateBuilder) updateReplicationStateLastEventID(clusterName string, lastWriteVersion,
 	lastEventID int64) {
 	e.replicationState.LastWriteVersion = lastWriteVersion
-	e.replicationState.LastWriteVersion = e.replicationState.CurrentVersion
 	// TODO: Rename this to NextEventID to stay consistent naming convention with rest of code base
 	e.replicationState.LastWriteEventID = lastEventID
 	if clusterName != "" {
