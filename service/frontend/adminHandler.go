@@ -31,7 +31,9 @@ import (
 	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/logging"
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
 )
 
@@ -42,22 +44,25 @@ type (
 	AdminHandler struct {
 		numberOfHistoryShards int
 		service.Service
-		history history.Client
+		history     history.Client
+		domainCache cache.DomainCache
 	}
 )
 
 // NewAdminHandler creates a thrift handler for the cadence admin service
 func NewAdminHandler(
-	sVice service.Service, numberOfHistoryShards int) *AdminHandler {
+	sVice service.Service, numberOfHistoryShards int, metadataMgr persistence.MetadataManager) *AdminHandler {
 	handler := &AdminHandler{
 		numberOfHistoryShards: numberOfHistoryShards,
 		Service:               sVice,
+		domainCache:           cache.NewDomainCache(metadataMgr, sVice.GetClusterMetadata(), sVice.GetLogger()),
 	}
 	return handler
 }
 
 // Start starts the handler
 func (adh *AdminHandler) Start() error {
+	adh.domainCache.Start()
 	adh.Service.GetDispatcher().Register(adminserviceserver.New(adh))
 	adh.Service.Start()
 	var err error
@@ -71,6 +76,7 @@ func (adh *AdminHandler) Start() error {
 // Stop stops the handler
 func (adh *AdminHandler) Stop() {
 	adh.Service.Stop()
+	adh.domainCache.Stop()
 }
 
 // DescribeWorkflowExecution returns information about the specified workflow execution.
@@ -92,11 +98,16 @@ func (adh *AdminHandler) DescribeWorkflowExecution(ctx context.Context, request 
 		return nil, adh.error(err)
 	}
 
+	domainID, err := adh.domainCache.GetDomainID(request.GetDomain())
+
 	historyAddr := historyHost.GetAddress()
 	resp, err := adh.history.DescribeMutableState(ctx, &hist.DescribeMutableStateRequest{
-		DomainUUID: request.Domain,
+		DomainUUID: &domainID,
 		Execution:  request.Execution,
 	})
+	if err != nil {
+		return &admin.DescribeWorkflowExecutionResponse{}, err
+	}
 	return &admin.DescribeWorkflowExecutionResponse{
 		ShardId:                common.StringPtr(shardIDForOutput),
 		HistoryAddr:            common.StringPtr(historyAddr),
