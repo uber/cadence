@@ -877,6 +877,11 @@ type (
 		NextPageToken []byte
 	}
 
+	// GetMetadataResponse is the response for GetMetadata
+	GetMetadataResponse struct {
+		NotificationVersion int64
+	}
+
 	// Closeable is an interface for any entity that supports a close operation to release resources
 	Closeable interface {
 		Close()
@@ -946,7 +951,7 @@ type (
 		DeleteDomain(request *DeleteDomainRequest) error
 		DeleteDomainByName(request *DeleteDomainByNameRequest) error
 		ListDomain(request *ListDomainRequest) (*ListDomainResponse, error)
-		GetMetadata() (int64, error)
+		GetMetadata() (*GetMetadataResponse, error)
 	}
 )
 

@@ -325,10 +325,11 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 	// this version can be regarded as the lock on the v2 domain table
 	// and since we do not know which table will return the domain afterwards
 	// this call has to be made
-	notificationVersion, err := wh.metadataMgr.GetMetadata()
+	metadata, err := wh.metadataMgr.GetMetadata()
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
+	notificationVersion := metadata.NotificationVersion
 	getResponse, err := wh.metadataMgr.GetDomain(&persistence.GetDomainRequest{Name: updateRequest.GetName()})
 	if err != nil {
 		return nil, wh.error(err, scope)
@@ -517,10 +518,11 @@ func (wh *WorkflowHandler) DeprecateDomain(ctx context.Context, deprecateRequest
 	// this version can be regarded as the lock on the v2 domain table
 	// and since we do not know which table will return the domain afterwards
 	// this call has to be made
-	notificationVersion, err := wh.metadataMgr.GetMetadata()
+	metadata, err := wh.metadataMgr.GetMetadata()
 	if err != nil {
 		return wh.error(err, scope)
 	}
+	notificationVersion := metadata.NotificationVersion
 	getResponse, err := wh.metadataMgr.GetDomain(&persistence.GetDomainRequest{Name: deprecateRequest.GetName()})
 	if err != nil {
 		return wh.error(err, scope)

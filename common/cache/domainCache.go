@@ -255,10 +255,11 @@ func (c *domainCache) refreshDomains() error {
 	// first load the metadata record, then load domains
 	// this can guarentee that domains in the cache is not
 	// more update to date then the metadata record
-	domainNotificationVersion, err := c.metadataMgr.GetMetadata()
+	metadata, err := c.metadataMgr.GetMetadata()
 	if err != nil {
 		return err
 	}
+	domainNotificationVersion := metadata.NotificationVersion
 	c.Lock()
 	c.domainNotificationVersion = domainNotificationVersion
 	c.Unlock()

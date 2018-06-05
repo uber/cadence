@@ -125,10 +125,11 @@ func (domainReplicator *domainReplicatorImpl) handleDomainUpdateReplicationTask(
 	}
 
 	// first we need to get the current notification verion since we need to it for conditional update
-	notificationVersion, err := domainReplicator.metadataManagerV2.GetMetadata()
+	metadata, err := domainReplicator.metadataManagerV2.GetMetadata()
 	if err != nil {
 		return err
 	}
+	notificationVersion := metadata.NotificationVersion
 
 	// plus, we need to check whether the config version is <= the config version set in the input
 	// plus, we need to check whether the failover version is <= the failover version set in the input

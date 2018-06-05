@@ -113,8 +113,9 @@ func (s *domainReplicatorSuite) TestHandleReceivingTask_RegisterDomainTask() {
 		FailoverVersion: common.Int64Ptr(failoverVersion),
 	}
 
-	notificationVersion, err := s.MetadataManagerV2.GetMetadata()
+	metadata, err := s.MetadataManagerV2.GetMetadata()
 	s.Nil(err)
+	notificationVersion := metadata.NotificationVersion
 	err = s.domainReplicator.HandleReceivingTask(task)
 	s.Nil(err)
 
@@ -179,8 +180,9 @@ func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_DomainN
 		FailoverVersion: common.Int64Ptr(failoverVersion),
 	}
 
-	notificationVersion, err := s.MetadataManagerV2.GetMetadata()
+	metadata, err := s.MetadataManagerV2.GetMetadata()
 	s.Nil(err)
+	notificationVersion := metadata.NotificationVersion
 	err = s.domainReplicator.HandleReceivingTask(updateTask)
 	s.Nil(err)
 
@@ -287,8 +289,9 @@ func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_UpdateC
 		ConfigVersion:   common.Int64Ptr(updateConfigVersion),
 		FailoverVersion: common.Int64Ptr(updateFailoverVersion),
 	}
-	notificationVersion, err := s.MetadataManagerV2.GetMetadata()
+	metadata, err := s.MetadataManagerV2.GetMetadata()
 	s.Nil(err)
+	notificationVersion := metadata.NotificationVersion
 	err = s.domainReplicator.HandleReceivingTask(updateTask)
 	s.Nil(err)
 	resp, err := s.MetadataManagerV2.GetDomain(&persistence.GetDomainRequest{Name: name})
@@ -394,8 +397,9 @@ func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_UpdateC
 		ConfigVersion:   common.Int64Ptr(updateConfigVersion),
 		FailoverVersion: common.Int64Ptr(updateFailoverVersion),
 	}
-	notificationVersion, err := s.MetadataManagerV2.GetMetadata()
+	metadata, err := s.MetadataManagerV2.GetMetadata()
 	s.Nil(err)
+	notificationVersion := metadata.NotificationVersion
 	err = s.domainReplicator.HandleReceivingTask(updateTask)
 	s.Nil(err)
 	resp, err := s.MetadataManagerV2.GetDomain(&persistence.GetDomainRequest{Name: name})
@@ -501,8 +505,9 @@ func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_NoUpdat
 		ConfigVersion:   common.Int64Ptr(updateConfigVersion),
 		FailoverVersion: common.Int64Ptr(updateFailoverVersion),
 	}
-	notificationVersion, err := s.MetadataManagerV2.GetMetadata()
+	metadata, err := s.MetadataManagerV2.GetMetadata()
 	s.Nil(err)
+	notificationVersion := metadata.NotificationVersion
 	err = s.domainReplicator.HandleReceivingTask(updateTask)
 	s.Nil(err)
 	resp, err := s.MetadataManagerV2.GetDomain(&persistence.GetDomainRequest{Name: name})
@@ -565,8 +570,9 @@ func (s *domainReplicatorSuite) TestHandleReceivingTask_UpdateDomainTask_NoUpdat
 		ConfigVersion:   common.Int64Ptr(configVersion),
 		FailoverVersion: common.Int64Ptr(failoverVersion),
 	}
-	notificationVersion, err := s.MetadataManagerV2.GetMetadata()
+	metadata, err := s.MetadataManagerV2.GetMetadata()
 	s.Nil(err)
+	notificationVersion := metadata.NotificationVersion
 	err = s.domainReplicator.HandleReceivingTask(createTask)
 	s.Nil(err)
 

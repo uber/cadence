@@ -145,14 +145,16 @@ func (_m *MetadataManager) ListDomain(request *persistence.ListDomainRequest) (*
 }
 
 // GetMetadata provides a mock function with given fields: request
-func (_m *MetadataManager) GetMetadata() (int64, error) {
+func (_m *MetadataManager) GetMetadata() (*persistence.GetMetadataResponse, error) {
 	ret := _m.Called()
 
-	var r0 int64
-	if rf, ok := ret.Get(0).(func() int64); ok {
+	var r0 *persistence.GetMetadataResponse
+	if rf, ok := ret.Get(0).(func() *persistence.GetMetadataResponse); ok {
 		r0 = rf()
 	} else {
-		r0 = ret.Get(0).(int64)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*persistence.GetMetadataResponse)
+		}
 	}
 
 	var r1 error

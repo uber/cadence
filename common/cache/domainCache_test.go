@@ -130,7 +130,7 @@ func (s *domainCacheSuite) TestListDomain() {
 
 	pageToken := []byte("some random page token")
 
-	s.metadataMgr.On("GetMetadata").Return(domainNotificationVersion, nil)
+	s.metadataMgr.On("GetMetadata").Return(&persistence.GetMetadataResponse{NotificationVersion: domainNotificationVersion}, nil)
 	s.clusterMetadata.On("IsGlobalDomainEnabled").Return(true)
 	s.metadataMgr.On("ListDomain", &persistence.ListDomainRequest{
 		PageSize:      domainCacheRefreshPageSize,
@@ -263,7 +263,7 @@ func (s *domainCacheSuite) TestRegisterCallback_CatchUp() {
 	entry2 := s.buildEntryFromRecord(domainRecord2)
 	domainNotificationVersion++
 
-	s.metadataMgr.On("GetMetadata").Return(domainNotificationVersion, nil).Once()
+	s.metadataMgr.On("GetMetadata").Return(&persistence.GetMetadataResponse{NotificationVersion: domainNotificationVersion}, nil).Once()
 	s.clusterMetadata.On("IsGlobalDomainEnabled").Return(true)
 	s.metadataMgr.On("ListDomain", &persistence.ListDomainRequest{
 		PageSize:      domainCacheRefreshPageSize,
@@ -327,7 +327,7 @@ func (s *domainCacheSuite) TestUpdateCache_ListTrigger() {
 	entry2Old := s.buildEntryFromRecord(domainRecord2Old)
 	domainNotificationVersion++
 
-	s.metadataMgr.On("GetMetadata").Return(domainNotificationVersion, nil).Once()
+	s.metadataMgr.On("GetMetadata").Return(&persistence.GetMetadataResponse{NotificationVersion: domainNotificationVersion}, nil).Once()
 	s.clusterMetadata.On("IsGlobalDomainEnabled").Return(true)
 	s.metadataMgr.On("ListDomain", &persistence.ListDomainRequest{
 		PageSize:      domainCacheRefreshPageSize,
@@ -388,7 +388,7 @@ func (s *domainCacheSuite) TestUpdateCache_ListTrigger() {
 	s.Empty(entriesOld)
 	s.Empty(entriesNew)
 
-	s.metadataMgr.On("GetMetadata").Return(domainNotificationVersion, nil).Once()
+	s.metadataMgr.On("GetMetadata").Return(&persistence.GetMetadataResponse{NotificationVersion: domainNotificationVersion}, nil).Once()
 	s.metadataMgr.On("ListDomain", &persistence.ListDomainRequest{
 		PageSize:      domainCacheRefreshPageSize,
 		NextPageToken: nil,

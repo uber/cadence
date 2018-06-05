@@ -635,7 +635,7 @@ func (p *metadataPersistenceClient) ListDomain(request *ListDomainRequest) (*Lis
 	return response, err
 }
 
-func (p *metadataPersistenceClient) GetMetadata() (int64, error) {
+func (p *metadataPersistenceClient) GetMetadata() (*GetMetadataResponse, error) {
 	p.metricClient.IncCounter(metrics.PersistenceGetMetadataScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceGetMetadataScope, metrics.PersistenceLatency)

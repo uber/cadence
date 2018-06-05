@@ -144,7 +144,7 @@ func (m *cassandraMetadataPersistenceV2) CreateDomain(request *CreateDomainReque
 		}
 	}
 
-	notificationVersion, err := m.GetMetadata()
+	metadata, err := m.GetMetadata()
 	if err != nil {
 		return nil, err
 	}
@@ -166,9 +166,9 @@ func (m *cassandraMetadataPersistenceV2) CreateDomain(request *CreateDomainReque
 		request.ConfigVersion,
 		request.FailoverVersion,
 		initialFailoverNotificationVersion,
-		notificationVersion,
+		metadata.NotificationVersion,
 	)
-	m.updateMetadataBatch(batch, notificationVersion)
+	m.updateMetadataBatch(batch, metadata.NotificationVersion)
 
 	previous := make(map[string]interface{})
 	applied, iter, err := m.session.MapExecuteBatchCAS(batch, previous)
@@ -408,7 +408,7 @@ func (m *cassandraMetadataPersistenceV2) DeleteDomainByName(request *DeleteDomai
 	return m.deleteDomain(request.Name, ID)
 }
 
-func (m *cassandraMetadataPersistenceV2) GetMetadata() (int64, error) {
+func (m *cassandraMetadataPersistenceV2) GetMetadata() (*GetMetadataResponse, error) {
 	var notificationVersion int64
 	query := m.session.Query(templateGetMetadataQueryV2, constDomainPartition, domainMetadataRecordName)
 	err := query.Scan(&notificationVersion)
@@ -416,11 +416,11 @@ func (m *cassandraMetadataPersistenceV2) GetMetadata() (int64, error) {
 		if err == gocql.ErrNotFound {
 			// this error can be thrown in the very begining,
 			// i.e. when domains_by_name_v2 is initialized
-			return 0, nil
+			return &GetMetadataResponse{NotificationVersion: 0}, nil
 		}
-		return 0, err
+		return nil, err
 	}
-	return notificationVersion, nil
+	return &GetMetadataResponse{NotificationVersion: notificationVersion}, nil
 }
 
 func (m *cassandraMetadataPersistenceV2) updateMetadataBatch(batch *gocql.Batch, notificationVersion int64) {

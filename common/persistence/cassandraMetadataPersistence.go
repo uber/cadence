@@ -336,7 +336,7 @@ func (m *cassandraMetadataPersistence) ListDomain(request *ListDomainRequest) (*
 	panic("cassandraMetadataPersistence do not support list domain operation.")
 }
 
-func (m *cassandraMetadataPersistence) GetMetadata() (int64, error) {
+func (m *cassandraMetadataPersistence) GetMetadata() (*GetMetadataResponse, error) {
 	panic("cassandraMetadataPersistence do not supporgetsmetadatain operation.")
 }
 

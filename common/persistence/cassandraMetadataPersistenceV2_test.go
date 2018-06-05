@@ -305,8 +305,9 @@ func (m *metadataPersistenceSuiteV2) TestUpdateDomain() {
 
 	resp2, err2 := m.GetDomain(id, "")
 	m.Nil(err2)
-	notificationVersion, err := m.MetadataManagerV2.GetMetadata()
+	metadata, err := m.MetadataManagerV2.GetMetadata()
 	m.Nil(err)
+	notificationVersion := metadata.NotificationVersion
 
 	updatedStatus := DomainStatusDeprecated
 	updatedDescription := "description-updated"
