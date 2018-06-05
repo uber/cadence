@@ -88,7 +88,7 @@ const (
 	FlagPrintEventVersion          = "print_event_version"
 	FlagPrintEventVersionWithAlias = FlagPrintEventVersion + ", pev"
 	FlagPrintFullyDetail           = "print_full"
-	FlagPrintFullyDetailWithAlias  = FlagPrintFullyDetail + ", full"
+	FlagPrintFullyDetailWithAlias  = FlagPrintFullyDetail + ", pf"
 	FlagPrintRawTime               = "print_raw_time"
 	FlagPrintRawTimeWithAlias      = FlagPrintRawTime + ", prt"
 	FlagPrintDateTime              = "print_datetime"
@@ -392,14 +392,7 @@ func showHistoryHelper(c *cli.Context, wid, rid string) {
 	for _, e := range history.Events {
 		columns := []string{}
 		if printFully {
-			jsonBs, err := json.Marshal(e)
-			var jsonStr string
-			if err != nil {
-				jsonStr = "ERROR!"
-			} else {
-				jsonStr = string(jsonBs)
-			}
-			columns = append(columns, jsonStr)
+			columns = append(columns, anyToString(e))
 			table.Append(columns)
 			continue
 		}
