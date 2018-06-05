@@ -318,6 +318,13 @@ func (e *mutableStateBuilder) GetCurrentVersion() int64 {
 	return e.replicationState.CurrentVersion
 }
 
+func (e *mutableStateBuilder) GetLastWriteVersion() int64 {
+	if e.replicationState == nil {
+		return common.EmptyVersion
+	}
+	return e.replicationState.LastWriteVersion
+}
+
 func (e *mutableStateBuilder) updateReplicationStateVersion(version int64) {
 	e.replicationState.CurrentVersion = version
 }
