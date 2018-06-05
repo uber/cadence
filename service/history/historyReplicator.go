@@ -149,7 +149,7 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 
 				resolver := newConflictResolver(r.shard, context, r.historyMgr, r.logger)
 				msBuilder, err = resolver.reset(uuid.New(), ri.GetLastEventId(), msBuilder.executionInfo.StartTimestamp)
-				logger.Infof("Completed Resetting of workflow execution.  NextEventID:%v. Err: %v", msBuilder.GetNextEventID(), err)
+				logger.Infof("Completed Resetting of workflow execution.  NextEventID: %v. Err: %v", msBuilder.GetNextEventID(), err)
 				if err != nil {
 					return err
 				}
