@@ -398,36 +398,6 @@ func _DescribeWorkflowExecutionResponse_Read(w wire.Value) (*shared.DescribeWork
 	return &v, err
 }
 
-func _BadRequestError_Read(w wire.Value) (*shared.BadRequestError, error) {
-	var v shared.BadRequestError
-	err := v.FromWire(w)
-	return &v, err
-}
-
-func _InternalServiceError_Read(w wire.Value) (*shared.InternalServiceError, error) {
-	var v shared.InternalServiceError
-	err := v.FromWire(w)
-	return &v, err
-}
-
-func _EntityNotExistsError_Read(w wire.Value) (*shared.EntityNotExistsError, error) {
-	var v shared.EntityNotExistsError
-	err := v.FromWire(w)
-	return &v, err
-}
-
-func _ShardOwnershipLostError_Read(w wire.Value) (*ShardOwnershipLostError, error) {
-	var v ShardOwnershipLostError
-	err := v.FromWire(w)
-	return &v, err
-}
-
-func _LimitExceededError_Read(w wire.Value) (*shared.LimitExceededError, error) {
-	var v shared.LimitExceededError
-	err := v.FromWire(w)
-	return &v, err
-}
-
 // FromWire deserializes a HistoryService_DescribeWorkflowExecution_Result struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.

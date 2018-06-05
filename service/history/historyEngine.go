@@ -532,8 +532,8 @@ func (e *historyEngineImpl) getMutableState(ctx context.Context,
 	return
 }
 
-func (e *historyEngineImpl) InquireMutableState(ctx context.Context,
-	request *h.InquireMutableStateRequest) (retResp *h.InquireMutableStateResponse, retError error) {
+func (e *historyEngineImpl) DescribeMutableState(ctx context.Context,
+	request *h.DescribeMutableStateRequest) (retResp *h.DescribeMutableStateResponse, retError error) {
 
 	domainID, err := validateDomainUUID(request.DomainUUID)
 	if err != nil {
@@ -550,7 +550,7 @@ func (e *historyEngineImpl) InquireMutableState(ctx context.Context,
 		return nil, err
 	}
 	defer func() { release(retError) }()
-	retResp = &h.InquireMutableStateResponse{}
+	retResp = &h.DescribeMutableStateResponse{}
 
 	if cacheHit && cacheCtx.msBuilder != nil {
 		msb := cacheCtx.msBuilder

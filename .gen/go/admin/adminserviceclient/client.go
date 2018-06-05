@@ -35,11 +35,11 @@ import (
 
 // Interface is a client for the AdminService service.
 type Interface interface {
-	InquireWorkflowExecution(
+	DescribeWorkflowExecution(
 		ctx context.Context,
-		InquireRequest *admin.InquireWorkflowExecutionRequest,
+		Request *admin.DescribeWorkflowExecutionRequest,
 		opts ...yarpc.CallOption,
-	) (*admin.InquireWorkflowExecutionResponse, error)
+	) (*admin.DescribeWorkflowExecutionResponse, error)
 }
 
 // New builds a new client for the AdminService service.
@@ -66,13 +66,13 @@ type client struct {
 	c thrift.Client
 }
 
-func (c client) InquireWorkflowExecution(
+func (c client) DescribeWorkflowExecution(
 	ctx context.Context,
-	_InquireRequest *admin.InquireWorkflowExecutionRequest,
+	_Request *admin.DescribeWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
-) (success *admin.InquireWorkflowExecutionResponse, err error) {
+) (success *admin.DescribeWorkflowExecutionResponse, err error) {
 
-	args := admin.AdminService_InquireWorkflowExecution_Helper.Args(_InquireRequest)
+	args := admin.AdminService_DescribeWorkflowExecution_Helper.Args(_Request)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)
@@ -80,11 +80,11 @@ func (c client) InquireWorkflowExecution(
 		return
 	}
 
-	var result admin.AdminService_InquireWorkflowExecution_Result
+	var result admin.AdminService_DescribeWorkflowExecution_Result
 	if err = result.FromWire(body); err != nil {
 		return
 	}
 
-	success, err = admin.AdminService_InquireWorkflowExecution_Helper.UnwrapResponse(&result)
+	success, err = admin.AdminService_DescribeWorkflowExecution_Helper.UnwrapResponse(&result)
 	return
 }

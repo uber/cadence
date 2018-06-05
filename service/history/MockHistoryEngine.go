@@ -66,21 +66,21 @@ func (_m *MockHistoryEngine) StartWorkflowExecution(request *gohistory.StartWork
 	return r0, r1
 }
 
-// InquireMutableState is mock implementation for InquireMutableState of HistoryEngine
-func (_m *MockHistoryEngine) InquireMutableState(ctx context.Context, request *gohistory.InquireMutableStateRequest) (*gohistory.InquireMutableStateResponse, error) {
+// DescribeMutableState is mock implementation for DescribeMutableState of HistoryEngine
+func (_m *MockHistoryEngine) DescribeMutableState(ctx context.Context, request *gohistory.DescribeMutableStateRequest) (*gohistory.DescribeMutableStateResponse, error) {
 	ret := _m.Called(ctx, request)
 
-	var r0 *gohistory.InquireMutableStateResponse
-	if rf, ok := ret.Get(0).(func(*gohistory.InquireMutableStateRequest) *gohistory.InquireMutableStateResponse); ok {
+	var r0 *gohistory.DescribeMutableStateResponse
+	if rf, ok := ret.Get(0).(func(*gohistory.DescribeMutableStateRequest) *gohistory.DescribeMutableStateResponse); ok {
 		r0 = rf(request)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*gohistory.InquireMutableStateResponse)
+			r0 = ret.Get(0).(*gohistory.DescribeMutableStateResponse)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(*gohistory.InquireMutableStateRequest) error); ok {
+	if rf, ok := ret.Get(1).(func(*gohistory.DescribeMutableStateRequest) error); ok {
 		r1 = rf(request)
 	} else {
 		r1 = ret.Error(1)

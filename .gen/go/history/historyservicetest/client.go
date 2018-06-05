@@ -63,6 +63,39 @@ func (m *MockClient) EXPECT() *_MockClientRecorder {
 	return m.recorder
 }
 
+// DescribeMutableState responds to a DescribeMutableState call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().DescribeMutableState(gomock.Any(), ...).Return(...)
+// 	... := client.DescribeMutableState(...)
+func (m *MockClient) DescribeMutableState(
+	ctx context.Context,
+	_Request *history.DescribeMutableStateRequest,
+	opts ...yarpc.CallOption,
+) (success *history.DescribeMutableStateResponse, err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "DescribeMutableState", args...)
+	success, _ = ret[i].(*history.DescribeMutableStateResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) DescribeMutableState(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "DescribeMutableState", args...)
+}
+
 // DescribeWorkflowExecution responds to a DescribeWorkflowExecution call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
@@ -127,39 +160,6 @@ func (mr *_MockClientRecorder) GetMutableState(
 ) *gomock.Call {
 	args := append([]interface{}{ctx, _GetRequest}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "GetMutableState", args...)
-}
-
-// InquireMutableState responds to a InquireMutableState call based on the mock expectations. This
-// call will fail if the mock does not expect this call. Use EXPECT to expect
-// a call to this function.
-//
-// 	client.EXPECT().InquireMutableState(gomock.Any(), ...).Return(...)
-// 	... := client.InquireMutableState(...)
-func (m *MockClient) InquireMutableState(
-	ctx context.Context,
-	_InquireRequest *history.InquireMutableStateRequest,
-	opts ...yarpc.CallOption,
-) (success *history.InquireMutableStateResponse, err error) {
-
-	args := []interface{}{ctx, _InquireRequest}
-	for _, o := range opts {
-		args = append(args, o)
-	}
-	i := 0
-	ret := m.ctrl.Call(m, "InquireMutableState", args...)
-	success, _ = ret[i].(*history.InquireMutableStateResponse)
-	i++
-	err, _ = ret[i].(error)
-	return
-}
-
-func (mr *_MockClientRecorder) InquireMutableState(
-	ctx interface{},
-	_InquireRequest interface{},
-	opts ...interface{},
-) *gomock.Call {
-	args := append([]interface{}{ctx, _InquireRequest}, opts...)
-	return mr.mock.ctrl.RecordCall(mr.mock, "InquireMutableState", args...)
 }
 
 // RecordActivityTaskHeartbeat responds to a RecordActivityTaskHeartbeat call based on the mock expectations. This

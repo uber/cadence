@@ -31,21 +31,21 @@ type HistoryClient struct {
 	mock.Mock
 }
 
-// InquireMutableState provides a mock function with given fields: ctx, getRequest
-func (_m *HistoryClient) InquireMutableState(ctx context.Context, request *history.InquireMutableStateRequest, opts ...yarpc.CallOption) (*history.InquireMutableStateResponse, error) {
+// DescribeMutableState provides a mock function with given fields: ctx, getRequest
+func (_m *HistoryClient) DescribeMutableState(ctx context.Context, request *history.DescribeMutableStateRequest, opts ...yarpc.CallOption) (*history.DescribeMutableStateResponse, error) {
 	ret := _m.Called(ctx, request)
 
-	var r0 *history.InquireMutableStateResponse
-	if rf, ok := ret.Get(0).(func(context.Context, *history.InquireMutableStateRequest) *history.InquireMutableStateResponse); ok {
+	var r0 *history.DescribeMutableStateResponse
+	if rf, ok := ret.Get(0).(func(context.Context, *history.DescribeMutableStateRequest) *history.DescribeMutableStateResponse); ok {
 		r0 = rf(ctx, request)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*history.InquireMutableStateResponse)
+			r0 = ret.Get(0).(*history.DescribeMutableStateResponse)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *history.InquireMutableStateRequest) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *history.DescribeMutableStateRequest) error); ok {
 		r1 = rf(ctx, request)
 	} else {
 		r1 = ret.Error(1)

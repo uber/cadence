@@ -37,8 +37,8 @@ func getAdminServiceClient(c *cli.Context) adminserviceclient.Interface {
 	return client
 }
 
-// InquireWorkflow inquiries a new workflow execution
-func InquireWorkflow(c *cli.Context) {
+// AdminDescribeWorkflow describe a new workflow execution for admin
+func AdminDescribeWorkflow(c *cli.Context) {
 	// using service client instead of cadence.Client because we need to directly pass the json blob as input.
 	serviceClient := getAdminServiceClient(c)
 
@@ -49,7 +49,7 @@ func InquireWorkflow(c *cli.Context) {
 	ctx, cancel := newContext()
 	defer cancel()
 
-	resp, err := serviceClient.InquireWorkflowExecution(ctx, &admin.InquireWorkflowExecutionRequest{
+	resp, err := serviceClient.DescribeWorkflowExecution(ctx, &admin.DescribeWorkflowExecutionRequest{
 		Domain: common.StringPtr(domain),
 		Execution: &s.WorkflowExecution{
 			WorkflowId: common.StringPtr(wid),
@@ -57,7 +57,7 @@ func InquireWorkflow(c *cli.Context) {
 		},
 	})
 	if err != nil {
-		ErrorAndExit("Inquire workflow execution failed", err)
+		ErrorAndExit("Describe workflow execution failed", err)
 	}
 
 	prettyPrintJSONObject(resp)

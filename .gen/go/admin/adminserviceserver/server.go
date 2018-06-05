@@ -33,10 +33,10 @@ import (
 
 // Interface is the server-side interface for the AdminService service.
 type Interface interface {
-	InquireWorkflowExecution(
+	DescribeWorkflowExecution(
 		ctx context.Context,
-		InquireRequest *admin.InquireWorkflowExecutionRequest,
-	) (*admin.InquireWorkflowExecutionResponse, error)
+		Request *admin.DescribeWorkflowExecutionRequest,
+	) (*admin.DescribeWorkflowExecutionResponse, error)
 }
 
 // New prepares an implementation of the AdminService service for
@@ -51,13 +51,13 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		Methods: []thrift.Method{
 
 			thrift.Method{
-				Name: "InquireWorkflowExecution",
+				Name: "DescribeWorkflowExecution",
 				HandlerSpec: thrift.HandlerSpec{
 
 					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.InquireWorkflowExecution),
+					Unary: thrift.UnaryHandler(h.DescribeWorkflowExecution),
 				},
-				Signature:    "InquireWorkflowExecution(InquireRequest *admin.InquireWorkflowExecutionRequest) (*admin.InquireWorkflowExecutionResponse)",
+				Signature:    "DescribeWorkflowExecution(Request *admin.DescribeWorkflowExecutionRequest) (*admin.DescribeWorkflowExecutionResponse)",
 				ThriftModule: admin.ThriftModule,
 			},
 		},
@@ -70,16 +70,16 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 type handler struct{ impl Interface }
 
-func (h handler) InquireWorkflowExecution(ctx context.Context, body wire.Value) (thrift.Response, error) {
-	var args admin.AdminService_InquireWorkflowExecution_Args
+func (h handler) DescribeWorkflowExecution(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args admin.AdminService_DescribeWorkflowExecution_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	success, err := h.impl.InquireWorkflowExecution(ctx, args.InquireRequest)
+	success, err := h.impl.DescribeWorkflowExecution(ctx, args.Request)
 
 	hadError := err != nil
-	result, err := admin.AdminService_InquireWorkflowExecution_Helper.WrapResponse(success, err)
+	result, err := admin.AdminService_DescribeWorkflowExecution_Helper.WrapResponse(success, err)
 
 	var response thrift.Response
 	if err == nil {

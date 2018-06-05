@@ -62,35 +62,35 @@ func (m *MockClient) EXPECT() *_MockClientRecorder {
 	return m.recorder
 }
 
-// InquireWorkflowExecution responds to a InquireWorkflowExecution call based on the mock expectations. This
+// DescribeWorkflowExecution responds to a DescribeWorkflowExecution call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().InquireWorkflowExecution(gomock.Any(), ...).Return(...)
-// 	... := client.InquireWorkflowExecution(...)
-func (m *MockClient) InquireWorkflowExecution(
+// 	client.EXPECT().DescribeWorkflowExecution(gomock.Any(), ...).Return(...)
+// 	... := client.DescribeWorkflowExecution(...)
+func (m *MockClient) DescribeWorkflowExecution(
 	ctx context.Context,
-	_InquireRequest *admin.InquireWorkflowExecutionRequest,
+	_Request *admin.DescribeWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
-) (success *admin.InquireWorkflowExecutionResponse, err error) {
+) (success *admin.DescribeWorkflowExecutionResponse, err error) {
 
-	args := []interface{}{ctx, _InquireRequest}
+	args := []interface{}{ctx, _Request}
 	for _, o := range opts {
 		args = append(args, o)
 	}
 	i := 0
-	ret := m.ctrl.Call(m, "InquireWorkflowExecution", args...)
-	success, _ = ret[i].(*admin.InquireWorkflowExecutionResponse)
+	ret := m.ctrl.Call(m, "DescribeWorkflowExecution", args...)
+	success, _ = ret[i].(*admin.DescribeWorkflowExecutionResponse)
 	i++
 	err, _ = ret[i].(error)
 	return
 }
 
-func (mr *_MockClientRecorder) InquireWorkflowExecution(
+func (mr *_MockClientRecorder) DescribeWorkflowExecution(
 	ctx interface{},
-	_InquireRequest interface{},
+	_Request interface{},
 	opts ...interface{},
 ) *gomock.Call {
-	args := append([]interface{}{ctx, _InquireRequest}, opts...)
-	return mr.mock.ctrl.RecordCall(mr.mock, "InquireWorkflowExecution", args...)
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "DescribeWorkflowExecution", args...)
 }

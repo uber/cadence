@@ -30,12 +30,12 @@ import (
 	"strings"
 )
 
-type InquireWorkflowExecutionRequest struct {
+type DescribeWorkflowExecutionRequest struct {
 	Domain    *string                   `json:"domain,omitempty"`
 	Execution *shared.WorkflowExecution `json:"execution,omitempty"`
 }
 
-// ToWire translates a InquireWorkflowExecutionRequest struct into a Thrift-level intermediate
+// ToWire translates a DescribeWorkflowExecutionRequest struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
 // into bytes using a ThriftRW protocol implementation.
 //
@@ -50,7 +50,7 @@ type InquireWorkflowExecutionRequest struct {
 //   if err := binaryProtocol.Encode(x, writer); err != nil {
 //     return err
 //   }
-func (v *InquireWorkflowExecutionRequest) ToWire() (wire.Value, error) {
+func (v *DescribeWorkflowExecutionRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
 		i      int = 0
@@ -84,11 +84,11 @@ func _WorkflowExecution_Read(w wire.Value) (*shared.WorkflowExecution, error) {
 	return &v, err
 }
 
-// FromWire deserializes a InquireWorkflowExecutionRequest struct from its Thrift-level
+// FromWire deserializes a DescribeWorkflowExecutionRequest struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.
 //
-// An error is returned if we were unable to build a InquireWorkflowExecutionRequest struct
+// An error is returned if we were unable to build a DescribeWorkflowExecutionRequest struct
 // from the provided intermediate representation.
 //
 //   x, err := binaryProtocol.Decode(reader, wire.TStruct)
@@ -96,12 +96,12 @@ func _WorkflowExecution_Read(w wire.Value) (*shared.WorkflowExecution, error) {
 //     return nil, err
 //   }
 //
-//   var v InquireWorkflowExecutionRequest
+//   var v DescribeWorkflowExecutionRequest
 //   if err := v.FromWire(x); err != nil {
 //     return nil, err
 //   }
 //   return &v, nil
-func (v *InquireWorkflowExecutionRequest) FromWire(w wire.Value) error {
+func (v *DescribeWorkflowExecutionRequest) FromWire(w wire.Value) error {
 	var err error
 
 	for _, field := range w.GetStruct().Fields {
@@ -130,9 +130,9 @@ func (v *InquireWorkflowExecutionRequest) FromWire(w wire.Value) error {
 	return nil
 }
 
-// String returns a readable string representation of a InquireWorkflowExecutionRequest
+// String returns a readable string representation of a DescribeWorkflowExecutionRequest
 // struct.
-func (v *InquireWorkflowExecutionRequest) String() string {
+func (v *DescribeWorkflowExecutionRequest) String() string {
 	if v == nil {
 		return "<nil>"
 	}
@@ -148,7 +148,7 @@ func (v *InquireWorkflowExecutionRequest) String() string {
 		i++
 	}
 
-	return fmt.Sprintf("InquireWorkflowExecutionRequest{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("DescribeWorkflowExecutionRequest{%v}", strings.Join(fields[:i], ", "))
 }
 
 func _String_EqualsPtr(lhs, rhs *string) bool {
@@ -161,11 +161,11 @@ func _String_EqualsPtr(lhs, rhs *string) bool {
 	return lhs == nil && rhs == nil
 }
 
-// Equals returns true if all the fields of this InquireWorkflowExecutionRequest match the
-// provided InquireWorkflowExecutionRequest.
+// Equals returns true if all the fields of this DescribeWorkflowExecutionRequest match the
+// provided DescribeWorkflowExecutionRequest.
 //
 // This function performs a deep comparison.
-func (v *InquireWorkflowExecutionRequest) Equals(rhs *InquireWorkflowExecutionRequest) bool {
+func (v *DescribeWorkflowExecutionRequest) Equals(rhs *DescribeWorkflowExecutionRequest) bool {
 	if !_String_EqualsPtr(v.Domain, rhs.Domain) {
 		return false
 	}
@@ -178,7 +178,7 @@ func (v *InquireWorkflowExecutionRequest) Equals(rhs *InquireWorkflowExecutionRe
 
 // GetDomain returns the value of Domain if it is set or its
 // zero value if it is unset.
-func (v *InquireWorkflowExecutionRequest) GetDomain() (o string) {
+func (v *DescribeWorkflowExecutionRequest) GetDomain() (o string) {
 	if v.Domain != nil {
 		return *v.Domain
 	}
@@ -186,14 +186,14 @@ func (v *InquireWorkflowExecutionRequest) GetDomain() (o string) {
 	return
 }
 
-type InquireWorkflowExecutionResponse struct {
+type DescribeWorkflowExecutionResponse struct {
 	ShardId                *string `json:"shardId,omitempty"`
 	HistoryAddr            *string `json:"historyAddr,omitempty"`
 	MutableStateInCache    *string `json:"mutableStateInCache,omitempty"`
 	MutableStateInDatabase *string `json:"mutableStateInDatabase,omitempty"`
 }
 
-// ToWire translates a InquireWorkflowExecutionResponse struct into a Thrift-level intermediate
+// ToWire translates a DescribeWorkflowExecutionResponse struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
 // into bytes using a ThriftRW protocol implementation.
 //
@@ -208,7 +208,7 @@ type InquireWorkflowExecutionResponse struct {
 //   if err := binaryProtocol.Encode(x, writer); err != nil {
 //     return err
 //   }
-func (v *InquireWorkflowExecutionResponse) ToWire() (wire.Value, error) {
+func (v *DescribeWorkflowExecutionResponse) ToWire() (wire.Value, error) {
 	var (
 		fields [4]wire.Field
 		i      int = 0
@@ -252,11 +252,11 @@ func (v *InquireWorkflowExecutionResponse) ToWire() (wire.Value, error) {
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-// FromWire deserializes a InquireWorkflowExecutionResponse struct from its Thrift-level
+// FromWire deserializes a DescribeWorkflowExecutionResponse struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.
 //
-// An error is returned if we were unable to build a InquireWorkflowExecutionResponse struct
+// An error is returned if we were unable to build a DescribeWorkflowExecutionResponse struct
 // from the provided intermediate representation.
 //
 //   x, err := binaryProtocol.Decode(reader, wire.TStruct)
@@ -264,12 +264,12 @@ func (v *InquireWorkflowExecutionResponse) ToWire() (wire.Value, error) {
 //     return nil, err
 //   }
 //
-//   var v InquireWorkflowExecutionResponse
+//   var v DescribeWorkflowExecutionResponse
 //   if err := v.FromWire(x); err != nil {
 //     return nil, err
 //   }
 //   return &v, nil
-func (v *InquireWorkflowExecutionResponse) FromWire(w wire.Value) error {
+func (v *DescribeWorkflowExecutionResponse) FromWire(w wire.Value) error {
 	var err error
 
 	for _, field := range w.GetStruct().Fields {
@@ -320,9 +320,9 @@ func (v *InquireWorkflowExecutionResponse) FromWire(w wire.Value) error {
 	return nil
 }
 
-// String returns a readable string representation of a InquireWorkflowExecutionResponse
+// String returns a readable string representation of a DescribeWorkflowExecutionResponse
 // struct.
-func (v *InquireWorkflowExecutionResponse) String() string {
+func (v *DescribeWorkflowExecutionResponse) String() string {
 	if v == nil {
 		return "<nil>"
 	}
@@ -346,14 +346,14 @@ func (v *InquireWorkflowExecutionResponse) String() string {
 		i++
 	}
 
-	return fmt.Sprintf("InquireWorkflowExecutionResponse{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("DescribeWorkflowExecutionResponse{%v}", strings.Join(fields[:i], ", "))
 }
 
-// Equals returns true if all the fields of this InquireWorkflowExecutionResponse match the
-// provided InquireWorkflowExecutionResponse.
+// Equals returns true if all the fields of this DescribeWorkflowExecutionResponse match the
+// provided DescribeWorkflowExecutionResponse.
 //
 // This function performs a deep comparison.
-func (v *InquireWorkflowExecutionResponse) Equals(rhs *InquireWorkflowExecutionResponse) bool {
+func (v *DescribeWorkflowExecutionResponse) Equals(rhs *DescribeWorkflowExecutionResponse) bool {
 	if !_String_EqualsPtr(v.ShardId, rhs.ShardId) {
 		return false
 	}
@@ -372,7 +372,7 @@ func (v *InquireWorkflowExecutionResponse) Equals(rhs *InquireWorkflowExecutionR
 
 // GetShardId returns the value of ShardId if it is set or its
 // zero value if it is unset.
-func (v *InquireWorkflowExecutionResponse) GetShardId() (o string) {
+func (v *DescribeWorkflowExecutionResponse) GetShardId() (o string) {
 	if v.ShardId != nil {
 		return *v.ShardId
 	}
@@ -382,7 +382,7 @@ func (v *InquireWorkflowExecutionResponse) GetShardId() (o string) {
 
 // GetHistoryAddr returns the value of HistoryAddr if it is set or its
 // zero value if it is unset.
-func (v *InquireWorkflowExecutionResponse) GetHistoryAddr() (o string) {
+func (v *DescribeWorkflowExecutionResponse) GetHistoryAddr() (o string) {
 	if v.HistoryAddr != nil {
 		return *v.HistoryAddr
 	}
@@ -392,7 +392,7 @@ func (v *InquireWorkflowExecutionResponse) GetHistoryAddr() (o string) {
 
 // GetMutableStateInCache returns the value of MutableStateInCache if it is set or its
 // zero value if it is unset.
-func (v *InquireWorkflowExecutionResponse) GetMutableStateInCache() (o string) {
+func (v *DescribeWorkflowExecutionResponse) GetMutableStateInCache() (o string) {
 	if v.MutableStateInCache != nil {
 		return *v.MutableStateInCache
 	}
@@ -402,7 +402,7 @@ func (v *InquireWorkflowExecutionResponse) GetMutableStateInCache() (o string) {
 
 // GetMutableStateInDatabase returns the value of MutableStateInDatabase if it is set or its
 // zero value if it is unset.
-func (v *InquireWorkflowExecutionResponse) GetMutableStateInDatabase() (o string) {
+func (v *DescribeWorkflowExecutionResponse) GetMutableStateInDatabase() (o string) {
 	if v.MutableStateInDatabase != nil {
 		return *v.MutableStateInDatabase
 	}

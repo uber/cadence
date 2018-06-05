@@ -34,6 +34,11 @@ import (
 
 // Interface is the server-side interface for the HistoryService service.
 type Interface interface {
+	DescribeMutableState(
+		ctx context.Context,
+		Request *history.DescribeMutableStateRequest,
+	) (*history.DescribeMutableStateResponse, error)
+
 	DescribeWorkflowExecution(
 		ctx context.Context,
 		DescribeRequest *history.DescribeWorkflowExecutionRequest,
@@ -43,11 +48,6 @@ type Interface interface {
 		ctx context.Context,
 		GetRequest *history.GetMutableStateRequest,
 	) (*history.GetMutableStateResponse, error)
-
-	InquireMutableState(
-		ctx context.Context,
-		InquireRequest *history.InquireMutableStateRequest,
-	) (*history.InquireMutableStateResponse, error)
 
 	RecordActivityTaskHeartbeat(
 		ctx context.Context,
@@ -152,6 +152,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		Methods: []thrift.Method{
 
 			thrift.Method{
+				Name: "DescribeMutableState",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.DescribeMutableState),
+				},
+				Signature:    "DescribeMutableState(Request *history.DescribeMutableStateRequest) (*history.DescribeMutableStateResponse)",
+				ThriftModule: history.ThriftModule,
+			},
+
+			thrift.Method{
 				Name: "DescribeWorkflowExecution",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -170,17 +181,6 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary: thrift.UnaryHandler(h.GetMutableState),
 				},
 				Signature:    "GetMutableState(GetRequest *history.GetMutableStateRequest) (*history.GetMutableStateResponse)",
-				ThriftModule: history.ThriftModule,
-			},
-
-			thrift.Method{
-				Name: "InquireMutableState",
-				HandlerSpec: thrift.HandlerSpec{
-
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.InquireMutableState),
-				},
-				Signature:    "InquireMutableState(InquireRequest *history.InquireMutableStateRequest) (*history.InquireMutableStateResponse)",
 				ThriftModule: history.ThriftModule,
 			},
 
@@ -391,6 +391,25 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 type handler struct{ impl Interface }
 
+func (h handler) DescribeMutableState(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args history.HistoryService_DescribeMutableState_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.DescribeMutableState(ctx, args.Request)
+
+	hadError := err != nil
+	result, err := history.HistoryService_DescribeMutableState_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
 func (h handler) DescribeWorkflowExecution(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args history.HistoryService_DescribeWorkflowExecution_Args
 	if err := args.FromWire(body); err != nil {
@@ -420,25 +439,6 @@ func (h handler) GetMutableState(ctx context.Context, body wire.Value) (thrift.R
 
 	hadError := err != nil
 	result, err := history.HistoryService_GetMutableState_Helper.WrapResponse(success, err)
-
-	var response thrift.Response
-	if err == nil {
-		response.IsApplicationError = hadError
-		response.Body = result
-	}
-	return response, err
-}
-
-func (h handler) InquireMutableState(ctx context.Context, body wire.Value) (thrift.Response, error) {
-	var args history.HistoryService_InquireMutableState_Args
-	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
-	}
-
-	success, err := h.impl.InquireMutableState(ctx, args.InquireRequest)
-
-	hadError := err != nil
-	result, err := history.HistoryService_InquireMutableState_Helper.WrapResponse(success, err)
 
 	var response thrift.Response
 	if err == nil {

@@ -36,6 +36,12 @@ import (
 
 // Interface is a client for the HistoryService service.
 type Interface interface {
+	DescribeMutableState(
+		ctx context.Context,
+		Request *history.DescribeMutableStateRequest,
+		opts ...yarpc.CallOption,
+	) (*history.DescribeMutableStateResponse, error)
+
 	DescribeWorkflowExecution(
 		ctx context.Context,
 		DescribeRequest *history.DescribeWorkflowExecutionRequest,
@@ -47,12 +53,6 @@ type Interface interface {
 		GetRequest *history.GetMutableStateRequest,
 		opts ...yarpc.CallOption,
 	) (*history.GetMutableStateResponse, error)
-
-	InquireMutableState(
-		ctx context.Context,
-		InquireRequest *history.InquireMutableStateRequest,
-		opts ...yarpc.CallOption,
-	) (*history.InquireMutableStateResponse, error)
 
 	RecordActivityTaskHeartbeat(
 		ctx context.Context,
@@ -187,6 +187,29 @@ type client struct {
 	c thrift.Client
 }
 
+func (c client) DescribeMutableState(
+	ctx context.Context,
+	_Request *history.DescribeMutableStateRequest,
+	opts ...yarpc.CallOption,
+) (success *history.DescribeMutableStateResponse, err error) {
+
+	args := history.HistoryService_DescribeMutableState_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result history.HistoryService_DescribeMutableState_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = history.HistoryService_DescribeMutableState_Helper.UnwrapResponse(&result)
+	return
+}
+
 func (c client) DescribeWorkflowExecution(
 	ctx context.Context,
 	_DescribeRequest *history.DescribeWorkflowExecutionRequest,
@@ -230,29 +253,6 @@ func (c client) GetMutableState(
 	}
 
 	success, err = history.HistoryService_GetMutableState_Helper.UnwrapResponse(&result)
-	return
-}
-
-func (c client) InquireMutableState(
-	ctx context.Context,
-	_InquireRequest *history.InquireMutableStateRequest,
-	opts ...yarpc.CallOption,
-) (success *history.InquireMutableStateResponse, err error) {
-
-	args := history.HistoryService_InquireMutableState_Helper.Args(_InquireRequest)
-
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
-
-	var result history.HistoryService_InquireMutableState_Result
-	if err = result.FromWire(body); err != nil {
-		return
-	}
-
-	success, err = history.HistoryService_InquireMutableState_Helper.UnwrapResponse(&result)
 	return
 }
 

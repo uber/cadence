@@ -522,9 +522,9 @@ func (h *Handler) StartWorkflowExecution(ctx context.Context,
 	return response, nil
 }
 
-// InquireMutableState - returns the internal analysis of workflow execution state
-func (h *Handler) InquireMutableState(ctx context.Context,
-	request *hist.InquireMutableStateRequest) (*hist.InquireMutableStateResponse, error) {
+// DescribeMutableState - returns the internal analysis of workflow execution state
+func (h *Handler) DescribeMutableState(ctx context.Context,
+	request *hist.DescribeMutableStateRequest) (*hist.DescribeMutableStateResponse, error) {
 	h.startWG.Wait()
 
 	if request.GetDomainUUID() == "" {
@@ -537,7 +537,7 @@ func (h *Handler) InquireMutableState(ctx context.Context,
 		return nil, err1
 	}
 
-	resp, err2 := engine.InquireMutableState(ctx, request)
+	resp, err2 := engine.DescribeMutableState(ctx, request)
 	if err2 != nil {
 		return nil, h.convertError(err2)
 	}

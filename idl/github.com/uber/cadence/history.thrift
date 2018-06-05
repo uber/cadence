@@ -44,12 +44,12 @@ struct StartWorkflowExecutionRequest {
   30: optional ParentExecutionInfo parentExecutionInfo
 }
 
-struct InquireMutableStateRequest{
+struct DescribeMutableStateRequest{
   10: optional string domainUUID
   20: optional shared.WorkflowExecution execution
 }
 
-struct InquireMutableStateResponse{
+struct DescribeMutableStateResponse{
   30: optional string mutableStateInCache
   40: optional string mutableStateInDatabase
 }
@@ -539,9 +539,9 @@ service HistoryService {
     )
 
   /**
-  * InquireMutableState returns information about the internal states of workflow mutable state.
+  * DescribeMutableState returns information about the internal states of workflow mutable state.
   **/
-  InquireMutableStateResponse InquireMutableState(1: InquireMutableStateRequest inquireRequest)
+  DescribeMutableStateResponse DescribeMutableState(1: DescribeMutableStateRequest request)
     throws (
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,

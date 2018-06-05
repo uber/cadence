@@ -73,8 +73,8 @@ func (adh *AdminHandler) Stop() {
 	adh.Service.Stop()
 }
 
-// InquireWorkflowExecution returns information about the specified workflow execution.
-func (adh *AdminHandler) InquireWorkflowExecution(ctx context.Context, request *admin.InquireWorkflowExecutionRequest) (*admin.InquireWorkflowExecutionResponse, error) {
+// DescribeWorkflowExecution returns information about the specified workflow execution.
+func (adh *AdminHandler) DescribeWorkflowExecution(ctx context.Context, request *admin.DescribeWorkflowExecutionRequest) (*admin.DescribeWorkflowExecutionResponse, error) {
 	if request == nil {
 		return nil, adh.error(errRequestNotSet)
 	}
@@ -93,11 +93,11 @@ func (adh *AdminHandler) InquireWorkflowExecution(ctx context.Context, request *
 	}
 
 	historyAddr := historyHost.GetAddress()
-	resp, err := adh.history.InquireMutableState(ctx, &hist.InquireMutableStateRequest{
+	resp, err := adh.history.DescribeMutableState(ctx, &hist.DescribeMutableStateRequest{
 		DomainUUID: request.Domain,
 		Execution:  request.Execution,
 	})
-	return &admin.InquireWorkflowExecutionResponse{
+	return &admin.DescribeWorkflowExecutionResponse{
 		ShardId:                common.StringPtr(shardIDForOutput),
 		HistoryAddr:            common.StringPtr(historyAddr),
 		MutableStateInDatabase: resp.MutableStateInDatabase,
