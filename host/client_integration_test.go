@@ -27,6 +27,13 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"os"
+	"reflect"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/pborman/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
@@ -36,6 +43,7 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
+	"go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/client"
 	"go.uber.org/cadence/encoded"
@@ -44,10 +52,6 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/zap"
-	"os"
-	"reflect"
-	"testing"
-	"time"
 )
 
 type (
@@ -184,6 +188,11 @@ func (s *clientIntegrationSuite) setupSuite(enableGlobalDomain bool, isMasterClu
 		},
 		ReplicationConfig: &persistence.DomainReplicationConfig{},
 	})
+
+	workflow.Register(testDataConverterWorkflow)
+	activity.Register(testActivity)
+	workflow.Register(testParentWorkflow)
+	workflow.Register(testChildWorkflow)
 }
 
 // testDataConverter implements encoded.DataConverter using gob
@@ -220,13 +229,10 @@ func testActivity(ctx context.Context, msg string) (string, error) {
 	return "hello_" + msg, nil
 }
 
-var activityTaskList = "client-integration-data-converter-activity-tasklist"
-
-func testDataConverterWorkflow(ctx workflow.Context) (string, error) {
+func testDataConverterWorkflow(ctx workflow.Context, tl string) (string, error) {
 	ao := workflow.ActivityOptions{
 		ScheduleToStartTimeout: time.Minute,
 		StartToCloseTimeout:    time.Minute,
-		HeartbeatTimeout:       20 * time.Second,
 	}
 	ctx = workflow.WithActivityOptions(ctx, ao)
 
@@ -240,7 +246,7 @@ func testDataConverterWorkflow(ctx workflow.Context) (string, error) {
 	// with new taskList so that worker with same data converter can properly process tasks.
 	var result1 string
 	ctx1 := workflow.WithDataConverter(ctx, newTestDataConverter())
-	ctx1 = workflow.WithTaskList(ctx1, activityTaskList)
+	ctx1 = workflow.WithTaskList(ctx1, tl)
 	err1 := workflow.ExecuteActivity(ctx1, testActivity, "world1").Get(ctx1, &result1)
 	if err1 != nil {
 		return "", err1
@@ -248,9 +254,10 @@ func testDataConverterWorkflow(ctx workflow.Context) (string, error) {
 	return result + "," + result1, nil
 }
 
-func (s *clientIntegrationSuite) startWorkerWithDataConverter(tl string) cworker.Worker {
-	opts := cworker.Options{
-		DataConverter: newTestDataConverter(),
+func (s *clientIntegrationSuite) startWorkerWithDataConverter(tl string, useTestConverter bool) cworker.Worker {
+	opts := cworker.Options{}
+	if useTestConverter {
+		opts.DataConverter = newTestDataConverter()
 	}
 	worker := cworker.New(s.wfService, s.domainName, tl, opts)
 	if err := worker.Start(); err != nil {
@@ -260,10 +267,8 @@ func (s *clientIntegrationSuite) startWorkerWithDataConverter(tl string) cworker
 }
 
 func (s *clientIntegrationSuite) TestClientDataConverter() {
-	workflow.Register(testDataConverterWorkflow)
-	activity.Register(testActivity)
-
-	worker := s.startWorkerWithDataConverter(activityTaskList)
+	tl := "client-integration-data-converter-activity-tasklist"
+	worker := s.startWorkerWithDataConverter(tl, true)
 	defer worker.Stop()
 
 	id := "client-integration-data-converter-workflow"
@@ -273,7 +278,7 @@ func (s *clientIntegrationSuite) TestClientDataConverter() {
 		ExecutionStartToCloseTimeout: 20 * time.Second,
 	}
 	ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
-	we, err := s.wfClient.ExecuteWorkflow(ctx, workflowOptions, testDataConverterWorkflow)
+	we, err := s.wfClient.ExecuteWorkflow(ctx, workflowOptions, testDataConverterWorkflow, tl)
 	if err != nil {
 		s.logger.Fatalf("Start workflow with err: %v", err)
 	}
@@ -284,6 +289,47 @@ func (s *clientIntegrationSuite) TestClientDataConverter() {
 	err = we.Get(ctx, &res)
 	s.NoError(err)
 	s.Equal("hello_world,hello_world1", res)
+}
+
+func (s *clientIntegrationSuite) TestClientDataConverter_Failed() {
+	tl := "client-integration-data-converter-activity-failed-tasklist"
+	worker := s.startWorkerWithDataConverter(tl, false) // mismatch of data converter
+	defer worker.Stop()
+
+	id := "client-integration-data-converter-failed-workflow"
+	workflowOptions := client.StartWorkflowOptions{
+		ID:                           id,
+		TaskList:                     s.taskList,
+		ExecutionStartToCloseTimeout: 20 * time.Second,
+	}
+	ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
+	we, err := s.wfClient.ExecuteWorkflow(ctx, workflowOptions, testDataConverterWorkflow, tl)
+	if err != nil {
+		s.logger.Fatalf("Start workflow with err: %v", err)
+	}
+	s.NotNil(we)
+	s.True(we.GetRunID() != "")
+
+	var res string
+	err = we.Get(ctx, &res)
+	s.Error(err)
+
+	// Get history to make sure only the 2nd activity is failed because of mismatch of data converter
+	iter := s.wfClient.GetWorkflowHistory(ctx, id, we.GetRunID(), false, 0)
+	for iter.HasNext() {
+		event, _ := iter.Next()
+		if event.GetEventId() == 7 {
+			s.Equal(shared.EventTypeActivityTaskCompleted, event.GetEventType())
+		}
+		if event.GetEventId() == 13 {
+			s.Equal(shared.EventTypeActivityTaskFailed, event.GetEventType())
+		}
+		if event.GetEventId() == 17 {
+			s.Equal(shared.EventTypeWorkflowExecutionFailed, event.GetEventType())
+			attr := event.WorkflowExecutionFailedEventAttributes
+			s.True(strings.HasPrefix(string(attr.Details), "unable to decode the activity function input bytes with error"))
+		}
+	}
 }
 
 var childTaskList = "client-integration-data-converter-child-tasklist"
@@ -313,14 +359,15 @@ func testParentWorkflow(ctx workflow.Context) (string, error) {
 	ctx1 := workflow.WithChildOptions(ctx, cwo1)
 	ctx1 = workflow.WithDataConverter(ctx1, newTestDataConverter())
 	var result1 string
-	err1 := workflow.ExecuteChildWorkflow(ctx1, testChildWorkflow, 0, 3).Get(ctx1, &result1)
+	err1 := workflow.ExecuteChildWorkflow(ctx1, testChildWorkflow, 0, 2).Get(ctx1, &result1)
 	if err1 != nil {
 		logger.Error("Parent execution received child execution 1 failure.", zap.Error(err1))
 		return "", err1
 	}
 
-	logger.Info("Parent execution completed.", zap.String("Result", result+result1))
-	return "success", nil
+	res := fmt.Sprintf("Complete child1 %s times, complete child2 %s times", result, result1)
+	logger.Info("Parent execution completed.", zap.String("Result", res))
+	return res, nil
 }
 
 func testChildWorkflow(ctx workflow.Context, totalCount, runCount int) (string, error) {
@@ -336,7 +383,7 @@ func testChildWorkflow(ctx workflow.Context, totalCount, runCount int) (string, 
 	if runCount == 0 {
 		result := fmt.Sprintf("Child workflow execution completed after %v runs", totalCount)
 		logger.Info("Child workflow completed.", zap.String("Result", result))
-		return result, nil
+		return strconv.Itoa(totalCount), nil
 	}
 
 	logger.Info("Child workflow starting new run.", zap.Int("RunCount", runCount), zap.Int("TotalCount",
@@ -345,10 +392,7 @@ func testChildWorkflow(ctx workflow.Context, totalCount, runCount int) (string, 
 }
 
 func (s *clientIntegrationSuite) TestClientDataConverter_WithChild() {
-	workflow.Register(testParentWorkflow)
-	workflow.Register(testChildWorkflow)
-
-	worker := s.startWorkerWithDataConverter(childTaskList)
+	worker := s.startWorkerWithDataConverter(childTaskList, true)
 	defer worker.Stop()
 
 	id := "client-integration-data-converter-with-child-workflow"
@@ -368,5 +412,5 @@ func (s *clientIntegrationSuite) TestClientDataConverter_WithChild() {
 	var res string
 	err = we.Get(ctx, &res)
 	s.NoError(err)
-	s.Equal("success", res)
+	s.Equal("Complete child1 3 times, complete child2 2 times", res)
 }
