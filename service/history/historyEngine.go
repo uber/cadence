@@ -544,6 +544,34 @@ func (e *historyEngineImpl) getMutableState(ctx context.Context,
 	return
 }
 
+func (e *historyEngineImpl) ReloadMutableState(ctx context.Context,
+	request *h.ReloadMutableStateRequest) (retResp *h.ReloadMutableStateResponse, retError error) {
+
+	domainID, err := validateDomainUUID(request.DomainUUID)
+	if err != nil {
+		return nil, err
+	}
+
+	execution := workflow.WorkflowExecution{
+		WorkflowId: request.Execution.WorkflowId,
+		RunId:      request.Execution.RunId,
+	}
+
+	newCtx, release, err := e.historyCache.reloadWorkflowExecutionWithTimeout(ctx, domainID, execution)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { release(retError) }()
+	retResp = &h.ReloadMutableStateResponse{}
+
+	msb, retError := newCtx.loadWorkflowExecution()
+	if retError != nil {
+		return
+	}
+	retResp.MutableState, retError = e.toMutableStateJSON(msb)
+	return
+}
+
 func (e *historyEngineImpl) DescribeMutableState(ctx context.Context,
 	request *h.DescribeMutableStateRequest) (retResp *h.DescribeMutableStateResponse, retError error) {
 
@@ -570,6 +598,9 @@ func (e *historyEngineImpl) DescribeMutableState(ctx context.Context,
 	}
 
 	msb, retError := dbCtx.loadWorkflowExecution()
+	if retError != nil {
+		return
+	}
 	retResp.MutableStateInDatabase, retError = e.toMutableStateJSON(msb)
 
 	return

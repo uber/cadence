@@ -79,6 +79,31 @@ func (adh *AdminHandler) Stop() {
 	adh.domainCache.Stop()
 }
 
+// ReloadMutableState forces reloading the mutable state from database into history cache, and returns the updated mutable state
+func (adh *AdminHandler) ReloadMutableState(ctx context.Context, request *admin.ReloadMutableStateRequest) (*admin.ReloadMutableStateResponse, error) {
+	if request == nil {
+		return nil, adh.error(errRequestNotSet)
+	}
+
+	if err := validateExecution(request.Execution); err != nil {
+		return nil, adh.error(err)
+	}
+	domainID, err := adh.domainCache.GetDomainID(request.GetDomain())
+	if err != nil {
+		return &admin.ReloadMutableStateResponse{}, err
+	}
+	resp, err := adh.history.ReloadMutableState(ctx, &hist.ReloadMutableStateRequest{
+		DomainUUID: &domainID,
+		Execution:  request.Execution,
+	})
+	if err != nil {
+		return &admin.ReloadMutableStateResponse{}, err
+	}
+	return &admin.ReloadMutableStateResponse{
+		MutableState: resp.MutableState,
+	}, nil
+}
+
 // DescribeWorkflowExecution returns information about the specified workflow execution.
 func (adh *AdminHandler) DescribeWorkflowExecution(ctx context.Context, request *admin.DescribeWorkflowExecutionRequest) (*admin.DescribeWorkflowExecutionResponse, error) {
 	if request == nil {
@@ -99,6 +124,9 @@ func (adh *AdminHandler) DescribeWorkflowExecution(ctx context.Context, request 
 	}
 
 	domainID, err := adh.domainCache.GetDomainID(request.GetDomain())
+	if err != nil {
+		return &admin.DescribeWorkflowExecutionResponse{}, err
+	}
 
 	historyAddr := historyHost.GetAddress()
 	resp, err := adh.history.DescribeMutableState(ctx, &hist.DescribeMutableStateRequest{

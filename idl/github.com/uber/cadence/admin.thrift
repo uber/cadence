@@ -36,6 +36,17 @@ service AdminService {
       3: shared.EntityNotExistsError entityNotExistError,
       4: shared.AccessDeniedError accessDeniedError,
     )
+
+  /**
+    * ReloadMutableState forces reloading the mutable state from database into history cache, and returns the updated mutable state
+    **/
+    ReloadMutableStateResponse ReloadMutableState(1: ReloadMutableStateRequest request)
+      throws (
+        1: shared.BadRequestError badRequestError,
+        2: shared.InternalServiceError internalServiceError,
+        3: shared.EntityNotExistsError entityNotExistError,
+        4: shared.AccessDeniedError accessDeniedError,
+      )
 }
 
 struct DescribeWorkflowExecutionRequest {
@@ -48,4 +59,13 @@ struct DescribeWorkflowExecutionResponse{
   20: optional string historyAddr
   40: optional string mutableStateInCache
   50: optional string mutableStateInDatabase
+}
+
+struct ReloadMutableStateRequest {
+  10: optional string domain
+  20: optional shared.WorkflowExecution execution
+}
+
+struct ReloadMutableStateResponse{
+  40: optional string mutableState
 }

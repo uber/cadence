@@ -78,6 +78,12 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*history.RecordDecisionTaskStartedResponse, error)
 
+	ReloadMutableState(
+		ctx context.Context,
+		Request *history.ReloadMutableStateRequest,
+		opts ...yarpc.CallOption,
+	) (*history.ReloadMutableStateResponse, error)
+
 	RemoveSignalMutableState(
 		ctx context.Context,
 		RemoveRequest *history.RemoveSignalMutableStateRequest,
@@ -345,6 +351,29 @@ func (c client) RecordDecisionTaskStarted(
 	}
 
 	success, err = history.HistoryService_RecordDecisionTaskStarted_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) ReloadMutableState(
+	ctx context.Context,
+	_Request *history.ReloadMutableStateRequest,
+	opts ...yarpc.CallOption,
+) (success *history.ReloadMutableStateResponse, err error) {
+
+	args := history.HistoryService_ReloadMutableState_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result history.HistoryService_ReloadMutableState_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = history.HistoryService_ReloadMutableState_Helper.UnwrapResponse(&result)
 	return
 }
 

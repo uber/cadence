@@ -130,6 +130,25 @@ func (c *historyCache) getAndCreateWorkflowExecutionWithTimeout(ctx context.Cont
 	return contextFromCache, contextFromDB, releaseFunc, cacheHit, nil
 }
 
+func (c *historyCache) reloadWorkflowExecutionWithTimeout(ctx context.Context, domainID string,
+	execution workflow.WorkflowExecution) (*workflowExecutionContext, releaseWorkflowExecutionFunc, error) {
+	if err := c.validateWorkflowExecutionInfo(domainID, &execution); err != nil {
+		return nil, nil, err
+	}
+	key := execution.GetRunId()
+
+	newCtx := newWorkflowExecutionContext(domainID, execution, c.shard, c.executionManager, c.logger)
+	c.Put(key, newCtx)
+
+	releaseFunc := c.makeReleaseFunc(key, cacheNotReleased, newCtx)
+	if err := newCtx.locker.Lock(ctx); err != nil {
+		// ctx is done before lock can be acquired
+		c.Release(key)
+		return nil, nil, err
+	}
+	return newCtx, releaseFunc, nil
+}
+
 func (c *historyCache) getOrCreateWorkflowExecutionWithTimeout(ctx context.Context, domainID string,
 	execution workflow.WorkflowExecution) (*workflowExecutionContext, releaseWorkflowExecutionFunc, error) {
 	if err := c.validateWorkflowExecutionInfo(domainID, &execution); err != nil {
