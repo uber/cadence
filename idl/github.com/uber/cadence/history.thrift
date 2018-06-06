@@ -44,6 +44,15 @@ struct StartWorkflowExecutionRequest {
   30: optional ParentExecutionInfo parentExecutionInfo
 }
 
+struct ReloadMutableStateRequest{
+  10: optional string domainUUID
+  20: optional shared.WorkflowExecution execution
+}
+
+struct ReloadMutableStateResponse{
+  40: optional string mutableState
+}
+
 struct DescribeMutableStateRequest{
   10: optional string domainUUID
   20: optional shared.WorkflowExecution execution
@@ -550,4 +559,17 @@ service HistoryService {
       5: ShardOwnershipLostError shardOwnershipLostError,
       6: shared.LimitExceededError limitExceededError,
     )
+
+  /**
+    * ReloadMutableState forces reloading the mutable state from database into history cache, and returns the updated mutable state
+    **/
+    ReloadMutableStateResponse ReloadMutableState(1: ReloadMutableStateRequest request)
+      throws (
+        1: shared.BadRequestError badRequestError,
+        2: shared.InternalServiceError internalServiceError,
+        3: shared.EntityNotExistsError entityNotExistError,
+        4: shared.AccessDeniedError accessDeniedError,
+        5: ShardOwnershipLostError shardOwnershipLostError,
+        6: shared.LimitExceededError limitExceededError,
+      )
 }

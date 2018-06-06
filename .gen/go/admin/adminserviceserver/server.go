@@ -37,6 +37,11 @@ type Interface interface {
 		ctx context.Context,
 		Request *admin.DescribeWorkflowExecutionRequest,
 	) (*admin.DescribeWorkflowExecutionResponse, error)
+
+	ReloadMutableState(
+		ctx context.Context,
+		Request *admin.ReloadMutableStateRequest,
+	) (*admin.ReloadMutableStateResponse, error)
 }
 
 // New prepares an implementation of the AdminService service for
@@ -60,10 +65,21 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Signature:    "DescribeWorkflowExecution(Request *admin.DescribeWorkflowExecutionRequest) (*admin.DescribeWorkflowExecutionResponse)",
 				ThriftModule: admin.ThriftModule,
 			},
+
+			thrift.Method{
+				Name: "ReloadMutableState",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.ReloadMutableState),
+				},
+				Signature:    "ReloadMutableState(Request *admin.ReloadMutableStateRequest) (*admin.ReloadMutableStateResponse)",
+				ThriftModule: admin.ThriftModule,
+			},
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 1)
+	procedures := make([]transport.Procedure, 0, 2)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
@@ -80,6 +96,25 @@ func (h handler) DescribeWorkflowExecution(ctx context.Context, body wire.Value)
 
 	hadError := err != nil
 	result, err := admin.AdminService_DescribeWorkflowExecution_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) ReloadMutableState(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args admin.AdminService_ReloadMutableState_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.ReloadMutableState(ctx, args.Request)
+
+	hadError := err != nil
+	result, err := admin.AdminService_ReloadMutableState_Helper.WrapResponse(success, err)
 
 	var response thrift.Response
 	if err == nil {

@@ -69,6 +69,11 @@ type Interface interface {
 		AddRequest *history.RecordDecisionTaskStartedRequest,
 	) (*history.RecordDecisionTaskStartedResponse, error)
 
+	ReloadMutableState(
+		ctx context.Context,
+		Request *history.ReloadMutableStateRequest,
+	) (*history.ReloadMutableStateResponse, error)
+
 	RemoveSignalMutableState(
 		ctx context.Context,
 		RemoveRequest *history.RemoveSignalMutableStateRequest,
@@ -229,6 +234,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
+				Name: "ReloadMutableState",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.ReloadMutableState),
+				},
+				Signature:    "ReloadMutableState(Request *history.ReloadMutableStateRequest) (*history.ReloadMutableStateResponse)",
+				ThriftModule: history.ThriftModule,
+			},
+
+			thrift.Method{
 				Name: "RemoveSignalMutableState",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -384,7 +400,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 21)
+	procedures := make([]transport.Procedure, 0, 22)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
@@ -515,6 +531,25 @@ func (h handler) RecordDecisionTaskStarted(ctx context.Context, body wire.Value)
 
 	hadError := err != nil
 	result, err := history.HistoryService_RecordDecisionTaskStarted_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) ReloadMutableState(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args history.HistoryService_ReloadMutableState_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.ReloadMutableState(ctx, args.Request)
+
+	hadError := err != nil
+	result, err := history.HistoryService_ReloadMutableState_Helper.WrapResponse(success, err)
 
 	var response thrift.Response
 	if err == nil {

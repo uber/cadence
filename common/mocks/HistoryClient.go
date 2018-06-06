@@ -31,6 +31,29 @@ type HistoryClient struct {
 	mock.Mock
 }
 
+// ReloadMutableState provides a mock function with given fields: ctx, getRequest
+func (_m *HistoryClient) ReloadMutableState(ctx context.Context, request *history.ReloadMutableStateRequest, opts ...yarpc.CallOption) (*history.ReloadMutableStateResponse, error) {
+	ret := _m.Called(ctx, request)
+
+	var r0 *history.ReloadMutableStateResponse
+	if rf, ok := ret.Get(0).(func(context.Context, *history.ReloadMutableStateRequest) *history.ReloadMutableStateResponse); ok {
+		r0 = rf(ctx, request)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*history.ReloadMutableStateResponse)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *history.ReloadMutableStateRequest) error); ok {
+		r1 = rf(ctx, request)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // DescribeMutableState provides a mock function with given fields: ctx, getRequest
 func (_m *HistoryClient) DescribeMutableState(ctx context.Context, request *history.DescribeMutableStateRequest, opts ...yarpc.CallOption) (*history.DescribeMutableStateResponse, error) {
 	ret := _m.Called(ctx, request)

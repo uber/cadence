@@ -66,6 +66,29 @@ func (_m *MockHistoryEngine) StartWorkflowExecution(request *gohistory.StartWork
 	return r0, r1
 }
 
+// ReloadMutableState is mock implementation for ReloadMutableState of HistoryEngine
+func (_m *MockHistoryEngine) ReloadMutableState(ctx context.Context, request *gohistory.ReloadMutableStateRequest) (*gohistory.ReloadMutableStateResponse, error) {
+	ret := _m.Called(ctx, request)
+
+	var r0 *gohistory.ReloadMutableStateResponse
+	if rf, ok := ret.Get(0).(func(*gohistory.ReloadMutableStateRequest) *gohistory.ReloadMutableStateResponse); ok {
+		r0 = rf(request)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*gohistory.ReloadMutableStateResponse)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*gohistory.ReloadMutableStateRequest) error); ok {
+		r1 = rf(request)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // DescribeMutableState is mock implementation for DescribeMutableState of HistoryEngine
 func (_m *MockHistoryEngine) DescribeMutableState(ctx context.Context, request *gohistory.DescribeMutableStateRequest) (*gohistory.DescribeMutableStateResponse, error) {
 	ret := _m.Called(ctx, request)

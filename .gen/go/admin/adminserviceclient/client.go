@@ -40,6 +40,12 @@ type Interface interface {
 		Request *admin.DescribeWorkflowExecutionRequest,
 		opts ...yarpc.CallOption,
 	) (*admin.DescribeWorkflowExecutionResponse, error)
+
+	ReloadMutableState(
+		ctx context.Context,
+		Request *admin.ReloadMutableStateRequest,
+		opts ...yarpc.CallOption,
+	) (*admin.ReloadMutableStateResponse, error)
 }
 
 // New builds a new client for the AdminService service.
@@ -86,5 +92,28 @@ func (c client) DescribeWorkflowExecution(
 	}
 
 	success, err = admin.AdminService_DescribeWorkflowExecution_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) ReloadMutableState(
+	ctx context.Context,
+	_Request *admin.ReloadMutableStateRequest,
+	opts ...yarpc.CallOption,
+) (success *admin.ReloadMutableStateResponse, err error) {
+
+	args := admin.AdminService_ReloadMutableState_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result admin.AdminService_ReloadMutableState_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = admin.AdminService_ReloadMutableState_Helper.UnwrapResponse(&result)
 	return
 }

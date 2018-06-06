@@ -527,6 +527,28 @@ func (h *Handler) StartWorkflowExecution(ctx context.Context,
 	return response, nil
 }
 
+// ReloadMutableState - forces reloading the mutable state from database into history cache, and returns the updated mutable state
+func (h *Handler) ReloadMutableState(ctx context.Context,
+	request *hist.ReloadMutableStateRequest) (*hist.ReloadMutableStateResponse, error) {
+	h.startWG.Wait()
+
+	if request.GetDomainUUID() == "" {
+		return nil, errDomainNotSet
+	}
+
+	workflowExecution := request.Execution
+	engine, err1 := h.controller.GetEngine(workflowExecution.GetWorkflowId())
+	if err1 != nil {
+		return nil, err1
+	}
+
+	resp, err2 := engine.ReloadMutableState(ctx, request)
+	if err2 != nil {
+		return nil, h.convertError(err2)
+	}
+	return resp, nil
+}
+
 // DescribeMutableState - returns the internal analysis of workflow execution state
 func (h *Handler) DescribeMutableState(ctx context.Context,
 	request *hist.DescribeMutableStateRequest) (*hist.DescribeMutableStateResponse, error) {

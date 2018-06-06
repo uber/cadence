@@ -61,6 +61,15 @@ func (c *metricClient) StartWorkflowExecution(
 	return resp, err
 }
 
+func (c *metricClient) ReloadMutableState(
+	context context.Context,
+	request *h.ReloadMutableStateRequest,
+	opts ...yarpc.CallOption) (*h.ReloadMutableStateResponse, error) {
+	resp, err := c.client.ReloadMutableState(context, request, opts...)
+
+	return resp, err
+}
+
 func (c *metricClient) DescribeMutableState(
 	context context.Context,
 	request *h.DescribeMutableStateRequest,

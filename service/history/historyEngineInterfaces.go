@@ -53,6 +53,7 @@ type (
 			error)
 		GetMutableState(ctx context.Context, request *h.GetMutableStateRequest) (*h.GetMutableStateResponse, error)
 		DescribeMutableState(ctx context.Context, request *h.DescribeMutableStateRequest) (*h.DescribeMutableStateResponse, error)
+		ReloadMutableState(ctx context.Context, request *h.ReloadMutableStateRequest) (*h.ReloadMutableStateResponse, error)
 		ResetStickyTaskList(ctx context.Context, resetRequest *h.ResetStickyTaskListRequest) (*h.ResetStickyTaskListResponse, error)
 		DescribeWorkflowExecution(ctx context.Context,
 			request *h.DescribeWorkflowExecutionRequest) (*workflow.DescribeWorkflowExecutionResponse, error)

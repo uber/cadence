@@ -94,3 +94,36 @@ func (mr *_MockClientRecorder) DescribeWorkflowExecution(
 	args := append([]interface{}{ctx, _Request}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "DescribeWorkflowExecution", args...)
 }
+
+// ReloadMutableState responds to a ReloadMutableState call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().ReloadMutableState(gomock.Any(), ...).Return(...)
+// 	... := client.ReloadMutableState(...)
+func (m *MockClient) ReloadMutableState(
+	ctx context.Context,
+	_Request *admin.ReloadMutableStateRequest,
+	opts ...yarpc.CallOption,
+) (success *admin.ReloadMutableStateResponse, err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "ReloadMutableState", args...)
+	success, _ = ret[i].(*admin.ReloadMutableStateResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) ReloadMutableState(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "ReloadMutableState", args...)
+}
