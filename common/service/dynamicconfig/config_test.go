@@ -131,10 +131,10 @@ func (s *configSuite) SetupSuite() {
 
 func (s *configSuite) TestGetProperty() {
 	key := testGetPropertyKey
-	value := s.cln.GetProperty(key, 10)
-	s.Equal(10, value())
-	s.client.SetValue(key, 50)
-	s.Equal(50, value())
+	value := s.cln.GetProperty(key, "a")
+	s.Equal("a", value())
+	s.client.SetValue(key, "b")
+	s.Equal("b", value())
 }
 
 func (s *configSuite) TestGetIntProperty() {

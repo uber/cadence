@@ -125,7 +125,7 @@ func NewWorkflowHandler(sVice service.Service, config *Config, metadataMgr persi
 		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
 		hSerializerFactory: persistence.NewHistorySerializerFactory(),
 		domainCache:        cache.NewDomainCache(metadataMgr, sVice.GetClusterMetadata(), sVice.GetLogger()),
-		rateLimiter:        common.NewTokenBucket(config.RPS, common.NewRealTimeSource()),
+		rateLimiter:        common.NewTokenBucket(config.RPS(), common.NewRealTimeSource()),
 		domainReplicator:   NewDomainReplicator(kafkaProducer, sVice.GetLogger()),
 	}
 	// prevent us from trying to serve requests before handler's Start() is complete
@@ -1338,7 +1338,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	}
 
 	if getRequest.GetMaximumPageSize() == 0 {
-		getRequest.MaximumPageSize = common.Int32Ptr(wh.config.DefaultHistoryMaxPageSize)
+		getRequest.MaximumPageSize = common.Int32Ptr(int32(wh.config.DefaultHistoryMaxPageSize()))
 	}
 
 	domainID, err := wh.domainCache.GetDomainID(getRequest.GetDomain())
@@ -1701,7 +1701,7 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx context.Context,
 	}
 
 	if listRequest.GetMaximumPageSize() == 0 {
-		listRequest.MaximumPageSize = common.Int32Ptr(wh.config.DefaultVisibilityMaxPageSize)
+		listRequest.MaximumPageSize = common.Int32Ptr(int32(wh.config.DefaultVisibilityMaxPageSize()))
 	}
 
 	domainID, err := wh.domainCache.GetDomainID(listRequest.GetDomain())
@@ -1792,7 +1792,7 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx context.Context,
 	}
 
 	if listRequest.GetMaximumPageSize() == 0 {
-		listRequest.MaximumPageSize = common.Int32Ptr(wh.config.DefaultVisibilityMaxPageSize)
+		listRequest.MaximumPageSize = common.Int32Ptr(int32(wh.config.DefaultVisibilityMaxPageSize()))
 	}
 
 	domainID, err := wh.domainCache.GetDomainID(listRequest.GetDomain())
@@ -2285,7 +2285,7 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(ctx context.Context
 			*matchingResp.WorkflowExecution,
 			firstEventID,
 			nextEventID,
-			wh.config.DefaultHistoryMaxPageSize,
+			int32(wh.config.DefaultHistoryMaxPageSize()),
 			nil,
 			matchingResp.DecisionInfo)
 		if err != nil {

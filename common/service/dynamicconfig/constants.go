@@ -34,6 +34,7 @@ const (
 	_matchingRoot               = "matching."
 	_matchingDomainTaskListRoot = _matchingRoot + "domain." + "taskList."
 	_historyRoot                = "history."
+	_frontendRoot               = "frontend."
 )
 
 var keys = []string{
@@ -43,6 +44,10 @@ var keys = []string{
 	"testGetFloat64PropertyKey",
 	"testGetDurationPropertyKey",
 	"testGetBoolPropertyKey",
+	_frontendRoot + "defaultVisibilityMaxPageSize",
+	_frontendRoot + "defaultHistoryMaxPageSize",
+	_frontendRoot + "rps",
+	_frontendRoot + "historyMgrNumConns",
 	_matchingDomainTaskListRoot + "minTaskThrottlingBurstSize",
 	_matchingDomainTaskListRoot + "maxTaskBatchSize",
 	_matchingDomainTaskListRoot + "longPollExpirationInterval",
@@ -63,7 +68,19 @@ const (
 	testGetDurationPropertyKey
 	testGetBoolPropertyKey
 
+	// key for frontend
+
+	// FrontendDefaultVisibilityMaxPageSize is default max size for ListWorkflowExecutions in one page
+	FrontendDefaultVisibilityMaxPageSize
+	// FrontendDefaultHistoryMaxPageSize is default max size for GetWorkflowExecutionHistory in one page
+	FrontendDefaultHistoryMaxPageSize
+	// FrontendRPS is workflow rate limit per second
+	FrontendRPS
+	// FrontendHistoryMgrNumConns is for persistence cluster.NumConns
+	FrontendHistoryMgrNumConns
+
 	// key for matching
+
 	// MatchingMinTaskThrottlingBurstSize is the minimum burst size for task list throttling
 	MatchingMinTaskThrottlingBurstSize
 	// MatchingMaxTaskBatchSize is the maximum batch size to fetch from the task buffer
@@ -78,6 +95,7 @@ const (
 	MatchingIdleTasklistCheckInterval
 
 	// key for history
+
 	// HistoryLongPollExpirationInterval is the long poll expiration interval in the history service
 	HistoryLongPollExpirationInterval
 )
