@@ -74,7 +74,7 @@ func (s *Service) Start() {
 
 	base := service.New(p)
 
-	metadata, err := persistence.NewCassandraMetadataPersistence(p.CassandraConfig.Hosts,
+	metadata, err := persistence.NewMetadataManagerProxy(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,
 		p.CassandraConfig.User,
 		p.CassandraConfig.Password,
@@ -130,7 +130,7 @@ func (s *Service) Start() {
 	wfHandler := NewWorkflowHandler(base, s.config, metadata, history, visibility, kafkaProducer)
 	wfHandler.Start()
 
-	adminHandler := NewAdminHandler(base, p.CassandraConfig.NumHistoryShards)
+	adminHandler := NewAdminHandler(base, p.CassandraConfig.NumHistoryShards, metadata)
 	adminHandler.Start()
 
 	log.Infof("%v started", common.FrontendServiceName)

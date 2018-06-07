@@ -866,6 +866,22 @@ func (_m *mockMutableState) CloseUpdateSession() (*mutableStateSessionUpdates, e
 	return r0, r1
 }
 
+// CopyToPersistence provides a mock function with given fields:
+func (_m *mockMutableState) CopyToPersistence() *persistence.WorkflowMutableState {
+	ret := _m.Called()
+
+	var r0 *persistence.WorkflowMutableState
+	if rf, ok := ret.Get(0).(func() *persistence.WorkflowMutableState); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*persistence.WorkflowMutableState)
+		}
+	}
+
+	return r0
+}
+
 // CreateNewHistoryEvent provides a mock function with given fields: eventType
 func (_m *mockMutableState) CreateNewHistoryEvent(eventType shared.EventType) *shared.HistoryEvent {
 	ret := _m.Called(eventType)
@@ -1347,6 +1363,20 @@ func (_m *mockMutableState) GetLastFirstEventID() int64 {
 
 // GetLastUpdatedTimestamp provides a mock function with given fields:
 func (_m *mockMutableState) GetLastUpdatedTimestamp() int64 {
+	ret := _m.Called()
+
+	var r0 int64
+	if rf, ok := ret.Get(0).(func() int64); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	return r0
+}
+
+// GetLastWriteVersion provides a mock function with given fields:
+func (_m *mockMutableState) GetLastWriteVersion() int64 {
 	ret := _m.Called()
 
 	var r0 int64
@@ -2070,9 +2100,9 @@ func (_m *mockMutableState) UpdateDecision(_a0 *decisionInfo) {
 	_m.Called(_a0)
 }
 
-// UpdateReplicationStateLastEventID provides a mock function with given fields: clusterName, lastEventID
-func (_m *mockMutableState) UpdateReplicationStateLastEventID(clusterName string, lastEventID int64) {
-	_m.Called(clusterName, lastEventID)
+// UpdateReplicationStateLastEventID provides a mock function with given fields: clusterName, lastWriteVersion, lastEventID
+func (_m *mockMutableState) UpdateReplicationStateLastEventID(clusterName string, lastWriteVersion int64, lastEventID int64) {
+	_m.Called(clusterName, lastWriteVersion, lastEventID)
 }
 
 // UpdateReplicationStateVersion provides a mock function with given fields: version

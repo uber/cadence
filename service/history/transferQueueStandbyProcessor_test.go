@@ -102,6 +102,7 @@ func (s *transferQueueStandbyProcessorSuite) SetupTest() {
 				},
 			},
 			IsGlobalDomain: true,
+			TableVersion:   persistence.DomainTableVersionV1,
 		},
 		nil,
 	)
@@ -447,6 +448,7 @@ func (s *transferQueueStandbyProcessorSuite) TestProcessCloseExecution() {
 
 	taskID := int64(59)
 	event = addCompleteWorkflowEvent(msBuilder, event.GetEventId(), nil)
+	msBuilder.UpdateReplicationStateLastEventID("", version, event.GetEventId())
 
 	transferTask := &persistence.TransferTaskInfo{
 		Version:    version,

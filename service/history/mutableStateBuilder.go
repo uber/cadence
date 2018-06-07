@@ -91,6 +91,7 @@ type (
 		BufferReplicationTask(*h.ReplicateEventsRequest) error
 		ClearStickyness()
 		CloseUpdateSession() (*mutableStateSessionUpdates, error)
+		CopyToPersistence() *persistence.WorkflowMutableState
 		CreateNewHistoryEvent(eventType workflow.EventType) *workflow.HistoryEvent
 		CreateNewHistoryEventWithTimestamp(eventType workflow.EventType, timestamp int64) *workflow.HistoryEvent
 		CreateRetryTimer(*persistence.ActivityInfo, string) persistence.Task
@@ -123,6 +124,7 @@ type (
 		GetHistoryEvent(serializedEvent []byte) (*workflow.HistoryEvent, bool)
 		GetLastFirstEventID() int64
 		GetLastUpdatedTimestamp() int64
+		GetLastWriteVersion() int64
 		GetNextEventID() int64
 		GetPendingDecision(int64) (*decisionInfo, bool)
 		GetPendingActivityInfos() map[int64]*persistence.ActivityInfo
@@ -187,8 +189,8 @@ type (
 		UpdateActivity(*persistence.ActivityInfo) error
 		UpdateActivityProgress(ai *persistence.ActivityInfo, request *workflow.RecordActivityTaskHeartbeatRequest)
 		UpdateDecision(*decisionInfo)
-		UpdateReplicationStateVersion(version int64)
-		UpdateReplicationStateLastEventID(clusterName string, lastEventID int64)
+		UpdateReplicationStateVersion(int64)
+		UpdateReplicationStateLastEventID(string, int64, int64)
 		UpdateUserTimer(string, *persistence.TimerInfo)
 	}
 
@@ -321,6 +323,22 @@ func newMutableStateBuilderWithReplicationState(config *Config, logger bark.Logg
 		LastReplicationInfo: make(map[string]*persistence.ReplicationInfo),
 	}
 	return s
+}
+
+func (e *mutableStateBuilder) CopyToPersistence() *persistence.WorkflowMutableState {
+	state := &persistence.WorkflowMutableState{}
+
+	state.ActivitInfos = e.pendingActivityInfoIDs
+	state.TimerInfos = e.pendingTimerInfoIDs
+	state.ChildExecutionInfos = e.pendingChildExecutionInfoIDs
+	state.RequestCancelInfos = e.pendingRequestCancelInfoIDs
+	state.SignalInfos = e.pendingSignalInfoIDs
+	state.SignalRequestedIDs = e.pendingSignalRequestedIDs
+	state.ExecutionInfo = e.executionInfo
+	state.ReplicationState = e.replicationState
+	state.BufferedEvents = e.bufferedEvents
+	state.BufferedReplicationTasks = e.bufferedReplicationTasks
+	return state
 }
 
 func (e *mutableStateBuilder) Load(state *persistence.WorkflowMutableState) {
@@ -489,10 +507,18 @@ func (e *mutableStateBuilder) UpdateReplicationStateVersion(version int64) {
 	e.replicationState.CurrentVersion = version
 }
 
+func (e *mutableStateBuilder) GetLastWriteVersion() int64 {
+	if e.replicationState == nil {
+		return common.EmptyVersion
+	}
+	return e.replicationState.LastWriteVersion
+}
+
 // Assumption: It is expected CurrentVersion on replication state is updated at the start of transaction when
 // mutableState is loaded for this workflow execution.
-func (e *mutableStateBuilder) UpdateReplicationStateLastEventID(clusterName string, lastEventID int64) {
-	e.replicationState.LastWriteVersion = e.replicationState.CurrentVersion
+func (e *mutableStateBuilder) UpdateReplicationStateLastEventID(clusterName string, lastWriteVersion,
+	lastEventID int64) {
+	e.replicationState.LastWriteVersion = lastWriteVersion
 	// TODO: Rename this to NextEventID to stay consistent naming convention with rest of code base
 	e.replicationState.LastWriteEventID = lastEventID
 	if clusterName != "" {
@@ -2315,7 +2341,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(sour
 	}
 
 	if newStateBuilder.GetReplicationState() != nil {
-		newStateBuilder.UpdateReplicationStateLastEventID(sourceClusterName, di.ScheduleID)
+		newStateBuilder.UpdateReplicationStateLastEventID(sourceClusterName, startedEvent.GetVersion(), di.ScheduleID)
 	}
 
 	newTransferTasks := []persistence.Task{&persistence.DecisionTask{

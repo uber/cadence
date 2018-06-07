@@ -169,6 +169,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionStarted() 
 				},
 			},
 			IsGlobalDomain: true,
+			TableVersion:   persistence.DomainTableVersionV1,
 		}, nil,
 	).Once()
 	s.mockMutableState.On("ReplicateWorkflowExecutionStartedEvent",
@@ -219,6 +220,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionTimedOut()
 				},
 			},
 			IsGlobalDomain: true,
+			TableVersion:   persistence.DomainTableVersionV1,
 		}, nil,
 	).Once()
 	s.mockMutableState.On("ReplicateWorkflowExecutionTimedoutEvent", event).Once()
@@ -267,6 +269,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionTerminated
 				},
 			},
 			IsGlobalDomain: true,
+			TableVersion:   persistence.DomainTableVersionV1,
 		}, nil,
 	).Once()
 	s.mockMutableState.On("ReplicateWorkflowExecutionTerminatedEvent", event).Once()
@@ -343,6 +346,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionFailed() {
 				},
 			},
 			IsGlobalDomain: true,
+			TableVersion:   persistence.DomainTableVersionV1,
 		}, nil,
 	).Once()
 	s.mockMutableState.On("ReplicateWorkflowExecutionFailedEvent", event).Once()
@@ -437,6 +441,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 				},
 			},
 			IsGlobalDomain: true,
+			TableVersion:   persistence.DomainTableVersionV1,
 		}, nil,
 	).Once()
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{Name: parentName}).Return(
@@ -450,6 +455,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 				},
 			},
 			IsGlobalDomain: true,
+			TableVersion:   persistence.DomainTableVersionV1,
 		}, nil,
 	).Once()
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", continueAsNewEvent.GetVersion()).Return(sourceCluster).Once()
@@ -494,7 +500,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 	expectedNewRunStateBuilder.GetExecutionInfo().LastFirstEventID = newRunStartedEvent.GetEventId()
 	expectedNewRunStateBuilder.GetExecutionInfo().NextEventID = newRunDecisionEvent.GetEventId() + 1
 	expectedNewRunStateBuilder.SetHistoryBuilder(newHistoryBuilderFromEvents(newRunHistory.Events, s.logger))
-	expectedNewRunStateBuilder.UpdateReplicationStateLastEventID(sourceCluster, newRunDecisionEvent.GetEventId())
+	expectedNewRunStateBuilder.UpdateReplicationStateLastEventID(sourceCluster, newRunStartedEvent.GetVersion(), newRunDecisionEvent.GetEventId())
 	s.Equal(expectedNewRunStateBuilder, newRunStateBuilder)
 
 	s.Equal([]persistence.Task{&persistence.CloseExecutionTask{}}, s.stateBuilder.transferTasks)
@@ -546,6 +552,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionCompleted(
 				},
 			},
 			IsGlobalDomain: true,
+			TableVersion:   persistence.DomainTableVersionV1,
 		}, nil,
 	).Once()
 	s.mockMutableState.On("ReplicateWorkflowExecutionCompletedEvent", event).Once()
@@ -594,6 +601,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionCanceled()
 				},
 			},
 			IsGlobalDomain: true,
+			TableVersion:   persistence.DomainTableVersionV1,
 		}, nil,
 	).Once()
 	s.mockMutableState.On("ReplicateWorkflowExecutionCanceledEvent", event).Once()
@@ -793,6 +801,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeStartChildWorkflowExecution
 				},
 			},
 			IsGlobalDomain: true,
+			TableVersion:   persistence.DomainTableVersionV1,
 		}, nil,
 	).Once()
 	s.mockUpdateVersion(event)
@@ -896,6 +905,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeSignalExternalWorkflowExecu
 				},
 			},
 			IsGlobalDomain: true,
+			TableVersion:   persistence.DomainTableVersionV1,
 		}, nil,
 	).Once()
 	s.mockUpdateVersion(event)
@@ -996,6 +1006,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeRequestCancelExternalWorkfl
 				},
 			},
 			IsGlobalDomain: true,
+			TableVersion:   persistence.DomainTableVersionV1,
 		}, nil,
 	).Once()
 	s.mockUpdateVersion(event)

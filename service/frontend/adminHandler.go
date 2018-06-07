@@ -27,9 +27,13 @@ import (
 
 	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/admin/adminserviceserver"
+	hist "github.com/uber/cadence/.gen/go/history"
 	gen "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/logging"
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
 )
 
@@ -40,33 +44,43 @@ type (
 	AdminHandler struct {
 		numberOfHistoryShards int
 		service.Service
+		history     history.Client
+		domainCache cache.DomainCache
 	}
 )
 
 // NewAdminHandler creates a thrift handler for the cadence admin service
 func NewAdminHandler(
-	sVice service.Service, numberOfHistoryShards int) *AdminHandler {
+	sVice service.Service, numberOfHistoryShards int, metadataMgr persistence.MetadataManager) *AdminHandler {
 	handler := &AdminHandler{
 		numberOfHistoryShards: numberOfHistoryShards,
 		Service:               sVice,
+		domainCache:           cache.NewDomainCache(metadataMgr, sVice.GetClusterMetadata(), sVice.GetLogger()),
 	}
 	return handler
 }
 
 // Start starts the handler
 func (adh *AdminHandler) Start() error {
+	adh.domainCache.Start()
 	adh.Service.GetDispatcher().Register(adminserviceserver.New(adh))
 	adh.Service.Start()
+	var err error
+	adh.history, err = adh.Service.GetClientFactory().NewHistoryClient()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
 // Stop stops the handler
 func (adh *AdminHandler) Stop() {
 	adh.Service.Stop()
+	adh.domainCache.Stop()
 }
 
-// InquiryWorkflowExecution returns information about the specified workflow execution.
-func (adh *AdminHandler) InquiryWorkflowExecution(ctx context.Context, request *gen.DescribeWorkflowExecutionRequest) (*admin.InquiryWorkflowExecutionResponse, error) {
+// DescribeWorkflowExecution returns information about the specified workflow execution.
+func (adh *AdminHandler) DescribeWorkflowExecution(ctx context.Context, request *admin.DescribeWorkflowExecutionRequest) (*admin.DescribeWorkflowExecutionResponse, error) {
 	if request == nil {
 		return nil, adh.error(errRequestNotSet)
 	}
@@ -84,12 +98,22 @@ func (adh *AdminHandler) InquiryWorkflowExecution(ctx context.Context, request *
 		return nil, adh.error(err)
 	}
 
-	historyAddr := historyHost.GetAddress()
+	domainID, err := adh.domainCache.GetDomainID(request.GetDomain())
 
-	return &admin.InquiryWorkflowExecutionResponse{
-		ShardId:     common.StringPtr(shardIDForOutput),
-		HistoryAddr: common.StringPtr(historyAddr),
-	}, nil
+	historyAddr := historyHost.GetAddress()
+	resp, err := adh.history.DescribeMutableState(ctx, &hist.DescribeMutableStateRequest{
+		DomainUUID: &domainID,
+		Execution:  request.Execution,
+	})
+	if err != nil {
+		return &admin.DescribeWorkflowExecutionResponse{}, err
+	}
+	return &admin.DescribeWorkflowExecutionResponse{
+		ShardId:                common.StringPtr(shardIDForOutput),
+		HistoryAddr:            common.StringPtr(historyAddr),
+		MutableStateInDatabase: resp.MutableStateInDatabase,
+		MutableStateInCache:    resp.MutableStateInCache,
+	}, err
 }
 
 func (adh *AdminHandler) error(err error) error {

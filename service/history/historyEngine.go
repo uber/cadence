@@ -26,6 +26,8 @@ import (
 	"fmt"
 	"time"
 
+	"encoding/json"
+
 	"go.uber.org/yarpc"
 
 	"github.com/pborman/uuid"
@@ -167,27 +169,13 @@ func (e *historyEngineImpl) Start() {
 	logging.LogHistoryEngineStartingEvent(e.logger)
 	defer logging.LogHistoryEngineStartedEvent(e.logger)
 
+	e.registerDomainFailoverCallback()
+
 	e.txProcessor.Start()
 	e.timerProcessor.Start()
 	if e.replicatorProcessor != nil {
 		e.replicatorProcessor.Start()
 	}
-
-	// set the failover callback
-	e.shard.GetDomainCache().RegisterDomainChangeCallback(
-		e.shard.GetShardID(),
-		func(prevDomain *cache.DomainCacheEntry, nextDomain *cache.DomainCacheEntry) {
-			if prevDomain.GetReplicationConfig() != nil && nextDomain.GetReplicationConfig() != nil {
-				prevActiveCluster := prevDomain.GetReplicationConfig().ActiveClusterName
-				nextActiveCluster := nextDomain.GetReplicationConfig().ActiveClusterName
-				if prevActiveCluster != nextActiveCluster && nextActiveCluster == e.currentClusterName {
-					domainID := prevDomain.GetInfo().ID
-					e.txProcessor.FailoverDomain(domainID, prevActiveCluster)
-					e.timerProcessor.FailoverDomain(domainID, prevActiveCluster)
-				}
-			}
-		},
-	)
 }
 
 // Stop the service.
@@ -203,6 +191,32 @@ func (e *historyEngineImpl) Stop() {
 
 	// unset the failover callback
 	e.shard.GetDomainCache().UnregisterDomainChangeCallback(e.shard.GetShardID())
+}
+
+func (e *historyEngineImpl) registerDomainFailoverCallback() {
+	// first set the failover callback
+	e.shard.GetDomainCache().RegisterDomainChangeCallback(
+		e.shard.GetShardID(),
+		e.shard.GetDomainCache().GetDomainNotificationVersion(),
+		func(prevDomain *cache.DomainCacheEntry, nextDomain *cache.DomainCacheEntry) {
+			domainFailoverNotificationVersion := nextDomain.GetFailoverNotificationVersion()
+			shardNotificationVersion := e.shard.GetDomainNotificationVersion()
+			domainActiveCluster := nextDomain.GetReplicationConfig().ActiveClusterName
+
+			e.logger.Infof("Domain Change Event: Shard: %v, Domain: %v, ID: %v, Failover Notification Version: %v, Active Cluster: %v, Shard Domain Notification Version: %v\n",
+				e.shard.GetShardID(), nextDomain.GetInfo().Name, nextDomain.GetInfo().ID, domainFailoverNotificationVersion, domainActiveCluster, shardNotificationVersion)
+
+			if nextDomain.IsGlobalDomain() &&
+				domainFailoverNotificationVersion >= shardNotificationVersion &&
+				domainActiveCluster == e.currentClusterName {
+				domainID := prevDomain.GetInfo().ID
+				e.txProcessor.FailoverDomain(domainID)
+				e.timerProcessor.FailoverDomain(domainID)
+			}
+
+			e.shard.UpdateDomainNotificationVersion(nextDomain.GetNotificationVersion() + 1)
+		},
+	)
 }
 
 // StartWorkflowExecution starts a workflow execution
@@ -501,20 +515,20 @@ func (e *historyEngineImpl) GetMutableState(ctx context.Context,
 func (e *historyEngineImpl) getMutableState(ctx context.Context,
 	domainID string, execution workflow.WorkflowExecution) (retResp *h.GetMutableStateResponse, retError error) {
 
-	context, release, err0 := e.historyCache.getOrCreateWorkflowExecutionWithTimeout(ctx, domainID, execution)
-	if err0 != nil {
-		return nil, err0
+	context, release, retError := e.historyCache.getOrCreateWorkflowExecutionWithTimeout(ctx, domainID, execution)
+	if retError != nil {
+		return
 	}
 	defer func() { release(retError) }()
 
-	msBuilder, err1 := context.loadWorkflowExecution()
-	if err1 != nil {
-		return nil, err1
+	msBuilder, retError := context.loadWorkflowExecution()
+	if retError != nil {
+		return
 	}
 
 	executionInfo := msBuilder.GetExecutionInfo()
 	execution.RunId = context.workflowExecution.RunId
-	result := &h.GetMutableStateResponse{
+	retResp = &h.GetMutableStateResponse{
 		Execution:                            &execution,
 		WorkflowType:                         &workflow.WorkflowType{Name: common.StringPtr(executionInfo.WorkflowTypeName)},
 		LastFirstEventId:                     common.Int64Ptr(msBuilder.GetLastFirstEventID()),
@@ -528,7 +542,48 @@ func (e *historyEngineImpl) getMutableState(ctx context.Context,
 		StickyTaskListScheduleToStartTimeout: common.Int32Ptr(executionInfo.StickyScheduleToStartTimeout),
 	}
 
-	return result, nil
+	return
+}
+
+func (e *historyEngineImpl) DescribeMutableState(ctx context.Context,
+	request *h.DescribeMutableStateRequest) (retResp *h.DescribeMutableStateResponse, retError error) {
+
+	domainID, err := validateDomainUUID(request.DomainUUID)
+	if err != nil {
+		return nil, err
+	}
+
+	execution := workflow.WorkflowExecution{
+		WorkflowId: request.Execution.WorkflowId,
+		RunId:      request.Execution.RunId,
+	}
+
+	cacheCtx, dbCtx, release, cacheHit, err := e.historyCache.getAndCreateWorkflowExecutionWithTimeout(ctx, domainID, execution)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { release(retError) }()
+	retResp = &h.DescribeMutableStateResponse{}
+
+	if cacheHit && cacheCtx.msBuilder != nil {
+		msb := cacheCtx.msBuilder
+		retResp.MutableStateInCache, retError = e.toMutableStateJSON(msb)
+	}
+
+	msb, retError := dbCtx.loadWorkflowExecution()
+	retResp.MutableStateInDatabase, retError = e.toMutableStateJSON(msb)
+
+	return
+}
+
+func (e *historyEngineImpl) toMutableStateJSON(msb mutableState) (*string, error) {
+	ms := msb.CopyToPersistence()
+
+	jsonBytes, err := json.Marshal(ms)
+	if err != nil {
+		return nil, err
+	}
+	return common.StringPtr(string(jsonBytes)), nil
 }
 
 // ResetStickyTaskList reset the volatile information in mutable state of a given workflow.
@@ -1337,6 +1392,8 @@ Update_History_Loop:
 		if request.GetReturnNewDecisionTask() && createNewDecisionTask {
 			di, _ := msBuilder.GetPendingDecision(newDecisionTaskScheduledID)
 			response.StartedResponse = e.createRecordDecisionTaskStartedResponse(domainID, msBuilder, di, request.GetIdentity())
+			// sticky is always enabled when worker request for new decision task from RespondDecisionTaskCompleted
+			response.StartedResponse.StickyExecutionEnabled = common.BoolPtr(true)
 		}
 
 		return response, nil

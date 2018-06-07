@@ -61,10 +61,10 @@ func (r *conflictResolver) reset(requestID string, replayEventID int64, startTim
 	var nextPageToken []byte
 	var history *shared.History
 	var err error
-	var resetMutableStateBuilder mutableState
-	var executionInfo *persistence.WorkflowExecutionInfo
+	var resetMutableStateBuilder *mutableStateBuilder
 	var sBuilder *stateBuilder
 	var lastFirstEventID int64
+	var lastEvent *shared.HistoryEvent
 	eventsToApply := replayNextEventID - common.FirstEventID
 	for hasMore := true; hasMore; hasMore = len(nextPageToken) > 0 {
 		history, nextPageToken, lastFirstEventID, err = r.getHistory(domainID, execution, common.FirstEventID,
@@ -89,10 +89,11 @@ func (r *conflictResolver) reset(requestID string, replayEventID int64, startTim
 		}
 
 		firstEvent := history.Events[0]
+		lastEvent = history.Events[len(history.Events)-1]
 		if firstEvent.GetEventId() == common.FirstEventID {
 			resetMutableStateBuilder = newMutableStateBuilderWithReplicationState(r.shard.GetConfig(), r.logger,
 				firstEvent.GetVersion())
-			executionInfo = resetMutableStateBuilder.GetExecutionInfo()
+
 			sBuilder = newStateBuilder(r.shard, resetMutableStateBuilder, r.logger)
 		}
 
@@ -100,16 +101,17 @@ func (r *conflictResolver) reset(requestID string, replayEventID int64, startTim
 		if err != nil {
 			return nil, err
 		}
-		executionInfo.LastFirstEventID = lastFirstEventID
+		resetMutableStateBuilder.executionInfo.LastFirstEventID = lastFirstEventID
 	}
 
 	// Applying events to mutableState does not move the nextEventID.  Explicitly set nextEventID to new value
-	executionInfo.NextEventID = replayNextEventID
-	executionInfo.StartTimestamp = startTime
+	resetMutableStateBuilder.executionInfo.NextEventID = replayNextEventID
+	resetMutableStateBuilder.executionInfo.StartTimestamp = startTime
 	// the last updated time is not important here, since this should be updated with event time afterwards
-	executionInfo.LastUpdatedTimestamp = startTime
-	sourceCluster := r.clusterMetadata.ClusterNameForFailoverVersion(resetMutableStateBuilder.GetCurrentVersion())
-	resetMutableStateBuilder.UpdateReplicationStateLastEventID(sourceCluster, replayEventID)
+	resetMutableStateBuilder.executionInfo.LastUpdatedTimestamp = startTime
+
+	sourceCluster := r.clusterMetadata.ClusterNameForFailoverVersion(lastEvent.GetVersion())
+	resetMutableStateBuilder.UpdateReplicationStateLastEventID(sourceCluster, lastEvent.GetVersion(), replayEventID)
 
 	r.logger.Infof("All events applied for execution.  WorkflowID: %v, RunID: %v, NextEventID: %v",
 		execution.GetWorkflowId(), execution.GetRunId(), resetMutableStateBuilder.GetNextEventID())

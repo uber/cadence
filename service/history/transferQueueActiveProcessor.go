@@ -135,7 +135,8 @@ func newTransferQueueActiveProcessor(shard ShardContext, historyService *history
 }
 
 func newTransferQueueFailoverProcessor(shard ShardContext, historyService *historyEngineImpl, visibilityMgr persistence.VisibilityManager,
-	matchingClient matching.Client, historyClient history.Client, domainID string, standbyClusterName string, logger bark.Logger) *transferQueueActiveProcessorImpl {
+	matchingClient matching.Client, historyClient history.Client, domainID string, standbyClusterName string,
+	minLevel int64, maxLevel int64, logger bark.Logger) *transferQueueActiveProcessorImpl {
 	config := shard.GetConfig()
 	options := &QueueProcessorOptions{
 		BatchSize:            config.TransferTaskBatchSize,
@@ -150,6 +151,7 @@ func newTransferQueueFailoverProcessor(shard ShardContext, historyService *histo
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 	logger = logger.WithFields(bark.Fields{
 		logging.TagWorkflowCluster: currentClusterName,
+		logging.TagDomainID:        domainID,
 		logging.TagFailover:        "from: " + standbyClusterName,
 	})
 	transferTaskFilter := func(task *persistence.TransferTaskInfo) (bool, error) {
@@ -158,9 +160,8 @@ func newTransferQueueFailoverProcessor(shard ShardContext, historyService *histo
 		}
 		return false, nil
 	}
-	maxAck := shard.GetTransferClusterAckLevel(currentClusterName)
 	maxReadAckLevel := func() int64 {
-		return maxAck // this is a const
+		return maxLevel // this is a const
 	}
 	updateClusterAckLevel := func(ackLevel int64) error {
 		// TODO, the failover processor should have the ability to persist the ack level progress, #646
@@ -183,7 +184,7 @@ func newTransferQueueFailoverProcessor(shard ShardContext, historyService *histo
 		maxReadAckLevel:       maxReadAckLevel,
 		updateClusterAckLevel: updateClusterAckLevel,
 	}
-	queueAckMgr := newQueueFailoverAckMgr(shard, options, processor, shard.GetTransferClusterAckLevel(standbyClusterName), logger)
+	queueAckMgr := newQueueFailoverAckMgr(shard, options, processor, minLevel, logger)
 	queueProcessorBase := newQueueProcessorBase(shard, options, processor, queueAckMgr, logger)
 	processor.queueAckMgr = queueAckMgr
 	processor.queueProcessorBase = queueProcessorBase
@@ -234,6 +235,8 @@ func (t *transferQueueActiveProcessorImpl) process(qTask queueTaskInfo) error {
 		return err
 	} else if !ok {
 		t.queueAckMgr.completeTask(task.TaskID)
+		t.logger.Debugf("Discarding task: (%s), for WorkflowID: %v, RunID: %v, Type: %v, EventID: %v, Error: %v",
+			task.TaskID, task.WorkflowID, task.RunID, task.TaskType, task.ScheduleID, err)
 		return nil
 	}
 
@@ -260,6 +263,9 @@ func (t *transferQueueActiveProcessorImpl) process(qTask queueTaskInfo) error {
 	default:
 		err = errUnknownTransferTask
 	}
+
+	t.logger.Debugf("Processing task: (%s), for WorkflowID: %v, RunID: %v, Type: %v, EventID: %v, Error: %v",
+		task.TaskID, task.WorkflowID, task.RunID, task.TaskType, task.ScheduleID, err)
 
 	if err != nil {
 		if _, ok := err.(*workflow.EntityNotExistsError); ok {
@@ -441,7 +447,7 @@ func (t *transferQueueActiveProcessorImpl) processCloseExecution(task *persisten
 		return nil
 	}
 
-	ok, err := verifyTransferTaskVersion(t.shard, domainID, msBuilder.GetCurrentVersion(), task)
+	ok, err := verifyTransferTaskVersion(t.shard, domainID, msBuilder.GetLastWriteVersion(), task)
 	if err != nil {
 		return err
 	} else if !ok {
