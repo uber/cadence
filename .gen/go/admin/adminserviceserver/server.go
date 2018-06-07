@@ -33,6 +33,11 @@ import (
 
 // Interface is the server-side interface for the AdminService service.
 type Interface interface {
+	DescribeHistoryHost(
+		ctx context.Context,
+		Request *admin.DescribeHistoryHostRequest,
+	) (*admin.DescribeHistoryHostResponse, error)
+
 	DescribeWorkflowExecution(
 		ctx context.Context,
 		Request *admin.DescribeWorkflowExecutionRequest,
@@ -51,6 +56,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		Methods: []thrift.Method{
 
 			thrift.Method{
+				Name: "DescribeHistoryHost",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.DescribeHistoryHost),
+				},
+				Signature:    "DescribeHistoryHost(Request *admin.DescribeHistoryHostRequest) (*admin.DescribeHistoryHostResponse)",
+				ThriftModule: admin.ThriftModule,
+			},
+
+			thrift.Method{
 				Name: "DescribeWorkflowExecution",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -63,12 +79,31 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 1)
+	procedures := make([]transport.Procedure, 0, 2)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
 
 type handler struct{ impl Interface }
+
+func (h handler) DescribeHistoryHost(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args admin.AdminService_DescribeHistoryHost_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.DescribeHistoryHost(ctx, args.Request)
+
+	hadError := err != nil
+	result, err := admin.AdminService_DescribeHistoryHost_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
 
 func (h handler) DescribeWorkflowExecution(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args admin.AdminService_DescribeWorkflowExecution_Args

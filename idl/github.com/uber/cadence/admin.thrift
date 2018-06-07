@@ -36,6 +36,16 @@ service AdminService {
       3: shared.EntityNotExistsError entityNotExistError,
       4: shared.AccessDeniedError accessDeniedError,
     )
+
+  /**
+    * DescribeHistoryHost returns information about the internal states of a history host
+    **/
+    DescribeHistoryHostResponse DescribeHistoryHost(1: DescribeHistoryHostRequest request)
+      throws (
+        1: shared.BadRequestError badRequestError,
+        2: shared.InternalServiceError internalServiceError,
+        3: shared.AccessDeniedError accessDeniedError,
+      )
 }
 
 struct DescribeWorkflowExecutionRequest {
@@ -48,4 +58,24 @@ struct DescribeWorkflowExecutionResponse{
   20: optional string historyAddr
   40: optional string mutableStateInCache
   50: optional string mutableStateInDatabase
+}
+
+//At least one of the parameters needs to be provided
+struct DescribeHistoryHostRequest {
+  10: optional string hostAddress //ip:port
+  20: optional i32 shardIdForHost
+  30: optional shared.WorkflowExecution executionForHost
+}
+
+struct DescribeHistoryHostResponse{
+  10: optional i32 numberOfShards
+  20: optional list<i32> shardIDs
+  30: optional DomainCache domainCache
+  40: optional string shardControllerStatus
+  50: optional string address
+}
+
+struct DomainCache{
+  10: optional i64 numOfItemsInCacheByID
+  20: optional i64 numOfItemsInCacheByName
 }

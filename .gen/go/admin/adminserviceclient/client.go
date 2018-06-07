@@ -35,6 +35,12 @@ import (
 
 // Interface is a client for the AdminService service.
 type Interface interface {
+	DescribeHistoryHost(
+		ctx context.Context,
+		Request *admin.DescribeHistoryHostRequest,
+		opts ...yarpc.CallOption,
+	) (*admin.DescribeHistoryHostResponse, error)
+
 	DescribeWorkflowExecution(
 		ctx context.Context,
 		Request *admin.DescribeWorkflowExecutionRequest,
@@ -64,6 +70,29 @@ func init() {
 
 type client struct {
 	c thrift.Client
+}
+
+func (c client) DescribeHistoryHost(
+	ctx context.Context,
+	_Request *admin.DescribeHistoryHostRequest,
+	opts ...yarpc.CallOption,
+) (success *admin.DescribeHistoryHostResponse, err error) {
+
+	args := admin.AdminService_DescribeHistoryHost_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result admin.AdminService_DescribeHistoryHost_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = admin.AdminService_DescribeHistoryHost_Helper.UnwrapResponse(&result)
+	return
 }
 
 func (c client) DescribeWorkflowExecution(

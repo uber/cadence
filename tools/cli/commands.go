@@ -53,6 +53,8 @@ const (
 	FlagAddressWithAlias           = FlagAddress + ", ad"
 	FlagDomain                     = "domain"
 	FlagDomainWithAlias            = FlagDomain + ", do"
+	FlagShardID                    = "shard_id"
+	FlagShardIDWithAlias           = FlagShardID + ", sid"
 	FlagWorkflowID                 = "workflow_id"
 	FlagWorkflowIDWithAlias        = FlagWorkflowID + ", wid, w"
 	FlagRunID                      = "run_id"

@@ -116,6 +116,38 @@ func (adh *AdminHandler) DescribeWorkflowExecution(ctx context.Context, request 
 	}, err
 }
 
+// DescribeHistoryHost returns information about the internal states of a history host
+func (adh *AdminHandler) DescribeHistoryHost(ctx context.Context, request *admin.DescribeHistoryHostRequest) (*admin.DescribeHistoryHostResponse, error) {
+	if request == nil || (request.ShardIdForHost == nil && request.ExecutionForHost == nil && request.HostAddress == nil) {
+		return nil, adh.error(errRequestNotSet)
+	}
+
+	if request.ExecutionForHost != nil {
+		if err := validateExecution(request.ExecutionForHost); err != nil {
+			return nil, adh.error(err)
+		}
+	}
+
+	resp, err := adh.history.DescribeHistoryHost(ctx, &hist.DescribeHistoryHostRequest{
+		HostAddress:      request.HostAddress,
+		ShardIdForHost:   request.ShardIdForHost,
+		ExecutionForHost: request.ExecutionForHost,
+	})
+	if err != nil {
+		return &admin.DescribeHistoryHostResponse{}, err
+	}
+	return &admin.DescribeHistoryHostResponse{
+		NumberOfShards: resp.NumberOfShards,
+		ShardIDs:       resp.ShardIDs,
+		DomainCache: &admin.DomainCache{
+			NumOfItemsInCacheByID:   resp.DomainCache.NumOfItemsInCacheByID,
+			NumOfItemsInCacheByName: resp.DomainCache.NumOfItemsInCacheByName,
+		},
+		ShardControllerStatus: resp.ShardControllerStatus,
+		Address:               resp.Address,
+	}, err
+}
+
 func (adh *AdminHandler) error(err error) error {
 	switch err.(type) {
 	case *gen.InternalServiceError:

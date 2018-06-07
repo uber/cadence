@@ -195,6 +195,26 @@ struct DescribeWorkflowExecutionRequest {
   20: optional shared.DescribeWorkflowExecutionRequest request
 }
 
+//At least one of the parameter needs to be provided
+struct DescribeHistoryHostRequest {
+  10: optional string hostAddress //ip:port
+  20: optional i32 shardIdForHost
+  30: optional shared.WorkflowExecution executionForHost
+}
+
+struct DescribeHistoryHostResponse{
+  10: optional i32 numberOfShards
+  20: optional list<i32> shardIDs
+  30: optional DomainCache domainCache
+  40: optional string shardControllerStatus
+  50: optional string address
+}
+
+struct DomainCache{
+  10: optional i64 numOfItemsInCacheByID
+  20: optional i64 numOfItemsInCacheByName
+}
+
 /**
 * RecordChildExecutionCompletedRequest is used for reporting the completion of child execution to parent workflow
 * execution which started it.  When a child execution is completed it creates this request and calls the
@@ -549,5 +569,15 @@ service HistoryService {
       4: shared.AccessDeniedError accessDeniedError,
       5: ShardOwnershipLostError shardOwnershipLostError,
       6: shared.LimitExceededError limitExceededError,
+    )
+
+  /**
+  * DescribeHistoryHost returns information about the internal states of a history host
+  **/
+  DescribeHistoryHostResponse DescribeHistoryHost(1: DescribeHistoryHostRequest request)
+    throws (
+      1: shared.BadRequestError badRequestError,
+      2: shared.InternalServiceError internalServiceError,
+      3: shared.AccessDeniedError accessDeniedError,
     )
 }

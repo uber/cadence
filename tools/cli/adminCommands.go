@@ -21,6 +21,9 @@
 package cli
 
 import (
+	"fmt"
+	"strconv"
+
 	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 	s "github.com/uber/cadence/.gen/go/shared"
@@ -60,5 +63,50 @@ func AdminDescribeWorkflow(c *cli.Context) {
 		ErrorAndExit("Describe workflow execution failed", err)
 	}
 
+	prettyPrintJSONObject(resp)
+}
+
+// AdminDescribeHistoryHost describes history host
+func AdminDescribeHistoryHost(c *cli.Context) {
+	// using service client instead of cadence.Client because we need to directly pass the json blob as input.
+	serviceClient := getAdminServiceClient(c)
+
+	wid := c.String(FlagWorkflowID)
+	sid := c.String(FlagShardID)
+	addr := c.String(FlagAddress)
+	printFully := c.Bool(FlagPrintFullyDetail)
+
+	if len(wid) <= 0 && len(sid) <= 0 && len(addr) <= 0 {
+		ExitIfError(fmt.Errorf("at least one of them is required to provide to lookup host: workflowID, shardID and host address"))
+		return
+	}
+
+	ctx, cancel := newContext()
+	defer cancel()
+
+	req := &admin.DescribeHistoryHostRequest{}
+	if len(wid) > 0 {
+		req.ExecutionForHost = &s.WorkflowExecution{WorkflowId: common.StringPtr(wid)}
+	}
+	if len(sid) > 0 {
+		sidInt, err := strconv.Atoi(sid)
+		if err != nil {
+			ErrorAndExit("Describe history host failed", err)
+			return
+		}
+		req.ShardIdForHost = common.Int32Ptr(int32(sidInt))
+	}
+	if len(addr) > 0 {
+		req.HostAddress = common.StringPtr(addr)
+	}
+
+	resp, err := serviceClient.DescribeHistoryHost(ctx, req)
+	if err != nil {
+		ErrorAndExit("Describe history host failed", err)
+	}
+
+	if !printFully {
+		resp.ShardIDs = nil
+	}
 	prettyPrintJSONObject(resp)
 }
