@@ -38,6 +38,11 @@ const (
 
 var keys = []string{
 	"unknownKey",
+	"testGetPropertyKey",
+	"testGetIntPropertyKey",
+	"testGetFloat64PropertyKey",
+	"testGetDurationPropertyKey",
+	"testGetBoolPropertyKey",
 	_matchingDomainTaskListRoot + "minTaskThrottlingBurstSize",
 	_matchingDomainTaskListRoot + "maxTaskBatchSize",
 	_matchingDomainTaskListRoot + "longPollExpirationInterval",
@@ -50,8 +55,15 @@ var keys = []string{
 const (
 	// The order of constants is important. It should match the order in the keys array above.
 	unknownKey Key = iota
-	// Matching keys
 
+	// key for tests
+	testGetPropertyKey
+	testGetIntPropertyKey
+	testGetFloat64PropertyKey
+	testGetDurationPropertyKey
+	testGetBoolPropertyKey
+
+	// key for matching
 	// MatchingMinTaskThrottlingBurstSize is the minimum burst size for task list throttling
 	MatchingMinTaskThrottlingBurstSize
 	// MatchingMaxTaskBatchSize is the maximum batch size to fetch from the task buffer
@@ -64,6 +76,8 @@ const (
 	MatchingUpdateAckInterval
 	// MatchingIdleTasklistCheckInterval is the IdleTasklistCheckInterval
 	MatchingIdleTasklistCheckInterval
+
+	// key for history
 	// HistoryLongPollExpirationInterval is the long poll expiration interval in the history service
 	HistoryLongPollExpirationInterval
 )
