@@ -123,6 +123,7 @@ type (
 		RunID          string
 		State          int
 		CloseStatus    int
+		StartVersion   int64
 	}
 
 	// TimeoutError is returned when a write operation fails due to a timeout

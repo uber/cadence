@@ -88,6 +88,68 @@ func (s *cassandraPersistenceSuite) TestPersistenceStartWorkflow() {
 	startedErr, ok := err1.(*WorkflowExecutionAlreadyStartedError)
 	s.True(ok)
 	s.Equal(workflowExecution.GetRunId(), startedErr.RunID, startedErr.Msg)
+	s.Equal(WorkflowStateRunning, startedErr.State, startedErr.Msg)
+	s.Equal(WorkflowCloseStatusNone, startedErr.CloseStatus, startedErr.Msg)
+	s.Equal(common.EmptyVersion, startedErr.StartVersion, startedErr.Msg)
+	s.Empty(task1, "Expected empty task identifier.")
+
+	response, err2 := s.WorkflowMgr.CreateWorkflowExecution(&CreateWorkflowExecutionRequest{
+		RequestID:            uuid.New(),
+		DomainID:             domainID,
+		Execution:            workflowExecution,
+		TaskList:             "queue1",
+		WorkflowTypeName:     "workflow_type_test",
+		WorkflowTimeout:      20,
+		DecisionTimeoutValue: 13,
+		ExecutionContext:     nil,
+		NextEventID:          int64(3),
+		LastProcessedEvent:   0,
+		RangeID:              s.ShardInfo.RangeID - 1,
+		TransferTasks: []Task{
+			&DecisionTask{
+				TaskID:     s.GetNextSequenceNumber(),
+				DomainID:   domainID,
+				TaskList:   "queue1",
+				ScheduleID: int64(2),
+			},
+		},
+		TimerTasks:                  nil,
+		DecisionScheduleID:          int64(2),
+		DecisionStartedID:           common.EmptyEventID,
+		DecisionStartToCloseTimeout: 1,
+	})
+
+	s.NotNil(err2, "Expected workflow creation to fail.")
+	s.Nil(response)
+	log.Infof("Unable to start workflow execution: %v", err2)
+	s.IsType(&ShardOwnershipLostError{}, err2)
+}
+
+func (s *cassandraPersistenceSuite) TestPersistenceStartWorkflowWithReplicationState() {
+	domainID := "2d7994bf-9de8-459d-9c81-e723daedb246"
+	workflowExecution := gen.WorkflowExecution{
+		WorkflowId: common.StringPtr("start-workflow-test-replication-state"),
+		RunId:      common.StringPtr("7f9fe8a0-9237-11e6-ae22-56b6b6499611"),
+	}
+	version := int64(144)
+	replicationState := &ReplicationState{
+		StartVersion:     version, // we are only testing this attribute
+		CurrentVersion:   version,
+		LastWriteVersion: version,
+	}
+	task0, err0 := s.CreateWorkflowExecutionWithReplication(domainID, workflowExecution, "queue1", "wType", 20, 13, 3, 0, 2, replicationState, nil)
+	s.Nil(err0, "No error expected.")
+	s.NotEmpty(task0, "Expected non empty task identifier.")
+
+	task1, err1 := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType1", 20, 14, nil, 3, 0, 2, nil)
+	s.NotNil(err1, "Expected workflow creation to fail.")
+	log.Infof("Unable to start workflow execution: %v", err1)
+	startedErr, ok := err1.(*WorkflowExecutionAlreadyStartedError)
+	s.True(ok)
+	s.Equal(workflowExecution.GetRunId(), startedErr.RunID, startedErr.Msg)
+	s.Equal(WorkflowStateRunning, startedErr.State, startedErr.Msg)
+	s.Equal(WorkflowCloseStatusNone, startedErr.CloseStatus, startedErr.Msg)
+	s.Equal(version, startedErr.StartVersion, startedErr.Msg)
 	s.Empty(task1, "Expected empty task identifier.")
 
 	response, err2 := s.WorkflowMgr.CreateWorkflowExecution(&CreateWorkflowExecutionRequest{
