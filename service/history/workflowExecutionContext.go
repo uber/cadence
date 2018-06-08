@@ -174,12 +174,9 @@ func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persi
 
 	currentVersion := c.msBuilder.GetCurrentVersion()
 	if createReplicationTask {
-		lastWriteVersion := c.msBuilder.GetLastWriteVersion()
 		activeCluster := c.clusterMetadata.ClusterNameForFailoverVersion(currentVersion)
 		currentCluster := c.clusterMetadata.GetCurrentClusterName()
-		if currentVersion < lastWriteVersion {
-			return errors.NewDomainNotActiveError(c.msBuilder.executionInfo.DomainID, currentCluster, activeCluster)
-		} else if activeCluster != currentCluster {
+		if activeCluster != currentCluster {
 			return errors.NewDomainNotActiveError(c.msBuilder.executionInfo.DomainID, currentCluster, activeCluster)
 		}
 	}
