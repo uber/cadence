@@ -35,7 +35,7 @@ import (
 //
 // The arguments for DescribeHistoryHost are sent and received over the wire as this struct.
 type HistoryService_DescribeHistoryHost_Args struct {
-	Request *DescribeHistoryHostRequest `json:"request,omitempty"`
+	Request *shared.DescribeHistoryHostRequest `json:"request,omitempty"`
 }
 
 // ToWire translates a HistoryService_DescribeHistoryHost_Args struct into a Thrift-level intermediate
@@ -73,8 +73,8 @@ func (v *HistoryService_DescribeHistoryHost_Args) ToWire() (wire.Value, error) {
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _DescribeHistoryHostRequest_Read(w wire.Value) (*DescribeHistoryHostRequest, error) {
-	var v DescribeHistoryHostRequest
+func _DescribeHistoryHostRequest_Read(w wire.Value) (*shared.DescribeHistoryHostRequest, error) {
+	var v shared.DescribeHistoryHostRequest
 	err := v.FromWire(w)
 	return &v, err
 }
@@ -166,7 +166,7 @@ var HistoryService_DescribeHistoryHost_Helper = struct {
 	// Args accepts the parameters of DescribeHistoryHost in-order and returns
 	// the arguments struct for the function.
 	Args func(
-		request *DescribeHistoryHostRequest,
+		request *shared.DescribeHistoryHostRequest,
 	) *HistoryService_DescribeHistoryHost_Args
 
 	// IsException returns true if the given error can be thrown
@@ -191,7 +191,7 @@ var HistoryService_DescribeHistoryHost_Helper = struct {
 	//     return fmt.Errorf("unexpected error from DescribeHistoryHost: %v", err)
 	//   }
 	//   serialize(result)
-	WrapResponse func(*DescribeHistoryHostResponse, error) (*HistoryService_DescribeHistoryHost_Result, error)
+	WrapResponse func(*shared.DescribeHistoryHostResponse, error) (*HistoryService_DescribeHistoryHost_Result, error)
 
 	// UnwrapResponse takes the result struct for DescribeHistoryHost
 	// and returns the value or error returned by it.
@@ -201,12 +201,12 @@ var HistoryService_DescribeHistoryHost_Helper = struct {
 	//
 	//   result := deserialize(bytes)
 	//   value, err := HistoryService_DescribeHistoryHost_Helper.UnwrapResponse(result)
-	UnwrapResponse func(*HistoryService_DescribeHistoryHost_Result) (*DescribeHistoryHostResponse, error)
+	UnwrapResponse func(*HistoryService_DescribeHistoryHost_Result) (*shared.DescribeHistoryHostResponse, error)
 }{}
 
 func init() {
 	HistoryService_DescribeHistoryHost_Helper.Args = func(
-		request *DescribeHistoryHostRequest,
+		request *shared.DescribeHistoryHostRequest,
 	) *HistoryService_DescribeHistoryHost_Args {
 		return &HistoryService_DescribeHistoryHost_Args{
 			Request: request,
@@ -226,7 +226,7 @@ func init() {
 		}
 	}
 
-	HistoryService_DescribeHistoryHost_Helper.WrapResponse = func(success *DescribeHistoryHostResponse, err error) (*HistoryService_DescribeHistoryHost_Result, error) {
+	HistoryService_DescribeHistoryHost_Helper.WrapResponse = func(success *shared.DescribeHistoryHostResponse, err error) (*HistoryService_DescribeHistoryHost_Result, error) {
 		if err == nil {
 			return &HistoryService_DescribeHistoryHost_Result{Success: success}, nil
 		}
@@ -251,7 +251,7 @@ func init() {
 
 		return nil, err
 	}
-	HistoryService_DescribeHistoryHost_Helper.UnwrapResponse = func(result *HistoryService_DescribeHistoryHost_Result) (success *DescribeHistoryHostResponse, err error) {
+	HistoryService_DescribeHistoryHost_Helper.UnwrapResponse = func(result *HistoryService_DescribeHistoryHost_Result) (success *shared.DescribeHistoryHostResponse, err error) {
 		if result.BadRequestError != nil {
 			err = result.BadRequestError
 			return
@@ -283,10 +283,10 @@ func init() {
 // Success is set only if the function did not throw an exception.
 type HistoryService_DescribeHistoryHost_Result struct {
 	// Value returned by DescribeHistoryHost after a successful execution.
-	Success              *DescribeHistoryHostResponse `json:"success,omitempty"`
-	BadRequestError      *shared.BadRequestError      `json:"badRequestError,omitempty"`
-	InternalServiceError *shared.InternalServiceError `json:"internalServiceError,omitempty"`
-	AccessDeniedError    *shared.AccessDeniedError    `json:"accessDeniedError,omitempty"`
+	Success              *shared.DescribeHistoryHostResponse `json:"success,omitempty"`
+	BadRequestError      *shared.BadRequestError             `json:"badRequestError,omitempty"`
+	InternalServiceError *shared.InternalServiceError        `json:"internalServiceError,omitempty"`
+	AccessDeniedError    *shared.AccessDeniedError           `json:"accessDeniedError,omitempty"`
 }
 
 // ToWire translates a HistoryService_DescribeHistoryHost_Result struct into a Thrift-level intermediate
@@ -352,8 +352,8 @@ func (v *HistoryService_DescribeHistoryHost_Result) ToWire() (wire.Value, error)
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _DescribeHistoryHostResponse_Read(w wire.Value) (*DescribeHistoryHostResponse, error) {
-	var v DescribeHistoryHostResponse
+func _DescribeHistoryHostResponse_Read(w wire.Value) (*shared.DescribeHistoryHostResponse, error) {
+	var v shared.DescribeHistoryHostResponse
 	err := v.FromWire(w)
 	return &v, err
 }

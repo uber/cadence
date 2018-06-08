@@ -36,8 +36,8 @@ import (
 type Interface interface {
 	DescribeHistoryHost(
 		ctx context.Context,
-		Request *history.DescribeHistoryHostRequest,
-	) (*history.DescribeHistoryHostResponse, error)
+		Request *shared.DescribeHistoryHostRequest,
+	) (*shared.DescribeHistoryHostResponse, error)
 
 	DescribeMutableState(
 		ctx context.Context,
@@ -163,7 +163,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.DescribeHistoryHost),
 				},
-				Signature:    "DescribeHistoryHost(Request *history.DescribeHistoryHostRequest) (*history.DescribeHistoryHostResponse)",
+				Signature:    "DescribeHistoryHost(Request *shared.DescribeHistoryHostRequest) (*shared.DescribeHistoryHostResponse)",
 				ThriftModule: history.ThriftModule,
 			},
 

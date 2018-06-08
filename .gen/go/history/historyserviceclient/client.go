@@ -38,9 +38,9 @@ import (
 type Interface interface {
 	DescribeHistoryHost(
 		ctx context.Context,
-		Request *history.DescribeHistoryHostRequest,
+		Request *shared.DescribeHistoryHostRequest,
 		opts ...yarpc.CallOption,
-	) (*history.DescribeHistoryHostResponse, error)
+	) (*shared.DescribeHistoryHostResponse, error)
 
 	DescribeMutableState(
 		ctx context.Context,
@@ -195,9 +195,9 @@ type client struct {
 
 func (c client) DescribeHistoryHost(
 	ctx context.Context,
-	_Request *history.DescribeHistoryHostRequest,
+	_Request *shared.DescribeHistoryHostRequest,
 	opts ...yarpc.CallOption,
-) (success *history.DescribeHistoryHostResponse, err error) {
+) (success *shared.DescribeHistoryHostResponse, err error) {
 
 	args := history.HistoryService_DescribeHistoryHost_Helper.Args(_Request)
 

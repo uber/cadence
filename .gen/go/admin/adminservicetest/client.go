@@ -28,6 +28,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/admin/adminserviceclient"
+	"github.com/uber/cadence/.gen/go/shared"
 	"go.uber.org/yarpc"
 )
 
@@ -70,9 +71,9 @@ func (m *MockClient) EXPECT() *_MockClientRecorder {
 // 	... := client.DescribeHistoryHost(...)
 func (m *MockClient) DescribeHistoryHost(
 	ctx context.Context,
-	_Request *admin.DescribeHistoryHostRequest,
+	_Request *shared.DescribeHistoryHostRequest,
 	opts ...yarpc.CallOption,
-) (success *admin.DescribeHistoryHostResponse, err error) {
+) (success *shared.DescribeHistoryHostResponse, err error) {
 
 	args := []interface{}{ctx, _Request}
 	for _, o := range opts {
@@ -80,7 +81,7 @@ func (m *MockClient) DescribeHistoryHost(
 	}
 	i := 0
 	ret := m.ctrl.Call(m, "DescribeHistoryHost", args...)
-	success, _ = ret[i].(*admin.DescribeHistoryHostResponse)
+	success, _ = ret[i].(*shared.DescribeHistoryHostResponse)
 	i++
 	err, _ = ret[i].(error)
 	return

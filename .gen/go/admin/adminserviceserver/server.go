@@ -26,6 +26,7 @@ package adminserviceserver
 import (
 	"context"
 	"github.com/uber/cadence/.gen/go/admin"
+	"github.com/uber/cadence/.gen/go/shared"
 	"go.uber.org/thriftrw/wire"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/thrift"
@@ -35,8 +36,8 @@ import (
 type Interface interface {
 	DescribeHistoryHost(
 		ctx context.Context,
-		Request *admin.DescribeHistoryHostRequest,
-	) (*admin.DescribeHistoryHostResponse, error)
+		Request *shared.DescribeHistoryHostRequest,
+	) (*shared.DescribeHistoryHostResponse, error)
 
 	DescribeWorkflowExecution(
 		ctx context.Context,
@@ -62,7 +63,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.DescribeHistoryHost),
 				},
-				Signature:    "DescribeHistoryHost(Request *admin.DescribeHistoryHostRequest) (*admin.DescribeHistoryHostResponse)",
+				Signature:    "DescribeHistoryHost(Request *shared.DescribeHistoryHostRequest) (*shared.DescribeHistoryHostResponse)",
 				ThriftModule: admin.ThriftModule,
 			},
 

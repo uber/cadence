@@ -529,7 +529,7 @@ func (h *Handler) StartWorkflowExecution(ctx context.Context,
 
 // DescribeHistoryHost returns information about the internal states of a history host
 func (h *Handler) DescribeHistoryHost(ctx context.Context,
-	request *hist.DescribeHistoryHostRequest) (*hist.DescribeHistoryHostResponse, error) {
+	request *gen.DescribeHistoryHostRequest) (*gen.DescribeHistoryHostResponse, error) {
 	h.startWG.Wait()
 
 	numOfItemsInCacheByID, numOfItemsInCacheByName := h.domainCache.GetCacheSize()
@@ -550,10 +550,10 @@ func (h *Handler) DescribeHistoryHost(ctx context.Context,
 		status += "not stopping,"
 	}
 
-	resp := &hist.DescribeHistoryHostResponse{
+	resp := &gen.DescribeHistoryHostResponse{
 		NumberOfShards: common.Int32Ptr(int32(h.controller.numShards())),
 		ShardIDs:       h.controller.shardIDs(),
-		DomainCache: &hist.DomainCache{
+		DomainCache: &gen.DomainCacheInfo{
 			NumOfItemsInCacheByID:   &numOfItemsInCacheByID,
 			NumOfItemsInCacheByName: &numOfItemsInCacheByName,
 		},

@@ -63,8 +63,8 @@ func (c *metricClient) StartWorkflowExecution(
 
 func (c *metricClient) DescribeHistoryHost(
 	context context.Context,
-	request *h.DescribeHistoryHostRequest,
-	opts ...yarpc.CallOption) (*h.DescribeHistoryHostResponse, error) {
+	request *shared.DescribeHistoryHostRequest,
+	opts ...yarpc.CallOption) (*shared.DescribeHistoryHostResponse, error) {
 	resp, err := c.client.DescribeHistoryHost(context, request, opts...)
 
 	return resp, err

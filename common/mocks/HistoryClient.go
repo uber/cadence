@@ -39,20 +39,20 @@ type HistoryClient struct {
 var _ historyserviceclient.Interface = (*HistoryClient)(nil)
 
 // DescribeHistoryHost provides a mock function with given fields: ctx, getRequest
-func (_m *HistoryClient) DescribeHistoryHost(ctx context.Context, request *history.DescribeHistoryHostRequest, opts ...yarpc.CallOption) (*history.DescribeHistoryHostResponse, error) {
+func (_m *HistoryClient) DescribeHistoryHost(ctx context.Context, request *shared.DescribeHistoryHostRequest, opts ...yarpc.CallOption) (*shared.DescribeHistoryHostResponse, error) {
 	ret := _m.Called(ctx, request)
 
-	var r0 *history.DescribeHistoryHostResponse
-	if rf, ok := ret.Get(0).(func(context.Context, *history.DescribeHistoryHostRequest) *history.DescribeHistoryHostResponse); ok {
+	var r0 *shared.DescribeHistoryHostResponse
+	if rf, ok := ret.Get(0).(func(context.Context, *shared.DescribeHistoryHostRequest) *shared.DescribeHistoryHostResponse); ok {
 		r0 = rf(ctx, request)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*history.DescribeHistoryHostResponse)
+			r0 = ret.Get(0).(*shared.DescribeHistoryHostResponse)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *history.DescribeHistoryHostRequest) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *shared.DescribeHistoryHostRequest) error); ok {
 		r1 = rf(ctx, request)
 	} else {
 		r1 = ret.Error(1)

@@ -112,8 +112,8 @@ func (c *clientImpl) GetMutableState(
 
 func (c *clientImpl) DescribeHistoryHost(
 	ctx context.Context,
-	request *h.DescribeHistoryHostRequest,
-	opts ...yarpc.CallOption) (*h.DescribeHistoryHostResponse, error) {
+	request *workflow.DescribeHistoryHostRequest,
+	opts ...yarpc.CallOption) (*workflow.DescribeHistoryHostResponse, error) {
 
 	var hostAddr string
 	if request.HostAddress != nil {
@@ -136,7 +136,7 @@ func (c *clientImpl) DescribeHistoryHost(
 	client := c.getThriftClient(hostAddr)
 
 	opts = common.AggregateYarpcOptions(ctx, opts...)
-	var response *h.DescribeHistoryHostResponse
+	var response *workflow.DescribeHistoryHostResponse
 	op := func(ctx context.Context, client historyserviceclient.Interface) error {
 		var err error
 		ctx, cancel := c.createContext(ctx)

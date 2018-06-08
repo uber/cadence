@@ -84,7 +84,7 @@ func AdminDescribeHistoryHost(c *cli.Context) {
 	ctx, cancel := newContext()
 	defer cancel()
 
-	req := &admin.DescribeHistoryHostRequest{}
+	req := &s.DescribeHistoryHostRequest{}
 	if len(wid) > 0 {
 		req.ExecutionForHost = &s.WorkflowExecution{WorkflowId: common.StringPtr(wid)}
 	}
