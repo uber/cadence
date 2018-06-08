@@ -73,7 +73,7 @@ func AdminDescribeHistoryHost(c *cli.Context) {
 
 	wid := c.String(FlagWorkflowID)
 	sid := c.String(FlagShardID)
-	addr := c.String(FlagAddress)
+	addr := c.String(FlagHistoryAddress)
 	printFully := c.Bool(FlagPrintFullyDetail)
 
 	if len(wid) <= 0 && len(sid) <= 0 && len(addr) <= 0 {

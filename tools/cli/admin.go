@@ -57,8 +57,8 @@ func newAdminHistoryHostCommands() []cli.Command {
 					Usage: "WorkflowID",
 				},
 				cli.StringFlag{
-					Name:  FlagAddressWithAlias,
-					Usage: "Host address(IP:PORT)",
+					Name:  FlagHistoryAddressWithAlias,
+					Usage: "History Host address(IP:PORT)",
 				},
 				// We have to use string type here because the CLI framework will mix 0 and empty value
 				cli.StringFlag{

@@ -51,6 +51,8 @@ Flags used to specify cli command line arguments
 const (
 	FlagAddress                    = "address"
 	FlagAddressWithAlias           = FlagAddress + ", ad"
+	FlagHistoryAddress             = "history_address"
+	FlagHistoryAddressWithAlias    = FlagHistoryAddress + ", had"
 	FlagDomain                     = "domain"
 	FlagDomainWithAlias            = FlagDomain + ", do"
 	FlagShardID                    = "shard_id"
