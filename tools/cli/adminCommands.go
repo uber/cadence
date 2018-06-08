@@ -21,8 +21,6 @@
 package cli
 
 import (
-	"fmt"
-
 	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 	s "github.com/uber/cadence/.gen/go/shared"
@@ -76,7 +74,7 @@ func AdminDescribeHistoryHost(c *cli.Context) {
 	printFully := c.Bool(FlagPrintFullyDetail)
 
 	if len(wid) <= 0 && !c.IsSet(FlagShardID) && len(addr) <= 0 {
-		ExitIfError(fmt.Errorf("at least one of them is required to provide to lookup host: workflowID, shardID and host address"))
+		ErrorAndExit("at least one of them is required to provide to lookup host: workflowID, shardID and host address", nil)
 		return
 	}
 
