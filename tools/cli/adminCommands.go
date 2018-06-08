@@ -22,7 +22,6 @@ package cli
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/admin/adminserviceclient"
@@ -72,11 +71,11 @@ func AdminDescribeHistoryHost(c *cli.Context) {
 	serviceClient := getAdminServiceClient(c)
 
 	wid := c.String(FlagWorkflowID)
-	sid := c.String(FlagShardID)
+	sid := c.Int(FlagShardID)
 	addr := c.String(FlagHistoryAddress)
 	printFully := c.Bool(FlagPrintFullyDetail)
 
-	if len(wid) <= 0 && len(sid) <= 0 && len(addr) <= 0 {
+	if len(wid) <= 0 && !c.IsSet(FlagShardID) && len(addr) <= 0 {
 		ExitIfError(fmt.Errorf("at least one of them is required to provide to lookup host: workflowID, shardID and host address"))
 		return
 	}
@@ -88,13 +87,8 @@ func AdminDescribeHistoryHost(c *cli.Context) {
 	if len(wid) > 0 {
 		req.ExecutionForHost = &s.WorkflowExecution{WorkflowId: common.StringPtr(wid)}
 	}
-	if len(sid) > 0 {
-		sidInt, err := strconv.Atoi(sid)
-		if err != nil {
-			ErrorAndExit("Describe history host failed", err)
-			return
-		}
-		req.ShardIdForHost = common.Int32Ptr(int32(sidInt))
+	if c.IsSet(FlagShardID) {
+		req.ShardIdForHost = common.Int32Ptr(int32(sid))
 	}
 	if len(addr) > 0 {
 		req.HostAddress = common.StringPtr(addr)

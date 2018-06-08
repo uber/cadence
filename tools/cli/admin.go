@@ -60,8 +60,7 @@ func newAdminHistoryHostCommands() []cli.Command {
 					Name:  FlagHistoryAddressWithAlias,
 					Usage: "History Host address(IP:PORT)",
 				},
-				// We have to use string type here because the CLI framework will mix 0 and empty value
-				cli.StringFlag{
+				cli.IntFlag{
 					Name:  FlagShardIDWithAlias,
 					Usage: "ShardID",
 				},
