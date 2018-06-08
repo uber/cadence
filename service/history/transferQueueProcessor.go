@@ -172,17 +172,18 @@ func (t *transferQueueProcessorImpl) completeTransferLoop() {
 
 func (t *transferQueueProcessorImpl) completeTransfer() error {
 	lowerAckLevel := t.ackLevel
-	upperAckLevel := t.activeTaskProcessor.queueAckMgr.getAckLevel()
+	upperAckLevel := t.activeTaskProcessor.queueAckMgr.getQueueAckLevel()
 
 	if t.isGlobalDomainEnabled {
 		for _, standbyTaskProcessor := range t.standbyTaskProcessors {
-			ackLevel := standbyTaskProcessor.queueAckMgr.getAckLevel()
+			ackLevel := standbyTaskProcessor.queueAckMgr.getQueueAckLevel()
 			if upperAckLevel > ackLevel {
 				upperAckLevel = ackLevel
 			}
 		}
 	}
 
+	t.logger.Infof("Start completing transfer task from: %v, to %v.", lowerAckLevel, upperAckLevel)
 	if lowerAckLevel >= upperAckLevel {
 		return nil
 	}
@@ -190,20 +191,20 @@ func (t *transferQueueProcessorImpl) completeTransfer() error {
 	executionMgr := t.shard.GetExecutionManager()
 	maxLevel := upperAckLevel + 1
 	batchSize := t.config.TransferTaskBatchSize
+	request := &persistence.GetTransferTasksRequest{
+		ReadLevel:    lowerAckLevel,
+		MaxReadLevel: maxLevel,
+		BatchSize:    batchSize,
+	}
 
 LoadCompleteLoop:
 	for {
-		request := &persistence.GetTransferTasksRequest{
-			ReadLevel:    lowerAckLevel,
-			MaxReadLevel: maxLevel,
-			BatchSize:    batchSize,
-		}
 		response, err := executionMgr.GetTransferTasks(request)
 		if err != nil {
 			return err
 		}
+		request.NextPageToken = response.NextPageToken
 
-		more := len(response.Tasks) >= batchSize
 		for _, task := range response.Tasks {
 			if upperAckLevel < task.GetTaskID() {
 				break LoadCompleteLoop
@@ -215,7 +216,7 @@ LoadCompleteLoop:
 			t.finishedTaskCounter++
 		}
 
-		if !more {
+		if len(response.NextPageToken) == 0 {
 			break LoadCompleteLoop
 		}
 	}

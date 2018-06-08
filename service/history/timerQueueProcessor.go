@@ -182,6 +182,7 @@ func (t *timerQueueProcessorImpl) completeTimers() error {
 		}
 	}
 
+	t.logger.Infof("Start completing timer task from: %v, to %v.", lowerAckLevel, upperAckLevel)
 	if !compareTimerIDLess(&lowerAckLevel, &upperAckLevel) {
 		return nil
 	}
@@ -191,20 +192,20 @@ func (t *timerQueueProcessorImpl) completeTimers() error {
 	// releax the upper limit for scan since the query is [minTimestamp, minTimestamp)
 	maxTimestamp := upperAckLevel.VisibilityTimestamp.Add(1 * time.Second)
 	batchSize := t.config.TimerTaskBatchSize
+	request := &persistence.GetTimerIndexTasksRequest{
+		MinTimestamp: minTimestamp,
+		MaxTimestamp: maxTimestamp,
+		BatchSize:    batchSize,
+	}
 
 LoadCompleteLoop:
 	for {
-		request := &persistence.GetTimerIndexTasksRequest{
-			MinTimestamp: minTimestamp,
-			MaxTimestamp: maxTimestamp,
-			BatchSize:    batchSize,
-		}
 		response, err := executionMgr.GetTimerIndexTasks(request)
 		if err != nil {
 			return err
 		}
+		request.NextPageToken = response.NextPageToken
 
-		more := len(response.Timers) >= batchSize
 		for _, timer := range response.Timers {
 			timerSequenceID := TimerSequenceID{VisibilityTimestamp: timer.VisibilityTimestamp, TaskID: timer.TaskID}
 			if compareTimerIDLess(&upperAckLevel, &timerSequenceID) {
@@ -219,7 +220,7 @@ LoadCompleteLoop:
 			t.finishedTaskCounter++
 		}
 
-		if !more {
+		if len(response.NextPageToken) == 0 {
 			break LoadCompleteLoop
 		}
 	}
