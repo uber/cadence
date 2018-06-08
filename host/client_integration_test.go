@@ -113,7 +113,7 @@ func (s *clientIntegrationSuite) buildServiceClient() (workflowserviceclient.Int
 	hostPort := "127.0.0.1:7104"
 
 	ch, err := tchannel.NewChannelTransport(
-		tchannel.ServiceName(cadenceClientName))
+		tchannel.ServiceName(cadenceClientName), tchannel.ListenAddr("127.0.0.1:0"))
 	if err != nil {
 		s.logger.Fatalf("Failed to create transport channel: %v", err)
 	}
