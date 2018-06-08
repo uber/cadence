@@ -1747,9 +1747,6 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx context.Context,
 func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx context.Context,
 	listRequest *gen.ListClosedWorkflowExecutionsRequest) (*gen.ListClosedWorkflowExecutionsResponse, error) {
 
-	fmt.Println("************")
-	fmt.Printf("vancexu: max page size %d", wh.config.DefaultVisibilityMaxPageSize())
-	fmt.Println("************")
 	scope := metrics.FrontendListClosedWorkflowExecutionsScope
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
