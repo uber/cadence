@@ -1115,17 +1115,17 @@ struct DescribeTaskListResponse {
 
 //At least one of the parameters needs to be provided
 struct DescribeHistoryHostRequest {
-  10: optional string hostAddress //ip:port
-  20: optional i32 shardIdForHost
-  30: optional WorkflowExecution executionForHost
+  10: optional string               hostAddress //ip:port
+  20: optional i32                  shardIdForHost
+  30: optional WorkflowExecution    executionForHost
 }
 
 struct DescribeHistoryHostResponse{
-  10: optional i32 numberOfShards
-  20: optional list<i32> shardIDs
-  30: optional DomainCacheInfo domainCache
-  40: optional string shardControllerStatus
-  50: optional string address
+  10: optional i32                  numberOfShards
+  20: optional list<i32>            shardIDs
+  30: optional DomainCacheInfo      domainCache
+  40: optional string               shardControllerStatus
+  50: optional string               address
 }
 
 struct DomainCacheInfo{

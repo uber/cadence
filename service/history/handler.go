@@ -545,9 +545,9 @@ func (h *Handler) DescribeHistoryHost(ctx context.Context,
 		status += "not stopped,"
 	}
 	if h.controller.isStopping {
-		status += "stopping,"
+		status += "stopping"
 	} else {
-		status += "not stopping,"
+		status += "not stopping"
 	}
 
 	resp := &gen.DescribeHistoryHostResponse{
