@@ -105,11 +105,11 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int) *Config {
 		HistoryCacheTTL:                                    time.Hour,
 		RangeSizeBits:                                      20, // 20 bits for sequencer, 2^20 sequence number for any range
 		AcquireShardInterval:                               time.Minute,
-		DefaultScheduleToStartActivityTimeoutInSecs:        10,
+		DefaultScheduleToStartActivityTimeoutInSecs:        10, // Todo: remove maybe
 		DefaultScheduleToCloseActivityTimeoutInSecs:        10,
 		DefaultStartToCloseActivityTimeoutInSecs:           10,
 		TimerTaskBatchSize:                                 100,
-		TimerTaskWorkerCount:                               30,
+		TimerTaskWorkerCount:                               10,
 		TimerTaskMaxRetryCount:                             5,
 		TimerProcessorGetFailureRetryCount:                 5,
 		TimerProcessorCompleteTimerFailureRetryCount:       10,
@@ -118,7 +118,7 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int) *Config {
 		TimerProcessorCompleteTimerInterval:                3 * time.Second,
 		TimerProcessorMaxPollInterval:                      60 * time.Second,
 		TimerProcessorStandbyTaskDelay:                     0 * time.Minute,
-		TransferTaskBatchSize:                              10,
+		TransferTaskBatchSize:                              100,
 		TransferProcessorMaxPollRPS:                        100,
 		TransferTaskWorkerCount:                            10,
 		TransferTaskMaxRetryCount:                          100,
@@ -128,7 +128,7 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int) *Config {
 		TransferProcessorUpdateAckInterval:                 5 * time.Second,
 		TransferProcessorCompleteTransferInterval:          3 * time.Second,
 		TransferProcessorStandbyTaskDelay:                  0 * time.Minute,
-		ReplicatorTaskBatchSize:                            10,
+		ReplicatorTaskBatchSize:                            100,
 		ReplicatorTaskWorkerCount:                          10,
 		ReplicatorTaskMaxRetryCount:                        100,
 		ReplicatorProcessorMaxPollRPS:                      100,
@@ -138,7 +138,7 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int) *Config {
 		ExecutionMgrNumConns:                               100,
 		HistoryMgrNumConns:                                 100,
 		MaximumBufferedEventsBatch:                         100,
-		ShardUpdateMinInterval:                             60 * time.Second,
+		ShardUpdateMinInterval:                             5 * time.Minute,
 		// history client: client/history/client.go set the client timeout 30s
 		LongPollExpirationInterval: dc.GetDurationProperty(
 			dynamicconfig.HistoryLongPollExpirationInterval, time.Second*20,
