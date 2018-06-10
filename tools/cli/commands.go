@@ -51,8 +51,12 @@ Flags used to specify cli command line arguments
 const (
 	FlagAddress                    = "address"
 	FlagAddressWithAlias           = FlagAddress + ", ad"
+	FlagHistoryAddress             = "history_address"
+	FlagHistoryAddressWithAlias    = FlagHistoryAddress + ", had"
 	FlagDomain                     = "domain"
 	FlagDomainWithAlias            = FlagDomain + ", do"
+	FlagShardID                    = "shard_id"
+	FlagShardIDWithAlias           = FlagShardID + ", sid"
 	FlagWorkflowID                 = "workflow_id"
 	FlagWorkflowIDWithAlias        = FlagWorkflowID + ", wid, w"
 	FlagRunID                      = "run_id"
@@ -1109,7 +1113,7 @@ func parseTime(timeStr string, defaultValue int64) int64 {
 	}
 
 	// try to parse
-	parsedTime, err := time.Parse(defaultTimeFormat, timeStr)
+	parsedTime, err := time.Parse(defaultDateTimeFormat, timeStr)
 	if err == nil {
 		return parsedTime.UnixNano()
 	}

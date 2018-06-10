@@ -69,6 +69,10 @@ exception AccessDeniedError {
   1: required string message
 }
 
+exception RetryTaskError {
+  1: required string message
+}
+
 enum WorkflowIdReusePolicy {
   /*
    * allow start a workflow execution using the same workflow ID,
@@ -1111,6 +1115,26 @@ struct DescribeTaskListRequest {
 
 struct DescribeTaskListResponse {
   10: optional list<PollerInfo> pollers
+}
+
+//At least one of the parameters needs to be provided
+struct DescribeHistoryHostRequest {
+  10: optional string               hostAddress //ip:port
+  20: optional i32                  shardIdForHost
+  30: optional WorkflowExecution    executionForHost
+}
+
+struct DescribeHistoryHostResponse{
+  10: optional i32                  numberOfShards
+  20: optional list<i32>            shardIDs
+  30: optional DomainCacheInfo      domainCache
+  40: optional string               shardControllerStatus
+  50: optional string               address
+}
+
+struct DomainCacheInfo{
+  10: optional i64 numOfItemsInCacheByID
+  20: optional i64 numOfItemsInCacheByName
 }
 
 enum TaskListType {

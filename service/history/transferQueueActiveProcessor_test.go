@@ -222,7 +222,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessActivityTask_Success() {
 	persistenceMutableState := createMutableState(msBuilder)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockMatchingClient.On("AddActivityTask", nil, s.createAddActivityTaskRequest(transferTask, ai)).Once().Return(nil)
-	s.mockQueueAckMgr.On("completeTask", taskID).Return(nil).Once()
+	s.mockQueueAckMgr.On("completeQueueTask", taskID).Return(nil).Once()
 	s.Nil(s.transferQueueActiveProcessor.process(transferTask))
 }
 
@@ -279,7 +279,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessActivityTask_Duplication(
 
 	persistenceMutableState := createMutableState(msBuilder)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
-	s.mockQueueAckMgr.On("completeTask", taskID).Return(nil).Once()
+	s.mockQueueAckMgr.On("completeQueueTask", taskID).Return(nil).Once()
 	s.Nil(s.transferQueueActiveProcessor.process(transferTask))
 }
 
@@ -325,7 +325,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessDecisionTask_FirstDecisio
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockMatchingClient.On("AddDecisionTask", nil, s.createAddDecisionTaskRequest(transferTask, msBuilder)).Once().Return(nil)
 	s.mockVisibilityMgr.On("RecordWorkflowExecutionStarted", s.createRecordWorkflowExecutionStartedRequest(transferTask, msBuilder)).Once().Return(nil)
-	s.mockQueueAckMgr.On("completeTask", taskID).Return(nil).Once()
+	s.mockQueueAckMgr.On("completeQueueTask", taskID).Return(nil).Once()
 	s.Nil(s.transferQueueActiveProcessor.process(transferTask))
 }
 
@@ -376,7 +376,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessDecisionTask_NonFirstDeci
 	persistenceMutableState := createMutableState(msBuilder)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockMatchingClient.On("AddDecisionTask", nil, s.createAddDecisionTaskRequest(transferTask, msBuilder)).Once().Return(nil)
-	s.mockQueueAckMgr.On("completeTask", taskID).Return(nil).Once()
+	s.mockQueueAckMgr.On("completeQueueTask", taskID).Return(nil).Once()
 	s.Nil(s.transferQueueActiveProcessor.process(transferTask))
 }
 
@@ -432,7 +432,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessDecisionTask_Sticky_NonFi
 	persistenceMutableState := createMutableState(msBuilder)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockMatchingClient.On("AddDecisionTask", nil, s.createAddDecisionTaskRequest(transferTask, msBuilder)).Once().Return(nil)
-	s.mockQueueAckMgr.On("completeTask", taskID).Return(nil).Once()
+	s.mockQueueAckMgr.On("completeQueueTask", taskID).Return(nil).Once()
 	s.Nil(s.transferQueueActiveProcessor.process(transferTask))
 }
 
@@ -479,7 +479,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessDecisionTask_Duplication(
 
 	persistenceMutableState := createMutableState(msBuilder)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
-	s.mockQueueAckMgr.On("completeTask", taskID).Return(nil).Once()
+	s.mockQueueAckMgr.On("completeQueueTask", taskID).Return(nil).Once()
 	s.Nil(s.transferQueueActiveProcessor.process(transferTask))
 }
 
@@ -550,7 +550,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCloseExecution_HasParent(
 		CompletionEvent:    event,
 	}).Return(nil).Once()
 	s.mockVisibilityMgr.On("RecordWorkflowExecutionClosed", mock.Anything).Return(nil).Once()
-	s.mockQueueAckMgr.On("completeTask", taskID).Return(nil).Once()
+	s.mockQueueAckMgr.On("completeQueueTask", taskID).Return(nil).Once()
 
 	s.Nil(s.transferQueueActiveProcessor.process(transferTask))
 }
@@ -601,7 +601,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCloseExecution_NoParent()
 	persistenceMutableState := createMutableState(msBuilder)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockVisibilityMgr.On("RecordWorkflowExecutionClosed", mock.Anything).Return(nil).Once()
-	s.mockQueueAckMgr.On("completeTask", taskID).Return(nil).Once()
+	s.mockQueueAckMgr.On("completeQueueTask", taskID).Return(nil).Once()
 
 	s.Nil(s.transferQueueActiveProcessor.process(transferTask))
 }
@@ -664,7 +664,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCancelExecution_Success()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(nil).Once()
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", s.version).Return(cluster.TestCurrentClusterName)
 	s.mockTimerQueueProcessor.On("NotifyNewTimers", cluster.TestCurrentClusterName, mock.Anything, mock.Anything).Once()
-	s.mockQueueAckMgr.On("completeTask", taskID).Return(nil).Once()
+	s.mockQueueAckMgr.On("completeQueueTask", taskID).Return(nil).Once()
 	s.Nil(s.transferQueueActiveProcessor.process(transferTask))
 }
 
@@ -727,7 +727,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCancelExecution_Failure()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(nil).Once()
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", s.version).Return(cluster.TestCurrentClusterName)
 	s.mockTimerQueueProcessor.On("NotifyNewTimers", cluster.TestCurrentClusterName, mock.Anything, mock.Anything).Once()
-	s.mockQueueAckMgr.On("completeTask", taskID).Return(nil).Once()
+	s.mockQueueAckMgr.On("completeQueueTask", taskID).Return(nil).Once()
 	s.Nil(s.transferQueueActiveProcessor.process(transferTask))
 }
 
@@ -787,7 +787,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessCancelExecution_Duplicati
 
 	persistenceMutableState := createMutableState(msBuilder)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
-	s.mockQueueAckMgr.On("completeTask", taskID).Return(nil).Once()
+	s.mockQueueAckMgr.On("completeQueueTask", taskID).Return(nil).Once()
 	s.Nil(s.transferQueueActiveProcessor.process(transferTask))
 }
 
@@ -862,7 +862,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessSignalExecution_Success()
 		},
 		RequestId: common.StringPtr(si.SignalRequestID),
 	}).Return(nil).Once()
-	s.mockQueueAckMgr.On("completeTask", taskID).Return(nil).Once()
+	s.mockQueueAckMgr.On("completeQueueTask", taskID).Return(nil).Once()
 	s.Nil(s.transferQueueActiveProcessor.process(transferTask))
 }
 
@@ -929,7 +929,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessSignalExecution_Failure()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(nil).Once()
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", s.version).Return(cluster.TestCurrentClusterName)
 	s.mockTimerQueueProcessor.On("NotifyNewTimers", cluster.TestCurrentClusterName, mock.Anything, mock.Anything).Once()
-	s.mockQueueAckMgr.On("completeTask", taskID).Return(nil).Once()
+	s.mockQueueAckMgr.On("completeQueueTask", taskID).Return(nil).Once()
 	s.Nil(s.transferQueueActiveProcessor.process(transferTask))
 }
 
@@ -993,7 +993,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessSignalExecution_Duplicati
 
 	persistenceMutableState := createMutableState(msBuilder)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
-	s.mockQueueAckMgr.On("completeTask", taskID).Return(nil).Once()
+	s.mockQueueAckMgr.On("completeQueueTask", taskID).Return(nil).Once()
 	s.Nil(s.transferQueueActiveProcessor.process(transferTask))
 }
 
@@ -1086,7 +1086,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Succe
 		},
 	}).Return(nil).Once()
 	s.mockTimerQueueProcessor.On("NotifyNewTimers", cluster.TestCurrentClusterName, mock.Anything, mock.Anything).Once()
-	s.mockQueueAckMgr.On("completeTask", taskID).Return(nil).Once()
+	s.mockQueueAckMgr.On("completeQueueTask", taskID).Return(nil).Once()
 
 	s.Nil(s.transferQueueActiveProcessor.process(transferTask))
 }
@@ -1172,7 +1172,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Failu
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(nil).Once()
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", s.version).Return(cluster.TestCurrentClusterName)
 	s.mockTimerQueueProcessor.On("NotifyNewTimers", cluster.TestCurrentClusterName, mock.Anything, mock.Anything).Once()
-	s.mockQueueAckMgr.On("completeTask", taskID).Return(nil).Once()
+	s.mockQueueAckMgr.On("completeQueueTask", taskID).Return(nil).Once()
 
 	s.Nil(s.transferQueueActiveProcessor.process(transferTask))
 }
@@ -1258,7 +1258,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Succe
 			RunId:      common.StringPtr(childRunID),
 		},
 	}).Return(nil).Once()
-	s.mockQueueAckMgr.On("completeTask", taskID).Return(nil).Once()
+	s.mockQueueAckMgr.On("completeQueueTask", taskID).Return(nil).Once()
 
 	s.Nil(s.transferQueueActiveProcessor.process(transferTask))
 }
@@ -1343,7 +1343,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Dupli
 		TableVersion:      persistence.DomainTableVersionV1,
 	}, nil).Once()
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
-	s.mockQueueAckMgr.On("completeTask", taskID).Return(nil).Once()
+	s.mockQueueAckMgr.On("completeQueueTask", taskID).Return(nil).Once()
 
 	s.Nil(s.transferQueueActiveProcessor.process(transferTask))
 }
