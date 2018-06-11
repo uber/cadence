@@ -21,23 +21,21 @@
 package persistence
 
 import (
-	"os"
-	"testing"
-
 	"fmt"
+	"os"
+	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
+	"testing"
 
-	"strings"
-
-	"strconv"
+	gen "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/cluster"
 
 	"github.com/pborman/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	gen "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common/cluster"
 )
 
 type (
@@ -52,6 +50,8 @@ type (
 
 func TestMetadataPersistenceSuiteV2(t *testing.T) {
 	s := new(metadataPersistenceSuiteV2)
+	suite.Run(t, s)
+	s.UseMysql = true
 	suite.Run(t, s)
 }
 

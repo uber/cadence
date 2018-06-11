@@ -1,5 +1,5 @@
-hash: 00ba73194b255643850bcf2a42d7848719c0dc6b9d048ed53ad4700480b2a84e
-updated: 2018-07-03T16:18:50.061172-07:00
+hash: e6bf157cdefddd412f202cb07b2cfb5bc2d478bde6cdcad4d60aa37df00ac4cd
+updated: 2018-07-10T15:15:00.977236815-07:00
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -8,7 +8,7 @@ imports:
 - name: github.com/benbjohnson/clock
   version: 7dc76406b6d3c05b5f71a86293cbcf3c4ea03b19
 - name: github.com/beorn7/perks
-  version: 3a771d992973f24aa725d07868b467d1ddfceafb
+  version: 4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9
   subpackages:
   - quantile
 - name: github.com/bsm/sarama-cluster
@@ -22,17 +22,17 @@ imports:
   subpackages:
   - spew
 - name: github.com/dgryski/go-farm
-  version: 2de33835d10275975374b37b2dcfd22c9020a1f5
+  version: e2d0fe22b456fa0a35cd883ba355ecfcf1881490
 - name: github.com/eapache/go-resiliency
-  version: ea41b0fad31007accc7f806884dcdf3da98b79ce
+  version: b1fe83b5b03f624450823b751b662259ffc6af70
   subpackages:
   - breaker
 - name: github.com/eapache/go-xerial-snappy
-  version: 040cc1a32f578808623071247fdbd5cc43f37f5f
+  version: bb955e01b9346ac19dc29eb16586c90ded99a98c
 - name: github.com/eapache/queue
-  version: 093482f3f8ce946c05bcba64badd2c82369e084d
+  version: 44cc805cf13205b55f69e14bcb69867d1ae92f98
 - name: github.com/emirpasic/gods
-  version: bba54c718c4e39e4db35f73e0c660df44a4de4cd
+  version: f6c17b524822278a87e3b3bd809fec33b51f5b46
   subpackages:
   - containers
   - maps
@@ -43,9 +43,11 @@ imports:
 - name: github.com/facebookgo/clock
   version: 600d898af40aa09a7a93ecb9265d87b0504b6f03
 - name: github.com/fatih/color
-  version: 2d684516a8861da43017284349b7e303e809ac21
+  version: 507f6050b8568533fb3f5504de8e5205fa62a114
+- name: github.com/go-sql-driver/mysql
+  version: e333f778f290654339e13bbc63d2dd4e8de23b67
 - name: github.com/gocql/gocql
-  version: e06f8c1bcd787e6bf0608288b314522f08cc7848
+  version: 56a164ee9f3135e9cfe725a6d25939f24cb2d044
   subpackages:
   - internal/lru
   - internal/murmur
@@ -59,32 +61,38 @@ imports:
   subpackages:
   - proto
 - name: github.com/golang/snappy
-  version: 2e65f85255dbc3072edf28d6b5b8efc472979f5a
+  version: 553a641470496b2327abcac10b36396bd98e45c9
 - name: github.com/hailocab/go-hostpool
   version: e80d13ce29ede4452c43dea11e79b9bc8a15b478
+- name: github.com/jmoiron/sqlx
+  version: 2aeb6a910c2b94f2d5eb53d9895d80e27264ec41
+  subpackages:
+  - reflectx
 - name: github.com/mattn/go-colorable
   version: efa589957cd060542a26d2dd7832fd6a6c6c3ade
 - name: github.com/mattn/go-isatty
   version: 6ca4dbf54d38eea1a992b3c722a76a5d1c4cb25c
 - name: github.com/mattn/go-runewidth
-  version: ce7b0b5c7b45a81508558cd1dba6bb1e4ddb51bb
+  version: 97311d9f7767e3d6f422ea06661bc2c7a19e8a5d
 - name: github.com/matttproud/golang_protobuf_extensions
   version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
   - pbutil
 - name: github.com/olekukonko/tablewriter
-  version: d4647c9c7a84d847478d890b816b7d8b62b0b279
+  version: b8a9be070da40449e501c3c4730a889e42d87a9e
 - name: github.com/opentracing/opentracing-go
   version: 1949ddbfd147afd4d964a9f00b24eb291e0e7c38
   subpackages:
   - ext
   - log
 - name: github.com/pborman/uuid
-  version: c65b2f87fee37d1c7854c9164a450713c28d50cd
+  version: a97ce2ca70fa5a848076093f05e639a89ca34d06
 - name: github.com/pierrec/lz4
-  version: 6b9367c9ff401dbc54fabce3fb8d972e799b702d
+  version: 2fcda4cb7018ce05a25959d2fe08c83e3329f169
+- name: github.com/pierrec/xxHash
+  version: a0006b13c722f7f12368c00a3d3c2ae8a999a0c6
   subpackages:
-  - internal/xxh32
+  - xxHash32
 - name: github.com/pmezard/go-difflib
   version: 792786c7400a136282c1664665ae0a8db921c6c2
   subpackages:
@@ -99,25 +107,23 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 7600349dcfe1abd18d72d3a1770870d9800a7801
+  version: 2e54d0b93cba2fd133edc32211dcc32c06ef72ca
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: 40f013a808ec4fa79def444a1a56de4d1727efcb
+  version: a6e9df898b1336106c743392c48ee0b71f5c4efa
   subpackages:
-  - internal/util
-  - nfs
   - xfs
 - name: github.com/rcrowley/go-metrics
-  version: e2704e165165ec55d062f5919b4b29494e9fa790
+  version: 1f30fe9094a513ce4c700b9a54458bbb0c96996c
 - name: github.com/Shopify/sarama
-  version: 5d35641fb5a1327c06d31f0bc341f6742a208e71
+  version: 35324cf48e33d8260e1c7c18854465a904ade249
 - name: github.com/sirupsen/logrus
-  version: e54a77765aca7bbdd8e56c1c54f60579968b2dc9
+  version: 3d4380f53a34dcdc95f0c1db702615992b38d9a4
 - name: github.com/stretchr/objx
-  version: b8b73a35e9830ae509858c10dec5866b4d5c8bff
+  version: 0ab728f62c7f6fcd754334f7931c2dd659dce1d1
 - name: github.com/stretchr/testify
   version: f35b8ab0b5a2cef36673838d662e249dd9c94686
   subpackages:
@@ -126,13 +132,13 @@ imports:
   - require
   - suite
 - name: github.com/uber-common/bark
-  version: ccbdb38cd12f61e426257603fd840c99f124d87b
+  version: dbf558e8a7b65e2b54e1e01c14ee0e4207a865f5
 - name: github.com/uber-go/atomic
   version: 1ea20fb1cbb1cc08cbd0d913a96dead89aa18289
   subpackages:
   - utils
 - name: github.com/uber-go/kafka-client
-  version: b2484cf77be08c7d522e86cea2013a5b05421ca0
+  version: d3982364cc55cd78569fc58a587ff5ec0e06ab20
   subpackages:
   - internal/consumer
   - internal/list
@@ -180,7 +186,7 @@ imports:
   - trand
   - typed
 - name: github.com/urfave/cli
-  version: 8e01ec4cd3e2d84ab2fe90d8210528ffbb06d8ff
+  version: cf33a9befefdd6c6ea1a236ab6d546e797a62cbf
 - name: go.uber.org/atomic
   version: 1ea20fb1cbb1cc08cbd0d913a96dead89aa18289
 - name: go.uber.org/cadence
@@ -220,7 +226,7 @@ imports:
   - version
   - wire
 - name: go.uber.org/yarpc
-  version: f890b9f2fd812eb3f81efac46ccddf0e46d15210
+  version: fc2d75d3b5e30fc81e5dc2375667bbd6333b0099
   subpackages:
   - api/backoff
   - api/encoding
@@ -264,12 +270,8 @@ imports:
   - internal/color
   - internal/exit
   - zapcore
-- name: golang.org/x/crypto
-  version: a49355c7e3f8fe157a85be2f77e6e269a0f89602
-  subpackages:
-  - ssh/terminal
 - name: golang.org/x/net
-  version: ed29d75add3d7c4bf7ca65aac0c6df3d1420216f
+  version: d5fb3049416fd7858fdde45759440b022da452e5
   repo: https://github.com/golang/net
   subpackages:
   - bpf
@@ -278,20 +280,14 @@ imports:
   - internal/socket
   - ipv4
   - ipv6
-- name: golang.org/x/sys
-  version: 7138fd3d9dc8335c567ca206f4333fb75eb05d56
-  repo: https://github.com/golang/sys
-  subpackages:
-  - unix
-  - windows
 - name: golang.org/x/time
-  version: fbb02b2291d28baffd63558aa44b4b56f178d650
+  version: 6dc17368e09b0e8634d71cac8168d853e869a0c7
   subpackages:
   - rate
 - name: gopkg.in/inf.v0
-  version: d2d2541c53f18d2a059457998ce2876cc8e67cbf
+  version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/validator.v2
-  version: 135c24b11c19e52befcae2ec3fca5d9b78c4e98e
+  version: 07ffaad256c8e957050ad83d6472eb97d785013d
 - name: gopkg.in/yaml.v2
-  version: 5420a8b6744d3b0345ab293f6fcba19c978f1183
+  version: 287cf08546ab5e7e37d55a84f7ed3fd1db036de5
 testImports: []
