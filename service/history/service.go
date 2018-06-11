@@ -43,11 +43,6 @@ type Config struct {
 	RangeSizeBits        uint
 	AcquireShardInterval time.Duration
 
-	// Timeout settings
-	DefaultScheduleToStartActivityTimeoutInSecs int32
-	DefaultScheduleToCloseActivityTimeoutInSecs int32
-	DefaultStartToCloseActivityTimeoutInSecs    int32
-
 	// TimerQueueProcessor settings
 	TimerTaskBatchSize                           int
 	TimerTaskWorkerCount                         int
@@ -105,9 +100,6 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int) *Config {
 		HistoryCacheTTL:                                    time.Hour,
 		RangeSizeBits:                                      20, // 20 bits for sequencer, 2^20 sequence number for any range
 		AcquireShardInterval:                               time.Minute,
-		DefaultScheduleToStartActivityTimeoutInSecs:        10, // Todo: remove maybe
-		DefaultScheduleToCloseActivityTimeoutInSecs:        10,
-		DefaultStartToCloseActivityTimeoutInSecs:           10,
 		TimerTaskBatchSize:                                 100,
 		TimerTaskWorkerCount:                               10,
 		TimerTaskMaxRetryCount:                             5,

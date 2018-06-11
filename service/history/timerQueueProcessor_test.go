@@ -511,6 +511,7 @@ func (s *timerQueueProcessorSuite) TestTimerActivityTaskScheduleToStart_MoreThan
 			ActivityId:                    common.StringPtr("testID"),
 			ScheduleToStartTimeoutSeconds: common.Int32Ptr(2),
 			StartToCloseTimeoutSeconds:    common.Int32Ptr(1),
+			ScheduleToCloseTimeoutSeconds: common.Int32Ptr(3),
 			TaskList:                      &workflow.TaskList{Name: common.StringPtr("task-list")},
 		})
 	s.NotNil(activityScheduledEvent)
