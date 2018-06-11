@@ -26,7 +26,6 @@ import (
 	"time"
 
 	"github.com/gocql/gocql"
-	"github.com/pborman/uuid"
 	"github.com/uber-common/bark"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -992,7 +991,6 @@ func (d *cassandraPersistence) UpdateShard(request *UpdateShardRequest) error {
 
 func (d *cassandraPersistence) CreateWorkflowExecution(request *CreateWorkflowExecutionRequest) (
 	*CreateWorkflowExecutionResponse, error) {
-	transferTaskID := uuid.New()
 	cqlNowTimestamp := common.UnixNanoToCQLTimestamp(time.Now().UnixNano())
 	batch := d.session.NewBatch(gocql.LoggedBatch)
 
@@ -1111,7 +1109,7 @@ func (d *cassandraPersistence) CreateWorkflowExecution(request *CreateWorkflowEx
 		}
 	}
 
-	return &CreateWorkflowExecutionResponse{TaskID: transferTaskID}, nil
+	return &CreateWorkflowExecutionResponse{}, nil
 }
 
 func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *CreateWorkflowExecutionRequest,

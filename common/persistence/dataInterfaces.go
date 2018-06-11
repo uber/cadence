@@ -532,7 +532,6 @@ type (
 
 	// CreateWorkflowExecutionResponse is the response to CreateWorkflowExecutionRequest
 	CreateWorkflowExecutionResponse struct {
-		TaskID string
 	}
 
 	// GetWorkflowExecutionRequest is used to retrieve the info of a workflow execution

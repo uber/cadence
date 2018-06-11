@@ -80,7 +80,7 @@ func (s *cassandraPersistenceSuite) TestPersistenceStartWorkflow() {
 	}
 	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType", 20, 13, nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
-	s.NotEmpty(task0, "Expected non empty task identifier.")
+	s.NotNil(task0, "Expected non empty task identifier.")
 
 	task1, err1 := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType1", 20, 14, nil, 3, 0, 2, nil)
 	s.NotNil(err1, "Expected workflow creation to fail.")
@@ -139,7 +139,7 @@ func (s *cassandraPersistenceSuite) TestPersistenceStartWorkflowWithReplicationS
 	}
 	task0, err0 := s.CreateWorkflowExecutionWithReplication(domainID, workflowExecution, "queue1", "wType", 20, 13, 3, 0, 2, replicationState, nil)
 	s.Nil(err0, "No error expected.")
-	s.NotEmpty(task0, "Expected non empty task identifier.")
+	s.NotNil(task0, "Expected non empty task identifier.")
 
 	task1, err1 := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType1", 20, 14, nil, 3, 0, 2, nil)
 	s.NotNil(err1, "Expected workflow creation to fail.")
@@ -192,7 +192,7 @@ func (s *cassandraPersistenceSuite) TestGetWorkflow() {
 	}
 	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType", 20, 13, nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
-	s.NotEmpty(task0, "Expected non empty task identifier.")
+	s.NotNil(task0, "Expected non empty task identifier.")
 
 	state, err1 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.Nil(err1, "No error expected.")
@@ -225,7 +225,7 @@ func (s *cassandraPersistenceSuite) TestUpdateWorkflow() {
 	}
 	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType", 20, 13, nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
-	s.NotEmpty(task0, "Expected non empty task identifier.")
+	s.NotNil(task0, "Expected non empty task identifier.")
 
 	state0, err1 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.Nil(err1, "No error expected.")
@@ -427,7 +427,7 @@ func (s *cassandraPersistenceSuite) TestGetCurrentWorkflow() {
 
 	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType", 20, 13, nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
-	s.NotEmpty(task0, "Expected non empty task identifier.")
+	s.NotNil(task0, "Expected non empty task identifier.")
 
 	runID0, err1 := s.GetCurrentWorkflowRunID(domainID, *workflowExecution.WorkflowId)
 	s.Nil(err1, "No error expected.")
@@ -465,7 +465,7 @@ func (s *cassandraPersistenceSuite) TestTransferTasksThroughUpdate() {
 
 	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType", 20, 13, nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
-	s.NotEmpty(task0, "Expected non empty task identifier.")
+	s.NotNil(task0, "Expected non empty task identifier.")
 
 	tasks1, err1 := s.GetTransferTasks(1, false)
 	s.Nil(err1, "No error expected.")
@@ -553,7 +553,7 @@ func (s *cassandraPersistenceSuite) TestCancelTransferTaskTasks() {
 
 	task0, err := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType", 20, 13, nil, 3, 0, 2, nil)
 	s.Nil(err, "No error expected.")
-	s.NotEmpty(task0, "Expected non empty task identifier.")
+	s.NotNil(task0, "Expected non empty task identifier.")
 
 	taskD, err := s.GetTransferTasks(1, false)
 	s.Equal(1, len(taskD), "Expected 1 decision task.")
@@ -647,7 +647,7 @@ func (s *cassandraPersistenceSuite) TestSignalTransferTaskTasks() {
 
 	task0, err := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType", 20, 13, nil, 3, 0, 2, nil)
 	s.Nil(err, "No error expected.")
-	s.NotEmpty(task0, "Expected non empty task identifier.")
+	s.NotNil(task0, "Expected non empty task identifier.")
 
 	taskD, err := s.GetTransferTasks(1, false)
 	s.Equal(1, len(taskD), "Expected 1 decision task.")
@@ -738,7 +738,7 @@ func (s *cassandraPersistenceSuite) TestCreateTask() {
 		RunId: common.StringPtr("c949447a-691a-4132-8b2a-a5b38106793c")}
 	task0, err0 := s.CreateDecisionTask(domainID, workflowExecution, "a5b38106793c", 5)
 	s.Nil(err0, "No error expected.")
-	s.NotEmpty(task0, "Expected non empty task identifier.")
+	s.NotNil(task0, "Expected non empty task identifier.")
 
 	tasks1, err1 := s.CreateActivityTasks(domainID, workflowExecution, map[int64]string{
 		10: "a5b38106793c"})
@@ -770,7 +770,7 @@ func (s *cassandraPersistenceSuite) TestGetDecisionTasks() {
 	taskList := "d8b886738e05"
 	task0, err0 := s.CreateDecisionTask(domainID, workflowExecution, taskList, 5)
 	s.Nil(err0, "No error expected.")
-	s.NotEmpty(task0, "Expected non empty task identifier.")
+	s.NotNil(task0, "Expected non empty task identifier.")
 
 	tasks1Response, err1 := s.GetTasks(domainID, taskList, TaskListTypeDecision, 1)
 	s.Nil(err1, "No error expected.")
@@ -897,7 +897,7 @@ func (s *cassandraPersistenceSuite) TestReplicationTasks() {
 
 	task0, err := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType", 20, 13, nil, 3, 0, 2, nil)
 	s.Nil(err, "No error expected.")
-	s.NotEmpty(task0, "Expected non empty task identifier.")
+	s.NotNil(task0, "Expected non empty task identifier.")
 	taskD, err := s.GetTransferTasks(1, false)
 	s.Equal(1, len(taskD), "Expected 1 decision task.")
 	err = s.CompleteTransferTask(taskD[0].TaskID)
@@ -962,7 +962,7 @@ func (s *cassandraPersistenceSuite) TestTransferTasks() {
 
 	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, tasklist, "wType", 20, 13, nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
-	s.NotEmpty(task0, "Expected non empty task identifier.")
+	s.NotNil(task0, "Expected non empty task identifier.")
 
 	tasks1, err1 := s.GetTransferTasks(1, false)
 	s.Nil(err1, "No error expected.")
@@ -1053,7 +1053,7 @@ func (s *cassandraPersistenceSuite) TestTimerTasks() {
 
 	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "taskList", "wType", 20, 13, nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
-	s.NotEmpty(task0, "Expected non empty task identifier.")
+	s.NotNil(task0, "Expected non empty task identifier.")
 
 	state0, err1 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.Nil(err1, "No error expected.")
@@ -1118,7 +1118,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_Activities() {
 
 	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "taskList", "wType", 20, 13, nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
-	s.NotEmpty(task0, "Expected non empty task identifier.")
+	s.NotNil(task0, "Expected non empty task identifier.")
 
 	state0, err1 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.Nil(err1, "No error expected.")
@@ -1186,7 +1186,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_Timers() {
 
 	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "taskList", "wType", 20, 13, nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
-	s.NotEmpty(task0, "Expected non empty task identifier.")
+	s.NotNil(task0, "Expected non empty task identifier.")
 
 	state0, err1 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.Nil(err1, "No error expected.")
@@ -1242,7 +1242,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_ChildExecutions() {
 
 	task0, err0 := s.CreateChildWorkflowExecution(domainID, workflowExecution, parentDomainID, parentExecution, 1, "taskList", "wType", 20, 13, nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
-	s.NotEmpty(task0, "Expected non empty task identifier.")
+	s.NotNil(task0, "Expected non empty task identifier.")
 
 	state0, err1 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.Nil(err1, "No error expected.")
@@ -1300,7 +1300,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_RequestCancel() {
 
 	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "taskList", "wType", 20, 13, nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
-	s.NotEmpty(task0, "Expected non empty task identifier.")
+	s.NotNil(task0, "Expected non empty task identifier.")
 
 	state0, err1 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.Nil(err1, "No error expected.")
@@ -1349,7 +1349,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_SignalInfo() {
 
 	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "taskList", "wType", 20, 13, nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
-	s.NotEmpty(task0, "Expected non empty task identifier.")
+	s.NotNil(task0, "Expected non empty task identifier.")
 
 	state0, err1 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.Nil(err1, "No error expected.")
@@ -1408,7 +1408,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_SignalRequested() {
 
 	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "taskList", "wType", 20, 13, nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
-	s.NotEmpty(task0, "Expected non empty task identifier.")
+	s.NotNil(task0, "Expected non empty task identifier.")
 
 	state0, err1 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.Nil(err1, "No error expected.")
@@ -1449,7 +1449,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_BufferedReplication
 
 	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "taskList", "wType", 20, 13, nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
-	s.NotEmpty(task0, "Expected non empty task identifier.")
+	s.NotNil(task0, "Expected non empty task identifier.")
 
 	state0, err1 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.Nil(err1, "No error expected.")
@@ -1638,7 +1638,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableStateInfo() {
 
 	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "taskList", "wType", 20, 13, nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
-	s.NotEmpty(task0, "Expected non empty task identifier.")
+	s.NotNil(task0, "Expected non empty task identifier.")
 
 	state0, err1 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.Nil(err1, "No error expected.")
@@ -1714,7 +1714,7 @@ func (s *cassandraPersistenceSuite) TestReplicationTransferTaskTasks() {
 
 	task0, err := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType", 20, 13, nil, 3, 0, 2, nil)
 	s.Nil(err, "No error expected.")
-	s.NotEmpty(task0, "Expected non empty task identifier.")
+	s.NotNil(task0, "Expected non empty task identifier.")
 
 	taskD, err := s.GetTransferTasks(1, false)
 	s.Equal(1, len(taskD), "Expected 1 decision task.")
@@ -1820,7 +1820,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowReplicationState() {
 			},
 		}, replicationTasks)
 	s.Nil(err0, "No error expected.")
-	s.NotEmpty(task0, "Expected non empty task identifier.")
+	s.NotNil(task0, "Expected non empty task identifier.")
 
 	taskD, err := s.GetTransferTasks(2, false)
 	s.Equal(1, len(taskD), "Expected 1 decision task.")
@@ -1986,7 +1986,7 @@ func (s *cassandraPersistenceSuite) TestResetMutableState() {
 
 	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, "taskList", "wType", 20, 13, nil, 3, 0, 2, nil)
 	s.Nil(err0, "No error expected.")
-	s.NotEmpty(task0, "Expected non empty task identifier.")
+	s.NotNil(task0, "Expected non empty task identifier.")
 
 	state0, err1 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.Nil(err1, "No error expected.")

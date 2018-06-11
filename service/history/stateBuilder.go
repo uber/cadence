@@ -33,10 +33,20 @@ import (
 )
 
 type (
-	stateBuilder struct {
+	stateBuilder interface {
+		applyEvents(domainID, requestID string, execution shared.WorkflowExecution,
+			history *shared.History, newRunHistory *shared.History) (*shared.HistoryEvent,
+			*decisionInfo, mutableState, error)
+		getTransferTasks() []persistence.Task
+		getTimerTasks() []persistence.Task
+		getNewRunTransferTasks() []persistence.Task
+		getNewRunTimerTasks() []persistence.Task
+	}
+
+	stateBuilderImpl struct {
 		shard           ShardContext
 		clusterMetadata cluster.Metadata
-		msBuilder       *mutableStateBuilder
+		msBuilder       mutableState
 		domainCache     cache.DomainCache
 		logger          bark.Logger
 
@@ -47,9 +57,9 @@ type (
 	}
 )
 
-func newStateBuilder(shard ShardContext, msBuilder *mutableStateBuilder, logger bark.Logger) *stateBuilder {
+func newStateBuilder(shard ShardContext, msBuilder mutableState, logger bark.Logger) *stateBuilderImpl {
 
-	return &stateBuilder{
+	return &stateBuilderImpl{
 		shard:           shard,
 		clusterMetadata: shard.GetService().GetClusterMetadata(),
 		msBuilder:       msBuilder,
@@ -58,14 +68,32 @@ func newStateBuilder(shard ShardContext, msBuilder *mutableStateBuilder, logger 
 	}
 }
 
-func (b *stateBuilder) applyEvents(domainID, requestID string,
-	execution shared.WorkflowExecution, history *shared.History, newRunHistory *shared.History) (*shared.HistoryEvent,
-	*decisionInfo, *mutableStateBuilder, error) {
+func (b *stateBuilderImpl) getTransferTasks() []persistence.Task {
+	return b.transferTasks
+}
+
+func (b *stateBuilderImpl) getTimerTasks() []persistence.Task {
+	return b.timerTasks
+}
+
+func (b *stateBuilderImpl) getNewRunTransferTasks() []persistence.Task {
+	return b.newRunTransferTasks
+}
+
+func (b *stateBuilderImpl) getNewRunTimerTasks() []persistence.Task {
+	return b.newRunTimerTasks
+}
+
+func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution shared.WorkflowExecution,
+	history *shared.History, newRunHistory *shared.History) (*shared.HistoryEvent,
+	*decisionInfo, mutableState, error) {
 	var lastEvent *shared.HistoryEvent
 	var lastDecision *decisionInfo
-	var newRunStateBuilder *mutableStateBuilder
+	var newRunStateBuilder mutableState
 	for _, event := range history.Events {
 		lastEvent = event
+		// must set the current version, since this is standby here, not active
+		b.msBuilder.UpdateReplicationStateVersion(event.GetVersion())
 		switch event.GetEventType() {
 		case shared.EventTypeWorkflowExecutionStarted:
 			attributes := event.WorkflowExecutionStartedEventAttributes
@@ -324,7 +352,7 @@ func (b *stateBuilder) applyEvents(domainID, requestID string,
 			}
 
 			// Create mutable state updates for the new run
-			newRunStateBuilder = newMutableStateBuilderWithReplicationState(b.shard.GetConfig(), b.logger, event.GetVersion())
+			newRunStateBuilder = newMutableStateBuilderWithReplicationState(b.shard.GetConfig(), b.logger, startedEvent.GetVersion())
 			newRunStateBuilder.ReplicateWorkflowExecutionStartedEvent(domainID, parentDomainID, newExecution, uuid.New(),
 				startedAttributes)
 			di := newRunStateBuilder.ReplicateDecisionTaskScheduledEvent(
@@ -333,17 +361,19 @@ func (b *stateBuilder) applyEvents(domainID, requestID string,
 				dtScheduledEvent.DecisionTaskScheduledEventAttributes.TaskList.GetName(),
 				dtScheduledEvent.DecisionTaskScheduledEventAttributes.GetStartToCloseTimeoutSeconds(),
 			)
+			newRunExecutionInfo := newRunStateBuilder.GetExecutionInfo()
 			nextEventID := di.ScheduleID + 1
-			newRunStateBuilder.executionInfo.NextEventID = nextEventID
-			newRunStateBuilder.executionInfo.LastFirstEventID = startedEvent.GetEventId()
+			newRunExecutionInfo.NextEventID = nextEventID
+			newRunExecutionInfo.LastFirstEventID = startedEvent.GetEventId()
 			// Set the history from replication task on the newStateBuilder
-			newRunStateBuilder.hBuilder = newHistoryBuilderFromEvents(newRunHistory.Events, b.logger)
+			newRunStateBuilder.SetHistoryBuilder(newHistoryBuilderFromEvents(newRunHistory.Events, b.logger))
+			sourceClusterName := b.clusterMetadata.ClusterNameForFailoverVersion(startedEvent.GetVersion())
+			newRunStateBuilder.UpdateReplicationStateLastEventID(sourceClusterName, startedEvent.GetVersion(), nextEventID-1)
 
 			b.newRunTransferTasks = append(b.newRunTransferTasks, b.scheduleDecisionTransferTask(domainID,
 				b.getTaskList(newRunStateBuilder), di.ScheduleID))
 			b.newRunTimerTasks = append(b.newRunTimerTasks, b.scheduleWorkflowTimerTask(event, newRunStateBuilder))
 
-			sourceClusterName := b.clusterMetadata.ClusterNameForFailoverVersion(event.GetVersion())
 			b.msBuilder.ReplicateWorkflowExecutionContinuedAsNewEvent(sourceClusterName, domainID, event,
 				startedEvent, di, newRunStateBuilder)
 			b.transferTasks = append(b.transferTasks, b.scheduleDeleteHistoryTransferTask())
@@ -359,7 +389,7 @@ func (b *stateBuilder) applyEvents(domainID, requestID string,
 	return lastEvent, lastDecision, newRunStateBuilder, nil
 }
 
-func (b *stateBuilder) scheduleDecisionTransferTask(domainID string, tasklist string,
+func (b *stateBuilderImpl) scheduleDecisionTransferTask(domainID string, tasklist string,
 	scheduleID int64) persistence.Task {
 	return &persistence.DecisionTask{
 		DomainID:   domainID,
@@ -368,7 +398,7 @@ func (b *stateBuilder) scheduleDecisionTransferTask(domainID string, tasklist st
 	}
 }
 
-func (b *stateBuilder) scheduleActivityTransferTask(domainID string, tasklist string,
+func (b *stateBuilderImpl) scheduleActivityTransferTask(domainID string, tasklist string,
 	scheduleID int64) persistence.Task {
 	return &persistence.ActivityTask{
 		DomainID:   domainID,
@@ -377,7 +407,7 @@ func (b *stateBuilder) scheduleActivityTransferTask(domainID string, tasklist st
 	}
 }
 
-func (b *stateBuilder) scheduleStartChildWorkflowTransferTask(domainID string, workflowID string,
+func (b *stateBuilderImpl) scheduleStartChildWorkflowTransferTask(domainID string, workflowID string,
 	initiatedID int64) persistence.Task {
 	return &persistence.StartChildExecutionTask{
 		TargetDomainID:   domainID,
@@ -386,7 +416,7 @@ func (b *stateBuilder) scheduleStartChildWorkflowTransferTask(domainID string, w
 	}
 }
 
-func (b *stateBuilder) scheduleCancelExternalWorkflowTransferTask(domainID string, workflowID string,
+func (b *stateBuilderImpl) scheduleCancelExternalWorkflowTransferTask(domainID string, workflowID string,
 	runID string, childWorkflowOnly bool, initiatedID int64) persistence.Task {
 	return &persistence.CancelExecutionTask{
 		TargetDomainID:          domainID,
@@ -397,7 +427,7 @@ func (b *stateBuilder) scheduleCancelExternalWorkflowTransferTask(domainID strin
 	}
 }
 
-func (b *stateBuilder) scheduleSignalWorkflowTransferTask(domainID string, workflowID string,
+func (b *stateBuilderImpl) scheduleSignalWorkflowTransferTask(domainID string, workflowID string,
 	runID string, childWorkflowOnly bool, initiatedID int64) persistence.Task {
 	return &persistence.SignalExecutionTask{
 		TargetDomainID:          domainID,
@@ -408,35 +438,35 @@ func (b *stateBuilder) scheduleSignalWorkflowTransferTask(domainID string, workf
 	}
 }
 
-func (b *stateBuilder) scheduleDeleteHistoryTransferTask() persistence.Task {
+func (b *stateBuilderImpl) scheduleDeleteHistoryTransferTask() persistence.Task {
 	return &persistence.CloseExecutionTask{}
 }
 
-func (b *stateBuilder) scheduleDecisionTimerTask(event *shared.HistoryEvent, scheduleID int64, attempt int64,
+func (b *stateBuilderImpl) scheduleDecisionTimerTask(event *shared.HistoryEvent, scheduleID int64, attempt int64,
 	timeoutSecond int32) persistence.Task {
 	return b.getTimerBuilder(event).AddStartToCloseDecisionTimoutTask(scheduleID, attempt, timeoutSecond)
 }
 
-func (b *stateBuilder) scheduleUserTimerTask(event *shared.HistoryEvent,
-	ti *persistence.TimerInfo, msBuilder *mutableStateBuilder) persistence.Task {
+func (b *stateBuilderImpl) scheduleUserTimerTask(event *shared.HistoryEvent,
+	ti *persistence.TimerInfo, msBuilder mutableState) persistence.Task {
 	timerBuilder := b.getTimerBuilder(event)
 	timerBuilder.AddUserTimer(ti, msBuilder)
 	return timerBuilder.GetUserTimerTaskIfNeeded(msBuilder)
 }
 
-func (b *stateBuilder) scheduleActivityTimerTask(event *shared.HistoryEvent,
-	msBuilder *mutableStateBuilder) persistence.Task {
+func (b *stateBuilderImpl) scheduleActivityTimerTask(event *shared.HistoryEvent,
+	msBuilder mutableState) persistence.Task {
 	return b.getTimerBuilder(event).GetActivityTimerTaskIfNeeded(msBuilder)
 }
 
-func (b *stateBuilder) scheduleWorkflowTimerTask(event *shared.HistoryEvent,
-	msBuilder *mutableStateBuilder) persistence.Task {
+func (b *stateBuilderImpl) scheduleWorkflowTimerTask(event *shared.HistoryEvent,
+	msBuilder mutableState) persistence.Task {
 	now := time.Unix(0, event.GetTimestamp())
-	timeout := now.Add(time.Duration(msBuilder.executionInfo.WorkflowTimeout) * time.Second)
+	timeout := now.Add(time.Duration(msBuilder.GetExecutionInfo().WorkflowTimeout) * time.Second)
 	return &persistence.WorkflowTimeoutTask{VisibilityTimestamp: timeout}
 }
 
-func (b *stateBuilder) scheduleDeleteHistoryTimerTask(event *shared.HistoryEvent, domainID string) (persistence.Task, error) {
+func (b *stateBuilderImpl) scheduleDeleteHistoryTimerTask(event *shared.HistoryEvent, domainID string) (persistence.Task, error) {
 	var retentionInDays int32
 	domainEntry, err := b.shard.GetDomainCache().GetDomainByID(domainID)
 	if err != nil {
@@ -449,12 +479,12 @@ func (b *stateBuilder) scheduleDeleteHistoryTimerTask(event *shared.HistoryEvent
 	return b.getTimerBuilder(event).createDeleteHistoryEventTimerTask(time.Duration(retentionInDays) * time.Hour * 24), nil
 }
 
-func (b *stateBuilder) getTaskList(msBuilder *mutableStateBuilder) string {
+func (b *stateBuilderImpl) getTaskList(msBuilder mutableState) string {
 	// on the standby side, sticky tasklist is meaningless, so always use the normal tasklist
-	return msBuilder.executionInfo.TaskList
+	return msBuilder.GetExecutionInfo().TaskList
 }
 
-func (b *stateBuilder) getTimerBuilder(event *shared.HistoryEvent) *timerBuilder {
+func (b *stateBuilderImpl) getTimerBuilder(event *shared.HistoryEvent) *timerBuilder {
 	timeSource := common.NewFakeTimeSource()
 	now := time.Unix(0, event.GetTimestamp())
 	timeSource.Update(now)

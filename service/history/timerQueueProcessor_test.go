@@ -135,7 +135,7 @@ func (s *timerQueueProcessorSuite) createExecutionWithTimers(domainID string, we
 	task0, err0 := s.CreateWorkflowExecution(domainID, we, tl, info.WorkflowTypeName, info.WorkflowTimeout, info.DecisionTimeoutValue,
 		info.ExecutionContext, info.NextEventID, info.LastProcessedEvent, info.DecisionScheduleID, nil)
 	s.Nil(err0, "No error expected.")
-	s.NotEmpty(task0, "Expected non empty task identifier.")
+	s.NotNil(task0, "Expected non empty task identifier.")
 
 	state0, err2 := s.GetWorkflowExecutionInfo(domainID, we)
 	s.Nil(err2, "No error expected.")
@@ -383,7 +383,7 @@ func (s *timerQueueProcessorSuite) checkTimedOutEventForUserTimer(domainID strin
 	return isRunning
 }
 
-func (s *timerQueueProcessorSuite) updateHistoryAndTimers(ms *mutableStateBuilder, timerTasks []persistence.Task, condition int64) {
+func (s *timerQueueProcessorSuite) updateHistoryAndTimers(ms mutableState, timerTasks []persistence.Task, condition int64) {
 	updatedState := createMutableState(ms)
 
 	actInfos := []*persistence.ActivityInfo{}
@@ -950,8 +950,8 @@ func (s *timerQueueProcessorSuite) TestTimersOnClosedWorkflow() {
 	s.Equal(state0.ExecutionInfo.NextEventID, state1.ExecutionInfo.NextEventID)
 }
 
-func (s *timerQueueProcessorSuite) printHistory(builder *mutableStateBuilder) string {
-	history, err := builder.hBuilder.Serialize()
+func (s *timerQueueProcessorSuite) printHistory(builder mutableState) string {
+	history, err := builder.GetHistoryBuilder().Serialize()
 	if err != nil {
 		s.logger.Errorf("Error serializing history: %v", err)
 		return ""
