@@ -50,8 +50,8 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
-	"go.uber.org/yarpc/yarpcerrors"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"go.uber.org/yarpc/yarpcerrors"
 )
 
 var _ workflowserviceserver.Interface = (*WorkflowHandler)(nil)
