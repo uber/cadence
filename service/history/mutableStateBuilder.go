@@ -503,15 +503,17 @@ func (e *mutableStateBuilder) GetCurrentVersion() int64 {
 	return e.replicationState.CurrentVersion
 }
 
-func (e *mutableStateBuilder) UpdateReplicationStateVersion(version int64) {
-	e.replicationState.CurrentVersion = version
-}
-
 func (e *mutableStateBuilder) GetLastWriteVersion() int64 {
 	if e.replicationState == nil {
 		return common.EmptyVersion
 	}
 	return e.replicationState.LastWriteVersion
+}
+
+func (e *mutableStateBuilder) UpdateReplicationStateVersion(version int64) {
+	if version > e.replicationState.CurrentVersion {
+		e.replicationState.CurrentVersion = version
+	}
 }
 
 // Assumption: It is expected CurrentVersion on replication state is updated at the start of transaction when
