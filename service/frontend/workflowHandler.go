@@ -51,6 +51,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
 	"go.uber.org/yarpc/yarpcerrors"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 var _ workflowserviceserver.Interface = (*WorkflowHandler)(nil)
@@ -1701,7 +1702,8 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx context.Context,
 	}
 
 	if listRequest.GetMaximumPageSize() == 0 {
-		listRequest.MaximumPageSize = common.Int32Ptr(int32(wh.config.VisibilityMaxPageSize()))
+		domainFilter := dynamicconfig.DomainFilter(listRequest.GetDomain())
+		listRequest.MaximumPageSize = common.Int32Ptr(int32(wh.config.VisibilityMaxPageSize(domainFilter)))
 	}
 
 	domainID, err := wh.domainCache.GetDomainID(listRequest.GetDomain())
@@ -1792,8 +1794,13 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx context.Context,
 	}
 
 	if listRequest.GetMaximumPageSize() == 0 {
-		listRequest.MaximumPageSize = common.Int32Ptr(int32(wh.config.VisibilityMaxPageSize()))
+		domainFilter := dynamicconfig.DomainFilter(listRequest.GetDomain())
+		listRequest.MaximumPageSize = common.Int32Ptr(int32(wh.config.VisibilityMaxPageSize(domainFilter)))
 	}
+
+	fmt.Println("********")
+	fmt.Printf("vancexu: visibility max page size: %d\n", listRequest.GetMaximumPageSize())
+	fmt.Println("********")
 
 	domainID, err := wh.domainCache.GetDomainID(listRequest.GetDomain())
 	if err != nil {
