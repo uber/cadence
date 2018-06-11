@@ -1338,7 +1338,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	}
 
 	if getRequest.GetMaximumPageSize() == 0 {
-		getRequest.MaximumPageSize = common.Int32Ptr(int32(wh.config.DefaultHistoryMaxPageSize()))
+		getRequest.MaximumPageSize = common.Int32Ptr(int32(wh.config.HistoryMaxPageSize()))
 	}
 
 	domainID, err := wh.domainCache.GetDomainID(getRequest.GetDomain())
@@ -1701,7 +1701,7 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx context.Context,
 	}
 
 	if listRequest.GetMaximumPageSize() == 0 {
-		listRequest.MaximumPageSize = common.Int32Ptr(int32(wh.config.DefaultVisibilityMaxPageSize()))
+		listRequest.MaximumPageSize = common.Int32Ptr(int32(wh.config.VisibilityMaxPageSize()))
 	}
 
 	domainID, err := wh.domainCache.GetDomainID(listRequest.GetDomain())
@@ -1792,7 +1792,7 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx context.Context,
 	}
 
 	if listRequest.GetMaximumPageSize() == 0 {
-		listRequest.MaximumPageSize = common.Int32Ptr(int32(wh.config.DefaultVisibilityMaxPageSize()))
+		listRequest.MaximumPageSize = common.Int32Ptr(int32(wh.config.VisibilityMaxPageSize()))
 	}
 
 	domainID, err := wh.domainCache.GetDomainID(listRequest.GetDomain())
@@ -2285,7 +2285,7 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(ctx context.Context
 			*matchingResp.WorkflowExecution,
 			firstEventID,
 			nextEventID,
-			int32(wh.config.DefaultHistoryMaxPageSize()),
+			int32(wh.config.HistoryMaxPageSize()),
 			nil,
 			matchingResp.DecisionInfo)
 		if err != nil {

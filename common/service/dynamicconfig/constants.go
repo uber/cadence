@@ -70,10 +70,10 @@ const (
 
 	// key for frontend
 
-	// FrontendDefaultVisibilityMaxPageSize is default max size for ListWorkflowExecutions in one page
-	FrontendDefaultVisibilityMaxPageSize
-	// FrontendDefaultHistoryMaxPageSize is default max size for GetWorkflowExecutionHistory in one page
-	FrontendDefaultHistoryMaxPageSize
+	// FrontendVisibilityMaxPageSize is default max size for ListWorkflowExecutions in one page
+	FrontendVisibilityMaxPageSize
+	// FrontendHistoryMaxPageSize is default max size for GetWorkflowExecutionHistory in one page
+	FrontendHistoryMaxPageSize
 	// FrontendRPS is workflow rate limit per second
 	FrontendRPS
 	// FrontendHistoryMgrNumConns is for persistence cluster.NumConns

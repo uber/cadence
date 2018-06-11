@@ -31,9 +31,9 @@ import (
 
 // Config represents configuration for cadence-frontend service
 type Config struct {
-	DefaultVisibilityMaxPageSize dynamicconfig.IntPropertyFn
-	DefaultHistoryMaxPageSize    dynamicconfig.IntPropertyFn
-	RPS                          dynamicconfig.IntPropertyFn
+	VisibilityMaxPageSize dynamicconfig.IntPropertyFn
+	HistoryMaxPageSize    dynamicconfig.IntPropertyFn
+	RPS                   dynamicconfig.IntPropertyFn
 
 	// Persistence settings
 	HistoryMgrNumConns dynamicconfig.IntPropertyFn
@@ -42,11 +42,11 @@ type Config struct {
 // NewConfig returns new service config with default values
 func NewConfig(dc *dynamicconfig.Collection) *Config {
 	return &Config{
-		DefaultVisibilityMaxPageSize: dc.GetIntProperty(
-			dynamicconfig.FrontendDefaultVisibilityMaxPageSize, 1000,
+		VisibilityMaxPageSize: dc.GetIntProperty(
+			dynamicconfig.FrontendVisibilityMaxPageSize, 1000,
 		),
-		DefaultHistoryMaxPageSize: dc.GetIntProperty(
-			dynamicconfig.FrontendDefaultHistoryMaxPageSize, 1000,
+		HistoryMaxPageSize: dc.GetIntProperty(
+			dynamicconfig.FrontendHistoryMaxPageSize, 1000,
 		),
 		RPS: dc.GetIntProperty(
 			dynamicconfig.FrontendRPS, 1200,
