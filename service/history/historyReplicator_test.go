@@ -394,7 +394,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 
 	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(context, msBuilderIn, request, s.logger)
 	s.Nil(msBuilderOut)
-	s.Equal(ErrMissingReplicationInfo, err)
+	s.Equal(ErrCorruptedReplicationInfo, err)
 }
 
 func (s *historyReplicatorSuite) TestApplyOtherEvents_IncomingLessThanCurrent() {
@@ -474,6 +474,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_BrandNew() {
 	parentDomainID := validDomainID
 	parentWorkflowID := "some random workflow ID"
 	parentRunID := uuid.New()
+	sourceCluster := "some random source cluster"
 
 	context := newWorkflowExecutionContext(domainID, shared.WorkflowExecution{
 		WorkflowId: common.StringPtr(workflowID),
@@ -519,7 +520,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_BrandNew() {
 		WorkflowTimeout:      workflowTimeout,
 		DecisionTimeoutValue: decisionTimeout,
 	})
-	msBuilder.On("UpdateReplicationStateLastEventID", "", version, nextEventID-1).Once()
+	msBuilder.On("UpdateReplicationStateLastEventID", sourceCluster, version, nextEventID-1).Once()
 	msBuilder.On("GetReplicationState").Return(replicationState)
 	msBuilder.On("GetCurrentVersion").Return(version)
 	msBuilder.On("GetNextEventID").Return(nextEventID)
@@ -560,7 +561,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_BrandNew() {
 		return true
 	})).Return(&persistence.CreateWorkflowExecutionResponse{}, nil).Once()
 
-	err := s.historyReplicator.replicateWorkflowStarted(context, msBuilder, di, history, sBuilder, requestID, s.logger)
+	err := s.historyReplicator.replicateWorkflowStarted(context, msBuilder, di, sourceCluster, history, sBuilder, requestID, s.logger)
 	s.Nil(err)
 	s.Equal(1, len(transferTasks))
 	s.Equal(version, transferTasks[0].GetVersion())
@@ -582,6 +583,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_ISE() {
 	parentDomainID := validDomainID
 	parentWorkflowID := "some random workflow ID"
 	parentRunID := uuid.New()
+	sourceCluster := "some random source cluster"
 
 	context := newWorkflowExecutionContext(domainID, shared.WorkflowExecution{
 		WorkflowId: common.StringPtr(workflowID),
@@ -627,7 +629,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_ISE() {
 		WorkflowTimeout:      workflowTimeout,
 		DecisionTimeoutValue: decisionTimeout,
 	})
-	msBuilder.On("UpdateReplicationStateLastEventID", "", version, nextEventID-1).Once()
+	msBuilder.On("UpdateReplicationStateLastEventID", sourceCluster, version, nextEventID-1).Once()
 	msBuilder.On("GetReplicationState").Return(replicationState)
 	msBuilder.On("GetCurrentVersion").Return(version)
 	msBuilder.On("GetNextEventID").Return(nextEventID)
@@ -641,7 +643,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_ISE() {
 	// the test above already assert the create workflow request, so here jsut use anyting
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(nil, errRet).Once()
 
-	err := s.historyReplicator.replicateWorkflowStarted(context, msBuilder, di, history, sBuilder, requestID, s.logger)
+	err := s.historyReplicator.replicateWorkflowStarted(context, msBuilder, di, sourceCluster, history, sBuilder, requestID, s.logger)
 	s.Equal(errRet, err)
 	s.Equal(1, len(transferTasks))
 	s.Equal(version, transferTasks[0].GetVersion())
@@ -663,6 +665,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_SameRunID() {
 	parentDomainID := validDomainID
 	parentWorkflowID := "some random workflow ID"
 	parentRunID := uuid.New()
+	sourceCluster := "some random source cluster"
 
 	context := newWorkflowExecutionContext(domainID, shared.WorkflowExecution{
 		WorkflowId: common.StringPtr(workflowID),
@@ -708,7 +711,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_SameRunID() {
 		WorkflowTimeout:      workflowTimeout,
 		DecisionTimeoutValue: decisionTimeout,
 	})
-	msBuilder.On("UpdateReplicationStateLastEventID", "", version, nextEventID-1).Once()
+	msBuilder.On("UpdateReplicationStateLastEventID", sourceCluster, version, nextEventID-1).Once()
 	msBuilder.On("GetReplicationState").Return(replicationState)
 	msBuilder.On("GetCurrentVersion").Return(version)
 	msBuilder.On("GetNextEventID").Return(nextEventID)
@@ -727,7 +730,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_SameRunID() {
 	// the test above already assert the create workflow request, so here jsut use anyting
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(nil, errRet).Once()
 
-	err := s.historyReplicator.replicateWorkflowStarted(context, msBuilder, di, history, sBuilder, requestID, s.logger)
+	err := s.historyReplicator.replicateWorkflowStarted(context, msBuilder, di, sourceCluster, history, sBuilder, requestID, s.logger)
 	s.Nil(err)
 	s.Equal(1, len(transferTasks))
 	s.Equal(version, transferTasks[0].GetVersion())
@@ -749,6 +752,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 	parentDomainID := validDomainID
 	parentWorkflowID := "some random workflow ID"
 	parentRunID := uuid.New()
+	sourceCluster := "some random source cluster"
 
 	context := newWorkflowExecutionContext(domainID, shared.WorkflowExecution{
 		WorkflowId: common.StringPtr(workflowID),
@@ -794,7 +798,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 		WorkflowTimeout:      workflowTimeout,
 		DecisionTimeoutValue: decisionTimeout,
 	})
-	msBuilder.On("UpdateReplicationStateLastEventID", "", version, nextEventID-1).Once()
+	msBuilder.On("UpdateReplicationStateLastEventID", sourceCluster, version, nextEventID-1).Once()
 	msBuilder.On("GetReplicationState").Return(replicationState)
 	msBuilder.On("GetCurrentVersion").Return(version)
 	msBuilder.On("GetNextEventID").Return(nextEventID)
@@ -814,7 +818,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(nil, errRet).Once()
 	s.mockHistoryMgr.On("DeleteWorkflowExecutionHistory", mock.Anything).Return(nil).Once()
 
-	err := s.historyReplicator.replicateWorkflowStarted(context, msBuilder, di, history, sBuilder, requestID, s.logger)
+	err := s.historyReplicator.replicateWorkflowStarted(context, msBuilder, di, sourceCluster, history, sBuilder, requestID, s.logger)
 	s.Nil(err)
 	s.Equal(1, len(transferTasks))
 	s.Equal(version, transferTasks[0].GetVersion())
@@ -836,6 +840,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 	parentDomainID := validDomainID
 	parentWorkflowID := "some random workflow ID"
 	parentRunID := uuid.New()
+	sourceCluster := "some random source cluster"
 
 	context := newWorkflowExecutionContext(domainID, shared.WorkflowExecution{
 		WorkflowId: common.StringPtr(workflowID),
@@ -881,7 +886,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 		WorkflowTimeout:      workflowTimeout,
 		DecisionTimeoutValue: decisionTimeout,
 	})
-	msBuilder.On("UpdateReplicationStateLastEventID", "", version, nextEventID-1).Once()
+	msBuilder.On("UpdateReplicationStateLastEventID", sourceCluster, version, nextEventID-1).Once()
 	msBuilder.On("GetReplicationState").Return(replicationState)
 	msBuilder.On("GetCurrentVersion").Return(version)
 	msBuilder.On("GetNextEventID").Return(nextEventID)
@@ -963,7 +968,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 		}, input)
 	})).Return(&persistence.CreateWorkflowExecutionResponse{}, nil).Once()
 
-	err := s.historyReplicator.replicateWorkflowStarted(context, msBuilder, di, history, sBuilder, requestID, s.logger)
+	err := s.historyReplicator.replicateWorkflowStarted(context, msBuilder, di, sourceCluster, history, sBuilder, requestID, s.logger)
 	s.Nil(err)
 	s.Equal(1, len(transferTasks))
 	s.Equal(version, transferTasks[0].GetVersion())
@@ -985,6 +990,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 	parentDomainID := validDomainID
 	parentWorkflowID := "some random workflow ID"
 	parentRunID := uuid.New()
+	sourceCluster := "some random source cluster"
 
 	context := newWorkflowExecutionContext(domainID, shared.WorkflowExecution{
 		WorkflowId: common.StringPtr(workflowID),
@@ -1030,7 +1036,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 		WorkflowTimeout:      workflowTimeout,
 		DecisionTimeoutValue: decisionTimeout,
 	})
-	msBuilder.On("UpdateReplicationStateLastEventID", "", version, nextEventID-1).Once()
+	msBuilder.On("UpdateReplicationStateLastEventID", sourceCluster, version, nextEventID-1).Once()
 	msBuilder.On("GetReplicationState").Return(replicationState)
 	msBuilder.On("GetCurrentVersion").Return(version)
 	msBuilder.On("GetNextEventID").Return(nextEventID)
@@ -1112,7 +1118,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 		}, input)
 	})).Return(&persistence.CreateWorkflowExecutionResponse{}, nil).Once()
 
-	err := s.historyReplicator.replicateWorkflowStarted(context, msBuilder, di, history, sBuilder, requestID, s.logger)
+	err := s.historyReplicator.replicateWorkflowStarted(context, msBuilder, di, sourceCluster, history, sBuilder, requestID, s.logger)
 	s.Nil(err)
 	s.Equal(1, len(transferTasks))
 	s.Equal(version, transferTasks[0].GetVersion())
@@ -1134,6 +1140,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	parentDomainID := validDomainID
 	parentWorkflowID := "some random workflow ID"
 	parentRunID := uuid.New()
+	sourceCluster := "some random source cluster"
 
 	context := newWorkflowExecutionContext(domainID, shared.WorkflowExecution{
 		WorkflowId: common.StringPtr(workflowID),
@@ -1179,7 +1186,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		WorkflowTimeout:      workflowTimeout,
 		DecisionTimeoutValue: decisionTimeout,
 	})
-	msBuilder.On("UpdateReplicationStateLastEventID", "", version, nextEventID-1).Once()
+	msBuilder.On("UpdateReplicationStateLastEventID", sourceCluster, version, nextEventID-1).Once()
 	msBuilder.On("GetReplicationState").Return(replicationState)
 	msBuilder.On("GetCurrentVersion").Return(version)
 	msBuilder.On("GetNextEventID").Return(nextEventID)
@@ -1199,7 +1206,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(nil, errRet).Once()
 	s.mockHistoryMgr.On("DeleteWorkflowExecutionHistory", mock.Anything).Return(nil).Once()
 
-	err := s.historyReplicator.replicateWorkflowStarted(context, msBuilder, di, history, sBuilder, requestID, s.logger)
+	err := s.historyReplicator.replicateWorkflowStarted(context, msBuilder, di, sourceCluster, history, sBuilder, requestID, s.logger)
 	s.Nil(err)
 	s.Equal(1, len(transferTasks))
 	s.Equal(version, transferTasks[0].GetVersion())
@@ -1221,6 +1228,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	parentDomainID := validDomainID
 	parentWorkflowID := "some random workflow ID"
 	parentRunID := uuid.New()
+	sourceCluster := "some random source cluster"
 
 	context := newWorkflowExecutionContext(domainID, shared.WorkflowExecution{
 		WorkflowId: common.StringPtr(workflowID),
@@ -1266,7 +1274,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		WorkflowTimeout:      workflowTimeout,
 		DecisionTimeoutValue: decisionTimeout,
 	})
-	msBuilder.On("UpdateReplicationStateLastEventID", "", version, nextEventID-1).Once()
+	msBuilder.On("UpdateReplicationStateLastEventID", sourceCluster, version, nextEventID-1).Once()
 	msBuilder.On("GetReplicationState").Return(replicationState)
 	msBuilder.On("GetCurrentVersion").Return(version)
 	msBuilder.On("GetNextEventID").Return(nextEventID)
@@ -1285,7 +1293,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	// the test above already assert the create workflow request, so here jsut use anyting
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(nil, errRet).Once()
 
-	err := s.historyReplicator.replicateWorkflowStarted(context, msBuilder, di, history, sBuilder, requestID, s.logger)
+	err := s.historyReplicator.replicateWorkflowStarted(context, msBuilder, di, sourceCluster, history, sBuilder, requestID, s.logger)
 	s.Equal(ErrRetryEntityNotExists, err)
 	s.Equal(1, len(transferTasks))
 	s.Equal(version, transferTasks[0].GetVersion())
@@ -1308,6 +1316,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	parentDomainID := validDomainID
 	parentWorkflowID := "some random workflow ID"
 	parentRunID := uuid.New()
+	sourceCluster := "some random source cluster"
 
 	context := newWorkflowExecutionContext(domainID, shared.WorkflowExecution{
 		WorkflowId: common.StringPtr(workflowID),
@@ -1353,7 +1362,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 		WorkflowTimeout:      workflowTimeout,
 		DecisionTimeoutValue: decisionTimeout,
 	})
-	msBuilder.On("UpdateReplicationStateLastEventID", "", version, nextEventID-1).Once()
+	msBuilder.On("UpdateReplicationStateLastEventID", sourceCluster, version, nextEventID-1).Once()
 	msBuilder.On("GetReplicationState").Return(replicationState)
 	msBuilder.On("GetCurrentVersion").Return(version)
 	msBuilder.On("GetNextEventID").Return(nextEventID)
@@ -1464,7 +1473,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	currentMsBuilder.On("IsWorkflowExecutionRunning").Return(false) // return nil so we can skil a lot of mocking
 	currentMsBuilder.On("GetReplicationState").Return(nil)
 
-	err = s.historyReplicator.replicateWorkflowStarted(context, msBuilder, di, history, sBuilder, requestID, s.logger)
+	err = s.historyReplicator.replicateWorkflowStarted(context, msBuilder, di, sourceCluster, history, sBuilder, requestID, s.logger)
 	s.Nil(err)
 	s.Equal(1, len(transferTasks))
 	s.Equal(version, transferTasks[0].GetVersion())

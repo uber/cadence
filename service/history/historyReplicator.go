@@ -66,6 +66,8 @@ var (
 	ErrRetryEntityNotExists = &shared.RetryTaskError{Message: "workflow execution not found"}
 	// ErrMissingReplicationInfo is returned when replication task is missing replication information from source cluster
 	ErrMissingReplicationInfo = &shared.BadRequestError{Message: "replication task is missing cluster replication info"}
+	// ErrCorruptedReplicationInfo is returned when replication task has corrupted replication information from source cluster
+	ErrCorruptedReplicationInfo = &shared.BadRequestError{Message: "replication task is has corrupted cluster replication info"}
 )
 
 func newHistoryReplicator(shard ShardContext, historyEngine *historyEngineImpl, historyCache *historyCache, domainCache cache.DomainCache,
@@ -105,6 +107,7 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 
 	if request == nil || request.History == nil || len(request.History.Events) == 0 {
 		r.logger.Warn("Dropping empty replication task")
+		r.metricsClient.IncCounter(metrics.ReplicateHistoryEventsScope, metrics.StaleReplicationEventsCounter)
 		return nil
 	}
 	domainID, err := validateDomainUUID(request.DomainUUID)
@@ -137,8 +140,10 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 		if err == nil {
 			// Workflow execution already exist, looks like a duplicate start event, it is safe to ignore it
 			logger.Info("Dropping stale replication task for start event.")
+			r.metricsClient.IncCounter(metrics.ReplicateHistoryEventsScope, metrics.StaleReplicationEventsCounter)
 			return nil
-		} else if _, ok := err.(*shared.EntityNotExistsError); !ok {
+		}
+		if _, ok := err.(*shared.EntityNotExistsError); !ok {
 			// GetWorkflowExecution failed with some transient error. Return err so we can retry the task later
 			return err
 		}
@@ -200,6 +205,7 @@ func (r *historyReplicator) ApplyOtherEventsMissingMutableState(domainID string,
 	if currentLastWriteVersion > incomingVersion {
 		logger.Infof("Dropping replication task. Current RunID: %v, Current LastWriteVersion: %v, Incoming Version: %v.",
 			currentRunID, currentLastWriteVersion, incomingVersion)
+		r.metricsClient.IncCounter(metrics.ReplicateHistoryEventsScope, metrics.StaleReplicationEventsCounter)
 		return nil
 	}
 	// currentLastWriteVersion <= incomingVersion
@@ -220,8 +226,10 @@ func (r *historyReplicator) ApplyOtherEventsVersionChecking(context *workflowExe
 		// TODO: We need to replay external events like signal to the new version
 		logger.Warnf("Dropping stale replication task. CurrentV: %v, LastWriteV: %v, LastWriteEvent: %v, IncomingV: %v.",
 			rState.CurrentVersion, rState.LastWriteVersion, rState.LastWriteEventID, incomingVersion)
+		r.metricsClient.IncCounter(metrics.ReplicateHistoryEventsScope, metrics.StaleReplicationEventsCounter)
 		return nil, nil
-	} else if rState.LastWriteVersion < incomingVersion {
+	}
+	if rState.LastWriteVersion < incomingVersion {
 		// Check if this is the first event after failover
 		logger.Infof("First Event after replication. CurrentV: %v, LastWriteV: %v, LastWriteEvent: %v, IncomingV: %v.",
 			rState.CurrentVersion, rState.LastWriteVersion, rState.LastWriteEventID, incomingVersion)
@@ -231,14 +239,25 @@ func (r *historyReplicator) ApplyOtherEventsVersionChecking(context *workflowExe
 			logger.Errorf("No ReplicationInfo Found For Previous Active Cluster. Previous Active Cluster: %v, Request Source Cluster: %v, Request ReplicationInfo: %v.",
 				previousActiveCluster, request.GetSourceCluster(), request.ReplicationInfo)
 			// TODO: Handle missing replication information, #840
+			// Returning BadRequestError to force the message to land into DLQ
 			return nil, ErrMissingReplicationInfo
 		}
 
 		// Detect conflict
-		if ri.GetLastEventId() < rState.LastWriteEventID {
-			logger.Infof("Conflict detected.  State: {CurrentV: %v, LastWriteV: %v, LastWriteEvent: %v}, ReplicationInfo: {PrevActiveCluster: %v, V: %v, LastEventID: %v}",
+		if ri.GetLastEventId() > rState.LastWriteEventID {
+			// if there is any bug in the replication protocol or implementation, this case can happen
+			logger.Errorf("Conflict detected, but cannot resolve. State: {CurrentV: %v, LastWriteV: %v, LastWriteEvent: %v}, ReplicationInfo: {PrevActiveCluster: %v, V: %v, LastEventID: %v}",
 				rState.CurrentVersion, rState.LastWriteVersion, rState.LastWriteEventID,
 				previousActiveCluster, ri.GetVersion(), ri.GetLastEventId())
+			// Returning BadRequestError to force the message to land into DLQ
+			return nil, ErrCorruptedReplicationInfo
+		}
+
+		if ri.GetLastEventId() < rState.LastWriteEventID {
+			logger.Infof("Conflict detected. State: {CurrentV: %v, LastWriteV: %v, LastWriteEvent: %v}, ReplicationInfo: {PrevActiveCluster: %v, V: %v, LastEventID: %v}",
+				rState.CurrentVersion, rState.LastWriteVersion, rState.LastWriteEventID,
+				previousActiveCluster, ri.GetVersion(), ri.GetLastEventId())
+			r.metricsClient.IncCounter(metrics.ReplicateHistoryEventsScope, metrics.HistoryConflictsCounter)
 
 			resolver := r.getNewConflictResolver(context, logger)
 			msBuilder, err = resolver.reset(uuid.New(), ri.GetLastEventId(), msBuilder.GetExecutionInfo().StartTimestamp)
@@ -246,13 +265,9 @@ func (r *historyReplicator) ApplyOtherEventsVersionChecking(context *workflowExe
 			if err != nil {
 				return nil, err
 			}
-		} else if ri.GetLastEventId() > rState.LastWriteEventID {
-			// TODO handle this case
-			logger.Errorf("Conflict detected.  State: {CurrentV: %v, LastWriteV: %v, LastWriteEvent: %v}, ReplicationInfo: {PrevActiveCluster: %v, V: %v, LastEventID: %v}",
-				rState.CurrentVersion, rState.LastWriteVersion, rState.LastWriteEventID,
-				previousActiveCluster, ri.GetVersion(), ri.GetLastEventId())
-			return nil, ErrMissingReplicationInfo
 		}
+
+		// for ri.GetLastEventId() == rState.LastWriteEventID, ideally we should not do anything
 	}
 	return msBuilder, nil
 }
@@ -266,12 +281,14 @@ func (r *historyReplicator) ApplyOtherEvents(context *workflowExecutionContext, 
 		replicationState := msBuilder.GetReplicationState()
 		logger.Debugf("Dropping replication task.  State: {NextEvent: %v, Version: %v, LastWriteV: %v, LastWriteEvent: %v}",
 			msBuilder.GetNextEventID(), replicationState.CurrentVersion, replicationState.LastWriteVersion, replicationState.LastWriteEventID)
+		r.metricsClient.IncCounter(metrics.ReplicateHistoryEventsScope, metrics.StaleReplicationEventsCounter)
 		return nil
-	} else if firstEventID > msBuilder.GetNextEventID() {
+	}
+	if firstEventID > msBuilder.GetNextEventID() {
 		// out of order replication task and store it in the buffer
 		logger.Debugf("Buffer out of order replication task.  NextEvent: %v, FirstEvent: %v",
 			msBuilder.GetNextEventID(), firstEventID)
-
+		r.metricsClient.IncCounter(metrics.ReplicateHistoryEventsScope, metrics.BufferedReplicationTaskCounter)
 		err = msBuilder.BufferReplicationTask(request)
 		if err != nil {
 			logger.Errorf("Failed to buffer out of order replication task.  Err: %v", err)
@@ -345,7 +362,7 @@ func (r *historyReplicator) ApplyReplicationTask(context *workflowExecutionConte
 	switch firstEvent.GetEventType() {
 	case shared.EventTypeWorkflowExecutionStarted:
 		requestID := uuid.New()
-		err = r.replicateWorkflowStarted(context, msBuilder, di, request.History, sBuilder, requestID, logger)
+		err = r.replicateWorkflowStarted(context, msBuilder, di, request.GetSourceCluster(), request.History, sBuilder, requestID, logger)
 	default:
 		// Generate a transaction ID for appending events to history
 		transactionID, err2 := r.shard.GetNextTransferTaskID()
@@ -400,8 +417,8 @@ func (r *historyReplicator) FlushBuffer(context *workflowExecutionContext, msBui
 	return nil
 }
 
-func (r *historyReplicator) replicateWorkflowStarted(context *workflowExecutionContext, msBuilder mutableState, di *decisionInfo, history *shared.History,
-	sBuilder stateBuilder, requestID string, logger bark.Logger) error {
+func (r *historyReplicator) replicateWorkflowStarted(context *workflowExecutionContext, msBuilder mutableState, di *decisionInfo,
+	sourceCluster string, history *shared.History, sBuilder stateBuilder, requestID string, logger bark.Logger) error {
 	executionInfo := msBuilder.GetExecutionInfo()
 	domainID := executionInfo.DomainID
 	execution := shared.WorkflowExecution{
@@ -452,7 +469,7 @@ func (r *historyReplicator) replicateWorkflowStarted(context *workflowExecutionC
 	executionInfo.LastFirstEventID = firstEvent.GetEventId()
 	executionInfo.NextEventID = lastEvent.GetEventId() + 1
 	incomingVersion := firstEvent.GetVersion()
-	msBuilder.UpdateReplicationStateLastEventID("", incomingVersion, lastEvent.GetEventId())
+	msBuilder.UpdateReplicationStateLastEventID(sourceCluster, incomingVersion, lastEvent.GetEventId())
 	replicationState := msBuilder.GetReplicationState()
 
 	// Set decision attributes after replication of history events
@@ -510,7 +527,8 @@ func (r *historyReplicator) replicateWorkflowStarted(context *workflowExecutionC
 	err = createWorkflow(isBrandNew, "")
 	if err == nil {
 		return nil
-	} else if _, ok := err.(*persistence.WorkflowExecutionAlreadyStartedError); !ok {
+	}
+	if _, ok := err.(*persistence.WorkflowExecutionAlreadyStartedError); !ok {
 		deleteHistory()
 		return err
 	}
@@ -524,6 +542,7 @@ func (r *historyReplicator) replicateWorkflowStarted(context *workflowExecutionC
 	if currentRunID == execution.GetRunId() {
 		logger.Warnf("Dropping stale start replication task. Current StartV: %v, IncomingV: %v.",
 			currentStartVersion, incomingVersion)
+		r.metricsClient.IncCounter(metrics.ReplicateHistoryEventsScope, metrics.StaleReplicationEventsCounter)
 		return nil
 	}
 
@@ -532,6 +551,7 @@ func (r *historyReplicator) replicateWorkflowStarted(context *workflowExecutionC
 		if currentStartVersion > incomingVersion {
 			logger.Warnf("Dropping stale start replication task. Current StartV: %v, IncomingV: %v.",
 				currentStartVersion, incomingVersion)
+			r.metricsClient.IncCounter(metrics.ReplicateHistoryEventsScope, metrics.StaleReplicationEventsCounter)
 			deleteHistory()
 			return nil
 		}
@@ -544,9 +564,11 @@ func (r *historyReplicator) replicateWorkflowStarted(context *workflowExecutionC
 	if currentStartVersion > incomingVersion {
 		logger.Warnf("Dropping stale start replication task. Current StartV: %v, IncomingV: %v.",
 			currentStartVersion, incomingVersion)
+		r.metricsClient.IncCounter(metrics.ReplicateHistoryEventsScope, metrics.StaleReplicationEventsCounter)
 		deleteHistory()
 		return nil
-	} else if currentStartVersion == incomingVersion {
+	}
+	if currentStartVersion == incomingVersion {
 		return ErrRetryEntityNotExists
 	}
 
