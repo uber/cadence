@@ -6,7 +6,7 @@ Status: Initial Design
 
 ## Summary
 Remove cadence-cassandra-tool and use [migrate](https://github.com/golang-migrate/migrate) instead.
-Add support for SQL lite.
+Add support for more SQL databases.
 
 ## Objectives
 
@@ -14,6 +14,8 @@ Add support for SQL lite.
 - Remove cadence-cassandra-tool
 - Use a 3rd party library to manage migrations
 - Cadence manages migrations on start (keeps cadence version tied to correct schema version)
+- Implement SQL lite support
+- Implement Microsoft SQL server support
 
 ## Motivation
 We are using cadence for a desktop application and Cassandra is over kill 
@@ -30,8 +32,21 @@ The library we are proposing to use is: [migrate](https://github.com/golang-migr
 
 Migrate supports multiple types of [databases](https://github.com/golang-migrate/migrate#databases)
 
-### Implementation Steps
+### Implementation Summary
 
-1. Import migrate
-2. 
+1. [Use migrate for existing cassandra schema updates](#Use migrate for existing cassandra schema updates)
+2. [Implement SQL lite as a persistence option](#Implement SQL lite as a persistence option)
+3. [Implement schema migrations support for SQL lite](#Implement schema migrations support for SQL lite)
+
+
+#### Use migrate for existing cassandra schema updates
+Remove existing cadence-cassandra-tool and use migrate library within cadence to manage schema.
+This will make sure that cadence is always in sync with the underlying data structures.
+
+
+Note: if schema migration was required to be kept separate from cadence the [command line version](https://github.com/golang-migrate/migrate#cli-usage)
+of migrate library could be used.
+
+#### Implement SQL lite as a persistence option
+Implement dataInterfaces.go for SQL lite (maybe using a ORM like [GORM](https://github.com/jinzhu/gorm))
 
