@@ -1799,6 +1799,10 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx context.Context,
 	}
 
 	fmt.Println("********")
+	fmt.Printf("vancexu: visibility max page size from config: %d\n", wh.config.VisibilityMaxPageSize(dynamicconfig.DomainFilter(listRequest.GetDomain())))
+	fmt.Println("********")
+
+	fmt.Println("********")
 	fmt.Printf("vancexu: visibility max page size: %d\n", listRequest.GetMaximumPageSize())
 	fmt.Println("********")
 
