@@ -61,9 +61,8 @@ func NewService(params *service.BootstrapParams) common.Daemon {
 // NewConfig builds the new Config for cadence-worker service
 func NewConfig() *Config {
 	return &Config{
-		ReplicatorConcurrency:   10,
-		ReplicatorMaxRetryCount: 20,
-		ReplicatorRetryDelay:    50 * time.Millisecond,
+		ReplicatorConcurrency: 1000,
+		ReplicatorRetryDelay:  50 * time.Millisecond,
 	}
 }
 
