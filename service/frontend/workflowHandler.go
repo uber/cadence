@@ -1701,7 +1701,7 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx context.Context,
 			Message: "Only one of ExecutionFilter or TypeFilter is allowed"}, scope)
 	}
 
-	if listRequest.GetMaximumPageSize() == 0 {
+	if listRequest.GetMaximumPageSize() <= 0 {
 		domainFilter := dynamicconfig.DomainFilter(listRequest.GetDomain())
 		listRequest.MaximumPageSize = common.Int32Ptr(int32(wh.config.VisibilityMaxPageSize(domainFilter)))
 	}
@@ -1793,18 +1793,10 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx context.Context,
 			Message: "Only one of ExecutionFilter, TypeFilter or StatusFilter is allowed"}, scope)
 	}
 
-	if listRequest.GetMaximumPageSize() == 0 {
+	if listRequest.GetMaximumPageSize() <= 0 {
 		domainFilter := dynamicconfig.DomainFilter(listRequest.GetDomain())
 		listRequest.MaximumPageSize = common.Int32Ptr(int32(wh.config.VisibilityMaxPageSize(domainFilter)))
 	}
-
-	fmt.Println("********")
-	fmt.Printf("vancexu: visibility max page size from config: %d\n", wh.config.VisibilityMaxPageSize(dynamicconfig.DomainFilter(listRequest.GetDomain())))
-	fmt.Println("********")
-
-	fmt.Println("********")
-	fmt.Printf("vancexu: visibility max page size: %d\n", listRequest.GetMaximumPageSize())
-	fmt.Println("********")
 
 	domainID, err := wh.domainCache.GetDomainID(listRequest.GetDomain())
 	if err != nil {
