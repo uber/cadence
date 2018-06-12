@@ -361,8 +361,7 @@ func (r *historyReplicator) ApplyReplicationTask(context *workflowExecutionConte
 	firstEvent := request.History.Events[0]
 	switch firstEvent.GetEventType() {
 	case shared.EventTypeWorkflowExecutionStarted:
-		requestID := uuid.New()
-		err = r.replicateWorkflowStarted(context, msBuilder, di, request.GetSourceCluster(), request.History, sBuilder, requestID, logger)
+		err = r.replicateWorkflowStarted(context, msBuilder, di, request.GetSourceCluster(), request.History, sBuilder, logger)
 	default:
 		// Generate a transaction ID for appending events to history
 		transactionID, err2 := r.shard.GetNextTransferTaskID()
@@ -418,7 +417,7 @@ func (r *historyReplicator) FlushBuffer(context *workflowExecutionContext, msBui
 }
 
 func (r *historyReplicator) replicateWorkflowStarted(context *workflowExecutionContext, msBuilder mutableState, di *decisionInfo,
-	sourceCluster string, history *shared.History, sBuilder stateBuilder, requestID string, logger bark.Logger) error {
+	sourceCluster string, history *shared.History, sBuilder stateBuilder, logger bark.Logger) error {
 	executionInfo := msBuilder.GetExecutionInfo()
 	domainID := executionInfo.DomainID
 	execution := shared.WorkflowExecution{
@@ -489,7 +488,7 @@ func (r *historyReplicator) replicateWorkflowStarted(context *workflowExecutionC
 
 	createWorkflow := func(isBrandNew bool, prevRunID string) error {
 		_, err = r.shard.CreateWorkflowExecution(&persistence.CreateWorkflowExecutionRequest{
-			RequestID:                   requestID,
+			RequestID:                   executionInfo.CreateRequestID,
 			DomainID:                    domainID,
 			Execution:                   execution,
 			ParentDomainID:              parentDomainID,

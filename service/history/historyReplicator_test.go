@@ -508,6 +508,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_BrandNew() {
 	timerTasks := []persistence.Task{&persistence.DeleteHistoryEventTask{}}
 
 	msBuilder.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{
+		CreateRequestID:      requestID,
 		DomainID:             domainID,
 		WorkflowID:           workflowID,
 		RunID:                runID,
@@ -561,7 +562,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_BrandNew() {
 		return true
 	})).Return(&persistence.CreateWorkflowExecutionResponse{}, nil).Once()
 
-	err := s.historyReplicator.replicateWorkflowStarted(context, msBuilder, di, sourceCluster, history, sBuilder, requestID, s.logger)
+	err := s.historyReplicator.replicateWorkflowStarted(context, msBuilder, di, sourceCluster, history, sBuilder, s.logger)
 	s.Nil(err)
 	s.Equal(1, len(transferTasks))
 	s.Equal(version, transferTasks[0].GetVersion())
@@ -617,6 +618,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_ISE() {
 	timerTasks := []persistence.Task{&persistence.DeleteHistoryEventTask{}}
 
 	msBuilder.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{
+		CreateRequestID:      requestID,
 		DomainID:             domainID,
 		WorkflowID:           workflowID,
 		RunID:                runID,
@@ -643,7 +645,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_ISE() {
 	// the test above already assert the create workflow request, so here jsut use anyting
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(nil, errRet).Once()
 
-	err := s.historyReplicator.replicateWorkflowStarted(context, msBuilder, di, sourceCluster, history, sBuilder, requestID, s.logger)
+	err := s.historyReplicator.replicateWorkflowStarted(context, msBuilder, di, sourceCluster, history, sBuilder, s.logger)
 	s.Equal(errRet, err)
 	s.Equal(1, len(transferTasks))
 	s.Equal(version, transferTasks[0].GetVersion())
@@ -699,6 +701,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_SameRunID() {
 	timerTasks := []persistence.Task{&persistence.DeleteHistoryEventTask{}}
 
 	msBuilder.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{
+		CreateRequestID:      requestID,
 		DomainID:             domainID,
 		WorkflowID:           workflowID,
 		RunID:                runID,
@@ -730,7 +733,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_SameRunID() {
 	// the test above already assert the create workflow request, so here jsut use anyting
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(nil, errRet).Once()
 
-	err := s.historyReplicator.replicateWorkflowStarted(context, msBuilder, di, sourceCluster, history, sBuilder, requestID, s.logger)
+	err := s.historyReplicator.replicateWorkflowStarted(context, msBuilder, di, sourceCluster, history, sBuilder, s.logger)
 	s.Nil(err)
 	s.Equal(1, len(transferTasks))
 	s.Equal(version, transferTasks[0].GetVersion())
@@ -786,6 +789,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 	timerTasks := []persistence.Task{&persistence.DeleteHistoryEventTask{}}
 
 	msBuilder.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{
+		CreateRequestID:      requestID,
 		DomainID:             domainID,
 		WorkflowID:           workflowID,
 		RunID:                runID,
@@ -818,7 +822,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(nil, errRet).Once()
 	s.mockHistoryMgr.On("DeleteWorkflowExecutionHistory", mock.Anything).Return(nil).Once()
 
-	err := s.historyReplicator.replicateWorkflowStarted(context, msBuilder, di, sourceCluster, history, sBuilder, requestID, s.logger)
+	err := s.historyReplicator.replicateWorkflowStarted(context, msBuilder, di, sourceCluster, history, sBuilder, s.logger)
 	s.Nil(err)
 	s.Equal(1, len(transferTasks))
 	s.Equal(version, transferTasks[0].GetVersion())
@@ -874,6 +878,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 	timerTasks := []persistence.Task{&persistence.DeleteHistoryEventTask{}}
 
 	msBuilder.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{
+		CreateRequestID:      requestID,
 		DomainID:             domainID,
 		WorkflowID:           workflowID,
 		RunID:                runID,
@@ -968,7 +973,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 		}, input)
 	})).Return(&persistence.CreateWorkflowExecutionResponse{}, nil).Once()
 
-	err := s.historyReplicator.replicateWorkflowStarted(context, msBuilder, di, sourceCluster, history, sBuilder, requestID, s.logger)
+	err := s.historyReplicator.replicateWorkflowStarted(context, msBuilder, di, sourceCluster, history, sBuilder, s.logger)
 	s.Nil(err)
 	s.Equal(1, len(transferTasks))
 	s.Equal(version, transferTasks[0].GetVersion())
@@ -1024,6 +1029,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 	timerTasks := []persistence.Task{&persistence.DeleteHistoryEventTask{}}
 
 	msBuilder.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{
+		CreateRequestID:      requestID,
 		DomainID:             domainID,
 		WorkflowID:           workflowID,
 		RunID:                runID,
@@ -1118,7 +1124,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 		}, input)
 	})).Return(&persistence.CreateWorkflowExecutionResponse{}, nil).Once()
 
-	err := s.historyReplicator.replicateWorkflowStarted(context, msBuilder, di, sourceCluster, history, sBuilder, requestID, s.logger)
+	err := s.historyReplicator.replicateWorkflowStarted(context, msBuilder, di, sourceCluster, history, sBuilder, s.logger)
 	s.Nil(err)
 	s.Equal(1, len(transferTasks))
 	s.Equal(version, transferTasks[0].GetVersion())
@@ -1174,6 +1180,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	timerTasks := []persistence.Task{&persistence.DeleteHistoryEventTask{}}
 
 	msBuilder.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{
+		CreateRequestID:      requestID,
 		DomainID:             domainID,
 		WorkflowID:           workflowID,
 		RunID:                runID,
@@ -1206,7 +1213,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(nil, errRet).Once()
 	s.mockHistoryMgr.On("DeleteWorkflowExecutionHistory", mock.Anything).Return(nil).Once()
 
-	err := s.historyReplicator.replicateWorkflowStarted(context, msBuilder, di, sourceCluster, history, sBuilder, requestID, s.logger)
+	err := s.historyReplicator.replicateWorkflowStarted(context, msBuilder, di, sourceCluster, history, sBuilder, s.logger)
 	s.Nil(err)
 	s.Equal(1, len(transferTasks))
 	s.Equal(version, transferTasks[0].GetVersion())
@@ -1262,6 +1269,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	timerTasks := []persistence.Task{&persistence.DeleteHistoryEventTask{}}
 
 	msBuilder.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{
+		CreateRequestID:      requestID,
 		DomainID:             domainID,
 		WorkflowID:           workflowID,
 		RunID:                runID,
@@ -1293,7 +1301,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	// the test above already assert the create workflow request, so here jsut use anyting
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(nil, errRet).Once()
 
-	err := s.historyReplicator.replicateWorkflowStarted(context, msBuilder, di, sourceCluster, history, sBuilder, requestID, s.logger)
+	err := s.historyReplicator.replicateWorkflowStarted(context, msBuilder, di, sourceCluster, history, sBuilder, s.logger)
 	s.Equal(ErrRetryEntityNotExists, err)
 	s.Equal(1, len(transferTasks))
 	s.Equal(version, transferTasks[0].GetVersion())
@@ -1350,6 +1358,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	timerTasks := []persistence.Task{&persistence.DeleteHistoryEventTask{}}
 
 	msBuilder.On("GetExecutionInfo").Return(&persistence.WorkflowExecutionInfo{
+		CreateRequestID:      requestID,
 		DomainID:             domainID,
 		WorkflowID:           workflowID,
 		RunID:                runID,
@@ -1473,7 +1482,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	currentMsBuilder.On("IsWorkflowExecutionRunning").Return(false) // return nil so we can skil a lot of mocking
 	currentMsBuilder.On("GetReplicationState").Return(nil)
 
-	err = s.historyReplicator.replicateWorkflowStarted(context, msBuilder, di, sourceCluster, history, sBuilder, requestID, s.logger)
+	err = s.historyReplicator.replicateWorkflowStarted(context, msBuilder, di, sourceCluster, history, sBuilder, s.logger)
 	s.Nil(err)
 	s.Equal(1, len(transferTasks))
 	s.Equal(version, transferTasks[0].GetVersion())
