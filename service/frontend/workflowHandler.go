@@ -1338,8 +1338,9 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		return nil, err
 	}
 
-	if getRequest.GetMaximumPageSize() == 0 {
-		getRequest.MaximumPageSize = common.Int32Ptr(int32(wh.config.HistoryMaxPageSize()))
+	if getRequest.GetMaximumPageSize() <= 0 {
+		domainFilter := dynamicconfig.DomainFilter(getRequest.GetDomain())
+		getRequest.MaximumPageSize = common.Int32Ptr(int32(wh.config.HistoryMaxPageSize(domainFilter)))
 	}
 
 	domainID, err := wh.domainCache.GetDomainID(getRequest.GetDomain())
@@ -2283,12 +2284,16 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(ctx context.Context
 		if matchingResp.GetStickyExecutionEnabled() {
 			firstEventID = matchingResp.GetPreviousStartedEventId() + 1
 		}
+		domain, dErr := wh.domainCache.GetDomainByID(domainID)
+		if dErr != nil {
+			return nil, dErr
+		}
 		history, persistenceToken, err = wh.getHistory(
 			domainID,
 			*matchingResp.WorkflowExecution,
 			firstEventID,
 			nextEventID,
-			int32(wh.config.HistoryMaxPageSize()),
+			int32(wh.config.HistoryMaxPageSize(dynamicconfig.DomainFilter(domain.GetInfo().Name))),
 			nil,
 			matchingResp.DecisionInfo)
 		if err != nil {

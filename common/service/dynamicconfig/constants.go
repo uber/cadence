@@ -37,6 +37,7 @@ const (
 	_frontendRoot               = "frontend."
 )
 
+// These are keys name dynamic config source use.
 var keys = []string{
 	"unknownKey",
 	"testGetPropertyKey",
