@@ -87,6 +87,8 @@ var keys = []string{
 	_historyRoot + "replicatorProcessorUpdateShardTaskCount",
 	_historyRoot + "replicatorProcessorMaxPollInterval",
 	_historyRoot + "replicatorProcessorUpdateAckInterval",
+	_historyRoot + "executionMgrNumConns",
+	_historyRoot + "historyMgrNumConns",
 }
 
 const (
@@ -192,6 +194,10 @@ const (
 	ReplicatorProcessorMaxPollInterval
 	// ReplicatorProcessorUpdateAckInterval is update interval for ReplicatorProcessor
 	ReplicatorProcessorUpdateAckInterval
+	// ExecutionMgrNumConns is persistence connections number for ExecutionManager
+	ExecutionMgrNumConns
+	// HistoryMgrNumConns is persistence connections number for HistoryManager
+	HistoryMgrNumConns
 )
 
 // Filter represents a filter on the dynamic config key

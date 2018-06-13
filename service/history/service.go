@@ -78,8 +78,8 @@ type Config struct {
 	ReplicatorProcessorUpdateAckInterval    dynamicconfig.DurationPropertyFn
 
 	// Persistence settings
-	ExecutionMgrNumConns int
-	HistoryMgrNumConns   int
+	ExecutionMgrNumConns dynamicconfig.IntPropertyFn
+	HistoryMgrNumConns   dynamicconfig.IntPropertyFn
 
 	// System Limits
 	MaximumBufferedEventsBatch int
@@ -128,8 +128,8 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int) *Config {
 		ReplicatorProcessorUpdateShardTaskCount:            dc.GetIntProperty(dynamicconfig.ReplicatorProcessorUpdateShardTaskCount, 100),
 		ReplicatorProcessorMaxPollInterval:                 dc.GetDurationProperty(dynamicconfig.ReplicatorProcessorMaxPollInterval, 60*time.Second),
 		ReplicatorProcessorUpdateAckInterval:               dc.GetDurationProperty(dynamicconfig.ReplicatorProcessorUpdateAckInterval, 5*time.Second),
-		ExecutionMgrNumConns:                               100,
-		HistoryMgrNumConns:                                 100,
+		ExecutionMgrNumConns:                               dc.GetIntProperty(dynamicconfig.ExecutionMgrNumConns, 100),
+		HistoryMgrNumConns:                                 dc.GetIntProperty(dynamicconfig.HistoryMgrNumConns, 100),
 		MaximumBufferedEventsBatch:                         100,
 		ShardUpdateMinInterval:                             5 * time.Minute,
 		// history client: client/history/client.go set the client timeout 30s
@@ -240,7 +240,7 @@ func (s *Service) Start() {
 		p.CassandraConfig.Password,
 		p.CassandraConfig.Datacenter,
 		p.CassandraConfig.Keyspace,
-		s.config.HistoryMgrNumConns,
+		s.config.HistoryMgrNumConns(),
 		p.Logger)
 
 	if err != nil {
@@ -254,7 +254,7 @@ func (s *Service) Start() {
 		p.CassandraConfig.Password,
 		p.CassandraConfig.Datacenter,
 		p.CassandraConfig.Keyspace,
-		s.config.ExecutionMgrNumConns,
+		s.config.ExecutionMgrNumConns(),
 		p.Logger,
 		s.metricsClient,
 	)
