@@ -190,7 +190,6 @@ func (p *replicationTaskProcessor) worker(workerWG *sync.WaitGroup) {
 					err = backoff.Retry(op, replicationTaskRetryPolicy, p.isTransientRetryableError)
 					if err != nil && p.isTransientRetryableError(err) {
 						// Keep on retrying transient errors for ever
-						time.Sleep(p.config.ReplicatorRetryDelay)
 						continue ProcessRetryLoop
 					}
 				}

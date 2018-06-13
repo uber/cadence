@@ -21,8 +21,6 @@
 package worker
 
 import (
-	"time"
-
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
@@ -45,7 +43,6 @@ type (
 		// Replicator settings
 		ReplicatorConcurrency   int
 		ReplicatorMaxRetryCount int
-		ReplicatorRetryDelay    time.Duration
 	}
 )
 
@@ -62,7 +59,6 @@ func NewService(params *service.BootstrapParams) common.Daemon {
 func NewConfig() *Config {
 	return &Config{
 		ReplicatorConcurrency: 1000,
-		ReplicatorRetryDelay:  50 * time.Millisecond,
 	}
 }
 
