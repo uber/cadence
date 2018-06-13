@@ -80,6 +80,13 @@ var keys = []string{
 	_historyRoot + "transferProcessorUpdateAckInterval",
 	_historyRoot + "transferProcessorCompleteTransferInterval",
 	_historyRoot + "transferProcessorStandbyTaskDelay",
+	_historyRoot + "replicatorTaskBatchSize",
+	_historyRoot + "replicatorTaskWorkerCount",
+	_historyRoot + "replicatorTaskMaxRetryCount",
+	_historyRoot + "replicatorProcessorMaxPollRPS",
+	_historyRoot + "replicatorProcessorUpdateShardTaskCount",
+	_historyRoot + "replicatorProcessorMaxPollInterval",
+	_historyRoot + "replicatorProcessorUpdateAckInterval",
 }
 
 const (
@@ -171,6 +178,20 @@ const (
 	TransferProcessorCompleteTransferInterval
 	// TransferProcessorStandbyTaskDelay is delay time for standby task in transferQueueProcessor
 	TransferProcessorStandbyTaskDelay
+	// ReplicatorTaskBatchSize is batch size for ReplicatorProcessor
+	ReplicatorTaskBatchSize
+	// ReplicatorTaskWorkerCount is number of worker for ReplicatorProcessor
+	ReplicatorTaskWorkerCount
+	// ReplicatorTaskMaxRetryCount is max times of retry for ReplicatorProcessor
+	ReplicatorTaskMaxRetryCount
+	// ReplicatorProcessorMaxPollRPS is max poll rate per second for ReplicatorProcessor
+	ReplicatorProcessorMaxPollRPS
+	// ReplicatorProcessorUpdateShardTaskCount is update shard count for ReplicatorProcessor
+	ReplicatorProcessorUpdateShardTaskCount
+	// ReplicatorProcessorMaxPollInterval is max poll interval for ReplicatorProcessor
+	ReplicatorProcessorMaxPollInterval
+	// ReplicatorProcessorUpdateAckInterval is update interval for ReplicatorProcessor
+	ReplicatorProcessorUpdateAckInterval
 )
 
 // Filter represents a filter on the dynamic config key

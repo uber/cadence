@@ -69,13 +69,13 @@ type Config struct {
 	TransferProcessorStandbyTaskDelay                  dynamicconfig.DurationPropertyFn
 
 	// ReplicatorQueueProcessor settings
-	ReplicatorTaskBatchSize                 int
-	ReplicatorTaskWorkerCount               int
-	ReplicatorTaskMaxRetryCount             int
-	ReplicatorProcessorMaxPollRPS           int
-	ReplicatorProcessorUpdateShardTaskCount int
-	ReplicatorProcessorMaxPollInterval      time.Duration
-	ReplicatorProcessorUpdateAckInterval    time.Duration
+	ReplicatorTaskBatchSize                 dynamicconfig.IntPropertyFn
+	ReplicatorTaskWorkerCount               dynamicconfig.IntPropertyFn
+	ReplicatorTaskMaxRetryCount             dynamicconfig.IntPropertyFn
+	ReplicatorProcessorMaxPollRPS           dynamicconfig.IntPropertyFn
+	ReplicatorProcessorUpdateShardTaskCount dynamicconfig.IntPropertyFn
+	ReplicatorProcessorMaxPollInterval      dynamicconfig.DurationPropertyFn
+	ReplicatorProcessorUpdateAckInterval    dynamicconfig.DurationPropertyFn
 
 	// Persistence settings
 	ExecutionMgrNumConns int
@@ -121,13 +121,13 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int) *Config {
 		TransferProcessorUpdateAckInterval:                 dc.GetDurationProperty(dynamicconfig.TransferProcessorUpdateAckInterval, 5*time.Second),
 		TransferProcessorCompleteTransferInterval:          dc.GetDurationProperty(dynamicconfig.TransferProcessorCompleteTransferInterval, 3*time.Second),
 		TransferProcessorStandbyTaskDelay:                  dc.GetDurationProperty(dynamicconfig.TransferProcessorStandbyTaskDelay, 0*time.Minute),
-		ReplicatorTaskBatchSize:                            100,
-		ReplicatorTaskWorkerCount:                          10,
-		ReplicatorTaskMaxRetryCount:                        100,
-		ReplicatorProcessorMaxPollRPS:                      100,
-		ReplicatorProcessorUpdateShardTaskCount:            100,
-		ReplicatorProcessorMaxPollInterval:                 60 * time.Second,
-		ReplicatorProcessorUpdateAckInterval:               5 * time.Second,
+		ReplicatorTaskBatchSize:                            dc.GetIntProperty(dynamicconfig.ReplicatorTaskBatchSize, 100),
+		ReplicatorTaskWorkerCount:                          dc.GetIntProperty(dynamicconfig.ReplicatorTaskWorkerCount, 10),
+		ReplicatorTaskMaxRetryCount:                        dc.GetIntProperty(dynamicconfig.ReplicatorTaskMaxRetryCount, 100),
+		ReplicatorProcessorMaxPollRPS:                      dc.GetIntProperty(dynamicconfig.ReplicatorProcessorMaxPollRPS, 100),
+		ReplicatorProcessorUpdateShardTaskCount:            dc.GetIntProperty(dynamicconfig.ReplicatorProcessorUpdateShardTaskCount, 100),
+		ReplicatorProcessorMaxPollInterval:                 dc.GetDurationProperty(dynamicconfig.ReplicatorProcessorMaxPollInterval, 60*time.Second),
+		ReplicatorProcessorUpdateAckInterval:               dc.GetDurationProperty(dynamicconfig.ReplicatorProcessorUpdateAckInterval, 5*time.Second),
 		ExecutionMgrNumConns:                               100,
 		HistoryMgrNumConns:                                 100,
 		MaximumBufferedEventsBatch:                         100,
