@@ -42,6 +42,7 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 const (
@@ -486,7 +487,12 @@ func (e *historyEngineImpl) GetMutableState(ctx context.Context,
 			return response, nil
 		}
 
-		timer := time.NewTimer(e.shard.GetConfig().LongPollExpirationInterval())
+		domainCache, err := e.shard.GetDomainCache().GetDomainByID(domainID)
+		if err != nil {
+			return nil, err
+		}
+		domainFilter := dynamicconfig.DomainFilter(domainCache.GetInfo().Name)
+		timer := time.NewTimer(e.shard.GetConfig().LongPollExpirationInterval(domainFilter))
 		defer timer.Stop()
 		for {
 			select {

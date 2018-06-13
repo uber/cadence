@@ -82,10 +82,10 @@ type Config struct {
 	HistoryMgrNumConns   dynamicconfig.IntPropertyFn
 
 	// System Limits
-	MaximumBufferedEventsBatch int
+	MaximumBufferedEventsBatch dynamicconfig.IntPropertyFn
 
 	// ShardUpdateMinInterval the minimal time interval which the shard info can be updated
-	ShardUpdateMinInterval time.Duration
+	ShardUpdateMinInterval dynamicconfig.DurationPropertyFn
 
 	// Time to hold a poll request before returning an empty response
 	// right now only used by GetMutableState
@@ -130,8 +130,8 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int) *Config {
 		ReplicatorProcessorUpdateAckInterval:               dc.GetDurationProperty(dynamicconfig.ReplicatorProcessorUpdateAckInterval, 5*time.Second),
 		ExecutionMgrNumConns:                               dc.GetIntProperty(dynamicconfig.ExecutionMgrNumConns, 100),
 		HistoryMgrNumConns:                                 dc.GetIntProperty(dynamicconfig.HistoryMgrNumConns, 100),
-		MaximumBufferedEventsBatch:                         100,
-		ShardUpdateMinInterval:                             5 * time.Minute,
+		MaximumBufferedEventsBatch:                         dc.GetIntProperty(dynamicconfig.MaximumBufferedEventsBatch, 100),
+		ShardUpdateMinInterval:                             dc.GetDurationProperty(dynamicconfig.ShardUpdateMinInterval, 5*time.Minute),
 		// history client: client/history/client.go set the client timeout 30s
 		LongPollExpirationInterval: dc.GetDurationProperty(
 			dynamicconfig.HistoryLongPollExpirationInterval, time.Second*20,

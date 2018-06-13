@@ -136,7 +136,7 @@ func (s *timerQueueAckMgrSuite) SetupTest() {
 		metricsClient:             s.metricsClient,
 	}
 	s.mockShard.config.TimerProcessorUpdateShardTaskCount = dynamicconfig.GetIntPropertyFn(1)
-	s.mockShard.config.ShardUpdateMinInterval = 0 * time.Second
+	s.mockShard.config.ShardUpdateMinInterval = dynamicconfig.GetDurationPropertyFn(0 * time.Second)
 
 	// this is used by shard context, not relevent to this test, so we do not care how many times "GetCurrentClusterName" os called
 	s.clusterName = cluster.TestCurrentClusterName
@@ -580,7 +580,7 @@ func (s *timerQueueFailoverAckMgrSuite) SetupTest() {
 		metricsClient:             s.metricsClient,
 	}
 	s.mockShard.config.TimerProcessorUpdateShardTaskCount = dynamicconfig.GetIntPropertyFn(1)
-	s.mockShard.config.ShardUpdateMinInterval = 0 * time.Second
+	s.mockShard.config.ShardUpdateMinInterval = dynamicconfig.GetDurationPropertyFn(0 * time.Second)
 
 	s.standbyClusterName = cluster.TestAlternativeClusterName
 	s.minLevel = time.Now().Add(-10 * time.Minute)

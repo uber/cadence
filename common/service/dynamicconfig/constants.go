@@ -89,6 +89,8 @@ var keys = []string{
 	_historyRoot + "replicatorProcessorUpdateAckInterval",
 	_historyRoot + "executionMgrNumConns",
 	_historyRoot + "historyMgrNumConns",
+	_historyRoot + "maximumBufferedEventsBatch",
+	_historyRoot + "shardUpdateMinInterval",
 }
 
 const (
@@ -198,6 +200,10 @@ const (
 	ExecutionMgrNumConns
 	// HistoryMgrNumConns is persistence connections number for HistoryManager
 	HistoryMgrNumConns
+	// MaximumBufferedEventsBatch is max number of buffer event in mutable state
+	MaximumBufferedEventsBatch
+	// ShardUpdateMinInterval is the minimal time interval which the shard info can be updated
+	ShardUpdateMinInterval
 )
 
 // Filter represents a filter on the dynamic config key

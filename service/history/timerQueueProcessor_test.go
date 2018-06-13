@@ -72,7 +72,7 @@ func (s *timerQueueProcessorSuite) SetupSuite() {
 	s.logger = bark.NewLoggerFromLogrus(log2)
 
 	// override config for testing
-	s.ShardContext.config.ShardUpdateMinInterval = 0 * time.Second
+	s.ShardContext.config.ShardUpdateMinInterval = dynamicconfig.GetDurationPropertyFn(0 * time.Second)
 	s.ShardContext.config.TransferProcessorUpdateShardTaskCount = dynamicconfig.GetIntPropertyFn(1)
 	s.ShardContext.config.TimerProcessorUpdateShardTaskCount = dynamicconfig.GetIntPropertyFn(1)
 	s.ShardContext.config.ReplicatorProcessorUpdateShardTaskCount = dynamicconfig.GetIntPropertyFn(1)
