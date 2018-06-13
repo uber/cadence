@@ -271,6 +271,10 @@ func (m *metadataPersistenceSuiteV2) TestGetDomain() {
 	m.NotNil(err4)
 	m.IsType(&gen.BadRequestError{}, err4)
 	m.Nil(resp4)
+
+	resp5, err5 := m.GetDomain("", "")
+	m.Nil(resp5)
+	m.IsType(&gen.BadRequestError{}, err5)
 }
 
 func (m *metadataPersistenceSuiteV2) TestConcurrentCreateDomain() {
