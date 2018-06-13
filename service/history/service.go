@@ -42,19 +42,19 @@ type Config struct {
 
 	// ShardController settings
 	RangeSizeBits        uint
-	AcquireShardInterval time.Duration
+	AcquireShardInterval dynamicconfig.DurationPropertyFn
 
 	// TimerQueueProcessor settings
-	TimerTaskBatchSize                           int
-	TimerTaskWorkerCount                         int
-	TimerTaskMaxRetryCount                       int
-	TimerProcessorGetFailureRetryCount           int
-	TimerProcessorCompleteTimerFailureRetryCount int
-	TimerProcessorUpdateShardTaskCount           int
-	TimerProcessorUpdateAckInterval              time.Duration
-	TimerProcessorCompleteTimerInterval          time.Duration
-	TimerProcessorMaxPollInterval                time.Duration
-	TimerProcessorStandbyTaskDelay               time.Duration
+	TimerTaskBatchSize                           dynamicconfig.IntPropertyFn
+	TimerTaskWorkerCount                         dynamicconfig.IntPropertyFn
+	TimerTaskMaxRetryCount                       dynamicconfig.IntPropertyFn
+	TimerProcessorGetFailureRetryCount           dynamicconfig.IntPropertyFn
+	TimerProcessorCompleteTimerFailureRetryCount dynamicconfig.IntPropertyFn
+	TimerProcessorUpdateShardTaskCount           dynamicconfig.IntPropertyFn
+	TimerProcessorUpdateAckInterval              dynamicconfig.DurationPropertyFn
+	TimerProcessorCompleteTimerInterval          dynamicconfig.DurationPropertyFn
+	TimerProcessorMaxPollInterval                dynamicconfig.DurationPropertyFn
+	TimerProcessorStandbyTaskDelay               dynamicconfig.DurationPropertyFn
 
 	// TransferQueueProcessor settings
 	TransferTaskBatchSize                              int
@@ -100,17 +100,17 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int) *Config {
 		HistoryCacheMaxSize:                                dc.GetIntProperty(dynamicconfig.HistoryCacheMaxSize, 512),
 		HistoryCacheTTL:                                    dc.GetDurationProperty(dynamicconfig.HistoryCacheTTL, time.Hour),
 		RangeSizeBits:                                      20, // 20 bits for sequencer, 2^20 sequence number for any range
-		AcquireShardInterval:                               time.Minute,
-		TimerTaskBatchSize:                                 100,
-		TimerTaskWorkerCount:                               10,
-		TimerTaskMaxRetryCount:                             5,
-		TimerProcessorGetFailureRetryCount:                 5,
-		TimerProcessorCompleteTimerFailureRetryCount:       10,
-		TimerProcessorUpdateShardTaskCount:                 100,
-		TimerProcessorUpdateAckInterval:                    5 * time.Second,
-		TimerProcessorCompleteTimerInterval:                3 * time.Second,
-		TimerProcessorMaxPollInterval:                      60 * time.Second,
-		TimerProcessorStandbyTaskDelay:                     0 * time.Minute,
+		AcquireShardInterval:                               dc.GetDurationProperty(dynamicconfig.AcquireShardInterval, time.Minute),
+		TimerTaskBatchSize:                                 dc.GetIntProperty(dynamicconfig.TimerTaskBatchSize, 100),
+		TimerTaskWorkerCount:                               dc.GetIntProperty(dynamicconfig.TimerTaskWorkerCount, 10),
+		TimerTaskMaxRetryCount:                             dc.GetIntProperty(dynamicconfig.TimerTaskMaxRetryCount, 5),
+		TimerProcessorGetFailureRetryCount:                 dc.GetIntProperty(dynamicconfig.TimerProcessorGetFailureRetryCount, 5),
+		TimerProcessorCompleteTimerFailureRetryCount:       dc.GetIntProperty(dynamicconfig.TimerProcessorCompleteTimerFailureRetryCount, 10),
+		TimerProcessorUpdateShardTaskCount:                 dc.GetIntProperty(dynamicconfig.TimerProcessorUpdateShardTaskCount, 100),
+		TimerProcessorUpdateAckInterval:                    dc.GetDurationProperty(dynamicconfig.TimerProcessorUpdateAckInterval, 5*time.Second),
+		TimerProcessorCompleteTimerInterval:                dc.GetDurationProperty(dynamicconfig.TimerProcessorCompleteTimerInterval, 3*time.Second),
+		TimerProcessorMaxPollInterval:                      dc.GetDurationProperty(dynamicconfig.TimerProcessorMaxPollInterval, 60*time.Second),
+		TimerProcessorStandbyTaskDelay:                     dc.GetDurationProperty(dynamicconfig.TimerProcessorStandbyTaskDelay, 0*time.Minute),
 		TransferTaskBatchSize:                              100,
 		TransferProcessorMaxPollRPS:                        100,
 		TransferTaskWorkerCount:                            10,

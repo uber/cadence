@@ -59,6 +59,17 @@ var keys = []string{
 	_historyRoot + "cacheInitialSize",
 	_historyRoot + "cacheMaxSize",
 	_historyRoot + "cacheTTL",
+	_historyRoot + "acquireShardInterval",
+	_historyRoot + "timerTaskBatchSize",
+	_historyRoot + "timerTaskWorkerCount",
+	_historyRoot + "timerTaskMaxRetryCount",
+	_historyRoot + "timerProcessorGetFailureRetryCount",
+	_historyRoot + "timerProcessorCompleteTimerFailureRetryCount",
+	_historyRoot + "timerProcessorUpdateShardTaskCount",
+	_historyRoot + "timerProcessorUpdateAckInterval",
+	_historyRoot + "timerProcessorCompleteTimerInterval",
+	_historyRoot + "timerProcessorMaxPollInterval",
+	_historyRoot + "timerProcessorStandbyTaskDelay",
 }
 
 const (
@@ -108,6 +119,28 @@ const (
 	HistoryCacheMaxSize
 	// HistoryCacheTTL is TTL of history cache
 	HistoryCacheTTL
+	// AcquireShardInterval is interval that timer used to acquire shard
+	AcquireShardInterval
+	// TimerTaskBatchSize is batch size for timer processor to process tasks
+	TimerTaskBatchSize
+	// TimerTaskWorkerCount is number of task workers for timer processor
+	TimerTaskWorkerCount
+	// TimerTaskMaxRetryCount is max retry count for timer processor
+	TimerTaskMaxRetryCount
+	// TimerProcessorGetFailureRetryCount is retry count for timer processor get failure operation
+	TimerProcessorGetFailureRetryCount
+	// TimerProcessorCompleteTimerFailureRetryCount is retry count for timer processor complete timer operation
+	TimerProcessorCompleteTimerFailureRetryCount
+	// TimerProcessorUpdateShardTaskCount is update shard count for timer processor
+	TimerProcessorUpdateShardTaskCount
+	// TimerProcessorUpdateAckInterval is update interval for timer processor
+	TimerProcessorUpdateAckInterval
+	// TimerProcessorCompleteTimerInterval is complete timer interval for timer processor
+	TimerProcessorCompleteTimerInterval
+	// TimerProcessorMaxPollInterval is max poll interval for timer processor
+	TimerProcessorMaxPollInterval
+	// TimerProcessorStandbyTaskDelay is task delay for standby cluster
+	TimerProcessorStandbyTaskDelay
 )
 
 // Filter represents a filter on the dynamic config key
