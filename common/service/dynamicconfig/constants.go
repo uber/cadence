@@ -31,10 +31,9 @@ func (k Key) String() string {
 }
 
 const (
-	_matchingRoot               = "matching."
-	_matchingDomainTaskListRoot = _matchingRoot + "domain." + "taskList."
-	_historyRoot                = "history."
-	_frontendRoot               = "frontend."
+	_matchingRoot = "matching."
+	_historyRoot  = "history."
+	_frontendRoot = "frontend."
 )
 
 // These are keys name dynamic config source use.
@@ -49,12 +48,14 @@ var keys = []string{
 	_frontendRoot + "historyMaxPageSize",
 	_frontendRoot + "rps",
 	_frontendRoot + "historyMgrNumConns",
-	_matchingDomainTaskListRoot + "minTaskThrottlingBurstSize",
-	_matchingDomainTaskListRoot + "maxTaskBatchSize",
-	_matchingDomainTaskListRoot + "longPollExpirationInterval",
-	_matchingDomainTaskListRoot + "enableSyncMatch",
-	_matchingDomainTaskListRoot + "updateAckInterval",
-	_matchingDomainTaskListRoot + "idleTasklistCheckInterval",
+	_matchingRoot + "minTaskThrottlingBurstSize",
+	_matchingRoot + "getTasksBatchSize",
+	_matchingRoot + "longPollExpirationInterval",
+	_matchingRoot + "enableSyncMatch",
+	_matchingRoot + "updateAckInterval",
+	_matchingRoot + "idleTasklistCheckInterval",
+	_matchingRoot + "outstandingTaskAppendsThreshold",
+	_matchingRoot + "maxTaskBatchSize",
 	_historyRoot + "longPollExpirationInterval",
 	_historyRoot + "cacheInitialSize",
 	_historyRoot + "cacheMaxSize",
@@ -119,8 +120,8 @@ const (
 
 	// MatchingMinTaskThrottlingBurstSize is the minimum burst size for task list throttling
 	MatchingMinTaskThrottlingBurstSize
-	// MatchingMaxTaskBatchSize is the maximum batch size to fetch from the task buffer
-	MatchingMaxTaskBatchSize
+	// MatchingGetTasksBatchSize is the maximum batch size to fetch from the task buffer
+	MatchingGetTasksBatchSize
 	// MatchingLongPollExpirationInterval is the long poll expiration interval in the matching service
 	MatchingLongPollExpirationInterval
 	// MatchingEnableSyncMatch is to enable sync match
@@ -129,6 +130,10 @@ const (
 	MatchingUpdateAckInterval
 	// MatchingIdleTasklistCheckInterval is the IdleTasklistCheckInterval
 	MatchingIdleTasklistCheckInterval
+	// MatchingOutstandingTaskAppendsThreshold is the threshold for outstanding task appends
+	MatchingOutstandingTaskAppendsThreshold
+	// MatchingMaxTaskBatchSize is max batch size for task writer
+	MatchingMaxTaskBatchSize
 
 	// key for history
 

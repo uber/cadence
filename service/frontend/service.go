@@ -42,18 +42,10 @@ type Config struct {
 // NewConfig returns new service config with default values
 func NewConfig(dc *dynamicconfig.Collection) *Config {
 	return &Config{
-		VisibilityMaxPageSize: dc.GetIntProperty(
-			dynamicconfig.FrontendVisibilityMaxPageSize, 1000,
-		),
-		HistoryMaxPageSize: dc.GetIntProperty(
-			dynamicconfig.FrontendHistoryMaxPageSize, 1000,
-		),
-		RPS: dc.GetIntProperty(
-			dynamicconfig.FrontendRPS, 1200,
-		),
-		HistoryMgrNumConns: dc.GetIntProperty(
-			dynamicconfig.FrontendHistoryMgrNumConns, 10,
-		),
+		VisibilityMaxPageSize: dc.GetIntProperty(dynamicconfig.FrontendVisibilityMaxPageSize, 1000),
+		HistoryMaxPageSize:    dc.GetIntProperty(dynamicconfig.FrontendHistoryMaxPageSize, 1000),
+		RPS:                   dc.GetIntProperty(dynamicconfig.FrontendRPS, 1200),
+		HistoryMgrNumConns:    dc.GetIntProperty(dynamicconfig.FrontendHistoryMgrNumConns, 10),
 	}
 }
 
