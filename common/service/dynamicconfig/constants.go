@@ -56,6 +56,9 @@ var keys = []string{
 	_matchingDomainTaskListRoot + "updateAckInterval",
 	_matchingDomainTaskListRoot + "idleTasklistCheckInterval",
 	_historyRoot + "longPollExpirationInterval",
+	_historyRoot + "cacheInitialSize",
+	_historyRoot + "cacheMaxSize",
+	_historyRoot + "cacheTTL",
 }
 
 const (
@@ -99,6 +102,12 @@ const (
 
 	// HistoryLongPollExpirationInterval is the long poll expiration interval in the history service
 	HistoryLongPollExpirationInterval
+	// HistoryCacheInitialSize is initial size of history cache
+	HistoryCacheInitialSize
+	// HistoryCacheMaxSize is max size of history cache
+	HistoryCacheMaxSize
+	// HistoryCacheTTL is TTL of history cache
+	HistoryCacheTTL
 )
 
 // Filter represents a filter on the dynamic config key
