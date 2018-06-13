@@ -70,6 +70,16 @@ var keys = []string{
 	_historyRoot + "timerProcessorCompleteTimerInterval",
 	_historyRoot + "timerProcessorMaxPollInterval",
 	_historyRoot + "timerProcessorStandbyTaskDelay",
+	_historyRoot + "transferTaskBatchSize",
+	_historyRoot + "transferProcessorMaxPollRPS",
+	_historyRoot + "transferTaskWorkerCount",
+	_historyRoot + "transferTaskMaxRetryCount",
+	_historyRoot + "transferProcessorCompleteTransferFailureRetryCount",
+	_historyRoot + "transferProcessorUpdateShardTaskCount",
+	_historyRoot + "transferProcessorMaxPollInterval",
+	_historyRoot + "transferProcessorUpdateAckInterval",
+	_historyRoot + "transferProcessorCompleteTransferInterval",
+	_historyRoot + "transferProcessorStandbyTaskDelay",
 }
 
 const (
@@ -139,8 +149,28 @@ const (
 	TimerProcessorCompleteTimerInterval
 	// TimerProcessorMaxPollInterval is max poll interval for timer processor
 	TimerProcessorMaxPollInterval
-	// TimerProcessorStandbyTaskDelay is task delay for standby cluster
+	// TimerProcessorStandbyTaskDelay is task delay for standby task in timer processor
 	TimerProcessorStandbyTaskDelay
+	// TransferTaskBatchSize is batch size for transferQueueProcessor
+	TransferTaskBatchSize
+	// TransferProcessorMaxPollRPS is max poll rate per second for transferQueueProcessor
+	TransferProcessorMaxPollRPS
+	// TransferTaskWorkerCount is number of worker for transferQueueProcessor
+	TransferTaskWorkerCount
+	// TransferTaskMaxRetryCount is max times of retry for transferQueueProcessor
+	TransferTaskMaxRetryCount
+	// TransferProcessorCompleteTransferFailureRetryCount is times of retry for failure
+	TransferProcessorCompleteTransferFailureRetryCount
+	// TransferProcessorUpdateShardTaskCount is update shard count for transferQueueProcessor
+	TransferProcessorUpdateShardTaskCount
+	// TransferProcessorMaxPollInterval max poll interval for transferQueueProcessor
+	TransferProcessorMaxPollInterval
+	// TransferProcessorUpdateAckInterval is update interval for transferQueueProcessor
+	TransferProcessorUpdateAckInterval
+	// TransferProcessorCompleteTransferInterval is complete timer interval for transferQueueProcessor
+	TransferProcessorCompleteTransferInterval
+	// TransferProcessorStandbyTaskDelay is delay time for standby task in transferQueueProcessor
+	TransferProcessorStandbyTaskDelay
 )
 
 // Filter represents a filter on the dynamic config key

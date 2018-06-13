@@ -73,12 +73,12 @@ func (s *timerQueueProcessorSuite) SetupSuite() {
 
 	// override config for testing
 	s.ShardContext.config.ShardUpdateMinInterval = 0 * time.Second
-	s.ShardContext.config.TransferProcessorUpdateShardTaskCount = 1
+	s.ShardContext.config.TransferProcessorUpdateShardTaskCount = dynamicconfig.GetIntPropertyFn(1)
 	s.ShardContext.config.TimerProcessorUpdateShardTaskCount = dynamicconfig.GetIntPropertyFn(1)
 	s.ShardContext.config.ReplicatorProcessorUpdateShardTaskCount = 1
-	s.ShardContext.config.TransferProcessorCompleteTransferInterval = 100 * time.Millisecond
+	s.ShardContext.config.TransferProcessorCompleteTransferInterval = dynamicconfig.GetDurationPropertyFn(100 * time.Millisecond)
 	s.ShardContext.config.TimerProcessorCompleteTimerInterval = dynamicconfig.GetDurationPropertyFn(100 * time.Millisecond)
-	s.ShardContext.config.TransferProcessorUpdateAckInterval = 100 * time.Millisecond
+	s.ShardContext.config.TransferProcessorUpdateAckInterval = dynamicconfig.GetDurationPropertyFn(100 * time.Millisecond)
 	s.ShardContext.config.TimerProcessorUpdateAckInterval = dynamicconfig.GetDurationPropertyFn(100 * time.Millisecond)
 
 	historyCache := newHistoryCache(s.ShardContext, s.logger)

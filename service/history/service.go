@@ -57,16 +57,16 @@ type Config struct {
 	TimerProcessorStandbyTaskDelay               dynamicconfig.DurationPropertyFn
 
 	// TransferQueueProcessor settings
-	TransferTaskBatchSize                              int
-	TransferProcessorMaxPollRPS                        int
-	TransferTaskWorkerCount                            int
-	TransferTaskMaxRetryCount                          int
-	TransferProcessorCompleteTransferFailureRetryCount int
-	TransferProcessorUpdateShardTaskCount              int
-	TransferProcessorMaxPollInterval                   time.Duration
-	TransferProcessorUpdateAckInterval                 time.Duration
-	TransferProcessorCompleteTransferInterval          time.Duration
-	TransferProcessorStandbyTaskDelay                  time.Duration
+	TransferTaskBatchSize                              dynamicconfig.IntPropertyFn
+	TransferProcessorMaxPollRPS                        dynamicconfig.IntPropertyFn
+	TransferTaskWorkerCount                            dynamicconfig.IntPropertyFn
+	TransferTaskMaxRetryCount                          dynamicconfig.IntPropertyFn
+	TransferProcessorCompleteTransferFailureRetryCount dynamicconfig.IntPropertyFn
+	TransferProcessorUpdateShardTaskCount              dynamicconfig.IntPropertyFn
+	TransferProcessorMaxPollInterval                   dynamicconfig.DurationPropertyFn
+	TransferProcessorUpdateAckInterval                 dynamicconfig.DurationPropertyFn
+	TransferProcessorCompleteTransferInterval          dynamicconfig.DurationPropertyFn
+	TransferProcessorStandbyTaskDelay                  dynamicconfig.DurationPropertyFn
 
 	// ReplicatorQueueProcessor settings
 	ReplicatorTaskBatchSize                 int
@@ -111,16 +111,16 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int) *Config {
 		TimerProcessorCompleteTimerInterval:                dc.GetDurationProperty(dynamicconfig.TimerProcessorCompleteTimerInterval, 3*time.Second),
 		TimerProcessorMaxPollInterval:                      dc.GetDurationProperty(dynamicconfig.TimerProcessorMaxPollInterval, 60*time.Second),
 		TimerProcessorStandbyTaskDelay:                     dc.GetDurationProperty(dynamicconfig.TimerProcessorStandbyTaskDelay, 0*time.Minute),
-		TransferTaskBatchSize:                              100,
-		TransferProcessorMaxPollRPS:                        100,
-		TransferTaskWorkerCount:                            10,
-		TransferTaskMaxRetryCount:                          100,
-		TransferProcessorCompleteTransferFailureRetryCount: 10,
-		TransferProcessorUpdateShardTaskCount:              100,
-		TransferProcessorMaxPollInterval:                   60 * time.Second,
-		TransferProcessorUpdateAckInterval:                 5 * time.Second,
-		TransferProcessorCompleteTransferInterval:          3 * time.Second,
-		TransferProcessorStandbyTaskDelay:                  0 * time.Minute,
+		TransferTaskBatchSize:                              dc.GetIntProperty(dynamicconfig.TransferTaskBatchSize, 100),
+		TransferProcessorMaxPollRPS:                        dc.GetIntProperty(dynamicconfig.TransferProcessorMaxPollRPS, 100),
+		TransferTaskWorkerCount:                            dc.GetIntProperty(dynamicconfig.TransferTaskWorkerCount, 10),
+		TransferTaskMaxRetryCount:                          dc.GetIntProperty(dynamicconfig.TransferTaskMaxRetryCount, 100),
+		TransferProcessorCompleteTransferFailureRetryCount: dc.GetIntProperty(dynamicconfig.TransferProcessorCompleteTransferFailureRetryCount, 10),
+		TransferProcessorUpdateShardTaskCount:              dc.GetIntProperty(dynamicconfig.TransferProcessorUpdateShardTaskCount, 100),
+		TransferProcessorMaxPollInterval:                   dc.GetDurationProperty(dynamicconfig.TransferProcessorMaxPollInterval, 60*time.Second),
+		TransferProcessorUpdateAckInterval:                 dc.GetDurationProperty(dynamicconfig.TransferProcessorUpdateAckInterval, 5*time.Second),
+		TransferProcessorCompleteTransferInterval:          dc.GetDurationProperty(dynamicconfig.TransferProcessorCompleteTransferInterval, 3*time.Second),
+		TransferProcessorStandbyTaskDelay:                  dc.GetDurationProperty(dynamicconfig.TransferProcessorStandbyTaskDelay, 0*time.Minute),
 		ReplicatorTaskBatchSize:                            100,
 		ReplicatorTaskWorkerCount:                          10,
 		ReplicatorTaskMaxRetryCount:                        100,
