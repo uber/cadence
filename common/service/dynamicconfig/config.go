@@ -121,3 +121,8 @@ func (c *Collection) GetBoolProperty(key Key, defaultValue bool) BoolPropertyFn 
 		return val
 	}
 }
+
+// GetIntPropertyWithDomainFilter return int value from dynamic config with domain filter
+func GetIntPropertyWithDomainFilter(fn IntPropertyFn, domain string) int {
+	return fn(DomainFilter(domain))
+}

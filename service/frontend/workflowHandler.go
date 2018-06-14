@@ -1339,8 +1339,8 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	}
 
 	if getRequest.GetMaximumPageSize() <= 0 {
-		domainFilter := dynamicconfig.DomainFilter(getRequest.GetDomain())
-		getRequest.MaximumPageSize = common.Int32Ptr(int32(wh.config.HistoryMaxPageSize(domainFilter)))
+		getRequest.MaximumPageSize = common.Int32Ptr(int32(
+			dynamicconfig.GetIntPropertyWithDomainFilter(wh.config.HistoryMaxPageSize, getRequest.GetDomain())))
 	}
 
 	domainID, err := wh.domainCache.GetDomainID(getRequest.GetDomain())
@@ -1703,8 +1703,8 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx context.Context,
 	}
 
 	if listRequest.GetMaximumPageSize() <= 0 {
-		domainFilter := dynamicconfig.DomainFilter(listRequest.GetDomain())
-		listRequest.MaximumPageSize = common.Int32Ptr(int32(wh.config.VisibilityMaxPageSize(domainFilter)))
+		listRequest.MaximumPageSize = common.Int32Ptr(int32(
+			dynamicconfig.GetIntPropertyWithDomainFilter(wh.config.VisibilityMaxPageSize, listRequest.GetDomain())))
 	}
 
 	domainID, err := wh.domainCache.GetDomainID(listRequest.GetDomain())
@@ -1795,8 +1795,8 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx context.Context,
 	}
 
 	if listRequest.GetMaximumPageSize() <= 0 {
-		domainFilter := dynamicconfig.DomainFilter(listRequest.GetDomain())
-		listRequest.MaximumPageSize = common.Int32Ptr(int32(wh.config.VisibilityMaxPageSize(domainFilter)))
+		listRequest.MaximumPageSize = common.Int32Ptr(int32(
+			dynamicconfig.GetIntPropertyWithDomainFilter(wh.config.VisibilityMaxPageSize, listRequest.GetDomain())))
 	}
 
 	domainID, err := wh.domainCache.GetDomainID(listRequest.GetDomain())
@@ -2293,7 +2293,7 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(ctx context.Context
 			*matchingResp.WorkflowExecution,
 			firstEventID,
 			nextEventID,
-			int32(wh.config.HistoryMaxPageSize(dynamicconfig.DomainFilter(domain.GetInfo().Name))),
+			int32(dynamicconfig.GetIntPropertyWithDomainFilter(wh.config.HistoryMaxPageSize, domain.GetInfo().Name)),
 			nil,
 			matchingResp.DecisionInfo)
 		if err != nil {
