@@ -50,7 +50,6 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -1339,8 +1338,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	}
 
 	if getRequest.GetMaximumPageSize() <= 0 {
-		getRequest.MaximumPageSize = common.Int32Ptr(int32(
-			dynamicconfig.GetIntPropertyWithDomainFilter(wh.config.HistoryMaxPageSize, getRequest.GetDomain())))
+		getRequest.MaximumPageSize = common.Int32Ptr(int32(wh.config.HistoryMaxPageSize(getRequest.GetDomain())))
 	}
 
 	domainID, err := wh.domainCache.GetDomainID(getRequest.GetDomain())
@@ -1703,8 +1701,7 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx context.Context,
 	}
 
 	if listRequest.GetMaximumPageSize() <= 0 {
-		listRequest.MaximumPageSize = common.Int32Ptr(int32(
-			dynamicconfig.GetIntPropertyWithDomainFilter(wh.config.VisibilityMaxPageSize, listRequest.GetDomain())))
+		listRequest.MaximumPageSize = common.Int32Ptr(int32(wh.config.VisibilityMaxPageSize(listRequest.GetDomain())))
 	}
 
 	domainID, err := wh.domainCache.GetDomainID(listRequest.GetDomain())
@@ -1795,8 +1792,7 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx context.Context,
 	}
 
 	if listRequest.GetMaximumPageSize() <= 0 {
-		listRequest.MaximumPageSize = common.Int32Ptr(int32(
-			dynamicconfig.GetIntPropertyWithDomainFilter(wh.config.VisibilityMaxPageSize, listRequest.GetDomain())))
+		listRequest.MaximumPageSize = common.Int32Ptr(int32(wh.config.VisibilityMaxPageSize(listRequest.GetDomain())))
 	}
 
 	domainID, err := wh.domainCache.GetDomainID(listRequest.GetDomain())
@@ -2293,7 +2289,7 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(ctx context.Context
 			*matchingResp.WorkflowExecution,
 			firstEventID,
 			nextEventID,
-			int32(dynamicconfig.GetIntPropertyWithDomainFilter(wh.config.HistoryMaxPageSize, domain.GetInfo().Name)),
+			int32(wh.config.HistoryMaxPageSize(domain.GetInfo().Name)),
 			nil,
 			matchingResp.DecisionInfo)
 		if err != nil {

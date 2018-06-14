@@ -97,7 +97,6 @@ var keys = map[Key]string{
 }
 
 const (
-	// The order of constants is important. It should match the order in the keys array above.
 	unknownKey Key = iota
 
 	// key for tests
@@ -106,6 +105,8 @@ const (
 	testGetFloat64PropertyKey
 	testGetDurationPropertyKey
 	testGetBoolPropertyKey
+	testGetIntPropertyFilteredByDomainKey
+	testGetDurationPropertyFilteredByDomainKey
 
 	// key for frontend
 

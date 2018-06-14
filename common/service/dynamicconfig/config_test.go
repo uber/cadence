@@ -168,3 +168,21 @@ func (s *configSuite) TestGetDurationProperty() {
 	s.client.SetValue(key, time.Minute)
 	s.Equal(time.Minute, value())
 }
+
+func (s *configSuite) TestGetIntPropertyFilteredByDomain() {
+	key := testGetIntPropertyFilteredByDomainKey
+	domain := "testDomain"
+	value := s.cln.GetIntPropertyFilteredByDomain(key, 10)
+	s.Equal(10, value(domain))
+	s.client.SetValue(key, 50)
+	s.Equal(50, value(domain))
+}
+
+func (s *configSuite) TestGetDurationPropertyFilteredByDomain() {
+	key := testGetDurationPropertyFilteredByDomainKey
+	domain := "testDomain"
+	value := s.cln.GetDurationPropertyFilteredByDomain(key, time.Second)
+	s.Equal(time.Second, value(domain))
+	s.client.SetValue(key, time.Minute)
+	s.Equal(time.Minute, value(domain))
+}

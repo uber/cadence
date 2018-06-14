@@ -89,7 +89,7 @@ type Config struct {
 
 	// Time to hold a poll request before returning an empty response
 	// right now only used by GetMutableState
-	LongPollExpirationInterval dynamicconfig.DurationPropertyFn
+	LongPollExpirationInterval dynamicconfig.DurationPropertyFnWithDomainFilter
 }
 
 // NewConfig returns new service config with default values
@@ -133,7 +133,7 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int) *Config {
 		MaximumBufferedEventsBatch:                         dc.GetIntProperty(dynamicconfig.MaximumBufferedEventsBatch, 100),
 		ShardUpdateMinInterval:                             dc.GetDurationProperty(dynamicconfig.ShardUpdateMinInterval, 5*time.Minute),
 		// history client: client/history/client.go set the client timeout 30s
-		LongPollExpirationInterval: dc.GetDurationProperty(
+		LongPollExpirationInterval: dc.GetDurationPropertyFilteredByDomain(
 			dynamicconfig.HistoryLongPollExpirationInterval, time.Second*20,
 		),
 	}
