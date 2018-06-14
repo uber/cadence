@@ -24,74 +24,76 @@ package dynamicconfig
 type Key int
 
 func (k Key) String() string {
-	if k <= unknownKey || int(k) >= len(keys) {
+	keyName, ok := keys[k]
+	if !ok {
 		return keys[unknownKey]
 	}
-	return keys[k]
+	return keyName
 }
 
-const (
-	_matchingRoot = "matching."
-	_historyRoot  = "history."
-	_frontendRoot = "frontend."
-)
+// Mapping from Key to keyName, where keyName are used dynamic config source.
+var keys = map[Key]string{
+	unknownKey: "unknownKey",
 
-// These are keys name dynamic config source use.
-var keys = []string{
-	"unknownKey",
-	"testGetPropertyKey",
-	"testGetIntPropertyKey",
-	"testGetFloat64PropertyKey",
-	"testGetDurationPropertyKey",
-	"testGetBoolPropertyKey",
-	_frontendRoot + "visibilityMaxPageSize",
-	_frontendRoot + "historyMaxPageSize",
-	_frontendRoot + "rps",
-	_frontendRoot + "historyMgrNumConns",
-	_matchingRoot + "minTaskThrottlingBurstSize",
-	_matchingRoot + "getTasksBatchSize",
-	_matchingRoot + "longPollExpirationInterval",
-	_matchingRoot + "enableSyncMatch",
-	_matchingRoot + "updateAckInterval",
-	_matchingRoot + "idleTasklistCheckInterval",
-	_matchingRoot + "outstandingTaskAppendsThreshold",
-	_matchingRoot + "maxTaskBatchSize",
-	_historyRoot + "longPollExpirationInterval",
-	_historyRoot + "cacheInitialSize",
-	_historyRoot + "cacheMaxSize",
-	_historyRoot + "cacheTTL",
-	_historyRoot + "acquireShardInterval",
-	_historyRoot + "timerTaskBatchSize",
-	_historyRoot + "timerTaskWorkerCount",
-	_historyRoot + "timerTaskMaxRetryCount",
-	_historyRoot + "timerProcessorGetFailureRetryCount",
-	_historyRoot + "timerProcessorCompleteTimerFailureRetryCount",
-	_historyRoot + "timerProcessorUpdateShardTaskCount",
-	_historyRoot + "timerProcessorUpdateAckInterval",
-	_historyRoot + "timerProcessorCompleteTimerInterval",
-	_historyRoot + "timerProcessorMaxPollInterval",
-	_historyRoot + "timerProcessorStandbyTaskDelay",
-	_historyRoot + "transferTaskBatchSize",
-	_historyRoot + "transferProcessorMaxPollRPS",
-	_historyRoot + "transferTaskWorkerCount",
-	_historyRoot + "transferTaskMaxRetryCount",
-	_historyRoot + "transferProcessorCompleteTransferFailureRetryCount",
-	_historyRoot + "transferProcessorUpdateShardTaskCount",
-	_historyRoot + "transferProcessorMaxPollInterval",
-	_historyRoot + "transferProcessorUpdateAckInterval",
-	_historyRoot + "transferProcessorCompleteTransferInterval",
-	_historyRoot + "transferProcessorStandbyTaskDelay",
-	_historyRoot + "replicatorTaskBatchSize",
-	_historyRoot + "replicatorTaskWorkerCount",
-	_historyRoot + "replicatorTaskMaxRetryCount",
-	_historyRoot + "replicatorProcessorMaxPollRPS",
-	_historyRoot + "replicatorProcessorUpdateShardTaskCount",
-	_historyRoot + "replicatorProcessorMaxPollInterval",
-	_historyRoot + "replicatorProcessorUpdateAckInterval",
-	_historyRoot + "executionMgrNumConns",
-	_historyRoot + "historyMgrNumConns",
-	_historyRoot + "maximumBufferedEventsBatch",
-	_historyRoot + "shardUpdateMinInterval",
+	testGetPropertyKey:         "testGetPropertyKey",
+	testGetIntPropertyKey:      "testGetIntPropertyKey",
+	testGetFloat64PropertyKey:  "testGetFloat64PropertyKey",
+	testGetDurationPropertyKey: "testGetDurationPropertyKey",
+	testGetBoolPropertyKey:     "testGetBoolPropertyKey",
+
+	// frontend settings
+	FrontendVisibilityMaxPageSize: "frontend.visibilityMaxPageSize",
+	FrontendHistoryMaxPageSize:    "frontend.historyMaxPageSize",
+	FrontendRPS:                   "frontend.rps",
+	FrontendHistoryMgrNumConns:    "frontend.historyMgrNumConns",
+
+	// matching settings
+	MatchingMinTaskThrottlingBurstSize:      "matching.minTaskThrottlingBurstSize",
+	MatchingGetTasksBatchSize:               "matching.getTasksBatchSize",
+	MatchingLongPollExpirationInterval:      "matching.longPollExpirationInterval",
+	MatchingEnableSyncMatch:                 "matching.enableSyncMatch",
+	MatchingUpdateAckInterval:               "matching.updateAckInterval",
+	MatchingIdleTasklistCheckInterval:       "matching.idleTasklistCheckInterval",
+	MatchingOutstandingTaskAppendsThreshold: "matching.outstandingTaskAppendsThreshold",
+	MatchingMaxTaskBatchSize:                "matching.maxTaskBatchSize",
+
+	// history settings
+	HistoryLongPollExpirationInterval:                  "history.longPollExpirationInterval",
+	HistoryCacheInitialSize:                            "history.cacheInitialSize",
+	HistoryCacheMaxSize:                                "history.cacheMaxSize",
+	HistoryCacheTTL:                                    "history.cacheTTL",
+	AcquireShardInterval:                               "history.acquireShardInterval",
+	TimerTaskBatchSize:                                 "history.timerTaskBatchSize",
+	TimerTaskWorkerCount:                               "history.timerTaskWorkerCount",
+	TimerTaskMaxRetryCount:                             "history.timerTaskMaxRetryCount",
+	TimerProcessorGetFailureRetryCount:                 "history.timerProcessorGetFailureRetryCount",
+	TimerProcessorCompleteTimerFailureRetryCount:       "history.timerProcessorCompleteTimerFailureRetryCount",
+	TimerProcessorUpdateShardTaskCount:                 "history.timerProcessorUpdateShardTaskCount",
+	TimerProcessorUpdateAckInterval:                    "history.timerProcessorUpdateAckInterval",
+	TimerProcessorCompleteTimerInterval:                "history.timerProcessorCompleteTimerInterval",
+	TimerProcessorMaxPollInterval:                      "history.timerProcessorMaxPollInterval",
+	TimerProcessorStandbyTaskDelay:                     "history.timerProcessorStandbyTaskDelay",
+	TransferTaskBatchSize:                              "history.transferTaskBatchSize",
+	TransferProcessorMaxPollRPS:                        "history.transferProcessorMaxPollRPS",
+	TransferTaskWorkerCount:                            "history.transferTaskWorkerCount",
+	TransferTaskMaxRetryCount:                          "history.transferTaskMaxRetryCount",
+	TransferProcessorCompleteTransferFailureRetryCount: "history.transferProcessorCompleteTransferFailureRetryCount",
+	TransferProcessorUpdateShardTaskCount:              "history.transferProcessorUpdateShardTaskCount",
+	TransferProcessorMaxPollInterval:                   "history.transferProcessorMaxPollInterval",
+	TransferProcessorUpdateAckInterval:                 "history.transferProcessorUpdateAckInterval",
+	TransferProcessorCompleteTransferInterval:          "history.transferProcessorCompleteTransferInterval",
+	TransferProcessorStandbyTaskDelay:                  "history.transferProcessorStandbyTaskDelay",
+	ReplicatorTaskBatchSize:                            "history.replicatorTaskBatchSize",
+	ReplicatorTaskWorkerCount:                          "history.replicatorTaskWorkerCount",
+	ReplicatorTaskMaxRetryCount:                        "history.replicatorTaskMaxRetryCount",
+	ReplicatorProcessorMaxPollRPS:                      "history.replicatorProcessorMaxPollRPS",
+	ReplicatorProcessorUpdateShardTaskCount:            "history.replicatorProcessorUpdateShardTaskCount",
+	ReplicatorProcessorMaxPollInterval:                 "history.replicatorProcessorMaxPollInterval",
+	ReplicatorProcessorUpdateAckInterval:               "history.replicatorProcessorUpdateAckInterval",
+	ExecutionMgrNumConns:                               "history.executionMgrNumConns",
+	HistoryMgrNumConns:                                 "history.historyMgrNumConns",
+	MaximumBufferedEventsBatch:                         "history.maximumBufferedEventsBatch",
+	ShardUpdateMinInterval:                             "history.shardUpdateMinInterval",
 }
 
 const (
