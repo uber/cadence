@@ -107,6 +107,9 @@ const (
 	testGetBoolPropertyKey
 	testGetIntPropertyFilteredByDomainKey
 	testGetDurationPropertyFilteredByDomainKey
+	testGetIntPropertyFilteredByTaskListInfoKey
+	testGetDurationPropertyFilteredByTaskListInfoKey
+	testGetBoolPropertyFilteredByTaskListInfoKey
 
 	// key for frontend
 
@@ -236,6 +239,8 @@ const (
 	DomainName
 	// TaskListName is the tasklist name
 	TaskListName
+	// TaskType is the task type (0:Decision, 1:Activity)
+	TaskType
 )
 
 // FilterOption is used to provide filters for dynamic config keys
@@ -252,5 +257,12 @@ func TaskListFilter(name string) FilterOption {
 func DomainFilter(name string) FilterOption {
 	return func(filterMap map[Filter]interface{}) {
 		filterMap[DomainName] = name
+	}
+}
+
+// TaskTypeFilter filters by task type
+func TaskTypeFilter(taskType int) FilterOption {
+	return func(filterMap map[Filter]interface{}) {
+		filterMap[TaskType] = taskType
 	}
 }
