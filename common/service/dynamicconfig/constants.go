@@ -35,11 +35,15 @@ func (k Key) String() string {
 var keys = map[Key]string{
 	unknownKey: "unknownKey",
 
-	testGetPropertyKey:         "testGetPropertyKey",
-	testGetIntPropertyKey:      "testGetIntPropertyKey",
-	testGetFloat64PropertyKey:  "testGetFloat64PropertyKey",
-	testGetDurationPropertyKey: "testGetDurationPropertyKey",
-	testGetBoolPropertyKey:     "testGetBoolPropertyKey",
+	testGetPropertyKey:                         "testGetPropertyKey",
+	testGetIntPropertyKey:                      "testGetIntPropertyKey",
+	testGetFloat64PropertyKey:                  "testGetFloat64PropertyKey",
+	testGetDurationPropertyKey:                 "testGetDurationPropertyKey",
+	testGetBoolPropertyKey:                     "testGetBoolPropertyKey",
+	testGetIntPropertyFilteredByDomainKey:      "testGetIntPropertyFilteredByDomainKey",
+	testGetDurationPropertyFilteredByDomainKey: "testGetDurationPropertyFilteredByDomainKey",
+
+	EnableGlobalDomainKey: "enableGlobalDomainKey",
 
 	// frontend settings
 	FrontendVisibilityMaxPageSize: "frontend.visibilityMaxPageSize",
@@ -107,6 +111,9 @@ const (
 	testGetBoolPropertyKey
 	testGetIntPropertyFilteredByDomainKey
 	testGetDurationPropertyFilteredByDomainKey
+
+	// EnableGlobalDomainKey is key for enable global domain
+	EnableGlobalDomainKey
 
 	// key for frontend
 
