@@ -151,6 +151,14 @@ func SetBuilder(builder WorkflowClientBuilderInterface) {
 	cBuilder = builder
 }
 
+// cAuthorizationManager for manging permission
+// To provide customized builder, call SetAuthorizationManager() before call NewCliApp()
+var cAuthorizationManager AuthorizationManagerInterface
+
+func SetAuthorizationManager(m AuthorizationManagerInterface) {
+	cAuthorizationManager = m
+}
+
 // ErrorAndExit print easy to understand error msg first then error detail in a new line
 func ErrorAndExit(msg string, err error) {
 	fmt.Printf("%s %s\n%s %+v\n", colorRed("Error:"), msg, colorMagenta("Error Details:"), err)
