@@ -50,7 +50,7 @@ type WorkflowClientBuilderInterface interface {
 // (See cadence/cmd/tools/cli/main.go for example)
 // The customized AuthorizationManager may have more processing on Env, Address and other info.
 type AuthorizationManagerInterface interface {
-	//Decides which operation will be available in this CLI
+	//FilterUnauthorizedOperations decides which operation will be available in this CLI
 	FilterUnauthorizedOperations(*cli.App) *cli.App
 }
 
@@ -77,6 +77,7 @@ func NewBuilder() *WorkflowClientBuilder {
 type NoopAuthorizationManager struct {
 }
 
+//NewNoopAuthorizationManager returns NoopAuthorizationManager
 func NewNoopAuthorizationManager() *NoopAuthorizationManager {
 	return &NoopAuthorizationManager{}
 }
