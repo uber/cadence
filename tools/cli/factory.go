@@ -82,7 +82,7 @@ func NewNoopAuthorizationManager() *NoopAuthorizationManager {
 	return &NoopAuthorizationManager{}
 }
 
-//Decides which operation will be available in this CLI
+//FilterUnauthorizedOperations decides which operation will be available in this CLI
 func (m *NoopAuthorizationManager) FilterUnauthorizedOperations(app *cli.App) *cli.App {
 	return app
 }

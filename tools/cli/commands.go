@@ -155,6 +155,7 @@ func SetBuilder(builder WorkflowClientBuilderInterface) {
 // To provide customized builder, call SetAuthorizationManager() before call NewCliApp()
 var cAuthorizationManager AuthorizationManagerInterface
 
+// SetAuthorizationManager can be used to inject customized AuthorizationManager
 func SetAuthorizationManager(m AuthorizationManagerInterface) {
 	cAuthorizationManager = m
 }
