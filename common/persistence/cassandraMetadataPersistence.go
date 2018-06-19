@@ -37,6 +37,7 @@ const (
 		`status: ?, ` +
 		`description: ?, ` +
 		`owner_email: ? ` +
+		`data: ? ` +
 		`}`
 
 	templateDomainConfigType = `{` +
@@ -62,7 +63,7 @@ const (
 		`WHERE id = ?`
 
 	templateGetDomainByNameQuery = `SELECT domain.id, domain.name, domain.status, domain.description, ` +
-		`domain.owner_email, config.retention, config.emit_metric, ` +
+		`domain.owner_email, domain.data, config.retention, config.emit_metric, ` +
 		`replication_config.active_cluster_name, replication_config.clusters, ` +
 		`is_global_domain, ` +
 		`config_version, ` +
@@ -151,6 +152,7 @@ func (m *cassandraMetadataPersistence) CreateDomain(request *CreateDomainRequest
 		request.Info.Status,
 		request.Info.Description,
 		request.Info.OwnerEmail,
+		request.Info.Data,
 		request.Config.Retention,
 		request.Config.EmitMetric,
 		request.ReplicationConfig.ActiveClusterName,
@@ -243,6 +245,7 @@ func (m *cassandraMetadataPersistence) GetDomain(request *GetDomainRequest) (*Ge
 		&info.Status,
 		&info.Description,
 		&info.OwnerEmail,
+		&info.Data,
 		&config.Retention,
 		&config.EmitMetric,
 		&replicationConfig.ActiveClusterName,
@@ -285,6 +288,7 @@ func (m *cassandraMetadataPersistence) UpdateDomain(request *UpdateDomainRequest
 		request.Info.Status,
 		request.Info.Description,
 		request.Info.OwnerEmail,
+		request.Info.Data,
 		request.Config.Retention,
 		request.Config.EmitMetric,
 		request.ReplicationConfig.ActiveClusterName,
@@ -322,7 +326,7 @@ func (m *cassandraMetadataPersistence) DeleteDomain(request *DeleteDomainRequest
 func (m *cassandraMetadataPersistence) DeleteDomainByName(request *DeleteDomainByNameRequest) error {
 	var ID string
 	query := m.session.Query(templateGetDomainByNameQuery, request.Name)
-	err := query.Scan(&ID, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	err := query.Scan(&ID, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	if err != nil {
 		if err == gocql.ErrNotFound {
 			return nil

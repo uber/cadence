@@ -76,6 +76,7 @@ func (m *metadataPersistenceSuite) TestCreateDomain() {
 	isGlobalDomain := false
 	configVersion := int64(0)
 	failoverVersion := int64(0)
+	data := map[string]string{"k1": "v1"}
 
 	resp0, err0 := m.CreateDomain(
 		&DomainInfo{
@@ -84,6 +85,7 @@ func (m *metadataPersistenceSuite) TestCreateDomain() {
 			Status:      status,
 			Description: description,
 			OwnerEmail:  owner,
+			Data:        data,
 		},
 		&DomainConfig{
 			Retention:  retention,
@@ -109,6 +111,7 @@ func (m *metadataPersistenceSuite) TestCreateDomain() {
 	m.Equal(status, resp1.Info.Status)
 	m.Equal(description, resp1.Info.Description)
 	m.Equal(owner, resp1.Info.OwnerEmail)
+	m.Equal(data, resp1.Info.Data)
 	m.Equal(retention, resp1.Config.Retention)
 	m.Equal(emitMetric, resp1.Config.EmitMetric)
 	m.Equal(cluster.TestCurrentClusterName, resp1.ReplicationConfig.ActiveClusterName)
@@ -126,6 +129,7 @@ func (m *metadataPersistenceSuite) TestCreateDomain() {
 			Status:      status,
 			Description: "fail",
 			OwnerEmail:  "fail",
+			Data:        map[string]string{},
 		},
 		&DomainConfig{
 			Retention:  100,
@@ -147,6 +151,7 @@ func (m *metadataPersistenceSuite) TestGetDomain() {
 	status := DomainStatusRegistered
 	description := "get-domain-test-description"
 	owner := "get-domain-test-owner"
+	data := map[string]string{"k1": "v1"}
 	retention := int32(10)
 	emitMetric := true
 
@@ -176,6 +181,7 @@ func (m *metadataPersistenceSuite) TestGetDomain() {
 			Status:      status,
 			Description: description,
 			OwnerEmail:  owner,
+			Data:        data,
 		},
 		&DomainConfig{
 			Retention:  retention,
@@ -201,6 +207,7 @@ func (m *metadataPersistenceSuite) TestGetDomain() {
 	m.Equal(status, resp2.Info.Status)
 	m.Equal(description, resp2.Info.Description)
 	m.Equal(owner, resp2.Info.OwnerEmail)
+	m.Equal(data, resp2.Info.Data)
 	m.Equal(retention, resp2.Config.Retention)
 	m.Equal(emitMetric, resp2.Config.EmitMetric)
 	m.Equal(clusterActive, resp2.ReplicationConfig.ActiveClusterName)
@@ -221,6 +228,7 @@ func (m *metadataPersistenceSuite) TestGetDomain() {
 	m.Equal(status, resp3.Info.Status)
 	m.Equal(description, resp3.Info.Description)
 	m.Equal(owner, resp3.Info.OwnerEmail)
+	m.Equal(data, resp3.Info.Data)
 	m.Equal(retention, resp3.Config.Retention)
 	m.Equal(emitMetric, resp3.Config.EmitMetric)
 	m.Equal(clusterActive, resp3.ReplicationConfig.ActiveClusterName)
@@ -245,6 +253,7 @@ func (m *metadataPersistenceSuite) TestUpdateDomain() {
 	status := DomainStatusRegistered
 	description := "update-domain-test-description"
 	owner := "update-domain-test-owner"
+	data := map[string]string{"k1": "v1"}
 	retention := int32(10)
 	emitMetric := true
 
@@ -269,6 +278,7 @@ func (m *metadataPersistenceSuite) TestUpdateDomain() {
 			Status:      status,
 			Description: description,
 			OwnerEmail:  owner,
+			Data:        data,
 		},
 		&DomainConfig{
 			Retention:  retention,
@@ -290,6 +300,7 @@ func (m *metadataPersistenceSuite) TestUpdateDomain() {
 	updatedStatus := DomainStatusDeprecated
 	updatedDescription := "description-updated"
 	updatedOwner := "owner-updated"
+	updateData := map[string]string{"k1": "v2"}
 	updatedRetention := int32(20)
 	updatedEmitMetric := false
 
@@ -313,6 +324,7 @@ func (m *metadataPersistenceSuite) TestUpdateDomain() {
 			Status:      updatedStatus,
 			Description: updatedDescription,
 			OwnerEmail:  updatedOwner,
+			Data:        updateData,
 		},
 		&DomainConfig{
 			Retention:  updatedRetention,
@@ -337,6 +349,7 @@ func (m *metadataPersistenceSuite) TestUpdateDomain() {
 	m.Equal(updatedStatus, resp4.Info.Status)
 	m.Equal(updatedDescription, resp4.Info.Description)
 	m.Equal(updatedOwner, resp4.Info.OwnerEmail)
+	m.Equal(updateData, resp4.Info.Data)
 	m.Equal(updatedRetention, resp4.Config.Retention)
 	m.Equal(updatedEmitMetric, resp4.Config.EmitMetric)
 	m.Equal(updateClusterActive, resp4.ReplicationConfig.ActiveClusterName)
@@ -356,6 +369,7 @@ func (m *metadataPersistenceSuite) TestUpdateDomain() {
 	m.Equal(updatedStatus, resp5.Info.Status)
 	m.Equal(updatedDescription, resp5.Info.Description)
 	m.Equal(updatedOwner, resp5.Info.OwnerEmail)
+	m.Equal(updateData, resp5.Info.Data)
 	m.Equal(updatedRetention, resp5.Config.Retention)
 	m.Equal(updatedEmitMetric, resp5.Config.EmitMetric)
 	m.Equal(updateClusterActive, resp5.ReplicationConfig.ActiveClusterName)
@@ -398,6 +412,7 @@ func (m *metadataPersistenceSuite) TestDeleteDomain() {
 			Status:      status,
 			Description: description,
 			OwnerEmail:  owner,
+			Data:        map[string]string{},
 		},
 		&DomainConfig{
 			Retention:  int32(retention),
@@ -439,6 +454,7 @@ func (m *metadataPersistenceSuite) TestDeleteDomain() {
 			Status:      status,
 			Description: description,
 			OwnerEmail:  owner,
+			Data:        map[string]string{},
 		},
 		&DomainConfig{
 			Retention:  int32(retention),
