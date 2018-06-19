@@ -231,6 +231,7 @@ var filters = []string{
 	"unknownFilter",
 	"domainName",
 	"taskListName",
+	"taskType",
 }
 
 const (

@@ -237,7 +237,7 @@ func (e *matchingEngineImpl) AddActivityTask(addRequest *m.AddActivityTaskReques
 	sourceDomainID := addRequest.GetSourceDomainUUID()
 	taskListName := addRequest.TaskList.GetName()
 	taskListKind := common.TaskListKindPtr(addRequest.TaskList.GetKind())
-	e.logger.Infof("Received AddActivityTask for taskList=%v WorkflowID=%v, RunID=%v",
+	e.logger.Debugf("Received AddActivityTask for taskList=%v WorkflowID=%v, RunID=%v",
 		taskListName, addRequest.Execution.WorkflowId, addRequest.Execution.RunId)
 	taskList := newTaskListID(domainID, taskListName, persistence.TaskListTypeActivity)
 	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
