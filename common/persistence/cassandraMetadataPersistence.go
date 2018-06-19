@@ -36,7 +36,7 @@ const (
 		`name: ?, ` +
 		`status: ?, ` +
 		`description: ?, ` +
-		`owner_email: ? ` +
+		`owner_email: ?, ` +
 		`data: ? ` +
 		`}`
 
