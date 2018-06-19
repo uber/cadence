@@ -168,6 +168,8 @@ const (
 	TimerProcessorCompleteTimerInterval
 	// TimerProcessorMaxPollInterval is max poll interval for timer processor
 	TimerProcessorMaxPollInterval
+	// TimerProcessorMaxPollIntervalJitterCoefficient is the max poll interval jitter coefficient
+	TimerProcessorMaxPollIntervalJitterCoefficient
 	// TimerProcessorStandbyTaskDelay is task delay for standby task in timer processor
 	TimerProcessorStandbyTaskDelay
 	// TransferTaskBatchSize is batch size for transferQueueProcessor
@@ -184,6 +186,8 @@ const (
 	TransferProcessorUpdateShardTaskCount
 	// TransferProcessorMaxPollInterval max poll interval for transferQueueProcessor
 	TransferProcessorMaxPollInterval
+	// TransferProcessorMaxPollIntervalJitterCoefficient is the max poll interval jitter coefficient
+	TransferProcessorMaxPollIntervalJitterCoefficient
 	// TransferProcessorUpdateAckInterval is update interval for transferQueueProcessor
 	TransferProcessorUpdateAckInterval
 	// TransferProcessorCompleteTransferInterval is complete timer interval for transferQueueProcessor
@@ -202,6 +206,8 @@ const (
 	ReplicatorProcessorUpdateShardTaskCount
 	// ReplicatorProcessorMaxPollInterval is max poll interval for ReplicatorProcessor
 	ReplicatorProcessorMaxPollInterval
+	// ReplicatorProcessorMaxPollIntervalJitterCoefficient is the max poll interval jitter coefficient
+	ReplicatorProcessorMaxPollIntervalJitterCoefficient
 	// ReplicatorProcessorUpdateAckInterval is update interval for ReplicatorProcessor
 	ReplicatorProcessorUpdateAckInterval
 	// ExecutionMgrNumConns is persistence connections number for ExecutionManager
