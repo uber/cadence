@@ -300,7 +300,7 @@ func (m *metadataPersistenceSuite) TestUpdateDomain() {
 	updatedStatus := DomainStatusDeprecated
 	updatedDescription := "description-updated"
 	updatedOwner := "owner-updated"
-	updateData := map[string]string{"k1": "v2"}
+	updatedData := map[string]string{"k1": "v2"}
 	updatedRetention := int32(20)
 	updatedEmitMetric := false
 
@@ -324,7 +324,7 @@ func (m *metadataPersistenceSuite) TestUpdateDomain() {
 			Status:      updatedStatus,
 			Description: updatedDescription,
 			OwnerEmail:  updatedOwner,
-			Data:        updateData,
+			Data:        updatedData,
 		},
 		&DomainConfig{
 			Retention:  updatedRetention,
@@ -349,7 +349,7 @@ func (m *metadataPersistenceSuite) TestUpdateDomain() {
 	m.Equal(updatedStatus, resp4.Info.Status)
 	m.Equal(updatedDescription, resp4.Info.Description)
 	m.Equal(updatedOwner, resp4.Info.OwnerEmail)
-	m.Equal(updateData, resp4.Info.Data)
+	m.Equal(updatedData, resp4.Info.Data)
 	m.Equal(updatedRetention, resp4.Config.Retention)
 	m.Equal(updatedEmitMetric, resp4.Config.EmitMetric)
 	m.Equal(updateClusterActive, resp4.ReplicationConfig.ActiveClusterName)
@@ -369,7 +369,7 @@ func (m *metadataPersistenceSuite) TestUpdateDomain() {
 	m.Equal(updatedStatus, resp5.Info.Status)
 	m.Equal(updatedDescription, resp5.Info.Description)
 	m.Equal(updatedOwner, resp5.Info.OwnerEmail)
-	m.Equal(updateData, resp5.Info.Data)
+	m.Equal(updatedData, resp5.Info.Data)
 	m.Equal(updatedRetention, resp5.Config.Retention)
 	m.Equal(updatedEmitMetric, resp5.Config.EmitMetric)
 	m.Equal(updateClusterActive, resp5.ReplicationConfig.ActiveClusterName)
@@ -388,6 +388,7 @@ func (m *metadataPersistenceSuite) TestDeleteDomain() {
 	status := DomainStatusRegistered
 	description := "delete-domain-test-description"
 	owner := "delete-domain-test-owner"
+	data := map[string]string{"k1": "v1"}
 	retention := 10
 	emitMetric := true
 
@@ -412,7 +413,7 @@ func (m *metadataPersistenceSuite) TestDeleteDomain() {
 			Status:      status,
 			Description: description,
 			OwnerEmail:  owner,
-			Data:        map[string]string{},
+			Data:        data,
 		},
 		&DomainConfig{
 			Retention:  int32(retention),
@@ -454,7 +455,7 @@ func (m *metadataPersistenceSuite) TestDeleteDomain() {
 			Status:      status,
 			Description: description,
 			OwnerEmail:  owner,
-			Data:        map[string]string{},
+			Data:        data,
 		},
 		&DomainConfig{
 			Retention:  int32(retention),
