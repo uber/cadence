@@ -49,7 +49,7 @@ type PropertyFn func() interface{}
 // IntPropertyFn is a wrapper to get int property from dynamic config
 type IntPropertyFn func(opts ...FilterOption) int
 
-// IntPropertyFn is a wrapper to get int property from dynamic config with domainName as filter
+// IntPropertyFnWithDomainFilter is a wrapper to get int property from dynamic config with domainName as filter
 type IntPropertyFnWithDomainFilter func(domain string) int
 
 // FloatPropertyFn is a wrapper to get float property from dynamic config
