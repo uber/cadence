@@ -37,7 +37,6 @@ import (
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
-	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
@@ -64,7 +63,6 @@ type (
 		config           *Config
 		logger           bark.Logger
 		metricsClient    metrics.Client
-		domainCache      cache.DomainCache
 		domainReplicator DomainReplicator
 		historyClient    history.Client
 	}
@@ -85,7 +83,7 @@ var (
 )
 
 func newReplicationTaskProcessor(currentCluster, sourceCluster, consumer string, client messaging.Client, config *Config,
-	logger bark.Logger, metricsClient metrics.Client, domainCache cache.DomainCache, domainReplicator DomainReplicator,
+	logger bark.Logger, metricsClient metrics.Client, domainReplicator DomainReplicator,
 	historyClient history.Client) *replicationTaskProcessor {
 	return &replicationTaskProcessor{
 		currentCluster: currentCluster,
@@ -100,7 +98,6 @@ func newReplicationTaskProcessor(currentCluster, sourceCluster, consumer string,
 			logging.TagConsumerName:      consumer,
 		}),
 		metricsClient:    metricsClient,
-		domainCache:      domainCache,
 		domainReplicator: domainReplicator,
 		historyClient:    historyClient,
 	}
@@ -271,16 +268,10 @@ func (p *replicationTaskProcessor) handleHistoryReplicationTask(task *replicator
 	defer sw.Stop()
 
 	attr := task.HistoryTaskAttributes
-	domainID := attr.GetDomainId()
-	domainEntry, err := p.domainCache.GetDomainByID(domainID)
-	if err != nil {
-		return err
-	}
-
 	processTask := false
 Loop:
-	for _, cluster := range domainEntry.GetReplicationConfig().Clusters {
-		if p.currentCluster == cluster.ClusterName {
+	for _, cluster := range attr.TargetClusters {
+		if p.currentCluster == cluster {
 			processTask = true
 			break Loop
 		}
@@ -345,8 +336,6 @@ func (p *replicationTaskProcessor) isTransientRetryableError(err error) bool {
 	case *shared.InternalServiceError:
 		return true
 	case *shared.RetryTaskError:
-		return true
-	case *shared.EntityNotExistsError:
 		return true
 	}
 
