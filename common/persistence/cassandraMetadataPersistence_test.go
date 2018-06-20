@@ -24,6 +24,12 @@ import (
 	"os"
 	"testing"
 
+	"fmt"
+	"strconv"
+	"strings"
+	"sync"
+	"sync/atomic"
+
 	"github.com/pborman/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
@@ -147,6 +153,7 @@ func (m *metadataPersistenceSuite) TestCreateDomain() {
 
 func (m *metadataPersistenceSuite) TestGetDomain() {
 	id := uuid.New()
+	log.Info("uuid in TestGetDomain", id)
 	name := "get-domain-test-name"
 	status := DomainStatusRegistered
 	description := "get-domain-test-description"
@@ -245,6 +252,134 @@ func (m *metadataPersistenceSuite) TestGetDomain() {
 	m.NotNil(err4)
 	m.IsType(&gen.BadRequestError{}, err4)
 	m.Nil(resp4)
+}
+
+func (m *metadataPersistenceSuite) TestConcurrentUpdateDomain() {
+	id := uuid.New()
+	log.Info("uuid in TestConcurrentUpdateDomain", id)
+	name := "concurrent-update-domain-test-name"
+	status := DomainStatusRegistered
+	description := "get-domain-test-description"
+	owner := "get-domain-test-owner"
+	data := map[string]string{"k0": "v0"}
+	retention := int32(10)
+	emitMetric := true
+
+	clusterActive := "some random active cluster name"
+	clusterStandby := "some random standby cluster name"
+	configVersion := int64(11)
+	failoverVersion := int64(59)
+	isGlobalDomain := true
+	clusters := []*ClusterReplicationConfig{
+		&ClusterReplicationConfig{
+			ClusterName: clusterActive,
+		},
+		&ClusterReplicationConfig{
+			ClusterName: clusterStandby,
+		},
+	}
+
+	resp0, err0 := m.GetDomain("", "does-not-exist")
+	m.Nil(resp0)
+	m.NotNil(err0)
+	m.IsType(&gen.EntityNotExistsError{}, err0)
+
+	resp1, err1 := m.CreateDomain(
+		&DomainInfo{
+			ID:          id,
+			Name:        name,
+			Status:      status,
+			Description: description,
+			OwnerEmail:  owner,
+			Data:        data,
+		},
+		&DomainConfig{
+			Retention:  retention,
+			EmitMetric: emitMetric,
+		},
+		&DomainReplicationConfig{
+			ActiveClusterName: clusterActive,
+			Clusters:          clusters,
+		},
+		isGlobalDomain,
+		configVersion,
+		failoverVersion,
+	)
+	m.Nil(err1)
+	m.NotNil(resp1)
+	m.Equal(id, resp1.ID)
+
+	resp2, err2 := m.GetDomain(id, "")
+	m.Nil(err2)
+	m.NotNil(resp2)
+	m.Equal(id, resp2.Info.ID)
+	m.Equal(name, resp2.Info.Name)
+
+	concurrency := 16
+	successCount := int32(0)
+	var wg sync.WaitGroup
+	for i := 1; i <= concurrency; i++ {
+		newValue := fmt.Sprintf("v-%v", i)
+		go func(updatedData map[string]string) {
+			wg.Add(1)
+			err3 := m.UpdateDomain(
+				&DomainInfo{
+					ID:          resp2.Info.ID,
+					Name:        resp2.Info.Name,
+					Status:      resp2.Info.Status,
+					Description: resp2.Info.Description,
+					OwnerEmail:  resp2.Info.OwnerEmail,
+					Data:        updatedData,
+				},
+				&DomainConfig{
+					Retention:  resp2.Config.Retention,
+					EmitMetric: resp2.Config.EmitMetric,
+				},
+				&DomainReplicationConfig{
+					ActiveClusterName: resp2.ReplicationConfig.ActiveClusterName,
+					Clusters:          resp2.ReplicationConfig.Clusters,
+				},
+				resp2.ConfigVersion,
+				resp2.FailoverVersion,
+				resp2.NotificationVersion,
+			)
+			if err3 == nil {
+				atomic.AddInt32(&successCount, 1)
+			}
+			wg.Done()
+		}(map[string]string{"k0": newValue})
+	}
+	wg.Wait()
+	resp3, err3 := m.GetDomain("", name)
+
+	log.Info("successCount:", successCount)
+	m.Equal(int32(1), successCount)
+
+	m.Nil(err3)
+	m.NotNil(resp3)
+	m.Equal(id, resp3.Info.ID)
+	m.Equal(name, resp3.Info.Name)
+	m.Equal(status, resp3.Info.Status)
+	m.Equal(description, resp3.Info.Description)
+	m.Equal(owner, resp3.Info.OwnerEmail)
+	m.Equal(retention, resp3.Config.Retention)
+	m.Equal(emitMetric, resp3.Config.EmitMetric)
+	m.Equal(clusterActive, resp3.ReplicationConfig.ActiveClusterName)
+	m.Equal(len(clusters), len(resp3.ReplicationConfig.Clusters))
+	for index := range clusters {
+		m.Equal(clusters[index], resp3.ReplicationConfig.Clusters[index])
+	}
+	m.Equal(isGlobalDomain, resp2.IsGlobalDomain)
+	m.Equal(configVersion, resp2.ConfigVersion)
+	m.Equal(failoverVersion, resp3.FailoverVersion)
+	m.Equal(int64(1), resp3.NotificationVersion)
+
+	//check domain data
+	ss := strings.Split(resp3.Info.Data["k0"], "-")
+	m.Equal(2, len(ss))
+	vi, err := strconv.Atoi(ss[1])
+	m.Nil(err)
+	m.Equal(true, vi > 0 && vi <= concurrency)
 }
 
 func (m *metadataPersistenceSuite) TestUpdateDomain() {

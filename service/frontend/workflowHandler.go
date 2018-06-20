@@ -410,9 +410,7 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 		}
 		if updatedInfo.Data != nil {
 			configurationChanged = true
-			for k, v := range updatedInfo.Data {
-				info.Data[k] = v
-			}
+			info.Data = wh.mergeDomainData(info.Data, updatedInfo.Data)
 		}
 	}
 	if updateRequest.Configuration != nil {
@@ -496,6 +494,13 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 	response.DomainInfo, response.Configuration, response.ReplicationConfiguration = createDomainResponse(
 		info, config, replicationConfig)
 	return response, nil
+}
+
+func (wh *WorkflowHandler) mergeDomainData(old map[string]string, new map[string]string) map[string]string {
+	for k, v := range new {
+		old[k] = v
+	}
+	return old
 }
 
 // DeprecateDomain us used to update status of a registered domain to DEPRECATED.  Once the domain is deprecated
