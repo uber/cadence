@@ -145,6 +145,7 @@ func (p *queueProcessorBase) processorPump() {
 	}
 
 	jitter := backoff.NewJitter()
+	lastPollTime := time.Time{}
 	pollTimer := time.NewTimer(jitter.JitDuration(p.options.MaxPollInterval(), p.options.MaxPollIntervalJitterCoefficient()))
 	updateAckTimer := time.NewTimer(p.options.UpdateAckInterval())
 
@@ -158,9 +159,13 @@ processorPumpLoop:
 			go p.Stop()
 		case <-p.notifyCh:
 			p.processBatch(tasksCh)
+			lastPollTime = time.Now()
 		case <-pollTimer.C:
-			p.processBatch(tasksCh)
 			pollTimer.Reset(jitter.JitDuration(p.options.MaxPollInterval(), p.options.MaxPollIntervalJitterCoefficient()))
+			if lastPollTime.Add(p.options.MaxPollInterval()).Before(time.Now()) {
+				p.processBatch(tasksCh)
+				lastPollTime = time.Now()
+			}
 		case <-updateAckTimer.C:
 			p.ackMgr.updateQueueAckLevel()
 			updateAckTimer = time.NewTimer(p.options.UpdateAckInterval())

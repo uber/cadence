@@ -263,6 +263,7 @@ func (t *timerQueueProcessorBase) notifyNewTimers(timerTasks []persistence.Task,
 func (t *timerQueueProcessorBase) internalProcessor() error {
 	timerGate := t.timerProcessor.getTimerGate()
 	jitter := backoff.NewJitter()
+	lastPollTime := time.Time{}
 	pollTimer := time.NewTimer(jitter.JitDuration(
 		t.config.TimerProcessorMaxPollInterval(),
 		t.config.TimerProcessorMaxPollIntervalJitterCoefficient(),
@@ -295,11 +296,13 @@ continueProcessor:
 			case <-timerGate.FireChan():
 				// Timer Fired.
 			case <-pollTimer.C:
-				// forced timer scan
 				pollTimer.Reset(jitter.JitDuration(
 					t.config.TimerProcessorMaxPollInterval(),
 					t.config.TimerProcessorMaxPollIntervalJitterCoefficient(),
 				))
+				if !lastPollTime.Add(t.config.TimerProcessorMaxPollInterval()).Before(time.Now()) {
+					continue continueProcessor
+				}
 			case <-updateAckChan:
 				t.timerQueueAckMgr.updateAckLevel()
 				continue continueProcessor
@@ -326,6 +329,7 @@ continueProcessor:
 			}
 		}
 
+		lastPollTime = time.Now()
 		var err error
 		nextKeyTask, err = t.readAndFanoutTimerTasks()
 		if err != nil {
