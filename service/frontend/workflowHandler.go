@@ -234,6 +234,7 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 			Status:      persistence.DomainStatusRegistered,
 			OwnerEmail:  registerRequest.GetOwnerEmail(),
 			Description: registerRequest.GetDescription(),
+			Data:        registerRequest.Data,
 		},
 		Config: &persistence.DomainConfig{
 			Retention:  registerRequest.GetWorkflowExecutionRetentionPeriodInDays(),
@@ -406,6 +407,12 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 		if updatedInfo.OwnerEmail != nil {
 			configurationChanged = true
 			info.OwnerEmail = updatedInfo.GetOwnerEmail()
+		}
+		if updatedInfo.Data != nil {
+			configurationChanged = true
+			for k, v := range updatedInfo.Data {
+				info.Data[k] = v
+			}
 		}
 	}
 	if updateRequest.Configuration != nil {
@@ -2225,6 +2232,7 @@ func createDomainResponse(info *persistence.DomainInfo, config *persistence.Doma
 		Status:      getDomainStatus(info),
 		Description: common.StringPtr(info.Description),
 		OwnerEmail:  common.StringPtr(info.OwnerEmail),
+		Data:        info.Data,
 	}
 
 	configResult := &gen.DomainConfiguration{
