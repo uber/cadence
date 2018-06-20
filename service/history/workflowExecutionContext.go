@@ -48,10 +48,11 @@ type (
 		executionManager  persistence.ExecutionManager
 		logger            bark.Logger
 
-		locker          common.Mutex
-		msBuilder       mutableState
-		updateCondition int64
-		deleteTimerTask persistence.Task
+		locker                common.Mutex
+		msBuilder             mutableState
+		updateCondition       int64
+		deleteTimerTask       persistence.Task
+		createReplicationTask bool
 	}
 )
 
@@ -161,6 +162,13 @@ func (c *workflowExecutionContext) updateVersion() error {
 			return err
 		}
 		c.msBuilder.UpdateReplicationStateVersion(domainEntry.GetFailoverVersion())
+
+		// this is a hack, only create replication task if have # target cluster > 1, for more see #868
+		if len(domainEntry.GetReplicationConfig().Clusters) > 1 {
+			c.createReplicationTask = true
+		} else {
+			c.createReplicationTask = false
+		}
 	}
 	return nil
 }
@@ -168,11 +176,8 @@ func (c *workflowExecutionContext) updateVersion() error {
 func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persistence.Task,
 	timerTasks []persistence.Task, transactionID int64) error {
 
-	// Only generate replication task if this is a global domain
-	createReplicationTask := c.msBuilder.GetReplicationState() != nil
-
 	currentVersion := c.msBuilder.GetCurrentVersion()
-	if createReplicationTask {
+	if c.msBuilder.GetReplicationState() != nil {
 		activeCluster := c.clusterMetadata.ClusterNameForFailoverVersion(currentVersion)
 		currentCluster := c.clusterMetadata.GetCurrentClusterName()
 		if activeCluster != currentCluster {
@@ -180,7 +185,13 @@ func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persi
 		}
 	}
 
-	return c.updateHelper(nil, transferTasks, timerTasks, createReplicationTask, "", currentVersion, transactionID)
+	if !c.createReplicationTask {
+		c.logger.Debugf("Skipping replication task creation: %v, workflowID: %v, runID: %v, firstEventID: %v, nextEventID: %v.",
+			c.domainID, c.workflowExecution.GetWorkflowId(), c.workflowExecution.GetRunId(),
+			c.msBuilder.GetExecutionInfo().LastFirstEventID, c.msBuilder.GetExecutionInfo().NextEventID)
+	}
+
+	return c.updateHelper(nil, transferTasks, timerTasks, c.createReplicationTask, "", currentVersion, transactionID)
 }
 
 func (c *workflowExecutionContext) updateHelper(builder *historyBuilder, transferTasks []persistence.Task,

@@ -23,6 +23,8 @@ package worker
 import (
 	"fmt"
 
+	"github.com/uber/cadence/common/cache"
+
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common/cluster"
@@ -36,6 +38,7 @@ type (
 	// Replicator is the processor for replication tasks
 	Replicator struct {
 		clusterMetadata  cluster.Metadata
+		domainCache      cache.DomainCache
 		domainReplicator DomainReplicator
 		historyClient    history.Client
 		config           *Config
@@ -55,6 +58,7 @@ func NewReplicator(clusterMetadata cluster.Metadata, metadataManagerV2 persisten
 	})
 	return &Replicator{
 		clusterMetadata:  clusterMetadata,
+		domainCache:      cache.NewDomainCache(metadataManagerV2, clusterMetadata, logger),
 		domainReplicator: NewDomainReplicator(metadataManagerV2, logger),
 		historyClient:    historyClient,
 		config:           config,
@@ -66,12 +70,13 @@ func NewReplicator(clusterMetadata cluster.Metadata, metadataManagerV2 persisten
 
 // Start is called to start replicator
 func (r *Replicator) Start() error {
+	r.domainCache.Start()
 	currentClusterName := r.clusterMetadata.GetCurrentClusterName()
 	for cluster := range r.clusterMetadata.GetAllClusterFailoverVersions() {
 		if cluster != currentClusterName {
 			consumerName := getConsumerName(currentClusterName, cluster)
 			r.processors = append(r.processors, newReplicationTaskProcessor(currentClusterName, cluster, consumerName, r.client,
-				r.config, r.logger, r.metricsClient, r.domainReplicator, r.historyClient))
+				r.config, r.logger, r.metricsClient, r.domainCache, r.domainReplicator, r.historyClient))
 		}
 	}
 
@@ -89,6 +94,7 @@ func (r *Replicator) Stop() {
 	for _, processor := range r.processors {
 		processor.Stop()
 	}
+	r.domainCache.Stop()
 }
 
 func getConsumerName(currentCluster, remoteCluster string) string {

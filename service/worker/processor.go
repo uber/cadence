@@ -37,6 +37,7 @@ import (
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
@@ -63,6 +64,7 @@ type (
 		config           *Config
 		logger           bark.Logger
 		metricsClient    metrics.Client
+		domainCache      cache.DomainCache
 		domainReplicator DomainReplicator
 		historyClient    history.Client
 	}
@@ -83,7 +85,7 @@ var (
 )
 
 func newReplicationTaskProcessor(currentCluster, sourceCluster, consumer string, client messaging.Client, config *Config,
-	logger bark.Logger, metricsClient metrics.Client, domainReplicator DomainReplicator,
+	logger bark.Logger, metricsClient metrics.Client, domainCache cache.DomainCache, domainReplicator DomainReplicator,
 	historyClient history.Client) *replicationTaskProcessor {
 	return &replicationTaskProcessor{
 		currentCluster: currentCluster,
@@ -98,6 +100,7 @@ func newReplicationTaskProcessor(currentCluster, sourceCluster, consumer string,
 			logging.TagConsumerName:      consumer,
 		}),
 		metricsClient:    metricsClient,
+		domainCache:      domainCache,
 		domainReplicator: domainReplicator,
 		historyClient:    historyClient,
 	}
@@ -267,19 +270,40 @@ func (p *replicationTaskProcessor) handleHistoryReplicationTask(task *replicator
 	sw := p.metricsClient.StartTimer(metrics.HistoryReplicationTaskScope, metrics.ReplicatorLatency)
 	defer sw.Stop()
 
+	attr := task.HistoryTaskAttributes
+	domainID := attr.GetDomainId()
+	domainEntry, err := p.domainCache.GetDomainByID(domainID)
+	if err != nil {
+		return err
+	}
+
+	processTask := false
+Loop:
+	for _, cluster := range domainEntry.GetReplicationConfig().Clusters {
+		if p.currentCluster == cluster.ClusterName {
+			processTask = true
+			break Loop
+		}
+	}
+	if !processTask {
+		p.logger.Debugf("Dropping non-targeted history task with domainID: %v, workflowID: %v, runID: %v, firstEventID: %v, nextEventID: %v.",
+			attr.GetDomainId(), attr.GetWorkflowId(), attr.GetRunId(), attr.GetFirstEventId(), attr.GetNextEventId())
+		return nil
+	}
+
 	return p.historyClient.ReplicateEvents(context.Background(), &h.ReplicateEventsRequest{
 		SourceCluster: common.StringPtr(p.sourceCluster),
-		DomainUUID:    task.HistoryTaskAttributes.DomainId,
+		DomainUUID:    attr.DomainId,
 		WorkflowExecution: &shared.WorkflowExecution{
-			WorkflowId: task.HistoryTaskAttributes.WorkflowId,
-			RunId:      task.HistoryTaskAttributes.RunId,
+			WorkflowId: attr.WorkflowId,
+			RunId:      attr.RunId,
 		},
-		FirstEventId:    task.HistoryTaskAttributes.FirstEventId,
-		NextEventId:     task.HistoryTaskAttributes.NextEventId,
-		Version:         task.HistoryTaskAttributes.Version,
-		ReplicationInfo: task.HistoryTaskAttributes.ReplicationInfo,
-		History:         task.HistoryTaskAttributes.History,
-		NewRunHistory:   task.HistoryTaskAttributes.NewRunHistory,
+		FirstEventId:    attr.FirstEventId,
+		NextEventId:     attr.NextEventId,
+		Version:         attr.Version,
+		ReplicationInfo: attr.ReplicationInfo,
+		History:         attr.History,
+		NewRunHistory:   attr.NewRunHistory,
 	})
 }
 
@@ -321,6 +345,8 @@ func (p *replicationTaskProcessor) isTransientRetryableError(err error) bool {
 	case *shared.InternalServiceError:
 		return true
 	case *shared.RetryTaskError:
+		return true
+	case *shared.EntityNotExistsError:
 		return true
 	}
 
