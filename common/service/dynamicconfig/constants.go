@@ -64,42 +64,45 @@ var keys = map[Key]string{
 	MatchingMaxTaskBatchSize:                "matching.maxTaskBatchSize",
 
 	// history settings
-	HistoryLongPollExpirationInterval:                  "history.longPollExpirationInterval",
-	HistoryCacheInitialSize:                            "history.cacheInitialSize",
-	HistoryCacheMaxSize:                                "history.cacheMaxSize",
-	HistoryCacheTTL:                                    "history.cacheTTL",
-	AcquireShardInterval:                               "history.acquireShardInterval",
-	TimerTaskBatchSize:                                 "history.timerTaskBatchSize",
-	TimerTaskWorkerCount:                               "history.timerTaskWorkerCount",
-	TimerTaskMaxRetryCount:                             "history.timerTaskMaxRetryCount",
-	TimerProcessorGetFailureRetryCount:                 "history.timerProcessorGetFailureRetryCount",
-	TimerProcessorCompleteTimerFailureRetryCount:       "history.timerProcessorCompleteTimerFailureRetryCount",
-	TimerProcessorUpdateShardTaskCount:                 "history.timerProcessorUpdateShardTaskCount",
-	TimerProcessorUpdateAckInterval:                    "history.timerProcessorUpdateAckInterval",
-	TimerProcessorCompleteTimerInterval:                "history.timerProcessorCompleteTimerInterval",
-	TimerProcessorMaxPollInterval:                      "history.timerProcessorMaxPollInterval",
-	TimerProcessorStandbyTaskDelay:                     "history.timerProcessorStandbyTaskDelay",
-	TransferTaskBatchSize:                              "history.transferTaskBatchSize",
-	TransferProcessorMaxPollRPS:                        "history.transferProcessorMaxPollRPS",
-	TransferTaskWorkerCount:                            "history.transferTaskWorkerCount",
-	TransferTaskMaxRetryCount:                          "history.transferTaskMaxRetryCount",
-	TransferProcessorCompleteTransferFailureRetryCount: "history.transferProcessorCompleteTransferFailureRetryCount",
-	TransferProcessorUpdateShardTaskCount:              "history.transferProcessorUpdateShardTaskCount",
-	TransferProcessorMaxPollInterval:                   "history.transferProcessorMaxPollInterval",
-	TransferProcessorUpdateAckInterval:                 "history.transferProcessorUpdateAckInterval",
-	TransferProcessorCompleteTransferInterval:          "history.transferProcessorCompleteTransferInterval",
-	TransferProcessorStandbyTaskDelay:                  "history.transferProcessorStandbyTaskDelay",
-	ReplicatorTaskBatchSize:                            "history.replicatorTaskBatchSize",
-	ReplicatorTaskWorkerCount:                          "history.replicatorTaskWorkerCount",
-	ReplicatorTaskMaxRetryCount:                        "history.replicatorTaskMaxRetryCount",
-	ReplicatorProcessorMaxPollRPS:                      "history.replicatorProcessorMaxPollRPS",
-	ReplicatorProcessorUpdateShardTaskCount:            "history.replicatorProcessorUpdateShardTaskCount",
-	ReplicatorProcessorMaxPollInterval:                 "history.replicatorProcessorMaxPollInterval",
-	ReplicatorProcessorUpdateAckInterval:               "history.replicatorProcessorUpdateAckInterval",
-	ExecutionMgrNumConns:                               "history.executionMgrNumConns",
-	HistoryMgrNumConns:                                 "history.historyMgrNumConns",
-	MaximumBufferedEventsBatch:                         "history.maximumBufferedEventsBatch",
-	ShardUpdateMinInterval:                             "history.shardUpdateMinInterval",
+	HistoryLongPollExpirationInterval:                   "history.longPollExpirationInterval",
+	HistoryCacheInitialSize:                             "history.cacheInitialSize",
+	HistoryCacheMaxSize:                                 "history.cacheMaxSize",
+	HistoryCacheTTL:                                     "history.cacheTTL",
+	AcquireShardInterval:                                "history.acquireShardInterval",
+	TimerTaskBatchSize:                                  "history.timerTaskBatchSize",
+	TimerTaskWorkerCount:                                "history.timerTaskWorkerCount",
+	TimerTaskMaxRetryCount:                              "history.timerTaskMaxRetryCount",
+	TimerProcessorGetFailureRetryCount:                  "history.timerProcessorGetFailureRetryCount",
+	TimerProcessorCompleteTimerFailureRetryCount:        "history.timerProcessorCompleteTimerFailureRetryCount",
+	TimerProcessorUpdateShardTaskCount:                  "history.timerProcessorUpdateShardTaskCount",
+	TimerProcessorUpdateAckInterval:                     "history.timerProcessorUpdateAckInterval",
+	TimerProcessorCompleteTimerInterval:                 "history.timerProcessorCompleteTimerInterval",
+	TimerProcessorMaxPollInterval:                       "history.timerProcessorMaxPollInterval",
+	TimerProcessorMaxPollIntervalJitterCoefficient:      "history.timerProcessorMaxPollIntervalJitterCoefficient",
+	TimerProcessorStandbyTaskDelay:                      "history.timerProcessorStandbyTaskDelay",
+	TransferTaskBatchSize:                               "history.transferTaskBatchSize",
+	TransferProcessorMaxPollRPS:                         "history.transferProcessorMaxPollRPS",
+	TransferTaskWorkerCount:                             "history.transferTaskWorkerCount",
+	TransferTaskMaxRetryCount:                           "history.transferTaskMaxRetryCount",
+	TransferProcessorCompleteTransferFailureRetryCount:  "history.transferProcessorCompleteTransferFailureRetryCount",
+	TransferProcessorUpdateShardTaskCount:               "history.transferProcessorUpdateShardTaskCount",
+	TransferProcessorMaxPollInterval:                    "history.transferProcessorMaxPollInterval",
+	TransferProcessorMaxPollIntervalJitterCoefficient:   "history.transferProcessorMaxPollIntervalJitterCoefficient",
+	TransferProcessorUpdateAckInterval:                  "history.transferProcessorUpdateAckInterval",
+	TransferProcessorCompleteTransferInterval:           "history.transferProcessorCompleteTransferInterval",
+	TransferProcessorStandbyTaskDelay:                   "history.transferProcessorStandbyTaskDelay",
+	ReplicatorTaskBatchSize:                             "history.replicatorTaskBatchSize",
+	ReplicatorTaskWorkerCount:                           "history.replicatorTaskWorkerCount",
+	ReplicatorTaskMaxRetryCount:                         "history.replicatorTaskMaxRetryCount",
+	ReplicatorProcessorMaxPollRPS:                       "history.replicatorProcessorMaxPollRPS",
+	ReplicatorProcessorUpdateShardTaskCount:             "history.replicatorProcessorUpdateShardTaskCount",
+	ReplicatorProcessorMaxPollInterval:                  "history.replicatorProcessorMaxPollInterval",
+	ReplicatorProcessorMaxPollIntervalJitterCoefficient: "history.replicatorProcessorMaxPollIntervalJitterCoefficient",
+	ReplicatorProcessorUpdateAckInterval:                "history.replicatorProcessorUpdateAckInterval",
+	ExecutionMgrNumConns:                                "history.executionMgrNumConns",
+	HistoryMgrNumConns:                                  "history.historyMgrNumConns",
+	MaximumBufferedEventsBatch:                          "history.maximumBufferedEventsBatch",
+	ShardUpdateMinInterval:                              "history.shardUpdateMinInterval",
 }
 
 const (
@@ -113,6 +116,9 @@ const (
 	testGetBoolPropertyKey
 	testGetIntPropertyFilteredByDomainKey
 	testGetDurationPropertyFilteredByDomainKey
+	testGetIntPropertyFilteredByTaskListInfoKey
+	testGetDurationPropertyFilteredByTaskListInfoKey
+	testGetBoolPropertyFilteredByTaskListInfoKey
 
 	// EnableGlobalDomain is key for enable global domain
 	EnableGlobalDomain
@@ -177,6 +183,8 @@ const (
 	TimerProcessorCompleteTimerInterval
 	// TimerProcessorMaxPollInterval is max poll interval for timer processor
 	TimerProcessorMaxPollInterval
+	// TimerProcessorMaxPollIntervalJitterCoefficient is the max poll interval jitter coefficient
+	TimerProcessorMaxPollIntervalJitterCoefficient
 	// TimerProcessorStandbyTaskDelay is task delay for standby task in timer processor
 	TimerProcessorStandbyTaskDelay
 	// TransferTaskBatchSize is batch size for transferQueueProcessor
@@ -193,6 +201,8 @@ const (
 	TransferProcessorUpdateShardTaskCount
 	// TransferProcessorMaxPollInterval max poll interval for transferQueueProcessor
 	TransferProcessorMaxPollInterval
+	// TransferProcessorMaxPollIntervalJitterCoefficient is the max poll interval jitter coefficient
+	TransferProcessorMaxPollIntervalJitterCoefficient
 	// TransferProcessorUpdateAckInterval is update interval for transferQueueProcessor
 	TransferProcessorUpdateAckInterval
 	// TransferProcessorCompleteTransferInterval is complete timer interval for transferQueueProcessor
@@ -211,6 +221,8 @@ const (
 	ReplicatorProcessorUpdateShardTaskCount
 	// ReplicatorProcessorMaxPollInterval is max poll interval for ReplicatorProcessor
 	ReplicatorProcessorMaxPollInterval
+	// ReplicatorProcessorMaxPollIntervalJitterCoefficient is the max poll interval jitter coefficient
+	ReplicatorProcessorMaxPollIntervalJitterCoefficient
 	// ReplicatorProcessorUpdateAckInterval is update interval for ReplicatorProcessor
 	ReplicatorProcessorUpdateAckInterval
 	// ExecutionMgrNumConns is persistence connections number for ExecutionManager
@@ -237,6 +249,7 @@ var filters = []string{
 	"unknownFilter",
 	"domainName",
 	"taskListName",
+	"taskType",
 }
 
 const (
@@ -245,6 +258,8 @@ const (
 	DomainName
 	// TaskListName is the tasklist name
 	TaskListName
+	// TaskType is the task type (0:Decision, 1:Activity)
+	TaskType
 )
 
 // FilterOption is used to provide filters for dynamic config keys
@@ -261,5 +276,12 @@ func TaskListFilter(name string) FilterOption {
 func DomainFilter(name string) FilterOption {
 	return func(filterMap map[Filter]interface{}) {
 		filterMap[DomainName] = name
+	}
+}
+
+// TaskTypeFilter filters by task type
+func TaskTypeFilter(taskType int) FilterOption {
+	return func(filterMap map[Filter]interface{}) {
+		filterMap[TaskType] = taskType
 	}
 }
