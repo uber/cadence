@@ -45,6 +45,15 @@ type WorkflowClientBuilderInterface interface {
 	BuildAdminServiceClient(c *cli.Context) (adminserviceclient.Interface, error)
 }
 
+// AuthorizationManagerInterface is an interface to build permission checking layer to cadence service.
+// User can customize builder by implementing this interface, and call SetAuthorizationManager after initialize cli.
+// (See cadence/cmd/tools/cli/main.go for example)
+// The customized AuthorizationManager may have more processing on Env, Address and other info.
+type AuthorizationManagerInterface interface {
+	//FilterUnauthorizedOperations decides which operation will be available in this CLI
+	FilterUnauthorizedOperations(*cli.App) *cli.App
+}
+
 // WorkflowClientBuilder build client to cadence service
 type WorkflowClientBuilder struct {
 	hostPort   string
@@ -62,6 +71,20 @@ func NewBuilder() *WorkflowClientBuilder {
 	return &WorkflowClientBuilder{
 		logger: logger,
 	}
+}
+
+// NoopAuthorizationManager build a noop manager
+type NoopAuthorizationManager struct {
+}
+
+//NewNoopAuthorizationManager returns NoopAuthorizationManager
+func NewNoopAuthorizationManager() *NoopAuthorizationManager {
+	return &NoopAuthorizationManager{}
+}
+
+//FilterUnauthorizedOperations decides which operation will be available in this CLI
+func (m *NoopAuthorizationManager) FilterUnauthorizedOperations(app *cli.App) *cli.App {
+	return app
 }
 
 // BuildServiceClient builds a rpc service client to cadence service

@@ -92,5 +92,11 @@ func NewCliApp() *cli.App {
 		SetBuilder(NewBuilder())
 	}
 
+	// set AuthorizationManager if not customized
+	if cAuthorizationManager == nil {
+		SetAuthorizationManager(NewNoopAuthorizationManager())
+	}
+	app = cAuthorizationManager.FilterUnauthorizedOperations(app)
+
 	return app
 }
