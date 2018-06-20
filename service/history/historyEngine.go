@@ -320,7 +320,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 		msBuilder.UpdateReplicationStateLastEventID("", msBuilder.GetCurrentVersion(), msBuilder.GetNextEventID()-1)
 		replicationState = msBuilder.GetReplicationState()
 		// this is a hack, only create replication task if have # target cluster > 1, for more see #868
-		if len(domainEntry.GetReplicationConfig().Clusters) > 1 {
+		if domainEntry.CanReplicateEvent() {
 			replicationTask := &persistence.HistoryReplicationTask{
 				FirstEventID:        common.FirstEventID,
 				NextEventID:         msBuilder.GetNextEventID(),
@@ -1962,7 +1962,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 		msBuilder.UpdateReplicationStateLastEventID("", msBuilder.GetCurrentVersion(), msBuilder.GetNextEventID()-1)
 		replicationState = msBuilder.GetReplicationState()
 		// this is a hack, only create replication task if have # target cluster > 1, for more see #868
-		if len(domainEntry.GetReplicationConfig().Clusters) > 1 {
+		if domainEntry.CanReplicateEvent() {
 			replicationTask := &persistence.HistoryReplicationTask{
 				FirstEventID:        common.FirstEventID,
 				NextEventID:         msBuilder.GetNextEventID(),
