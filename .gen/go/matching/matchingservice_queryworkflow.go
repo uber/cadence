@@ -398,12 +398,6 @@ func _QueryWorkflowResponse_Read(w wire.Value) (*shared.QueryWorkflowResponse, e
 	return &v, err
 }
 
-func _QueryFailedError_Read(w wire.Value) (*shared.QueryFailedError, error) {
-	var v shared.QueryFailedError
-	err := v.FromWire(w)
-	return &v, err
-}
-
 // FromWire deserializes a MatchingService_QueryWorkflow_Result struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.

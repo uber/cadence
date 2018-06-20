@@ -72,6 +72,12 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*matching.PollForDecisionTaskResponse, error)
 
+	QueryTaskList(
+		ctx context.Context,
+		Request *matching.QueryTaskListRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.QueryTaskListResponse, error)
+
 	QueryWorkflow(
 		ctx context.Context,
 		QueryRequest *matching.QueryWorkflowRequest,
@@ -244,6 +250,29 @@ func (c client) PollForDecisionTask(
 	}
 
 	success, err = matching.MatchingService_PollForDecisionTask_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) QueryTaskList(
+	ctx context.Context,
+	_Request *matching.QueryTaskListRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.QueryTaskListResponse, err error) {
+
+	args := matching.MatchingService_QueryTaskList_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result matching.MatchingService_QueryTaskList_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = matching.MatchingService_QueryTaskList_Helper.UnwrapResponse(&result)
 	return
 }
 

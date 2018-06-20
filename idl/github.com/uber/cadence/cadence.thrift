@@ -424,6 +424,18 @@ service WorkflowService {
 	)
 
   /**
+  * QueryTaskList returns query result for a specified task list
+  **/
+  shared.QueryTaskListResponse QueryTaskList(1: shared.QueryTaskListRequest queryRequest)
+	throws (
+	  1: shared.BadRequestError badRequestError,
+	  2: shared.InternalServiceError internalServiceError,
+	  3: shared.EntityNotExistsError entityNotExistError,
+	  4: shared.QueryFailedError queryFailedError,
+	  5: shared.LimitExceededError limitExceededError,
+	)
+
+  /**
   * DescribeWorkflowExecution returns information about the specified workflow execution.
   **/
   shared.DescribeWorkflowExecutionResponse DescribeWorkflowExecution(1: shared.DescribeWorkflowExecutionRequest describeRequest)

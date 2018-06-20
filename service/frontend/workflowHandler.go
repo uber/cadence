@@ -1982,6 +1982,54 @@ func (wh *WorkflowHandler) QueryWorkflow(ctx context.Context,
 	return matchingResp, nil
 }
 
+// QueryTaskList returns query result for a specified task list
+func (wh *WorkflowHandler) QueryTaskList(
+	ctx context.Context,
+	queryRequest *gen.QueryTaskListRequest) (*gen.QueryTaskListResponse, error) {
+	scope := metrics.FrontendQueryTaskListScope
+	sw := wh.startRequestProfile(scope)
+	defer sw.Stop()
+
+	if queryRequest == nil {
+		return nil, wh.error(errRequestNotSet, scope)
+	}
+
+	if queryRequest.GetDomain() == "" {
+		return nil, wh.error(errDomainNotSet, scope)
+	}
+
+	if queryRequest.Query == nil {
+		return nil, wh.error(errQueryNotSet, scope)
+	}
+
+	if queryRequest.Query.GetQueryType() == "" {
+		return nil, wh.error(errQueryTypeNotSet, scope)
+	}
+
+	domainID, err := wh.domainCache.GetDomainID(queryRequest.GetDomain())
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+
+	matchingRequest := &m.QueryTaskListRequest{
+		DomainUUID:   common.StringPtr(domainID),
+		QueryRequest: queryRequest,
+	}
+
+	matchingResp, err := wh.matching.QueryTaskList(ctx, matchingRequest)
+	if err != nil {
+		wh.GetLogger().WithFields(bark.Fields{
+			"Domain":                queryRequest.GetDomain(),
+			logging.TagTaskListName: queryRequest.GetTaskListName(),
+			logging.TagTaskListType: queryRequest.GetTaskListType().String(),
+			"QueryType":             queryRequest.Query.GetQueryType(),
+		}).Info("QueryTaskListFailed.")
+		return nil, wh.error(err, scope)
+	}
+
+	return matchingResp, nil
+}
+
 // DescribeWorkflowExecution returns information about the specified workflow execution.
 func (wh *WorkflowHandler) DescribeWorkflowExecution(ctx context.Context, request *gen.DescribeWorkflowExecutionRequest) (*gen.DescribeWorkflowExecutionResponse, error) {
 
@@ -2264,6 +2312,14 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(ctx context.Context
 	matchingResp *m.PollForDecisionTaskResponse) (*gen.PollForDecisionTaskResponse, error) {
 
 	if matchingResp.WorkflowExecution == nil {
+		// task list query
+		if matchingResp.Query != nil && len(matchingResp.TaskToken) > 0 {
+			return &gen.PollForDecisionTaskResponse{
+				TaskToken: matchingResp.TaskToken,
+				Query:     matchingResp.Query,
+			}, nil
+		}
+
 		// this will happen if there is no decision task to be send to worker / caller
 		return &gen.PollForDecisionTaskResponse{}, nil
 	}

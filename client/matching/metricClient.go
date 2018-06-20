@@ -129,6 +129,23 @@ func (c *metricClient) QueryWorkflow(
 	return resp, err
 }
 
+func (c *metricClient) QueryTaskList(
+	ctx context.Context,
+	queryRequest *m.QueryTaskListRequest,
+	opts ...yarpc.CallOption) (*workflow.QueryTaskListResponse, error) {
+	c.metricsClient.IncCounter(metrics.MatchingClientQueryTaskListScope, metrics.CadenceRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.MatchingClientQueryTaskListScope, metrics.CadenceLatency)
+	resp, err := c.client.QueryTaskList(ctx, queryRequest, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.MatchingClientQueryTaskListScope, metrics.MatchingClientFailures)
+	}
+
+	return resp, err
+}
+
 func (c *metricClient) RespondQueryTaskCompleted(
 	ctx context.Context,
 	request *m.RespondQueryTaskCompletedRequest,

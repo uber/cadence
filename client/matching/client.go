@@ -124,6 +124,20 @@ func (c *clientImpl) QueryWorkflow(ctx context.Context, queryRequest *m.QueryWor
 	return client.QueryWorkflow(ctx, queryRequest, opts...)
 }
 
+func (c *clientImpl) QueryTaskList(
+	ctx context.Context,
+	queryRequest *m.QueryTaskListRequest,
+	opts ...yarpc.CallOption) (*workflow.QueryTaskListResponse, error) {
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+	client, err := c.getHostForRequest(queryRequest.QueryRequest.GetTaskListName())
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return client.QueryTaskList(ctx, queryRequest, opts...)
+}
+
 func (c *clientImpl) RespondQueryTaskCompleted(ctx context.Context, request *m.RespondQueryTaskCompletedRequest, opts ...yarpc.CallOption) error {
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	client, err := c.getHostForRequest(request.TaskList.GetName())

@@ -1747,6 +1747,152 @@ func (v *PollForDecisionTaskResponse) GetStickyExecutionEnabled() (o bool) {
 	return
 }
 
+type QueryTaskListRequest struct {
+	DomainUUID   *string                      `json:"domainUUID,omitempty"`
+	QueryRequest *shared.QueryTaskListRequest `json:"queryRequest,omitempty"`
+}
+
+// ToWire translates a QueryTaskListRequest struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *QueryTaskListRequest) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.DomainUUID != nil {
+		w, err = wire.NewValueString(*(v.DomainUUID)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.QueryRequest != nil {
+		w, err = v.QueryRequest.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _QueryTaskListRequest_Read(w wire.Value) (*shared.QueryTaskListRequest, error) {
+	var v shared.QueryTaskListRequest
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a QueryTaskListRequest struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a QueryTaskListRequest struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v QueryTaskListRequest
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *QueryTaskListRequest) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.DomainUUID = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TStruct {
+				v.QueryRequest, err = _QueryTaskListRequest_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a QueryTaskListRequest
+// struct.
+func (v *QueryTaskListRequest) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [2]string
+	i := 0
+	if v.DomainUUID != nil {
+		fields[i] = fmt.Sprintf("DomainUUID: %v", *(v.DomainUUID))
+		i++
+	}
+	if v.QueryRequest != nil {
+		fields[i] = fmt.Sprintf("QueryRequest: %v", v.QueryRequest)
+		i++
+	}
+
+	return fmt.Sprintf("QueryTaskListRequest{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this QueryTaskListRequest match the
+// provided QueryTaskListRequest.
+//
+// This function performs a deep comparison.
+func (v *QueryTaskListRequest) Equals(rhs *QueryTaskListRequest) bool {
+	if !_String_EqualsPtr(v.DomainUUID, rhs.DomainUUID) {
+		return false
+	}
+	if !((v.QueryRequest == nil && rhs.QueryRequest == nil) || (v.QueryRequest != nil && rhs.QueryRequest != nil && v.QueryRequest.Equals(rhs.QueryRequest))) {
+		return false
+	}
+
+	return true
+}
+
+// GetDomainUUID returns the value of DomainUUID if it is set or its
+// zero value if it is unset.
+func (v *QueryTaskListRequest) GetDomainUUID() (o string) {
+	if v.DomainUUID != nil {
+		return *v.DomainUUID
+	}
+
+	return
+}
+
 type QueryWorkflowRequest struct {
 	DomainUUID   *string                      `json:"domainUUID,omitempty"`
 	TaskList     *shared.TaskList             `json:"taskList,omitempty"`

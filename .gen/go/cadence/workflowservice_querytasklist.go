@@ -31,14 +31,14 @@ import (
 	"strings"
 )
 
-// WorkflowService_QueryWorkflow_Args represents the arguments for the WorkflowService.QueryWorkflow function.
+// WorkflowService_QueryTaskList_Args represents the arguments for the WorkflowService.QueryTaskList function.
 //
-// The arguments for QueryWorkflow are sent and received over the wire as this struct.
-type WorkflowService_QueryWorkflow_Args struct {
-	QueryRequest *shared.QueryWorkflowRequest `json:"queryRequest,omitempty"`
+// The arguments for QueryTaskList are sent and received over the wire as this struct.
+type WorkflowService_QueryTaskList_Args struct {
+	QueryRequest *shared.QueryTaskListRequest `json:"queryRequest,omitempty"`
 }
 
-// ToWire translates a WorkflowService_QueryWorkflow_Args struct into a Thrift-level intermediate
+// ToWire translates a WorkflowService_QueryTaskList_Args struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
 // into bytes using a ThriftRW protocol implementation.
 //
@@ -53,7 +53,7 @@ type WorkflowService_QueryWorkflow_Args struct {
 //   if err := binaryProtocol.Encode(x, writer); err != nil {
 //     return err
 //   }
-func (v *WorkflowService_QueryWorkflow_Args) ToWire() (wire.Value, error) {
+func (v *WorkflowService_QueryTaskList_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
 		i      int = 0
@@ -73,17 +73,17 @@ func (v *WorkflowService_QueryWorkflow_Args) ToWire() (wire.Value, error) {
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _QueryWorkflowRequest_Read(w wire.Value) (*shared.QueryWorkflowRequest, error) {
-	var v shared.QueryWorkflowRequest
+func _QueryTaskListRequest_Read(w wire.Value) (*shared.QueryTaskListRequest, error) {
+	var v shared.QueryTaskListRequest
 	err := v.FromWire(w)
 	return &v, err
 }
 
-// FromWire deserializes a WorkflowService_QueryWorkflow_Args struct from its Thrift-level
+// FromWire deserializes a WorkflowService_QueryTaskList_Args struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.
 //
-// An error is returned if we were unable to build a WorkflowService_QueryWorkflow_Args struct
+// An error is returned if we were unable to build a WorkflowService_QueryTaskList_Args struct
 // from the provided intermediate representation.
 //
 //   x, err := binaryProtocol.Decode(reader, wire.TStruct)
@@ -91,19 +91,19 @@ func _QueryWorkflowRequest_Read(w wire.Value) (*shared.QueryWorkflowRequest, err
 //     return nil, err
 //   }
 //
-//   var v WorkflowService_QueryWorkflow_Args
+//   var v WorkflowService_QueryTaskList_Args
 //   if err := v.FromWire(x); err != nil {
 //     return nil, err
 //   }
 //   return &v, nil
-func (v *WorkflowService_QueryWorkflow_Args) FromWire(w wire.Value) error {
+func (v *WorkflowService_QueryTaskList_Args) FromWire(w wire.Value) error {
 	var err error
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
 		case 1:
 			if field.Value.Type() == wire.TStruct {
-				v.QueryRequest, err = _QueryWorkflowRequest_Read(field.Value)
+				v.QueryRequest, err = _QueryTaskListRequest_Read(field.Value)
 				if err != nil {
 					return err
 				}
@@ -115,9 +115,9 @@ func (v *WorkflowService_QueryWorkflow_Args) FromWire(w wire.Value) error {
 	return nil
 }
 
-// String returns a readable string representation of a WorkflowService_QueryWorkflow_Args
+// String returns a readable string representation of a WorkflowService_QueryTaskList_Args
 // struct.
-func (v *WorkflowService_QueryWorkflow_Args) String() string {
+func (v *WorkflowService_QueryTaskList_Args) String() string {
 	if v == nil {
 		return "<nil>"
 	}
@@ -129,14 +129,14 @@ func (v *WorkflowService_QueryWorkflow_Args) String() string {
 		i++
 	}
 
-	return fmt.Sprintf("WorkflowService_QueryWorkflow_Args{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("WorkflowService_QueryTaskList_Args{%v}", strings.Join(fields[:i], ", "))
 }
 
-// Equals returns true if all the fields of this WorkflowService_QueryWorkflow_Args match the
-// provided WorkflowService_QueryWorkflow_Args.
+// Equals returns true if all the fields of this WorkflowService_QueryTaskList_Args match the
+// provided WorkflowService_QueryTaskList_Args.
 //
 // This function performs a deep comparison.
-func (v *WorkflowService_QueryWorkflow_Args) Equals(rhs *WorkflowService_QueryWorkflow_Args) bool {
+func (v *WorkflowService_QueryTaskList_Args) Equals(rhs *WorkflowService_QueryTaskList_Args) bool {
 	if !((v.QueryRequest == nil && rhs.QueryRequest == nil) || (v.QueryRequest != nil && rhs.QueryRequest != nil && v.QueryRequest.Equals(rhs.QueryRequest))) {
 		return false
 	}
@@ -147,73 +147,73 @@ func (v *WorkflowService_QueryWorkflow_Args) Equals(rhs *WorkflowService_QueryWo
 // MethodName returns the name of the Thrift function as specified in
 // the IDL, for which this struct represent the arguments.
 //
-// This will always be "QueryWorkflow" for this struct.
-func (v *WorkflowService_QueryWorkflow_Args) MethodName() string {
-	return "QueryWorkflow"
+// This will always be "QueryTaskList" for this struct.
+func (v *WorkflowService_QueryTaskList_Args) MethodName() string {
+	return "QueryTaskList"
 }
 
 // EnvelopeType returns the kind of value inside this struct.
 //
 // This will always be Call for this struct.
-func (v *WorkflowService_QueryWorkflow_Args) EnvelopeType() wire.EnvelopeType {
+func (v *WorkflowService_QueryTaskList_Args) EnvelopeType() wire.EnvelopeType {
 	return wire.Call
 }
 
-// WorkflowService_QueryWorkflow_Helper provides functions that aid in handling the
-// parameters and return values of the WorkflowService.QueryWorkflow
+// WorkflowService_QueryTaskList_Helper provides functions that aid in handling the
+// parameters and return values of the WorkflowService.QueryTaskList
 // function.
-var WorkflowService_QueryWorkflow_Helper = struct {
-	// Args accepts the parameters of QueryWorkflow in-order and returns
+var WorkflowService_QueryTaskList_Helper = struct {
+	// Args accepts the parameters of QueryTaskList in-order and returns
 	// the arguments struct for the function.
 	Args func(
-		queryRequest *shared.QueryWorkflowRequest,
-	) *WorkflowService_QueryWorkflow_Args
+		queryRequest *shared.QueryTaskListRequest,
+	) *WorkflowService_QueryTaskList_Args
 
 	// IsException returns true if the given error can be thrown
-	// by QueryWorkflow.
+	// by QueryTaskList.
 	//
-	// An error can be thrown by QueryWorkflow only if the
+	// An error can be thrown by QueryTaskList only if the
 	// corresponding exception type was mentioned in the 'throws'
 	// section for it in the Thrift file.
 	IsException func(error) bool
 
-	// WrapResponse returns the result struct for QueryWorkflow
+	// WrapResponse returns the result struct for QueryTaskList
 	// given its return value and error.
 	//
 	// This allows mapping values and errors returned by
-	// QueryWorkflow into a serializable result struct.
+	// QueryTaskList into a serializable result struct.
 	// WrapResponse returns a non-nil error if the provided
-	// error cannot be thrown by QueryWorkflow
+	// error cannot be thrown by QueryTaskList
 	//
-	//   value, err := QueryWorkflow(args)
-	//   result, err := WorkflowService_QueryWorkflow_Helper.WrapResponse(value, err)
+	//   value, err := QueryTaskList(args)
+	//   result, err := WorkflowService_QueryTaskList_Helper.WrapResponse(value, err)
 	//   if err != nil {
-	//     return fmt.Errorf("unexpected error from QueryWorkflow: %v", err)
+	//     return fmt.Errorf("unexpected error from QueryTaskList: %v", err)
 	//   }
 	//   serialize(result)
-	WrapResponse func(*shared.QueryWorkflowResponse, error) (*WorkflowService_QueryWorkflow_Result, error)
+	WrapResponse func(*shared.QueryTaskListResponse, error) (*WorkflowService_QueryTaskList_Result, error)
 
-	// UnwrapResponse takes the result struct for QueryWorkflow
+	// UnwrapResponse takes the result struct for QueryTaskList
 	// and returns the value or error returned by it.
 	//
-	// The error is non-nil only if QueryWorkflow threw an
+	// The error is non-nil only if QueryTaskList threw an
 	// exception.
 	//
 	//   result := deserialize(bytes)
-	//   value, err := WorkflowService_QueryWorkflow_Helper.UnwrapResponse(result)
-	UnwrapResponse func(*WorkflowService_QueryWorkflow_Result) (*shared.QueryWorkflowResponse, error)
+	//   value, err := WorkflowService_QueryTaskList_Helper.UnwrapResponse(result)
+	UnwrapResponse func(*WorkflowService_QueryTaskList_Result) (*shared.QueryTaskListResponse, error)
 }{}
 
 func init() {
-	WorkflowService_QueryWorkflow_Helper.Args = func(
-		queryRequest *shared.QueryWorkflowRequest,
-	) *WorkflowService_QueryWorkflow_Args {
-		return &WorkflowService_QueryWorkflow_Args{
+	WorkflowService_QueryTaskList_Helper.Args = func(
+		queryRequest *shared.QueryTaskListRequest,
+	) *WorkflowService_QueryTaskList_Args {
+		return &WorkflowService_QueryTaskList_Args{
 			QueryRequest: queryRequest,
 		}
 	}
 
-	WorkflowService_QueryWorkflow_Helper.IsException = func(err error) bool {
+	WorkflowService_QueryTaskList_Helper.IsException = func(err error) bool {
 		switch err.(type) {
 		case *shared.BadRequestError:
 			return true
@@ -230,42 +230,42 @@ func init() {
 		}
 	}
 
-	WorkflowService_QueryWorkflow_Helper.WrapResponse = func(success *shared.QueryWorkflowResponse, err error) (*WorkflowService_QueryWorkflow_Result, error) {
+	WorkflowService_QueryTaskList_Helper.WrapResponse = func(success *shared.QueryTaskListResponse, err error) (*WorkflowService_QueryTaskList_Result, error) {
 		if err == nil {
-			return &WorkflowService_QueryWorkflow_Result{Success: success}, nil
+			return &WorkflowService_QueryTaskList_Result{Success: success}, nil
 		}
 
 		switch e := err.(type) {
 		case *shared.BadRequestError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_QueryWorkflow_Result.BadRequestError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_QueryTaskList_Result.BadRequestError")
 			}
-			return &WorkflowService_QueryWorkflow_Result{BadRequestError: e}, nil
+			return &WorkflowService_QueryTaskList_Result{BadRequestError: e}, nil
 		case *shared.InternalServiceError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_QueryWorkflow_Result.InternalServiceError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_QueryTaskList_Result.InternalServiceError")
 			}
-			return &WorkflowService_QueryWorkflow_Result{InternalServiceError: e}, nil
+			return &WorkflowService_QueryTaskList_Result{InternalServiceError: e}, nil
 		case *shared.EntityNotExistsError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_QueryWorkflow_Result.EntityNotExistError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_QueryTaskList_Result.EntityNotExistError")
 			}
-			return &WorkflowService_QueryWorkflow_Result{EntityNotExistError: e}, nil
+			return &WorkflowService_QueryTaskList_Result{EntityNotExistError: e}, nil
 		case *shared.QueryFailedError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_QueryWorkflow_Result.QueryFailedError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_QueryTaskList_Result.QueryFailedError")
 			}
-			return &WorkflowService_QueryWorkflow_Result{QueryFailedError: e}, nil
+			return &WorkflowService_QueryTaskList_Result{QueryFailedError: e}, nil
 		case *shared.LimitExceededError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_QueryWorkflow_Result.LimitExceededError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_QueryTaskList_Result.LimitExceededError")
 			}
-			return &WorkflowService_QueryWorkflow_Result{LimitExceededError: e}, nil
+			return &WorkflowService_QueryTaskList_Result{LimitExceededError: e}, nil
 		}
 
 		return nil, err
 	}
-	WorkflowService_QueryWorkflow_Helper.UnwrapResponse = func(result *WorkflowService_QueryWorkflow_Result) (success *shared.QueryWorkflowResponse, err error) {
+	WorkflowService_QueryTaskList_Helper.UnwrapResponse = func(result *WorkflowService_QueryTaskList_Result) (success *shared.QueryTaskListResponse, err error) {
 		if result.BadRequestError != nil {
 			err = result.BadRequestError
 			return
@@ -298,14 +298,14 @@ func init() {
 
 }
 
-// WorkflowService_QueryWorkflow_Result represents the result of a WorkflowService.QueryWorkflow function call.
+// WorkflowService_QueryTaskList_Result represents the result of a WorkflowService.QueryTaskList function call.
 //
-// The result of a QueryWorkflow execution is sent and received over the wire as this struct.
+// The result of a QueryTaskList execution is sent and received over the wire as this struct.
 //
 // Success is set only if the function did not throw an exception.
-type WorkflowService_QueryWorkflow_Result struct {
-	// Value returned by QueryWorkflow after a successful execution.
-	Success              *shared.QueryWorkflowResponse `json:"success,omitempty"`
+type WorkflowService_QueryTaskList_Result struct {
+	// Value returned by QueryTaskList after a successful execution.
+	Success              *shared.QueryTaskListResponse `json:"success,omitempty"`
 	BadRequestError      *shared.BadRequestError       `json:"badRequestError,omitempty"`
 	InternalServiceError *shared.InternalServiceError  `json:"internalServiceError,omitempty"`
 	EntityNotExistError  *shared.EntityNotExistsError  `json:"entityNotExistError,omitempty"`
@@ -313,7 +313,7 @@ type WorkflowService_QueryWorkflow_Result struct {
 	LimitExceededError   *shared.LimitExceededError    `json:"limitExceededError,omitempty"`
 }
 
-// ToWire translates a WorkflowService_QueryWorkflow_Result struct into a Thrift-level intermediate
+// ToWire translates a WorkflowService_QueryTaskList_Result struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
 // into bytes using a ThriftRW protocol implementation.
 //
@@ -328,7 +328,7 @@ type WorkflowService_QueryWorkflow_Result struct {
 //   if err := binaryProtocol.Encode(x, writer); err != nil {
 //     return err
 //   }
-func (v *WorkflowService_QueryWorkflow_Result) ToWire() (wire.Value, error) {
+func (v *WorkflowService_QueryTaskList_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [6]wire.Field
 		i      int = 0
@@ -386,23 +386,29 @@ func (v *WorkflowService_QueryWorkflow_Result) ToWire() (wire.Value, error) {
 	}
 
 	if i != 1 {
-		return wire.Value{}, fmt.Errorf("WorkflowService_QueryWorkflow_Result should have exactly one field: got %v fields", i)
+		return wire.Value{}, fmt.Errorf("WorkflowService_QueryTaskList_Result should have exactly one field: got %v fields", i)
 	}
 
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _QueryWorkflowResponse_Read(w wire.Value) (*shared.QueryWorkflowResponse, error) {
-	var v shared.QueryWorkflowResponse
+func _QueryTaskListResponse_Read(w wire.Value) (*shared.QueryTaskListResponse, error) {
+	var v shared.QueryTaskListResponse
 	err := v.FromWire(w)
 	return &v, err
 }
 
-// FromWire deserializes a WorkflowService_QueryWorkflow_Result struct from its Thrift-level
+func _QueryFailedError_Read(w wire.Value) (*shared.QueryFailedError, error) {
+	var v shared.QueryFailedError
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a WorkflowService_QueryTaskList_Result struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.
 //
-// An error is returned if we were unable to build a WorkflowService_QueryWorkflow_Result struct
+// An error is returned if we were unable to build a WorkflowService_QueryTaskList_Result struct
 // from the provided intermediate representation.
 //
 //   x, err := binaryProtocol.Decode(reader, wire.TStruct)
@@ -410,19 +416,19 @@ func _QueryWorkflowResponse_Read(w wire.Value) (*shared.QueryWorkflowResponse, e
 //     return nil, err
 //   }
 //
-//   var v WorkflowService_QueryWorkflow_Result
+//   var v WorkflowService_QueryTaskList_Result
 //   if err := v.FromWire(x); err != nil {
 //     return nil, err
 //   }
 //   return &v, nil
-func (v *WorkflowService_QueryWorkflow_Result) FromWire(w wire.Value) error {
+func (v *WorkflowService_QueryTaskList_Result) FromWire(w wire.Value) error {
 	var err error
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
 		case 0:
 			if field.Value.Type() == wire.TStruct {
-				v.Success, err = _QueryWorkflowResponse_Read(field.Value)
+				v.Success, err = _QueryTaskListResponse_Read(field.Value)
 				if err != nil {
 					return err
 				}
@@ -491,15 +497,15 @@ func (v *WorkflowService_QueryWorkflow_Result) FromWire(w wire.Value) error {
 		count++
 	}
 	if count != 1 {
-		return fmt.Errorf("WorkflowService_QueryWorkflow_Result should have exactly one field: got %v fields", count)
+		return fmt.Errorf("WorkflowService_QueryTaskList_Result should have exactly one field: got %v fields", count)
 	}
 
 	return nil
 }
 
-// String returns a readable string representation of a WorkflowService_QueryWorkflow_Result
+// String returns a readable string representation of a WorkflowService_QueryTaskList_Result
 // struct.
-func (v *WorkflowService_QueryWorkflow_Result) String() string {
+func (v *WorkflowService_QueryTaskList_Result) String() string {
 	if v == nil {
 		return "<nil>"
 	}
@@ -531,14 +537,14 @@ func (v *WorkflowService_QueryWorkflow_Result) String() string {
 		i++
 	}
 
-	return fmt.Sprintf("WorkflowService_QueryWorkflow_Result{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("WorkflowService_QueryTaskList_Result{%v}", strings.Join(fields[:i], ", "))
 }
 
-// Equals returns true if all the fields of this WorkflowService_QueryWorkflow_Result match the
-// provided WorkflowService_QueryWorkflow_Result.
+// Equals returns true if all the fields of this WorkflowService_QueryTaskList_Result match the
+// provided WorkflowService_QueryTaskList_Result.
 //
 // This function performs a deep comparison.
-func (v *WorkflowService_QueryWorkflow_Result) Equals(rhs *WorkflowService_QueryWorkflow_Result) bool {
+func (v *WorkflowService_QueryTaskList_Result) Equals(rhs *WorkflowService_QueryTaskList_Result) bool {
 	if !((v.Success == nil && rhs.Success == nil) || (v.Success != nil && rhs.Success != nil && v.Success.Equals(rhs.Success))) {
 		return false
 	}
@@ -564,14 +570,14 @@ func (v *WorkflowService_QueryWorkflow_Result) Equals(rhs *WorkflowService_Query
 // MethodName returns the name of the Thrift function as specified in
 // the IDL, for which this struct represent the result.
 //
-// This will always be "QueryWorkflow" for this struct.
-func (v *WorkflowService_QueryWorkflow_Result) MethodName() string {
-	return "QueryWorkflow"
+// This will always be "QueryTaskList" for this struct.
+func (v *WorkflowService_QueryTaskList_Result) MethodName() string {
+	return "QueryTaskList"
 }
 
 // EnvelopeType returns the kind of value inside this struct.
 //
 // This will always be Reply for this struct.
-func (v *WorkflowService_QueryWorkflow_Result) EnvelopeType() wire.EnvelopeType {
+func (v *WorkflowService_QueryTaskList_Result) EnvelopeType() wire.EnvelopeType {
 	return wire.Reply
 }

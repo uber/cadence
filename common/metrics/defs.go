@@ -242,6 +242,8 @@ const (
 	MatchingClientAddDecisionTaskScope
 	// MatchingClientQueryWorkflowScope tracks RPC calls to matching service
 	MatchingClientQueryWorkflowScope
+	// MatchingClientQueryTaskListScope tracks RPC calls to matching service
+	MatchingClientQueryTaskListScope
 	// MatchingClientRespondQueryTaskCompletedScope tracks RPC calls to matching service
 	MatchingClientRespondQueryTaskCompletedScope
 	// MatchingClientCancelOutstandingPollScope tracks RPC calls to matching service
@@ -256,7 +258,7 @@ const (
 const (
 	// FrontendStartWorkflowExecutionScope is the metric scope for frontend.StartWorkflowExecution
 	FrontendStartWorkflowExecutionScope = iota + NumCommonScopes
-	// PollForDecisionTaskScope is the metric scope for frontend.PollForDecisionTask
+	// FrontendPollForDecisionTaskScope is the metric scope for frontend.PollForDecisionTask
 	FrontendPollForDecisionTaskScope
 	// FrontendPollForActivityTaskScope is the metric scope for frontend.PollForActivityTask
 	FrontendPollForActivityTaskScope
@@ -306,6 +308,8 @@ const (
 	FrontendDeprecateDomainScope
 	// FrontendQueryWorkflowScope is the metric scope for frontend.QueryWorkflow
 	FrontendQueryWorkflowScope
+	// FrontendQueryTaskListScope is the metric scope for frontend.QueryTaskList
+	FrontendQueryTaskListScope
 	// FrontendDescribeWorkflowExecutionScope is the metric scope for frontend.DescribeWorkflowExecution
 	FrontendDescribeWorkflowExecutionScope
 	// FrontendDescribeTaskListScope is the metric scope for frontend.DescribeTaskList
@@ -414,6 +418,8 @@ const (
 	MatchingTaskListMgrScope
 	// MatchingQueryWorkflowScope tracks AddDecisionTask API calls received by service
 	MatchingQueryWorkflowScope
+	// MatchingQueryTaskListScope tracks AddDecisionTask API calls received by service
+	MatchingQueryTaskListScope
 	// MatchingRespondQueryTaskCompletedScope tracks AddDecisionTask API calls received by service
 	MatchingRespondQueryTaskCompletedScope
 	// MatchingCancelOutstandingPollScope tracks CancelOutstandingPoll API calls received by service
@@ -506,6 +512,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		MatchingClientAddActivityTaskScope:                 {operation: "MatchingClientAddActivityTask"},
 		MatchingClientAddDecisionTaskScope:                 {operation: "MatchingClientAddDecisionTask"},
 		MatchingClientQueryWorkflowScope:                   {operation: "MatchingClientQueryWorkflow"},
+		MatchingClientQueryTaskListScope:                   {operation: "MatchingClientQueryTaskList"},
 		MatchingClientRespondQueryTaskCompletedScope:       {operation: "MatchingClientRespondQueryTaskCompleted"},
 		MatchingClientCancelOutstandingPollScope:           {operation: "MatchingClientCancelOutstandingPoll"},
 		MatchingClientDescribeTaskListScope:                {operation: "MatchingClientDescribeTaskList"},
@@ -538,6 +545,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FrontendUpdateDomainScope:                     {operation: "UpdateDomain"},
 		FrontendDeprecateDomainScope:                  {operation: "DeprecateDomain"},
 		FrontendQueryWorkflowScope:                    {operation: "QueryWorkflow"},
+		FrontendQueryTaskListScope:                    {operation: "QueryTaskList"},
 		FrontendDescribeWorkflowExecutionScope:        {operation: "DescribeWorkflowExecution"},
 		FrontendDescribeTaskListScope:                 {operation: "DescribeTaskList"},
 	},
@@ -591,6 +599,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		MatchingAddDecisionTaskScope:           {operation: "AddDecisionTask"},
 		MatchingTaskListMgrScope:               {operation: "TaskListMgr"},
 		MatchingQueryWorkflowScope:             {operation: "QueryWorkflow"},
+		MatchingQueryTaskListScope:             {operation: "QueryTaskList"},
 		MatchingRespondQueryTaskCompletedScope: {operation: "RespondQueryTaskCompleted"},
 		MatchingCancelOutstandingPollScope:     {operation: "CancelOutstandingPoll"},
 		MatchingDescribeTaskListScope:          {operation: "DescribeTaskList"},

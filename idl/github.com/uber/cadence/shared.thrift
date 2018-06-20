@@ -916,6 +916,7 @@ struct PollForActivityTaskResponse {
   110: optional i32 heartbeatTimeoutSeconds
   120: optional i32 attempt
   130: optional i64 (js.type = "Long") scheduledTimestampOfThisAttempt
+  140: optional Query query
 }
 
 struct RecordActivityTaskHeartbeatRequest {
@@ -1081,6 +1082,22 @@ struct QueryWorkflowResponse {
 struct WorkflowQuery {
   10: optional string queryType
   20: optional binary queryArgs
+}
+
+struct Query {
+  10: optional string queryType
+  20: optional binary queryArgs
+}
+
+struct QueryTaskListRequest {
+  10: optional string domain
+  20: optional string taskListName
+  30: optional TaskListType taskListType
+  40: optional Query query
+}
+
+struct QueryTaskListResponse {
+  10: optional binary queryResult
 }
 
 struct ResetStickyTaskListRequest {

@@ -255,6 +255,39 @@ func (mr *_MockClientRecorder) PollForDecisionTask(
 	return mr.mock.ctrl.RecordCall(mr.mock, "PollForDecisionTask", args...)
 }
 
+// QueryTaskList responds to a QueryTaskList call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().QueryTaskList(gomock.Any(), ...).Return(...)
+// 	... := client.QueryTaskList(...)
+func (m *MockClient) QueryTaskList(
+	ctx context.Context,
+	_Request *matching.QueryTaskListRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.QueryTaskListResponse, err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "QueryTaskList", args...)
+	success, _ = ret[i].(*shared.QueryTaskListResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) QueryTaskList(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "QueryTaskList", args...)
+}
+
 // QueryWorkflow responds to a QueryWorkflow call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.

@@ -30,7 +30,6 @@ import (
 	"time"
 
 	h "github.com/uber/cadence/.gen/go/history"
-	m "github.com/uber/cadence/.gen/go/matching"
 	s "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -242,14 +241,17 @@ type taskContext struct {
 	tlMgr             *taskListManagerImpl
 	info              *persistence.TaskInfo
 	syncResponseCh    chan<- *syncMatchResponse
-	workflowExecution s.WorkflowExecution
+	workflowExecution *s.WorkflowExecution
 	queryTaskInfo     *queryTaskInfo
 	backlogCountHint  int64
 }
 
 type queryTaskInfo struct {
 	taskID       string
-	queryRequest *m.QueryWorkflowRequest
+	domainUUID   string
+	taskListName string
+	execution    *s.WorkflowExecution
+	query        *s.Query
 }
 
 // Single task list in memory state
@@ -374,12 +376,14 @@ func (c *taskListManagerImpl) AddTask(execution *s.WorkflowExecution, taskInfo *
 func (c *taskListManagerImpl) SyncMatchQueryTask(ctx context.Context, queryTask *queryTaskInfo) error {
 	c.startWG.Wait()
 
-	domainID := queryTask.queryRequest.GetDomainUUID()
-	we := queryTask.queryRequest.QueryRequest.Execution
 	taskInfo := &persistence.TaskInfo{
-		DomainID:   domainID,
-		RunID:      we.GetRunId(),
-		WorkflowID: we.GetWorkflowId(),
+		DomainID: queryTask.domainUUID,
+	}
+
+	we := queryTask.execution
+	if we != nil {
+		taskInfo.WorkflowID = we.GetWorkflowId()
+		taskInfo.RunID = we.GetRunId()
 	}
 
 	request := &getTaskResult{task: taskInfo, C: make(chan *syncMatchResponse, 1), queryTask: queryTask}
@@ -402,11 +406,18 @@ func (c *taskListManagerImpl) GetTaskContext(
 	if err != nil {
 		return nil, err
 	}
+
 	task := result.task
-	workflowExecution := s.WorkflowExecution{
-		WorkflowId: common.StringPtr(task.WorkflowID),
-		RunId:      common.StringPtr(task.RunID),
+	var workflowExecution *s.WorkflowExecution
+	if result.queryTask != nil {
+		workflowExecution = result.queryTask.execution
+	} else {
+		workflowExecution = &s.WorkflowExecution{
+			WorkflowId: common.StringPtr(task.WorkflowID),
+			RunId:      common.StringPtr(task.RunID),
+		}
 	}
+
 	tCtx := &taskContext{
 		info:              task,
 		workflowExecution: workflowExecution,
@@ -910,7 +921,7 @@ func (c *taskContext) completeTask(err error) {
 		// Note that RecordTaskStarted only fails after retrying for a long time, so a single task will not be
 		// re-written to persistence frequently.
 		_, err = tlMgr.executeWithRetry(func(rangeID int64) (interface{}, error) {
-			return tlMgr.taskWriter.appendTask(&c.workflowExecution, c.info, rangeID)
+			return tlMgr.taskWriter.appendTask(c.workflowExecution, c.info, rangeID)
 		})
 
 		if err != nil {

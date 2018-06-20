@@ -71,6 +71,11 @@ struct QueryWorkflowRequest {
   30: optional shared.QueryWorkflowRequest queryRequest
 }
 
+struct QueryTaskListRequest {
+  10: optional string domainUUID
+  20: optional shared.QueryTaskListRequest queryRequest
+}
+
 struct RespondQueryTaskCompletedRequest {
   10: optional string domainUUID
   20: optional shared.TaskList taskList
@@ -148,6 +153,18 @@ service MatchingService {
   * QueryWorkflow is called by frontend to query a workflow.
   **/
   shared.QueryWorkflowResponse QueryWorkflow(1: QueryWorkflowRequest queryRequest)
+    throws (
+      1: shared.BadRequestError badRequestError,
+      2: shared.InternalServiceError internalServiceError,
+      3: shared.EntityNotExistsError entityNotExistError,
+      4: shared.QueryFailedError queryFailedError,
+      5: shared.LimitExceededError limitExceededError,
+    )
+
+  /**
+  * QueryTaskList is called by frontend to query a taskList.
+  **/
+  shared.QueryTaskListResponse QueryTaskList(1: QueryTaskListRequest request)
     throws (
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,

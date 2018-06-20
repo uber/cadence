@@ -90,6 +90,12 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*shared.PollForDecisionTaskResponse, error)
 
+	QueryTaskList(
+		ctx context.Context,
+		QueryRequest *shared.QueryTaskListRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.QueryTaskListResponse, error)
+
 	QueryWorkflow(
 		ctx context.Context,
 		QueryRequest *shared.QueryWorkflowRequest,
@@ -439,6 +445,29 @@ func (c client) PollForDecisionTask(
 	}
 
 	success, err = cadence.WorkflowService_PollForDecisionTask_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) QueryTaskList(
+	ctx context.Context,
+	_QueryRequest *shared.QueryTaskListRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.QueryTaskListResponse, err error) {
+
+	args := cadence.WorkflowService_QueryTaskList_Helper.Args(_QueryRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result cadence.WorkflowService_QueryTaskList_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = cadence.WorkflowService_QueryTaskList_Helper.UnwrapResponse(&result)
 	return
 }
 

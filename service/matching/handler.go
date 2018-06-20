@@ -144,6 +144,7 @@ func (h *Handler) PollForDecisionTask(ctx context.Context,
 	defer sw.Stop()
 
 	response, err := h.engine.PollForDecisionTask(ctx, pollRequest)
+
 	return response, h.handleErr(err, scope)
 }
 
@@ -155,6 +156,17 @@ func (h *Handler) QueryWorkflow(ctx context.Context,
 	defer sw.Stop()
 
 	response, err := h.engine.QueryWorkflow(ctx, queryRequest)
+	return response, h.handleErr(err, scope)
+}
+
+// QueryTaskList queries a given task list synchronously and return the query result.
+func (h *Handler) QueryTaskList(ctx context.Context,
+	queryRequest *m.QueryTaskListRequest) (*gen.QueryTaskListResponse, error) {
+	scope := metrics.MatchingQueryTaskListScope
+	sw := h.startRequestProfile("QueryTaskList", scope)
+	defer sw.Stop()
+
+	response, err := h.engine.QueryTaskList(ctx, queryRequest)
 	return response, h.handleErr(err, scope)
 }
 

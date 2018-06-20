@@ -64,6 +64,11 @@ type Interface interface {
 		PollRequest *matching.PollForDecisionTaskRequest,
 	) (*matching.PollForDecisionTaskResponse, error)
 
+	QueryTaskList(
+		ctx context.Context,
+		Request *matching.QueryTaskListRequest,
+	) (*shared.QueryTaskListResponse, error)
+
 	QueryWorkflow(
 		ctx context.Context,
 		QueryRequest *matching.QueryWorkflowRequest,
@@ -153,6 +158,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
+				Name: "QueryTaskList",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.QueryTaskList),
+				},
+				Signature:    "QueryTaskList(Request *matching.QueryTaskListRequest) (*shared.QueryTaskListResponse)",
+				ThriftModule: matching.ThriftModule,
+			},
+
+			thrift.Method{
 				Name: "QueryWorkflow",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -176,7 +192,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 8)
+	procedures := make([]transport.Procedure, 0, 9)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
@@ -288,6 +304,25 @@ func (h handler) PollForDecisionTask(ctx context.Context, body wire.Value) (thri
 
 	hadError := err != nil
 	result, err := matching.MatchingService_PollForDecisionTask_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) QueryTaskList(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args matching.MatchingService_QueryTaskList_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.QueryTaskList(ctx, args.Request)
+
+	hadError := err != nil
+	result, err := matching.MatchingService_QueryTaskList_Helper.WrapResponse(success, err)
 
 	var response thrift.Response
 	if err == nil {

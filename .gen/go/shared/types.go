@@ -15512,6 +15512,7 @@ type PollForActivityTaskResponse struct {
 	HeartbeatTimeoutSeconds         *int32             `json:"heartbeatTimeoutSeconds,omitempty"`
 	Attempt                         *int32             `json:"attempt,omitempty"`
 	ScheduledTimestampOfThisAttempt *int64             `json:"scheduledTimestampOfThisAttempt,omitempty"`
+	Query                           *Query             `json:"query,omitempty"`
 }
 
 // ToWire translates a PollForActivityTaskResponse struct into a Thrift-level intermediate
@@ -15531,7 +15532,7 @@ type PollForActivityTaskResponse struct {
 //   }
 func (v *PollForActivityTaskResponse) ToWire() (wire.Value, error) {
 	var (
-		fields [12]wire.Field
+		fields [13]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -15633,8 +15634,22 @@ func (v *PollForActivityTaskResponse) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 130, Value: w}
 		i++
 	}
+	if v.Query != nil {
+		w, err = v.Query.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 140, Value: w}
+		i++
+	}
 
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _Query_Read(w wire.Value) (*Query, error) {
+	var v Query
+	err := v.FromWire(w)
+	return &v, err
 }
 
 // FromWire deserializes a PollForActivityTaskResponse struct from its Thrift-level
@@ -15771,6 +15786,14 @@ func (v *PollForActivityTaskResponse) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 140:
+			if field.Value.Type() == wire.TStruct {
+				v.Query, err = _Query_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -15784,7 +15807,7 @@ func (v *PollForActivityTaskResponse) String() string {
 		return "<nil>"
 	}
 
-	var fields [12]string
+	var fields [13]string
 	i := 0
 	if v.TaskToken != nil {
 		fields[i] = fmt.Sprintf("TaskToken: %v", v.TaskToken)
@@ -15834,6 +15857,10 @@ func (v *PollForActivityTaskResponse) String() string {
 		fields[i] = fmt.Sprintf("ScheduledTimestampOfThisAttempt: %v", *(v.ScheduledTimestampOfThisAttempt))
 		i++
 	}
+	if v.Query != nil {
+		fields[i] = fmt.Sprintf("Query: %v", v.Query)
+		i++
+	}
 
 	return fmt.Sprintf("PollForActivityTaskResponse{%v}", strings.Join(fields[:i], ", "))
 }
@@ -15877,6 +15904,9 @@ func (v *PollForActivityTaskResponse) Equals(rhs *PollForActivityTaskResponse) b
 		return false
 	}
 	if !_I64_EqualsPtr(v.ScheduledTimestampOfThisAttempt, rhs.ScheduledTimestampOfThisAttempt) {
+		return false
+	}
+	if !((v.Query == nil && rhs.Query == nil) || (v.Query != nil && rhs.Query != nil && v.Query.Equals(rhs.Query))) {
 		return false
 	}
 
@@ -16665,6 +16695,146 @@ func (v *PollerInfo) GetIdentity() (o string) {
 	return
 }
 
+type Query struct {
+	QueryType *string `json:"queryType,omitempty"`
+	QueryArgs []byte  `json:"queryArgs,omitempty"`
+}
+
+// ToWire translates a Query struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *Query) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.QueryType != nil {
+		w, err = wire.NewValueString(*(v.QueryType)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.QueryArgs != nil {
+		w, err = wire.NewValueBinary(v.QueryArgs), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a Query struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a Query struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v Query
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *Query) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.QueryType = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TBinary {
+				v.QueryArgs, err = field.Value.GetBinary(), error(nil)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a Query
+// struct.
+func (v *Query) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [2]string
+	i := 0
+	if v.QueryType != nil {
+		fields[i] = fmt.Sprintf("QueryType: %v", *(v.QueryType))
+		i++
+	}
+	if v.QueryArgs != nil {
+		fields[i] = fmt.Sprintf("QueryArgs: %v", v.QueryArgs)
+		i++
+	}
+
+	return fmt.Sprintf("Query{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this Query match the
+// provided Query.
+//
+// This function performs a deep comparison.
+func (v *Query) Equals(rhs *Query) bool {
+	if !_String_EqualsPtr(v.QueryType, rhs.QueryType) {
+		return false
+	}
+	if !((v.QueryArgs == nil && rhs.QueryArgs == nil) || (v.QueryArgs != nil && rhs.QueryArgs != nil && bytes.Equal(v.QueryArgs, rhs.QueryArgs))) {
+		return false
+	}
+
+	return true
+}
+
+// GetQueryType returns the value of QueryType if it is set or its
+// zero value if it is unset.
+func (v *Query) GetQueryType() (o string) {
+	if v.QueryType != nil {
+		return *v.QueryType
+	}
+
+	return
+}
+
 type QueryFailedError struct {
 	Message string `json:"message,required"`
 }
@@ -16908,6 +17078,322 @@ func (v *QueryTaskCompletedType) UnmarshalJSON(text []byte) error {
 	default:
 		return fmt.Errorf("invalid JSON value %q (%T) to unmarshal into %q", t, t, "QueryTaskCompletedType")
 	}
+}
+
+type QueryTaskListRequest struct {
+	Domain       *string       `json:"domain,omitempty"`
+	TaskListName *string       `json:"taskListName,omitempty"`
+	TaskListType *TaskListType `json:"taskListType,omitempty"`
+	Query        *Query        `json:"query,omitempty"`
+}
+
+// ToWire translates a QueryTaskListRequest struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *QueryTaskListRequest) ToWire() (wire.Value, error) {
+	var (
+		fields [4]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Domain != nil {
+		w, err = wire.NewValueString(*(v.Domain)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.TaskListName != nil {
+		w, err = wire.NewValueString(*(v.TaskListName)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	if v.TaskListType != nil {
+		w, err = v.TaskListType.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 30, Value: w}
+		i++
+	}
+	if v.Query != nil {
+		w, err = v.Query.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 40, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a QueryTaskListRequest struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a QueryTaskListRequest struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v QueryTaskListRequest
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *QueryTaskListRequest) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.Domain = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.TaskListName = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 30:
+			if field.Value.Type() == wire.TI32 {
+				var x TaskListType
+				x, err = _TaskListType_Read(field.Value)
+				v.TaskListType = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 40:
+			if field.Value.Type() == wire.TStruct {
+				v.Query, err = _Query_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a QueryTaskListRequest
+// struct.
+func (v *QueryTaskListRequest) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [4]string
+	i := 0
+	if v.Domain != nil {
+		fields[i] = fmt.Sprintf("Domain: %v", *(v.Domain))
+		i++
+	}
+	if v.TaskListName != nil {
+		fields[i] = fmt.Sprintf("TaskListName: %v", *(v.TaskListName))
+		i++
+	}
+	if v.TaskListType != nil {
+		fields[i] = fmt.Sprintf("TaskListType: %v", *(v.TaskListType))
+		i++
+	}
+	if v.Query != nil {
+		fields[i] = fmt.Sprintf("Query: %v", v.Query)
+		i++
+	}
+
+	return fmt.Sprintf("QueryTaskListRequest{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this QueryTaskListRequest match the
+// provided QueryTaskListRequest.
+//
+// This function performs a deep comparison.
+func (v *QueryTaskListRequest) Equals(rhs *QueryTaskListRequest) bool {
+	if !_String_EqualsPtr(v.Domain, rhs.Domain) {
+		return false
+	}
+	if !_String_EqualsPtr(v.TaskListName, rhs.TaskListName) {
+		return false
+	}
+	if !_TaskListType_EqualsPtr(v.TaskListType, rhs.TaskListType) {
+		return false
+	}
+	if !((v.Query == nil && rhs.Query == nil) || (v.Query != nil && rhs.Query != nil && v.Query.Equals(rhs.Query))) {
+		return false
+	}
+
+	return true
+}
+
+// GetDomain returns the value of Domain if it is set or its
+// zero value if it is unset.
+func (v *QueryTaskListRequest) GetDomain() (o string) {
+	if v.Domain != nil {
+		return *v.Domain
+	}
+
+	return
+}
+
+// GetTaskListName returns the value of TaskListName if it is set or its
+// zero value if it is unset.
+func (v *QueryTaskListRequest) GetTaskListName() (o string) {
+	if v.TaskListName != nil {
+		return *v.TaskListName
+	}
+
+	return
+}
+
+// GetTaskListType returns the value of TaskListType if it is set or its
+// zero value if it is unset.
+func (v *QueryTaskListRequest) GetTaskListType() (o TaskListType) {
+	if v.TaskListType != nil {
+		return *v.TaskListType
+	}
+
+	return
+}
+
+type QueryTaskListResponse struct {
+	QueryResult []byte `json:"queryResult,omitempty"`
+}
+
+// ToWire translates a QueryTaskListResponse struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *QueryTaskListResponse) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.QueryResult != nil {
+		w, err = wire.NewValueBinary(v.QueryResult), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a QueryTaskListResponse struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a QueryTaskListResponse struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v QueryTaskListResponse
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *QueryTaskListResponse) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TBinary {
+				v.QueryResult, err = field.Value.GetBinary(), error(nil)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a QueryTaskListResponse
+// struct.
+func (v *QueryTaskListResponse) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.QueryResult != nil {
+		fields[i] = fmt.Sprintf("QueryResult: %v", v.QueryResult)
+		i++
+	}
+
+	return fmt.Sprintf("QueryTaskListResponse{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this QueryTaskListResponse match the
+// provided QueryTaskListResponse.
+//
+// This function performs a deep comparison.
+func (v *QueryTaskListResponse) Equals(rhs *QueryTaskListResponse) bool {
+	if !((v.QueryResult == nil && rhs.QueryResult == nil) || (v.QueryResult != nil && rhs.QueryResult != nil && bytes.Equal(v.QueryResult, rhs.QueryResult))) {
+		return false
+	}
+
+	return true
 }
 
 type QueryWorkflowRequest struct {
