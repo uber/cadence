@@ -302,8 +302,8 @@ func (m *metadataPersistenceSuiteV2) TestConcurrentCreateDomain() {
 	var wg sync.WaitGroup
 	for i := 1; i <= concurrency; i++ {
 		newValue := fmt.Sprintf("v-%v", i)
+		wg.Add(1)
 		go func(data map[string]string) {
-			wg.Add(1)
 			_, err1 := m.CreateDomain(
 				&DomainInfo{
 					ID:          id,
@@ -351,14 +351,6 @@ func (m *metadataPersistenceSuiteV2) TestConcurrentCreateDomain() {
 	m.Equal(isGlobalDomain, resp.IsGlobalDomain)
 	m.Equal(configVersion, resp.ConfigVersion)
 	m.Equal(failoverVersion, resp.FailoverVersion)
-
-	//Check notificationVersion in domain record
-	m.Equal(int64(0), resp.NotificationVersion)
-	//Check the notificationVersion in Metadata
-	metadata, err := m.MetadataManagerV2.GetMetadata()
-	m.Nil(err)
-	notificationVersion := metadata.NotificationVersion
-	m.Equal(int64(1), notificationVersion)
 
 	//check domain data
 	ss := strings.Split(resp.Info.Data["k0"], "-")
@@ -427,8 +419,8 @@ func (m *metadataPersistenceSuiteV2) TestConcurrentUpdateDomain() {
 	var wg sync.WaitGroup
 	for i := 1; i <= concurrency; i++ {
 		newValue := fmt.Sprintf("v-%v", i)
+		wg.Add(1)
 		go func(updatedData map[string]string) {
-			wg.Add(1)
 			err3 := m.UpdateDomain(
 				&DomainInfo{
 					ID:          resp2.Info.ID,
