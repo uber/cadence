@@ -68,7 +68,8 @@ type (
 	activityTaskHandler func(execution *workflow.WorkflowExecution, activityType *workflow.ActivityType,
 		activityID string, input []byte, takeToken []byte) ([]byte, bool, error)
 
-	queryHandler func(task *workflow.PollForDecisionTaskResponse) ([]byte, error)
+	decisionQueryHandler func(task *workflow.PollForDecisionTaskResponse) ([]byte, error)
+	activityQueryHandler func(task *workflow.PollForActivityTaskResponse) ([]byte, error)
 
 	taskPoller struct {
 		engine                              frontend.Client
@@ -79,7 +80,8 @@ type (
 		identity                            string
 		decisionHandler                     decisionTaskHandler
 		activityHandler                     activityTaskHandler
-		queryHandler                        queryHandler
+		decisionQueryHandler                decisionQueryHandler
+		activityQueryHandler                activityQueryHandler
 		logger                              bark.Logger
 		suite                               *integrationSuite
 	}
@@ -646,43 +648,47 @@ Loop:
 			continue Loop
 		}
 
+		taskListQuery := response.Query != nil && response.WorkflowExecution == nil
+
 		var events []*workflow.HistoryEvent
-		if response.Query == nil || !pollStickyTaskList {
-			// if not query task, should have some history events
-			// for non sticky query, there should be events returned
-			history := response.History
-			if history == nil {
-				p.logger.Fatal("History is nil")
-			}
-
-			events = history.Events
-			if events == nil || len(events) == 0 {
-				p.logger.Fatalf("History Events are empty: %v", events)
-			}
-
-			nextPageToken := response.NextPageToken
-			for nextPageToken != nil {
-				resp, err2 := p.engine.GetWorkflowExecutionHistory(createContext(), &workflow.GetWorkflowExecutionHistoryRequest{
-					Domain:        common.StringPtr(p.domain),
-					Execution:     response.WorkflowExecution,
-					NextPageToken: nextPageToken,
-				})
-
-				if err2 != nil {
-					return false, nil, err2
+		if !taskListQuery {
+			if response.Query == nil || (!pollStickyTaskList) {
+				// if not query task, should have some history events
+				// for non sticky query, there should be events returned
+				history := response.History
+				if history == nil {
+					p.logger.Fatal("History is nil")
 				}
 
-				events = append(events, resp.History.Events...)
-				nextPageToken = resp.NextPageToken
-			}
-		} else {
-			// for sticky query, there should be NO events returned
-			// since worker side already has the state machine and we do not intend to update that.
-			history := response.History
-			nextPageToken := response.NextPageToken
-			if !(history == nil || (len(history.Events) == 0 && nextPageToken == nil)) {
-				// if history is not nil, and contains events or next token
-				p.logger.Fatal("History is not empty for sticky query")
+				events = history.Events
+				if events == nil || len(events) == 0 {
+					p.logger.Fatalf("History Events are empty: %v", events)
+				}
+
+				nextPageToken := response.NextPageToken
+				for nextPageToken != nil {
+					resp, err2 := p.engine.GetWorkflowExecutionHistory(createContext(), &workflow.GetWorkflowExecutionHistoryRequest{
+						Domain:        common.StringPtr(p.domain),
+						Execution:     response.WorkflowExecution,
+						NextPageToken: nextPageToken,
+					})
+
+					if err2 != nil {
+						return false, nil, err2
+					}
+
+					events = append(events, resp.History.Events...)
+					nextPageToken = resp.NextPageToken
+				}
+			} else {
+				// for sticky query, there should be NO events returned
+				// since worker side already has the state machine and we do not intend to update that.
+				history := response.History
+				nextPageToken := response.NextPageToken
+				if !(history == nil || (len(history.Events) == 0 && nextPageToken == nil)) {
+					// if history is not nil, and contains events or next token
+					p.logger.Fatal("History is not empty for sticky query")
+				}
 			}
 		}
 
@@ -697,7 +703,7 @@ Loop:
 
 		// handle query task response
 		if response.Query != nil {
-			blob, err := p.queryHandler(response)
+			blob, err := p.decisionQueryHandler(response)
 
 			completeRequest := &workflow.RespondQueryTaskCompletedRequest{TaskToken: response.TaskToken}
 			if err != nil {
@@ -803,6 +809,23 @@ retry:
 			return nil
 		}
 		p.logger.Debugf("Received Activity task: %v", response)
+
+		if response.Query != nil {
+			blob, err := p.activityQueryHandler(response)
+
+			completeRequest := &workflow.RespondQueryTaskCompletedRequest{TaskToken: response.TaskToken}
+			if err != nil {
+				completeType := workflow.QueryTaskCompletedTypeFailed
+				completeRequest.CompletedType = &completeType
+				completeRequest.ErrorMessage = common.StringPtr(err.Error())
+			} else {
+				completeType := workflow.QueryTaskCompletedTypeCompleted
+				completeRequest.CompletedType = &completeType
+				completeRequest.QueryResult = blob
+			}
+
+			return p.engine.RespondQueryTaskCompleted(createContext(), completeRequest)
+		}
 
 		result, cancel, err2 := p.activityHandler(response.WorkflowExecution, response.ActivityType, *response.ActivityId,
 			response.Input, response.TaskToken)
@@ -2709,7 +2732,7 @@ func (s *integrationSuite) TestQueryWorkflow_Sticky() {
 		identity:                            identity,
 		decisionHandler:                     dtHandler,
 		activityHandler:                     atHandler,
-		queryHandler:                        queryHandler,
+		decisionQueryHandler:                queryHandler,
 		logger:                              s.logger,
 		suite:                               s,
 		sticktTaskList:                      stickyTaskList,
@@ -2872,7 +2895,7 @@ func (s *integrationSuite) TestQueryWorkflow_StickyTimeout() {
 		identity:                            identity,
 		decisionHandler:                     dtHandler,
 		activityHandler:                     atHandler,
-		queryHandler:                        queryHandler,
+		decisionQueryHandler:                queryHandler,
 		logger:                              s.logger,
 		suite:                               s,
 		sticktTaskList:                      stickyTaskList,
@@ -3010,15 +3033,15 @@ func (s *integrationSuite) TestQueryWorkflow_NonSticky() {
 	}
 
 	poller := &taskPoller{
-		engine:          s.engine,
-		domain:          s.domainName,
-		taskList:        taskList,
-		identity:        identity,
-		decisionHandler: dtHandler,
-		activityHandler: atHandler,
-		queryHandler:    queryHandler,
-		logger:          s.logger,
-		suite:           s,
+		engine:               s.engine,
+		domain:               s.domainName,
+		taskList:             taskList,
+		identity:             identity,
+		decisionHandler:      dtHandler,
+		activityHandler:      atHandler,
+		decisionQueryHandler: queryHandler,
+		logger:               s.logger,
+		suite:                s,
 	}
 
 	// Make first decision to schedule activity
@@ -3051,7 +3074,7 @@ func (s *integrationSuite) TestQueryWorkflow_NonSticky() {
 	for {
 		// loop until process the query task
 		isQueryTask, errInner := poller.pollAndProcessDecisionTask(false, false)
-		s.logger.Infof("pollAndProcessDecisionTask: %v", err)
+		s.logger.Infof("pollAndProcessDecisionTask: %v", errInner)
 		s.Nil(errInner)
 		if isQueryTask {
 			break
@@ -3079,6 +3102,99 @@ func (s *integrationSuite) TestQueryWorkflow_NonSticky() {
 	queryFailError, ok := queryResult.Err.(*workflow.QueryFailedError)
 	s.True(ok)
 	s.Equal("unknown-query-type", queryFailError.Message)
+}
+
+func (s *integrationSuite) TestQueryTaskList() {
+	wt := "interation-query-task-list-test-type"
+	tl := "interation-query-task-list-test-tasklist"
+	identity := "worker1"
+	queryType := "test-query"
+
+	workflowType := &workflow.WorkflowType{}
+	workflowType.Name = common.StringPtr(wt)
+
+	taskList := &workflow.TaskList{}
+	taskList.Name = common.StringPtr(tl)
+
+	decisionQueryHandler := func(task *workflow.PollForDecisionTaskResponse) ([]byte, error) {
+		s.NotNil(task.Query)
+		s.NotNil(task.Query.QueryType)
+		s.Nil(task.WorkflowExecution)
+		if *task.Query.QueryType == queryType {
+			return []byte("decision-task-list-query-result"), nil
+		}
+
+		return nil, errors.New("unknown-query-type")
+	}
+
+	activityQueryHandler := func(task *workflow.PollForActivityTaskResponse) ([]byte, error) {
+		s.NotNil(task.Query)
+		s.NotNil(task.Query.QueryType)
+		s.Nil(task.WorkflowExecution)
+		if *task.Query.QueryType == queryType {
+			return []byte("activity-task-list-query-result"), nil
+		}
+
+		return nil, errors.New("unknown-query-type")
+	}
+
+	poller := &taskPoller{
+		engine:               s.engine,
+		domain:               s.domainName,
+		taskList:             taskList,
+		identity:             identity,
+		decisionQueryHandler: decisionQueryHandler,
+		activityQueryHandler: activityQueryHandler,
+		logger:               s.logger,
+		suite:                s,
+	}
+
+	type QueryResult struct {
+		Resp *workflow.QueryTaskListResponse
+		Err  error
+	}
+	queryResultCh := make(chan QueryResult)
+	queryTaskListFn := func(queryType string, taskListType workflow.TaskListType) {
+		queryResp, err := s.engine.QueryTaskList(createContext(), &workflow.QueryTaskListRequest{
+			Domain:       common.StringPtr(s.domainName),
+			TaskListType: &taskListType,
+			TaskListName: &tl,
+			Query: &workflow.Query{
+				QueryType: common.StringPtr(queryType),
+			},
+		})
+		queryResultCh <- QueryResult{Resp: queryResp, Err: err}
+	}
+
+	// call QueryWorkflow in separate goroutinue (because it is blocking). That will generate a query task
+	go queryTaskListFn(queryType, workflow.TaskListTypeDecision)
+	// process that query task, which should respond via RespondQueryTaskCompleted
+
+	_, err1 := poller.pollAndProcessDecisionTask(false, false)
+	s.logger.Infof("pollAndProcessDecisionTask: %v", err1)
+	s.Nil(err1)
+
+	queryResult := <-queryResultCh
+	s.NoError(queryResult.Err)
+	s.NotNil(queryResult.Resp)
+	s.NotNil(queryResult.Resp.QueryResult)
+	queryResultString := string(queryResult.Resp.QueryResult)
+	s.Equal("decision-task-list-query-result", queryResultString)
+
+	// call QueryWorkflow in separate goroutinue (because it is blocking). That will generate a query task
+	go queryTaskListFn(queryType, workflow.TaskListTypeActivity)
+
+	err2 := poller.pollAndProcessActivityTask(false)
+	s.logger.Infof("pollAndProcessActivityTask: %v", err2)
+	s.Nil(err2)
+
+	queryResult = <-queryResultCh
+	s.NoError(queryResult.Err)
+	s.NotNil(queryResult.Resp)
+	s.NotNil(queryResult.Resp.QueryResult)
+	queryResultString = string(queryResult.Resp.QueryResult)
+	s.Equal("activity-task-list-query-result", queryResultString)
+
 }
 
 func (s *integrationSuite) TestDescribeWorkflowExecution() {
