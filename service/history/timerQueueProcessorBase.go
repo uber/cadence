@@ -210,7 +210,7 @@ ProcessRetryLoop:
 					if _, ok := err.(*workflow.DomainNotActiveError); ok && time.Now().Sub(startTime) > cache.DomainCacheRefreshInterval {
 						return
 					}
-					backoff := time.Duration(retryCount * 100)
+					backoff := time.Duration(attempt * 100)
 					time.Sleep(backoff * time.Millisecond)
 					attempt++
 				}
