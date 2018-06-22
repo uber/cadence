@@ -272,16 +272,12 @@ ProcessRetryLoop:
 					// it is possible that DomainNotActiveError is thrown
 					// just keep try for cache.DomainCacheRefreshInterval
 					// and giveup
-					switch err.(type) {
-					case *workflow.DomainNotActiveError:
-						if time.Now().Sub(startTime) > cache.DomainCacheRefreshInterval {
-							return
-						}
-					default:
-						backoff := time.Duration(retryCount * 100)
-						time.Sleep(backoff * time.Millisecond)
-						retryCount++
+					if _, ok := err.(*workflow.DomainNotActiveError); ok && time.Now().Sub(startTime) > cache.DomainCacheRefreshInterval {
+						return
 					}
+					backoff := time.Duration(retryCount * 100)
+					time.Sleep(backoff * time.Millisecond)
+					retryCount++
 				}
 				continue ProcessRetryLoop
 			}
