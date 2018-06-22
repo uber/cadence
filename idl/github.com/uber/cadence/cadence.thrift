@@ -55,9 +55,9 @@ service WorkflowService {
     )
 
   /**
-    * ListDomain returns the information and configuration for all domains.
+    * ListDomains returns the information and configuration for all domains.
     **/
-    shared.ListDomainResponse ListDomain(1: shared.ListDomainRequest listRequest)
+    shared.ListDomainsResponse ListDomains(1: shared.ListDomainsRequest listRequest)
       throws (
         1: shared.BadRequestError badRequestError,
         2: shared.InternalServiceError internalServiceError,

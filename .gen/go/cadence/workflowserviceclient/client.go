@@ -72,11 +72,11 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*shared.ListClosedWorkflowExecutionsResponse, error)
 
-	ListDomain(
+	ListDomains(
 		ctx context.Context,
-		ListRequest *shared.ListDomainRequest,
+		ListRequest *shared.ListDomainsRequest,
 		opts ...yarpc.CallOption,
-	) (*shared.ListDomainResponse, error)
+	) (*shared.ListDomainsResponse, error)
 
 	ListOpenWorkflowExecutions(
 		ctx context.Context,
@@ -379,13 +379,13 @@ func (c client) ListClosedWorkflowExecutions(
 	return
 }
 
-func (c client) ListDomain(
+func (c client) ListDomains(
 	ctx context.Context,
-	_ListRequest *shared.ListDomainRequest,
+	_ListRequest *shared.ListDomainsRequest,
 	opts ...yarpc.CallOption,
-) (success *shared.ListDomainResponse, err error) {
+) (success *shared.ListDomainsResponse, err error) {
 
-	args := cadence.WorkflowService_ListDomain_Helper.Args(_ListRequest)
+	args := cadence.WorkflowService_ListDomains_Helper.Args(_ListRequest)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)
@@ -393,12 +393,12 @@ func (c client) ListDomain(
 		return
 	}
 
-	var result cadence.WorkflowService_ListDomain_Result
+	var result cadence.WorkflowService_ListDomains_Result
 	if err = result.FromWire(body); err != nil {
 		return
 	}
 
-	success, err = cadence.WorkflowService_ListDomain_Helper.UnwrapResponse(&result)
+	success, err = cadence.WorkflowService_ListDomains_Helper.UnwrapResponse(&result)
 	return
 }
 

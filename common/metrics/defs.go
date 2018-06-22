@@ -312,8 +312,8 @@ const (
 	FrontendDescribeTaskListScope
 	// FrontendResetStickyTaskListScope is the metric scope for frontend.ResetStickyTaskList
 	FrontendResetStickyTaskListScope
-	// FrontendListDomainScope is the metric scope for frontend.ListDomain
-	FrontendListDomainScope
+	// FrontendListDomainsScope is the metric scope for frontend.ListDomain
+	FrontendListDomainsScope
 
 	NumFrontendScopes
 )
@@ -537,7 +537,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FrontendListClosedWorkflowExecutionsScope:     {operation: "ListClosedWorkflowExecutions"},
 		FrontendRegisterDomainScope:                   {operation: "RegisterDomain"},
 		FrontendDescribeDomainScope:                   {operation: "DescribeDomain"},
-		FrontendListDomainScope:                       {operation: "ListDomain"},
+		FrontendListDomainsScope:                      {operation: "ListDomain"},
 		FrontendUpdateDomainScope:                     {operation: "UpdateDomain"},
 		FrontendDeprecateDomainScope:                  {operation: "DeprecateDomain"},
 		FrontendQueryWorkflowScope:                    {operation: "QueryWorkflow"},

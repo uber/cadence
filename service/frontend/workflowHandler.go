@@ -268,10 +268,10 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 	return nil
 }
 
-// ListDomain returns the information and configuration for a registered domain.
-func (wh *WorkflowHandler) ListDomain(ctx context.Context,
-	listRequest *gen.ListDomainRequest) (*gen.ListDomainResponse, error) {
-	scope := metrics.FrontendListDomainScope
+// ListDomains returns the information and configuration for a registered domain.
+func (wh *WorkflowHandler) ListDomains(ctx context.Context,
+	listRequest *gen.ListDomainsRequest) (*gen.ListDomainsResponse, error) {
+	scope := metrics.FrontendListDomainsScope
 	sw := wh.startRequestProfile(scope)
 	defer sw.Stop()
 
@@ -284,15 +284,16 @@ func (wh *WorkflowHandler) ListDomain(ctx context.Context,
 		pageSize = int(listRequest.GetPageSize())
 	}
 
-	resp, err := wh.metadataMgr.ListDomain(&persistence.ListDomainRequest{
+	resp, err := wh.metadataMgr.ListDomains(&persistence.ListDomainsRequest{
 		PageSize:      pageSize,
-		NextPageToken: []byte(listRequest.GetNextPageToken()),
+		NextPageToken: listRequest.NextPageToken,
 	})
 
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
 
+	fmt.Println("resp from db.....", len(resp.Domains), "....last token:", listRequest.NextPageToken, "next token:", resp.NextPageToken)
 	domains := []*gen.DescribeDomainResponse{}
 	for _, d := range resp.Domains {
 		desc := &gen.DescribeDomainResponse{
@@ -303,10 +304,9 @@ func (wh *WorkflowHandler) ListDomain(ctx context.Context,
 		domains = append(domains, desc)
 	}
 
-	nextPageToken := string(resp.NextPageToken[:])
-	response := &gen.ListDomainResponse{
+	response := &gen.ListDomainsResponse{
 		Domains:       domains,
-		NextPageToken: &nextPageToken,
+		NextPageToken: resp.NextPageToken,
 	}
 
 	return response, nil

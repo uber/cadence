@@ -31,14 +31,14 @@ import (
 	"strings"
 )
 
-// WorkflowService_ListDomain_Args represents the arguments for the WorkflowService.ListDomain function.
+// WorkflowService_ListDomains_Args represents the arguments for the WorkflowService.ListDomains function.
 //
-// The arguments for ListDomain are sent and received over the wire as this struct.
-type WorkflowService_ListDomain_Args struct {
-	ListRequest *shared.ListDomainRequest `json:"listRequest,omitempty"`
+// The arguments for ListDomains are sent and received over the wire as this struct.
+type WorkflowService_ListDomains_Args struct {
+	ListRequest *shared.ListDomainsRequest `json:"listRequest,omitempty"`
 }
 
-// ToWire translates a WorkflowService_ListDomain_Args struct into a Thrift-level intermediate
+// ToWire translates a WorkflowService_ListDomains_Args struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
 // into bytes using a ThriftRW protocol implementation.
 //
@@ -53,7 +53,7 @@ type WorkflowService_ListDomain_Args struct {
 //   if err := binaryProtocol.Encode(x, writer); err != nil {
 //     return err
 //   }
-func (v *WorkflowService_ListDomain_Args) ToWire() (wire.Value, error) {
+func (v *WorkflowService_ListDomains_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
 		i      int = 0
@@ -73,17 +73,17 @@ func (v *WorkflowService_ListDomain_Args) ToWire() (wire.Value, error) {
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _ListDomainRequest_Read(w wire.Value) (*shared.ListDomainRequest, error) {
-	var v shared.ListDomainRequest
+func _ListDomainsRequest_Read(w wire.Value) (*shared.ListDomainsRequest, error) {
+	var v shared.ListDomainsRequest
 	err := v.FromWire(w)
 	return &v, err
 }
 
-// FromWire deserializes a WorkflowService_ListDomain_Args struct from its Thrift-level
+// FromWire deserializes a WorkflowService_ListDomains_Args struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.
 //
-// An error is returned if we were unable to build a WorkflowService_ListDomain_Args struct
+// An error is returned if we were unable to build a WorkflowService_ListDomains_Args struct
 // from the provided intermediate representation.
 //
 //   x, err := binaryProtocol.Decode(reader, wire.TStruct)
@@ -91,19 +91,19 @@ func _ListDomainRequest_Read(w wire.Value) (*shared.ListDomainRequest, error) {
 //     return nil, err
 //   }
 //
-//   var v WorkflowService_ListDomain_Args
+//   var v WorkflowService_ListDomains_Args
 //   if err := v.FromWire(x); err != nil {
 //     return nil, err
 //   }
 //   return &v, nil
-func (v *WorkflowService_ListDomain_Args) FromWire(w wire.Value) error {
+func (v *WorkflowService_ListDomains_Args) FromWire(w wire.Value) error {
 	var err error
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
 		case 1:
 			if field.Value.Type() == wire.TStruct {
-				v.ListRequest, err = _ListDomainRequest_Read(field.Value)
+				v.ListRequest, err = _ListDomainsRequest_Read(field.Value)
 				if err != nil {
 					return err
 				}
@@ -115,9 +115,9 @@ func (v *WorkflowService_ListDomain_Args) FromWire(w wire.Value) error {
 	return nil
 }
 
-// String returns a readable string representation of a WorkflowService_ListDomain_Args
+// String returns a readable string representation of a WorkflowService_ListDomains_Args
 // struct.
-func (v *WorkflowService_ListDomain_Args) String() string {
+func (v *WorkflowService_ListDomains_Args) String() string {
 	if v == nil {
 		return "<nil>"
 	}
@@ -129,14 +129,14 @@ func (v *WorkflowService_ListDomain_Args) String() string {
 		i++
 	}
 
-	return fmt.Sprintf("WorkflowService_ListDomain_Args{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("WorkflowService_ListDomains_Args{%v}", strings.Join(fields[:i], ", "))
 }
 
-// Equals returns true if all the fields of this WorkflowService_ListDomain_Args match the
-// provided WorkflowService_ListDomain_Args.
+// Equals returns true if all the fields of this WorkflowService_ListDomains_Args match the
+// provided WorkflowService_ListDomains_Args.
 //
 // This function performs a deep comparison.
-func (v *WorkflowService_ListDomain_Args) Equals(rhs *WorkflowService_ListDomain_Args) bool {
+func (v *WorkflowService_ListDomains_Args) Equals(rhs *WorkflowService_ListDomains_Args) bool {
 	if !((v.ListRequest == nil && rhs.ListRequest == nil) || (v.ListRequest != nil && rhs.ListRequest != nil && v.ListRequest.Equals(rhs.ListRequest))) {
 		return false
 	}
@@ -147,73 +147,73 @@ func (v *WorkflowService_ListDomain_Args) Equals(rhs *WorkflowService_ListDomain
 // MethodName returns the name of the Thrift function as specified in
 // the IDL, for which this struct represent the arguments.
 //
-// This will always be "ListDomain" for this struct.
-func (v *WorkflowService_ListDomain_Args) MethodName() string {
-	return "ListDomain"
+// This will always be "ListDomains" for this struct.
+func (v *WorkflowService_ListDomains_Args) MethodName() string {
+	return "ListDomains"
 }
 
 // EnvelopeType returns the kind of value inside this struct.
 //
 // This will always be Call for this struct.
-func (v *WorkflowService_ListDomain_Args) EnvelopeType() wire.EnvelopeType {
+func (v *WorkflowService_ListDomains_Args) EnvelopeType() wire.EnvelopeType {
 	return wire.Call
 }
 
-// WorkflowService_ListDomain_Helper provides functions that aid in handling the
-// parameters and return values of the WorkflowService.ListDomain
+// WorkflowService_ListDomains_Helper provides functions that aid in handling the
+// parameters and return values of the WorkflowService.ListDomains
 // function.
-var WorkflowService_ListDomain_Helper = struct {
-	// Args accepts the parameters of ListDomain in-order and returns
+var WorkflowService_ListDomains_Helper = struct {
+	// Args accepts the parameters of ListDomains in-order and returns
 	// the arguments struct for the function.
 	Args func(
-		listRequest *shared.ListDomainRequest,
-	) *WorkflowService_ListDomain_Args
+		listRequest *shared.ListDomainsRequest,
+	) *WorkflowService_ListDomains_Args
 
 	// IsException returns true if the given error can be thrown
-	// by ListDomain.
+	// by ListDomains.
 	//
-	// An error can be thrown by ListDomain only if the
+	// An error can be thrown by ListDomains only if the
 	// corresponding exception type was mentioned in the 'throws'
 	// section for it in the Thrift file.
 	IsException func(error) bool
 
-	// WrapResponse returns the result struct for ListDomain
+	// WrapResponse returns the result struct for ListDomains
 	// given its return value and error.
 	//
 	// This allows mapping values and errors returned by
-	// ListDomain into a serializable result struct.
+	// ListDomains into a serializable result struct.
 	// WrapResponse returns a non-nil error if the provided
-	// error cannot be thrown by ListDomain
+	// error cannot be thrown by ListDomains
 	//
-	//   value, err := ListDomain(args)
-	//   result, err := WorkflowService_ListDomain_Helper.WrapResponse(value, err)
+	//   value, err := ListDomains(args)
+	//   result, err := WorkflowService_ListDomains_Helper.WrapResponse(value, err)
 	//   if err != nil {
-	//     return fmt.Errorf("unexpected error from ListDomain: %v", err)
+	//     return fmt.Errorf("unexpected error from ListDomains: %v", err)
 	//   }
 	//   serialize(result)
-	WrapResponse func(*shared.ListDomainResponse, error) (*WorkflowService_ListDomain_Result, error)
+	WrapResponse func(*shared.ListDomainsResponse, error) (*WorkflowService_ListDomains_Result, error)
 
-	// UnwrapResponse takes the result struct for ListDomain
+	// UnwrapResponse takes the result struct for ListDomains
 	// and returns the value or error returned by it.
 	//
-	// The error is non-nil only if ListDomain threw an
+	// The error is non-nil only if ListDomains threw an
 	// exception.
 	//
 	//   result := deserialize(bytes)
-	//   value, err := WorkflowService_ListDomain_Helper.UnwrapResponse(result)
-	UnwrapResponse func(*WorkflowService_ListDomain_Result) (*shared.ListDomainResponse, error)
+	//   value, err := WorkflowService_ListDomains_Helper.UnwrapResponse(result)
+	UnwrapResponse func(*WorkflowService_ListDomains_Result) (*shared.ListDomainsResponse, error)
 }{}
 
 func init() {
-	WorkflowService_ListDomain_Helper.Args = func(
-		listRequest *shared.ListDomainRequest,
-	) *WorkflowService_ListDomain_Args {
-		return &WorkflowService_ListDomain_Args{
+	WorkflowService_ListDomains_Helper.Args = func(
+		listRequest *shared.ListDomainsRequest,
+	) *WorkflowService_ListDomains_Args {
+		return &WorkflowService_ListDomains_Args{
 			ListRequest: listRequest,
 		}
 	}
 
-	WorkflowService_ListDomain_Helper.IsException = func(err error) bool {
+	WorkflowService_ListDomains_Helper.IsException = func(err error) bool {
 		switch err.(type) {
 		case *shared.BadRequestError:
 			return true
@@ -226,32 +226,32 @@ func init() {
 		}
 	}
 
-	WorkflowService_ListDomain_Helper.WrapResponse = func(success *shared.ListDomainResponse, err error) (*WorkflowService_ListDomain_Result, error) {
+	WorkflowService_ListDomains_Helper.WrapResponse = func(success *shared.ListDomainsResponse, err error) (*WorkflowService_ListDomains_Result, error) {
 		if err == nil {
-			return &WorkflowService_ListDomain_Result{Success: success}, nil
+			return &WorkflowService_ListDomains_Result{Success: success}, nil
 		}
 
 		switch e := err.(type) {
 		case *shared.BadRequestError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_ListDomain_Result.BadRequestError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_ListDomains_Result.BadRequestError")
 			}
-			return &WorkflowService_ListDomain_Result{BadRequestError: e}, nil
+			return &WorkflowService_ListDomains_Result{BadRequestError: e}, nil
 		case *shared.InternalServiceError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_ListDomain_Result.InternalServiceError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_ListDomains_Result.InternalServiceError")
 			}
-			return &WorkflowService_ListDomain_Result{InternalServiceError: e}, nil
+			return &WorkflowService_ListDomains_Result{InternalServiceError: e}, nil
 		case *shared.EntityNotExistsError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_ListDomain_Result.EntityNotExistError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_ListDomains_Result.EntityNotExistError")
 			}
-			return &WorkflowService_ListDomain_Result{EntityNotExistError: e}, nil
+			return &WorkflowService_ListDomains_Result{EntityNotExistError: e}, nil
 		}
 
 		return nil, err
 	}
-	WorkflowService_ListDomain_Helper.UnwrapResponse = func(result *WorkflowService_ListDomain_Result) (success *shared.ListDomainResponse, err error) {
+	WorkflowService_ListDomains_Helper.UnwrapResponse = func(result *WorkflowService_ListDomains_Result) (success *shared.ListDomainsResponse, err error) {
 		if result.BadRequestError != nil {
 			err = result.BadRequestError
 			return
@@ -276,20 +276,20 @@ func init() {
 
 }
 
-// WorkflowService_ListDomain_Result represents the result of a WorkflowService.ListDomain function call.
+// WorkflowService_ListDomains_Result represents the result of a WorkflowService.ListDomains function call.
 //
-// The result of a ListDomain execution is sent and received over the wire as this struct.
+// The result of a ListDomains execution is sent and received over the wire as this struct.
 //
 // Success is set only if the function did not throw an exception.
-type WorkflowService_ListDomain_Result struct {
-	// Value returned by ListDomain after a successful execution.
-	Success              *shared.ListDomainResponse   `json:"success,omitempty"`
+type WorkflowService_ListDomains_Result struct {
+	// Value returned by ListDomains after a successful execution.
+	Success              *shared.ListDomainsResponse  `json:"success,omitempty"`
 	BadRequestError      *shared.BadRequestError      `json:"badRequestError,omitempty"`
 	InternalServiceError *shared.InternalServiceError `json:"internalServiceError,omitempty"`
 	EntityNotExistError  *shared.EntityNotExistsError `json:"entityNotExistError,omitempty"`
 }
 
-// ToWire translates a WorkflowService_ListDomain_Result struct into a Thrift-level intermediate
+// ToWire translates a WorkflowService_ListDomains_Result struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
 // into bytes using a ThriftRW protocol implementation.
 //
@@ -304,7 +304,7 @@ type WorkflowService_ListDomain_Result struct {
 //   if err := binaryProtocol.Encode(x, writer); err != nil {
 //     return err
 //   }
-func (v *WorkflowService_ListDomain_Result) ToWire() (wire.Value, error) {
+func (v *WorkflowService_ListDomains_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [4]wire.Field
 		i      int = 0
@@ -346,23 +346,23 @@ func (v *WorkflowService_ListDomain_Result) ToWire() (wire.Value, error) {
 	}
 
 	if i != 1 {
-		return wire.Value{}, fmt.Errorf("WorkflowService_ListDomain_Result should have exactly one field: got %v fields", i)
+		return wire.Value{}, fmt.Errorf("WorkflowService_ListDomains_Result should have exactly one field: got %v fields", i)
 	}
 
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _ListDomainResponse_Read(w wire.Value) (*shared.ListDomainResponse, error) {
-	var v shared.ListDomainResponse
+func _ListDomainsResponse_Read(w wire.Value) (*shared.ListDomainsResponse, error) {
+	var v shared.ListDomainsResponse
 	err := v.FromWire(w)
 	return &v, err
 }
 
-// FromWire deserializes a WorkflowService_ListDomain_Result struct from its Thrift-level
+// FromWire deserializes a WorkflowService_ListDomains_Result struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.
 //
-// An error is returned if we were unable to build a WorkflowService_ListDomain_Result struct
+// An error is returned if we were unable to build a WorkflowService_ListDomains_Result struct
 // from the provided intermediate representation.
 //
 //   x, err := binaryProtocol.Decode(reader, wire.TStruct)
@@ -370,19 +370,19 @@ func _ListDomainResponse_Read(w wire.Value) (*shared.ListDomainResponse, error) 
 //     return nil, err
 //   }
 //
-//   var v WorkflowService_ListDomain_Result
+//   var v WorkflowService_ListDomains_Result
 //   if err := v.FromWire(x); err != nil {
 //     return nil, err
 //   }
 //   return &v, nil
-func (v *WorkflowService_ListDomain_Result) FromWire(w wire.Value) error {
+func (v *WorkflowService_ListDomains_Result) FromWire(w wire.Value) error {
 	var err error
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
 		case 0:
 			if field.Value.Type() == wire.TStruct {
-				v.Success, err = _ListDomainResponse_Read(field.Value)
+				v.Success, err = _ListDomainsResponse_Read(field.Value)
 				if err != nil {
 					return err
 				}
@@ -429,15 +429,15 @@ func (v *WorkflowService_ListDomain_Result) FromWire(w wire.Value) error {
 		count++
 	}
 	if count != 1 {
-		return fmt.Errorf("WorkflowService_ListDomain_Result should have exactly one field: got %v fields", count)
+		return fmt.Errorf("WorkflowService_ListDomains_Result should have exactly one field: got %v fields", count)
 	}
 
 	return nil
 }
 
-// String returns a readable string representation of a WorkflowService_ListDomain_Result
+// String returns a readable string representation of a WorkflowService_ListDomains_Result
 // struct.
-func (v *WorkflowService_ListDomain_Result) String() string {
+func (v *WorkflowService_ListDomains_Result) String() string {
 	if v == nil {
 		return "<nil>"
 	}
@@ -461,14 +461,14 @@ func (v *WorkflowService_ListDomain_Result) String() string {
 		i++
 	}
 
-	return fmt.Sprintf("WorkflowService_ListDomain_Result{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("WorkflowService_ListDomains_Result{%v}", strings.Join(fields[:i], ", "))
 }
 
-// Equals returns true if all the fields of this WorkflowService_ListDomain_Result match the
-// provided WorkflowService_ListDomain_Result.
+// Equals returns true if all the fields of this WorkflowService_ListDomains_Result match the
+// provided WorkflowService_ListDomains_Result.
 //
 // This function performs a deep comparison.
-func (v *WorkflowService_ListDomain_Result) Equals(rhs *WorkflowService_ListDomain_Result) bool {
+func (v *WorkflowService_ListDomains_Result) Equals(rhs *WorkflowService_ListDomains_Result) bool {
 	if !((v.Success == nil && rhs.Success == nil) || (v.Success != nil && rhs.Success != nil && v.Success.Equals(rhs.Success))) {
 		return false
 	}
@@ -488,14 +488,14 @@ func (v *WorkflowService_ListDomain_Result) Equals(rhs *WorkflowService_ListDoma
 // MethodName returns the name of the Thrift function as specified in
 // the IDL, for which this struct represent the result.
 //
-// This will always be "ListDomain" for this struct.
-func (v *WorkflowService_ListDomain_Result) MethodName() string {
-	return "ListDomain"
+// This will always be "ListDomains" for this struct.
+func (v *WorkflowService_ListDomains_Result) MethodName() string {
+	return "ListDomains"
 }
 
 // EnvelopeType returns the kind of value inside this struct.
 //
 // This will always be Reply for this struct.
-func (v *WorkflowService_ListDomain_Result) EnvelopeType() wire.EnvelopeType {
+func (v *WorkflowService_ListDomains_Result) EnvelopeType() wire.EnvelopeType {
 	return wire.Reply
 }

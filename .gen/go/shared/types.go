@@ -14315,12 +14315,12 @@ func (v *ListClosedWorkflowExecutionsResponse) Equals(rhs *ListClosedWorkflowExe
 	return true
 }
 
-type ListDomainRequest struct {
-	PageSize      *int32  `json:"pageSize,omitempty"`
-	NextPageToken *string `json:"nextPageToken,omitempty"`
+type ListDomainsRequest struct {
+	PageSize      *int32 `json:"pageSize,omitempty"`
+	NextPageToken []byte `json:"nextPageToken,omitempty"`
 }
 
-// ToWire translates a ListDomainRequest struct into a Thrift-level intermediate
+// ToWire translates a ListDomainsRequest struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
 // into bytes using a ThriftRW protocol implementation.
 //
@@ -14335,7 +14335,7 @@ type ListDomainRequest struct {
 //   if err := binaryProtocol.Encode(x, writer); err != nil {
 //     return err
 //   }
-func (v *ListDomainRequest) ToWire() (wire.Value, error) {
+func (v *ListDomainsRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
 		i      int = 0
@@ -14352,7 +14352,7 @@ func (v *ListDomainRequest) ToWire() (wire.Value, error) {
 		i++
 	}
 	if v.NextPageToken != nil {
-		w, err = wire.NewValueString(*(v.NextPageToken)), error(nil)
+		w, err = wire.NewValueBinary(v.NextPageToken), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -14363,11 +14363,11 @@ func (v *ListDomainRequest) ToWire() (wire.Value, error) {
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-// FromWire deserializes a ListDomainRequest struct from its Thrift-level
+// FromWire deserializes a ListDomainsRequest struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.
 //
-// An error is returned if we were unable to build a ListDomainRequest struct
+// An error is returned if we were unable to build a ListDomainsRequest struct
 // from the provided intermediate representation.
 //
 //   x, err := binaryProtocol.Decode(reader, wire.TStruct)
@@ -14375,12 +14375,12 @@ func (v *ListDomainRequest) ToWire() (wire.Value, error) {
 //     return nil, err
 //   }
 //
-//   var v ListDomainRequest
+//   var v ListDomainsRequest
 //   if err := v.FromWire(x); err != nil {
 //     return nil, err
 //   }
 //   return &v, nil
-func (v *ListDomainRequest) FromWire(w wire.Value) error {
+func (v *ListDomainsRequest) FromWire(w wire.Value) error {
 	var err error
 
 	for _, field := range w.GetStruct().Fields {
@@ -14397,9 +14397,7 @@ func (v *ListDomainRequest) FromWire(w wire.Value) error {
 			}
 		case 20:
 			if field.Value.Type() == wire.TBinary {
-				var x string
-				x, err = field.Value.GetString(), error(nil)
-				v.NextPageToken = &x
+				v.NextPageToken, err = field.Value.GetBinary(), error(nil)
 				if err != nil {
 					return err
 				}
@@ -14411,9 +14409,9 @@ func (v *ListDomainRequest) FromWire(w wire.Value) error {
 	return nil
 }
 
-// String returns a readable string representation of a ListDomainRequest
+// String returns a readable string representation of a ListDomainsRequest
 // struct.
-func (v *ListDomainRequest) String() string {
+func (v *ListDomainsRequest) String() string {
 	if v == nil {
 		return "<nil>"
 	}
@@ -14425,22 +14423,22 @@ func (v *ListDomainRequest) String() string {
 		i++
 	}
 	if v.NextPageToken != nil {
-		fields[i] = fmt.Sprintf("NextPageToken: %v", *(v.NextPageToken))
+		fields[i] = fmt.Sprintf("NextPageToken: %v", v.NextPageToken)
 		i++
 	}
 
-	return fmt.Sprintf("ListDomainRequest{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("ListDomainsRequest{%v}", strings.Join(fields[:i], ", "))
 }
 
-// Equals returns true if all the fields of this ListDomainRequest match the
-// provided ListDomainRequest.
+// Equals returns true if all the fields of this ListDomainsRequest match the
+// provided ListDomainsRequest.
 //
 // This function performs a deep comparison.
-func (v *ListDomainRequest) Equals(rhs *ListDomainRequest) bool {
+func (v *ListDomainsRequest) Equals(rhs *ListDomainsRequest) bool {
 	if !_I32_EqualsPtr(v.PageSize, rhs.PageSize) {
 		return false
 	}
-	if !_String_EqualsPtr(v.NextPageToken, rhs.NextPageToken) {
+	if !((v.NextPageToken == nil && rhs.NextPageToken == nil) || (v.NextPageToken != nil && rhs.NextPageToken != nil && bytes.Equal(v.NextPageToken, rhs.NextPageToken))) {
 		return false
 	}
 
@@ -14449,7 +14447,7 @@ func (v *ListDomainRequest) Equals(rhs *ListDomainRequest) bool {
 
 // GetPageSize returns the value of PageSize if it is set or its
 // zero value if it is unset.
-func (v *ListDomainRequest) GetPageSize() (o int32) {
+func (v *ListDomainsRequest) GetPageSize() (o int32) {
 	if v.PageSize != nil {
 		return *v.PageSize
 	}
@@ -14457,19 +14455,9 @@ func (v *ListDomainRequest) GetPageSize() (o int32) {
 	return
 }
 
-// GetNextPageToken returns the value of NextPageToken if it is set or its
-// zero value if it is unset.
-func (v *ListDomainRequest) GetNextPageToken() (o string) {
-	if v.NextPageToken != nil {
-		return *v.NextPageToken
-	}
-
-	return
-}
-
-type ListDomainResponse struct {
+type ListDomainsResponse struct {
 	Domains       []*DescribeDomainResponse `json:"domains,omitempty"`
-	NextPageToken *string                   `json:"nextPageToken,omitempty"`
+	NextPageToken []byte                    `json:"nextPageToken,omitempty"`
 }
 
 type _List_DescribeDomainResponse_ValueList []*DescribeDomainResponse
@@ -14501,7 +14489,7 @@ func (_List_DescribeDomainResponse_ValueList) ValueType() wire.Type {
 
 func (_List_DescribeDomainResponse_ValueList) Close() {}
 
-// ToWire translates a ListDomainResponse struct into a Thrift-level intermediate
+// ToWire translates a ListDomainsResponse struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
 // into bytes using a ThriftRW protocol implementation.
 //
@@ -14516,7 +14504,7 @@ func (_List_DescribeDomainResponse_ValueList) Close() {}
 //   if err := binaryProtocol.Encode(x, writer); err != nil {
 //     return err
 //   }
-func (v *ListDomainResponse) ToWire() (wire.Value, error) {
+func (v *ListDomainsResponse) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
 		i      int = 0
@@ -14533,7 +14521,7 @@ func (v *ListDomainResponse) ToWire() (wire.Value, error) {
 		i++
 	}
 	if v.NextPageToken != nil {
-		w, err = wire.NewValueString(*(v.NextPageToken)), error(nil)
+		w, err = wire.NewValueBinary(v.NextPageToken), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -14568,11 +14556,11 @@ func _List_DescribeDomainResponse_Read(l wire.ValueList) ([]*DescribeDomainRespo
 	return o, err
 }
 
-// FromWire deserializes a ListDomainResponse struct from its Thrift-level
+// FromWire deserializes a ListDomainsResponse struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.
 //
-// An error is returned if we were unable to build a ListDomainResponse struct
+// An error is returned if we were unable to build a ListDomainsResponse struct
 // from the provided intermediate representation.
 //
 //   x, err := binaryProtocol.Decode(reader, wire.TStruct)
@@ -14580,12 +14568,12 @@ func _List_DescribeDomainResponse_Read(l wire.ValueList) ([]*DescribeDomainRespo
 //     return nil, err
 //   }
 //
-//   var v ListDomainResponse
+//   var v ListDomainsResponse
 //   if err := v.FromWire(x); err != nil {
 //     return nil, err
 //   }
 //   return &v, nil
-func (v *ListDomainResponse) FromWire(w wire.Value) error {
+func (v *ListDomainsResponse) FromWire(w wire.Value) error {
 	var err error
 
 	for _, field := range w.GetStruct().Fields {
@@ -14600,9 +14588,7 @@ func (v *ListDomainResponse) FromWire(w wire.Value) error {
 			}
 		case 20:
 			if field.Value.Type() == wire.TBinary {
-				var x string
-				x, err = field.Value.GetString(), error(nil)
-				v.NextPageToken = &x
+				v.NextPageToken, err = field.Value.GetBinary(), error(nil)
 				if err != nil {
 					return err
 				}
@@ -14614,9 +14600,9 @@ func (v *ListDomainResponse) FromWire(w wire.Value) error {
 	return nil
 }
 
-// String returns a readable string representation of a ListDomainResponse
+// String returns a readable string representation of a ListDomainsResponse
 // struct.
-func (v *ListDomainResponse) String() string {
+func (v *ListDomainsResponse) String() string {
 	if v == nil {
 		return "<nil>"
 	}
@@ -14628,11 +14614,11 @@ func (v *ListDomainResponse) String() string {
 		i++
 	}
 	if v.NextPageToken != nil {
-		fields[i] = fmt.Sprintf("NextPageToken: %v", *(v.NextPageToken))
+		fields[i] = fmt.Sprintf("NextPageToken: %v", v.NextPageToken)
 		i++
 	}
 
-	return fmt.Sprintf("ListDomainResponse{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("ListDomainsResponse{%v}", strings.Join(fields[:i], ", "))
 }
 
 func _List_DescribeDomainResponse_Equals(lhs, rhs []*DescribeDomainResponse) bool {
@@ -14650,29 +14636,19 @@ func _List_DescribeDomainResponse_Equals(lhs, rhs []*DescribeDomainResponse) boo
 	return true
 }
 
-// Equals returns true if all the fields of this ListDomainResponse match the
-// provided ListDomainResponse.
+// Equals returns true if all the fields of this ListDomainsResponse match the
+// provided ListDomainsResponse.
 //
 // This function performs a deep comparison.
-func (v *ListDomainResponse) Equals(rhs *ListDomainResponse) bool {
+func (v *ListDomainsResponse) Equals(rhs *ListDomainsResponse) bool {
 	if !((v.Domains == nil && rhs.Domains == nil) || (v.Domains != nil && rhs.Domains != nil && _List_DescribeDomainResponse_Equals(v.Domains, rhs.Domains))) {
 		return false
 	}
-	if !_String_EqualsPtr(v.NextPageToken, rhs.NextPageToken) {
+	if !((v.NextPageToken == nil && rhs.NextPageToken == nil) || (v.NextPageToken != nil && rhs.NextPageToken != nil && bytes.Equal(v.NextPageToken, rhs.NextPageToken))) {
 		return false
 	}
 
 	return true
-}
-
-// GetNextPageToken returns the value of NextPageToken if it is set or its
-// zero value if it is unset.
-func (v *ListDomainResponse) GetNextPageToken() (o string) {
-	if v.NextPageToken != nil {
-		return *v.NextPageToken
-	}
-
-	return
 }
 
 type ListOpenWorkflowExecutionsRequest struct {
