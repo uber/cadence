@@ -268,6 +268,50 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 	return nil
 }
 
+// ListDomain returns the information and configuration for a registered domain.
+func (wh *WorkflowHandler) ListDomain(ctx context.Context,
+	listRequest *gen.ListDomainRequest) (*gen.ListDomainResponse, error) {
+	scope := metrics.FrontendListDomainScope
+	sw := wh.startRequestProfile(scope)
+	defer sw.Stop()
+
+	if listRequest == nil {
+		return nil, wh.error(errRequestNotSet, scope)
+	}
+
+	pageSize := 100
+	if listRequest.GetPageSize() != 0 {
+		pageSize = int(listRequest.GetPageSize())
+	}
+
+	resp, err := wh.metadataMgr.ListDomain(&persistence.ListDomainRequest{
+		PageSize:      pageSize,
+		NextPageToken: []byte(listRequest.GetNextPageToken()),
+	})
+
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+
+	domains := []*gen.DescribeDomainResponse{}
+	for _, d := range resp.Domains {
+		desc := &gen.DescribeDomainResponse{
+			IsGlobalDomain:  common.BoolPtr(d.IsGlobalDomain),
+			FailoverVersion: common.Int64Ptr(d.FailoverVersion),
+		}
+		desc.DomainInfo, desc.Configuration, desc.ReplicationConfiguration = createDomainResponse(d.Info, d.Config, d.ReplicationConfig)
+		domains = append(domains, desc)
+	}
+
+	nextPageToken := string(resp.NextPageToken[:])
+	response := &gen.ListDomainResponse{
+		Domains:       domains,
+		NextPageToken: &nextPageToken,
+	}
+
+	return response, nil
+}
+
 // DescribeDomain returns the information and configuration for a registered domain.
 func (wh *WorkflowHandler) DescribeDomain(ctx context.Context,
 	describeRequest *gen.DescribeDomainRequest) (*gen.DescribeDomainResponse, error) {

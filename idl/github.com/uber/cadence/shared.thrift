@@ -802,8 +802,18 @@ struct RegisterDomainRequest {
   80: optional map<string,string> data
 }
 
+struct ListDomainRequest {
+  10: optional i32 pageSize
+  20: optional string nextPageToken
+}
+
+struct ListDomainResponse {
+  10: optional list<DescribeDomainResponse> domains
+  20: optional string nextPageToken
+}
+
 struct DescribeDomainRequest {
- 10: optional string name
+  10: optional string name
 }
 
 struct DescribeDomainResponse {

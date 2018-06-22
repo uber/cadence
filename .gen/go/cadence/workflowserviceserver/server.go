@@ -64,6 +64,11 @@ type Interface interface {
 		ListRequest *shared.ListClosedWorkflowExecutionsRequest,
 	) (*shared.ListClosedWorkflowExecutionsResponse, error)
 
+	ListDomain(
+		ctx context.Context,
+		ListRequest *shared.ListDomainRequest,
+	) (*shared.ListDomainResponse, error)
+
 	ListOpenWorkflowExecutions(
 		ctx context.Context,
 		ListRequest *shared.ListOpenWorkflowExecutionsRequest,
@@ -254,6 +259,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary: thrift.UnaryHandler(h.ListClosedWorkflowExecutions),
 				},
 				Signature:    "ListClosedWorkflowExecutions(ListRequest *shared.ListClosedWorkflowExecutionsRequest) (*shared.ListClosedWorkflowExecutionsResponse)",
+				ThriftModule: cadence.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "ListDomain",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.ListDomain),
+				},
+				Signature:    "ListDomain(ListRequest *shared.ListDomainRequest) (*shared.ListDomainResponse)",
 				ThriftModule: cadence.ThriftModule,
 			},
 
@@ -512,7 +528,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 29)
+	procedures := make([]transport.Procedure, 0, 30)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
@@ -624,6 +640,25 @@ func (h handler) ListClosedWorkflowExecutions(ctx context.Context, body wire.Val
 
 	hadError := err != nil
 	result, err := cadence.WorkflowService_ListClosedWorkflowExecutions_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) ListDomain(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args cadence.WorkflowService_ListDomain_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.ListDomain(ctx, args.ListRequest)
+
+	hadError := err != nil
+	result, err := cadence.WorkflowService_ListDomain_Helper.WrapResponse(success, err)
 
 	var response thrift.Response
 	if err == nil {
