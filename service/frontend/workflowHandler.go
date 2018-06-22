@@ -293,7 +293,6 @@ func (wh *WorkflowHandler) ListDomains(ctx context.Context,
 		return nil, wh.error(err, scope)
 	}
 
-	fmt.Println("resp from db.....", len(resp.Domains), "....last token:", listRequest.NextPageToken, "next token:", resp.NextPageToken)
 	domains := []*gen.DescribeDomainResponse{}
 	for _, d := range resp.Domains {
 		desc := &gen.DescribeDomainResponse{
