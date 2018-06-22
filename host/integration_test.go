@@ -1158,7 +1158,7 @@ func (s *integrationSuite) TestActivityHeartBeatWorkflow_Success() {
 	_, err = poller.pollAndProcessDecisionTask(true, false)
 	s.Nil(err)
 	s.True(workflowComplete)
-	s.True(activityExecutedCount == 1)
+	s.Equal(1, activityExecutedCount)
 }
 
 func (s *integrationSuite) TestActivityRetry() {
