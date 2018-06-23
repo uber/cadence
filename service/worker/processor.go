@@ -22,7 +22,6 @@ package worker
 
 import (
 	"errors"
-	"fmt"
 	"math"
 	"sync"
 	"sync/atomic"
@@ -95,11 +94,10 @@ type (
 		domainReplicator DomainReplicator
 		historyClient    history.Client
 
-		sync.Mutex
-		// worker in retry is used by underlying processor when doing retry on a task
+		// worker in retry count is used by underlying processor when doing retry on a task
 		// this help the replicator / underlying processor understanding the overall
 		// situation and giveup retrying
-		workerInRetry map[int]struct{}
+		workerInRetryCount int32
 	}
 )
 
@@ -132,10 +130,10 @@ func newReplicationTaskProcessor(currentCluster, sourceCluster, consumer string,
 			logging.TagSourceCluster:     sourceCluster,
 			logging.TagConsumerName:      consumer,
 		}),
-		metricsClient:    metricsClient,
-		domainReplicator: domainReplicator,
-		historyClient:    historyClient,
-		workerInRetry:    make(map[int]struct{}),
+		metricsClient:      metricsClient,
+		domainReplicator:   domainReplicator,
+		historyClient:      historyClient,
+		workerInRetryCount: 0,
 	}
 }
 
@@ -181,26 +179,17 @@ func (p *replicationTaskProcessor) Stop() {
 	}
 }
 
-// updateWorkerStatus update the status of given worker ID
-func (p *replicationTaskProcessor) updateWorkerStatus(workerID int, status workerStatus) {
-	p.Lock()
-	defer p.Unlock()
-
-	switch status {
-	case workerStatusRunning:
-		delete(p.workerInRetry, workerID)
-	case workerStatusPendingRetry:
-		p.workerInRetry[workerID] = struct{}{}
-	default:
-		panic(fmt.Sprintf("Unknown worker status code: %v.", status))
+func (p *replicationTaskProcessor) updateWorkerRetryStatus(isInRetry bool) {
+	if isInRetry {
+		atomic.AddInt32(&p.workerInRetryCount, 1)
+	} else {
+		atomic.AddInt32(&p.workerInRetryCount, -1)
 	}
 }
 
 // getRemainingRetryCount returns the max retry count at the moment
 func (p *replicationTaskProcessor) getRemainingRetryCount(remainingRetryCount int64) int64 {
-	p.Lock()
-	workerInRetry := float64(len(p.workerInRetry))
-	p.Unlock()
+	workerInRetry := float64(atomic.LoadInt32(&p.workerInRetryCount))
 	numWorker := float64(p.config.ReplicatorConcurrency)
 	retryPercentage := workerInRetry / numWorker
 
@@ -270,7 +259,14 @@ func (p *replicationTaskProcessor) messageProcessLoop(workerWG *sync.WaitGroup, 
 
 func (p *replicationTaskProcessor) processWithRetry(msg kafka.Message, workerID int) {
 	var err error
+
+	isInRetry := false
 	remainingRetryCount := retryCountInfinity
+	defer func() {
+		if isInRetry {
+			p.updateWorkerRetryStatus(false)
+		}
+	}()
 
 ProcessRetryLoop:
 	for {
@@ -287,7 +283,10 @@ ProcessRetryLoop:
 				errMsg := p.process(msg)
 				if errMsg != nil && p.isTransientRetryableError(errMsg) {
 					// Keep on retrying transient errors for ever
-					p.updateWorkerStatus(workerID, workerStatusPendingRetry)
+					if !isInRetry {
+						isInRetry = true
+						p.updateWorkerRetryStatus(true)
+					}
 					remainingRetryCount = p.getRemainingRetryCount(remainingRetryCount)
 				}
 				return errMsg
@@ -299,8 +298,6 @@ ProcessRetryLoop:
 				continue ProcessRetryLoop
 			}
 		}
-
-		p.updateWorkerStatus(workerID, workerStatusRunning)
 		break ProcessRetryLoop
 	}
 
