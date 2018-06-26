@@ -61,7 +61,7 @@ func LogOperationPanicEvent(logger bark.Logger, msg string, err error) {
 	logger.WithFields(bark.Fields{
 		TagWorkflowEventID: OperationPanic,
 		TagWorkflowErr:     err,
-	}).Fatalf("%v.  Error: %v", msg, err)
+	}).Fatal(msg)
 }
 
 // LogInternalServiceError is used to log internal service error
@@ -418,11 +418,17 @@ func LogQueueProcesorShutdownTimedoutEvent(logger bark.Logger) {
 }
 
 // LogTaskProcessingFailedEvent is used to log failures from task processing.
-func LogTaskProcessingFailedEvent(logger bark.Logger, taskID int64, taskType int, err error) {
+func LogTaskProcessingFailedEvent(logger bark.Logger, err error) {
 	logger.WithFields(bark.Fields{
 		TagWorkflowEventID: TransferTaskProcessingFailed,
-		TagTaskID:          taskID,
-		TagTaskType:        taskType,
 		TagWorkflowErr:     err,
-	}).Errorf("Processor failed to process task: %v, type: %v.  Error: %v", taskID, taskType, err)
+	}).Error("Processor failed to process task.")
+}
+
+// LogOperationPanicEvent is used to log fatal errors by application to cause panic
+func LogCriticalErrorEvent(logger bark.Logger, msg string, err error) {
+	logger.WithFields(bark.Fields{
+		TagWorkflowEventID: OperationCritical,
+		TagWorkflowErr:     err,
+	}).Error(msg)
 }
