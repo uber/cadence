@@ -50,7 +50,6 @@ type (
 		UpdateAckInterval                dynamicconfig.DurationPropertyFn
 		MaxRetryCount                    dynamicconfig.IntPropertyFn
 		MetricScope                      int
-		UpdateShardTaskCount             dynamicconfig.IntPropertyFn
 	}
 
 	queueProcessorBase struct {
@@ -265,6 +264,7 @@ ProcessRetryLoop:
 			err = p.processor.process(task)
 			if err != nil {
 				if err == ErrTaskRetry {
+					p.metricsClient.IncCounter(p.options.MetricScope, metrics.HistoryTaskStandbyRetryCounter)
 					<-notificationChan
 				} else {
 					logging.LogTaskProcessingFailedEvent(p.logger, task.GetTaskID(), task.GetTaskType(), err)
@@ -273,6 +273,7 @@ ProcessRetryLoop:
 					// just keep try for cache.DomainCacheRefreshInterval
 					// and giveup
 					if _, ok := err.(*workflow.DomainNotActiveError); ok && time.Now().Sub(startTime) > cache.DomainCacheRefreshInterval {
+						p.metricsClient.IncCounter(p.options.MetricScope, metrics.HistoryTaskNotActiveCounter)
 						return
 					}
 					backoff := time.Duration(retryCount * 100)
