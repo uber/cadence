@@ -6199,7 +6199,6 @@ func (s *integrationSuite) TestTransientDecisionTimeout() {
 			}
 		}
 
-
 		workflowComplete = true
 		return nil, []*workflow.Decision{{
 			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
