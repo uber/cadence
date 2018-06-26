@@ -780,15 +780,15 @@ const (
 		`and task_id = ? ` +
 		`IF range_id = ?`
 
-	templateUpdateTaskListQueryWithTTL = `INSERT INTO tasks (` +
-		`domain_id, ` +
-		`task_list_name, ` +
-		`task_list_type, ` +
-		`type, ` +
-		`task_id, ` +
-		`range_id, ` +
-		`task_list ` +
-		`) VALUES (?, ?, ?, ?, ?, ?, ` + templateTaskListType + `) USING TTL ?`
+	templateUpdateTaskListQueryWithTTL = `UPDATE tasks USING TTL ? SET ` +
+		`range_id = ?, ` +
+		`task_list = ` + templateTaskListType + " " +
+		`WHERE domain_id = ? ` +
+		`and task_list_name = ? ` +
+		`and task_list_type = ? ` +
+		`and type = ? ` +
+		`and task_id = ? ` +
+		`IF range_id = ?`
 )
 
 var (
@@ -2137,49 +2137,39 @@ func (d *cassandraPersistence) LeaseTaskList(request *LeaseTaskListRequest) (*Le
 func (d *cassandraPersistence) UpdateTaskList(request *UpdateTaskListRequest) (*UpdateTaskListResponse, error) {
 	tli := request.TaskListInfo
 
+	var query *gocql.Query
 	if tli.Kind == TaskListKindSticky { // if task_list is sticky, then update with TTL
-		query := d.session.Query(templateUpdateTaskListQueryWithTTL,
-			tli.DomainID,
-			&tli.Name,
-			tli.TaskType,
-			rowTypeTaskList,
-			taskListTaskID,
+		query = d.session.Query(templateUpdateTaskListQueryWithTTL,
+			stickyTaskListTTL,
 			tli.RangeID,
 			tli.DomainID,
 			&tli.Name,
 			tli.TaskType,
 			tli.AckLevel,
 			tli.Kind,
-			stickyTaskListTTL,
+			tli.DomainID,
+			&tli.Name,
+			tli.TaskType,
+			rowTypeTaskList,
+			taskListTaskID,
+			tli.RangeID,
 		)
-		err := query.Exec()
-		if err != nil {
-			if isThrottlingError(err) {
-				return nil, &workflow.ServiceBusyError{
-					Message: fmt.Sprintf("UpdateTaskList operation failed. Error: %v", err),
-				}
-			}
-			return nil, &workflow.InternalServiceError{
-				Message: fmt.Sprintf("UpdateTaskList operation failed. Error: %v", err),
-			}
-		}
-		return &UpdateTaskListResponse{}, nil
+	} else {
+		query = d.session.Query(templateUpdateTaskListQuery,
+			tli.RangeID,
+			tli.DomainID,
+			&tli.Name,
+			tli.TaskType,
+			tli.AckLevel,
+			tli.Kind,
+			tli.DomainID,
+			&tli.Name,
+			tli.TaskType,
+			rowTypeTaskList,
+			taskListTaskID,
+			tli.RangeID,
+		)
 	}
-
-	query := d.session.Query(templateUpdateTaskListQuery,
-		tli.RangeID,
-		tli.DomainID,
-		&tli.Name,
-		tli.TaskType,
-		tli.AckLevel,
-		tli.Kind,
-		tli.DomainID,
-		&tli.Name,
-		tli.TaskType,
-		rowTypeTaskList,
-		taskListTaskID,
-		tli.RangeID,
-	)
 
 	previous := make(map[string]interface{})
 	applied, err := query.MapScanCAS(previous)
