@@ -425,7 +425,7 @@ func LogTaskProcessingFailedEvent(logger bark.Logger, err error) {
 	}).Error("Processor failed to process task.")
 }
 
-// LogOperationPanicEvent is used to log fatal errors by application to cause panic
+// LogCriticalErrorEvent is used to log critical errors by application it is expected to have alerts setup on such errors
 func LogCriticalErrorEvent(logger bark.Logger, msg string, err error) {
 	logger.WithFields(bark.Fields{
 		TagWorkflowEventID: OperationCritical,
