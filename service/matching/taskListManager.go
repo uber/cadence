@@ -629,7 +629,7 @@ func (c *taskListManagerImpl) updateRangeIfNeededLocked(e *matchingEngineImpl) e
 
 	if err != nil {
 		c.metricsClient.IncCounter(metrics.MatchingTaskListMgrScope, metrics.LeaseFailureCounter)
-		c.engine.unloadTaskList(c.taskListID)
+		c.Stop()
 		return err
 	}
 
@@ -783,6 +783,7 @@ getTasksPumpLoop:
 					if _, ok := err.(*persistence.ConditionFailedError); ok {
 						// This indicates the task list may have moved to another host.
 						c.Stop()
+						break getTasksPumpLoop
 					} else {
 						logging.LogPersistantStoreErrorEvent(c.logger, logging.TagValueStoreOperationUpdateTaskList, err,
 							"Persist AckLevel failed")
@@ -797,6 +798,7 @@ getTasksPumpLoop:
 				pollers := c.GetAllPollerInfo()
 				if len(pollers) == 0 {
 					c.Stop()
+					break getTasksPumpLoop
 				}
 				checkPollerTimer = time.NewTimer(c.config.IdleTasklistCheckInterval())
 			}

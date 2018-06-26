@@ -267,8 +267,9 @@ func (p *queueProcessorBase) processWithRetry(notificationChan <-chan struct{}, 
 
 	var err error
 	startTime := time.Now()
+	retryCount := 1
 ProcessRetryLoop:
-	for retryCount := 1; retryCount <= p.options.MaxRetryCount(); {
+	for retryCount <= p.options.MaxRetryCount() {
 		select {
 		case <-p.shutdownCh:
 			return
@@ -288,8 +289,8 @@ ProcessRetryLoop:
 					logging.LogTaskProcessingFailedEvent(logger, err)
 
 					// it is possible that DomainNotActiveError is thrown
-					// just keep try for cache.DomainCacheRefreshInterval
-					// and giveup
+					// just keep trying for cache.DomainCacheRefreshInterval
+					// and give up
 					if _, ok := err.(*workflow.DomainNotActiveError); ok && time.Now().Sub(startTime) > cache.DomainCacheRefreshInterval {
 						p.metricsClient.IncCounter(p.options.MetricScope, metrics.HistoryTaskNotActiveCounter)
 						return
