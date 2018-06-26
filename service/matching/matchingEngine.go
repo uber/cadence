@@ -520,18 +520,6 @@ func (e *matchingEngineImpl) getTask(
 	return tlMgr.GetTaskContext(ctx, maxDispatchPerSecond)
 }
 
-func (e *matchingEngineImpl) unloadTaskList(id *taskListID) {
-	e.taskListsLock.Lock()
-	tlMgr, ok := e.taskLists[*id]
-	if ok {
-		delete(e.taskLists, *id)
-	}
-	e.taskListsLock.Unlock()
-	if ok {
-		tlMgr.Stop()
-	}
-}
-
 // Populate the decision task response based on context and scheduled/started events.
 func (e *matchingEngineImpl) createPollForDecisionTaskResponse(context *taskContext,
 	historyResponse *h.RecordDecisionTaskStartedResponse) *m.PollForDecisionTaskResponse {
