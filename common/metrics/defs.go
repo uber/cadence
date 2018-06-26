@@ -658,6 +658,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 const (
 	CadenceRequests = iota
 	CadenceFailures
+	CadenceCriticalFailures
 	CadenceLatency
 	CadenceErrBadRequestCounter
 	CadenceErrDomainNotActiveCounter
@@ -758,6 +759,7 @@ const (
 	ReplicatorMessages = iota + NumCommonMetrics
 	ReplicatorFailures
 	ReplicatorLatency
+	ReplicatorRetryPercentage
 )
 
 // MetricDefs record the metrics for all services
@@ -765,6 +767,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 	Common: {
 		CadenceRequests:                               {metricName: "cadence.requests", metricType: Counter},
 		CadenceFailures:                               {metricName: "cadence.errors", metricType: Counter},
+		CadenceCriticalFailures:                       {metricName: "cadence.errors.critical", metricType: Counter},
 		CadenceLatency:                                {metricName: "cadence.latency", metricType: Timer},
 		CadenceErrBadRequestCounter:                   {metricName: "cadence.errors.bad-request", metricType: Counter},
 		CadenceErrDomainNotActiveCounter:              {metricName: "cadence.errors.domain-not-active", metricType: Counter},
@@ -853,9 +856,10 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		BufferThrottleCounter:         {metricName: "buffer.throttle.count"},
 	},
 	Worker: {
-		ReplicatorMessages: {metricName: "replicator.messages"},
-		ReplicatorFailures: {metricName: "replicator.errors"},
-		ReplicatorLatency:  {metricName: "replicator.latency"},
+		ReplicatorMessages:        {metricName: "replicator.messages"},
+		ReplicatorFailures:        {metricName: "replicator.errors"},
+		ReplicatorLatency:         {metricName: "replicator.latency"},
+		ReplicatorRetryPercentage: {metricName: "replicator.retry-percentage", metricType: Gauge},
 	},
 }
 
