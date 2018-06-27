@@ -107,7 +107,7 @@ const (
 )
 
 // newCQLClient returns a new instance of CQLClient
-func newCQLClient(hostsCsv string, port int, user, password, keyspace string) (CQLClient, error) {
+func newCQLClient(hostsCsv string, port int, user, password, keyspace string, timeout time.Duration) (CQLClient, error) {
 	hosts := parseHosts(hostsCsv)
 	if len(hosts) == 0 {
 		return nil, errNoHosts
@@ -123,7 +123,7 @@ func newCQLClient(hostsCsv string, port int, user, password, keyspace string) (C
 		}
 	}
 	clusterCfg.Keyspace = keyspace
-	clusterCfg.Timeout = defaultTimeout
+	clusterCfg.Timeout = timeout
 	clusterCfg.ProtoVersion = cqlProtoVersion
 	clusterCfg.Consistency = gocql.ParseConsistency(defaultConsistency)
 	cqlClient := new(cqlClient)

@@ -35,6 +35,7 @@ type (
 		CassUser     string
 		CassPassword string
 		CassKeyspace string
+		CassTimeout  int
 	}
 
 	// UpdateSchemaConfig holds the config

@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"github.com/urfave/cli"
 	"log"
+	"time"
 )
 
 // setupSchema executes the setupSchemaTask
@@ -59,7 +60,8 @@ func createKeyspace(cli *cli.Context) error {
 	if err != nil {
 		return handleErr(err)
 	}
-	client, err := newCQLClient(config.CassHosts, config.CassPort, config.CassUser, config.CassPassword, "system")
+	client, err := newCQLClient(config.CassHosts, config.CassPort, config.CassUser, config.CassPassword, "system",
+		config.CassTimeout * time.Second)
 	if err != nil {
 		return handleErr(fmt.Errorf("error creating cql client:%v", err))
 	}
