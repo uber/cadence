@@ -21,6 +21,8 @@
 package history
 
 import (
+	"time"
+
 	"github.com/stretchr/testify/mock"
 	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/shared"
@@ -1880,12 +1882,12 @@ func (_m *mockMutableState) ReplicateDecisionTaskFailedEvent(_a0 int64, _a1 int6
 }
 
 // ReplicateDecisionTaskScheduledEvent provides a mock function with given fields: _a0, _a1, _a2, _a3
-func (_m *mockMutableState) ReplicateDecisionTaskScheduledEvent(_a0 int64, _a1 int64, _a2 string, _a3 int32) *decisionInfo {
-	ret := _m.Called(_a0, _a1, _a2, _a3)
+func (_m *mockMutableState) ReplicateDecisionTaskScheduledEvent(_a0 int64, _a1 int64, _a2 time.Time, _a3 string, _a4 int32) *decisionInfo {
+	ret := _m.Called(_a0, _a1, _a2, _a3, _a4)
 
 	var r0 *decisionInfo
-	if rf, ok := ret.Get(0).(func(int64, int64, string, int32) *decisionInfo); ok {
-		r0 = rf(_a0, _a1, _a2, _a3)
+	if rf, ok := ret.Get(0).(func(int64, int64, time.Time, string, int32) *decisionInfo); ok {
+		r0 = rf(_a0, _a1, _a2, _a3, _a4)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*decisionInfo)

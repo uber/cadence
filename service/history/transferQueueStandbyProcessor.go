@@ -89,7 +89,7 @@ func newTransferQueueStandbyProcessor(clusterName string, shard ShardContext, hi
 		transferQueueProcessorBase: newTransferQueueProcessorBase(shard, options, maxReadAckLevel, updateClusterAckLevel),
 	}
 	queueAckMgr := newQueueAckMgr(shard, options, processor, shard.GetTransferClusterAckLevel(clusterName), logger)
-	queueProcessorBase := newQueueProcessorBase(shard, options, processor, queueAckMgr, logger)
+	queueProcessorBase := newQueueProcessorBase(clusterName, shard, options, processor, queueAckMgr, logger)
 	processor.queueAckMgr = queueAckMgr
 	processor.queueProcessorBase = queueProcessorBase
 
@@ -174,7 +174,7 @@ func (t *transferQueueStandbyProcessorImpl) processActivityTask(transferTask *pe
 		}
 
 		if activityInfo.StartedID == common.EmptyEventID {
-			return ErrTaskRetry
+			return NewTaskRetryError(activityInfo.ScheduledTime)
 		}
 		return nil
 	})
@@ -203,7 +203,7 @@ func (t *transferQueueStandbyProcessorImpl) processDecisionTask(transferTask *pe
 		}
 
 		if decisionInfo.StartedID == common.EmptyEventID {
-			return ErrTaskRetry
+			return NewTaskRetryError(decisionInfo.ScheduleTimestamp)
 		}
 
 		if transferTask.ScheduleID == common.FirstEventID+1 {
@@ -273,7 +273,7 @@ func (t *transferQueueStandbyProcessorImpl) processCancelExecution(transferTask 
 			return nil
 		}
 
-		return ErrTaskRetry
+		return NewTaskRetryError(requestCancelInfo.InitiatedTimestamp)
 	})
 }
 
@@ -296,7 +296,7 @@ func (t *transferQueueStandbyProcessorImpl) processSignalExecution(transferTask 
 			return nil
 		}
 
-		return ErrTaskRetry
+		return NewTaskRetryError(signalInfo.InitiatedTimestamp)
 	})
 }
 
@@ -320,7 +320,7 @@ func (t *transferQueueStandbyProcessorImpl) processStartChildExecution(transferT
 		}
 
 		if childWorkflowInfo.StartedID == common.EmptyEventID {
-			return ErrTaskRetry
+			return NewTaskRetryError(childWorkflowInfo.InitiatedTimestamp)
 		}
 		return nil
 	})
@@ -332,7 +332,7 @@ func (t *transferQueueStandbyProcessorImpl) processTransfer(processTaskIfClosed 
 		return err
 	}
 	defer func() {
-		if retError == ErrTaskRetry {
+		if IsTaskRetryError(retError) {
 			release(nil)
 		} else {
 			release(retError)

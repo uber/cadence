@@ -207,7 +207,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Pending() 
 	persistenceMutableState := createMutableState(msBuilder)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 
-	s.Equal(ErrTaskRetry, s.timerQueueStandbyProcessor.process(timerTask))
+	s.IsType(&TaskRetryError{}, s.timerQueueStandbyProcessor.process(timerTask))
 }
 
 func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Success() {
@@ -381,7 +381,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Pending() {
 	persistenceMutableState := createMutableState(msBuilder)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil).Once()
 
-	s.Equal(ErrTaskRetry, s.timerQueueStandbyProcessor.process(timerTask))
+	s.IsType(&TaskRetryError{}, s.timerQueueStandbyProcessor.process(timerTask))
 }
 
 func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Success() {
@@ -557,7 +557,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessDecisionTimeout_Pending() {
 	persistenceMutableState := createMutableState(msBuilder)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil).Once()
 
-	s.Equal(ErrTaskRetry, s.timerQueueStandbyProcessor.process(timerTask))
+	s.IsType(&TaskRetryError{}, s.timerQueueStandbyProcessor.process(timerTask))
 }
 
 func (s *timerQueueStandbyProcessorSuite) TestProcessDecisionTimeout_Success() {
@@ -651,7 +651,7 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessWorkflowTimeout_Pending() {
 	persistenceMutableState := createMutableState(msBuilder)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil).Once()
 
-	s.Equal(ErrTaskRetry, s.timerQueueStandbyProcessor.process(timerTask))
+	s.IsType(&TaskRetryError{}, s.timerQueueStandbyProcessor.process(timerTask))
 }
 
 func (s *timerQueueStandbyProcessorSuite) TestProcessWorkflowTimeout_Success() {

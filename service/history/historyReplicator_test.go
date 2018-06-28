@@ -610,11 +610,12 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_BrandNew() {
 	msBuilder := &mockMutableState{}
 	context.msBuilder = msBuilder
 	di := &decisionInfo{
-		Version:         version,
-		ScheduleID:      common.FirstEventID + 1,
-		StartedID:       common.EmptyEventID,
-		DecisionTimeout: decisionTimeout,
-		TaskList:        tasklist,
+		Version:           version,
+		ScheduleID:        common.FirstEventID + 1,
+		ScheduleTimestamp: common.NewRealTimeSource().Now(),
+		StartedID:         common.EmptyEventID,
+		DecisionTimeout:   decisionTimeout,
+		TaskList:          tasklist,
 	}
 	sBuilder := &mockStateBuilder{}
 	requestID := uuid.New()
@@ -679,6 +680,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_BrandNew() {
 			TransferTasks:               transferTasks,
 			DecisionVersion:             di.Version,
 			DecisionScheduleID:          di.ScheduleID,
+			DecisionScheduleTimestamp:   di.ScheduleTimestamp,
 			DecisionStartedID:           di.StartedID,
 			DecisionStartToCloseTimeout: di.DecisionTimeout,
 			TimerTasks:                  timerTasks,
@@ -983,11 +985,12 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 	msBuilder := &mockMutableState{}
 	context.msBuilder = msBuilder
 	di := &decisionInfo{
-		Version:         version,
-		ScheduleID:      common.FirstEventID + 1,
-		StartedID:       common.EmptyEventID,
-		DecisionTimeout: decisionTimeout,
-		TaskList:        tasklist,
+		Version:           version,
+		ScheduleID:        common.FirstEventID + 1,
+		ScheduleTimestamp: common.NewRealTimeSource().Now(),
+		StartedID:         common.EmptyEventID,
+		DecisionTimeout:   decisionTimeout,
+		TaskList:          tasklist,
 	}
 	sBuilder := &mockStateBuilder{}
 	requestID := uuid.New()
@@ -1062,6 +1065,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 			TransferTasks:               transferTasks,
 			DecisionVersion:             di.Version,
 			DecisionScheduleID:          di.ScheduleID,
+			DecisionScheduleTimestamp:   di.ScheduleTimestamp,
 			DecisionStartedID:           di.StartedID,
 			DecisionStartToCloseTimeout: di.DecisionTimeout,
 			TimerTasks:                  timerTasks,
@@ -1094,6 +1098,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 			TransferTasks:               transferTasks,
 			DecisionVersion:             di.Version,
 			DecisionScheduleID:          di.ScheduleID,
+			DecisionScheduleTimestamp:   di.ScheduleTimestamp,
 			DecisionStartedID:           di.StartedID,
 			DecisionStartToCloseTimeout: di.DecisionTimeout,
 			TimerTasks:                  timerTasks,
@@ -1135,11 +1140,12 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 	msBuilder := &mockMutableState{}
 	context.msBuilder = msBuilder
 	di := &decisionInfo{
-		Version:         version,
-		ScheduleID:      common.FirstEventID + 1,
-		StartedID:       common.EmptyEventID,
-		DecisionTimeout: decisionTimeout,
-		TaskList:        tasklist,
+		Version:           version,
+		ScheduleID:        common.FirstEventID + 1,
+		ScheduleTimestamp: common.NewRealTimeSource().Now(),
+		StartedID:         common.EmptyEventID,
+		DecisionTimeout:   decisionTimeout,
+		TaskList:          tasklist,
 	}
 	sBuilder := &mockStateBuilder{}
 	requestID := uuid.New()
@@ -1214,6 +1220,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 			TransferTasks:               transferTasks,
 			DecisionVersion:             di.Version,
 			DecisionScheduleID:          di.ScheduleID,
+			DecisionScheduleTimestamp:   di.ScheduleTimestamp,
 			DecisionStartedID:           di.StartedID,
 			DecisionStartToCloseTimeout: di.DecisionTimeout,
 			TimerTasks:                  timerTasks,
@@ -1246,6 +1253,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 			TransferTasks:               transferTasks,
 			DecisionVersion:             di.Version,
 			DecisionScheduleID:          di.ScheduleID,
+			DecisionScheduleTimestamp:   di.ScheduleTimestamp,
 			DecisionStartedID:           di.StartedID,
 			DecisionStartToCloseTimeout: di.DecisionTimeout,
 			TimerTasks:                  timerTasks,
@@ -1487,11 +1495,12 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	msBuilder := &mockMutableState{}
 	context.msBuilder = msBuilder
 	di := &decisionInfo{
-		Version:         version,
-		ScheduleID:      common.FirstEventID + 1,
-		StartedID:       common.EmptyEventID,
-		DecisionTimeout: decisionTimeout,
-		TaskList:        tasklist,
+		Version:           version,
+		ScheduleID:        common.FirstEventID + 1,
+		ScheduleTimestamp: common.NewRealTimeSource().Now(),
+		StartedID:         common.EmptyEventID,
+		DecisionTimeout:   decisionTimeout,
+		TaskList:          tasklist,
 	}
 	sBuilder := &mockStateBuilder{}
 	requestID := uuid.New()
@@ -1566,6 +1575,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 			TransferTasks:               transferTasks,
 			DecisionVersion:             di.Version,
 			DecisionScheduleID:          di.ScheduleID,
+			DecisionScheduleTimestamp:   di.ScheduleTimestamp,
 			DecisionStartedID:           di.StartedID,
 			DecisionStartToCloseTimeout: di.DecisionTimeout,
 			TimerTasks:                  timerTasks,
@@ -1598,6 +1608,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 			TransferTasks:               transferTasks,
 			DecisionVersion:             di.Version,
 			DecisionScheduleID:          di.ScheduleID,
+			DecisionScheduleTimestamp:   di.ScheduleTimestamp,
 			DecisionStartedID:           di.StartedID,
 			DecisionStartToCloseTimeout: di.DecisionTimeout,
 			TimerTasks:                  timerTasks,

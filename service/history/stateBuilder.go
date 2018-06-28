@@ -111,8 +111,13 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 
 		case shared.EventTypeDecisionTaskScheduled:
 			attributes := event.DecisionTaskScheduledEventAttributes
-			di := b.msBuilder.ReplicateDecisionTaskScheduledEvent(event.GetVersion(), event.GetEventId(),
-				attributes.TaskList.GetName(), attributes.GetStartToCloseTimeoutSeconds())
+			di := b.msBuilder.ReplicateDecisionTaskScheduledEvent(
+				event.GetVersion(),
+				event.GetEventId(),
+				time.Unix(0, event.GetTimestamp()),
+				attributes.TaskList.GetName(),
+				attributes.GetStartToCloseTimeoutSeconds(),
+			)
 
 			b.transferTasks = append(b.transferTasks, b.scheduleDecisionTransferTask(domainID, b.getTaskList(b.msBuilder),
 				di.ScheduleID))
@@ -358,6 +363,7 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 			di := newRunStateBuilder.ReplicateDecisionTaskScheduledEvent(
 				dtScheduledEvent.GetVersion(),
 				dtScheduledEvent.GetEventId(),
+				time.Unix(0, dtScheduledEvent.GetTimestamp()),
 				dtScheduledEvent.DecisionTaskScheduledEventAttributes.TaskList.GetName(),
 				dtScheduledEvent.DecisionTaskScheduledEventAttributes.GetStartToCloseTimeoutSeconds(),
 			)

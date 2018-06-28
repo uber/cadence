@@ -42,6 +42,7 @@ CREATE TYPE workflow_execution (
   create_request_id                uuid,
   decision_version                 bigint,
   decision_schedule_id             bigint,
+  decision_schedule_time           timestamp,
   decision_started_id              bigint,
   decision_request_id              text,    -- Identifier used by matching engine for retrying history service calls for recording task is started
   decision_timeout                 int,
@@ -157,6 +158,7 @@ CREATE TYPE timer_info (
 CREATE TYPE child_execution_info (
   version           bigint,
   initiated_id      bigint,
+  initiated_time    timestamp,
   initiated_event   blob,
   started_id        bigint,
   started_event     blob,
@@ -167,6 +169,7 @@ CREATE TYPE child_execution_info (
 CREATE TYPE request_cancel_info (
   version           bigint,
   initiated_id      bigint,
+  initiated_time    timestamp,
   cancel_request_id text,
 );
 
@@ -174,6 +177,7 @@ CREATE TYPE request_cancel_info (
 CREATE TYPE signal_info (
   version           bigint,
   initiated_id      bigint,
+  initiated_time    timestamp,
   signal_request_id uuid,
   signal_name       text,
   input             blob,

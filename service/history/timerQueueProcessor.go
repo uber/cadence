@@ -120,7 +120,7 @@ func (t *timerQueueProcessorImpl) NotifyNewTimers(clusterName string, currentTim
 	if !ok {
 		panic(fmt.Sprintf("Cannot find timer processor for %s.", clusterName))
 	}
-	standbyTimerProcessor.setCurrentTime(currentTime.Add(-t.config.TimerProcessorStandbyTaskDelay()))
+	standbyTimerProcessor.setCurrentTime(currentTime)
 	standbyTimerProcessor.notifyNewTimers(timerTasks)
 	standbyTimerProcessor.retryTasks()
 }

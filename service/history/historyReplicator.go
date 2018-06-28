@@ -517,11 +517,13 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 	// Set decision attributes after replication of history events
 	decisionVersionID := common.EmptyVersion
 	decisionScheduleID := common.EmptyEventID
+	decisionScheduleTimestamp := time.Time{}
 	decisionStartID := common.EmptyEventID
 	decisionTimeout := int32(0)
 	if di != nil {
 		decisionVersionID = di.Version
 		decisionScheduleID = di.ScheduleID
+		decisionScheduleTimestamp = di.ScheduleTimestamp
 		decisionStartID = di.StartedID
 		decisionTimeout = di.DecisionTimeout
 	}
@@ -548,6 +550,7 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 			TransferTasks:               transferTasks,
 			DecisionVersion:             decisionVersionID,
 			DecisionScheduleID:          decisionScheduleID,
+			DecisionScheduleTimestamp:   decisionScheduleTimestamp,
 			DecisionStartedID:           decisionStartID,
 			DecisionStartToCloseTimeout: decisionTimeout,
 			TimerTasks:                  timerTasks,
@@ -812,8 +815,9 @@ func (r *historyReplicator) terminateWorkflow(ctx context.Context, domainID stri
 
 func (r *historyReplicator) notify(clusterName string, now time.Time, transferTasks []persistence.Task,
 	timerTasks []persistence.Task) {
+	now = now.Add(-r.shard.GetConfig().StandbyClusterDelay())
 	r.shard.SetCurrentTime(clusterName, now)
-	r.historyEngine.txProcessor.NotifyNewTask(clusterName, now, transferTasks)
+	r.historyEngine.txProcessor.NotifyNewTask(clusterName, transferTasks)
 	r.historyEngine.timerProcessor.NotifyNewTimers(clusterName, now, timerTasks)
 }
 

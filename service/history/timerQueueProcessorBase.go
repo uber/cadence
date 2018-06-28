@@ -379,7 +379,7 @@ func (t *timerQueueProcessorBase) processWithRetry(notificationChan <-chan struc
 	attempt := 0
 	op := func() error {
 		err = t.timerProcessor.process(task)
-		if err != nil && err != ErrTaskRetry {
+		if err != nil && !IsTaskRetryError(err) {
 			attempt++
 			logger = t.initializeLoggerForTask(task, logger)
 			logging.LogTaskProcessingFailedEvent(logger, err)
@@ -400,12 +400,13 @@ ProcessRetryLoop:
 			}
 
 			err = backoff.Retry(op, t.retryPolicy, func(err error) bool {
-				return err != ErrTaskRetry
+				return !IsTaskRetryError(err)
 			})
 
 			if err != nil {
-				if err == ErrTaskRetry {
+				if IsTaskRetryError(err) {
 					t.metricsClient.IncCounter(t.scope, metrics.HistoryTaskStandbyRetryCounter)
+					// the timer has already been delayed, so just wait on the notificationChan
 					<-notificationChan
 				} else if _, ok := err.(*workflow.DomainNotActiveError); ok && time.Now().Sub(startTime) > cache.DomainCacheRefreshInterval {
 					t.metricsClient.IncCounter(t.scope, metrics.HistoryTaskNotActiveCounter)

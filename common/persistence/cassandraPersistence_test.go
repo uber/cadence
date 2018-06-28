@@ -1258,12 +1258,13 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_ChildExecutions() {
 	updatedInfo.LastProcessedEvent = int64(2)
 	createRequestID := uuid.New()
 	childExecutionInfos := []*ChildExecutionInfo{{
-		Version:         1234,
-		InitiatedID:     1,
-		InitiatedEvent:  []byte("initiated_event_1"),
-		StartedID:       2,
-		StartedEvent:    []byte("started_event_1"),
-		CreateRequestID: createRequestID,
+		Version:            1234,
+		InitiatedID:        1,
+		InitiatedTimestamp: timestampConvertor(time.Now()),
+		InitiatedEvent:     []byte("initiated_event_1"),
+		StartedID:          2,
+		StartedEvent:       []byte("started_event_1"),
+		CreateRequestID:    createRequestID,
 	}}
 	err2 := s.UpsertChildExecutionsState(updatedInfo, int64(3), childExecutionInfos)
 	s.Nil(err2, "No error expected.")
@@ -1275,11 +1276,12 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_ChildExecutions() {
 	ci, ok := state.ChildExecutionInfos[1]
 	s.True(ok)
 	s.NotNil(ci)
-	s.Equal(int64(1234), ci.Version)
-	s.Equal(int64(1), ci.InitiatedID)
-	s.Equal([]byte("initiated_event_1"), ci.InitiatedEvent)
-	s.Equal(int64(2), ci.StartedID)
-	s.Equal([]byte("started_event_1"), ci.StartedEvent)
+	s.Equal(childExecutionInfos[0].Version, ci.Version)
+	s.Equal(childExecutionInfos[0].InitiatedID, ci.InitiatedID)
+	s.True(timeComparator(childExecutionInfos[0].InitiatedTimestamp, ci.InitiatedTimestamp, timePrecision))
+	s.Equal(childExecutionInfos[0].InitiatedEvent, ci.InitiatedEvent)
+	s.Equal(childExecutionInfos[0].StartedID, ci.StartedID)
+	s.Equal(childExecutionInfos[0].StartedEvent, ci.StartedEvent)
 	s.Equal(createRequestID, ci.CreateRequestID)
 
 	err2 = s.DeleteChildExecutionsState(updatedInfo, int64(5), int64(1))
@@ -1312,9 +1314,10 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_RequestCancel() {
 	updatedInfo.LastProcessedEvent = int64(2)
 	cancelRequestID := uuid.New()
 	requestCancelInfos := []*RequestCancelInfo{{
-		Version:         456,
-		InitiatedID:     1,
-		CancelRequestID: cancelRequestID,
+		Version:            456,
+		InitiatedID:        1,
+		InitiatedTimestamp: timestampConvertor(time.Now()),
+		CancelRequestID:    cancelRequestID,
 	}}
 	err2 := s.UpsertRequestCancelState(updatedInfo, int64(3), requestCancelInfos)
 	s.Nil(err2, "No error expected.")
@@ -1326,8 +1329,9 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_RequestCancel() {
 	ri, ok := state.RequestCancelInfos[1]
 	s.True(ok)
 	s.NotNil(ri)
-	s.Equal(int64(456), ri.Version)
-	s.Equal(int64(1), ri.InitiatedID)
+	s.Equal(requestCancelInfos[0].Version, ri.Version)
+	s.Equal(requestCancelInfos[0].InitiatedID, ri.InitiatedID)
+	s.True(timeComparator(requestCancelInfos[0].InitiatedTimestamp, ri.InitiatedTimestamp, timePrecision))
 	s.Equal(cancelRequestID, ri.CancelRequestID)
 
 	err2 = s.DeleteCancelState(updatedInfo, int64(5), int64(1))
@@ -1363,15 +1367,15 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_SignalInfo() {
 	signalName := "my signal"
 	input := []byte("test signal input")
 	control := []byte(uuid.New())
-	signalInfos := []*SignalInfo{
-		{
-			Version:         123,
-			InitiatedID:     1,
-			SignalRequestID: signalRequestID,
-			SignalName:      signalName,
-			Input:           input,
-			Control:         control,
-		}}
+	signalInfos := []*SignalInfo{{
+		Version:            123,
+		InitiatedID:        1,
+		InitiatedTimestamp: timestampConvertor(time.Now()),
+		SignalRequestID:    signalRequestID,
+		SignalName:         signalName,
+		Input:              input,
+		Control:            control,
+	}}
 	err2 := s.UpsertSignalInfoState(updatedInfo, int64(3), signalInfos)
 	s.Nil(err2, "No error expected.")
 
@@ -1379,15 +1383,16 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_SignalInfo() {
 	s.Nil(err1, "No error expected.")
 	s.NotNil(state, "expected valid state.")
 	s.Equal(1, len(state.SignalInfos))
-	ri, ok := state.SignalInfos[1]
+	si, ok := state.SignalInfos[1]
 	s.True(ok)
-	s.NotNil(ri)
-	s.Equal(int64(123), ri.Version)
-	s.Equal(int64(1), ri.InitiatedID)
-	s.Equal(signalRequestID, ri.SignalRequestID)
-	s.Equal(signalName, ri.SignalName)
-	s.Equal(input, ri.Input)
-	s.Equal(control, ri.Control)
+	s.NotNil(si)
+	s.Equal(signalInfos[0].Version, si.Version)
+	s.Equal(signalInfos[0].InitiatedID, si.InitiatedID)
+	s.True(timeComparator(signalInfos[0].InitiatedTimestamp, si.InitiatedTimestamp, timePrecision))
+	s.Equal(signalRequestID, si.SignalRequestID)
+	s.Equal(signalName, si.SignalName)
+	s.Equal(input, si.Input)
+	s.Equal(control, si.Control)
 
 	err2 = s.DeleteSignalState(updatedInfo, int64(5), int64(1))
 	s.Nil(err2, "No error expected.")
@@ -2058,31 +2063,34 @@ func (s *cassandraPersistenceSuite) TestResetMutableState() {
 
 		ChildExecutionInfos: map[int64]*ChildExecutionInfo{
 			9: {
-				Version:         2334,
-				InitiatedID:     9,
-				InitiatedEvent:  nil,
-				StartedID:       11,
-				StartedEvent:    nil,
-				CreateRequestID: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+				Version:            2334,
+				InitiatedID:        9,
+				InitiatedTimestamp: currentTime,
+				InitiatedEvent:     nil,
+				StartedID:          11,
+				StartedEvent:       nil,
+				CreateRequestID:    "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
 			},
 		},
 
 		RequestCancelInfos: map[int64]*RequestCancelInfo{
 			19: {
-				Version:         2335,
-				InitiatedID:     19,
-				CancelRequestID: "cancel_requested_id",
+				Version:            2335,
+				InitiatedID:        19,
+				InitiatedTimestamp: currentTime,
+				CancelRequestID:    "cancel_requested_id",
 			},
 		},
 
 		SignalInfos: map[int64]*SignalInfo{
 			39: {
-				Version:         2336,
-				InitiatedID:     39,
-				SignalRequestID: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-				SignalName:      "signalA",
-				Input:           []byte("signal_input_A"),
-				Control:         []byte("signal_control_A"),
+				Version:            2336,
+				InitiatedID:        39,
+				InitiatedTimestamp: currentTime,
+				SignalRequestID:    "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+				SignalName:         "signalA",
+				Input:              []byte("signal_input_A"),
+				Control:            []byte("signal_control_A"),
 			},
 		},
 
@@ -2170,18 +2178,21 @@ func (s *cassandraPersistenceSuite) TestResetMutableState() {
 	s.True(ok)
 	s.NotNil(ci)
 	s.Equal(int64(2334), ci.Version)
+	s.Equal(currentTime.Unix(), ci.InitiatedTimestamp.Unix())
 
 	s.Equal(1, len(state1.RequestCancelInfos))
 	rci, ok := state1.RequestCancelInfos[19]
 	s.True(ok)
 	s.NotNil(rci)
 	s.Equal(int64(2335), rci.Version)
+	s.Equal(currentTime.Unix(), rci.InitiatedTimestamp.Unix())
 
 	s.Equal(1, len(state1.SignalInfos))
 	si, ok := state1.SignalInfos[39]
 	s.True(ok)
 	s.NotNil(si)
 	s.Equal(int64(2336), si.Version)
+	s.Equal(currentTime.Unix(), si.InitiatedTimestamp.Unix())
 
 	s.Equal(3, len(state1.SignalRequestedIDs))
 	_, contains := state1.SignalRequestedIDs["00000000-0000-0000-0000-000000000001"]
@@ -2228,37 +2239,41 @@ func (s *cassandraPersistenceSuite) TestResetMutableState() {
 
 	resetChildExecutionInfos := []*ChildExecutionInfo{
 		{
-			Version:         3334,
-			InitiatedID:     10,
-			InitiatedEvent:  nil,
-			StartedID:       15,
-			StartedEvent:    nil,
-			CreateRequestID: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+			Version:            3334,
+			InitiatedID:        10,
+			InitiatedTimestamp: currentTime,
+			InitiatedEvent:     nil,
+			StartedID:          15,
+			StartedEvent:       nil,
+			CreateRequestID:    "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
 		}}
 
 	resetRequestCancelInfos := []*RequestCancelInfo{
 		{
-			Version:         3335,
-			InitiatedID:     29,
-			CancelRequestID: "new_cancel_requested_id",
+			Version:            3335,
+			InitiatedID:        29,
+			InitiatedTimestamp: currentTime,
+			CancelRequestID:    "new_cancel_requested_id",
 		}}
 
 	resetSignalInfos := []*SignalInfo{
 		{
-			Version:         3336,
-			InitiatedID:     39,
-			SignalRequestID: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-			SignalName:      "signalB",
-			Input:           []byte("signal_input_b"),
-			Control:         []byte("signal_control_b"),
+			Version:            3336,
+			InitiatedID:        39,
+			InitiatedTimestamp: currentTime,
+			SignalRequestID:    "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+			SignalName:         "signalB",
+			Input:              []byte("signal_input_b"),
+			Control:            []byte("signal_control_b"),
 		},
 		{
-			Version:         3336,
-			InitiatedID:     42,
-			SignalRequestID: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-			SignalName:      "signalC",
-			Input:           []byte("signal_input_c"),
-			Control:         []byte("signal_control_c"),
+			Version:            3336,
+			InitiatedID:        42,
+			InitiatedTimestamp: currentTime,
+			SignalRequestID:    "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+			SignalName:         "signalC",
+			Input:              []byte("signal_input_c"),
+			Control:            []byte("signal_control_c"),
 		}}
 
 	rState := &ReplicationState{
@@ -2320,6 +2335,7 @@ func (s *cassandraPersistenceSuite) TestResetMutableState() {
 	s.NotNil(ci)
 	s.Equal(int64(3334), ci.Version)
 	s.Equal(int64(10), ci.InitiatedID)
+	s.Equal(currentTime.Unix(), ci.InitiatedTimestamp.Unix())
 	s.Equal(int64(15), ci.StartedID)
 
 	s.Equal(1, len(state4.RequestCancelInfos))
@@ -2328,6 +2344,7 @@ func (s *cassandraPersistenceSuite) TestResetMutableState() {
 	s.NotNil(rci)
 	s.Equal(int64(3335), rci.Version)
 	s.Equal(int64(29), rci.InitiatedID)
+	s.Equal(currentTime.Unix(), rci.InitiatedTimestamp.Unix())
 	s.Equal("new_cancel_requested_id", rci.CancelRequestID)
 
 	s.Equal(2, len(state4.SignalInfos))
@@ -2336,6 +2353,7 @@ func (s *cassandraPersistenceSuite) TestResetMutableState() {
 	s.NotNil(si)
 	s.Equal(int64(3336), si.Version)
 	s.Equal(int64(39), si.InitiatedID)
+	s.Equal(currentTime.Unix(), si.InitiatedTimestamp.Unix())
 	s.Equal("signalB", si.SignalName)
 	s.Equal([]byte("signal_input_b"), si.Input)
 	s.Equal([]byte("signal_control_b"), si.Control)
@@ -2345,6 +2363,7 @@ func (s *cassandraPersistenceSuite) TestResetMutableState() {
 	s.NotNil(si)
 	s.Equal(int64(3336), si.Version)
 	s.Equal(int64(42), si.InitiatedID)
+	s.Equal(currentTime.Unix(), si.InitiatedTimestamp.Unix())
 	s.Equal("signalC", si.SignalName)
 	s.Equal([]byte("signal_input_c"), si.Input)
 	s.Equal([]byte("signal_control_c"), si.Control)
@@ -2354,29 +2373,30 @@ func (s *cassandraPersistenceSuite) TestResetMutableState() {
 
 func copyWorkflowExecutionInfo(sourceInfo *WorkflowExecutionInfo) *WorkflowExecutionInfo {
 	return &WorkflowExecutionInfo{
-		DomainID:             sourceInfo.DomainID,
-		WorkflowID:           sourceInfo.WorkflowID,
-		RunID:                sourceInfo.RunID,
-		ParentDomainID:       sourceInfo.ParentDomainID,
-		ParentWorkflowID:     sourceInfo.ParentWorkflowID,
-		ParentRunID:          sourceInfo.ParentRunID,
-		InitiatedID:          sourceInfo.InitiatedID,
-		CompletionEvent:      sourceInfo.CompletionEvent,
-		TaskList:             sourceInfo.TaskList,
-		WorkflowTypeName:     sourceInfo.WorkflowTypeName,
-		WorkflowTimeout:      sourceInfo.WorkflowTimeout,
-		DecisionTimeoutValue: sourceInfo.DecisionTimeoutValue,
-		ExecutionContext:     sourceInfo.ExecutionContext,
-		State:                sourceInfo.State,
-		NextEventID:          sourceInfo.NextEventID,
-		LastProcessedEvent:   sourceInfo.LastProcessedEvent,
-		LastUpdatedTimestamp: sourceInfo.LastUpdatedTimestamp,
-		CreateRequestID:      sourceInfo.CreateRequestID,
-		DecisionVersion:      sourceInfo.DecisionVersion,
-		DecisionScheduleID:   sourceInfo.DecisionScheduleID,
-		DecisionStartedID:    sourceInfo.DecisionStartedID,
-		DecisionRequestID:    sourceInfo.DecisionRequestID,
-		DecisionTimeout:      sourceInfo.DecisionTimeout,
+		DomainID:                  sourceInfo.DomainID,
+		WorkflowID:                sourceInfo.WorkflowID,
+		RunID:                     sourceInfo.RunID,
+		ParentDomainID:            sourceInfo.ParentDomainID,
+		ParentWorkflowID:          sourceInfo.ParentWorkflowID,
+		ParentRunID:               sourceInfo.ParentRunID,
+		InitiatedID:               sourceInfo.InitiatedID,
+		CompletionEvent:           sourceInfo.CompletionEvent,
+		TaskList:                  sourceInfo.TaskList,
+		WorkflowTypeName:          sourceInfo.WorkflowTypeName,
+		WorkflowTimeout:           sourceInfo.WorkflowTimeout,
+		DecisionTimeoutValue:      sourceInfo.DecisionTimeoutValue,
+		ExecutionContext:          sourceInfo.ExecutionContext,
+		State:                     sourceInfo.State,
+		NextEventID:               sourceInfo.NextEventID,
+		LastProcessedEvent:        sourceInfo.LastProcessedEvent,
+		LastUpdatedTimestamp:      sourceInfo.LastUpdatedTimestamp,
+		CreateRequestID:           sourceInfo.CreateRequestID,
+		DecisionVersion:           sourceInfo.DecisionVersion,
+		DecisionScheduleID:        sourceInfo.DecisionScheduleID,
+		DecisionScheduleTimestamp: sourceInfo.DecisionScheduleTimestamp,
+		DecisionStartedID:         sourceInfo.DecisionStartedID,
+		DecisionRequestID:         sourceInfo.DecisionRequestID,
+		DecisionTimeout:           sourceInfo.DecisionTimeout,
 	}
 }
 

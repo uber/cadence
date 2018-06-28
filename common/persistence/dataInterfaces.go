@@ -171,6 +171,7 @@ type (
 		CreateRequestID              string
 		DecisionVersion              int64
 		DecisionScheduleID           int64
+		DecisionScheduleTimestamp    time.Time
 		DecisionStartedID            int64
 		DecisionRequestID            string
 		DecisionTimeout              int32
@@ -449,29 +450,32 @@ type (
 
 	// ChildExecutionInfo has details for pending child executions.
 	ChildExecutionInfo struct {
-		Version         int64
-		InitiatedID     int64
-		InitiatedEvent  []byte
-		StartedID       int64
-		StartedEvent    []byte
-		CreateRequestID string
+		Version            int64
+		InitiatedID        int64
+		InitiatedTimestamp time.Time
+		InitiatedEvent     []byte
+		StartedID          int64
+		StartedEvent       []byte
+		CreateRequestID    string
 	}
 
 	// RequestCancelInfo has details for pending external workflow cancellations
 	RequestCancelInfo struct {
-		Version         int64
-		InitiatedID     int64
-		CancelRequestID string
+		Version            int64
+		InitiatedID        int64
+		InitiatedTimestamp time.Time
+		CancelRequestID    string
 	}
 
 	// SignalInfo has details for pending external workflow signal
 	SignalInfo struct {
-		Version         int64
-		InitiatedID     int64
-		SignalRequestID string
-		SignalName      string
-		Input           []byte
-		Control         []byte
+		Version            int64
+		InitiatedID        int64
+		InitiatedTimestamp time.Time
+		SignalRequestID    string
+		SignalName         string
+		Input              []byte
+		Control            []byte
 	}
 
 	// BufferedReplicationTask has details to handle out of order receive of history events
@@ -525,6 +529,7 @@ type (
 		RangeID                     int64
 		DecisionVersion             int64
 		DecisionScheduleID          int64
+		DecisionScheduleTimestamp   time.Time
 		DecisionStartedID           int64
 		DecisionStartToCloseTimeout int32
 		ContinueAsNew               bool

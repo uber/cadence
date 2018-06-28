@@ -53,6 +53,7 @@ type (
 	}
 
 	queueProcessorBase struct {
+		clusterName   string
 		shard         ShardContext
 		options       *QueueProcessorOptions
 		processor     processor
@@ -78,13 +79,14 @@ var (
 	errUnexpectedQueueTask = errors.New("unexpected queue task")
 )
 
-func newQueueProcessorBase(shard ShardContext, options *QueueProcessorOptions, processor processor, queueAckMgr queueAckMgr, logger bark.Logger) *queueProcessorBase {
+func newQueueProcessorBase(clusterName string, shard ShardContext, options *QueueProcessorOptions, processor processor, queueAckMgr queueAckMgr, logger bark.Logger) *queueProcessorBase {
 	workerNotificationChans := []chan struct{}{}
 	for index := 0; index < options.WorkerCount(); index++ {
 		workerNotificationChans = append(workerNotificationChans, make(chan struct{}, 1))
 	}
 
 	p := &queueProcessorBase{
+		clusterName:             clusterName,
 		shard:                   shard,
 		options:                 options,
 		processor:               processor,
@@ -254,7 +256,7 @@ func (p *queueProcessorBase) processWithRetry(notificationChan <-chan struct{}, 
 	retryCount := 0
 	op := func() error {
 		err = p.processor.process(task)
-		if err != nil && err != ErrTaskRetry {
+		if err != nil && !IsTaskRetryError(err) {
 			retryCount++
 			logger = p.initializeLoggerForTask(task, logger)
 			logging.LogTaskProcessingFailedEvent(logger, err)
@@ -275,13 +277,19 @@ ProcessRetryLoop:
 			}
 
 			err = backoff.Retry(op, p.retryPolicy, func(err error) bool {
-				return err != ErrTaskRetry
+				return !IsTaskRetryError(err)
 			})
 
 			if err != nil {
-				if err == ErrTaskRetry {
+				if IsTaskRetryError(err) {
 					p.metricsClient.IncCounter(p.options.MetricScope, metrics.HistoryTaskStandbyRetryCounter)
-					<-notificationChan
+					timestamp := err.(*TaskRetryError).GetNextRetryTime()
+					for {
+						<-notificationChan
+						if p.shard.GetCurrentTime(p.clusterName).After(timestamp) {
+							continue ProcessRetryLoop
+						}
+					}
 				} else if _, ok := err.(*workflow.DomainNotActiveError); ok && time.Now().Sub(startTime) > cache.DomainCacheRefreshInterval {
 					p.metricsClient.IncCounter(p.options.MetricScope, metrics.HistoryTaskNotActiveCounter)
 					return

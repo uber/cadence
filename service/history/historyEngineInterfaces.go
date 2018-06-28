@@ -116,7 +116,7 @@ type (
 	transferQueueProcessor interface {
 		common.Daemon
 		FailoverDomain(domainID string)
-		NotifyNewTask(clusterName string, currentTime time.Time, transferTasks []persistence.Task)
+		NotifyNewTask(clusterName string, transferTasks []persistence.Task)
 	}
 
 	// TODO the timer quque processor and the one below, timer processor

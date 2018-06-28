@@ -78,13 +78,42 @@ type (
 		replcatorProcessor   queueProcessor
 		historyEventNotifier historyEventNotifier
 	}
+
+	// TaskRetryError is the error indicating that the timer / transfer task should be retried.
+	TaskRetryError struct {
+		NextRetryTime time.Time
+	}
 )
+
+// NewTaskRetryError create a TaskRetryError when a standby task cannot be processed right now
+func NewTaskRetryError(nextRetryTime time.Time) *TaskRetryError {
+	return &TaskRetryError{NextRetryTime: nextRetryTime}
+}
+
+// IsTaskRetryError whether err is of type *TaskRetryError
+func IsTaskRetryError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if _, ok := err.(*TaskRetryError); ok {
+		return true
+	}
+	return false
+}
+
+// Error error interface
+func (err *TaskRetryError) Error() string {
+	return "standby task should retry due to condition in mutable state is not met"
+}
+
+// GetNextRetryTime return the next time this task should be retried
+func (err *TaskRetryError) GetNextRetryTime() time.Time {
+	return err.NextRetryTime
+}
 
 var _ Engine = (*historyEngineImpl)(nil)
 
 var (
-	// ErrTaskRetry is the error indicating that the timer / transfer task should be retried.
-	ErrTaskRetry = errors.New("passive task should retry due to condition in mutable state is not met")
 	// ErrDuplicate is exported temporarily for integration test
 	ErrDuplicate = errors.New("Duplicate task, completing it")
 	// ErrConflict is exported temporarily for integration test
@@ -237,7 +266,7 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 				// its length > 0 and has correct timestamp, to trkgger a db scan
 				fakeDecisionTask := []persistence.Task{&persistence.DecisionTask{}}
 				fakeDecisionTimeoutTask := []persistence.Task{&persistence.DecisionTimeoutTask{VisibilityTimestamp: now}}
-				e.txProcessor.NotifyNewTask(e.currentClusterName, now, fakeDecisionTask)
+				e.txProcessor.NotifyNewTask(e.currentClusterName, fakeDecisionTask)
 				e.timerProcessor.NotifyNewTimers(e.currentClusterName, now, fakeDecisionTimeoutTask)
 			})
 			e.shard.UpdateDomainNotificationVersion(nextDomain.GetNotificationVersion() + 1)
@@ -295,6 +324,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 	var transferTasks []persistence.Task
 	decisionVersion := common.EmptyVersion
 	decisionScheduleID := common.EmptyEventID
+	decisionScheduleTimestamp := time.Time{}
 	decisionStartID := common.EmptyEventID
 	decisionTimeout := int32(0)
 	if parentInfo == nil {
@@ -309,6 +339,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 		}}
 		decisionVersion = di.Version
 		decisionScheduleID = di.ScheduleID
+		decisionScheduleTimestamp = common.NewRealTimeSource().Now()
 		decisionStartID = di.StartedID
 		decisionTimeout = di.DecisionTimeout
 	}
@@ -377,6 +408,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 			ReplicationTasks:            replicationTasks,
 			DecisionVersion:             decisionVersion,
 			DecisionScheduleID:          decisionScheduleID,
+			DecisionScheduleTimestamp:   decisionScheduleTimestamp,
 			DecisionStartedID:           decisionStartID,
 			DecisionStartToCloseTimeout: decisionTimeout,
 			TimerTasks:                  timerTasks,
@@ -1952,6 +1984,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 	}}
 	decisionVersion := di.Version
 	decisionScheduleID := di.ScheduleID
+	decisionScheduleTimestamp := common.NewRealTimeSource().Now()
 	decisionStartID := di.StartedID
 	decisionTimeout := di.DecisionTimeout
 
@@ -2017,6 +2050,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 			ReplicationTasks:            replicationTasks,
 			DecisionVersion:             decisionVersion,
 			DecisionScheduleID:          decisionScheduleID,
+			DecisionScheduleTimestamp:   decisionScheduleTimestamp,
 			DecisionStartedID:           decisionStartID,
 			DecisionStartToCloseTimeout: decisionTimeout,
 			TimerTasks:                  timerTasks,
@@ -2203,7 +2237,7 @@ func (e *historyEngineImpl) SyncShardStatus(ctx context.Context, request *h.Sync
 	// 2. notify the timer gate in the timer queue standby processor
 	// 3, notify the transfer (essentially a no op, just put it here so it looks symmetric)
 	e.shard.SetCurrentTime(clusterName, now)
-	e.txProcessor.NotifyNewTask(clusterName, now, []persistence.Task{})
+	e.txProcessor.NotifyNewTask(clusterName, []persistence.Task{})
 	e.timerProcessor.NotifyNewTimers(clusterName, now, []persistence.Task{})
 	return nil
 }
@@ -2402,7 +2436,7 @@ func (e *historyEngineImpl) getTimerBuilder(we *workflow.WorkflowExecution) *tim
 func (s *shardContextWrapper) UpdateWorkflowExecution(request *persistence.UpdateWorkflowExecutionRequest) error {
 	err := s.ShardContext.UpdateWorkflowExecution(request)
 	if err == nil {
-		s.txProcessor.NotifyNewTask(s.currentClusterName, s.GetCurrentTime(s.currentClusterName), request.TransferTasks)
+		s.txProcessor.NotifyNewTask(s.currentClusterName, request.TransferTasks)
 		if len(request.ReplicationTasks) > 0 {
 			s.replcatorProcessor.notifyNewTask()
 		}
@@ -2414,7 +2448,7 @@ func (s *shardContextWrapper) CreateWorkflowExecution(request *persistence.Creat
 	*persistence.CreateWorkflowExecutionResponse, error) {
 	resp, err := s.ShardContext.CreateWorkflowExecution(request)
 	if err == nil {
-		s.txProcessor.NotifyNewTask(s.currentClusterName, s.GetCurrentTime(s.currentClusterName), request.TransferTasks)
+		s.txProcessor.NotifyNewTask(s.currentClusterName, request.TransferTasks)
 		if len(request.ReplicationTasks) > 0 {
 			s.replcatorProcessor.notifyNewTask()
 		}
