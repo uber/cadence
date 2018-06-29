@@ -226,7 +226,7 @@ type (
 
 		bufferedReplicationTasks       map[int64]*persistence.BufferedReplicationTask // Storage for out of order events
 		updateBufferedReplicationTasks *persistence.BufferedReplicationTask
-		deleteBufferedReplicationEvent *int64
+		deleteBufferedReplicationEvent map[int64]struct{}
 
 		executionInfo    *persistence.WorkflowExecutionInfo // Workflow mutable state info.
 		replicationState *persistence.ReplicationState
@@ -255,7 +255,7 @@ type (
 		newBufferedEvents                *persistence.SerializedHistoryEventBatch
 		clearBufferedEvents              bool
 		newBufferedReplicationEventsInfo *persistence.BufferedReplicationTask
-		deleteBufferedReplicationEvent   *int64
+		deleteBufferedReplicationEvent   []int64
 	}
 
 	// TODO: This should be part of persistence layer
@@ -563,7 +563,7 @@ func (e *mutableStateBuilder) CloseUpdateSession() (*mutableStateSessionUpdates,
 		newBufferedEvents:                e.updateBufferedEvents,
 		clearBufferedEvents:              e.clearBufferedEvents,
 		newBufferedReplicationEventsInfo: e.updateBufferedReplicationTasks,
-		deleteBufferedReplicationEvent:   e.deleteBufferedReplicationEvent,
+		deleteBufferedReplicationEvent:   convertBufferedReplicationTaskIDs(e.deleteBufferedReplicationEvent),
 	}
 
 	// Clear all updates to prepare for the next session
@@ -643,7 +643,7 @@ func (e *mutableStateBuilder) GetBufferedReplicationTask(firstEventID int64) (*p
 
 func (e *mutableStateBuilder) DeleteBufferedReplicationTask(firstEventID int64) {
 	delete(e.bufferedReplicationTasks, firstEventID)
-	e.deleteBufferedReplicationEvent = common.Int64Ptr(firstEventID)
+	e.deleteBufferedReplicationEvent[firstEventID] = struct{}{}
 }
 
 func (e *mutableStateBuilder) GetBufferedHistory(
@@ -736,6 +736,14 @@ func convertUpdateSignalInfos(inputs map[*persistence.SignalInfo]struct{}) []*pe
 
 func convertSignalRequestedIDs(inputs map[string]struct{}) []string {
 	outputs := []string{}
+	for item := range inputs {
+		outputs = append(outputs, item)
+	}
+	return outputs
+}
+
+func convertBufferedReplicationTaskIDs(inputs map[int64]struct{}) []int64 {
+	outputs := []int64{}
 	for item := range inputs {
 		outputs = append(outputs, item)
 	}

@@ -1611,7 +1611,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_BufferedReplication
 	s.Equal(int64(1), bufferedNewRunEvents.Events[1].DecisionTaskScheduledEventAttributes.GetAttempt())
 
 	deleteBufferedReplicationTask := int64(5)
-	err5 := s.UpdateWorklowStateAndReplication(updatedInfo, nil, nil, &deleteBufferedReplicationTask, int64(3), nil)
+	err5 := s.UpdateWorklowStateAndReplication(updatedInfo, nil, nil, []int64{deleteBufferedReplicationTask}, int64(3), nil)
 	s.Nil(err5, "No error expected.")
 
 	state3, err6 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
@@ -1620,7 +1620,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_BufferedReplication
 	s.Equal(1, len(state3.BufferedReplicationTasks))
 
 	deleteBufferedReplicationTask2 := int64(10)
-	err7 := s.UpdateWorklowStateAndReplication(updatedInfo, nil, nil, &deleteBufferedReplicationTask2, int64(3), nil)
+	err7 := s.UpdateWorklowStateAndReplication(updatedInfo, nil, nil, []int64{deleteBufferedReplicationTask2}, int64(3), nil)
 	s.Nil(err7, "No error expected.")
 
 	state4, err8 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)

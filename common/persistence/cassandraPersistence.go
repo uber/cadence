@@ -1518,7 +1518,7 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 	d.updateBufferedEvents(batch, request.NewBufferedEvents, request.ClearBufferedEvents,
 		executionInfo.DomainID, executionInfo.WorkflowID, executionInfo.RunID, request.Condition, request.RangeID)
 
-	d.updateBufferedReplicationTasks(batch, request.NewBufferedReplicationTask, request.DeleteBufferedReplicationTask,
+	d.updateBufferedReplicationTasks(batch, request.NewBufferedReplicationTask, request.DeleteBufferedReplicationTasks,
 		executionInfo.DomainID, executionInfo.WorkflowID, executionInfo.RunID, request.Condition, request.RangeID)
 
 	if request.ContinueAsNew != nil {
@@ -2937,7 +2937,7 @@ func (d *cassandraPersistence) updateBufferedEvents(batch *gocql.Batch, newBuffe
 }
 
 func (d *cassandraPersistence) updateBufferedReplicationTasks(batch *gocql.Batch, newBufferedReplicationTask *BufferedReplicationTask,
-	deleteInfo *int64, domainID, workflowID, runID string, condition int64, rangeID int64) {
+	deleteInfos []int64, domainID, workflowID, runID string, condition int64, rangeID int64) {
 
 	if newBufferedReplicationTask != nil {
 		if newBufferedReplicationTask.NewRunHistory != nil {
@@ -2981,9 +2981,9 @@ func (d *cassandraPersistence) updateBufferedReplicationTasks(batch *gocql.Batch
 	}
 
 	// deleteInfo is the FirstEventID for the history batch being deleted
-	if deleteInfo != nil {
+	for _, deleteInfo := range deleteInfos {
 		batch.Query(templateDeleteBufferedReplicationTaskQuery,
-			*deleteInfo,
+			deleteInfo,
 			d.shardID,
 			rowTypeExecution,
 			domainID,
