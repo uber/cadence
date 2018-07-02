@@ -25,16 +25,18 @@ import (
 	"sync"
 	"time"
 
+	"go.uber.org/yarpc/yarpcerrors"
 	"golang.org/x/net/context"
 
 	farm "github.com/dgryski/go-farm"
 	"github.com/uber-common/bark"
 
+	"math/rand"
+
 	h "github.com/uber/cadence/.gen/go/history"
 	m "github.com/uber/cadence/.gen/go/matching"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/backoff"
-	"math/rand"
 )
 
 const (
@@ -49,6 +51,10 @@ const (
 	frontendServiceOperationInitialInterval    = 200 * time.Millisecond
 	frontendServiceOperationMaxInterval        = 5 * time.Second
 	frontendServiceOperationExpirationInterval = 15 * time.Second
+
+	matchingServiceOperationInitialInterval    = 1000 * time.Millisecond
+	matchingServiceOperationMaxInterval        = 10 * time.Second
+	matchingServiceOperationExpirationInterval = 30 * time.Second
 )
 
 // MergeDictoRight copies the contents of src to dest
@@ -119,6 +125,15 @@ func CreateFrontendServiceRetryPolicy() backoff.RetryPolicy {
 	return policy
 }
 
+// CreateMatchingRetryPolicy creates a retry policy for calls to matching service
+func CreateMatchingRetryPolicy() backoff.RetryPolicy {
+	policy := backoff.NewExponentialRetryPolicy(matchingServiceOperationInitialInterval)
+	policy.SetMaximumInterval(matchingServiceOperationMaxInterval)
+	policy.SetExpirationInterval(matchingServiceOperationExpirationInterval)
+
+	return policy
+}
+
 // IsPersistenceTransientError checks if the error is a transient persistence error
 func IsPersistenceTransientError(err error) bool {
 	switch err.(type) {
@@ -143,6 +158,32 @@ func IsServiceNonRetryableError(err error) bool {
 		return true
 	case *workflow.CancellationAlreadyRequestedError:
 		return true
+	case *yarpcerrors.Status:
+		rpcErr := err.(*yarpcerrors.Status)
+		if rpcErr.Code() != yarpcerrors.CodeDeadlineExceeded {
+			return true
+		}
+		return false
+	}
+
+	return false
+}
+
+// IsMatchingServiceTransientError checks if the error is a transient error.
+func IsMatchingServiceTransientError(err error) bool {
+	switch err.(type) {
+	case *workflow.InternalServiceError:
+		return true
+	case *workflow.ServiceBusyError:
+		return true
+	case *workflow.LimitExceededError:
+		return true
+	case *yarpcerrors.Status:
+		rpcErr := err.(*yarpcerrors.Status)
+		if rpcErr.Code() == yarpcerrors.CodeDeadlineExceeded {
+			return true
+		}
+		return false
 	}
 
 	return false
