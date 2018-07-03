@@ -228,3 +228,10 @@ func TestDynamicConfigKeyIsMapped(t *testing.T) {
 		require.NotEmpty(t, key)
 	}
 }
+
+func TestDynamicConfigFilterTypeIsMapped(t *testing.T) {
+	require.Equal(t, int(lastFilterTypeForTest), len(filters))
+	for i := unknownFilter; i < lastFilterTypeForTest; i++ {
+		require.NotEmpty(t, filters[i])
+	}
+}

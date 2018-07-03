@@ -272,6 +272,9 @@ const (
 	TaskListName
 	// TaskType is the task type (0:Decision, 1:Activity)
 	TaskType
+
+	// lastFilterTypeForTest must be the last one in this const group for testing purpose
+	lastFilterTypeForTest
 )
 
 // FilterOption is used to provide filters for dynamic config keys
