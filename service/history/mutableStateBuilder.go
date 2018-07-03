@@ -224,9 +224,9 @@ type (
 		updateBufferedEvents *persistence.SerializedHistoryEventBatch   // buffered history events that needs to be persisted
 		clearBufferedEvents  bool                                       // delete buffered events from persistence
 
-		bufferedReplicationTasks       map[int64]*persistence.BufferedReplicationTask // Storage for out of order events
-		updateBufferedReplicationTasks *persistence.BufferedReplicationTask
-		deleteBufferedReplicationEvent map[int64]struct{}
+		bufferedReplicationTasks        map[int64]*persistence.BufferedReplicationTask // Storage for out of order events
+		updateBufferedReplicationTasks  *persistence.BufferedReplicationTask
+		deleteBufferedReplicationEvents map[int64]struct{}
 
 		executionInfo    *persistence.WorkflowExecutionInfo // Workflow mutable state info.
 		replicationState *persistence.ReplicationState
@@ -255,7 +255,7 @@ type (
 		newBufferedEvents                *persistence.SerializedHistoryEventBatch
 		clearBufferedEvents              bool
 		newBufferedReplicationEventsInfo *persistence.BufferedReplicationTask
-		deleteBufferedReplicationEvent   []int64
+		deleteBufferedReplicationEvents  []int64
 	}
 
 	// TODO: This should be part of persistence layer
@@ -563,7 +563,7 @@ func (e *mutableStateBuilder) CloseUpdateSession() (*mutableStateSessionUpdates,
 		newBufferedEvents:                e.updateBufferedEvents,
 		clearBufferedEvents:              e.clearBufferedEvents,
 		newBufferedReplicationEventsInfo: e.updateBufferedReplicationTasks,
-		deleteBufferedReplicationEvent:   convertBufferedReplicationTaskIDs(e.deleteBufferedReplicationEvent),
+		deleteBufferedReplicationEvents:  convertBufferedReplicationTaskIDs(e.deleteBufferedReplicationEvents),
 	}
 
 	// Clear all updates to prepare for the next session
@@ -590,7 +590,7 @@ func (e *mutableStateBuilder) CloseUpdateSession() (*mutableStateSessionUpdates,
 		return nil, ErrBufferedEventsLimitExceeded
 	}
 	e.updateBufferedReplicationTasks = nil
-	e.deleteBufferedReplicationEvent = nil
+	e.deleteBufferedReplicationEvents = nil
 
 	return updates, nil
 }
@@ -643,7 +643,7 @@ func (e *mutableStateBuilder) GetBufferedReplicationTask(firstEventID int64) (*p
 
 func (e *mutableStateBuilder) DeleteBufferedReplicationTask(firstEventID int64) {
 	delete(e.bufferedReplicationTasks, firstEventID)
-	e.deleteBufferedReplicationEvent[firstEventID] = struct{}{}
+	e.deleteBufferedReplicationEvents[firstEventID] = struct{}{}
 }
 
 func (e *mutableStateBuilder) GetBufferedHistory(

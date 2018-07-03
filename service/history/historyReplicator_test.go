@@ -527,7 +527,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEvents_IncomingGreaterThanCurrent
 	msBuilder.On("CloseUpdateSession").Return(&mutableStateSessionUpdates{
 		newEventsBuilder:                 newHistoryBuilder(msBuilder, s.logger),
 		newBufferedReplicationEventsInfo: bufferedReplicationTask,
-		deleteBufferedReplicationEvent:   nil,
+		deleteBufferedReplicationEvents:  nil,
 	}, nil).Once()
 	msBuilder.On("GetExecutionInfo").Return(executionInfo)
 	msBuilder.On("UpdateReplicationStateLastEventID", currentSourceCluster, currentVersion, currentNextEventID-1).Once()

@@ -289,7 +289,7 @@ func (c *workflowExecutionContext) updateHelper(builder *historyBuilder, transfe
 		NewBufferedEvents:              updates.newBufferedEvents,
 		ClearBufferedEvents:            updates.clearBufferedEvents,
 		NewBufferedReplicationTask:     updates.newBufferedReplicationEventsInfo,
-		DeleteBufferedReplicationTasks: updates.deleteBufferedReplicationEvent,
+		DeleteBufferedReplicationTasks: updates.deleteBufferedReplicationEvents,
 		ContinueAsNew:                  continueAsNew,
 		FinishExecution:                finishExecution,
 		FinishedExecutionTTL:           finishExecutionTTL,
