@@ -36,13 +36,16 @@ var keys = map[Key]string{
 	unknownKey: "unknownKey",
 
 	// tests keys
-	testGetPropertyKey:                         "testGetPropertyKey",
-	testGetIntPropertyKey:                      "testGetIntPropertyKey",
-	testGetFloat64PropertyKey:                  "testGetFloat64PropertyKey",
-	testGetDurationPropertyKey:                 "testGetDurationPropertyKey",
-	testGetBoolPropertyKey:                     "testGetBoolPropertyKey",
-	testGetIntPropertyFilteredByDomainKey:      "testGetIntPropertyFilteredByDomainKey",
-	testGetDurationPropertyFilteredByDomainKey: "testGetDurationPropertyFilteredByDomainKey",
+	testGetPropertyKey:                               "testGetPropertyKey",
+	testGetIntPropertyKey:                            "testGetIntPropertyKey",
+	testGetFloat64PropertyKey:                        "testGetFloat64PropertyKey",
+	testGetDurationPropertyKey:                       "testGetDurationPropertyKey",
+	testGetBoolPropertyKey:                           "testGetBoolPropertyKey",
+	testGetIntPropertyFilteredByDomainKey:            "testGetIntPropertyFilteredByDomainKey",
+	testGetDurationPropertyFilteredByDomainKey:       "testGetDurationPropertyFilteredByDomainKey",
+	testGetIntPropertyFilteredByTaskListInfoKey:      "testGetIntPropertyFilteredByTaskListInfoKey",
+	testGetDurationPropertyFilteredByTaskListInfoKey: "testGetDurationPropertyFilteredByTaskListInfoKey",
+	testGetBoolPropertyFilteredByTaskListInfoKey:     "testGetBoolPropertyFilteredByTaskListInfoKey",
 
 	// system settings
 	EnableGlobalDomain: "system.enableGlobalDomain",
@@ -239,6 +242,9 @@ const (
 	MaximumBufferedEventsBatch
 	// ShardUpdateMinInterval is the minimal time interval which the shard info can be updated
 	ShardUpdateMinInterval
+
+	// lastKeyForTest must be the last one in this const group for testing purpose
+	lastKeyForTest
 )
 
 // Filter represents a filter on the dynamic config key
