@@ -51,6 +51,8 @@ const (
 const (
 	_defaultTaskDispatchRPS    = 100000.0
 	_defaultTaskDispatchRPSTTL = 60 * time.Second
+
+	maxAddTasksIdleTime = 5 * time.Minute
 )
 
 var errAddTasklistThrottled = errors.New("cannot add to tasklist, limit exceeded")
@@ -742,7 +744,8 @@ func (c *taskListManagerImpl) getTasksPump() {
 
 	go c.deliverBufferTasksForPoll()
 	updateAckTimer := time.NewTimer(c.config.UpdateAckInterval())
-	checkPollerTimer := time.NewTimer(c.config.IdleTasklistCheckInterval())
+	checkIdleTaskListTimer := time.NewTimer(c.config.IdleTasklistCheckInterval())
+	lastTimeWriteTask := time.Time{}
 getTasksPumpLoop:
 	for {
 		select {
@@ -750,6 +753,8 @@ getTasksPumpLoop:
 			break getTasksPumpLoop
 		case <-c.notifyCh:
 			{
+				lastTimeWriteTask = time.Now()
+
 				tasks, readLevel, err := c.getTaskBatch()
 				if err != nil {
 					c.signalNewTask() // re-enqueue the event
@@ -796,19 +801,18 @@ getTasksPumpLoop:
 				c.signalNewTask() // periodically signal pump to check persistence for tasks
 				updateAckTimer = time.NewTimer(c.config.UpdateAckInterval())
 			}
-		case <-checkPollerTimer.C:
+		case <-checkIdleTaskListTimer.C:
 			{
-				pollers := c.GetAllPollerInfo()
-				if len(pollers) == 0 {
+				if !isTaskAddedRecently(lastTimeWriteTask) && len(c.GetAllPollerInfo()) == 0 {
 					c.Stop()
 				}
-				checkPollerTimer = time.NewTimer(c.config.IdleTasklistCheckInterval())
+				checkIdleTaskListTimer = time.NewTimer(c.config.IdleTasklistCheckInterval())
 			}
 		}
 	}
 
 	updateAckTimer.Stop()
-	checkPollerTimer.Stop()
+	checkIdleTaskListTimer.Stop()
 }
 
 // Retry operation on transient error and on rangeID change. On rangeID update by another process calls c.Stop().
@@ -952,4 +956,8 @@ func (c *taskContext) completeTask(err error) {
 
 func createServiceBusyError(msg string) *s.ServiceBusyError {
 	return &s.ServiceBusyError{Message: msg}
+}
+
+func isTaskAddedRecently(lastAddTime time.Time) bool {
+	return time.Now().Sub(lastAddTime) <= maxAddTasksIdleTime
 }
