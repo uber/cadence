@@ -143,9 +143,9 @@ func (t *timerQueueProcessorImpl) FailoverDomain(domainID string) {
 	failoverTimerProcessor := newTimerQueueFailoverProcessor(t.shard, t.historyService, domainID,
 		standbyClusterName, minLevel, maxLevel, t.matchingClient, t.logger)
 	failoverTimerProcessor.Start()
-	// use a fake timer to trigger db scan
-	fakeDecisionTimeoutTask := []persistence.Task{&persistence.DecisionTimeoutTask{VisibilityTimestamp: t.shard.GetTimeSource().Now()}}
-	failoverTimerProcessor.notifyNewTimers(fakeDecisionTimeoutTask)
+	// // use a fake timer to trigger db scan
+	// fakeDecisionTimeoutTask := []persistence.Task{&persistence.DecisionTimeoutTask{VisibilityTimestamp: t.shard.GetTimeSource().Now()}}
+	// failoverTimerProcessor.notifyNewTimers(fakeDecisionTimeoutTask)
 }
 
 func (t *timerQueueProcessorImpl) getTimerFiredCount(clusterName string) uint64 {

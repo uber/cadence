@@ -157,7 +157,7 @@ func (t *transferQueueProcessorImpl) FailoverDomain(domainID string) {
 		domainID, standbyClusterName, minLevel, maxLevel, t.logger,
 	)
 	failoverTaskProcessor.Start()
-	failoverTaskProcessor.notifyNewTask()
+	// failoverTaskProcessor.notifyNewTask()
 }
 
 func (t *transferQueueProcessorImpl) completeTransferLoop() {
