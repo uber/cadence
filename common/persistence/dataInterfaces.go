@@ -574,22 +574,22 @@ type (
 		FinishedExecutionTTL int32
 
 		// Mutable state
-		UpsertActivityInfos           []*ActivityInfo
-		DeleteActivityInfos           []int64
-		UpserTimerInfos               []*TimerInfo
-		DeleteTimerInfos              []string
-		UpsertChildExecutionInfos     []*ChildExecutionInfo
-		DeleteChildExecutionInfo      *int64
-		UpsertRequestCancelInfos      []*RequestCancelInfo
-		DeleteRequestCancelInfo       *int64
-		UpsertSignalInfos             []*SignalInfo
-		DeleteSignalInfo              *int64
-		UpsertSignalRequestedIDs      []string
-		DeleteSignalRequestedID       string
-		NewBufferedEvents             *SerializedHistoryEventBatch
-		ClearBufferedEvents           bool
-		NewBufferedReplicationTask    *BufferedReplicationTask
-		DeleteBufferedReplicationTask *int64
+		UpsertActivityInfos            []*ActivityInfo
+		DeleteActivityInfos            []int64
+		UpserTimerInfos                []*TimerInfo
+		DeleteTimerInfos               []string
+		UpsertChildExecutionInfos      []*ChildExecutionInfo
+		DeleteChildExecutionInfo       *int64
+		UpsertRequestCancelInfos       []*RequestCancelInfo
+		DeleteRequestCancelInfo        *int64
+		UpsertSignalInfos              []*SignalInfo
+		DeleteSignalInfo               *int64
+		UpsertSignalRequestedIDs       []string
+		DeleteSignalRequestedID        string
+		NewBufferedEvents              *SerializedHistoryEventBatch
+		ClearBufferedEvents            bool
+		NewBufferedReplicationTask     *BufferedReplicationTask
+		DeleteBufferedReplicationTasks []int64
 	}
 
 	// ResetMutableStateRequest is used to reset workflow execution state
