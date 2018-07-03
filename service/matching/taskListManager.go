@@ -51,8 +51,6 @@ const (
 const (
 	_defaultTaskDispatchRPS    = 100000.0
 	_defaultTaskDispatchRPSTTL = 60 * time.Second
-
-	maxAddTasksIdleTime = 5 * time.Minute
 )
 
 var errAddTasklistThrottled = errors.New("cannot add to tasklist, limit exceeded")
@@ -76,6 +74,7 @@ type taskListConfig struct {
 	GetTasksBatchSize          func() int
 	UpdateAckInterval          func() time.Duration
 	IdleTasklistCheckInterval  func() time.Duration
+	MaxTasklistIdleTime        func() time.Duration
 	MinTaskThrottlingBurstSize func() int
 	// taskWriter configuration
 	OutstandingTaskAppendsThreshold func() int
@@ -101,6 +100,9 @@ func newTaskListConfig(id *taskListID, config *Config, domainCache cache.DomainC
 		},
 		IdleTasklistCheckInterval: func() time.Duration {
 			return config.IdleTasklistCheckInterval(domain, taskListName, taskType)
+		},
+		MaxTasklistIdleTime: func() time.Duration {
+			return config.MaxTasklistIdleTime(domain, taskListName, taskType)
 		},
 		MinTaskThrottlingBurstSize: func() int {
 			return config.MinTaskThrottlingBurstSize(domain, taskListName, taskType)
@@ -803,7 +805,7 @@ getTasksPumpLoop:
 			}
 		case <-checkIdleTaskListTimer.C:
 			{
-				if !isTaskAddedRecently(lastTimeWriteTask) && len(c.GetAllPollerInfo()) == 0 {
+				if !c.isTaskAddedRecently(lastTimeWriteTask) && len(c.GetAllPollerInfo()) == 0 {
 					c.Stop()
 				}
 				checkIdleTaskListTimer = time.NewTimer(c.config.IdleTasklistCheckInterval())
@@ -958,6 +960,6 @@ func createServiceBusyError(msg string) *s.ServiceBusyError {
 	return &s.ServiceBusyError{Message: msg}
 }
 
-func isTaskAddedRecently(lastAddTime time.Time) bool {
-	return time.Now().Sub(lastAddTime) <= maxAddTasksIdleTime
+func (c *taskListManagerImpl) isTaskAddedRecently(lastAddTime time.Time) bool {
+	return time.Now().Sub(lastAddTime) <= c.config.MaxTasklistIdleTime()
 }

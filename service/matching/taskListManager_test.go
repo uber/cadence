@@ -109,10 +109,11 @@ func createTestTaskListManagerWithConfig(cfg *Config) *taskListManagerImpl {
 }
 
 func TestIsTaskAddedRecently(t *testing.T) {
-	require.True(t, isTaskAddedRecently(time.Now()))
-	require.False(t, isTaskAddedRecently(time.Now().Add(-maxAddTasksIdleTime)))
-	require.True(t, isTaskAddedRecently(time.Now().Add(1*time.Second)))
-	require.False(t, isTaskAddedRecently(time.Time{}))
+	tlm := createTestTaskListManager()
+	require.True(t, tlm.isTaskAddedRecently(time.Now()))
+	require.False(t, tlm.isTaskAddedRecently(time.Now().Add(-tlm.config.MaxTasklistIdleTime())))
+	require.True(t, tlm.isTaskAddedRecently(time.Now().Add(1*time.Second)))
+	require.False(t, tlm.isTaskAddedRecently(time.Time{}))
 }
 
 func tlMgrStartWithoutNotifyEvent(tlm *taskListManagerImpl) {
