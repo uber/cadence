@@ -40,7 +40,7 @@ func checkRequiredDomainDataKVs(domainData map[string]string) error {
 	for _, k := range requiredDomainDataKeys {
 		_, ok := domainData[k]
 		if !ok {
-			return fmt.Errorf("domain data error, missing required key %v", k)
+			return fmt.Errorf("domain data error, missing required key %v . All required keys: %v", k, requiredDomainDataKeys)
 		}
 	}
 	return nil

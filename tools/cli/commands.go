@@ -180,7 +180,6 @@ func RegisterDomain(c *cli.Context) {
 
 	description := c.String(FlagDescription)
 	ownerEmail := c.String(FlagOwnerEmail)
-	domainDataStr := c.String(FlagDomainData)
 	retentionDays := defaultDomainRetentionDays
 	if c.IsSet(FlagRetentionDays) {
 		retentionDays = c.Int(FlagRetentionDays)
@@ -194,16 +193,22 @@ func RegisterDomain(c *cli.Context) {
 			return
 		}
 	}
-	domainData, err := parseDomainDataKVs(domainDataStr)
-	if err != nil {
-		fmt.Printf("Register Domain failed: %v.\n", err.Error())
-		return
+
+	domainData := map[string]string{}
+	if len(requiredDomainDataKeys) > 0 {
+		domainDataStr := getRequiredOption(c, FlagDomainData)
+		domainData, err = parseDomainDataKVs(domainDataStr)
+		if err != nil {
+			fmt.Printf("Register Domain failed: %v.\n", err.Error())
+			return
+		}
+		err = checkRequiredDomainDataKVs(domainData)
+		if err != nil {
+			fmt.Printf("Register Domain failed: %v.\n", err.Error())
+			return
+		}
 	}
-	err = checkRequiredDomainDataKVs(domainData)
-	if err != nil {
-		fmt.Printf("Register Domain failed: %v.\n", err.Error())
-		return
-	}
+
 	var activeClusterName string
 	if c.IsSet(FlagActiveClusterName) {
 		activeClusterName = c.String(FlagActiveClusterName)
