@@ -227,10 +227,10 @@ LoadCompleteLoop:
 			if compareTimerIDLess(&upperAckLevel, &timerSequenceID) {
 				break LoadCompleteLoop
 			}
-			minTimestamp = timer.VisibilityTimestamp
-			if err := executionMgr.CompleteTimerTask(&persistence.CompleteTimerTaskRequest{
+			err := executionMgr.CompleteTimerTask(&persistence.CompleteTimerTaskRequest{
 				VisibilityTimestamp: timer.VisibilityTimestamp,
-				TaskID:              timer.TaskID}); err != nil {
+				TaskID:              timer.TaskID})
+			if err != nil {
 				t.logger.Warnf("Timer queue ack manager unable to complete timer task: %v; %v", timer, err)
 			}
 		}
