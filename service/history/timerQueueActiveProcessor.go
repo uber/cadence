@@ -40,6 +40,7 @@ type (
 		historyService          *historyEngineImpl
 		cache                   *historyCache
 		timerTaskFilter         timerTaskFilter
+		now                     timeNow
 		logger                  bark.Logger
 		metricsClient           metrics.Client
 		currentClusterName      string
@@ -70,6 +71,7 @@ func newTimerQueueActiveProcessor(shard ShardContext, historyService *historyEng
 		historyService:          historyService,
 		cache:                   historyService.historyCache,
 		timerTaskFilter:         timerTaskFilter,
+		now:                     timeNow,
 		logger:                  logger,
 		matchingClient:          retryableMatchingClient,
 		metricsClient:           historyService.metricsClient,
@@ -107,6 +109,7 @@ func newTimerQueueFailoverProcessor(shard ShardContext, historyService *historyE
 		historyService:          historyService,
 		cache:                   historyService.historyCache,
 		timerTaskFilter:         timerTaskFilter,
+		now:                     timeNow,
 		logger:                  logger,
 		metricsClient:           historyService.metricsClient,
 		matchingClient:          retryableMatchingClient,
@@ -278,6 +281,7 @@ func (t *timerQueueActiveProcessorImpl) processActivityTimeout(timerTask *persis
 		return err0
 	}
 	defer func() { release(retError) }()
+	referenceTime := t.now()
 
 Update_History_Loop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
@@ -318,7 +322,7 @@ Update_History_Loop:
 				continue ExpireActivityTimers
 			}
 
-			if isExpired := tBuilder.IsTimerExpired(td, timerTask.VisibilityTimestamp); isExpired {
+			if isExpired := tBuilder.IsTimerExpired(td, referenceTime); isExpired {
 				timeoutType := td.TimeoutType
 				t.logger.Debugf("Activity TimeoutType: %v, scheduledID: %v, startedId: %v. \n",
 					timeoutType, ai.ScheduleID, ai.StartedID)
