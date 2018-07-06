@@ -104,9 +104,9 @@ type (
 )
 
 const (
-	replicationTaskInitialRetryInterval = 50 * time.Millisecond
-	replicationTaskMaxRetryInterval     = 10 * time.Second
-	replicationTaskExpirationInterval   = 30 * time.Second
+	replicationTaskInitialRetryInterval = 100 * time.Millisecond
+	replicationTaskMaxRetryInterval     = 2 * time.Second
+	replicationTaskExpirationInterval   = 10 * time.Second
 )
 
 var (
@@ -443,18 +443,10 @@ func (p *replicationTaskProcessor) updateFailureMetric(scope int, err error) {
 
 func (p *replicationTaskProcessor) isTransientRetryableError(err error) bool {
 	switch err.(type) {
-	case *h.ShardOwnershipLostError:
-		return true
-	case *shared.ServiceBusyError:
-		return true
-	case *shared.LimitExceededError:
-		return true
-	case *shared.InternalServiceError:
-		return true
-	case *shared.RetryTaskError:
-		return true
-	default:
+	case *shared.BadRequestError:
 		return false
+	default:
+		return true
 	}
 }
 
