@@ -184,7 +184,7 @@ func (r *historyReplicator) ApplyEvents(request *h.ReplicateEventsRequest) (retE
 
 		err = r.FlushBuffer(context, msBuilder, logger)
 		if err != nil {
-			logger.Errorf("Fail to pre-flush buffer, Err: %v", err)
+			r.logError(logger, "Fail to pre-flush buffer.", err)
 			return err
 		}
 		msBuilder, err = r.ApplyOtherEventsVersionChecking(context, msBuilder, request, logger)
@@ -199,8 +199,7 @@ func (r *historyReplicator) ApplyStartEvent(context *workflowExecutionContext, r
 	msBuilder := r.getNewMutableState(request.GetVersion(), logger)
 	err := r.ApplyReplicationTask(context, msBuilder, request, logger)
 	if err != nil {
-		logger.Errorf("Fail to Apply Replication task.  NextEvent: %v, FirstEvent: %v, Err: %v", msBuilder.GetNextEventID(),
-			request.GetFirstEventId(), err)
+		r.logError(logger, "Fail to Apply Replication task.", err)
 	}
 	return err
 }
@@ -326,7 +325,7 @@ func (r *historyReplicator) ApplyOtherEvents(context *workflowExecutionContext, 
 		r.metricsClient.IncCounter(metrics.ReplicateHistoryEventsScope, metrics.BufferedReplicationTaskCounter)
 		err = msBuilder.BufferReplicationTask(request)
 		if err != nil {
-			logger.Errorf("Failed to buffer out of order replication task.  Err: %v", err)
+			r.logError(logger, "Failed to buffer out of order replication task.", err)
 			return errors.New("failed to add buffered replication task")
 		}
 
@@ -346,16 +345,14 @@ func (r *historyReplicator) ApplyOtherEvents(context *workflowExecutionContext, 
 	// Apply the replication task
 	err = r.ApplyReplicationTask(context, msBuilder, request, logger)
 	if err != nil {
-		logger.Errorf("Fail to Apply Replication task.  NextEvent: %v, FirstEvent: %v, Err: %v",
-			msBuilder.GetNextEventID(), firstEventID, err)
+		r.logError(logger, "Fail to Apply Replication task.", err)
 		return err
 	}
 
 	// Flush buffered replication tasks after applying the update
 	err = r.FlushBuffer(context, msBuilder, logger)
 	if err != nil {
-		logger.Errorf("Fail to flush buffer.  NextEvent: %v, FirstEvent: %v, Err: %v",
-			msBuilder.GetNextEventID(), firstEventID, err)
+		r.logError(logger, "Fail to flush buffer.", err)
 	}
 
 	return err
@@ -650,8 +647,7 @@ func (r *historyReplicator) flushCurrentWorkflowBuffer(domainID string, workflow
 	err = r.FlushBuffer(currentContext, currentMutableState, logger)
 	currentRelease(err)
 	if err != nil {
-		logger.Errorf("Fail to flush buffer for current workflow: domainID: %v, workflowID: %v, runID: %v, Err: %v",
-			domainID, workflowID, currentMutableState.GetExecutionInfo().RunID, err)
+		r.logError(logger, "Fail to flush buffer for current workflow.", err)
 		return err
 	}
 	return nil
@@ -810,4 +806,10 @@ func (r *historyReplicator) notify(clusterName string, now time.Time, transferTa
 	r.shard.SetCurrentTime(clusterName, now)
 	r.historyEngine.txProcessor.NotifyNewTask(clusterName, now, transferTasks)
 	r.historyEngine.timerProcessor.NotifyNewTimers(clusterName, now, timerTasks)
+}
+
+func (r *historyReplicator) logError(logger bark.Logger, msg string, err error) {
+	logger.WithFields(bark.Fields{
+		logging.TagErr: err,
+	}).Error(msg)
 }
