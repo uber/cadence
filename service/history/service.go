@@ -37,6 +37,8 @@ import (
 type Config struct {
 	NumberOfShards int
 
+	PersistenceMaxQPS dynamicconfig.FloatPropertyFn
+
 	// HistoryCache settings
 	// Change of these configs require shard restart
 	HistoryCacheInitialSize dynamicconfig.IntPropertyFn
@@ -102,6 +104,7 @@ type Config struct {
 func NewConfig(dc *dynamicconfig.Collection, numberOfShards int) *Config {
 	return &Config{
 		NumberOfShards:                                      numberOfShards,
+		PersistenceMaxQPS:                                   dc.GetFloat64Property(dynamicconfig.HistoryPersistenceMaxQPS, 1500),
 		HistoryCacheInitialSize:                             dc.GetIntProperty(dynamicconfig.HistoryCacheInitialSize, 128),
 		HistoryCacheMaxSize:                                 dc.GetIntProperty(dynamicconfig.HistoryCacheMaxSize, 512),
 		HistoryCacheTTL:                                     dc.GetDurationProperty(dynamicconfig.HistoryCacheTTL, time.Hour),
@@ -183,6 +186,9 @@ func (s *Service) Start() {
 
 	base := service.New(p)
 
+	persistenceMaxQPS := int(s.config.PersistenceMaxQPS())
+	persistenceRateLimiter := common.NewTokenBucket(persistenceMaxQPS, common.NewRealTimeSource())
+
 	s.metricsClient = base.GetMetricsClient()
 
 	shardMgr, err := persistence.NewCassandraShardPersistence(p.CassandraConfig.Hosts,
@@ -197,7 +203,8 @@ func (s *Service) Start() {
 	if err != nil {
 		log.Fatalf("failed to create shard manager: %v", err)
 	}
-	shardMgr = persistence.NewShardPersistenceClient(shardMgr, base.GetMetricsClient(), log)
+	shardMgr = persistence.NewShardRateLimitedPersistenceClient(shardMgr, persistenceRateLimiter, log)
+	shardMgr = persistence.NewShardMetricsPersistenceClient(shardMgr, base.GetMetricsClient(), log)
 
 	// Hack to create shards for bootstrap purposes
 	// TODO: properly pre-create all shards before deployment.
@@ -215,7 +222,8 @@ func (s *Service) Start() {
 	if err != nil {
 		log.Fatalf("failed to create metadata manager: %v", err)
 	}
-	metadata = persistence.NewMetadataPersistenceClient(metadata, base.GetMetricsClient(), log)
+	metadata = persistence.NewMetadataRateLimitedPersistenceClient(metadata, persistenceRateLimiter, log)
+	metadata = persistence.NewMetadataMetricsPersistenceClient(metadata, base.GetMetricsClient(), log)
 
 	visibility, err := persistence.NewCassandraVisibilityPersistence(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,
@@ -228,7 +236,8 @@ func (s *Service) Start() {
 	if err != nil {
 		log.Fatalf("failed to create visiblity manager: %v", err)
 	}
-	visibility = persistence.NewVisibilityPersistenceClient(visibility, base.GetMetricsClient(), log)
+	visibility = persistence.NewVisibilityRateLimitedPersistenceClient(visibility, persistenceRateLimiter, log)
+	visibility = persistence.NewVisibilityMetricsPersistenceClient(visibility, base.GetMetricsClient(), log)
 
 	history, err := persistence.NewCassandraHistoryPersistence(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,
@@ -242,7 +251,8 @@ func (s *Service) Start() {
 	if err != nil {
 		log.Fatalf("Creating Cassandra history manager persistence failed: %v", err)
 	}
-	history = persistence.NewHistoryPersistenceClient(history, base.GetMetricsClient(), log)
+	history = persistence.NewHistoryRateLimitedPersistenceClient(history, persistenceRateLimiter, log)
+	history = persistence.NewHistoryMetricsPersistenceClient(history, base.GetMetricsClient(), log)
 
 	execMgrFactory, err := persistence.NewCassandraPersistenceClientFactory(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,

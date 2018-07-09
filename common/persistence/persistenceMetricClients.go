@@ -72,8 +72,8 @@ var _ HistoryManager = (*historyPersistenceClient)(nil)
 var _ MetadataManager = (*metadataPersistenceClient)(nil)
 var _ VisibilityManager = (*visibilityPersistenceClient)(nil)
 
-// NewShardPersistenceClient creates a client to manage shards
-func NewShardPersistenceClient(persistence ShardManager, metricClient metrics.Client, logger bark.Logger) ShardManager {
+// NewShardMetricsPersistenceClient creates a client to manage shards
+func NewShardMetricsPersistenceClient(persistence ShardManager, metricClient metrics.Client, logger bark.Logger) ShardManager {
 	return &shardPersistenceClient{
 		persistence:  persistence,
 		metricClient: metricClient,
@@ -81,8 +81,8 @@ func NewShardPersistenceClient(persistence ShardManager, metricClient metrics.Cl
 	}
 }
 
-// NewWorkflowExecutionPersistenceClient creates a client to manage executions
-func NewWorkflowExecutionPersistenceClient(persistence ExecutionManager, metricClient metrics.Client, logger bark.Logger) ExecutionManager {
+// NewWorkflowExecutionMetricsPersistenceClient creates a client to manage executions
+func NewWorkflowExecutionMetricsPersistenceClient(persistence ExecutionManager, metricClient metrics.Client, logger bark.Logger) ExecutionManager {
 	return &workflowExecutionPersistenceClient{
 		persistence:  persistence,
 		metricClient: metricClient,
@@ -90,8 +90,8 @@ func NewWorkflowExecutionPersistenceClient(persistence ExecutionManager, metricC
 	}
 }
 
-// NewTaskPersistenceClient creates a client to manage tasks
-func NewTaskPersistenceClient(persistence TaskManager, metricClient metrics.Client, logger bark.Logger) TaskManager {
+// NewTaskMetricsPersistenceClient creates a client to manage tasks
+func NewTaskMetricsPersistenceClient(persistence TaskManager, metricClient metrics.Client, logger bark.Logger) TaskManager {
 	return &taskPersistenceClient{
 		persistence:  persistence,
 		metricClient: metricClient,
@@ -99,8 +99,8 @@ func NewTaskPersistenceClient(persistence TaskManager, metricClient metrics.Clie
 	}
 }
 
-// NewHistoryPersistenceClient creates a HistoryManager client to manage workflow execution history
-func NewHistoryPersistenceClient(persistence HistoryManager, metricClient metrics.Client, logger bark.Logger) HistoryManager {
+// NewHistoryMetricsPersistenceClient creates a HistoryManager client to manage workflow execution history
+func NewHistoryMetricsPersistenceClient(persistence HistoryManager, metricClient metrics.Client, logger bark.Logger) HistoryManager {
 	return &historyPersistenceClient{
 		persistence:  persistence,
 		metricClient: metricClient,
@@ -108,8 +108,8 @@ func NewHistoryPersistenceClient(persistence HistoryManager, metricClient metric
 	}
 }
 
-// NewMetadataPersistenceClient creates a MetadataManager client to manage metadata
-func NewMetadataPersistenceClient(persistence MetadataManager, metricClient metrics.Client, logger bark.Logger) MetadataManager {
+// NewMetadataMetricsPersistenceClient creates a MetadataManager client to manage metadata
+func NewMetadataMetricsPersistenceClient(persistence MetadataManager, metricClient metrics.Client, logger bark.Logger) MetadataManager {
 	return &metadataPersistenceClient{
 		persistence:  persistence,
 		metricClient: metricClient,
@@ -117,8 +117,8 @@ func NewMetadataPersistenceClient(persistence MetadataManager, metricClient metr
 	}
 }
 
-// NewVisibilityPersistenceClient creates a client to manage visibility
-func NewVisibilityPersistenceClient(persistence VisibilityManager, metricClient metrics.Client, logger bark.Logger) VisibilityManager {
+// NewVisibilityMetricsPersistenceClient creates a client to manage visibility
+func NewVisibilityMetricsPersistenceClient(persistence VisibilityManager, metricClient metrics.Client, logger bark.Logger) VisibilityManager {
 	return &visibilityPersistenceClient{
 		persistence:  persistence,
 		metricClient: metricClient,
@@ -379,6 +379,8 @@ func (p *workflowExecutionPersistenceClient) updateErrorMetric(scope int, err er
 	case *TimeoutError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrTimeoutCounter)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
+	case *workflow.LimitExceededError:
+		p.metricClient.IncCounter(scope, metrics.CadenceErrLimitExceededCounter)
 	case *workflow.ServiceBusyError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrBusyCounter)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
@@ -472,6 +474,8 @@ func (p *taskPersistenceClient) updateErrorMetric(scope int, err error) {
 	case *TimeoutError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrTimeoutCounter)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
+	case *workflow.LimitExceededError:
+		p.metricClient.IncCounter(scope, metrics.CadenceErrLimitExceededCounter)
 	default:
 		p.logger.WithFields(bark.Fields{
 			logging.TagScope: scope,
@@ -538,6 +542,8 @@ func (p *historyPersistenceClient) updateErrorMetric(scope int, err error) {
 	case *TimeoutError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrTimeoutCounter)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
+	case *workflow.LimitExceededError:
+		p.metricClient.IncCounter(scope, metrics.CadenceErrLimitExceededCounter)
 	default:
 		p.logger.WithFields(bark.Fields{
 			logging.TagScope: scope,
@@ -661,6 +667,8 @@ func (p *metadataPersistenceClient) updateErrorMetric(scope int, err error) {
 		p.metricClient.IncCounter(scope, metrics.CadenceErrEntityNotExistsCounter)
 	case *workflow.BadRequestError:
 		p.metricClient.IncCounter(scope, metrics.CadenceErrBadRequestCounter)
+	case *workflow.LimitExceededError:
+		p.metricClient.IncCounter(scope, metrics.CadenceErrLimitExceededCounter)
 	default:
 		p.logger.WithFields(bark.Fields{
 			logging.TagScope: scope,
@@ -817,6 +825,8 @@ func (p *visibilityPersistenceClient) updateErrorMetric(scope int, err error) {
 	case *TimeoutError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrTimeoutCounter)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
+	case *workflow.LimitExceededError:
+		p.metricClient.IncCounter(scope, metrics.CadenceErrLimitExceededCounter)
 	case *workflow.EntityNotExistsError:
 		p.metricClient.IncCounter(scope, metrics.CadenceErrEntityNotExistsCounter)
 	case *workflow.ServiceBusyError:

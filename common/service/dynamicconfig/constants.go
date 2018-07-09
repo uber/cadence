@@ -51,12 +51,14 @@ var keys = map[Key]string{
 	EnableGlobalDomain: "system.enableGlobalDomain",
 
 	// frontend settings
+	FrontendPersistenceMaxQPS:     "frontend.persistenceMaxQPS",
 	FrontendVisibilityMaxPageSize: "frontend.visibilityMaxPageSize",
 	FrontendHistoryMaxPageSize:    "frontend.historyMaxPageSize",
 	FrontendRPS:                   "frontend.rps",
 	FrontendHistoryMgrNumConns:    "frontend.historyMgrNumConns",
 
 	// matching settings
+	MatchingPersistenceMaxQPS:               "matching.persistenceMaxQPS",
 	MatchingMinTaskThrottlingBurstSize:      "matching.minTaskThrottlingBurstSize",
 	MatchingGetTasksBatchSize:               "matching.getTasksBatchSize",
 	MatchingLongPollExpirationInterval:      "matching.longPollExpirationInterval",
@@ -69,6 +71,7 @@ var keys = map[Key]string{
 	MatchingRPS:                             "matching.rps",
 
 	// history settings
+	HistoryPersistenceMaxQPS:                            "history.persistenceMaxQPS",
 	HistoryLongPollExpirationInterval:                   "history.longPollExpirationInterval",
 	HistoryCacheInitialSize:                             "history.cacheInitialSize",
 	HistoryCacheMaxSize:                                 "history.cacheMaxSize",
@@ -111,6 +114,9 @@ var keys = map[Key]string{
 	HistoryMgrNumConns:                                  "history.historyMgrNumConns",
 	MaximumBufferedEventsBatch:                          "history.maximumBufferedEventsBatch",
 	ShardUpdateMinInterval:                              "history.shardUpdateMinInterval",
+
+	// worker settings
+	WorkerPersistenceMaxQPS: "worker.persistenceMaxQPS",
 }
 
 const (
@@ -133,6 +139,8 @@ const (
 
 	// key for frontend
 
+	// FrontendPersistenceMaxQPS is the max qps frontend host can querty DB
+	FrontendPersistenceMaxQPS
 	// FrontendVisibilityMaxPageSize is default max size for ListWorkflowExecutions in one page
 	FrontendVisibilityMaxPageSize
 	// FrontendHistoryMaxPageSize is default max size for GetWorkflowExecutionHistory in one page
@@ -144,6 +152,8 @@ const (
 
 	// key for matching
 
+	// MatchingPersistenceMaxQPS is the max qps matching host can querty DB
+	MatchingPersistenceMaxQPS
 	// MatchingMinTaskThrottlingBurstSize is the minimum burst size for task list throttling
 	MatchingMinTaskThrottlingBurstSize
 	// MatchingGetTasksBatchSize is the maximum batch size to fetch from the task buffer
@@ -167,6 +177,8 @@ const (
 
 	// key for history
 
+	// HistoryPersistenceMaxQPS is the max qps history host can querty DB
+	HistoryPersistenceMaxQPS
 	// HistoryLongPollExpirationInterval is the long poll expiration interval in the history service
 	HistoryLongPollExpirationInterval
 	// HistoryCacheInitialSize is initial size of history cache
@@ -251,6 +263,11 @@ const (
 	MaximumBufferedEventsBatch
 	// ShardUpdateMinInterval is the minimal time interval which the shard info can be updated
 	ShardUpdateMinInterval
+
+	// key for histoworkerry
+
+	// WorkerPersistenceMaxQPS is the max qps worker host can querty DB
+	WorkerPersistenceMaxQPS
 
 	// lastKeyForTest must be the last one in this const group for testing purpose
 	lastKeyForTest
