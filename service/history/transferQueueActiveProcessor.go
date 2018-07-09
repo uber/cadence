@@ -126,7 +126,7 @@ func newTransferQueueFailoverProcessor(shard ShardContext, historyService *histo
 	options := &QueueProcessorOptions{
 		BatchSize:                        config.TransferTaskBatchSize,
 		WorkerCount:                      config.TransferTaskWorkerCount,
-		MaxPollRPS:                       config.TransferProcessorMaxPollRPS,
+		MaxPollRPS:                       config.TransferProcessorFailoverMaxPollRPS,
 		MaxPollInterval:                  config.TransferProcessorMaxPollInterval,
 		MaxPollIntervalJitterCoefficient: config.TransferProcessorMaxPollIntervalJitterCoefficient,
 		UpdateAckInterval:                config.TransferProcessorUpdateAckInterval,

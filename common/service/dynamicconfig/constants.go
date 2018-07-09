@@ -82,11 +82,13 @@ var keys = map[Key]string{
 	TimerProcessorUpdateShardTaskCount:                  "history.timerProcessorUpdateShardTaskCount",
 	TimerProcessorUpdateAckInterval:                     "history.timerProcessorUpdateAckInterval",
 	TimerProcessorCompleteTimerInterval:                 "history.timerProcessorCompleteTimerInterval",
+	TimerProcessorFailoverMaxPollRPS:                    "history.timerProcessorFailoverMaxPollRPS",
 	TimerProcessorMaxPollRPS:                            "history.timerProcessorMaxPollRPS",
 	TimerProcessorMaxPollInterval:                       "history.timerProcessorMaxPollInterval",
 	TimerProcessorMaxPollIntervalJitterCoefficient:      "history.timerProcessorMaxPollIntervalJitterCoefficient",
 	TimerProcessorStandbyTaskDelay:                      "history.timerProcessorStandbyTaskDelay",
 	TransferTaskBatchSize:                               "history.transferTaskBatchSize",
+	TransferProcessorFailoverMaxPollRPS:                 "history.transferProcessorFailoverMaxPollRPS",
 	TransferProcessorMaxPollRPS:                         "history.transferProcessorMaxPollRPS",
 	TransferTaskWorkerCount:                             "history.transferTaskWorkerCount",
 	TransferTaskMaxRetryCount:                           "history.transferTaskMaxRetryCount",
@@ -191,6 +193,8 @@ const (
 	TimerProcessorUpdateAckInterval
 	// TimerProcessorCompleteTimerInterval is complete timer interval for timer processor
 	TimerProcessorCompleteTimerInterval
+	// TimerProcessorFailoverMaxPollRPS is max poll rate per second for timer processor
+	TimerProcessorFailoverMaxPollRPS
 	// TimerProcessorMaxPollRPS is max poll rate per second for timer processor
 	TimerProcessorMaxPollRPS
 	// TimerProcessorMaxPollInterval is max poll interval for timer processor
@@ -201,6 +205,8 @@ const (
 	TimerProcessorStandbyTaskDelay
 	// TransferTaskBatchSize is batch size for transferQueueProcessor
 	TransferTaskBatchSize
+	// TransferProcessorFailoverMaxPollRPS is max poll rate per second for transferQueueProcessor
+	TransferProcessorFailoverMaxPollRPS
 	// TransferProcessorMaxPollRPS is max poll rate per second for transferQueueProcessor
 	TransferProcessorMaxPollRPS
 	// TransferTaskWorkerCount is number of worker for transferQueueProcessor

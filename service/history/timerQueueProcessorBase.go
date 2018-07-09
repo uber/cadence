@@ -79,7 +79,8 @@ type (
 	}
 )
 
-func newTimerQueueProcessorBase(scope int, shard ShardContext, historyService *historyEngineImpl, timerQueueAckMgr timerQueueAckMgr, timeNow timeNow, logger bark.Logger) *timerQueueProcessorBase {
+func newTimerQueueProcessorBase(scope int, shard ShardContext, historyService *historyEngineImpl,
+	timerQueueAckMgr timerQueueAckMgr, timeNow timeNow, maxPollRPS int, logger bark.Logger) *timerQueueProcessorBase {
 	log := logger.WithFields(bark.Fields{
 		logging.TagWorkflowComponent: logging.TagValueTimerQueueComponent,
 	})
@@ -108,7 +109,7 @@ func newTimerQueueProcessorBase(scope int, shard ShardContext, historyService *h
 		workerNotificationChans: workerNotificationChans,
 		newTimerCh:              make(chan struct{}, 1),
 		lastPollTime:            time.Time{},
-		rateLimiter:             common.NewTokenBucket(shard.GetConfig().TimerProcessorMaxPollRPS(), common.NewRealTimeSource()),
+		rateLimiter:             common.NewTokenBucket(maxPollRPS, common.NewRealTimeSource()),
 	}
 
 	return base
