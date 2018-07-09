@@ -39,12 +39,13 @@ const (
 	FlagDLQTopic         = "dlqTopic"
 	FlagDLQConsumerGroup = "dlqConsumerGroup"
 
-	FlagDestinationCluster       = "destCluster"
-	FlagDestinationTopic         = "destTopic"
-	FlagDestinationConsumerGroup = "destConsumerGroup"
+	FlagDestinationCluster = "destCluster"
+	FlagDestinationTopic   = "destTopic"
 
 	FlagOffsets          = "offsets"
 	FlagOffsetsWithAlias = FlagOffsets + ", off"
+
+	FlagConcurrency = "concurrency"
 )
 
 // RunTool runs the cadence-cassandra-tool command line tool
@@ -68,7 +69,7 @@ func buildCLIOptions() *cli.App {
 		},
 		cli.BoolFlag{
 			Name:  FlagLocalWithAlias,
-			Usage: "Use local kafka broker: 127.0.0.1:9092 as the broker. Will be ignored if Kafka cluster file is set (" + FlagKafkaClusterFileWithAlias + ")",
+			Usage: "Use local kafka broker: 127.0.0.1:9092 as the broker. This will ignore Kafka cluster file (" + FlagKafkaClusterFileWithAlias + ") if it is set",
 		},
 	}
 
@@ -88,6 +89,7 @@ func buildCLIOptions() *cli.App {
 				cli.StringFlag{
 					Name:  FlagDLQConsumerGroup,
 					Usage: "The DLQ consumer group.",
+					Value: "DLQConsumerGroup",
 				},
 
 				cli.StringFlag{
@@ -98,9 +100,10 @@ func buildCLIOptions() *cli.App {
 					Name:  FlagDestinationTopic,
 					Usage: "The Destination topic that is operated on.",
 				},
-				cli.StringFlag{
-					Name:  FlagDestinationConsumerGroup,
-					Usage: "The Destination consumer group.",
+				cli.Int64Flag{
+					Name:  FlagConcurrency,
+					Usage: "number of go routines processing messages in parallel",
+					Value: 10,
 				},
 			},
 			Action: func(c *cli.Context) {
