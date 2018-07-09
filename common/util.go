@@ -178,6 +178,8 @@ func IsWhitelistServiceTransientError(err error) bool {
 		return true
 	case *workflow.LimitExceededError:
 		return true
+	case *h.ShardOwnershipLostError:
+		return true
 	case *yarpcerrors.Status:
 		// We only selectively retry the following yarpc errors client can safe retry with a backoff
 		if yarpcerrors.IsDeadlineExceeded(err) || yarpcerrors.IsUnavailable(err) || yarpcerrors.IsInternal(err) {
