@@ -169,8 +169,8 @@ func IsServiceNonRetryableError(err error) bool {
 	return false
 }
 
-// IsMatchingServiceTransientError checks if the error is a transient error.
-func IsMatchingServiceTransientError(err error) bool {
+// IsWhitelistServiceTransientError checks if the error is a transient error.
+func IsWhitelistServiceTransientError(err error) bool {
 	switch err.(type) {
 	case *workflow.InternalServiceError:
 		return true
@@ -179,8 +179,8 @@ func IsMatchingServiceTransientError(err error) bool {
 	case *workflow.LimitExceededError:
 		return true
 	case *yarpcerrors.Status:
-		rpcErr := err.(*yarpcerrors.Status)
-		if rpcErr.Code() == yarpcerrors.CodeDeadlineExceeded {
+		// We only selectively retry the following yarpc errors client can safe retry with a backoff
+		if yarpcerrors.IsDeadlineExceeded(err) || yarpcerrors.IsUnavailable(err) || yarpcerrors.IsInternal(err) {
 			return true
 		}
 		return false
