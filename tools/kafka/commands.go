@@ -28,24 +28,25 @@ import (
 
 	"strings"
 
-	"os/signal"
-
 	"strconv"
+
+	"time"
 
 	"github.com/Shopify/sarama"
 	saramacluster "github.com/bsm/sarama-cluster"
 	"github.com/fatih/color"
-	kafkaclient "github.com/uber-go/kafka-client"
+	"github.com/uber-go/kafka-client"
 	"github.com/uber-go/kafka-client/kafka"
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/urfave/cli"
 	"go.uber.org/zap"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 )
 
 const (
-	localKafka = "127.0.0.1:9092"
+	localKafka     = "127.0.0.1:9092"
+	mergeHeartBeat = time.Second * 5
 )
 
 type (
@@ -109,9 +110,6 @@ func mergeDLQ(c *cli.Context) {
 		ErrorAndExit("", fmt.Errorf("failed to start DLQ consumer"))
 	}
 
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, os.Interrupt)
-
 	for {
 		select {
 		case cmsg, ok := <-consumer.Messages():
@@ -132,9 +130,8 @@ func mergeDLQ(c *cli.Context) {
 				cmsg.Ack()
 				fmt.Printf("Message [%v],[%v] is sent to [%v],[%v] in DLQ\n", cmsg.Partition(), cmsg.Offset(), partition, offset)
 			}
-		case <-sigCh:
-			consumer.Stop()
-			<-consumer.Closed()
+		case <-time.After(mergeHeartBeat):
+			fmt.Println("heartbeat: waiting for messages...")
 		}
 	}
 }
@@ -190,11 +187,15 @@ func markTopicOffsets(c *cli.Context, offsetPerPartition map[int32]int64) {
 	}
 	for p, off := range offsetPerPartition {
 		fmt.Printf("fast fowarding partition %v to offset %v \n", p, off)
-		consumer.MarkPartitionOffset(topic, p, off, "")
+		consumer.ResetPartitionOffset(topic, p, off, "")
 	}
 	if err := consumer.CommitOffsets(); err != nil {
 		ErrorAndExit("failed to commit offsets", err)
 	}
+	if err := consumer.Close(); err != nil {
+		ErrorAndExit("failed to close consumer", err)
+	}
+	fmt.Printf("mark offset for topic %v group %v is completed\n", topic, group)
 }
 
 func resetTopic(c *cli.Context) {
@@ -213,7 +214,7 @@ func parseOffsetStr(offsetStr string) (map[int32]int64, error) {
 	pss := strings.Split(offsetStr, ",")
 	ret := map[int32]int64{}
 	for _, ps := range pss {
-		if strings.Contains(ps, ":") {
+		if !strings.Contains(ps, ":") {
 			return nil, fmt.Errorf("offsets should be in format of partition:offset")
 		}
 		po := strings.Split(ps, ":")
@@ -221,7 +222,7 @@ func parseOffsetStr(offsetStr string) (map[int32]int64, error) {
 		if err != nil {
 			return nil, fmt.Errorf("%v is not a valid integer", po[0])
 		}
-		offset, err := strconv.ParseInt(po[0], 10, 64)
+		offset, err := strconv.ParseInt(po[1], 10, 64)
 		if err != nil {
 			return nil, fmt.Errorf("%v is not a valid integer", po[1])
 		}

@@ -152,7 +152,7 @@ func buildCLIOptions() *cli.App {
 				},
 				cli.StringFlag{
 					Name:  FlagOffsetsWithAlias,
-					Usage: "The offsets for each partition in format of p0:off0,p1:off1. Or '*:off' will set an offset for all partitions ",
+					Usage: "The offsets for each partition in format of p0:off0,p1:off1.",
 				},
 			},
 			Action: func(c *cli.Context) {
