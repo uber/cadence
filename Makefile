@@ -92,7 +92,7 @@ cadence: vendor/glide.updated $(TOOLS_SRC)
 cadence-server: vendor/glide.updated $(ALL_SRC)
 	go build -i -o cadence-server cmd/server/cadence.go cmd/server/server.go
 
-bins_nothrift: lint copyright cadence-cassandra-tool cadence cadence-server
+bins_nothrift: lint copyright cadence-cassandra-tool cadence-kafka-tool cadence cadence-server
 
 bins: thriftc bins_nothrift
 

@@ -24,6 +24,9 @@ import (
 	"github.com/urfave/cli"
 )
 
+/**
+Flags used to specify cli command line arguments
+*/
 const (
 	FlagKafkaClusterFile          = "clusterfile"
 	FlagKafkaClusterFileWithAlias = FlagKafkaClusterFile + ", f"
@@ -80,7 +83,7 @@ func buildCLIOptions() *cli.App {
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  FlagDLQCluster,
-					Usage: "The DLQ cluster that is operated on.",
+					Usage: "The DLQ cluster that is operated on. Optional for local mode.",
 				},
 				cli.StringFlag{
 					Name:  FlagDLQTopic,
@@ -94,7 +97,7 @@ func buildCLIOptions() *cli.App {
 
 				cli.StringFlag{
 					Name:  FlagDestinationCluster,
-					Usage: "The Destination cluster that is operated on.",
+					Usage: "The Destination cluster that is operated on. Optional for local mode.",
 				},
 				cli.StringFlag{
 					Name:  FlagDestinationTopic,
@@ -116,7 +119,7 @@ func buildCLIOptions() *cli.App {
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  FlagCluster,
-					Usage: "The cluster that is operated on.",
+					Usage: "The cluster that is operated on. Optional for local mode.",
 				},
 				cli.StringFlag{
 					Name:  FlagTopic,
@@ -137,7 +140,7 @@ func buildCLIOptions() *cli.App {
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  FlagCluster,
-					Usage: "The cluster that is operated on.",
+					Usage: "The cluster that is operated on. Optional for local mode.",
 				},
 				cli.StringFlag{
 					Name:  FlagTopic,
