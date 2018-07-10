@@ -56,6 +56,7 @@ var keys = map[Key]string{
 	FrontendHistoryMaxPageSize:    "frontend.historyMaxPageSize",
 	FrontendRPS:                   "frontend.rps",
 	FrontendHistoryMgrNumConns:    "frontend.historyMgrNumConns",
+	MaxDecisionStartToCloseTimeout: "frontend.maxDecisionStartToCloseTimeout",
 
 	// matching settings
 	MatchingPersistenceMaxQPS:               "matching.persistenceMaxQPS",
@@ -155,6 +156,8 @@ const (
 	FrontendRPS
 	// FrontendHistoryMgrNumConns is for persistence cluster.NumConns
 	FrontendHistoryMgrNumConns
+	// MaxDecisionStartToCloseTimeout is max decision timeout in seconds
+	MaxDecisionStartToCloseTimeout
 
 	// key for matching
 

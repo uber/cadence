@@ -38,6 +38,8 @@ type Config struct {
 
 	// Persistence settings
 	HistoryMgrNumConns dynamicconfig.IntPropertyFn
+
+	MaxDecisionStartToCloseTimeout dynamicconfig.IntPropertyFnWithDomainFilter
 }
 
 // NewConfig returns new service config with default values
@@ -48,6 +50,7 @@ func NewConfig(dc *dynamicconfig.Collection) *Config {
 		HistoryMaxPageSize:    dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendHistoryMaxPageSize, 1000),
 		RPS:                   dc.GetIntProperty(dynamicconfig.FrontendRPS, 1200),
 		HistoryMgrNumConns:    dc.GetIntProperty(dynamicconfig.FrontendHistoryMgrNumConns, 10),
+		MaxDecisionStartToCloseTimeout: dc.GetIntPropertyFilteredByDomain(dynamicconfig.MaxDecisionStartToCloseTimeout, 600),
 	}
 }
 

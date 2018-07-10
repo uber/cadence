@@ -57,4 +57,5 @@ type (
 	EncodingType string
 )
 
-const MaxTaskTimeout = 31622400 // 366 days in seconds
+// MaxTaskTimeout is maximum task timeout allowed. 366 days in seconds
+const MaxTaskTimeout = 31622400
