@@ -70,6 +70,7 @@ func newTransferQueueActiveProcessor(shard ShardContext, historyService *history
 	matchingClient matching.Client, historyClient history.Client, logger bark.Logger) *transferQueueActiveProcessorImpl {
 	config := shard.GetConfig()
 	options := &QueueProcessorOptions{
+		StartDelay:                       config.TransferProcessorStartDelay,
 		BatchSize:                        config.TransferTaskBatchSize,
 		WorkerCount:                      config.TransferTaskWorkerCount,
 		MaxPollRPS:                       config.TransferProcessorMaxPollRPS,
@@ -124,6 +125,7 @@ func newTransferQueueFailoverProcessor(shard ShardContext, historyService *histo
 	minLevel int64, maxLevel int64, logger bark.Logger) *transferQueueActiveProcessorImpl {
 	config := shard.GetConfig()
 	options := &QueueProcessorOptions{
+		StartDelay:                       config.TransferProcessorFailoverStartDelay,
 		BatchSize:                        config.TransferTaskBatchSize,
 		WorkerCount:                      config.TransferTaskWorkerCount,
 		MaxPollRPS:                       config.TransferProcessorFailoverMaxPollRPS,

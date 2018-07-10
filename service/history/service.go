@@ -53,6 +53,8 @@ type Config struct {
 	TimerTaskBatchSize                             dynamicconfig.IntPropertyFn
 	TimerTaskWorkerCount                           dynamicconfig.IntPropertyFn
 	TimerTaskMaxRetryCount                         dynamicconfig.IntPropertyFn
+	TimerProcessorStartDelay                       dynamicconfig.DurationPropertyFn
+	TimerProcessorFailoverStartDelay               dynamicconfig.DurationPropertyFn
 	TimerProcessorGetFailureRetryCount             dynamicconfig.IntPropertyFn
 	TimerProcessorCompleteTimerFailureRetryCount   dynamicconfig.IntPropertyFn
 	TimerProcessorUpdateAckInterval                dynamicconfig.DurationPropertyFn
@@ -67,6 +69,8 @@ type Config struct {
 	TransferTaskBatchSize                              dynamicconfig.IntPropertyFn
 	TransferTaskWorkerCount                            dynamicconfig.IntPropertyFn
 	TransferTaskMaxRetryCount                          dynamicconfig.IntPropertyFn
+	TransferProcessorStartDelay                        dynamicconfig.DurationPropertyFn
+	TransferProcessorFailoverStartDelay                dynamicconfig.DurationPropertyFn
 	TransferProcessorCompleteTransferFailureRetryCount dynamicconfig.IntPropertyFn
 	TransferProcessorFailoverMaxPollRPS                dynamicconfig.IntPropertyFn
 	TransferProcessorMaxPollRPS                        dynamicconfig.IntPropertyFn
@@ -80,6 +84,7 @@ type Config struct {
 	ReplicatorTaskBatchSize                             dynamicconfig.IntPropertyFn
 	ReplicatorTaskWorkerCount                           dynamicconfig.IntPropertyFn
 	ReplicatorTaskMaxRetryCount                         dynamicconfig.IntPropertyFn
+	ReplicatorProcessorStartDelay                       dynamicconfig.DurationPropertyFn
 	ReplicatorProcessorMaxPollRPS                       dynamicconfig.IntPropertyFn
 	ReplicatorProcessorMaxPollInterval                  dynamicconfig.DurationPropertyFn
 	ReplicatorProcessorMaxPollIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
@@ -113,6 +118,8 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int) *Config {
 		TimerTaskBatchSize:                                  dc.GetIntProperty(dynamicconfig.TimerTaskBatchSize, 100),
 		TimerTaskWorkerCount:                                dc.GetIntProperty(dynamicconfig.TimerTaskWorkerCount, 10),
 		TimerTaskMaxRetryCount:                              dc.GetIntProperty(dynamicconfig.TimerTaskMaxRetryCount, 100),
+		TimerProcessorStartDelay:                            dc.GetDurationProperty(dynamicconfig.TimerProcessorStartDelay, 1*time.Microsecond),
+		TimerProcessorFailoverStartDelay:                    dc.GetDurationProperty(dynamicconfig.TimerProcessorFailoverStartDelay, 5*time.Second),
 		TimerProcessorGetFailureRetryCount:                  dc.GetIntProperty(dynamicconfig.TimerProcessorGetFailureRetryCount, 5),
 		TimerProcessorCompleteTimerFailureRetryCount:        dc.GetIntProperty(dynamicconfig.TimerProcessorCompleteTimerFailureRetryCount, 10),
 		TimerProcessorUpdateAckInterval:                     dc.GetDurationProperty(dynamicconfig.TimerProcessorUpdateAckInterval, 5*time.Second),
@@ -127,6 +134,8 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int) *Config {
 		TransferProcessorMaxPollRPS:                         dc.GetIntProperty(dynamicconfig.TransferProcessorMaxPollRPS, 20),
 		TransferTaskWorkerCount:                             dc.GetIntProperty(dynamicconfig.TransferTaskWorkerCount, 10),
 		TransferTaskMaxRetryCount:                           dc.GetIntProperty(dynamicconfig.TransferTaskMaxRetryCount, 100),
+		TransferProcessorStartDelay:                         dc.GetDurationProperty(dynamicconfig.TransferProcessorStartDelay, 1*time.Microsecond),
+		TransferProcessorFailoverStartDelay:                 dc.GetDurationProperty(dynamicconfig.TransferProcessorFailoverStartDelay, 5*time.Second),
 		TransferProcessorCompleteTransferFailureRetryCount:  dc.GetIntProperty(dynamicconfig.TransferProcessorCompleteTransferFailureRetryCount, 10),
 		TransferProcessorMaxPollInterval:                    dc.GetDurationProperty(dynamicconfig.TransferProcessorMaxPollInterval, 1*time.Minute),
 		TransferProcessorMaxPollIntervalJitterCoefficient:   dc.GetFloat64Property(dynamicconfig.TransferProcessorMaxPollIntervalJitterCoefficient, 0.15),
@@ -136,6 +145,7 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int) *Config {
 		ReplicatorTaskBatchSize:                             dc.GetIntProperty(dynamicconfig.ReplicatorTaskBatchSize, 100),
 		ReplicatorTaskWorkerCount:                           dc.GetIntProperty(dynamicconfig.ReplicatorTaskWorkerCount, 10),
 		ReplicatorTaskMaxRetryCount:                         dc.GetIntProperty(dynamicconfig.ReplicatorTaskMaxRetryCount, 100),
+		ReplicatorProcessorStartDelay:                       dc.GetDurationProperty(dynamicconfig.ReplicatorProcessorStartDelay, 1*time.Microsecond),
 		ReplicatorProcessorMaxPollRPS:                       dc.GetIntProperty(dynamicconfig.ReplicatorProcessorMaxPollRPS, 20),
 		ReplicatorProcessorMaxPollInterval:                  dc.GetDurationProperty(dynamicconfig.ReplicatorProcessorMaxPollInterval, 1*time.Minute),
 		ReplicatorProcessorMaxPollIntervalJitterCoefficient: dc.GetFloat64Property(dynamicconfig.ReplicatorProcessorMaxPollIntervalJitterCoefficient, 0.15),

@@ -35,6 +35,7 @@ import (
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 var (
@@ -64,6 +65,7 @@ type (
 		timerProcessor   timerProcessor
 		timerQueueAckMgr timerQueueAckMgr
 		rateLimiter      common.TokenBucket
+		startDelay       dynamicconfig.DurationPropertyFn
 
 		// worker coroutines notification
 		workerNotificationChans []chan struct{}
@@ -80,7 +82,8 @@ type (
 )
 
 func newTimerQueueProcessorBase(scope int, shard ShardContext, historyService *historyEngineImpl,
-	timerQueueAckMgr timerQueueAckMgr, timeNow timeNow, maxPollRPS int, logger bark.Logger) *timerQueueProcessorBase {
+	timerQueueAckMgr timerQueueAckMgr, timeNow timeNow, maxPollRPS dynamicconfig.IntPropertyFn,
+	startDelay dynamicconfig.DurationPropertyFn, logger bark.Logger) *timerQueueProcessorBase {
 	log := logger.WithFields(bark.Fields{
 		logging.TagWorkflowComponent: logging.TagValueTimerQueueComponent,
 	})
@@ -109,7 +112,8 @@ func newTimerQueueProcessorBase(scope int, shard ShardContext, historyService *h
 		workerNotificationChans: workerNotificationChans,
 		newTimerCh:              make(chan struct{}, 1),
 		lastPollTime:            time.Time{},
-		rateLimiter:             common.NewTokenBucket(maxPollRPS, common.NewRealTimeSource()),
+		rateLimiter:             common.NewTokenBucket(maxPollRPS(), common.NewRealTimeSource()),
+		startDelay:              startDelay,
 	}
 
 	return base
@@ -143,6 +147,8 @@ func (t *timerQueueProcessorBase) Stop() {
 }
 
 func (t *timerQueueProcessorBase) processorPump() {
+	<-time.NewTimer(backoff.NewJitter().JitDuration(t.startDelay(), 0.99)).C
+
 	defer t.shutdownWG.Done()
 
 	var workerWG sync.WaitGroup

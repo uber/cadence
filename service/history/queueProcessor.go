@@ -41,6 +41,7 @@ import (
 type (
 	// QueueProcessorOptions is options passed to queue processor implementation
 	QueueProcessorOptions struct {
+		StartDelay                       dynamicconfig.DurationPropertyFn
 		BatchSize                        dynamicconfig.IntPropertyFn
 		WorkerCount                      dynamicconfig.IntPropertyFn
 		MaxPollRPS                       dynamicconfig.IntPropertyFn
@@ -137,6 +138,8 @@ func (p *queueProcessorBase) notifyNewTask() {
 }
 
 func (p *queueProcessorBase) processorPump() {
+	<-time.NewTimer(backoff.NewJitter().JitDuration(p.options.StartDelay(), 0.99)).C
+
 	defer p.shutdownWG.Done()
 	tasksCh := make(chan queueTaskInfo, p.options.BatchSize())
 
