@@ -53,7 +53,7 @@ type Config struct {
 // NewConfig returns new service config with default values
 func NewConfig(dc *dynamicconfig.Collection) *Config {
 	return &Config{
-		PersistenceMaxQPS:               dc.GetFloat64Property(dynamicconfig.MatchingPersistenceMaxQPS, 1000),
+		PersistenceMaxQPS:               dc.GetFloat64Property(dynamicconfig.MatchingPersistenceMaxQPS, 500),
 		EnableSyncMatch:                 dc.GetBoolPropertyFilteredByTaskListInfo(dynamicconfig.MatchingEnableSyncMatch, true),
 		RPS:                             dc.GetIntProperty(dynamicconfig.MatchingRPS, 1200),
 		RangeSize:                       100000,

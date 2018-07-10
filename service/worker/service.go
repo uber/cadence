@@ -60,7 +60,7 @@ func NewService(params *service.BootstrapParams) common.Daemon {
 // NewConfig builds the new Config for cadence-worker service
 func NewConfig(dc *dynamicconfig.Collection) *Config {
 	return &Config{
-		PersistenceMaxQPS:          dc.GetFloat64Property(dynamicconfig.WorkerPersistenceMaxQPS, 500),
+		PersistenceMaxQPS:          dc.GetFloat64Property(dynamicconfig.WorkerPersistenceMaxQPS, 100),
 		ReplicatorConcurrency:      1000,
 		ReplicatorBufferRetryCount: 8,
 	}
