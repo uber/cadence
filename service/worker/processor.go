@@ -199,22 +199,22 @@ func (p *replicationTaskProcessor) processWithRetry(msg kafka.Message, workerID 
 	forceBuffer := false
 	remainingRetryCount := p.config.ReplicationTaskMaxRetry
 
+	op := func() error {
+		processErr := p.process(msg, forceBuffer)
+		if processErr != nil && p.isRetryTaskError(processErr) {
+			// Enable buffering of replication tasks for next attempt
+			forceBuffer = true
+		}
+
+		return processErr
+	}
+
 ProcessRetryLoop:
 	for attempt := 0; ; attempt++ {
 		select {
 		case <-p.shutdownCh:
 			return
 		default:
-			op := func() error {
-				processErr := p.process(msg, forceBuffer)
-				if processErr != nil && p.isRetryTaskError(processErr) {
-					// Enable buffering of replication tasks for next attempt
-					forceBuffer = true
-				}
-
-				return processErr
-			}
-
 			// isTransientRetryableError is pretty broad on purpose as we want to retry replication tasks few times before
 			// moving them to DLQ.
 			err = backoff.Retry(op, replicationTaskRetryPolicy, p.isTransientRetryableError)
