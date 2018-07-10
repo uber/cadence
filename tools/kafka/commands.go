@@ -74,8 +74,8 @@ func mergeDLQ(c *cli.Context) {
 	dlqGroup := c.String(FlagDLQConsumerGroup)
 	dlqCluster := c.String(FlagDLQCluster)
 	destCluster := c.String(FlagDestinationCluster)
-	clusterFile := c.String(FlagKafkaClusterFile)
-	useLocal := c.Bool(FlagLocal)
+	clusterFile := c.GlobalString(FlagKafkaClusterFile)
+	useLocal := c.GlobalBool(FlagLocal)
 	concurrency := c.Int64(FlagConcurrency)
 	brokers := map[string][]string{}
 	var err error
@@ -162,8 +162,8 @@ func markTopicOffsets(c *cli.Context, offsetPerPartition map[int32]int64) {
 	group := c.String(FlagConsumerGroup)
 
 	cluster := c.String(FlagCluster)
-	clusterFile := c.String(FlagKafkaClusterFile)
-	useLocal := c.Bool(FlagLocal)
+	clusterFile := c.GlobalString(FlagKafkaClusterFile)
+	useLocal := c.GlobalBool(FlagLocal)
 	brokers := map[string][]string{}
 	var err error
 	if useLocal {
