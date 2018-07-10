@@ -129,6 +129,10 @@ func buildCLIOptions() *cli.App {
 					Name:  FlagConsumerGroup,
 					Usage: "The consumer group.",
 				},
+				cli.StringFlag{
+					Name:  FlagOffsetsWithAlias,
+					Usage: "The offsets for each partition in format of p0:off0,p1:off1.",
+				},
 			},
 			Action: func(c *cli.Context) {
 				purgeTopic(c)

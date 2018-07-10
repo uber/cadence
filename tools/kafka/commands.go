@@ -45,8 +45,8 @@ import (
 )
 
 const (
-	localKafka     = "127.0.0.1:9092"
-	mergeHeartBeat = time.Second * 5
+	localKafka = "127.0.0.1:9092"
+	heartBeat  = time.Second * 5
 )
 
 type (
@@ -130,7 +130,7 @@ func mergeDLQ(c *cli.Context) {
 				cmsg.Ack()
 				fmt.Printf("Message [%v],[%v] is sent to [%v],[%v] in DLQ\n", cmsg.Partition(), cmsg.Offset(), partition, offset)
 			}
-		case <-time.After(mergeHeartBeat):
+		case <-time.After(heartBeat):
 			fmt.Println("heartbeat: waiting for messages...")
 		}
 	}
@@ -145,10 +145,20 @@ func getKey(originKey []byte) sarama.Encoder {
 }
 
 func purgeTopic(c *cli.Context) {
-	markTopicOffsets(c, nil)
+	if !c.IsSet(FlagOffsets) {
+		ErrorAndExit("", fmt.Errorf("target topic name must be provided by flag %v", FlagTopic))
+	}
+
+	offsetStr := c.String(FlagOffsets)
+	offsets, err := parseOffsetStr(offsetStr)
+	if err != nil {
+		ErrorAndExit("input offset is not valid", err)
+	}
+
+	setTopicOffsets(c, offsets, true)
 }
 
-func markTopicOffsets(c *cli.Context, offsetPerPartition map[int32]int64) {
+func setTopicOffsets(c *cli.Context, offsetPerPartition map[int32]int64, isForward bool) {
 	if !c.IsSet(FlagTopic) {
 		ErrorAndExit("", fmt.Errorf("target topic name must be provided by flag %v", FlagTopic))
 	}
@@ -182,19 +192,34 @@ func markTopicOffsets(c *cli.Context, offsetPerPartition map[int32]int64) {
 	config.Group.Mode = saramacluster.ConsumerModePartitions
 	consumer, err := saramacluster.NewConsumer(brokers[cluster], group, []string{topic}, config)
 
-	if offsetPerPartition == nil {
-		offsetPerPartition = consumer.HighWaterMarks()[topic]
+outloop:
+	for {
+		select {
+		case <-time.After(heartBeat):
+			_, ok := consumer.Subscriptions()[topic]
+			if !ok {
+				fmt.Println("heartbeat: waiting for subscriptions...")
+				continue
+			}
+			fmt.Println("subs:", consumer.Subscriptions())
+			break outloop
+		}
 	}
+
 	for p, off := range offsetPerPartition {
-		fmt.Printf("fast fowarding partition %v to offset %v \n", p, off)
-		consumer.ResetPartitionOffset(topic, p, off, "")
+		fmt.Printf("partition %v setting to offset %v \n", p, off)
+		consumer.MarkPartitionOffset(topic, p, off, "")
+		if isForward {
+			consumer.MarkPartitionOffset(topic, p, off, "")
+		} else {
+			consumer.ResetPartitionOffset(topic, p, off, "")
+		}
 	}
+
 	if err := consumer.CommitOffsets(); err != nil {
 		ErrorAndExit("failed to commit offsets", err)
 	}
-	if err := consumer.Close(); err != nil {
-		ErrorAndExit("failed to close consumer", err)
-	}
+
 	fmt.Printf("mark offset for topic %v group %v is completed\n", topic, group)
 }
 
@@ -207,7 +232,7 @@ func resetTopic(c *cli.Context) {
 	if err != nil {
 		ErrorAndExit("input offset is not valid", err)
 	}
-	markTopicOffsets(c, offsets)
+	setTopicOffsets(c, offsets, false)
 }
 
 func parseOffsetStr(offsetStr string) (map[int32]int64, error) {
