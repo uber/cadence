@@ -107,8 +107,8 @@ func (s *Service) Start() {
 	if err != nil {
 		log.Fatalf("failed to create task persistence: %v", err)
 	}
-	taskPersistence = persistence.NewTaskRateLimitedPersistenceClient(taskPersistence, persistenceRateLimiter, log)
-	taskPersistence = persistence.NewTaskMetricsPersistenceClient(taskPersistence, base.GetMetricsClient(), log)
+	taskPersistence = persistence.NewTaskPersistenceRateLimitedClient(taskPersistence, persistenceRateLimiter, log)
+	taskPersistence = persistence.NewTaskPersistenceMetricsClient(taskPersistence, base.GetMetricsClient(), log)
 
 	metadata, err := persistence.NewMetadataManagerProxy(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,
@@ -122,8 +122,8 @@ func (s *Service) Start() {
 	if err != nil {
 		log.Fatalf("failed to create metadata manager: %v", err)
 	}
-	metadata = persistence.NewMetadataRateLimitedPersistenceClient(metadata, persistenceRateLimiter, log)
-	metadata = persistence.NewMetadataMetricsPersistenceClient(metadata, base.GetMetricsClient(), log)
+	metadata = persistence.NewMetadataPersistenceRateLimitedClient(metadata, persistenceRateLimiter, log)
+	metadata = persistence.NewMetadataPersistenceMetricsClient(metadata, base.GetMetricsClient(), log)
 
 	handler := NewHandler(base, s.config, taskPersistence, metadata)
 	handler.Start()

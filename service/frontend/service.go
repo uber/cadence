@@ -92,8 +92,8 @@ func (s *Service) Start() {
 	if err != nil {
 		log.Fatalf("failed to create metadata manager: %v", err)
 	}
-	metadata = persistence.NewMetadataRateLimitedPersistenceClient(metadata, persistenceRateLimiter, log)
-	metadata = persistence.NewMetadataMetricsPersistenceClient(metadata, base.GetMetricsClient(), log)
+	metadata = persistence.NewMetadataPersistenceRateLimitedClient(metadata, persistenceRateLimiter, log)
+	metadata = persistence.NewMetadataPersistenceMetricsClient(metadata, base.GetMetricsClient(), log)
 
 	visibility, err := persistence.NewCassandraVisibilityPersistence(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,
@@ -106,8 +106,8 @@ func (s *Service) Start() {
 	if err != nil {
 		log.Fatalf("failed to create visiblity manager: %v", err)
 	}
-	visibility = persistence.NewVisibilityRateLimitedPersistenceClient(visibility, persistenceRateLimiter, log)
-	visibility = persistence.NewVisibilityMetricsPersistenceClient(visibility, base.GetMetricsClient(), log)
+	visibility = persistence.NewVisibilityPersistenceRateLimitedClient(visibility, persistenceRateLimiter, log)
+	visibility = persistence.NewVisibilityPersistenceMetricsClient(visibility, base.GetMetricsClient(), log)
 
 	history, err := persistence.NewCassandraHistoryPersistence(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,
@@ -121,8 +121,8 @@ func (s *Service) Start() {
 	if err != nil {
 		log.Fatalf("Creating Cassandra history manager persistence failed: %v", err)
 	}
-	history = persistence.NewHistoryRateLimitedPersistenceClient(history, persistenceRateLimiter, log)
-	history = persistence.NewHistoryMetricsPersistenceClient(history, base.GetMetricsClient(), log)
+	history = persistence.NewHistoryPersistenceRateLimitedClient(history, persistenceRateLimiter, log)
+	history = persistence.NewHistoryPersistenceMetricsClient(history, base.GetMetricsClient(), log)
 
 	// TODO when global domain is enabled, uncomment the line below and remove the line after
 	var kafkaProducer messaging.Producer

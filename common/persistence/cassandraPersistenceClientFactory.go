@@ -66,7 +66,7 @@ func (f *cassandraPersistenceClientFactory) CreateExecutionManager(shardID int) 
 		return mgr, nil
 	}
 
-	return NewWorkflowExecutionMetricsPersistenceClient(mgr, f.metricsClient, f.logger), nil
+	return NewWorkflowExecutionPersistenceMetricsClient(mgr, f.metricsClient, f.logger), nil
 }
 
 // Close releases the underlying resources held by this object
