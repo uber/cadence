@@ -95,7 +95,7 @@ func newTransferQueueActiveProcessor(shard ShardContext, historyService *history
 	}
 
 	retryableMatchingClient := matching.NewRetryableClient(matchingClient, common.CreateMatchingRetryPolicy(),
-		common.IsMatchingServiceTransientError)
+		common.IsWhitelistServiceTransientError)
 
 	processor := &transferQueueActiveProcessorImpl{
 		currentClusterName:         currentClusterName,
@@ -153,7 +153,7 @@ func newTransferQueueFailoverProcessor(shard ShardContext, historyService *histo
 	}
 
 	retryableMatchingClient := matching.NewRetryableClient(matchingClient, common.CreateMatchingRetryPolicy(),
-		common.IsMatchingServiceTransientError)
+		common.IsWhitelistServiceTransientError)
 
 	processor := &transferQueueActiveProcessorImpl{
 		currentClusterName:         currentClusterName,

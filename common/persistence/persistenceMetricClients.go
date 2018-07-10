@@ -379,8 +379,6 @@ func (p *workflowExecutionPersistenceClient) updateErrorMetric(scope int, err er
 	case *TimeoutError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrTimeoutCounter)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
-	case *workflow.LimitExceededError:
-		p.metricClient.IncCounter(scope, metrics.CadenceErrLimitExceededCounter)
 	case *workflow.ServiceBusyError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrBusyCounter)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
@@ -474,8 +472,6 @@ func (p *taskPersistenceClient) updateErrorMetric(scope int, err error) {
 	case *TimeoutError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrTimeoutCounter)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
-	case *workflow.LimitExceededError:
-		p.metricClient.IncCounter(scope, metrics.CadenceErrLimitExceededCounter)
 	default:
 		p.logger.WithFields(bark.Fields{
 			logging.TagScope: scope,
@@ -542,8 +538,6 @@ func (p *historyPersistenceClient) updateErrorMetric(scope int, err error) {
 	case *TimeoutError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrTimeoutCounter)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
-	case *workflow.LimitExceededError:
-		p.metricClient.IncCounter(scope, metrics.CadenceErrLimitExceededCounter)
 	default:
 		p.logger.WithFields(bark.Fields{
 			logging.TagScope: scope,
@@ -667,8 +661,6 @@ func (p *metadataPersistenceClient) updateErrorMetric(scope int, err error) {
 		p.metricClient.IncCounter(scope, metrics.CadenceErrEntityNotExistsCounter)
 	case *workflow.BadRequestError:
 		p.metricClient.IncCounter(scope, metrics.CadenceErrBadRequestCounter)
-	case *workflow.LimitExceededError:
-		p.metricClient.IncCounter(scope, metrics.CadenceErrLimitExceededCounter)
 	default:
 		p.logger.WithFields(bark.Fields{
 			logging.TagScope: scope,
@@ -825,8 +817,6 @@ func (p *visibilityPersistenceClient) updateErrorMetric(scope int, err error) {
 	case *TimeoutError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrTimeoutCounter)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
-	case *workflow.LimitExceededError:
-		p.metricClient.IncCounter(scope, metrics.CadenceErrLimitExceededCounter)
 	case *workflow.EntityNotExistsError:
 		p.metricClient.IncCounter(scope, metrics.CadenceErrEntityNotExistsCounter)
 	case *workflow.ServiceBusyError:

@@ -45,6 +45,7 @@ type (
 		PersistenceMaxQPS          dynamicconfig.FloatPropertyFn
 		ReplicatorConcurrency      int
 		ReplicatorBufferRetryCount int
+		ReplicationTaskMaxRetry    int
 	}
 )
 
@@ -63,6 +64,7 @@ func NewConfig(dc *dynamicconfig.Collection) *Config {
 		PersistenceMaxQPS:          dc.GetFloat64Property(dynamicconfig.WorkerPersistenceMaxQPS, 500),
 		ReplicatorConcurrency:      1000,
 		ReplicatorBufferRetryCount: 8,
+		ReplicationTaskMaxRetry:    5,
 	}
 }
 
