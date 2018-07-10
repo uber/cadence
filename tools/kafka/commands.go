@@ -6,16 +6,14 @@ import (
 
 	"io/ioutil"
 
-	"github.com/uber-go/kafka-client"
-	"github.com/uber-go/kafka-client/kafka"
-	"github.com/uber-go/tally"
-	"go.uber.org/zap"
-
 	"strings"
 
 	"os/signal"
 
+	"strconv"
+
 	"github.com/Shopify/sarama"
+	saramacluster "github.com/bsm/sarama-cluster"
 	"github.com/fatih/color"
 	kafkaclient "github.com/uber-go/kafka-client"
 	"github.com/uber-go/kafka-client/kafka"
@@ -24,6 +22,10 @@ import (
 	"github.com/urfave/cli"
 	"go.uber.org/zap"
 	yaml "gopkg.in/yaml.v2"
+)
+
+const (
+	localKafka = "127.0.0.1:9092"
 )
 
 type (
@@ -59,8 +61,8 @@ func mergeDLQ(c *cli.Context) {
 	var err error
 	if useLocal {
 		brokers = map[string][]string{
-			dlqCluster:  {"127.0.0.1:9092"},
-			destCluster: {"127.0.0.1:9092"},
+			dlqCluster:  {localKafka},
+			destCluster: {localKafka},
 		}
 	} else {
 		// if not using local mode, cluster names and host file must be provided
@@ -73,26 +75,7 @@ func mergeDLQ(c *cli.Context) {
 		}
 	}
 
-	topicClusterAssignment := map[string][]string{
-		dlqTopic:  {dlqCluster},
-		destTopic: {destCluster},
-	}
-	client := kafkaclient.New(kafka.NewStaticNameResolver(topicClusterAssignment, brokers), zap.NewNop(), tally.NoopScope)
-
-	dlqConsumerConfig := &kafka.ConsumerConfig{
-		TopicList: kafka.ConsumerTopicList{
-			kafka.ConsumerTopic{
-				Topic: kafka.Topic{
-					Name:    dlqTopic,
-					Cluster: dlqCluster,
-				},
-			},
-		},
-		GroupName:   dlqGroup,
-		Concurrency: int(concurrency),
-	}
-
-	consumer, err := client.NewConsumer(dlqConsumerConfig)
+	consumer, err := buildConsumer(brokers, dlqTopic, dlqCluster, dlqGroup, concurrency)
 	if err != nil {
 		ErrorAndExit("failed to create DLQ consumer", err)
 	}
@@ -121,14 +104,13 @@ func mergeDLQ(c *cli.Context) {
 				Key:   getKey(cmsg.Key()),
 				Value: sarama.ByteEncoder(cmsg.Value()),
 			}
-
 			partition, offset, err := producer.SendMessage(pmsg)
-
 			if err != nil {
 				cmsg.Nack()
+				fmt.Printf("[Error] Message [%v],[%v] failed to be sent to DLQ\n", cmsg.Partition(), cmsg.Offset())
 			} else {
 				cmsg.Ack()
-				fmt.Println("Message [%v],[%v] is sent to [%v],[%v] in DLQ", cmsg.Partition(), cmsg.Offset(), partition, offset)
+				fmt.Printf("Message [%v],[%v] is sent to [%v],[%v] in DLQ\n", cmsg.Partition(), cmsg.Offset(), partition, offset)
 			}
 		case <-sigCh:
 			consumer.Stop()
@@ -146,25 +128,109 @@ func getKey(originKey []byte) sarama.Encoder {
 }
 
 func purgeTopic(c *cli.Context) {
+	markTopicOffsets(c, nil)
+}
+
+func markTopicOffsets(c *cli.Context, offsetPerPartition map[int32]int64) {
 	if !c.IsSet(FlagTopic) {
 		ErrorAndExit("", fmt.Errorf("target topic name must be provided by flag %v", FlagTopic))
 	}
+	topic := c.String(FlagTopic)
 	if !c.IsSet(FlagConsumerGroup) {
 		ErrorAndExit("", fmt.Errorf("target consumer group name must be provided by flag %v", FlagConsumerGroup))
+	}
+	group := c.String(FlagConsumerGroup)
+
+	cluster := c.String(FlagCluster)
+	clusterFile := c.String(FlagKafkaClusterFile)
+	useLocal := c.Bool(FlagLocal)
+	brokers := map[string][]string{}
+	var err error
+	if useLocal {
+		brokers = map[string][]string{
+			cluster: {localKafka},
+		}
+	} else {
+		// if not using local mode, cluster names and host file must be provided
+		if len(clusterFile) == 0 || len(cluster) == 0 {
+			ErrorAndExit("", fmt.Errorf("cluster name and host file must be provided must be provided by flags %v,%v", FlagCluster, FlagKafkaClusterFile))
+		}
+		brokers, err = loadClusterConfig(clusterFile, []string{cluster})
+		if err != nil {
+			ErrorAndExit("failed to load cluster from file", err)
+		}
+	}
+
+	config := saramacluster.NewConfig()
+	config.Group.Mode = saramacluster.ConsumerModePartitions
+	consumer, err := saramacluster.NewConsumer(brokers[cluster], group, []string{topic}, config)
+
+	if offsetPerPartition == nil {
+		offsetPerPartition = consumer.HighWaterMarks()[topic]
+	}
+	for p, off := range offsetPerPartition {
+		fmt.Printf("fast fowarding partition %v to offset %v \n", p, off)
+		consumer.MarkPartitionOffset(topic, p, off, "")
+	}
+	if err := consumer.CommitOffsets(); err != nil {
+		ErrorAndExit("failed to commit offsets", err)
 	}
 }
 
 func resetTopic(c *cli.Context) {
-	if !c.IsSet(FlagTopic) {
+	if !c.IsSet(FlagOffsets) {
 		ErrorAndExit("", fmt.Errorf("target topic name must be provided by flag %v", FlagTopic))
 	}
-	if !c.IsSet(FlagConsumerGroup) {
-		ErrorAndExit("", fmt.Errorf("target consumer group name must be provided by flag %v", FlagConsumerGroup))
+	offsetStr := c.String(FlagOffsets)
+	offsets, err := parseOffsetStr(offsetStr)
+	if err != nil {
+		ErrorAndExit("input offset is not valid", err)
 	}
+	markTopicOffsets(c, offsets)
 }
 
-func buildConsumer() {
+func parseOffsetStr(offsetStr string) (map[int32]int64, error) {
+	pss := strings.Split(offsetStr, ",")
+	ret := map[int32]int64{}
+	for _, ps := range pss {
+		if strings.Contains(ps, ":") {
+			return nil, fmt.Errorf("offsets should be in format of partition:offset")
+		}
+		po := strings.Split(ps, ":")
+		partition, err := strconv.Atoi(po[0])
+		if err != nil {
+			return nil, fmt.Errorf("%v is not a valid integer", po[0])
+		}
+		offset, err := strconv.ParseInt(po[0], 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("%v is not a valid integer", po[1])
+		}
+		ret[int32(partition)] = offset
+	}
+	return ret, nil
+}
 
+func buildConsumer(brokers map[string][]string, topic string, cluster string, group string, concurrency int64) (kafka.Consumer, error) {
+	topicClusterAssignment := map[string][]string{
+		topic: {cluster},
+	}
+	client := kafkaclient.New(kafka.NewStaticNameResolver(topicClusterAssignment, brokers), zap.NewNop(), tally.NoopScope)
+
+	dlqConsumerConfig := &kafka.ConsumerConfig{
+		TopicList: kafka.ConsumerTopicList{
+			kafka.ConsumerTopic{
+				Topic: kafka.Topic{
+					Name:    topic,
+					Cluster: cluster,
+				},
+			},
+		},
+		GroupName:   group,
+		Concurrency: int(concurrency),
+	}
+
+	consumer, err := client.NewConsumer(dlqConsumerConfig)
+	return consumer, err
 }
 
 // load the kafka cluster config file from host and convert it to a useable config
