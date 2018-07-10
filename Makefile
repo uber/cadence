@@ -83,6 +83,9 @@ copyright: cmd/tools/copyright/licensegen.go
 cadence-cassandra-tool: vendor/glide.updated $(TOOLS_SRC)
 	go build -i -o cadence-cassandra-tool cmd/tools/cassandra/main.go
 
+cadence-kafka-tool: vendor/glide.updated $(TOOLS_SRC)
+	go build -i -o cadence-kafka-tool cmd/tools/kafka/main.go
+
 cadence: vendor/glide.updated $(TOOLS_SRC)
 	go build -i -o cadence cmd/tools/cli/main.go
 
