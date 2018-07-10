@@ -208,7 +208,6 @@ outloop:
 
 	for p, off := range offsetPerPartition {
 		fmt.Printf("partition %v setting to offset %v \n", p, off)
-		consumer.MarkPartitionOffset(topic, p, off, "")
 		if isForward {
 			consumer.MarkPartitionOffset(topic, p, off, "")
 		} else {
