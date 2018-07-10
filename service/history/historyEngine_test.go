@@ -1092,6 +1092,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedBadDecisionAttributes() {
 // HistoryEngine's validateActivityScheduleAttribute will deduce the missing timeout and fill it in
 // instead of returning a BadRequest error and only when all three are missing should a BadRequest be returned.
 func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledAttribute() {
+	workflowTimeout := int32(100)
 	testIterationVariables := []struct {
 		scheduleToClose         *int32
 		scheduleToStart         *int32
@@ -1124,6 +1125,21 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledAtt
 		// Negative HeartBeat, expect error return
 		{nil, nil, nil, common.Int32Ptr(-1),
 			0, 0, 0, true},
+		// Use workflow timeout
+		{common.Int32Ptr(workflowTimeout), nil, nil, nil,
+			workflowTimeout, workflowTimeout, workflowTimeout, false},
+		// Timeout larger than workflow timeout, expect error return
+		{common.Int32Ptr(workflowTimeout + 1), nil, nil, nil,
+			0, 0, 0, true},
+		{nil, common.Int32Ptr(workflowTimeout + 1), nil, nil,
+			0, 0, 0, true},
+		{nil, nil, common.Int32Ptr(workflowTimeout + 1), nil,
+			0, 0, 0, true},
+		{nil, nil, nil, common.Int32Ptr(workflowTimeout + 1),
+			0, 0, 0, true},
+		// No ScheduleToClose timeout, will use ScheduleToStart + StartToClose, but exceed limit
+		{nil, common.Int32Ptr(workflowTimeout), common.Int32Ptr(workflowTimeout), nil,
+			0, 0, 0, true},
 	}
 
 	for _, iVar := range testIterationVariables {
@@ -1143,7 +1159,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledAtt
 		input := []byte("input")
 
 		msBuilder := newMutableStateBuilder(s.config, bark.NewLoggerFromLogrus(log.New()))
-		addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
+		addWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), workflowTimeout, 200, identity)
 		di := addDecisionTaskScheduledEvent(msBuilder)
 		addDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
 

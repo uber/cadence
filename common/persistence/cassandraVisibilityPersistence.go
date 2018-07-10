@@ -36,6 +36,8 @@ const (
 	domainPartition        = 0
 	defaultCloseTTLSeconds = 86400
 	openExecutionTTLBuffer = int64(86400) // setting it to a day to account for shard going down
+
+	maxCassandraTTL = int64(630720000) // Cassandra TTL maximum, 20 years in second
 )
 
 const (
@@ -150,7 +152,7 @@ func (v *cassandraVisibilityPersistence) Close() {
 
 func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionStarted(
 	request *RecordWorkflowExecutionStartedRequest) error {
-	ttl := request.WorkflowTimeout + openExecutionTTLBuffer
+	ttl := common.MinInt64(request.WorkflowTimeout+openExecutionTTLBuffer, maxCassandraTTL)
 	query := v.session.Query(templateCreateWorkflowExecutionStarted,
 		request.DomainUUID,
 		domainPartition,
@@ -195,6 +197,7 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 	if retention == 0 {
 		retention = defaultCloseTTLSeconds
 	}
+	retention = common.MinInt64(retention, maxCassandraTTL)
 
 	batch.Query(templateCreateWorkflowExecutionClosed,
 		request.DomainUUID,

@@ -1354,6 +1354,11 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 			Message: "A valid TaskStartToCloseTimeoutSeconds is not set on request."}, scope)
 	}
 
+	if startRequest.GetTaskStartToCloseTimeoutSeconds() > startRequest.GetExecutionStartToCloseTimeoutSeconds() {
+		return nil, wh.error(&gen.BadRequestError{
+			Message: "TaskStartToCloseTimeoutSeconds is larger than ExecutionStartToCloseTimeout."}, scope)
+	}
+
 	domainName := startRequest.GetDomain()
 	wh.Service.GetLogger().Debugf("Start workflow execution request domain: %v", domainName)
 	domainID, err := wh.domainCache.GetDomainID(domainName)
@@ -1624,6 +1629,11 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(ctx context.Context,
 	if signalWithStartRequest.GetTaskStartToCloseTimeoutSeconds() <= 0 {
 		return nil, wh.error(&gen.BadRequestError{
 			Message: "A valid TaskStartToCloseTimeoutSeconds is not set on request."}, scope)
+	}
+
+	if signalWithStartRequest.GetTaskStartToCloseTimeoutSeconds() > signalWithStartRequest.GetExecutionStartToCloseTimeoutSeconds() {
+		return nil, wh.error(&gen.BadRequestError{
+			Message: "TaskStartToCloseTimeoutSeconds is larger than ExecutionStartToCloseTimeout."}, scope)
 	}
 
 	domainID, err := wh.domainCache.GetDomainID(signalWithStartRequest.GetDomain())

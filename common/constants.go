@@ -56,3 +56,5 @@ type (
 	// EncodingType is an enum that represents various data encoding types
 	EncodingType string
 )
+
+const MaxTaskTimeout = 31622400 // 366 days in seconds
