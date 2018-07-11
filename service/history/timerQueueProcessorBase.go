@@ -196,70 +196,6 @@ func (t *timerQueueProcessorBase) taskWorker(workerWG *sync.WaitGroup, notificat
 	}
 }
 
-func (t *timerQueueProcessorBase) processWithRetry(notificationChan <-chan struct{}, task *persistence.TimerTaskInfo) {
-	logger := t.logger.WithFields(bark.Fields{
-		logging.TagTaskID:              task.GetTaskID(),
-		logging.TagTaskType:            task.GetTaskType(),
-		logging.TagVersion:             task.GetVersion(),
-		logging.TagTimeoutType:         task.TimeoutType,
-		logging.TagDomainID:            task.DomainID,
-		logging.TagWorkflowExecutionID: task.WorkflowID,
-		logging.TagWorkflowRunID:       task.RunID,
-	})
-
-	logger.Debugf("Processing timer task: %v, type: %v", task.GetTaskID(), task.GetTaskType())
-	startTime := time.Now()
-	var err error
-ProcessRetryLoop:
-	for attempt := 1; attempt <= t.config.TimerTaskMaxRetryCount(); {
-		select {
-		case <-t.shutdownCh:
-			return
-		default:
-			// clear the existing notification
-			select {
-			case <-notificationChan:
-			default:
-			}
-
-			err = t.timerProcessor.process(task)
-			if err != nil {
-				if err == ErrTaskRetry {
-					t.metricsClient.IncCounter(t.scope, metrics.HistoryTaskStandbyRetryCounter)
-					<-notificationChan
-				} else {
-					logging.LogTaskProcessingFailedEvent(logger, err)
-
-					// it is possible that DomainNotActiveError is thrown
-					// just keep try for cache.DomainCacheRefreshInterval
-					// and giveup
-					if _, ok := err.(*workflow.DomainNotActiveError); ok && time.Now().Sub(startTime) > cache.DomainCacheRefreshInterval {
-						t.metricsClient.IncCounter(t.scope, metrics.HistoryTaskNotActiveCounter)
-						return
-					}
-					backoff := time.Duration(attempt * 100)
-					time.Sleep(backoff * time.Millisecond)
-					attempt++
-				}
-				continue ProcessRetryLoop
-			}
-			atomic.AddUint64(&t.timerFiredCount, 1)
-			return
-		}
-	}
-
-	// Cannot processes timer task due to LimitExceededError after all retries
-	// raise and alert and move on
-	if _, ok := err.(*workflow.LimitExceededError); ok {
-		logging.LogCriticalErrorEvent(logger, "Critical error processing timer task.  Skipping.", err)
-		t.metricsClient.IncCounter(metrics.TimerQueueProcessorScope, metrics.CadenceCriticalFailures)
-		return
-	}
-
-	// All attempts to process transfer task failed.  We won't be able to move the ackLevel so panic
-	logging.LogOperationPanicEvent(logger, "Retry count exceeded for timer task", err)
-}
-
 // NotifyNewTimers - Notify the processor about the new timer events arrival.
 // This should be called each time new timer events arrives, otherwise timers maybe fired unexpected.
 func (t *timerQueueProcessorBase) notifyNewTimers(timerTasks []persistence.Task) {
@@ -430,6 +366,81 @@ func (t *timerQueueProcessorBase) retryTasks() {
 		default:
 		}
 	}
+}
+
+func (t *timerQueueProcessorBase) processWithRetry(notificationChan <-chan struct{}, task *persistence.TimerTaskInfo) {
+
+	var logger bark.Logger
+	var err error
+	startTime := time.Now()
+ProcessRetryLoop:
+	for attempt := 1; attempt <= t.config.TimerTaskMaxRetryCount(); {
+		select {
+		case <-t.shutdownCh:
+			return
+		default:
+			// clear the existing notification
+			select {
+			case <-notificationChan:
+			default:
+			}
+
+			err = t.timerProcessor.process(task)
+			if err != nil {
+				if err == ErrTaskRetry {
+					t.metricsClient.IncCounter(t.scope, metrics.HistoryTaskStandbyRetryCounter)
+					<-notificationChan
+				} else {
+					logger = t.initializeLoggerForTask(task, logger)
+					logging.LogTaskProcessingFailedEvent(logger, err)
+
+					// it is possible that DomainNotActiveError is thrown
+					// just keep try for cache.DomainCacheRefreshInterval
+					// and giveup
+					if _, ok := err.(*workflow.DomainNotActiveError); ok && time.Now().Sub(startTime) > cache.DomainCacheRefreshInterval {
+						t.metricsClient.IncCounter(t.scope, metrics.HistoryTaskNotActiveCounter)
+						return
+					}
+					backoff := time.Duration(attempt * 100)
+					time.Sleep(backoff * time.Millisecond)
+					attempt++
+				}
+				continue ProcessRetryLoop
+			}
+			atomic.AddUint64(&t.timerFiredCount, 1)
+			return
+		}
+	}
+
+	// Cannot processes timer task due to LimitExceededError after all retries
+	// raise and alert and move on
+	logger = t.initializeLoggerForTask(task, logger)
+	if _, ok := err.(*workflow.LimitExceededError); ok {
+		logging.LogCriticalErrorEvent(logger, "Critical error processing timer task.  Skipping.", err)
+		t.metricsClient.IncCounter(metrics.TimerQueueProcessorScope, metrics.CadenceCriticalFailures)
+		return
+	}
+
+	// All attempts to process transfer task failed.  We won't be able to move the ackLevel so panic
+	logging.LogOperationPanicEvent(logger, "Retry count exceeded for timer task", err)
+}
+
+func (t *timerQueueProcessorBase) initializeLoggerForTask(task *persistence.TimerTaskInfo, logger bark.Logger) bark.Logger {
+	if logger != nil {
+		return logger
+	}
+
+	logger = t.logger.WithFields(bark.Fields{
+		logging.TagTaskID:              task.GetTaskID(),
+		logging.TagTaskType:            task.GetTaskType(),
+		logging.TagVersion:             task.GetVersion(),
+		logging.TagTimeoutType:         task.TimeoutType,
+		logging.TagDomainID:            task.DomainID,
+		logging.TagWorkflowExecutionID: task.WorkflowID,
+		logging.TagWorkflowRunID:       task.RunID,
+	})
+	logger.Debugf("Processing timer task: %v, type: %v", task.GetTaskID(), task.GetTaskType())
+	return logger
 }
 
 func (t *timerQueueProcessorBase) getTimerFiredCount() uint64 {

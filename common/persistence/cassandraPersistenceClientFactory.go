@@ -31,13 +31,14 @@ type (
 	cassandraPersistenceClientFactory struct {
 		session       *gocql.Session
 		metricsClient metrics.Client
+		rateLimiter   common.TokenBucket
 		logger        bark.Logger
 	}
 )
 
 // NewCassandraPersistenceClientFactory is used to create an instance of ExecutionManagerFactory implementation
 func NewCassandraPersistenceClientFactory(hosts string, port int, user, password, dc string, keyspace string,
-	numConns int, logger bark.Logger, metricsClient metrics.Client) (ExecutionManagerFactory, error) {
+	numConns int, logger bark.Logger, rateLimiter common.TokenBucket, metricsClient metrics.Client) (ExecutionManagerFactory, error) {
 	cluster := common.NewCassandraCluster(hosts, port, user, password, dc)
 	cluster.Keyspace = keyspace
 	cluster.ProtoVersion = cassandraProtoVersion
@@ -51,7 +52,7 @@ func NewCassandraPersistenceClientFactory(hosts string, port int, user, password
 		return nil, err
 	}
 
-	return &cassandraPersistenceClientFactory{session: session, logger: logger, metricsClient: metricsClient}, nil
+	return &cassandraPersistenceClientFactory{session: session, logger: logger, metricsClient: metricsClient, rateLimiter: rateLimiter}, nil
 }
 
 // CreateExecutionManager implements ExecutionManagerFactory interface
@@ -60,6 +61,10 @@ func (f *cassandraPersistenceClientFactory) CreateExecutionManager(shardID int) 
 
 	if err != nil {
 		return nil, err
+	}
+
+	if f.rateLimiter != nil {
+		mgr = NewWorkflowExecutionPersistenceRateLimitedClient(mgr, f.rateLimiter, f.logger)
 	}
 
 	if f.metricsClient == nil {

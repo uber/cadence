@@ -272,6 +272,7 @@ func (s *Service) Start() {
 		p.CassandraConfig.Keyspace,
 		s.config.ExecutionMgrNumConns(),
 		p.Logger,
+		persistenceRateLimiter,
 		s.metricsClient,
 	)
 	if err != nil {
