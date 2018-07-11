@@ -35,6 +35,7 @@ import (
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/cassandra"
 )
 
 var (
@@ -262,9 +263,9 @@ func (t *timerQueueProcessorBase) notifyNewTimers(timerTasks []persistence.Task)
 
 	isActive := t.scope == metrics.TimerActiveQueueProcessorScope
 
-	newTime := persistence.GetVisibilityTSFrom(timerTasks[0])
+	newTime := cassandra.GetVisibilityTSFrom(timerTasks[0])
 	for _, task := range timerTasks {
-		ts := persistence.GetVisibilityTSFrom(task)
+		ts := cassandra.GetVisibilityTSFrom(task)
 		if ts.Before(newTime) {
 			newTime = ts
 		}

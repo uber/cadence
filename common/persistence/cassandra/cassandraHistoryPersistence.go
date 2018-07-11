@@ -18,16 +18,17 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package persistence
+package cassandra
 
 import (
 	"fmt"
 
-	"github.com/gocql/gocql"
-	"github.com/uber-common/bark"
-
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/persistence"
+
+	"github.com/gocql/gocql"
+	"github.com/uber-common/bark"
 )
 
 const (
@@ -60,9 +61,9 @@ type (
 	}
 )
 
-// NewCassandraHistoryPersistence is used to create an instance of HistoryManager implementation
-func NewCassandraHistoryPersistence(hosts string, port int, user, password, dc string, keyspace string,
-	numConns int, logger bark.Logger) (HistoryManager,
+// NewHistoryPersistence is used to create an instance of HistoryManager implementation
+func NewHistoryPersistence(hosts string, port int, user, password, dc string, keyspace string,
+	numConns int, logger bark.Logger) (persistence.HistoryManager,
 	error) {
 	cluster := common.NewCassandraCluster(hosts, port, user, password, dc)
 	cluster.Keyspace = keyspace
@@ -87,7 +88,7 @@ func (h *cassandraHistoryPersistence) Close() {
 	}
 }
 
-func (h *cassandraHistoryPersistence) AppendHistoryEvents(request *AppendHistoryEventsRequest) error {
+func (h *cassandraHistoryPersistence) AppendHistoryEvents(request *persistence.AppendHistoryEventsRequest) error {
 	var query *gocql.Query
 	if request.Overwrite {
 		query = h.session.Query(templateOverwriteHistoryEvents,
@@ -125,7 +126,7 @@ func (h *cassandraHistoryPersistence) AppendHistoryEvents(request *AppendHistory
 		} else if isTimeoutError(err) {
 			// Write may have succeeded, but we don't know
 			// return this info to the caller so they have the option of trying to find out by executing a read
-			return &TimeoutError{Msg: fmt.Sprintf("AppendHistoryEvents timed out. Error: %v", err)}
+			return &persistence.TimeoutError{Msg: fmt.Sprintf("AppendHistoryEvents timed out. Error: %v", err)}
 		}
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("AppendHistoryEvents operation failed. Error: %v", err),
@@ -133,7 +134,7 @@ func (h *cassandraHistoryPersistence) AppendHistoryEvents(request *AppendHistory
 	}
 
 	if !applied {
-		return &ConditionFailedError{
+		return &persistence.ConditionFailedError{
 			Msg: "Failed to append history events.",
 		}
 	}
@@ -141,8 +142,8 @@ func (h *cassandraHistoryPersistence) AppendHistoryEvents(request *AppendHistory
 	return nil
 }
 
-func (h *cassandraHistoryPersistence) GetWorkflowExecutionHistory(request *GetWorkflowExecutionHistoryRequest) (
-	*GetWorkflowExecutionHistoryResponse, error) {
+func (h *cassandraHistoryPersistence) GetWorkflowExecutionHistory(request *persistence.GetWorkflowExecutionHistoryRequest) (
+	*persistence.GetWorkflowExecutionHistoryResponse, error) {
 	execution := request.Execution
 	query := h.session.Query(templateGetWorkflowExecutionHistory,
 		request.DomainID,
@@ -159,13 +160,13 @@ func (h *cassandraHistoryPersistence) GetWorkflowExecutionHistory(request *GetWo
 	}
 
 	var firstEventID int64
-	var history SerializedHistoryEventBatch
-	response := &GetWorkflowExecutionHistoryResponse{}
+	var history persistence.SerializedHistoryEventBatch
+	response := &persistence.GetWorkflowExecutionHistoryResponse{}
 	found := false
 	for iter.Scan(&firstEventID, &history.Data, &history.EncodingType, &history.Version) {
 		found = true
 		response.Events = append(response.Events, history)
-		history = SerializedHistoryEventBatch{}
+		history = persistence.SerializedHistoryEventBatch{}
 	}
 
 	nextPageToken := iter.PageState()
@@ -190,7 +191,7 @@ func (h *cassandraHistoryPersistence) GetWorkflowExecutionHistory(request *GetWo
 }
 
 func (h *cassandraHistoryPersistence) DeleteWorkflowExecutionHistory(
-	request *DeleteWorkflowExecutionHistoryRequest) error {
+	request *persistence.DeleteWorkflowExecutionHistoryRequest) error {
 	execution := request.Execution
 	query := h.session.Query(templateDeleteWorkflowExecutionHistory,
 		request.DomainID,

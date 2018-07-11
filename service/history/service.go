@@ -29,6 +29,7 @@ import (
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 )
@@ -181,7 +182,7 @@ func (s *Service) Start() {
 
 	s.metricsClient = base.GetMetricsClient()
 
-	shardMgr, err := persistence.NewCassandraShardPersistence(p.CassandraConfig.Hosts,
+	shardMgr, err := cassandra.NewShardPersistence(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,
 		p.CassandraConfig.User,
 		p.CassandraConfig.Password,
@@ -199,7 +200,7 @@ func (s *Service) Start() {
 	// TODO: properly pre-create all shards before deployment.
 	s.createAllShards(p.CassandraConfig.NumHistoryShards, shardMgr, log)
 
-	metadata, err := persistence.NewMetadataManagerProxy(p.CassandraConfig.Hosts,
+	metadata, err := cassandra.NewMetadataManagerProxy(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,
 		p.CassandraConfig.User,
 		p.CassandraConfig.Password,
@@ -213,7 +214,7 @@ func (s *Service) Start() {
 	}
 	metadata = persistence.NewMetadataPersistenceClient(metadata, base.GetMetricsClient(), log)
 
-	visibility, err := persistence.NewCassandraVisibilityPersistence(p.CassandraConfig.Hosts,
+	visibility, err := cassandra.NewVisibilityPersistence(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,
 		p.CassandraConfig.User,
 		p.CassandraConfig.Password,
@@ -226,7 +227,7 @@ func (s *Service) Start() {
 	}
 	visibility = persistence.NewVisibilityPersistenceClient(visibility, base.GetMetricsClient(), log)
 
-	history, err := persistence.NewCassandraHistoryPersistence(p.CassandraConfig.Hosts,
+	history, err := cassandra.NewHistoryPersistence(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,
 		p.CassandraConfig.User,
 		p.CassandraConfig.Password,
@@ -240,7 +241,7 @@ func (s *Service) Start() {
 	}
 	history = persistence.NewHistoryPersistenceClient(history, base.GetMetricsClient(), log)
 
-	execMgrFactory, err := persistence.NewCassandraPersistenceClientFactory(p.CassandraConfig.Hosts,
+	execMgrFactory, err := cassandra.NewPersistenceClientFactory(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,
 		p.CassandraConfig.User,
 		p.CassandraConfig.Password,

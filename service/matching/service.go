@@ -25,6 +25,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 )
@@ -92,7 +93,7 @@ func (s *Service) Start() {
 
 	base := service.New(p)
 
-	taskPersistence, err := persistence.NewCassandraTaskPersistence(p.CassandraConfig.Hosts,
+	taskPersistence, err := cassandra.NewTaskPersistence(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,
 		p.CassandraConfig.User,
 		p.CassandraConfig.Password,
@@ -104,7 +105,7 @@ func (s *Service) Start() {
 	}
 	taskPersistence = persistence.NewTaskPersistenceClient(taskPersistence, base.GetMetricsClient(), log)
 
-	metadata, err := persistence.NewMetadataManagerProxy(p.CassandraConfig.Hosts,
+	metadata, err := cassandra.NewMetadataManagerProxy(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,
 		p.CassandraConfig.User,
 		p.CassandraConfig.Password,

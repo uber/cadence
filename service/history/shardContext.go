@@ -35,6 +35,7 @@ import (
 
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/service"
 )
 
@@ -605,14 +606,14 @@ func (s *shardContextImpl) updateShardInfoLocked() error {
 func (s *shardContextImpl) allocateTimerIDsLocked(timerTasks []persistence.Task) error {
 	// assign IDs for the timer tasks. They need to be assigned under shard lock.
 	for _, task := range timerTasks {
-		ts := persistence.GetVisibilityTSFrom(task)
+		ts := cassandra.GetVisibilityTSFrom(task)
 		if ts.Before(s.shardInfo.TimerAckLevel) {
 			// This is not a common scenario, the shard can move and new host might have a time SKU.
 			// We generate a new timer ID that is above the ack level with an offset.
 			s.logger.Warnf("%v: New timer generated is less than ack level. timestamp: %v, ackLevel: %v",
 				time.Now(), ts, s.shardInfo.TimerAckLevel)
 			newTimestamp := s.shardInfo.TimerAckLevel
-			persistence.SetVisibilityTSFrom(task, newTimestamp.Add(time.Second))
+			cassandra.SetVisibilityTSFrom(task, newTimestamp.Add(time.Second))
 		}
 
 		seqNum, err := s.getNextTransferTaskIDLocked()
@@ -621,7 +622,7 @@ func (s *shardContextImpl) allocateTimerIDsLocked(timerTasks []persistence.Task)
 		}
 		task.SetTaskID(seqNum)
 		s.logger.Debugf("Assigning new timer (timestamp: %v, seq: %v) ackLeveL: %v",
-			persistence.GetVisibilityTSFrom(task), task.GetTaskID(), s.shardInfo.TimerAckLevel)
+			cassandra.GetVisibilityTSFrom(task), task.GetTaskID(), s.shardInfo.TimerAckLevel)
 	}
 	return nil
 }

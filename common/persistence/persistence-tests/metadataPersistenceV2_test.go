@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package persistence
+package persistencetests
 
 import (
 	"fmt"
@@ -36,6 +36,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/uber/cadence/common/persistence"
 )
 
 type (
@@ -95,7 +96,7 @@ func (m *metadataPersistenceSuiteV2) TearDownSuite() {
 func (m *metadataPersistenceSuiteV2) TestCreateDomain() {
 	id := uuid.New()
 	name := "create-domain-test-name"
-	status := DomainStatusRegistered
+	status := persistence.DomainStatusRegistered
 	description := "create-domain-test-description"
 	owner := "create-domain-test-owner"
 	data := map[string]string{"k1": "v1"}
@@ -106,7 +107,7 @@ func (m *metadataPersistenceSuiteV2) TestCreateDomain() {
 	failoverVersion := int64(0)
 
 	resp0, err0 := m.CreateDomain(
-		&DomainInfo{
+		&persistence.DomainInfo{
 			ID:          id,
 			Name:        name,
 			Status:      status,
@@ -114,11 +115,11 @@ func (m *metadataPersistenceSuiteV2) TestCreateDomain() {
 			OwnerEmail:  owner,
 			Data:        data,
 		},
-		&DomainConfig{
+		&persistence.DomainConfig{
 			Retention:  retention,
 			EmitMetric: emitMetric,
 		},
-		&DomainReplicationConfig{},
+		&persistence.DomainReplicationConfig{},
 		isGlobalDomain,
 		configVersion,
 		failoverVersion,
@@ -146,10 +147,10 @@ func (m *metadataPersistenceSuiteV2) TestCreateDomain() {
 	m.Equal(configVersion, resp1.ConfigVersion)
 	m.Equal(failoverVersion, resp1.FailoverVersion)
 	m.True(resp1.ReplicationConfig.Clusters[0].ClusterName == cluster.TestCurrentClusterName)
-	m.Equal(initialFailoverNotificationVersion, resp1.FailoverNotificationVersion)
+	m.Equal(persistence.InitialFailoverNotificationVersion, resp1.FailoverNotificationVersion)
 
 	resp2, err2 := m.CreateDomain(
-		&DomainInfo{
+		&persistence.DomainInfo{
 			ID:          uuid.New(),
 			Name:        name,
 			Status:      status,
@@ -157,11 +158,11 @@ func (m *metadataPersistenceSuiteV2) TestCreateDomain() {
 			OwnerEmail:  "fail",
 			Data:        map[string]string{},
 		},
-		&DomainConfig{
+		&persistence.DomainConfig{
 			Retention:  100,
 			EmitMetric: false,
 		},
-		&DomainReplicationConfig{},
+		&persistence.DomainReplicationConfig{},
 		isGlobalDomain,
 		configVersion,
 		failoverVersion,
@@ -174,7 +175,7 @@ func (m *metadataPersistenceSuiteV2) TestCreateDomain() {
 func (m *metadataPersistenceSuiteV2) TestGetDomain() {
 	id := uuid.New()
 	name := "get-domain-test-name"
-	status := DomainStatusRegistered
+	status := persistence.DomainStatusRegistered
 	description := "get-domain-test-description"
 	owner := "get-domain-test-owner"
 	data := map[string]string{"k1": "v1"}
@@ -186,11 +187,11 @@ func (m *metadataPersistenceSuiteV2) TestGetDomain() {
 	configVersion := int64(11)
 	failoverVersion := int64(59)
 	isGlobalDomain := true
-	clusters := []*ClusterReplicationConfig{
-		&ClusterReplicationConfig{
+	clusters := []*persistence.ClusterReplicationConfig{
+		{
 			ClusterName: clusterActive,
 		},
-		&ClusterReplicationConfig{
+		{
 			ClusterName: clusterStandby,
 		},
 	}
@@ -201,7 +202,7 @@ func (m *metadataPersistenceSuiteV2) TestGetDomain() {
 	m.IsType(&gen.EntityNotExistsError{}, err0)
 
 	resp1, err1 := m.CreateDomain(
-		&DomainInfo{
+		&persistence.DomainInfo{
 			ID:          id,
 			Name:        name,
 			Status:      status,
@@ -209,11 +210,11 @@ func (m *metadataPersistenceSuiteV2) TestGetDomain() {
 			OwnerEmail:  owner,
 			Data:        data,
 		},
-		&DomainConfig{
+		&persistence.DomainConfig{
 			Retention:  retention,
 			EmitMetric: emitMetric,
 		},
-		&DomainReplicationConfig{
+		&persistence.DomainReplicationConfig{
 			ActiveClusterName: clusterActive,
 			Clusters:          clusters,
 		},
@@ -244,7 +245,7 @@ func (m *metadataPersistenceSuiteV2) TestGetDomain() {
 	m.Equal(isGlobalDomain, resp2.IsGlobalDomain)
 	m.Equal(configVersion, resp2.ConfigVersion)
 	m.Equal(failoverVersion, resp2.FailoverVersion)
-	m.Equal(initialFailoverNotificationVersion, resp2.FailoverNotificationVersion)
+	m.Equal(persistence.InitialFailoverNotificationVersion, resp2.FailoverNotificationVersion)
 
 	resp3, err3 := m.GetDomain("", name)
 	m.Nil(err3)
@@ -265,7 +266,7 @@ func (m *metadataPersistenceSuiteV2) TestGetDomain() {
 	m.Equal(isGlobalDomain, resp2.IsGlobalDomain)
 	m.Equal(configVersion, resp2.ConfigVersion)
 	m.Equal(failoverVersion, resp3.FailoverVersion)
-	m.Equal(initialFailoverNotificationVersion, resp3.FailoverNotificationVersion)
+	m.Equal(persistence.InitialFailoverNotificationVersion, resp3.FailoverNotificationVersion)
 
 	resp4, err4 := m.GetDomain(id, name)
 	m.NotNil(err4)
@@ -281,7 +282,7 @@ func (m *metadataPersistenceSuiteV2) TestConcurrentCreateDomain() {
 	id := uuid.New()
 
 	name := "concurrent-create-domain-test-name"
-	status := DomainStatusRegistered
+	status := persistence.DomainStatusRegistered
 	description := "concurrent-create-domain-test-description"
 	owner := "create-domain-test-owner"
 	retention := int32(10)
@@ -292,11 +293,11 @@ func (m *metadataPersistenceSuiteV2) TestConcurrentCreateDomain() {
 	configVersion := int64(10)
 	failoverVersion := int64(59)
 	isGlobalDomain := true
-	clusters := []*ClusterReplicationConfig{
-		&ClusterReplicationConfig{
+	clusters := []*persistence.ClusterReplicationConfig{
+		{
 			ClusterName: clusterActive,
 		},
-		&ClusterReplicationConfig{
+		{
 			ClusterName: clusterStandby,
 		},
 	}
@@ -309,7 +310,7 @@ func (m *metadataPersistenceSuiteV2) TestConcurrentCreateDomain() {
 		wg.Add(1)
 		go func(data map[string]string) {
 			_, err1 := m.CreateDomain(
-				&DomainInfo{
+				&persistence.DomainInfo{
 					ID:          id,
 					Name:        name,
 					Status:      status,
@@ -317,11 +318,11 @@ func (m *metadataPersistenceSuiteV2) TestConcurrentCreateDomain() {
 					OwnerEmail:  owner,
 					Data:        data,
 				},
-				&DomainConfig{
+				&persistence.DomainConfig{
 					Retention:  retention,
 					EmitMetric: emitMetric,
 				},
-				&DomainReplicationConfig{
+				&persistence.DomainReplicationConfig{
 					ActiveClusterName: clusterActive,
 					Clusters:          clusters,
 				},
@@ -367,7 +368,7 @@ func (m *metadataPersistenceSuiteV2) TestConcurrentCreateDomain() {
 func (m *metadataPersistenceSuiteV2) TestConcurrentUpdateDomain() {
 	id := uuid.New()
 	name := "concurrent-update-domain-test-name"
-	status := DomainStatusRegistered
+	status := persistence.DomainStatusRegistered
 	description := "update-domain-test-description"
 	owner := "update-domain-test-owner"
 	data := map[string]string{"k1": "v1"}
@@ -379,17 +380,17 @@ func (m *metadataPersistenceSuiteV2) TestConcurrentUpdateDomain() {
 	configVersion := int64(10)
 	failoverVersion := int64(59)
 	isGlobalDomain := true
-	clusters := []*ClusterReplicationConfig{
-		&ClusterReplicationConfig{
+	clusters := []*persistence.ClusterReplicationConfig{
+		{
 			ClusterName: clusterActive,
 		},
-		&ClusterReplicationConfig{
+		{
 			ClusterName: clusterStandby,
 		},
 	}
 
 	resp1, err1 := m.CreateDomain(
-		&DomainInfo{
+		&persistence.DomainInfo{
 			ID:          id,
 			Name:        name,
 			Status:      status,
@@ -397,11 +398,11 @@ func (m *metadataPersistenceSuiteV2) TestConcurrentUpdateDomain() {
 			OwnerEmail:  owner,
 			Data:        data,
 		},
-		&DomainConfig{
+		&persistence.DomainConfig{
 			Retention:  retention,
 			EmitMetric: emitMetric,
 		},
-		&DomainReplicationConfig{
+		&persistence.DomainReplicationConfig{
 			ActiveClusterName: clusterActive,
 			Clusters:          clusters,
 		},
@@ -426,7 +427,7 @@ func (m *metadataPersistenceSuiteV2) TestConcurrentUpdateDomain() {
 		wg.Add(1)
 		go func(updatedData map[string]string) {
 			err3 := m.UpdateDomain(
-				&DomainInfo{
+				&persistence.DomainInfo{
 					ID:          resp2.Info.ID,
 					Name:        resp2.Info.Name,
 					Status:      resp2.Info.Status,
@@ -434,11 +435,11 @@ func (m *metadataPersistenceSuiteV2) TestConcurrentUpdateDomain() {
 					OwnerEmail:  resp2.Info.OwnerEmail,
 					Data:        updatedData,
 				},
-				&DomainConfig{
+				&persistence.DomainConfig{
 					Retention:  resp2.Config.Retention,
 					EmitMetric: resp2.Config.EmitMetric,
 				},
-				&DomainReplicationConfig{
+				&persistence.DomainReplicationConfig{
 					ActiveClusterName: resp2.ReplicationConfig.ActiveClusterName,
 					Clusters:          resp2.ReplicationConfig.Clusters,
 				},
@@ -487,7 +488,7 @@ func (m *metadataPersistenceSuiteV2) TestConcurrentUpdateDomain() {
 func (m *metadataPersistenceSuiteV2) TestUpdateDomain() {
 	id := uuid.New()
 	name := "update-domain-test-name"
-	status := DomainStatusRegistered
+	status := persistence.DomainStatusRegistered
 	description := "update-domain-test-description"
 	owner := "update-domain-test-owner"
 	data := map[string]string{"k1": "v1"}
@@ -499,17 +500,17 @@ func (m *metadataPersistenceSuiteV2) TestUpdateDomain() {
 	configVersion := int64(10)
 	failoverVersion := int64(59)
 	isGlobalDomain := true
-	clusters := []*ClusterReplicationConfig{
-		&ClusterReplicationConfig{
+	clusters := []*persistence.ClusterReplicationConfig{
+		{
 			ClusterName: clusterActive,
 		},
-		&ClusterReplicationConfig{
+		{
 			ClusterName: clusterStandby,
 		},
 	}
 
 	resp1, err1 := m.CreateDomain(
-		&DomainInfo{
+		&persistence.DomainInfo{
 			ID:          id,
 			Name:        name,
 			Status:      status,
@@ -517,11 +518,11 @@ func (m *metadataPersistenceSuiteV2) TestUpdateDomain() {
 			OwnerEmail:  owner,
 			Data:        data,
 		},
-		&DomainConfig{
+		&persistence.DomainConfig{
 			Retention:  retention,
 			EmitMetric: emitMetric,
 		},
-		&DomainReplicationConfig{
+		&persistence.DomainReplicationConfig{
 			ActiveClusterName: clusterActive,
 			Clusters:          clusters,
 		},
@@ -538,7 +539,7 @@ func (m *metadataPersistenceSuiteV2) TestUpdateDomain() {
 	m.Nil(err)
 	notificationVersion := metadata.NotificationVersion
 
-	updatedStatus := DomainStatusDeprecated
+	updatedStatus := persistence.DomainStatusDeprecated
 	updatedDescription := "description-updated"
 	updatedOwner := "owner-updated"
 	//This will overriding the previous key-value pair
@@ -551,17 +552,17 @@ func (m *metadataPersistenceSuiteV2) TestUpdateDomain() {
 	updateConfigVersion := int64(12)
 	updateFailoverVersion := int64(28)
 	updateFailoverNotificationVersion := int64(14)
-	updateClusters := []*ClusterReplicationConfig{
-		&ClusterReplicationConfig{
+	updateClusters := []*persistence.ClusterReplicationConfig{
+		{
 			ClusterName: updateClusterActive,
 		},
-		&ClusterReplicationConfig{
+		{
 			ClusterName: updateClusterStandby,
 		},
 	}
 
 	err3 := m.UpdateDomain(
-		&DomainInfo{
+		&persistence.DomainInfo{
 			ID:          resp2.Info.ID,
 			Name:        resp2.Info.Name,
 			Status:      updatedStatus,
@@ -569,11 +570,11 @@ func (m *metadataPersistenceSuiteV2) TestUpdateDomain() {
 			OwnerEmail:  updatedOwner,
 			Data:        updatedData,
 		},
-		&DomainConfig{
+		&persistence.DomainConfig{
 			Retention:  updatedRetention,
 			EmitMetric: updatedEmitMetric,
 		},
-		&DomainReplicationConfig{
+		&persistence.DomainReplicationConfig{
 			ActiveClusterName: updateClusterActive,
 			Clusters:          updateClusters,
 		},
@@ -630,7 +631,7 @@ func (m *metadataPersistenceSuiteV2) TestUpdateDomain() {
 func (m *metadataPersistenceSuiteV2) TestDeleteDomain() {
 	id := uuid.New()
 	name := "delete-domain-test-name"
-	status := DomainStatusRegistered
+	status := persistence.DomainStatusRegistered
 	description := "delete-domain-test-description"
 	owner := "delete-domain-test-owner"
 	data := map[string]string{"k1": "v1"}
@@ -642,17 +643,17 @@ func (m *metadataPersistenceSuiteV2) TestDeleteDomain() {
 	configVersion := int64(10)
 	failoverVersion := int64(59)
 	isGlobalDomain := true
-	clusters := []*ClusterReplicationConfig{
-		&ClusterReplicationConfig{
+	clusters := []*persistence.ClusterReplicationConfig{
+		{
 			ClusterName: clusterActive,
 		},
-		&ClusterReplicationConfig{
+		{
 			ClusterName: clusterStandby,
 		},
 	}
 
 	resp1, err1 := m.CreateDomain(
-		&DomainInfo{
+		&persistence.DomainInfo{
 			ID:          id,
 			Name:        name,
 			Status:      status,
@@ -660,11 +661,11 @@ func (m *metadataPersistenceSuiteV2) TestDeleteDomain() {
 			OwnerEmail:  owner,
 			Data:        data,
 		},
-		&DomainConfig{
+		&persistence.DomainConfig{
 			Retention:  int32(retention),
 			EmitMetric: emitMetric,
 		},
-		&DomainReplicationConfig{
+		&persistence.DomainReplicationConfig{
 			ActiveClusterName: clusterActive,
 			Clusters:          clusters,
 		},
@@ -694,7 +695,7 @@ func (m *metadataPersistenceSuiteV2) TestDeleteDomain() {
 
 	id = uuid.New()
 	resp6, err6 := m.CreateDomain(
-		&DomainInfo{
+		&persistence.DomainInfo{
 			ID:          id,
 			Name:        name,
 			Status:      status,
@@ -702,11 +703,11 @@ func (m *metadataPersistenceSuiteV2) TestDeleteDomain() {
 			OwnerEmail:  owner,
 			Data:        data,
 		},
-		&DomainConfig{
+		&persistence.DomainConfig{
 			Retention:  int32(retention),
 			EmitMetric: emitMetric,
 		},
-		&DomainReplicationConfig{
+		&persistence.DomainReplicationConfig{
 			ActiveClusterName: clusterActive,
 			Clusters:          clusters,
 		},
@@ -734,41 +735,41 @@ func (m *metadataPersistenceSuiteV2) TestDeleteDomain() {
 func (m *metadataPersistenceSuiteV2) TestListDomains() {
 	clusterActive1 := "some random active cluster name"
 	clusterStandby1 := "some random standby cluster name"
-	clusters1 := []*ClusterReplicationConfig{
-		&ClusterReplicationConfig{
+	clusters1 := []*persistence.ClusterReplicationConfig{
+		{
 			ClusterName: clusterActive1,
 		},
-		&ClusterReplicationConfig{
+		{
 			ClusterName: clusterStandby1,
 		},
 	}
 
 	clusterActive2 := "other random active cluster name"
 	clusterStandby2 := "other random standby cluster name"
-	clusters2 := []*ClusterReplicationConfig{
-		&ClusterReplicationConfig{
+	clusters2 := []*persistence.ClusterReplicationConfig{
+		{
 			ClusterName: clusterActive2,
 		},
-		&ClusterReplicationConfig{
+		{
 			ClusterName: clusterStandby2,
 		},
 	}
 
-	inputDomains := []*GetDomainResponse{
-		&GetDomainResponse{
-			Info: &DomainInfo{
+	inputDomains := []*persistence.GetDomainResponse{
+		{
+			Info: &persistence.DomainInfo{
 				ID:          uuid.New(),
 				Name:        "list-domain-test-name-1",
-				Status:      DomainStatusRegistered,
+				Status:      persistence.DomainStatusRegistered,
 				Description: "list-domain-test-description-1",
 				OwnerEmail:  "list-domain-test-owner-1",
 				Data:        map[string]string{"k1": "v1"},
 			},
-			Config: &DomainConfig{
+			Config: &persistence.DomainConfig{
 				Retention:  109,
 				EmitMetric: true,
 			},
-			ReplicationConfig: &DomainReplicationConfig{
+			ReplicationConfig: &persistence.DomainReplicationConfig{
 				ActiveClusterName: clusterActive1,
 				Clusters:          clusters1,
 			},
@@ -776,20 +777,20 @@ func (m *metadataPersistenceSuiteV2) TestListDomains() {
 			ConfigVersion:   133,
 			FailoverVersion: 266,
 		},
-		&GetDomainResponse{
-			Info: &DomainInfo{
+		{
+			Info: &persistence.DomainInfo{
 				ID:          uuid.New(),
 				Name:        "list-domain-test-name-2",
-				Status:      DomainStatusRegistered,
+				Status:      persistence.DomainStatusRegistered,
 				Description: "list-domain-test-description-2",
 				OwnerEmail:  "list-domain-test-owner-2",
 				Data:        map[string]string{"k1": "v2"},
 			},
-			Config: &DomainConfig{
+			Config: &persistence.DomainConfig{
 				Retention:  326,
 				EmitMetric: false,
 			},
-			ReplicationConfig: &DomainReplicationConfig{
+			ReplicationConfig: &persistence.DomainReplicationConfig{
 				ActiveClusterName: clusterActive2,
 				Clusters:          clusters2,
 			},
@@ -812,7 +813,7 @@ func (m *metadataPersistenceSuiteV2) TestListDomains() {
 
 	var token []byte
 	pageSize := 1
-	outputDomains := make(map[string]*GetDomainResponse)
+	outputDomains := make(map[string]*persistence.GetDomainResponse)
 ListLoop:
 	for {
 		resp, err := m.ListDomains(pageSize, token)
@@ -835,9 +836,9 @@ ListLoop:
 	}
 }
 
-func (m *metadataPersistenceSuiteV2) CreateDomain(info *DomainInfo, config *DomainConfig,
-	replicationConfig *DomainReplicationConfig, isGlobaldomain bool, configVersion int64, failoverVersion int64) (*CreateDomainResponse, error) {
-	return m.MetadataManagerV2.CreateDomain(&CreateDomainRequest{
+func (m *metadataPersistenceSuiteV2) CreateDomain(info *persistence.DomainInfo, config *persistence.DomainConfig,
+	replicationConfig *persistence.DomainReplicationConfig, isGlobaldomain bool, configVersion int64, failoverVersion int64) (*persistence.CreateDomainResponse, error) {
+	return m.MetadataManagerV2.CreateDomain(&persistence.CreateDomainRequest{
 		Info:              info,
 		Config:            config,
 		ReplicationConfig: replicationConfig,
@@ -847,16 +848,16 @@ func (m *metadataPersistenceSuiteV2) CreateDomain(info *DomainInfo, config *Doma
 	})
 }
 
-func (m *metadataPersistenceSuiteV2) GetDomain(id, name string) (*GetDomainResponse, error) {
-	return m.MetadataManagerV2.GetDomain(&GetDomainRequest{
+func (m *metadataPersistenceSuiteV2) GetDomain(id, name string) (*persistence.GetDomainResponse, error) {
+	return m.MetadataManagerV2.GetDomain(&persistence.GetDomainRequest{
 		ID:   id,
 		Name: name,
 	})
 }
 
-func (m *metadataPersistenceSuiteV2) UpdateDomain(info *DomainInfo, config *DomainConfig, replicationConfig *DomainReplicationConfig,
+func (m *metadataPersistenceSuiteV2) UpdateDomain(info *persistence.DomainInfo, config *persistence.DomainConfig, replicationConfig *persistence.DomainReplicationConfig,
 	configVersion int64, failoverVersion int64, failoverNotificationVersion int64, notificationVersion int64) error {
-	return m.MetadataManagerV2.UpdateDomain(&UpdateDomainRequest{
+	return m.MetadataManagerV2.UpdateDomain(&persistence.UpdateDomainRequest{
 		Info:                        info,
 		Config:                      config,
 		ReplicationConfig:           replicationConfig,
@@ -869,13 +870,13 @@ func (m *metadataPersistenceSuiteV2) UpdateDomain(info *DomainInfo, config *Doma
 
 func (m *metadataPersistenceSuiteV2) DeleteDomain(id, name string) error {
 	if len(id) > 0 {
-		return m.MetadataManagerV2.DeleteDomain(&DeleteDomainRequest{ID: id})
+		return m.MetadataManagerV2.DeleteDomain(&persistence.DeleteDomainRequest{ID: id})
 	}
-	return m.MetadataManagerV2.DeleteDomainByName(&DeleteDomainByNameRequest{Name: name})
+	return m.MetadataManagerV2.DeleteDomainByName(&persistence.DeleteDomainByNameRequest{Name: name})
 }
 
-func (m *metadataPersistenceSuiteV2) ListDomains(pageSize int, pageToken []byte) (*ListDomainsResponse, error) {
-	return m.MetadataManagerV2.ListDomains(&ListDomainsRequest{
+func (m *metadataPersistenceSuiteV2) ListDomains(pageSize int, pageToken []byte) (*persistence.ListDomainsResponse, error) {
+	return m.MetadataManagerV2.ListDomains(&persistence.ListDomainsRequest{
 		PageSize:      pageSize,
 		NextPageToken: pageToken,
 	})

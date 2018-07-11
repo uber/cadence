@@ -25,6 +25,7 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 )
@@ -75,7 +76,7 @@ func (s *Service) Start() {
 
 	base := service.New(p)
 
-	metadata, err := persistence.NewMetadataManagerProxy(p.CassandraConfig.Hosts,
+	metadata, err := cassandra.NewMetadataManagerProxy(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,
 		p.CassandraConfig.User,
 		p.CassandraConfig.Password,
@@ -89,7 +90,7 @@ func (s *Service) Start() {
 	}
 	metadata = persistence.NewMetadataPersistenceClient(metadata, base.GetMetricsClient(), log)
 
-	visibility, err := persistence.NewCassandraVisibilityPersistence(p.CassandraConfig.Hosts,
+	visibility, err := cassandra.NewVisibilityPersistence(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,
 		p.CassandraConfig.User,
 		p.CassandraConfig.Password,
@@ -102,7 +103,7 @@ func (s *Service) Start() {
 	}
 	visibility = persistence.NewVisibilityPersistenceClient(visibility, base.GetMetricsClient(), log)
 
-	history, err := persistence.NewCassandraHistoryPersistence(p.CassandraConfig.Hosts,
+	history, err := cassandra.NewHistoryPersistence(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,
 		p.CassandraConfig.User,
 		p.CassandraConfig.Password,

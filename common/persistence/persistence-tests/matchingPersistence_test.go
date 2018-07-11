@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package persistence
+package persistencetests
 
 import (
 	"os"
@@ -33,10 +33,11 @@ import (
 	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/persistence"
 )
 
 type (
-	cassandraPersistenceSuite struct {
+	matchingPersistenceSuite struct {
 		suite.Suite
 		TestBase
 		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
@@ -49,12 +50,12 @@ type (
 // we need to use tolerance when doing comparison
 var timePrecision = 2 * time.Millisecond
 
-func TestCassandraPersistenceSuite(t *testing.T) {
-	s := new(cassandraPersistenceSuite)
+func TestMatchingPersistenceSuite(t *testing.T) {
+	s := new(matchingPersistenceSuite)
 	suite.Run(t, s)
 }
 
-func (s *cassandraPersistenceSuite) SetupSuite() {
+func (s *matchingPersistenceSuite) SetupSuite() {
 	if testing.Verbose() {
 		log.SetOutput(os.Stdout)
 	}
@@ -62,17 +63,17 @@ func (s *cassandraPersistenceSuite) SetupSuite() {
 	s.SetupWorkflowStore()
 }
 
-func (s *cassandraPersistenceSuite) TearDownSuite() {
+func (s *matchingPersistenceSuite) TearDownSuite() {
 	s.TearDownWorkflowStore()
 }
 
-func (s *cassandraPersistenceSuite) SetupTest() {
+func (s *matchingPersistenceSuite) SetupTest() {
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
 	s.ClearTasks()
 }
 
-func (s *cassandraPersistenceSuite) TestPersistenceStartWorkflow() {
+func (s *matchingPersistenceSuite) TestPersistenceStartWorkflow() {
 	domainID := "2d7994bf-9de8-459d-9c81-e723daedb246"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("start-workflow-test"),
@@ -85,15 +86,15 @@ func (s *cassandraPersistenceSuite) TestPersistenceStartWorkflow() {
 	task1, err1 := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType1", 20, 14, nil, 3, 0, 2, nil)
 	s.NotNil(err1, "Expected workflow creation to fail.")
 	log.Infof("Unable to start workflow execution: %v", err1)
-	startedErr, ok := err1.(*WorkflowExecutionAlreadyStartedError)
+	startedErr, ok := err1.(*persistence.WorkflowExecutionAlreadyStartedError)
 	s.True(ok)
 	s.Equal(workflowExecution.GetRunId(), startedErr.RunID, startedErr.Msg)
-	s.Equal(WorkflowStateRunning, startedErr.State, startedErr.Msg)
-	s.Equal(WorkflowCloseStatusNone, startedErr.CloseStatus, startedErr.Msg)
+	s.Equal(persistence.WorkflowStateRunning, startedErr.State, startedErr.Msg)
+	s.Equal(persistence.WorkflowCloseStatusNone, startedErr.CloseStatus, startedErr.Msg)
 	s.Equal(common.EmptyVersion, startedErr.StartVersion, startedErr.Msg)
 	s.Empty(task1, "Expected empty task identifier.")
 
-	response, err2 := s.WorkflowMgr.CreateWorkflowExecution(&CreateWorkflowExecutionRequest{
+	response, err2 := s.WorkflowMgr.CreateWorkflowExecution(&persistence.CreateWorkflowExecutionRequest{
 		RequestID:            uuid.New(),
 		DomainID:             domainID,
 		Execution:            workflowExecution,
@@ -105,8 +106,8 @@ func (s *cassandraPersistenceSuite) TestPersistenceStartWorkflow() {
 		NextEventID:          int64(3),
 		LastProcessedEvent:   0,
 		RangeID:              s.ShardInfo.RangeID - 1,
-		TransferTasks: []Task{
-			&DecisionTask{
+		TransferTasks: []persistence.Task{
+			&persistence.DecisionTask{
 				TaskID:     s.GetNextSequenceNumber(),
 				DomainID:   domainID,
 				TaskList:   "queue1",
@@ -122,17 +123,17 @@ func (s *cassandraPersistenceSuite) TestPersistenceStartWorkflow() {
 	s.NotNil(err2, "Expected workflow creation to fail.")
 	s.Nil(response)
 	log.Infof("Unable to start workflow execution: %v", err2)
-	s.IsType(&ShardOwnershipLostError{}, err2)
+	s.IsType(&persistence.ShardOwnershipLostError{}, err2)
 }
 
-func (s *cassandraPersistenceSuite) TestPersistenceStartWorkflowWithReplicationState() {
+func (s *matchingPersistenceSuite) TestPersistenceStartWorkflowWithReplicationState() {
 	domainID := "2d7994bf-9de8-459d-9c81-e723daedb246"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("start-workflow-test-replication-state"),
 		RunId:      common.StringPtr("7f9fe8a0-9237-11e6-ae22-56b6b6499611"),
 	}
 	version := int64(144)
-	replicationState := &ReplicationState{
+	replicationState := &persistence.ReplicationState{
 		StartVersion:     version, // we are only testing this attribute
 		CurrentVersion:   version,
 		LastWriteVersion: version,
@@ -144,15 +145,15 @@ func (s *cassandraPersistenceSuite) TestPersistenceStartWorkflowWithReplicationS
 	task1, err1 := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType1", 20, 14, nil, 3, 0, 2, nil)
 	s.NotNil(err1, "Expected workflow creation to fail.")
 	log.Infof("Unable to start workflow execution: %v", err1)
-	startedErr, ok := err1.(*WorkflowExecutionAlreadyStartedError)
+	startedErr, ok := err1.(*persistence.WorkflowExecutionAlreadyStartedError)
 	s.True(ok)
 	s.Equal(workflowExecution.GetRunId(), startedErr.RunID, startedErr.Msg)
-	s.Equal(WorkflowStateRunning, startedErr.State, startedErr.Msg)
-	s.Equal(WorkflowCloseStatusNone, startedErr.CloseStatus, startedErr.Msg)
+	s.Equal(persistence.WorkflowStateRunning, startedErr.State, startedErr.Msg)
+	s.Equal(persistence.WorkflowCloseStatusNone, startedErr.CloseStatus, startedErr.Msg)
 	s.Equal(version, startedErr.StartVersion, startedErr.Msg)
 	s.Empty(task1, "Expected empty task identifier.")
 
-	response, err2 := s.WorkflowMgr.CreateWorkflowExecution(&CreateWorkflowExecutionRequest{
+	response, err2 := s.WorkflowMgr.CreateWorkflowExecution(&persistence.CreateWorkflowExecutionRequest{
 		RequestID:            uuid.New(),
 		DomainID:             domainID,
 		Execution:            workflowExecution,
@@ -164,8 +165,8 @@ func (s *cassandraPersistenceSuite) TestPersistenceStartWorkflowWithReplicationS
 		NextEventID:          int64(3),
 		LastProcessedEvent:   0,
 		RangeID:              s.ShardInfo.RangeID - 1,
-		TransferTasks: []Task{
-			&DecisionTask{
+		TransferTasks: []persistence.Task{
+			&persistence.DecisionTask{
 				TaskID:     s.GetNextSequenceNumber(),
 				DomainID:   domainID,
 				TaskList:   "queue1",
@@ -181,10 +182,10 @@ func (s *cassandraPersistenceSuite) TestPersistenceStartWorkflowWithReplicationS
 	s.NotNil(err2, "Expected workflow creation to fail.")
 	s.Nil(response)
 	log.Infof("Unable to start workflow execution: %v", err2)
-	s.IsType(&ShardOwnershipLostError{}, err2)
+	s.IsType(&persistence.ShardOwnershipLostError{}, err2)
 }
 
-func (s *cassandraPersistenceSuite) TestGetWorkflow() {
+func (s *matchingPersistenceSuite) TestGetWorkflow() {
 	domainID := "8f27f02b-ce22-4fd9-941b-65e1131b0bb5"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("get-workflow-test"),
@@ -207,7 +208,7 @@ func (s *cassandraPersistenceSuite) TestGetWorkflow() {
 	s.Equal(int32(20), info.WorkflowTimeout)
 	s.Equal(int32(13), info.DecisionTimeoutValue)
 	s.Equal([]byte(nil), info.ExecutionContext)
-	s.Equal(WorkflowStateCreated, info.State)
+	s.Equal(persistence.WorkflowStateCreated, info.State)
 	s.Equal(int64(3), info.NextEventID)
 	s.Equal(int64(0), info.LastProcessedEvent)
 	s.Equal(true, validateTimeRange(info.LastUpdatedTimestamp, time.Hour))
@@ -217,7 +218,7 @@ func (s *cassandraPersistenceSuite) TestGetWorkflow() {
 	log.Infof("Workflow execution last updated: %v", info.LastUpdatedTimestamp)
 }
 
-func (s *cassandraPersistenceSuite) TestUpdateWorkflow() {
+func (s *matchingPersistenceSuite) TestUpdateWorkflow() {
 	domainID := "b0a8571c-0257-40ea-afcd-3a14eae181c0"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("update-workflow-test"),
@@ -239,7 +240,7 @@ func (s *cassandraPersistenceSuite) TestUpdateWorkflow() {
 	s.Equal(int32(20), info0.WorkflowTimeout)
 	s.Equal(int32(13), info0.DecisionTimeoutValue)
 	s.Equal([]byte(nil), info0.ExecutionContext)
-	s.Equal(WorkflowStateCreated, info0.State)
+	s.Equal(persistence.WorkflowStateCreated, info0.State)
 	s.Equal(int64(1), info0.LastFirstEventID)
 	s.Equal(int64(3), info0.NextEventID)
 	s.Equal(int64(0), info0.LastProcessedEvent)
@@ -285,7 +286,7 @@ func (s *cassandraPersistenceSuite) TestUpdateWorkflow() {
 	s.Equal(int32(20), info1.WorkflowTimeout)
 	s.Equal(int32(13), info1.DecisionTimeoutValue)
 	s.Equal([]byte(nil), info1.ExecutionContext)
-	s.Equal(WorkflowStateCreated, info1.State)
+	s.Equal(persistence.WorkflowStateCreated, info1.State)
 	s.Equal(int64(3), info1.LastFirstEventID)
 	s.Equal(int64(5), info1.NextEventID)
 	s.Equal(int64(2), info1.LastProcessedEvent)
@@ -311,7 +312,7 @@ func (s *cassandraPersistenceSuite) TestUpdateWorkflow() {
 	failedUpdatedInfo.DecisionTimestamp = int64(55)
 	err4 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(5)}, nil, int64(3), nil, nil, nil, nil, nil, nil)
 	s.NotNil(err4, "expected non nil error.")
-	s.IsType(&ConditionFailedError{}, err4)
+	s.IsType(&persistence.ConditionFailedError{}, err4)
 	log.Errorf("Conditional update failed with error: %v", err4)
 
 	state2, err4 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
@@ -326,7 +327,7 @@ func (s *cassandraPersistenceSuite) TestUpdateWorkflow() {
 	s.Equal(int32(20), info2.WorkflowTimeout)
 	s.Equal(int32(13), info2.DecisionTimeoutValue)
 	s.Equal([]byte(nil), info2.ExecutionContext)
-	s.Equal(WorkflowStateCreated, info2.State)
+	s.Equal(persistence.WorkflowStateCreated, info2.State)
 	s.Equal(int64(5), info2.NextEventID)
 	s.Equal(int64(2), info2.LastProcessedEvent)
 	s.Equal(true, validateTimeRange(info2.LastUpdatedTimestamp, time.Hour))
@@ -346,7 +347,7 @@ func (s *cassandraPersistenceSuite) TestUpdateWorkflow() {
 	failedUpdatedInfo.DecisionTimestamp = int64(66)
 	err5 := s.UpdateWorkflowExecutionWithRangeID(updatedInfo, []int64{int64(5)}, nil, int64(12345), int64(5), nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "")
 	s.NotNil(err5, "expected non nil error.")
-	s.IsType(&ShardOwnershipLostError{}, err5)
+	s.IsType(&persistence.ShardOwnershipLostError{}, err5)
 	log.Errorf("Conditional update failed with error: %v", err5)
 
 	state3, err6 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
@@ -361,7 +362,7 @@ func (s *cassandraPersistenceSuite) TestUpdateWorkflow() {
 	s.Equal(int32(20), info1.WorkflowTimeout)
 	s.Equal(int32(13), info3.DecisionTimeoutValue)
 	s.Equal([]byte(nil), info3.ExecutionContext)
-	s.Equal(WorkflowStateCreated, info3.State)
+	s.Equal(persistence.WorkflowStateCreated, info3.State)
 	s.Equal(int64(5), info3.NextEventID)
 	s.Equal(int64(2), info3.LastProcessedEvent)
 	s.Equal(true, validateTimeRange(info3.LastUpdatedTimestamp, time.Hour))
@@ -375,7 +376,7 @@ func (s *cassandraPersistenceSuite) TestUpdateWorkflow() {
 	log.Infof("Workflow execution last updated: %v", info3.LastUpdatedTimestamp)
 }
 
-func (s *cassandraPersistenceSuite) TestDeleteWorkflow() {
+func (s *matchingPersistenceSuite) TestDeleteWorkflow() {
 	domainID := "1d4abb23-b87b-457b-96ef-43aba0b9c44f"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("delete-workflow-test"),
@@ -397,7 +398,7 @@ func (s *cassandraPersistenceSuite) TestDeleteWorkflow() {
 	s.Equal(int32(20), info0.WorkflowTimeout)
 	s.Equal(int32(13), info0.DecisionTimeoutValue)
 	s.Equal([]byte(nil), info0.ExecutionContext)
-	s.Equal(WorkflowStateCreated, info0.State)
+	s.Equal(persistence.WorkflowStateCreated, info0.State)
 	s.Equal(int64(3), info0.NextEventID)
 	s.Equal(int64(0), info0.LastProcessedEvent)
 	s.Equal(true, validateTimeRange(info0.LastUpdatedTimestamp, time.Hour))
@@ -418,7 +419,7 @@ func (s *cassandraPersistenceSuite) TestDeleteWorkflow() {
 	s.Nil(err5)
 }
 
-func (s *cassandraPersistenceSuite) TestGetCurrentWorkflow() {
+func (s *matchingPersistenceSuite) TestGetCurrentWorkflow() {
 	domainID := "54d15308-e20e-4b91-a00f-a518a3892790"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("get-current-workflow-test"),
@@ -456,7 +457,7 @@ func (s *cassandraPersistenceSuite) TestGetCurrentWorkflow() {
 	s.Empty(task1, "Expected empty task identifier.")
 }
 
-func (s *cassandraPersistenceSuite) TestTransferTasksThroughUpdate() {
+func (s *matchingPersistenceSuite) TestTransferTasksThroughUpdate() {
 	domainID := "b785a8ba-bd7d-4760-bb05-41b115f3e10a"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("get-transfer-tasks-through-update-test"),
@@ -476,7 +477,7 @@ func (s *cassandraPersistenceSuite) TestTransferTasksThroughUpdate() {
 	s.Equal(*workflowExecution.WorkflowId, task1.WorkflowID)
 	s.Equal(*workflowExecution.RunId, task1.RunID)
 	s.Equal("queue1", task1.TaskList)
-	s.Equal(TransferTaskTypeDecisionTask, task1.TaskType)
+	s.Equal(persistence.TransferTaskTypeDecisionTask, task1.TaskType)
 	s.Equal(int64(2), task1.ScheduleID)
 	s.Equal("", task1.TargetRunID)
 
@@ -500,7 +501,7 @@ func (s *cassandraPersistenceSuite) TestTransferTasksThroughUpdate() {
 	s.Equal(*workflowExecution.WorkflowId, task2.WorkflowID)
 	s.Equal(*workflowExecution.RunId, task2.RunID)
 	s.Equal("queue1", task2.TaskList)
-	s.Equal(TransferTaskTypeActivityTask, task2.TaskType)
+	s.Equal(persistence.TransferTaskTypeActivityTask, task2.TaskType)
 	s.Equal(int64(4), task2.ScheduleID)
 	s.Equal("", task2.TargetRunID)
 
@@ -531,7 +532,7 @@ func (s *cassandraPersistenceSuite) TestTransferTasksThroughUpdate() {
 	s.Equal(domainID, task3.DomainID)
 	s.Equal(*workflowExecution.WorkflowId, task3.WorkflowID)
 	s.Equal(*workflowExecution.RunId, task3.RunID)
-	s.Equal(TransferTaskTypeCloseExecution, task3.TaskType)
+	s.Equal(persistence.TransferTaskTypeCloseExecution, task3.TaskType)
 	s.Equal("", task3.TargetRunID)
 
 	err8 := s.DeleteWorkflowExecution(info1)
@@ -544,7 +545,7 @@ func (s *cassandraPersistenceSuite) TestTransferTasksThroughUpdate() {
 	s.NotNil(err10, "Error expected.")
 }
 
-func (s *cassandraPersistenceSuite) TestCancelTransferTaskTasks() {
+func (s *matchingPersistenceSuite) TestCancelTransferTaskTasks() {
 	domainID := "aeac8287-527b-4b35-80a9-667cb47e7c6d"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("cancel-workflow-test"),
@@ -570,7 +571,7 @@ func (s *cassandraPersistenceSuite) TestCancelTransferTaskTasks() {
 	targetWorkflowID := "target-workflow-cancellation-id-1"
 	targetRunID := "0d00698f-08e1-4d36-a3e2-3bf109f5d2d6"
 	targetChildWorkflowOnly := false
-	transferTasks := []Task{&CancelExecutionTask{
+	transferTasks := []persistence.Task{&persistence.CancelExecutionTask{
 		TaskID:                  s.GetNextSequenceNumber(),
 		TargetDomainID:          targetDomainID,
 		TargetWorkflowID:        targetWorkflowID,
@@ -586,7 +587,7 @@ func (s *cassandraPersistenceSuite) TestCancelTransferTaskTasks() {
 	s.NotNil(tasks1, "expected valid list of tasks.")
 	s.Equal(1, len(tasks1), "Expected 1 cancel task.")
 	task1 := tasks1[0]
-	s.Equal(TransferTaskTypeCancelExecution, task1.TaskType)
+	s.Equal(persistence.TransferTaskTypeCancelExecution, task1.TaskType)
 	s.Equal(domainID, task1.DomainID)
 	s.Equal(*workflowExecution.WorkflowId, task1.WorkflowID)
 	s.Equal(*workflowExecution.RunId, task1.RunID)
@@ -602,7 +603,7 @@ func (s *cassandraPersistenceSuite) TestCancelTransferTaskTasks() {
 	targetWorkflowID = "target-workflow-cancellation-id-2"
 	targetRunID = ""
 	targetChildWorkflowOnly = true
-	transferTasks = []Task{&CancelExecutionTask{
+	transferTasks = []persistence.Task{&persistence.CancelExecutionTask{
 		TaskID:                  s.GetNextSequenceNumber(),
 		TargetDomainID:          targetDomainID,
 		TargetWorkflowID:        targetWorkflowID,
@@ -625,7 +626,7 @@ func (s *cassandraPersistenceSuite) TestCancelTransferTaskTasks() {
 	s.NotNil(tasks2, "expected valid list of tasks.")
 	s.Equal(1, len(tasks2), "Expected 1 cancel task.")
 	task2 := tasks2[0]
-	s.Equal(TransferTaskTypeCancelExecution, task2.TaskType)
+	s.Equal(persistence.TransferTaskTypeCancelExecution, task2.TaskType)
 	s.Equal(domainID, task2.DomainID)
 	s.Equal(*workflowExecution.WorkflowId, task2.WorkflowID)
 	s.Equal(*workflowExecution.RunId, task2.RunID)
@@ -638,7 +639,7 @@ func (s *cassandraPersistenceSuite) TestCancelTransferTaskTasks() {
 	s.Nil(err)
 }
 
-func (s *cassandraPersistenceSuite) TestSignalTransferTaskTasks() {
+func (s *matchingPersistenceSuite) TestSignalTransferTaskTasks() {
 	domainID := "aeac8287-527b-4b35-80a9-667cb47e7c6d"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("signal-workflow-test"),
@@ -664,7 +665,7 @@ func (s *cassandraPersistenceSuite) TestSignalTransferTaskTasks() {
 	targetWorkflowID := "target-workflow-signal-id-1"
 	targetRunID := "0d00698f-08e1-4d36-a3e2-3bf109f5d2d6"
 	targetChildWorkflowOnly := false
-	transferTasks := []Task{&SignalExecutionTask{
+	transferTasks := []persistence.Task{&persistence.SignalExecutionTask{
 		TaskID:                  s.GetNextSequenceNumber(),
 		TargetDomainID:          targetDomainID,
 		TargetWorkflowID:        targetWorkflowID,
@@ -680,7 +681,7 @@ func (s *cassandraPersistenceSuite) TestSignalTransferTaskTasks() {
 	s.NotNil(tasks1, "expected valid list of tasks.")
 	s.Equal(1, len(tasks1), "Expected 1 cancel task.")
 	task1 := tasks1[0]
-	s.Equal(TransferTaskTypeSignalExecution, task1.TaskType)
+	s.Equal(persistence.TransferTaskTypeSignalExecution, task1.TaskType)
 	s.Equal(domainID, task1.DomainID)
 	s.Equal(*workflowExecution.WorkflowId, task1.WorkflowID)
 	s.Equal(*workflowExecution.RunId, task1.RunID)
@@ -696,7 +697,7 @@ func (s *cassandraPersistenceSuite) TestSignalTransferTaskTasks() {
 	targetWorkflowID = "target-workflow-signal-id-2"
 	targetRunID = ""
 	targetChildWorkflowOnly = true
-	transferTasks = []Task{&SignalExecutionTask{
+	transferTasks = []persistence.Task{&persistence.SignalExecutionTask{
 		TaskID:                  s.GetNextSequenceNumber(),
 		TargetDomainID:          targetDomainID,
 		TargetWorkflowID:        targetWorkflowID,
@@ -719,7 +720,7 @@ func (s *cassandraPersistenceSuite) TestSignalTransferTaskTasks() {
 	s.NotNil(tasks2, "expected valid list of tasks.")
 	s.Equal(1, len(tasks2), "Expected 1 cancel task.")
 	task2 := tasks2[0]
-	s.Equal(TransferTaskTypeSignalExecution, task2.TaskType)
+	s.Equal(persistence.TransferTaskTypeSignalExecution, task2.TaskType)
 	s.Equal(domainID, task2.DomainID)
 	s.Equal(*workflowExecution.WorkflowId, task2.WorkflowID)
 	s.Equal(*workflowExecution.RunId, task2.RunID)
@@ -732,7 +733,7 @@ func (s *cassandraPersistenceSuite) TestSignalTransferTaskTasks() {
 	s.Nil(err)
 }
 
-func (s *cassandraPersistenceSuite) TestCreateTask() {
+func (s *matchingPersistenceSuite) TestCreateTask() {
 	domainID := "11adbd1b-f164-4ea7-b2f3-2e857a5048f1"
 	workflowExecution := gen.WorkflowExecution{WorkflowId: common.StringPtr("create-task-test"),
 		RunId: common.StringPtr("c949447a-691a-4132-8b2a-a5b38106793c")}
@@ -763,7 +764,7 @@ func (s *cassandraPersistenceSuite) TestCreateTask() {
 	}
 }
 
-func (s *cassandraPersistenceSuite) TestGetDecisionTasks() {
+func (s *matchingPersistenceSuite) TestGetDecisionTasks() {
 	domainID := "aeac8287-527b-4b35-80a9-667cb47e7c6d"
 	workflowExecution := gen.WorkflowExecution{WorkflowId: common.StringPtr("get-decision-task-test"),
 		RunId: common.StringPtr("db20f7e2-1a1e-40d9-9278-d8b886738e05")}
@@ -772,14 +773,14 @@ func (s *cassandraPersistenceSuite) TestGetDecisionTasks() {
 	s.Nil(err0, "No error expected.")
 	s.NotNil(task0, "Expected non empty task identifier.")
 
-	tasks1Response, err1 := s.GetTasks(domainID, taskList, TaskListTypeDecision, 1)
+	tasks1Response, err1 := s.GetTasks(domainID, taskList, persistence.TaskListTypeDecision, 1)
 	s.Nil(err1, "No error expected.")
 	s.NotNil(tasks1Response.Tasks, "expected valid list of tasks.")
 	s.Equal(1, len(tasks1Response.Tasks), "Expected 1 decision task.")
 	s.Equal(int64(5), tasks1Response.Tasks[0].ScheduleID)
 }
 
-func (s *cassandraPersistenceSuite) TestCompleteDecisionTask() {
+func (s *matchingPersistenceSuite) TestCompleteDecisionTask() {
 	domainID := "f1116985-d1f1-40e0-aba9-83344db915bc"
 	workflowExecution := gen.WorkflowExecution{WorkflowId: common.StringPtr("complete-decision-task-test"),
 		RunId: common.StringPtr("2aa0a74e-16ee-4f27-983d-48b07ec1915d")}
@@ -798,7 +799,7 @@ func (s *cassandraPersistenceSuite) TestCompleteDecisionTask() {
 		s.NotEmpty(t, "Expected non empty task identifier.")
 	}
 
-	tasksWithID1Response, err1 := s.GetTasks(domainID, taskList, TaskListTypeActivity, 5)
+	tasksWithID1Response, err1 := s.GetTasks(domainID, taskList, persistence.TaskListTypeActivity, 5)
 
 	s.Nil(err1, "No error expected.")
 	tasksWithID1 := tasksWithID1Response.Tasks
@@ -811,84 +812,84 @@ func (s *cassandraPersistenceSuite) TestCompleteDecisionTask() {
 		s.Equal(*workflowExecution.RunId, t.RunID)
 		s.True(t.TaskID > 0)
 
-		err2 := s.CompleteTask(domainID, taskList, TaskListTypeActivity, t.TaskID, 100)
+		err2 := s.CompleteTask(domainID, taskList, persistence.TaskListTypeActivity, t.TaskID, 100)
 		s.Nil(err2)
 	}
 }
 
-func (s *cassandraPersistenceSuite) TestLeaseAndUpdateTaskList() {
+func (s *matchingPersistenceSuite) TestLeaseAndUpdateTaskList() {
 	domainID := "00136543-72ad-4615-b7e9-44bca9775b45"
 	taskList := "aaaaaaa"
-	response, err := s.TaskMgr.LeaseTaskList(&LeaseTaskListRequest{
+	response, err := s.TaskMgr.LeaseTaskList(&persistence.LeaseTaskListRequest{
 		DomainID: domainID,
 		TaskList: taskList,
-		TaskType: TaskListTypeActivity,
+		TaskType: persistence.TaskListTypeActivity,
 	})
 	s.NoError(err)
 	tli := response.TaskListInfo
 	s.EqualValues(1, tli.RangeID)
 	s.EqualValues(0, tli.AckLevel)
 
-	response, err = s.TaskMgr.LeaseTaskList(&LeaseTaskListRequest{
+	response, err = s.TaskMgr.LeaseTaskList(&persistence.LeaseTaskListRequest{
 		DomainID: domainID,
 		TaskList: taskList,
-		TaskType: TaskListTypeActivity,
+		TaskType: persistence.TaskListTypeActivity,
 	})
 	s.NoError(err)
 	tli = response.TaskListInfo
 	s.EqualValues(2, tli.RangeID)
 	s.EqualValues(0, tli.AckLevel)
 
-	taskListInfo := &TaskListInfo{
+	taskListInfo := &persistence.TaskListInfo{
 		DomainID: domainID,
 		Name:     taskList,
-		TaskType: TaskListTypeActivity,
+		TaskType: persistence.TaskListTypeActivity,
 		RangeID:  2,
 		AckLevel: 0,
-		Kind:     TaskListKindNormal,
+		Kind:     persistence.TaskListKindNormal,
 	}
-	_, err = s.TaskMgr.UpdateTaskList(&UpdateTaskListRequest{
+	_, err = s.TaskMgr.UpdateTaskList(&persistence.UpdateTaskListRequest{
 		TaskListInfo: taskListInfo,
 	})
 	s.NoError(err)
 
 	taskListInfo.RangeID = 3
-	_, err = s.TaskMgr.UpdateTaskList(&UpdateTaskListRequest{
+	_, err = s.TaskMgr.UpdateTaskList(&persistence.UpdateTaskListRequest{
 		TaskListInfo: taskListInfo,
 	})
 	s.Error(err)
 }
 
-func (s *cassandraPersistenceSuite) TestLeaseAndUpdateTaskList_Sticky() {
+func (s *matchingPersistenceSuite) TestLeaseAndUpdateTaskList_Sticky() {
 	domainID := uuid.New()
 	taskList := "aaaaaaa"
-	response, err := s.TaskMgr.LeaseTaskList(&LeaseTaskListRequest{
+	response, err := s.TaskMgr.LeaseTaskList(&persistence.LeaseTaskListRequest{
 		DomainID:     domainID,
 		TaskList:     taskList,
-		TaskType:     TaskListTypeDecision,
-		TaskListKind: TaskListKindSticky,
+		TaskType:     persistence.TaskListTypeDecision,
+		TaskListKind: persistence.TaskListKindSticky,
 	})
 	s.NoError(err)
 	tli := response.TaskListInfo
 	s.EqualValues(1, tli.RangeID)
 	s.EqualValues(0, tli.AckLevel)
-	s.EqualValues(TaskListKindSticky, tli.Kind)
+	s.EqualValues(persistence.TaskListKindSticky, tli.Kind)
 
-	taskListInfo := &TaskListInfo{
+	taskListInfo := &persistence.TaskListInfo{
 		DomainID: domainID,
 		Name:     taskList,
-		TaskType: TaskListTypeDecision,
+		TaskType: persistence.TaskListTypeDecision,
 		RangeID:  2,
 		AckLevel: 0,
-		Kind:     TaskListKindSticky,
+		Kind:     persistence.TaskListKindSticky,
 	}
-	_, err = s.TaskMgr.UpdateTaskList(&UpdateTaskListRequest{
+	_, err = s.TaskMgr.UpdateTaskList(&persistence.UpdateTaskListRequest{
 		TaskListInfo: taskListInfo,
 	})
 	s.NoError(err) // because update with ttl doesn't check rangeID
 }
 
-func (s *cassandraPersistenceSuite) TestReplicationTasks() {
+func (s *matchingPersistenceSuite) TestReplicationTasks() {
 	domainID := "2466d7de-6602-4ad8-b939-fb8f8c36c711"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("get-replication-tasks-test"),
@@ -909,26 +910,26 @@ func (s *cassandraPersistenceSuite) TestReplicationTasks() {
 	s.NotNil(info1, "Valid Workflow info expected.")
 	updatedInfo1 := copyWorkflowExecutionInfo(info1)
 
-	replicationTasks := []Task{
-		&HistoryReplicationTask{
+	replicationTasks := []persistence.Task{
+		&persistence.HistoryReplicationTask{
 			TaskID:       s.GetNextSequenceNumber(),
 			FirstEventID: int64(1),
 			NextEventID:  int64(3),
 			Version:      123,
-			LastReplicationInfo: map[string]*ReplicationInfo{
-				"dc1": &ReplicationInfo{
+			LastReplicationInfo: map[string]*persistence.ReplicationInfo{
+				"dc1": {
 					Version:     int64(3),
 					LastEventID: int64(1),
 				},
 			},
 		},
-		&HistoryReplicationTask{
+		&persistence.HistoryReplicationTask{
 			TaskID:       s.GetNextSequenceNumber(),
 			FirstEventID: int64(1),
 			NextEventID:  int64(3),
 			Version:      456,
-			LastReplicationInfo: map[string]*ReplicationInfo{
-				"dc1": &ReplicationInfo{
+			LastReplicationInfo: map[string]*persistence.ReplicationInfo{
+				"dc1": {
 					Version:     int64(3),
 					LastEventID: int64(1),
 				},
@@ -952,7 +953,7 @@ func (s *cassandraPersistenceSuite) TestReplicationTasks() {
 	}
 }
 
-func (s *cassandraPersistenceSuite) TestTransferTasks() {
+func (s *matchingPersistenceSuite) TestTransferTasks() {
 	domainID := "8bfb47be-5b57-4d55-9109-5fb35e20b1d7"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("get-transfer-tasks-test"),
@@ -973,9 +974,9 @@ func (s *cassandraPersistenceSuite) TestTransferTasks() {
 	s.Equal(workflowExecution.GetWorkflowId(), task1.WorkflowID)
 	s.Equal(workflowExecution.GetRunId(), task1.RunID)
 	s.Equal(tasklist, task1.TaskList)
-	s.Equal(TransferTaskTypeDecisionTask, task1.TaskType)
+	s.Equal(persistence.TransferTaskTypeDecisionTask, task1.TaskType)
 	s.Equal(int64(2), task1.ScheduleID)
-	s.Equal(transferTaskTransferTargetWorkflowID, task1.TargetWorkflowID)
+	s.Equal(persistence.TransferTaskTransferTargetWorkflowID, task1.TargetWorkflowID)
 	s.Equal("", task1.TargetRunID)
 	err3 := s.CompleteTransferTask(task1.TaskID)
 	s.Nil(err3)
@@ -993,13 +994,13 @@ func (s *cassandraPersistenceSuite) TestTransferTasks() {
 	targetWorkflowID := "some random target domain ID"
 	targetRunID := uuid.New()
 	currentTransferID := s.GetTransferReadLevel()
-	tasks := []Task{
-		&ActivityTask{currentTransferID + 10001, domainID, tasklist, scheduleID, 111},
-		&DecisionTask{currentTransferID + 10002, domainID, tasklist, scheduleID, 222},
-		&CloseExecutionTask{currentTransferID + 10003, 333},
-		&CancelExecutionTask{currentTransferID + 10004, targetDomainID, targetWorkflowID, targetRunID, true, scheduleID, 444},
-		&SignalExecutionTask{currentTransferID + 10005, targetDomainID, targetWorkflowID, targetRunID, true, scheduleID, 555},
-		&StartChildExecutionTask{currentTransferID + 10006, targetDomainID, targetWorkflowID, scheduleID, 666},
+	tasks := []persistence.Task{
+		&persistence.ActivityTask{currentTransferID + 10001, domainID, tasklist, scheduleID, 111},
+		&persistence.DecisionTask{currentTransferID + 10002, domainID, tasklist, scheduleID, 222},
+		&persistence.CloseExecutionTask{currentTransferID + 10003, 333},
+		&persistence.CancelExecutionTask{currentTransferID + 10004, targetDomainID, targetWorkflowID, targetRunID, true, scheduleID, 444},
+		&persistence.SignalExecutionTask{currentTransferID + 10005, targetDomainID, targetWorkflowID, targetRunID, true, scheduleID, 555},
+		&persistence.StartChildExecutionTask{currentTransferID + 10006, targetDomainID, targetWorkflowID, scheduleID, 666},
 	}
 	err2 := s.UpdateWorklowStateAndReplication(updatedInfo, nil, nil, nil, int64(3), tasks)
 	s.Nil(err2, "No error expected.")
@@ -1008,12 +1009,12 @@ func (s *cassandraPersistenceSuite) TestTransferTasks() {
 	s.Nil(err1, "No error expected.")
 	s.NotNil(txTasks, "expected valid list of tasks.")
 	s.Equal(len(tasks), len(txTasks))
-	s.Equal(TransferTaskTypeActivityTask, txTasks[0].TaskType)
-	s.Equal(TransferTaskTypeDecisionTask, txTasks[1].TaskType)
-	s.Equal(TransferTaskTypeCloseExecution, txTasks[2].TaskType)
-	s.Equal(TransferTaskTypeCancelExecution, txTasks[3].TaskType)
-	s.Equal(TransferTaskTypeSignalExecution, txTasks[4].TaskType)
-	s.Equal(TransferTaskTypeStartChildExecution, txTasks[5].TaskType)
+	s.Equal(persistence.TransferTaskTypeActivityTask, txTasks[0].TaskType)
+	s.Equal(persistence.TransferTaskTypeDecisionTask, txTasks[1].TaskType)
+	s.Equal(persistence.TransferTaskTypeCloseExecution, txTasks[2].TaskType)
+	s.Equal(persistence.TransferTaskTypeCancelExecution, txTasks[3].TaskType)
+	s.Equal(persistence.TransferTaskTypeSignalExecution, txTasks[4].TaskType)
+	s.Equal(persistence.TransferTaskTypeStartChildExecution, txTasks[5].TaskType)
 	s.Equal(int64(111), txTasks[0].Version)
 	s.Equal(int64(222), txTasks[1].Version)
 	s.Equal(int64(333), txTasks[2].Version)
@@ -1044,7 +1045,7 @@ func (s *cassandraPersistenceSuite) TestTransferTasks() {
 	s.Empty(txTasks, "expected empty task list.")
 }
 
-func (s *cassandraPersistenceSuite) TestTimerTasks() {
+func (s *matchingPersistenceSuite) TestTimerTasks() {
 	domainID := "8bfb47be-5b57-4d66-9109-5fb35e20b1d7"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("get-timer-tasks-test"),
@@ -1063,12 +1064,12 @@ func (s *cassandraPersistenceSuite) TestTimerTasks() {
 	updatedInfo := copyWorkflowExecutionInfo(info0)
 	updatedInfo.NextEventID = int64(5)
 	updatedInfo.LastProcessedEvent = int64(2)
-	tasks := []Task{
-		&DecisionTimeoutTask{time.Now(), 1, 2, 3, int(gen.TimeoutTypeStartToClose), 11},
-		&WorkflowTimeoutTask{time.Now(), 2, 12},
-		&DeleteHistoryEventTask{time.Now(), 3, 13},
-		&ActivityTimeoutTask{time.Now(), 4, int(gen.TimeoutTypeStartToClose), 7, 0, 14},
-		&UserTimerTask{time.Now(), 5, 7, 15},
+	tasks := []persistence.Task{
+		&persistence.DecisionTimeoutTask{time.Now(), 1, 2, 3, int(gen.TimeoutTypeStartToClose), 11},
+		&persistence.WorkflowTimeoutTask{time.Now(), 2, 12},
+		&persistence.DeleteHistoryEventTask{time.Now(), 3, 13},
+		&persistence.ActivityTimeoutTask{time.Now(), 4, int(gen.TimeoutTypeStartToClose), 7, 0, 14},
+		&persistence.UserTimerTask{time.Now(), 5, 7, 15},
 	}
 	err2 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(4)}, nil, int64(3), tasks, nil, nil, nil, nil, nil)
 	s.Nil(err2, "No error expected.")
@@ -1077,18 +1078,18 @@ func (s *cassandraPersistenceSuite) TestTimerTasks() {
 	s.Nil(err1, "No error expected.")
 	s.NotNil(timerTasks, "expected valid list of tasks.")
 	s.Equal(len(tasks), len(timerTasks))
-	s.Equal(TaskTypeDecisionTimeout, timerTasks[0].TaskType)
-	s.Equal(TaskTypeWorkflowTimeout, timerTasks[1].TaskType)
-	s.Equal(TaskTypeDeleteHistoryEvent, timerTasks[2].TaskType)
-	s.Equal(TaskTypeActivityTimeout, timerTasks[3].TaskType)
-	s.Equal(TaskTypeUserTimer, timerTasks[4].TaskType)
+	s.Equal(persistence.TaskTypeDecisionTimeout, timerTasks[0].TaskType)
+	s.Equal(persistence.TaskTypeWorkflowTimeout, timerTasks[1].TaskType)
+	s.Equal(persistence.TaskTypeDeleteHistoryEvent, timerTasks[2].TaskType)
+	s.Equal(persistence.TaskTypeActivityTimeout, timerTasks[3].TaskType)
+	s.Equal(persistence.TaskTypeUserTimer, timerTasks[4].TaskType)
 	s.Equal(int64(11), timerTasks[0].Version)
 	s.Equal(int64(12), timerTasks[1].Version)
 	s.Equal(int64(13), timerTasks[2].Version)
 	s.Equal(int64(14), timerTasks[3].Version)
 	s.Equal(int64(15), timerTasks[4].Version)
 
-	deleteTimerTask := &DecisionTimeoutTask{VisibilityTimestamp: timerTasks[0].VisibilityTimestamp, TaskID: timerTasks[0].TaskID}
+	deleteTimerTask := &persistence.DecisionTimeoutTask{VisibilityTimestamp: timerTasks[0].VisibilityTimestamp, TaskID: timerTasks[0].TaskID}
 	err2 = s.UpdateWorkflowExecution(updatedInfo, nil, nil, int64(5), nil, deleteTimerTask, nil, nil, nil, nil)
 	s.Nil(err2, "No error expected.")
 
@@ -1109,7 +1110,7 @@ func (s *cassandraPersistenceSuite) TestTimerTasks() {
 	s.Empty(timerTasks2, "expected empty task list.")
 }
 
-func (s *cassandraPersistenceSuite) TestWorkflowMutableState_Activities() {
+func (s *matchingPersistenceSuite) TestWorkflowMutableState_Activities() {
 	domainID := "7fcf0aa9-e121-4292-bdad-0a75181b4aa3"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("test-workflow-mutable-test"),
@@ -1129,7 +1130,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_Activities() {
 	updatedInfo.NextEventID = int64(5)
 	updatedInfo.LastProcessedEvent = int64(2)
 	currentTime := time.Now().UTC()
-	activityInfos := []*ActivityInfo{{
+	activityInfos := []*persistence.ActivityInfo{{
 		Version:                  7789,
 		ScheduleID:               1,
 		ScheduledEvent:           []byte("scheduled_event_1"),
@@ -1177,7 +1178,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_Activities() {
 	s.Equal(0, len(state.ActivitInfos))
 }
 
-func (s *cassandraPersistenceSuite) TestWorkflowMutableState_Timers() {
+func (s *matchingPersistenceSuite) TestWorkflowMutableState_Timers() {
 	domainID := "025d178a-709b-4c07-8dd7-86dbf9bd2e06"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("test-workflow-mutable-timers-test"),
@@ -1198,7 +1199,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_Timers() {
 	updatedInfo.LastProcessedEvent = int64(2)
 	currentTime := time.Now().UTC()
 	timerID := "id_1"
-	timerInfos := []*TimerInfo{{
+	timerInfos := []*persistence.TimerInfo{{
 		Version:    3345,
 		TimerID:    timerID,
 		ExpiryTime: currentTime,
@@ -1227,7 +1228,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_Timers() {
 	s.Equal(0, len(state.TimerInfos))
 }
 
-func (s *cassandraPersistenceSuite) TestWorkflowMutableState_ChildExecutions() {
+func (s *matchingPersistenceSuite) TestWorkflowMutableState_ChildExecutions() {
 	domainID := "88236cd2-c439-4cec-9957-2748ce3be074"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("test-workflow-mutable-child-executions-parent-test"),
@@ -1257,7 +1258,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_ChildExecutions() {
 	updatedInfo.NextEventID = int64(5)
 	updatedInfo.LastProcessedEvent = int64(2)
 	createRequestID := uuid.New()
-	childExecutionInfos := []*ChildExecutionInfo{{
+	childExecutionInfos := []*persistence.ChildExecutionInfo{{
 		Version:         1234,
 		InitiatedID:     1,
 		InitiatedEvent:  []byte("initiated_event_1"),
@@ -1291,7 +1292,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_ChildExecutions() {
 	s.Equal(0, len(state.ChildExecutionInfos))
 }
 
-func (s *cassandraPersistenceSuite) TestWorkflowMutableState_RequestCancel() {
+func (s *matchingPersistenceSuite) TestWorkflowMutableState_RequestCancel() {
 	domainID := "568b8d19-cf64-4aac-be1b-f8a3edbc1fa9"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("test-workflow-mutable-request-cancel-test"),
@@ -1311,7 +1312,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_RequestCancel() {
 	updatedInfo.NextEventID = int64(5)
 	updatedInfo.LastProcessedEvent = int64(2)
 	cancelRequestID := uuid.New()
-	requestCancelInfos := []*RequestCancelInfo{{
+	requestCancelInfos := []*persistence.RequestCancelInfo{{
 		Version:         456,
 		InitiatedID:     1,
 		CancelRequestID: cancelRequestID,
@@ -1339,7 +1340,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_RequestCancel() {
 	s.Equal(0, len(state.RequestCancelInfos))
 }
 
-func (s *cassandraPersistenceSuite) TestWorkflowMutableState_SignalInfo() {
+func (s *matchingPersistenceSuite) TestWorkflowMutableState_SignalInfo() {
 	domainID := uuid.New()
 	runID := uuid.New()
 	workflowExecution := gen.WorkflowExecution{
@@ -1363,7 +1364,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_SignalInfo() {
 	signalName := "my signal"
 	input := []byte("test signal input")
 	control := []byte(uuid.New())
-	signalInfos := []*SignalInfo{
+	signalInfos := []*persistence.SignalInfo{
 		{
 			Version:         123,
 			InitiatedID:     1,
@@ -1398,7 +1399,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_SignalInfo() {
 	s.Equal(0, len(state.SignalInfos))
 }
 
-func (s *cassandraPersistenceSuite) TestWorkflowMutableState_SignalRequested() {
+func (s *matchingPersistenceSuite) TestWorkflowMutableState_SignalRequested() {
 	domainID := uuid.New()
 	runID := uuid.New()
 	workflowExecution := gen.WorkflowExecution{
@@ -1440,7 +1441,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_SignalRequested() {
 	s.Equal(0, len(state.SignalRequestedIDs))
 }
 
-func (s *cassandraPersistenceSuite) TestWorkflowMutableState_BufferedReplicationTasks() {
+func (s *matchingPersistenceSuite) TestWorkflowMutableState_BufferedReplicationTasks() {
 	domainID := "714f8491-a34e-4301-a5af-f0cf5d8660c6"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("test-workflow-mutable-buffered-replication-tasks-test"),
@@ -1459,7 +1460,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_BufferedReplication
 
 	updatedInfo := copyWorkflowExecutionInfo(info0)
 	events := []*gen.HistoryEvent{
-		&gen.HistoryEvent{
+		{
 			EventId:   common.Int64Ptr(5),
 			EventType: gen.EventTypeDecisionTaskCompleted.Ptr(),
 			DecisionTaskCompletedEventAttributes: &gen.DecisionTaskCompletedEventAttributes{
@@ -1468,7 +1469,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_BufferedReplication
 				Identity:         common.StringPtr("test_worker"),
 			},
 		},
-		&gen.HistoryEvent{
+		{
 			EventId:   common.Int64Ptr(6),
 			EventType: gen.EventTypeTimerStarted.Ptr(),
 			TimerStartedEventAttributes: &gen.TimerStartedEventAttributes{
@@ -1479,7 +1480,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_BufferedReplication
 		},
 	}
 
-	bufferedTask := &BufferedReplicationTask{
+	bufferedTask := &persistence.BufferedReplicationTask{
 		FirstEventID: int64(5),
 		NextEventID:  int64(7),
 		Version:      int64(11),
@@ -1517,7 +1518,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_BufferedReplication
 	info1 := state1.ExecutionInfo
 	updatedInfo = copyWorkflowExecutionInfo(info1)
 	completionEvents := []*gen.HistoryEvent{
-		&gen.HistoryEvent{
+		{
 			EventId:   common.Int64Ptr(10),
 			EventType: gen.EventTypeDecisionTaskCompleted.Ptr(),
 			DecisionTaskCompletedEventAttributes: &gen.DecisionTaskCompletedEventAttributes{
@@ -1526,7 +1527,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_BufferedReplication
 				Identity:         common.StringPtr("test_worker"),
 			},
 		},
-		&gen.HistoryEvent{
+		{
 			EventId:   common.Int64Ptr(11),
 			EventType: gen.EventTypeWorkflowExecutionContinuedAsNew.Ptr(),
 			WorkflowExecutionContinuedAsNewEventAttributes: &gen.WorkflowExecutionContinuedAsNewEventAttributes{
@@ -1541,7 +1542,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_BufferedReplication
 	}
 
 	newRunEvents := []*gen.HistoryEvent{
-		&gen.HistoryEvent{
+		{
 			EventId:   common.Int64Ptr(1),
 			EventType: gen.EventTypeWorkflowExecutionStarted.Ptr(),
 			WorkflowExecutionStartedEventAttributes: &gen.WorkflowExecutionStartedEventAttributes{
@@ -1549,7 +1550,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_BufferedReplication
 				TaskList:     &gen.TaskList{Name: common.StringPtr("taskList")},
 			},
 		},
-		&gen.HistoryEvent{
+		{
 			EventId:   common.Int64Ptr(2),
 			EventType: gen.EventTypeDecisionTaskScheduled.Ptr(),
 			DecisionTaskScheduledEventAttributes: &gen.DecisionTaskScheduledEventAttributes{
@@ -1560,7 +1561,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_BufferedReplication
 		},
 	}
 
-	bufferedTask = &BufferedReplicationTask{
+	bufferedTask = &persistence.BufferedReplicationTask{
 		FirstEventID:  int64(10),
 		NextEventID:   int64(12),
 		Version:       int64(12),
@@ -1629,7 +1630,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableState_BufferedReplication
 	s.Equal(0, len(state4.BufferedReplicationTasks))
 }
 
-func (s *cassandraPersistenceSuite) TestWorkflowMutableStateInfo() {
+func (s *matchingPersistenceSuite) TestWorkflowMutableStateInfo() {
 	domainID := "9ed8818b-3090-4160-9f21-c6b70e64d2dd"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("test-workflow-mutable-state-test"),
@@ -1660,7 +1661,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowMutableStateInfo() {
 	s.Equal(updatedInfo.State, state.ExecutionInfo.State)
 }
 
-func (s *cassandraPersistenceSuite) TestContinueAsNew() {
+func (s *matchingPersistenceSuite) TestContinueAsNew() {
 	domainID := "c1c0bb55-04e6-4a9c-89d0-1be7b96459f8"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("continue-as-new-workflow-test"),
@@ -1674,7 +1675,7 @@ func (s *cassandraPersistenceSuite) TestContinueAsNew() {
 	s.Nil(err1, "No error expected.")
 	info0 := state0.ExecutionInfo
 	continueAsNewInfo := copyWorkflowExecutionInfo(info0)
-	continueAsNewInfo.State = WorkflowStateCompleted
+	continueAsNewInfo.State = persistence.WorkflowStateCompleted
 	continueAsNewInfo.NextEventID = int64(5)
 	continueAsNewInfo.LastProcessedEvent = int64(2)
 
@@ -1688,14 +1689,14 @@ func (s *cassandraPersistenceSuite) TestContinueAsNew() {
 	prevExecutionState, err3 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.Nil(err3)
 	prevExecutionInfo := prevExecutionState.ExecutionInfo
-	s.Equal(WorkflowStateCompleted, prevExecutionInfo.State)
+	s.Equal(persistence.WorkflowStateCompleted, prevExecutionInfo.State)
 	s.Equal(int64(5), prevExecutionInfo.NextEventID)
 	s.Equal(int64(2), prevExecutionInfo.LastProcessedEvent)
 
 	newExecutionState, err4 := s.GetWorkflowExecutionInfo(domainID, newWorkflowExecution)
 	s.Nil(err4)
 	newExecutionInfo := newExecutionState.ExecutionInfo
-	s.Equal(WorkflowStateCreated, newExecutionInfo.State)
+	s.Equal(persistence.WorkflowStateCreated, newExecutionInfo.State)
 	s.Equal(int64(3), newExecutionInfo.NextEventID)
 	s.Equal(common.EmptyEventID, newExecutionInfo.LastProcessedEvent)
 	s.Equal(int64(2), newExecutionInfo.DecisionScheduleID)
@@ -1705,7 +1706,7 @@ func (s *cassandraPersistenceSuite) TestContinueAsNew() {
 	s.Equal(*newWorkflowExecution.RunId, newRunID)
 }
 
-func (s *cassandraPersistenceSuite) TestReplicationTransferTaskTasks() {
+func (s *matchingPersistenceSuite) TestReplicationTransferTaskTasks() {
 	domainID := "2466d7de-6602-4ad8-b939-fb8f8c36c711"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("replication-transfer-task-test"),
@@ -1727,17 +1728,17 @@ func (s *cassandraPersistenceSuite) TestReplicationTransferTaskTasks() {
 	s.NotNil(info1, "Valid Workflow info expected.")
 	updatedInfo1 := copyWorkflowExecutionInfo(info1)
 
-	replicationTasks := []Task{&HistoryReplicationTask{
+	replicationTasks := []persistence.Task{&persistence.HistoryReplicationTask{
 		TaskID:       s.GetNextSequenceNumber(),
 		FirstEventID: int64(1),
 		NextEventID:  int64(3),
 		Version:      int64(9),
-		LastReplicationInfo: map[string]*ReplicationInfo{
-			"dc1": &ReplicationInfo{
+		LastReplicationInfo: map[string]*persistence.ReplicationInfo{
+			"dc1": {
 				Version:     int64(3),
 				LastEventID: int64(1),
 			},
-			"dc2": &ReplicationInfo{
+			"dc2": {
 				Version:     int64(5),
 				LastEventID: int64(2),
 			},
@@ -1751,7 +1752,7 @@ func (s *cassandraPersistenceSuite) TestReplicationTransferTaskTasks() {
 	s.NotNil(tasks1, "expected valid list of tasks.")
 	s.Equal(1, len(tasks1), "Expected 1 replication task.")
 	task1 := tasks1[0]
-	s.Equal(ReplicationTaskTypeHistory, task1.TaskType)
+	s.Equal(persistence.ReplicationTaskTypeHistory, task1.TaskType)
 	s.Equal(domainID, task1.DomainID)
 	s.Equal(*workflowExecution.WorkflowId, task1.WorkflowID)
 	s.Equal(*workflowExecution.RunId, task1.RunID)
@@ -1777,7 +1778,7 @@ func (s *cassandraPersistenceSuite) TestReplicationTransferTaskTasks() {
 	s.Nil(err)
 }
 
-func (s *cassandraPersistenceSuite) TestWorkflowReplicationState() {
+func (s *matchingPersistenceSuite) TestWorkflowReplicationState() {
 	domainID := uuid.New()
 	runID := uuid.New()
 	workflowExecution := gen.WorkflowExecution{
@@ -1785,17 +1786,17 @@ func (s *cassandraPersistenceSuite) TestWorkflowReplicationState() {
 		RunId:      common.StringPtr(runID),
 	}
 
-	replicationTasks := []Task{&HistoryReplicationTask{
+	replicationTasks := []persistence.Task{&persistence.HistoryReplicationTask{
 		TaskID:       s.GetNextSequenceNumber(),
 		FirstEventID: int64(1),
 		NextEventID:  int64(3),
 		Version:      int64(9),
-		LastReplicationInfo: map[string]*ReplicationInfo{
-			"dc1": &ReplicationInfo{
+		LastReplicationInfo: map[string]*persistence.ReplicationInfo{
+			"dc1": {
 				Version:     int64(3),
 				LastEventID: int64(1),
 			},
-			"dc2": &ReplicationInfo{
+			"dc2": {
 				Version:     int64(5),
 				LastEventID: int64(2),
 			},
@@ -1803,12 +1804,12 @@ func (s *cassandraPersistenceSuite) TestWorkflowReplicationState() {
 	}}
 
 	task0, err0 := s.CreateWorkflowExecutionWithReplication(domainID, workflowExecution, "taskList", "wType", 20, 13, 3,
-		0, 2, &ReplicationState{
+		0, 2, &persistence.ReplicationState{
 			CurrentVersion:   int64(9),
 			StartVersion:     int64(8),
 			LastWriteVersion: int64(7),
 			LastWriteEventID: int64(6),
-			LastReplicationInfo: map[string]*ReplicationInfo{
+			LastReplicationInfo: map[string]*persistence.ReplicationInfo{
 				"dc1": {
 					Version:     int64(3),
 					LastEventID: int64(1),
@@ -1824,14 +1825,14 @@ func (s *cassandraPersistenceSuite) TestWorkflowReplicationState() {
 
 	taskD, err := s.GetTransferTasks(2, false)
 	s.Equal(1, len(taskD), "Expected 1 decision task.")
-	s.Equal(TransferTaskTypeDecisionTask, taskD[0].TaskType)
+	s.Equal(persistence.TransferTaskTypeDecisionTask, taskD[0].TaskType)
 	err = s.CompleteTransferTask(taskD[0].TaskID)
 	s.Nil(err)
 
 	taskR, err := s.GetReplicationTasks(1, false)
 	s.Equal(1, len(taskR), "Expected 1 replication task.")
 	tsk := taskR[0]
-	s.Equal(ReplicationTaskTypeHistory, tsk.TaskType)
+	s.Equal(persistence.ReplicationTaskTypeHistory, tsk.TaskType)
 	s.Equal(domainID, tsk.DomainID)
 	s.Equal(*workflowExecution.WorkflowId, tsk.WorkflowID)
 	s.Equal(*workflowExecution.RunId, tsk.RunID)
@@ -1898,17 +1899,17 @@ func (s *cassandraPersistenceSuite) TestWorkflowReplicationState() {
 	updatedReplicationState.LastReplicationInfo["dc1"].Version = int64(4)
 	updatedReplicationState.LastReplicationInfo["dc1"].LastEventID = int64(2)
 
-	replicationTasks1 := []Task{&HistoryReplicationTask{
+	replicationTasks1 := []persistence.Task{&persistence.HistoryReplicationTask{
 		TaskID:       s.GetNextSequenceNumber(),
 		FirstEventID: int64(3),
 		NextEventID:  int64(5),
 		Version:      int64(10),
-		LastReplicationInfo: map[string]*ReplicationInfo{
-			"dc1": &ReplicationInfo{
+		LastReplicationInfo: map[string]*persistence.ReplicationInfo{
+			"dc1": {
 				Version:     int64(4),
 				LastEventID: int64(2),
 			},
-			"dc2": &ReplicationInfo{
+			"dc2": {
 				Version:     int64(5),
 				LastEventID: int64(2),
 			},
@@ -1920,7 +1921,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowReplicationState() {
 	taskR1, err := s.GetReplicationTasks(1, false)
 	s.Equal(1, len(taskR1), "Expected 1 replication task.")
 	tsk1 := taskR1[0]
-	s.Equal(ReplicationTaskTypeHistory, tsk1.TaskType)
+	s.Equal(persistence.ReplicationTaskTypeHistory, tsk1.TaskType)
 	s.Equal(domainID, tsk1.DomainID)
 	s.Equal(*workflowExecution.WorkflowId, tsk1.WorkflowID)
 	s.Equal(*workflowExecution.RunId, tsk1.RunID)
@@ -1977,7 +1978,7 @@ func (s *cassandraPersistenceSuite) TestWorkflowReplicationState() {
 	}
 }
 
-func (s *cassandraPersistenceSuite) TestResetMutableState() {
+func (s *matchingPersistenceSuite) TestResetMutableState() {
 	domainID := "4ca1faac-1a3a-47af-8e51-fdaa2b3d45b9"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("test-reset-mutable-state-test"),
@@ -1998,9 +1999,9 @@ func (s *cassandraPersistenceSuite) TestResetMutableState() {
 	updatedInfo.LastProcessedEvent = int64(2)
 	currentTime := time.Now().UTC()
 	expiryTime := currentTime.Add(10 * time.Second)
-	updatedState := &WorkflowMutableState{
+	updatedState := &persistence.WorkflowMutableState{
 		ExecutionInfo: updatedInfo,
-		ActivitInfos: map[int64]*ActivityInfo{
+		ActivitInfos: map[int64]*persistence.ActivityInfo{
 			4: {
 				Version:                  7789,
 				ScheduleID:               4,
@@ -2032,7 +2033,7 @@ func (s *cassandraPersistenceSuite) TestResetMutableState() {
 				TimerTaskStatus:          1,
 			}},
 
-		TimerInfos: map[string]*TimerInfo{
+		TimerInfos: map[string]*persistence.TimerInfo{
 			"t1": {
 				Version:    2333,
 				TimerID:    "t1",
@@ -2056,7 +2057,7 @@ func (s *cassandraPersistenceSuite) TestResetMutableState() {
 			},
 		},
 
-		ChildExecutionInfos: map[int64]*ChildExecutionInfo{
+		ChildExecutionInfos: map[int64]*persistence.ChildExecutionInfo{
 			9: {
 				Version:         2334,
 				InitiatedID:     9,
@@ -2067,7 +2068,7 @@ func (s *cassandraPersistenceSuite) TestResetMutableState() {
 			},
 		},
 
-		RequestCancelInfos: map[int64]*RequestCancelInfo{
+		RequestCancelInfos: map[int64]*persistence.RequestCancelInfo{
 			19: {
 				Version:         2335,
 				InitiatedID:     19,
@@ -2075,7 +2076,7 @@ func (s *cassandraPersistenceSuite) TestResetMutableState() {
 			},
 		},
 
-		SignalInfos: map[int64]*SignalInfo{
+		SignalInfos: map[int64]*persistence.SignalInfo{
 			39: {
 				Version:         2336,
 				InitiatedID:     39,
@@ -2193,7 +2194,7 @@ func (s *cassandraPersistenceSuite) TestResetMutableState() {
 
 	updatedInfo1 := copyWorkflowExecutionInfo(info1)
 	updatedInfo1.NextEventID = int64(3)
-	resetActivityInfos := []*ActivityInfo{
+	resetActivityInfos := []*persistence.ActivityInfo{
 		{
 			Version:                  8789,
 			ScheduleID:               40,
@@ -2210,7 +2211,7 @@ func (s *cassandraPersistenceSuite) TestResetMutableState() {
 			TimerTaskStatus:          1,
 		}}
 
-	resetTimerInfos := []*TimerInfo{
+	resetTimerInfos := []*persistence.TimerInfo{
 		{
 			Version:    3333,
 			TimerID:    "t1_new",
@@ -2226,7 +2227,7 @@ func (s *cassandraPersistenceSuite) TestResetMutableState() {
 			TaskID:     601,
 		}}
 
-	resetChildExecutionInfos := []*ChildExecutionInfo{
+	resetChildExecutionInfos := []*persistence.ChildExecutionInfo{
 		{
 			Version:         3334,
 			InitiatedID:     10,
@@ -2236,14 +2237,14 @@ func (s *cassandraPersistenceSuite) TestResetMutableState() {
 			CreateRequestID: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
 		}}
 
-	resetRequestCancelInfos := []*RequestCancelInfo{
+	resetRequestCancelInfos := []*persistence.RequestCancelInfo{
 		{
 			Version:         3335,
 			InitiatedID:     29,
 			CancelRequestID: "new_cancel_requested_id",
 		}}
 
-	resetSignalInfos := []*SignalInfo{
+	resetSignalInfos := []*persistence.SignalInfo{
 		{
 			Version:         3336,
 			InitiatedID:     39,
@@ -2261,7 +2262,7 @@ func (s *cassandraPersistenceSuite) TestResetMutableState() {
 			Control:         []byte("signal_control_c"),
 		}}
 
-	rState := &ReplicationState{
+	rState := &persistence.ReplicationState{
 		CurrentVersion: int64(8789),
 		StartVersion:   int64(8780),
 	}
@@ -2352,8 +2353,8 @@ func (s *cassandraPersistenceSuite) TestResetMutableState() {
 	s.Equal(0, len(state4.SignalRequestedIDs))
 }
 
-func copyWorkflowExecutionInfo(sourceInfo *WorkflowExecutionInfo) *WorkflowExecutionInfo {
-	return &WorkflowExecutionInfo{
+func copyWorkflowExecutionInfo(sourceInfo *persistence.WorkflowExecutionInfo) *persistence.WorkflowExecutionInfo {
+	return &persistence.WorkflowExecutionInfo{
 		DomainID:             sourceInfo.DomainID,
 		WorkflowID:           sourceInfo.WorkflowID,
 		RunID:                sourceInfo.RunID,
@@ -2380,7 +2381,7 @@ func copyWorkflowExecutionInfo(sourceInfo *WorkflowExecutionInfo) *WorkflowExecu
 	}
 }
 
-func (s *cassandraPersistenceSuite) TestCreateGetShard_Backfill() {
+func (s *matchingPersistenceSuite) TestCreateGetShard_Backfill() {
 	shardID := 4
 	rangeID := int64(59)
 
@@ -2388,7 +2389,7 @@ func (s *cassandraPersistenceSuite) TestCreateGetShard_Backfill() {
 	currentReplicationAck := int64(27)
 	currentClusterTransferAck := int64(21)
 	currentClusterTimerAck := timestampConvertor(time.Now().Add(-10 * time.Second))
-	shardInfo := &ShardInfo{
+	shardInfo := &persistence.ShardInfo{
 		ShardID:             shardID,
 		Owner:               "some random owner",
 		RangeID:             rangeID,
@@ -2398,7 +2399,7 @@ func (s *cassandraPersistenceSuite) TestCreateGetShard_Backfill() {
 		TransferAckLevel:    currentClusterTransferAck,
 		TimerAckLevel:       currentClusterTimerAck,
 	}
-	createRequest := &CreateShardRequest{
+	createRequest := &persistence.CreateShardRequest{
 		ShardInfo: shardInfo,
 	}
 	s.Nil(s.ShardMgr.CreateShard(createRequest))
@@ -2409,7 +2410,7 @@ func (s *cassandraPersistenceSuite) TestCreateGetShard_Backfill() {
 	shardInfo.ClusterTimerAckLevel = map[string]time.Time{
 		s.ClusterMetadata.GetCurrentClusterName(): currentClusterTimerAck,
 	}
-	resp, err := s.ShardMgr.GetShard(&GetShardRequest{ShardID: shardID})
+	resp, err := s.ShardMgr.GetShard(&persistence.GetShardRequest{ShardID: shardID})
 	s.Nil(err)
 	s.True(timeComparator(shardInfo.UpdatedAt, resp.ShardInfo.UpdatedAt, timePrecision))
 	s.True(timeComparator(shardInfo.ClusterTimerAckLevel[cluster.TestCurrentClusterName], resp.ShardInfo.ClusterTimerAckLevel[cluster.TestCurrentClusterName], timePrecision))
@@ -2419,7 +2420,7 @@ func (s *cassandraPersistenceSuite) TestCreateGetShard_Backfill() {
 	s.Equal(shardInfo, resp.ShardInfo)
 }
 
-func (s *cassandraPersistenceSuite) TestCreateGetUpdateGetShard() {
+func (s *matchingPersistenceSuite) TestCreateGetUpdateGetShard() {
 	shardID := 8
 	rangeID := int64(59)
 
@@ -2430,7 +2431,7 @@ func (s *cassandraPersistenceSuite) TestCreateGetUpdateGetShard() {
 	currentClusterTimerAck := timestampConvertor(time.Now().Add(-10 * time.Second))
 	alternativeClusterTimerAck := timestampConvertor(time.Now().Add(-20 * time.Second))
 	domainNotificationVersion := int64(8192)
-	shardInfo := &ShardInfo{
+	shardInfo := &persistence.ShardInfo{
 		ShardID:             shardID,
 		Owner:               "some random owner",
 		RangeID:             rangeID,
@@ -2449,12 +2450,12 @@ func (s *cassandraPersistenceSuite) TestCreateGetUpdateGetShard() {
 		},
 		DomainNotificationVersion: domainNotificationVersion,
 	}
-	createRequest := &CreateShardRequest{
+	createRequest := &persistence.CreateShardRequest{
 		ShardInfo: shardInfo,
 	}
 	s.Nil(s.ShardMgr.CreateShard(createRequest))
 
-	resp, err := s.ShardMgr.GetShard(&GetShardRequest{ShardID: shardID})
+	resp, err := s.ShardMgr.GetShard(&persistence.GetShardRequest{ShardID: shardID})
 	s.Nil(err)
 	s.True(timeComparator(shardInfo.UpdatedAt, resp.ShardInfo.UpdatedAt, timePrecision))
 	s.True(timeComparator(shardInfo.ClusterTimerAckLevel[cluster.TestCurrentClusterName], resp.ShardInfo.ClusterTimerAckLevel[cluster.TestCurrentClusterName], timePrecision))
@@ -2470,7 +2471,7 @@ func (s *cassandraPersistenceSuite) TestCreateGetUpdateGetShard() {
 	currentClusterTimerAck = timestampConvertor(time.Now().Add(-100 * time.Second))
 	alternativeClusterTimerAck = timestampConvertor(time.Now().Add(-200 * time.Second))
 	domainNotificationVersion = int64(16384)
-	shardInfo = &ShardInfo{
+	shardInfo = &persistence.ShardInfo{
 		ShardID:             shardID,
 		Owner:               "some random owner",
 		RangeID:             int64(28),
@@ -2489,13 +2490,13 @@ func (s *cassandraPersistenceSuite) TestCreateGetUpdateGetShard() {
 		},
 		DomainNotificationVersion: domainNotificationVersion,
 	}
-	updateRequest := &UpdateShardRequest{
+	updateRequest := &persistence.UpdateShardRequest{
 		ShardInfo:       shardInfo,
 		PreviousRangeID: rangeID,
 	}
 	s.Nil(s.ShardMgr.UpdateShard(updateRequest))
 
-	resp, err = s.ShardMgr.GetShard(&GetShardRequest{ShardID: shardID})
+	resp, err = s.ShardMgr.GetShard(&persistence.GetShardRequest{ShardID: shardID})
 	s.Nil(err)
 	s.True(timeComparator(shardInfo.UpdatedAt, resp.ShardInfo.UpdatedAt, timePrecision))
 	s.True(timeComparator(shardInfo.ClusterTimerAckLevel[cluster.TestCurrentClusterName], resp.ShardInfo.ClusterTimerAckLevel[cluster.TestCurrentClusterName], timePrecision))
@@ -2523,15 +2524,15 @@ func timeComparator(t1 time.Time, t2 time.Time, timeTolerance time.Duration) boo
 	return false
 }
 
-func copyReplicationState(sourceState *ReplicationState) *ReplicationState {
-	state := &ReplicationState{
+func copyReplicationState(sourceState *persistence.ReplicationState) *persistence.ReplicationState {
+	state := &persistence.ReplicationState{
 		CurrentVersion:   sourceState.CurrentVersion,
 		StartVersion:     sourceState.StartVersion,
 		LastWriteVersion: sourceState.LastWriteVersion,
 		LastWriteEventID: sourceState.LastWriteEventID,
 	}
 	if sourceState.LastReplicationInfo != nil {
-		state.LastReplicationInfo = map[string]*ReplicationInfo{}
+		state.LastReplicationInfo = map[string]*persistence.ReplicationInfo{}
 		for k, v := range sourceState.LastReplicationInfo {
 			state.LastReplicationInfo[k] = copyReplicationInfo(v)
 		}
@@ -2540,23 +2541,23 @@ func copyReplicationState(sourceState *ReplicationState) *ReplicationState {
 	return state
 }
 
-func copyReplicationInfo(sourceInfo *ReplicationInfo) *ReplicationInfo {
-	return &ReplicationInfo{
+func copyReplicationInfo(sourceInfo *persistence.ReplicationInfo) *persistence.ReplicationInfo {
+	return &persistence.ReplicationInfo{
 		Version:     sourceInfo.Version,
 		LastEventID: sourceInfo.LastEventID,
 	}
 }
 
-func (s *cassandraPersistenceSuite) serializeHistoryEvents(events []*gen.HistoryEvent) *SerializedHistoryEventBatch {
-	historySerializer := NewJSONHistorySerializer()
-	bufferedBatch := NewHistoryEventBatch(GetDefaultHistoryVersion(), events)
+func (s *matchingPersistenceSuite) serializeHistoryEvents(events []*gen.HistoryEvent) *persistence.SerializedHistoryEventBatch {
+	historySerializer := persistence.NewJSONHistorySerializer()
+	bufferedBatch := persistence.NewHistoryEventBatch(persistence.GetDefaultHistoryVersion(), events)
 	serializedEvents, _ := historySerializer.Serialize(bufferedBatch)
 
 	return serializedEvents
 }
 
-func (s *cassandraPersistenceSuite) deserializedHistoryEvents(batch *SerializedHistoryEventBatch) *HistoryEventBatch {
-	historySerializer := NewJSONHistorySerializer()
+func (s *matchingPersistenceSuite) deserializedHistoryEvents(batch *persistence.SerializedHistoryEventBatch) *persistence.HistoryEventBatch {
+	historySerializer := persistence.NewJSONHistorySerializer()
 	events, err := historySerializer.Deserialize(batch)
 	if err != nil {
 		panic(err)
