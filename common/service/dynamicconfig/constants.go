@@ -51,11 +51,11 @@ var keys = map[Key]string{
 	EnableGlobalDomain: "system.enableGlobalDomain",
 
 	// frontend settings
-	FrontendPersistenceMaxQPS:     "frontend.persistenceMaxQPS",
-	FrontendVisibilityMaxPageSize: "frontend.visibilityMaxPageSize",
-	FrontendHistoryMaxPageSize:    "frontend.historyMaxPageSize",
-	FrontendRPS:                   "frontend.rps",
-	FrontendHistoryMgrNumConns:    "frontend.historyMgrNumConns",
+	FrontendPersistenceMaxQPS:      "frontend.persistenceMaxQPS",
+	FrontendVisibilityMaxPageSize:  "frontend.visibilityMaxPageSize",
+	FrontendHistoryMaxPageSize:     "frontend.historyMaxPageSize",
+	FrontendRPS:                    "frontend.rps",
+	FrontendHistoryMgrNumConns:     "frontend.historyMgrNumConns",
 	MaxDecisionStartToCloseTimeout: "frontend.maxDecisionStartToCloseTimeout",
 
 	// matching settings
