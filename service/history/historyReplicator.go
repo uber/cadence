@@ -626,7 +626,7 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 	// start the new workflow from the request
 
 	// same workflow ID, same shard
-	err = r.terminateWorkflow(domainID, executionInfo.WorkflowID, currentRunID)
+	err = r.terminateWorkflow(ctx, domainID, executionInfo.WorkflowID, currentRunID)
 	if err != nil {
 		if _, ok := err.(*shared.EntityNotExistsError); !ok {
 			return err
@@ -754,7 +754,7 @@ func (r *historyReplicator) conflictResolutionTerminateContinueAsNew(ctx context
 	// we will retry on the worker level
 
 	// same workflow ID, same shard
-	return r.terminateWorkflow(domainID, workflowID, currentRunID)
+	return r.terminateWorkflow(ctx, domainID, workflowID, currentRunID)
 }
 
 func (r *historyReplicator) Serialize(history *shared.History) (*persistence.SerializedHistoryEventBatch, error) {
@@ -788,13 +788,14 @@ func (r *historyReplicator) getCurrentWorkflowMutableState(ctx context.Context, 
 	return context, msBuilder, release, nil
 }
 
-func (r *historyReplicator) terminateWorkflow(domainID string, workflowID string, runID string) error {
+func (r *historyReplicator) terminateWorkflow(ctx context.Context, domainID string, workflowID string,
+	runID string) error {
 	domainEntry, err := r.domainCache.GetDomainByID(domainID)
 	if err != nil {
 		return err
 	}
 	// same workflow ID, same shard
-	return r.historyEngine.TerminateWorkflowExecution(context.Background(), &h.TerminateWorkflowExecutionRequest{
+	return r.historyEngine.TerminateWorkflowExecution(ctx, &h.TerminateWorkflowExecutionRequest{
 		DomainUUID: common.StringPtr(domainID),
 		TerminateRequest: &shared.TerminateWorkflowExecutionRequest{
 			Domain: common.StringPtr(domainEntry.GetInfo().Name),
