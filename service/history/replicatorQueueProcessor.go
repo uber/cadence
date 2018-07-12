@@ -22,6 +22,8 @@ package history
 
 import (
 	"errors"
+	"sync"
+	"time"
 
 	"github.com/uber-common/bark"
 	h "github.com/uber/cadence/.gen/go/history"
@@ -36,16 +38,20 @@ import (
 
 type (
 	replicatorQueueProcessorImpl struct {
-		shard              ShardContext
-		executionMgr       persistence.ExecutionManager
-		historyMgr         persistence.HistoryManager
-		hSerializerFactory persistence.HistorySerializerFactory
-		replicator         messaging.Producer
-		metricsClient      metrics.Client
-		options            *QueueProcessorOptions
-		logger             bark.Logger
+		currentClusterNamer string
+		shard               ShardContext
+		executionMgr        persistence.ExecutionManager
+		historyMgr          persistence.HistoryManager
+		hSerializerFactory  persistence.HistorySerializerFactory
+		replicator          messaging.Producer
+		metricsClient       metrics.Client
+		options             *QueueProcessorOptions
+		logger              bark.Logger
 		*queueProcessorBase
 		queueAckMgr
+
+		sync.Mutex
+		lastShardSyncTimestamp time.Time
 	}
 )
 
@@ -76,14 +82,15 @@ func newReplicatorQueueProcessor(shard ShardContext, replicator messaging.Produc
 	})
 
 	processor := &replicatorQueueProcessorImpl{
-		shard:              shard,
-		executionMgr:       executionMgr,
-		historyMgr:         historyMgr,
-		hSerializerFactory: hSerializerFactory,
-		replicator:         replicator,
-		metricsClient:      shard.GetMetricsClient(),
-		options:            options,
-		logger:             logger,
+		currentClusterNamer: shard.GetService().GetClusterMetadata().GetCurrentClusterName(),
+		shard:               shard,
+		executionMgr:        executionMgr,
+		historyMgr:          historyMgr,
+		hSerializerFactory:  hSerializerFactory,
+		replicator:          replicator,
+		metricsClient:       shard.GetMetricsClient(),
+		options:             options,
+		logger:              logger,
 	}
 
 	queueAckMgr := newQueueAckMgr(shard, options, processor, shard.GetReplicatorAckLevel(), logger)
@@ -168,7 +175,9 @@ func (p *replicatorQueueProcessorImpl) processHistoryReplicationTask(task *persi
 
 	err = p.replicator.Publish(replicationTask)
 	if err == nil {
-		p.shard.UpdateLastShardSyncTimestamp(common.NewRealTimeSource().Now())
+		p.Lock()
+		p.lastShardSyncTimestamp = common.NewRealTimeSource().Now()
+		p.Unlock()
 	}
 	return err
 }
@@ -199,7 +208,33 @@ func (p *replicatorQueueProcessorImpl) completeTask(taskID int64) error {
 }
 
 func (p *replicatorQueueProcessorImpl) updateAckLevel(ackLevel int64) error {
-	return p.shard.UpdateReplicatorAckLevel(ackLevel)
+	err := p.shard.UpdateReplicatorAckLevel(ackLevel)
+
+	// this is a hack, since there is not dedicated ticker on the queue processor
+	// to periodically send out sync shard message, put it here
+	now := common.NewRealTimeSource().Now()
+	sendSyncTask := false
+	p.Lock()
+	if p.lastShardSyncTimestamp.Add(p.shard.GetConfig().ShardSyncMinInterval()).Before(now) {
+		p.lastShardSyncTimestamp = now
+		sendSyncTask = true
+	}
+	p.Unlock()
+
+	if sendSyncTask {
+		syncStatusTask := &replicator.ReplicationTask{
+			TaskType: replicator.ReplicationTaskType.Ptr(replicator.ReplicationTaskTypeSyncShardStatus),
+			SyncShardStatusTaskAttributes: &replicator.SyncShardStatusTaskAttributes{
+				SourceCluster: common.StringPtr(p.currentClusterNamer),
+				ShardId:       common.Int64Ptr(int64(p.shard.GetShardID())),
+				Timestamp:     common.Int64Ptr(now.UnixNano()),
+			},
+		}
+		// ignore the error
+		p.replicator.Publish(syncStatusTask)
+	}
+
+	return err
 }
 
 func (p *replicatorQueueProcessorImpl) getHistory(domainID, workflowID, runID string, firstEventID,

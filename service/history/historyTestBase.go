@@ -75,7 +75,6 @@ type (
 		logger                    bark.Logger
 		metricsClient             metrics.Client
 		standbyClusterCurrentTime map[string]time.Time
-		lastShardSyncTimestamp    time.Time
 	}
 
 	// TestBase wraps the base setup needed to create workflows over engine layer.
@@ -245,22 +244,6 @@ func (s *TestShardContext) UpdateTimerClusterAckLevel(cluster string, ackLevel t
 
 	s.shardInfo.ClusterTimerAckLevel[cluster] = ackLevel
 	return nil
-}
-
-// GetLastShardSyncTimestamp get the last shard sync time
-func (s *TestShardContext) GetLastShardSyncTimestamp() time.Time {
-	s.RLock()
-	defer s.RUnlock()
-
-	return s.lastShardSyncTimestamp
-}
-
-// UpdateLastShardSyncTimestamp set the last shard sync time
-func (s *TestShardContext) UpdateLastShardSyncTimestamp(now time.Time) {
-	s.Lock()
-	defer s.Unlock()
-
-	s.lastShardSyncTimestamp = now
 }
 
 // GetDomainNotificationVersion test implementation
