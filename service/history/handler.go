@@ -76,6 +76,9 @@ var (
 	errTaskListNotSet          = &gen.BadRequestError{Message: "Tasklist not set."}
 	errWorkflowIDNotSet        = &gen.BadRequestError{Message: "WorkflowId is not set on request."}
 	errRunIDNotValid           = &gen.BadRequestError{Message: "RunID is not valid UUID."}
+	errSourceClusterNotSet     = &gen.BadRequestError{Message: "Source Cluster not set on request."}
+	errShardIDNotSet           = &gen.BadRequestError{Message: "Shard ID not set on request."}
+	errTimestampNotSet         = &gen.BadRequestError{Message: "Timestamp not set on request."}
 )
 
 // NewHandler creates a thrift handler for the history service
@@ -931,6 +934,18 @@ func (h *Handler) SyncShardStatus(ctx context.Context, syncShardStatusRequest *h
 	h.metricsClient.IncCounter(metrics.HistorySyncShardStatusScope, metrics.CadenceRequests)
 	sw := h.metricsClient.StartTimer(metrics.HistorySyncShardStatusScope, metrics.CadenceLatency)
 	defer sw.Stop()
+
+	if syncShardStatusRequest.SourceCluster == nil {
+		return errSourceClusterNotSet
+	}
+
+	if syncShardStatusRequest.ShardId == nil {
+		return errShardIDNotSet
+	}
+
+	if syncShardStatusRequest.Timestamp == nil {
+		return errTimestampNotSet
+	}
 
 	// shard ID is already provided in the request
 	engine, err := h.controller.getEngineForShard(int(syncShardStatusRequest.GetShardId()))
