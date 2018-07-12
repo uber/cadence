@@ -60,6 +60,8 @@ type (
 		UpdateTimerAckLevel(ackLevel time.Time) error
 		GetTimerClusterAckLevel(cluster string) time.Time
 		UpdateTimerClusterAckLevel(cluster string, ackLevel time.Time) error
+		GetLastShardSyncTimestamp() time.Time
+		UpdateLastShardSyncTimestamp(time.Time)
 		GetDomainNotificationVersion() int64
 		UpdateDomainNotificationVersion(domainNotificationVersion int64) error
 		CreateWorkflowExecution(request *persistence.CreateWorkflowExecutionRequest) (
@@ -98,7 +100,10 @@ type (
 		transferSequenceNumber    int64
 		maxTransferSequenceNumber int64
 		transferMaxReadLevel      int64
+
+		// exist only in memory
 		standbyClusterCurrentTime map[string]time.Time
+		lastShardSyncTimestamp    time.Time
 	}
 )
 
@@ -241,6 +246,20 @@ func (s *shardContextImpl) UpdateDomainNotificationVersion(domainNotificationVer
 
 	s.shardInfo.DomainNotificationVersion = domainNotificationVersion
 	return s.updateShardInfoLocked()
+}
+
+func (s *shardContextImpl) GetLastShardSyncTimestamp() time.Time {
+	s.RLock()
+	defer s.RUnlock()
+
+	return s.lastShardSyncTimestamp
+}
+
+func (s *shardContextImpl) UpdateLastShardSyncTimestamp(now time.Time) {
+	s.Lock()
+	defer s.Unlock()
+
+	s.lastShardSyncTimestamp = now
 }
 
 func (s *shardContextImpl) CreateWorkflowExecution(request *persistence.CreateWorkflowExecutionRequest) (
@@ -588,13 +607,14 @@ func (s *shardContextImpl) updateMaxReadLevelLocked(rl int64) {
 }
 
 func (s *shardContextImpl) updateShardInfoLocked() error {
-	now := time.Now()
+	var err error
+	now := common.NewRealTimeSource().Now()
 	if s.lastUpdated.Add(s.config.ShardUpdateMinInterval()).After(now) {
 		return nil
 	}
 	updatedShardInfo := copyShardInfo(s.shardInfo)
 
-	if s.messageProducer != nil {
+	if s.messageProducer != nil && s.lastShardSyncTimestamp.Add(s.config.ShardUpdateMinInterval()).Before(now) {
 		syncStatusTask := &replicator.ReplicationTask{
 			TaskType: replicator.ReplicationTaskType.Ptr(replicator.ReplicationTaskTypeSyncShardStatus),
 			SyncShardStatusTaskAttributes: &replicator.SyncShardStatusTaskAttributes{
@@ -604,10 +624,13 @@ func (s *shardContextImpl) updateShardInfoLocked() error {
 			},
 		}
 		// ignore the error
-		s.messageProducer.Publish(syncStatusTask)
+		err = s.messageProducer.Publish(syncStatusTask)
+		if err == nil {
+			s.lastShardSyncTimestamp = now
+		}
 	}
 
-	err := s.shardManager.UpdateShard(&persistence.UpdateShardRequest{
+	err = s.shardManager.UpdateShard(&persistence.UpdateShardRequest{
 		ShardInfo:       updatedShardInfo,
 		PreviousRangeID: s.shardInfo.RangeID,
 	})

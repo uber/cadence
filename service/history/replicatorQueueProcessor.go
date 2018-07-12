@@ -166,7 +166,11 @@ func (p *replicatorQueueProcessorImpl) processHistoryReplicationTask(task *persi
 		},
 	}
 
-	return p.replicator.Publish(replicationTask)
+	err = p.replicator.Publish(replicationTask)
+	if err == nil {
+		p.shard.UpdateLastShardSyncTimestamp(common.NewRealTimeSource().Now())
+	}
+	return err
 }
 
 func (p *replicatorQueueProcessorImpl) readTasks(readLevel int64) ([]queueTaskInfo, bool, error) {
