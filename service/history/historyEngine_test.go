@@ -1128,9 +1128,9 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledAtt
 		// Use workflow timeout
 		{common.Int32Ptr(workflowTimeout), nil, nil, nil,
 			workflowTimeout, workflowTimeout, workflowTimeout, false},
-		// Timeout larger than workflow timeout, expect error return
+		// Timeout larger than workflow timeout
 		{common.Int32Ptr(workflowTimeout + 1), nil, nil, nil,
-			0, 0, 0, true},
+			workflowTimeout, workflowTimeout, workflowTimeout, false},
 		{nil, common.Int32Ptr(workflowTimeout + 1), nil, nil,
 			0, 0, 0, true},
 		{nil, nil, common.Int32Ptr(workflowTimeout + 1), nil,
@@ -1138,8 +1138,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledAtt
 		{nil, nil, nil, common.Int32Ptr(workflowTimeout + 1),
 			0, 0, 0, true},
 		// No ScheduleToClose timeout, will use ScheduleToStart + StartToClose, but exceed limit
-		{nil, common.Int32Ptr(workflowTimeout), common.Int32Ptr(workflowTimeout), nil,
-			0, 0, 0, true},
+		{nil, common.Int32Ptr(workflowTimeout), common.Int32Ptr(10), nil,
+			workflowTimeout, workflowTimeout, 10, false},
 	}
 
 	for _, iVar := range testIterationVariables {

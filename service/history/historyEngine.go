@@ -2463,11 +2463,18 @@ func validateActivityScheduleAttributes(attributes *workflow.ScheduleActivityTas
 		return &workflow.BadRequestError{Message: "A valid timeout may not be negative."}
 	}
 
-	if attributes.GetScheduleToCloseTimeoutSeconds() > wfTimeout ||
-		attributes.GetScheduleToStartTimeoutSeconds() > wfTimeout ||
-		attributes.GetStartToCloseTimeoutSeconds() > wfTimeout ||
-		attributes.GetHeartbeatTimeoutSeconds() > wfTimeout {
-		return &workflow.BadRequestError{Message: fmt.Sprintf("Timeout cannot be larger than workflow timeout %d.", wfTimeout)}
+	// ensure activity timeout never larger than workflow timeout
+	if attributes.GetScheduleToCloseTimeoutSeconds() > wfTimeout {
+		attributes.ScheduleToCloseTimeoutSeconds = common.Int32Ptr(wfTimeout)
+	}
+	if attributes.GetScheduleToStartTimeoutSeconds() > wfTimeout {
+		attributes.ScheduleToStartTimeoutSeconds = common.Int32Ptr(wfTimeout)
+	}
+	if attributes.GetStartToCloseTimeoutSeconds() > wfTimeout {
+		attributes.StartToCloseTimeoutSeconds = common.Int32Ptr(wfTimeout)
+	}
+	if attributes.GetHeartbeatTimeoutSeconds() > wfTimeout {
+		attributes.HeartbeatTimeoutSeconds = common.Int32Ptr(wfTimeout)
 	}
 
 	validScheduleToClose := attributes.GetScheduleToCloseTimeoutSeconds() > 0
@@ -2484,7 +2491,7 @@ func validateActivityScheduleAttributes(attributes *workflow.ScheduleActivityTas
 	} else if validScheduleToStart && validStartToClose {
 		attributes.ScheduleToCloseTimeoutSeconds = common.Int32Ptr(attributes.GetScheduleToStartTimeoutSeconds() + attributes.GetStartToCloseTimeoutSeconds())
 		if attributes.GetScheduleToCloseTimeoutSeconds() > wfTimeout {
-			return &workflow.BadRequestError{Message: fmt.Sprintf("Timeout cannot be larger than workflow timeout %d.", wfTimeout)}
+			attributes.ScheduleToCloseTimeoutSeconds = common.Int32Ptr(wfTimeout)
 		}
 	} else {
 		// Deduction failed as there's not enough information to fill in missing timeouts.

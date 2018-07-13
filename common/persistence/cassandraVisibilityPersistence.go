@@ -41,9 +41,13 @@ const (
 )
 
 const (
-	templateCreateWorkflowExecutionStarted = `INSERT INTO open_executions (` +
+	templateCreateWorkflowExecutionStartedWithTTL = `INSERT INTO open_executions (` +
 		`domain_id, domain_partition, workflow_id, run_id, start_time, workflow_type_name) ` +
 		`VALUES (?, ?, ?, ?, ?, ?) using TTL ?`
+
+	templateCreateWorkflowExecutionStarted = `INSERT INTO open_executions (` +
+		`domain_id, domain_partition, workflow_id, run_id, start_time, workflow_type_name) ` +
+		`VALUES (?, ?, ?, ?, ?, ?)`
 
 	templateDeleteWorkflowExecutionStarted = `DELETE FROM open_executions ` +
 		`WHERE domain_id = ? ` +
@@ -51,9 +55,13 @@ const (
 		`AND start_time = ? ` +
 		`AND run_id = ?`
 
-	templateCreateWorkflowExecutionClosed = `INSERT INTO closed_executions (` +
+	templateCreateWorkflowExecutionClosedWithTTL = `INSERT INTO closed_executions (` +
 		`domain_id, domain_partition, workflow_id, run_id, start_time, close_time, workflow_type_name, status, history_length) ` +
 		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) using TTL ?`
+
+	templateCreateWorkflowExecutionClosed = `INSERT INTO closed_executions (` +
+		`domain_id, domain_partition, workflow_id, run_id, start_time, close_time, workflow_type_name, status, history_length) ` +
+		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	templateGetOpenWorkflowExecutions = `SELECT workflow_id, run_id, start_time, workflow_type_name ` +
 		`FROM open_executions ` +
@@ -152,16 +160,28 @@ func (v *cassandraVisibilityPersistence) Close() {
 
 func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionStarted(
 	request *RecordWorkflowExecutionStartedRequest) error {
-	ttl := common.MinInt64(request.WorkflowTimeout+openExecutionTTLBuffer, maxCassandraTTL)
-	query := v.session.Query(templateCreateWorkflowExecutionStarted,
-		request.DomainUUID,
-		domainPartition,
-		*request.Execution.WorkflowId,
-		*request.Execution.RunId,
-		common.UnixNanoToCQLTimestamp(request.StartTimestamp),
-		request.WorkflowTypeName,
-		ttl,
-	)
+	ttl := request.WorkflowTimeout + openExecutionTTLBuffer
+	var query *gocql.Query
+	if ttl > maxCassandraTTL {
+		query = v.session.Query(templateCreateWorkflowExecutionStarted,
+			request.DomainUUID,
+			domainPartition,
+			*request.Execution.WorkflowId,
+			*request.Execution.RunId,
+			common.UnixNanoToCQLTimestamp(request.StartTimestamp),
+			request.WorkflowTypeName,
+		)
+	} else {
+		query = v.session.Query(templateCreateWorkflowExecutionStartedWithTTL,
+			request.DomainUUID,
+			domainPartition,
+			*request.Execution.WorkflowId,
+			*request.Execution.RunId,
+			common.UnixNanoToCQLTimestamp(request.StartTimestamp),
+			request.WorkflowTypeName,
+			ttl,
+		)
+	}
 	query = query.WithTimestamp(common.UnixNanoToCQLTimestamp(request.StartTimestamp))
 	err := query.Exec()
 	if err != nil {
@@ -197,20 +217,33 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 	if retention == 0 {
 		retention = defaultCloseTTLSeconds
 	}
-	retention = common.MinInt64(retention, maxCassandraTTL)
 
-	batch.Query(templateCreateWorkflowExecutionClosed,
-		request.DomainUUID,
-		domainPartition,
-		*request.Execution.WorkflowId,
-		*request.Execution.RunId,
-		common.UnixNanoToCQLTimestamp(request.StartTimestamp),
-		common.UnixNanoToCQLTimestamp(request.CloseTimestamp),
-		request.WorkflowTypeName,
-		request.Status,
-		request.HistoryLength,
-		retention,
-	)
+	if retention > maxCassandraTTL {
+		batch.Query(templateCreateWorkflowExecutionClosed,
+			request.DomainUUID,
+			domainPartition,
+			*request.Execution.WorkflowId,
+			*request.Execution.RunId,
+			common.UnixNanoToCQLTimestamp(request.StartTimestamp),
+			common.UnixNanoToCQLTimestamp(request.CloseTimestamp),
+			request.WorkflowTypeName,
+			request.Status,
+			request.HistoryLength,
+		)
+	} else {
+		batch.Query(templateCreateWorkflowExecutionClosedWithTTL,
+			request.DomainUUID,
+			domainPartition,
+			*request.Execution.WorkflowId,
+			*request.Execution.RunId,
+			common.UnixNanoToCQLTimestamp(request.StartTimestamp),
+			common.UnixNanoToCQLTimestamp(request.CloseTimestamp),
+			request.WorkflowTypeName,
+			request.Status,
+			request.HistoryLength,
+			retention,
+		)
+	}
 
 	batch = batch.WithTimestamp(common.UnixNanoToCQLTimestamp(request.CloseTimestamp))
 	err := v.session.ExecuteBatch(batch)
