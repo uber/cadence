@@ -136,7 +136,7 @@ func (h *Handler) Start() error {
 	h.domainCache = cache.NewDomainCache(h.metadataMgr, h.GetClusterMetadata(), h.GetMetricsClient(), h.GetLogger())
 	h.domainCache.Start()
 	h.controller = newShardController(h.Service, h.GetHostInfo(), hServiceResolver, h.shardManager, h.historyMgr,
-		h.domainCache, h.executionMgrFactory, h, h.config, h.GetLogger(), h.GetMetricsClient(), h.publisher)
+		h.domainCache, h.executionMgrFactory, h, h.config, h.GetLogger(), h.GetMetricsClient())
 	h.metricsClient = h.GetMetricsClient()
 	h.historyEventNotifier = newHistoryEventNotifier(h.GetMetricsClient(), h.config.GetShardID)
 	// events notifier must starts before controller
@@ -918,7 +918,7 @@ func (h *Handler) ReplicateEvents(ctx context.Context, replicateRequest *hist.Re
 		return err1
 	}
 
-	err2 := engine.ReplicateEvents(replicateRequest)
+	err2 := engine.ReplicateEvents(ctx, replicateRequest)
 	if err2 != nil {
 		h.updateErrorMetric(metrics.HistoryReplicateEventsScope, h.convertError(err2))
 		return h.convertError(err2)

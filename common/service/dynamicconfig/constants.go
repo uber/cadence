@@ -51,11 +51,12 @@ var keys = map[Key]string{
 	EnableGlobalDomain: "system.enableGlobalDomain",
 
 	// frontend settings
-	FrontendPersistenceMaxQPS:     "frontend.persistenceMaxQPS",
-	FrontendVisibilityMaxPageSize: "frontend.visibilityMaxPageSize",
-	FrontendHistoryMaxPageSize:    "frontend.historyMaxPageSize",
-	FrontendRPS:                   "frontend.rps",
-	FrontendHistoryMgrNumConns:    "frontend.historyMgrNumConns",
+	FrontendPersistenceMaxQPS:      "frontend.persistenceMaxQPS",
+	FrontendVisibilityMaxPageSize:  "frontend.visibilityMaxPageSize",
+	FrontendHistoryMaxPageSize:     "frontend.historyMaxPageSize",
+	FrontendRPS:                    "frontend.rps",
+	FrontendHistoryMgrNumConns:     "frontend.historyMgrNumConns",
+	MaxDecisionStartToCloseTimeout: "frontend.maxDecisionStartToCloseTimeout",
 
 	// matching settings
 	MatchingPersistenceMaxQPS:               "matching.persistenceMaxQPS",
@@ -119,6 +120,7 @@ var keys = map[Key]string{
 	HistoryMgrNumConns:                                  "history.historyMgrNumConns",
 	MaximumBufferedEventsBatch:                          "history.maximumBufferedEventsBatch",
 	ShardUpdateMinInterval:                              "history.shardUpdateMinInterval",
+	ShardSyncMinInterval:                                "history.shardSyncMinInterval",
 
 	// worker settings
 	WorkerPersistenceMaxQPS: "worker.persistenceMaxQPS",
@@ -154,6 +156,8 @@ const (
 	FrontendRPS
 	// FrontendHistoryMgrNumConns is for persistence cluster.NumConns
 	FrontendHistoryMgrNumConns
+	// MaxDecisionStartToCloseTimeout is max decision timeout in seconds
+	MaxDecisionStartToCloseTimeout
 
 	// key for matching
 
@@ -278,6 +282,8 @@ const (
 	MaximumBufferedEventsBatch
 	// ShardUpdateMinInterval is the minimal time interval which the shard info can be updated
 	ShardUpdateMinInterval
+	// ShardSyncMinInterval is the minimal time interval which the shard info should be sync to remote
+	ShardSyncMinInterval
 
 	// key for histoworkerry
 
