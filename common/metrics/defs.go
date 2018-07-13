@@ -749,8 +749,12 @@ const (
 	HistoryEventNotificationFanoutLatency
 	HistoryEventNotificationInFlightMessageGauge
 	HistoryEventNotificationFailDeliveryCount
+	EmptyReplicationEventsCounter
+	DuplicateReplicationEventsCounter
 	StaleReplicationEventsCounter
-	BufferedReplicationTaskCounter
+	ReplicationEventsSizeTimer
+	BufferReplicationTaskTimer
+	UnbufferReplicationTaskTimer
 	HistoryConflictsCounter
 	HistoryTaskStandbyRetryCounter
 	HistoryTaskNotActiveCounter
@@ -855,8 +859,12 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		HistoryEventNotificationFanoutLatency:        {metricName: "history-event-notification-fanout-latency", metricType: Timer},
 		HistoryEventNotificationInFlightMessageGauge: {metricName: "history-event-notification-inflight-message-gauge", metricType: Gauge},
 		HistoryEventNotificationFailDeliveryCount:    {metricName: "history-event-notification-fail-delivery-count", metricType: Counter},
+		EmptyReplicationEventsCounter:                {metricName: "empty-replication-events", metricType: Counter},
+		DuplicateReplicationEventsCounter:            {metricName: "duplicate-replication-events", metricType: Counter},
 		StaleReplicationEventsCounter:                {metricName: "stale-replication-events", metricType: Counter},
-		BufferedReplicationTaskCounter:               {metricName: "buffered-replication-tasks", metricType: Counter},
+		ReplicationEventsSizeTimer:                   {metricName: "replication-events-size", metricType: Timer},
+		BufferReplicationTaskTimer:                   {metricName: "buffer-replication-tasks", metricType: Timer},
+		UnbufferReplicationTaskTimer:                 {metricName: "unbuffer-replication-tasks", metricType: Timer},
 		HistoryConflictsCounter:                      {metricName: "history-conflicts", metricType: Counter},
 		HistoryTaskStandbyRetryCounter:               {metricName: "history-task-standby-retry-counter", metricType: Counter},
 		HistoryTaskNotActiveCounter:                  {metricName: "history-task-not-active-counter", metricType: Counter},
