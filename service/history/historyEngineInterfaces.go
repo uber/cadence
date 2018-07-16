@@ -111,6 +111,7 @@ type (
 		readTasks(readLevel int64) ([]queueTaskInfo, bool, error)
 		completeTask(taskID int64) error
 		updateAckLevel(taskID int64) error
+		queueShutdown() error
 	}
 
 	transferQueueProcessor interface {

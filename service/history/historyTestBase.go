@@ -246,6 +246,66 @@ func (s *TestShardContext) UpdateTimerClusterAckLevel(cluster string, ackLevel t
 	return nil
 }
 
+// UpdateDomainTransferFailoverLevels test implementation
+func (s *TestShardContext) UpdateDomainTransferFailoverLevels(domainID string, level persistence.TransferFailoverLevels) error {
+	s.Lock()
+	defer s.Unlock()
+
+	s.shardInfo.DomainTransferFailoverLevels[domainID] = level
+	return nil
+}
+
+// DeleteDomainTransferFailoverLevels test implementation
+func (s *TestShardContext) DeleteDomainTransferFailoverLevels(domainID string) error {
+	s.Lock()
+	defer s.Unlock()
+
+	delete(s.shardInfo.DomainTransferFailoverLevels, domainID)
+	return nil
+}
+
+// GetAllDomainTransferFailoverLevels test implementation
+func (s *TestShardContext) GetAllDomainTransferFailoverLevels() map[string]persistence.TransferFailoverLevels {
+	s.RLock()
+	defer s.RUnlock()
+
+	ret := map[string]persistence.TransferFailoverLevels{}
+	for k, v := range s.shardInfo.DomainTransferFailoverLevels {
+		ret[k] = v
+	}
+	return ret
+}
+
+// UpdateDomainTimerFailoverLevels test implementation
+func (s *TestShardContext) UpdateDomainTimerFailoverLevels(domainID string, level persistence.TimerFailoverLevels) error {
+	s.Lock()
+	defer s.Unlock()
+
+	s.shardInfo.DomainTimerFailoverLevels[domainID] = level
+	return nil
+}
+
+// DeleteDomainTimerFailoverLevels test implementation
+func (s *TestShardContext) DeleteDomainTimerFailoverLevels(domainID string) error {
+	s.Lock()
+	defer s.Unlock()
+
+	delete(s.shardInfo.DomainTimerFailoverLevels, domainID)
+	return nil
+}
+
+// GetAllDomainTimerFailoverLevels test implementation
+func (s *TestShardContext) GetAllDomainTimerFailoverLevels() map[string]persistence.TimerFailoverLevels {
+	s.RLock()
+	defer s.RUnlock()
+
+	ret := map[string]persistence.TimerFailoverLevels{}
+	for k, v := range s.shardInfo.DomainTimerFailoverLevels {
+		ret[k] = v
+	}
+	return ret
+}
+
 // GetDomainNotificationVersion test implementation
 func (s *TestShardContext) GetDomainNotificationVersion() int64 {
 	s.RLock()

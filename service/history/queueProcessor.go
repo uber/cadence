@@ -154,7 +154,10 @@ func (p *queueProcessorBase) processorPump() {
 
 	jitter := backoff.NewJitter()
 	pollTimer := time.NewTimer(jitter.JitDuration(p.options.MaxPollInterval(), p.options.MaxPollIntervalJitterCoefficient()))
-	updateAckTimer := time.NewTimer(p.options.UpdateAckInterval())
+	defer pollTimer.Stop()
+
+	updateAckTicker := time.NewTicker(p.options.UpdateAckInterval())
+	defer updateAckTicker.Stop()
 
 processorPumpLoop:
 	for {
@@ -171,9 +174,8 @@ processorPumpLoop:
 			if p.lastPollTime.Add(p.options.MaxPollInterval()).Before(time.Now()) {
 				p.processBatch(tasksCh)
 			}
-		case <-updateAckTimer.C:
+		case <-updateAckTicker.C:
 			p.ackMgr.updateQueueAckLevel()
-			updateAckTimer = time.NewTimer(p.options.UpdateAckInterval())
 		}
 	}
 
@@ -183,8 +185,7 @@ processorPumpLoop:
 	if success := common.AwaitWaitGroup(&workerWG, 10*time.Second); !success {
 		p.logger.Warn("Queue processor timedout on worker shutdown.")
 	}
-	updateAckTimer.Stop()
-	pollTimer.Stop()
+
 }
 
 func (p *queueProcessorBase) processBatch(tasksCh chan<- queueTaskInfo) {

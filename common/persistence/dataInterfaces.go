@@ -133,17 +133,31 @@ type (
 
 	// ShardInfo describes a shard
 	ShardInfo struct {
-		ShardID                   int
-		Owner                     string
-		RangeID                   int64
-		StolenSinceRenew          int
-		UpdatedAt                 time.Time
-		ReplicationAckLevel       int64
-		TransferAckLevel          int64
-		TimerAckLevel             time.Time
-		ClusterTransferAckLevel   map[string]int64
-		ClusterTimerAckLevel      map[string]time.Time
-		DomainNotificationVersion int64
+		ShardID                      int
+		Owner                        string
+		RangeID                      int64
+		StolenSinceRenew             int
+		UpdatedAt                    time.Time
+		ReplicationAckLevel          int64
+		TransferAckLevel             int64
+		TimerAckLevel                time.Time
+		ClusterTransferAckLevel      map[string]int64
+		ClusterTimerAckLevel         map[string]time.Time
+		DomainTransferFailoverLevels map[string]TransferFailoverLevels
+		DomainTimerFailoverLevels    map[string]TimerFailoverLevels
+		DomainNotificationVersion    int64
+	}
+
+	// TransferFailoverLevels contains corresponding start / end level
+	TransferFailoverLevels struct {
+		MinLevel int64
+		MaxLevel int64
+	}
+
+	// TimerFailoverLevels contains domain IDs and corresponding start / end level
+	TimerFailoverLevels struct {
+		MinLevel time.Time
+		MaxLevel time.Time
 	}
 
 	// WorkflowExecutionInfo describes a workflow execution
