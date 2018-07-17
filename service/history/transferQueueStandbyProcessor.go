@@ -174,7 +174,7 @@ func (t *transferQueueStandbyProcessorImpl) processActivityTask(transferTask *pe
 		}
 
 		if activityInfo.StartedID == common.EmptyEventID {
-			return NewTaskRetryError(activityInfo.ScheduledTime)
+			return ErrTaskRetry
 		}
 		return nil
 	})
@@ -203,7 +203,7 @@ func (t *transferQueueStandbyProcessorImpl) processDecisionTask(transferTask *pe
 		}
 
 		if decisionInfo.StartedID == common.EmptyEventID {
-			return NewTaskRetryError(decisionInfo.ScheduleTimestamp)
+			return ErrTaskRetry
 		}
 
 		if transferTask.ScheduleID == common.FirstEventID+1 {
@@ -273,7 +273,7 @@ func (t *transferQueueStandbyProcessorImpl) processCancelExecution(transferTask 
 			return nil
 		}
 
-		return NewTaskRetryError(requestCancelInfo.InitiatedTimestamp)
+		return ErrTaskRetry
 	})
 }
 
@@ -296,7 +296,7 @@ func (t *transferQueueStandbyProcessorImpl) processSignalExecution(transferTask 
 			return nil
 		}
 
-		return NewTaskRetryError(signalInfo.InitiatedTimestamp)
+		return ErrTaskRetry
 	})
 }
 
@@ -320,7 +320,7 @@ func (t *transferQueueStandbyProcessorImpl) processStartChildExecution(transferT
 		}
 
 		if childWorkflowInfo.StartedID == common.EmptyEventID {
-			return NewTaskRetryError(childWorkflowInfo.InitiatedTimestamp)
+			return ErrTaskRetry
 		}
 		return nil
 	})
@@ -332,7 +332,7 @@ func (t *transferQueueStandbyProcessorImpl) processTransfer(processTaskIfClosed 
 		return err
 	}
 	defer func() {
-		if IsTaskRetryError(retError) {
+		if err == ErrTaskRetry {
 			release(nil)
 		} else {
 			release(retError)

@@ -349,7 +349,10 @@ func (r *historyReplicator) ApplyOtherEvents(ctx context.Context, context *workf
 		// so nothing on the replication state should be changed
 		lastWriteVersion := msBuilder.GetLastWriteVersion()
 		sourceCluster := r.clusterMetadata.ClusterNameForFailoverVersion(lastWriteVersion)
-		return context.updateHelper(nil, nil, nil, false, sourceCluster, lastWriteVersion, transactionID)
+		history := request.GetHistory()
+		lastEvent := history.Events[len(history.Events)-1]
+		now := time.Unix(0, lastEvent.GetTimestamp())
+		return context.updateHelper(nil, nil, nil, false, sourceCluster, lastWriteVersion, transactionID, now)
 	}
 
 	// Apply the replication task
@@ -413,8 +416,9 @@ func (r *historyReplicator) ApplyReplicationTask(ctx context.Context, context *w
 		if err2 != nil {
 			return err2
 		}
+		now := time.Unix(0, lastEvent.GetTimestamp())
 		err = context.replicateWorkflowExecution(request, sBuilder.getTransferTasks(), sBuilder.getTimerTasks(),
-			lastEvent.GetEventId(), transactionID)
+			lastEvent.GetEventId(), transactionID, now)
 	}
 
 	if err == nil {
@@ -534,19 +538,18 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 	// Set decision attributes after replication of history events
 	decisionVersionID := common.EmptyVersion
 	decisionScheduleID := common.EmptyEventID
-	decisionScheduleTimestamp := time.Time{}
 	decisionStartID := common.EmptyEventID
 	decisionTimeout := int32(0)
 	if di != nil {
 		decisionVersionID = di.Version
 		decisionScheduleID = di.ScheduleID
-		decisionScheduleTimestamp = di.ScheduleTimestamp
 		decisionStartID = di.StartedID
 		decisionTimeout = di.DecisionTimeout
 	}
 	transferTasks := sBuilder.getTransferTasks()
 	timerTasks := sBuilder.getTimerTasks()
 	setTaskVersion(msBuilder.GetCurrentVersion(), transferTasks, timerTasks)
+	setTransferTaskTimestamp(common.NewFakeTimeSource().Update(time.Unix(0, lastEvent.GetTimestamp())).Now(), transferTasks)
 
 	createWorkflow := func(isBrandNew bool, prevRunID string) error {
 		_, err = r.shard.CreateWorkflowExecution(&persistence.CreateWorkflowExecutionRequest{
@@ -567,7 +570,6 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 			TransferTasks:               transferTasks,
 			DecisionVersion:             decisionVersionID,
 			DecisionScheduleID:          decisionScheduleID,
-			DecisionScheduleTimestamp:   decisionScheduleTimestamp,
 			DecisionStartedID:           decisionStartID,
 			DecisionStartToCloseTimeout: decisionTimeout,
 			TimerTasks:                  timerTasks,

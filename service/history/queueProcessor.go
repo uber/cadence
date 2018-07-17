@@ -170,7 +170,7 @@ processorPumpLoop:
 			p.processBatch(tasksCh)
 		case <-pollTimer.C:
 			pollTimer.Reset(jitter.JitDuration(p.options.MaxPollInterval(), p.options.MaxPollIntervalJitterCoefficient()))
-			if p.lastPollTime.Add(p.options.MaxPollInterval()).Before(time.Now()) {
+			if p.lastPollTime.Add(p.options.MaxPollInterval()).Before(common.NewRealTimeSource().Now()) {
 				p.processBatch(tasksCh)
 			}
 		case <-updateAckTimer.C:
@@ -196,7 +196,7 @@ func (p *queueProcessorBase) processBatch(tasksCh chan<- queueTaskInfo) {
 		return
 	}
 
-	p.lastPollTime = time.Now()
+	p.lastPollTime = common.NewRealTimeSource().Now()
 	tasks, more, err := p.ackMgr.readQueueTasks()
 
 	if err != nil {
@@ -251,12 +251,12 @@ func (p *queueProcessorBase) processWithRetry(notificationChan <-chan struct{}, 
 
 	var logger bark.Logger
 	var err error
-	startTime := time.Now()
+	startTime := common.NewRealTimeSource().Now()
 
 	retryCount := 0
 	op := func() error {
 		err = p.processor.process(task)
-		if err != nil && !IsTaskRetryError(err) {
+		if err != nil && err != ErrTaskRetry {
 			retryCount++
 			logger = p.initializeLoggerForTask(task, logger)
 			logging.LogTaskProcessingFailedEvent(logger, err)
@@ -277,20 +277,20 @@ ProcessRetryLoop:
 			}
 
 			err = backoff.Retry(op, p.retryPolicy, func(err error) bool {
-				return !IsTaskRetryError(err)
+				return err != ErrTaskRetry
 			})
 
 			if err != nil {
-				if IsTaskRetryError(err) {
+				if err == ErrTaskRetry {
 					p.metricsClient.IncCounter(p.options.MetricScope, metrics.HistoryTaskStandbyRetryCounter)
-					timestamp := err.(*TaskRetryError).GetNextRetryTime()
+					timestamp := task.GetVisibilityTimestamp()
 					for {
 						<-notificationChan
 						if p.shard.GetCurrentTime(p.clusterName).After(timestamp) {
 							continue ProcessRetryLoop
 						}
 					}
-				} else if _, ok := err.(*workflow.DomainNotActiveError); ok && time.Now().Sub(startTime) > cache.DomainCacheRefreshInterval {
+				} else if _, ok := err.(*workflow.DomainNotActiveError); ok && common.NewRealTimeSource().Now().Sub(startTime) > cache.DomainCacheRefreshInterval {
 					p.metricsClient.IncCounter(p.options.MetricScope, metrics.HistoryTaskNotActiveCounter)
 					return
 				}

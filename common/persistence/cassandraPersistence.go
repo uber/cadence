@@ -136,7 +136,6 @@ const (
 		`create_request_id: ?, ` +
 		`decision_version: ?, ` +
 		`decision_schedule_id: ?, ` +
-		`decision_schedule_time: ?, ` +
 		`decision_started_id: ?, ` +
 		`decision_request_id: ?, ` +
 		`decision_timeout: ?, ` +
@@ -163,6 +162,7 @@ const (
 		`domain_id: ?, ` +
 		`workflow_id: ?, ` +
 		`run_id: ?, ` +
+		`visibility_ts: ?, ` +
 		`task_id: ?, ` +
 		`target_domain_id: ?, ` +
 		`target_workflow_id: ?, ` +
@@ -241,7 +241,6 @@ const (
 	templateChildExecutionInfoType = `{` +
 		`version: ?,` +
 		`initiated_id: ?, ` +
-		`initiated_time: ?, ` +
 		`initiated_event: ?, ` +
 		`started_id: ?, ` +
 		`started_event: ?, ` +
@@ -251,14 +250,12 @@ const (
 	templateRequestCancelInfoType = `{` +
 		`version: ?,` +
 		`initiated_id: ?, ` +
-		`initiated_time: ?, ` +
 		`cancel_request_id: ? ` +
 		`}`
 
 	templateSignalInfoType = `{` +
 		`version: ?,` +
 		`initiated_id: ?, ` +
-		`initiated_time: ?, ` +
 		`signal_request_id: ?, ` +
 		`signal_name: ?, ` +
 		`input: ?, ` +
@@ -1205,7 +1202,6 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *Creat
 			request.RequestID,
 			request.DecisionVersion,
 			request.DecisionScheduleID,
-			request.DecisionScheduleTimestamp,
 			request.DecisionStartedID,
 			"", // Decision Start Request ID
 			request.DecisionStartToCloseTimeout,
@@ -1256,7 +1252,6 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *Creat
 			request.RequestID,
 			request.DecisionVersion,
 			request.DecisionScheduleID,
-			request.DecisionScheduleTimestamp,
 			request.DecisionStartedID,
 			"", // Decision Start Request ID
 			request.DecisionStartToCloseTimeout,
@@ -1415,7 +1410,6 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 			executionInfo.CreateRequestID,
 			executionInfo.DecisionVersion,
 			executionInfo.DecisionScheduleID,
-			executionInfo.DecisionScheduleTimestamp,
 			executionInfo.DecisionStartedID,
 			executionInfo.DecisionRequestID,
 			executionInfo.DecisionTimeout,
@@ -1467,7 +1461,6 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 			executionInfo.CreateRequestID,
 			executionInfo.DecisionVersion,
 			executionInfo.DecisionScheduleID,
-			executionInfo.DecisionScheduleTimestamp,
 			executionInfo.DecisionStartedID,
 			executionInfo.DecisionRequestID,
 			executionInfo.DecisionTimeout,
@@ -1694,7 +1687,6 @@ func (d *cassandraPersistence) ResetMutableState(request *ResetMutableStateReque
 		executionInfo.CreateRequestID,
 		executionInfo.DecisionVersion,
 		executionInfo.DecisionScheduleID,
-		executionInfo.DecisionScheduleTimestamp,
 		executionInfo.DecisionStartedID,
 		executionInfo.DecisionRequestID,
 		executionInfo.DecisionTimeout,
@@ -2479,6 +2471,7 @@ func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferT
 			domainID,
 			workflowID,
 			runID,
+			task.GetVisibilityTimestamp(),
 			task.GetTaskID(),
 			targetDomainID,
 			targetWorkflowID,
@@ -2726,7 +2719,6 @@ func (d *cassandraPersistence) updateChildExecutionInfos(batch *gocql.Batch, chi
 			c.InitiatedID,
 			c.Version,
 			c.InitiatedID,
-			c.InitiatedTimestamp,
 			c.InitiatedEvent,
 			c.StartedID,
 			c.StartedEvent,
@@ -2778,7 +2770,6 @@ func (d *cassandraPersistence) updateRequestCancelInfos(batch *gocql.Batch, requ
 			c.InitiatedID,
 			c.Version,
 			c.InitiatedID,
-			c.InitiatedTimestamp,
 			c.CancelRequestID,
 			d.shardID,
 			rowTypeExecution,
@@ -2827,7 +2818,6 @@ func (d *cassandraPersistence) updateSignalInfos(batch *gocql.Batch, signalInfos
 			c.InitiatedID,
 			c.Version,
 			c.InitiatedID,
-			c.InitiatedTimestamp,
 			c.SignalRequestID,
 			c.SignalName,
 			c.Input,
@@ -3100,8 +3090,6 @@ func createWorkflowExecutionInfo(result map[string]interface{}) *WorkflowExecuti
 			info.DecisionVersion = v.(int64)
 		case "decision_schedule_id":
 			info.DecisionScheduleID = v.(int64)
-		case "decision_schedule_time":
-			info.DecisionScheduleTimestamp = v.(time.Time)
 		case "decision_started_id":
 			info.DecisionStartedID = v.(int64)
 		case "decision_request_id":
@@ -3170,6 +3158,8 @@ func createTransferTaskInfo(result map[string]interface{}) *TransferTaskInfo {
 			info.WorkflowID = v.(string)
 		case "run_id":
 			info.RunID = v.(gocql.UUID).String()
+		case "visibility_ts":
+			info.VisibilityTimestamp = v.(time.Time)
 		case "task_id":
 			info.TaskID = v.(int64)
 		case "target_domain_id":
@@ -3322,8 +3312,6 @@ func createChildExecutionInfo(result map[string]interface{}) *ChildExecutionInfo
 			info.Version = v.(int64)
 		case "initiated_id":
 			info.InitiatedID = v.(int64)
-		case "initiated_time":
-			info.InitiatedTimestamp = v.(time.Time)
 		case "initiated_event":
 			info.InitiatedEvent = v.([]byte)
 		case "started_id":
@@ -3346,8 +3334,6 @@ func createRequestCancelInfo(result map[string]interface{}) *RequestCancelInfo {
 			info.Version = v.(int64)
 		case "initiated_id":
 			info.InitiatedID = v.(int64)
-		case "initiated_time":
-			info.InitiatedTimestamp = v.(time.Time)
 		case "cancel_request_id":
 			info.CancelRequestID = v.(string)
 		}
@@ -3364,8 +3350,6 @@ func createSignalInfo(result map[string]interface{}) *SignalInfo {
 			info.Version = v.(int64)
 		case "initiated_id":
 			info.InitiatedID = v.(int64)
-		case "initiated_time":
-			info.InitiatedTimestamp = v.(time.Time)
 		case "signal_request_id":
 			info.SignalRequestID = v.(gocql.UUID).String()
 		case "signal_name":
@@ -3463,7 +3447,6 @@ func resetChildExecutionInfoMap(childExecutionInfos []*ChildExecutionInfo) map[i
 		cInfo := make(map[string]interface{})
 		cInfo["version"] = c.Version
 		cInfo["initiated_id"] = c.InitiatedID
-		cInfo["initiated_time"] = c.InitiatedTimestamp
 		cInfo["initiated_event"] = c.InitiatedEvent
 		cInfo["started_id"] = c.StartedID
 		cInfo["started_event"] = c.StartedEvent
@@ -3481,7 +3464,6 @@ func resetRequestCancelInfoMap(requestCancelInfos []*RequestCancelInfo) map[int6
 		rcInfo := make(map[string]interface{})
 		rcInfo["version"] = rc.Version
 		rcInfo["initiated_id"] = rc.InitiatedID
-		rcInfo["initiated_time"] = rc.InitiatedTimestamp
 		rcInfo["cancel_request_id"] = rc.CancelRequestID
 
 		rcMap[rc.InitiatedID] = rcInfo
@@ -3496,7 +3478,6 @@ func resetSignalInfoMap(signalInfos []*SignalInfo) map[int64]map[string]interfac
 		sInfo := make(map[string]interface{})
 		sInfo["version"] = s.Version
 		sInfo["initiated_id"] = s.InitiatedID
-		sInfo["initiated_time"] = s.InitiatedTimestamp
 		sInfo["signal_request_id"] = s.SignalRequestID
 		sInfo["signal_name"] = s.SignalName
 		sInfo["input"] = s.Input

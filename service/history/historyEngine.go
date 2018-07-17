@@ -78,42 +78,13 @@ type (
 		replcatorProcessor   queueProcessor
 		historyEventNotifier historyEventNotifier
 	}
-
-	// TaskRetryError is the error indicating that the timer / transfer task should be retried.
-	TaskRetryError struct {
-		NextRetryTime time.Time
-	}
 )
-
-// NewTaskRetryError create a TaskRetryError when a standby task cannot be processed right now
-func NewTaskRetryError(nextRetryTime time.Time) *TaskRetryError {
-	return &TaskRetryError{NextRetryTime: nextRetryTime}
-}
-
-// IsTaskRetryError whether err is of type *TaskRetryError
-func IsTaskRetryError(err error) bool {
-	if err == nil {
-		return false
-	}
-	if _, ok := err.(*TaskRetryError); ok {
-		return true
-	}
-	return false
-}
-
-// Error error interface
-func (err *TaskRetryError) Error() string {
-	return "standby task should retry due to condition in mutable state is not met"
-}
-
-// GetNextRetryTime return the next time this task should be retried
-func (err *TaskRetryError) GetNextRetryTime() time.Time {
-	return err.NextRetryTime
-}
 
 var _ Engine = (*historyEngineImpl)(nil)
 
 var (
+	// ErrTaskRetry is the error indicating that the timer / transfer task should be retried.
+	ErrTaskRetry = errors.New("passive task should retry due to condition in mutable state is not met")
 	// ErrDuplicate is exported temporarily for integration test
 	ErrDuplicate = errors.New("Duplicate task, completing it")
 	// ErrConflict is exported temporarily for integration test
@@ -324,7 +295,6 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 	var transferTasks []persistence.Task
 	decisionVersion := common.EmptyVersion
 	decisionScheduleID := common.EmptyEventID
-	decisionScheduleTimestamp := time.Time{}
 	decisionStartID := common.EmptyEventID
 	decisionTimeout := int32(0)
 	if parentInfo == nil {
@@ -339,7 +309,6 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 		}}
 		decisionVersion = di.Version
 		decisionScheduleID = di.ScheduleID
-		decisionScheduleTimestamp = common.NewRealTimeSource().Now()
 		decisionStartID = di.StartedID
 		decisionTimeout = di.DecisionTimeout
 	}
@@ -388,6 +357,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 		}
 	}
 	setTaskVersion(msBuilder.GetCurrentVersion(), transferTasks, timerTasks)
+	setTransferTaskTimestamp(common.NewRealTimeSource().Now(), transferTasks)
 
 	createWorkflow := func(isBrandNew bool, prevRunID string) (string, error) {
 		_, err = e.shard.CreateWorkflowExecution(&persistence.CreateWorkflowExecutionRequest{
@@ -408,7 +378,6 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 			ReplicationTasks:            replicationTasks,
 			DecisionVersion:             decisionVersion,
 			DecisionScheduleID:          decisionScheduleID,
-			DecisionScheduleTimestamp:   decisionScheduleTimestamp,
 			DecisionStartedID:           decisionStartID,
 			DecisionStartToCloseTimeout: decisionTimeout,
 			TimerTasks:                  timerTasks,
@@ -1984,7 +1953,6 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 	}}
 	decisionVersion := di.Version
 	decisionScheduleID := di.ScheduleID
-	decisionScheduleTimestamp := common.NewRealTimeSource().Now()
 	decisionStartID := di.StartedID
 	decisionTimeout := di.DecisionTimeout
 
@@ -2032,6 +2000,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 		}
 	}
 	setTaskVersion(msBuilder.GetCurrentVersion(), transferTasks, timerTasks)
+	setTransferTaskTimestamp(common.NewRealTimeSource().Now(), transferTasks)
 
 	createWorkflow := func(isBrandNew bool, prevRunID string) (string, error) {
 		_, err = e.shard.CreateWorkflowExecution(&persistence.CreateWorkflowExecutionRequest{
@@ -2050,7 +2019,6 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 			ReplicationTasks:            replicationTasks,
 			DecisionVersion:             decisionVersion,
 			DecisionScheduleID:          decisionScheduleID,
-			DecisionScheduleTimestamp:   decisionScheduleTimestamp,
 			DecisionStartedID:           decisionStartID,
 			DecisionStartToCloseTimeout: decisionTimeout,
 			TimerTasks:                  timerTasks,
@@ -2799,5 +2767,11 @@ func setTaskVersion(version int64, transferTasks []persistence.Task, timerTasks 
 	}
 	for _, task := range timerTasks {
 		task.SetVersion(version)
+	}
+}
+
+func setTransferTaskTimestamp(timestamp time.Time, transferTasks []persistence.Task) {
+	for _, task := range transferTasks {
+		task.SetVisibilityTimestamp(timestamp)
 	}
 }

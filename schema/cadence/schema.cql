@@ -42,7 +42,6 @@ CREATE TYPE workflow_execution (
   create_request_id                uuid,
   decision_version                 bigint,
   decision_schedule_id             bigint,
-  decision_schedule_time           timestamp,
   decision_started_id              bigint,
   decision_request_id              text,    -- Identifier used by matching engine for retrying history service calls for recording task is started
   decision_timeout                 int,
@@ -78,6 +77,7 @@ CREATE TYPE transfer_task (
   workflow_id                text,   -- The workflow ID that this transfer task belongs to
   run_id                     uuid,   -- The run ID that this transfer task belongs to
   task_id                    bigint,
+  visibility_ts              timestamp, -- The timestamp when the transfer task is generated
   target_domain_id           uuid,   -- The external domain ID that this transfer task is doing work for.
   target_workflow_id         text,   -- The external workflow ID that this transfer task is doing work for.
   target_run_id              uuid,   -- The external run ID that this transfer task is doing work for.
@@ -158,7 +158,6 @@ CREATE TYPE timer_info (
 CREATE TYPE child_execution_info (
   version           bigint,
   initiated_id      bigint,
-  initiated_time    timestamp,
   initiated_event   blob,
   started_id        bigint,
   started_event     blob,
@@ -169,7 +168,6 @@ CREATE TYPE child_execution_info (
 CREATE TYPE request_cancel_info (
   version           bigint,
   initiated_id      bigint,
-  initiated_time    timestamp,
   cancel_request_id text,
 );
 
@@ -177,7 +175,6 @@ CREATE TYPE request_cancel_info (
 CREATE TYPE signal_info (
   version           bigint,
   initiated_id      bigint,
-  initiated_time    timestamp,
   signal_request_id uuid,
   signal_name       text,
   input             blob,

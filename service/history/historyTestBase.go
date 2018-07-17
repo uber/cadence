@@ -279,7 +279,7 @@ func (s *TestShardContext) UpdateWorkflowExecution(request *persistence.UpdateWo
 		}
 		task.SetTaskID(seqID)
 		s.logger.Infof("%v: TestShardContext: Assigning timer (timestamp: %v, seq: %v)",
-			time.Now().UTC(), persistence.GetVisibilityTSFrom(task).UTC(), task.GetTaskID())
+			common.NewRealTimeSource().Now(), persistence.GetVisibilityTSFrom(task).UTC(), task.GetTaskID())
 	}
 	return s.executionMgr.UpdateWorkflowExecution(request)
 }
@@ -351,7 +351,7 @@ func (s *TestShardContext) GetCurrentTime(cluster string) time.Time {
 	if cluster != s.GetService().GetClusterMetadata().GetCurrentClusterName() {
 		return s.standbyClusterCurrentTime[cluster]
 	}
-	return time.Now()
+	return common.NewRealTimeSource().Now()
 }
 
 // SetupWorkflowStoreWithOptions to setup workflow test base

@@ -104,6 +104,7 @@ type (
 		GetVersion() int64
 		GetTaskID() int64
 		GetTaskType() int
+		GetVisibilityTimestamp() time.Time
 	}
 
 	processor interface {

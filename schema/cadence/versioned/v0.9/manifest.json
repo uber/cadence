@@ -1,9 +1,9 @@
 {
   "CurrVersion": "0.9",
   "MinCompatibleVersion": "0.9",
-  "Description": "Support domain customized key-value data, adding initiate time for decision, start child workflow, request cancel and signal.",
+  "Description": "Support domain customized key-value data, adding timestamp to transfer task.",
   "SchemaUpdateCqlFiles": [
     "domain_data.cql",
-    "initiate_time.cql"
+    "transfer_timestamp.cql"
   ]
 }

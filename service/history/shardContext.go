@@ -619,7 +619,7 @@ func (s *shardContextImpl) allocateTimerIDsLocked(timerTasks []persistence.Task)
 			// This is not a common scenario, the shard can move and new host might have a time SKU.
 			// We generate a new timer ID that is above the ack level with an offset.
 			s.logger.Warnf("%v: New timer generated is less than ack level. timestamp: %v, ackLevel: %v",
-				time.Now(), ts, s.shardInfo.TimerAckLevel)
+				common.NewRealTimeSource().Now(), ts, s.shardInfo.TimerAckLevel)
 			newTimestamp := s.shardInfo.TimerAckLevel
 			persistence.SetVisibilityTSFrom(task, newTimestamp.Add(time.Second))
 		}
@@ -658,7 +658,7 @@ func (s *shardContextImpl) GetCurrentTime(cluster string) time.Time {
 	if cluster != s.GetService().GetClusterMetadata().GetCurrentClusterName() {
 		return s.standbyClusterCurrentTime[cluster]
 	}
-	return time.Now()
+	return common.NewRealTimeSource().Now()
 }
 
 // TODO: This method has too many parameters.  Clean it up.  Maybe create a struct to pass in as parameter.

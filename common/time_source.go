@@ -47,7 +47,7 @@ func NewRealTimeSource() *RealTimeSource {
 
 // Now return the real current time
 func (ts *RealTimeSource) Now() time.Time {
-	return time.Now()
+	return time.Now().UTC()
 }
 
 // NewFakeTimeSource returns a time source that servers
@@ -62,6 +62,7 @@ func (ts *FakeTimeSource) Now() time.Time {
 }
 
 // Update update the fake current time
-func (ts *FakeTimeSource) Update(now time.Time) {
-	ts.now = now
+func (ts *FakeTimeSource) Update(now time.Time) *FakeTimeSource {
+	ts.now = now.UTC()
+	return ts
 }

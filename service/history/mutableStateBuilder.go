@@ -122,6 +122,7 @@ type (
 		GetExecutionInfo() *persistence.WorkflowExecutionInfo
 		GetHistoryBuilder() *historyBuilder
 		GetHistoryEvent(serializedEvent []byte) (*workflow.HistoryEvent, bool)
+		GetInFlightDecisionTask() (*decisionInfo, bool)
 		GetLastFirstEventID() int64
 		GetLastUpdatedTimestamp() int64
 		GetLastWriteVersion() int64
@@ -162,7 +163,7 @@ type (
 		ReplicateChildWorkflowExecutionTimedOutEvent(*workflow.HistoryEvent)
 		ReplicateDecisionTaskCompletedEvent(int64, int64)
 		ReplicateDecisionTaskFailedEvent(int64, int64)
-		ReplicateDecisionTaskScheduledEvent(int64, int64, time.Time, string, int32) *decisionInfo
+		ReplicateDecisionTaskScheduledEvent(int64, int64, string, int32) *decisionInfo
 		ReplicateDecisionTaskStartedEvent(*decisionInfo, int64, int64, int64, string, int64) *decisionInfo
 		ReplicateDecisionTaskTimedOutEvent(int64, int64)
 		ReplicateExternalWorkflowExecutionCancelRequested(*workflow.HistoryEvent)
@@ -260,15 +261,14 @@ type (
 
 	// TODO: This should be part of persistence layer
 	decisionInfo struct {
-		Version           int64
-		ScheduleID        int64
-		ScheduleTimestamp time.Time
-		StartedID         int64
-		RequestID         string
-		DecisionTimeout   int32
-		TaskList          string // This is only needed to communicate tasklist used after AddDecisionTaskScheduledEvent
-		Attempt           int64
-		Timestamp         int64
+		Version         int64
+		ScheduleID      int64
+		StartedID       int64
+		RequestID       string
+		DecisionTimeout int32
+		TaskList        string // This is only needed to communicate tasklist used after AddDecisionTaskScheduledEvent
+		Attempt         int64
+		Timestamp       int64
 	}
 )
 
@@ -827,7 +827,7 @@ func (e *mutableStateBuilder) IsStickyTaskListEnabled() bool {
 }
 
 func (e *mutableStateBuilder) CreateNewHistoryEvent(eventType workflow.EventType) *workflow.HistoryEvent {
-	return e.CreateNewHistoryEventWithTimestamp(eventType, time.Now().UnixNano())
+	return e.CreateNewHistoryEventWithTimestamp(eventType, common.NewRealTimeSource().Now().UnixNano())
 }
 
 func (e *mutableStateBuilder) CreateNewHistoryEventWithTimestamp(eventType workflow.EventType,
@@ -1057,7 +1057,7 @@ func (e *mutableStateBuilder) HasParentExecution() bool {
 func (e *mutableStateBuilder) UpdateActivityProgress(ai *persistence.ActivityInfo,
 	request *workflow.RecordActivityTaskHeartbeatRequest) {
 	ai.Details = request.Details
-	ai.LastHeartBeatUpdatedTime = time.Now()
+	ai.LastHeartBeatUpdatedTime = common.NewRealTimeSource().Now()
 	e.updateActivityInfos[ai] = struct{}{}
 }
 
@@ -1111,18 +1111,21 @@ func (e *mutableStateBuilder) DeleteUserTimer(timerID string) {
 	e.deleteTimerInfos[timerID] = struct{}{}
 }
 
+func (e *mutableStateBuilder) getDecisionInfo() *decisionInfo {
+	return &decisionInfo{
+		Version:         e.executionInfo.DecisionVersion,
+		ScheduleID:      e.executionInfo.DecisionScheduleID,
+		StartedID:       e.executionInfo.DecisionStartedID,
+		RequestID:       e.executionInfo.DecisionRequestID,
+		DecisionTimeout: e.executionInfo.DecisionTimeout,
+		Attempt:         e.executionInfo.DecisionAttempt,
+		Timestamp:       e.executionInfo.DecisionTimestamp,
+	}
+}
+
 // GetPendingDecision returns details about the in-progress decision task
 func (e *mutableStateBuilder) GetPendingDecision(scheduleEventID int64) (*decisionInfo, bool) {
-	di := &decisionInfo{
-		Version:           e.executionInfo.DecisionVersion,
-		ScheduleID:        e.executionInfo.DecisionScheduleID,
-		ScheduleTimestamp: e.executionInfo.DecisionScheduleTimestamp,
-		StartedID:         e.executionInfo.DecisionStartedID,
-		RequestID:         e.executionInfo.DecisionRequestID,
-		DecisionTimeout:   e.executionInfo.DecisionTimeout,
-		Attempt:           e.executionInfo.DecisionAttempt,
-		Timestamp:         e.executionInfo.DecisionTimestamp,
-	}
+	di := e.getDecisionInfo()
 	if scheduleEventID == di.ScheduleID {
 		return di, true
 	}
@@ -1147,6 +1150,16 @@ func (e *mutableStateBuilder) HasPendingDecisionTask() bool {
 
 func (e *mutableStateBuilder) HasInFlightDecisionTask() bool {
 	return e.executionInfo.DecisionStartedID > 0
+}
+
+func (e *mutableStateBuilder) GetInFlightDecisionTask() (*decisionInfo, bool) {
+	if e.executionInfo.DecisionScheduleID == common.EmptyEventID ||
+		e.executionInfo.DecisionStartedID == common.EmptyEventID {
+		return nil, false
+	}
+
+	di := e.getDecisionInfo()
+	return di, true
 }
 
 func (e *mutableStateBuilder) HasBufferedEvents() bool {
@@ -1188,14 +1201,13 @@ func (e *mutableStateBuilder) UpdateDecision(di *decisionInfo) {
 // DeleteDecision deletes a decision task.
 func (e *mutableStateBuilder) DeleteDecision() {
 	emptyDecisionInfo := &decisionInfo{
-		Version:           common.EmptyVersion,
-		ScheduleID:        common.EmptyEventID,
-		ScheduleTimestamp: time.Time{},
-		StartedID:         common.EmptyEventID,
-		RequestID:         emptyUUID,
-		DecisionTimeout:   0,
-		Attempt:           0,
-		Timestamp:         0,
+		Version:         common.EmptyVersion,
+		ScheduleID:      common.EmptyEventID,
+		StartedID:       common.EmptyEventID,
+		RequestID:       emptyUUID,
+		DecisionTimeout: 0,
+		Attempt:         0,
+		Timestamp:       0,
 	}
 	e.UpdateDecision(emptyDecisionInfo)
 }
@@ -1205,13 +1217,12 @@ func (e *mutableStateBuilder) FailDecision() {
 	e.ClearStickyness()
 
 	failDecisionInfo := &decisionInfo{
-		Version:           common.EmptyVersion,
-		ScheduleID:        common.EmptyEventID,
-		ScheduleTimestamp: time.Time{},
-		StartedID:         common.EmptyEventID,
-		RequestID:         emptyUUID,
-		DecisionTimeout:   0,
-		Attempt:           e.executionInfo.DecisionAttempt + 1,
+		Version:         common.EmptyVersion,
+		ScheduleID:      common.EmptyEventID,
+		StartedID:       common.EmptyEventID,
+		RequestID:       emptyUUID,
+		DecisionTimeout: 0,
+		Attempt:         e.executionInfo.DecisionAttempt + 1,
 	}
 	e.UpdateDecision(failDecisionInfo)
 }
@@ -1408,29 +1419,26 @@ func (e *mutableStateBuilder) AddDecisionTaskScheduledEvent() *decisionInfo {
 
 	var newDecisionEvent *workflow.HistoryEvent
 	scheduleID := e.GetNextEventID() // we will generate the schedule event later for repeatedly failing decisions
-	scheduleTimestamp := common.NewRealTimeSource().Now()
 	// Avoid creating new history events when decisions are continuously failing
 	if e.executionInfo.DecisionAttempt == 0 {
 		newDecisionEvent = e.hBuilder.AddDecisionTaskScheduledEvent(taskList, startToCloseTimeoutSeconds,
 			e.executionInfo.DecisionAttempt)
 		scheduleID = newDecisionEvent.GetEventId()
-		scheduleTimestamp = time.Unix(0, newDecisionEvent.GetTimestamp())
 	}
 
-	return e.ReplicateDecisionTaskScheduledEvent(e.GetCurrentVersion(), scheduleID, scheduleTimestamp, taskList, startToCloseTimeoutSeconds)
+	return e.ReplicateDecisionTaskScheduledEvent(e.GetCurrentVersion(), scheduleID, taskList, startToCloseTimeoutSeconds)
 }
 
-func (e *mutableStateBuilder) ReplicateDecisionTaskScheduledEvent(version, scheduleID int64, scheduleTimestamp time.Time, taskList string,
+func (e *mutableStateBuilder) ReplicateDecisionTaskScheduledEvent(version, scheduleID int64, taskList string,
 	startToCloseTimeoutSeconds int32) *decisionInfo {
 	di := &decisionInfo{
-		Version:           version,
-		ScheduleID:        scheduleID,
-		ScheduleTimestamp: scheduleTimestamp,
-		StartedID:         common.EmptyEventID,
-		RequestID:         emptyUUID,
-		DecisionTimeout:   startToCloseTimeoutSeconds,
-		TaskList:          taskList,
-		Attempt:           e.executionInfo.DecisionAttempt,
+		Version:         version,
+		ScheduleID:      scheduleID,
+		StartedID:       common.EmptyEventID,
+		RequestID:       emptyUUID,
+		DecisionTimeout: startToCloseTimeoutSeconds,
+		TaskList:        taskList,
+		Attempt:         e.executionInfo.DecisionAttempt,
 	}
 
 	e.UpdateDecision(di)
@@ -1451,7 +1459,7 @@ func (e *mutableStateBuilder) AddDecisionTaskStartedEvent(scheduleEventID int64,
 	scheduleID := di.ScheduleID
 	startedID := scheduleID + 1
 	tasklist := request.TaskList.GetName()
-	timestamp := time.Now().UnixNano()
+	timestamp := common.NewRealTimeSource().Now().UnixNano()
 	// First check to see if new events came since transient decision was scheduled
 	if di.Attempt > 0 && di.ScheduleID != e.GetNextEventID() {
 		// Also create a new DecisionTaskScheduledEvent since new events came in when it was scheduled
@@ -1483,14 +1491,13 @@ func (e *mutableStateBuilder) ReplicateDecisionTaskStartedEvent(di *decisionInfo
 	e.executionInfo.State = persistence.WorkflowStateRunning
 	// Update mutable decision state
 	di = &decisionInfo{
-		Version:           version,
-		ScheduleID:        scheduleID,
-		ScheduleTimestamp: di.ScheduleTimestamp,
-		StartedID:         startedID,
-		RequestID:         requestID,
-		DecisionTimeout:   di.DecisionTimeout,
-		Attempt:           di.Attempt,
-		Timestamp:         timestamp,
+		Version:         version,
+		ScheduleID:      scheduleID,
+		StartedID:       startedID,
+		RequestID:       requestID,
+		DecisionTimeout: di.DecisionTimeout,
+		Attempt:         di.Attempt,
+		Timestamp:       timestamp,
 	}
 
 	e.UpdateDecision(di)
@@ -1706,7 +1713,7 @@ func (e *mutableStateBuilder) AddActivityTaskStartedEvent(ai *persistence.Activi
 	// instead update mutable state and will record started event when activity task is closed
 	ai.StartedID = common.TransientEventID
 	ai.RequestID = requestID
-	ai.StartedTime = time.Now()
+	ai.StartedTime = common.NewRealTimeSource().Now()
 	ai.StartedIdentity = identity
 	e.UpdateActivity(ai)
 	return nil
@@ -1983,10 +1990,9 @@ func (e *mutableStateBuilder) ReplicateRequestCancelExternalWorkflowExecutionIni
 	// TODO: Evaluate if we need cancelRequestID also part of history event
 	initiatedEventID := event.GetEventId()
 	rci := &persistence.RequestCancelInfo{
-		Version:            event.GetVersion(),
-		InitiatedID:        initiatedEventID,
-		InitiatedTimestamp: time.Unix(0, event.GetTimestamp()),
-		CancelRequestID:    cancelRequestID,
+		Version:         event.GetVersion(),
+		InitiatedID:     initiatedEventID,
+		CancelRequestID: cancelRequestID,
 	}
 
 	e.pendingRequestCancelInfoIDs[initiatedEventID] = rci
@@ -2058,13 +2064,12 @@ func (e *mutableStateBuilder) ReplicateSignalExternalWorkflowExecutionInitiatedE
 	initiatedEventID := event.GetEventId()
 	attributes := event.SignalExternalWorkflowExecutionInitiatedEventAttributes
 	si := &persistence.SignalInfo{
-		Version:            event.GetVersion(),
-		InitiatedID:        initiatedEventID,
-		InitiatedTimestamp: time.Unix(0, event.GetTimestamp()),
-		SignalRequestID:    signalRequestID,
-		SignalName:         attributes.GetSignalName(),
-		Input:              attributes.Input,
-		Control:            attributes.Control,
+		Version:         event.GetVersion(),
+		InitiatedID:     initiatedEventID,
+		SignalRequestID: signalRequestID,
+		SignalName:      attributes.GetSignalName(),
+		Input:           attributes.Input,
+		Control:         attributes.Control,
 	}
 
 	e.pendingSignalInfoIDs[initiatedEventID] = si
@@ -2333,6 +2338,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(sour
 		ScheduleID: di.ScheduleID,
 	}}
 	setTaskVersion(newStateBuilder.GetCurrentVersion(), newTransferTasks, nil)
+	setTransferTaskTimestamp(common.NewFakeTimeSource().Update(time.Unix(0, startedEvent.GetTimestamp())).Now(), newTransferTasks)
 
 	e.continueAsNew = &persistence.CreateWorkflowExecutionRequest{
 		// NOTE: there is no replication task for the start / decision scheduled event,
@@ -2353,7 +2359,6 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(sour
 		TransferTasks:               newTransferTasks,
 		DecisionVersion:             di.Version,
 		DecisionScheduleID:          di.ScheduleID,
-		DecisionScheduleTimestamp:   di.ScheduleTimestamp,
 		DecisionStartedID:           di.StartedID,
 		DecisionStartToCloseTimeout: di.DecisionTimeout,
 		ContinueAsNew:               true,
@@ -2383,12 +2388,11 @@ func (e *mutableStateBuilder) ReplicateStartChildWorkflowExecutionInitiatedEvent
 
 	initiatedEventID := event.GetEventId()
 	ci := &persistence.ChildExecutionInfo{
-		Version:            event.GetVersion(),
-		InitiatedID:        initiatedEventID,
-		InitiatedTimestamp: time.Unix(0, event.GetTimestamp()),
-		InitiatedEvent:     initiatedEvent,
-		StartedID:          common.EmptyEventID,
-		CreateRequestID:    createRequestID,
+		Version:         event.GetVersion(),
+		InitiatedID:     initiatedEventID,
+		InitiatedEvent:  initiatedEvent,
+		StartedID:       common.EmptyEventID,
+		CreateRequestID: createRequestID,
 	}
 
 	e.pendingChildExecutionInfoIDs[initiatedEventID] = ci

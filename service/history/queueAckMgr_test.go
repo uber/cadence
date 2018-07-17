@@ -30,6 +30,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/messaging"
@@ -123,8 +124,8 @@ func (s *queueAckMgrSuite) SetupTest() {
 			ShardID: 0,
 			RangeID: 1,
 			ClusterTimerAckLevel: map[string]time.Time{
-				cluster.TestCurrentClusterName:     time.Now().Add(-8 * time.Second),
-				cluster.TestAlternativeClusterName: time.Now().Add(-10 * time.Second),
+				cluster.TestCurrentClusterName:     common.NewRealTimeSource().Now().Add(-8 * time.Second),
+				cluster.TestAlternativeClusterName: common.NewRealTimeSource().Now().Add(-10 * time.Second),
 			},
 		}),
 		transferSequenceNumber:    1,
@@ -332,8 +333,8 @@ func (s *queueFailoverAckMgrSuite) SetupTest() {
 			ShardID: 0,
 			RangeID: 1,
 			ClusterTimerAckLevel: map[string]time.Time{
-				cluster.TestCurrentClusterName:     time.Now(),
-				cluster.TestAlternativeClusterName: time.Now().Add(-10 * time.Second),
+				cluster.TestCurrentClusterName:     common.NewRealTimeSource().Now(),
+				cluster.TestAlternativeClusterName: common.NewRealTimeSource().Now().Add(-10 * time.Second),
 			},
 		}),
 		transferSequenceNumber:    1,

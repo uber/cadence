@@ -155,6 +155,11 @@ func (t *transferQueueProcessorImpl) FailoverDomain(domainID string) {
 		t.shard, t.historyService, t.visibilityMgr, t.matchingClient, t.historyClient,
 		domainID, standbyClusterName, minLevel, maxLevel, t.logger,
 	)
+
+	for _, standbyTaskProcessor := range t.standbyTaskProcessors {
+		standbyTaskProcessor.retryTasks()
+	}
+
 	failoverTaskProcessor.Start()
 }
 

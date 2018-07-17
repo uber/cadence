@@ -23,6 +23,8 @@ package history
 import (
 	"sync"
 	"time"
+
+	"github.com/uber/cadence/common"
 )
 
 type (
@@ -131,7 +133,7 @@ func (timerGate *LocalTimerGateImpl) FireAfter(now time.Time) bool {
 // success means timer is idle or timer is set with a sooner time to fire
 func (timerGate *LocalTimerGateImpl) Update(nextTime time.Time) bool {
 	// NOTE: negative duration will make the timer fire immediately
-	now := time.Now()
+	now := common.NewRealTimeSource().Now()
 
 	if timerGate.timer.Stop() && timerGate.nextWakeupTime.Before(nextTime) {
 		// this means the timer, before stopped, is active && next wake up time do not have to be updated

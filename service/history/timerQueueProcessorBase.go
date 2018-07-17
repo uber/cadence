@@ -313,7 +313,7 @@ func (t *timerQueueProcessorBase) internalProcessor() error {
 				t.config.TimerProcessorMaxPollInterval(),
 				t.config.TimerProcessorMaxPollIntervalJitterCoefficient(),
 			))
-			if t.lastPollTime.Add(t.config.TimerProcessorMaxPollInterval()).Before(time.Now()) {
+			if t.lastPollTime.Add(t.config.TimerProcessorMaxPollInterval()).Before(common.NewRealTimeSource().Now()) {
 				lookAheadTimer, err := t.readAndFanoutTimerTasks()
 				if err != nil {
 					return err
@@ -342,7 +342,7 @@ func (t *timerQueueProcessorBase) readAndFanoutTimerTasks() (*persistence.TimerT
 		return nil, nil
 	}
 
-	t.lastPollTime = time.Now()
+	t.lastPollTime = common.NewRealTimeSource().Now()
 	timerTasks, lookAheadTask, moreTasks, err := t.timerQueueAckMgr.readTimerTasks()
 	if err != nil {
 		return nil, err
@@ -374,12 +374,12 @@ func (t *timerQueueProcessorBase) processWithRetry(notificationChan <-chan struc
 
 	var logger bark.Logger
 	var err error
-	startTime := time.Now()
+	startTime := common.NewRealTimeSource().Now()
 
 	attempt := 0
 	op := func() error {
 		err = t.timerProcessor.process(task)
-		if err != nil && !IsTaskRetryError(err) {
+		if err != nil && err != ErrTaskRetry {
 			attempt++
 			logger = t.initializeLoggerForTask(task, logger)
 			logging.LogTaskProcessingFailedEvent(logger, err)
@@ -400,15 +400,15 @@ ProcessRetryLoop:
 			}
 
 			err = backoff.Retry(op, t.retryPolicy, func(err error) bool {
-				return !IsTaskRetryError(err)
+				return err != ErrTaskRetry
 			})
 
 			if err != nil {
-				if IsTaskRetryError(err) {
+				if err == ErrTaskRetry {
 					t.metricsClient.IncCounter(t.scope, metrics.HistoryTaskStandbyRetryCounter)
 					// the timer has already been delayed, so just wait on the notificationChan
 					<-notificationChan
-				} else if _, ok := err.(*workflow.DomainNotActiveError); ok && time.Now().Sub(startTime) > cache.DomainCacheRefreshInterval {
+				} else if _, ok := err.(*workflow.DomainNotActiveError); ok && common.NewRealTimeSource().Now().Sub(startTime) > cache.DomainCacheRefreshInterval {
 					t.metricsClient.IncCounter(t.scope, metrics.HistoryTaskNotActiveCounter)
 					return
 				}

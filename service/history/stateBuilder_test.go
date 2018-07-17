@@ -465,14 +465,13 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 		continueAsNewEvent,
 		newRunStartedEvent,
 		&decisionInfo{
-			Version:           newRunDecisionEvent.GetVersion(),
-			ScheduleID:        newRunDecisionEvent.GetEventId(),
-			ScheduleTimestamp: time.Unix(0, newRunDecisionEvent.GetTimestamp()),
-			StartedID:         common.EmptyEventID,
-			RequestID:         emptyUUID,
-			DecisionTimeout:   decisionTimeoutSecond,
-			TaskList:          tasklist,
-			Attempt:           0,
+			Version:         newRunDecisionEvent.GetVersion(),
+			ScheduleID:      newRunDecisionEvent.GetEventId(),
+			StartedID:       common.EmptyEventID,
+			RequestID:       emptyUUID,
+			DecisionTimeout: decisionTimeoutSecond,
+			TaskList:        tasklist,
+			Attempt:         0,
 		},
 		mock.Anything,
 	).Once()
@@ -495,7 +494,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 	expectedNewRunStateBuilder.ReplicateDecisionTaskScheduledEvent(
 		newRunDecisionEvent.GetVersion(),
 		newRunDecisionEvent.GetEventId(),
-		time.Unix(0, newRunDecisionEvent.GetTimestamp()),
 		tasklist,
 		decisionTimeoutSecond,
 	)
@@ -1293,10 +1291,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskScheduled() {
 		TaskList: tasklist,
 	}
 	s.mockMutableState.On("GetExecutionInfo").Return(executionInfo)
-	s.mockMutableState.On("ReplicateDecisionTaskScheduledEvent",
-		event.GetVersion(),
-		event.GetEventId(),
-		time.Unix(0, event.GetTimestamp()), tasklist, timeoutSecond).Return(di).Once()
+	s.mockMutableState.On("ReplicateDecisionTaskScheduledEvent", event.GetVersion(), event.GetEventId(), tasklist, timeoutSecond).Return(di).Once()
 	s.mockMutableState.On("UpdateDecision", di).Once()
 	s.mockUpdateVersion(event)
 

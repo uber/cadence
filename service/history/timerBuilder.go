@@ -175,7 +175,7 @@ func (tb *timerBuilder) AddActivityTimeoutTask(scheduleID int64,
 
 	timeOutTask := tb.createActivityTimeoutTask(fireTimeout, timeoutType, scheduleID, baseTime)
 	tb.logger.Debugf("%s: Adding Activity Timeout: with timeout: %v sec, TimeoutType: %v, EventID: %v",
-		time.Now(), fireTimeout, timeoutType.String(), timeOutTask.EventID)
+		common.NewRealTimeSource().Now(), fireTimeout, timeoutType.String(), timeOutTask.EventID)
 	return timeOutTask
 }
 
@@ -249,7 +249,7 @@ func (tb *timerBuilder) GetActivityTimerTaskIfNeeded(msBuilder mutableState) per
 		msBuilder.UpdateActivity(ai)
 
 		tb.logger.Debugf("%s: Adding Activity Timeout: with timeout: %v sec, ExpiryTime: %s, TimeoutType: %v, EventID: %v",
-			time.Now(), td.TimeoutSec, at.VisibilityTimestamp, td.TimeoutType.String(), at.EventID)
+			common.NewRealTimeSource().Now(), td.TimeoutSec, at.VisibilityTimestamp, td.TimeoutType.String(), at.EventID)
 	}
 	return timerTask
 }

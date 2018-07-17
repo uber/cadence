@@ -143,6 +143,10 @@ func (t *timerQueueProcessorImpl) FailoverDomain(domainID string) {
 	failoverTimerProcessor := newTimerQueueFailoverProcessor(t.shard, t.historyService, domainID,
 		standbyClusterName, minLevel, maxLevel, t.matchingClient, t.logger)
 
+	for _, standbyTimerProcessor := range t.standbyTimerProcessors {
+		standbyTimerProcessor.retryTasks()
+	}
+
 	failoverTimerProcessor.Start()
 }
 
