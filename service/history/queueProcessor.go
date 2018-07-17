@@ -170,7 +170,7 @@ processorPumpLoop:
 			p.processBatch(tasksCh)
 		case <-pollTimer.C:
 			pollTimer.Reset(jitter.JitDuration(p.options.MaxPollInterval(), p.options.MaxPollIntervalJitterCoefficient()))
-			if p.lastPollTime.Add(p.options.MaxPollInterval()).Before(common.NewRealTimeSource().Now()) {
+			if p.lastPollTime.Add(p.options.MaxPollInterval()).Before(time.Now()) {
 				p.processBatch(tasksCh)
 			}
 		case <-updateAckTimer.C:
@@ -196,7 +196,7 @@ func (p *queueProcessorBase) processBatch(tasksCh chan<- queueTaskInfo) {
 		return
 	}
 
-	p.lastPollTime = common.NewRealTimeSource().Now()
+	p.lastPollTime = time.Now()
 	tasks, more, err := p.ackMgr.readQueueTasks()
 
 	if err != nil {
@@ -251,7 +251,7 @@ func (p *queueProcessorBase) processWithRetry(notificationChan <-chan struct{}, 
 
 	var logger bark.Logger
 	var err error
-	startTime := common.NewRealTimeSource().Now()
+	startTime := time.Now()
 
 	retryCount := 0
 	op := func() error {
@@ -283,14 +283,8 @@ ProcessRetryLoop:
 			if err != nil {
 				if err == ErrTaskRetry {
 					p.metricsClient.IncCounter(p.options.MetricScope, metrics.HistoryTaskStandbyRetryCounter)
-					timestamp := task.GetVisibilityTimestamp()
-					for {
-						<-notificationChan
-						if p.shard.GetCurrentTime(p.clusterName).After(timestamp) {
-							continue ProcessRetryLoop
-						}
-					}
-				} else if _, ok := err.(*workflow.DomainNotActiveError); ok && common.NewRealTimeSource().Now().Sub(startTime) > cache.DomainCacheRefreshInterval {
+					<-notificationChan
+				} else if _, ok := err.(*workflow.DomainNotActiveError); ok && time.Now().Sub(startTime) > cache.DomainCacheRefreshInterval {
 					p.metricsClient.IncCounter(p.options.MetricScope, metrics.HistoryTaskNotActiveCounter)
 					return
 				}

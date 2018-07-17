@@ -548,8 +548,12 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 	}
 	transferTasks := sBuilder.getTransferTasks()
 	timerTasks := sBuilder.getTimerTasks()
-	setTaskVersion(msBuilder.GetCurrentVersion(), transferTasks, timerTasks)
-	setTransferTaskTimestamp(common.NewFakeTimeSource().Update(time.Unix(0, lastEvent.GetTimestamp())).Now(), transferTasks)
+	setTaskInfo(
+		msBuilder.GetCurrentVersion(),
+		common.NewFakeTimeSource().Update(time.Unix(0, lastEvent.GetTimestamp())).Now(),
+		transferTasks,
+		timerTasks,
+	)
 
 	createWorkflow := func(isBrandNew bool, prevRunID string) error {
 		_, err = r.shard.CreateWorkflowExecution(&persistence.CreateWorkflowExecutionRequest{

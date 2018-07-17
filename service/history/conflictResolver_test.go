@@ -23,6 +23,7 @@ package history
 import (
 	"os"
 	"testing"
+	"time"
 
 	"github.com/pborman/uuid"
 	log "github.com/sirupsen/logrus"
@@ -185,7 +186,7 @@ func (s *conflictResolverSuite) TestGetHistory() {
 
 func (s *conflictResolverSuite) TestReset() {
 	sourceCluster := "some random source cluster"
-	startTime := common.NewRealTimeSource().Now()
+	startTime := time.Now()
 	domainID := s.mockContext.domainID
 	execution := s.mockContext.workflowExecution
 	nextEventID := int64(2)

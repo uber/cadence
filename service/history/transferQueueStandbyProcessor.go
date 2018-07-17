@@ -332,7 +332,7 @@ func (t *transferQueueStandbyProcessorImpl) processTransfer(processTaskIfClosed 
 		return err
 	}
 	defer func() {
-		if err == ErrTaskRetry {
+		if retError == ErrTaskRetry {
 			release(nil)
 		} else {
 			release(retError)

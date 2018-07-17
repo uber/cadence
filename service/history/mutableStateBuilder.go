@@ -827,7 +827,7 @@ func (e *mutableStateBuilder) IsStickyTaskListEnabled() bool {
 }
 
 func (e *mutableStateBuilder) CreateNewHistoryEvent(eventType workflow.EventType) *workflow.HistoryEvent {
-	return e.CreateNewHistoryEventWithTimestamp(eventType, common.NewRealTimeSource().Now().UnixNano())
+	return e.CreateNewHistoryEventWithTimestamp(eventType, time.Now().UnixNano())
 }
 
 func (e *mutableStateBuilder) CreateNewHistoryEventWithTimestamp(eventType workflow.EventType,
@@ -1057,7 +1057,7 @@ func (e *mutableStateBuilder) HasParentExecution() bool {
 func (e *mutableStateBuilder) UpdateActivityProgress(ai *persistence.ActivityInfo,
 	request *workflow.RecordActivityTaskHeartbeatRequest) {
 	ai.Details = request.Details
-	ai.LastHeartBeatUpdatedTime = common.NewRealTimeSource().Now()
+	ai.LastHeartBeatUpdatedTime = time.Now()
 	e.updateActivityInfos[ai] = struct{}{}
 }
 
@@ -1459,7 +1459,7 @@ func (e *mutableStateBuilder) AddDecisionTaskStartedEvent(scheduleEventID int64,
 	scheduleID := di.ScheduleID
 	startedID := scheduleID + 1
 	tasklist := request.TaskList.GetName()
-	timestamp := common.NewRealTimeSource().Now().UnixNano()
+	timestamp := time.Now().UnixNano()
 	// First check to see if new events came since transient decision was scheduled
 	if di.Attempt > 0 && di.ScheduleID != e.GetNextEventID() {
 		// Also create a new DecisionTaskScheduledEvent since new events came in when it was scheduled
@@ -1713,7 +1713,7 @@ func (e *mutableStateBuilder) AddActivityTaskStartedEvent(ai *persistence.Activi
 	// instead update mutable state and will record started event when activity task is closed
 	ai.StartedID = common.TransientEventID
 	ai.RequestID = requestID
-	ai.StartedTime = common.NewRealTimeSource().Now()
+	ai.StartedTime = time.Now()
 	ai.StartedIdentity = identity
 	e.UpdateActivity(ai)
 	return nil
@@ -2337,8 +2337,12 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(sour
 		TaskList:   newExecutionInfo.TaskList,
 		ScheduleID: di.ScheduleID,
 	}}
-	setTaskVersion(newStateBuilder.GetCurrentVersion(), newTransferTasks, nil)
-	setTransferTaskTimestamp(common.NewFakeTimeSource().Update(time.Unix(0, startedEvent.GetTimestamp())).Now(), newTransferTasks)
+	setTaskInfo(
+		newStateBuilder.GetCurrentVersion(),
+		common.NewFakeTimeSource().Update(time.Unix(0, startedEvent.GetTimestamp())).Now(),
+		newTransferTasks,
+		nil,
+	)
 
 	e.continueAsNew = &persistence.CreateWorkflowExecutionRequest{
 		// NOTE: there is no replication task for the start / decision scheduled event,

@@ -177,7 +177,7 @@ func (notifier *historyEventNotifierImpl) dispatchHistoryEventNotification(event
 
 func (notifier *historyEventNotifierImpl) enqueueHistoryEventNotification(event *historyEventNotification) {
 	// set the timestamp just before enqueuing the event
-	event.timestamp = common.NewRealTimeSource().Now()
+	event.timestamp = time.Now()
 	select {
 	case notifier.eventsChan <- event:
 	default:

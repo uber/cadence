@@ -359,7 +359,7 @@ Update_History_Loop:
 						createNewTimer = true
 
 						t.logger.Debugf("Ignore ActivityTimeout (%v) as retry is needed. New attempt: %v, retry backoff duration: %v.",
-							timeoutType, ai.Attempt, retryTask.(*persistence.RetryTimerTask).VisibilityTimestamp.Sub(common.NewRealTimeSource().Now()))
+							timeoutType, ai.Attempt, retryTask.(*persistence.RetryTimerTask).VisibilityTimestamp.Sub(time.Now()))
 
 						continue
 					}
@@ -421,7 +421,7 @@ Update_History_Loop:
 					createNewTimer = true
 
 					t.logger.Debugf("%s: Adding Activity Timeout: with timeout: %v sec, ExpiryTime: %s, TimeoutType: %v, EventID: %v",
-						common.NewRealTimeSource().Now(), td.TimeoutSec, at.VisibilityTimestamp, td.TimeoutType.String(), at.EventID)
+						time.Now(), td.TimeoutSec, at.VisibilityTimestamp, td.TimeoutType.String(), at.EventID)
 				}
 
 				// Done!

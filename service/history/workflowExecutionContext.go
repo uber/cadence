@@ -187,7 +187,7 @@ func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persi
 			c.msBuilder.GetExecutionInfo().LastFirstEventID, c.msBuilder.GetExecutionInfo().NextEventID)
 	}
 
-	now := common.NewRealTimeSource().Now()
+	now := time.Now().UTC()
 	return c.updateHelper(nil, transferTasks, timerTasks, c.createReplicationTask, "", currentVersion, transactionID, now)
 }
 
@@ -267,8 +267,7 @@ func (c *workflowExecutionContext) updateHelper(builder *historyBuilder, transfe
 		replicationTasks = append(replicationTasks, c.msBuilder.CreateReplicationTask())
 	}
 
-	setTaskVersion(c.msBuilder.GetCurrentVersion(), transferTasks, timerTasks)
-	setTransferTaskTimestamp(now, transferTasks)
+	setTaskInfo(c.msBuilder.GetCurrentVersion(), now, transferTasks, timerTasks)
 
 	if err1 := c.updateWorkflowExecutionWithRetry(&persistence.UpdateWorkflowExecutionRequest{
 		ExecutionInfo:                 executionInfo,
@@ -310,7 +309,7 @@ func (c *workflowExecutionContext) updateHelper(builder *historyBuilder, transfe
 
 	// Update went through so update the condition for new updates
 	c.updateCondition = c.msBuilder.GetNextEventID()
-	c.msBuilder.GetExecutionInfo().LastUpdatedTimestamp = common.NewRealTimeSource().Now()
+	c.msBuilder.GetExecutionInfo().LastUpdatedTimestamp = time.Now()
 
 	// for any change in the workflow, send a event
 	c.shard.NotifyNewHistoryEvent(newHistoryEventNotification(
