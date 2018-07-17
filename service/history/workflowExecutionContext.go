@@ -430,3 +430,29 @@ func (c *workflowExecutionContext) updateWorkflowExecutionWithRetry(
 func (c *workflowExecutionContext) clear() {
 	c.msBuilder = nil
 }
+
+func (c *workflowExecutionContext) scheduleNewDecision(transferTasks []persistence.Task,
+	timerTasks []persistence.Task) ([]persistence.Task, []persistence.Task, error) {
+	msBuilder, err := c.loadWorkflowExecution()
+	if err != nil {
+		return transferTasks, timerTasks, err
+	}
+
+	executionInfo := msBuilder.GetExecutionInfo()
+	if !msBuilder.HasPendingDecisionTask() {
+		di := msBuilder.AddDecisionTaskScheduledEvent()
+		transferTasks = append(transferTasks, &persistence.DecisionTask{
+			DomainID:   executionInfo.DomainID,
+			TaskList:   di.TaskList,
+			ScheduleID: di.ScheduleID,
+		})
+		if msBuilder.IsStickyTaskListEnabled() {
+			tBuilder := newTimerBuilder(c.shard.GetConfig(), c.logger, common.NewRealTimeSource())
+			stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(di.ScheduleID, di.Attempt,
+				executionInfo.StickyScheduleToStartTimeout)
+			timerTasks = append(timerTasks, stickyTaskTimeoutTimer)
+		}
+	}
+
+	return transferTasks, timerTasks, nil
+}
