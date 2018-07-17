@@ -224,8 +224,9 @@ func (c *workflowExecutionContext) updateHelper(builder *historyBuilder, transfe
 	}
 	executionInfo := c.msBuilder.GetExecutionInfo()
 
+	hasNewHistoryEvents := builder.history != nil && len(builder.history) > 0
 	// Some operations only update the mutable state. For example RecordActivityTaskHeartbeat.
-	if builder.history != nil && len(builder.history) > 0 {
+	if hasNewHistoryEvents {
 		firstEvent := builder.GetFirstEvent()
 		// Transient decision events need to be written as a separate batch
 		if builder.HasTransientEvents() {
@@ -260,7 +261,8 @@ func (c *workflowExecutionContext) updateHelper(builder *historyBuilder, transfe
 	}
 
 	var replicationTasks []persistence.Task
-	if createReplicationTask {
+	// Check if the update resulted in new history events before generating replication task
+	if hasNewHistoryEvents && createReplicationTask {
 		// Let's create a replication task as part of this update
 		replicationTasks = append(replicationTasks, c.msBuilder.CreateReplicationTask())
 	}
@@ -431,4 +433,35 @@ func (c *workflowExecutionContext) updateWorkflowExecutionWithRetry(
 
 func (c *workflowExecutionContext) clear() {
 	c.msBuilder = nil
+}
+
+// scheduleNewDecision is helper method which has the logic for scheduling new decision for a workflow execution.
+// This function takes in a slice of transferTasks and timerTasks already scheduled for the current transaction
+// and may append more tasks to it.  It also returns back the slice with new tasks appended to it.  It is expected
+// caller to assign returned slice to original passed in slices.  For this reason we return the original slices
+// even if the method fails due to an error on loading workflow execution.
+func (c *workflowExecutionContext) scheduleNewDecision(transferTasks []persistence.Task,
+	timerTasks []persistence.Task) ([]persistence.Task, []persistence.Task, error) {
+	msBuilder, err := c.loadWorkflowExecution()
+	if err != nil {
+		return transferTasks, timerTasks, err
+	}
+
+	executionInfo := msBuilder.GetExecutionInfo()
+	if !msBuilder.HasPendingDecisionTask() {
+		di := msBuilder.AddDecisionTaskScheduledEvent()
+		transferTasks = append(transferTasks, &persistence.DecisionTask{
+			DomainID:   executionInfo.DomainID,
+			TaskList:   di.TaskList,
+			ScheduleID: di.ScheduleID,
+		})
+		if msBuilder.IsStickyTaskListEnabled() {
+			tBuilder := newTimerBuilder(c.shard.GetConfig(), c.logger, common.NewRealTimeSource())
+			stickyTaskTimeoutTimer := tBuilder.AddScheduleToStartDecisionTimoutTask(di.ScheduleID, di.Attempt,
+				executionInfo.StickyScheduleToStartTimeout)
+			timerTasks = append(timerTasks, stickyTaskTimeoutTimer)
+		}
+	}
+
+	return transferTasks, timerTasks, nil
 }
