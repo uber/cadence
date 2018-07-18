@@ -6171,8 +6171,16 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 	})
 	s.Nil(err)
 
-	listResp, err = s.engine.ListOpenWorkflowExecutions(createContext(), listOpenRequest)
-	s.NoError(err)
+	waitForVisibilityInterval := 100 * time.Millisecond
+	time.Sleep(waitForVisibilityInterval)
+	for i := 0; i < 10; i++ { // retry
+		listResp, err = s.engine.ListOpenWorkflowExecutions(createContext(), listOpenRequest)
+		s.NoError(err)
+		if len(listResp.Executions) == 0 {
+			break
+		}
+		time.Sleep(waitForVisibilityInterval)
+	}
 	s.Equal(0, len(listResp.Executions))
 
 	listClosedRequest := &workflow.ListClosedWorkflowExecutionsRequest{
