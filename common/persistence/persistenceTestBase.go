@@ -708,6 +708,19 @@ func (s *TestBase) UpdateWorkflowExecutionForSignal(
 	})
 }
 
+// UpdateWorkflowExecutionForSignal is a utility method to update workflow execution
+func (s *TestBase) UpdateWorkflowExecutionForBufferEvents(
+	updatedInfo *WorkflowExecutionInfo, rState *ReplicationState, condition int64,
+	bufferEvents *SerializedHistoryEventBatch) error {
+	return s.WorkflowMgr.UpdateWorkflowExecution(&UpdateWorkflowExecutionRequest{
+		ExecutionInfo:     updatedInfo,
+		ReplicationState:  rState,
+		NewBufferedEvents: bufferEvents,
+		Condition:         condition,
+		RangeID:           s.ShardInfo.RangeID,
+	})
+}
+
 // UpdateAllMutableState is a utility method to update workflow execution
 func (s *TestBase) UpdateAllMutableState(updatedMutableState *WorkflowMutableState, condition int64) error {
 	var aInfos []*ActivityInfo
@@ -750,6 +763,7 @@ func (s *TestBase) UpdateAllMutableState(updatedMutableState *WorkflowMutableSta
 		UpsertRequestCancelInfos:  rcInfos,
 		UpsertSignalInfos:         sInfos,
 		UpsertSignalRequestedIDs:  srIDs,
+
 	})
 }
 
