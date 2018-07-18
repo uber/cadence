@@ -763,7 +763,6 @@ func (s *TestBase) UpdateAllMutableState(updatedMutableState *WorkflowMutableSta
 		UpsertRequestCancelInfos:  rcInfos,
 		UpsertSignalInfos:         sInfos,
 		UpsertSignalRequestedIDs:  srIDs,
-
 	})
 }
 
