@@ -702,7 +702,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_BrandNew() {
 	s.Nil(err)
 	s.Equal(1, len(transferTasks))
 	s.Equal(version, transferTasks[0].GetVersion())
-	s.Equal(now, transferTasks[0].GetVisibilityTimestamp())
+	s.True(now.Equal(transferTasks[0].GetVisibilityTimestamp()))
 	s.Equal(1, len(timerTasks))
 	s.Equal(version, timerTasks[0].GetVersion())
 }
@@ -1119,7 +1119,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 	s.Nil(err)
 	s.Equal(1, len(transferTasks))
 	s.Equal(version, transferTasks[0].GetVersion())
-	s.Equal(now, transferTasks[0].GetVisibilityTimestamp())
+	s.True(now.Equal(transferTasks[0].GetVisibilityTimestamp()))
 	s.Equal(1, len(timerTasks))
 	s.Equal(version, timerTasks[0].GetVersion())
 }
@@ -1273,7 +1273,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 	s.Nil(err)
 	s.Equal(1, len(transferTasks))
 	s.Equal(version, transferTasks[0].GetVersion())
-	s.Equal(now, transferTasks[0].GetVisibilityTimestamp())
+	s.True(now.Equal(transferTasks[0].GetVisibilityTimestamp()))
 	s.Equal(1, len(timerTasks))
 	s.Equal(version, timerTasks[0].GetVersion())
 }
@@ -1656,7 +1656,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	s.Nil(err)
 	s.Equal(1, len(transferTasks))
 	s.Equal(version, transferTasks[0].GetVersion())
-	s.Equal(now, transferTasks[0].GetVisibilityTimestamp())
+	s.True(now.Equal(transferTasks[0].GetVisibilityTimestamp()))
 	s.Equal(1, len(timerTasks))
 	s.Equal(version, timerTasks[0].GetVersion())
 }
