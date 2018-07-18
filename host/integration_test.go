@@ -6142,6 +6142,53 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 	s.Equal(signalName, *signalEvent.WorkflowExecutionSignaledEventAttributes.SignalName)
 	s.Equal(signalInput, signalEvent.WorkflowExecutionSignaledEventAttributes.Input)
 	s.Equal(identity, *signalEvent.WorkflowExecutionSignaledEventAttributes.Identity)
+
+	// Assert visibility is correct
+	listOpenRequest := &workflow.ListOpenWorkflowExecutionsRequest{
+		Domain:          common.StringPtr(s.domainName),
+		MaximumPageSize: common.Int32Ptr(100),
+		StartTimeFilter: &workflow.StartTimeFilter{
+			EarliestTime: common.Int64Ptr(0),
+			LatestTime:   common.Int64Ptr(time.Now().UnixNano()),
+		},
+		ExecutionFilter: &workflow.WorkflowExecutionFilter{
+			WorkflowId: common.StringPtr(id),
+		},
+	}
+	listResp, err := s.engine.ListOpenWorkflowExecutions(createContext(), listOpenRequest)
+	s.NoError(err)
+	s.Equal(1, len(listResp.Executions))
+
+	// Terminate workflow execution and assert visibility is correct
+	err = s.engine.TerminateWorkflowExecution(createContext(), &workflow.TerminateWorkflowExecutionRequest{
+		Domain: common.StringPtr(s.domainName),
+		WorkflowExecution: &workflow.WorkflowExecution{
+			WorkflowId: common.StringPtr(id),
+		},
+		Reason:   common.StringPtr("kill workflow"),
+		Details:  nil,
+		Identity: common.StringPtr(identity),
+	})
+	s.Nil(err)
+
+	listResp, err = s.engine.ListOpenWorkflowExecutions(createContext(), listOpenRequest)
+	s.NoError(err)
+	s.Equal(0, len(listResp.Executions))
+
+	listClosedRequest := &workflow.ListClosedWorkflowExecutionsRequest{
+		Domain:          common.StringPtr(s.domainName),
+		MaximumPageSize: common.Int32Ptr(100),
+		StartTimeFilter: &workflow.StartTimeFilter{
+			EarliestTime: common.Int64Ptr(0),
+			LatestTime:   common.Int64Ptr(time.Now().UnixNano()),
+		},
+		ExecutionFilter: &workflow.WorkflowExecutionFilter{
+			WorkflowId: common.StringPtr(id),
+		},
+	}
+	listClosedResp, err := s.engine.ListClosedWorkflowExecutions(createContext(), listClosedRequest)
+	s.NoError(err)
+	s.Equal(1, len(listClosedResp.Executions))
 }
 
 func (s *integrationSuite) TestTransientDecisionTimeout() {
@@ -6244,6 +6291,130 @@ func (s *integrationSuite) TestTransientDecisionTimeout() {
 
 	s.Equal(1, signalCount)
 	s.True(workflowComplete)
+}
+
+func (s *integrationSuite) TestTaskProcessingProtectionForRateLimitError() {
+	id := "integration-task-processing-protection-for-rate-limit-error-test"
+	wt := "integration-task-processing-protection-for-rate-limit-error-test-type"
+	tl := "integration-task-processing-protection-for-rate-limit-error-test-tasklist"
+	identity := "worker1"
+
+	workflowType := &workflow.WorkflowType{}
+	workflowType.Name = common.StringPtr(wt)
+
+	taskList := &workflow.TaskList{}
+	taskList.Name = common.StringPtr(tl)
+
+	// Start workflow execution
+	request := &workflow.StartWorkflowExecutionRequest{
+		RequestId:    common.StringPtr(uuid.New()),
+		Domain:       common.StringPtr(s.domainName),
+		WorkflowId:   common.StringPtr(id),
+		WorkflowType: workflowType,
+		TaskList:     taskList,
+		Input:        nil,
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(601),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(600),
+		Identity:                            common.StringPtr(identity),
+	}
+
+	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
+	s.Nil(err0)
+
+	s.logger.Infof("StartWorkflowExecution: response: %v \n", *we.RunId)
+	workflowExecution := &workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr(id),
+		RunId:      common.StringPtr(*we.RunId),
+	}
+
+	// decider logic
+	workflowComplete := false
+	signalCount := 0
+	createUserTimer := false
+	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
+		previousStartedEventID, startedEventID int64, h *workflow.History) ([]byte, []*workflow.Decision, error) {
+
+		if !createUserTimer {
+			createUserTimer = true
+
+			return nil, []*workflow.Decision{{
+				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeStartTimer),
+				StartTimerDecisionAttributes: &workflow.StartTimerDecisionAttributes{
+					TimerId:                   common.StringPtr("timer-id-1"),
+					StartToFireTimeoutSeconds: common.Int64Ptr(5),
+				},
+			}}, nil
+		}
+
+		// Count signals
+		for _, event := range h.Events[previousStartedEventID:] {
+			if event.GetEventType() == workflow.EventTypeWorkflowExecutionSignaled {
+				signalCount++
+			}
+		}
+
+		workflowComplete = true
+		return nil, []*workflow.Decision{{
+			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
+			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
+				Result: []byte("Done."),
+			},
+		}}, nil
+	}
+
+	poller := &taskPoller{
+		engine:          s.engine,
+		domain:          s.domainName,
+		taskList:        taskList,
+		identity:        identity,
+		decisionHandler: dtHandler,
+		activityHandler: nil,
+		logger:          s.logger,
+		suite:           s,
+	}
+
+	// Process first decision to create user timer
+	_, err := poller.pollAndProcessDecisionTask(false, false)
+	s.logger.Infof("pollAndProcessDecisionTask: %v", err)
+	s.Nil(err)
+
+	// Send one signal to create a new decision
+	for i := 0; i < 1; i++ {
+		buf := new(bytes.Buffer)
+		binary.Write(buf, binary.LittleEndian, i)
+		s.Nil(s.sendSignal(s.domainName, workflowExecution, "SignalName", buf.Bytes(), identity))
+	}
+
+	// Drop decision to cause all events to be buffered from now on
+	_, err = poller.pollAndProcessDecisionTask(false, true)
+	s.logger.Infof("pollAndProcessDecisionTask: %v", err)
+	s.Nil(err)
+
+	// Buffered Signals
+	for i := 1; i < 101; i++ {
+		buf := new(bytes.Buffer)
+		binary.Write(buf, binary.LittleEndian, i)
+		s.Nil(s.sendSignal(s.domainName, workflowExecution, "SignalName", buf.Bytes(), identity))
+	}
+
+	// Rate limitted signals
+	for i := 0; i < 10; i++ {
+		buf := new(bytes.Buffer)
+		binary.Write(buf, binary.LittleEndian, i)
+		signalErr := s.sendSignal(s.domainName, workflowExecution, "SignalName", buf.Bytes(), identity)
+		s.NotNil(signalErr)
+		s.Equal(history.ErrBufferedEventsLimitExceeded, signalErr)
+	}
+
+	// Process signal in decider
+	_, err = poller.pollAndProcessDecisionTaskWithAttempt(true, false, false, false, 1)
+	s.logger.Infof("pollAndProcessDecisionTask: %v", err)
+	s.Nil(err)
+
+	s.printWorkflowHistory(s.domainName, workflowExecution)
+
+	s.True(workflowComplete)
+	s.Equal(101, signalCount)
 }
 
 func (s *integrationSuite) getHistory(domain string, execution *workflow.WorkflowExecution) []*workflow.HistoryEvent {
