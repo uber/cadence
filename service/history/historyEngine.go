@@ -356,7 +356,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 			replicationTasks = append(replicationTasks, replicationTask)
 		}
 	}
-	setTaskInfo(msBuilder.GetCurrentVersion(), time.Now().UTC(), transferTasks, timerTasks)
+	setTaskInfo(msBuilder.GetCurrentVersion(), time.Now(), transferTasks, timerTasks)
 
 	createWorkflow := func(isBrandNew bool, prevRunID string) (string, error) {
 		_, err = e.shard.CreateWorkflowExecution(&persistence.CreateWorkflowExecutionRequest{
@@ -1998,7 +1998,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 			replicationTasks = append(replicationTasks, replicationTask)
 		}
 	}
-	setTaskInfo(msBuilder.GetCurrentVersion(), time.Now().UTC(), transferTasks, timerTasks)
+	setTaskInfo(msBuilder.GetCurrentVersion(), time.Now(), transferTasks, timerTasks)
 
 	createWorkflow := func(isBrandNew bool, prevRunID string) (string, error) {
 		_, err = e.shard.CreateWorkflowExecution(&persistence.CreateWorkflowExecutionRequest{
@@ -2763,7 +2763,7 @@ func setTaskInfo(version int64, timestamp time.Time, transferTasks []persistence
 	// set both the task version, as well as the timestamp on the transfer tasks
 	for _, task := range transferTasks {
 		task.SetVersion(version)
-		task.SetVisibilityTimestamp(timestamp)
+		task.SetVisibilityTimestamp(timestamp.UTC())
 	}
 	for _, task := range timerTasks {
 		task.SetVersion(version)

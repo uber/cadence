@@ -187,7 +187,7 @@ func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persi
 			c.msBuilder.GetExecutionInfo().LastFirstEventID, c.msBuilder.GetExecutionInfo().NextEventID)
 	}
 
-	now := time.Now().UTC()
+	now := time.Now()
 	return c.updateHelper(nil, transferTasks, timerTasks, c.createReplicationTask, "", currentVersion, transactionID, now)
 }
 
