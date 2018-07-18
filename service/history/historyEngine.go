@@ -2763,7 +2763,7 @@ func setTaskInfo(version int64, timestamp time.Time, transferTasks []persistence
 	// set both the task version, as well as the timestamp on the transfer tasks
 	for _, task := range transferTasks {
 		task.SetVersion(version)
-		task.SetVisibilityTimestamp(timestamp.UTC())
+		task.SetVisibilityTimestamp(timestamp)
 	}
 	for _, task := range timerTasks {
 		task.SetVersion(version)

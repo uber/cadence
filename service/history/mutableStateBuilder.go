@@ -2339,7 +2339,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(sour
 	}}
 	setTaskInfo(
 		newStateBuilder.GetCurrentVersion(),
-		common.NewFakeTimeSource().Update(time.Unix(0, startedEvent.GetTimestamp())).Now(),
+		time.Unix(0, startedEvent.GetTimestamp()),
 		newTransferTasks,
 		nil,
 	)

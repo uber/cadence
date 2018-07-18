@@ -310,7 +310,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 		}},
 		History: &shared.History{},
 	}
-	startTimeStamp := time.Now().UTC()
+	startTimeStamp := time.Now()
 	msBuilderIn.On("GetReplicationState").Return(&persistence.ReplicationState{
 		LastWriteVersion: currentLastWriteVersion,
 		LastWriteEventID: currentLastEventID,
@@ -360,7 +360,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 		}},
 		History: &shared.History{},
 	}
-	startTimeStamp := time.Now().UTC()
+	startTimeStamp := time.Now()
 	msBuilderIn.On("GetReplicationState").Return(&persistence.ReplicationState{
 		LastWriteVersion: currentLastWriteVersion,
 		LastWriteEventID: currentLastEventID,
@@ -399,7 +399,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 		}},
 		History: &shared.History{},
 	}
-	startTimeStamp := time.Now().UTC()
+	startTimeStamp := time.Now()
 	msBuilderIn.On("GetReplicationState").Return(&persistence.ReplicationState{
 		LastWriteVersion: currentLastWriteVersion,
 		LastWriteEventID: currentLastEventID,
@@ -626,7 +626,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_BrandNew() {
 	}
 	sBuilder := &mockStateBuilder{}
 	requestID := uuid.New()
-	now := time.Now().UTC()
+	now := time.Now()
 	history := &shared.History{
 		Events: []*shared.HistoryEvent{
 			&shared.HistoryEvent{Version: common.Int64Ptr(version), EventId: common.Int64Ptr(1), Timestamp: common.Int64Ptr(now.UnixNano())},
@@ -1001,7 +1001,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 	}
 	sBuilder := &mockStateBuilder{}
 	requestID := uuid.New()
-	now := time.Now().UTC()
+	now := time.Now()
 	history := &shared.History{
 		Events: []*shared.HistoryEvent{
 			&shared.HistoryEvent{Version: common.Int64Ptr(version), EventId: common.Int64Ptr(1), Timestamp: common.Int64Ptr(now.UnixNano())},
@@ -1155,7 +1155,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 	}
 	sBuilder := &mockStateBuilder{}
 	requestID := uuid.New()
-	now := time.Now().UTC()
+	now := time.Now()
 	history := &shared.History{
 		Events: []*shared.HistoryEvent{
 			&shared.HistoryEvent{Version: common.Int64Ptr(version), EventId: common.Int64Ptr(1), Timestamp: common.Int64Ptr(now.UnixNano())},
@@ -1509,7 +1509,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	}
 	sBuilder := &mockStateBuilder{}
 	requestID := uuid.New()
-	now := time.Now().UTC()
+	now := time.Now()
 	history := &shared.History{
 		Events: []*shared.HistoryEvent{
 			&shared.HistoryEvent{Version: common.Int64Ptr(version), EventId: common.Int64Ptr(1), Timestamp: common.Int64Ptr(now.UnixNano())},

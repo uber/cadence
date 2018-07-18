@@ -550,7 +550,7 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 	timerTasks := sBuilder.getTimerTasks()
 	setTaskInfo(
 		msBuilder.GetCurrentVersion(),
-		common.NewFakeTimeSource().Update(time.Unix(0, lastEvent.GetTimestamp())).Now(),
+		time.Unix(0, lastEvent.GetTimestamp()),
 		transferTasks,
 		timerTasks,
 	)
