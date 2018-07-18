@@ -214,6 +214,7 @@ type (
 		DomainID                string
 		WorkflowID              string
 		RunID                   string
+		VisibilityTimestamp     time.Time
 		TaskID                  int64
 		TargetDomainID          string
 		TargetWorkflowID        string
@@ -279,30 +280,35 @@ type (
 		SetVersion(version int64)
 		GetTaskID() int64
 		SetTaskID(id int64)
+		GetVisibilityTimestamp() time.Time
+		SetVisibilityTimestamp(timestamp time.Time)
 	}
 
 	// ActivityTask identifies a transfer task for activity
 	ActivityTask struct {
-		TaskID     int64
-		DomainID   string
-		TaskList   string
-		ScheduleID int64
-		Version    int64
+		VisibilityTimestamp time.Time
+		TaskID              int64
+		DomainID            string
+		TaskList            string
+		ScheduleID          int64
+		Version             int64
 	}
 
 	// DecisionTask identifies a transfer task for decision
 	DecisionTask struct {
-		TaskID     int64
-		DomainID   string
-		TaskList   string
-		ScheduleID int64
-		Version    int64
+		VisibilityTimestamp time.Time
+		TaskID              int64
+		DomainID            string
+		TaskList            string
+		ScheduleID          int64
+		Version             int64
 	}
 
 	// CloseExecutionTask identifies a transfer task for deletion of execution
 	CloseExecutionTask struct {
-		TaskID  int64
-		Version int64
+		VisibilityTimestamp time.Time
+		TaskID              int64
+		Version             int64
 	}
 
 	// DeleteHistoryEventTask identifies a timer task for deletion of history events of completed execution.
@@ -331,6 +337,7 @@ type (
 
 	// CancelExecutionTask identifies a transfer task for cancel of execution
 	CancelExecutionTask struct {
+		VisibilityTimestamp     time.Time
 		TaskID                  int64
 		TargetDomainID          string
 		TargetWorkflowID        string
@@ -342,6 +349,7 @@ type (
 
 	// SignalExecutionTask identifies a transfer task for signal execution
 	SignalExecutionTask struct {
+		VisibilityTimestamp     time.Time
 		TaskID                  int64
 		TargetDomainID          string
 		TargetWorkflowID        string
@@ -353,11 +361,12 @@ type (
 
 	// StartChildExecutionTask identifies a transfer task for starting child execution
 	StartChildExecutionTask struct {
-		TaskID           int64
-		TargetDomainID   string
-		TargetWorkflowID string
-		InitiatedID      int64
-		Version          int64
+		VisibilityTimestamp time.Time
+		TaskID              int64
+		TargetDomainID      string
+		TargetWorkflowID    string
+		InitiatedID         int64
+		Version             int64
 	}
 
 	// ActivityTimeoutTask identifies a timeout task.
@@ -389,6 +398,7 @@ type (
 
 	// HistoryReplicationTask is the transfer task created for shipping history replication events to other clusters
 	HistoryReplicationTask struct {
+		VisibilityTimestamp time.Time
 		TaskID              int64
 		FirstEventID        int64
 		NextEventID         int64
@@ -1023,6 +1033,16 @@ func (a *ActivityTask) SetTaskID(id int64) {
 	a.TaskID = id
 }
 
+// GetVisibilityTimestamp get the visibility timestamp
+func (a *ActivityTask) GetVisibilityTimestamp() time.Time {
+	return a.VisibilityTimestamp
+}
+
+// SetVisibilityTimestamp set the visibility timestamp
+func (a *ActivityTask) SetVisibilityTimestamp(timestamp time.Time) {
+	a.VisibilityTimestamp = timestamp
+}
+
 // GetType returns the type of the decision task
 func (d *DecisionTask) GetType() int {
 	return TransferTaskTypeDecisionTask
@@ -1046,6 +1066,16 @@ func (d *DecisionTask) GetTaskID() int64 {
 // SetTaskID sets the sequence ID of the decision task
 func (d *DecisionTask) SetTaskID(id int64) {
 	d.TaskID = id
+}
+
+// GetVisibilityTimestamp get the visibility timestamp
+func (d *DecisionTask) GetVisibilityTimestamp() time.Time {
+	return d.VisibilityTimestamp
+}
+
+// SetVisibilityTimestamp set the visibility timestamp
+func (d *DecisionTask) SetVisibilityTimestamp(timestamp time.Time) {
+	d.VisibilityTimestamp = timestamp
 }
 
 // GetType returns the type of the close execution task
@@ -1073,6 +1103,16 @@ func (a *CloseExecutionTask) SetTaskID(id int64) {
 	a.TaskID = id
 }
 
+// GetVisibilityTimestamp get the visibility timestamp
+func (a *CloseExecutionTask) GetVisibilityTimestamp() time.Time {
+	return a.VisibilityTimestamp
+}
+
+// SetVisibilityTimestamp set the visibility timestamp
+func (a *CloseExecutionTask) SetVisibilityTimestamp(timestamp time.Time) {
+	a.VisibilityTimestamp = timestamp
+}
+
 // GetType returns the type of the delete execution task
 func (a *DeleteHistoryEventTask) GetType() int {
 	return TaskTypeDeleteHistoryEvent
@@ -1096,6 +1136,16 @@ func (a *DeleteHistoryEventTask) GetTaskID() int64 {
 // SetTaskID sets the sequence ID of the delete execution task
 func (a *DeleteHistoryEventTask) SetTaskID(id int64) {
 	a.TaskID = id
+}
+
+// GetVisibilityTimestamp get the visibility timestamp
+func (a *DeleteHistoryEventTask) GetVisibilityTimestamp() time.Time {
+	return a.VisibilityTimestamp
+}
+
+// SetVisibilityTimestamp set the visibility timestamp
+func (a *DeleteHistoryEventTask) SetVisibilityTimestamp(timestamp time.Time) {
+	a.VisibilityTimestamp = timestamp
 }
 
 // GetType returns the type of the timer task
@@ -1298,6 +1348,16 @@ func (u *CancelExecutionTask) SetTaskID(id int64) {
 	u.TaskID = id
 }
 
+// GetVisibilityTimestamp get the visibility timestamp
+func (u *CancelExecutionTask) GetVisibilityTimestamp() time.Time {
+	return u.VisibilityTimestamp
+}
+
+// SetVisibilityTimestamp set the visibility timestamp
+func (u *CancelExecutionTask) SetVisibilityTimestamp(timestamp time.Time) {
+	u.VisibilityTimestamp = timestamp
+}
+
 // GetType returns the type of the signal transfer task
 func (u *SignalExecutionTask) GetType() int {
 	return TransferTaskTypeSignalExecution
@@ -1321,6 +1381,16 @@ func (u *SignalExecutionTask) GetTaskID() int64 {
 // SetTaskID sets the sequence ID of the signal transfer task.
 func (u *SignalExecutionTask) SetTaskID(id int64) {
 	u.TaskID = id
+}
+
+// GetVisibilityTimestamp get the visibility timestamp
+func (u *SignalExecutionTask) GetVisibilityTimestamp() time.Time {
+	return u.VisibilityTimestamp
+}
+
+// SetVisibilityTimestamp set the visibility timestamp
+func (u *SignalExecutionTask) SetVisibilityTimestamp(timestamp time.Time) {
+	u.VisibilityTimestamp = timestamp
 }
 
 // GetType returns the type of the start child transfer task
@@ -1348,6 +1418,16 @@ func (u *StartChildExecutionTask) SetTaskID(id int64) {
 	u.TaskID = id
 }
 
+// GetVisibilityTimestamp get the visibility timestamp
+func (u *StartChildExecutionTask) GetVisibilityTimestamp() time.Time {
+	return u.VisibilityTimestamp
+}
+
+// SetVisibilityTimestamp set the visibility timestamp
+func (u *StartChildExecutionTask) SetVisibilityTimestamp(timestamp time.Time) {
+	u.VisibilityTimestamp = timestamp
+}
+
 // GetType returns the type of the history replication task
 func (a *HistoryReplicationTask) GetType() int {
 	return ReplicationTaskTypeHistory
@@ -1373,6 +1453,16 @@ func (a *HistoryReplicationTask) SetTaskID(id int64) {
 	a.TaskID = id
 }
 
+// GetVisibilityTimestamp get the visibility timestamp
+func (a *HistoryReplicationTask) GetVisibilityTimestamp() time.Time {
+	return a.VisibilityTimestamp
+}
+
+// SetVisibilityTimestamp set the visibility timestamp
+func (a *HistoryReplicationTask) SetVisibilityTimestamp(timestamp time.Time) {
+	a.VisibilityTimestamp = timestamp
+}
+
 // GetTaskID returns the task ID for transfer task
 func (t *TransferTaskInfo) GetTaskID() int64 {
 	return t.TaskID
@@ -1386,6 +1476,11 @@ func (t *TransferTaskInfo) GetVersion() int64 {
 // GetTaskType returns the task type for transfer task
 func (t *TransferTaskInfo) GetTaskType() int {
 	return t.TaskType
+}
+
+// GetVisibilityTimestamp returns the task type for transfer task
+func (t *TransferTaskInfo) GetVisibilityTimestamp() time.Time {
+	return t.VisibilityTimestamp
 }
 
 // String returns string
@@ -1411,6 +1506,11 @@ func (t *ReplicationTaskInfo) GetTaskType() int {
 	return t.TaskType
 }
 
+// GetVisibilityTimestamp returns the task type for transfer task
+func (t *ReplicationTaskInfo) GetVisibilityTimestamp() time.Time {
+	return time.Time{}
+}
+
 // GetTaskID returns the task ID for timer task
 func (t *TimerTaskInfo) GetTaskID() int64 {
 	return t.TaskID
@@ -1424,6 +1524,11 @@ func (t *TimerTaskInfo) GetVersion() int64 {
 // GetTaskType returns the task type for timer task
 func (t *TimerTaskInfo) GetTaskType() int {
 	return t.TaskType
+}
+
+// GetVisibilityTimestamp returns the task type for transfer task
+func (t *TimerTaskInfo) GetVisibilityTimestamp() time.Time {
+	return t.VisibilityTimestamp
 }
 
 // GetTaskType returns the task type for timer task
