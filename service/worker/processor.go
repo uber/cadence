@@ -213,7 +213,7 @@ func (p *replicationTaskProcessor) processWithRetry(msg kafka.Message, workerID 
 	}
 
 ProcessRetryLoop:
-	for attempt := 0; ; attempt++ {
+	for {
 		select {
 		case <-p.shutdownCh:
 			return
@@ -230,7 +230,10 @@ ProcessRetryLoop:
 							logging.TagErr:          err,
 							logging.TagPartitionKey: msg.Partition(),
 							logging.TagOffset:       msg.Offset(),
-						}).Warn("Error processing replication task.")
+							logging.TagAttemptCount: attempt,
+							logging.TagAttemptStart: startTime,
+							logging.TagAttemptEnd:   time.Now(),
+						}).Warn("Error (transient) processing replication task.")
 					}
 
 					// Keep on retrying transient errors for ever
