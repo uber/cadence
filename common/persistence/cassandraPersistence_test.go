@@ -2037,8 +2037,8 @@ func (s *cassandraPersistenceSuite) TestResetMutableState() {
 			EventType: gen.EventTypeTimerFired.Ptr(),
 			Version:   common.Int64Ptr(12),
 			TimerFiredEventAttributes: &gen.TimerFiredEventAttributes{
-				TimerId: common.StringPtr("2"),
-				StartedEventId:   common.Int64Ptr(3),
+				TimerId:        common.StringPtr("2"),
+				StartedEventId: common.Int64Ptr(3),
 			},
 		},
 	}
