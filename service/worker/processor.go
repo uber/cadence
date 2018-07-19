@@ -385,10 +385,9 @@ Loop:
 
 RetryLoop:
 	for i := 0; i < p.config.ReplicatorBufferRetryCount; i++ {
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		err = p.historyClient.ReplicateEvents(ctx, req)
+		cancel()
 
 		// Replication tasks could be slightly out of order for a particular workflow execution
 		// We first try to apply the events without buffering enabled with a small delay to account for such delays
