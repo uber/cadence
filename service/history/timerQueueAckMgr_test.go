@@ -605,16 +605,17 @@ func (s *timerQueueFailoverAckMgrSuite) SetupTest() {
 			return s.mockShard.GetCurrentTime(s.mockShard.GetService().GetClusterMetadata().GetCurrentClusterName())
 		},
 		func(ackLevel TimerSequenceID) error {
-			return s.mockShard.UpdateDomainTimerFailoverLevels(
+			return s.mockShard.UpdateTimerFailoverLevel(
 				s.domainID,
-				persistence.TimerFailoverLevels{
-					MinLevel: ackLevel.VisibilityTimestamp,
-					MaxLevel: s.maxLevel,
+				persistence.TimerFailoverLevel{
+					MinLevel:  ackLevel.VisibilityTimestamp,
+					MaxLevel:  s.maxLevel,
+					DomainIDs: []string{s.domainID},
 				},
 			)
 		},
 		func() error {
-			return s.mockShard.DeleteDomainTimerFailoverLevels(s.domainID)
+			return s.mockShard.DeleteTimerFailoverLevel(s.domainID)
 		},
 		s.logger,
 	)

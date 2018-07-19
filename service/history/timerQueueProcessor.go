@@ -150,7 +150,7 @@ func (t *timerQueueProcessorImpl) FailoverDomain(domainID string) {
 	failoverTimerProcessor.Start()
 
 	// err is ignored
-	t.shard.UpdateDomainTimerFailoverLevels(domainID, persistence.TimerFailoverLevels{MinLevel: minLevel, MaxLevel: maxLevel})
+	t.shard.UpdateTimerFailoverLevel(domainID, persistence.TimerFailoverLevel{MinLevel: minLevel, MaxLevel: maxLevel, DomainIDs: []string{domainID}})
 }
 
 func (t *timerQueueProcessorImpl) getTimerFiredCount(clusterName string) uint64 {
@@ -203,7 +203,7 @@ func (t *timerQueueProcessorImpl) completeTimers() error {
 			}
 		}
 
-		for _, failoverInfo := range t.shard.GetAllDomainTimerFailoverLevels() {
+		for _, failoverInfo := range t.shard.GetAllTimerFailoverLevels() {
 			if !upperAckLevel.VisibilityTimestamp.Before(failoverInfo.MinLevel) {
 				upperAckLevel = TimerSequenceID{VisibilityTimestamp: failoverInfo.MinLevel}
 			}

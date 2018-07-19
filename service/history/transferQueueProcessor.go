@@ -162,7 +162,7 @@ func (t *transferQueueProcessorImpl) FailoverDomain(domainID string) {
 	failoverTaskProcessor.Start()
 
 	// err is ignored
-	t.shard.UpdateDomainTransferFailoverLevels(domainID, persistence.TransferFailoverLevels{MinLevel: minLevel, MaxLevel: maxLevel})
+	t.shard.UpdateTransferFailoverLevel(domainID, persistence.TransferFailoverLevel{MinLevel: minLevel, MaxLevel: maxLevel, DomainIDs: []string{domainID}})
 }
 
 func (t *transferQueueProcessorImpl) completeTransferLoop() {
@@ -204,7 +204,7 @@ func (t *transferQueueProcessorImpl) completeTransfer() error {
 			}
 		}
 
-		for _, failoverInfo := range t.shard.GetAllDomainTransferFailoverLevels() {
+		for _, failoverInfo := range t.shard.GetAllTransferFailoverLevels() {
 			if upperAckLevel > failoverInfo.MinLevel {
 				upperAckLevel = failoverInfo.MinLevel
 			}

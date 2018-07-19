@@ -159,8 +159,8 @@ func (s *shardControllerSuite) TestAcquireShardSuccess() {
 						cluster.TestCurrentClusterName:     currentClusterTimerAck,
 						cluster.TestAlternativeClusterName: alternativeClusterTimerAck,
 					},
-					DomainTransferFailoverLevels: map[string]persistence.TransferFailoverLevels{},
-					DomainTimerFailoverLevels:    map[string]persistence.TimerFailoverLevels{},
+					TransferFailoverLevels: map[string]persistence.TransferFailoverLevel{},
+					TimerFailoverLevels:    map[string]persistence.TimerFailoverLevel{},
 				},
 				PreviousRangeID: 5,
 			}).Return(nil).Once()
@@ -249,8 +249,8 @@ func (s *shardControllerSuite) TestAcquireShardRenewSuccess() {
 					cluster.TestCurrentClusterName:     currentClusterTimerAck,
 					cluster.TestAlternativeClusterName: alternativeClusterTimerAck,
 				},
-				DomainTransferFailoverLevels: map[string]persistence.TransferFailoverLevels{},
-				DomainTimerFailoverLevels:    map[string]persistence.TimerFailoverLevels{},
+				TransferFailoverLevels: map[string]persistence.TransferFailoverLevel{},
+				TimerFailoverLevels:    map[string]persistence.TimerFailoverLevel{},
 			},
 			PreviousRangeID: 5,
 		}).Return(nil).Once()
@@ -324,8 +324,8 @@ func (s *shardControllerSuite) TestAcquireShardRenewLookupFailed() {
 					cluster.TestCurrentClusterName:     currentClusterTimerAck,
 					cluster.TestAlternativeClusterName: alternativeClusterTimerAck,
 				},
-				DomainTransferFailoverLevels: map[string]persistence.TransferFailoverLevels{},
-				DomainTimerFailoverLevels:    map[string]persistence.TimerFailoverLevels{},
+				TransferFailoverLevels: map[string]persistence.TransferFailoverLevel{},
+				TimerFailoverLevels:    map[string]persistence.TimerFailoverLevel{},
 			},
 			PreviousRangeID: 5,
 		}).Return(nil).Once()
@@ -620,8 +620,8 @@ func (s *shardControllerSuite) setupMocksForAcquireShard(shardID int, mockEngine
 				cluster.TestCurrentClusterName:     currentClusterTimerAck,
 				cluster.TestAlternativeClusterName: alternativeClusterTimerAck,
 			},
-			DomainTransferFailoverLevels: map[string]persistence.TransferFailoverLevels{},
-			DomainTimerFailoverLevels:    map[string]persistence.TimerFailoverLevels{},
+			TransferFailoverLevels: map[string]persistence.TransferFailoverLevel{},
+			TimerFailoverLevels:    map[string]persistence.TimerFailoverLevel{},
 		},
 		PreviousRangeID: currentRangeID,
 	}).Return(nil).Once()

@@ -151,16 +151,17 @@ func newTransferQueueFailoverProcessor(shard ShardContext, historyService *histo
 		return maxLevel // this is a const
 	}
 	updateTransferAckLevel := func(ackLevel int64) error {
-		return shard.UpdateDomainTransferFailoverLevels(
+		return shard.UpdateTransferFailoverLevel(
 			domainID,
-			persistence.TransferFailoverLevels{
-				MinLevel: ackLevel,
-				MaxLevel: maxLevel,
+			persistence.TransferFailoverLevel{
+				MinLevel:  ackLevel,
+				MaxLevel:  maxLevel,
+				DomainIDs: []string{domainID},
 			},
 		)
 	}
 	transferQueueShutdown := func() error {
-		return shard.DeleteDomainTransferFailoverLevels(domainID)
+		return shard.DeleteTransferFailoverLevel(domainID)
 	}
 
 	retryableMatchingClient := matching.NewRetryableClient(matchingClient, common.CreateMatchingRetryPolicy(),

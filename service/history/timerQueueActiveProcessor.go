@@ -111,17 +111,18 @@ func newTimerQueueFailoverProcessor(shard ShardContext, historyService *historyE
 		return shard.GetCurrentTime(currentClusterName)
 	}
 	updateShardAckLevel := func(ackLevel TimerSequenceID) error {
-		return shard.UpdateDomainTimerFailoverLevels(
+		return shard.UpdateTimerFailoverLevel(
 			domainID,
-			persistence.TimerFailoverLevels{
-				MinLevel: ackLevel.VisibilityTimestamp,
-				MaxLevel: maxLevel,
+			persistence.TimerFailoverLevel{
+				MinLevel:  ackLevel.VisibilityTimestamp,
+				MaxLevel:  maxLevel,
+				DomainIDs: []string{domainID},
 			},
 		)
 	}
 
 	timerAckMgrShutdown := func() error {
-		return shard.DeleteDomainTimerFailoverLevels(domainID)
+		return shard.DeleteTimerFailoverLevel(domainID)
 	}
 
 	logger = logger.WithFields(bark.Fields{

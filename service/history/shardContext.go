@@ -58,12 +58,12 @@ type (
 		UpdateTimerAckLevel(ackLevel time.Time) error
 		GetTimerClusterAckLevel(cluster string) time.Time
 		UpdateTimerClusterAckLevel(cluster string, ackLevel time.Time) error
-		UpdateDomainTransferFailoverLevels(domainID string, level persistence.TransferFailoverLevels) error
-		DeleteDomainTransferFailoverLevels(domainID string) error
-		GetAllDomainTransferFailoverLevels() map[string]persistence.TransferFailoverLevels
-		UpdateDomainTimerFailoverLevels(domainID string, level persistence.TimerFailoverLevels) error
-		DeleteDomainTimerFailoverLevels(domainID string) error
-		GetAllDomainTimerFailoverLevels() map[string]persistence.TimerFailoverLevels
+		UpdateTransferFailoverLevel(failoverID string, level persistence.TransferFailoverLevel) error
+		DeleteTransferFailoverLevel(failoverID string) error
+		GetAllTransferFailoverLevels() map[string]persistence.TransferFailoverLevel
+		UpdateTimerFailoverLevel(failoverID string, level persistence.TimerFailoverLevel) error
+		DeleteTimerFailoverLevel(failoverID string) error
+		GetAllTimerFailoverLevels() map[string]persistence.TimerFailoverLevel
 		GetDomainNotificationVersion() int64
 		UpdateDomainNotificationVersion(domainNotificationVersion int64) error
 		CreateWorkflowExecution(request *persistence.CreateWorkflowExecutionRequest) (
@@ -233,55 +233,55 @@ func (s *shardContextImpl) UpdateTimerClusterAckLevel(cluster string, ackLevel t
 	return s.updateShardInfoLocked()
 }
 
-func (s *shardContextImpl) UpdateDomainTransferFailoverLevels(domainID string, level persistence.TransferFailoverLevels) error {
+func (s *shardContextImpl) UpdateTransferFailoverLevel(failoverID string, level persistence.TransferFailoverLevel) error {
 	s.Lock()
 	defer s.Unlock()
 
-	s.shardInfo.DomainTransferFailoverLevels[domainID] = level
+	s.shardInfo.TransferFailoverLevels[failoverID] = level
 	return s.updateShardInfoLocked()
 }
 
-func (s *shardContextImpl) DeleteDomainTransferFailoverLevels(domainID string) error {
+func (s *shardContextImpl) DeleteTransferFailoverLevel(failoverID string) error {
 	s.Lock()
 	defer s.Unlock()
 
-	delete(s.shardInfo.DomainTransferFailoverLevels, domainID)
+	delete(s.shardInfo.TransferFailoverLevels, failoverID)
 	return s.updateShardInfoLocked()
 }
 
-func (s *shardContextImpl) GetAllDomainTransferFailoverLevels() map[string]persistence.TransferFailoverLevels {
+func (s *shardContextImpl) GetAllTransferFailoverLevels() map[string]persistence.TransferFailoverLevel {
 	s.RLock()
 	defer s.RUnlock()
 
-	ret := map[string]persistence.TransferFailoverLevels{}
-	for k, v := range s.shardInfo.DomainTransferFailoverLevels {
+	ret := map[string]persistence.TransferFailoverLevel{}
+	for k, v := range s.shardInfo.TransferFailoverLevels {
 		ret[k] = v
 	}
 	return ret
 }
 
-func (s *shardContextImpl) UpdateDomainTimerFailoverLevels(domainID string, level persistence.TimerFailoverLevels) error {
+func (s *shardContextImpl) UpdateTimerFailoverLevel(failoverID string, level persistence.TimerFailoverLevel) error {
 	s.Lock()
 	defer s.Unlock()
 
-	s.shardInfo.DomainTimerFailoverLevels[domainID] = level
+	s.shardInfo.TimerFailoverLevels[failoverID] = level
 	return s.updateShardInfoLocked()
 }
 
-func (s *shardContextImpl) DeleteDomainTimerFailoverLevels(domainID string) error {
+func (s *shardContextImpl) DeleteTimerFailoverLevel(failoverID string) error {
 	s.Lock()
 	defer s.Unlock()
 
-	delete(s.shardInfo.DomainTimerFailoverLevels, domainID)
+	delete(s.shardInfo.TimerFailoverLevels, failoverID)
 	return s.updateShardInfoLocked()
 }
 
-func (s *shardContextImpl) GetAllDomainTimerFailoverLevels() map[string]persistence.TimerFailoverLevels {
+func (s *shardContextImpl) GetAllTimerFailoverLevels() map[string]persistence.TimerFailoverLevel {
 	s.RLock()
 	defer s.RUnlock()
 
-	ret := map[string]persistence.TimerFailoverLevels{}
-	for k, v := range s.shardInfo.DomainTimerFailoverLevels {
+	ret := map[string]persistence.TimerFailoverLevel{}
+	for k, v := range s.shardInfo.TimerFailoverLevels {
 		ret[k] = v
 	}
 	return ret
@@ -774,13 +774,13 @@ func acquireShard(shardID int, svc service.Service, shardManager persistence.Sha
 }
 
 func copyShardInfo(shardInfo *persistence.ShardInfo) *persistence.ShardInfo {
-	domainTransferFailoverLevels := map[string]persistence.TransferFailoverLevels{}
-	for k, v := range shardInfo.DomainTransferFailoverLevels {
-		domainTransferFailoverLevels[k] = v
+	transferFailoverLevels := map[string]persistence.TransferFailoverLevel{}
+	for k, v := range shardInfo.TransferFailoverLevels {
+		transferFailoverLevels[k] = v
 	}
-	domainTimerFailoverLevels := map[string]persistence.TimerFailoverLevels{}
-	for k, v := range shardInfo.DomainTimerFailoverLevels {
-		domainTimerFailoverLevels[k] = v
+	timerFailoverLevels := map[string]persistence.TimerFailoverLevel{}
+	for k, v := range shardInfo.TimerFailoverLevels {
+		timerFailoverLevels[k] = v
 	}
 	clusterTransferAckLevel := make(map[string]int64)
 	for k, v := range shardInfo.ClusterTransferAckLevel {
@@ -791,18 +791,18 @@ func copyShardInfo(shardInfo *persistence.ShardInfo) *persistence.ShardInfo {
 		clusterTimerAckLevel[k] = v
 	}
 	shardInfoCopy := &persistence.ShardInfo{
-		ShardID:                      shardInfo.ShardID,
-		Owner:                        shardInfo.Owner,
-		RangeID:                      shardInfo.RangeID,
-		StolenSinceRenew:             shardInfo.StolenSinceRenew,
-		ReplicationAckLevel:          shardInfo.ReplicationAckLevel,
-		TransferAckLevel:             shardInfo.TransferAckLevel,
-		TimerAckLevel:                shardInfo.TimerAckLevel,
-		DomainTransferFailoverLevels: domainTransferFailoverLevels,
-		DomainTimerFailoverLevels:    domainTimerFailoverLevels,
-		ClusterTransferAckLevel:      clusterTransferAckLevel,
-		ClusterTimerAckLevel:         clusterTimerAckLevel,
-		DomainNotificationVersion:    shardInfo.DomainNotificationVersion,
+		ShardID:                   shardInfo.ShardID,
+		Owner:                     shardInfo.Owner,
+		RangeID:                   shardInfo.RangeID,
+		StolenSinceRenew:          shardInfo.StolenSinceRenew,
+		ReplicationAckLevel:       shardInfo.ReplicationAckLevel,
+		TransferAckLevel:          shardInfo.TransferAckLevel,
+		TimerAckLevel:             shardInfo.TimerAckLevel,
+		TransferFailoverLevels:    transferFailoverLevels,
+		TimerFailoverLevels:       timerFailoverLevels,
+		ClusterTransferAckLevel:   clusterTransferAckLevel,
+		ClusterTimerAckLevel:      clusterTimerAckLevel,
+		DomainNotificationVersion: shardInfo.DomainNotificationVersion,
 	}
 
 	return shardInfoCopy
