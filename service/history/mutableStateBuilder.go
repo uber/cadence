@@ -853,6 +853,17 @@ func (e *mutableStateBuilder) CreateNewHistoryEventWithTimestamp(eventType workf
 }
 
 func (e *mutableStateBuilder) shouldBufferEvent(eventType workflow.EventType) bool {
+	// we need to make sure that if there is a decision in flight
+	// that decision has the same version as the current version
+	// otherwise, the decision is in flight in a different datacenter
+	if di, ok := e.GetInFlightDecisionTask(); ok {
+		if di.Version < e.GetCurrentVersion() {
+			// decision is in flight in a different data center
+			e.AddDecisionTaskFailedEvent(di.ScheduleID, di.StartedID,
+				workflow.DecisionTaskFailedCauseFailoverCloseDecision, nil, identityHistoryService)
+		}
+	}
+
 	switch eventType {
 	case // do not buffer for workflow state change
 		workflow.EventTypeWorkflowExecutionStarted,
@@ -1724,6 +1735,7 @@ func (e *mutableStateBuilder) ReplicateActivityTaskStartedEvent(event *workflow.
 	scheduleID := attributes.GetScheduledEventId()
 	ai, _ := e.GetActivityInfo(scheduleID)
 
+	ai.Version = event.GetVersion()
 	ai.StartedID = event.GetEventId()
 	ai.RequestID = attributes.GetRequestId()
 	ai.StartedTime = time.Unix(0, event.GetTimestamp())
