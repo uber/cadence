@@ -385,7 +385,7 @@ Loop:
 
 RetryLoop:
 	for i := 0; i < p.config.ReplicatorBufferRetryCount; i++ {
-		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		err = p.historyClient.ReplicateEvents(ctx, req)
 		cancel()
 
