@@ -33,6 +33,7 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/logging"
 
+	"fmt"
 	"github.com/gocql/gocql"
 	"github.com/jmoiron/sqlx"
 	"github.com/pborman/uuid"
@@ -189,8 +190,6 @@ func (s *TestBase) SetupWorkflowStoreWithOptions(options TestBaseOptions, metada
 			log.Fatal(err)
 		}
 
-		s.TaskIDGenerator = &testTransferTaskIDGenerator{}
-
 		// Create a shard for test
 		s.readLevel = 0
 		s.replicationReadLevel = 0
@@ -204,39 +203,64 @@ func (s *TestBase) SetupWorkflowStoreWithOptions(options TestBaseOptions, metada
 			ClusterTransferAckLevel: map[string]int64{currentClusterName: 0},
 		}
 
-		err1 := s.ShardMgr.CreateShard(&persistence.CreateShardRequest{
-			ShardInfo: s.ShardInfo,
-		})
-		if err1 != nil {
-			log.Fatal(err1)
-		}
 	} else {
 		var err error
+
 		s.MetadataManager, err = sql.NewMetadataPersistence("uber",
 			"uber",
 			"localhost",
 			"3306",
 			"catalyst_test")
-
 		if err != nil {
 			log.Fatal(err)
 		}
 
 		s.MetadataManagerV2 = s.MetadataManager
 
+		s.WorkflowMgr, err = sql.NewSqlMatchingPersistence("uber",
+			"uber",
+			"localhost",
+			"3306",
+			"catalyst_test")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		s.ShardInfo = &persistence.ShardInfo{}
+
+		s.TaskMgr, err = sql.NewTaskPersistence("uber", "uber", "localhost", "3306", "catalyst_test")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		s.ShardMgr, err = sql.NewShardPersistence("uber", "uber", "localhost", "3306", "catalyst_test")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		s.ClusterMetadata = cluster.GetTestClusterMetadata(false, false)
+
 		db, err := sqlx.Connect("mysql",
-			"uber:uber@tcp(localhost:3306)/catalyst_test?multiStatements=true&tx_isolation=%27READ-COMMITTED%27")
+			fmt.Sprintf(sql.Dsn, "uber", "uber", "localhost", "3306", "catalyst_test"))
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		file, err := ioutil.ReadFile("../sql/domains.sql")
+		file, err := ioutil.ReadFile("../sql/schema/up.sql")
 		if err != nil {
 			log.Fatal(err)
 		}
-
 		db.MustExec(string(file))
+
 		db.Close()
+	}
+	s.TaskIDGenerator = &testTransferTaskIDGenerator{}
+
+	err1 := s.ShardMgr.CreateShard(&persistence.CreateShardRequest{
+		ShardInfo: s.ShardInfo,
+	})
+	if err1 != nil {
+		log.Fatal(err1)
 	}
 }
 
@@ -1077,13 +1101,17 @@ func (s *TestBase) SetupWorkflowStore() {
 func (s *TestBase) TearDownWorkflowStore() {
 	if s.UseMysql {
 		db, err := sqlx.Connect("mysql",
-			"uber:uber@tcp(localhost:3306)/catalyst_test")
+			fmt.Sprintf(sql.Dsn, "uber", "uber", "localhost", "3306", "catalyst_test"))
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		db.MustExec(`drop table domains`)
-		db.MustExec(`drop table domain_metadata`)
+		file, err := ioutil.ReadFile("../sql/schema/down.sql")
+		if err != nil {
+			log.Fatal(err)
+		}
+		db.MustExec(string(file))
+
 		db.Close()
 	} else {
 		s.CassandraTestCluster.tearDownTestCluster()

@@ -52,6 +52,8 @@ var timePrecision = 2 * time.Millisecond
 
 func TestMatchingPersistenceSuite(t *testing.T) {
 	s := new(matchingPersistenceSuite)
+	// suite.Run(t, s)
+	s.UseMysql = true
 	suite.Run(t, s)
 }
 
@@ -89,14 +91,21 @@ func (s *matchingPersistenceSuite) TestPersistenceStartWorkflow() {
 	startedErr, ok := err1.(*persistence.WorkflowExecutionAlreadyStartedError)
 	s.True(ok)
 	s.Equal(workflowExecution.GetRunId(), startedErr.RunID, startedErr.Msg)
+
 	s.Equal(persistence.WorkflowStateRunning, startedErr.State, startedErr.Msg)
+
 	s.Equal(persistence.WorkflowCloseStatusNone, startedErr.CloseStatus, startedErr.Msg)
 	s.Equal(common.EmptyVersion, startedErr.StartVersion, startedErr.Msg)
 	s.Empty(task1, "Expected empty task identifier.")
 
 	response, err2 := s.WorkflowMgr.CreateWorkflowExecution(&persistence.CreateWorkflowExecutionRequest{
 		RequestID:            uuid.New(),
-		DomainID:             domainID,
+		// We perturb the DomainID slightly. Otherwise,
+		// if domain ID, workflow ID, and run ID are all identical
+		// to those of the previously created workflows,
+		// then there is no reason that this should not throw
+		// a WorkflowAlreadyExists error as opposed to ShardOwnershipLostError.
+		DomainID:             domainID + "foo",
 		Execution:            workflowExecution,
 		TaskList:             "queue1",
 		WorkflowTypeName:     "workflow_type_test",
@@ -2454,7 +2463,6 @@ func (s *matchingPersistenceSuite) TestCreateGetUpdateGetShard() {
 		ShardInfo: shardInfo,
 	}
 	s.Nil(s.ShardMgr.CreateShard(createRequest))
-
 	resp, err := s.ShardMgr.GetShard(&persistence.GetShardRequest{ShardID: shardID})
 	s.Nil(err)
 	s.True(timeComparator(shardInfo.UpdatedAt, resp.ShardInfo.UpdatedAt, timePrecision))
