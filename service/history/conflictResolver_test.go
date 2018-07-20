@@ -184,15 +184,14 @@ func (s *conflictResolverSuite) TestGetHistory() {
 	s.Equal(firstEventID, event4.GetEventId())
 }
 
-func (s *conflictResolverSuite) TestReset() {
-	sourceCluster := "some random source cluster"
+func (s *conflictResolverSuite) TestReset_HistoryMisAllignment() {
 	startTime := time.Now()
 	domainID := s.mockContext.domainID
 	execution := s.mockContext.workflowExecution
-	nextEventID := int64(2)
 
+	eventID := common.FirstEventID
 	event1 := &shared.HistoryEvent{
-		EventId: common.Int64Ptr(1),
+		EventId: common.Int64Ptr(eventID),
 		Version: common.Int64Ptr(12),
 		WorkflowExecutionStartedEventAttributes: &shared.WorkflowExecutionStartedEventAttributes{
 			WorkflowType: &shared.WorkflowType{Name: common.StringPtr("some random workflow type")},
@@ -203,26 +202,76 @@ func (s *conflictResolverSuite) TestReset() {
 			Identity:                            common.StringPtr("some random identity"),
 		},
 	}
+
+	eventID++
 	event2 := &shared.HistoryEvent{
-		EventId: common.Int64Ptr(2),
+		EventId: common.Int64Ptr(eventID),
 		DecisionTaskScheduledEventAttributes: &shared.DecisionTaskScheduledEventAttributes{},
 	}
 
 	historySerializer := persistence.NewJSONHistorySerializer()
 	serializedBatch, _ := historySerializer.Serialize(persistence.NewHistoryEventBatch(persistence.GetDefaultHistoryVersion(), []*shared.HistoryEvent{event1, event2}))
 
-	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", event1.GetVersion()).Return(sourceCluster).Once()
 	s.mockHistoryMgr.On("GetWorkflowExecutionHistory", &persistence.GetWorkflowExecutionHistoryRequest{
 		DomainID:      domainID,
 		Execution:     execution,
 		FirstEventID:  common.FirstEventID,
-		NextEventID:   nextEventID,
+		NextEventID:   eventID,
 		PageSize:      defaultHistoryPageSize,
 		NextPageToken: nil,
 	}).Return(&persistence.GetWorkflowExecutionHistoryResponse{
 		Events:        []persistence.SerializedHistoryEventBatch{*serializedBatch},
 		NextPageToken: nil,
-	}, nil)
+	}, nil).Once()
+
+	mutableState, err := s.conflictResolver.reset(uuid.New(), eventID-1, startTime)
+	s.Nil(mutableState)
+	s.Equal(ErrCorruptedHistory, err)
+}
+
+func (s *conflictResolverSuite) TestReset() {
+	sourceCluster := "some random source cluster"
+	startTime := time.Now()
+	domainID := s.mockContext.domainID
+	execution := s.mockContext.workflowExecution
+
+	eventID := common.FirstEventID
+	event := &shared.HistoryEvent{
+		EventId:   common.Int64Ptr(eventID),
+		Version:   common.Int64Ptr(12),
+		EventType: shared.EventTypeWorkflowExecutionStarted.Ptr(),
+		WorkflowExecutionStartedEventAttributes: &shared.WorkflowExecutionStartedEventAttributes{
+			WorkflowType: &shared.WorkflowType{Name: common.StringPtr("some random workflow type")},
+			TaskList:     &shared.TaskList{Name: common.StringPtr("some random workflow type")},
+			Input:        []byte("some random input"),
+			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(123),
+			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(233),
+			Identity:                            common.StringPtr("some random identity"),
+		},
+	}
+
+	historySerializer := persistence.NewJSONHistorySerializer()
+	serializedBatch, _ := historySerializer.Serialize(persistence.NewHistoryEventBatch(persistence.GetDefaultHistoryVersion(), []*shared.HistoryEvent{event}))
+
+	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", event.GetVersion()).Return(sourceCluster).Once()
+	s.mockHistoryMgr.On("GetWorkflowExecutionHistory", &persistence.GetWorkflowExecutionHistoryRequest{
+		DomainID:      domainID,
+		Execution:     execution,
+		FirstEventID:  common.FirstEventID,
+		NextEventID:   eventID + 1,
+		PageSize:      defaultHistoryPageSize,
+		NextPageToken: nil,
+	}).Return(&persistence.GetWorkflowExecutionHistoryResponse{
+		Events:        []persistence.SerializedHistoryEventBatch{*serializedBatch},
+		NextPageToken: nil,
+	}, nil).Once()
+
+	s.mockHistoryMgr.On("DeleteWorkflowExecutionPartialHistory", &persistence.DeleteWorkflowExecutionPartialHistoryRequest{
+		DomainID:     domainID,
+		Execution:    execution,
+		StartEventID: eventID + 1,
+		EndEventID:   common.EndEventID,
+	}).Return(nil).Once()
 
 	s.mockContext.updateCondition = int64(59)
 	createRequestID := uuid.New()
@@ -234,14 +283,14 @@ func (s *conflictResolverSuite) TestReset() {
 			DomainID:             domainID,
 			WorkflowID:           execution.GetWorkflowId(),
 			RunID:                execution.GetRunId(),
-			TaskList:             event1.WorkflowExecutionStartedEventAttributes.TaskList.GetName(),
-			WorkflowTypeName:     event1.WorkflowExecutionStartedEventAttributes.WorkflowType.GetName(),
-			WorkflowTimeout:      *event1.WorkflowExecutionStartedEventAttributes.ExecutionStartToCloseTimeoutSeconds,
-			DecisionTimeoutValue: *event1.WorkflowExecutionStartedEventAttributes.TaskStartToCloseTimeoutSeconds,
+			TaskList:             event.WorkflowExecutionStartedEventAttributes.TaskList.GetName(),
+			WorkflowTypeName:     event.WorkflowExecutionStartedEventAttributes.WorkflowType.GetName(),
+			WorkflowTimeout:      *event.WorkflowExecutionStartedEventAttributes.ExecutionStartToCloseTimeoutSeconds,
+			DecisionTimeoutValue: *event.WorkflowExecutionStartedEventAttributes.TaskStartToCloseTimeoutSeconds,
 			State:                persistence.WorkflowStateCreated,
 			CloseStatus:          persistence.WorkflowCloseStatusNone,
-			LastFirstEventID:     event1.GetEventId(),
-			NextEventID:          nextEventID,
+			LastFirstEventID:     event.GetEventId(),
+			NextEventID:          eventID + 1,
 			LastProcessedEvent:   common.EmptyEventID,
 			StartTimestamp:       startTime,
 			LastUpdatedTimestamp: startTime,
@@ -255,14 +304,14 @@ func (s *conflictResolverSuite) TestReset() {
 			CreateRequestID:      createRequestID,
 		},
 		ReplicationState: &persistence.ReplicationState{
-			CurrentVersion:   event1.GetVersion(),
-			StartVersion:     event1.GetVersion(),
-			LastWriteVersion: event1.GetVersion(),
-			LastWriteEventID: event1.GetEventId(),
+			CurrentVersion:   event.GetVersion(),
+			StartVersion:     event.GetVersion(),
+			LastWriteVersion: event.GetVersion(),
+			LastWriteEventID: event.GetEventId(),
 			LastReplicationInfo: map[string]*persistence.ReplicationInfo{
 				sourceCluster: &persistence.ReplicationInfo{
-					Version:     event1.GetVersion(),
-					LastEventID: event1.GetEventId(),
+					Version:     event.GetVersion(),
+					LastEventID: event.GetEventId(),
 				},
 			},
 		},
@@ -295,6 +344,6 @@ func (s *conflictResolverSuite) TestReset() {
 		},
 		nil,
 	)
-	_, err := s.conflictResolver.reset(createRequestID, nextEventID-1, startTime)
+	_, err := s.conflictResolver.reset(createRequestID, eventID, startTime)
 	s.Nil(err)
 }

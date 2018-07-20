@@ -79,7 +79,7 @@ var (
 	// ErrMissingReplicationInfo is returned when replication task is missing replication information from source cluster
 	ErrMissingReplicationInfo = &shared.BadRequestError{Message: "replication task is missing cluster replication info"}
 	// ErrCorruptedReplicationInfo is returned when replication task has corrupted replication information from source cluster
-	ErrCorruptedReplicationInfo = &shared.BadRequestError{Message: "replication task is has corrupted cluster replication info"}
+	ErrCorruptedReplicationInfo = &shared.BadRequestError{Message: "replication task has corrupted cluster replication info"}
 )
 
 func newHistoryReplicator(shard ShardContext, historyEngine *historyEngineImpl, historyCache *historyCache, domainCache cache.DomainCache,

@@ -349,6 +349,15 @@ func (p *historyRateLimitedPersistenceClient) DeleteWorkflowExecutionHistory(req
 	return err
 }
 
+func (p *historyRateLimitedPersistenceClient) DeleteWorkflowExecutionPartialHistory(request *DeleteWorkflowExecutionPartialHistoryRequest) error {
+	if ok, _ := p.rateLimiter.TryConsume(1); !ok {
+		return ErrPersistenceLimitExceeded
+	}
+
+	err := p.persistence.DeleteWorkflowExecutionPartialHistory(request)
+	return err
+}
+
 func (p *historyRateLimitedPersistenceClient) Close() {
 	p.persistence.Close()
 }

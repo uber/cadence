@@ -51,6 +51,13 @@ const (
 		`WHERE domain_id = ? ` +
 		`AND workflow_id = ? ` +
 		`AND run_id = ? `
+
+	templateDeleteWorkflowExecutionPartialHistory = `DELETE FROM events ` +
+		`WHERE domain_id = ? ` +
+		`AND workflow_id = ? ` +
+		`AND run_id = ? ` +
+		`AND first_event_id >= ? ` +
+		`AND first_event_id < ?`
 )
 
 type (
@@ -105,8 +112,8 @@ func (h *cassandraHistoryPersistence) AppendHistoryEvents(request *AppendHistory
 	} else {
 		query = h.session.Query(templateAppendHistoryEvents,
 			request.DomainID,
-			*request.Execution.WorkflowId,
-			*request.Execution.RunId,
+			request.Execution.GetWorkflowId(),
+			request.Execution.GetRunId(),
 			request.FirstEventID,
 			request.RangeID,
 			request.TransactionID,
@@ -146,8 +153,8 @@ func (h *cassandraHistoryPersistence) GetWorkflowExecutionHistory(request *GetWo
 	execution := request.Execution
 	query := h.session.Query(templateGetWorkflowExecutionHistory,
 		request.DomainID,
-		*execution.WorkflowId,
-		*execution.RunId,
+		execution.GetWorkflowId(),
+		execution.GetRunId(),
 		request.FirstEventID,
 		request.NextEventID)
 
@@ -194,8 +201,34 @@ func (h *cassandraHistoryPersistence) DeleteWorkflowExecutionHistory(
 	execution := request.Execution
 	query := h.session.Query(templateDeleteWorkflowExecutionHistory,
 		request.DomainID,
-		*execution.WorkflowId,
-		*execution.RunId)
+		execution.GetWorkflowId(),
+		execution.GetRunId())
+
+	err := query.Exec()
+	if err != nil {
+		if isThrottlingError(err) {
+			return &workflow.ServiceBusyError{
+				Message: fmt.Sprintf("DeleteWorkflowExecutionHistory operation failed. Error: %v", err),
+			}
+		}
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("DeleteWorkflowExecutionHistory operation failed. Error: %v", err),
+		}
+	}
+
+	return nil
+}
+
+func (h *cassandraHistoryPersistence) DeleteWorkflowExecutionPartialHistory(
+	request *DeleteWorkflowExecutionPartialHistoryRequest) error {
+	execution := request.Execution
+	query := h.session.Query(templateDeleteWorkflowExecutionPartialHistory,
+		request.DomainID,
+		execution.GetWorkflowId(),
+		execution.GetRunId(),
+		request.StartEventID,
+		request.EndEventID,
+	)
 
 	err := query.Exec()
 	if err != nil {

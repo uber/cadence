@@ -158,6 +158,8 @@ const (
 	PersistenceGetWorkflowExecutionHistoryScope
 	// PersistenceDeleteWorkflowExecutionHistoryScope tracks DeleteWorkflowExecutionHistory calls made by service to persistence layer
 	PersistenceDeleteWorkflowExecutionHistoryScope
+	// PersistenceDeleteWorkflowExecutionPartialHistoryScope tracks DeleteWorkflowExecutionPartialHistory calls made by service to persistence layer
+	PersistenceDeleteWorkflowExecutionPartialHistoryScope
 	// PersistenceCreateDomainScope tracks CreateDomain calls made by service to persistence layer
 	PersistenceCreateDomainScope
 	// PersistenceGetDomainScope tracks GetDomain calls made by service to persistence layer
@@ -507,6 +509,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceAppendHistoryEventsScope:                      {operation: "AppendHistoryEvents", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 		PersistenceGetWorkflowExecutionHistoryScope:              {operation: "GetWorkflowExecutionHistory", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 		PersistenceDeleteWorkflowExecutionHistoryScope:           {operation: "DeleteWorkflowExecutionHistory", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceDeleteWorkflowExecutionPartialHistoryScope:    {operation: "DeleteWorkflowExecutionPartialeHistory", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 		PersistenceCreateDomainScope:                             {operation: "CreateDomain", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 		PersistenceGetDomainScope:                                {operation: "GetDomain", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 		PersistenceUpdateDomainScope:                             {operation: "UpdateDomain", tags: map[string]string{ShardTagName: NoneShardsTagValue}},

@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"fmt"
+
 	"github.com/pborman/uuid"
 	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -208,6 +209,70 @@ func (s *historyPersistenceSuite) TestDeleteHistoryEvents() {
 	s.Nil(data1)
 }
 
+func (s *historyPersistenceSuite) TestDeleteHistoryPartialEvents() {
+	domainID := "003de9c6-e41e-42d4-bee9-9e06968e4d0d"
+	workflowExecution := gen.WorkflowExecution{
+		WorkflowId: common.StringPtr("delete-history-partial-events-test"),
+		RunId:      common.StringPtr("2122fd8d-2859-459e-a2e2-d1fb273a43cb"),
+	}
+
+	eventBatchMap := map[int64]*SerializedHistoryEventBatch{
+		1:  NewSerializedHistoryEventBatch([]byte("event1;event2"), common.EncodingTypeGob, 1),
+		3:  NewSerializedHistoryEventBatch([]byte("event3"), common.EncodingTypeGob, 1),
+		4:  NewSerializedHistoryEventBatch([]byte("event4;event5"), common.EncodingTypeGob, 1),
+		6:  NewSerializedHistoryEventBatch([]byte("event6"), common.EncodingTypeGob, 1),
+		7:  NewSerializedHistoryEventBatch([]byte("event7"), common.EncodingTypeGob, 1),
+		8:  NewSerializedHistoryEventBatch([]byte("event8;event9"), common.EncodingTypeGob, 1),
+		10: NewSerializedHistoryEventBatch([]byte("event10"), common.EncodingTypeGob, 1),
+		11: NewSerializedHistoryEventBatch([]byte("event11;event12"), common.EncodingTypeGob, 1),
+		13: NewSerializedHistoryEventBatch([]byte("event13"), common.EncodingTypeGob, 1),
+		14: NewSerializedHistoryEventBatch([]byte("event14"), common.EncodingTypeGob, 1),
+	}
+	eventBatches := []*SerializedHistoryEventBatch{}
+	for i := int64(1); i < 15; i++ {
+		if eventBatch, ok := eventBatchMap[i]; ok {
+			eventBatches = append(eventBatches, eventBatch)
+		}
+	}
+
+	for firstEventID, eventBatch := range eventBatchMap {
+		err := s.AppendHistoryEvents(domainID, workflowExecution, firstEventID, 1, firstEventID, eventBatch, false)
+		s.Nil(err)
+	}
+
+	gotHistoryList, token, err := s.GetWorkflowExecutionHistory(domainID, workflowExecution, 0, 15, 11, nil)
+	s.Nil(err)
+	s.Equal([]byte{}, token)
+	s.Equal(len(eventBatches), len(gotHistoryList))
+	for i := 0; i < len(gotHistoryList); i++ {
+		s.Equal(eventBatches[i].Data, gotHistoryList[i].Data)
+		s.Equal(eventBatches[i].Version, gotHistoryList[i].Version)
+		s.Equal(eventBatches[i].EncodingType, gotHistoryList[i].EncodingType)
+	}
+
+	deletionStartEventID := int64(8)
+	deletionEndEventID := int64(13)
+	err2 := s.DeleteWorkflowExecutionPartialHistory(domainID, workflowExecution, deletionStartEventID, deletionEndEventID)
+	s.Nil(err2)
+
+	eventBatches = []*SerializedHistoryEventBatch{}
+	for i := int64(1); i < 15; i++ {
+		if eventBatch, ok := eventBatchMap[i]; ok && (i < deletionStartEventID || i >= deletionEndEventID) {
+			eventBatches = append(eventBatches, eventBatch)
+		}
+	}
+
+	gotHistoryList, token, err = s.GetWorkflowExecutionHistory(domainID, workflowExecution, 0, 15, 11, nil)
+	s.Nil(err)
+	s.Equal([]byte{}, token)
+	s.Equal(len(eventBatches), len(gotHistoryList))
+	for i := 0; i < len(gotHistoryList); i++ {
+		s.Equal(eventBatches[i].Data, gotHistoryList[i].Data)
+		s.Equal(eventBatches[i].Version, gotHistoryList[i].Version)
+		s.Equal(eventBatches[i].EncodingType, gotHistoryList[i].EncodingType)
+	}
+}
+
 func (s *historyPersistenceSuite) TestAppendAndGet() {
 	domainID := uuid.New()
 	workflowExecution := gen.WorkflowExecution{
@@ -278,5 +343,16 @@ func (s *historyPersistenceSuite) DeleteWorkflowExecutionHistory(domainID string
 	return s.HistoryMgr.DeleteWorkflowExecutionHistory(&DeleteWorkflowExecutionHistoryRequest{
 		DomainID:  domainID,
 		Execution: workflowExecution,
+	})
+}
+
+func (s *historyPersistenceSuite) DeleteWorkflowExecutionPartialHistory(domainID string,
+	workflowExecution gen.WorkflowExecution, startEventID, endEventID int64) error {
+
+	return s.HistoryMgr.DeleteWorkflowExecutionPartialHistory(&DeleteWorkflowExecutionPartialHistoryRequest{
+		DomainID:     domainID,
+		Execution:    workflowExecution,
+		StartEventID: startEventID,
+		EndEventID:   endEventID,
 	})
 }

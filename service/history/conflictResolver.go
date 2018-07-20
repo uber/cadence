@@ -31,6 +31,12 @@ import (
 	"github.com/uber/cadence/common/persistence"
 )
 
+var (
+	// ErrCorruptedHistory is returned when replication task try to reset history while
+	// the local history does not align with the input next event ID.
+	ErrCorruptedHistory = &shared.BadRequestError{Message: "replication task encounter mis-allignment history."}
+)
+
 type (
 	conflictResolver interface {
 		reset(requestID string, replayEventID int64, startTime time.Time) (mutableState, error)
@@ -85,9 +91,9 @@ func (r *conflictResolverImpl) reset(requestID string, replayEventID int64, star
 		// NextEventID could be in the middle of the batch.  Trim the history events to not have more events then what
 		// need to be applied
 		if batchSize > eventsToApply {
-			history.Events = history.Events[0:eventsToApply]
+			r.logError("Conflict resolution err mis-allignment history.", ErrCorruptedHistory)
+			return nil, ErrCorruptedHistory
 		}
-
 		eventsToApply -= int64(len(history.Events))
 
 		if len(history.Events) == 0 {
@@ -121,10 +127,23 @@ func (r *conflictResolverImpl) reset(requestID string, replayEventID int64, star
 	resetMutableStateBuilder.UpdateReplicationStateLastEventID(sourceCluster, lastEvent.GetVersion(), replayEventID)
 
 	r.logger.WithField(logging.TagResetNextEventID, resetMutableStateBuilder.GetNextEventID()).Info("All events applied for execution.")
+
+	// first delete the history events, then reset mutable state
+	// reasion:
+	// if reset mutable state then delete history events, the deletion of history events can fail
+	// causing the worker to retry. since reset of mutable state is a success, this code path will never be
+	// executed again.
+
+	err = r.deleteHistory(domainID, execution, replayNextEventID, common.EndEventID)
+	if err != nil {
+		return nil, err
+	}
+
 	msBuilder, err := r.context.resetWorkflowExecution(resetMutableStateBuilder)
 	if err != nil {
 		r.logError("Conflict resolution err reset workflow.", err)
 	}
+
 	return msBuilder, err
 }
 
@@ -162,6 +181,22 @@ func (r *conflictResolverImpl) getHistory(domainID string, execution shared.Work
 	executionHistory := &shared.History{}
 	executionHistory.Events = historyEvents
 	return executionHistory, response.NextPageToken, lastFirstEventID, nil
+}
+
+func (r *conflictResolverImpl) deleteHistory(domainID string, execution shared.WorkflowExecution, startEventID, endEventID int64) error {
+
+	err := r.historyMgr.DeleteWorkflowExecutionPartialHistory(&persistence.DeleteWorkflowExecutionPartialHistoryRequest{
+		DomainID:     domainID,
+		Execution:    execution,
+		StartEventID: startEventID,
+		EndEventID:   endEventID,
+	})
+
+	if err != nil {
+		r.logError("Conflict resolution err reset history.", err)
+		return err
+	}
+	return nil
 }
 
 func (r *conflictResolverImpl) logError(msg string, err error) {
