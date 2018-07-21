@@ -804,10 +804,8 @@ type (
 	DeleteWorkflowExecutionPartialHistoryRequest struct {
 		DomainID  string
 		Execution workflow.WorkflowExecution
-		// Delete the history events from FirstEventID. Inclusive.
+		// Delete the history events from FirstEventID. Inclusive, to infinity
 		StartEventID int64
-		// Delete the history events upto NextEventID.  Not Inclusive.
-		EndEventID int64
 	}
 
 	// DomainInfo describes the domain entity

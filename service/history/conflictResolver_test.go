@@ -270,7 +270,6 @@ func (s *conflictResolverSuite) TestReset() {
 		DomainID:     domainID,
 		Execution:    execution,
 		StartEventID: eventID + 1,
-		EndEventID:   common.EndEventID,
 	}).Return(nil).Once()
 
 	s.mockContext.updateCondition = int64(59)

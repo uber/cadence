@@ -119,7 +119,14 @@ func (p *replicatorQueueProcessorImpl) process(qTask queueTaskInfo) error {
 	}
 
 	if err != nil {
-		p.metricsClient.IncCounter(scope, metrics.TaskFailures)
+		if _, ok := err.(*shared.EntityNotExistsError); ok {
+			// history can be resetted.
+			// In which case just ignore the error
+			p.queueAckMgr.completeQueueTask(task.TaskID)
+			err = nil
+		} else {
+			p.metricsClient.IncCounter(scope, metrics.TaskFailures)
+		}
 	} else {
 		p.queueAckMgr.completeQueueTask(task.TaskID)
 	}

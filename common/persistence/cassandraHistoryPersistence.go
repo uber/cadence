@@ -227,7 +227,7 @@ func (h *cassandraHistoryPersistence) DeleteWorkflowExecutionPartialHistory(
 		execution.GetWorkflowId(),
 		execution.GetRunId(),
 		request.StartEventID,
-		request.EndEventID,
+		common.EndEventID,
 	)
 
 	err := query.Exec()

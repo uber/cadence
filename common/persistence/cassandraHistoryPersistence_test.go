@@ -251,13 +251,12 @@ func (s *historyPersistenceSuite) TestDeleteHistoryPartialEvents() {
 	}
 
 	deletionStartEventID := int64(8)
-	deletionEndEventID := int64(13)
-	err2 := s.DeleteWorkflowExecutionPartialHistory(domainID, workflowExecution, deletionStartEventID, deletionEndEventID)
+	err2 := s.DeleteWorkflowExecutionPartialHistory(domainID, workflowExecution, deletionStartEventID)
 	s.Nil(err2)
 
 	eventBatches = []*SerializedHistoryEventBatch{}
 	for i := int64(1); i < 15; i++ {
-		if eventBatch, ok := eventBatchMap[i]; ok && (i < deletionStartEventID || i >= deletionEndEventID) {
+		if eventBatch, ok := eventBatchMap[i]; ok && i < deletionStartEventID {
 			eventBatches = append(eventBatches, eventBatch)
 		}
 	}
@@ -347,12 +346,11 @@ func (s *historyPersistenceSuite) DeleteWorkflowExecutionHistory(domainID string
 }
 
 func (s *historyPersistenceSuite) DeleteWorkflowExecutionPartialHistory(domainID string,
-	workflowExecution gen.WorkflowExecution, startEventID, endEventID int64) error {
+	workflowExecution gen.WorkflowExecution, startEventID int64) error {
 
 	return s.HistoryMgr.DeleteWorkflowExecutionPartialHistory(&DeleteWorkflowExecutionPartialHistoryRequest{
 		DomainID:     domainID,
 		Execution:    workflowExecution,
 		StartEventID: startEventID,
-		EndEventID:   endEventID,
 	})
 }

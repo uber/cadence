@@ -134,7 +134,7 @@ func (r *conflictResolverImpl) reset(requestID string, replayEventID int64, star
 	// causing the worker to retry. since reset of mutable state is a success, this code path will never be
 	// executed again.
 
-	err = r.deleteHistory(domainID, execution, replayNextEventID, common.EndEventID)
+	err = r.deleteHistory(domainID, execution, replayNextEventID)
 	if err != nil {
 		return nil, err
 	}
@@ -183,13 +183,12 @@ func (r *conflictResolverImpl) getHistory(domainID string, execution shared.Work
 	return executionHistory, response.NextPageToken, lastFirstEventID, nil
 }
 
-func (r *conflictResolverImpl) deleteHistory(domainID string, execution shared.WorkflowExecution, startEventID, endEventID int64) error {
+func (r *conflictResolverImpl) deleteHistory(domainID string, execution shared.WorkflowExecution, startEventID int64) error {
 
 	err := r.historyMgr.DeleteWorkflowExecutionPartialHistory(&persistence.DeleteWorkflowExecutionPartialHistoryRequest{
 		DomainID:     domainID,
 		Execution:    execution,
 		StartEventID: startEventID,
-		EndEventID:   endEventID,
 	})
 
 	if err != nil {
