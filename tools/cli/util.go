@@ -196,14 +196,14 @@ func HistoryEventToString(e *s.HistoryEvent) string {
 		data = e
 	}
 
-	return anyToString(data)
+	return anyToString(data, false)
 }
 
-func anyToString(d interface{}) string {
+func anyToString(d interface{}, printFully bool) string {
 	v := reflect.ValueOf(d)
 	switch v.Kind() {
 	case reflect.Ptr:
-		return anyToString(v.Elem().Interface())
+		return anyToString(v.Elem().Interface(), printFully)
 	case reflect.Struct:
 		var buf bytes.Buffer
 		t := reflect.TypeOf(d)
@@ -213,20 +213,22 @@ func anyToString(d interface{}) string {
 			if f.Kind() == reflect.Invalid {
 				continue
 			}
-			fieldValue := valueToString(f)
+			fieldValue := valueToString(f, printFully)
 			if len(fieldValue) == 0 {
 				continue
 			}
 			if buf.Len() > 1 {
-				buf.WriteString(",")
+				buf.WriteString(", ")
 			}
 			fieldName := t.Field(i).Name
+			if !printFully {
+				fieldValue = trimInput(fieldValue)
+			}
 			if fieldName == "Reason" || fieldName == "Details" || fieldName == "Cause" {
 				buf.WriteString(fmt.Sprintf("%s:%s", color.RedString(fieldName), color.MagentaString(fieldValue)))
 			} else {
 				buf.WriteString(fmt.Sprintf("%s:%s", fieldName, fieldValue))
 			}
-
 		}
 		buf.WriteString(")")
 		return buf.String()
@@ -235,22 +237,56 @@ func anyToString(d interface{}) string {
 	}
 }
 
-func valueToString(v reflect.Value) string {
+func valueToString(v reflect.Value, printFully bool) string {
 	switch v.Kind() {
 	case reflect.Ptr:
-		return valueToString(v.Elem())
+		return valueToString(v.Elem(), printFully)
 	case reflect.Struct:
-		return anyToString(v.Interface())
+		return anyToString(v.Interface(), printFully)
 	case reflect.Invalid:
 		return ""
 	case reflect.Slice:
 		if v.Type().Elem().Kind() == reflect.Uint8 {
-			return fmt.Sprintf("[%v]", string(v.Bytes()))
+			n := string(v.Bytes())
+			if n != "" && n[len(n)-1] == '\n' {
+				return fmt.Sprintf("[%v]", n[:len(n)-1])
+			}
+			return fmt.Sprintf("[%v]", n)
 		}
 		return fmt.Sprintf("[len=%d]", v.Len())
 	default:
 		return fmt.Sprint(v.Interface())
 	}
+}
+
+// limit the maximum length for each field
+func trimInput(input string) string {
+	if len(input) > maxInputLength {
+		input = fmt.Sprintf("%s ... %s", input[:maxInputLength/2], input[(len(input)-maxInputLength/2):])
+	}
+	return breakLongWords(input, maxWordLength)
+}
+
+// long words will make output in table cell looks bad,
+// break long text "ltltltltllt..." to "ltlt ltlt lt..." will make use of table autowrap so that output is pretty.
+func breakLongWords(input string, maxWordLength int) string {
+	if len(input) <= maxWordLength {
+		return input
+	}
+
+	cnt := 0
+	for i := 0; i < len(input); i++ {
+		if cnt == maxWordLength {
+			cnt = 0
+			input = input[:i] + " " + input[i:]
+			continue
+		}
+		cnt++
+		if input[i] == ' ' {
+			cnt = 0
+		}
+	}
+	return input
 }
 
 // ColorEvent takes an event and return string with color

@@ -126,6 +126,8 @@ const (
 
 	maxOutputStringLength = 200 // max length for output string
 	maxWorkflowTypeLength = 32  // max item length for output workflow type in table
+	maxInputLength        = 500 // max input length for arguments and signal
+	maxWordLength         = 120 // if text length is larger than maxWordLength, it will be inserted spaces
 
 	defaultTimeFormat                = "15:04:05"   // used for converting UnixNano to string like 16:16:36 (only time)
 	defaultDateTimeFormat            = time.RFC3339 // used for converting UnixNano to string like 2018-02-15T16:16:36-08:00
@@ -420,34 +422,32 @@ func showHistoryHelper(c *cli.Context, wid, rid string) {
 		ExitIfError(err)
 	}
 
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetBorder(false)
-	table.SetColumnSeparator("")
-	for _, e := range history.Events {
-		columns := []string{}
-		if printFully {
-			columns = append(columns, anyToString(e))
+	if printFully { // dump everything
+		for _, e := range history.Events {
+			fmt.Println(anyToString(e, true))
+		}
+	} else { // use table to pretty output, will trim long text
+		table := tablewriter.NewWriter(os.Stdout)
+		table.SetBorder(false)
+		table.SetColumnSeparator("")
+		for _, e := range history.Events {
+			columns := []string{}
+			columns = append(columns, strconv.FormatInt(e.GetEventId(), 10))
+
+			if printRawTime {
+				columns = append(columns, strconv.FormatInt(e.GetTimestamp(), 10))
+			} else if printDateTime {
+				columns = append(columns, convertTime(e.GetTimestamp(), false))
+			}
+			if printVersion {
+				columns = append(columns, fmt.Sprintf("(Version: %v)", *e.Version))
+			}
+
+			columns = append(columns, ColorEvent(e), HistoryEventToString(e))
 			table.Append(columns)
-			continue
 		}
-
-		columns = append(columns, strconv.FormatInt(e.GetEventId(), 10))
-
-		if printRawTime {
-			columns = append(columns, strconv.FormatInt(e.GetTimestamp(), 10))
-		} else if printDateTime {
-			columns = append(columns, convertTime(e.GetTimestamp(), false))
-		}
-
-		if printVersion {
-			columns = append(columns, fmt.Sprintf("(Version: %v)", *e.Version))
-		}
-
-		columns = append(columns, ColorEvent(e), HistoryEventToString(e))
-
-		table.Append(columns)
+		table.Render()
 	}
-	table.Render()
 
 	if outputFileName != "" {
 		serializer := &JSONHistorySerializer{}
