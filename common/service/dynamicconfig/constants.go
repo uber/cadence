@@ -95,6 +95,7 @@ var keys = map[Key]string{
 	TimerProcessorMaxPollRPS:                              "history.timerProcessorMaxPollRPS",
 	TimerProcessorMaxPollInterval:                         "history.timerProcessorMaxPollInterval",
 	TimerProcessorMaxPollIntervalJitterCoefficient:        "history.timerProcessorMaxPollIntervalJitterCoefficient",
+	TimerProcessorMaxTimeShift:                            "history.timerProcessorMaxTimeShift",
 	TransferTaskBatchSize:                                 "history.transferTaskBatchSize",
 	TransferProcessorFailoverMaxPollRPS:                   "history.transferProcessorFailoverMaxPollRPS",
 	TransferProcessorMaxPollRPS:                           "history.transferProcessorMaxPollRPS",
@@ -234,6 +235,8 @@ const (
 	TimerProcessorMaxPollInterval
 	// TimerProcessorMaxPollIntervalJitterCoefficient is the max poll interval jitter coefficient
 	TimerProcessorMaxPollIntervalJitterCoefficient
+	// TimerProcessorMaxTimeShift is the max shift timer processor can have
+	TimerProcessorMaxTimeShift
 	// TransferTaskBatchSize is batch size for transferQueueProcessor
 	TransferTaskBatchSize
 	// TransferProcessorFailoverMaxPollRPS is max poll rate per second for transferQueueProcessor

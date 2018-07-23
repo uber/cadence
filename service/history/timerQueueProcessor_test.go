@@ -86,7 +86,7 @@ func (s *timerQueueProcessorSuite) SetupSuite() {
 	historyCache.disabled = true
 	// set the standby cluster's timer ack level to max since we are not testing it
 	// but we are testing the complete timer functionality
-	s.ShardContext.UpdateTimerClusterAckLevel(cluster.TestAlternativeClusterName, timerQueueAckMgrMaxQueryLevel)
+	s.ShardContext.UpdateTimerClusterAckLevel(cluster.TestAlternativeClusterName, maximumTime)
 	s.matchingClient = &mocks.MatchingClient{}
 	s.engineImpl = &historyEngineImpl{
 		currentClusterName: s.ShardContext.GetService().GetClusterMetadata().GetCurrentClusterName(),
@@ -114,6 +114,14 @@ func (s *timerQueueProcessorSuite) TearDownTest() {
 
 func (s *timerQueueProcessorSuite) updateTimerSeqNumbers(timerTasks []persistence.Task) {
 	for _, task := range timerTasks {
+		ts := persistence.GetVisibilityTSFrom(task)
+		if ts.Before(s.engineImpl.shard.GetTimerMaxReadLevel()) {
+			// This can happen if shard move and new host have a time SKU, or there is db write delay.
+			// We generate a new timer ID using timerMaxReadLevel.
+			s.logger.Warnf("%v: New timer generated is less than read level. timestamp: %v, timerMaxReadLevel: %v",
+				time.Now(), ts, s.engineImpl.shard.GetTimerMaxReadLevel())
+			persistence.SetVisibilityTSFrom(task, s.engineImpl.shard.GetTimerMaxReadLevel().Add(time.Millisecond))
+		}
 		taskID, err := s.ShardContext.GetNextTransferTaskID()
 		if err != nil {
 			panic(err)
@@ -149,7 +157,7 @@ func (s *timerQueueProcessorSuite) createExecutionWithTimers(domainID string, we
 	timerTasks := []persistence.Task{}
 	timerInfos := []*persistence.TimerInfo{}
 	decisionCompletedID := int64(4)
-	tBuilder := newTimerBuilder(s.ShardContext.GetConfig(), s.logger, &mockTimeSource{currTime: time.Now()})
+	tBuilder := newTimerBuilder(s.ShardContext.GetConfig(), s.logger, common.NewRealTimeSource())
 
 	for _, timeOut := range timeOuts {
 		_, ti := builder.AddTimerStartedEvent(decisionCompletedID,
@@ -338,7 +346,7 @@ func (s *timerQueueProcessorSuite) TestTimerTaskAfterProcessorStart() {
 	processor := newTimerQueueProcessor(s.ShardContext, s.engineImpl, s.matchingClient, s.logger).(*timerQueueProcessorImpl)
 	processor.Start()
 
-	tBuilder := newTimerBuilder(s.ShardContext.GetConfig(), s.logger, &mockTimeSource{currTime: time.Now()})
+	tBuilder := newTimerBuilder(s.ShardContext.GetConfig(), s.logger, common.NewRealTimeSource())
 	tt := s.addDecisionTimer(domainID, workflowExecution, tBuilder)
 	processor.NotifyNewTimers(cluster.TestCurrentClusterName, s.ShardContext.GetCurrentTime(cluster.TestCurrentClusterName), tt)
 
@@ -401,6 +409,8 @@ func (s *timerQueueProcessorSuite) updateHistoryAndTimers(ms mutableState, timer
 	err3 := s.UpdateWorkflowExecution(
 		updatedState.ExecutionInfo, nil, nil, condition, timerTasks, nil, actInfos, nil, timerInfos, nil)
 	s.Nil(err3)
+
+	time.Sleep(10 * time.Millisecond) // Because TestBase is currently not locked with shard lock, wait to exclude other shard op
 }
 
 func (s *timerQueueProcessorSuite) TestTimerActivityTaskScheduleToStart_WithOutStart() {
@@ -920,7 +930,7 @@ func (s *timerQueueProcessorSuite) TestTimerUserTimers_SameExpiry() {
 
 func (s *timerQueueProcessorSuite) TestTimersOnClosedWorkflow() {
 	domainID := testDomainActiveID
-	workflowExecution := workflow.WorkflowExecution{WorkflowId: common.StringPtr("closed-workflow-test-desicion-timer"),
+	workflowExecution := workflow.WorkflowExecution{WorkflowId: common.StringPtr("closed-workflow-test-decision-timer"),
 		RunId: common.StringPtr(validRunID)}
 
 	taskList := "closed-workflow-queue"

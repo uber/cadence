@@ -121,7 +121,7 @@ type (
 		NotifyNewTask(clusterName string, transferTasks []persistence.Task)
 	}
 
-	// TODO the timer quque processor and the one below, timer processor
+	// TODO the timer queue processor and the one below, timer processor
 	// in combination are confusing, we should consider a better naming
 	// convention, or at least come with a better name for this case.
 	timerQueueProcessor interface {
@@ -139,9 +139,9 @@ type (
 	timerQueueAckMgr interface {
 		getFinishedChan() <-chan struct{}
 		readTimerTasks() ([]*persistence.TimerTaskInfo, *persistence.TimerTaskInfo, bool, error)
+		readLookAheadTask() (*persistence.TimerTaskInfo, error)
 		completeTimerTask(timerTask *persistence.TimerTaskInfo)
 		getAckLevel() TimerSequenceID
-		getReadLevel() TimerSequenceID
 		updateAckLevel()
 	}
 
