@@ -119,6 +119,8 @@ const (
 	FlagClustersWithAlias          = FlagClusters + ", cl"
 	FlagDomainData                 = "domain_data"
 	FlagDomainDataWithAlias        = FlagDomainData + ", dmd"
+	FlagEventId                    = "event_id"
+	FlagEventIdWithAlias           = FlagEventId + ", eid"
 )
 
 const (
@@ -412,7 +414,6 @@ func showHistoryHelper(c *cli.Context, wid, rid string) {
 	printRawTime := c.Bool(FlagPrintRawTime)
 	printFully := c.Bool(FlagPrintFullyDetail)
 	printVersion := c.Bool(FlagPrintEventVersion)
-
 	outputFileName := c.String(FlagOutputFilename)
 
 	ctx, cancel := newContext()
@@ -426,6 +427,13 @@ func showHistoryHelper(c *cli.Context, wid, rid string) {
 		for _, e := range history.Events {
 			fmt.Println(anyToString(e, true))
 		}
+	} else if c.IsSet(FlagEventId) { // only dump that event
+		eventId := c.Int(FlagEventId)
+		if eventId <= 0 || eventId > len(history.Events) {
+			ErrorAndExit("EventId out of range.", errors.New(fmt.Sprintf("Number should be 1 - %d inclusive", len(history.Events))))
+		}
+		e := history.Events[eventId-1]
+		fmt.Println(anyToString(e, true))
 	} else { // use table to pretty output, will trim long text
 		table := tablewriter.NewWriter(os.Stdout)
 		table.SetBorder(false)

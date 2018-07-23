@@ -56,6 +56,10 @@ func newWorkflowCommands() []cli.Command {
 					Name:  FlagOutputFilenameWithAlias,
 					Usage: "Serialize history event to a file",
 				},
+				cli.IntFlag{
+					Name:  FlagEventIdWithAlias,
+					Usage: "Print specific event details",
+				},
 			},
 			Action: func(c *cli.Context) {
 				ShowHistory(c)
@@ -77,6 +81,18 @@ func newWorkflowCommands() []cli.Command {
 				cli.StringFlag{
 					Name:  FlagOutputFilenameWithAlias,
 					Usage: "Serialize history event to a file",
+				},
+				cli.BoolFlag{
+					Name:  FlagPrintFullyDetailWithAlias,
+					Usage: "Print fully event detail",
+				},
+				cli.BoolFlag{
+					Name:  FlagPrintEventVersionWithAlias,
+					Usage: "Print event version",
+				},
+				cli.IntFlag{
+					Name:  FlagEventIdWithAlias,
+					Usage: "Print specific event details",
 				},
 			},
 			Action: func(c *cli.Context) {
