@@ -154,9 +154,10 @@ func newTransferQueueFailoverProcessor(shard ShardContext, historyService *histo
 		return shard.UpdateTransferFailoverLevel(
 			domainID,
 			persistence.TransferFailoverLevel{
-				MinLevel:  ackLevel,
-				MaxLevel:  maxLevel,
-				DomainIDs: []string{domainID},
+				MinLevel:     minLevel,
+				CurrentLevel: ackLevel,
+				MaxLevel:     maxLevel,
+				DomainIDs:    []string{domainID},
 			},
 		)
 	}

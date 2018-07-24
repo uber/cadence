@@ -150,7 +150,15 @@ func (t *timerQueueProcessorImpl) FailoverDomain(domainID string) {
 	failoverTimerProcessor.Start()
 
 	// err is ignored
-	t.shard.UpdateTimerFailoverLevel(domainID, persistence.TimerFailoverLevel{MinLevel: minLevel, MaxLevel: maxLevel, DomainIDs: []string{domainID}})
+	t.shard.UpdateTimerFailoverLevel(
+		domainID,
+		persistence.TimerFailoverLevel{
+			MinLevel:     minLevel,
+			CurrentLevel: minLevel,
+			MaxLevel:     maxLevel,
+			DomainIDs:    []string{domainID},
+		},
+	)
 }
 
 func (t *timerQueueProcessorImpl) getTimerFiredCount(clusterName string) uint64 {

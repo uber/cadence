@@ -114,9 +114,10 @@ func newTimerQueueFailoverProcessor(shard ShardContext, historyService *historyE
 		return shard.UpdateTimerFailoverLevel(
 			domainID,
 			persistence.TimerFailoverLevel{
-				MinLevel:  ackLevel.VisibilityTimestamp,
-				MaxLevel:  maxLevel,
-				DomainIDs: []string{domainID},
+				MinLevel:     minLevel,
+				CurrentLevel: ackLevel.VisibilityTimestamp,
+				MaxLevel:     maxLevel,
+				DomainIDs:    []string{domainID},
 			},
 		)
 	}

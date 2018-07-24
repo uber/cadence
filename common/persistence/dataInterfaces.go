@@ -150,16 +150,18 @@ type (
 
 	// TransferFailoverLevel contains corresponding start / end level
 	TransferFailoverLevel struct {
-		MinLevel  int64
-		MaxLevel  int64
-		DomainIDs []string
+		MinLevel     int64
+		CurrentLevel int64
+		MaxLevel     int64
+		DomainIDs    []string
 	}
 
 	// TimerFailoverLevel contains domain IDs and corresponding start / end level
 	TimerFailoverLevel struct {
-		MinLevel  time.Time
-		MaxLevel  time.Time
-		DomainIDs []string
+		MinLevel     time.Time
+		CurrentLevel time.Time
+		MaxLevel     time.Time
+		DomainIDs    []string
 	}
 
 	// WorkflowExecutionInfo describes a workflow execution
