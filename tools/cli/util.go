@@ -222,7 +222,7 @@ func anyToString(d interface{}, printFully bool) string {
 			}
 			fieldName := t.Field(i).Name
 			if !printFully {
-				fieldValue = trimInput(fieldValue)
+				fieldValue = trimText(fieldValue)
 			}
 			if fieldName == "Reason" || fieldName == "Details" || fieldName == "Cause" {
 				buf.WriteString(fmt.Sprintf("%s:%s", color.RedString(fieldName), color.MagentaString(fieldValue)))
@@ -260,7 +260,7 @@ func valueToString(v reflect.Value, printFully bool) string {
 }
 
 // limit the maximum length for each field
-func trimInput(input string) string {
+func trimText(input string) string {
 	if len(input) > maxInputLength {
 		input = fmt.Sprintf("%s ... %s", input[:maxInputLength/2], input[(len(input)-maxInputLength/2):])
 	}
