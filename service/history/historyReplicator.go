@@ -307,6 +307,7 @@ func (r *historyReplicator) ApplyOtherEventsVersionChecking(ctx context.Context,
 		resolver := r.getNewConflictResolver(context, logger)
 		msBuilder, err = resolver.reset(uuid.New(), ri.GetLastEventId(), msBuilder.GetExecutionInfo().StartTimestamp)
 		logger.Info("Completed Resetting of workflow execution.")
+		context.msBuilder = msBuilder
 		if err != nil {
 			return nil, err
 		}

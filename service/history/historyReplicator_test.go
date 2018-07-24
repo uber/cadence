@@ -328,6 +328,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEventsVersionChecking_IncomingGre
 	mockConflictResolver.On("reset", mock.Anything, incomingLastEventID, startTimeStamp).Return(msBuilderMid, nil)
 	msBuilderOut, err := s.historyReplicator.ApplyOtherEventsVersionChecking(ctx.Background(), context, msBuilderIn, request, s.logger)
 	s.Equal(msBuilderMid, msBuilderOut)
+	s.Equal(context.msBuilder, msBuilderOut)
 	s.Nil(err)
 }
 
