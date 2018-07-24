@@ -61,6 +61,20 @@ func (_m *HistoryManager) DeleteWorkflowExecutionHistory(request *persistence.De
 	return r0
 }
 
+// DeleteWorkflowExecutionPartialHistory provides a mock function with given fields: request
+func (_m *HistoryManager) DeleteWorkflowExecutionPartialHistory(request *persistence.DeleteWorkflowExecutionPartialHistoryRequest) error {
+	ret := _m.Called(request)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*persistence.DeleteWorkflowExecutionPartialHistoryRequest) error); ok {
+		r0 = rf(request)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // GetWorkflowExecutionHistory provides a mock function with given fields: request
 func (_m *HistoryManager) GetWorkflowExecutionHistory(
 	request *persistence.GetWorkflowExecutionHistoryRequest) (*persistence.GetWorkflowExecutionHistoryResponse, error) {

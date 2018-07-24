@@ -818,6 +818,14 @@ type (
 		Execution workflow.WorkflowExecution
 	}
 
+	// DeleteWorkflowExecutionPartialHistoryRequest is used to delete partial workflow execution history
+	DeleteWorkflowExecutionPartialHistoryRequest struct {
+		DomainID  string
+		Execution workflow.WorkflowExecution
+		// Delete the history events from FirstEventID. Inclusive, to infinity
+		StartEventID int64
+	}
+
 	// DomainInfo describes the domain entity
 	DomainInfo struct {
 		ID          string
@@ -974,9 +982,9 @@ type (
 		Closeable
 		AppendHistoryEvents(request *AppendHistoryEventsRequest) error
 		// GetWorkflowExecutionHistory retrieves the paginated list of history events for given execution
-		GetWorkflowExecutionHistory(request *GetWorkflowExecutionHistoryRequest) (*GetWorkflowExecutionHistoryResponse,
-			error)
+		GetWorkflowExecutionHistory(request *GetWorkflowExecutionHistoryRequest) (*GetWorkflowExecutionHistoryResponse, error)
 		DeleteWorkflowExecutionHistory(request *DeleteWorkflowExecutionHistoryRequest) error
+		DeleteWorkflowExecutionPartialHistory(request *DeleteWorkflowExecutionPartialHistoryRequest) error
 	}
 
 	// MetadataManager is used to manage metadata CRUD for domain entities
