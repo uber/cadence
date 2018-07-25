@@ -478,8 +478,13 @@ func (s *cliAppSuite) TestAnyToString() {
 			Input:                               []byte(arg),
 		},
 	}
-	res := anyToString(event, false)
+	res := anyToString(event, false, defaultMaxFieldLength)
 	ss, l := tablewriter.WrapString(res, 10)
-	s.Equal(5, len(ss))
+	s.Equal(8, len(ss))
 	s.Equal(147, l)
+}
+
+func (s *cliAppSuite) TestIsAttributeName() {
+	s.True(isAttributeName("WorkflowExecutionStartedEventAttributes"))
+	s.False(isAttributeName("workflowExecutionStartedEventAttributes"))
 }

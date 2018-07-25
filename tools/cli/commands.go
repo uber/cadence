@@ -121,6 +121,8 @@ const (
 	FlagDomainDataWithAlias        = FlagDomainData + ", dmd"
 	FlagEventId                    = "event_id"
 	FlagEventIdWithAlias           = FlagEventId + ", eid"
+	FlagMaxFieldLength             = "max_field_length"
+	FlagMaxFieldLengthWithAlias    = FlagMaxFieldLength + ", maxl"
 )
 
 const (
@@ -128,7 +130,7 @@ const (
 
 	maxOutputStringLength = 200 // max length for output string
 	maxWorkflowTypeLength = 32  // max item length for output workflow type in table
-	maxInputLength        = 500 // max input length for arguments and signal
+	defaultMaxFieldLength = 500 // default max length for each attribute field
 	maxWordLength         = 120 // if text length is larger than maxWordLength, it will be inserted spaces
 
 	defaultTimeFormat                = "15:04:05"   // used for converting UnixNano to string like 16:16:36 (only time)
@@ -415,6 +417,10 @@ func showHistoryHelper(c *cli.Context, wid, rid string) {
 	printFully := c.Bool(FlagPrintFullyDetail)
 	printVersion := c.Bool(FlagPrintEventVersion)
 	outputFileName := c.String(FlagOutputFilename)
+	var maxFieldLength int
+	if c.IsSet(FlagMaxFieldLength) || !printFully {
+		maxFieldLength = c.Int(FlagMaxFieldLength)
+	}
 
 	ctx, cancel := newContext()
 	defer cancel()
@@ -425,7 +431,7 @@ func showHistoryHelper(c *cli.Context, wid, rid string) {
 
 	if printFully { // dump everything
 		for _, e := range history.Events {
-			fmt.Println(anyToString(e, true))
+			fmt.Println(anyToString(e, true, maxFieldLength))
 		}
 	} else if c.IsSet(FlagEventId) { // only dump that event
 		eventId := c.Int(FlagEventId)
@@ -433,7 +439,7 @@ func showHistoryHelper(c *cli.Context, wid, rid string) {
 			ErrorAndExit("EventId out of range.", errors.New(fmt.Sprintf("Number should be 1 - %d inclusive", len(history.Events))))
 		}
 		e := history.Events[eventId-1]
-		fmt.Println(anyToString(e, true))
+		fmt.Println(anyToString(e, true, 0))
 	} else { // use table to pretty output, will trim long text
 		table := tablewriter.NewWriter(os.Stdout)
 		table.SetBorder(false)
@@ -451,7 +457,7 @@ func showHistoryHelper(c *cli.Context, wid, rid string) {
 				columns = append(columns, fmt.Sprintf("(Version: %v)", *e.Version))
 			}
 
-			columns = append(columns, ColorEvent(e), HistoryEventToString(e))
+			columns = append(columns, ColorEvent(e), HistoryEventToString(e, false, maxFieldLength))
 			table.Append(columns)
 		}
 		table.Render()
@@ -600,6 +606,10 @@ func printWorkflowProgress(c *cli.Context, wid, rid string) {
 	defer cancel()
 
 	showDetails := c.Bool(FlagShowDetail)
+	var maxFieldLength int
+	if c.IsSet(FlagMaxFieldLength) {
+		maxFieldLength = c.Int(FlagMaxFieldLength)
+	}
 
 	go func() {
 		iter := wfClient.GetWorkflowHistory(tcCtx, wid, rid, true, s.HistoryEventFilterTypeAllEvent)
@@ -613,7 +623,7 @@ func printWorkflowProgress(c *cli.Context, wid, rid string) {
 				isTimeElapseExist = false
 			}
 			if showDetails {
-				fmt.Printf("  %d, %s, %s, %s\n", event.GetEventId(), convertTime(event.GetTimestamp(), false), ColorEvent(event), HistoryEventToString(event))
+				fmt.Printf("  %d, %s, %s, %s\n", event.GetEventId(), convertTime(event.GetTimestamp(), false), ColorEvent(event), HistoryEventToString(event, true, maxFieldLength))
 			} else {
 				fmt.Printf("  %d, %s, %s\n", event.GetEventId(), convertTime(event.GetTimestamp(), false), ColorEvent(event))
 			}
