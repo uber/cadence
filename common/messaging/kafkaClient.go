@@ -28,7 +28,6 @@ import (
 	uberKafkaClient "github.com/uber-go/kafka-client"
 	uberKafka "github.com/uber-go/kafka-client/kafka"
 	"github.com/uber/cadence/.gen/go/replicator"
-	"github.com/uber/cadence/common/metrics"
 )
 
 const rcvBufferSize = 2 * 1024
@@ -41,59 +40,23 @@ type (
 		logger bark.Logger
 	}
 
+	// a wrapper of uberKafka.Consumer to let the compiler happy
 	kafkaConsumer struct {
 		uConsumer uberKafka.Consumer
-		logger    bark.Logger
 		msgC      chan Message
 		doneC     chan struct{}
-	}
-
-	kafkaMessage struct {
-		uMsg uberKafka.Message
 	}
 )
 
 var _ Client = (*kafkaClient)(nil)
 var _ Consumer = (*kafkaConsumer)(nil)
-var _ Message = (*kafkaMessage)(nil)
 
-func newKafkaMessage(uMsg uberKafka.Message) Message {
-	return &kafkaMessage{
-		uMsg: uMsg,
-	}
-}
-
-func newKafkaConsumer(uConsumer uberKafka.Consumer, metricsClient metrics.Client, logger bark.Logger) Consumer {
+func newKafkaConsumer(uConsumer uberKafka.Consumer) Consumer {
 	return &kafkaConsumer{
 		uConsumer: uConsumer,
-		logger:    logger,
 		msgC:      make(chan Message, rcvBufferSize),
 		doneC:     make(chan struct{}),
 	}
-}
-
-func (m *kafkaMessage) Value() []byte {
-	return m.uMsg.Value()
-}
-
-// Partition is the ID of the partition from which the message was read.
-func (m *kafkaMessage) Partition() int32 {
-	return m.uMsg.Partition()
-}
-
-// Offset is the message's offset.
-func (m *kafkaMessage) Offset() int64 {
-	return m.uMsg.Offset()
-}
-
-// Ack marks the message as successfully processed.
-func (m *kafkaMessage) Ack() error {
-	return m.uMsg.Ack()
-}
-
-// Nack marks the message processing as failed and the message will be retried or sent to DLQ.
-func (m *kafkaMessage) Nack() error {
-	return m.uMsg.Nack()
 }
 
 func (c *kafkaConsumer) Start() error {
@@ -104,6 +67,7 @@ func (c *kafkaConsumer) Start() error {
 		select {
 		case <-c.doneC:
 			return nil
+		// our Message interface is just a subset of Message interface in kafka-client so we don't need a wrapper here
 		case uMsg := <-c.uConsumer.Messages():
 			c.msgC <- uMsg
 		}
@@ -160,7 +124,7 @@ func (c *kafkaClient) NewConsumer(currentCluster, sourceCluster, consumerName st
 	if err != nil {
 		return nil, err
 	}
-	return newKafkaConsumer(uConsumer, c.metricsClient, c.logger), nil
+	return newKafkaConsumer(uConsumer), nil
 }
 
 // NewProducer is used to create a Kafka producer for shipping replication tasks
