@@ -60,20 +60,24 @@ func (c *kafkaConsumer) Start() error {
 	if err := c.uConsumer.Start(); err != nil {
 		return err
 	}
-	for {
-		select {
-		case <-c.doneC:
-			return nil
-		// our Message interface is just a subset of Message interface in kafka-client so we don't need a wrapper here
-		case uMsg := <-c.uConsumer.Messages():
-			c.msgC <- uMsg
+	go func() {
+		for {
+			select {
+			case <-c.doneC:
+				break
+				// our Message interface is just a subset of Message interface in kafka-client so we don't need a wrapper here
+			case uMsg := <-c.uConsumer.Messages():
+				c.msgC <- uMsg
+			}
 		}
-	}
+	}()
+	return nil
 }
 
 // Stop stops the consumer
 func (c *kafkaConsumer) Stop() {
 	close(c.doneC)
+	close(c.msgC)
 	c.uConsumer.Stop()
 }
 
