@@ -21,13 +21,10 @@
 package messaging
 
 import (
-	"encoding/json"
-
 	"github.com/Shopify/sarama"
 	"github.com/uber-common/bark"
 	uberKafkaClient "github.com/uber-go/kafka-client"
 	uberKafka "github.com/uber-go/kafka-client/kafka"
-	"github.com/uber/cadence/.gen/go/replicator"
 )
 
 const rcvBufferSize = 2 * 1024
@@ -83,15 +80,6 @@ func (c *kafkaConsumer) Stop() {
 // Messages return the message channel for this consumer
 func (c *kafkaConsumer) Messages() <-chan Message {
 	return c.msgC
-}
-
-func Deserialize(payload []byte) (*replicator.ReplicationTask, error) {
-	var task replicator.ReplicationTask
-	if err := json.Unmarshal(payload, &task); err != nil {
-		return nil, err
-	}
-
-	return &task, nil
 }
 
 // NewConsumer is used to create a Kafka consumer
