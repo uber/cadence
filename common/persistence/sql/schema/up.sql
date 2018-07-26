@@ -144,3 +144,27 @@ CREATE TABLE IF NOT EXISTS current_executions(
   start_version BIGINT,
   PRIMARY KEY (shard_id, domain_id, workflow_id)
 );
+
+CREATE TABLE tasks (
+  domain_id VARCHAR(64) NOT NULL,
+  workflow_id VARCHAR(255) NOT NULL,
+  run_id VARCHAR(64) NOT NULL,
+  schedule_id BIGINT NOT NULL,
+  task_list_name VARCHAR(255) NOT NULL,
+  task_list_type TINYINT NOT NULL,
+  task_id BIGINT NOT NULL,
+  expiry_ts TIMESTAMP NOT NULL,
+  PRIMARY KEY (domain_id, task_list_name, task_list_type, task_id)
+);
+
+CREATE TABLE task_lists (
+	domain_id VARCHAR(64) NOT NULL,
+	range_id BIGINT NOT NULL,
+	name VARCHAR(255) NOT NULL,
+	type TINYINT NOT NULL, -- {Activity, Decision}
+	ack_level BIGINT NOT NULL DEFAULT 0,
+	kind TINYINT NOT NULL, -- {Normal, Sticky}
+	expiry_ts TIMESTAMP NOT NULL,
+	PRIMARY KEY (domain_id, name, type)
+);
+

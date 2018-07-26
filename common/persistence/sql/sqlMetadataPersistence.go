@@ -28,7 +28,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 
 	_ "github.com/go-sql-driver/mysql" // MySQL driver
-	"github.com/jmoiron/sqlx"
+	"github.com/hmgle/sqlx"
 )
 
 type (

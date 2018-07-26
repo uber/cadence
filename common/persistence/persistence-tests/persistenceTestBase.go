@@ -35,7 +35,7 @@ import (
 
 	"fmt"
 	"github.com/gocql/gocql"
-	"github.com/jmoiron/sqlx"
+	"github.com/hmgle/sqlx"
 	"github.com/pborman/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/uber-common/bark"

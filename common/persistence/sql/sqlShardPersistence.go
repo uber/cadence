@@ -21,13 +21,14 @@
 package sql
 
 import (
+	"database/sql"
 	"fmt"
 	"time"
 
-	"database/sql"
-	"github.com/jmoiron/sqlx"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/persistence"
+
+	"github.com/hmgle/sqlx"
 )
 
 type (
@@ -111,7 +112,7 @@ shard_id = :shard_id AND
 range_id = :old_range_id
 `
 
-	lockShardSQLQuery   = `SELECT range_id FROM shards WHERE shard_id = ? FOR UPDATE`
+	lockShardSQLQuery = `SELECT range_id FROM shards WHERE shard_id = ? FOR UPDATE`
 )
 
 func NewShardPersistence(username, password, host, port, dbName string) (persistence.ShardManager, error) {

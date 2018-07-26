@@ -47,7 +47,7 @@ import:
   - transport/tchannel
 - package: github.com/uber-go/kafka-client
   version: 0.1.7
-- package: github.com/jmoiron/sqlx
+- package: github.com/hmgle/sqlx
 - package: github.com/go-sql-driver/mysql
 
 # Added excludeDirs to prevent build from failing on the yarpc generated code.

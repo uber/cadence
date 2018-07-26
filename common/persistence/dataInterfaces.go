@@ -219,7 +219,7 @@ type (
 		TaskList                string `db:"task_list"`
 		TaskType                int    `db:"type"`
 		ScheduleID              int64  `db:"schedule_id"`
-		Version                 int64  `db:"version_id"`
+		Version                 int64  `db:"version"`
 	}
 
 	// ReplicationTaskInfo describes the replication task created for replication of history events

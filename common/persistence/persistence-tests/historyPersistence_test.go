@@ -21,18 +21,18 @@
 package persistencetests
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
-	log "github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
-
-	"fmt"
-	"github.com/pborman/uuid"
 	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
+
+	"github.com/pborman/uuid"
+	log "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 )
 
 type (

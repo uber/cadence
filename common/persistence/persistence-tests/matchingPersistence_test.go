@@ -99,7 +99,7 @@ func (s *matchingPersistenceSuite) TestPersistenceStartWorkflow() {
 	s.Empty(task1, "Expected empty task identifier.")
 
 	response, err2 := s.WorkflowMgr.CreateWorkflowExecution(&persistence.CreateWorkflowExecutionRequest{
-		RequestID:            uuid.New(),
+		RequestID: uuid.New(),
 		// We perturb the DomainID slightly. Otherwise,
 		// if domain ID, workflow ID, and run ID are all identical
 		// to those of the previously created workflows,
@@ -164,7 +164,7 @@ func (s *matchingPersistenceSuite) TestPersistenceStartWorkflowWithReplicationSt
 
 	response, err2 := s.WorkflowMgr.CreateWorkflowExecution(&persistence.CreateWorkflowExecutionRequest{
 		RequestID:            uuid.New(),
-		DomainID:             domainID,
+		DomainID:             domainID + "foo",
 		Execution:            workflowExecution,
 		TaskList:             "queue1",
 		WorkflowTypeName:     "workflow_type_test",

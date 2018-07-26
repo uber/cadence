@@ -1,5 +1,5 @@
-hash: e6bf157cdefddd412f202cb07b2cfb5bc2d478bde6cdcad4d60aa37df00ac4cd
-updated: 2018-07-10T15:15:00.977236815-07:00
+hash: c2b9bc6e36071afd27ff7418eccb00f413bb96516466463bd5cc75aead445ef6
+updated: 2018-07-23T13:25:00.203910625-07:00
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -64,6 +64,8 @@ imports:
   version: 553a641470496b2327abcac10b36396bd98e45c9
 - name: github.com/hailocab/go-hostpool
   version: e80d13ce29ede4452c43dea11e79b9bc8a15b478
+- name: github.com/hmgle/sqlx
+  version: 22027eaedbbe25383d27e64fa63d2f72176f81ec
 - name: github.com/jmoiron/sqlx
   version: 2aeb6a910c2b94f2d5eb53d9895d80e27264ec41
   subpackages:
@@ -150,7 +152,7 @@ imports:
   subpackages:
   - internal/mapstructure
 - name: github.com/uber-go/tally
-  version: 79f2a33b0e55b1255ffbbaf824dcafb09ff34dda
+  version: ff17f3c43c065c3c2991f571e740eee43ea3a14a
   subpackages:
   - m3
   - m3/customtransports
@@ -263,7 +265,7 @@ imports:
   - yarpcconfig
   - yarpcerrors
 - name: go.uber.org/zap
-  version: eeedf312bc6c57391d84767a4cd413f02a917974
+  version: 4d45f9617f7d90f7a663ff21c7a4321dbe78098b
   subpackages:
   - buffer
   - internal/bufferpool
@@ -271,7 +273,7 @@ imports:
   - internal/exit
   - zapcore
 - name: golang.org/x/net
-  version: d5fb3049416fd7858fdde45759440b022da452e5
+  version: a680a1efc54dd51c040b3b5ce4939ea3cf2ea0d1
   repo: https://github.com/golang/net
   subpackages:
   - bpf
