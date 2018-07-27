@@ -69,7 +69,7 @@ vendor/glide.updated: glide.lock glide.yaml
 	touch vendor/glide.updated
 
 yarpc-install:
-	go get './vendor/go.uber.org/thriftrw'
+	go get './vendor/go.uber.org/thriftrw/wire'
 	go get './vendor/go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc'
 
 clean_thrift:
