@@ -879,6 +879,7 @@ struct PollForDecisionTaskResponse {
   60: optional History history
   70: optional binary nextPageToken
   80: optional WorkflowQuery query
+  90: optional string publicTaskList
 }
 
 struct StickyExecutionAttributes {

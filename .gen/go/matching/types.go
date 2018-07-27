@@ -1395,6 +1395,7 @@ type PollForDecisionTaskResponse struct {
 	StickyExecutionEnabled *bool                         `json:"stickyExecutionEnabled,omitempty"`
 	Query                  *shared.WorkflowQuery         `json:"query,omitempty"`
 	DecisionInfo           *shared.TransientDecisionInfo `json:"decisionInfo,omitempty"`
+	PublicTaskList         *string                       `json:"publicTaskList,omitempty"`
 }
 
 // ToWire translates a PollForDecisionTaskResponse struct into a Thrift-level intermediate
@@ -1414,7 +1415,7 @@ type PollForDecisionTaskResponse struct {
 //   }
 func (v *PollForDecisionTaskResponse) ToWire() (wire.Value, error) {
 	var (
-		fields [11]wire.Field
+		fields [12]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -1506,6 +1507,14 @@ func (v *PollForDecisionTaskResponse) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 90, Value: w}
+		i++
+	}
+	if v.PublicTaskList != nil {
+		w, err = wire.NewValueString(*(v.PublicTaskList)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 100, Value: w}
 		i++
 	}
 
@@ -1652,6 +1661,16 @@ func (v *PollForDecisionTaskResponse) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 100:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.PublicTaskList = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -1665,7 +1684,7 @@ func (v *PollForDecisionTaskResponse) String() string {
 		return "<nil>"
 	}
 
-	var fields [11]string
+	var fields [12]string
 	i := 0
 	if v.TaskToken != nil {
 		fields[i] = fmt.Sprintf("TaskToken: %v", v.TaskToken)
@@ -1709,6 +1728,10 @@ func (v *PollForDecisionTaskResponse) String() string {
 	}
 	if v.DecisionInfo != nil {
 		fields[i] = fmt.Sprintf("DecisionInfo: %v", v.DecisionInfo)
+		i++
+	}
+	if v.PublicTaskList != nil {
+		fields[i] = fmt.Sprintf("PublicTaskList: %v", *(v.PublicTaskList))
 		i++
 	}
 
@@ -1761,6 +1784,9 @@ func (v *PollForDecisionTaskResponse) Equals(rhs *PollForDecisionTaskResponse) b
 		return false
 	}
 	if !((v.DecisionInfo == nil && rhs.DecisionInfo == nil) || (v.DecisionInfo != nil && rhs.DecisionInfo != nil && v.DecisionInfo.Equals(rhs.DecisionInfo))) {
+		return false
+	}
+	if !_String_EqualsPtr(v.PublicTaskList, rhs.PublicTaskList) {
 		return false
 	}
 
@@ -1872,6 +1898,16 @@ func (v *PollForDecisionTaskResponse) GetQuery() (o *shared.WorkflowQuery) {
 func (v *PollForDecisionTaskResponse) GetDecisionInfo() (o *shared.TransientDecisionInfo) {
 	if v.DecisionInfo != nil {
 		return v.DecisionInfo
+	}
+
+	return
+}
+
+// GetPublicTaskList returns the value of PublicTaskList if it is set or its
+// zero value if it is unset.
+func (v *PollForDecisionTaskResponse) GetPublicTaskList() (o string) {
+	if v.PublicTaskList != nil {
+		return *v.PublicTaskList
 	}
 
 	return

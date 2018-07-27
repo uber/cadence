@@ -255,6 +255,7 @@ func CreateMatchingPollForDecisionTaskResponse(historyResponse *h.RecordDecision
 		StickyExecutionEnabled: historyResponse.StickyExecutionEnabled,
 		NextEventId:            historyResponse.NextEventId,
 		DecisionInfo:           historyResponse.DecisionInfo,
+		PublicTaskList:         historyResponse.PublicTaskList,
 	}
 	if historyResponse.GetPreviousStartedEventId() != EmptyEventID {
 		matchingResp.PreviousStartedEventId = historyResponse.PreviousStartedEventId

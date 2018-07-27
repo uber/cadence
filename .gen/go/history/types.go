@@ -2785,6 +2785,7 @@ type RecordDecisionTaskStartedResponse struct {
 	Attempt                *int64                        `json:"attempt,omitempty"`
 	StickyExecutionEnabled *bool                         `json:"stickyExecutionEnabled,omitempty"`
 	DecisionInfo           *shared.TransientDecisionInfo `json:"decisionInfo,omitempty"`
+	PublicTaskList         *string                       `json:"publicTaskList,omitempty"`
 }
 
 // ToWire translates a RecordDecisionTaskStartedResponse struct into a Thrift-level intermediate
@@ -2804,7 +2805,7 @@ type RecordDecisionTaskStartedResponse struct {
 //   }
 func (v *RecordDecisionTaskStartedResponse) ToWire() (wire.Value, error) {
 	var (
-		fields [8]wire.Field
+		fields [9]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -2872,6 +2873,14 @@ func (v *RecordDecisionTaskStartedResponse) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 80, Value: w}
+		i++
+	}
+	if v.PublicTaskList != nil {
+		w, err = wire.NewValueString(*(v.PublicTaskList)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 90, Value: w}
 		i++
 	}
 
@@ -2982,6 +2991,16 @@ func (v *RecordDecisionTaskStartedResponse) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 90:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.PublicTaskList = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -2995,7 +3014,7 @@ func (v *RecordDecisionTaskStartedResponse) String() string {
 		return "<nil>"
 	}
 
-	var fields [8]string
+	var fields [9]string
 	i := 0
 	if v.WorkflowType != nil {
 		fields[i] = fmt.Sprintf("WorkflowType: %v", v.WorkflowType)
@@ -3029,6 +3048,10 @@ func (v *RecordDecisionTaskStartedResponse) String() string {
 		fields[i] = fmt.Sprintf("DecisionInfo: %v", v.DecisionInfo)
 		i++
 	}
+	if v.PublicTaskList != nil {
+		fields[i] = fmt.Sprintf("PublicTaskList: %v", *(v.PublicTaskList))
+		i++
+	}
 
 	return fmt.Sprintf("RecordDecisionTaskStartedResponse{%v}", strings.Join(fields[:i], ", "))
 }
@@ -3060,6 +3083,9 @@ func (v *RecordDecisionTaskStartedResponse) Equals(rhs *RecordDecisionTaskStarte
 		return false
 	}
 	if !((v.DecisionInfo == nil && rhs.DecisionInfo == nil) || (v.DecisionInfo != nil && rhs.DecisionInfo != nil && v.DecisionInfo.Equals(rhs.DecisionInfo))) {
+		return false
+	}
+	if !_String_EqualsPtr(v.PublicTaskList, rhs.PublicTaskList) {
 		return false
 	}
 
@@ -3141,6 +3167,16 @@ func (v *RecordDecisionTaskStartedResponse) GetStickyExecutionEnabled() (o bool)
 func (v *RecordDecisionTaskStartedResponse) GetDecisionInfo() (o *shared.TransientDecisionInfo) {
 	if v.DecisionInfo != nil {
 		return v.DecisionInfo
+	}
+
+	return
+}
+
+// GetPublicTaskList returns the value of PublicTaskList if it is set or its
+// zero value if it is unset.
+func (v *RecordDecisionTaskStartedResponse) GetPublicTaskList() (o string) {
+	if v.PublicTaskList != nil {
+		return *v.PublicTaskList
 	}
 
 	return

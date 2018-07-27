@@ -2417,6 +2417,7 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(ctx context.Context
 		Attempt:                matchingResp.Attempt,
 		History:                history,
 		NextPageToken:          continuation,
+		PublicTaskList:         matchingResp.PublicTaskList,
 	}
 
 	return resp, nil
