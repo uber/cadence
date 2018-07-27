@@ -40,6 +40,7 @@ type (
 	// a wrapper of uberKafka.Consumer to let the compiler happy
 	kafkaConsumer struct {
 		uConsumer uberKafka.Consumer
+		logger    bark.Logger
 		msgC      chan Message
 		doneC     chan struct{}
 	}
@@ -48,9 +49,10 @@ type (
 var _ Client = (*kafkaClient)(nil)
 var _ Consumer = (*kafkaConsumer)(nil)
 
-func newKafkaConsumer(uConsumer uberKafka.Consumer) Consumer {
+func newKafkaConsumer(uConsumer uberKafka.Consumer, logger bark.Logger) Consumer {
 	return &kafkaConsumer{
 		uConsumer: uConsumer,
+		logger:    logger,
 		msgC:      make(chan Message, rcvBufferSize),
 		doneC:     make(chan struct{}),
 	}
@@ -64,6 +66,7 @@ func (c *kafkaConsumer) Start() error {
 		for {
 			select {
 			case <-c.doneC:
+				c.logger.Info("Stop consuming messages from channel")
 				break
 				// our Message interface is just a subset of Message interface in kafka-client so we don't need a wrapper here
 			case uMsg := <-c.uConsumer.Messages():
@@ -76,6 +79,7 @@ func (c *kafkaConsumer) Start() error {
 
 // Stop stops the consumer
 func (c *kafkaConsumer) Stop() {
+	c.logger.Info("Stopping consumer")
 	close(c.doneC)
 	close(c.msgC)
 	c.uConsumer.Stop()
@@ -116,7 +120,7 @@ func (c *kafkaClient) NewConsumer(currentCluster, sourceCluster, consumerName st
 	if err != nil {
 		return nil, err
 	}
-	return newKafkaConsumer(uConsumer), nil
+	return newKafkaConsumer(uConsumer, c.logger), nil
 }
 
 // NewProducer is used to create a Kafka producer for shipping replication tasks
