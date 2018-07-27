@@ -1376,7 +1376,7 @@ func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch_ReadBatchDone() {
 	tlNormal := workflow.TaskListKindNormal
 
 	const rangeSize = 10
-	const maxReadLevel = int64(1200)
+	const maxReadLevel = int64(120)
 	config := defaultTestConfig()
 	config.RangeSize = rangeSize
 	tlMgr0, err := newTaskListManager(s.matchingEngine, tlID, &tlNormal, config)
@@ -1388,7 +1388,7 @@ func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch_ReadBatchDone() {
 	atomic.StoreInt64(&tlMgr.taskWriter.maxReadLevel, maxReadLevel)
 	tasks, readLevel, isReadBatchDone, err := tlMgr.getTaskBatch()
 	s.Empty(tasks)
-	s.Equal(int64(rangeSize*100), readLevel)
+	s.Equal(int64(rangeSize*10), readLevel)
 	s.False(isReadBatchDone)
 	s.NoError(err)
 

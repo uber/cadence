@@ -562,35 +562,32 @@ func (c *taskListManagerImpl) CancelPoller(pollerID string) {
 
 // Returns a batch of tasks from persistence starting form current read level.
 // Also return a number that can be used to update readLevel
+// Also return a bool to indicate whether read is finished
 func (c *taskListManagerImpl) getTaskBatch() ([]*persistence.TaskInfo, int64, bool, error) {
 	var tasks []*persistence.TaskInfo
 	readLevel := c.taskAckManager.getReadLevel()
 	maxReadLevel := c.taskWriter.GetMaxReadLevel()
-	times := 0
-	isReadBatchDone := true
-	for readLevel < maxReadLevel {
+	if readLevel > maxReadLevel { // this should never happen
+		logging.LogReadTaskLevelIncorrect(c.logger, readLevel, maxReadLevel)
+	}
+
+	// counter i is used to break and let caller check whether tasklist is still alive and need resume read.
+	for i := 0; i < 10 && readLevel < maxReadLevel; i++ {
 		upper := readLevel + c.config.RangeSize
 		if upper > maxReadLevel {
 			upper = maxReadLevel
 		}
 		tasks, err := c.getTaskBatchWithRange(readLevel, upper)
 		if err != nil {
-			return nil, readLevel, isReadBatchDone, err
+			return nil, readLevel, true, err
 		}
 		// return as long as it grabs any tasks
 		if len(tasks) > 0 {
-			return tasks, upper, isReadBatchDone, nil
+			return tasks, upper, true, nil
 		}
 		readLevel = upper
-
-		times++
-		if times >= 100 {
-			// break and let caller check whether tasklist is still alive and need resume read.
-			isReadBatchDone = false
-			break
-		}
 	}
-	return tasks, readLevel, isReadBatchDone, nil // caller will update readLevel when no task grabbed
+	return tasks, readLevel, readLevel == maxReadLevel, nil // caller will update readLevel when no task grabbed
 }
 
 func (c *taskListManagerImpl) getTaskBatchWithRange(readLevel int64, maxReadLevel int64) ([]*persistence.TaskInfo, error) {
