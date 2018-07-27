@@ -64,6 +64,10 @@ PKG_TEST_DIRS := $(filter-out $(INTEG_TEST_ROOT)%,$(TEST_DIRS))
 #   Packages are specified as import paths.
 GOCOVERPKG_ARG := -coverpkg="$(PROJECT_ROOT)/common/...,$(PROJECT_ROOT)/service/...,$(PROJECT_ROOT)/client/...,$(PROJECT_ROOT)/tools/..."
 
+dep-ensured: Gopkg.toml Gopkg.lock
+	brew install dep 
+	dep ensure 
+
 yarpc-install:
 	go get './vendor/go.uber.org/thriftrw'
 	go get './vendor/go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc'
@@ -76,20 +80,20 @@ thriftc: yarpc-install $(THRIFTRW_GEN_SRC)
 copyright: cmd/tools/copyright/licensegen.go
 	go run ./cmd/tools/copyright/licensegen.go --verifyOnly
 
-cadence-cassandra-tool: $(TOOLS_SRC)
+cadence-cassandra-tool: dep-ensured $(TOOLS_SRC)
 	go build -i -o cadence-cassandra-tool cmd/tools/cassandra/main.go
 
-cadence: $(TOOLS_SRC)
+cadence: dep-ensured $(TOOLS_SRC)
 	go build -i -o cadence cmd/tools/cli/main.go
 
-cadence-server: $(ALL_SRC)
+cadence-server: dep-ensured $(ALL_SRC)
 	go build -i -o cadence-server cmd/server/cadence.go cmd/server/server.go
 
 bins_nothrift: lint copyright cadence-cassandra-tool cadence cadence-server
 
 bins: thriftc bins_nothrift
 
-test:  bins
+test: dep-ensured bins
 	@rm -f test
 	@rm -f test.log
 	@for dir in $(TEST_DIRS); do \
@@ -97,7 +101,7 @@ test:  bins
 	done;
 
 # need to run xdc tests with race detector off because of ringpop bug causing data race issue
-test_xdc:  bins
+test_xdc: dep-ensured bins
 	@rm -f test
 	@rm -f test.log
 	@for dir in $(INTEG_TEST_XDC_ROOT); do \
@@ -131,7 +135,7 @@ cover: cover_profile
 cover_ci: cover_profile
 	goveralls -coverprofile=$(BUILD)/cover.out -service=travis-ci || echo -e "\x1b[31mCoveralls failed\x1b[m"; \
 
-lint: 
+lint: dep-ensured
 	@echo Running linter
 	@lintFail=0; for file in $(ALL_SRC); do \
 		golint "$$file"; \
