@@ -120,8 +120,8 @@ func (g *testTransferTaskIDGenerator) GetNextTransferTaskID() (int64, error) {
 
 // SetupWorkflowStoreWithOptions to setup workflow test base
 func (s *TestBase) SetupWorkflowStoreWithOptions(options TestBaseOptions, metadata cluster.Metadata) {
+	log := bark.NewLoggerFromLogrus(log.New())
 	if !s.UseMysql {
-		log := bark.NewLoggerFromLogrus(log.New())
 
 		if metadata == nil {
 			s.ClusterMetadata = cluster.GetTestClusterMetadata(
@@ -221,7 +221,8 @@ func (s *TestBase) SetupWorkflowStoreWithOptions(options TestBaseOptions, metada
 			"uber",
 			"localhost",
 			"3306",
-			"catalyst_test")
+			"catalyst_test",
+				log)
 		if err != nil {
 			log.Fatal(err)
 		}
