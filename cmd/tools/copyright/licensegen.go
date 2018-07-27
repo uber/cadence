@@ -107,7 +107,7 @@ func (task *addLicenseHeaderTask) handleFile(path string, fileInfo os.FileInfo, 
 	if fileInfo.IsDir() && strings.HasPrefix(fileInfo.Name(), "_vendor-") {
 		return filepath.SkipDir
 	}
-	
+
 	if fileInfo.IsDir() {
 		return nil
 	}
