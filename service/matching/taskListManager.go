@@ -562,10 +562,12 @@ func (c *taskListManagerImpl) CancelPoller(pollerID string) {
 
 // Returns a batch of tasks from persistence starting form current read level.
 // Also return a number that can be used to update readLevel
-func (c *taskListManagerImpl) getTaskBatch() ([]*persistence.TaskInfo, int64, error) {
+func (c *taskListManagerImpl) getTaskBatch() ([]*persistence.TaskInfo, int64, bool, error) {
 	var tasks []*persistence.TaskInfo
 	readLevel := c.taskAckManager.getReadLevel()
 	maxReadLevel := c.taskWriter.GetMaxReadLevel()
+	times := 0
+	isReadBatchDone := true
 	for readLevel < maxReadLevel {
 		upper := readLevel + c.config.RangeSize
 		if upper > maxReadLevel {
@@ -573,15 +575,22 @@ func (c *taskListManagerImpl) getTaskBatch() ([]*persistence.TaskInfo, int64, er
 		}
 		tasks, err := c.getTaskBatchWithRange(readLevel, upper)
 		if err != nil {
-			return nil, readLevel, err
+			return nil, readLevel, isReadBatchDone, err
 		}
 		// return as long as it grabs any tasks
 		if len(tasks) > 0 {
-			return tasks, upper, nil
+			return tasks, upper, isReadBatchDone, nil
 		}
 		readLevel = upper
+
+		times++
+		if times >= 100 {
+			// break and let caller check whether tasklist is still alive and need resume read.
+			isReadBatchDone = false
+			break
+		}
 	}
-	return tasks, readLevel, nil // caller will update readLevel when no task grabbed
+	return tasks, readLevel, isReadBatchDone, nil // caller will update readLevel when no task grabbed
 }
 
 func (c *taskListManagerImpl) getTaskBatchWithRange(readLevel int64, maxReadLevel int64) ([]*persistence.TaskInfo, error) {
@@ -757,7 +766,7 @@ getTasksPumpLoop:
 			{
 				lastTimeWriteTask = time.Now()
 
-				tasks, readLevel, err := c.getTaskBatch()
+				tasks, readLevel, isReadBatchDone, err := c.getTaskBatch()
 				if err != nil {
 					c.signalNewTask() // re-enqueue the event
 					// TODO: Should we ever stop retrying on db errors?
@@ -780,7 +789,7 @@ getTasksPumpLoop:
 					}
 				}
 
-				if len(tasks) > 0 {
+				if len(tasks) > 0 || !isReadBatchDone {
 					// There maybe more tasks.
 					// We yield now, but signal pump to check again later.
 					c.signalNewTask()
