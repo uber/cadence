@@ -84,7 +84,7 @@ ignored = ["github.com/uber/cadence/.gen"]
 
 [[constraint]]
   name = "github.com/uber-go/kafka-client"
-  version = "0.2.0"
+  version = "0.1.7"
 
 [[constraint]]
   name = "github.com/uber-go/tally"
@@ -125,10 +125,6 @@ ignored = ["github.com/uber/cadence/.gen"]
 [[constraint]]
   branch = "master"
   name = "golang.org/x/time"
-
-[prune]
-  go-tests = true
-  unused-packages = true
 
 [[constraint]]
   name = "go.uber.org/thriftrw"
