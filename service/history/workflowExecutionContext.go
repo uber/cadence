@@ -106,7 +106,7 @@ func (c *workflowExecutionContext) loadWorkflowExecutionInternal() error {
 		return err
 	}
 
-	msBuilder := newMutableStateBuilder(c.shard.GetConfig(), c.logger)
+	msBuilder := newMutableStateBuilder(c.clusterMetadata.GetCurrentClusterName(), c.shard.GetConfig(), c.logger)
 	if response != nil && response.State != nil {
 		state := response.State
 		msBuilder.Load(state)
@@ -268,9 +268,9 @@ func (c *workflowExecutionContext) updateHelper(transferTasks []persistence.Task
 
 		if hasNewActiveHistoryEvents {
 			c.msBuilder.UpdateReplicationStateLastEventID(
-				"",
+				c.clusterMetadata.GetCurrentClusterName(),
 				c.msBuilder.GetCurrentVersion(),
-				executionInfo.NextEventID,
+				executionInfo.NextEventID-1,
 			)
 		}
 	}
