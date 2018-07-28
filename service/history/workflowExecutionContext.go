@@ -79,11 +79,20 @@ func newWorkflowExecutionContext(domainID string, execution workflow.WorkflowExe
 }
 
 func (c *workflowExecutionContext) loadWorkflowExecution() (mutableState, error) {
+	err := c.loadWorkflowExecutionInternal()
+	if err != nil {
+		return nil, err
+	}
+	err = c.updateVersion()
+	if err != nil {
+		return nil, err
+	}
+	return c.msBuilder, nil
+}
+
+func (c *workflowExecutionContext) loadWorkflowExecutionInternal() error {
 	if c.msBuilder != nil {
-		if err := c.updateVersion(); err != nil {
-			return nil, err
-		}
-		return c.msBuilder, nil
+		return nil
 	}
 
 	response, err := c.getWorkflowExecutionWithRetry(&persistence.GetWorkflowExecutionRequest{
@@ -94,10 +103,10 @@ func (c *workflowExecutionContext) loadWorkflowExecution() (mutableState, error)
 		if common.IsPersistenceTransientError(err) {
 			logging.LogPersistantStoreErrorEvent(c.logger, logging.TagValueStoreOperationGetWorkflowExecution, err, "")
 		}
-		return nil, err
+		return err
 	}
 
-	msBuilder := newMutableStateBuilder(c.shard.GetConfig(), c.logger)
+	msBuilder := newMutableStateBuilder(c.clusterMetadata.GetCurrentClusterName(), c.shard.GetConfig(), c.logger)
 	if response != nil && response.State != nil {
 		state := response.State
 		msBuilder.Load(state)
@@ -106,10 +115,7 @@ func (c *workflowExecutionContext) loadWorkflowExecution() (mutableState, error)
 	}
 
 	c.msBuilder = msBuilder
-	if err := c.updateVersion(); err != nil {
-		return nil, err
-	}
-	return msBuilder, nil
+	return nil
 }
 
 func (c *workflowExecutionContext) resetWorkflowExecution(resetBuilder mutableState) (mutableState,
@@ -171,12 +177,32 @@ func (c *workflowExecutionContext) updateVersion() error {
 func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persistence.Task,
 	timerTasks []persistence.Task, transactionID int64) error {
 
-	currentVersion := c.msBuilder.GetCurrentVersion()
 	if c.msBuilder.GetReplicationState() != nil {
+		currentVersion := c.msBuilder.GetCurrentVersion()
+
 		activeCluster := c.clusterMetadata.ClusterNameForFailoverVersion(currentVersion)
 		currentCluster := c.clusterMetadata.GetCurrentClusterName()
 		if activeCluster != currentCluster {
-			return errors.NewDomainNotActiveError(c.msBuilder.GetExecutionInfo().DomainID, currentCluster, activeCluster)
+			domainID := c.msBuilder.GetExecutionInfo().DomainID
+			c.clear()
+			return errors.NewDomainNotActiveError(domainID, currentCluster, activeCluster)
+		}
+
+		// Handling mutable state turn from standby to active, while having a decision on the fly
+		if di, ok := c.msBuilder.GetInFlightDecisionTask(); ok {
+			if di.Version < currentVersion {
+				// we have a decision on the fly with a lower version, fail it
+				c.msBuilder.AddDecisionTaskFailedEvent(di.ScheduleID, di.StartedID,
+					workflow.DecisionTaskFailedCauseFailoverCloseDecision, nil, identityHistoryService)
+
+				var transT, timerT []persistence.Task
+				transT, timerT, err := c.scheduleNewDecision(transT, timerT)
+				if err != nil {
+					return err
+				}
+				transferTasks = append(transferTasks, transT...)
+				timerTasks = append(timerTasks, timerT...)
+			}
 		}
 	}
 
@@ -214,6 +240,17 @@ func (c *workflowExecutionContext) updateHelper(transferTasks []persistence.Task
 	activeHistoryBuilder := updates.newEventsBuilder
 	hasNewActiveHistoryEvents := len(activeHistoryBuilder.history) > 0
 
+	if hasNewStandbyHistoryEvents && hasNewActiveHistoryEvents {
+		c.logger.WithFields(bark.Fields{
+			logging.TagDomainID:            executionInfo.DomainID,
+			logging.TagWorkflowExecutionID: executionInfo.WorkflowID,
+			logging.TagWorkflowRunID:       executionInfo.RunID,
+			logging.TagFirstEventID:        executionInfo.LastFirstEventID,
+			logging.TagNextEventID:         executionInfo.NextEventID,
+			logging.TagReplicationState:    c.msBuilder.GetReplicationState(),
+		}).Fatal("Both standby and active history builder has events.")
+	}
+
 	// Replication state should only be updated after the UpdateSession is closed.  IDs for certain events are only
 	// generated on CloseSession as they could be buffered events.  The value for NextEventID will be wrong on
 	// mutable state if read before flushing the buffered events.
@@ -231,9 +268,9 @@ func (c *workflowExecutionContext) updateHelper(transferTasks []persistence.Task
 
 		if hasNewActiveHistoryEvents {
 			c.msBuilder.UpdateReplicationStateLastEventID(
-				"",
+				c.clusterMetadata.GetCurrentClusterName(),
 				c.msBuilder.GetCurrentVersion(),
-				executionInfo.NextEventID,
+				executionInfo.NextEventID-1,
 			)
 		}
 	}
