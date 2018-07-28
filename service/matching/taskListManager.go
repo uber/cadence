@@ -567,9 +567,6 @@ func (c *taskListManagerImpl) getTaskBatch() ([]*persistence.TaskInfo, int64, bo
 	var tasks []*persistence.TaskInfo
 	readLevel := c.taskAckManager.getReadLevel()
 	maxReadLevel := c.taskWriter.GetMaxReadLevel()
-	if readLevel > maxReadLevel { // this should never happen
-		logging.LogReadTaskLevelIncorrect(c.logger, readLevel, maxReadLevel)
-	}
 
 	// counter i is used to break and let caller check whether tasklist is still alive and need resume read.
 	for i := 0; i < 10 && readLevel < maxReadLevel; i++ {

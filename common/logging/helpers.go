@@ -452,11 +452,3 @@ func LogDecisionTimeoutLargerThanWorkflowTimeout(logger bark.Logger, t int32, do
 		"DecisionTimeout": t,
 	}).Warn("Decision timeout is larger than workflow timeout")
 }
-
-// LogReadTaskLevelIncorrect is used to log error msg for matching read level exceed maxReadLevel
-func LogReadTaskLevelIncorrect(logger bark.Logger, readLevel, maxReadLevel int64) {
-	logger.WithFields(bark.Fields{
-		"ReadLevel":    readLevel,
-		"MaxReadLevel": maxReadLevel,
-	}).Error("Read task level is larger than maxReadLevel")
-}
