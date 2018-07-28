@@ -176,23 +176,22 @@ func (h *cassandraHistoryPersistence) GetWorkflowExecutionHistory(request *GetWo
 	token.Data = iter.PageState()
 
 	eventBatchVersionPointer := new(int64)
-	result := map[string]interface{}{
-		"event_batch_version": &eventBatchVersionPointer,
-	}
-
-	for iter.MapScan(result) {
+	eventBatchVersion := common.EmptyVersion
+	eventBatch := SerializedHistoryEventBatch{}
+	for iter.Scan(nil, &eventBatchVersionPointer, &eventBatch.Data, &eventBatch.EncodingType, &eventBatch.Version) {
 		found = true
-		eventBatchVersion, eventBatch := h.createSerializedHistoryEventBatch(result)
 
-		eventBatchVersionPointer = new(int64)
-		result = map[string]interface{}{
-			"event_batch_version": &eventBatchVersionPointer,
+		if eventBatchVersionPointer != nil {
+			eventBatchVersion = *eventBatchVersionPointer
 		}
-
 		if eventBatchVersion >= token.LastEventBatchVersion {
 			response.Events = append(response.Events, eventBatch)
 			token.LastEventBatchVersion = eventBatchVersion
 		}
+
+		eventBatchVersionPointer = new(int64)
+		eventBatchVersion = common.EmptyVersion
+		eventBatch = SerializedHistoryEventBatch{}
 	}
 
 	data, err := h.serializeToken(token)
@@ -240,31 +239,6 @@ func (h *cassandraHistoryPersistence) DeleteWorkflowExecutionHistory(
 	}
 
 	return nil
-}
-
-func (h *cassandraHistoryPersistence) createSerializedHistoryEventBatch(result map[string]interface{}) (int64, SerializedHistoryEventBatch) {
-	var eventBatchVersionPointer *int64
-	eventBatch := SerializedHistoryEventBatch{}
-	for k, v := range result {
-		switch k {
-		case "first_event_id":
-			// nothing to be done
-		case "event_batch_version":
-			eventBatchVersionPointer = v.(*int64)
-		case "data":
-			eventBatch.Data = v.([]byte)
-		case "data_encoding":
-			eventBatch.EncodingType = common.EncodingType(v.(string))
-		case "data_version":
-			eventBatch.Version = v.(int)
-		}
-	}
-
-	eventBatchVersion := common.EmptyVersion
-	if eventBatchVersionPointer != nil {
-		eventBatchVersion = *eventBatchVersionPointer
-	}
-	return eventBatchVersion, eventBatch
 }
 
 func (h *cassandraHistoryPersistence) serializeToken(token *historyToken) ([]byte, error) {
