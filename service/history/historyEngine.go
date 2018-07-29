@@ -1224,7 +1224,7 @@ Update_History_Loop:
 					failCause = workflow.DecisionTaskFailedCauseBadSignalWorkflowExecutionAttributes
 					break Process_Decision_Loop
 				}
-				if len(attributes.Input) > signalInputSizeLimit {
+				if err = validateSignalInput(attributes.Input); err != nil {
 					failDecision = true
 					failCause = workflow.DecisionTaskFailedCauseBadSignalInputSize
 					break Process_Decision_Loop
@@ -1813,8 +1813,8 @@ func (e *historyEngineImpl) SignalWorkflowExecution(ctx context.Context, signalR
 		RunId:      request.WorkflowExecution.RunId,
 	}
 
-	if len(request.GetInput()) > signalInputSizeLimit {
-		return ErrSignalOverSize
+	if err := validateSignalInput(request.GetInput()); err != nil {
+		return err
 	}
 
 	return e.updateWorkflowExecution(ctx, domainID, execution, false, true,
@@ -1861,6 +1861,10 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 	sRequest := signalWithStartRequest.SignalWithStartRequest
 	execution := workflow.WorkflowExecution{
 		WorkflowId: sRequest.WorkflowId,
+	}
+
+	if err := validateSignalInput(sRequest.GetSignalInput()); err != nil {
+		return nil, err
 	}
 
 	isBrandNew := false
@@ -2725,6 +2729,13 @@ func validateStartWorkflowExecutionRequest(request *workflow.StartWorkflowExecut
 	}
 	if request.TaskList == nil || request.TaskList.Name == nil || request.TaskList.GetName() == "" {
 		return &workflow.BadRequestError{Message: "Missing Tasklist."}
+	}
+	return nil
+}
+
+func validateSignalInput(signalInput []byte) error {
+	if len(signalInput) > signalInputSizeLimit {
+		return ErrSignalOverSize
 	}
 	return nil
 }
