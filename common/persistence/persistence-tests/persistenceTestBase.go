@@ -222,7 +222,7 @@ func (s *TestBase) SetupWorkflowStoreWithOptions(options TestBaseOptions, metada
 			"localhost",
 			"3306",
 			"catalyst_test",
-				log)
+			log)
 		if err != nil {
 			log.Fatal(err)
 		}

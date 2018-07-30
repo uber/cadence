@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS domains(
+CREATE TABLE domains(
 /* domain */
   id CHAR(36) PRIMARY KEY NOT NULL,
   name VARCHAR(255) UNIQUE NOT NULL,
@@ -21,42 +21,13 @@ CREATE TABLE IF NOT EXISTS domains(
 /* end domain_replication_config */
 ) DEFAULT CHARACTER SET utf8 COLLATE utf8_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS domain_metadata (
+CREATE TABLE domain_metadata (
   notification_version BIGINT NOT NULL
 );
 
 INSERT INTO domain_metadata (notification_version) VALUES (0);
 
-CREATE TABLE IF NOT EXISTS domains(
-/* domain */
-  id CHAR(36) PRIMARY KEY NOT NULL,
-  name VARCHAR(255) UNIQUE NOT NULL,
-  status INT NOT NULL,
-  description VARCHAR(255) NOT NULL,
-  owner_email VARCHAR(255) NOT NULL,
-  data BLOB NOT NULL,
-/* end domain */
-  retention_days INT NOT NULL,
-  emit_metric TINYINT(1) NOT NULL,
-/* end domain_config */
-  config_version BIGINT NOT NULL,
-  notification_version BIGINT NOT NULL,
-  failover_notification_version BIGINT NOT NULL,
-  failover_version BIGINT NOT NULL,
-  is_global_domain TINYINT(1) NOT NULL,
-/* domain_replication_config */
-  active_cluster_name VARCHAR(255) NOT NULL,
-  clusters BLOB NOT NULL
-/* end domain_replication_config */
-) DEFAULT CHARACTER SET utf8 COLLATE utf8_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS domain_metadata (
-  notification_version BIGINT NOT NULL
-);
-
-INSERT INTO domain_metadata (notification_version) VALUES (0);
-
-CREATE TABLE IF NOT EXISTS shards (
+CREATE TABLE shards (
 	shard_id INT NOT NULL,
 	owner VARCHAR(255) NOT NULL,
 	range_id BIGINT NOT NULL,
@@ -71,7 +42,7 @@ CREATE TABLE IF NOT EXISTS shards (
 	PRIMARY KEY (shard_id)
 );
 
-CREATE TABLE IF NOT EXISTS transfer_tasks(
+CREATE TABLE transfer_tasks(
 	domain_id CHAR(64) NOT NULL,
 	workflow_id VARCHAR(255) NOT NULL,
 	run_id CHAR(64) NOT NULL,
@@ -89,7 +60,7 @@ CREATE TABLE IF NOT EXISTS transfer_tasks(
 	PRIMARY KEY (shard_id, task_id)
 );
 
-CREATE TABLE IF NOT EXISTS executions(
+CREATE TABLE executions(
 	domain_id CHAR(64) NOT NULL,
 	workflow_id VARCHAR(255) NOT NULL,
 	run_id CHAR(64) NOT NULL,
@@ -132,7 +103,7 @@ CREATE TABLE IF NOT EXISTS executions(
 	PRIMARY KEY (shard_id, domain_id, workflow_id, run_id)
 );
 
-CREATE TABLE IF NOT EXISTS current_executions(
+CREATE TABLE current_executions(
   shard_id INT NOT NULL,
   domain_id CHAR(64) NOT NULL,
   workflow_id VARCHAR(255) NOT NULL,
@@ -166,5 +137,36 @@ CREATE TABLE task_lists (
 	kind TINYINT NOT NULL, -- {Normal, Sticky}
 	expiry_ts TIMESTAMP NOT NULL,
 	PRIMARY KEY (domain_id, name, type)
+);
+
+CREATE TABLE replication_tasks (
+	domain_id VARCHAR(64) NOT NULL,
+	workflow_id VARCHAR(255) NOT NULL,
+	run_id VARCHAR(64) NOT NULL,
+	task_id BIGINT NOT NULL,
+	type TINYINT NOT NULL,
+	first_event_id BIGINT NOT NULL,
+	next_event_id BIGINT NOT NULL,
+	version BIGINT NOT NULL,
+  last_replication_info BLOB NOT NULL,
+--
+shard_id INT NOT NULL,
+PRIMARY KEY (shard_id, task_id)
+);
+
+CREATE TABLE timer_tasks (
+	domain_id VARCHAR(64) NOT NULL,
+	workflow_id VARCHAR(255) NOT NULL,
+	run_id VARCHAR(64) NOT NULL,
+	visibility_ts TIMESTAMP(3) NOT NULL,
+	task_id BIGINT NOT NULL,
+	type TINYINT NOT NULL,
+	timeout_type TINYINT NOT NULL,
+	event_id BIGINT NOT NULL,
+	schedule_attempt BIGINT NOT NULL,
+	version BIGINT NOT NULL,
+	--
+	shard_id INT NOT NULL,
+	PRIMARY KEY (shard_id, visibility_ts, task_id)
 );
 
