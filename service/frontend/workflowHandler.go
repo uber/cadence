@@ -2407,17 +2407,17 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(ctx context.Context
 	}
 
 	resp := &gen.PollForDecisionTaskResponse{
-		TaskToken:              matchingResp.TaskToken,
-		WorkflowExecution:      matchingResp.WorkflowExecution,
-		WorkflowType:           matchingResp.WorkflowType,
-		PreviousStartedEventId: matchingResp.PreviousStartedEventId,
-		StartedEventId:         matchingResp.StartedEventId,
-		Query:                  matchingResp.Query,
-		BacklogCountHint:       matchingResp.BacklogCountHint,
-		Attempt:                matchingResp.Attempt,
-		History:                history,
-		NextPageToken:          continuation,
-		PublicTaskList:         matchingResp.PublicTaskList,
+		TaskToken:                 matchingResp.TaskToken,
+		WorkflowExecution:         matchingResp.WorkflowExecution,
+		WorkflowType:              matchingResp.WorkflowType,
+		PreviousStartedEventId:    matchingResp.PreviousStartedEventId,
+		StartedEventId:            matchingResp.StartedEventId,
+		Query:                     matchingResp.Query,
+		BacklogCountHint:          matchingResp.BacklogCountHint,
+		Attempt:                   matchingResp.Attempt,
+		History:                   history,
+		NextPageToken:             continuation,
+		WorkflowExecutionTaskList: matchingResp.WorkflowExecutionTaskList,
 	}
 
 	return resp, nil

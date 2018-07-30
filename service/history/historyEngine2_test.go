@@ -224,7 +224,10 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 	expectedResponse.StickyExecutionEnabled = common.BoolPtr(true)
 	expectedResponse.NextEventId = common.Int64Ptr(msBuilder.GetNextEventID() + 1)
 	expectedResponse.Attempt = common.Int64Ptr(di.Attempt)
-	expectedResponse.PublicTaskList = &executionInfo.TaskList
+	expectedResponse.WorkflowExecutionTaskList = common.TaskListPtr(workflow.TaskList{
+		Name: &executionInfo.TaskList,
+		Kind: common.TaskListKindPtr(workflow.TaskListKindNormal),
+	})
 
 	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &request)
 	s.Nil(err)

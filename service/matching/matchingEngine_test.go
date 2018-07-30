@@ -238,7 +238,10 @@ func (s *matchingEngineSuite) PollForDecisionTasksResultTest() {
 			response.ScheduledEventId = common.Int64Ptr(scheduleID + 1)
 			response.Attempt = common.Int64Ptr(0)
 			response.StickyExecutionEnabled = common.BoolPtr(true)
-			response.PublicTaskList = &tl
+			response.WorkflowExecutionTaskList = common.TaskListPtr(workflow.TaskList{
+				Name: &tl,
+				Kind: common.TaskListKindPtr(workflow.TaskListKindNormal),
+			})
 			return response
 		}, nil)
 
@@ -271,7 +274,10 @@ func (s *matchingEngineSuite) PollForDecisionTasksResultTest() {
 		Attempt:                common.Int64Ptr(0),
 		BacklogCountHint:       common.Int64Ptr(1),
 		StickyExecutionEnabled: common.BoolPtr(true),
-		PublicTaskList:         taskList.Name,
+		WorkflowExecutionTaskList: common.TaskListPtr(workflow.TaskList{
+			Name: &tl,
+			Kind: common.TaskListKindPtr(workflow.TaskListKindNormal),
+		}),
 	}
 
 	s.Nil(err)
