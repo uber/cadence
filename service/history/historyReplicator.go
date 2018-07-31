@@ -349,6 +349,13 @@ func (r *historyReplicator) ApplyOtherEvents(ctx context.Context, context *workf
 			metrics.BufferReplicationTaskTimer,
 			time.Duration(len(request.History.Events)),
 		)
+
+		bt, ok := msBuilder.GetBufferedReplicationTask(request.GetFirstEventId())
+		if ok && bt.Version >= request.GetVersion() {
+			// Have an existing replication task
+			return nil
+		}
+
 		err = msBuilder.BufferReplicationTask(request)
 		if err != nil {
 			r.logError(logger, "Failed to buffer out of order replication task.", err)
