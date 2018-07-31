@@ -167,7 +167,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 	stickyTl := "stickyTaskList"
 	identity := "testIdentity"
 
-	msBuilder := newMutableStateBuilder(s.config, bark.NewLoggerFromLogrus(log.New()))
+	msBuilder := newMutableStateBuilder("test", s.config, bark.NewLoggerFromLogrus(log.New()))
 	executionInfo := msBuilder.GetExecutionInfo()
 	executionInfo.StickyTaskList = stickyTl
 
