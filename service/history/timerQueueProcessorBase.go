@@ -60,7 +60,6 @@ type (
 		config           *Config
 		logger           bark.Logger
 		metricsClient    metrics.Client
-		now              timeNow
 		timerFiredCount  uint64
 		timerProcessor   timerProcessor
 		timerQueueAckMgr timerQueueAckMgr
@@ -83,7 +82,7 @@ type (
 )
 
 func newTimerQueueProcessorBase(scope int, shard ShardContext, historyService *historyEngineImpl,
-	timerQueueAckMgr timerQueueAckMgr, timeNow timeNow, maxPollRPS dynamicconfig.IntPropertyFn,
+	timerQueueAckMgr timerQueueAckMgr, maxPollRPS dynamicconfig.IntPropertyFn,
 	startDelay dynamicconfig.DurationPropertyFn, logger bark.Logger) *timerQueueProcessorBase {
 	log := logger.WithFields(bark.Fields{
 		logging.TagWorkflowComponent: logging.TagValueTimerQueueComponent,
@@ -107,7 +106,6 @@ func newTimerQueueProcessorBase(scope int, shard ShardContext, historyService *h
 		config:                  shard.GetConfig(),
 		logger:                  log,
 		metricsClient:           historyService.metricsClient,
-		now:                     timeNow,
 		timerQueueAckMgr:        timerQueueAckMgr,
 		numOfWorker:             numOfWorker,
 		workerNotificationChans: workerNotificationChans,
@@ -281,7 +279,11 @@ func (t *timerQueueProcessorBase) internalProcessor() error {
 	))
 	defer pollTimer.Stop()
 
-	updateAckChan := time.NewTicker(t.shard.GetConfig().TimerProcessorUpdateAckInterval()).C
+	updateAckTimer := time.NewTimer(jitter.JitDuration(
+		t.config.TimerProcessorUpdateAckInterval(),
+		t.config.TimerProcessorUpdateAckIntervalJitterCoefficient(),
+	))
+	defer updateAckTimer.Stop()
 
 	for {
 		// Wait until one of four things occurs:
@@ -322,7 +324,11 @@ func (t *timerQueueProcessorBase) internalProcessor() error {
 					timerGate.Update(lookAheadTimer.VisibilityTimestamp)
 				}
 			}
-		case <-updateAckChan:
+		case <-updateAckTimer.C:
+			updateAckTimer.Reset(jitter.JitDuration(
+				t.config.TimerProcessorUpdateAckInterval(),
+				t.config.TimerProcessorUpdateAckIntervalJitterCoefficient(),
+			))
 			t.timerQueueAckMgr.updateAckLevel()
 		case <-t.newTimerCh:
 			t.newTimeLock.Lock()
@@ -380,9 +386,11 @@ func (t *timerQueueProcessorBase) processWithRetry(notificationChan <-chan struc
 	op := func() error {
 		err = t.timerProcessor.process(task)
 		if err != nil && err != ErrTaskRetry {
-			attempt++
-			logger = t.initializeLoggerForTask(task, logger)
-			logging.LogTaskProcessingFailedEvent(logger, err)
+			if _, ok := err.(*workflow.DomainNotActiveError); !ok {
+				attempt++
+				logger = t.initializeLoggerForTask(task, logger)
+				logging.LogTaskProcessingFailedEvent(logger, err)
+			}
 		}
 		return err
 	}

@@ -79,11 +79,20 @@ func newWorkflowExecutionContext(domainID string, execution workflow.WorkflowExe
 }
 
 func (c *workflowExecutionContext) loadWorkflowExecution() (mutableState, error) {
+	err := c.loadWorkflowExecutionInternal()
+	if err != nil {
+		return nil, err
+	}
+	err = c.updateVersion()
+	if err != nil {
+		return nil, err
+	}
+	return c.msBuilder, nil
+}
+
+func (c *workflowExecutionContext) loadWorkflowExecutionInternal() error {
 	if c.msBuilder != nil {
-		if err := c.updateVersion(); err != nil {
-			return nil, err
-		}
-		return c.msBuilder, nil
+		return nil
 	}
 
 	response, err := c.getWorkflowExecutionWithRetry(&persistence.GetWorkflowExecutionRequest{
@@ -94,10 +103,10 @@ func (c *workflowExecutionContext) loadWorkflowExecution() (mutableState, error)
 		if common.IsPersistenceTransientError(err) {
 			logging.LogPersistantStoreErrorEvent(c.logger, logging.TagValueStoreOperationGetWorkflowExecution, err, "")
 		}
-		return nil, err
+		return err
 	}
 
-	msBuilder := newMutableStateBuilder(c.shard.GetConfig(), c.logger)
+	msBuilder := newMutableStateBuilder(c.clusterMetadata.GetCurrentClusterName(), c.shard.GetConfig(), c.logger)
 	if response != nil && response.State != nil {
 		state := response.State
 		msBuilder.Load(state)
@@ -106,10 +115,7 @@ func (c *workflowExecutionContext) loadWorkflowExecution() (mutableState, error)
 	}
 
 	c.msBuilder = msBuilder
-	if err := c.updateVersion(); err != nil {
-		return nil, err
-	}
-	return msBuilder, nil
+	return nil
 }
 
 func (c *workflowExecutionContext) resetWorkflowExecution(resetBuilder mutableState) (mutableState,
@@ -145,9 +151,8 @@ func (c *workflowExecutionContext) replicateWorkflowExecution(request *h.Replica
 	nextEventID := lastEventID + 1
 	c.msBuilder.GetExecutionInfo().NextEventID = nextEventID
 
-	builder := newHistoryBuilderFromEvents(request.History.Events, c.logger)
-	return c.updateHelper(builder, transferTasks, timerTasks, false, request.GetSourceCluster(), request.GetVersion(),
-		transactionID, now)
+	standbyHistoryBuilder := newHistoryBuilderFromEvents(request.History.Events, c.logger)
+	return c.updateHelper(transferTasks, timerTasks, transactionID, now, false, standbyHistoryBuilder, request.GetSourceCluster())
 }
 
 func (c *workflowExecutionContext) updateVersion() error {
@@ -172,12 +177,32 @@ func (c *workflowExecutionContext) updateVersion() error {
 func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persistence.Task,
 	timerTasks []persistence.Task, transactionID int64) error {
 
-	currentVersion := c.msBuilder.GetCurrentVersion()
 	if c.msBuilder.GetReplicationState() != nil {
+		currentVersion := c.msBuilder.GetCurrentVersion()
+
 		activeCluster := c.clusterMetadata.ClusterNameForFailoverVersion(currentVersion)
 		currentCluster := c.clusterMetadata.GetCurrentClusterName()
 		if activeCluster != currentCluster {
-			return errors.NewDomainNotActiveError(c.msBuilder.GetExecutionInfo().DomainID, currentCluster, activeCluster)
+			domainID := c.msBuilder.GetExecutionInfo().DomainID
+			c.clear()
+			return errors.NewDomainNotActiveError(domainID, currentCluster, activeCluster)
+		}
+
+		// Handling mutable state turn from standby to active, while having a decision on the fly
+		if di, ok := c.msBuilder.GetInFlightDecisionTask(); ok {
+			if di.Version < currentVersion {
+				// we have a decision on the fly with a lower version, fail it
+				c.msBuilder.AddDecisionTaskFailedEvent(di.ScheduleID, di.StartedID,
+					workflow.DecisionTaskFailedCauseFailoverCloseDecision, nil, identityHistoryService)
+
+				var transT, timerT []persistence.Task
+				transT, timerT, err := c.scheduleNewDecision(transT, timerT)
+				if err != nil {
+					return err
+				}
+				transferTasks = append(transferTasks, transT...)
+				timerTasks = append(timerTasks, timerT...)
+			}
 		}
 	}
 
@@ -188,12 +213,12 @@ func (c *workflowExecutionContext) updateWorkflowExecution(transferTasks []persi
 	}
 
 	now := time.Now()
-	return c.updateHelper(nil, transferTasks, timerTasks, c.createReplicationTask, "", currentVersion, transactionID, now)
+	return c.updateHelper(transferTasks, timerTasks, transactionID, now, c.createReplicationTask, nil, "")
 }
 
-func (c *workflowExecutionContext) updateHelper(builder *historyBuilder, transferTasks []persistence.Task,
-	timerTasks []persistence.Task, createReplicationTask bool, sourceCluster string, lastWriteVersion int64,
-	transactionID int64, now time.Time) (errRet error) {
+func (c *workflowExecutionContext) updateHelper(transferTasks []persistence.Task, timerTasks []persistence.Task,
+	transactionID int64, now time.Time,
+	createReplicationTask bool, standbyHistoryBuilder *historyBuilder, sourceCluster string) (errRet error) {
 
 	defer func() {
 		if errRet != nil {
@@ -208,40 +233,77 @@ func (c *workflowExecutionContext) updateHelper(builder *historyBuilder, transfe
 		return err
 	}
 
-	// Replicator passes in a custom builder as it already has the events
-	if builder == nil {
-		// If no builder is passed in then use the one as part of the updates
-		builder = updates.newEventsBuilder
-	}
 	executionInfo := c.msBuilder.GetExecutionInfo()
-	hasNewHistoryEvents := len(builder.history) > 0
+
+	// this builder has events generated locally
+	hasNewStandbyHistoryEvents := standbyHistoryBuilder != nil && len(standbyHistoryBuilder.history) > 0
+	activeHistoryBuilder := updates.newEventsBuilder
+	hasNewActiveHistoryEvents := len(activeHistoryBuilder.history) > 0
+
+	if hasNewStandbyHistoryEvents && hasNewActiveHistoryEvents {
+		c.logger.WithFields(bark.Fields{
+			logging.TagDomainID:            executionInfo.DomainID,
+			logging.TagWorkflowExecutionID: executionInfo.WorkflowID,
+			logging.TagWorkflowRunID:       executionInfo.RunID,
+			logging.TagFirstEventID:        executionInfo.LastFirstEventID,
+			logging.TagNextEventID:         executionInfo.NextEventID,
+			logging.TagReplicationState:    c.msBuilder.GetReplicationState(),
+		}).Fatal("Both standby and active history builder has events.")
+	}
 
 	// Replication state should only be updated after the UpdateSession is closed.  IDs for certain events are only
 	// generated on CloseSession as they could be buffered events.  The value for NextEventID will be wrong on
 	// mutable state if read before flushing the buffered events.
 	crossDCEnabled := c.msBuilder.GetReplicationState() != nil
-	if crossDCEnabled && hasNewHistoryEvents {
-		lastEventID := c.msBuilder.GetNextEventID() - 1
-		c.msBuilder.UpdateReplicationStateLastEventID(sourceCluster, lastWriteVersion, lastEventID)
+	if crossDCEnabled {
+		// always standby history first
+		if hasNewStandbyHistoryEvents {
+			lastEvent := standbyHistoryBuilder.history[len(standbyHistoryBuilder.history)-1]
+			c.msBuilder.UpdateReplicationStateLastEventID(
+				sourceCluster,
+				lastEvent.GetVersion(),
+				lastEvent.GetEventId(),
+			)
+		}
+
+		if hasNewActiveHistoryEvents {
+			c.msBuilder.UpdateReplicationStateLastEventID(
+				c.clusterMetadata.GetCurrentClusterName(),
+				c.msBuilder.GetCurrentVersion(),
+				executionInfo.NextEventID-1,
+			)
+		}
+	}
+
+	// always standby history first
+	if hasNewStandbyHistoryEvents {
+		firstEvent := standbyHistoryBuilder.GetFirstEvent()
+		// Note: standby events has no transient decision events
+		err = c.appendHistoryEvents(standbyHistoryBuilder, standbyHistoryBuilder.history, transactionID)
+		if err != nil {
+			return err
+		}
+
+		executionInfo.LastFirstEventID = firstEvent.GetEventId()
 	}
 
 	// Some operations only update the mutable state. For example RecordActivityTaskHeartbeat.
-	if hasNewHistoryEvents {
-		firstEvent := builder.GetFirstEvent()
+	if hasNewActiveHistoryEvents {
+		firstEvent := activeHistoryBuilder.GetFirstEvent()
 		// Transient decision events need to be written as a separate batch
-		if builder.HasTransientEvents() {
-			err = c.appendHistoryEvents(builder, builder.transientHistory, transactionID)
+		if activeHistoryBuilder.HasTransientEvents() {
+			err = c.appendHistoryEvents(activeHistoryBuilder, activeHistoryBuilder.transientHistory, transactionID)
 			if err != nil {
 				return err
 			}
 		}
 
-		err = c.appendHistoryEvents(builder, builder.history, transactionID)
+		err = c.appendHistoryEvents(activeHistoryBuilder, activeHistoryBuilder.history, transactionID)
 		if err != nil {
 			return err
 		}
 
-		executionInfo.LastFirstEventID = *firstEvent.EventId
+		executionInfo.LastFirstEventID = firstEvent.GetEventId()
 	}
 
 	continueAsNew := updates.continueAsNew
@@ -262,7 +324,7 @@ func (c *workflowExecutionContext) updateHelper(builder *historyBuilder, transfe
 
 	var replicationTasks []persistence.Task
 	// Check if the update resulted in new history events before generating replication task
-	if hasNewHistoryEvents && createReplicationTask {
+	if hasNewActiveHistoryEvents && createReplicationTask {
 		// Let's create a replication task as part of this update
 		replicationTasks = append(replicationTasks, c.msBuilder.CreateReplicationTask())
 	}
@@ -334,11 +396,12 @@ func (c *workflowExecutionContext) appendHistoryEvents(builder *historyBuilder, 
 	}
 
 	if err0 := c.shard.AppendHistoryEvents(&persistence.AppendHistoryEventsRequest{
-		DomainID:      c.domainID,
-		Execution:     c.workflowExecution,
-		TransactionID: transactionID,
-		FirstEventID:  *firstEvent.EventId,
-		Events:        serializedHistory,
+		DomainID:          c.domainID,
+		Execution:         c.workflowExecution,
+		TransactionID:     transactionID,
+		FirstEventID:      firstEvent.GetEventId(),
+		EventBatchVersion: firstEvent.GetVersion(),
+		Events:            serializedHistory,
 	}); err0 != nil {
 		switch err0.(type) {
 		case *persistence.ConditionFailedError:
@@ -395,11 +458,12 @@ func (c *workflowExecutionContext) continueAsNewWorkflowExecutionHelper(context 
 	}
 
 	return c.shard.AppendHistoryEvents(&persistence.AppendHistoryEventsRequest{
-		DomainID:      domainID,
-		Execution:     newExecution,
-		TransactionID: transactionID,
-		FirstEventID:  *firstEvent.EventId,
-		Events:        serializedHistory,
+		DomainID:          domainID,
+		Execution:         newExecution,
+		TransactionID:     transactionID,
+		FirstEventID:      firstEvent.GetEventId(),
+		EventBatchVersion: firstEvent.GetVersion(),
+		Events:            serializedHistory,
 	})
 }
 

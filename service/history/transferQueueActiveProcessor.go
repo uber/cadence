@@ -43,19 +43,18 @@ const identityHistoryService = "history-service"
 
 type (
 	transferQueueActiveProcessorImpl struct {
-		currentClusterName    string
-		shard                 ShardContext
-		historyService        *historyEngineImpl
-		options               *QueueProcessorOptions
-		visibilityManager     persistence.VisibilityManager
-		matchingClient        matching.Client
-		historyClient         history.Client
-		cache                 *historyCache
-		transferTaskFilter    transferTaskFilter
-		logger                bark.Logger
-		metricsClient         metrics.Client
-		maxReadAckLevel       maxReadAckLevel
-		updateClusterAckLevel updateClusterAckLevel
+		currentClusterName string
+		shard              ShardContext
+		historyService     *historyEngineImpl
+		options            *QueueProcessorOptions
+		visibilityManager  persistence.VisibilityManager
+		matchingClient     matching.Client
+		historyClient      history.Client
+		cache              *historyCache
+		transferTaskFilter transferTaskFilter
+		logger             bark.Logger
+		metricsClient      metrics.Client
+		maxReadAckLevel    maxReadAckLevel
 		*transferQueueProcessorBase
 		*queueProcessorBase
 		queueAckMgr
@@ -70,15 +69,16 @@ func newTransferQueueActiveProcessor(shard ShardContext, historyService *history
 	matchingClient matching.Client, historyClient history.Client, logger bark.Logger) *transferQueueActiveProcessorImpl {
 	config := shard.GetConfig()
 	options := &QueueProcessorOptions{
-		StartDelay:                       config.TransferProcessorStartDelay,
-		BatchSize:                        config.TransferTaskBatchSize,
-		WorkerCount:                      config.TransferTaskWorkerCount,
-		MaxPollRPS:                       config.TransferProcessorMaxPollRPS,
-		MaxPollInterval:                  config.TransferProcessorMaxPollInterval,
-		MaxPollIntervalJitterCoefficient: config.TransferProcessorMaxPollIntervalJitterCoefficient,
-		UpdateAckInterval:                config.TransferProcessorUpdateAckInterval,
-		MaxRetryCount:                    config.TransferTaskMaxRetryCount,
-		MetricScope:                      metrics.TransferActiveQueueProcessorScope,
+		StartDelay:                         config.TransferProcessorStartDelay,
+		BatchSize:                          config.TransferTaskBatchSize,
+		WorkerCount:                        config.TransferTaskWorkerCount,
+		MaxPollRPS:                         config.TransferProcessorMaxPollRPS,
+		MaxPollInterval:                    config.TransferProcessorMaxPollInterval,
+		MaxPollIntervalJitterCoefficient:   config.TransferProcessorMaxPollIntervalJitterCoefficient,
+		UpdateAckInterval:                  config.TransferProcessorUpdateAckInterval,
+		UpdateAckIntervalJitterCoefficient: config.TransferProcessorUpdateAckIntervalJitterCoefficient,
+		MaxRetryCount:                      config.TransferTaskMaxRetryCount,
+		MetricScope:                        metrics.TransferActiveQueueProcessorScope,
 	}
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 	logger = logger.WithFields(bark.Fields{
@@ -90,65 +90,11 @@ func newTransferQueueActiveProcessor(shard ShardContext, historyService *history
 	maxReadAckLevel := func() int64 {
 		return shard.GetTransferMaxReadLevel()
 	}
-	updateClusterAckLevel := func(ackLevel int64) error {
+	updateTransferAckLevel := func(ackLevel int64) error {
 		return shard.UpdateTransferClusterAckLevel(currentClusterName, ackLevel)
 	}
 
-	retryableMatchingClient := matching.NewRetryableClient(matchingClient, common.CreateMatchingRetryPolicy(),
-		common.IsWhitelistServiceTransientError)
-
-	processor := &transferQueueActiveProcessorImpl{
-		currentClusterName:         currentClusterName,
-		shard:                      shard,
-		historyService:             historyService,
-		options:                    options,
-		visibilityManager:          visibilityMgr,
-		matchingClient:             retryableMatchingClient,
-		historyClient:              historyClient,
-		logger:                     logger,
-		metricsClient:              historyService.metricsClient,
-		cache:                      historyService.historyCache,
-		transferTaskFilter:         transferTaskFilter,
-		transferQueueProcessorBase: newTransferQueueProcessorBase(shard, options, maxReadAckLevel, updateClusterAckLevel),
-	}
-
-	queueAckMgr := newQueueAckMgr(shard, options, processor, shard.GetTransferClusterAckLevel(currentClusterName), logger)
-	queueProcessorBase := newQueueProcessorBase(currentClusterName, shard, options, processor, queueAckMgr, logger)
-	processor.queueAckMgr = queueAckMgr
-	processor.queueProcessorBase = queueProcessorBase
-
-	return processor
-}
-
-func newTransferQueueFailoverProcessor(shard ShardContext, historyService *historyEngineImpl, visibilityMgr persistence.VisibilityManager,
-	matchingClient matching.Client, historyClient history.Client, domainID string, standbyClusterName string,
-	minLevel int64, maxLevel int64, logger bark.Logger) *transferQueueActiveProcessorImpl {
-	config := shard.GetConfig()
-	options := &QueueProcessorOptions{
-		StartDelay:                       config.TransferProcessorFailoverStartDelay,
-		BatchSize:                        config.TransferTaskBatchSize,
-		WorkerCount:                      config.TransferTaskWorkerCount,
-		MaxPollRPS:                       config.TransferProcessorFailoverMaxPollRPS,
-		MaxPollInterval:                  config.TransferProcessorMaxPollInterval,
-		MaxPollIntervalJitterCoefficient: config.TransferProcessorMaxPollIntervalJitterCoefficient,
-		UpdateAckInterval:                config.TransferProcessorUpdateAckInterval,
-		MaxRetryCount:                    config.TransferTaskMaxRetryCount,
-		MetricScope:                      metrics.TransferActiveQueueProcessorScope,
-	}
-	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
-	logger = logger.WithFields(bark.Fields{
-		logging.TagWorkflowCluster: currentClusterName,
-		logging.TagDomainID:        domainID,
-		logging.TagFailover:        "from: " + standbyClusterName,
-	})
-	transferTaskFilter := func(task *persistence.TransferTaskInfo) (bool, error) {
-		return verifyFailoverActiveTask(logger, domainID, task.DomainID, task)
-	}
-	maxReadAckLevel := func() int64 {
-		return maxLevel // this is a const
-	}
-	updateClusterAckLevel := func(ackLevel int64) error {
-		// TODO, the failover processor should have the ability to persist the ack level progress, #646
+	transferQueueShutdown := func() error {
 		return nil
 	}
 
@@ -167,13 +113,81 @@ func newTransferQueueFailoverProcessor(shard ShardContext, historyService *histo
 		metricsClient:              historyService.metricsClient,
 		cache:                      historyService.historyCache,
 		transferTaskFilter:         transferTaskFilter,
-		transferQueueProcessorBase: newTransferQueueProcessorBase(shard, options, maxReadAckLevel, updateClusterAckLevel),
+		transferQueueProcessorBase: newTransferQueueProcessorBase(shard, options, maxReadAckLevel, updateTransferAckLevel, transferQueueShutdown),
+	}
+
+	queueAckMgr := newQueueAckMgr(shard, options, processor, shard.GetTransferClusterAckLevel(currentClusterName), logger)
+	queueProcessorBase := newQueueProcessorBase(currentClusterName, shard, options, processor, queueAckMgr, logger)
+	processor.queueAckMgr = queueAckMgr
+	processor.queueProcessorBase = queueProcessorBase
+
+	return processor
+}
+
+func newTransferQueueFailoverProcessor(shard ShardContext, historyService *historyEngineImpl, visibilityMgr persistence.VisibilityManager,
+	matchingClient matching.Client, historyClient history.Client, domainID string, standbyClusterName string,
+	minLevel int64, maxLevel int64, logger bark.Logger) *transferQueueActiveProcessorImpl {
+	config := shard.GetConfig()
+	options := &QueueProcessorOptions{
+		StartDelay:                         config.TransferProcessorFailoverStartDelay,
+		BatchSize:                          config.TransferTaskBatchSize,
+		WorkerCount:                        config.TransferTaskWorkerCount,
+		MaxPollRPS:                         config.TransferProcessorFailoverMaxPollRPS,
+		MaxPollInterval:                    config.TransferProcessorMaxPollInterval,
+		MaxPollIntervalJitterCoefficient:   config.TransferProcessorMaxPollIntervalJitterCoefficient,
+		UpdateAckInterval:                  config.TransferProcessorUpdateAckInterval,
+		UpdateAckIntervalJitterCoefficient: config.TransferProcessorUpdateAckIntervalJitterCoefficient,
+		MaxRetryCount:                      config.TransferTaskMaxRetryCount,
+		MetricScope:                        metrics.TransferActiveQueueProcessorScope,
+	}
+	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
+	logger = logger.WithFields(bark.Fields{
+		logging.TagWorkflowCluster: currentClusterName,
+		logging.TagDomainID:        domainID,
+		logging.TagFailover:        "from: " + standbyClusterName,
+	})
+	transferTaskFilter := func(task *persistence.TransferTaskInfo) (bool, error) {
+		return verifyFailoverActiveTask(logger, domainID, task.DomainID, task)
+	}
+	maxReadAckLevel := func() int64 {
+		return maxLevel // this is a const
+	}
+	updateTransferAckLevel := func(ackLevel int64) error {
+		return shard.UpdateTransferFailoverLevel(
+			domainID,
+			persistence.TransferFailoverLevel{
+				MinLevel:     minLevel,
+				CurrentLevel: ackLevel,
+				MaxLevel:     maxLevel,
+				DomainIDs:    []string{domainID},
+			},
+		)
+	}
+	transferQueueShutdown := func() error {
+		return shard.DeleteTransferFailoverLevel(domainID)
+	}
+
+	retryableMatchingClient := matching.NewRetryableClient(matchingClient, common.CreateMatchingRetryPolicy(),
+		common.IsWhitelistServiceTransientError)
+
+	processor := &transferQueueActiveProcessorImpl{
+		currentClusterName:         currentClusterName,
+		shard:                      shard,
+		historyService:             historyService,
+		options:                    options,
+		visibilityManager:          visibilityMgr,
+		matchingClient:             retryableMatchingClient,
+		historyClient:              historyClient,
+		logger:                     logger,
+		metricsClient:              historyService.metricsClient,
+		cache:                      historyService.historyCache,
+		transferTaskFilter:         transferTaskFilter,
+		transferQueueProcessorBase: newTransferQueueProcessorBase(shard, options, maxReadAckLevel, updateTransferAckLevel, transferQueueShutdown),
 	}
 	queueAckMgr := newQueueFailoverAckMgr(shard, options, processor, minLevel, logger)
 	queueProcessorBase := newQueueProcessorBase(currentClusterName, shard, options, processor, queueAckMgr, logger)
 	processor.queueAckMgr = queueAckMgr
 	processor.queueProcessorBase = queueProcessorBase
-
 	return processor
 }
 

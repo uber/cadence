@@ -41,15 +41,16 @@ import (
 type (
 	// QueueProcessorOptions is options passed to queue processor implementation
 	QueueProcessorOptions struct {
-		StartDelay                       dynamicconfig.DurationPropertyFn
-		BatchSize                        dynamicconfig.IntPropertyFn
-		WorkerCount                      dynamicconfig.IntPropertyFn
-		MaxPollRPS                       dynamicconfig.IntPropertyFn
-		MaxPollInterval                  dynamicconfig.DurationPropertyFn
-		MaxPollIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
-		UpdateAckInterval                dynamicconfig.DurationPropertyFn
-		MaxRetryCount                    dynamicconfig.IntPropertyFn
-		MetricScope                      int
+		StartDelay                         dynamicconfig.DurationPropertyFn
+		BatchSize                          dynamicconfig.IntPropertyFn
+		WorkerCount                        dynamicconfig.IntPropertyFn
+		MaxPollRPS                         dynamicconfig.IntPropertyFn
+		MaxPollInterval                    dynamicconfig.DurationPropertyFn
+		MaxPollIntervalJitterCoefficient   dynamicconfig.FloatPropertyFn
+		UpdateAckInterval                  dynamicconfig.DurationPropertyFn
+		UpdateAckIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
+		MaxRetryCount                      dynamicconfig.IntPropertyFn
+		MetricScope                        int
 	}
 
 	queueProcessorBase struct {
@@ -155,8 +156,17 @@ func (p *queueProcessorBase) processorPump() {
 	}
 
 	jitter := backoff.NewJitter()
-	pollTimer := time.NewTimer(jitter.JitDuration(p.options.MaxPollInterval(), p.options.MaxPollIntervalJitterCoefficient()))
-	updateAckTimer := time.NewTimer(p.options.UpdateAckInterval())
+	pollTimer := time.NewTimer(jitter.JitDuration(
+		p.options.MaxPollInterval(),
+		p.options.MaxPollIntervalJitterCoefficient(),
+	))
+	defer pollTimer.Stop()
+
+	updateAckTimer := time.NewTimer(jitter.JitDuration(
+		p.options.UpdateAckInterval(),
+		p.options.UpdateAckIntervalJitterCoefficient(),
+	))
+	defer updateAckTimer.Stop()
 
 processorPumpLoop:
 	for {
@@ -169,13 +179,19 @@ processorPumpLoop:
 		case <-p.notifyCh:
 			p.processBatch(tasksCh)
 		case <-pollTimer.C:
-			pollTimer.Reset(jitter.JitDuration(p.options.MaxPollInterval(), p.options.MaxPollIntervalJitterCoefficient()))
+			pollTimer.Reset(jitter.JitDuration(
+				p.options.MaxPollInterval(),
+				p.options.MaxPollIntervalJitterCoefficient(),
+			))
 			if p.lastPollTime.Add(p.options.MaxPollInterval()).Before(time.Now()) {
 				p.processBatch(tasksCh)
 			}
 		case <-updateAckTimer.C:
+			updateAckTimer.Reset(jitter.JitDuration(
+				p.options.UpdateAckInterval(),
+				p.options.UpdateAckIntervalJitterCoefficient(),
+			))
 			p.ackMgr.updateQueueAckLevel()
-			updateAckTimer = time.NewTimer(p.options.UpdateAckInterval())
 		}
 	}
 
@@ -185,8 +201,7 @@ processorPumpLoop:
 	if success := common.AwaitWaitGroup(&workerWG, 10*time.Second); !success {
 		p.logger.Warn("Queue processor timedout on worker shutdown.")
 	}
-	updateAckTimer.Stop()
-	pollTimer.Stop()
+
 }
 
 func (p *queueProcessorBase) processBatch(tasksCh chan<- queueTaskInfo) {
@@ -257,9 +272,11 @@ func (p *queueProcessorBase) processWithRetry(notificationChan <-chan struct{}, 
 	op := func() error {
 		err = p.processor.process(task)
 		if err != nil && err != ErrTaskRetry {
-			retryCount++
-			logger = p.initializeLoggerForTask(task, logger)
-			logging.LogTaskProcessingFailedEvent(logger, err)
+			if _, ok := err.(*workflow.DomainNotActiveError); !ok {
+				retryCount++
+				logger = p.initializeLoggerForTask(task, logger)
+				logging.LogTaskProcessingFailedEvent(logger, err)
+			}
 		}
 		return err
 	}
