@@ -20,7 +20,13 @@
 
 package history
 
-import "github.com/uber/cadence/common/persistence"
+import (
+	m "github.com/uber/cadence/.gen/go/matching"
+	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client/matching"
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/persistence"
+)
 
 type (
 	maxReadAckLevel func() int64
@@ -32,6 +38,8 @@ type (
 		shard                  ShardContext
 		options                *QueueProcessorOptions
 		executionManager       persistence.ExecutionManager
+		visibilityMgr          persistence.VisibilityManager
+		matchingClient         matching.Client
 		maxReadAckLevel        maxReadAckLevel
 		updateTransferAckLevel updateTransferAckLevel
 		transferQueueShutdown  transferQueueShutdown
@@ -39,12 +47,15 @@ type (
 )
 
 func newTransferQueueProcessorBase(shard ShardContext, options *QueueProcessorOptions,
+	visibilityMgr persistence.VisibilityManager, matchingClient matching.Client,
 	maxReadAckLevel maxReadAckLevel, updateTransferAckLevel updateTransferAckLevel,
 	transferQueueShutdown transferQueueShutdown) *transferQueueProcessorBase {
 	return &transferQueueProcessorBase{
 		shard:                  shard,
 		options:                options,
 		executionManager:       shard.GetExecutionManager(),
+		visibilityMgr:          visibilityMgr,
+		matchingClient:         matching.NewRetryableClient(matchingClient, common.CreateMatchingRetryPolicy(), common.IsWhitelistServiceTransientError),
 		maxReadAckLevel:        maxReadAckLevel,
 		updateTransferAckLevel: updateTransferAckLevel,
 		transferQueueShutdown:  transferQueueShutdown,
@@ -81,4 +92,94 @@ func (t *transferQueueProcessorBase) updateAckLevel(ackLevel int64) error {
 
 func (t *transferQueueProcessorBase) queueShutdown() error {
 	return t.transferQueueShutdown()
+}
+
+func (t *transferQueueProcessorBase) pushActivity(task *persistence.TransferTaskInfo, activityScheduleToStartTimeout int32) error {
+	if task.TaskType != persistence.TransferTaskTypeActivityTask {
+		panic("i++")
+	}
+
+	err := t.matchingClient.AddActivityTask(nil, &m.AddActivityTaskRequest{
+		DomainUUID:       common.StringPtr(task.TargetDomainID),
+		SourceDomainUUID: common.StringPtr(task.DomainID),
+		Execution: &workflow.WorkflowExecution{
+			WorkflowId: common.StringPtr(task.WorkflowID),
+			RunId:      common.StringPtr(task.RunID),
+		},
+		TaskList:                      &workflow.TaskList{Name: &task.TaskList},
+		ScheduleId:                    &task.ScheduleID,
+		ScheduleToStartTimeoutSeconds: common.Int32Ptr(activityScheduleToStartTimeout),
+	})
+
+	return err
+}
+
+func (t *transferQueueProcessorBase) pushDecision(task *persistence.TransferTaskInfo, tasklist *workflow.TaskList, decisionScheduleToStartTimeout int32) error {
+	if task.TaskType != persistence.TransferTaskTypeDecisionTask {
+		panic("i++")
+	}
+
+	err := t.matchingClient.AddDecisionTask(nil, &m.AddDecisionTaskRequest{
+		DomainUUID: common.StringPtr(task.DomainID),
+		Execution: &workflow.WorkflowExecution{
+			WorkflowId: common.StringPtr(task.WorkflowID),
+			RunId:      common.StringPtr(task.RunID),
+		},
+		TaskList:                      tasklist,
+		ScheduleId:                    common.Int64Ptr(task.ScheduleID),
+		ScheduleToStartTimeoutSeconds: common.Int32Ptr(decisionScheduleToStartTimeout),
+	})
+
+	return err
+}
+
+func (t *transferQueueProcessorBase) recordWorkflowStarted(
+	domainID string, execution workflow.WorkflowExecution, workflowTypeName string,
+	startTimeUnixNano int64, workflowTimeout int32) error {
+	// return t.visibilityMgr.RecordWorkflowExecutionStarted(&persistence.RecordWorkflowExecutionStartedRequest{
+	// 	DomainUUID: executionInfo.DomainID,
+	// 	Execution: workflow.WorkflowExecution{
+	// 		WorkflowId: common.StringPtr(executionInfo.WorkflowID),
+	// 		RunId:      common.StringPtr(executionInfo.RunID),
+	// 	},
+	// 	WorkflowTypeName: executionInfo.WorkflowTypeName,
+	// 	StartTimestamp:   executionInfo.StartTimestamp.UnixNano(),
+	// 	WorkflowTimeout:  int64(executionInfo.WorkflowTimeout),
+	// })
+	return t.visibilityMgr.RecordWorkflowExecutionStarted(&persistence.RecordWorkflowExecutionStartedRequest{
+		DomainUUID:       domainID,
+		Execution:        execution,
+		WorkflowTypeName: workflowTypeName,
+		StartTimestamp:   startTimeUnixNano,
+		WorkflowTimeout:  int64(workflowTimeout),
+	})
+}
+
+func (t *transferQueueProcessorBase) recordWorkflowClosed(
+	domainID string, execution workflow.WorkflowExecution, workflowTypeName string,
+	startTimeUnixNano int64, endTimeUnixNano int64, closeStatus workflow.WorkflowExecutionCloseStatus,
+	historyLength int64) error {
+	// Record closing in visibility store
+	retentionSeconds := int64(0)
+	domainEntry, err := t.shard.GetDomainCache().GetDomainByID(domainID)
+	if err != nil {
+		if _, ok := err.(*workflow.EntityNotExistsError); !ok {
+			return err
+		}
+		// it is possible that the domain got deleted. Use default retention.
+	} else {
+		// retention in domain config is in days, convert to seconds
+		retentionSeconds = int64(domainEntry.GetConfig().Retention) * 24 * 60 * 60
+	}
+
+	return t.visibilityMgr.RecordWorkflowExecutionClosed(&persistence.RecordWorkflowExecutionClosedRequest{
+		DomainUUID:       domainID,
+		Execution:        execution,
+		WorkflowTypeName: workflowTypeName,
+		StartTimestamp:   startTimeUnixNano,
+		CloseTimestamp:   endTimeUnixNano,
+		Status:           closeStatus,
+		HistoryLength:    historyLength,
+		RetentionSeconds: retentionSeconds,
+	})
 }
