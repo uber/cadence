@@ -21,8 +21,6 @@
 package history
 
 import (
-	"time"
-
 	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/matching"
@@ -96,7 +94,7 @@ func newTransferQueueStandbyProcessor(clusterName string, shard ShardContext, hi
 		logger:             logger,
 		metricsClient:      historyService.metricsClient,
 		transferQueueProcessorBase: newTransferQueueProcessorBase(
-			shard, options, visibilityMgr, matchingClient, maxReadAckLevel, updateClusterAckLevel, transferQueueShutdown,
+			shard, options, visibilityMgr, matchingClient, maxReadAckLevel, updateClusterAckLevel, transferQueueShutdown, logger,
 		),
 	}
 	queueAckMgr := newQueueAckMgr(shard, options, processor, shard.GetTransferClusterAckLevel(clusterName), logger)
@@ -185,7 +183,8 @@ func (t *transferQueueStandbyProcessorImpl) processActivityTask(transferTask *pe
 			return nil
 		}
 
-		pushToMatching := time.Now().Sub(transferTask.GetVisibilityTimestamp()) > t.shard.GetConfig().StandbyClusterDelay()
+		now := t.shard.GetCurrentTime(t.clusterName)
+		pushToMatching := now.Sub(transferTask.GetVisibilityTimestamp()) > t.shard.GetConfig().StandbyClusterDelay()
 		if activityInfo.StartedID == common.EmptyEventID {
 			if !pushToMatching {
 				return ErrTaskRetry
@@ -253,7 +252,8 @@ func (t *transferQueueStandbyProcessorImpl) processDecisionTask(transferTask *pe
 			err = t.recordWorkflowStarted(transferTask.DomainID, execution, wfTypeName, startTimestamp.UnixNano(), workflowTimeout)
 		}
 
-		pushToMatching := time.Now().Sub(transferTask.GetVisibilityTimestamp()) > t.shard.GetConfig().StandbyClusterDelay()
+		now := t.shard.GetCurrentTime(t.clusterName)
+		pushToMatching := now.Sub(transferTask.GetVisibilityTimestamp()) > t.shard.GetConfig().StandbyClusterDelay()
 		if decisionInfo.StartedID == common.EmptyEventID {
 			if !pushToMatching {
 				return ErrTaskRetry

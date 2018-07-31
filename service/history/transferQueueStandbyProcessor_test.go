@@ -129,6 +129,7 @@ func (s *transferQueueStandbyProcessorSuite) SetupTest() {
 		logger:                    s.logger,
 		domainCache:               cache.NewDomainCache(s.mockMetadataMgr, s.mockClusterMetadata, metricsClient, s.logger),
 		metricsClient:             metrics.NewClient(tally.NoopScope, metrics.History),
+		standbyClusterCurrentTime: make(map[string]time.Time),
 	}
 
 	historyCache := newHistoryCache(s.mockShard, s.logger)
@@ -195,6 +196,7 @@ func (s *transferQueueStandbyProcessorSuite) TestProcessActivityTask_Pending() {
 	activityType := "some random activity type"
 	event, _ = addActivityTaskScheduledEvent(msBuilder, event.GetEventId(), activityID, activityType, taskListName, []byte{}, 1, 1, 1)
 
+	s.mockShard.SetCurrentTime(s.clusterName, time.Now())
 	transferTask := &persistence.TransferTaskInfo{
 		Version:             version,
 		DomainID:            domainID,
@@ -247,6 +249,7 @@ func (s *transferQueueStandbyProcessorSuite) TestProcessActivityTask_Pending_Pus
 	activityType := "some random activity type"
 	event, _ = addActivityTaskScheduledEvent(msBuilder, event.GetEventId(), activityID, activityType, taskListName, []byte{}, 1, 1, 1)
 
+	s.mockShard.SetCurrentTime(s.clusterName, time.Now())
 	transferTask := &persistence.TransferTaskInfo{
 		Version:             version,
 		DomainID:            domainID,
@@ -348,6 +351,7 @@ func (s *transferQueueStandbyProcessorSuite) TestProcessDecisionTask_Pending() {
 	taskID := int64(59)
 	di := addDecisionTaskScheduledEvent(msBuilder)
 
+	s.mockShard.SetCurrentTime(s.clusterName, time.Now())
 	transferTask := &persistence.TransferTaskInfo{
 		Version:             version,
 		DomainID:            domainID,
@@ -394,6 +398,7 @@ func (s *transferQueueStandbyProcessorSuite) TestProcessDecisionTask_Pending_Pus
 	taskID := int64(59)
 	di := addDecisionTaskScheduledEvent(msBuilder)
 
+	s.mockShard.SetCurrentTime(s.clusterName, time.Now())
 	transferTask := &persistence.TransferTaskInfo{
 		Version:             version,
 		DomainID:            domainID,

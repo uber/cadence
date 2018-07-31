@@ -104,7 +104,7 @@ func newTransferQueueActiveProcessor(shard ShardContext, historyService *history
 		cache:              historyService.historyCache,
 		transferTaskFilter: transferTaskFilter,
 		transferQueueProcessorBase: newTransferQueueProcessorBase(
-			shard, options, visibilityMgr, matchingClient, maxReadAckLevel, updateTransferAckLevel, transferQueueShutdown,
+			shard, options, visibilityMgr, matchingClient, maxReadAckLevel, updateTransferAckLevel, transferQueueShutdown, logger,
 		),
 	}
 
@@ -170,7 +170,7 @@ func newTransferQueueFailoverProcessor(shard ShardContext, historyService *histo
 		cache:              historyService.historyCache,
 		transferTaskFilter: transferTaskFilter,
 		transferQueueProcessorBase: newTransferQueueProcessorBase(
-			shard, options, visibilityMgr, matchingClient, maxReadAckLevel, updateTransferAckLevel, transferQueueShutdown,
+			shard, options, visibilityMgr, matchingClient, maxReadAckLevel, updateTransferAckLevel, transferQueueShutdown, logger,
 		),
 	}
 	queueAckMgr := newQueueFailoverAckMgr(shard, options, processor, minLevel, logger)

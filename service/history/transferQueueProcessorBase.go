@@ -21,10 +21,12 @@
 package history
 
 import (
+	"github.com/uber-common/bark"
 	m "github.com/uber/cadence/.gen/go/matching"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/persistence"
 )
 
@@ -43,13 +45,14 @@ type (
 		maxReadAckLevel        maxReadAckLevel
 		updateTransferAckLevel updateTransferAckLevel
 		transferQueueShutdown  transferQueueShutdown
+		logger                 bark.Logger
 	}
 )
 
 func newTransferQueueProcessorBase(shard ShardContext, options *QueueProcessorOptions,
 	visibilityMgr persistence.VisibilityManager, matchingClient matching.Client,
 	maxReadAckLevel maxReadAckLevel, updateTransferAckLevel updateTransferAckLevel,
-	transferQueueShutdown transferQueueShutdown) *transferQueueProcessorBase {
+	transferQueueShutdown transferQueueShutdown, logger bark.Logger) *transferQueueProcessorBase {
 	return &transferQueueProcessorBase{
 		shard:                  shard,
 		options:                options,
@@ -59,6 +62,7 @@ func newTransferQueueProcessorBase(shard ShardContext, options *QueueProcessorOp
 		maxReadAckLevel:        maxReadAckLevel,
 		updateTransferAckLevel: updateTransferAckLevel,
 		transferQueueShutdown:  transferQueueShutdown,
+		logger:                 logger,
 	}
 }
 
@@ -96,7 +100,7 @@ func (t *transferQueueProcessorBase) queueShutdown() error {
 
 func (t *transferQueueProcessorBase) pushActivity(task *persistence.TransferTaskInfo, activityScheduleToStartTimeout int32) error {
 	if task.TaskType != persistence.TransferTaskTypeActivityTask {
-		panic("i++")
+		t.logger.WithField(logging.TagTaskType, task.GetTaskType()).Fatal("Cannnot process non activity task")
 	}
 
 	err := t.matchingClient.AddActivityTask(nil, &m.AddActivityTaskRequest{
@@ -116,7 +120,7 @@ func (t *transferQueueProcessorBase) pushActivity(task *persistence.TransferTask
 
 func (t *transferQueueProcessorBase) pushDecision(task *persistence.TransferTaskInfo, tasklist *workflow.TaskList, decisionScheduleToStartTimeout int32) error {
 	if task.TaskType != persistence.TransferTaskTypeDecisionTask {
-		panic("i++")
+		t.logger.WithField(logging.TagTaskType, task.GetTaskType()).Fatal("Cannnot process non decision task")
 	}
 
 	err := t.matchingClient.AddDecisionTask(nil, &m.AddDecisionTaskRequest{
@@ -136,16 +140,7 @@ func (t *transferQueueProcessorBase) pushDecision(task *persistence.TransferTask
 func (t *transferQueueProcessorBase) recordWorkflowStarted(
 	domainID string, execution workflow.WorkflowExecution, workflowTypeName string,
 	startTimeUnixNano int64, workflowTimeout int32) error {
-	// return t.visibilityMgr.RecordWorkflowExecutionStarted(&persistence.RecordWorkflowExecutionStartedRequest{
-	// 	DomainUUID: executionInfo.DomainID,
-	// 	Execution: workflow.WorkflowExecution{
-	// 		WorkflowId: common.StringPtr(executionInfo.WorkflowID),
-	// 		RunId:      common.StringPtr(executionInfo.RunID),
-	// 	},
-	// 	WorkflowTypeName: executionInfo.WorkflowTypeName,
-	// 	StartTimestamp:   executionInfo.StartTimestamp.UnixNano(),
-	// 	WorkflowTimeout:  int64(executionInfo.WorkflowTimeout),
-	// })
+
 	return t.visibilityMgr.RecordWorkflowExecutionStarted(&persistence.RecordWorkflowExecutionStartedRequest{
 		DomainUUID:       domainID,
 		Execution:        execution,
