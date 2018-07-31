@@ -173,10 +173,11 @@ func (s *timerQueueProcessorSuite) createExecutionWithTimers(domainID string, we
 		timerTasks = append(timerTasks, t)
 	}
 
+	s.ShardContext.Lock()
 	s.updateTimerSeqNumbers(timerTasks)
-
 	updatedState := createMutableState(builder)
 	err3 := s.UpdateWorkflowExecution(updatedState.ExecutionInfo, nil, nil, int64(3), timerTasks, nil, nil, nil, timerInfos, nil)
+	s.ShardContext.Unlock()
 	s.Nil(err3)
 
 	return createMutableState(builder), timerTasks
@@ -196,10 +197,11 @@ func (s *timerQueueProcessorSuite) addDecisionTimer(domainID string, we workflow
 	timeOutTask := tb.AddStartToCloseDecisionTimoutTask(di.ScheduleID, di.Attempt, 1)
 	timerTasks := []persistence.Task{timeOutTask}
 
+	s.ShardContext.Lock()
 	s.updateTimerSeqNumbers(timerTasks)
-
 	addDecisionTaskCompletedEvent(builder, di.ScheduleID, startedEvent.GetEventId(), nil, "identity")
 	err2 := s.UpdateWorkflowExecution(state.ExecutionInfo, nil, nil, condition, timerTasks, nil, nil, nil, nil, nil)
+	s.ShardContext.Unlock()
 	s.Nil(err2, "No error expected.")
 	return timerTasks
 }
@@ -405,12 +407,12 @@ func (s *timerQueueProcessorSuite) updateHistoryAndTimers(ms mutableState, timer
 		timerInfos = append(timerInfos, x)
 	}
 
+	s.ShardContext.Lock()
 	s.updateTimerSeqNumbers(timerTasks)
 	err3 := s.UpdateWorkflowExecution(
 		updatedState.ExecutionInfo, nil, nil, condition, timerTasks, nil, actInfos, nil, timerInfos, nil)
+	s.ShardContext.Unlock()
 	s.Nil(err3)
-
-	time.Sleep(10 * time.Millisecond) // Because TestBase is currently not locked with shard lock, wait to exclude other shard op
 }
 
 func (s *timerQueueProcessorSuite) TestTimerActivityTaskScheduleToStart_WithOutStart() {

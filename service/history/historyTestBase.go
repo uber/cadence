@@ -364,8 +364,7 @@ func (s *TestShardContext) UpdateTimerMaxReadLevel() time.Time {
 
 // GetTimerMaxReadLevel test implementation
 func (s *TestShardContext) GetTimerMaxReadLevel() time.Time {
-	s.RLock()
-	defer s.RUnlock()
+	// This test method is called with shard lock
 	return s.timerMaxReadLevel
 }
 
