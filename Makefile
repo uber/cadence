@@ -64,9 +64,9 @@ PKG_TEST_DIRS := $(filter-out $(INTEG_TEST_ROOT)%,$(TEST_DIRS))
 #   Packages are specified as import paths.
 GOCOVERPKG_ARG := -coverpkg="$(PROJECT_ROOT)/common/...,$(PROJECT_ROOT)/service/...,$(PROJECT_ROOT)/client/...,$(PROJECT_ROOT)/tools/..."
 
-dep-ensured: Gopkg.toml Gopkg.lock
-	brew install dep 
-	dep ensure 
+dep-ensured:
+	./install-dep.sh
+	dep ensure
 
 yarpc-install:
 	go get './vendor/go.uber.org/thriftrw'
