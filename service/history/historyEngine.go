@@ -1370,6 +1370,8 @@ Update_History_Loop:
 					TaskList: &workflow.TaskList{Name: common.StringPtr(di.TaskList)},
 					Identity: request.Identity,
 				})
+				timeOutTask := tBuilder.AddStartToCloseDecisionTimoutTask(di.ScheduleID, di.Attempt, di.DecisionTimeout)
+				timerTasks = append(timerTasks, timeOutTask)
 			}
 		}
 
