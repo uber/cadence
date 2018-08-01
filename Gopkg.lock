@@ -440,7 +440,7 @@
   version = "v1.3.2"
 
 [[projects]]
-  digest = "1:e559cf44f907a8f68eb0991733fcf2a2e6e25d9f8a53f8309d577e8a76f59dd3"
+  digest = "1:698e8681e10cd9e80245bbe211830884c0a77f29d01a9dacee05d8eda050f2b8"
   name = "go.uber.org/cadence"
   packages = [
     ".gen/go/admin",
@@ -463,8 +463,8 @@
     "workflow",
   ]
   pruneopts = ""
-  revision = "80466fafbf8535a9855b7940525dd2bf45f3b283"
-  version = "v0.7.1"
+  revision = "4be6b261f85aa232e8d1a22b520929a1c0c67a16"
+  version = "v0.7.3"
 
 [[projects]]
   digest = "1:22c7effcb4da0eacb2bb1940ee173fac010e9ef3c691f5de4b524d538bd980f5"
