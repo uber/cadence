@@ -40,6 +40,7 @@ struct PollForDecisionTaskResponse {
   70: optional bool stickyExecutionEnabled
   80: optional shared.WorkflowQuery query
   90: optional shared.TransientDecisionInfo decisionInfo
+  100: optional shared.TaskList WorkflowExecutionTaskList
 }
 
 struct PollForActivityTaskRequest {
@@ -132,6 +133,7 @@ service MatchingService {
       2: shared.InternalServiceError internalServiceError,
       3: shared.ServiceBusyError serviceBusyError,
       4: shared.LimitExceededError limitExceededError,
+      5: shared.DomainNotActiveError domainNotActiveError,
     )
 
   /**
@@ -144,6 +146,7 @@ service MatchingService {
       2: shared.InternalServiceError internalServiceError,
       3: shared.ServiceBusyError serviceBusyError,
       4: shared.LimitExceededError limitExceededError,
+      5: shared.DomainNotActiveError domainNotActiveError,
     )
 
   /**

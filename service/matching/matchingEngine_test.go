@@ -89,6 +89,7 @@ func (s *matchingEngineSuite) SetupSuite() {
 
 // Renders content of taskManager and matchingEngine when called at http://localhost:6060/test/tasks
 // Uncomment HTTP server initialization in SetupSuite method to enable.
+
 func (s *matchingEngineSuite) TasksHandler(w http.ResponseWriter, r *http.Request) {
 	s.Lock()
 	defer s.Unlock()
@@ -197,6 +198,90 @@ func (s *matchingEngineSuite) TestPollForActivityTasksEmptyResult() {
 
 func (s *matchingEngineSuite) TestPollForDecisionTasksEmptyResult() {
 	s.PollForTasksEmptyResultTest(persistence.TaskListTypeDecision)
+}
+
+func (s *matchingEngineSuite) TestPollForDecisionTasks() {
+	s.PollForDecisionTasksResultTest()
+}
+
+func (s *matchingEngineSuite) PollForDecisionTasksResultTest() {
+
+	domainID := "domainId"
+	tl := "makeToast"
+	stickyTl := "makeStickyToast"
+	stickyTlKind := workflow.TaskListKindSticky
+	identity := "selfDrivingToaster"
+
+	stickyTaskList := &workflow.TaskList{}
+	stickyTaskList.Name = &stickyTl
+	stickyTaskList.Kind = &stickyTlKind
+
+	s.matchingEngine.config.RangeSize = 2 // to test that range is not updated without tasks
+	s.matchingEngine.config.LongPollExpirationInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(10 * time.Millisecond)
+
+	runID := "run1"
+	workflowID := "workflow1"
+	workflowType := workflow.WorkflowType{
+		Name: common.StringPtr("workflow"),
+	}
+	execution := workflow.WorkflowExecution{RunId: &runID, WorkflowId: &workflowID}
+	scheduleID := int64(0)
+
+	// History service is using mock
+	s.historyClient.On("RecordDecisionTaskStarted", nil,
+		mock.AnythingOfType("*history.RecordDecisionTaskStartedRequest")).Return(
+		func(ctx context.Context, taskRequest *gohistory.RecordDecisionTaskStartedRequest) *gohistory.RecordDecisionTaskStartedResponse {
+			s.logger.Debug("Mock Received RecordDecisionTaskStartedRequest")
+			response := &gohistory.RecordDecisionTaskStartedResponse{}
+			response.WorkflowType = &workflowType
+			response.PreviousStartedEventId = common.Int64Ptr(scheduleID)
+			response.ScheduledEventId = common.Int64Ptr(scheduleID + 1)
+			response.Attempt = common.Int64Ptr(0)
+			response.StickyExecutionEnabled = common.BoolPtr(true)
+			response.WorkflowExecutionTaskList = common.TaskListPtr(workflow.TaskList{
+				Name: &tl,
+				Kind: common.TaskListKindPtr(workflow.TaskListKindNormal),
+			})
+			return response
+		}, nil)
+
+	addRequest := matching.AddDecisionTaskRequest{
+		DomainUUID:                    common.StringPtr(domainID),
+		Execution:                     &execution,
+		ScheduleId:                    &scheduleID,
+		TaskList:                      stickyTaskList,
+		ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
+	}
+
+	err := s.matchingEngine.AddDecisionTask(&addRequest)
+	s.NoError(err)
+
+	taskList := &workflow.TaskList{}
+	taskList.Name = &tl
+
+	resp, err := s.matchingEngine.PollForDecisionTask(s.callContext, &matching.PollForDecisionTaskRequest{
+		DomainUUID: common.StringPtr(domainID),
+		PollRequest: &workflow.PollForDecisionTaskRequest{
+			TaskList: stickyTaskList,
+			Identity: &identity},
+	})
+
+	expectedResp := &matching.PollForDecisionTaskResponse{
+		TaskToken:              resp.TaskToken,
+		WorkflowExecution:      &execution,
+		WorkflowType:           &workflowType,
+		PreviousStartedEventId: common.Int64Ptr(scheduleID),
+		Attempt:                common.Int64Ptr(0),
+		BacklogCountHint:       common.Int64Ptr(1),
+		StickyExecutionEnabled: common.BoolPtr(true),
+		WorkflowExecutionTaskList: common.TaskListPtr(workflow.TaskList{
+			Name: &tl,
+			Kind: common.TaskListKindPtr(workflow.TaskListKindNormal),
+		}),
+	}
+
+	s.Nil(err)
+	s.Equal(expectedResp, resp)
 }
 
 func (s *matchingEngineSuite) PollForTasksEmptyResultTest(taskType int) {
@@ -497,7 +582,7 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 	tlConfig, err := newTaskListConfig(tlID, s.matchingEngine.config, s.domainCache)
 	s.NoError(err)
 	mgr := newTaskListManagerWithRateLimiter(
-		s.matchingEngine, tlID, tlKind, tlConfig,
+		s.matchingEngine, tlID, tlKind, s.domainCache, tlConfig,
 		newRateLimiter(&dPtr, dispatchTTL, _minBurst),
 	)
 	s.matchingEngine.updateTaskList(tlID, mgr)
@@ -654,7 +739,7 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 	tlConfig, err := newTaskListConfig(tlID, s.matchingEngine.config, s.domainCache)
 	s.NoError(err)
 	mgr := newTaskListManagerWithRateLimiter(
-		s.matchingEngine, tlID, tlKind, tlConfig,
+		s.matchingEngine, tlID, tlKind, s.domainCache, tlConfig,
 		newRateLimiter(&dPtr, dispatchTTL, _minBurst),
 	)
 	s.matchingEngine.updateTaskList(tlID, mgr)
@@ -1270,8 +1355,8 @@ func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch() {
 	taskList := &workflow.TaskList{}
 	taskList.Name = &tl
 
-	const taskCount = 2000
-	const rangeSize = 30
+	const taskCount = 1200
+	const rangeSize = 10
 	s.matchingEngine.config.RangeSize = rangeSize
 
 	// add taskCount tasks
@@ -1303,16 +1388,18 @@ func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch() {
 	// setReadLevel should NEVER be called without updating ackManager.outstandingTasks
 	// This is only for unit test purpose
 	tlMgr.taskAckManager.setReadLevel(tlMgr.taskWriter.GetMaxReadLevel())
-	tasks, readLevel, err := tlMgr.getTaskBatch()
+	tasks, readLevel, isReadBatchDone, err := tlMgr.getTaskBatch()
 	s.Nil(err)
 	s.EqualValues(0, len(tasks))
 	s.EqualValues(tlMgr.taskWriter.GetMaxReadLevel(), readLevel)
+	s.True(isReadBatchDone)
 
 	tlMgr.taskAckManager.setReadLevel(0)
-	tasks, readLevel, err = tlMgr.getTaskBatch()
+	tasks, readLevel, isReadBatchDone, err = tlMgr.getTaskBatch()
 	s.Nil(err)
 	s.EqualValues(rangeSize, len(tasks))
 	s.EqualValues(rangeSize, readLevel)
+	s.True(isReadBatchDone)
 
 	activityTypeName := "activity1"
 	activityID := "activityId1"
@@ -1358,13 +1445,44 @@ func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch() {
 		}
 	}
 	s.EqualValues(taskCount-rangeSize, s.taskManager.getTaskCount(tlID))
-
-	tasks, readLevel, err = tlMgr.getTaskBatch()
+	tasks, readLevel, isReadBatchDone, err = tlMgr.getTaskBatch()
 	s.Nil(err)
 	s.True(0 < len(tasks) && len(tasks) <= rangeSize)
 	s.EqualValues(rangeSize*2, readLevel)
+	s.True(isReadBatchDone)
 
 	tlMgr.engine.removeTaskListManager(tlMgr.taskListID)
+}
+
+func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch_ReadBatchDone() {
+	domainID := "domainId"
+	tl := "makeToast"
+	tlID := &taskListID{domainID: domainID, taskListName: tl, taskType: persistence.TaskListTypeActivity}
+	tlNormal := workflow.TaskListKindNormal
+
+	const rangeSize = 10
+	const maxReadLevel = int64(120)
+	config := defaultTestConfig()
+	config.RangeSize = rangeSize
+	tlMgr0, err := newTaskListManager(s.matchingEngine, tlID, &tlNormal, config)
+	s.NoError(err)
+	tlMgr, ok := tlMgr0.(*taskListManagerImpl)
+	s.True(ok, "taskListManger doesn't implement taskListManager interface")
+
+	tlMgr.taskAckManager.setReadLevel(0)
+	atomic.StoreInt64(&tlMgr.taskWriter.maxReadLevel, maxReadLevel)
+	tasks, readLevel, isReadBatchDone, err := tlMgr.getTaskBatch()
+	s.Empty(tasks)
+	s.Equal(int64(rangeSize*10), readLevel)
+	s.False(isReadBatchDone)
+	s.NoError(err)
+
+	tlMgr.taskAckManager.setReadLevel(readLevel)
+	tasks, readLevel, isReadBatchDone, err = tlMgr.getTaskBatch()
+	s.Empty(tasks)
+	s.Equal(maxReadLevel, readLevel)
+	s.True(isReadBatchDone)
+	s.NoError(err)
 }
 
 func newActivityTaskScheduledEvent(eventID int64, decisionTaskCompletedEventID int64,

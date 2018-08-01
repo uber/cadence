@@ -185,6 +185,8 @@ enum DecisionTaskFailedCause {
   BAD_SIGNAL_WORKFLOW_EXECUTION_ATTRIBUTES,
   BAD_START_CHILD_EXECUTION_ATTRIBUTES,
   FORCE_CLOSE_DECISION,
+  FAILOVER_CLOSE_DECISION,
+  BAD_SIGNAL_INPUT_SIZE,
 }
 
 enum CancelExternalWorkflowExecutionFailedCause {
@@ -879,6 +881,7 @@ struct PollForDecisionTaskResponse {
   60: optional History history
   70: optional binary nextPageToken
   80: optional WorkflowQuery query
+  90: optional TaskList WorkflowExecutionTaskList
 }
 
 struct StickyExecutionAttributes {

@@ -6280,6 +6280,8 @@ const (
 	DecisionTaskFailedCauseBadSignalWorkflowExecutionAttributes                DecisionTaskFailedCause = 14
 	DecisionTaskFailedCauseBadStartChildExecutionAttributes                    DecisionTaskFailedCause = 15
 	DecisionTaskFailedCauseForceCloseDecision                                  DecisionTaskFailedCause = 16
+	DecisionTaskFailedCauseFailoverCloseDecision                               DecisionTaskFailedCause = 17
+	DecisionTaskFailedCauseBadSignalInputSize                                  DecisionTaskFailedCause = 18
 )
 
 // DecisionTaskFailedCause_Values returns all recognized values of DecisionTaskFailedCause.
@@ -6302,6 +6304,8 @@ func DecisionTaskFailedCause_Values() []DecisionTaskFailedCause {
 		DecisionTaskFailedCauseBadSignalWorkflowExecutionAttributes,
 		DecisionTaskFailedCauseBadStartChildExecutionAttributes,
 		DecisionTaskFailedCauseForceCloseDecision,
+		DecisionTaskFailedCauseFailoverCloseDecision,
+		DecisionTaskFailedCauseBadSignalInputSize,
 	}
 }
 
@@ -6363,6 +6367,12 @@ func (v *DecisionTaskFailedCause) UnmarshalText(value []byte) error {
 	case "FORCE_CLOSE_DECISION":
 		*v = DecisionTaskFailedCauseForceCloseDecision
 		return nil
+	case "FAILOVER_CLOSE_DECISION":
+		*v = DecisionTaskFailedCauseFailoverCloseDecision
+		return nil
+	case "BAD_SIGNAL_INPUT_SIZE":
+		*v = DecisionTaskFailedCauseBadSignalInputSize
+		return nil
 	default:
 		return fmt.Errorf("unknown enum value %q for %q", value, "DecisionTaskFailedCause")
 	}
@@ -6410,6 +6420,10 @@ func (v DecisionTaskFailedCause) MarshalText() ([]byte, error) {
 		return []byte("BAD_START_CHILD_EXECUTION_ATTRIBUTES"), nil
 	case 16:
 		return []byte("FORCE_CLOSE_DECISION"), nil
+	case 17:
+		return []byte("FAILOVER_CLOSE_DECISION"), nil
+	case 18:
+		return []byte("BAD_SIGNAL_INPUT_SIZE"), nil
 	}
 	return []byte(strconv.FormatInt(int64(v), 10)), nil
 }
@@ -6484,6 +6498,10 @@ func (v DecisionTaskFailedCause) String() string {
 		return "BAD_START_CHILD_EXECUTION_ATTRIBUTES"
 	case 16:
 		return "FORCE_CLOSE_DECISION"
+	case 17:
+		return "FAILOVER_CLOSE_DECISION"
+	case 18:
+		return "BAD_SIGNAL_INPUT_SIZE"
 	}
 	return fmt.Sprintf("DecisionTaskFailedCause(%d)", w)
 }
@@ -6536,6 +6554,10 @@ func (v DecisionTaskFailedCause) MarshalJSON() ([]byte, error) {
 		return ([]byte)("\"BAD_START_CHILD_EXECUTION_ATTRIBUTES\""), nil
 	case 16:
 		return ([]byte)("\"FORCE_CLOSE_DECISION\""), nil
+	case 17:
+		return ([]byte)("\"FAILOVER_CLOSE_DECISION\""), nil
+	case 18:
+		return ([]byte)("\"BAD_SIGNAL_INPUT_SIZE\""), nil
 	}
 	return ([]byte)(strconv.FormatInt(int64(v), 10)), nil
 }
@@ -18143,16 +18165,17 @@ func (v *PollForDecisionTaskRequest) GetIdentity() (o string) {
 }
 
 type PollForDecisionTaskResponse struct {
-	TaskToken              []byte             `json:"taskToken,omitempty"`
-	WorkflowExecution      *WorkflowExecution `json:"workflowExecution,omitempty"`
-	WorkflowType           *WorkflowType      `json:"workflowType,omitempty"`
-	PreviousStartedEventId *int64             `json:"previousStartedEventId,omitempty"`
-	StartedEventId         *int64             `json:"startedEventId,omitempty"`
-	Attempt                *int64             `json:"attempt,omitempty"`
-	BacklogCountHint       *int64             `json:"backlogCountHint,omitempty"`
-	History                *History           `json:"history,omitempty"`
-	NextPageToken          []byte             `json:"nextPageToken,omitempty"`
-	Query                  *WorkflowQuery     `json:"query,omitempty"`
+	TaskToken                 []byte             `json:"taskToken,omitempty"`
+	WorkflowExecution         *WorkflowExecution `json:"workflowExecution,omitempty"`
+	WorkflowType              *WorkflowType      `json:"workflowType,omitempty"`
+	PreviousStartedEventId    *int64             `json:"previousStartedEventId,omitempty"`
+	StartedEventId            *int64             `json:"startedEventId,omitempty"`
+	Attempt                   *int64             `json:"attempt,omitempty"`
+	BacklogCountHint          *int64             `json:"backlogCountHint,omitempty"`
+	History                   *History           `json:"history,omitempty"`
+	NextPageToken             []byte             `json:"nextPageToken,omitempty"`
+	Query                     *WorkflowQuery     `json:"query,omitempty"`
+	WorkflowExecutionTaskList *TaskList          `json:"WorkflowExecutionTaskList,omitempty"`
 }
 
 // ToWire translates a PollForDecisionTaskResponse struct into a Thrift-level intermediate
@@ -18172,7 +18195,7 @@ type PollForDecisionTaskResponse struct {
 //   }
 func (v *PollForDecisionTaskResponse) ToWire() (wire.Value, error) {
 	var (
-		fields [10]wire.Field
+		fields [11]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -18256,6 +18279,14 @@ func (v *PollForDecisionTaskResponse) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 80, Value: w}
+		i++
+	}
+	if v.WorkflowExecutionTaskList != nil {
+		w, err = v.WorkflowExecutionTaskList.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 90, Value: w}
 		i++
 	}
 
@@ -18378,6 +18409,14 @@ func (v *PollForDecisionTaskResponse) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 90:
+			if field.Value.Type() == wire.TStruct {
+				v.WorkflowExecutionTaskList, err = _TaskList_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -18391,7 +18430,7 @@ func (v *PollForDecisionTaskResponse) String() string {
 		return "<nil>"
 	}
 
-	var fields [10]string
+	var fields [11]string
 	i := 0
 	if v.TaskToken != nil {
 		fields[i] = fmt.Sprintf("TaskToken: %v", v.TaskToken)
@@ -18433,6 +18472,10 @@ func (v *PollForDecisionTaskResponse) String() string {
 		fields[i] = fmt.Sprintf("Query: %v", v.Query)
 		i++
 	}
+	if v.WorkflowExecutionTaskList != nil {
+		fields[i] = fmt.Sprintf("WorkflowExecutionTaskList: %v", v.WorkflowExecutionTaskList)
+		i++
+	}
 
 	return fmt.Sprintf("PollForDecisionTaskResponse{%v}", strings.Join(fields[:i], ", "))
 }
@@ -18470,6 +18513,9 @@ func (v *PollForDecisionTaskResponse) Equals(rhs *PollForDecisionTaskResponse) b
 		return false
 	}
 	if !((v.Query == nil && rhs.Query == nil) || (v.Query != nil && rhs.Query != nil && v.Query.Equals(rhs.Query))) {
+		return false
+	}
+	if !((v.WorkflowExecutionTaskList == nil && rhs.WorkflowExecutionTaskList == nil) || (v.WorkflowExecutionTaskList != nil && rhs.WorkflowExecutionTaskList != nil && v.WorkflowExecutionTaskList.Equals(rhs.WorkflowExecutionTaskList))) {
 		return false
 	}
 
@@ -18571,6 +18617,16 @@ func (v *PollForDecisionTaskResponse) GetNextPageToken() (o []byte) {
 func (v *PollForDecisionTaskResponse) GetQuery() (o *WorkflowQuery) {
 	if v.Query != nil {
 		return v.Query
+	}
+
+	return
+}
+
+// GetWorkflowExecutionTaskList returns the value of WorkflowExecutionTaskList if it is set or its
+// zero value if it is unset.
+func (v *PollForDecisionTaskResponse) GetWorkflowExecutionTaskList() (o *TaskList) {
+	if v.WorkflowExecutionTaskList != nil {
+		return v.WorkflowExecutionTaskList
 	}
 
 	return

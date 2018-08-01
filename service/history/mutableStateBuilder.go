@@ -163,7 +163,7 @@ type (
 		ReplicateChildWorkflowExecutionTimedOutEvent(*workflow.HistoryEvent)
 		ReplicateDecisionTaskCompletedEvent(int64, int64)
 		ReplicateDecisionTaskFailedEvent(int64, int64)
-		ReplicateDecisionTaskScheduledEvent(int64, int64, string, int32) *decisionInfo
+		ReplicateDecisionTaskScheduledEvent(int64, int64, string, int32, int64) *decisionInfo
 		ReplicateDecisionTaskStartedEvent(*decisionInfo, int64, int64, int64, string, int64) *decisionInfo
 		ReplicateDecisionTaskTimedOutEvent(int64, int64)
 		ReplicateExternalWorkflowExecutionCancelRequested(*workflow.HistoryEvent)
@@ -234,6 +234,7 @@ type (
 		continueAsNew    *persistence.CreateWorkflowExecutionRequest
 		hBuilder         *historyBuilder
 		eventSerializer  historyEventSerializer
+		currentCluster   string
 		config           *Config
 		logger           bark.Logger
 	}
@@ -272,7 +273,7 @@ type (
 	}
 )
 
-func newMutableStateBuilder(config *Config, logger bark.Logger) *mutableStateBuilder {
+func newMutableStateBuilder(currentCluster string, config *Config, logger bark.Logger) *mutableStateBuilder {
 	s := &mutableStateBuilder{
 		updateActivityInfos:             make(map[*persistence.ActivityInfo]struct{}),
 		pendingActivityInfoIDs:          make(map[int64]*persistence.ActivityInfo),
@@ -300,6 +301,7 @@ func newMutableStateBuilder(config *Config, logger bark.Logger) *mutableStateBui
 		deleteSignalRequestedID:   "",
 
 		eventSerializer: newJSONHistoryEventSerializer(),
+		currentCluster:  currentCluster,
 		config:          config,
 		logger:          logger,
 	}
@@ -314,8 +316,8 @@ func newMutableStateBuilder(config *Config, logger bark.Logger) *mutableStateBui
 	return s
 }
 
-func newMutableStateBuilderWithReplicationState(config *Config, logger bark.Logger, version int64) *mutableStateBuilder {
-	s := newMutableStateBuilder(config, logger)
+func newMutableStateBuilderWithReplicationState(currentCluster string, config *Config, logger bark.Logger, version int64) *mutableStateBuilder {
+	s := newMutableStateBuilder(currentCluster, config, logger)
 	s.replicationState = &persistence.ReplicationState{
 		StartVersion:        version,
 		CurrentVersion:      version,
@@ -519,16 +521,11 @@ func (e *mutableStateBuilder) UpdateReplicationStateVersion(version int64, force
 
 // Assumption: It is expected CurrentVersion on replication state is updated at the start of transaction when
 // mutableState is loaded for this workflow execution.
-func (e *mutableStateBuilder) UpdateReplicationStateLastEventID(clusterName string, lastWriteVersion,
-	lastEventID int64) {
+func (e *mutableStateBuilder) UpdateReplicationStateLastEventID(clusterName string, lastWriteVersion, lastEventID int64) {
 	e.replicationState.LastWriteVersion = lastWriteVersion
 	// TODO: Rename this to NextEventID to stay consistent naming convention with rest of code base
 	e.replicationState.LastWriteEventID = lastEventID
-	if clusterName != "" {
-		// ReplicationState update for passive cluster
-		if e.replicationState.LastReplicationInfo == nil {
-			e.replicationState.LastReplicationInfo = make(map[string]*persistence.ReplicationInfo)
-		}
+	if clusterName != e.currentCluster {
 		info, ok := e.replicationState.LastReplicationInfo[clusterName]
 		if !ok {
 			// ReplicationInfo doesn't exist for this cluster, create one
@@ -536,7 +533,7 @@ func (e *mutableStateBuilder) UpdateReplicationStateLastEventID(clusterName stri
 			e.replicationState.LastReplicationInfo[clusterName] = info
 		}
 
-		info.Version = e.replicationState.CurrentVersion
+		info.Version = lastWriteVersion
 		info.LastEventID = lastEventID
 	}
 }
@@ -598,11 +595,6 @@ func (e *mutableStateBuilder) CloseUpdateSession() (*mutableStateSessionUpdates,
 
 func (e *mutableStateBuilder) BufferReplicationTask(
 	request *h.ReplicateEventsRequest) error {
-	if _, ok := e.GetBufferedReplicationTask(request.GetFirstEventId()); ok {
-		// Have an existing replication task
-		return nil
-	}
-
 	var err error
 	var serializedHistoryBatch, serializedNewRunHistoryBatch *persistence.SerializedHistoryEventBatch
 	if request.History != nil {
@@ -1426,11 +1418,17 @@ func (e *mutableStateBuilder) AddDecisionTaskScheduledEvent() *decisionInfo {
 		scheduleID = newDecisionEvent.GetEventId()
 	}
 
-	return e.ReplicateDecisionTaskScheduledEvent(e.GetCurrentVersion(), scheduleID, taskList, startToCloseTimeoutSeconds)
+	return e.ReplicateDecisionTaskScheduledEvent(
+		e.GetCurrentVersion(),
+		scheduleID,
+		taskList,
+		startToCloseTimeoutSeconds,
+		e.executionInfo.DecisionAttempt,
+	)
 }
 
 func (e *mutableStateBuilder) ReplicateDecisionTaskScheduledEvent(version, scheduleID int64, taskList string,
-	startToCloseTimeoutSeconds int32) *decisionInfo {
+	startToCloseTimeoutSeconds int32, attempt int64) *decisionInfo {
 	di := &decisionInfo{
 		Version:         version,
 		ScheduleID:      scheduleID,
@@ -1438,7 +1436,7 @@ func (e *mutableStateBuilder) ReplicateDecisionTaskScheduledEvent(version, sched
 		RequestID:       emptyUUID,
 		DecisionTimeout: startToCloseTimeoutSeconds,
 		TaskList:        taskList,
-		Attempt:         e.executionInfo.DecisionAttempt,
+		Attempt:         attempt,
 	}
 
 	e.UpdateDecision(di)
@@ -2279,9 +2277,9 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(decisionCompletedEventID int
 	if domainEntry.IsGlobalDomain() {
 		// all workflows within a global domain should have replication state, no matter whether it will be replicated to multiple
 		// target clusters or not
-		newStateBuilder = newMutableStateBuilderWithReplicationState(e.config, e.logger, domainEntry.GetFailoverVersion())
+		newStateBuilder = newMutableStateBuilderWithReplicationState(e.currentCluster, e.config, e.logger, domainEntry.GetFailoverVersion())
 	} else {
-		newStateBuilder = newMutableStateBuilder(e.config, e.logger)
+		newStateBuilder = newMutableStateBuilder(e.currentCluster, e.config, e.logger)
 	}
 	domainID := domainEntry.GetInfo().ID
 	startedEvent := newStateBuilder.AddWorkflowExecutionStartedEventForContinueAsNew(domainID, parentInfo, newExecution, e, attributes)

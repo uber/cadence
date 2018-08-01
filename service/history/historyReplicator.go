@@ -102,7 +102,12 @@ func newHistoryReplicator(shard ShardContext, historyEngine *historyEngineImpl, 
 			return newStateBuilder(shard, msBuilder, logger)
 		},
 		getNewMutableState: func(version int64, logger bark.Logger) mutableState {
-			return newMutableStateBuilderWithReplicationState(shard.GetConfig(), logger, version)
+			return newMutableStateBuilderWithReplicationState(
+				shard.GetService().GetClusterMetadata().GetCurrentClusterName(),
+				shard.GetConfig(),
+				logger,
+				version,
+			)
 		},
 	}
 
@@ -294,7 +299,11 @@ func (r *historyReplicator) ApplyOtherEventsVersionChecking(ctx context.Context,
 		return nil, ErrCorruptedReplicationInfo
 	}
 
-	if ri.GetLastEventId() < rState.LastWriteEventID {
+	if ri.GetLastEventId() < rState.LastWriteEventID || msBuilder.HasBufferedEvents() {
+		// the reason to reset mutable state if mutable state has buffered events
+		// is: what buffered event actually do is delay generation of event ID,
+		// the actual action of those buffered event are already applied to mutable state.
+
 		logger.Info("Conflict detected.")
 		r.metricsClient.IncCounter(metrics.ReplicateHistoryEventsScope, metrics.HistoryConflictsCounter)
 
@@ -340,26 +349,19 @@ func (r *historyReplicator) ApplyOtherEvents(ctx context.Context, context *workf
 			metrics.BufferReplicationTaskTimer,
 			time.Duration(len(request.History.Events)),
 		)
+
+		bt, ok := msBuilder.GetBufferedReplicationTask(request.GetFirstEventId())
+		if ok && bt.Version >= request.GetVersion() {
+			// Have an existing replication task
+			return nil
+		}
+
 		err = msBuilder.BufferReplicationTask(request)
 		if err != nil {
 			r.logError(logger, "Failed to buffer out of order replication task.", err)
 			return errors.New("failed to add buffered replication task")
 		}
-
-		// Generate a transaction ID for appending events to history
-		transactionID, err := r.shard.GetNextTransferTaskID()
-		if err != nil {
-			return err
-		}
-		// we need to handcraft some of the variables
-		// since this is a persisting the buffer replication task,
-		// so nothing on the replication state should be changed
-		lastWriteVersion := msBuilder.GetLastWriteVersion()
-		sourceCluster := r.clusterMetadata.ClusterNameForFailoverVersion(lastWriteVersion)
-		history := request.GetHistory()
-		lastEvent := history.Events[len(history.Events)-1]
-		now := time.Unix(0, lastEvent.GetTimestamp())
-		return context.updateHelper(nil, nil, transactionID, now, false, nil, sourceCluster)
+		return r.updateBufferedReplicationTask(context, msBuilder)
 	}
 
 	// Apply the replication task
@@ -458,13 +460,17 @@ func (r *historyReplicator) FlushBuffer(ctx context.Context, context *workflowEx
 		nextEventID := msBuilder.GetNextEventID()
 		bt, ok := msBuilder.GetBufferedReplicationTask(nextEventID)
 		if !ok {
-			// Bail out if nextEventID is not in the buffer
+			// Bail out if nextEventID is not in the buffer or version is stale
 			return nil
 		}
 
 		// We need to delete the task from buffer first to make sure delete update is queued up
 		// Applying replication task commits the transaction along with the delete
 		msBuilder.DeleteBufferedReplicationTask(nextEventID)
+
+		if bt.Version < msBuilder.GetLastWriteVersion() {
+			return r.updateBufferedReplicationTask(context, msBuilder)
+		}
 
 		sourceCluster := r.clusterMetadata.ClusterNameForFailoverVersion(bt.Version)
 		req := &h.ReplicateEventsRequest{
@@ -525,11 +531,12 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 	}
 
 	err = r.shard.AppendHistoryEvents(&persistence.AppendHistoryEventsRequest{
-		DomainID:      domainID,
-		Execution:     execution,
-		TransactionID: transactionID,
-		FirstEventID:  firstEvent.GetEventId(),
-		Events:        serializedHistory,
+		DomainID:          domainID,
+		Execution:         execution,
+		TransactionID:     transactionID,
+		FirstEventID:      firstEvent.GetEventId(),
+		EventBatchVersion: firstEvent.GetVersion(),
+		Events:            serializedHistory,
 	})
 	if err != nil {
 		return err
@@ -859,6 +866,20 @@ func (r *historyReplicator) terminateWorkflow(ctx context.Context, domainID stri
 			Identity: common.StringPtr("worker-service"),
 		},
 	})
+}
+
+func (r *historyReplicator) updateBufferedReplicationTask(context *workflowExecutionContext, msBuilder mutableState) error {
+	// Generate a transaction ID for appending events to history
+	transactionID, err := r.shard.GetNextTransferTaskID()
+	if err != nil {
+		return err
+	}
+	// we need to handcraft some of the variables
+	// since this is a persisting the buffer replication task,
+	// so nothing on the replication state should be changed
+	lastWriteVersion := msBuilder.GetLastWriteVersion()
+	sourceCluster := r.clusterMetadata.ClusterNameForFailoverVersion(lastWriteVersion)
+	return context.updateHelper(nil, nil, transactionID, time.Time{}, false, nil, sourceCluster)
 }
 
 func (r *historyReplicator) notify(clusterName string, now time.Time, transferTasks []persistence.Task,

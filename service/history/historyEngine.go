@@ -45,6 +45,7 @@ import (
 )
 
 const (
+	signalInputSizeLimit                     = 256 * 1024
 	conditionalRetryCount                    = 5
 	activityCancelationMsgActivityIDUnknown  = "ACTIVITY_ID_UNKNOWN"
 	activityCancelationMsgActivityNotStarted = "ACTIVITY_ID_NOT_STARTED"
@@ -101,6 +102,8 @@ var (
 	ErrWorkflowParent = &workflow.EntityNotExistsError{Message: "Workflow parent does not match."}
 	// ErrDeserializingToken is the error to indicate task token is invalid
 	ErrDeserializingToken = &workflow.BadRequestError{Message: "Error deserializing task token."}
+	// ErrSignalOverSize is the error to indicate signal input size is > 256K
+	ErrSignalOverSize = &workflow.BadRequestError{Message: "Signal input size is over 256K."}
 	// ErrCancellationAlreadyRequested is the error indicating cancellation for target workflow is already requested
 	ErrCancellationAlreadyRequested = &workflow.CancellationAlreadyRequestedError{Message: "Cancellation already requested for this workflow execution."}
 	// ErrBufferedEventsLimitExceeded is the error indicating limit reached for maximum number of buffered events
@@ -276,16 +279,27 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 		initiatedID = *parentInfo.InitiatedId
 	}
 
+	clusterMetadata := e.shard.GetService().GetClusterMetadata()
+
 	// Generate first decision task event.
 	taskList := request.TaskList.GetName()
 	// TODO when the workflow is going to be replicated, use the
 	var msBuilder mutableState
-	if e.shard.GetService().GetClusterMetadata().IsGlobalDomainEnabled() && domainEntry.IsGlobalDomain() {
+	if clusterMetadata.IsGlobalDomainEnabled() && domainEntry.IsGlobalDomain() {
 		// all workflows within a global domain should have replication state, no matter whether it will be replicated to multiple
 		// target clusters or not
-		msBuilder = newMutableStateBuilderWithReplicationState(e.shard.GetConfig(), e.logger, domainEntry.GetFailoverVersion())
+		msBuilder = newMutableStateBuilderWithReplicationState(
+			clusterMetadata.GetCurrentClusterName(),
+			e.shard.GetConfig(),
+			e.logger,
+			domainEntry.GetFailoverVersion(),
+		)
 	} else {
-		msBuilder = newMutableStateBuilder(e.shard.GetConfig(), e.logger)
+		msBuilder = newMutableStateBuilder(
+			clusterMetadata.GetCurrentClusterName(),
+			e.shard.GetConfig(),
+			e.logger,
+		)
 	}
 	startedEvent := msBuilder.AddWorkflowExecutionStartedEvent(execution, startRequest)
 	if startedEvent == nil {
@@ -331,9 +345,10 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 		Execution: execution,
 		// It is ok to use 0 for TransactionID because RunID is unique so there are
 		// no potential duplicates to override.
-		TransactionID: 0,
-		FirstEventID:  startedEvent.GetEventId(),
-		Events:        serializedHistory,
+		TransactionID:     0,
+		FirstEventID:      startedEvent.GetEventId(),
+		EventBatchVersion: startedEvent.GetVersion(),
+		Events:            serializedHistory,
 	})
 	if err != nil {
 		return nil, err
@@ -343,7 +358,11 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 	var replicationState *persistence.ReplicationState
 	var replicationTasks []persistence.Task
 	if msBuilder.GetReplicationState() != nil {
-		msBuilder.UpdateReplicationStateLastEventID("", msBuilder.GetCurrentVersion(), msBuilder.GetNextEventID()-1)
+		msBuilder.UpdateReplicationStateLastEventID(
+			clusterMetadata.GetCurrentClusterName(),
+			msBuilder.GetCurrentVersion(),
+			msBuilder.GetNextEventID()-1,
+		)
 		replicationState = msBuilder.GetReplicationState()
 		// this is a hack, only create replication task if have # target cluster > 1, for more see #868
 		if domainEntry.CanReplicateEvent() {
@@ -1205,6 +1224,11 @@ Update_History_Loop:
 					failCause = workflow.DecisionTaskFailedCauseBadSignalWorkflowExecutionAttributes
 					break Process_Decision_Loop
 				}
+				if err = validateSignalInput(attributes.Input); err != nil {
+					failDecision = true
+					failCause = workflow.DecisionTaskFailedCauseBadSignalInputSize
+					break Process_Decision_Loop
+				}
 
 				foreignDomainID := ""
 				if attributes.GetDomain() == "" {
@@ -1789,6 +1813,10 @@ func (e *historyEngineImpl) SignalWorkflowExecution(ctx context.Context, signalR
 		RunId:      request.WorkflowExecution.RunId,
 	}
 
+	if err := validateSignalInput(request.GetInput()); err != nil {
+		return err
+	}
+
 	return e.updateWorkflowExecution(ctx, domainID, execution, false, true,
 		func(msBuilder mutableState, tBuilder *timerBuilder) ([]persistence.Task, error) {
 			if !msBuilder.IsWorkflowExecutionRunning() {
@@ -1833,6 +1861,10 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 	sRequest := signalWithStartRequest.SignalWithStartRequest
 	execution := workflow.WorkflowExecution{
 		WorkflowId: sRequest.WorkflowId,
+	}
+
+	if err := validateSignalInput(sRequest.GetSignalInput()); err != nil {
+		return nil, err
 	}
 
 	isBrandNew := false
@@ -1921,16 +1953,27 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 		RunId:      common.StringPtr(uuid.New()),
 	}
 
+	clusterMetadata := e.shard.GetService().GetClusterMetadata()
+
 	// Generate first decision task event.
 	taskList := request.TaskList.GetName()
 	// TODO when the workflow is going to be replicated, use the
 	var msBuilder mutableState
-	if e.shard.GetService().GetClusterMetadata().IsGlobalDomainEnabled() && domainEntry.IsGlobalDomain() {
+	if clusterMetadata.IsGlobalDomainEnabled() && domainEntry.IsGlobalDomain() {
 		// all workflows within a global domain should have replication state, no matter whether it will be replicated to multiple
 		// target clusters or not
-		msBuilder = newMutableStateBuilderWithReplicationState(e.shard.GetConfig(), e.logger, domainEntry.GetFailoverVersion())
+		msBuilder = newMutableStateBuilderWithReplicationState(
+			clusterMetadata.GetCurrentClusterName(),
+			e.shard.GetConfig(),
+			e.logger,
+			domainEntry.GetFailoverVersion(),
+		)
 	} else {
-		msBuilder = newMutableStateBuilder(e.shard.GetConfig(), e.logger)
+		msBuilder = newMutableStateBuilder(
+			clusterMetadata.GetCurrentClusterName(),
+			e.shard.GetConfig(),
+			e.logger,
+		)
 	}
 	startedEvent := msBuilder.AddWorkflowExecutionStartedEvent(execution, startRequest)
 	if startedEvent == nil {
@@ -1973,9 +2016,10 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 		Execution: execution,
 		// It is ok to use 0 for TransactionID because RunID is unique so there are
 		// no potential duplicates to override.
-		TransactionID: 0,
-		FirstEventID:  startedEvent.GetEventId(),
-		Events:        serializedHistory,
+		TransactionID:     0,
+		FirstEventID:      startedEvent.GetEventId(),
+		EventBatchVersion: startedEvent.GetVersion(),
+		Events:            serializedHistory,
 	})
 	if err != nil {
 		return nil, err
@@ -1985,7 +2029,11 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 	var replicationState *persistence.ReplicationState
 	var replicationTasks []persistence.Task
 	if msBuilder.GetReplicationState() != nil {
-		msBuilder.UpdateReplicationStateLastEventID("", msBuilder.GetCurrentVersion(), msBuilder.GetNextEventID()-1)
+		msBuilder.UpdateReplicationStateLastEventID(
+			clusterMetadata.GetCurrentClusterName(),
+			msBuilder.GetCurrentVersion(),
+			msBuilder.GetNextEventID()-1,
+		)
 		replicationState = msBuilder.GetReplicationState()
 		// this is a hack, only create replication task if have # target cluster > 1, for more see #868
 		if domainEntry.CanReplicateEvent() {
@@ -2350,6 +2398,11 @@ func (e *historyEngineImpl) createRecordDecisionTaskStartedResponse(domainID str
 	response.StickyExecutionEnabled = common.BoolPtr(msBuilder.IsStickyTaskListEnabled())
 	response.NextEventId = common.Int64Ptr(msBuilder.GetNextEventID())
 	response.Attempt = common.Int64Ptr(di.Attempt)
+	response.WorkflowExecutionTaskList = common.TaskListPtr(workflow.TaskList{
+		Name: &executionInfo.TaskList,
+		Kind: common.TaskListKindPtr(workflow.TaskListKindNormal),
+	})
+
 	if di.Attempt > 0 {
 		// This decision is retried from mutable state
 		// Also return schedule and started which are not written to history yet
@@ -2681,6 +2734,13 @@ func validateStartWorkflowExecutionRequest(request *workflow.StartWorkflowExecut
 	}
 	if request.TaskList == nil || request.TaskList.Name == nil || request.TaskList.GetName() == "" {
 		return &workflow.BadRequestError{Message: "Missing Tasklist."}
+	}
+	return nil
+}
+
+func validateSignalInput(signalInput []byte) error {
+	if len(signalInput) > signalInputSizeLimit {
+		return ErrSignalOverSize
 	}
 	return nil
 }

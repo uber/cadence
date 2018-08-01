@@ -203,18 +203,19 @@ func newTaskListManager(
 		&dPtr, _defaultTaskDispatchRPSTTL, taskListConfig.MinTaskThrottlingBurstSize(),
 	)
 	return newTaskListManagerWithRateLimiter(
-		e, taskList, taskListKind, taskListConfig, rl,
+		e, taskList, taskListKind, e.domainCache, taskListConfig, rl,
 	), nil
 }
 
 func newTaskListManagerWithRateLimiter(
-	e *matchingEngineImpl, taskList *taskListID, taskListKind *s.TaskListKind, config *taskListConfig,
-	rl *rateLimiter,
+	e *matchingEngineImpl, taskList *taskListID, taskListKind *s.TaskListKind,
+	domainCache cache.DomainCache, config *taskListConfig, rl *rateLimiter,
 ) taskListManager {
 	// To perform one db operation if there are no pollers
 	taskBufferSize := config.GetTasksBatchSize() - 1
 	ctx, cancel := context.WithCancel(context.Background())
 	tlMgr := &taskListManagerImpl{
+		domainCache:             domainCache,
 		engine:                  e,
 		taskBuffer:              make(chan *persistence.TaskInfo, taskBufferSize),
 		notifyCh:                make(chan struct{}, 1),
@@ -258,6 +259,7 @@ type queryTaskInfo struct {
 
 // Single task list in memory state
 type taskListManagerImpl struct {
+	domainCache   cache.DomainCache
 	taskListID    *taskListID
 	logger        bark.Logger
 	metricsClient metrics.Client
@@ -362,6 +364,17 @@ func (c *taskListManagerImpl) Stop() {
 func (c *taskListManagerImpl) AddTask(execution *s.WorkflowExecution, taskInfo *persistence.TaskInfo) error {
 	c.startWG.Wait()
 	_, err := c.executeWithRetry(func(rangeID int64) (interface{}, error) {
+
+		domainEntry, err := c.domainCache.GetDomainByID(taskInfo.DomainID)
+		if err != nil {
+			return nil, err
+		}
+		if domainEntry.GetDomainNotActiveErr() != nil {
+			// domain not active, do not do sync match
+			r, err := c.taskWriter.appendTask(execution, taskInfo, rangeID)
+			return r, err
+		}
+
 		r, err := c.trySyncMatch(taskInfo)
 		if (err != nil && err != errAddTasklistThrottled) || r != nil {
 			return r, err
@@ -530,8 +543,18 @@ func (c *taskListManagerImpl) getTask(ctx context.Context) (*getTaskResult, erro
 		})
 	}
 
+	var tasksForPoll chan *getTaskResult
+	domainEntry, err := c.domainCache.GetDomainByID(c.taskListID.domainID)
+	if err != nil {
+		return nil, err
+	}
+	if domainEntry.GetDomainNotActiveErr() == nil {
+		// domain active
+		tasksForPoll = c.tasksForPoll
+	}
+
 	select {
-	case result := <-c.tasksForPoll:
+	case result := <-tasksForPoll:
 		if result.syncMatch {
 			c.metricsClient.IncCounter(scope, metrics.PollSuccessWithSyncCounter)
 		}
@@ -562,26 +585,29 @@ func (c *taskListManagerImpl) CancelPoller(pollerID string) {
 
 // Returns a batch of tasks from persistence starting form current read level.
 // Also return a number that can be used to update readLevel
-func (c *taskListManagerImpl) getTaskBatch() ([]*persistence.TaskInfo, int64, error) {
+// Also return a bool to indicate whether read is finished
+func (c *taskListManagerImpl) getTaskBatch() ([]*persistence.TaskInfo, int64, bool, error) {
 	var tasks []*persistence.TaskInfo
 	readLevel := c.taskAckManager.getReadLevel()
 	maxReadLevel := c.taskWriter.GetMaxReadLevel()
-	for readLevel < maxReadLevel {
+
+	// counter i is used to break and let caller check whether tasklist is still alive and need resume read.
+	for i := 0; i < 10 && readLevel < maxReadLevel; i++ {
 		upper := readLevel + c.config.RangeSize
 		if upper > maxReadLevel {
 			upper = maxReadLevel
 		}
 		tasks, err := c.getTaskBatchWithRange(readLevel, upper)
 		if err != nil {
-			return nil, readLevel, err
+			return nil, readLevel, true, err
 		}
 		// return as long as it grabs any tasks
 		if len(tasks) > 0 {
-			return tasks, upper, nil
+			return tasks, upper, true, nil
 		}
 		readLevel = upper
 	}
-	return tasks, readLevel, nil // caller will update readLevel when no task grabbed
+	return tasks, readLevel, readLevel == maxReadLevel, nil // caller will update readLevel when no task grabbed
 }
 
 func (c *taskListManagerImpl) getTaskBatchWithRange(readLevel int64, maxReadLevel int64) ([]*persistence.TaskInfo, error) {
@@ -757,7 +783,7 @@ getTasksPumpLoop:
 			{
 				lastTimeWriteTask = time.Now()
 
-				tasks, readLevel, err := c.getTaskBatch()
+				tasks, readLevel, isReadBatchDone, err := c.getTaskBatch()
 				if err != nil {
 					c.signalNewTask() // re-enqueue the event
 					// TODO: Should we ever stop retrying on db errors?
@@ -780,7 +806,7 @@ getTasksPumpLoop:
 					}
 				}
 
-				if len(tasks) > 0 {
+				if len(tasks) > 0 || !isReadBatchDone {
 					// There maybe more tasks.
 					// We yield now, but signal pump to check again later.
 					c.signalNewTask()
