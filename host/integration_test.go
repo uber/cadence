@@ -6361,7 +6361,7 @@ func (s *integrationSuite) TestRelayDecisionTimeout() {
 		suite:           s,
 	}
 
-	// First decision immediately fails and schedules a transient decision
+	// First decision task complete with a marker decision, and request to relay decision (immediately return a new decision task)
 	_, newTask, err := poller.pollAndProcessDecisionTaskWithAttemptAndRetryAndForceNewDecision(false, false, false, false, 0, 3, true)
 	s.logger.Infof("pollAndProcessDecisionTask: %v", err)
 	s.Nil(err)
