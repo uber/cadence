@@ -139,7 +139,6 @@ type (
 	timerQueueAckMgr interface {
 		getFinishedChan() <-chan struct{}
 		readTimerTasks() ([]*persistence.TimerTaskInfo, *persistence.TimerTaskInfo, bool, error)
-		readLookAheadTask() (*persistence.TimerTaskInfo, error)
 		completeTimerTask(timerTask *persistence.TimerTaskInfo)
 		getAckLevel() TimerSequenceID
 		updateAckLevel()

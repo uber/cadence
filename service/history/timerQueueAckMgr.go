@@ -154,14 +154,12 @@ func (t *timerQueueAckMgrImpl) getFinishedChan() <-chan struct{} {
 }
 
 func (t *timerQueueAckMgrImpl) readTimerTasks() ([]*persistence.TimerTaskInfo, *persistence.TimerTaskInfo, bool, error) {
-	t.Lock()
 	if t.maxQueryLevel == t.minQueryLevel {
 		t.maxQueryLevel = t.shard.UpdateTimerMaxReadLevel()
 	}
 	minQueryLevel := t.minQueryLevel
 	maxQueryLevel := t.maxQueryLevel
 	pageToken := t.pageToken
-	t.Unlock()
 
 	var tasks []*persistence.TimerTaskInfo
 	morePage := false
@@ -176,7 +174,6 @@ func (t *timerQueueAckMgrImpl) readTimerTasks() ([]*persistence.TimerTaskInfo, *
 	}
 
 	t.Lock()
-	defer t.Unlock()
 	t.pageToken = pageToken
 	if t.isFailover && !morePage {
 		t.isReadFinished = true
@@ -210,7 +207,7 @@ TaskFilterLoop:
 		filteredTasks = append(filteredTasks, task)
 	}
 
-	if lookAheadTask != nil || len(t.pageToken) == 0 {
+	if lookAheadTask != nil || !morePage {
 		if t.isReadFinished {
 			t.minQueryLevel = maximumTime // set it to the maximum time to avoid any mistakenly read
 		} else {
@@ -218,6 +215,14 @@ TaskFilterLoop:
 		}
 		t.logger.Debugf("Moved timer minQueryLevel: (%s)", t.minQueryLevel)
 		t.pageToken = nil
+	}
+	t.Unlock()
+
+	if len(t.pageToken) == 0 && lookAheadTask == nil {
+		lookAheadTask, err = t.readLookAheadTask()
+		if err != nil {
+			return nil, nil, false, err
+		}
 	}
 
 	// We may have large number of timers which need to be fired immediately.  Return true in such case so the pump
@@ -229,8 +234,8 @@ TaskFilterLoop:
 
 // read lookAheadTask from s.GetTimerMaxReadLevel to poll interval from there.
 func (t *timerQueueAckMgrImpl) readLookAheadTask() (*persistence.TimerTaskInfo, error) {
-	minQueryLevel := t.shard.GetTimerMaxReadLevel()
-	maxQueryLevel := minQueryLevel.Add(t.shard.GetConfig().TimerProcessorMaxPollInterval())
+	minQueryLevel := t.maxQueryLevel
+	maxQueryLevel := maximumTime
 
 	var tasks []*persistence.TimerTaskInfo
 	var err error

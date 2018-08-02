@@ -360,12 +360,6 @@ func (t *timerQueueProcessorBase) readAndFanoutTimerTasks() (*persistence.TimerT
 	}
 
 	if !moreTasks {
-		if lookAheadTask == nil { // try to get lookAheadTask
-			lookAheadTask, err = t.timerQueueAckMgr.readLookAheadTask()
-			if err != nil {
-				return nil, err // in this case, timer will be delayed till next timers read
-			}
-		}
 		return lookAheadTask, nil
 	}
 
