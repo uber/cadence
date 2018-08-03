@@ -1394,6 +1394,8 @@ Update_History_Loop:
 					TaskList: &workflow.TaskList{Name: common.StringPtr(di.TaskList)},
 					Identity: request.Identity,
 				})
+				timeOutTask := tBuilder.AddStartToCloseDecisionTimoutTask(di.ScheduleID, di.Attempt, di.DecisionTimeout)
+				timerTasks = append(timerTasks, timeOutTask)
 			}
 		}
 
@@ -2398,6 +2400,11 @@ func (e *historyEngineImpl) createRecordDecisionTaskStartedResponse(domainID str
 	response.StickyExecutionEnabled = common.BoolPtr(msBuilder.IsStickyTaskListEnabled())
 	response.NextEventId = common.Int64Ptr(msBuilder.GetNextEventID())
 	response.Attempt = common.Int64Ptr(di.Attempt)
+	response.WorkflowExecutionTaskList = common.TaskListPtr(workflow.TaskList{
+		Name: &executionInfo.TaskList,
+		Kind: common.TaskListKindPtr(workflow.TaskListKindNormal),
+	})
+
 	if di.Attempt > 0 {
 		// This decision is retried from mutable state
 		// Also return schedule and started which are not written to history yet
