@@ -50,6 +50,7 @@ type (
 	}
 )
 
+// Validate will validate config
 func (k *KafkaConfig) Validate() {
 	if len(k.Clusters) == 0 {
 		panic("Empty Kafka Cluster Config")
