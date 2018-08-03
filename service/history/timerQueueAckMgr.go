@@ -346,5 +346,8 @@ func (t *timerQueueAckMgrImpl) getTimerTasks(minTimestamp time.Time, maxTimestam
 }
 
 func (t *timerQueueAckMgrImpl) isProcessNow(expiryTime time.Time) bool {
-	return !expiryTime.IsZero() && expiryTime.UnixNano() <= t.timeNow().UnixNano()
+	if expiryTime.IsZero() { // return true, but somewhere probably have bug creating empty timerTask.
+		t.logger.Warn("Timer task has timestamp zero")
+	}
+	return expiryTime.UnixNano() <= t.timeNow().UnixNano()
 }

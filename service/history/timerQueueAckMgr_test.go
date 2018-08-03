@@ -167,7 +167,7 @@ func (s *timerQueueAckMgrSuite) TearDownTest() {
 
 func (s *timerQueueAckMgrSuite) TestIsProcessNow() {
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
-	s.False(s.timerQueueAckMgr.isProcessNow(time.Time{}))
+	s.True(s.timerQueueAckMgr.isProcessNow(time.Time{}))
 
 	now := s.mockShard.GetCurrentTime(s.clusterName)
 	s.True(s.timerQueueAckMgr.isProcessNow(now))
@@ -623,7 +623,7 @@ func (s *timerQueueFailoverAckMgrSuite) TearDownTest() {
 func (s *timerQueueFailoverAckMgrSuite) TestIsProcessNow() {
 	// failover test to process whether to process a timer is use the current cluster's time
 	now := s.mockShard.GetCurrentTime(s.mockShard.GetService().GetClusterMetadata().GetCurrentClusterName())
-	s.False(s.timerQueueFailoverAckMgr.isProcessNow(time.Time{}))
+	s.True(s.timerQueueFailoverAckMgr.isProcessNow(time.Time{}))
 	s.True(s.timerQueueFailoverAckMgr.isProcessNow(now))
 
 	timeBefore := now.Add(-5 * time.Second)

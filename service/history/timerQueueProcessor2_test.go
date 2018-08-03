@@ -294,7 +294,7 @@ func (s *timerQueueProcessor2Suite) TestWorkflowTimeout() {
 	<-waitCh
 
 	s.mockExecutionMgr.On("GetTimerIndexTasks", mock.Anything).Return(timerIndexResponse, nil).Once()
-	s.mockExecutionMgr.On("GetTimerIndexTasks", mock.Anything).Return(emptyResponse, nil).Once() // for lookAheadTask
+	s.mockExecutionMgr.On("GetTimerIndexTasks", mock.Anything).Return(emptyResponse, nil) // for lookAheadTask
 	s.mockHistoryEngine.timerProcessor.NotifyNewTimers(
 		cluster.TestCurrentClusterName,
 		s.mockShard.GetCurrentTime(cluster.TestCurrentClusterName),
