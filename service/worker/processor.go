@@ -90,9 +90,6 @@ func newReplicationTaskProcessor(currentCluster, sourceCluster, consumer string,
 	logger bark.Logger, metricsClient metrics.Client, domainReplicator DomainReplicator,
 	historyClient history.Client) *replicationTaskProcessor {
 
-	retryableHistoryClient := history.NewRetryableClient(historyClient, common.CreateHistoryServiceRetryPolicy(),
-		common.IsWhitelistServiceTransientError)
-
 	return &replicationTaskProcessor{
 		currentCluster: currentCluster,
 		sourceCluster:  sourceCluster,
@@ -107,7 +104,7 @@ func newReplicationTaskProcessor(currentCluster, sourceCluster, consumer string,
 		}),
 		metricsClient:    metricsClient,
 		domainReplicator: domainReplicator,
-		historyClient:    retryableHistoryClient,
+		historyClient:    historyClient,
 	}
 }
 

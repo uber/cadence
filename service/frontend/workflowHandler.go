@@ -63,6 +63,7 @@ type (
 		historyMgr         persistence.HistoryManager
 		visibitiltyMgr     persistence.VisibilityManager
 		history            history.Client
+		historyRawClient   history.Client
 		matching           matching.Client
 		matchingRawClient  matching.Client
 		tokenSerializer    common.TaskTokenSerializer
@@ -141,10 +142,13 @@ func (wh *WorkflowHandler) Start() error {
 	wh.Service.Start()
 	wh.domainCache.Start()
 	var err error
-	wh.history, err = wh.Service.GetClientFactory().NewHistoryClient()
+	wh.historyRawClient, err = wh.Service.GetClientFactory().NewHistoryClient()
 	if err != nil {
 		return err
 	}
+	wh.history = history.NewRetryableClient(wh.historyRawClient, common.CreateHistoryServiceRetryPolicy(),
+		common.IsWhitelistServiceTransientError)
+
 	wh.matchingRawClient, err = wh.Service.GetClientFactory().NewMatchingClient()
 	if err != nil {
 		return err
