@@ -111,6 +111,7 @@ func newTimerQueueAckMgr(scope int, shard ShardContext, metricsClient metrics.Cl
 		timerQueueShutdown:  func() error { return nil },
 		outstandingTasks:    make(map[TimerSequenceID]bool),
 		ackLevel:            ackLevel,
+		readLevel:           ackLevel,
 		minQueryLevel:       ackLevel.VisibilityTimestamp,
 		pageToken:           nil,
 		maxQueryLevel:       ackLevel.VisibilityTimestamp,
@@ -140,6 +141,7 @@ func newTimerQueueFailoverAckMgr(shard ShardContext, metricsClient metrics.Clien
 		timerQueueShutdown:  timerQueueShutdown,
 		outstandingTasks:    make(map[TimerSequenceID]bool),
 		ackLevel:            ackLevel,
+		readLevel:           ackLevel,
 		minQueryLevel:       ackLevel.VisibilityTimestamp,
 		pageToken:           nil,
 		maxQueryLevel:       maxLevel,
@@ -171,7 +173,8 @@ func (t *timerQueueAckMgrImpl) readTimerTasks() ([]*persistence.TimerTaskInfo, *
 			return nil, nil, false, err
 		}
 		morePage = len(pageToken) != 0
-		t.logger.Debugf("readTimerTasks: minQueryLevel: (%s) count: %v, more timer: %v", minQueryLevel, len(tasks), morePage)
+		t.logger.Debugf("readTimerTasks: minQueryLevel: (%s), maxQueryLevel: (%s), count: %v, more timer: %v",
+			minQueryLevel, maxQueryLevel, len(tasks), morePage)
 	}
 
 	t.Lock()
