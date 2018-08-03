@@ -307,7 +307,7 @@ func (r *historyReplicator) ApplyOtherEventsVersionChecking(ctx context.Context,
 	ri, ok := replicationInfo[previousActiveCluster]
 	// this cluster is previously active, we need to check whether the events is applied by remote cluster
 	if !ok || rState.LastWriteVersion > ri.GetVersion() {
-		logger.Info("Encounter case when no events generated during a verion.")
+		logger.Info("Encounter case where events are rejected by remote.")
 		// use the last valid version && event ID to do a reset
 		lastValidVersion, lastValidEventID := r.getLatestCheckpoint(replicationInfo, rState.LastReplicationInfo)
 
@@ -894,22 +894,22 @@ func (r *historyReplicator) terminateWorkflow(ctx context.Context, domainID stri
 	})
 }
 
-func (r *historyReplicator) getLatestCheckpoint(replicationInfo1 map[string]*h.ReplicationInfo,
-	replicationInfo2 map[string]*persistence.ReplicationInfo) (int64, int64) {
+func (r *historyReplicator) getLatestCheckpoint(replicationInfoRemote map[string]*h.ReplicationInfo,
+	replicationInfoLocal map[string]*persistence.ReplicationInfo) (int64, int64) {
 
 	// this only applies to 2 data center case
 
 	lastValidVersion := common.EmptyVersion
 	lastValidEventID := common.EmptyEventID
 
-	for _, ri := range replicationInfo1 {
+	for _, ri := range replicationInfoRemote {
 		if lastValidVersion == common.EmptyVersion || ri.GetVersion() > lastValidVersion {
 			lastValidVersion = ri.GetVersion()
 			lastValidEventID = ri.GetLastEventId()
 		}
 	}
 
-	for _, ri := range replicationInfo2 {
+	for _, ri := range replicationInfoLocal {
 		if lastValidVersion == common.EmptyVersion || ri.Version > lastValidVersion {
 			lastValidVersion = ri.Version
 			lastValidEventID = ri.LastEventID
