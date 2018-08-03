@@ -141,6 +141,7 @@ type (
 		readTimerTasks() ([]*persistence.TimerTaskInfo, *persistence.TimerTaskInfo, bool, error)
 		completeTimerTask(timerTask *persistence.TimerTaskInfo)
 		getAckLevel() TimerSequenceID
+		getReadLevel() TimerSequenceID
 		updateAckLevel()
 	}
 

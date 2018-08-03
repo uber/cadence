@@ -104,7 +104,7 @@ func newTimerQueueActiveProcessor(shard ShardContext, historyService *historyEng
 }
 
 func newTimerQueueFailoverProcessor(shard ShardContext, historyService *historyEngineImpl, domainID string, standbyClusterName string,
-	minLevel time.Time, matchingClient matching.Client, logger bark.Logger) *timerQueueActiveProcessorImpl {
+	minLevel time.Time, maxLevel time.Time, matchingClient matching.Client, logger bark.Logger) *timerQueueActiveProcessorImpl {
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 	timeNow := func() time.Time {
 		// should use current cluster's time when doing domain failover
@@ -116,7 +116,7 @@ func newTimerQueueFailoverProcessor(shard ShardContext, historyService *historyE
 			persistence.TimerFailoverLevel{
 				MinLevel:     minLevel,
 				CurrentLevel: ackLevel.VisibilityTimestamp,
-				MaxLevel:     minLevel,
+				MaxLevel:     maxLevel,
 				DomainIDs:    []string{domainID},
 			},
 		)
@@ -139,6 +139,7 @@ func newTimerQueueFailoverProcessor(shard ShardContext, historyService *historyE
 		shard,
 		historyService.metricsClient,
 		minLevel,
+		maxLevel,
 		timeNow,
 		updateShardAckLevel,
 		timerAckMgrShutdown,

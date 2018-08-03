@@ -147,6 +147,7 @@ const (
 
 	// EnableGlobalDomain is key for enable global domain
 	EnableGlobalDomain
+	// EnableNewKafkaClient is key for using New Kafka client
 	EnableNewKafkaClient
 
 	// key for frontend

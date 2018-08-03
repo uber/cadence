@@ -136,10 +136,12 @@ func (t *timerQueueProcessorImpl) FailoverDomain(domainID string) {
 			standbyClusterName = cluster
 		}
 	}
-	t.logger.Infof("Timer Failover Triggered: %v, min level: %v.\n", domainID, minLevel)
+	// the ack manager is exclusive, so just add a cassandra min precision
+	maxLevel := t.activeTimerProcessor.timerQueueAckMgr.getReadLevel().VisibilityTimestamp.Add(1 * time.Millisecond)
+	t.logger.Infof("Timer Failover Triggered: %v, min level: %v, max level: %v.\n", domainID, minLevel, maxLevel)
 	// we should consider make the failover idempotent
 	failoverTimerProcessor := newTimerQueueFailoverProcessor(t.shard, t.historyService, domainID,
-		standbyClusterName, minLevel, t.matchingClient, t.logger)
+		standbyClusterName, minLevel, maxLevel, t.matchingClient, t.logger)
 
 	for _, standbyTimerProcessor := range t.standbyTimerProcessors {
 		standbyTimerProcessor.retryTasks()
@@ -153,7 +155,7 @@ func (t *timerQueueProcessorImpl) FailoverDomain(domainID string) {
 		persistence.TimerFailoverLevel{
 			MinLevel:     minLevel,
 			CurrentLevel: minLevel,
-			MaxLevel:     minLevel,
+			MaxLevel:     maxLevel,
 			DomainIDs:    []string{domainID},
 		},
 	)

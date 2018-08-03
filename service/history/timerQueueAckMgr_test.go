@@ -78,6 +78,7 @@ type (
 		domainID                 string
 		timerQueueFailoverAckMgr *timerQueueAckMgrImpl
 		minLevel                 time.Time
+		maxLevel                 time.Time
 	}
 )
 
@@ -584,11 +585,13 @@ func (s *timerQueueFailoverAckMgrSuite) SetupTest() {
 
 	s.domainID = "some random failover domain ID"
 	s.minLevel = time.Now().Add(-10 * time.Minute)
+	s.maxLevel = time.Now().Add(10 * time.Minute)
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	s.timerQueueFailoverAckMgr = newTimerQueueFailoverAckMgr(
 		s.mockShard,
 		s.metricsClient,
 		s.minLevel,
+		s.maxLevel,
 		func() time.Time {
 			return s.mockShard.GetCurrentTime(s.mockShard.GetService().GetClusterMetadata().GetCurrentClusterName())
 		},
@@ -640,7 +643,7 @@ func (s *timerQueueFailoverAckMgrSuite) TestReadTimerTasks_HasNextPage() {
 	s.Equal(s.minLevel, ackLevel.VisibilityTimestamp)
 	s.Equal(s.minLevel, minQueryLevel)
 	s.Empty(token)
-	s.Equal(s.minLevel, maxQueryLevel)
+	s.Equal(s.maxLevel, maxQueryLevel)
 
 	timer1 := &persistence.TimerTaskInfo{
 		DomainID:            "some random domain ID",
@@ -682,7 +685,7 @@ func (s *timerQueueFailoverAckMgrSuite) TestReadTimerTasks_HasNextPage() {
 	s.Equal(minQueryLevel, s.timerQueueFailoverAckMgr.minQueryLevel)
 	s.Equal(response.NextPageToken, s.timerQueueFailoverAckMgr.pageToken)
 	s.True(s.timerQueueFailoverAckMgr.maxQueryLevel.After(readTimestamp))
-	s.True(s.timerQueueFailoverAckMgr.maxQueryLevel.Before(readTimestamp.Add(s.mockShard.GetConfig().TimerProcessorMaxTimeShift()).Add(time.Second)))
+	s.Equal(maxQueryLevel, s.timerQueueFailoverAckMgr.maxQueryLevel)
 }
 
 func (s *timerQueueFailoverAckMgrSuite) TestReadTimerTasks_NoNextPage() {
@@ -695,7 +698,7 @@ func (s *timerQueueFailoverAckMgrSuite) TestReadTimerTasks_NoNextPage() {
 	s.Equal(s.minLevel, ackLevel.VisibilityTimestamp)
 	s.Equal(s.minLevel, minQueryLevel)
 	s.Empty(token)
-	s.Equal(minQueryLevel, maxQueryLevel)
+	s.Equal(s.maxLevel, maxQueryLevel)
 
 	response := &persistence.GetTimerIndexTasksResponse{
 		Timers:        []*persistence.TimerTaskInfo{},
@@ -716,8 +719,7 @@ func (s *timerQueueFailoverAckMgrSuite) TestReadTimerTasks_NoNextPage() {
 	s.Equal(maximumTime, s.timerQueueFailoverAckMgr.minQueryLevel)
 	s.Empty(s.timerQueueFailoverAckMgr.pageToken)
 	s.True(s.timerQueueFailoverAckMgr.maxQueryLevel.After(readTimestamp))
-	s.True(s.timerQueueFailoverAckMgr.maxQueryLevel.Before(readTimestamp.Add(s.mockShard.GetConfig().TimerProcessorMaxTimeShift()).Add(time.Second)))
-
+	s.Equal(maxQueryLevel, s.timerQueueFailoverAckMgr.maxQueryLevel)
 }
 
 func (s *timerQueueFailoverAckMgrSuite) TestReadTimerTasks_InTheFuture() {

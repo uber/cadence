@@ -49,8 +49,6 @@ type (
 		timeNow             timeNow
 		updateTimerAckLevel updateTimerAckLevel
 		timerQueueShutdown  timerQueueShutdown
-		// immutable max possible timer level
-		maxQueryLevel time.Time
 		// isReadFinished indicate timer queue ack manager
 		// have no more task to send out
 		isReadFinished bool
@@ -64,8 +62,11 @@ type (
 		outstandingTasks map[TimerSequenceID]bool
 		// timer task ack level
 		ackLevel TimerSequenceID
-		// mutable min timer level
+		// timer task read level, used by failover
+		readLevel TimerSequenceID
+		// mutable timer level
 		minQueryLevel time.Time
+		maxQueryLevel time.Time
 		pageToken     []byte
 	}
 	// for each cluster, the ack level is the point in time when
@@ -121,7 +122,7 @@ func newTimerQueueAckMgr(scope int, shard ShardContext, metricsClient metrics.Cl
 }
 
 func newTimerQueueFailoverAckMgr(shard ShardContext, metricsClient metrics.Client,
-	minLevel time.Time, timeNow timeNow, updateTimerAckLevel updateTimerAckLevel,
+	minLevel time.Time, maxLevel time.Time, timeNow timeNow, updateTimerAckLevel updateTimerAckLevel,
 	timerQueueShutdown timerQueueShutdown, logger bark.Logger) *timerQueueAckMgrImpl {
 	// failover ack manager will start from the standby cluster's ack level to active cluster's ack level
 	ackLevel := TimerSequenceID{VisibilityTimestamp: minLevel}
@@ -141,7 +142,7 @@ func newTimerQueueFailoverAckMgr(shard ShardContext, metricsClient metrics.Clien
 		ackLevel:            ackLevel,
 		minQueryLevel:       ackLevel.VisibilityTimestamp,
 		pageToken:           nil,
-		maxQueryLevel:       ackLevel.VisibilityTimestamp,
+		maxQueryLevel:       maxLevel,
 		isReadFinished:      false,
 		finishedChan:        make(chan struct{}, 1),
 	}
@@ -203,6 +204,9 @@ TaskFilterLoop:
 			break TaskFilterLoop
 		}
 
+		t.logger.Debugf("Moving timer read level: (%s)", timerSequenceID)
+		t.readLevel = timerSequenceID
+
 		t.outstandingTasks[timerSequenceID] = false
 		filteredTasks = append(filteredTasks, task)
 	}
@@ -255,6 +259,12 @@ func (t *timerQueueAckMgrImpl) completeTimerTask(timerTask *persistence.TimerTas
 	defer t.Unlock()
 
 	t.outstandingTasks[timerSequenceID] = true
+}
+
+func (t *timerQueueAckMgrImpl) getReadLevel() TimerSequenceID {
+	t.Lock()
+	defer t.Unlock()
+	return t.readLevel
 }
 
 func (t *timerQueueAckMgrImpl) getAckLevel() TimerSequenceID {
