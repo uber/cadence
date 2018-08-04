@@ -1871,6 +1871,7 @@ func (s *matchingPersistenceSuite) TestWorkflowReplicationState() {
 	info0 := state0.ExecutionInfo
 	replicationState0 := state0.ReplicationState
 	s.NotNil(info0, "Valid Workflow info expected.")
+	s.NotNil(replicationState0, "Valid replication state expected.")
 	s.Equal(domainID, info0.DomainID)
 	s.Equal("taskList", info0.TaskList)
 	s.Equal("wType", info0.WorkflowTypeName)
