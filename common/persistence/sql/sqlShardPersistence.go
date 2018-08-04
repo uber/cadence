@@ -34,6 +34,7 @@ import (
 type (
 	sqlShardManager struct {
 		db *sqlx.DB
+		currentClusterName string
 	}
 
 	shardsRow struct {
@@ -120,7 +121,7 @@ range_id = :old_range_id
 	lockShardSQLQuery = `SELECT range_id FROM shards WHERE shard_id = ? FOR UPDATE`
 )
 
-func NewShardPersistence(username, password, host, port, dbName string) (persistence.ShardManager, error) {
+func NewShardPersistence(username, password, host, port, dbName string, currentClusterName string) (persistence.ShardManager, error) {
 	var db, err = sqlx.Connect("mysql",
 		fmt.Sprintf(Dsn, username, password, host, port, dbName))
 	if err != nil {
@@ -129,6 +130,7 @@ func NewShardPersistence(username, password, host, port, dbName string) (persist
 
 	return &sqlShardManager{
 		db: db,
+		currentClusterName: currentClusterName,
 	}, nil
 }
 
@@ -174,6 +176,11 @@ func (m *sqlShardManager) GetShard(request *persistence.GetShardRequest) (*persi
 			Message: fmt.Sprintf("GetShard operation failed. Failed to deserialize ShardInfo.ClusterTransferAckLevel. ShardId: %v. Error: %v", request.ShardID, err),
 		}
 	}
+	if len(clusterTransferAckLevel) == 0 {
+		clusterTransferAckLevel = map[string]int64{
+			m.currentClusterName: row.TransferAckLevel,
+		}
+	}
 
 	clusterTimerAckLevel := make(map[string]time.Time)
 	if err := gobDeserialize(row.ClusterTimerAckLevel, &clusterTimerAckLevel); err != nil {
@@ -181,8 +188,13 @@ func (m *sqlShardManager) GetShard(request *persistence.GetShardRequest) (*persi
 			Message: fmt.Sprintf("GetShard operation failed. Failed to deserialize ShardInfo.ClusterTimerAckLevel. ShardId: %v. Error: %v", request.ShardID, err),
 		}
 	}
+	if len(clusterTimerAckLevel) == 0 {
+		clusterTimerAckLevel = map[string]time.Time{
+			m.currentClusterName: row.TimerAckLevel,
+		}
+	}
 
-	return &persistence.GetShardResponse{ShardInfo: &persistence.ShardInfo{
+	resp := &persistence.GetShardResponse{ShardInfo: &persistence.ShardInfo{
 		ShardID:                   int(row.ShardID),
 		Owner:                     row.Owner,
 		RangeID:                   row.RangeID,
@@ -194,7 +206,9 @@ func (m *sqlShardManager) GetShard(request *persistence.GetShardRequest) (*persi
 		ClusterTransferAckLevel:   clusterTransferAckLevel,
 		ClusterTimerAckLevel:      clusterTimerAckLevel,
 		DomainNotificationVersion: row.DomainNotificationVersion,
-	}}, nil
+	}}
+
+	return resp, nil
 }
 
 func (m *sqlShardManager) UpdateShard(request *persistence.UpdateShardRequest) error {

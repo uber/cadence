@@ -121,19 +121,19 @@ func (g *testTransferTaskIDGenerator) GetNextTransferTaskID() (int64, error) {
 // SetupWorkflowStoreWithOptions to setup workflow test base
 func (s *TestBase) SetupWorkflowStoreWithOptions(options TestBaseOptions, metadata cluster.Metadata) {
 	log := bark.NewLoggerFromLogrus(log.New())
+
+	if metadata == nil {
+		s.ClusterMetadata = cluster.GetTestClusterMetadata(
+			options.EnableGlobalDomain,
+			options.IsMasterCluster,
+		)
+	} else {
+		s.ClusterMetadata = metadata
+		log = log.WithField("Cluster", metadata.GetCurrentClusterName())
+	}
+	currentClusterName := s.ClusterMetadata.GetCurrentClusterName()
+
 	if !s.UseMysql {
-
-		if metadata == nil {
-			s.ClusterMetadata = cluster.GetTestClusterMetadata(
-				options.EnableGlobalDomain,
-				options.IsMasterCluster,
-			)
-		} else {
-			s.ClusterMetadata = metadata
-			log = log.WithField("Cluster", metadata.GetCurrentClusterName())
-		}
-		currentClusterName := s.ClusterMetadata.GetCurrentClusterName()
-
 		// Setup Workflow keyspace and deploy schema for tests
 		s.CassandraTestCluster.setupTestCluster(options)
 		shardID := 0
@@ -234,7 +234,12 @@ func (s *TestBase) SetupWorkflowStoreWithOptions(options TestBaseOptions, metada
 			log.Fatal(err)
 		}
 
-		s.ShardMgr, err = sql.NewShardPersistence("uber", "uber", "localhost", "3306", "catalyst_test")
+		s.ShardMgr, err = sql.NewShardPersistence("uber",
+			"uber",
+			"localhost",
+			"3306",
+			"catalyst_test",
+			currentClusterName)
 		if err != nil {
 			log.Fatal(err)
 		}
