@@ -246,6 +246,16 @@ func (s *TestBase) SetupWorkflowStoreWithOptions(options TestBaseOptions, metada
 
 		s.ClusterMetadata = cluster.GetTestClusterMetadata(false, false)
 
+		s.HistoryMgr, err = sql.NewHistoryPersistence("uber",
+			"uber",
+			"localhost",
+			"3306",
+			"catalyst_test",
+			log)
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		db, err := sqlx.Connect("mysql",
 			fmt.Sprintf(sql.Dsn, "uber", "uber", "localhost", "3306", "catalyst_test"))
 		if err != nil {

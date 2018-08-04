@@ -47,6 +47,8 @@ type (
 
 func TestHistoryPersistenceSuite(t *testing.T) {
 	s := new(historyPersistenceSuite)
+	//suite.Run(t, s)
+	s.UseMysql = true
 	suite.Run(t, s)
 }
 

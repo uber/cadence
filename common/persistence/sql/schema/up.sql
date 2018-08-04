@@ -175,3 +175,16 @@ CREATE TABLE timer_tasks (
 	PRIMARY KEY (shard_id, visibility_ts, task_id)
 );
 
+CREATE TABLE events (
+	domain_id VARCHAR(64) NOT NULL,
+	workflow_id VARCHAR(255) NOT NULL,
+	run_id VARCHAR(64) NOT NULL,
+	first_event_id BIGINT NOT NULL,
+	data BLOB NOT NULL,
+	data_encoding VARCHAR(64) NOT NULL,
+	data_version INT NOT NULL,
+	-- conditional update stuff
+	range_id INT NOT NULL,
+	tx_id INT NOT NULL,
+	PRIMARY KEY (domain_id, workflow_id, run_id, first_event_id)
+);
