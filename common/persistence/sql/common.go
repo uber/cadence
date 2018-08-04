@@ -59,3 +59,31 @@ const (
 )
 
 var MaximumExpiryTs time.Time = time.Unix(1<<63-62135596801, 999999999)
+
+func boolToInt64(b bool) int64 {
+	if b {
+		return 1
+	}
+	return 0
+}
+
+func int64ToBool(i int64) bool {
+	if i == 0 {
+		return false
+	}
+	return true
+}
+
+func takeAddressIfNotNil(a []byte) *[]byte {
+	if a != nil {
+		return &a
+	}
+	return nil
+}
+
+func dereferenceIfNotNil(a *[]byte) []byte {
+	if a != nil {
+		return *a
+	}
+	return nil
+}

@@ -52,7 +52,7 @@ var timePrecision = 2 * time.Millisecond
 
 func TestMatchingPersistenceSuite(t *testing.T) {
 	s := new(matchingPersistenceSuite)
-	// suite.Run(t, s)
+	//suite.Run(t, s)
 	s.UseMysql = true
 	suite.Run(t, s)
 }
@@ -1161,13 +1161,14 @@ func (s *matchingPersistenceSuite) TestWorkflowMutableState_Activities() {
 	s.Nil(err1, "No error expected.")
 	s.NotNil(state, "expected valid state.")
 	s.Equal(1, len(state.ActivitInfos))
+	log.Printf("%+v", state.ActivitInfos)
 	ai, ok := state.ActivitInfos[1]
 	s.True(ok)
 	s.NotNil(ai)
 	s.Equal(int64(7789), ai.Version)
 	s.Equal(int64(1), ai.ScheduleID)
 	s.Equal([]byte("scheduled_event_1"), ai.ScheduledEvent)
-	s.Equal(currentTime.Unix(), ai.ScheduledTime.Unix())
+	s.Equal(currentTime.Unix(), ai.ScheduledTime.Unix()) // This line is flakey
 	s.Equal(int64(2), ai.StartedID)
 	s.Equal([]byte("started_event_1"), ai.StartedEvent)
 	s.Equal(currentTime.Unix(), ai.StartedTime.Unix())
@@ -1224,7 +1225,7 @@ func (s *matchingPersistenceSuite) TestWorkflowMutableState_Timers() {
 	s.Equal(1, len(state.TimerInfos))
 	s.Equal(int64(3345), state.TimerInfos[timerID].Version)
 	s.Equal(timerID, state.TimerInfos[timerID].TimerID)
-	s.Equal(currentTime.Unix(), state.TimerInfos[timerID].ExpiryTime.Unix())
+	s.Equal(currentTime.Unix(), state.TimerInfos[timerID].ExpiryTime.Unix()) // flakey
 	s.Equal(int64(2), state.TimerInfos[timerID].TaskID)
 	s.Equal(int64(5), state.TimerInfos[timerID].StartedID)
 
@@ -2121,7 +2122,7 @@ func (s *matchingPersistenceSuite) TestResetMutableState() {
 	s.Equal(int64(7789), ai.Version)
 	s.Equal(int64(4), ai.ScheduleID)
 	s.Equal([]byte("scheduled_event_4"), ai.ScheduledEvent)
-	s.Equal(currentTime.Unix(), ai.ScheduledTime.Unix())
+	s.Equal(currentTime.Unix(), ai.ScheduledTime.Unix()) // flakey test
 	s.Equal(int64(6), ai.StartedID)
 	s.Equal([]byte("started_event_1"), ai.StartedEvent)
 	s.Equal(currentTime.Unix(), ai.StartedTime.Unix())
@@ -2286,6 +2287,7 @@ func (s *matchingPersistenceSuite) TestResetMutableState() {
 	s.Nil(err4, "No error expected.")
 	s.NotNil(state4, "expected valid state.")
 	info4 := state4.ExecutionInfo
+	log.Printf("%+v", info4)
 	s.NotNil(info4, "Valid Workflow info expected.")
 	s.Equal(int64(3), info4.NextEventID)
 

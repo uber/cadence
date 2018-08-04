@@ -122,9 +122,9 @@ CREATE TABLE current_executions(
 );
 
 CREATE TABLE tasks (
-  domain_id VARCHAR(64) NOT NULL,
+  domain_id CHAR(64) NOT NULL,
   workflow_id VARCHAR(255) NOT NULL,
-  run_id VARCHAR(64) NOT NULL,
+  run_id CHAR(64) NOT NULL,
   schedule_id BIGINT NOT NULL,
   task_list_name VARCHAR(255) NOT NULL,
   task_list_type TINYINT NOT NULL,
@@ -134,7 +134,7 @@ CREATE TABLE tasks (
 );
 
 CREATE TABLE task_lists (
-	domain_id VARCHAR(64) NOT NULL,
+	domain_id CHAR(64) NOT NULL,
 	range_id BIGINT NOT NULL,
 	name VARCHAR(255) NOT NULL,
 	type TINYINT NOT NULL, -- {Activity, Decision}
@@ -145,9 +145,9 @@ CREATE TABLE task_lists (
 );
 
 CREATE TABLE replication_tasks (
-	domain_id VARCHAR(64) NOT NULL,
+	domain_id CHAR(64) NOT NULL,
 	workflow_id VARCHAR(255) NOT NULL,
-	run_id VARCHAR(64) NOT NULL,
+	run_id CHAR(64) NOT NULL,
 	task_id BIGINT NOT NULL,
 	type TINYINT NOT NULL,
 	first_event_id BIGINT NOT NULL,
@@ -160,9 +160,9 @@ PRIMARY KEY (shard_id, task_id)
 );
 
 CREATE TABLE timer_tasks (
-	domain_id VARCHAR(64) NOT NULL,
+	domain_id CHAR(64) NOT NULL,
 	workflow_id VARCHAR(255) NOT NULL,
-	run_id VARCHAR(64) NOT NULL,
+	run_id CHAR(64) NOT NULL,
 	visibility_ts TIMESTAMP(3) NOT NULL,
 	task_id BIGINT NOT NULL,
 	type TINYINT NOT NULL,
@@ -187,4 +187,124 @@ CREATE TABLE events (
 	range_id INT NOT NULL,
 	tx_id INT NOT NULL,
 	PRIMARY KEY (domain_id, workflow_id, run_id, first_event_id)
+	);
+
+CREATE TABLE activity_info_maps (
+-- each row corresponds to one key of one map<string, ActivityInfo>
+	shard_id INT NOT NULL,
+	domain_id CHAR(64) NOT NULL,
+	workflow_id VARCHAR(255) NOT NULL,
+  run_id CHAR(64) NOT NULL,
+	schedule_id BIGINT NOT NULL, -- the key.
+-- fields of activity_info type follow
+version                   BIGINT NOT NULL,
+scheduled_event           BLOB NOT NULL,
+scheduled_time            TIMESTAMP NOT NULL,
+started_id                BIGINT NOT NULL,
+started_event             BLOB NOT NULL,
+started_time              TIMESTAMP NOT NULL,
+activity_id               VARCHAR(255) NOT NULL,
+request_id                VARCHAR(255) NOT NULL,
+details                   BLOB,
+schedule_to_start_timeout INT NOT NULL,
+schedule_to_close_timeout INT NOT NULL,
+start_to_close_timeout    INT NOT NULL,
+heartbeat_timeout        INT NOT NULL,
+cancel_requested          TINYINT(1),
+cancel_request_id         BIGINT NOT NULL,
+last_heartbeat_updated_time      TIMESTAMP NOT NULL,
+timer_task_status         INT NOT NULL,
+attempt                   INT NOT NULL,
+task_list                 VARCHAR(255) NOT NULL,
+started_identity          VARCHAR(255) NOT NULL,
+has_retry_policy          BOOLEAN NOT NULL,
+init_interval             INT NOT NULL,
+backoff_coefficient       DOUBLE NOT NULL,
+max_interval              INT NOT NULL,
+expiration_time           TIMESTAMP NOT NULL,
+max_attempts              INT NOT NULL,
+non_retriable_errors      BLOB, -- this was a list<text>. The use pattern is to replace, no modifications.
+	PRIMARY KEY (shard_id, domain_id, workflow_id, run_id, schedule_id)
+);
+
+CREATE TABLE timer_info_maps (
+shard_id INT NOT NULL,
+domain_id CHAR(64) NOT NULL,
+workflow_id VARCHAR(255) NOT NULL,
+run_id CHAR(64) NOT NULL,
+timer_id VARCHAR(255) NOT NULL, -- what string type should this be?
+--
+  version BIGINT NOT NULL,
+  started_id BIGINT NOT NULL,
+  expiry_time TIMESTAMP NOT NULL,
+  task_id BIGINT NOT NULL,
+  PRIMARY KEY (shard_id, domain_id, workflow_id, run_id, timer_id)
+);
+
+CREATE TABLE child_execution_info_maps (
+  shard_id INT NOT NULL,
+domain_id CHAR(64) NOT NULL,
+workflow_id VARCHAR(255) NOT NULL,
+run_id CHAR(64) NOT NULL,
+initiated_id BIGINT NOT NULL,
+--
+version BIGINT NOT NULL,
+initiated_event BLOB,
+started_id BIGINT NOT NULL,
+started_event BLOB,
+create_request_id CHAR(64),
+PRIMARY KEY (shard_id, domain_id, workflow_id, run_id, initiated_id)
+);
+
+CREATE TABLE request_cancel_info_maps (
+ shard_id INT NOT NULL,
+domain_id CHAR(64) NOT NULL,
+workflow_id VARCHAR(255) NOT NULL,
+run_id CHAR(64) NOT NULL,
+initiated_id BIGINT NOT NULL,
+--
+version BIGINT NOT NULL,
+cancel_request_id CHAR(64) NOT NULL, -- a uuid
+PRIMARY KEY (shard_id, domain_id, workflow_id, run_id, initiated_id)
+);
+
+
+CREATE TABLE signal_info_maps (
+ shard_id INT NOT NULL,
+domain_id CHAR(64) NOT NULL,
+workflow_id VARCHAR(255) NOT NULL,
+run_id CHAR(64) NOT NULL,
+initiated_id BIGINT NOT NULL,
+--
+version BIGINT NOT NULL,
+signal_request_id CHAR(64) NOT NULL, -- uuid
+signal_name VARCHAR(255) NOT NULL,
+input BLOB,
+control BLOB,
+PRIMARY KEY (shard_id, domain_id, workflow_id, run_id, initiated_id)
+);
+
+
+CREATE TABLE buffered_replication_task_maps (
+ shard_id INT NOT NULL,
+domain_id CHAR(64) NOT NULL,
+workflow_id VARCHAR(255) NOT NULL,
+run_id CHAR(64) NOT NULL,
+first_event_id BIGINT NOT NULL,
+--
+version BIGINT NOT NULL,
+next_event_id BIGINT NOT NULL,
+history BLOB,
+new_run_history BLOB,
+PRIMARY KEY (shard_id, domain_id, workflow_id, run_id, first_event_id)
+);
+
+CREATE TABLE signals_requested_sets (
+	shard_id INT NOT NULL,
+	domain_id VARCHAR(64) NOT NULL,
+	workflow_id VARCHAR(255) NOT NULL,
+	run_id VARCHAR(64) NOT NULL,
+	signal_id VARCHAR(64) NOT NULL,
+	--
+	PRIMARY KEY (shard_id, domain_id, workflow_id, run_id, signal_id)
 );

@@ -74,13 +74,6 @@ domain_id = ? AND workflow_id = ? AND run_id = ?`
 domain_id = ? AND workflow_id = ? AND run_id = ? AND first_event_id = ?`
 )
 
-func takeAddressIfNotNil(b []byte) *[]byte {
-	if b != nil {
-		return &b
-	}
-	return nil
-}
-
 func (m *sqlHistoryManager) Close() {
 	if m.db != nil {
 		m.db.Close()
