@@ -378,11 +378,11 @@ func (m *sqlTaskManager) GetTasks(request *persistence.GetTasksRequest) (*persis
 	var tasks = make([]*persistence.TaskInfo, len(rows))
 	for i, v := range rows {
 		tasks[i] = &persistence.TaskInfo{
-			DomainID:v.DomainID,
-			WorkflowID: v.WorkflowID,
-			RunID: v.RunID,
-			TaskID: v.TaskID,
-			ScheduleID: v.ScheduleID,
+			DomainID:               v.DomainID,
+			WorkflowID:             v.WorkflowID,
+			RunID:                  v.RunID,
+			TaskID:                 v.TaskID,
+			ScheduleID:             v.ScheduleID,
 			ScheduleToStartTimeout: 0,
 		}
 	}

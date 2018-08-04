@@ -1542,7 +1542,7 @@ func GetVisibilityTSFrom(task Task) (time.Time, error) {
 		}
 
 	case TaskTypeRetryTimer:
-		if t, ok := task.(*RetryTimerTask); ok{
+		if t, ok := task.(*RetryTimerTask); ok {
 			return t.VisibilityTimestamp, nil
 		}
 		return time.Time{}, &workflow.InternalServiceError{
