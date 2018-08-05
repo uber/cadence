@@ -426,6 +426,10 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 		prevState := err.State
 		prevCloseState := err.CloseStatus
 
+		if prevRunID == "" {
+			return nil
+		}
+
 		errFn := func(errMsg string, createRequestID string, workflowID string, runID string) error {
 			msg := fmt.Sprintf(errMsg, workflowID, runID)
 			return &workflow.WorkflowExecutionAlreadyStartedError{

@@ -1148,6 +1148,11 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *Creat
 		startVersion = request.ReplicationState.StartVersion
 	}
 	if request.ContinueAsNew {
+		var prevRunID *string
+		if request.PreviousRunID != "" {
+			prevRunID = &request.PreviousRunID
+		}
+
 		batch.Query(templateUpdateCurrentWorkflowExecutionQuery,
 			*request.Execution.RunId,
 			*request.Execution.RunId,
@@ -1162,7 +1167,7 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *Creat
 			permanentRunID,
 			defaultVisibilityTimestamp,
 			rowTypeExecutionTaskID,
-			request.PreviousRunID,
+			prevRunID,
 		)
 	} else {
 		batch.Query(templateCreateCurrentWorkflowExecutionQuery,
