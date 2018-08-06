@@ -1,3 +1,23 @@
+// Copyright (c) 2018 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
 package sql
 
 import (
@@ -86,8 +106,6 @@ func NewHistoryPersistence(username, password, host, port, dbName string, logger
 	if err != nil {
 		return nil, err
 	}
-
-
 
 	return &sqlHistoryManager{
 		db:     db,
@@ -183,11 +201,11 @@ func (m *sqlHistoryManager) GetWorkflowExecutionHistory(request *persistence.Get
 	var rows []eventsRow
 	if err := m.db.Select(&rows,
 		getWorkflowExecutionHistorySQLQuery,
-			request.DomainID,
-				request.Execution.WorkflowId,
-					request.Execution.RunId,
-						request.FirstEventID,
-							request.NextEventID); err != nil {
+		request.DomainID,
+		request.Execution.WorkflowId,
+		request.Execution.RunId,
+		request.FirstEventID,
+		request.NextEventID); err != nil {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("GetWorkflowExecutionHistory operation failed. Select failed. Error: %v", err),
 		}
@@ -210,14 +228,13 @@ func (m *sqlHistoryManager) GetWorkflowExecutionHistory(request *persistence.Get
 	}
 
 	return &persistence.GetWorkflowExecutionHistoryResponse{
-		Events: events,
+		Events:        events,
 		NextPageToken: []byte{},
 	}, nil
 }
 
 func (m *sqlHistoryManager) DeleteWorkflowExecutionHistory(request *persistence.DeleteWorkflowExecutionHistoryRequest) error {
-	if _, err := m.db.Exec(deleteWorkflowExecutionHistorySQLQuery, request.DomainID, request.Execution.WorkflowId, request.Execution.RunId);
-	err != nil {
+	if _, err := m.db.Exec(deleteWorkflowExecutionHistorySQLQuery, request.DomainID, request.Execution.WorkflowId, request.Execution.RunId); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("DeleteWorkflowExecutionHistory operation failed. Error: %v", err),
 		}

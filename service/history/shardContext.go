@@ -606,7 +606,10 @@ func (s *shardContextImpl) updateShardInfoLocked() error {
 func (s *shardContextImpl) allocateTimerIDsLocked(timerTasks []persistence.Task) error {
 	// assign IDs for the timer tasks. They need to be assigned under shard lock.
 	for _, task := range timerTasks {
-		ts := cassandra.GetVisibilityTSFrom(task)
+		ts, err := persistence.GetVisibilityTSFrom(task)
+		if err != nil {
+			panic(err)
+		}
 		if ts.Before(s.shardInfo.TimerAckLevel) {
 			// This is not a common scenario, the shard can move and new host might have a time SKU.
 			// We generate a new timer ID that is above the ack level with an offset.
@@ -621,8 +624,12 @@ func (s *shardContextImpl) allocateTimerIDsLocked(timerTasks []persistence.Task)
 			return err
 		}
 		task.SetTaskID(seqNum)
+		visibilityTs, err := persistence.GetVisibilityTSFrom(task)
+		if err != nil {
+			return err
+		}
 		s.logger.Debugf("Assigning new timer (timestamp: %v, seq: %v) ackLeveL: %v",
-			cassandra.GetVisibilityTSFrom(task), task.GetTaskID(), s.shardInfo.TimerAckLevel)
+			visibilityTs, task.GetTaskID(), s.shardInfo.TimerAckLevel)
 	}
 	return nil
 }

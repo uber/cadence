@@ -34,7 +34,6 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/dynamicconfig"
@@ -280,8 +279,12 @@ func (s *TestShardContext) UpdateWorkflowExecution(request *persistence.UpdateWo
 			panic(err)
 		}
 		task.SetTaskID(seqID)
+		visibilityTs, err := persistence.GetVisibilityTSFrom(task)
+		if err != nil {
+			panic(err)
+		}
 		s.logger.Infof("%v: TestShardContext: Assigning timer (timestamp: %v, seq: %v)",
-			time.Now().UTC(), cassandra.GetVisibilityTSFrom(task).UTC(), task.GetTaskID())
+			time.Now().UTC(), visibilityTs, task.GetTaskID())
 	}
 	return s.executionMgr.UpdateWorkflowExecution(request)
 }

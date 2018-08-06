@@ -1,3 +1,23 @@
+// Copyright (c) 2018 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
 package sql
 
 import (
@@ -61,7 +81,6 @@ workflow_id = :workflow_id AND
 run_id = :run_id AND
 %[2]v = :%[2]v`
 
-
 	// %[1]v is the name of the table
 	// %[2]v is the name of the key
 	// %[3]v is the value columns, separated by commas
@@ -80,24 +99,24 @@ func makeDeleteMapSQLQuery(tableName string) string {
 func makeSetKeyInMapSQLQuery(tableName string, nonPrimaryKeyColumns []string, mapKeyName string) string {
 	return fmt.Sprintf(setKeyInMapSQLQueryTemplate,
 		tableName,
-			strings.Join(nonPrimaryKeyColumns, ","),
-				strings.Join(stringMap(nonPrimaryKeyColumns, func(x string) string {
-					return ":" + x
-				}), ","),
-					mapKeyName)
+		strings.Join(nonPrimaryKeyColumns, ","),
+		strings.Join(stringMap(nonPrimaryKeyColumns, func(x string) string {
+			return ":" + x
+		}), ","),
+		mapKeyName)
 }
 
 func makeDeleteKeyInMapSQLQuery(tableName string, mapKeyName string) string {
 	return fmt.Sprintf(deleteKeyInMapSQLQueryTemplate,
 		tableName,
-			mapKeyName)
+		mapKeyName)
 }
 
 func makeGetMapSQLQueryTemplate(tableName string, nonPrimaryKeyColumns []string, mapKeyName string) string {
 	return fmt.Sprintf(getMapSQLQueryTemplate,
 		tableName,
 		mapKeyName,
-			strings.Join(nonPrimaryKeyColumns, ","))
+		strings.Join(nonPrimaryKeyColumns, ","))
 }
 
 var (
@@ -132,12 +151,12 @@ var (
 		"non_retriable_errors",
 	}
 	activityInfoTableName = "activity_info_maps"
-	activityInfoKey = "schedule_id"
+	activityInfoKey       = "schedule_id"
 
 	deleteActivityInfoMapSQLQuery      = makeDeleteMapSQLQuery(activityInfoTableName)
-	setKeyInActivityInfoMapSQLQuery = makeSetKeyInMapSQLQuery(activityInfoTableName, activityInfoColumns, activityInfoKey)
+	setKeyInActivityInfoMapSQLQuery    = makeSetKeyInMapSQLQuery(activityInfoTableName, activityInfoColumns, activityInfoKey)
 	deleteKeyInActivityInfoMapSQLQuery = makeDeleteKeyInMapSQLQuery(activityInfoTableName, activityInfoKey)
-	getActivityInfoMapSQLQuery = makeGetMapSQLQueryTemplate(activityInfoTableName, activityInfoColumns, activityInfoKey)
+	getActivityInfoMapSQLQuery         = makeGetMapSQLQueryTemplate(activityInfoTableName, activityInfoColumns, activityInfoKey)
 )
 
 type (
@@ -159,7 +178,7 @@ type (
 		StartedTime              time.Time `db:"started_time"`
 		ActivityID               string    `db:"activity_id"`
 		RequestID                string    `db:"request_id"`
-		Details                  *[]byte    `db:"details"`
+		Details                  *[]byte   `db:"details"`
 		ScheduleToStartTimeout   int64     `db:"schedule_to_start_timeout"`
 		ScheduleToCloseTimeout   int64     `db:"schedule_to_close_timeout"`
 		StartToCloseTimeout      int64     `db:"start_to_close_timeout"`
@@ -177,7 +196,7 @@ type (
 		MaxInterval              int64     `db:"max_interval"`
 		ExpirationTime           time.Time `db:"expiration_time"`
 		MaxAttempts              int64     `db:"max_attempts"`
-		NonRetriableErrors       *[]byte    `db:"non_retriable_errors"`
+		NonRetriableErrors       *[]byte   `db:"non_retriable_errors"`
 	}
 )
 
@@ -315,74 +334,74 @@ func getActivityInfoMap(tx *sqlx.Tx,
 	domainID,
 	workflowID,
 	runID string) (map[int64]*persistence.ActivityInfo, error) {
-		var activityInfoMapsRows []activityInfoMapsRow
+	var activityInfoMapsRows []activityInfoMapsRow
 
-		if err := tx.Select(&activityInfoMapsRows,
-			getActivityInfoMapSQLQuery,
-			shardID,
-			domainID,
-			 workflowID,
-			runID); err != nil {
-			return nil, &workflow.InternalServiceError{
-				Message: fmt.Sprintf("Failed to get activity info. Error: %v", err),
-			}
+	if err := tx.Select(&activityInfoMapsRows,
+		getActivityInfoMapSQLQuery,
+		shardID,
+		domainID,
+		workflowID,
+		runID); err != nil {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("Failed to get activity info. Error: %v", err),
+		}
+	}
+
+	ret := make(map[int64]*persistence.ActivityInfo)
+	for _, v := range activityInfoMapsRows {
+		ret[v.ScheduleID] = &persistence.ActivityInfo{
+			Version:                  v.Version,
+			ScheduleID:               v.ScheduleID,
+			ScheduledEvent:           v.ScheduledEvent,
+			ScheduledTime:            v.ScheduledTime,
+			StartedID:                v.StartedID,
+			StartedEvent:             v.StartedEvent,
+			StartedTime:              v.StartedTime,
+			ActivityID:               v.ActivityID,
+			RequestID:                v.RequestID,
+			ScheduleToStartTimeout:   int32(v.ScheduleToStartTimeout),
+			ScheduleToCloseTimeout:   int32(v.ScheduleToCloseTimeout),
+			StartToCloseTimeout:      int32(v.StartToCloseTimeout),
+			HeartbeatTimeout:         int32(v.HeartbeatTimeout),
+			CancelRequested:          int64ToBool(v.CancelRequested),
+			CancelRequestID:          v.CancelRequestID,
+			LastHeartBeatUpdatedTime: v.LastHeartbeatUpdatedTime,
+			TimerTaskStatus:          int32(v.TimerTaskStatus),
+			Attempt:                  int32(v.Attempt),
+			DomainID:                 v.DomainID,
+			StartedIdentity:          v.StartedIdentity,
+			TaskList:                 v.TaskList,
+			HasRetryPolicy:           int64ToBool(v.HasRetryPolicy),
+			InitialInterval:          int32(v.InitInterval),
+			BackoffCoefficient:       v.BackoffCoefficient,
+			MaximumInterval:          int32(v.MaxInterval),
+			ExpirationTime:           v.ExpirationTime,
+			MaximumAttempts:          int32(v.MaxAttempts),
 		}
 
-		ret := make(map[int64]*persistence.ActivityInfo)
-		for _, v := range activityInfoMapsRows {
-			ret[v.ScheduleID] = &persistence.ActivityInfo{
-				Version: v.Version,
-				ScheduleID: v.ScheduleID,
-				ScheduledEvent: v.ScheduledEvent,
-				ScheduledTime: v.ScheduledTime,
-				StartedID: v.StartedID,
-				StartedEvent: v.StartedEvent,
-				StartedTime: v.StartedTime,
-				ActivityID: v.ActivityID,
-				RequestID: v.RequestID,
-				ScheduleToStartTimeout: int32(v.ScheduleToStartTimeout),
-				ScheduleToCloseTimeout: int32(v.ScheduleToCloseTimeout),
-				StartToCloseTimeout: int32(v.StartToCloseTimeout),
-				HeartbeatTimeout: int32(v.HeartbeatTimeout),
-				CancelRequested: int64ToBool(v.CancelRequested),
-				CancelRequestID: v.CancelRequestID,
-				LastHeartBeatUpdatedTime: v.LastHeartbeatUpdatedTime,
-				TimerTaskStatus: int32(v.TimerTaskStatus),
-				Attempt: int32(v.Attempt),
-				DomainID: v.DomainID,
-				StartedIdentity: v.StartedIdentity,
-				TaskList: v.TaskList,
-				HasRetryPolicy: int64ToBool(v.HasRetryPolicy),
-				InitialInterval: int32(v.InitInterval),
-				BackoffCoefficient: v.BackoffCoefficient,
-				MaximumInterval: int32(v.MaxInterval),
-				ExpirationTime: v.ExpirationTime,
-				MaximumAttempts: int32(v.MaxAttempts),
-			}
+		if v.Details != nil {
+			ret[v.ScheduleID].Details = *v.Details
+		}
 
-			if v.Details != nil {
-				ret[v.ScheduleID].Details = *v.Details
-			}
-
-			if v.NonRetriableErrors != nil {
-				ret[v.ScheduleID].NonRetriableErrors = []string{}
-				if err := gobDeserialize(*v.NonRetriableErrors, &ret[v.ScheduleID].NonRetriableErrors); err != nil {
-					return nil, &workflow.InternalServiceError{
-						Message: fmt.Sprintf("Failed to get activity info. Failed to deserialize ActivityInfo.NonRetriableErrors. %v", err),
-					}
+		if v.NonRetriableErrors != nil {
+			ret[v.ScheduleID].NonRetriableErrors = []string{}
+			if err := gobDeserialize(*v.NonRetriableErrors, &ret[v.ScheduleID].NonRetriableErrors); err != nil {
+				return nil, &workflow.InternalServiceError{
+					Message: fmt.Sprintf("Failed to get activity info. Failed to deserialize ActivityInfo.NonRetriableErrors. %v", err),
 				}
 			}
 		}
+	}
 
-		return ret, nil
+	return ret, nil
 }
 
 func deleteActivityInfoMap(tx *sqlx.Tx, shardID int, domainID, workflowID, runID string) error {
 	if _, err := tx.NamedExec(deleteActivityInfoMapSQLQuery, &activityInfoMapsPrimaryKey{
-		ShardID: int64(shardID),
-		DomainID: domainID,
+		ShardID:    int64(shardID),
+		DomainID:   domainID,
 		WorkflowID: workflowID,
-		RunID: runID,
+		RunID:      runID,
 	}); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("Failed to delete activity info map. Error: %v", err),
@@ -399,12 +418,12 @@ var (
 		"task_id",
 	}
 	timerInfoTableName = "timer_info_maps"
-	timerInfoKey = "timer_id"
+	timerInfoKey       = "timer_id"
 
 	deleteTimerInfoMapSQLQuery      = makeDeleteMapSQLQuery(timerInfoTableName)
-	setKeyInTimerInfoMapSQLQuery = makeSetKeyInMapSQLQuery(timerInfoTableName, timerInfoColumns, timerInfoKey)
+	setKeyInTimerInfoMapSQLQuery    = makeSetKeyInMapSQLQuery(timerInfoTableName, timerInfoColumns, timerInfoKey)
 	deleteKeyInTimerInfoMapSQLQuery = makeDeleteKeyInMapSQLQuery(timerInfoTableName, timerInfoKey)
-	getTimerInfoMapSQLQuery = makeGetMapSQLQueryTemplate(timerInfoTableName, timerInfoColumns, timerInfoKey)
+	getTimerInfoMapSQLQuery         = makeGetMapSQLQueryTemplate(timerInfoTableName, timerInfoColumns, timerInfoKey)
 )
 
 type (
@@ -413,15 +432,15 @@ type (
 		DomainID   string `db:"domain_id"`
 		WorkflowID string `db:"workflow_id"`
 		RunID      string `db:"run_id"`
-		TimerID string  `db:"timer_id"`
+		TimerID    string `db:"timer_id"`
 	}
 
 	timerInfoMapsRow struct {
 		timerInfoMapsPrimaryKey
-		Version int64 `db:"version"`
-		StartedID int64 `db:"started_id"`
+		Version    int64     `db:"version"`
+		StartedID  int64     `db:"started_id"`
 		ExpiryTime time.Time `db:"expiry_time"`
-		TaskID int64 `db:"task_id"`
+		TaskID     int64     `db:"task_id"`
 	}
 )
 
@@ -437,16 +456,16 @@ func updateTimerInfos(tx *sqlx.Tx,
 		for i, v := range timerInfos {
 			timerInfoMapsRows[i] = &timerInfoMapsRow{
 				timerInfoMapsPrimaryKey: timerInfoMapsPrimaryKey{
-					ShardID: int64(shardID),
-					DomainID: domainID,
+					ShardID:    int64(shardID),
+					DomainID:   domainID,
 					WorkflowID: workflowID,
-					RunID: runID,
-					TimerID: v.TimerID,
+					RunID:      runID,
+					TimerID:    v.TimerID,
 				},
-				Version: v.Version,
-				StartedID: v.StartedID,
+				Version:    v.Version,
+				StartedID:  v.StartedID,
 				ExpiryTime: v.ExpiryTime,
-				TaskID: v.TaskID,
+				TaskID:     v.TaskID,
 			}
 		}
 
@@ -484,7 +503,7 @@ func updateTimerInfos(tx *sqlx.Tx,
 				DomainID:   domainID,
 				WorkflowID: workflowID,
 				RunID:      runID,
-				TimerID: v,
+				TimerID:    v,
 			}
 		}
 
@@ -538,11 +557,11 @@ func getTimerInfoMap(tx *sqlx.Tx,
 	ret := make(map[string]*persistence.TimerInfo)
 	for _, v := range timerInfoMapsRows {
 		ret[v.TimerID] = &persistence.TimerInfo{
-			Version: v.Version,
-			TimerID: v.TimerID,
-			StartedID: v.StartedID,
+			Version:    v.Version,
+			TimerID:    v.TimerID,
+			StartedID:  v.StartedID,
 			ExpiryTime: v.ExpiryTime,
-			TaskID: v.TaskID,
+			TaskID:     v.TaskID,
 		}
 	}
 
@@ -551,10 +570,10 @@ func getTimerInfoMap(tx *sqlx.Tx,
 
 func deleteTimerInfoMap(tx *sqlx.Tx, shardID int, domainID, workflowID, runID string) error {
 	if _, err := tx.NamedExec(deleteTimerInfoMapSQLQuery, &timerInfoMapsPrimaryKey{
-		ShardID: int64(shardID),
-		DomainID: domainID,
+		ShardID:    int64(shardID),
+		DomainID:   domainID,
 		WorkflowID: workflowID,
-		RunID: runID,
+		RunID:      runID,
 	}); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("Failed to delete timer info map. Error: %v", err),
@@ -572,7 +591,7 @@ var (
 		"create_request_id",
 	}
 	childExecutionInfoTableName = "child_execution_info_maps"
-	childExecutionInfoKey = "initiated_id"
+	childExecutionInfoKey       = "initiated_id"
 
 	deleteChildExecutionInfoMapSQLQuery      = makeDeleteMapSQLQuery(childExecutionInfoTableName)
 	setKeyInChildExecutionInfoMapSQLQuery    = makeSetKeyInMapSQLQuery(childExecutionInfoTableName, childExecutionInfoColumns, childExecutionInfoKey)
@@ -582,20 +601,20 @@ var (
 
 type (
 	childExecutionInfoMapsPrimaryKey struct {
-		ShardID    int64  `db:"shard_id"`
-		DomainID   string `db:"domain_id"`
-		WorkflowID string `db:"workflow_id"`
-		RunID      string `db:"run_id"`
+		ShardID     int64  `db:"shard_id"`
+		DomainID    string `db:"domain_id"`
+		WorkflowID  string `db:"workflow_id"`
+		RunID       string `db:"run_id"`
 		InitiatedID int64  `db:"initiated_id"`
 	}
 
 	childExecutionInfoMapsRow struct {
 		childExecutionInfoMapsPrimaryKey
-		Version int64 `db:"version"`
-		InitiatedEvent *[]byte `db:"initiated_event"`
-		StartedID int64 `db:"started_id"`
-		StartedEvent *[]byte `db:"started_event"`
-		CreateRequestID string `db:"create_request_id"`
+		Version         int64   `db:"version"`
+		InitiatedEvent  *[]byte `db:"initiated_event"`
+		StartedID       int64   `db:"started_id"`
+		StartedEvent    *[]byte `db:"started_event"`
+		CreateRequestID string  `db:"create_request_id"`
 	}
 )
 
@@ -611,16 +630,16 @@ func updateChildExecutionInfos(tx *sqlx.Tx,
 		for i, v := range childExecutionInfos {
 			timerInfoMapsRows[i] = &childExecutionInfoMapsRow{
 				childExecutionInfoMapsPrimaryKey: childExecutionInfoMapsPrimaryKey{
-					ShardID: int64(shardID),
-					DomainID: domainID,
-					WorkflowID: workflowID,
-					RunID: runID,
+					ShardID:     int64(shardID),
+					DomainID:    domainID,
+					WorkflowID:  workflowID,
+					RunID:       runID,
 					InitiatedID: v.InitiatedID,
 				},
-				Version: v.Version,
-				InitiatedEvent: takeAddressIfNotNil(v.InitiatedEvent),
-				StartedID: v.StartedID,
-				StartedEvent: takeAddressIfNotNil(v.StartedEvent),
+				Version:         v.Version,
+				InitiatedEvent:  takeAddressIfNotNil(v.InitiatedEvent),
+				StartedID:       v.StartedID,
+				StartedEvent:    takeAddressIfNotNil(v.StartedEvent),
 				CreateRequestID: v.CreateRequestID,
 			}
 		}
@@ -653,10 +672,10 @@ func updateChildExecutionInfos(tx *sqlx.Tx,
 	}
 	if deleteInfos != nil {
 		if result, err := tx.NamedExec(deleteKeyInChildExecutionInfoMapSQLQuery, &childExecutionInfoMapsPrimaryKey{
-			ShardID:    int64(shardID),
-			DomainID:   domainID,
-			WorkflowID: workflowID,
-			RunID:      runID,
+			ShardID:     int64(shardID),
+			DomainID:    domainID,
+			WorkflowID:  workflowID,
+			RunID:       runID,
 			InitiatedID: *deleteInfos,
 		}); err != nil {
 			return &workflow.InternalServiceError{
@@ -701,11 +720,11 @@ func getChildExecutionInfoMap(tx *sqlx.Tx,
 	ret := make(map[int64]*persistence.ChildExecutionInfo)
 	for _, v := range childExecutionInfoMapsRows {
 		ret[v.InitiatedID] = &persistence.ChildExecutionInfo{
-			InitiatedID: v.InitiatedID,
-			Version: v.Version,
-			InitiatedEvent: dereferenceIfNotNil(v.InitiatedEvent),
-			StartedID: v.StartedID,
-			StartedEvent: dereferenceIfNotNil(v.StartedEvent),
+			InitiatedID:     v.InitiatedID,
+			Version:         v.Version,
+			InitiatedEvent:  dereferenceIfNotNil(v.InitiatedEvent),
+			StartedID:       v.StartedID,
+			StartedEvent:    dereferenceIfNotNil(v.StartedEvent),
 			CreateRequestID: v.CreateRequestID,
 		}
 
@@ -716,10 +735,10 @@ func getChildExecutionInfoMap(tx *sqlx.Tx,
 
 func deleteChildExecutionInfoMap(tx *sqlx.Tx, shardID int, domainID, workflowID, runID string) error {
 	if _, err := tx.NamedExec(deleteChildExecutionInfoMapSQLQuery, &childExecutionInfoMapsPrimaryKey{
-		ShardID: int64(shardID),
-		DomainID: domainID,
+		ShardID:    int64(shardID),
+		DomainID:   domainID,
 		WorkflowID: workflowID,
-		RunID: runID,
+		RunID:      runID,
 	}); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("Failed to delete timer info map. Error: %v", err),
@@ -728,33 +747,32 @@ func deleteChildExecutionInfoMap(tx *sqlx.Tx, shardID int, domainID, workflowID,
 	return nil
 }
 
-
 var (
 	requestCancelInfoColumns = []string{
 		"version",
 		"cancel_request_id",
 	}
 	requestCancelInfoTableName = "request_cancel_info_maps"
-	requestCancelInfoKey = "initiated_id"
+	requestCancelInfoKey       = "initiated_id"
 
 	deleteRequestCancelInfoMapSQLQuery      = makeDeleteMapSQLQuery(requestCancelInfoTableName)
-	setKeyInRequestCancelInfoMapSQLQuery = makeSetKeyInMapSQLQuery(requestCancelInfoTableName, requestCancelInfoColumns, requestCancelInfoKey)
+	setKeyInRequestCancelInfoMapSQLQuery    = makeSetKeyInMapSQLQuery(requestCancelInfoTableName, requestCancelInfoColumns, requestCancelInfoKey)
 	deleteKeyInRequestCancelInfoMapSQLQuery = makeDeleteKeyInMapSQLQuery(requestCancelInfoTableName, requestCancelInfoKey)
-	getRequestCancelInfoMapSQLQuery = makeGetMapSQLQueryTemplate(requestCancelInfoTableName, requestCancelInfoColumns, requestCancelInfoKey)
+	getRequestCancelInfoMapSQLQuery         = makeGetMapSQLQueryTemplate(requestCancelInfoTableName, requestCancelInfoColumns, requestCancelInfoKey)
 )
 
 type (
 	requestCancelInfoMapsPrimaryKey struct {
-		ShardID    int64  `db:"shard_id"`
-		DomainID   string `db:"domain_id"`
-		WorkflowID string `db:"workflow_id"`
-		RunID      string `db:"run_id"`
+		ShardID     int64  `db:"shard_id"`
+		DomainID    string `db:"domain_id"`
+		WorkflowID  string `db:"workflow_id"`
+		RunID       string `db:"run_id"`
 		InitiatedID int64  `db:"initiated_id"`
 	}
 
 	requestCancelInfoMapsRow struct {
 		requestCancelInfoMapsPrimaryKey
-		Version int64 `db:"version"`
+		Version         int64  `db:"version"`
 		CancelRequestID string `db:"cancel_request_id"`
 	}
 )
@@ -771,13 +789,13 @@ func updateRequestCancelInfos(tx *sqlx.Tx,
 		for i, v := range requestCancelInfos {
 			requestCancelInfoMapsRows[i] = &requestCancelInfoMapsRow{
 				requestCancelInfoMapsPrimaryKey: requestCancelInfoMapsPrimaryKey{
-					ShardID: int64(shardID),
-					DomainID: domainID,
-					WorkflowID: workflowID,
-					RunID: runID,
+					ShardID:     int64(shardID),
+					DomainID:    domainID,
+					WorkflowID:  workflowID,
+					RunID:       runID,
 					InitiatedID: v.InitiatedID,
 				},
-				Version: v.Version,
+				Version:         v.Version,
 				CancelRequestID: v.CancelRequestID,
 			}
 		}
@@ -810,10 +828,10 @@ func updateRequestCancelInfos(tx *sqlx.Tx,
 	}
 	if deleteInfo != nil {
 		if result, err := tx.NamedExec(deleteKeyInRequestCancelInfoMapSQLQuery, &requestCancelInfoMapsPrimaryKey{
-			ShardID:    int64(shardID),
-			DomainID:   domainID,
-			WorkflowID: workflowID,
-			RunID:      runID,
+			ShardID:     int64(shardID),
+			DomainID:    domainID,
+			WorkflowID:  workflowID,
+			RunID:       runID,
 			InitiatedID: *deleteInfo,
 		}); err != nil {
 			return &workflow.InternalServiceError{
@@ -858,9 +876,9 @@ func getRequestCancelInfoMap(tx *sqlx.Tx,
 	ret := make(map[int64]*persistence.RequestCancelInfo)
 	for _, v := range requestCancelInfoMapsRows {
 		ret[v.InitiatedID] = &persistence.RequestCancelInfo{
-			Version: v.Version,
+			Version:         v.Version,
 			CancelRequestID: v.CancelRequestID,
-			InitiatedID: v.InitiatedID,
+			InitiatedID:     v.InitiatedID,
 		}
 	}
 
@@ -869,10 +887,10 @@ func getRequestCancelInfoMap(tx *sqlx.Tx,
 
 func deleteRequestCancelInfoMap(tx *sqlx.Tx, shardID int, domainID, workflowID, runID string) error {
 	if _, err := tx.NamedExec(deleteRequestCancelInfoMapSQLQuery, &requestCancelInfoMapsPrimaryKey{
-		ShardID: int64(shardID),
-		DomainID: domainID,
+		ShardID:    int64(shardID),
+		DomainID:   domainID,
 		WorkflowID: workflowID,
-		RunID: runID,
+		RunID:      runID,
 	}); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("Failed to delete request cancel info map. Error: %v", err),
@@ -890,29 +908,28 @@ var (
 		"control",
 	}
 	signalInfoTableName = "signal_info_maps"
-	signalInfoKey = "initiated_id"
+	signalInfoKey       = "initiated_id"
 
 	deleteSignalInfoMapSQLQuery      = makeDeleteMapSQLQuery(signalInfoTableName)
-	setKeyInSignalInfoMapSQLQuery = makeSetKeyInMapSQLQuery(signalInfoTableName, signalInfoColumns, signalInfoKey)
+	setKeyInSignalInfoMapSQLQuery    = makeSetKeyInMapSQLQuery(signalInfoTableName, signalInfoColumns, signalInfoKey)
 	deleteKeyInSignalInfoMapSQLQuery = makeDeleteKeyInMapSQLQuery(signalInfoTableName, signalInfoKey)
-	getSignalInfoMapSQLQuery = makeGetMapSQLQueryTemplate(signalInfoTableName, signalInfoColumns, signalInfoKey)
+	getSignalInfoMapSQLQuery         = makeGetMapSQLQueryTemplate(signalInfoTableName, signalInfoColumns, signalInfoKey)
 )
-
 
 type (
 	signalInfoMapsPrimaryKey struct {
-		ShardID    int64  `db:"shard_id"`
-		DomainID   string `db:"domain_id"`
-		WorkflowID string `db:"workflow_id"`
-		RunID      string `db:"run_id"`
+		ShardID     int64  `db:"shard_id"`
+		DomainID    string `db:"domain_id"`
+		WorkflowID  string `db:"workflow_id"`
+		RunID       string `db:"run_id"`
 		InitiatedID int64  `db:"initiated_id"`
 	}
 
 	signalInfoMapsRow struct {
 		signalInfoMapsPrimaryKey
-		Version int64 `db:"version"`
-		SignalRequestID string `db:"signal_request_id"`
-		SignalName      string `db:"signal_name"`
+		Version         int64   `db:"version"`
+		SignalRequestID string  `db:"signal_request_id"`
+		SignalName      string  `db:"signal_name"`
 		Input           *[]byte `db:"input"`
 		Control         *[]byte `db:"control"`
 	}
@@ -930,17 +947,17 @@ func updateSignalInfos(tx *sqlx.Tx,
 		for i, v := range signalInfos {
 			signalInfoMapsRows[i] = &signalInfoMapsRow{
 				signalInfoMapsPrimaryKey: signalInfoMapsPrimaryKey{
-					ShardID: int64(shardID),
-					DomainID: domainID,
-					WorkflowID: workflowID,
-					RunID: runID,
+					ShardID:     int64(shardID),
+					DomainID:    domainID,
+					WorkflowID:  workflowID,
+					RunID:       runID,
 					InitiatedID: v.InitiatedID,
 				},
-				Version: v.Version,
+				Version:         v.Version,
 				SignalRequestID: v.SignalRequestID,
-				SignalName: v.SignalName,
-				Input: takeAddressIfNotNil(v.Input),
-				Control: takeAddressIfNotNil(v.Control),
+				SignalName:      v.SignalName,
+				Input:           takeAddressIfNotNil(v.Input),
+				Control:         takeAddressIfNotNil(v.Control),
 			}
 		}
 
@@ -972,10 +989,10 @@ func updateSignalInfos(tx *sqlx.Tx,
 	}
 	if deleteInfo != nil {
 		if result, err := tx.NamedExec(deleteKeyInSignalInfoMapSQLQuery, &signalInfoMapsPrimaryKey{
-			ShardID:    int64(shardID),
-			DomainID:   domainID,
-			WorkflowID: workflowID,
-			RunID:      runID,
+			ShardID:     int64(shardID),
+			DomainID:    domainID,
+			WorkflowID:  workflowID,
+			RunID:       runID,
 			InitiatedID: *deleteInfo,
 		}); err != nil {
 			return &workflow.InternalServiceError{
@@ -1020,12 +1037,12 @@ func getSignalInfoMap(tx *sqlx.Tx,
 	ret := make(map[int64]*persistence.SignalInfo)
 	for _, v := range signalInfoMapsRows {
 		ret[v.InitiatedID] = &persistence.SignalInfo{
-			Version: v.Version,
-			InitiatedID: v.InitiatedID,
+			Version:         v.Version,
+			InitiatedID:     v.InitiatedID,
 			SignalRequestID: v.SignalRequestID,
-			SignalName: v.SignalName,
-			Input: dereferenceIfNotNil(v.Input),
-			Control: dereferenceIfNotNil(v.Control),
+			SignalName:      v.SignalName,
+			Input:           dereferenceIfNotNil(v.Input),
+			Control:         dereferenceIfNotNil(v.Control),
 		}
 	}
 
@@ -1034,10 +1051,10 @@ func getSignalInfoMap(tx *sqlx.Tx,
 
 func deleteSignalInfoMap(tx *sqlx.Tx, shardID int, domainID, workflowID, runID string) error {
 	if _, err := tx.NamedExec(deleteSignalInfoMapSQLQuery, &requestCancelInfoMapsPrimaryKey{
-		ShardID: int64(shardID),
-		DomainID: domainID,
+		ShardID:    int64(shardID),
+		DomainID:   domainID,
 		WorkflowID: workflowID,
-		RunID: runID,
+		RunID:      runID,
 	}); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("Failed to delete signal info map. Error: %v", err),
@@ -1054,31 +1071,28 @@ var (
 		"new_run_history",
 	}
 	bufferedReplicationTasksTableName = "buffered_replication_task_maps"
-	bufferedReplicationTasksKey = "first_event_id"
+	bufferedReplicationTasksKey       = "first_event_id"
 
 	deleteBufferedReplicationTasksMapSQLQuery      = makeDeleteMapSQLQuery(bufferedReplicationTasksTableName)
-	setKeyInBufferedReplicationTasksMapSQLQuery = makeSetKeyInMapSQLQuery(bufferedReplicationTasksTableName, bufferedReplicationTasksMapColumns, bufferedReplicationTasksKey)
+	setKeyInBufferedReplicationTasksMapSQLQuery    = makeSetKeyInMapSQLQuery(bufferedReplicationTasksTableName, bufferedReplicationTasksMapColumns, bufferedReplicationTasksKey)
 	deleteKeyInBufferedReplicationTasksMapSQLQuery = makeDeleteKeyInMapSQLQuery(bufferedReplicationTasksTableName, bufferedReplicationTasksKey)
-	getBufferedReplicationTasksMapSQLQuery = makeGetMapSQLQueryTemplate(bufferedReplicationTasksTableName, bufferedReplicationTasksMapColumns, bufferedReplicationTasksKey)
-
-
+	getBufferedReplicationTasksMapSQLQuery         = makeGetMapSQLQueryTemplate(bufferedReplicationTasksTableName, bufferedReplicationTasksMapColumns, bufferedReplicationTasksKey)
 )
-
 
 type (
 	bufferedReplicationTaskMapsPrimaryKey struct {
-		ShardID    int64  `db:"shard_id"`
-		DomainID   string `db:"domain_id"`
-		WorkflowID string `db:"workflow_id"`
-		RunID      string `db:"run_id"`
+		ShardID      int64  `db:"shard_id"`
+		DomainID     string `db:"domain_id"`
+		WorkflowID   string `db:"workflow_id"`
+		RunID        string `db:"run_id"`
 		FirstEventID int64  `db:"first_event_id"`
 	}
 
 	bufferedReplicationTaskMapsRow struct {
 		bufferedReplicationTaskMapsPrimaryKey
-		NextEventID int64 `db:"next_event_id"`
-		Version int64 `db:"version"`
-		History *[]byte `db:"history"`
+		NextEventID   int64   `db:"next_event_id"`
+		Version       int64   `db:"version"`
+		History       *[]byte `db:"history"`
 		NewRunHistory *[]byte `db:"new_run_history"`
 	}
 )
@@ -1092,36 +1106,36 @@ func updateBufferedReplicationTasks(tx *sqlx.Tx,
 	runID string) error {
 	if newBufferedReplicationTask != nil {
 		arg := &bufferedReplicationTaskMapsRow{
-				bufferedReplicationTaskMapsPrimaryKey: bufferedReplicationTaskMapsPrimaryKey{
-					ShardID: int64(shardID),
-					DomainID: domainID,
-					WorkflowID: workflowID,
-					RunID: runID,
-					FirstEventID: newBufferedReplicationTask.FirstEventID,
-				},
-				Version: newBufferedReplicationTask.Version,
-				NextEventID: newBufferedReplicationTask.NextEventID,
-			}
+			bufferedReplicationTaskMapsPrimaryKey: bufferedReplicationTaskMapsPrimaryKey{
+				ShardID:      int64(shardID),
+				DomainID:     domainID,
+				WorkflowID:   workflowID,
+				RunID:        runID,
+				FirstEventID: newBufferedReplicationTask.FirstEventID,
+			},
+			Version:     newBufferedReplicationTask.Version,
+			NextEventID: newBufferedReplicationTask.NextEventID,
+		}
 
-			if newBufferedReplicationTask.History != nil {
-				if b, err := gobSerialize(&newBufferedReplicationTask.History); err != nil {
-					return &workflow.InternalServiceError{
-						Message: fmt.Sprintf("Failed to update buffered replication tasks. Failed to serialize a BufferedReplicationTask.History. Error: %v", err),
-					}
-				} else {
-					arg.History = &b
+		if newBufferedReplicationTask.History != nil {
+			if b, err := gobSerialize(&newBufferedReplicationTask.History); err != nil {
+				return &workflow.InternalServiceError{
+					Message: fmt.Sprintf("Failed to update buffered replication tasks. Failed to serialize a BufferedReplicationTask.History. Error: %v", err),
 				}
+			} else {
+				arg.History = &b
 			}
+		}
 
-			if newBufferedReplicationTask.NewRunHistory != nil {
-				if b, err := gobSerialize(&newBufferedReplicationTask.NewRunHistory); err != nil {
-					return &workflow.InternalServiceError{
-						Message: fmt.Sprintf("Failed to update buffered replication tasks. Failed to serialize a BufferedReplicationTask.NewRunHistory. Error: %v", err),
-					}
-				} else {
-					arg.NewRunHistory = &b
+		if newBufferedReplicationTask.NewRunHistory != nil {
+			if b, err := gobSerialize(&newBufferedReplicationTask.NewRunHistory); err != nil {
+				return &workflow.InternalServiceError{
+					Message: fmt.Sprintf("Failed to update buffered replication tasks. Failed to serialize a BufferedReplicationTask.NewRunHistory. Error: %v", err),
 				}
+			} else {
+				arg.NewRunHistory = &b
 			}
+		}
 
 		if result, err := tx.NamedExec(setKeyInBufferedReplicationTasksMapSQLQuery, arg); err != nil {
 			return &workflow.InternalServiceError{
@@ -1144,10 +1158,10 @@ func updateBufferedReplicationTasks(tx *sqlx.Tx,
 	}
 	if deleteInfo != nil {
 		if result, err := tx.NamedExec(deleteKeyInBufferedReplicationTasksMapSQLQuery, &bufferedReplicationTaskMapsPrimaryKey{
-			ShardID:    int64(shardID),
-			DomainID:   domainID,
-			WorkflowID: workflowID,
-			RunID:      runID,
+			ShardID:      int64(shardID),
+			DomainID:     domainID,
+			WorkflowID:   workflowID,
+			RunID:        runID,
 			FirstEventID: *deleteInfo,
 		}); err != nil {
 			return &workflow.InternalServiceError{
@@ -1192,9 +1206,9 @@ func getBufferedReplicationTasks(tx *sqlx.Tx,
 	ret := make(map[int64]*persistence.BufferedReplicationTask)
 	for _, v := range bufferedReplicationTaskMapsRows {
 		ret[v.FirstEventID] = &persistence.BufferedReplicationTask{
-			Version: v.Version,
+			Version:      v.Version,
 			FirstEventID: v.FirstEventID,
-			NextEventID: v.NextEventID,
+			NextEventID:  v.NextEventID,
 		}
 
 		if v.History != nil {
@@ -1218,6 +1232,7 @@ func getBufferedReplicationTasks(tx *sqlx.Tx,
 
 	return ret, nil
 }
+
 //
 //func deleteBufferedReplicationTaskMap(tx *sqlx.Tx, shardID int, domainID, workflowID, runID string) error {
 //	if _, err := tx.Exec(deleteBufferedReplicationTasksMapSQLQuery, &bufferedReplicationTaskMapsPrimaryKey{

@@ -1711,7 +1711,7 @@ func (s *matchingPersistenceSuite) TestContinueAsNew() {
 	s.Equal(int64(3), newExecutionInfo.NextEventID)
 	s.Equal(common.EmptyEventID, newExecutionInfo.LastProcessedEvent)
 	s.Equal(int64(2), newExecutionInfo.DecisionScheduleID)
-	
+
 	newRunID, err5 := s.GetCurrentWorkflowRunID(domainID, *workflowExecution.WorkflowId)
 	s.Nil(err5)
 	s.Equal(*newWorkflowExecution.RunId, newRunID)

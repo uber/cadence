@@ -33,7 +33,7 @@ import (
 
 type (
 	sqlShardManager struct {
-		db *sqlx.DB
+		db                 *sqlx.DB
 		currentClusterName string
 	}
 
@@ -129,7 +129,7 @@ func NewShardPersistence(username, password, host, port, dbName string, currentC
 	}
 
 	return &sqlShardManager{
-		db: db,
+		db:                 db,
 		currentClusterName: currentClusterName,
 	}, nil
 }

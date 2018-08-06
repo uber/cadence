@@ -558,8 +558,7 @@ func (m *sqlMatchingManager) GetWorkflowExecution(request *persistence.GetWorkfl
 	// all the other parts of mutable state
 	// TODO Replace with repeatable read transaction level
 
-	if _, err := lockNextEventID(tx, m.shardID, request.DomainID, *request.Execution.WorkflowId, *request.Execution.RunId);
-	err != nil {
+	if _, err := lockNextEventID(tx, m.shardID, request.DomainID, *request.Execution.WorkflowId, *request.Execution.RunId); err != nil {
 		switch err.(type) {
 		case *workflow.EntityNotExistsError:
 			return nil, &workflow.EntityNotExistsError{
@@ -732,7 +731,6 @@ func (m *sqlMatchingManager) GetWorkflowExecution(request *persistence.GetWorkfl
 		}
 	}
 
-
 	{
 		var err error
 		state.BufferedReplicationTasks, err = getBufferedReplicationTasks(tx,
@@ -858,11 +856,11 @@ func (m *sqlMatchingManager) UpdateWorkflowExecution(request *persistence.Update
 
 	if err := updateTimerInfos(tx,
 		request.UpserTimerInfos,
-			request.DeleteTimerInfos,
-				m.shardID,
-					request.ExecutionInfo.DomainID,
-						request.ExecutionInfo.WorkflowID,
-							request.ExecutionInfo.RunID); err != nil {
+		request.DeleteTimerInfos,
+		m.shardID,
+		request.ExecutionInfo.DomainID,
+		request.ExecutionInfo.WorkflowID,
+		request.ExecutionInfo.RunID); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("UpdateWorkflowExecution operation failed. Error: %v", err),
 		}
@@ -918,10 +916,10 @@ func (m *sqlMatchingManager) UpdateWorkflowExecution(request *persistence.Update
 
 	if err := updateSignalsRequested(tx,
 		request.UpsertSignalRequestedIDs,
-			request.DeleteSignalRequestedID,
-				m.shardID,
+		request.DeleteSignalRequestedID,
+		m.shardID,
 		request.ExecutionInfo.DomainID,
-					request.ExecutionInfo.WorkflowID,
+		request.ExecutionInfo.WorkflowID,
 		request.ExecutionInfo.RunID); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("UpdateWorkflowExecution operation failed. Error: %v", err),
@@ -1732,8 +1730,8 @@ func continueAsNew(tx *sqlx.Tx, shardID int, domainID, workflowID, runID, previo
 	return nil
 }
 
-func updateExecution(tx *sqlx.Tx, 
-	executionInfo *persistence.WorkflowExecutionInfo, 
+func updateExecution(tx *sqlx.Tx,
+	executionInfo *persistence.WorkflowExecutionInfo,
 	replicationState *persistence.ReplicationState,
 	condition int64) error {
 	args := updateExecutionRow{
@@ -1824,6 +1822,6 @@ func updateExecution(tx *sqlx.Tx,
 			Message: fmt.Sprintf("Failed to update executions row. Affected %v rows updated instead of 1.", rowsAffected),
 		}
 	}
-	
+
 	return nil
 }
