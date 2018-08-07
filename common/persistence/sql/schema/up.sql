@@ -5,7 +5,7 @@ CREATE TABLE domains(
   status INT NOT NULL,
   description VARCHAR(255) NOT NULL,
   owner_email VARCHAR(255) NOT NULL,
-  data BLOB NOT NULL,
+  data BLOB,
 /* end domain */
   retention_days INT NOT NULL,
   emit_metric TINYINT(1) NOT NULL,
@@ -17,7 +17,7 @@ CREATE TABLE domains(
   is_global_domain TINYINT(1) NOT NULL,
 /* domain_replication_config */
   active_cluster_name VARCHAR(255) NOT NULL,
-  clusters BLOB NOT NULL
+  clusters BLOB
 /* end domain_replication_config */
 ) DEFAULT CHARACTER SET utf8 COLLATE utf8_unicode_ci;
 
@@ -308,3 +308,6 @@ CREATE TABLE signals_requested_sets (
 	--
 	PRIMARY KEY (shard_id, domain_id, workflow_id, run_id, signal_id)
 );
+
+insert into domains  (id, name, status, description, owner_email, data,  retention_days, emit_metric, config_version, notification_version, failover_notification_version, failover_version, is_global_domain, active_cluster_name, clusters) values
+ ("46a263b6-ace2-4b53-9b6c-0b42d6549ac1","samples-domain", 0, "", "", NULL, 0, 0, 0, 0, 0, 0, 0, "", NULL)

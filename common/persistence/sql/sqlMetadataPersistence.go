@@ -38,21 +38,21 @@ type (
 
 	DomainCommon struct {
 		// TODO Extracting the fields from DomainInfo since we don't support scanning into DomainInfo.Data
-		ID          string `db:"id"`
-		Name        string `db:"name"`
-		Status      int    `db:"status"`
-		Description string `db:"description"`
-		OwnerEmail  string `db:"owner_email"`
-		Data        []byte `db:"data"`
+		ID          string  `db:"id"`
+		Name        string  `db:"name"`
+		Status      int     `db:"status"`
+		Description string  `db:"description"`
+		OwnerEmail  string  `db:"owner_email"`
+		Data        *[]byte `db:"data"`
 
 		persistence.DomainConfig
 		// TODO Extracting the fields from DomainReplicationConfig since we don't currently support
 		// TODO scanning into DomainReplicationConfig.Clusters
 		//DomainReplicationConfig: *(request.ReplicationConfig),
-		ActiveClusterName string `db:"active_cluster_name"`
-		Clusters          []byte `db:"clusters"`
-		ConfigVersion     int64  `db:"config_version"`
-		FailoverVersion   int64  `db:"failover_version"`
+		ActiveClusterName string  `db:"active_cluster_name"`
+		Clusters          *[]byte `db:"clusters"`
+		ConfigVersion     int64   `db:"config_version"`
+		FailoverVersion   int64   `db:"failover_version"`
 	}
 
 	FlatUpdateDomainRequest struct {
@@ -247,12 +247,12 @@ func (m *sqlMetadataManager) CreateDomain(request *persistence.CreateDomainReque
 				Status:      request.Info.Status,
 				Description: request.Info.Description,
 				OwnerEmail:  request.Info.OwnerEmail,
-				Data:        data,
+				Data:        &data,
 
 				DomainConfig: *(request.Config),
 
 				ActiveClusterName: request.ReplicationConfig.ActiveClusterName,
-				Clusters:          clusters,
+				Clusters:          &clusters,
 
 				ConfigVersion:   request.ConfigVersion,
 				FailoverVersion: request.FailoverVersion,
@@ -345,16 +345,20 @@ func (m *sqlMetadataManager) GetDomain(request *persistence.GetDomainRequest) (*
 
 func domainRowToGetDomainResponse(result *domainRow) (*persistence.GetDomainResponse, error) {
 	var data map[string]string
-	if err := gobDeserialize(result.Data, &data); err != nil {
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("Error in deserializing DomainInfo.Data. Error: %v", err),
+	if result.Data != nil {
+		if err := gobDeserialize(*result.Data, &data); err != nil {
+			return nil, &workflow.InternalServiceError{
+				Message: fmt.Sprintf("Error in deserializing DomainInfo.Data. Error: %v", err),
+			}
 		}
 	}
 
 	var clusters []map[string]interface{}
-	if err := gobDeserialize(result.Clusters, &clusters); err != nil {
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("Error in deserializing ReplicationConfig.Clusters. Error: %v", err),
+	if result.Clusters != nil {
+		if err := gobDeserialize(*result.Clusters, &clusters); err != nil {
+			return nil, &workflow.InternalServiceError{
+				Message: fmt.Sprintf("Error in deserializing ReplicationConfig.Clusters. Error: %v", err),
+			}
 		}
 	}
 
@@ -411,12 +415,12 @@ func (m *sqlMetadataManager) UpdateDomain(request *persistence.UpdateDomainReque
 			Status:      request.Info.Status,
 			Description: request.Info.Description,
 			OwnerEmail:  request.Info.OwnerEmail,
-			Data:        data,
+			Data:        &data,
 
 			DomainConfig: *(request.Config),
 
 			ActiveClusterName: request.ReplicationConfig.ActiveClusterName,
-			Clusters:          clusters,
+			Clusters:          &clusters,
 			ConfigVersion:     request.ConfigVersion,
 			FailoverVersion:   request.FailoverVersion,
 		},

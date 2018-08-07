@@ -25,9 +25,13 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/cassandra"
+	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+
+	"github.com/uber/cadence/common/persistence/cassandra"
+
+	sc "github.com/uber/cadence/service"
 )
 
 // Config represents configuration for cadence-matching service
@@ -93,26 +97,46 @@ func (s *Service) Start() {
 
 	base := service.New(p)
 
-	taskPersistence, err := cassandra.NewTaskPersistence(p.CassandraConfig.Hosts,
-		p.CassandraConfig.Port,
-		p.CassandraConfig.User,
-		p.CassandraConfig.Password,
-		p.CassandraConfig.Datacenter,
-		p.CassandraConfig.Keyspace,
-		log)
+	var taskPersistence persistence.TaskManager
+	var err error
+	if sc.UseMysql {
+		taskPersistence, err = sql.NewTaskPersistence("uber",
+			"uber",
+			"localhost",
+			"3306",
+			"catalyst_test")
+	} else {
+		taskPersistence, err = cassandra.NewTaskPersistence(p.CassandraConfig.Hosts,
+			p.CassandraConfig.Port,
+			p.CassandraConfig.User,
+			p.CassandraConfig.Password,
+			p.CassandraConfig.Datacenter,
+			p.CassandraConfig.Keyspace,
+			log)
+	}
+
 	if err != nil {
 		log.Fatalf("failed to create task persistence: %v", err)
 	}
 	taskPersistence = persistence.NewTaskPersistenceClient(taskPersistence, base.GetMetricsClient(), log)
 
-	metadata, err := cassandra.NewMetadataManagerProxy(p.CassandraConfig.Hosts,
-		p.CassandraConfig.Port,
-		p.CassandraConfig.User,
-		p.CassandraConfig.Password,
-		p.CassandraConfig.Datacenter,
-		p.CassandraConfig.Keyspace,
-		p.ClusterMetadata.GetCurrentClusterName(),
-		log)
+	var metadata persistence.MetadataManager
+	if sc.UseMysql {
+		metadata, err = cassandra.NewMetadataManagerProxy(p.CassandraConfig.Hosts,
+			p.CassandraConfig.Port,
+			p.CassandraConfig.User,
+			p.CassandraConfig.Password,
+			p.CassandraConfig.Datacenter,
+			p.CassandraConfig.Keyspace,
+			p.ClusterMetadata.GetCurrentClusterName(),
+			log)
+	} else {
+		metadata, err = sql.NewMetadataPersistence("uber",
+			"uber",
+			"localhost",
+			"3306",
+			"catalyst_test")
+	}
 
 	if err != nil {
 		log.Fatalf("failed to create metadata manager: %v", err)
