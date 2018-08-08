@@ -45,6 +45,7 @@ type (
 
 func TestShardPersistenceSuite(t *testing.T) {
 	s := new(shardPersistenceSuite)
+	s.UseMysql = true
 	suite.Run(t, s)
 }
 
