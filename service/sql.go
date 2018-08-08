@@ -22,16 +22,19 @@ package service
 
 import "os"
 
-var UseMysql = (func() bool {
-	if _, err := os.Stat("/tmp/usemysql"); err == nil {
+func ifFileExists(filename string) bool {
+	if _, err := os.Stat(filename); err == nil {
 		return true
 	}
 	return false
-})()
+}
 
-var UseSqlMetadata = (func() bool {
-	if _, err := os.Stat("/tmp/usesqlmetadata"); err == nil {
-		return true
-	}
-	return false
-})()
+var UseMysql = ifFileExists("/tmp/usemysql")
+
+var UseSqlMetadata = ifFileExists("/tmp/usesqlmetadata")
+
+var UseSqlExecutions = ifFileExists("/tmp/usesqlexecutions")
+
+var UseSqlHistory = ifFileExists("/tmp/usesqlhistory")
+
+var UseSqlShard = ifFileExists("/tmp/usesqlshards")

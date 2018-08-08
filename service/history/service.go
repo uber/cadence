@@ -186,7 +186,7 @@ func (s *Service) Start() {
 
 	var shardMgr persistence.ShardManager
 	var err error
-	if sc.UseMysql {
+	if sc.UseMysql || sc.UseSqlExecutions || sc.UseSqlShard {
 		shardMgr, err = sql.NewShardPersistence("uber",
 			"uber",
 			"localhost",
@@ -250,7 +250,7 @@ func (s *Service) Start() {
 	visibility = persistence.NewVisibilityPersistenceClient(visibility, base.GetMetricsClient(), log)
 
 	var history persistence.HistoryManager
-	if sc.UseMysql {
+	if sc.UseMysql || sc.UseSqlHistory {
 		history, err = sql.NewHistoryPersistence("uber",
 			"uber",
 			"localhost",
@@ -274,7 +274,7 @@ func (s *Service) Start() {
 	history = persistence.NewHistoryPersistenceClient(history, base.GetMetricsClient(), log)
 
 	var execMgrFactory persistence.ExecutionManagerFactory
-	if sc.UseMysql {
+	if sc.UseMysql || sc.UseSqlExecutions {
 		execMgrFactory, err = sql.NewPersistenceClientFactory(p.Logger)
 	} else {
 		execMgrFactory, err = cassandra.NewPersistenceClientFactory(p.CassandraConfig.Hosts,

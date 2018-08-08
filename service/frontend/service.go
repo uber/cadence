@@ -117,7 +117,7 @@ func (s *Service) Start() {
 	visibility = persistence.NewVisibilityPersistenceClient(visibility, base.GetMetricsClient(), log)
 
 	var history persistence.HistoryManager
-	if sc.UseMysql {
+	if sc.UseMysql || sc.UseSqlHistory {
 		history, err = sql.NewHistoryPersistence("uber",
 			"uber",
 			"localhost",
