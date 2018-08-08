@@ -122,6 +122,13 @@ func (s *Service) Start() {
 
 	var metadata persistence.MetadataManager
 	if sc.UseMysql {
+		metadata, err = sql.NewMetadataPersistence("uber",
+			"uber",
+			"localhost",
+			"3306",
+			"catalyst_test")
+
+	} else {
 		metadata, err = cassandra.NewMetadataManagerProxy(p.CassandraConfig.Hosts,
 			p.CassandraConfig.Port,
 			p.CassandraConfig.User,
@@ -130,12 +137,6 @@ func (s *Service) Start() {
 			p.CassandraConfig.Keyspace,
 			p.ClusterMetadata.GetCurrentClusterName(),
 			log)
-	} else {
-		metadata, err = sql.NewMetadataPersistence("uber",
-			"uber",
-			"localhost",
-			"3306",
-			"catalyst_test")
 	}
 
 	if err != nil {

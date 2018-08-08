@@ -116,12 +116,24 @@ func (s *Service) Start() {
 	}
 	visibility = persistence.NewVisibilityPersistenceClient(visibility, base.GetMetricsClient(), log)
 
-	history, err := sql.NewHistoryPersistence("uber",
-		"uber",
-		"localhost",
-		"3306",
-		"catalyst_test",
-		log)
+	var history persistence.HistoryManager
+	if sc.UseMysql {
+		history, err = sql.NewHistoryPersistence("uber",
+			"uber",
+			"localhost",
+			"3306",
+			"catalyst_test",
+			log)
+	} else {
+		history, err = cassandra.NewHistoryPersistence(p.CassandraConfig.Hosts,
+			p.CassandraConfig.Port,
+			p.CassandraConfig.User,
+			p.CassandraConfig.Password,
+			p.CassandraConfig.Datacenter,
+			p.CassandraConfig.Keyspace,
+			s.config.HistoryMgrNumConns(),
+			p.Logger)
+	}
 
 	if err != nil {
 		log.Fatalf("Creating Cassandra history manager persistence failed: %v", err)

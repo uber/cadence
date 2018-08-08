@@ -277,7 +277,16 @@ func (s *Service) Start() {
 	if sc.UseMysql {
 		execMgrFactory, err = sql.NewPersistenceClientFactory(p.Logger)
 	} else {
-		execMgrFactory, err = sql.NewPersistenceClientFactory(p.Logger)
+		execMgrFactory, err = cassandra.NewPersistenceClientFactory(p.CassandraConfig.Hosts,
+			p.CassandraConfig.Port,
+			p.CassandraConfig.User,
+			p.CassandraConfig.Password,
+			p.CassandraConfig.Datacenter,
+			p.CassandraConfig.Keyspace,
+			s.config.ExecutionMgrNumConns(),
+			p.Logger,
+			s.metricsClient,
+		)
 	}
 
 	if err != nil {
