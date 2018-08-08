@@ -127,8 +127,8 @@ func (p *queueProcessorBase) Stop() {
 	logging.LogQueueProcesorShuttingDownEvent(p.logger)
 	defer logging.LogQueueProcesorShutdownEvent(p.logger)
 
-	p.retryTasks()
 	close(p.shutdownCh)
+	p.retryTasks()
 
 	if success := common.AwaitWaitGroup(&p.shutdownWG, time.Minute); !success {
 		logging.LogQueueProcesorShutdownTimedoutEvent(p.logger)

@@ -137,8 +137,8 @@ func (t *timerQueueProcessorBase) Stop() {
 		return
 	}
 
-	t.retryTasks()
 	close(t.shutdownCh)
+	t.retryTasks()
 
 	if success := common.AwaitWaitGroup(&t.shutdownWG, time.Minute); !success {
 		t.logger.Warn("Timer queue processor timedout on shutdown.")
