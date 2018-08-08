@@ -137,6 +137,7 @@ func (t *timerQueueProcessorBase) Stop() {
 		return
 	}
 
+	t.retryTasks()
 	close(t.shutdownCh)
 
 	if success := common.AwaitWaitGroup(&t.shutdownWG, time.Minute); !success {
@@ -356,7 +357,11 @@ func (t *timerQueueProcessorBase) readAndFanoutTimerTasks() (*persistence.TimerT
 
 	for _, task := range timerTasks {
 		// We have a timer to fire.
-		t.tasksCh <- task
+		select {
+		case t.tasksCh <- task:
+		case <-t.shutdownCh:
+			return nil, nil
+		}
 	}
 
 	if !moreTasks {

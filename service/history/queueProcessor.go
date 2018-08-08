@@ -127,6 +127,7 @@ func (p *queueProcessorBase) Stop() {
 	logging.LogQueueProcesorShuttingDownEvent(p.logger)
 	defer logging.LogQueueProcesorShutdownEvent(p.logger)
 
+	p.retryTasks()
 	close(p.shutdownCh)
 
 	if success := common.AwaitWaitGroup(&p.shutdownWG, time.Minute); !success {
@@ -224,8 +225,12 @@ func (p *queueProcessorBase) processBatch(tasksCh chan<- queueTaskInfo) {
 		return
 	}
 
-	for _, tsk := range tasks {
-		tasksCh <- tsk
+	for _, task := range tasks {
+		select {
+		case tasksCh <- task:
+		case <-p.shutdownCh:
+			return
+		}
 	}
 
 	if more {
