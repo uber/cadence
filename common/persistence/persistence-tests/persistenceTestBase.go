@@ -266,7 +266,7 @@ func (s *TestBase) SetupWorkflowStoreWithOptions(options TestBaseOptions, metada
 		if err != nil {
 			log.Fatal(err)
 		}
-		db.MustExec(string(file))
+		db.Exec(string(file))
 
 		db.Close()
 	}

@@ -82,7 +82,7 @@ func (s *Service) Start() {
 
 	var metadataManager persistence.MetadataManager
 	var err error
-	if sc.UseMysql {
+	if sc.UseMysql || sc.UseSqlMetadata {
 		metadataManager, err = sql.NewMetadataPersistence("uber",
 			"uber",
 			"localhost",

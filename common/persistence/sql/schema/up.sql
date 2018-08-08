@@ -309,5 +309,3 @@ CREATE TABLE signals_requested_sets (
 	PRIMARY KEY (shard_id, domain_id, workflow_id, run_id, signal_id)
 );
 
-insert into domains  (id, name, status, description, owner_email, data,  retention_days, emit_metric, config_version, notification_version, failover_notification_version, failover_version, is_global_domain, active_cluster_name, clusters) values
- ("46a263b6-ace2-4b53-9b6c-0b42d6549ac1","samples-domain", 0, "", "", NULL, 0, 0, 0, 0, 0, 0, 0, "", NULL)

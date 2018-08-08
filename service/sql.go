@@ -28,3 +28,10 @@ var UseMysql = (func() bool {
 	}
 	return false
 })()
+
+var UseSqlMetadata = (func() bool {
+	if _, err := os.Stat("/tmp/usesqlmetadata"); err == nil {
+		return true
+	}
+	return false
+})()

@@ -214,7 +214,7 @@ func (s *Service) Start() {
 	s.createAllShards(p.CassandraConfig.NumHistoryShards, shardMgr, log)
 
 	var metadata persistence.MetadataManager
-	if sc.UseMysql {
+	if sc.UseMysql || sc.UseSqlMetadata {
 		metadata, err = sql.NewMetadataPersistence("uber",
 			"uber",
 			"localhost",
