@@ -281,6 +281,7 @@ func (c *shardController) shardManagementPump() {
 				len(changedEvent.HostsRemoved), len(changedEvent.HostsUpdated))
 			c.acquireShards()
 		case shardID := <-c.shardClosedCh:
+			c.logger.Error("OH BOY!")
 			c.metricsClient.IncCounter(metrics.HistoryShardControllerScope, metrics.ShardClosedCounter)
 			logging.LogShardClosedEvent(c.logger, c.host.Identity(), shardID)
 			c.removeEngineForShard(shardID)

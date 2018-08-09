@@ -277,6 +277,7 @@ Create_Loop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
 		currentRangeID := s.getRangeID()
 		request.RangeID = currentRangeID
+
 		response, err := s.executionManager.CreateWorkflowExecution(request)
 		if err != nil {
 			switch err.(type) {
@@ -291,6 +292,8 @@ Create_Loop:
 					if currentRangeID != s.getRangeID() {
 						continue Create_Loop
 					} else {
+						s.logger.Error(fmt.Sprintf("create! shard ownership lost boogaloo current %v get %v", currentRangeID, s.getRangeID()))
+
 						// Shard is stolen, trigger shutdown of history engine
 						s.closeShard()
 					}
@@ -304,6 +307,8 @@ Create_Loop:
 					// a read.
 					err1 := s.renewRangeLocked(false)
 					if err1 != nil {
+						s.logger.Error(fmt.Sprintf("create! unknown error boogaloo %v", err1))
+
 						// At this point we have no choice but to unload the shard, so that it
 						// gets a new RangeID when it's reloaded.
 						s.closeShard()
@@ -387,6 +392,7 @@ Update_Loop:
 					if currentRangeID != s.getRangeID() {
 						continue Update_Loop
 					} else {
+						s.logger.Error(fmt.Sprintf("update! shard ownership lost boogaloo current %v get %v", currentRangeID, s.getRangeID()))
 						// Shard is stolen, trigger shutdown of history engine
 						s.closeShard()
 					}
@@ -400,6 +406,7 @@ Update_Loop:
 					// a read.
 					err1 := s.renewRangeLocked(false)
 					if err1 != nil {
+						s.logger.Error(fmt.Sprintf("update! unknown error boogaloo %v", err1))
 						// At this point we have no choice but to unload the shard, so that it
 						// gets a new RangeID when it's reloaded.
 						s.closeShard()
