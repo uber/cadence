@@ -140,7 +140,7 @@ func (m *sqlShardManager) CreateShard(request *persistence.CreateShardRequest) e
 		ShardID: request.ShardInfo.ShardID,
 	}); err == nil {
 		return &persistence.ShardAlreadyExistError{
-			Msg: fmt.Sprintf("CreateShard operaiton failed. Shard with ID %v already exists."),
+			Msg: fmt.Sprintf("CreateShard operaiton failed. Shard with ID %v already exists.", request.ShardInfo.ShardID),
 		}
 	}
 

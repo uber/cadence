@@ -198,10 +198,10 @@ CREATE TABLE activity_info_maps (
 	schedule_id BIGINT NOT NULL, -- the key.
 -- fields of activity_info type follow
 version                   BIGINT NOT NULL,
-scheduled_event           BLOB NOT NULL,
+scheduled_event           BLOB,
 scheduled_time            TIMESTAMP NOT NULL,
 started_id                BIGINT NOT NULL,
-started_event             BLOB NOT NULL,
+started_event             BLOB,
 started_time              TIMESTAMP NOT NULL,
 activity_id               VARCHAR(255) NOT NULL,
 request_id                VARCHAR(255) NOT NULL,

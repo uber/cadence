@@ -171,10 +171,10 @@ type (
 	activityInfoMapsRow struct {
 		activityInfoMapsPrimaryKey
 		Version                  int64     `db:"version"`
-		ScheduledEvent           []byte    `db:"scheduled_event"`
+		ScheduledEvent           *[]byte   `db:"scheduled_event"`
 		ScheduledTime            time.Time `db:"scheduled_time"`
 		StartedID                int64     `db:"started_id"`
-		StartedEvent             []byte    `db:"started_event"`
+		StartedEvent             *[]byte   `db:"started_event"`
 		StartedTime              time.Time `db:"started_time"`
 		ActivityID               string    `db:"activity_id"`
 		RequestID                string    `db:"request_id"`
@@ -220,10 +220,10 @@ func updateActivityInfos(tx *sqlx.Tx,
 					ScheduleID: v.ScheduleID,
 				},
 				Version:                  v.Version,
-				ScheduledEvent:           v.ScheduledEvent,
+				ScheduledEvent:           takeAddressIfNotNil(v.ScheduledEvent),
 				ScheduledTime:            v.ScheduledTime,
 				StartedID:                v.StartedID,
-				StartedEvent:             v.StartedEvent,
+				StartedEvent:             takeAddressIfNotNil(v.StartedEvent),
 				StartedTime:              v.StartedTime,
 				ActivityID:               v.ActivityID,
 				RequestID:                v.RequestID,
@@ -268,22 +268,30 @@ func updateActivityInfos(tx *sqlx.Tx,
 			}
 		}
 
-		if result, err := tx.Exec(query, args...); err != nil {
+		if _, err := tx.Exec(query, args...); err != nil {
 			return &workflow.InternalServiceError{
 				Message: fmt.Sprintf("Failed to update activity info. Failed to execute update query. Error: %v", err),
 			}
 		} else {
-			rowsAffected, err := result.RowsAffected()
-			if err != nil {
-				return &workflow.InternalServiceError{
-					Message: fmt.Sprintf("Failed to update activity info. Failed to verify number of rows updated. Error: %v", err),
-				}
-			}
-			if int(rowsAffected) != len(activityInfos) {
-				return &workflow.InternalServiceError{
-					Message: fmt.Sprintf("Failed to update activity info. Touched %v rows instead of %v", len(activityInfos), rowsAffected),
-				}
-			}
+			// There is no sense in checking rowsAffected == len(activityInfo) for a REPLACE query, because
+			// it is 1 for each inserted row and 2 for each replaced row
+
+			//rowsAffected, err := result.RowsAffected()
+			//if err != nil {
+			//	return &workflow.InternalServiceError{
+			//		Message: fmt.Sprintf("Failed to update activity info. Failed to verify number of rows updated. Error: %v", err),
+			//	}
+			//}
+			//if rowsAffected == 0 {
+			//	return &workflow.InternalServiceError{
+			//		Message: fmt.Sprintf("Failed to update activity info. Touched 0 rows. Error: %v", err),
+			//	}
+			//}
+			//if int(rowsAffected) != len(activityInfos) {
+			//	return &workflow.InternalServiceError{
+			//		Message: fmt.Sprintf("Failed to update activity info. Touched %v rows instead of %v", rowsAffected, len(activityInfos)),
+			//	}
+			//}
 		}
 
 	}
@@ -320,7 +328,7 @@ func updateActivityInfos(tx *sqlx.Tx,
 			}
 			if int(rowsAffected) != len(deleteInfos) {
 				return &workflow.InternalServiceError{
-					Message: fmt.Sprintf("Failed to update activity info. Deleted %v rows instead of %v", len(activityInfos), rowsAffected),
+					Message: fmt.Sprintf("Failed to update activity info. Deleted %v rows instead of %v", rowsAffected, len(activityInfos)),
 				}
 			}
 		}
@@ -352,10 +360,10 @@ func getActivityInfoMap(tx *sqlx.Tx,
 		ret[v.ScheduleID] = &persistence.ActivityInfo{
 			Version:                  v.Version,
 			ScheduleID:               v.ScheduleID,
-			ScheduledEvent:           v.ScheduledEvent,
+			ScheduledEvent:           dereferenceIfNotNil(v.ScheduledEvent),
 			ScheduledTime:            v.ScheduledTime,
 			StartedID:                v.StartedID,
-			StartedEvent:             v.StartedEvent,
+			StartedEvent:             dereferenceIfNotNil(v.StartedEvent),
 			StartedTime:              v.StartedTime,
 			ActivityID:               v.ActivityID,
 			RequestID:                v.RequestID,
@@ -476,21 +484,9 @@ func updateTimerInfos(tx *sqlx.Tx,
 			}
 		}
 
-		if result, err := tx.Exec(query, args...); err != nil {
+		if _, err := tx.Exec(query, args...); err != nil {
 			return &workflow.InternalServiceError{
 				Message: fmt.Sprintf("Failed to update timer info. Failed to execute update query. Error: %v", err),
-			}
-		} else {
-			rowsAffected, err := result.RowsAffected()
-			if err != nil {
-				return &workflow.InternalServiceError{
-					Message: fmt.Sprintf("Failed to update timer info. Failed to verify number of rows updated. Error: %v", err),
-				}
-			}
-			if int(rowsAffected) != len(timerInfos) {
-				return &workflow.InternalServiceError{
-					Message: fmt.Sprintf("Failed to update timer info. Touched %v rows instead of %v", len(timerInfos), rowsAffected),
-				}
 			}
 		}
 
@@ -527,7 +523,7 @@ func updateTimerInfos(tx *sqlx.Tx,
 			}
 			if int(rowsAffected) != len(deleteInfos) {
 				return &workflow.InternalServiceError{
-					Message: fmt.Sprintf("Failed to update timer info. Deleted %v rows instead of %v", len(timerInfos), rowsAffected),
+					Message: fmt.Sprintf("Failed to update timer info. Deleted %v rows instead of %v", rowsAffected, len(timerInfos)),
 				}
 			}
 		}
@@ -651,27 +647,15 @@ func updateChildExecutionInfos(tx *sqlx.Tx,
 			}
 		}
 
-		if result, err := tx.Exec(query, args...); err != nil {
+		if _, err := tx.Exec(query, args...); err != nil {
 			return &workflow.InternalServiceError{
 				Message: fmt.Sprintf("Failed to update child execution info. Failed to execute update query. Error: %v", err),
-			}
-		} else {
-			rowsAffected, err := result.RowsAffected()
-			if err != nil {
-				return &workflow.InternalServiceError{
-					Message: fmt.Sprintf("Failed to update child execution info. Failed to verify number of rows updated. Error: %v", err),
-				}
-			}
-			if int(rowsAffected) != len(childExecutionInfos) {
-				return &workflow.InternalServiceError{
-					Message: fmt.Sprintf("Failed to update child execution info. Touched %v rows instead of %v", len(childExecutionInfos), rowsAffected),
-				}
 			}
 		}
 
 	}
 	if deleteInfos != nil {
-		if result, err := tx.NamedExec(deleteKeyInChildExecutionInfoMapSQLQuery, &childExecutionInfoMapsPrimaryKey{
+		if _, err := tx.NamedExec(deleteKeyInChildExecutionInfoMapSQLQuery, &childExecutionInfoMapsPrimaryKey{
 			ShardID:     int64(shardID),
 			DomainID:    domainID,
 			WorkflowID:  workflowID,
@@ -680,18 +664,6 @@ func updateChildExecutionInfos(tx *sqlx.Tx,
 		}); err != nil {
 			return &workflow.InternalServiceError{
 				Message: fmt.Sprintf("Failed to update child execution info. Failed to execute delete query. Error: %v", err),
-			}
-		} else {
-			rowsAffected, err := result.RowsAffected()
-			if err != nil {
-				return &workflow.InternalServiceError{
-					Message: fmt.Sprintf("Failed to update child execution info. Failed to verify number of rows deleted. Error: %v", err),
-				}
-			}
-			if int(rowsAffected) != 1 {
-				return &workflow.InternalServiceError{
-					Message: fmt.Sprintf("Failed to update child execution info. Deleted %v rows instead of 1", rowsAffected),
-				}
 			}
 		}
 	}
@@ -807,21 +779,9 @@ func updateRequestCancelInfos(tx *sqlx.Tx,
 			}
 		}
 
-		if result, err := tx.Exec(query, args...); err != nil {
+		if _, err := tx.Exec(query, args...); err != nil {
 			return &workflow.InternalServiceError{
 				Message: fmt.Sprintf("Failed to update request cancel info. Failed to execute update query. Error: %v", err),
-			}
-		} else {
-			rowsAffected, err := result.RowsAffected()
-			if err != nil {
-				return &workflow.InternalServiceError{
-					Message: fmt.Sprintf("Failed to update request cancel info. Failed to verify number of rows updated. Error: %v", err),
-				}
-			}
-			if int(rowsAffected) != len(requestCancelInfos) {
-				return &workflow.InternalServiceError{
-					Message: fmt.Sprintf("Failed to update request cancel info. Touched %v rows instead of %v", len(requestCancelInfos), rowsAffected),
-				}
 			}
 		}
 
@@ -968,21 +928,9 @@ func updateSignalInfos(tx *sqlx.Tx,
 			}
 		}
 
-		if result, err := tx.Exec(query, args...); err != nil {
+		if _, err := tx.Exec(query, args...); err != nil {
 			return &workflow.InternalServiceError{
 				Message: fmt.Sprintf("Failed to update signal info. Failed to execute update query. Error: %v", err),
-			}
-		} else {
-			rowsAffected, err := result.RowsAffected()
-			if err != nil {
-				return &workflow.InternalServiceError{
-					Message: fmt.Sprintf("Failed to update signal info. Failed to verify number of rows updated. Error: %v", err),
-				}
-			}
-			if int(rowsAffected) != len(signalInfos) {
-				return &workflow.InternalServiceError{
-					Message: fmt.Sprintf("Failed to update signal info. Touched %v rows instead of %v", len(signalInfos), rowsAffected),
-				}
 			}
 		}
 
@@ -1137,21 +1085,9 @@ func updateBufferedReplicationTasks(tx *sqlx.Tx,
 			}
 		}
 
-		if result, err := tx.NamedExec(setKeyInBufferedReplicationTasksMapSQLQuery, arg); err != nil {
+		if _, err := tx.NamedExec(setKeyInBufferedReplicationTasksMapSQLQuery, arg); err != nil {
 			return &workflow.InternalServiceError{
 				Message: fmt.Sprintf("Failed to update buffered replication tasks. Failed to execute update query. Error: %v", err),
-			}
-		} else {
-			rowsAffected, err := result.RowsAffected()
-			if err != nil {
-				return &workflow.InternalServiceError{
-					Message: fmt.Sprintf("Failed to update buffered replication tasks. Failed to verify number of rows updated. Error: %v", err),
-				}
-			}
-			if int(rowsAffected) != 1 {
-				return &workflow.InternalServiceError{
-					Message: fmt.Sprintf("Failed to update buffered replication tasks. Touched %v rows instead of 1", rowsAffected),
-				}
 			}
 		}
 
