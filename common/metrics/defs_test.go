@@ -21,7 +21,6 @@
 package metrics
 
 import (
-	"fmt"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -60,12 +59,8 @@ func TestMetricDefsMapped(t *testing.T) {
 		require.True(t, ok)
 		require.NotEmpty(t, key)
 	}
-	fmt.Println(TaskRequests)
 	for i := TaskRequests; i < NumHistoryMetrics; i++ {
 		key, ok := MetricDefs[History][i]
-		if !ok {
-			fmt.Println(i)
-		}
 		require.True(t, ok)
 		require.NotEmpty(t, key)
 	}
