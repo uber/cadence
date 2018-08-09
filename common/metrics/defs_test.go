@@ -21,11 +21,12 @@
 package metrics
 
 import (
-	"testing"
+	"fmt"
 	"github.com/stretchr/testify/require"
+	"testing"
 )
 
-func TestScopeDefMapped(t *testing.T) {
+func TestScopeDefsMapped(t *testing.T) {
 	for i := PersistenceCreateShardScope; i < NumCommonScopes; i++ {
 		key, ok := ScopeDefs[Common][i]
 		require.True(t, ok)
@@ -48,6 +49,33 @@ func TestScopeDefMapped(t *testing.T) {
 	}
 	for i := ReplicatorScope; i < NumWorkerScopes; i++ {
 		key, ok := ScopeDefs[Worker][i]
+		require.True(t, ok)
+		require.NotEmpty(t, key)
+	}
+}
+
+func TestMetricDefsMapped(t *testing.T) {
+	for i := CadenceRequests; i < NumCommonMetrics; i++ {
+		key, ok := MetricDefs[Common][i]
+		require.True(t, ok)
+		require.NotEmpty(t, key)
+	}
+	fmt.Println(TaskRequests)
+	for i := TaskRequests; i < NumHistoryMetrics; i++ {
+		key, ok := MetricDefs[History][i]
+		if !ok {
+			fmt.Println(i)
+		}
+		require.True(t, ok)
+		require.NotEmpty(t, key)
+	}
+	for i := PollSuccessCounter; i < NumMatchingMetrics; i++ {
+		key, ok := MetricDefs[Matching][i]
+		require.True(t, ok)
+		require.NotEmpty(t, key)
+	}
+	for i := ReplicatorMessages; i < NumWorkerMetrics; i++ {
+		key, ok := MetricDefs[Worker][i]
 		require.True(t, ok)
 		require.NotEmpty(t, key)
 	}
