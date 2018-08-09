@@ -1388,10 +1388,6 @@ Update_History_Loop:
 			return nil, err3
 		}
 
-		for _, t := range timerTasks {
-			e.logger.Error(fmt.Sprintf(" im a task %v my type is %v it should be %v", t, t.GetType(), persistence.TaskTypeWorkflowTimeout))
-		}
-
 		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict then reload
 		// the history and try the operation again.
 		var updateErr error

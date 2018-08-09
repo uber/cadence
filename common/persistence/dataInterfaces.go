@@ -26,8 +26,6 @@ import (
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"reflect"
-	"runtime/debug"
 )
 
 // TODO remove this table version
@@ -1507,10 +1505,6 @@ func GetVisibilityTSFrom(task Task) (time.Time, error) {
 		if t, ok := task.(*DecisionTimeoutTask); ok {
 			return t.VisibilityTimestamp, nil
 		}
-
-		debug.PrintStack()
-		panic(fmt.Sprintf(" im a task %v my type is %v it should be %v. type %v", task, task.GetType(), TaskTypeWorkflowTimeout, reflect.TypeOf(task)))
-
 		return time.Time{}, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("Failed to cast %v to DecisionTimeoutTask", task),
 		}
