@@ -164,15 +164,22 @@ func (p *replicationTaskProcessor) processorPump() {
 
 	select {
 	case <-p.shutdownCh:
-		//wait for process function to finish
-		time.Sleep(time.Second * 2)
+		// To mitigate message loss issue, wait for all messageProcessLoop to finish before ask consumer to stop
+		// TODO https://github.com/bsm/sarama-cluster/issues/255
+		// Remove this line when we confirmed this issue is fixed
+		success := false
+		for i := 0; i < 30; i++ {
+			p.logger.Info("Replication task processor pump shutting down...")
+			if success = common.AwaitWaitGroup(&workerWG, 1*time.Second); success {
+				p.logger.Info("All messageProcessLoop are shutdown.")
+				break
+			}
+		}
+		if !success {
+			p.logger.Error("failed to wait for all messageProcessLoop being down, we may lose messages...")
+		}
 		// Processor is shutting down, close the underlying consumer
 		p.consumer.Stop()
-	}
-
-	p.logger.Info("Replication task processor pump shutting down.")
-	if success := common.AwaitWaitGroup(&workerWG, 10*time.Second); !success {
-		p.logger.Warn("Replication task processor timed out on worker shutdown.")
 	}
 }
 
