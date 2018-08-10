@@ -985,7 +985,7 @@ func getCurrentExecutionIfExists(tx *sqlx.Tx, shardID int64, domainID string, wo
 }
 
 func createExecution(tx *sqlx.Tx, request *persistence.CreateWorkflowExecutionRequest, shardID int, nowTimestamp time.Time) error {
-	_, err := tx.NamedExec(createExecutionWithNoParentSQLQuery, &executionRow{
+	args := &executionRow{
 		ShardID:                    int64(shardID),
 		DomainID:                   request.DomainID,
 		WorkflowID:                 *request.Execution.WorkflowId,
