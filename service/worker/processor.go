@@ -188,9 +188,12 @@ func (p *replicationTaskProcessor) messageProcessLoop(workerWG *sync.WaitGroup, 
 
 	for {
 		select {
+		case <-p.shutdownCh:
+			p.logger.Info("Worker for replication task processor shutting down by shutdownCh.")
+			return
 		case msg, ok := <-p.consumer.Messages():
 			if !ok {
-				p.logger.Info("Worker for replication task processor shutting down.")
+				p.logger.Info("Worker for replication task processor shutting down by message channel.")
 				return // channel closed
 			}
 			p.processWithRetry(msg, workerID)
