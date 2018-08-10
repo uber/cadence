@@ -164,6 +164,8 @@ func (p *replicationTaskProcessor) processorPump() {
 
 	select {
 	case <-p.shutdownCh:
+		//wait for process function to finish
+		time.Sleep(time.Second * 2)
 		// Processor is shutting down, close the underlying consumer
 		p.consumer.Stop()
 	}
