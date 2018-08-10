@@ -496,6 +496,7 @@ func (s *TestBase) ContinueAsNewExecution(updatedInfo *persistence.WorkflowExecu
 		ScheduleID: int64(decisionScheduleID),
 	}
 
+	// TODO Add a test that continues as new with a transfer task/a timer task
 	return s.WorkflowMgr.UpdateWorkflowExecution(&persistence.UpdateWorkflowExecutionRequest{
 		ExecutionInfo:       updatedInfo,
 		TransferTasks:       []persistence.Task{newdecisionTask},

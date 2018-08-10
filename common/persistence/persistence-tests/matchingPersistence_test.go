@@ -1055,6 +1055,8 @@ func (s *matchingPersistenceSuite) TestTransferTasks() {
 }
 
 func (s *matchingPersistenceSuite) TestTimerTasks() {
+	// TODO Test CreateWorkflowExecution with a timer task (as opposed to update)
+
 	domainID := "8bfb47be-5b57-4d66-9109-5fb35e20b1d7"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("get-timer-tasks-test"),
@@ -1693,6 +1695,7 @@ func (s *matchingPersistenceSuite) TestContinueAsNew() {
 		RunId:      common.StringPtr("64c7e15a-3fd7-4182-9c6f-6f25a4fa2614"),
 	}
 	err2 := s.ContinueAsNewExecution(continueAsNewInfo, info0.NextEventID, newWorkflowExecution, int64(3), int64(2))
+
 	s.Nil(err2, "No error expected.")
 
 	prevExecutionState, err3 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
@@ -1709,7 +1712,7 @@ func (s *matchingPersistenceSuite) TestContinueAsNew() {
 	s.Equal(int64(3), newExecutionInfo.NextEventID)
 	s.Equal(common.EmptyEventID, newExecutionInfo.LastProcessedEvent)
 	s.Equal(int64(2), newExecutionInfo.DecisionScheduleID)
-
+	
 	newRunID, err5 := s.GetCurrentWorkflowRunID(domainID, *workflowExecution.WorkflowId)
 	s.Nil(err5)
 	s.Equal(*newWorkflowExecution.RunId, newRunID)
