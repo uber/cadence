@@ -75,6 +75,10 @@ type (
 		State                        int64     `db:"state"`
 		CloseStatus                  int64     `db:"close_status"`
 		StartVersion                 *int64    `db:"start_version"`
+		CurrentVersion               *int64    `db:"current_version"`
+		LastWriteVersion             *int64    `db:"last_write_version"`
+		LastWriteEventID             *int64    `db:"last_write_event_id"`
+		LastReplicationInfo          *[]byte   `db:"last_replication_info"`
 		LastFirstEventID             int64     `db:"last_first_event_id"`
 		NextEventID                  int64     `db:"next_event_id"`
 		LastProcessedEvent           int64     `db:"last_processed_event"`
@@ -150,7 +154,6 @@ workflow_timeout_seconds,
 decision_task_timeout_minutes,
 state,
 close_status,
-start_version,
 last_first_event_id,
 next_event_id,
 last_processed_event,
@@ -179,7 +182,6 @@ client_impl`
 :decision_task_timeout_minutes,
 :state,
 :close_status,
-:start_version,
 :last_first_event_id,
 :next_event_id,
 :last_processed_event,
@@ -221,20 +223,24 @@ cancel_request_id`
 	executionsCancelColumnsTags = `:cancel_requested,
 :cancel_request_id`
 
-	executionsReplicationStateColumns     = `start_version`
-	executionsReplicationStateColumnsTags = `:start_version`
+	executionsReplicationStateColumns     = `start_version, current_version, last_write_version, last_write_event_id, last_replication_info`
+	executionsReplicationStateColumnsTags = `:start_version, :current_version, :last_write_version, :last_write_event_id, :last_replication_info`
 
 	createExecutionWithNoParentSQLQuery = `INSERT INTO executions 
 (` + executionsNonNullableColumns +
 		`,
 execution_context,
 cancel_requested,
-cancel_request_id)
+cancel_request_id,` +
+		executionsReplicationStateColumns +
+		`)
 VALUES
 (` + executionsNonNullableColumnsTags + `,
 :execution_context,
 :cancel_requested,
-:cancel_request_id)
+:cancel_request_id,` +
+		executionsReplicationStateColumnsTags +
+		`)
 `
 
 	updateExecutionSQLQuery = `UPDATE executions SET
@@ -272,7 +278,12 @@ sticky_task_list = :sticky_task_list,
 sticky_schedule_to_start_timeout = :sticky_schedule_to_start_timeout,
 client_library_version = :client_library_version,
 client_feature_version = :client_feature_version,
-client_impl = :client_impl
+client_impl = :client_impl,
+start_version = :start_version,
+current_version = :current_version,
+last_write_version = :last_write_version,
+last_write_event_id = :last_write_event_id,
+last_replication_info = :last_replication_info
 WHERE
 shard_id = :shard_id AND
 domain_id = :domain_id AND
@@ -444,10 +455,10 @@ func (m *sqlMatchingManager) Close() {
 
 func (m *sqlMatchingManager) CreateWorkflowExecution(request *persistence.CreateWorkflowExecutionRequest) (*persistence.CreateWorkflowExecutionResponse, error) {
 	/*
-		make a transaction
-		check for a parent
-		check for continueasnew, update the curret exec or create one for this new workflow
-		create a workflow with/without cross dc
+		(x) make a transaction
+		( ) check for a parent
+		(x) check for continueasnew, update the curret exec or create one for this new workflow
+		(x) create a workflow with/without cross dc
 	*/
 
 	tx, err := m.db.Beginx()
@@ -586,9 +597,25 @@ func (m *sqlMatchingManager) GetWorkflowExecution(request *persistence.GetWorkfl
 		state.ExecutionInfo.ExecutionContext = *execution.ExecutionContext
 	}
 
+	state.ReplicationState = &persistence.ReplicationState{}
 	if execution.StartVersion != nil {
-		state.ReplicationState = &persistence.ReplicationState{
-			StartVersion: *execution.StartVersion,
+		state.ReplicationState.StartVersion = *execution.StartVersion
+	}
+	if execution.CurrentVersion != nil {
+		state.ReplicationState.CurrentVersion = *execution.CurrentVersion
+	}
+	if execution.LastWriteVersion != nil {
+		state.ReplicationState.LastWriteVersion = *execution.LastWriteVersion
+	}
+	if execution.LastWriteEventID != nil {
+		state.ReplicationState.LastWriteEventID = *execution.LastWriteEventID
+	}
+	if execution.LastReplicationInfo != nil {
+		state.ReplicationState.LastReplicationInfo = make(map[string]*persistence.ReplicationInfo)
+		if err := gobDeserialize(*execution.LastReplicationInfo, &state.ReplicationState.LastReplicationInfo); err != nil {
+			return nil, &workflow.InternalServiceError{
+				Message: fmt.Sprintf("GetWorkflowExecution failed. Failed to deserialize LastReplicationInfo. Error: %v", err),
+			}
 		}
 	}
 
@@ -725,6 +752,17 @@ func (m *sqlMatchingManager) UpdateWorkflowExecution(request *persistence.Update
 
 	if request.ReplicationState != nil {
 		args.StartVersion = &request.ReplicationState.StartVersion
+		args.CurrentVersion = &request.ReplicationState.CurrentVersion
+		args.LastWriteVersion = &request.ReplicationState.LastWriteVersion
+		args.LastWriteEventID = &request.ReplicationState.LastWriteEventID
+
+		b, err := gobSerialize(&request.ReplicationState.LastReplicationInfo)
+		if err != nil {
+			return &workflow.InternalServiceError{
+				Message: fmt.Sprintf("UpdateWorkflowExecution operation failed. Failed to serialize LastReplicationInfo. Error: %v", err),
+			}
+		}
+		args.LastReplicationInfo = &b
 	}
 
 	if request.ExecutionInfo.ParentDomainID != "" {
@@ -975,7 +1013,23 @@ func createExecution(tx *sqlx.Tx, request *persistence.CreateWorkflowExecutionRe
 		ClientLibraryVersion:         "",
 		ClientFeatureVersion:         "",
 		ClientImpl:                   "",
-	})
+	}
+	if request.ReplicationState != nil {
+		args.StartVersion = &request.ReplicationState.StartVersion
+		args.CurrentVersion = &request.ReplicationState.CurrentVersion
+		args.LastWriteVersion = &request.ReplicationState.LastWriteVersion
+		args.LastWriteEventID = &request.ReplicationState.LastWriteEventID
+
+		lastReplicationInfo, err := gobSerialize(&request.ReplicationState.LastReplicationInfo)
+		if err != nil {
+			return &workflow.InternalServiceError{
+				Message: fmt.Sprintf("CreateWorkflowExecution operation failed. Failed to serialize LastReplicationInfo. Error: %v", err),
+			}
+		}
+		args.LastReplicationInfo = &lastReplicationInfo
+	}
+
+	_, err := tx.NamedExec(createExecutionWithNoParentSQLQuery, args)
 	if err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("CreateWorkflowExecution operation failed. Failed to insert into executions table. Error: %v", err),

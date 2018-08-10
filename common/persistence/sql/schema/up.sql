@@ -76,8 +76,13 @@ CREATE TABLE executions(
 	execution_context BLOB, -- nullable because test passes in a null blob.
 	state INT NOT NULL,
 	close_status INT NOT NULL,
+	-- replication_state members
   start_version BIGINT,
-  -- other replication_state members omitted due to lack of use
+  current_version BIGINT,
+  last_write_version BIGINT,
+  last_write_event_id BIGINT,
+  last_replication_info BLOB,
+  -- replication_state members end
 	last_first_event_id BIGINT NOT NULL,
 	next_event_id BIGINT NOT NULL, -- very important! for conditional updates of all the dependent tables.
 	last_processed_event BIGINT NOT NULL,
