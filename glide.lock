@@ -1,5 +1,5 @@
-hash: c2b9bc6e36071afd27ff7418eccb00f413bb96516466463bd5cc75aead445ef6
-updated: 2018-07-23T13:25:00.203910625-07:00
+hash: f67f28c20ef2c7a5b46dc18925e9d791bc0d479540adbd3021593317aced56ed
+updated: 2018-08-10T15:40:40.102840248-07:00
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -45,13 +45,20 @@ imports:
 - name: github.com/fatih/color
   version: 507f6050b8568533fb3f5504de8e5205fa62a114
 - name: github.com/go-sql-driver/mysql
-  version: e333f778f290654339e13bbc63d2dd4e8de23b67
+  version: 99ff426eb706cffe92ff3d058e168b278cabf7c7
 - name: github.com/gocql/gocql
   version: 56a164ee9f3135e9cfe725a6d25939f24cb2d044
   subpackages:
   - internal/lru
   - internal/murmur
   - internal/streams
+- name: github.com/golang-migrate/migrate
+  version: 4092e160a4d29184b737498837600ddc919b8b8d
+  subpackages:
+  - database
+  - database/mysql
+  - source
+  - source/file
 - name: github.com/golang/mock
   version: c34cdb4725f4c3844d095133c6e40e448b86589b
   subpackages:
@@ -192,7 +199,7 @@ imports:
 - name: go.uber.org/atomic
   version: 1ea20fb1cbb1cc08cbd0d913a96dead89aa18289
 - name: go.uber.org/cadence
-  version: 80466fafbf8535a9855b7940525dd2bf45f3b283
+  version: 4be6b261f85aa232e8d1a22b520929a1c0c67a16
   subpackages:
   - .gen/go/cadence
   - .gen/go/cadence/workflowserviceclient
@@ -228,7 +235,7 @@ imports:
   - version
   - wire
 - name: go.uber.org/yarpc
-  version: fc2d75d3b5e30fc81e5dc2375667bbd6333b0099
+  version: 57163f1e97e7bf5573c50329be0fc302e7b145ca
   subpackages:
   - api/backoff
   - api/encoding
@@ -265,7 +272,7 @@ imports:
   - yarpcconfig
   - yarpcerrors
 - name: go.uber.org/zap
-  version: 4d45f9617f7d90f7a663ff21c7a4321dbe78098b
+  version: ff33455a0e382e8a81d14dd7c922020b6b5e7982
   subpackages:
   - buffer
   - internal/bufferpool
@@ -273,7 +280,7 @@ imports:
   - internal/exit
   - zapcore
 - name: golang.org/x/net
-  version: a680a1efc54dd51c040b3b5ce4939ea3cf2ea0d1
+  version: f9ce57c11b242f0f1599cf25c89d8cb02c45295a
   repo: https://github.com/golang/net
   subpackages:
   - bpf
