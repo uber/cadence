@@ -21,9 +21,7 @@
 package persistencetests
 
 import (
-	gosql "database/sql"
 	"fmt"
-	"io/ioutil"
 	"math"
 	"math/rand"
 	"strings"
@@ -40,11 +38,10 @@ import (
 	"github.com/uber-common/bark"
 
 	"github.com/gocql/gocql"
-	"github.com/hmgle/sqlx"
 	"github.com/pborman/uuid"
 	log "github.com/sirupsen/logrus"
 	_ "github.com/golang-migrate/migrate/source/file"
-	"github.com/golang-migrate/migrate/database/mysql"
+	_ "github.com/golang-migrate/migrate/database/mysql"
 	"github.com/golang-migrate/migrate"
 )
 
@@ -245,19 +242,16 @@ func (s *TestBase) SetupWorkflowStoreWithOptions(options TestBaseOptions, metada
 
 		s.ClusterMetadata = cluster.GetTestClusterMetadata(false, false)
 
-		db, err := sqlx.Connect("mysql",
-			fmt.Sprintf(sql.Dsn, "uber", "uber", "localhost", "3306", "catalyst_test"))
+		m, err := migrate.New(
+			"file://../sql/schema",
+			"mysql://" + fmt.Sprintf(sql.Dsn, "uber", "uber", "localhost", "3306", "catalyst_test"),
+		)
 		if err != nil {
 			log.Fatal(err)
 		}
-
-		file, err := ioutil.ReadFile("../sql/schema/1_base.up.sql")
-		if err != nil {
+		if err := m.Up(); err != nil {
 			log.Fatal(err)
 		}
-		db.MustExec(string(file))
-
-		db.Close()
 	}
 	s.TaskIDGenerator = &testTransferTaskIDGenerator{}
 
@@ -1106,22 +1100,16 @@ func (s *TestBase) SetupWorkflowStore() {
 // TearDownWorkflowStore to cleanup
 func (s *TestBase) TearDownWorkflowStore() {
 	if s.UseMysql {
-		db, err := gosql.Open("mysql", "mysql://" + fmt.Sprintf(sql.Dsn, "uber", "uber", "localhost", "3306", "catalyst_test"))
+		m, err := migrate.New(
+			"file://../sql/schema",
+			"mysql://" + fmt.Sprintf(sql.Dsn, "uber", "uber", "localhost", "3306", "catalyst_test"),
+		)
 		if err != nil {
-			log.Info("doops")
 			log.Fatal(err)
 		}
-		driver, err := mysql.WithInstance(db, &mysql.Config{})
-		if err != nil {
-			log.Info("oops")
+		if err := m.Down(); err != nil {
 			log.Fatal(err)
 		}
-		m, err := migrate.NewWithDatabaseInstance("file://../sql/schema", "catalyst_test", driver)
-		if err != nil {
-			log.Info("qoops")
-			log.Fatal(err)
-		}
-		m.Down()
 	} else {
 		s.CassandraTestCluster.tearDownTestCluster()
 	}
