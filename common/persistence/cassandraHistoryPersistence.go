@@ -156,12 +156,9 @@ func (h *cassandraHistoryPersistence) AppendHistoryEvents(request *AppendHistory
 func (h *cassandraHistoryPersistence) GetWorkflowExecutionHistory(request *GetWorkflowExecutionHistoryRequest) (
 	*GetWorkflowExecutionHistoryResponse, error) {
 	execution := request.Execution
-	token, err := h.deserializeToken(request.NextPageToken)
+	token, err := h.deserializeToken(request)
 	if err != nil {
 		return nil, err
-	}
-	if len(request.NextPageToken) == 0 {
-		token.LastEventID = request.FirstEventID - 1
 	}
 	query := h.session.Query(templateGetWorkflowExecutionHistory,
 		request.DomainID,
@@ -291,20 +288,22 @@ func (h *cassandraHistoryPersistence) serializeToken(token *historyToken) ([]byt
 	return data, nil
 }
 
-func (h *cassandraHistoryPersistence) deserializeToken(data []byte) (*historyToken, error) {
+func (h *cassandraHistoryPersistence) deserializeToken(request *GetWorkflowExecutionHistoryRequest) (*historyToken, error) {
 	token := &historyToken{
 		LastEventBatchVersion: common.EmptyVersion,
+		LastEventID:           request.FirstEventID - 1,
 	}
-	if len(data) == 0 {
+
+	if len(request.NextPageToken) == 0 {
 		return token, nil
 	}
 
-	err := json.Unmarshal(data, token)
+	err := json.Unmarshal(request.NextPageToken, token)
 	if err == nil {
 		return token, nil
 	}
 
 	// for backward compatible reason, the input data can be raw Cassandra token
-	token.Data = data
+	token.Data = request.NextPageToken
 	return token, nil
 }

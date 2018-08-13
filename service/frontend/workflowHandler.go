@@ -1458,7 +1458,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	token := &getHistoryContinuationToken{}
 
 	var runID string
-	var lastFirstEventID int64
+	lastFirstEventID := common.FirstEventID
 	var nextEventID int64
 	var isWorkflowRunning bool
 
