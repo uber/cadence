@@ -1,5 +1,5 @@
 hash: f67f28c20ef2c7a5b46dc18925e9d791bc0d479540adbd3021593317aced56ed
-updated: 2018-08-10T15:40:40.102840248-07:00
+updated: 2018-08-15T22:31:26.002692338-07:00
 imports:
 - name: github.com/apache/thrift
   version: 53dd39833a08ce33582e5ff31fa18bb4735d6731
@@ -53,7 +53,7 @@ imports:
   - internal/murmur
   - internal/streams
 - name: github.com/golang-migrate/migrate
-  version: 4092e160a4d29184b737498837600ddc919b8b8d
+  version: beb09d85faffcee526b16ed19dea30c1dd843578
   subpackages:
   - database
   - database/mysql
@@ -199,7 +199,7 @@ imports:
 - name: go.uber.org/atomic
   version: 1ea20fb1cbb1cc08cbd0d913a96dead89aa18289
 - name: go.uber.org/cadence
-  version: 4be6b261f85aa232e8d1a22b520929a1c0c67a16
+  version: fd0b3dabb22f30f67c830d04e7b6389bf5789b02
   subpackages:
   - .gen/go/cadence
   - .gen/go/cadence/workflowserviceclient

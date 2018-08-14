@@ -191,5 +191,5 @@ start-cdc-active: bins
 start-cdc-standby: bins
 	./cadence-server --zone standby start
 
-install-sql-schema: bins
-	migrate -source file://./common/persistence/sql/schema -database mysql://localhost:3306/catalyst_test up 1
+install-sql-schema: 
+	migrate -source file://./common/persistence/sql/schema -database mysql://localhost:3306/catalyst_test up 

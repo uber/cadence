@@ -28,6 +28,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
@@ -35,14 +36,13 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/persistence/sql"
-	"github.com/uber-common/bark"
 
 	"github.com/gocql/gocql"
+	"github.com/golang-migrate/migrate"
+	_ "github.com/golang-migrate/migrate/database/mysql"
+	_ "github.com/golang-migrate/migrate/source/file"
 	"github.com/pborman/uuid"
 	log "github.com/sirupsen/logrus"
-	_ "github.com/golang-migrate/migrate/source/file"
-	_ "github.com/golang-migrate/migrate/database/mysql"
-	"github.com/golang-migrate/migrate"
 )
 
 const (
@@ -244,13 +244,16 @@ func (s *TestBase) SetupWorkflowStoreWithOptions(options TestBaseOptions, metada
 
 		m, err := migrate.New(
 			"file://../sql/schema",
-			"mysql://" + fmt.Sprintf(sql.Dsn, "uber", "uber", "localhost", "3306", "catalyst_test"),
+			"mysql://"+fmt.Sprintf(sql.Dsn, "uber", "uber", "localhost", "3306", "catalyst_test"),
 		)
 		if err != nil {
 			log.Fatal(err)
 		}
-		if err := m.Up(); err != nil {
-			log.Fatal(err)
+		if err := m.Drop(); err != nil {
+			log.Fatal(fmt.Sprintf("SQL migrate drop failed. Error: %v", err))
+		}
+		if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+			log.Fatal(fmt.Sprintf("SQL migrate up failed. Error: %v", err))
 		}
 	}
 	s.TaskIDGenerator = &testTransferTaskIDGenerator{}
@@ -1102,7 +1105,7 @@ func (s *TestBase) TearDownWorkflowStore() {
 	if s.UseMysql {
 		m, err := migrate.New(
 			"file://../sql/schema",
-			"mysql://" + fmt.Sprintf(sql.Dsn, "uber", "uber", "localhost", "3306", "catalyst_test"),
+			"mysql://"+fmt.Sprintf(sql.Dsn, "uber", "uber", "localhost", "3306", "catalyst_test"),
 		)
 		if err != nil {
 			log.Fatal(err)
