@@ -452,6 +452,10 @@ const (
 	MatchingAddActivityTaskScope
 	// MatchingAddDecisionTaskScope tracks AddDecisionTask API calls received by service
 	MatchingAddDecisionTaskScope
+	// MatchingAddActivityTaskScope tracks AddActivityTask API calls received by service
+	MatchingSyncAddActivityTaskScope
+	// MatchingAddDecisionTaskScope tracks AddDecisionTask API calls received by service
+	MatchingSyncAddDecisionTaskScope
 	// MatchingTaskListMgrScope is the metrics scope for matching.TaskListManager component
 	MatchingTaskListMgrScope
 	// MatchingQueryWorkflowScope tracks AddDecisionTask API calls received by service
@@ -655,6 +659,8 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		MatchingPollForActivityTaskScope:       {operation: "PollForActivityTask"},
 		MatchingAddActivityTaskScope:           {operation: "AddActivityTask"},
 		MatchingAddDecisionTaskScope:           {operation: "AddDecisionTask"},
+		MatchingSyncAddActivityTaskScope:       {operation: "AddActivityTask", tags: map[string]string{"SyncMatch": "true"}},
+		MatchingSyncAddDecisionTaskScope:       {operation: "AddDecisionTask", tags: map[string]string{"SyncMatch": "true"}},
 		MatchingTaskListMgrScope:               {operation: "TaskListMgr"},
 		MatchingQueryWorkflowScope:             {operation: "QueryWorkflow"},
 		MatchingRespondQueryTaskCompletedScope: {operation: "RespondQueryTaskCompleted"},
