@@ -162,7 +162,7 @@ func (t *transferQueueStandbyProcessorImpl) process(qTask queueTaskInfo) error {
 		t.queueAckMgr.completeQueueTask(task.TaskID)
 	}
 
-	if err != nil {
+	if err == nil {
 		t.metricsClient.RecordTimer(scope, metrics.StandbyTransferTaskQueueLatency, time.Since(task.GetVisibilityTimestamp()))
 	}
 
