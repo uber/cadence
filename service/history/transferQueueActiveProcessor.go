@@ -243,7 +243,7 @@ func (t *transferQueueActiveProcessorImpl) process(qTask queueTaskInfo) error {
 	}
 
 	if err != nil {
-		t.metricsClient.RecordTimer(scope, metrics.ActiveTimerTaskQueueLatency, time.Since(task.GetVisibilityTimestamp()))
+		t.metricsClient.RecordTimer(scope, metrics.ActiveTransferTaskQueueLatency, time.Since(task.GetVisibilityTimestamp()))
 	}
 	return err
 }
