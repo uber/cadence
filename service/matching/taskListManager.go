@@ -58,7 +58,7 @@ var errAddTasklistThrottled = errors.New("cannot add to tasklist, limit exceeded
 type taskListManager interface {
 	Start() error
 	Stop()
-	AddTask(execution *s.WorkflowExecution, taskInfo *persistence.TaskInfo) (err error, syncMatch bool)
+	AddTask(execution *s.WorkflowExecution, taskInfo *persistence.TaskInfo) (syncMatch bool, err error)
 	GetTaskContext(ctx context.Context, maxDispatchPerSecond *float64) (*taskContext, error)
 	SyncMatchQueryTask(ctx context.Context, queryTask *queryTaskInfo) error
 	CancelPoller(pollerID string)
@@ -361,7 +361,7 @@ func (c *taskListManagerImpl) Stop() {
 	logging.LogTaskListUnloadedEvent(c.logger)
 }
 
-func (c *taskListManagerImpl) AddTask(execution *s.WorkflowExecution, taskInfo *persistence.TaskInfo) (err error, syncMatch bool) {
+func (c *taskListManagerImpl) AddTask(execution *s.WorkflowExecution, taskInfo *persistence.TaskInfo) (syncMatch bool, err error) {
 	c.startWG.Wait()
 	r, err := c.executeWithRetry(func(rangeID int64) (interface{}, error) {
 
@@ -388,7 +388,7 @@ func (c *taskListManagerImpl) AddTask(execution *s.WorkflowExecution, taskInfo *
 	if r != nil && err == nil {
 		syncMatch = true
 	}
-	return err, syncMatch
+	return syncMatch, err
 }
 
 func (c *taskListManagerImpl) SyncMatchQueryTask(ctx context.Context, queryTask *queryTaskInfo) error {

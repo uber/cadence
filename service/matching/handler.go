@@ -119,17 +119,18 @@ func (h *Handler) startRequestProfile(api string, scope int) tally.Stopwatch {
 func (h *Handler) AddActivityTask(ctx context.Context, addRequest *m.AddActivityTaskRequest) error {
 	startT := time.Now()
 	scope := metrics.MatchingAddActivityTaskScope
+	sw := h.startRequestProfile("AddActivityTask", scope)
+	defer sw.Stop()
 
 	if ok, _ := h.rateLimiter.TryConsume(1); !ok {
 		return h.handleErr(errMatchingHostThrottle, scope)
 	}
 
-	err, syncMatch := h.engine.AddActivityTask(addRequest)
+	syncMatch, err := h.engine.AddActivityTask(addRequest)
 	if syncMatch {
-		scope = metrics.MatchingSyncAddActivityTaskScope
+		h.metricsClient.RecordTimer(scope, metrics.SyncMatchLatency, time.Since(startT))
 	}
-	h.metricsClient.RecordTimer(scope, metrics.CadenceLatency, time.Since(startT))
-	h.metricsClient.IncCounter(scope, metrics.CadenceRequests)
+
 	return h.handleErr(err, scope)
 }
 
@@ -137,17 +138,17 @@ func (h *Handler) AddActivityTask(ctx context.Context, addRequest *m.AddActivity
 func (h *Handler) AddDecisionTask(ctx context.Context, addRequest *m.AddDecisionTaskRequest) error {
 	startT := time.Now()
 	scope := metrics.MatchingAddDecisionTaskScope
+	sw := h.startRequestProfile("AddDecisionTask", scope)
+	defer sw.Stop()
 
 	if ok, _ := h.rateLimiter.TryConsume(1); !ok {
 		return h.handleErr(errMatchingHostThrottle, scope)
 	}
 
-	err, syncMatch := h.engine.AddDecisionTask(addRequest)
+	syncMatch, err := h.engine.AddDecisionTask(addRequest)
 	if syncMatch {
-		scope = metrics.MatchingSyncAddDecisionTaskScope
+		h.metricsClient.RecordTimer(scope, metrics.SyncMatchLatency, time.Since(startT))
 	}
-	h.metricsClient.RecordTimer(scope, metrics.CadenceLatency, time.Since(startT))
-	h.metricsClient.IncCounter(scope, metrics.CadenceRequests)
 	return h.handleErr(err, scope)
 }
 
