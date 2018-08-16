@@ -136,11 +136,6 @@ type (
 		persistence.TimerTaskInfo
 		ShardID int `db:"shard_id"`
 	}
-
-	updateExecutionRow struct {
-		executionRow
-		Condition int64 `db:"old_next_event_id"`
-	}
 )
 
 const (
@@ -260,7 +255,6 @@ execution_context = :execution_context,
 state = :state,
 close_status = :close_status,
 last_first_event_id = :last_first_event_id,
-next_event_id = :next_event_id,
 last_processed_event = :last_processed_event,
 start_time = :start_time,
 last_updated_time = :last_updated_time,
@@ -445,6 +439,15 @@ domain_id = ? AND
 workflow_id = ? AND
 run_id = ?
 FOR UPDATE`
+
+	setNextEventIDSQLQuery = `UPDATE executions SET
+next_event_id = ?
+WHERE
+shard_id = ? AND
+domain_id = ? AND
+workflow_id = ? AND
+run_id = ?
+`
 )
 
 func (m *sqlMatchingManager) Close() {
@@ -680,36 +683,7 @@ func (m *sqlMatchingManager) UpdateWorkflowExecution(request *persistence.Update
 		}
 	}
 
-	if err := lockShard(tx, m.shardID, request.RangeID); err != nil {
-		switch err.(type) {
-		case *persistence.ShardOwnershipLostError:
-			return err
-		default:
-			return &workflow.InternalServiceError{
-				Message: fmt.Sprintf("CreateWorkflowExecution operation failed. Error: %v", err),
-			}
-		}
-	}
-
-	// TODO Remove me if UPDATE holds the lock to the end of a transaction
-	if err := lockAndCheckNextEventID(tx,
-		m.shardID,
-		request.ExecutionInfo.DomainID,
-		request.ExecutionInfo.WorkflowID,
-		request.ExecutionInfo.RunID,
-		request.Condition); err != nil {
-		switch err.(type) {
-		case *persistence.ConditionFailedError:
-			return err
-		default:
-			return &workflow.InternalServiceError{
-				Message: fmt.Sprintf("UpdateWorkflowExecution operation failed. Failed to lock executions row. Error: %v", err),
-			}
-		}
-	}
-
-	args := updateExecutionRow{
-		executionRow{
+	args := executionRow{
 			DomainID:                   request.ExecutionInfo.DomainID,
 			WorkflowID:                 request.ExecutionInfo.WorkflowID,
 			RunID:                      request.ExecutionInfo.RunID,
@@ -742,12 +716,10 @@ func (m *sqlMatchingManager) UpdateWorkflowExecution(request *persistence.Update
 			ClientLibraryVersion:         request.ExecutionInfo.ClientLibraryVersion,
 			ClientFeatureVersion:         request.ExecutionInfo.ClientFeatureVersion,
 			ClientImpl:                   request.ExecutionInfo.ClientImpl,
-		},
-		request.Condition,
 	}
 
 	if request.ExecutionInfo.ExecutionContext != nil {
-		args.executionRow.ExecutionContext = &request.ExecutionInfo.ExecutionContext
+		args.ExecutionContext = &request.ExecutionInfo.ExecutionContext
 	}
 
 	if request.ReplicationState != nil {
@@ -824,6 +796,44 @@ func (m *sqlMatchingManager) UpdateWorkflowExecution(request *persistence.Update
 			request.ContinueAsNew.Execution.GetWorkflowId(),
 			request.ContinueAsNew.Execution.GetRunId()); err != nil {
 			return err
+		}
+	}
+
+	if err := lockShard(tx, m.shardID, request.RangeID); err != nil {
+		switch err.(type) {
+		case *persistence.ShardOwnershipLostError:
+			return err
+		default:
+			return &workflow.InternalServiceError{
+				Message: fmt.Sprintf("CreateWorkflowExecution operation failed. Error: %v", err),
+			}
+		}
+	}
+
+	if err := lockAndCheckNextEventID(tx,
+		m.shardID,
+		request.ExecutionInfo.DomainID,
+		request.ExecutionInfo.WorkflowID,
+		request.ExecutionInfo.RunID,
+		request.Condition); err != nil {
+		switch err.(type) {
+		case *persistence.ConditionFailedError:
+			return err
+		default:
+			return &workflow.InternalServiceError{
+				Message: fmt.Sprintf("UpdateWorkflowExecution operation failed. Failed to lock executions row. Error: %v", err),
+			}
+		}
+	}
+
+	if _, err := tx.Exec(setNextEventIDSQLQuery,
+		request.ExecutionInfo.NextEventID,
+		m.shardID,
+		request.ExecutionInfo.DomainID,
+		request.ExecutionInfo.WorkflowID,
+		request.ExecutionInfo.RunID); err != nil {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("UpdateWorkflowExecution operation failed. Failed to update next event ID. Error: %v", err),
 		}
 	}
 
