@@ -442,8 +442,9 @@ ProcessRetryLoop:
 		return
 	}
 
-	// All attempts to process transfer task failed.  We won't be able to move the ackLevel so panic
-	logging.LogOperationPanicEvent(logger, "Retry count exceeded for timer task", err)
+	// All attempts to process transfer task failed.  We won't be able to move the ackLevel
+	t.metricsClient.IncCounter(t.scope, metrics.TaskStuck)
+	logging.LogOperationStuckEvent(logger, "Retry count exceeded for timer task", err)
 }
 
 func (t *timerQueueProcessorBase) initializeLoggerForTask(task *persistence.TimerTaskInfo, logger bark.Logger) bark.Logger {
@@ -452,6 +453,7 @@ func (t *timerQueueProcessorBase) initializeLoggerForTask(task *persistence.Time
 	}
 
 	logger = t.logger.WithFields(bark.Fields{
+		logging.TagHistoryShardID:      t.shard.GetShardID(),
 		logging.TagTaskID:              task.GetTaskID(),
 		logging.TagTaskType:            task.GetTaskType(),
 		logging.TagVersion:             task.GetVersion(),
