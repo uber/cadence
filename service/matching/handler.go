@@ -23,7 +23,6 @@ package matching
 import (
 	"context"
 	"sync"
-
 	"time"
 
 	"github.com/uber-go/tally"
