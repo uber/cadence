@@ -2023,10 +2023,10 @@ func (s *cassandraPersistenceSuite) TestWorkflowReplicationState() {
 	}
 }
 
-func (s *cassandraPersistenceSuite) TestResetMutableState() {
+func (s *cassandraPersistenceSuite) TestResetMutableState_CurrentIsSelf() {
 	domainID := "4ca1faac-1a3a-47af-8e51-fdaa2b3d45b9"
 	workflowExecution := gen.WorkflowExecution{
-		WorkflowId: common.StringPtr("test-reset-mutable-state-test"),
+		WorkflowId: common.StringPtr("test-reset-mutable-state-test-current-is-self"),
 		RunId:      common.StringPtr("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
 	}
 
@@ -2466,6 +2466,78 @@ func (s *cassandraPersistenceSuite) TestResetMutableState() {
 
 	s.Equal(0, len(state4.BufferedReplicationTasks))
 	s.Equal(0, len(state4.BufferedEvents))
+}
+
+func (s *cassandraPersistenceSuite) TestResetMutableState_CurrentIsNotSelf() {
+	domainID := "4ca1faac-1a3a-47af-8e51-fdaa2b3d45b9"
+	workflowID := "test-reset-mutable-state-test-current-is-not-self"
+
+	// first create a workflow and continue as new it
+	workflowExecutionReset := gen.WorkflowExecution{
+		WorkflowId: common.StringPtr(workflowID),
+		RunId:      common.StringPtr("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa0"),
+	}
+	task, err := s.CreateWorkflowExecution(domainID, workflowExecutionReset, "taskList", "wType", 20, 13, nil, 3, 0, 2, nil)
+	s.Nil(err, "No error expected.")
+	s.NotNil(task, "Expected non empty task identifier.")
+
+	state, err := s.GetWorkflowExecutionInfo(domainID, workflowExecutionReset)
+	s.Nil(err)
+
+	info := state.ExecutionInfo
+	continueAsNewInfo := copyWorkflowExecutionInfo(info)
+	continueAsNewInfo.State = WorkflowStateCompleted
+	continueAsNewInfo.NextEventID = int64(5)
+	continueAsNewInfo.LastProcessedEvent = int64(2)
+
+	workflowExecutionCurrent := gen.WorkflowExecution{
+		WorkflowId: common.StringPtr(workflowID),
+		RunId:      common.StringPtr("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1"),
+	}
+	err = s.ContinueAsNewExecution(continueAsNewInfo, info.NextEventID, workflowExecutionCurrent, int64(3), int64(2))
+	s.Nil(err, "No error expected.")
+
+	runID, err := s.GetCurrentWorkflowRunID(domainID, workflowID)
+	s.Equal(workflowExecutionCurrent.GetRunId(), runID)
+
+	resetExecutionInfo := &WorkflowExecutionInfo{
+		DomainID:             domainID,
+		WorkflowID:           workflowExecutionReset.GetWorkflowId(),
+		RunID:                workflowExecutionReset.GetRunId(),
+		ParentDomainID:       uuid.New(),
+		ParentWorkflowID:     "some random parent workflow ID",
+		ParentRunID:          uuid.New(),
+		InitiatedID:          12345,
+		TaskList:             "some random tasklist",
+		WorkflowTypeName:     "some random workflow type name",
+		WorkflowTimeout:      1112,
+		DecisionTimeoutValue: 14,
+		State:                WorkflowStateRunning,
+		NextEventID:          123,
+		CreateRequestID:      uuid.New(),
+		DecisionVersion:      common.EmptyVersion,
+		DecisionScheduleID:   111,
+		DecisionStartedID:    222,
+		DecisionRequestID:    uuid.New(),
+		DecisionTimeout:      0,
+	}
+	resetActivityInfos := []*ActivityInfo{}
+	resetTimerInfos := []*TimerInfo{}
+	resetChildExecutionInfos := []*ChildExecutionInfo{}
+	resetRequestCancelInfos := []*RequestCancelInfo{}
+	resetSignalInfos := []*SignalInfo{}
+	rState := &ReplicationState{
+		CurrentVersion: int64(8789),
+		StartVersion:   int64(8780),
+	}
+
+	err = s.ResetMutableState(resetExecutionInfo, rState, int64(5), resetActivityInfos, resetTimerInfos,
+		resetChildExecutionInfos, resetRequestCancelInfos, resetSignalInfos, nil)
+	s.Nil(err, "No error expected.")
+
+	// this test only assert whether the current workflow execution record is resetted
+	runID, err = s.GetCurrentWorkflowRunID(domainID, workflowID)
+	s.Equal(workflowExecutionReset.GetRunId(), runID)
 }
 
 func copyWorkflowExecutionInfo(sourceInfo *WorkflowExecutionInfo) *WorkflowExecutionInfo {
