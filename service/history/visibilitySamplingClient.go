@@ -23,7 +23,6 @@ package history
 import (
 	"sync"
 
-	"fmt"
 	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -99,7 +98,6 @@ func (m *domainToBucketMap) getRateLimiter(domain string, numOfPriority, qps int
 func (p *visibilitySamplingClient) RecordWorkflowExecutionStarted(request *persistence.RecordWorkflowExecutionStartedRequest) error {
 	domain := request.Domain
 
-	fmt.Println("vancexu in")
 	rateLimiter := p.rateLimitersForOpen.getRateLimiter(domain, numOfPriorityForOpen, p.config.VisibilityOpenMaxQPS(domain))
 	if ok, _ := rateLimiter.GetToken(0, 1); ok {
 		return p.persistence.RecordWorkflowExecutionStarted(request)
