@@ -48,8 +48,9 @@ var keys = map[Key]string{
 	testGetBoolPropertyFilteredByTaskListInfoKey:     "testGetBoolPropertyFilteredByTaskListInfoKey",
 
 	// system settings
-	EnableGlobalDomain:   "system.enableGlobalDomain",
-	EnableNewKafkaClient: "system.enableNewKafkaClient",
+	EnableGlobalDomain:       "system.enableGlobalDomain",
+	EnableNewKafkaClient:     "system.enableNewKafkaClient",
+	EnableVisibilitySampling: "system.enableVisibilitySampling",
 
 	// frontend settings
 	FrontendPersistenceMaxQPS:      "frontend.persistenceMaxQPS",
@@ -152,6 +153,8 @@ const (
 	EnableGlobalDomain
 	// EnableNewKafkaClient is key for using New Kafka client
 	EnableNewKafkaClient
+	// EnableVisibilitySampling is key for enable visibility sampling
+	EnableVisibilitySampling
 
 	// key for frontend
 

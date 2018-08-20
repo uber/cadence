@@ -37,10 +37,11 @@ import (
 type Config struct {
 	NumberOfShards int
 
-	RPS                    dynamicconfig.IntPropertyFn
-	PersistenceMaxQPS      dynamicconfig.IntPropertyFn
-	VisibilityOpenMaxQPS   dynamicconfig.IntPropertyFnWithDomainFilter
-	VisibilityClosedMaxQPS dynamicconfig.IntPropertyFnWithDomainFilter
+	RPS                      dynamicconfig.IntPropertyFn
+	PersistenceMaxQPS        dynamicconfig.IntPropertyFn
+	EnableVisibilitySampling dynamicconfig.BoolPropertyFn
+	VisibilityOpenMaxQPS     dynamicconfig.IntPropertyFnWithDomainFilter
+	VisibilityClosedMaxQPS   dynamicconfig.IntPropertyFnWithDomainFilter
 
 	// HistoryCache settings
 	// Change of these configs require shard restart
@@ -121,6 +122,7 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int) *Config {
 		NumberOfShards:                                        numberOfShards,
 		RPS:                                                   dc.GetIntProperty(dynamicconfig.HistoryRPS, 1200),
 		PersistenceMaxQPS:                                     dc.GetIntProperty(dynamicconfig.HistoryPersistenceMaxQPS, 9000),
+		EnableVisibilitySampling:                              dc.GetBoolProperty(dynamicconfig.EnableVisibilitySampling, true),
 		VisibilityOpenMaxQPS:                                  dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryVisibilityOpenMaxQPS, 300),
 		VisibilityClosedMaxQPS:                                dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryVisibilityClosedMaxQPS, 300),
 		HistoryCacheInitialSize:                               dc.GetIntProperty(dynamicconfig.HistoryCacheInitialSize, 128),
@@ -267,7 +269,9 @@ func (s *Service) Start() {
 	}
 	visibility = persistence.NewVisibilityPersistenceRateLimitedClient(visibility, persistenceRateLimiter, log)
 	visibility = persistence.NewVisibilityPersistenceMetricsClient(visibility, base.GetMetricsClient(), log)
-	visibility = NewVisibilitySamplingClient(visibility, s.config, base.GetMetricsClient(), log)
+	if s.config.EnableVisibilitySampling() {
+		visibility = NewVisibilitySamplingClient(visibility, s.config, base.GetMetricsClient(), log)
+	}
 
 	history, err := persistence.NewCassandraHistoryPersistence(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,
