@@ -323,7 +323,7 @@ const (
 		`and task_id = ? ` +
 		`IF range_id = ?`
 
-	templateResetCurrentWorkflowExecutionQuery = `UPDATE executions USING TTL 0 ` +
+	templateUpdateCurrentWorkflowExecutionQuery = `UPDATE executions USING TTL 0 ` +
 		`SET current_run_id = ?, execution = {run_id: ?, create_request_id: ?, state: ?, close_status: ?}, replication_state = {start_version: ?}` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
@@ -331,9 +331,7 @@ const (
 		`and workflow_id = ? ` +
 		`and run_id = ? ` +
 		`and visibility_ts = ? ` +
-		`and task_id = ? `
-
-	templateUpdateCurrentWorkflowExecutionQuery = templateResetCurrentWorkflowExecutionQuery +
+		`and task_id = ? ` +
 		`IF current_run_id = ? `
 
 	templateCreateCurrentWorkflowExecutionQuery = `INSERT INTO executions (` +
@@ -1684,7 +1682,7 @@ func (d *cassandraPersistence) ResetMutableState(request *ResetMutableStateReque
 		parentRunID = executionInfo.ParentRunID
 	}
 
-	batch.Query(templateResetCurrentWorkflowExecutionQuery,
+	batch.Query(templateUpdateCurrentWorkflowExecutionQuery,
 		executionInfo.RunID,
 		executionInfo.RunID,
 		executionInfo.CreateRequestID,
@@ -1698,6 +1696,7 @@ func (d *cassandraPersistence) ResetMutableState(request *ResetMutableStateReque
 		permanentRunID,
 		defaultVisibilityTimestamp,
 		rowTypeExecutionTaskID,
+		request.PrevRunID,
 	)
 
 	batch.Query(templateUpdateWorkflowExecutionWithReplicationQuery,

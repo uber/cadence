@@ -2379,7 +2379,7 @@ func (s *cassandraPersistenceSuite) TestResetMutableState_CurrentIsSelf() {
 		StartVersion:   int64(8780),
 	}
 
-	err3 := s.ResetMutableState(updatedInfo1, rState, int64(5), resetActivityInfos, resetTimerInfos,
+	err3 := s.ResetMutableState(workflowExecution.GetRunId(), updatedInfo1, rState, int64(5), resetActivityInfos, resetTimerInfos,
 		resetChildExecutionInfos, resetRequestCancelInfos, resetSignalInfos, nil)
 	s.Nil(err3, "No error expected.")
 
@@ -2531,11 +2531,11 @@ func (s *cassandraPersistenceSuite) TestResetMutableState_CurrentIsNotSelf() {
 		StartVersion:   int64(8780),
 	}
 
-	err = s.ResetMutableState(resetExecutionInfo, rState, int64(5), resetActivityInfos, resetTimerInfos,
+	err = s.ResetMutableState(workflowExecutionCurrent.GetRunId(), resetExecutionInfo, rState, int64(5), resetActivityInfos, resetTimerInfos,
 		resetChildExecutionInfos, resetRequestCancelInfos, resetSignalInfos, nil)
 	s.Nil(err, "No error expected.")
 
-	// this test only assert whether the current workflow execution record is resetted
+	// this test only assert whether the current workflow execution record is reseted
 	runID, err = s.GetCurrentWorkflowRunID(domainID, workflowID)
 	s.Equal(workflowExecutionReset.GetRunId(), runID)
 }
