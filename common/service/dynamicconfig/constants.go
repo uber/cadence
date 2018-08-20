@@ -75,6 +75,8 @@ var keys = map[Key]string{
 	// history settings
 	HistoryRPS:                                            "history.rps",
 	HistoryPersistenceMaxQPS:                              "history.persistenceMaxQPS",
+	HistoryVisibilityOpenMaxQPS:                           "history.historyVisibilityOpenMaxQPS",
+	HistoryVisibilityClosedMaxQPS:                         "history.historyVisibilityClosedMaxQPS",
 	HistoryLongPollExpirationInterval:                     "history.longPollExpirationInterval",
 	HistoryCacheInitialSize:                               "history.cacheInitialSize",
 	HistoryCacheMaxSize:                                   "history.cacheMaxSize",
@@ -153,7 +155,7 @@ const (
 
 	// key for frontend
 
-	// FrontendPersistenceMaxQPS is the max qps frontend host can querty DB
+	// FrontendPersistenceMaxQPS is the max qps frontend host can query DB
 	FrontendPersistenceMaxQPS
 	// FrontendVisibilityMaxPageSize is default max size for ListWorkflowExecutions in one page
 	FrontendVisibilityMaxPageSize
@@ -170,7 +172,7 @@ const (
 
 	// MatchingRPS is request rate per second for each matching host
 	MatchingRPS
-	// MatchingPersistenceMaxQPS is the max qps matching host can querty DB
+	// MatchingPersistenceMaxQPS is the max qps matching host can query DB
 	MatchingPersistenceMaxQPS
 	// MatchingMinTaskThrottlingBurstSize is the minimum burst size for task list throttling
 	MatchingMinTaskThrottlingBurstSize
@@ -195,8 +197,12 @@ const (
 
 	// HistoryRPS is request rate per second for each history host
 	HistoryRPS
-	// HistoryPersistenceMaxQPS is the max qps history host can querty DB
+	// HistoryPersistenceMaxQPS is the max qps history host can query DB
 	HistoryPersistenceMaxQPS
+	// HistoryVisibilityOpenMaxQPS is max qps one history host can query visibility open_executions
+	HistoryVisibilityOpenMaxQPS
+	// HistoryVisibilityClosedMaxQPS is max qps one history host can query visibility closed_executions
+	HistoryVisibilityClosedMaxQPS
 	// HistoryLongPollExpirationInterval is the long poll expiration interval in the history service
 	HistoryLongPollExpirationInterval
 	// HistoryCacheInitialSize is initial size of history cache
@@ -302,7 +308,7 @@ const (
 
 	// key for histoworkerry
 
-	// WorkerPersistenceMaxQPS is the max qps worker host can querty DB
+	// WorkerPersistenceMaxQPS is the max qps worker host can query DB
 	WorkerPersistenceMaxQPS
 
 	// lastKeyForTest must be the last one in this const group for testing purpose
