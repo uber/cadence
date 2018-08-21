@@ -2490,15 +2490,26 @@ func (s *cassandraPersistenceSuite) TestResetMutableState_CurrentIsNotSelf() {
 	continueAsNewInfo.NextEventID = int64(5)
 	continueAsNewInfo.LastProcessedEvent = int64(2)
 
-	workflowExecutionCurrent := gen.WorkflowExecution{
+	workflowExecutionCurrent1 := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr(workflowID),
 		RunId:      common.StringPtr("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1"),
 	}
-	err = s.ContinueAsNewExecution(continueAsNewInfo, info.NextEventID, workflowExecutionCurrent, int64(3), int64(2))
+	err = s.ContinueAsNewExecution(continueAsNewInfo, info.NextEventID, workflowExecutionCurrent1, int64(3), int64(2))
 	s.Nil(err, "No error expected.")
 
-	runID, err := s.GetCurrentWorkflowRunID(domainID, workflowID)
-	s.Equal(workflowExecutionCurrent.GetRunId(), runID)
+	runID1, err := s.GetCurrentWorkflowRunID(domainID, workflowID)
+	s.Equal(workflowExecutionCurrent1.GetRunId(), runID1)
+	state, err = s.GetWorkflowExecutionInfo(domainID, workflowExecutionCurrent1)
+	s.Nil(err)
+	updatedInfo1 := copyWorkflowExecutionInfo(state.ExecutionInfo)
+	updatedInfo1.State = WorkflowStateCompleted
+	updatedInfo1.CloseStatus = WorkflowCloseStatusCompleted
+	updatedInfo1.NextEventID = int64(6)
+	updatedInfo1.LastProcessedEvent = int64(2)
+	err3 := s.UpdateWorkflowExecutionAndFinish(updatedInfo1, int64(3), 123)
+	s.Nil(err3, "No error expected.")
+	runID1, err = s.GetCurrentWorkflowRunID(domainID, workflowID)
+	s.Equal(workflowExecutionCurrent1.GetRunId(), runID1)
 
 	resetExecutionInfo := &WorkflowExecutionInfo{
 		DomainID:             domainID,
@@ -2531,7 +2542,33 @@ func (s *cassandraPersistenceSuite) TestResetMutableState_CurrentIsNotSelf() {
 		StartVersion:   int64(8780),
 	}
 
-	err = s.ResetMutableState(workflowExecutionCurrent.GetRunId(), resetExecutionInfo, rState, int64(5), resetActivityInfos, resetTimerInfos,
+	err = s.ResetMutableState(workflowExecutionCurrent1.GetRunId(), resetExecutionInfo, rState, continueAsNewInfo.NextEventID, resetActivityInfos, resetTimerInfos,
+		resetChildExecutionInfos, resetRequestCancelInfos, resetSignalInfos, nil)
+	s.Nil(err, "No error expected.")
+
+	// this test only assert whether the current workflow execution record is reseted
+	runID, err := s.GetCurrentWorkflowRunID(domainID, workflowID)
+	s.Equal(workflowExecutionReset.GetRunId(), runID)
+
+	state, err = s.GetWorkflowExecutionInfo(domainID, workflowExecutionReset)
+	s.Nil(err)
+	info = state.ExecutionInfo
+	continueAsNewInfo = copyWorkflowExecutionInfo(info)
+	continueAsNewInfo.State = WorkflowStateCompleted
+	continueAsNewInfo.NextEventID += 3
+	continueAsNewInfo.LastProcessedEvent += 2
+
+	workflowExecutionCurrent2 := gen.WorkflowExecution{
+		WorkflowId: common.StringPtr(workflowID),
+		RunId:      common.StringPtr("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2"),
+	}
+	err = s.ContinueAsNewExecution(continueAsNewInfo, info.NextEventID, workflowExecutionCurrent2, int64(3), int64(2))
+	s.Nil(err, "No error expected.")
+
+	runID2, err := s.GetCurrentWorkflowRunID(domainID, workflowID)
+	s.Equal(workflowExecutionCurrent2.GetRunId(), runID2)
+
+	err = s.ResetMutableState(workflowExecutionCurrent2.GetRunId(), resetExecutionInfo, rState, continueAsNewInfo.NextEventID, resetActivityInfos, resetTimerInfos,
 		resetChildExecutionInfos, resetRequestCancelInfos, resetSignalInfos, nil)
 	s.Nil(err, "No error expected.")
 
