@@ -189,17 +189,65 @@ func (p *replicationTaskProcessor) messageProcessLoop(workerWG *sync.WaitGroup, 
 	}
 }
 
-func (p *replicationTaskProcessor) processWithRetry(msg messaging.Message, workerID int) {
-	var err error
+func (p *replicationTaskProcessor) processWithRetry(msg messaging.Message, workerID int) (retError error) {
+	attempt := 0
+	startTime := time.Now()
+	logger := p.logger.WithFields(bark.Fields{
+		logging.TagPartitionKey: msg.Partition(),
+		logging.TagOffset:       msg.Offset(),
+		logging.TagAttemptStart: startTime,
+	})
+
+	defer func() {
+		if retError == nil {
+			// Successfully processed replication task.  Ack message to move the cursor forward.
+			msg.Ack()
+		} else {
+			// Task still failed after all retries.  This is most probably due to a bug in replication code.
+			// Nack the task to move it to DLQ to not block replication for other workflow executions.
+			logger := logger.WithFields(bark.Fields{
+				logging.TagErr:          retError,
+				logging.TagAttemptCount: attempt,
+				logging.TagAttemptEnd:   time.Now(),
+			})
+
+			logger.Error("Error processing replication task.")
+			msg.Nack()
+		}
+	}()
+
+	task, err := deserialize(msg.Value())
+	if err != nil {
+		p.updateFailureMetric(metrics.ReplicatorScope, err)
+		p.logger.WithFields(bark.Fields{
+			logging.TagErr:          err,
+			logging.TagPartitionKey: msg.Partition(),
+			logging.TagOffset:       msg.Offset(),
+		}).Error("Failed to deserialize replication task.")
+
+		// return BadRequestError so processWithRetry can nack the message
+		return ErrDeserializeReplicationTask
+	}
+	switch task.GetTaskType() {
+	case replicator.ReplicationTaskTypeHistory:
+		attr := task.HistoryTaskAttributes
+		logger = logger.WithFields(bark.Fields{
+			logging.TagDomainID:            attr.GetDomainId(),
+			logging.TagWorkflowExecutionID: attr.GetWorkflowId(),
+			logging.TagWorkflowRunID:       attr.GetRunId(),
+			logging.TagFirstEventID:        attr.GetFirstEventId(),
+			logging.TagNextEventID:         attr.GetNextEventId(),
+			logging.TagVersion:             attr.GetVersion(),
+		})
+	default:
+	}
 
 	forceBuffer := false
 	remainingRetryCount := p.config.ReplicationTaskMaxRetry
 
-	attempt := 0
-	startTime := time.Now()
 	op := func() error {
 		attempt++
-		processErr := p.process(msg, forceBuffer)
+		processErr := p.process(task, forceBuffer)
 		if processErr != nil && p.isRetryTaskError(processErr) {
 			// Enable buffering of replication tasks for next attempt
 			forceBuffer = true
@@ -247,42 +295,13 @@ ProcessRetryLoop:
 
 		}
 
-		break ProcessRetryLoop
-	}
-
-	if err == nil {
-		// Successfully processed replication task.  Ack message to move the cursor forward.
-		msg.Ack()
-	} else {
-		// Task still failed after all retries.  This is most probably due to a bug in replication code.
-		// Nack the task to move it to DLQ to not block replication for other workflow executions.
-		p.logger.WithFields(bark.Fields{
-			logging.TagErr:          err,
-			logging.TagPartitionKey: msg.Partition(),
-			logging.TagOffset:       msg.Offset(),
-			logging.TagAttemptCount: attempt,
-			logging.TagAttemptStart: startTime,
-			logging.TagAttemptEnd:   time.Now(),
-		}).Error("Error processing replication task.")
-		msg.Nack()
+		return err
 	}
 }
 
-func (p *replicationTaskProcessor) process(msg messaging.Message, inRetry bool) error {
+func (p *replicationTaskProcessor) process(task *replicator.ReplicationTask, inRetry bool) error {
+	var err error
 	scope := metrics.ReplicatorScope
-	task, err := deserialize(msg.Value())
-	if err != nil {
-		p.updateFailureMetric(scope, err)
-		p.logger.WithFields(bark.Fields{
-			logging.TagErr:          err,
-			logging.TagPartitionKey: msg.Partition(),
-			logging.TagOffset:       msg.Offset(),
-		}).Error("Failed to deserialize replication task.")
-
-		// return BadRequestError so processWithRetry can nack the message
-		return ErrDeserializeReplicationTask
-	}
-
 	if task.TaskType == nil {
 		p.updateFailureMetric(scope, ErrEmptyReplicationTask)
 		return ErrEmptyReplicationTask
