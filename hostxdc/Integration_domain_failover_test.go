@@ -35,6 +35,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-common/bark"
 
+	"github.com/pborman/uuid"
 	"github.com/uber-go/tally"
 	wsc "github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -126,7 +127,7 @@ func (s *testCluster) setupCluster(no int) {
 	s.SetupWorkflowStoreWithOptions(options, metadata)
 	s.setupShards()
 	messagingClient := s.createMessagingClient()
-	s.host = host.NewCadence(s.ClusterMetadata, messagingClient, s.MetadataProxy, s.ShardMgr, s.HistoryMgr, s.ExecutionMgrFactory, s.TaskMgr,
+	s.host = host.NewCadence(s.ClusterMetadata, messagingClient, s.MetadataProxy, s.MetadataManagerV2, s.ShardMgr, s.HistoryMgr, s.ExecutionMgrFactory, s.TaskMgr,
 		s.VisibilityMgr, testNumberOfHistoryShards, testNumberOfHistoryHosts, s.logger, no, true)
 	s.host.Start()
 }
@@ -243,20 +244,19 @@ func (s *integrationClustersTestSuite) TestDomainFailover() {
 	s.NoError(err)
 	s.NotNil(resp)
 
-	//// uncommented when domain cache background update is ready
-	//client2 := s.cluster2.host.GetFrontendClient() // standby
-	//var resp2 *workflow.DescribeDomainResponse
-	//for i := 0; i < 20; i++ { // retry to wait domain been replicated to cluster2
-	//	if resp2, err = client2.DescribeDomain(createContext(), descReq); err != nil {
-	//		s.Equal(&workflow.EntityNotExistsError{Message: "Domain " + domainName + " does not exist."}, err)
-	//		time.Sleep(500 * time.Millisecond)
-	//	} else {
-	//		break
-	//	}
-	//}
-	//s.NoError(err)
-	//s.NotNil(resp2)
-	//s.Equal(resp, resp2)
+	client2 := s.cluster2.host.GetFrontendClient() // standby
+	var resp2 *workflow.DescribeDomainResponse
+	for i := 0; i < 30; i++ { // retry to wait domain been replicated to cluster2
+		if resp2, err = client2.DescribeDomain(createContext(), descReq); err != nil {
+			s.Equal(&workflow.EntityNotExistsError{Message: "Domain " + domainName + " does not exist."}, err)
+			time.Sleep(500 * time.Millisecond)
+		} else {
+			break
+		}
+	}
+	s.NoError(err)
+	s.NotNil(resp2)
+	s.Equal(resp, resp2)
 
 	// update domain to fail over
 	updateReq := &workflow.UpdateDomainRequest{
@@ -271,23 +271,49 @@ func (s *integrationClustersTestSuite) TestDomainFailover() {
 	s.Equal(clusterName[1], updateResp.ReplicationConfiguration.GetActiveClusterName())
 	s.Equal(int64(1), updateResp.GetFailoverVersion())
 
-	//// uncommented when domain cache background update is ready
-	//updated := false
-	//var resp3 *workflow.DescribeDomainResponse
-	//for i := 0; i < 20; i++ {
-	//	resp3, err = client2.DescribeDomain(createContext(), descReq)
-	//	s.NoError(err)
-	//	if resp2.ReplicationConfiguration.GetActiveClusterName() == clusterName[1] {
-	//		updated = true
-	//		break
-	//	}
-	//	fmt.Println("vancexu waiting update replciation")
-	//	time.Sleep(500 * time.Millisecond)
-	//}
-	//s.True(updated)
-	//s.NotNil(resp3)
-	//fmt.Println("vancexu resp3:")
-	//fmt.Println(resp3)
+	updated := false
+	var resp3 *workflow.DescribeDomainResponse
+	for i := 0; i < 30; i++ {
+		resp3, err = client2.DescribeDomain(createContext(), descReq)
+		s.NoError(err)
+		if resp3.ReplicationConfiguration.GetActiveClusterName() == clusterName[1] {
+			updated = true
+			break
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+	s.True(updated)
+	s.NotNil(resp3)
+	s.Equal(int64(1), resp3.GetFailoverVersion())
+
+	// start workflow in new cluster
+	id := "integration-domain-failover-test"
+	wt := "integration-domain-failover-test-type"
+	tl := "integration-domain-failover-test-tasklist"
+	identity := "worker1"
+	workflowType := &workflow.WorkflowType{Name: common.StringPtr(wt)}
+	taskList := &workflow.TaskList{Name: common.StringPtr(tl)}
+	startReq := &workflow.StartWorkflowExecutionRequest{
+		RequestId:    common.StringPtr(uuid.New()),
+		Domain:       common.StringPtr(domainName),
+		WorkflowId:   common.StringPtr(id),
+		WorkflowType: workflowType,
+		TaskList:     taskList,
+		Input:        nil,
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		Identity:                            common.StringPtr(identity),
+	}
+	var we *workflow.StartWorkflowExecutionResponse
+	for i := 0; i < 30; i++ {
+		we, err = client2.StartWorkflowExecution(createContext(), startReq)
+		if err == nil {
+			break
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+	s.NoError(err)
+	s.NotNil(we.GetRunId())
 }
 
 func createContext() context.Context {
