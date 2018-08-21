@@ -1,0 +1,94 @@
+cassandra:
+  hosts: "127.0.0.1"
+  keyspace: "cadence_active"
+  visibilityKeyspace: "cadence_visibility_active"
+  consistency: "One"
+  numHistoryShards: 1
+
+ringpop:
+  name: cadence_active
+  bootstrapMode: hosts
+  bootstrapHosts: ["127.0.0.1:7933", "127.0.0.1:7934", "127.0.0.1:7935", "127.0.0.1:7940"]
+  maxJoinDuration: 30s
+
+services:
+  frontend:
+    rpc:
+      port: 7933
+      bindOnLocalHost: true
+    metrics:
+      statsd:
+        hostPort: "127.0.0.1:8125"
+        prefix: "cadence_active"
+    pprof:
+      port: 7936
+
+  matching:
+    rpc:
+      port: 7935
+      bindOnLocalHost: true
+    metrics:
+      statsd:
+        hostPort: "127.0.0.1:8125"
+        prefix: "cadence_active"
+    pprof:
+      port: 7938
+
+  history:
+    rpc:
+      port: 7934
+      bindOnLocalHost: true
+    metrics:
+      statsd:
+        hostPort: "127.0.0.1:8125"
+        prefix: "cadence_active"
+    pprof:
+      port: 7937
+
+  worker:
+    rpc:
+      port: 7940
+      bindOnLocalHost: true
+    metrics:
+      statsd:
+        hostPort: "127.0.0.1:8125"
+        prefix: "cadence_active"
+    pprof:
+      port: 7941
+
+clustersInfo:
+  enableGlobalDomain: true
+  failoverVersionIncrement: 10
+  masterClusterName: "active"
+  currentClusterName: "active"
+  clusterInitialFailoverVersion:
+    active: 1
+    standby: 0
+
+kafka:
+  clusters:
+    test:
+      brokers:
+        - 127.0.0.1:9092
+  topics:
+    active:
+      cluster: test
+    active-retry:
+      cluster: test
+    active-dlq:
+      cluster: test
+    standby:
+      cluster: test
+    standby-retry:
+      cluster: test
+    standby-dlq:
+      cluster: test
+  cadence-cluster-topics:
+    active:
+      topic: active
+      retry-topic: active-retry
+      dlq-topic: active-dlq
+    standby:
+      topic: standby
+      retry-topic: standby-retry
+      dlq-topic: standby-dlq

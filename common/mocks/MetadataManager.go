@@ -120,3 +120,49 @@ func (_m *MetadataManager) UpdateDomain(request *persistence.UpdateDomainRequest
 
 	return r0
 }
+
+// ListDomains provides a mock function with given fields: request
+func (_m *MetadataManager) ListDomains(request *persistence.ListDomainsRequest) (*persistence.ListDomainsResponse, error) {
+	ret := _m.Called(request)
+
+	var r0 *persistence.ListDomainsResponse
+	if rf, ok := ret.Get(0).(func(*persistence.ListDomainsRequest) *persistence.ListDomainsResponse); ok {
+		r0 = rf(request)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*persistence.ListDomainsResponse)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*persistence.ListDomainsRequest) error); ok {
+		r1 = rf(request)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetMetadata provides a mock function with given fields: request
+func (_m *MetadataManager) GetMetadata() (*persistence.GetMetadataResponse, error) {
+	ret := _m.Called()
+
+	var r0 *persistence.GetMetadataResponse
+	if rf, ok := ret.Get(0).(func() *persistence.GetMetadataResponse); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*persistence.GetMetadataResponse)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}

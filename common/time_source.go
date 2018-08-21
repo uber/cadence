@@ -30,16 +30,39 @@ type (
 	TimeSource interface {
 		Now() time.Time
 	}
-	// realTimeSource serves real wall-clock time
-	realTimeSource struct{}
+	// RealTimeSource serves real wall-clock time
+	RealTimeSource struct{}
+
+	// EventTimeSource serves fake controlled time
+	EventTimeSource struct {
+		now time.Time
+	}
 )
 
 // NewRealTimeSource returns a time source that servers
-// real wall clock time using CLOCK_REALTIME
-func NewRealTimeSource() TimeSource {
-	return &realTimeSource{}
+// real wall clock time
+func NewRealTimeSource() *RealTimeSource {
+	return &RealTimeSource{}
 }
 
-func (ts *realTimeSource) Now() time.Time {
+// Now return the real current time
+func (ts *RealTimeSource) Now() time.Time {
 	return time.Now()
+}
+
+// NewEventTimeSource returns a time source that servers
+// fake controlled time
+func NewEventTimeSource() *EventTimeSource {
+	return &EventTimeSource{}
+}
+
+// Now return the fake current time
+func (ts *EventTimeSource) Now() time.Time {
+	return ts.now
+}
+
+// Update update the fake current time
+func (ts *EventTimeSource) Update(now time.Time) *EventTimeSource {
+	ts.now = now
+	return ts
 }

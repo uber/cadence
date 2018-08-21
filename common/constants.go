@@ -25,6 +25,14 @@ const (
 	FirstEventID int64 = 1
 	// EmptyEventID is the id of the empty event
 	EmptyEventID int64 = -23
+	// EmptyVersion is used as the default value for failover version when no value is provided
+	EmptyVersion int64 = -24
+	// EndEventID is the id of the end event, here we use the int64 max
+	EndEventID int64 = 1<<63 - 1
+	// BufferedEventID is the id of the buffered event
+	BufferedEventID int64 = -123
+	// TransientEventID is the id of the transient event
+	TransientEventID int64 = -124
 )
 
 const (
@@ -34,6 +42,8 @@ const (
 	HistoryServiceName = "cadence-history"
 	// MatchingServiceName is the name of the matching service
 	MatchingServiceName = "cadence-matching"
+	// WorkerServiceName is the name of the worker service
+	WorkerServiceName = "cadence-worker"
 )
 
 // Data encoding types
@@ -46,3 +56,6 @@ type (
 	// EncodingType is an enum that represents various data encoding types
 	EncodingType string
 )
+
+// MaxTaskTimeout is maximum task timeout allowed. 366 days in seconds
+const MaxTaskTimeout = 31622400

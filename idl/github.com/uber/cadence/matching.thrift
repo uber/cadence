@@ -24,6 +24,7 @@ namespace java com.uber.cadence.matching
 
 struct PollForDecisionTaskRequest {
   10: optional string domainUUID
+  15: optional string pollerID
   20: optional shared.PollForDecisionTaskRequest pollRequest
 }
 
@@ -33,10 +34,18 @@ struct PollForDecisionTaskResponse {
   30: optional shared.WorkflowType workflowType
   40: optional i64 (js.type = "Long") previousStartedEventId
   50: optional i64 (js.type = "Long") startedEventId
+  51: optional i64 (js.type = "Long") attempt
+  60: optional i64 (js.type = "Long") nextEventId
+  65: optional i64 (js.type = "Long") backlogCountHint
+  70: optional bool stickyExecutionEnabled
+  80: optional shared.WorkflowQuery query
+  90: optional shared.TransientDecisionInfo decisionInfo
+  100: optional shared.TaskList WorkflowExecutionTaskList
 }
 
 struct PollForActivityTaskRequest {
   10: optional string domainUUID
+  15: optional string pollerID
   20: optional shared.PollForActivityTaskRequest pollRequest
 }
 
@@ -45,6 +54,7 @@ struct AddDecisionTaskRequest {
   20: optional shared.WorkflowExecution execution
   30: optional shared.TaskList taskList
   40: optional i64 (js.type = "Long") scheduleId
+  50: optional i32 scheduleToStartTimeoutSeconds
 }
 
 struct AddActivityTaskRequest {
@@ -54,6 +64,31 @@ struct AddActivityTaskRequest {
   40: optional shared.TaskList taskList
   50: optional i64 (js.type = "Long") scheduleId
   60: optional i32 scheduleToStartTimeoutSeconds
+}
+
+struct QueryWorkflowRequest {
+  10: optional string domainUUID
+  20: optional shared.TaskList taskList
+  30: optional shared.QueryWorkflowRequest queryRequest
+}
+
+struct RespondQueryTaskCompletedRequest {
+  10: optional string domainUUID
+  20: optional shared.TaskList taskList
+  30: optional string taskID
+  40: optional shared.RespondQueryTaskCompletedRequest completedRequest
+}
+
+struct CancelOutstandingPollRequest {
+  10: optional string domainUUID
+  20: optional i32 taskListType
+  30: optional shared.TaskList taskList
+  40: optional string pollerID
+}
+
+struct DescribeTaskListRequest {
+  10: optional string domainUUID
+  20: optional shared.DescribeTaskListRequest descRequest
 }
 
 /**
@@ -72,6 +107,8 @@ service MatchingService {
     throws (
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,
+      3: shared.LimitExceededError limitExceededError,
+      4: shared.ServiceBusyError serviceBusyError,
     )
 
   /**
@@ -82,6 +119,8 @@ service MatchingService {
     throws (
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,
+      3: shared.LimitExceededError limitExceededError,
+      4: shared.ServiceBusyError serviceBusyError,
     )
 
   /**
@@ -93,6 +132,8 @@ service MatchingService {
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,
       3: shared.ServiceBusyError serviceBusyError,
+      4: shared.LimitExceededError limitExceededError,
+      5: shared.DomainNotActiveError domainNotActiveError,
     )
 
   /**
@@ -104,5 +145,60 @@ service MatchingService {
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,
       3: shared.ServiceBusyError serviceBusyError,
+      4: shared.LimitExceededError limitExceededError,
+      5: shared.DomainNotActiveError domainNotActiveError,
     )
+
+  /**
+  * QueryWorkflow is called by frontend to query a workflow.
+  **/
+  shared.QueryWorkflowResponse QueryWorkflow(1: QueryWorkflowRequest queryRequest)
+    throws (
+      1: shared.BadRequestError badRequestError,
+      2: shared.InternalServiceError internalServiceError,
+      3: shared.EntityNotExistsError entityNotExistError,
+      4: shared.QueryFailedError queryFailedError,
+      5: shared.LimitExceededError limitExceededError,
+      6: shared.ServiceBusyError serviceBusyError,
+    )
+
+  /**
+  * RespondQueryTaskCompleted is called by frontend to respond query completed.
+  **/
+  void RespondQueryTaskCompleted(1: RespondQueryTaskCompletedRequest request)
+    throws (
+      1: shared.BadRequestError badRequestError,
+      2: shared.InternalServiceError internalServiceError,
+      3: shared.EntityNotExistsError entityNotExistError,
+      4: shared.LimitExceededError limitExceededError,
+      5: shared.ServiceBusyError serviceBusyError,
+    )
+
+  /**
+    * CancelOutstandingPoll is called by frontend to unblock long polls on matching for zombie pollers.
+    * Our rpc stack does not support context propagation, so when a client connection goes away frontend sees
+    * cancellation of context for that handler, but any corresponding calls (long-poll) to matching service does not
+    * see the cancellation propagated so it can unblock corresponding long-polls on its end.  This results is tasks
+    * being dispatched to zombie pollers in this situation.  This API is added so everytime frontend makes a long-poll
+    * api call to matching it passes in a pollerID and then calls this API when it detects client connection is closed
+    * to unblock long polls for this poller and prevent tasks being sent to these zombie pollers.
+    **/
+  void CancelOutstandingPoll(1: CancelOutstandingPollRequest request)
+    throws (
+      1: shared.BadRequestError badRequestError,
+      2: shared.InternalServiceError internalServiceError,
+      3: shared.ServiceBusyError serviceBusyError,
+    )
+
+  /**
+  * DescribeTaskList returns information about the target tasklist, right now this API returns the
+  * pollers which polled this tasklist in last few minutes.
+  **/
+  shared.DescribeTaskListResponse DescribeTaskList(1: DescribeTaskListRequest request)
+    throws (
+        1: shared.BadRequestError badRequestError,
+        2: shared.InternalServiceError internalServiceError,
+        3: shared.EntityNotExistsError entityNotExistError,
+        4: shared.ServiceBusyError serviceBusyError,
+      )
 }

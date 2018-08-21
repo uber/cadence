@@ -26,6 +26,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/common/cache"
+
 	"github.com/uber-common/bark"
 
 	"github.com/uber/cadence/common"
@@ -33,6 +35,7 @@ import (
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/service"
 )
 
 const (
@@ -41,12 +44,14 @@ const (
 
 type (
 	shardController struct {
+		service             service.Service
 		host                *membership.HostInfo
 		hServiceResolver    membership.ServiceResolver
 		membershipUpdateCh  chan *membership.ChangedEvent
 		shardMgr            persistence.ShardManager
 		historyMgr          persistence.HistoryManager
 		executionMgrFactory persistence.ExecutionManagerFactory
+		domainCache         cache.DomainCache
 		engineFactory       EngineFactory
 		shardClosedCh       chan int
 		isStarted           int32
@@ -65,9 +70,11 @@ type (
 	historyShardsItem struct {
 		sync.RWMutex
 		shardID       int
+		service       service.Service
 		shardMgr      persistence.ShardManager
 		historyMgr    persistence.HistoryManager
 		executionMgr  persistence.ExecutionManager
+		domainCache   cache.DomainCache
 		engineFactory EngineFactory
 		host          *membership.HostInfo
 		engine        Engine
@@ -77,32 +84,36 @@ type (
 	}
 )
 
-func newShardController(host *membership.HostInfo, resolver membership.ServiceResolver,
-	shardMgr persistence.ShardManager, historyMgr persistence.HistoryManager,
-	executionMgrFactory persistence.ExecutionManagerFactory, factory EngineFactory, config *Config,
-	logger bark.Logger, reporter metrics.Client) *shardController {
+func newShardController(svc service.Service, host *membership.HostInfo, resolver membership.ServiceResolver,
+	shardMgr persistence.ShardManager, historyMgr persistence.HistoryManager, domainCache cache.DomainCache,
+	executionMgrFactory persistence.ExecutionManagerFactory, factory EngineFactory,
+	config *Config, logger bark.Logger, metricsClient metrics.Client) *shardController {
+	logger = logger.WithFields(bark.Fields{
+		logging.TagWorkflowComponent: logging.TagValueShardController,
+	})
 	return &shardController{
+		service:             svc,
 		host:                host,
 		hServiceResolver:    resolver,
 		membershipUpdateCh:  make(chan *membership.ChangedEvent, 10),
 		shardMgr:            shardMgr,
 		historyMgr:          historyMgr,
 		executionMgrFactory: executionMgrFactory,
+		domainCache:         domainCache,
 		engineFactory:       factory,
 		historyShards:       make(map[int]*historyShardsItem),
 		shardClosedCh:       make(chan int, config.NumberOfShards),
 		shutdownCh:          make(chan struct{}),
-		logger: logger.WithFields(bark.Fields{
-			logging.TagWorkflowComponent: logging.TagValueShardController,
-		}),
-		config:        config,
-		metricsClient: reporter,
+		logger:              logger,
+		config:              config,
+		metricsClient:       metricsClient,
 	}
 }
 
-func newHistoryShardsItem(shardID int, shardMgr persistence.ShardManager, historyMgr persistence.HistoryManager,
+func newHistoryShardsItem(shardID int, svc service.Service, shardMgr persistence.ShardManager,
+	historyMgr persistence.HistoryManager, domainCache cache.DomainCache,
 	executionMgrFactory persistence.ExecutionManagerFactory, factory EngineFactory, host *membership.HostInfo,
-	config *Config, logger bark.Logger, reporter metrics.Client) (*historyShardsItem, error) {
+	config *Config, logger bark.Logger, metricsClient metrics.Client) (*historyShardsItem, error) {
 
 	executionMgr, err := executionMgrFactory.CreateExecutionManager(shardID)
 	if err != nil {
@@ -110,17 +121,19 @@ func newHistoryShardsItem(shardID int, shardMgr persistence.ShardManager, histor
 	}
 
 	return &historyShardsItem{
+		service:       svc,
 		shardID:       shardID,
 		shardMgr:      shardMgr,
 		historyMgr:    historyMgr,
 		executionMgr:  executionMgr,
+		domainCache:   domainCache,
 		engineFactory: factory,
 		host:          host,
 		config:        config,
 		logger: logger.WithFields(bark.Fields{
 			logging.TagHistoryShardID: shardID,
 		}),
-		metricsClient: reporter,
+		metricsClient: metricsClient,
 	}, nil
 }
 
@@ -162,7 +175,7 @@ func (c *shardController) Stop() {
 }
 
 func (c *shardController) GetEngine(workflowID string) (Engine, error) {
-	shardID := common.WorkflowIDToHistoryShard(workflowID, c.config.NumberOfShards)
+	shardID := c.config.GetShardID(workflowID)
 	return c.getEngineForShard(shardID)
 }
 
@@ -209,8 +222,8 @@ func (c *shardController) getOrCreateHistoryShardItem(shardID int) (*historyShar
 	}
 
 	if info.Identity() == c.host.Identity() {
-		shardItem, err := newHistoryShardsItem(shardID, c.shardMgr, c.historyMgr, c.executionMgrFactory, c.engineFactory, c.host,
-			c.config, c.logger, c.metricsClient)
+		shardItem, err := newHistoryShardsItem(shardID, c.service, c.shardMgr, c.historyMgr, c.domainCache,
+			c.executionMgrFactory, c.engineFactory, c.host, c.config, c.logger, c.metricsClient)
 		if err != nil {
 			return nil, err
 		}
@@ -251,7 +264,7 @@ func (c *shardController) shardManagementPump() {
 
 	defer c.shutdownWG.Done()
 
-	acquireTicker := time.NewTicker(c.config.AcquireShardInterval)
+	acquireTicker := time.NewTicker(c.config.AcquireShardInterval())
 	defer acquireTicker.Stop()
 
 	for {
@@ -344,6 +357,17 @@ func (c *shardController) numShards() int {
 	return nShards
 }
 
+func (c *shardController) shardIDs() []int32 {
+	c.RLock()
+	ids := []int32{}
+	for id := range c.historyShards {
+		id32 := int32(id)
+		ids = append(ids, id32)
+	}
+	c.RUnlock()
+	return ids
+}
+
 func (i *historyShardsItem) getEngine() Engine {
 	i.RLock()
 	defer i.RUnlock()
@@ -368,8 +392,8 @@ func (i *historyShardsItem) getOrCreateEngine(shardClosedCh chan<- int) (Engine,
 
 	logging.LogShardEngineCreatingEvent(i.logger, i.host.Identity(), i.shardID)
 
-	context, err := acquireShard(i.shardID, i.shardMgr, i.historyMgr, i.executionMgr, i.host.Identity(), shardClosedCh,
-		i.config, i.logger, i.metricsClient)
+	context, err := acquireShard(i.shardID, i.service, i.shardMgr, i.historyMgr, i.executionMgr, i.domainCache,
+		i.host.Identity(), shardClosedCh, i.config, i.logger, i.metricsClient)
 	if err != nil {
 		return nil, err
 	}
@@ -390,13 +414,6 @@ func (i *historyShardsItem) stopEngine() {
 		i.engine.Stop()
 		i.engine = nil
 		logging.LogShardEngineStoppedEvent(i.logger, i.host.Identity(), i.shardID)
-	}
-
-	// Shutting down executionMgr will close all connections
-	// to cassandra for this engine. So, make sure to
-	// close executionMgr only after stopping the engine
-	if i.executionMgr != nil {
-		i.executionMgr.Close()
 	}
 }
 

@@ -25,11 +25,11 @@ package matchingserviceserver
 
 import (
 	"context"
+	"github.com/uber/cadence/.gen/go/matching"
+	"github.com/uber/cadence/.gen/go/shared"
 	"go.uber.org/thriftrw/wire"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/thrift"
-	"github.com/uber/cadence/.gen/go/matching"
-	"github.com/uber/cadence/.gen/go/shared"
 )
 
 // Interface is the server-side interface for the MatchingService service.
@@ -44,6 +44,16 @@ type Interface interface {
 		AddRequest *matching.AddDecisionTaskRequest,
 	) error
 
+	CancelOutstandingPoll(
+		ctx context.Context,
+		Request *matching.CancelOutstandingPollRequest,
+	) error
+
+	DescribeTaskList(
+		ctx context.Context,
+		Request *matching.DescribeTaskListRequest,
+	) (*shared.DescribeTaskListResponse, error)
+
 	PollForActivityTask(
 		ctx context.Context,
 		PollRequest *matching.PollForActivityTaskRequest,
@@ -53,6 +63,16 @@ type Interface interface {
 		ctx context.Context,
 		PollRequest *matching.PollForDecisionTaskRequest,
 	) (*matching.PollForDecisionTaskResponse, error)
+
+	QueryWorkflow(
+		ctx context.Context,
+		QueryRequest *matching.QueryWorkflowRequest,
+	) (*shared.QueryWorkflowResponse, error)
+
+	RespondQueryTaskCompleted(
+		ctx context.Context,
+		Request *matching.RespondQueryTaskCompletedRequest,
+	) error
 }
 
 // New prepares an implementation of the MatchingService service for
@@ -89,6 +109,28 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
+				Name: "CancelOutstandingPoll",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.CancelOutstandingPoll),
+				},
+				Signature:    "CancelOutstandingPoll(Request *matching.CancelOutstandingPollRequest)",
+				ThriftModule: matching.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "DescribeTaskList",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.DescribeTaskList),
+				},
+				Signature:    "DescribeTaskList(Request *matching.DescribeTaskListRequest) (*shared.DescribeTaskListResponse)",
+				ThriftModule: matching.ThriftModule,
+			},
+
+			thrift.Method{
 				Name: "PollForActivityTask",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -109,10 +151,32 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Signature:    "PollForDecisionTask(PollRequest *matching.PollForDecisionTaskRequest) (*matching.PollForDecisionTaskResponse)",
 				ThriftModule: matching.ThriftModule,
 			},
+
+			thrift.Method{
+				Name: "QueryWorkflow",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.QueryWorkflow),
+				},
+				Signature:    "QueryWorkflow(QueryRequest *matching.QueryWorkflowRequest) (*shared.QueryWorkflowResponse)",
+				ThriftModule: matching.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "RespondQueryTaskCompleted",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.RespondQueryTaskCompleted),
+				},
+				Signature:    "RespondQueryTaskCompleted(Request *matching.RespondQueryTaskCompletedRequest)",
+				ThriftModule: matching.ThriftModule,
+			},
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 4)
+	procedures := make([]transport.Procedure, 0, 8)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
@@ -157,6 +221,44 @@ func (h handler) AddDecisionTask(ctx context.Context, body wire.Value) (thrift.R
 	return response, err
 }
 
+func (h handler) CancelOutstandingPoll(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args matching.MatchingService_CancelOutstandingPoll_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	err := h.impl.CancelOutstandingPoll(ctx, args.Request)
+
+	hadError := err != nil
+	result, err := matching.MatchingService_CancelOutstandingPoll_Helper.WrapResponse(err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) DescribeTaskList(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args matching.MatchingService_DescribeTaskList_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.DescribeTaskList(ctx, args.Request)
+
+	hadError := err != nil
+	result, err := matching.MatchingService_DescribeTaskList_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
 func (h handler) PollForActivityTask(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args matching.MatchingService_PollForActivityTask_Args
 	if err := args.FromWire(body); err != nil {
@@ -186,6 +288,44 @@ func (h handler) PollForDecisionTask(ctx context.Context, body wire.Value) (thri
 
 	hadError := err != nil
 	result, err := matching.MatchingService_PollForDecisionTask_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) QueryWorkflow(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args matching.MatchingService_QueryWorkflow_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.QueryWorkflow(ctx, args.QueryRequest)
+
+	hadError := err != nil
+	result, err := matching.MatchingService_QueryWorkflow_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) RespondQueryTaskCompleted(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args matching.MatchingService_RespondQueryTaskCompleted_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	err := h.impl.RespondQueryTaskCompleted(ctx, args.Request)
+
+	hadError := err != nil
+	result, err := matching.MatchingService_RespondQueryTaskCompleted_Helper.WrapResponse(err)
 
 	var response thrift.Response
 	if err == nil {

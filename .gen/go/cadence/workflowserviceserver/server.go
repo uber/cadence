@@ -25,11 +25,11 @@ package workflowserviceserver
 
 import (
 	"context"
+	"github.com/uber/cadence/.gen/go/cadence"
+	"github.com/uber/cadence/.gen/go/shared"
 	"go.uber.org/thriftrw/wire"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/thrift"
-	"github.com/uber/cadence/.gen/go/cadence"
-	"github.com/uber/cadence/.gen/go/shared"
 )
 
 // Interface is the server-side interface for the WorkflowService service.
@@ -44,6 +44,16 @@ type Interface interface {
 		DescribeRequest *shared.DescribeDomainRequest,
 	) (*shared.DescribeDomainResponse, error)
 
+	DescribeTaskList(
+		ctx context.Context,
+		Request *shared.DescribeTaskListRequest,
+	) (*shared.DescribeTaskListResponse, error)
+
+	DescribeWorkflowExecution(
+		ctx context.Context,
+		DescribeRequest *shared.DescribeWorkflowExecutionRequest,
+	) (*shared.DescribeWorkflowExecutionResponse, error)
+
 	GetWorkflowExecutionHistory(
 		ctx context.Context,
 		GetRequest *shared.GetWorkflowExecutionHistoryRequest,
@@ -53,6 +63,11 @@ type Interface interface {
 		ctx context.Context,
 		ListRequest *shared.ListClosedWorkflowExecutionsRequest,
 	) (*shared.ListClosedWorkflowExecutionsResponse, error)
+
+	ListDomains(
+		ctx context.Context,
+		ListRequest *shared.ListDomainsRequest,
+	) (*shared.ListDomainsResponse, error)
 
 	ListOpenWorkflowExecutions(
 		ctx context.Context,
@@ -69,9 +84,19 @@ type Interface interface {
 		PollRequest *shared.PollForDecisionTaskRequest,
 	) (*shared.PollForDecisionTaskResponse, error)
 
+	QueryWorkflow(
+		ctx context.Context,
+		QueryRequest *shared.QueryWorkflowRequest,
+	) (*shared.QueryWorkflowResponse, error)
+
 	RecordActivityTaskHeartbeat(
 		ctx context.Context,
 		HeartbeatRequest *shared.RecordActivityTaskHeartbeatRequest,
+	) (*shared.RecordActivityTaskHeartbeatResponse, error)
+
+	RecordActivityTaskHeartbeatByID(
+		ctx context.Context,
+		HeartbeatRequest *shared.RecordActivityTaskHeartbeatByIDRequest,
 	) (*shared.RecordActivityTaskHeartbeatResponse, error)
 
 	RegisterDomain(
@@ -84,9 +109,19 @@ type Interface interface {
 		CancelRequest *shared.RequestCancelWorkflowExecutionRequest,
 	) error
 
+	ResetStickyTaskList(
+		ctx context.Context,
+		ResetRequest *shared.ResetStickyTaskListRequest,
+	) (*shared.ResetStickyTaskListResponse, error)
+
 	RespondActivityTaskCanceled(
 		ctx context.Context,
 		CanceledRequest *shared.RespondActivityTaskCanceledRequest,
+	) error
+
+	RespondActivityTaskCanceledByID(
+		ctx context.Context,
+		CanceledRequest *shared.RespondActivityTaskCanceledByIDRequest,
 	) error
 
 	RespondActivityTaskCompleted(
@@ -94,15 +129,40 @@ type Interface interface {
 		CompleteRequest *shared.RespondActivityTaskCompletedRequest,
 	) error
 
+	RespondActivityTaskCompletedByID(
+		ctx context.Context,
+		CompleteRequest *shared.RespondActivityTaskCompletedByIDRequest,
+	) error
+
 	RespondActivityTaskFailed(
 		ctx context.Context,
 		FailRequest *shared.RespondActivityTaskFailedRequest,
 	) error
 
+	RespondActivityTaskFailedByID(
+		ctx context.Context,
+		FailRequest *shared.RespondActivityTaskFailedByIDRequest,
+	) error
+
 	RespondDecisionTaskCompleted(
 		ctx context.Context,
 		CompleteRequest *shared.RespondDecisionTaskCompletedRequest,
+	) (*shared.RespondDecisionTaskCompletedResponse, error)
+
+	RespondDecisionTaskFailed(
+		ctx context.Context,
+		FailedRequest *shared.RespondDecisionTaskFailedRequest,
 	) error
+
+	RespondQueryTaskCompleted(
+		ctx context.Context,
+		CompleteRequest *shared.RespondQueryTaskCompletedRequest,
+	) error
+
+	SignalWithStartWorkflowExecution(
+		ctx context.Context,
+		SignalWithStartRequest *shared.SignalWithStartWorkflowExecutionRequest,
+	) (*shared.StartWorkflowExecutionResponse, error)
 
 	SignalWorkflowExecution(
 		ctx context.Context,
@@ -159,6 +219,28 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
+				Name: "DescribeTaskList",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.DescribeTaskList),
+				},
+				Signature:    "DescribeTaskList(Request *shared.DescribeTaskListRequest) (*shared.DescribeTaskListResponse)",
+				ThriftModule: cadence.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "DescribeWorkflowExecution",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.DescribeWorkflowExecution),
+				},
+				Signature:    "DescribeWorkflowExecution(DescribeRequest *shared.DescribeWorkflowExecutionRequest) (*shared.DescribeWorkflowExecutionResponse)",
+				ThriftModule: cadence.ThriftModule,
+			},
+
+			thrift.Method{
 				Name: "GetWorkflowExecutionHistory",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -177,6 +259,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary: thrift.UnaryHandler(h.ListClosedWorkflowExecutions),
 				},
 				Signature:    "ListClosedWorkflowExecutions(ListRequest *shared.ListClosedWorkflowExecutionsRequest) (*shared.ListClosedWorkflowExecutionsResponse)",
+				ThriftModule: cadence.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "ListDomains",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.ListDomains),
+				},
+				Signature:    "ListDomains(ListRequest *shared.ListDomainsRequest) (*shared.ListDomainsResponse)",
 				ThriftModule: cadence.ThriftModule,
 			},
 
@@ -214,6 +307,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
+				Name: "QueryWorkflow",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.QueryWorkflow),
+				},
+				Signature:    "QueryWorkflow(QueryRequest *shared.QueryWorkflowRequest) (*shared.QueryWorkflowResponse)",
+				ThriftModule: cadence.ThriftModule,
+			},
+
+			thrift.Method{
 				Name: "RecordActivityTaskHeartbeat",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -221,6 +325,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary: thrift.UnaryHandler(h.RecordActivityTaskHeartbeat),
 				},
 				Signature:    "RecordActivityTaskHeartbeat(HeartbeatRequest *shared.RecordActivityTaskHeartbeatRequest) (*shared.RecordActivityTaskHeartbeatResponse)",
+				ThriftModule: cadence.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "RecordActivityTaskHeartbeatByID",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.RecordActivityTaskHeartbeatByID),
+				},
+				Signature:    "RecordActivityTaskHeartbeatByID(HeartbeatRequest *shared.RecordActivityTaskHeartbeatByIDRequest) (*shared.RecordActivityTaskHeartbeatResponse)",
 				ThriftModule: cadence.ThriftModule,
 			},
 
@@ -247,6 +362,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
+				Name: "ResetStickyTaskList",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.ResetStickyTaskList),
+				},
+				Signature:    "ResetStickyTaskList(ResetRequest *shared.ResetStickyTaskListRequest) (*shared.ResetStickyTaskListResponse)",
+				ThriftModule: cadence.ThriftModule,
+			},
+
+			thrift.Method{
 				Name: "RespondActivityTaskCanceled",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -254,6 +380,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary: thrift.UnaryHandler(h.RespondActivityTaskCanceled),
 				},
 				Signature:    "RespondActivityTaskCanceled(CanceledRequest *shared.RespondActivityTaskCanceledRequest)",
+				ThriftModule: cadence.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "RespondActivityTaskCanceledByID",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.RespondActivityTaskCanceledByID),
+				},
+				Signature:    "RespondActivityTaskCanceledByID(CanceledRequest *shared.RespondActivityTaskCanceledByIDRequest)",
 				ThriftModule: cadence.ThriftModule,
 			},
 
@@ -269,6 +406,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
+				Name: "RespondActivityTaskCompletedByID",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.RespondActivityTaskCompletedByID),
+				},
+				Signature:    "RespondActivityTaskCompletedByID(CompleteRequest *shared.RespondActivityTaskCompletedByIDRequest)",
+				ThriftModule: cadence.ThriftModule,
+			},
+
+			thrift.Method{
 				Name: "RespondActivityTaskFailed",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -280,13 +428,57 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
+				Name: "RespondActivityTaskFailedByID",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.RespondActivityTaskFailedByID),
+				},
+				Signature:    "RespondActivityTaskFailedByID(FailRequest *shared.RespondActivityTaskFailedByIDRequest)",
+				ThriftModule: cadence.ThriftModule,
+			},
+
+			thrift.Method{
 				Name: "RespondDecisionTaskCompleted",
 				HandlerSpec: thrift.HandlerSpec{
 
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.RespondDecisionTaskCompleted),
 				},
-				Signature:    "RespondDecisionTaskCompleted(CompleteRequest *shared.RespondDecisionTaskCompletedRequest)",
+				Signature:    "RespondDecisionTaskCompleted(CompleteRequest *shared.RespondDecisionTaskCompletedRequest) (*shared.RespondDecisionTaskCompletedResponse)",
+				ThriftModule: cadence.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "RespondDecisionTaskFailed",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.RespondDecisionTaskFailed),
+				},
+				Signature:    "RespondDecisionTaskFailed(FailedRequest *shared.RespondDecisionTaskFailedRequest)",
+				ThriftModule: cadence.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "RespondQueryTaskCompleted",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.RespondQueryTaskCompleted),
+				},
+				Signature:    "RespondQueryTaskCompleted(CompleteRequest *shared.RespondQueryTaskCompletedRequest)",
+				ThriftModule: cadence.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "SignalWithStartWorkflowExecution",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.SignalWithStartWorkflowExecution),
+				},
+				Signature:    "SignalWithStartWorkflowExecution(SignalWithStartRequest *shared.SignalWithStartWorkflowExecutionRequest) (*shared.StartWorkflowExecutionResponse)",
 				ThriftModule: cadence.ThriftModule,
 			},
 
@@ -336,7 +528,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 18)
+	procedures := make([]transport.Procedure, 0, 30)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
@@ -381,6 +573,44 @@ func (h handler) DescribeDomain(ctx context.Context, body wire.Value) (thrift.Re
 	return response, err
 }
 
+func (h handler) DescribeTaskList(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args cadence.WorkflowService_DescribeTaskList_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.DescribeTaskList(ctx, args.Request)
+
+	hadError := err != nil
+	result, err := cadence.WorkflowService_DescribeTaskList_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) DescribeWorkflowExecution(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args cadence.WorkflowService_DescribeWorkflowExecution_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.DescribeWorkflowExecution(ctx, args.DescribeRequest)
+
+	hadError := err != nil
+	result, err := cadence.WorkflowService_DescribeWorkflowExecution_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
 func (h handler) GetWorkflowExecutionHistory(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args cadence.WorkflowService_GetWorkflowExecutionHistory_Args
 	if err := args.FromWire(body); err != nil {
@@ -410,6 +640,25 @@ func (h handler) ListClosedWorkflowExecutions(ctx context.Context, body wire.Val
 
 	hadError := err != nil
 	result, err := cadence.WorkflowService_ListClosedWorkflowExecutions_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) ListDomains(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args cadence.WorkflowService_ListDomains_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.ListDomains(ctx, args.ListRequest)
+
+	hadError := err != nil
+	result, err := cadence.WorkflowService_ListDomains_Helper.WrapResponse(success, err)
 
 	var response thrift.Response
 	if err == nil {
@@ -476,6 +725,25 @@ func (h handler) PollForDecisionTask(ctx context.Context, body wire.Value) (thri
 	return response, err
 }
 
+func (h handler) QueryWorkflow(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args cadence.WorkflowService_QueryWorkflow_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.QueryWorkflow(ctx, args.QueryRequest)
+
+	hadError := err != nil
+	result, err := cadence.WorkflowService_QueryWorkflow_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
 func (h handler) RecordActivityTaskHeartbeat(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args cadence.WorkflowService_RecordActivityTaskHeartbeat_Args
 	if err := args.FromWire(body); err != nil {
@@ -486,6 +754,25 @@ func (h handler) RecordActivityTaskHeartbeat(ctx context.Context, body wire.Valu
 
 	hadError := err != nil
 	result, err := cadence.WorkflowService_RecordActivityTaskHeartbeat_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) RecordActivityTaskHeartbeatByID(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args cadence.WorkflowService_RecordActivityTaskHeartbeatByID_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.RecordActivityTaskHeartbeatByID(ctx, args.HeartbeatRequest)
+
+	hadError := err != nil
+	result, err := cadence.WorkflowService_RecordActivityTaskHeartbeatByID_Helper.WrapResponse(success, err)
 
 	var response thrift.Response
 	if err == nil {
@@ -533,6 +820,25 @@ func (h handler) RequestCancelWorkflowExecution(ctx context.Context, body wire.V
 	return response, err
 }
 
+func (h handler) ResetStickyTaskList(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args cadence.WorkflowService_ResetStickyTaskList_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.ResetStickyTaskList(ctx, args.ResetRequest)
+
+	hadError := err != nil
+	result, err := cadence.WorkflowService_ResetStickyTaskList_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
 func (h handler) RespondActivityTaskCanceled(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args cadence.WorkflowService_RespondActivityTaskCanceled_Args
 	if err := args.FromWire(body); err != nil {
@@ -543,6 +849,25 @@ func (h handler) RespondActivityTaskCanceled(ctx context.Context, body wire.Valu
 
 	hadError := err != nil
 	result, err := cadence.WorkflowService_RespondActivityTaskCanceled_Helper.WrapResponse(err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) RespondActivityTaskCanceledByID(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args cadence.WorkflowService_RespondActivityTaskCanceledByID_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	err := h.impl.RespondActivityTaskCanceledByID(ctx, args.CanceledRequest)
+
+	hadError := err != nil
+	result, err := cadence.WorkflowService_RespondActivityTaskCanceledByID_Helper.WrapResponse(err)
 
 	var response thrift.Response
 	if err == nil {
@@ -571,6 +896,25 @@ func (h handler) RespondActivityTaskCompleted(ctx context.Context, body wire.Val
 	return response, err
 }
 
+func (h handler) RespondActivityTaskCompletedByID(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args cadence.WorkflowService_RespondActivityTaskCompletedByID_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	err := h.impl.RespondActivityTaskCompletedByID(ctx, args.CompleteRequest)
+
+	hadError := err != nil
+	result, err := cadence.WorkflowService_RespondActivityTaskCompletedByID_Helper.WrapResponse(err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
 func (h handler) RespondActivityTaskFailed(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args cadence.WorkflowService_RespondActivityTaskFailed_Args
 	if err := args.FromWire(body); err != nil {
@@ -590,16 +934,92 @@ func (h handler) RespondActivityTaskFailed(ctx context.Context, body wire.Value)
 	return response, err
 }
 
+func (h handler) RespondActivityTaskFailedByID(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args cadence.WorkflowService_RespondActivityTaskFailedByID_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	err := h.impl.RespondActivityTaskFailedByID(ctx, args.FailRequest)
+
+	hadError := err != nil
+	result, err := cadence.WorkflowService_RespondActivityTaskFailedByID_Helper.WrapResponse(err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
 func (h handler) RespondDecisionTaskCompleted(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args cadence.WorkflowService_RespondDecisionTaskCompleted_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	err := h.impl.RespondDecisionTaskCompleted(ctx, args.CompleteRequest)
+	success, err := h.impl.RespondDecisionTaskCompleted(ctx, args.CompleteRequest)
 
 	hadError := err != nil
-	result, err := cadence.WorkflowService_RespondDecisionTaskCompleted_Helper.WrapResponse(err)
+	result, err := cadence.WorkflowService_RespondDecisionTaskCompleted_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) RespondDecisionTaskFailed(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args cadence.WorkflowService_RespondDecisionTaskFailed_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	err := h.impl.RespondDecisionTaskFailed(ctx, args.FailedRequest)
+
+	hadError := err != nil
+	result, err := cadence.WorkflowService_RespondDecisionTaskFailed_Helper.WrapResponse(err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) RespondQueryTaskCompleted(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args cadence.WorkflowService_RespondQueryTaskCompleted_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	err := h.impl.RespondQueryTaskCompleted(ctx, args.CompleteRequest)
+
+	hadError := err != nil
+	result, err := cadence.WorkflowService_RespondQueryTaskCompleted_Helper.WrapResponse(err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) SignalWithStartWorkflowExecution(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args cadence.WorkflowService_SignalWithStartWorkflowExecution_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.SignalWithStartWorkflowExecution(ctx, args.SignalWithStartRequest)
+
+	hadError := err != nil
+	result, err := cadence.WorkflowService_SignalWithStartWorkflowExecution_Helper.WrapResponse(success, err)
 
 	var response thrift.Response
 	if err == nil {

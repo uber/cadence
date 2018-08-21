@@ -33,6 +33,7 @@ exception ShardOwnershipLostError {
 
 struct ParentExecutionInfo {
   10: optional string domainUUID
+  15: optional string domain
   20: optional shared.WorkflowExecution execution
   30: optional i64 (js.type = "Long") initiatedId
 }
@@ -43,19 +44,58 @@ struct StartWorkflowExecutionRequest {
   30: optional ParentExecutionInfo parentExecutionInfo
 }
 
-struct GetWorkflowExecutionNextEventIDRequest {
+struct DescribeMutableStateRequest{
   10: optional string domainUUID
   20: optional shared.WorkflowExecution execution
 }
 
-struct GetWorkflowExecutionNextEventIDResponse {
-  10: optional i64 (js.type = "Long") eventId
-  20: optional string runId
+struct DescribeMutableStateResponse{
+  30: optional string mutableStateInCache
+  40: optional string mutableStateInDatabase
+}
+
+struct GetMutableStateRequest {
+  10: optional string domainUUID
+  20: optional shared.WorkflowExecution execution
+  30: optional i64 (js.type = "Long") expectedNextEventId
+}
+
+struct GetMutableStateResponse {
+  10: optional shared.WorkflowExecution execution
+  20: optional shared.WorkflowType workflowType
+  30: optional i64 (js.type = "Long") NextEventId
+  40: optional i64 (js.type = "Long") LastFirstEventId
+  50: optional shared.TaskList taskList
+  60: optional shared.TaskList stickyTaskList
+  70: optional string clientLibraryVersion
+  80: optional string clientFeatureVersion
+  90: optional string clientImpl
+  100: optional bool isWorkflowRunning
+  110: optional i32 stickyTaskListScheduleToStartTimeout
+}
+
+struct ResetStickyTaskListRequest {
+  10: optional string domainUUID
+  20: optional shared.WorkflowExecution execution
+}
+
+struct ResetStickyTaskListResponse {
+  // The reason to keep this response is to allow returning
+  // information in the future.
 }
 
 struct RespondDecisionTaskCompletedRequest {
   10: optional string domainUUID
   20: optional shared.RespondDecisionTaskCompletedRequest completeRequest
+}
+
+struct RespondDecisionTaskCompletedResponse {
+  10: optional RecordDecisionTaskStartedResponse startedResponse
+}
+
+struct RespondDecisionTaskFailedRequest {
+  10: optional string domainUUID
+  20: optional shared.RespondDecisionTaskFailedRequest failedRequest
 }
 
 struct RecordActivityTaskHeartbeatRequest {
@@ -88,8 +128,10 @@ struct RecordActivityTaskStartedRequest {
 }
 
 struct RecordActivityTaskStartedResponse {
-  10: optional shared.HistoryEvent startedEvent
   20: optional shared.HistoryEvent scheduledEvent
+  30: optional i64 (js.type = "Long") startedTimestamp
+  40: optional i64 (js.type = "Long") attempt
+  50: optional i64 (js.type = "Long") scheduledTimestampOfThisAttempt
 }
 
 struct RecordDecisionTaskStartedRequest {
@@ -104,12 +146,31 @@ struct RecordDecisionTaskStartedRequest {
 struct RecordDecisionTaskStartedResponse {
   10: optional shared.WorkflowType workflowType
   20: optional i64 (js.type = "Long") previousStartedEventId
-  30: optional i64 (js.type = "Long") startedEventId
+  30: optional i64 (js.type = "Long") scheduledEventId
+  40: optional i64 (js.type = "Long") startedEventId
+  50: optional i64 (js.type = "Long") nextEventId
+  60: optional i64 (js.type = "Long") attempt
+  70: optional bool stickyExecutionEnabled
+  80: optional shared.TransientDecisionInfo decisionInfo
+  90: optional shared.TaskList WorkflowExecutionTaskList
 }
 
 struct SignalWorkflowExecutionRequest {
   10: optional string domainUUID
   20: optional shared.SignalWorkflowExecutionRequest signalRequest
+  30: optional shared.WorkflowExecution externalWorkflowExecution
+  40: optional bool childWorkflowOnly
+}
+
+struct SignalWithStartWorkflowExecutionRequest {
+  10: optional string domainUUID
+  20: optional shared.SignalWithStartWorkflowExecutionRequest signalWithStartRequest
+}
+
+struct RemoveSignalMutableStateRequest {
+  10: optional string domainUUID
+  20: optional shared.WorkflowExecution workflowExecution
+  30: optional string requestId
 }
 
 struct TerminateWorkflowExecutionRequest {
@@ -122,11 +183,17 @@ struct RequestCancelWorkflowExecutionRequest {
   20: optional shared.RequestCancelWorkflowExecutionRequest cancelRequest
   30: optional i64 (js.type = "Long") externalInitiatedEventId
   40: optional shared.WorkflowExecution externalWorkflowExecution
+  50: optional bool childWorkflowOnly
 }
 
 struct ScheduleDecisionTaskRequest {
   10: optional string domainUUID
   20: optional shared.WorkflowExecution workflowExecution
+}
+
+struct DescribeWorkflowExecutionRequest {
+  10: optional string domainUUID
+  20: optional shared.DescribeWorkflowExecutionRequest request
 }
 
 /**
@@ -142,6 +209,30 @@ struct RecordChildExecutionCompletedRequest {
   30: optional i64 (js.type = "Long") initiatedId
   40: optional shared.WorkflowExecution completedExecution
   50: optional shared.HistoryEvent completionEvent
+}
+
+struct ReplicationInfo {
+  10: optional i64 (js.type = "Long") version
+  20: optional i64 (js.type = "Long") lastEventId
+}
+
+struct ReplicateEventsRequest {
+  10: optional string sourceCluster
+  20: optional string domainUUID
+  30: optional shared.WorkflowExecution workflowExecution
+  40: optional i64 (js.type = "Long") firstEventId
+  50: optional i64 (js.type = "Long") nextEventId
+  60: optional i64 (js.type = "Long") version
+  70: optional map<string, ReplicationInfo> replicationInfo
+  80: optional shared.History history
+  90: optional shared.History newRunHistory
+  100: optional bool forceBufferEvents
+}
+
+struct SyncShardStatusRequest {
+  10: optional string sourceCluster
+  20: optional i64 (js.type = "Long") shardId
+  30: optional i64 (js.type = "Long") timestamp
 }
 
 /**
@@ -161,19 +252,42 @@ service HistoryService {
       2: shared.InternalServiceError internalServiceError,
       3: shared.WorkflowExecutionAlreadyStartedError sessionAlreadyExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
+      5: shared.DomainNotActiveError domainNotActiveError,
+      6: shared.LimitExceededError limitExceededError,
+      7: shared.ServiceBusyError serviceBusyError,
     )
 
   /**
-  * Returns the nextEventID of the history of workflow execution. Only events in the history with Ids below the returned Id are
-  * guaranteed to be valid, so the first step of reading an execution's history is to retrieve this event Id.
+  * Returns the information from mutable state of workflow execution.
   * It fails with 'EntityNotExistError' if specified workflow execution in unknown to the service.
   **/
-  GetWorkflowExecutionNextEventIDResponse GetWorkflowExecutionNextEventID(1: GetWorkflowExecutionNextEventIDRequest getRequest)
+  GetMutableStateResponse GetMutableState(1: GetMutableStateRequest getRequest)
     throws (
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
+      5: shared.LimitExceededError limitExceededError,
+      6: shared.ServiceBusyError serviceBusyError,
+    )
+
+  /**
+  * Reset the sticky tasklist related information in mutable state of a given workflow.
+  * Things cleared are:
+  * 1. StickyTaskList
+  * 2. StickyScheduleToStartTimeout
+  * 3. ClientLibraryVersion
+  * 4. ClientFeatureVersion
+  * 5. ClientImpl
+  **/
+  ResetStickyTaskListResponse ResetStickyTaskList(1: ResetStickyTaskListRequest resetRequest)
+    throws (
+      1: shared.BadRequestError badRequestError,
+      2: shared.InternalServiceError internalServiceError,
+      3: shared.EntityNotExistsError entityNotExistError,
+      4: ShardOwnershipLostError shardOwnershipLostError,
+      5: shared.LimitExceededError limitExceededError,
+      6: shared.ServiceBusyError serviceBusyError,
     )
 
   /**
@@ -188,6 +302,9 @@ service HistoryService {
       3: EventAlreadyStartedError eventAlreadyStartedError,
       4: shared.EntityNotExistsError entityNotExistError,
       5: ShardOwnershipLostError shardOwnershipLostError,
+      6: shared.DomainNotActiveError domainNotActiveError,
+      7: shared.LimitExceededError limitExceededError,
+      8: shared.ServiceBusyError serviceBusyError,
     )
 
   /**
@@ -202,6 +319,9 @@ service HistoryService {
       3: EventAlreadyStartedError eventAlreadyStartedError,
       4: shared.EntityNotExistsError entityNotExistError,
       5: ShardOwnershipLostError shardOwnershipLostError,
+      6: shared.DomainNotActiveError domainNotActiveError,
+      7: shared.LimitExceededError limitExceededError,
+      8: shared.ServiceBusyError serviceBusyError,
     )
 
   /**
@@ -211,12 +331,31 @@ service HistoryService {
   * event in the history for that session.  Use the 'taskToken' provided as response of PollForDecisionTask API call
   * for completing the DecisionTask.
   **/
-  void RespondDecisionTaskCompleted(1: RespondDecisionTaskCompletedRequest completeRequest)
+  RespondDecisionTaskCompletedResponse RespondDecisionTaskCompleted(1: RespondDecisionTaskCompletedRequest completeRequest)
     throws (
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
+      5: shared.DomainNotActiveError domainNotActiveError,
+      6: shared.LimitExceededError limitExceededError,
+      7: shared.ServiceBusyError serviceBusyError,
+    )
+
+  /**
+  * RespondDecisionTaskFailed is called by application worker to indicate failure.  This results in
+  * DecisionTaskFailedEvent written to the history and a new DecisionTask created.  This API can be used by client to
+  * either clear sticky tasklist or report ny panics during DecisionTask processing.
+  **/
+  void RespondDecisionTaskFailed(1: RespondDecisionTaskFailedRequest failedRequest)
+    throws (
+      1: shared.BadRequestError badRequestError,
+      2: shared.InternalServiceError internalServiceError,
+      3: shared.EntityNotExistsError entityNotExistError,
+      4: ShardOwnershipLostError shardOwnershipLostError,
+      5: shared.DomainNotActiveError domainNotActiveError,
+      6: shared.LimitExceededError limitExceededError,
+      7: shared.ServiceBusyError serviceBusyError,
     )
 
   /**
@@ -232,6 +371,9 @@ service HistoryService {
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
+      5: shared.DomainNotActiveError domainNotActiveError,
+      6: shared.LimitExceededError limitExceededError,
+      7: shared.ServiceBusyError serviceBusyError,
     )
 
   /**
@@ -247,6 +389,9 @@ service HistoryService {
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
+      5: shared.DomainNotActiveError domainNotActiveError,
+      6: shared.LimitExceededError limitExceededError,
+      7: shared.ServiceBusyError serviceBusyError,
     )
 
   /**
@@ -262,6 +407,9 @@ service HistoryService {
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
+      5: shared.DomainNotActiveError domainNotActiveError,
+      6: shared.LimitExceededError limitExceededError,
+      7: shared.ServiceBusyError serviceBusyError,
     )
 
   /**
@@ -277,6 +425,9 @@ service HistoryService {
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
+      5: shared.DomainNotActiveError domainNotActiveError,
+      6: shared.LimitExceededError limitExceededError,
+      7: shared.ServiceBusyError serviceBusyError,
     )
 
   /**
@@ -289,6 +440,41 @@ service HistoryService {
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
+      5: shared.DomainNotActiveError domainNotActiveError,
+      6: shared.ServiceBusyError serviceBusyError,
+      7: shared.LimitExceededError limitExceededError,
+    )
+
+  /**
+  * SignalWithStartWorkflowExecution is used to ensure sending a signal event to a workflow execution.
+  * If workflow is running, this results in WorkflowExecutionSignaled event recorded in the history
+  * and a decision task being created for the execution.
+  * If workflow is not running or not found, this results in WorkflowExecutionStarted and WorkflowExecutionSignaled
+  * event recorded in history, and a decision task being created for the execution
+  **/
+  shared.StartWorkflowExecutionResponse SignalWithStartWorkflowExecution(1: SignalWithStartWorkflowExecutionRequest signalWithStartRequest)
+    throws (
+      1: shared.BadRequestError badRequestError,
+      2: shared.InternalServiceError internalServiceError,
+      3: ShardOwnershipLostError shardOwnershipLostError,
+      4: shared.DomainNotActiveError domainNotActiveError,
+      5: shared.LimitExceededError limitExceededError,
+      6: shared.ServiceBusyError serviceBusyError,
+    )
+
+  /**
+  * RemoveSignalMutableState is used to remove a signal request ID that was previously recorded.  This is currently
+  * used to clean execution info when signal decision finished.
+  **/
+  void RemoveSignalMutableState(1: RemoveSignalMutableStateRequest removeRequest)
+    throws (
+      1: shared.BadRequestError badRequestError,
+      2: shared.InternalServiceError internalServiceError,
+      3: shared.EntityNotExistsError entityNotExistError,
+      4: ShardOwnershipLostError shardOwnershipLostError,
+      5: shared.DomainNotActiveError domainNotActiveError,
+      6: shared.LimitExceededError limitExceededError,
+      7: shared.ServiceBusyError serviceBusyError,
     )
 
   /**
@@ -301,6 +487,9 @@ service HistoryService {
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
+      5: shared.DomainNotActiveError domainNotActiveError,
+      6: shared.LimitExceededError limitExceededError,
+      7: shared.ServiceBusyError serviceBusyError,
     )
 
   /**
@@ -316,6 +505,9 @@ service HistoryService {
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
       5: shared.CancellationAlreadyRequestedError cancellationAlreadyRequestedError,
+      6: shared.DomainNotActiveError domainNotActiveError,
+      7: shared.LimitExceededError limitExceededError,
+      8: shared.ServiceBusyError serviceBusyError,
     )
 
   /**
@@ -330,6 +522,9 @@ service HistoryService {
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
+      5: shared.DomainNotActiveError domainNotActiveError,
+      6: shared.LimitExceededError limitExceededError,
+      7: shared.ServiceBusyError serviceBusyError,
     )
 
   /**
@@ -342,5 +537,67 @@ service HistoryService {
       2: shared.InternalServiceError internalServiceError,
       3: shared.EntityNotExistsError entityNotExistError,
       4: ShardOwnershipLostError shardOwnershipLostError,
+      5: shared.DomainNotActiveError domainNotActiveError,
+      6: shared.LimitExceededError limitExceededError,
+      7: shared.ServiceBusyError serviceBusyError,
+    )
+
+  /**
+  * DescribeWorkflowExecution returns information about the specified workflow execution.
+  **/
+  shared.DescribeWorkflowExecutionResponse DescribeWorkflowExecution(1: DescribeWorkflowExecutionRequest describeRequest)
+    throws (
+      1: shared.BadRequestError badRequestError,
+      2: shared.InternalServiceError internalServiceError,
+      3: shared.EntityNotExistsError entityNotExistError,
+      4: ShardOwnershipLostError shardOwnershipLostError,
+      5: shared.LimitExceededError limitExceededError,
+      6: shared.ServiceBusyError serviceBusyError,
+    )
+
+  void ReplicateEvents(1: ReplicateEventsRequest replicateRequest)
+    throws (
+      1: shared.BadRequestError badRequestError,
+      2: shared.InternalServiceError internalServiceError,
+      3: shared.EntityNotExistsError entityNotExistError,
+      4: ShardOwnershipLostError shardOwnershipLostError,
+      5: shared.LimitExceededError limitExceededError,
+      6: shared.RetryTaskError retryTaskError,
+      7: shared.ServiceBusyError serviceBusyError,
+    )
+
+  /**
+  * SyncShardStatus sync the status between shards
+  **/
+  void SyncShardStatus(1: SyncShardStatusRequest syncShardStatusRequest)
+    throws (
+      1: shared.BadRequestError badRequestError,
+      2: shared.InternalServiceError internalServiceError,
+      4: ShardOwnershipLostError shardOwnershipLostError,
+      5: shared.LimitExceededError limitExceededError,
+      6: shared.ServiceBusyError serviceBusyError,
+    )
+
+  /**
+  * DescribeMutableState returns information about the internal states of workflow mutable state.
+  **/
+  DescribeMutableStateResponse DescribeMutableState(1: DescribeMutableStateRequest request)
+    throws (
+      1: shared.BadRequestError badRequestError,
+      2: shared.InternalServiceError internalServiceError,
+      3: shared.EntityNotExistsError entityNotExistError,
+      4: shared.AccessDeniedError accessDeniedError,
+      5: ShardOwnershipLostError shardOwnershipLostError,
+      6: shared.LimitExceededError limitExceededError,
+    )
+
+  /**
+  * DescribeHistoryHost returns information about the internal states of a history host
+  **/
+  shared.DescribeHistoryHostResponse DescribeHistoryHost(1: shared.DescribeHistoryHostRequest request)
+    throws (
+      1: shared.BadRequestError badRequestError,
+      2: shared.InternalServiceError internalServiceError,
+      3: shared.AccessDeniedError accessDeniedError,
     )
 }

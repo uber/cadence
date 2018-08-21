@@ -25,11 +25,17 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/frontend"
 	"github.com/uber/cadence/service/history"
 	"github.com/uber/cadence/service/matching"
+	"github.com/uber/cadence/service/worker"
+
+	"github.com/uber/cadence/common/messaging"
+	"go.uber.org/zap"
 )
 
 type (
@@ -45,6 +51,7 @@ const (
 	frontendService = "frontend"
 	historyService  = "history"
 	matchingService = "matching"
+	workerService   = "worker"
 )
 
 // newServer returns a new instance of a daemon
@@ -99,20 +106,39 @@ func (s *server) startService() common.Daemon {
 		log.Fatalf("error creating ringpop factory: %v", err)
 	}
 
-	svcCfg := s.cfg.Services[s.name]
+	params.DynamicConfig = dynamicconfig.NewNopClient()
+	dc := dynamicconfig.NewCollection(params.DynamicConfig, params.Logger)
 
+	svcCfg := s.cfg.Services[s.name]
 	params.MetricScope = svcCfg.Metrics.NewScope()
 	params.RPCFactory = svcCfg.RPC.NewFactory(params.Name, params.Logger)
+	params.PProfInitializer = svcCfg.PProf.NewInitializer(params.Logger)
+	enableGlobalDomain := dc.GetBoolProperty(dynamicconfig.EnableGlobalDomain, s.cfg.ClustersInfo.EnableGlobalDomain)
+	params.ClusterMetadata = cluster.NewMetadata(
+		enableGlobalDomain,
+		s.cfg.ClustersInfo.FailoverVersionIncrement,
+		s.cfg.ClustersInfo.MasterClusterName,
+		s.cfg.ClustersInfo.CurrentClusterName,
+		s.cfg.ClustersInfo.ClusterInitialFailoverVersions,
+	)
+	// TODO: We need to switch Cadence to use zap logger, until then just pass zap.NewNop
+	if params.ClusterMetadata.IsGlobalDomainEnabled() {
+		params.MessagingClient = messaging.NewKafkaClient(&s.cfg.Kafka, zap.NewNop(), params.Logger, params.MetricScope)
+	} else {
+		params.MessagingClient = nil
+	}
 
 	var daemon common.Daemon
 
 	switch s.name {
 	case frontendService:
-		daemon = frontend.NewService(&params, frontend.NewConfig())
+		daemon = frontend.NewService(&params)
 	case historyService:
-		daemon = history.NewService(&params, history.NewConfig(s.cfg.Cassandra.NumHistoryShards))
+		daemon = history.NewService(&params)
 	case matchingService:
-		daemon = matching.NewService(&params, matching.NewConfig())
+		daemon = matching.NewService(&params)
+	case workerService:
+		daemon = worker.NewService(&params)
 	}
 
 	go execute(daemon, s.doneC)

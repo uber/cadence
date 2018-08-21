@@ -21,6 +21,7 @@
 package persistence
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/gocql/gocql"
@@ -28,22 +29,24 @@ import (
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/logging"
 )
 
 const (
 	templateAppendHistoryEvents = `INSERT INTO events (` +
-		`domain_id, workflow_id, run_id, first_event_id, range_id, tx_id, data, data_encoding, data_version) ` +
-		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) IF NOT EXISTS`
+		`domain_id, workflow_id, run_id, first_event_id, event_batch_version, range_id, tx_id, data, data_encoding, data_version) ` +
+		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) IF NOT EXISTS`
 
 	templateOverwriteHistoryEvents = `UPDATE events ` +
-		`SET range_id = ?, tx_id = ?, data = ?, data_encoding = ?, data_version = ? ` +
+		`SET event_batch_version = ?, range_id = ?, tx_id = ?, data = ?, data_encoding = ?, data_version = ? ` +
 		`WHERE domain_id = ? AND workflow_id = ? AND run_id = ? AND first_event_id = ? ` +
 		`IF range_id <= ? AND tx_id < ?`
 
-	templateGetWorkflowExecutionHistory = `SELECT first_event_id, data, data_encoding, data_version FROM events ` +
+	templateGetWorkflowExecutionHistory = `SELECT first_event_id, event_batch_version, data, data_encoding, data_version FROM events ` +
 		`WHERE domain_id = ? ` +
 		`AND workflow_id = ? ` +
 		`AND run_id = ? ` +
+		`AND first_event_id >= ? ` +
 		`AND first_event_id < ?`
 
 	templateDeleteWorkflowExecutionHistory = `DELETE FROM events ` +
@@ -53,14 +56,22 @@ const (
 )
 
 type (
+	historyToken struct {
+		LastEventBatchVersion int64
+		LastEventID           int64
+		Data                  []byte
+	}
+
 	cassandraHistoryPersistence struct {
-		session *gocql.Session
-		logger  bark.Logger
+		session           *gocql.Session
+		logger            bark.Logger
+		serializerFactory HistorySerializerFactory
 	}
 )
 
 // NewCassandraHistoryPersistence is used to create an instance of HistoryManager implementation
-func NewCassandraHistoryPersistence(hosts string, port int, user, password, dc string, keyspace string, logger bark.Logger) (HistoryManager,
+func NewCassandraHistoryPersistence(hosts string, port int, user, password, dc string, keyspace string,
+	numConns int, logger bark.Logger) (HistoryManager,
 	error) {
 	cluster := common.NewCassandraCluster(hosts, port, user, password, dc)
 	cluster.Keyspace = keyspace
@@ -68,13 +79,14 @@ func NewCassandraHistoryPersistence(hosts string, port int, user, password, dc s
 	cluster.Consistency = gocql.LocalQuorum
 	cluster.SerialConsistency = gocql.LocalSerial
 	cluster.Timeout = defaultSessionTimeout
+	cluster.NumConns = numConns
 
 	session, err := cluster.CreateSession()
 	if err != nil {
 		return nil, err
 	}
 
-	return &cassandraHistoryPersistence{session: session, logger: logger}, nil
+	return &cassandraHistoryPersistence{session: session, logger: logger, serializerFactory: NewHistorySerializerFactory()}, nil
 }
 
 // Close gracefully releases the resources held by this object
@@ -86,8 +98,10 @@ func (h *cassandraHistoryPersistence) Close() {
 
 func (h *cassandraHistoryPersistence) AppendHistoryEvents(request *AppendHistoryEventsRequest) error {
 	var query *gocql.Query
+
 	if request.Overwrite {
 		query = h.session.Query(templateOverwriteHistoryEvents,
+			request.EventBatchVersion,
 			request.RangeID,
 			request.TransactionID,
 			request.Events.Data,
@@ -105,6 +119,7 @@ func (h *cassandraHistoryPersistence) AppendHistoryEvents(request *AppendHistory
 			*request.Execution.WorkflowId,
 			*request.Execution.RunId,
 			request.FirstEventID,
+			request.EventBatchVersion,
 			request.RangeID,
 			request.TransactionID,
 			request.Events.Data,
@@ -141,46 +156,101 @@ func (h *cassandraHistoryPersistence) AppendHistoryEvents(request *AppendHistory
 func (h *cassandraHistoryPersistence) GetWorkflowExecutionHistory(request *GetWorkflowExecutionHistoryRequest) (
 	*GetWorkflowExecutionHistoryResponse, error) {
 	execution := request.Execution
+	token, err := h.deserializeToken(request)
+	if err != nil {
+		return nil, err
+	}
 	query := h.session.Query(templateGetWorkflowExecutionHistory,
 		request.DomainID,
 		*execution.WorkflowId,
 		*execution.RunId,
+		request.FirstEventID,
 		request.NextEventID)
 
-	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
+	iter := query.PageSize(request.PageSize).PageState(token.Data).Iter()
 	if iter == nil {
 		return nil, &workflow.InternalServiceError{
 			Message: "GetWorkflowExecutionHistory operation failed.  Not able to create query iterator.",
 		}
 	}
 
-	var firstEventID int64
-	var history SerializedHistoryEventBatch
-	response := &GetWorkflowExecutionHistoryResponse{}
 	found := false
-	for iter.Scan(&firstEventID, &history.Data, &history.EncodingType, &history.Version) {
+	token.Data = iter.PageState()
+
+	eventBatchVersionPointer := new(int64)
+	eventBatchVersion := common.EmptyVersion
+	lastFirstEventID := common.EmptyEventID // first_event_id of last batch
+	eventBatch := SerializedHistoryEventBatch{}
+	history := &workflow.History{}
+	for iter.Scan(nil, &eventBatchVersionPointer, &eventBatch.Data, &eventBatch.EncodingType, &eventBatch.Version) {
 		found = true
-		response.Events = append(response.Events, history)
-		history = SerializedHistoryEventBatch{}
+
+		if eventBatchVersionPointer != nil {
+			eventBatchVersion = *eventBatchVersionPointer
+		}
+		if eventBatchVersion >= token.LastEventBatchVersion {
+			historyBatch, err := h.deserializeEvents(&eventBatch)
+			if err != nil {
+				return nil, err
+			}
+			if len(historyBatch.Events) == 0 || historyBatch.Events[0].GetEventId() > token.LastEventID+1 {
+				logger := h.logger.WithFields(bark.Fields{
+					logging.TagWorkflowExecutionID: request.Execution.GetWorkflowId(),
+					logging.TagWorkflowRunID:       request.Execution.GetRunId(),
+					logging.TagDomainID:            request.DomainID,
+				})
+				logger.Error("Unexpected event batch")
+				return nil, fmt.Errorf("corrupted history event batch")
+			}
+
+			if historyBatch.Events[0].GetEventId() != token.LastEventID+1 {
+				// staled event batch, skip it
+				continue
+			}
+
+			lastFirstEventID = historyBatch.Events[0].GetEventId()
+			history.Events = append(history.Events, historyBatch.Events...)
+			token.LastEventID = historyBatch.Events[len(historyBatch.Events)-1].GetEventId()
+			token.LastEventBatchVersion = eventBatchVersion
+		}
+
+		eventBatchVersionPointer = new(int64)
+		eventBatchVersion = common.EmptyVersion
+		eventBatch = SerializedHistoryEventBatch{}
 	}
 
-	nextPageToken := iter.PageState()
-	response.NextPageToken = make([]byte, len(nextPageToken))
-	copy(response.NextPageToken, nextPageToken)
+	data, err := h.serializeToken(token)
+	if err != nil {
+		return nil, err
+	}
 	if err := iter.Close(); err != nil {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("GetWorkflowExecutionHistory operation failed. Error: %v", err),
 		}
 	}
 
-	if !found {
+	if !found && len(request.NextPageToken) == 0 {
+		// adding the check of request next token being not nil, since
+		// there can be case when found == false at the very end of pagination.
 		return nil, &workflow.EntityNotExistsError{
 			Message: fmt.Sprintf("Workflow execution history not found.  WorkflowId: %v, RunId: %v",
 				*execution.WorkflowId, *execution.RunId),
 		}
 	}
 
+	response := &GetWorkflowExecutionHistoryResponse{
+		NextPageToken:    data,
+		History:          history,
+		LastFirstEventID: lastFirstEventID,
+	}
+
 	return response, nil
+}
+
+func (h *cassandraHistoryPersistence) deserializeEvents(e *SerializedHistoryEventBatch) (*HistoryEventBatch, error) {
+	SetSerializedHistoryDefaults(e)
+	s, _ := h.serializerFactory.Get(e.EncodingType)
+	return s.Deserialize(e)
 }
 
 func (h *cassandraHistoryPersistence) DeleteWorkflowExecutionHistory(
@@ -204,4 +274,36 @@ func (h *cassandraHistoryPersistence) DeleteWorkflowExecutionHistory(
 	}
 
 	return nil
+}
+
+func (h *cassandraHistoryPersistence) serializeToken(token *historyToken) ([]byte, error) {
+	if len(token.Data) == 0 {
+		return nil, nil
+	}
+
+	data, err := json.Marshal(token)
+	if err != nil {
+		return nil, &workflow.InternalServiceError{Message: "Error generating history event token."}
+	}
+	return data, nil
+}
+
+func (h *cassandraHistoryPersistence) deserializeToken(request *GetWorkflowExecutionHistoryRequest) (*historyToken, error) {
+	token := &historyToken{
+		LastEventBatchVersion: common.EmptyVersion,
+		LastEventID:           request.FirstEventID - 1,
+	}
+
+	if len(request.NextPageToken) == 0 {
+		return token, nil
+	}
+
+	err := json.Unmarshal(request.NextPageToken, token)
+	if err == nil {
+		return token, nil
+	}
+
+	// for backward compatible reason, the input data can be raw Cassandra token
+	token.Data = request.NextPageToken
+	return token, nil
 }

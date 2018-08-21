@@ -21,972 +21,248 @@
 package history
 
 import (
-	"errors"
 	"fmt"
-	"math"
-	"sort"
-	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/uber-common/bark"
-	workflow "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 )
 
-var (
-	errTimerTaskNotFound          = errors.New("Timer task not found")
-	errFailedToAddTimeoutEvent    = errors.New("Failed to add timeout event")
-	errFailedToAddTimerFiredEvent = errors.New("Failed to add timer fired event")
-	maxTimestamp                  = time.Unix(0, math.MaxInt64)
-)
-
 type (
+	timeNow                 func() time.Time
+	updateTimerAckLevel     func(TimerSequenceID) error
+	timerQueueShutdown      func() error
+	timerTaskFilter         func(timer *persistence.TimerTaskInfo) (bool, error)
 	timerQueueProcessorImpl struct {
-		historyService   *historyEngineImpl
-		cache            *historyCache
-		executionManager persistence.ExecutionManager
-		isStarted        int32
-		isStopped        int32
-		shutdownWG       sync.WaitGroup
-		shutdownCh       chan struct{}
-		newTimerCh       chan struct{}
-		config           *Config
-		logger           bark.Logger
-		metricsClient    metrics.Client
-		timerFiredCount  uint64
-		lock             sync.Mutex // Used to synchronize pending timers.
-		ackMgr           *timerAckMgr
-		minPendingTimer  time.Time // Track the minimum timer ID in memory.
-	}
-
-	timeGate struct {
-		tNext, tNow, tEnd int64       // time (in 'UnixNano' units) for next, (last) now and end
-		timer             *time.Timer // timer used to wake us up when the next message is ready to deliver
-		gateC             chan struct{}
-		closeC            chan struct{}
-	}
-
-	timerAckMgr struct {
-		sync.RWMutex
-		processor        *timerQueueProcessorImpl
-		shard            ShardContext
-		executionMgr     persistence.ExecutionManager
-		logger           bark.Logger
-		outstandingTasks map[SequenceID]bool
-		readLevel        SequenceID
-		ackLevel         time.Time
-		metricsClient    metrics.Client
+		isGlobalDomainEnabled  bool
+		currentClusterName     string
+		shard                  ShardContext
+		config                 *Config
+		metricsClient          metrics.Client
+		historyService         *historyEngineImpl
+		ackLevel               TimerSequenceID
+		logger                 bark.Logger
+		matchingClient         matching.Client
+		isStarted              int32
+		isStopped              int32
+		shutdownChan           chan struct{}
+		activeTimerProcessor   *timerQueueActiveProcessorImpl
+		standbyTimerProcessors map[string]*timerQueueStandbyProcessorImpl
 	}
 )
 
-func newTimeGate() *timeGate {
-	tNow := time.Now()
-
-	// setup timeGate with timer set to fire at the 'end of time'
-	t := &timeGate{
-		tNow:   tNow.UnixNano(),
-		tEnd:   math.MaxInt64,
-		gateC:  make(chan struct{}),
-		closeC: make(chan struct{}),
-		timer:  time.NewTimer(time.Unix(0, math.MaxInt64).Sub(tNow)),
-	}
-
-	// "Cast" chan Time to chan struct{}.
-	// Unfortunately go doesn't have a common channel supertype.
-	go func() {
-		defer close(t.gateC)
-		defer t.timer.Stop()
-	loop:
-		for {
-			select {
-			case <-t.timer.C:
-				// re-transmit on gateC
-				t.gateC <- struct{}{}
-
-			case <-t.closeC:
-				// closed; cleanup and quit
-				break loop
-			}
-		}
-	}()
-
-	return t
-}
-
-func (t *timeGate) setEoxReached() {
-	t.tNext = t.tEnd
-}
-
-func (t *timeGate) beforeSleep() <-chan struct{} {
-	if t.engaged() && t.tNext != t.tEnd {
-		// reset timer to fire when the next message should be made 'visible'
-		tNow := time.Now()
-		t.tNow = tNow.UnixNano()
-		t.timer.Reset(time.Unix(0, t.tNext).Sub(tNow))
-	}
-	return t.gateC
-}
-
-func (t *timeGate) engaged() bool {
-	t.tNow = time.Now().UnixNano()
-	return t.tNext > t.tNow
-}
-
-func (t *timeGate) setNext(next time.Time) {
-	t.tNext = next.UnixNano()
-}
-
-func (t *timeGate) close() {
-	close(t.closeC)
-}
-
-func (t *timeGate) String() string {
-	return fmt.Sprintf("timeGate [engaged=%v eox=%v tNext=%x tNow=%x]", t.engaged(), t.tNext == t.tEnd, t.tNext, t.tNow)
-}
-
-func newTimerQueueProcessor(shard ShardContext, historyService *historyEngineImpl, executionManager persistence.ExecutionManager,
-	logger bark.Logger) timerQueueProcessor {
-	l := logger.WithFields(bark.Fields{
+func newTimerQueueProcessor(shard ShardContext, historyService *historyEngineImpl, matchingClient matching.Client, logger bark.Logger) timerQueueProcessor {
+	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
+	logger = logger.WithFields(bark.Fields{
 		logging.TagWorkflowComponent: logging.TagValueTimerQueueComponent,
 	})
-	tp := &timerQueueProcessorImpl{
-		historyService:   historyService,
-		cache:            historyService.historyCache,
-		executionManager: executionManager,
-		shutdownCh:       make(chan struct{}),
-		newTimerCh:       make(chan struct{}, 1),
-		config:           shard.GetConfig(),
-		logger:           l,
-		metricsClient:    historyService.metricsClient,
+	standbyTimerProcessors := make(map[string]*timerQueueStandbyProcessorImpl)
+	for clusterName := range shard.GetService().GetClusterMetadata().GetAllClusterFailoverVersions() {
+		if clusterName != shard.GetService().GetClusterMetadata().GetCurrentClusterName() {
+			standbyTimerProcessors[clusterName] = newTimerQueueStandbyProcessor(shard, historyService, clusterName, logger)
+		}
 	}
-	tp.ackMgr = newTimerAckMgr(tp, shard, executionManager, l)
-	return tp
+
+	return &timerQueueProcessorImpl{
+		isGlobalDomainEnabled:  shard.GetService().GetClusterMetadata().IsGlobalDomainEnabled(),
+		currentClusterName:     currentClusterName,
+		shard:                  shard,
+		config:                 shard.GetConfig(),
+		metricsClient:          historyService.metricsClient,
+		historyService:         historyService,
+		ackLevel:               TimerSequenceID{VisibilityTimestamp: shard.GetTimerAckLevel()},
+		logger:                 logger,
+		matchingClient:         matchingClient,
+		shutdownChan:           make(chan struct{}),
+		activeTimerProcessor:   newTimerQueueActiveProcessor(shard, historyService, matchingClient, logger),
+		standbyTimerProcessors: standbyTimerProcessors,
+	}
 }
 
 func (t *timerQueueProcessorImpl) Start() {
 	if !atomic.CompareAndSwapInt32(&t.isStarted, 0, 1) {
 		return
 	}
-
-	t.shutdownWG.Add(1)
-	go t.processorPump(t.config.ProcessTimerTaskWorkerCount)
-
-	t.logger.Info("Timer queue processor started.")
+	t.activeTimerProcessor.Start()
+	if t.isGlobalDomainEnabled {
+		for _, standbyTimerProcessor := range t.standbyTimerProcessors {
+			standbyTimerProcessor.Start()
+		}
+	}
+	go t.completeTimersLoop()
 }
 
 func (t *timerQueueProcessorImpl) Stop() {
 	if !atomic.CompareAndSwapInt32(&t.isStopped, 0, 1) {
 		return
 	}
-
-	if atomic.LoadInt32(&t.isStarted) == 1 {
-		close(t.shutdownCh)
+	t.activeTimerProcessor.Stop()
+	if t.isGlobalDomainEnabled {
+		for _, standbyTimerProcessor := range t.standbyTimerProcessors {
+			standbyTimerProcessor.Stop()
+		}
 	}
-
-	if success := common.AwaitWaitGroup(&t.shutdownWG, time.Minute); !success {
-		t.logger.Warn("Timer queue processor timed out on shutdown.")
-	}
-
-	t.logger.Info("Timer queue processor stopped.")
+	close(t.shutdownChan)
 }
 
-// NotifyNewTimer - Notify the processor about the new timer arrival.
-func (t *timerQueueProcessorImpl) NotifyNewTimer(timerTasks []persistence.Task) {
-	t.metricsClient.AddCounter(metrics.TimerQueueProcessorScope, metrics.NewTimerCounter, int64(len(timerTasks)))
-
-	updatedMinTimer := false
-	t.lock.Lock()
-	for _, task := range timerTasks {
-		ts := persistence.GetVisibilityTSFrom(task)
-		if t.minPendingTimer.IsZero() || ts.Before(t.minPendingTimer) {
-			t.minPendingTimer = ts
-			updatedMinTimer = true
-		}
-
-		switch task.GetType() {
-		case persistence.TaskTypeDecisionTimeout:
-			t.metricsClient.IncCounter(metrics.TimerTaskDecisionTimeoutScope, metrics.NewTimerCounter)
-		case persistence.TaskTypeActivityTimeout:
-			t.metricsClient.IncCounter(metrics.TimerTaskActivityTimeoutScope, metrics.NewTimerCounter)
-		case persistence.TaskTypeUserTimer:
-			t.metricsClient.IncCounter(metrics.TimerTaskUserTimerScope, metrics.NewTimerCounter)
-		case persistence.TaskTypeWorkflowTimeout:
-			t.metricsClient.IncCounter(metrics.TimerTaskWorkflowTimeoutScope, metrics.NewTimerCounter)
-		case persistence.TaskTypeDeleteHistoryEvent:
-			t.metricsClient.IncCounter(metrics.TimerTaskDeleteHistoryEvent, metrics.NewTimerCounter)
-		}
+// NotifyNewTimers - Notify the processor about the new active / standby timer arrival.
+// This should be called each time new timer arrives, otherwise timers maybe fired unexpected.
+func (t *timerQueueProcessorImpl) NotifyNewTimers(clusterName string, currentTime time.Time, timerTasks []persistence.Task) {
+	if clusterName == t.currentClusterName {
+		t.activeTimerProcessor.notifyNewTimers(timerTasks)
+		return
 	}
-	t.lock.Unlock()
 
-	if updatedMinTimer {
-		select {
-		case t.newTimerCh <- struct{}{}:
-			// Notified about new timer.
-
-		default:
-			// Channel "full" -> drop and move on, since we are using it as an event.
-		}
+	standbyTimerProcessor, ok := t.standbyTimerProcessors[clusterName]
+	if !ok {
+		panic(fmt.Sprintf("Cannot find timer processor for %s.", clusterName))
 	}
+	standbyTimerProcessor.setCurrentTime(currentTime)
+	standbyTimerProcessor.notifyNewTimers(timerTasks)
+	standbyTimerProcessor.retryTasks()
 }
 
-func (t *timerQueueProcessorImpl) processorPump(taskWorkerCount int) {
-	defer t.shutdownWG.Done()
+func (t *timerQueueProcessorImpl) FailoverDomain(domainID string) {
+	minLevel := t.shard.GetTimerClusterAckLevel(t.currentClusterName)
+	standbyClusterName := t.currentClusterName
+	for cluster := range t.shard.GetService().GetClusterMetadata().GetAllClusterFailoverVersions() {
+		ackLevel := t.shard.GetTimerClusterAckLevel(cluster)
+		if ackLevel.Before(minLevel) {
+			minLevel = ackLevel
+			standbyClusterName = cluster
+		}
+	}
+	// the ack manager is exclusive, so just add a cassandra min precision
+	maxLevel := t.activeTimerProcessor.timerQueueAckMgr.getReadLevel().VisibilityTimestamp.Add(1 * time.Millisecond)
+	t.logger.Infof("Timer Failover Triggered: %v, min level: %v, max level: %v.\n", domainID, minLevel, maxLevel)
+	// we should consider make the failover idempotent
+	failoverTimerProcessor := newTimerQueueFailoverProcessor(t.shard, t.historyService, domainID,
+		standbyClusterName, minLevel, maxLevel, t.matchingClient, t.logger)
 
-	// Workers to process timer tasks that are expired.
-	tasksCh := make(chan *persistence.TimerTaskInfo, 10*t.config.TimerTaskBatchSize)
-	var workerWG sync.WaitGroup
-	for i := 0; i < taskWorkerCount; i++ {
-		workerWG.Add(1)
-		go t.processTaskWorker(tasksCh, &workerWG)
+	for _, standbyTimerProcessor := range t.standbyTimerProcessors {
+		standbyTimerProcessor.retryTasks()
 	}
 
-RetryProcessor:
+	failoverTimerProcessor.Start()
+
+	// err is ignored
+	t.shard.UpdateTimerFailoverLevel(
+		domainID,
+		persistence.TimerFailoverLevel{
+			MinLevel:     minLevel,
+			CurrentLevel: minLevel,
+			MaxLevel:     maxLevel,
+			DomainIDs:    []string{domainID},
+		},
+	)
+}
+
+func (t *timerQueueProcessorImpl) getTimerFiredCount(clusterName string) uint64 {
+	if clusterName == t.currentClusterName {
+		return t.activeTimerProcessor.getTimerFiredCount()
+	}
+
+	standbyTimerProcessor, ok := t.standbyTimerProcessors[clusterName]
+	if !ok {
+		panic(fmt.Sprintf("Cannot find timer processor for %s.", clusterName))
+	}
+	return standbyTimerProcessor.getTimerFiredCount()
+}
+
+func (t *timerQueueProcessorImpl) completeTimersLoop() {
+	timer := time.NewTimer(t.config.TimerProcessorCompleteTimerInterval())
+	defer timer.Stop()
 	for {
 		select {
-		case <-t.shutdownCh:
-			t.logger.Info("Timer queue processor pump shutting down.")
-			close(tasksCh)
-			if success := common.AwaitWaitGroup(&workerWG, 10*time.Second); !success {
-				t.logger.Warn("Timer queue processor timed out on worker shutdown.")
-			}
-			break RetryProcessor
-		default:
-			err := t.internalProcessor(tasksCh)
-			if err != nil {
-				t.logger.Error("processor pump failed with error: ", err)
-			}
-		}
-	}
-	t.logger.Info("Timer processor exiting.")
-}
-
-func (t *timerQueueProcessorImpl) internalProcessor(tasksCh chan<- *persistence.TimerTaskInfo) error {
-	gate := newTimeGate()
-	defer gate.close()
-
-	updateAckChan := time.NewTicker(t.config.TimerProcessorUpdateAckInterval).C
-	var nextKeyTask *persistence.TimerTaskInfo
-
-	for {
-		isWokeByNewTimer := false
-
-		if nextKeyTask == nil || gate.engaged() {
-			gateC := gate.beforeSleep()
-
-			// Wait until one of four things occurs:
-			// 1. we get notified of a new message
-			// 2. the timer fires (message scheduled to be delivered)
-			// 3. shutdown was triggered.
-			// 4. updating ack level
-			//
-			select {
-
-			case <-t.shutdownCh:
-				t.logger.Debug("Timer queue processor pump shutting down.")
-				return nil
-
-			case <-gateC:
-				// Timer Fired.
-
-			case <-t.newTimerCh:
-				// New Timer has arrived.
-				isWokeByNewTimer = true
-
-			case <-updateAckChan:
-				t.ackMgr.updateAckLevel()
-			}
-		}
-
-		if isWokeByNewTimer {
-			t.metricsClient.IncCounter(metrics.TimerQueueProcessorScope, metrics.NewTimerNotifyCounter)
-			t.logger.Debugf("Woke up by the timer")
-
-			t.lock.Lock()
-			newMinTimestamp := t.minPendingTimer
-			if !gate.engaged() || newMinTimestamp.UnixNano() < gate.tNext {
-				nextKeyTask = nil
-				gate.setNext(newMinTimestamp)
-			}
-			t.minPendingTimer = time.Time{}
-			t.lock.Unlock()
-
-			t.logger.Debugf("%v: Next key after woke up by timer: %v",
-				time.Now().UTC(), newMinTimestamp.UTC())
-
-			if !t.isProcessNow(time.Unix(0, gate.tNext)) {
-				continue
-			}
-		}
-
-		// Either we have new timer (or) we are gated on timer to query for it.
-		for {
-			// Get next set of timer tasks.
-			timerTasks, lookAheadTask, err := t.getTasksAndNextKey()
-			if err != nil {
-				return err
-			}
-
-			for _, task := range timerTasks {
-				// We have a timer to fire.
-				tasksCh <- task
-			}
-
-			if lookAheadTask != nil || len(timerTasks) < t.config.TimerTaskBatchSize {
-				// We have processed all the tasks.
-				nextKeyTask = lookAheadTask
-				break
-			}
-		}
-
-		if nextKeyTask != nil {
-			nextKey := SequenceID{VisibilityTimestamp: nextKeyTask.VisibilityTimestamp, TaskID: nextKeyTask.TaskID}
-			t.logger.Debugf("%s: GetNextKey: %s", time.Now().UTC(), nextKey)
-
-			gate.setNext(nextKey.VisibilityTimestamp)
-		}
-	}
-}
-
-func (t *timerQueueProcessorImpl) isProcessNow(expiryTime time.Time) bool {
-	return !expiryTime.IsZero() && expiryTime.UnixNano() <= time.Now().UnixNano()
-}
-
-func (t *timerQueueProcessorImpl) getTasksAndNextKey() ([]*persistence.TimerTaskInfo, *persistence.TimerTaskInfo, error) {
-	tasks, lookAheadTask, err := t.ackMgr.readTimerTasks()
-	if err != nil {
-		return nil, nil, err
-	}
-	return tasks, lookAheadTask, nil
-}
-
-func (t *timerQueueProcessorImpl) getTimerTasks(
-	minTimestamp time.Time,
-	maxTimestamp time.Time,
-	batchSize int) ([]*persistence.TimerTaskInfo, error) {
-	request := &persistence.GetTimerIndexTasksRequest{
-		MinTimestamp: minTimestamp,
-		MaxTimestamp: maxTimestamp,
-		BatchSize:    batchSize}
-
-	for attempt := 1; attempt <= t.config.TimerProcessorGetFailureRetryCount; attempt++ {
-		response, err := t.executionManager.GetTimerIndexTasks(request)
-		if err == nil {
-			return response.Timers, nil
-		}
-		backoff := time.Duration(attempt * 100)
-		time.Sleep(backoff * time.Millisecond)
-	}
-	return nil, ErrMaxAttemptsExceeded
-}
-
-func (t *timerQueueProcessorImpl) processTaskWorker(tasksCh <-chan *persistence.TimerTaskInfo, workerWG *sync.WaitGroup) {
-	defer workerWG.Done()
-	for {
-		select {
-		case task, ok := <-tasksCh:
-			if !ok {
-				return
-			}
-
-			var err error
-
-		UpdateFailureLoop:
-			for attempt := 1; attempt <= t.config.TimerProcessorUpdateFailureRetryCount; attempt++ {
-				taskID := SequenceID{VisibilityTimestamp: task.VisibilityTimestamp, TaskID: task.TaskID}
-				err = t.processTimerTask(task)
-				if err != nil && err != errTimerTaskNotFound {
-					// We will retry until we don't find the timer task any more.
-					t.logger.Infof("Failed to process timer with SequenceID: %s with error: %v",
-						taskID, err)
+		case <-t.shutdownChan:
+			// before shutdown, make sure the ack level is up to date
+			t.completeTimers()
+			return
+		case <-timer.C:
+		CompleteLoop:
+			for attempt := 0; attempt < t.config.TimerProcessorCompleteTimerFailureRetryCount(); attempt++ {
+				err := t.completeTimers()
+				if err != nil {
+					t.logger.Infof("Failed to complete timers: %v.", err)
 					backoff := time.Duration(attempt * 100)
 					time.Sleep(backoff * time.Millisecond)
 				} else {
-					// Completed processing the timer task.
-					t.ackMgr.completeTimerTask(taskID)
-					break UpdateFailureLoop
+					break CompleteLoop
 				}
 			}
+			timer.Reset(t.config.TimerProcessorCompleteTimerInterval())
 		}
 	}
 }
 
-func (t *timerQueueProcessorImpl) processTimerTask(timerTask *persistence.TimerTaskInfo) error {
-	taskID := SequenceID{VisibilityTimestamp: timerTask.VisibilityTimestamp, TaskID: timerTask.TaskID}
-	t.logger.Debugf("Processing timer: (%s), for WorkflowID: %v, RunID: %v, Type: %v, TimeoutType: %v, EventID: %v",
-		taskID, timerTask.WorkflowID, timerTask.RunID, t.getTimerTaskType(timerTask.TaskType),
-		workflow.TimeoutType(timerTask.TimeoutType).String(), timerTask.EventID)
+func (t *timerQueueProcessorImpl) completeTimers() error {
+	lowerAckLevel := t.ackLevel
 
-	var err error
-	scope := metrics.TimerQueueProcessorScope
-	switch timerTask.TaskType {
-	case persistence.TaskTypeUserTimer:
-		scope = metrics.TimerTaskUserTimerScope
-		err = t.processExpiredUserTimer(timerTask)
-
-	case persistence.TaskTypeActivityTimeout:
-		scope = metrics.TimerTaskActivityTimeoutScope
-		err = t.processActivityTimeout(timerTask)
-
-	case persistence.TaskTypeDecisionTimeout:
-		scope = metrics.TimerTaskDecisionTimeoutScope
-		err = t.processDecisionTimeout(timerTask)
-
-	case persistence.TaskTypeWorkflowTimeout:
-		scope = metrics.TimerTaskWorkflowTimeoutScope
-		err = t.processWorkflowTimeout(timerTask)
-
-	case persistence.TaskTypeDeleteHistoryEvent:
-		scope = metrics.TimerTaskDeleteHistoryEvent
-		err = t.processDeleteHistoryEvent(timerTask)
-	}
-
-	if err != nil {
-		if _, ok := err.(*workflow.EntityNotExistsError); ok {
-			// Timer could fire after the execution is deleted.
-			// In which case just ignore the error so we can complete the timer task.
-			err = nil
+	upperAckLevel := t.activeTimerProcessor.timerQueueAckMgr.getAckLevel()
+	if t.isGlobalDomainEnabled {
+		for _, standbyTimerProcessor := range t.standbyTimerProcessors {
+			ackLevel := standbyTimerProcessor.timerQueueAckMgr.getAckLevel()
+			if !compareTimerIDLess(&upperAckLevel, &ackLevel) {
+				upperAckLevel = ackLevel
+			}
 		}
-		if err != nil {
-			t.metricsClient.IncCounter(scope, metrics.TaskFailures)
+
+		for _, failoverInfo := range t.shard.GetAllTimerFailoverLevels() {
+			if !upperAckLevel.VisibilityTimestamp.Before(failoverInfo.MinLevel) {
+				upperAckLevel = TimerSequenceID{VisibilityTimestamp: failoverInfo.MinLevel}
+			}
 		}
 	}
 
-	if err == nil {
-		// Tracking only successful ones.
-		atomic.AddUint64(&t.timerFiredCount, 1)
-		err := t.executionManager.CompleteTimerTask(&persistence.CompleteTimerTaskRequest{
-			VisibilityTimestamp: timerTask.VisibilityTimestamp,
-			TaskID:              timerTask.TaskID})
-		if err != nil {
-			t.logger.Warnf("Processor unable to complete timer task '%v': %v", timerTask.TaskID, err)
-		}
+	t.logger.Debugf("Start completing timer task from: %v, to %v.", lowerAckLevel, upperAckLevel)
+	if !compareTimerIDLess(&lowerAckLevel, &upperAckLevel) {
 		return nil
 	}
 
-	return err
-}
+	t.metricsClient.IncCounter(metrics.TimerQueueProcessorScope, metrics.HistoryTaskBatchCompleteCounter)
 
-func (t *timerQueueProcessorImpl) processExpiredUserTimer(task *persistence.TimerTaskInfo) error {
-	t.metricsClient.IncCounter(metrics.TimerTaskUserTimerScope, metrics.TaskRequests)
-	sw := t.metricsClient.StartTimer(metrics.TimerTaskUserTimerScope, metrics.TaskLatency)
-	defer sw.Stop()
-
-	context, release, err0 := t.cache.getOrCreateWorkflowExecution(getDomainIDAndWorkflowExecution(task))
-	if err0 != nil {
-		return err0
+	executionMgr := t.shard.GetExecutionManager()
+	minTimestamp := lowerAckLevel.VisibilityTimestamp
+	// relax the upper limit for scan since the query is [minTimestamp, maxTimestamp)
+	maxTimestamp := upperAckLevel.VisibilityTimestamp.Add(1 * time.Second)
+	batchSize := t.config.TimerTaskBatchSize()
+	request := &persistence.GetTimerIndexTasksRequest{
+		MinTimestamp: minTimestamp,
+		MaxTimestamp: maxTimestamp,
+		BatchSize:    batchSize,
 	}
-	defer release()
 
-Update_History_Loop:
-	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
-		msBuilder, err1 := context.loadWorkflowExecution()
-		if err1 != nil {
-			return err1
-		}
-		tBuilder := t.historyService.getTimerBuilder(&context.workflowExecution)
-
-		if !msBuilder.isWorkflowExecutionRunning() {
-			// Workflow is completed.
-			return nil
-		}
-
-		var timerTasks []persistence.Task
-		scheduleNewDecision := false
-
-	ExpireUserTimers:
-		for _, td := range tBuilder.GetUserTimers(msBuilder) {
-			hasTimer, ti := tBuilder.GetUserTimer(td.TimerID)
-			if !hasTimer {
-				t.logger.Debugf("Failed to find in memory user timer: %s", td.TimerID)
-				return fmt.Errorf("Failed to find in memory user timer: %s", td.TimerID)
-			}
-
-			if isExpired := tBuilder.IsTimerExpired(td, task.VisibilityTimestamp); isExpired {
-				// Add TimerFired event to history.
-				if msBuilder.AddTimerFiredEvent(ti.StartedID, ti.TimerID) == nil {
-					return errFailedToAddTimerFiredEvent
-				}
-
-				scheduleNewDecision = !msBuilder.HasPendingDecisionTask()
-			} else {
-				// See if we have next timer in list to be created.
-				if !td.TaskCreated {
-					nextTask := tBuilder.createNewTask(td)
-					timerTasks = []persistence.Task{nextTask}
-
-					// Update the task ID tracking the corresponding timer task.
-					ti.TaskID = nextTask.GetTaskID()
-					msBuilder.UpdateUserTimer(ti.TimerID, ti)
-					defer t.NotifyNewTimer(timerTasks)
-				}
-
-				// Done!
-				break ExpireUserTimers
-			}
-		}
-
-		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
-		// the history and try the operation again.
-		err := t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, false, timerTasks, nil)
+LoadCompleteLoop:
+	for {
+		response, err := executionMgr.GetTimerIndexTasks(request)
 		if err != nil {
-			if err == ErrConflict {
-				continue Update_History_Loop
-			}
-		}
-		return err
-	}
-	return ErrMaxAttemptsExceeded
-}
-
-func getDomainIDAndWorkflowExecution(task *persistence.TimerTaskInfo) (string, workflow.WorkflowExecution) {
-	return task.DomainID, workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(task.WorkflowID),
-		RunId:      common.StringPtr(task.RunID),
-	}
-}
-
-func (t *timerQueueProcessorImpl) processActivityTimeout(timerTask *persistence.TimerTaskInfo) error {
-	t.metricsClient.IncCounter(metrics.TimerTaskActivityTimeoutScope, metrics.TaskRequests)
-	sw := t.metricsClient.StartTimer(metrics.TimerTaskActivityTimeoutScope, metrics.TaskLatency)
-	defer sw.Stop()
-
-	context, release, err0 := t.cache.getOrCreateWorkflowExecution(getDomainIDAndWorkflowExecution(timerTask))
-	if err0 != nil {
-		return err0
-	}
-	defer release()
-
-Update_History_Loop:
-	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
-		msBuilder, err1 := context.loadWorkflowExecution()
-		if err1 != nil {
-			return err1
-		}
-		tBuilder := t.historyService.getTimerBuilder(&context.workflowExecution)
-
-		scheduleID := timerTask.EventID
-		// First check to see if cache needs to be refreshed as we could potentially have stale workflow execution in
-		// some extreme cassandra failure cases.
-		if scheduleID >= msBuilder.GetNextEventID() {
-			t.metricsClient.IncCounter(metrics.TimerQueueProcessorScope, metrics.StaleMutableStateCounter)
-			t.logger.Debugf("processActivityTimeout: scheduleID mismatch. MS NextEventID: %v, scheduleID: %v",
-				msBuilder.GetNextEventID(), scheduleID)
-			// Reload workflow execution history
-			context.clear()
-			continue Update_History_Loop
-		}
-
-		if !msBuilder.isWorkflowExecutionRunning() {
-			// Workflow is completed.
-			return nil
-		}
-
-		var timerTasks []persistence.Task
-		scheduleNewDecision := false
-		updateHistory := false
-
-	ExpireActivityTimers:
-		for _, td := range tBuilder.GetActivityTimers(msBuilder) {
-			ai, isRunning := msBuilder.GetActivityInfo(td.ActivityID)
-			if !isRunning {
-				//  We might have time out this activity already.
-				continue ExpireActivityTimers
-			}
-
-			if isExpired := tBuilder.IsTimerExpired(td, timerTask.VisibilityTimestamp); isExpired {
-				timeoutType := td.TimeoutType
-				t.logger.Debugf("Activity TimeoutType: %v, scheduledID: %v, startedId: %v. \n",
-					timeoutType, ai.ScheduleID, ai.StartedID)
-
-				switch timeoutType {
-				case workflow.TimeoutTypeScheduleToClose:
-					{
-						t.metricsClient.IncCounter(metrics.TimerTaskActivityTimeoutScope, metrics.ScheduleToCloseTimeoutCounter)
-						if msBuilder.AddActivityTaskTimedOutEvent(ai.ScheduleID, ai.StartedID, timeoutType, nil) == nil {
-							return errFailedToAddTimeoutEvent
-						}
-						updateHistory = true
-					}
-
-				case workflow.TimeoutTypeStartToClose:
-					{
-						t.metricsClient.IncCounter(metrics.TimerTaskActivityTimeoutScope, metrics.StartToCloseTimeoutCounter)
-						if ai.StartedID != emptyEventID {
-							if msBuilder.AddActivityTaskTimedOutEvent(ai.ScheduleID, ai.StartedID, timeoutType, nil) == nil {
-								return errFailedToAddTimeoutEvent
-							}
-							updateHistory = true
-						}
-					}
-
-				case workflow.TimeoutTypeHeartbeat:
-					{
-						t.metricsClient.IncCounter(metrics.TimerTaskActivityTimeoutScope, metrics.HeartbeatTimeoutCounter)
-						t.logger.Debugf("Activity Heartbeat expired: %+v", *ai)
-
-						if msBuilder.AddActivityTaskTimedOutEvent(ai.ScheduleID, ai.StartedID, timeoutType, nil) == nil {
-							return errFailedToAddTimeoutEvent
-						}
-						updateHistory = true
-					}
-
-				case workflow.TimeoutTypeScheduleToStart:
-					{
-						t.metricsClient.IncCounter(metrics.TimerTaskActivityTimeoutScope, metrics.ScheduleToStartTimeoutCounter)
-						if ai.StartedID == emptyEventID {
-							if msBuilder.AddActivityTaskTimedOutEvent(ai.ScheduleID, ai.StartedID, timeoutType, nil) == nil {
-								return errFailedToAddTimeoutEvent
-							}
-							updateHistory = true
-						}
-					}
-				}
-			} else {
-				// See if we have next timer in list to be created.
-				isHeartBeatTask := timerTask.TimeoutType == int(workflow.TimeoutTypeHeartbeat)
-
-				// Create next timer task if we don't have one (or)
-				// if current one is HB task and we need to create next HB task for the same.
-				// NOTE: When record activity HB comes in we only update last heartbeat timestamp, this is the place
-				// where we create next timer task based on that new updated timestamp.
-				if !td.TaskCreated || (isHeartBeatTask && td.ActivityID == scheduleID) {
-					nextTask := tBuilder.createNewTask(td)
-					timerTasks = []persistence.Task{nextTask}
-					at := nextTask.(*persistence.ActivityTimeoutTask)
-
-					ai.TimerTaskStatus = ai.TimerTaskStatus & getActivityTimerStatus(workflow.TimeoutType(at.TimeoutType))
-					msBuilder.UpdateActivity(ai)
-
-					t.logger.Debugf("%s: Adding Activity Timeout: with timeout: %v sec, ExpiryTime: %s, TimeoutType: %v, EventID: %v",
-						time.Now(), td.TimeoutSec, at.VisibilityTimestamp, td.TimeoutType.String(), at.EventID)
-				}
-
-				// Done!
-				break ExpireActivityTimers
-			}
-		}
-
-		if updateHistory {
-			// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
-			// the history and try the operation again.
-			scheduleNewDecision = !msBuilder.HasPendingDecisionTask()
-			err := t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, false, timerTasks, nil)
-			if err != nil {
-				if err == ErrConflict {
-					continue Update_History_Loop
-				}
-			}
-
-			t.NotifyNewTimer(timerTasks)
-			return nil
-		}
-
-		return nil
-	}
-	return ErrMaxAttemptsExceeded
-}
-
-func (t *timerQueueProcessorImpl) processDeleteHistoryEvent(task *persistence.TimerTaskInfo) error {
-	t.metricsClient.IncCounter(metrics.TimerTaskDeleteHistoryEvent, metrics.TaskRequests)
-	sw := t.metricsClient.StartTimer(metrics.TimerTaskDeleteHistoryEvent, metrics.TaskLatency)
-	defer sw.Stop()
-
-	domainID, workflowExecution := getDomainIDAndWorkflowExecution(task)
-	op := func() error {
-		return t.historyService.historyMgr.DeleteWorkflowExecutionHistory(
-			&persistence.DeleteWorkflowExecutionHistoryRequest{
-				DomainID:  domainID,
-				Execution: workflowExecution,
-			})
-	}
-
-	return backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
-}
-
-func (t *timerQueueProcessorImpl) processDecisionTimeout(task *persistence.TimerTaskInfo) error {
-	t.metricsClient.IncCounter(metrics.TimerTaskDecisionTimeoutScope, metrics.TaskRequests)
-	sw := t.metricsClient.StartTimer(metrics.TimerTaskDecisionTimeoutScope, metrics.TaskLatency)
-	defer sw.Stop()
-
-	context, release, err0 := t.cache.getOrCreateWorkflowExecution(getDomainIDAndWorkflowExecution(task))
-	if err0 != nil {
-		return err0
-	}
-	defer release()
-
-Update_History_Loop:
-	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
-		msBuilder, err1 := context.loadWorkflowExecution()
-		if err1 != nil {
-			return err1
-		}
-
-		scheduleID := task.EventID
-
-		// First check to see if cache needs to be refreshed as we could potentially have stale workflow execution in
-		// some extreme cassandra failure cases.
-		if scheduleID >= msBuilder.GetNextEventID() {
-			t.metricsClient.IncCounter(metrics.TimerQueueProcessorScope, metrics.StaleMutableStateCounter)
-			// Reload workflow execution history
-			context.clear()
-			continue Update_History_Loop
-		}
-
-		scheduleNewDecision := false
-		di, isRunning := msBuilder.GetPendingDecision(scheduleID)
-		if isRunning && msBuilder.isWorkflowExecutionRunning() {
-			// Add a decision task timeout event.
-			timeoutEvent := msBuilder.AddDecisionTaskTimedOutEvent(scheduleID, di.StartedID)
-			if timeoutEvent == nil {
-				// Unable to add DecisionTaskTimedout event to history
-				return &workflow.InternalServiceError{Message: "Unable to add DecisionTaskTimedout event to history."}
-			}
-
-			scheduleNewDecision = true
-		}
-
-		if scheduleNewDecision {
-			// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
-			// the history and try the operation again.
-			err := t.updateWorkflowExecution(context, msBuilder, scheduleNewDecision, false, nil, nil)
-			if err != nil {
-				if err == ErrConflict {
-					continue Update_History_Loop
-				}
-			}
 			return err
 		}
+		request.NextPageToken = response.NextPageToken
 
-		return nil
-
-	}
-	return ErrMaxAttemptsExceeded
-}
-
-func (t *timerQueueProcessorImpl) processWorkflowTimeout(task *persistence.TimerTaskInfo) error {
-	t.metricsClient.IncCounter(metrics.TimerTaskWorkflowTimeoutScope, metrics.TaskRequests)
-	sw := t.metricsClient.StartTimer(metrics.TimerTaskWorkflowTimeoutScope, metrics.TaskLatency)
-	defer sw.Stop()
-
-	context, release, err0 := t.cache.getOrCreateWorkflowExecution(getDomainIDAndWorkflowExecution(task))
-	if err0 != nil {
-		return err0
-	}
-	defer release()
-
-Update_History_Loop:
-	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
-		msBuilder, err1 := context.loadWorkflowExecution()
-		if err1 != nil {
-			return err1
-		}
-
-		if !msBuilder.isWorkflowExecutionRunning() {
-			return nil
-		}
-
-		if e := msBuilder.AddTimeoutWorkflowEvent(); e == nil {
-			// If we failed to add the event that means the workflow is already completed.
-			// we drop this timeout event.
-			return nil
-		}
-
-		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
-		// the history and try the operation again.
-		err := t.updateWorkflowExecution(context, msBuilder, false, true, nil, nil)
-		if err != nil {
-			if err == ErrConflict {
-				continue Update_History_Loop
+		for _, timer := range response.Timers {
+			timerSequenceID := TimerSequenceID{VisibilityTimestamp: timer.VisibilityTimestamp, TaskID: timer.TaskID}
+			if compareTimerIDLess(&upperAckLevel, &timerSequenceID) {
+				break LoadCompleteLoop
+			}
+			err := executionMgr.CompleteTimerTask(&persistence.CompleteTimerTaskRequest{
+				VisibilityTimestamp: timer.VisibilityTimestamp,
+				TaskID:              timer.TaskID})
+			if err != nil {
+				t.logger.Warnf("Timer queue ack manager unable to complete timer task: %v; %v", timer, err)
 			}
 		}
-		return err
-	}
-	return ErrMaxAttemptsExceeded
-}
 
-func (t *timerQueueProcessorImpl) updateWorkflowExecution(
-	context *workflowExecutionContext,
-	msBuilder *mutableStateBuilder,
-	scheduleNewDecision bool,
-	createDeletionTask bool,
-	timerTasks []persistence.Task,
-	clearTimerTask persistence.Task,
-) error {
-	var transferTasks []persistence.Task
-	if scheduleNewDecision {
-		// Schedule a new decision.
-		newDecisionEvent, _ := msBuilder.AddDecisionTaskScheduledEvent()
-		transferTasks = []persistence.Task{&persistence.DecisionTask{
-			DomainID:   msBuilder.executionInfo.DomainID,
-			TaskList:   *newDecisionEvent.DecisionTaskScheduledEventAttributes.TaskList.Name,
-			ScheduleID: *newDecisionEvent.EventId,
-		}}
-	}
-
-	if createDeletionTask {
-		tBuilder := t.historyService.getTimerBuilder(&context.workflowExecution)
-		tranT, timerT, err := t.historyService.getDeleteWorkflowTasks(msBuilder.executionInfo.DomainID, tBuilder)
-		if err != nil {
-			return nil
-		}
-		transferTasks = append(transferTasks, tranT)
-		timerTasks = append(timerTasks, timerT)
-	}
-
-	// Generate a transaction ID for appending events to history
-	transactionID, err1 := t.historyService.shard.GetNextTransferTaskID()
-	if err1 != nil {
-		return err1
-	}
-
-	err := context.updateWorkflowExecutionWithDeleteTask(transferTasks, timerTasks, clearTimerTask, transactionID)
-	if err != nil {
-		if isShardOwnershiptLostError(err) {
-			// Shard is stolen.  Stop timer processing to reduce duplicates
-			t.Stop()
+		if len(response.NextPageToken) == 0 {
+			break LoadCompleteLoop
 		}
 	}
-	return err
-}
+	t.ackLevel = upperAckLevel
 
-func (t *timerQueueProcessorImpl) getTimerTaskType(taskType int) string {
-	switch taskType {
-	case persistence.TaskTypeUserTimer:
-		return "UserTimer"
-	case persistence.TaskTypeActivityTimeout:
-		return "ActivityTimeout"
-	case persistence.TaskTypeDecisionTimeout:
-		return "DecisionTimeout"
-	case persistence.TaskTypeWorkflowTimeout:
-		return "WorkflowTimeout"
-	case persistence.TaskTypeDeleteHistoryEvent:
-		return "DeleteHistoryEvent"
-	}
-	return "UnKnown"
-}
-
-type timerTaskIDs []SequenceID
-
-// Len implements sort.Interace
-func (t timerTaskIDs) Len() int {
-	return len(t)
-}
-
-// Swap implements sort.Interface.
-func (t timerTaskIDs) Swap(i, j int) {
-	t[i], t[j] = t[j], t[i]
-}
-
-// Less implements sort.Interface
-func (t timerTaskIDs) Less(i, j int) bool {
-	return compareTimerIDLess(&t[i], &t[j])
-}
-
-func newTimerAckMgr(processor *timerQueueProcessorImpl, shard ShardContext, executionMgr persistence.ExecutionManager,
-	logger bark.Logger) *timerAckMgr {
-	ackLevel := shard.GetTimerAckLevel()
-	return &timerAckMgr{
-		processor:        processor,
-		shard:            shard,
-		executionMgr:     executionMgr,
-		outstandingTasks: make(map[SequenceID]bool),
-		readLevel:        SequenceID{VisibilityTimestamp: ackLevel},
-		ackLevel:         ackLevel,
-		metricsClient:    processor.metricsClient,
-		logger:           logger,
-	}
-}
-
-func (t *timerAckMgr) readTimerTasks() ([]*persistence.TimerTaskInfo, *persistence.TimerTaskInfo, error) {
-	t.RLock()
-	rLevel := t.readLevel
-	t.RUnlock()
-
-	tasks, err := t.processor.getTimerTasks(rLevel.VisibilityTimestamp, maxTimestamp, t.processor.config.TimerTaskBatchSize)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	t.logger.Debugf("readTimerTasks: ReadLevel: (%s) count: %v", rLevel, len(tasks))
-
-	// We filter tasks so read only moves to desired timer tasks.
-	// We also get a look ahead task but it doesn't move the read level, this is for timer
-	// to wait on it instead of doing queries.
-
-	var lookAheadTask *persistence.TimerTaskInfo
-	filteredTasks := []*persistence.TimerTaskInfo{}
-
-	t.Lock()
-	for _, task := range tasks {
-		taskSeq := SequenceID{VisibilityTimestamp: task.VisibilityTimestamp, TaskID: task.TaskID}
-		if _, ok := t.outstandingTasks[taskSeq]; ok {
-			continue
-		}
-		if task.VisibilityTimestamp.Before(t.readLevel.VisibilityTimestamp) {
-			t.logger.Fatalf(
-				"Next timer task time stamp is less than current timer task read level. timer task: (%s), ReadLevel: (%s)",
-				taskSeq, t.readLevel)
-		}
-		if !t.processor.isProcessNow(task.VisibilityTimestamp) {
-			lookAheadTask = task
-			break
-		}
-
-		t.logger.Debugf("Moving timer read level: (%s)", taskSeq)
-		t.readLevel = taskSeq
-		t.outstandingTasks[t.readLevel] = false
-		filteredTasks = append(filteredTasks, task)
-	}
-	t.Unlock()
-
-	return filteredTasks, lookAheadTask, nil
-}
-
-func (t *timerAckMgr) completeTimerTask(taskID SequenceID) {
-	t.Lock()
-	if _, ok := t.outstandingTasks[taskID]; ok {
-		t.outstandingTasks[taskID] = true
-	}
-	t.Unlock()
-}
-
-func (t *timerAckMgr) updateAckLevel() {
-	t.metricsClient.IncCounter(metrics.TimerQueueProcessorScope, metrics.AckLevelUpdateCounter)
-	updatedAckLevel := t.ackLevel
-	t.Lock()
-
-	// Timer IDs can have holes in the middle. So we sort the map to get the order to
-	// check. TODO: we can maintain a sorted slice as well.
-	var taskIDs timerTaskIDs
-	for k := range t.outstandingTasks {
-		taskIDs = append(taskIDs, k)
-	}
-	sort.Sort(taskIDs)
-
-MoveAckLevelLoop:
-	for _, current := range taskIDs {
-		if acked, ok := t.outstandingTasks[current]; ok {
-			if acked {
-				t.ackLevel = current.VisibilityTimestamp
-				updatedAckLevel = current.VisibilityTimestamp
-				delete(t.outstandingTasks, current)
-			} else {
-				break MoveAckLevelLoop
-			}
-		}
-	}
-	t.Unlock()
-
-	t.logger.Debugf("Updating timer ack level: %v", updatedAckLevel)
-
-	// Always update ackLevel to detect if the shared is stolen
-	if err := t.shard.UpdateTimerAckLevel(updatedAckLevel); err != nil {
-		t.metricsClient.IncCounter(metrics.TimerQueueProcessorScope, metrics.AckLevelUpdateFailedCounter)
-		t.logger.Errorf("Error updating timer ack level for shard: %v", err)
-	}
+	t.shard.UpdateTimerAckLevel(t.ackLevel.VisibilityTimestamp)
+	return nil
 }

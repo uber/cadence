@@ -25,13 +25,13 @@ package matchingserviceclient
 
 import (
 	"context"
-	"reflect"
-	"go.uber.org/thriftrw/wire"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc"
 	"github.com/uber/cadence/.gen/go/matching"
 	"github.com/uber/cadence/.gen/go/shared"
+	"go.uber.org/thriftrw/wire"
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/encoding/thrift"
+	"reflect"
 )
 
 // Interface is a client for the MatchingService service.
@@ -48,6 +48,18 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) error
 
+	CancelOutstandingPoll(
+		ctx context.Context,
+		Request *matching.CancelOutstandingPollRequest,
+		opts ...yarpc.CallOption,
+	) error
+
+	DescribeTaskList(
+		ctx context.Context,
+		Request *matching.DescribeTaskListRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.DescribeTaskListResponse, error)
+
 	PollForActivityTask(
 		ctx context.Context,
 		PollRequest *matching.PollForActivityTaskRequest,
@@ -59,6 +71,18 @@ type Interface interface {
 		PollRequest *matching.PollForDecisionTaskRequest,
 		opts ...yarpc.CallOption,
 	) (*matching.PollForDecisionTaskResponse, error)
+
+	QueryWorkflow(
+		ctx context.Context,
+		QueryRequest *matching.QueryWorkflowRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.QueryWorkflowResponse, error)
+
+	RespondQueryTaskCompleted(
+		ctx context.Context,
+		Request *matching.RespondQueryTaskCompletedRequest,
+		opts ...yarpc.CallOption,
+	) error
 }
 
 // New builds a new client for the MatchingService service.
@@ -131,6 +155,52 @@ func (c client) AddDecisionTask(
 	return
 }
 
+func (c client) CancelOutstandingPoll(
+	ctx context.Context,
+	_Request *matching.CancelOutstandingPollRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := matching.MatchingService_CancelOutstandingPoll_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result matching.MatchingService_CancelOutstandingPoll_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	err = matching.MatchingService_CancelOutstandingPoll_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) DescribeTaskList(
+	ctx context.Context,
+	_Request *matching.DescribeTaskListRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.DescribeTaskListResponse, err error) {
+
+	args := matching.MatchingService_DescribeTaskList_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result matching.MatchingService_DescribeTaskList_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = matching.MatchingService_DescribeTaskList_Helper.UnwrapResponse(&result)
+	return
+}
+
 func (c client) PollForActivityTask(
 	ctx context.Context,
 	_PollRequest *matching.PollForActivityTaskRequest,
@@ -174,5 +244,51 @@ func (c client) PollForDecisionTask(
 	}
 
 	success, err = matching.MatchingService_PollForDecisionTask_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) QueryWorkflow(
+	ctx context.Context,
+	_QueryRequest *matching.QueryWorkflowRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.QueryWorkflowResponse, err error) {
+
+	args := matching.MatchingService_QueryWorkflow_Helper.Args(_QueryRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result matching.MatchingService_QueryWorkflow_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = matching.MatchingService_QueryWorkflow_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) RespondQueryTaskCompleted(
+	ctx context.Context,
+	_Request *matching.RespondQueryTaskCompletedRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := matching.MatchingService_RespondQueryTaskCompleted_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result matching.MatchingService_RespondQueryTaskCompleted_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	err = matching.MatchingService_RespondQueryTaskCompleted_Helper.UnwrapResponse(&result)
 	return
 }

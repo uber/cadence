@@ -26,8 +26,8 @@ package historyservicefx
 import (
 	"github.com/uber/cadence/.gen/go/history/historyserviceclient"
 	"go.uber.org/fx"
-	"go.uber.org/yarpc/encoding/thrift"
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/encoding/thrift"
 )
 
 // Params defines the dependencies for the HistoryService client.
@@ -37,8 +37,8 @@ type Params struct {
 	Provider yarpc.ClientConfig
 }
 
-// Result defines the output of this Fx module. It provides a HistoryService client
-// to an Fx application.
+// Result defines the output of the HistoryService client module. It provides a
+// HistoryService client to an Fx application.
 type Result struct {
 	fx.Out
 

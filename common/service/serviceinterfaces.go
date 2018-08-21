@@ -23,7 +23,9 @@ package service
 import (
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/client"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/membership"
+	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"go.uber.org/yarpc"
 )
@@ -51,5 +53,11 @@ type (
 		GetMembershipMonitor() membership.Monitor
 
 		GetHostInfo() *membership.HostInfo
+
+		// GetClusterMetadata returns the service cluster metadata
+		GetClusterMetadata() cluster.Metadata
+
+		// GetMessagingClient returns the messaging client against Kafka
+		GetMessagingClient() messaging.Client
 	}
 )

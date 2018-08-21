@@ -25,19 +25,34 @@ package historyserviceserver
 
 import (
 	"context"
+	"github.com/uber/cadence/.gen/go/history"
+	"github.com/uber/cadence/.gen/go/shared"
 	"go.uber.org/thriftrw/wire"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/encoding/thrift"
-	"github.com/uber/cadence/.gen/go/history"
-	"github.com/uber/cadence/.gen/go/shared"
 )
 
 // Interface is the server-side interface for the HistoryService service.
 type Interface interface {
-	GetWorkflowExecutionNextEventID(
+	DescribeHistoryHost(
 		ctx context.Context,
-		GetRequest *history.GetWorkflowExecutionNextEventIDRequest,
-	) (*history.GetWorkflowExecutionNextEventIDResponse, error)
+		Request *shared.DescribeHistoryHostRequest,
+	) (*shared.DescribeHistoryHostResponse, error)
+
+	DescribeMutableState(
+		ctx context.Context,
+		Request *history.DescribeMutableStateRequest,
+	) (*history.DescribeMutableStateResponse, error)
+
+	DescribeWorkflowExecution(
+		ctx context.Context,
+		DescribeRequest *history.DescribeWorkflowExecutionRequest,
+	) (*shared.DescribeWorkflowExecutionResponse, error)
+
+	GetMutableState(
+		ctx context.Context,
+		GetRequest *history.GetMutableStateRequest,
+	) (*history.GetMutableStateResponse, error)
 
 	RecordActivityTaskHeartbeat(
 		ctx context.Context,
@@ -59,10 +74,25 @@ type Interface interface {
 		AddRequest *history.RecordDecisionTaskStartedRequest,
 	) (*history.RecordDecisionTaskStartedResponse, error)
 
+	RemoveSignalMutableState(
+		ctx context.Context,
+		RemoveRequest *history.RemoveSignalMutableStateRequest,
+	) error
+
+	ReplicateEvents(
+		ctx context.Context,
+		ReplicateRequest *history.ReplicateEventsRequest,
+	) error
+
 	RequestCancelWorkflowExecution(
 		ctx context.Context,
 		CancelRequest *history.RequestCancelWorkflowExecutionRequest,
 	) error
+
+	ResetStickyTaskList(
+		ctx context.Context,
+		ResetRequest *history.ResetStickyTaskListRequest,
+	) (*history.ResetStickyTaskListResponse, error)
 
 	RespondActivityTaskCanceled(
 		ctx context.Context,
@@ -82,12 +112,22 @@ type Interface interface {
 	RespondDecisionTaskCompleted(
 		ctx context.Context,
 		CompleteRequest *history.RespondDecisionTaskCompletedRequest,
+	) (*history.RespondDecisionTaskCompletedResponse, error)
+
+	RespondDecisionTaskFailed(
+		ctx context.Context,
+		FailedRequest *history.RespondDecisionTaskFailedRequest,
 	) error
 
 	ScheduleDecisionTask(
 		ctx context.Context,
 		ScheduleRequest *history.ScheduleDecisionTaskRequest,
 	) error
+
+	SignalWithStartWorkflowExecution(
+		ctx context.Context,
+		SignalWithStartRequest *history.SignalWithStartWorkflowExecutionRequest,
+	) (*shared.StartWorkflowExecutionResponse, error)
 
 	SignalWorkflowExecution(
 		ctx context.Context,
@@ -98,6 +138,11 @@ type Interface interface {
 		ctx context.Context,
 		StartRequest *history.StartWorkflowExecutionRequest,
 	) (*shared.StartWorkflowExecutionResponse, error)
+
+	SyncShardStatus(
+		ctx context.Context,
+		SyncShardStatusRequest *history.SyncShardStatusRequest,
+	) error
 
 	TerminateWorkflowExecution(
 		ctx context.Context,
@@ -117,13 +162,46 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		Methods: []thrift.Method{
 
 			thrift.Method{
-				Name: "GetWorkflowExecutionNextEventID",
+				Name: "DescribeHistoryHost",
 				HandlerSpec: thrift.HandlerSpec{
 
 					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.GetWorkflowExecutionNextEventID),
+					Unary: thrift.UnaryHandler(h.DescribeHistoryHost),
 				},
-				Signature:    "GetWorkflowExecutionNextEventID(GetRequest *history.GetWorkflowExecutionNextEventIDRequest) (*history.GetWorkflowExecutionNextEventIDResponse)",
+				Signature:    "DescribeHistoryHost(Request *shared.DescribeHistoryHostRequest) (*shared.DescribeHistoryHostResponse)",
+				ThriftModule: history.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "DescribeMutableState",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.DescribeMutableState),
+				},
+				Signature:    "DescribeMutableState(Request *history.DescribeMutableStateRequest) (*history.DescribeMutableStateResponse)",
+				ThriftModule: history.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "DescribeWorkflowExecution",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.DescribeWorkflowExecution),
+				},
+				Signature:    "DescribeWorkflowExecution(DescribeRequest *history.DescribeWorkflowExecutionRequest) (*shared.DescribeWorkflowExecutionResponse)",
+				ThriftModule: history.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "GetMutableState",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.GetMutableState),
+				},
+				Signature:    "GetMutableState(GetRequest *history.GetMutableStateRequest) (*history.GetMutableStateResponse)",
 				ThriftModule: history.ThriftModule,
 			},
 
@@ -172,6 +250,28 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
+				Name: "RemoveSignalMutableState",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.RemoveSignalMutableState),
+				},
+				Signature:    "RemoveSignalMutableState(RemoveRequest *history.RemoveSignalMutableStateRequest)",
+				ThriftModule: history.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "ReplicateEvents",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.ReplicateEvents),
+				},
+				Signature:    "ReplicateEvents(ReplicateRequest *history.ReplicateEventsRequest)",
+				ThriftModule: history.ThriftModule,
+			},
+
+			thrift.Method{
 				Name: "RequestCancelWorkflowExecution",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -179,6 +279,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary: thrift.UnaryHandler(h.RequestCancelWorkflowExecution),
 				},
 				Signature:    "RequestCancelWorkflowExecution(CancelRequest *history.RequestCancelWorkflowExecutionRequest)",
+				ThriftModule: history.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "ResetStickyTaskList",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.ResetStickyTaskList),
+				},
+				Signature:    "ResetStickyTaskList(ResetRequest *history.ResetStickyTaskListRequest) (*history.ResetStickyTaskListResponse)",
 				ThriftModule: history.ThriftModule,
 			},
 
@@ -222,7 +333,18 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.RespondDecisionTaskCompleted),
 				},
-				Signature:    "RespondDecisionTaskCompleted(CompleteRequest *history.RespondDecisionTaskCompletedRequest)",
+				Signature:    "RespondDecisionTaskCompleted(CompleteRequest *history.RespondDecisionTaskCompletedRequest) (*history.RespondDecisionTaskCompletedResponse)",
+				ThriftModule: history.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "RespondDecisionTaskFailed",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.RespondDecisionTaskFailed),
+				},
+				Signature:    "RespondDecisionTaskFailed(FailedRequest *history.RespondDecisionTaskFailedRequest)",
 				ThriftModule: history.ThriftModule,
 			},
 
@@ -234,6 +356,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary: thrift.UnaryHandler(h.ScheduleDecisionTask),
 				},
 				Signature:    "ScheduleDecisionTask(ScheduleRequest *history.ScheduleDecisionTaskRequest)",
+				ThriftModule: history.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "SignalWithStartWorkflowExecution",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.SignalWithStartWorkflowExecution),
+				},
+				Signature:    "SignalWithStartWorkflowExecution(SignalWithStartRequest *history.SignalWithStartWorkflowExecutionRequest) (*shared.StartWorkflowExecutionResponse)",
 				ThriftModule: history.ThriftModule,
 			},
 
@@ -260,6 +393,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
+				Name: "SyncShardStatus",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.SyncShardStatus),
+				},
+				Signature:    "SyncShardStatus(SyncShardStatusRequest *history.SyncShardStatusRequest)",
+				ThriftModule: history.ThriftModule,
+			},
+
+			thrift.Method{
 				Name: "TerminateWorkflowExecution",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -272,23 +416,80 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 14)
+	procedures := make([]transport.Procedure, 0, 23)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
 
 type handler struct{ impl Interface }
 
-func (h handler) GetWorkflowExecutionNextEventID(ctx context.Context, body wire.Value) (thrift.Response, error) {
-	var args history.HistoryService_GetWorkflowExecutionNextEventID_Args
+func (h handler) DescribeHistoryHost(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args history.HistoryService_DescribeHistoryHost_Args
 	if err := args.FromWire(body); err != nil {
 		return thrift.Response{}, err
 	}
 
-	success, err := h.impl.GetWorkflowExecutionNextEventID(ctx, args.GetRequest)
+	success, err := h.impl.DescribeHistoryHost(ctx, args.Request)
 
 	hadError := err != nil
-	result, err := history.HistoryService_GetWorkflowExecutionNextEventID_Helper.WrapResponse(success, err)
+	result, err := history.HistoryService_DescribeHistoryHost_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) DescribeMutableState(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args history.HistoryService_DescribeMutableState_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.DescribeMutableState(ctx, args.Request)
+
+	hadError := err != nil
+	result, err := history.HistoryService_DescribeMutableState_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) DescribeWorkflowExecution(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args history.HistoryService_DescribeWorkflowExecution_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.DescribeWorkflowExecution(ctx, args.DescribeRequest)
+
+	hadError := err != nil
+	result, err := history.HistoryService_DescribeWorkflowExecution_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) GetMutableState(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args history.HistoryService_GetMutableState_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.GetMutableState(ctx, args.GetRequest)
+
+	hadError := err != nil
+	result, err := history.HistoryService_GetMutableState_Helper.WrapResponse(success, err)
 
 	var response thrift.Response
 	if err == nil {
@@ -374,6 +575,44 @@ func (h handler) RecordDecisionTaskStarted(ctx context.Context, body wire.Value)
 	return response, err
 }
 
+func (h handler) RemoveSignalMutableState(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args history.HistoryService_RemoveSignalMutableState_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	err := h.impl.RemoveSignalMutableState(ctx, args.RemoveRequest)
+
+	hadError := err != nil
+	result, err := history.HistoryService_RemoveSignalMutableState_Helper.WrapResponse(err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) ReplicateEvents(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args history.HistoryService_ReplicateEvents_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	err := h.impl.ReplicateEvents(ctx, args.ReplicateRequest)
+
+	hadError := err != nil
+	result, err := history.HistoryService_ReplicateEvents_Helper.WrapResponse(err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
 func (h handler) RequestCancelWorkflowExecution(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args history.HistoryService_RequestCancelWorkflowExecution_Args
 	if err := args.FromWire(body); err != nil {
@@ -384,6 +623,25 @@ func (h handler) RequestCancelWorkflowExecution(ctx context.Context, body wire.V
 
 	hadError := err != nil
 	result, err := history.HistoryService_RequestCancelWorkflowExecution_Helper.WrapResponse(err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) ResetStickyTaskList(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args history.HistoryService_ResetStickyTaskList_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.ResetStickyTaskList(ctx, args.ResetRequest)
+
+	hadError := err != nil
+	result, err := history.HistoryService_ResetStickyTaskList_Helper.WrapResponse(success, err)
 
 	var response thrift.Response
 	if err == nil {
@@ -456,10 +714,29 @@ func (h handler) RespondDecisionTaskCompleted(ctx context.Context, body wire.Val
 		return thrift.Response{}, err
 	}
 
-	err := h.impl.RespondDecisionTaskCompleted(ctx, args.CompleteRequest)
+	success, err := h.impl.RespondDecisionTaskCompleted(ctx, args.CompleteRequest)
 
 	hadError := err != nil
-	result, err := history.HistoryService_RespondDecisionTaskCompleted_Helper.WrapResponse(err)
+	result, err := history.HistoryService_RespondDecisionTaskCompleted_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) RespondDecisionTaskFailed(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args history.HistoryService_RespondDecisionTaskFailed_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	err := h.impl.RespondDecisionTaskFailed(ctx, args.FailedRequest)
+
+	hadError := err != nil
+	result, err := history.HistoryService_RespondDecisionTaskFailed_Helper.WrapResponse(err)
 
 	var response thrift.Response
 	if err == nil {
@@ -479,6 +756,25 @@ func (h handler) ScheduleDecisionTask(ctx context.Context, body wire.Value) (thr
 
 	hadError := err != nil
 	result, err := history.HistoryService_ScheduleDecisionTask_Helper.WrapResponse(err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) SignalWithStartWorkflowExecution(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args history.HistoryService_SignalWithStartWorkflowExecution_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.SignalWithStartWorkflowExecution(ctx, args.SignalWithStartRequest)
+
+	hadError := err != nil
+	result, err := history.HistoryService_SignalWithStartWorkflowExecution_Helper.WrapResponse(success, err)
 
 	var response thrift.Response
 	if err == nil {
@@ -517,6 +813,25 @@ func (h handler) StartWorkflowExecution(ctx context.Context, body wire.Value) (t
 
 	hadError := err != nil
 	result, err := history.HistoryService_StartWorkflowExecution_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) SyncShardStatus(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args history.HistoryService_SyncShardStatus_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	err := h.impl.SyncShardStatus(ctx, args.SyncShardStatusRequest)
+
+	hadError := err != nil
+	result, err := history.HistoryService_SyncShardStatus_Helper.WrapResponse(err)
 
 	var response thrift.Response
 	if err == nil {

@@ -20,6 +20,11 @@
 
 FROM debian:jessie
 
+# Specify the cadence version to be built into this docker image
+# See https://github.com/uber/cadence/tags
+ARG git_branch
+RUN if [ -z "$git_branch" ]; then echo "ERROR: git_branch NOT SET. Usage: docker build . --build-arg git_branch=YOUR_CHECKOUT_BRANCH"; exit 1; else : ; fi
+
 # get golang 1.8.1
 RUN apt-get update && apt-get install -y --no-install-recommends \
 		g++ \
@@ -30,15 +35,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 		libev4 libev-dev \
 		gettext-base \
 		wget \
+		vim \
+		tcpdump \
+		netcat \
 		python-pip \
 		git-all \
 	&& rm -rf /var/lib/apt/lists/*
 
 RUN pip install cqlsh
 
-ENV GOLANG_VERSION 1.8.2
+ENV GOLANG_VERSION 1.10.1
 ENV GOLANG_DOWNLOAD_URL https://golang.org/dl/go$GOLANG_VERSION.linux-amd64.tar.gz
-ENV GOLANG_DOWNLOAD_SHA256 5477d6c9a4f96fa120847fafa88319d7b56b5d5068e41c3587eebe248b939be7
+ENV GOLANG_DOWNLOAD_SHA256 72d820dec546752e5a8303b33b009079c15c2390ce76d67cf514991646c6127b
 
 RUN set -eux; \
     wget -O golang.tar.gz "$GOLANG_DOWNLOAD_URL" \
@@ -56,8 +64,8 @@ ENV CADENCE_HOME $GOPATH/src/github.com/uber/cadence
 RUN go get -u github.com/Masterminds/glide
 RUN go get -u github.com/golang/lint/golint
 
-RUN git clone --depth=50 https://github.com/uber/cadence.git $CADENCE_HOME
-RUN cd $CADENCE_HOME; make bins_nothrift
+RUN git clone https://github.com/uber/cadence.git $CADENCE_HOME
+RUN cd $CADENCE_HOME && git checkout $git_branch && make bins_nothrift
 
 EXPOSE 7933 7934 7935
 

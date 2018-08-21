@@ -28,6 +28,14 @@ import (
 	"github.com/uber/cadence/common"
 )
 
+// TODO remove this table version
+// this is a temp version indicating where is the domain resides
+// either V1 or V2
+const (
+	DomainTableVersionV1 = 1
+	DomainTableVersionV2 = 2
+)
+
 // Domain status
 const (
 	DomainStatusRegistered = iota
@@ -59,13 +67,26 @@ const (
 	TaskListTypeActivity
 )
 
+// Kinds of task lists
+const (
+	TaskListKindNormal = iota
+	TaskListKindSticky
+)
+
 // Transfer task types
 const (
 	TransferTaskTypeDecisionTask = iota
 	TransferTaskTypeActivityTask
-	TransferTaskTypeDeleteExecution
+	TransferTaskTypeCloseExecution
 	TransferTaskTypeCancelExecution
 	TransferTaskTypeStartChildExecution
+	TransferTaskTypeSignalExecution
+)
+
+// Types of replication tasks
+const (
+	ReplicationTaskTypeHistory = iota
+	ReplicationTaskTypeHeartbeat
 )
 
 // Types of timers
@@ -75,6 +96,7 @@ const (
 	TaskTypeUserTimer
 	TaskTypeWorkflowTimeout
 	TaskTypeDeleteHistoryEvent
+	TaskTypeRetryTimer
 )
 
 type (
@@ -94,6 +116,16 @@ type (
 		Msg     string
 	}
 
+	// WorkflowExecutionAlreadyStartedError is returned when creating a new workflow failed.
+	WorkflowExecutionAlreadyStartedError struct {
+		Msg            string
+		StartRequestID string
+		RunID          string
+		State          int
+		CloseStatus    int
+		StartVersion   int64
+	}
+
 	// TimeoutError is returned when a write operation fails due to a timeout
 	TimeoutError struct {
 		Msg string
@@ -101,56 +133,114 @@ type (
 
 	// ShardInfo describes a shard
 	ShardInfo struct {
-		ShardID          int
-		Owner            string
-		RangeID          int64
-		StolenSinceRenew int
-		UpdatedAt        time.Time
-		TransferAckLevel int64
-		TimerAckLevel    time.Time
+		ShardID                   int
+		Owner                     string
+		RangeID                   int64
+		StolenSinceRenew          int
+		UpdatedAt                 time.Time
+		ReplicationAckLevel       int64
+		TransferAckLevel          int64
+		TimerAckLevel             time.Time
+		ClusterTransferAckLevel   map[string]int64
+		ClusterTimerAckLevel      map[string]time.Time
+		TransferFailoverLevels    map[string]TransferFailoverLevel // uuid -> TransferFailoverLevel
+		TimerFailoverLevels       map[string]TimerFailoverLevel    // uuid -> TimerFailoverLevel
+		DomainNotificationVersion int64
+	}
+
+	// TransferFailoverLevel contains corresponding start / end level
+	TransferFailoverLevel struct {
+		MinLevel     int64
+		CurrentLevel int64
+		MaxLevel     int64
+		DomainIDs    []string
+	}
+
+	// TimerFailoverLevel contains domain IDs and corresponding start / end level
+	TimerFailoverLevel struct {
+		MinLevel     time.Time
+		CurrentLevel time.Time
+		MaxLevel     time.Time
+		DomainIDs    []string
 	}
 
 	// WorkflowExecutionInfo describes a workflow execution
 	WorkflowExecutionInfo struct {
-		DomainID             string
-		WorkflowID           string
-		RunID                string
-		ParentDomainID       string
-		ParentWorkflowID     string
-		ParentRunID          string
-		InitiatedID          int64
-		CompletionEvent      []byte
-		TaskList             string
-		WorkflowTypeName     string
-		DecisionTimeoutValue int32
-		ExecutionContext     []byte
-		State                int
-		CloseStatus          int
-		NextEventID          int64
-		LastProcessedEvent   int64
-		StartTimestamp       time.Time
-		LastUpdatedTimestamp time.Time
-		CreateRequestID      string
-		DecisionScheduleID   int64
-		DecisionStartedID    int64
-		DecisionRequestID    string
-		DecisionTimeout      int32
-		CancelRequested      bool
-		CancelRequestID      string
+		DomainID                     string
+		WorkflowID                   string
+		RunID                        string
+		ParentDomainID               string
+		ParentWorkflowID             string
+		ParentRunID                  string
+		InitiatedID                  int64
+		CompletionEvent              []byte
+		TaskList                     string
+		WorkflowTypeName             string
+		WorkflowTimeout              int32
+		DecisionTimeoutValue         int32
+		ExecutionContext             []byte
+		State                        int
+		CloseStatus                  int
+		LastFirstEventID             int64
+		NextEventID                  int64
+		LastProcessedEvent           int64
+		StartTimestamp               time.Time
+		LastUpdatedTimestamp         time.Time
+		CreateRequestID              string
+		DecisionVersion              int64
+		DecisionScheduleID           int64
+		DecisionStartedID            int64
+		DecisionRequestID            string
+		DecisionTimeout              int32
+		DecisionAttempt              int64
+		DecisionTimestamp            int64
+		CancelRequested              bool
+		CancelRequestID              string
+		StickyTaskList               string
+		StickyScheduleToStartTimeout int32
+		ClientLibraryVersion         string
+		ClientFeatureVersion         string
+		ClientImpl                   string
+	}
+
+	// ReplicationState represents mutable state information for global domains.
+	// This information is used by replication protocol when applying events from remote clusters
+	ReplicationState struct {
+		CurrentVersion      int64
+		StartVersion        int64
+		LastWriteVersion    int64
+		LastWriteEventID    int64
+		LastReplicationInfo map[string]*ReplicationInfo
 	}
 
 	// TransferTaskInfo describes a transfer task
 	TransferTaskInfo struct {
-		DomainID         string
-		WorkflowID       string
-		RunID            string
-		TaskID           int64
-		TargetDomainID   string
-		TargetWorkflowID string
-		TargetRunID      string
-		TaskList         string
-		TaskType         int
-		ScheduleID       int64
+		DomainID                string
+		WorkflowID              string
+		RunID                   string
+		VisibilityTimestamp     time.Time
+		TaskID                  int64
+		TargetDomainID          string
+		TargetWorkflowID        string
+		TargetRunID             string
+		TargetChildWorkflowOnly bool
+		TaskList                string
+		TaskType                int
+		ScheduleID              int64
+		Version                 int64
+	}
+
+	// ReplicationTaskInfo describes the replication task created for replication of history events
+	ReplicationTaskInfo struct {
+		DomainID            string
+		WorkflowID          string
+		RunID               string
+		TaskID              int64
+		TaskType            int
+		FirstEventID        int64
+		NextEventID         int64
+		Version             int64
+		LastReplicationInfo map[string]*ReplicationInfo
 	}
 
 	// TimerTaskInfo describes a timer task.
@@ -163,6 +253,8 @@ type (
 		TaskType            int
 		TimeoutType         int
 		EventID             int64
+		ScheduleAttempt     int64
+		Version             int64
 	}
 
 	// TaskListInfo describes a state of a task list implementation.
@@ -172,6 +264,7 @@ type (
 		TaskType int
 		RangeID  int64
 		AckLevel int64
+		Kind     int
 	}
 
 	// TaskInfo describes either activity or decision task
@@ -187,35 +280,46 @@ type (
 	// Task is the generic interface for workflow tasks
 	Task interface {
 		GetType() int
+		GetVersion() int64
+		SetVersion(version int64)
 		GetTaskID() int64
 		SetTaskID(id int64)
+		GetVisibilityTimestamp() time.Time
+		SetVisibilityTimestamp(timestamp time.Time)
 	}
 
 	// ActivityTask identifies a transfer task for activity
 	ActivityTask struct {
-		TaskID     int64
-		DomainID   string
-		TaskList   string
-		ScheduleID int64
+		VisibilityTimestamp time.Time
+		TaskID              int64
+		DomainID            string
+		TaskList            string
+		ScheduleID          int64
+		Version             int64
 	}
 
 	// DecisionTask identifies a transfer task for decision
 	DecisionTask struct {
-		TaskID     int64
-		DomainID   string
-		TaskList   string
-		ScheduleID int64
+		VisibilityTimestamp time.Time
+		TaskID              int64
+		DomainID            string
+		TaskList            string
+		ScheduleID          int64
+		Version             int64
 	}
 
-	// DeleteExecutionTask identifies a transfer task for deletion of execution
-	DeleteExecutionTask struct {
-		TaskID int64
+	// CloseExecutionTask identifies a transfer task for deletion of execution
+	CloseExecutionTask struct {
+		VisibilityTimestamp time.Time
+		TaskID              int64
+		Version             int64
 	}
 
 	// DeleteHistoryEventTask identifies a timer task for deletion of history events of completed execution.
 	DeleteHistoryEventTask struct {
 		VisibilityTimestamp time.Time
 		TaskID              int64
+		Version             int64
 	}
 
 	// DecisionTimeoutTask identifies a timeout task.
@@ -223,29 +327,50 @@ type (
 		VisibilityTimestamp time.Time
 		TaskID              int64
 		EventID             int64
+		ScheduleAttempt     int64
+		TimeoutType         int
+		Version             int64
 	}
 
 	// WorkflowTimeoutTask identifies a timeout task.
 	WorkflowTimeoutTask struct {
 		VisibilityTimestamp time.Time
 		TaskID              int64
+		Version             int64
 	}
 
 	// CancelExecutionTask identifies a transfer task for cancel of execution
 	CancelExecutionTask struct {
-		TaskID           int64
-		TargetDomainID   string
-		TargetWorkflowID string
-		TargetRunID      string
-		ScheduleID       int64
+		VisibilityTimestamp     time.Time
+		TaskID                  int64
+		TargetDomainID          string
+		TargetWorkflowID        string
+		TargetRunID             string
+		TargetChildWorkflowOnly bool
+		InitiatedID             int64
+		Version                 int64
+	}
+
+	// SignalExecutionTask identifies a transfer task for signal execution
+	SignalExecutionTask struct {
+		VisibilityTimestamp     time.Time
+		TaskID                  int64
+		TargetDomainID          string
+		TargetWorkflowID        string
+		TargetRunID             string
+		TargetChildWorkflowOnly bool
+		InitiatedID             int64
+		Version                 int64
 	}
 
 	// StartChildExecutionTask identifies a transfer task for starting child execution
 	StartChildExecutionTask struct {
-		TaskID           int64
-		TargetDomainID   string
-		TargetWorkflowID string
-		InitiatedID      int64
+		VisibilityTimestamp time.Time
+		TaskID              int64
+		TargetDomainID      string
+		TargetWorkflowID    string
+		InitiatedID         int64
+		Version             int64
 	}
 
 	// ActivityTimeoutTask identifies a timeout task.
@@ -254,6 +379,8 @@ type (
 		TaskID              int64
 		TimeoutType         int
 		EventID             int64
+		Attempt             int64
+		Version             int64
 	}
 
 	// UserTimerTask identifies a timeout task.
@@ -261,19 +388,51 @@ type (
 		VisibilityTimestamp time.Time
 		TaskID              int64
 		EventID             int64
+		Version             int64
+	}
+
+	// RetryTimerTask to schedule a retry task for activity
+	RetryTimerTask struct {
+		VisibilityTimestamp time.Time
+		TaskID              int64
+		EventID             int64
+		Version             int64
+		Attempt             int32
+	}
+
+	// HistoryReplicationTask is the transfer task created for shipping history replication events to other clusters
+	HistoryReplicationTask struct {
+		VisibilityTimestamp time.Time
+		TaskID              int64
+		FirstEventID        int64
+		NextEventID         int64
+		Version             int64
+		LastReplicationInfo map[string]*ReplicationInfo
+	}
+
+	// ReplicationInfo represents the information stored for last replication event details per cluster
+	ReplicationInfo struct {
+		Version     int64
+		LastEventID int64
 	}
 
 	// WorkflowMutableState indicates workflow related state
 	WorkflowMutableState struct {
-		ActivitInfos        map[int64]*ActivityInfo
-		TimerInfos          map[string]*TimerInfo
-		ChildExecutionInfos map[int64]*ChildExecutionInfo
-		RequestCancelInfos  map[int64]*RequestCancelInfo
-		ExecutionInfo       *WorkflowExecutionInfo
+		ActivitInfos             map[int64]*ActivityInfo
+		TimerInfos               map[string]*TimerInfo
+		ChildExecutionInfos      map[int64]*ChildExecutionInfo
+		RequestCancelInfos       map[int64]*RequestCancelInfo
+		SignalInfos              map[int64]*SignalInfo
+		SignalRequestedIDs       map[string]struct{}
+		ExecutionInfo            *WorkflowExecutionInfo
+		ReplicationState         *ReplicationState
+		BufferedEvents           []*SerializedHistoryEventBatch
+		BufferedReplicationTasks map[int64]*BufferedReplicationTask
 	}
 
 	// ActivityInfo details.
 	ActivityInfo struct {
+		Version                  int64
 		ScheduleID               int64
 		ScheduledEvent           []byte
 		ScheduledTime            time.Time
@@ -291,10 +450,25 @@ type (
 		CancelRequestID          int64
 		LastHeartBeatUpdatedTime time.Time
 		TimerTaskStatus          int32
+		// For retry
+		Attempt            int32
+		DomainID           string
+		StartedIdentity    string
+		TaskList           string
+		HasRetryPolicy     bool
+		InitialInterval    int32
+		BackoffCoefficient float64
+		MaximumInterval    int32
+		ExpirationTime     time.Time
+		MaximumAttempts    int32
+		NonRetriableErrors []string
+		// Not written to database - This is used only for deduping heartbeat timer creation
+		LastTimeoutVisibility int64
 	}
 
 	// TimerInfo details - metadata about user timer info.
 	TimerInfo struct {
+		Version    int64
 		TimerID    string
 		StartedID  int64
 		ExpiryTime time.Time
@@ -303,6 +477,7 @@ type (
 
 	// ChildExecutionInfo has details for pending child executions.
 	ChildExecutionInfo struct {
+		Version         int64
 		InitiatedID     int64
 		InitiatedEvent  []byte
 		StartedID       int64
@@ -312,8 +487,28 @@ type (
 
 	// RequestCancelInfo has details for pending external workflow cancellations
 	RequestCancelInfo struct {
+		Version         int64
 		InitiatedID     int64
 		CancelRequestID string
+	}
+
+	// SignalInfo has details for pending external workflow signal
+	SignalInfo struct {
+		Version         int64
+		InitiatedID     int64
+		SignalRequestID string
+		SignalName      string
+		Input           []byte
+		Control         []byte
+	}
+
+	// BufferedReplicationTask has details to handle out of order receive of history events
+	BufferedReplicationTask struct {
+		FirstEventID  int64
+		NextEventID   int64
+		Version       int64
+		History       *SerializedHistoryEventBatch
+		NewRunHistory *SerializedHistoryEventBatch
 	}
 
 	// CreateShardRequest is used to create a shard in executions table
@@ -347,22 +542,26 @@ type (
 		InitiatedID                 int64
 		TaskList                    string
 		WorkflowTypeName            string
+		WorkflowTimeout             int32
 		DecisionTimeoutValue        int32
 		ExecutionContext            []byte
 		NextEventID                 int64
 		LastProcessedEvent          int64
 		TransferTasks               []Task
+		ReplicationTasks            []Task
 		TimerTasks                  []Task
 		RangeID                     int64
+		DecisionVersion             int64
 		DecisionScheduleID          int64
 		DecisionStartedID           int64
 		DecisionStartToCloseTimeout int32
 		ContinueAsNew               bool
+		PreviousRunID               string
+		ReplicationState            *ReplicationState
 	}
 
 	// CreateWorkflowExecutionResponse is the response to CreateWorkflowExecutionRequest
 	CreateWorkflowExecutionResponse struct {
-		TaskID string
 	}
 
 	// GetWorkflowExecutionRequest is used to retrieve the info of a workflow execution
@@ -384,50 +583,103 @@ type (
 
 	// GetCurrentExecutionResponse is the response to GetCurrentExecution
 	GetCurrentExecutionResponse struct {
-		RunID string
+		StartRequestID string
+		RunID          string
+		State          int
+		CloseStatus    int
 	}
 
 	// UpdateWorkflowExecutionRequest is used to update a workflow execution
 	UpdateWorkflowExecutionRequest struct {
-		ExecutionInfo   *WorkflowExecutionInfo
-		TransferTasks   []Task
-		TimerTasks      []Task
-		DeleteTimerTask Task
-		Condition       int64
-		RangeID         int64
-		ContinueAsNew   *CreateWorkflowExecutionRequest
-		CloseExecution  bool
+		ExecutionInfo        *WorkflowExecutionInfo
+		ReplicationState     *ReplicationState
+		TransferTasks        []Task
+		TimerTasks           []Task
+		ReplicationTasks     []Task
+		DeleteTimerTask      Task
+		Condition            int64
+		RangeID              int64
+		ContinueAsNew        *CreateWorkflowExecutionRequest
+		FinishExecution      bool
+		FinishedExecutionTTL int32
 
 		// Mutable state
-		UpsertActivityInfos       []*ActivityInfo
-		DeleteActivityInfo        *int64
-		UpserTimerInfos           []*TimerInfo
-		DeleteTimerInfos          []string
-		UpsertChildExecutionInfos []*ChildExecutionInfo
-		DeleteChildExecutionInfo  *int64
-		UpsertRequestCancelInfos  []*RequestCancelInfo
-		DeleteRequestCancelInfo   *int64
+		UpsertActivityInfos           []*ActivityInfo
+		DeleteActivityInfos           []int64
+		UpserTimerInfos               []*TimerInfo
+		DeleteTimerInfos              []string
+		UpsertChildExecutionInfos     []*ChildExecutionInfo
+		DeleteChildExecutionInfo      *int64
+		UpsertRequestCancelInfos      []*RequestCancelInfo
+		DeleteRequestCancelInfo       *int64
+		UpsertSignalInfos             []*SignalInfo
+		DeleteSignalInfo              *int64
+		UpsertSignalRequestedIDs      []string
+		DeleteSignalRequestedID       string
+		NewBufferedEvents             *SerializedHistoryEventBatch
+		ClearBufferedEvents           bool
+		NewBufferedReplicationTask    *BufferedReplicationTask
+		DeleteBufferedReplicationTask *int64
+	}
+
+	// ResetMutableStateRequest is used to reset workflow execution state
+	ResetMutableStateRequest struct {
+		ExecutionInfo    *WorkflowExecutionInfo
+		ReplicationState *ReplicationState
+		Condition        int64
+		RangeID          int64
+
+		// Mutable state
+		InsertActivityInfos       []*ActivityInfo
+		InsertTimerInfos          []*TimerInfo
+		InsertChildExecutionInfos []*ChildExecutionInfo
+		InsertRequestCancelInfos  []*RequestCancelInfo
+		InsertSignalInfos         []*SignalInfo
+		InsertSignalRequestedIDs  []string
 	}
 
 	// DeleteWorkflowExecutionRequest is used to delete a workflow execution
 	DeleteWorkflowExecutionRequest struct {
-		ExecutionInfo *WorkflowExecutionInfo
+		DomainID   string
+		WorkflowID string
+		RunID      string
 	}
 
 	// GetTransferTasksRequest is used to read tasks from the transfer task queue
 	GetTransferTasksRequest struct {
-		ReadLevel    int64
-		MaxReadLevel int64
-		BatchSize    int
+		ReadLevel     int64
+		MaxReadLevel  int64
+		BatchSize     int
+		NextPageToken []byte
 	}
 
 	// GetTransferTasksResponse is the response to GetTransferTasksRequest
 	GetTransferTasksResponse struct {
-		Tasks []*TransferTaskInfo
+		Tasks         []*TransferTaskInfo
+		NextPageToken []byte
+	}
+
+	// GetReplicationTasksRequest is used to read tasks from the replication task queue
+	GetReplicationTasksRequest struct {
+		ReadLevel     int64
+		MaxReadLevel  int64
+		BatchSize     int
+		NextPageToken []byte
+	}
+
+	// GetReplicationTasksResponse is the response to GetReplicationTask
+	GetReplicationTasksResponse struct {
+		Tasks         []*ReplicationTaskInfo
+		NextPageToken []byte
 	}
 
 	// CompleteTransferTaskRequest is used to complete a task in the transfer task queue
 	CompleteTransferTaskRequest struct {
+		TaskID int64
+	}
+
+	// CompleteReplicationTaskRequest is used to complete a task in the replication task queue
+	CompleteReplicationTaskRequest struct {
 		TaskID int64
 	}
 
@@ -439,9 +691,10 @@ type (
 
 	// LeaseTaskListRequest is used to request lease of a task list
 	LeaseTaskListRequest struct {
-		DomainID string
-		TaskList string
-		TaskType int
+		DomainID     string
+		TaskList     string
+		TaskType     int
+		TaskListKind int
 	}
 
 	// LeaseTaskListResponse is response to LeaseTaskListRequest
@@ -500,14 +753,16 @@ type (
 	// GetTimerIndexTasksRequest is the request for GetTimerIndexTasks
 	// TODO: replace this with an iterator that can configure min and max index.
 	GetTimerIndexTasksRequest struct {
-		MinTimestamp time.Time
-		MaxTimestamp time.Time
-		BatchSize    int
+		MinTimestamp  time.Time
+		MaxTimestamp  time.Time
+		BatchSize     int
+		NextPageToken []byte
 	}
 
 	// GetTimerIndexTasksResponse is the response for GetTimerIndexTasks
 	GetTimerIndexTasksResponse struct {
-		Timers []*TimerTaskInfo
+		Timers        []*TimerTaskInfo
+		NextPageToken []byte
 	}
 
 	// SerializedHistoryEventBatch represents a serialized batch of history events
@@ -525,19 +780,22 @@ type (
 
 	// AppendHistoryEventsRequest is used to append new events to workflow execution history
 	AppendHistoryEventsRequest struct {
-		DomainID      string
-		Execution     workflow.WorkflowExecution
-		FirstEventID  int64
-		RangeID       int64
-		TransactionID int64
-		Events        *SerializedHistoryEventBatch
-		Overwrite     bool
+		DomainID          string
+		Execution         workflow.WorkflowExecution
+		FirstEventID      int64
+		EventBatchVersion int64
+		RangeID           int64
+		TransactionID     int64
+		Events            *SerializedHistoryEventBatch
+		Overwrite         bool
 	}
 
 	// GetWorkflowExecutionHistoryRequest is used to retrieve history of a workflow execution
 	GetWorkflowExecutionHistoryRequest struct {
 		DomainID  string
 		Execution workflow.WorkflowExecution
+		// Get the history events from FirstEventID. Inclusive.
+		FirstEventID int64
 		// Get the history events upto NextEventID.  Not Inclusive.
 		NextEventID int64
 		// Maximum number of history append transactions per page
@@ -548,11 +806,12 @@ type (
 
 	// GetWorkflowExecutionHistoryResponse is the response to GetWorkflowExecutionHistoryRequest
 	GetWorkflowExecutionHistoryResponse struct {
-		// Slice of history append transaction batches
-		Events []SerializedHistoryEventBatch
+		History *workflow.History
 		// Token to read next page if there are more events beyond page size.
 		// Use this to set NextPageToken on GetworkflowExecutionHistoryRequest to read the next page.
 		NextPageToken []byte
+		// the first_event_id of last loaded batch
+		LastFirstEventID int64
 	}
 
 	// DeleteWorkflowExecutionHistoryRequest is used to delete workflow execution history
@@ -568,22 +827,35 @@ type (
 		Status      int
 		Description string
 		OwnerEmail  string
+		Data        map[string]string
 	}
 
 	// DomainConfig describes the domain configuration
 	DomainConfig struct {
+		// NOTE: this retention is in days, not in seconds
 		Retention  int32
 		EmitMetric bool
 	}
 
+	// DomainReplicationConfig describes the cross DC domain replication configuration
+	DomainReplicationConfig struct {
+		ActiveClusterName string
+		Clusters          []*ClusterReplicationConfig
+	}
+
+	// ClusterReplicationConfig describes the cross DC cluster replication configuration
+	ClusterReplicationConfig struct {
+		ClusterName string
+	}
+
 	// CreateDomainRequest is used to create the domain
 	CreateDomainRequest struct {
-		Name        string
-		Status      int
-		Description string
-		OwnerEmail  string
-		Retention   int32
-		EmitMetric  bool
+		Info              *DomainInfo
+		Config            *DomainConfig
+		ReplicationConfig *DomainReplicationConfig
+		IsGlobalDomain    bool
+		ConfigVersion     int64
+		FailoverVersion   int64
 	}
 
 	// CreateDomainResponse is the response for CreateDomain
@@ -599,14 +871,27 @@ type (
 
 	// GetDomainResponse is the response for GetDomain
 	GetDomainResponse struct {
-		Info   *DomainInfo
-		Config *DomainConfig
+		Info                        *DomainInfo
+		Config                      *DomainConfig
+		ReplicationConfig           *DomainReplicationConfig
+		IsGlobalDomain              bool
+		ConfigVersion               int64
+		FailoverVersion             int64
+		FailoverNotificationVersion int64
+		NotificationVersion         int64
+		TableVersion                int
 	}
 
 	// UpdateDomainRequest is used to update domain
 	UpdateDomainRequest struct {
-		Info   *DomainInfo
-		Config *DomainConfig
+		Info                        *DomainInfo
+		Config                      *DomainConfig
+		ReplicationConfig           *DomainReplicationConfig
+		ConfigVersion               int64
+		FailoverVersion             int64
+		FailoverNotificationVersion int64
+		NotificationVersion         int64
+		TableVersion                int
 	}
 
 	// DeleteDomainRequest is used to delete domain entry from domains table
@@ -617,6 +902,23 @@ type (
 	// DeleteDomainByNameRequest is used to delete domain entry from domains_by_name table
 	DeleteDomainByNameRequest struct {
 		Name string
+	}
+
+	// ListDomainsRequest is used to list domains
+	ListDomainsRequest struct {
+		PageSize      int
+		NextPageToken []byte
+	}
+
+	// ListDomainsResponse is the response for GetDomain
+	ListDomainsResponse struct {
+		Domains       []*GetDomainResponse
+		NextPageToken []byte
+	}
+
+	// GetMetadataResponse is the response for GetMetadata
+	GetMetadataResponse struct {
+		NotificationVersion int64
 	}
 
 	// Closeable is an interface for any entity that supports a close operation to release resources
@@ -638,10 +940,15 @@ type (
 		CreateWorkflowExecution(request *CreateWorkflowExecutionRequest) (*CreateWorkflowExecutionResponse, error)
 		GetWorkflowExecution(request *GetWorkflowExecutionRequest) (*GetWorkflowExecutionResponse, error)
 		UpdateWorkflowExecution(request *UpdateWorkflowExecutionRequest) error
+		ResetMutableState(request *ResetMutableStateRequest) error
 		DeleteWorkflowExecution(request *DeleteWorkflowExecutionRequest) error
 		GetCurrentExecution(request *GetCurrentExecutionRequest) (*GetCurrentExecutionResponse, error)
 		GetTransferTasks(request *GetTransferTasksRequest) (*GetTransferTasksResponse, error)
 		CompleteTransferTask(request *CompleteTransferTaskRequest) error
+
+		// Replication task related methods
+		GetReplicationTasks(request *GetReplicationTasksRequest) (*GetReplicationTasksResponse, error)
+		CompleteReplicationTask(request *CompleteReplicationTaskRequest) error
 
 		// Timer related methods.
 		GetTimerIndexTasks(request *GetTimerIndexTasksRequest) (*GetTimerIndexTasksResponse, error)
@@ -650,6 +957,7 @@ type (
 
 	// ExecutionManagerFactory creates an instance of ExecutionManager for a given shard
 	ExecutionManagerFactory interface {
+		Closeable
 		CreateExecutionManager(shardID int) (ExecutionManager, error)
 	}
 
@@ -673,7 +981,7 @@ type (
 		DeleteWorkflowExecutionHistory(request *DeleteWorkflowExecutionHistoryRequest) error
 	}
 
-	// MetadataManager is used to manage metadata CRUD for various entities
+	// MetadataManager is used to manage metadata CRUD for domain entities
 	MetadataManager interface {
 		Closeable
 		CreateDomain(request *CreateDomainRequest) (*CreateDomainResponse, error)
@@ -681,6 +989,8 @@ type (
 		UpdateDomain(request *UpdateDomainRequest) error
 		DeleteDomain(request *DeleteDomainRequest) error
 		DeleteDomainByName(request *DeleteDomainByNameRequest) error
+		ListDomains(request *ListDomainsRequest) (*ListDomainsResponse, error)
+		GetMetadata() (*GetMetadataResponse, error)
 	}
 )
 
@@ -696,6 +1006,10 @@ func (e *ShardOwnershipLostError) Error() string {
 	return e.Msg
 }
 
+func (e *WorkflowExecutionAlreadyStartedError) Error() string {
+	return e.Msg
+}
+
 func (e *TimeoutError) Error() string {
 	return e.Msg
 }
@@ -703,6 +1017,16 @@ func (e *TimeoutError) Error() string {
 // GetType returns the type of the activity task
 func (a *ActivityTask) GetType() int {
 	return TransferTaskTypeActivityTask
+}
+
+// GetVersion returns the version of the activity task
+func (a *ActivityTask) GetVersion() int64 {
+	return a.Version
+}
+
+// SetVersion returns the version of the activity task
+func (a *ActivityTask) SetVersion(version int64) {
+	a.Version = version
 }
 
 // GetTaskID returns the sequence ID of the activity task
@@ -715,9 +1039,29 @@ func (a *ActivityTask) SetTaskID(id int64) {
 	a.TaskID = id
 }
 
+// GetVisibilityTimestamp get the visibility timestamp
+func (a *ActivityTask) GetVisibilityTimestamp() time.Time {
+	return a.VisibilityTimestamp
+}
+
+// SetVisibilityTimestamp set the visibility timestamp
+func (a *ActivityTask) SetVisibilityTimestamp(timestamp time.Time) {
+	a.VisibilityTimestamp = timestamp
+}
+
 // GetType returns the type of the decision task
 func (d *DecisionTask) GetType() int {
 	return TransferTaskTypeDecisionTask
+}
+
+// GetVersion returns the version of the decision task
+func (d *DecisionTask) GetVersion() int64 {
+	return d.Version
+}
+
+// SetVersion returns the version of the decision task
+func (d *DecisionTask) SetVersion(version int64) {
+	d.Version = version
 }
 
 // GetTaskID returns the sequence ID of the decision task.
@@ -730,24 +1074,64 @@ func (d *DecisionTask) SetTaskID(id int64) {
 	d.TaskID = id
 }
 
-// GetType returns the type of the delete execution task
-func (a *DeleteExecutionTask) GetType() int {
-	return TransferTaskTypeDeleteExecution
+// GetVisibilityTimestamp get the visibility timestamp
+func (d *DecisionTask) GetVisibilityTimestamp() time.Time {
+	return d.VisibilityTimestamp
 }
 
-// GetTaskID returns the sequence ID of the delete execution task
-func (a *DeleteExecutionTask) GetTaskID() int64 {
+// SetVisibilityTimestamp set the visibility timestamp
+func (d *DecisionTask) SetVisibilityTimestamp(timestamp time.Time) {
+	d.VisibilityTimestamp = timestamp
+}
+
+// GetType returns the type of the close execution task
+func (a *CloseExecutionTask) GetType() int {
+	return TransferTaskTypeCloseExecution
+}
+
+// GetVersion returns the version of the close execution task
+func (a *CloseExecutionTask) GetVersion() int64 {
+	return a.Version
+}
+
+// SetVersion returns the version of the close execution task
+func (a *CloseExecutionTask) SetVersion(version int64) {
+	a.Version = version
+}
+
+// GetTaskID returns the sequence ID of the close execution task
+func (a *CloseExecutionTask) GetTaskID() int64 {
 	return a.TaskID
 }
 
-// SetTaskID sets the sequence ID of the delete execution task
-func (a *DeleteExecutionTask) SetTaskID(id int64) {
+// SetTaskID sets the sequence ID of the close execution task
+func (a *CloseExecutionTask) SetTaskID(id int64) {
 	a.TaskID = id
+}
+
+// GetVisibilityTimestamp get the visibility timestamp
+func (a *CloseExecutionTask) GetVisibilityTimestamp() time.Time {
+	return a.VisibilityTimestamp
+}
+
+// SetVisibilityTimestamp set the visibility timestamp
+func (a *CloseExecutionTask) SetVisibilityTimestamp(timestamp time.Time) {
+	a.VisibilityTimestamp = timestamp
 }
 
 // GetType returns the type of the delete execution task
 func (a *DeleteHistoryEventTask) GetType() int {
 	return TaskTypeDeleteHistoryEvent
+}
+
+// GetVersion returns the version of the delete execution task
+func (a *DeleteHistoryEventTask) GetVersion() int64 {
+	return a.Version
+}
+
+// SetVersion returns the version of the delete execution task
+func (a *DeleteHistoryEventTask) SetVersion(version int64) {
+	a.Version = version
 }
 
 // GetTaskID returns the sequence ID of the delete execution task
@@ -760,9 +1144,29 @@ func (a *DeleteHistoryEventTask) SetTaskID(id int64) {
 	a.TaskID = id
 }
 
+// GetVisibilityTimestamp get the visibility timestamp
+func (a *DeleteHistoryEventTask) GetVisibilityTimestamp() time.Time {
+	return a.VisibilityTimestamp
+}
+
+// SetVisibilityTimestamp set the visibility timestamp
+func (a *DeleteHistoryEventTask) SetVisibilityTimestamp(timestamp time.Time) {
+	a.VisibilityTimestamp = timestamp
+}
+
 // GetType returns the type of the timer task
 func (d *DecisionTimeoutTask) GetType() int {
 	return TaskTypeDecisionTimeout
+}
+
+// GetVersion returns the version of the timer task
+func (d *DecisionTimeoutTask) GetVersion() int64 {
+	return d.Version
+}
+
+// SetVersion returns the version of the timer task
+func (d *DecisionTimeoutTask) SetVersion(version int64) {
+	d.Version = version
 }
 
 // GetTaskID returns the sequence ID.
@@ -790,6 +1194,16 @@ func (a *ActivityTimeoutTask) GetType() int {
 	return TaskTypeActivityTimeout
 }
 
+// GetVersion returns the version of the timer task
+func (a *ActivityTimeoutTask) GetVersion() int64 {
+	return a.Version
+}
+
+// SetVersion returns the version of the timer task
+func (a *ActivityTimeoutTask) SetVersion(version int64) {
+	a.Version = version
+}
+
 // GetTaskID returns the sequence ID.
 func (a *ActivityTimeoutTask) GetTaskID() int64 {
 	return a.TaskID
@@ -815,6 +1229,16 @@ func (u *UserTimerTask) GetType() int {
 	return TaskTypeUserTimer
 }
 
+// GetVersion returns the version of the timer task
+func (u *UserTimerTask) GetVersion() int64 {
+	return u.Version
+}
+
+// SetVersion returns the version of the timer task
+func (u *UserTimerTask) SetVersion(version int64) {
+	u.Version = version
+}
+
 // GetTaskID returns the sequence ID of the timer task.
 func (u *UserTimerTask) GetTaskID() int64 {
 	return u.TaskID
@@ -835,9 +1259,54 @@ func (u *UserTimerTask) SetVisibilityTimestamp(t time.Time) {
 	u.VisibilityTimestamp = t
 }
 
+// GetType returns the type of the retry timer task
+func (r *RetryTimerTask) GetType() int {
+	return TaskTypeRetryTimer
+}
+
+// GetVersion returns the version of the retry timer task
+func (r *RetryTimerTask) GetVersion() int64 {
+	return r.Version
+}
+
+// SetVersion returns the version of the retry timer task
+func (r *RetryTimerTask) SetVersion(version int64) {
+	r.Version = version
+}
+
+// GetTaskID returns the sequence ID.
+func (r *RetryTimerTask) GetTaskID() int64 {
+	return r.TaskID
+}
+
+// SetTaskID sets the sequence ID.
+func (r *RetryTimerTask) SetTaskID(id int64) {
+	r.TaskID = id
+}
+
+// GetVisibilityTimestamp gets the visibility time stamp
+func (r *RetryTimerTask) GetVisibilityTimestamp() time.Time {
+	return r.VisibilityTimestamp
+}
+
+// SetVisibilityTimestamp gets the visibility time stamp
+func (r *RetryTimerTask) SetVisibilityTimestamp(t time.Time) {
+	r.VisibilityTimestamp = t
+}
+
 // GetType returns the type of the timeout task.
 func (u *WorkflowTimeoutTask) GetType() int {
 	return TaskTypeWorkflowTimeout
+}
+
+// GetVersion returns the version of the timeout task
+func (u *WorkflowTimeoutTask) GetVersion() int64 {
+	return u.Version
+}
+
+// SetVersion returns the version of the timeout task
+func (u *WorkflowTimeoutTask) SetVersion(version int64) {
+	u.Version = version
 }
 
 // GetTaskID returns the sequence ID of the cancel transfer task.
@@ -865,6 +1334,16 @@ func (u *CancelExecutionTask) GetType() int {
 	return TransferTaskTypeCancelExecution
 }
 
+// GetVersion returns the version of the cancel transfer task
+func (u *CancelExecutionTask) GetVersion() int64 {
+	return u.Version
+}
+
+// SetVersion returns the version of the cancel transfer task
+func (u *CancelExecutionTask) SetVersion(version int64) {
+	u.Version = version
+}
+
 // GetTaskID returns the sequence ID of the cancel transfer task.
 func (u *CancelExecutionTask) GetTaskID() int64 {
 	return u.TaskID
@@ -875,19 +1354,195 @@ func (u *CancelExecutionTask) SetTaskID(id int64) {
 	u.TaskID = id
 }
 
-// GetType returns the type of the cancel transfer task
+// GetVisibilityTimestamp get the visibility timestamp
+func (u *CancelExecutionTask) GetVisibilityTimestamp() time.Time {
+	return u.VisibilityTimestamp
+}
+
+// SetVisibilityTimestamp set the visibility timestamp
+func (u *CancelExecutionTask) SetVisibilityTimestamp(timestamp time.Time) {
+	u.VisibilityTimestamp = timestamp
+}
+
+// GetType returns the type of the signal transfer task
+func (u *SignalExecutionTask) GetType() int {
+	return TransferTaskTypeSignalExecution
+}
+
+// GetVersion returns the version of the signal transfer task
+func (u *SignalExecutionTask) GetVersion() int64 {
+	return u.Version
+}
+
+// SetVersion returns the version of the signal transfer task
+func (u *SignalExecutionTask) SetVersion(version int64) {
+	u.Version = version
+}
+
+// GetTaskID returns the sequence ID of the signal transfer task.
+func (u *SignalExecutionTask) GetTaskID() int64 {
+	return u.TaskID
+}
+
+// SetTaskID sets the sequence ID of the signal transfer task.
+func (u *SignalExecutionTask) SetTaskID(id int64) {
+	u.TaskID = id
+}
+
+// GetVisibilityTimestamp get the visibility timestamp
+func (u *SignalExecutionTask) GetVisibilityTimestamp() time.Time {
+	return u.VisibilityTimestamp
+}
+
+// SetVisibilityTimestamp set the visibility timestamp
+func (u *SignalExecutionTask) SetVisibilityTimestamp(timestamp time.Time) {
+	u.VisibilityTimestamp = timestamp
+}
+
+// GetType returns the type of the start child transfer task
 func (u *StartChildExecutionTask) GetType() int {
 	return TransferTaskTypeStartChildExecution
 }
 
-// GetTaskID returns the sequence ID of the cancel transfer task.
+// GetVersion returns the version of the start child transfer task
+func (u *StartChildExecutionTask) GetVersion() int64 {
+	return u.Version
+}
+
+// SetVersion returns the version of the start child transfer task
+func (u *StartChildExecutionTask) SetVersion(version int64) {
+	u.Version = version
+}
+
+// GetTaskID returns the sequence ID of the start child transfer task
 func (u *StartChildExecutionTask) GetTaskID() int64 {
 	return u.TaskID
 }
 
-// SetTaskID sets the sequence ID of the cancel transfer task.
+// SetTaskID sets the sequence ID of the start child transfer task
 func (u *StartChildExecutionTask) SetTaskID(id int64) {
 	u.TaskID = id
+}
+
+// GetVisibilityTimestamp get the visibility timestamp
+func (u *StartChildExecutionTask) GetVisibilityTimestamp() time.Time {
+	return u.VisibilityTimestamp
+}
+
+// SetVisibilityTimestamp set the visibility timestamp
+func (u *StartChildExecutionTask) SetVisibilityTimestamp(timestamp time.Time) {
+	u.VisibilityTimestamp = timestamp
+}
+
+// GetType returns the type of the history replication task
+func (a *HistoryReplicationTask) GetType() int {
+	return ReplicationTaskTypeHistory
+}
+
+// GetVersion returns the version of the history replication task
+func (a *HistoryReplicationTask) GetVersion() int64 {
+	return a.Version
+}
+
+// SetVersion returns the version of the history replication task
+func (a *HistoryReplicationTask) SetVersion(version int64) {
+	a.Version = version
+}
+
+// GetTaskID returns the sequence ID of the history replication task
+func (a *HistoryReplicationTask) GetTaskID() int64 {
+	return a.TaskID
+}
+
+// SetTaskID sets the sequence ID of the history replication task
+func (a *HistoryReplicationTask) SetTaskID(id int64) {
+	a.TaskID = id
+}
+
+// GetVisibilityTimestamp get the visibility timestamp
+func (a *HistoryReplicationTask) GetVisibilityTimestamp() time.Time {
+	return a.VisibilityTimestamp
+}
+
+// SetVisibilityTimestamp set the visibility timestamp
+func (a *HistoryReplicationTask) SetVisibilityTimestamp(timestamp time.Time) {
+	a.VisibilityTimestamp = timestamp
+}
+
+// GetTaskID returns the task ID for transfer task
+func (t *TransferTaskInfo) GetTaskID() int64 {
+	return t.TaskID
+}
+
+// GetVersion returns the task version for transfer task
+func (t *TransferTaskInfo) GetVersion() int64 {
+	return t.Version
+}
+
+// GetTaskType returns the task type for transfer task
+func (t *TransferTaskInfo) GetTaskType() int {
+	return t.TaskType
+}
+
+// GetVisibilityTimestamp returns the task type for transfer task
+func (t *TransferTaskInfo) GetVisibilityTimestamp() time.Time {
+	return t.VisibilityTimestamp
+}
+
+// String returns string
+func (t *TransferTaskInfo) String() string {
+	return fmt.Sprintf(
+		"{DomainID: %v, WorkflowID: %v, RunID: %v, TaskID: %v, TargetDomainID: %v, TargetWorkflowID %v, TargetRunID: %v, TargetChildWorkflowOnly: %v, TaskList: %v, TaskType: %v, ScheduleID: %v, Version: %v.}",
+		t.DomainID, t.WorkflowID, t.RunID, t.TaskID, t.TargetDomainID, t.TargetWorkflowID, t.TargetRunID, t.TargetChildWorkflowOnly, t.TaskList, t.TaskType, t.ScheduleID, t.Version,
+	)
+}
+
+// GetTaskID returns the task ID for replication task
+func (t *ReplicationTaskInfo) GetTaskID() int64 {
+	return t.TaskID
+}
+
+// GetVersion returns the task version for replication task
+func (t *ReplicationTaskInfo) GetVersion() int64 {
+	return t.Version
+}
+
+// GetTaskType returns the task type for replication task
+func (t *ReplicationTaskInfo) GetTaskType() int {
+	return t.TaskType
+}
+
+// GetVisibilityTimestamp returns the task type for transfer task
+func (t *ReplicationTaskInfo) GetVisibilityTimestamp() time.Time {
+	return time.Time{}
+}
+
+// GetTaskID returns the task ID for timer task
+func (t *TimerTaskInfo) GetTaskID() int64 {
+	return t.TaskID
+}
+
+// GetVersion returns the task version for timer task
+func (t *TimerTaskInfo) GetVersion() int64 {
+	return t.Version
+}
+
+// GetTaskType returns the task type for timer task
+func (t *TimerTaskInfo) GetTaskType() int {
+	return t.TaskType
+}
+
+// GetVisibilityTimestamp returns the task type for transfer task
+func (t *TimerTaskInfo) GetVisibilityTimestamp() time.Time {
+	return t.VisibilityTimestamp
+}
+
+// GetTaskType returns the task type for timer task
+func (t *TimerTaskInfo) String() string {
+	return fmt.Sprintf(
+		"{DomainID: %v, WorkflowID: %v, RunID: %v, VisibilityTimestamp: %v, TaskID: %v, TaskType: %v, TimeoutType: %v, EventID: %v, ScheduleAttempt: %v, Version: %v.}",
+		t.DomainID, t.WorkflowID, t.RunID, t.VisibilityTimestamp, t.TaskID, t.TaskType, t.TimeoutType, t.EventID, t.ScheduleAttempt, t.Version,
+	)
 }
 
 // NewHistoryEventBatch returns a new instance of HistoryEventBatch
@@ -899,7 +1554,7 @@ func NewHistoryEventBatch(version int, events []*workflow.HistoryEvent) *History
 }
 
 func (b *HistoryEventBatch) String() string {
-	return fmt.Sprint("[version:%v, events:%v]", b.Version, b.Events)
+	return fmt.Sprintf("[version:%v, events:%v]", b.Version, b.Events)
 }
 
 // NewSerializedHistoryEventBatch constructs and returns a new instance of of SerializedHistoryEventBatch
@@ -914,4 +1569,25 @@ func NewSerializedHistoryEventBatch(data []byte, encoding common.EncodingType, v
 func (h *SerializedHistoryEventBatch) String() string {
 	return fmt.Sprintf("[encodingType:%v,historyVersion:%v,history:%v]",
 		h.EncodingType, h.Version, string(h.Data))
+}
+
+func (config *ClusterReplicationConfig) serialize() map[string]interface{} {
+	output := make(map[string]interface{})
+	output["cluster_name"] = config.ClusterName
+	return output
+}
+
+func (config *ClusterReplicationConfig) deserialize(input map[string]interface{}) {
+	config.ClusterName = input["cluster_name"].(string)
+}
+
+// SetSerializedHistoryDefaults  sets the version and encoding types to defaults if they
+// are missing from persistence. This is purely for backwards compatibility
+func SetSerializedHistoryDefaults(history *SerializedHistoryEventBatch) {
+	if history.Version == 0 {
+		history.Version = GetDefaultHistoryVersion()
+	}
+	if len(history.EncodingType) == 0 {
+		history.EncodingType = DefaultEncodingType
+	}
 }

@@ -57,6 +57,7 @@ const (
 	Frontend
 	History
 	Matching
+	Worker
 	NumServices
 )
 
@@ -123,14 +124,20 @@ const (
 	PersistenceGetWorkflowExecutionScope
 	// PersistenceUpdateWorkflowExecutionScope tracks UpdateWorkflowExecution calls made by service to persistence layer
 	PersistenceUpdateWorkflowExecutionScope
+	// PersistenceResetMutableStateScope tracks ResetMutableState calls made by service to persistence layer
+	PersistenceResetMutableStateScope
 	// PersistenceDeleteWorkflowExecutionScope tracks DeleteWorkflowExecution calls made by service to persistence layer
 	PersistenceDeleteWorkflowExecutionScope
 	// PersistenceGetCurrentExecutionScope tracks GetCurrentExecution calls made by service to persistence layer
 	PersistenceGetCurrentExecutionScope
 	// PersistenceGetTransferTasksScope tracks GetTransferTasks calls made by service to persistence layer
 	PersistenceGetTransferTasksScope
+	// PersistenceGetReplicationTasksScope tracks GetReplicationTasks calls made by service to persistence layer
+	PersistenceGetReplicationTasksScope
 	// PersistenceCompleteTransferTaskScope tracks CompleteTransferTasks calls made by service to persistence layer
 	PersistenceCompleteTransferTaskScope
+	// PersistenceCompleteReplicationTaskScope tracks CompleteReplicationTasks calls made by service to persistence layer
+	PersistenceCompleteReplicationTaskScope
 	// PersistenceGetTimerIndexTasksScope tracks GetTimerIndexTasks calls made by service to persistence layer
 	PersistenceGetTimerIndexTasksScope
 	// PersistenceCompleteTimerTaskScope tracks CompleteTimerTasks calls made by service to persistence layer
@@ -161,20 +168,50 @@ const (
 	PersistenceDeleteDomainScope
 	// PersistenceDeleteDomainByNameScope tracks DeleteDomainByName calls made by service to persistence layer
 	PersistenceDeleteDomainByNameScope
+	// PersistenceListDomainScope tracks DeleteDomainByName calls made by service to persistence layer
+	PersistenceListDomainScope
+	// PersistenceGetMetadataScope tracks DeleteDomainByName calls made by service to persistence layer
+	PersistenceGetMetadataScope
+	// PersistenceRecordWorkflowExecutionStartedScope tracks RecordWorkflowExecutionStarted calls made by service to persistence layer
+	PersistenceRecordWorkflowExecutionStartedScope
+	// PersistenceRecordWorkflowExecutionClosedScope tracks RecordWorkflowExecutionClosed calls made by service to persistence layer
+	PersistenceRecordWorkflowExecutionClosedScope
+	// PersistenceListOpenWorkflowExecutionsScope tracks ListOpenWorkflowExecutions calls made by service to persistence layer
+	PersistenceListOpenWorkflowExecutionsScope
+	// PersistenceListClosedWorkflowExecutionsScope tracks ListClosedWorkflowExecutions calls made by service to persistence layer
+	PersistenceListClosedWorkflowExecutionsScope
+	// PersistenceListOpenWorkflowExecutionsByTypeScope tracks ListOpenWorkflowExecutionsByType calls made by service to persistence layer
+	PersistenceListOpenWorkflowExecutionsByTypeScope
+	// PersistenceListClosedWorkflowExecutionsByTypeScope tracks ListClosedWorkflowExecutionsByType calls made by service to persistence layer
+	PersistenceListClosedWorkflowExecutionsByTypeScope
+	// PersistenceListOpenWorkflowExecutionsByWorkflowIDScope tracks ListOpenWorkflowExecutionsByWorkflowID calls made by service to persistence layer
+	PersistenceListOpenWorkflowExecutionsByWorkflowIDScope
+	// PersistenceListClosedWorkflowExecutionsByWorkflowIDScope tracks ListClosedWorkflowExecutionsByWorkflowID calls made by service to persistence layer
+	PersistenceListClosedWorkflowExecutionsByWorkflowIDScope
+	// PersistenceListClosedWorkflowExecutionsByStatusScope tracks ListClosedWorkflowExecutionsByStatus calls made by service to persistence layer
+	PersistenceListClosedWorkflowExecutionsByStatusScope
+	// PersistenceGetClosedWorkflowExecutionScope tracks GetClosedWorkflowExecution calls made by service to persistence layer
+	PersistenceGetClosedWorkflowExecutionScope
 	// HistoryClientStartWorkflowExecutionScope tracks RPC calls to history service
 	HistoryClientStartWorkflowExecutionScope
 	// HistoryClientRecordActivityTaskHeartbeatScope tracks RPC calls to history service
 	HistoryClientRecordActivityTaskHeartbeatScope
 	// HistoryClientRespondDecisionTaskCompletedScope tracks RPC calls to history service
 	HistoryClientRespondDecisionTaskCompletedScope
+	// HistoryClientRespondDecisionTaskFailedScope tracks RPC calls to history service
+	HistoryClientRespondDecisionTaskFailedScope
 	// HistoryClientRespondActivityTaskCompletedScope tracks RPC calls to history service
 	HistoryClientRespondActivityTaskCompletedScope
 	// HistoryClientRespondActivityTaskFailedScope tracks RPC calls to history service
 	HistoryClientRespondActivityTaskFailedScope
 	// HistoryClientRespondActivityTaskCanceledScope tracks RPC calls to history service
 	HistoryClientRespondActivityTaskCanceledScope
-	// HistoryClientGetWorkflowExecutionNextEventIDScope tracks RPC calls to history service
-	HistoryClientGetWorkflowExecutionNextEventIDScope
+	// HistoryClientGetMutableStateScope tracks RPC calls to history service
+	HistoryClientGetMutableStateScope
+	// HistoryClientResetStickyTaskListScope tracks RPC calls to history service
+	HistoryClientResetStickyTaskListScope
+	// HistoryClientDescribeWorkflowExecutionScope tracks RPC calls to history service
+	HistoryClientDescribeWorkflowExecutionScope
 	// HistoryClientRecordDecisionTaskStartedScope tracks RPC calls to history service
 	HistoryClientRecordDecisionTaskStartedScope
 	// HistoryClientRecordActivityTaskStartedScope tracks RPC calls to history service
@@ -183,12 +220,20 @@ const (
 	HistoryClientRequestCancelWorkflowExecutionScope
 	// HistoryClientSignalWorkflowExecutionScope tracks RPC calls to history service
 	HistoryClientSignalWorkflowExecutionScope
+	// HistoryClientSignalWithStartWorkflowExecutionScope tracks RPC calls to history service
+	HistoryClientSignalWithStartWorkflowExecutionScope
+	// HistoryClientRemoveSignalMutableStateScope tracks RPC calls to history service
+	HistoryClientRemoveSignalMutableStateScope
 	// HistoryClientTerminateWorkflowExecutionScope tracks RPC calls to history service
 	HistoryClientTerminateWorkflowExecutionScope
 	// HistoryClientScheduleDecisionTaskScope tracks RPC calls to history service
 	HistoryClientScheduleDecisionTaskScope
 	// HistoryClientRecordChildExecutionCompletedScope tracks RPC calls to history service
 	HistoryClientRecordChildExecutionCompletedScope
+	// HistoryClientReplicateEventsScope tracks RPC calls to history service
+	HistoryClientReplicateEventsScope
+	// HistoryClientSyncShardStatusScope tracks RPC calls to history service
+	HistoryClientSyncShardStatusScope
 	// MatchingClientPollForDecisionTaskScope tracks RPC calls to matching service
 	MatchingClientPollForDecisionTaskScope
 	// MatchingClientPollForActivityTaskScope tracks RPC calls to matching service
@@ -197,6 +242,16 @@ const (
 	MatchingClientAddActivityTaskScope
 	// MatchingClientAddDecisionTaskScope tracks RPC calls to matching service
 	MatchingClientAddDecisionTaskScope
+	// MatchingClientQueryWorkflowScope tracks RPC calls to matching service
+	MatchingClientQueryWorkflowScope
+	// MatchingClientRespondQueryTaskCompletedScope tracks RPC calls to matching service
+	MatchingClientRespondQueryTaskCompletedScope
+	// MatchingClientCancelOutstandingPollScope tracks RPC calls to matching service
+	MatchingClientCancelOutstandingPollScope
+	// MatchingClientDescribeTaskListScope tracks RPC calls to matching service
+	MatchingClientDescribeTaskListScope
+	// DomainCacheScope tracks domain cache callbacks
+	DomainCacheScope
 
 	NumCommonScopes
 )
@@ -211,18 +266,32 @@ const (
 	FrontendPollForActivityTaskScope
 	// FrontendRecordActivityTaskHeartbeatScope is the metric scope for frontend.RecordActivityTaskHeartbeat
 	FrontendRecordActivityTaskHeartbeatScope
+	// FrontendRecordActivityTaskHeartbeatByIDScope is the metric scope for frontend.RespondDecisionTaskCompleted
+	FrontendRecordActivityTaskHeartbeatByIDScope
 	// FrontendRespondDecisionTaskCompletedScope is the metric scope for frontend.RespondDecisionTaskCompleted
 	FrontendRespondDecisionTaskCompletedScope
+	// FrontendRespondDecisionTaskFailedScope is the metric scope for frontend.RespondDecisionTaskFailed
+	FrontendRespondDecisionTaskFailedScope
+	// FrontendRespondQueryTaskCompletedScope is the metric scope for frontend.RespondQueryTaskCompleted
+	FrontendRespondQueryTaskCompletedScope
 	// FrontendRespondActivityTaskCompletedScope is the metric scope for frontend.RespondActivityTaskCompleted
 	FrontendRespondActivityTaskCompletedScope
 	// FrontendRespondActivityTaskFailedScope is the metric scope for frontend.RespondActivityTaskFailed
 	FrontendRespondActivityTaskFailedScope
 	// FrontendRespondActivityTaskCanceledScope is the metric scope for frontend.RespondActivityTaskCanceled
 	FrontendRespondActivityTaskCanceledScope
+	// FrontendRespondActivityTaskCompletedScope is the metric scope for frontend.RespondActivityTaskCompletedByID
+	FrontendRespondActivityTaskCompletedByIDScope
+	// FrontendRespondActivityTaskFailedScope is the metric scope for frontend.RespondActivityTaskFailedByID
+	FrontendRespondActivityTaskFailedByIDScope
+	// FrontendRespondActivityTaskCanceledScope is the metric scope for frontend.RespondActivityTaskCanceledByID
+	FrontendRespondActivityTaskCanceledByIDScope
 	// FrontendGetWorkflowExecutionHistoryScope is the metric scope for frontend.GetWorkflowExecutionHistory
 	FrontendGetWorkflowExecutionHistoryScope
 	// FrontendSignalWorkflowExecutionScope is the metric scope for frontend.SignalWorkflowExecution
 	FrontendSignalWorkflowExecutionScope
+	// FrontendSignalWithStartWorkflowExecutionScope is the metric scope for frontend.SignalWithStartWorkflowExecution
+	FrontendSignalWithStartWorkflowExecutionScope
 	// FrontendTerminateWorkflowExecutionScope is the metric scope for frontend.TerminateWorkflowExecution
 	FrontendTerminateWorkflowExecutionScope
 	// FrontendRequestCancelWorkflowExecutionScope is the metric scope for frontend.RequestCancelWorkflowExecution
@@ -239,6 +308,16 @@ const (
 	FrontendUpdateDomainScope
 	// FrontendDeprecateDomainScope is the metric scope for frontend.DeprecateDomain
 	FrontendDeprecateDomainScope
+	// FrontendQueryWorkflowScope is the metric scope for frontend.QueryWorkflow
+	FrontendQueryWorkflowScope
+	// FrontendDescribeWorkflowExecutionScope is the metric scope for frontend.DescribeWorkflowExecution
+	FrontendDescribeWorkflowExecutionScope
+	// FrontendDescribeTaskListScope is the metric scope for frontend.DescribeTaskList
+	FrontendDescribeTaskListScope
+	// FrontendResetStickyTaskListScope is the metric scope for frontend.ResetStickyTaskList
+	FrontendResetStickyTaskListScope
+	// FrontendListDomainsScope is the metric scope for frontend.ListDomain
+	FrontendListDomainsScope
 
 	NumFrontendScopes
 )
@@ -251,20 +330,30 @@ const (
 	HistoryRecordActivityTaskHeartbeatScope
 	// HistoryRespondDecisionTaskCompletedScope tracks RespondDecisionTaskCompleted API calls received by service
 	HistoryRespondDecisionTaskCompletedScope
+	// HistoryRespondDecisionTaskFailedScope tracks RespondDecisionTaskFailed API calls received by service
+	HistoryRespondDecisionTaskFailedScope
 	// HistoryRespondActivityTaskCompletedScope tracks RespondActivityTaskCompleted API calls received by service
 	HistoryRespondActivityTaskCompletedScope
 	// HistoryRespondActivityTaskFailedScope tracks RespondActivityTaskFailed API calls received by service
 	HistoryRespondActivityTaskFailedScope
 	// HistoryRespondActivityTaskCanceledScope tracks RespondActivityTaskCanceled API calls received by service
 	HistoryRespondActivityTaskCanceledScope
-	// HistoryGetWorkflowExecutionNextEventIDScope tracks GetWorkflowExecutionHistory API calls received by service
-	HistoryGetWorkflowExecutionNextEventIDScope
+	// HistoryGetMutableStateScope tracks GetMutableStateScope API calls received by service
+	HistoryGetMutableStateScope
+	// HistoryResetStickyTaskListScope tracks ResetStickyTaskListScope API calls received by service
+	HistoryResetStickyTaskListScope
+	// HistoryDescribeWorkflowExecutionScope tracks DescribeWorkflowExecution API calls received by service
+	HistoryDescribeWorkflowExecutionScope
 	// HistoryRecordDecisionTaskStartedScope tracks RecordDecisionTaskStarted API calls received by service
 	HistoryRecordDecisionTaskStartedScope
 	// HistoryRecordActivityTaskStartedScope tracks RecordActivityTaskStarted API calls received by service
 	HistoryRecordActivityTaskStartedScope
 	// HistorySignalWorkflowExecutionScope tracks SignalWorkflowExecution API calls received by service
 	HistorySignalWorkflowExecutionScope
+	// HistorySignalWithStartWorkflowExecutionScope tracks SignalWithStartWorkflowExecution API calls received by service
+	HistorySignalWithStartWorkflowExecutionScope
+	// HistoryRemoveSignalMutableStateScope tracks RemoveSignalMutableState API calls received by service
+	HistoryRemoveSignalMutableStateScope
 	// HistoryTerminateWorkflowExecutionScope tracks TerminateWorkflowExecution API calls received by service
 	HistoryTerminateWorkflowExecutionScope
 	// HistoryScheduleDecisionTaskScope tracks ScheduleDecisionTask API calls received by service
@@ -273,32 +362,82 @@ const (
 	HistoryRecordChildExecutionCompletedScope
 	// HistoryRequestCancelWorkflowExecutionScope tracks RequestCancelWorkflowExecution API calls received by service
 	HistoryRequestCancelWorkflowExecutionScope
+	// HistoryReplicateEventsScope tracks ReplicateEvents API calls received by service
+	HistoryReplicateEventsScope
+	// HistorySyncShardStatusScope tracks ReplicateEvents API calls received by service
+	HistorySyncShardStatusScope
 	// HistoryShardControllerScope is the scope used by shard controller
 	HistoryShardControllerScope
 	// TransferQueueProcessorScope is the scope used by all metric emitted by transfer queue processor
 	TransferQueueProcessorScope
-	// TransferTaskActivityScope is the scope used for activity task processing by transfer queue processor
-	TransferTaskActivityScope
-	// TransferTaskDecisionScope is the scope used for decision task processing by transfer queue processor
-	TransferTaskDecisionScope
-	// TransferTaskDeleteExecutionScope is the scope used for delete execution task processing by transfer queue processor
-	TransferTaskDeleteExecutionScope
-	// TransferTaskCancelExecutionScope is the scope used for cancel execution task processing by transfer queue processor
-	TransferTaskCancelExecutionScope
-	// TransferTaskStartChildExecutionScope is the scope used for start child execution task processing by transfer queue processor
-	TransferTaskStartChildExecutionScope
+	// TransferActiveQueueProcessorScope is the scope used by all metric emitted by transfer queue processor
+	TransferActiveQueueProcessorScope
+	// TransferStandbyQueueProcessorScope is the scope used by all metric emitted by transfer queue processor
+	TransferStandbyQueueProcessorScope
+	// TransferActiveTaskActivityScope is the scope used for activity task processing by transfer queue processor
+	TransferActiveTaskActivityScope
+	// TransferActiveTaskDecisionScope is the scope used for decision task processing by transfer queue processor
+	TransferActiveTaskDecisionScope
+	// TransferActiveTaskCloseExecutionScope is the scope used for close execution task processing by transfer queue processor
+	TransferActiveTaskCloseExecutionScope
+	// TransferActiveTaskCancelExecutionScope is the scope used for cancel execution task processing by transfer queue processor
+	TransferActiveTaskCancelExecutionScope
+	// TransferActiveTaskSignalExecutionScope is the scope used for signal execution task processing by transfer queue processor
+	TransferActiveTaskSignalExecutionScope
+	// TransferActiveTaskStartChildExecutionScope is the scope used for start child execution task processing by transfer queue processor
+	TransferActiveTaskStartChildExecutionScope
+	// TransferStandbyTaskActivityScope is the scope used for activity task processing by transfer queue processor
+	TransferStandbyTaskActivityScope
+	// TransferStandbyTaskDecisionScope is the scope used for decision task processing by transfer queue processor
+	TransferStandbyTaskDecisionScope
+	// TransferStandbyTaskCloseExecutionScope is the scope used for close execution task processing by transfer queue processor
+	TransferStandbyTaskCloseExecutionScope
+	// TransferStandbyTaskCancelExecutionScope is the scope used for cancel execution task processing by transfer queue processor
+	TransferStandbyTaskCancelExecutionScope
+	// TransferStandbyTaskSignalExecutionScope is the scope used for signal execution task processing by transfer queue processor
+	TransferStandbyTaskSignalExecutionScope
+	// TransferStandbyTaskStartChildExecutionScope is the scope used for start child execution task processing by transfer queue processor
+	TransferStandbyTaskStartChildExecutionScope
 	// TimerQueueProcessorScope is the scope used by all metric emitted by timer queue processor
 	TimerQueueProcessorScope
-	// TimerTaskActivityTimeoutScope is the scope used by metric emitted by timer queue processor for processing activity timeouts
-	TimerTaskActivityTimeoutScope
-	// TimerTaskDecisionTimeoutScope is the scope used by metric emitted by timer queue processor for processing decision timeouts
-	TimerTaskDecisionTimeoutScope
-	// TimerTaskUserTimerScope is the scope used by metric emitted by timer queue processor for processing user timers
-	TimerTaskUserTimerScope
-	// TimerTaskWorkflowTimeoutScope is the scope used by metric emitted by timer queue processor for processing workflow timeouts.
-	TimerTaskWorkflowTimeoutScope
-	// TimerTaskDeleteHistoryEvent is the scope used by metric emitted by timer queue processor for processing history event cleanup
-	TimerTaskDeleteHistoryEvent
+	// TimerActiveQueueProcessorScope is the scope used by all metric emitted by timer queue processor
+	TimerActiveQueueProcessorScope
+	// TimerQueueProcessorScope is the scope used by all metric emitted by timer queue processor
+	TimerStandbyQueueProcessorScope
+	// TimerActiveTaskActivityTimeoutScope is the scope used by metric emitted by timer queue processor for processing activity timeouts
+	TimerActiveTaskActivityTimeoutScope
+	// TimerActiveTaskDecisionTimeoutScope is the scope used by metric emitted by timer queue processor for processing decision timeouts
+	TimerActiveTaskDecisionTimeoutScope
+	// TimerActiveTaskUserTimerScope is the scope used by metric emitted by timer queue processor for processing user timers
+	TimerActiveTaskUserTimerScope
+	// TimerActiveTaskWorkflowTimeoutScope is the scope used by metric emitted by timer queue processor for processing workflow timeouts.
+	TimerActiveTaskWorkflowTimeoutScope
+	// TimerActiveTaskRetryTimerScope is the scope used by metric emitted by timer queue processor for processing retry task.
+	TimerActiveTaskRetryTimerScope
+	// TimerActiveTaskDeleteHistoryEvent is the scope used by metric emitted by timer queue processor for processing history event cleanup
+	TimerActiveTaskDeleteHistoryEvent
+	// TimerStandbyTaskActivityTimeoutScope is the scope used by metric emitted by timer queue processor for processing activity timeouts
+	TimerStandbyTaskActivityTimeoutScope
+	// TimerStandbyTaskDecisionTimeoutScope is the scope used by metric emitted by timer queue processor for processing decision timeouts
+	TimerStandbyTaskDecisionTimeoutScope
+	// TimerStandbyTaskUserTimerScope is the scope used by metric emitted by timer queue processor for processing user timers
+	TimerStandbyTaskUserTimerScope
+	// TimerStandbyTaskWorkflowTimeoutScope is the scope used by metric emitted by timer queue processor for processing workflow timeouts.
+	TimerStandbyTaskWorkflowTimeoutScope
+	// TimerStandbyTaskRetryTimerScope is the scope used by metric emitted by timer queue processor for processing retry task.
+	TimerStandbyTaskRetryTimerScope
+	// TimerStandbyTaskDeleteHistoryEvent is the scope used by metric emitted by timer queue processor for processing history event cleanup
+	TimerStandbyTaskDeleteHistoryEvent
+	// HistoryEventNotificationScope is the scope used by shard history event nitification
+	HistoryEventNotificationScope
+	// ReplicatorQueueProcessorScope is the scope used by all metric emitted by replicator queue processor
+	ReplicatorQueueProcessorScope
+	// ReplicatorTaskHistoryScope is the scope used for history task processing by replicator queue processor
+	ReplicatorTaskHistoryScope
+	// ReplicateHistoryEventsScope is the scope used by historyReplicator API for applying events
+	ReplicateHistoryEventsScope
+	// ShardInfoScope is the scope used when updating shard info
+	ShardInfoScope
 
 	NumHistoryScopes
 )
@@ -315,117 +454,219 @@ const (
 	MatchingAddDecisionTaskScope
 	// MatchingTaskListMgrScope is the metrics scope for matching.TaskListManager component
 	MatchingTaskListMgrScope
+	// MatchingQueryWorkflowScope tracks AddDecisionTask API calls received by service
+	MatchingQueryWorkflowScope
+	// MatchingRespondQueryTaskCompletedScope tracks AddDecisionTask API calls received by service
+	MatchingRespondQueryTaskCompletedScope
+	// MatchingCancelOutstandingPollScope tracks CancelOutstandingPoll API calls received by service
+	MatchingCancelOutstandingPollScope
+	// MatchingDescribeTaskListScope tracks DescribeTaskList API calls received by service
+	MatchingDescribeTaskListScope
 
 	NumMatchingScopes
+)
+
+// -- Operation scopes for Worker service --
+const (
+	// ReplicationScope is the scope used by all metric emitted by replicator
+	ReplicatorScope = iota + NumCommonScopes
+	// DomainReplicationTaskScope is the scope used by domain task replication processing
+	DomainReplicationTaskScope
+	// HistoryReplicationTaskScope is the scope used by history task replication processing
+	HistoryReplicationTaskScope
+	// SyncShardTaskScope is the scope used by sync shrad information processing
+	SyncShardTaskScope
+
+	NumWorkerScopes
 )
 
 // ScopeDefs record the scopes for all services
 var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 	// common scope Names
 	Common: {
-		PersistenceCreateShardScope:                    {operation: "CreateShard"},
-		PersistenceGetShardScope:                       {operation: "GetShard"},
-		PersistenceUpdateShardScope:                    {operation: "UpdateShard"},
-		PersistenceCreateWorkflowExecutionScope:        {operation: "CreateWorkflowExecution"},
-		PersistenceGetWorkflowExecutionScope:           {operation: "GetWorkflowExecution"},
-		PersistenceUpdateWorkflowExecutionScope:        {operation: "UpdateWorkflowExecution"},
-		PersistenceDeleteWorkflowExecutionScope:        {operation: "DeleteWorkflowExecution"},
-		PersistenceGetCurrentExecutionScope:            {operation: "GetCurrentExecution"},
-		PersistenceGetTransferTasksScope:               {operation: "GetTransferTasks"},
-		PersistenceCompleteTransferTaskScope:           {operation: "CompleteTransferTask"},
-		PersistenceGetTimerIndexTasksScope:             {operation: "GetTimerIndexTasks"},
-		PersistenceCompleteTimerTaskScope:              {operation: "CompleteTimerTask"},
-		PersistenceCreateTaskScope:                     {operation: "CreateTask", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
-		PersistenceGetTasksScope:                       {operation: "GetTasks", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
-		PersistenceCompleteTaskScope:                   {operation: "CompleteTask", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
-		PersistenceLeaseTaskListScope:                  {operation: "LeaseTaskList", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
-		PersistenceUpdateTaskListScope:                 {operation: "UpdateTaskList", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
-		PersistenceAppendHistoryEventsScope:            {operation: "AppendHistoryEvents", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
-		PersistenceGetWorkflowExecutionHistoryScope:    {operation: "GetWorkflowExecutionHistory", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
-		PersistenceDeleteWorkflowExecutionHistoryScope: {operation: "DeleteWorkflowExecutionHistory", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
-		PersistenceCreateDomainScope:                   {operation: "CreateDomain", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
-		PersistenceGetDomainScope:                      {operation: "GetDomain", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
-		PersistenceUpdateDomainScope:                   {operation: "UpdateDomain", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
-		PersistenceDeleteDomainScope:                   {operation: "DeleteDomain", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
-		PersistenceDeleteDomainByNameScope:             {operation: "DeleteDomainByName", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceCreateShardScope:                              {operation: "CreateShard", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceGetShardScope:                                 {operation: "GetShard", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceUpdateShardScope:                              {operation: "UpdateShard", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceCreateWorkflowExecutionScope:                  {operation: "CreateWorkflowExecution"},
+		PersistenceGetWorkflowExecutionScope:                     {operation: "GetWorkflowExecution"},
+		PersistenceUpdateWorkflowExecutionScope:                  {operation: "UpdateWorkflowExecution"},
+		PersistenceResetMutableStateScope:                        {operation: "ResetMutableState"},
+		PersistenceDeleteWorkflowExecutionScope:                  {operation: "DeleteWorkflowExecution"},
+		PersistenceGetCurrentExecutionScope:                      {operation: "GetCurrentExecution"},
+		PersistenceGetTransferTasksScope:                         {operation: "GetTransferTasks"},
+		PersistenceGetReplicationTasksScope:                      {operation: "GetReplicationTasks"},
+		PersistenceCompleteTransferTaskScope:                     {operation: "CompleteTransferTask"},
+		PersistenceCompleteReplicationTaskScope:                  {operation: "CompleteReplicationTask"},
+		PersistenceGetTimerIndexTasksScope:                       {operation: "GetTimerIndexTasks"},
+		PersistenceCompleteTimerTaskScope:                        {operation: "CompleteTimerTask"},
+		PersistenceCreateTaskScope:                               {operation: "CreateTask", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceGetTasksScope:                                 {operation: "GetTasks", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceCompleteTaskScope:                             {operation: "CompleteTask", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceLeaseTaskListScope:                            {operation: "LeaseTaskList", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceUpdateTaskListScope:                           {operation: "UpdateTaskList", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceAppendHistoryEventsScope:                      {operation: "AppendHistoryEvents", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceGetWorkflowExecutionHistoryScope:              {operation: "GetWorkflowExecutionHistory", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceDeleteWorkflowExecutionHistoryScope:           {operation: "DeleteWorkflowExecutionHistory", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceCreateDomainScope:                             {operation: "CreateDomain", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceGetDomainScope:                                {operation: "GetDomain", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceUpdateDomainScope:                             {operation: "UpdateDomain", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceDeleteDomainScope:                             {operation: "DeleteDomain", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceDeleteDomainByNameScope:                       {operation: "DeleteDomainByName", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceListDomainScope:                               {operation: "ListDomain", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceGetMetadataScope:                              {operation: "GetMetadata", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceRecordWorkflowExecutionStartedScope:           {operation: "RecordWorkflowExecutionStarted"},
+		PersistenceRecordWorkflowExecutionClosedScope:            {operation: "RecordWorkflowExecutionClosed"},
+		PersistenceListOpenWorkflowExecutionsScope:               {operation: "ListOpenWorkflowExecutions"},
+		PersistenceListClosedWorkflowExecutionsScope:             {operation: "ListClosedWorkflowExecutions"},
+		PersistenceListOpenWorkflowExecutionsByTypeScope:         {operation: "ListOpenWorkflowExecutionsByType"},
+		PersistenceListClosedWorkflowExecutionsByTypeScope:       {operation: "ListClosedWorkflowExecutionsByType"},
+		PersistenceListOpenWorkflowExecutionsByWorkflowIDScope:   {operation: "ListOpenWorkflowExecutionsByWorkflowID"},
+		PersistenceListClosedWorkflowExecutionsByWorkflowIDScope: {operation: "ListClosedWorkflowExecutionsByWorkflowID"},
+		PersistenceListClosedWorkflowExecutionsByStatusScope:     {operation: "ListClosedWorkflowExecutionsByStatus"},
+		PersistenceGetClosedWorkflowExecutionScope:               {operation: "GetClosedWorkflowExecution"},
 
-		HistoryClientStartWorkflowExecutionScope:          {operation: "HistoryClientStartWorkflowExecution"},
-		HistoryClientRecordActivityTaskHeartbeatScope:     {operation: "HistoryClientRecordActivityTaskHeartbeat"},
-		HistoryClientRespondDecisionTaskCompletedScope:    {operation: "HistoryClientRespondDecisionTaskCompleted"},
-		HistoryClientRespondActivityTaskCompletedScope:    {operation: "HistoryClientRespondActivityTaskCompleted"},
-		HistoryClientRespondActivityTaskFailedScope:       {operation: "HistoryClientRespondActivityTaskFailed"},
-		HistoryClientRespondActivityTaskCanceledScope:     {operation: "HistoryClientRespondActivityTaskCanceled"},
-		HistoryClientGetWorkflowExecutionNextEventIDScope: {operation: "HistoryClientGetWorkflowExecutionNextEventId"},
-		HistoryClientRecordDecisionTaskStartedScope:       {operation: "HistoryClientRecordDecisionTaskStarted"},
-		HistoryClientRecordActivityTaskStartedScope:       {operation: "HistoryClientRecordActivityTaskStarted"},
-		HistoryClientRequestCancelWorkflowExecutionScope:  {operation: "HistoryClientRequestCancelWorkflowExecution"},
-		HistoryClientSignalWorkflowExecutionScope:         {operation: "HistoryClientSignalWorkflowExecution"},
-		HistoryClientTerminateWorkflowExecutionScope:      {operation: "HistoryClientTerminateWorkflowExecution"},
-		HistoryClientScheduleDecisionTaskScope:            {operation: "HistoryClientScheduleDecisionTask"},
-		HistoryClientRecordChildExecutionCompletedScope:   {operation: "HistoryClientRecordChildExecutionCompleted"},
-		MatchingClientPollForDecisionTaskScope:            {operation: "MatchingClientPollForDecisionTask"},
-		MatchingClientPollForActivityTaskScope:            {operation: "MatchingClientPollForActivityTask"},
-		MatchingClientAddActivityTaskScope:                {operation: "MatchingClientAddActivityTask"},
-		MatchingClientAddDecisionTaskScope:                {operation: "MatchingClientAddDecisionTask"},
+		HistoryClientStartWorkflowExecutionScope:           {operation: "HistoryClientStartWorkflowExecution"},
+		HistoryClientRecordActivityTaskHeartbeatScope:      {operation: "HistoryClientRecordActivityTaskHeartbeat"},
+		HistoryClientRespondDecisionTaskCompletedScope:     {operation: "HistoryClientRespondDecisionTaskCompleted"},
+		HistoryClientRespondDecisionTaskFailedScope:        {operation: "HistoryClientRespondDecisionTaskFailed"},
+		HistoryClientRespondActivityTaskCompletedScope:     {operation: "HistoryClientRespondActivityTaskCompleted"},
+		HistoryClientRespondActivityTaskFailedScope:        {operation: "HistoryClientRespondActivityTaskFailed"},
+		HistoryClientRespondActivityTaskCanceledScope:      {operation: "HistoryClientRespondActivityTaskCanceled"},
+		HistoryClientGetMutableStateScope:                  {operation: "HistoryClientGetMutableState"},
+		HistoryClientResetStickyTaskListScope:              {operation: "HistoryClientResetStickyTaskListScope"},
+		HistoryClientDescribeWorkflowExecutionScope:        {operation: "HistoryClientDescribeWorkflowExecution"},
+		HistoryClientRecordDecisionTaskStartedScope:        {operation: "HistoryClientRecordDecisionTaskStarted"},
+		HistoryClientRecordActivityTaskStartedScope:        {operation: "HistoryClientRecordActivityTaskStarted"},
+		HistoryClientRequestCancelWorkflowExecutionScope:   {operation: "HistoryClientRequestCancelWorkflowExecution"},
+		HistoryClientSignalWorkflowExecutionScope:          {operation: "HistoryClientSignalWorkflowExecution"},
+		HistoryClientSignalWithStartWorkflowExecutionScope: {operation: "HistoryClientSignalWithStartWorkflowExecution"},
+		HistoryClientRemoveSignalMutableStateScope:         {operation: "HistoryClientRemoveSignalMutableStateScope"},
+		HistoryClientTerminateWorkflowExecutionScope:       {operation: "HistoryClientTerminateWorkflowExecution"},
+		HistoryClientScheduleDecisionTaskScope:             {operation: "HistoryClientScheduleDecisionTask"},
+		HistoryClientRecordChildExecutionCompletedScope:    {operation: "HistoryClientRecordChildExecutionCompleted"},
+		HistoryClientReplicateEventsScope:                  {operation: "HistoryClientReplicateEvents"},
+		HistoryClientSyncShardStatusScope:                  {operation: "HistoryClientSyncShardStatusScope"},
+		MatchingClientPollForDecisionTaskScope:             {operation: "MatchingClientPollForDecisionTask"},
+		MatchingClientPollForActivityTaskScope:             {operation: "MatchingClientPollForActivityTask"},
+		MatchingClientAddActivityTaskScope:                 {operation: "MatchingClientAddActivityTask"},
+		MatchingClientAddDecisionTaskScope:                 {operation: "MatchingClientAddDecisionTask"},
+		MatchingClientQueryWorkflowScope:                   {operation: "MatchingClientQueryWorkflow"},
+		MatchingClientRespondQueryTaskCompletedScope:       {operation: "MatchingClientRespondQueryTaskCompleted"},
+		MatchingClientCancelOutstandingPollScope:           {operation: "MatchingClientCancelOutstandingPoll"},
+		MatchingClientDescribeTaskListScope:                {operation: "MatchingClientDescribeTaskList"},
+		DomainCacheScope:                                   {operation: "DomainCache"},
 	},
 	// Frontend Scope Names
 	Frontend: {
-		FrontendStartWorkflowExecutionScope:         {operation: "StartWorkflowExecution"},
-		FrontendPollForDecisionTaskScope:            {operation: "PollForDecisionTask"},
-		FrontendPollForActivityTaskScope:            {operation: "PollForActivityTask"},
-		FrontendRecordActivityTaskHeartbeatScope:    {operation: "RecordActivityTaskHeartbeat"},
-		FrontendRespondDecisionTaskCompletedScope:   {operation: "RespondDecisionTaskCompleted"},
-		FrontendRespondActivityTaskCompletedScope:   {operation: "RespondActivityTaskCompleted"},
-		FrontendRespondActivityTaskFailedScope:      {operation: "RespondActivityTaskFailed"},
-		FrontendRespondActivityTaskCanceledScope:    {operation: "RespondActivityTaskCanceled"},
-		FrontendGetWorkflowExecutionHistoryScope:    {operation: "GetWorkflowExecutionHistory"},
-		FrontendSignalWorkflowExecutionScope:        {operation: "SignalWorkflowExecution"},
-		FrontendTerminateWorkflowExecutionScope:     {operation: "TerminateWorkflowExecution"},
-		FrontendRequestCancelWorkflowExecutionScope: {operation: "RequestCancelWorkflowExecution"},
-		FrontendListOpenWorkflowExecutionsScope:     {operation: "ListOpenWorkflowExecutions"},
-		FrontendListClosedWorkflowExecutionsScope:   {operation: "ListClosedWorkflowExecutions"},
-		FrontendRegisterDomainScope:                 {operation: "RegisterDomain"},
-		FrontendDescribeDomainScope:                 {operation: "DescribeDomain"},
-		FrontendUpdateDomainScope:                   {operation: "UpdateDomain"},
-		FrontendDeprecateDomainScope:                {operation: "DeprecateDomain"},
+		FrontendStartWorkflowExecutionScope:           {operation: "StartWorkflowExecution"},
+		FrontendPollForDecisionTaskScope:              {operation: "PollForDecisionTask"},
+		FrontendPollForActivityTaskScope:              {operation: "PollForActivityTask"},
+		FrontendRecordActivityTaskHeartbeatScope:      {operation: "RecordActivityTaskHeartbeat"},
+		FrontendRecordActivityTaskHeartbeatByIDScope:  {operation: "RecordActivityTaskHeartbeatByID"},
+		FrontendRespondDecisionTaskCompletedScope:     {operation: "RespondDecisionTaskCompleted"},
+		FrontendRespondDecisionTaskFailedScope:        {operation: "RespondDecisionTaskFailed"},
+		FrontendRespondQueryTaskCompletedScope:        {operation: "RespondQueryTaskCompleted"},
+		FrontendRespondActivityTaskCompletedScope:     {operation: "RespondActivityTaskCompleted"},
+		FrontendRespondActivityTaskFailedScope:        {operation: "RespondActivityTaskFailed"},
+		FrontendRespondActivityTaskCanceledScope:      {operation: "RespondActivityTaskCanceled"},
+		FrontendRespondActivityTaskCompletedByIDScope: {operation: "RespondActivityTaskCompletedByID"},
+		FrontendRespondActivityTaskFailedByIDScope:    {operation: "RespondActivityTaskFailedByID"},
+		FrontendRespondActivityTaskCanceledByIDScope:  {operation: "RespondActivityTaskCanceledByID"},
+		FrontendGetWorkflowExecutionHistoryScope:      {operation: "GetWorkflowExecutionHistory"},
+		FrontendSignalWorkflowExecutionScope:          {operation: "SignalWorkflowExecution"},
+		FrontendSignalWithStartWorkflowExecutionScope: {operation: "SignalWithStartWorkflowExecution"},
+		FrontendTerminateWorkflowExecutionScope:       {operation: "TerminateWorkflowExecution"},
+		FrontendRequestCancelWorkflowExecutionScope:   {operation: "RequestCancelWorkflowExecution"},
+		FrontendListOpenWorkflowExecutionsScope:       {operation: "ListOpenWorkflowExecutions"},
+		FrontendListClosedWorkflowExecutionsScope:     {operation: "ListClosedWorkflowExecutions"},
+		FrontendRegisterDomainScope:                   {operation: "RegisterDomain"},
+		FrontendDescribeDomainScope:                   {operation: "DescribeDomain"},
+		FrontendListDomainsScope:                      {operation: "ListDomain"},
+		FrontendUpdateDomainScope:                     {operation: "UpdateDomain"},
+		FrontendDeprecateDomainScope:                  {operation: "DeprecateDomain"},
+		FrontendQueryWorkflowScope:                    {operation: "QueryWorkflow"},
+		FrontendDescribeWorkflowExecutionScope:        {operation: "DescribeWorkflowExecution"},
+		FrontendDescribeTaskListScope:                 {operation: "DescribeTaskList"},
+		FrontendResetStickyTaskListScope:              {operation: "ResetStickyTaskList"},
 	},
 	// History Scope Names
 	History: {
-		HistoryStartWorkflowExecutionScope:          {operation: "StartWorkflowExecution"},
-		HistoryRecordActivityTaskHeartbeatScope:     {operation: "RecordActivityTaskHeartbeat"},
-		HistoryRespondDecisionTaskCompletedScope:    {operation: "RespondDecisionTaskCompleted"},
-		HistoryRespondActivityTaskCompletedScope:    {operation: "RespondActivityTaskCompleted"},
-		HistoryRespondActivityTaskFailedScope:       {operation: "RespondActivityTaskFailed"},
-		HistoryRespondActivityTaskCanceledScope:     {operation: "RespondActivityTaskCanceled"},
-		HistoryGetWorkflowExecutionNextEventIDScope: {operation: "GetWorkflowExecutionNextEventIDScope"},
-		HistoryRecordDecisionTaskStartedScope:       {operation: "RecordDecisionTaskStarted"},
-		HistoryRecordActivityTaskStartedScope:       {operation: "RecordActivityTaskStarted"},
-		HistorySignalWorkflowExecutionScope:         {operation: "SignalWorkflowExecution"},
-		HistoryTerminateWorkflowExecutionScope:      {operation: "TerminateWorkflowExecution"},
-		HistoryScheduleDecisionTaskScope:            {operation: "ScheduleDecisionTask"},
-		HistoryRecordChildExecutionCompletedScope:   {operation: "RecordChildExecutionCompleted"},
-		HistoryRequestCancelWorkflowExecutionScope:  {operation: "RequestCancelWorkflowExecution"},
-		HistoryShardControllerScope:                 {operation: "ShardController"},
-		TransferQueueProcessorScope:                 {operation: "TransferQueueProcessor"},
-		TransferTaskActivityScope:                   {operation: "TransferTaskActivity"},
-		TransferTaskDecisionScope:                   {operation: "TransferTaskDecision"},
-		TransferTaskDeleteExecutionScope:            {operation: "TransferTaskDeleteExecution"},
-		TransferTaskCancelExecutionScope:            {operation: "TransferTaskCancelExecution"},
-		TransferTaskStartChildExecutionScope:        {operation: "TransferTaskStartChildExecution"},
-		TimerQueueProcessorScope:                    {operation: "TimerQueueProcessor"},
-		TimerTaskActivityTimeoutScope:               {operation: "TimerTaskActivityTimeout"},
-		TimerTaskDecisionTimeoutScope:               {operation: "TimerTaskDecisionTimeout"},
-		TimerTaskUserTimerScope:                     {operation: "TimerTaskUserTimer"},
-		TimerTaskWorkflowTimeoutScope:               {operation: "TimerTaskWorkflowTimeout"},
-		TimerTaskDeleteHistoryEvent:                 {operation: "TimerTaskDeleteHistoryEvent"},
+		HistoryStartWorkflowExecutionScope:           {operation: "StartWorkflowExecution"},
+		HistoryRecordActivityTaskHeartbeatScope:      {operation: "RecordActivityTaskHeartbeat"},
+		HistoryRespondDecisionTaskCompletedScope:     {operation: "RespondDecisionTaskCompleted"},
+		HistoryRespondDecisionTaskFailedScope:        {operation: "RespondDecisionTaskFailed"},
+		HistoryRespondActivityTaskCompletedScope:     {operation: "RespondActivityTaskCompleted"},
+		HistoryRespondActivityTaskFailedScope:        {operation: "RespondActivityTaskFailed"},
+		HistoryRespondActivityTaskCanceledScope:      {operation: "RespondActivityTaskCanceled"},
+		HistoryGetMutableStateScope:                  {operation: "GetMutableState"},
+		HistoryResetStickyTaskListScope:              {operation: "ResetStickyTaskListScope"},
+		HistoryDescribeWorkflowExecutionScope:        {operation: "DescribeWorkflowExecution"},
+		HistoryRecordDecisionTaskStartedScope:        {operation: "RecordDecisionTaskStarted"},
+		HistoryRecordActivityTaskStartedScope:        {operation: "RecordActivityTaskStarted"},
+		HistorySignalWorkflowExecutionScope:          {operation: "SignalWorkflowExecution"},
+		HistorySignalWithStartWorkflowExecutionScope: {operation: "SignalWithStartWorkflowExecution"},
+		HistoryRemoveSignalMutableStateScope:         {operation: "RemoveSignalMutableState"},
+		HistoryTerminateWorkflowExecutionScope:       {operation: "TerminateWorkflowExecution"},
+		HistoryScheduleDecisionTaskScope:             {operation: "ScheduleDecisionTask"},
+		HistoryRecordChildExecutionCompletedScope:    {operation: "RecordChildExecutionCompleted"},
+		HistoryRequestCancelWorkflowExecutionScope:   {operation: "RequestCancelWorkflowExecution"},
+		HistoryReplicateEventsScope:                  {operation: "ReplicateEvents"},
+		HistorySyncShardStatusScope:                  {operation: "SyncShardStatus"},
+		HistoryShardControllerScope:                  {operation: "ShardController"},
+		TransferQueueProcessorScope:                  {operation: "TransferQueueProcessor"},
+		TransferActiveQueueProcessorScope:            {operation: "TransferActiveQueueProcessor"},
+		TransferStandbyQueueProcessorScope:           {operation: "TransferStandbyQueueProcessor"},
+		TransferActiveTaskActivityScope:              {operation: "TransferActiveTaskActivity"},
+		TransferActiveTaskDecisionScope:              {operation: "TransferActiveTaskDecision"},
+		TransferActiveTaskCloseExecutionScope:        {operation: "TransferActiveTaskCloseExecution"},
+		TransferActiveTaskCancelExecutionScope:       {operation: "TransferActiveTaskCancelExecution"},
+		TransferActiveTaskSignalExecutionScope:       {operation: "TransferActiveTaskSignalExecution"},
+		TransferActiveTaskStartChildExecutionScope:   {operation: "TransferActiveTaskStartChildExecution"},
+		TransferStandbyTaskActivityScope:             {operation: "TransferStandbyTaskActivity"},
+		TransferStandbyTaskDecisionScope:             {operation: "TransferStandbyTaskDecision"},
+		TransferStandbyTaskCloseExecutionScope:       {operation: "TransferStandbyTaskCloseExecution"},
+		TransferStandbyTaskCancelExecutionScope:      {operation: "TransferStandbyTaskCancelExecution"},
+		TransferStandbyTaskSignalExecutionScope:      {operation: "TransferStandbyTaskSignalExecution"},
+		TransferStandbyTaskStartChildExecutionScope:  {operation: "TransferStandbyTaskStartChildExecution"},
+		TimerQueueProcessorScope:                     {operation: "TimerQueueProcessor"},
+		TimerActiveQueueProcessorScope:               {operation: "TimerActiveQueueProcessor"},
+		TimerStandbyQueueProcessorScope:              {operation: "TimerStandbyQueueProcessor"},
+		TimerActiveTaskActivityTimeoutScope:          {operation: "TimerActiveTaskActivityTimeout"},
+		TimerActiveTaskDecisionTimeoutScope:          {operation: "TimerActiveTaskDecisionTimeout"},
+		TimerActiveTaskUserTimerScope:                {operation: "TimerActiveTaskUserTimer"},
+		TimerActiveTaskWorkflowTimeoutScope:          {operation: "TimerActiveTaskWorkflowTimeout"},
+		TimerActiveTaskRetryTimerScope:               {operation: "TimerActiveTaskRetryTimer"},
+		TimerActiveTaskDeleteHistoryEvent:            {operation: "TimerActiveTaskDeleteHistoryEvent"},
+		TimerStandbyTaskActivityTimeoutScope:         {operation: "TimerStandbyTaskActivityTimeout"},
+		TimerStandbyTaskDecisionTimeoutScope:         {operation: "TimerStandbyTaskDecisionTimeout"},
+		TimerStandbyTaskUserTimerScope:               {operation: "TimerStandbyTaskUserTimer"},
+		TimerStandbyTaskWorkflowTimeoutScope:         {operation: "TimerStandbyTaskWorkflowTimeout"},
+		TimerStandbyTaskRetryTimerScope:              {operation: "TimerStandbyTaskRetryTimer"},
+		TimerStandbyTaskDeleteHistoryEvent:           {operation: "TimerStandbyTaskDeleteHistoryEvent"},
+		HistoryEventNotificationScope:                {operation: "HistoryEventNotification"},
+		ReplicatorQueueProcessorScope:                {operation: "ReplicatorQueueProcessor"},
+		ReplicatorTaskHistoryScope:                   {operation: "ReplicatorTaskHistory"},
+		ReplicateHistoryEventsScope:                  {operation: "ReplicateHistoryEvents"},
+		ShardInfoScope:                               {operation: "ShardInfo"},
 	},
 	// Matching Scope Names
 	Matching: {
-		MatchingPollForDecisionTaskScope: {operation: "PollForDecisionTask"},
-		MatchingPollForActivityTaskScope: {operation: "PollForActivityTask"},
-		MatchingAddActivityTaskScope:     {operation: "AddActivityTask"},
-		MatchingAddDecisionTaskScope:     {operation: "AddDecisionTask"},
-		MatchingTaskListMgrScope:         {operation: "TaskListMgr"},
+		MatchingPollForDecisionTaskScope:       {operation: "PollForDecisionTask"},
+		MatchingPollForActivityTaskScope:       {operation: "PollForActivityTask"},
+		MatchingAddActivityTaskScope:           {operation: "AddActivityTask"},
+		MatchingAddDecisionTaskScope:           {operation: "AddDecisionTask"},
+		MatchingTaskListMgrScope:               {operation: "TaskListMgr"},
+		MatchingQueryWorkflowScope:             {operation: "QueryWorkflow"},
+		MatchingRespondQueryTaskCompletedScope: {operation: "RespondQueryTaskCompleted"},
+		MatchingCancelOutstandingPollScope:     {operation: "CancelOutstandingPoll"},
+		MatchingDescribeTaskListScope:          {operation: "DescribeTaskList"},
+	},
+	// Worker Scope Names
+	Worker: {
+		ReplicatorScope:             {operation: "Replicator"},
+		DomainReplicationTaskScope:  {operation: "DomainReplicationTask"},
+		HistoryReplicationTaskScope: {operation: "HistoryReplicationTask"},
+		SyncShardTaskScope:          {operation: "SyncShardTask"},
 	},
 }
 
@@ -433,13 +674,19 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 const (
 	CadenceRequests = iota
 	CadenceFailures
+	CadenceCriticalFailures
 	CadenceLatency
 	CadenceErrBadRequestCounter
+	CadenceErrDomainNotActiveCounter
 	CadenceErrServiceBusyCounter
 	CadenceErrEntityNotExistsCounter
 	CadenceErrExecutionAlreadyStartedCounter
 	CadenceErrDomainAlreadyExistsCounter
 	CadenceErrCancellationAlreadyRequestedCounter
+	CadenceErrQueryFailedCounter
+	CadenceErrLimitExceededCounter
+	CadenceErrContextTimeoutCounter
+	CadenceErrRetryTaskCounter
 	PersistenceRequests
 	PersistenceFailures
 	PersistenceLatency
@@ -449,7 +696,14 @@ const (
 	PersistenceErrTimeoutCounter
 	PersistenceErrBusyCounter
 
-	NumCommonMetrics
+	HistoryClientFailures
+	MatchingClientFailures
+
+	DomainCacheTotalCallbacksLatency
+	DomainCacheBeforeCallbackLatency
+	DomainCacheAfterCallbackLatency
+
+	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
 
 // History Metrics enum
@@ -470,6 +724,7 @@ const (
 	DecisionTypeCancelExternalWorkflowCounter
 	DecisionTypeChildWorkflowCounter
 	DecisionTypeContinueAsNewCounter
+	DecisionTypeSignalExternalWorkflowCounter
 	MultipleCompletionDecisionsCounter
 	FailedDecisionsCounter
 	StaleMutableStateCounter
@@ -487,22 +742,60 @@ const (
 	ShardClosedCounter
 	ShardItemCreatedCounter
 	ShardItemRemovedCounter
+	ShardInfoTransferDiffTimer
+	ShardInfoTimerDiffTimer
 	MembershipChangedCounter
 	NumShardsGauge
 	GetEngineForShardErrorCounter
 	GetEngineForShardLatency
 	RemoveEngineForShardLatency
+	CompleteDecisionWithStickyEnabledCounter
+	CompleteDecisionWithStickyDisabledCounter
+	HistoryEventNotificationQueueingLatency
+	HistoryEventNotificationFanoutLatency
+	HistoryEventNotificationInFlightMessageGauge
+	HistoryEventNotificationFailDeliveryCount
+	SignalSizeTimer
+	EmptyReplicationEventsCounter
+	DuplicateReplicationEventsCounter
+	StaleReplicationEventsCounter
+	ReplicationEventsSizeTimer
+	BufferReplicationTaskTimer
+	UnbufferReplicationTaskTimer
+	HistoryConflictsCounter
+	HistoryTaskStandbyRetryCounter
+	HistoryTaskNotActiveCounter
+	HistoryTaskBatchCompleteCounter
+	ActiveTransferTaskQueueLatency
+	ActiveTimerTaskQueueLatency
+	StandbyTransferTaskQueueLatency
+	StandbyTimerTaskQueueLatency
+	NumHistoryMetrics
 )
 
 // Matching metrics enum
 const (
 	PollSuccessCounter = iota + NumCommonMetrics
 	PollTimeoutCounter
-	PollErrorsCounter
 	PollSuccessWithSyncCounter
 	LeaseRequestCounter
 	LeaseFailureCounter
 	ConditionFailedErrorCounter
+	RespondQueryTaskFailedCounter
+	SyncThrottleCounter
+	BufferThrottleCounter
+	SyncMatchLatency
+
+	NumMatchingMetrics
+)
+
+// Worker metrics enum
+const (
+	ReplicatorMessages = iota + NumCommonMetrics
+	ReplicatorFailures
+	ReplicatorLatency
+
+	NumWorkerMetrics
 )
 
 // MetricDefs record the metrics for all services
@@ -510,13 +803,19 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 	Common: {
 		CadenceRequests:                               {metricName: "cadence.requests", metricType: Counter},
 		CadenceFailures:                               {metricName: "cadence.errors", metricType: Counter},
+		CadenceCriticalFailures:                       {metricName: "cadence.errors.critical", metricType: Counter},
 		CadenceLatency:                                {metricName: "cadence.latency", metricType: Timer},
 		CadenceErrBadRequestCounter:                   {metricName: "cadence.errors.bad-request", metricType: Counter},
+		CadenceErrDomainNotActiveCounter:              {metricName: "cadence.errors.domain-not-active", metricType: Counter},
 		CadenceErrServiceBusyCounter:                  {metricName: "cadence.errors.service-busy", metricType: Counter},
 		CadenceErrEntityNotExistsCounter:              {metricName: "cadence.errors.entity-not-exists", metricType: Counter},
 		CadenceErrExecutionAlreadyStartedCounter:      {metricName: "cadence.errors.execution-already-started", metricType: Counter},
 		CadenceErrDomainAlreadyExistsCounter:          {metricName: "cadence.errors.domain-already-exists", metricType: Counter},
 		CadenceErrCancellationAlreadyRequestedCounter: {metricName: "cadence.errors.cancellation-already-requested", metricType: Counter},
+		CadenceErrQueryFailedCounter:                  {metricName: "cadence.errors.query-failed", metricType: Counter},
+		CadenceErrLimitExceededCounter:                {metricName: "cadence.errors.limit-exceeded", metricType: Counter},
+		CadenceErrContextTimeoutCounter:               {metricName: "cadence.errors.context-timeout", metricType: Counter},
+		CadenceErrRetryTaskCounter:                    {metricName: "cadence.errors.retry-task", metricType: Counter},
 		PersistenceRequests:                           {metricName: "persistence.requests", metricType: Counter},
 		PersistenceFailures:                           {metricName: "persistence.errors", metricType: Counter},
 		PersistenceLatency:                            {metricName: "persistence.latency", metricType: Timer},
@@ -525,56 +824,93 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		PersistenceErrConditionFailedCounter:          {metricName: "persistence.errors.condition-failed", metricType: Counter},
 		PersistenceErrTimeoutCounter:                  {metricName: "persistence.errors.timeout", metricType: Counter},
 		PersistenceErrBusyCounter:                     {metricName: "persistence.errors.busy", metricType: Counter},
+		HistoryClientFailures:                         {metricName: "client.history.errors", metricType: Counter},
+		MatchingClientFailures:                        {metricName: "client.matching.errors", metricType: Counter},
+		DomainCacheTotalCallbacksLatency:              {metricName: "domain-cache.total-callbacks.latency", metricType: Timer},
+		DomainCacheBeforeCallbackLatency:              {metricName: "domain-cache.before-callbacks.latency", metricType: Timer},
+		DomainCacheAfterCallbackLatency:               {metricName: "domain-cache.after-callbacks.latency", metricType: Timer},
 	},
 	Frontend: {},
 	History: {
-		TaskRequests:                              {metricName: "task.requests", metricType: Counter},
-		TaskFailures:                              {metricName: "task.errors", metricType: Counter},
-		TaskLatency:                               {metricName: "task.latency", metricType: Counter},
-		AckLevelUpdateCounter:                     {metricName: "ack-level-update", metricType: Counter},
-		AckLevelUpdateFailedCounter:               {metricName: "ack-level-update-failed", metricType: Counter},
-		DecisionTypeScheduleActivityCounter:       {metricName: "schedule-activity-decision", metricType: Counter},
-		DecisionTypeCompleteWorkflowCounter:       {metricName: "complete-workflow-decision", metricType: Counter},
-		DecisionTypeFailWorkflowCounter:           {metricName: "fail-workflow-decision", metricType: Counter},
-		DecisionTypeCancelWorkflowCounter:         {metricName: "cancel-workflow-decision", metricType: Counter},
-		DecisionTypeStartTimerCounter:             {metricName: "start-timer-decision", metricType: Counter},
-		DecisionTypeCancelActivityCounter:         {metricName: "cancel-activity-decision", metricType: Counter},
-		DecisionTypeCancelTimerCounter:            {metricName: "cancel-timer-decision", metricType: Counter},
-		DecisionTypeRecordMarkerCounter:           {metricName: "record-marker-decision", metricType: Counter},
-		DecisionTypeCancelExternalWorkflowCounter: {metricName: "cancel-external-workflow-decision", metricType: Counter},
-		DecisionTypeContinueAsNewCounter:          {metricName: "continue-as-new-decision", metricType: Counter},
-		DecisionTypeChildWorkflowCounter:          {metricName: "child-workflow-decision", metricType: Counter},
-		MultipleCompletionDecisionsCounter:        {metricName: "multiple-completion-decisions", metricType: Counter},
-		FailedDecisionsCounter:                    {metricName: "failed-decisions", metricType: Counter},
-		StaleMutableStateCounter:                  {metricName: "stale-mutable-state", metricType: Counter},
-		ConcurrencyUpdateFailureCounter:           {metricName: "concurrency-update-failure", metricType: Counter},
-		CadenceErrShardOwnershipLostCounter:       {metricName: "cadence.errors.shard-ownership-lost", metricType: Counter},
-		CadenceErrEventAlreadyStartedCounter:      {metricName: "cadence.errors.event-already-started", metricType: Counter},
-		HeartbeatTimeoutCounter:                   {metricName: "heartbeat-tiemout", metricType: Counter},
-		ScheduleToStartTimeoutCounter:             {metricName: "schedule-to-start-timeout", metricType: Counter},
-		StartToCloseTimeoutCounter:                {metricName: "start-to-close-timeout", metricType: Counter},
-		ScheduleToCloseTimeoutCounter:             {metricName: "schedule-to-close-timeout", metricType: Counter},
-		NewTimerCounter:                           {metricName: "new-timer", metricType: Counter},
-		NewTimerNotifyCounter:                     {metricName: "new-timer-notifications", metricType: Counter},
-		AcquireShardsCounter:                      {metricName: "acquire-shards-count", metricType: Counter},
-		AcquireShardsLatency:                      {metricName: "acquire-shards-latency", metricType: Timer},
-		ShardClosedCounter:                        {metricName: "shard-closed-count", metricType: Counter},
-		ShardItemCreatedCounter:                   {metricName: "sharditem-created-count", metricType: Counter},
-		ShardItemRemovedCounter:                   {metricName: "sharditem-removed-count", metricType: Counter},
-		MembershipChangedCounter:                  {metricName: "membership-changed-count", metricType: Counter},
-		NumShardsGauge:                            {metricName: "numshards-gauge", metricType: Gauge},
-		GetEngineForShardErrorCounter:             {metricName: "get-engine-for-shard-errors", metricType: Counter},
-		GetEngineForShardLatency:                  {metricName: "get-engine-for-shard-latency", metricType: Timer},
-		RemoveEngineForShardLatency:               {metricName: "remove-engine-for-shard-latency", metricType: Timer},
+		TaskRequests:                                 {metricName: "task.requests", metricType: Counter},
+		TaskFailures:                                 {metricName: "task.errors", metricType: Counter},
+		TaskLatency:                                  {metricName: "task.latency", metricType: Timer},
+		AckLevelUpdateCounter:                        {metricName: "ack-level-update", metricType: Counter},
+		AckLevelUpdateFailedCounter:                  {metricName: "ack-level-update-failed", metricType: Counter},
+		DecisionTypeScheduleActivityCounter:          {metricName: "schedule-activity-decision", metricType: Counter},
+		DecisionTypeCompleteWorkflowCounter:          {metricName: "complete-workflow-decision", metricType: Counter},
+		DecisionTypeFailWorkflowCounter:              {metricName: "fail-workflow-decision", metricType: Counter},
+		DecisionTypeCancelWorkflowCounter:            {metricName: "cancel-workflow-decision", metricType: Counter},
+		DecisionTypeStartTimerCounter:                {metricName: "start-timer-decision", metricType: Counter},
+		DecisionTypeCancelActivityCounter:            {metricName: "cancel-activity-decision", metricType: Counter},
+		DecisionTypeCancelTimerCounter:               {metricName: "cancel-timer-decision", metricType: Counter},
+		DecisionTypeRecordMarkerCounter:              {metricName: "record-marker-decision", metricType: Counter},
+		DecisionTypeCancelExternalWorkflowCounter:    {metricName: "cancel-external-workflow-decision", metricType: Counter},
+		DecisionTypeContinueAsNewCounter:             {metricName: "continue-as-new-decision", metricType: Counter},
+		DecisionTypeSignalExternalWorkflowCounter:    {metricName: "signal-external-workflow-decision", metricType: Counter},
+		DecisionTypeChildWorkflowCounter:             {metricName: "child-workflow-decision", metricType: Counter},
+		MultipleCompletionDecisionsCounter:           {metricName: "multiple-completion-decisions", metricType: Counter},
+		FailedDecisionsCounter:                       {metricName: "failed-decisions", metricType: Counter},
+		StaleMutableStateCounter:                     {metricName: "stale-mutable-state", metricType: Counter},
+		ConcurrencyUpdateFailureCounter:              {metricName: "concurrency-update-failure", metricType: Counter},
+		CadenceErrShardOwnershipLostCounter:          {metricName: "cadence.errors.shard-ownership-lost", metricType: Counter},
+		CadenceErrEventAlreadyStartedCounter:         {metricName: "cadence.errors.event-already-started", metricType: Counter},
+		HeartbeatTimeoutCounter:                      {metricName: "heartbeat-timeout", metricType: Counter},
+		ScheduleToStartTimeoutCounter:                {metricName: "schedule-to-start-timeout", metricType: Counter},
+		StartToCloseTimeoutCounter:                   {metricName: "start-to-close-timeout", metricType: Counter},
+		ScheduleToCloseTimeoutCounter:                {metricName: "schedule-to-close-timeout", metricType: Counter},
+		NewTimerCounter:                              {metricName: "new-timer", metricType: Counter},
+		NewTimerNotifyCounter:                        {metricName: "new-timer-notifications", metricType: Counter},
+		AcquireShardsCounter:                         {metricName: "acquire-shards-count", metricType: Counter},
+		AcquireShardsLatency:                         {metricName: "acquire-shards-latency", metricType: Timer},
+		ShardClosedCounter:                           {metricName: "shard-closed-count", metricType: Counter},
+		ShardItemCreatedCounter:                      {metricName: "sharditem-created-count", metricType: Counter},
+		ShardItemRemovedCounter:                      {metricName: "sharditem-removed-count", metricType: Counter},
+		ShardInfoTransferDiffTimer:                   {metricName: "shardinfo-transfer-diff", metricType: Timer},
+		ShardInfoTimerDiffTimer:                      {metricName: "shardinfo-timer-diff", metricType: Timer},
+		MembershipChangedCounter:                     {metricName: "membership-changed-count", metricType: Counter},
+		NumShardsGauge:                               {metricName: "numshards-gauge", metricType: Gauge},
+		GetEngineForShardErrorCounter:                {metricName: "get-engine-for-shard-errors", metricType: Counter},
+		GetEngineForShardLatency:                     {metricName: "get-engine-for-shard-latency", metricType: Timer},
+		RemoveEngineForShardLatency:                  {metricName: "remove-engine-for-shard-latency", metricType: Timer},
+		CompleteDecisionWithStickyEnabledCounter:     {metricName: "complete-decision-sticky-enabled-count", metricType: Counter},
+		CompleteDecisionWithStickyDisabledCounter:    {metricName: "complete-decision-sticky-disabled-count", metricType: Counter},
+		HistoryEventNotificationQueueingLatency:      {metricName: "history-event-notification-queueing-latency", metricType: Timer},
+		HistoryEventNotificationFanoutLatency:        {metricName: "history-event-notification-fanout-latency", metricType: Timer},
+		HistoryEventNotificationInFlightMessageGauge: {metricName: "history-event-notification-inflight-message-gauge", metricType: Gauge},
+		HistoryEventNotificationFailDeliveryCount:    {metricName: "history-event-notification-fail-delivery-count", metricType: Counter},
+		SignalSizeTimer:                              {metricName: "signal-size", metricType: Timer},
+		EmptyReplicationEventsCounter:                {metricName: "empty-replication-events", metricType: Counter},
+		DuplicateReplicationEventsCounter:            {metricName: "duplicate-replication-events", metricType: Counter},
+		StaleReplicationEventsCounter:                {metricName: "stale-replication-events", metricType: Counter},
+		ReplicationEventsSizeTimer:                   {metricName: "replication-events-size", metricType: Timer},
+		BufferReplicationTaskTimer:                   {metricName: "buffer-replication-tasks", metricType: Timer},
+		UnbufferReplicationTaskTimer:                 {metricName: "unbuffer-replication-tasks", metricType: Timer},
+		HistoryConflictsCounter:                      {metricName: "history-conflicts", metricType: Counter},
+		HistoryTaskStandbyRetryCounter:               {metricName: "history-task-standby-retry-counter", metricType: Counter},
+		HistoryTaskNotActiveCounter:                  {metricName: "history-task-not-active-counter", metricType: Counter},
+		HistoryTaskBatchCompleteCounter:              {metricName: "history-task-batch-complete-counter", metricType: Counter},
+		ActiveTransferTaskQueueLatency:               {metricName: "active.transfertask.queue.latency", metricType: Timer},
+		ActiveTimerTaskQueueLatency:                  {metricName: "active.timertask.queue.latency", metricType: Timer},
+		StandbyTransferTaskQueueLatency:              {metricName: "standby.transfertask.queue.latency", metricType: Timer},
+		StandbyTimerTaskQueueLatency:                 {metricName: "standby.timertask.queue.latency", metricType: Timer},
 	},
 	Matching: {
-		PollSuccessCounter:          {metricName: "poll.success"},
-		PollTimeoutCounter:          {metricName: "poll.timeouts"},
-		PollErrorsCounter:           {metricName: "poll.errors"},
-		PollSuccessWithSyncCounter:  {metricName: "poll.success.sync"},
-		LeaseRequestCounter:         {metricName: "lease.requests"},
-		LeaseFailureCounter:         {metricName: "lease.failures"},
-		ConditionFailedErrorCounter: {metricName: "condition-failed-errors"},
+		PollSuccessCounter:            {metricName: "poll.success"},
+		PollTimeoutCounter:            {metricName: "poll.timeouts"},
+		PollSuccessWithSyncCounter:    {metricName: "poll.success.sync"},
+		LeaseRequestCounter:           {metricName: "lease.requests"},
+		LeaseFailureCounter:           {metricName: "lease.failures"},
+		ConditionFailedErrorCounter:   {metricName: "condition-failed-errors"},
+		RespondQueryTaskFailedCounter: {metricName: "respond-query-failed"},
+		SyncThrottleCounter:           {metricName: "sync.throttle.count"},
+		BufferThrottleCounter:         {metricName: "buffer.throttle.count"},
+		SyncMatchLatency:              {metricName: "syncmatch.latency", metricType: Timer},
+	},
+	Worker: {
+		ReplicatorMessages: {metricName: "replicator.messages"},
+		ReplicatorFailures: {metricName: "replicator.errors"},
+		ReplicatorLatency:  {metricName: "replicator.latency"},
 	},
 }
 

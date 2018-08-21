@@ -20,7 +20,9 @@
 
 package common
 
-import s "github.com/uber/cadence/.gen/go/shared"
+import (
+	s "github.com/uber/cadence/.gen/go/shared"
+)
 
 // IntPtr makes a copy and returns the pointer to an int.
 func IntPtr(v int) *int {
@@ -92,6 +94,16 @@ func TimeoutTypePtr(t s.TimeoutType) *s.TimeoutType {
 	return &t
 }
 
+// TaskListKindPtr makes a copy and returns the pointer to a TaskListKind.
+func TaskListKindPtr(t s.TaskListKind) *s.TaskListKind {
+	return &t
+}
+
+// TaskListTypePtr makes a copy and returns the pointer to a TaskListKind.
+func TaskListTypePtr(t s.TaskListType) *s.TaskListType {
+	return &t
+}
+
 // DecisionTaskFailedCausePtr makes a copy and returns the pointer to a DecisionTaskFailedCause.
 func DecisionTaskFailedCausePtr(t s.DecisionTaskFailedCause) *s.DecisionTaskFailedCause {
 	return &t
@@ -99,6 +111,11 @@ func DecisionTaskFailedCausePtr(t s.DecisionTaskFailedCause) *s.DecisionTaskFail
 
 // CancelExternalWorkflowExecutionFailedCausePtr makes a copy and returns the pointer to a CancelExternalWorkflowExecutionFailedCause.
 func CancelExternalWorkflowExecutionFailedCausePtr(t s.CancelExternalWorkflowExecutionFailedCause) *s.CancelExternalWorkflowExecutionFailedCause {
+	return &t
+}
+
+// SignalExternalWorkflowExecutionFailedCausePtr makes a copy and returns the pointer to a SignalExternalWorkflowExecutionFailedCause.
+func SignalExternalWorkflowExecutionFailedCausePtr(t s.SignalExternalWorkflowExecutionFailedCause) *s.SignalExternalWorkflowExecutionFailedCause {
 	return &t
 }
 

@@ -25,13 +25,13 @@ package workflowserviceclient
 
 import (
 	"context"
-	"reflect"
-	"go.uber.org/thriftrw/wire"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc"
 	"github.com/uber/cadence/.gen/go/cadence"
 	"github.com/uber/cadence/.gen/go/shared"
+	"go.uber.org/thriftrw/wire"
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/encoding/thrift"
+	"reflect"
 )
 
 // Interface is a client for the WorkflowService service.
@@ -48,6 +48,18 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*shared.DescribeDomainResponse, error)
 
+	DescribeTaskList(
+		ctx context.Context,
+		Request *shared.DescribeTaskListRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.DescribeTaskListResponse, error)
+
+	DescribeWorkflowExecution(
+		ctx context.Context,
+		DescribeRequest *shared.DescribeWorkflowExecutionRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.DescribeWorkflowExecutionResponse, error)
+
 	GetWorkflowExecutionHistory(
 		ctx context.Context,
 		GetRequest *shared.GetWorkflowExecutionHistoryRequest,
@@ -59,6 +71,12 @@ type Interface interface {
 		ListRequest *shared.ListClosedWorkflowExecutionsRequest,
 		opts ...yarpc.CallOption,
 	) (*shared.ListClosedWorkflowExecutionsResponse, error)
+
+	ListDomains(
+		ctx context.Context,
+		ListRequest *shared.ListDomainsRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.ListDomainsResponse, error)
 
 	ListOpenWorkflowExecutions(
 		ctx context.Context,
@@ -78,9 +96,21 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*shared.PollForDecisionTaskResponse, error)
 
+	QueryWorkflow(
+		ctx context.Context,
+		QueryRequest *shared.QueryWorkflowRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.QueryWorkflowResponse, error)
+
 	RecordActivityTaskHeartbeat(
 		ctx context.Context,
 		HeartbeatRequest *shared.RecordActivityTaskHeartbeatRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.RecordActivityTaskHeartbeatResponse, error)
+
+	RecordActivityTaskHeartbeatByID(
+		ctx context.Context,
+		HeartbeatRequest *shared.RecordActivityTaskHeartbeatByIDRequest,
 		opts ...yarpc.CallOption,
 	) (*shared.RecordActivityTaskHeartbeatResponse, error)
 
@@ -96,9 +126,21 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) error
 
+	ResetStickyTaskList(
+		ctx context.Context,
+		ResetRequest *shared.ResetStickyTaskListRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.ResetStickyTaskListResponse, error)
+
 	RespondActivityTaskCanceled(
 		ctx context.Context,
 		CanceledRequest *shared.RespondActivityTaskCanceledRequest,
+		opts ...yarpc.CallOption,
+	) error
+
+	RespondActivityTaskCanceledByID(
+		ctx context.Context,
+		CanceledRequest *shared.RespondActivityTaskCanceledByIDRequest,
 		opts ...yarpc.CallOption,
 	) error
 
@@ -108,9 +150,21 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) error
 
+	RespondActivityTaskCompletedByID(
+		ctx context.Context,
+		CompleteRequest *shared.RespondActivityTaskCompletedByIDRequest,
+		opts ...yarpc.CallOption,
+	) error
+
 	RespondActivityTaskFailed(
 		ctx context.Context,
 		FailRequest *shared.RespondActivityTaskFailedRequest,
+		opts ...yarpc.CallOption,
+	) error
+
+	RespondActivityTaskFailedByID(
+		ctx context.Context,
+		FailRequest *shared.RespondActivityTaskFailedByIDRequest,
 		opts ...yarpc.CallOption,
 	) error
 
@@ -118,7 +172,25 @@ type Interface interface {
 		ctx context.Context,
 		CompleteRequest *shared.RespondDecisionTaskCompletedRequest,
 		opts ...yarpc.CallOption,
+	) (*shared.RespondDecisionTaskCompletedResponse, error)
+
+	RespondDecisionTaskFailed(
+		ctx context.Context,
+		FailedRequest *shared.RespondDecisionTaskFailedRequest,
+		opts ...yarpc.CallOption,
 	) error
+
+	RespondQueryTaskCompleted(
+		ctx context.Context,
+		CompleteRequest *shared.RespondQueryTaskCompletedRequest,
+		opts ...yarpc.CallOption,
+	) error
+
+	SignalWithStartWorkflowExecution(
+		ctx context.Context,
+		SignalWithStartRequest *shared.SignalWithStartWorkflowExecutionRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.StartWorkflowExecutionResponse, error)
 
 	SignalWorkflowExecution(
 		ctx context.Context,
@@ -215,6 +287,52 @@ func (c client) DescribeDomain(
 	return
 }
 
+func (c client) DescribeTaskList(
+	ctx context.Context,
+	_Request *shared.DescribeTaskListRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.DescribeTaskListResponse, err error) {
+
+	args := cadence.WorkflowService_DescribeTaskList_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result cadence.WorkflowService_DescribeTaskList_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = cadence.WorkflowService_DescribeTaskList_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) DescribeWorkflowExecution(
+	ctx context.Context,
+	_DescribeRequest *shared.DescribeWorkflowExecutionRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.DescribeWorkflowExecutionResponse, err error) {
+
+	args := cadence.WorkflowService_DescribeWorkflowExecution_Helper.Args(_DescribeRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result cadence.WorkflowService_DescribeWorkflowExecution_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = cadence.WorkflowService_DescribeWorkflowExecution_Helper.UnwrapResponse(&result)
+	return
+}
+
 func (c client) GetWorkflowExecutionHistory(
 	ctx context.Context,
 	_GetRequest *shared.GetWorkflowExecutionHistoryRequest,
@@ -258,6 +376,29 @@ func (c client) ListClosedWorkflowExecutions(
 	}
 
 	success, err = cadence.WorkflowService_ListClosedWorkflowExecutions_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) ListDomains(
+	ctx context.Context,
+	_ListRequest *shared.ListDomainsRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.ListDomainsResponse, err error) {
+
+	args := cadence.WorkflowService_ListDomains_Helper.Args(_ListRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result cadence.WorkflowService_ListDomains_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = cadence.WorkflowService_ListDomains_Helper.UnwrapResponse(&result)
 	return
 }
 
@@ -330,6 +471,29 @@ func (c client) PollForDecisionTask(
 	return
 }
 
+func (c client) QueryWorkflow(
+	ctx context.Context,
+	_QueryRequest *shared.QueryWorkflowRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.QueryWorkflowResponse, err error) {
+
+	args := cadence.WorkflowService_QueryWorkflow_Helper.Args(_QueryRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result cadence.WorkflowService_QueryWorkflow_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = cadence.WorkflowService_QueryWorkflow_Helper.UnwrapResponse(&result)
+	return
+}
+
 func (c client) RecordActivityTaskHeartbeat(
 	ctx context.Context,
 	_HeartbeatRequest *shared.RecordActivityTaskHeartbeatRequest,
@@ -350,6 +514,29 @@ func (c client) RecordActivityTaskHeartbeat(
 	}
 
 	success, err = cadence.WorkflowService_RecordActivityTaskHeartbeat_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) RecordActivityTaskHeartbeatByID(
+	ctx context.Context,
+	_HeartbeatRequest *shared.RecordActivityTaskHeartbeatByIDRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.RecordActivityTaskHeartbeatResponse, err error) {
+
+	args := cadence.WorkflowService_RecordActivityTaskHeartbeatByID_Helper.Args(_HeartbeatRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result cadence.WorkflowService_RecordActivityTaskHeartbeatByID_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = cadence.WorkflowService_RecordActivityTaskHeartbeatByID_Helper.UnwrapResponse(&result)
 	return
 }
 
@@ -399,6 +586,29 @@ func (c client) RequestCancelWorkflowExecution(
 	return
 }
 
+func (c client) ResetStickyTaskList(
+	ctx context.Context,
+	_ResetRequest *shared.ResetStickyTaskListRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.ResetStickyTaskListResponse, err error) {
+
+	args := cadence.WorkflowService_ResetStickyTaskList_Helper.Args(_ResetRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result cadence.WorkflowService_ResetStickyTaskList_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = cadence.WorkflowService_ResetStickyTaskList_Helper.UnwrapResponse(&result)
+	return
+}
+
 func (c client) RespondActivityTaskCanceled(
 	ctx context.Context,
 	_CanceledRequest *shared.RespondActivityTaskCanceledRequest,
@@ -419,6 +629,29 @@ func (c client) RespondActivityTaskCanceled(
 	}
 
 	err = cadence.WorkflowService_RespondActivityTaskCanceled_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) RespondActivityTaskCanceledByID(
+	ctx context.Context,
+	_CanceledRequest *shared.RespondActivityTaskCanceledByIDRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := cadence.WorkflowService_RespondActivityTaskCanceledByID_Helper.Args(_CanceledRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result cadence.WorkflowService_RespondActivityTaskCanceledByID_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	err = cadence.WorkflowService_RespondActivityTaskCanceledByID_Helper.UnwrapResponse(&result)
 	return
 }
 
@@ -445,6 +678,29 @@ func (c client) RespondActivityTaskCompleted(
 	return
 }
 
+func (c client) RespondActivityTaskCompletedByID(
+	ctx context.Context,
+	_CompleteRequest *shared.RespondActivityTaskCompletedByIDRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := cadence.WorkflowService_RespondActivityTaskCompletedByID_Helper.Args(_CompleteRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result cadence.WorkflowService_RespondActivityTaskCompletedByID_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	err = cadence.WorkflowService_RespondActivityTaskCompletedByID_Helper.UnwrapResponse(&result)
+	return
+}
+
 func (c client) RespondActivityTaskFailed(
 	ctx context.Context,
 	_FailRequest *shared.RespondActivityTaskFailedRequest,
@@ -468,11 +724,34 @@ func (c client) RespondActivityTaskFailed(
 	return
 }
 
+func (c client) RespondActivityTaskFailedByID(
+	ctx context.Context,
+	_FailRequest *shared.RespondActivityTaskFailedByIDRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := cadence.WorkflowService_RespondActivityTaskFailedByID_Helper.Args(_FailRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result cadence.WorkflowService_RespondActivityTaskFailedByID_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	err = cadence.WorkflowService_RespondActivityTaskFailedByID_Helper.UnwrapResponse(&result)
+	return
+}
+
 func (c client) RespondDecisionTaskCompleted(
 	ctx context.Context,
 	_CompleteRequest *shared.RespondDecisionTaskCompletedRequest,
 	opts ...yarpc.CallOption,
-) (err error) {
+) (success *shared.RespondDecisionTaskCompletedResponse, err error) {
 
 	args := cadence.WorkflowService_RespondDecisionTaskCompleted_Helper.Args(_CompleteRequest)
 
@@ -487,7 +766,76 @@ func (c client) RespondDecisionTaskCompleted(
 		return
 	}
 
-	err = cadence.WorkflowService_RespondDecisionTaskCompleted_Helper.UnwrapResponse(&result)
+	success, err = cadence.WorkflowService_RespondDecisionTaskCompleted_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) RespondDecisionTaskFailed(
+	ctx context.Context,
+	_FailedRequest *shared.RespondDecisionTaskFailedRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := cadence.WorkflowService_RespondDecisionTaskFailed_Helper.Args(_FailedRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result cadence.WorkflowService_RespondDecisionTaskFailed_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	err = cadence.WorkflowService_RespondDecisionTaskFailed_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) RespondQueryTaskCompleted(
+	ctx context.Context,
+	_CompleteRequest *shared.RespondQueryTaskCompletedRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := cadence.WorkflowService_RespondQueryTaskCompleted_Helper.Args(_CompleteRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result cadence.WorkflowService_RespondQueryTaskCompleted_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	err = cadence.WorkflowService_RespondQueryTaskCompleted_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) SignalWithStartWorkflowExecution(
+	ctx context.Context,
+	_SignalWithStartRequest *shared.SignalWithStartWorkflowExecutionRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.StartWorkflowExecutionResponse, err error) {
+
+	args := cadence.WorkflowService_SignalWithStartWorkflowExecution_Helper.Args(_SignalWithStartRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result cadence.WorkflowService_SignalWithStartWorkflowExecution_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = cadence.WorkflowService_SignalWithStartWorkflowExecution_Helper.UnwrapResponse(&result)
 	return
 }
 

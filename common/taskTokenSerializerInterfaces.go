@@ -25,13 +25,24 @@ type (
 	TaskTokenSerializer interface {
 		Serialize(token *TaskToken) ([]byte, error)
 		Deserialize(data []byte) (*TaskToken, error)
+		SerializeQueryTaskToken(token *QueryTaskToken) ([]byte, error)
+		DeserializeQueryTaskToken(data []byte) (*QueryTaskToken, error)
 	}
 
 	// TaskToken identifies a task
 	TaskToken struct {
-		DomainID   string `json:"domainId"`
-		WorkflowID string `json:"workflowId"`
-		RunID      string `json:"runId"`
-		ScheduleID int64  `json:"scheduleId"`
+		DomainID        string `json:"domainId"`
+		WorkflowID      string `json:"workflowId"`
+		RunID           string `json:"runId"`
+		ScheduleID      int64  `json:"scheduleId"`
+		ScheduleAttempt int64  `json:"scheduleAttempt"`
+		ActivityID      string `json:"activityId"`
+	}
+
+	// QueryTaskToken identifies a query task
+	QueryTaskToken struct {
+		DomainID string `json:"domainId"`
+		TaskList string `json:"taskList"`
+		TaskID   string `json:"taskId"`
 	}
 )

@@ -39,7 +39,7 @@ type ClientImpl struct {
 
 // NewClient creates and returns a new instance of
 // Client implementation
-// reporter holds the common tags for the servcie
+// reporter holds the common tags for the service
 // serviceIdx indicates the service type in (InputhostIndex, ... StorageIndex)
 func NewClient(scope tally.Scope, serviceIdx ServiceIdx) Client {
 	commonScopes := ScopeDefs[Common]
@@ -106,9 +106,9 @@ func (m *ClientImpl) RecordTimer(scopeIdx int, timerIdx int, d time.Duration) {
 }
 
 // UpdateGauge reports Gauge type metric
-func (m *ClientImpl) UpdateGauge(scopeIdx int, gaugeIdx int, delta float64) {
+func (m *ClientImpl) UpdateGauge(scopeIdx int, gaugeIdx int, value float64) {
 	name := string(m.metricDefs[gaugeIdx].metricName)
-	m.childScopes[scopeIdx].Gauge(name).Update(delta)
+	m.childScopes[scopeIdx].Gauge(name).Update(value)
 }
 
 // Tagged returns a client that adds the given tags to all metrics

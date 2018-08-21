@@ -21,15 +21,21 @@
 package main
 
 import (
-	"github.com/uber/cadence/common/service/config"
-	"github.com/urfave/cli"
 	"log"
 	"os"
 	"strings"
+
+	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/tools/cassandra"
+
+	"github.com/urfave/cli"
 )
 
 // validServices is the list of all valid cadence services
-var validServices = []string{historyService, matchingService, frontendService}
+var validServices = []string{historyService, matchingService, frontendService, workerService}
+
+// inDevelopmentServices is the list of services we want to support skipping logic on startup if config does not exist
+var inDevelopmentServices = map[string]bool{workerService: true}
 
 // main entry point for the cadence server
 func main() {
@@ -46,12 +52,31 @@ func startHandler(c *cli.Context) {
 	log.Printf("Loading config; env=%v,zone=%v,configDir=%v\n", env, zone, configDir)
 
 	var cfg config.Config
-	config.Load(env, configDir, zone, &cfg)
+	err := config.Load(env, configDir, zone, &cfg)
+	if err != nil {
+		log.Fatal("Config file corrupted.", err)
+	}
 	log.Printf("config=\n%v\n", cfg.String())
 
-	for _, svc := range getServices(c) {
+	cassCfg := cfg.Cassandra
+	dir, err := os.Getwd()
+	if err != nil {
+		log.Fatal("Unable to get current directory")
+	}
+	if err := cassandra.VerifyCompatibleVersion(cassCfg, dir); err != nil {
+		log.Fatal("Incompatible versions", err)
+	}
+
+	services := getServices(c)
+LoadServiceLoop:
+	for _, svc := range services {
 		if _, ok := cfg.Services[svc]; !ok {
-			log.Fatalf("`%v` service missing config", svc)
+			if _, ok := inDevelopmentServices[svc]; len(services) > 1 && ok {
+				log.Printf("Config missing for development service `%v`. Skipping to load service.\n", svc)
+				continue LoadServiceLoop
+			} else {
+				log.Fatalf("`%v` service missing config", svc)
+			}
 		}
 		server := newServer(svc, &cfg)
 		server.Start()
@@ -98,7 +123,7 @@ func isValidService(in string) bool {
 }
 
 func getConfigDir(c *cli.Context) string {
-	return path(getRootDir(c), c.GlobalString("config"))
+	return constructPath(getRootDir(c), c.GlobalString("config"))
 }
 
 func getRootDir(c *cli.Context) string {
@@ -113,7 +138,7 @@ func getRootDir(c *cli.Context) string {
 	return dirpath
 }
 
-func path(dir string, file string) string {
+func constructPath(dir string, file string) string {
 	return dir + "/" + file
 }
 

@@ -7,24 +7,24 @@ This doc is intended for contributors to `cadence` server (hopefully that's you!
 ## Development Environment
 
 * Go. Install on OS X with `brew install go`.
-* `thrift`. Install on OS X with `brew install thrift`
-* `thrift-gen`. Install with `go get github.com/uber/tchannel-go/thrift/thrift-gen`
-
-Note: `thrift` should be >= 0.10.0. Run `brew upgrade thrift` if you're on an older version.
 
 ## Checking out the code
 
 Make sure the repository is cloned to the correct location:
 
 ```bash
-go get github.com/uber/cadence/...
+cd $GOPATH
+git clone https://github.com/uber/cadence.git src/github.com/uber/cadence
 cd $GOPATH/src/github.com/uber/cadence
 ```
 
 ## Dependency management
 
-Dependencies are tracked via `glide.yaml`. If you're not familiar with `glide`,
-read the [docs](https://github.com/Masterminds/glide#usage).
+Dependencies are recorded in `Gopkg.toml` and managed by dep. If you're not 
+familiar with dep, read the [docs](https://golang.github.io/dep/). The Makefile 
+will call `install-dep.sh` to install dep on Mac or Linux. You can use this 
+script directly, but it will be run automatically with  `make` commands. To 
+check dependencies, run `dep ensure`. 
 
 ## Licence headers
 
@@ -51,7 +51,7 @@ make bins
 
 ## Testing
 
-Before running the tests you must have `cassandra` running locally:
+Before running the tests you must have `cassandra` and `kafka` running locally:
 
 ```bash
 # for OS X
@@ -61,8 +61,22 @@ brew install cassandra
 /usr/local/bin/cassandra
 ```
 
+To run kafka, follow kafka quickstart guide [here](https://kafka.apache.org/quickstart)
+
 Run all the tests:
 
 ```bash
 make test
+
+# `make test` currently do not include crossdc tests, start kafka and run 
+make test_xdc
+
+# or go to folder with *_test.go, e.g
+cd service/history/ 
+go test -v
+# run single test
+go test -v <path> -run <TestSuite> -testify.m <TestSpercificTaskName>
+# example:
+go test -v github.com/uber/cadence/common/persistence -run TestCassandraPersistenceSuite -testify.m TestPersistenceStartWorkflow
 ```
+

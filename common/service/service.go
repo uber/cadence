@@ -27,10 +27,13 @@ import (
 
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/membership"
+	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 
 	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
@@ -38,18 +41,28 @@ import (
 	"go.uber.org/yarpc"
 )
 
-var cadenceServices = []string{common.FrontendServiceName, common.HistoryServiceName, common.MatchingServiceName}
+var cadenceServices = []string{
+	common.FrontendServiceName,
+	common.HistoryServiceName,
+	common.MatchingServiceName,
+	common.WorkerServiceName,
+}
 
 type (
 	// BootstrapParams holds the set of parameters
 	// needed to bootstrap a service
 	BootstrapParams struct {
-		Name            string
-		Logger          bark.Logger
-		MetricScope     tally.Scope
-		RingpopFactory  RingpopFactory
-		RPCFactory      common.RPCFactory
-		CassandraConfig config.Cassandra
+		Name             string
+		Logger           bark.Logger
+		MetricScope      tally.Scope
+		RingpopFactory   RingpopFactory
+		RPCFactory       common.RPCFactory
+		PProfInitializer common.PProfInitializer
+		CassandraConfig  config.Cassandra
+		ClusterMetadata  cluster.Metadata
+		ReplicatorConfig config.Replicator
+		MessagingClient  messaging.Client
+		DynamicConfig    dynamicconfig.Client
 	}
 
 	// RingpopFactory provides a bootstrapped ringpop
@@ -68,12 +81,16 @@ type (
 		rpFactory              RingpopFactory
 		membershipMonitor      membership.Monitor
 		rpcFactory             common.RPCFactory
+		pprofInitializer       common.PProfInitializer
 		clientFactory          client.Factory
 		numberOfHistoryShards  int
 		logger                 bark.Logger
 		metricsScope           tally.Scope
 		runtimeMetricsReporter *metrics.RuntimeMetricsReporter
 		metricsClient          metrics.Client
+		clusterMetadata        cluster.Metadata
+		messagingClient        messaging.Client
+		dynamicCollection      *dynamicconfig.Collection
 	}
 )
 
@@ -82,11 +99,15 @@ type (
 func New(params *BootstrapParams) Service {
 	sVice := &serviceImpl{
 		sName:                 params.Name,
-		logger:                params.Logger.WithField("Service", params.Name),
+		logger:                params.Logger,
 		rpcFactory:            params.RPCFactory,
 		rpFactory:             params.RingpopFactory,
+		pprofInitializer:      params.PProfInitializer,
 		metricsScope:          params.MetricScope,
 		numberOfHistoryShards: params.CassandraConfig.NumHistoryShards,
+		clusterMetadata:       params.ClusterMetadata,
+		messagingClient:       params.MessagingClient,
+		dynamicCollection:     dynamicconfig.NewCollection(params.DynamicConfig, params.Logger),
 	}
 	sVice.runtimeMetricsReporter = metrics.NewRuntimeMetricsReporter(params.MetricScope, time.Minute, sVice.logger)
 	sVice.metricsClient = metrics.NewClient(params.MetricScope, getMetricsServiceIdx(params.Name, params.Logger))
@@ -104,6 +125,11 @@ func New(params *BootstrapParams) Service {
 	return sVice
 }
 
+// UpdateLoggerWithServiceName tag logging with service name from the top level
+func (params *BootstrapParams) UpdateLoggerWithServiceName(name string) {
+	params.Logger = params.Logger.WithField("Service", name)
+}
+
 // GetHostName returns the name of host running the service
 func (h *serviceImpl) GetHostName() string {
 	return h.hostName
@@ -115,6 +141,10 @@ func (h *serviceImpl) Start() {
 
 	h.metricsScope.Counter(metrics.RestartCount).Inc(1)
 	h.runtimeMetricsReporter.Start()
+
+	if err := h.pprofInitializer.Start(); err != nil {
+		h.logger.WithFields(bark.Fields{logging.TagErr: err}).Fatal("Failed to start pprof")
+	}
 
 	if err := h.dispatcher.Start(); err != nil {
 		h.logger.WithFields(bark.Fields{logging.TagErr: err}).Fatal("Failed to start yarpc dispatcher")
@@ -199,6 +229,16 @@ func (h *serviceImpl) GetDispatcher() *yarpc.Dispatcher {
 	return h.dispatcher
 }
 
+// GetClusterMetadata returns the service cluster metadata
+func (h *serviceImpl) GetClusterMetadata() cluster.Metadata {
+	return h.clusterMetadata
+}
+
+// GetMessagingClient returns the messaging client against Kafka
+func (h *serviceImpl) GetMessagingClient() messaging.Client {
+	return h.messagingClient
+}
+
 func getMetricsServiceIdx(serviceName string, logger bark.Logger) metrics.ServiceIdx {
 	switch serviceName {
 	case common.FrontendServiceName:
@@ -207,6 +247,8 @@ func getMetricsServiceIdx(serviceName string, logger bark.Logger) metrics.Servic
 		return metrics.History
 	case common.MatchingServiceName:
 		return metrics.Matching
+	case common.WorkerServiceName:
+		return metrics.Worker
 	default:
 		logger.Fatalf("Unknown service name '%v' for metrics!", serviceName)
 	}

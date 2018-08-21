@@ -23,14 +23,14 @@ package cassandra
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"io"
+	"log"
 	"os"
 	"strings"
 	"time"
 
-	"fmt"
 	"github.com/gocql/gocql"
-	"log"
 )
 
 type (
@@ -74,9 +74,9 @@ var errGetSchemaVersion = errors.New("Failed to get current schema version from 
 
 const (
 	newLineDelim         = '\n'
-	defaultTimeout       = 30 * time.Second
-	cqlProtoVersion      = 4        // default CQL protocol version
-	defaultConsistency   = "QUORUM" // schema updates must always be QUORUM
+	defaultTimeout       = 30    // timeout in seconds
+	cqlProtoVersion      = 4     // default CQL protocol version
+	defaultConsistency   = "ALL" // schema updates must always be ALL
 	defaultCassandraPort = 9042
 )
 
@@ -107,21 +107,25 @@ const (
 )
 
 // newCQLClient returns a new instance of CQLClient
-func newCQLClient(hostsCsv string, port int, user, password, keyspace string) (CQLClient, error) {
+func newCQLClient(hostsCsv string, port int, user, password, keyspace string, timeoutSeconds int) (CQLClient,
+	error) {
 	hosts := parseHosts(hostsCsv)
 	if len(hosts) == 0 {
 		return nil, errNoHosts
 	}
 	clusterCfg := gocql.NewCluster(hosts...)
-	clusterCfg.Port = port
+	if port > 0 {
+		clusterCfg.Port = port
+	}
 	if user != "" && password != "" {
 		clusterCfg.Authenticator = gocql.PasswordAuthenticator{
 			Username: user,
 			Password: password,
 		}
 	}
+	timeout := time.Duration(timeoutSeconds) * time.Second
 	clusterCfg.Keyspace = keyspace
-	clusterCfg.Timeout = defaultTimeout
+	clusterCfg.Timeout = timeout
 	clusterCfg.ProtoVersion = cqlProtoVersion
 	clusterCfg.Consistency = gocql.ParseConsistency(defaultConsistency)
 	cqlClient := new(cqlClient)
@@ -189,10 +193,7 @@ func (client *cqlClient) CreateSchemaVersionTables() error {
 	if err := client.Exec(createSchemaVersionTableCQL); err != nil {
 		return err
 	}
-	if err := client.Exec(createSchemaUpdateHistoryTableCQL); err != nil {
-		return err
-	}
-	return nil
+	return client.Exec(createSchemaUpdateHistoryTableCQL)
 }
 
 // ReadSchemaVersion returns the current schema version for the keyspace

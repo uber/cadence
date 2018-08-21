@@ -22,9 +22,11 @@ package config
 
 import (
 	"encoding/json"
-	"github.com/uber-go/tally/m3"
-	"github.com/uber/ringpop-go/discovery"
 	"time"
+
+	"github.com/uber-go/tally/m3"
+	"github.com/uber/cadence/common/messaging"
+	"github.com/uber/ringpop-go/discovery"
 )
 
 type (
@@ -36,8 +38,12 @@ type (
 		Cassandra Cassandra `yaml:"cassandra"`
 		// Log is the logging config
 		Log Logger `yaml:"log"`
+		// ClustersInfo is the config containing all valid clusters and active acluster
+		ClustersInfo ClustersInfo `yaml:"clustersInfo"`
 		// Services is a map of service name to service config items
 		Services map[string]Service `yaml:"services"`
+		// Kafka is the config for connecting to kafka
+		Kafka messaging.KafkaConfig `yaml:"kafka"`
 	}
 
 	// Service contains the service specific config items
@@ -46,6 +52,14 @@ type (
 		RPC RPC `yaml:"rpc"`
 		// Metrics is the metrics subsystem configuration
 		Metrics Metrics `yaml:"metrics"`
+		// PProf is the PProf configuration
+		PProf PProf `yaml:"pprof"`
+	}
+
+	// PProf contains the rpc config items
+	PProf struct {
+		// Port is the port on which the PProf will bind to
+		Port int `yaml:"port"`
 	}
 
 	// RPC contains the rpc config items
@@ -98,6 +112,10 @@ type (
 		NumHistoryShards int `yaml:"numHistoryShards" validate:"nonzero"`
 	}
 
+	// Replicator describes the configuration of replicator
+	Replicator struct {
+	}
+
 	// Logger contains the config items for logger
 	Logger struct {
 		// Stdout is true if the output needs to goto standard out
@@ -106,6 +124,22 @@ type (
 		Level string `yaml:"level"`
 		// OutputFile is the path to the log output file
 		OutputFile string `yaml:"outputFile"`
+	}
+
+	// ClustersInfo contains the all cluster names and active cluster
+	ClustersInfo struct {
+		// EnableGlobalDomain whether the global domain is enabled, this attr should be discarded when
+		// cross DC is made public
+		EnableGlobalDomain bool `yaml:"enableGlobalDomain"`
+		// FailoverVersionIncrement is the increment of each cluster failover version
+		FailoverVersionIncrement int64 `yaml:"failoverVersionIncrement"`
+		// MasterClusterName is the master cluster name, only the master cluster can register / update domain
+		// all clusters can do domain failover
+		MasterClusterName string `yaml:"masterClusterName"`
+		// CurrentClusterName is the name of the current cluster
+		CurrentClusterName string `yaml:"currentClusterName"`
+		// ClusterInitialFailoverVersions contains all cluster names to corresponding initial failover version
+		ClusterInitialFailoverVersions map[string]int64 `yaml:"clusterInitialFailoverVersion"`
 	}
 
 	// Metrics contains the config items for metrics subsystem

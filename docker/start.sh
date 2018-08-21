@@ -21,21 +21,34 @@
 # THE SOFTWARE.
 
 setup_schema() {
-    SCHEMA_FILE=$CADENCE_HOME/schema/cadence/schema.cql
+    SCHEMA_DIR=$CADENCE_HOME/schema/cadence/versioned
     $CADENCE_HOME/cadence-cassandra-tool --ep $CASSANDRA_SEEDS create -k $KEYSPACE --rf $RF
-    $CADENCE_HOME/cadence-cassandra-tool --ep $CASSANDRA_SEEDS -k $KEYSPACE setup-schema -d -f $SCHEMA_FILE
-    VISIBILITY_SCHEMA_FILE=$CADENCE_HOME/schema/visibility/schema.cql
+    $CADENCE_HOME/cadence-cassandra-tool --ep $CASSANDRA_SEEDS -k $KEYSPACE setup-schema -v 0.0
+    $CADENCE_HOME/cadence-cassandra-tool --ep $CASSANDRA_SEEDS -k $KEYSPACE update-schema -d $SCHEMA_DIR
+    VISIBILITY_SCHEMA_DIR=$CADENCE_HOME/schema/visibility/versioned
     $CADENCE_HOME/cadence-cassandra-tool --ep $CASSANDRA_SEEDS create -k $VISIBILITY_KEYSPACE --rf $RF
-    $CADENCE_HOME/cadence-cassandra-tool --ep $CASSANDRA_SEEDS -k $VISIBILITY_KEYSPACE setup-schema -d -f $VISIBILITY_SCHEMA_FILE
+    $CADENCE_HOME/cadence-cassandra-tool --ep $CASSANDRA_SEEDS -k $VISIBILITY_KEYSPACE setup-schema -v 0.0
+    $CADENCE_HOME/cadence-cassandra-tool --ep $CASSANDRA_SEEDS -k $VISIBILITY_KEYSPACE update-schema -d $VISIBILITY_SCHEMA_DIR
 }
 
 wait_for_cassandra() {
     server=`echo $CASSANDRA_SEEDS | awk -F ',' '{print $1}'`
-    until cqlsh --cqlversion=3.4.2 $server < /dev/null; do
+    until cqlsh --cqlversion=3.4.4 $server < /dev/null; do
         echo 'waiting for cassandra to start up'
         sleep 1
     done
     echo 'cassandra started'
+}
+
+json_array() {
+  echo -n '['
+  while [ $# -gt 0 ]; do
+    x=${1//\\/\\\\}
+    echo -n \"${x//\"/\\\"}\"
+    [ $# -gt 1 ] && echo -n ', '
+    shift
+  done
+  echo ']'
 }
 
 init_env() {
@@ -65,11 +78,18 @@ init_env() {
     fi
 
     if [ -z "$RINGPOP_SEEDS" ]; then
-        export RINGPOP_SEEDS=$HOST_IP:7933
+        export RINGPOP_SEEDS_JSON_ARRAY="[\"$HOST_IP:7933\",\"$HOST_IP:7934\",\"$HOST_IP:7935\"]"
+    else
+        array=(${RINGPOP_SEEDS//,/ })
+        export RINGPOP_SEEDS_JSON_ARRAY=$(json_array "${array[@]}")
     fi
 
     if [ -z "$NUM_HISTORY_SHARDS" ]; then
         export NUM_HISTORY_SHARDS=4
+    fi
+
+    if [ -z "$LOG_LEVEL" ]; then
+        export LOG_LEVEL="debug"
     fi
 }
 
@@ -92,4 +112,4 @@ fi
 
 # fix up config
 envsubst < config/docker_template.yaml > config/docker.yaml
-./cadence --root $CADENCE_HOME --env docker start --services=$SERVICES
+./cadence-server --root $CADENCE_HOME --env docker start --services=$SERVICES

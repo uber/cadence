@@ -15,23 +15,25 @@ THRIFTRW_SRCS = \
   idl/github.com/uber/cadence/health.thrift \
   idl/github.com/uber/cadence/history.thrift \
   idl/github.com/uber/cadence/matching.thrift \
+  idl/github.com/uber/cadence/replicator.thrift \
   idl/github.com/uber/cadence/shared.thrift \
+  idl/github.com/uber/cadence/admin.thrift \
 
 PROGS = cadence
-TEST_ARG ?= -race -v -timeout 5m
+TEST_ARG ?= -race -v -timeout 10m
 BUILD := ./build
 TOOLS_CMD_ROOT=./cmd/tools
 INTEG_TEST_ROOT=./host
 INTEG_TEST_DIR=host
-
-export PATH := $(GOPATH)/bin:$(PATH)
+INTEG_TEST_XDC_ROOT=./hostxdc
+INTEG_TEST_XDC_DIR=hostxdc
 
 define thriftrwrule
 THRIFTRW_GEN_SRC += $(THRIFT_GENDIR)/go/$1/$1.go
 
 $(THRIFT_GENDIR)/go/$1/$1.go:: $2
 	@mkdir -p $(THRIFT_GENDIR)/go
-	$(ECHO_V)thriftrw --plugin=yarpc --pkg-prefix=$(PROJECT_ROOT)/$(THRIFT_GENDIR)/go/ --out=$(THRIFT_GENDIR)/go $2
+	$(GOPATH)/bin/thriftrw --plugin=yarpc --pkg-prefix=$(PROJECT_ROOT)/$(THRIFT_GENDIR)/go/ --out=$(THRIFT_GENDIR)/go $2
 endef
 
 $(foreach tsrc,$(THRIFTRW_SRCS),$(eval $(call \
@@ -48,12 +50,11 @@ ALL_SRC := $(shell find . -name "*.go" | grep -v -e Godeps -e vendor \
 TOOLS_SRC := $(shell find ./tools -name "*.go")
 TOOLS_SRC += $(TOOLS_CMD_ROOT)
 
-# all directories with *_test.go files in them
-TEST_DIRS := $(sort $(dir $(filter %_test.go,$(ALL_SRC))))
+# all directories with *_test.go files in them (exclude hostxdc)
+TEST_DIRS := $(filter-out $(INTEG_TEST_XDC_ROOT)%, $(sort $(dir $(filter %_test.go,$(ALL_SRC)))))
 
 # all tests other than integration test fall into the pkg_test category
 PKG_TEST_DIRS := $(filter-out $(INTEG_TEST_ROOT)%,$(TEST_DIRS))
-
 
 # Need the following option to have integration tests
 # count towards coverage. godoc below:
@@ -63,37 +64,48 @@ PKG_TEST_DIRS := $(filter-out $(INTEG_TEST_ROOT)%,$(TEST_DIRS))
 #   Packages are specified as import paths.
 GOCOVERPKG_ARG := -coverpkg="$(PROJECT_ROOT)/common/...,$(PROJECT_ROOT)/service/...,$(PROJECT_ROOT)/client/...,$(PROJECT_ROOT)/tools/..."
 
-vendor/glide.updated: glide.lock glide.yaml
-	glide install
-	touch vendor/glide.updated
+dep-ensured:
+	./install-dep.sh
+	dep ensure
 
 yarpc-install:
-	@type thriftrw >/dev/null 2>&1 || go get 'go.uber.org/thriftrw'
-	@type thriftrw-plugin-yarpc >/dev/null 2>&1 || go get 'go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc'
+	go get './vendor/go.uber.org/thriftrw'
+	go get './vendor/go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc'
 
 clean_thrift:
 	rm -rf .gen
 
-thriftc: clean_thrift yarpc-install $(THRIFTRW_GEN_SRC)
+thriftc: yarpc-install $(THRIFTRW_GEN_SRC)
 
 copyright: cmd/tools/copyright/licensegen.go
 	go run ./cmd/tools/copyright/licensegen.go --verifyOnly
 
-cadence-cassandra-tool: vendor/glide.updated $(TOOLS_SRC)
+cadence-cassandra-tool: dep-ensured $(TOOLS_SRC)
 	go build -i -o cadence-cassandra-tool cmd/tools/cassandra/main.go
 
-cadence: vendor/glide.updated $(ALL_SRC)
-	go build -i -o cadence cmd/server/cadence.go cmd/server/server.go
+cadence: dep-ensured $(TOOLS_SRC)
+	go build -i -o cadence cmd/tools/cli/main.go
 
-bins_nothrift: lint copyright cadence-cassandra-tool cadence
+cadence-server: dep-ensured $(ALL_SRC)
+	go build -i -o cadence-server cmd/server/cadence.go cmd/server/server.go
+
+bins_nothrift: lint copyright cadence-cassandra-tool cadence cadence-server
 
 bins: thriftc bins_nothrift
 
-test: bins
+test: dep-ensured bins
 	@rm -f test
 	@rm -f test.log
 	@for dir in $(TEST_DIRS); do \
-		go test -coverprofile=$@ "$$dir" | tee -a test.log; \
+		go test -timeout 15m -race -coverprofile=$@ "$$dir" | tee -a test.log; \
+	done;
+
+# need to run xdc tests with race detector off because of ringpop bug causing data race issue
+test_xdc: dep-ensured bins
+	@rm -f test
+	@rm -f test.log
+	@for dir in $(INTEG_TEST_XDC_ROOT); do \
+		go test -timeout 15m -coverprofile=$@ "$$dir" | tee -a test.log; \
 	done;
 
 cover_profile: clean bins_nothrift
@@ -101,9 +113,14 @@ cover_profile: clean bins_nothrift
 	@echo "mode: atomic" > $(BUILD)/cover.out
 
 	@echo Running integration test
-	@mkdir -p $(BUILD)/$(INTEG_TEST_DIR) 
+	@mkdir -p $(BUILD)/$(INTEG_TEST_DIR)
 	@time go test $(INTEG_TEST_ROOT) $(TEST_ARG) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_DIR)/coverage.out || exit 1;
 	@cat $(BUILD)/$(INTEG_TEST_DIR)/coverage.out | grep -v "mode: atomic" >> $(BUILD)/cover.out
+
+	@echo Running integration test for cross dc
+	@mkdir -p $(BUILD)/$(INTEG_TEST_XDC_DIR)
+	@time go test $(INTEG_TEST_XDC_ROOT) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_XDC_DIR)/coverage.out || exit 1;
+	@cat $(BUILD)/$(INTEG_TEST_XDC_DIR)/coverage.out | grep -v "mode: atomic" >> $(BUILD)/cover.out
 
 	@echo Running package tests:
 	@for dir in $(PKG_TEST_DIRS); do \
@@ -118,7 +135,7 @@ cover: cover_profile
 cover_ci: cover_profile
 	goveralls -coverprofile=$(BUILD)/cover.out -service=travis-ci || echo -e "\x1b[31mCoveralls failed\x1b[m"; \
 
-lint: vendor/glide.updated
+lint: dep-ensured
 	@echo Running linter
 	@lintFail=0; for file in $(ALL_SRC); do \
 		golint "$$file"; \
@@ -138,4 +155,38 @@ fmt:
 clean:
 	rm -f cadence
 	rm -f cadence-cassandra-tool
+	rm -f cadence-server
 	rm -Rf $(BUILD)
+
+install-schema: bins
+	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence --rf 1
+	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence setup-schema -v 0.0
+	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence update-schema -d ./schema/cadence/versioned
+	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence_visibility --rf 1
+	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence_visibility setup-schema -v 0.0
+	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence_visibility update-schema -d ./schema/visibility/versioned
+
+start: bins
+	./cadence-server start
+
+install-schema-cdc: bins
+	@echo Setting up cadence_active key space
+	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence_active --rf 1
+	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence_active setup-schema -v 0.0
+	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence_active update-schema -d ./schema/cadence/versioned
+	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence_visibility_active --rf 1
+	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence_visibility_active setup-schema -v 0.0
+	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence_visibility_active update-schema -d ./schema/visibility/versioned
+	@echo Setting up cadence_standby key space
+	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence_standby --rf 1
+	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence_standby setup-schema -v 0.0
+	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence_standby update-schema -d ./schema/cadence/versioned
+	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence_visibility_standby --rf 1
+	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence_visibility_standby setup-schema -v 0.0
+	./cadence-cassandra-tool -ep 127.0.0.1 -k cadence_visibility_standby update-schema -d ./schema/visibility/versioned
+
+start-cdc-active: bins
+	./cadence-server --zone active start
+
+start-cdc-standby: bins
+	./cadence-server --zone standby start

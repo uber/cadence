@@ -22,23 +22,35 @@ package frontend
 
 import (
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/messaging"
+	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 // Config represents configuration for cadence-frontend service
 type Config struct {
-	DefaultVisibilityMaxPageSize int32
-	DefaultHistoryMaxPageSize    int32
-	RPS                          int
+	PersistenceMaxQPS     dynamicconfig.IntPropertyFn
+	VisibilityMaxPageSize dynamicconfig.IntPropertyFnWithDomainFilter
+	HistoryMaxPageSize    dynamicconfig.IntPropertyFnWithDomainFilter
+	RPS                   dynamicconfig.IntPropertyFn
+
+	// Persistence settings
+	HistoryMgrNumConns dynamicconfig.IntPropertyFn
+
+	MaxDecisionStartToCloseTimeout dynamicconfig.IntPropertyFnWithDomainFilter
 }
 
 // NewConfig returns new service config with default values
-func NewConfig() *Config {
+func NewConfig(dc *dynamicconfig.Collection) *Config {
 	return &Config{
-		DefaultVisibilityMaxPageSize: 1000,
-		DefaultHistoryMaxPageSize:    1000,
-		RPS: 1200, // This limit is based on experimental runs.
+		PersistenceMaxQPS:              dc.GetIntProperty(dynamicconfig.FrontendPersistenceMaxQPS, 2000),
+		VisibilityMaxPageSize:          dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendVisibilityMaxPageSize, 1000),
+		HistoryMaxPageSize:             dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendHistoryMaxPageSize, 1000),
+		RPS:                            dc.GetIntProperty(dynamicconfig.FrontendRPS, 1200),
+		HistoryMgrNumConns:             dc.GetIntProperty(dynamicconfig.FrontendHistoryMgrNumConns, 10),
+		MaxDecisionStartToCloseTimeout: dc.GetIntPropertyFilteredByDomain(dynamicconfig.MaxDecisionStartToCloseTimeout, 600),
 	}
 }
 
@@ -50,10 +62,11 @@ type Service struct {
 }
 
 // NewService builds a new cadence-frontend service
-func NewService(params *service.BootstrapParams, config *Config) common.Daemon {
+func NewService(params *service.BootstrapParams) common.Daemon {
+	params.UpdateLoggerWithServiceName(common.FrontendServiceName)
 	return &Service{
 		params: params,
-		config: config,
+		config: NewConfig(dynamicconfig.NewCollection(params.DynamicConfig, params.Logger)),
 		stopC:  make(chan struct{}),
 	}
 }
@@ -68,18 +81,23 @@ func (s *Service) Start() {
 
 	base := service.New(p)
 
-	metadata, err := persistence.NewCassandraMetadataPersistence(p.CassandraConfig.Hosts,
+	persistenceMaxQPS := s.config.PersistenceMaxQPS()
+	persistenceRateLimiter := common.NewTokenBucket(persistenceMaxQPS, common.NewRealTimeSource())
+
+	metadata, err := persistence.NewMetadataManagerProxy(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,
 		p.CassandraConfig.User,
 		p.CassandraConfig.Password,
 		p.CassandraConfig.Datacenter,
 		p.CassandraConfig.Keyspace,
+		p.ClusterMetadata.GetCurrentClusterName(),
 		p.Logger)
 
 	if err != nil {
 		log.Fatalf("failed to create metadata manager: %v", err)
 	}
-	metadata = persistence.NewMetadataPersistenceClient(metadata, base.GetMetricsClient())
+	metadata = persistence.NewMetadataPersistenceRateLimitedClient(metadata, persistenceRateLimiter, log)
+	metadata = persistence.NewMetadataPersistenceMetricsClient(metadata, base.GetMetricsClient(), log)
 
 	visibility, err := persistence.NewCassandraVisibilityPersistence(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,
@@ -92,6 +110,8 @@ func (s *Service) Start() {
 	if err != nil {
 		log.Fatalf("failed to create visiblity manager: %v", err)
 	}
+	visibility = persistence.NewVisibilityPersistenceRateLimitedClient(visibility, persistenceRateLimiter, log)
+	visibility = persistence.NewVisibilityPersistenceMetricsClient(visibility, base.GetMetricsClient(), log)
 
 	history, err := persistence.NewCassandraHistoryPersistence(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,
@@ -99,16 +119,31 @@ func (s *Service) Start() {
 		p.CassandraConfig.Password,
 		p.CassandraConfig.Datacenter,
 		p.CassandraConfig.Keyspace,
+		s.config.HistoryMgrNumConns(),
 		p.Logger)
 
 	if err != nil {
 		log.Fatalf("Creating Cassandra history manager persistence failed: %v", err)
 	}
+	history = persistence.NewHistoryPersistenceRateLimitedClient(history, persistenceRateLimiter, log)
+	history = persistence.NewHistoryPersistenceMetricsClient(history, base.GetMetricsClient(), log)
 
-	history = persistence.NewHistoryPersistenceClient(history, base.GetMetricsClient())
+	// TODO when global domain is enabled, uncomment the line below and remove the line after
+	var kafkaProducer messaging.Producer
+	if base.GetClusterMetadata().IsGlobalDomainEnabled() {
+		kafkaProducer, err = base.GetMessagingClient().NewProducer(base.GetClusterMetadata().GetCurrentClusterName())
+		if err != nil {
+			log.Fatalf("Creating kafka producer failed: %v", err)
+		}
+	} else {
+		kafkaProducer = &mocks.KafkaProducer{}
+	}
 
-	handler := NewWorkflowHandler(base, s.config, metadata, history, visibility)
-	handler.Start()
+	wfHandler := NewWorkflowHandler(base, s.config, metadata, history, visibility, kafkaProducer)
+	wfHandler.Start()
+
+	adminHandler := NewAdminHandler(base, p.CassandraConfig.NumHistoryShards, metadata)
+	adminHandler.Start()
 
 	log.Infof("%v started", common.FrontendServiceName)
 

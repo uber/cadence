@@ -25,22 +25,40 @@ package historyserviceclient
 
 import (
 	"context"
-	"reflect"
-	"go.uber.org/thriftrw/wire"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/encoding/thrift"
-	"go.uber.org/yarpc"
 	"github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/shared"
+	"go.uber.org/thriftrw/wire"
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/encoding/thrift"
+	"reflect"
 )
 
 // Interface is a client for the HistoryService service.
 type Interface interface {
-	GetWorkflowExecutionNextEventID(
+	DescribeHistoryHost(
 		ctx context.Context,
-		GetRequest *history.GetWorkflowExecutionNextEventIDRequest,
+		Request *shared.DescribeHistoryHostRequest,
 		opts ...yarpc.CallOption,
-	) (*history.GetWorkflowExecutionNextEventIDResponse, error)
+	) (*shared.DescribeHistoryHostResponse, error)
+
+	DescribeMutableState(
+		ctx context.Context,
+		Request *history.DescribeMutableStateRequest,
+		opts ...yarpc.CallOption,
+	) (*history.DescribeMutableStateResponse, error)
+
+	DescribeWorkflowExecution(
+		ctx context.Context,
+		DescribeRequest *history.DescribeWorkflowExecutionRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.DescribeWorkflowExecutionResponse, error)
+
+	GetMutableState(
+		ctx context.Context,
+		GetRequest *history.GetMutableStateRequest,
+		opts ...yarpc.CallOption,
+	) (*history.GetMutableStateResponse, error)
 
 	RecordActivityTaskHeartbeat(
 		ctx context.Context,
@@ -66,11 +84,29 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*history.RecordDecisionTaskStartedResponse, error)
 
+	RemoveSignalMutableState(
+		ctx context.Context,
+		RemoveRequest *history.RemoveSignalMutableStateRequest,
+		opts ...yarpc.CallOption,
+	) error
+
+	ReplicateEvents(
+		ctx context.Context,
+		ReplicateRequest *history.ReplicateEventsRequest,
+		opts ...yarpc.CallOption,
+	) error
+
 	RequestCancelWorkflowExecution(
 		ctx context.Context,
 		CancelRequest *history.RequestCancelWorkflowExecutionRequest,
 		opts ...yarpc.CallOption,
 	) error
+
+	ResetStickyTaskList(
+		ctx context.Context,
+		ResetRequest *history.ResetStickyTaskListRequest,
+		opts ...yarpc.CallOption,
+	) (*history.ResetStickyTaskListResponse, error)
 
 	RespondActivityTaskCanceled(
 		ctx context.Context,
@@ -94,6 +130,12 @@ type Interface interface {
 		ctx context.Context,
 		CompleteRequest *history.RespondDecisionTaskCompletedRequest,
 		opts ...yarpc.CallOption,
+	) (*history.RespondDecisionTaskCompletedResponse, error)
+
+	RespondDecisionTaskFailed(
+		ctx context.Context,
+		FailedRequest *history.RespondDecisionTaskFailedRequest,
+		opts ...yarpc.CallOption,
 	) error
 
 	ScheduleDecisionTask(
@@ -101,6 +143,12 @@ type Interface interface {
 		ScheduleRequest *history.ScheduleDecisionTaskRequest,
 		opts ...yarpc.CallOption,
 	) error
+
+	SignalWithStartWorkflowExecution(
+		ctx context.Context,
+		SignalWithStartRequest *history.SignalWithStartWorkflowExecutionRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.StartWorkflowExecutionResponse, error)
 
 	SignalWorkflowExecution(
 		ctx context.Context,
@@ -113,6 +161,12 @@ type Interface interface {
 		StartRequest *history.StartWorkflowExecutionRequest,
 		opts ...yarpc.CallOption,
 	) (*shared.StartWorkflowExecutionResponse, error)
+
+	SyncShardStatus(
+		ctx context.Context,
+		SyncShardStatusRequest *history.SyncShardStatusRequest,
+		opts ...yarpc.CallOption,
+	) error
 
 	TerminateWorkflowExecution(
 		ctx context.Context,
@@ -145,13 +199,13 @@ type client struct {
 	c thrift.Client
 }
 
-func (c client) GetWorkflowExecutionNextEventID(
+func (c client) DescribeHistoryHost(
 	ctx context.Context,
-	_GetRequest *history.GetWorkflowExecutionNextEventIDRequest,
+	_Request *shared.DescribeHistoryHostRequest,
 	opts ...yarpc.CallOption,
-) (success *history.GetWorkflowExecutionNextEventIDResponse, err error) {
+) (success *shared.DescribeHistoryHostResponse, err error) {
 
-	args := history.HistoryService_GetWorkflowExecutionNextEventID_Helper.Args(_GetRequest)
+	args := history.HistoryService_DescribeHistoryHost_Helper.Args(_Request)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)
@@ -159,12 +213,81 @@ func (c client) GetWorkflowExecutionNextEventID(
 		return
 	}
 
-	var result history.HistoryService_GetWorkflowExecutionNextEventID_Result
+	var result history.HistoryService_DescribeHistoryHost_Result
 	if err = result.FromWire(body); err != nil {
 		return
 	}
 
-	success, err = history.HistoryService_GetWorkflowExecutionNextEventID_Helper.UnwrapResponse(&result)
+	success, err = history.HistoryService_DescribeHistoryHost_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) DescribeMutableState(
+	ctx context.Context,
+	_Request *history.DescribeMutableStateRequest,
+	opts ...yarpc.CallOption,
+) (success *history.DescribeMutableStateResponse, err error) {
+
+	args := history.HistoryService_DescribeMutableState_Helper.Args(_Request)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result history.HistoryService_DescribeMutableState_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = history.HistoryService_DescribeMutableState_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) DescribeWorkflowExecution(
+	ctx context.Context,
+	_DescribeRequest *history.DescribeWorkflowExecutionRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.DescribeWorkflowExecutionResponse, err error) {
+
+	args := history.HistoryService_DescribeWorkflowExecution_Helper.Args(_DescribeRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result history.HistoryService_DescribeWorkflowExecution_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = history.HistoryService_DescribeWorkflowExecution_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) GetMutableState(
+	ctx context.Context,
+	_GetRequest *history.GetMutableStateRequest,
+	opts ...yarpc.CallOption,
+) (success *history.GetMutableStateResponse, err error) {
+
+	args := history.HistoryService_GetMutableState_Helper.Args(_GetRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result history.HistoryService_GetMutableState_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = history.HistoryService_GetMutableState_Helper.UnwrapResponse(&result)
 	return
 }
 
@@ -260,6 +383,52 @@ func (c client) RecordDecisionTaskStarted(
 	return
 }
 
+func (c client) RemoveSignalMutableState(
+	ctx context.Context,
+	_RemoveRequest *history.RemoveSignalMutableStateRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := history.HistoryService_RemoveSignalMutableState_Helper.Args(_RemoveRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result history.HistoryService_RemoveSignalMutableState_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	err = history.HistoryService_RemoveSignalMutableState_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) ReplicateEvents(
+	ctx context.Context,
+	_ReplicateRequest *history.ReplicateEventsRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := history.HistoryService_ReplicateEvents_Helper.Args(_ReplicateRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result history.HistoryService_ReplicateEvents_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	err = history.HistoryService_ReplicateEvents_Helper.UnwrapResponse(&result)
+	return
+}
+
 func (c client) RequestCancelWorkflowExecution(
 	ctx context.Context,
 	_CancelRequest *history.RequestCancelWorkflowExecutionRequest,
@@ -280,6 +449,29 @@ func (c client) RequestCancelWorkflowExecution(
 	}
 
 	err = history.HistoryService_RequestCancelWorkflowExecution_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) ResetStickyTaskList(
+	ctx context.Context,
+	_ResetRequest *history.ResetStickyTaskListRequest,
+	opts ...yarpc.CallOption,
+) (success *history.ResetStickyTaskListResponse, err error) {
+
+	args := history.HistoryService_ResetStickyTaskList_Helper.Args(_ResetRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result history.HistoryService_ResetStickyTaskList_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = history.HistoryService_ResetStickyTaskList_Helper.UnwrapResponse(&result)
 	return
 }
 
@@ -356,7 +548,7 @@ func (c client) RespondDecisionTaskCompleted(
 	ctx context.Context,
 	_CompleteRequest *history.RespondDecisionTaskCompletedRequest,
 	opts ...yarpc.CallOption,
-) (err error) {
+) (success *history.RespondDecisionTaskCompletedResponse, err error) {
 
 	args := history.HistoryService_RespondDecisionTaskCompleted_Helper.Args(_CompleteRequest)
 
@@ -371,7 +563,30 @@ func (c client) RespondDecisionTaskCompleted(
 		return
 	}
 
-	err = history.HistoryService_RespondDecisionTaskCompleted_Helper.UnwrapResponse(&result)
+	success, err = history.HistoryService_RespondDecisionTaskCompleted_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) RespondDecisionTaskFailed(
+	ctx context.Context,
+	_FailedRequest *history.RespondDecisionTaskFailedRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := history.HistoryService_RespondDecisionTaskFailed_Helper.Args(_FailedRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result history.HistoryService_RespondDecisionTaskFailed_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	err = history.HistoryService_RespondDecisionTaskFailed_Helper.UnwrapResponse(&result)
 	return
 }
 
@@ -395,6 +610,29 @@ func (c client) ScheduleDecisionTask(
 	}
 
 	err = history.HistoryService_ScheduleDecisionTask_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) SignalWithStartWorkflowExecution(
+	ctx context.Context,
+	_SignalWithStartRequest *history.SignalWithStartWorkflowExecutionRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.StartWorkflowExecutionResponse, err error) {
+
+	args := history.HistoryService_SignalWithStartWorkflowExecution_Helper.Args(_SignalWithStartRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result history.HistoryService_SignalWithStartWorkflowExecution_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	success, err = history.HistoryService_SignalWithStartWorkflowExecution_Helper.UnwrapResponse(&result)
 	return
 }
 
@@ -441,6 +679,29 @@ func (c client) StartWorkflowExecution(
 	}
 
 	success, err = history.HistoryService_StartWorkflowExecution_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) SyncShardStatus(
+	ctx context.Context,
+	_SyncShardStatusRequest *history.SyncShardStatusRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := history.HistoryService_SyncShardStatus_Helper.Args(_SyncShardStatusRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result history.HistoryService_SyncShardStatus_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	err = history.HistoryService_SyncShardStatus_Helper.UnwrapResponse(&result)
 	return
 }
 

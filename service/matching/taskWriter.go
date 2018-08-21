@@ -47,7 +47,7 @@ type (
 	// taskWriter writes tasks sequentially to persistence
 	taskWriter struct {
 		tlMgr        *taskListManagerImpl
-		config       *Config
+		config       *taskListConfig
 		taskListID   *taskListID
 		taskManager  persistence.TaskManager
 		appendCh     chan *writeTaskRequest
@@ -68,7 +68,7 @@ func newTaskWriter(tlMgr *taskListManagerImpl) *taskWriter {
 		taskListID:  tlMgr.taskListID,
 		taskManager: tlMgr.engine.taskManager,
 		stopCh:      make(chan struct{}),
-		appendCh:    make(chan *writeTaskRequest, tlMgr.config.OutstandingTaskAppendsThreshold),
+		appendCh:    make(chan *writeTaskRequest, tlMgr.config.OutstandingTaskAppendsThreshold()),
 		logger:      tlMgr.logger,
 	}
 }
@@ -115,7 +115,7 @@ func (w *taskWriter) appendTask(execution *s.WorkflowExecution,
 			return nil, errShutdown
 		}
 	default: // channel is full, throttle
-		return nil, createServiceBusyError()
+		return nil, createServiceBusyError("Too many outstanding appends to the TaskList")
 	}
 }
 
@@ -164,6 +164,7 @@ writerLoop:
 					// might be out of sync. This is OK as caller can just retry.
 					RangeID:  rangeID,
 					AckLevel: w.tlMgr.getAckLevel(),
+					Kind:     w.tlMgr.getTaskListKind(),
 				}
 
 				w.tlMgr.persistenceLock.Lock()
@@ -197,7 +198,7 @@ writerLoop:
 
 func (w *taskWriter) getWriteBatch(reqs []*writeTaskRequest) []*writeTaskRequest {
 readLoop:
-	for i := 0; i < w.config.MaxTaskBatchSize; i++ {
+	for i := 0; i < w.config.MaxTaskBatchSize(); i++ {
 		select {
 		case req := <-w.appendCh:
 			reqs = append(reqs, req)

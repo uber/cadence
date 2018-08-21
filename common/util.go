@@ -25,11 +25,16 @@ import (
 	"sync"
 	"time"
 
+	"go.uber.org/yarpc/yarpcerrors"
 	"golang.org/x/net/context"
 
 	farm "github.com/dgryski/go-farm"
 	"github.com/uber-common/bark"
 
+	"math/rand"
+
+	h "github.com/uber/cadence/.gen/go/history"
+	m "github.com/uber/cadence/.gen/go/matching"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/backoff"
 )
@@ -42,6 +47,14 @@ const (
 	historyServiceOperationInitialInterval    = 50 * time.Millisecond
 	historyServiceOperationMaxInterval        = 10 * time.Second
 	historyServiceOperationExpirationInterval = 30 * time.Second
+
+	frontendServiceOperationInitialInterval    = 200 * time.Millisecond
+	frontendServiceOperationMaxInterval        = 5 * time.Second
+	frontendServiceOperationExpirationInterval = 15 * time.Second
+
+	matchingServiceOperationInitialInterval    = 1000 * time.Millisecond
+	matchingServiceOperationMaxInterval        = 10 * time.Second
+	matchingServiceOperationExpirationInterval = 30 * time.Second
 )
 
 // MergeDictoRight copies the contents of src to dest
@@ -103,6 +116,24 @@ func CreateHistoryServiceRetryPolicy() backoff.RetryPolicy {
 	return policy
 }
 
+// CreateFrontendServiceRetryPolicy creates a retry policy for calls to frontend service
+func CreateFrontendServiceRetryPolicy() backoff.RetryPolicy {
+	policy := backoff.NewExponentialRetryPolicy(frontendServiceOperationInitialInterval)
+	policy.SetMaximumInterval(frontendServiceOperationMaxInterval)
+	policy.SetExpirationInterval(frontendServiceOperationExpirationInterval)
+
+	return policy
+}
+
+// CreateMatchingRetryPolicy creates a retry policy for calls to matching service
+func CreateMatchingRetryPolicy() backoff.RetryPolicy {
+	policy := backoff.NewExponentialRetryPolicy(matchingServiceOperationInitialInterval)
+	policy.SetMaximumInterval(matchingServiceOperationMaxInterval)
+	policy.SetExpirationInterval(matchingServiceOperationExpirationInterval)
+
+	return policy
+}
+
 // IsPersistenceTransientError checks if the error is a transient persistence error
 func IsPersistenceTransientError(err error) bool {
 	switch err.(type) {
@@ -113,6 +144,11 @@ func IsPersistenceTransientError(err error) bool {
 	return false
 }
 
+// IsServiceTransientError checks if the error is a retryable error.
+func IsServiceTransientError(err error) bool {
+	return !IsServiceNonRetryableError(err)
+}
+
 // IsServiceNonRetryableError checks if the error is a non retryable error.
 func IsServiceNonRetryableError(err error) bool {
 	switch err.(type) {
@@ -120,6 +156,45 @@ func IsServiceNonRetryableError(err error) bool {
 		return true
 	case *workflow.BadRequestError:
 		return true
+	case *workflow.DomainNotActiveError:
+		return true
+	case *workflow.CancellationAlreadyRequestedError:
+		return true
+	case *yarpcerrors.Status:
+		rpcErr := err.(*yarpcerrors.Status)
+		if rpcErr.Code() != yarpcerrors.CodeDeadlineExceeded {
+			return true
+		}
+		return false
+	}
+
+	return false
+}
+
+// IsWhitelistServiceTransientError checks if the error is a transient error.
+func IsWhitelistServiceTransientError(err error) bool {
+	if err == context.DeadlineExceeded {
+		return true
+	}
+
+	switch err.(type) {
+	case *workflow.InternalServiceError:
+		return true
+	case *workflow.ServiceBusyError:
+		return true
+	case *workflow.LimitExceededError:
+		return true
+	case *h.ShardOwnershipLostError:
+		return true
+	case *yarpcerrors.Status:
+		// We only selectively retry the following yarpc errors client can safe retry with a backoff
+		if yarpcerrors.IsDeadlineExceeded(err) ||
+			yarpcerrors.IsUnavailable(err) ||
+			yarpcerrors.IsUnknown(err) ||
+			yarpcerrors.IsInternal(err) {
+			return true
+		}
+		return false
 	}
 
 	return false
@@ -158,4 +233,42 @@ func IsValidContext(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+// GenerateRandomString is used for generate test string
+func GenerateRandomString(n int) string {
+	rand.Seed(time.Now().UnixNano())
+	letterRunes := []rune("random")
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	return string(b)
+}
+
+// CreateMatchingPollForDecisionTaskResponse create response for matching's PollForDecisionTask
+func CreateMatchingPollForDecisionTaskResponse(historyResponse *h.RecordDecisionTaskStartedResponse, workflowExecution *workflow.WorkflowExecution, token []byte) *m.PollForDecisionTaskResponse {
+	matchingResp := &m.PollForDecisionTaskResponse{
+		WorkflowExecution:         workflowExecution,
+		TaskToken:                 token,
+		Attempt:                   Int64Ptr(historyResponse.GetAttempt()),
+		WorkflowType:              historyResponse.WorkflowType,
+		StartedEventId:            historyResponse.StartedEventId,
+		StickyExecutionEnabled:    historyResponse.StickyExecutionEnabled,
+		NextEventId:               historyResponse.NextEventId,
+		DecisionInfo:              historyResponse.DecisionInfo,
+		WorkflowExecutionTaskList: historyResponse.WorkflowExecutionTaskList,
+	}
+	if historyResponse.GetPreviousStartedEventId() != EmptyEventID {
+		matchingResp.PreviousStartedEventId = historyResponse.PreviousStartedEventId
+	}
+	return matchingResp
+}
+
+// MinInt32 return smaller one of two inputs int32
+func MinInt32(a, b int32) int32 {
+	if a < b {
+		return a
+	}
+	return b
 }

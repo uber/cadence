@@ -34,6 +34,7 @@ const (
 	HistoryEngineShutdown              = 2003
 	PersistentStoreErrorEventID        = 2010
 	HistorySerializationErrorEventID   = 2020
+	HistoryDeserializationErrorEventID = 2021
 	DuplicateTaskEventID               = 2030
 	MultipleCompletionDecisionsEventID = 2040
 	DuplicateTransferTaskEventID       = 2050
@@ -74,7 +75,21 @@ const (
 	TaskListUnloaded      = 5003
 	TaskListLoadingFailed = 5004
 
+	// Query task events
+	InvalidQueryTaskEventID = 6000
+	QueryTaskFailedEventID  = 6001
+
+	// Worker Service Events
+	ReplicationTaskProcessorStarting         = 7100
+	ReplicationTaskProcessorStarted          = 7101
+	ReplicationTaskProcessorStartFailed      = 7102
+	ReplicationTaskProcessorShuttingDown     = 7103
+	ReplicationTaskProcessorShutdown         = 7104
+	ReplicationTaskProcessorShutdownTimedout = 7105
+	ReplicationTaskProcessingFailed          = 7106
+
 	// General purpose events
-	OperationFailed = 9000
-	OperationPanic  = 9001
+	OperationFailed   = 9000
+	OperationPanic    = 9001
+	OperationCritical = 9002
 )

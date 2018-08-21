@@ -12,29 +12,38 @@ cd $GOPATH/src/github.com/uber/cadence/docker
 docker-compose up
 ```
 
-View metrics at localhost:8080/dashboard
+View metrics at localhost:8080/dashboard    
+View Cadence-Web at localhost:8088  
+Use Cadence-CLI with `docker run --rm ubercadence/cli:master`
 
 
 Using a pre-built image
 -----------------------
 With every tagged release of the cadence server, there is also a corresponding
 docker image that's uploaded to docker hub. In addition, the release will also
-contain a docker.tar.gz file (docker-compose startup scripts). Execute the following
+contain a **docker.tar.gz** file (docker-compose startup scripts). 
+Go [here](https://github.com/uber/cadence/releases/latest) to download a latest **docker.tar.gz** 
+
+Execute the following
 commands to start a pre-built image along with all dependencies (cassandra/statsd).
 
 ```
-wget https://github.com/uber/cadence/releases/download/v0.1.0-beta/docker.tar.gz
 tar -xzvf docker.tar.gz
 cd docker
 docker-compose up
 ```
 
-Updating an existing image and restarting
+Building an image for any branch and restarting
 -----------------------------------------
+Replace **YOUR_TAG** and **YOUR_CHECKOUT_BRANCH** in the below command to build:
 ```
 cd $GOPATH/src/github.com/uber/cadence/docker
-docker-compose stop
-docker-compose build
+docker build . -t ubercadence/server:YOUR_TAG --build-arg git_branch=YOUR_CHECKOUT_BRANCH
+```
+Replace the tag of **image: ubercadence/server** to **YOUR_TAG** in docker-compose.yml .
+Then stop service and remove all containers using the below commands.
+```
+docker-compose down
 docker-compose up
 ```
 
@@ -51,9 +60,29 @@ docker run -e CASSANDRA_CONSISTENCY=Quorum \            -- Default cassandra con
     -e KEYSPACE=<keyspace>                              -- Cassandra keyspace
     -e VISIBILITY_KEYSPACE=<visibility_keyspace>        -- Cassandra visibility keyspace
     -e SKIP_SCHEMA_SETUP=true                           -- do not setup cassandra schema during startup
-    -e RINGPOP_SEEDS=10.x.x.x  \                        -- csv of ipaddrs for gossip bootstrap
+    -e RINGPOP_SEEDS=10.x.x.x,10.x.x.x  \               -- csv of ipaddrs for gossip bootstrap
     -e STATSD_ENDPOINT=10.x.x.x:8125                    -- statsd server endpoint
     -e NUM_HISTORY_SHARDS=1024  \                       -- Number of history shards
     -e SERVICES=history,matching \                      -- Spinup only the provided services
+    -e LOG_LEVEL=debug,info \                           -- Logging level
     ubercadence/server:<tag>
+```
+Update docker-compose.yml when releasing new version
+=========================
+0. Creat new version tag in the repo
+1. Build the new docker image and push into docker hub
+```bash
+docker build . -t ubercadence/server:THE.LATEST.VERSION  --build-arg git_branch=vTHE.LATEST.VERSION 
+docker push ubercadence/server:master
+```
+2. Remember to update the docker-compose.yml to use latest version and check in to master
+```yaml
+  cadence:
+    image: ubercadence/server:THE.LATEST.VERSION 
+    ports
+```
+3. Create the tar.gz file and upload to release page
+```bash
+cd github.com/uber/cadence/docker
+tar -cvf docker.tar.gz *
 ```

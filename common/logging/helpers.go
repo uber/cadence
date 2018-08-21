@@ -61,7 +61,21 @@ func LogOperationPanicEvent(logger bark.Logger, msg string, err error) {
 	logger.WithFields(bark.Fields{
 		TagWorkflowEventID: OperationPanic,
 		TagWorkflowErr:     err,
-	}).Fatalf("%v.  Error: %v", msg, err)
+	}).Fatal(msg)
+}
+
+// LogInternalServiceError is used to log internal service error
+func LogInternalServiceError(logger bark.Logger, err error) {
+	logger.WithFields(bark.Fields{
+		TagErr: err,
+	}).Error("Internal service error")
+}
+
+// LogUncategorizedError is used to log error that are uncategorized
+func LogUncategorizedError(logger bark.Logger, err error) {
+	logger.WithFields(bark.Fields{
+		TagErr: err,
+	}).Error("Uncategorized error")
 }
 
 //
@@ -82,6 +96,14 @@ func LogHistorySerializationErrorEvent(logger bark.Logger, err error, msg string
 		TagWorkflowEventID: HistorySerializationErrorEventID,
 		TagWorkflowErr:     err,
 	}).Errorf("Error serializing workflow execution history.  Msg: %v", msg)
+}
+
+// LogHistoryDeserializationErrorEvent is used to log errors deserializing execution history
+func LogHistoryDeserializationErrorEvent(logger bark.Logger, err error, msg string) {
+	logger.WithFields(bark.Fields{
+		TagWorkflowEventID: HistoryDeserializationErrorEventID,
+		TagWorkflowErr:     err,
+	}).Errorf("Error deserializing workflow execution history.  Msg: %v", msg)
 }
 
 // LogHistoryEngineStartingEvent is used to log history engine starting
@@ -127,41 +149,6 @@ func LogDuplicateTransferTaskEvent(lg bark.Logger, taskType int, taskID int64, s
 		TagWorkflowEventID: DuplicateTransferTaskEventID,
 	}).Debugf("Potentially duplicate task.  TaskID: %v, TaskType: %v, scheduleID: %v",
 		taskID, taskType, scheduleID)
-}
-
-// LogTransferQueueProcesorStartingEvent is used to log transfer queue processor starting
-func LogTransferQueueProcesorStartingEvent(logger bark.Logger) {
-	logger.WithFields(bark.Fields{
-		TagWorkflowEventID: TransferQueueProcessorStarting,
-	}).Info("Transfer queue processor starting.")
-}
-
-// LogTransferQueueProcesorStartedEvent is used to log transfer queue processor started
-func LogTransferQueueProcesorStartedEvent(logger bark.Logger) {
-	logger.WithFields(bark.Fields{
-		TagWorkflowEventID: TransferQueueProcessorStarted,
-	}).Info("Transfer queue processor started.")
-}
-
-// LogTransferQueueProcesorShuttingDownEvent is used to log transfer queue processing shutting down
-func LogTransferQueueProcesorShuttingDownEvent(logger bark.Logger) {
-	logger.WithFields(bark.Fields{
-		TagWorkflowEventID: TransferQueueProcessorShuttingDown,
-	}).Info("Transfer queue processor shutting down.")
-}
-
-// LogTransferQueueProcesorShutdownEvent is used to log transfer queue processor shutdown complete
-func LogTransferQueueProcesorShutdownEvent(logger bark.Logger) {
-	logger.WithFields(bark.Fields{
-		TagWorkflowEventID: TransferQueueProcessorShutdown,
-	}).Info("Transfer queue processor shutdown.")
-}
-
-// LogTransferQueueProcesorShutdownTimedoutEvent is used to log timeout during transfer queue processor shutdown
-func LogTransferQueueProcesorShutdownTimedoutEvent(logger bark.Logger) {
-	logger.WithFields(bark.Fields{
-		TagWorkflowEventID: TransferQueueProcessorShutdownTimedout,
-	}).Warn("Transfer queue processor timedout on shutdown.")
 }
 
 // LogShardRangeUpdatedEvent is used to log rangeID update for a shard
@@ -330,4 +317,138 @@ func LogTaskListUnloadedEvent(logger bark.Logger) {
 	logger.WithFields(bark.Fields{
 		TagWorkflowEventID: TaskListUnloaded,
 	}).Info("Unloaded TaskList.")
+}
+
+// LogQueryTaskMissingWorkflowTypeErrorEvent is used to log invalid query task that is missing workflow type
+func LogQueryTaskMissingWorkflowTypeErrorEvent(logger bark.Logger, workflowID, runID, queryType string) {
+	logger.WithFields(bark.Fields{
+		TagWorkflowEventID: InvalidQueryTaskEventID,
+		"WorkflowID":       workflowID,
+		"RunID":            runID,
+		"QueryType":        queryType,
+	}).Error("Cannot get WorkflowType for QueryTask.")
+}
+
+// LogQueryTaskFailedEvent is used to log query task failure
+func LogQueryTaskFailedEvent(logger bark.Logger, domain, workflowID, runID, queryType string) {
+	logger.WithFields(bark.Fields{
+		TagWorkflowEventID: QueryTaskFailedEventID,
+		"Domain":           domain,
+		"WorkflowID":       workflowID,
+		"RunID":            runID,
+		"QueryType":        queryType,
+	}).Info("QueryWorkflowFailed.")
+}
+
+// LogReplicationTaskProcessorStartingEvent is used to log replication task processor starting
+func LogReplicationTaskProcessorStartingEvent(logger bark.Logger) {
+	logger.WithFields(bark.Fields{
+		TagWorkflowEventID: ReplicationTaskProcessorStarting,
+	}).Info("Replication task processor starting.")
+}
+
+// LogReplicationTaskProcessorStartedEvent is used to log replication task processor started
+func LogReplicationTaskProcessorStartedEvent(logger bark.Logger) {
+	logger.WithFields(bark.Fields{
+		TagWorkflowEventID: ReplicationTaskProcessorStarted,
+	}).Info("Replication task processor started.")
+}
+
+// LogReplicationTaskProcessorStartFailedEvent is used to log replication task processor started
+func LogReplicationTaskProcessorStartFailedEvent(logger bark.Logger, err error) {
+	logger.WithFields(bark.Fields{
+		TagWorkflowEventID: ReplicationTaskProcessorStartFailed,
+	}).WithError(err).Warn("Replication task processor failed to start.")
+}
+
+// LogReplicationTaskProcessorShuttingDownEvent is used to log replication task processing shutting down
+func LogReplicationTaskProcessorShuttingDownEvent(logger bark.Logger) {
+	logger.WithFields(bark.Fields{
+		TagWorkflowEventID: ReplicationTaskProcessorShuttingDown,
+	}).Info("Replication task processor shutting down.")
+}
+
+// LogReplicationTaskProcessorShutdownEvent is used to log replication task processor shutdown complete
+func LogReplicationTaskProcessorShutdownEvent(logger bark.Logger) {
+	logger.WithFields(bark.Fields{
+		TagWorkflowEventID: ReplicationTaskProcessorShutdown,
+	}).Info("Replication task processor shutdown.")
+}
+
+// LogReplicationTaskProcessorShutdownTimedoutEvent is used to log timeout during replication task processor shutdown
+func LogReplicationTaskProcessorShutdownTimedoutEvent(logger bark.Logger) {
+	logger.WithFields(bark.Fields{
+		TagWorkflowEventID: ReplicationTaskProcessorShutdownTimedout,
+	}).Warn("Replication task processor timedout on shutdown.")
+}
+
+// LogQueueProcesorStartingEvent is used to log queue processor starting
+func LogQueueProcesorStartingEvent(logger bark.Logger) {
+	logger.WithFields(bark.Fields{
+		TagWorkflowEventID: TransferQueueProcessorStarting,
+	}).Info("Queue processor starting.")
+}
+
+// LogQueueProcesorStartedEvent is used to log queue processor started
+func LogQueueProcesorStartedEvent(logger bark.Logger) {
+	logger.WithFields(bark.Fields{
+		TagWorkflowEventID: TransferQueueProcessorStarted,
+	}).Info("Queue processor started.")
+}
+
+// LogQueueProcesorShuttingDownEvent is used to log queue processor shutting down
+func LogQueueProcesorShuttingDownEvent(logger bark.Logger) {
+	logger.WithFields(bark.Fields{
+		TagWorkflowEventID: TransferQueueProcessorShuttingDown,
+	}).Info("Queue processor shutting down.")
+}
+
+// LogQueueProcesorShutdownEvent is used to log transfer queue processor shutdown complete
+func LogQueueProcesorShutdownEvent(logger bark.Logger) {
+	logger.WithFields(bark.Fields{
+		TagWorkflowEventID: TransferQueueProcessorShutdown,
+	}).Info("Queue processor shutdown.")
+}
+
+// LogQueueProcesorShutdownTimedoutEvent is used to log timeout during transfer queue processor shutdown
+func LogQueueProcesorShutdownTimedoutEvent(logger bark.Logger) {
+	logger.WithFields(bark.Fields{
+		TagWorkflowEventID: TransferQueueProcessorShutdownTimedout,
+	}).Warn("Queue processor timedout on shutdown.")
+}
+
+// LogTaskProcessingFailedEvent is used to log failures from task processing.
+func LogTaskProcessingFailedEvent(logger bark.Logger, err error) {
+	logger.WithFields(bark.Fields{
+		TagWorkflowEventID: TransferTaskProcessingFailed,
+		TagWorkflowErr:     err,
+	}).Error("Processor failed to process task.")
+}
+
+// LogCriticalErrorEvent is used to log critical errors by application it is expected to have alerts setup on such errors
+func LogCriticalErrorEvent(logger bark.Logger, msg string, err error) {
+	logger.WithFields(bark.Fields{
+		TagWorkflowEventID: OperationCritical,
+		TagWorkflowErr:     err,
+	}).Error(msg)
+}
+
+// LogDecisionTimeoutTooLarge is used to log warning msg for workflow that contains large decision timeout
+func LogDecisionTimeoutTooLarge(logger bark.Logger, t int32, domain, wid, wfType string) {
+	logger.WithFields(bark.Fields{
+		"Domain":          domain,
+		"WorkflowID":      wid,
+		"WorkflowType":    wfType,
+		"DecisionTimeout": t,
+	}).Warn("Decision timeout is too large")
+}
+
+// LogDecisionTimeoutLargerThanWorkflowTimeout is used to log warning msg for workflow that contains large decision timeout
+func LogDecisionTimeoutLargerThanWorkflowTimeout(logger bark.Logger, t int32, domain, wid, wfType string) {
+	logger.WithFields(bark.Fields{
+		"Domain":          domain,
+		"WorkflowID":      wid,
+		"WorkflowType":    wfType,
+		"DecisionTimeout": t,
+	}).Warn("Decision timeout is larger than workflow timeout")
 }

@@ -23,68 +23,161 @@ package history
 import (
 	"time"
 
+	"github.com/uber-common/bark"
+	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 // Config represents configuration for cadence-history service
 type Config struct {
 	NumberOfShards int
 
+	RPS               dynamicconfig.IntPropertyFn
+	PersistenceMaxQPS dynamicconfig.IntPropertyFn
+
 	// HistoryCache settings
-	HistoryCacheInitialSize int
-	HistoryCacheMaxSize     int
-	HistoryCacheTTL         time.Duration
+	// Change of these configs require shard restart
+	HistoryCacheInitialSize dynamicconfig.IntPropertyFn
+	HistoryCacheMaxSize     dynamicconfig.IntPropertyFn
+	HistoryCacheTTL         dynamicconfig.DurationPropertyFn
 
 	// ShardController settings
 	RangeSizeBits        uint
-	AcquireShardInterval time.Duration
+	AcquireShardInterval dynamicconfig.DurationPropertyFn
 
-	// Timeout settings
-	DefaultScheduleToStartActivityTimeoutInSecs int32
-	DefaultScheduleToCloseActivityTimeoutInSecs int32
-	DefaultStartToCloseActivityTimeoutInSecs    int32
+	// the atrificial delay added to standby cluster's view of active cluster's time
+	StandbyClusterDelay dynamicconfig.DurationPropertyFn
 
 	// TimerQueueProcessor settings
-	TimerTaskBatchSize                    int
-	ProcessTimerTaskWorkerCount           int
-	TimerProcessorUpdateFailureRetryCount int
-	TimerProcessorGetFailureRetryCount    int
-	TimerProcessorUpdateAckInterval       time.Duration
+	TimerTaskBatchSize                               dynamicconfig.IntPropertyFn
+	TimerTaskWorkerCount                             dynamicconfig.IntPropertyFn
+	TimerTaskMaxRetryCount                           dynamicconfig.IntPropertyFn
+	TimerProcessorStartDelay                         dynamicconfig.DurationPropertyFn
+	TimerProcessorFailoverStartDelay                 dynamicconfig.DurationPropertyFn
+	TimerProcessorGetFailureRetryCount               dynamicconfig.IntPropertyFn
+	TimerProcessorCompleteTimerFailureRetryCount     dynamicconfig.IntPropertyFn
+	TimerProcessorUpdateAckInterval                  dynamicconfig.DurationPropertyFn
+	TimerProcessorUpdateAckIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
+	TimerProcessorCompleteTimerInterval              dynamicconfig.DurationPropertyFn
+	TimerProcessorFailoverMaxPollRPS                 dynamicconfig.IntPropertyFn
+	TimerProcessorMaxPollRPS                         dynamicconfig.IntPropertyFn
+	TimerProcessorMaxPollInterval                    dynamicconfig.DurationPropertyFn
+	TimerProcessorMaxPollIntervalJitterCoefficient   dynamicconfig.FloatPropertyFn
+	TimerProcessorMaxTimeShift                       dynamicconfig.DurationPropertyFn
 
 	// TransferQueueProcessor settings
-	TransferTaskBatchSize              int
-	TransferProcessorMaxPollRPS        int
-	TransferProcessorMaxPollInterval   time.Duration
-	TransferProcessorUpdateAckInterval time.Duration
-	TransferTaskWorkerCount            int
+	TransferTaskBatchSize                               dynamicconfig.IntPropertyFn
+	TransferTaskWorkerCount                             dynamicconfig.IntPropertyFn
+	TransferTaskMaxRetryCount                           dynamicconfig.IntPropertyFn
+	TransferProcessorStartDelay                         dynamicconfig.DurationPropertyFn
+	TransferProcessorFailoverStartDelay                 dynamicconfig.DurationPropertyFn
+	TransferProcessorCompleteTransferFailureRetryCount  dynamicconfig.IntPropertyFn
+	TransferProcessorFailoverMaxPollRPS                 dynamicconfig.IntPropertyFn
+	TransferProcessorMaxPollRPS                         dynamicconfig.IntPropertyFn
+	TransferProcessorMaxPollInterval                    dynamicconfig.DurationPropertyFn
+	TransferProcessorMaxPollIntervalJitterCoefficient   dynamicconfig.FloatPropertyFn
+	TransferProcessorUpdateAckInterval                  dynamicconfig.DurationPropertyFn
+	TransferProcessorUpdateAckIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
+	TransferProcessorCompleteTransferInterval           dynamicconfig.DurationPropertyFn
+
+	// ReplicatorQueueProcessor settings
+	ReplicatorTaskBatchSize                               dynamicconfig.IntPropertyFn
+	ReplicatorTaskWorkerCount                             dynamicconfig.IntPropertyFn
+	ReplicatorTaskMaxRetryCount                           dynamicconfig.IntPropertyFn
+	ReplicatorProcessorStartDelay                         dynamicconfig.DurationPropertyFn
+	ReplicatorProcessorMaxPollRPS                         dynamicconfig.IntPropertyFn
+	ReplicatorProcessorMaxPollInterval                    dynamicconfig.DurationPropertyFn
+	ReplicatorProcessorMaxPollIntervalJitterCoefficient   dynamicconfig.FloatPropertyFn
+	ReplicatorProcessorUpdateAckInterval                  dynamicconfig.DurationPropertyFn
+	ReplicatorProcessorUpdateAckIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
+
+	// Persistence settings
+	ExecutionMgrNumConns dynamicconfig.IntPropertyFn
+	HistoryMgrNumConns   dynamicconfig.IntPropertyFn
+
+	// System Limits
+	MaximumBufferedEventsBatch dynamicconfig.IntPropertyFn
+
+	// ShardUpdateMinInterval the minimal time interval which the shard info can be updated
+	ShardUpdateMinInterval dynamicconfig.DurationPropertyFn
+	// ShardSyncMinInterval the minimal time interval which the shard info should be sync to remote
+	ShardSyncMinInterval dynamicconfig.DurationPropertyFn
+
+	// Time to hold a poll request before returning an empty response
+	// right now only used by GetMutableState
+	LongPollExpirationInterval dynamicconfig.DurationPropertyFnWithDomainFilter
 }
 
 // NewConfig returns new service config with default values
-func NewConfig(numberOfShards int) *Config {
+func NewConfig(dc *dynamicconfig.Collection, numberOfShards int) *Config {
 	return &Config{
-		NumberOfShards:                              numberOfShards,
-		HistoryCacheInitialSize:                     256,
-		HistoryCacheMaxSize:                         1 * 1024,
-		HistoryCacheTTL:                             time.Hour,
-		RangeSizeBits:                               20, // 20 bits for sequencer, 2^20 sequence number for any range
-		AcquireShardInterval:                        time.Minute,
-		DefaultScheduleToStartActivityTimeoutInSecs: 10,
-		DefaultScheduleToCloseActivityTimeoutInSecs: 10,
-		DefaultStartToCloseActivityTimeoutInSecs:    10,
-		TimerTaskBatchSize:                          100,
-		ProcessTimerTaskWorkerCount:                 30,
-		TimerProcessorUpdateFailureRetryCount:       5,
-		TimerProcessorGetFailureRetryCount:          5,
-		TimerProcessorUpdateAckInterval:             10 * time.Second,
-		TransferTaskBatchSize:                       10,
-		TransferProcessorMaxPollRPS:                 100,
-		TransferProcessorMaxPollInterval:            10 * time.Second,
-		TransferProcessorUpdateAckInterval:          10 * time.Second,
-		TransferTaskWorkerCount:                     10,
+		NumberOfShards:                                        numberOfShards,
+		RPS:                                                   dc.GetIntProperty(dynamicconfig.HistoryRPS, 1200),
+		PersistenceMaxQPS:                                     dc.GetIntProperty(dynamicconfig.HistoryPersistenceMaxQPS, 9000),
+		HistoryCacheInitialSize:                               dc.GetIntProperty(dynamicconfig.HistoryCacheInitialSize, 128),
+		HistoryCacheMaxSize:                                   dc.GetIntProperty(dynamicconfig.HistoryCacheMaxSize, 512),
+		HistoryCacheTTL:                                       dc.GetDurationProperty(dynamicconfig.HistoryCacheTTL, time.Hour),
+		RangeSizeBits:                                         20, // 20 bits for sequencer, 2^20 sequence number for any range
+		AcquireShardInterval:                                  dc.GetDurationProperty(dynamicconfig.AcquireShardInterval, time.Minute),
+		StandbyClusterDelay:                                   dc.GetDurationProperty(dynamicconfig.AcquireShardInterval, 5*time.Minute),
+		TimerTaskBatchSize:                                    dc.GetIntProperty(dynamicconfig.TimerTaskBatchSize, 100),
+		TimerTaskWorkerCount:                                  dc.GetIntProperty(dynamicconfig.TimerTaskWorkerCount, 10),
+		TimerTaskMaxRetryCount:                                dc.GetIntProperty(dynamicconfig.TimerTaskMaxRetryCount, 100),
+		TimerProcessorStartDelay:                              dc.GetDurationProperty(dynamicconfig.TimerProcessorStartDelay, 1*time.Microsecond),
+		TimerProcessorFailoverStartDelay:                      dc.GetDurationProperty(dynamicconfig.TimerProcessorFailoverStartDelay, 5*time.Second),
+		TimerProcessorGetFailureRetryCount:                    dc.GetIntProperty(dynamicconfig.TimerProcessorGetFailureRetryCount, 5),
+		TimerProcessorCompleteTimerFailureRetryCount:          dc.GetIntProperty(dynamicconfig.TimerProcessorCompleteTimerFailureRetryCount, 10),
+		TimerProcessorUpdateAckInterval:                       dc.GetDurationProperty(dynamicconfig.TimerProcessorUpdateAckInterval, 5*time.Second),
+		TimerProcessorUpdateAckIntervalJitterCoefficient:      dc.GetFloat64Property(dynamicconfig.TimerProcessorUpdateAckIntervalJitterCoefficient, 0.15),
+		TimerProcessorCompleteTimerInterval:                   dc.GetDurationProperty(dynamicconfig.TimerProcessorCompleteTimerInterval, 3*time.Second),
+		TimerProcessorFailoverMaxPollRPS:                      dc.GetIntProperty(dynamicconfig.TimerProcessorFailoverMaxPollRPS, 1),
+		TimerProcessorMaxPollRPS:                              dc.GetIntProperty(dynamicconfig.TimerProcessorMaxPollRPS, 20),
+		TimerProcessorMaxPollInterval:                         dc.GetDurationProperty(dynamicconfig.TimerProcessorMaxPollInterval, 5*time.Minute),
+		TimerProcessorMaxPollIntervalJitterCoefficient:        dc.GetFloat64Property(dynamicconfig.TimerProcessorMaxPollIntervalJitterCoefficient, 0.15),
+		TimerProcessorMaxTimeShift:                            dc.GetDurationProperty(dynamicconfig.TimerProcessorMaxPollInterval, 1*time.Second),
+		TransferTaskBatchSize:                                 dc.GetIntProperty(dynamicconfig.TransferTaskBatchSize, 100),
+		TransferProcessorFailoverMaxPollRPS:                   dc.GetIntProperty(dynamicconfig.TransferProcessorFailoverMaxPollRPS, 1),
+		TransferProcessorMaxPollRPS:                           dc.GetIntProperty(dynamicconfig.TransferProcessorMaxPollRPS, 20),
+		TransferTaskWorkerCount:                               dc.GetIntProperty(dynamicconfig.TransferTaskWorkerCount, 10),
+		TransferTaskMaxRetryCount:                             dc.GetIntProperty(dynamicconfig.TransferTaskMaxRetryCount, 100),
+		TransferProcessorStartDelay:                           dc.GetDurationProperty(dynamicconfig.TransferProcessorStartDelay, 1*time.Microsecond),
+		TransferProcessorFailoverStartDelay:                   dc.GetDurationProperty(dynamicconfig.TransferProcessorFailoverStartDelay, 5*time.Second),
+		TransferProcessorCompleteTransferFailureRetryCount:    dc.GetIntProperty(dynamicconfig.TransferProcessorCompleteTransferFailureRetryCount, 10),
+		TransferProcessorMaxPollInterval:                      dc.GetDurationProperty(dynamicconfig.TransferProcessorMaxPollInterval, 1*time.Minute),
+		TransferProcessorMaxPollIntervalJitterCoefficient:     dc.GetFloat64Property(dynamicconfig.TransferProcessorMaxPollIntervalJitterCoefficient, 0.15),
+		TransferProcessorUpdateAckInterval:                    dc.GetDurationProperty(dynamicconfig.TransferProcessorUpdateAckInterval, 5*time.Second),
+		TransferProcessorUpdateAckIntervalJitterCoefficient:   dc.GetFloat64Property(dynamicconfig.TransferProcessorUpdateAckIntervalJitterCoefficient, 0.15),
+		TransferProcessorCompleteTransferInterval:             dc.GetDurationProperty(dynamicconfig.TransferProcessorCompleteTransferInterval, 3*time.Second),
+		ReplicatorTaskBatchSize:                               dc.GetIntProperty(dynamicconfig.ReplicatorTaskBatchSize, 100),
+		ReplicatorTaskWorkerCount:                             dc.GetIntProperty(dynamicconfig.ReplicatorTaskWorkerCount, 10),
+		ReplicatorTaskMaxRetryCount:                           dc.GetIntProperty(dynamicconfig.ReplicatorTaskMaxRetryCount, 100),
+		ReplicatorProcessorStartDelay:                         dc.GetDurationProperty(dynamicconfig.ReplicatorProcessorStartDelay, 1*time.Microsecond),
+		ReplicatorProcessorMaxPollRPS:                         dc.GetIntProperty(dynamicconfig.ReplicatorProcessorMaxPollRPS, 20),
+		ReplicatorProcessorMaxPollInterval:                    dc.GetDurationProperty(dynamicconfig.ReplicatorProcessorMaxPollInterval, 1*time.Minute),
+		ReplicatorProcessorMaxPollIntervalJitterCoefficient:   dc.GetFloat64Property(dynamicconfig.ReplicatorProcessorMaxPollIntervalJitterCoefficient, 0.15),
+		ReplicatorProcessorUpdateAckInterval:                  dc.GetDurationProperty(dynamicconfig.ReplicatorProcessorUpdateAckInterval, 5*time.Second),
+		ReplicatorProcessorUpdateAckIntervalJitterCoefficient: dc.GetFloat64Property(dynamicconfig.ReplicatorProcessorUpdateAckIntervalJitterCoefficient, 0.15),
+		ExecutionMgrNumConns:                                  dc.GetIntProperty(dynamicconfig.ExecutionMgrNumConns, 50),
+		HistoryMgrNumConns:                                    dc.GetIntProperty(dynamicconfig.HistoryMgrNumConns, 50),
+		MaximumBufferedEventsBatch:                            dc.GetIntProperty(dynamicconfig.MaximumBufferedEventsBatch, 100),
+		ShardUpdateMinInterval:                                dc.GetDurationProperty(dynamicconfig.ShardUpdateMinInterval, 5*time.Minute),
+		ShardSyncMinInterval:                                  dc.GetDurationProperty(dynamicconfig.ShardSyncMinInterval, 5*time.Minute),
+
+		// history client: client/history/client.go set the client timeout 30s
+		LongPollExpirationInterval: dc.GetDurationPropertyFilteredByDomain(
+			dynamicconfig.HistoryLongPollExpirationInterval, time.Second*20,
+		),
 	}
+}
+
+// GetShardID return the corresponding shard ID for a given workflow ID
+func (config *Config) GetShardID(workflowID string) int {
+	return common.WorkflowIDToHistoryShard(workflowID, config.NumberOfShards)
 }
 
 // Service represents the cadence-history service
@@ -96,11 +189,15 @@ type Service struct {
 }
 
 // NewService builds a new cadence-history service
-func NewService(params *service.BootstrapParams, config *Config) common.Daemon {
+func NewService(params *service.BootstrapParams) common.Daemon {
+	params.UpdateLoggerWithServiceName(common.HistoryServiceName)
 	return &Service{
 		params: params,
 		stopC:  make(chan struct{}),
-		config: config,
+		config: NewConfig(
+			dynamicconfig.NewCollection(params.DynamicConfig, params.Logger),
+			params.CassandraConfig.NumHistoryShards,
+		),
 	}
 }
 
@@ -114,6 +211,9 @@ func (s *Service) Start() {
 
 	base := service.New(p)
 
+	persistenceMaxQPS := s.config.PersistenceMaxQPS()
+	persistenceRateLimiter := common.NewTokenBucket(persistenceMaxQPS, common.NewRealTimeSource())
+
 	s.metricsClient = base.GetMetricsClient()
 
 	shardMgr, err := persistence.NewCassandraShardPersistence(p.CassandraConfig.Hosts,
@@ -122,42 +222,33 @@ func (s *Service) Start() {
 		p.CassandraConfig.Password,
 		p.CassandraConfig.Datacenter,
 		p.CassandraConfig.Keyspace,
+		p.ClusterMetadata.GetCurrentClusterName(),
 		p.Logger)
 
 	if err != nil {
 		log.Fatalf("failed to create shard manager: %v", err)
 	}
-	shardMgr = persistence.NewShardPersistenceClient(shardMgr, base.GetMetricsClient())
+	shardMgr = persistence.NewShardPersistenceRateLimitedClient(shardMgr, persistenceRateLimiter, log)
+	shardMgr = persistence.NewShardPersistenceMetricsClient(shardMgr, base.GetMetricsClient(), log)
 
 	// Hack to create shards for bootstrap purposes
 	// TODO: properly pre-create all shards before deployment.
-	for shardID := 0; shardID < p.CassandraConfig.NumHistoryShards; shardID++ {
-		err := shardMgr.CreateShard(&persistence.CreateShardRequest{
-			ShardInfo: &persistence.ShardInfo{
-				ShardID:          shardID,
-				RangeID:          0,
-				TransferAckLevel: 0,
-			}})
+	s.createAllShards(p.CassandraConfig.NumHistoryShards, shardMgr, log)
 
-		if err != nil {
-			if _, ok := err.(*persistence.ShardAlreadyExistError); !ok {
-				log.Fatalf("failed to create shard for ShardId: %v, with error: %v", shardID, err)
-			}
-		}
-	}
-
-	metadata, err := persistence.NewCassandraMetadataPersistence(p.CassandraConfig.Hosts,
+	metadata, err := persistence.NewMetadataManagerProxy(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,
 		p.CassandraConfig.User,
 		p.CassandraConfig.Password,
 		p.CassandraConfig.Datacenter,
 		p.CassandraConfig.Keyspace,
+		p.ClusterMetadata.GetCurrentClusterName(),
 		p.Logger)
 
 	if err != nil {
 		log.Fatalf("failed to create metadata manager: %v", err)
 	}
-	metadata = persistence.NewMetadataPersistenceClient(metadata, base.GetMetricsClient())
+	metadata = persistence.NewMetadataPersistenceRateLimitedClient(metadata, persistenceRateLimiter, log)
+	metadata = persistence.NewMetadataPersistenceMetricsClient(metadata, base.GetMetricsClient(), log)
 
 	visibility, err := persistence.NewCassandraVisibilityPersistence(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,
@@ -170,6 +261,8 @@ func (s *Service) Start() {
 	if err != nil {
 		log.Fatalf("failed to create visiblity manager: %v", err)
 	}
+	visibility = persistence.NewVisibilityPersistenceRateLimitedClient(visibility, persistenceRateLimiter, log)
+	visibility = persistence.NewVisibilityPersistenceMetricsClient(visibility, base.GetMetricsClient(), log)
 
 	history, err := persistence.NewCassandraHistoryPersistence(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,
@@ -177,14 +270,29 @@ func (s *Service) Start() {
 		p.CassandraConfig.Password,
 		p.CassandraConfig.Datacenter,
 		p.CassandraConfig.Keyspace,
+		s.config.HistoryMgrNumConns(),
 		p.Logger)
 
 	if err != nil {
 		log.Fatalf("Creating Cassandra history manager persistence failed: %v", err)
 	}
+	history = persistence.NewHistoryPersistenceRateLimitedClient(history, persistenceRateLimiter, log)
+	history = persistence.NewHistoryPersistenceMetricsClient(history, base.GetMetricsClient(), log)
 
-	history = persistence.NewHistoryPersistenceClient(history, base.GetMetricsClient())
-	execMgrFactory := NewExecutionManagerFactory(&p.CassandraConfig, p.Logger, base.GetMetricsClient())
+	execMgrFactory, err := persistence.NewCassandraPersistenceClientFactory(p.CassandraConfig.Hosts,
+		p.CassandraConfig.Port,
+		p.CassandraConfig.User,
+		p.CassandraConfig.Password,
+		p.CassandraConfig.Datacenter,
+		p.CassandraConfig.Keyspace,
+		s.config.ExecutionMgrNumConns(),
+		p.Logger,
+		persistenceRateLimiter,
+		s.metricsClient,
+	)
+	if err != nil {
+		log.Fatalf("Creating Cassandra execution manager persistence factory failed: %v", err)
+	}
 
 	handler := NewHandler(base,
 		s.config,
@@ -209,4 +317,46 @@ func (s *Service) Stop() {
 	default:
 	}
 	s.params.Logger.Infof("%v stopped", common.HistoryServiceName)
+}
+
+func (s *Service) createAllShards(numShards int, shardMgr persistence.ShardManager, log bark.Logger) {
+	policy := backoff.NewExponentialRetryPolicy(50 * time.Millisecond)
+	policy.SetMaximumInterval(time.Second)
+	policy.SetExpirationInterval(5 * time.Second)
+
+	log.Infof("Starting check for shard creation of '%v' shards.", numShards)
+	for shardID := 0; shardID < numShards; shardID++ {
+		getShardOperation := func() error {
+			_, err := shardMgr.GetShard(&persistence.GetShardRequest{
+				ShardID: shardID,
+			})
+
+			return err
+		}
+
+		err := backoff.Retry(getShardOperation, policy, common.IsPersistenceTransientError)
+		if err != nil {
+			if _, ok := err.(*shared.EntityNotExistsError); !ok {
+				log.Fatalf("failed to get shard for ShardId: %v, with error: %v", shardID, err)
+			}
+
+			// Shard not found.  Let's create shard for the very first time
+			createShardOperation := func() error {
+				return shardMgr.CreateShard(&persistence.CreateShardRequest{
+					ShardInfo: &persistence.ShardInfo{
+						ShardID:          shardID,
+						RangeID:          0,
+						TransferAckLevel: 0,
+					}})
+			}
+
+			err := backoff.Retry(createShardOperation, policy, common.IsPersistenceTransientError)
+			if err != nil {
+				if _, ok := err.(*persistence.ShardAlreadyExistError); !ok {
+					log.Fatalf("failed to create shard for ShardId: %v, with error: %v", shardID, err)
+				}
+			}
+		}
+	}
+	log.Infof("All '%v' shards are created.", numShards)
 }

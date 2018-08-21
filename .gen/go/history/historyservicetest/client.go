@@ -25,11 +25,11 @@ package historyservicetest
 
 import (
 	"context"
-	"go.uber.org/yarpc"
 	"github.com/golang/mock/gomock"
 	"github.com/uber/cadence/.gen/go/history"
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/history/historyserviceclient"
+	"github.com/uber/cadence/.gen/go/shared"
+	"go.uber.org/yarpc"
 )
 
 // MockClient implements a gomock-compatible mock client for service
@@ -63,37 +63,136 @@ func (m *MockClient) EXPECT() *_MockClientRecorder {
 	return m.recorder
 }
 
-// GetWorkflowExecutionNextEventID responds to a GetWorkflowExecutionNextEventID call based on the mock expectations. This
+// DescribeHistoryHost responds to a DescribeHistoryHost call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().GetWorkflowExecutionNextEventID(gomock.Any(), ...).Return(...)
-// 	... := client.GetWorkflowExecutionNextEventID(...)
-func (m *MockClient) GetWorkflowExecutionNextEventID(
+// 	client.EXPECT().DescribeHistoryHost(gomock.Any(), ...).Return(...)
+// 	... := client.DescribeHistoryHost(...)
+func (m *MockClient) DescribeHistoryHost(
 	ctx context.Context,
-	_GetRequest *history.GetWorkflowExecutionNextEventIDRequest,
+	_Request *shared.DescribeHistoryHostRequest,
 	opts ...yarpc.CallOption,
-) (success *history.GetWorkflowExecutionNextEventIDResponse, err error) {
+) (success *shared.DescribeHistoryHostResponse, err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "DescribeHistoryHost", args...)
+	success, _ = ret[i].(*shared.DescribeHistoryHostResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) DescribeHistoryHost(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "DescribeHistoryHost", args...)
+}
+
+// DescribeMutableState responds to a DescribeMutableState call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().DescribeMutableState(gomock.Any(), ...).Return(...)
+// 	... := client.DescribeMutableState(...)
+func (m *MockClient) DescribeMutableState(
+	ctx context.Context,
+	_Request *history.DescribeMutableStateRequest,
+	opts ...yarpc.CallOption,
+) (success *history.DescribeMutableStateResponse, err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "DescribeMutableState", args...)
+	success, _ = ret[i].(*history.DescribeMutableStateResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) DescribeMutableState(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "DescribeMutableState", args...)
+}
+
+// DescribeWorkflowExecution responds to a DescribeWorkflowExecution call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().DescribeWorkflowExecution(gomock.Any(), ...).Return(...)
+// 	... := client.DescribeWorkflowExecution(...)
+func (m *MockClient) DescribeWorkflowExecution(
+	ctx context.Context,
+	_DescribeRequest *history.DescribeWorkflowExecutionRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.DescribeWorkflowExecutionResponse, err error) {
+
+	args := []interface{}{ctx, _DescribeRequest}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "DescribeWorkflowExecution", args...)
+	success, _ = ret[i].(*shared.DescribeWorkflowExecutionResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) DescribeWorkflowExecution(
+	ctx interface{},
+	_DescribeRequest interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _DescribeRequest}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "DescribeWorkflowExecution", args...)
+}
+
+// GetMutableState responds to a GetMutableState call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().GetMutableState(gomock.Any(), ...).Return(...)
+// 	... := client.GetMutableState(...)
+func (m *MockClient) GetMutableState(
+	ctx context.Context,
+	_GetRequest *history.GetMutableStateRequest,
+	opts ...yarpc.CallOption,
+) (success *history.GetMutableStateResponse, err error) {
 
 	args := []interface{}{ctx, _GetRequest}
 	for _, o := range opts {
 		args = append(args, o)
 	}
 	i := 0
-	ret := m.ctrl.Call(m, "GetWorkflowExecutionNextEventID", args...)
-	success, _ = ret[i].(*history.GetWorkflowExecutionNextEventIDResponse)
+	ret := m.ctrl.Call(m, "GetMutableState", args...)
+	success, _ = ret[i].(*history.GetMutableStateResponse)
 	i++
 	err, _ = ret[i].(error)
 	return
 }
 
-func (mr *_MockClientRecorder) GetWorkflowExecutionNextEventID(
+func (mr *_MockClientRecorder) GetMutableState(
 	ctx interface{},
 	_GetRequest interface{},
 	opts ...interface{},
 ) *gomock.Call {
 	args := append([]interface{}{ctx, _GetRequest}, opts...)
-	return mr.mock.ctrl.RecordCall(mr.mock, "GetWorkflowExecutionNextEventID", args...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "GetMutableState", args...)
 }
 
 // RecordActivityTaskHeartbeat responds to a RecordActivityTaskHeartbeat call based on the mock expectations. This
@@ -226,6 +325,68 @@ func (mr *_MockClientRecorder) RecordDecisionTaskStarted(
 	return mr.mock.ctrl.RecordCall(mr.mock, "RecordDecisionTaskStarted", args...)
 }
 
+// RemoveSignalMutableState responds to a RemoveSignalMutableState call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().RemoveSignalMutableState(gomock.Any(), ...).Return(...)
+// 	... := client.RemoveSignalMutableState(...)
+func (m *MockClient) RemoveSignalMutableState(
+	ctx context.Context,
+	_RemoveRequest *history.RemoveSignalMutableStateRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := []interface{}{ctx, _RemoveRequest}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "RemoveSignalMutableState", args...)
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) RemoveSignalMutableState(
+	ctx interface{},
+	_RemoveRequest interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _RemoveRequest}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "RemoveSignalMutableState", args...)
+}
+
+// ReplicateEvents responds to a ReplicateEvents call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().ReplicateEvents(gomock.Any(), ...).Return(...)
+// 	... := client.ReplicateEvents(...)
+func (m *MockClient) ReplicateEvents(
+	ctx context.Context,
+	_ReplicateRequest *history.ReplicateEventsRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := []interface{}{ctx, _ReplicateRequest}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "ReplicateEvents", args...)
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) ReplicateEvents(
+	ctx interface{},
+	_ReplicateRequest interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _ReplicateRequest}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "ReplicateEvents", args...)
+}
+
 // RequestCancelWorkflowExecution responds to a RequestCancelWorkflowExecution call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
@@ -255,6 +416,39 @@ func (mr *_MockClientRecorder) RequestCancelWorkflowExecution(
 ) *gomock.Call {
 	args := append([]interface{}{ctx, _CancelRequest}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "RequestCancelWorkflowExecution", args...)
+}
+
+// ResetStickyTaskList responds to a ResetStickyTaskList call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().ResetStickyTaskList(gomock.Any(), ...).Return(...)
+// 	... := client.ResetStickyTaskList(...)
+func (m *MockClient) ResetStickyTaskList(
+	ctx context.Context,
+	_ResetRequest *history.ResetStickyTaskListRequest,
+	opts ...yarpc.CallOption,
+) (success *history.ResetStickyTaskListResponse, err error) {
+
+	args := []interface{}{ctx, _ResetRequest}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "ResetStickyTaskList", args...)
+	success, _ = ret[i].(*history.ResetStickyTaskListResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) ResetStickyTaskList(
+	ctx interface{},
+	_ResetRequest interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _ResetRequest}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "ResetStickyTaskList", args...)
 }
 
 // RespondActivityTaskCanceled responds to a RespondActivityTaskCanceled call based on the mock expectations. This
@@ -360,7 +554,7 @@ func (m *MockClient) RespondDecisionTaskCompleted(
 	ctx context.Context,
 	_CompleteRequest *history.RespondDecisionTaskCompletedRequest,
 	opts ...yarpc.CallOption,
-) (err error) {
+) (success *history.RespondDecisionTaskCompletedResponse, err error) {
 
 	args := []interface{}{ctx, _CompleteRequest}
 	for _, o := range opts {
@@ -368,6 +562,8 @@ func (m *MockClient) RespondDecisionTaskCompleted(
 	}
 	i := 0
 	ret := m.ctrl.Call(m, "RespondDecisionTaskCompleted", args...)
+	success, _ = ret[i].(*history.RespondDecisionTaskCompletedResponse)
+	i++
 	err, _ = ret[i].(error)
 	return
 }
@@ -379,6 +575,37 @@ func (mr *_MockClientRecorder) RespondDecisionTaskCompleted(
 ) *gomock.Call {
 	args := append([]interface{}{ctx, _CompleteRequest}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "RespondDecisionTaskCompleted", args...)
+}
+
+// RespondDecisionTaskFailed responds to a RespondDecisionTaskFailed call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().RespondDecisionTaskFailed(gomock.Any(), ...).Return(...)
+// 	... := client.RespondDecisionTaskFailed(...)
+func (m *MockClient) RespondDecisionTaskFailed(
+	ctx context.Context,
+	_FailedRequest *history.RespondDecisionTaskFailedRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := []interface{}{ctx, _FailedRequest}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "RespondDecisionTaskFailed", args...)
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) RespondDecisionTaskFailed(
+	ctx interface{},
+	_FailedRequest interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _FailedRequest}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "RespondDecisionTaskFailed", args...)
 }
 
 // ScheduleDecisionTask responds to a ScheduleDecisionTask call based on the mock expectations. This
@@ -410,6 +637,39 @@ func (mr *_MockClientRecorder) ScheduleDecisionTask(
 ) *gomock.Call {
 	args := append([]interface{}{ctx, _ScheduleRequest}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "ScheduleDecisionTask", args...)
+}
+
+// SignalWithStartWorkflowExecution responds to a SignalWithStartWorkflowExecution call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().SignalWithStartWorkflowExecution(gomock.Any(), ...).Return(...)
+// 	... := client.SignalWithStartWorkflowExecution(...)
+func (m *MockClient) SignalWithStartWorkflowExecution(
+	ctx context.Context,
+	_SignalWithStartRequest *history.SignalWithStartWorkflowExecutionRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.StartWorkflowExecutionResponse, err error) {
+
+	args := []interface{}{ctx, _SignalWithStartRequest}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "SignalWithStartWorkflowExecution", args...)
+	success, _ = ret[i].(*shared.StartWorkflowExecutionResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) SignalWithStartWorkflowExecution(
+	ctx interface{},
+	_SignalWithStartRequest interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _SignalWithStartRequest}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "SignalWithStartWorkflowExecution", args...)
 }
 
 // SignalWorkflowExecution responds to a SignalWorkflowExecution call based on the mock expectations. This
@@ -474,6 +734,37 @@ func (mr *_MockClientRecorder) StartWorkflowExecution(
 ) *gomock.Call {
 	args := append([]interface{}{ctx, _StartRequest}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "StartWorkflowExecution", args...)
+}
+
+// SyncShardStatus responds to a SyncShardStatus call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().SyncShardStatus(gomock.Any(), ...).Return(...)
+// 	... := client.SyncShardStatus(...)
+func (m *MockClient) SyncShardStatus(
+	ctx context.Context,
+	_SyncShardStatusRequest *history.SyncShardStatusRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := []interface{}{ctx, _SyncShardStatusRequest}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "SyncShardStatus", args...)
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) SyncShardStatus(
+	ctx interface{},
+	_SyncShardStatusRequest interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _SyncShardStatusRequest}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "SyncShardStatus", args...)
 }
 
 // TerminateWorkflowExecution responds to a TerminateWorkflowExecution call based on the mock expectations. This

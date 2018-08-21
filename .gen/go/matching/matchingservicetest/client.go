@@ -25,11 +25,11 @@ package matchingservicetest
 
 import (
 	"context"
-	"go.uber.org/yarpc"
 	"github.com/golang/mock/gomock"
 	"github.com/uber/cadence/.gen/go/matching"
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/matching/matchingserviceclient"
+	"github.com/uber/cadence/.gen/go/shared"
+	"go.uber.org/yarpc"
 )
 
 // MockClient implements a gomock-compatible mock client for service
@@ -125,6 +125,70 @@ func (mr *_MockClientRecorder) AddDecisionTask(
 	return mr.mock.ctrl.RecordCall(mr.mock, "AddDecisionTask", args...)
 }
 
+// CancelOutstandingPoll responds to a CancelOutstandingPoll call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().CancelOutstandingPoll(gomock.Any(), ...).Return(...)
+// 	... := client.CancelOutstandingPoll(...)
+func (m *MockClient) CancelOutstandingPoll(
+	ctx context.Context,
+	_Request *matching.CancelOutstandingPollRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "CancelOutstandingPoll", args...)
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) CancelOutstandingPoll(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "CancelOutstandingPoll", args...)
+}
+
+// DescribeTaskList responds to a DescribeTaskList call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().DescribeTaskList(gomock.Any(), ...).Return(...)
+// 	... := client.DescribeTaskList(...)
+func (m *MockClient) DescribeTaskList(
+	ctx context.Context,
+	_Request *matching.DescribeTaskListRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.DescribeTaskListResponse, err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "DescribeTaskList", args...)
+	success, _ = ret[i].(*shared.DescribeTaskListResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) DescribeTaskList(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "DescribeTaskList", args...)
+}
+
 // PollForActivityTask responds to a PollForActivityTask call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
@@ -189,4 +253,68 @@ func (mr *_MockClientRecorder) PollForDecisionTask(
 ) *gomock.Call {
 	args := append([]interface{}{ctx, _PollRequest}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "PollForDecisionTask", args...)
+}
+
+// QueryWorkflow responds to a QueryWorkflow call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().QueryWorkflow(gomock.Any(), ...).Return(...)
+// 	... := client.QueryWorkflow(...)
+func (m *MockClient) QueryWorkflow(
+	ctx context.Context,
+	_QueryRequest *matching.QueryWorkflowRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.QueryWorkflowResponse, err error) {
+
+	args := []interface{}{ctx, _QueryRequest}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "QueryWorkflow", args...)
+	success, _ = ret[i].(*shared.QueryWorkflowResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) QueryWorkflow(
+	ctx interface{},
+	_QueryRequest interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _QueryRequest}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "QueryWorkflow", args...)
+}
+
+// RespondQueryTaskCompleted responds to a RespondQueryTaskCompleted call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().RespondQueryTaskCompleted(gomock.Any(), ...).Return(...)
+// 	... := client.RespondQueryTaskCompleted(...)
+func (m *MockClient) RespondQueryTaskCompleted(
+	ctx context.Context,
+	_Request *matching.RespondQueryTaskCompletedRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "RespondQueryTaskCompleted", args...)
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) RespondQueryTaskCompleted(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "RespondQueryTaskCompleted", args...)
 }

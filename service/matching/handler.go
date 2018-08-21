@@ -23,6 +23,7 @@ package matching
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/.gen/go/health"
@@ -30,6 +31,7 @@ import (
 	"github.com/uber/cadence/.gen/go/matching/matchingserviceserver"
 	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
@@ -40,19 +42,28 @@ var _ matchingserviceserver.Interface = (*Handler)(nil)
 // Handler - Thrift handler inteface for history service
 type Handler struct {
 	taskPersistence persistence.TaskManager
+	metadataMgr     persistence.MetadataManager
 	engine          Engine
 	config          *Config
 	metricsClient   metrics.Client
 	startWG         sync.WaitGroup
+	domainCache     cache.DomainCache
+	rateLimiter     common.TokenBucket
 	service.Service
 }
 
+var (
+	errMatchingHostThrottle = &gen.ServiceBusyError{Message: "Matching host rps exceeded"}
+)
+
 // NewHandler creates a thrift handler for the history service
-func NewHandler(sVice service.Service, config *Config, taskPersistence persistence.TaskManager) *Handler {
+func NewHandler(sVice service.Service, config *Config, taskPersistence persistence.TaskManager, metadataMgr persistence.MetadataManager) *Handler {
 	handler := &Handler{
 		Service:         sVice,
 		taskPersistence: taskPersistence,
+		metadataMgr:     metadataMgr,
 		config:          config,
+		rateLimiter:     common.NewTokenBucket(config.RPS(), common.NewRealTimeSource()),
 	}
 	// prevent us from trying to serve requests before matching engine is started and ready
 	handler.startWG.Add(1)
@@ -67,8 +78,12 @@ func (h *Handler) Start() error {
 	if err != nil {
 		return err
 	}
+	h.domainCache = cache.NewDomainCache(h.metadataMgr, h.GetClusterMetadata(), h.GetMetricsClient(), h.GetLogger())
+	h.domainCache.Start()
 	h.metricsClient = h.Service.GetMetricsClient()
-	h.engine = NewEngine(h.taskPersistence, history, h.config, h.Service.GetLogger(), h.Service.GetMetricsClient())
+	h.engine = NewEngine(
+		h.taskPersistence, history, h.config, h.Service.GetLogger(), h.Service.GetMetricsClient(), h.domainCache,
+	)
 	h.startWG.Done()
 	return nil
 }
@@ -76,7 +91,9 @@ func (h *Handler) Start() error {
 // Stop stops the handler
 func (h *Handler) Stop() {
 	h.engine.Stop()
+	h.domainCache.Stop()
 	h.taskPersistence.Close()
+	h.metadataMgr.Close()
 	h.Service.Stop()
 }
 
@@ -99,18 +116,39 @@ func (h *Handler) startRequestProfile(api string, scope int) tally.Stopwatch {
 
 // AddActivityTask - adds an activity task.
 func (h *Handler) AddActivityTask(ctx context.Context, addRequest *m.AddActivityTaskRequest) error {
+	startT := time.Now()
 	scope := metrics.MatchingAddActivityTaskScope
 	sw := h.startRequestProfile("AddActivityTask", scope)
 	defer sw.Stop()
-	return h.handleErr(h.engine.AddActivityTask(addRequest), scope)
+
+	if ok, _ := h.rateLimiter.TryConsume(1); !ok {
+		return h.handleErr(errMatchingHostThrottle, scope)
+	}
+
+	syncMatch, err := h.engine.AddActivityTask(addRequest)
+	if syncMatch {
+		h.metricsClient.RecordTimer(scope, metrics.SyncMatchLatency, time.Since(startT))
+	}
+
+	return h.handleErr(err, scope)
 }
 
 // AddDecisionTask - adds a decision task.
 func (h *Handler) AddDecisionTask(ctx context.Context, addRequest *m.AddDecisionTaskRequest) error {
+	startT := time.Now()
 	scope := metrics.MatchingAddDecisionTaskScope
 	sw := h.startRequestProfile("AddDecisionTask", scope)
 	defer sw.Stop()
-	return h.handleErr(h.engine.AddDecisionTask(addRequest), scope)
+
+	if ok, _ := h.rateLimiter.TryConsume(1); !ok {
+		return h.handleErr(errMatchingHostThrottle, scope)
+	}
+
+	syncMatch, err := h.engine.AddDecisionTask(addRequest)
+	if syncMatch {
+		h.metricsClient.RecordTimer(scope, metrics.SyncMatchLatency, time.Since(startT))
+	}
+	return h.handleErr(err, scope)
 }
 
 // PollForActivityTask - long poll for an activity task.
@@ -121,10 +159,12 @@ func (h *Handler) PollForActivityTask(ctx context.Context,
 	sw := h.startRequestProfile("PollForActivityTask", scope)
 	defer sw.Stop()
 
-	response, error := h.engine.PollForActivityTask(ctx, pollRequest)
-	h.Service.GetLogger().Debug("Engine returned from PollForActivityTask")
-	return response, h.handleErr(error, scope)
+	if ok, _ := h.rateLimiter.TryConsume(1); !ok {
+		return nil, h.handleErr(errMatchingHostThrottle, scope)
+	}
 
+	response, err := h.engine.PollForActivityTask(ctx, pollRequest)
+	return response, h.handleErr(err, scope)
 }
 
 // PollForDecisionTask - long poll for a decision task.
@@ -135,9 +175,69 @@ func (h *Handler) PollForDecisionTask(ctx context.Context,
 	sw := h.startRequestProfile("PollForDecisionTask", scope)
 	defer sw.Stop()
 
-	response, error := h.engine.PollForDecisionTask(ctx, pollRequest)
-	h.Service.GetLogger().Debug("Engine returned from PollForDecisionTask")
-	return response, h.handleErr(error, scope)
+	if ok, _ := h.rateLimiter.TryConsume(1); !ok {
+		return nil, h.handleErr(errMatchingHostThrottle, scope)
+	}
+
+	response, err := h.engine.PollForDecisionTask(ctx, pollRequest)
+	return response, h.handleErr(err, scope)
+}
+
+// QueryWorkflow queries a given workflow synchronously and return the query result.
+func (h *Handler) QueryWorkflow(ctx context.Context,
+	queryRequest *m.QueryWorkflowRequest) (*gen.QueryWorkflowResponse, error) {
+	scope := metrics.MatchingQueryWorkflowScope
+	sw := h.startRequestProfile("QueryWorkflow", scope)
+	defer sw.Stop()
+
+	if ok, _ := h.rateLimiter.TryConsume(1); !ok {
+		return nil, h.handleErr(errMatchingHostThrottle, scope)
+	}
+
+	response, err := h.engine.QueryWorkflow(ctx, queryRequest)
+	return response, h.handleErr(err, scope)
+}
+
+// RespondQueryTaskCompleted responds a query task completed
+func (h *Handler) RespondQueryTaskCompleted(ctx context.Context, request *m.RespondQueryTaskCompletedRequest) error {
+	scope := metrics.MatchingRespondQueryTaskCompletedScope
+	sw := h.startRequestProfile("RespondQueryTaskCompleted", scope)
+	defer sw.Stop()
+
+	// Count the request in the RPS, but we still accept it even if RPS is exceeded
+	h.rateLimiter.TryConsume(1)
+
+	err := h.engine.RespondQueryTaskCompleted(ctx, request)
+	return h.handleErr(err, scope)
+}
+
+// CancelOutstandingPoll is used to cancel outstanding pollers
+func (h *Handler) CancelOutstandingPoll(ctx context.Context,
+	request *m.CancelOutstandingPollRequest) error {
+	scope := metrics.MatchingCancelOutstandingPollScope
+	sw := h.startRequestProfile("CancelOutstandingPoll", scope)
+	defer sw.Stop()
+
+	// Count the request in the RPS, but we still accept it even if RPS is exceeded
+	h.rateLimiter.TryConsume(1)
+
+	err := h.engine.CancelOutstandingPoll(ctx, request)
+	return h.handleErr(err, scope)
+}
+
+// DescribeTaskList returns information about the target tasklist, right now this API returns the
+// pollers which polled this tasklist in last few minutes.
+func (h *Handler) DescribeTaskList(ctx context.Context, request *m.DescribeTaskListRequest) (*gen.DescribeTaskListResponse, error) {
+	scope := metrics.MatchingDescribeTaskListScope
+	sw := h.startRequestProfile("DescribeTaskList", scope)
+	defer sw.Stop()
+
+	if ok, _ := h.rateLimiter.TryConsume(1); !ok {
+		return nil, h.handleErr(errMatchingHostThrottle, scope)
+	}
+
+	response, err := h.engine.DescribeTaskList(ctx, request)
+	return response, h.handleErr(err, scope)
 }
 
 func (h *Handler) handleErr(err error, scope int) error {
@@ -161,6 +261,18 @@ func (h *Handler) handleErr(err error, scope int) error {
 		return err
 	case *gen.DomainAlreadyExistsError:
 		h.metricsClient.IncCounter(scope, metrics.CadenceErrDomainAlreadyExistsCounter)
+		return err
+	case *gen.QueryFailedError:
+		h.metricsClient.IncCounter(scope, metrics.CadenceErrQueryFailedCounter)
+		return err
+	case *gen.LimitExceededError:
+		h.metricsClient.IncCounter(scope, metrics.CadenceErrLimitExceededCounter)
+		return err
+	case *gen.ServiceBusyError:
+		h.metricsClient.IncCounter(scope, metrics.CadenceErrServiceBusyCounter)
+		return err
+	case *gen.DomainNotActiveError:
+		h.metricsClient.IncCounter(scope, metrics.CadenceErrDomainNotActiveCounter)
 		return err
 	default:
 		h.metricsClient.IncCounter(scope, metrics.CadenceFailures)
