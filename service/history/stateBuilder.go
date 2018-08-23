@@ -191,6 +191,9 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 
 		case shared.EventTypeTimerCanceled:
 			b.msBuilder.ReplicateTimerCanceledEvent(event)
+			if timerTask := b.refreshUserTimerTask(event, b.msBuilder); timerTask != nil {
+				b.timerTasks = append(b.timerTasks, timerTask)
+			}
 
 		case shared.EventTypeCancelTimerFailed:
 			// No mutable state action is needed
@@ -335,7 +338,6 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 			// ContinuedAsNew event also has history for first 2 events for next run as they are created transactionally
 			startedEvent := newRunHistory.Events[0]
 			startedAttributes := startedEvent.WorkflowExecutionStartedEventAttributes
-			dtScheduledEvent := newRunHistory.Events[1]
 
 			// History event only have the parentDomainName.  Lookup the domain ID from cache
 			var parentDomainID *string
@@ -353,7 +355,6 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 				WorkflowId: execution.WorkflowId,
 				RunId:      common.StringPtr(newRunID),
 			}
-
 			// Create mutable state updates for the new run
 			newRunStateBuilder = newMutableStateBuilderWithReplicationState(
 				b.clusterMetadata.GetCurrentClusterName(),
@@ -363,15 +364,21 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 			)
 			newRunStateBuilder.ReplicateWorkflowExecutionStartedEvent(domainID, parentDomainID, newExecution, uuid.New(),
 				startedAttributes)
-			di := newRunStateBuilder.ReplicateDecisionTaskScheduledEvent(
-				dtScheduledEvent.GetVersion(),
-				dtScheduledEvent.GetEventId(),
-				dtScheduledEvent.DecisionTaskScheduledEventAttributes.TaskList.GetName(),
-				dtScheduledEvent.DecisionTaskScheduledEventAttributes.GetStartToCloseTimeoutSeconds(),
-				dtScheduledEvent.DecisionTaskScheduledEventAttributes.GetAttempt(),
-			)
+
+			var di *decisionInfo
+			nextEventID := startedEvent.GetEventId() + 1
+			if len(newRunHistory.Events) > 1 {
+				dtScheduledEvent := newRunHistory.Events[1]
+				di = newRunStateBuilder.ReplicateDecisionTaskScheduledEvent(
+					dtScheduledEvent.GetVersion(),
+					dtScheduledEvent.GetEventId(),
+					dtScheduledEvent.DecisionTaskScheduledEventAttributes.TaskList.GetName(),
+					dtScheduledEvent.DecisionTaskScheduledEventAttributes.GetStartToCloseTimeoutSeconds(),
+					dtScheduledEvent.DecisionTaskScheduledEventAttributes.GetAttempt(),
+				)
+				nextEventID = di.ScheduleID + 1
+			}
 			newRunExecutionInfo := newRunStateBuilder.GetExecutionInfo()
-			nextEventID := di.ScheduleID + 1
 			newRunExecutionInfo.NextEventID = nextEventID
 			newRunExecutionInfo.LastFirstEventID = startedEvent.GetEventId()
 			// Set the history from replication task on the newStateBuilder
@@ -379,19 +386,19 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 			sourceClusterName := b.clusterMetadata.ClusterNameForFailoverVersion(startedEvent.GetVersion())
 			newRunStateBuilder.UpdateReplicationStateLastEventID(sourceClusterName, startedEvent.GetVersion(), nextEventID-1)
 
-			b.newRunTransferTasks = append(b.newRunTransferTasks, b.scheduleDecisionTransferTask(domainID,
-				b.getTaskList(newRunStateBuilder), di.ScheduleID))
+			if startedAttributes.GetAttempt() == 0 {
+				b.newRunTransferTasks = append(b.newRunTransferTasks, b.scheduleDecisionTransferTask(domainID,
+					b.getTaskList(newRunStateBuilder), nextEventID-1))
+			}
 			b.newRunTimerTasks = append(b.newRunTimerTasks, b.scheduleWorkflowTimerTask(event, newRunStateBuilder))
 
-			b.msBuilder.ReplicateWorkflowExecutionContinuedAsNewEvent(sourceClusterName, domainID, event,
-				startedEvent, di, newRunStateBuilder)
+			b.msBuilder.ReplicateWorkflowExecutionContinuedAsNewEvent(sourceClusterName, domainID, event, startedEvent, di, newRunStateBuilder)
 			b.transferTasks = append(b.transferTasks, b.scheduleDeleteHistoryTransferTask())
 			timerTask, err := b.scheduleDeleteHistoryTimerTask(event, domainID)
 			if err != nil {
 				return nil, nil, nil, err
 			}
 			b.timerTasks = append(b.timerTasks, timerTask)
-
 		}
 	}
 
@@ -460,6 +467,12 @@ func (b *stateBuilderImpl) scheduleUserTimerTask(event *shared.HistoryEvent,
 	ti *persistence.TimerInfo, msBuilder mutableState) persistence.Task {
 	timerBuilder := b.getTimerBuilder(event)
 	timerBuilder.AddUserTimer(ti, msBuilder)
+	return timerBuilder.GetUserTimerTaskIfNeeded(msBuilder)
+}
+
+func (b *stateBuilderImpl) refreshUserTimerTask(event *shared.HistoryEvent, msBuilder mutableState) persistence.Task {
+	timerBuilder := b.getTimerBuilder(event)
+	timerBuilder.loadUserTimers(msBuilder)
 	return timerBuilder.GetUserTimerTaskIfNeeded(msBuilder)
 }
 
