@@ -276,37 +276,36 @@ func (r *historyReplicator) ApplyOtherEventsVersionChecking(ctx context.Context,
 
 	// we have rState.LastWriteVersion < incomingVersion
 
-	// the code below only deal with 2 data center case
-	// for multiple data center cases, wait for #840
-
 	// Check if this is the first event after failover
 	previousActiveCluster := r.clusterMetadata.ClusterNameForFailoverVersion(rState.LastWriteVersion)
-	logger.WithFields(bark.Fields{
+	logger = logger.WithFields(bark.Fields{
 		logging.TagPrevActiveCluster: previousActiveCluster,
 		logging.TagReplicationInfo:   request.ReplicationInfo,
 	})
-	logger.Info("First Event after replication.")
+	logger.Info("First Event after failover.")
 
-	// first check whether the replication info
-	// the reason is, if current cluster was active, and sent out replication task
-	// to remote, there is no guarantee that the replication task is going to be applied,
-	// if not applied, the replication info will not be up to date.
+	// It is possible that a workflow will not generate any event in few rounds of failover
+	// meaning that the incoming version > last write version and
+	// (incoming version - last write version) % failover version increment == 0
+	// If this cluster is previously NOT active, this also means there is no buffered event
+	if r.clusterMetadata.IsVersionFromSameCluster(incomingVersion, rState.LastWriteVersion) {
+		return msBuilder, nil
+	}
 
+	// The code below only deal with 2 data center case, for >2 data center case, wait for #840
 	if previousActiveCluster != r.clusterMetadata.GetCurrentClusterName() {
-		// this cluster is previously NOT active, this also means there is no buffered event
-		if r.clusterMetadata.IsVersionFromSameCluster(incomingVersion, rState.LastWriteVersion) {
-			// it is possible that a workflow will not generate any event in few rounds of failover
-			// meaning that the incoming version > last write version and
-			// (incoming version - last write version) % failover version increment == 0
-			return msBuilder, nil
-		}
-
 		err = ErrMoreThan2DC
 		logError(logger, err.Error(), err)
 		return nil, err
 	}
 
 	// previousActiveCluster == current cluster
+
+	// Check the remote replication info:
+	// the reason is, if current cluster was active, and sent out replication task
+	// to remote, there is no guarantee that the replication task is going to be applied,
+	// if not applied, the remote replication info will not be up to date.
+
 	ri, ok := replicationInfo[previousActiveCluster]
 	// this cluster is previously active, we need to check whether the events is applied by remote cluster
 	if !ok || rState.LastWriteVersion > ri.GetVersion() {
