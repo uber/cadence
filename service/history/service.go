@@ -268,10 +268,10 @@ func (s *Service) Start() {
 		log.Fatalf("failed to create visibility manager: %v", err)
 	}
 	visibility = persistence.NewVisibilityPersistenceRateLimitedClient(visibility, persistenceRateLimiter, log)
-	visibility = persistence.NewVisibilityPersistenceMetricsClient(visibility, base.GetMetricsClient(), log)
 	if s.config.EnableVisibilitySampling() {
 		visibility = NewVisibilitySamplingClient(visibility, s.config, base.GetMetricsClient(), log)
 	}
+	visibility = persistence.NewVisibilityPersistenceMetricsClient(visibility, base.GetMetricsClient(), log)
 
 	history, err := persistence.NewCassandraHistoryPersistence(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,

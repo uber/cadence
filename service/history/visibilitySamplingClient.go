@@ -85,11 +85,7 @@ func (m *domainToBucketMap) getRateLimiter(domain string, numOfPriority, qps int
 		m.Unlock()
 		return rateLimiter
 	}
-	if numOfPriority == 1 {
-		rateLimiter = common.NewPriorityTokenBucket(numOfPriority, qps, common.NewRealTimeSource())
-	} else {
-		rateLimiter = common.NewFullPriorityTokenBucket(numOfPriority, qps, common.NewRealTimeSource())
-	}
+	rateLimiter = common.NewFullPriorityTokenBucket(numOfPriority, qps, common.NewRealTimeSource())
 	m.mappings[domain] = rateLimiter
 	m.Unlock()
 	return rateLimiter
@@ -104,7 +100,7 @@ func (p *visibilitySamplingClient) RecordWorkflowExecutionStarted(request *persi
 	}
 
 	logging.LogOpenWorkflowSampled(p.logger, domain, request.Execution.GetWorkflowId(), request.Execution.GetRunId(), request.WorkflowTypeName)
-	p.metricClient.IncCounter(metrics.PersistenceRecordWorkflowExecutionStartedScope, metrics.PersistenceErrSampledCounter)
+	p.metricClient.IncCounter(metrics.PersistenceRecordWorkflowExecutionStartedScope, metrics.PersistenceSampledCounter)
 	return nil
 }
 
@@ -118,7 +114,7 @@ func (p *visibilitySamplingClient) RecordWorkflowExecutionClosed(request *persis
 	}
 
 	logging.LogClosedWorkflowSampled(p.logger, domain, request.Execution.GetWorkflowId(), request.Execution.GetRunId(), request.WorkflowTypeName)
-	p.metricClient.IncCounter(metrics.PersistenceRecordWorkflowExecutionClosedScope, metrics.PersistenceErrSampledCounter)
+	p.metricClient.IncCounter(metrics.PersistenceRecordWorkflowExecutionClosedScope, metrics.PersistenceSampledCounter)
 	return nil
 }
 

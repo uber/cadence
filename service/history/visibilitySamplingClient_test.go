@@ -86,7 +86,7 @@ func (s *VisibilitySamplingSuite) TestRecordWorkflowExecutionStarted() {
 	s.NoError(s.client.RecordWorkflowExecutionStarted(request))
 
 	// no remaining tokens
-	s.metricClient.On("IncCounter", metrics.PersistenceRecordWorkflowExecutionStartedScope, metrics.PersistenceErrSampledCounter).Once()
+	s.metricClient.On("IncCounter", metrics.PersistenceRecordWorkflowExecutionStartedScope, metrics.PersistenceSampledCounter).Once()
 	s.NoError(s.client.RecordWorkflowExecutionStarted(request))
 }
 
@@ -112,8 +112,8 @@ func (s *VisibilitySamplingSuite) TestRecordWorkflowExecutionClosed() {
 	s.NoError(s.client.RecordWorkflowExecutionClosed(request2))
 
 	// no remaining tokens
-	s.metricClient.On("IncCounter", metrics.PersistenceRecordWorkflowExecutionClosedScope, metrics.PersistenceErrSampledCounter).Once()
+	s.metricClient.On("IncCounter", metrics.PersistenceRecordWorkflowExecutionClosedScope, metrics.PersistenceSampledCounter).Once()
 	s.NoError(s.client.RecordWorkflowExecutionClosed(request))
-	s.metricClient.On("IncCounter", metrics.PersistenceRecordWorkflowExecutionClosedScope, metrics.PersistenceErrSampledCounter).Once()
+	s.metricClient.On("IncCounter", metrics.PersistenceRecordWorkflowExecutionClosedScope, metrics.PersistenceSampledCounter).Once()
 	s.NoError(s.client.RecordWorkflowExecutionClosed(request2))
 }
