@@ -284,16 +284,16 @@ func (r *historyReplicator) ApplyOtherEventsVersionChecking(ctx context.Context,
 	})
 	logger.Info("First Event after failover.")
 
-	// It is possible that a workflow will not generate any event in few rounds of failover
-	// meaning that the incoming version > last write version and
-	// (incoming version - last write version) % failover version increment == 0
-	// If this cluster is previously NOT active, this also means there is no buffered event
-	if r.clusterMetadata.IsVersionFromSameCluster(incomingVersion, rState.LastWriteVersion) {
-		return msBuilder, nil
-	}
-
 	// The code below only deal with 2 data center case, for >2 data center case, wait for #840
 	if previousActiveCluster != r.clusterMetadata.GetCurrentClusterName() {
+		// It is possible that a workflow will not generate any event in few rounds of failover
+		// meaning that the incoming version > last write version and
+		// (incoming version - last write version) % failover version increment == 0
+		// If this cluster is previously NOT active, this also means there is no buffered event
+		if r.clusterMetadata.IsVersionFromSameCluster(incomingVersion, rState.LastWriteVersion) {
+			return msBuilder, nil
+		}
+
 		err = ErrMoreThan2DC
 		logError(logger, err.Error(), err)
 		return nil, err
@@ -310,7 +310,7 @@ func (r *historyReplicator) ApplyOtherEventsVersionChecking(ctx context.Context,
 	// this cluster is previously active, we need to check whether the events is applied by remote cluster
 	if !ok || rState.LastWriteVersion > ri.GetVersion() {
 		logger.Info("Encounter case where events are rejected by remote.")
-		// use the last valid version && event ID to do a reset
+		// use the last valid version && event ID to do a reset: find the largest version in all replication info as check point
 		lastValidVersion, lastValidEventID := r.getLatestCheckpoint(replicationInfo, rState.LastReplicationInfo)
 
 		if lastValidVersion == common.EmptyVersion {
