@@ -23,10 +23,7 @@ package history
 import (
 	"time"
 
-	"github.com/uber-common/bark"
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
@@ -37,8 +34,11 @@ import (
 type Config struct {
 	NumberOfShards int
 
-	RPS               dynamicconfig.IntPropertyFn
-	PersistenceMaxQPS dynamicconfig.IntPropertyFn
+	RPS                      dynamicconfig.IntPropertyFn
+	PersistenceMaxQPS        dynamicconfig.IntPropertyFn
+	EnableVisibilitySampling dynamicconfig.BoolPropertyFn
+	VisibilityOpenMaxQPS     dynamicconfig.IntPropertyFnWithDomainFilter
+	VisibilityClosedMaxQPS   dynamicconfig.IntPropertyFnWithDomainFilter
 
 	// HistoryCache settings
 	// Change of these configs require shard restart
@@ -119,6 +119,9 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int) *Config {
 		NumberOfShards:                                        numberOfShards,
 		RPS:                                                   dc.GetIntProperty(dynamicconfig.HistoryRPS, 3000),
 		PersistenceMaxQPS:                                     dc.GetIntProperty(dynamicconfig.HistoryPersistenceMaxQPS, 9000),
+		EnableVisibilitySampling:                              dc.GetBoolProperty(dynamicconfig.EnableVisibilitySampling, true),
+		VisibilityOpenMaxQPS:                                  dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryVisibilityOpenMaxQPS, 300),
+		VisibilityClosedMaxQPS:                                dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryVisibilityClosedMaxQPS, 300),
 		HistoryCacheInitialSize:                               dc.GetIntProperty(dynamicconfig.HistoryCacheInitialSize, 128),
 		HistoryCacheMaxSize:                                   dc.GetIntProperty(dynamicconfig.HistoryCacheMaxSize, 512),
 		HistoryCacheTTL:                                       dc.GetDurationProperty(dynamicconfig.HistoryCacheTTL, time.Hour),
@@ -231,10 +234,6 @@ func (s *Service) Start() {
 	shardMgr = persistence.NewShardPersistenceRateLimitedClient(shardMgr, persistenceRateLimiter, log)
 	shardMgr = persistence.NewShardPersistenceMetricsClient(shardMgr, base.GetMetricsClient(), log)
 
-	// Hack to create shards for bootstrap purposes
-	// TODO: properly pre-create all shards before deployment.
-	s.createAllShards(p.CassandraConfig.NumHistoryShards, shardMgr, log)
-
 	metadata, err := persistence.NewMetadataManagerProxy(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,
 		p.CassandraConfig.User,
@@ -259,9 +258,12 @@ func (s *Service) Start() {
 		p.Logger)
 
 	if err != nil {
-		log.Fatalf("failed to create visiblity manager: %v", err)
+		log.Fatalf("failed to create visibility manager: %v", err)
 	}
 	visibility = persistence.NewVisibilityPersistenceRateLimitedClient(visibility, persistenceRateLimiter, log)
+	if s.config.EnableVisibilitySampling() {
+		visibility = NewVisibilitySamplingClient(visibility, s.config, base.GetMetricsClient(), log)
+	}
 	visibility = persistence.NewVisibilityPersistenceMetricsClient(visibility, base.GetMetricsClient(), log)
 
 	history, err := persistence.NewCassandraHistoryPersistence(p.CassandraConfig.Hosts,
@@ -317,46 +319,4 @@ func (s *Service) Stop() {
 	default:
 	}
 	s.params.Logger.Infof("%v stopped", common.HistoryServiceName)
-}
-
-func (s *Service) createAllShards(numShards int, shardMgr persistence.ShardManager, log bark.Logger) {
-	policy := backoff.NewExponentialRetryPolicy(50 * time.Millisecond)
-	policy.SetMaximumInterval(time.Second)
-	policy.SetExpirationInterval(5 * time.Second)
-
-	log.Infof("Starting check for shard creation of '%v' shards.", numShards)
-	for shardID := 0; shardID < numShards; shardID++ {
-		getShardOperation := func() error {
-			_, err := shardMgr.GetShard(&persistence.GetShardRequest{
-				ShardID: shardID,
-			})
-
-			return err
-		}
-
-		err := backoff.Retry(getShardOperation, policy, common.IsPersistenceTransientError)
-		if err != nil {
-			if _, ok := err.(*shared.EntityNotExistsError); !ok {
-				log.Fatalf("failed to get shard for ShardId: %v, with error: %v", shardID, err)
-			}
-
-			// Shard not found.  Let's create shard for the very first time
-			createShardOperation := func() error {
-				return shardMgr.CreateShard(&persistence.CreateShardRequest{
-					ShardInfo: &persistence.ShardInfo{
-						ShardID:          shardID,
-						RangeID:          0,
-						TransferAckLevel: 0,
-					}})
-			}
-
-			err := backoff.Retry(createShardOperation, policy, common.IsPersistenceTransientError)
-			if err != nil {
-				if _, ok := err.(*persistence.ShardAlreadyExistError); !ok {
-					log.Fatalf("failed to create shard for ShardId: %v, with error: %v", shardID, err)
-				}
-			}
-		}
-	}
-	log.Infof("All '%v' shards are created.", numShards)
 }

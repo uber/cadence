@@ -412,8 +412,10 @@ const (
 	TimerActiveTaskUserTimerScope
 	// TimerActiveTaskWorkflowTimeoutScope is the scope used by metric emitted by timer queue processor for processing workflow timeouts.
 	TimerActiveTaskWorkflowTimeoutScope
-	// TimerActiveTaskRetryTimerScope is the scope used by metric emitted by timer queue processor for processing retry task.
-	TimerActiveTaskRetryTimerScope
+	// TimerActiveTaskActivityRetryTimerScope is the scope used by metric emitted by timer queue processor for processing retry task.
+	TimerActiveTaskActivityRetryTimerScope
+	// TimerActiveTaskWorkflowRetryTimerScope is the scope used by metric emitted by timer queue processor for processing retry task.
+	TimerActiveTaskWorkflowRetryTimerScope
 	// TimerActiveTaskDeleteHistoryEvent is the scope used by metric emitted by timer queue processor for processing history event cleanup
 	TimerActiveTaskDeleteHistoryEvent
 	// TimerStandbyTaskActivityTimeoutScope is the scope used by metric emitted by timer queue processor for processing activity timeouts
@@ -424,10 +426,12 @@ const (
 	TimerStandbyTaskUserTimerScope
 	// TimerStandbyTaskWorkflowTimeoutScope is the scope used by metric emitted by timer queue processor for processing workflow timeouts.
 	TimerStandbyTaskWorkflowTimeoutScope
-	// TimerStandbyTaskRetryTimerScope is the scope used by metric emitted by timer queue processor for processing retry task.
-	TimerStandbyTaskRetryTimerScope
+	// TimerStandbyTaskActivityRetryTimerScope is the scope used by metric emitted by timer queue processor for processing retry task.
+	TimerStandbyTaskActivityRetryTimerScope
 	// TimerStandbyTaskDeleteHistoryEvent is the scope used by metric emitted by timer queue processor for processing history event cleanup
 	TimerStandbyTaskDeleteHistoryEvent
+	// TimerStandbyTaskWorkflowRetryTimerScope is the scope used by metric emitted by timer queue processor for processing retry task.
+	TimerStandbyTaskWorkflowRetryTimerScope
 	// HistoryEventNotificationScope is the scope used by shard history event nitification
 	HistoryEventNotificationScope
 	// ReplicatorQueueProcessorScope is the scope used by all metric emitted by replicator queue processor
@@ -635,13 +639,15 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		TimerActiveTaskDecisionTimeoutScope:          {operation: "TimerActiveTaskDecisionTimeout"},
 		TimerActiveTaskUserTimerScope:                {operation: "TimerActiveTaskUserTimer"},
 		TimerActiveTaskWorkflowTimeoutScope:          {operation: "TimerActiveTaskWorkflowTimeout"},
-		TimerActiveTaskRetryTimerScope:               {operation: "TimerActiveTaskRetryTimer"},
+		TimerActiveTaskActivityRetryTimerScope:       {operation: "TimerActiveTaskActivityRetryTimer"},
+		TimerActiveTaskWorkflowRetryTimerScope:       {operation: "TimerActiveTaskWorkflowRetryTimer"},
 		TimerActiveTaskDeleteHistoryEvent:            {operation: "TimerActiveTaskDeleteHistoryEvent"},
 		TimerStandbyTaskActivityTimeoutScope:         {operation: "TimerStandbyTaskActivityTimeout"},
 		TimerStandbyTaskDecisionTimeoutScope:         {operation: "TimerStandbyTaskDecisionTimeout"},
 		TimerStandbyTaskUserTimerScope:               {operation: "TimerStandbyTaskUserTimer"},
 		TimerStandbyTaskWorkflowTimeoutScope:         {operation: "TimerStandbyTaskWorkflowTimeout"},
-		TimerStandbyTaskRetryTimerScope:              {operation: "TimerStandbyTaskRetryTimer"},
+		TimerStandbyTaskActivityRetryTimerScope:      {operation: "TimerStandbyTaskActivityRetryTimer"},
+		TimerStandbyTaskWorkflowRetryTimerScope:      {operation: "TimerStandbyTaskWorkflowRetryTimer"},
 		TimerStandbyTaskDeleteHistoryEvent:           {operation: "TimerStandbyTaskDeleteHistoryEvent"},
 		HistoryEventNotificationScope:                {operation: "HistoryEventNotification"},
 		ReplicatorQueueProcessorScope:                {operation: "ReplicatorQueueProcessor"},
@@ -695,6 +701,7 @@ const (
 	PersistenceErrConditionFailedCounter
 	PersistenceErrTimeoutCounter
 	PersistenceErrBusyCounter
+	PersistenceSampledCounter
 
 	HistoryClientFailures
 	MatchingClientFailures
@@ -770,6 +777,8 @@ const (
 	ActiveTimerTaskQueueLatency
 	StandbyTransferTaskQueueLatency
 	StandbyTimerTaskQueueLatency
+	CompleteTaskFailedCounter
+
 	NumHistoryMetrics
 )
 
@@ -824,6 +833,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		PersistenceErrConditionFailedCounter:          {metricName: "persistence.errors.condition-failed", metricType: Counter},
 		PersistenceErrTimeoutCounter:                  {metricName: "persistence.errors.timeout", metricType: Counter},
 		PersistenceErrBusyCounter:                     {metricName: "persistence.errors.busy", metricType: Counter},
+		PersistenceSampledCounter:                     {metricName: "persistence.sampled", metricType: Counter},
 		HistoryClientFailures:                         {metricName: "client.history.errors", metricType: Counter},
 		MatchingClientFailures:                        {metricName: "client.matching.errors", metricType: Counter},
 		DomainCacheTotalCallbacksLatency:              {metricName: "domain-cache.total-callbacks.latency", metricType: Timer},
@@ -894,6 +904,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ActiveTimerTaskQueueLatency:                  {metricName: "active.timertask.queue.latency", metricType: Timer},
 		StandbyTransferTaskQueueLatency:              {metricName: "standby.transfertask.queue.latency", metricType: Timer},
 		StandbyTimerTaskQueueLatency:                 {metricName: "standby.timertask.queue.latency", metricType: Timer},
+		CompleteTaskFailedCounter:                    {metricName: "complete-task-fail-count", metricType: Counter},
 	},
 	Matching: {
 		PollSuccessCounter:            {metricName: "poll.success"},
