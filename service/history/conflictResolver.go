@@ -33,7 +33,7 @@ import (
 
 type (
 	conflictResolver interface {
-		reset(requestID string, replayEventID int64, startTime time.Time) (mutableState, error)
+		reset(prevRunID string, requestID string, replayEventID int64, startTime time.Time) (mutableState, error)
 	}
 
 	conflictResolverImpl struct {
@@ -59,7 +59,7 @@ func newConflictResolver(shard ShardContext, context *workflowExecutionContext, 
 	}
 }
 
-func (r *conflictResolverImpl) reset(requestID string, replayEventID int64, startTime time.Time) (mutableState, error) {
+func (r *conflictResolverImpl) reset(prevRunID string, requestID string, replayEventID int64, startTime time.Time) (mutableState, error) {
 	domainID := r.context.domainID
 	execution := r.context.workflowExecution
 	replayNextEventID := replayEventID + 1
@@ -74,8 +74,6 @@ func (r *conflictResolverImpl) reset(requestID string, replayEventID int64, star
 	for hasMore := true; hasMore; hasMore = len(nextPageToken) > 0 {
 		history, nextPageToken, lastFirstEventID, err = r.getHistory(domainID, execution, common.FirstEventID,
 			replayNextEventID, nextPageToken)
-		r.logger.Debugf("Conflict Resolver GetHistory. History Length: %v, token: %v, err: %v",
-			len(history.Events), nextPageToken, err)
 		if err != nil {
 			r.logError("Conflict resolution err getting history.", err)
 			return nil, err
@@ -125,7 +123,7 @@ func (r *conflictResolverImpl) reset(requestID string, replayEventID int64, star
 	resetMutableStateBuilder.UpdateReplicationStateLastEventID(sourceCluster, lastEvent.GetVersion(), replayEventID)
 
 	r.logger.WithField(logging.TagResetNextEventID, resetMutableStateBuilder.GetNextEventID()).Info("All events applied for execution.")
-	msBuilder, err := r.context.resetWorkflowExecution(resetMutableStateBuilder)
+	msBuilder, err := r.context.resetWorkflowExecution(prevRunID, resetMutableStateBuilder)
 	if err != nil {
 		r.logError("Conflict resolution err reset workflow.", err)
 	}

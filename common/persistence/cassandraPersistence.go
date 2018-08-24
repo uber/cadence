@@ -147,7 +147,15 @@ const (
 		`sticky_schedule_to_start_timeout: ?,` +
 		`client_library_version: ?, ` +
 		`client_feature_version: ?, ` +
-		`client_impl: ?` +
+		`client_impl: ?, ` +
+		`attempt: ?, ` +
+		`has_retry_policy: ?, ` +
+		`init_interval: ?, ` +
+		`backoff_coefficient: ?, ` +
+		`max_interval: ?, ` +
+		`expiration_time: ?, ` +
+		`max_attempts: ?, ` +
+		`non_retriable_errors: ?` +
 		`}`
 
 	templateReplicationStateType = `{` +
@@ -1244,6 +1252,14 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *Creat
 			"", // client_library_version
 			"", // client_feature_version
 			"", // client_impl
+			request.Attempt,
+			request.HasRetryPolicy,
+			request.InitialInterval,
+			request.BackoffCoefficient,
+			request.MaximumInterval,
+			request.ExpirationTime,
+			request.MaximumAttempts,
+			request.NonRetriableErrors,
 			request.NextEventID,
 			defaultVisibilityTimestamp,
 			rowTypeExecutionTaskID)
@@ -1294,6 +1310,14 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *Creat
 			"", // client_library_version
 			"", // client_feature_version
 			"", // client_impl
+			request.Attempt,
+			request.HasRetryPolicy,
+			request.InitialInterval,
+			request.BackoffCoefficient,
+			request.MaximumInterval,
+			request.ExpirationTime,
+			request.MaximumAttempts,
+			request.NonRetriableErrors,
 			request.ReplicationState.CurrentVersion,
 			request.ReplicationState.StartVersion,
 			request.ReplicationState.LastWriteVersion,
@@ -1452,6 +1476,14 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 			executionInfo.ClientLibraryVersion,
 			executionInfo.ClientFeatureVersion,
 			executionInfo.ClientImpl,
+			executionInfo.Attempt,
+			executionInfo.HasRetryPolicy,
+			executionInfo.InitialInterval,
+			executionInfo.BackoffCoefficient,
+			executionInfo.MaximumInterval,
+			executionInfo.ExpirationTime,
+			executionInfo.MaximumAttempts,
+			executionInfo.NonRetriableErrors,
 			executionInfo.NextEventID,
 			d.shardID,
 			rowTypeExecution,
@@ -1503,6 +1535,14 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 			executionInfo.ClientLibraryVersion,
 			executionInfo.ClientFeatureVersion,
 			executionInfo.ClientImpl,
+			executionInfo.Attempt,
+			executionInfo.HasRetryPolicy,
+			executionInfo.InitialInterval,
+			executionInfo.BackoffCoefficient,
+			executionInfo.MaximumInterval,
+			executionInfo.ExpirationTime,
+			executionInfo.MaximumAttempts,
+			executionInfo.NonRetriableErrors,
 			replicationState.CurrentVersion,
 			replicationState.StartVersion,
 			replicationState.LastWriteVersion,
@@ -1700,6 +1740,24 @@ func (d *cassandraPersistence) ResetMutableState(request *ResetMutableStateReque
 	if executionInfo.ParentRunID != "" {
 		parentRunID = executionInfo.ParentRunID
 	}
+
+	batch.Query(templateUpdateCurrentWorkflowExecutionQuery,
+		executionInfo.RunID,
+		executionInfo.RunID,
+		executionInfo.CreateRequestID,
+		executionInfo.State,
+		executionInfo.CloseStatus,
+		replicationState.StartVersion,
+		d.shardID,
+		rowTypeExecution,
+		executionInfo.DomainID,
+		executionInfo.WorkflowID,
+		permanentRunID,
+		defaultVisibilityTimestamp,
+		rowTypeExecutionTaskID,
+		request.PrevRunID,
+	)
+
 	batch.Query(templateUpdateWorkflowExecutionWithReplicationQuery,
 		executionInfo.DomainID,
 		executionInfo.WorkflowID,
@@ -1736,6 +1794,14 @@ func (d *cassandraPersistence) ResetMutableState(request *ResetMutableStateReque
 		executionInfo.ClientLibraryVersion,
 		executionInfo.ClientFeatureVersion,
 		executionInfo.ClientImpl,
+		executionInfo.Attempt,
+		executionInfo.HasRetryPolicy,
+		executionInfo.InitialInterval,
+		executionInfo.BackoffCoefficient,
+		executionInfo.MaximumInterval,
+		executionInfo.ExpirationTime,
+		executionInfo.MaximumAttempts,
+		executionInfo.NonRetriableErrors,
 		replicationState.CurrentVersion,
 		replicationState.StartVersion,
 		replicationState.LastWriteVersion,
@@ -2644,9 +2710,11 @@ func (d *cassandraPersistence) createTimerTasks(batch *gocql.Batch, timerTasks [
 			attempt = t.Attempt
 		case *UserTimerTask:
 			eventID = t.EventID
-		case *RetryTimerTask:
+		case *ActivityRetryTimerTask:
 			eventID = t.EventID
 			attempt = int64(t.Attempt)
+		case *WorkflowRetryTimerTask:
+			eventID = t.EventID
 		}
 
 		ts := common.UnixNanoToCQLTimestamp(GetVisibilityTSFrom(task).UnixNano())
@@ -3231,6 +3299,22 @@ func createWorkflowExecutionInfo(result map[string]interface{}) *WorkflowExecuti
 			info.ClientFeatureVersion = v.(string)
 		case "client_impl":
 			info.ClientImpl = v.(string)
+		case "attempt":
+			info.Attempt = int32(v.(int))
+		case "has_retry_policy":
+			info.HasRetryPolicy = v.(bool)
+		case "init_interval":
+			info.InitialInterval = int32(v.(int))
+		case "backoff_coefficient":
+			info.BackoffCoefficient = v.(float64)
+		case "max_interval":
+			info.MaximumInterval = int32(v.(int))
+		case "max_attempts":
+			info.MaximumAttempts = int32(v.(int))
+		case "expiration_time":
+			info.ExpirationTime = v.(time.Time)
+		case "non_retriable_errors":
+			info.NonRetriableErrors = v.([]string)
 		}
 	}
 
@@ -3728,8 +3812,11 @@ func GetVisibilityTSFrom(task Task) time.Time {
 	case TaskTypeDeleteHistoryEvent:
 		return task.(*DeleteHistoryEventTask).VisibilityTimestamp
 
-	case TaskTypeRetryTimer:
-		return task.(*RetryTimerTask).VisibilityTimestamp
+	case TaskTypeActivityRetryTimer:
+		return task.(*ActivityRetryTimerTask).VisibilityTimestamp
+
+	case TaskTypeWorkflowRetryTimer:
+		return task.(*WorkflowRetryTimerTask).VisibilityTimestamp
 	}
 	return time.Time{}
 }
@@ -3752,7 +3839,10 @@ func SetVisibilityTSFrom(task Task, t time.Time) {
 	case TaskTypeDeleteHistoryEvent:
 		task.(*DeleteHistoryEventTask).VisibilityTimestamp = t
 
-	case TaskTypeRetryTimer:
-		task.(*RetryTimerTask).VisibilityTimestamp = t
+	case TaskTypeActivityRetryTimer:
+		task.(*ActivityRetryTimerTask).VisibilityTimestamp = t
+
+	case TaskTypeWorkflowRetryTimer:
+		task.(*WorkflowRetryTimerTask).VisibilityTimestamp = t
 	}
 }
