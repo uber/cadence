@@ -27,7 +27,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"fmt"
 	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -357,7 +356,6 @@ func (t *timerQueueProcessorBase) internalProcessor() error {
 }
 
 func (t *timerQueueProcessorBase) readAndFanoutTimerTasks() (*persistence.TimerTaskInfo, error) {
-	fmt.Println("vancexu in readAndFanoutTimerTasks")
 	if !t.rateLimiter.Consume(1, t.shard.GetConfig().TimerProcessorMaxPollInterval()) {
 		t.notifyNewTimer(time.Time{}) // re-enqueue the event
 		return nil, nil
