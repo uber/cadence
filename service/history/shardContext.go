@@ -813,7 +813,7 @@ func (s *shardContextImpl) allocateTimerIDsLocked(timerTasks []persistence.Task)
 		if ts.Before(s.timerMaxReadLevelMap[cluster]) {
 			// This can happen if shard move and new host have a time SKU, or there is db write delay.
 			// We generate a new timer ID using timerMaxReadLevel.
-			s.logger.WithField("Cluster", cluster).Warnf("%v: New timer generated is less than read level. timestamp: %v, timerMaxReadLevel: %v,",
+			s.logger.WithField("Cluster", cluster).Warnf("%v: New timer generated is less than read level. timestamp: %v, timerMaxReadLevel: %v",
 				time.Now(), ts, s.timerMaxReadLevelMap[cluster])
 			persistence.SetVisibilityTSFrom(task, s.timerMaxReadLevelMap[cluster].Add(time.Millisecond))
 		}
