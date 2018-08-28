@@ -1012,23 +1012,23 @@ func (s *integrationSuite) TestWorkflowRetry() {
 			}}, nil
 	}
 
-	poller := &taskPoller{
-		engine:          s.engine,
-		domain:          s.domainName,
-		taskList:        taskList,
-		identity:        identity,
-		decisionHandler: dtHandler,
-		logger:          s.logger,
-		suite:           s,
+	poller := &TaskPoller{
+		Engine:          s.engine,
+		Domain:          s.domainName,
+		TaskList:        taskList,
+		Identity:        identity,
+		DecisionHandler: dtHandler,
+		Logger:          s.logger,
+		T:               s.T(),
 	}
 
-	_, err := poller.pollAndProcessDecisionTask(false, false)
+	_, err := poller.PollAndProcessDecisionTask(false, false)
 	s.True(err == nil, err)
 
-	_, err = poller.pollAndProcessDecisionTask(false, false)
+	_, err = poller.PollAndProcessDecisionTask(false, false)
 	s.True(err == nil, err)
 
-	_, err = poller.pollAndProcessDecisionTask(false, false)
+	_, err = poller.PollAndProcessDecisionTask(false, false)
 	s.True(err == nil, err)
 
 	s.Equal(3, attemptCount)

@@ -57,6 +57,7 @@ type (
 		foreignDomainName string
 	}
 
+	// IntegrationBase is a base struct for integration tests
 	IntegrationBase struct {
 		persistence.TestBase
 		mockMessagingClient messaging.Client
@@ -66,6 +67,7 @@ type (
 		logger              bark.Logger
 	}
 
+	// TaskPoller is used in integration tests to poll decision or activity tasks
 	TaskPoller struct {
 		Engine                              fecli.Client
 		Domain                              string
@@ -81,30 +83,36 @@ type (
 	}
 )
 
+// PollAndProcessDecisionTask for decision tasks
 func (p *TaskPoller) PollAndProcessDecisionTask(dumpHistory bool, dropTask bool) (isQueryTask bool, err error) {
 	return p.PollAndProcessDecisionTaskWithAttempt(dumpHistory, dropTask, false, false, int64(0))
 }
 
+// PollAndProcessDecisionTaskWithSticky for decision tasks
 func (p *TaskPoller) PollAndProcessDecisionTaskWithSticky(dumpHistory bool, dropTask bool) (isQueryTask bool, err error) {
 	return p.PollAndProcessDecisionTaskWithAttempt(dumpHistory, dropTask, true, true, int64(0))
 }
 
+// PollAndProcessDecisionTaskWithoutRetry for decision tasks
 func (p *TaskPoller) PollAndProcessDecisionTaskWithoutRetry(dumpHistory bool, dropTask bool) (isQueryTask bool, err error) {
 	return p.PollAndProcessDecisionTaskWithAttemptAndRetry(dumpHistory, dropTask, false, false, int64(0), 1)
 }
 
+// PollAndProcessDecisionTaskWithAttempt for decision tasks
 func (p *TaskPoller) PollAndProcessDecisionTaskWithAttempt(dumpHistory bool, dropTask bool,
 	pollStickyTaskList bool, respondStickyTaskList bool, decisionAttempt int64) (isQueryTask bool, err error) {
 	return p.PollAndProcessDecisionTaskWithAttemptAndRetry(dumpHistory, dropTask, pollStickyTaskList,
 		respondStickyTaskList, decisionAttempt, 5)
 }
 
+// PollAndProcessDecisionTaskWithAttemptAndRetry for decision tasks
 func (p *TaskPoller) PollAndProcessDecisionTaskWithAttemptAndRetry(dumpHistory bool, dropTask bool,
 	pollStickyTaskList bool, respondStickyTaskList bool, decisionAttempt int64, retryCount int) (isQueryTask bool, err error) {
 	isQueryTask, _, err = p.PollAndProcessDecisionTaskWithAttemptAndRetryAndForceNewDecision(dumpHistory, dropTask, pollStickyTaskList, respondStickyTaskList, decisionAttempt, retryCount, false)
 	return isQueryTask, err
 }
 
+// PollAndProcessDecisionTaskWithAttemptAndRetryAndForceNewDecision for decision tasks
 func (p *TaskPoller) PollAndProcessDecisionTaskWithAttemptAndRetryAndForceNewDecision(dumpHistory bool, dropTask bool,
 	pollStickyTaskList bool, respondStickyTaskList bool, decisionAttempt int64, retryCount int, forceCreateNewDecision bool) (isQueryTask bool, newTask *workflow.RespondDecisionTaskCompletedResponse, err error) {
 Loop:
@@ -263,6 +271,7 @@ Loop:
 	return false, nil, matching.ErrNoTasks
 }
 
+// PollAndProcessActivityTask for activity tasks
 func (p *TaskPoller) PollAndProcessActivityTask(dropTask bool) error {
 retry:
 	for attempt := 0; attempt < 5; attempt++ {
@@ -321,7 +330,7 @@ retry:
 	return matching.ErrNoTasks
 }
 
-// Similar to PollAndProcessActivityTask but using RespondActivityTask...ByID
+// PollAndProcessActivityTaskWithID is similar to PollAndProcessActivityTask but using RespondActivityTask...ByID
 func (p *TaskPoller) PollAndProcessActivityTaskWithID(dropTask bool) error {
 retry:
 	for attempt := 0; attempt < 5; attempt++ {
