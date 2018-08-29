@@ -723,6 +723,7 @@ const (
 const (
 	TaskRequests = iota + NumCommonMetrics
 	TaskFailures
+	TaskStuck
 	TaskLatency
 	AckLevelUpdateCounter
 	AckLevelUpdateFailedCounter
@@ -850,6 +851,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 	History: {
 		TaskRequests:                                 {metricName: "task.requests", metricType: Counter},
 		TaskFailures:                                 {metricName: "task.errors", metricType: Counter},
+		TaskStuck:                                    {metricName: "task.stuck", metricType: Counter},
 		TaskLatency:                                  {metricName: "task.latency", metricType: Timer},
 		AckLevelUpdateCounter:                        {metricName: "ack-level-update", metricType: Counter},
 		AckLevelUpdateFailedCounter:                  {metricName: "ack-level-update-failed", metricType: Counter},

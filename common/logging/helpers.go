@@ -56,12 +56,12 @@ func LogOperationFailedEvent(logger bark.Logger, msg string, err error) {
 	}).Warnf("%v.  Error: %v", msg, err)
 }
 
-// LogOperationPanicEvent is used to log fatal errors by application to cause panic
-func LogOperationPanicEvent(logger bark.Logger, msg string, err error) {
+// LogOperationStuckEvent is used to log fatal errors by application to cause panic
+func LogOperationStuckEvent(logger bark.Logger, msg string, err error) {
 	logger.WithFields(bark.Fields{
 		TagWorkflowEventID: OperationPanic,
 		TagWorkflowErr:     err,
-	}).Fatal(msg)
+	}).Error(msg)
 }
 
 // LogInternalServiceError is used to log internal service error

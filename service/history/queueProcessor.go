@@ -330,7 +330,8 @@ ProcessRetryLoop:
 			return
 		}
 
-		logging.LogOperationPanicEvent(logger, "Retry count exceeded for transfer task", err)
+		p.metricsClient.IncCounter(p.options.MetricScope, metrics.TaskStuck)
+		logging.LogOperationStuckEvent(logger, "Retry count exceeded for transfer task", err)
 	case *persistence.ReplicationTaskInfo:
 		// Cannot processes replication task due to LimitExceededError after all retries
 		// raise and alert and move on
@@ -341,7 +342,8 @@ ProcessRetryLoop:
 			return
 		}
 
-		logging.LogOperationPanicEvent(logger, "Retry count exceeded for replication task", err)
+		p.metricsClient.IncCounter(p.options.MetricScope, metrics.TaskStuck)
+		logging.LogOperationStuckEvent(logger, "Retry count exceeded for replication task", err)
 	}
 }
 
@@ -351,9 +353,10 @@ func (p *queueProcessorBase) initializeLoggerForTask(task queueTaskInfo, logger 
 	}
 
 	logger = p.logger.WithFields(bark.Fields{
-		logging.TagTaskID:   task.GetTaskID(),
-		logging.TagTaskType: task.GetTaskType(),
-		logging.TagVersion:  task.GetVersion(),
+		logging.TagHistoryShardID: p.shard.GetShardID(),
+		logging.TagTaskID:         task.GetTaskID(),
+		logging.TagTaskType:       task.GetTaskType(),
+		logging.TagVersion:        task.GetVersion(),
 	})
 
 	switch task := task.(type) {
