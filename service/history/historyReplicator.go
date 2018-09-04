@@ -654,7 +654,6 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 		return nil
 	}
 	if _, ok := err.(*persistence.WorkflowExecutionAlreadyStartedError); !ok {
-		deleteHistory()
 		return err
 	}
 
