@@ -709,8 +709,9 @@ const (
 	PersistenceErrBusyCounter
 	PersistenceSampledCounter
 
-	HistoryClientFailures
-	MatchingClientFailures
+	CadenceClientRequests
+	CadenceClientFailures
+	CadenceClientLatency
 
 	DomainCacheTotalCallbacksLatency
 	DomainCacheBeforeCallbackLatency
@@ -840,8 +841,9 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		PersistenceErrTimeoutCounter:                  {metricName: "persistence.errors.timeout", metricType: Counter},
 		PersistenceErrBusyCounter:                     {metricName: "persistence.errors.busy", metricType: Counter},
 		PersistenceSampledCounter:                     {metricName: "persistence.sampled", metricType: Counter},
-		HistoryClientFailures:                         {metricName: "client.history.errors", metricType: Counter},
-		MatchingClientFailures:                        {metricName: "client.matching.errors", metricType: Counter},
+		CadenceClientRequests:                         {metricName: "cadence.client.requests", metricType: Counter},
+		CadenceClientFailures:                         {metricName: "cadence.client.errors", metricType: Counter},
+		CadenceClientLatency:                          {metricName: "cadence.client.latency", metricType: Timer},
 		DomainCacheTotalCallbacksLatency:              {metricName: "domain-cache.total-callbacks.latency", metricType: Timer},
 		DomainCacheBeforeCallbackLatency:              {metricName: "domain-cache.before-callbacks.latency", metricType: Timer},
 		DomainCacheAfterCallbackLatency:               {metricName: "domain-cache.after-callbacks.latency", metricType: Timer},
