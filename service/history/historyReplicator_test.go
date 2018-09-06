@@ -1454,9 +1454,9 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_SameRunID() {
 	currentRunID := runID
 	currentState := persistence.WorkflowStateRunning
 	errRet := &persistence.WorkflowExecutionAlreadyStartedError{
-		RunID:        currentRunID,
-		State:        currentState,
-		StartVersion: currentVersion,
+		RunID:            currentRunID,
+		State:            currentState,
+		LastWriteVersion: currentVersion,
 	}
 	// the test above already assert the create workflow request, so here jsut use anyting
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(nil, errRet).Once()
@@ -1543,9 +1543,9 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 	currentRunID := uuid.New()
 	currentState := persistence.WorkflowStateCompleted
 	errRet := &persistence.WorkflowExecutionAlreadyStartedError{
-		RunID:        currentRunID,
-		State:        currentState,
-		StartVersion: currentVersion,
+		RunID:            currentRunID,
+		State:            currentState,
+		LastWriteVersion: currentVersion,
 	}
 	// the test above already assert the create workflow request, so here jsut use anyting
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(nil, errRet).Once()
@@ -1634,9 +1634,9 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 	currentRunID := uuid.New()
 	currentState := persistence.WorkflowStateCompleted
 	errRet := &persistence.WorkflowExecutionAlreadyStartedError{
-		RunID:        currentRunID,
-		State:        currentState,
-		StartVersion: currentVersion,
+		RunID:            currentRunID,
+		State:            currentState,
+		LastWriteVersion: currentVersion,
 	}
 	// the test above already assert the create workflow request, so here jsut use anyting
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.MatchedBy(func(input *persistence.CreateWorkflowExecutionRequest) bool {
@@ -1788,9 +1788,9 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 	currentRunID := uuid.New()
 	currentState := persistence.WorkflowStateCompleted
 	errRet := &persistence.WorkflowExecutionAlreadyStartedError{
-		RunID:        currentRunID,
-		State:        currentState,
-		StartVersion: currentVersion,
+		RunID:            currentRunID,
+		State:            currentState,
+		LastWriteVersion: currentVersion,
 	}
 	// the test above already assert the create workflow request, so here jsut use anyting
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.MatchedBy(func(input *persistence.CreateWorkflowExecutionRequest) bool {
@@ -1941,9 +1941,9 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	currentRunID := uuid.New()
 	currentState := persistence.WorkflowStateRunning
 	errRet := &persistence.WorkflowExecutionAlreadyStartedError{
-		RunID:        currentRunID,
-		State:        currentState,
-		StartVersion: currentVersion,
+		RunID:            currentRunID,
+		State:            currentState,
+		LastWriteVersion: currentVersion,
 	}
 	// the test above already assert the create workflow request, so here jsut use anyting
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(nil, errRet).Once()
@@ -2031,9 +2031,9 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	currentRunID := uuid.New()
 	currentState := persistence.WorkflowStateRunning
 	errRet := &persistence.WorkflowExecutionAlreadyStartedError{
-		RunID:        currentRunID,
-		State:        currentState,
-		StartVersion: currentVersion,
+		RunID:            currentRunID,
+		State:            currentState,
+		LastWriteVersion: currentVersion,
 	}
 	// the test above already assert the create workflow request, so here jsut use anyting
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(nil, errRet).Once()
@@ -2141,9 +2141,9 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	currentRunID := uuid.New()
 	currentState := persistence.WorkflowStateRunning
 	errRet := &persistence.WorkflowExecutionAlreadyStartedError{
-		RunID:        currentRunID,
-		State:        currentState,
-		StartVersion: currentVersion,
+		RunID:            currentRunID,
+		State:            currentState,
+		LastWriteVersion: currentVersion,
 	}
 	// the test above already assert the create workflow request, so here jsut use anyting
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.MatchedBy(func(input *persistence.CreateWorkflowExecutionRequest) bool {
