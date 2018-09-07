@@ -1875,7 +1875,7 @@ GetFailureReasonLoop:
 			break GetFailureReasonLoop
 		}
 
-		runId, runIdOk := previous["run_id"].(string)
+		runID, runIDOk := previous["run_id"].(string)
 
 		if rowType == rowTypeShard {
 			if actualRangeID, ok = previous["range_id"].(int64); ok && actualRangeID != requestRangeID {
@@ -1883,7 +1883,7 @@ GetFailureReasonLoop:
 				rangeIDUnmatch = true
 
 			}
-		} else if rowType == rowTypeExecution && runIdOk && runId == requestRunID {
+		} else if rowType == rowTypeExecution && runIDOk && runID == requestRunID {
 			if actualNextEventID, ok = previous["next_event_id"].(int64); ok && actualNextEventID != requestCondition {
 				// CreateWorkflowExecution failed because next event ID is unexpected
 				nextEventIDUnmatch = true
@@ -1915,8 +1915,6 @@ GetFailureReasonLoop:
 	}
 
 	// At this point we only know that the write was not applied.
-	// It's much safer to return ShardOwnershipLostError as the default to force the application to reload
-	// shard to recover from such errors
 	var columns []string
 	columnID := 0
 	for _, previous := range allPrevious {
@@ -1925,10 +1923,9 @@ GetFailureReasonLoop:
 		}
 		columnID++
 	}
-	return &ShardOwnershipLostError{
-		ShardID: d.shardID,
-		Msg: fmt.Sprintf("Failed to reset mutable state.  RangeID: %v, Condition: %v, columns: (%v)",
-			requestRangeID, requestCondition, strings.Join(columns, ",")),
+	return &ConditionFailedError{
+		Msg: fmt.Sprintf("Failed to reset mutable state. ShardID: %v, RangeID: %v, Condition: %v, columns: (%v)",
+			d.shardID, requestRangeID, requestCondition, strings.Join(columns, ",")),
 	}
 }
 
