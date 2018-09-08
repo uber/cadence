@@ -1692,7 +1692,7 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 	}
 
 	if !applied {
-		return d.getExecutionConditionalUpdateFailure(previous, iter, executionInfo.RunID, request.Condition, request.RangeID)
+		return d.getExecutionConditionalUpdateFailure(previous, iter, executionInfo.RunID, request.Condition, request.RangeID, executionInfo.RunID)
 	}
 
 	return nil
@@ -1852,19 +1852,21 @@ func (d *cassandraPersistence) ResetMutableState(request *ResetMutableStateReque
 	}
 
 	if !applied {
-		return d.getExecutionConditionalUpdateFailure(previous, iter, executionInfo.RunID, request.Condition, request.RangeID)
+		return d.getExecutionConditionalUpdateFailure(previous, iter, executionInfo.RunID, request.Condition, request.RangeID, request.PrevRunID)
 	}
 
 	return nil
 }
 
-func (d *cassandraPersistence) getExecutionConditionalUpdateFailure(previous map[string]interface{}, iter *gocql.Iter, requestRunID string, requestCondition int64, requestRangeID int64) error {
-	// There can be two reasons why the query does not get applied. Either the RangeID has changed, or
-	// the next_event_id check failed. Check the row info returned by Cassandra to figure out which one it is.
+func (d *cassandraPersistence) getExecutionConditionalUpdateFailure(previous map[string]interface{}, iter *gocql.Iter, requestRunID string, requestCondition int64, requestRangeID int64, requestConditionalRunID string) error {
+	// There can be three reasons why the query does not get applied: the RangeID has changed, or the next_event_id or current_run_id check failed.
+	// Check the row info returned by Cassandra to figure out which one it is.
 	rangeIDUnmatch := false
 	actualRangeID := int64(0)
 	nextEventIDUnmatch := false
 	actualNextEventID := int64(0)
+	runIDUnmatch := false
+	actualCurrRunID := ""
 	allPrevious := []map[string]interface{}{}
 
 GetFailureReasonLoop:
@@ -1885,8 +1887,15 @@ GetFailureReasonLoop:
 			}
 		} else if rowType == rowTypeExecution && runIDOk && runID == requestRunID {
 			if actualNextEventID, ok = previous["next_event_id"].(int64); ok && actualNextEventID != requestCondition {
-				// CreateWorkflowExecution failed because next event ID is unexpected
+				// UpdateWorkflowExecution failed because next event ID is unexpected
 				nextEventIDUnmatch = true
+			}
+		} else if rowType == rowTypeExecution && runIDOk && runID == permanentRunID {
+			// UpdateWorkflowExecution failed because current_run_id is unexpected
+			if r, ok := previous["current_run_id"].(gocql.UUID); ok && r.String() != requestConditionalRunID {
+				actualCurrRunID = r.String()
+				// UpdateWorkflowExecution failed because next event ID is unexpected
+				runIDUnmatch = true
 			}
 		}
 
@@ -1907,10 +1916,10 @@ GetFailureReasonLoop:
 		}
 	}
 
-	if nextEventIDUnmatch {
+	if nextEventIDUnmatch || runIDUnmatch {
 		return &ConditionFailedError{
-			Msg: fmt.Sprintf("Failed to reset mutable state.  Request Condition: %v, Actual Value: %v",
-				requestCondition, actualNextEventID),
+			Msg: fmt.Sprintf("Failed to reset mutable state.  Request Condition: %v, Actual Value: %v, Request Current RunID: %v, Actual Value: %v",
+				requestCondition, actualNextEventID, requestConditionalRunID, actualCurrRunID),
 		}
 	}
 
