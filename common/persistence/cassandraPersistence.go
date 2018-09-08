@@ -1911,14 +1911,14 @@ GetFailureReasonLoop:
 	if rangeIDUnmatch {
 		return &ShardOwnershipLostError{
 			ShardID: d.shardID,
-			Msg: fmt.Sprintf("Failed to reset mutable state.  Request RangeID: %v, Actual RangeID: %v",
+			Msg: fmt.Sprintf("Failed to update mutable state.  Request RangeID: %v, Actual RangeID: %v",
 				requestRangeID, actualRangeID),
 		}
 	}
 
 	if nextEventIDUnmatch || runIDUnmatch {
 		return &ConditionFailedError{
-			Msg: fmt.Sprintf("Failed to reset mutable state.  Request Condition: %v, Actual Value: %v, Request Current RunID: %v, Actual Value: %v",
+			Msg: fmt.Sprintf("Failed to update mutable state.  Request Condition: %v, Actual Value: %v, Request Current RunID: %v, Actual Value: %v",
 				requestCondition, actualNextEventID, requestConditionalRunID, actualCurrRunID),
 		}
 	}
@@ -1933,8 +1933,8 @@ GetFailureReasonLoop:
 		columnID++
 	}
 	return &ConditionFailedError{
-		Msg: fmt.Sprintf("Failed to reset mutable state. ShardID: %v, RangeID: %v, Condition: %v, columns: (%v)",
-			d.shardID, requestRangeID, requestCondition, strings.Join(columns, ",")),
+		Msg: fmt.Sprintf("Failed to reset mutable state. ShardID: %v, RangeID: %v, Condition: %v, Request Current RunID: %v, columns: (%v)",
+			d.shardID, requestRangeID, requestCondition, requestConditionalRunID, strings.Join(columns, ",")),
 	}
 }
 
