@@ -292,4 +292,6 @@ imports:
   version: 07ffaad256c8e957050ad83d6472eb97d785013d
 - name: gopkg.in/yaml.v2
   version: 287cf08546ab5e7e37d55a84f7ed3fd1db036de5
+- name: github.com/iancoleman/strcase
+  version: 3605ed457bf7f8caa1371b4fafadadc026673479
 testImports: []

@@ -22,6 +22,7 @@ package sql
 
 import (
 	"fmt"
+	"github.com/iancoleman/strcase"
 
 	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -40,16 +41,16 @@ type (
 	}
 
 	eventsRow struct {
-		DomainID     string  `db:"domain_id"`
-		WorkflowID   string  `db:"workflow_id"`
-		RunID        string  `db:"run_id"`
-		FirstEventID int64   `db:"first_event_id"`
-		Data         *[]byte `db:"data"`
-		DataEncoding string  `db:"data_encoding"`
-		DataVersion  int64   `db:"data_version"`
+		DomainID     string
+		WorkflowID   string
+		RunID        string
+		FirstEventID int64
+		Data         *[]byte
+		DataEncoding string
+		DataVersion  int64
 
-		RangeID int64 `db:"range_id"`
-		TxID    int64 `db:"tx_id"`
+		RangeID int64
+		TxID    int64
 	}
 )
 
@@ -106,7 +107,7 @@ func NewHistoryPersistence(username, password, host, port, dbName string, logger
 	if err != nil {
 		return nil, err
 	}
-
+	db.MapperFunc(strcase.ToSnake)
 	return &sqlHistoryManager{
 		db:     db,
 		logger: logger,

@@ -49,6 +49,7 @@ import:
   version: 0.1.7
 - package: github.com/hmgle/sqlx
 - package: github.com/go-sql-driver/mysql
+- package: github.com/iancoleman/strcase
 
 # Added excludeDirs to prevent build from failing on the yarpc generated code.
 excludeDirs:
