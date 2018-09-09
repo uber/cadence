@@ -34,6 +34,7 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 )
@@ -80,7 +81,7 @@ type (
 
 	// TestBase wraps the base setup needed to create workflows over engine layer.
 	TestBase struct {
-		persistence.TestBase
+		persistencetests.TestBase
 		ShardContext *TestShardContext
 	}
 )
@@ -348,8 +349,12 @@ func (s *TestShardContext) UpdateWorkflowExecution(request *persistence.UpdateWo
 			panic(err)
 		}
 		task.SetTaskID(seqID)
+		visibilityTs, err := persistence.GetVisibilityTSFrom(task)
+		if err != nil {
+			panic(err)
+		}
 		s.logger.Infof("%v: TestShardContext: Assigning timer (timestamp: %v, seq: %v)",
-			time.Now().UTC(), persistence.GetVisibilityTSFrom(task).UTC(), task.GetTaskID())
+			time.Now().UTC(), visibilityTs, task.GetTaskID())
 	}
 	return s.executionMgr.UpdateWorkflowExecution(request)
 }
@@ -439,7 +444,7 @@ func (s *TestShardContext) GetCurrentTime(cluster string) time.Time {
 }
 
 // SetupWorkflowStoreWithOptions to setup workflow test base
-func (s *TestBase) SetupWorkflowStoreWithOptions(options persistence.TestBaseOptions) {
+func (s *TestBase) SetupWorkflowStoreWithOptions(options persistencetests.TestBaseOptions) {
 	s.TestBase.SetupWorkflowStoreWithOptions(options, nil)
 	log := bark.NewLoggerFromLogrus(log.New())
 	config := NewConfig(dynamicconfig.NewNopCollection(), 1)

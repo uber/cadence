@@ -25,8 +25,12 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/cassandra"
+	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+
+	sc "github.com/uber/cadence/service"
 )
 
 // Config represents configuration for cadence-frontend service
@@ -84,14 +88,24 @@ func (s *Service) Start() {
 	persistenceMaxQPS := s.config.PersistenceMaxQPS()
 	persistenceRateLimiter := common.NewTokenBucket(persistenceMaxQPS, common.NewRealTimeSource())
 
-	metadata, err := persistence.NewMetadataManagerProxy(p.CassandraConfig.Hosts,
-		p.CassandraConfig.Port,
-		p.CassandraConfig.User,
-		p.CassandraConfig.Password,
-		p.CassandraConfig.Datacenter,
-		p.CassandraConfig.Keyspace,
-		p.ClusterMetadata.GetCurrentClusterName(),
-		p.Logger)
+	var metadata persistence.MetadataManager
+	var err error
+	if sc.UseMysql || sc.UseSqlMetadata {
+		metadata, err = sql.NewMetadataPersistence("uber",
+			"uber",
+			"localhost",
+			"3306",
+			"catalyst_test")
+	} else {
+		metadata, err = cassandra.NewMetadataManagerProxy(p.CassandraConfig.Hosts,
+			p.CassandraConfig.Port,
+			p.CassandraConfig.User,
+			p.CassandraConfig.Password,
+			p.CassandraConfig.Datacenter,
+			p.CassandraConfig.Keyspace,
+			p.ClusterMetadata.GetCurrentClusterName(),
+			p.Logger)
+	}
 
 	if err != nil {
 		log.Fatalf("failed to create metadata manager: %v", err)
@@ -99,7 +113,7 @@ func (s *Service) Start() {
 	metadata = persistence.NewMetadataPersistenceRateLimitedClient(metadata, persistenceRateLimiter, log)
 	metadata = persistence.NewMetadataPersistenceMetricsClient(metadata, base.GetMetricsClient(), log)
 
-	visibility, err := persistence.NewCassandraVisibilityPersistence(p.CassandraConfig.Hosts,
+	visibility, err := cassandra.NewVisibilityPersistence(p.CassandraConfig.Hosts,
 		p.CassandraConfig.Port,
 		p.CassandraConfig.User,
 		p.CassandraConfig.Password,
@@ -113,14 +127,24 @@ func (s *Service) Start() {
 	visibility = persistence.NewVisibilityPersistenceRateLimitedClient(visibility, persistenceRateLimiter, log)
 	visibility = persistence.NewVisibilityPersistenceMetricsClient(visibility, base.GetMetricsClient(), log)
 
-	history, err := persistence.NewCassandraHistoryPersistence(p.CassandraConfig.Hosts,
-		p.CassandraConfig.Port,
-		p.CassandraConfig.User,
-		p.CassandraConfig.Password,
-		p.CassandraConfig.Datacenter,
-		p.CassandraConfig.Keyspace,
-		s.config.HistoryMgrNumConns(),
-		p.Logger)
+	var history persistence.HistoryManager
+	if sc.UseMysql || sc.UseSqlHistory {
+		history, err = sql.NewHistoryPersistence("uber",
+			"uber",
+			"localhost",
+			"3306",
+			"catalyst_test",
+			log)
+	} else {
+		history, err = cassandra.NewHistoryPersistence(p.CassandraConfig.Hosts,
+			p.CassandraConfig.Port,
+			p.CassandraConfig.User,
+			p.CassandraConfig.Password,
+			p.CassandraConfig.Datacenter,
+			p.CassandraConfig.Keyspace,
+			s.config.HistoryMgrNumConns(),
+			p.Logger)
+	}
 
 	if err != nil {
 		log.Fatalf("Creating Cassandra history manager persistence failed: %v", err)

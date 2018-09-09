@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package persistence
+package cassandra
 
 import (
 	"fmt"
@@ -30,6 +30,7 @@ import (
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/persistence"
 )
 
 // Guidelines for creating new special UUID constants
@@ -47,8 +48,6 @@ const (
 	emptyRunID                          = "30000000-0000-f000-f000-000000000000"
 	permanentRunID                      = "30000000-0000-f000-f000-000000000001"
 	transferTaskTypeTransferTargetRunID = "30000000-0000-f000-f000-000000000002"
-	// Special Workflow IDs
-	transferTaskTransferTargetWorkflowID = "20000000-0000-f000-f000-000000000001"
 	// Row Constants for Shard Row
 	rowTypeShardDomainID   = "10000000-1000-f000-f000-000000000000"
 	rowTypeShardWorkflowID = "20000000-1000-f000-f000-000000000000"
@@ -844,9 +843,9 @@ type (
 	}
 )
 
-// NewCassandraShardPersistence is used to create an instance of ShardManager implementation
-func NewCassandraShardPersistence(hosts string, port int, user, password, dc string, keyspace string,
-	currentClusterName string, logger bark.Logger) (ShardManager, error) {
+// NewShardPersistence is used to create an instance of ShardManager implementation
+func NewShardPersistence(hosts string, port int, user, password, dc string, keyspace string,
+	currentClusterName string, logger bark.Logger) (persistence.ShardManager, error) {
 	cluster := common.NewCassandraCluster(hosts, port, user, password, dc)
 	cluster.Keyspace = keyspace
 	cluster.ProtoVersion = cassandraProtoVersion
@@ -862,15 +861,15 @@ func NewCassandraShardPersistence(hosts string, port int, user, password, dc str
 	return &cassandraPersistence{shardID: -1, session: session, currentClusterName: currentClusterName, logger: logger}, nil
 }
 
-// NewCassandraWorkflowExecutionPersistence is used to create an instance of workflowExecutionManager implementation
-func NewCassandraWorkflowExecutionPersistence(shardID int, session *gocql.Session,
-	logger bark.Logger) (ExecutionManager, error) {
+// NewWorkflowExecutionPersistence is used to create an instance of workflowExecutionManager implementation
+func NewWorkflowExecutionPersistence(shardID int, session *gocql.Session,
+	logger bark.Logger) (persistence.ExecutionManager, error) {
 	return &cassandraPersistence{shardID: shardID, session: session, logger: logger}, nil
 }
 
-// NewCassandraTaskPersistence is used to create an instance of TaskManager implementation
-func NewCassandraTaskPersistence(hosts string, port int, user, password, dc string, keyspace string,
-	logger bark.Logger) (TaskManager, error) {
+// NewTaskPersistence is used to create an instance of TaskManager implementation
+func NewTaskPersistence(hosts string, port int, user, password, dc string, keyspace string,
+	logger bark.Logger) (persistence.TaskManager, error) {
 	cluster := common.NewCassandraCluster(hosts, port, user, password, dc)
 	cluster.Keyspace = keyspace
 	cluster.ProtoVersion = cassandraProtoVersion
@@ -892,7 +891,7 @@ func (d *cassandraPersistence) Close() {
 	}
 }
 
-func (d *cassandraPersistence) CreateShard(request *CreateShardRequest) error {
+func (d *cassandraPersistence) CreateShard(request *persistence.CreateShardRequest) error {
 	cqlNowTimestamp := common.UnixNanoToCQLTimestamp(time.Now().UnixNano())
 	shardInfo := request.ShardInfo
 	query := d.session.Query(templateCreateShardQuery,
@@ -931,7 +930,7 @@ func (d *cassandraPersistence) CreateShard(request *CreateShardRequest) error {
 
 	if !applied {
 		shard := previous["shard"].(map[string]interface{})
-		return &ShardAlreadyExistError{
+		return &persistence.ShardAlreadyExistError{
 			Msg: fmt.Sprintf("Shard already exists in executions table.  ShardId: %v, RangeId: %v",
 				shard["shard_id"], shard["range_id"]),
 		}
@@ -940,7 +939,7 @@ func (d *cassandraPersistence) CreateShard(request *CreateShardRequest) error {
 	return nil
 }
 
-func (d *cassandraPersistence) GetShard(request *GetShardRequest) (*GetShardResponse, error) {
+func (d *cassandraPersistence) GetShard(request *persistence.GetShardRequest) (*persistence.GetShardResponse, error) {
 	shardID := request.ShardID
 	query := d.session.Query(templateGetShardQuery,
 		shardID,
@@ -970,10 +969,10 @@ func (d *cassandraPersistence) GetShard(request *GetShardRequest) (*GetShardResp
 
 	info := createShardInfo(d.currentClusterName, result["shard"].(map[string]interface{}))
 
-	return &GetShardResponse{ShardInfo: info}, nil
+	return &persistence.GetShardResponse{ShardInfo: info}, nil
 }
 
-func (d *cassandraPersistence) UpdateShard(request *UpdateShardRequest) error {
+func (d *cassandraPersistence) UpdateShard(request *persistence.UpdateShardRequest) error {
 	cqlNowTimestamp := common.UnixNanoToCQLTimestamp(time.Now().UnixNano())
 	shardInfo := request.ShardInfo
 
@@ -1018,7 +1017,7 @@ func (d *cassandraPersistence) UpdateShard(request *UpdateShardRequest) error {
 			columns = append(columns, fmt.Sprintf("%s=%v", k, v))
 		}
 
-		return &ShardOwnershipLostError{
+		return &persistence.ShardOwnershipLostError{
 			ShardID: d.shardID,
 			Msg: fmt.Sprintf("Failed to update shard.  previous_range_id: %v, columns: (%v)",
 				request.PreviousRangeID, strings.Join(columns, ",")),
@@ -1028,8 +1027,8 @@ func (d *cassandraPersistence) UpdateShard(request *UpdateShardRequest) error {
 	return nil
 }
 
-func (d *cassandraPersistence) CreateWorkflowExecution(request *CreateWorkflowExecutionRequest) (
-	*CreateWorkflowExecutionResponse, error) {
+func (d *cassandraPersistence) CreateWorkflowExecution(request *persistence.CreateWorkflowExecutionRequest) (
+	*persistence.CreateWorkflowExecutionResponse, error) {
 	cqlNowTimestamp := common.UnixNanoToCQLTimestamp(time.Now().UnixNano())
 	batch := d.session.NewBatch(gocql.LoggedBatch)
 
@@ -1066,7 +1065,7 @@ func (d *cassandraPersistence) CreateWorkflowExecution(request *CreateWorkflowEx
 		if isTimeoutError(err) {
 			// Write may have succeeded, but we don't know
 			// return this info to the caller so they have the option of trying to find out by executing a read
-			return nil, &TimeoutError{Msg: fmt.Sprintf("CreateWorkflowExecution timed out. Error: %v", err)}
+			return nil, &persistence.TimeoutError{Msg: fmt.Sprintf("CreateWorkflowExecution timed out. Error: %v", err)}
 		} else if isThrottlingError(err) {
 			return nil, &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("CreateWorkflowExecution operation failed. Error: %v", err),
@@ -1092,7 +1091,7 @@ func (d *cassandraPersistence) CreateWorkflowExecution(request *CreateWorkflowEx
 			if rowType == rowTypeShard {
 				if rangeID, ok := previous["range_id"].(int64); ok && rangeID != request.RangeID {
 					// CreateWorkflowExecution failed because rangeID was modified
-					return nil, &ShardOwnershipLostError{
+					return nil, &persistence.ShardOwnershipLostError{
 						ShardID: d.shardID,
 						Msg: fmt.Sprintf("Failed to create workflow execution.  Request RangeID: %v, Actual RangeID: %v",
 							request.RangeID, rangeID),
@@ -1117,7 +1116,7 @@ func (d *cassandraPersistence) CreateWorkflowExecution(request *CreateWorkflowEx
 
 					msg := fmt.Sprintf("Workflow execution already running. WorkflowId: %v, RunId: %v, rangeID: %v, columns: (%v)",
 						request.Execution.GetWorkflowId(), executionInfo.RunID, request.RangeID, strings.Join(columns, ","))
-					return nil, &WorkflowExecutionAlreadyStartedError{
+					return nil, &persistence.WorkflowExecutionAlreadyStartedError{
 						Msg:              msg,
 						StartRequestID:   executionInfo.CreateRequestID,
 						RunID:            executionInfo.RunID,
@@ -1143,31 +1142,31 @@ func (d *cassandraPersistence) CreateWorkflowExecution(request *CreateWorkflowEx
 		for k, v := range previous {
 			columns = append(columns, fmt.Sprintf("%s=%v", k, v))
 		}
-		return nil, &ShardOwnershipLostError{
+		return nil, &persistence.ShardOwnershipLostError{
 			ShardID: d.shardID,
 			Msg: fmt.Sprintf("Failed to create workflow execution.  Request RangeID: %v, columns: (%v)",
 				request.RangeID, strings.Join(columns, ",")),
 		}
 	}
 
-	return &CreateWorkflowExecutionResponse{}, nil
+	return &persistence.CreateWorkflowExecutionResponse{}, nil
 }
 
-func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *CreateWorkflowExecutionRequest,
+func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *persistence.CreateWorkflowExecutionRequest,
 	batch *gocql.Batch, cqlNowTimestamp int64) {
 
 	parentDomainID := emptyDomainID
 	parentWorkflowID := ""
 	parentRunID := emptyRunID
 	initiatedID := emptyInitiatedID
-	state := WorkflowStateRunning
-	closeStatus := WorkflowCloseStatusNone
+	state := persistence.WorkflowStateRunning
+	closeStatus := persistence.WorkflowCloseStatusNone
 	if request.ParentExecution != nil {
 		parentDomainID = request.ParentDomainID
 		parentWorkflowID = *request.ParentExecution.WorkflowId
 		parentRunID = *request.ParentExecution.RunId
 		initiatedID = request.InitiatedID
-		state = WorkflowStateCreated
+		state = persistence.WorkflowStateCreated
 	}
 
 	startVersion := common.EmptyVersion
@@ -1234,8 +1233,8 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *Creat
 			request.WorkflowTimeout,
 			request.DecisionTimeoutValue,
 			request.ExecutionContext,
-			WorkflowStateCreated,
-			WorkflowCloseStatusNone,
+			persistence.WorkflowStateCreated,
+			persistence.WorkflowCloseStatusNone,
 			common.FirstEventID,
 			request.NextEventID,
 			request.LastProcessedEvent,
@@ -1292,8 +1291,8 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *Creat
 			request.WorkflowTimeout,
 			request.DecisionTimeoutValue,
 			request.ExecutionContext,
-			WorkflowStateCreated,
-			WorkflowCloseStatusNone,
+			persistence.WorkflowStateCreated,
+			persistence.WorkflowCloseStatusNone,
 			common.FirstEventID,
 			request.NextEventID,
 			request.LastProcessedEvent,
@@ -1333,8 +1332,8 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *Creat
 	}
 }
 
-func (d *cassandraPersistence) GetWorkflowExecution(request *GetWorkflowExecutionRequest) (
-	*GetWorkflowExecutionResponse, error) {
+func (d *cassandraPersistence) GetWorkflowExecution(request *persistence.GetWorkflowExecutionRequest) (
+	*persistence.GetWorkflowExecutionResponse, error) {
 	execution := request.Execution
 	query := d.session.Query(templateGetWorkflowExecutionQuery,
 		d.shardID,
@@ -1363,14 +1362,14 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *GetWorkflowExecutio
 		}
 	}
 
-	state := &WorkflowMutableState{}
+	state := &persistence.WorkflowMutableState{}
 	info := createWorkflowExecutionInfo(result["execution"].(map[string]interface{}))
 	state.ExecutionInfo = info
 
 	replicationState := createReplicationState(result["replication_state"].(map[string]interface{}))
 	state.ReplicationState = replicationState
 
-	activityInfos := make(map[int64]*ActivityInfo)
+	activityInfos := make(map[int64]*persistence.ActivityInfo)
 	aMap := result["activity_map"].(map[int64]map[string]interface{})
 	for key, value := range aMap {
 		info := createActivityInfo(value)
@@ -1378,7 +1377,7 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *GetWorkflowExecutio
 	}
 	state.ActivitInfos = activityInfos
 
-	timerInfos := make(map[string]*TimerInfo)
+	timerInfos := make(map[string]*persistence.TimerInfo)
 	tMap := result["timer_map"].(map[string]map[string]interface{})
 	for key, value := range tMap {
 		info := createTimerInfo(value)
@@ -1386,7 +1385,7 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *GetWorkflowExecutio
 	}
 	state.TimerInfos = timerInfos
 
-	childExecutionInfos := make(map[int64]*ChildExecutionInfo)
+	childExecutionInfos := make(map[int64]*persistence.ChildExecutionInfo)
 	cMap := result["child_executions_map"].(map[int64]map[string]interface{})
 	for key, value := range cMap {
 		info := createChildExecutionInfo(value)
@@ -1394,7 +1393,7 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *GetWorkflowExecutio
 	}
 	state.ChildExecutionInfos = childExecutionInfos
 
-	requestCancelInfos := make(map[int64]*RequestCancelInfo)
+	requestCancelInfos := make(map[int64]*persistence.RequestCancelInfo)
 	rMap := result["request_cancel_map"].(map[int64]map[string]interface{})
 	for key, value := range rMap {
 		info := createRequestCancelInfo(value)
@@ -1402,7 +1401,7 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *GetWorkflowExecutio
 	}
 	state.RequestCancelInfos = requestCancelInfos
 
-	signalInfos := make(map[int64]*SignalInfo)
+	signalInfos := make(map[int64]*persistence.SignalInfo)
 	sMap := result["signal_map"].(map[int64]map[string]interface{})
 	for key, value := range sMap {
 		info := createSignalInfo(value)
@@ -1418,14 +1417,14 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *GetWorkflowExecutio
 	state.SignalRequestedIDs = signalRequestedIDs
 
 	eList := result["buffered_events_list"].([]map[string]interface{})
-	bufferedEvents := make([]*SerializedHistoryEventBatch, 0, len(eList))
+	bufferedEvents := make([]*persistence.SerializedHistoryEventBatch, 0, len(eList))
 	for _, v := range eList {
 		eventBatch := createSerializedHistoryEventBatch(v)
 		bufferedEvents = append(bufferedEvents, eventBatch)
 	}
 	state.BufferedEvents = bufferedEvents
 
-	bufferedReplicationTasks := make(map[int64]*BufferedReplicationTask)
+	bufferedReplicationTasks := make(map[int64]*persistence.BufferedReplicationTask)
 	bufferedRTMap := result["buffered_replication_tasks_map"].(map[int64]map[string]interface{})
 	for k, v := range bufferedRTMap {
 		info := createBufferedReplicationTaskInfo(v)
@@ -1433,10 +1432,10 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *GetWorkflowExecutio
 	}
 	state.BufferedReplicationTasks = bufferedReplicationTasks
 
-	return &GetWorkflowExecutionResponse{State: state}, nil
+	return &persistence.GetWorkflowExecutionResponse{State: state}, nil
 }
 
-func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowExecutionRequest) error {
+func (d *cassandraPersistence) UpdateWorkflowExecution(request *persistence.UpdateWorkflowExecutionRequest) error {
 	batch := d.session.NewBatch(gocql.LoggedBatch)
 	cqlNowTimestamp := common.UnixNanoToCQLTimestamp(time.Now().UnixNano())
 	executionInfo := request.ExecutionInfo
@@ -1680,7 +1679,7 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 		if isTimeoutError(err) {
 			// Write may have succeeded, but we don't know
 			// return this info to the caller so they have the option of trying to find out by executing a read
-			return &TimeoutError{Msg: fmt.Sprintf("UpdateWorkflowExecution timed out. Error: %v", err)}
+			return &persistence.TimeoutError{Msg: fmt.Sprintf("UpdateWorkflowExecution timed out. Error: %v", err)}
 		} else if isThrottlingError(err) {
 			return &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("UpdateWorkflowExecution operation failed. Error: %v", err),
@@ -1694,11 +1693,10 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 	if !applied {
 		return d.getExecutionConditionalUpdateFailure(previous, iter, executionInfo.RunID, request.Condition, request.RangeID)
 	}
-
 	return nil
 }
 
-func (d *cassandraPersistence) ResetMutableState(request *ResetMutableStateRequest) error {
+func (d *cassandraPersistence) ResetMutableState(request *persistence.ResetMutableStateRequest) error {
 	batch := d.session.NewBatch(gocql.LoggedBatch)
 	cqlNowTimestamp := common.UnixNanoToCQLTimestamp(time.Now().UnixNano())
 	executionInfo := request.ExecutionInfo
@@ -1840,7 +1838,7 @@ func (d *cassandraPersistence) ResetMutableState(request *ResetMutableStateReque
 		if isTimeoutError(err) {
 			// Write may have succeeded, but we don't know
 			// return this info to the caller so they have the option of trying to find out by executing a read
-			return &TimeoutError{Msg: fmt.Sprintf("ResetMutableState timed out. Error: %v", err)}
+			return &persistence.TimeoutError{Msg: fmt.Sprintf("ResetMutableState timed out. Error: %v", err)}
 		} else if isThrottlingError(err) {
 			return &workflow.ServiceBusyError{
 				Message: fmt.Sprintf("ResetMutableState operation failed. Error: %v", err),
@@ -1881,7 +1879,6 @@ GetFailureReasonLoop:
 			if actualRangeID, ok = previous["range_id"].(int64); ok && actualRangeID != requestRangeID {
 				// UpdateWorkflowExecution failed because rangeID was modified
 				rangeIDUnmatch = true
-
 			}
 		} else if rowType == rowTypeExecution && runIDOk && runID == requestRunID {
 			if actualNextEventID, ok = previous["next_event_id"].(int64); ok && actualNextEventID != requestCondition {
@@ -1900,7 +1897,7 @@ GetFailureReasonLoop:
 	}
 
 	if rangeIDUnmatch {
-		return &ShardOwnershipLostError{
+		return &persistence.ShardOwnershipLostError{
 			ShardID: d.shardID,
 			Msg: fmt.Sprintf("Failed to reset mutable state.  Request RangeID: %v, Actual RangeID: %v",
 				requestRangeID, actualRangeID),
@@ -1908,7 +1905,7 @@ GetFailureReasonLoop:
 	}
 
 	if nextEventIDUnmatch {
-		return &ConditionFailedError{
+		return &persistence.ConditionFailedError{
 			Msg: fmt.Sprintf("Failed to reset mutable state.  Request Condition: %v, Actual Value: %v",
 				requestCondition, actualNextEventID),
 		}
@@ -1923,13 +1920,13 @@ GetFailureReasonLoop:
 		}
 		columnID++
 	}
-	return &ConditionFailedError{
+	return &persistence.ConditionFailedError{
 		Msg: fmt.Sprintf("Failed to reset mutable state. ShardID: %v, RangeID: %v, Condition: %v, columns: (%v)",
 			d.shardID, requestRangeID, requestCondition, strings.Join(columns, ",")),
 	}
 }
 
-func (d *cassandraPersistence) DeleteWorkflowExecution(request *DeleteWorkflowExecutionRequest) error {
+func (d *cassandraPersistence) DeleteWorkflowExecution(request *persistence.DeleteWorkflowExecutionRequest) error {
 	query := d.session.Query(templateDeleteWorkflowExecutionMutableStateQuery,
 		d.shardID,
 		rowTypeExecution,
@@ -1954,7 +1951,7 @@ func (d *cassandraPersistence) DeleteWorkflowExecution(request *DeleteWorkflowEx
 	return nil
 }
 
-func (d *cassandraPersistence) GetCurrentExecution(request *GetCurrentExecutionRequest) (*GetCurrentExecutionResponse,
+func (d *cassandraPersistence) GetCurrentExecution(request *persistence.GetCurrentExecutionRequest) (*persistence.GetCurrentExecutionResponse,
 	error) {
 	query := d.session.Query(templateGetCurrentExecutionQuery,
 		d.shardID,
@@ -1985,7 +1982,7 @@ func (d *cassandraPersistence) GetCurrentExecution(request *GetCurrentExecutionR
 
 	currentRunID := result["current_run_id"].(gocql.UUID).String()
 	executionInfo := createWorkflowExecutionInfo(result["execution"].(map[string]interface{}))
-	return &GetCurrentExecutionResponse{
+	return &persistence.GetCurrentExecutionResponse{
 		RunID:          currentRunID,
 		StartRequestID: executionInfo.CreateRequestID,
 		State:          executionInfo.State,
@@ -1993,7 +1990,7 @@ func (d *cassandraPersistence) GetCurrentExecution(request *GetCurrentExecutionR
 	}, nil
 }
 
-func (d *cassandraPersistence) GetTransferTasks(request *GetTransferTasksRequest) (*GetTransferTasksResponse, error) {
+func (d *cassandraPersistence) GetTransferTasks(request *persistence.GetTransferTasksRequest) (*persistence.GetTransferTasksResponse, error) {
 
 	// Reading transfer tasks need to be quorum level consistent, otherwise we could loose task
 	query := d.session.Query(templateGetTransferTasksQuery,
@@ -2014,7 +2011,7 @@ func (d *cassandraPersistence) GetTransferTasks(request *GetTransferTasksRequest
 		}
 	}
 
-	response := &GetTransferTasksResponse{}
+	response := &persistence.GetTransferTasksResponse{}
 	task := make(map[string]interface{})
 	for iter.MapScan(task) {
 		t := createTransferTaskInfo(task["transfer"].(map[string]interface{}))
@@ -2036,7 +2033,7 @@ func (d *cassandraPersistence) GetTransferTasks(request *GetTransferTasksRequest
 	return response, nil
 }
 
-func (d *cassandraPersistence) GetReplicationTasks(request *GetReplicationTasksRequest) (*GetReplicationTasksResponse,
+func (d *cassandraPersistence) GetReplicationTasks(request *persistence.GetReplicationTasksRequest) (*persistence.GetReplicationTasksResponse,
 	error) {
 
 	// Reading replication tasks need to be quorum level consistent, otherwise we could loose task
@@ -2058,7 +2055,7 @@ func (d *cassandraPersistence) GetReplicationTasks(request *GetReplicationTasksR
 		}
 	}
 
-	response := &GetReplicationTasksResponse{}
+	response := &persistence.GetReplicationTasksResponse{}
 	task := make(map[string]interface{})
 	for iter.MapScan(task) {
 		t := createReplicationTaskInfo(task["replication"].(map[string]interface{}))
@@ -2080,7 +2077,7 @@ func (d *cassandraPersistence) GetReplicationTasks(request *GetReplicationTasksR
 	return response, nil
 }
 
-func (d *cassandraPersistence) CompleteTransferTask(request *CompleteTransferTaskRequest) error {
+func (d *cassandraPersistence) CompleteTransferTask(request *persistence.CompleteTransferTaskRequest) error {
 	query := d.session.Query(templateCompleteTransferTaskQuery,
 		d.shardID,
 		rowTypeTransferTask,
@@ -2105,7 +2102,7 @@ func (d *cassandraPersistence) CompleteTransferTask(request *CompleteTransferTas
 	return nil
 }
 
-func (d *cassandraPersistence) RangeCompleteTransferTask(request *RangeCompleteTransferTaskRequest) error {
+func (d *cassandraPersistence) RangeCompleteTransferTask(request *persistence.RangeCompleteTransferTaskRequest) error {
 	query := d.session.Query(templateRangeCompleteTransferTaskQuery,
 		d.shardID,
 		rowTypeTransferTask,
@@ -2132,7 +2129,7 @@ func (d *cassandraPersistence) RangeCompleteTransferTask(request *RangeCompleteT
 	return nil
 }
 
-func (d *cassandraPersistence) CompleteReplicationTask(request *CompleteReplicationTaskRequest) error {
+func (d *cassandraPersistence) CompleteReplicationTask(request *persistence.CompleteReplicationTaskRequest) error {
 	query := d.session.Query(templateCompleteTransferTaskQuery,
 		d.shardID,
 		rowTypeReplicationTask,
@@ -2157,7 +2154,7 @@ func (d *cassandraPersistence) CompleteReplicationTask(request *CompleteReplicat
 	return nil
 }
 
-func (d *cassandraPersistence) CompleteTimerTask(request *CompleteTimerTaskRequest) error {
+func (d *cassandraPersistence) CompleteTimerTask(request *persistence.CompleteTimerTaskRequest) error {
 	ts := common.UnixNanoToCQLTimestamp(request.VisibilityTimestamp.UnixNano())
 	query := d.session.Query(templateCompleteTimerTaskQuery,
 		d.shardID,
@@ -2183,7 +2180,7 @@ func (d *cassandraPersistence) CompleteTimerTask(request *CompleteTimerTaskReque
 	return nil
 }
 
-func (d *cassandraPersistence) RangeCompleteTimerTask(request *RangeCompleteTimerTaskRequest) error {
+func (d *cassandraPersistence) RangeCompleteTimerTask(request *persistence.RangeCompleteTimerTaskRequest) error {
 	start := common.UnixNanoToCQLTimestamp(request.InclusiveBeginTimestamp.UnixNano())
 	end := common.UnixNanoToCQLTimestamp(request.ExclusiveEndTimestamp.UnixNano())
 	query := d.session.Query(templateRangeCompleteTimerTaskQuery,
@@ -2212,7 +2209,7 @@ func (d *cassandraPersistence) RangeCompleteTimerTask(request *RangeCompleteTime
 }
 
 // From TaskManager interface
-func (d *cassandraPersistence) LeaseTaskList(request *LeaseTaskListRequest) (*LeaseTaskListResponse, error) {
+func (d *cassandraPersistence) LeaseTaskList(request *persistence.LeaseTaskListRequest) (*persistence.LeaseTaskListResponse, error) {
 	if len(request.TaskList) == 0 {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("LeaseTaskList requires non empty task list"),
@@ -2286,19 +2283,19 @@ func (d *cassandraPersistence) LeaseTaskList(request *LeaseTaskListRequest) (*Le
 	}
 	if !applied {
 		previousRangeID := previous["range_id"]
-		return nil, &ConditionFailedError{
+		return nil, &persistence.ConditionFailedError{
 			Msg: fmt.Sprintf("LeaseTaskList failed to apply. db rangeID %v", previousRangeID),
 		}
 	}
-	tli := &TaskListInfo{DomainID: request.DomainID, Name: request.TaskList, TaskType: request.TaskType, RangeID: rangeID + 1, AckLevel: ackLevel, Kind: request.TaskListKind}
-	return &LeaseTaskListResponse{TaskListInfo: tli}, nil
+	tli := &persistence.TaskListInfo{DomainID: request.DomainID, Name: request.TaskList, TaskType: request.TaskType, RangeID: rangeID + 1, AckLevel: ackLevel, Kind: request.TaskListKind}
+	return &persistence.LeaseTaskListResponse{TaskListInfo: tli}, nil
 }
 
 // From TaskManager interface
-func (d *cassandraPersistence) UpdateTaskList(request *UpdateTaskListRequest) (*UpdateTaskListResponse, error) {
+func (d *cassandraPersistence) UpdateTaskList(request *persistence.UpdateTaskListRequest) (*persistence.UpdateTaskListResponse, error) {
 	tli := request.TaskListInfo
 
-	if tli.Kind == TaskListKindSticky { // if task_list is sticky, then update with TTL
+	if tli.Kind == persistence.TaskListKindSticky { // if task_list is sticky, then update with TTL
 		query := d.session.Query(templateUpdateTaskListQueryWithTTL,
 			tli.DomainID,
 			&tli.Name,
@@ -2324,7 +2321,7 @@ func (d *cassandraPersistence) UpdateTaskList(request *UpdateTaskListRequest) (*
 				Message: fmt.Sprintf("UpdateTaskList operation failed. Error: %v", err),
 			}
 		}
-		return &UpdateTaskListResponse{}, nil
+		return &persistence.UpdateTaskListResponse{}, nil
 	}
 
 	query := d.session.Query(templateUpdateTaskListQuery,
@@ -2361,17 +2358,17 @@ func (d *cassandraPersistence) UpdateTaskList(request *UpdateTaskListRequest) (*
 			columns = append(columns, fmt.Sprintf("%s=%v", k, v))
 		}
 
-		return nil, &ConditionFailedError{
+		return nil, &persistence.ConditionFailedError{
 			Msg: fmt.Sprintf("Failed to update task list. name: %v, type: %v, rangeID: %v, columns: (%v)",
 				tli.Name, tli.TaskType, tli.RangeID, strings.Join(columns, ",")),
 		}
 	}
 
-	return &UpdateTaskListResponse{}, nil
+	return &persistence.UpdateTaskListResponse{}, nil
 }
 
 // From TaskManager interface
-func (d *cassandraPersistence) CreateTasks(request *CreateTasksRequest) (*CreateTasksResponse, error) {
+func (d *cassandraPersistence) CreateTasks(request *persistence.CreateTasksRequest) (*persistence.CreateTasksResponse, error) {
 	batch := d.session.NewBatch(gocql.LoggedBatch)
 	domainID := request.TaskListInfo.DomainID
 	taskList := request.TaskListInfo.Name
@@ -2437,19 +2434,19 @@ func (d *cassandraPersistence) CreateTasks(request *CreateTasksRequest) (*Create
 	}
 	if !applied {
 		rangeID := previous["range_id"]
-		return nil, &ConditionFailedError{
+		return nil, &persistence.ConditionFailedError{
 			Msg: fmt.Sprintf("Failed to create task. TaskList: %v, taskListType: %v, rangeID: %v, db rangeID: %v",
 				taskList, taskListType, request.TaskListInfo.RangeID, rangeID),
 		}
 	}
 
-	return &CreateTasksResponse{}, nil
+	return &persistence.CreateTasksResponse{}, nil
 }
 
 // From TaskManager interface
-func (d *cassandraPersistence) GetTasks(request *GetTasksRequest) (*GetTasksResponse, error) {
+func (d *cassandraPersistence) GetTasks(request *persistence.GetTasksRequest) (*persistence.GetTasksResponse, error) {
 	if request.ReadLevel > request.MaxReadLevel {
-		return &GetTasksResponse{}, nil
+		return &persistence.GetTasksResponse{}, nil
 	}
 
 	// Reading tasklist tasks need to be quorum level consistent, otherwise we could loose task
@@ -2469,7 +2466,7 @@ func (d *cassandraPersistence) GetTasks(request *GetTasksRequest) (*GetTasksResp
 		}
 	}
 
-	response := &GetTasksResponse{}
+	response := &persistence.GetTasksResponse{}
 	task := make(map[string]interface{})
 PopulateTasks:
 	for iter.MapScan(task) {
@@ -2496,7 +2493,7 @@ PopulateTasks:
 }
 
 // From TaskManager interface
-func (d *cassandraPersistence) CompleteTask(request *CompleteTaskRequest) error {
+func (d *cassandraPersistence) CompleteTask(request *persistence.CompleteTaskRequest) error {
 	tli := request.TaskList
 	query := d.session.Query(templateCompleteTaskQuery,
 		tli.DomainID,
@@ -2520,7 +2517,7 @@ func (d *cassandraPersistence) CompleteTask(request *CompleteTaskRequest) error 
 	return nil
 }
 
-func (d *cassandraPersistence) GetTimerIndexTasks(request *GetTimerIndexTasksRequest) (*GetTimerIndexTasksResponse,
+func (d *cassandraPersistence) GetTimerIndexTasks(request *persistence.GetTimerIndexTasksRequest) (*persistence.GetTimerIndexTasksResponse,
 	error) {
 	// Reading timer tasks need to be quorum level consistent, otherwise we could loose task
 	minTimestamp := common.UnixNanoToCQLTimestamp(request.MinTimestamp.UnixNano())
@@ -2542,7 +2539,7 @@ func (d *cassandraPersistence) GetTimerIndexTasks(request *GetTimerIndexTasksReq
 		}
 	}
 
-	response := &GetTimerIndexTasksResponse{}
+	response := &persistence.GetTimerIndexTasksResponse{}
 	task := make(map[string]interface{})
 	for iter.MapScan(task) {
 		t := createTimerTaskInfo(task["timer"].(map[string]interface{}))
@@ -2569,53 +2566,53 @@ func (d *cassandraPersistence) GetTimerIndexTasks(request *GetTimerIndexTasksReq
 	return response, nil
 }
 
-func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferTasks []Task, domainID, workflowID,
+func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferTasks []persistence.Task, domainID, workflowID,
 	runID string) {
 	targetDomainID := domainID
 	for _, task := range transferTasks {
 		var taskList string
 		var scheduleID int64
-		targetWorkflowID := transferTaskTransferTargetWorkflowID
+		targetWorkflowID := persistence.TransferTaskTransferTargetWorkflowID
 		targetRunID := transferTaskTypeTransferTargetRunID
 		targetChildWorkflowOnly := false
 
 		switch task.GetType() {
-		case TransferTaskTypeActivityTask:
-			targetDomainID = task.(*ActivityTask).DomainID
-			taskList = task.(*ActivityTask).TaskList
-			scheduleID = task.(*ActivityTask).ScheduleID
+		case persistence.TransferTaskTypeActivityTask:
+			targetDomainID = task.(*persistence.ActivityTask).DomainID
+			taskList = task.(*persistence.ActivityTask).TaskList
+			scheduleID = task.(*persistence.ActivityTask).ScheduleID
 
-		case TransferTaskTypeDecisionTask:
-			targetDomainID = task.(*DecisionTask).DomainID
-			taskList = task.(*DecisionTask).TaskList
-			scheduleID = task.(*DecisionTask).ScheduleID
+		case persistence.TransferTaskTypeDecisionTask:
+			targetDomainID = task.(*persistence.DecisionTask).DomainID
+			taskList = task.(*persistence.DecisionTask).TaskList
+			scheduleID = task.(*persistence.DecisionTask).ScheduleID
 
-		case TransferTaskTypeCancelExecution:
-			targetDomainID = task.(*CancelExecutionTask).TargetDomainID
-			targetWorkflowID = task.(*CancelExecutionTask).TargetWorkflowID
-			targetRunID = task.(*CancelExecutionTask).TargetRunID
+		case persistence.TransferTaskTypeCancelExecution:
+			targetDomainID = task.(*persistence.CancelExecutionTask).TargetDomainID
+			targetWorkflowID = task.(*persistence.CancelExecutionTask).TargetWorkflowID
+			targetRunID = task.(*persistence.CancelExecutionTask).TargetRunID
 			if targetRunID == "" {
 				targetRunID = transferTaskTypeTransferTargetRunID
 			}
-			targetChildWorkflowOnly = task.(*CancelExecutionTask).TargetChildWorkflowOnly
-			scheduleID = task.(*CancelExecutionTask).InitiatedID
+			targetChildWorkflowOnly = task.(*persistence.CancelExecutionTask).TargetChildWorkflowOnly
+			scheduleID = task.(*persistence.CancelExecutionTask).InitiatedID
 
-		case TransferTaskTypeSignalExecution:
-			targetDomainID = task.(*SignalExecutionTask).TargetDomainID
-			targetWorkflowID = task.(*SignalExecutionTask).TargetWorkflowID
-			targetRunID = task.(*SignalExecutionTask).TargetRunID
+		case persistence.TransferTaskTypeSignalExecution:
+			targetDomainID = task.(*persistence.SignalExecutionTask).TargetDomainID
+			targetWorkflowID = task.(*persistence.SignalExecutionTask).TargetWorkflowID
+			targetRunID = task.(*persistence.SignalExecutionTask).TargetRunID
 			if targetRunID == "" {
 				targetRunID = transferTaskTypeTransferTargetRunID
 			}
-			targetChildWorkflowOnly = task.(*SignalExecutionTask).TargetChildWorkflowOnly
-			scheduleID = task.(*SignalExecutionTask).InitiatedID
+			targetChildWorkflowOnly = task.(*persistence.SignalExecutionTask).TargetChildWorkflowOnly
+			scheduleID = task.(*persistence.SignalExecutionTask).InitiatedID
 
-		case TransferTaskTypeStartChildExecution:
-			targetDomainID = task.(*StartChildExecutionTask).TargetDomainID
-			targetWorkflowID = task.(*StartChildExecutionTask).TargetWorkflowID
-			scheduleID = task.(*StartChildExecutionTask).InitiatedID
+		case persistence.TransferTaskTypeStartChildExecution:
+			targetDomainID = task.(*persistence.StartChildExecutionTask).TargetDomainID
+			targetWorkflowID = task.(*persistence.StartChildExecutionTask).TargetWorkflowID
+			scheduleID = task.(*persistence.StartChildExecutionTask).InitiatedID
 
-		case TransferTaskTypeCloseExecution:
+		case persistence.TransferTaskTypeCloseExecution:
 			// No explicit property needs to be set
 
 		default:
@@ -2646,7 +2643,7 @@ func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferT
 	}
 }
 
-func (d *cassandraPersistence) createReplicationTasks(batch *gocql.Batch, replicationTasks []Task, domainID, workflowID,
+func (d *cassandraPersistence) createReplicationTasks(batch *gocql.Batch, replicationTasks []persistence.Task, domainID, workflowID,
 	runID string) {
 
 	for _, task := range replicationTasks {
@@ -2657,12 +2654,12 @@ func (d *cassandraPersistence) createReplicationTasks(batch *gocql.Batch, replic
 		var lastReplicationInfo map[string]map[string]interface{}
 
 		switch task.GetType() {
-		case ReplicationTaskTypeHistory:
-			firstEventID = task.(*HistoryReplicationTask).FirstEventID
-			nextEventID = task.(*HistoryReplicationTask).NextEventID
+		case persistence.ReplicationTaskTypeHistory:
+			firstEventID = task.(*persistence.HistoryReplicationTask).FirstEventID
+			nextEventID = task.(*persistence.HistoryReplicationTask).NextEventID
 			version = task.GetVersion()
 			lastReplicationInfo = make(map[string]map[string]interface{})
-			for k, v := range task.(*HistoryReplicationTask).LastReplicationInfo {
+			for k, v := range task.(*persistence.HistoryReplicationTask).LastReplicationInfo {
 				lastReplicationInfo[k] = createReplicationInfoMap(v)
 			}
 
@@ -2690,7 +2687,7 @@ func (d *cassandraPersistence) createReplicationTasks(batch *gocql.Batch, replic
 	}
 }
 
-func (d *cassandraPersistence) createTimerTasks(batch *gocql.Batch, timerTasks []Task, deleteTimerTask Task,
+func (d *cassandraPersistence) createTimerTasks(batch *gocql.Batch, timerTasks []persistence.Task, deleteTimerTask persistence.Task,
 	domainID, workflowID, runID string, cqlNowTimestamp int64) {
 
 	for _, task := range timerTasks {
@@ -2700,24 +2697,26 @@ func (d *cassandraPersistence) createTimerTasks(batch *gocql.Batch, timerTasks [
 		timeoutType := 0
 
 		switch t := task.(type) {
-		case *DecisionTimeoutTask:
+		case *persistence.DecisionTimeoutTask:
 			eventID = t.EventID
 			timeoutType = t.TimeoutType
 			attempt = t.ScheduleAttempt
-		case *ActivityTimeoutTask:
+		case *persistence.ActivityTimeoutTask:
 			eventID = t.EventID
 			timeoutType = t.TimeoutType
 			attempt = t.Attempt
-		case *UserTimerTask:
+		case *persistence.UserTimerTask:
 			eventID = t.EventID
-		case *ActivityRetryTimerTask:
+		case *persistence.ActivityRetryTimerTask:
 			eventID = t.EventID
 			attempt = int64(t.Attempt)
-		case *WorkflowRetryTimerTask:
+		case *persistence.WorkflowRetryTimerTask:
 			eventID = t.EventID
 		}
 
-		ts := common.UnixNanoToCQLTimestamp(GetVisibilityTSFrom(task).UnixNano())
+		// Ignoring possible type cast errors.
+		t, _ := persistence.GetVisibilityTSFrom(task)
+		ts := common.UnixNanoToCQLTimestamp(t.UnixNano())
 
 		batch.Query(templateCreateTimerTaskQuery,
 			d.shardID,
@@ -2740,7 +2739,10 @@ func (d *cassandraPersistence) createTimerTasks(batch *gocql.Batch, timerTasks [
 	}
 
 	if deleteTimerTask != nil {
-		ts := common.UnixNanoToCQLTimestamp(GetVisibilityTSFrom(deleteTimerTask).UnixNano())
+		// Ignoring possible type cast errors.
+		t, _ := persistence.GetVisibilityTSFrom(deleteTimerTask)
+		ts := common.UnixNanoToCQLTimestamp(t.UnixNano())
+
 		batch.Query(templateCompleteTimerTaskQuery,
 			d.shardID,
 			rowTypeTimerTask,
@@ -2752,7 +2754,7 @@ func (d *cassandraPersistence) createTimerTasks(batch *gocql.Batch, timerTasks [
 	}
 }
 
-func (d *cassandraPersistence) updateActivityInfos(batch *gocql.Batch, activityInfos []*ActivityInfo, deleteInfos []int64,
+func (d *cassandraPersistence) updateActivityInfos(batch *gocql.Batch, activityInfos []*persistence.ActivityInfo, deleteInfos []int64,
 	domainID, workflowID, runID string, condition int64, rangeID int64) {
 
 	for _, a := range activityInfos {
@@ -2833,7 +2835,7 @@ func (d *cassandraPersistence) resetBufferedEvents(batch *gocql.Batch, domainID,
 		condition)
 }
 
-func (d *cassandraPersistence) resetActivityInfos(batch *gocql.Batch, activityInfos []*ActivityInfo, domainID,
+func (d *cassandraPersistence) resetActivityInfos(batch *gocql.Batch, activityInfos []*persistence.ActivityInfo, domainID,
 	workflowID, runID string, condition int64) {
 	batch.Query(templateResetActivityInfoQuery,
 		resetActivityInfoMap(activityInfos),
@@ -2847,7 +2849,7 @@ func (d *cassandraPersistence) resetActivityInfos(batch *gocql.Batch, activityIn
 		condition)
 }
 
-func (d *cassandraPersistence) updateTimerInfos(batch *gocql.Batch, timerInfos []*TimerInfo, deleteInfos []string,
+func (d *cassandraPersistence) updateTimerInfos(batch *gocql.Batch, timerInfos []*persistence.TimerInfo, deleteInfos []string,
 	domainID, workflowID, runID string, condition int64, rangeID int64) {
 
 	for _, a := range timerInfos {
@@ -2882,7 +2884,7 @@ func (d *cassandraPersistence) updateTimerInfos(batch *gocql.Batch, timerInfos [
 	}
 }
 
-func (d *cassandraPersistence) resetTimerInfos(batch *gocql.Batch, timerInfos []*TimerInfo, domainID, workflowID,
+func (d *cassandraPersistence) resetTimerInfos(batch *gocql.Batch, timerInfos []*persistence.TimerInfo, domainID, workflowID,
 	runID string, condition int64) {
 	batch.Query(templateResetTimerInfoQuery,
 		resetTimerInfoMap(timerInfos),
@@ -2896,7 +2898,7 @@ func (d *cassandraPersistence) resetTimerInfos(batch *gocql.Batch, timerInfos []
 		condition)
 }
 
-func (d *cassandraPersistence) updateChildExecutionInfos(batch *gocql.Batch, childExecutionInfos []*ChildExecutionInfo,
+func (d *cassandraPersistence) updateChildExecutionInfos(batch *gocql.Batch, childExecutionInfos []*persistence.ChildExecutionInfo,
 	deleteInfo *int64, domainID, workflowID, runID string, condition int64, rangeID int64) {
 
 	for _, c := range childExecutionInfos {
@@ -2933,7 +2935,7 @@ func (d *cassandraPersistence) updateChildExecutionInfos(batch *gocql.Batch, chi
 	}
 }
 
-func (d *cassandraPersistence) resetChildExecutionInfos(batch *gocql.Batch, childExecutionInfos []*ChildExecutionInfo,
+func (d *cassandraPersistence) resetChildExecutionInfos(batch *gocql.Batch, childExecutionInfos []*persistence.ChildExecutionInfo,
 	domainID, workflowID, runID string, condition int64) {
 	batch.Query(templateResetChildExecutionInfoQuery,
 		resetChildExecutionInfoMap(childExecutionInfos),
@@ -2947,7 +2949,7 @@ func (d *cassandraPersistence) resetChildExecutionInfos(batch *gocql.Batch, chil
 		condition)
 }
 
-func (d *cassandraPersistence) updateRequestCancelInfos(batch *gocql.Batch, requestCancelInfos []*RequestCancelInfo,
+func (d *cassandraPersistence) updateRequestCancelInfos(batch *gocql.Batch, requestCancelInfos []*persistence.RequestCancelInfo,
 	deleteInfo *int64, domainID, workflowID, runID string, condition int64, rangeID int64) {
 
 	for _, c := range requestCancelInfos {
@@ -2981,7 +2983,7 @@ func (d *cassandraPersistence) updateRequestCancelInfos(batch *gocql.Batch, requ
 	}
 }
 
-func (d *cassandraPersistence) resetRequestCancelInfos(batch *gocql.Batch, requestCancelInfos []*RequestCancelInfo,
+func (d *cassandraPersistence) resetRequestCancelInfos(batch *gocql.Batch, requestCancelInfos []*persistence.RequestCancelInfo,
 	domainID, workflowID, runID string, condition int64) {
 	batch.Query(templateResetRequestCancelInfoQuery,
 		resetRequestCancelInfoMap(requestCancelInfos),
@@ -2995,7 +2997,7 @@ func (d *cassandraPersistence) resetRequestCancelInfos(batch *gocql.Batch, reque
 		condition)
 }
 
-func (d *cassandraPersistence) updateSignalInfos(batch *gocql.Batch, signalInfos []*SignalInfo,
+func (d *cassandraPersistence) updateSignalInfos(batch *gocql.Batch, signalInfos []*persistence.SignalInfo,
 	deleteInfo *int64, domainID, workflowID, runID string, condition int64, rangeID int64) {
 
 	for _, c := range signalInfos {
@@ -3032,7 +3034,7 @@ func (d *cassandraPersistence) updateSignalInfos(batch *gocql.Batch, signalInfos
 	}
 }
 
-func (d *cassandraPersistence) resetSignalInfos(batch *gocql.Batch, signalInfos []*SignalInfo,
+func (d *cassandraPersistence) resetSignalInfos(batch *gocql.Batch, signalInfos []*persistence.SignalInfo,
 	domainID, workflowID, runID string, condition int64) {
 	batch.Query(templateResetSignalInfoQuery,
 		resetSignalInfoMap(signalInfos),
@@ -3091,7 +3093,7 @@ func (d *cassandraPersistence) resetSignalRequested(batch *gocql.Batch, signalRe
 		condition)
 }
 
-func (d *cassandraPersistence) updateBufferedEvents(batch *gocql.Batch, newBufferedEvents *SerializedHistoryEventBatch,
+func (d *cassandraPersistence) updateBufferedEvents(batch *gocql.Batch, newBufferedEvents *persistence.SerializedHistoryEventBatch,
 	clearBufferedEvents bool, domainID, workflowID, runID string, condition int64, rangeID int64) {
 
 	if clearBufferedEvents {
@@ -3123,7 +3125,7 @@ func (d *cassandraPersistence) updateBufferedEvents(batch *gocql.Batch, newBuffe
 	}
 }
 
-func (d *cassandraPersistence) updateBufferedReplicationTasks(batch *gocql.Batch, newBufferedReplicationTask *BufferedReplicationTask,
+func (d *cassandraPersistence) updateBufferedReplicationTasks(batch *gocql.Batch, newBufferedReplicationTask *persistence.BufferedReplicationTask,
 	deleteInfo *int64, domainID, workflowID, runID string, condition int64, rangeID int64) {
 
 	if newBufferedReplicationTask != nil {
@@ -3182,8 +3184,8 @@ func (d *cassandraPersistence) updateBufferedReplicationTasks(batch *gocql.Batch
 	}
 }
 
-func createShardInfo(currentCluster string, result map[string]interface{}) *ShardInfo {
-	info := &ShardInfo{}
+func createShardInfo(currentCluster string, result map[string]interface{}) *persistence.ShardInfo {
+	info := &persistence.ShardInfo{}
 	for k, v := range result {
 		switch k {
 		case "shard_id":
@@ -3225,8 +3227,8 @@ func createShardInfo(currentCluster string, result map[string]interface{}) *Shar
 	return info
 }
 
-func createWorkflowExecutionInfo(result map[string]interface{}) *WorkflowExecutionInfo {
-	info := &WorkflowExecutionInfo{}
+func createWorkflowExecutionInfo(result map[string]interface{}) *persistence.WorkflowExecutionInfo {
+	info := &persistence.WorkflowExecutionInfo{}
 	for k, v := range result {
 		switch k {
 		case "domain_id":
@@ -3321,12 +3323,12 @@ func createWorkflowExecutionInfo(result map[string]interface{}) *WorkflowExecuti
 	return info
 }
 
-func createReplicationState(result map[string]interface{}) *ReplicationState {
+func createReplicationState(result map[string]interface{}) *persistence.ReplicationState {
 	if len(result) == 0 {
 		return nil
 	}
 
-	info := &ReplicationState{}
+	info := &persistence.ReplicationState{}
 	for k, v := range result {
 		switch k {
 		case "current_version":
@@ -3338,7 +3340,7 @@ func createReplicationState(result map[string]interface{}) *ReplicationState {
 		case "last_write_event_id":
 			info.LastWriteEventID = v.(int64)
 		case "last_replication_info":
-			info.LastReplicationInfo = make(map[string]*ReplicationInfo)
+			info.LastReplicationInfo = make(map[string]*persistence.ReplicationInfo)
 			replicationInfoMap := v.(map[string]map[string]interface{})
 			for key, value := range replicationInfoMap {
 				info.LastReplicationInfo[key] = createReplicationInfo(value)
@@ -3349,8 +3351,8 @@ func createReplicationState(result map[string]interface{}) *ReplicationState {
 	return info
 }
 
-func createTransferTaskInfo(result map[string]interface{}) *TransferTaskInfo {
-	info := &TransferTaskInfo{}
+func createTransferTaskInfo(result map[string]interface{}) *persistence.TransferTaskInfo {
+	info := &persistence.TransferTaskInfo{}
 	for k, v := range result {
 		switch k {
 		case "domain_id":
@@ -3388,8 +3390,8 @@ func createTransferTaskInfo(result map[string]interface{}) *TransferTaskInfo {
 	return info
 }
 
-func createReplicationTaskInfo(result map[string]interface{}) *ReplicationTaskInfo {
-	info := &ReplicationTaskInfo{}
+func createReplicationTaskInfo(result map[string]interface{}) *persistence.ReplicationTaskInfo {
+	info := &persistence.ReplicationTaskInfo{}
 	for k, v := range result {
 		switch k {
 		case "domain_id":
@@ -3409,7 +3411,7 @@ func createReplicationTaskInfo(result map[string]interface{}) *ReplicationTaskIn
 		case "version":
 			info.Version = v.(int64)
 		case "last_replication_info":
-			info.LastReplicationInfo = make(map[string]*ReplicationInfo)
+			info.LastReplicationInfo = make(map[string]*persistence.ReplicationInfo)
 			replicationInfoMap := v.(map[string]map[string]interface{})
 			for key, value := range replicationInfoMap {
 				info.LastReplicationInfo[key] = createReplicationInfo(value)
@@ -3420,8 +3422,8 @@ func createReplicationTaskInfo(result map[string]interface{}) *ReplicationTaskIn
 	return info
 }
 
-func createActivityInfo(result map[string]interface{}) *ActivityInfo {
-	info := &ActivityInfo{}
+func createActivityInfo(result map[string]interface{}) *persistence.ActivityInfo {
+	info := &persistence.ActivityInfo{}
 	for k, v := range result {
 		switch k {
 		case "version":
@@ -3486,8 +3488,8 @@ func createActivityInfo(result map[string]interface{}) *ActivityInfo {
 	return info
 }
 
-func createTimerInfo(result map[string]interface{}) *TimerInfo {
-	info := &TimerInfo{}
+func createTimerInfo(result map[string]interface{}) *persistence.TimerInfo {
+	info := &persistence.TimerInfo{}
 	for k, v := range result {
 		switch k {
 		case "version":
@@ -3505,8 +3507,8 @@ func createTimerInfo(result map[string]interface{}) *TimerInfo {
 	return info
 }
 
-func createChildExecutionInfo(result map[string]interface{}) *ChildExecutionInfo {
-	info := &ChildExecutionInfo{}
+func createChildExecutionInfo(result map[string]interface{}) *persistence.ChildExecutionInfo {
+	info := &persistence.ChildExecutionInfo{}
 	for k, v := range result {
 		switch k {
 		case "version":
@@ -3527,8 +3529,8 @@ func createChildExecutionInfo(result map[string]interface{}) *ChildExecutionInfo
 	return info
 }
 
-func createRequestCancelInfo(result map[string]interface{}) *RequestCancelInfo {
-	info := &RequestCancelInfo{}
+func createRequestCancelInfo(result map[string]interface{}) *persistence.RequestCancelInfo {
+	info := &persistence.RequestCancelInfo{}
 	for k, v := range result {
 		switch k {
 		case "version":
@@ -3543,8 +3545,8 @@ func createRequestCancelInfo(result map[string]interface{}) *RequestCancelInfo {
 	return info
 }
 
-func createSignalInfo(result map[string]interface{}) *SignalInfo {
-	info := &SignalInfo{}
+func createSignalInfo(result map[string]interface{}) *persistence.SignalInfo {
+	info := &persistence.SignalInfo{}
 	for k, v := range result {
 		switch k {
 		case "version":
@@ -3565,8 +3567,8 @@ func createSignalInfo(result map[string]interface{}) *SignalInfo {
 	return info
 }
 
-func createBufferedReplicationTaskInfo(result map[string]interface{}) *BufferedReplicationTask {
-	info := &BufferedReplicationTask{}
+func createBufferedReplicationTaskInfo(result map[string]interface{}) *persistence.BufferedReplicationTask {
+	info := &persistence.BufferedReplicationTask{}
 	for k, v := range result {
 		switch k {
 		case "first_event_id":
@@ -3587,7 +3589,7 @@ func createBufferedReplicationTaskInfo(result map[string]interface{}) *BufferedR
 	return info
 }
 
-func resetActivityInfoMap(activityInfos []*ActivityInfo) map[int64]map[string]interface{} {
+func resetActivityInfoMap(activityInfos []*persistence.ActivityInfo) map[int64]map[string]interface{} {
 	aMap := make(map[int64]map[string]interface{})
 	for _, a := range activityInfos {
 		aInfo := make(map[string]interface{})
@@ -3626,7 +3628,7 @@ func resetActivityInfoMap(activityInfos []*ActivityInfo) map[int64]map[string]in
 	return aMap
 }
 
-func resetTimerInfoMap(timerInfos []*TimerInfo) map[string]map[string]interface{} {
+func resetTimerInfoMap(timerInfos []*persistence.TimerInfo) map[string]map[string]interface{} {
 	tMap := make(map[string]map[string]interface{})
 	for _, t := range timerInfos {
 		tInfo := make(map[string]interface{})
@@ -3642,7 +3644,7 @@ func resetTimerInfoMap(timerInfos []*TimerInfo) map[string]map[string]interface{
 	return tMap
 }
 
-func resetChildExecutionInfoMap(childExecutionInfos []*ChildExecutionInfo) map[int64]map[string]interface{} {
+func resetChildExecutionInfoMap(childExecutionInfos []*persistence.ChildExecutionInfo) map[int64]map[string]interface{} {
 	cMap := make(map[int64]map[string]interface{})
 	for _, c := range childExecutionInfos {
 		cInfo := make(map[string]interface{})
@@ -3659,7 +3661,7 @@ func resetChildExecutionInfoMap(childExecutionInfos []*ChildExecutionInfo) map[i
 	return cMap
 }
 
-func resetRequestCancelInfoMap(requestCancelInfos []*RequestCancelInfo) map[int64]map[string]interface{} {
+func resetRequestCancelInfoMap(requestCancelInfos []*persistence.RequestCancelInfo) map[int64]map[string]interface{} {
 	rcMap := make(map[int64]map[string]interface{})
 	for _, rc := range requestCancelInfos {
 		rcInfo := make(map[string]interface{})
@@ -3673,7 +3675,7 @@ func resetRequestCancelInfoMap(requestCancelInfos []*RequestCancelInfo) map[int6
 	return rcMap
 }
 
-func resetSignalInfoMap(signalInfos []*SignalInfo) map[int64]map[string]interface{} {
+func resetSignalInfoMap(signalInfos []*persistence.SignalInfo) map[int64]map[string]interface{} {
 	sMap := make(map[int64]map[string]interface{})
 	for _, s := range signalInfos {
 		sInfo := make(map[string]interface{})
@@ -3690,9 +3692,9 @@ func resetSignalInfoMap(signalInfos []*SignalInfo) map[int64]map[string]interfac
 	return sMap
 }
 
-func createSerializedHistoryEventBatch(result map[string]interface{}) *SerializedHistoryEventBatch {
+func createSerializedHistoryEventBatch(result map[string]interface{}) *persistence.SerializedHistoryEventBatch {
 	// TODO: default to JSON, update this when we support different encoding types.
-	eventBatch := &SerializedHistoryEventBatch{EncodingType: common.EncodingTypeJSON}
+	eventBatch := &persistence.SerializedHistoryEventBatch{EncodingType: common.EncodingTypeJSON}
 	for k, v := range result {
 		switch k {
 		case "version":
@@ -3705,8 +3707,8 @@ func createSerializedHistoryEventBatch(result map[string]interface{}) *Serialize
 	return eventBatch
 }
 
-func createTaskInfo(result map[string]interface{}) *TaskInfo {
-	info := &TaskInfo{}
+func createTaskInfo(result map[string]interface{}) *persistence.TaskInfo {
+	info := &persistence.TaskInfo{}
 	for k, v := range result {
 		switch k {
 		case "domain_id":
@@ -3723,8 +3725,8 @@ func createTaskInfo(result map[string]interface{}) *TaskInfo {
 	return info
 }
 
-func createTimerTaskInfo(result map[string]interface{}) *TimerTaskInfo {
-	info := &TimerTaskInfo{}
+func createTimerTaskInfo(result map[string]interface{}) *persistence.TimerTaskInfo {
+	info := &persistence.TimerTaskInfo{}
 	for k, v := range result {
 		switch k {
 		case "domain_id":
@@ -3753,8 +3755,8 @@ func createTimerTaskInfo(result map[string]interface{}) *TimerTaskInfo {
 	return info
 }
 
-func createReplicationInfo(result map[string]interface{}) *ReplicationInfo {
-	info := &ReplicationInfo{}
+func createReplicationInfo(result map[string]interface{}) *persistence.ReplicationInfo {
+	info := &persistence.ReplicationInfo{}
 	for k, v := range result {
 		switch k {
 		case "version":
@@ -3767,7 +3769,7 @@ func createReplicationInfo(result map[string]interface{}) *ReplicationInfo {
 	return info
 }
 
-func createReplicationInfoMap(info *ReplicationInfo) map[string]interface{} {
+func createReplicationInfoMap(info *persistence.ReplicationInfo) map[string]interface{} {
 	rInfoMap := make(map[string]interface{})
 	rInfoMap["version"] = info.Version
 	rInfoMap["last_event_id"] = info.LastEventID
@@ -3792,57 +3794,4 @@ func isThrottlingError(err error) bool {
 		return req.Code() == 0x1001
 	}
 	return false
-}
-
-// GetVisibilityTSFrom - helper method to get visibility timestamp
-func GetVisibilityTSFrom(task Task) time.Time {
-	switch task.GetType() {
-	case TaskTypeDecisionTimeout:
-		return task.(*DecisionTimeoutTask).VisibilityTimestamp
-
-	case TaskTypeActivityTimeout:
-		return task.(*ActivityTimeoutTask).VisibilityTimestamp
-
-	case TaskTypeUserTimer:
-		return task.(*UserTimerTask).VisibilityTimestamp
-
-	case TaskTypeWorkflowTimeout:
-		return task.(*WorkflowTimeoutTask).VisibilityTimestamp
-
-	case TaskTypeDeleteHistoryEvent:
-		return task.(*DeleteHistoryEventTask).VisibilityTimestamp
-
-	case TaskTypeActivityRetryTimer:
-		return task.(*ActivityRetryTimerTask).VisibilityTimestamp
-
-	case TaskTypeWorkflowRetryTimer:
-		return task.(*WorkflowRetryTimerTask).VisibilityTimestamp
-	}
-	return time.Time{}
-}
-
-// SetVisibilityTSFrom - helper method to set visibility timestamp
-func SetVisibilityTSFrom(task Task, t time.Time) {
-	switch task.GetType() {
-	case TaskTypeDecisionTimeout:
-		task.(*DecisionTimeoutTask).VisibilityTimestamp = t
-
-	case TaskTypeActivityTimeout:
-		task.(*ActivityTimeoutTask).VisibilityTimestamp = t
-
-	case TaskTypeUserTimer:
-		task.(*UserTimerTask).VisibilityTimestamp = t
-
-	case TaskTypeWorkflowTimeout:
-		task.(*WorkflowTimeoutTask).VisibilityTimestamp = t
-
-	case TaskTypeDeleteHistoryEvent:
-		task.(*DeleteHistoryEventTask).VisibilityTimestamp = t
-
-	case TaskTypeActivityRetryTimer:
-		task.(*ActivityRetryTimerTask).VisibilityTimestamp = t
-
-	case TaskTypeWorkflowRetryTimer:
-		task.(*WorkflowRetryTimerTask).VisibilityTimestamp = t
-	}
 }

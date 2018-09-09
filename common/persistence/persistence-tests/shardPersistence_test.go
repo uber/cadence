@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package persistence
+package persistencetests
 
 import (
 	"os"
@@ -30,6 +30,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	gen "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/persistence"
 )
 
 type (
@@ -44,6 +45,7 @@ type (
 
 func TestShardPersistenceSuite(t *testing.T) {
 	s := new(shardPersistenceSuite)
+	s.UseMysql = true
 	suite.Run(t, s)
 }
 
@@ -70,7 +72,7 @@ func (s *shardPersistenceSuite) TestCreateShard() {
 
 	err1 := s.CreateShard(19, "test_create_shard2", 124)
 	s.NotNil(err1, "expected non nil error.")
-	s.IsType(&ShardAlreadyExistError{}, err1)
+	s.IsType(&persistence.ShardAlreadyExistError{}, err1)
 	log.Infof("CreateShard failed with error: %v", err1)
 }
 
@@ -142,7 +144,7 @@ func (s *shardPersistenceSuite) TestUpdateShard() {
 	failedUpdateInfo.ReplicationAckLevel = int64(5000)
 	err4 := s.UpdateShard(failedUpdateInfo, shardInfo.RangeID)
 	s.NotNil(err4)
-	s.IsType(&ShardOwnershipLostError{}, err4)
+	s.IsType(&persistence.ShardOwnershipLostError{}, err4)
 	log.Infof("Update shard failed with error: %v", err4)
 
 	info2, err5 := s.GetShard(shardID)
@@ -156,8 +158,8 @@ func (s *shardPersistenceSuite) TestUpdateShard() {
 	s.Equal(updatedTimerAckLevel.Unix(), info1.TimerAckLevel.Unix())
 }
 
-func copyShardInfo(sourceInfo *ShardInfo) *ShardInfo {
-	return &ShardInfo{
+func copyShardInfo(sourceInfo *persistence.ShardInfo) *persistence.ShardInfo {
+	return &persistence.ShardInfo{
 		ShardID:             sourceInfo.ShardID,
 		Owner:               sourceInfo.Owner,
 		RangeID:             sourceInfo.RangeID,
