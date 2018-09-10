@@ -1916,7 +1916,14 @@ GetFailureReasonLoop:
 		}
 	}
 
-	if nextEventIDUnmatch || runIDUnmatch {
+	if runIDUnmatch {
+		return &WorkflowConditionFailedError{
+			Msg: fmt.Sprintf("Failed to update mutable state.  Request Condition: %v, Actual Value: %v, Request Current RunID: %v, Actual Value: %v",
+				requestCondition, actualNextEventID, requestConditionalRunID, actualCurrRunID),
+		}
+	}
+
+	if nextEventIDUnmatch {
 		return &ConditionFailedError{
 			Msg: fmt.Sprintf("Failed to update mutable state.  Request Condition: %v, Actual Value: %v, Request Current RunID: %v, Actual Value: %v",
 				requestCondition, actualNextEventID, requestConditionalRunID, actualCurrRunID),
