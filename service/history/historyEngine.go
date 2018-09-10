@@ -659,7 +659,7 @@ func (e *historyEngineImpl) ResetStickyTaskList(ctx context.Context, resetReques
 	err = e.updateWorkflowExecution(ctx, domainID, *resetRequest.Execution, false, false,
 		func(msBuilder mutableState, tBuilder *timerBuilder) ([]persistence.Task, error) {
 			if !msBuilder.IsWorkflowExecutionRunning() {
-				return nil, nil
+				return nil, ErrWorkflowCompleted
 			}
 			msBuilder.ClearStickyness()
 			return nil, nil
@@ -908,6 +908,7 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(ctx context.Context,
 
 			response.StartedTimestamp = common.Int64Ptr(ai.StartedTime.UnixNano())
 			response.Attempt = common.Int64Ptr(int64(ai.Attempt))
+			response.HeartbeatDetails = ai.Details
 
 			// Start a timer for the activity task.
 			timerTasks := []persistence.Task{}

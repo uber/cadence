@@ -90,7 +90,7 @@ func (s *cassandraPersistenceSuite) TestPersistenceStartWorkflow() {
 	s.Equal(workflowExecution.GetRunId(), startedErr.RunID, startedErr.Msg)
 	s.Equal(WorkflowStateRunning, startedErr.State, startedErr.Msg)
 	s.Equal(WorkflowCloseStatusNone, startedErr.CloseStatus, startedErr.Msg)
-	s.Equal(common.EmptyVersion, startedErr.StartVersion, startedErr.Msg)
+	s.Equal(common.EmptyVersion, startedErr.LastWriteVersion, startedErr.Msg)
 	s.Empty(task1, "Expected empty task identifier.")
 
 	response, err2 := s.WorkflowMgr.CreateWorkflowExecution(&CreateWorkflowExecutionRequest{
@@ -131,11 +131,12 @@ func (s *cassandraPersistenceSuite) TestPersistenceStartWorkflowWithReplicationS
 		WorkflowId: common.StringPtr("start-workflow-test-replication-state"),
 		RunId:      common.StringPtr("7f9fe8a0-9237-11e6-ae22-56b6b6499611"),
 	}
-	version := int64(144)
+	startVersion := int64(144)
+	lastWriteVersion := int64(1444)
 	replicationState := &ReplicationState{
-		StartVersion:     version, // we are only testing this attribute
-		CurrentVersion:   version,
-		LastWriteVersion: version,
+		StartVersion:     startVersion, // we are only testing this attribute
+		CurrentVersion:   lastWriteVersion,
+		LastWriteVersion: lastWriteVersion,
 	}
 	task0, err0 := s.CreateWorkflowExecutionWithReplication(domainID, workflowExecution, "queue1", "wType", 20, 13, 3, 0, 2, replicationState, nil)
 	s.Nil(err0, "No error expected.")
@@ -149,7 +150,7 @@ func (s *cassandraPersistenceSuite) TestPersistenceStartWorkflowWithReplicationS
 	s.Equal(workflowExecution.GetRunId(), startedErr.RunID, startedErr.Msg)
 	s.Equal(WorkflowStateRunning, startedErr.State, startedErr.Msg)
 	s.Equal(WorkflowCloseStatusNone, startedErr.CloseStatus, startedErr.Msg)
-	s.Equal(version, startedErr.StartVersion, startedErr.Msg)
+	s.Equal(lastWriteVersion, startedErr.LastWriteVersion, startedErr.Msg)
 	s.Empty(task1, "Expected empty task identifier.")
 
 	response, err2 := s.WorkflowMgr.CreateWorkflowExecution(&CreateWorkflowExecutionRequest{
@@ -304,11 +305,6 @@ func (s *cassandraPersistenceSuite) TestUpdateWorkflow() {
 
 	log.Infof("Workflow execution last updated: %v", info1.LastUpdatedTimestamp)
 
-	failedUpdatedInfo := copyWorkflowExecutionInfo(info0)
-	failedUpdatedInfo.NextEventID = int64(6)
-	failedUpdatedInfo.LastProcessedEvent = int64(3)
-	failedUpdatedInfo.DecisionAttempt = int64(555)
-	failedUpdatedInfo.DecisionTimestamp = int64(55)
 	err4 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(5)}, nil, int64(3), nil, nil, nil, nil, nil, nil)
 	s.NotNil(err4, "expected non nil error.")
 	s.IsType(&ConditionFailedError{}, err4)
@@ -334,16 +330,11 @@ func (s *cassandraPersistenceSuite) TestUpdateWorkflow() {
 	s.Equal(int64(2), info2.DecisionScheduleID)
 	s.Equal(common.EmptyEventID, info2.DecisionStartedID)
 	s.Equal(int32(1), info2.DecisionTimeout)
-	s.Equal(int64(123), info1.DecisionAttempt)
-	s.Equal(int64(321), info1.DecisionTimestamp)
+	s.Equal(int64(123), info2.DecisionAttempt)
+	s.Equal(int64(321), info2.DecisionTimestamp)
 
 	log.Infof("Workflow execution last updated: %v", info2.LastUpdatedTimestamp)
 
-	failedUpdatedInfo2 := copyWorkflowExecutionInfo(info1)
-	failedUpdatedInfo2.NextEventID = int64(6)
-	failedUpdatedInfo2.LastProcessedEvent = int64(3)
-	failedUpdatedInfo.DecisionAttempt = int64(666)
-	failedUpdatedInfo.DecisionTimestamp = int64(66)
 	err5 := s.UpdateWorkflowExecutionWithRangeID(updatedInfo, []int64{int64(5)}, nil, int64(12345), int64(5), nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "")
 	s.NotNil(err5, "expected non nil error.")
 	s.IsType(&ShardOwnershipLostError{}, err5)
@@ -358,7 +349,7 @@ func (s *cassandraPersistenceSuite) TestUpdateWorkflow() {
 	s.Equal("5ba5e531-e46b-48d9-b4b3-859919839553", info3.RunID)
 	s.Equal("queue1", info3.TaskList)
 	s.Equal("wType", info3.WorkflowTypeName)
-	s.Equal(int32(20), info1.WorkflowTimeout)
+	s.Equal(int32(20), info3.WorkflowTimeout)
 	s.Equal(int32(13), info3.DecisionTimeoutValue)
 	s.Equal([]byte(nil), info3.ExecutionContext)
 	s.Equal(WorkflowStateCreated, info3.State)
@@ -368,11 +359,42 @@ func (s *cassandraPersistenceSuite) TestUpdateWorkflow() {
 	s.Equal(int64(666), info3.DecisionVersion)
 	s.Equal(int64(2), info3.DecisionScheduleID)
 	s.Equal(common.EmptyEventID, info3.DecisionStartedID)
-	s.Equal(int32(1), info1.DecisionTimeout)
-	s.Equal(int64(123), info1.DecisionAttempt)
-	s.Equal(int64(321), info1.DecisionTimestamp)
+	s.Equal(int32(1), info3.DecisionTimeout)
+	s.Equal(int64(123), info3.DecisionAttempt)
+	s.Equal(int64(321), info3.DecisionTimestamp)
 
 	log.Infof("Workflow execution last updated: %v", info3.LastUpdatedTimestamp)
+
+	//update with incorrect rangeID and condition(next_event_id)
+	err7 := s.UpdateWorkflowExecutionWithRangeID(updatedInfo, []int64{int64(5)}, nil, int64(12345), int64(3), nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "")
+	s.NotNil(err7, "expected non nil error.")
+	s.IsType(&ShardOwnershipLostError{}, err7)
+	log.Errorf("Conditional update failed with error: %v", err7)
+
+	state3, err8 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
+	s.Nil(err8, "No error expected.")
+	info4 := state3.ExecutionInfo
+	s.NotNil(info4, "Valid Workflow info expected.")
+	s.Equal(domainID, info4.DomainID)
+	s.Equal("update-workflow-test", info4.WorkflowID)
+	s.Equal("5ba5e531-e46b-48d9-b4b3-859919839553", info4.RunID)
+	s.Equal("queue1", info4.TaskList)
+	s.Equal("wType", info4.WorkflowTypeName)
+	s.Equal(int32(20), info4.WorkflowTimeout)
+	s.Equal(int32(13), info4.DecisionTimeoutValue)
+	s.Equal([]byte(nil), info4.ExecutionContext)
+	s.Equal(WorkflowStateCreated, info4.State)
+	s.Equal(int64(5), info4.NextEventID)
+	s.Equal(int64(2), info4.LastProcessedEvent)
+	s.Equal(true, validateTimeRange(info4.LastUpdatedTimestamp, time.Hour))
+	s.Equal(int64(666), info4.DecisionVersion)
+	s.Equal(int64(2), info4.DecisionScheduleID)
+	s.Equal(common.EmptyEventID, info4.DecisionStartedID)
+	s.Equal(int32(1), info4.DecisionTimeout)
+	s.Equal(int64(123), info4.DecisionAttempt)
+	s.Equal(int64(321), info4.DecisionTimestamp)
+
+	log.Infof("Workflow execution last updated: %v", info4.LastUpdatedTimestamp)
 }
 
 func (s *cassandraPersistenceSuite) TestDeleteWorkflow() {
