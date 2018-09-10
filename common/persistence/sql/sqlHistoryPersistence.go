@@ -23,6 +23,7 @@ package sql
 import (
 	"fmt"
 	"github.com/iancoleman/strcase"
+	"github.com/uber/cadence/common/logging"
 
 	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -35,9 +36,10 @@ import (
 
 type (
 	sqlHistoryManager struct {
-		db      *sqlx.DB
-		shardID int
-		logger  bark.Logger
+		db                *sqlx.DB
+		shardID           int
+		logger            bark.Logger
+		serializerFactory persistence.HistorySerializerFactory
 	}
 
 	eventsRow struct {
@@ -109,8 +111,9 @@ func NewHistoryPersistence(username, password, host, port, dbName string, logger
 	}
 	db.MapperFunc(strcase.ToSnake)
 	return &sqlHistoryManager{
-		db:     db,
-		logger: logger,
+		db:                db,
+		logger:            logger,
+		serializerFactory: persistence.NewHistorySerializerFactory(),
 	}, nil
 }
 
@@ -197,8 +200,9 @@ func (m *sqlHistoryManager) AppendHistoryEvents(request *persistence.AppendHisto
 	return nil
 }
 
-func (m *sqlHistoryManager) GetWorkflowExecutionHistory(request *persistence.GetWorkflowExecutionHistoryRequest) (*persistence.GetWorkflowExecutionHistoryResponse,
-	error) {
+// TODO: Pagination
+func (m *sqlHistoryManager) GetWorkflowExecutionHistory(request *persistence.GetWorkflowExecutionHistoryRequest) (
+	*persistence.GetWorkflowExecutionHistoryResponse, error) {
 	var rows []eventsRow
 	if err := m.db.Select(&rows,
 		getWorkflowExecutionHistorySQLQuery,
@@ -219,19 +223,45 @@ func (m *sqlHistoryManager) GetWorkflowExecutionHistory(request *persistence.Get
 		}
 	}
 
-	events := make([]persistence.SerializedHistoryEventBatch, len(rows))
-	for i, v := range rows {
-		events[i].EncodingType = common.EncodingType(v.DataEncoding)
-		events[i].Version = int(v.DataVersion)
-		if v.Data != nil {
-			events[i].Data = *v.Data
+	lastFirstEventID := common.EmptyEventID // first_event_id of last batch
+	history := &workflow.History{}
+	eventBatch := persistence.SerializedHistoryEventBatch{}
+	for _, v := range rows {
+		eventBatch.Data = *v.Data
+		eventBatch.EncodingType = common.EncodingType(v.DataEncoding)
+
+		historyBatch, err := m.deserializeEvents(&eventBatch)
+		if err != nil {
+			return nil, err
 		}
+		if len(historyBatch.Events) == 0 || historyBatch.Events[0].GetEventId() >= request.NextEventID {
+			logger := m.logger.WithFields(bark.Fields{
+				logging.TagWorkflowExecutionID: request.Execution.GetWorkflowId(),
+				logging.TagWorkflowRunID:       request.Execution.GetRunId(),
+				logging.TagDomainID:            request.DomainID,
+			})
+			logger.Error("Unexpected event batch")
+			return nil, fmt.Errorf("corrupted history event batch")
+		}
+
+		lastFirstEventID = historyBatch.Events[0].GetEventId()
+		history.Events = append(history.Events, historyBatch.Events...)
+
+		eventBatch = persistence.SerializedHistoryEventBatch{}
 	}
 
-	return &persistence.GetWorkflowExecutionHistoryResponse{
-		History:        events,
-		NextPageToken: []byte{},
-	}, nil
+	response := &persistence.GetWorkflowExecutionHistoryResponse{
+		History:          history,
+		LastFirstEventID: lastFirstEventID,
+	}
+
+	return response, nil
+}
+
+func (h *sqlHistoryManager) deserializeEvents(e *persistence.SerializedHistoryEventBatch) (*persistence.HistoryEventBatch, error) {
+	persistence.SetSerializedHistoryDefaults(e)
+	s, _ := h.serializerFactory.Get(e.EncodingType)
+	return s.Deserialize(e)
 }
 
 func (m *sqlHistoryManager) DeleteWorkflowExecutionHistory(request *persistence.DeleteWorkflowExecutionHistoryRequest) error {

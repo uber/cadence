@@ -786,9 +786,9 @@ func (s *TestBase) UpdateWorkflowExecutionForSignal(
 
 // UpdateWorkflowExecutionForBufferEvents is a utility method to update workflow execution
 func (s *TestBase) UpdateWorkflowExecutionForBufferEvents(
-	updatedInfo *WorkflowExecutionInfo, rState *ReplicationState, condition int64,
-	bufferEvents *SerializedHistoryEventBatch) error {
-	return s.WorkflowMgr.UpdateWorkflowExecution(&UpdateWorkflowExecutionRequest{
+	updatedInfo *persistence.WorkflowExecutionInfo, rState *persistence.ReplicationState, condition int64,
+	bufferEvents *persistence.SerializedHistoryEventBatch) error {
+	return s.WorkflowMgr.UpdateWorkflowExecution(&persistence.UpdateWorkflowExecutionRequest{
 		ExecutionInfo:     updatedInfo,
 		ReplicationState:  rState,
 		NewBufferedEvents: bufferEvents,
@@ -942,7 +942,7 @@ func (s *TestBase) CompleteTransferTask(taskID int64) error {
 
 // RangeCompleteTransferTask is a utility method to complete a range of transfer tasks
 func (s *TestBase) RangeCompleteTransferTask(exclusiveBeginTaskID int64, inclusiveEndTaskID int64) error {
-	return s.WorkflowMgr.RangeCompleteTransferTask(&RangeCompleteTransferTaskRequest{
+	return s.WorkflowMgr.RangeCompleteTransferTask(&persistence.RangeCompleteTransferTaskRequest{
 		ExclusiveBeginTaskID: exclusiveBeginTaskID,
 		InclusiveEndTaskID:   inclusiveEndTaskID,
 	})
@@ -993,7 +993,7 @@ func (s *TestBase) CompleteTimerTask(ts time.Time, taskID int64) error {
 
 // RangeCompleteTimerTask is a utility method to complete a range of timer tasks
 func (s *TestBase) RangeCompleteTimerTask(inclusiveBeginTimestamp time.Time, exclusiveEndTimestamp time.Time) error {
-	return s.WorkflowMgr.RangeCompleteTimerTask(&RangeCompleteTimerTaskRequest{
+	return s.WorkflowMgr.RangeCompleteTimerTask(&persistence.RangeCompleteTimerTaskRequest{
 		InclusiveBeginTimestamp: inclusiveBeginTimestamp,
 		ExclusiveEndTimestamp:   exclusiveEndTimestamp,
 	})

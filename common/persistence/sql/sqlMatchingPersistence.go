@@ -390,7 +390,8 @@ VALUES
 )
 `
 
-	completeTransferTaskSQLQuery = `DELETE FROM transfer_tasks WHERE shard_id = :shard_id AND task_id = :task_id`
+	completeTransferTaskSQLQuery      = `DELETE FROM transfer_tasks WHERE shard_id = :shard_id AND task_id = :task_id`
+	rangeCompleteTransferTaskSQLQuery = `DELETE FROM transfer_tasks WHERE shard_id = ? AND task_id > ? AND task_id <= ?`
 
 	replicationTaskInfoColumns = `domain_id,
 workflow_id,
@@ -439,8 +440,8 @@ FROM timer_tasks WHERE
 shard_id = ? AND
 visibility_ts >= ? AND
 visibility_ts < ?`
-	completeTimerTaskSQLQuery = `DELETE FROM timer_tasks WHERE shard_id = ? AND visibility_ts = ? AND task_id = ?`
-
+	completeTimerTaskSQLQuery       = `DELETE FROM timer_tasks WHERE shard_id = ? AND visibility_ts = ? AND task_id = ?`
+	rangeCompleteTimerTaskSQLQuery  = `DELETE FROM timer_tasks WHERE shard_id = ? AND visibility_ts >= ? AND visibility_ts < ?`
 	lockAndCheckNextEventIdSQLQuery = `SELECT next_event_id FROM executions WHERE
 shard_id = ? AND
 domain_id = ? AND
@@ -473,18 +474,18 @@ func (m *sqlMatchingManager) CreateWorkflowExecution(request *persistence.Create
 
 	if row, err := getCurrentExecutionIfExists(tx, int64(m.shardID), request.DomainID, *request.Execution.WorkflowId); err == nil {
 		// Workflow already exists.
-		startVersion := common.EmptyVersion
+		lastWriteVersion := common.EmptyVersion
 		if row.StartVersion != nil {
-			startVersion = *row.StartVersion
+			lastWriteVersion = *row.StartVersion
 		}
 
 		return nil, &persistence.WorkflowExecutionAlreadyStartedError{
-			Msg:            fmt.Sprintf("Workflow execution already running. WorkflowId: %v", row.WorkflowID),
-			StartRequestID: row.CreateRequestID,
-			RunID:          row.RunID,
-			State:          int(row.State),
-			CloseStatus:    int(row.CloseStatus),
-			StartVersion:   startVersion,
+			Msg:              fmt.Sprintf("Workflow execution already running. WorkflowId: %v", row.WorkflowID),
+			StartRequestID:   row.CreateRequestID,
+			RunID:            row.RunID,
+			State:            int(row.State),
+			CloseStatus:      int(row.CloseStatus),
+			LastWriteVersion: lastWriteVersion,
 		}
 	}
 
@@ -1199,6 +1200,15 @@ func (m *sqlMatchingManager) CompleteTransferTask(request *persistence.CompleteT
 	return nil
 }
 
+func (m *sqlMatchingManager) RangeCompleteTransferTask(request *persistence.RangeCompleteTransferTaskRequest) error {
+	if _, err := m.db.Exec(rangeCompleteTransferTaskSQLQuery, m.shardID, request.ExclusiveBeginTaskID, request.InclusiveEndTaskID); err != nil {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("RangeCompleteTransferTask operation failed. Error: %v", err),
+		}
+	}
+	return nil
+}
+
 func (m *sqlMatchingManager) GetReplicationTasks(request *persistence.GetReplicationTasksRequest) (*persistence.GetReplicationTasksResponse, error) {
 	var rows []replicationTasksRow
 
@@ -1262,6 +1272,17 @@ func (m *sqlMatchingManager) GetTimerIndexTasks(request *persistence.GetTimerInd
 
 func (m *sqlMatchingManager) CompleteTimerTask(request *persistence.CompleteTimerTaskRequest) error {
 	if _, err := m.db.Exec(completeTimerTaskSQLQuery, m.shardID, request.VisibilityTimestamp, request.TaskID); err != nil {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("CompleteTimerTask operation failed. Error: %v", err),
+		}
+	}
+	return nil
+}
+
+func (m *sqlMatchingManager) RangeCompleteTimerTask(request *persistence.RangeCompleteTimerTaskRequest) error {
+	start := common.UnixNanoToCQLTimestamp(request.InclusiveBeginTimestamp.UnixNano())
+	end := common.UnixNanoToCQLTimestamp(request.ExclusiveEndTimestamp.UnixNano())
+	if _, err := m.db.Exec(rangeCompleteTimerTaskSQLQuery, m.shardID, start, end); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("CompleteTimerTask operation failed. Error: %v", err),
 		}

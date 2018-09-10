@@ -36,7 +36,6 @@ import (
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
-	"github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/service"
 )
 

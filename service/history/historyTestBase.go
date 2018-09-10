@@ -336,7 +336,10 @@ func (s *TestShardContext) CreateWorkflowExecution(request *persistence.CreateWo
 func (s *TestShardContext) UpdateWorkflowExecution(request *persistence.UpdateWorkflowExecutionRequest) error {
 	// assign IDs for the timer tasks. They need to be assigned under shard lock.
 	for _, task := range request.TimerTasks {
-		ts := persistence.GetVisibilityTSFrom(task)
+		ts, err := persistence.GetVisibilityTSFrom(task)
+		if err != nil {
+			panic(err)
+		}
 		if ts.Before(s.timerMaxReadLevel) {
 			// This can happen if shard move and new host have a time SKU, or there is db write delay.
 			// We generate a new timer ID using timerMaxReadLevel.

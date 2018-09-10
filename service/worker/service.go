@@ -28,6 +28,7 @@ import (
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	ser "github.com/uber/cadence/service"
 )
 
 type (
@@ -87,7 +88,7 @@ func (s *Service) Start() {
 
 	var metadataManager persistence.MetadataManager
 	var err error
-	if service.UseMysql || service.UseSqlMetadata {
+	if ser.UseMysql || ser.UseSqlMetadata {
 		metadataManager, err = sql.NewMetadataPersistence("uber",
 			"uber",
 			"localhost",
