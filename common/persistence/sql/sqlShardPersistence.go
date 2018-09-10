@@ -23,12 +23,13 @@ package sql
 import (
 	"database/sql"
 	"fmt"
+	"github.com/iancoleman/strcase"
 	"time"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/persistence"
 
-	"github.com/hmgle/sqlx"
+	"github.com/jmoiron/sqlx"
 )
 
 type (
@@ -38,17 +39,17 @@ type (
 	}
 
 	shardsRow struct {
-		ShardID                   int64     `db:"shard_id"`
-		Owner                     string    `db:"owner"`
-		RangeID                   int64     `db:"range_id"`
-		StolenSinceRenew          int64     `db:"stolen_since_renew"`
-		UpdatedAt                 time.Time `db:"updated_at"`
-		ReplicationAckLevel       int64     `db:"replication_ack_level"`
-		TransferAckLevel          int64     `db:"transfer_ack_level"`
-		TimerAckLevel             time.Time `db:"timer_ack_level"`
-		ClusterTransferAckLevel   []byte    `db:"cluster_transfer_ack_level"`
-		ClusterTimerAckLevel      []byte    `db:"cluster_timer_ack_level"`
-		DomainNotificationVersion int64     `db:"domain_notification_version"`
+		ShardID                   int64
+		Owner                     string
+		RangeID                   int64
+		StolenSinceRenew          int64
+		UpdatedAt                 time.Time
+		ReplicationAckLevel       int64
+		TransferAckLevel          int64
+		TimerAckLevel             time.Time
+		ClusterTransferAckLevel   []byte
+		ClusterTimerAckLevel      []byte
+		DomainNotificationVersion int64
 	}
 )
 
@@ -121,7 +122,7 @@ func NewShardPersistence(username, password, host, port, dbName string, currentC
 	if err != nil {
 		return nil, err
 	}
-
+	db.MapperFunc(strcase.ToSnake)
 	return &sqlShardManager{
 		db:                 db,
 		currentClusterName: currentClusterName,

@@ -23,12 +23,13 @@ package sql
 import (
 	"database/sql"
 	"fmt"
+	"github.com/iancoleman/strcase"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/persistence"
 
 	_ "github.com/go-sql-driver/mysql" // MySQL driver
-	"github.com/hmgle/sqlx"
+	"github.com/jmoiron/sqlx"
 )
 
 type (
@@ -38,41 +39,41 @@ type (
 
 	DomainCommon struct {
 		// TODO Extracting the fields from DomainInfo since we don't support scanning into DomainInfo.Data
-		ID          string  `db:"id"`
-		Name        string  `db:"name"`
-		Status      int     `db:"status"`
-		Description string  `db:"description"`
-		OwnerEmail  string  `db:"owner_email"`
-		Data        *[]byte `db:"data"`
+		ID          string
+		Name        string
+		Status      int
+		Description string
+		OwnerEmail  string
+		Data        *[]byte
 
 		persistence.DomainConfig
 		// TODO Extracting the fields from DomainReplicationConfig since we don't currently support
 		// TODO scanning into DomainReplicationConfig.Clusters
 		//DomainReplicationConfig: *(request.ReplicationConfig),
-		ActiveClusterName string  `db:"active_cluster_name"`
-		Clusters          *[]byte `db:"clusters"`
-		ConfigVersion     int64   `db:"config_version"`
-		FailoverVersion   int64   `db:"failover_version"`
+		ActiveClusterName string
+		Clusters          *[]byte
+		ConfigVersion     int64
+		FailoverVersion   int64
 	}
 
 	FlatUpdateDomainRequest struct {
 		DomainCommon
-		FailoverNotificationVersion int64 `db:"failover_notification_version"`
-		NotificationVersion         int64 `db:"notification_version"`
+		FailoverNotificationVersion int64
+		NotificationVersion         int64
 	}
 
 	domainRow struct {
 		DomainCommon
-		FailoverNotificationVersion int64 `db:"failover_notification_version"`
-		NotificationVersion         int64 `db:"notification_version"`
-		IsGlobalDomain              bool  `db:"is_global_domain"`
+		FailoverNotificationVersion int64
+		NotificationVersion         int64
+		IsGlobalDomain              bool
 	}
 )
 
 const (
 	createDomainSQLQuery = `INSERT INTO domains (
 		id,
-		retention_days, 
+		retention, 
 		emit_metric,
 		config_version,
 		name, 
@@ -89,7 +90,7 @@ const (
 		)
 		VALUES(
 		:id,
-		:retention_days, 
+		:retention, 
 		:emit_metric,
 		:config_version,
 		:name, 
@@ -107,7 +108,7 @@ const (
 
 	getDomainPart = `SELECT
 		id,
-		retention_days, 
+		retention, 
 		emit_metric,
 		config_version,
 		name, 
@@ -130,7 +131,7 @@ FROM domains
 
 	updateDomainSQLQuery = `UPDATE domains
 SET
-		retention_days = :retention_days, 
+		retention = :retention, 
 		emit_metric = :emit_metric,
 		config_version = :config_version,
 		status = :status, 
@@ -167,7 +168,7 @@ func (m *sqlMetadataManager) Close() {
 func updateMetadata(tx *sqlx.Tx, oldNotificationVersion int64) error {
 	result, err := tx.NamedExec(updateMetadataSQLQuery,
 		struct {
-			NotificationVersion int64 `db:"notification_version"`
+			NotificationVersion int64
 		}{oldNotificationVersion})
 	if err != nil {
 		return &workflow.InternalServiceError{
@@ -529,7 +530,7 @@ func NewMetadataPersistence(username, password, host, port, dbName string) (pers
 	if err != nil {
 		return nil, err
 	}
-
+	db.MapperFunc(strcase.ToSnake)
 	return &sqlMetadataManager{
 		db: db,
 	}, nil

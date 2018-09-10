@@ -27,7 +27,7 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/persistence"
 
-	"github.com/hmgle/sqlx"
+	"github.com/jmoiron/sqlx"
 	"strings"
 )
 
@@ -161,42 +161,42 @@ var (
 
 type (
 	activityInfoMapsPrimaryKey struct {
-		ShardID    int64  `db:"shard_id"`
-		DomainID   string `db:"domain_id"`
-		WorkflowID string `db:"workflow_id"`
-		RunID      string `db:"run_id"`
-		ScheduleID int64  `db:"schedule_id"`
+		ShardID    int64
+		DomainID   string
+		WorkflowID string
+		RunID      string
+		ScheduleID int64
 	}
 
 	activityInfoMapsRow struct {
 		activityInfoMapsPrimaryKey
-		Version                  int64     `db:"version"`
-		ScheduledEvent           *[]byte   `db:"scheduled_event"`
-		ScheduledTime            time.Time `db:"scheduled_time"`
-		StartedID                int64     `db:"started_id"`
-		StartedEvent             *[]byte   `db:"started_event"`
-		StartedTime              time.Time `db:"started_time"`
-		ActivityID               string    `db:"activity_id"`
-		RequestID                string    `db:"request_id"`
-		Details                  *[]byte   `db:"details"`
-		ScheduleToStartTimeout   int64     `db:"schedule_to_start_timeout"`
-		ScheduleToCloseTimeout   int64     `db:"schedule_to_close_timeout"`
-		StartToCloseTimeout      int64     `db:"start_to_close_timeout"`
-		HeartbeatTimeout         int64     `db:"heartbeat_timeout"`
-		CancelRequested          int64     `db:"cancel_requested"`
-		CancelRequestID          int64     `db:"cancel_request_id"`
-		LastHeartbeatUpdatedTime time.Time `db:"last_heartbeat_updated_time"`
-		TimerTaskStatus          int64     `db:"timer_task_status"`
-		Attempt                  int64     `db:"attempt"`
-		TaskList                 string    `db:"task_list"`
-		StartedIdentity          string    `db:"started_identity"`
-		HasRetryPolicy           int64     `db:"has_retry_policy"`
-		InitInterval             int64     `db:"init_interval"`
-		BackoffCoefficient       float64   `db:"backoff_coefficient"`
-		MaxInterval              int64     `db:"max_interval"`
-		ExpirationTime           time.Time `db:"expiration_time"`
-		MaxAttempts              int64     `db:"max_attempts"`
-		NonRetriableErrors       *[]byte   `db:"non_retriable_errors"`
+		Version                  int64
+		ScheduledEvent           *[]byte
+		ScheduledTime            time.Time
+		StartedID                int64
+		StartedEvent             *[]byte
+		StartedTime              time.Time
+		ActivityID               string
+		RequestID                string
+		Details                  *[]byte
+		ScheduleToStartTimeout   int64
+		ScheduleToCloseTimeout   int64
+		StartToCloseTimeout      int64
+		HeartbeatTimeout         int64
+		CancelRequested          int64
+		CancelRequestID          int64
+		LastHeartbeatUpdatedTime time.Time
+		TimerTaskStatus          int64
+		Attempt                  int64
+		TaskList                 string
+		StartedIdentity          string
+		HasRetryPolicy           int64
+		InitInterval             int64
+		BackoffCoefficient       float64
+		MaxInterval              int64
+		ExpirationTime           time.Time
+		MaxAttempts              int64
+		NonRetriableErrors       *[]byte
 	}
 )
 
@@ -436,19 +436,19 @@ var (
 
 type (
 	timerInfoMapsPrimaryKey struct {
-		ShardID    int64  `db:"shard_id"`
-		DomainID   string `db:"domain_id"`
-		WorkflowID string `db:"workflow_id"`
-		RunID      string `db:"run_id"`
-		TimerID    string `db:"timer_id"`
+		ShardID    int64
+		DomainID   string
+		WorkflowID string
+		RunID      string
+		TimerID    string
 	}
 
 	timerInfoMapsRow struct {
 		timerInfoMapsPrimaryKey
-		Version    int64     `db:"version"`
-		StartedID  int64     `db:"started_id"`
-		ExpiryTime time.Time `db:"expiry_time"`
-		TaskID     int64     `db:"task_id"`
+		Version    int64
+		StartedID  int64
+		ExpiryTime time.Time
+		TaskID     int64
 	}
 )
 
@@ -597,20 +597,20 @@ var (
 
 type (
 	childExecutionInfoMapsPrimaryKey struct {
-		ShardID     int64  `db:"shard_id"`
-		DomainID    string `db:"domain_id"`
-		WorkflowID  string `db:"workflow_id"`
-		RunID       string `db:"run_id"`
-		InitiatedID int64  `db:"initiated_id"`
+		ShardID     int64
+		DomainID    string
+		WorkflowID  string
+		RunID       string
+		InitiatedID int64
 	}
 
 	childExecutionInfoMapsRow struct {
 		childExecutionInfoMapsPrimaryKey
-		Version         int64   `db:"version"`
-		InitiatedEvent  *[]byte `db:"initiated_event"`
-		StartedID       int64   `db:"started_id"`
-		StartedEvent    *[]byte `db:"started_event"`
-		CreateRequestID string  `db:"create_request_id"`
+		Version         int64
+		InitiatedEvent  *[]byte
+		StartedID       int64
+		StartedEvent    *[]byte
+		CreateRequestID string
 	}
 )
 
@@ -735,17 +735,17 @@ var (
 
 type (
 	requestCancelInfoMapsPrimaryKey struct {
-		ShardID     int64  `db:"shard_id"`
-		DomainID    string `db:"domain_id"`
-		WorkflowID  string `db:"workflow_id"`
-		RunID       string `db:"run_id"`
-		InitiatedID int64  `db:"initiated_id"`
+		ShardID     int64
+		DomainID    string
+		WorkflowID  string
+		RunID       string
+		InitiatedID int64
 	}
 
 	requestCancelInfoMapsRow struct {
 		requestCancelInfoMapsPrimaryKey
-		Version         int64  `db:"version"`
-		CancelRequestID string `db:"cancel_request_id"`
+		Version         int64
+		CancelRequestID string
 	}
 )
 
@@ -878,20 +878,20 @@ var (
 
 type (
 	signalInfoMapsPrimaryKey struct {
-		ShardID     int64  `db:"shard_id"`
-		DomainID    string `db:"domain_id"`
-		WorkflowID  string `db:"workflow_id"`
-		RunID       string `db:"run_id"`
-		InitiatedID int64  `db:"initiated_id"`
+		ShardID     int64
+		DomainID    string
+		WorkflowID  string
+		RunID       string
+		InitiatedID int64
 	}
 
 	signalInfoMapsRow struct {
 		signalInfoMapsPrimaryKey
-		Version         int64   `db:"version"`
-		SignalRequestID string  `db:"signal_request_id"`
-		SignalName      string  `db:"signal_name"`
-		Input           *[]byte `db:"input"`
-		Control         *[]byte `db:"control"`
+		Version         int64
+		SignalRequestID string
+		SignalName      string
+		Input           *[]byte
+		Control         *[]byte
 	}
 )
 
@@ -1029,19 +1029,19 @@ var (
 
 type (
 	bufferedReplicationTaskMapsPrimaryKey struct {
-		ShardID      int64  `db:"shard_id"`
-		DomainID     string `db:"domain_id"`
-		WorkflowID   string `db:"workflow_id"`
-		RunID        string `db:"run_id"`
-		FirstEventID int64  `db:"first_event_id"`
+		ShardID      int64
+		DomainID     string
+		WorkflowID   string
+		RunID        string
+		FirstEventID int64
 	}
 
 	bufferedReplicationTaskMapsRow struct {
 		bufferedReplicationTaskMapsPrimaryKey
-		NextEventID   int64   `db:"next_event_id"`
-		Version       int64   `db:"version"`
-		History       *[]byte `db:"history"`
-		NewRunHistory *[]byte `db:"new_run_history"`
+		NextEventID   int64
+		Version       int64
+		History       *[]byte
+		NewRunHistory *[]byte
 	}
 )
 

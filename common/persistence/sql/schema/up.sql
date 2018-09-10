@@ -7,7 +7,7 @@ CREATE TABLE domains(
   owner_email VARCHAR(255) NOT NULL,
   data BLOB,
 /* end domain */
-  retention_days INT NOT NULL,
+  retention INT NOT NULL,
   emit_metric TINYINT(1) NOT NULL,
 /* end domain_config */
   config_version BIGINT NOT NULL,
@@ -47,7 +47,7 @@ CREATE TABLE transfer_tasks(
 	workflow_id VARCHAR(255) NOT NULL,
 	run_id CHAR(64) NOT NULL,
 	task_id BIGINT NOT NULL,
-	type TINYINT NOT NULL,
+	task_type TINYINT NOT NULL,
 	target_domain_id CHAR(64) NOT NULL,
 	target_workflow_id CHAR(64) NOT NULL,
 	target_run_id CHAR(64) NOT NULL,
@@ -137,11 +137,11 @@ CREATE TABLE task_lists (
 	domain_id CHAR(64) NOT NULL,
 	range_id BIGINT NOT NULL,
 	name VARCHAR(255) NOT NULL,
-	type TINYINT NOT NULL, -- {Activity, Decision}
+	task_type TINYINT NOT NULL, -- {Activity, Decision}
 	ack_level BIGINT NOT NULL DEFAULT 0,
 	kind TINYINT NOT NULL, -- {Normal, Sticky}
 	expiry_ts TIMESTAMP NOT NULL,
-	PRIMARY KEY (domain_id, name, type)
+	PRIMARY KEY (domain_id, name, task_type)
 );
 
 CREATE TABLE replication_tasks (
@@ -149,7 +149,7 @@ CREATE TABLE replication_tasks (
 	workflow_id VARCHAR(255) NOT NULL,
 	run_id CHAR(64) NOT NULL,
 	task_id BIGINT NOT NULL,
-	type TINYINT NOT NULL,
+	task_type TINYINT NOT NULL,
 	first_event_id BIGINT NOT NULL,
 	next_event_id BIGINT NOT NULL,
 	version BIGINT NOT NULL,
@@ -163,16 +163,16 @@ CREATE TABLE timer_tasks (
 	domain_id CHAR(64) NOT NULL,
 	workflow_id VARCHAR(255) NOT NULL,
 	run_id CHAR(64) NOT NULL,
-	visibility_ts TIMESTAMP(3) NOT NULL,
+	visibility_timestamp TIMESTAMP(3) NOT NULL,
 	task_id BIGINT NOT NULL,
-	type TINYINT NOT NULL,
+	task_type TINYINT NOT NULL,
 	timeout_type TINYINT NOT NULL,
 	event_id BIGINT NOT NULL,
 	schedule_attempt BIGINT NOT NULL,
 	version BIGINT NOT NULL,
 	--
 	shard_id INT NOT NULL,
-	PRIMARY KEY (shard_id, visibility_ts, task_id)
+	PRIMARY KEY (shard_id, visibility_timestamp, task_id)
 );
 
 CREATE TABLE events (

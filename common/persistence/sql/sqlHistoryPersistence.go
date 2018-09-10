@@ -30,7 +30,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 
-	"github.com/hmgle/sqlx"
+	"github.com/jmoiron/sqlx"
 	"strings"
 )
 

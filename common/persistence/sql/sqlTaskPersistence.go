@@ -22,9 +22,10 @@ package sql
 
 import (
 	"fmt"
+	"github.com/iancoleman/strcase"
 
 	"database/sql"
-	"github.com/hmgle/sqlx"
+	"github.com/jmoiron/sqlx"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/persistence"
 	"time"
@@ -36,37 +37,37 @@ type (
 	}
 
 	tasksRow struct {
-		DomainID     string    `db:"domain_id"`
-		WorkflowID   string    `db:"workflow_id"`
-		RunID        string    `db:"run_id"`
-		ScheduleID   int64     `db:"schedule_id"`
-		TaskID       int64     `db:"task_id"`
-		TaskListName string    `db:"task_list_name"`
-		TaskListType int64     `db:"task_list_type"`
-		ExpiryTs     time.Time `db:"expiry_ts"`
+		DomainID     string
+		WorkflowID   string
+		RunID        string
+		ScheduleID   int64
+		TaskID       int64
+		TaskListName string
+		TaskListType int64
+		ExpiryTs     time.Time
 	}
 
 	tasksListsRow struct {
-		DomainID string    `db:"domain_id"`
-		RangeID  int64     `db:"range_id"`
-		Name     string    `db:"name"`
-		Type     int64     `db:"type"`
-		AckLevel int64     `db:"ack_level"`
-		Kind     int64     `db:"kind"`
-		ExpiryTs time.Time `db:"expiry_ts"`
+		DomainID string
+		RangeID  int64
+		Name     string
+		TaskType int64
+		AckLevel int64
+		Kind     int64
+		ExpiryTs time.Time
 	}
 
 	updateTaskListsRow struct {
 		tasksListsRow
-		OldRangeID int64 `db:"old_range_id"`
+		OldRangeID int64
 	}
 )
 
 const (
 	taskListCreatePart = `INTO task_lists 
-(domain_id, range_id, name, type, ack_level, kind, expiry_ts)
+(domain_id, range_id, name, task_type, ack_level, kind, expiry_ts)
 VALUES
-(:domain_id, :range_id, :name, :type, :ack_level, :kind, :expiry_ts)`
+(:domain_id, :range_id, :name, :task_type, :ack_level, :kind, :expiry_ts)`
 
 	// (default range ID: initialRangeID == 1)
 	createTaskListSQLQuery = `INSERT ` + taskListCreatePart
@@ -77,25 +78,25 @@ VALUES
 domain_id = :domain_id,
 range_id = :range_id,
 name = :name,
-type = :type,
+task_type = :task_type,
 ack_level = :ack_level,
 kind = :kind,
 expiry_ts = :expiry_ts
 WHERE
 domain_id = :domain_id AND
 name = :name AND
-type = :type
+task_type = :task_type
 `
 
-	getTaskListSQLQuery = `SELECT domain_id, range_id, name, type, ack_level, kind, expiry_ts FROM task_lists WHERE
+	getTaskListSQLQuery = `SELECT domain_id, range_id, name, task_type, ack_level, kind, expiry_ts FROM task_lists WHERE
 domain_id = ? AND 
 name = ? AND 
-type = ?`
+task_type = ?`
 
 	lockTaskListSQLQuery = `SELECT range_id FROM task_lists WHERE
 domain_id = ? AND
 name = ? AND
-type = ?
+task_type = ?
 FOR UPDATE
 `
 
@@ -122,6 +123,7 @@ func NewTaskPersistence(username, password, host, port, dbName string) (persiste
 	if err != nil {
 		return nil, err
 	}
+	db.MapperFunc(strcase.ToSnake)
 
 	return &sqlTaskManager{
 		db: db,
@@ -146,7 +148,7 @@ func (m *sqlTaskManager) LeaseTaskList(request *persistence.LeaseTaskListRequest
 					DomainID: request.DomainID,
 					RangeID:  rangeID + 1,
 					Name:     request.TaskList,
-					Type:     int64(request.TaskType),
+					TaskType: int64(request.TaskType),
 					AckLevel: ackLevel,
 					Kind:     int64(request.TaskListKind),
 					ExpiryTs: MaximumExpiryTs,
@@ -193,7 +195,7 @@ func (m *sqlTaskManager) LeaseTaskList(request *persistence.LeaseTaskListRequest
 					DomainID: row.DomainID,
 					RangeID:  row.RangeID + 1,
 					Name:     row.Name,
-					Type:     row.Type,
+					TaskType: row.TaskType,
 					AckLevel: row.AckLevel,
 					Kind:     row.Kind,
 					ExpiryTs: row.ExpiryTs,
@@ -242,7 +244,7 @@ func (m *sqlTaskManager) UpdateTaskList(request *persistence.UpdateTaskListReque
 			DomainID: request.TaskListInfo.DomainID,
 			RangeID:  request.TaskListInfo.RangeID,
 			Name:     request.TaskListInfo.Name,
-			Type:     int64(request.TaskListInfo.TaskType),
+			TaskType: int64(request.TaskListInfo.TaskType),
 			AckLevel: request.TaskListInfo.AckLevel,
 			Kind:     int64(request.TaskListInfo.Kind),
 			ExpiryTs: stickyTaskListTTL(),

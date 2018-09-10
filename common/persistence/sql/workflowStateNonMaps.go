@@ -22,7 +22,7 @@ package sql
 
 import (
 	"fmt"
-	"github.com/hmgle/sqlx"
+	"github.com/jmoiron/sqlx"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 )
 
@@ -56,11 +56,11 @@ run_id = ?`
 
 type (
 	signalsRequestedSetsRow struct {
-		ShardID    int64  `db:"shard_id"`
-		DomainID   string `db:"domain_id"`
-		WorkflowID string `db:"workflow_id"`
-		RunID      string `db:"run_id"`
-		SignalID   string `db:"signal_id"`
+		ShardID    int64
+		DomainID   string
+		WorkflowID string
+		RunID      string
+		SignalID   string
 	}
 )
 

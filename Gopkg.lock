@@ -175,14 +175,6 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:1f3b7881928bc2d099f18e33e3aad26150aa2beae258e2f230cbb1795e9309fe"
-  name = "github.com/hmgle/sqlx"
-  packages = ["."]
-  pruneopts = ""
-  revision = "f4076845477b10ac2453a16377a8383467aafe72"
-
-[[projects]]
-  branch = "master"
   digest = "1:67bcf41677f33b22aee1b82e9460aa093a96cfe4877445dd19ea950c200a47ab"
   name = "github.com/iancoleman/strcase"
   packages = ["."]
@@ -190,12 +182,16 @@
   revision = "3605ed457bf7f8caa1371b4fafadadc026673479"
 
 [[projects]]
-  branch = "master"
-  digest = "1:617ee2434b77e911fa26b678730be9a617f75243b194eadc8201c8ac860844aa"
+  branch = "batch"
+  digest = "1:f2dfbafa7faa143650abef3a721e6f654fec14422c0f3c03f7bec598622c102e"
   name = "github.com/jmoiron/sqlx"
-  packages = ["reflectx"]
+  packages = [
+    ".",
+    "reflectx",
+  ]
   pruneopts = ""
-  revision = "0dae4fefe7c0e190f7b5a78dac28a1c82cc8d849"
+  revision = "fa49b1cf03f78497da59de5455f40a753fa4a31d"
+  source = "github.com/mfateev/sqlx"
 
 [[projects]]
   digest = "1:9ea83adf8e96d6304f394d40436f2eb44c1dc3250d223b74088cc253a6cd0a1c"
@@ -681,8 +677,8 @@
     "github.com/go-sql-driver/mysql",
     "github.com/gocql/gocql",
     "github.com/golang/mock/gomock",
-    "github.com/hmgle/sqlx",
     "github.com/iancoleman/strcase",
+    "github.com/jmoiron/sqlx",
     "github.com/olekukonko/tablewriter",
     "github.com/pborman/uuid",
     "github.com/sirupsen/logrus",

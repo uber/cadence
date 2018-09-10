@@ -23,12 +23,13 @@ package sql
 import (
 	"database/sql"
 	"fmt"
+	"github.com/iancoleman/strcase"
 	"time"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/persistence"
 
-	"github.com/hmgle/sqlx"
+	"github.com/jmoiron/sqlx"
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/common"
 )
@@ -41,105 +42,105 @@ type (
 	}
 
 	FlatCreateWorkflowExecutionRequest struct {
-		DomainID               string  `db:"domain_id"`
-		WorkflowID             string  `db:"workflow_id"`
-		RunID                  string  `db:"run_id"`
-		ParentDomainID         *string `db:"parent_domain_id"`
-		ParentWorkflowID       *string `db:"parent_workflow_id"`
-		ParentRunID            *string `db:"parent_run_id"`
-		InitiatedID            *int64  `db:"initiated_id"`
-		TaskList               string  `db:"task_list"`
-		WorkflowTypeName       string  `db:"workflow_type_name"`
-		WorkflowTimeoutSeconds int64   `db:"workflow_timeout_seconds"`
-		DecisionTimeoutValue   int64   `db:"decision_timeout_value"`
-		ExecutionContext       []byte  `db:"execution_context"`
-		NextEventID            int64   `db:"next_event_id"`
-		LastProcessedEvent     int64   `db:"last_processed_event"`
+		DomainID               string
+		WorkflowID             string
+		RunID                  string
+		ParentDomainID         *string
+		ParentWorkflowID       *string
+		ParentRunID            *string
+		InitiatedID            *int64
+		TaskList               string
+		WorkflowTypeName       string
+		WorkflowTimeoutSeconds int64
+		DecisionTimeoutValue   int64
+		ExecutionContext       []byte
+		NextEventID            int64
+		LastProcessedEvent     int64
 		// maybe i don't need this.
 	}
 
 	executionRow struct {
-		DomainID                     string    `db:"domain_id"`
-		WorkflowID                   string    `db:"workflow_id"`
-		RunID                        string    `db:"run_id"`
-		ParentDomainID               *string   `db:"parent_domain_id"`
-		ParentWorkflowID             *string   `db:"parent_workflow_id"`
-		ParentRunID                  *string   `db:"parent_run_id"`
-		InitiatedID                  *int64    `db:"initiated_id"`
-		CompletionEvent              *[]byte   `db:"completion_event"`
-		TaskList                     string    `db:"task_list"`
-		WorkflowTypeName             string    `db:"workflow_type_name"`
-		WorkflowTimeoutSeconds       int64     `db:"workflow_timeout_seconds"`
-		DecisionTaskTimeoutMinutes   int64     `db:"decision_task_timeout_minutes"`
-		ExecutionContext             *[]byte   `db:"execution_context"`
-		State                        int64     `db:"state"`
-		CloseStatus                  int64     `db:"close_status"`
-		StartVersion                 *int64    `db:"start_version"`
-		CurrentVersion               *int64    `db:"current_version"`
-		LastWriteVersion             *int64    `db:"last_write_version"`
-		LastWriteEventID             *int64    `db:"last_write_event_id"`
-		LastReplicationInfo          *[]byte   `db:"last_replication_info"`
-		LastFirstEventID             int64     `db:"last_first_event_id"`
-		NextEventID                  int64     `db:"next_event_id"`
-		LastProcessedEvent           int64     `db:"last_processed_event"`
-		StartTime                    time.Time `db:"start_time"`
-		LastUpdatedTime              time.Time `db:"last_updated_time"`
-		CreateRequestID              string    `db:"create_request_id"`
-		DecisionVersion              int64     `db:"decision_version"`
-		DecisionScheduleID           int64     `db:"decision_schedule_id"`
-		DecisionStartedID            int64     `db:"decision_started_id"`
-		DecisionRequestID            string    `db:"decision_request_id"`
-		DecisionTimeout              int64     `db:"decision_timeout"`
-		DecisionAttempt              int64     `db:"decision_attempt"`
-		DecisionTimestamp            int64     `db:"decision_timestamp"`
-		CancelRequested              *int64    `db:"cancel_requested"`
-		CancelRequestID              *string   `db:"cancel_request_id"`
-		StickyTaskList               string    `db:"sticky_task_list"`
-		StickyScheduleToStartTimeout int64     `db:"sticky_schedule_to_start_timeout"`
-		ClientLibraryVersion         string    `db:"client_library_version"`
-		ClientFeatureVersion         string    `db:"client_feature_version"`
-		ClientImpl                   string    `db:"client_impl"`
-		ShardID                      int64     `db:"shard_id"`
+		DomainID                     string
+		WorkflowID                   string
+		RunID                        string
+		ParentDomainID               *string
+		ParentWorkflowID             *string
+		ParentRunID                  *string
+		InitiatedID                  *int64
+		CompletionEvent              *[]byte
+		TaskList                     string
+		WorkflowTypeName             string
+		WorkflowTimeoutSeconds       int64
+		DecisionTaskTimeoutMinutes   int64
+		ExecutionContext             *[]byte
+		State                        int64
+		CloseStatus                  int64
+		StartVersion                 *int64
+		CurrentVersion               *int64
+		LastWriteVersion             *int64
+		LastWriteEventID             *int64
+		LastReplicationInfo          *[]byte
+		LastFirstEventID             int64
+		NextEventID                  int64
+		LastProcessedEvent           int64
+		StartTime                    time.Time
+		LastUpdatedTime              time.Time
+		CreateRequestID              string
+		DecisionVersion              int64
+		DecisionScheduleID           int64
+		DecisionStartedID            int64
+		DecisionRequestID            string
+		DecisionTimeout              int64
+		DecisionAttempt              int64
+		DecisionTimestamp            int64
+		CancelRequested              *int64
+		CancelRequestID              *string
+		StickyTaskList               string
+		StickyScheduleToStartTimeout int64
+		ClientLibraryVersion         string
+		ClientFeatureVersion         string
+		ClientImpl                   string
+		ShardID                      int64
 	}
 
 	currentExecutionRow struct {
-		ShardID    int64  `db:"shard_id"`
-		DomainID   string `db:"domain_id"`
-		WorkflowID string `db:"workflow_id"`
+		ShardID    int64
+		DomainID   string
+		WorkflowID string
 
-		RunID           string `db:"run_id"`
-		CreateRequestID string `db:"create_request_id"`
-		State           int64  `db:"state"`
-		CloseStatus     int64  `db:"close_status"`
-		StartVersion    *int64 `db:"start_version"`
+		RunID           string
+		CreateRequestID string
+		State           int64
+		CloseStatus     int64
+		StartVersion    *int64
 	}
 
 	transferTasksRow struct {
 		persistence.TransferTaskInfo
-		ShardID int `db:"shard_id"`
+		ShardID int
 	}
 
 	replicationTasksRow struct {
-		DomainID            string `db:"domain_id"`
-		WorkflowID          string `db:"workflow_id"`
-		RunID               string `db:"run_id"`
-		TaskID              int64  `db:"task_id"`
-		TaskType            int    `db:"type"`
-		FirstEventID        int64  `db:"first_event_id"`
-		NextEventID         int64  `db:"next_event_id"`
-		Version             int64  `db:"version"`
-		LastReplicationInfo []byte `db:"last_replication_info"`
-		ShardID             int    `db:"shard_id"`
+		DomainID            string
+		WorkflowID          string
+		RunID               string
+		TaskID              int64
+		TaskType            int
+		FirstEventID        int64
+		NextEventID         int64
+		Version             int64
+		LastReplicationInfo []byte
+		ShardID             int
 	}
 
 	timerTasksRow struct {
 		persistence.TimerTaskInfo
-		ShardID int `db:"shard_id"`
+		ShardID int
 	}
 
 	updateExecutionRow struct {
 		executionRow
-		Condition int64 `db:"old_next_event_id"`
+		Condition int64
 	}
 )
 
@@ -315,7 +316,7 @@ run_id = ?`
 workflow_id,
 run_id,
 task_id,
-type,
+task_type,
 target_domain_id,
 target_workflow_id,
 target_run_id,
@@ -328,7 +329,7 @@ version`
 :workflow_id,
 :run_id,
 :task_id,
-:type,
+:task_type,
 :target_domain_id,
 :target_workflow_id,
 :target_run_id,
@@ -427,8 +428,8 @@ shard_id = ? AND
 task_id > ? AND
 task_id <= ?`
 
-	timerTaskInfoColumns     = `domain_id, workflow_id, run_id, visibility_ts, task_id, type, timeout_type, event_id, schedule_attempt, version`
-	timerTaskInfoColumnsTags = `:domain_id, :workflow_id, :run_id, :visibility_ts, :task_id, :type, :timeout_type, :event_id, :schedule_attempt, :version`
+	timerTaskInfoColumns     = `domain_id, workflow_id, run_id, visibility_timestamp, task_id, task_type, timeout_type, event_id, schedule_attempt, version`
+	timerTaskInfoColumnsTags = `:domain_id, :workflow_id, :run_id, :visibility_timestamp, :task_id, :task_type, :timeout_type, :event_id, :schedule_attempt, :version`
 	timerTasksColumns        = `shard_id,` + timerTaskInfoColumns
 	timerTasksColumnsTags    = `:shard_id,` + timerTaskInfoColumnsTags
 	createTimerTasksSQLQuery = `INSERT INTO timer_tasks (` +
@@ -438,10 +439,10 @@ task_id <= ?`
 		`
 FROM timer_tasks WHERE
 shard_id = ? AND
-visibility_ts >= ? AND
-visibility_ts < ?`
-	completeTimerTaskSQLQuery       = `DELETE FROM timer_tasks WHERE shard_id = ? AND visibility_ts = ? AND task_id = ?`
-	rangeCompleteTimerTaskSQLQuery  = `DELETE FROM timer_tasks WHERE shard_id = ? AND visibility_ts >= ? AND visibility_ts < ?`
+visibility_timestamp >= ? AND
+visibility_timestamp < ?`
+	completeTimerTaskSQLQuery       = `DELETE FROM timer_tasks WHERE shard_id = ? AND visibility_timestamp = ? AND task_id = ?`
+	rangeCompleteTimerTaskSQLQuery  = `DELETE FROM timer_tasks WHERE shard_id = ? AND visibility_timestamp >= ? AND visibility_timestamp < ?`
 	lockAndCheckNextEventIdSQLQuery = `SELECT next_event_id FROM executions WHERE
 shard_id = ? AND
 domain_id = ? AND
@@ -1190,8 +1191,8 @@ func (m *sqlMatchingManager) GetTransferTasks(request *persistence.GetTransferTa
 
 func (m *sqlMatchingManager) CompleteTransferTask(request *persistence.CompleteTransferTaskRequest) error {
 	if _, err := m.db.NamedExec(completeTransferTaskSQLQuery, &struct {
-		ShardID int64 `db:"shard_id"`
-		TaskID  int64 `db:"task_id"`
+		ShardID int64
+		TaskID  int64
 	}{int64(m.shardID), request.TaskID}); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("CompleteTransferTask operation failed. Error: %v", err),
@@ -1296,7 +1297,7 @@ func NewSqlMatchingPersistence(username, password, host, port, dbName string, lo
 	if err != nil {
 		return nil, err
 	}
-
+	db.MapperFunc(strcase.ToSnake)
 	return &sqlMatchingManager{
 		db:     db,
 		logger: logger,

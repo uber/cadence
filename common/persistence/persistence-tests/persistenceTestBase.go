@@ -21,6 +21,7 @@
 package persistencetests
 
 import (
+	"github.com/iancoleman/strcase"
 	"io/ioutil"
 	"math"
 	"math/rand"
@@ -35,7 +36,7 @@ import (
 
 	"fmt"
 	"github.com/gocql/gocql"
-	"github.com/hmgle/sqlx"
+	"github.com/jmoiron/sqlx"
 	"github.com/pborman/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/uber-common/bark"
@@ -261,7 +262,7 @@ func (s *TestBase) SetupWorkflowStoreWithOptions(options TestBaseOptions, metada
 		if err != nil {
 			log.Fatal(err)
 		}
-
+		db.MapperFunc(strcase.ToSnake)
 		file, err := ioutil.ReadFile("../sql/schema/up.sql")
 		if err != nil {
 			log.Fatal(err)
@@ -1152,6 +1153,7 @@ func (s *TestBase) TearDownWorkflowStore() {
 		if err != nil {
 			log.Fatal(err)
 		}
+		db.MapperFunc(strcase.ToSnake)
 
 		file, err := ioutil.ReadFile("../sql/schema/down.sql")
 		if err != nil {

@@ -23,7 +23,7 @@ package sql
 import (
 	"github.com/uber/cadence/common/persistence"
 
-	"github.com/hmgle/sqlx"
+	"github.com/jmoiron/sqlx"
 	"github.com/uber-common/bark"
 )
 
