@@ -34,7 +34,6 @@ const (
 	TagWorkflowCluster          = "wf-cluster"
 	TagWorkflowErr              = "wf-error"
 	TagHistoryBuilderAction     = "history-builder-action"
-	TagStoreOperation           = "store-operation"
 	TagDomainID                 = "domain-id"
 	TagWorkflowExecutionID      = "execution-id"
 	TagWorkflowRunID            = "run-id"

@@ -134,15 +134,7 @@ func (p *shardPersistenceClient) CreateShard(request *CreateShardRequest) error 
 	sw.Stop()
 
 	if err != nil {
-		if _, ok := err.(*ShardAlreadyExistError); ok {
-			p.metricClient.IncCounter(metrics.PersistenceCreateShardScope, metrics.PersistenceErrShardExistsCounter)
-		} else {
-			p.logger.WithFields(bark.Fields{
-				logging.TagStoreOperation: "CreateShard",
-				logging.TagErr:            err,
-			}).Error("Operation failed with internal error.")
-			p.metricClient.IncCounter(metrics.PersistenceCreateShardScope, metrics.PersistenceFailures)
-		}
+		p.updateErrorMetric(metrics.PersistenceCreateShardScope, err)
 	}
 
 	return err
@@ -157,16 +149,7 @@ func (p *shardPersistenceClient) GetShard(
 	sw.Stop()
 
 	if err != nil {
-		switch err.(type) {
-		case *workflow.EntityNotExistsError:
-			p.metricClient.IncCounter(metrics.PersistenceGetShardScope, metrics.CadenceErrEntityNotExistsCounter)
-		default:
-			p.logger.WithFields(bark.Fields{
-				logging.TagStoreOperation: "GetShard",
-				logging.TagErr:            err,
-			}).Error("Operation failed with internal error.")
-			p.metricClient.IncCounter(metrics.PersistenceGetShardScope, metrics.PersistenceFailures)
-		}
+		p.updateErrorMetric(metrics.PersistenceGetShardScope, err)
 	}
 
 	return response, err
@@ -180,18 +163,30 @@ func (p *shardPersistenceClient) UpdateShard(request *UpdateShardRequest) error 
 	sw.Stop()
 
 	if err != nil {
-		if _, ok := err.(*ShardOwnershipLostError); ok {
-			p.metricClient.IncCounter(metrics.PersistenceUpdateShardScope, metrics.PersistenceErrShardOwnershipLostCounter)
-		} else {
-			p.logger.WithFields(bark.Fields{
-				logging.TagStoreOperation: "UpdateShard",
-				logging.TagErr:            err,
-			}).Error("Operation failed with internal error.")
-			p.metricClient.IncCounter(metrics.PersistenceUpdateShardScope, metrics.PersistenceFailures)
-		}
+		p.updateErrorMetric(metrics.PersistenceUpdateShardScope, err)
 	}
 
 	return err
+}
+
+func (p *shardPersistenceClient) updateErrorMetric(scope int, err error) {
+	switch err.(type) {
+	case *ShardAlreadyExistError:
+		p.metricClient.IncCounter(scope, metrics.PersistenceErrShardExistsCounter)
+	case *ShardOwnershipLostError:
+		p.metricClient.IncCounter(scope, metrics.PersistenceErrShardOwnershipLostCounter)
+	case *workflow.EntityNotExistsError:
+		p.metricClient.IncCounter(scope, metrics.PersistenceErrEntityNotExistsCounter)
+	case *workflow.ServiceBusyError:
+		p.metricClient.IncCounter(scope, metrics.PersistenceErrBusyCounter)
+		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
+	default:
+		p.logger.WithFields(bark.Fields{
+			logging.TagScope: scope,
+			logging.TagErr:   err,
+		}).Error("Operation failed with internal error.")
+		p.metricClient.IncCounter(metrics.PersistenceCreateShardScope, metrics.PersistenceFailures)
+	}
 }
 
 func (p *shardPersistenceClient) Close() {
