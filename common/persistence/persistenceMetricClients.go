@@ -185,7 +185,7 @@ func (p *shardPersistenceClient) updateErrorMetric(scope int, err error) {
 			logging.TagScope: scope,
 			logging.TagErr:   err,
 		}).Error("Operation failed with internal error.")
-		p.metricClient.IncCounter(metrics.PersistenceCreateShardScope, metrics.PersistenceFailures)
+		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
 	}
 }
 
