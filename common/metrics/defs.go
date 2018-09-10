@@ -713,6 +713,9 @@ const (
 	PersistenceErrTimeoutCounter
 	PersistenceErrBusyCounter
 	PersistenceErrEntityNotExistsCounter
+	PersistenceErrExecutionAlreadyStartedCounter
+	PersistenceErrDomainAlreadyExistsCounter
+	PersistenceErrBadRequestCounter
 	PersistenceSampledCounter
 
 	CadenceClientRequests
@@ -848,6 +851,9 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		PersistenceErrTimeoutCounter:                  {metricName: "persistence.errors.timeout", metricType: Counter},
 		PersistenceErrBusyCounter:                     {metricName: "persistence.errors.busy", metricType: Counter},
 		PersistenceErrEntityNotExistsCounter:          {metricName: "persistence.errors.entity-not-exists", metricType: Counter},
+		PersistenceErrExecutionAlreadyStartedCounter:  {metricName: "persistence.errors.execution-already-started", metricType: Counter},
+		PersistenceErrDomainAlreadyExistsCounter:      {metricName: "persistence.errors.domain-already-exists", metricType: Counter},
+		PersistenceErrBadRequestCounter:               {metricName: "persistence.errors.bad-request", metricType: Counter},
 		PersistenceSampledCounter:                     {metricName: "persistence.sampled", metricType: Counter},
 		HistoryClientFailures:                         {metricName: "client.history.errors", metricType: Counter},
 		MatchingClientFailures:                        {metricName: "client.matching.errors", metricType: Counter},
