@@ -101,8 +101,8 @@ const (
 )
 
 type (
-	// WorkflowConditionFailedError represents a failed conditional update for workflow record
-	WorkflowConditionFailedError struct {
+	// CurrentWorkflowConditionFailedError represents a failed conditional update for current workflow record
+	CurrentWorkflowConditionFailedError struct {
 		Msg string
 	}
 
@@ -1042,7 +1042,7 @@ type (
 	}
 )
 
-func (e *WorkflowConditionFailedError) Error() string {
+func (e *CurrentWorkflowConditionFailedError) Error() string {
 	return e.Msg
 }
 

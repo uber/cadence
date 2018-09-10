@@ -1877,7 +1877,7 @@ GetFailureReasonLoop:
 			break GetFailureReasonLoop
 		}
 
-		runID, runIDOk := previous["run_id"].(string)
+		runID := previous["run_id"].(gocql.UUID).String()
 
 		if rowType == rowTypeShard {
 			if actualRangeID, ok = previous["range_id"].(int64); ok && actualRangeID != requestRangeID {
@@ -1885,15 +1885,14 @@ GetFailureReasonLoop:
 				rangeIDUnmatch = true
 
 			}
-		} else if rowType == rowTypeExecution && runIDOk && runID == requestRunID {
+		} else if rowType == rowTypeExecution && runID == requestRunID {
 			if actualNextEventID, ok = previous["next_event_id"].(int64); ok && actualNextEventID != requestCondition {
 				// UpdateWorkflowExecution failed because next event ID is unexpected
 				nextEventIDUnmatch = true
 			}
-		} else if rowType == rowTypeExecution && runIDOk && runID == permanentRunID {
+		} else if rowType == rowTypeExecution && runID == permanentRunID {
 			// UpdateWorkflowExecution failed because current_run_id is unexpected
-			if r, ok := previous["current_run_id"].(gocql.UUID); ok && r.String() != requestConditionalRunID {
-				actualCurrRunID = r.String()
+			if actualCurrRunID = previous["current_run_id"].(gocql.UUID).String(); actualCurrRunID != requestConditionalRunID {
 				// UpdateWorkflowExecution failed because next event ID is unexpected
 				runIDUnmatch = true
 			}
@@ -1917,7 +1916,7 @@ GetFailureReasonLoop:
 	}
 
 	if runIDUnmatch {
-		return &WorkflowConditionFailedError{
+		return &CurrentWorkflowConditionFailedError{
 			Msg: fmt.Sprintf("Failed to update mutable state.  Request Condition: %v, Actual Value: %v, Request Current RunID: %v, Actual Value: %v",
 				requestCondition, actualNextEventID, requestConditionalRunID, actualCurrRunID),
 		}
