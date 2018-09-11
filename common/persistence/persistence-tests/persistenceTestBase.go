@@ -80,23 +80,23 @@ type (
 	TestBase struct {
 		ShardMgr             persistence.ShardManager
 		ExecutionMgrFactory  persistence.ExecutionManagerFactory
-		WorkflowMgr          persistence.ExecutionManager
-		TaskMgr              persistence.TaskManager
-		HistoryMgr           persistence.HistoryManager
-		MetadataManager      persistence.MetadataManager
-		MetadataManagerV2    persistence.MetadataManager
-		MetadataProxy        persistence.MetadataManager
-		VisibilityMgr        persistence.VisibilityManager
-		ShardInfo            *persistence.ShardInfo
-		TaskIDGenerator      TransferTaskIDGenerator
-		ClusterMetadata      cluster.Metadata
-		readLevel            int64
-		replicationReadLevel int64
-		CassandraTestCluster
-		UseMysql bool
+		WorkflowMgr            persistence.ExecutionManager
+		TaskMgr                persistence.TaskManager
+		HistoryMgr             persistence.HistoryManager
+		MetadataManager        persistence.MetadataManager
+		MetadataManagerV2      persistence.MetadataManager
+		MetadataProxy          persistence.MetadataManager
+		VisibilityMgr          persistence.VisibilityManager
+		ShardInfo              *persistence.ShardInfo
+		TaskIDGenerator        TransferTaskIDGenerator
+		ClusterMetadata        cluster.Metadata
+		readLevel              int64
+		replicationReadLevel   int64
+		persistenceTestCluster CassandraTestCluster
+		UseMysql               bool
 	}
 
-	// CassandraTestCluster allows executing cassandra operations in testing.
+	// persistenceTestCluster allows executing cassandra operations in testing.
 	CassandraTestCluster struct {
 		port     int
 		keyspace string
@@ -136,16 +136,16 @@ func (s *TestBase) SetupWorkflowStoreWithOptions(options TestBaseOptions, metada
 
 	if !s.UseMysql {
 		// Setup Workflow keyspace and deploy schema for tests
-		s.CassandraTestCluster.setupTestCluster(options)
+		s.persistenceTestCluster.setupTestCluster(options)
 		shardID := 0
 		var err error
 		s.ShardMgr, err = cassandra.NewShardPersistence(options.ClusterHost, options.ClusterPort, options.ClusterUser,
-			options.ClusterPassword, options.Datacenter, s.CassandraTestCluster.keyspace, currentClusterName, log)
+			options.ClusterPassword, options.Datacenter, s.persistenceTestCluster.keyspace, currentClusterName, log)
 		if err != nil {
 			log.Fatal(err)
 		}
 		s.ExecutionMgrFactory, err = cassandra.NewPersistenceClientFactory(options.ClusterHost, options.ClusterPort,
-			options.ClusterUser, options.ClusterPassword, options.Datacenter, s.CassandraTestCluster.keyspace, 2, log, nil, nil)
+			options.ClusterUser, options.ClusterPassword, options.Datacenter, s.persistenceTestCluster.keyspace, 2, log, nil, nil)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -155,38 +155,38 @@ func (s *TestBase) SetupWorkflowStoreWithOptions(options TestBaseOptions, metada
 			log.Fatal(err)
 		}
 		s.TaskMgr, err = cassandra.NewTaskPersistence(options.ClusterHost, options.ClusterPort, options.ClusterUser,
-			options.ClusterPassword, options.Datacenter, s.CassandraTestCluster.keyspace,
+			options.ClusterPassword, options.Datacenter, s.persistenceTestCluster.keyspace,
 			log)
 		if err != nil {
 			log.Fatal(err)
 		}
 
 		s.HistoryMgr, err = cassandra.NewHistoryPersistence(options.ClusterHost, options.ClusterPort, options.ClusterUser,
-			options.ClusterPassword, options.Datacenter, s.CassandraTestCluster.keyspace, 2, log)
+			options.ClusterPassword, options.Datacenter, s.persistenceTestCluster.keyspace, 2, log)
 		if err != nil {
 			log.Fatal(err)
 		}
 
 		s.MetadataManager, err = cassandra.NewMetadataPersistence(options.ClusterHost, options.ClusterPort, options.ClusterUser,
-			options.ClusterPassword, options.Datacenter, s.CassandraTestCluster.keyspace, currentClusterName, log)
+			options.ClusterPassword, options.Datacenter, s.persistenceTestCluster.keyspace, currentClusterName, log)
 		if err != nil {
 			log.Fatal(err)
 		}
 
 		s.MetadataManagerV2, err = cassandra.NewMetadataPersistenceV2(options.ClusterHost, options.ClusterPort, options.ClusterUser,
-			options.ClusterPassword, options.Datacenter, s.CassandraTestCluster.keyspace, currentClusterName, log)
+			options.ClusterPassword, options.Datacenter, s.persistenceTestCluster.keyspace, currentClusterName, log)
 		if err != nil {
 			log.Fatal(err)
 		}
 
 		s.MetadataProxy, err = cassandra.NewMetadataManagerProxy(options.ClusterHost, options.ClusterPort, options.ClusterUser,
-			options.ClusterPassword, options.Datacenter, s.CassandraTestCluster.keyspace, currentClusterName, log)
+			options.ClusterPassword, options.Datacenter, s.persistenceTestCluster.keyspace, currentClusterName, log)
 		if err != nil {
 			log.Fatal(err)
 		}
 
 		s.VisibilityMgr, err = cassandra.NewVisibilityPersistence(options.ClusterHost, options.ClusterPort,
-			options.ClusterUser, options.ClusterPassword, options.Datacenter, s.CassandraTestCluster.keyspace, log)
+			options.ClusterUser, options.ClusterPassword, options.Datacenter, s.persistenceTestCluster.keyspace, log)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -1163,7 +1163,7 @@ func (s *TestBase) TearDownWorkflowStore() {
 
 		db.Close()
 	} else {
-		s.CassandraTestCluster.tearDownTestCluster()
+		s.persistenceTestCluster.tearDownTestCluster()
 	}
 }
 
