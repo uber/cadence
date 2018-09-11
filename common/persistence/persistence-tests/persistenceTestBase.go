@@ -104,12 +104,6 @@ type (
 		session  *gocql.Session
 	}
 
-	testExecutionMgrFactory struct {
-		options   TestBaseOptions
-		cassandra CassandraTestCluster
-		logger    bark.Logger
-	}
-
 	testTransferTaskIDGenerator struct {
 		seqNum int64
 	}
@@ -136,7 +130,7 @@ func (s *TestBase) SetupWorkflowStoreWithOptions(options TestBaseOptions, metada
 
 	if !s.UseMysql {
 		// Setup Workflow keyspace and deploy schema for tests
-		s.persistenceTestCluster.setupTestCluster(options)
+		s.persistenceTestCluster.setupTestDatabase(options)
 		shardID := 0
 		var err error
 		s.ShardMgr, err = cassandra.NewShardPersistence(options.DBHost, options.DBPort, options.DBUser,
@@ -1163,7 +1157,7 @@ func (s *TestBase) TearDownWorkflowStore() {
 
 		db.Close()
 	} else {
-		s.persistenceTestCluster.tearDownTestCluster()
+		s.persistenceTestCluster.tearDownTestDatabase()
 	}
 }
 
@@ -1229,27 +1223,27 @@ func (s *TestBase) ClearReplicationQueue() {
 	atomic.StoreInt64(&s.replicationReadLevel, 0)
 }
 
-func (s *CassandraTestCluster) setupTestCluster(options TestBaseOptions) {
+func (s *CassandraTestCluster) setupTestDatabase(options TestBaseOptions) {
 	keySpace := options.KeySpace
 	if keySpace == "" {
 		keySpace = generateRandomKeyspace(10)
 	}
 
-	s.createCluster(
+	s.createSession(
 		testWorkflowClusterHosts, options.DBPort, testUser, testPassword, testDatacenter,
 		gocql.Consistency(1), keySpace,
 	)
-	s.createKeyspace(1, options.DropKeySpace)
+	s.createDatabase(1, options.DropKeySpace)
 	s.loadSchema([]string{"schema.cql"}, options.SchemaDir)
 	s.loadVisibilitySchema([]string{"schema.cql"}, options.SchemaDir)
 }
 
-func (s *CassandraTestCluster) tearDownTestCluster() {
-	s.dropKeyspace()
+func (s *CassandraTestCluster) tearDownTestDatabase() {
+	s.dropDatabase()
 	s.session.Close()
 }
 
-func (s *CassandraTestCluster) createCluster(
+func (s *CassandraTestCluster) createSession(
 	clusterHosts string, port int, user, password, dc string,
 	cons gocql.Consistency, keyspace string) {
 	s.cluster = common.NewCassandraCluster(clusterHosts, port, user, password, dc)
@@ -1264,7 +1258,7 @@ func (s *CassandraTestCluster) createCluster(
 	s.keyspace = keyspace
 }
 
-func (s *CassandraTestCluster) createKeyspace(replicas int, dropKeySpace bool) {
+func (s *CassandraTestCluster) createDatabase(replicas int, dropKeySpace bool) {
 	err := common.CreateCassandraKeyspace(s.session, s.keyspace, replicas, dropKeySpace)
 	if err != nil {
 		log.Fatal(err)
@@ -1273,7 +1267,7 @@ func (s *CassandraTestCluster) createKeyspace(replicas int, dropKeySpace bool) {
 	s.cluster.Keyspace = s.keyspace
 }
 
-func (s *CassandraTestCluster) dropKeyspace() {
+func (s *CassandraTestCluster) dropDatabase() {
 	err := common.DropCassandraKeyspace(s.session, s.keyspace)
 	if err != nil && !strings.Contains(err.Error(), "AlreadyExists") {
 		log.Fatal(err)
