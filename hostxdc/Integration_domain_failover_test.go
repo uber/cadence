@@ -113,7 +113,7 @@ func (s *integrationClustersTestSuite) newTestCluster(no int) *testCluster {
 }
 
 func (s *testCluster) setupCluster(no int) {
-	options := persistence.TestBaseOptions{}
+	options := persistencetests.TestBaseOptions{}
 	options.ClusterHost = "127.0.0.1"
 	options.KeySpace = "integration_" + clusterName[no]
 	options.DropKeySpace = true

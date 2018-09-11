@@ -86,10 +86,10 @@ func (s *domainReplicatorSuite) TestHandleTransmissionTask_RegisterDomainTask() 
 	configVersion := int64(0)
 	failoverVersion := int64(59)
 	clusters := []*persistence.ClusterReplicationConfig{
-		&persistence.ClusterReplicationConfig{
+		{
 			ClusterName: clusterActive,
 		},
-		&persistence.ClusterReplicationConfig{
+		{
 			ClusterName: clusterStandby,
 		},
 	}
@@ -156,10 +156,10 @@ func (s *domainReplicatorSuite) TestHandleTransmissionTask_UpdateDomainTask() {
 	configVersion := int64(0)
 	failoverVersion := int64(59)
 	clusters := []*persistence.ClusterReplicationConfig{
-		&persistence.ClusterReplicationConfig{
+		{
 			ClusterName: clusterActive,
 		},
-		&persistence.ClusterReplicationConfig{
+		{
 			ClusterName: clusterStandby,
 		},
 	}

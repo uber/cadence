@@ -34,7 +34,7 @@ import (
 )
 
 type (
-	shardPersistenceSuite struct {
+	ShardPersistenceSuite struct {
 		suite.Suite
 		TestBase
 		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
@@ -44,12 +44,12 @@ type (
 )
 
 func TestShardPersistenceSuite(t *testing.T) {
-	s := new(shardPersistenceSuite)
+	s := new(ShardPersistenceSuite)
 	s.UseMysql = true
 	suite.Run(t, s)
 }
 
-func (s *shardPersistenceSuite) SetupSuite() {
+func (s *ShardPersistenceSuite) SetupSuite() {
 	if testing.Verbose() {
 		log.SetOutput(os.Stdout)
 	}
@@ -57,16 +57,16 @@ func (s *shardPersistenceSuite) SetupSuite() {
 	s.SetupWorkflowStore()
 }
 
-func (s *shardPersistenceSuite) SetupTest() {
+func (s *ShardPersistenceSuite) SetupTest() {
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
 }
 
-func (s *shardPersistenceSuite) TearDownSuite() {
+func (s *ShardPersistenceSuite) TearDownSuite() {
 	s.TearDownWorkflowStore()
 }
 
-func (s *shardPersistenceSuite) TestCreateShard() {
+func (s *ShardPersistenceSuite) TestCreateShard() {
 	err0 := s.CreateShard(19, "test_create_shard1", 123)
 	s.Nil(err0, "No error expected.")
 
@@ -76,7 +76,7 @@ func (s *shardPersistenceSuite) TestCreateShard() {
 	log.Infof("CreateShard failed with error: %v", err1)
 }
 
-func (s *shardPersistenceSuite) TestGetShard() {
+func (s *ShardPersistenceSuite) TestGetShard() {
 	shardID := 20
 	owner := "test_get_shard"
 	rangeID := int64(131)
@@ -97,7 +97,7 @@ func (s *shardPersistenceSuite) TestGetShard() {
 	log.Infof("GetShard failed with error: %v", err2)
 }
 
-func (s *shardPersistenceSuite) TestUpdateShard() {
+func (s *ShardPersistenceSuite) TestUpdateShard() {
 	shardID := 30
 	owner := "test_update_shard"
 	rangeID := int64(141)

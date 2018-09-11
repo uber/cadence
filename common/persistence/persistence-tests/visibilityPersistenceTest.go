@@ -36,7 +36,7 @@ import (
 )
 
 type (
-	visibilityPersistenceSuite struct {
+	VisibilityPersistenceSuite struct {
 		suite.Suite
 		TestBase
 		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
@@ -46,11 +46,11 @@ type (
 )
 
 func TestVisibilityPersistenceSuite(t *testing.T) {
-	s := new(visibilityPersistenceSuite)
+	s := new(VisibilityPersistenceSuite)
 	suite.Run(t, s)
 }
 
-func (s *visibilityPersistenceSuite) SetupSuite() {
+func (s *VisibilityPersistenceSuite) SetupSuite() {
 	if testing.Verbose() {
 		log.SetOutput(os.Stdout)
 	}
@@ -58,16 +58,16 @@ func (s *visibilityPersistenceSuite) SetupSuite() {
 	s.SetupWorkflowStore()
 }
 
-func (s *visibilityPersistenceSuite) SetupTest() {
+func (s *VisibilityPersistenceSuite) SetupTest() {
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
 }
 
-func (s *visibilityPersistenceSuite) TearDownSuite() {
+func (s *VisibilityPersistenceSuite) TearDownSuite() {
 	s.TearDownWorkflowStore()
 }
 
-func (s *visibilityPersistenceSuite) TestBasicVisibility() {
+func (s *VisibilityPersistenceSuite) TestBasicVisibility() {
 	testDomainUUID := uuid.New()
 
 	workflowExecution := gen.WorkflowExecution{
@@ -122,7 +122,7 @@ func (s *visibilityPersistenceSuite) TestBasicVisibility() {
 	s.Equal(1, len(resp.Executions))
 }
 
-func (s *visibilityPersistenceSuite) TestVisibilityPagination() {
+func (s *VisibilityPersistenceSuite) TestVisibilityPagination() {
 	testDomainUUID := uuid.New()
 
 	// Create 2 executions
@@ -187,7 +187,7 @@ func (s *visibilityPersistenceSuite) TestVisibilityPagination() {
 	s.Equal(0, len(resp.Executions))
 }
 
-func (s *visibilityPersistenceSuite) TestFilteringByType() {
+func (s *VisibilityPersistenceSuite) TestFilteringByType() {
 	testDomainUUID := uuid.New()
 	startTime := time.Now().UnixNano()
 
@@ -264,7 +264,7 @@ func (s *visibilityPersistenceSuite) TestFilteringByType() {
 	s.Equal(workflowExecution2.WorkflowId, resp.Executions[0].Execution.WorkflowId)
 }
 
-func (s *visibilityPersistenceSuite) TestFilteringByWorkflowID() {
+func (s *VisibilityPersistenceSuite) TestFilteringByWorkflowID() {
 	testDomainUUID := uuid.New()
 	startTime := time.Now().UnixNano()
 
@@ -341,7 +341,7 @@ func (s *visibilityPersistenceSuite) TestFilteringByWorkflowID() {
 	s.Equal(workflowExecution2.WorkflowId, resp.Executions[0].Execution.WorkflowId)
 }
 
-func (s *visibilityPersistenceSuite) TestFilteringByCloseStatus() {
+func (s *VisibilityPersistenceSuite) TestFilteringByCloseStatus() {
 	testDomainUUID := uuid.New()
 	startTime := time.Now().UnixNano()
 
@@ -406,7 +406,7 @@ func (s *visibilityPersistenceSuite) TestFilteringByCloseStatus() {
 	s.Equal(workflowExecution2.WorkflowId, resp.Executions[0].Execution.WorkflowId)
 }
 
-func (s *visibilityPersistenceSuite) TestGetClosedExecution() {
+func (s *VisibilityPersistenceSuite) TestGetClosedExecution() {
 	testDomainUUID := uuid.New()
 
 	workflowExecution := gen.WorkflowExecution{

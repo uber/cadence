@@ -27,6 +27,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/uber/cadence/common/persistence/persistence-tests"
 	"os"
 	"reflect"
 	"strconv"
@@ -153,7 +154,7 @@ func (s *clientIntegrationSuite) TearDownTest() {
 func (s *clientIntegrationSuite) setupSuite(enableGlobalDomain bool, isMasterCluster bool) {
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
-	options := persistence.TestBaseOptions{}
+	options := persistencetests.TestBaseOptions{}
 	options.ClusterHost = "127.0.0.1"
 	options.DropKeySpace = true
 	options.SchemaDir = ".."

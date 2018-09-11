@@ -78,8 +78,8 @@ type (
 
 	// TestBase wraps the base setup needed to create workflows over persistence layer.
 	TestBase struct {
-		ShardMgr             persistence.ShardManager
-		ExecutionMgrFactory  persistence.ExecutionManagerFactory
+		ShardMgr               persistence.ShardManager
+		ExecutionMgrFactory    persistence.ExecutionManagerFactory
 		WorkflowMgr            persistence.ExecutionManager
 		TaskMgr                persistence.TaskManager
 		HistoryMgr             persistence.HistoryManager

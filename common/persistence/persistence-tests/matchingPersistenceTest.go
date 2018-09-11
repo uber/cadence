@@ -37,7 +37,7 @@ import (
 )
 
 type (
-	matchingPersistenceSuite struct {
+	MatchingPersistenceSuite struct {
 		suite.Suite
 		TestBase
 		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
@@ -50,14 +50,7 @@ type (
 // we need to use tolerance when doing comparison
 var timePrecision = 2 * time.Millisecond
 
-func TestMatchingPersistenceSuite(t *testing.T) {
-	s := new(matchingPersistenceSuite)
-	//suite.Run(t, s)
-	s.UseMysql = true
-	suite.Run(t, s)
-}
-
-func (s *matchingPersistenceSuite) SetupSuite() {
+func (s *MatchingPersistenceSuite) SetupSuite() {
 	if testing.Verbose() {
 		log.SetOutput(os.Stdout)
 	}
@@ -65,17 +58,17 @@ func (s *matchingPersistenceSuite) SetupSuite() {
 	s.SetupWorkflowStore()
 }
 
-func (s *matchingPersistenceSuite) TearDownSuite() {
+func (s *MatchingPersistenceSuite) TearDownSuite() {
 	s.TearDownWorkflowStore()
 }
 
-func (s *matchingPersistenceSuite) SetupTest() {
+func (s *MatchingPersistenceSuite) SetupTest() {
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
 	s.ClearTasks()
 }
 
-func (s *matchingPersistenceSuite) TestPersistenceStartWorkflow() {
+func (s *MatchingPersistenceSuite) TestPersistenceStartWorkflow() {
 	domainID := "2d7994bf-9de8-459d-9c81-e723daedb246"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("start-workflow-test"),
@@ -98,13 +91,8 @@ func (s *matchingPersistenceSuite) TestPersistenceStartWorkflow() {
 	s.Empty(task1, "Expected empty task identifier.")
 
 	response, err2 := s.WorkflowMgr.CreateWorkflowExecution(&persistence.CreateWorkflowExecutionRequest{
-		RequestID: uuid.New(),
-		// We perturb the DomainID slightly. Otherwise,
-		// if domain ID, workflow ID, and run ID are all identical
-		// to those of the previously created workflows,
-		// then there is no reason that this should not throw
-		// a WorkflowAlreadyExists error as opposed to ShardOwnershipLostError.
-		DomainID:             domainID + "foo",
+		RequestID:            uuid.New(),
+		DomainID:             domainID,
 		Execution:            workflowExecution,
 		TaskList:             "queue1",
 		WorkflowTypeName:     "workflow_type_test",
@@ -134,7 +122,7 @@ func (s *matchingPersistenceSuite) TestPersistenceStartWorkflow() {
 	s.IsType(&persistence.ShardOwnershipLostError{}, err2)
 }
 
-func (s *matchingPersistenceSuite) TestPersistenceStartWorkflowWithReplicationState() {
+func (s *MatchingPersistenceSuite) TestPersistenceStartWorkflowWithReplicationState() {
 	domainID := "2d7994bf-9de8-459d-9c81-e723daedb246"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("start-workflow-test-replication-state"),
@@ -164,7 +152,7 @@ func (s *matchingPersistenceSuite) TestPersistenceStartWorkflowWithReplicationSt
 
 	response, err2 := s.WorkflowMgr.CreateWorkflowExecution(&persistence.CreateWorkflowExecutionRequest{
 		RequestID:            uuid.New(),
-		DomainID:             domainID + "foo",
+		DomainID:             domainID,
 		Execution:            workflowExecution,
 		TaskList:             "queue1",
 		WorkflowTypeName:     "workflow_type_test",
@@ -194,7 +182,7 @@ func (s *matchingPersistenceSuite) TestPersistenceStartWorkflowWithReplicationSt
 	s.IsType(&persistence.ShardOwnershipLostError{}, err2)
 }
 
-func (s *matchingPersistenceSuite) TestGetWorkflow() {
+func (s *MatchingPersistenceSuite) TestGetWorkflow() {
 	domainID := "8f27f02b-ce22-4fd9-941b-65e1131b0bb5"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("get-workflow-test"),
@@ -227,7 +215,7 @@ func (s *matchingPersistenceSuite) TestGetWorkflow() {
 	log.Infof("Workflow execution last updated: %v", info.LastUpdatedTimestamp)
 }
 
-func (s *matchingPersistenceSuite) TestUpdateWorkflow() {
+func (s *MatchingPersistenceSuite) TestUpdateWorkflow() {
 	domainID := "b0a8571c-0257-40ea-afcd-3a14eae181c0"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("update-workflow-test"),
@@ -406,7 +394,7 @@ func (s *matchingPersistenceSuite) TestUpdateWorkflow() {
 	log.Infof("Workflow execution last updated: %v", info4.LastUpdatedTimestamp)
 }
 
-func (s *matchingPersistenceSuite) TestDeleteWorkflow() {
+func (s *MatchingPersistenceSuite) TestDeleteWorkflow() {
 	domainID := "1d4abb23-b87b-457b-96ef-43aba0b9c44f"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("delete-workflow-test"),
@@ -449,7 +437,7 @@ func (s *matchingPersistenceSuite) TestDeleteWorkflow() {
 	s.Nil(err5)
 }
 
-func (s *matchingPersistenceSuite) TestDeleteCurrentWorkflow() {
+func (s *MatchingPersistenceSuite) TestDeleteCurrentWorkflow() {
 	finishedCurrentExecutionRetentionTTL := int32(3) // 3 seconds
 	domainID := "54d15308-e20e-4b91-a00f-a518a3892790"
 	workflowExecution := gen.WorkflowExecution{
@@ -491,7 +479,7 @@ func (s *matchingPersistenceSuite) TestDeleteCurrentWorkflow() {
 	s.Nil(err2)
 }
 
-func (s *matchingPersistenceSuite) TestGetCurrentWorkflow() {
+func (s *MatchingPersistenceSuite) TestGetCurrentWorkflow() {
 	domainID := "54d15308-e20e-4b91-a00f-a518a3892790"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("get-current-workflow-test"),
@@ -529,7 +517,7 @@ func (s *matchingPersistenceSuite) TestGetCurrentWorkflow() {
 	s.Empty(task1, "Expected empty task identifier.")
 }
 
-func (s *matchingPersistenceSuite) TestTransferTasksThroughUpdate() {
+func (s *MatchingPersistenceSuite) TestTransferTasksThroughUpdate() {
 	domainID := "b785a8ba-bd7d-4760-bb05-41b115f3e10a"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("get-transfer-tasks-through-update-test"),
@@ -617,7 +605,7 @@ func (s *matchingPersistenceSuite) TestTransferTasksThroughUpdate() {
 	s.NotNil(err10, "Error expected.")
 }
 
-func (s *matchingPersistenceSuite) TestCancelTransferTaskTasks() {
+func (s *MatchingPersistenceSuite) TestCancelTransferTaskTasks() {
 	domainID := "aeac8287-527b-4b35-80a9-667cb47e7c6d"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("cancel-workflow-test"),
@@ -711,7 +699,7 @@ func (s *matchingPersistenceSuite) TestCancelTransferTaskTasks() {
 	s.Nil(err)
 }
 
-func (s *matchingPersistenceSuite) TestSignalTransferTaskTasks() {
+func (s *MatchingPersistenceSuite) TestSignalTransferTaskTasks() {
 	domainID := "aeac8287-527b-4b35-80a9-667cb47e7c6d"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("signal-workflow-test"),
@@ -805,7 +793,7 @@ func (s *matchingPersistenceSuite) TestSignalTransferTaskTasks() {
 	s.Nil(err)
 }
 
-func (s *matchingPersistenceSuite) TestCreateTask() {
+func (s *MatchingPersistenceSuite) TestCreateTask() {
 	domainID := "11adbd1b-f164-4ea7-b2f3-2e857a5048f1"
 	workflowExecution := gen.WorkflowExecution{WorkflowId: common.StringPtr("create-task-test"),
 		RunId: common.StringPtr("c949447a-691a-4132-8b2a-a5b38106793c")}
@@ -836,7 +824,7 @@ func (s *matchingPersistenceSuite) TestCreateTask() {
 	}
 }
 
-func (s *matchingPersistenceSuite) TestGetDecisionTasks() {
+func (s *MatchingPersistenceSuite) TestGetDecisionTasks() {
 	domainID := "aeac8287-527b-4b35-80a9-667cb47e7c6d"
 	workflowExecution := gen.WorkflowExecution{WorkflowId: common.StringPtr("get-decision-task-test"),
 		RunId: common.StringPtr("db20f7e2-1a1e-40d9-9278-d8b886738e05")}
@@ -852,7 +840,7 @@ func (s *matchingPersistenceSuite) TestGetDecisionTasks() {
 	s.Equal(int64(5), tasks1Response.Tasks[0].ScheduleID)
 }
 
-func (s *matchingPersistenceSuite) TestCompleteDecisionTask() {
+func (s *MatchingPersistenceSuite) TestCompleteDecisionTask() {
 	domainID := "f1116985-d1f1-40e0-aba9-83344db915bc"
 	workflowExecution := gen.WorkflowExecution{WorkflowId: common.StringPtr("complete-decision-task-test"),
 		RunId: common.StringPtr("2aa0a74e-16ee-4f27-983d-48b07ec1915d")}
@@ -889,7 +877,7 @@ func (s *matchingPersistenceSuite) TestCompleteDecisionTask() {
 	}
 }
 
-func (s *matchingPersistenceSuite) TestLeaseAndUpdateTaskList() {
+func (s *MatchingPersistenceSuite) TestLeaseAndUpdateTaskList() {
 	domainID := "00136543-72ad-4615-b7e9-44bca9775b45"
 	taskList := "aaaaaaa"
 	response, err := s.TaskMgr.LeaseTaskList(&persistence.LeaseTaskListRequest{
@@ -932,7 +920,7 @@ func (s *matchingPersistenceSuite) TestLeaseAndUpdateTaskList() {
 	s.Error(err)
 }
 
-func (s *matchingPersistenceSuite) TestLeaseAndUpdateTaskList_Sticky() {
+func (s *MatchingPersistenceSuite) TestLeaseAndUpdateTaskList_Sticky() {
 	domainID := uuid.New()
 	taskList := "aaaaaaa"
 	response, err := s.TaskMgr.LeaseTaskList(&persistence.LeaseTaskListRequest{
@@ -961,7 +949,7 @@ func (s *matchingPersistenceSuite) TestLeaseAndUpdateTaskList_Sticky() {
 	s.NoError(err) // because update with ttl doesn't check rangeID
 }
 
-func (s *matchingPersistenceSuite) TestReplicationTasks() {
+func (s *MatchingPersistenceSuite) TestReplicationTasks() {
 	domainID := "2466d7de-6602-4ad8-b939-fb8f8c36c711"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("get-replication-tasks-test"),
@@ -1025,7 +1013,7 @@ func (s *matchingPersistenceSuite) TestReplicationTasks() {
 	}
 }
 
-func (s *matchingPersistenceSuite) TestTransferTasks_Complete() {
+func (s *MatchingPersistenceSuite) TestTransferTasks_Complete() {
 	domainID := "8bfb47be-5b57-4d55-9109-5fb35e20b1d7"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("get-transfer-tasks-test-complete"),
@@ -1121,7 +1109,7 @@ func (s *matchingPersistenceSuite) TestTransferTasks_Complete() {
 	s.Empty(txTasks, "expected empty task list.")
 }
 
-func (s *matchingPersistenceSuite) TestTransferTasks_RangeComplete() {
+func (s *MatchingPersistenceSuite) TestTransferTasks_RangeComplete() {
 	domainID := "8bfb47be-5b57-4d55-9109-5fb35e20b1d7"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("get-transfer-tasks-test-range-complete"),
@@ -1202,7 +1190,7 @@ func (s *matchingPersistenceSuite) TestTransferTasks_RangeComplete() {
 	s.Empty(txTasks, "expected empty task list.")
 }
 
-func (s *matchingPersistenceSuite) TestTimerTasks_Complete() {
+func (s *MatchingPersistenceSuite) TestTimerTasks_Complete() {
 	domainID := "8bfb47be-5b57-4d66-9109-5fb35e20b1d7"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("get-timer-tasks-test-complete"),
@@ -1255,7 +1243,7 @@ func (s *matchingPersistenceSuite) TestTimerTasks_Complete() {
 	s.Empty(timerTasks2, "expected empty task list.")
 }
 
-func (s *matchingPersistenceSuite) TestTimerTasks_RangeComplete() {
+func (s *MatchingPersistenceSuite) TestTimerTasks_RangeComplete() {
 	domainID := "8bfb47be-5b57-4d66-9109-5fb35e20b1d7"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("get-timer-tasks-test-range-complete"),
@@ -1320,7 +1308,7 @@ func (s *matchingPersistenceSuite) TestTimerTasks_RangeComplete() {
 	s.Empty(timerTasks2, "expected empty task list.")
 }
 
-func (s *matchingPersistenceSuite) TestWorkflowMutableState_Activities() {
+func (s *MatchingPersistenceSuite) TestWorkflowMutableState_Activities() {
 	domainID := "7fcf0aa9-e121-4292-bdad-0a75181b4aa3"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("test-workflow-mutable-test"),
@@ -1389,7 +1377,7 @@ func (s *matchingPersistenceSuite) TestWorkflowMutableState_Activities() {
 	s.Equal(0, len(state.ActivitInfos))
 }
 
-func (s *matchingPersistenceSuite) TestWorkflowMutableState_Timers() {
+func (s *MatchingPersistenceSuite) TestWorkflowMutableState_Timers() {
 	domainID := "025d178a-709b-4c07-8dd7-86dbf9bd2e06"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("test-workflow-mutable-timers-test"),
@@ -1439,7 +1427,7 @@ func (s *matchingPersistenceSuite) TestWorkflowMutableState_Timers() {
 	s.Equal(0, len(state.TimerInfos))
 }
 
-func (s *matchingPersistenceSuite) TestWorkflowMutableState_ChildExecutions() {
+func (s *MatchingPersistenceSuite) TestWorkflowMutableState_ChildExecutions() {
 	domainID := "88236cd2-c439-4cec-9957-2748ce3be074"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("test-workflow-mutable-child-executions-parent-test"),
@@ -1503,7 +1491,7 @@ func (s *matchingPersistenceSuite) TestWorkflowMutableState_ChildExecutions() {
 	s.Equal(0, len(state.ChildExecutionInfos))
 }
 
-func (s *matchingPersistenceSuite) TestWorkflowMutableState_RequestCancel() {
+func (s *MatchingPersistenceSuite) TestWorkflowMutableState_RequestCancel() {
 	domainID := "568b8d19-cf64-4aac-be1b-f8a3edbc1fa9"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("test-workflow-mutable-request-cancel-test"),
@@ -1551,7 +1539,7 @@ func (s *matchingPersistenceSuite) TestWorkflowMutableState_RequestCancel() {
 	s.Equal(0, len(state.RequestCancelInfos))
 }
 
-func (s *matchingPersistenceSuite) TestWorkflowMutableState_SignalInfo() {
+func (s *MatchingPersistenceSuite) TestWorkflowMutableState_SignalInfo() {
 	domainID := uuid.New()
 	runID := uuid.New()
 	workflowExecution := gen.WorkflowExecution{
@@ -1610,7 +1598,7 @@ func (s *matchingPersistenceSuite) TestWorkflowMutableState_SignalInfo() {
 	s.Equal(0, len(state.SignalInfos))
 }
 
-func (s *matchingPersistenceSuite) TestWorkflowMutableState_SignalRequested() {
+func (s *MatchingPersistenceSuite) TestWorkflowMutableState_SignalRequested() {
 	domainID := uuid.New()
 	runID := uuid.New()
 	workflowExecution := gen.WorkflowExecution{
@@ -1652,7 +1640,7 @@ func (s *matchingPersistenceSuite) TestWorkflowMutableState_SignalRequested() {
 	s.Equal(0, len(state.SignalRequestedIDs))
 }
 
-func (s *matchingPersistenceSuite) TestWorkflowMutableState_BufferedReplicationTasks() {
+func (s *MatchingPersistenceSuite) TestWorkflowMutableState_BufferedReplicationTasks() {
 	domainID := "714f8491-a34e-4301-a5af-f0cf5d8660c6"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("test-workflow-mutable-buffered-replication-tasks-test"),
@@ -1841,7 +1829,7 @@ func (s *matchingPersistenceSuite) TestWorkflowMutableState_BufferedReplicationT
 	s.Equal(0, len(state4.BufferedReplicationTasks))
 }
 
-func (s *matchingPersistenceSuite) TestWorkflowMutableStateInfo() {
+func (s *MatchingPersistenceSuite) TestWorkflowMutableStateInfo() {
 	domainID := "9ed8818b-3090-4160-9f21-c6b70e64d2dd"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("test-workflow-mutable-state-test"),
@@ -1872,7 +1860,7 @@ func (s *matchingPersistenceSuite) TestWorkflowMutableStateInfo() {
 	s.Equal(updatedInfo.State, state.ExecutionInfo.State)
 }
 
-func (s *matchingPersistenceSuite) TestContinueAsNew() {
+func (s *MatchingPersistenceSuite) TestContinueAsNew() {
 	domainID := "c1c0bb55-04e6-4a9c-89d0-1be7b96459f8"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("continue-as-new-workflow-test"),
@@ -1918,7 +1906,7 @@ func (s *matchingPersistenceSuite) TestContinueAsNew() {
 	s.Equal(*newWorkflowExecution.RunId, newRunID)
 }
 
-func (s *matchingPersistenceSuite) TestReplicationTransferTaskTasks() {
+func (s *MatchingPersistenceSuite) TestReplicationTransferTaskTasks() {
 	domainID := "2466d7de-6602-4ad8-b939-fb8f8c36c711"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("replication-transfer-task-test"),
@@ -1990,7 +1978,7 @@ func (s *matchingPersistenceSuite) TestReplicationTransferTaskTasks() {
 	s.Nil(err)
 }
 
-func (s *matchingPersistenceSuite) TestWorkflowReplicationState() {
+func (s *MatchingPersistenceSuite) TestWorkflowReplicationState() {
 	domainID := uuid.New()
 	runID := uuid.New()
 	workflowExecution := gen.WorkflowExecution{
@@ -2191,7 +2179,7 @@ func (s *matchingPersistenceSuite) TestWorkflowReplicationState() {
 	}
 }
 
-func (s *matchingPersistenceSuite) TestResetMutableState_CurrentIsSelf() {
+func (s *MatchingPersistenceSuite) TestResetMutableState_CurrentIsSelf() {
 	domainID := "4ca1faac-1a3a-47af-8e51-fdaa2b3d45b9"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("test-reset-mutable-state-test-current-is-self"),
@@ -2637,7 +2625,7 @@ func (s *matchingPersistenceSuite) TestResetMutableState_CurrentIsSelf() {
 	s.Equal(0, len(state4.BufferedEvents))
 }
 
-func (s *matchingPersistenceSuite) TestResetMutableState_CurrentIsNotSelf() {
+func (s *MatchingPersistenceSuite) TestResetMutableState_CurrentIsNotSelf() {
 	domainID := "4ca1faac-1a3a-47af-8e51-fdaa2b3d45b9"
 	workflowID := "test-reset-mutable-state-test-current-is-not-self"
 
@@ -2774,7 +2762,7 @@ func copyWorkflowExecutionInfo(sourceInfo *persistence.WorkflowExecutionInfo) *p
 	}
 }
 
-func (s *matchingPersistenceSuite) TestCreateGetShard_Backfill() {
+func (s *MatchingPersistenceSuite) TestCreateGetShard_Backfill() {
 	shardID := 4
 	rangeID := int64(59)
 
@@ -2813,7 +2801,7 @@ func (s *matchingPersistenceSuite) TestCreateGetShard_Backfill() {
 	s.Equal(shardInfo, resp.ShardInfo)
 }
 
-func (s *matchingPersistenceSuite) TestCreateGetUpdateGetShard() {
+func (s *MatchingPersistenceSuite) TestCreateGetUpdateGetShard() {
 	shardID := 8
 	rangeID := int64(59)
 
@@ -2940,7 +2928,7 @@ func copyReplicationInfo(sourceInfo *persistence.ReplicationInfo) *persistence.R
 	}
 }
 
-func (s *matchingPersistenceSuite) serializeHistoryEvents(events []*gen.HistoryEvent) *persistence.SerializedHistoryEventBatch {
+func (s *MatchingPersistenceSuite) serializeHistoryEvents(events []*gen.HistoryEvent) *persistence.SerializedHistoryEventBatch {
 	historySerializer := persistence.NewJSONHistorySerializer()
 	bufferedBatch := persistence.NewHistoryEventBatch(persistence.GetDefaultHistoryVersion(), events)
 	serializedEvents, _ := historySerializer.Serialize(bufferedBatch)
@@ -2948,7 +2936,7 @@ func (s *matchingPersistenceSuite) serializeHistoryEvents(events []*gen.HistoryE
 	return serializedEvents
 }
 
-func (s *matchingPersistenceSuite) deserializedHistoryEvents(batch *persistence.SerializedHistoryEventBatch) *persistence.HistoryEventBatch {
+func (s *MatchingPersistenceSuite) deserializedHistoryEvents(batch *persistence.SerializedHistoryEventBatch) *persistence.HistoryEventBatch {
 	historySerializer := persistence.NewJSONHistorySerializer()
 	events, err := historySerializer.Deserialize(batch)
 	if err != nil {
