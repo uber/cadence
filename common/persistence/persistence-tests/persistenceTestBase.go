@@ -62,14 +62,14 @@ type (
 
 	// TestBaseOptions options to configure workflow test base.
 	TestBaseOptions struct {
-		ClusterHost     string
-		ClusterPort     int
-		ClusterUser     string
-		ClusterPassword string
-		KeySpace        string
-		Datacenter      string
-		DropKeySpace    bool
-		SchemaDir       string
+		DBHost       string
+		DBPort       int
+		DBUser       string
+		DBPassword   string
+		KeySpace     string
+		Datacenter   string
+		DropKeySpace bool
+		SchemaDir    string
 		// TODO this is used for global domain test
 		// when crtoss DC is public, remove EnableGlobalDomain
 		EnableGlobalDomain bool
@@ -139,13 +139,13 @@ func (s *TestBase) SetupWorkflowStoreWithOptions(options TestBaseOptions, metada
 		s.persistenceTestCluster.setupTestCluster(options)
 		shardID := 0
 		var err error
-		s.ShardMgr, err = cassandra.NewShardPersistence(options.ClusterHost, options.ClusterPort, options.ClusterUser,
-			options.ClusterPassword, options.Datacenter, s.persistenceTestCluster.keyspace, currentClusterName, log)
+		s.ShardMgr, err = cassandra.NewShardPersistence(options.DBHost, options.DBPort, options.DBUser,
+			options.DBPassword, options.Datacenter, s.persistenceTestCluster.keyspace, currentClusterName, log)
 		if err != nil {
 			log.Fatal(err)
 		}
-		s.ExecutionMgrFactory, err = cassandra.NewPersistenceClientFactory(options.ClusterHost, options.ClusterPort,
-			options.ClusterUser, options.ClusterPassword, options.Datacenter, s.persistenceTestCluster.keyspace, 2, log, nil, nil)
+		s.ExecutionMgrFactory, err = cassandra.NewPersistenceClientFactory(options.DBHost, options.DBPort,
+			options.DBUser, options.DBPassword, options.Datacenter, s.persistenceTestCluster.keyspace, 2, log, nil, nil)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -154,39 +154,39 @@ func (s *TestBase) SetupWorkflowStoreWithOptions(options TestBaseOptions, metada
 		if err != nil {
 			log.Fatal(err)
 		}
-		s.TaskMgr, err = cassandra.NewTaskPersistence(options.ClusterHost, options.ClusterPort, options.ClusterUser,
-			options.ClusterPassword, options.Datacenter, s.persistenceTestCluster.keyspace,
+		s.TaskMgr, err = cassandra.NewTaskPersistence(options.DBHost, options.DBPort, options.DBUser,
+			options.DBPassword, options.Datacenter, s.persistenceTestCluster.keyspace,
 			log)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		s.HistoryMgr, err = cassandra.NewHistoryPersistence(options.ClusterHost, options.ClusterPort, options.ClusterUser,
-			options.ClusterPassword, options.Datacenter, s.persistenceTestCluster.keyspace, 2, log)
+		s.HistoryMgr, err = cassandra.NewHistoryPersistence(options.DBHost, options.DBPort, options.DBUser,
+			options.DBPassword, options.Datacenter, s.persistenceTestCluster.keyspace, 2, log)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		s.MetadataManager, err = cassandra.NewMetadataPersistence(options.ClusterHost, options.ClusterPort, options.ClusterUser,
-			options.ClusterPassword, options.Datacenter, s.persistenceTestCluster.keyspace, currentClusterName, log)
+		s.MetadataManager, err = cassandra.NewMetadataPersistence(options.DBHost, options.DBPort, options.DBUser,
+			options.DBPassword, options.Datacenter, s.persistenceTestCluster.keyspace, currentClusterName, log)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		s.MetadataManagerV2, err = cassandra.NewMetadataPersistenceV2(options.ClusterHost, options.ClusterPort, options.ClusterUser,
-			options.ClusterPassword, options.Datacenter, s.persistenceTestCluster.keyspace, currentClusterName, log)
+		s.MetadataManagerV2, err = cassandra.NewMetadataPersistenceV2(options.DBHost, options.DBPort, options.DBUser,
+			options.DBPassword, options.Datacenter, s.persistenceTestCluster.keyspace, currentClusterName, log)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		s.MetadataProxy, err = cassandra.NewMetadataManagerProxy(options.ClusterHost, options.ClusterPort, options.ClusterUser,
-			options.ClusterPassword, options.Datacenter, s.persistenceTestCluster.keyspace, currentClusterName, log)
+		s.MetadataProxy, err = cassandra.NewMetadataManagerProxy(options.DBHost, options.DBPort, options.DBUser,
+			options.DBPassword, options.Datacenter, s.persistenceTestCluster.keyspace, currentClusterName, log)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		s.VisibilityMgr, err = cassandra.NewVisibilityPersistence(options.ClusterHost, options.ClusterPort,
-			options.ClusterUser, options.ClusterPassword, options.Datacenter, s.persistenceTestCluster.keyspace, log)
+		s.VisibilityMgr, err = cassandra.NewVisibilityPersistence(options.DBHost, options.DBPort,
+			options.DBUser, options.DBPassword, options.Datacenter, s.persistenceTestCluster.keyspace, log)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -1136,10 +1136,10 @@ func (s *TestBase) CompleteTask(domainID, taskList string, taskType int, taskID 
 func (s *TestBase) SetupWorkflowStore() {
 	s.SetupWorkflowStoreWithOptions(TestBaseOptions{
 		SchemaDir:          testSchemaDir,
-		ClusterHost:        testWorkflowClusterHosts,
-		ClusterPort:        testPort,
-		ClusterUser:        testUser,
-		ClusterPassword:    testPassword,
+		DBHost:             testWorkflowClusterHosts,
+		DBPort:             testPort,
+		DBUser:             testUser,
+		DBPassword:         testPassword,
 		DropKeySpace:       true,
 		EnableGlobalDomain: false,
 	}, nil)
@@ -1236,7 +1236,7 @@ func (s *CassandraTestCluster) setupTestCluster(options TestBaseOptions) {
 	}
 
 	s.createCluster(
-		testWorkflowClusterHosts, options.ClusterPort, testUser, testPassword, testDatacenter,
+		testWorkflowClusterHosts, options.DBPort, testUser, testPassword, testDatacenter,
 		gocql.Consistency(1), keySpace,
 	)
 	s.createKeyspace(1, options.DropKeySpace)

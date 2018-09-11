@@ -155,7 +155,7 @@ func (s *clientIntegrationSuite) setupSuite(enableGlobalDomain bool, isMasterClu
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
 	options := persistencetests.TestBaseOptions{}
-	options.ClusterHost = "127.0.0.1"
+	options.DBHost = "127.0.0.1"
 	options.DropKeySpace = true
 	options.SchemaDir = ".."
 	options.EnableGlobalDomain = enableGlobalDomain
