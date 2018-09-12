@@ -21,22 +21,17 @@
 package persistencetests
 
 import (
-	"github.com/iancoleman/strcase"
-	"io/ioutil"
 	"math"
 	"math/rand"
 	"sync/atomic"
 	"time"
 
-	"fmt"
-	"github.com/jmoiron/sqlx"
 	"github.com/pborman/uuid"
 	log "github.com/sirupsen/logrus"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/sql"
 )
 
 type (
@@ -99,168 +94,6 @@ type (
 
 func (g *TestTransferTaskIDGenerator) GetNextTransferTaskID() (int64, error) {
 	return atomic.AddInt64(&g.seqNum, 1), nil
-}
-
-// SetupWorkflowStoreWithOptions to setup workflow test base
-func (s *TestBase) SetupWorkflowStoreWithOptions(options *TestBaseOptions, metadata cluster.Metadata) {
-	//log := bark.NewLoggerFromLogrus(log.New())
-	//
-	//if metadata == nil {
-	//	s.ClusterMetadata = cluster.GetTestClusterMetadata(
-	//		options.EnableGlobalDomain,
-	//		options.IsMasterCluster,
-	//	)
-	//} else {
-	//	s.ClusterMetadata = metadata
-	//	log = log.WithField("Cluster", metadata.GetCurrentClusterName())
-	//}
-	//currentClusterName := s.ClusterMetadata.GetCurrentClusterName()
-	//
-	//if !s.UseMysql {
-	//	// Setup Workflow keyspace and deploy schema for tests
-	//	s.PersistenceTestCluster.SetupTestDatabase(options)
-	//	shardID := 0
-	//	var err error
-	//	s.ShardMgr, err = cassandra.NewShardPersistence(options.DBHost, options.DBPort, options.DBUser,
-	//		options.DBPassword, options.Datacenter, options.KeySpace, currentClusterName, log)
-	//	if err != nil {
-	//		log.Fatal(err)
-	//	}
-	//	s.ExecutionMgrFactory, err = cassandra.NewPersistenceClientFactory(options.DBHost, options.DBPort,
-	//		options.DBUser, options.DBPassword, options.Datacenter, options.KeySpace, 2, log, nil, nil)
-	//	if err != nil {
-	//		log.Fatal(err)
-	//	}
-	//	// Create an ExecutionManager for the shard for use in unit tests
-	//	s.WorkflowMgr, err = s.ExecutionMgrFactory.CreateExecutionManager(shardID)
-	//	if err != nil {
-	//		log.Fatal(err)
-	//	}
-	//	s.TaskMgr, err = cassandra.NewTaskPersistence(options.DBHost, options.DBPort, options.DBUser,
-	//		options.DBPassword, options.Datacenter, options.KeySpace,
-	//		log)
-	//	if err != nil {
-	//		log.Fatal(err)
-	//	}
-	//
-	//	s.HistoryMgr, err = cassandra.NewHistoryPersistence(options.DBHost, options.DBPort, options.DBUser,
-	//		options.DBPassword, options.Datacenter, options.KeySpace, 2, log)
-	//	if err != nil {
-	//		log.Fatal(err)
-	//	}
-	//
-	//	s.MetadataManager, err = cassandra.NewMetadataPersistence(options.DBHost, options.DBPort, options.DBUser,
-	//		options.DBPassword, options.Datacenter, options.KeySpace, currentClusterName, log)
-	//	if err != nil {
-	//		log.Fatal(err)
-	//	}
-	//
-	//	s.MetadataManagerV2, err = cassandra.NewMetadataPersistenceV2(options.DBHost, options.DBPort, options.DBUser,
-	//		options.DBPassword, options.Datacenter, options.KeySpace, currentClusterName, log)
-	//	if err != nil {
-	//		log.Fatal(err)
-	//	}
-	//
-	//	s.MetadataProxy, err = cassandra.NewMetadataManagerProxy(options.DBHost, options.DBPort, options.DBUser,
-	//		options.DBPassword, options.Datacenter, options.KeySpace, currentClusterName, log)
-	//	if err != nil {
-	//		log.Fatal(err)
-	//	}
-	//
-	//	s.VisibilityMgr, err = cassandra.NewVisibilityPersistence(options.DBHost, options.DBPort,
-	//		options.DBUser, options.DBPassword, options.Datacenter, options.KeySpace, log)
-	//	if err != nil {
-	//		log.Fatal(err)
-	//	}
-	//
-	//	// Create a shard for test
-	//	s.ReadLevel = 0
-	//	s.ReplicationReadLevel = 0
-	//	s.ShardInfo = &persistence.ShardInfo{
-	//		ShardID:                 shardID,
-	//		RangeID:                 0,
-	//		TransferAckLevel:        0,
-	//		ReplicationAckLevel:     0,
-	//		TimerAckLevel:           time.Time{},
-	//		ClusterTimerAckLevel:    map[string]time.Time{currentClusterName: time.Time{}},
-	//		ClusterTransferAckLevel: map[string]int64{currentClusterName: 0},
-	//	}
-	//
-	//} else {
-	//	var err error
-	//
-	//	s.MetadataManager, err = sql.NewMetadataPersistence("uber",
-	//		"uber",
-	//		"localhost",
-	//		"3306",
-	//		"catalyst_test")
-	//	if err != nil {
-	//		log.Fatal(err)
-	//	}
-	//
-	//	s.MetadataManagerV2 = s.MetadataManager
-	//
-	//	s.WorkflowMgr, err = sql.NewSqlMatchingPersistence("uber",
-	//		"uber",
-	//		"localhost",
-	//		"3306",
-	//		"catalyst_test",
-	//		log)
-	//	if err != nil {
-	//		log.Fatal(err)
-	//	}
-	//
-	//	s.ShardInfo = &persistence.ShardInfo{}
-	//
-	//	s.TaskMgr, err = sql.NewTaskPersistence("uber", "uber", "localhost", "3306", "catalyst_test")
-	//	if err != nil {
-	//		log.Fatal(err)
-	//	}
-	//
-	//	s.ShardMgr, err = sql.NewShardPersistence("uber",
-	//		"uber",
-	//		"localhost",
-	//		"3306",
-	//		"catalyst_test",
-	//		currentClusterName)
-	//	if err != nil {
-	//		log.Fatal(err)
-	//	}
-	//
-	//	s.ClusterMetadata = cluster.GetTestClusterMetadata(false, false)
-	//
-	//	s.HistoryMgr, err = sql.NewHistoryPersistence("uber",
-	//		"uber",
-	//		"localhost",
-	//		"3306",
-	//		"catalyst_test",
-	//		log)
-	//	if err != nil {
-	//		log.Fatal(err)
-	//	}
-	//
-	//	db, err := sqlx.Connect("mysql",
-	//		fmt.Sprintf(sql.Dsn, "uber", "uber", "localhost", "3306", "catalyst_test"))
-	//	if err != nil {
-	//		log.Fatal(err)
-	//	}
-	//	db.MapperFunc(strcase.ToSnake)
-	//	file, err := ioutil.ReadFile("../sql/schema/up.sql")
-	//	if err != nil {
-	//		log.Fatal(err)
-	//	}
-	//	db.Exec(string(file))
-	//
-	//	db.Close()
-	//}
-	//s.TaskIDGenerator = &TestTransferTaskIDGenerator{}
-	//
-	//err1 := s.ShardMgr.CreateShard(&persistence.CreateShardRequest{
-	//	ShardInfo: s.ShardInfo,
-	//})
-	//if err1 != nil {
-	//	log.Fatal(err1)
-	//}
 }
 
 // CreateShard is a utility method to create the shard using persistence layer
@@ -1114,39 +947,9 @@ func (s *TestBase) CompleteTask(domainID, taskList string, taskType int, taskID 
 	})
 }
 
-//// SetupWorkflowStore to setup workflow test base
-//func (s *TestBase) SetupWorkflowStore() {
-//	s.SetupWorkflowStoreWithOptions(&TestBaseOptions{
-//		SchemaDir:          testSchemaDir,
-//		DBHost:             testWorkflowClusterHosts,
-//		DBPort:             testPort,
-//		DBUser:             testUser,
-//		DBPassword:         testPassword,
-//		DropKeySpace:       true,
-//		EnableGlobalDomain: false,
-//	}, nil)
-//}
-
 // TearDownWorkflowStore to cleanup
 func (s *TestBase) TearDownWorkflowStore() {
-	if s.UseMysql {
-		db, err := sqlx.Connect("mysql",
-			fmt.Sprintf(sql.Dsn, "uber", "uber", "localhost", "3306", "catalyst_test"))
-		if err != nil {
-			log.Fatal(err)
-		}
-		db.MapperFunc(strcase.ToSnake)
-
-		file, err := ioutil.ReadFile("../sql/schema/down.sql")
-		if err != nil {
-			log.Fatal(err)
-		}
-		db.MustExec(string(file))
-
-		db.Close()
-	} else {
-		s.PersistenceTestCluster.TearDownTestDatabase()
-	}
+	s.PersistenceTestCluster.TearDownTestDatabase()
 }
 
 // GetNextSequenceNumber generates a unique sequence number for can be used for transfer queue taskId

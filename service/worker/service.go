@@ -25,10 +25,8 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/cassandra"
-	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/dynamicconfig"
-	ser "github.com/uber/cadence/service"
 )
 
 type (
@@ -86,26 +84,15 @@ func (s *Service) Start() {
 
 	s.metricsClient = base.GetMetricsClient()
 
-	var metadataManager persistence.MetadataManager
-	var err error
-	if ser.UseMysql || ser.UseSqlMetadata {
-		metadataManager, err = sql.NewMetadataPersistence("uber",
-			"uber",
-			"localhost",
-			"3306",
-			"catalyst_test")
-	} else {
-
-		// worker only use the v2
-		metadataManager, err = cassandra.NewMetadataPersistenceV2(p.CassandraConfig.Hosts,
-			p.CassandraConfig.Port,
-			p.CassandraConfig.User,
-			p.CassandraConfig.Password,
-			p.CassandraConfig.Datacenter,
-			p.CassandraConfig.Keyspace,
-			p.ClusterMetadata.GetCurrentClusterName(),
-			p.Logger)
-	}
+	// worker only use the v2
+	metadataManager, err := cassandra.NewMetadataPersistenceV2(p.CassandraConfig.Hosts,
+		p.CassandraConfig.Port,
+		p.CassandraConfig.User,
+		p.CassandraConfig.Password,
+		p.CassandraConfig.Datacenter,
+		p.CassandraConfig.Keyspace,
+		p.ClusterMetadata.GetCurrentClusterName(),
+		p.Logger)
 
 	if err != nil {
 		log.Fatalf("failed to create metadata manager: %v", err)
