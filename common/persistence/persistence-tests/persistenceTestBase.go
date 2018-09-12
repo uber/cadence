@@ -25,33 +25,18 @@ import (
 	"io/ioutil"
 	"math"
 	"math/rand"
-	"strings"
 	"sync/atomic"
 	"time"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/logging"
-
 	"fmt"
-	"github.com/gocql/gocql"
 	"github.com/jmoiron/sqlx"
 	"github.com/pborman/uuid"
 	log "github.com/sirupsen/logrus"
-	"github.com/uber-common/bark"
+	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/persistence/sql"
-)
-
-const (
-	testWorkflowClusterHosts = "127.0.0.1"
-	testPort                 = 0
-	testUser                 = ""
-	testPassword             = ""
-	testDatacenter           = ""
-	testSchemaDir            = "../../.."
 )
 
 type (
@@ -90,189 +75,192 @@ type (
 		ShardInfo              *persistence.ShardInfo
 		TaskIDGenerator        TransferTaskIDGenerator
 		ClusterMetadata        cluster.Metadata
-		readLevel              int64
-		replicationReadLevel   int64
-		persistenceTestCluster CassandraTestCluster
+		ReadLevel              int64
+		ReplicationReadLevel   int64
+		PersistenceTestCluster PersistenceTestCluster
 		UseMysql               bool
 	}
 
-	// persistenceTestCluster allows executing cassandra operations in testing.
-	CassandraTestCluster struct {
-		port     int
-		keyspace string
-		cluster  *gocql.ClusterConfig
-		session  *gocql.Session
+	PersistenceTestCluster interface {
+		Keyspace() string
+		SetupTestDatabase(options *TestBaseOptions)
+		TearDownTestDatabase()
+		CreateSession(options *TestBaseOptions)
+		CreateDatabase(replicas int, dropExisting bool)
+		DropDatabase()
+		LoadSchema(fileNames []string, schemaDir string)
+		LoadVisibilitySchema(fileNames []string, schemaDir string)
 	}
 
-	testTransferTaskIDGenerator struct {
+	TestTransferTaskIDGenerator struct {
 		seqNum int64
 	}
 )
 
-func (g *testTransferTaskIDGenerator) GetNextTransferTaskID() (int64, error) {
+func (g *TestTransferTaskIDGenerator) GetNextTransferTaskID() (int64, error) {
 	return atomic.AddInt64(&g.seqNum, 1), nil
 }
 
 // SetupWorkflowStoreWithOptions to setup workflow test base
-func (s *TestBase) SetupWorkflowStoreWithOptions(options TestBaseOptions, metadata cluster.Metadata) {
-	log := bark.NewLoggerFromLogrus(log.New())
-
-	if metadata == nil {
-		s.ClusterMetadata = cluster.GetTestClusterMetadata(
-			options.EnableGlobalDomain,
-			options.IsMasterCluster,
-		)
-	} else {
-		s.ClusterMetadata = metadata
-		log = log.WithField("Cluster", metadata.GetCurrentClusterName())
-	}
-	currentClusterName := s.ClusterMetadata.GetCurrentClusterName()
-
-	if !s.UseMysql {
-		// Setup Workflow keyspace and deploy schema for tests
-		s.persistenceTestCluster.setupTestDatabase(options)
-		shardID := 0
-		var err error
-		s.ShardMgr, err = cassandra.NewShardPersistence(options.DBHost, options.DBPort, options.DBUser,
-			options.DBPassword, options.Datacenter, s.persistenceTestCluster.keyspace, currentClusterName, log)
-		if err != nil {
-			log.Fatal(err)
-		}
-		s.ExecutionMgrFactory, err = cassandra.NewPersistenceClientFactory(options.DBHost, options.DBPort,
-			options.DBUser, options.DBPassword, options.Datacenter, s.persistenceTestCluster.keyspace, 2, log, nil, nil)
-		if err != nil {
-			log.Fatal(err)
-		}
-		// Create an ExecutionManager for the shard for use in unit tests
-		s.WorkflowMgr, err = s.ExecutionMgrFactory.CreateExecutionManager(shardID)
-		if err != nil {
-			log.Fatal(err)
-		}
-		s.TaskMgr, err = cassandra.NewTaskPersistence(options.DBHost, options.DBPort, options.DBUser,
-			options.DBPassword, options.Datacenter, s.persistenceTestCluster.keyspace,
-			log)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		s.HistoryMgr, err = cassandra.NewHistoryPersistence(options.DBHost, options.DBPort, options.DBUser,
-			options.DBPassword, options.Datacenter, s.persistenceTestCluster.keyspace, 2, log)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		s.MetadataManager, err = cassandra.NewMetadataPersistence(options.DBHost, options.DBPort, options.DBUser,
-			options.DBPassword, options.Datacenter, s.persistenceTestCluster.keyspace, currentClusterName, log)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		s.MetadataManagerV2, err = cassandra.NewMetadataPersistenceV2(options.DBHost, options.DBPort, options.DBUser,
-			options.DBPassword, options.Datacenter, s.persistenceTestCluster.keyspace, currentClusterName, log)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		s.MetadataProxy, err = cassandra.NewMetadataManagerProxy(options.DBHost, options.DBPort, options.DBUser,
-			options.DBPassword, options.Datacenter, s.persistenceTestCluster.keyspace, currentClusterName, log)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		s.VisibilityMgr, err = cassandra.NewVisibilityPersistence(options.DBHost, options.DBPort,
-			options.DBUser, options.DBPassword, options.Datacenter, s.persistenceTestCluster.keyspace, log)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		// Create a shard for test
-		s.readLevel = 0
-		s.replicationReadLevel = 0
-		s.ShardInfo = &persistence.ShardInfo{
-			ShardID:                 shardID,
-			RangeID:                 0,
-			TransferAckLevel:        0,
-			ReplicationAckLevel:     0,
-			TimerAckLevel:           time.Time{},
-			ClusterTimerAckLevel:    map[string]time.Time{currentClusterName: time.Time{}},
-			ClusterTransferAckLevel: map[string]int64{currentClusterName: 0},
-		}
-
-	} else {
-		var err error
-
-		s.MetadataManager, err = sql.NewMetadataPersistence("uber",
-			"uber",
-			"localhost",
-			"3306",
-			"catalyst_test")
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		s.MetadataManagerV2 = s.MetadataManager
-
-		s.WorkflowMgr, err = sql.NewSqlMatchingPersistence("uber",
-			"uber",
-			"localhost",
-			"3306",
-			"catalyst_test",
-			log)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		s.ShardInfo = &persistence.ShardInfo{}
-
-		s.TaskMgr, err = sql.NewTaskPersistence("uber", "uber", "localhost", "3306", "catalyst_test")
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		s.ShardMgr, err = sql.NewShardPersistence("uber",
-			"uber",
-			"localhost",
-			"3306",
-			"catalyst_test",
-			currentClusterName)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		s.ClusterMetadata = cluster.GetTestClusterMetadata(false, false)
-
-		s.HistoryMgr, err = sql.NewHistoryPersistence("uber",
-			"uber",
-			"localhost",
-			"3306",
-			"catalyst_test",
-			log)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		db, err := sqlx.Connect("mysql",
-			fmt.Sprintf(sql.Dsn, "uber", "uber", "localhost", "3306", "catalyst_test"))
-		if err != nil {
-			log.Fatal(err)
-		}
-		db.MapperFunc(strcase.ToSnake)
-		file, err := ioutil.ReadFile("../sql/schema/up.sql")
-		if err != nil {
-			log.Fatal(err)
-		}
-		db.Exec(string(file))
-
-		db.Close()
-	}
-	s.TaskIDGenerator = &testTransferTaskIDGenerator{}
-
-	err1 := s.ShardMgr.CreateShard(&persistence.CreateShardRequest{
-		ShardInfo: s.ShardInfo,
-	})
-	if err1 != nil {
-		log.Fatal(err1)
-	}
+func (s *TestBase) SetupWorkflowStoreWithOptions(options *TestBaseOptions, metadata cluster.Metadata) {
+	//log := bark.NewLoggerFromLogrus(log.New())
+	//
+	//if metadata == nil {
+	//	s.ClusterMetadata = cluster.GetTestClusterMetadata(
+	//		options.EnableGlobalDomain,
+	//		options.IsMasterCluster,
+	//	)
+	//} else {
+	//	s.ClusterMetadata = metadata
+	//	log = log.WithField("Cluster", metadata.GetCurrentClusterName())
+	//}
+	//currentClusterName := s.ClusterMetadata.GetCurrentClusterName()
+	//
+	//if !s.UseMysql {
+	//	// Setup Workflow keyspace and deploy schema for tests
+	//	s.PersistenceTestCluster.SetupTestDatabase(options)
+	//	shardID := 0
+	//	var err error
+	//	s.ShardMgr, err = cassandra.NewShardPersistence(options.DBHost, options.DBPort, options.DBUser,
+	//		options.DBPassword, options.Datacenter, options.KeySpace, currentClusterName, log)
+	//	if err != nil {
+	//		log.Fatal(err)
+	//	}
+	//	s.ExecutionMgrFactory, err = cassandra.NewPersistenceClientFactory(options.DBHost, options.DBPort,
+	//		options.DBUser, options.DBPassword, options.Datacenter, options.KeySpace, 2, log, nil, nil)
+	//	if err != nil {
+	//		log.Fatal(err)
+	//	}
+	//	// Create an ExecutionManager for the shard for use in unit tests
+	//	s.WorkflowMgr, err = s.ExecutionMgrFactory.CreateExecutionManager(shardID)
+	//	if err != nil {
+	//		log.Fatal(err)
+	//	}
+	//	s.TaskMgr, err = cassandra.NewTaskPersistence(options.DBHost, options.DBPort, options.DBUser,
+	//		options.DBPassword, options.Datacenter, options.KeySpace,
+	//		log)
+	//	if err != nil {
+	//		log.Fatal(err)
+	//	}
+	//
+	//	s.HistoryMgr, err = cassandra.NewHistoryPersistence(options.DBHost, options.DBPort, options.DBUser,
+	//		options.DBPassword, options.Datacenter, options.KeySpace, 2, log)
+	//	if err != nil {
+	//		log.Fatal(err)
+	//	}
+	//
+	//	s.MetadataManager, err = cassandra.NewMetadataPersistence(options.DBHost, options.DBPort, options.DBUser,
+	//		options.DBPassword, options.Datacenter, options.KeySpace, currentClusterName, log)
+	//	if err != nil {
+	//		log.Fatal(err)
+	//	}
+	//
+	//	s.MetadataManagerV2, err = cassandra.NewMetadataPersistenceV2(options.DBHost, options.DBPort, options.DBUser,
+	//		options.DBPassword, options.Datacenter, options.KeySpace, currentClusterName, log)
+	//	if err != nil {
+	//		log.Fatal(err)
+	//	}
+	//
+	//	s.MetadataProxy, err = cassandra.NewMetadataManagerProxy(options.DBHost, options.DBPort, options.DBUser,
+	//		options.DBPassword, options.Datacenter, options.KeySpace, currentClusterName, log)
+	//	if err != nil {
+	//		log.Fatal(err)
+	//	}
+	//
+	//	s.VisibilityMgr, err = cassandra.NewVisibilityPersistence(options.DBHost, options.DBPort,
+	//		options.DBUser, options.DBPassword, options.Datacenter, options.KeySpace, log)
+	//	if err != nil {
+	//		log.Fatal(err)
+	//	}
+	//
+	//	// Create a shard for test
+	//	s.ReadLevel = 0
+	//	s.ReplicationReadLevel = 0
+	//	s.ShardInfo = &persistence.ShardInfo{
+	//		ShardID:                 shardID,
+	//		RangeID:                 0,
+	//		TransferAckLevel:        0,
+	//		ReplicationAckLevel:     0,
+	//		TimerAckLevel:           time.Time{},
+	//		ClusterTimerAckLevel:    map[string]time.Time{currentClusterName: time.Time{}},
+	//		ClusterTransferAckLevel: map[string]int64{currentClusterName: 0},
+	//	}
+	//
+	//} else {
+	//	var err error
+	//
+	//	s.MetadataManager, err = sql.NewMetadataPersistence("uber",
+	//		"uber",
+	//		"localhost",
+	//		"3306",
+	//		"catalyst_test")
+	//	if err != nil {
+	//		log.Fatal(err)
+	//	}
+	//
+	//	s.MetadataManagerV2 = s.MetadataManager
+	//
+	//	s.WorkflowMgr, err = sql.NewSqlMatchingPersistence("uber",
+	//		"uber",
+	//		"localhost",
+	//		"3306",
+	//		"catalyst_test",
+	//		log)
+	//	if err != nil {
+	//		log.Fatal(err)
+	//	}
+	//
+	//	s.ShardInfo = &persistence.ShardInfo{}
+	//
+	//	s.TaskMgr, err = sql.NewTaskPersistence("uber", "uber", "localhost", "3306", "catalyst_test")
+	//	if err != nil {
+	//		log.Fatal(err)
+	//	}
+	//
+	//	s.ShardMgr, err = sql.NewShardPersistence("uber",
+	//		"uber",
+	//		"localhost",
+	//		"3306",
+	//		"catalyst_test",
+	//		currentClusterName)
+	//	if err != nil {
+	//		log.Fatal(err)
+	//	}
+	//
+	//	s.ClusterMetadata = cluster.GetTestClusterMetadata(false, false)
+	//
+	//	s.HistoryMgr, err = sql.NewHistoryPersistence("uber",
+	//		"uber",
+	//		"localhost",
+	//		"3306",
+	//		"catalyst_test",
+	//		log)
+	//	if err != nil {
+	//		log.Fatal(err)
+	//	}
+	//
+	//	db, err := sqlx.Connect("mysql",
+	//		fmt.Sprintf(sql.Dsn, "uber", "uber", "localhost", "3306", "catalyst_test"))
+	//	if err != nil {
+	//		log.Fatal(err)
+	//	}
+	//	db.MapperFunc(strcase.ToSnake)
+	//	file, err := ioutil.ReadFile("../sql/schema/up.sql")
+	//	if err != nil {
+	//		log.Fatal(err)
+	//	}
+	//	db.Exec(string(file))
+	//
+	//	db.Close()
+	//}
+	//s.TaskIDGenerator = &TestTransferTaskIDGenerator{}
+	//
+	//err1 := s.ShardMgr.CreateShard(&persistence.CreateShardRequest{
+	//	ShardInfo: s.ShardInfo,
+	//})
+	//if err1 != nil {
+	//	log.Fatal(err1)
+	//}
 }
 
 // CreateShard is a utility method to create the shard using persistence layer
@@ -890,7 +878,7 @@ Loop:
 	}
 
 	for _, task := range result {
-		atomic.StoreInt64(&s.readLevel, task.TaskID)
+		atomic.StoreInt64(&s.ReadLevel, task.TaskID)
 	}
 
 	return result, nil
@@ -921,7 +909,7 @@ Loop:
 	}
 
 	for _, task := range result {
-		atomic.StoreInt64(&s.replicationReadLevel, task.TaskID)
+		atomic.StoreInt64(&s.ReplicationReadLevel, task.TaskID)
 	}
 
 	return result, nil
@@ -1126,18 +1114,18 @@ func (s *TestBase) CompleteTask(domainID, taskList string, taskType int, taskID 
 	})
 }
 
-// SetupWorkflowStore to setup workflow test base
-func (s *TestBase) SetupWorkflowStore() {
-	s.SetupWorkflowStoreWithOptions(TestBaseOptions{
-		SchemaDir:          testSchemaDir,
-		DBHost:             testWorkflowClusterHosts,
-		DBPort:             testPort,
-		DBUser:             testUser,
-		DBPassword:         testPassword,
-		DropKeySpace:       true,
-		EnableGlobalDomain: false,
-	}, nil)
-}
+//// SetupWorkflowStore to setup workflow test base
+//func (s *TestBase) SetupWorkflowStore() {
+//	s.SetupWorkflowStoreWithOptions(&TestBaseOptions{
+//		SchemaDir:          testSchemaDir,
+//		DBHost:             testWorkflowClusterHosts,
+//		DBPort:             testPort,
+//		DBUser:             testUser,
+//		DBPassword:         testPassword,
+//		DropKeySpace:       true,
+//		EnableGlobalDomain: false,
+//	}, nil)
+//}
 
 // TearDownWorkflowStore to cleanup
 func (s *TestBase) TearDownWorkflowStore() {
@@ -1157,7 +1145,7 @@ func (s *TestBase) TearDownWorkflowStore() {
 
 		db.Close()
 	} else {
-		s.persistenceTestCluster.tearDownTestDatabase()
+		s.PersistenceTestCluster.TearDownTestDatabase()
 	}
 }
 
@@ -1169,12 +1157,12 @@ func (s *TestBase) GetNextSequenceNumber() int64 {
 
 // GetTransferReadLevel returns the current read level for shard
 func (s *TestBase) GetTransferReadLevel() int64 {
-	return atomic.LoadInt64(&s.readLevel)
+	return atomic.LoadInt64(&s.ReadLevel)
 }
 
 // GetReplicationReadLevel returns the current read level for shard
 func (s *TestBase) GetReplicationReadLevel() int64 {
-	return atomic.LoadInt64(&s.replicationReadLevel)
+	return atomic.LoadInt64(&s.ReplicationReadLevel)
 }
 
 // ClearTasks completes all transfer tasks and replication tasks
@@ -1200,7 +1188,7 @@ func (s *TestBase) ClearTransferQueue() {
 	}
 
 	log.Infof("Deleted '%v' transfer tasks.", counter)
-	atomic.StoreInt64(&s.readLevel, 0)
+	atomic.StoreInt64(&s.ReadLevel, 0)
 }
 
 // ClearReplicationQueue completes all tasks in replication queue
@@ -1220,82 +1208,7 @@ func (s *TestBase) ClearReplicationQueue() {
 	}
 
 	log.Infof("Deleted '%v' replication tasks.", counter)
-	atomic.StoreInt64(&s.replicationReadLevel, 0)
-}
-
-func (s *CassandraTestCluster) setupTestDatabase(options TestBaseOptions) {
-	keySpace := options.KeySpace
-	if keySpace == "" {
-		keySpace = generateRandomKeyspace(10)
-	}
-
-	s.createSession(
-		testWorkflowClusterHosts, options.DBPort, testUser, testPassword, testDatacenter,
-		gocql.Consistency(1), keySpace,
-	)
-	s.createDatabase(1, options.DropKeySpace)
-	s.loadSchema([]string{"schema.cql"}, options.SchemaDir)
-	s.loadVisibilitySchema([]string{"schema.cql"}, options.SchemaDir)
-}
-
-func (s *CassandraTestCluster) tearDownTestDatabase() {
-	s.dropDatabase()
-	s.session.Close()
-}
-
-func (s *CassandraTestCluster) createSession(
-	clusterHosts string, port int, user, password, dc string,
-	cons gocql.Consistency, keyspace string) {
-	s.cluster = common.NewCassandraCluster(clusterHosts, port, user, password, dc)
-	s.cluster.Consistency = cons
-	s.cluster.Keyspace = "system"
-	s.cluster.Timeout = 40 * time.Second
-	var err error
-	s.session, err = s.cluster.CreateSession()
-	if err != nil {
-		log.WithField(logging.TagErr, err).Fatal(`createSession`)
-	}
-	s.keyspace = keyspace
-}
-
-func (s *CassandraTestCluster) createDatabase(replicas int, dropKeySpace bool) {
-	err := common.CreateCassandraKeyspace(s.session, s.keyspace, replicas, dropKeySpace)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	s.cluster.Keyspace = s.keyspace
-}
-
-func (s *CassandraTestCluster) dropDatabase() {
-	err := common.DropCassandraKeyspace(s.session, s.keyspace)
-	if err != nil && !strings.Contains(err.Error(), "AlreadyExists") {
-		log.Fatal(err)
-	}
-}
-
-func (s *CassandraTestCluster) loadSchema(fileNames []string, schemaDir string) {
-	workflowSchemaDir := "./schema/cadence"
-	if schemaDir != "" {
-		workflowSchemaDir = schemaDir + "/schema/cadence"
-	}
-
-	err := common.LoadCassandraSchema(workflowSchemaDir, fileNames, s.cluster.Port, s.keyspace, true)
-	if err != nil && !strings.Contains(err.Error(), "AlreadyExists") {
-		log.Fatal(err)
-	}
-}
-
-func (s *CassandraTestCluster) loadVisibilitySchema(fileNames []string, schemaDir string) {
-	workflowSchemaDir := "./schema/visibility"
-	if schemaDir != "" {
-		workflowSchemaDir = schemaDir + "/schema/visibility"
-	}
-
-	err := common.LoadCassandraSchema(workflowSchemaDir, fileNames, s.cluster.Port, s.keyspace, false)
-	if err != nil && !strings.Contains(err.Error(), "AlreadyExists") {
-		log.Fatal(err)
-	}
+	atomic.StoreInt64(&s.ReplicationReadLevel, 0)
 }
 
 func validateTimeRange(t time.Time, expectedDuration time.Duration) bool {
@@ -1308,7 +1221,7 @@ func validateTimeRange(t time.Time, expectedDuration time.Duration) bool {
 	return true
 }
 
-func generateRandomKeyspace(n int) string {
+func GenerateRandomDBName(n int) string {
 	rand.Seed(time.Now().UnixNano())
 	letterRunes := []rune("workflow")
 	b := make([]rune, n)

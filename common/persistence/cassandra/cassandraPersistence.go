@@ -924,7 +924,7 @@ func (d *cassandraPersistence) CreateShard(request *persistence.CreateShardReque
 			}
 		}
 		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("CreateShard operation failed. Error : %v", err),
+			Message: fmt.Sprintf("CreateShard operation failed. Error: %v", err),
 		}
 	}
 

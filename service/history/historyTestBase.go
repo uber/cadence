@@ -34,6 +34,7 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	cassandra_persistence "github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/dynamicconfig"
@@ -448,7 +449,7 @@ func (s *TestShardContext) GetCurrentTime(cluster string) time.Time {
 
 // SetupWorkflowStoreWithOptions to setup workflow test base
 func (s *TestBase) SetupWorkflowStoreWithOptions(options persistencetests.TestBaseOptions) {
-	s.TestBase.SetupWorkflowStoreWithOptions(options, nil)
+	cassandra_persistence.InitTestSuite(&s.TestBase)
 	log := bark.NewLoggerFromLogrus(log.New())
 	config := NewConfig(dynamicconfig.NewNopCollection(), 1)
 	clusterMetadata := cluster.GetTestClusterMetadata(options.EnableGlobalDomain, options.IsMasterCluster)
@@ -459,7 +460,7 @@ func (s *TestBase) SetupWorkflowStoreWithOptions(options persistencetests.TestBa
 
 // SetupWorkflowStore to setup workflow test base
 func (s *TestBase) SetupWorkflowStore() {
-	s.TestBase.SetupWorkflowStore()
+	cassandra_persistence.InitTestSuite(&s.TestBase)
 	log := bark.NewLoggerFromLogrus(log.New())
 	config := NewConfig(dynamicconfig.NewNopCollection(), 1)
 	clusterMetadata := cluster.GetTestClusterMetadata(false, false)

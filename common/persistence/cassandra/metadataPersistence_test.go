@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package cassandra_test
+package cassandra
 
 import (
 	"testing"
@@ -29,5 +29,6 @@ import (
 
 func TestMetadataPersistenceSuite(t *testing.T) {
 	s := new(persistencetests.MetadataPersistenceSuite)
+	InitTestSuite(&s.TestBase)
 	suite.Run(t, s)
 }

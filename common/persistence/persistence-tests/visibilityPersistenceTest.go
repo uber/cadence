@@ -45,17 +45,10 @@ type (
 	}
 )
 
-func TestVisibilityPersistenceSuite(t *testing.T) {
-	s := new(VisibilityPersistenceSuite)
-	suite.Run(t, s)
-}
-
 func (s *VisibilityPersistenceSuite) SetupSuite() {
 	if testing.Verbose() {
 		log.SetOutput(os.Stdout)
 	}
-
-	s.SetupWorkflowStore()
 }
 
 func (s *VisibilityPersistenceSuite) SetupTest() {

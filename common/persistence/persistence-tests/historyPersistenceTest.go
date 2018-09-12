@@ -47,8 +47,6 @@ func (s *HistoryPersistenceSuite) SetupSuite() {
 	if testing.Verbose() {
 		log.SetOutput(os.Stdout)
 	}
-
-	s.SetupWorkflowStore()
 }
 
 func (s *HistoryPersistenceSuite) SetupTest() {

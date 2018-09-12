@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package cassandra_test
+package cassandra
 
 import (
 	"github.com/stretchr/testify/suite"
@@ -28,5 +28,6 @@ import (
 
 func TestShardPersistenceSuite(t *testing.T) {
 	s := new(persistencetests.ShardPersistenceSuite)
+	InitTestSuite(&s.TestBase)
 	suite.Run(t, s)
 }

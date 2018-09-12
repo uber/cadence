@@ -43,18 +43,10 @@ type (
 	}
 )
 
-func TestShardPersistenceSuite(t *testing.T) {
-	s := new(ShardPersistenceSuite)
-	s.UseMysql = true
-	suite.Run(t, s)
-}
-
 func (s *ShardPersistenceSuite) SetupSuite() {
 	if testing.Verbose() {
 		log.SetOutput(os.Stdout)
 	}
-
-	s.SetupWorkflowStore()
 }
 
 func (s *ShardPersistenceSuite) SetupTest() {

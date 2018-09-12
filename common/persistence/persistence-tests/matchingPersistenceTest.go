@@ -54,8 +54,6 @@ func (s *MatchingPersistenceSuite) SetupSuite() {
 	if testing.Verbose() {
 		log.SetOutput(os.Stdout)
 	}
-
-	s.SetupWorkflowStore()
 }
 
 func (s *MatchingPersistenceSuite) TearDownSuite() {

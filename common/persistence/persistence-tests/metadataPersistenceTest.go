@@ -50,20 +50,10 @@ type (
 	}
 )
 
-func TestMetadataPersistenceSuite(t *testing.T) {
-	s := new(MetadataPersistenceSuite)
-	//s.UseMysql = false
-	//suite.Run(t, s)
-	s.UseMysql = true
-	suite.Run(t, s)
-}
-
 func (m *MetadataPersistenceSuite) SetupSuite() {
 	if testing.Verbose() {
 		log.SetOutput(os.Stdout)
 	}
-
-	m.SetupWorkflowStore()
 }
 
 func (m *MetadataPersistenceSuite) SetupTest() {

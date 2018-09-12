@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package cassandra_test
+package cassandra
 
 import (
 	"github.com/uber/cadence/common/persistence/persistence-tests"
@@ -29,6 +29,7 @@ import (
 
 func TestHistoryPersistenceSuite(t *testing.T) {
 	s := new(persistencetests.HistoryPersistenceSuite)
+	InitTestSuite(&s.TestBase)
 	//suite.Run(t, s)
 	suite.Run(t, s)
 }
