@@ -104,27 +104,18 @@ func newReplicatorQueueProcessor(shard ShardContext, replicator messaging.Produc
 	return processor
 }
 
-func (p *replicatorQueueProcessorImpl) process(qTask queueTaskInfo) error {
+func (p *replicatorQueueProcessorImpl) process(qTask queueTaskInfo) (int, error) {
 	task, ok := qTask.(*persistence.ReplicationTaskInfo)
 	if !ok {
-		return errUnexpectedQueueTask
-	}
-	scope := metrics.ReplicatorQueueProcessorScope
-	var err error
-	switch task.TaskType {
-	case persistence.ReplicationTaskTypeHistory:
-		scope = metrics.ReplicatorTaskHistoryScope
-		err = p.processHistoryReplicationTask(task)
-	default:
-		err = errUnknownReplicationTask
+		return metrics.ReplicatorQueueProcessorScope, errUnexpectedQueueTask
 	}
 
-	if err != nil {
-		p.metricsClient.IncCounter(scope, metrics.TaskFailures)
-	} else {
-		p.queueAckMgr.completeQueueTask(task.TaskID)
+	switch task.TaskType {
+	case persistence.ReplicationTaskTypeHistory:
+		return metrics.ReplicatorTaskHistoryScope, p.processHistoryReplicationTask(task)
+	default:
+		return 0, errUnknownReplicationTask
 	}
-	return err
 }
 
 func (p *replicatorQueueProcessorImpl) queueShutdown() error {
@@ -133,9 +124,6 @@ func (p *replicatorQueueProcessorImpl) queueShutdown() error {
 }
 
 func (p *replicatorQueueProcessorImpl) processHistoryReplicationTask(task *persistence.ReplicationTaskInfo) error {
-	p.metricsClient.IncCounter(metrics.ReplicatorTaskHistoryScope, metrics.TaskRequests)
-	sw := p.metricsClient.StartTimer(metrics.ReplicatorTaskHistoryScope, metrics.TaskLatency)
-	defer sw.Stop()
 
 	domainEntry, err := p.shard.GetDomainCache().GetDomainByID(task.DomainID)
 	if err != nil {

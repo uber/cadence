@@ -108,7 +108,7 @@ type (
 	}
 
 	processor interface {
-		process(task queueTaskInfo) error
+		process(task queueTaskInfo) (int, error)
 		readTasks(readLevel int64) ([]queueTaskInfo, bool, error)
 		completeTask(taskID int64) error
 		updateAckLevel(taskID int64) error
@@ -132,7 +132,7 @@ type (
 
 	timerProcessor interface {
 		notifyNewTimers(timerTask []persistence.Task)
-		process(task *persistence.TimerTaskInfo) error
+		process(task *persistence.TimerTaskInfo) (int, error)
 		getTimerGate() TimerGate
 	}
 

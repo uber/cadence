@@ -733,7 +733,13 @@ const (
 const (
 	TaskRequests = iota + NumCommonMetrics
 	TaskFailures
-	TaskLatency
+	TaskRetryCounter
+	TaskNotActiveCounter
+	TaskLimitExceededCounter
+	TaskBatchCompleteCounter
+	TaskProcessingLatency
+	TaskQueueLatency
+
 	AckLevelUpdateCounter
 	AckLevelUpdateFailedCounter
 	DecisionTypeScheduleActivityCounter
@@ -786,13 +792,6 @@ const (
 	BufferReplicationTaskTimer
 	UnbufferReplicationTaskTimer
 	HistoryConflictsCounter
-	HistoryTaskStandbyRetryCounter
-	HistoryTaskNotActiveCounter
-	HistoryTaskBatchCompleteCounter
-	ActiveTransferTaskQueueLatency
-	ActiveTimerTaskQueueLatency
-	StandbyTransferTaskQueueLatency
-	StandbyTimerTaskQueueLatency
 	CompleteTaskFailedCounter
 
 	NumHistoryMetrics
@@ -866,7 +865,12 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 	History: {
 		TaskRequests:                                 {metricName: "task.requests", metricType: Counter},
 		TaskFailures:                                 {metricName: "task.errors", metricType: Counter},
-		TaskLatency:                                  {metricName: "task.latency", metricType: Timer},
+		TaskRetryCounter:                             {metricName: "task.errors.standby-retry-counter", metricType: Counter},
+		TaskNotActiveCounter:                         {metricName: "task.errors.not-active-counter", metricType: Counter},
+		TaskLimitExceededCounter:                     {metricName: "task.errors.limit-exceeded-counter", metricType: Counter},
+		TaskProcessingLatency:                        {metricName: "task.latency.processing", metricType: Timer},
+		TaskQueueLatency:                             {metricName: "task.latency.queue", metricType: Timer},
+		TaskBatchCompleteCounter:                     {metricName: "task.batch-complete-counter", metricType: Counter},
 		AckLevelUpdateCounter:                        {metricName: "ack-level-update", metricType: Counter},
 		AckLevelUpdateFailedCounter:                  {metricName: "ack-level-update-failed", metricType: Counter},
 		DecisionTypeScheduleActivityCounter:          {metricName: "schedule-activity-decision", metricType: Counter},
@@ -919,13 +923,6 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		BufferReplicationTaskTimer:                   {metricName: "buffer-replication-tasks", metricType: Timer},
 		UnbufferReplicationTaskTimer:                 {metricName: "unbuffer-replication-tasks", metricType: Timer},
 		HistoryConflictsCounter:                      {metricName: "history-conflicts", metricType: Counter},
-		HistoryTaskStandbyRetryCounter:               {metricName: "history-task-standby-retry-counter", metricType: Counter},
-		HistoryTaskNotActiveCounter:                  {metricName: "history-task-not-active-counter", metricType: Counter},
-		HistoryTaskBatchCompleteCounter:              {metricName: "history-task-batch-complete-counter", metricType: Counter},
-		ActiveTransferTaskQueueLatency:               {metricName: "active.transfertask.queue.latency", metricType: Timer},
-		ActiveTimerTaskQueueLatency:                  {metricName: "active.timertask.queue.latency", metricType: Timer},
-		StandbyTransferTaskQueueLatency:              {metricName: "standby.transfertask.queue.latency", metricType: Timer},
-		StandbyTimerTaskQueueLatency:                 {metricName: "standby.timertask.queue.latency", metricType: Timer},
 		CompleteTaskFailedCounter:                    {metricName: "complete-task-fail-count", metricType: Counter},
 	},
 	Matching: {
