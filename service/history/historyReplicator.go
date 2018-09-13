@@ -617,8 +617,8 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 		timerTasks,
 	)
 
-	createWorkflow := func(isBrandNew bool, prevRunID string) error {
-		_, err = r.shard.CreateWorkflowExecution(&persistence.CreateWorkflowExecutionRequest{
+	createWorkflow := func(isBrandNew bool, prevRunID string, prevLastWriteVersion int64) error {
+		createRequest := &persistence.CreateWorkflowExecutionRequest{
 			// NOTE: should not set the replication task, since we are in the standby
 			RequestID:                   executionInfo.CreateRequestID,
 			DomainID:                    domainID,
@@ -639,10 +639,15 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 			DecisionStartedID:           decisionStartID,
 			DecisionStartToCloseTimeout: decisionTimeout,
 			TimerTasks:                  timerTasks,
-			ContinueAsNew:               !isBrandNew,
 			PreviousRunID:               prevRunID,
+			PreviousLastWriteVersion:    prevLastWriteVersion,
 			ReplicationState:            replicationState,
-		})
+		}
+		createRequest.CreateWorkflowMode = persistence.CreateWorkflowModeBrandNew
+		if !isBrandNew {
+			createRequest.CreateWorkflowMode = persistence.CreateWorkflowModeWorkflowIDReuse
+		}
+		_, err = r.shard.CreateWorkflowExecution(createRequest)
 		return err
 	}
 	deleteHistory := func() {
@@ -655,7 +660,7 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 
 	// try to create the workflow execution
 	isBrandNew := true
-	err = createWorkflow(isBrandNew, "")
+	err = createWorkflow(isBrandNew, "", 0)
 	if err == nil {
 		return nil
 	}
@@ -687,7 +692,7 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 		}
 		// proceed to create workflow
 		isBrandNew = false
-		return createWorkflow(isBrandNew, currentRunID)
+		return createWorkflow(isBrandNew, currentRunID, currentLastWriteVersion)
 	}
 
 	// current workflow is still running
@@ -724,7 +729,7 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 		// there will be retry on the worker level
 	}
 	isBrandNew = false
-	return createWorkflow(isBrandNew, currentRunID)
+	return createWorkflow(isBrandNew, currentRunID, incomingVersion)
 }
 
 func (r *historyReplicator) flushCurrentWorkflowBuffer(ctx context.Context, domainID string, workflowID string,

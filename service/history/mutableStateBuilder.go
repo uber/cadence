@@ -2367,7 +2367,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(sour
 		ExecutionContext:     nil,
 		NextEventID:          newStateBuilder.GetNextEventID(),
 		LastProcessedEvent:   common.EmptyEventID,
-		ContinueAsNew:        true,
+		CreateWorkflowMode:   persistence.CreateWorkflowModeContinueAsNew,
 		PreviousRunID:        prevRunID,
 		ReplicationState:     newStateBuilder.GetReplicationState(),
 		HasRetryPolicy:       startedAttributes.RetryPolicy != nil,

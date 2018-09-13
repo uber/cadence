@@ -332,7 +332,7 @@ const (
 		`IF range_id = ?`
 
 	templateUpdateCurrentWorkflowExecutionQuery = `UPDATE executions USING TTL 0 ` +
-		`SET current_run_id = ?, execution = {run_id: ?, create_request_id: ?, state: ?, close_status: ?}, replication_state = {start_version: ?, last_write_version: ?}` +
+		`SET current_run_id = ?, execution = {run_id: ?, create_request_id: ?, state: ?, close_status: ?}, replication_state = {start_version: ?, last_write_version: ?}, workflow_last_write_version = ?, workflow_state = ? ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
 		`and domain_id = ? ` +
@@ -342,13 +342,17 @@ const (
 		`and task_id = ? ` +
 		`IF current_run_id = ? `
 
+	templateUpdateCurrentWorkflowExecutionForNewQuery = templateUpdateCurrentWorkflowExecutionQuery +
+		`and workflow_last_write_version = ? ` +
+		`and workflow_state = ? `
+
 	templateCreateCurrentWorkflowExecutionQuery = `INSERT INTO executions (` +
-		`shard_id, type, domain_id, workflow_id, run_id, visibility_ts, task_id, current_run_id, execution, replication_state) ` +
-		`VALUES(?, ?, ?, ?, ?, ?, ?, ?, {run_id: ?, create_request_id: ?, state: ?, close_status: ?}, {start_version: ?, last_write_version: ?}) IF NOT EXISTS USING TTL 0 `
+		`shard_id, type, domain_id, workflow_id, run_id, visibility_ts, task_id, current_run_id, execution, replication_state, workflow_last_write_version, workflow_state) ` +
+		`VALUES(?, ?, ?, ?, ?, ?, ?, ?, {run_id: ?, create_request_id: ?, state: ?, close_status: ?}, {start_version: ?, last_write_version: ?}, ?, ?) IF NOT EXISTS USING TTL 0 `
 
 	templateDeleteCurrentWorkflowExecutionQueryWithTTL = `INSERT INTO executions ` +
-		`(shard_id, type, domain_id, workflow_id, run_id, visibility_ts, task_id, current_run_id, execution, replication_state) ` +
-		`VALUES(?, ?, ?, ?, ?, ?, ?, ?, {run_id: ?, create_request_id: ?, state: ?, close_status: ?}, {start_version: ?, last_write_version: ?}) USING TTL ? `
+		`(shard_id, type, domain_id, workflow_id, run_id, visibility_ts, task_id, current_run_id, execution, replication_state, workflow_last_write_version, workflow_state) ` +
+		`VALUES(?, ?, ?, ?, ?, ?, ?, ?, {run_id: ?, create_request_id: ?, state: ?, close_status: ?}, {start_version: ?, last_write_version: ?}, ?, ?) USING TTL ? `
 
 	templateCreateWorkflowExecutionQuery = `INSERT INTO executions (` +
 		`shard_id, domain_id, workflow_id, run_id, type, execution, next_event_id, visibility_ts, task_id) ` +
@@ -1072,10 +1076,10 @@ func (d *cassandraPersistence) CreateWorkflowExecution(request *CreateWorkflowEx
 				Message: fmt.Sprintf("CreateWorkflowExecution operation failed. Error: %v", err),
 			}
 		}
+
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("CreateWorkflowExecution operation failed. Error: %v", err),
 		}
-
 	}
 
 	if !applied {
@@ -1088,6 +1092,7 @@ func (d *cassandraPersistence) CreateWorkflowExecution(request *CreateWorkflowEx
 				// This should never happen, as all our rows have the type field.
 				break GetFailureReasonLoop
 			}
+			runID := previous["run_id"].(gocql.UUID).String()
 
 			if rowType == rowTypeShard {
 				if rangeID, ok := previous["range_id"].(int64); ok && rangeID != request.RangeID {
@@ -1099,7 +1104,7 @@ func (d *cassandraPersistence) CreateWorkflowExecution(request *CreateWorkflowEx
 					}
 				}
 
-			} else if rowType == rowTypeExecution {
+			} else if rowType == rowTypeExecution && runID == permanentRunID {
 				var columns []string
 				for k, v := range previous {
 					columns = append(columns, fmt.Sprintf("%s=%v", k, v))
@@ -1110,8 +1115,8 @@ func (d *cassandraPersistence) CreateWorkflowExecution(request *CreateWorkflowEx
 					executionInfo := createWorkflowExecutionInfo(execution)
 
 					lastWriteVersion := common.EmptyVersion
-					replicationState := createReplicationState(previous["replication_state"].(map[string]interface{}))
-					if replicationState != nil {
+					if request.ReplicationState != nil {
+						replicationState := createReplicationState(previous["replication_state"].(map[string]interface{}))
 						lastWriteVersion = replicationState.LastWriteVersion
 					}
 
@@ -1126,6 +1131,15 @@ func (d *cassandraPersistence) CreateWorkflowExecution(request *CreateWorkflowEx
 						LastWriteVersion: lastWriteVersion,
 					}
 				}
+
+				// condition update on current run id or current run id + last write version + state failed
+				currentRunID := previous["current_run_id"].(gocql.UUID).String()
+				currentLastWriteVersion := previous["workflow_last_write_version"].(int64)
+				currentState := previous["workflow_state"].(int)
+
+				msg := fmt.Sprintf("Workflow execution creation condition failed. WorkflowId: %v, CurrentRunID: %v, LastWriteVersion: %v, State: %v, columns: (%v)",
+					request.Execution.GetWorkflowId(), currentRunID, currentLastWriteVersion, currentState, strings.Join(columns, ","))
+				return nil, &ConditionFailedError{Msg: msg}
 			}
 
 			previous = make(map[string]interface{})
@@ -1175,8 +1189,17 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *Creat
 	if request.ReplicationState != nil {
 		startVersion = request.ReplicationState.StartVersion
 		lastWriteVersion = request.ReplicationState.LastWriteVersion
+	} else {
+		// this is to deal with issue that gocql cannot return null value for value inside user defined type
+		// so we cannot know whether the last write version of current workflow record is null or not
+		// since non global domain (request.ReplicationState == null) will not have workflow reset problem
+		// so the CAS on last write version is not necessary
+		if request.CreateWorkflowMode == CreateWorkflowModeWorkflowIDReuse {
+			request.CreateWorkflowMode = CreateWorkflowModeContinueAsNew
+		}
 	}
-	if request.ContinueAsNew {
+	switch request.CreateWorkflowMode {
+	case CreateWorkflowModeContinueAsNew:
 		batch.Query(templateUpdateCurrentWorkflowExecutionQuery,
 			*request.Execution.RunId,
 			*request.Execution.RunId,
@@ -1185,6 +1208,8 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *Creat
 			closeStatus,
 			startVersion,
 			lastWriteVersion,
+			lastWriteVersion,
+			state,
 			d.shardID,
 			rowTypeExecution,
 			request.DomainID,
@@ -1194,7 +1219,29 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *Creat
 			rowTypeExecutionTaskID,
 			request.PreviousRunID,
 		)
-	} else {
+	case CreateWorkflowModeWorkflowIDReuse:
+		batch.Query(templateUpdateCurrentWorkflowExecutionForNewQuery,
+			*request.Execution.RunId,
+			*request.Execution.RunId,
+			request.RequestID,
+			state,
+			closeStatus,
+			startVersion,
+			lastWriteVersion,
+			lastWriteVersion,
+			state,
+			d.shardID,
+			rowTypeExecution,
+			request.DomainID,
+			*request.Execution.WorkflowId,
+			permanentRunID,
+			defaultVisibilityTimestamp,
+			rowTypeExecutionTaskID,
+			request.PreviousRunID,
+			request.PreviousLastWriteVersion,
+			WorkflowStateCompleted,
+		)
+	case CreateWorkflowModeBrandNew:
 		batch.Query(templateCreateCurrentWorkflowExecutionQuery,
 			d.shardID,
 			rowTypeExecution,
@@ -1210,7 +1257,11 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *Creat
 			closeStatus,
 			startVersion,
 			lastWriteVersion,
+			lastWriteVersion,
+			state,
 		)
+	default:
+		d.logger.Panic(fmt.Sprintf("Unknown CreateWorkflowContinueAsNew Mode: %v", request.CreateWorkflowMode))
 	}
 
 	if request.ReplicationState == nil {
@@ -1632,6 +1683,8 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 				executionInfo.CloseStatus,
 				startVersion,
 				lastWriteVersion,
+				lastWriteVersion,
+				executionInfo.State,
 				retentionInSeconds,
 			)
 		} else {
@@ -1643,6 +1696,8 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *UpdateWorkflowEx
 				executionInfo.CloseStatus,
 				startVersion,
 				lastWriteVersion,
+				lastWriteVersion,
+				executionInfo.State,
 				d.shardID,
 				rowTypeExecution,
 				executionInfo.DomainID,
@@ -1726,6 +1781,8 @@ func (d *cassandraPersistence) ResetMutableState(request *ResetMutableStateReque
 		executionInfo.CloseStatus,
 		replicationState.StartVersion,
 		replicationState.LastWriteVersion,
+		replicationState.LastWriteVersion,
+		executionInfo.State,
 		d.shardID,
 		rowTypeExecution,
 		executionInfo.DomainID,

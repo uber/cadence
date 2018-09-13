@@ -464,7 +464,7 @@ func (s *TestBase) ContinueAsNewExecution(updatedInfo *WorkflowExecutionInfo, co
 			DecisionScheduleID:          decisionScheduleID,
 			DecisionStartedID:           common.EmptyEventID,
 			DecisionStartToCloseTimeout: 1,
-			ContinueAsNew:               true,
+			CreateWorkflowMode:          CreateWorkflowModeContinueAsNew,
 			PreviousRunID:               updatedInfo.RunID,
 		},
 	})
