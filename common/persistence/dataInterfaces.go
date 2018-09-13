@@ -1022,11 +1022,32 @@ type (
 	// HistoryManager is used to manage Workflow Execution HistoryEventBatch
 	HistoryManager interface {
 		Closeable
+
+		// The below 3 APIs are deprecated, they will be deleted after we fully migrate to new API
+		//Deprecated: use AppendHistoryNode() instead
 		AppendHistoryEvents(request *AppendHistoryEventsRequest) error
 		// GetWorkflowExecutionHistory retrieves the paginated list of history events for given execution
+		//Deprecated: use ReadHistoryBranch() instead
 		GetWorkflowExecutionHistory(request *GetWorkflowExecutionHistoryRequest) (*GetWorkflowExecutionHistoryResponse,
 			error)
+		//Deprecated: use DeleteHistoryBranch instead
 		DeleteWorkflowExecutionHistory(request *DeleteWorkflowExecutionHistoryRequest) error
+
+		// The below are history V2 APIs
+		// V2 regards history events growing as a tree, decoupled from workflow concepts
+
+		// NewHistoryBranch creates a new branch from tree root. If tree doesn't exist, then create one. Return error if the branch already exists.
+		NewHistoryBranch(request *NewHistoryBranchRequest) error
+		// AppendHistoryNode add(or override) a node to a history branch
+		AppendHistoryNode(request *AppendHistoryNodeRequest) error
+		// ReadHistoryBranch returns history node data for a branch
+		ReadHistoryBranch(request *ReadHistoryBranchRequest) (*ReadHistoryBranchResponse, error)
+		// ForkHistoryBranch forks a new branch from a old branch
+		ForkHistoryBranch(request *ForkHistoryBranchRequest) (*ForkHistoryBranchResponse, error)
+		// DeleteHistoryBranch removes a branch
+		DeleteHistoryBranch(request *DeleteHistoryBranchRequest) error
+		// GetHistoryTree returns all branch information of a tree
+		GetHistoryTree(request *GetHistoryTreeRequest) (*GetHistoryTreeResponse, error)
 	}
 
 	// MetadataManager is used to manage metadata CRUD for domain entities
