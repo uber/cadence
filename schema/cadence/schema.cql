@@ -243,6 +243,12 @@ CREATE TYPE buffered_replication_task_info (
   new_run_history frozen<serialized_event_batch>,
 );
 
+-- for history v2 events
+CREATE TYPE branch_range (
+  branch_id   uuid,
+  forked_node_id bigint,
+);
+
 CREATE TABLE executions (
   shard_id                       int,
   type                           int, -- enum RowType { Shard, Execution, TransferTask, TimerTask, ReplicationTask}
@@ -345,12 +351,6 @@ CREATE TABLE domains_by_name_v2 (
 )  WITH COMPACTION = {
      'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'
    };
-
--- this is V2 of history events table
-CREATE TYPE branch_range (
-  branch_id   uuid,
-  forked_node_id bigint,
-);
 
 CREATE TABLE events_v2 (
   tree_id           uuid,
