@@ -828,7 +828,7 @@ type (
 		BranchID string
 		// Beginning node of the branch, inclusive
 		BeginNodeID int64
-		// Ending node of the branch, inclusive
+		// Ending node of the branch, exclusive
 		EndNodeID int64
 	}
 
