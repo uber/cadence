@@ -107,6 +107,9 @@ const (
 	// TransferTaskTransferTargetWorkflowID is the the dummy workflow ID for transfer tasks of types
 	// that do not have a target workflow
 	TransferTaskTransferTargetWorkflowID = "20000000-0000-f000-f000-000000000001"
+	// TransferTaskTransferTargetRunID is the the dummy run ID for transfer tasks of types
+	// that do not have a target workflow
+	TransferTaskTypeTransferTargetRunID = "30000000-0000-f000-f000-000000000002"
 )
 
 type (

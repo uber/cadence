@@ -45,9 +45,8 @@ const (
 	// Special Domains related constants
 	emptyDomainID = "10000000-0000-f000-f000-000000000000"
 	// Special Run IDs
-	emptyRunID                          = "30000000-0000-f000-f000-000000000000"
-	permanentRunID                      = "30000000-0000-f000-f000-000000000001"
-	transferTaskTypeTransferTargetRunID = "30000000-0000-f000-f000-000000000002"
+	emptyRunID     = "30000000-0000-f000-f000-000000000000"
+	permanentRunID = "30000000-0000-f000-f000-000000000001"
 	// Row Constants for Shard Row
 	rowTypeShardDomainID   = "10000000-1000-f000-f000-000000000000"
 	rowTypeShardWorkflowID = "20000000-1000-f000-f000-000000000000"
@@ -2588,7 +2587,7 @@ func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferT
 		var taskList string
 		var scheduleID int64
 		targetWorkflowID := p.TransferTaskTransferTargetWorkflowID
-		targetRunID := transferTaskTypeTransferTargetRunID
+		targetRunID := p.TransferTaskTypeTransferTargetRunID
 		targetChildWorkflowOnly := false
 
 		switch task.GetType() {
@@ -2607,7 +2606,7 @@ func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferT
 			targetWorkflowID = task.(*p.CancelExecutionTask).TargetWorkflowID
 			targetRunID = task.(*p.CancelExecutionTask).TargetRunID
 			if targetRunID == "" {
-				targetRunID = transferTaskTypeTransferTargetRunID
+				targetRunID = p.TransferTaskTypeTransferTargetRunID
 			}
 			targetChildWorkflowOnly = task.(*p.CancelExecutionTask).TargetChildWorkflowOnly
 			scheduleID = task.(*p.CancelExecutionTask).InitiatedID
@@ -2617,7 +2616,7 @@ func (d *cassandraPersistence) createTransferTasks(batch *gocql.Batch, transferT
 			targetWorkflowID = task.(*p.SignalExecutionTask).TargetWorkflowID
 			targetRunID = task.(*p.SignalExecutionTask).TargetRunID
 			if targetRunID == "" {
-				targetRunID = transferTaskTypeTransferTargetRunID
+				targetRunID = p.TransferTaskTypeTransferTargetRunID
 			}
 			targetChildWorkflowOnly = task.(*p.SignalExecutionTask).TargetChildWorkflowOnly
 			scheduleID = task.(*p.SignalExecutionTask).InitiatedID
@@ -3386,7 +3385,7 @@ func createTransferTaskInfo(result map[string]interface{}) *p.TransferTaskInfo {
 			info.TargetWorkflowID = v.(string)
 		case "target_run_id":
 			info.TargetRunID = v.(gocql.UUID).String()
-			if info.TargetRunID == transferTaskTypeTransferTargetRunID {
+			if info.TargetRunID == p.TransferTaskTypeTransferTargetRunID {
 				info.TargetRunID = ""
 			}
 		case "target_child_workflow_only":
