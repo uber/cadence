@@ -822,6 +822,106 @@ type (
 		Events  []*workflow.HistoryEvent
 	}
 
+	// HistoryBranchRange represents a range of nodes of a branch
+	HistoryBranchRange struct {
+		// A UUID of a branch
+		BranchID string
+		// Beginning node of the branch, inclusive
+		BeginNodeID int64
+		// Ending node of the branch, inclusive
+		EndNodeID int64
+	}
+
+	// HistoryBranch represents a history branch
+	HistoryBranch struct {
+		// A UUID of a tree
+		TreeID string
+		// A UUID of a branch
+		BranchID string
+		// All the ancestors of the branch
+		Ancestors []HistoryBranchRange
+	}
+
+	// NewHistoryBranchRequest is used to create a new history branch
+	NewHistoryBranchRequest struct {
+		BranchInfo HistoryBranch
+	}
+	// AppendHistoryNodeRequest is used to append a history node
+	AppendHistoryNodeRequest struct {
+		// The branch to be appended
+		BranchInfo HistoryBranch
+		// The nodeID to be appended
+		NextNodeID int64
+		// The events to be appended
+		Events *SerializedHistoryEventBatch
+		// Override the node if this true and existing TransactionID < requested TransactionID
+		Overwrite bool
+		// requested TransactionID for override
+		TransactionID int64
+	}
+
+	// ReadHistoryBranchRequest is used to read a history branch
+	ReadHistoryBranchRequest struct {
+		// The branch to be read
+		BranchInfo HistoryBranch
+		// Get the history nodes from MinNodeID. Inclusive.
+		MinNodeID int64
+		// Get the history nodes upto MaxNodeID.  Not Inclusive.
+		MaxNodeID int64
+		// Maximum number of history nodes per page
+		PageSize int
+		// Token to continue reading next page of history append transactions.  Pass in empty slice for first page
+		NextPageToken []byte
+	}
+
+	// ReadHistoryBranchResponse is the response to ReadHistoryBranchRequest
+	ReadHistoryBranchResponse struct {
+		// The branch to be read
+		BranchInfo HistoryBranch
+		//
+		History *workflow.History
+		// Token to read next page if there are more events beyond page size.
+		// Use this to set NextPageToken on GetworkflowExecutionHistoryRequest to read the next page.
+		NextPageToken []byte
+		// the MinNodeID of last loaded batch
+		LastMinNodeID int64
+	}
+
+	// ForkHistoryBranchRequest is ued to fork a history branch
+	ForkHistoryBranchRequest struct {
+		// The branch to be fork
+		BranchInfo HistoryBranch
+		// The nodeID to fork from
+		ForkFromNodeID int64
+		// UUID of the new branch
+		NewBranchID string
+	}
+
+	// ForkHistoryBranchResponse is the response to ForkHistoryBranchRequest
+	ForkHistoryBranchResponse struct {
+		// branchInfo of the new branch
+		BranchInfo HistoryBranch
+	}
+
+	// DeleteHistoryBranchRequest is used to remove a history branch
+	DeleteHistoryBranchRequest struct {
+		// branch to be deleted
+		BranchInfo HistoryBranch
+	}
+
+	// GetHistoryTreeRequest is used to retrieve branch info of a history tree
+	GetHistoryTreeRequest struct {
+		// A UUID of a tree
+		TreeID string
+	}
+
+	// GetHistoryTreeResponse is a response to GetHistoryTreeRequest
+	GetHistoryTreeResponse struct {
+		// all branches of a tree
+		Branches []HistoryBranch
+	}
+
+	// Deprecated: uses V2 API
 	// AppendHistoryEventsRequest is used to append new events to workflow execution history
 	AppendHistoryEventsRequest struct {
 		DomainID          string
@@ -834,6 +934,7 @@ type (
 		Overwrite         bool
 	}
 
+	// Deprecated: use V2 API instead
 	// GetWorkflowExecutionHistoryRequest is used to retrieve history of a workflow execution
 	GetWorkflowExecutionHistoryRequest struct {
 		DomainID  string
@@ -848,6 +949,7 @@ type (
 		NextPageToken []byte
 	}
 
+	// Deprecated: use V2 API instead
 	// GetWorkflowExecutionHistoryResponse is the response to GetWorkflowExecutionHistoryRequest
 	GetWorkflowExecutionHistoryResponse struct {
 		History *workflow.History
@@ -858,6 +960,7 @@ type (
 		LastFirstEventID int64
 	}
 
+	// Deprecated: use V2 API instead
 	// DeleteWorkflowExecutionHistoryRequest is used to delete workflow execution history
 	DeleteWorkflowExecutionHistoryRequest struct {
 		DomainID  string
@@ -1035,6 +1138,9 @@ type (
 
 		// The below are history V2 APIs
 		// V2 regards history events growing as a tree, decoupled from workflow concepts
+		// For Cadence, treeID will be a UUID, shared for the same workflow_id,
+		//     a workflow run may have one or more than one branchID
+		//     NodeID is the same as EventID
 
 		// NewHistoryBranch creates a new branch from tree root. If tree doesn't exist, then create one. Return error if the branch already exists.
 		NewHistoryBranch(request *NewHistoryBranchRequest) error
