@@ -866,7 +866,7 @@ type (
 		BranchInfo HistoryBranch
 		// Get the history nodes from MinNodeID. Inclusive.
 		MinNodeID int64
-		// Get the history nodes upto MaxNodeID.  Not Inclusive.
+		// Get the history nodes upto MaxNodeID.  Exclusive.
 		MaxNodeID int64
 		// Maximum number of history nodes per page
 		PageSize int
@@ -941,7 +941,7 @@ type (
 		Execution workflow.WorkflowExecution
 		// Get the history events from FirstEventID. Inclusive.
 		FirstEventID int64
-		// Get the history events upto NextEventID.  Exclusive.
+		// Get the history events upto NextEventID.  Not Inclusive.
 		NextEventID int64
 		// Maximum number of history append transactions per page
 		PageSize int
