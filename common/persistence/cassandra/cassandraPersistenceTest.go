@@ -44,14 +44,15 @@ const (
 	testSchemaDir            = "schema/"
 )
 
-// PersistenceTestCluster allows executing cassandra operations in testing.
-type CassandraTestCluster struct {
+// TestCluster allows executing cassandra operations in testing.
+type TestCluster struct {
 	Port     int
 	keyspace string
 	cluster  *gocql.ClusterConfig
 	session  *gocql.Session
 }
 
+// InitTestSuite initializes test suite to use cassandra
 func InitTestSuite(tb *persistencetests.TestBase) {
 	options := &persistencetests.TestBaseOptions{
 		SchemaDir:          testSchemaDir,
@@ -65,12 +66,13 @@ func InitTestSuite(tb *persistencetests.TestBase) {
 	InitTestSuiteWithOptions(tb, options)
 }
 
+// InitTestSuiteWithOptions initializes test suite to use cassandra given options
 func InitTestSuiteWithOptions(tb *persistencetests.TestBase, options *persistencetests.TestBaseOptions) {
 	if options.SchemaDir == "" {
 		options.SchemaDir = "schema"
 	}
 	log := bark.NewLoggerFromLogrus(log.New())
-	tb.PersistenceTestCluster = &CassandraTestCluster{}
+	tb.PersistenceTestCluster = &TestCluster{}
 	tb.ClusterMetadata = cluster.GetTestClusterMetadata(
 		options.EnableGlobalDomain,
 		options.IsMasterCluster,
@@ -79,7 +81,7 @@ func InitTestSuiteWithOptions(tb *persistencetests.TestBase, options *persistenc
 	// Setup Workflow keyspace and deploy schema for tests
 	tb.PersistenceTestCluster.SetupTestDatabase(options)
 	shardID := 0
-	keyspace := tb.PersistenceTestCluster.Keyspace()
+	keyspace := tb.PersistenceTestCluster.DatabaseName()
 	var err error
 	tb.ShardMgr, err = NewShardPersistence(options.DBHost, options.DBPort, options.DBUser,
 		options.DBPassword, options.Datacenter, keyspace, currentClusterName, log)
@@ -161,12 +163,14 @@ func getCadencePackageDir() (string, error) {
 	return cadencePackageDir, err
 }
 
-func (s *CassandraTestCluster) Keyspace() string {
+// DatabaseName from PersistenceTestCluster interface
+func (s *TestCluster) DatabaseName() string {
 	return s.keyspace
 }
 
-func (s *CassandraTestCluster) SetupTestDatabase(options *persistencetests.TestBaseOptions) {
-	s.keyspace = options.KeySpace
+// SetupTestDatabase from PersistenceTestCluster interface
+func (s *TestCluster) SetupTestDatabase(options *persistencetests.TestBaseOptions) {
+	s.keyspace = options.DatabaseName
 	if s.keyspace == "" {
 		s.keyspace = persistencetests.GenerateRandomDBName(10)
 	}
@@ -182,12 +186,14 @@ func (s *CassandraTestCluster) SetupTestDatabase(options *persistencetests.TestB
 	s.LoadVisibilitySchema([]string{"schema.cql"}, schemaDir)
 }
 
-func (s *CassandraTestCluster) TearDownTestDatabase() {
+// TearDownTestDatabase from PersistenceTestCluster interface
+func (s *TestCluster) TearDownTestDatabase() {
 	s.DropDatabase()
 	s.session.Close()
 }
 
-func (s *CassandraTestCluster) CreateSession(options *persistencetests.TestBaseOptions) {
+// CreateSession from PersistenceTestCluster interface
+func (s *TestCluster) CreateSession(options *persistencetests.TestBaseOptions) {
 	s.cluster = common.NewCassandraCluster(options.DBHost, options.DBPort, options.DBUser, options.DBPassword, options.Datacenter)
 	s.cluster.Consistency = gocql.Consistency(1)
 	s.cluster.Keyspace = "system"
@@ -199,33 +205,37 @@ func (s *CassandraTestCluster) CreateSession(options *persistencetests.TestBaseO
 	}
 }
 
-func (s *CassandraTestCluster) CreateDatabase(replicas int, dropKeySpace bool) {
-	err := common.CreateCassandraKeyspace(s.session, s.Keyspace(), replicas, dropKeySpace)
+// CreateDatabase from PersistenceTestCluster interface
+func (s *TestCluster) CreateDatabase(replicas int, dropKeySpace bool) {
+	err := common.CreateCassandraKeyspace(s.session, s.DatabaseName(), replicas, dropKeySpace)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	s.cluster.Keyspace = s.Keyspace()
+	s.cluster.Keyspace = s.DatabaseName()
 }
 
-func (s *CassandraTestCluster) DropDatabase() {
-	err := common.DropCassandraKeyspace(s.session, s.Keyspace())
+// DropDatabase from PersistenceTestCluster interface
+func (s *TestCluster) DropDatabase() {
+	err := common.DropCassandraKeyspace(s.session, s.DatabaseName())
 	if err != nil && !strings.Contains(err.Error(), "AlreadyExists") {
 		log.Fatal(err)
 	}
 }
 
-func (s *CassandraTestCluster) LoadSchema(fileNames []string, schemaDir string) {
+// LoadSchema from PersistenceTestCluster interface
+func (s *TestCluster) LoadSchema(fileNames []string, schemaDir string) {
 	workflowSchemaDir := schemaDir + "/cadence"
-	err := common.LoadCassandraSchema(workflowSchemaDir, fileNames, s.cluster.Port, s.Keyspace(), true)
+	err := common.LoadCassandraSchema(workflowSchemaDir, fileNames, s.cluster.Port, s.DatabaseName(), true)
 	if err != nil && !strings.Contains(err.Error(), "AlreadyExists") {
 		log.Fatal(err)
 	}
 }
 
-func (s *CassandraTestCluster) LoadVisibilitySchema(fileNames []string, schemaDir string) {
+// LoadVisibilitySchema from PersistenceTestCluster interface
+func (s *TestCluster) LoadVisibilitySchema(fileNames []string, schemaDir string) {
 	workflowSchemaDir := schemaDir + "visibility"
-	err := common.LoadCassandraSchema(workflowSchemaDir, fileNames, s.cluster.Port, s.Keyspace(), false)
+	err := common.LoadCassandraSchema(workflowSchemaDir, fileNames, s.cluster.Port, s.DatabaseName(), false)
 	if err != nil && !strings.Contains(err.Error(), "AlreadyExists") {
 		log.Fatal(err)
 	}

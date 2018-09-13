@@ -34,6 +34,7 @@ import (
 )
 
 type (
+	// HistoryPersistenceSuite contains history persistence tests
 	HistoryPersistenceSuite struct {
 		suite.Suite
 		TestBase
@@ -43,21 +44,25 @@ type (
 	}
 )
 
+// SetupSuite implementation
 func (s *HistoryPersistenceSuite) SetupSuite() {
 	if testing.Verbose() {
 		log.SetOutput(os.Stdout)
 	}
 }
 
+// SetupTest implementation
 func (s *HistoryPersistenceSuite) SetupTest() {
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
 }
 
+// TearDownSuite implementation
 func (s *HistoryPersistenceSuite) TearDownSuite() {
 	s.TearDownWorkflowStore()
 }
 
+// TestAppendHistoryEvents test
 func (s *HistoryPersistenceSuite) TestAppendHistoryEvents() {
 	domainID := "ff03c29f-fcf1-4aea-893d-1a7ec421e3ec"
 	workflowExecution := gen.WorkflowExecution{
@@ -85,6 +90,7 @@ func (s *HistoryPersistenceSuite) TestAppendHistoryEvents() {
 	s.Nil(err3)
 }
 
+// TestGetHistoryEvents test
 func (s *HistoryPersistenceSuite) TestGetHistoryEvents() {
 	domainID := "0fdc53ef-b890-4870-a944-b9b028ac9742"
 	workflowExecution := gen.WorkflowExecution{
@@ -123,6 +129,7 @@ func newBatchEventForTest(eventIDs []int64, version int64) *testBatchEvent {
 	return &testBatchEvent{batch: batch, events: events}
 }
 
+// TestGetHistoryEventsCompatibility test
 func (s *HistoryPersistenceSuite) TestGetHistoryEventsCompatibility() {
 	domainID := "373de9d6-e41e-42d4-bee9-9e06968e4d0d"
 	workflowExecution := gen.WorkflowExecution{
@@ -161,6 +168,7 @@ func (s *HistoryPersistenceSuite) TestGetHistoryEventsCompatibility() {
 	s.Equal(int64(7), history.Events[1].GetEventId())
 }
 
+// TestDeleteHistoryEvents test
 func (s *HistoryPersistenceSuite) TestDeleteHistoryEvents() {
 	domainID := "373de9d6-e41e-42d4-bee9-9e06968e4d0d"
 	workflowExecution := gen.WorkflowExecution{
@@ -198,6 +206,7 @@ func (s *HistoryPersistenceSuite) TestDeleteHistoryEvents() {
 	s.Nil(data1)
 }
 
+// TestAppendAndGet test
 func (s *HistoryPersistenceSuite) TestAppendAndGet() {
 	domainID := uuid.New()
 	workflowExecution := gen.WorkflowExecution{
@@ -227,6 +236,7 @@ func (s *HistoryPersistenceSuite) TestAppendAndGet() {
 	}
 }
 
+// TestOverwriteAndShadowingHistoryEvents test
 func (s *HistoryPersistenceSuite) TestOverwriteAndShadowingHistoryEvents() {
 	domainID := "003de9c6-e41e-42d4-bee9-9e06968e4d0d"
 	workflowExecution := gen.WorkflowExecution{
@@ -299,6 +309,7 @@ func (s *HistoryPersistenceSuite) TestOverwriteAndShadowingHistoryEvents() {
 	}
 }
 
+// AppendHistoryEvents helper
 func (s *HistoryPersistenceSuite) AppendHistoryEvents(domainID string, workflowExecution gen.WorkflowExecution,
 	firstEventID, eventBatchVersion int64, rangeID, txID int64, eventsBatch *persistence.SerializedHistoryEventBatch, overwrite bool) error {
 
@@ -314,6 +325,7 @@ func (s *HistoryPersistenceSuite) AppendHistoryEvents(domainID string, workflowE
 	})
 }
 
+// GetWorkflowExecutionHistory helper
 func (s *HistoryPersistenceSuite) GetWorkflowExecutionHistory(domainID string, workflowExecution gen.WorkflowExecution,
 	firstEventID, nextEventID int64, pageSize int, token []byte) (*gen.History, []byte, error) {
 
@@ -333,6 +345,7 @@ func (s *HistoryPersistenceSuite) GetWorkflowExecutionHistory(domainID string, w
 	return response.History, response.NextPageToken, nil
 }
 
+// DeleteWorkflowExecutionHistory helper
 func (s *HistoryPersistenceSuite) DeleteWorkflowExecutionHistory(domainID string,
 	workflowExecution gen.WorkflowExecution) error {
 

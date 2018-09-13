@@ -34,6 +34,7 @@ import (
 )
 
 type (
+	// ShardPersistenceSuite contains shard persistence tests
 	ShardPersistenceSuite struct {
 		suite.Suite
 		TestBase
@@ -43,21 +44,25 @@ type (
 	}
 )
 
+// SetupSuite implementation
 func (s *ShardPersistenceSuite) SetupSuite() {
 	if testing.Verbose() {
 		log.SetOutput(os.Stdout)
 	}
 }
 
+// SetupTest implementation
 func (s *ShardPersistenceSuite) SetupTest() {
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
 }
 
+// TearDownSuite implementation
 func (s *ShardPersistenceSuite) TearDownSuite() {
 	s.TearDownWorkflowStore()
 }
 
+// TestCreateShard test
 func (s *ShardPersistenceSuite) TestCreateShard() {
 	err0 := s.CreateShard(19, "test_create_shard1", 123)
 	s.Nil(err0, "No error expected.")
@@ -68,6 +73,7 @@ func (s *ShardPersistenceSuite) TestCreateShard() {
 	log.Infof("CreateShard failed with error: %v", err1)
 }
 
+// TestGetShard test
 func (s *ShardPersistenceSuite) TestGetShard() {
 	shardID := 20
 	owner := "test_get_shard"
@@ -89,6 +95,7 @@ func (s *ShardPersistenceSuite) TestGetShard() {
 	log.Infof("GetShard failed with error: %v", err2)
 }
 
+// TestUpdateShard test
 func (s *ShardPersistenceSuite) TestUpdateShard() {
 	shardID := 30
 	owner := "test_update_shard"

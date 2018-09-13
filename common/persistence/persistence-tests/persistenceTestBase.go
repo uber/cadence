@@ -42,18 +42,18 @@ type (
 
 	// TestBaseOptions options to configure workflow test base.
 	TestBaseOptions struct {
-		DBHost       string
-		DBPort       int
-		DBUser       string
-		DBPassword   string
-		KeySpace     string
-		Datacenter   string
-		DropKeySpace bool
-		SchemaDir    string
+		DBHost       string // database hostname
+		DBPort       int    // database port
+		DBUser       string // database user
+		DBPassword   string // database password
+		DatabaseName string // database name
+		Datacenter   string // database datacenter
+		DropKeySpace bool   // drop existing database
+		SchemaDir    string // directory with schema files
 		// TODO this is used for global domain test
 		// when crtoss DC is public, remove EnableGlobalDomain
-		EnableGlobalDomain bool
-		IsMasterCluster    bool
+		EnableGlobalDomain bool // is global domain enabled
+		IsMasterCluster    bool // is master cluster
 	}
 
 	// TestBase wraps the base setup needed to create workflows over persistence layer.
@@ -76,8 +76,9 @@ type (
 		UseMysql               bool
 	}
 
+	// PersistenceTestCluster exposes management operations on a database
 	PersistenceTestCluster interface {
-		Keyspace() string
+		DatabaseName() string
 		SetupTestDatabase(options *TestBaseOptions)
 		TearDownTestDatabase()
 		CreateSession(options *TestBaseOptions)
@@ -87,11 +88,13 @@ type (
 		LoadVisibilitySchema(fileNames []string, schemaDir string)
 	}
 
+	// TestTransferTaskIDGenerator helper
 	TestTransferTaskIDGenerator struct {
 		seqNum int64
 	}
 )
 
+// GetNextTransferTaskID helper
 func (g *TestTransferTaskIDGenerator) GetNextTransferTaskID() (int64, error) {
 	return atomic.AddInt64(&g.seqNum, 1), nil
 }
@@ -1024,6 +1027,7 @@ func validateTimeRange(t time.Time, expectedDuration time.Duration) bool {
 	return true
 }
 
+// GenerateRandomDBName helper
 func GenerateRandomDBName(n int) string {
 	rand.Seed(time.Now().UnixNano())
 	letterRunes := []rune("workflow")

@@ -40,6 +40,7 @@ import (
 )
 
 type (
+	// MetadataPersistenceSuiteV2 is test of the V2 version of metadata persistence
 	MetadataPersistenceSuiteV2 struct {
 		suite.Suite
 		TestBase
@@ -49,12 +50,14 @@ type (
 	}
 )
 
+// SetupSuite implementation
 func (m *MetadataPersistenceSuiteV2) SetupSuite() {
 	if testing.Verbose() {
 		log.SetOutput(os.Stdout)
 	}
 }
 
+// SetupTest implementation
 func (m *MetadataPersistenceSuiteV2) SetupTest() {
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	m.Assertions = require.New(m.T())
@@ -76,14 +79,16 @@ ListLoop:
 	}
 }
 
+// TearDownTest implementation
 func (m *MetadataPersistenceSuiteV2) TearDownTest() {
-
 }
 
+// TearDownSuite implementation
 func (m *MetadataPersistenceSuiteV2) TearDownSuite() {
 	m.TearDownWorkflowStore()
 }
 
+// TestCreateDomain test
 func (m *MetadataPersistenceSuiteV2) TestCreateDomain() {
 	id := uuid.New()
 	name := "create-domain-test-name"
@@ -163,6 +168,7 @@ func (m *MetadataPersistenceSuiteV2) TestCreateDomain() {
 	m.Nil(resp2)
 }
 
+// TestGetDomain test
 func (m *MetadataPersistenceSuiteV2) TestGetDomain() {
 	id := uuid.New()
 	name := "get-domain-test-name"
@@ -269,6 +275,7 @@ func (m *MetadataPersistenceSuiteV2) TestGetDomain() {
 	m.IsType(&gen.BadRequestError{}, err5)
 }
 
+// TestConcurrentCreateDomain test
 func (m *MetadataPersistenceSuiteV2) TestConcurrentCreateDomain() {
 	id := uuid.New()
 
@@ -356,6 +363,7 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentCreateDomain() {
 	m.Equal(true, vi > 0 && vi <= concurrency)
 }
 
+// TestConcurrentUpdateDomain test
 func (m *MetadataPersistenceSuiteV2) TestConcurrentUpdateDomain() {
 	id := uuid.New()
 	name := "concurrent-update-domain-test-name"
@@ -476,6 +484,7 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentUpdateDomain() {
 	m.Equal(true, vi > 0 && vi <= concurrency)
 }
 
+// TestUpdateDomain test
 func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 	id := uuid.New()
 	name := "update-domain-test-name"
@@ -619,6 +628,7 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 	m.Equal(notificationVersion, resp5.NotificationVersion)
 }
 
+// TestDeleteDomain test
 func (m *MetadataPersistenceSuiteV2) TestDeleteDomain() {
 	id := uuid.New()
 	name := "delete-domain-test-name"
@@ -723,6 +733,7 @@ func (m *MetadataPersistenceSuiteV2) TestDeleteDomain() {
 	m.Nil(resp9)
 }
 
+// TestListDomains test
 func (m *MetadataPersistenceSuiteV2) TestListDomains() {
 	clusterActive1 := "some random active cluster name"
 	clusterStandby1 := "some random standby cluster name"
@@ -827,6 +838,7 @@ ListLoop:
 	}
 }
 
+// CreateDomain helper method
 func (m *MetadataPersistenceSuiteV2) CreateDomain(info *persistence.DomainInfo, config *persistence.DomainConfig,
 	replicationConfig *persistence.DomainReplicationConfig, isGlobaldomain bool, configVersion int64, failoverVersion int64) (*persistence.CreateDomainResponse, error) {
 	return m.MetadataManagerV2.CreateDomain(&persistence.CreateDomainRequest{
@@ -839,6 +851,7 @@ func (m *MetadataPersistenceSuiteV2) CreateDomain(info *persistence.DomainInfo, 
 	})
 }
 
+// GetDomain helper method
 func (m *MetadataPersistenceSuiteV2) GetDomain(id, name string) (*persistence.GetDomainResponse, error) {
 	return m.MetadataManagerV2.GetDomain(&persistence.GetDomainRequest{
 		ID:   id,
@@ -846,6 +859,7 @@ func (m *MetadataPersistenceSuiteV2) GetDomain(id, name string) (*persistence.Ge
 	})
 }
 
+// UpdateDomain helper method
 func (m *MetadataPersistenceSuiteV2) UpdateDomain(info *persistence.DomainInfo, config *persistence.DomainConfig, replicationConfig *persistence.DomainReplicationConfig,
 	configVersion int64, failoverVersion int64, failoverNotificationVersion int64, notificationVersion int64) error {
 	return m.MetadataManagerV2.UpdateDomain(&persistence.UpdateDomainRequest{
@@ -859,6 +873,7 @@ func (m *MetadataPersistenceSuiteV2) UpdateDomain(info *persistence.DomainInfo, 
 	})
 }
 
+// DeleteDomain helper method
 func (m *MetadataPersistenceSuiteV2) DeleteDomain(id, name string) error {
 	if len(id) > 0 {
 		return m.MetadataManagerV2.DeleteDomain(&persistence.DeleteDomainRequest{ID: id})
@@ -866,6 +881,7 @@ func (m *MetadataPersistenceSuiteV2) DeleteDomain(id, name string) error {
 	return m.MetadataManagerV2.DeleteDomainByName(&persistence.DeleteDomainByNameRequest{Name: name})
 }
 
+// ListDomains helper method
 func (m *MetadataPersistenceSuiteV2) ListDomains(pageSize int, pageToken []byte) (*persistence.ListDomainsResponse, error) {
 	return m.MetadataManagerV2.ListDomains(&persistence.ListDomainsRequest{
 		PageSize:      pageSize,

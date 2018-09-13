@@ -36,6 +36,7 @@ import (
 )
 
 type (
+	// VisibilityPersistenceSuite tests visibility persistence
 	VisibilityPersistenceSuite struct {
 		suite.Suite
 		TestBase
@@ -45,21 +46,25 @@ type (
 	}
 )
 
+// SetupSuite implementation
 func (s *VisibilityPersistenceSuite) SetupSuite() {
 	if testing.Verbose() {
 		log.SetOutput(os.Stdout)
 	}
 }
 
+// SetupTest implementation
 func (s *VisibilityPersistenceSuite) SetupTest() {
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
 }
 
+// TearDownSuite implementation
 func (s *VisibilityPersistenceSuite) TearDownSuite() {
 	s.TearDownWorkflowStore()
 }
 
+// TestBasicVisibility test
 func (s *VisibilityPersistenceSuite) TestBasicVisibility() {
 	testDomainUUID := uuid.New()
 
@@ -115,6 +120,7 @@ func (s *VisibilityPersistenceSuite) TestBasicVisibility() {
 	s.Equal(1, len(resp.Executions))
 }
 
+// TestVisibilityPagination test
 func (s *VisibilityPersistenceSuite) TestVisibilityPagination() {
 	testDomainUUID := uuid.New()
 
@@ -180,6 +186,7 @@ func (s *VisibilityPersistenceSuite) TestVisibilityPagination() {
 	s.Equal(0, len(resp.Executions))
 }
 
+// TestFilteringByType test
 func (s *VisibilityPersistenceSuite) TestFilteringByType() {
 	testDomainUUID := uuid.New()
 	startTime := time.Now().UnixNano()
@@ -257,6 +264,7 @@ func (s *VisibilityPersistenceSuite) TestFilteringByType() {
 	s.Equal(workflowExecution2.WorkflowId, resp.Executions[0].Execution.WorkflowId)
 }
 
+// TestFilteringByWorkflowID test
 func (s *VisibilityPersistenceSuite) TestFilteringByWorkflowID() {
 	testDomainUUID := uuid.New()
 	startTime := time.Now().UnixNano()
@@ -334,6 +342,7 @@ func (s *VisibilityPersistenceSuite) TestFilteringByWorkflowID() {
 	s.Equal(workflowExecution2.WorkflowId, resp.Executions[0].Execution.WorkflowId)
 }
 
+// TestFilteringByCloseStatus test
 func (s *VisibilityPersistenceSuite) TestFilteringByCloseStatus() {
 	testDomainUUID := uuid.New()
 	startTime := time.Now().UnixNano()
@@ -399,6 +408,7 @@ func (s *VisibilityPersistenceSuite) TestFilteringByCloseStatus() {
 	s.Equal(workflowExecution2.WorkflowId, resp.Executions[0].Execution.WorkflowId)
 }
 
+// TestGetClosedExecution test
 func (s *VisibilityPersistenceSuite) TestGetClosedExecution() {
 	testDomainUUID := uuid.New()
 
