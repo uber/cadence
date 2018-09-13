@@ -68,15 +68,23 @@ func InitTestSuite(tb *persistencetests.TestBase) {
 
 // InitTestSuiteWithOptions initializes test suite to use cassandra given options
 func InitTestSuiteWithOptions(tb *persistencetests.TestBase, options *persistencetests.TestBaseOptions) {
+	InitTestSuiteWithMetadata(tb, options, cluster.GetTestClusterMetadata(
+		options.EnableGlobalDomain,
+		options.IsMasterCluster,
+	))
+}
+
+// InitTestSuiteWithMetadata initializes test suite to use cassandra given options and metadata
+func InitTestSuiteWithMetadata(tb *persistencetests.TestBase, options *persistencetests.TestBaseOptions, metadata cluster.Metadata) {
+	if metadata == nil {
+		panic("nil metadata")
+	}
 	if options.SchemaDir == "" {
 		options.SchemaDir = "schema"
 	}
 	log := bark.NewLoggerFromLogrus(log.New())
 	tb.PersistenceTestCluster = &TestCluster{}
-	tb.ClusterMetadata = cluster.GetTestClusterMetadata(
-		options.EnableGlobalDomain,
-		options.IsMasterCluster,
-	)
+	tb.ClusterMetadata = metadata
 	currentClusterName := tb.ClusterMetadata.GetCurrentClusterName()
 	// Setup Workflow keyspace and deploy schema for tests
 	tb.PersistenceTestCluster.SetupTestDatabase(options)
