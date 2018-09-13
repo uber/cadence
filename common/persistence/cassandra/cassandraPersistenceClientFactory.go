@@ -25,7 +25,7 @@ import (
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/persistence"
+	p "github.com/uber/cadence/common/persistence"
 )
 
 type (
@@ -39,7 +39,7 @@ type (
 
 // NewPersistenceClientFactory is used to create an instance of ExecutionManagerFactory implementation
 func NewPersistenceClientFactory(hosts string, port int, user, password, dc string, keyspace string,
-	numConns int, logger bark.Logger, rateLimiter common.TokenBucket, metricsClient metrics.Client) (persistence.ExecutionManagerFactory, error) {
+	numConns int, logger bark.Logger, rateLimiter common.TokenBucket, metricsClient metrics.Client) (p.ExecutionManagerFactory, error) {
 	cluster := common.NewCassandraCluster(hosts, port, user, password, dc)
 	cluster.Keyspace = keyspace
 	cluster.ProtoVersion = cassandraProtoVersion
@@ -57,7 +57,7 @@ func NewPersistenceClientFactory(hosts string, port int, user, password, dc stri
 }
 
 // CreateExecutionManager implements ExecutionManagerFactory interface
-func (f *cassandraPersistenceClientFactory) CreateExecutionManager(shardID int) (persistence.ExecutionManager, error) {
+func (f *cassandraPersistenceClientFactory) CreateExecutionManager(shardID int) (p.ExecutionManager, error) {
 	mgr, err := NewWorkflowExecutionPersistence(shardID, f.session, f.logger)
 
 	if err != nil {
@@ -65,14 +65,14 @@ func (f *cassandraPersistenceClientFactory) CreateExecutionManager(shardID int) 
 	}
 
 	if f.rateLimiter != nil {
-		mgr = persistence.NewWorkflowExecutionPersistenceRateLimitedClient(mgr, f.rateLimiter, f.logger)
+		mgr = p.NewWorkflowExecutionPersistenceRateLimitedClient(mgr, f.rateLimiter, f.logger)
 	}
 
 	if f.metricsClient == nil {
 		return mgr, nil
 	}
 
-	return persistence.NewWorkflowExecutionPersistenceMetricsClient(mgr, f.metricsClient, f.logger), nil
+	return p.NewWorkflowExecutionPersistenceMetricsClient(mgr, f.metricsClient, f.logger), nil
 }
 
 // Close releases the underlying resources held by this object

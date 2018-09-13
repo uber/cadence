@@ -21,17 +21,17 @@
 package cassandra
 
 import (
-	"github.com/gocql/gocql"
-	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/logging"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/gocql/gocql"
 	log "github.com/sirupsen/logrus"
 	"github.com/uber-common/bark"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/logging"
+	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/persistence-tests"
 )
 
@@ -132,7 +132,7 @@ func InitTestSuiteWithOptions(tb *persistencetests.TestBase, options *persistenc
 	// Create a shard for test
 	tb.ReadLevel = 0
 	tb.ReplicationReadLevel = 0
-	tb.ShardInfo = &persistence.ShardInfo{
+	tb.ShardInfo = &p.ShardInfo{
 		ShardID:                 shardID,
 		RangeID:                 0,
 		TransferAckLevel:        0,
@@ -142,7 +142,7 @@ func InitTestSuiteWithOptions(tb *persistencetests.TestBase, options *persistenc
 		ClusterTransferAckLevel: map[string]int64{currentClusterName: 0},
 	}
 	tb.TaskIDGenerator = &persistencetests.TestTransferTaskIDGenerator{}
-	err1 := tb.ShardMgr.CreateShard(&persistence.CreateShardRequest{
+	err1 := tb.ShardMgr.CreateShard(&p.CreateShardRequest{
 		ShardInfo: tb.ShardInfo,
 	})
 	if err1 != nil {

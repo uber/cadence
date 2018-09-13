@@ -21,10 +21,10 @@
 package cassandra
 
 import (
-	"github.com/uber/cadence/common/persistence/persistence-tests"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
+	"github.com/uber/cadence/common/persistence/persistence-tests"
 )
 
 func TestMetadataPersistenceSuiteV2(t *testing.T) {
