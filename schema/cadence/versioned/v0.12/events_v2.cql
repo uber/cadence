@@ -1,3 +1,8 @@
+CREATE TYPE branch_range (
+  branch_id   uuid,
+  forked_node_id bigint,
+);
+
 CREATE TABLE events_v2 (
   tree_id           uuid,
   branch_id         uuid,
