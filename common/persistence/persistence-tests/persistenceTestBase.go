@@ -31,7 +31,7 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/persistence"
+	p "github.com/uber/cadence/common/persistence"
 )
 
 type (
@@ -58,16 +58,16 @@ type (
 
 	// TestBase wraps the base setup needed to create workflows over persistence layer.
 	TestBase struct {
-		ShardMgr               persistence.ShardManager
-		ExecutionMgrFactory    persistence.ExecutionManagerFactory
-		WorkflowMgr            persistence.ExecutionManager
-		TaskMgr                persistence.TaskManager
-		HistoryMgr             persistence.HistoryManager
-		MetadataManager        persistence.MetadataManager
-		MetadataManagerV2      persistence.MetadataManager
-		MetadataProxy          persistence.MetadataManager
-		VisibilityMgr          persistence.VisibilityManager
-		ShardInfo              *persistence.ShardInfo
+		ShardMgr               p.ShardManager
+		ExecutionMgrFactory    p.ExecutionManagerFactory
+		WorkflowMgr            p.ExecutionManager
+		TaskMgr                p.TaskManager
+		HistoryMgr             p.HistoryManager
+		MetadataManager        p.MetadataManager
+		MetadataManagerV2      p.MetadataManager
+		MetadataProxy          p.MetadataManager
+		VisibilityMgr          p.VisibilityManager
+		ShardInfo              *p.ShardInfo
 		TaskIDGenerator        TransferTaskIDGenerator
 		ClusterMetadata        cluster.Metadata
 		ReadLevel              int64
@@ -101,20 +101,20 @@ func (g *TestTransferTaskIDGenerator) GetNextTransferTaskID() (int64, error) {
 
 // CreateShard is a utility method to create the shard using persistence layer
 func (s *TestBase) CreateShard(shardID int, owner string, rangeID int64) error {
-	info := &persistence.ShardInfo{
+	info := &p.ShardInfo{
 		ShardID: shardID,
 		Owner:   owner,
 		RangeID: rangeID,
 	}
 
-	return s.ShardMgr.CreateShard(&persistence.CreateShardRequest{
+	return s.ShardMgr.CreateShard(&p.CreateShardRequest{
 		ShardInfo: info,
 	})
 }
 
 // GetShard is a utility method to get the shard using persistence layer
-func (s *TestBase) GetShard(shardID int) (*persistence.ShardInfo, error) {
-	response, err := s.ShardMgr.GetShard(&persistence.GetShardRequest{
+func (s *TestBase) GetShard(shardID int) (*p.ShardInfo, error) {
+	response, err := s.ShardMgr.GetShard(&p.GetShardRequest{
 		ShardID: shardID,
 	})
 
@@ -126,8 +126,8 @@ func (s *TestBase) GetShard(shardID int) (*persistence.ShardInfo, error) {
 }
 
 // UpdateShard is a utility method to update the shard using persistence layer
-func (s *TestBase) UpdateShard(updatedInfo *persistence.ShardInfo, previousRangeID int64) error {
-	return s.ShardMgr.UpdateShard(&persistence.UpdateShardRequest{
+func (s *TestBase) UpdateShard(updatedInfo *p.ShardInfo, previousRangeID int64) error {
+	return s.ShardMgr.UpdateShard(&p.UpdateShardRequest{
 		ShardInfo:       updatedInfo,
 		PreviousRangeID: previousRangeID,
 	})
@@ -136,8 +136,8 @@ func (s *TestBase) UpdateShard(updatedInfo *persistence.ShardInfo, previousRange
 // CreateWorkflowExecution is a utility method to create workflow executions
 func (s *TestBase) CreateWorkflowExecution(domainID string, workflowExecution workflow.WorkflowExecution, taskList,
 	wType string, wTimeout int32, decisionTimeout int32, executionContext []byte, nextEventID int64, lastProcessedEventID int64,
-	decisionScheduleID int64, timerTasks []persistence.Task) (*persistence.CreateWorkflowExecutionResponse, error) {
-	response, err := s.WorkflowMgr.CreateWorkflowExecution(&persistence.CreateWorkflowExecutionRequest{
+	decisionScheduleID int64, timerTasks []p.Task) (*p.CreateWorkflowExecutionResponse, error) {
+	response, err := s.WorkflowMgr.CreateWorkflowExecution(&p.CreateWorkflowExecutionRequest{
 		RequestID:            uuid.New(),
 		DomainID:             domainID,
 		Execution:            workflowExecution,
@@ -149,8 +149,8 @@ func (s *TestBase) CreateWorkflowExecution(domainID string, workflowExecution wo
 		NextEventID:          nextEventID,
 		LastProcessedEvent:   lastProcessedEventID,
 		RangeID:              s.ShardInfo.RangeID,
-		TransferTasks: []persistence.Task{
-			&persistence.DecisionTask{
+		TransferTasks: []p.Task{
+			&p.DecisionTask{
 				TaskID:     s.GetNextSequenceNumber(),
 				DomainID:   domainID,
 				TaskList:   taskList,
@@ -169,27 +169,27 @@ func (s *TestBase) CreateWorkflowExecution(domainID string, workflowExecution wo
 // CreateWorkflowExecutionWithReplication is a utility method to create workflow executions
 func (s *TestBase) CreateWorkflowExecutionWithReplication(domainID string, workflowExecution workflow.WorkflowExecution,
 	taskList, wType string, wTimeout int32, decisionTimeout int32, nextEventID int64,
-	lastProcessedEventID int64, decisionScheduleID int64, state *persistence.ReplicationState, txTasks []persistence.Task) (*persistence.CreateWorkflowExecutionResponse, error) {
-	var transferTasks []persistence.Task
-	var replicationTasks []persistence.Task
+	lastProcessedEventID int64, decisionScheduleID int64, state *p.ReplicationState, txTasks []p.Task) (*p.CreateWorkflowExecutionResponse, error) {
+	var transferTasks []p.Task
+	var replicationTasks []p.Task
 	for _, task := range txTasks {
 		switch t := task.(type) {
-		case *persistence.DecisionTask, *persistence.ActivityTask, *persistence.CloseExecutionTask, *persistence.CancelExecutionTask, *persistence.StartChildExecutionTask, *persistence.SignalExecutionTask:
+		case *p.DecisionTask, *p.ActivityTask, *p.CloseExecutionTask, *p.CancelExecutionTask, *p.StartChildExecutionTask, *p.SignalExecutionTask:
 			transferTasks = append(transferTasks, t)
-		case *persistence.HistoryReplicationTask:
+		case *p.HistoryReplicationTask:
 			replicationTasks = append(replicationTasks, t)
 		default:
 			panic("Unknown transfer task type.")
 		}
 	}
 
-	transferTasks = append(transferTasks, &persistence.DecisionTask{
+	transferTasks = append(transferTasks, &p.DecisionTask{
 		TaskID:     s.GetNextSequenceNumber(),
 		DomainID:   domainID,
 		TaskList:   taskList,
 		ScheduleID: decisionScheduleID,
 	})
-	response, err := s.WorkflowMgr.CreateWorkflowExecution(&persistence.CreateWorkflowExecutionRequest{
+	response, err := s.WorkflowMgr.CreateWorkflowExecution(&p.CreateWorkflowExecutionRequest{
 		RequestID:                   uuid.New(),
 		DomainID:                    domainID,
 		Execution:                   workflowExecution,
@@ -214,12 +214,12 @@ func (s *TestBase) CreateWorkflowExecutionWithReplication(domainID string, workf
 // CreateWorkflowExecutionManyTasks is a utility method to create workflow executions
 func (s *TestBase) CreateWorkflowExecutionManyTasks(domainID string, workflowExecution workflow.WorkflowExecution,
 	taskList string, executionContext []byte, nextEventID int64, lastProcessedEventID int64,
-	decisionScheduleIDs []int64, activityScheduleIDs []int64) (*persistence.CreateWorkflowExecutionResponse, error) {
+	decisionScheduleIDs []int64, activityScheduleIDs []int64) (*p.CreateWorkflowExecutionResponse, error) {
 
-	transferTasks := []persistence.Task{}
+	transferTasks := []p.Task{}
 	for _, decisionScheduleID := range decisionScheduleIDs {
 		transferTasks = append(transferTasks,
-			&persistence.DecisionTask{
+			&p.DecisionTask{
 				TaskID:     s.GetNextSequenceNumber(),
 				DomainID:   domainID,
 				TaskList:   taskList,
@@ -229,7 +229,7 @@ func (s *TestBase) CreateWorkflowExecutionManyTasks(domainID string, workflowExe
 
 	for _, activityScheduleID := range activityScheduleIDs {
 		transferTasks = append(transferTasks,
-			&persistence.ActivityTask{
+			&p.ActivityTask{
 				TaskID:     s.GetNextSequenceNumber(),
 				DomainID:   domainID,
 				TaskList:   taskList,
@@ -237,7 +237,7 @@ func (s *TestBase) CreateWorkflowExecutionManyTasks(domainID string, workflowExe
 			})
 	}
 
-	response, err := s.WorkflowMgr.CreateWorkflowExecution(&persistence.CreateWorkflowExecutionRequest{
+	response, err := s.WorkflowMgr.CreateWorkflowExecution(&p.CreateWorkflowExecutionRequest{
 		RequestID:                   uuid.New(),
 		DomainID:                    domainID,
 		Execution:                   workflowExecution,
@@ -259,8 +259,8 @@ func (s *TestBase) CreateWorkflowExecutionManyTasks(domainID string, workflowExe
 func (s *TestBase) CreateChildWorkflowExecution(domainID string, workflowExecution workflow.WorkflowExecution,
 	parentDomainID string, parentExecution *workflow.WorkflowExecution, initiatedID int64, taskList, wType string,
 	wTimeout int32, decisionTimeout int32, executionContext []byte, nextEventID int64, lastProcessedEventID int64,
-	decisionScheduleID int64, timerTasks []persistence.Task) (*persistence.CreateWorkflowExecutionResponse, error) {
-	response, err := s.WorkflowMgr.CreateWorkflowExecution(&persistence.CreateWorkflowExecutionRequest{
+	decisionScheduleID int64, timerTasks []p.Task) (*p.CreateWorkflowExecutionResponse, error) {
+	response, err := s.WorkflowMgr.CreateWorkflowExecution(&p.CreateWorkflowExecutionRequest{
 		RequestID:            uuid.New(),
 		DomainID:             domainID,
 		Execution:            workflowExecution,
@@ -275,8 +275,8 @@ func (s *TestBase) CreateChildWorkflowExecution(domainID string, workflowExecuti
 		NextEventID:          nextEventID,
 		LastProcessedEvent:   lastProcessedEventID,
 		RangeID:              s.ShardInfo.RangeID,
-		TransferTasks: []persistence.Task{
-			&persistence.DecisionTask{
+		TransferTasks: []p.Task{
+			&p.DecisionTask{
 				TaskID:     s.GetNextSequenceNumber(),
 				DomainID:   domainID,
 				TaskList:   taskList,
@@ -294,8 +294,8 @@ func (s *TestBase) CreateChildWorkflowExecution(domainID string, workflowExecuti
 
 // GetWorkflowExecutionInfo is a utility method to retrieve execution info
 func (s *TestBase) GetWorkflowExecutionInfo(domainID string, workflowExecution workflow.WorkflowExecution) (
-	*persistence.WorkflowMutableState, error) {
-	response, err := s.WorkflowMgr.GetWorkflowExecution(&persistence.GetWorkflowExecutionRequest{
+	*p.WorkflowMutableState, error) {
+	response, err := s.WorkflowMgr.GetWorkflowExecution(&p.GetWorkflowExecutionRequest{
 		DomainID:  domainID,
 		Execution: workflowExecution,
 	})
@@ -308,7 +308,7 @@ func (s *TestBase) GetWorkflowExecutionInfo(domainID string, workflowExecution w
 
 // GetCurrentWorkflowRunID returns the workflow run ID for the given params
 func (s *TestBase) GetCurrentWorkflowRunID(domainID, workflowID string) (string, error) {
-	response, err := s.WorkflowMgr.GetCurrentExecution(&persistence.GetCurrentExecutionRequest{
+	response, err := s.WorkflowMgr.GetCurrentExecution(&p.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	})
@@ -321,18 +321,18 @@ func (s *TestBase) GetCurrentWorkflowRunID(domainID, workflowID string) (string,
 }
 
 // ContinueAsNewExecution is a utility method to create workflow executions
-func (s *TestBase) ContinueAsNewExecution(updatedInfo *persistence.WorkflowExecutionInfo, condition int64,
+func (s *TestBase) ContinueAsNewExecution(updatedInfo *p.WorkflowExecutionInfo, condition int64,
 	newExecution workflow.WorkflowExecution, nextEventID, decisionScheduleID int64) error {
-	newdecisionTask := &persistence.DecisionTask{
+	newdecisionTask := &p.DecisionTask{
 		TaskID:     s.GetNextSequenceNumber(),
 		DomainID:   updatedInfo.DomainID,
 		TaskList:   updatedInfo.TaskList,
 		ScheduleID: int64(decisionScheduleID),
 	}
 
-	return s.WorkflowMgr.UpdateWorkflowExecution(&persistence.UpdateWorkflowExecutionRequest{
+	return s.WorkflowMgr.UpdateWorkflowExecution(&p.UpdateWorkflowExecutionRequest{
 		ExecutionInfo:       updatedInfo,
-		TransferTasks:       []persistence.Task{newdecisionTask},
+		TransferTasks:       []p.Task{newdecisionTask},
 		TimerTasks:          nil,
 		Condition:           condition,
 		DeleteTimerTask:     nil,
@@ -341,7 +341,7 @@ func (s *TestBase) ContinueAsNewExecution(updatedInfo *persistence.WorkflowExecu
 		DeleteActivityInfos: nil,
 		UpserTimerInfos:     nil,
 		DeleteTimerInfos:    nil,
-		ContinueAsNew: &persistence.CreateWorkflowExecutionRequest{
+		ContinueAsNew: &p.CreateWorkflowExecutionRequest{
 			RequestID:                   uuid.New(),
 			DomainID:                    updatedInfo.DomainID,
 			Execution:                   newExecution,
@@ -365,10 +365,10 @@ func (s *TestBase) ContinueAsNewExecution(updatedInfo *persistence.WorkflowExecu
 }
 
 // UpdateWorkflowExecution is a utility method to update workflow execution
-func (s *TestBase) UpdateWorkflowExecution(updatedInfo *persistence.WorkflowExecutionInfo, decisionScheduleIDs []int64,
-	activityScheduleIDs []int64, condition int64, timerTasks []persistence.Task, deleteTimerTask persistence.Task,
-	upsertActivityInfos []*persistence.ActivityInfo, deleteActivityInfos []int64,
-	upsertTimerInfos []*persistence.TimerInfo, deleteTimerInfos []string) error {
+func (s *TestBase) UpdateWorkflowExecution(updatedInfo *p.WorkflowExecutionInfo, decisionScheduleIDs []int64,
+	activityScheduleIDs []int64, condition int64, timerTasks []p.Task, deleteTimerTask p.Task,
+	upsertActivityInfos []*p.ActivityInfo, deleteActivityInfos []int64,
+	upsertTimerInfos []*p.TimerInfo, deleteTimerInfos []string) error {
 	return s.UpdateWorkflowExecutionWithRangeID(updatedInfo, decisionScheduleIDs, activityScheduleIDs,
 		s.ShardInfo.RangeID, condition, timerTasks, deleteTimerTask, upsertActivityInfos, deleteActivityInfos,
 		upsertTimerInfos, deleteTimerInfos, nil, nil, nil, nil,
@@ -376,10 +376,10 @@ func (s *TestBase) UpdateWorkflowExecution(updatedInfo *persistence.WorkflowExec
 }
 
 // UpdateWorkflowExecutionAndFinish is a utility method to update workflow execution
-func (s *TestBase) UpdateWorkflowExecutionAndFinish(updatedInfo *persistence.WorkflowExecutionInfo, condition int64, retentionSecond int32) error {
-	transferTasks := []persistence.Task{}
-	transferTasks = append(transferTasks, &persistence.CloseExecutionTask{TaskID: s.GetNextSequenceNumber()})
-	return s.WorkflowMgr.UpdateWorkflowExecution(&persistence.UpdateWorkflowExecutionRequest{
+func (s *TestBase) UpdateWorkflowExecutionAndFinish(updatedInfo *p.WorkflowExecutionInfo, condition int64, retentionSecond int32) error {
+	transferTasks := []p.Task{}
+	transferTasks = append(transferTasks, &p.CloseExecutionTask{TaskID: s.GetNextSequenceNumber()})
+	return s.WorkflowMgr.UpdateWorkflowExecution(&p.UpdateWorkflowExecutionRequest{
 		ExecutionInfo:        updatedInfo,
 		TransferTasks:        transferTasks,
 		TimerTasks:           nil,
@@ -396,8 +396,8 @@ func (s *TestBase) UpdateWorkflowExecutionAndFinish(updatedInfo *persistence.Wor
 }
 
 // UpsertChildExecutionsState is a utility method to update mutable state of workflow execution
-func (s *TestBase) UpsertChildExecutionsState(updatedInfo *persistence.WorkflowExecutionInfo, condition int64,
-	upsertChildInfos []*persistence.ChildExecutionInfo) error {
+func (s *TestBase) UpsertChildExecutionsState(updatedInfo *p.WorkflowExecutionInfo, condition int64,
+	upsertChildInfos []*p.ChildExecutionInfo) error {
 	return s.UpdateWorkflowExecutionWithRangeID(updatedInfo, nil, nil,
 		s.ShardInfo.RangeID, condition, nil, nil, nil, nil,
 		nil, nil, upsertChildInfos, nil, nil, nil,
@@ -405,8 +405,8 @@ func (s *TestBase) UpsertChildExecutionsState(updatedInfo *persistence.WorkflowE
 }
 
 // UpsertRequestCancelState is a utility method to update mutable state of workflow execution
-func (s *TestBase) UpsertRequestCancelState(updatedInfo *persistence.WorkflowExecutionInfo, condition int64,
-	upsertCancelInfos []*persistence.RequestCancelInfo) error {
+func (s *TestBase) UpsertRequestCancelState(updatedInfo *p.WorkflowExecutionInfo, condition int64,
+	upsertCancelInfos []*p.RequestCancelInfo) error {
 	return s.UpdateWorkflowExecutionWithRangeID(updatedInfo, nil, nil,
 		s.ShardInfo.RangeID, condition, nil, nil, nil, nil,
 		nil, nil, nil, nil, upsertCancelInfos, nil,
@@ -414,8 +414,8 @@ func (s *TestBase) UpsertRequestCancelState(updatedInfo *persistence.WorkflowExe
 }
 
 // UpsertSignalInfoState is a utility method to update mutable state of workflow execution
-func (s *TestBase) UpsertSignalInfoState(updatedInfo *persistence.WorkflowExecutionInfo, condition int64,
-	upsertSignalInfos []*persistence.SignalInfo) error {
+func (s *TestBase) UpsertSignalInfoState(updatedInfo *p.WorkflowExecutionInfo, condition int64,
+	upsertSignalInfos []*p.SignalInfo) error {
 	return s.UpdateWorkflowExecutionWithRangeID(updatedInfo, nil, nil,
 		s.ShardInfo.RangeID, condition, nil, nil, nil, nil,
 		nil, nil, nil, nil, nil, nil,
@@ -423,7 +423,7 @@ func (s *TestBase) UpsertSignalInfoState(updatedInfo *persistence.WorkflowExecut
 }
 
 // UpsertSignalsRequestedState is a utility method to update mutable state of workflow execution
-func (s *TestBase) UpsertSignalsRequestedState(updatedInfo *persistence.WorkflowExecutionInfo, condition int64,
+func (s *TestBase) UpsertSignalsRequestedState(updatedInfo *p.WorkflowExecutionInfo, condition int64,
 	upsertSignalsRequested []string) error {
 	return s.UpdateWorkflowExecutionWithRangeID(updatedInfo, nil, nil,
 		s.ShardInfo.RangeID, condition, nil, nil, nil, nil,
@@ -432,7 +432,7 @@ func (s *TestBase) UpsertSignalsRequestedState(updatedInfo *persistence.Workflow
 }
 
 // DeleteChildExecutionsState is a utility method to delete child execution from mutable state
-func (s *TestBase) DeleteChildExecutionsState(updatedInfo *persistence.WorkflowExecutionInfo, condition int64,
+func (s *TestBase) DeleteChildExecutionsState(updatedInfo *p.WorkflowExecutionInfo, condition int64,
 	deleteChildInfo int64) error {
 	return s.UpdateWorkflowExecutionWithRangeID(updatedInfo, nil, nil,
 		s.ShardInfo.RangeID, condition, nil, nil, nil, nil,
@@ -441,7 +441,7 @@ func (s *TestBase) DeleteChildExecutionsState(updatedInfo *persistence.WorkflowE
 }
 
 // DeleteCancelState is a utility method to delete request cancel state from mutable state
-func (s *TestBase) DeleteCancelState(updatedInfo *persistence.WorkflowExecutionInfo, condition int64,
+func (s *TestBase) DeleteCancelState(updatedInfo *p.WorkflowExecutionInfo, condition int64,
 	deleteCancelInfo int64) error {
 	return s.UpdateWorkflowExecutionWithRangeID(updatedInfo, nil, nil,
 		s.ShardInfo.RangeID, condition, nil, nil, nil, nil,
@@ -450,7 +450,7 @@ func (s *TestBase) DeleteCancelState(updatedInfo *persistence.WorkflowExecutionI
 }
 
 // DeleteSignalState is a utility method to delete request cancel state from mutable state
-func (s *TestBase) DeleteSignalState(updatedInfo *persistence.WorkflowExecutionInfo, condition int64,
+func (s *TestBase) DeleteSignalState(updatedInfo *p.WorkflowExecutionInfo, condition int64,
 	deleteSignalInfo int64) error {
 	return s.UpdateWorkflowExecutionWithRangeID(updatedInfo, nil, nil,
 		s.ShardInfo.RangeID, condition, nil, nil, nil, nil,
@@ -459,7 +459,7 @@ func (s *TestBase) DeleteSignalState(updatedInfo *persistence.WorkflowExecutionI
 }
 
 // DeleteSignalsRequestedState is a utility method to delete mutable state of workflow execution
-func (s *TestBase) DeleteSignalsRequestedState(updatedInfo *persistence.WorkflowExecutionInfo, condition int64,
+func (s *TestBase) DeleteSignalsRequestedState(updatedInfo *p.WorkflowExecutionInfo, condition int64,
 	deleteSignalsRequestedID string) error {
 	return s.UpdateWorkflowExecutionWithRangeID(updatedInfo, nil, nil,
 		s.ShardInfo.RangeID, condition, nil, nil, nil, nil,
@@ -468,51 +468,51 @@ func (s *TestBase) DeleteSignalsRequestedState(updatedInfo *persistence.Workflow
 }
 
 // UpdateWorklowStateAndReplication is a utility method to update workflow execution
-func (s *TestBase) UpdateWorklowStateAndReplication(updatedInfo *persistence.WorkflowExecutionInfo,
-	updatedReplicationState *persistence.ReplicationState, newBufferedReplicationTask *persistence.BufferedReplicationTask,
-	deleteBufferedReplicationTask *int64, condition int64, txTasks []persistence.Task) error {
+func (s *TestBase) UpdateWorklowStateAndReplication(updatedInfo *p.WorkflowExecutionInfo,
+	updatedReplicationState *p.ReplicationState, newBufferedReplicationTask *p.BufferedReplicationTask,
+	deleteBufferedReplicationTask *int64, condition int64, txTasks []p.Task) error {
 	return s.UpdateWorkflowExecutionWithReplication(updatedInfo, updatedReplicationState, nil, nil,
 		s.ShardInfo.RangeID, condition, nil, txTasks, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "",
 		newBufferedReplicationTask, deleteBufferedReplicationTask)
 }
 
 // UpdateWorkflowExecutionWithRangeID is a utility method to update workflow execution
-func (s *TestBase) UpdateWorkflowExecutionWithRangeID(updatedInfo *persistence.WorkflowExecutionInfo, decisionScheduleIDs []int64,
-	activityScheduleIDs []int64, rangeID, condition int64, timerTasks []persistence.Task, deleteTimerTask persistence.Task,
-	upsertActivityInfos []*persistence.ActivityInfo, deleteActivityInfos []int64, upsertTimerInfos []*persistence.TimerInfo,
-	deleteTimerInfos []string, upsertChildInfos []*persistence.ChildExecutionInfo, deleteChildInfo *int64,
-	upsertCancelInfos []*persistence.RequestCancelInfo, deleteCancelInfo *int64,
-	upsertSignalInfos []*persistence.SignalInfo, deleteSignalInfo *int64,
+func (s *TestBase) UpdateWorkflowExecutionWithRangeID(updatedInfo *p.WorkflowExecutionInfo, decisionScheduleIDs []int64,
+	activityScheduleIDs []int64, rangeID, condition int64, timerTasks []p.Task, deleteTimerTask p.Task,
+	upsertActivityInfos []*p.ActivityInfo, deleteActivityInfos []int64, upsertTimerInfos []*p.TimerInfo,
+	deleteTimerInfos []string, upsertChildInfos []*p.ChildExecutionInfo, deleteChildInfo *int64,
+	upsertCancelInfos []*p.RequestCancelInfo, deleteCancelInfo *int64,
+	upsertSignalInfos []*p.SignalInfo, deleteSignalInfo *int64,
 	upsertSignalRequestedIDs []string, deleteSignalRequestedID string) error {
 	return s.UpdateWorkflowExecutionWithReplication(updatedInfo, nil, decisionScheduleIDs, activityScheduleIDs, rangeID,
-		condition, timerTasks, []persistence.Task{}, deleteTimerTask, upsertActivityInfos, deleteActivityInfos, upsertTimerInfos, deleteTimerInfos,
+		condition, timerTasks, []p.Task{}, deleteTimerTask, upsertActivityInfos, deleteActivityInfos, upsertTimerInfos, deleteTimerInfos,
 		upsertChildInfos, deleteChildInfo, upsertCancelInfos, deleteCancelInfo, upsertSignalInfos, deleteSignalInfo,
 		upsertSignalRequestedIDs, deleteSignalRequestedID, nil, nil)
 }
 
 // UpdateWorkflowExecutionWithReplication is a utility method to update workflow execution
-func (s *TestBase) UpdateWorkflowExecutionWithReplication(updatedInfo *persistence.WorkflowExecutionInfo,
-	updatedReplicationState *persistence.ReplicationState, decisionScheduleIDs []int64, activityScheduleIDs []int64, rangeID,
-	condition int64, timerTasks []persistence.Task, txTasks []persistence.Task, deleteTimerTask persistence.Task, upsertActivityInfos []*persistence.ActivityInfo,
-	deleteActivityInfos []int64, upsertTimerInfos []*persistence.TimerInfo, deleteTimerInfos []string,
-	upsertChildInfos []*persistence.ChildExecutionInfo, deleteChildInfo *int64, upsertCancelInfos []*persistence.RequestCancelInfo,
-	deleteCancelInfo *int64, upsertSignalInfos []*persistence.SignalInfo, deleteSignalInfo *int64, upsertSignalRequestedIDs []string,
-	deleteSignalRequestedID string, newBufferedReplicationTask *persistence.BufferedReplicationTask,
+func (s *TestBase) UpdateWorkflowExecutionWithReplication(updatedInfo *p.WorkflowExecutionInfo,
+	updatedReplicationState *p.ReplicationState, decisionScheduleIDs []int64, activityScheduleIDs []int64, rangeID,
+	condition int64, timerTasks []p.Task, txTasks []p.Task, deleteTimerTask p.Task, upsertActivityInfos []*p.ActivityInfo,
+	deleteActivityInfos []int64, upsertTimerInfos []*p.TimerInfo, deleteTimerInfos []string,
+	upsertChildInfos []*p.ChildExecutionInfo, deleteChildInfo *int64, upsertCancelInfos []*p.RequestCancelInfo,
+	deleteCancelInfo *int64, upsertSignalInfos []*p.SignalInfo, deleteSignalInfo *int64, upsertSignalRequestedIDs []string,
+	deleteSignalRequestedID string, newBufferedReplicationTask *p.BufferedReplicationTask,
 	deleteBufferedReplicationTask *int64) error {
-	var transferTasks []persistence.Task
-	var replicationTasks []persistence.Task
+	var transferTasks []p.Task
+	var replicationTasks []p.Task
 	for _, task := range txTasks {
 		switch t := task.(type) {
-		case *persistence.DecisionTask, *persistence.ActivityTask, *persistence.CloseExecutionTask, *persistence.CancelExecutionTask, *persistence.StartChildExecutionTask, *persistence.SignalExecutionTask:
+		case *p.DecisionTask, *p.ActivityTask, *p.CloseExecutionTask, *p.CancelExecutionTask, *p.StartChildExecutionTask, *p.SignalExecutionTask:
 			transferTasks = append(transferTasks, t)
-		case *persistence.HistoryReplicationTask:
+		case *p.HistoryReplicationTask:
 			replicationTasks = append(replicationTasks, t)
 		default:
 			panic("Unknown transfer task type.")
 		}
 	}
 	for _, decisionScheduleID := range decisionScheduleIDs {
-		transferTasks = append(transferTasks, &persistence.DecisionTask{
+		transferTasks = append(transferTasks, &p.DecisionTask{
 			TaskID:     s.GetNextSequenceNumber(),
 			DomainID:   updatedInfo.DomainID,
 			TaskList:   updatedInfo.TaskList,
@@ -520,14 +520,14 @@ func (s *TestBase) UpdateWorkflowExecutionWithReplication(updatedInfo *persisten
 	}
 
 	for _, activityScheduleID := range activityScheduleIDs {
-		transferTasks = append(transferTasks, &persistence.ActivityTask{
+		transferTasks = append(transferTasks, &p.ActivityTask{
 			TaskID:     s.GetNextSequenceNumber(),
 			DomainID:   updatedInfo.DomainID,
 			TaskList:   updatedInfo.TaskList,
 			ScheduleID: int64(activityScheduleID)})
 	}
 
-	return s.WorkflowMgr.UpdateWorkflowExecution(&persistence.UpdateWorkflowExecutionRequest{
+	return s.WorkflowMgr.UpdateWorkflowExecution(&p.UpdateWorkflowExecutionRequest{
 		ExecutionInfo:                 updatedInfo,
 		ReplicationState:              updatedReplicationState,
 		TransferTasks:                 transferTasks,
@@ -555,8 +555,8 @@ func (s *TestBase) UpdateWorkflowExecutionWithReplication(updatedInfo *persisten
 
 // UpdateWorkflowExecutionWithTransferTasks is a utility method to update workflow execution
 func (s *TestBase) UpdateWorkflowExecutionWithTransferTasks(
-	updatedInfo *persistence.WorkflowExecutionInfo, condition int64, transferTasks []persistence.Task, upsertActivityInfo []*persistence.ActivityInfo) error {
-	return s.WorkflowMgr.UpdateWorkflowExecution(&persistence.UpdateWorkflowExecutionRequest{
+	updatedInfo *p.WorkflowExecutionInfo, condition int64, transferTasks []p.Task, upsertActivityInfo []*p.ActivityInfo) error {
+	return s.WorkflowMgr.UpdateWorkflowExecution(&p.UpdateWorkflowExecutionRequest{
 		ExecutionInfo:       updatedInfo,
 		TransferTasks:       transferTasks,
 		Condition:           condition,
@@ -567,8 +567,8 @@ func (s *TestBase) UpdateWorkflowExecutionWithTransferTasks(
 
 // UpdateWorkflowExecutionForChildExecutionsInitiated is a utility method to update workflow execution
 func (s *TestBase) UpdateWorkflowExecutionForChildExecutionsInitiated(
-	updatedInfo *persistence.WorkflowExecutionInfo, condition int64, transferTasks []persistence.Task, childInfos []*persistence.ChildExecutionInfo) error {
-	return s.WorkflowMgr.UpdateWorkflowExecution(&persistence.UpdateWorkflowExecutionRequest{
+	updatedInfo *p.WorkflowExecutionInfo, condition int64, transferTasks []p.Task, childInfos []*p.ChildExecutionInfo) error {
+	return s.WorkflowMgr.UpdateWorkflowExecution(&p.UpdateWorkflowExecutionRequest{
 		ExecutionInfo:             updatedInfo,
 		TransferTasks:             transferTasks,
 		Condition:                 condition,
@@ -579,9 +579,9 @@ func (s *TestBase) UpdateWorkflowExecutionForChildExecutionsInitiated(
 
 // UpdateWorkflowExecutionForRequestCancel is a utility method to update workflow execution
 func (s *TestBase) UpdateWorkflowExecutionForRequestCancel(
-	updatedInfo *persistence.WorkflowExecutionInfo, condition int64, transferTasks []persistence.Task,
-	upsertRequestCancelInfo []*persistence.RequestCancelInfo) error {
-	return s.WorkflowMgr.UpdateWorkflowExecution(&persistence.UpdateWorkflowExecutionRequest{
+	updatedInfo *p.WorkflowExecutionInfo, condition int64, transferTasks []p.Task,
+	upsertRequestCancelInfo []*p.RequestCancelInfo) error {
+	return s.WorkflowMgr.UpdateWorkflowExecution(&p.UpdateWorkflowExecutionRequest{
 		ExecutionInfo:            updatedInfo,
 		TransferTasks:            transferTasks,
 		Condition:                condition,
@@ -592,9 +592,9 @@ func (s *TestBase) UpdateWorkflowExecutionForRequestCancel(
 
 // UpdateWorkflowExecutionForSignal is a utility method to update workflow execution
 func (s *TestBase) UpdateWorkflowExecutionForSignal(
-	updatedInfo *persistence.WorkflowExecutionInfo, condition int64, transferTasks []persistence.Task,
-	upsertSignalInfos []*persistence.SignalInfo) error {
-	return s.WorkflowMgr.UpdateWorkflowExecution(&persistence.UpdateWorkflowExecutionRequest{
+	updatedInfo *p.WorkflowExecutionInfo, condition int64, transferTasks []p.Task,
+	upsertSignalInfos []*p.SignalInfo) error {
+	return s.WorkflowMgr.UpdateWorkflowExecution(&p.UpdateWorkflowExecutionRequest{
 		ExecutionInfo:     updatedInfo,
 		TransferTasks:     transferTasks,
 		Condition:         condition,
@@ -605,9 +605,9 @@ func (s *TestBase) UpdateWorkflowExecutionForSignal(
 
 // UpdateWorkflowExecutionForBufferEvents is a utility method to update workflow execution
 func (s *TestBase) UpdateWorkflowExecutionForBufferEvents(
-	updatedInfo *persistence.WorkflowExecutionInfo, rState *persistence.ReplicationState, condition int64,
-	bufferEvents *persistence.SerializedHistoryEventBatch) error {
-	return s.WorkflowMgr.UpdateWorkflowExecution(&persistence.UpdateWorkflowExecutionRequest{
+	updatedInfo *p.WorkflowExecutionInfo, rState *p.ReplicationState, condition int64,
+	bufferEvents *p.SerializedHistoryEventBatch) error {
+	return s.WorkflowMgr.UpdateWorkflowExecution(&p.UpdateWorkflowExecutionRequest{
 		ExecutionInfo:     updatedInfo,
 		ReplicationState:  rState,
 		NewBufferedEvents: bufferEvents,
@@ -617,28 +617,28 @@ func (s *TestBase) UpdateWorkflowExecutionForBufferEvents(
 }
 
 // UpdateAllMutableState is a utility method to update workflow execution
-func (s *TestBase) UpdateAllMutableState(updatedMutableState *persistence.WorkflowMutableState, condition int64) error {
-	var aInfos []*persistence.ActivityInfo
+func (s *TestBase) UpdateAllMutableState(updatedMutableState *p.WorkflowMutableState, condition int64) error {
+	var aInfos []*p.ActivityInfo
 	for _, ai := range updatedMutableState.ActivitInfos {
 		aInfos = append(aInfos, ai)
 	}
 
-	var tInfos []*persistence.TimerInfo
+	var tInfos []*p.TimerInfo
 	for _, ti := range updatedMutableState.TimerInfos {
 		tInfos = append(tInfos, ti)
 	}
 
-	var cInfos []*persistence.ChildExecutionInfo
+	var cInfos []*p.ChildExecutionInfo
 	for _, ci := range updatedMutableState.ChildExecutionInfos {
 		cInfos = append(cInfos, ci)
 	}
 
-	var rcInfos []*persistence.RequestCancelInfo
+	var rcInfos []*p.RequestCancelInfo
 	for _, rci := range updatedMutableState.RequestCancelInfos {
 		rcInfos = append(rcInfos, rci)
 	}
 
-	var sInfos []*persistence.SignalInfo
+	var sInfos []*p.SignalInfo
 	for _, si := range updatedMutableState.SignalInfos {
 		sInfos = append(sInfos, si)
 	}
@@ -647,7 +647,7 @@ func (s *TestBase) UpdateAllMutableState(updatedMutableState *persistence.Workfl
 	for id := range updatedMutableState.SignalRequestedIDs {
 		srIDs = append(srIDs, id)
 	}
-	return s.WorkflowMgr.UpdateWorkflowExecution(&persistence.UpdateWorkflowExecutionRequest{
+	return s.WorkflowMgr.UpdateWorkflowExecution(&p.UpdateWorkflowExecutionRequest{
 		ExecutionInfo:             updatedMutableState.ExecutionInfo,
 		ReplicationState:          updatedMutableState.ReplicationState,
 		Condition:                 condition,
@@ -662,10 +662,10 @@ func (s *TestBase) UpdateAllMutableState(updatedMutableState *persistence.Workfl
 }
 
 // ResetMutableState is  utility method to reset mutable state
-func (s *TestBase) ResetMutableState(prevRunID string, info *persistence.WorkflowExecutionInfo, replicationState *persistence.ReplicationState, nextEventID int64,
-	activityInfos []*persistence.ActivityInfo, timerInfos []*persistence.TimerInfo, childExecutionInfos []*persistence.ChildExecutionInfo,
-	requestCancelInfos []*persistence.RequestCancelInfo, signalInfos []*persistence.SignalInfo, ids []string) error {
-	return s.WorkflowMgr.ResetMutableState(&persistence.ResetMutableStateRequest{
+func (s *TestBase) ResetMutableState(prevRunID string, info *p.WorkflowExecutionInfo, replicationState *p.ReplicationState, nextEventID int64,
+	activityInfos []*p.ActivityInfo, timerInfos []*p.TimerInfo, childExecutionInfos []*p.ChildExecutionInfo,
+	requestCancelInfos []*p.RequestCancelInfo, signalInfos []*p.SignalInfo, ids []string) error {
+	return s.WorkflowMgr.ResetMutableState(&p.ResetMutableStateRequest{
 		PrevRunID:                 prevRunID,
 		ExecutionInfo:             info,
 		ReplicationState:          replicationState,
@@ -681,8 +681,8 @@ func (s *TestBase) ResetMutableState(prevRunID string, info *persistence.Workflo
 }
 
 // DeleteWorkflowExecution is a utility method to delete a workflow execution
-func (s *TestBase) DeleteWorkflowExecution(info *persistence.WorkflowExecutionInfo) error {
-	return s.WorkflowMgr.DeleteWorkflowExecution(&persistence.DeleteWorkflowExecutionRequest{
+func (s *TestBase) DeleteWorkflowExecution(info *p.WorkflowExecutionInfo) error {
+	return s.WorkflowMgr.DeleteWorkflowExecution(&p.DeleteWorkflowExecutionRequest{
 		DomainID:   info.DomainID,
 		WorkflowID: info.WorkflowID,
 		RunID:      info.RunID,
@@ -690,13 +690,13 @@ func (s *TestBase) DeleteWorkflowExecution(info *persistence.WorkflowExecutionIn
 }
 
 // GetTransferTasks is a utility method to get tasks from transfer task queue
-func (s *TestBase) GetTransferTasks(batchSize int, getAll bool) ([]*persistence.TransferTaskInfo, error) {
-	result := []*persistence.TransferTaskInfo{}
+func (s *TestBase) GetTransferTasks(batchSize int, getAll bool) ([]*p.TransferTaskInfo, error) {
+	result := []*p.TransferTaskInfo{}
 	var token []byte
 
 Loop:
 	for {
-		response, err := s.WorkflowMgr.GetTransferTasks(&persistence.GetTransferTasksRequest{
+		response, err := s.WorkflowMgr.GetTransferTasks(&p.GetTransferTasksRequest{
 			ReadLevel:     s.GetTransferReadLevel(),
 			MaxReadLevel:  int64(math.MaxInt64),
 			BatchSize:     batchSize,
@@ -721,13 +721,13 @@ Loop:
 }
 
 // GetReplicationTasks is a utility method to get tasks from replication task queue
-func (s *TestBase) GetReplicationTasks(batchSize int, getAll bool) ([]*persistence.ReplicationTaskInfo, error) {
-	result := []*persistence.ReplicationTaskInfo{}
+func (s *TestBase) GetReplicationTasks(batchSize int, getAll bool) ([]*p.ReplicationTaskInfo, error) {
+	result := []*p.ReplicationTaskInfo{}
 	var token []byte
 
 Loop:
 	for {
-		response, err := s.WorkflowMgr.GetReplicationTasks(&persistence.GetReplicationTasksRequest{
+		response, err := s.WorkflowMgr.GetReplicationTasks(&p.GetReplicationTasksRequest{
 			ReadLevel:     s.GetReplicationReadLevel(),
 			MaxReadLevel:  int64(math.MaxInt64),
 			BatchSize:     batchSize,
@@ -754,14 +754,14 @@ Loop:
 // CompleteTransferTask is a utility method to complete a transfer task
 func (s *TestBase) CompleteTransferTask(taskID int64) error {
 
-	return s.WorkflowMgr.CompleteTransferTask(&persistence.CompleteTransferTaskRequest{
+	return s.WorkflowMgr.CompleteTransferTask(&p.CompleteTransferTaskRequest{
 		TaskID: taskID,
 	})
 }
 
 // RangeCompleteTransferTask is a utility method to complete a range of transfer tasks
 func (s *TestBase) RangeCompleteTransferTask(exclusiveBeginTaskID int64, inclusiveEndTaskID int64) error {
-	return s.WorkflowMgr.RangeCompleteTransferTask(&persistence.RangeCompleteTransferTaskRequest{
+	return s.WorkflowMgr.RangeCompleteTransferTask(&p.RangeCompleteTransferTaskRequest{
 		ExclusiveBeginTaskID: exclusiveBeginTaskID,
 		InclusiveEndTaskID:   inclusiveEndTaskID,
 	})
@@ -770,19 +770,19 @@ func (s *TestBase) RangeCompleteTransferTask(exclusiveBeginTaskID int64, inclusi
 // CompleteReplicationTask is a utility method to complete a replication task
 func (s *TestBase) CompleteReplicationTask(taskID int64) error {
 
-	return s.WorkflowMgr.CompleteReplicationTask(&persistence.CompleteReplicationTaskRequest{
+	return s.WorkflowMgr.CompleteReplicationTask(&p.CompleteReplicationTaskRequest{
 		TaskID: taskID,
 	})
 }
 
 // GetTimerIndexTasks is a utility method to get tasks from transfer task queue
-func (s *TestBase) GetTimerIndexTasks(batchSize int, getAll bool) ([]*persistence.TimerTaskInfo, error) {
-	result := []*persistence.TimerTaskInfo{}
+func (s *TestBase) GetTimerIndexTasks(batchSize int, getAll bool) ([]*p.TimerTaskInfo, error) {
+	result := []*p.TimerTaskInfo{}
 	var token []byte
 
 Loop:
 	for {
-		response, err := s.WorkflowMgr.GetTimerIndexTasks(&persistence.GetTimerIndexTasksRequest{
+		response, err := s.WorkflowMgr.GetTimerIndexTasks(&p.GetTimerIndexTasksRequest{
 			MinTimestamp:  time.Time{},
 			MaxTimestamp:  time.Unix(0, math.MaxInt64),
 			BatchSize:     batchSize,
@@ -804,7 +804,7 @@ Loop:
 
 // CompleteTimerTask is a utility method to complete a timer task
 func (s *TestBase) CompleteTimerTask(ts time.Time, taskID int64) error {
-	return s.WorkflowMgr.CompleteTimerTask(&persistence.CompleteTimerTaskRequest{
+	return s.WorkflowMgr.CompleteTimerTask(&p.CompleteTimerTaskRequest{
 		VisibilityTimestamp: ts,
 		TaskID:              taskID,
 	})
@@ -812,7 +812,7 @@ func (s *TestBase) CompleteTimerTask(ts time.Time, taskID int64) error {
 
 // RangeCompleteTimerTask is a utility method to complete a range of timer tasks
 func (s *TestBase) RangeCompleteTimerTask(inclusiveBeginTimestamp time.Time, exclusiveEndTimestamp time.Time) error {
-	return s.WorkflowMgr.RangeCompleteTimerTask(&persistence.RangeCompleteTimerTaskRequest{
+	return s.WorkflowMgr.RangeCompleteTimerTask(&p.RangeCompleteTimerTaskRequest{
 		InclusiveBeginTimestamp: inclusiveBeginTimestamp,
 		ExclusiveEndTimestamp:   exclusiveEndTimestamp,
 	})
@@ -821,21 +821,21 @@ func (s *TestBase) RangeCompleteTimerTask(inclusiveBeginTimestamp time.Time, exc
 // CreateDecisionTask is a utility method to create a task
 func (s *TestBase) CreateDecisionTask(domainID string, workflowExecution workflow.WorkflowExecution, taskList string,
 	decisionScheduleID int64) (int64, error) {
-	leaseResponse, err := s.TaskMgr.LeaseTaskList(&persistence.LeaseTaskListRequest{
+	leaseResponse, err := s.TaskMgr.LeaseTaskList(&p.LeaseTaskListRequest{
 		DomainID: domainID,
 		TaskList: taskList,
-		TaskType: persistence.TaskListTypeDecision,
+		TaskType: p.TaskListTypeDecision,
 	})
 	if err != nil {
 		return 0, err
 	}
 
 	taskID := s.GetNextSequenceNumber()
-	tasks := []*persistence.CreateTaskInfo{
+	tasks := []*p.CreateTaskInfo{
 		{
 			TaskID:    taskID,
 			Execution: workflowExecution,
-			Data: &persistence.TaskInfo{
+			Data: &p.TaskInfo{
 				DomainID:   domainID,
 				WorkflowID: *workflowExecution.WorkflowId,
 				RunID:      *workflowExecution.RunId,
@@ -845,7 +845,7 @@ func (s *TestBase) CreateDecisionTask(domainID string, workflowExecution workflo
 		},
 	}
 
-	_, err = s.TaskMgr.CreateTasks(&persistence.CreateTasksRequest{
+	_, err = s.TaskMgr.CreateTasks(&p.CreateTasksRequest{
 		TaskListInfo: leaseResponse.TaskListInfo,
 		Tasks:        tasks,
 	})
@@ -862,21 +862,21 @@ func (s *TestBase) CreateActivityTasks(domainID string, workflowExecution workfl
 	activities map[int64]string) ([]int64, error) {
 
 	var taskIDs []int64
-	var leaseResponse *persistence.LeaseTaskListResponse
+	var leaseResponse *p.LeaseTaskListResponse
 	var err error
 	for activityScheduleID, taskList := range activities {
 
 		leaseResponse, err = s.TaskMgr.LeaseTaskList(
-			&persistence.LeaseTaskListRequest{DomainID: domainID, TaskList: taskList, TaskType: persistence.TaskListTypeActivity})
+			&p.LeaseTaskListRequest{DomainID: domainID, TaskList: taskList, TaskType: p.TaskListTypeActivity})
 		if err != nil {
 			return []int64{}, err
 		}
 		taskID := s.GetNextSequenceNumber()
-		tasks := []*persistence.CreateTaskInfo{
+		tasks := []*p.CreateTaskInfo{
 			{
 				TaskID:    taskID,
 				Execution: workflowExecution,
-				Data: &persistence.TaskInfo{
+				Data: &p.TaskInfo{
 					DomainID:   domainID,
 					WorkflowID: *workflowExecution.WorkflowId,
 					RunID:      *workflowExecution.RunId,
@@ -885,7 +885,7 @@ func (s *TestBase) CreateActivityTasks(domainID string, workflowExecution workfl
 				},
 			},
 		}
-		_, err := s.TaskMgr.CreateTasks(&persistence.CreateTasksRequest{
+		_, err := s.TaskMgr.CreateTasks(&p.CreateTasksRequest{
 			TaskListInfo: leaseResponse.TaskListInfo,
 			Tasks:        tasks,
 		})
@@ -901,8 +901,8 @@ func (s *TestBase) CreateActivityTasks(domainID string, workflowExecution workfl
 }
 
 // GetTasks is a utility method to get tasks from persistence
-func (s *TestBase) GetTasks(domainID, taskList string, taskType int, batchSize int) (*persistence.GetTasksResponse, error) {
-	leaseResponse, err := s.TaskMgr.LeaseTaskList(&persistence.LeaseTaskListRequest{
+func (s *TestBase) GetTasks(domainID, taskList string, taskType int, batchSize int) (*p.GetTasksResponse, error) {
+	leaseResponse, err := s.TaskMgr.LeaseTaskList(&p.LeaseTaskListRequest{
 		DomainID: domainID,
 		TaskList: taskList,
 		TaskType: taskType,
@@ -911,7 +911,7 @@ func (s *TestBase) GetTasks(domainID, taskList string, taskType int, batchSize i
 		return nil, err
 	}
 
-	response, err := s.TaskMgr.GetTasks(&persistence.GetTasksRequest{
+	response, err := s.TaskMgr.GetTasks(&p.GetTasksRequest{
 		DomainID:     domainID,
 		TaskList:     taskList,
 		TaskType:     taskType,
@@ -924,12 +924,12 @@ func (s *TestBase) GetTasks(domainID, taskList string, taskType int, batchSize i
 		return nil, err
 	}
 
-	return &persistence.GetTasksResponse{Tasks: response.Tasks}, nil
+	return &p.GetTasksResponse{Tasks: response.Tasks}, nil
 }
 
 // CompleteTask is a utility method to complete a task
 func (s *TestBase) CompleteTask(domainID, taskList string, taskType int, taskID int64, ackLevel int64) error {
-	leaseResponse, err := s.TaskMgr.LeaseTaskList(&persistence.LeaseTaskListRequest{
+	leaseResponse, err := s.TaskMgr.LeaseTaskList(&p.LeaseTaskListRequest{
 		DomainID: domainID,
 		TaskList: taskList,
 		TaskType: taskType,
@@ -938,8 +938,8 @@ func (s *TestBase) CompleteTask(domainID, taskList string, taskType int, taskID 
 		return err
 	}
 
-	return s.TaskMgr.CompleteTask(&persistence.CompleteTaskRequest{
-		TaskList: &persistence.TaskListInfo{
+	return s.TaskMgr.CompleteTask(&p.CompleteTaskRequest{
+		TaskList: &p.TaskListInfo{
 			DomainID: domainID,
 			AckLevel: ackLevel,
 			TaskType: taskType,

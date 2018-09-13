@@ -30,7 +30,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	gen "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common/persistence"
+	p "github.com/uber/cadence/common/persistence"
 )
 
 type (
@@ -69,7 +69,7 @@ func (s *ShardPersistenceSuite) TestCreateShard() {
 
 	err1 := s.CreateShard(19, "test_create_shard2", 124)
 	s.NotNil(err1, "expected non nil error.")
-	s.IsType(&persistence.ShardAlreadyExistError{}, err1)
+	s.IsType(&p.ShardAlreadyExistError{}, err1)
 	log.Infof("CreateShard failed with error: %v", err1)
 }
 
@@ -143,7 +143,7 @@ func (s *ShardPersistenceSuite) TestUpdateShard() {
 	failedUpdateInfo.ReplicationAckLevel = int64(5000)
 	err4 := s.UpdateShard(failedUpdateInfo, shardInfo.RangeID)
 	s.NotNil(err4)
-	s.IsType(&persistence.ShardOwnershipLostError{}, err4)
+	s.IsType(&p.ShardOwnershipLostError{}, err4)
 	log.Infof("Update shard failed with error: %v", err4)
 
 	info2, err5 := s.GetShard(shardID)
@@ -157,8 +157,8 @@ func (s *ShardPersistenceSuite) TestUpdateShard() {
 	s.Equal(updatedTimerAckLevel.Unix(), info1.TimerAckLevel.Unix())
 }
 
-func copyShardInfo(sourceInfo *persistence.ShardInfo) *persistence.ShardInfo {
-	return &persistence.ShardInfo{
+func copyShardInfo(sourceInfo *p.ShardInfo) *p.ShardInfo {
+	return &p.ShardInfo{
 		ShardID:             sourceInfo.ShardID,
 		Owner:               sourceInfo.Owner,
 		RangeID:             sourceInfo.RangeID,

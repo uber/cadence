@@ -30,7 +30,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/persistence"
+	p "github.com/uber/cadence/common/persistence"
 )
 
 type (
@@ -71,7 +71,7 @@ func (s *HistoryPersistenceSuite) TestAppendHistoryEvents() {
 	}
 
 	events1 := []byte("event1;event2")
-	serializedHistory := &persistence.SerializedHistoryEventBatch{Version: 1, EncodingType: common.EncodingTypeJSON, Data: events1}
+	serializedHistory := &p.SerializedHistoryEventBatch{Version: 1, EncodingType: common.EncodingTypeJSON, Data: events1}
 	err0 := s.AppendHistoryEvents(domainID, workflowExecution, 1, common.EmptyVersion, 1, 1, serializedHistory, false)
 	s.Nil(err0)
 
@@ -84,7 +84,7 @@ func (s *HistoryPersistenceSuite) TestAppendHistoryEvents() {
 	serializedHistory.Data = events2New
 	err2 := s.AppendHistoryEvents(domainID, workflowExecution, 3, common.EmptyVersion, 1, 1, serializedHistory, false)
 	s.NotNil(err2)
-	s.IsType(&persistence.ConditionFailedError{}, err2)
+	s.IsType(&p.ConditionFailedError{}, err2)
 
 	err3 := s.AppendHistoryEvents(domainID, workflowExecution, 3, common.EmptyVersion, 1, 2, serializedHistory, true)
 	s.Nil(err3)
@@ -110,7 +110,7 @@ func (s *HistoryPersistenceSuite) TestGetHistoryEvents() {
 }
 
 type testBatchEvent struct {
-	batch  *persistence.SerializedHistoryEventBatch
+	batch  *p.SerializedHistoryEventBatch
 	events []*gen.HistoryEvent
 }
 
@@ -121,8 +121,8 @@ func newBatchEventForTest(eventIDs []int64, version int64) *testBatchEvent {
 		events = append(events, e)
 	}
 
-	historySerializer := persistence.NewJSONHistorySerializer()
-	batch, err := historySerializer.Serialize(persistence.NewHistoryEventBatch(persistence.GetDefaultHistoryVersion(), events))
+	historySerializer := p.NewJSONHistorySerializer()
+	batch, err := historySerializer.Serialize(p.NewHistoryEventBatch(p.GetDefaultHistoryVersion(), events))
 	if err != nil {
 		panic(err)
 	}
@@ -311,9 +311,9 @@ func (s *HistoryPersistenceSuite) TestOverwriteAndShadowingHistoryEvents() {
 
 // AppendHistoryEvents helper
 func (s *HistoryPersistenceSuite) AppendHistoryEvents(domainID string, workflowExecution gen.WorkflowExecution,
-	firstEventID, eventBatchVersion int64, rangeID, txID int64, eventsBatch *persistence.SerializedHistoryEventBatch, overwrite bool) error {
+	firstEventID, eventBatchVersion int64, rangeID, txID int64, eventsBatch *p.SerializedHistoryEventBatch, overwrite bool) error {
 
-	return s.HistoryMgr.AppendHistoryEvents(&persistence.AppendHistoryEventsRequest{
+	return s.HistoryMgr.AppendHistoryEvents(&p.AppendHistoryEventsRequest{
 		DomainID:          domainID,
 		Execution:         workflowExecution,
 		FirstEventID:      firstEventID,
@@ -329,7 +329,7 @@ func (s *HistoryPersistenceSuite) AppendHistoryEvents(domainID string, workflowE
 func (s *HistoryPersistenceSuite) GetWorkflowExecutionHistory(domainID string, workflowExecution gen.WorkflowExecution,
 	firstEventID, nextEventID int64, pageSize int, token []byte) (*gen.History, []byte, error) {
 
-	response, err := s.HistoryMgr.GetWorkflowExecutionHistory(&persistence.GetWorkflowExecutionHistoryRequest{
+	response, err := s.HistoryMgr.GetWorkflowExecutionHistory(&p.GetWorkflowExecutionHistoryRequest{
 		DomainID:      domainID,
 		Execution:     workflowExecution,
 		FirstEventID:  firstEventID,
@@ -349,7 +349,7 @@ func (s *HistoryPersistenceSuite) GetWorkflowExecutionHistory(domainID string, w
 func (s *HistoryPersistenceSuite) DeleteWorkflowExecutionHistory(domainID string,
 	workflowExecution gen.WorkflowExecution) error {
 
-	return s.HistoryMgr.DeleteWorkflowExecutionHistory(&persistence.DeleteWorkflowExecutionHistoryRequest{
+	return s.HistoryMgr.DeleteWorkflowExecutionHistory(&p.DeleteWorkflowExecutionHistoryRequest{
 		DomainID:  domainID,
 		Execution: workflowExecution,
 	})
