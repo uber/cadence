@@ -4,22 +4,7 @@ cassandra:
   keyspace: "cadence"
   visibilityKeyspace: "cadence_visibility"
   consistency: "One"
-  numHistoryShards: 1
-
-persistence:
-  databases:
-    sql1:
-      sql:
-        name: "foo"
-        user: "bar"
-    cas1:
-      cassandra:
-        keyspace: "sql1"
-
-  managers:
-    metadata: "cas1"
-    visibility: "sql1"
-    historyt: "cas1"
+  numHistoryShards: 4
 
 ringpop:
   name: cadence
