@@ -887,7 +887,7 @@ type (
 		LastMinNodeID int64
 	}
 
-	// ForkHistoryBranchRequest is ued to fork a history branch
+	// ForkHistoryBranchRequest is used to fork a history branch
 	ForkHistoryBranchRequest struct {
 		// The branch to be fork
 		BranchInfo HistoryBranch
