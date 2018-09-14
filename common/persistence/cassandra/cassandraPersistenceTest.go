@@ -80,7 +80,7 @@ func InitTestSuiteWithMetadata(tb *persistencetests.TestBase, options *persisten
 		panic("nil metadata")
 	}
 	if options.SchemaDir == "" {
-		options.SchemaDir = "schema"
+		options.SchemaDir = testSchemaDir
 	}
 	log := bark.NewLoggerFromLogrus(log.New())
 	tb.PersistenceTestCluster = &TestCluster{}
