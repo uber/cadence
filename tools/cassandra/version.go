@@ -135,7 +135,7 @@ func VerifyCompatibleVersion(cfg config.Cassandra, rootPath string) error {
 	if err := checkCompatibleVersion(cfg, cfg.Keyspace, schemaPath); err != nil {
 		return err
 	}
-	schemaPath = path.Join(rootPath, "schema/visibility/versioned")
+	schemaPath = path.Join(rootPath, "schema/cassandra/visibility/versioned")
 	return checkCompatibleVersion(cfg, cfg.VisibilityKeyspace, schemaPath)
 }
 
