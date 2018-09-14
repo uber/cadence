@@ -131,7 +131,7 @@ func getExpectedVersion(dir string) (string, error) {
 // rollback, the code version (expected version) would fall lower than the actual version in
 // cassandra.
 func VerifyCompatibleVersion(cfg config.Cassandra, rootPath string) error {
-	schemaPath := path.Join(rootPath, "schema/cadence/versioned")
+	schemaPath := path.Join(rootPath, "schema/cassandra/cadence/versioned")
 	if err := checkCompatibleVersion(cfg, cfg.Keyspace, schemaPath); err != nil {
 		return err
 	}
