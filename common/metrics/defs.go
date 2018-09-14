@@ -450,7 +450,7 @@ const (
 	ReplicateHistoryEventsScope
 	// ShardInfoScope is the scope used when updating shard info
 	ShardInfoScope
-	// WorkflowContextScope is the scope used when by WorkflowContext component
+	// WorkflowContextScope is the scope used by WorkflowContext component
 	WorkflowContextScope
 	// HistoryCacheGetAndCreateScope is the scope used by history cache
 	HistoryCacheGetAndCreateScope
