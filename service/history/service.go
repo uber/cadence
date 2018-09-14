@@ -27,7 +27,6 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/cassandra"
-	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	sc "github.com/uber/cadence/service"
@@ -222,25 +221,14 @@ func (s *Service) Start() {
 
 	s.metricsClient = base.GetMetricsClient()
 
-	var shardMgr persistence.ShardManager
-	var err error
-	if sc.UseMysql || sc.UseSqlExecutions || sc.UseSqlShard {
-		shardMgr, err = sql.NewShardPersistence("uber",
-			"uber",
-			"localhost",
-			"3306",
-			"catalyst_test",
-			p.ClusterMetadata.GetCurrentClusterName())
-	} else {
-		shardMgr, err = cassandra.NewShardPersistence(p.CassandraConfig.Hosts,
-			p.CassandraConfig.Port,
-			p.CassandraConfig.User,
-			p.CassandraConfig.Password,
-			p.CassandraConfig.Datacenter,
-			p.CassandraConfig.Keyspace,
-			p.ClusterMetadata.GetCurrentClusterName(),
-			p.Logger)
-	}
+	shardMgr, err := cassandra.NewShardPersistence(p.CassandraConfig.Hosts,
+		p.CassandraConfig.Port,
+		p.CassandraConfig.User,
+		p.CassandraConfig.Password,
+		p.CassandraConfig.Datacenter,
+		p.CassandraConfig.Keyspace,
+		p.ClusterMetadata.GetCurrentClusterName(),
+		p.Logger)
 
 	if err != nil {
 		log.Fatalf("failed to create shard manager: %v", err)
@@ -248,23 +236,14 @@ func (s *Service) Start() {
 	shardMgr = persistence.NewShardPersistenceRateLimitedClient(shardMgr, persistenceRateLimiter, log)
 	shardMgr = persistence.NewShardPersistenceMetricsClient(shardMgr, base.GetMetricsClient(), log)
 
-	var metadata persistence.MetadataManager
-	if sc.UseMysql || sc.UseSqlMetadata {
-		metadata, err = sql.NewMetadataPersistence("uber",
-			"uber",
-			"localhost",
-			"3306",
-			"catalyst_test")
-	} else {
-		metadata, err = cassandra.NewMetadataManagerProxy(p.CassandraConfig.Hosts,
-			p.CassandraConfig.Port,
-			p.CassandraConfig.User,
-			p.CassandraConfig.Password,
-			p.CassandraConfig.Datacenter,
-			p.CassandraConfig.Keyspace,
-			p.ClusterMetadata.GetCurrentClusterName(),
-			p.Logger)
-	}
+	metadata, err := cassandra.NewMetadataManagerProxy(p.CassandraConfig.Hosts,
+		p.CassandraConfig.Port,
+		p.CassandraConfig.User,
+		p.CassandraConfig.Password,
+		p.CassandraConfig.Datacenter,
+		p.CassandraConfig.Keyspace,
+		p.ClusterMetadata.GetCurrentClusterName(),
+		p.Logger)
 
 	if err != nil {
 		log.Fatalf("failed to create metadata manager: %v", err)
@@ -289,24 +268,14 @@ func (s *Service) Start() {
 	}
 	visibility = persistence.NewVisibilityPersistenceMetricsClient(visibility, base.GetMetricsClient(), log)
 
-	var history persistence.HistoryManager
-	if sc.UseMysql || sc.UseSqlHistory {
-		history, err = sql.NewHistoryPersistence("uber",
-			"uber",
-			"localhost",
-			"3306",
-			"catalyst_test",
-			p.Logger)
-	} else {
-		history, err = cassandra.NewHistoryPersistence(p.CassandraConfig.Hosts,
-			p.CassandraConfig.Port,
-			p.CassandraConfig.User,
-			p.CassandraConfig.Password,
-			p.CassandraConfig.Datacenter,
-			p.CassandraConfig.Keyspace,
-			s.config.HistoryMgrNumConns(),
-			log)
-	}
+	history, err := cassandra.NewHistoryPersistence(p.CassandraConfig.Hosts,
+		p.CassandraConfig.Port,
+		p.CassandraConfig.User,
+		p.CassandraConfig.Password,
+		p.CassandraConfig.Datacenter,
+		p.CassandraConfig.Keyspace,
+		s.config.HistoryMgrNumConns(),
+		log)
 
 	if err != nil {
 		log.Fatalf("Creating Cassandra history manager persistence failed: %v", err)
@@ -314,22 +283,17 @@ func (s *Service) Start() {
 	history = persistence.NewHistoryPersistenceRateLimitedClient(history, persistenceRateLimiter, log)
 	history = persistence.NewHistoryPersistenceMetricsClient(history, base.GetMetricsClient(), log)
 
-	var execMgrFactory persistence.ExecutionManagerFactory
-	if sc.UseMysql || sc.UseSqlExecutions {
-		execMgrFactory, err = sql.NewPersistenceClientFactory(p.Logger)
-	} else {
-		execMgrFactory, err = cassandra.NewPersistenceClientFactory(p.CassandraConfig.Hosts,
-			p.CassandraConfig.Port,
-			p.CassandraConfig.User,
-			p.CassandraConfig.Password,
-			p.CassandraConfig.Datacenter,
-			p.CassandraConfig.Keyspace,
-			s.config.ExecutionMgrNumConns(),
-			p.Logger,
-			persistenceRateLimiter,
-			s.metricsClient,
-		)
-	}
+	execMgrFactory, err := cassandra.NewPersistenceClientFactory(p.CassandraConfig.Hosts,
+		p.CassandraConfig.Port,
+		p.CassandraConfig.User,
+		p.CassandraConfig.Password,
+		p.CassandraConfig.Datacenter,
+		p.CassandraConfig.Keyspace,
+		s.config.ExecutionMgrNumConns(),
+		p.Logger,
+		persistenceRateLimiter,
+		s.metricsClient,
+	)
 
 	if err != nil {
 		log.Fatalf("Creating Cassandra execution manager persistence factory failed: %v", err)

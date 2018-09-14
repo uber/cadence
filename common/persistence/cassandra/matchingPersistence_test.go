@@ -21,9 +21,10 @@
 package cassandra
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/suite"
 	"github.com/uber/cadence/common/persistence/persistence-tests"
-	"testing"
 )
 
 func TestMatchingPersistenceSuite(t *testing.T) {

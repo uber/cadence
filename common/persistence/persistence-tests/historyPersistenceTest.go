@@ -30,10 +30,11 @@ import (
 	"github.com/stretchr/testify/suite"
 	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/persistence"
+	p "github.com/uber/cadence/common/persistence"
 )
 
 type (
+	// HistoryPersistenceSuite contains history persistence tests
 	HistoryPersistenceSuite struct {
 		suite.Suite
 		TestBase
@@ -43,21 +44,25 @@ type (
 	}
 )
 
+// SetupSuite implementation
 func (s *HistoryPersistenceSuite) SetupSuite() {
 	if testing.Verbose() {
 		log.SetOutput(os.Stdout)
 	}
 }
 
+// SetupTest implementation
 func (s *HistoryPersistenceSuite) SetupTest() {
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
 }
 
+// TearDownSuite implementation
 func (s *HistoryPersistenceSuite) TearDownSuite() {
 	s.TearDownWorkflowStore()
 }
 
+// TestAppendHistoryEvents test
 func (s *HistoryPersistenceSuite) TestAppendHistoryEvents() {
 	domainID := "ff03c29f-fcf1-4aea-893d-1a7ec421e3ec"
 	workflowExecution := gen.WorkflowExecution{
@@ -66,7 +71,7 @@ func (s *HistoryPersistenceSuite) TestAppendHistoryEvents() {
 	}
 
 	events1 := []byte("event1;event2")
-	serializedHistory := &persistence.SerializedHistoryEventBatch{Version: 1, EncodingType: common.EncodingTypeJSON, Data: events1}
+	serializedHistory := &p.SerializedHistoryEventBatch{Version: 1, EncodingType: common.EncodingTypeJSON, Data: events1}
 	err0 := s.AppendHistoryEvents(domainID, workflowExecution, 1, common.EmptyVersion, 1, 1, serializedHistory, false)
 	s.Nil(err0)
 
@@ -79,12 +84,13 @@ func (s *HistoryPersistenceSuite) TestAppendHistoryEvents() {
 	serializedHistory.Data = events2New
 	err2 := s.AppendHistoryEvents(domainID, workflowExecution, 3, common.EmptyVersion, 1, 1, serializedHistory, false)
 	s.NotNil(err2)
-	s.IsType(&persistence.ConditionFailedError{}, err2)
+	s.IsType(&p.ConditionFailedError{}, err2)
 
 	err3 := s.AppendHistoryEvents(domainID, workflowExecution, 3, common.EmptyVersion, 1, 2, serializedHistory, true)
 	s.Nil(err3)
 }
 
+// TestGetHistoryEvents test
 func (s *HistoryPersistenceSuite) TestGetHistoryEvents() {
 	domainID := "0fdc53ef-b890-4870-a944-b9b028ac9742"
 	workflowExecution := gen.WorkflowExecution{
@@ -104,7 +110,7 @@ func (s *HistoryPersistenceSuite) TestGetHistoryEvents() {
 }
 
 type testBatchEvent struct {
-	batch  *persistence.SerializedHistoryEventBatch
+	batch  *p.SerializedHistoryEventBatch
 	events []*gen.HistoryEvent
 }
 
@@ -115,14 +121,15 @@ func newBatchEventForTest(eventIDs []int64, version int64) *testBatchEvent {
 		events = append(events, e)
 	}
 
-	historySerializer := persistence.NewJSONHistorySerializer()
-	batch, err := historySerializer.Serialize(persistence.NewHistoryEventBatch(persistence.GetDefaultHistoryVersion(), events))
+	historySerializer := p.NewJSONHistorySerializer()
+	batch, err := historySerializer.Serialize(p.NewHistoryEventBatch(p.GetDefaultHistoryVersion(), events))
 	if err != nil {
 		panic(err)
 	}
 	return &testBatchEvent{batch: batch, events: events}
 }
 
+// TestGetHistoryEventsCompatibility test
 func (s *HistoryPersistenceSuite) TestGetHistoryEventsCompatibility() {
 	domainID := "373de9d6-e41e-42d4-bee9-9e06968e4d0d"
 	workflowExecution := gen.WorkflowExecution{
@@ -161,6 +168,7 @@ func (s *HistoryPersistenceSuite) TestGetHistoryEventsCompatibility() {
 	s.Equal(int64(7), history.Events[1].GetEventId())
 }
 
+// TestDeleteHistoryEvents test
 func (s *HistoryPersistenceSuite) TestDeleteHistoryEvents() {
 	domainID := "373de9d6-e41e-42d4-bee9-9e06968e4d0d"
 	workflowExecution := gen.WorkflowExecution{
@@ -198,6 +206,7 @@ func (s *HistoryPersistenceSuite) TestDeleteHistoryEvents() {
 	s.Nil(data1)
 }
 
+// TestAppendAndGet test
 func (s *HistoryPersistenceSuite) TestAppendAndGet() {
 	domainID := uuid.New()
 	workflowExecution := gen.WorkflowExecution{
@@ -227,6 +236,7 @@ func (s *HistoryPersistenceSuite) TestAppendAndGet() {
 	}
 }
 
+// TestOverwriteAndShadowingHistoryEvents test
 func (s *HistoryPersistenceSuite) TestOverwriteAndShadowingHistoryEvents() {
 	domainID := "003de9c6-e41e-42d4-bee9-9e06968e4d0d"
 	workflowExecution := gen.WorkflowExecution{
@@ -299,10 +309,11 @@ func (s *HistoryPersistenceSuite) TestOverwriteAndShadowingHistoryEvents() {
 	}
 }
 
+// AppendHistoryEvents helper
 func (s *HistoryPersistenceSuite) AppendHistoryEvents(domainID string, workflowExecution gen.WorkflowExecution,
-	firstEventID, eventBatchVersion int64, rangeID, txID int64, eventsBatch *persistence.SerializedHistoryEventBatch, overwrite bool) error {
+	firstEventID, eventBatchVersion int64, rangeID, txID int64, eventsBatch *p.SerializedHistoryEventBatch, overwrite bool) error {
 
-	return s.HistoryMgr.AppendHistoryEvents(&persistence.AppendHistoryEventsRequest{
+	return s.HistoryMgr.AppendHistoryEvents(&p.AppendHistoryEventsRequest{
 		DomainID:          domainID,
 		Execution:         workflowExecution,
 		FirstEventID:      firstEventID,
@@ -314,10 +325,11 @@ func (s *HistoryPersistenceSuite) AppendHistoryEvents(domainID string, workflowE
 	})
 }
 
+// GetWorkflowExecutionHistory helper
 func (s *HistoryPersistenceSuite) GetWorkflowExecutionHistory(domainID string, workflowExecution gen.WorkflowExecution,
 	firstEventID, nextEventID int64, pageSize int, token []byte) (*gen.History, []byte, error) {
 
-	response, err := s.HistoryMgr.GetWorkflowExecutionHistory(&persistence.GetWorkflowExecutionHistoryRequest{
+	response, err := s.HistoryMgr.GetWorkflowExecutionHistory(&p.GetWorkflowExecutionHistoryRequest{
 		DomainID:      domainID,
 		Execution:     workflowExecution,
 		FirstEventID:  firstEventID,
@@ -333,10 +345,11 @@ func (s *HistoryPersistenceSuite) GetWorkflowExecutionHistory(domainID string, w
 	return response.History, response.NextPageToken, nil
 }
 
+// DeleteWorkflowExecutionHistory helper
 func (s *HistoryPersistenceSuite) DeleteWorkflowExecutionHistory(domainID string,
 	workflowExecution gen.WorkflowExecution) error {
 
-	return s.HistoryMgr.DeleteWorkflowExecutionHistory(&persistence.DeleteWorkflowExecutionHistoryRequest{
+	return s.HistoryMgr.DeleteWorkflowExecutionHistory(&p.DeleteWorkflowExecutionHistoryRequest{
 		DomainID:  domainID,
 		Execution: workflowExecution,
 	})

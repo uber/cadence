@@ -30,8 +30,6 @@ import (
 	"github.com/uber/cadence/common/service/dynamicconfig"
 
 	"github.com/uber/cadence/common/persistence/cassandra"
-
-	sc "github.com/uber/cadence/service"
 )
 
 // Config represents configuration for cadence-matching service
@@ -103,23 +101,13 @@ func (s *Service) Start() {
 	persistenceMaxQPS := s.config.PersistenceMaxQPS()
 	persistenceRateLimiter := common.NewTokenBucket(persistenceMaxQPS, common.NewRealTimeSource())
 
-	var taskPersistence persistence.TaskManager
-	var err error
-	if sc.UseMysql {
-		taskPersistence, err = sql.NewTaskPersistence("uber",
-			"uber",
-			"localhost",
-			"3306",
-			"catalyst_test")
-	} else {
-		taskPersistence, err = cassandra.NewTaskPersistence(p.CassandraConfig.Hosts,
-			p.CassandraConfig.Port,
-			p.CassandraConfig.User,
-			p.CassandraConfig.Password,
-			p.CassandraConfig.Datacenter,
-			p.CassandraConfig.Keyspace,
-			log)
-	}
+	taskPersistence, err := cassandra.NewTaskPersistence(p.CassandraConfig.Hosts,
+		p.CassandraConfig.Port,
+		p.CassandraConfig.User,
+		p.CassandraConfig.Password,
+		p.CassandraConfig.Datacenter,
+		p.CassandraConfig.Keyspace,
+		log)
 
 	if err != nil {
 		log.Fatalf("failed to create task persistence: %v", err)
@@ -127,24 +115,14 @@ func (s *Service) Start() {
 	taskPersistence = persistence.NewTaskPersistenceRateLimitedClient(taskPersistence, persistenceRateLimiter, log)
 	taskPersistence = persistence.NewTaskPersistenceMetricsClient(taskPersistence, base.GetMetricsClient(), log)
 
-	var metadata persistence.MetadataManager
-	if sc.UseMysql || sc.UseSqlMetadata {
-		metadata, err = sql.NewMetadataPersistence("uber",
-			"uber",
-			"localhost",
-			"3306",
-			"catalyst_test")
-
-	} else {
-		metadata, err = cassandra.NewMetadataManagerProxy(p.CassandraConfig.Hosts,
-			p.CassandraConfig.Port,
-			p.CassandraConfig.User,
-			p.CassandraConfig.Password,
-			p.CassandraConfig.Datacenter,
-			p.CassandraConfig.Keyspace,
-			p.ClusterMetadata.GetCurrentClusterName(),
-			log)
-	}
+	metadata, err := cassandra.NewMetadataManagerProxy(p.CassandraConfig.Hosts,
+		p.CassandraConfig.Port,
+		p.CassandraConfig.User,
+		p.CassandraConfig.Password,
+		p.CassandraConfig.Datacenter,
+		p.CassandraConfig.Keyspace,
+		p.ClusterMetadata.GetCurrentClusterName(),
+		log)
 
 	if err != nil {
 		log.Fatalf("failed to create metadata manager: %v", err)

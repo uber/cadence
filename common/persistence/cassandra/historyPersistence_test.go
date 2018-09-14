@@ -21,15 +21,14 @@
 package cassandra
 
 import (
-	"github.com/uber/cadence/common/persistence/persistence-tests"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
+	"github.com/uber/cadence/common/persistence/persistence-tests"
 )
 
 func TestHistoryPersistenceSuite(t *testing.T) {
 	s := new(persistencetests.HistoryPersistenceSuite)
 	InitTestSuite(&s.TestBase)
-	//suite.Run(t, s)
 	suite.Run(t, s)
 }

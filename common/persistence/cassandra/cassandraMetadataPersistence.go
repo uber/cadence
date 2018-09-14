@@ -25,7 +25,7 @@ import (
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/persistence"
+	p "github.com/uber/cadence/common/persistence"
 
 	"github.com/gocql/gocql"
 	"github.com/uber-common/bark"
@@ -100,7 +100,7 @@ type (
 
 // NewMetadataPersistence is used to create an instance of HistoryManager implementation
 func NewMetadataPersistence(hosts string, port int, user, password, dc string, keyspace string,
-	currentClusterName string, logger bark.Logger) (persistence.MetadataManager,
+	currentClusterName string, logger bark.Logger) (p.MetadataManager,
 	error) {
 	cluster := common.NewCassandraCluster(hosts, port, user, password, dc)
 	cluster.Keyspace = keyspace
@@ -132,7 +132,7 @@ func (m *cassandraMetadataPersistence) Close() {
 // 'Domains' table and then do a conditional insert into domains_by_name table.  If the conditional write fails we
 // delete the orphaned entry from domains table.  There is a chance delete entry could fail and we never delete the
 // orphaned entry from domains table.  We might need a background job to delete those orphaned record.
-func (m *cassandraMetadataPersistence) CreateDomain(request *persistence.CreateDomainRequest) (*persistence.CreateDomainResponse, error) {
+func (m *cassandraMetadataPersistence) CreateDomain(request *p.CreateDomainRequest) (*p.CreateDomainResponse, error) {
 	query := m.session.Query(templateCreateDomainQuery, request.Info.ID, request.Info.Name)
 	applied, err := query.ScanCAS()
 	if err != nil {
@@ -157,7 +157,7 @@ func (m *cassandraMetadataPersistence) CreateDomain(request *persistence.CreateD
 		request.Config.Retention,
 		request.Config.EmitMetric,
 		request.ReplicationConfig.ActiveClusterName,
-		persistence.SerializeClusterConfigs(request.ReplicationConfig.Clusters),
+		p.SerializeClusterConfigs(request.ReplicationConfig.Clusters),
 		request.IsGlobalDomain,
 		request.ConfigVersion,
 		request.FailoverVersion,
@@ -190,15 +190,15 @@ func (m *cassandraMetadataPersistence) CreateDomain(request *persistence.CreateD
 		}
 	}
 
-	return &persistence.CreateDomainResponse{ID: request.Info.ID}, nil
+	return &p.CreateDomainResponse{ID: request.Info.ID}, nil
 }
 
-func (m *cassandraMetadataPersistence) GetDomain(request *persistence.GetDomainRequest) (*persistence.GetDomainResponse, error) {
+func (m *cassandraMetadataPersistence) GetDomain(request *p.GetDomainRequest) (*p.GetDomainResponse, error) {
 	var query *gocql.Query
 	var err error
-	info := &persistence.DomainInfo{}
-	config := &persistence.DomainConfig{}
-	replicationConfig := &persistence.DomainReplicationConfig{}
+	info := &p.DomainInfo{}
+	config := &p.DomainConfig{}
+	replicationConfig := &p.DomainReplicationConfig{}
 	var replicationClusters []map[string]interface{}
 	var dbVersion int64
 	var failoverVersion int64
@@ -261,11 +261,11 @@ func (m *cassandraMetadataPersistence) GetDomain(request *persistence.GetDomainR
 		return nil, handleError(request.Name, request.ID, err)
 	}
 
-	replicationConfig.ActiveClusterName = persistence.GetOrUseDefaultActiveCluster(m.currentClusterName, replicationConfig.ActiveClusterName)
-	replicationConfig.Clusters = persistence.DeserializeClusterConfigs(replicationClusters)
-	replicationConfig.Clusters = persistence.GetOrUseDefaultClusters(m.currentClusterName, replicationConfig.Clusters)
+	replicationConfig.ActiveClusterName = p.GetOrUseDefaultActiveCluster(m.currentClusterName, replicationConfig.ActiveClusterName)
+	replicationConfig.Clusters = p.DeserializeClusterConfigs(replicationClusters)
+	replicationConfig.Clusters = p.GetOrUseDefaultClusters(m.currentClusterName, replicationConfig.Clusters)
 
-	return &persistence.GetDomainResponse{
+	return &p.GetDomainResponse{
 		Info:                info,
 		Config:              config,
 		ReplicationConfig:   replicationConfig,
@@ -276,7 +276,7 @@ func (m *cassandraMetadataPersistence) GetDomain(request *persistence.GetDomainR
 	}, nil
 }
 
-func (m *cassandraMetadataPersistence) UpdateDomain(request *persistence.UpdateDomainRequest) error {
+func (m *cassandraMetadataPersistence) UpdateDomain(request *p.UpdateDomainRequest) error {
 	var nextVersion int64 = 1
 	var currentVersion *int64
 	if request.NotificationVersion > 0 {
@@ -293,7 +293,7 @@ func (m *cassandraMetadataPersistence) UpdateDomain(request *persistence.UpdateD
 		request.Config.Retention,
 		request.Config.EmitMetric,
 		request.ReplicationConfig.ActiveClusterName,
-		persistence.SerializeClusterConfigs(request.ReplicationConfig.Clusters),
+		p.SerializeClusterConfigs(request.ReplicationConfig.Clusters),
 		request.ConfigVersion,
 		request.FailoverVersion,
 		nextVersion,
@@ -316,7 +316,7 @@ func (m *cassandraMetadataPersistence) UpdateDomain(request *persistence.UpdateD
 	return nil
 }
 
-func (m *cassandraMetadataPersistence) DeleteDomain(request *persistence.DeleteDomainRequest) error {
+func (m *cassandraMetadataPersistence) DeleteDomain(request *p.DeleteDomainRequest) error {
 	var name string
 	query := m.session.Query(templateGetDomainQuery, request.ID)
 	err := query.Scan(&name)
@@ -330,7 +330,7 @@ func (m *cassandraMetadataPersistence) DeleteDomain(request *persistence.DeleteD
 	return m.deleteDomain(name, request.ID)
 }
 
-func (m *cassandraMetadataPersistence) DeleteDomainByName(request *persistence.DeleteDomainByNameRequest) error {
+func (m *cassandraMetadataPersistence) DeleteDomainByName(request *p.DeleteDomainByNameRequest) error {
 	var ID string
 	query := m.session.Query(templateGetDomainByNameQuery, request.Name)
 	err := query.Scan(&ID, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
@@ -343,11 +343,11 @@ func (m *cassandraMetadataPersistence) DeleteDomainByName(request *persistence.D
 	return m.deleteDomain(request.Name, ID)
 }
 
-func (m *cassandraMetadataPersistence) ListDomains(request *persistence.ListDomainsRequest) (*persistence.ListDomainsResponse, error) {
+func (m *cassandraMetadataPersistence) ListDomains(request *p.ListDomainsRequest) (*p.ListDomainsResponse, error) {
 	panic("cassandraMetadataPersistence do not support list domain operation.")
 }
 
-func (m *cassandraMetadataPersistence) GetMetadata() (*persistence.GetMetadataResponse, error) {
+func (m *cassandraMetadataPersistence) GetMetadata() (*p.GetMetadataResponse, error) {
 	panic("cassandraMetadataPersistence do not support get metadata operation.")
 }
 

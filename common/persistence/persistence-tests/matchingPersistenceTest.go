@@ -33,10 +33,11 @@ import (
 	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/persistence"
+	p "github.com/uber/cadence/common/persistence"
 )
 
 type (
+	// MatchingPersistenceSuite contains matching persistence tests
 	MatchingPersistenceSuite struct {
 		suite.Suite
 		TestBase
@@ -50,22 +51,26 @@ type (
 // we need to use tolerance when doing comparison
 var timePrecision = 2 * time.Millisecond
 
+// SetupSuite implementation
 func (s *MatchingPersistenceSuite) SetupSuite() {
 	if testing.Verbose() {
 		log.SetOutput(os.Stdout)
 	}
 }
 
+// TearDownSuite implementation
 func (s *MatchingPersistenceSuite) TearDownSuite() {
 	s.TearDownWorkflowStore()
 }
 
+// SetupTest implementation
 func (s *MatchingPersistenceSuite) SetupTest() {
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
 	s.ClearTasks()
 }
 
+// TestPersistenceStartWorkflow test
 func (s *MatchingPersistenceSuite) TestPersistenceStartWorkflow() {
 	domainID := "2d7994bf-9de8-459d-9c81-e723daedb246"
 	workflowExecution := gen.WorkflowExecution{
@@ -79,16 +84,16 @@ func (s *MatchingPersistenceSuite) TestPersistenceStartWorkflow() {
 	task1, err1 := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType1", 20, 14, nil, 3, 0, 2, nil)
 	s.NotNil(err1, "Expected workflow creation to fail.")
 	log.Infof("Unable to start workflow execution: %v", err1)
-	startedErr, ok := err1.(*persistence.WorkflowExecutionAlreadyStartedError)
+	startedErr, ok := err1.(*p.WorkflowExecutionAlreadyStartedError)
 	s.True(ok)
 	s.Equal(workflowExecution.GetRunId(), startedErr.RunID, startedErr.Msg)
 
-	s.Equal(persistence.WorkflowStateRunning, startedErr.State, startedErr.Msg)
-	s.Equal(persistence.WorkflowCloseStatusNone, startedErr.CloseStatus, startedErr.Msg)
+	s.Equal(p.WorkflowStateRunning, startedErr.State, startedErr.Msg)
+	s.Equal(p.WorkflowCloseStatusNone, startedErr.CloseStatus, startedErr.Msg)
 	s.Equal(common.EmptyVersion, startedErr.LastWriteVersion, startedErr.Msg)
 	s.Empty(task1, "Expected empty task identifier.")
 
-	response, err2 := s.WorkflowMgr.CreateWorkflowExecution(&persistence.CreateWorkflowExecutionRequest{
+	response, err2 := s.WorkflowMgr.CreateWorkflowExecution(&p.CreateWorkflowExecutionRequest{
 		RequestID:            uuid.New(),
 		DomainID:             domainID,
 		Execution:            workflowExecution,
@@ -100,8 +105,8 @@ func (s *MatchingPersistenceSuite) TestPersistenceStartWorkflow() {
 		NextEventID:          int64(3),
 		LastProcessedEvent:   0,
 		RangeID:              s.ShardInfo.RangeID - 1,
-		TransferTasks: []persistence.Task{
-			&persistence.DecisionTask{
+		TransferTasks: []p.Task{
+			&p.DecisionTask{
 				TaskID:     s.GetNextSequenceNumber(),
 				DomainID:   domainID,
 				TaskList:   "queue1",
@@ -117,9 +122,10 @@ func (s *MatchingPersistenceSuite) TestPersistenceStartWorkflow() {
 	s.NotNil(err2, "Expected workflow creation to fail.")
 	s.Nil(response)
 	log.Infof("Unable to start workflow execution: %v", err2)
-	s.IsType(&persistence.ShardOwnershipLostError{}, err2)
+	s.IsType(&p.ShardOwnershipLostError{}, err2)
 }
 
+// TestPersistenceStartWorkflowWithReplicationState test
 func (s *MatchingPersistenceSuite) TestPersistenceStartWorkflowWithReplicationState() {
 	domainID := "2d7994bf-9de8-459d-9c81-e723daedb246"
 	workflowExecution := gen.WorkflowExecution{
@@ -128,7 +134,7 @@ func (s *MatchingPersistenceSuite) TestPersistenceStartWorkflowWithReplicationSt
 	}
 	startVersion := int64(144)
 	lastWriteVersion := int64(1444)
-	replicationState := &persistence.ReplicationState{
+	replicationState := &p.ReplicationState{
 		StartVersion:     startVersion, // we are only testing this attribute
 		CurrentVersion:   lastWriteVersion,
 		LastWriteVersion: lastWriteVersion,
@@ -140,15 +146,15 @@ func (s *MatchingPersistenceSuite) TestPersistenceStartWorkflowWithReplicationSt
 	task1, err1 := s.CreateWorkflowExecution(domainID, workflowExecution, "queue1", "wType1", 20, 14, nil, 3, 0, 2, nil)
 	s.NotNil(err1, "Expected workflow creation to fail.")
 	log.Infof("Unable to start workflow execution: %v", err1)
-	startedErr, ok := err1.(*persistence.WorkflowExecutionAlreadyStartedError)
+	startedErr, ok := err1.(*p.WorkflowExecutionAlreadyStartedError)
 	s.True(ok)
 	s.Equal(workflowExecution.GetRunId(), startedErr.RunID, startedErr.Msg)
-	s.Equal(persistence.WorkflowStateRunning, startedErr.State, startedErr.Msg)
-	s.Equal(persistence.WorkflowCloseStatusNone, startedErr.CloseStatus, startedErr.Msg)
+	s.Equal(p.WorkflowStateRunning, startedErr.State, startedErr.Msg)
+	s.Equal(p.WorkflowCloseStatusNone, startedErr.CloseStatus, startedErr.Msg)
 	s.Equal(lastWriteVersion, startedErr.LastWriteVersion, startedErr.Msg)
 	s.Empty(task1, "Expected empty task identifier.")
 
-	response, err2 := s.WorkflowMgr.CreateWorkflowExecution(&persistence.CreateWorkflowExecutionRequest{
+	response, err2 := s.WorkflowMgr.CreateWorkflowExecution(&p.CreateWorkflowExecutionRequest{
 		RequestID:            uuid.New(),
 		DomainID:             domainID,
 		Execution:            workflowExecution,
@@ -160,8 +166,8 @@ func (s *MatchingPersistenceSuite) TestPersistenceStartWorkflowWithReplicationSt
 		NextEventID:          int64(3),
 		LastProcessedEvent:   0,
 		RangeID:              s.ShardInfo.RangeID - 1,
-		TransferTasks: []persistence.Task{
-			&persistence.DecisionTask{
+		TransferTasks: []p.Task{
+			&p.DecisionTask{
 				TaskID:     s.GetNextSequenceNumber(),
 				DomainID:   domainID,
 				TaskList:   "queue1",
@@ -177,9 +183,10 @@ func (s *MatchingPersistenceSuite) TestPersistenceStartWorkflowWithReplicationSt
 	s.NotNil(err2, "Expected workflow creation to fail.")
 	s.Nil(response)
 	log.Infof("Unable to start workflow execution: %v", err2)
-	s.IsType(&persistence.ShardOwnershipLostError{}, err2)
+	s.IsType(&p.ShardOwnershipLostError{}, err2)
 }
 
+// TestGetWorkflow test
 func (s *MatchingPersistenceSuite) TestGetWorkflow() {
 	domainID := "8f27f02b-ce22-4fd9-941b-65e1131b0bb5"
 	workflowExecution := gen.WorkflowExecution{
@@ -203,7 +210,7 @@ func (s *MatchingPersistenceSuite) TestGetWorkflow() {
 	s.Equal(int32(20), info.WorkflowTimeout)
 	s.Equal(int32(13), info.DecisionTimeoutValue)
 	s.Equal([]byte(nil), info.ExecutionContext)
-	s.Equal(persistence.WorkflowStateCreated, info.State)
+	s.Equal(p.WorkflowStateCreated, info.State)
 	s.Equal(int64(3), info.NextEventID)
 	s.Equal(int64(0), info.LastProcessedEvent)
 	s.Equal(true, validateTimeRange(info.LastUpdatedTimestamp, time.Hour))
@@ -213,6 +220,7 @@ func (s *MatchingPersistenceSuite) TestGetWorkflow() {
 	log.Infof("Workflow execution last updated: %v", info.LastUpdatedTimestamp)
 }
 
+// TestUpdateWorkflow test
 func (s *MatchingPersistenceSuite) TestUpdateWorkflow() {
 	domainID := "b0a8571c-0257-40ea-afcd-3a14eae181c0"
 	workflowExecution := gen.WorkflowExecution{
@@ -235,7 +243,7 @@ func (s *MatchingPersistenceSuite) TestUpdateWorkflow() {
 	s.Equal(int32(20), info0.WorkflowTimeout)
 	s.Equal(int32(13), info0.DecisionTimeoutValue)
 	s.Equal([]byte(nil), info0.ExecutionContext)
-	s.Equal(persistence.WorkflowStateCreated, info0.State)
+	s.Equal(p.WorkflowStateCreated, info0.State)
 	s.Equal(int64(1), info0.LastFirstEventID)
 	s.Equal(int64(3), info0.NextEventID)
 	s.Equal(int64(0), info0.LastProcessedEvent)
@@ -281,7 +289,7 @@ func (s *MatchingPersistenceSuite) TestUpdateWorkflow() {
 	s.Equal(int32(20), info1.WorkflowTimeout)
 	s.Equal(int32(13), info1.DecisionTimeoutValue)
 	s.Equal([]byte(nil), info1.ExecutionContext)
-	s.Equal(persistence.WorkflowStateCreated, info1.State)
+	s.Equal(p.WorkflowStateCreated, info1.State)
 	s.Equal(int64(3), info1.LastFirstEventID)
 	s.Equal(int64(5), info1.NextEventID)
 	s.Equal(int64(2), info1.LastProcessedEvent)
@@ -302,7 +310,7 @@ func (s *MatchingPersistenceSuite) TestUpdateWorkflow() {
 
 	err4 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(5)}, nil, int64(3), nil, nil, nil, nil, nil, nil)
 	s.NotNil(err4, "expected non nil error.")
-	s.IsType(&persistence.ConditionFailedError{}, err4)
+	s.IsType(&p.ConditionFailedError{}, err4)
 	log.Errorf("Conditional update failed with error: %v", err4)
 
 	state2, err4 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
@@ -317,7 +325,7 @@ func (s *MatchingPersistenceSuite) TestUpdateWorkflow() {
 	s.Equal(int32(20), info2.WorkflowTimeout)
 	s.Equal(int32(13), info2.DecisionTimeoutValue)
 	s.Equal([]byte(nil), info2.ExecutionContext)
-	s.Equal(persistence.WorkflowStateCreated, info2.State)
+	s.Equal(p.WorkflowStateCreated, info2.State)
 	s.Equal(int64(5), info2.NextEventID)
 	s.Equal(int64(2), info2.LastProcessedEvent)
 	s.Equal(true, validateTimeRange(info2.LastUpdatedTimestamp, time.Hour))
@@ -332,7 +340,7 @@ func (s *MatchingPersistenceSuite) TestUpdateWorkflow() {
 
 	err5 := s.UpdateWorkflowExecutionWithRangeID(updatedInfo, []int64{int64(5)}, nil, int64(12345), int64(5), nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "")
 	s.NotNil(err5, "expected non nil error.")
-	s.IsType(&persistence.ShardOwnershipLostError{}, err5)
+	s.IsType(&p.ShardOwnershipLostError{}, err5)
 	log.Errorf("Conditional update failed with error: %v", err5)
 
 	state3, err6 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
@@ -347,7 +355,7 @@ func (s *MatchingPersistenceSuite) TestUpdateWorkflow() {
 	s.Equal(int32(20), info3.WorkflowTimeout)
 	s.Equal(int32(13), info3.DecisionTimeoutValue)
 	s.Equal([]byte(nil), info3.ExecutionContext)
-	s.Equal(persistence.WorkflowStateCreated, info3.State)
+	s.Equal(p.WorkflowStateCreated, info3.State)
 	s.Equal(int64(5), info3.NextEventID)
 	s.Equal(int64(2), info3.LastProcessedEvent)
 	s.Equal(true, validateTimeRange(info3.LastUpdatedTimestamp, time.Hour))
@@ -363,7 +371,7 @@ func (s *MatchingPersistenceSuite) TestUpdateWorkflow() {
 	//update with incorrect rangeID and condition(next_event_id)
 	err7 := s.UpdateWorkflowExecutionWithRangeID(updatedInfo, []int64{int64(5)}, nil, int64(12345), int64(3), nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "")
 	s.NotNil(err7, "expected non nil error.")
-	s.IsType(&persistence.ShardOwnershipLostError{}, err7)
+	s.IsType(&p.ShardOwnershipLostError{}, err7)
 	log.Errorf("Conditional update failed with error: %v", err7)
 
 	state3, err8 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
@@ -378,7 +386,7 @@ func (s *MatchingPersistenceSuite) TestUpdateWorkflow() {
 	s.Equal(int32(20), info4.WorkflowTimeout)
 	s.Equal(int32(13), info4.DecisionTimeoutValue)
 	s.Equal([]byte(nil), info4.ExecutionContext)
-	s.Equal(persistence.WorkflowStateCreated, info4.State)
+	s.Equal(p.WorkflowStateCreated, info4.State)
 	s.Equal(int64(5), info4.NextEventID)
 	s.Equal(int64(2), info4.LastProcessedEvent)
 	s.Equal(true, validateTimeRange(info4.LastUpdatedTimestamp, time.Hour))
@@ -392,6 +400,7 @@ func (s *MatchingPersistenceSuite) TestUpdateWorkflow() {
 	log.Infof("Workflow execution last updated: %v", info4.LastUpdatedTimestamp)
 }
 
+// TestDeleteWorkflow test
 func (s *MatchingPersistenceSuite) TestDeleteWorkflow() {
 	domainID := "1d4abb23-b87b-457b-96ef-43aba0b9c44f"
 	workflowExecution := gen.WorkflowExecution{
@@ -414,7 +423,7 @@ func (s *MatchingPersistenceSuite) TestDeleteWorkflow() {
 	s.Equal(int32(20), info0.WorkflowTimeout)
 	s.Equal(int32(13), info0.DecisionTimeoutValue)
 	s.Equal([]byte(nil), info0.ExecutionContext)
-	s.Equal(persistence.WorkflowStateCreated, info0.State)
+	s.Equal(p.WorkflowStateCreated, info0.State)
 	s.Equal(int64(3), info0.NextEventID)
 	s.Equal(int64(0), info0.LastProcessedEvent)
 	s.Equal(true, validateTimeRange(info0.LastUpdatedTimestamp, time.Hour))
@@ -435,6 +444,7 @@ func (s *MatchingPersistenceSuite) TestDeleteWorkflow() {
 	s.Nil(err5)
 }
 
+// TestDeleteCurrentWorkflow test
 func (s *MatchingPersistenceSuite) TestDeleteCurrentWorkflow() {
 	finishedCurrentExecutionRetentionTTL := int32(3) // 3 seconds
 	domainID := "54d15308-e20e-4b91-a00f-a518a3892790"
@@ -477,6 +487,7 @@ func (s *MatchingPersistenceSuite) TestDeleteCurrentWorkflow() {
 	s.Nil(err2)
 }
 
+// TestGetCurrentWorkflow test
 func (s *MatchingPersistenceSuite) TestGetCurrentWorkflow() {
 	domainID := "54d15308-e20e-4b91-a00f-a518a3892790"
 	workflowExecution := gen.WorkflowExecution{
@@ -515,6 +526,7 @@ func (s *MatchingPersistenceSuite) TestGetCurrentWorkflow() {
 	s.Empty(task1, "Expected empty task identifier.")
 }
 
+// TestTransferTasksThroughUpdate test
 func (s *MatchingPersistenceSuite) TestTransferTasksThroughUpdate() {
 	domainID := "b785a8ba-bd7d-4760-bb05-41b115f3e10a"
 	workflowExecution := gen.WorkflowExecution{
@@ -535,7 +547,7 @@ func (s *MatchingPersistenceSuite) TestTransferTasksThroughUpdate() {
 	s.Equal(*workflowExecution.WorkflowId, task1.WorkflowID)
 	s.Equal(*workflowExecution.RunId, task1.RunID)
 	s.Equal("queue1", task1.TaskList)
-	s.Equal(persistence.TransferTaskTypeDecisionTask, task1.TaskType)
+	s.Equal(p.TransferTaskTypeDecisionTask, task1.TaskType)
 	s.Equal(int64(2), task1.ScheduleID)
 	s.Equal("", task1.TargetRunID)
 
@@ -559,7 +571,7 @@ func (s *MatchingPersistenceSuite) TestTransferTasksThroughUpdate() {
 	s.Equal(*workflowExecution.WorkflowId, task2.WorkflowID)
 	s.Equal(*workflowExecution.RunId, task2.RunID)
 	s.Equal("queue1", task2.TaskList)
-	s.Equal(persistence.TransferTaskTypeActivityTask, task2.TaskType)
+	s.Equal(p.TransferTaskTypeActivityTask, task2.TaskType)
 	s.Equal(int64(4), task2.ScheduleID)
 	s.Equal("", task2.TargetRunID)
 
@@ -590,7 +602,7 @@ func (s *MatchingPersistenceSuite) TestTransferTasksThroughUpdate() {
 	s.Equal(domainID, task3.DomainID)
 	s.Equal(*workflowExecution.WorkflowId, task3.WorkflowID)
 	s.Equal(*workflowExecution.RunId, task3.RunID)
-	s.Equal(persistence.TransferTaskTypeCloseExecution, task3.TaskType)
+	s.Equal(p.TransferTaskTypeCloseExecution, task3.TaskType)
 	s.Equal("", task3.TargetRunID)
 
 	err8 := s.DeleteWorkflowExecution(info1)
@@ -603,6 +615,7 @@ func (s *MatchingPersistenceSuite) TestTransferTasksThroughUpdate() {
 	s.NotNil(err10, "Error expected.")
 }
 
+// TestCancelTransferTaskTasks test
 func (s *MatchingPersistenceSuite) TestCancelTransferTaskTasks() {
 	domainID := "aeac8287-527b-4b35-80a9-667cb47e7c6d"
 	workflowExecution := gen.WorkflowExecution{
@@ -629,7 +642,7 @@ func (s *MatchingPersistenceSuite) TestCancelTransferTaskTasks() {
 	targetWorkflowID := "target-workflow-cancellation-id-1"
 	targetRunID := "0d00698f-08e1-4d36-a3e2-3bf109f5d2d6"
 	targetChildWorkflowOnly := false
-	transferTasks := []persistence.Task{&persistence.CancelExecutionTask{
+	transferTasks := []p.Task{&p.CancelExecutionTask{
 		TaskID:                  s.GetNextSequenceNumber(),
 		TargetDomainID:          targetDomainID,
 		TargetWorkflowID:        targetWorkflowID,
@@ -645,7 +658,7 @@ func (s *MatchingPersistenceSuite) TestCancelTransferTaskTasks() {
 	s.NotNil(tasks1, "expected valid list of tasks.")
 	s.Equal(1, len(tasks1), "Expected 1 cancel task.")
 	task1 := tasks1[0]
-	s.Equal(persistence.TransferTaskTypeCancelExecution, task1.TaskType)
+	s.Equal(p.TransferTaskTypeCancelExecution, task1.TaskType)
 	s.Equal(domainID, task1.DomainID)
 	s.Equal(*workflowExecution.WorkflowId, task1.WorkflowID)
 	s.Equal(*workflowExecution.RunId, task1.RunID)
@@ -661,7 +674,7 @@ func (s *MatchingPersistenceSuite) TestCancelTransferTaskTasks() {
 	targetWorkflowID = "target-workflow-cancellation-id-2"
 	targetRunID = ""
 	targetChildWorkflowOnly = true
-	transferTasks = []persistence.Task{&persistence.CancelExecutionTask{
+	transferTasks = []p.Task{&p.CancelExecutionTask{
 		TaskID:                  s.GetNextSequenceNumber(),
 		TargetDomainID:          targetDomainID,
 		TargetWorkflowID:        targetWorkflowID,
@@ -684,7 +697,7 @@ func (s *MatchingPersistenceSuite) TestCancelTransferTaskTasks() {
 	s.NotNil(tasks2, "expected valid list of tasks.")
 	s.Equal(1, len(tasks2), "Expected 1 cancel task.")
 	task2 := tasks2[0]
-	s.Equal(persistence.TransferTaskTypeCancelExecution, task2.TaskType)
+	s.Equal(p.TransferTaskTypeCancelExecution, task2.TaskType)
 	s.Equal(domainID, task2.DomainID)
 	s.Equal(*workflowExecution.WorkflowId, task2.WorkflowID)
 	s.Equal(*workflowExecution.RunId, task2.RunID)
@@ -697,6 +710,7 @@ func (s *MatchingPersistenceSuite) TestCancelTransferTaskTasks() {
 	s.Nil(err)
 }
 
+// TestSignalTransferTaskTasks test
 func (s *MatchingPersistenceSuite) TestSignalTransferTaskTasks() {
 	domainID := "aeac8287-527b-4b35-80a9-667cb47e7c6d"
 	workflowExecution := gen.WorkflowExecution{
@@ -723,7 +737,7 @@ func (s *MatchingPersistenceSuite) TestSignalTransferTaskTasks() {
 	targetWorkflowID := "target-workflow-signal-id-1"
 	targetRunID := "0d00698f-08e1-4d36-a3e2-3bf109f5d2d6"
 	targetChildWorkflowOnly := false
-	transferTasks := []persistence.Task{&persistence.SignalExecutionTask{
+	transferTasks := []p.Task{&p.SignalExecutionTask{
 		TaskID:                  s.GetNextSequenceNumber(),
 		TargetDomainID:          targetDomainID,
 		TargetWorkflowID:        targetWorkflowID,
@@ -739,7 +753,7 @@ func (s *MatchingPersistenceSuite) TestSignalTransferTaskTasks() {
 	s.NotNil(tasks1, "expected valid list of tasks.")
 	s.Equal(1, len(tasks1), "Expected 1 cancel task.")
 	task1 := tasks1[0]
-	s.Equal(persistence.TransferTaskTypeSignalExecution, task1.TaskType)
+	s.Equal(p.TransferTaskTypeSignalExecution, task1.TaskType)
 	s.Equal(domainID, task1.DomainID)
 	s.Equal(*workflowExecution.WorkflowId, task1.WorkflowID)
 	s.Equal(*workflowExecution.RunId, task1.RunID)
@@ -755,7 +769,7 @@ func (s *MatchingPersistenceSuite) TestSignalTransferTaskTasks() {
 	targetWorkflowID = "target-workflow-signal-id-2"
 	targetRunID = ""
 	targetChildWorkflowOnly = true
-	transferTasks = []persistence.Task{&persistence.SignalExecutionTask{
+	transferTasks = []p.Task{&p.SignalExecutionTask{
 		TaskID:                  s.GetNextSequenceNumber(),
 		TargetDomainID:          targetDomainID,
 		TargetWorkflowID:        targetWorkflowID,
@@ -778,7 +792,7 @@ func (s *MatchingPersistenceSuite) TestSignalTransferTaskTasks() {
 	s.NotNil(tasks2, "expected valid list of tasks.")
 	s.Equal(1, len(tasks2), "Expected 1 cancel task.")
 	task2 := tasks2[0]
-	s.Equal(persistence.TransferTaskTypeSignalExecution, task2.TaskType)
+	s.Equal(p.TransferTaskTypeSignalExecution, task2.TaskType)
 	s.Equal(domainID, task2.DomainID)
 	s.Equal(*workflowExecution.WorkflowId, task2.WorkflowID)
 	s.Equal(*workflowExecution.RunId, task2.RunID)
@@ -791,6 +805,7 @@ func (s *MatchingPersistenceSuite) TestSignalTransferTaskTasks() {
 	s.Nil(err)
 }
 
+// TestCreateTask test
 func (s *MatchingPersistenceSuite) TestCreateTask() {
 	domainID := "11adbd1b-f164-4ea7-b2f3-2e857a5048f1"
 	workflowExecution := gen.WorkflowExecution{WorkflowId: common.StringPtr("create-task-test"),
@@ -822,6 +837,7 @@ func (s *MatchingPersistenceSuite) TestCreateTask() {
 	}
 }
 
+// TestGetDecisionTasks test
 func (s *MatchingPersistenceSuite) TestGetDecisionTasks() {
 	domainID := "aeac8287-527b-4b35-80a9-667cb47e7c6d"
 	workflowExecution := gen.WorkflowExecution{WorkflowId: common.StringPtr("get-decision-task-test"),
@@ -831,13 +847,14 @@ func (s *MatchingPersistenceSuite) TestGetDecisionTasks() {
 	s.Nil(err0, "No error expected.")
 	s.NotNil(task0, "Expected non empty task identifier.")
 
-	tasks1Response, err1 := s.GetTasks(domainID, taskList, persistence.TaskListTypeDecision, 1)
+	tasks1Response, err1 := s.GetTasks(domainID, taskList, p.TaskListTypeDecision, 1)
 	s.Nil(err1, "No error expected.")
 	s.NotNil(tasks1Response.Tasks, "expected valid list of tasks.")
 	s.Equal(1, len(tasks1Response.Tasks), "Expected 1 decision task.")
 	s.Equal(int64(5), tasks1Response.Tasks[0].ScheduleID)
 }
 
+// TestCompleteDecisionTask test
 func (s *MatchingPersistenceSuite) TestCompleteDecisionTask() {
 	domainID := "f1116985-d1f1-40e0-aba9-83344db915bc"
 	workflowExecution := gen.WorkflowExecution{WorkflowId: common.StringPtr("complete-decision-task-test"),
@@ -857,7 +874,7 @@ func (s *MatchingPersistenceSuite) TestCompleteDecisionTask() {
 		s.NotEmpty(t, "Expected non empty task identifier.")
 	}
 
-	tasksWithID1Response, err1 := s.GetTasks(domainID, taskList, persistence.TaskListTypeActivity, 5)
+	tasksWithID1Response, err1 := s.GetTasks(domainID, taskList, p.TaskListTypeActivity, 5)
 
 	s.Nil(err1, "No error expected.")
 	tasksWithID1 := tasksWithID1Response.Tasks
@@ -870,83 +887,86 @@ func (s *MatchingPersistenceSuite) TestCompleteDecisionTask() {
 		s.Equal(*workflowExecution.RunId, t.RunID)
 		s.True(t.TaskID > 0)
 
-		err2 := s.CompleteTask(domainID, taskList, persistence.TaskListTypeActivity, t.TaskID, 100)
+		err2 := s.CompleteTask(domainID, taskList, p.TaskListTypeActivity, t.TaskID, 100)
 		s.Nil(err2)
 	}
 }
 
+// TestLeaseAndUpdateTaskList test
 func (s *MatchingPersistenceSuite) TestLeaseAndUpdateTaskList() {
 	domainID := "00136543-72ad-4615-b7e9-44bca9775b45"
 	taskList := "aaaaaaa"
-	response, err := s.TaskMgr.LeaseTaskList(&persistence.LeaseTaskListRequest{
+	response, err := s.TaskMgr.LeaseTaskList(&p.LeaseTaskListRequest{
 		DomainID: domainID,
 		TaskList: taskList,
-		TaskType: persistence.TaskListTypeActivity,
+		TaskType: p.TaskListTypeActivity,
 	})
 	s.NoError(err)
 	tli := response.TaskListInfo
 	s.EqualValues(1, tli.RangeID)
 	s.EqualValues(0, tli.AckLevel)
 
-	response, err = s.TaskMgr.LeaseTaskList(&persistence.LeaseTaskListRequest{
+	response, err = s.TaskMgr.LeaseTaskList(&p.LeaseTaskListRequest{
 		DomainID: domainID,
 		TaskList: taskList,
-		TaskType: persistence.TaskListTypeActivity,
+		TaskType: p.TaskListTypeActivity,
 	})
 	s.NoError(err)
 	tli = response.TaskListInfo
 	s.EqualValues(2, tli.RangeID)
 	s.EqualValues(0, tli.AckLevel)
 
-	taskListInfo := &persistence.TaskListInfo{
+	taskListInfo := &p.TaskListInfo{
 		DomainID: domainID,
 		Name:     taskList,
-		TaskType: persistence.TaskListTypeActivity,
+		TaskType: p.TaskListTypeActivity,
 		RangeID:  2,
 		AckLevel: 0,
-		Kind:     persistence.TaskListKindNormal,
+		Kind:     p.TaskListKindNormal,
 	}
-	_, err = s.TaskMgr.UpdateTaskList(&persistence.UpdateTaskListRequest{
+	_, err = s.TaskMgr.UpdateTaskList(&p.UpdateTaskListRequest{
 		TaskListInfo: taskListInfo,
 	})
 	s.NoError(err)
 
 	taskListInfo.RangeID = 3
-	_, err = s.TaskMgr.UpdateTaskList(&persistence.UpdateTaskListRequest{
+	_, err = s.TaskMgr.UpdateTaskList(&p.UpdateTaskListRequest{
 		TaskListInfo: taskListInfo,
 	})
 	s.Error(err)
 }
 
-func (s *MatchingPersistenceSuite) TestLeaseAndUpdateTaskList_Sticky() {
+// TestLeaseAndUpdateTaskListSticky test
+func (s *MatchingPersistenceSuite) TestLeaseAndUpdateTaskListSticky() {
 	domainID := uuid.New()
 	taskList := "aaaaaaa"
-	response, err := s.TaskMgr.LeaseTaskList(&persistence.LeaseTaskListRequest{
+	response, err := s.TaskMgr.LeaseTaskList(&p.LeaseTaskListRequest{
 		DomainID:     domainID,
 		TaskList:     taskList,
-		TaskType:     persistence.TaskListTypeDecision,
-		TaskListKind: persistence.TaskListKindSticky,
+		TaskType:     p.TaskListTypeDecision,
+		TaskListKind: p.TaskListKindSticky,
 	})
 	s.NoError(err)
 	tli := response.TaskListInfo
 	s.EqualValues(1, tli.RangeID)
 	s.EqualValues(0, tli.AckLevel)
-	s.EqualValues(persistence.TaskListKindSticky, tli.Kind)
+	s.EqualValues(p.TaskListKindSticky, tli.Kind)
 
-	taskListInfo := &persistence.TaskListInfo{
+	taskListInfo := &p.TaskListInfo{
 		DomainID: domainID,
 		Name:     taskList,
-		TaskType: persistence.TaskListTypeDecision,
+		TaskType: p.TaskListTypeDecision,
 		RangeID:  2,
 		AckLevel: 0,
-		Kind:     persistence.TaskListKindSticky,
+		Kind:     p.TaskListKindSticky,
 	}
-	_, err = s.TaskMgr.UpdateTaskList(&persistence.UpdateTaskListRequest{
+	_, err = s.TaskMgr.UpdateTaskList(&p.UpdateTaskListRequest{
 		TaskListInfo: taskListInfo,
 	})
 	s.NoError(err) // because update with ttl doesn't check rangeID
 }
 
+// TestReplicationTasks test
 func (s *MatchingPersistenceSuite) TestReplicationTasks() {
 	domainID := "2466d7de-6602-4ad8-b939-fb8f8c36c711"
 	workflowExecution := gen.WorkflowExecution{
@@ -968,25 +988,25 @@ func (s *MatchingPersistenceSuite) TestReplicationTasks() {
 	s.NotNil(info1, "Valid Workflow info expected.")
 	updatedInfo1 := copyWorkflowExecutionInfo(info1)
 
-	replicationTasks := []persistence.Task{
-		&persistence.HistoryReplicationTask{
+	replicationTasks := []p.Task{
+		&p.HistoryReplicationTask{
 			TaskID:       s.GetNextSequenceNumber(),
 			FirstEventID: int64(1),
 			NextEventID:  int64(3),
 			Version:      123,
-			LastReplicationInfo: map[string]*persistence.ReplicationInfo{
+			LastReplicationInfo: map[string]*p.ReplicationInfo{
 				"dc1": {
 					Version:     int64(3),
 					LastEventID: int64(1),
 				},
 			},
 		},
-		&persistence.HistoryReplicationTask{
+		&p.HistoryReplicationTask{
 			TaskID:       s.GetNextSequenceNumber(),
 			FirstEventID: int64(1),
 			NextEventID:  int64(3),
 			Version:      456,
-			LastReplicationInfo: map[string]*persistence.ReplicationInfo{
+			LastReplicationInfo: map[string]*p.ReplicationInfo{
 				"dc1": {
 					Version:     int64(3),
 					LastEventID: int64(1),
@@ -1011,7 +1031,8 @@ func (s *MatchingPersistenceSuite) TestReplicationTasks() {
 	}
 }
 
-func (s *MatchingPersistenceSuite) TestTransferTasks_Complete() {
+// TestTransferTasksComplete test
+func (s *MatchingPersistenceSuite) TestTransferTasksComplete() {
 	domainID := "8bfb47be-5b57-4d55-9109-5fb35e20b1d7"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("get-transfer-tasks-test-complete"),
@@ -1032,9 +1053,9 @@ func (s *MatchingPersistenceSuite) TestTransferTasks_Complete() {
 	s.Equal(workflowExecution.GetWorkflowId(), task1.WorkflowID)
 	s.Equal(workflowExecution.GetRunId(), task1.RunID)
 	s.Equal(tasklist, task1.TaskList)
-	s.Equal(persistence.TransferTaskTypeDecisionTask, task1.TaskType)
+	s.Equal(p.TransferTaskTypeDecisionTask, task1.TaskType)
 	s.Equal(int64(2), task1.ScheduleID)
-	s.Equal(persistence.TransferTaskTransferTargetWorkflowID, task1.TargetWorkflowID)
+	s.Equal(p.TransferTaskTransferTargetWorkflowID, task1.TargetWorkflowID)
 	s.Equal("", task1.TargetRunID)
 	err3 := s.CompleteTransferTask(task1.TaskID)
 	s.Nil(err3)
@@ -1053,13 +1074,13 @@ func (s *MatchingPersistenceSuite) TestTransferTasks_Complete() {
 	targetRunID := uuid.New()
 	currentTransferID := s.GetTransferReadLevel()
 	now := time.Now()
-	tasks := []persistence.Task{
-		&persistence.ActivityTask{now, currentTransferID + 10001, domainID, tasklist, scheduleID, 111},
-		&persistence.DecisionTask{now, currentTransferID + 10002, domainID, tasklist, scheduleID, 222},
-		&persistence.CloseExecutionTask{now, currentTransferID + 10003, 333},
-		&persistence.CancelExecutionTask{now, currentTransferID + 10004, targetDomainID, targetWorkflowID, targetRunID, true, scheduleID, 444},
-		&persistence.SignalExecutionTask{now, currentTransferID + 10005, targetDomainID, targetWorkflowID, targetRunID, true, scheduleID, 555},
-		&persistence.StartChildExecutionTask{now, currentTransferID + 10006, targetDomainID, targetWorkflowID, scheduleID, 666},
+	tasks := []p.Task{
+		&p.ActivityTask{now, currentTransferID + 10001, domainID, tasklist, scheduleID, 111},
+		&p.DecisionTask{now, currentTransferID + 10002, domainID, tasklist, scheduleID, 222},
+		&p.CloseExecutionTask{now, currentTransferID + 10003, 333},
+		&p.CancelExecutionTask{now, currentTransferID + 10004, targetDomainID, targetWorkflowID, targetRunID, true, scheduleID, 444},
+		&p.SignalExecutionTask{now, currentTransferID + 10005, targetDomainID, targetWorkflowID, targetRunID, true, scheduleID, 555},
+		&p.StartChildExecutionTask{now, currentTransferID + 10006, targetDomainID, targetWorkflowID, scheduleID, 666},
 	}
 	err2 := s.UpdateWorklowStateAndReplication(updatedInfo, nil, nil, nil, int64(3), tasks)
 	s.Nil(err2, "No error expected.")
@@ -1071,12 +1092,12 @@ func (s *MatchingPersistenceSuite) TestTransferTasks_Complete() {
 	for index := range tasks {
 		s.True(timeComparator(tasks[index].GetVisibilityTimestamp(), txTasks[index].VisibilityTimestamp, timePrecision))
 	}
-	s.Equal(persistence.TransferTaskTypeActivityTask, txTasks[0].TaskType)
-	s.Equal(persistence.TransferTaskTypeDecisionTask, txTasks[1].TaskType)
-	s.Equal(persistence.TransferTaskTypeCloseExecution, txTasks[2].TaskType)
-	s.Equal(persistence.TransferTaskTypeCancelExecution, txTasks[3].TaskType)
-	s.Equal(persistence.TransferTaskTypeSignalExecution, txTasks[4].TaskType)
-	s.Equal(persistence.TransferTaskTypeStartChildExecution, txTasks[5].TaskType)
+	s.Equal(p.TransferTaskTypeActivityTask, txTasks[0].TaskType)
+	s.Equal(p.TransferTaskTypeDecisionTask, txTasks[1].TaskType)
+	s.Equal(p.TransferTaskTypeCloseExecution, txTasks[2].TaskType)
+	s.Equal(p.TransferTaskTypeCancelExecution, txTasks[3].TaskType)
+	s.Equal(p.TransferTaskTypeSignalExecution, txTasks[4].TaskType)
+	s.Equal(p.TransferTaskTypeStartChildExecution, txTasks[5].TaskType)
 	s.Equal(int64(111), txTasks[0].Version)
 	s.Equal(int64(222), txTasks[1].Version)
 	s.Equal(int64(333), txTasks[2].Version)
@@ -1107,7 +1128,8 @@ func (s *MatchingPersistenceSuite) TestTransferTasks_Complete() {
 	s.Empty(txTasks, "expected empty task list.")
 }
 
-func (s *MatchingPersistenceSuite) TestTransferTasks_RangeComplete() {
+// TestTransferTasksRangeComplete test
+func (s *MatchingPersistenceSuite) TestTransferTasksRangeComplete() {
 	domainID := "8bfb47be-5b57-4d55-9109-5fb35e20b1d7"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("get-transfer-tasks-test-range-complete"),
@@ -1128,9 +1150,9 @@ func (s *MatchingPersistenceSuite) TestTransferTasks_RangeComplete() {
 	s.Equal(workflowExecution.GetWorkflowId(), task1.WorkflowID)
 	s.Equal(workflowExecution.GetRunId(), task1.RunID)
 	s.Equal(tasklist, task1.TaskList)
-	s.Equal(persistence.TransferTaskTypeDecisionTask, task1.TaskType)
+	s.Equal(p.TransferTaskTypeDecisionTask, task1.TaskType)
 	s.Equal(int64(2), task1.ScheduleID)
-	s.Equal(persistence.TransferTaskTransferTargetWorkflowID, task1.TargetWorkflowID)
+	s.Equal(p.TransferTaskTransferTargetWorkflowID, task1.TargetWorkflowID)
 	s.Equal("", task1.TargetRunID)
 	err3 := s.CompleteTransferTask(task1.TaskID)
 	s.Nil(err3)
@@ -1149,13 +1171,13 @@ func (s *MatchingPersistenceSuite) TestTransferTasks_RangeComplete() {
 	targetRunID := uuid.New()
 	currentTransferID := s.GetTransferReadLevel()
 	now := time.Now()
-	tasks := []persistence.Task{
-		&persistence.ActivityTask{now, currentTransferID + 10001, domainID, tasklist, scheduleID, 111},
-		&persistence.DecisionTask{now, currentTransferID + 10002, domainID, tasklist, scheduleID, 222},
-		&persistence.CloseExecutionTask{now, currentTransferID + 10003, 333},
-		&persistence.CancelExecutionTask{now, currentTransferID + 10004, targetDomainID, targetWorkflowID, targetRunID, true, scheduleID, 444},
-		&persistence.SignalExecutionTask{now, currentTransferID + 10005, targetDomainID, targetWorkflowID, targetRunID, true, scheduleID, 555},
-		&persistence.StartChildExecutionTask{now, currentTransferID + 10006, targetDomainID, targetWorkflowID, scheduleID, 666},
+	tasks := []p.Task{
+		&p.ActivityTask{now, currentTransferID + 10001, domainID, tasklist, scheduleID, 111},
+		&p.DecisionTask{now, currentTransferID + 10002, domainID, tasklist, scheduleID, 222},
+		&p.CloseExecutionTask{now, currentTransferID + 10003, 333},
+		&p.CancelExecutionTask{now, currentTransferID + 10004, targetDomainID, targetWorkflowID, targetRunID, true, scheduleID, 444},
+		&p.SignalExecutionTask{now, currentTransferID + 10005, targetDomainID, targetWorkflowID, targetRunID, true, scheduleID, 555},
+		&p.StartChildExecutionTask{now, currentTransferID + 10006, targetDomainID, targetWorkflowID, scheduleID, 666},
 	}
 	err2 := s.UpdateWorklowStateAndReplication(updatedInfo, nil, nil, nil, int64(3), tasks)
 	s.Nil(err2, "No error expected.")
@@ -1167,12 +1189,12 @@ func (s *MatchingPersistenceSuite) TestTransferTasks_RangeComplete() {
 	for index := range tasks {
 		s.True(timeComparator(tasks[index].GetVisibilityTimestamp(), txTasks[index].VisibilityTimestamp, timePrecision))
 	}
-	s.Equal(persistence.TransferTaskTypeActivityTask, txTasks[0].TaskType)
-	s.Equal(persistence.TransferTaskTypeDecisionTask, txTasks[1].TaskType)
-	s.Equal(persistence.TransferTaskTypeCloseExecution, txTasks[2].TaskType)
-	s.Equal(persistence.TransferTaskTypeCancelExecution, txTasks[3].TaskType)
-	s.Equal(persistence.TransferTaskTypeSignalExecution, txTasks[4].TaskType)
-	s.Equal(persistence.TransferTaskTypeStartChildExecution, txTasks[5].TaskType)
+	s.Equal(p.TransferTaskTypeActivityTask, txTasks[0].TaskType)
+	s.Equal(p.TransferTaskTypeDecisionTask, txTasks[1].TaskType)
+	s.Equal(p.TransferTaskTypeCloseExecution, txTasks[2].TaskType)
+	s.Equal(p.TransferTaskTypeCancelExecution, txTasks[3].TaskType)
+	s.Equal(p.TransferTaskTypeSignalExecution, txTasks[4].TaskType)
+	s.Equal(p.TransferTaskTypeStartChildExecution, txTasks[5].TaskType)
 	s.Equal(int64(111), txTasks[0].Version)
 	s.Equal(int64(222), txTasks[1].Version)
 	s.Equal(int64(333), txTasks[2].Version)
@@ -1188,7 +1210,8 @@ func (s *MatchingPersistenceSuite) TestTransferTasks_RangeComplete() {
 	s.Empty(txTasks, "expected empty task list.")
 }
 
-func (s *MatchingPersistenceSuite) TestTimerTasks_Complete() {
+// TestTimerTasksComplete test
+func (s *MatchingPersistenceSuite) TestTimerTasksComplete() {
 	domainID := "8bfb47be-5b57-4d66-9109-5fb35e20b1d7"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("get-timer-tasks-test-complete"),
@@ -1208,12 +1231,12 @@ func (s *MatchingPersistenceSuite) TestTimerTasks_Complete() {
 	updatedInfo.NextEventID = int64(5)
 	updatedInfo.LastProcessedEvent = int64(2)
 	now := time.Now()
-	tasks := []persistence.Task{
-		&persistence.DecisionTimeoutTask{now.Add(1 * time.Second), 1, 2, 3, int(gen.TimeoutTypeStartToClose), 11},
-		&persistence.WorkflowTimeoutTask{now.Add(2 * time.Second), 2, 12},
-		&persistence.DeleteHistoryEventTask{now.Add(2 * time.Second), 3, 13},
-		&persistence.ActivityTimeoutTask{now.Add(3 * time.Second), 4, int(gen.TimeoutTypeStartToClose), 7, 0, 14},
-		&persistence.UserTimerTask{now.Add(3 * time.Second), 5, 7, 15},
+	tasks := []p.Task{
+		&p.DecisionTimeoutTask{now.Add(1 * time.Second), 1, 2, 3, int(gen.TimeoutTypeStartToClose), 11},
+		&p.WorkflowTimeoutTask{now.Add(2 * time.Second), 2, 12},
+		&p.DeleteHistoryEventTask{now.Add(2 * time.Second), 3, 13},
+		&p.ActivityTimeoutTask{now.Add(3 * time.Second), 4, int(gen.TimeoutTypeStartToClose), 7, 0, 14},
+		&p.UserTimerTask{now.Add(3 * time.Second), 5, 7, 15},
 	}
 	err2 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(4)}, nil, int64(3), tasks, nil, nil, nil, nil, nil)
 	s.Nil(err2, "No error expected.")
@@ -1222,11 +1245,11 @@ func (s *MatchingPersistenceSuite) TestTimerTasks_Complete() {
 	s.Nil(err1, "No error expected.")
 	s.NotNil(timerTasks, "expected valid list of tasks.")
 	s.Equal(len(tasks), len(timerTasks))
-	s.Equal(persistence.TaskTypeDecisionTimeout, timerTasks[0].TaskType)
-	s.Equal(persistence.TaskTypeWorkflowTimeout, timerTasks[1].TaskType)
-	s.Equal(persistence.TaskTypeDeleteHistoryEvent, timerTasks[2].TaskType)
-	s.Equal(persistence.TaskTypeActivityTimeout, timerTasks[3].TaskType)
-	s.Equal(persistence.TaskTypeUserTimer, timerTasks[4].TaskType)
+	s.Equal(p.TaskTypeDecisionTimeout, timerTasks[0].TaskType)
+	s.Equal(p.TaskTypeWorkflowTimeout, timerTasks[1].TaskType)
+	s.Equal(p.TaskTypeDeleteHistoryEvent, timerTasks[2].TaskType)
+	s.Equal(p.TaskTypeActivityTimeout, timerTasks[3].TaskType)
+	s.Equal(p.TaskTypeUserTimer, timerTasks[4].TaskType)
 	s.Equal(int64(11), timerTasks[0].Version)
 	s.Equal(int64(12), timerTasks[1].Version)
 	s.Equal(int64(13), timerTasks[2].Version)
@@ -1241,7 +1264,8 @@ func (s *MatchingPersistenceSuite) TestTimerTasks_Complete() {
 	s.Empty(timerTasks2, "expected empty task list.")
 }
 
-func (s *MatchingPersistenceSuite) TestTimerTasks_RangeComplete() {
+// TestTimerTasksRangeComplete test
+func (s *MatchingPersistenceSuite) TestTimerTasksRangeComplete() {
 	domainID := "8bfb47be-5b57-4d66-9109-5fb35e20b1d7"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("get-timer-tasks-test-range-complete"),
@@ -1260,12 +1284,12 @@ func (s *MatchingPersistenceSuite) TestTimerTasks_RangeComplete() {
 	updatedInfo := copyWorkflowExecutionInfo(info0)
 	updatedInfo.NextEventID = int64(5)
 	updatedInfo.LastProcessedEvent = int64(2)
-	tasks := []persistence.Task{
-		&persistence.DecisionTimeoutTask{time.Now(), 1, 2, 3, int(gen.TimeoutTypeStartToClose), 11},
-		&persistence.WorkflowTimeoutTask{time.Now(), 2, 12},
-		&persistence.DeleteHistoryEventTask{time.Now(), 3, 13},
-		&persistence.ActivityTimeoutTask{time.Now(), 4, int(gen.TimeoutTypeStartToClose), 7, 0, 14},
-		&persistence.UserTimerTask{time.Now(), 5, 7, 15},
+	tasks := []p.Task{
+		&p.DecisionTimeoutTask{time.Now(), 1, 2, 3, int(gen.TimeoutTypeStartToClose), 11},
+		&p.WorkflowTimeoutTask{time.Now(), 2, 12},
+		&p.DeleteHistoryEventTask{time.Now(), 3, 13},
+		&p.ActivityTimeoutTask{time.Now(), 4, int(gen.TimeoutTypeStartToClose), 7, 0, 14},
+		&p.UserTimerTask{time.Now(), 5, 7, 15},
 	}
 	err2 := s.UpdateWorkflowExecution(updatedInfo, []int64{int64(4)}, nil, int64(3), tasks, nil, nil, nil, nil, nil)
 	s.Nil(err2, "No error expected.")
@@ -1274,18 +1298,18 @@ func (s *MatchingPersistenceSuite) TestTimerTasks_RangeComplete() {
 	s.Nil(err1, "No error expected.")
 	s.NotNil(timerTasks, "expected valid list of tasks.")
 	s.Equal(len(tasks), len(timerTasks))
-	s.Equal(persistence.TaskTypeDecisionTimeout, timerTasks[0].TaskType)
-	s.Equal(persistence.TaskTypeWorkflowTimeout, timerTasks[1].TaskType)
-	s.Equal(persistence.TaskTypeDeleteHistoryEvent, timerTasks[2].TaskType)
-	s.Equal(persistence.TaskTypeActivityTimeout, timerTasks[3].TaskType)
-	s.Equal(persistence.TaskTypeUserTimer, timerTasks[4].TaskType)
+	s.Equal(p.TaskTypeDecisionTimeout, timerTasks[0].TaskType)
+	s.Equal(p.TaskTypeWorkflowTimeout, timerTasks[1].TaskType)
+	s.Equal(p.TaskTypeDeleteHistoryEvent, timerTasks[2].TaskType)
+	s.Equal(p.TaskTypeActivityTimeout, timerTasks[3].TaskType)
+	s.Equal(p.TaskTypeUserTimer, timerTasks[4].TaskType)
 	s.Equal(int64(11), timerTasks[0].Version)
 	s.Equal(int64(12), timerTasks[1].Version)
 	s.Equal(int64(13), timerTasks[2].Version)
 	s.Equal(int64(14), timerTasks[3].Version)
 	s.Equal(int64(15), timerTasks[4].Version)
 
-	deleteTimerTask := &persistence.DecisionTimeoutTask{VisibilityTimestamp: timerTasks[0].VisibilityTimestamp, TaskID: timerTasks[0].TaskID}
+	deleteTimerTask := &p.DecisionTimeoutTask{VisibilityTimestamp: timerTasks[0].VisibilityTimestamp, TaskID: timerTasks[0].TaskID}
 	err2 = s.UpdateWorkflowExecution(updatedInfo, nil, nil, int64(5), nil, deleteTimerTask, nil, nil, nil, nil)
 	s.Nil(err2, "No error expected.")
 
@@ -1306,7 +1330,8 @@ func (s *MatchingPersistenceSuite) TestTimerTasks_RangeComplete() {
 	s.Empty(timerTasks2, "expected empty task list.")
 }
 
-func (s *MatchingPersistenceSuite) TestWorkflowMutableState_Activities() {
+// TestWorkflowMutableStateActivities test
+func (s *MatchingPersistenceSuite) TestWorkflowMutableStateActivities() {
 	domainID := "7fcf0aa9-e121-4292-bdad-0a75181b4aa3"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("test-workflow-mutable-test"),
@@ -1326,7 +1351,7 @@ func (s *MatchingPersistenceSuite) TestWorkflowMutableState_Activities() {
 	updatedInfo.NextEventID = int64(5)
 	updatedInfo.LastProcessedEvent = int64(2)
 	currentTime := time.Now().UTC()
-	activityInfos := []*persistence.ActivityInfo{{
+	activityInfos := []*p.ActivityInfo{{
 		Version:                  7789,
 		ScheduleID:               1,
 		ScheduledEvent:           []byte("scheduled_event_1"),
@@ -1375,7 +1400,8 @@ func (s *MatchingPersistenceSuite) TestWorkflowMutableState_Activities() {
 	s.Equal(0, len(state.ActivitInfos))
 }
 
-func (s *MatchingPersistenceSuite) TestWorkflowMutableState_Timers() {
+// TestWorkflowMutableStateTimers test
+func (s *MatchingPersistenceSuite) TestWorkflowMutableStateTimers() {
 	domainID := "025d178a-709b-4c07-8dd7-86dbf9bd2e06"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("test-workflow-mutable-timers-test"),
@@ -1396,7 +1422,7 @@ func (s *MatchingPersistenceSuite) TestWorkflowMutableState_Timers() {
 	updatedInfo.LastProcessedEvent = int64(2)
 	currentTime := time.Now().UTC()
 	timerID := "id_1"
-	timerInfos := []*persistence.TimerInfo{{
+	timerInfos := []*p.TimerInfo{{
 		Version:    3345,
 		TimerID:    timerID,
 		ExpiryTime: currentTime,
@@ -1425,7 +1451,8 @@ func (s *MatchingPersistenceSuite) TestWorkflowMutableState_Timers() {
 	s.Equal(0, len(state.TimerInfos))
 }
 
-func (s *MatchingPersistenceSuite) TestWorkflowMutableState_ChildExecutions() {
+// TestWorkflowMutableStateChildExecutions test
+func (s *MatchingPersistenceSuite) TestWorkflowMutableStateChildExecutions() {
 	domainID := "88236cd2-c439-4cec-9957-2748ce3be074"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("test-workflow-mutable-child-executions-parent-test"),
@@ -1455,7 +1482,7 @@ func (s *MatchingPersistenceSuite) TestWorkflowMutableState_ChildExecutions() {
 	updatedInfo.NextEventID = int64(5)
 	updatedInfo.LastProcessedEvent = int64(2)
 	createRequestID := uuid.New()
-	childExecutionInfos := []*persistence.ChildExecutionInfo{{
+	childExecutionInfos := []*p.ChildExecutionInfo{{
 		Version:         1234,
 		InitiatedID:     1,
 		InitiatedEvent:  []byte("initiated_event_1"),
@@ -1489,7 +1516,8 @@ func (s *MatchingPersistenceSuite) TestWorkflowMutableState_ChildExecutions() {
 	s.Equal(0, len(state.ChildExecutionInfos))
 }
 
-func (s *MatchingPersistenceSuite) TestWorkflowMutableState_RequestCancel() {
+// TestWorkflowMutableStateRequestCancel test
+func (s *MatchingPersistenceSuite) TestWorkflowMutableStateRequestCancel() {
 	domainID := "568b8d19-cf64-4aac-be1b-f8a3edbc1fa9"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("test-workflow-mutable-request-cancel-test"),
@@ -1509,7 +1537,7 @@ func (s *MatchingPersistenceSuite) TestWorkflowMutableState_RequestCancel() {
 	updatedInfo.NextEventID = int64(5)
 	updatedInfo.LastProcessedEvent = int64(2)
 	cancelRequestID := uuid.New()
-	requestCancelInfos := []*persistence.RequestCancelInfo{{
+	requestCancelInfos := []*p.RequestCancelInfo{{
 		Version:         456,
 		InitiatedID:     1,
 		CancelRequestID: cancelRequestID,
@@ -1537,7 +1565,8 @@ func (s *MatchingPersistenceSuite) TestWorkflowMutableState_RequestCancel() {
 	s.Equal(0, len(state.RequestCancelInfos))
 }
 
-func (s *MatchingPersistenceSuite) TestWorkflowMutableState_SignalInfo() {
+// TestWorkflowMutableStateSignalInfo test
+func (s *MatchingPersistenceSuite) TestWorkflowMutableStateSignalInfo() {
 	domainID := uuid.New()
 	runID := uuid.New()
 	workflowExecution := gen.WorkflowExecution{
@@ -1561,7 +1590,7 @@ func (s *MatchingPersistenceSuite) TestWorkflowMutableState_SignalInfo() {
 	signalName := "my signal"
 	input := []byte("test signal input")
 	control := []byte(uuid.New())
-	signalInfos := []*persistence.SignalInfo{
+	signalInfos := []*p.SignalInfo{
 		{
 			Version:         123,
 			InitiatedID:     1,
@@ -1596,7 +1625,8 @@ func (s *MatchingPersistenceSuite) TestWorkflowMutableState_SignalInfo() {
 	s.Equal(0, len(state.SignalInfos))
 }
 
-func (s *MatchingPersistenceSuite) TestWorkflowMutableState_SignalRequested() {
+// TestWorkflowMutableStateSignalRequested test
+func (s *MatchingPersistenceSuite) TestWorkflowMutableStateSignalRequested() {
 	domainID := uuid.New()
 	runID := uuid.New()
 	workflowExecution := gen.WorkflowExecution{
@@ -1638,7 +1668,8 @@ func (s *MatchingPersistenceSuite) TestWorkflowMutableState_SignalRequested() {
 	s.Equal(0, len(state.SignalRequestedIDs))
 }
 
-func (s *MatchingPersistenceSuite) TestWorkflowMutableState_BufferedReplicationTasks() {
+// TestWorkflowMutableStateBufferedReplicationTasks test
+func (s *MatchingPersistenceSuite) TestWorkflowMutableStateBufferedReplicationTasks() {
 	domainID := "714f8491-a34e-4301-a5af-f0cf5d8660c6"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("test-workflow-mutable-buffered-replication-tasks-test"),
@@ -1677,7 +1708,7 @@ func (s *MatchingPersistenceSuite) TestWorkflowMutableState_BufferedReplicationT
 		},
 	}
 
-	bufferedTask := &persistence.BufferedReplicationTask{
+	bufferedTask := &p.BufferedReplicationTask{
 		FirstEventID: int64(5),
 		NextEventID:  int64(7),
 		Version:      int64(11),
@@ -1758,7 +1789,7 @@ func (s *MatchingPersistenceSuite) TestWorkflowMutableState_BufferedReplicationT
 		},
 	}
 
-	bufferedTask = &persistence.BufferedReplicationTask{
+	bufferedTask = &p.BufferedReplicationTask{
 		FirstEventID:  int64(10),
 		NextEventID:   int64(12),
 		Version:       int64(12),
@@ -1827,6 +1858,7 @@ func (s *MatchingPersistenceSuite) TestWorkflowMutableState_BufferedReplicationT
 	s.Equal(0, len(state4.BufferedReplicationTasks))
 }
 
+// TestWorkflowMutableStateInfo test
 func (s *MatchingPersistenceSuite) TestWorkflowMutableStateInfo() {
 	domainID := "9ed8818b-3090-4160-9f21-c6b70e64d2dd"
 	workflowExecution := gen.WorkflowExecution{
@@ -1858,6 +1890,7 @@ func (s *MatchingPersistenceSuite) TestWorkflowMutableStateInfo() {
 	s.Equal(updatedInfo.State, state.ExecutionInfo.State)
 }
 
+// TestContinueAsNew test
 func (s *MatchingPersistenceSuite) TestContinueAsNew() {
 	domainID := "c1c0bb55-04e6-4a9c-89d0-1be7b96459f8"
 	workflowExecution := gen.WorkflowExecution{
@@ -1872,7 +1905,7 @@ func (s *MatchingPersistenceSuite) TestContinueAsNew() {
 	s.Nil(err1, "No error expected.")
 	info0 := state0.ExecutionInfo
 	continueAsNewInfo := copyWorkflowExecutionInfo(info0)
-	continueAsNewInfo.State = persistence.WorkflowStateCompleted
+	continueAsNewInfo.State = p.WorkflowStateCompleted
 	continueAsNewInfo.NextEventID = int64(5)
 	continueAsNewInfo.LastProcessedEvent = int64(2)
 
@@ -1887,14 +1920,14 @@ func (s *MatchingPersistenceSuite) TestContinueAsNew() {
 	prevExecutionState, err3 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.Nil(err3)
 	prevExecutionInfo := prevExecutionState.ExecutionInfo
-	s.Equal(persistence.WorkflowStateCompleted, prevExecutionInfo.State)
+	s.Equal(p.WorkflowStateCompleted, prevExecutionInfo.State)
 	s.Equal(int64(5), prevExecutionInfo.NextEventID)
 	s.Equal(int64(2), prevExecutionInfo.LastProcessedEvent)
 
 	newExecutionState, err4 := s.GetWorkflowExecutionInfo(domainID, newWorkflowExecution)
 	s.Nil(err4)
 	newExecutionInfo := newExecutionState.ExecutionInfo
-	s.Equal(persistence.WorkflowStateCreated, newExecutionInfo.State)
+	s.Equal(p.WorkflowStateCreated, newExecutionInfo.State)
 	s.Equal(int64(3), newExecutionInfo.NextEventID)
 	s.Equal(common.EmptyEventID, newExecutionInfo.LastProcessedEvent)
 	s.Equal(int64(2), newExecutionInfo.DecisionScheduleID)
@@ -1904,6 +1937,7 @@ func (s *MatchingPersistenceSuite) TestContinueAsNew() {
 	s.Equal(*newWorkflowExecution.RunId, newRunID)
 }
 
+// TestReplicationTransferTaskTasks test
 func (s *MatchingPersistenceSuite) TestReplicationTransferTaskTasks() {
 	domainID := "2466d7de-6602-4ad8-b939-fb8f8c36c711"
 	workflowExecution := gen.WorkflowExecution{
@@ -1926,12 +1960,12 @@ func (s *MatchingPersistenceSuite) TestReplicationTransferTaskTasks() {
 	s.NotNil(info1, "Valid Workflow info expected.")
 	updatedInfo1 := copyWorkflowExecutionInfo(info1)
 
-	replicationTasks := []persistence.Task{&persistence.HistoryReplicationTask{
+	replicationTasks := []p.Task{&p.HistoryReplicationTask{
 		TaskID:       s.GetNextSequenceNumber(),
 		FirstEventID: int64(1),
 		NextEventID:  int64(3),
 		Version:      int64(9),
-		LastReplicationInfo: map[string]*persistence.ReplicationInfo{
+		LastReplicationInfo: map[string]*p.ReplicationInfo{
 			"dc1": {
 				Version:     int64(3),
 				LastEventID: int64(1),
@@ -1950,7 +1984,7 @@ func (s *MatchingPersistenceSuite) TestReplicationTransferTaskTasks() {
 	s.NotNil(tasks1, "expected valid list of tasks.")
 	s.Equal(1, len(tasks1), "Expected 1 replication task.")
 	task1 := tasks1[0]
-	s.Equal(persistence.ReplicationTaskTypeHistory, task1.TaskType)
+	s.Equal(p.ReplicationTaskTypeHistory, task1.TaskType)
 	s.Equal(domainID, task1.DomainID)
 	s.Equal(*workflowExecution.WorkflowId, task1.WorkflowID)
 	s.Equal(*workflowExecution.RunId, task1.RunID)
@@ -1976,6 +2010,7 @@ func (s *MatchingPersistenceSuite) TestReplicationTransferTaskTasks() {
 	s.Nil(err)
 }
 
+// TestWorkflowReplicationState test
 func (s *MatchingPersistenceSuite) TestWorkflowReplicationState() {
 	domainID := uuid.New()
 	runID := uuid.New()
@@ -1984,12 +2019,12 @@ func (s *MatchingPersistenceSuite) TestWorkflowReplicationState() {
 		RunId:      common.StringPtr(runID),
 	}
 
-	replicationTasks := []persistence.Task{&persistence.HistoryReplicationTask{
+	replicationTasks := []p.Task{&p.HistoryReplicationTask{
 		TaskID:       s.GetNextSequenceNumber(),
 		FirstEventID: int64(1),
 		NextEventID:  int64(3),
 		Version:      int64(9),
-		LastReplicationInfo: map[string]*persistence.ReplicationInfo{
+		LastReplicationInfo: map[string]*p.ReplicationInfo{
 			"dc1": {
 				Version:     int64(3),
 				LastEventID: int64(1),
@@ -2002,12 +2037,12 @@ func (s *MatchingPersistenceSuite) TestWorkflowReplicationState() {
 	}}
 
 	task0, err0 := s.CreateWorkflowExecutionWithReplication(domainID, workflowExecution, "taskList", "wType", 20, 13, 3,
-		0, 2, &persistence.ReplicationState{
+		0, 2, &p.ReplicationState{
 			CurrentVersion:   int64(9),
 			StartVersion:     int64(8),
 			LastWriteVersion: int64(7),
 			LastWriteEventID: int64(6),
-			LastReplicationInfo: map[string]*persistence.ReplicationInfo{
+			LastReplicationInfo: map[string]*p.ReplicationInfo{
 				"dc1": {
 					Version:     int64(3),
 					LastEventID: int64(1),
@@ -2023,14 +2058,14 @@ func (s *MatchingPersistenceSuite) TestWorkflowReplicationState() {
 
 	taskD, err := s.GetTransferTasks(2, false)
 	s.Equal(1, len(taskD), "Expected 1 decision task.")
-	s.Equal(persistence.TransferTaskTypeDecisionTask, taskD[0].TaskType)
+	s.Equal(p.TransferTaskTypeDecisionTask, taskD[0].TaskType)
 	err = s.CompleteTransferTask(taskD[0].TaskID)
 	s.Nil(err)
 
 	taskR, err := s.GetReplicationTasks(1, false)
 	s.Equal(1, len(taskR), "Expected 1 replication task.")
 	tsk := taskR[0]
-	s.Equal(persistence.ReplicationTaskTypeHistory, tsk.TaskType)
+	s.Equal(p.ReplicationTaskTypeHistory, tsk.TaskType)
 	s.Equal(domainID, tsk.DomainID)
 	s.Equal(*workflowExecution.WorkflowId, tsk.WorkflowID)
 	s.Equal(*workflowExecution.RunId, tsk.RunID)
@@ -2098,12 +2133,12 @@ func (s *MatchingPersistenceSuite) TestWorkflowReplicationState() {
 	updatedReplicationState.LastReplicationInfo["dc1"].Version = int64(4)
 	updatedReplicationState.LastReplicationInfo["dc1"].LastEventID = int64(2)
 
-	replicationTasks1 := []persistence.Task{&persistence.HistoryReplicationTask{
+	replicationTasks1 := []p.Task{&p.HistoryReplicationTask{
 		TaskID:       s.GetNextSequenceNumber(),
 		FirstEventID: int64(3),
 		NextEventID:  int64(5),
 		Version:      int64(10),
-		LastReplicationInfo: map[string]*persistence.ReplicationInfo{
+		LastReplicationInfo: map[string]*p.ReplicationInfo{
 			"dc1": {
 				Version:     int64(4),
 				LastEventID: int64(2),
@@ -2120,7 +2155,7 @@ func (s *MatchingPersistenceSuite) TestWorkflowReplicationState() {
 	taskR1, err := s.GetReplicationTasks(1, false)
 	s.Equal(1, len(taskR1), "Expected 1 replication task.")
 	tsk1 := taskR1[0]
-	s.Equal(persistence.ReplicationTaskTypeHistory, tsk1.TaskType)
+	s.Equal(p.ReplicationTaskTypeHistory, tsk1.TaskType)
 	s.Equal(domainID, tsk1.DomainID)
 	s.Equal(*workflowExecution.WorkflowId, tsk1.WorkflowID)
 	s.Equal(*workflowExecution.RunId, tsk1.RunID)
@@ -2177,7 +2212,8 @@ func (s *MatchingPersistenceSuite) TestWorkflowReplicationState() {
 	}
 }
 
-func (s *MatchingPersistenceSuite) TestResetMutableState_CurrentIsSelf() {
+// TestResetMutableStateCurrentIsSelf test
+func (s *MatchingPersistenceSuite) TestResetMutableStateCurrentIsSelf() {
 	domainID := "4ca1faac-1a3a-47af-8e51-fdaa2b3d45b9"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("test-reset-mutable-state-test-current-is-self"),
@@ -2220,7 +2256,7 @@ func (s *MatchingPersistenceSuite) TestResetMutableState_CurrentIsSelf() {
 			},
 		},
 	}
-	bufferedTask1 := &persistence.BufferedReplicationTask{
+	bufferedTask1 := &p.BufferedReplicationTask{
 		FirstEventID: int64(5),
 		NextEventID:  int64(7),
 		Version:      int64(11),
@@ -2238,15 +2274,15 @@ func (s *MatchingPersistenceSuite) TestResetMutableState_CurrentIsSelf() {
 			},
 		},
 	}
-	bufferedTask2 := &persistence.BufferedReplicationTask{
+	bufferedTask2 := &p.BufferedReplicationTask{
 		FirstEventID: int64(21),
 		NextEventID:  int64(22),
 		Version:      int64(12),
 		History:      s.serializeHistoryEvents(eventsBatch2),
 	}
-	updatedState := &persistence.WorkflowMutableState{
+	updatedState := &p.WorkflowMutableState{
 		ExecutionInfo: updatedInfo,
-		ActivitInfos: map[int64]*persistence.ActivityInfo{
+		ActivitInfos: map[int64]*p.ActivityInfo{
 			4: {
 				Version:                  7789,
 				ScheduleID:               4,
@@ -2278,7 +2314,7 @@ func (s *MatchingPersistenceSuite) TestResetMutableState_CurrentIsSelf() {
 				TimerTaskStatus:          1,
 			}},
 
-		TimerInfos: map[string]*persistence.TimerInfo{
+		TimerInfos: map[string]*p.TimerInfo{
 			"t1": {
 				Version:    2333,
 				TimerID:    "t1",
@@ -2302,7 +2338,7 @@ func (s *MatchingPersistenceSuite) TestResetMutableState_CurrentIsSelf() {
 			},
 		},
 
-		ChildExecutionInfos: map[int64]*persistence.ChildExecutionInfo{
+		ChildExecutionInfos: map[int64]*p.ChildExecutionInfo{
 			9: {
 				Version:         2334,
 				InitiatedID:     9,
@@ -2313,7 +2349,7 @@ func (s *MatchingPersistenceSuite) TestResetMutableState_CurrentIsSelf() {
 			},
 		},
 
-		RequestCancelInfos: map[int64]*persistence.RequestCancelInfo{
+		RequestCancelInfos: map[int64]*p.RequestCancelInfo{
 			19: {
 				Version:         2335,
 				InitiatedID:     19,
@@ -2321,7 +2357,7 @@ func (s *MatchingPersistenceSuite) TestResetMutableState_CurrentIsSelf() {
 			},
 		},
 
-		SignalInfos: map[int64]*persistence.SignalInfo{
+		SignalInfos: map[int64]*p.SignalInfo{
 			39: {
 				Version:         2336,
 				InitiatedID:     39,
@@ -2460,7 +2496,7 @@ func (s *MatchingPersistenceSuite) TestResetMutableState_CurrentIsSelf() {
 
 	updatedInfo1 := copyWorkflowExecutionInfo(info1)
 	updatedInfo1.NextEventID = int64(3)
-	resetActivityInfos := []*persistence.ActivityInfo{
+	resetActivityInfos := []*p.ActivityInfo{
 		{
 			Version:                  8789,
 			ScheduleID:               40,
@@ -2477,7 +2513,7 @@ func (s *MatchingPersistenceSuite) TestResetMutableState_CurrentIsSelf() {
 			TimerTaskStatus:          1,
 		}}
 
-	resetTimerInfos := []*persistence.TimerInfo{
+	resetTimerInfos := []*p.TimerInfo{
 		{
 			Version:    3333,
 			TimerID:    "t1_new",
@@ -2493,7 +2529,7 @@ func (s *MatchingPersistenceSuite) TestResetMutableState_CurrentIsSelf() {
 			TaskID:     601,
 		}}
 
-	resetChildExecutionInfos := []*persistence.ChildExecutionInfo{
+	resetChildExecutionInfos := []*p.ChildExecutionInfo{
 		{
 			Version:         3334,
 			InitiatedID:     10,
@@ -2503,14 +2539,14 @@ func (s *MatchingPersistenceSuite) TestResetMutableState_CurrentIsSelf() {
 			CreateRequestID: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
 		}}
 
-	resetRequestCancelInfos := []*persistence.RequestCancelInfo{
+	resetRequestCancelInfos := []*p.RequestCancelInfo{
 		{
 			Version:         3335,
 			InitiatedID:     29,
 			CancelRequestID: "new_cancel_requested_id",
 		}}
 
-	resetSignalInfos := []*persistence.SignalInfo{
+	resetSignalInfos := []*p.SignalInfo{
 		{
 			Version:         3336,
 			InitiatedID:     39,
@@ -2528,7 +2564,7 @@ func (s *MatchingPersistenceSuite) TestResetMutableState_CurrentIsSelf() {
 			Control:         []byte("signal_control_c"),
 		}}
 
-	rState := &persistence.ReplicationState{
+	rState := &p.ReplicationState{
 		CurrentVersion: int64(8789),
 		StartVersion:   int64(8780),
 	}
@@ -2623,7 +2659,8 @@ func (s *MatchingPersistenceSuite) TestResetMutableState_CurrentIsSelf() {
 	s.Equal(0, len(state4.BufferedEvents))
 }
 
-func (s *MatchingPersistenceSuite) TestResetMutableState_CurrentIsNotSelf() {
+// TestResetMutableStateCurrentIsNotSelf test
+func (s *MatchingPersistenceSuite) TestResetMutableStateCurrentIsNotSelf() {
 	domainID := "4ca1faac-1a3a-47af-8e51-fdaa2b3d45b9"
 	workflowID := "test-reset-mutable-state-test-current-is-not-self"
 
@@ -2641,7 +2678,7 @@ func (s *MatchingPersistenceSuite) TestResetMutableState_CurrentIsNotSelf() {
 
 	info := state.ExecutionInfo
 	continueAsNewInfo := copyWorkflowExecutionInfo(info)
-	continueAsNewInfo.State = persistence.WorkflowStateCompleted
+	continueAsNewInfo.State = p.WorkflowStateCompleted
 	continueAsNewInfo.NextEventID = int64(5)
 	continueAsNewInfo.LastProcessedEvent = int64(2)
 
@@ -2657,8 +2694,8 @@ func (s *MatchingPersistenceSuite) TestResetMutableState_CurrentIsNotSelf() {
 	state, err = s.GetWorkflowExecutionInfo(domainID, workflowExecutionCurrent1)
 	s.Nil(err)
 	updatedInfo1 := copyWorkflowExecutionInfo(state.ExecutionInfo)
-	updatedInfo1.State = persistence.WorkflowStateCompleted
-	updatedInfo1.CloseStatus = persistence.WorkflowCloseStatusCompleted
+	updatedInfo1.State = p.WorkflowStateCompleted
+	updatedInfo1.CloseStatus = p.WorkflowCloseStatusCompleted
 	updatedInfo1.NextEventID = int64(6)
 	updatedInfo1.LastProcessedEvent = int64(2)
 	err3 := s.UpdateWorkflowExecutionAndFinish(updatedInfo1, int64(3), 123)
@@ -2666,7 +2703,7 @@ func (s *MatchingPersistenceSuite) TestResetMutableState_CurrentIsNotSelf() {
 	runID1, err = s.GetCurrentWorkflowRunID(domainID, workflowID)
 	s.Equal(workflowExecutionCurrent1.GetRunId(), runID1)
 
-	resetExecutionInfo := &persistence.WorkflowExecutionInfo{
+	resetExecutionInfo := &p.WorkflowExecutionInfo{
 		DomainID:             domainID,
 		WorkflowID:           workflowExecutionReset.GetWorkflowId(),
 		RunID:                workflowExecutionReset.GetRunId(),
@@ -2678,7 +2715,7 @@ func (s *MatchingPersistenceSuite) TestResetMutableState_CurrentIsNotSelf() {
 		WorkflowTypeName:     "some random workflow type name",
 		WorkflowTimeout:      1112,
 		DecisionTimeoutValue: 14,
-		State:                persistence.WorkflowStateRunning,
+		State:                p.WorkflowStateRunning,
 		NextEventID:          123,
 		CreateRequestID:      uuid.New(),
 		DecisionVersion:      common.EmptyVersion,
@@ -2687,12 +2724,12 @@ func (s *MatchingPersistenceSuite) TestResetMutableState_CurrentIsNotSelf() {
 		DecisionRequestID:    uuid.New(),
 		DecisionTimeout:      0,
 	}
-	resetActivityInfos := []*persistence.ActivityInfo{}
-	resetTimerInfos := []*persistence.TimerInfo{}
-	resetChildExecutionInfos := []*persistence.ChildExecutionInfo{}
-	resetRequestCancelInfos := []*persistence.RequestCancelInfo{}
-	resetSignalInfos := []*persistence.SignalInfo{}
-	rState := &persistence.ReplicationState{
+	resetActivityInfos := []*p.ActivityInfo{}
+	resetTimerInfos := []*p.TimerInfo{}
+	resetChildExecutionInfos := []*p.ChildExecutionInfo{}
+	resetRequestCancelInfos := []*p.RequestCancelInfo{}
+	resetSignalInfos := []*p.SignalInfo{}
+	rState := &p.ReplicationState{
 		CurrentVersion: int64(8789),
 		StartVersion:   int64(8780),
 	}
@@ -2709,7 +2746,7 @@ func (s *MatchingPersistenceSuite) TestResetMutableState_CurrentIsNotSelf() {
 	s.Nil(err)
 	info = state.ExecutionInfo
 	continueAsNewInfo = copyWorkflowExecutionInfo(info)
-	continueAsNewInfo.State = persistence.WorkflowStateCompleted
+	continueAsNewInfo.State = p.WorkflowStateCompleted
 	continueAsNewInfo.NextEventID += 3
 	continueAsNewInfo.LastProcessedEvent += 2
 
@@ -2732,8 +2769,8 @@ func (s *MatchingPersistenceSuite) TestResetMutableState_CurrentIsNotSelf() {
 	s.Equal(workflowExecutionReset.GetRunId(), runID)
 }
 
-func copyWorkflowExecutionInfo(sourceInfo *persistence.WorkflowExecutionInfo) *persistence.WorkflowExecutionInfo {
-	return &persistence.WorkflowExecutionInfo{
+func copyWorkflowExecutionInfo(sourceInfo *p.WorkflowExecutionInfo) *p.WorkflowExecutionInfo {
+	return &p.WorkflowExecutionInfo{
 		DomainID:             sourceInfo.DomainID,
 		WorkflowID:           sourceInfo.WorkflowID,
 		RunID:                sourceInfo.RunID,
@@ -2760,7 +2797,8 @@ func copyWorkflowExecutionInfo(sourceInfo *persistence.WorkflowExecutionInfo) *p
 	}
 }
 
-func (s *MatchingPersistenceSuite) TestCreateGetShard_Backfill() {
+// TestCreateGetShardBackfill test
+func (s *MatchingPersistenceSuite) TestCreateGetShardBackfill() {
 	shardID := 4
 	rangeID := int64(59)
 
@@ -2768,7 +2806,7 @@ func (s *MatchingPersistenceSuite) TestCreateGetShard_Backfill() {
 	currentReplicationAck := int64(27)
 	currentClusterTransferAck := int64(21)
 	currentClusterTimerAck := timestampConvertor(time.Now().Add(-10 * time.Second))
-	shardInfo := &persistence.ShardInfo{
+	shardInfo := &p.ShardInfo{
 		ShardID:             shardID,
 		Owner:               "some random owner",
 		RangeID:             rangeID,
@@ -2778,7 +2816,7 @@ func (s *MatchingPersistenceSuite) TestCreateGetShard_Backfill() {
 		TransferAckLevel:    currentClusterTransferAck,
 		TimerAckLevel:       currentClusterTimerAck,
 	}
-	createRequest := &persistence.CreateShardRequest{
+	createRequest := &p.CreateShardRequest{
 		ShardInfo: shardInfo,
 	}
 	s.Nil(s.ShardMgr.CreateShard(createRequest))
@@ -2789,7 +2827,7 @@ func (s *MatchingPersistenceSuite) TestCreateGetShard_Backfill() {
 	shardInfo.ClusterTimerAckLevel = map[string]time.Time{
 		s.ClusterMetadata.GetCurrentClusterName(): currentClusterTimerAck,
 	}
-	resp, err := s.ShardMgr.GetShard(&persistence.GetShardRequest{ShardID: shardID})
+	resp, err := s.ShardMgr.GetShard(&p.GetShardRequest{ShardID: shardID})
 	s.Nil(err)
 	s.True(timeComparator(shardInfo.UpdatedAt, resp.ShardInfo.UpdatedAt, timePrecision))
 	s.True(timeComparator(shardInfo.ClusterTimerAckLevel[cluster.TestCurrentClusterName], resp.ShardInfo.ClusterTimerAckLevel[cluster.TestCurrentClusterName], timePrecision))
@@ -2799,6 +2837,7 @@ func (s *MatchingPersistenceSuite) TestCreateGetShard_Backfill() {
 	s.Equal(shardInfo, resp.ShardInfo)
 }
 
+// TestCreateGetUpdateGetShard test
 func (s *MatchingPersistenceSuite) TestCreateGetUpdateGetShard() {
 	shardID := 8
 	rangeID := int64(59)
@@ -2810,7 +2849,7 @@ func (s *MatchingPersistenceSuite) TestCreateGetUpdateGetShard() {
 	currentClusterTimerAck := timestampConvertor(time.Now().Add(-10 * time.Second))
 	alternativeClusterTimerAck := timestampConvertor(time.Now().Add(-20 * time.Second))
 	domainNotificationVersion := int64(8192)
-	shardInfo := &persistence.ShardInfo{
+	shardInfo := &p.ShardInfo{
 		ShardID:             shardID,
 		Owner:               "some random owner",
 		RangeID:             rangeID,
@@ -2829,11 +2868,11 @@ func (s *MatchingPersistenceSuite) TestCreateGetUpdateGetShard() {
 		},
 		DomainNotificationVersion: domainNotificationVersion,
 	}
-	createRequest := &persistence.CreateShardRequest{
+	createRequest := &p.CreateShardRequest{
 		ShardInfo: shardInfo,
 	}
 	s.Nil(s.ShardMgr.CreateShard(createRequest))
-	resp, err := s.ShardMgr.GetShard(&persistence.GetShardRequest{ShardID: shardID})
+	resp, err := s.ShardMgr.GetShard(&p.GetShardRequest{ShardID: shardID})
 	s.Nil(err)
 	s.True(timeComparator(shardInfo.UpdatedAt, resp.ShardInfo.UpdatedAt, timePrecision))
 	s.True(timeComparator(shardInfo.ClusterTimerAckLevel[cluster.TestCurrentClusterName], resp.ShardInfo.ClusterTimerAckLevel[cluster.TestCurrentClusterName], timePrecision))
@@ -2849,7 +2888,7 @@ func (s *MatchingPersistenceSuite) TestCreateGetUpdateGetShard() {
 	currentClusterTimerAck = timestampConvertor(time.Now().Add(-100 * time.Second))
 	alternativeClusterTimerAck = timestampConvertor(time.Now().Add(-200 * time.Second))
 	domainNotificationVersion = int64(16384)
-	shardInfo = &persistence.ShardInfo{
+	shardInfo = &p.ShardInfo{
 		ShardID:             shardID,
 		Owner:               "some random owner",
 		RangeID:             int64(28),
@@ -2868,13 +2907,13 @@ func (s *MatchingPersistenceSuite) TestCreateGetUpdateGetShard() {
 		},
 		DomainNotificationVersion: domainNotificationVersion,
 	}
-	updateRequest := &persistence.UpdateShardRequest{
+	updateRequest := &p.UpdateShardRequest{
 		ShardInfo:       shardInfo,
 		PreviousRangeID: rangeID,
 	}
 	s.Nil(s.ShardMgr.UpdateShard(updateRequest))
 
-	resp, err = s.ShardMgr.GetShard(&persistence.GetShardRequest{ShardID: shardID})
+	resp, err = s.ShardMgr.GetShard(&p.GetShardRequest{ShardID: shardID})
 	s.Nil(err)
 	s.True(timeComparator(shardInfo.UpdatedAt, resp.ShardInfo.UpdatedAt, timePrecision))
 	s.True(timeComparator(shardInfo.ClusterTimerAckLevel[cluster.TestCurrentClusterName], resp.ShardInfo.ClusterTimerAckLevel[cluster.TestCurrentClusterName], timePrecision))
@@ -2902,15 +2941,15 @@ func timeComparator(t1 time.Time, t2 time.Time, timeTolerance time.Duration) boo
 	return false
 }
 
-func copyReplicationState(sourceState *persistence.ReplicationState) *persistence.ReplicationState {
-	state := &persistence.ReplicationState{
+func copyReplicationState(sourceState *p.ReplicationState) *p.ReplicationState {
+	state := &p.ReplicationState{
 		CurrentVersion:   sourceState.CurrentVersion,
 		StartVersion:     sourceState.StartVersion,
 		LastWriteVersion: sourceState.LastWriteVersion,
 		LastWriteEventID: sourceState.LastWriteEventID,
 	}
 	if sourceState.LastReplicationInfo != nil {
-		state.LastReplicationInfo = map[string]*persistence.ReplicationInfo{}
+		state.LastReplicationInfo = map[string]*p.ReplicationInfo{}
 		for k, v := range sourceState.LastReplicationInfo {
 			state.LastReplicationInfo[k] = copyReplicationInfo(v)
 		}
@@ -2919,23 +2958,23 @@ func copyReplicationState(sourceState *persistence.ReplicationState) *persistenc
 	return state
 }
 
-func copyReplicationInfo(sourceInfo *persistence.ReplicationInfo) *persistence.ReplicationInfo {
-	return &persistence.ReplicationInfo{
+func copyReplicationInfo(sourceInfo *p.ReplicationInfo) *p.ReplicationInfo {
+	return &p.ReplicationInfo{
 		Version:     sourceInfo.Version,
 		LastEventID: sourceInfo.LastEventID,
 	}
 }
 
-func (s *MatchingPersistenceSuite) serializeHistoryEvents(events []*gen.HistoryEvent) *persistence.SerializedHistoryEventBatch {
-	historySerializer := persistence.NewJSONHistorySerializer()
-	bufferedBatch := persistence.NewHistoryEventBatch(persistence.GetDefaultHistoryVersion(), events)
+func (s *MatchingPersistenceSuite) serializeHistoryEvents(events []*gen.HistoryEvent) *p.SerializedHistoryEventBatch {
+	historySerializer := p.NewJSONHistorySerializer()
+	bufferedBatch := p.NewHistoryEventBatch(p.GetDefaultHistoryVersion(), events)
 	serializedEvents, _ := historySerializer.Serialize(bufferedBatch)
 
 	return serializedEvents
 }
 
-func (s *MatchingPersistenceSuite) deserializedHistoryEvents(batch *persistence.SerializedHistoryEventBatch) *persistence.HistoryEventBatch {
-	historySerializer := persistence.NewJSONHistorySerializer()
+func (s *MatchingPersistenceSuite) deserializedHistoryEvents(batch *p.SerializedHistoryEventBatch) *p.HistoryEventBatch {
+	historySerializer := p.NewJSONHistorySerializer()
 	events, err := historySerializer.Deserialize(batch)
 	if err != nil {
 		panic(err)
