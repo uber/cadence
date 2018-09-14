@@ -881,7 +881,7 @@ type (
 		// History events
 		History *workflow.History
 		// Token to read next page if there are more events beyond page size.
-		// Use this to set NextPageToken on GetworkflowExecutionHistoryRequest to read the next page.
+		// Use this to set NextPageToken on ReadHistoryBranchRequest to read the next page.
 		NextPageToken []byte
 		// the MinNodeID of last loaded batch
 		LastMinNodeID int64
