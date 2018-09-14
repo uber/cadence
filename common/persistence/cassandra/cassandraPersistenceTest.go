@@ -41,7 +41,7 @@ const (
 	testUser                 = ""
 	testPassword             = ""
 	testDatacenter           = ""
-	testSchemaDir            = "schema/"
+	testSchemaDir            = "schema/cassandra/"
 )
 
 // TestCluster allows executing cassandra operations in testing.
