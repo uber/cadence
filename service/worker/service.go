@@ -27,7 +27,6 @@ import (
 	"github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/dynamicconfig"
-	ser "github.com/uber/cadence/service"
 )
 
 type (

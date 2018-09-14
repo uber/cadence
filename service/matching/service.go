@@ -25,7 +25,6 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 

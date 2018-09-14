@@ -21,8 +21,6 @@
 package persistencetests
 
 import (
-	"github.com/iancoleman/strcase"
-	"io/ioutil"
 	"math"
 	"math/rand"
 	"sync/atomic"

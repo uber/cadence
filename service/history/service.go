@@ -29,7 +29,6 @@ import (
 	"github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/dynamicconfig"
-	sc "github.com/uber/cadence/service"
 )
 
 // Config represents configuration for cadence-history service
