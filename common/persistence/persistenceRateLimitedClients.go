@@ -371,6 +371,66 @@ func (p *historyRateLimitedPersistenceClient) Close() {
 	p.persistence.Close()
 }
 
+// NewHistoryBranch creates a new branch from tree root. If tree doesn't exist, then create one. Return error if the branch already exists.
+func (p *historyRateLimitedPersistenceClient) NewHistoryBranch(request *NewHistoryBranchRequest) error {
+	if ok, _ := p.rateLimiter.TryConsume(1); !ok {
+		return ErrPersistenceLimitExceeded
+	}
+
+	err := p.persistence.NewHistoryBranch(request)
+	return err
+}
+
+// AppendHistoryNode add(or override) a node to a history branch
+func (p *historyRateLimitedPersistenceClient) AppendHistoryNode(request *AppendHistoryNodeRequest) error {
+	if ok, _ := p.rateLimiter.TryConsume(1); !ok {
+		return ErrPersistenceLimitExceeded
+	}
+
+	err := p.persistence.AppendHistoryNode(request)
+	return err
+}
+
+// ReadHistoryBranch returns history node data for a branch
+func (p *historyRateLimitedPersistenceClient) ReadHistoryBranch(request *ReadHistoryBranchRequest) (*ReadHistoryBranchResponse, error) {
+	if ok, _ := p.rateLimiter.TryConsume(1); !ok {
+		return nil, ErrPersistenceLimitExceeded
+	}
+
+	response, err := p.persistence.ReadHistoryBranch(request)
+	return response, err
+}
+
+// ForkHistoryBranch forks a new branch from a old branch
+func (p *historyRateLimitedPersistenceClient) ForkHistoryBranch(request *ForkHistoryBranchRequest) (*ForkHistoryBranchResponse, error) {
+	if ok, _ := p.rateLimiter.TryConsume(1); !ok {
+		return nil, ErrPersistenceLimitExceeded
+	}
+
+	response, err := p.persistence.ForkHistoryBranch(request)
+	return response, err
+}
+
+// DeleteHistoryBranch removes a branch
+func (p *historyRateLimitedPersistenceClient) DeleteHistoryBranch(request *DeleteHistoryBranchRequest) error {
+	if ok, _ := p.rateLimiter.TryConsume(1); !ok {
+		return ErrPersistenceLimitExceeded
+	}
+
+	err := p.persistence.DeleteHistoryBranch(request)
+	return err
+}
+
+// GetHistoryTree returns all branch information of a tree
+func (p *historyRateLimitedPersistenceClient) GetHistoryTree(request *GetHistoryTreeRequest) (*GetHistoryTreeResponse, error) {
+	if ok, _ := p.rateLimiter.TryConsume(1); !ok {
+		return nil, ErrPersistenceLimitExceeded
+	}
+
+	response, err := p.persistence.GetHistoryTree(request)
+	return response, err
+}
+
 func (p *metadataRateLimitedPersistenceClient) CreateDomain(request *CreateDomainRequest) (*CreateDomainResponse, error) {
 	if ok, _ := p.rateLimiter.TryConsume(1); !ok {
 		return nil, ErrPersistenceLimitExceeded

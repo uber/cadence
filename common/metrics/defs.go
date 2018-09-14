@@ -260,6 +260,18 @@ const (
 	MatchingClientDescribeTaskListScope
 	// DomainCacheScope tracks domain cache callbacks
 	DomainCacheScope
+	// PersistenceNewHistoryBranchScope tracks NewHistoryBranch calls made by service to persistence layer
+	PersistenceNewHistoryBranchScope
+	// PersistenceAppendHistoryNodeScope tracks AppendHistoryNode calls made by service to persistence layer
+	PersistenceAppendHistoryNodeScope
+	// PersistenceReadHistoryBranchScope tracks ReadHistoryBranch calls made by service to persistence layer
+	PersistenceReadHistoryBranchScope
+	// PersistenceForkHistoryBranchScope tracks ForkHistoryBranch calls made by service to persistence layer
+	PersistenceForkHistoryBranchScope
+	// PersistenceDeleteHistoryBranchScope tracks DeleteHistoryBranch calls made by service to persistence layer
+	PersistenceDeleteHistoryBranchScope
+	// PersistenceGetHistoryTreeScope tracks GetHistoryTree calls made by service to persistence layer
+	PersistenceGetHistoryTreeScope
 
 	NumCommonScopes
 )
@@ -538,6 +550,12 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceListClosedWorkflowExecutionsByWorkflowIDScope: {operation: "ListClosedWorkflowExecutionsByWorkflowID"},
 		PersistenceListClosedWorkflowExecutionsByStatusScope:     {operation: "ListClosedWorkflowExecutionsByStatus"},
 		PersistenceGetClosedWorkflowExecutionScope:               {operation: "GetClosedWorkflowExecution"},
+		PersistenceNewHistoryBranchScope:                         {operation: "NewHistoryBranch", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceAppendHistoryNodeScope:                        {operation: "AppendHistoryNode", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceReadHistoryBranchScope:                        {operation: "ReadHistoryBranch", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceForkHistoryBranchScope:                        {operation: "ForkHistoryBranch", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceDeleteHistoryBranchScope:                      {operation: "DeleteHistoryBranch", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceGetHistoryTreeScope:                           {operation: "GetHistoryTree", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 
 		HistoryClientStartWorkflowExecutionScope:           {operation: "HistoryClientStartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
 		HistoryClientRecordActivityTaskHeartbeatScope:      {operation: "HistoryClientRecordActivityTaskHeartbeat", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},

@@ -89,6 +89,44 @@ func NewCassandraHistoryPersistence(hosts string, port int, user, password, dc s
 	return &cassandraHistoryPersistence{session: session, logger: logger, serializerFactory: NewHistorySerializerFactory()}, nil
 }
 
+const v1HistoryPanicError = "history Events V2 APIs is not supported in V1 implementation"
+
+// NewHistoryBranch creates a new branch from tree root. If tree doesn't exist, then create one. Return error if the branch already exists.
+func (h *cassandraHistoryPersistence) NewHistoryBranch(request *NewHistoryBranchRequest) error {
+	h.logger.Fatal(v1HistoryPanicError)
+	return fmt.Errorf(v1HistoryPanicError)
+}
+
+// AppendHistoryNode add(or override) a node to a history branch
+func (h *cassandraHistoryPersistence) AppendHistoryNode(request *AppendHistoryNodeRequest) error {
+	h.logger.Fatal(v1HistoryPanicError)
+	return fmt.Errorf(v1HistoryPanicError)
+}
+
+// ReadHistoryBranch returns history node data for a branch
+func (h *cassandraHistoryPersistence) ReadHistoryBranch(request *ReadHistoryBranchRequest) (*ReadHistoryBranchResponse, error) {
+	h.logger.Fatal(v1HistoryPanicError)
+	return &ReadHistoryBranchResponse{}, fmt.Errorf(v1HistoryPanicError)
+}
+
+// ForkHistoryBranch forks a new branch from a old branch
+func (h *cassandraHistoryPersistence) ForkHistoryBranch(request *ForkHistoryBranchRequest) (*ForkHistoryBranchResponse, error) {
+	h.logger.Fatal(v1HistoryPanicError)
+	return &ForkHistoryBranchResponse{}, fmt.Errorf(v1HistoryPanicError)
+}
+
+// DeleteHistoryBranch removes a branch
+func (h *cassandraHistoryPersistence) DeleteHistoryBranch(request *DeleteHistoryBranchRequest) error {
+	h.logger.Fatal(v1HistoryPanicError)
+	return fmt.Errorf(v1HistoryPanicError)
+}
+
+// GetHistoryTree returns all branch information of a tree
+func (h *cassandraHistoryPersistence) GetHistoryTree(request *GetHistoryTreeRequest) (*GetHistoryTreeResponse, error) {
+	h.logger.Fatal(v1HistoryPanicError)
+	return &GetHistoryTreeResponse{}, fmt.Errorf(v1HistoryPanicError)
+}
+
 // Close gracefully releases the resources held by this object
 func (h *cassandraHistoryPersistence) Close() {
 	if h.session != nil {
