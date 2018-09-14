@@ -878,7 +878,7 @@ type (
 	ReadHistoryBranchResponse struct {
 		// The branch to be read
 		BranchInfo HistoryBranch
-		//
+		// History events
 		History *workflow.History
 		// Token to read next page if there are more events beyond page size.
 		// Use this to set NextPageToken on GetworkflowExecutionHistoryRequest to read the next page.
