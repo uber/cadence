@@ -57,7 +57,6 @@ type (
 	historyToken struct {
 		LastEventBatchVersion int64
 		LastEventID           int64
-		Data                  []byte
 	}
 )
 
@@ -97,7 +96,9 @@ domain_id = ? AND
 workflow_id = ? AND
 run_id = ? AND
 first_event_id >= ? AND
-first_event_id < ?`
+first_event_id < ?
+ORDER BY first_event_id
+LIMIT ?`
 
 	deleteWorkflowExecutionHistorySQLQuery = `DELETE FROM events WHERE
 domain_id = ? AND workflow_id = ? AND run_id = ?`
@@ -219,8 +220,9 @@ func (m *sqlHistoryManager) GetWorkflowExecutionHistory(request *p.GetWorkflowEx
 		request.DomainID,
 		request.Execution.WorkflowId,
 		request.Execution.RunId,
-		request.FirstEventID,
-		request.NextEventID); err != nil {
+		token.LastEventID + 1,
+		request.NextEventID,
+		request.PageSize); err != nil {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("GetWorkflowExecutionHistory operation failed. Select failed. Error: %v", err),
 		}
@@ -275,12 +277,18 @@ func (m *sqlHistoryManager) GetWorkflowExecutionHistory(request *p.GetWorkflowEx
 		eventBatchVersion = common.EmptyVersion
 		eventBatch = p.SerializedHistoryEventBatch{}
 	}
-
+	var nextToken []byte
+	if token.LastEventID < request.NextEventID-1 {
+		nextToken, err = m.serializeToken(token)
+		if err != nil {
+			return nil, err
+		}
+	}
 	response := &p.GetWorkflowExecutionHistoryResponse{
 		History:          history,
 		LastFirstEventID: lastFirstEventID,
+		NextPageToken:    nextToken,
 	}
-
 	return response, nil
 }
 
@@ -329,6 +337,14 @@ func lockAndCheckRangeIDAndTxID(tx *sqlx.Tx,
 	return nil
 }
 
+func (h *sqlHistoryManager) serializeToken(token *historyToken) ([]byte, error) {
+	data, err := json.Marshal(token)
+	if err != nil {
+		return nil, &workflow.InternalServiceError{Message: "Error generating history event token."}
+	}
+	return data, nil
+}
+
 func (h *sqlHistoryManager) deserializeToken(request *p.GetWorkflowExecutionHistoryRequest) (*historyToken, error) {
 	token := &historyToken{
 		LastEventBatchVersion: common.EmptyVersion,
@@ -343,8 +359,5 @@ func (h *sqlHistoryManager) deserializeToken(request *p.GetWorkflowExecutionHist
 	if err == nil {
 		return token, nil
 	}
-
-	// for backward compatible reason, the input data can be raw Cassandra token
-	token.Data = request.NextPageToken
 	return token, nil
 }
