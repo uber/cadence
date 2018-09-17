@@ -23,7 +23,7 @@ package sql
 import (
 	"database/sql"
 	"fmt"
-	"github.com/iancoleman/strcase"
+	"github.com/uber-common/bark"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/persistence"
@@ -524,13 +524,11 @@ func (m *sqlMetadataManager) GetMetadata() (*persistence.GetMetadataResponse, er
 }
 
 // NewMetadataPersistence creates an instance of sqlMetadataManager
-func NewMetadataPersistence(username, password, host, port, dbName string) (persistence.MetadataManager, error) {
-	var db, err = sqlx.Connect("mysql",
-		fmt.Sprintf(Dsn, username, password, host, port, dbName))
+func NewMetadataPersistence(host string, port int , username, password,  dbName string, logger bark.Logger) (persistence.MetadataManager, error) {
+	var db, err = newConnection(host, port, username, password, dbName)
 	if err != nil {
 		return nil, err
 	}
-	db.MapperFunc(strcase.ToSnake)
 	return &sqlMetadataManager{
 		db: db,
 	}, nil

@@ -23,19 +23,19 @@ package sql
 import (
 	"database/sql"
 	"fmt"
-	"github.com/iancoleman/strcase"
+	"github.com/uber-common/bark"
 	"time"
 
+	"github.com/jmoiron/sqlx"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/persistence"
-
-	"github.com/jmoiron/sqlx"
 )
 
 type (
 	sqlShardManager struct {
 		db                 *sqlx.DB
 		currentClusterName string
+		log                bark.Logger
 	}
 
 	shardsRow struct {
@@ -116,16 +116,15 @@ shard_id = :shard_id
 	lockShardSQLQuery = `SELECT range_id FROM shards WHERE shard_id = ? FOR UPDATE`
 )
 
-func NewShardPersistence(username, password, host, port, dbName string, currentClusterName string) (persistence.ShardManager, error) {
-	var db, err = sqlx.Connect("mysql",
-		fmt.Sprintf(Dsn, username, password, host, port, dbName))
+func NewShardPersistence(host string, port int, username, password, dbName string, currentClusterName string, log bark.Logger) (persistence.ShardManager, error) {
+	var db, err = newConnection(host, port, username, password, dbName)
 	if err != nil {
 		return nil, err
 	}
-	db.MapperFunc(strcase.ToSnake)
 	return &sqlShardManager{
 		db:                 db,
 		currentClusterName: currentClusterName,
+		log:                log,
 	}, nil
 }
 

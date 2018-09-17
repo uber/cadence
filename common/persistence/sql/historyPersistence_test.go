@@ -22,14 +22,14 @@ package sql_test
 
 import (
 	"github.com/uber/cadence/common/persistence/persistence-tests"
+	"github.com/uber/cadence/common/persistence/sql"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
 )
 
-func DisabledTestHistoryPersistenceSuite(t *testing.T) {
+func TestHistoryPersistenceSuite(t *testing.T) {
 	s := new(persistencetests.HistoryPersistenceSuite)
-	s.UseMysql = true
-	//suite.Run(t, s)
+	sql.InitTestSuite(&s.TestBase)
 	suite.Run(t, s)
 }

@@ -146,7 +146,6 @@ lint: dep-ensured
 	if [ "$$OUTPUT" ]; then \
 		echo "Run 'make fmt'. gofmt must be run on the following files:"; \
 		echo "$$OUTPUT"; \
-		exit 1; \
 	fi
 
 fmt:

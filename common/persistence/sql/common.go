@@ -24,7 +24,6 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
-
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"time"
 )
@@ -55,7 +54,7 @@ func gobDeserialize(a []byte, x interface{}) error {
 }
 
 const (
-	Dsn = "%s:%s@tcp(%s:%s)/%s?multiStatements=true&tx_isolation=%%27READ-COMMITTED%%27&parseTime=true&clientFoundRows=true"
+	Dsn = "%s:%s@tcp(%s:%d)/%s?multiStatements=true&tx_isolation=%%27READ-COMMITTED%%27&parseTime=true&clientFoundRows=true"
 )
 
 var MaximumExpiryTs time.Time = time.Unix(1<<63-62135596801, 999999999)

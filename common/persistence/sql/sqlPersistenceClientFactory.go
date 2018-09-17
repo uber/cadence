@@ -23,29 +23,36 @@ package sql
 import (
 	"github.com/uber/cadence/common/persistence"
 
-	"github.com/jmoiron/sqlx"
 	"github.com/uber-common/bark"
 )
 
 type (
 	persistenceClientFactory struct {
-		db     *sqlx.DB
-		logger bark.Logger
+		host               string
+		port               int
+		username           string
+		password           string
+		dbName             string
+		currentClusterName string
+		logger             bark.Logger
 	}
 )
 
-func NewPersistenceClientFactory(logger bark.Logger) (persistence.ExecutionManagerFactory, error) {
+func NewPersistenceClientFactory(host string, port int, username, password, dbName string, currentClusterName string, logger bark.Logger) (persistence.ExecutionManagerFactory, error) {
 	return &persistenceClientFactory{
-		logger: logger,
+		host:               host,
+		port:               port,
+		username:           username,
+		password:           password,
+		dbName:             dbName,
+		currentClusterName: currentClusterName,
+		logger:             logger,
 	}, nil
 }
 
 func (f *persistenceClientFactory) CreateExecutionManager(shardID int) (persistence.ExecutionManager, error) {
-	return NewSqlMatchingPersistence("uber", "uber", "localhost", "3306", "catalyst_test", f.logger)
+	return NewSqlMatchingPersistence(f.host, f.port, f.username, f.password, f.dbName, f.logger)
 }
 
 func (f *persistenceClientFactory) Close() {
-	if f.db != nil {
-		f.Close()
-	}
 }

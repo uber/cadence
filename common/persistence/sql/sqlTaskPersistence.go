@@ -22,7 +22,7 @@ package sql
 
 import (
 	"fmt"
-	"github.com/iancoleman/strcase"
+	"github.com/uber-common/bark"
 
 	"database/sql"
 	"github.com/jmoiron/sqlx"
@@ -117,14 +117,11 @@ VALUES
 (:domain_id, :workflow_id, :run_id, :schedule_id, :task_list_name, :task_list_type, :task_id, :expiry_ts)`
 )
 
-func NewTaskPersistence(username, password, host, port, dbName string) (persistence.TaskManager, error) {
-	var db, err = sqlx.Connect("mysql",
-		fmt.Sprintf(Dsn, username, password, host, port, dbName))
+func NewTaskPersistence(host string, port int, username, password, dbName string, logger bark.Logger) (persistence.TaskManager, error) {
+	var db, err = newConnection(host, port, username, password, dbName)
 	if err != nil {
 		return nil, err
 	}
-	db.MapperFunc(strcase.ToSnake)
-
 	return &sqlTaskManager{
 		db: db,
 	}, nil

@@ -2929,7 +2929,7 @@ func (s *MatchingPersistenceSuite) TestCreateGetUpdateGetShard() {
 func timestampConvertor(t time.Time) time.Time {
 	return time.Unix(
 		0,
-		common.CQLTimestampToUnixNano(common.UnixNanoToCQLTimestamp(t.UnixNano())),
+		p.DBTimestampToUnixNano(p.UnixNanoToDBTimestamp(t.UnixNano())),
 	).UTC()
 }
 

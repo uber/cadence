@@ -116,8 +116,8 @@ func (s *integrationClustersTestSuite) newTestCluster(no int) *testCluster {
 func (s *testCluster) setupCluster(no int) {
 	options := persistencetests.TestBaseOptions{}
 	options.DBHost = "127.0.0.1"
-	options.DatabaseName = "integration_" + clusterName[no]
-	options.DropKeySpace = true
+	options.DBName = "integration_" + clusterName[no]
+	options.DropDatabase = true
 	clusterInfo := clustersInfo[no]
 	metadata := cluster.NewMetadata(
 		dynamicconfig.GetBoolPropertyFn(clusterInfo.EnableGlobalDomain),

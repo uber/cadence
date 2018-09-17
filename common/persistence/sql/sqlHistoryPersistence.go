@@ -21,17 +21,16 @@
 package sql
 
 import (
+	"encoding/json"
 	"fmt"
-	"github.com/iancoleman/strcase"
-	"github.com/uber/cadence/common/logging"
 
+	"github.com/go-sql-driver/mysql"
+	"github.com/jmoiron/sqlx"
 	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/persistence"
-
-	"github.com/jmoiron/sqlx"
-	"strings"
+	"github.com/uber/cadence/common/logging"
+	p "github.com/uber/cadence/common/persistence"
 )
 
 type (
@@ -39,7 +38,7 @@ type (
 		db                *sqlx.DB
 		shardID           int
 		logger            bark.Logger
-		serializerFactory persistence.HistorySerializerFactory
+		serializerFactory p.HistorySerializerFactory
 	}
 
 	eventsRow struct {
@@ -54,9 +53,19 @@ type (
 		RangeID int64
 		TxID    int64
 	}
+
+	historyToken struct {
+		LastEventBatchVersion int64
+		LastEventID           int64
+		Data                  []byte
+	}
 )
 
 const (
+	// MySQL Error 1062 indicates a duplicate primary key i.e. the row already exists,
+	// so we don't do the insert and return a ConditionalUpdate error.
+	ErrDupEntry = 1062
+
 	appendHistorySQLQuery = `INSERT INTO events (
 domain_id,workflow_id,run_id,first_event_id,data,data_encoding,data_version
 ) VALUES (
@@ -103,21 +112,19 @@ func (m *sqlHistoryManager) Close() {
 	}
 }
 
-func NewHistoryPersistence(username, password, host, port, dbName string, logger bark.Logger) (persistence.HistoryManager, error) {
-	var db, err = sqlx.Connect("mysql",
-		fmt.Sprintf(Dsn, username, password, host, port, dbName))
+func NewHistoryPersistence(host string, port int, username, password, dbName string, logger bark.Logger) (p.HistoryManager, error) {
+	var db, err = newConnection(host, port, username, password, dbName)
 	if err != nil {
 		return nil, err
 	}
-	db.MapperFunc(strcase.ToSnake)
 	return &sqlHistoryManager{
 		db:                db,
 		logger:            logger,
-		serializerFactory: persistence.NewHistorySerializerFactory(),
+		serializerFactory: p.NewHistorySerializerFactory(),
 	}, nil
 }
 
-func (m *sqlHistoryManager) AppendHistoryEvents(request *persistence.AppendHistoryEventsRequest) error {
+func (m *sqlHistoryManager) AppendHistoryEvents(request *p.AppendHistoryEventsRequest) error {
 	arg := &eventsRow{
 		DomainID:     request.DomainID,
 		WorkflowID:   *request.Execution.WorkflowId,
@@ -147,8 +154,8 @@ func (m *sqlHistoryManager) AppendHistoryEvents(request *persistence.AppendHisto
 			*request.Execution.RunId,
 			request.FirstEventID); err != nil {
 			switch err.(type) {
-			case *persistence.ConditionFailedError:
-				return &persistence.ConditionFailedError{
+			case *p.ConditionFailedError:
+				return &p.ConditionFailedError{
 					Msg: fmt.Sprintf("AppendHistoryEvents operation failed. Overwrite failed. Error: %v", err),
 				}
 			default:
@@ -184,10 +191,8 @@ func (m *sqlHistoryManager) AppendHistoryEvents(request *persistence.AppendHisto
 	} else {
 		if _, err := m.db.NamedExec(appendHistorySQLQuery, arg); err != nil {
 			// TODO Find another way to do this without inspecting the error message (?)
-			// Error 1062 indicates a duplicate primary key i.e. the row already exists,
-			// so we don't do the insert and return a ConditionalUpdate error.
-			if strings.HasPrefix(err.Error(), "Error 1062") {
-				return &persistence.ConditionFailedError{
+			if sqlErr, ok := err.(*mysql.MySQLError); ok && sqlErr.Number == ErrDupEntry {
+				return &p.ConditionFailedError{
 					Msg: fmt.Sprintf("AppendHistoryEvents operaiton failed. Couldn't insert since row already existed. Erorr: %v", err),
 				}
 			}
@@ -201,8 +206,13 @@ func (m *sqlHistoryManager) AppendHistoryEvents(request *persistence.AppendHisto
 }
 
 // TODO: Pagination
-func (m *sqlHistoryManager) GetWorkflowExecutionHistory(request *persistence.GetWorkflowExecutionHistoryRequest) (
-	*persistence.GetWorkflowExecutionHistoryResponse, error) {
+func (m *sqlHistoryManager) GetWorkflowExecutionHistory(request *p.GetWorkflowExecutionHistoryRequest) (
+	*p.GetWorkflowExecutionHistoryResponse, error) {
+	token, err := m.deserializeToken(request)
+	if err != nil {
+		return nil, err
+	}
+
 	var rows []eventsRow
 	if err := m.db.Select(&rows,
 		getWorkflowExecutionHistorySQLQuery,
@@ -223,34 +233,50 @@ func (m *sqlHistoryManager) GetWorkflowExecutionHistory(request *persistence.Get
 		}
 	}
 
+	eventBatchVersionPointer := new(int64)
+	eventBatchVersion := common.EmptyVersion
 	lastFirstEventID := common.EmptyEventID // first_event_id of last batch
 	history := &workflow.History{}
-	eventBatch := persistence.SerializedHistoryEventBatch{}
+	eventBatch := p.SerializedHistoryEventBatch{}
 	for _, v := range rows {
 		eventBatch.Data = *v.Data
 		eventBatch.EncodingType = common.EncodingType(v.DataEncoding)
 
-		historyBatch, err := m.deserializeEvents(&eventBatch)
-		if err != nil {
-			return nil, err
+		if eventBatchVersionPointer != nil {
+			eventBatchVersion = *eventBatchVersionPointer
 		}
-		if len(historyBatch.Events) == 0 || historyBatch.Events[0].GetEventId() >= request.NextEventID {
-			logger := m.logger.WithFields(bark.Fields{
-				logging.TagWorkflowExecutionID: request.Execution.GetWorkflowId(),
-				logging.TagWorkflowRunID:       request.Execution.GetRunId(),
-				logging.TagDomainID:            request.DomainID,
-			})
-			logger.Error("Unexpected event batch")
-			return nil, fmt.Errorf("corrupted history event batch")
+		if eventBatchVersion >= token.LastEventBatchVersion {
+			historyBatch, err := m.deserializeEvents(&eventBatch)
+			if err != nil {
+				return nil, err
+			}
+			if len(historyBatch.Events) == 0 || historyBatch.Events[0].GetEventId() > token.LastEventID+1 {
+				logger := m.logger.WithFields(bark.Fields{
+					logging.TagWorkflowExecutionID: request.Execution.GetWorkflowId(),
+					logging.TagWorkflowRunID:       request.Execution.GetRunId(),
+					logging.TagDomainID:            request.DomainID,
+				})
+				logger.Error("Unexpected event batch")
+				return nil, fmt.Errorf("corrupted history event batch")
+			}
+
+			if historyBatch.Events[0].GetEventId() != token.LastEventID+1 {
+				// staled event batch, skip it
+				continue
+			}
+
+			lastFirstEventID = historyBatch.Events[0].GetEventId()
+			history.Events = append(history.Events, historyBatch.Events...)
+			token.LastEventID = historyBatch.Events[len(historyBatch.Events)-1].GetEventId()
+			token.LastEventBatchVersion = eventBatchVersion
 		}
 
-		lastFirstEventID = historyBatch.Events[0].GetEventId()
-		history.Events = append(history.Events, historyBatch.Events...)
-
-		eventBatch = persistence.SerializedHistoryEventBatch{}
+		eventBatchVersionPointer = new(int64)
+		eventBatchVersion = common.EmptyVersion
+		eventBatch = p.SerializedHistoryEventBatch{}
 	}
 
-	response := &persistence.GetWorkflowExecutionHistoryResponse{
+	response := &p.GetWorkflowExecutionHistoryResponse{
 		History:          history,
 		LastFirstEventID: lastFirstEventID,
 	}
@@ -258,13 +284,13 @@ func (m *sqlHistoryManager) GetWorkflowExecutionHistory(request *persistence.Get
 	return response, nil
 }
 
-func (h *sqlHistoryManager) deserializeEvents(e *persistence.SerializedHistoryEventBatch) (*persistence.HistoryEventBatch, error) {
-	persistence.SetSerializedHistoryDefaults(e)
+func (h *sqlHistoryManager) deserializeEvents(e *p.SerializedHistoryEventBatch) (*p.HistoryEventBatch, error) {
+	p.SetSerializedHistoryDefaults(e)
 	s, _ := h.serializerFactory.Get(e.EncodingType)
 	return s.Deserialize(e)
 }
 
-func (m *sqlHistoryManager) DeleteWorkflowExecutionHistory(request *persistence.DeleteWorkflowExecutionHistoryRequest) error {
+func (m *sqlHistoryManager) DeleteWorkflowExecutionHistory(request *p.DeleteWorkflowExecutionHistoryRequest) error {
 	if _, err := m.db.Exec(deleteWorkflowExecutionHistorySQLQuery, request.DomainID, request.Execution.WorkflowId, request.Execution.RunId); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("DeleteWorkflowExecutionHistory operation failed. Error: %v", err),
@@ -292,13 +318,33 @@ func lockAndCheckRangeIDAndTxID(tx *sqlx.Tx,
 		}
 	}
 	if !(row.RangeID <= maxRangeID) {
-		return &persistence.ConditionFailedError{
+		return &p.ConditionFailedError{
 			Msg: fmt.Sprintf("Failed to lock range ID and tx ID. %v should've been at most %v.", row.RangeID, maxRangeID),
 		}
 	} else if !(row.TxID < maxTxIDPlusOne) {
-		return &persistence.ConditionFailedError{
+		return &p.ConditionFailedError{
 			Msg: fmt.Sprintf("Failed to lock range ID and tx ID. %v should've been strictly less than %v.", row.TxID, maxTxIDPlusOne),
 		}
 	}
 	return nil
+}
+
+func (h *sqlHistoryManager) deserializeToken(request *p.GetWorkflowExecutionHistoryRequest) (*historyToken, error) {
+	token := &historyToken{
+		LastEventBatchVersion: common.EmptyVersion,
+		LastEventID:           request.FirstEventID - 1,
+	}
+
+	if len(request.NextPageToken) == 0 {
+		return token, nil
+	}
+
+	err := json.Unmarshal(request.NextPageToken, token)
+	if err == nil {
+		return token, nil
+	}
+
+	// for backward compatible reason, the input data can be raw Cassandra token
+	token.Data = request.NextPageToken
+	return token, nil
 }

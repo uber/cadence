@@ -23,11 +23,10 @@ package sql
 import (
 	"database/sql"
 	"fmt"
-	"github.com/iancoleman/strcase"
 	"time"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common/persistence"
+	p "github.com/uber/cadence/common/persistence"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/uber-common/bark"
@@ -116,7 +115,7 @@ type (
 	}
 
 	transferTasksRow struct {
-		persistence.TransferTaskInfo
+		p.TransferTaskInfo
 		ShardID int
 	}
 
@@ -134,7 +133,7 @@ type (
 	}
 
 	timerTasksRow struct {
-		persistence.TimerTaskInfo
+		p.TimerTaskInfo
 		ShardID int
 	}
 
@@ -457,7 +456,7 @@ func (m *sqlMatchingManager) Close() {
 	}
 }
 
-func (m *sqlMatchingManager) CreateWorkflowExecution(request *persistence.CreateWorkflowExecutionRequest) (*persistence.CreateWorkflowExecutionResponse, error) {
+func (m *sqlMatchingManager) CreateWorkflowExecution(request *p.CreateWorkflowExecutionRequest) (*p.CreateWorkflowExecutionResponse, error) {
 	/*
 		(x) make a transaction
 		( ) check for a parent
@@ -480,7 +479,7 @@ func (m *sqlMatchingManager) CreateWorkflowExecution(request *persistence.Create
 			lastWriteVersion = *row.StartVersion
 		}
 
-		return nil, &persistence.WorkflowExecutionAlreadyStartedError{
+		return nil, &p.WorkflowExecutionAlreadyStartedError{
 			Msg:              fmt.Sprintf("Workflow execution already running. WorkflowId: %v", row.WorkflowID),
 			StartRequestID:   row.CreateRequestID,
 			RunID:            row.RunID,
@@ -529,7 +528,7 @@ func (m *sqlMatchingManager) CreateWorkflowExecution(request *persistence.Create
 
 	if err := lockShard(tx, m.shardID, request.RangeID); err != nil {
 		switch err.(type) {
-		case *persistence.ShardOwnershipLostError:
+		case *p.ShardOwnershipLostError:
 			return nil, err
 		default:
 			return nil, &workflow.InternalServiceError{
@@ -544,10 +543,10 @@ func (m *sqlMatchingManager) CreateWorkflowExecution(request *persistence.Create
 		}
 	}
 
-	return &persistence.CreateWorkflowExecutionResponse{}, nil
+	return &p.CreateWorkflowExecutionResponse{}, nil
 }
 
-func (m *sqlMatchingManager) GetWorkflowExecution(request *persistence.GetWorkflowExecutionRequest) (*persistence.GetWorkflowExecutionResponse, error) {
+func (m *sqlMatchingManager) GetWorkflowExecution(request *p.GetWorkflowExecutionRequest) (*p.GetWorkflowExecutionResponse, error) {
 	tx, err := m.db.Beginx()
 	if err != nil {
 		return nil, &workflow.InternalServiceError{
@@ -591,8 +590,8 @@ func (m *sqlMatchingManager) GetWorkflowExecution(request *persistence.GetWorkfl
 		}
 	}
 
-	var state persistence.WorkflowMutableState
-	state.ExecutionInfo = &persistence.WorkflowExecutionInfo{
+	var state p.WorkflowMutableState
+	state.ExecutionInfo = &p.WorkflowExecutionInfo{
 		DomainID:                     execution.DomainID,
 		WorkflowID:                   execution.WorkflowID,
 		RunID:                        execution.RunID,
@@ -626,7 +625,7 @@ func (m *sqlMatchingManager) GetWorkflowExecution(request *persistence.GetWorkfl
 		state.ExecutionInfo.ExecutionContext = *execution.ExecutionContext
 	}
 
-	state.ReplicationState = &persistence.ReplicationState{}
+	state.ReplicationState = &p.ReplicationState{}
 	if execution.StartVersion != nil {
 		state.ReplicationState.StartVersion = *execution.StartVersion
 	}
@@ -640,7 +639,7 @@ func (m *sqlMatchingManager) GetWorkflowExecution(request *persistence.GetWorkfl
 		state.ReplicationState.LastWriteEventID = *execution.LastWriteEventID
 	}
 	if execution.LastReplicationInfo != nil {
-		state.ReplicationState.LastReplicationInfo = make(map[string]*persistence.ReplicationInfo)
+		state.ReplicationState.LastReplicationInfo = make(map[string]*p.ReplicationInfo)
 		if err := gobDeserialize(*execution.LastReplicationInfo, &state.ReplicationState.LastReplicationInfo); err != nil {
 			return nil, &workflow.InternalServiceError{
 				Message: fmt.Sprintf("GetWorkflowExecution failed. Failed to deserialize LastReplicationInfo. Error: %v", err),
@@ -761,10 +760,10 @@ func (m *sqlMatchingManager) GetWorkflowExecution(request *persistence.GetWorkfl
 		}
 	}
 
-	return &persistence.GetWorkflowExecutionResponse{State: &state}, nil
+	return &p.GetWorkflowExecutionResponse{State: &state}, nil
 }
 
-func (m *sqlMatchingManager) UpdateWorkflowExecution(request *persistence.UpdateWorkflowExecutionRequest) error {
+func (m *sqlMatchingManager) UpdateWorkflowExecution(request *p.UpdateWorkflowExecutionRequest) error {
 	tx, err := m.db.Beginx()
 	if err != nil {
 		return &workflow.InternalServiceError{
@@ -812,7 +811,7 @@ func (m *sqlMatchingManager) UpdateWorkflowExecution(request *persistence.Update
 	// TODO Otherwise, it'd probably be OK to put this right before the .Commit()
 	if err := lockShard(tx, m.shardID, request.RangeID); err != nil {
 		switch err.(type) {
-		case *persistence.ShardOwnershipLostError:
+		case *p.ShardOwnershipLostError:
 			return err
 		default:
 			return &workflow.InternalServiceError{
@@ -829,7 +828,7 @@ func (m *sqlMatchingManager) UpdateWorkflowExecution(request *persistence.Update
 		request.ExecutionInfo.RunID,
 		request.Condition); err != nil {
 		switch err.(type) {
-		case *persistence.ConditionFailedError:
+		case *p.ConditionFailedError:
 			return err
 		default:
 			return &workflow.InternalServiceError{
@@ -966,7 +965,7 @@ func (m *sqlMatchingManager) UpdateWorkflowExecution(request *persistence.Update
 	return nil
 }
 
-func (m *sqlMatchingManager) ResetMutableState(request *persistence.ResetMutableStateRequest) error {
+func (m *sqlMatchingManager) ResetMutableState(request *p.ResetMutableStateRequest) error {
 	tx, err := m.db.Beginx()
 	if err != nil {
 		return &workflow.InternalServiceError{
@@ -983,7 +982,7 @@ func (m *sqlMatchingManager) ResetMutableState(request *persistence.ResetMutable
 		request.ExecutionInfo.RunID,
 		request.Condition); err != nil {
 		switch err.(type) {
-		case *persistence.ConditionFailedError:
+		case *p.ConditionFailedError:
 			return err
 		default:
 			return &workflow.InternalServiceError{
@@ -1132,7 +1131,7 @@ func (m *sqlMatchingManager) ResetMutableState(request *persistence.ResetMutable
 
 	if err := lockShard(tx, m.shardID, request.RangeID); err != nil {
 		switch err.(type) {
-		case *persistence.ShardOwnershipLostError:
+		case *p.ShardOwnershipLostError:
 			return err
 		default:
 			return &workflow.InternalServiceError{
@@ -1150,7 +1149,7 @@ func (m *sqlMatchingManager) ResetMutableState(request *persistence.ResetMutable
 	return nil
 }
 
-func (m *sqlMatchingManager) DeleteWorkflowExecution(request *persistence.DeleteWorkflowExecutionRequest) error {
+func (m *sqlMatchingManager) DeleteWorkflowExecution(request *p.DeleteWorkflowExecutionRequest) error {
 	if _, err := m.db.Exec(deleteExecutionSQLQuery, m.shardID, request.DomainID, request.WorkflowID, request.RunID); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("DeleteWorkflowExecution operation failed. Error: %v", err),
@@ -1159,14 +1158,14 @@ func (m *sqlMatchingManager) DeleteWorkflowExecution(request *persistence.Delete
 	return nil
 }
 
-func (m *sqlMatchingManager) GetCurrentExecution(request *persistence.GetCurrentExecutionRequest) (*persistence.GetCurrentExecutionResponse, error) {
+func (m *sqlMatchingManager) GetCurrentExecution(request *p.GetCurrentExecutionRequest) (*p.GetCurrentExecutionResponse, error) {
 	var row currentExecutionRow
 	if err := m.db.Get(&row, getCurrentExecutionSQLQuery, m.shardID, request.DomainID, request.WorkflowID); err != nil {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("GetCurrentExecution operation failed. Error: %v", err),
 		}
 	}
-	return &persistence.GetCurrentExecutionResponse{
+	return &p.GetCurrentExecutionResponse{
 		StartRequestID: row.CreateRequestID,
 		RunID:          row.RunID,
 		State:          int(row.State),
@@ -1174,8 +1173,8 @@ func (m *sqlMatchingManager) GetCurrentExecution(request *persistence.GetCurrent
 	}, nil
 }
 
-func (m *sqlMatchingManager) GetTransferTasks(request *persistence.GetTransferTasksRequest) (*persistence.GetTransferTasksResponse, error) {
-	var resp persistence.GetTransferTasksResponse
+func (m *sqlMatchingManager) GetTransferTasks(request *p.GetTransferTasksRequest) (*p.GetTransferTasksResponse, error) {
+	var resp p.GetTransferTasksResponse
 	if err := m.db.Select(&resp.Tasks,
 		getTransferTasksSQLQuery,
 		m.shardID,
@@ -1189,7 +1188,7 @@ func (m *sqlMatchingManager) GetTransferTasks(request *persistence.GetTransferTa
 	return &resp, nil
 }
 
-func (m *sqlMatchingManager) CompleteTransferTask(request *persistence.CompleteTransferTaskRequest) error {
+func (m *sqlMatchingManager) CompleteTransferTask(request *p.CompleteTransferTaskRequest) error {
 	if _, err := m.db.NamedExec(completeTransferTaskSQLQuery, &struct {
 		ShardID int64
 		TaskID  int64
@@ -1201,7 +1200,7 @@ func (m *sqlMatchingManager) CompleteTransferTask(request *persistence.CompleteT
 	return nil
 }
 
-func (m *sqlMatchingManager) RangeCompleteTransferTask(request *persistence.RangeCompleteTransferTaskRequest) error {
+func (m *sqlMatchingManager) RangeCompleteTransferTask(request *p.RangeCompleteTransferTaskRequest) error {
 	if _, err := m.db.Exec(rangeCompleteTransferTaskSQLQuery, m.shardID, request.ExclusiveBeginTaskID, request.InclusiveEndTaskID); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("RangeCompleteTransferTask operation failed. Error: %v", err),
@@ -1210,7 +1209,7 @@ func (m *sqlMatchingManager) RangeCompleteTransferTask(request *persistence.Rang
 	return nil
 }
 
-func (m *sqlMatchingManager) GetReplicationTasks(request *persistence.GetReplicationTasksRequest) (*persistence.GetReplicationTasksResponse, error) {
+func (m *sqlMatchingManager) GetReplicationTasks(request *p.GetReplicationTasksRequest) (*p.GetReplicationTasksResponse, error) {
 	var rows []replicationTasksRow
 
 	if err := m.db.Select(&rows,
@@ -1223,17 +1222,17 @@ func (m *sqlMatchingManager) GetReplicationTasks(request *persistence.GetReplica
 		}
 	}
 
-	var tasks = make([]*persistence.ReplicationTaskInfo, len(rows))
+	var tasks = make([]*p.ReplicationTaskInfo, len(rows))
 
 	for i, row := range rows {
-		var lastReplicationInfo map[string]*persistence.ReplicationInfo
+		var lastReplicationInfo map[string]*p.ReplicationInfo
 		if err := gobDeserialize(row.LastReplicationInfo, &lastReplicationInfo); err != nil {
 			return nil, &workflow.InternalServiceError{
 				Message: fmt.Sprintf("GetReplicationTasks operation failed. Failed to deserialize LastReplicationInfo. Error: %v", err),
 			}
 		}
 
-		tasks[i] = &persistence.ReplicationTaskInfo{
+		tasks[i] = &p.ReplicationTaskInfo{
 			DomainID:            row.DomainID,
 			WorkflowID:          row.WorkflowID,
 			RunID:               row.RunID,
@@ -1247,17 +1246,17 @@ func (m *sqlMatchingManager) GetReplicationTasks(request *persistence.GetReplica
 
 	}
 
-	return &persistence.GetReplicationTasksResponse{
+	return &p.GetReplicationTasksResponse{
 		Tasks: tasks,
 	}, nil
 }
 
-func (m *sqlMatchingManager) CompleteReplicationTask(request *persistence.CompleteReplicationTaskRequest) error {
+func (m *sqlMatchingManager) CompleteReplicationTask(request *p.CompleteReplicationTaskRequest) error {
 	return nil
 }
 
-func (m *sqlMatchingManager) GetTimerIndexTasks(request *persistence.GetTimerIndexTasksRequest) (*persistence.GetTimerIndexTasksResponse, error) {
-	var resp persistence.GetTimerIndexTasksResponse
+func (m *sqlMatchingManager) GetTimerIndexTasks(request *p.GetTimerIndexTasksRequest) (*p.GetTimerIndexTasksResponse, error) {
+	var resp p.GetTimerIndexTasksResponse
 
 	if err := m.db.Select(&resp.Timers, getTimerTasksSQLQuery,
 		m.shardID,
@@ -1271,7 +1270,7 @@ func (m *sqlMatchingManager) GetTimerIndexTasks(request *persistence.GetTimerInd
 	return &resp, nil
 }
 
-func (m *sqlMatchingManager) CompleteTimerTask(request *persistence.CompleteTimerTaskRequest) error {
+func (m *sqlMatchingManager) CompleteTimerTask(request *p.CompleteTimerTaskRequest) error {
 	if _, err := m.db.Exec(completeTimerTaskSQLQuery, m.shardID, request.VisibilityTimestamp, request.TaskID); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("CompleteTimerTask operation failed. Error: %v", err),
@@ -1280,9 +1279,9 @@ func (m *sqlMatchingManager) CompleteTimerTask(request *persistence.CompleteTime
 	return nil
 }
 
-func (m *sqlMatchingManager) RangeCompleteTimerTask(request *persistence.RangeCompleteTimerTaskRequest) error {
-	start := common.UnixNanoToCQLTimestamp(request.InclusiveBeginTimestamp.UnixNano())
-	end := common.UnixNanoToCQLTimestamp(request.ExclusiveEndTimestamp.UnixNano())
+func (m *sqlMatchingManager) RangeCompleteTimerTask(request *p.RangeCompleteTimerTaskRequest) error {
+	start := p.UnixNanoToDBTimestamp(request.InclusiveBeginTimestamp.UnixNano())
+	end := p.UnixNanoToDBTimestamp(request.ExclusiveEndTimestamp.UnixNano())
 	if _, err := m.db.Exec(rangeCompleteTimerTaskSQLQuery, m.shardID, start, end); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("CompleteTimerTask operation failed. Error: %v", err),
@@ -1291,13 +1290,11 @@ func (m *sqlMatchingManager) RangeCompleteTimerTask(request *persistence.RangeCo
 	return nil
 }
 
-func NewSqlMatchingPersistence(username, password, host, port, dbName string, logger bark.Logger) (persistence.ExecutionManager, error) {
-	var db, err = sqlx.Connect("mysql",
-		fmt.Sprintf(Dsn, username, password, host, port, dbName))
+func NewSqlMatchingPersistence(host string, port int, username, password, dbName string, logger bark.Logger) (p.ExecutionManager, error) {
+	var db, err = newConnection(host, port, username, password, dbName)
 	if err != nil {
 		return nil, err
 	}
-	db.MapperFunc(strcase.ToSnake)
 	return &sqlMatchingManager{
 		db:     db,
 		logger: logger,
@@ -1314,7 +1311,7 @@ func getCurrentExecutionIfExists(tx *sqlx.Tx, shardID int64, domainID string, wo
 	return &row, nil
 }
 
-func createExecution(tx *sqlx.Tx, request *persistence.CreateWorkflowExecutionRequest, shardID int, nowTimestamp time.Time) error {
+func createExecution(tx *sqlx.Tx, request *p.CreateWorkflowExecutionRequest, shardID int, nowTimestamp time.Time) error {
 	args := &executionRow{
 		ShardID:                      int64(shardID),
 		DomainID:                     request.DomainID,
@@ -1324,17 +1321,17 @@ func createExecution(tx *sqlx.Tx, request *persistence.CreateWorkflowExecutionRe
 		WorkflowTypeName:             request.WorkflowTypeName,
 		WorkflowTimeoutSeconds:       int64(request.WorkflowTimeout),
 		DecisionTaskTimeoutMinutes:   int64(request.DecisionTimeoutValue),
-		State:                        persistence.WorkflowStateCreated,
-		CloseStatus:                  persistence.WorkflowCloseStatusNone,
-		LastFirstEventID:             common.FirstEventID,
-		NextEventID:                  request.NextEventID,
-		LastProcessedEvent:           request.LastProcessedEvent,
-		StartTime:                    nowTimestamp,
-		LastUpdatedTime:              nowTimestamp,
-		CreateRequestID:              request.RequestID,
-		DecisionVersion:              int64(request.DecisionVersion),
-		DecisionScheduleID:           int64(request.DecisionScheduleID),
-		DecisionStartedID:            int64(request.DecisionStartedID),
+		State:              p.WorkflowStateCreated,
+		CloseStatus:        p.WorkflowCloseStatusNone,
+		LastFirstEventID:   common.FirstEventID,
+		NextEventID:        request.NextEventID,
+		LastProcessedEvent: request.LastProcessedEvent,
+		StartTime:          nowTimestamp,
+		LastUpdatedTime:    nowTimestamp,
+		CreateRequestID:    request.RequestID,
+		DecisionVersion:    int64(request.DecisionVersion),
+		DecisionScheduleID: int64(request.DecisionScheduleID),
+		DecisionStartedID:  int64(request.DecisionStartedID),
 		DecisionTimeout:              int64(request.DecisionStartToCloseTimeout),
 		DecisionAttempt:              0,
 		DecisionTimestamp:            0,
@@ -1377,21 +1374,21 @@ func createExecution(tx *sqlx.Tx, request *persistence.CreateWorkflowExecutionRe
 	return nil
 }
 
-func createCurrentExecution(tx *sqlx.Tx, request *persistence.CreateWorkflowExecutionRequest, shardID int) error {
+func createCurrentExecution(tx *sqlx.Tx, request *p.CreateWorkflowExecutionRequest, shardID int) error {
 	arg := currentExecutionRow{
 		ShardID:         int64(shardID),
 		DomainID:        request.DomainID,
 		WorkflowID:      *request.Execution.WorkflowId,
 		RunID:           *request.Execution.RunId,
 		CreateRequestID: request.RequestID,
-		State:           persistence.WorkflowStateRunning,
-		CloseStatus:     persistence.WorkflowCloseStatusNone,
+		State:           p.WorkflowStateRunning,
+		CloseStatus:     p.WorkflowCloseStatusNone,
 	}
 	if request.ReplicationState != nil {
 		arg.StartVersion = &request.ReplicationState.StartVersion
 	}
 	if request.ParentExecution != nil {
-		arg.State = persistence.WorkflowStateCreated
+		arg.State = p.WorkflowStateCreated
 	}
 
 	if request.ContinueAsNew {
@@ -1402,8 +1399,8 @@ func createCurrentExecution(tx *sqlx.Tx, request *persistence.CreateWorkflowExec
 			*request.Execution.RunId,
 			request.PreviousRunID,
 			request.RequestID,
-			persistence.WorkflowStateRunning,
-			persistence.WorkflowCloseStatusNone,
+			p.WorkflowStateRunning,
+			p.WorkflowCloseStatusNone,
 			0); err != nil {
 			return &workflow.InternalServiceError{
 				Message: fmt.Sprintf("CreateWorkflowExecution operation failed. Failed to continue as new. Error: %v", err),
@@ -1425,7 +1422,7 @@ func lockAndCheckNextEventID(tx *sqlx.Tx, shardID int, domainID, workflowID, run
 		return err
 	} else {
 		if *nextEventID != condition {
-			return &persistence.ConditionFailedError{
+			return &p.ConditionFailedError{
 				Msg: fmt.Sprintf("next_event_id was %v when it should have been %v.", nextEventID, condition),
 			}
 		}
@@ -1448,7 +1445,7 @@ func lockNextEventID(tx *sqlx.Tx, shardID int, domainID, workflowID, runID strin
 	return &nextEventID, nil
 }
 
-func createTransferTasks(tx *sqlx.Tx, transferTasks []persistence.Task, shardID int, domainID, workflowID, runID string) error {
+func createTransferTasks(tx *sqlx.Tx, transferTasks []p.Task, shardID int, domainID, workflowID, runID string) error {
 	if len(transferTasks) == 0 {
 		return nil
 	}
@@ -1460,46 +1457,46 @@ func createTransferTasks(tx *sqlx.Tx, transferTasks []persistence.Task, shardID 
 		transferTasksRows[i].WorkflowID = workflowID
 		transferTasksRows[i].RunID = runID
 		transferTasksRows[i].TargetDomainID = domainID
-		transferTasksRows[i].TargetWorkflowID = persistence.TransferTaskTransferTargetWorkflowID
+		transferTasksRows[i].TargetWorkflowID = p.TransferTaskTransferTargetWorkflowID
 		transferTasksRows[i].TargetChildWorkflowOnly = false
 		transferTasksRows[i].TaskList = ""
 		transferTasksRows[i].ScheduleID = 0
 
 		switch task.GetType() {
-		case persistence.TransferTaskTypeActivityTask:
-			transferTasksRows[i].TargetDomainID = task.(*persistence.ActivityTask).DomainID
-			transferTasksRows[i].TaskList = task.(*persistence.ActivityTask).TaskList
-			transferTasksRows[i].ScheduleID = task.(*persistence.ActivityTask).ScheduleID
+		case p.TransferTaskTypeActivityTask:
+			transferTasksRows[i].TargetDomainID = task.(*p.ActivityTask).DomainID
+			transferTasksRows[i].TaskList = task.(*p.ActivityTask).TaskList
+			transferTasksRows[i].ScheduleID = task.(*p.ActivityTask).ScheduleID
 
-		case persistence.TransferTaskTypeDecisionTask:
-			transferTasksRows[i].TargetDomainID = task.(*persistence.DecisionTask).DomainID
-			transferTasksRows[i].TaskList = task.(*persistence.DecisionTask).TaskList
-			transferTasksRows[i].ScheduleID = task.(*persistence.DecisionTask).ScheduleID
+		case p.TransferTaskTypeDecisionTask:
+			transferTasksRows[i].TargetDomainID = task.(*p.DecisionTask).DomainID
+			transferTasksRows[i].TaskList = task.(*p.DecisionTask).TaskList
+			transferTasksRows[i].ScheduleID = task.(*p.DecisionTask).ScheduleID
 
-		case persistence.TransferTaskTypeCancelExecution:
-			transferTasksRows[i].TargetDomainID = task.(*persistence.CancelExecutionTask).TargetDomainID
-			transferTasksRows[i].TargetWorkflowID = task.(*persistence.CancelExecutionTask).TargetWorkflowID
-			if task.(*persistence.CancelExecutionTask).TargetRunID != "" {
-				transferTasksRows[i].TargetRunID = task.(*persistence.CancelExecutionTask).TargetRunID
+		case p.TransferTaskTypeCancelExecution:
+			transferTasksRows[i].TargetDomainID = task.(*p.CancelExecutionTask).TargetDomainID
+			transferTasksRows[i].TargetWorkflowID = task.(*p.CancelExecutionTask).TargetWorkflowID
+			if task.(*p.CancelExecutionTask).TargetRunID != "" {
+				transferTasksRows[i].TargetRunID = task.(*p.CancelExecutionTask).TargetRunID
 			}
-			transferTasksRows[i].TargetChildWorkflowOnly = task.(*persistence.CancelExecutionTask).TargetChildWorkflowOnly
-			transferTasksRows[i].ScheduleID = task.(*persistence.CancelExecutionTask).InitiatedID
+			transferTasksRows[i].TargetChildWorkflowOnly = task.(*p.CancelExecutionTask).TargetChildWorkflowOnly
+			transferTasksRows[i].ScheduleID = task.(*p.CancelExecutionTask).InitiatedID
 
-		case persistence.TransferTaskTypeSignalExecution:
-			transferTasksRows[i].TargetDomainID = task.(*persistence.SignalExecutionTask).TargetDomainID
-			transferTasksRows[i].TargetWorkflowID = task.(*persistence.SignalExecutionTask).TargetWorkflowID
-			if task.(*persistence.SignalExecutionTask).TargetRunID != "" {
-				transferTasksRows[i].TargetRunID = task.(*persistence.SignalExecutionTask).TargetRunID
+		case p.TransferTaskTypeSignalExecution:
+			transferTasksRows[i].TargetDomainID = task.(*p.SignalExecutionTask).TargetDomainID
+			transferTasksRows[i].TargetWorkflowID = task.(*p.SignalExecutionTask).TargetWorkflowID
+			if task.(*p.SignalExecutionTask).TargetRunID != "" {
+				transferTasksRows[i].TargetRunID = task.(*p.SignalExecutionTask).TargetRunID
 			}
-			transferTasksRows[i].TargetChildWorkflowOnly = task.(*persistence.SignalExecutionTask).TargetChildWorkflowOnly
-			transferTasksRows[i].ScheduleID = task.(*persistence.SignalExecutionTask).InitiatedID
+			transferTasksRows[i].TargetChildWorkflowOnly = task.(*p.SignalExecutionTask).TargetChildWorkflowOnly
+			transferTasksRows[i].ScheduleID = task.(*p.SignalExecutionTask).InitiatedID
 
-		case persistence.TransferTaskTypeStartChildExecution:
-			transferTasksRows[i].TargetDomainID = task.(*persistence.StartChildExecutionTask).TargetDomainID
-			transferTasksRows[i].TargetWorkflowID = task.(*persistence.StartChildExecutionTask).TargetWorkflowID
-			transferTasksRows[i].ScheduleID = task.(*persistence.StartChildExecutionTask).InitiatedID
+		case p.TransferTaskTypeStartChildExecution:
+			transferTasksRows[i].TargetDomainID = task.(*p.StartChildExecutionTask).TargetDomainID
+			transferTasksRows[i].TargetWorkflowID = task.(*p.StartChildExecutionTask).TargetWorkflowID
+			transferTasksRows[i].ScheduleID = task.(*p.StartChildExecutionTask).InitiatedID
 
-		case persistence.TransferTaskTypeCloseExecution:
+		case p.TransferTaskTypeCloseExecution:
 			// No explicit property needs to be set
 
 		default:
@@ -1542,7 +1539,7 @@ func createTransferTasks(tx *sqlx.Tx, transferTasks []persistence.Task, shardID 
 	return nil
 }
 
-func createReplicationTasks(tx *sqlx.Tx, replicationTasks []persistence.Task, shardID int, domainID, workflowID, runID string) error {
+func createReplicationTasks(tx *sqlx.Tx, replicationTasks []p.Task, shardID int, domainID, workflowID, runID string) error {
 	if len(replicationTasks) == 0 {
 		return nil
 	}
@@ -1563,8 +1560,8 @@ func createReplicationTasks(tx *sqlx.Tx, replicationTasks []persistence.Task, sh
 		var err error
 
 		switch task.GetType() {
-		case persistence.ReplicationTaskTypeHistory:
-			historyReplicationTask, ok := task.(*persistence.HistoryReplicationTask)
+		case p.ReplicationTaskTypeHistory:
+			historyReplicationTask, ok := task.(*p.HistoryReplicationTask)
 			if !ok {
 				return &workflow.InternalServiceError{
 					Message: fmt.Sprintf("Failed to cast %v to HistoryReplicationTask", task),
@@ -1623,26 +1620,26 @@ func createReplicationTasks(tx *sqlx.Tx, replicationTasks []persistence.Task, sh
 	return nil
 }
 
-func createTimerTasks(tx *sqlx.Tx, timerTasks []persistence.Task, deleteTimerTask persistence.Task, shardID int, domainID, workflowID, runID string) error {
+func createTimerTasks(tx *sqlx.Tx, timerTasks []p.Task, deleteTimerTask p.Task, shardID int, domainID, workflowID, runID string) error {
 	if len(timerTasks) > 0 {
 		timerTasksRows := make([]timerTasksRow, len(timerTasks))
 
 		for i, task := range timerTasks {
 			switch t := task.(type) {
-			case *persistence.DecisionTimeoutTask:
+			case *p.DecisionTimeoutTask:
 				timerTasksRows[i].EventID = t.EventID
 				timerTasksRows[i].TimeoutType = t.TimeoutType
 				timerTasksRows[i].ScheduleAttempt = t.ScheduleAttempt
-			case *persistence.ActivityTimeoutTask:
+			case *p.ActivityTimeoutTask:
 				timerTasksRows[i].EventID = t.EventID
 				timerTasksRows[i].TimeoutType = t.TimeoutType
 				timerTasksRows[i].ScheduleAttempt = t.Attempt
-			case *persistence.UserTimerTask:
+			case *p.UserTimerTask:
 				timerTasksRows[i].EventID = t.EventID
-			case *persistence.ActivityRetryTimerTask:
+			case *p.ActivityRetryTimerTask:
 				timerTasksRows[i].EventID = t.EventID
 				timerTasksRows[i].ScheduleAttempt = int64(t.Attempt)
-			case *persistence.WorkflowRetryTimerTask:
+			case *p.WorkflowRetryTimerTask:
 				timerTasksRows[i].EventID = t.EventID
 			}
 
@@ -1651,7 +1648,7 @@ func createTimerTasks(tx *sqlx.Tx, timerTasks []persistence.Task, deleteTimerTas
 			timerTasksRows[i].WorkflowID = workflowID
 			timerTasksRows[i].RunID = runID
 
-			if t, err := persistence.GetVisibilityTSFrom(task); err != nil {
+			if t, err := p.GetVisibilityTSFrom(task); err != nil {
 				return &workflow.InternalServiceError{
 					Message: fmt.Sprintf("Failed to create timer tasks. Error: %v", err),
 				}
@@ -1691,7 +1688,7 @@ func createTimerTasks(tx *sqlx.Tx, timerTasks []persistence.Task, deleteTimerTas
 	}
 
 	if deleteTimerTask != nil {
-		ts, err := persistence.GetVisibilityTSFrom(deleteTimerTask)
+		ts, err := p.GetVisibilityTSFrom(deleteTimerTask)
 		if err != nil {
 			return &workflow.InternalServiceError{
 				Message: fmt.Sprintf("Failed to delete timer task. Task: %v. Error: %v", deleteTimerTask, err),
@@ -1718,7 +1715,7 @@ func continueAsNew(tx *sqlx.Tx, shardID int, domainID, workflowID, runID, previo
 		}
 	}
 	if currentRunID != previousRunID {
-		return &persistence.ConditionFailedError{
+		return &p.ConditionFailedError{
 			Msg: fmt.Sprintf("ContinueAsNew failed. Current run ID was %v, expected %v", currentRunID, previousRunID),
 		}
 	}
@@ -1755,8 +1752,8 @@ func continueAsNew(tx *sqlx.Tx, shardID int, domainID, workflowID, runID, previo
 }
 
 func updateExecution(tx *sqlx.Tx,
-	executionInfo *persistence.WorkflowExecutionInfo,
-	replicationState *persistence.ReplicationState,
+	executionInfo *p.WorkflowExecutionInfo,
+	replicationState *p.ReplicationState,
 	condition int64) error {
 	args := updateExecutionRow{
 		executionRow{
