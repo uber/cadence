@@ -554,6 +554,11 @@ Reset_Loop:
 }
 
 func (s *shardContextImpl) AppendHistoryEvents(request *persistence.AppendHistoryEventsRequest) error {
+	if request.Events != nil {
+		size := len(request.Events.Data)
+		s.metricsClient.RecordTimer(metrics.ShardContextScope, metrics.AppendHistoryBatchSize, time.Duration(size))
+	}
+
 	// No need to lock context here, as we can write concurrently to append history events
 	currentRangeID := atomic.LoadInt64(&s.rangeID)
 	request.RangeID = currentRangeID

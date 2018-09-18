@@ -236,6 +236,8 @@ type (
 		hBuilder         *historyBuilder
 		eventSerializer  historyEventSerializer
 		currentCluster   string
+		mutableStateSize int
+		historySize      int
 		config           *Config
 		logger           bark.Logger
 	}
@@ -1405,6 +1407,19 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionStartedEvent(domainID st
 	if event.ParentInitiatedEventId != nil {
 		e.executionInfo.InitiatedID = event.GetParentInitiatedEventId()
 	}
+
+	e.mutableStateSize = e.computeWorkflowExecutionStartedSize(e.executionInfo)
+}
+
+func (e *mutableStateBuilder) computeWorkflowExecutionStartedSize(
+	executionInfo *persistence.WorkflowExecutionInfo) int {
+	size := 0
+	size += len(e.executionInfo.WorkflowID)
+	size += len(e.executionInfo.TaskList)
+	size += len(e.executionInfo.WorkflowTypeName)
+	size += len(e.executionInfo.ParentWorkflowID)
+
+	return size
 }
 
 func (e *mutableStateBuilder) AddDecisionTaskScheduledEvent() *decisionInfo {
