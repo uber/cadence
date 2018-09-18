@@ -27,7 +27,6 @@ import (
 
 	"github.com/stretchr/testify/suite"
 	workflow "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common"
 )
 
 type (
@@ -39,17 +38,17 @@ type (
 
 var (
 	thriftObject = &workflow.HistoryEvent{
-		Version:   common.Int64Ptr(1234),
-		EventId:   common.Int64Ptr(130),
-		Timestamp: common.Int64Ptr(112345132134),
+		Version:   int64Ptr(1234),
+		EventId:   int64Ptr(130),
+		Timestamp: int64Ptr(112345132134),
 		EventType: workflow.EventTypeRequestCancelExternalWorkflowExecutionInitiated.Ptr(),
 		RequestCancelExternalWorkflowExecutionInitiatedEventAttributes: &workflow.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes{
-			Domain: common.StringPtr("some random target domain"),
+			Domain: stringPtr("some random target domain"),
 			WorkflowExecution: &workflow.WorkflowExecution{
-				WorkflowId: common.StringPtr("some random target workflow ID"),
-				RunId:      common.StringPtr("some random target run ID"),
+				WorkflowId: stringPtr("some random target workflow ID"),
+				RunId:      stringPtr("some random target run ID"),
 			},
-			ChildWorkflowOnly: common.BoolPtr(true),
+			ChildWorkflowOnly: boolPtr(true),
 			Control:           []byte("some random control"),
 		},
 	}
@@ -78,49 +77,23 @@ func (s *thriftRWEncoderSuite) SetupSuite() {
 	s.encoder = NewThriftRWEncoder()
 }
 
-func (s *thriftRWEncoderSuite) TearDownSuite() {
-
-}
-
-func (s *thriftRWEncoderSuite) SetupTest() {
-
-}
-
-func (s *thriftRWEncoderSuite) TearDownTest() {
-
-}
-
 func (s *thriftRWEncoderSuite) TestEncode() {
-	wireObj, err := thriftObject.ToWire()
-	s.Nil(err)
-
-	binary, err := s.encoder.Encode(wireObj)
+	binary, err := s.encoder.Encode(thriftObject)
 	s.Nil(err)
 	s.Equal(thriftEncodedBinary, binary)
 }
 
 func (s *thriftRWEncoderSuite) TestDecode() {
-	wireObj, err := s.encoder.Decode(thriftEncodedBinary)
+	var val workflow.HistoryEvent
+	err := s.encoder.Decode(thriftEncodedBinary, &val)
 	s.Nil(err)
-
-	var obj workflow.HistoryEvent
-	err = obj.FromWire(wireObj)
-	s.Nil(err)
-	s.Equal(thriftObject, &obj)
-}
-
-func (s *thriftRWEncoderSuite) TestDecode_WrongType() {
-	wireObj, err := s.encoder.Decode(thriftEncodedBinary)
-	s.Nil(err)
-
-	var obj workflow.CancelTimerFailedEventAttributes
-	err = obj.FromWire(wireObj)
-	s.NotNil(err)
+	val.Equals(thriftObject)
 }
 
 func (s *thriftRWEncoderSuite) TestDecode_MissingVersion() {
 	binary := []byte{}
-	_, err := s.encoder.Decode(binary)
+	var val workflow.HistoryEvent
+	err := s.encoder.Decode(binary, &val)
 	s.Equal(MissingBinaryEncodingVersion, err)
 }
 
@@ -131,6 +104,19 @@ func (s *thriftRWEncoderSuite) TestDecode_InvalidVersion() {
 	}
 	binary[0] = preambleVersion0 - 1
 
-	_, err := s.encoder.Decode(binary)
+	var val workflow.HistoryEvent
+	err := s.encoder.Decode(binary, &val)
 	s.Equal(InvalidBinaryEncodingVersion, err)
+}
+
+func int64Ptr(v int64) *int64 {
+	return &v
+}
+
+func stringPtr(v string) *string {
+	return &v
+}
+
+func boolPtr(v bool) *bool {
+	return &v
 }
