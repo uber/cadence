@@ -34,20 +34,29 @@ type (
 	}
 )
 
+var _ BinaryEncoder = (*ThriftRWEncoder)(nil)
+
 // NewThriftRWEncoder generate a new ThriftRWEncoder
 func NewThriftRWEncoder() *ThriftRWEncoder {
 	return &ThriftRWEncoder{}
 }
 
 // Encode encode the object
-func (t *ThriftRWEncoder) Encode(obj wire.Value) ([]byte, error) {
+func (t *ThriftRWEncoder) Encode(obj ThriftObject) ([]byte, error) {
+	if obj == nil {
+		return nil, MsgPayloadNotThriftEncoded
+	}
 	var writer bytes.Buffer
 	// use the first byte to version the serialization
 	err := writer.WriteByte(preambleVersion0)
 	if err != nil {
 		return nil, err
 	}
-	err = protocol.Binary.Encode(obj, &writer)
+	val, err := obj.ToWire()
+	if err != nil {
+		return nil, err
+	}
+	err = protocol.Binary.Encode(val, &writer)
 	if err != nil {
 		return nil, err
 	}
@@ -55,16 +64,21 @@ func (t *ThriftRWEncoder) Encode(obj wire.Value) ([]byte, error) {
 }
 
 // Decode decode the object
-func (t *ThriftRWEncoder) Decode(binary []byte) (wire.Value, error) {
+func (t *ThriftRWEncoder) Decode(binary []byte, val ThriftObject) error {
 	if len(binary) < 1 {
-		return wire.Value{}, MissingBinaryEncodingVersion
+		return MissingBinaryEncodingVersion
 	}
 
 	version := binary[0]
 	if version != preambleVersion0 {
-		return wire.Value{}, InvalidBinaryEncodingVersion
+		return InvalidBinaryEncodingVersion
 	}
 
 	reader := bytes.NewReader(binary[1:])
-	return protocol.Binary.Decode(reader, wire.TStruct)
+	wireVal, err := protocol.Binary.Decode(reader, wire.TStruct)
+	if err != nil {
+		return err
+	}
+
+	return val.FromWire(wireVal)
 }

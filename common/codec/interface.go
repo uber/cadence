@@ -21,14 +21,20 @@
 package codec
 
 import (
-	"github.com/uber/cadence/common/errors"
+	"github.com/uber/cadence/.gen/go/shared"
+	"go.uber.org/thriftrw/wire"
 )
 
 type (
 	// BinaryEncoder represent the encoder which can serialize or deserialize object
 	BinaryEncoder interface {
-		Encode(obj interface{}) ([]byte, error)
-		Decode([]byte) (interface{}, error)
+		Encode(obj ThriftObject) ([]byte, error)
+		Decode(payload []byte, val ThriftObject) error
+	}
+
+	ThriftObject interface {
+		FromWire(w wire.Value) error
+		ToWire() (wire.Value, error)
 	}
 )
 
@@ -39,7 +45,9 @@ const (
 
 var (
 	// MissingBinaryEncodingVersion indicate that the encoding version is missing
-	MissingBinaryEncodingVersion = errors.NewInternalFailureError("Missing binary encoding version.")
+	MissingBinaryEncodingVersion = &shared.BadRequestError{Message: "Missing binary encoding version."}
 	// InvalidBinaryEncodingVersion indicate that the encoding version is incorrect
-	InvalidBinaryEncodingVersion = errors.NewInternalFailureError("Invalid binary encoding version.")
+	InvalidBinaryEncodingVersion = &shared.BadRequestError{Message: "Invalid binary encoding version."}
+	// MsgPayloadNotThriftEncoded indicate message is not thrift encoded
+	MsgPayloadNotThriftEncoded = &shared.BadRequestError{Message: "Message payload is not thrift encoded."}
 )
