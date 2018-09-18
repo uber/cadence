@@ -926,22 +926,18 @@ func (s *integrationClustersTestSuite) TestSignalFailover() {
 
 	s.logger.Infof("StartWorkflowExecution: response: %v \n", we.GetRunId())
 
-	workflowComplete := false
 	eventSignaled := false
-	var signalEvent *workflow.HistoryEvent
 	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
 		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
 		if !eventSignaled {
 			for _, event := range history.Events[previousStartedEventID:] {
 				if *event.EventType == workflow.EventTypeWorkflowExecutionSignaled {
 					eventSignaled = true
-					signalEvent = event
 					return nil, []*workflow.Decision{}, nil
 				}
 			}
 		}
 
-		workflowComplete = true
 		return nil, []*workflow.Decision{{
 			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
 			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
