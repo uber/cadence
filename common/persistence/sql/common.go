@@ -24,8 +24,9 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"time"
+
+	workflow "github.com/uber/cadence/.gen/go/shared"
 )
 
 func gobSerialize(x interface{}) ([]byte, error) {

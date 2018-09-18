@@ -4,7 +4,7 @@ cassandra:
   keyspace: "cadence"
   visibilityKeyspace: "cadence_visibility"
   consistency: "One"
-  numHistoryShards: 1
+  numHistoryShards: 4
 
 ringpop:
   name: cadence
