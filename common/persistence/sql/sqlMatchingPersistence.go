@@ -40,7 +40,7 @@ type (
 		logger  bark.Logger
 	}
 
-	FlatCreateWorkflowExecutionRequest struct {
+	flatCreateWorkflowExecutionRequest struct {
 		DomainID               string
 		WorkflowID             string
 		RunID                  string
@@ -397,7 +397,7 @@ VALUES
 workflow_id,
 run_id,
 task_id,
-type,
+task_type,
 first_event_id,
 next_event_id,
 version,
@@ -407,7 +407,7 @@ last_replication_info`
 :workflow_id,
 :run_id,
 :task_id,
-:type,
+:task_type,
 :first_event_id,
 :next_event_id,
 :version,
@@ -442,7 +442,7 @@ visibility_timestamp >= ? AND
 visibility_timestamp < ?`
 	completeTimerTaskSQLQuery       = `DELETE FROM timer_tasks WHERE shard_id = ? AND visibility_timestamp = ? AND task_id = ?`
 	rangeCompleteTimerTaskSQLQuery  = `DELETE FROM timer_tasks WHERE shard_id = ? AND visibility_timestamp >= ? AND visibility_timestamp < ?`
-	lockAndCheckNextEventIdSQLQuery = `SELECT next_event_id FROM executions WHERE
+	lockAndCheckNextEventIDSQLQuery = `SELECT next_event_id FROM executions WHERE
 shard_id = ? AND
 domain_id = ? AND
 workflow_id = ? AND
@@ -460,7 +460,7 @@ func (m *sqlMatchingManager) CreateWorkflowExecution(request *p.CreateWorkflowEx
 	/*
 		(x) make a transaction
 		( ) check for a parent
-		(x) check for continueasnew, update the curret exec or create one for this new workflow
+		(x) check for ContinueAsNew, update the current exec or create one for this new workflow
 		(x) create a workflow with/without cross dc
 	*/
 
@@ -1218,7 +1218,7 @@ func (m *sqlMatchingManager) GetReplicationTasks(request *p.GetReplicationTasksR
 		request.ReadLevel,
 		request.MaxReadLevel); err != nil {
 		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("GetReplicationTasks operation failed. Select failed. Error: %v", err),
+			Message: fmt.Sprintf("GetReplicationTasks operation failed. Select failed: %v", err),
 		}
 	}
 
@@ -1290,7 +1290,8 @@ func (m *sqlMatchingManager) RangeCompleteTimerTask(request *p.RangeCompleteTime
 	return nil
 }
 
-func NewSqlMatchingPersistence(host string, port int, username, password, dbName string, logger bark.Logger) (p.ExecutionManager, error) {
+// NewSQLMatchingPersistence creates an instance of ExecutionManager
+func NewSQLMatchingPersistence(host string, port int, username, password, dbName string, logger bark.Logger) (p.ExecutionManager, error) {
 	var db, err = newConnection(host, port, username, password, dbName)
 	if err != nil {
 		return nil, err
@@ -1321,17 +1322,17 @@ func createExecution(tx *sqlx.Tx, request *p.CreateWorkflowExecutionRequest, sha
 		WorkflowTypeName:             request.WorkflowTypeName,
 		WorkflowTimeoutSeconds:       int64(request.WorkflowTimeout),
 		DecisionTaskTimeoutMinutes:   int64(request.DecisionTimeoutValue),
-		State:              p.WorkflowStateCreated,
-		CloseStatus:        p.WorkflowCloseStatusNone,
-		LastFirstEventID:   common.FirstEventID,
-		NextEventID:        request.NextEventID,
-		LastProcessedEvent: request.LastProcessedEvent,
-		StartTime:          nowTimestamp,
-		LastUpdatedTime:    nowTimestamp,
-		CreateRequestID:    request.RequestID,
-		DecisionVersion:    int64(request.DecisionVersion),
-		DecisionScheduleID: int64(request.DecisionScheduleID),
-		DecisionStartedID:  int64(request.DecisionStartedID),
+		State:                        p.WorkflowStateCreated,
+		CloseStatus:                  p.WorkflowCloseStatusNone,
+		LastFirstEventID:             common.FirstEventID,
+		NextEventID:                  request.NextEventID,
+		LastProcessedEvent:           request.LastProcessedEvent,
+		StartTime:                    nowTimestamp,
+		LastUpdatedTime:              nowTimestamp,
+		CreateRequestID:              request.RequestID,
+		DecisionVersion:              int64(request.DecisionVersion),
+		DecisionScheduleID:           int64(request.DecisionScheduleID),
+		DecisionStartedID:            int64(request.DecisionStartedID),
 		DecisionTimeout:              int64(request.DecisionStartToCloseTimeout),
 		DecisionAttempt:              0,
 		DecisionTimestamp:            0,
@@ -1418,13 +1419,13 @@ func createCurrentExecution(tx *sqlx.Tx, request *p.CreateWorkflowExecutionReque
 }
 
 func lockAndCheckNextEventID(tx *sqlx.Tx, shardID int, domainID, workflowID, runID string, condition int64) error {
-	if nextEventID, err := lockNextEventID(tx, shardID, domainID, workflowID, runID); err != nil {
+	nextEventID, err := lockNextEventID(tx, shardID, domainID, workflowID, runID)
+	if err != nil {
 		return err
-	} else {
-		if *nextEventID != condition {
-			return &p.ConditionFailedError{
-				Msg: fmt.Sprintf("next_event_id was %v when it should have been %v.", nextEventID, condition),
-			}
+	}
+	if *nextEventID != condition {
+		return &p.ConditionFailedError{
+			Msg: fmt.Sprintf("next_event_id was %v when it should have been %v.", nextEventID, condition),
 		}
 	}
 	return nil
@@ -1432,7 +1433,7 @@ func lockAndCheckNextEventID(tx *sqlx.Tx, shardID int, domainID, workflowID, run
 
 func lockNextEventID(tx *sqlx.Tx, shardID int, domainID, workflowID, runID string) (*int64, error) {
 	var nextEventID int64
-	if err := tx.Get(&nextEventID, lockAndCheckNextEventIdSQLQuery, shardID, domainID, workflowID, runID); err != nil {
+	if err := tx.Get(&nextEventID, lockAndCheckNextEventIDSQLQuery, shardID, domainID, workflowID, runID); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, &workflow.EntityNotExistsError{
 				Message: fmt.Sprintf("Failed to lock executions row with (shard, domain, workflow, run) = (%v,%v,%v,%v) which does not exist.", shardID, domainID, workflowID, runID),
@@ -1647,14 +1648,13 @@ func createTimerTasks(tx *sqlx.Tx, timerTasks []p.Task, deleteTimerTask p.Task, 
 			timerTasksRows[i].DomainID = domainID
 			timerTasksRows[i].WorkflowID = workflowID
 			timerTasksRows[i].RunID = runID
-
-			if t, err := p.GetVisibilityTSFrom(task); err != nil {
+			t, err := p.GetVisibilityTSFrom(task)
+			if err != nil {
 				return &workflow.InternalServiceError{
 					Message: fmt.Sprintf("Failed to create timer tasks. Error: %v", err),
 				}
-			} else {
-				timerTasksRows[i].VisibilityTimestamp = t
 			}
+			timerTasksRows[i].VisibilityTimestamp = t
 			timerTasksRows[i].TaskID = task.GetTaskID()
 			timerTasksRows[i].Version = task.GetVersion()
 			timerTasksRows[i].TaskType = task.GetType()
@@ -1666,23 +1666,22 @@ func createTimerTasks(tx *sqlx.Tx, timerTasks []p.Task, deleteTimerTask p.Task, 
 				Message: fmt.Sprintf("Failed to create timer tasks. Failed to bind query. Error: %v", err),
 			}
 		}
-
-		if result, err := tx.Exec(query, args...); err != nil {
+		result, err := tx.Exec(query, args...)
+		if err != nil {
 			return &workflow.InternalServiceError{
 				Message: fmt.Sprintf("Failed to create timer tasks. Error: %v", err),
 			}
-		} else {
-			rowsAffected, err := result.RowsAffected()
-			if err != nil {
-				return &workflow.InternalServiceError{
-					Message: fmt.Sprintf("Failed to create timer tasks. Could not verify number of rows inserted. Error: %v", err),
-				}
+		}
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			return &workflow.InternalServiceError{
+				Message: fmt.Sprintf("Failed to create timer tasks. Could not verify number of rows inserted. Error: %v", err),
 			}
+		}
 
-			if int(rowsAffected) != len(timerTasks) {
-				return &workflow.InternalServiceError{
-					Message: fmt.Sprintf("Failed to create timer tasks. Inserted %v instead of %v rows into timer_tasks. Error: %v", rowsAffected, len(timerTasks), err),
-				}
+		if int(rowsAffected) != len(timerTasks) {
+			return &workflow.InternalServiceError{
+				Message: fmt.Sprintf("Failed to create timer tasks. Inserted %v instead of %v rows into timer_tasks. Error: %v", rowsAffected, len(timerTasks), err),
 			}
 		}
 	}
@@ -1719,9 +1718,7 @@ func continueAsNew(tx *sqlx.Tx, shardID int, domainID, workflowID, runID, previo
 			Msg: fmt.Sprintf("ContinueAsNew failed. Current run ID was %v, expected %v", currentRunID, previousRunID),
 		}
 	}
-
-	// The current_executions row is locked, and the run ID has been verified. We can do the updates.
-	if result, err := tx.NamedExec(continueAsNewUpdateCurrentExecutionsSQLQuery, &currentExecutionRow{
+	result, err := tx.NamedExec(continueAsNewUpdateCurrentExecutionsSQLQuery, &currentExecutionRow{
 		ShardID:         int64(shardID),
 		DomainID:        domainID,
 		WorkflowID:      workflowID,
@@ -1730,24 +1727,24 @@ func continueAsNew(tx *sqlx.Tx, shardID int, domainID, workflowID, runID, previo
 		State:           state,
 		CloseStatus:     closeStatus,
 		StartVersion:    &startVersion,
-	}); err != nil {
+	})
+	// The current_executions row is locked, and the run ID has been verified. We can do the updates.
+	if err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("ContinueAsNew failed. Failed to update current_executions table. Error: %v", err),
 		}
-	} else {
-		rowsAffected, err := result.RowsAffected()
-		if err != nil {
-			return &workflow.InternalServiceError{
-				Message: fmt.Sprintf("ContinueAsNew failed. Failed to check number of rows updated in current_executions table. Error: %v", err),
-			}
-		}
-		if rowsAffected != 1 {
-			return &workflow.InternalServiceError{
-				Message: fmt.Sprintf("ContinueAsNew failed. %v rows of current_executions updated instead of 1.", rowsAffected),
-			}
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("ContinueAsNew failed. Failed to check number of rows updated in current_executions table. Error: %v", err),
 		}
 	}
-
+	if rowsAffected != 1 {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("ContinueAsNew failed. %v rows of current_executions updated instead of 1.", rowsAffected),
+		}
+	}
 	return nil
 }
 

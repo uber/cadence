@@ -54,10 +54,10 @@ func gobDeserialize(a []byte, x interface{}) error {
 }
 
 const (
-	Dsn = "%s:%s@tcp(%s:%d)/%s?multiStatements=true&tx_isolation=%%27READ-COMMITTED%%27&parseTime=true&clientFoundRows=true"
+	dataSourceName = "%s:%s@tcp(%s:%d)/%s?multiStatements=true&tx_isolation=%%27READ-COMMITTED%%27&parseTime=true&clientFoundRows=true"
 )
 
-var MaximumExpiryTs time.Time = time.Unix(1<<63-62135596801, 999999999)
+var maximumExpiryTs = time.Unix(1<<63-62135596801, 999999999)
 
 func boolToInt64(b bool) int64 {
 	if b {

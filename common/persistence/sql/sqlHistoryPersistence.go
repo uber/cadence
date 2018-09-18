@@ -61,7 +61,7 @@ type (
 )
 
 const (
-	// MySQL Error 1062 indicates a duplicate primary key i.e. the row already exists,
+	// ErrDupEntry MySQL Error 1062 indicates a duplicate primary key i.e. the row already exists,
 	// so we don't do the insert and return a ConditionalUpdate error.
 	ErrDupEntry = 1062
 
@@ -113,6 +113,7 @@ func (m *sqlHistoryManager) Close() {
 	}
 }
 
+// NewHistoryPersistence creates an instance of HistoryManager
 func NewHistoryPersistence(host string, port int, username, password, dbName string, logger bark.Logger) (p.HistoryManager, error) {
 	var db, err = newConnection(host, port, username, password, dbName)
 	if err != nil {
@@ -165,22 +166,21 @@ func (m *sqlHistoryManager) AppendHistoryEvents(request *p.AppendHistoryEventsRe
 				}
 			}
 		}
-
-		if result, err := tx.NamedExec(overwriteHistorySQLQuery, arg); err != nil {
+		result, err := tx.NamedExec(overwriteHistorySQLQuery, arg)
+		if err != nil {
 			return &workflow.InternalServiceError{
 				Message: fmt.Sprintf("AppendHistoryEvents operation failed. Update failed. Error: %v", err),
 			}
-		} else {
-			rowsAffected, err := result.RowsAffected()
-			if err != nil {
-				return &workflow.InternalServiceError{
-					Message: fmt.Sprintf("AppendHistoryEvents operation failed. Failed to check number of rows updated. Error: %v", err),
-				}
+		}
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			return &workflow.InternalServiceError{
+				Message: fmt.Sprintf("AppendHistoryEvents operation failed. Failed to check number of rows updated. Error: %v", err),
 			}
-			if rowsAffected != 1 {
-				return &workflow.InternalServiceError{
-					Message: fmt.Sprintf("AppendHistoryEvents operation failed. Updated %v rows instead of one.", rowsAffected),
-				}
+		}
+		if rowsAffected != 1 {
+			return &workflow.InternalServiceError{
+				Message: fmt.Sprintf("AppendHistoryEvents operation failed. Updated %v rows instead of one.", rowsAffected),
 			}
 		}
 
@@ -220,7 +220,7 @@ func (m *sqlHistoryManager) GetWorkflowExecutionHistory(request *p.GetWorkflowEx
 		request.DomainID,
 		request.Execution.WorkflowId,
 		request.Execution.RunId,
-		token.LastEventID + 1,
+		token.LastEventID+1,
 		request.NextEventID,
 		request.PageSize); err != nil {
 		return nil, &workflow.InternalServiceError{
@@ -292,9 +292,9 @@ func (m *sqlHistoryManager) GetWorkflowExecutionHistory(request *p.GetWorkflowEx
 	return response, nil
 }
 
-func (h *sqlHistoryManager) deserializeEvents(e *p.SerializedHistoryEventBatch) (*p.HistoryEventBatch, error) {
+func (m *sqlHistoryManager) deserializeEvents(e *p.SerializedHistoryEventBatch) (*p.HistoryEventBatch, error) {
 	p.SetSerializedHistoryDefaults(e)
-	s, _ := h.serializerFactory.Get(e.EncodingType)
+	s, _ := m.serializerFactory.Get(e.EncodingType)
 	return s.Deserialize(e)
 }
 
@@ -337,7 +337,7 @@ func lockAndCheckRangeIDAndTxID(tx *sqlx.Tx,
 	return nil
 }
 
-func (h *sqlHistoryManager) serializeToken(token *historyToken) ([]byte, error) {
+func (m *sqlHistoryManager) serializeToken(token *historyToken) ([]byte, error) {
 	data, err := json.Marshal(token)
 	if err != nil {
 		return nil, &workflow.InternalServiceError{Message: "Error generating history event token."}
@@ -345,7 +345,7 @@ func (h *sqlHistoryManager) serializeToken(token *historyToken) ([]byte, error) 
 	return data, nil
 }
 
-func (h *sqlHistoryManager) deserializeToken(request *p.GetWorkflowExecutionHistoryRequest) (*historyToken, error) {
+func (m *sqlHistoryManager) deserializeToken(request *p.GetWorkflowExecutionHistoryRequest) (*historyToken, error) {
 	token := &historyToken{
 		LastEventBatchVersion: common.EmptyVersion,
 		LastEventID:           request.FirstEventID - 1,

@@ -38,6 +38,7 @@ type (
 	}
 )
 
+// NewPersistenceClientFactory creates ExecutionManagerFactory for SQL persistence.
 func NewPersistenceClientFactory(host string, port int, username, password, dbName string, currentClusterName string, logger bark.Logger) (persistence.ExecutionManagerFactory, error) {
 	return &persistenceClientFactory{
 		host:               host,
@@ -51,7 +52,7 @@ func NewPersistenceClientFactory(host string, port int, username, password, dbNa
 }
 
 func (f *persistenceClientFactory) CreateExecutionManager(shardID int) (persistence.ExecutionManager, error) {
-	return NewSqlMatchingPersistence(f.host, f.port, f.username, f.password, f.dbName, f.logger)
+	return NewSQLMatchingPersistence(f.host, f.port, f.username, f.password, f.dbName, f.logger)
 }
 
 func (f *persistenceClientFactory) Close() {

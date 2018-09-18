@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2017 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,28 +18,19 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package service
+package sql_test
 
-import "os"
+import (
+	"github.com/uber/cadence/common/persistence/sql"
+	"testing"
 
-func ifFileExists(filename string) bool {
-	if _, err := os.Stat(filename); err == nil {
-		return true
-	}
-	return false
+	"github.com/stretchr/testify/suite"
+	"github.com/uber/cadence/common/persistence/persistence-tests"
+)
+
+func TestMetadataPersistenceSuiteV2(t *testing.T) {
+	t.Skip("Temporary skipping until SQL persistence is fixed")
+	s := new(persistencetests.MetadataPersistenceSuiteV2)
+	sql.InitTestSuite(&s.TestBase)
+	suite.Run(t, s)
 }
-
-// UseMysql use mysql persistence. If false all the following variables are ignored.
-var UseMysql = ifFileExists("/tmp/usemysql")
-
-// UseSqlMetadata use mysql persistence for metadata
-var UseSqlMetadata = ifFileExists("/tmp/usesqlmetadata")
-
-//UseSqlExecutions use mysql persistence for mutable state
-var UseSqlExecutions = ifFileExists("/tmp/usesqlexecutions")
-
-// UseSqlHistory use mysql persistence for storing history events
-var UseSqlHistory = ifFileExists("/tmp/usesqlhistory")
-
-// UseSqlShard use mysql persistence for storing shard information
-var UseSqlShard = ifFileExists("/tmp/usesqlshards")

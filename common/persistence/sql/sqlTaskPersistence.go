@@ -117,6 +117,7 @@ VALUES
 (:domain_id, :workflow_id, :run_id, :schedule_id, :task_list_name, :task_list_type, :task_id, :expiry_ts)`
 )
 
+// NewTaskPersistence creates a new instance of TaskManager
 func NewTaskPersistence(host string, port int, username, password, dbName string, logger bark.Logger) (persistence.TaskManager, error) {
 	var db, err = newConnection(host, port, username, password, dbName)
 	if err != nil {
@@ -135,8 +136,8 @@ func (m *sqlTaskManager) Close() {
 
 func (m *sqlTaskManager) LeaseTaskList(request *persistence.LeaseTaskListRequest) (*persistence.LeaseTaskListResponse, error) {
 	var row tasksListsRow
-	var rangeID int64 = 0
-	var ackLevel int64 = 0
+	var rangeID int64
+	var ackLevel int64
 	if err := m.db.Get(&row, getTaskListSQLQuery, request.DomainID, request.TaskList, request.TaskType); err != nil {
 		if err == sql.ErrNoRows {
 			// The task list does not exist. Create it.
@@ -148,7 +149,7 @@ func (m *sqlTaskManager) LeaseTaskList(request *persistence.LeaseTaskListRequest
 					TaskType: int64(request.TaskType),
 					AckLevel: ackLevel,
 					Kind:     int64(request.TaskListKind),
-					ExpiryTs: MaximumExpiryTs,
+					ExpiryTs: maximumExpiryTs,
 				}); err != nil {
 				return nil, &workflow.InternalServiceError{
 					Message: fmt.Sprintf("LeaseTaskList operation failed. Failed to make task list %v of type %v. Error: %v", request.TaskList, request.TaskType, err),
@@ -185,8 +186,7 @@ func (m *sqlTaskManager) LeaseTaskList(request *persistence.LeaseTaskListRequest
 				}
 			}
 		}
-
-		if result, err := tx.NamedExec(updateTaskListSQLQuery,
+		result, err := tx.NamedExec(updateTaskListSQLQuery,
 			&updateTaskListsRow{
 				tasksListsRow{
 					DomainID: row.DomainID,
@@ -198,21 +198,21 @@ func (m *sqlTaskManager) LeaseTaskList(request *persistence.LeaseTaskListRequest
 					ExpiryTs: row.ExpiryTs,
 				},
 				row.RangeID,
-			}); err != nil {
+			})
+		if err != nil {
 			return nil, &workflow.InternalServiceError{
 				Message: fmt.Sprintf("LeaseTaskList operation failed. Failed to lease task list %v of type %v. Error: %v", request.TaskList, request.TaskType, err),
 			}
-		} else {
-			rowsAffected, err := result.RowsAffected()
-			if err != nil {
-				return nil, &workflow.InternalServiceError{
-					Message: fmt.Sprintf("LeaseTaskList operation failed. Failed to check if lease was successful. Error: %v", err),
-				}
+		}
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			return nil, &workflow.InternalServiceError{
+				Message: fmt.Sprintf("LeaseTaskList operation failed. Failed to check if lease was successful. Error: %v", err),
 			}
-			if rowsAffected == 0 {
-				return nil, &workflow.InternalServiceError{
-					Message: fmt.Sprintf("LeaseTaskList operation failed. Updated %v rows instead of 1", rowsAffected),
-				}
+		}
+		if rowsAffected == 0 {
+			return nil, &workflow.InternalServiceError{
+				Message: fmt.Sprintf("LeaseTaskList operation failed. Updated %v rows instead of 1", rowsAffected),
 			}
 		}
 
@@ -269,7 +269,7 @@ func (m *sqlTaskManager) UpdateTaskList(request *persistence.UpdateTaskListReque
 				}
 			}
 		}
-		if result, err := tx.NamedExec(updateTaskListSQLQuery,
+		result, err := tx.NamedExec(updateTaskListSQLQuery,
 			&updateTaskListsRow{
 				tasksListsRow{
 					request.TaskListInfo.DomainID,
@@ -278,24 +278,24 @@ func (m *sqlTaskManager) UpdateTaskList(request *persistence.UpdateTaskListReque
 					int64(request.TaskListInfo.TaskType),
 					request.TaskListInfo.AckLevel,
 					int64(request.TaskListInfo.Kind),
-					MaximumExpiryTs,
+					maximumExpiryTs,
 				},
 				request.TaskListInfo.RangeID,
-			}); err != nil {
+			})
+		if err != nil {
 			return nil, &workflow.InternalServiceError{
 				Message: fmt.Sprintf("UpdateTaskList operation failed. Failed to update task list. Error: %v", err),
 			}
-		} else {
-			rowsAffected, err := result.RowsAffected()
-			if err != nil {
-				return nil, &workflow.InternalServiceError{
-					Message: fmt.Sprintf("UpdateTaskList operation failed. Failed to verify how many rows were affected. Error: %v", err),
-				}
+		}
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			return nil, &workflow.InternalServiceError{
+				Message: fmt.Sprintf("UpdateTaskList operation failed. Failed to verify how many rows were affected. Error: %v", err),
 			}
-			if rowsAffected != 1 {
-				return nil, &workflow.InternalServiceError{
-					Message: fmt.Sprintf("UpdateTaskList operation failed. %v rows were affected instead of 1.", rowsAffected),
-				}
+		}
+		if rowsAffected != 1 {
+			return nil, &workflow.InternalServiceError{
+				Message: fmt.Sprintf("UpdateTaskList operation failed. %v rows were affected instead of 1.", rowsAffected),
 			}
 		}
 		if err := tx.Commit(); err != nil {
@@ -327,7 +327,7 @@ func (m *sqlTaskManager) CreateTasks(request *persistence.CreateTasksRequest) (*
 			TaskListName: request.TaskListInfo.Name,
 			TaskListType: int64(request.TaskListInfo.TaskType),
 			TaskID:       v.TaskID,
-			ExpiryTs:     MaximumExpiryTs,
+			ExpiryTs:     maximumExpiryTs,
 		}
 	}
 

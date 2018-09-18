@@ -23,10 +23,10 @@ package cassandra
 import (
 	"fmt"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
-	p "github.com/uber/cadence/common/persistence"
 	"github.com/gocql/gocql"
 	"github.com/uber-common/bark"
+	workflow "github.com/uber/cadence/.gen/go/shared"
+	p "github.com/uber/cadence/common/persistence"
 )
 
 const (

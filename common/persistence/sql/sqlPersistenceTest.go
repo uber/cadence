@@ -59,6 +59,7 @@ func InitTestSuite(tb *persistencetests.TestBase) {
 		DBPassword:         testPassword,
 		DropDatabase:       true,
 		EnableGlobalDomain: false,
+		Datacenter:         "foo",
 	}
 	InitTestSuiteWithOptions(tb, options)
 }
@@ -91,7 +92,7 @@ func InitTestSuiteWithMetadata(tb *persistencetests.TestBase, options *persisten
 	databaseName := tb.PersistenceTestCluster.DatabaseName()
 	var err error
 	tb.ShardMgr, err = NewShardPersistence(options.DBHost, options.DBPort, options.DBUser,
-		options.DBPassword, databaseName, options.Datacenter, log)
+		options.DBPassword, databaseName, currentClusterName, log)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -170,7 +171,7 @@ func getCadencePackageDir() (string, error) {
 	return cadencePackageDir, err
 }
 
-// DBName from PersistenceTestCluster interface
+// DatabaseName from PersistenceTestCluster interface
 func (s *TestCluster) DatabaseName() string {
 	return s.dbName
 }

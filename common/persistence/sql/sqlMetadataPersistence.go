@@ -33,11 +33,12 @@ import (
 )
 
 type (
+	// Implements MetadataManager
 	sqlMetadataManager struct {
 		db *sqlx.DB
 	}
 
-	DomainCommon struct {
+	domainCommon struct {
 		// TODO Extracting the fields from DomainInfo since we don't support scanning into DomainInfo.Data
 		ID          string
 		Name        string
@@ -56,14 +57,14 @@ type (
 		FailoverVersion   int64
 	}
 
-	FlatUpdateDomainRequest struct {
-		DomainCommon
+	flatUpdateDomainRequest struct {
+		domainCommon
 		FailoverNotificationVersion int64
 		NotificationVersion         int64
 	}
 
 	domainRow struct {
-		DomainCommon
+		domainCommon
 		FailoverNotificationVersion int64
 		NotificationVersion         int64
 		IsGlobalDomain              bool
@@ -242,7 +243,7 @@ func (m *sqlMetadataManager) CreateDomain(request *persistence.CreateDomainReque
 		defer tx.Rollback()
 
 		if _, err := tx.NamedExec(createDomainSQLQuery, &domainRow{
-			DomainCommon: DomainCommon{
+			domainCommon: domainCommon{
 				Name:        request.Info.Name,
 				ID:          request.Info.ID,
 				Status:      request.Info.Status,
@@ -409,8 +410,8 @@ func (m *sqlMetadataManager) UpdateDomain(request *persistence.UpdateDomainReque
 	}
 	defer tx.Rollback()
 
-	result, err := tx.NamedExec(updateDomainSQLQuery, &FlatUpdateDomainRequest{
-		DomainCommon: DomainCommon{
+	result, err := tx.NamedExec(updateDomainSQLQuery, &flatUpdateDomainRequest{
+		domainCommon: domainCommon{
 			Name:        request.Info.Name,
 			ID:          request.Info.ID,
 			Status:      request.Info.Status,
@@ -524,7 +525,7 @@ func (m *sqlMetadataManager) GetMetadata() (*persistence.GetMetadataResponse, er
 }
 
 // NewMetadataPersistence creates an instance of sqlMetadataManager
-func NewMetadataPersistence(host string, port int , username, password,  dbName string, logger bark.Logger) (persistence.MetadataManager, error) {
+func NewMetadataPersistence(host string, port int, username, password, dbName string, logger bark.Logger) (persistence.MetadataManager, error) {
 	var db, err = newConnection(host, port, username, password, dbName)
 	if err != nil {
 		return nil, err

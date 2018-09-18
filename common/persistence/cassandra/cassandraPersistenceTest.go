@@ -170,7 +170,7 @@ func getCadencePackageDir() (string, error) {
 	return cadencePackageDir, err
 }
 
-// DBName from PersistenceTestCluster interface
+// DatabaseName from PersistenceTestCluster interface
 func (s *TestCluster) DatabaseName() string {
 	return s.keyspace
 }

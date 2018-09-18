@@ -31,7 +31,7 @@ import (
 // TODO: driverName parameter
 func newConnection(host string, port int, username, password, dbName string) (*sqlx.DB, error) {
 	var db, err = sqlx.Connect("mysql",
-		fmt.Sprintf(Dsn, username, password, host, port, dbName))
+		fmt.Sprintf(dataSourceName, username, password, host, port, dbName))
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +42,7 @@ func newConnection(host string, port int, username, password, dbName string) (*s
 
 func createDatabase(host string, port int, username, password, dbName string, overwrite bool) error {
 	var db, err = sqlx.Connect("mysql",
-		fmt.Sprintf(Dsn, username, password, host, port, ""))
+		fmt.Sprintf(dataSourceName, username, password, host, port, ""))
 	if err != nil {
 		return fmt.Errorf("failure connecting to mysql database: %v", err)
 	}
@@ -60,7 +60,7 @@ func createDatabase(host string, port int, username, password, dbName string, ov
 
 // DropCassandraKeyspace drops the given keyspace, if it exists
 func dropDatabase(db *sqlx.DB, dbName string) (err error) {
-	_, err = db.Exec("DROP DATABASE "+ dbName)
+	_, err = db.Exec("DROP DATABASE " + dbName)
 	if err != nil {
 		return err
 	}

@@ -116,6 +116,7 @@ shard_id = :shard_id
 	lockShardSQLQuery = `SELECT range_id FROM shards WHERE shard_id = ? FOR UPDATE`
 )
 
+// NewShardPersistence creates an instance of ShardManager
 func NewShardPersistence(host string, port int, username, password, dbName string, currentClusterName string, log bark.Logger) (persistence.ShardManager, error) {
 	var db, err = newConnection(host, port, username, password, dbName)
 	if err != nil {

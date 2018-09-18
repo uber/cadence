@@ -226,7 +226,7 @@ func (s *HistoryPersistenceSuite) TestAppendAndGet() {
 		err0 := s.AppendHistoryEvents(domainID, workflowExecution, events[0].GetEventId(), common.EmptyVersion, 1, int64(i), batches[i].batch, false)
 		s.Nil(err0)
 
-		nextEventID := events[len(events) - 1].GetEventId()
+		nextEventID := events[len(events)-1].GetEventId()
 		history, token, err1 := s.GetWorkflowExecutionHistory(domainID, workflowExecution, 1, nextEventID, 11, nil)
 		s.Nil(err1)
 		s.Nil(token)
