@@ -38,7 +38,7 @@ type (
 		//DEPRECATED: it will be removed after all moved to Decode
 		Deserialize(batch *SerializedHistoryEventBatch) (*HistoryEventBatch, error)
 
-		Encode(batch *HistoryEventBatch, encodingType common.EncodingType) (*DataBlob, error)
+		Encode(batch *HistoryEventBatch) (*DataBlob, error)
 		Decode(data *DataBlob) (*HistoryEventBatch, error)
 	}
 
@@ -104,7 +104,7 @@ func NewThriftRWHistorySerializer() HistorySerializer {
 	}
 }
 
-func (t *thriftrwHistorySerializer) Encode(batch *HistoryEventBatch, encodingType common.EncodingType) (*DataBlob, error) {
+func (t *thriftrwHistorySerializer) Encode(batch *HistoryEventBatch) (*DataBlob, error) {
 	if batch.Version > GetMaxSupportedHistoryVersion() {
 		err := NewHistoryVersionCompatibilityError(batch.Version, GetMaxSupportedHistoryVersion())
 		return nil, &HistorySerializationError{msg: err.Error()}
@@ -147,7 +147,7 @@ func NewJSONHistorySerializer() HistorySerializer {
 	return &jsonHistorySerializer{}
 }
 
-func (j *jsonHistorySerializer) Encode(batch *HistoryEventBatch, encodingType common.EncodingType) (*DataBlob, error) {
+func (j *jsonHistorySerializer) Encode(batch *HistoryEventBatch) (*DataBlob, error) {
 	if batch.Version > GetMaxSupportedHistoryVersion() {
 		err := NewHistoryVersionCompatibilityError(batch.Version, GetMaxSupportedHistoryVersion())
 		return nil, &HistorySerializationError{msg: err.Error()}
