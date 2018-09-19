@@ -728,7 +728,6 @@ func (s *shardContextImpl) emitShardInfoMetricsLogsLocked() {
 
 	if logWarnTransferLevelDiff < diffTransferLevel ||
 		logWarnTimerLevelDiff < diffTimerLevel ||
-		logWarnTransferLevelDiff < replicationLag ||
 		logWarnTransferLevelDiff < transferLag ||
 		logWarnTimerLevelDiff < timerLag {
 
