@@ -1839,7 +1839,8 @@ func NewDataBlob(data []byte, encodingType common.EncodingType, version int) *Da
 func (d *DataBlob) GetEncoding() common.EncodingType {
 	encodingStr, ok := d.Headers[DataBlobHeaderKeyEncoding]
 	if !ok {
-		return common.EncodingTypeUnknown
+		// As backward compatibility, it should be json when the header is empty
+		return common.EncodingTypeJSON
 	}
 	switch common.EncodingType(encodingStr) {
 	case common.EncodingTypeGob:

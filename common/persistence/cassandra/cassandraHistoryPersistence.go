@@ -34,15 +34,15 @@ import (
 
 const (
 	templateAppendHistoryEvents = `INSERT INTO events (` +
-		`domain_id, workflow_id, run_id, first_event_id, event_batch_version, range_id, tx_id, data, data_encoding, data_version) ` +
-		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) IF NOT EXISTS`
+		`domain_id, workflow_id, run_id, first_event_id, event_batch_version, range_id, tx_id, data, data_headers) ` +
+		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) IF NOT EXISTS`
 
 	templateOverwriteHistoryEvents = `UPDATE events ` +
-		`SET event_batch_version = ?, range_id = ?, tx_id = ?, data = ?, data_encoding = ?, data_version = ? ` +
+		`SET event_batch_version = ?, range_id = ?, tx_id = ?, data = ?, data_headers = ? ` +
 		`WHERE domain_id = ? AND workflow_id = ? AND run_id = ? AND first_event_id = ? ` +
 		`IF range_id <= ? AND tx_id < ?`
 
-	templateGetWorkflowExecutionHistory = `SELECT first_event_id, event_batch_version, data, data_encoding, data_version FROM events ` +
+	templateGetWorkflowExecutionHistory = `SELECT first_event_id, event_batch_version, data, data_headers FROM events ` +
 		`WHERE domain_id = ? ` +
 		`AND workflow_id = ? ` +
 		`AND run_id = ? ` +
@@ -105,8 +105,7 @@ func (h *cassandraHistoryPersistence) AppendHistoryEvents(request *p.AppendHisto
 			request.RangeID,
 			request.TransactionID,
 			request.Events.Data,
-			request.Events.EncodingType,
-			request.Events.Version,
+			request.Events.Headers,
 			request.DomainID,
 			*request.Execution.WorkflowId,
 			*request.Execution.RunId,
@@ -123,8 +122,7 @@ func (h *cassandraHistoryPersistence) AppendHistoryEvents(request *p.AppendHisto
 			request.RangeID,
 			request.TransactionID,
 			request.Events.Data,
-			request.Events.EncodingType,
-			request.Events.Version)
+			request.Events.Headers)
 	}
 
 	previous := make(map[string]interface{})
@@ -180,16 +178,16 @@ func (h *cassandraHistoryPersistence) GetWorkflowExecutionHistory(request *p.Get
 	eventBatchVersionPointer := new(int64)
 	eventBatchVersion := common.EmptyVersion
 	lastFirstEventID := common.EmptyEventID // first_event_id of last batch
-	eventBatch := p.SerializedHistoryEventBatch{}
+	eventBatchData := p.DataBlob{}
 	history := &workflow.History{}
-	for iter.Scan(nil, &eventBatchVersionPointer, &eventBatch.Data, &eventBatch.EncodingType, &eventBatch.Version) {
+	for iter.Scan(nil, &eventBatchVersionPointer, &eventBatchData.Data, &eventBatchData.Headers) {
 		found = true
 
 		if eventBatchVersionPointer != nil {
 			eventBatchVersion = *eventBatchVersionPointer
 		}
 		if eventBatchVersion >= token.LastEventBatchVersion {
-			historyBatch, err := h.deserializeEvents(&eventBatch)
+			historyBatch, err := h.deserializeEvents(&eventBatchData)
 			if err != nil {
 				return nil, err
 			}
@@ -216,7 +214,6 @@ func (h *cassandraHistoryPersistence) GetWorkflowExecutionHistory(request *p.Get
 
 		eventBatchVersionPointer = new(int64)
 		eventBatchVersion = common.EmptyVersion
-		eventBatch = p.SerializedHistoryEventBatch{}
 	}
 
 	data, err := h.serializeToken(token)
@@ -247,10 +244,9 @@ func (h *cassandraHistoryPersistence) GetWorkflowExecutionHistory(request *p.Get
 	return response, nil
 }
 
-func (h *cassandraHistoryPersistence) deserializeEvents(e *p.SerializedHistoryEventBatch) (*p.HistoryEventBatch, error) {
-	p.SetSerializedHistoryDefaults(e)
-	s, _ := h.serializerFactory.Get(e.EncodingType)
-	return s.Deserialize(e)
+func (h *cassandraHistoryPersistence) deserializeEvents(blob *p.DataBlob) (*p.HistoryEventBatch, error) {
+	s, _ := h.serializerFactory.Get(blob.GetEncoding())
+	return s.Decode(blob)
 }
 
 func (h *cassandraHistoryPersistence) DeleteWorkflowExecutionHistory(
