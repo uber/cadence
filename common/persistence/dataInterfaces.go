@@ -24,6 +24,8 @@ import (
 	"fmt"
 	"time"
 
+	"strconv"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 )
@@ -1822,4 +1824,43 @@ func DBTimestampToUnixNano(milliseconds int64) int64 {
 // UnixNanoToDBTimestamp converts UnixNano to CQL timestamp
 func UnixNanoToDBTimestamp(timestamp int64) int64 {
 	return timestamp / (1000 * 1000) // Milliseconds are 10⁻³, nanoseconds are 10⁻⁹, (-9) - (-3) = -6, so divide by 10⁶
+}
+
+func NewDataBlob(data []byte, encodingType common.EncodingType, version int) *DataBlob {
+	return &DataBlob{
+		Data: data,
+		Headers: map[string]string{
+			DataBlobHeaderKeyEncoding: string(encodingType),
+			DataBlobHeaderKeyVersion:  strconv.Itoa(version),
+		},
+	}
+}
+
+func (d *DataBlob) GetEncoding() common.EncodingType {
+	encodingStr, ok := d.Headers[DataBlobHeaderKeyEncoding]
+	if !ok {
+		return common.EncodingTypeUnknown
+	}
+	switch common.EncodingType(encodingStr) {
+	case common.EncodingTypeGob:
+		return common.EncodingTypeGob
+	case common.EncodingTypeJSON:
+		return common.EncodingTypeJSON
+	case common.EncodingTypeThriftRW:
+		return common.EncodingTypeThriftRW
+	default:
+		return common.EncodingTypeUnknown
+	}
+}
+
+func (d *DataBlob) GetVersion() int {
+	versionStr, ok := d.Headers[DataBlobHeaderKeyVersion]
+	if !ok {
+		return 0
+	}
+	n, err := strconv.ParseInt(versionStr, 10, 32)
+	if err != nil {
+		return 0
+	}
+	return int(n)
 }

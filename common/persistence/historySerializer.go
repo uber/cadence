@@ -27,13 +27,19 @@ import (
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/codec"
 )
 
 type (
 	// HistorySerializer is used to serialize/deserialize history
 	HistorySerializer interface {
+		//DEPRECATED: it will be removed after all moved to Encode
 		Serialize(batch *HistoryEventBatch) (*SerializedHistoryEventBatch, error)
+		//DEPRECATED: it will be removed after all moved to Decode
 		Deserialize(batch *SerializedHistoryEventBatch) (*HistoryEventBatch, error)
+
+		Encode(batch *HistoryEventBatch, encodingType common.EncodingType) (*DataBlob, error)
+		Decode(data *DataBlob) (*HistoryEventBatch, error)
 	}
 
 	// HistorySerializerFactory is a factory that vends
@@ -72,10 +78,14 @@ type (
 		supportedVersion int
 	}
 
-	jsonHistorySerializer struct{}
+	jsonHistorySerializer     struct{}
+	thriftrwHistorySerializer struct {
+		thriftrwEncoder codec.BinaryEncoder
+	}
 
 	serializerFactoryImpl struct {
-		jsonSerializer HistorySerializer
+		jsonSerializer     HistorySerializer
+		thriftrwSerializer HistorySerializer
 	}
 )
 
@@ -88,8 +98,80 @@ var defaultHistoryVersion = int32(1)
 var maxSupportedHistoryVersion = int32(1)
 
 // NewJSONHistorySerializer returns a JSON HistorySerializer
+func NewThriftRWHistorySerializer() HistorySerializer {
+	return &thriftrwHistorySerializer{
+		thriftrwEncoder: codec.NewThriftRWEncoder(),
+	}
+}
+
+func (t *thriftrwHistorySerializer) Encode(batch *HistoryEventBatch, encodingType common.EncodingType) (*DataBlob, error) {
+	if batch.Version > GetMaxSupportedHistoryVersion() {
+		err := NewHistoryVersionCompatibilityError(batch.Version, GetMaxSupportedHistoryVersion())
+		return nil, &HistorySerializationError{msg: err.Error()}
+	}
+
+	history := &workflow.History{
+		Events: batch.Events,
+	}
+	data, err := t.thriftrwEncoder.Encode(history)
+	if err != nil {
+		return nil, &HistorySerializationError{msg: err.Error()}
+	}
+	return NewDataBlob(data, common.EncodingTypeThriftRW, batch.Version), nil
+}
+
+func (t *thriftrwHistorySerializer) Decode(blob *DataBlob) (*HistoryEventBatch, error) {
+	if blob.GetVersion() > GetMaxSupportedHistoryVersion() {
+		err := NewHistoryVersionCompatibilityError(blob.GetVersion(), GetMaxSupportedHistoryVersion())
+		return nil, &HistoryDeserializationError{msg: err.Error()}
+	}
+
+	var history workflow.History
+	err := t.thriftrwEncoder.Decode(blob.Data, &history)
+	if err != nil {
+		return nil, &HistoryDeserializationError{msg: err.Error()}
+	}
+	return &HistoryEventBatch{Version: blob.GetVersion(), Events: history.Events}, nil
+}
+
+func (j *thriftrwHistorySerializer) Serialize(batch *HistoryEventBatch) (*SerializedHistoryEventBatch, error) {
+	return nil, fmt.Errorf("not supported")
+}
+
+func (j *thriftrwHistorySerializer) Deserialize(batch *SerializedHistoryEventBatch) (*HistoryEventBatch, error) {
+	return nil, fmt.Errorf("not supported")
+}
+
+// NewJSONHistorySerializer returns a JSON HistorySerializer
 func NewJSONHistorySerializer() HistorySerializer {
 	return &jsonHistorySerializer{}
+}
+
+func (j *jsonHistorySerializer) Encode(batch *HistoryEventBatch, encodingType common.EncodingType) (*DataBlob, error) {
+	if batch.Version > GetMaxSupportedHistoryVersion() {
+		err := NewHistoryVersionCompatibilityError(batch.Version, GetMaxSupportedHistoryVersion())
+		return nil, &HistorySerializationError{msg: err.Error()}
+	}
+
+	data, err := json.Marshal(batch.Events)
+	if err != nil {
+		return nil, &HistorySerializationError{msg: err.Error()}
+	}
+	return NewDataBlob(data, common.EncodingTypeJSON, batch.Version), nil
+}
+
+func (j *jsonHistorySerializer) Decode(blob *DataBlob) (*HistoryEventBatch, error) {
+	if blob.GetVersion() > GetMaxSupportedHistoryVersion() {
+		err := NewHistoryVersionCompatibilityError(blob.GetVersion(), GetMaxSupportedHistoryVersion())
+		return nil, &HistoryDeserializationError{msg: err.Error()}
+	}
+
+	var events []*workflow.HistoryEvent
+	err := json.Unmarshal(blob.Data, &events)
+	if err != nil {
+		return nil, &HistoryDeserializationError{msg: err.Error()}
+	}
+	return &HistoryEventBatch{Version: blob.GetVersion(), Events: events}, nil
 }
 
 func (j *jsonHistorySerializer) Serialize(batch *HistoryEventBatch) (*SerializedHistoryEventBatch, error) {
@@ -125,7 +207,8 @@ func (j *jsonHistorySerializer) Deserialize(batch *SerializedHistoryEventBatch) 
 // of HistorySerializerFactory
 func NewHistorySerializerFactory() HistorySerializerFactory {
 	return &serializerFactoryImpl{
-		jsonSerializer: NewJSONHistorySerializer(),
+		jsonSerializer:     NewJSONHistorySerializer(),
+		thriftrwSerializer: NewThriftRWHistorySerializer(),
 	}
 }
 
@@ -134,6 +217,8 @@ func (f *serializerFactoryImpl) Get(encodingType common.EncodingType) (HistorySe
 	switch encodingType {
 	case common.EncodingTypeJSON:
 		return f.jsonSerializer, nil
+	case common.EncodingTypeThriftRW:
+		return f.thriftrwSerializer, nil
 	default:
 		return nil, NewUnknownEncodingTypeError(encodingType)
 	}
