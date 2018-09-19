@@ -284,8 +284,9 @@ CREATE TABLE events (
   range_id            bigint,
   tx_id               bigint,
   data                blob, -- Batch of workflow execution history events as a blob
-  data_encoding       text, -- Protocol used for history serialization
-  data_version        int,  -- history blob version
+  data_encoding       text, -- DEPRECATED, use data_header instead. Protocol used for history serialization
+  data_version        int,  -- DEPRECATED, use data_header instead. history blob version
+  data_header         map<text, text>, -- header information for data, to identify binary encoding, version, compression, etc
   PRIMARY KEY ((domain_id, workflow_id, run_id), first_event_id)
 ) WITH COMPACTION = {
     'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'

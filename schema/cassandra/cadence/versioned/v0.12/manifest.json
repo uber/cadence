@@ -1,0 +1,8 @@
+{
+  "CurrVersion": "0.12",
+  "MinCompatibleVersion": "0.12",
+  "Description": "Adding data header for events",
+  "SchemaUpdateCqlFiles": [
+    "events_data_header.cql"
+  ]
+}
