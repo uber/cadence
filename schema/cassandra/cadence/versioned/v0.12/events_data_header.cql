@@ -1,1 +1,1 @@
-ALTER TABLE events ADD data_header map<text, text>;
+ALTER TABLE events ADD data_headers map<text, text>;

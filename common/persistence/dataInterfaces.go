@@ -112,6 +112,12 @@ const (
 	TransferTaskTransferTargetRunID = "30000000-0000-f000-f000-000000000002"
 )
 
+// Keys of DataBlob headers
+const (
+	DataBlobHeaderKeyEncoding = "$Cadence.Blob.Encoding"
+	DataBlobHeaderKeyVersion  = "$Cadence.Blob.Version"
+)
+
 type (
 	// CurrentWorkflowConditionFailedError represents a failed conditional update for current workflow record
 	CurrentWorkflowConditionFailedError struct {
@@ -822,10 +828,17 @@ type (
 	}
 
 	// SerializedHistoryEventBatch represents a serialized batch of history events
+	// DEPRECATED: We will remmove it after we replace all fields in mutableState to use DataBlob
 	SerializedHistoryEventBatch struct {
 		EncodingType common.EncodingType
 		Version      int
 		Data         []byte
+	}
+
+	// DataBlob include binary data and its header information(encoding/compression/versin/etc)
+	DataBlob struct {
+		Headers map[string]string
+		Data    []byte
 	}
 
 	// HistoryEventBatch represents a batch of history events
@@ -842,7 +855,7 @@ type (
 		EventBatchVersion int64
 		RangeID           int64
 		TransactionID     int64
-		Events            *SerializedHistoryEventBatch
+		Events            *DataBlob
 		Overwrite         bool
 	}
 
