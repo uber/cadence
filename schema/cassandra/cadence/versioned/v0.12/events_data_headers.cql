@@ -1,1 +1,0 @@
-ALTER TABLE events ADD data_headers map<text, text>;

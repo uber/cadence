@@ -27,11 +27,13 @@ CREATE TYPE workflow_execution (
   parent_run_id                    uuid,   -- RunID of parent workflow which started the workflow execution
   initiated_id                     bigint, -- Initiated event ID of parent workflow which started this execution
   completion_event                 blob,   -- Completion event used to communicate result to parent workflow execution
+  completion_event_blob_headers    map<text,text>, -- blob headers for completion_event
   task_list                        text,
   workflow_type_name               text,
   workflow_timeout                 int,  -- Workflow ExecutionStartToCloseTimeoutSeconds
   decision_task_timeout            int,
   execution_context                blob,
+  execution_context_blob_headers   map<text,text>, -- blob headers for execution_context
   state                            int,  -- enum WorkflowState {Created, Running, Completed}
   close_status                     int,  -- enum WorkflowCloseStatus {None, Completed, Failed, Canceled, Terminated, ContinuedAsNew, TimedOut}
   last_first_event_id              bigint,
@@ -151,6 +153,7 @@ CREATE TYPE activity_info (
   expiration_time           timestamp, -- retry expiration time
   max_attempts              int,    -- max number of attempts including initial non-retry attempt
   non_retriable_errors      list<text>,
+  blob_headers              map<text,text>, -- blob headers for all blob fields in this struct
 );
 
 -- User timer details
@@ -170,6 +173,7 @@ CREATE TYPE child_execution_info (
   started_id        bigint,
   started_event     blob,
   create_request_id uuid,
+  blob_headers      map<text,text>, -- blob headers for all blob fields in this struct
 );
 
 -- External workflow cancellation in progress mutable state
@@ -187,6 +191,7 @@ CREATE TYPE signal_info (
   signal_name       text,
   input             blob,
   control           blob,
+  blob_headers      map<text,text>, -- blob headers for all blob fields in this struct
 );
 
 -- Activity or workflow task in a task list
