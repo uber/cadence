@@ -67,7 +67,7 @@ type (
 )
 
 const (
-	dropSyncShardTaskTimeThreshold = time.Minute * 10
+	dropSyncShardTaskTimeThreshold = 10 * time.Minute
 
 	retryErrorWaitMillis = 100
 
