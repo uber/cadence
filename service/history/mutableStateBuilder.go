@@ -1422,6 +1422,80 @@ func (e *mutableStateBuilder) computeWorkflowExecutionStartedSize(
 	return size
 }
 
+func (e *mutableStateBuilder) recomputeSize() {
+	totalSize := 0
+
+	executionInfoSize := 0
+	executionInfoSize += len(e.executionInfo.WorkflowID)
+	executionInfoSize += len(e.executionInfo.TaskList)
+	executionInfoSize += len(e.executionInfo.WorkflowTypeName)
+	executionInfoSize += len(e.executionInfo.ParentWorkflowID)
+
+	activityInfoCount := 0
+	activityInfoSize := 0
+	for _, ai := range e.pendingActivityInfoIDs {
+		activityInfoCount++
+		activityInfoSize += len(ai.ActivityID)
+		activityInfoSize += len(ai.ScheduledEvent)
+		activityInfoSize += len(ai.StartedEvent)
+		activityInfoSize += len(ai.Details)
+	}
+
+	timerInfoCount := 0
+	timerInfoSize := 0
+	for _, ti := range e.pendingTimerInfoIDs {
+		timerInfoCount++
+		timerInfoSize += len(ti.TimerID)
+	}
+
+	childExecutionInfoCount := 0
+	childExecutionInfoSize := 0
+	for _, ci := range e.pendingChildExecutionInfoIDs {
+		childExecutionInfoCount++
+		childExecutionInfoSize += len(ci.InitiatedEvent)
+		childExecutionInfoSize += len(ci.StartedEvent)
+	}
+
+	signalInfoCount := 0
+	signalInfoSize := 0
+	for _, si := range e.pendingSignalInfoIDs {
+		signalInfoCount++
+		signalInfoSize += len(si.SignalName)
+		signalInfoSize += len(si.Input)
+		signalInfoSize += len(si.Control)
+	}
+
+	bufferedEventsCount := 0
+	bufferedEventsSize := 0
+	for _, e := range e.bufferedEvents {
+		bufferedEventsCount++
+		bufferedEventsSize += len(e.Data)
+	}
+
+	bufferedReplicationTasksCount := 0
+	bufferedReplicationTasksSize := 0
+	for _, rt := range e.bufferedReplicationTasks {
+		bufferedReplicationTasksCount++
+		if rt.History != nil {
+			bufferedReplicationTasksSize += len(rt.History.Data)
+		}
+		if rt.NewRunHistory != nil {
+			bufferedReplicationTasksSize += len(rt.NewRunHistory.Data)
+		}
+	}
+
+	requestCancelInfoCount := len(e.pendingRequestCancelInfoIDs)
+
+
+	totalSize += executionInfoSize
+	totalSize += activityInfoSize
+	totalSize += timerInfoSize
+	totalSize += childExecutionInfoSize
+	totalSize += signalInfoSize
+	totalSize += bufferedEventsSize
+	totalSize += bufferedReplicationTasksSize
+}
+
 func (e *mutableStateBuilder) AddDecisionTaskScheduledEvent() *decisionInfo {
 	if e.HasPendingDecisionTask() {
 		logging.LogInvalidHistoryActionEvent(e.logger, logging.TagValueActionDecisionTaskScheduled, e.GetNextEventID(),
