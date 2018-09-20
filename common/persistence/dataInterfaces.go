@@ -26,6 +26,8 @@ import (
 
 	"strconv"
 
+	"encoding/hex"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 )
@@ -199,12 +201,12 @@ type (
 		ParentWorkflowID             string
 		ParentRunID                  string
 		InitiatedID                  int64
-		CompletionEvent              []byte
+		CompletionEvent              *workflow.HistoryEvent
 		TaskList                     string
 		WorkflowTypeName             string
 		WorkflowTimeout              int32
 		DecisionTimeoutValue         int32
-		ExecutionContext             []byte
+		ExecutionContext             *DataBlob
 		State                        int
 		CloseStatus                  int
 		LastFirstEventID             int64
@@ -469,7 +471,7 @@ type (
 		SignalRequestedIDs       map[string]struct{}
 		ExecutionInfo            *WorkflowExecutionInfo
 		ReplicationState         *ReplicationState
-		BufferedEvents           []*SerializedHistoryEventBatch
+		BufferedEvents           []*HistoryEventBatch
 		BufferedReplicationTasks map[int64]*BufferedReplicationTask
 	}
 
@@ -477,14 +479,14 @@ type (
 	ActivityInfo struct {
 		Version                  int64
 		ScheduleID               int64
-		ScheduledEvent           []byte
+		ScheduledEvent           *workflow.HistoryEvent
 		ScheduledTime            time.Time
 		StartedID                int64
-		StartedEvent             []byte
+		StartedEvent             *workflow.HistoryEvent
 		StartedTime              time.Time
 		ActivityID               string
 		RequestID                string
-		Details                  []byte
+		Details                  *DataBlob
 		ScheduleToStartTimeout   int32
 		ScheduleToCloseTimeout   int32
 		StartToCloseTimeout      int32
@@ -522,9 +524,9 @@ type (
 	ChildExecutionInfo struct {
 		Version         int64
 		InitiatedID     int64
-		InitiatedEvent  []byte
+		InitiatedEvent  *workflow.HistoryEvent
 		StartedID       int64
-		StartedEvent    []byte
+		StartedEvent    *workflow.HistoryEvent
 		CreateRequestID string
 	}
 
@@ -541,8 +543,8 @@ type (
 		InitiatedID     int64
 		SignalRequestID string
 		SignalName      string
-		Input           []byte
-		Control         []byte
+		Input           *DataBlob
+		Control         *DataBlob
 	}
 
 	// BufferedReplicationTask has details to handle out of order receive of history events
@@ -550,8 +552,8 @@ type (
 		FirstEventID  int64
 		NextEventID   int64
 		Version       int64
-		History       *SerializedHistoryEventBatch
-		NewRunHistory *SerializedHistoryEventBatch
+		History       *HistoryEventBatch
+		NewRunHistory *HistoryEventBatch
 	}
 
 	// CreateShardRequest is used to create a shard in executions table
@@ -587,7 +589,7 @@ type (
 		WorkflowTypeName            string
 		WorkflowTimeout             int32
 		DecisionTimeoutValue        int32
-		ExecutionContext            []byte
+		ExecutionContext            *DataBlob
 		NextEventID                 int64
 		LastProcessedEvent          int64
 		TransferTasks               []Task
@@ -667,10 +669,11 @@ type (
 		DeleteSignalInfo              *int64
 		UpsertSignalRequestedIDs      []string
 		DeleteSignalRequestedID       string
-		NewBufferedEvents             *SerializedHistoryEventBatch
+		NewBufferedEvents             HistoryEventBatch
 		ClearBufferedEvents           bool
 		NewBufferedReplicationTask    *BufferedReplicationTask
 		DeleteBufferedReplicationTask *int64
+		BinaryEncoding                common.EncodingType
 	}
 
 	// ResetMutableStateRequest is used to reset workflow execution state
@@ -680,6 +683,7 @@ type (
 		ReplicationState *ReplicationState
 		Condition        int64
 		RangeID          int64
+		BinaryEncoding   common.EncodingType
 
 		// Mutable state
 		InsertActivityInfos       []*ActivityInfo
@@ -829,15 +833,8 @@ type (
 		NextPageToken []byte
 	}
 
-	// SerializedHistoryEventBatch represents a serialized batch of history events
-	// DEPRECATED: We will remmove it after we replace all fields in mutableState to use DataBlob
-	SerializedHistoryEventBatch struct {
-		EncodingType common.EncodingType
-		Version      int
-		Data         []byte
-	}
-
-	// DataBlob include binary data and its header information(encoding/compression/versin/etc)
+	// DataBlob represents a blob for any binary data.
+	// The raw data is in Data field, and metadata(encoding/version/compression/etc) is in headers field
 	DataBlob struct {
 		Headers map[string]string
 		Data    []byte
@@ -857,8 +854,9 @@ type (
 		EventBatchVersion int64
 		RangeID           int64
 		TransactionID     int64
-		Events            *DataBlob
+		Events            *workflow.History
 		Overwrite         bool
+		BinaryEncoding    common.EncodingType
 	}
 
 	// GetWorkflowExecutionHistoryRequest is used to retrieve history of a workflow execution
@@ -1671,31 +1669,6 @@ func (b *HistoryEventBatch) String() string {
 	return fmt.Sprintf("[version:%v, events:%v]", b.Version, b.Events)
 }
 
-// NewSerializedHistoryEventBatch constructs and returns a new instance of of SerializedHistoryEventBatch
-func NewSerializedHistoryEventBatch(data []byte, encoding common.EncodingType, version int) *SerializedHistoryEventBatch {
-	return &SerializedHistoryEventBatch{
-		EncodingType: encoding,
-		Version:      version,
-		Data:         data,
-	}
-}
-
-func (h *SerializedHistoryEventBatch) String() string {
-	return fmt.Sprintf("[encodingType:%v,historyVersion:%v,history:%v]",
-		h.EncodingType, h.Version, string(h.Data))
-}
-
-// SetSerializedHistoryDefaults  sets the version and encoding types to defaults if they
-// are missing from persistence. This is purely for backwards compatibility
-func SetSerializedHistoryDefaults(history *SerializedHistoryEventBatch) {
-	if history.Version == 0 {
-		history.Version = GetDefaultHistoryVersion()
-	}
-	if len(history.EncodingType) == 0 {
-		history.EncodingType = DefaultEncodingType
-	}
-}
-
 // SerializeClusterConfigs makes an array of *ClusterReplicationConfig serializable
 // by flattening them into map[string]interface{}
 func SerializeClusterConfigs(replicationConfigs []*ClusterReplicationConfig) []map[string]interface{} {
@@ -1836,6 +1809,11 @@ func NewDataBlob(data []byte, encodingType common.EncodingType, version int) *Da
 	}
 }
 
+func (d *DataBlob) String() string {
+	return fmt.Sprintf("[encodingType:%v,version:%v,data in hex:%v]",
+		d.GetEncoding(), d.GetVersion(), hex.EncodeToString(d.Data))
+}
+
 func (d *DataBlob) GetEncoding() common.EncodingType {
 	encodingStr, ok := d.Headers[DataBlobHeaderKeyEncoding]
 	if !ok {
@@ -1857,6 +1835,7 @@ func (d *DataBlob) GetEncoding() common.EncodingType {
 func (d *DataBlob) GetVersion() int {
 	versionStr, ok := d.Headers[DataBlobHeaderKeyVersion]
 	if !ok {
+		// As backward compatibility, it should be 0 when the header is empty
 		return 0
 	}
 	n, err := strconv.ParseInt(versionStr, 10, 32)
