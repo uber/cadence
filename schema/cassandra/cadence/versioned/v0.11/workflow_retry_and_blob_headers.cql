@@ -9,8 +9,9 @@ ALTER TYPE workflow_execution ADD max_attempts         int;
 ALTER TYPE workflow_execution ADD non_retriable_errors list<text>;
 -- for blob headers
 ALTER TABLE events ADD data_headers map<text, text>;
-ALTER TYPE workflow_execution ADD completion_event_blob_headers  map<text,text>;
-ALTER TYPE workflow_execution ADD execution_context_blob_headers  map<text,text>;
-ALTER TYPE activity_info ADD blob_headers  map<text,text>;
-ALTER TYPE child_execution_info ADD blob_headers  map<text,text>;
-ALTER TYPE signal_info ADD blob_headers  map<text,text> ;
+ALTER TYPE workflow_execution ADD completion_event_data_headers  map<text,text>;
+ALTER TYPE workflow_execution ADD execution_context_data_headers  map<text,text>;
+ALTER TYPE activity_info ADD data_headers  map<text,text>;
+ALTER TYPE child_execution_info ADD data_headers  map<text,text>;
+ALTER TYPE signal_info ADD data_headers  map<text,text> ;
+ALTER TYPE serialized_event_batch ADD data_headers  map<text, text>;
