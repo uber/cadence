@@ -471,7 +471,7 @@ type (
 		SignalRequestedIDs       map[string]struct{}
 		ExecutionInfo            *WorkflowExecutionInfo
 		ReplicationState         *ReplicationState
-		BufferedEvents           []*HistoryEventBatch
+		BufferedEvents           []*workflow.History
 		BufferedReplicationTasks map[int64]*BufferedReplicationTask
 	}
 
@@ -552,8 +552,8 @@ type (
 		FirstEventID  int64
 		NextEventID   int64
 		Version       int64
-		History       *HistoryEventBatch
-		NewRunHistory *HistoryEventBatch
+		History       *workflow.History
+		NewRunHistory *workflow.History
 	}
 
 	// CreateShardRequest is used to create a shard in executions table
@@ -669,7 +669,7 @@ type (
 		DeleteSignalInfo              *int64
 		UpsertSignalRequestedIDs      []string
 		DeleteSignalRequestedID       string
-		NewBufferedEvents             HistoryEventBatch
+		NewBufferedEvents             workflow.History
 		ClearBufferedEvents           bool
 		NewBufferedReplicationTask    *BufferedReplicationTask
 		DeleteBufferedReplicationTask *int64
