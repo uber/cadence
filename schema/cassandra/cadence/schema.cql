@@ -153,7 +153,8 @@ CREATE TYPE activity_info (
   expiration_time           timestamp, -- retry expiration time
   max_attempts              int,    -- max number of attempts including initial non-retry attempt
   non_retriable_errors      list<text>,
-  data_headers              map<text,text>, -- data headers for all blob fields in this struct
+  event_data_headers        map<text,text>, -- data headers for all event fields in this struct
+  detail_data_headers       map<text,text>, -- data headers for details in this struct
 );
 
 -- User timer details
