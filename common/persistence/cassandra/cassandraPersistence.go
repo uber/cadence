@@ -1448,7 +1448,10 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *p.GetWorkflowExecut
 	bufferedReplicationTasks := make(map[int64]*p.BufferedReplicationTask)
 	bufferedRTMap := result["buffered_replication_tasks_map"].(map[int64]map[string]interface{})
 	for k, v := range bufferedRTMap {
-		info := createBufferedReplicationTaskInfo(v)
+		info, err := d.createBufferedReplicationTaskInfo(v)
+		if err != nil {
+			return nil, err
+		}
 		bufferedReplicationTasks[k] = info
 	}
 	state.BufferedReplicationTasks = bufferedReplicationTasks
@@ -1994,7 +1997,7 @@ GetFailureReasonLoop:
 		columnID++
 	}
 	return &p.ConditionFailedError{
-		Msg: fmt.Sprintf("Failed to reset mutable state. ShardID: %v, RangeID: %v, Condition: %v, Request Current RunID: %v, columns: (%v)",
+		Msg: fmt.Sprintf("Failed to update mutable state. ShardID: %v, RangeID: %v, Condition: %v, Request Current RunID: %v, columns: (%v)",
 			d.shardID, requestRangeID, requestCondition, requestConditionalRunID, strings.Join(columns, ",")),
 	}
 }
@@ -2054,7 +2057,7 @@ func (d *cassandraPersistence) GetCurrentExecution(request *p.GetCurrentExecutio
 	}
 
 	currentRunID := result["current_run_id"].(gocql.UUID).String()
-	executionInfo := createWorkflowExecutionInfo(result["execution"].(map[string]interface{}))
+	executionInfo, _ := d.createWorkflowExecutionInfo(result["execution"].(map[string]interface{}))
 	return &p.GetCurrentExecutionResponse{
 		RunID:          currentRunID,
 		StartRequestID: executionInfo.CreateRequestID,
@@ -2898,6 +2901,7 @@ func (d *cassandraPersistence) updateActivityInfos(batch *gocql.Batch, activityI
 			rowTypeExecutionTaskID,
 			condition)
 	}
+	return nil
 }
 
 func (d *cassandraPersistence) resetBufferedEvents(batch *gocql.Batch, domainID, workflowID, runID string,
@@ -3041,6 +3045,7 @@ func (d *cassandraPersistence) updateChildExecutionInfos(batch *gocql.Batch, chi
 			rowTypeExecutionTaskID,
 			condition)
 	}
+	return nil
 }
 
 func (d *cassandraPersistence) resetChildExecutionInfos(batch *gocql.Batch, childExecutionInfos []*p.ChildExecutionInfo,
@@ -3252,6 +3257,7 @@ func (d *cassandraPersistence) updateBufferedEvents(batch *gocql.Batch, newBuffe
 			rowTypeExecutionTaskID,
 			condition)
 	}
+	return nil
 }
 
 func (d *cassandraPersistence) updateBufferedReplicationTasks(batch *gocql.Batch, newBufferedReplicationTask *p.BufferedReplicationTask,
@@ -3753,8 +3759,9 @@ func createSignalInfo(result map[string]interface{}) *p.SignalInfo {
 	return info
 }
 
-func createBufferedReplicationTaskInfo(result map[string]interface{}) *p.BufferedReplicationTask {
+func (d *cassandraPersistence) createBufferedReplicationTaskInfo(result map[string]interface{}) (*p.BufferedReplicationTask, error) {
 	info := &p.BufferedReplicationTask{}
+	var err error
 	for k, v := range result {
 		switch k {
 		case "first_event_id":
@@ -3765,14 +3772,20 @@ func createBufferedReplicationTaskInfo(result map[string]interface{}) *p.Buffere
 			info.Version = v.(int64)
 		case "history":
 			h := v.(map[string]interface{})
-			info.History = deserializedHistoryEventBatch(h)
+			info.History, err = d.deserializedHistoryEventBatch(h)
+			if err != nil {
+				return info, nil
+			}
 		case "new_run_history":
 			h := v.(map[string]interface{})
-			info.NewRunHistory = deserializedHistoryEventBatch(h)
+			info.NewRunHistory, err = d.deserializedHistoryEventBatch(h)
+			if err != nil {
+				return info, nil
+			}
 		}
 	}
 
-	return info
+	return info, nil
 }
 
 func (d *cassandraPersistence) resetActivityInfoMap(activityInfos []*p.ActivityInfo, encodingType common.EncodingType) (map[int64]map[string]interface{}, error) {
