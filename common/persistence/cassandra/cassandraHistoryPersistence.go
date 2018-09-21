@@ -182,13 +182,13 @@ func (h *cassandraHistoryPersistence) GetWorkflowExecutionHistory(request *p.Get
 	eventBatchVersionPointer := new(int64)
 	eventBatchVersion := common.EmptyVersion
 	lastFirstEventID := common.EmptyEventID // first_event_id of last batch
-	dataBlobData := []byte{}
-	dataBlobHeader := map[string]string{}
+	blobData := []byte{}
+	blobHeaders := map[string]string{}
 	history := &workflow.History{}
-	for iter.Scan(nil, &eventBatchVersionPointer, &dataBlobData, &dataBlobHeader) {
+	for iter.Scan(nil, &eventBatchVersionPointer, &blobData, &blobHeaders) {
 		eventBatchData := p.DataBlob{
-			Headers: dataBlobHeader,
-			Data:    dataBlobData,
+			Headers: blobHeaders,
+			Data:    blobData,
 		}
 
 		found = true
