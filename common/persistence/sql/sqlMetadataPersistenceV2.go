@@ -339,7 +339,7 @@ func (m *sqlMetadataManagerV2) GetDomain(request *persistence.GetDomainRequest) 
 		}
 	}
 
-	response, err := domainRowToGetDomainResponse(&result)
+	response, err := m.domainRowToGetDomainResponse(&result)
 	if err != nil {
 		return nil, err
 	}
@@ -347,7 +347,7 @@ func (m *sqlMetadataManagerV2) GetDomain(request *persistence.GetDomainRequest) 
 	return response, nil
 }
 
-func domainRowToGetDomainResponse(result *domainRow) (*persistence.GetDomainResponse, error) {
+func (m *sqlMetadataManagerV2) domainRowToGetDomainResponse(result *domainRow) (*persistence.GetDomainResponse, error) {
 	var data map[string]string
 	if result.Data != nil {
 		if err := gobDeserialize(*result.Data, &data); err != nil {
@@ -377,9 +377,8 @@ func domainRowToGetDomainResponse(result *domainRow) (*persistence.GetDomainResp
 		},
 		Config: &result.DomainConfig,
 		ReplicationConfig: &persistence.DomainReplicationConfig{
-			ActiveClusterName: persistence.GetOrUseDefaultActiveCluster("active",
-				result.ActiveClusterName), // TODO TO BE IMPLEMENTED (get rid of "active" placeholder)
-			Clusters: persistence.GetOrUseDefaultClusters("active", persistence.DeserializeClusterConfigs(clusters)), // TODO same
+			ActiveClusterName: persistence.GetOrUseDefaultActiveCluster(m.currentClusterName, result.ActiveClusterName),
+			Clusters:          persistence.GetOrUseDefaultClusters(m.currentClusterName, persistence.DeserializeClusterConfigs(clusters)),
 		},
 		IsGlobalDomain:              result.IsGlobalDomain,
 		FailoverVersion:             result.FailoverVersion,
@@ -544,7 +543,7 @@ func (m *sqlMetadataManagerV2) ListDomains(request *persistence.ListDomainsReque
 			}
 		}
 
-		resp, err := domainRowToGetDomainResponse(&row)
+		resp, err := m.domainRowToGetDomainResponse(&row)
 		if err != nil {
 			return nil, err
 		}
