@@ -66,7 +66,7 @@ func (m *MetadataPersistenceSuite) SetupTest() {
 
 // TearDownSuite implementation
 func (m *MetadataPersistenceSuite) TearDownSuite() {
-	//m.TearDownWorkflowStore()
+	m.TearDownWorkflowStore()
 }
 
 // TestCreateDomain test
