@@ -32,6 +32,7 @@ import (
 
 type (
 	// HistorySerializer is used by persistence to serialize/deserialize history event(s)
+	// It will only be used inside persistence, so that serialize/deserialize is transparent for application
 	historySerializer interface {
 		// serialize/deserialize history events
 		SerializeBatchEvents(batch *workflow.History, encodingType common.EncodingType) (*DataBlob, error)
