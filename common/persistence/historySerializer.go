@@ -33,7 +33,7 @@ import (
 type (
 	// HistorySerializer is used by persistence to serialize/deserialize history event(s)
 	// It will only be used inside persistence, so that serialize/deserialize is transparent for application
-	historySerializer interface {
+	HistorySerializer interface {
 		// serialize/deserialize history events
 		SerializeBatchEvents(batch *workflow.History, encodingType common.EncodingType) (*DataBlob, error)
 		DeserializeBatchEvents(data *DataBlob) (*workflow.History, error)
@@ -86,7 +86,7 @@ var defaultHistoryVersion = int32(1)
 var maxSupportedHistoryVersion = int32(1)
 
 // NewJSONHistorySerializer returns a JSON HistorySerializer
-func newHistorySerializer() historySerializer {
+func NewHistorySerializer() HistorySerializer {
 	return &serializerImpl{
 		thriftrwEncoder: codec.NewThriftRWEncoder(),
 	}
