@@ -1799,12 +1799,12 @@ func UnixNanoToDBTimestamp(timestamp int64) int64 {
 	return timestamp / (1000 * 1000) // Milliseconds are 10⁻³, nanoseconds are 10⁻⁹, (-9) - (-3) = -6, so divide by 10⁶
 }
 
-func NewDataBlob(data []byte, encodingType common.EncodingType, version int) *DataBlob {
+func NewDataBlob(data []byte, encodingType common.EncodingType, version int32) *DataBlob {
 	return &DataBlob{
 		Data: data,
 		Headers: map[string]string{
 			DataBlobHeaderKeyEncoding: string(encodingType),
-			DataBlobHeaderKeyVersion:  strconv.Itoa(version),
+			DataBlobHeaderKeyVersion:  strconv.Itoa(int(version)),
 		},
 	}
 }
