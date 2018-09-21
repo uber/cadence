@@ -43,6 +43,12 @@ type (
 		DeserializeEvent(data *DataBlob) (*workflow.HistoryEvent, error)
 	}
 
+	// InconsistentDataHeaderError is an error that is returned when HistorySerializer returns inconsistent header
+	InconsistentDataHeaderError struct {
+		header1 map[string]string
+		header2 map[string]string
+	}
+
 	// HistorySerializationError is an error type that's
 	// returned on a history serialization failure
 	HistorySerializationError struct {
@@ -212,8 +218,18 @@ func (e *HistoryVersionCompatibilityError) Error() string {
 		e.requiredVersion, e.supportedVersion)
 }
 
+func NewInconsistentDataHeaderError(header1 map[string]string, header2 map[string]string) *InconsistentDataHeaderError {
+	return &InconsistentDataHeaderError{
+		header1: header1,
+		header2: header2,
+	}
+}
 func (e *HistorySerializationError) Error() string {
 	return fmt.Sprintf("history serialization error: %v", e.msg)
+}
+
+func (e *InconsistentDataHeaderError) Error() string {
+	return fmt.Sprintf("history serialization error. Header1: %v; Header2: %v", e.header1, e.header2)
 }
 
 func (e *HistoryDeserializationError) Error() string {

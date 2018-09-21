@@ -669,7 +669,7 @@ type (
 		DeleteSignalInfo              *int64
 		UpsertSignalRequestedIDs      []string
 		DeleteSignalRequestedID       string
-		NewBufferedEvents             workflow.History
+		NewBufferedEvents             *workflow.History
 		ClearBufferedEvents           bool
 		NewBufferedReplicationTask    *BufferedReplicationTask
 		DeleteBufferedReplicationTask *int64
@@ -1843,4 +1843,17 @@ func (d *DataBlob) GetVersion() int {
 		return 0
 	}
 	return int(n)
+}
+
+// EqualHeaders compares the two headers are the same
+func (d *DataBlob) EqualHeaders(d2 *DataBlob) bool {
+	if len(d.Headers) != len(d2.Headers) {
+		return false
+	}
+	for k, v := range d.Headers {
+		if d2.Headers[k] != v {
+			return false
+		}
+	}
+	return true
 }
