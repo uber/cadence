@@ -63,9 +63,9 @@ type (
 	}
 
 	cassandraHistoryPersistence struct {
-		session           *gocql.Session
-		logger            bark.Logger
-		serializerFactory p.HistorySerializerFactory
+		session    *gocql.Session
+		logger     bark.Logger
+		serializer p.HistorySerializer
 	}
 )
 
@@ -86,7 +86,7 @@ func NewHistoryPersistence(hosts string, port int, user, password, dc string, ke
 		return nil, err
 	}
 
-	return &cassandraHistoryPersistence{session: session, logger: logger, serializerFactory: p.NewHistorySerializerFactory()}, nil
+	return &cassandraHistoryPersistence{session: session, logger: logger, serializer: p.NewHistorySerializer()}, nil
 }
 
 // Close gracefully releases the resources held by this object
@@ -98,14 +98,18 @@ func (h *cassandraHistoryPersistence) Close() {
 
 func (h *cassandraHistoryPersistence) AppendHistoryEvents(request *p.AppendHistoryEventsRequest) error {
 	var query *gocql.Query
+	encodedData, err := h.serializer.SerializeBatchEvents(request.Events, request.BinaryEncoding)
+	if err != nil {
+		return err
+	}
 
 	if request.Overwrite {
 		query = h.session.Query(templateOverwriteHistoryEvents,
 			request.EventBatchVersion,
 			request.RangeID,
 			request.TransactionID,
-			request.Events.Data,
-			request.Events.Headers,
+			encodedData.Data,
+			encodedData.Headers,
 			request.DomainID,
 			*request.Execution.WorkflowId,
 			*request.Execution.RunId,
@@ -121,8 +125,8 @@ func (h *cassandraHistoryPersistence) AppendHistoryEvents(request *p.AppendHisto
 			request.EventBatchVersion,
 			request.RangeID,
 			request.TransactionID,
-			request.Events.Data,
-			request.Events.Headers)
+			encodedData.Data,
+			encodedData.Headers)
 	}
 
 	previous := make(map[string]interface{})
@@ -178,16 +182,22 @@ func (h *cassandraHistoryPersistence) GetWorkflowExecutionHistory(request *p.Get
 	eventBatchVersionPointer := new(int64)
 	eventBatchVersion := common.EmptyVersion
 	lastFirstEventID := common.EmptyEventID // first_event_id of last batch
-	eventBatchData := p.DataBlob{}
+	dataBlobData := []byte{}
+	dataBlobHeader := map[string]string{}
 	history := &workflow.History{}
-	for iter.Scan(nil, &eventBatchVersionPointer, &eventBatchData.Data, &eventBatchData.Headers) {
+	for iter.Scan(nil, &eventBatchVersionPointer, &dataBlobData, &dataBlobHeader) {
+		eventBatchData := p.DataBlob{
+			Headers: dataBlobHeader,
+			Data:    dataBlobData,
+		}
+
 		found = true
 
 		if eventBatchVersionPointer != nil {
 			eventBatchVersion = *eventBatchVersionPointer
 		}
 		if eventBatchVersion >= token.LastEventBatchVersion {
-			historyBatch, err := h.deserializeEvents(&eventBatchData)
+			historyBatch, err := h.serializer.DeserializeBatchEvents(&eventBatchData)
 			if err != nil {
 				return nil, err
 			}
@@ -242,11 +252,6 @@ func (h *cassandraHistoryPersistence) GetWorkflowExecutionHistory(request *p.Get
 	}
 
 	return response, nil
-}
-
-func (h *cassandraHistoryPersistence) deserializeEvents(blob *p.DataBlob) (*p.HistoryEventBatch, error) {
-	s, _ := h.serializerFactory.Get(blob.GetEncoding())
-	return s.Decode(blob)
 }
 
 func (h *cassandraHistoryPersistence) DeleteWorkflowExecutionHistory(
