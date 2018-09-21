@@ -98,6 +98,8 @@ func (m *MetadataPersistenceSuiteV2) TestCreateDomain() {
 	data := map[string]string{"k1": "v1"}
 	retention := int32(10)
 	emitMetric := true
+	sampleRetention := int32(30)
+	sampleRate := float64(0.02)
 	isGlobalDomain := false
 	configVersion := int64(0)
 	failoverVersion := int64(0)
@@ -112,8 +114,10 @@ func (m *MetadataPersistenceSuiteV2) TestCreateDomain() {
 			Data:        data,
 		},
 		&p.DomainConfig{
-			Retention:  retention,
-			EmitMetric: emitMetric,
+			Retention:       retention,
+			EmitMetric:      emitMetric,
+			SampleRetention: sampleRetention,
+			SampleRate:      sampleRate,
 		},
 		&p.DomainReplicationConfig{},
 		isGlobalDomain,
@@ -137,6 +141,8 @@ func (m *MetadataPersistenceSuiteV2) TestCreateDomain() {
 	m.Equal(data, resp1.Info.Data)
 	m.Equal(retention, resp1.Config.Retention)
 	m.Equal(emitMetric, resp1.Config.EmitMetric)
+	m.Equal(sampleRetention, resp1.Config.SampleRetention)
+	m.Equal(sampleRate, resp1.Config.SampleRate)
 	m.Equal(cluster.TestCurrentClusterName, resp1.ReplicationConfig.ActiveClusterName)
 	m.Equal(1, len(resp1.ReplicationConfig.Clusters))
 	m.Equal(isGlobalDomain, resp1.IsGlobalDomain)
@@ -178,6 +184,8 @@ func (m *MetadataPersistenceSuiteV2) TestGetDomain() {
 	data := map[string]string{"k1": "v1"}
 	retention := int32(10)
 	emitMetric := true
+	sampleRetention := int32(30)
+	sampleRate := float64(0.02)
 
 	clusterActive := "some random active cluster name"
 	clusterStandby := "some random standby cluster name"
@@ -208,8 +216,10 @@ func (m *MetadataPersistenceSuiteV2) TestGetDomain() {
 			Data:        data,
 		},
 		&p.DomainConfig{
-			Retention:  retention,
-			EmitMetric: emitMetric,
+			Retention:       retention,
+			EmitMetric:      emitMetric,
+			SampleRetention: sampleRetention,
+			SampleRate:      sampleRate,
 		},
 		&p.DomainReplicationConfig{
 			ActiveClusterName: clusterActive,
@@ -285,6 +295,8 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentCreateDomain() {
 	owner := "create-domain-test-owner"
 	retention := int32(10)
 	emitMetric := true
+	sampleRetention := int32(30)
+	sampleRate := float64(0.02)
 
 	clusterActive := "some random active cluster name"
 	clusterStandby := "some random standby cluster name"
@@ -317,8 +329,10 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentCreateDomain() {
 					Data:        data,
 				},
 				&p.DomainConfig{
-					Retention:  retention,
-					EmitMetric: emitMetric,
+					Retention:       retention,
+					EmitMetric:      emitMetric,
+					SampleRetention: sampleRetention,
+					SampleRate:      sampleRate,
 				},
 				&p.DomainReplicationConfig{
 					ActiveClusterName: clusterActive,
@@ -346,6 +360,8 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentCreateDomain() {
 	m.Equal(owner, resp.Info.OwnerEmail)
 	m.Equal(retention, resp.Config.Retention)
 	m.Equal(emitMetric, resp.Config.EmitMetric)
+	m.Equal(sampleRetention, resp.Config.SampleRetention)
+	m.Equal(sampleRate, resp.Config.SampleRate)
 	m.Equal(clusterActive, resp.ReplicationConfig.ActiveClusterName)
 	m.Equal(len(clusters), len(resp.ReplicationConfig.Clusters))
 	for index := range clusters {
@@ -373,6 +389,8 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentUpdateDomain() {
 	data := map[string]string{"k1": "v1"}
 	retention := int32(10)
 	emitMetric := true
+	sampleRetention := int32(30)
+	sampleRate := float64(0.02)
 
 	clusterActive := "some random active cluster name"
 	clusterStandby := "some random standby cluster name"
@@ -398,8 +416,10 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentUpdateDomain() {
 			Data:        data,
 		},
 		&p.DomainConfig{
-			Retention:  retention,
-			EmitMetric: emitMetric,
+			Retention:       retention,
+			EmitMetric:      emitMetric,
+			SampleRetention: sampleRetention,
+			SampleRate:      sampleRate,
 		},
 		&p.DomainReplicationConfig{
 			ActiveClusterName: clusterActive,
@@ -435,8 +455,10 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentUpdateDomain() {
 					Data:        updatedData,
 				},
 				&p.DomainConfig{
-					Retention:  resp2.Config.Retention,
-					EmitMetric: resp2.Config.EmitMetric,
+					Retention:       resp2.Config.Retention,
+					EmitMetric:      resp2.Config.EmitMetric,
+					SampleRetention: resp2.Config.SampleRetention,
+					SampleRate:      resp2.Config.SampleRate,
 				},
 				&p.DomainReplicationConfig{
 					ActiveClusterName: resp2.ReplicationConfig.ActiveClusterName,
@@ -546,6 +568,8 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 	updatedData := map[string]string{"k1": "v2"}
 	updatedRetention := int32(20)
 	updatedEmitMetric := false
+	updatedSampleRetention := int32(60)
+	updatedSampleRate := float64(0.05)
 
 	updateClusterActive := "other random active cluster name"
 	updateClusterStandby := "other random standby cluster name"
@@ -571,8 +595,10 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 			Data:        updatedData,
 		},
 		&p.DomainConfig{
-			Retention:  updatedRetention,
-			EmitMetric: updatedEmitMetric,
+			Retention:       updatedRetention,
+			EmitMetric:      updatedEmitMetric,
+			SampleRetention: updatedSampleRetention,
+			SampleRate:      updatedSampleRate,
 		},
 		&p.DomainReplicationConfig{
 			ActiveClusterName: updateClusterActive,
@@ -596,6 +622,8 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 	m.Equal(updatedData, resp4.Info.Data)
 	m.Equal(updatedRetention, resp4.Config.Retention)
 	m.Equal(updatedEmitMetric, resp4.Config.EmitMetric)
+	m.Equal(updatedSampleRetention, resp4.Config.SampleRetention)
+	m.Equal(updatedSampleRate, resp4.Config.SampleRate)
 	m.Equal(updateClusterActive, resp4.ReplicationConfig.ActiveClusterName)
 	m.Equal(len(updateClusters), len(resp4.ReplicationConfig.Clusters))
 	for index := range clusters {
@@ -617,6 +645,8 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 	m.Equal(updatedData, resp5.Info.Data)
 	m.Equal(updatedRetention, resp5.Config.Retention)
 	m.Equal(updatedEmitMetric, resp5.Config.EmitMetric)
+	m.Equal(updatedSampleRetention, resp4.Config.SampleRetention)
+	m.Equal(updatedSampleRate, resp4.Config.SampleRate)
 	m.Equal(updateClusterActive, resp5.ReplicationConfig.ActiveClusterName)
 	m.Equal(len(updateClusters), len(resp5.ReplicationConfig.Clusters))
 	for index := range clusters {

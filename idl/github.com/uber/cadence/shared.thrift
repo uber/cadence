@@ -783,6 +783,8 @@ struct DomainInfo {
 struct DomainConfiguration {
   10: optional i32 workflowExecutionRetentionPeriodInDays
   20: optional bool emitMetric
+  30: optional i32 sampledWorkflowExecutionRetentionPeriodInDays
+  40: optional double sampledWorkflowExecutionRate
 }
 
 struct UpdateDomainInfo {
@@ -811,6 +813,8 @@ struct RegisterDomainRequest {
   70: optional string activeClusterName
   // A key-value map for any customized purpose
   80: optional map<string,string> data
+  90: optional i32 sampledWorkflowExecutionRetentionPeriodInDays
+  110: optional double sampledRate
 }
 
 struct ListDomainsRequest {

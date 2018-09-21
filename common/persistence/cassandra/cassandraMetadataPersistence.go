@@ -41,7 +41,9 @@ const (
 
 	templateDomainConfigType = `{` +
 		`retention: ?, ` +
-		`emit_metric: ?` +
+		`emit_metric: ?, ` +
+		`sample_retention: ?, ` +
+		`sample_rate: ?` +
 		`}`
 
 	templateDomainReplicationConfigType = `{` +
@@ -62,7 +64,7 @@ const (
 		`WHERE id = ?`
 
 	templateGetDomainByNameQuery = `SELECT domain.id, domain.name, domain.status, domain.description, ` +
-		`domain.owner_email, domain.data, config.retention, config.emit_metric, ` +
+		`domain.owner_email, domain.data, config.retention, config.emit_metric, config.sample_retention, config.sample_rate, ` +
 		`replication_config.active_cluster_name, replication_config.clusters, ` +
 		`is_global_domain, ` +
 		`config_version, ` +
@@ -154,6 +156,8 @@ func (m *cassandraMetadataPersistence) CreateDomain(request *p.CreateDomainReque
 		request.Info.Data,
 		request.Config.Retention,
 		request.Config.EmitMetric,
+		request.Config.SampleRetention,
+		request.Config.SampleRate,
 		request.ReplicationConfig.ActiveClusterName,
 		p.SerializeClusterConfigs(request.ReplicationConfig.Clusters),
 		request.IsGlobalDomain,
@@ -247,6 +251,8 @@ func (m *cassandraMetadataPersistence) GetDomain(request *p.GetDomainRequest) (*
 		&info.Data,
 		&config.Retention,
 		&config.EmitMetric,
+		&config.SampleRetention,
+		&config.SampleRate,
 		&replicationConfig.ActiveClusterName,
 		&replicationClusters,
 		&isGlobalDomain,
@@ -290,6 +296,8 @@ func (m *cassandraMetadataPersistence) UpdateDomain(request *p.UpdateDomainReque
 		request.Info.Data,
 		request.Config.Retention,
 		request.Config.EmitMetric,
+		request.Config.SampleRetention,
+		request.Config.SampleRate,
 		request.ReplicationConfig.ActiveClusterName,
 		p.SerializeClusterConfigs(request.ReplicationConfig.Clusters),
 		request.ConfigVersion,
@@ -331,7 +339,7 @@ func (m *cassandraMetadataPersistence) DeleteDomain(request *p.DeleteDomainReque
 func (m *cassandraMetadataPersistence) DeleteDomainByName(request *p.DeleteDomainByNameRequest) error {
 	var ID string
 	query := m.session.Query(templateGetDomainByNameQuery, request.Name)
-	err := query.Scan(&ID, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	err := query.Scan(&ID, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	if err != nil {
 		if err == gocql.ErrNotFound {
 			return nil

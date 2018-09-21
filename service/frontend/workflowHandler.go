@@ -240,8 +240,10 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 			Data:        registerRequest.Data,
 		},
 		Config: &persistence.DomainConfig{
-			Retention:  registerRequest.GetWorkflowExecutionRetentionPeriodInDays(),
-			EmitMetric: registerRequest.GetEmitMetric(),
+			Retention:       registerRequest.GetWorkflowExecutionRetentionPeriodInDays(),
+			EmitMetric:      registerRequest.GetEmitMetric(),
+			SampleRetention: registerRequest.GetSampledWorkflowExecutionRetentionPeriodInDays(),
+			SampleRate:      registerRequest.GetSampledRate(),
 		},
 		ReplicationConfig: &persistence.DomainReplicationConfig{
 			ActiveClusterName: activeClusterName,
@@ -468,6 +470,14 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 		if updatedConfig.WorkflowExecutionRetentionPeriodInDays != nil {
 			configurationChanged = true
 			config.Retention = updatedConfig.GetWorkflowExecutionRetentionPeriodInDays()
+		}
+		if updatedConfig.SampledWorkflowExecutionRetentionPeriodInDays != nil {
+			configurationChanged = true
+			config.SampleRetention = updatedConfig.GetSampledWorkflowExecutionRetentionPeriodInDays()
+		}
+		if updatedConfig.SampledWorkflowExecutionRate != nil {
+			configurationChanged = true
+			config.SampleRate = updatedConfig.GetSampledWorkflowExecutionRate()
 		}
 	}
 	if updateRequest.ReplicationConfiguration != nil {
@@ -1942,7 +1952,7 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx context.Context,
 	} else if listRequest.StatusFilter != nil {
 		persistenceResp, err = wh.visibitiltyMgr.ListClosedWorkflowExecutionsByStatus(&persistence.ListClosedWorkflowExecutionsByStatusRequest{
 			ListWorkflowExecutionsRequest: baseReq,
-			Status:                        listRequest.GetStatusFilter(),
+			Status: listRequest.GetStatusFilter(),
 		})
 	} else {
 		persistenceResp, err = wh.visibitiltyMgr.ListClosedWorkflowExecutions(&baseReq)
@@ -2341,8 +2351,10 @@ func createDomainResponse(info *persistence.DomainInfo, config *persistence.Doma
 	}
 
 	configResult := &gen.DomainConfiguration{
-		EmitMetric:                             common.BoolPtr(config.EmitMetric),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(config.Retention),
+		EmitMetric:                                    common.BoolPtr(config.EmitMetric),
+		WorkflowExecutionRetentionPeriodInDays:        common.Int32Ptr(config.Retention),
+		SampledWorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(config.SampleRetention),
+		SampledWorkflowExecutionRate:                  common.Float64Ptr(config.SampleRate),
 	}
 
 	clusters := []*gen.ClusterReplicationConfiguration{}

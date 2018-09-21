@@ -22,6 +22,7 @@ package persistence
 
 import (
 	"fmt"
+	"hash/fnv"
 	"time"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -889,8 +890,10 @@ type (
 	// DomainConfig describes the domain configuration
 	DomainConfig struct {
 		// NOTE: this retention is in days, not in seconds
-		Retention  int32
-		EmitMetric bool
+		Retention       int32
+		EmitMetric      bool
+		SampleRetention int32
+		SampleRate      float64
 	}
 
 	// DomainReplicationConfig describes the cross DC domain replication configuration
@@ -1809,4 +1812,19 @@ func DBTimestampToUnixNano(milliseconds int64) int64 {
 // UnixNanoToDBTimestamp converts UnixNano to CQL timestamp
 func UnixNanoToDBTimestamp(timestamp int64) int64 {
 	return timestamp / (1000 * 1000) // Milliseconds are 10⁻³, nanoseconds are 10⁻⁹, (-9) - (-3) = -6, so divide by 10⁶
+}
+
+// GetRetentionDays returns retention in days for workflow
+func GetRetentionDays(workflowID string, domainConfig *DomainConfig) int32 {
+	if domainConfig.SampleRate > 0 && domainConfig.SampleRetention > domainConfig.Retention {
+		h := fnv.New32a()
+		h.Write([]byte(workflowID))
+		hash := h.Sum32()
+		if float64(hash%1000)/float64(1000) < domainConfig.SampleRate {
+			// sampled
+			return domainConfig.SampleRetention
+		}
+	}
+
+	return domainConfig.Retention
 }

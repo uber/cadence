@@ -698,7 +698,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(ctx context.Context,
 
 	result := &workflow.DescribeWorkflowExecutionResponse{
 		ExecutionConfiguration: &workflow.WorkflowExecutionConfiguration{
-			TaskList:                            &workflow.TaskList{Name: common.StringPtr(executionInfo.TaskList)},
+			TaskList: &workflow.TaskList{Name: common.StringPtr(executionInfo.TaskList)},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(executionInfo.WorkflowTimeout),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(executionInfo.DecisionTimeoutValue),
 			ChildPolicy:                         common.ChildPolicyPtr(workflow.ChildPolicyTerminate),
@@ -1121,10 +1121,10 @@ Update_History_Loop:
 
 					startAttributes := startEvent.WorkflowExecutionStartedEventAttributes
 					continueAsnewAttributes := &workflow.ContinueAsNewWorkflowExecutionDecisionAttributes{
-						WorkflowType:                        startAttributes.WorkflowType,
-						TaskList:                            startAttributes.TaskList,
-						RetryPolicy:                         startAttributes.RetryPolicy,
-						Input:                               startAttributes.Input,
+						WorkflowType: startAttributes.WorkflowType,
+						TaskList:     startAttributes.TaskList,
+						RetryPolicy:  startAttributes.RetryPolicy,
+						Input:        startAttributes.Input,
 						ExecutionStartToCloseTimeoutSeconds: startAttributes.ExecutionStartToCloseTimeoutSeconds,
 						TaskStartToCloseTimeoutSeconds:      startAttributes.TaskStartToCloseTimeoutSeconds,
 						BackoffStartIntervalInSeconds:       common.Int32Ptr(int32(retryBackoffInterval.Seconds())),
@@ -1448,7 +1448,7 @@ Update_History_Loop:
 		}
 
 		if isComplete {
-			tranT, timerT, err := e.getDeleteWorkflowTasks(domainID, tBuilder)
+			tranT, timerT, err := e.getDeleteWorkflowTasks(domainID, workflowExecution.GetWorkflowId(), tBuilder)
 			if err != nil {
 				return nil, err
 			}
@@ -2348,7 +2348,7 @@ Update_History_Loop:
 
 		transferTasks, timerTasks := postActions.transferTasks, postActions.timerTasks
 		if postActions.deleteWorkflow {
-			tranT, timerT, err := e.getDeleteWorkflowTasks(domainID, tBuilder)
+			tranT, timerT, err := e.getDeleteWorkflowTasks(domainID, execution.GetWorkflowId(), tBuilder)
 			if err != nil {
 				return err
 			}
@@ -2413,14 +2413,14 @@ func (e *historyEngineImpl) updateWorkflowExecution(ctx context.Context, domainI
 }
 
 func (e *historyEngineImpl) getDeleteWorkflowTasks(
-	domainID string,
+	domainID, workflowID string,
 	tBuilder *timerBuilder,
 ) (persistence.Task, persistence.Task, error) {
-	return getDeleteWorkflowTasksFromShard(e.shard, domainID, tBuilder)
+	return getDeleteWorkflowTasksFromShard(e.shard, domainID, workflowID, tBuilder)
 }
 
 func getDeleteWorkflowTasksFromShard(shard ShardContext,
-	domainID string,
+	domainID, workflowID string,
 	tBuilder *timerBuilder,
 ) (persistence.Task, persistence.Task, error) {
 	// Create a transfer task to close workflow execution
@@ -2434,7 +2434,7 @@ func getDeleteWorkflowTasksFromShard(shard ShardContext,
 			return nil, nil, err
 		}
 	} else {
-		retentionInDays = domainEntry.GetConfig().Retention
+		retentionInDays = persistence.GetRetentionDays(workflowID, domainEntry.GetConfig())
 	}
 	cleanupTask := tBuilder.createDeleteHistoryEventTimerTask(time.Duration(retentionInDays) * time.Hour * 24)
 
@@ -2876,11 +2876,11 @@ func getStartRequest(domainID string,
 	request *workflow.SignalWithStartWorkflowExecutionRequest) *h.StartWorkflowExecutionRequest {
 	policy := workflow.WorkflowIdReusePolicyAllowDuplicate
 	req := &workflow.StartWorkflowExecutionRequest{
-		Domain:                              request.Domain,
-		WorkflowId:                          request.WorkflowId,
-		WorkflowType:                        request.WorkflowType,
-		TaskList:                            request.TaskList,
-		Input:                               request.Input,
+		Domain:       request.Domain,
+		WorkflowId:   request.WorkflowId,
+		WorkflowType: request.WorkflowType,
+		TaskList:     request.TaskList,
+		Input:        request.Input,
 		ExecutionStartToCloseTimeoutSeconds: request.ExecutionStartToCloseTimeoutSeconds,
 		TaskStartToCloseTimeoutSeconds:      request.TaskStartToCloseTimeoutSeconds,
 		Identity:                            request.Identity,

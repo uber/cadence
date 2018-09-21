@@ -81,6 +81,8 @@ func (s *domainReplicatorSuite) TestHandleTransmissionTask_RegisterDomainTask() 
 	data := map[string]string{"k": "v"}
 	retention := int32(10)
 	emitMetric := true
+	sampleRetention := int32(30)
+	sampleRate := float64(0.02)
 	clusterActive := "some random active cluster name"
 	clusterStandby := "some random standby cluster name"
 	configVersion := int64(0)
@@ -104,8 +106,10 @@ func (s *domainReplicatorSuite) TestHandleTransmissionTask_RegisterDomainTask() 
 		Data:        data,
 	}
 	config := &p.DomainConfig{
-		Retention:  retention,
-		EmitMetric: emitMetric,
+		Retention:       retention,
+		EmitMetric:      emitMetric,
+		SampleRetention: sampleRetention,
+		SampleRate:      sampleRate,
 	}
 	replicationConfig := &p.DomainReplicationConfig{
 		ActiveClusterName: clusterActive,
@@ -127,6 +131,8 @@ func (s *domainReplicatorSuite) TestHandleTransmissionTask_RegisterDomainTask() 
 			Config: &shared.DomainConfiguration{
 				WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
 				EmitMetric:                             common.BoolPtr(emitMetric),
+				SampledWorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(sampleRetention),
+				SampledWorkflowExecutionRate:                  common.Float64Ptr(sampleRate),
 			},
 			ReplicationConfig: &shared.DomainReplicationConfiguration{
 				ActiveClusterName: common.StringPtr(clusterActive),
@@ -151,6 +157,8 @@ func (s *domainReplicatorSuite) TestHandleTransmissionTask_UpdateDomainTask() {
 	data := map[string]string{"k": "v"}
 	retention := int32(10)
 	emitMetric := true
+	sampleRetention := int32(30)
+	sampleRate := float64(0.02)
 	clusterActive := "some random active cluster name"
 	clusterStandby := "some random standby cluster name"
 	configVersion := int64(0)
@@ -174,8 +182,10 @@ func (s *domainReplicatorSuite) TestHandleTransmissionTask_UpdateDomainTask() {
 		Data:        data,
 	}
 	config := &p.DomainConfig{
-		Retention:  retention,
-		EmitMetric: emitMetric,
+		Retention:       retention,
+		EmitMetric:      emitMetric,
+		SampleRetention: sampleRetention,
+		SampleRate:      sampleRate,
 	}
 	replicationConfig := &p.DomainReplicationConfig{
 		ActiveClusterName: clusterActive,
@@ -197,6 +207,8 @@ func (s *domainReplicatorSuite) TestHandleTransmissionTask_UpdateDomainTask() {
 			Config: &shared.DomainConfiguration{
 				WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
 				EmitMetric:                             common.BoolPtr(emitMetric),
+				SampledWorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(sampleRetention),
+				SampledWorkflowExecutionRate:                  common.Float64Ptr(sampleRate),
 			},
 			ReplicationConfig: &shared.DomainReplicationConfiguration{
 				ActiveClusterName: common.StringPtr(clusterActive),

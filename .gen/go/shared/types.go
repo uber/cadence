@@ -9849,8 +9849,10 @@ func (v *DomainCacheInfo) GetNumOfItemsInCacheByName() (o int64) {
 }
 
 type DomainConfiguration struct {
-	WorkflowExecutionRetentionPeriodInDays *int32 `json:"workflowExecutionRetentionPeriodInDays,omitempty"`
-	EmitMetric                             *bool  `json:"emitMetric,omitempty"`
+	WorkflowExecutionRetentionPeriodInDays        *int32   `json:"workflowExecutionRetentionPeriodInDays,omitempty"`
+	EmitMetric                                    *bool    `json:"emitMetric,omitempty"`
+	SampledWorkflowExecutionRetentionPeriodInDays *int32   `json:"sampledWorkflowExecutionRetentionPeriodInDays,omitempty"`
+	SampledWorkflowExecutionRate                  *float64 `json:"sampledWorkflowExecutionRate,omitempty"`
 }
 
 // ToWire translates a DomainConfiguration struct into a Thrift-level intermediate
@@ -9870,7 +9872,7 @@ type DomainConfiguration struct {
 //   }
 func (v *DomainConfiguration) ToWire() (wire.Value, error) {
 	var (
-		fields [2]wire.Field
+		fields [4]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -9890,6 +9892,22 @@ func (v *DomainConfiguration) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	if v.SampledWorkflowExecutionRetentionPeriodInDays != nil {
+		w, err = wire.NewValueI32(*(v.SampledWorkflowExecutionRetentionPeriodInDays)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 30, Value: w}
+		i++
+	}
+	if v.SampledWorkflowExecutionRate != nil {
+		w, err = wire.NewValueDouble(*(v.SampledWorkflowExecutionRate)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 40, Value: w}
 		i++
 	}
 
@@ -9938,6 +9956,26 @@ func (v *DomainConfiguration) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 30:
+			if field.Value.Type() == wire.TI32 {
+				var x int32
+				x, err = field.Value.GetI32(), error(nil)
+				v.SampledWorkflowExecutionRetentionPeriodInDays = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 40:
+			if field.Value.Type() == wire.TDouble {
+				var x float64
+				x, err = field.Value.GetDouble(), error(nil)
+				v.SampledWorkflowExecutionRate = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -9951,7 +9989,7 @@ func (v *DomainConfiguration) String() string {
 		return "<nil>"
 	}
 
-	var fields [2]string
+	var fields [4]string
 	i := 0
 	if v.WorkflowExecutionRetentionPeriodInDays != nil {
 		fields[i] = fmt.Sprintf("WorkflowExecutionRetentionPeriodInDays: %v", *(v.WorkflowExecutionRetentionPeriodInDays))
@@ -9961,8 +9999,26 @@ func (v *DomainConfiguration) String() string {
 		fields[i] = fmt.Sprintf("EmitMetric: %v", *(v.EmitMetric))
 		i++
 	}
+	if v.SampledWorkflowExecutionRetentionPeriodInDays != nil {
+		fields[i] = fmt.Sprintf("SampledWorkflowExecutionRetentionPeriodInDays: %v", *(v.SampledWorkflowExecutionRetentionPeriodInDays))
+		i++
+	}
+	if v.SampledWorkflowExecutionRate != nil {
+		fields[i] = fmt.Sprintf("SampledWorkflowExecutionRate: %v", *(v.SampledWorkflowExecutionRate))
+		i++
+	}
 
 	return fmt.Sprintf("DomainConfiguration{%v}", strings.Join(fields[:i], ", "))
+}
+
+func _Double_EqualsPtr(lhs, rhs *float64) bool {
+	if lhs != nil && rhs != nil {
+
+		x := *lhs
+		y := *rhs
+		return (x == y)
+	}
+	return lhs == nil && rhs == nil
 }
 
 // Equals returns true if all the fields of this DomainConfiguration match the
@@ -9974,6 +10030,12 @@ func (v *DomainConfiguration) Equals(rhs *DomainConfiguration) bool {
 		return false
 	}
 	if !_Bool_EqualsPtr(v.EmitMetric, rhs.EmitMetric) {
+		return false
+	}
+	if !_I32_EqualsPtr(v.SampledWorkflowExecutionRetentionPeriodInDays, rhs.SampledWorkflowExecutionRetentionPeriodInDays) {
+		return false
+	}
+	if !_Double_EqualsPtr(v.SampledWorkflowExecutionRate, rhs.SampledWorkflowExecutionRate) {
 		return false
 	}
 
@@ -9995,6 +10057,26 @@ func (v *DomainConfiguration) GetWorkflowExecutionRetentionPeriodInDays() (o int
 func (v *DomainConfiguration) GetEmitMetric() (o bool) {
 	if v.EmitMetric != nil {
 		return *v.EmitMetric
+	}
+
+	return
+}
+
+// GetSampledWorkflowExecutionRetentionPeriodInDays returns the value of SampledWorkflowExecutionRetentionPeriodInDays if it is set or its
+// zero value if it is unset.
+func (v *DomainConfiguration) GetSampledWorkflowExecutionRetentionPeriodInDays() (o int32) {
+	if v.SampledWorkflowExecutionRetentionPeriodInDays != nil {
+		return *v.SampledWorkflowExecutionRetentionPeriodInDays
+	}
+
+	return
+}
+
+// GetSampledWorkflowExecutionRate returns the value of SampledWorkflowExecutionRate if it is set or its
+// zero value if it is unset.
+func (v *DomainConfiguration) GetSampledWorkflowExecutionRate() (o float64) {
+	if v.SampledWorkflowExecutionRate != nil {
+		return *v.SampledWorkflowExecutionRate
 	}
 
 	return
@@ -20230,14 +20312,16 @@ func (v *RecordMarkerDecisionAttributes) GetHeader() (o *Header) {
 }
 
 type RegisterDomainRequest struct {
-	Name                                   *string                            `json:"name,omitempty"`
-	Description                            *string                            `json:"description,omitempty"`
-	OwnerEmail                             *string                            `json:"ownerEmail,omitempty"`
-	WorkflowExecutionRetentionPeriodInDays *int32                             `json:"workflowExecutionRetentionPeriodInDays,omitempty"`
-	EmitMetric                             *bool                              `json:"emitMetric,omitempty"`
-	Clusters                               []*ClusterReplicationConfiguration `json:"clusters,omitempty"`
-	ActiveClusterName                      *string                            `json:"activeClusterName,omitempty"`
-	Data                                   map[string]string                  `json:"data,omitempty"`
+	Name                                          *string                            `json:"name,omitempty"`
+	Description                                   *string                            `json:"description,omitempty"`
+	OwnerEmail                                    *string                            `json:"ownerEmail,omitempty"`
+	WorkflowExecutionRetentionPeriodInDays        *int32                             `json:"workflowExecutionRetentionPeriodInDays,omitempty"`
+	EmitMetric                                    *bool                              `json:"emitMetric,omitempty"`
+	Clusters                                      []*ClusterReplicationConfiguration `json:"clusters,omitempty"`
+	ActiveClusterName                             *string                            `json:"activeClusterName,omitempty"`
+	Data                                          map[string]string                  `json:"data,omitempty"`
+	SampledWorkflowExecutionRetentionPeriodInDays *int32                             `json:"sampledWorkflowExecutionRetentionPeriodInDays,omitempty"`
+	SampledRate                                   *float64                           `json:"sampledRate,omitempty"`
 }
 
 // ToWire translates a RegisterDomainRequest struct into a Thrift-level intermediate
@@ -20257,7 +20341,7 @@ type RegisterDomainRequest struct {
 //   }
 func (v *RegisterDomainRequest) ToWire() (wire.Value, error) {
 	var (
-		fields [8]wire.Field
+		fields [10]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -20325,6 +20409,22 @@ func (v *RegisterDomainRequest) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 80, Value: w}
+		i++
+	}
+	if v.SampledWorkflowExecutionRetentionPeriodInDays != nil {
+		w, err = wire.NewValueI32(*(v.SampledWorkflowExecutionRetentionPeriodInDays)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 90, Value: w}
+		i++
+	}
+	if v.SampledRate != nil {
+		w, err = wire.NewValueDouble(*(v.SampledRate)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 110, Value: w}
 		i++
 	}
 
@@ -20429,6 +20529,26 @@ func (v *RegisterDomainRequest) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 90:
+			if field.Value.Type() == wire.TI32 {
+				var x int32
+				x, err = field.Value.GetI32(), error(nil)
+				v.SampledWorkflowExecutionRetentionPeriodInDays = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 110:
+			if field.Value.Type() == wire.TDouble {
+				var x float64
+				x, err = field.Value.GetDouble(), error(nil)
+				v.SampledRate = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -20442,7 +20562,7 @@ func (v *RegisterDomainRequest) String() string {
 		return "<nil>"
 	}
 
-	var fields [8]string
+	var fields [10]string
 	i := 0
 	if v.Name != nil {
 		fields[i] = fmt.Sprintf("Name: %v", *(v.Name))
@@ -20476,6 +20596,14 @@ func (v *RegisterDomainRequest) String() string {
 		fields[i] = fmt.Sprintf("Data: %v", v.Data)
 		i++
 	}
+	if v.SampledWorkflowExecutionRetentionPeriodInDays != nil {
+		fields[i] = fmt.Sprintf("SampledWorkflowExecutionRetentionPeriodInDays: %v", *(v.SampledWorkflowExecutionRetentionPeriodInDays))
+		i++
+	}
+	if v.SampledRate != nil {
+		fields[i] = fmt.Sprintf("SampledRate: %v", *(v.SampledRate))
+		i++
+	}
 
 	return fmt.Sprintf("RegisterDomainRequest{%v}", strings.Join(fields[:i], ", "))
 }
@@ -20507,6 +20635,12 @@ func (v *RegisterDomainRequest) Equals(rhs *RegisterDomainRequest) bool {
 		return false
 	}
 	if !((v.Data == nil && rhs.Data == nil) || (v.Data != nil && rhs.Data != nil && _Map_String_String_Equals(v.Data, rhs.Data))) {
+		return false
+	}
+	if !_I32_EqualsPtr(v.SampledWorkflowExecutionRetentionPeriodInDays, rhs.SampledWorkflowExecutionRetentionPeriodInDays) {
+		return false
+	}
+	if !_Double_EqualsPtr(v.SampledRate, rhs.SampledRate) {
 		return false
 	}
 
@@ -20588,6 +20722,26 @@ func (v *RegisterDomainRequest) GetActiveClusterName() (o string) {
 func (v *RegisterDomainRequest) GetData() (o map[string]string) {
 	if v.Data != nil {
 		return v.Data
+	}
+
+	return
+}
+
+// GetSampledWorkflowExecutionRetentionPeriodInDays returns the value of SampledWorkflowExecutionRetentionPeriodInDays if it is set or its
+// zero value if it is unset.
+func (v *RegisterDomainRequest) GetSampledWorkflowExecutionRetentionPeriodInDays() (o int32) {
+	if v.SampledWorkflowExecutionRetentionPeriodInDays != nil {
+		return *v.SampledWorkflowExecutionRetentionPeriodInDays
+	}
+
+	return
+}
+
+// GetSampledRate returns the value of SampledRate if it is set or its
+// zero value if it is unset.
+func (v *RegisterDomainRequest) GetSampledRate() (o float64) {
+	if v.SampledRate != nil {
+		return *v.SampledRate
 	}
 
 	return
@@ -24896,16 +25050,6 @@ func (v *RetryPolicy) String() string {
 	}
 
 	return fmt.Sprintf("RetryPolicy{%v}", strings.Join(fields[:i], ", "))
-}
-
-func _Double_EqualsPtr(lhs, rhs *float64) bool {
-	if lhs != nil && rhs != nil {
-
-		x := *lhs
-		y := *rhs
-		return (x == y)
-	}
-	return lhs == nil && rhs == nil
 }
 
 func _List_String_Equals(lhs, rhs []string) bool {
