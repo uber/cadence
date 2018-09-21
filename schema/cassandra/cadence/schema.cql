@@ -192,7 +192,7 @@ CREATE TYPE signal_info (
   signal_name       text,
   input             blob,
   control           blob,
-  event_data_headers      map<text,text>, -- data headers for all blob fields in this struct
+  data_headers      map<text,text>, -- data headers for all blob fields in this struct
 );
 
 -- Activity or workflow task in a task list
