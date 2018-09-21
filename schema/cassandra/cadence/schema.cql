@@ -174,7 +174,7 @@ CREATE TYPE child_execution_info (
   started_id        bigint,
   started_event     blob,
   create_request_id uuid,
-  data_headers      map<text,text>, -- data headers for all blob fields in this struct
+  event_data_headers      map<text,text>, -- data headers for all blob fields in this struct
 );
 
 -- External workflow cancellation in progress mutable state
@@ -192,7 +192,7 @@ CREATE TYPE signal_info (
   signal_name       text,
   input             blob,
   control           blob,
-  data_headers      map<text,text>, -- data headers for all blob fields in this struct
+  event_data_headers      map<text,text>, -- data headers for all blob fields in this struct
 );
 
 -- Activity or workflow task in a task list
