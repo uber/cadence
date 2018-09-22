@@ -26,34 +26,30 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/logging"
-	"github.com/uber/cadence/common/persistence"
 )
 
 type (
 	historyBuilder struct {
-		serializerFactory persistence.HistorySerializerFactory
-		transientHistory  []*workflow.HistoryEvent
-		history           []*workflow.HistoryEvent
-		msBuilder         mutableState
-		logger            bark.Logger
+		transientHistory []*workflow.HistoryEvent
+		history          []*workflow.HistoryEvent
+		msBuilder        mutableState
+		logger           bark.Logger
 	}
 )
 
 func newHistoryBuilder(msBuilder mutableState, logger bark.Logger) *historyBuilder {
 	return &historyBuilder{
-		serializerFactory: persistence.NewHistorySerializerFactory(),
-		transientHistory:  []*workflow.HistoryEvent{},
-		history:           []*workflow.HistoryEvent{},
-		msBuilder:         msBuilder,
-		logger:            logger.WithField(logging.TagWorkflowComponent, logging.TagValueHistoryBuilderComponent),
+		transientHistory: []*workflow.HistoryEvent{},
+		history:          []*workflow.HistoryEvent{},
+		msBuilder:        msBuilder,
+		logger:           logger.WithField(logging.TagWorkflowComponent, logging.TagValueHistoryBuilderComponent),
 	}
 }
 
 func newHistoryBuilderFromEvents(history []*workflow.HistoryEvent, logger bark.Logger) *historyBuilder {
 	return &historyBuilder{
-		serializerFactory: persistence.NewHistorySerializerFactory(),
-		history:           history,
-		logger:            logger.WithField(logging.TagWorkflowComponent, logging.TagValueHistoryBuilderComponent),
+		history: history,
+		logger:  logger.WithField(logging.TagWorkflowComponent, logging.TagValueHistoryBuilderComponent),
 	}
 }
 
@@ -74,42 +70,9 @@ func (b *historyBuilder) HasTransientEvents() bool {
 	return b.transientHistory != nil && len(b.transientHistory) > 0
 }
 
-// DEPRECATED: will be removed and use SerializeEventsToBlob
-func (b *historyBuilder) SerializeEvents(events []*workflow.HistoryEvent) (*persistence.SerializedHistoryEventBatch,
-	error) {
-	eventBatch := persistence.NewHistoryEventBatch(persistence.GetDefaultHistoryVersion(), events)
-	serializer, err := b.serializerFactory.Get(common.EncodingTypeJSON)
-	if err != nil {
-		return nil, err
-	}
-	history, err := serializer.Serialize(eventBatch)
-	if err != nil {
-		return nil, err
-	}
-	return history, nil
-}
-
-func (b *historyBuilder) SerializeEventsToBlob(events []*workflow.HistoryEvent) (*persistence.DataBlob,
-	error) {
-	eventBatch := persistence.NewHistoryEventBatch(persistence.GetDefaultHistoryVersion(), events)
-	serializer, err := b.serializerFactory.Get(common.EncodingTypeThriftRW)
-	if err != nil {
-		return nil, err
-	}
-	history, err := serializer.Encode(eventBatch)
-	if err != nil {
-		return nil, err
-	}
-	return history, nil
-}
-
-// DEPRECATED: will be removed and use SerializeToBlob
-func (b *historyBuilder) Serialize() (*persistence.SerializedHistoryEventBatch, error) {
-	return b.SerializeEvents(b.history)
-}
-
-func (b *historyBuilder) SerializeToBlob() (*persistence.DataBlob, error) {
-	return b.SerializeEventsToBlob(b.history)
+func (b *historyBuilder) GetHistory() *workflow.History {
+	history := workflow.History{Events: b.history}
+	return &history
 }
 
 func (b *historyBuilder) AddWorkflowExecutionStartedEvent(request *h.StartWorkflowExecutionRequest,

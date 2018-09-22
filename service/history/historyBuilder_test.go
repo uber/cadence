@@ -237,7 +237,7 @@ func (s *historyBuilderSuite) TestHistoryBuilderWorkflowStartFailures() {
 
 	workflowStartedEvent2 := s.addWorkflowExecutionStartedEvent(we, wt, tl, input, execTimeout, taskTimeout, identity)
 	s.Nil(workflowStartedEvent2)
-	s.Equal(int64(3), s.getNextEventID(), s.printHistory())
+	s.Equal(int64(3), s.getNextEventID(), s.builder.GetHistory())
 	di1, decisionRunning1 := s.msBuilder.GetPendingDecision(2)
 	s.True(decisionRunning1)
 	s.Equal(common.EmptyEventID, di1.StartedID)
@@ -657,10 +657,10 @@ func (s *historyBuilderSuite) addWorkflowExecutionStartedEvent(we workflow.Workf
 	identity string) *workflow.HistoryEvent {
 
 	request := &workflow.StartWorkflowExecutionRequest{
-		WorkflowId:                          common.StringPtr(*we.WorkflowId),
-		WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
-		TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskList)},
-		Input:                               input,
+		WorkflowId:   common.StringPtr(*we.WorkflowId),
+		WorkflowType: &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
+		TaskList:     &workflow.TaskList{Name: common.StringPtr(taskList)},
+		Input:        input,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(executionStartToCloseTimeout),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(taskStartToCloseTimeout),
 		Identity:                            common.StringPtr(identity),
@@ -703,10 +703,10 @@ func (s *historyBuilderSuite) addActivityTaskScheduledEvent(decisionCompletedID 
 	*persistence.ActivityInfo) {
 	return s.msBuilder.AddActivityTaskScheduledEvent(decisionCompletedID,
 		&workflow.ScheduleActivityTaskDecisionAttributes{
-			ActivityId:                    common.StringPtr(activityID),
-			ActivityType:                  &workflow.ActivityType{Name: common.StringPtr(activityType)},
-			TaskList:                      &workflow.TaskList{Name: common.StringPtr(taskList)},
-			Input:                         input,
+			ActivityId:   common.StringPtr(activityID),
+			ActivityType: &workflow.ActivityType{Name: common.StringPtr(activityType)},
+			TaskList:     &workflow.TaskList{Name: common.StringPtr(taskList)},
+			Input:        input,
 			ScheduleToCloseTimeoutSeconds: common.Int32Ptr(timeout),
 			ScheduleToStartTimeoutSeconds: common.Int32Ptr(queueTimeout),
 			HeartbeatTimeoutSeconds:       common.Int32Ptr(hearbeatTimeout),
@@ -959,15 +959,4 @@ func (s *historyBuilderSuite) validateRequestCancelExternalWorkflowExecutionFail
 	s.Equal(execution.GetWorkflowId(), attributes.WorkflowExecution.GetWorkflowId())
 	s.Equal(execution.GetRunId(), attributes.WorkflowExecution.GetRunId())
 	s.Equal(cause, *attributes.Cause)
-}
-
-func (s *historyBuilderSuite) printHistory() string {
-	history, err := s.builder.Serialize()
-	if err != nil {
-		s.logger.Errorf("Error serializing history: %v", err)
-		return ""
-	}
-
-	//s.logger.Info(string(history))
-	return history.String()
 }
