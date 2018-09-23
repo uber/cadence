@@ -71,7 +71,7 @@ type (
 			*persistence.CreateWorkflowExecutionResponse, error)
 		UpdateWorkflowExecution(request *persistence.UpdateWorkflowExecutionRequest) error
 		ResetMutableState(request *persistence.ResetMutableStateRequest) error
-		AppendHistoryEvents(request *persistence.AppendHistoryEventsRequest) error
+		AppendHistoryEvents(request *persistence.AppendHistoryEventsRequest) (int, error)
 		NotifyNewHistoryEvent(event *historyEventNotification) error
 		GetConfig() *Config
 		GetLogger() bark.Logger
@@ -368,9 +368,9 @@ Create_Loop:
 		if err != nil {
 			switch err.(type) {
 			case *shared.WorkflowExecutionAlreadyStartedError,
-				*persistence.WorkflowExecutionAlreadyStartedError,
-				*shared.ServiceBusyError,
-				*shared.LimitExceededError:
+			*persistence.WorkflowExecutionAlreadyStartedError,
+			*shared.ServiceBusyError,
+			*shared.LimitExceededError:
 				// No special handling required for these errors
 			case *persistence.ShardOwnershipLostError:
 				{
@@ -467,8 +467,8 @@ Update_Loop:
 		if err != nil {
 			switch err.(type) {
 			case *persistence.ConditionFailedError,
-				*shared.ServiceBusyError,
-				*shared.LimitExceededError:
+			*shared.ServiceBusyError,
+			*shared.LimitExceededError:
 				// No special handling required for these errors
 			case *persistence.ShardOwnershipLostError:
 				{
@@ -516,8 +516,8 @@ Reset_Loop:
 		if err != nil {
 			switch err.(type) {
 			case *persistence.ConditionFailedError,
-				*shared.ServiceBusyError,
-				*shared.LimitExceededError:
+			*shared.ServiceBusyError,
+			*shared.LimitExceededError:
 				// No special handling required for these errors
 			case *persistence.ShardOwnershipLostError:
 				{
@@ -553,10 +553,11 @@ Reset_Loop:
 	return ErrMaxAttemptsExceeded
 }
 
-func (s *shardContextImpl) AppendHistoryEvents(request *persistence.AppendHistoryEventsRequest) error {
+func (s *shardContextImpl) AppendHistoryEvents(request *persistence.AppendHistoryEventsRequest) (int, error) {
+	size := 0
 	if request.Events != nil {
-		size := len(request.Events.Data)
-		s.metricsClient.RecordTimer(metrics.ShardContextScope, metrics.AppendHistoryBatchSize, time.Duration(size))
+		size = len(request.Events.Data)
+		s.metricsClient.RecordTimer(metrics.SessionSizeStatsScope, metrics.HistorySize, time.Duration(size))
 	}
 
 	// No need to lock context here, as we can write concurrently to append history events
@@ -567,11 +568,11 @@ func (s *shardContextImpl) AppendHistoryEvents(request *persistence.AppendHistor
 		if _, ok := err0.(*persistence.ConditionFailedError); ok {
 			// Inserting a new event failed, lets try to overwrite the tail
 			request.Overwrite = true
-			return s.historyMgr.AppendHistoryEvents(request)
+			return size, s.historyMgr.AppendHistoryEvents(request)
 		}
 	}
 
-	return err0
+	return 0, err0
 }
 
 func (s *shardContextImpl) NotifyNewHistoryEvent(event *historyEventNotification) error {

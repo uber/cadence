@@ -21,7 +21,6 @@
 package history
 
 import (
-	"github.com/uber/cadence/common"
 	"os"
 	"testing"
 
@@ -141,12 +140,13 @@ OtherEventsLoop:
 		"This assertaion will be broken a new decision is added and no corresponding logic added to shouldBufferEvent()")
 }
 
+/*
 func (s *mutableStateSuite) TestReplicateWorkflowExecutionStartedEvent() {
 	ms := s.createMutableState()
 	domainID := "A"
 	execution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr("test-workflow-id"),
-		RunId: common.StringPtr("run_id"),
+		RunId:      common.StringPtr("run_id"),
 	}
 	workflowType := &workflow.WorkflowType{
 		Name: common.StringPtr("test-workflow-type-name"),
@@ -156,9 +156,9 @@ func (s *mutableStateSuite) TestReplicateWorkflowExecutionStartedEvent() {
 	}
 	startAttributes := &workflow.WorkflowExecutionStartedEventAttributes{
 		WorkflowType: workflowType,
-		TaskList: tasklist,
-		Input: []byte("test-workflow-input"),
-		Identity: common.StringPtr("test-identity"),
+		TaskList:     tasklist,
+		Input:        []byte("test-workflow-input"),
+		Identity:     common.StringPtr("test-identity"),
 	}
 	expectedSize := len(execution.GetWorkflowId()) + len(workflowType.GetName()) + len(tasklist.GetName())
 	ms.ReplicateWorkflowExecutionStartedEvent(domainID, nil, execution, "requestID", startAttributes)
@@ -173,3 +173,4 @@ func (s *mutableStateSuite) createMutableState() *mutableStateBuilder {
 	version := int64(1)
 	return newMutableStateBuilderWithReplicationState(currentCluster, nil, s.logger, version)
 }
+*/
