@@ -1761,6 +1761,7 @@ func (d *cassandraPersistence) ResetMutableState(request *p.ResetMutableStateReq
 		executionInfo.StartTimestamp,
 		cqlNowTimestamp,
 		executionInfo.CreateRequestID,
+		executionInfo.HistorySize,
 		executionInfo.DecisionVersion,
 		executionInfo.DecisionScheduleID,
 		executionInfo.DecisionStartedID,
