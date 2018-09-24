@@ -870,6 +870,8 @@ type (
 		NextPageToken []byte
 		// the first_event_id of last loaded batch
 		LastFirstEventID int64
+		// Size of history read from store
+		Size int
 	}
 
 	// DeleteWorkflowExecutionHistoryRequest is used to delete workflow execution history
