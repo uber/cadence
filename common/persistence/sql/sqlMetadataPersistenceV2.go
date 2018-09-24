@@ -36,9 +36,9 @@ import (
 type (
 	// Implements MetadataManager
 	sqlMetadataManagerV2 struct {
-		db                 *sqlx.DB
-		currentClusterName string
-		logger             bark.Logger
+		db                *sqlx.DB
+		activeClusterName string
+		logger            bark.Logger
 	}
 
 	domainCommon struct {
@@ -177,9 +177,9 @@ func NewMetadataPersistenceV2(host string, port int, username, password, dbName 
 		return nil, err
 	}
 	return &sqlMetadataManagerV2{
-		db:                 db,
-		currentClusterName: currentClusterName,
-		logger:             logger,
+		db:                db,
+		activeClusterName: currentClusterName,
+		logger:            logger,
 	}, nil
 }
 
@@ -244,7 +244,12 @@ func (m *sqlMetadataManagerV2) CreateDomain(request *persistence.CreateDomainReq
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	commited := false
+	defer func() {
+		if !commited {
+			tx.Rollback()
+		}
+	}()
 
 	if _, err := tx.NamedExec(createDomainSQLQuery, &domainRow{
 		domainCommon: domainCommon{
@@ -291,7 +296,7 @@ func (m *sqlMetadataManagerV2) CreateDomain(request *persistence.CreateDomainReq
 			Message: fmt.Sprintf("CreateDomain operation failed. Committing transaction. Error: %v", err),
 		}
 	}
-
+	commited = true
 	return &persistence.CreateDomainResponse{ID: request.Info.ID}, nil
 }
 
@@ -377,8 +382,8 @@ func (m *sqlMetadataManagerV2) domainRowToGetDomainResponse(result *domainRow) (
 		},
 		Config: &result.DomainConfig,
 		ReplicationConfig: &persistence.DomainReplicationConfig{
-			ActiveClusterName: persistence.GetOrUseDefaultActiveCluster(m.currentClusterName, result.ActiveClusterName),
-			Clusters:          persistence.GetOrUseDefaultClusters(m.currentClusterName, persistence.DeserializeClusterConfigs(clusters)),
+			ActiveClusterName: persistence.GetOrUseDefaultActiveCluster(m.activeClusterName, result.ActiveClusterName),
+			Clusters:          persistence.GetOrUseDefaultClusters(m.activeClusterName, persistence.DeserializeClusterConfigs(clusters)),
 		},
 		IsGlobalDomain:              result.IsGlobalDomain,
 		FailoverVersion:             result.FailoverVersion,
