@@ -338,8 +338,7 @@ func (c *workflowExecutionContext) updateHelper(transferTasks []persistence.Task
 	setTaskInfo(c.msBuilder.GetCurrentVersion(), now, transferTasks, timerTasks)
 
 	// Update history size on mutableState before calling UpdateWorkflowExecution
-	c.msBuilder.
-		IncrementHistorySize(historySize)
+	c.msBuilder.IncrementHistorySize(historySize)
 
 	if err1 := c.updateWorkflowExecutionWithRetry(&persistence.UpdateWorkflowExecutionRequest{
 		ExecutionInfo:                 executionInfo,
@@ -555,6 +554,9 @@ func (c *workflowExecutionContext) scheduleNewDecision(transferTasks []persisten
 
 func (c *workflowExecutionContext) emitWorkflowExecutionStats(msBuilder mutableState) {
 	stats := msBuilder.GetStats()
+	executionInfo := msBuilder.GetExecutionInfo()
+	c.metricsClient.RecordTimer(metrics.ExecutionSizeStatsScope, metrics.HistorySize,
+		time.Duration(executionInfo.HistorySize))
 	c.metricsClient.RecordTimer(metrics.ExecutionSizeStatsScope, metrics.MutableStateSize,
 		time.Duration(stats.mutableStateSize))
 	c.metricsClient.RecordTimer(metrics.ExecutionSizeStatsScope, metrics.ExecutionInfoSize,
