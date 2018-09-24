@@ -2966,7 +2966,7 @@ func copyReplicationInfo(sourceInfo *p.ReplicationInfo) *p.ReplicationInfo {
 	}
 }
 
-func (s *MatchingPersistenceSuite) serializeHistoryEvents(events []*gen.HistoryEvent) *p.SerializedHistoryEventBatch {
+func (s *MatchingPersistenceSuite) serializeHistoryEvents(events []*gen.HistoryEvent) *p.DataBlob {
 	historySerializer := p.NewJSONHistorySerializer()
 	bufferedBatch := p.NewHistoryEventBatch(p.GetDefaultHistoryVersion(), events)
 	serializedEvents, _ := historySerializer.Serialize(bufferedBatch)
@@ -2974,7 +2974,7 @@ func (s *MatchingPersistenceSuite) serializeHistoryEvents(events []*gen.HistoryE
 	return serializedEvents
 }
 
-func (s *MatchingPersistenceSuite) deserializedHistoryEvents(batch *p.SerializedHistoryEventBatch) *p.HistoryEventBatch {
+func (s *MatchingPersistenceSuite) deserializedHistoryEvents(batch *p.DataBlob) *p.HistoryEventBatch {
 	historySerializer := p.NewJSONHistorySerializer()
 	events, err := historySerializer.Deserialize(batch)
 	if err != nil {

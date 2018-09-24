@@ -27,8 +27,9 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/persistence"
 
-	"github.com/jmoiron/sqlx"
 	"strings"
+
+	"github.com/jmoiron/sqlx"
 )
 
 /*
@@ -1142,7 +1143,7 @@ func getBufferedReplicationTasks(tx *sqlx.Tx,
 		}
 
 		if v.History != nil {
-			ret[v.FirstEventID].History = &persistence.SerializedHistoryEventBatch{}
+			ret[v.FirstEventID].History = &persistence.DataBlob{}
 			if err := gobDeserialize(*v.History, &ret[v.FirstEventID].History); err != nil {
 				return nil, &workflow.InternalServiceError{
 					Message: fmt.Sprintf("Failed to get buffered replication tasks. Failed to deserialize a BufferedReplicationTask.History. Error: %v", err),
@@ -1151,7 +1152,7 @@ func getBufferedReplicationTasks(tx *sqlx.Tx,
 		}
 
 		if v.NewRunHistory != nil {
-			ret[v.FirstEventID].NewRunHistory = &persistence.SerializedHistoryEventBatch{}
+			ret[v.FirstEventID].NewRunHistory = &persistence.DataBlob{}
 			if err := gobDeserialize(*v.NewRunHistory, &ret[v.FirstEventID].NewRunHistory); err != nil {
 				return nil, &workflow.InternalServiceError{
 					Message: fmt.Sprintf("Failed to get buffered replication tasks. Failed to deserialize a BufferedReplicationTask.NewRunHistory. Error: %v", err),

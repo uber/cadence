@@ -604,7 +604,7 @@ func (s *TestBase) UpdateWorkflowExecutionForSignal(
 // UpdateWorkflowExecutionForBufferEvents is a utility method to update workflow execution
 func (s *TestBase) UpdateWorkflowExecutionForBufferEvents(
 	updatedInfo *p.WorkflowExecutionInfo, rState *p.ReplicationState, condition int64,
-	bufferEvents *p.SerializedHistoryEventBatch) error {
+	bufferEvents *p.DataBlob) error {
 	return s.WorkflowMgr.UpdateWorkflowExecution(&p.UpdateWorkflowExecutionRequest{
 		ExecutionInfo:     updatedInfo,
 		ReplicationState:  rState,

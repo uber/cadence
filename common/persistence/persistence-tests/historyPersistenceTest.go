@@ -71,7 +71,7 @@ func (s *HistoryPersistenceSuite) TestAppendHistoryEvents() {
 	}
 
 	events1 := []byte("event1;event2")
-	serializedHistory := &p.SerializedHistoryEventBatch{Version: 1, EncodingType: common.EncodingTypeJSON, Data: events1}
+	serializedHistory := &p.DataBlob{Version: 1, EncodingType: common.EncodingTypeJSON, Data: events1}
 	err0 := s.AppendHistoryEvents(domainID, workflowExecution, 1, common.EmptyVersion, 1, 1, serializedHistory, false)
 	s.Nil(err0)
 
@@ -110,7 +110,7 @@ func (s *HistoryPersistenceSuite) TestGetHistoryEvents() {
 }
 
 type testBatchEvent struct {
-	batch  *p.SerializedHistoryEventBatch
+	batch  *p.DataBlob
 	events []*gen.HistoryEvent
 }
 
@@ -313,7 +313,7 @@ func (s *HistoryPersistenceSuite) TestOverwriteAndShadowingHistoryEvents() {
 
 // AppendHistoryEvents helper
 func (s *HistoryPersistenceSuite) AppendHistoryEvents(domainID string, workflowExecution gen.WorkflowExecution,
-	firstEventID, eventBatchVersion int64, rangeID, txID int64, eventsBatch *p.SerializedHistoryEventBatch, overwrite bool) error {
+	firstEventID, eventBatchVersion int64, rangeID, txID int64, eventsBatch *p.DataBlob, overwrite bool) error {
 
 	return s.HistoryMgr.AppendHistoryEvents(&p.AppendHistoryEventsRequest{
 		DomainID:          domainID,

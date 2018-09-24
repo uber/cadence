@@ -433,7 +433,7 @@ Update_History_Loop:
 				case workflow.TimeoutTypeHeartbeat:
 					{
 						t.metricsClient.IncCounter(metrics.TimerActiveTaskActivityTimeoutScope, metrics.HeartbeatTimeoutCounter)
-						if msBuilder.AddActivityTaskTimedOutEvent(ai.ScheduleID, ai.StartedID, timeoutType, ai.Details) == nil {
+						if msBuilder.AddActivityTaskTimedOutEvent(ai.ScheduleID, ai.StartedID, timeoutType, ai.Details.Data) == nil {
 							return errFailedToAddTimeoutEvent
 						}
 						updateHistory = true
@@ -741,10 +741,10 @@ Update_History_Loop:
 
 		startAttributes := startEvent.WorkflowExecutionStartedEventAttributes
 		continueAsnewAttributes := &workflow.ContinueAsNewWorkflowExecutionDecisionAttributes{
-			WorkflowType:                        startAttributes.WorkflowType,
-			TaskList:                            startAttributes.TaskList,
-			RetryPolicy:                         startAttributes.RetryPolicy,
-			Input:                               startAttributes.Input,
+			WorkflowType: startAttributes.WorkflowType,
+			TaskList:     startAttributes.TaskList,
+			RetryPolicy:  startAttributes.RetryPolicy,
+			Input:        startAttributes.Input,
 			ExecutionStartToCloseTimeoutSeconds: startAttributes.ExecutionStartToCloseTimeoutSeconds,
 			TaskStartToCloseTimeoutSeconds:      startAttributes.TaskStartToCloseTimeoutSeconds,
 			BackoffStartIntervalInSeconds:       common.Int32Ptr(int32(retryBackoffInterval.Seconds())),

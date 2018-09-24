@@ -793,7 +793,7 @@ func (r *historyReplicator) conflictResolutionTerminateCurrentRunningIfNotSelf(c
 	return currentRunID, err
 }
 
-func (r *historyReplicator) Serialize(history *shared.History) (*persistence.SerializedHistoryEventBatch, error) {
+func (r *historyReplicator) Serialize(history *shared.History) (*persistence.DataBlob, error) {
 	eventBatch := persistence.NewHistoryEventBatch(persistence.GetDefaultHistoryVersion(), history.Events)
 	h, err := r.historySerializer.Serialize(eventBatch)
 	if err != nil {
