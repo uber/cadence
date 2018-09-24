@@ -368,9 +368,9 @@ Create_Loop:
 		if err != nil {
 			switch err.(type) {
 			case *shared.WorkflowExecutionAlreadyStartedError,
-			*persistence.WorkflowExecutionAlreadyStartedError,
-			*shared.ServiceBusyError,
-			*shared.LimitExceededError:
+				*persistence.WorkflowExecutionAlreadyStartedError,
+				*shared.ServiceBusyError,
+				*shared.LimitExceededError:
 				// No special handling required for these errors
 			case *persistence.ShardOwnershipLostError:
 				{
@@ -467,8 +467,8 @@ Update_Loop:
 		if err != nil {
 			switch err.(type) {
 			case *persistence.ConditionFailedError,
-			*shared.ServiceBusyError,
-			*shared.LimitExceededError:
+				*shared.ServiceBusyError,
+				*shared.LimitExceededError:
 				// No special handling required for these errors
 			case *persistence.ShardOwnershipLostError:
 				{
@@ -516,8 +516,8 @@ Reset_Loop:
 		if err != nil {
 			switch err.(type) {
 			case *persistence.ConditionFailedError,
-			*shared.ServiceBusyError,
-			*shared.LimitExceededError:
+				*shared.ServiceBusyError,
+				*shared.LimitExceededError:
 				// No special handling required for these errors
 			case *persistence.ShardOwnershipLostError:
 				{
