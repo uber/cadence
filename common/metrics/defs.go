@@ -452,8 +452,6 @@ const (
 	ReplicatorTaskHistoryScope
 	// ReplicateHistoryEventsScope is the scope used by historyReplicator API for applying events
 	ReplicateHistoryEventsScope
-	// ShardContextScope is the scope used when by ShardContext for emitting various metric
-	ShardContextScope
 	// ShardInfoScope is the scope used when updating shard info
 	ShardInfoScope
 	// WorkflowContextScope is the scope used by WorkflowContext component
@@ -685,7 +683,6 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		ReplicatorQueueProcessorScope:                {operation: "ReplicatorQueueProcessor"},
 		ReplicatorTaskHistoryScope:                   {operation: "ReplicatorTaskHistory"},
 		ReplicateHistoryEventsScope:                  {operation: "ReplicateHistoryEvents"},
-		ShardContextScope:                            {operation: "ShardContext"},
 		ShardInfoScope:                               {operation: "ShardInfo"},
 		WorkflowContextScope:                         {operation: "WorkflowContext"},
 		HistoryCacheGetAndCreateScope:                {operation: "HistoryCacheGetAndCreate"},
