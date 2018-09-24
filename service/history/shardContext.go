@@ -572,7 +572,7 @@ func (s *shardContextImpl) AppendHistoryEvents(request *persistence.AppendHistor
 		}
 	}
 
-	return 0, err0
+	return size, err0
 }
 
 func (s *shardContextImpl) NotifyNewHistoryEvent(event *historyEventNotification) error {
