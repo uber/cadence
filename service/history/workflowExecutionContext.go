@@ -137,7 +137,7 @@ func (c *workflowExecutionContext) resetWorkflowExecution(prevRunID string, rese
 
 func (c *workflowExecutionContext) updateWorkflowExecutionWithContext(context []byte, transferTasks []persistence.Task,
 	timerTasks []persistence.Task, transactionID int64) error {
-	c.msBuilder.GetExecutionInfo().ExecutionContext = context
+	c.msBuilder.GetExecutionInfo().ExecutionContext.Data = context
 
 	return c.updateWorkflowExecution(transferTasks, timerTasks, transactionID)
 }
@@ -392,11 +392,6 @@ func (c *workflowExecutionContext) appendHistoryEvents(builder *historyBuilder, 
 	transactionID int64) error {
 
 	firstEvent := history[0]
-	serializedHistory, err := builder.SerializeEvents(history)
-	if err != nil {
-		logging.LogHistorySerializationErrorEvent(c.logger, err, "Unable to serialize execution history for update.")
-		return err
-	}
 
 	if err0 := c.shard.AppendHistoryEvents(&persistence.AppendHistoryEventsRequest{
 		DomainID:          c.domainID,
@@ -404,7 +399,7 @@ func (c *workflowExecutionContext) appendHistoryEvents(builder *historyBuilder, 
 		TransactionID:     transactionID,
 		FirstEventID:      firstEvent.GetEventId(),
 		EventBatchVersion: firstEvent.GetVersion(),
-		Events:            serializedHistory,
+		Events:            &workflow.History{Events: history},
 	}); err0 != nil {
 		switch err0.(type) {
 		case *persistence.ConditionFailedError:
@@ -450,22 +445,13 @@ func (c *workflowExecutionContext) continueAsNewWorkflowExecutionHelper(context 
 	}
 	firstEvent := newStateBuilder.GetHistoryBuilder().history[0]
 
-	// Serialize the history
-	serializedHistory, serializedError := newStateBuilder.GetHistoryBuilder().Serialize()
-	if serializedError != nil {
-		logging.LogHistorySerializationErrorEvent(c.logger, serializedError, fmt.Sprintf(
-			"HistoryEventBatch serialization error on start workflow.  WorkflowID: %v, RunID: %v", *newExecution.WorkflowId,
-			*newExecution.RunId))
-		return serializedError
-	}
-
 	return c.shard.AppendHistoryEvents(&persistence.AppendHistoryEventsRequest{
 		DomainID:          domainID,
 		Execution:         newExecution,
 		TransactionID:     transactionID,
 		FirstEventID:      firstEvent.GetEventId(),
 		EventBatchVersion: firstEvent.GetVersion(),
-		Events:            serializedHistory,
+		Events:            newStateBuilder.GetHistoryBuilder().GetHistory(),
 	})
 }
 
