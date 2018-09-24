@@ -628,7 +628,7 @@ func (t *transferQueueActiveProcessorImpl) processSignalExecution(task *persiste
 					RunId:      common.StringPtr(task.TargetRunID),
 				},
 				Identity: common.StringPtr(identityHistoryService),
-				Control:  si.Control,
+				Control:  si.Control.Data,
 			},
 		}
 		err = t.requestSignalFailed(task, context, signalRequest)
@@ -649,10 +649,10 @@ func (t *transferQueueActiveProcessorImpl) processSignalExecution(task *persiste
 			},
 			Identity:   common.StringPtr(identityHistoryService),
 			SignalName: common.StringPtr(si.SignalName),
-			Input:      si.Input,
+			Input:      si.Input.Data,
 			// Use same request ID to deduplicate SignalWorkflowExecution calls
 			RequestId: common.StringPtr(si.SignalRequestID),
-			Control:   si.Control,
+			Control:   si.Control.Data,
 		},
 		ExternalWorkflowExecution: &workflow.WorkflowExecution{
 			WorkflowId: common.StringPtr(task.WorkflowID),

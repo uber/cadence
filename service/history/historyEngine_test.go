@@ -4693,7 +4693,7 @@ func createMutableState(ms mutableState) *persistence.WorkflowMutableState {
 	}
 
 	builder.FlushBufferedEvents()
-	var bufferedEvents []*persistence.SerializedHistoryEventBatch
+	var bufferedEvents []*persistence.DataBlob
 	if len(builder.bufferedEvents) > 0 {
 		bufferedEvents = append(bufferedEvents, builder.bufferedEvents...)
 	}

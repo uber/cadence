@@ -27,11 +27,13 @@ CREATE TYPE workflow_execution (
   parent_run_id                    uuid,   -- RunID of parent workflow which started the workflow execution
   initiated_id                     bigint, -- Initiated event ID of parent workflow which started this execution
   completion_event                 blob,   -- Completion event used to communicate result to parent workflow execution
+  completion_event_data_headers    map<text,text>, -- data headers for completion_event
   task_list                        text,
   workflow_type_name               text,
   workflow_timeout                 int,  -- Workflow ExecutionStartToCloseTimeoutSeconds
   decision_task_timeout            int,
   execution_context                blob,
+  execution_context_data_headers   map<text,text>, -- data headers for execution_context
   state                            int,  -- enum WorkflowState {Created, Running, Completed}
   close_status                     int,  -- enum WorkflowCloseStatus {None, Completed, Failed, Canceled, Terminated, ContinuedAsNew, TimedOut}
   last_first_event_id              bigint,
@@ -151,6 +153,8 @@ CREATE TYPE activity_info (
   expiration_time           timestamp, -- retry expiration time
   max_attempts              int,    -- max number of attempts including initial non-retry attempt
   non_retriable_errors      list<text>,
+  event_data_headers        map<text,text>, -- data headers for all event fields in this struct
+  detail_data_headers       map<text,text>, -- data headers for details in this struct
 );
 
 -- User timer details
@@ -170,6 +174,7 @@ CREATE TYPE child_execution_info (
   started_id        bigint,
   started_event     blob,
   create_request_id uuid,
+  event_data_headers      map<text,text>, -- data headers for all blob fields in this struct
 );
 
 -- External workflow cancellation in progress mutable state
@@ -187,6 +192,7 @@ CREATE TYPE signal_info (
   signal_name       text,
   input             blob,
   control           blob,
+  data_headers      map<text,text>, -- data headers for all blob fields in this struct
 );
 
 -- Activity or workflow task in a task list
@@ -229,9 +235,10 @@ CREATE TYPE domain_replication_config (
 );
 
 CREATE TYPE serialized_event_batch (
-  encoding_type text,
-  version       int,
+  encoding_type text, -- DEPRECATED, use data_header instead.
+  version       int,  -- DEPRECATED, use data_header instead.
   data          blob,
+  data_headers  map<text, text>, -- header information for data, to identify binary encoding, version, compression, etc
 );
 
 -- Storage for out of order replication tasks for an execution
@@ -284,8 +291,9 @@ CREATE TABLE events (
   range_id            bigint,
   tx_id               bigint,
   data                blob, -- Batch of workflow execution history events as a blob
-  data_encoding       text, -- Protocol used for history serialization
-  data_version        int,  -- history blob version
+  data_encoding       text, -- DEPRECATED, use data_header instead. Protocol used for history serialization
+  data_version        int,  -- DEPRECATED, use data_header instead. history blob version
+  data_headers        map<text, text>, -- header information for data, to identify binary encoding, version, compression, etc
   PRIMARY KEY ((domain_id, workflow_id, run_id), first_event_id)
 ) WITH COMPACTION = {
     'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'

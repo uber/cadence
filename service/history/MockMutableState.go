@@ -1134,11 +1134,11 @@ func (_m *mockMutableState) GetActivityStartedEvent(_a0 int64) (*shared.HistoryE
 }
 
 // GetBufferedHistory provides a mock function with given fields: _a0
-func (_m *mockMutableState) GetBufferedHistory(_a0 *persistence.SerializedHistoryEventBatch) *shared.History {
+func (_m *mockMutableState) GetBufferedHistory(_a0 *persistence.DataBlob) *shared.History {
 	ret := _m.Called(_a0)
 
 	var r0 *shared.History
-	if rf, ok := ret.Get(0).(func(*persistence.SerializedHistoryEventBatch) *shared.History); ok {
+	if rf, ok := ret.Get(0).(func(*persistence.DataBlob) *shared.History); ok {
 		r0 = rf(_a0)
 	} else {
 		if ret.Get(0) != nil {

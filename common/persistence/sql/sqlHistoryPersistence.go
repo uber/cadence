@@ -239,7 +239,7 @@ func (m *sqlHistoryManager) GetWorkflowExecutionHistory(request *p.GetWorkflowEx
 	eventBatchVersion := common.EmptyVersion
 	lastFirstEventID := common.EmptyEventID // first_event_id of last batch
 	history := &workflow.History{}
-	eventBatch := p.SerializedHistoryEventBatch{}
+	eventBatch := p.DataBlob{}
 	for _, v := range rows {
 		eventBatch.Data = *v.Data
 		eventBatch.EncodingType = common.EncodingType(v.DataEncoding)
@@ -275,7 +275,7 @@ func (m *sqlHistoryManager) GetWorkflowExecutionHistory(request *p.GetWorkflowEx
 
 		eventBatchVersionPointer = new(int64)
 		eventBatchVersion = common.EmptyVersion
-		eventBatch = p.SerializedHistoryEventBatch{}
+		eventBatch = p.DataBlob{}
 	}
 	var nextToken []byte
 	if token.LastEventID < request.NextEventID-1 {
@@ -292,7 +292,7 @@ func (m *sqlHistoryManager) GetWorkflowExecutionHistory(request *p.GetWorkflowEx
 	return response, nil
 }
 
-func (m *sqlHistoryManager) deserializeEvents(e *p.SerializedHistoryEventBatch) (*p.HistoryEventBatch, error) {
+func (m *sqlHistoryManager) deserializeEvents(e *p.DataBlob) (*p.HistoryEventBatch, error) {
 	p.SetSerializedHistoryDefaults(e)
 	s, _ := m.serializerFactory.Get(e.EncodingType)
 	return s.Deserialize(e)

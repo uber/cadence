@@ -1,3 +1,4 @@
+-- for workflow retry
 ALTER TYPE workflow_execution ADD attempt              int;
 ALTER TYPE workflow_execution ADD has_retry_policy     boolean;
 ALTER TYPE workflow_execution ADD init_interval        int;

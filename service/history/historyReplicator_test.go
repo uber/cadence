@@ -828,7 +828,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEvents_IncomingGreaterThanCurrent
 		History:           &shared.History{Events: []*shared.HistoryEvent{&shared.HistoryEvent{}}},
 	}
 
-	serializedHistoryBatch := &persistence.SerializedHistoryEventBatch{
+	serializedHistoryBatch := &persistence.DataBlob{
 		EncodingType: common.EncodingTypeJSON,
 		Version:      144,
 		Data:         []byte("some random history"),
@@ -938,7 +938,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEvents_IncomingGreaterThanCurrent
 		History:           &shared.History{Events: []*shared.HistoryEvent{&shared.HistoryEvent{}}},
 	}
 
-	serializedHistoryBatch := &persistence.SerializedHistoryEventBatch{
+	serializedHistoryBatch := &persistence.DataBlob{
 		EncodingType: common.EncodingTypeJSON,
 		Version:      144,
 		Data:         []byte("some random history"),
@@ -1015,7 +1015,7 @@ func (s *historyReplicatorSuite) TestApplyOtherEvents_IncomingGreaterThanCurrent
 		History:           &shared.History{Events: []*shared.HistoryEvent{&shared.HistoryEvent{}}},
 	}
 
-	serializedHistoryBatch := &persistence.SerializedHistoryEventBatch{
+	serializedHistoryBatch := &persistence.DataBlob{
 		EncodingType: common.EncodingTypeJSON,
 		Version:      144,
 		Data:         []byte("some random history"),
