@@ -143,7 +143,7 @@ func (s *TestBase) CreateWorkflowExecution(domainID string, workflowExecution wo
 		WorkflowTypeName:     wType,
 		WorkflowTimeout:      wTimeout,
 		DecisionTimeoutValue: decisionTimeout,
-		ExecutionContext:     executionContext,
+		ExecutionContext:     &p.DataBlob{Data: executionContext},
 		NextEventID:          nextEventID,
 		LastProcessedEvent:   lastProcessedEventID,
 		RangeID:              s.ShardInfo.RangeID,
@@ -240,7 +240,7 @@ func (s *TestBase) CreateWorkflowExecutionManyTasks(domainID string, workflowExe
 		DomainID:                    domainID,
 		Execution:                   workflowExecution,
 		TaskList:                    taskList,
-		ExecutionContext:            executionContext,
+		ExecutionContext:            &p.DataBlob{Data: executionContext},
 		NextEventID:                 nextEventID,
 		LastProcessedEvent:          lastProcessedEventID,
 		TransferTasks:               transferTasks,
@@ -269,7 +269,7 @@ func (s *TestBase) CreateChildWorkflowExecution(domainID string, workflowExecuti
 		WorkflowTypeName:     wType,
 		WorkflowTimeout:      wTimeout,
 		DecisionTimeoutValue: decisionTimeout,
-		ExecutionContext:     executionContext,
+		ExecutionContext:     &p.DataBlob{Data: executionContext},
 		NextEventID:          nextEventID,
 		LastProcessedEvent:   lastProcessedEventID,
 		RangeID:              s.ShardInfo.RangeID,
@@ -604,7 +604,7 @@ func (s *TestBase) UpdateWorkflowExecutionForSignal(
 // UpdateWorkflowExecutionForBufferEvents is a utility method to update workflow execution
 func (s *TestBase) UpdateWorkflowExecutionForBufferEvents(
 	updatedInfo *p.WorkflowExecutionInfo, rState *p.ReplicationState, condition int64,
-	bufferEvents *p.DataBlob) error {
+	bufferEvents *workflow.History) error {
 	return s.WorkflowMgr.UpdateWorkflowExecution(&p.UpdateWorkflowExecutionRequest{
 		ExecutionInfo:     updatedInfo,
 		ReplicationState:  rState,

@@ -172,10 +172,10 @@ type (
 	activityInfoMapsRow struct {
 		activityInfoMapsPrimaryKey
 		Version                  int64
-		ScheduledEvent           *[]byte
+		ScheduledEvent           *workflow.HistoryEvent
 		ScheduledTime            time.Time
 		StartedID                int64
-		StartedEvent             *[]byte
+		StartedEvent             *workflow.HistoryEvent
 		StartedTime              time.Time
 		ActivityID               string
 		RequestID                string
@@ -221,10 +221,10 @@ func updateActivityInfos(tx *sqlx.Tx,
 					ScheduleID: v.ScheduleID,
 				},
 				Version:                  v.Version,
-				ScheduledEvent:           takeAddressIfNotNil(v.ScheduledEvent),
+				ScheduledEvent:           v.ScheduledEvent,
 				ScheduledTime:            v.ScheduledTime,
 				StartedID:                v.StartedID,
-				StartedEvent:             takeAddressIfNotNil(v.StartedEvent),
+				StartedEvent:             v.StartedEvent,
 				StartedTime:              v.StartedTime,
 				ActivityID:               v.ActivityID,
 				RequestID:                v.RequestID,
@@ -248,7 +248,7 @@ func updateActivityInfos(tx *sqlx.Tx,
 			}
 
 			if v.Details != nil {
-				activityInfoMapsRows[i].Details = &v.Details
+				activityInfoMapsRows[i].Details = &v.Details.Data
 			}
 
 			if v.NonRetriableErrors != nil {
@@ -358,10 +358,10 @@ func getActivityInfoMap(tx *sqlx.Tx,
 		ret[v.ScheduleID] = &persistence.ActivityInfo{
 			Version:                  v.Version,
 			ScheduleID:               v.ScheduleID,
-			ScheduledEvent:           dereferenceIfNotNil(v.ScheduledEvent),
+			ScheduledEvent:           v.ScheduledEvent,
 			ScheduledTime:            v.ScheduledTime,
 			StartedID:                v.StartedID,
-			StartedEvent:             dereferenceIfNotNil(v.StartedEvent),
+			StartedEvent:             v.StartedEvent,
 			StartedTime:              v.StartedTime,
 			ActivityID:               v.ActivityID,
 			RequestID:                v.RequestID,
@@ -386,7 +386,7 @@ func getActivityInfoMap(tx *sqlx.Tx,
 		}
 
 		if v.Details != nil {
-			ret[v.ScheduleID].Details = *v.Details
+			ret[v.ScheduleID].Details = &persistence.DataBlob{Data: *v.Details}
 		}
 
 		if v.NonRetriableErrors != nil {
@@ -603,9 +603,9 @@ type (
 	childExecutionInfoMapsRow struct {
 		childExecutionInfoMapsPrimaryKey
 		Version         int64
-		InitiatedEvent  *[]byte
+		InitiatedEvent  *workflow.HistoryEvent
 		StartedID       int64
-		StartedEvent    *[]byte
+		StartedEvent    *workflow.HistoryEvent
 		CreateRequestID string
 	}
 )
@@ -629,9 +629,9 @@ func updateChildExecutionInfos(tx *sqlx.Tx,
 					InitiatedID: v.InitiatedID,
 				},
 				Version:         v.Version,
-				InitiatedEvent:  takeAddressIfNotNil(v.InitiatedEvent),
+				InitiatedEvent:  v.InitiatedEvent,
 				StartedID:       v.StartedID,
-				StartedEvent:    takeAddressIfNotNil(v.StartedEvent),
+				StartedEvent:    v.StartedEvent,
 				CreateRequestID: v.CreateRequestID,
 			}
 		}
@@ -690,9 +690,9 @@ func getChildExecutionInfoMap(tx *sqlx.Tx,
 		ret[v.InitiatedID] = &persistence.ChildExecutionInfo{
 			InitiatedID:     v.InitiatedID,
 			Version:         v.Version,
-			InitiatedEvent:  dereferenceIfNotNil(v.InitiatedEvent),
+			InitiatedEvent:  v.InitiatedEvent,
 			StartedID:       v.StartedID,
-			StartedEvent:    dereferenceIfNotNil(v.StartedEvent),
+			StartedEvent:    v.StartedEvent,
 			CreateRequestID: v.CreateRequestID,
 		}
 
@@ -912,8 +912,8 @@ func updateSignalInfos(tx *sqlx.Tx,
 				Version:         v.Version,
 				SignalRequestID: v.SignalRequestID,
 				SignalName:      v.SignalName,
-				Input:           takeAddressIfNotNil(v.Input),
-				Control:         takeAddressIfNotNil(v.Control),
+				Input:           &v.Input.Data,
+				Control:         &v.Control.Data,
 			}
 		}
 
@@ -984,8 +984,8 @@ func getSignalInfoMap(tx *sqlx.Tx,
 			InitiatedID:     v.InitiatedID,
 			SignalRequestID: v.SignalRequestID,
 			SignalName:      v.SignalName,
-			Input:           dereferenceIfNotNil(v.Input),
-			Control:         dereferenceIfNotNil(v.Control),
+			Input:           &persistence.DataBlob{Data: *v.Input},
+			Control:         &persistence.DataBlob{Data: *v.Control},
 		}
 	}
 
@@ -1143,7 +1143,7 @@ func getBufferedReplicationTasks(tx *sqlx.Tx,
 		}
 
 		if v.History != nil {
-			ret[v.FirstEventID].History = &persistence.DataBlob{}
+			ret[v.FirstEventID].History = &workflow.History{}
 			if err := gobDeserialize(*v.History, &ret[v.FirstEventID].History); err != nil {
 				return nil, &workflow.InternalServiceError{
 					Message: fmt.Sprintf("Failed to get buffered replication tasks. Failed to deserialize a BufferedReplicationTask.History. Error: %v", err),
@@ -1152,7 +1152,7 @@ func getBufferedReplicationTasks(tx *sqlx.Tx,
 		}
 
 		if v.NewRunHistory != nil {
-			ret[v.FirstEventID].NewRunHistory = &persistence.DataBlob{}
+			ret[v.FirstEventID].NewRunHistory = &workflow.History{}
 			if err := gobDeserialize(*v.NewRunHistory, &ret[v.FirstEventID].NewRunHistory); err != nil {
 				return nil, &workflow.InternalServiceError{
 					Message: fmt.Sprintf("Failed to get buffered replication tasks. Failed to deserialize a BufferedReplicationTask.NewRunHistory. Error: %v", err),

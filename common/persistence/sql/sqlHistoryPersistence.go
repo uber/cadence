@@ -35,10 +35,10 @@ import (
 
 type (
 	sqlHistoryManager struct {
-		db                *sqlx.DB
-		shardID           int
-		logger            bark.Logger
-		serializerFactory p.HistorySerializerFactory
+		db         *sqlx.DB
+		shardID    int
+		logger     bark.Logger
+		serializer p.HistorySerializer
 	}
 
 	eventsRow struct {
@@ -120,21 +120,23 @@ func NewHistoryPersistence(host string, port int, username, password, dbName str
 		return nil, err
 	}
 	return &sqlHistoryManager{
-		db:                db,
-		logger:            logger,
-		serializerFactory: p.NewHistorySerializerFactory(),
+		db:         db,
+		logger:     logger,
+		serializer: p.NewHistorySerializer(),
 	}, nil
 }
 
 func (m *sqlHistoryManager) AppendHistoryEvents(request *p.AppendHistoryEventsRequest) error {
+	blob, err := m.serializer.SerializeBatchEvents(request.Events, request.BinaryEncoding)
+	if err != nil {
+		return err
+	}
 	arg := &eventsRow{
 		DomainID:     request.DomainID,
 		WorkflowID:   *request.Execution.WorkflowId,
 		RunID:        *request.Execution.RunId,
 		FirstEventID: request.FirstEventID,
-		Data:         takeAddressIfNotNil(request.Events.Data),
-		DataEncoding: string(request.Events.EncodingType),
-		DataVersion:  int64(request.Events.Version),
+		Data:         &blob.Data,
 		RangeID:      request.RangeID,
 		TxID:         request.TransactionID,
 	}
@@ -242,13 +244,12 @@ func (m *sqlHistoryManager) GetWorkflowExecutionHistory(request *p.GetWorkflowEx
 	eventBatch := p.DataBlob{}
 	for _, v := range rows {
 		eventBatch.Data = *v.Data
-		eventBatch.EncodingType = common.EncodingType(v.DataEncoding)
 
 		if eventBatchVersionPointer != nil {
 			eventBatchVersion = *eventBatchVersionPointer
 		}
 		if eventBatchVersion >= token.LastEventBatchVersion {
-			historyBatch, err := m.deserializeEvents(&eventBatch)
+			historyBatch, err := m.serializer.DeserializeBatchEvents(&eventBatch)
 			if err != nil {
 				return nil, err
 			}
@@ -290,12 +291,6 @@ func (m *sqlHistoryManager) GetWorkflowExecutionHistory(request *p.GetWorkflowEx
 		NextPageToken:    nextToken,
 	}
 	return response, nil
-}
-
-func (m *sqlHistoryManager) deserializeEvents(e *p.DataBlob) (*p.HistoryEventBatch, error) {
-	p.SetSerializedHistoryDefaults(e)
-	s, _ := m.serializerFactory.Get(e.EncodingType)
-	return s.Deserialize(e)
 }
 
 func (m *sqlHistoryManager) DeleteWorkflowExecutionHistory(request *p.DeleteWorkflowExecutionHistoryRequest) error {

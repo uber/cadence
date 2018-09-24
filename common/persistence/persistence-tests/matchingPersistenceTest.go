@@ -1355,10 +1355,10 @@ func (s *MatchingPersistenceSuite) TestWorkflowMutableStateActivities() {
 	activityInfos := []*p.ActivityInfo{{
 		Version:                  7789,
 		ScheduleID:               1,
-		ScheduledEvent:           []byte("scheduled_event_1"),
+		ScheduledEvent:           &gen.HistoryEvent{EventId: int64Ptr(1)},
 		ScheduledTime:            currentTime,
 		StartedID:                2,
-		StartedEvent:             []byte("started_event_1"),
+		StartedEvent:             &gen.HistoryEvent{EventId: int64Ptr(2)},
 		StartedTime:              currentTime,
 		ScheduleToCloseTimeout:   1,
 		ScheduleToStartTimeout:   2,
@@ -1486,9 +1486,9 @@ func (s *MatchingPersistenceSuite) TestWorkflowMutableStateChildExecutions() {
 	childExecutionInfos := []*p.ChildExecutionInfo{{
 		Version:         1234,
 		InitiatedID:     1,
-		InitiatedEvent:  []byte("initiated_event_1"),
+		InitiatedEvent:  &gen.HistoryEvent{EventId: int64Ptr(1)},
 		StartedID:       2,
-		StartedEvent:    []byte("started_event_1"),
+		StartedEvent:    &gen.HistoryEvent{EventId: int64Ptr(2)},
 		CreateRequestID: createRequestID,
 	}}
 	err2 := s.UpsertChildExecutionsState(updatedInfo, int64(3), childExecutionInfos)
@@ -1597,8 +1597,8 @@ func (s *MatchingPersistenceSuite) TestWorkflowMutableStateSignalInfo() {
 			InitiatedID:     1,
 			SignalRequestID: signalRequestID,
 			SignalName:      signalName,
-			Input:           input,
-			Control:         control,
+			Input:           &p.DataBlob{Data: input},
+			Control:         &p.DataBlob{Data: control},
 		}}
 	err2 := s.UpsertSignalInfoState(updatedInfo, int64(3), signalInfos)
 	s.NoError(err2)
@@ -1713,7 +1713,7 @@ func (s *MatchingPersistenceSuite) TestWorkflowMutableStateBufferedReplicationTa
 		FirstEventID: int64(5),
 		NextEventID:  int64(7),
 		Version:      int64(11),
-		History:      s.serializeHistoryEvents(events),
+		History:      &gen.History{Events: events},
 	}
 	err2 := s.UpdateWorklowStateAndReplication(updatedInfo, nil, bufferedTask, nil, int64(3), nil)
 	s.NoError(err2)
@@ -1730,7 +1730,7 @@ func (s *MatchingPersistenceSuite) TestWorkflowMutableStateBufferedReplicationTa
 	s.Equal(int64(7), bufferedTask.NextEventID)
 	s.Equal(int64(11), bufferedTask.Version)
 
-	bufferedEvents := s.deserializedHistoryEvents(bufferedTask.History)
+	bufferedEvents := bufferedTask.History
 	s.Equal(2, len(bufferedEvents.Events))
 	s.Equal(int64(5), bufferedEvents.Events[0].GetEventId())
 	s.Equal(gen.EventTypeDecisionTaskCompleted, bufferedEvents.Events[0].GetEventType())
@@ -1794,8 +1794,8 @@ func (s *MatchingPersistenceSuite) TestWorkflowMutableStateBufferedReplicationTa
 		FirstEventID:  int64(10),
 		NextEventID:   int64(12),
 		Version:       int64(12),
-		History:       s.serializeHistoryEvents(completionEvents),
-		NewRunHistory: s.serializeHistoryEvents(newRunEvents),
+		History:       &gen.History{Events: completionEvents},
+		NewRunHistory: &gen.History{Events: newRunEvents},
 	}
 	err3 := s.UpdateWorklowStateAndReplication(updatedInfo, nil, bufferedTask, nil, int64(3), nil)
 	s.NoError(err3)
@@ -1812,7 +1812,7 @@ func (s *MatchingPersistenceSuite) TestWorkflowMutableStateBufferedReplicationTa
 	s.Equal(int64(12), bufferedTask.NextEventID)
 	s.Equal(int64(12), bufferedTask.Version)
 
-	bufferedEvents = s.deserializedHistoryEvents(bufferedTask.History)
+	bufferedEvents = bufferedTask.History
 	s.Equal(2, len(bufferedEvents.Events))
 	s.Equal(int64(10), bufferedEvents.Events[0].GetEventId())
 	s.Equal(gen.EventTypeDecisionTaskCompleted, bufferedEvents.Events[0].GetEventType())
@@ -1828,7 +1828,7 @@ func (s *MatchingPersistenceSuite) TestWorkflowMutableStateBufferedReplicationTa
 	s.Equal(int32(312), bufferedEvents.Events[1].WorkflowExecutionContinuedAsNewEventAttributes.GetExecutionStartToCloseTimeoutSeconds())
 	s.Equal(int64(10), bufferedEvents.Events[1].WorkflowExecutionContinuedAsNewEventAttributes.GetDecisionTaskCompletedEventId())
 
-	bufferedNewRunEvents := s.deserializedHistoryEvents(bufferedTask.NewRunHistory)
+	bufferedNewRunEvents := bufferedTask.NewRunHistory
 	s.Equal(2, len(bufferedNewRunEvents.Events))
 	s.Equal(int64(1), bufferedNewRunEvents.Events[0].GetEventId())
 	s.Equal(gen.EventTypeWorkflowExecutionStarted, bufferedNewRunEvents.Events[0].GetEventType())
@@ -2261,7 +2261,7 @@ func (s *MatchingPersistenceSuite) TestResetMutableStateCurrentIsSelf() {
 		FirstEventID: int64(5),
 		NextEventID:  int64(7),
 		Version:      int64(11),
-		History:      s.serializeHistoryEvents(eventsBatch1),
+		History:      &gen.History{Events: eventsBatch1},
 	}
 
 	eventsBatch2 := []*gen.HistoryEvent{
@@ -2279,7 +2279,7 @@ func (s *MatchingPersistenceSuite) TestResetMutableStateCurrentIsSelf() {
 		FirstEventID: int64(21),
 		NextEventID:  int64(22),
 		Version:      int64(12),
-		History:      s.serializeHistoryEvents(eventsBatch2),
+		History:      &gen.History{Events: eventsBatch2},
 	}
 	updatedState := &p.WorkflowMutableState{
 		ExecutionInfo: updatedInfo,
@@ -2287,10 +2287,10 @@ func (s *MatchingPersistenceSuite) TestResetMutableStateCurrentIsSelf() {
 			4: {
 				Version:                  7789,
 				ScheduleID:               4,
-				ScheduledEvent:           []byte("scheduled_event_4"),
+				ScheduledEvent:           &gen.HistoryEvent{EventId: int64Ptr(4)},
 				ScheduledTime:            currentTime,
 				StartedID:                6,
-				StartedEvent:             []byte("started_event_1"),
+				StartedEvent:             &gen.HistoryEvent{EventId: int64Ptr(1)},
 				StartedTime:              currentTime,
 				ScheduleToCloseTimeout:   1,
 				ScheduleToStartTimeout:   2,
@@ -2302,10 +2302,10 @@ func (s *MatchingPersistenceSuite) TestResetMutableStateCurrentIsSelf() {
 			5: {
 				Version:                  7789,
 				ScheduleID:               5,
-				ScheduledEvent:           []byte("scheduled_event_5"),
+				ScheduledEvent:           &gen.HistoryEvent{EventId: int64Ptr(5)},
 				ScheduledTime:            currentTime,
 				StartedID:                7,
-				StartedEvent:             []byte("started_event_2"),
+				StartedEvent:             &gen.HistoryEvent{EventId: int64Ptr(2)},
 				StartedTime:              currentTime,
 				ScheduleToCloseTimeout:   1,
 				ScheduleToStartTimeout:   2,
@@ -2364,8 +2364,8 @@ func (s *MatchingPersistenceSuite) TestResetMutableStateCurrentIsSelf() {
 				InitiatedID:     39,
 				SignalRequestID: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
 				SignalName:      "signalA",
-				Input:           []byte("signal_input_A"),
-				Control:         []byte("signal_control_A"),
+				Input:           &p.DataBlob{Data: []byte("signal_input_A")},
+				Control:         &p.DataBlob{Data: []byte("signal_control_A")},
 			},
 		},
 
@@ -2391,10 +2391,10 @@ func (s *MatchingPersistenceSuite) TestResetMutableStateCurrentIsSelf() {
 	err2 = s.UpdateWorklowStateAndReplication(bufferUpdateInfo, nil, bufferedTask2, nil, bufferUpdateInfo.NextEventID, nil)
 	s.NoError(err2)
 	err2 = s.UpdateWorkflowExecutionForBufferEvents(bufferUpdateInfo, nil, bufferUpdateInfo.NextEventID,
-		s.serializeHistoryEvents(eventsBatch1))
+		&gen.History{Events: eventsBatch1})
 	s.NoError(err2)
 	err2 = s.UpdateWorkflowExecutionForBufferEvents(bufferUpdateInfo, nil, bufferUpdateInfo.NextEventID,
-		s.serializeHistoryEvents(eventsBatch2))
+		&gen.History{Events: eventsBatch2})
 	s.NoError(err2)
 
 	state1, err1 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
@@ -2501,10 +2501,10 @@ func (s *MatchingPersistenceSuite) TestResetMutableStateCurrentIsSelf() {
 		{
 			Version:                  8789,
 			ScheduleID:               40,
-			ScheduledEvent:           []byte("scheduled_event_40"),
+			ScheduledEvent:           &gen.HistoryEvent{EventId: int64Ptr(40)},
 			ScheduledTime:            currentTime,
 			StartedID:                60,
-			StartedEvent:             []byte("started_event_10"),
+			StartedEvent:             &gen.HistoryEvent{EventId: int64Ptr(10)},
 			StartedTime:              currentTime,
 			ScheduleToCloseTimeout:   10,
 			ScheduleToStartTimeout:   20,
@@ -2553,16 +2553,16 @@ func (s *MatchingPersistenceSuite) TestResetMutableStateCurrentIsSelf() {
 			InitiatedID:     39,
 			SignalRequestID: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
 			SignalName:      "signalB",
-			Input:           []byte("signal_input_b"),
-			Control:         []byte("signal_control_b"),
+			Input:           &p.DataBlob{Data: []byte("signal_input_b")},
+			Control:         &p.DataBlob{Data: []byte("signal_control_b")},
 		},
 		{
 			Version:         3336,
 			InitiatedID:     42,
 			SignalRequestID: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
 			SignalName:      "signalC",
-			Input:           []byte("signal_input_c"),
-			Control:         []byte("signal_control_c"),
+			Input:           &p.DataBlob{Data: []byte("signal_input_c")},
+			Control:         &p.DataBlob{Data: []byte("signal_control_c")},
 		}}
 
 	rState := &p.ReplicationState{
@@ -2964,22 +2964,4 @@ func copyReplicationInfo(sourceInfo *p.ReplicationInfo) *p.ReplicationInfo {
 		Version:     sourceInfo.Version,
 		LastEventID: sourceInfo.LastEventID,
 	}
-}
-
-func (s *MatchingPersistenceSuite) serializeHistoryEvents(events []*gen.HistoryEvent) *p.DataBlob {
-	historySerializer := p.NewJSONHistorySerializer()
-	bufferedBatch := p.NewHistoryEventBatch(p.GetDefaultHistoryVersion(), events)
-	serializedEvents, _ := historySerializer.Serialize(bufferedBatch)
-
-	return serializedEvents
-}
-
-func (s *MatchingPersistenceSuite) deserializedHistoryEvents(batch *p.DataBlob) *p.HistoryEventBatch {
-	historySerializer := p.NewJSONHistorySerializer()
-	events, err := historySerializer.Deserialize(batch)
-	if err != nil {
-		panic(err)
-	}
-
-	return events
 }

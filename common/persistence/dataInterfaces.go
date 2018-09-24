@@ -1657,18 +1657,6 @@ func (t *TimerTaskInfo) String() string {
 	)
 }
 
-// NewHistoryEventBatch returns a new instance of HistoryEventBatch
-func NewHistoryEventBatch(version int, events []*workflow.HistoryEvent) *HistoryEventBatch {
-	return &HistoryEventBatch{
-		Version: version,
-		Events:  events,
-	}
-}
-
-func (b *HistoryEventBatch) String() string {
-	return fmt.Sprintf("[version:%v, events:%v]", b.Version, b.Events)
-}
-
 // SerializeClusterConfigs makes an array of *ClusterReplicationConfig serializable
 // by flattening them into map[string]interface{}
 func SerializeClusterConfigs(replicationConfigs []*ClusterReplicationConfig) []map[string]interface{} {
