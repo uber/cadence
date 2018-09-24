@@ -3,6 +3,7 @@
   "MinCompatibleVersion": "0.11",
   "Description": "Adding server side workflow retry and blob headers",
   "SchemaUpdateCqlFiles": [
-    "workflow_retry_and_blob_headers.cql"
+    "workflow_retry.cql",
+    "blob_headers.cql"
   ]
 }
