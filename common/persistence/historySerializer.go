@@ -91,7 +91,7 @@ const (
 var defaultHistoryVersion = int32(1)
 var maxSupportedHistoryVersion = int32(1)
 
-// NewJSONHistorySerializer returns a JSON HistorySerializer
+// NewHistorySerializer returns a HistorySerializer
 func NewHistorySerializer() HistorySerializer {
 	return &serializerImpl{
 		thriftrwEncoder: codec.NewThriftRWEncoder(),
@@ -218,6 +218,7 @@ func (e *HistoryVersionCompatibilityError) Error() string {
 		e.requiredVersion, e.supportedVersion)
 }
 
+// NewInconsistentDataHeaderError returns a new InconsistentDataHeaderError
 func NewInconsistentDataHeaderError(header1 map[string]string, header2 map[string]string) *InconsistentDataHeaderError {
 	return &InconsistentDataHeaderError{
 		header1: header1,

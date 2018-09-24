@@ -1799,6 +1799,7 @@ func UnixNanoToDBTimestamp(timestamp int64) int64 {
 	return timestamp / (1000 * 1000) // Milliseconds are 10⁻³, nanoseconds are 10⁻⁹, (-9) - (-3) = -6, so divide by 10⁶
 }
 
+// NewDataBlob returns a new DataBlob
 func NewDataBlob(data []byte, encodingType common.EncodingType, version int32) *DataBlob {
 	return &DataBlob{
 		Data: data,
@@ -1809,11 +1810,13 @@ func NewDataBlob(data []byte, encodingType common.EncodingType, version int32) *
 	}
 }
 
+// String returns hex data, encoding and version
 func (d *DataBlob) String() string {
 	return fmt.Sprintf("[encodingType:%v,version:%v,data in hex:%v]",
 		d.GetEncoding(), d.GetVersion(), hex.EncodeToString(d.Data))
 }
 
+// GetEncoding returns encoding type
 func (d *DataBlob) GetEncoding() common.EncodingType {
 	encodingStr, ok := d.Headers[DataBlobHeaderKeyEncoding]
 	if !ok {
@@ -1832,6 +1835,7 @@ func (d *DataBlob) GetEncoding() common.EncodingType {
 	}
 }
 
+// GetVersion returns version
 func (d *DataBlob) GetVersion() int {
 	versionStr, ok := d.Headers[DataBlobHeaderKeyVersion]
 	if !ok {
