@@ -22,13 +22,15 @@ package sql
 
 import (
 	"fmt"
+
 	"github.com/uber-common/bark"
 
 	"database/sql"
+	"time"
+
 	"github.com/jmoiron/sqlx"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/persistence"
-	"time"
 )
 
 type (
@@ -65,9 +67,9 @@ type (
 
 const (
 	taskListCreatePart = `INTO task_lists 
-(domain_id, range_id, name, task_type, ack_level, kind, expiry_ts)
+(domain_id, name, task_type, range_id, ack_level, kind, expiry_ts)
 VALUES
-(:domain_id, :range_id, :name, :task_type, :ack_level, :kind, :expiry_ts)`
+(:domain_id, :name, :task_type, :range_id, :ack_level, :kind, :expiry_ts)`
 
 	// (default range ID: initialRangeID == 1)
 	createTaskListSQLQuery = `INSERT ` + taskListCreatePart
@@ -112,9 +114,9 @@ task_id <= ?
 `
 
 	createTaskSQLQuery = `INSERT INTO tasks
-(domain_id, workflow_id, run_id, schedule_id, task_list_name, task_list_type, task_id, expiry_ts)
+(domain_id, task_list_name, task_list_type, task_id, workflow_id, run_id, schedule_id, expiry_ts)
 VALUES
-(:domain_id, :workflow_id, :run_id, :schedule_id, :task_list_name, :task_list_type, :task_id, :expiry_ts)`
+(:domain_id, :task_list_name, :task_list_type, :task_id, :workflow_id, :run_id, :schedule_id, :expiry_ts)`
 )
 
 // NewTaskPersistence creates a new instance of TaskManager

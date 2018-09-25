@@ -23,13 +23,13 @@ package sql
 import (
 	"database/sql"
 	"fmt"
+
 	"github.com/go-sql-driver/mysql"
 	"github.com/uber-common/bark"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/persistence"
 
-	_ "github.com/go-sql-driver/mysql" // MySQL driver
 	"github.com/jmoiron/sqlx"
 )
 
@@ -77,10 +77,10 @@ type (
 const (
 	createDomainSQLQuery = `INSERT INTO domains (
 		id,
+		name,
 		retention, 
 		emit_metric,
 		config_version,
-		name, 
 		status, 
 		description, 
 		owner_email,
@@ -94,10 +94,10 @@ const (
 		)
 		VALUES(
 		:id,
+		:name,
 		:retention, 
 		:emit_metric,
 		:config_version,
-		:name, 
 		:status, 
 		:description, 
 		:owner_email,

@@ -23,8 +23,9 @@ package sql
 import (
 	"database/sql"
 	"fmt"
-	"github.com/uber-common/bark"
 	"time"
+
+	"github.com/uber-common/bark"
 
 	"github.com/jmoiron/sqlx"
 	workflow "github.com/uber/cadence/.gen/go/shared"
