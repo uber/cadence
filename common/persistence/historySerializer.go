@@ -80,6 +80,10 @@ func NewHistorySerializer() HistorySerializer {
 }
 
 func (t *serializerImpl) SerializeBatchEvents(batch *workflow.History, encodingType common.EncodingType) (*DataBlob, error) {
+	if batch == nil {
+		batch = &workflow.History{}
+	}
+
 	switch encodingType {
 	case common.EncodingTypeGob:
 		return nil, NewUnknownEncodingTypeError(encodingType)
@@ -128,6 +132,9 @@ func (t *serializerImpl) DeserializeBatchEvents(data *DataBlob) (*workflow.Histo
 }
 
 func (t *serializerImpl) SerializeEvent(event *workflow.HistoryEvent, encodingType common.EncodingType) (*DataBlob, error) {
+	if event == nil {
+		event = &workflow.HistoryEvent{}
+	}
 	switch encodingType {
 	case common.EncodingTypeGob:
 		return nil, NewUnknownEncodingTypeError(encodingType)

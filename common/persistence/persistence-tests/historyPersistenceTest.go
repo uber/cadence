@@ -316,6 +316,7 @@ func (s *HistoryPersistenceSuite) AppendHistoryEvents(domainID string, workflowE
 		TransactionID:     txID,
 		Events:            eventsBatch,
 		Overwrite:         overwrite,
+		BinaryEncoding:    pickRandomEncoding(),
 	})
 }
 
