@@ -1798,7 +1798,7 @@ func NewDataBlob(data []byte, encodingType common.EncodingType) *DataBlob {
 
 // String returns hex data, encoding and version
 func (d *DataBlob) String() string {
-	return fmt.Sprintf("[encodingType:%v,version:%v,data in hex:%v]",
+	return fmt.Sprintf("[encodingType:%v, data in hex:%v]",
 		d.GetEncoding(), hex.EncodeToString(d.Data))
 }
 
