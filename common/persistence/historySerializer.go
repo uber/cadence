@@ -67,15 +67,6 @@ type (
 		encodingType common.EncodingType
 	}
 
-	// HistoryVersionCompatibilityError is an error type
-	// that's returned when history serialization or
-	// deserialization cannot proceed due to version
-	// incompatibility
-	HistoryVersionCompatibilityError struct {
-		requiredVersion  int
-		supportedVersion int
-	}
-
 	serializerImpl struct {
 		thriftrwEncoder codec.BinaryEncoder
 	}
@@ -177,19 +168,6 @@ func NewUnknownEncodingTypeError(encodingType common.EncodingType) error {
 
 func (e *UnknownEncodingTypeError) Error() string {
 	return fmt.Sprintf("unknown or unsupported encoding type %v", e.encodingType)
-}
-
-// NewHistoryVersionCompatibilityError returns a new instance of compatibility error type
-func NewHistoryVersionCompatibilityError(required int, supported int) error {
-	return &HistoryVersionCompatibilityError{
-		requiredVersion:  required,
-		supportedVersion: supported,
-	}
-}
-
-func (e *HistoryVersionCompatibilityError) Error() string {
-	return fmt.Sprintf("incompatible history version;required=%v;maxSupported=%v",
-		e.requiredVersion, e.supportedVersion)
 }
 
 // NewInconsistentDataHeaderError returns a new InconsistentDataHeaderError
