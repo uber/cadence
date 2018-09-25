@@ -33,7 +33,6 @@ CREATE TYPE workflow_execution (
   workflow_timeout                 int,  -- Workflow ExecutionStartToCloseTimeoutSeconds
   decision_task_timeout            int,
   execution_context                blob,
-  execution_context_data_headers   map<text,text>, -- data headers for execution_context
   state                            int,  -- enum WorkflowState {Created, Running, Completed}
   close_status                     int,  -- enum WorkflowCloseStatus {None, Completed, Failed, Canceled, Terminated, ContinuedAsNew, TimedOut}
   last_first_event_id              bigint,
@@ -154,7 +153,6 @@ CREATE TYPE activity_info (
   max_attempts              int,    -- max number of attempts including initial non-retry attempt
   non_retriable_errors      list<text>,
   event_data_headers        map<text,text>, -- data headers for all event fields in this struct
-  detail_data_headers       map<text,text>, -- data headers for details in this struct
 );
 
 -- User timer details
@@ -192,7 +190,6 @@ CREATE TYPE signal_info (
   signal_name       text,
   input             blob,
   control           blob,
-  data_headers      map<text,text>, -- data headers for all blob fields in this struct
 );
 
 -- Activity or workflow task in a task list
