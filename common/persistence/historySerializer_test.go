@@ -91,9 +91,9 @@ func (s *historySerializerSuite) TestSerializer() {
 			_, ok := err.(*UnknownEncodingTypeError)
 			s.True(ok)
 
-			dJson, err := serializer.SerializeEvent(event0, common.EncodingTypeJSON)
+			dJSON, err := serializer.SerializeEvent(event0, common.EncodingTypeJSON)
 			s.Nil(err)
-			s.NotNil(dJson)
+			s.NotNil(dJSON)
 
 			dThrift, err := serializer.SerializeEvent(event0, common.EncodingTypeThriftRW)
 			s.Nil(err)
@@ -108,9 +108,9 @@ func (s *historySerializerSuite) TestSerializer() {
 			_, ok = err.(*UnknownEncodingTypeError)
 			s.True(ok)
 
-			dsJson, err := serializer.SerializeBatchEvents(history0, common.EncodingTypeJSON)
+			dsJSON, err := serializer.SerializeBatchEvents(history0, common.EncodingTypeJSON)
 			s.Nil(err)
-			s.NotNil(dsJson)
+			s.NotNil(dsJSON)
 
 			dsThrift, err := serializer.SerializeBatchEvents(history0, common.EncodingTypeThriftRW)
 			s.Nil(err)
@@ -120,7 +120,7 @@ func (s *historySerializerSuite) TestSerializer() {
 			s.Nil(err)
 			s.NotNil(dsEmpty)
 
-			event1, err := serializer.DeserializeEvent(dJson)
+			event1, err := serializer.DeserializeEvent(dJSON)
 			s.Nil(err)
 			event0.Equals(event1)
 
@@ -132,7 +132,7 @@ func (s *historySerializerSuite) TestSerializer() {
 			s.Nil(err)
 			event0.Equals(event3)
 
-			history1, err := serializer.DeserializeBatchEvents(dsJson)
+			history1, err := serializer.DeserializeBatchEvents(dsJSON)
 			s.Nil(err)
 			history0.Equals(history1)
 
