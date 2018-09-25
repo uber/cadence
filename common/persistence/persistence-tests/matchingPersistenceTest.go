@@ -1597,8 +1597,8 @@ func (s *MatchingPersistenceSuite) TestWorkflowMutableStateSignalInfo() {
 			InitiatedID:     1,
 			SignalRequestID: signalRequestID,
 			SignalName:      signalName,
-			Input:           &p.DataBlob{Data: input},
-			Control:         &p.DataBlob{Data: control},
+			Input:           input,
+			Control:         control,
 		}}
 	err2 := s.UpsertSignalInfoState(updatedInfo, int64(3), signalInfos)
 	s.NoError(err2)
@@ -2364,8 +2364,8 @@ func (s *MatchingPersistenceSuite) TestResetMutableStateCurrentIsSelf() {
 				InitiatedID:     39,
 				SignalRequestID: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
 				SignalName:      "signalA",
-				Input:           &p.DataBlob{Data: []byte("signal_input_A")},
-				Control:         &p.DataBlob{Data: []byte("signal_control_A")},
+				Input:           []byte("signal_input_A"),
+				Control:         []byte("signal_control_A"),
 			},
 		},
 
@@ -2553,16 +2553,16 @@ func (s *MatchingPersistenceSuite) TestResetMutableStateCurrentIsSelf() {
 			InitiatedID:     39,
 			SignalRequestID: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
 			SignalName:      "signalB",
-			Input:           &p.DataBlob{Data: []byte("signal_input_b")},
-			Control:         &p.DataBlob{Data: []byte("signal_control_b")},
+			Input:           []byte("signal_input_b"),
+			Control:         []byte("signal_control_b"),
 		},
 		{
 			Version:         3336,
 			InitiatedID:     42,
 			SignalRequestID: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
 			SignalName:      "signalC",
-			Input:           &p.DataBlob{Data: []byte("signal_input_c")},
-			Control:         &p.DataBlob{Data: []byte("signal_control_c")},
+			Input:           []byte("signal_input_c"),
+			Control:         []byte("signal_control_c"),
 		}}
 
 	rState := &p.ReplicationState{
