@@ -619,7 +619,7 @@ var SampleRateKey = "sample_retention_rate"
 func (entry *DomainCacheEntry) GetRetentionDays(workflowID string) int32 {
 	if sampledRetentionValue, ok := entry.info.Data[SampleRetentionKey]; ok {
 		sampledRetentionDays, err := strconv.Atoi(sampledRetentionValue)
-		if err != nil && sampledRetentionDays < int(entry.config.Retention) {
+		if err != nil || sampledRetentionDays < int(entry.config.Retention) {
 			return entry.config.Retention
 		}
 
@@ -633,7 +633,7 @@ func (entry *DomainCacheEntry) GetRetentionDays(workflowID string) int32 {
 			h.Write([]byte(workflowID))
 			hash := h.Sum32()
 
-			r := float64(hash%1000) / float64(1000)
+			r := float64(hash%1000) / float64(1000) // use 1000 so we support one decimal rate like 1.5%.
 			if r < sampledRate {
 				// sampled
 				return int32(sampledRetentionDays)

@@ -587,9 +587,18 @@ func Test_GetRetentionDays(t *testing.T) {
 
 	wid := uuid.New()
 	rd := d.GetRetentionDays(wid)
-	require.Equal(t, d.config.Retention, rd)
+	require.Equal(t, int32(7), rd)
 
 	d.info.Data[SampleRateKey] = "1"
 	rd = d.GetRetentionDays(wid)
 	require.Equal(t, int32(30), rd)
+
+	d.info.Data[SampleRetentionKey] = "invalid-value"
+	rd = d.GetRetentionDays(wid)
+	require.Equal(t, int32(7), rd) // fallback to normal retention
+
+	d.info.Data[SampleRetentionKey] = "30"
+	d.info.Data[SampleRateKey] = "invalid-value"
+	rd = d.GetRetentionDays(wid)
+	require.Equal(t, int32(7), rd) // fallback to normal retention
 }
