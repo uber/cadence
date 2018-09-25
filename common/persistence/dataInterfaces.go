@@ -205,7 +205,7 @@ type (
 		WorkflowTypeName             string
 		WorkflowTimeout              int32
 		DecisionTimeoutValue         int32
-		ExecutionContext             *DataBlob
+		ExecutionContext             []byte
 		State                        int
 		CloseStatus                  int
 		LastFirstEventID             int64
@@ -485,7 +485,7 @@ type (
 		StartedTime              time.Time
 		ActivityID               string
 		RequestID                string
-		Details                  *DataBlob
+		Details                  []byte
 		ScheduleToStartTimeout   int32
 		ScheduleToCloseTimeout   int32
 		StartToCloseTimeout      int32
@@ -542,8 +542,8 @@ type (
 		InitiatedID     int64
 		SignalRequestID string
 		SignalName      string
-		Input           *DataBlob
-		Control         *DataBlob
+		Input           []byte
+		Control         []byte
 	}
 
 	// BufferedReplicationTask has details to handle out of order receive of history events
@@ -588,7 +588,7 @@ type (
 		WorkflowTypeName            string
 		WorkflowTimeout             int32
 		DecisionTimeoutValue        int32
-		ExecutionContext            *DataBlob
+		ExecutionContext            []byte
 		NextEventID                 int64
 		LastProcessedEvent          int64
 		TransferTasks               []Task

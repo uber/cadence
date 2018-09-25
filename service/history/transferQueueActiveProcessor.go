@@ -649,10 +649,10 @@ func (t *transferQueueActiveProcessorImpl) processSignalExecution(task *persiste
 			},
 			Identity:   common.StringPtr(identityHistoryService),
 			SignalName: common.StringPtr(si.SignalName),
-			Input:      si.Input.Data,
+			Input:      si.Input,
 			// Use same request ID to deduplicate SignalWorkflowExecution calls
 			RequestId: common.StringPtr(si.SignalRequestID),
-			Control:   si.Control.Data,
+			Control:   si.Control,
 		},
 		ExternalWorkflowExecution: &workflow.WorkflowExecution{
 			WorkflowId: common.StringPtr(task.WorkflowID),
@@ -778,11 +778,11 @@ func (t *transferQueueActiveProcessorImpl) processStartChildExecution(task *pers
 		startRequest := &h.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(targetDomainID),
 			StartRequest: &workflow.StartWorkflowExecutionRequest{
-				Domain:                              common.StringPtr(targetDomain),
-				WorkflowId:                          attributes.WorkflowId,
-				WorkflowType:                        attributes.WorkflowType,
-				TaskList:                            attributes.TaskList,
-				Input:                               attributes.Input,
+				Domain:       common.StringPtr(targetDomain),
+				WorkflowId:   attributes.WorkflowId,
+				WorkflowType: attributes.WorkflowType,
+				TaskList:     attributes.TaskList,
+				Input:        attributes.Input,
 				ExecutionStartToCloseTimeoutSeconds: attributes.ExecutionStartToCloseTimeoutSeconds,
 				TaskStartToCloseTimeoutSeconds:      attributes.TaskStartToCloseTimeoutSeconds,
 				// Use the same request ID to dedupe StartWorkflowExecution calls

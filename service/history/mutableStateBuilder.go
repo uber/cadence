@@ -997,7 +997,7 @@ func (e *mutableStateBuilder) HasParentExecution() bool {
 
 func (e *mutableStateBuilder) UpdateActivityProgress(ai *persistence.ActivityInfo,
 	request *workflow.RecordActivityTaskHeartbeatRequest) {
-	ai.Details = &persistence.DataBlob{Data: request.Details}
+	ai.Details = request.Details
 	ai.LastHeartBeatUpdatedTime = time.Now()
 	e.updateActivityInfos[ai] = struct{}{}
 }
@@ -1253,8 +1253,8 @@ func (e *mutableStateBuilder) AddWorkflowExecutionStartedEventForContinueAsNew(d
 		WorkflowType:                        wType,
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(decisionTimeout),
 		ExecutionStartToCloseTimeoutSeconds: attributes.ExecutionStartToCloseTimeoutSeconds,
-		Input:                               attributes.Input,
-		RetryPolicy:                         attributes.RetryPolicy,
+		Input:       attributes.Input,
+		RetryPolicy: attributes.RetryPolicy,
 	}
 
 	req := &h.StartWorkflowExecutionRequest{
@@ -2012,8 +2012,8 @@ func (e *mutableStateBuilder) ReplicateSignalExternalWorkflowExecutionInitiatedE
 		InitiatedID:     initiatedEventID,
 		SignalRequestID: signalRequestID,
 		SignalName:      attributes.GetSignalName(),
-		Input:           &persistence.DataBlob{Data: attributes.Input},
-		Control:         &persistence.DataBlob{Data: attributes.Control},
+		Input:           attributes.Input,
+		Control:         attributes.Control,
 	}
 
 	e.pendingSignalInfoIDs[initiatedEventID] = si

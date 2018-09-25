@@ -125,7 +125,6 @@ const (
 		`workflow_timeout: ?, ` +
 		`decision_task_timeout: ?, ` +
 		`execution_context: ?, ` +
-		`execution_context_data_headers: ?, ` +
 		`state: ?, ` +
 		`close_status: ?, ` +
 		`last_first_event_id: ?, ` +
@@ -236,8 +235,7 @@ const (
 		`expiration_time: ?, ` +
 		`max_attempts: ?, ` +
 		`non_retriable_errors: ?, ` +
-		`event_data_headers: ?, ` +
-		`detail_data_headers: ?` +
+		`event_data_headers: ?` +
 		`}`
 
 	templateTimerInfoType = `{` +
@@ -270,8 +268,7 @@ const (
 		`signal_request_id: ?, ` +
 		`signal_name: ?, ` +
 		`input: ?, ` +
-		`control: ?, ` +
-		`data_headers: ?` +
+		`control: ?` +
 		`}`
 
 	templateBufferedReplicationTaskInfoType = `{` +
@@ -1238,8 +1235,7 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Cre
 			request.WorkflowTypeName,
 			request.WorkflowTimeout,
 			request.DecisionTimeoutValue,
-			request.ExecutionContext.Data,
-			request.ExecutionContext.Headers,
+			request.ExecutionContext,
 			p.WorkflowStateCreated,
 			p.WorkflowCloseStatusNone,
 			common.FirstEventID,
@@ -1298,8 +1294,7 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Cre
 			request.WorkflowTypeName,
 			request.WorkflowTimeout,
 			request.DecisionTimeoutValue,
-			request.ExecutionContext.Data,
-			request.ExecutionContext.Headers,
+			request.ExecutionContext,
 			p.WorkflowStateCreated,
 			p.WorkflowCloseStatusNone,
 			common.FirstEventID,
@@ -1485,8 +1480,7 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *p.UpdateWorkflow
 			executionInfo.WorkflowTypeName,
 			executionInfo.WorkflowTimeout,
 			executionInfo.DecisionTimeoutValue,
-			executionInfo.ExecutionContext.Data,
-			executionInfo.ExecutionContext.Headers,
+			executionInfo.ExecutionContext,
 			executionInfo.State,
 			executionInfo.CloseStatus,
 			executionInfo.LastFirstEventID,
@@ -1546,8 +1540,7 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *p.UpdateWorkflow
 			executionInfo.WorkflowTypeName,
 			executionInfo.WorkflowTimeout,
 			executionInfo.DecisionTimeoutValue,
-			executionInfo.ExecutionContext.Data,
-			executionInfo.ExecutionContext.Headers,
+			executionInfo.ExecutionContext,
 			executionInfo.State,
 			executionInfo.CloseStatus,
 			executionInfo.LastFirstEventID,
@@ -1799,8 +1792,7 @@ func (d *cassandraPersistence) ResetMutableState(request *p.ResetMutableStateReq
 		executionInfo.WorkflowTypeName,
 		executionInfo.WorkflowTimeout,
 		executionInfo.DecisionTimeoutValue,
-		executionInfo.ExecutionContext.Data,
-		executionInfo.ExecutionContext.Headers,
+		executionInfo.ExecutionContext,
 		executionInfo.State,
 		executionInfo.CloseStatus,
 		executionInfo.LastFirstEventID,
@@ -2858,7 +2850,7 @@ func (d *cassandraPersistence) updateActivityInfos(batch *gocql.Batch, activityI
 			a.StartedTime,
 			a.ActivityID,
 			a.RequestID,
-			a.Details.Data,
+			a.Details,
 			a.ScheduleToStartTimeout,
 			a.ScheduleToCloseTimeout,
 			a.StartToCloseTimeout,
@@ -2878,7 +2870,6 @@ func (d *cassandraPersistence) updateActivityInfos(batch *gocql.Batch, activityI
 			a.MaximumAttempts,
 			a.NonRetriableErrors,
 			startedEventBlob.Headers,
-			a.Details.Headers,
 			d.shardID,
 			rowTypeExecution,
 			domainID,
@@ -3120,19 +3111,14 @@ func (d *cassandraPersistence) updateSignalInfos(batch *gocql.Batch, signalInfos
 	deleteInfo *int64, domainID, workflowID, runID string, condition int64, rangeID int64) error {
 
 	for _, c := range signalInfos {
-		// we require both Control and Input will have the same headers
-		if !c.Input.EqualHeaders(c.Control) {
-			return p.NewInconsistentDataHeaderError(c.Control.Headers, c.Input.Headers)
-		}
 		batch.Query(templateUpdateSignalInfoQuery,
 			c.InitiatedID,
 			c.Version,
 			c.InitiatedID,
 			c.SignalRequestID,
 			c.SignalName,
-			c.Input.Data,
-			c.Control.Data,
-			c.Input.Headers,
+			c.Input,
+			c.Control,
 			d.shardID,
 			rowTypeExecution,
 			domainID,
@@ -3374,7 +3360,6 @@ func createShardInfo(currentCluster string, result map[string]interface{}) *p.Sh
 
 func (d *cassandraPersistence) createWorkflowExecutionInfo(result map[string]interface{}) (info *p.WorkflowExecutionInfo, err error) {
 	info = &p.WorkflowExecutionInfo{}
-	info.ExecutionContext = &p.DataBlob{}
 	completionEventBlob := &p.DataBlob{}
 	for k, v := range result {
 		switch k {
@@ -3405,9 +3390,7 @@ func (d *cassandraPersistence) createWorkflowExecutionInfo(result map[string]int
 		case "decision_task_timeout":
 			info.DecisionTimeoutValue = int32(v.(int))
 		case "execution_context":
-			info.ExecutionContext.Data = v.([]byte)
-		case "execution_context_data_headers":
-			info.ExecutionContext.Headers = v.(map[string]string)
+			info.ExecutionContext = v.([]byte)
 		case "state":
 			info.State = v.(int)
 		case "close_status":
@@ -3576,7 +3559,6 @@ func createReplicationTaskInfo(result map[string]interface{}) *p.ReplicationTask
 
 func (d *cassandraPersistence) createActivityInfo(result map[string]interface{}) (info *p.ActivityInfo, err error) {
 	info = &p.ActivityInfo{}
-	info.Details = &p.DataBlob{}
 
 	scheduledEventData := []byte{}
 	startedEventData := []byte{}
@@ -3604,9 +3586,7 @@ func (d *cassandraPersistence) createActivityInfo(result map[string]interface{})
 		case "request_id":
 			info.RequestID = v.(string)
 		case "details":
-			info.Details.Data = v.([]byte)
-		case "detail_data_headers":
-			info.Details.Headers = v.(map[string]string)
+			info.Details = v.([]byte)
 		case "schedule_to_start_timeout":
 			info.ScheduleToStartTimeout = int32(v.(int))
 		case "schedule_to_close_timeout":
@@ -3731,10 +3711,6 @@ func createRequestCancelInfo(result map[string]interface{}) *p.RequestCancelInfo
 
 func createSignalInfo(result map[string]interface{}) *p.SignalInfo {
 	info := &p.SignalInfo{}
-	info.Input = &p.DataBlob{}
-	info.Control = &p.DataBlob{}
-	// a shared header for both Input and Control
-	sharedHeader := map[string]string{}
 	for k, v := range result {
 		switch k {
 		case "version":
@@ -3746,16 +3722,12 @@ func createSignalInfo(result map[string]interface{}) *p.SignalInfo {
 		case "signal_name":
 			info.SignalName = v.(string)
 		case "input":
-			info.Input.Data = v.([]byte)
+			info.Input = v.([]byte)
 		case "control":
-			info.Control.Data = v.([]byte)
-		case "data_headers":
-			sharedHeader = v.(map[string]string)
+			info.Control = v.([]byte)
 		}
 	}
 
-	info.Input.Headers = sharedHeader
-	info.Control.Headers = sharedHeader
 	return info
 }
 
@@ -3813,8 +3785,7 @@ func (d *cassandraPersistence) resetActivityInfoMap(activityInfos []*p.ActivityI
 		aInfo["started_time"] = a.StartedTime
 		aInfo["activity_id"] = a.ActivityID
 		aInfo["request_id"] = a.RequestID
-		aInfo["details"] = a.Details.Data
-		aInfo["detail_data_headers"] = a.Details.Headers
+		aInfo["details"] = a.Details
 		aInfo["schedule_to_start_timeout"] = a.ScheduleToStartTimeout
 		aInfo["schedule_to_close_timeout"] = a.ScheduleToCloseTimeout
 		aInfo["start_to_close_timeout"] = a.StartToCloseTimeout
@@ -3904,17 +3875,13 @@ func resetRequestCancelInfoMap(requestCancelInfos []*p.RequestCancelInfo) map[in
 func resetSignalInfoMap(signalInfos []*p.SignalInfo) (map[int64]map[string]interface{}, error) {
 	sMap := make(map[int64]map[string]interface{})
 	for _, s := range signalInfos {
-		if !s.Input.EqualHeaders(s.Control) {
-			return nil, p.NewInconsistentDataHeaderError(s.Input.Headers, s.Control.Headers)
-		}
 		sInfo := make(map[string]interface{})
 		sInfo["version"] = s.Version
 		sInfo["initiated_id"] = s.InitiatedID
 		sInfo["signal_request_id"] = s.SignalRequestID
 		sInfo["signal_name"] = s.SignalName
-		sInfo["input"] = s.Input.Data
-		sInfo["control"] = s.Control.Data
-		sInfo["data_headers"] = s.Input.Headers
+		sInfo["input"] = s.Input
+		sInfo["control"] = s.Control
 
 		sMap[s.InitiatedID] = sInfo
 	}

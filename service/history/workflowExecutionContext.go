@@ -137,7 +137,7 @@ func (c *workflowExecutionContext) resetWorkflowExecution(prevRunID string, rese
 
 func (c *workflowExecutionContext) updateWorkflowExecutionWithContext(context []byte, transferTasks []persistence.Task,
 	timerTasks []persistence.Task, transactionID int64) error {
-	c.msBuilder.GetExecutionInfo().ExecutionContext.Data = context
+	c.msBuilder.GetExecutionInfo().ExecutionContext = context
 
 	return c.updateWorkflowExecution(transferTasks, timerTasks, transactionID)
 }

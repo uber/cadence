@@ -248,7 +248,7 @@ func updateActivityInfos(tx *sqlx.Tx,
 			}
 
 			if v.Details != nil {
-				activityInfoMapsRows[i].Details = &v.Details.Data
+				activityInfoMapsRows[i].Details = &v.Details
 			}
 
 			if v.NonRetriableErrors != nil {
@@ -386,7 +386,7 @@ func getActivityInfoMap(tx *sqlx.Tx,
 		}
 
 		if v.Details != nil {
-			ret[v.ScheduleID].Details = &persistence.DataBlob{Data: *v.Details}
+			ret[v.ScheduleID].Details = *v.Details
 		}
 
 		if v.NonRetriableErrors != nil {
@@ -912,8 +912,8 @@ func updateSignalInfos(tx *sqlx.Tx,
 				Version:         v.Version,
 				SignalRequestID: v.SignalRequestID,
 				SignalName:      v.SignalName,
-				Input:           &v.Input.Data,
-				Control:         &v.Control.Data,
+				Input:           &v.Input,
+				Control:         &v.Control,
 			}
 		}
 
@@ -984,8 +984,8 @@ func getSignalInfoMap(tx *sqlx.Tx,
 			InitiatedID:     v.InitiatedID,
 			SignalRequestID: v.SignalRequestID,
 			SignalName:      v.SignalName,
-			Input:           &persistence.DataBlob{Data: *v.Input},
-			Control:         &persistence.DataBlob{Data: *v.Control},
+			Input:           *v.Input,
+			Control:         *v.Control,
 		}
 	}
 
