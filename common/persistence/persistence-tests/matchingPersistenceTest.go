@@ -555,7 +555,8 @@ func (s *MatchingPersistenceSuite) TestTransferTasksThroughUpdate() {
 	err3 := s.CompleteTransferTask(task1.TaskID)
 	s.NoError(err3)
 
-	state0, _ := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
+	state0, err := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
+	s.Nil(err)
 	info0 := state0.ExecutionInfo
 	updatedInfo := copyWorkflowExecutionInfo(info0)
 	updatedInfo.NextEventID = int64(5)

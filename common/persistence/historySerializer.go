@@ -107,6 +107,9 @@ func (t *serializerImpl) DeserializeBatchEvents(data *DataBlob) (*workflow.Histo
 	switch data.GetEncoding() {
 	case common.EncodingTypeJSON:
 		var events []*workflow.HistoryEvent
+		if len(data.Data) == 0 {
+			return &workflow.History{Events: events}, nil
+		}
 		err := json.Unmarshal(data.Data, &events)
 		if err != nil {
 			return nil, &HistoryDeserializationError{msg: err.Error()}
@@ -149,6 +152,9 @@ func (t *serializerImpl) DeserializeEvent(data *DataBlob) (*workflow.HistoryEven
 	var event workflow.HistoryEvent
 	switch data.GetEncoding() {
 	case common.EncodingTypeJSON:
+		if len(data.Data) == 0 {
+			return &event, nil
+		}
 		err := json.Unmarshal(data.Data, &event)
 		if err != nil {
 			return nil, &HistoryDeserializationError{msg: err.Error()}
