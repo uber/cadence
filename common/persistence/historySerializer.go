@@ -23,7 +23,6 @@ package persistence
 import (
 	"encoding/json"
 	"fmt"
-	"sync/atomic"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -82,15 +81,6 @@ type (
 	}
 )
 
-const (
-	// DefaultEncodingType is the default encoding/decoding format for persisted history
-	DefaultEncodingType = common.EncodingTypeJSON
-)
-
-// version checking will be used when we introduce backward incompatible change
-var defaultHistoryVersion = int32(1)
-var maxSupportedHistoryVersion = int32(1)
-
 // NewHistorySerializer returns a HistorySerializer
 func NewHistorySerializer() HistorySerializer {
 	return &serializerImpl{
@@ -108,7 +98,7 @@ func (t *serializerImpl) SerializeBatchEvents(batch *workflow.History, encodingT
 		if err != nil {
 			return nil, &HistorySerializationError{msg: err.Error()}
 		}
-		return NewDataBlob(data, encodingType, defaultHistoryVersion), nil
+		return NewDataBlob(data, encodingType), nil
 	default:
 		fallthrough
 	case common.EncodingTypeJSON:
@@ -116,15 +106,11 @@ func (t *serializerImpl) SerializeBatchEvents(batch *workflow.History, encodingT
 		if err != nil {
 			return nil, &HistorySerializationError{msg: err.Error()}
 		}
-		return NewDataBlob(data, encodingType, defaultHistoryVersion), nil
+		return NewDataBlob(data, encodingType), nil
 	}
 }
 
 func (t *serializerImpl) DeserializeBatchEvents(data *DataBlob) (*workflow.History, error) {
-	if data.GetVersion() > GetMaxSupportedHistoryVersion() {
-		err := NewHistoryVersionCompatibilityError(data.GetVersion(), GetMaxSupportedHistoryVersion())
-		return nil, &HistoryDeserializationError{msg: err.Error()}
-	}
 	switch data.GetEncoding() {
 	case common.EncodingTypeJSON:
 		var events []*workflow.HistoryEvent
@@ -152,7 +138,7 @@ func (t *serializerImpl) SerializeEvent(event *workflow.HistoryEvent, encodingTy
 		if err != nil {
 			return nil, &HistorySerializationError{msg: err.Error()}
 		}
-		return NewDataBlob(data, encodingType, defaultHistoryVersion), nil
+		return NewDataBlob(data, encodingType), nil
 	default:
 		fallthrough
 	case common.EncodingTypeJSON:
@@ -160,15 +146,11 @@ func (t *serializerImpl) SerializeEvent(event *workflow.HistoryEvent, encodingTy
 		if err != nil {
 			return nil, &HistorySerializationError{msg: err.Error()}
 		}
-		return NewDataBlob(data, encodingType, defaultHistoryVersion), nil
+		return NewDataBlob(data, encodingType), nil
 	}
 }
 
 func (t *serializerImpl) DeserializeEvent(data *DataBlob) (*workflow.HistoryEvent, error) {
-	if data.GetVersion() > GetMaxSupportedHistoryVersion() {
-		err := NewHistoryVersionCompatibilityError(data.GetVersion(), GetMaxSupportedHistoryVersion())
-		return nil, &HistoryDeserializationError{msg: err.Error()}
-	}
 	var event workflow.HistoryEvent
 	switch data.GetEncoding() {
 	case common.EncodingTypeJSON:
@@ -227,26 +209,4 @@ func (e *InconsistentDataHeaderError) Error() string {
 
 func (e *HistoryDeserializationError) Error() string {
 	return fmt.Sprintf("history deserialization error: %v", e.msg)
-}
-
-// SetMaxSupportedHistoryVersion resets the max supported history version
-// this method is only intended for integration test
-func SetMaxSupportedHistoryVersion(version int) {
-	atomic.StoreInt32(&maxSupportedHistoryVersion, int32(version))
-}
-
-// GetMaxSupportedHistoryVersion returns the max supported version
-func GetMaxSupportedHistoryVersion() int {
-	return int(atomic.LoadInt32(&maxSupportedHistoryVersion))
-}
-
-// SetDefaultHistoryVersion resets the default history version
-// only intended for integration test
-func SetDefaultHistoryVersion(version int) {
-	atomic.StoreInt32(&defaultHistoryVersion, int32(version))
-}
-
-// GetDefaultHistoryVersion returns the default history version
-func GetDefaultHistoryVersion() int {
-	return int(atomic.LoadInt32(&defaultHistoryVersion))
 }

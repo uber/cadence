@@ -24,8 +24,6 @@ import (
 	"fmt"
 	"time"
 
-	"strconv"
-
 	"encoding/hex"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -118,8 +116,9 @@ const (
 
 // Keys of DataBlob headers
 const (
-	DataBlobHeaderKeyEncoding = "$Cadence.Blob.Encoding"
-	DataBlobHeaderKeyVersion  = "$Cadence.Blob.Version"
+	DataBlobHeaderKeyEncoding            = "$Cadence.Blob.Encoding"
+	DataBlobHeaderKeyVersion             = "$Cadence.Blob.Version"
+	DataBlobHeaderKeyFrontendCompression = "$Cadence.Frontend.Compression"
 )
 
 type (
@@ -1788,12 +1787,11 @@ func UnixNanoToDBTimestamp(timestamp int64) int64 {
 }
 
 // NewDataBlob returns a new DataBlob
-func NewDataBlob(data []byte, encodingType common.EncodingType, version int32) *DataBlob {
+func NewDataBlob(data []byte, encodingType common.EncodingType) *DataBlob {
 	return &DataBlob{
 		Data: data,
 		Headers: map[string]string{
 			DataBlobHeaderKeyEncoding: string(encodingType),
-			DataBlobHeaderKeyVersion:  strconv.Itoa(int(version)),
 		},
 	}
 }
@@ -1801,7 +1799,7 @@ func NewDataBlob(data []byte, encodingType common.EncodingType, version int32) *
 // String returns hex data, encoding and version
 func (d *DataBlob) String() string {
 	return fmt.Sprintf("[encodingType:%v,version:%v,data in hex:%v]",
-		d.GetEncoding(), d.GetVersion(), hex.EncodeToString(d.Data))
+		d.GetEncoding(), hex.EncodeToString(d.Data))
 }
 
 // GetEncoding returns encoding type
@@ -1821,20 +1819,6 @@ func (d *DataBlob) GetEncoding() common.EncodingType {
 	default:
 		return common.EncodingTypeUnknown
 	}
-}
-
-// GetVersion returns version
-func (d *DataBlob) GetVersion() int {
-	versionStr, ok := d.Headers[DataBlobHeaderKeyVersion]
-	if !ok {
-		// As backward compatibility, it should be 0 when the header is empty
-		return 0
-	}
-	n, err := strconv.ParseInt(versionStr, 10, 32)
-	if err != nil {
-		return 0
-	}
-	return int(n)
 }
 
 // EqualHeaders compares the two headers are the same
