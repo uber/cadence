@@ -99,17 +99,7 @@ func NewHistorySerializer() HistorySerializer {
 }
 
 func (t *serializerImpl) SerializeBatchEvents(batch *workflow.History, encodingType common.EncodingType) (*DataBlob, error) {
-	if encodingType == common.EncodingTypeUnknown {
-		encodingType = DefaultEncodingType
-	}
-
 	switch encodingType {
-	case common.EncodingTypeJSON:
-		data, err := json.Marshal(batch.Events)
-		if err != nil {
-			return nil, &HistorySerializationError{msg: err.Error()}
-		}
-		return NewDataBlob(data, encodingType, defaultHistoryVersion), nil
 	case common.EncodingTypeThriftRW:
 		history := &workflow.History{
 			Events: batch.Events,
@@ -120,7 +110,13 @@ func (t *serializerImpl) SerializeBatchEvents(batch *workflow.History, encodingT
 		}
 		return NewDataBlob(data, encodingType, defaultHistoryVersion), nil
 	default:
-		return nil, NewUnknownEncodingTypeError(encodingType)
+		fallthrough
+	case common.EncodingTypeJSON:
+		data, err := json.Marshal(batch.Events)
+		if err != nil {
+			return nil, &HistorySerializationError{msg: err.Error()}
+		}
+		return NewDataBlob(data, encodingType, defaultHistoryVersion), nil
 	}
 }
 
@@ -150,17 +146,7 @@ func (t *serializerImpl) DeserializeBatchEvents(data *DataBlob) (*workflow.Histo
 }
 
 func (t *serializerImpl) SerializeEvent(event *workflow.HistoryEvent, encodingType common.EncodingType) (*DataBlob, error) {
-	if encodingType == common.EncodingTypeUnknown {
-		encodingType = DefaultEncodingType
-	}
-
 	switch encodingType {
-	case common.EncodingTypeJSON:
-		data, err := json.Marshal(event)
-		if err != nil {
-			return nil, &HistorySerializationError{msg: err.Error()}
-		}
-		return NewDataBlob(data, encodingType, defaultHistoryVersion), nil
 	case common.EncodingTypeThriftRW:
 		data, err := t.thriftrwEncoder.Encode(event)
 		if err != nil {
@@ -168,7 +154,13 @@ func (t *serializerImpl) SerializeEvent(event *workflow.HistoryEvent, encodingTy
 		}
 		return NewDataBlob(data, encodingType, defaultHistoryVersion), nil
 	default:
-		return nil, NewUnknownEncodingTypeError(encodingType)
+		fallthrough
+	case common.EncodingTypeJSON:
+		data, err := json.Marshal(event)
+		if err != nil {
+			return nil, &HistorySerializationError{msg: err.Error()}
+		}
+		return NewDataBlob(data, encodingType, defaultHistoryVersion), nil
 	}
 }
 
