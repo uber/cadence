@@ -1725,6 +1725,7 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *p.UpdateWorkflow
 				Message: fmt.Sprintf("UpdateWorkflowExecution operation failed. Error: %v", err),
 			}
 		}
+
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("UpdateWorkflowExecution operation failed. Error: %v", err),
 		}
@@ -3231,6 +3232,9 @@ func (d *cassandraPersistence) updateBufferedEvents(batch *gocql.Batch, newBuffe
 		}
 		values["data"] = blob.Data
 		values["data_headers"] = blob.Headers
+		// NOTE: Although we have deprecated these two columns, we have to set some values here to make CQL happy
+		values["encoding_type"] = string(blob.GetEncoding())
+		values["version"] = int64(0)
 		newEventValues := []map[string]interface{}{values}
 		batch.Query(templateAppendBufferedEventsQuery,
 			newEventValues,
