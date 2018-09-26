@@ -108,17 +108,17 @@ func (t *serializerImpl) DeserializeBatchEvents(data *DataBlob) (*workflow.Histo
 		fallthrough
 	case common.EncodingTypeJSON:
 		var events []*workflow.HistoryEvent
-		if len(data.RawData) == 0 {
+		if len(data.Data) == 0 {
 			return &workflow.History{Events: events}, nil
 		}
-		err := json.Unmarshal(data.RawData, &events)
+		err := json.Unmarshal(data.Data, &events)
 		if err != nil {
 			return nil, &HistoryDeserializationError{msg: err.Error()}
 		}
 		return &workflow.History{Events: events}, nil
 	case common.EncodingTypeThriftRW:
 		var history workflow.History
-		err := t.thriftrwEncoder.Decode(data.RawData, &history)
+		err := t.thriftrwEncoder.Decode(data.Data, &history)
 		if err != nil {
 			return nil, &HistoryDeserializationError{msg: err.Error()}
 		}
@@ -159,16 +159,16 @@ func (t *serializerImpl) DeserializeEvent(data *DataBlob) (*workflow.HistoryEven
 	case common.EncodingTypeUnknown:
 		fallthrough
 	case common.EncodingTypeJSON:
-		if len(data.RawData) == 0 {
+		if len(data.Data) == 0 {
 			return &event, nil
 		}
-		err := json.Unmarshal(data.RawData, &event)
+		err := json.Unmarshal(data.Data, &event)
 		if err != nil {
 			return nil, &HistoryDeserializationError{msg: err.Error()}
 		}
 		return &event, nil
 	case common.EncodingTypeThriftRW:
-		err := t.thriftrwEncoder.Decode(data.RawData, &event)
+		err := t.thriftrwEncoder.Decode(data.Data, &event)
 		if err != nil {
 			return nil, &HistoryDeserializationError{msg: err.Error()}
 		}

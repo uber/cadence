@@ -30,13 +30,13 @@ type (
 	// It contains raw data, and metadata(right now only encoding) in other field
 	DataBlob struct {
 		Encoding common.EncodingType
-		RawData  []byte
+		Data     []byte
 	}
 )
 
 func NewDataBlob(data []byte, encodingType common.EncodingType) *DataBlob {
 	return &DataBlob{
-		RawData:  data,
+		Data:     data,
 		Encoding: encodingType,
 	}
 }
