@@ -82,7 +82,7 @@ func (s *timerQueueProcessorSuite) SetupTest() {
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 
-	historyCache := newHistoryCache(s.ShardContext, s.logger)
+	historyCache := newHistoryCache(s.ShardContext)
 	historyCache.disabled = true
 	// set the standby cluster's timer ack level to max since we are not testing it
 	// but we are testing the complete timer functionality
@@ -110,7 +110,10 @@ func (s *timerQueueProcessorSuite) TearDownTest() {
 
 func (s *timerQueueProcessorSuite) updateTimerSeqNumbers(timerTasks []persistence.Task) {
 	for _, task := range timerTasks {
-		ts := persistence.GetVisibilityTSFrom(task)
+		ts, err := persistence.GetVisibilityTSFrom(task)
+		if err != nil {
+			panic(err)
+		}
 		if ts.Before(s.engineImpl.shard.GetTimerMaxReadLevel()) {
 			// This can happen if shard move and new host have a time SKU, or there is db write delay.
 			// We generate a new timer ID using timerMaxReadLevel.
@@ -123,8 +126,12 @@ func (s *timerQueueProcessorSuite) updateTimerSeqNumbers(timerTasks []persistenc
 			panic(err)
 		}
 		task.SetTaskID(taskID)
+		ts, err = persistence.GetVisibilityTSFrom(task)
+		if err != nil {
+			panic(err)
+		}
 		s.logger.Infof("%v: TestTimerQueueProcessorSuite: Assigning timer: %s",
-			time.Now().UTC(), TimerSequenceID{VisibilityTimestamp: persistence.GetVisibilityTSFrom(task), TaskID: task.GetTaskID()})
+			time.Now().UTC(), TimerSequenceID{VisibilityTimestamp: ts, TaskID: task.GetTaskID()})
 	}
 }
 

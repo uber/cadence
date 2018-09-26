@@ -1,0 +1,9 @@
+{
+  "CurrVersion": "0.11",
+  "MinCompatibleVersion": "0.11",
+  "Description": "Mutable state support for server-side retries and history size",
+  "SchemaUpdateCqlFiles": [
+    "workflow_retry.cql",
+    "history_size.cql"
+  ]
+}

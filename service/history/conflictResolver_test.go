@@ -123,23 +123,23 @@ func (s *conflictResolverSuite) TestGetHistory() {
 	nextEventID := int64(101)
 
 	event1 := &shared.HistoryEvent{
-		EventId: common.Int64Ptr(1),
+		EventId:                                 common.Int64Ptr(1),
 		WorkflowExecutionStartedEventAttributes: &shared.WorkflowExecutionStartedEventAttributes{},
 	}
 	event2 := &shared.HistoryEvent{
-		EventId: common.Int64Ptr(2),
+		EventId:                              common.Int64Ptr(2),
 		DecisionTaskScheduledEventAttributes: &shared.DecisionTaskScheduledEventAttributes{},
 	}
 	event3 := &shared.HistoryEvent{
-		EventId: common.Int64Ptr(3),
+		EventId:                            common.Int64Ptr(3),
 		DecisionTaskStartedEventAttributes: &shared.DecisionTaskStartedEventAttributes{},
 	}
 	event4 := &shared.HistoryEvent{
-		EventId: common.Int64Ptr(4),
+		EventId:                              common.Int64Ptr(4),
 		DecisionTaskCompletedEventAttributes: &shared.DecisionTaskCompletedEventAttributes{},
 	}
 	event5 := &shared.HistoryEvent{
-		EventId: common.Int64Ptr(5),
+		EventId:                              common.Int64Ptr(5),
 		ActivityTaskScheduledEventAttributes: &shared.ActivityTaskScheduledEventAttributes{},
 	}
 
@@ -156,7 +156,8 @@ func (s *conflictResolverSuite) TestGetHistory() {
 		NextPageToken:    pageToken,
 		LastFirstEventID: event1.GetEventId(),
 	}, nil)
-	history, token, firstEventID, err := s.conflictResolver.getHistory(domainID, execution, common.FirstEventID, nextEventID, nil)
+	response, err := s.conflictResolver.getHistory(domainID, execution, common.FirstEventID, nextEventID, nil)
+	history, token, firstEventID := response.History, response.NextPageToken, response.LastFirstEventID
 	s.Nil(err)
 	s.Equal(history.Events, []*shared.HistoryEvent{event1, event2})
 	s.Equal(pageToken, token)
@@ -174,7 +175,8 @@ func (s *conflictResolverSuite) TestGetHistory() {
 		NextPageToken:    nil,
 		LastFirstEventID: event4.GetEventId(),
 	}, nil)
-	history, token, firstEventID, err = s.conflictResolver.getHistory(domainID, execution, common.FirstEventID, nextEventID, token)
+	response, err = s.conflictResolver.getHistory(domainID, execution, common.FirstEventID, nextEventID, token)
+	history, token, firstEventID = response.History, response.NextPageToken, response.LastFirstEventID
 	s.Nil(err)
 	s.Equal(history.Events, []*shared.HistoryEvent{event3, event4, event5})
 	s.Empty(token)
@@ -193,16 +195,16 @@ func (s *conflictResolverSuite) TestReset() {
 		EventId: common.Int64Ptr(1),
 		Version: common.Int64Ptr(12),
 		WorkflowExecutionStartedEventAttributes: &shared.WorkflowExecutionStartedEventAttributes{
-			WorkflowType: &shared.WorkflowType{Name: common.StringPtr("some random workflow type")},
-			TaskList:     &shared.TaskList{Name: common.StringPtr("some random workflow type")},
-			Input:        []byte("some random input"),
+			WorkflowType:                        &shared.WorkflowType{Name: common.StringPtr("some random workflow type")},
+			TaskList:                            &shared.TaskList{Name: common.StringPtr("some random workflow type")},
+			Input:                               []byte("some random input"),
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(123),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(233),
 			Identity:                            common.StringPtr("some random identity"),
 		},
 	}
 	event2 := &shared.HistoryEvent{
-		EventId: common.Int64Ptr(2),
+		EventId:                              common.Int64Ptr(2),
 		DecisionTaskScheduledEventAttributes: &shared.DecisionTaskScheduledEventAttributes{},
 	}
 
