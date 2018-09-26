@@ -28,7 +28,6 @@ import (
 	"github.com/gocql/gocql"
 	log "github.com/sirupsen/logrus"
 	"github.com/uber-common/bark"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/logging"
 	p "github.com/uber/cadence/common/persistence"
@@ -60,7 +59,7 @@ func InitTestSuite(tb *persistencetests.TestBase) {
 		DBPort:             testPort,
 		DBUser:             testUser,
 		DBPassword:         testPassword,
-		DropKeySpace:       true,
+		DropDatabase:       true,
 		EnableGlobalDomain: false,
 	}
 	InitTestSuiteWithOptions(tb, options)
@@ -102,7 +101,7 @@ func InitTestSuiteWithMetadata(tb *persistencetests.TestBase, options *persisten
 		log.Fatal(err)
 	}
 	// Create an ExecutionManager for the shard for use in unit tests
-	tb.WorkflowMgr, err = tb.ExecutionMgrFactory.CreateExecutionManager(shardID)
+	tb.ExecutionManager, err = tb.ExecutionMgrFactory.CreateExecutionManager(shardID)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -178,13 +177,13 @@ func (s *TestCluster) DatabaseName() string {
 
 // SetupTestDatabase from PersistenceTestCluster interface
 func (s *TestCluster) SetupTestDatabase(options *persistencetests.TestBaseOptions) {
-	s.keyspace = options.DatabaseName
+	s.keyspace = options.DBName
 	if s.keyspace == "" {
 		s.keyspace = persistencetests.GenerateRandomDBName(10)
 	}
 
 	s.CreateSession(options)
-	s.CreateDatabase(1, options.DropKeySpace)
+	s.CreateDatabase(1, options.DropDatabase)
 	cadencePackageDir, err := getCadencePackageDir()
 	if err != nil {
 		log.Fatal(err)
@@ -202,7 +201,7 @@ func (s *TestCluster) TearDownTestDatabase() {
 
 // CreateSession from PersistenceTestCluster interface
 func (s *TestCluster) CreateSession(options *persistencetests.TestBaseOptions) {
-	s.cluster = common.NewCassandraCluster(options.DBHost, options.DBPort, options.DBUser, options.DBPassword, options.Datacenter)
+	s.cluster = NewCassandraCluster(options.DBHost, options.DBPort, options.DBUser, options.DBPassword, options.Datacenter)
 	s.cluster.Consistency = gocql.Consistency(1)
 	s.cluster.Keyspace = "system"
 	s.cluster.Timeout = 40 * time.Second
@@ -215,7 +214,7 @@ func (s *TestCluster) CreateSession(options *persistencetests.TestBaseOptions) {
 
 // CreateDatabase from PersistenceTestCluster interface
 func (s *TestCluster) CreateDatabase(replicas int, dropKeySpace bool) {
-	err := common.CreateCassandraKeyspace(s.session, s.DatabaseName(), replicas, dropKeySpace)
+	err := CreateCassandraKeyspace(s.session, s.DatabaseName(), replicas, dropKeySpace)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -225,7 +224,7 @@ func (s *TestCluster) CreateDatabase(replicas int, dropKeySpace bool) {
 
 // DropDatabase from PersistenceTestCluster interface
 func (s *TestCluster) DropDatabase() {
-	err := common.DropCassandraKeyspace(s.session, s.DatabaseName())
+	err := DropCassandraKeyspace(s.session, s.DatabaseName())
 	if err != nil && !strings.Contains(err.Error(), "AlreadyExists") {
 		log.Fatal(err)
 	}
@@ -234,7 +233,7 @@ func (s *TestCluster) DropDatabase() {
 // LoadSchema from PersistenceTestCluster interface
 func (s *TestCluster) LoadSchema(fileNames []string, schemaDir string) {
 	workflowSchemaDir := schemaDir + "/cadence"
-	err := common.LoadCassandraSchema(workflowSchemaDir, fileNames, s.cluster.Port, s.DatabaseName(), true)
+	err := LoadCassandraSchema(workflowSchemaDir, fileNames, s.cluster.Port, s.DatabaseName(), true)
 	if err != nil && !strings.Contains(err.Error(), "AlreadyExists") {
 		log.Fatal(err)
 	}
@@ -243,7 +242,7 @@ func (s *TestCluster) LoadSchema(fileNames []string, schemaDir string) {
 // LoadVisibilitySchema from PersistenceTestCluster interface
 func (s *TestCluster) LoadVisibilitySchema(fileNames []string, schemaDir string) {
 	workflowSchemaDir := schemaDir + "visibility"
-	err := common.LoadCassandraSchema(workflowSchemaDir, fileNames, s.cluster.Port, s.DatabaseName(), false)
+	err := LoadCassandraSchema(workflowSchemaDir, fileNames, s.cluster.Port, s.DatabaseName(), false)
 	if err != nil && !strings.Contains(err.Error(), "AlreadyExists") {
 		log.Fatal(err)
 	}

@@ -68,6 +68,7 @@ const (
 	// ShardTagName is temporary until we can get all metric data removed for the service
 	ShardTagName       = "shard"
 	CadenceRoleTagName = "cadence-role"
+	StatsTypeTagName   = "stats-type"
 )
 
 // This package should hold all the metrics and tags for cadence
@@ -78,6 +79,9 @@ const (
 
 	HistoryRoleTagValue  = "history"
 	MatchingRoleTagValue = "matching"
+
+	SizeStatsTypeTagValue  = "size"
+	CountStatsTypeTagValue = "count"
 )
 
 // Common service base metrics
@@ -458,6 +462,14 @@ const (
 	HistoryCacheGetOrCreateScope
 	// HistoryCacheGetCurrentExecutionScope is the scope used by history cache for getting current execution
 	HistoryCacheGetCurrentExecutionScope
+	// ExecutionSizeStatsScope is the scope used for emiting workflow execution size related stats
+	ExecutionSizeStatsScope
+	// ExecutionCountStatsScope is the scope used for emiting workflow execution count related stats
+	ExecutionCountStatsScope
+	// SessionSizeStatsScope is the scope used for emiting session update size related stats
+	SessionSizeStatsScope
+	// SessionCountStatsScope is the scope used for emiting session update count related stats
+	SessionCountStatsScope
 
 	NumHistoryScopes
 )
@@ -676,6 +688,10 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryCacheGetAndCreateScope:                {operation: "HistoryCacheGetAndCreate"},
 		HistoryCacheGetOrCreateScope:                 {operation: "HistoryCacheGetOrCreate"},
 		HistoryCacheGetCurrentExecutionScope:         {operation: "HistoryCacheGetCurrentExecution"},
+		ExecutionSizeStatsScope:                      {operation: "ExecutionStats", tags: map[string]string{StatsTypeTagName: SizeStatsTypeTagValue}},
+		ExecutionCountStatsScope:                     {operation: "ExecutionStats", tags: map[string]string{StatsTypeTagName: CountStatsTypeTagValue}},
+		SessionSizeStatsScope:                        {operation: "SessionStats", tags: map[string]string{StatsTypeTagName: SizeStatsTypeTagValue}},
+		SessionCountStatsScope:                       {operation: "SessionStats", tags: map[string]string{StatsTypeTagName: CountStatsTypeTagValue}},
 	},
 	// Matching Scope Names
 	Matching: {
@@ -745,6 +761,7 @@ const (
 const (
 	TaskRequests = iota + NumCommonMetrics
 	TaskFailures
+	TaskDiscarded
 	TaskLatency
 	AckLevelUpdateCounter
 	AckLevelUpdateFailedCounter
@@ -777,6 +794,14 @@ const (
 	ShardClosedCounter
 	ShardItemCreatedCounter
 	ShardItemRemovedCounter
+	ShardInfoReplicationPendingTasksTimer
+	ShardInfoTransferActivePendingTasksTimer
+	ShardInfoTransferStandbyPendingTasksTimer
+	ShardInfoTimerActivePendingTasksTimer
+	ShardInfoTimerStandbyPendingTasksTimer
+	ShardInfoReplicationLagTimer
+	ShardInfoTransferLagTimer
+	ShardInfoTimerLagTimer
 	ShardInfoTransferDiffTimer
 	ShardInfoTimerDiffTimer
 	MembershipChangedCounter
@@ -812,6 +837,27 @@ const (
 	CacheMissCounter
 	AcquireLockFailedCounter
 	WorkflowContextCleared
+	HistorySize
+	MutableStateSize
+	ExecutionInfoSize
+	ActivityInfoSize
+	TimerInfoSize
+	ChildInfoSize
+	SignalInfoSize
+	BufferedEventsSize
+	BufferedReplicationTasksSize
+	ActivityInfoCount
+	TimerInfoCount
+	ChildInfoCount
+	SignalInfoCount
+	RequestCancelInfoCount
+	BufferedEventsCount
+	BufferedReplicationTasksCount
+	DeleteActivityInfoCount
+	DeleteTimerInfoCount
+	DeleteChildInfoCount
+	DeleteSignalInfoCount
+	DeleteRequestCancelInfoCount
 
 	NumHistoryMetrics
 )
@@ -884,6 +930,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 	History: {
 		TaskRequests:                                 {metricName: "task.requests", metricType: Counter},
 		TaskFailures:                                 {metricName: "task.errors", metricType: Counter},
+		TaskDiscarded:                                {metricName: "task.errors.discarded", metricType: Counter},
 		TaskLatency:                                  {metricName: "task.latency", metricType: Timer},
 		AckLevelUpdateCounter:                        {metricName: "ack-level-update", metricType: Counter},
 		AckLevelUpdateFailedCounter:                  {metricName: "ack-level-update-failed", metricType: Counter},
@@ -916,6 +963,14 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ShardClosedCounter:                           {metricName: "shard-closed-count", metricType: Counter},
 		ShardItemCreatedCounter:                      {metricName: "sharditem-created-count", metricType: Counter},
 		ShardItemRemovedCounter:                      {metricName: "sharditem-removed-count", metricType: Counter},
+		ShardInfoReplicationPendingTasksTimer:        {metricName: "shardinfo-replication-pending-task", metricType: Timer},
+		ShardInfoTransferActivePendingTasksTimer:     {metricName: "shardinfo-transfer-active-pending-task", metricType: Timer},
+		ShardInfoTransferStandbyPendingTasksTimer:    {metricName: "shardinfo-transfer-standby-pending-task", metricType: Timer},
+		ShardInfoTimerActivePendingTasksTimer:        {metricName: "shardinfo-timer-active-pending-task", metricType: Timer},
+		ShardInfoTimerStandbyPendingTasksTimer:       {metricName: "shardinfo-timer-standby-pending-task", metricType: Timer},
+		ShardInfoReplicationLagTimer:                 {metricName: "shardinfo-replication-lag", metricType: Timer},
+		ShardInfoTransferLagTimer:                    {metricName: "shardinfo-transfer-lag", metricType: Timer},
+		ShardInfoTimerLagTimer:                       {metricName: "shardinfo-timer-lag", metricType: Timer},
 		ShardInfoTransferDiffTimer:                   {metricName: "shardinfo-transfer-diff", metricType: Timer},
 		ShardInfoTimerDiffTimer:                      {metricName: "shardinfo-timer-diff", metricType: Timer},
 		MembershipChangedCounter:                     {metricName: "membership-changed-count", metricType: Counter},
@@ -951,6 +1006,27 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		CacheMissCounter:                             {metricName: "cache-miss", metricType: Counter},
 		AcquireLockFailedCounter:                     {metricName: "acquire-lock-failed", metricType: Counter},
 		WorkflowContextCleared:                       {metricName: "workflow-context-cleared", metricType: Counter},
+		HistorySize:                                  {metricName: "history-size", metricType: Timer},
+		MutableStateSize:                             {metricName: "mutable-state-size", metricType: Timer},
+		ExecutionInfoSize:                            {metricName: "execution-info-size", metricType: Timer},
+		ActivityInfoSize:                             {metricName: "activity-info-size", metricType: Timer},
+		TimerInfoSize:                                {metricName: "timer-info-size", metricType: Timer},
+		ChildInfoSize:                                {metricName: "child-info-size", metricType: Timer},
+		SignalInfoSize:                               {metricName: "signal-info", metricType: Timer},
+		BufferedEventsSize:                           {metricName: "buffered-events-size", metricType: Timer},
+		BufferedReplicationTasksSize:                 {metricName: "buffered-replication-tasks-size", metricType: Timer},
+		ActivityInfoCount:                            {metricName: "activity-info-count", metricType: Timer},
+		TimerInfoCount:                               {metricName: "timer-info-count", metricType: Timer},
+		ChildInfoCount:                               {metricName: "child-info-count", metricType: Timer},
+		SignalInfoCount:                              {metricName: "signal-info-count", metricType: Timer},
+		RequestCancelInfoCount:                       {metricName: "request-cancel-info-count", metricType: Timer},
+		BufferedEventsCount:                          {metricName: "buffered-events-count", metricType: Timer},
+		BufferedReplicationTasksCount:                {metricName: "buffered-replication-tasks-count", metricType: Timer},
+		DeleteActivityInfoCount:                      {metricName: "delete-activity-info", metricType: Timer},
+		DeleteTimerInfoCount:                         {metricName: "delete-timer-info", metricType: Timer},
+		DeleteChildInfoCount:                         {metricName: "delete-child-info", metricType: Timer},
+		DeleteSignalInfoCount:                        {metricName: "delete-signal-info", metricType: Timer},
+		DeleteRequestCancelInfoCount:                 {metricName: "delete-request-cancel-info", metricType: Timer},
 	},
 	Matching: {
 		PollSuccessCounter:            {metricName: "poll.success"},

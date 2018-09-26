@@ -383,8 +383,12 @@ func (s *TestShardContext) ResetMutableState(request *persistence.ResetMutableSt
 }
 
 // AppendHistoryEvents test implementation
-func (s *TestShardContext) AppendHistoryEvents(request *persistence.AppendHistoryEventsRequest) error {
-	return s.historyMgr.AppendHistoryEvents(request)
+func (s *TestShardContext) AppendHistoryEvents(request *persistence.AppendHistoryEventsRequest) (int, error) {
+	size := 0
+	if request.Events != nil {
+		size = len(request.Events.Data)
+	}
+	return size, s.historyMgr.AppendHistoryEvents(request)
 }
 
 // NotifyNewHistoryEvent test implementation
@@ -453,7 +457,7 @@ func (s *TestBase) SetupWorkflowStoreWithOptions(options persistencetests.TestBa
 	log := bark.NewLoggerFromLogrus(log.New())
 	config := NewConfig(dynamicconfig.NewNopCollection(), 1)
 	clusterMetadata := cluster.GetTestClusterMetadata(options.EnableGlobalDomain, options.IsMasterCluster)
-	s.ShardContext = newTestShardContext(s.ShardInfo, 0, s.HistoryMgr, s.WorkflowMgr, s.MetadataManager, s.MetadataManagerV2,
+	s.ShardContext = newTestShardContext(s.ShardInfo, 0, s.HistoryMgr, s.ExecutionManager, s.MetadataManager, s.MetadataManagerV2,
 		clusterMetadata, config, log)
 	s.TestBase.TaskIDGenerator = s.ShardContext
 }
@@ -464,7 +468,7 @@ func (s *TestBase) SetupWorkflowStore() {
 	log := bark.NewLoggerFromLogrus(log.New())
 	config := NewConfig(dynamicconfig.NewNopCollection(), 1)
 	clusterMetadata := cluster.GetTestClusterMetadata(false, false)
-	s.ShardContext = newTestShardContext(s.ShardInfo, 0, s.HistoryMgr, s.WorkflowMgr, s.MetadataManager, s.MetadataManagerV2,
+	s.ShardContext = newTestShardContext(s.ShardInfo, 0, s.HistoryMgr, s.ExecutionManager, s.MetadataManager, s.MetadataManagerV2,
 		clusterMetadata, config, log)
 	s.TestBase.TaskIDGenerator = s.ShardContext
 }

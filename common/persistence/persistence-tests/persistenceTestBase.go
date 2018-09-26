@@ -46,9 +46,9 @@ type (
 		DBPort       int    // database port
 		DBUser       string // database user
 		DBPassword   string // database password
-		DatabaseName string // database name
+		DBName       string // database name
 		Datacenter   string // database datacenter
-		DropKeySpace bool   // drop existing database
+		DropDatabase bool   // drop existing database
 		SchemaDir    string // directory with schema files
 		// TODO this is used for global domain test
 		// when crtoss DC is public, remove EnableGlobalDomain
@@ -60,7 +60,7 @@ type (
 	TestBase struct {
 		ShardMgr               p.ShardManager
 		ExecutionMgrFactory    p.ExecutionManagerFactory
-		WorkflowMgr            p.ExecutionManager
+		ExecutionManager       p.ExecutionManager
 		TaskMgr                p.TaskManager
 		HistoryMgr             p.HistoryManager
 		MetadataManager        p.MetadataManager
@@ -73,7 +73,6 @@ type (
 		ReadLevel              int64
 		ReplicationReadLevel   int64
 		PersistenceTestCluster PersistenceTestCluster
-		UseMysql               bool
 	}
 
 	// PersistenceTestCluster exposes management operations on a database
@@ -82,7 +81,6 @@ type (
 		SetupTestDatabase(options *TestBaseOptions)
 		TearDownTestDatabase()
 		CreateSession(options *TestBaseOptions)
-		CreateDatabase(replicas int, dropExisting bool)
 		DropDatabase()
 		LoadSchema(fileNames []string, schemaDir string)
 		LoadVisibilitySchema(fileNames []string, schemaDir string)
@@ -137,7 +135,7 @@ func (s *TestBase) UpdateShard(updatedInfo *p.ShardInfo, previousRangeID int64) 
 func (s *TestBase) CreateWorkflowExecution(domainID string, workflowExecution workflow.WorkflowExecution, taskList,
 	wType string, wTimeout int32, decisionTimeout int32, executionContext []byte, nextEventID int64, lastProcessedEventID int64,
 	decisionScheduleID int64, timerTasks []p.Task) (*p.CreateWorkflowExecutionResponse, error) {
-	response, err := s.WorkflowMgr.CreateWorkflowExecution(&p.CreateWorkflowExecutionRequest{
+	response, err := s.ExecutionManager.CreateWorkflowExecution(&p.CreateWorkflowExecutionRequest{
 		RequestID:            uuid.New(),
 		DomainID:             domainID,
 		Execution:            workflowExecution,
@@ -189,7 +187,7 @@ func (s *TestBase) CreateWorkflowExecutionWithReplication(domainID string, workf
 		TaskList:   taskList,
 		ScheduleID: decisionScheduleID,
 	})
-	response, err := s.WorkflowMgr.CreateWorkflowExecution(&p.CreateWorkflowExecutionRequest{
+	response, err := s.ExecutionManager.CreateWorkflowExecution(&p.CreateWorkflowExecutionRequest{
 		RequestID:                   uuid.New(),
 		DomainID:                    domainID,
 		Execution:                   workflowExecution,
@@ -237,7 +235,7 @@ func (s *TestBase) CreateWorkflowExecutionManyTasks(domainID string, workflowExe
 			})
 	}
 
-	response, err := s.WorkflowMgr.CreateWorkflowExecution(&p.CreateWorkflowExecutionRequest{
+	response, err := s.ExecutionManager.CreateWorkflowExecution(&p.CreateWorkflowExecutionRequest{
 		RequestID:                   uuid.New(),
 		DomainID:                    domainID,
 		Execution:                   workflowExecution,
@@ -260,7 +258,7 @@ func (s *TestBase) CreateChildWorkflowExecution(domainID string, workflowExecuti
 	parentDomainID string, parentExecution *workflow.WorkflowExecution, initiatedID int64, taskList, wType string,
 	wTimeout int32, decisionTimeout int32, executionContext []byte, nextEventID int64, lastProcessedEventID int64,
 	decisionScheduleID int64, timerTasks []p.Task) (*p.CreateWorkflowExecutionResponse, error) {
-	response, err := s.WorkflowMgr.CreateWorkflowExecution(&p.CreateWorkflowExecutionRequest{
+	response, err := s.ExecutionManager.CreateWorkflowExecution(&p.CreateWorkflowExecutionRequest{
 		RequestID:            uuid.New(),
 		DomainID:             domainID,
 		Execution:            workflowExecution,
@@ -295,7 +293,7 @@ func (s *TestBase) CreateChildWorkflowExecution(domainID string, workflowExecuti
 // GetWorkflowExecutionInfo is a utility method to retrieve execution info
 func (s *TestBase) GetWorkflowExecutionInfo(domainID string, workflowExecution workflow.WorkflowExecution) (
 	*p.WorkflowMutableState, error) {
-	response, err := s.WorkflowMgr.GetWorkflowExecution(&p.GetWorkflowExecutionRequest{
+	response, err := s.ExecutionManager.GetWorkflowExecution(&p.GetWorkflowExecutionRequest{
 		DomainID:  domainID,
 		Execution: workflowExecution,
 	})
@@ -308,7 +306,7 @@ func (s *TestBase) GetWorkflowExecutionInfo(domainID string, workflowExecution w
 
 // GetCurrentWorkflowRunID returns the workflow run ID for the given params
 func (s *TestBase) GetCurrentWorkflowRunID(domainID, workflowID string) (string, error) {
-	response, err := s.WorkflowMgr.GetCurrentExecution(&p.GetCurrentExecutionRequest{
+	response, err := s.ExecutionManager.GetCurrentExecution(&p.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	})
@@ -330,7 +328,7 @@ func (s *TestBase) ContinueAsNewExecution(updatedInfo *p.WorkflowExecutionInfo, 
 		ScheduleID: int64(decisionScheduleID),
 	}
 
-	return s.WorkflowMgr.UpdateWorkflowExecution(&p.UpdateWorkflowExecutionRequest{
+	return s.ExecutionManager.UpdateWorkflowExecution(&p.UpdateWorkflowExecutionRequest{
 		ExecutionInfo:       updatedInfo,
 		TransferTasks:       []p.Task{newdecisionTask},
 		TimerTasks:          nil,
@@ -379,7 +377,7 @@ func (s *TestBase) UpdateWorkflowExecution(updatedInfo *p.WorkflowExecutionInfo,
 func (s *TestBase) UpdateWorkflowExecutionAndFinish(updatedInfo *p.WorkflowExecutionInfo, condition int64, retentionSecond int32) error {
 	transferTasks := []p.Task{}
 	transferTasks = append(transferTasks, &p.CloseExecutionTask{TaskID: s.GetNextSequenceNumber()})
-	return s.WorkflowMgr.UpdateWorkflowExecution(&p.UpdateWorkflowExecutionRequest{
+	return s.ExecutionManager.UpdateWorkflowExecution(&p.UpdateWorkflowExecutionRequest{
 		ExecutionInfo:        updatedInfo,
 		TransferTasks:        transferTasks,
 		TimerTasks:           nil,
@@ -527,7 +525,7 @@ func (s *TestBase) UpdateWorkflowExecutionWithReplication(updatedInfo *p.Workflo
 			ScheduleID: int64(activityScheduleID)})
 	}
 
-	return s.WorkflowMgr.UpdateWorkflowExecution(&p.UpdateWorkflowExecutionRequest{
+	return s.ExecutionManager.UpdateWorkflowExecution(&p.UpdateWorkflowExecutionRequest{
 		ExecutionInfo:                 updatedInfo,
 		ReplicationState:              updatedReplicationState,
 		TransferTasks:                 transferTasks,
@@ -556,7 +554,7 @@ func (s *TestBase) UpdateWorkflowExecutionWithReplication(updatedInfo *p.Workflo
 // UpdateWorkflowExecutionWithTransferTasks is a utility method to update workflow execution
 func (s *TestBase) UpdateWorkflowExecutionWithTransferTasks(
 	updatedInfo *p.WorkflowExecutionInfo, condition int64, transferTasks []p.Task, upsertActivityInfo []*p.ActivityInfo) error {
-	return s.WorkflowMgr.UpdateWorkflowExecution(&p.UpdateWorkflowExecutionRequest{
+	return s.ExecutionManager.UpdateWorkflowExecution(&p.UpdateWorkflowExecutionRequest{
 		ExecutionInfo:       updatedInfo,
 		TransferTasks:       transferTasks,
 		Condition:           condition,
@@ -568,7 +566,7 @@ func (s *TestBase) UpdateWorkflowExecutionWithTransferTasks(
 // UpdateWorkflowExecutionForChildExecutionsInitiated is a utility method to update workflow execution
 func (s *TestBase) UpdateWorkflowExecutionForChildExecutionsInitiated(
 	updatedInfo *p.WorkflowExecutionInfo, condition int64, transferTasks []p.Task, childInfos []*p.ChildExecutionInfo) error {
-	return s.WorkflowMgr.UpdateWorkflowExecution(&p.UpdateWorkflowExecutionRequest{
+	return s.ExecutionManager.UpdateWorkflowExecution(&p.UpdateWorkflowExecutionRequest{
 		ExecutionInfo:             updatedInfo,
 		TransferTasks:             transferTasks,
 		Condition:                 condition,
@@ -581,7 +579,7 @@ func (s *TestBase) UpdateWorkflowExecutionForChildExecutionsInitiated(
 func (s *TestBase) UpdateWorkflowExecutionForRequestCancel(
 	updatedInfo *p.WorkflowExecutionInfo, condition int64, transferTasks []p.Task,
 	upsertRequestCancelInfo []*p.RequestCancelInfo) error {
-	return s.WorkflowMgr.UpdateWorkflowExecution(&p.UpdateWorkflowExecutionRequest{
+	return s.ExecutionManager.UpdateWorkflowExecution(&p.UpdateWorkflowExecutionRequest{
 		ExecutionInfo:            updatedInfo,
 		TransferTasks:            transferTasks,
 		Condition:                condition,
@@ -594,7 +592,7 @@ func (s *TestBase) UpdateWorkflowExecutionForRequestCancel(
 func (s *TestBase) UpdateWorkflowExecutionForSignal(
 	updatedInfo *p.WorkflowExecutionInfo, condition int64, transferTasks []p.Task,
 	upsertSignalInfos []*p.SignalInfo) error {
-	return s.WorkflowMgr.UpdateWorkflowExecution(&p.UpdateWorkflowExecutionRequest{
+	return s.ExecutionManager.UpdateWorkflowExecution(&p.UpdateWorkflowExecutionRequest{
 		ExecutionInfo:     updatedInfo,
 		TransferTasks:     transferTasks,
 		Condition:         condition,
@@ -607,7 +605,7 @@ func (s *TestBase) UpdateWorkflowExecutionForSignal(
 func (s *TestBase) UpdateWorkflowExecutionForBufferEvents(
 	updatedInfo *p.WorkflowExecutionInfo, rState *p.ReplicationState, condition int64,
 	bufferEvents *p.SerializedHistoryEventBatch) error {
-	return s.WorkflowMgr.UpdateWorkflowExecution(&p.UpdateWorkflowExecutionRequest{
+	return s.ExecutionManager.UpdateWorkflowExecution(&p.UpdateWorkflowExecutionRequest{
 		ExecutionInfo:     updatedInfo,
 		ReplicationState:  rState,
 		NewBufferedEvents: bufferEvents,
@@ -647,7 +645,7 @@ func (s *TestBase) UpdateAllMutableState(updatedMutableState *p.WorkflowMutableS
 	for id := range updatedMutableState.SignalRequestedIDs {
 		srIDs = append(srIDs, id)
 	}
-	return s.WorkflowMgr.UpdateWorkflowExecution(&p.UpdateWorkflowExecutionRequest{
+	return s.ExecutionManager.UpdateWorkflowExecution(&p.UpdateWorkflowExecutionRequest{
 		ExecutionInfo:             updatedMutableState.ExecutionInfo,
 		ReplicationState:          updatedMutableState.ReplicationState,
 		Condition:                 condition,
@@ -665,7 +663,7 @@ func (s *TestBase) UpdateAllMutableState(updatedMutableState *p.WorkflowMutableS
 func (s *TestBase) ResetMutableState(prevRunID string, info *p.WorkflowExecutionInfo, replicationState *p.ReplicationState, nextEventID int64,
 	activityInfos []*p.ActivityInfo, timerInfos []*p.TimerInfo, childExecutionInfos []*p.ChildExecutionInfo,
 	requestCancelInfos []*p.RequestCancelInfo, signalInfos []*p.SignalInfo, ids []string) error {
-	return s.WorkflowMgr.ResetMutableState(&p.ResetMutableStateRequest{
+	return s.ExecutionManager.ResetMutableState(&p.ResetMutableStateRequest{
 		PrevRunID:                 prevRunID,
 		ExecutionInfo:             info,
 		ReplicationState:          replicationState,
@@ -682,7 +680,7 @@ func (s *TestBase) ResetMutableState(prevRunID string, info *p.WorkflowExecution
 
 // DeleteWorkflowExecution is a utility method to delete a workflow execution
 func (s *TestBase) DeleteWorkflowExecution(info *p.WorkflowExecutionInfo) error {
-	return s.WorkflowMgr.DeleteWorkflowExecution(&p.DeleteWorkflowExecutionRequest{
+	return s.ExecutionManager.DeleteWorkflowExecution(&p.DeleteWorkflowExecutionRequest{
 		DomainID:   info.DomainID,
 		WorkflowID: info.WorkflowID,
 		RunID:      info.RunID,
@@ -696,7 +694,7 @@ func (s *TestBase) GetTransferTasks(batchSize int, getAll bool) ([]*p.TransferTa
 
 Loop:
 	for {
-		response, err := s.WorkflowMgr.GetTransferTasks(&p.GetTransferTasksRequest{
+		response, err := s.ExecutionManager.GetTransferTasks(&p.GetTransferTasksRequest{
 			ReadLevel:     s.GetTransferReadLevel(),
 			MaxReadLevel:  int64(math.MaxInt64),
 			BatchSize:     batchSize,
@@ -727,7 +725,7 @@ func (s *TestBase) GetReplicationTasks(batchSize int, getAll bool) ([]*p.Replica
 
 Loop:
 	for {
-		response, err := s.WorkflowMgr.GetReplicationTasks(&p.GetReplicationTasksRequest{
+		response, err := s.ExecutionManager.GetReplicationTasks(&p.GetReplicationTasksRequest{
 			ReadLevel:     s.GetReplicationReadLevel(),
 			MaxReadLevel:  int64(math.MaxInt64),
 			BatchSize:     batchSize,
@@ -754,14 +752,14 @@ Loop:
 // CompleteTransferTask is a utility method to complete a transfer task
 func (s *TestBase) CompleteTransferTask(taskID int64) error {
 
-	return s.WorkflowMgr.CompleteTransferTask(&p.CompleteTransferTaskRequest{
+	return s.ExecutionManager.CompleteTransferTask(&p.CompleteTransferTaskRequest{
 		TaskID: taskID,
 	})
 }
 
 // RangeCompleteTransferTask is a utility method to complete a range of transfer tasks
 func (s *TestBase) RangeCompleteTransferTask(exclusiveBeginTaskID int64, inclusiveEndTaskID int64) error {
-	return s.WorkflowMgr.RangeCompleteTransferTask(&p.RangeCompleteTransferTaskRequest{
+	return s.ExecutionManager.RangeCompleteTransferTask(&p.RangeCompleteTransferTaskRequest{
 		ExclusiveBeginTaskID: exclusiveBeginTaskID,
 		InclusiveEndTaskID:   inclusiveEndTaskID,
 	})
@@ -770,7 +768,7 @@ func (s *TestBase) RangeCompleteTransferTask(exclusiveBeginTaskID int64, inclusi
 // CompleteReplicationTask is a utility method to complete a replication task
 func (s *TestBase) CompleteReplicationTask(taskID int64) error {
 
-	return s.WorkflowMgr.CompleteReplicationTask(&p.CompleteReplicationTaskRequest{
+	return s.ExecutionManager.CompleteReplicationTask(&p.CompleteReplicationTaskRequest{
 		TaskID: taskID,
 	})
 }
@@ -782,7 +780,7 @@ func (s *TestBase) GetTimerIndexTasks(batchSize int, getAll bool) ([]*p.TimerTas
 
 Loop:
 	for {
-		response, err := s.WorkflowMgr.GetTimerIndexTasks(&p.GetTimerIndexTasksRequest{
+		response, err := s.ExecutionManager.GetTimerIndexTasks(&p.GetTimerIndexTasksRequest{
 			MinTimestamp:  time.Time{},
 			MaxTimestamp:  time.Unix(0, math.MaxInt64),
 			BatchSize:     batchSize,
@@ -804,7 +802,7 @@ Loop:
 
 // CompleteTimerTask is a utility method to complete a timer task
 func (s *TestBase) CompleteTimerTask(ts time.Time, taskID int64) error {
-	return s.WorkflowMgr.CompleteTimerTask(&p.CompleteTimerTaskRequest{
+	return s.ExecutionManager.CompleteTimerTask(&p.CompleteTimerTaskRequest{
 		VisibilityTimestamp: ts,
 		TaskID:              taskID,
 	})
@@ -812,7 +810,7 @@ func (s *TestBase) CompleteTimerTask(ts time.Time, taskID int64) error {
 
 // RangeCompleteTimerTask is a utility method to complete a range of timer tasks
 func (s *TestBase) RangeCompleteTimerTask(inclusiveBeginTimestamp time.Time, exclusiveEndTimestamp time.Time) error {
-	return s.WorkflowMgr.RangeCompleteTimerTask(&p.RangeCompleteTimerTaskRequest{
+	return s.ExecutionManager.RangeCompleteTimerTask(&p.RangeCompleteTimerTaskRequest{
 		InclusiveBeginTimestamp: inclusiveBeginTimestamp,
 		ExclusiveEndTimestamp:   exclusiveEndTimestamp,
 	})

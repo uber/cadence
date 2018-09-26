@@ -203,10 +203,10 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionTimedOut()
 	now := time.Now()
 	evenType := shared.EventTypeWorkflowExecutionTimedOut
 	event := &shared.HistoryEvent{
-		Version:   common.Int64Ptr(version),
-		EventId:   common.Int64Ptr(130),
-		Timestamp: common.Int64Ptr(now.UnixNano()),
-		EventType: &evenType,
+		Version:                                  common.Int64Ptr(version),
+		EventId:                                  common.Int64Ptr(130),
+		Timestamp:                                common.Int64Ptr(now.UnixNano()),
+		EventType:                                &evenType,
 		WorkflowExecutionTimedOutEventAttributes: &shared.WorkflowExecutionTimedOutEventAttributes{},
 	}
 
@@ -299,10 +299,10 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionSignaled()
 	now := time.Now()
 	evenType := shared.EventTypeWorkflowExecutionSignaled
 	event := &shared.HistoryEvent{
-		Version:   common.Int64Ptr(version),
-		EventId:   common.Int64Ptr(130),
-		Timestamp: common.Int64Ptr(now.UnixNano()),
-		EventType: &evenType,
+		Version:                                  common.Int64Ptr(version),
+		EventId:                                  common.Int64Ptr(130),
+		Timestamp:                                common.Int64Ptr(now.UnixNano()),
+		EventType:                                &evenType,
 		WorkflowExecutionSignaledEventAttributes: &shared.WorkflowExecutionSignaledEventAttributes{},
 	}
 	s.mockUpdateVersion(event)
@@ -329,10 +329,10 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionFailed() {
 	now := time.Now()
 	evenType := shared.EventTypeWorkflowExecutionFailed
 	event := &shared.HistoryEvent{
-		Version:   common.Int64Ptr(version),
-		EventId:   common.Int64Ptr(130),
-		Timestamp: common.Int64Ptr(now.UnixNano()),
-		EventType: &evenType,
+		Version:                                common.Int64Ptr(version),
+		EventId:                                common.Int64Ptr(130),
+		Timestamp:                              common.Int64Ptr(now.UnixNano()),
+		EventType:                              &evenType,
 		WorkflowExecutionFailedEventAttributes: &shared.WorkflowExecutionFailedEventAttributes{},
 	}
 
@@ -592,10 +592,10 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionCanceled()
 	now := time.Now()
 	evenType := shared.EventTypeWorkflowExecutionCanceled
 	event := &shared.HistoryEvent{
-		Version:   common.Int64Ptr(version),
-		EventId:   common.Int64Ptr(130),
-		Timestamp: common.Int64Ptr(now.UnixNano()),
-		EventType: &evenType,
+		Version:                                  common.Int64Ptr(version),
+		EventId:                                  common.Int64Ptr(130),
+		Timestamp:                                common.Int64Ptr(now.UnixNano()),
+		EventType:                                &evenType,
 		WorkflowExecutionCanceledEventAttributes: &shared.WorkflowExecutionCanceledEventAttributes{},
 	}
 
@@ -721,12 +721,27 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeTimerFired() {
 		EventType:                 &evenType,
 		TimerFiredEventAttributes: &shared.TimerFiredEventAttributes{},
 	}
+
+	// this is the remaining timer
+	// should create a user timer for this
+	timeoutSecond := int32(20)
+	ti := &persistence.TimerInfo{
+		Version:    version,
+		TimerID:    "some random timer ID",
+		ExpiryTime: now.Add(time.Duration(timeoutSecond) * time.Second),
+		StartedID:  144,
+		TaskID:     TimerTaskStatusNone,
+	}
+	s.mockMutableState.On("GetPendingTimerInfos").Return(map[string]*persistence.TimerInfo{ti.TimerID: ti}).Once()
+	s.mockMutableState.On("UpdateUserTimer", ti.TimerID, ti).Once()
 	s.mockMutableState.On("ReplicateTimerFiredEvent", event).Once()
 	s.mockUpdateVersion(event)
 
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
-
-	s.Empty(s.stateBuilder.timerTasks)
+	s.Equal(1, len(s.stateBuilder.timerTasks))
+	timerTask, ok := s.stateBuilder.timerTasks[0].(*persistence.UserTimerTask)
+	s.True(ok)
+	s.True(timerTask.VisibilityTimestamp.Equal(ti.ExpiryTime))
 	s.Empty(s.stateBuilder.transferTasks)
 	s.Empty(s.stateBuilder.newRunTimerTasks)
 	s.Empty(s.stateBuilder.newRunTransferTasks)
@@ -1627,12 +1642,40 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskTimedOut() {
 		EventType:                           &evenType,
 		ActivityTaskTimedOutEventAttributes: &shared.ActivityTaskTimedOutEventAttributes{},
 	}
+
+	// this is the remaining activity
+	// should create a activity timer for this
+	timeoutSecond := int32(10)
+	ai := &persistence.ActivityInfo{
+		Version:                  version,
+		ScheduleID:               123,
+		ScheduledEvent:           nil,
+		ScheduledTime:            now,
+		StartedID:                124,
+		StartedEvent:             nil,
+		StartedTime:              now,
+		ActivityID:               "some random activity ID",
+		ScheduleToStartTimeout:   timeoutSecond,
+		ScheduleToCloseTimeout:   timeoutSecond,
+		StartToCloseTimeout:      timeoutSecond,
+		HeartbeatTimeout:         timeoutSecond,
+		CancelRequested:          false,
+		CancelRequestID:          common.EmptyEventID,
+		LastHeartBeatUpdatedTime: time.Time{},
+		TimerTaskStatus:          TimerTaskStatusNone,
+		TaskList:                 "some random tasklist",
+	}
+	s.mockMutableState.On("GetPendingActivityInfos").Return(map[int64]*persistence.ActivityInfo{ai.ScheduleID: ai})
+	s.mockMutableState.On("UpdateActivity", ai).Return(nil).Once()
 	s.mockMutableState.On("ReplicateActivityTaskTimedOutEvent", event).Return(nil).Once()
 	s.mockUpdateVersion(event)
 
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
-
-	s.Empty(s.stateBuilder.timerTasks)
+	s.Equal(1, len(s.stateBuilder.timerTasks))
+	timerTask, ok := s.stateBuilder.timerTasks[0].(*persistence.ActivityTimeoutTask)
+	s.True(ok)
+	s.True(timerTask.VisibilityTimestamp.Equal(now.Add(time.Duration(timeoutSecond) * time.Second)))
+	s.Equal(ai.ScheduleID, timerTask.EventID)
 	s.Empty(s.stateBuilder.transferTasks)
 	s.Empty(s.stateBuilder.newRunTimerTasks)
 	s.Empty(s.stateBuilder.newRunTransferTasks)
@@ -1653,10 +1696,10 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskStarted() {
 	timeoutSecond := int32(10)
 	evenType := shared.EventTypeActivityTaskScheduled
 	scheduledEvent := &shared.HistoryEvent{
-		Version:   common.Int64Ptr(version),
-		EventId:   common.Int64Ptr(130),
-		Timestamp: common.Int64Ptr(now.UnixNano()),
-		EventType: &evenType,
+		Version:                              common.Int64Ptr(version),
+		EventId:                              common.Int64Ptr(130),
+		Timestamp:                            common.Int64Ptr(now.UnixNano()),
+		EventType:                            &evenType,
 		ActivityTaskScheduledEventAttributes: &shared.ActivityTaskScheduledEventAttributes{},
 	}
 
@@ -1728,10 +1771,10 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskScheduled() {
 	timeoutSecond := int32(10)
 	evenType := shared.EventTypeActivityTaskScheduled
 	event := &shared.HistoryEvent{
-		Version:   common.Int64Ptr(version),
-		EventId:   common.Int64Ptr(130),
-		Timestamp: common.Int64Ptr(now.UnixNano()),
-		EventType: &evenType,
+		Version:                              common.Int64Ptr(version),
+		EventId:                              common.Int64Ptr(130),
+		Timestamp:                            common.Int64Ptr(now.UnixNano()),
+		EventType:                            &evenType,
 		ActivityTaskScheduledEventAttributes: &shared.ActivityTaskScheduledEventAttributes{},
 	}
 
@@ -1798,12 +1841,40 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskFailed() {
 		EventType:                         &evenType,
 		ActivityTaskFailedEventAttributes: &shared.ActivityTaskFailedEventAttributes{},
 	}
+
+	// this is the remaining activity
+	// should create a activity timer for this
+	timeoutSecond := int32(10)
+	ai := &persistence.ActivityInfo{
+		Version:                  version,
+		ScheduleID:               123,
+		ScheduledEvent:           nil,
+		ScheduledTime:            now,
+		StartedID:                124,
+		StartedEvent:             nil,
+		StartedTime:              now,
+		ActivityID:               "some random activity ID",
+		ScheduleToStartTimeout:   timeoutSecond,
+		ScheduleToCloseTimeout:   timeoutSecond,
+		StartToCloseTimeout:      timeoutSecond,
+		HeartbeatTimeout:         timeoutSecond,
+		CancelRequested:          false,
+		CancelRequestID:          common.EmptyEventID,
+		LastHeartBeatUpdatedTime: time.Time{},
+		TimerTaskStatus:          TimerTaskStatusNone,
+		TaskList:                 "some random tasklist",
+	}
+	s.mockMutableState.On("GetPendingActivityInfos").Return(map[int64]*persistence.ActivityInfo{ai.ScheduleID: ai})
+	s.mockMutableState.On("UpdateActivity", ai).Return(nil).Once()
 	s.mockMutableState.On("ReplicateActivityTaskFailedEvent", event).Return(nil).Once()
 	s.mockUpdateVersion(event)
 
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
-
-	s.Empty(s.stateBuilder.timerTasks)
+	s.Equal(1, len(s.stateBuilder.timerTasks))
+	timerTask, ok := s.stateBuilder.timerTasks[0].(*persistence.ActivityTimeoutTask)
+	s.True(ok)
+	s.True(timerTask.VisibilityTimestamp.Equal(now.Add(time.Duration(timeoutSecond) * time.Second)))
+	s.Equal(ai.ScheduleID, timerTask.EventID)
 	s.Empty(s.stateBuilder.transferTasks)
 	s.Empty(s.stateBuilder.newRunTimerTasks)
 	s.Empty(s.stateBuilder.newRunTransferTasks)
@@ -1821,18 +1892,46 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskCompleted() {
 	now := time.Now()
 	evenType := shared.EventTypeActivityTaskCompleted
 	event := &shared.HistoryEvent{
-		Version:   common.Int64Ptr(version),
-		EventId:   common.Int64Ptr(130),
-		Timestamp: common.Int64Ptr(now.UnixNano()),
-		EventType: &evenType,
+		Version:                              common.Int64Ptr(version),
+		EventId:                              common.Int64Ptr(130),
+		Timestamp:                            common.Int64Ptr(now.UnixNano()),
+		EventType:                            &evenType,
 		ActivityTaskCompletedEventAttributes: &shared.ActivityTaskCompletedEventAttributes{},
 	}
+
+	// this is the remaining activity
+	// should create a activity timer for this
+	timeoutSecond := int32(10)
+	ai := &persistence.ActivityInfo{
+		Version:                  version,
+		ScheduleID:               123,
+		ScheduledEvent:           nil,
+		ScheduledTime:            now,
+		StartedID:                124,
+		StartedEvent:             nil,
+		StartedTime:              now,
+		ActivityID:               "some random activity ID",
+		ScheduleToStartTimeout:   timeoutSecond,
+		ScheduleToCloseTimeout:   timeoutSecond,
+		StartToCloseTimeout:      timeoutSecond,
+		HeartbeatTimeout:         timeoutSecond,
+		CancelRequested:          false,
+		CancelRequestID:          common.EmptyEventID,
+		LastHeartBeatUpdatedTime: time.Time{},
+		TimerTaskStatus:          TimerTaskStatusNone,
+		TaskList:                 "some random tasklist",
+	}
+	s.mockMutableState.On("GetPendingActivityInfos").Return(map[int64]*persistence.ActivityInfo{ai.ScheduleID: ai})
+	s.mockMutableState.On("UpdateActivity", ai).Return(nil).Once()
 	s.mockMutableState.On("ReplicateActivityTaskCompletedEvent", event).Return(nil).Once()
 	s.mockUpdateVersion(event)
 
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
-
-	s.Empty(s.stateBuilder.timerTasks)
+	s.Equal(1, len(s.stateBuilder.timerTasks))
+	timerTask, ok := s.stateBuilder.timerTasks[0].(*persistence.ActivityTimeoutTask)
+	s.True(ok)
+	s.True(timerTask.VisibilityTimestamp.Equal(now.Add(time.Duration(timeoutSecond) * time.Second)))
+	s.Equal(ai.ScheduleID, timerTask.EventID)
 	s.Empty(s.stateBuilder.transferTasks)
 	s.Empty(s.stateBuilder.newRunTimerTasks)
 	s.Empty(s.stateBuilder.newRunTransferTasks)
@@ -1856,12 +1955,40 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskCanceled() {
 		EventType:                           &evenType,
 		ActivityTaskCanceledEventAttributes: &shared.ActivityTaskCanceledEventAttributes{},
 	}
+
+	// this is the remaining activity
+	// should create a activity timer for this
+	timeoutSecond := int32(10)
+	ai := &persistence.ActivityInfo{
+		Version:                  version,
+		ScheduleID:               123,
+		ScheduledEvent:           nil,
+		ScheduledTime:            now,
+		StartedID:                124,
+		StartedEvent:             nil,
+		StartedTime:              now,
+		ActivityID:               "some random activity ID",
+		ScheduleToStartTimeout:   timeoutSecond,
+		ScheduleToCloseTimeout:   timeoutSecond,
+		StartToCloseTimeout:      timeoutSecond,
+		HeartbeatTimeout:         timeoutSecond,
+		CancelRequested:          false,
+		CancelRequestID:          common.EmptyEventID,
+		LastHeartBeatUpdatedTime: time.Time{},
+		TimerTaskStatus:          TimerTaskStatusNone,
+		TaskList:                 "some random tasklist",
+	}
+	s.mockMutableState.On("GetPendingActivityInfos").Return(map[int64]*persistence.ActivityInfo{ai.ScheduleID: ai})
+	s.mockMutableState.On("UpdateActivity", ai).Return(nil).Once()
 	s.mockMutableState.On("ReplicateActivityTaskCanceledEvent", event).Return(nil).Once()
 	s.mockUpdateVersion(event)
 
 	s.stateBuilder.applyEvents(domainID, requestID, execution, s.toHistory(event), nil)
-
-	s.Empty(s.stateBuilder.timerTasks)
+	s.Equal(1, len(s.stateBuilder.timerTasks))
+	timerTask, ok := s.stateBuilder.timerTasks[0].(*persistence.ActivityTimeoutTask)
+	s.True(ok)
+	s.True(timerTask.VisibilityTimestamp.Equal(now.Add(time.Duration(timeoutSecond) * time.Second)))
+	s.Equal(ai.ScheduleID, timerTask.EventID)
 	s.Empty(s.stateBuilder.transferTasks)
 	s.Empty(s.stateBuilder.newRunTimerTasks)
 	s.Empty(s.stateBuilder.newRunTransferTasks)

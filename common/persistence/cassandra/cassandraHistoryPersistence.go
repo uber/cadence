@@ -73,7 +73,7 @@ type (
 func NewHistoryPersistence(hosts string, port int, user, password, dc string, keyspace string,
 	numConns int, logger bark.Logger) (p.HistoryManager,
 	error) {
-	cluster := common.NewCassandraCluster(hosts, port, user, password, dc)
+	cluster := NewCassandraCluster(hosts, port, user, password, dc)
 	cluster.Keyspace = keyspace
 	cluster.ProtoVersion = cassandraProtoVersion
 	cluster.Consistency = gocql.LocalQuorum
@@ -182,6 +182,7 @@ func (h *cassandraHistoryPersistence) GetWorkflowExecutionHistory(request *p.Get
 	lastFirstEventID := common.EmptyEventID // first_event_id of last batch
 	eventBatch := p.SerializedHistoryEventBatch{}
 	history := &workflow.History{}
+	size := 0
 	for iter.Scan(nil, &eventBatchVersionPointer, &eventBatch.Data, &eventBatch.EncodingType, &eventBatch.Version) {
 		found = true
 
@@ -212,6 +213,7 @@ func (h *cassandraHistoryPersistence) GetWorkflowExecutionHistory(request *p.Get
 			history.Events = append(history.Events, historyBatch.Events...)
 			token.LastEventID = historyBatch.Events[len(historyBatch.Events)-1].GetEventId()
 			token.LastEventBatchVersion = eventBatchVersion
+			size += len(eventBatch.Data)
 		}
 
 		eventBatchVersionPointer = new(int64)
@@ -242,6 +244,7 @@ func (h *cassandraHistoryPersistence) GetWorkflowExecutionHistory(request *p.Get
 		NextPageToken:    data,
 		History:          history,
 		LastFirstEventID: lastFirstEventID,
+		Size:             size,
 	}
 
 	return response, nil

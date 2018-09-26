@@ -205,6 +205,7 @@ type (
 		StartTimestamp               time.Time
 		LastUpdatedTimestamp         time.Time
 		CreateRequestID              string
+		HistorySize                  int64
 		DecisionVersion              int64
 		DecisionScheduleID           int64
 		DecisionStartedID            int64
@@ -582,6 +583,7 @@ type (
 		ExecutionContext            []byte
 		NextEventID                 int64
 		LastProcessedEvent          int64
+		HistorySize                 int64
 		TransferTasks               []Task
 		ReplicationTasks            []Task
 		TimerTasks                  []Task
@@ -868,6 +870,8 @@ type (
 		NextPageToken []byte
 		// the first_event_id of last loaded batch
 		LastFirstEventID int64
+		// Size of history read from store
+		Size int
 	}
 
 	// DeleteWorkflowExecutionHistoryRequest is used to delete workflow execution history
@@ -1631,7 +1635,7 @@ func (t *TimerTaskInfo) GetTaskType() int {
 	return t.TaskType
 }
 
-// GetVisibilityTimestamp returns the task type for transfer task
+// GetVisibilityTimestamp returns the task type for timer task
 func (t *TimerTaskInfo) GetVisibilityTimestamp() time.Time {
 	return t.VisibilityTimestamp
 }
@@ -1799,4 +1803,14 @@ func SetVisibilityTSFrom(task Task, t time.Time) {
 	case TaskTypeWorkflowRetryTimer:
 		task.(*WorkflowRetryTimerTask).VisibilityTimestamp = t
 	}
+}
+
+// DBTimestampToUnixNano converts CQL timestamp to UnixNano
+func DBTimestampToUnixNano(milliseconds int64) int64 {
+	return milliseconds * 1000 * 1000 // Milliseconds are 10⁻³, nanoseconds are 10⁻⁹, (-3) - (-9) = 6, so multiply by 10⁶
+}
+
+// UnixNanoToDBTimestamp converts UnixNano to CQL timestamp
+func UnixNanoToDBTimestamp(timestamp int64) int64 {
+	return timestamp / (1000 * 1000) // Milliseconds are 10⁻³, nanoseconds are 10⁻⁹, (-9) - (-3) = -6, so divide by 10⁶
 }

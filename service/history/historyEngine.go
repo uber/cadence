@@ -84,6 +84,8 @@ type (
 var _ Engine = (*historyEngineImpl)(nil)
 
 var (
+	// ErrTaskDiscarded is the error indicating that the timer / transfer task is pending for too long and discarded.
+	ErrTaskDiscarded = errors.New("passive task pending for too long")
 	// ErrTaskRetry is the error indicating that the timer / transfer task should be retried.
 	ErrTaskRetry = errors.New("passive task should retry due to condition in mutable state is not met")
 	// ErrDuplicate is exported temporarily for integration test
@@ -339,7 +341,8 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 		return nil, serializedError
 	}
 
-	err = e.shard.AppendHistoryEvents(&persistence.AppendHistoryEventsRequest{
+	var historySize int
+	historySize, err = e.shard.AppendHistoryEvents(&persistence.AppendHistoryEventsRequest{
 		DomainID:  domainID,
 		Execution: execution,
 		// It is ok to use 0 for TransactionID because RunID is unique so there are
@@ -391,6 +394,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 			ExecutionContext:            nil,
 			NextEventID:                 msBuilder.GetNextEventID(),
 			LastProcessedEvent:          common.EmptyEventID,
+			HistorySize:                 int64(historySize),
 			TransferTasks:               transferTasks,
 			ReplicationTasks:            replicationTasks,
 			DecisionVersion:             decisionVersion,
@@ -696,7 +700,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(ctx context.Context,
 
 	result := &workflow.DescribeWorkflowExecutionResponse{
 		ExecutionConfiguration: &workflow.WorkflowExecutionConfiguration{
-			TaskList: &workflow.TaskList{Name: common.StringPtr(executionInfo.TaskList)},
+			TaskList:                            &workflow.TaskList{Name: common.StringPtr(executionInfo.TaskList)},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(executionInfo.WorkflowTimeout),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(executionInfo.DecisionTimeoutValue),
 			ChildPolicy:                         common.ChildPolicyPtr(workflow.ChildPolicyTerminate),
@@ -1119,10 +1123,10 @@ Update_History_Loop:
 
 					startAttributes := startEvent.WorkflowExecutionStartedEventAttributes
 					continueAsnewAttributes := &workflow.ContinueAsNewWorkflowExecutionDecisionAttributes{
-						WorkflowType: startAttributes.WorkflowType,
-						TaskList:     startAttributes.TaskList,
-						RetryPolicy:  startAttributes.RetryPolicy,
-						Input:        startAttributes.Input,
+						WorkflowType:                        startAttributes.WorkflowType,
+						TaskList:                            startAttributes.TaskList,
+						RetryPolicy:                         startAttributes.RetryPolicy,
+						Input:                               startAttributes.Input,
 						ExecutionStartToCloseTimeoutSeconds: startAttributes.ExecutionStartToCloseTimeoutSeconds,
 						TaskStartToCloseTimeoutSeconds:      startAttributes.TaskStartToCloseTimeoutSeconds,
 						BackoffStartIntervalInSeconds:       common.Int32Ptr(int32(retryBackoffInterval.Seconds())),
@@ -1446,7 +1450,7 @@ Update_History_Loop:
 		}
 
 		if isComplete {
-			tranT, timerT, err := e.getDeleteWorkflowTasks(domainID, tBuilder)
+			tranT, timerT, err := e.getDeleteWorkflowTasks(domainID, workflowExecution.GetWorkflowId(), tBuilder)
 			if err != nil {
 				return nil, err
 			}
@@ -2062,7 +2066,8 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 		return nil, serializedError
 	}
 
-	err = e.shard.AppendHistoryEvents(&persistence.AppendHistoryEventsRequest{
+	var historySize int
+	historySize, err = e.shard.AppendHistoryEvents(&persistence.AppendHistoryEventsRequest{
 		DomainID:  domainID,
 		Execution: execution,
 		// It is ok to use 0 for TransactionID because RunID is unique so there are
@@ -2112,6 +2117,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 			ExecutionContext:            nil,
 			NextEventID:                 msBuilder.GetNextEventID(),
 			LastProcessedEvent:          common.EmptyEventID,
+			HistorySize:                 int64(historySize),
 			TransferTasks:               transferTasks,
 			ReplicationTasks:            replicationTasks,
 			DecisionVersion:             decisionVersion,
@@ -2346,7 +2352,7 @@ Update_History_Loop:
 
 		transferTasks, timerTasks := postActions.transferTasks, postActions.timerTasks
 		if postActions.deleteWorkflow {
-			tranT, timerT, err := e.getDeleteWorkflowTasks(domainID, tBuilder)
+			tranT, timerT, err := e.getDeleteWorkflowTasks(domainID, execution.GetWorkflowId(), tBuilder)
 			if err != nil {
 				return err
 			}
@@ -2411,14 +2417,14 @@ func (e *historyEngineImpl) updateWorkflowExecution(ctx context.Context, domainI
 }
 
 func (e *historyEngineImpl) getDeleteWorkflowTasks(
-	domainID string,
+	domainID, workflowID string,
 	tBuilder *timerBuilder,
 ) (persistence.Task, persistence.Task, error) {
-	return getDeleteWorkflowTasksFromShard(e.shard, domainID, tBuilder)
+	return getDeleteWorkflowTasksFromShard(e.shard, domainID, workflowID, tBuilder)
 }
 
 func getDeleteWorkflowTasksFromShard(shard ShardContext,
-	domainID string,
+	domainID, workflowID string,
 	tBuilder *timerBuilder,
 ) (persistence.Task, persistence.Task, error) {
 	// Create a transfer task to close workflow execution
@@ -2432,7 +2438,7 @@ func getDeleteWorkflowTasksFromShard(shard ShardContext,
 			return nil, nil, err
 		}
 	} else {
-		retentionInDays = domainEntry.GetConfig().Retention
+		retentionInDays = domainEntry.GetRetentionDays(workflowID)
 	}
 	cleanupTask := tBuilder.createDeleteHistoryEventTimerTask(time.Duration(retentionInDays) * time.Hour * 24)
 
@@ -2874,11 +2880,11 @@ func getStartRequest(domainID string,
 	request *workflow.SignalWithStartWorkflowExecutionRequest) *h.StartWorkflowExecutionRequest {
 	policy := workflow.WorkflowIdReusePolicyAllowDuplicate
 	req := &workflow.StartWorkflowExecutionRequest{
-		Domain:       request.Domain,
-		WorkflowId:   request.WorkflowId,
-		WorkflowType: request.WorkflowType,
-		TaskList:     request.TaskList,
-		Input:        request.Input,
+		Domain:                              request.Domain,
+		WorkflowId:                          request.WorkflowId,
+		WorkflowType:                        request.WorkflowType,
+		TaskList:                            request.TaskList,
+		Input:                               request.Input,
 		ExecutionStartToCloseTimeoutSeconds: request.ExecutionStartToCloseTimeoutSeconds,
 		TaskStartToCloseTimeoutSeconds:      request.TaskStartToCloseTimeoutSeconds,
 		Identity:                            request.Identity,
@@ -2889,6 +2895,36 @@ func getStartRequest(domainID string,
 
 	startRequest := common.CreateHistoryStartWorkflowRequest(domainID, req)
 	return startRequest
+}
+
+func getWorkflowStartedEvent(historyMgr persistence.HistoryManager, logger bark.Logger, domainID, workflowID, runID string) (*workflow.HistoryEvent, error) {
+	response, err := historyMgr.GetWorkflowExecutionHistory(&persistence.GetWorkflowExecutionHistoryRequest{
+		DomainID: domainID,
+		Execution: workflow.WorkflowExecution{
+			WorkflowId: common.StringPtr(workflowID),
+			RunId:      common.StringPtr(runID),
+		},
+		FirstEventID:  common.FirstEventID,
+		NextEventID:   common.FirstEventID + 1,
+		PageSize:      defaultHistoryPageSize,
+		NextPageToken: nil,
+	})
+	if err != nil {
+		logger.WithFields(bark.Fields{
+			logging.TagErr: err,
+		}).Error("Conflict resolution current workflow finished.", err)
+		return nil, err
+	}
+	if len(response.History.Events) == 0 {
+		logger.WithFields(bark.Fields{
+			logging.TagWorkflowExecutionID: workflowID,
+			logging.TagWorkflowRunID:       runID,
+		})
+		logError(logger, errNoHistoryFound.Error(), errNoHistoryFound)
+		return nil, errNoHistoryFound
+	}
+
+	return response.History.Events[0], nil
 }
 
 func setTaskInfo(version int64, timestamp time.Time, transferTasks []persistence.Task, timerTasks []persistence.Task) {

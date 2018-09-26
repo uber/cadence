@@ -71,7 +71,7 @@ type (
 			*persistence.CreateWorkflowExecutionResponse, error)
 		UpdateWorkflowExecution(request *persistence.UpdateWorkflowExecutionRequest) error
 		ResetMutableState(request *persistence.ResetMutableStateRequest) error
-		AppendHistoryEvents(request *persistence.AppendHistoryEventsRequest) error
+		AppendHistoryEvents(request *persistence.AppendHistoryEventsRequest) (int, error)
 		NotifyNewHistoryEvent(event *historyEventNotification) error
 		GetConfig() *Config
 		GetLogger() bark.Logger
@@ -554,7 +554,13 @@ Reset_Loop:
 	return ErrMaxAttemptsExceeded
 }
 
-func (s *shardContextImpl) AppendHistoryEvents(request *persistence.AppendHistoryEventsRequest) error {
+func (s *shardContextImpl) AppendHistoryEvents(request *persistence.AppendHistoryEventsRequest) (int, error) {
+	size := 0
+	if request.Events != nil {
+		size = len(request.Events.Data)
+		s.metricsClient.RecordTimer(metrics.SessionSizeStatsScope, metrics.HistorySize, time.Duration(size))
+	}
+
 	// No need to lock context here, as we can write concurrently to append history events
 	currentRangeID := atomic.LoadInt64(&s.rangeID)
 	request.RangeID = currentRangeID
@@ -563,11 +569,11 @@ func (s *shardContextImpl) AppendHistoryEvents(request *persistence.AppendHistor
 		if _, ok := err0.(*persistence.ConditionFailedError); ok {
 			// Inserting a new event failed, lets try to overwrite the tail
 			request.Overwrite = true
-			return s.historyMgr.AppendHistoryEvents(request)
+			return size, s.historyMgr.AppendHistoryEvents(request)
 		}
 	}
 
-	return err0
+	return size, err0
 }
 
 func (s *shardContextImpl) NotifyNewHistoryEvent(event *historyEventNotification) error {
@@ -725,23 +731,31 @@ func (s *shardContextImpl) emitShardInfoMetricsLogsLocked() {
 	}
 	diffTimerLevel := maxTimerLevel.Sub(minTimerLevel)
 
-	if logWarnTransferLevelDiff < diffTransferLevel || logWarnTimerLevelDiff < diffTimerLevel {
+	replicationLag := s.transferMaxReadLevel - s.shardInfo.ReplicationAckLevel
+	transferLag := s.transferMaxReadLevel - s.shardInfo.TransferAckLevel
+	timerLag := time.Since(s.shardInfo.TimerAckLevel)
+
+	if logWarnTransferLevelDiff < diffTransferLevel ||
+		logWarnTimerLevelDiff < diffTimerLevel ||
+		logWarnTransferLevelDiff < transferLag ||
+		logWarnTimerLevelDiff < timerLag {
+
 		logger := s.logger.WithFields(bark.Fields{
-			logging.TagHistoryShardTime:         s.standbyClusterCurrentTime,
-			logging.TagHistoryShardTransferAcks: s.shardInfo.ClusterTransferAckLevel,
-			logging.TagHistoryShardTimerAcks:    s.shardInfo.ClusterTimerAckLevel,
+			logging.TagHistoryShardTime:           s.standbyClusterCurrentTime,
+			logging.TagHistoryShardReplicationAck: s.shardInfo.ReplicationAckLevel,
+			logging.TagHistoryShardTransferAcks:   s.shardInfo.ClusterTransferAckLevel,
+			logging.TagHistoryShardTimerAcks:      s.shardInfo.ClusterTimerAckLevel,
 		})
 
-		if logWarnTransferLevelDiff < diffTransferLevel {
-			logger.Warn("Transfer level diff exceeds warn threshold.")
-		}
-		if logWarnTimerLevelDiff < diffTimerLevel {
-			logger.Warn("Timer level diff exceeds warn threshold.")
-		}
+		logger.Warn("Shard ack levels diff exceeds warn threshold.")
 	}
 
 	s.metricsClient.RecordTimer(metrics.ShardInfoScope, metrics.ShardInfoTransferDiffTimer, time.Duration(diffTransferLevel))
 	s.metricsClient.RecordTimer(metrics.ShardInfoScope, metrics.ShardInfoTimerDiffTimer, diffTimerLevel)
+
+	s.metricsClient.RecordTimer(metrics.ShardInfoScope, metrics.ShardInfoReplicationLagTimer, time.Duration(replicationLag))
+	s.metricsClient.RecordTimer(metrics.ShardInfoScope, metrics.ShardInfoTransferLagTimer, time.Duration(transferLag))
+	s.metricsClient.RecordTimer(metrics.ShardInfoScope, metrics.ShardInfoTimerLagTimer, timerLag)
 }
 
 func (s *shardContextImpl) allocateTimerIDsLocked(timerTasks []persistence.Task) error {
@@ -865,18 +879,18 @@ func acquireShard(shardItem *historyShardsItem, closeCh chan<- int) (ShardContex
 	}
 
 	context := &shardContextImpl{
-		shardItem:        shardItem,
-		shardID:          shardItem.shardID,
-		currentCluster:   shardItem.service.GetClusterMetadata().GetCurrentClusterName(),
-		service:          shardItem.service,
-		shardManager:     shardItem.shardMgr,
-		historyMgr:       shardItem.historyMgr,
-		executionManager: shardItem.executionMgr,
-		domainCache:      shardItem.domainCache,
-		shardInfo:        updatedShardInfo,
-		closeCh:          closeCh,
-		metricsClient:    shardItem.metricsClient,
-		config:           shardItem.config,
+		shardItem:                 shardItem,
+		shardID:                   shardItem.shardID,
+		currentCluster:            shardItem.service.GetClusterMetadata().GetCurrentClusterName(),
+		service:                   shardItem.service,
+		shardManager:              shardItem.shardMgr,
+		historyMgr:                shardItem.historyMgr,
+		executionManager:          shardItem.executionMgr,
+		domainCache:               shardItem.domainCache,
+		shardInfo:                 updatedShardInfo,
+		closeCh:                   closeCh,
+		metricsClient:             shardItem.metricsClient,
+		config:                    shardItem.config,
 		standbyClusterCurrentTime: standbyClusterCurrentTime,
 		timerMaxReadLevel:         updatedShardInfo.TimerAckLevel, // use ack to init read level
 	}
