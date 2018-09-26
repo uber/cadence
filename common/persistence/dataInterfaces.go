@@ -198,7 +198,7 @@ type (
 		ParentWorkflowID             string
 		ParentRunID                  string
 		InitiatedID                  int64
-		CompletionEvent              []byte
+		CompletionEvent              *workflow.HistoryEvent
 		TaskList                     string
 		WorkflowTypeName             string
 		WorkflowTimeout              int32
@@ -469,7 +469,7 @@ type (
 		SignalRequestedIDs       map[string]struct{}
 		ExecutionInfo            *WorkflowExecutionInfo
 		ReplicationState         *ReplicationState
-		BufferedEvents           []*SerializedHistoryEventBatch
+		BufferedEvents           []*workflow.HistoryEvent
 		BufferedReplicationTasks map[int64]*BufferedReplicationTask
 	}
 
@@ -477,10 +477,10 @@ type (
 	ActivityInfo struct {
 		Version                  int64
 		ScheduleID               int64
-		ScheduledEvent           []byte
+		ScheduledEvent           workflow.HistoryEvent
 		ScheduledTime            time.Time
 		StartedID                int64
-		StartedEvent             []byte
+		StartedEvent             workflow.HistoryEvent
 		StartedTime              time.Time
 		ActivityID               string
 		RequestID                string
@@ -522,9 +522,9 @@ type (
 	ChildExecutionInfo struct {
 		Version         int64
 		InitiatedID     int64
-		InitiatedEvent  []byte
+		InitiatedEvent  workflow.HistoryEvent
 		StartedID       int64
-		StartedEvent    []byte
+		StartedEvent    workflow.HistoryEvent
 		CreateRequestID string
 	}
 
@@ -550,8 +550,8 @@ type (
 		FirstEventID  int64
 		NextEventID   int64
 		Version       int64
-		History       *SerializedHistoryEventBatch
-		NewRunHistory *SerializedHistoryEventBatch
+		History       []*workflow.HistoryEvent
+		NewRunHistory []*workflow.HistoryEvent
 	}
 
 	// CreateShardRequest is used to create a shard in executions table
@@ -669,10 +669,12 @@ type (
 		DeleteSignalInfo              *int64
 		UpsertSignalRequestedIDs      []string
 		DeleteSignalRequestedID       string
-		NewBufferedEvents             *SerializedHistoryEventBatch
+		NewBufferedEvents             []*workflow.HistoryEvent
 		ClearBufferedEvents           bool
 		NewBufferedReplicationTask    *BufferedReplicationTask
 		DeleteBufferedReplicationTask *int64
+		//Optional. It is to suggest a binary encoding type to serialize history events
+		Encoding common.EncodingType
 	}
 
 	// ResetMutableStateRequest is used to reset workflow execution state
@@ -690,6 +692,8 @@ type (
 		InsertRequestCancelInfos  []*RequestCancelInfo
 		InsertSignalInfos         []*SignalInfo
 		InsertSignalRequestedIDs  []string
+		//Optional. It is to suggest a binary encoding type to serialize history events
+		Encoding common.EncodingType
 	}
 
 	// DeleteWorkflowExecutionRequest is used to delete a workflow execution
@@ -831,19 +835,6 @@ type (
 		NextPageToken []byte
 	}
 
-	// SerializedHistoryEventBatch represents a serialized batch of history events
-	SerializedHistoryEventBatch struct {
-		EncodingType common.EncodingType
-		Version      int
-		Data         []byte
-	}
-
-	// HistoryEventBatch represents a batch of history events
-	HistoryEventBatch struct {
-		Version int
-		Events  []*workflow.HistoryEvent
-	}
-
 	// AppendHistoryEventsRequest is used to append new events to workflow execution history
 	AppendHistoryEventsRequest struct {
 		DomainID          string
@@ -852,8 +843,10 @@ type (
 		EventBatchVersion int64
 		RangeID           int64
 		TransactionID     int64
-		Events            *SerializedHistoryEventBatch
+		Events            []*workflow.HistoryEvent
 		Overwrite         bool
+		//Optional. It is to suggest a binary encoding type to serialize history events
+		Encoding common.EncodingType
 	}
 
 	// GetWorkflowExecutionHistoryRequest is used to retrieve history of a workflow execution
@@ -1654,43 +1647,6 @@ func (t *TimerTaskInfo) String() string {
 		"{DomainID: %v, WorkflowID: %v, RunID: %v, VisibilityTimestamp: %v, TaskID: %v, TaskType: %v, TimeoutType: %v, EventID: %v, ScheduleAttempt: %v, Version: %v.}",
 		t.DomainID, t.WorkflowID, t.RunID, t.VisibilityTimestamp, t.TaskID, t.TaskType, t.TimeoutType, t.EventID, t.ScheduleAttempt, t.Version,
 	)
-}
-
-// NewHistoryEventBatch returns a new instance of HistoryEventBatch
-func NewHistoryEventBatch(version int, events []*workflow.HistoryEvent) *HistoryEventBatch {
-	return &HistoryEventBatch{
-		Version: version,
-		Events:  events,
-	}
-}
-
-func (b *HistoryEventBatch) String() string {
-	return fmt.Sprintf("[version:%v, events:%v]", b.Version, b.Events)
-}
-
-// NewSerializedHistoryEventBatch constructs and returns a new instance of of SerializedHistoryEventBatch
-func NewSerializedHistoryEventBatch(data []byte, encoding common.EncodingType, version int) *SerializedHistoryEventBatch {
-	return &SerializedHistoryEventBatch{
-		EncodingType: encoding,
-		Version:      version,
-		Data:         data,
-	}
-}
-
-func (h *SerializedHistoryEventBatch) String() string {
-	return fmt.Sprintf("[encodingType:%v,historyVersion:%v,history:%v]",
-		h.EncodingType, h.Version, string(h.Data))
-}
-
-// SetSerializedHistoryDefaults  sets the version and encoding types to defaults if they
-// are missing from persistence. This is purely for backwards compatibility
-func SetSerializedHistoryDefaults(history *SerializedHistoryEventBatch) {
-	if history.Version == 0 {
-		history.Version = GetDefaultHistoryVersion()
-	}
-	if len(history.EncodingType) == 0 {
-		history.EncodingType = DefaultEncodingType
-	}
 }
 
 // SerializeClusterConfigs makes an array of *ClusterReplicationConfig serializable
