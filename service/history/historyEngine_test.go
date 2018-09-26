@@ -69,7 +69,6 @@ type (
 		mockService         service.Service
 		mockMetricClient    metrics.Client
 		shardClosedCh       chan int
-		eventSerializer     historyEventSerializer
 		config              *Config
 		logger              bark.Logger
 	}
@@ -111,7 +110,6 @@ func (s *engineSuite) SetupTest() {
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
 	s.mockProducer = &mocks.KafkaProducer{}
 	s.shardClosedCh = make(chan int, 100)
-	s.eventSerializer = newJSONHistoryEventSerializer()
 	s.mockMetricClient = metrics.NewClient(tally.NoopScope, metrics.History)
 	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
 	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.logger)
@@ -160,7 +158,6 @@ func (s *engineSuite) SetupTest() {
 		logger:               s.logger,
 		metricsClient:        metrics.NewClient(tally.NoopScope, metrics.History),
 		tokenSerializer:      common.NewJSONTaskTokenSerializer(),
-		hSerializerFactory:   persistence.NewHistorySerializerFactory(),
 		historyEventNotifier: historyEventNotifier,
 	}
 	h.txProcessor = newTransferQueueProcessor(shardContextWrapper, h, s.mockVisibilityMgr, s.mockMatchingClient, s.mockHistoryClient, s.logger)
@@ -4016,13 +4013,8 @@ func (s *engineSuite) TestStarTimer_DuplicateTimerID() {
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gwmsResponse2, nil).Once()
 	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(nil).Run(func(arguments mock.Arguments) {
 		req := arguments.Get(0).(*persistence.AppendHistoryEventsRequest)
-		hs := persistence.NewJSONHistorySerializer()
-		h, err := hs.Deserialize(req.Events)
-		if err != nil {
-			panic(err)
-		}
-		decTaskIndex := len(h.Events) - 1
-		if decTaskIndex >= 0 && *h.Events[decTaskIndex].EventType == workflow.EventTypeDecisionTaskFailed {
+		decTaskIndex := len(req.Events.Events) - 1
+		if decTaskIndex >= 0 && *req.Events.Events[decTaskIndex].EventType == workflow.EventTypeDecisionTaskFailed {
 			decisionFailedEvent = true
 		}
 	}).Once()
@@ -4430,12 +4422,7 @@ func (s *engineSuite) getActivityScheduledEvent(msBuilder mutableState,
 		return nil
 	}
 
-	event, err := s.eventSerializer.Deserialize(ai.ScheduledEvent)
-	if err != nil {
-		s.logger.Errorf("Error Deserializing Event: %v", err)
-	}
-
-	return event
+	return ai.ScheduledEvent
 }
 
 func (s *engineSuite) getActivityStartedEvent(msBuilder mutableState,
@@ -4446,22 +4433,11 @@ func (s *engineSuite) getActivityStartedEvent(msBuilder mutableState,
 		return nil
 	}
 
-	event, err := s.eventSerializer.Deserialize(ai.StartedEvent)
-	if err != nil {
-		s.logger.Errorf("Error Deserializing Event: %v", err)
-	}
-
-	return event
+	return ai.StartedEvent
 }
 
 func (s *engineSuite) printHistory(builder mutableState) string {
-	history, err := builder.GetHistoryBuilder().Serialize()
-	if err != nil {
-		s.logger.Errorf("Error serializing history: %v", err)
-		return ""
-	}
-
-	//s.logger.Info(string(history))
+	history := builder.GetHistoryBuilder().GetHistory()
 	return history.String()
 }
 
@@ -4693,7 +4669,7 @@ func createMutableState(ms mutableState) *persistence.WorkflowMutableState {
 	}
 
 	builder.FlushBufferedEvents()
-	var bufferedEvents []*persistence.DataBlob
+	var bufferedEvents []*workflow.History
 	if len(builder.bufferedEvents) > 0 {
 		bufferedEvents = append(bufferedEvents, builder.bufferedEvents...)
 	}
@@ -4810,7 +4786,7 @@ func copySignalInfo(sourceInfo *persistence.SignalInfo) *persistence.SignalInfo 
 	return result
 }
 
-func copyChildInfo(sourceInfo *persistence.ChildExecutionInfo) *persistence.ChildExecutionInfo {
+func copyChildInfo(sourceInfo *persistence.ChildExecutionInfo) (*persistence.ChildExecutionInfo, error) {
 	result := &persistence.ChildExecutionInfo{
 		Version:         sourceInfo.Version,
 		InitiatedID:     sourceInfo.InitiatedID,
@@ -4818,11 +4794,27 @@ func copyChildInfo(sourceInfo *persistence.ChildExecutionInfo) *persistence.Chil
 		CreateRequestID: sourceInfo.CreateRequestID,
 	}
 
-	result.InitiatedEvent = make([]byte, len(sourceInfo.InitiatedEvent))
-	copy(result.InitiatedEvent, sourceInfo.InitiatedEvent)
-	result.StartedEvent = make([]byte, len(sourceInfo.StartedEvent))
-	copy(result.StartedEvent, sourceInfo.StartedEvent)
-	return result
+	result.InitiatedEvent = &workflow.HistoryEvent{}
+	wv, err := sourceInfo.InitiatedEvent.ToWire()
+	if err != nil {
+		panic(err)
+	}
+	err = result.InitiatedEvent.FromWire(wv)
+	if err != nil {
+		panic(err)
+	}
+
+	result.StartedEvent = &workflow.HistoryEvent{}
+	wv, err = sourceInfo.StartedEvent.ToWire()
+	if err != nil {
+		panic(err)
+	}
+	err = result.StartedEvent.FromWire(wv)
+	if err != nil {
+		panic(err)
+	}
+
+	return result, nil
 }
 
 func copyReplicationState(source *persistence.ReplicationState) *persistence.ReplicationState {
