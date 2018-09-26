@@ -24,7 +24,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -61,10 +60,6 @@ type (
 )
 
 const (
-	// ErrDupEntry MySQL Error 1062 indicates a duplicate primary key i.e. the row already exists,
-	// so we don't do the insert and return a ConditionalUpdate error.
-	ErrDupEntry = 1062
-
 	appendHistorySQLQuery = `INSERT INTO events (
 domain_id,workflow_id,run_id,first_event_id,data,data_encoding,data_version
 ) VALUES (
@@ -191,8 +186,7 @@ func (m *sqlHistoryManager) AppendHistoryEvents(request *p.AppendHistoryEventsRe
 		}
 	} else {
 		if _, err := m.db.NamedExec(appendHistorySQLQuery, arg); err != nil {
-			// TODO Find another way to do this without inspecting the error message (?)
-			if sqlErr, ok := err.(*mysql.MySQLError); ok && sqlErr.Number == ErrDupEntry {
+			if isDupEntry(err) {
 				return &p.ConditionFailedError{
 					Msg: fmt.Sprintf("AppendHistoryEvents operaiton failed. Couldn't insert since row already existed. Erorr: %v", err),
 				}

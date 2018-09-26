@@ -26,8 +26,54 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-sql-driver/mysql"
+	"github.com/jmoiron/sqlx"
+	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/persistence"
 )
+
+type sqlManager struct {
+	db     *sqlx.DB
+	logger bark.Logger
+}
+
+func (m *sqlManager) txExecute(operation string, f func(tx *sqlx.Tx) error) error {
+	tx, err := m.db.Beginx()
+	if err != nil {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("%s failed. Failed to start transaction. Error: %v", operation, err),
+		}
+	}
+	err = f(tx)
+	if err != nil {
+		tx.Rollback()
+		switch err.(type) {
+		case *persistence.ConditionFailedError, *workflow.InternalServiceError:
+			return err
+		default:
+			return &workflow.InternalServiceError{
+				Message: fmt.Sprintf("%v: %v", operation, err),
+			}
+		}
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("%s operation failed. Failed to commit transaction. Error: %v", operation, err),
+		}
+	}
+	return nil
+}
+
+// ErrDupEntry MySQL Error 1062 indicates a duplicate primary key i.e. the row already exists,
+// so we don't do the insert and return a ConditionalUpdate error.
+const ErrDupEntry = 1062
+
+func isDupEntry(err error) bool {
+	sqlErr, ok := err.(*mysql.MySQLError)
+	return ok && sqlErr.Number == ErrDupEntry
+}
 
 func gobSerialize(x interface{}) ([]byte, error) {
 	b := bytes.Buffer{}

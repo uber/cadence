@@ -36,9 +36,8 @@ import (
 type (
 	// Implements ExecutionManager
 	sqlExecutionManager struct {
-		db      *sqlx.DB
+		sqlManager
 		shardID int
-		logger  bark.Logger
 	}
 
 	flatCreateWorkflowExecutionRequest struct {
@@ -105,14 +104,16 @@ type (
 
 	currentExecutionRow struct {
 		ShardID    int64
+		RangeID    int64
 		DomainID   string
 		WorkflowID string
 
-		RunID           string
-		CreateRequestID string
-		State           int64
-		CloseStatus     int64
-		StartVersion    *int64
+		RunID            string
+		CreateRequestID  string
+		State            int64
+		CloseStatus      int64
+		LastWriteVersion *int64
+		StartVersion     *int64
 	}
 
 	transferTasksRow struct {
@@ -356,12 +357,13 @@ task_id <= ?
 (:shard_id, :domain_id, :workflow_id, :run_id, :create_request_id, :state, :close_status, :start_version)`
 
 	getCurrentExecutionSQLQuery = `SELECT 
-shard_id, domain_id, workflow_id, run_id, state, close_status, start_version 
-FROM current_executions
-WHERE
-shard_id = ? AND domain_id = ? AND workflow_id = ?
+ce.shard_id, s.range_id, ce.domain_id, ce.workflow_id, ce.run_id, ce.state, ce.close_status, ce.start_version, e.last_write_version 
+FROM current_executions ce
+INNER JOIN shards s ON s.shard_id = ce.shard_id
+INNER JOIN executions e ON s.shard_id = e.shard_id AND e.domain_id = ce.domain_id AND e.workflow_id = ce.workflow_id 
+                           AND ce.run_id = e.run_id 
+WHERE ce.shard_id = ? AND ce.domain_id = ? AND ce.workflow_id = ?
 `
-
 	// The following queries together comprise ContinueAsNew.
 	// The updates must be executed only after locking current_run_id of
 	// the current_executions row that we are going to update,
@@ -457,27 +459,44 @@ func (m *sqlExecutionManager) Close() {
 	}
 }
 
-func (m *sqlExecutionManager) CreateWorkflowExecution(request *p.CreateWorkflowExecutionRequest) (*p.CreateWorkflowExecutionResponse, error) {
+func (m *sqlExecutionManager) CreateWorkflowExecution(request *p.CreateWorkflowExecutionRequest) (response *p.CreateWorkflowExecutionResponse, err error) {
+	err = m.txExecute("CreateWorkflowExecution", func(tx *sqlx.Tx) error {
+		response, err = m.createWorkflowExecutionTx(tx, request)
+		return err
+	})
+	return
+}
+
+func (m *sqlExecutionManager) createWorkflowExecutionTx(tx *sqlx.Tx, request *p.CreateWorkflowExecutionRequest) (*p.CreateWorkflowExecutionResponse, error) {
 	/*
 		(x) make a transaction
 		( ) check for a parent
 		(x) check for ContinueAsNew, update the current exec or create one for this new workflow
 		(x) create a workflow with/without cross dc
 	*/
-
-	tx, err := m.db.Beginx()
-	if err != nil {
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("CreateWorkflowExecution failed. Failed to start transaction. Error: %v", err),
-		}
-	}
-	defer tx.Rollback()
-
 	if row, err := getCurrentExecutionIfExists(tx, int64(m.shardID), request.DomainID, *request.Execution.WorkflowId); err == nil {
-		// Workflow already exists.
+		if request.RangeID != row.RangeID {
+			return nil, &p.ShardOwnershipLostError{
+				Msg: fmt.Sprintf("Failed to create workflow execution.  Request RangeID: %v, Actual RangeID: %v",
+					request.RangeID, row.RangeID),
+			}
+		}
 		lastWriteVersion := common.EmptyVersion
-		if row.StartVersion != nil {
-			lastWriteVersion = *row.StartVersion
+		if row.LastWriteVersion != nil {
+			lastWriteVersion = *row.LastWriteVersion
+		}
+
+		if isDupEntry(err) {
+			msg := fmt.Sprintf("Workflow execution already running. WorkflowId: %v, RunId: %v, rangeID: %v",
+				request.Execution.GetWorkflowId(), row.RunID, row.RangeID)
+			return nil, &p.WorkflowExecutionAlreadyStartedError{
+				Msg:              msg,
+				StartRequestID:   request.RequestID,
+				RunID:            row.RunID,
+				State:            int(row.State),
+				CloseStatus:      int(row.CloseStatus),
+				LastWriteVersion: lastWriteVersion,
+			}
 		}
 
 		return nil, &p.WorkflowExecutionAlreadyStartedError{
@@ -537,13 +556,6 @@ func (m *sqlExecutionManager) CreateWorkflowExecution(request *p.CreateWorkflowE
 			}
 		}
 	}
-
-	if err := tx.Commit(); err != nil {
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("CreateWorkflowExecution operation failed. Failed to commit transaction. Error: %v", err),
-		}
-	}
-
 	return &p.CreateWorkflowExecutionResponse{}, nil
 }
 
@@ -765,14 +777,12 @@ func (m *sqlExecutionManager) GetWorkflowExecution(request *p.GetWorkflowExecuti
 }
 
 func (m *sqlExecutionManager) UpdateWorkflowExecution(request *p.UpdateWorkflowExecutionRequest) error {
-	tx, err := m.db.Beginx()
-	if err != nil {
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("UpdateWorkflowExecution operation failed. Failed to begin transaction. Erorr: %v", err),
-		}
-	}
-	defer tx.Rollback()
+	return m.txExecute("UpdateWorkflowExecution", func(tx *sqlx.Tx) error {
+		return m.updateWorkflowExecutionTx(tx, request)
+	})
+}
 
+func (m *sqlExecutionManager) updateWorkflowExecutionTx(tx *sqlx.Tx, request *p.UpdateWorkflowExecutionRequest) error {
 	if err := createTransferTasks(tx,
 		request.TransferTasks,
 		m.shardID,
@@ -956,13 +966,6 @@ func (m *sqlExecutionManager) UpdateWorkflowExecution(request *p.UpdateWorkflowE
 			return err
 		}
 	}
-
-	if err := tx.Commit(); err != nil {
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("UpdateWorkflowExecution operation failed. Failed to commit transaction. Error: %v", err),
-		}
-	}
-
 	return nil
 }
 
@@ -1298,8 +1301,10 @@ func NewSQLMatchingPersistence(host string, port int, username, password, dbName
 		return nil, err
 	}
 	return &sqlExecutionManager{
-		db:     db,
-		logger: logger,
+		sqlManager: sqlManager{
+			db:     db,
+			logger: logger,
+		},
 	}, nil
 }
 
@@ -1386,8 +1391,10 @@ func createCurrentExecution(tx *sqlx.Tx, request *p.CreateWorkflowExecutionReque
 		State:           p.WorkflowStateRunning,
 		CloseStatus:     p.WorkflowCloseStatusNone,
 	}
-	if request.ReplicationState != nil {
-		arg.StartVersion = &request.ReplicationState.StartVersion
+	replicationState := request.ReplicationState
+	if replicationState != nil {
+		arg.StartVersion = &replicationState.StartVersion
+		arg.LastWriteVersion = &replicationState.LastWriteVersion
 	}
 	if request.ParentExecution != nil {
 		arg.State = p.WorkflowStateCreated
