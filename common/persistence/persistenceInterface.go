@@ -70,7 +70,7 @@ type (
 
 		//The below two APIs are related to serialization/deserialization
 		AppendHistoryEvents(request *PersistenceAppendHistoryEventsRequest) error
-		GetWorkflowExecutionHistory(request *GetWorkflowExecutionHistoryRequest) (*PersistenceGetWorkflowExecutionHistoryResponse, error)
+		GetWorkflowExecutionHistory(request *PersistenceGetWorkflowExecutionHistoryRequest) (*PersistenceGetWorkflowExecutionHistoryResponse, error)
 
 		DeleteWorkflowExecutionHistory(request *DeleteWorkflowExecutionHistoryRequest) error
 	}
@@ -268,6 +268,23 @@ type (
 		State *PersistenceWorkflowMutableState
 	}
 
+	// PersistenceGetWorkflowExecutionHistoryRequest is used to retrieve history of a workflow execution
+	PersistenceGetWorkflowExecutionHistoryRequest struct {
+		// an extra field passing from GetWorkflowExecutionHistoryRequest
+		LastEventBatchVersion int64
+
+		DomainID  string
+		Execution workflow.WorkflowExecution
+		// Get the history events from FirstEventID. Inclusive.
+		FirstEventID int64
+		// Get the history events upto NextEventID.  Not Inclusive.
+		NextEventID int64
+		// Maximum number of history append transactions per page
+		PageSize int
+		// Token to continue reading next page of history append transactions.  Pass in empty slice for first page
+		NextPageToken []byte
+	}
+
 	// PersistenceGetWorkflowExecutionHistoryResponse is the response to GetWorkflowExecutionHistoryRequest for Persistence Interface
 	PersistenceGetWorkflowExecutionHistoryResponse struct {
 		History []*DataBlob
@@ -275,9 +292,9 @@ type (
 		// Use this to set NextPageToken on GetworkflowExecutionHistoryRequest to read the next page.
 		NextPageToken []byte
 		// the first_event_id of last loaded batch
-		LastFirstEventID int64
-		// Size of history read from store
 		Size int
+		// an extra field passing from GetWorkflowExecutionHistoryResponse
+		LastEventBatchVersion int64
 	}
 )
 
