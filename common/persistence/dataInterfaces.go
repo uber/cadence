@@ -477,10 +477,10 @@ type (
 	ActivityInfo struct {
 		Version                  int64
 		ScheduleID               int64
-		ScheduledEvent           workflow.HistoryEvent
+		ScheduledEvent           *workflow.HistoryEvent
 		ScheduledTime            time.Time
 		StartedID                int64
-		StartedEvent             workflow.HistoryEvent
+		StartedEvent             *workflow.HistoryEvent
 		StartedTime              time.Time
 		ActivityID               string
 		RequestID                string
@@ -522,9 +522,9 @@ type (
 	ChildExecutionInfo struct {
 		Version         int64
 		InitiatedID     int64
-		InitiatedEvent  workflow.HistoryEvent
+		InitiatedEvent  *workflow.HistoryEvent
 		StartedID       int64
-		StartedEvent    workflow.HistoryEvent
+		StartedEvent    *workflow.HistoryEvent
 		CreateRequestID string
 	}
 
