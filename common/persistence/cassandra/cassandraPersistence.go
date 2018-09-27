@@ -1390,7 +1390,7 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Cre
 }
 
 func (d *cassandraPersistence) GetWorkflowExecution(request *p.GetWorkflowExecutionRequest) (
-	*p.GetWorkflowExecutionResponse, error) {
+	*p.PersistenceGetWorkflowExecutionResponse, error) {
 	execution := request.Execution
 	query := d.session.Query(templateGetWorkflowExecutionQuery,
 		d.shardID,
@@ -1419,14 +1419,14 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *p.GetWorkflowExecut
 		}
 	}
 
-	state := &p.WorkflowMutableState{}
+	state := &p.PersistenceWorkflowMutableState{}
 	info := createWorkflowExecutionInfo(result["execution"].(map[string]interface{}))
 	state.ExecutionInfo = info
 
 	replicationState := createReplicationState(result["replication_state"].(map[string]interface{}))
 	state.ReplicationState = replicationState
 
-	activityInfos := make(map[int64]*p.ActivityInfo)
+	activityInfos := make(map[int64]*p.PersistenceActivityInfo)
 	aMap := result["activity_map"].(map[int64]map[string]interface{})
 	for key, value := range aMap {
 		info := createActivityInfo(value)
@@ -1442,7 +1442,7 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *p.GetWorkflowExecut
 	}
 	state.TimerInfos = timerInfos
 
-	childExecutionInfos := make(map[int64]*p.ChildExecutionInfo)
+	childExecutionInfos := make(map[int64]*p.PersistenceChildExecutionInfo)
 	cMap := result["child_executions_map"].(map[int64]map[string]interface{})
 	for key, value := range cMap {
 		info := createChildExecutionInfo(value)
@@ -1474,14 +1474,14 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *p.GetWorkflowExecut
 	state.SignalRequestedIDs = signalRequestedIDs
 
 	eList := result["buffered_events_list"].([]map[string]interface{})
-	bufferedEvents := make([]*p.SerializedHistoryEventBatch, 0, len(eList))
+	bufferedEventsBlobs := make([]*p.DataBlob, 0, len(eList))
 	for _, v := range eList {
-		eventBatch := createSerializedHistoryEventBatch(v)
-		bufferedEvents = append(bufferedEvents, eventBatch)
+		blob := createHistoryEventBatchBlob(v)
+		bufferedEventsBlobs = append(bufferedEventsBlobs, blob)
 	}
-	state.BufferedEvents = bufferedEvents
+	state.BufferedEvents = bufferedEventsBlobs
 
-	bufferedReplicationTasks := make(map[int64]*p.BufferedReplicationTask)
+	bufferedReplicationTasks := make(map[int64]*p.PersistenceBufferedReplicationTask)
 	bufferedRTMap := result["buffered_replication_tasks_map"].(map[int64]map[string]interface{})
 	for k, v := range bufferedRTMap {
 		info := createBufferedReplicationTaskInfo(v)
@@ -1489,7 +1489,7 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *p.GetWorkflowExecut
 	}
 	state.BufferedReplicationTasks = bufferedReplicationTasks
 
-	return &p.GetWorkflowExecutionResponse{State: state}, nil
+	return &p.PersistenceGetWorkflowExecutionResponse{State: state}, nil
 }
 
 func (d *cassandraPersistence) UpdateWorkflowExecution(request *p.UpdateWorkflowExecutionRequest) error {
@@ -3308,8 +3308,10 @@ func createShardInfo(currentCluster string, result map[string]interface{}) *p.Sh
 	return info
 }
 
-func createWorkflowExecutionInfo(result map[string]interface{}) *p.WorkflowExecutionInfo {
-	info := &p.WorkflowExecutionInfo{}
+func createWorkflowExecutionInfo(result map[string]interface{}) *p.PersistenceWorkflowExecutionInfo {
+	info := &p.PersistenceWorkflowExecutionInfo{
+		CompletionEvent: &p.DataBlob{},
+	}
 	for k, v := range result {
 		switch k {
 		case "domain_id":
@@ -3327,7 +3329,9 @@ func createWorkflowExecutionInfo(result map[string]interface{}) *p.WorkflowExecu
 		case "initiated_id":
 			info.InitiatedID = v.(int64)
 		case "completion_event":
-			info.CompletionEvent = v.([]byte)
+			info.CompletionEvent.Data = v.([]byte)
+		case "completion_event_data_encoding":
+			info.CompletionEvent.Encoding = common.EncodingType(v.(string))
 		case "task_list":
 			info.TaskList = v.(string)
 		case "workflow_type_name":
@@ -3505,8 +3509,12 @@ func createReplicationTaskInfo(result map[string]interface{}) *p.ReplicationTask
 	return info
 }
 
-func createActivityInfo(result map[string]interface{}) *p.ActivityInfo {
-	info := &p.ActivityInfo{}
+func createActivityInfo(result map[string]interface{}) *p.PersistenceActivityInfo {
+	info := &p.PersistenceActivityInfo{
+		ScheduledEvent: &p.DataBlob{},
+		StartedEvent:   &p.DataBlob{},
+	}
+	var sharedEncoding common.EncodingType
 	for k, v := range result {
 		switch k {
 		case "version":
@@ -3514,13 +3522,13 @@ func createActivityInfo(result map[string]interface{}) *p.ActivityInfo {
 		case "schedule_id":
 			info.ScheduleID = v.(int64)
 		case "scheduled_event":
-			info.ScheduledEvent = v.([]byte)
+			info.ScheduledEvent.Data = v.([]byte)
 		case "scheduled_time":
 			info.ScheduledTime = v.(time.Time)
 		case "started_id":
 			info.StartedID = v.(int64)
 		case "started_event":
-			info.StartedEvent = v.([]byte)
+			info.StartedEvent.Data = v.([]byte)
 		case "started_time":
 			info.StartedTime = v.(time.Time)
 		case "activity_id":
@@ -3565,8 +3573,12 @@ func createActivityInfo(result map[string]interface{}) *p.ActivityInfo {
 			info.ExpirationTime = v.(time.Time)
 		case "non_retriable_errors":
 			info.NonRetriableErrors = v.([]string)
+		case "event_data_encoding":
+			sharedEncoding = common.EncodingType(v.(string))
 		}
 	}
+	info.ScheduledEvent.Encoding = sharedEncoding
+	info.StartedEvent.Encoding = sharedEncoding
 
 	return info
 }
@@ -3590,8 +3602,12 @@ func createTimerInfo(result map[string]interface{}) *p.TimerInfo {
 	return info
 }
 
-func createChildExecutionInfo(result map[string]interface{}) *p.ChildExecutionInfo {
-	info := &p.ChildExecutionInfo{}
+func createChildExecutionInfo(result map[string]interface{}) *p.PersistenceChildExecutionInfo {
+	info := &p.PersistenceChildExecutionInfo{
+		InitiatedEvent: &p.DataBlob{},
+		StartedEvent:   &p.DataBlob{},
+	}
+	var sharedEncoding common.EncodingType
 	for k, v := range result {
 		switch k {
 		case "version":
@@ -3599,16 +3615,19 @@ func createChildExecutionInfo(result map[string]interface{}) *p.ChildExecutionIn
 		case "initiated_id":
 			info.InitiatedID = v.(int64)
 		case "initiated_event":
-			info.InitiatedEvent = v.([]byte)
+			info.InitiatedEvent.Data = v.([]byte)
 		case "started_id":
 			info.StartedID = v.(int64)
 		case "started_event":
-			info.StartedEvent = v.([]byte)
+			info.StartedEvent.Data = v.([]byte)
 		case "create_request_id":
 			info.CreateRequestID = v.(gocql.UUID).String()
+		case "event_data_encoding":
+			sharedEncoding = common.EncodingType(v.(string))
 		}
 	}
-
+	info.InitiatedEvent.Encoding = sharedEncoding
+	info.StartedEvent.Encoding = sharedEncoding
 	return info
 }
 
@@ -3650,8 +3669,11 @@ func createSignalInfo(result map[string]interface{}) *p.SignalInfo {
 	return info
 }
 
-func createBufferedReplicationTaskInfo(result map[string]interface{}) *p.BufferedReplicationTask {
-	info := &p.BufferedReplicationTask{}
+func createBufferedReplicationTaskInfo(result map[string]interface{}) *p.PersistenceBufferedReplicationTask {
+	info := &p.PersistenceBufferedReplicationTask{
+		History:       &p.DataBlob{},
+		NewRunHistory: &p.DataBlob{},
+	}
 	for k, v := range result {
 		switch k {
 		case "first_event_id":
@@ -3662,10 +3684,10 @@ func createBufferedReplicationTaskInfo(result map[string]interface{}) *p.Buffere
 			info.Version = v.(int64)
 		case "history":
 			h := v.(map[string]interface{})
-			info.History = createSerializedHistoryEventBatch(h)
+			info.History = createHistoryEventBatchBlob(h)
 		case "new_run_history":
 			h := v.(map[string]interface{})
-			info.NewRunHistory = createSerializedHistoryEventBatch(h)
+			info.NewRunHistory = createHistoryEventBatchBlob(h)
 		}
 	}
 
@@ -3775,13 +3797,12 @@ func resetSignalInfoMap(signalInfos []*p.SignalInfo) map[int64]map[string]interf
 	return sMap
 }
 
-func createSerializedHistoryEventBatch(result map[string]interface{}) *p.SerializedHistoryEventBatch {
-	// TODO: default to JSON, update this when we support different encoding types.
-	eventBatch := &p.SerializedHistoryEventBatch{EncodingType: common.EncodingTypeJSON}
+func createHistoryEventBatchBlob(result map[string]interface{}) *p.DataBlob {
+	eventBatch := &p.DataBlob{Encoding: common.EncodingTypeJSON}
 	for k, v := range result {
 		switch k {
-		case "version":
-			eventBatch.Version = v.(int)
+		case "encoding_type":
+			eventBatch.Encoding = common.EncodingType(v.(string))
 		case "data":
 			eventBatch.Data = v.([]byte)
 		}
