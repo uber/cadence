@@ -21,6 +21,7 @@
 package history
 
 import (
+	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/persistence"
 )
 
@@ -41,7 +42,7 @@ type (
 		updateSignalRequestedIDs         []string
 		deleteSignalRequestedID          string
 		continueAsNew                    *persistence.CreateWorkflowExecutionRequest
-		newBufferedEvents                *persistence.SerializedHistoryEventBatch
+		newBufferedEvents                []*workflow.HistoryEvent
 		clearBufferedEvents              bool
 		newBufferedReplicationEventsInfo *persistence.BufferedReplicationTask
 		deleteBufferedReplicationEvent   *int64
@@ -200,7 +201,7 @@ func computeSignalInfoSize(si *persistence.SignalInfo) int {
 	return size
 }
 
-func computeBufferedEventsSize(events *persistence.SerializedHistoryEventBatch) int {
+func computeBufferedEventsSize(events []*workflow.HistoryEvent) int {
 	size := 0
 	if events != nil {
 		size = len(events.Data)

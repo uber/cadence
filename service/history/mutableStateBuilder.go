@@ -67,9 +67,9 @@ type (
 		updateSignalRequestedIDs  map[string]struct{} // Set of signaled requestIds since last update
 		deleteSignalRequestedID   string              // Deleted signaled requestId
 
-		bufferedEvents       []*persistence.SerializedHistoryEventBatch // buffered history events that are already persisted
-		updateBufferedEvents *persistence.SerializedHistoryEventBatch   // buffered history events that needs to be persisted
-		clearBufferedEvents  bool                                       // delete buffered events from persistence
+		bufferedEvents       []*workflow.HistoryEvent // buffered history events that are already persisted
+		updateBufferedEvents []*workflow.HistoryEvent // buffered history events that needs to be persisted
+		clearBufferedEvents  bool                     // delete buffered events from persistence
 
 		bufferedReplicationTasks       map[int64]*persistence.BufferedReplicationTask // Storage for out of order events
 		updateBufferedReplicationTasks *persistence.BufferedReplicationTask
@@ -79,7 +79,6 @@ type (
 		replicationState *persistence.ReplicationState
 		continueAsNew    *persistence.CreateWorkflowExecutionRequest
 		hBuilder         *historyBuilder
-		eventSerializer  historyEventSerializer
 		currentCluster   string
 		stateStats       *mutableStateStats
 		historySize      int
@@ -115,10 +114,9 @@ func newMutableStateBuilder(currentCluster string, config *Config, logger bark.L
 		pendingSignalRequestedIDs: make(map[string]struct{}),
 		deleteSignalRequestedID:   "",
 
-		eventSerializer: newJSONHistoryEventSerializer(),
-		currentCluster:  currentCluster,
-		config:          config,
-		logger:          logger,
+		currentCluster: currentCluster,
+		config:         config,
+		logger:         logger,
 	}
 	s.executionInfo = &persistence.WorkflowExecutionInfo{
 		NextEventID:        common.FirstEventID,
@@ -354,30 +352,12 @@ func (e *mutableStateBuilder) FlushBufferedEvents() error {
 
 	// no decision in-flight, flush all buffered events to committed bucket
 	if !e.HasInFlightDecisionTask() {
-		flush := func(bufferedEventBatch *persistence.SerializedHistoryEventBatch) error {
-			// TODO: get serializer based on eventBatch's EncodingType when we support multiple encoding
-			eventBatch, err := e.hBuilder.serializer.Deserialize(bufferedEventBatch)
-			if err != nil {
-				logging.LogHistoryDeserializationErrorEvent(e.logger, err, "Unable to serialize execution history for update.")
-				return err
-			}
-			for _, event := range eventBatch.Events {
-				newCommittedEvents = append(newCommittedEvents, event)
-			}
-			return nil
-		}
 
 		// flush persisted buffered events
-		for _, bufferedEventBatch := range e.bufferedEvents {
-			if err := flush(bufferedEventBatch); err != nil {
-				return err
-			}
-		}
+		newCommittedEvents = append(newCommittedEvents, e.bufferedEvents...)
 		// flush pending buffered events
 		if e.updateBufferedEvents != nil {
-			if err := flush(e.updateBufferedEvents); err != nil {
-				return err
-			}
+			newCommittedEvents = append(newCommittedEvents, e.updateBufferedEvents...)
 		}
 
 		// flush new buffered events that were not saved to persistence yet
@@ -397,14 +377,7 @@ func (e *mutableStateBuilder) FlushBufferedEvents() error {
 
 	// if decision is not closed yet, and there are new buffered events, then put those to the pending buffer
 	if e.HasInFlightDecisionTask() && len(newBufferedEvents) > 0 {
-		// decision in-flight, and some new events needs to be buffered
-		bufferedBatch := persistence.NewHistoryEventBatch(persistence.GetDefaultHistoryVersion(), newBufferedEvents)
-		serializedEvents, err := e.hBuilder.serializer.Serialize(bufferedBatch)
-		if err != nil {
-			logging.LogHistorySerializationErrorEvent(e.logger, err, "Unable to serialize execution history for update.")
-			return err
-		}
-		e.updateBufferedEvents = serializedEvents
+		e.updateBufferedEvents = newBufferedEvents
 	}
 
 	return nil
@@ -503,7 +476,7 @@ func (e *mutableStateBuilder) CloseUpdateSession() (*mutableStateSessionUpdates,
 	e.continueAsNew = nil
 	e.clearBufferedEvents = false
 	if e.updateBufferedEvents != nil {
-		e.bufferedEvents = append(e.bufferedEvents, e.updateBufferedEvents)
+		e.bufferedEvents = append(e.bufferedEvents, e.updateBufferedEvents...)
 		e.updateBufferedEvents = nil
 	}
 	if len(e.bufferedEvents) > e.config.MaximumBufferedEventsBatch() {
@@ -517,31 +490,12 @@ func (e *mutableStateBuilder) CloseUpdateSession() (*mutableStateSessionUpdates,
 
 func (e *mutableStateBuilder) BufferReplicationTask(
 	request *h.ReplicateEventsRequest) error {
-	var err error
-	var serializedHistoryBatch, serializedNewRunHistoryBatch *persistence.SerializedHistoryEventBatch
-	if request.History != nil {
-		historyBatch := persistence.NewHistoryEventBatch(persistence.GetDefaultHistoryVersion(), request.History.Events)
-		serializedHistoryBatch, err = e.hBuilder.serializer.Serialize(historyBatch)
-		if err != nil {
-			return err
-		}
-	}
-
-	if request.NewRunHistory != nil {
-		newRunHistoryBatch := persistence.NewHistoryEventBatch(persistence.GetDefaultHistoryVersion(),
-			request.NewRunHistory.Events)
-		serializedNewRunHistoryBatch, err = e.hBuilder.serializer.Serialize(newRunHistoryBatch)
-		if err != nil {
-			return err
-		}
-	}
-
 	bt := &persistence.BufferedReplicationTask{
 		FirstEventID:  request.GetFirstEventId(),
 		NextEventID:   request.GetNextEventId(),
 		Version:       request.GetVersion(),
-		History:       serializedHistoryBatch,
-		NewRunHistory: serializedNewRunHistoryBatch,
+		History:       request.History.Events,
+		NewRunHistory: request.NewRunHistory.Events,
 	}
 
 	e.bufferedReplicationTasks[request.GetFirstEventId()] = bt
@@ -559,29 +513,6 @@ func (e *mutableStateBuilder) GetBufferedReplicationTask(firstEventID int64) (*p
 func (e *mutableStateBuilder) DeleteBufferedReplicationTask(firstEventID int64) {
 	delete(e.bufferedReplicationTasks, firstEventID)
 	e.deleteBufferedReplicationEvent = common.Int64Ptr(firstEventID)
-}
-
-func (e *mutableStateBuilder) GetBufferedHistory(
-	serializedHistory *persistence.SerializedHistoryEventBatch) *workflow.History {
-
-	if serializedHistory != nil {
-		var history []*workflow.HistoryEvent
-		batch, err := e.hBuilder.serializer.Deserialize(serializedHistory)
-		if err != nil {
-			// TODO: return proper error here
-			return nil
-		}
-
-		for _, event := range batch.Events {
-			history = append(history, event)
-		}
-
-		return &workflow.History{
-			Events: history,
-		}
-	}
-
-	return nil
 }
 
 func (e *mutableStateBuilder) CreateReplicationTask() *persistence.HistoryReplicationTask {
@@ -1242,8 +1173,8 @@ func (e *mutableStateBuilder) AddWorkflowExecutionStartedEventForContinueAsNew(d
 		WorkflowType:                        wType,
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(decisionTimeout),
 		ExecutionStartToCloseTimeoutSeconds: attributes.ExecutionStartToCloseTimeoutSeconds,
-		Input:                               attributes.Input,
-		RetryPolicy:                         attributes.RetryPolicy,
+		Input:       attributes.Input,
+		RetryPolicy: attributes.RetryPolicy,
 	}
 
 	req := &h.StartWorkflowExecutionRequest{
