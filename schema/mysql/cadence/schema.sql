@@ -43,6 +43,7 @@ CREATE TABLE shards (
 );
 
 CREATE TABLE transfer_tasks(
+	shard_id INT NOT NULL,
 	domain_id CHAR(64) NOT NULL,
 	workflow_id VARCHAR(255) NOT NULL,
 	run_id CHAR(64) NOT NULL,
@@ -55,15 +56,15 @@ CREATE TABLE transfer_tasks(
 	task_list VARCHAR(255) NOT NULL,
 	schedule_id BIGINT NOT NULL,
 	version BIGINT NOT NULL,
-	-- fields specific to the former transfer_task type end here
-	shard_id INT NOT NULL,
 	PRIMARY KEY (shard_id, task_id)
 );
 
 CREATE TABLE executions(
+  shard_id INT NOT NULL,
 	domain_id CHAR(64) NOT NULL,
 	workflow_id VARCHAR(255) NOT NULL,
 	run_id CHAR(64) NOT NULL,
+	--
 	parent_domain_id CHAR(64), -- 1.
 	parent_workflow_id VARCHAR(255), -- 2.
 	parent_run_id CHAR(64), -- 3.
@@ -103,8 +104,6 @@ CREATE TABLE executions(
 	client_library_version VARCHAR(255) NOT NULL, -- 3.
 	client_feature_version VARCHAR(255) NOT NULL, -- 4.
 	client_impl VARCHAR(255) NOT NULL, -- 5.
---
-	shard_id INT NOT NULL,
 	PRIMARY KEY (shard_id, domain_id, workflow_id, run_id)
 );
 
@@ -121,7 +120,24 @@ CREATE TABLE current_executions(
   PRIMARY KEY (shard_id, domain_id, workflow_id)
 );
 
+CREATE TABLE buffered_events (
+  id BIGINT AUTO_INCREMENT NOT NULL,
+  shard_id INT NOT NULL,
+	domain_id CHAR(64) NOT NULL,
+	workflow_id VARCHAR(255) NOT NULL,
+	run_id CHAR(64) NOT NULL,
+	buffered_id BIGINT NOT NULL,
+	--
+	data BLOB NOT NULL,
+	data_encoding VARCHAR(64) NOT NULL,
+	data_version INT NOT NULL,
+	PRIMARY KEY (id)
+);
+
+CREATE INDEX buffered_events_by_events_ids ON buffered_events(shard_id, domain_id, workflow_id, run_id, buffered_id);
+
 CREATE TABLE tasks (
+  shard_id INT NOT NULL,
   domain_id CHAR(64) NOT NULL,
   workflow_id VARCHAR(255) NOT NULL,
   run_id CHAR(64) NOT NULL,
@@ -130,7 +146,7 @@ CREATE TABLE tasks (
   task_list_type TINYINT NOT NULL,
   task_id BIGINT NOT NULL,
   expiry_ts TIMESTAMP NOT NULL,
-  PRIMARY KEY (domain_id, task_list_name, task_list_type, task_id)
+  PRIMARY KEY (shard_id, domain_id, task_list_name, task_list_type, task_id)
 );
 
 CREATE TABLE task_lists (
@@ -145,33 +161,33 @@ CREATE TABLE task_lists (
 );
 
 CREATE TABLE replication_tasks (
+  shard_id INT NOT NULL,
+	task_id BIGINT NOT NULL,
+	--
 	domain_id CHAR(64) NOT NULL,
 	workflow_id VARCHAR(255) NOT NULL,
 	run_id CHAR(64) NOT NULL,
-	task_id BIGINT NOT NULL,
 	task_type TINYINT NOT NULL,
 	first_event_id BIGINT NOT NULL,
 	next_event_id BIGINT NOT NULL,
 	version BIGINT NOT NULL,
   last_replication_info BLOB NOT NULL,
---
-shard_id INT NOT NULL,
 PRIMARY KEY (shard_id, task_id)
 );
 
 CREATE TABLE timer_tasks (
+	shard_id INT NOT NULL,
+	visibility_timestamp TIMESTAMP(3) NOT NULL,
+	task_id BIGINT NOT NULL,
+	--
 	domain_id CHAR(64) NOT NULL,
 	workflow_id VARCHAR(255) NOT NULL,
 	run_id CHAR(64) NOT NULL,
-	visibility_timestamp TIMESTAMP(3) NOT NULL,
-	task_id BIGINT NOT NULL,
 	task_type TINYINT NOT NULL,
 	timeout_type TINYINT NOT NULL,
 	event_id BIGINT NOT NULL,
 	schedule_attempt BIGINT NOT NULL,
 	version BIGINT NOT NULL,
-	--
-	shard_id INT NOT NULL,
 	PRIMARY KEY (shard_id, visibility_timestamp, task_id)
 );
 
