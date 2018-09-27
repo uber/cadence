@@ -22,6 +22,7 @@ package persistence
 
 import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
 )
 
 type (
@@ -255,15 +256,15 @@ func (m *executionManagerImpl) DeserializeActivityInfos(infos map[int64]*Persist
 }
 
 func (m *executionManagerImpl) UpdateWorkflowExecution(request *UpdateWorkflowExecutionRequest) error {
-	executionInfo, err := m.SerializeExecutionInfo(request.ExecutionInfo)
+	executionInfo, err := m.SerializeExecutionInfo(request.ExecutionInfo, request.Encoding)
 	if err != nil {
 		return err
 	}
-	upsertActivityInfos, err := m.SerializeUpsertActivityInfos(request.UpsertActivityInfos)
+	upsertActivityInfos, err := m.SerializeUpsertActivityInfos(request.UpsertActivityInfos, request.Encoding)
 	if err != nil {
 		return err
 	}
-	upsertChildExecutionInfos, err := m.SerializeUpsertChildExecutionInfos(request.UpsertChildExecutionInfos)
+	upsertChildExecutionInfos, err := m.SerializeUpsertChildExecutionInfos(request.UpsertChildExecutionInfos, request.Encoding)
 	if err != nil {
 		return err
 	}
@@ -271,7 +272,7 @@ func (m *executionManagerImpl) UpdateWorkflowExecution(request *UpdateWorkflowEx
 	if err != nil {
 		return err
 	}
-	newBufferedReplicationTask, err := m.SerializeNewBufferedReplicationTask(request.NewBufferedReplicationTask)
+	newBufferedReplicationTask, err := m.SerializeNewBufferedReplicationTask(request.NewBufferedReplicationTask, request.Encoding)
 	if err != nil {
 		return err
 	}
@@ -309,24 +310,180 @@ func (m *executionManagerImpl) UpdateWorkflowExecution(request *UpdateWorkflowEx
 	return m.persistence.UpdateWorkflowExecution(newRequest)
 }
 
-func (m *executionManagerImpl) SerializeNewBufferedReplicationTask(task *BufferedReplicationTask) (*PersistenceBufferedReplicationTask, error) {
+func (m *executionManagerImpl) SerializeNewBufferedReplicationTask(task *BufferedReplicationTask, encoding common.EncodingType) (*PersistenceBufferedReplicationTask, error) {
+	history, err := m.serializer.SerializeBatchEvents(&workflow.History{Events: task.History}, encoding)
+	if err != nil {
+		return nil, err
+	}
+	newHistory, err := m.serializer.SerializeBatchEvents(&workflow.History{Events: task.NewRunHistory}, encoding)
+	if err != nil {
+		return nil, err
+	}
+	return &PersistenceBufferedReplicationTask{
+		FirstEventID: task.FirstEventID,
+		NextEventID:  task.NextEventID,
+		Version:      task.Version,
 
+		History:       history,
+		NewRunHistory: newHistory,
+	}, nil
 }
 
-func (m *executionManagerImpl) SerializeUpsertChildExecutionInfos(infos []*ChildExecutionInfo) ([]*PersistenceChildExecutionInfo, error) {
+func (m *executionManagerImpl) SerializeUpsertChildExecutionInfos(infos []*ChildExecutionInfo, encoding common.EncodingType) ([]*PersistenceChildExecutionInfo, error) {
+	newInfos := make([]*PersistenceChildExecutionInfo, len(infos))
+	for _, v := range infos {
+		initiatedEvent, err := m.serializer.SerializeEvent(v.InitiatedEvent, encoding)
+		if err != nil {
+			return nil, err
+		}
+		startedEvent, err := m.serializer.SerializeEvent(v.StartedEvent, encoding)
+		if err != nil {
+			return nil, err
+		}
+		i := &PersistenceChildExecutionInfo{
+			InitiatedEvent: initiatedEvent,
+			StartedEvent:   startedEvent,
 
+			Version:         v.Version,
+			InitiatedID:     v.InitiatedID,
+			CreateRequestID: v.CreateRequestID,
+			StartedID:       v.StartedID,
+		}
+		newInfos = append(newInfos, i)
+	}
+	return newInfos, nil
 }
 
-func (m *executionManagerImpl) SerializeUpsertActivityInfos(infos []*ActivityInfo) ([]*PersistenceActivityInfo, error) {
-
+func (m *executionManagerImpl) SerializeUpsertActivityInfos(infos []*ActivityInfo, encoding common.EncodingType) ([]*PersistenceActivityInfo, error) {
+	newInfos := make([]*PersistenceActivityInfo, len(infos))
+	for _, v := range infos {
+		scheduledEvent, err := m.serializer.SerializeEvent(v.ScheduledEvent, encoding)
+		if err != nil {
+			return nil, err
+		}
+		startedEvent, err := m.serializer.SerializeEvent(v.StartedEvent, encoding)
+		if err != nil {
+			return nil, err
+		}
+		i := &PersistenceActivityInfo{
+			Version:                  v.Version,
+			ScheduleID:               v.ScheduleID,
+			ScheduledEvent:           scheduledEvent,
+			ScheduledTime:            v.ScheduledTime,
+			StartedID:                v.StartedID,
+			StartedEvent:             startedEvent,
+			StartedTime:              v.StartedTime,
+			ActivityID:               v.ActivityID,
+			RequestID:                v.RequestID,
+			Details:                  v.Details,
+			ScheduleToStartTimeout:   v.ScheduleToStartTimeout,
+			ScheduleToCloseTimeout:   v.ScheduleToCloseTimeout,
+			StartToCloseTimeout:      v.StartToCloseTimeout,
+			HeartbeatTimeout:         v.HeartbeatTimeout,
+			CancelRequested:          v.CancelRequested,
+			CancelRequestID:          v.CancelRequestID,
+			LastHeartBeatUpdatedTime: v.LastHeartBeatUpdatedTime,
+			TimerTaskStatus:          v.TimerTaskStatus,
+			Attempt:                  v.Attempt,
+			DomainID:                 v.DomainID,
+			StartedIdentity:          v.StartedIdentity,
+			TaskList:                 v.TaskList,
+			HasRetryPolicy:           v.HasRetryPolicy,
+			InitialInterval:          v.InitialInterval,
+			BackoffCoefficient:       v.BackoffCoefficient,
+			MaximumInterval:          v.MaximumInterval,
+			ExpirationTime:           v.ExpirationTime,
+			MaximumAttempts:          v.MaximumAttempts,
+			NonRetriableErrors:       v.NonRetriableErrors,
+			LastTimeoutVisibility:    v.LastTimeoutVisibility,
+		}
+		newInfos = append(newInfos, i)
+	}
+	return newInfos, nil
 }
 
-func (m *executionManagerImpl) SerializeExecutionInfo(info *WorkflowExecutionInfo) (*PersistenceWorkflowExecutionInfo, error) {
+func (m *executionManagerImpl) SerializeExecutionInfo(info *WorkflowExecutionInfo, encoding common.EncodingType) (*PersistenceWorkflowExecutionInfo, error) {
+	completionEvent, err := m.serializer.SerializeEvent(info.CompletionEvent, encoding)
+	if err != nil {
+		return nil, err
+	}
 
+	return &PersistenceWorkflowExecutionInfo{
+		DomainID:                     info.DomainID,
+		WorkflowID:                   info.WorkflowID,
+		RunID:                        info.RunID,
+		ParentDomainID:               info.ParentDomainID,
+		ParentWorkflowID:             info.ParentWorkflowID,
+		ParentRunID:                  info.ParentRunID,
+		InitiatedID:                  info.InitiatedID,
+		CompletionEvent:              completionEvent,
+		TaskList:                     info.TaskList,
+		WorkflowTypeName:             info.WorkflowTypeName,
+		WorkflowTimeout:              info.WorkflowTimeout,
+		DecisionTimeoutValue:         info.DecisionTimeoutValue,
+		ExecutionContext:             info.ExecutionContext,
+		State:                        info.State,
+		CloseStatus:                  info.CloseStatus,
+		LastFirstEventID:             info.LastFirstEventID,
+		NextEventID:                  info.NextEventID,
+		LastProcessedEvent:           info.LastProcessedEvent,
+		StartTimestamp:               info.StartTimestamp,
+		LastUpdatedTimestamp:         info.LastUpdatedTimestamp,
+		CreateRequestID:              info.CreateRequestID,
+		HistorySize:                  info.HistorySize,
+		DecisionVersion:              info.DecisionVersion,
+		DecisionScheduleID:           info.DecisionScheduleID,
+		DecisionStartedID:            info.DecisionStartedID,
+		DecisionRequestID:            info.DecisionRequestID,
+		DecisionTimeout:              info.DecisionTimeout,
+		DecisionAttempt:              info.DecisionAttempt,
+		DecisionTimestamp:            info.DecisionTimestamp,
+		CancelRequested:              info.CancelRequested,
+		CancelRequestID:              info.CancelRequestID,
+		StickyTaskList:               info.StickyTaskList,
+		StickyScheduleToStartTimeout: info.StickyScheduleToStartTimeout,
+		ClientLibraryVersion:         info.ClientLibraryVersion,
+		ClientFeatureVersion:         info.ClientFeatureVersion,
+		ClientImpl:                   info.ClientImpl,
+		Attempt:                      info.Attempt,
+		HasRetryPolicy:               info.HasRetryPolicy,
+		InitialInterval:              info.InitialInterval,
+		BackoffCoefficient:           info.BackoffCoefficient,
+		MaximumInterval:              info.MaximumInterval,
+		ExpirationTime:               info.ExpirationTime,
+		MaximumAttempts:              info.MaximumAttempts,
+		NonRetriableErrors:           info.NonRetriableErrors,
+	}, nil
 }
 
 func (m *executionManagerImpl) ResetMutableState(request *ResetMutableStateRequest) error {
+	executionInfo, err := m.SerializeExecutionInfo(request.ExecutionInfo, request.Encoding)
+	if err != nil {
+		return err
+	}
+	insertActivityInfos, err := m.SerializeUpsertActivityInfos(request.InsertActivityInfos, request.Encoding)
+	if err != nil {
+		return err
+	}
+	insertChildExecutionInfos, err := m.SerializeUpsertChildExecutionInfos(request.InsertChildExecutionInfos, request.Encoding)
+	if err != nil {
+		return err
+	}
 
+	newRequest := &PersistenceResetMutableStateRequest{
+		PrevRunID:                 request.PrevRunID,
+		ExecutionInfo:             executionInfo,
+		ReplicationState:          request.ReplicationState,
+		Condition:                 request.Condition,
+		RangeID:                   request.RangeID,
+		InsertActivityInfos:       insertActivityInfos,
+		InsertTimerInfos:          request.InsertTimerInfos,
+		InsertChildExecutionInfos: insertChildExecutionInfos,
+		InsertRequestCancelInfos:  request.InsertRequestCancelInfos,
+		InsertSignalInfos:         request.InsertSignalInfos,
+		InsertSignalRequestedIDs:  request.InsertSignalRequestedIDs,
+	}
+	return m.persistence.ResetMutableState(newRequest)
 }
 
 func (m *executionManagerImpl) CreateWorkflowExecution(request *CreateWorkflowExecutionRequest) (*CreateWorkflowExecutionResponse, error) {
