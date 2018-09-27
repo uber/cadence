@@ -1492,7 +1492,7 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *p.GetWorkflowExecut
 	return &p.PersistenceGetWorkflowExecutionResponse{State: state}, nil
 }
 
-func (d *cassandraPersistence) UpdateWorkflowExecution(request *p.UpdateWorkflowExecutionRequest) error {
+func (d *cassandraPersistence) UpdateWorkflowExecution(request *p.PersistenceUpdateWorkflowExecutionRequest) error {
 	batch := d.session.NewBatch(gocql.LoggedBatch)
 	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
 	executionInfo := request.ExecutionInfo
@@ -1508,7 +1508,8 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *p.UpdateWorkflow
 			executionInfo.ParentWorkflowID,
 			executionInfo.ParentRunID,
 			executionInfo.InitiatedID,
-			executionInfo.CompletionEvent,
+			executionInfo.CompletionEvent.Data,
+			executionInfo.CompletionEvent.Encoding,
 			executionInfo.TaskList,
 			executionInfo.WorkflowTypeName,
 			executionInfo.WorkflowTimeout,
@@ -1568,7 +1569,8 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *p.UpdateWorkflow
 			executionInfo.ParentWorkflowID,
 			executionInfo.ParentRunID,
 			executionInfo.InitiatedID,
-			executionInfo.CompletionEvent,
+			executionInfo.CompletionEvent.Data,
+			executionInfo.CompletionEvent.Encoding,
 			executionInfo.TaskList,
 			executionInfo.WorkflowTypeName,
 			executionInfo.WorkflowTimeout,
@@ -1630,14 +1632,20 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *p.UpdateWorkflow
 	d.createTimerTasks(batch, request.TimerTasks, request.DeleteTimerTask, request.ExecutionInfo.DomainID,
 		executionInfo.WorkflowID, executionInfo.RunID, cqlNowTimestamp)
 
-	d.updateActivityInfos(batch, request.UpsertActivityInfos, request.DeleteActivityInfos, executionInfo.DomainID,
+	err := d.updateActivityInfos(batch, request.UpsertActivityInfos, request.DeleteActivityInfos, executionInfo.DomainID,
 		executionInfo.WorkflowID, executionInfo.RunID, request.Condition, request.RangeID)
+	if err != nil {
+		return err
+	}
 
 	d.updateTimerInfos(batch, request.UpserTimerInfos, request.DeleteTimerInfos, executionInfo.DomainID,
 		executionInfo.WorkflowID, executionInfo.RunID, request.Condition, request.RangeID)
 
-	d.updateChildExecutionInfos(batch, request.UpsertChildExecutionInfos, request.DeleteChildExecutionInfo,
+	err = d.updateChildExecutionInfos(batch, request.UpsertChildExecutionInfos, request.DeleteChildExecutionInfo,
 		executionInfo.DomainID, executionInfo.WorkflowID, executionInfo.RunID, request.Condition, request.RangeID)
+	if err != nil {
+		return err
+	}
 
 	d.updateRequestCancelInfos(batch, request.UpsertRequestCancelInfos, request.DeleteRequestCancelInfo,
 		executionInfo.DomainID, executionInfo.WorkflowID, executionInfo.RunID, request.Condition, request.RangeID)
@@ -1759,7 +1767,7 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *p.UpdateWorkflow
 	return nil
 }
 
-func (d *cassandraPersistence) ResetMutableState(request *p.ResetMutableStateRequest) error {
+func (d *cassandraPersistence) ResetMutableState(request *p.PersistenceResetMutableStateRequest) error {
 	batch := d.session.NewBatch(gocql.LoggedBatch)
 	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
 	executionInfo := request.ExecutionInfo
@@ -2835,18 +2843,22 @@ func (d *cassandraPersistence) createTimerTasks(batch *gocql.Batch, timerTasks [
 	}
 }
 
-func (d *cassandraPersistence) updateActivityInfos(batch *gocql.Batch, activityInfos []*p.ActivityInfo, deleteInfos []int64,
-	domainID, workflowID, runID string, condition int64, rangeID int64) {
+func (d *cassandraPersistence) updateActivityInfos(batch *gocql.Batch, activityInfos []*p.PersistenceActivityInfo, deleteInfos []int64,
+	domainID, workflowID, runID string, condition int64, rangeID int64) error {
 
 	for _, a := range activityInfos {
+		if a.StartedEvent.Encoding != a.ScheduledEvent.Encoding {
+			return p.NewHistorySerializationError(fmt.Sprintf("expect to have the same encoding, but %v != %v", a.ScheduledEvent.Encoding, a.StartedEvent.Encoding))
+		}
+
 		batch.Query(templateUpdateActivityInfoQuery,
 			a.ScheduleID,
 			a.Version,
 			a.ScheduleID,
-			a.ScheduledEvent,
+			a.ScheduledEvent.Data,
 			a.ScheduledTime,
 			a.StartedID,
-			a.StartedEvent,
+			a.StartedEvent.Data,
 			a.StartedTime,
 			a.ActivityID,
 			a.RequestID,
@@ -2869,6 +2881,7 @@ func (d *cassandraPersistence) updateActivityInfos(batch *gocql.Batch, activityI
 			a.ExpirationTime,
 			a.MaximumAttempts,
 			a.NonRetriableErrors,
+			a.StartedEvent.Encoding,
 			d.shardID,
 			rowTypeExecution,
 			domainID,
@@ -2891,6 +2904,7 @@ func (d *cassandraPersistence) updateActivityInfos(batch *gocql.Batch, activityI
 			rowTypeExecutionTaskID,
 			condition)
 	}
+	return nil
 }
 
 func (d *cassandraPersistence) resetBufferedEvents(batch *gocql.Batch, domainID, workflowID, runID string,
@@ -2916,10 +2930,16 @@ func (d *cassandraPersistence) resetBufferedEvents(batch *gocql.Batch, domainID,
 		condition)
 }
 
-func (d *cassandraPersistence) resetActivityInfos(batch *gocql.Batch, activityInfos []*p.ActivityInfo, domainID,
-	workflowID, runID string, condition int64) {
+func (d *cassandraPersistence) resetActivityInfos(batch *gocql.Batch, activityInfos []*p.PersistenceActivityInfo, domainID,
+	workflowID, runID string, condition int64) error {
+
+	infoMap, err := resetActivityInfoMap(activityInfos)
+	if err != nil {
+		return err
+	}
+
 	batch.Query(templateResetActivityInfoQuery,
-		resetActivityInfoMap(activityInfos),
+		infoMap,
 		d.shardID,
 		rowTypeExecution,
 		domainID,
@@ -2928,6 +2948,7 @@ func (d *cassandraPersistence) resetActivityInfos(batch *gocql.Batch, activityIn
 		defaultVisibilityTimestamp,
 		rowTypeExecutionTaskID,
 		condition)
+	return nil
 }
 
 func (d *cassandraPersistence) updateTimerInfos(batch *gocql.Batch, timerInfos []*p.TimerInfo, deleteInfos []string,
@@ -2979,18 +3000,23 @@ func (d *cassandraPersistence) resetTimerInfos(batch *gocql.Batch, timerInfos []
 		condition)
 }
 
-func (d *cassandraPersistence) updateChildExecutionInfos(batch *gocql.Batch, childExecutionInfos []*p.ChildExecutionInfo,
-	deleteInfo *int64, domainID, workflowID, runID string, condition int64, rangeID int64) {
+func (d *cassandraPersistence) updateChildExecutionInfos(batch *gocql.Batch, childExecutionInfos []*p.PersistenceChildExecutionInfo,
+	deleteInfo *int64, domainID, workflowID, runID string, condition int64, rangeID int64) error {
 
 	for _, c := range childExecutionInfos {
+		if c.StartedEvent.Encoding != c.InitiatedEvent.Encoding {
+			return p.NewHistorySerializationError(fmt.Sprintf("expect to have the same encoding, but %v != %v", c.InitiatedEvent.Encoding, c.StartedEvent.Encoding))
+		}
+
 		batch.Query(templateUpdateChildExecutionInfoQuery,
 			c.InitiatedID,
 			c.Version,
 			c.InitiatedID,
-			c.InitiatedEvent,
+			c.InitiatedEvent.Data,
 			c.StartedID,
-			c.StartedEvent,
+			c.StartedEvent.Data,
 			c.CreateRequestID,
+			c.StartedEvent.Encoding,
 			d.shardID,
 			rowTypeExecution,
 			domainID,
@@ -3014,12 +3040,17 @@ func (d *cassandraPersistence) updateChildExecutionInfos(batch *gocql.Batch, chi
 			rowTypeExecutionTaskID,
 			condition)
 	}
+	return nil
 }
 
-func (d *cassandraPersistence) resetChildExecutionInfos(batch *gocql.Batch, childExecutionInfos []*p.ChildExecutionInfo,
-	domainID, workflowID, runID string, condition int64) {
+func (d *cassandraPersistence) resetChildExecutionInfos(batch *gocql.Batch, childExecutionInfos []*p.PersistenceChildExecutionInfo,
+	domainID, workflowID, runID string, condition int64) error {
+	infoMap, err := resetChildExecutionInfoMap(childExecutionInfos)
+	if err != nil {
+		return err
+	}
 	batch.Query(templateResetChildExecutionInfoQuery,
-		resetChildExecutionInfoMap(childExecutionInfos),
+		infoMap,
 		d.shardID,
 		rowTypeExecution,
 		domainID,
@@ -3028,6 +3059,7 @@ func (d *cassandraPersistence) resetChildExecutionInfos(batch *gocql.Batch, chil
 		defaultVisibilityTimestamp,
 		rowTypeExecutionTaskID,
 		condition)
+	return nil
 }
 
 func (d *cassandraPersistence) updateRequestCancelInfos(batch *gocql.Batch, requestCancelInfos []*p.RequestCancelInfo,
@@ -3174,7 +3206,7 @@ func (d *cassandraPersistence) resetSignalRequested(batch *gocql.Batch, signalRe
 		condition)
 }
 
-func (d *cassandraPersistence) updateBufferedEvents(batch *gocql.Batch, newBufferedEvents *p.SerializedHistoryEventBatch,
+func (d *cassandraPersistence) updateBufferedEvents(batch *gocql.Batch, newBufferedEvents *p.DataBlob,
 	clearBufferedEvents bool, domainID, workflowID, runID string, condition int64, rangeID int64) {
 
 	if clearBufferedEvents {
@@ -3189,8 +3221,8 @@ func (d *cassandraPersistence) updateBufferedEvents(batch *gocql.Batch, newBuffe
 			condition)
 	} else if newBufferedEvents != nil {
 		values := make(map[string]interface{})
-		values["encoding_type"] = newBufferedEvents.EncodingType
-		values["version"] = newBufferedEvents.Version
+		values["encoding_type"] = newBufferedEvents.Encoding
+		values["version"] = int64(0)
 		values["data"] = newBufferedEvents.Data
 		newEventValues := []map[string]interface{}{values}
 		batch.Query(templateAppendBufferedEventsQuery,
@@ -3206,7 +3238,7 @@ func (d *cassandraPersistence) updateBufferedEvents(batch *gocql.Batch, newBuffe
 	}
 }
 
-func (d *cassandraPersistence) updateBufferedReplicationTasks(batch *gocql.Batch, newBufferedReplicationTask *p.BufferedReplicationTask,
+func (d *cassandraPersistence) updateBufferedReplicationTasks(batch *gocql.Batch, newBufferedReplicationTask *p.PersistenceBufferedReplicationTask,
 	deleteInfo *int64, domainID, workflowID, runID string, condition int64, rangeID int64) {
 
 	if newBufferedReplicationTask != nil {
@@ -3216,11 +3248,11 @@ func (d *cassandraPersistence) updateBufferedReplicationTasks(batch *gocql.Batch
 				newBufferedReplicationTask.FirstEventID,
 				newBufferedReplicationTask.NextEventID,
 				newBufferedReplicationTask.Version,
-				newBufferedReplicationTask.History.EncodingType,
-				newBufferedReplicationTask.History.Version,
+				newBufferedReplicationTask.History.Encoding,
+				int64(0),
 				newBufferedReplicationTask.History.Data,
-				newBufferedReplicationTask.NewRunHistory.EncodingType,
-				newBufferedReplicationTask.NewRunHistory.Version,
+				newBufferedReplicationTask.NewRunHistory.Encoding,
+				int64(0),
 				newBufferedReplicationTask.NewRunHistory.Data,
 				d.shardID,
 				rowTypeExecution,
@@ -3236,8 +3268,8 @@ func (d *cassandraPersistence) updateBufferedReplicationTasks(batch *gocql.Batch
 				newBufferedReplicationTask.FirstEventID,
 				newBufferedReplicationTask.NextEventID,
 				newBufferedReplicationTask.Version,
-				newBufferedReplicationTask.History.EncodingType,
-				newBufferedReplicationTask.History.Version,
+				newBufferedReplicationTask.History.Encoding,
+				int64(0),
 				newBufferedReplicationTask.History.Data,
 				d.shardID,
 				rowTypeExecution,
@@ -3694,16 +3726,21 @@ func createBufferedReplicationTaskInfo(result map[string]interface{}) *p.Persist
 	return info
 }
 
-func resetActivityInfoMap(activityInfos []*p.ActivityInfo) map[int64]map[string]interface{} {
+func resetActivityInfoMap(activityInfos []*p.PersistenceActivityInfo) (map[int64]map[string]interface{}, error) {
+
 	aMap := make(map[int64]map[string]interface{})
 	for _, a := range activityInfos {
+		if a.ScheduledEvent.Encoding != a.StartedEvent.Encoding {
+			return nil, p.NewHistorySerializationError(fmt.Sprintf("expect to have the same encoding, but %v != %v", a.ScheduledEvent.Encoding, a.StartedEvent.Encoding))
+		}
+
 		aInfo := make(map[string]interface{})
 		aInfo["version"] = a.Version
 		aInfo["schedule_id"] = a.ScheduleID
-		aInfo["scheduled_event"] = a.ScheduledEvent
+		aInfo["scheduled_event"] = a.ScheduledEvent.Data
 		aInfo["scheduled_time"] = a.ScheduledTime
 		aInfo["started_id"] = a.StartedID
-		aInfo["started_event"] = a.StartedEvent
+		aInfo["started_event"] = a.StartedEvent.Data
 		aInfo["started_time"] = a.StartedTime
 		aInfo["activity_id"] = a.ActivityID
 		aInfo["request_id"] = a.RequestID
@@ -3726,11 +3763,12 @@ func resetActivityInfoMap(activityInfos []*p.ActivityInfo) map[int64]map[string]
 		aInfo["expiration_time"] = a.ExpirationTime
 		aInfo["max_attempts"] = a.MaximumAttempts
 		aInfo["non_retriable_errors"] = a.NonRetriableErrors
+		aInfo["event_data_encoding"] = a.StartedEvent.Encoding
 
 		aMap[a.ScheduleID] = aInfo
 	}
 
-	return aMap
+	return aMap, nil
 }
 
 func resetTimerInfoMap(timerInfos []*p.TimerInfo) map[string]map[string]interface{} {
@@ -3749,21 +3787,26 @@ func resetTimerInfoMap(timerInfos []*p.TimerInfo) map[string]map[string]interfac
 	return tMap
 }
 
-func resetChildExecutionInfoMap(childExecutionInfos []*p.ChildExecutionInfo) map[int64]map[string]interface{} {
+func resetChildExecutionInfoMap(childExecutionInfos []*p.PersistenceChildExecutionInfo) (map[int64]map[string]interface{}, error) {
 	cMap := make(map[int64]map[string]interface{})
 	for _, c := range childExecutionInfos {
+		if c.StartedEvent.Encoding != c.InitiatedEvent.Encoding {
+			return nil, p.NewHistorySerializationError(fmt.Sprintf("expect to have the same encoding, but %v != %v", c.InitiatedEvent.Encoding, c.StartedEvent.Encoding))
+		}
+
 		cInfo := make(map[string]interface{})
 		cInfo["version"] = c.Version
 		cInfo["initiated_id"] = c.InitiatedID
-		cInfo["initiated_event"] = c.InitiatedEvent
+		cInfo["initiated_event"] = c.InitiatedEvent.Data
 		cInfo["started_id"] = c.StartedID
-		cInfo["started_event"] = c.StartedEvent
+		cInfo["started_event"] = c.StartedEvent.Data
 		cInfo["create_request_id"] = c.CreateRequestID
+		cInfo["event_data_encoding"] = c.StartedEvent.Encoding
 
 		cMap[c.InitiatedID] = cInfo
 	}
 
-	return cMap
+	return cMap, nil
 }
 
 func resetRequestCancelInfoMap(requestCancelInfos []*p.RequestCancelInfo) map[int64]map[string]interface{} {

@@ -187,6 +187,11 @@ func (e *UnknownEncodingTypeError) Error() string {
 	return fmt.Sprintf("unknown or unsupported encoding type %v", e.encodingType)
 }
 
+//NewHistorySerializationError returns a HistorySerializationError
+func NewHistorySerializationError(msg string) *HistorySerializationError {
+	return &HistorySerializationError{msg: msg}
+}
+
 func (e *HistorySerializationError) Error() string {
 	return fmt.Sprintf("history serialization error: %v", e.msg)
 }
