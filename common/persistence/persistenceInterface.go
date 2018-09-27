@@ -29,6 +29,52 @@ import (
 
 type (
 
+	//Persistence interface is a lower layer of dataInterface. The intention is to let different persistence implementation(SQL,Cassandra/etc) share some common logic
+	// Right now the only common part is serialization/deserialization, and only ExecutionManager/HistoryManager need it.
+	// ShardManager/TaskManager/MetadataManager are the same.
+	PersistenceShardManager    = ShardManager
+	PersistenceTaskManager     = TaskManager
+	PersistenceMetadataManager = MetadataManager
+
+	// PersistenceExecutionManager is used to manage workflow executions for Persistence layer
+	PersistenceExecutionManager interface {
+		Closeable
+
+		//The below three APIs are related to serialization/deserialization
+		GetWorkflowExecution(request *GetWorkflowExecutionRequest) (*PersistenceGetWorkflowExecutionResponse, error)
+		UpdateWorkflowExecution(request *PersistenceUpdateWorkflowExecutionRequest) error
+		ResetMutableState(request *PersistenceResetMutableStateRequest) error
+
+		CreateWorkflowExecution(request *CreateWorkflowExecutionRequest) (*CreateWorkflowExecutionResponse, error)
+		DeleteWorkflowExecution(request *DeleteWorkflowExecutionRequest) error
+		GetCurrentExecution(request *GetCurrentExecutionRequest) (*GetCurrentExecutionResponse, error)
+
+		// Transfer task related methods
+		GetTransferTasks(request *GetTransferTasksRequest) (*GetTransferTasksResponse, error)
+		CompleteTransferTask(request *CompleteTransferTaskRequest) error
+		RangeCompleteTransferTask(request *RangeCompleteTransferTaskRequest) error
+
+		// Replication task related methods
+		GetReplicationTasks(request *GetReplicationTasksRequest) (*GetReplicationTasksResponse, error)
+		CompleteReplicationTask(request *CompleteReplicationTaskRequest) error
+
+		// Timer related methods.
+		GetTimerIndexTasks(request *GetTimerIndexTasksRequest) (*GetTimerIndexTasksResponse, error)
+		CompleteTimerTask(request *CompleteTimerTaskRequest) error
+		RangeCompleteTimerTask(request *RangeCompleteTimerTaskRequest) error
+	}
+
+	// PersistenceHistoryManager is used to manage Workflow Execution HistoryEventBatch for Persistence layer
+	PersistenceHistoryManager interface {
+		Closeable
+
+		//The below two APIs are related to serialization/deserialization
+		AppendHistoryEvents(request *PersistenceAppendHistoryEventsRequest) error
+		GetWorkflowExecutionHistory(request *GetWorkflowExecutionHistoryRequest) (*PersistenceGetWorkflowExecutionHistoryResponse, error)
+
+		DeleteWorkflowExecutionHistory(request *DeleteWorkflowExecutionHistoryRequest) error
+	}
+
 	// DataBlob represents a blob for any binary data.
 	// It contains raw data, and metadata(right now only encoding) in other field
 	// Note that it should be only used for Persistence layer, below dataInterface and application(historyEngine/etc)
@@ -232,45 +278,6 @@ type (
 		LastFirstEventID int64
 		// Size of history read from store
 		Size int
-	}
-
-	// PersistenceExecutionManager is used to manage workflow executions
-	PersistenceExecutionManager interface {
-		Closeable
-
-		//The below three APIs are related to serialization/deserialization
-		GetWorkflowExecution(request *GetWorkflowExecutionRequest) (*PersistenceGetWorkflowExecutionResponse, error)
-		UpdateWorkflowExecution(request *PersistenceUpdateWorkflowExecutionRequest) error
-		ResetMutableState(request *PersistenceResetMutableStateRequest) error
-
-		CreateWorkflowExecution(request *CreateWorkflowExecutionRequest) (*CreateWorkflowExecutionResponse, error)
-		DeleteWorkflowExecution(request *DeleteWorkflowExecutionRequest) error
-		GetCurrentExecution(request *GetCurrentExecutionRequest) (*GetCurrentExecutionResponse, error)
-
-		// Transfer task related methods
-		GetTransferTasks(request *GetTransferTasksRequest) (*GetTransferTasksResponse, error)
-		CompleteTransferTask(request *CompleteTransferTaskRequest) error
-		RangeCompleteTransferTask(request *RangeCompleteTransferTaskRequest) error
-
-		// Replication task related methods
-		GetReplicationTasks(request *GetReplicationTasksRequest) (*GetReplicationTasksResponse, error)
-		CompleteReplicationTask(request *CompleteReplicationTaskRequest) error
-
-		// Timer related methods.
-		GetTimerIndexTasks(request *GetTimerIndexTasksRequest) (*GetTimerIndexTasksResponse, error)
-		CompleteTimerTask(request *CompleteTimerTaskRequest) error
-		RangeCompleteTimerTask(request *RangeCompleteTimerTaskRequest) error
-	}
-
-	// PersistenceHistoryManager is used to manage Workflow Execution HistoryEventBatch
-	PersistenceHistoryManager interface {
-		Closeable
-
-		//The below two APIs are related to serialization/deserialization
-		AppendHistoryEvents(request *PersistenceAppendHistoryEventsRequest) error
-		GetWorkflowExecutionHistory(request *GetWorkflowExecutionHistoryRequest) (*PersistenceGetWorkflowExecutionHistoryResponse, error)
-
-		DeleteWorkflowExecutionHistory(request *DeleteWorkflowExecutionHistoryRequest) error
 	}
 )
 
