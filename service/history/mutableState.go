@@ -136,7 +136,6 @@ type (
 		GetActivityInfo(int64) (*persistence.ActivityInfo, bool)
 		GetActivityScheduledEvent(int64) (*workflow.HistoryEvent, bool)
 		GetActivityStartedEvent(int64) (*workflow.HistoryEvent, bool)
-		GetBufferedHistory(*persistence.SerializedHistoryEventBatch) *workflow.History
 		GetBufferedReplicationTask(int64) (*persistence.BufferedReplicationTask, bool)
 		GetChildExecutionInfo(int64) (*persistence.ChildExecutionInfo, bool)
 		GetChildExecutionInitiatedEvent(int64) (*workflow.HistoryEvent, bool)
@@ -146,7 +145,6 @@ type (
 		GetCurrentVersion() int64
 		GetExecutionInfo() *persistence.WorkflowExecutionInfo
 		GetHistoryBuilder() *historyBuilder
-		GetHistoryEvent(serializedEvent []byte) (*workflow.HistoryEvent, bool)
 		GetInFlightDecisionTask() (*decisionInfo, bool)
 		GetLastFirstEventID() int64
 		GetLastUpdatedTimestamp() int64
