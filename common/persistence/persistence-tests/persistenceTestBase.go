@@ -359,6 +359,7 @@ func (s *TestBase) ContinueAsNewExecution(updatedInfo *p.WorkflowExecutionInfo, 
 			CreateWorkflowMode:          p.CreateWorkflowModeContinueAsNew,
 			PreviousRunID:               updatedInfo.RunID,
 		},
+		Encoding: pickRandomEncoding(),
 	})
 }
 
@@ -390,6 +391,7 @@ func (s *TestBase) UpdateWorkflowExecutionAndFinish(updatedInfo *p.WorkflowExecu
 		DeleteTimerInfos:     nil,
 		FinishedExecutionTTL: retentionSecond,
 		FinishExecution:      true,
+		Encoding:             pickRandomEncoding(),
 	})
 }
 
@@ -548,6 +550,7 @@ func (s *TestBase) UpdateWorkflowExecutionWithReplication(updatedInfo *p.Workflo
 		DeleteSignalRequestedID:       deleteSignalRequestedID,
 		NewBufferedReplicationTask:    newBufferedReplicationTask,
 		DeleteBufferedReplicationTask: deleteBufferedReplicationTask,
+		Encoding:                      pickRandomEncoding(),
 	})
 }
 
@@ -560,6 +563,7 @@ func (s *TestBase) UpdateWorkflowExecutionWithTransferTasks(
 		Condition:           condition,
 		UpsertActivityInfos: upsertActivityInfo,
 		RangeID:             s.ShardInfo.RangeID,
+		Encoding:            pickRandomEncoding(),
 	})
 }
 
@@ -572,6 +576,7 @@ func (s *TestBase) UpdateWorkflowExecutionForChildExecutionsInitiated(
 		Condition:                 condition,
 		UpsertChildExecutionInfos: childInfos,
 		RangeID:                   s.ShardInfo.RangeID,
+		Encoding:                  pickRandomEncoding(),
 	})
 }
 
@@ -585,6 +590,7 @@ func (s *TestBase) UpdateWorkflowExecutionForRequestCancel(
 		Condition:                condition,
 		UpsertRequestCancelInfos: upsertRequestCancelInfo,
 		RangeID:                  s.ShardInfo.RangeID,
+		Encoding:                 pickRandomEncoding(),
 	})
 }
 
@@ -598,19 +604,21 @@ func (s *TestBase) UpdateWorkflowExecutionForSignal(
 		Condition:         condition,
 		UpsertSignalInfos: upsertSignalInfos,
 		RangeID:           s.ShardInfo.RangeID,
+		Encoding:          pickRandomEncoding(),
 	})
 }
 
 // UpdateWorkflowExecutionForBufferEvents is a utility method to update workflow execution
 func (s *TestBase) UpdateWorkflowExecutionForBufferEvents(
 	updatedInfo *p.WorkflowExecutionInfo, rState *p.ReplicationState, condition int64,
-	bufferEvents *p.SerializedHistoryEventBatch) error {
+	bufferEvents []*workflow.HistoryEvent) error {
 	return s.ExecutionManager.UpdateWorkflowExecution(&p.UpdateWorkflowExecutionRequest{
 		ExecutionInfo:     updatedInfo,
 		ReplicationState:  rState,
 		NewBufferedEvents: bufferEvents,
 		Condition:         condition,
 		RangeID:           s.ShardInfo.RangeID,
+		Encoding:          pickRandomEncoding(),
 	})
 }
 
@@ -656,6 +664,7 @@ func (s *TestBase) UpdateAllMutableState(updatedMutableState *p.WorkflowMutableS
 		UpsertRequestCancelInfos:  rcInfos,
 		UpsertSignalInfos:         sInfos,
 		UpsertSignalRequestedIDs:  srIDs,
+		Encoding:                  pickRandomEncoding(),
 	})
 }
 
@@ -675,6 +684,7 @@ func (s *TestBase) ResetMutableState(prevRunID string, info *p.WorkflowExecution
 		InsertRequestCancelInfos:  requestCancelInfos,
 		InsertSignalInfos:         signalInfos,
 		InsertSignalRequestedIDs:  ids,
+		Encoding:                  pickRandomEncoding(),
 	})
 }
 
@@ -1034,4 +1044,19 @@ func GenerateRandomDBName(n int) string {
 		b[i] = letterRunes[rand.Intn(len(letterRunes))]
 	}
 	return string(b)
+}
+
+func pickRandomEncoding() common.EncodingType {
+	// randomly pick json/thriftrw/empty as encoding type
+	var encoding common.EncodingType
+	i := rand.Intn(3)
+	switch i {
+	case 0:
+		encoding = common.EncodingTypeJSON
+	case 1:
+		encoding = common.EncodingTypeThriftRW
+	case 2:
+		encoding = common.EncodingType("")
+	}
+	return encoding
 }
