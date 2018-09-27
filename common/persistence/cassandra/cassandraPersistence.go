@@ -119,6 +119,7 @@ const (
 		`parent_run_id: ?, ` +
 		`initiated_id: ?, ` +
 		`completion_event: ?, ` +
+		`completion_event_data_encoding: ?, ` +
 		`task_list: ?, ` +
 		`workflow_type_name: ?, ` +
 		`workflow_timeout: ?, ` +
@@ -234,7 +235,8 @@ const (
 		`max_interval: ?, ` +
 		`expiration_time: ?, ` +
 		`max_attempts: ?, ` +
-		`non_retriable_errors: ?` +
+		`non_retriable_errors: ?, ` +
+		`event_data_encoding: ?` +
 		`}`
 
 	templateTimerInfoType = `{` +
@@ -251,7 +253,8 @@ const (
 		`initiated_event: ?, ` +
 		`started_id: ?, ` +
 		`started_event: ?, ` +
-		`create_request_id: ?` +
+		`create_request_id: ?, ` +
+		`event_data_encoding: ?` +
 		`}`
 
 	templateRequestCancelInfoType = `{` +
