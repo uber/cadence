@@ -1260,7 +1260,8 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_BrandNew() {
 	msBuilder.On("GetReplicationState").Return(replicationState)
 	msBuilder.On("GetCurrentVersion").Return(version)
 	msBuilder.On("GetNextEventID").Return(nextEventID)
-	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(&p.AppendHistoryEventsResponse{Size: 0}, nil).Once()
+	historySize := 111
+	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(&p.AppendHistoryEventsResponse{Size: historySize}, nil).Once()
 	sBuilder.On("getTransferTasks").Return(transferTasks)
 	sBuilder.On("getTimerTasks").Return(timerTasks)
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.MatchedBy(func(input *persistence.CreateWorkflowExecutionRequest) bool {
@@ -1284,7 +1285,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_BrandNew() {
 			DecisionTimeoutValue:        decisionTimeout,
 			NextEventID:                 msBuilder.GetNextEventID(),
 			LastProcessedEvent:          common.EmptyEventID,
-			HistorySize:                 int64(121),
+			HistorySize:                 int64(historySize),
 			TransferTasks:               transferTasks,
 			DecisionVersion:             di.Version,
 			DecisionScheduleID:          di.ScheduleID,
@@ -1635,7 +1636,8 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 	msBuilder.On("GetReplicationState").Return(replicationState)
 	msBuilder.On("GetCurrentVersion").Return(version)
 	msBuilder.On("GetNextEventID").Return(nextEventID)
-	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(&p.AppendHistoryEventsResponse{Size: 0}, nil).Once()
+	historySize := 111
+	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(&p.AppendHistoryEventsResponse{Size: historySize}, nil).Once()
 	sBuilder.On("getTransferTasks").Return(transferTasks)
 	sBuilder.On("getTimerTasks").Return(timerTasks)
 
@@ -1669,7 +1671,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 			DecisionTimeoutValue:        decisionTimeout,
 			NextEventID:                 msBuilder.GetNextEventID(),
 			LastProcessedEvent:          common.EmptyEventID,
-			HistorySize:                 int64(121),
+			HistorySize:                 int64(historySize),
 			TransferTasks:               transferTasks,
 			DecisionVersion:             di.Version,
 			DecisionScheduleID:          di.ScheduleID,
@@ -1702,7 +1704,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 			DecisionTimeoutValue:        decisionTimeout,
 			NextEventID:                 msBuilder.GetNextEventID(),
 			LastProcessedEvent:          common.EmptyEventID,
-			HistorySize:                 int64(121),
+			HistorySize:                 int64(historySize),
 			TransferTasks:               transferTasks,
 			DecisionVersion:             di.Version,
 			DecisionScheduleID:          di.ScheduleID,
@@ -1792,7 +1794,8 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 	msBuilder.On("GetReplicationState").Return(replicationState)
 	msBuilder.On("GetCurrentVersion").Return(version)
 	msBuilder.On("GetNextEventID").Return(nextEventID)
-	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(&p.AppendHistoryEventsResponse{Size: 0}, nil).Once()
+	historySize := 111
+	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(&p.AppendHistoryEventsResponse{Size: historySize}, nil).Once()
 	sBuilder.On("getTransferTasks").Return(transferTasks)
 	sBuilder.On("getTimerTasks").Return(timerTasks)
 
@@ -1826,7 +1829,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 			DecisionTimeoutValue:        decisionTimeout,
 			NextEventID:                 msBuilder.GetNextEventID(),
 			LastProcessedEvent:          common.EmptyEventID,
-			HistorySize:                 int64(121),
+			HistorySize:                 int64(historySize),
 			TransferTasks:               transferTasks,
 			DecisionVersion:             di.Version,
 			DecisionScheduleID:          di.ScheduleID,
@@ -1859,7 +1862,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 			DecisionTimeoutValue:        decisionTimeout,
 			NextEventID:                 msBuilder.GetNextEventID(),
 			LastProcessedEvent:          common.EmptyEventID,
-			HistorySize:                 int64(121),
+			HistorySize:                 int64(historySize),
 			TransferTasks:               transferTasks,
 			DecisionVersion:             di.Version,
 			DecisionScheduleID:          di.ScheduleID,
@@ -2149,7 +2152,8 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	msBuilder.On("GetReplicationState").Return(replicationState)
 	msBuilder.On("GetCurrentVersion").Return(version)
 	msBuilder.On("GetNextEventID").Return(nextEventID)
-	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(&p.AppendHistoryEventsResponse{Size: 0}, nil).Once()
+	historySize := 111
+	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(&p.AppendHistoryEventsResponse{Size: historySize}, nil).Once()
 	sBuilder.On("getTransferTasks").Return(transferTasks)
 	sBuilder.On("getTimerTasks").Return(timerTasks)
 
@@ -2183,7 +2187,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 			DecisionTimeoutValue:        decisionTimeout,
 			NextEventID:                 msBuilder.GetNextEventID(),
 			LastProcessedEvent:          common.EmptyEventID,
-			HistorySize:                 int64(121),
+			HistorySize:                 int64(historySize),
 			TransferTasks:               transferTasks,
 			DecisionVersion:             di.Version,
 			DecisionScheduleID:          di.ScheduleID,
@@ -2216,7 +2220,7 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 			DecisionTimeoutValue:        decisionTimeout,
 			NextEventID:                 msBuilder.GetNextEventID(),
 			LastProcessedEvent:          common.EmptyEventID,
-			HistorySize:                 int64(121),
+			HistorySize:                 int64(historySize),
 			TransferTasks:               transferTasks,
 			DecisionVersion:             di.Version,
 			DecisionScheduleID:          di.ScheduleID,
