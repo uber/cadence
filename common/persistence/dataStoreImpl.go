@@ -649,7 +649,7 @@ func (m *historyManagerImpl) GetWorkflowExecutionHistory(request *GetWorkflowExe
 	return newResponse, nil
 }
 
-func (h *historyManagerImpl) deserializeToken(request *GetWorkflowExecutionHistoryRequest) (*historyToken, error) {
+func (m *historyManagerImpl) deserializeToken(request *GetWorkflowExecutionHistoryRequest) (*historyToken, error) {
 	token := &historyToken{
 		LastEventBatchVersion: common.EmptyVersion,
 		LastEventID:           request.FirstEventID - 1,
@@ -669,7 +669,7 @@ func (h *historyManagerImpl) deserializeToken(request *GetWorkflowExecutionHisto
 	return token, nil
 }
 
-func (h *historyManagerImpl) serializeToken(token *historyToken) ([]byte, error) {
+func (m *historyManagerImpl) serializeToken(token *historyToken) ([]byte, error) {
 	if len(token.Data) == 0 {
 		return nil, nil
 	}
