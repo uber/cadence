@@ -94,7 +94,7 @@ type (
 	queueAckMgr interface {
 		getFinishedChan() <-chan struct{}
 		readQueueTasks() ([]queueTaskInfo, bool, error)
-		completeQueueTask(taskID int64) error
+		completeQueueTask(taskID int64)
 		getQueueAckLevel() int64
 		getQueueReadLevel() int64
 		updateQueueAckLevel()
@@ -110,7 +110,6 @@ type (
 	processor interface {
 		process(task queueTaskInfo) (int, error)
 		readTasks(readLevel int64) ([]queueTaskInfo, bool, error)
-		completeTask(taskID int64) error
 		updateAckLevel(taskID int64) error
 		queueShutdown() error
 	}

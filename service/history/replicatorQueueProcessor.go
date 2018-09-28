@@ -57,6 +57,7 @@ type (
 
 var (
 	errUnknownReplicationTask = errors.New("Unknown replication task")
+	errHistoryNotFoundTask    = errors.New("History not found")
 	defaultHistoryPageSize    = 1000
 )
 
@@ -112,7 +113,14 @@ func (p *replicatorQueueProcessorImpl) process(qTask queueTaskInfo) (int, error)
 
 	switch task.TaskType {
 	case persistence.ReplicationTaskTypeHistory:
-		return metrics.ReplicatorTaskHistoryScope, p.processHistoryReplicationTask(task)
+		err := p.processHistoryReplicationTask(task)
+		if _, ok := err.(*shared.EntityNotExistsError); ok {
+			err = errHistoryNotFoundTask
+		}
+		if err == nil {
+			err = p.executionMgr.CompleteReplicationTask(&persistence.CompleteReplicationTaskRequest{TaskID: task.GetTaskID()})
+		}
+		return metrics.ReplicatorTaskHistoryScope, err
 	default:
 		return 0, errUnknownReplicationTask
 	}
@@ -195,12 +203,6 @@ func (p *replicatorQueueProcessorImpl) readTasks(readLevel int64) ([]queueTaskIn
 	}
 
 	return tasks, len(response.NextPageToken) != 0, nil
-}
-
-func (p *replicatorQueueProcessorImpl) completeTask(taskID int64) error {
-	return p.executionMgr.CompleteReplicationTask(&persistence.CompleteReplicationTaskRequest{
-		TaskID: taskID,
-	})
 }
 
 func (p *replicatorQueueProcessorImpl) updateAckLevel(ackLevel int64) error {
