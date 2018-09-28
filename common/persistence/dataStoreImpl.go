@@ -443,11 +443,9 @@ func (m *executionManagerImpl) SerializeExecutionInfo(info *WorkflowExecutionInf
 	}
 	var completionEvent *DataBlob
 	var err error
-	if info.CompletionEvent != nil {
-		completionEvent, err = m.serializer.SerializeEvent(info.CompletionEvent, encoding)
-		if err != nil {
-			return nil, err
-		}
+	completionEvent, err = m.serializer.SerializeEvent(info.CompletionEvent, encoding)
+	if err != nil {
+		return nil, err
 	}
 
 	return &PersistenceWorkflowExecutionInfo{

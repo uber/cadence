@@ -1848,7 +1848,7 @@ func (s *MatchingPersistenceSuite) TestWorkflowMutableStateBufferedReplicationTa
 	state3, err6 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.NoError(err6)
 	s.NotNil(state3, "expected valid state.")
-	s.Equal(1, len(state3.BufferedReplicationTasks))
+	s.Equal(2, len(state3.BufferedReplicationTasks))
 
 	deleteBufferedReplicationTask2 := int64(10)
 	err7 := s.UpdateWorklowStateAndReplication(updatedInfo, nil, nil, &deleteBufferedReplicationTask2, int64(3), nil)
@@ -2492,7 +2492,7 @@ func (s *MatchingPersistenceSuite) TestResetMutableStateCurrentIsSelf() {
 	s.True(contains)
 
 	s.Equal(3, len(state1.BufferedReplicationTasks))
-	s.Equal(2, len(state1.BufferedEvents))
+	s.Equal(3, len(state1.BufferedEvents))
 
 	updatedInfo1 := copyWorkflowExecutionInfo(info1)
 	updatedInfo1.NextEventID = int64(3)
