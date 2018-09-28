@@ -329,7 +329,10 @@ func (m *executionManagerImpl) UpdateWorkflowExecution(request *UpdateWorkflowEx
 
 func (m *executionManagerImpl) SerializeNewBufferedReplicationTask(task *BufferedReplicationTask, encoding common.EncodingType) (*PersistenceBufferedReplicationTask, error) {
 	if task == nil {
-		return &PersistenceBufferedReplicationTask{}, nil
+		return &PersistenceBufferedReplicationTask{
+			History:       &DataBlob{},
+			NewRunHistory: &DataBlob{},
+		}, nil
 	}
 	var history, newHistory *DataBlob
 	var err error
@@ -432,7 +435,9 @@ func (m *executionManagerImpl) SerializeUpsertActivityInfos(infos []*ActivityInf
 
 func (m *executionManagerImpl) SerializeExecutionInfo(info *WorkflowExecutionInfo, encoding common.EncodingType) (*PersistenceWorkflowExecutionInfo, error) {
 	if info == nil {
-		return &PersistenceWorkflowExecutionInfo{}, nil
+		return &PersistenceWorkflowExecutionInfo{
+			CompletionEvent: &DataBlob{},
+		}, nil
 	}
 	var completionEvent *DataBlob
 	var err error
