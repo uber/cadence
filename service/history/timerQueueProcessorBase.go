@@ -206,9 +206,15 @@ func (t *timerQueueProcessorBase) notifyNewTimers(timerTasks []persistence.Task)
 
 	isActive := t.scope == metrics.TimerActiveQueueProcessorScope
 
-	newTime := persistence.GetVisibilityTSFrom(timerTasks[0])
+	newTime, err := persistence.GetVisibilityTSFrom(timerTasks[0])
+	if err != nil {
+		panic(err)
+	}
 	for _, task := range timerTasks {
-		ts := persistence.GetVisibilityTSFrom(task)
+		ts, err := persistence.GetVisibilityTSFrom(task)
+		if err != nil {
+			panic(err)
+		}
 		if ts.Before(newTime) {
 			newTime = ts
 		}
@@ -449,6 +455,11 @@ func (t *timerQueueProcessorBase) handleTaskError(scope int, startTime time.Time
 	if err == ErrTaskRetry {
 		<-notificationChan
 		return err
+	}
+
+	if err == ErrTaskDiscarded {
+		t.metricsClient.IncCounter(scope, metrics.TaskDiscarded)
+		err = nil
 	}
 
 	// this is a transient error

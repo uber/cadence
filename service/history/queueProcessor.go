@@ -335,6 +335,11 @@ func (p *queueProcessorBase) handleTaskError(scope int, startTime time.Time,
 		return err
 	}
 
+	if err == ErrTaskDiscarded {
+		p.metricsClient.IncCounter(scope, metrics.TaskDiscarded)
+		err = nil
+	}
+
 	// this is a transient error
 	if _, ok := err.(*workflow.DomainNotActiveError); ok {
 		if time.Now().Sub(startTime) > cache.DomainCacheRefreshInterval {

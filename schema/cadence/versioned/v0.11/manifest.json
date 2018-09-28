@@ -1,8 +1,0 @@
-{
-  "CurrVersion": "0.11",
-  "MinCompatibleVersion": "0.11",
-  "Description": "Adding server side workflow retry",
-  "SchemaUpdateCqlFiles": [
-    "workflow_retry.cql"
-  ]
-}

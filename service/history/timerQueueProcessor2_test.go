@@ -131,7 +131,7 @@ func (s *timerQueueProcessor2Suite) SetupTest() {
 		metricsClient:             metrics.NewClient(tally.NoopScope, metrics.History),
 	}
 
-	historyCache := newHistoryCache(s.mockShard, s.logger)
+	historyCache := newHistoryCache(s.mockShard)
 	// this is used by shard context, not relevent to this test, so we do not care how many times "GetCurrentClusterName" os called
 	s.mockClusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	s.mockClusterMetadata.On("GetAllClusterFailoverVersions").Return(cluster.TestAllClusterFailoverVersions)
@@ -171,8 +171,8 @@ func (s *timerQueueProcessor2Suite) TestTimerUpdateTimesOut() {
 
 	builder := newMutableStateBuilder(cluster.TestCurrentClusterName, s.config, s.logger)
 	startRequest := &workflow.StartWorkflowExecutionRequest{
-		WorkflowType: &workflow.WorkflowType{Name: common.StringPtr("wType")},
-		TaskList:     common.TaskListPtr(workflow.TaskList{Name: common.StringPtr(taskList)}),
+		WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr("wType")},
+		TaskList:                            common.TaskListPtr(workflow.TaskList{Name: common.StringPtr(taskList)}),
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 	}
@@ -243,8 +243,8 @@ func (s *timerQueueProcessor2Suite) TestWorkflowTimeout() {
 
 	builder := newMutableStateBuilder(cluster.TestCurrentClusterName, s.config, s.logger)
 	startRequest := &workflow.StartWorkflowExecutionRequest{
-		WorkflowType: &workflow.WorkflowType{Name: common.StringPtr("wType")},
-		TaskList:     common.TaskListPtr(workflow.TaskList{Name: common.StringPtr(taskList)}),
+		WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr("wType")},
+		TaskList:                            common.TaskListPtr(workflow.TaskList{Name: common.StringPtr(taskList)}),
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 	}

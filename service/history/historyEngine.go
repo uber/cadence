@@ -38,6 +38,7 @@ import (
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	ce "github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
@@ -45,7 +46,8 @@ import (
 )
 
 const (
-	signalInputSizeLimit                     = 256 * 1024
+	signalInputWarnSizeLimit                 = 256 * 1024
+	signalInputErrSizeLimit                  = 2 * 1024 * 1024
 	conditionalRetryCount                    = 5
 	activityCancelationMsgActivityIDUnknown  = "ACTIVITY_ID_UNKNOWN"
 	activityCancelationMsgActivityNotStarted = "ACTIVITY_ID_NOT_STARTED"
@@ -84,6 +86,8 @@ type (
 var _ Engine = (*historyEngineImpl)(nil)
 
 var (
+	// ErrTaskDiscarded is the error indicating that the timer / transfer task is pending for too long and discarded.
+	ErrTaskDiscarded = errors.New("passive task pending for too long")
 	// ErrTaskRetry is the error indicating that the timer / transfer task should be retried.
 	ErrTaskRetry = errors.New("passive task should retry due to condition in mutable state is not met")
 	// ErrDuplicate is exported temporarily for integration test
@@ -131,7 +135,7 @@ func NewEngineWithShardContext(shard ShardContext, visibilityMgr persistence.Vis
 	logger := shard.GetLogger()
 	executionManager := shard.GetExecutionManager()
 	historyManager := shard.GetHistoryManager()
-	historyCache := newHistoryCache(shard, logger)
+	historyCache := newHistoryCache(shard)
 	historySerializerFactory := persistence.NewHistorySerializerFactory()
 	historyEngImpl := &historyEngineImpl{
 		currentClusterName: currentClusterName,
@@ -339,7 +343,8 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 		return nil, serializedError
 	}
 
-	err = e.shard.AppendHistoryEvents(&persistence.AppendHistoryEventsRequest{
+	var historySize int
+	historySize, err = e.shard.AppendHistoryEvents(&persistence.AppendHistoryEventsRequest{
 		DomainID:  domainID,
 		Execution: execution,
 		// It is ok to use 0 for TransactionID because RunID is unique so there are
@@ -376,7 +381,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 	}
 	setTaskInfo(msBuilder.GetCurrentVersion(), time.Now(), transferTasks, timerTasks)
 
-	createWorkflow := func(isBrandNew bool, prevRunID string) (string, error) {
+	createWorkflow := func(isBrandNew bool, prevRunID string, prevLastWriteVersion int64) (string, error) {
 		createRequest := &persistence.CreateWorkflowExecutionRequest{
 			RequestID:                   common.StringDefault(request.RequestId),
 			DomainID:                    domainID,
@@ -391,6 +396,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 			ExecutionContext:            nil,
 			NextEventID:                 msBuilder.GetNextEventID(),
 			LastProcessedEvent:          common.EmptyEventID,
+			HistorySize:                 int64(historySize),
 			TransferTasks:               transferTasks,
 			ReplicationTasks:            replicationTasks,
 			DecisionVersion:             decisionVersion,
@@ -398,11 +404,16 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 			DecisionStartedID:           decisionStartID,
 			DecisionStartToCloseTimeout: decisionTimeout,
 			TimerTasks:                  timerTasks,
-			ContinueAsNew:               !isBrandNew,
 			PreviousRunID:               prevRunID,
+			PreviousLastWriteVersion:    prevLastWriteVersion,
 			ReplicationState:            replicationState,
 			HasRetryPolicy:              request.RetryPolicy != nil,
 		}
+		createRequest.CreateWorkflowMode = persistence.CreateWorkflowModeBrandNew
+		if !isBrandNew {
+			createRequest.CreateWorkflowMode = persistence.CreateWorkflowModeWorkflowIDReuse
+		}
+
 		if createRequest.HasRetryPolicy {
 			createRequest.InitialInterval = request.RetryPolicy.GetInitialIntervalInSeconds()
 			createRequest.BackoffCoefficient = request.RetryPolicy.GetBackoffCoefficient()
@@ -478,12 +489,20 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 	// try to create the workflow execution
 	isBrandNew := true
 	resultRunID := ""
-	resultRunID, err = createWorkflow(isBrandNew, "")
+	resultRunID, err = createWorkflow(isBrandNew, "", 0)
 	// if err still non nil, see if retry
 	if errExist, ok := err.(*persistence.WorkflowExecutionAlreadyStartedError); ok {
+		if msBuilder.GetCurrentVersion() < errExist.LastWriteVersion {
+			return nil, ce.NewDomainNotActiveError(
+				domainEntry.GetInfo().Name,
+				clusterMetadata.GetCurrentClusterName(),
+				clusterMetadata.ClusterNameForFailoverVersion(errExist.LastWriteVersion),
+			)
+		}
+
 		if err = workflowExistsErrHandler(errExist); err == nil {
 			isBrandNew = false
-			resultRunID, err = createWorkflow(isBrandNew, errExist.RunID)
+			resultRunID, err = createWorkflow(isBrandNew, errExist.RunID, errExist.LastWriteVersion)
 		}
 	}
 
@@ -696,7 +715,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(ctx context.Context,
 
 	result := &workflow.DescribeWorkflowExecutionResponse{
 		ExecutionConfiguration: &workflow.WorkflowExecutionConfiguration{
-			TaskList: &workflow.TaskList{Name: common.StringPtr(executionInfo.TaskList)},
+			TaskList:                            &workflow.TaskList{Name: common.StringPtr(executionInfo.TaskList)},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(executionInfo.WorkflowTimeout),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(executionInfo.DecisionTimeoutValue),
 			ChildPolicy:                         common.ChildPolicyPtr(workflow.ChildPolicyTerminate),
@@ -766,6 +785,10 @@ Update_History_Loop:
 		if err0 != nil {
 			return nil, err0
 		}
+		if !msBuilder.IsWorkflowExecutionRunning() {
+			return nil, ErrWorkflowCompleted
+		}
+
 		tBuilder := e.getTimerBuilder(&context.workflowExecution)
 
 		di, isRunning := msBuilder.GetPendingDecision(scheduleID)
@@ -781,7 +804,7 @@ Update_History_Loop:
 
 		// Check execution state to make sure task is in the list of outstanding tasks and it is not yet started.  If
 		// task is not outstanding than it is most probably a duplicate and complete the task.
-		if !msBuilder.IsWorkflowExecutionRunning() || !isRunning {
+		if !isRunning {
 			// Looks like DecisionTask already completed as a result of another call.
 			// It is OK to drop the task at this point.
 			logging.LogDuplicateTaskEvent(context.logger, persistence.TransferTaskTypeDecisionTask, common.Int64Default(request.TaskId), requestID,
@@ -963,6 +986,10 @@ Update_History_Loop:
 		if err1 != nil {
 			return nil, err1
 		}
+		if !msBuilder.IsWorkflowExecutionRunning() {
+			return nil, ErrWorkflowCompleted
+		}
+
 		executionInfo := msBuilder.GetExecutionInfo()
 		tBuilder := e.getTimerBuilder(&context.workflowExecution)
 
@@ -1111,10 +1138,10 @@ Update_History_Loop:
 
 					startAttributes := startEvent.WorkflowExecutionStartedEventAttributes
 					continueAsnewAttributes := &workflow.ContinueAsNewWorkflowExecutionDecisionAttributes{
-						WorkflowType: startAttributes.WorkflowType,
-						TaskList:     startAttributes.TaskList,
-						RetryPolicy:  startAttributes.RetryPolicy,
-						Input:        startAttributes.Input,
+						WorkflowType:                        startAttributes.WorkflowType,
+						TaskList:                            startAttributes.TaskList,
+						RetryPolicy:                         startAttributes.RetryPolicy,
+						Input:                               startAttributes.Input,
 						ExecutionStartToCloseTimeoutSeconds: startAttributes.ExecutionStartToCloseTimeoutSeconds,
 						TaskStartToCloseTimeoutSeconds:      startAttributes.TaskStartToCloseTimeoutSeconds,
 						BackoffStartIntervalInSeconds:       common.Int32Ptr(int32(retryBackoffInterval.Seconds())),
@@ -1269,8 +1296,8 @@ Update_History_Loop:
 					failCause = workflow.DecisionTaskFailedCauseBadSignalWorkflowExecutionAttributes
 					break Process_Decision_Loop
 				}
-				if err = validateSignalInput(attributes.Input, e.metricsClient,
-					metrics.HistoryRespondDecisionTaskCompletedScope); err != nil {
+				if err = validateSignalInput(domainID, &workflowExecution, attributes.Input, e.metricsClient,
+					metrics.HistoryRespondDecisionTaskCompletedScope, e.logger); err != nil {
 					failDecision = true
 					failCause = workflow.DecisionTaskFailedCauseBadSignalInputSize
 					break Process_Decision_Loop
@@ -1391,6 +1418,7 @@ Update_History_Loop:
 			if err1 != nil {
 				return nil, err1
 			}
+			tBuilder = e.getTimerBuilder(&context.workflowExecution)
 			isComplete = false
 			hasUnhandledEvents = true
 			continueAsNewBuilder = nil
@@ -1438,7 +1466,7 @@ Update_History_Loop:
 		}
 
 		if isComplete {
-			tranT, timerT, err := e.getDeleteWorkflowTasks(domainID, tBuilder)
+			tranT, timerT, err := e.getDeleteWorkflowTasks(domainID, workflowExecution.GetWorkflowId(), tBuilder)
 			if err != nil {
 				return nil, err
 			}
@@ -1854,8 +1882,8 @@ func (e *historyEngineImpl) SignalWorkflowExecution(ctx context.Context, signalR
 		RunId:      request.WorkflowExecution.RunId,
 	}
 
-	if err := validateSignalInput(request.GetInput(), e.metricsClient,
-		metrics.HistorySignalWorkflowExecutionScope); err != nil {
+	if err := validateSignalInput(domainID, &execution, request.GetInput(), e.metricsClient,
+		metrics.HistorySignalWorkflowExecutionScope, e.logger); err != nil {
 		return err
 	}
 
@@ -1905,13 +1933,14 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 		WorkflowId: sRequest.WorkflowId,
 	}
 
-	if err := validateSignalInput(sRequest.GetSignalInput(), e.metricsClient,
-		metrics.HistorySignalWithStartWorkflowExecutionScope); err != nil {
+	if err := validateSignalInput(domainID, &execution, sRequest.GetSignalInput(), e.metricsClient,
+		metrics.HistorySignalWithStartWorkflowExecutionScope, e.logger); err != nil {
 		return nil, err
 	}
 
 	isBrandNew := false
 	prevRunID := ""
+	prevLastWriteVersion := common.EmptyVersion
 	attempt := 0
 
 	context, release, err0 := e.historyCache.getOrCreateWorkflowExecutionWithTimeout(ctx, domainID, execution)
@@ -1929,7 +1958,8 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 				return nil, err1
 			}
 			if !msBuilder.IsWorkflowExecutionRunning() {
-				prevRunID = context.workflowExecution.GetRunId()
+				prevRunID = msBuilder.GetExecutionInfo().RunID
+				prevLastWriteVersion = msBuilder.GetLastWriteVersion()
 				break
 			}
 			executionInfo := msBuilder.GetExecutionInfo()
@@ -2054,7 +2084,8 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 		return nil, serializedError
 	}
 
-	err = e.shard.AppendHistoryEvents(&persistence.AppendHistoryEventsRequest{
+	var historySize int
+	historySize, err = e.shard.AppendHistoryEvents(&persistence.AppendHistoryEventsRequest{
 		DomainID:  domainID,
 		Execution: execution,
 		// It is ok to use 0 for TransactionID because RunID is unique so there are
@@ -2091,8 +2122,8 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 	}
 	setTaskInfo(msBuilder.GetCurrentVersion(), time.Now(), transferTasks, timerTasks)
 
-	createWorkflow := func(isBrandNew bool, prevRunID string) (string, error) {
-		_, err = e.shard.CreateWorkflowExecution(&persistence.CreateWorkflowExecutionRequest{
+	createWorkflow := func(isBrandNew bool, prevRunID string, prevLastWriteVersion int64) (string, error) {
+		createRequest := &persistence.CreateWorkflowExecutionRequest{
 			RequestID:                   common.StringDefault(request.RequestId),
 			DomainID:                    domainID,
 			Execution:                   execution,
@@ -2104,6 +2135,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 			ExecutionContext:            nil,
 			NextEventID:                 msBuilder.GetNextEventID(),
 			LastProcessedEvent:          common.EmptyEventID,
+			HistorySize:                 int64(historySize),
 			TransferTasks:               transferTasks,
 			ReplicationTasks:            replicationTasks,
 			DecisionVersion:             decisionVersion,
@@ -2111,10 +2143,15 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 			DecisionStartedID:           decisionStartID,
 			DecisionStartToCloseTimeout: decisionTimeout,
 			TimerTasks:                  timerTasks,
-			ContinueAsNew:               !isBrandNew,
 			PreviousRunID:               prevRunID,
+			PreviousLastWriteVersion:    prevLastWriteVersion,
 			ReplicationState:            replicationState,
-		})
+		}
+		createRequest.CreateWorkflowMode = persistence.CreateWorkflowModeBrandNew
+		if !isBrandNew {
+			createRequest.CreateWorkflowMode = persistence.CreateWorkflowModeWorkflowIDReuse
+		}
+		_, err = e.shard.CreateWorkflowExecution(createRequest)
 
 		if err != nil {
 			switch t := err.(type) {
@@ -2132,7 +2169,14 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 	}
 
 	// try to create the workflow execution
-	resultRunID, err := createWorkflow(isBrandNew, prevRunID) // (true, "") or (false, "prevRunID")
+	if !isBrandNew && msBuilder.GetCurrentVersion() < prevLastWriteVersion {
+		return nil, ce.NewDomainNotActiveError(
+			domainEntry.GetInfo().Name,
+			clusterMetadata.GetCurrentClusterName(),
+			clusterMetadata.ClusterNameForFailoverVersion(prevLastWriteVersion),
+		)
+	}
+	resultRunID, err := createWorkflow(isBrandNew, prevRunID, prevLastWriteVersion) // (true, "", 0) or (false, "prevRunID", "prevLastWriteVersion")
 	if err == nil {
 		e.timerProcessor.NotifyNewTimers(e.currentClusterName, e.shard.GetCurrentTime(e.currentClusterName), timerTasks)
 
@@ -2338,7 +2382,7 @@ Update_History_Loop:
 
 		transferTasks, timerTasks := postActions.transferTasks, postActions.timerTasks
 		if postActions.deleteWorkflow {
-			tranT, timerT, err := e.getDeleteWorkflowTasks(domainID, tBuilder)
+			tranT, timerT, err := e.getDeleteWorkflowTasks(domainID, execution.GetWorkflowId(), tBuilder)
 			if err != nil {
 				return err
 			}
@@ -2403,14 +2447,14 @@ func (e *historyEngineImpl) updateWorkflowExecution(ctx context.Context, domainI
 }
 
 func (e *historyEngineImpl) getDeleteWorkflowTasks(
-	domainID string,
+	domainID, workflowID string,
 	tBuilder *timerBuilder,
 ) (persistence.Task, persistence.Task, error) {
-	return getDeleteWorkflowTasksFromShard(e.shard, domainID, tBuilder)
+	return getDeleteWorkflowTasksFromShard(e.shard, domainID, workflowID, tBuilder)
 }
 
 func getDeleteWorkflowTasksFromShard(shard ShardContext,
-	domainID string,
+	domainID, workflowID string,
 	tBuilder *timerBuilder,
 ) (persistence.Task, persistence.Task, error) {
 	// Create a transfer task to close workflow execution
@@ -2424,7 +2468,7 @@ func getDeleteWorkflowTasksFromShard(shard ShardContext,
 			return nil, nil, err
 		}
 	} else {
-		retentionInDays = domainEntry.GetConfig().Retention
+		retentionInDays = domainEntry.GetRetentionDays(workflowID)
 	}
 	cleanupTask := tBuilder.createDeleteHistoryEventTimerTask(time.Duration(retentionInDays) * time.Hour * 24)
 
@@ -2794,15 +2838,25 @@ func validateStartWorkflowExecutionRequest(request *workflow.StartWorkflowExecut
 	return common.ValidateRetryPolicy(request.RetryPolicy)
 }
 
-func validateSignalInput(signalInput []byte, metricsClient metrics.Client, scope int) error {
+func validateSignalInput(domainID string, execution *workflow.WorkflowExecution, signalInput []byte, metricsClient metrics.Client, scope int, logger bark.Logger) error {
 	size := len(signalInput)
 	metricsClient.RecordTimer(
 		scope,
 		metrics.SignalSizeTimer,
 		time.Duration(size),
 	)
-	if size > signalInputSizeLimit {
-		return ErrSignalOverSize
+
+	if size > signalInputWarnSizeLimit {
+		logger.WithFields(bark.Fields{
+			logging.TagDomainID:            domainID,
+			logging.TagWorkflowExecutionID: execution.GetWorkflowId(),
+			logging.TagWorkflowRunID:       execution.GetRunId(),
+			logging.TagSize:                size,
+		}).Warn("Large signal size encountered.")
+
+		if size > signalInputErrSizeLimit {
+			return ErrSignalOverSize
+		}
 	}
 	return nil
 }
@@ -2866,11 +2920,11 @@ func getStartRequest(domainID string,
 	request *workflow.SignalWithStartWorkflowExecutionRequest) *h.StartWorkflowExecutionRequest {
 	policy := workflow.WorkflowIdReusePolicyAllowDuplicate
 	req := &workflow.StartWorkflowExecutionRequest{
-		Domain:       request.Domain,
-		WorkflowId:   request.WorkflowId,
-		WorkflowType: request.WorkflowType,
-		TaskList:     request.TaskList,
-		Input:        request.Input,
+		Domain:                              request.Domain,
+		WorkflowId:                          request.WorkflowId,
+		WorkflowType:                        request.WorkflowType,
+		TaskList:                            request.TaskList,
+		Input:                               request.Input,
 		ExecutionStartToCloseTimeoutSeconds: request.ExecutionStartToCloseTimeoutSeconds,
 		TaskStartToCloseTimeoutSeconds:      request.TaskStartToCloseTimeoutSeconds,
 		Identity:                            request.Identity,
@@ -2881,6 +2935,36 @@ func getStartRequest(domainID string,
 
 	startRequest := common.CreateHistoryStartWorkflowRequest(domainID, req)
 	return startRequest
+}
+
+func getWorkflowStartedEvent(historyMgr persistence.HistoryManager, logger bark.Logger, domainID, workflowID, runID string) (*workflow.HistoryEvent, error) {
+	response, err := historyMgr.GetWorkflowExecutionHistory(&persistence.GetWorkflowExecutionHistoryRequest{
+		DomainID: domainID,
+		Execution: workflow.WorkflowExecution{
+			WorkflowId: common.StringPtr(workflowID),
+			RunId:      common.StringPtr(runID),
+		},
+		FirstEventID:  common.FirstEventID,
+		NextEventID:   common.FirstEventID + 1,
+		PageSize:      defaultHistoryPageSize,
+		NextPageToken: nil,
+	})
+	if err != nil {
+		logger.WithFields(bark.Fields{
+			logging.TagErr: err,
+		}).Error("Conflict resolution current workflow finished.", err)
+		return nil, err
+	}
+	if len(response.History.Events) == 0 {
+		logger.WithFields(bark.Fields{
+			logging.TagWorkflowExecutionID: workflowID,
+			logging.TagWorkflowRunID:       runID,
+		})
+		logError(logger, errNoHistoryFound.Error(), errNoHistoryFound)
+		return nil, errNoHistoryFound
+	}
+
+	return response.History.Events[0], nil
 }
 
 func setTaskInfo(version int64, timestamp time.Time, transferTasks []persistence.Task, timerTasks []persistence.Task) {

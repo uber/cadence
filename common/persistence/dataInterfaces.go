@@ -43,6 +43,13 @@ const (
 	DomainStatusDeleted
 )
 
+// Create Workflow Execution Mode
+const (
+	CreateWorkflowModeBrandNew = iota
+	CreateWorkflowModeWorkflowIDReuse
+	CreateWorkflowModeContinueAsNew
+)
+
 // Workflow execution states
 const (
 	WorkflowStateCreated = iota
@@ -98,6 +105,18 @@ const (
 	TaskTypeDeleteHistoryEvent
 	TaskTypeActivityRetryTimer
 	TaskTypeWorkflowRetryTimer
+)
+
+const (
+	// InitialFailoverNotificationVersion is the initial failover version for a domain
+	InitialFailoverNotificationVersion int64 = 0
+
+	// TransferTaskTransferTargetWorkflowID is the the dummy workflow ID for transfer tasks of types
+	// that do not have a target workflow
+	TransferTaskTransferTargetWorkflowID = "20000000-0000-f000-f000-000000000001"
+	// TransferTaskTransferTargetRunID is the the dummy run ID for transfer tasks of types
+	// that do not have a target workflow
+	TransferTaskTransferTargetRunID = "30000000-0000-f000-f000-000000000002"
 )
 
 type (
@@ -193,6 +212,7 @@ type (
 		StartTimestamp               time.Time
 		LastUpdatedTimestamp         time.Time
 		CreateRequestID              string
+		HistorySize                  int64
 		DecisionVersion              int64
 		DecisionScheduleID           int64
 		DecisionStartedID            int64
@@ -570,6 +590,7 @@ type (
 		ExecutionContext            []byte
 		NextEventID                 int64
 		LastProcessedEvent          int64
+		HistorySize                 int64
 		TransferTasks               []Task
 		ReplicationTasks            []Task
 		TimerTasks                  []Task
@@ -578,8 +599,9 @@ type (
 		DecisionScheduleID          int64
 		DecisionStartedID           int64
 		DecisionStartToCloseTimeout int32
-		ContinueAsNew               bool
+		CreateWorkflowMode          int
 		PreviousRunID               string
+		PreviousLastWriteVersion    int64
 		ReplicationState            *ReplicationState
 		Attempt                     int32
 		HasRetryPolicy              bool
@@ -856,6 +878,8 @@ type (
 		NextPageToken []byte
 		// the first_event_id of last loaded batch
 		LastFirstEventID int64
+		// Size of history read from store
+		Size int
 	}
 
 	// DeleteWorkflowExecutionHistoryRequest is used to delete workflow execution history
@@ -1619,7 +1643,7 @@ func (t *TimerTaskInfo) GetTaskType() int {
 	return t.TaskType
 }
 
-// GetVisibilityTimestamp returns the task type for transfer task
+// GetVisibilityTimestamp returns the task type for timer task
 func (t *TimerTaskInfo) GetVisibilityTimestamp() time.Time {
 	return t.VisibilityTimestamp
 }
@@ -1658,6 +1682,39 @@ func (h *SerializedHistoryEventBatch) String() string {
 		h.EncodingType, h.Version, string(h.Data))
 }
 
+// SetSerializedHistoryDefaults  sets the version and encoding types to defaults if they
+// are missing from persistence. This is purely for backwards compatibility
+func SetSerializedHistoryDefaults(history *SerializedHistoryEventBatch) {
+	if history.Version == 0 {
+		history.Version = GetDefaultHistoryVersion()
+	}
+	if len(history.EncodingType) == 0 {
+		history.EncodingType = DefaultEncodingType
+	}
+}
+
+// SerializeClusterConfigs makes an array of *ClusterReplicationConfig serializable
+// by flattening them into map[string]interface{}
+func SerializeClusterConfigs(replicationConfigs []*ClusterReplicationConfig) []map[string]interface{} {
+	seriaizedReplicationConfigs := []map[string]interface{}{}
+	for index := range replicationConfigs {
+		seriaizedReplicationConfigs = append(seriaizedReplicationConfigs, replicationConfigs[index].serialize())
+	}
+	return seriaizedReplicationConfigs
+}
+
+// DeserializeClusterConfigs creates an array of ClusterReplicationConfigs from an array of map representations
+func DeserializeClusterConfigs(replicationConfigs []map[string]interface{}) []*ClusterReplicationConfig {
+	deseriaizedReplicationConfigs := []*ClusterReplicationConfig{}
+	for index := range replicationConfigs {
+		deseriaizedReplicationConfig := &ClusterReplicationConfig{}
+		deseriaizedReplicationConfig.deserialize(replicationConfigs[index])
+		deseriaizedReplicationConfigs = append(deseriaizedReplicationConfigs, deseriaizedReplicationConfig)
+	}
+
+	return deseriaizedReplicationConfigs
+}
+
 func (config *ClusterReplicationConfig) serialize() map[string]interface{} {
 	output := make(map[string]interface{})
 	output["cluster_name"] = config.ClusterName
@@ -1668,13 +1725,100 @@ func (config *ClusterReplicationConfig) deserialize(input map[string]interface{}
 	config.ClusterName = input["cluster_name"].(string)
 }
 
-// SetSerializedHistoryDefaults  sets the version and encoding types to defaults if they
-// are missing from persistence. This is purely for backwards compatibility
-func SetSerializedHistoryDefaults(history *SerializedHistoryEventBatch) {
-	if history.Version == 0 {
-		history.Version = GetDefaultHistoryVersion()
+// GetVisibilityTSFrom - helper method to get visibility timestamp
+func GetVisibilityTSFrom(task Task) (time.Time, error) {
+	switch task.GetType() {
+	case TaskTypeDecisionTimeout:
+		if t, ok := task.(*DecisionTimeoutTask); ok {
+			return t.VisibilityTimestamp, nil
+		}
+		return time.Time{}, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("Failed to cast %v to DecisionTimeoutTask", task),
+		}
+
+	case TaskTypeActivityTimeout:
+		if t, ok := task.(*ActivityTimeoutTask); ok {
+			return t.VisibilityTimestamp, nil
+		}
+		return time.Time{}, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("Failed to cast %v to ActivityTimeoutTask", task),
+		}
+
+	case TaskTypeUserTimer:
+		if t, ok := task.(*UserTimerTask); ok {
+			return t.VisibilityTimestamp, nil
+		}
+		return time.Time{}, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("Failed to cast %v to UserTimerTask", task),
+		}
+
+	case TaskTypeWorkflowTimeout:
+		if t, ok := task.(*WorkflowTimeoutTask); ok {
+			return t.VisibilityTimestamp, nil
+		}
+		return time.Time{}, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("Failed to cast %v to WorkflowTimeoutTask", task),
+		}
+
+	case TaskTypeDeleteHistoryEvent:
+		if t, ok := task.(*DeleteHistoryEventTask); ok {
+			return t.VisibilityTimestamp, nil
+		}
+		return time.Time{}, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("Failed to cast %v to DeleteHistoryEventTask", task),
+		}
+
+	case TaskTypeActivityRetryTimer:
+		if t, ok := task.(*ActivityRetryTimerTask); ok {
+			return t.VisibilityTimestamp, nil
+		}
+		return time.Time{}, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("Failed to cast %v to ActivityRetryTimerTask", task),
+		}
+	case TaskTypeWorkflowRetryTimer:
+		if t, ok := task.(*WorkflowRetryTimerTask); ok {
+			return t.VisibilityTimestamp, nil
+		}
+		return time.Time{}, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("Failed to cast %v to TaskTypeWorkflowRetryTimer", task),
+		}
 	}
-	if len(history.EncodingType) == 0 {
-		history.EncodingType = DefaultEncodingType
+
+	return time.Time{}, nil
+}
+
+// SetVisibilityTSFrom - helper method to set visibility timestamp
+func SetVisibilityTSFrom(task Task, t time.Time) {
+	switch task.GetType() {
+	case TaskTypeDecisionTimeout:
+		task.(*DecisionTimeoutTask).VisibilityTimestamp = t
+
+	case TaskTypeActivityTimeout:
+		task.(*ActivityTimeoutTask).VisibilityTimestamp = t
+
+	case TaskTypeUserTimer:
+		task.(*UserTimerTask).VisibilityTimestamp = t
+
+	case TaskTypeWorkflowTimeout:
+		task.(*WorkflowTimeoutTask).VisibilityTimestamp = t
+
+	case TaskTypeDeleteHistoryEvent:
+		task.(*DeleteHistoryEventTask).VisibilityTimestamp = t
+
+	case TaskTypeActivityRetryTimer:
+		task.(*ActivityRetryTimerTask).VisibilityTimestamp = t
+
+	case TaskTypeWorkflowRetryTimer:
+		task.(*WorkflowRetryTimerTask).VisibilityTimestamp = t
 	}
+}
+
+// DBTimestampToUnixNano converts CQL timestamp to UnixNano
+func DBTimestampToUnixNano(milliseconds int64) int64 {
+	return milliseconds * 1000 * 1000 // Milliseconds are 10⁻³, nanoseconds are 10⁻⁹, (-3) - (-9) = 6, so multiply by 10⁶
+}
+
+// UnixNanoToDBTimestamp converts UnixNano to CQL timestamp
+func UnixNanoToDBTimestamp(timestamp int64) int64 {
+	return timestamp / (1000 * 1000) // Milliseconds are 10⁻³, nanoseconds are 10⁻⁹, (-9) - (-3) = -6, so divide by 10⁶
 }
