@@ -329,10 +329,7 @@ func (m *executionManagerImpl) UpdateWorkflowExecution(request *UpdateWorkflowEx
 
 func (m *executionManagerImpl) SerializeNewBufferedReplicationTask(task *BufferedReplicationTask, encoding common.EncodingType) (*PersistenceBufferedReplicationTask, error) {
 	if task == nil {
-		return &PersistenceBufferedReplicationTask{
-			History:       &DataBlob{},
-			NewRunHistory: &DataBlob{},
-		}, nil
+		return nil, nil
 	}
 	var history, newHistory *DataBlob
 	var err error

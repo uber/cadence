@@ -2543,7 +2543,7 @@ func (s *ExecutionManagerSuite) TestResetMutableStateCurrentIsSelf() {
 	s.True(contains)
 
 	s.Equal(2, len(state1.BufferedReplicationTasks))
-	s.Equal(2, len(state1.BufferedEvents))
+	s.Equal(3, len(state1.BufferedEvents))
 
 	updatedInfo1 := copyWorkflowExecutionInfo(info1)
 	updatedInfo1.NextEventID = int64(3)
