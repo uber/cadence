@@ -328,14 +328,22 @@ func (m *executionManagerImpl) UpdateWorkflowExecution(request *UpdateWorkflowEx
 }
 
 func (m *executionManagerImpl) SerializeNewBufferedReplicationTask(task *BufferedReplicationTask, encoding common.EncodingType) (*PersistenceBufferedReplicationTask, error) {
-	history, err := m.serializer.SerializeBatchEvents(&workflow.History{Events: task.History}, encoding)
-	if err != nil {
-		return nil, err
+	var history, newHistory *DataBlob
+	var err error
+	if task.History != nil {
+		history, err = m.serializer.SerializeBatchEvents(&workflow.History{Events: task.History}, encoding)
+		if err != nil {
+			return nil, err
+		}
 	}
-	newHistory, err := m.serializer.SerializeBatchEvents(&workflow.History{Events: task.NewRunHistory}, encoding)
-	if err != nil {
-		return nil, err
+
+	if task.NewRunHistory != nil {
+		newHistory, err = m.serializer.SerializeBatchEvents(&workflow.History{Events: task.NewRunHistory}, encoding)
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	return &PersistenceBufferedReplicationTask{
 		FirstEventID: task.FirstEventID,
 		NextEventID:  task.NextEventID,
@@ -420,9 +428,13 @@ func (m *executionManagerImpl) SerializeUpsertActivityInfos(infos []*ActivityInf
 }
 
 func (m *executionManagerImpl) SerializeExecutionInfo(info *WorkflowExecutionInfo, encoding common.EncodingType) (*PersistenceWorkflowExecutionInfo, error) {
-	completionEvent, err := m.serializer.SerializeEvent(info.CompletionEvent, encoding)
-	if err != nil {
-		return nil, err
+	var completionEvent *DataBlob
+	var err error
+	if info.CompletionEvent != nil {
+		completionEvent, err = m.serializer.SerializeEvent(info.CompletionEvent, encoding)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &PersistenceWorkflowExecutionInfo{

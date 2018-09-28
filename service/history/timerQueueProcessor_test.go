@@ -95,7 +95,6 @@ func (s *timerQueueProcessorSuite) SetupTest() {
 		historyCache:       historyCache,
 		logger:             s.logger,
 		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
-		hSerializerFactory: persistence.NewHistorySerializerFactory(),
 		metricsClient:      metrics.NewClient(tally.NoopScope, metrics.History),
 	}
 	s.engineImpl.txProcessor = newTransferQueueProcessor(
