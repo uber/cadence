@@ -385,7 +385,6 @@ func (m *executionManagerImpl) SerializeUpsertChildExecutionInfos(infos []*Child
 func (m *executionManagerImpl) SerializeUpsertActivityInfos(infos []*ActivityInfo, encoding common.EncodingType) ([]*PersistenceActivityInfo, error) {
 	newInfos := make([]*PersistenceActivityInfo, 0)
 	for _, v := range infos {
-		fmt.Printf("longer: %+v\n", v)
 		scheduledEvent, err := m.serializer.SerializeEvent(v.ScheduledEvent, encoding)
 		if err != nil {
 			return nil, err
@@ -426,7 +425,6 @@ func (m *executionManagerImpl) SerializeUpsertActivityInfos(infos []*ActivityInf
 			NonRetriableErrors:       v.NonRetriableErrors,
 			LastTimeoutVisibility:    v.LastTimeoutVisibility,
 		}
-		fmt.Printf("longer: %+v\n", *i)
 		newInfos = append(newInfos, i)
 	}
 	return newInfos, nil
@@ -601,7 +599,6 @@ func (m *historyManagerImpl) GetWorkflowExecutionHistory(request *GetWorkflowExe
 	}
 
 	// persistence API expects the actual cassandra paging token
-	request.NextPageToken = token.Data
 	newRequest := &PersistenceGetWorkflowExecutionHistoryRequest{
 		LastEventBatchVersion: token.LastEventBatchVersion,
 		NextPageToken:         token.Data,
@@ -618,6 +615,7 @@ func (m *historyManagerImpl) GetWorkflowExecutionHistory(request *GetWorkflowExe
 	}
 	// we store LastEventBatchVersion in the token. The reason we do it here is for historic reason.
 	token.LastEventBatchVersion = response.LastEventBatchVersion
+	token.Data = response.NextPageToken
 
 	newResponse := &GetWorkflowExecutionHistoryResponse{}
 
@@ -654,8 +652,6 @@ func (m *historyManagerImpl) GetWorkflowExecutionHistory(request *GetWorkflowExe
 		lastFirstEventID = historyBatch.Events[0].GetEventId()
 		history.Events = append(history.Events, historyBatch.Events...)
 		token.LastEventID = historyBatch.Events[len(historyBatch.Events)-1].GetEventId()
-
-		history.Events = append(history.Events, historyBatch.Events...)
 	}
 
 	newResponse.Size = size

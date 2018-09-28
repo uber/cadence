@@ -161,6 +161,7 @@ func (h *cassandraHistoryPersistence) GetWorkflowExecutionHistory(request *p.Per
 
 	found := false
 	nextPageToken := iter.PageState()
+	fmt.Printf("longer nextpage: %v, %v, %v, %v", nextPageToken, request.FirstEventID, request.NextEventID, request.PageSize)
 
 	//NOTE: in this method, we need to make sure is NOT decreasing(otherwise we skip the events)
 	lastEventBatchVersion := request.LastEventBatchVersion
