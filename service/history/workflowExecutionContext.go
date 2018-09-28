@@ -118,6 +118,8 @@ func (c *workflowExecutionContext) loadWorkflowExecutionInternal() error {
 	}
 
 	c.msBuilder = msBuilder
+	// finally emit execution and session stats
+	c.emitWorkflowExecutionStats(response.MutableStateStats, c.msBuilder.GetHistorySize())
 	return nil
 }
 
@@ -393,9 +395,10 @@ func (c *workflowExecutionContext) updateHelper(transferTasks []persistence.Task
 		c.msBuilder.IsWorkflowExecutionRunning(),
 	))
 
-	// finally emit execution and session stats
-	c.emitWorkflowExecutionStats(resp.MutableStateStats, c.msBuilder.GetHistorySize())
-	c.emitSessionUpdateStats(resp.MutableStateUpdateSessionStats)
+	// finally emit session stats
+	if resp != nil {
+		c.emitSessionUpdateStats(resp.MutableStateUpdateSessionStats)
+	}
 
 	return nil
 }
@@ -545,6 +548,9 @@ func (c *workflowExecutionContext) scheduleNewDecision(transferTasks []persisten
 }
 
 func (c *workflowExecutionContext) emitWorkflowExecutionStats(stats *persistence.MutableStateStats, executionInfoHistorySize int64) {
+	if stats == nil {
+		return
+	}
 	c.metricsClient.RecordTimer(metrics.ExecutionSizeStatsScope, metrics.HistorySize,
 		time.Duration(executionInfoHistorySize))
 	c.metricsClient.RecordTimer(metrics.ExecutionSizeStatsScope, metrics.MutableStateSize,

@@ -43,6 +43,7 @@ import (
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/common/messaging"
+	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
 )
 
@@ -170,8 +171,8 @@ func (s *timerQueueProcessor2Suite) TestTimerUpdateTimesOut() {
 
 	builder := newMutableStateBuilder(cluster.TestCurrentClusterName, s.config, s.logger)
 	startRequest := &workflow.StartWorkflowExecutionRequest{
-		WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr("wType")},
-		TaskList:                            common.TaskListPtr(workflow.TaskList{Name: common.StringPtr(taskList)}),
+		WorkflowType: &workflow.WorkflowType{Name: common.StringPtr("wType")},
+		TaskList:     common.TaskListPtr(workflow.TaskList{Name: common.StringPtr(taskList)}),
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 	}
@@ -209,12 +210,12 @@ func (s *timerQueueProcessor2Suite) TestTimerUpdateTimesOut() {
 	s.mockExecutionMgr.On("GetTimerIndexTasks", mock.Anything).Return(
 		&persistence.GetTimerIndexTasksResponse{Timers: []*persistence.TimerTaskInfo{}}, nil)
 
-	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(nil).Once()
-	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(errors.New("FAILED")).Once()
+	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(&p.AppendHistoryEventsResponse{Size: 0}, nil).Once()
+	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, errors.New("FAILED")).Once()
 	s.mockShardManager.On("UpdateShard", mock.Anything).Return(nil)
 
-	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(nil).Once()
-	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(nil).Run(func(arguments mock.Arguments) {
+	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(&p.AppendHistoryEventsResponse{Size: 0}, nil).Once()
+	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Run(func(arguments mock.Arguments) {
 		// Done.
 		waitCh <- struct{}{}
 	}).Once()
@@ -242,8 +243,8 @@ func (s *timerQueueProcessor2Suite) TestWorkflowTimeout() {
 
 	builder := newMutableStateBuilder(cluster.TestCurrentClusterName, s.config, s.logger)
 	startRequest := &workflow.StartWorkflowExecutionRequest{
-		WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr("wType")},
-		TaskList:                            common.TaskListPtr(workflow.TaskList{Name: common.StringPtr(taskList)}),
+		WorkflowType: &workflow.WorkflowType{Name: common.StringPtr("wType")},
+		TaskList:     common.TaskListPtr(workflow.TaskList{Name: common.StringPtr(taskList)}),
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 	}
@@ -274,8 +275,8 @@ func (s *timerQueueProcessor2Suite) TestWorkflowTimeout() {
 	wfResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(wfResponse, nil).Once()
 
-	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(nil).Once()
-	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(nil).Run(func(arguments mock.Arguments) {
+	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(&p.AppendHistoryEventsResponse{Size: 0}, nil).Once()
+	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Run(func(arguments mock.Arguments) {
 		// Done.
 		waitCh <- struct{}{}
 	}).Once()

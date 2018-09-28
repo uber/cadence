@@ -625,7 +625,8 @@ type (
 
 	// GetWorkflowExecutionResponse is the response to GetworkflowExecutionRequest
 	GetWorkflowExecutionResponse struct {
-		State *WorkflowMutableState
+		State             *WorkflowMutableState
+		MutableStateStats *MutableStateStats
 	}
 
 	// GetCurrentExecutionRequest is used to retrieve the current RunId for an execution
@@ -1036,7 +1037,6 @@ type (
 
 	//UpdateWorkflowExecutionResponse is response for UpdateWorkflowExecutionRequest
 	UpdateWorkflowExecutionResponse struct {
-		MutableStateStats              *MutableStateStats
 		MutableStateUpdateSessionStats *MutableStateUpdateSessionStats
 	}
 

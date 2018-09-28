@@ -25,33 +25,33 @@ type (
 	statsComputer struct{}
 )
 
-func (sc *statsComputer) computeMutableStateStats(req *PersistenceUpdateWorkflowExecutionRequest) *MutableStateStats {
-	executionInfoSize := computeExecutionInfoSize(req.ExecutionInfo)
+func (sc *statsComputer) computeMutableStateStats(req *PersistenceGetWorkflowExecutionResponse) *MutableStateStats {
+	executionInfoSize := computeExecutionInfoSize(req.State.ExecutionInfo)
 
 	activityInfoCount := 0
 	activityInfoSize := 0
-	for _, ai := range req.UpsertActivityInfos {
+	for _, ai := range req.State.ActivitInfos {
 		activityInfoCount++
 		activityInfoSize += computeActivityInfoSize(ai)
 	}
 
 	timerInfoCount := 0
 	timerInfoSize := 0
-	for _, ti := range req.UpserTimerInfos {
+	for _, ti := range req.State.TimerInfos {
 		timerInfoCount++
 		timerInfoSize += computeTimerInfoSize(ti)
 	}
 
 	childExecutionInfoCount := 0
 	childExecutionInfoSize := 0
-	for _, ci := range req.UpsertChildExecutionInfos {
+	for _, ci := range req.State.ChildExecutionInfos {
 		childExecutionInfoCount++
 		childExecutionInfoSize += computeChildInfoSize(ci)
 	}
 
 	signalInfoCount := 0
 	signalInfoSize := 0
-	for _, si := range req.UpsertSignalInfos {
+	for _, si := range req.State.SignalInfos {
 		signalInfoCount++
 		signalInfoSize += computeSignalInfoSize(si)
 	}
@@ -59,19 +59,19 @@ func (sc *statsComputer) computeMutableStateStats(req *PersistenceUpdateWorkflow
 	bufferedEventsCount := 0
 	bufferedEventsSize := 0
 
-	if req.NewBufferedEvents != nil {
+	for _, be := range req.State.BufferedEvents {
 		bufferedEventsCount++
-		bufferedEventsSize += len(req.NewBufferedEvents.Data)
+		bufferedEventsSize += len(be.Data)
 	}
 
 	bufferedReplicationTasksCount := 0
 	bufferedReplicationTasksSize := 0
-	if req.NewBufferedReplicationTask != nil {
+	for _, brt := range req.State.BufferedReplicationTasks {
 		bufferedReplicationTasksCount++
-		bufferedReplicationTasksSize += computeBufferedReplicationTasksSize(req.NewBufferedReplicationTask)
+		bufferedReplicationTasksSize += computeBufferedReplicationTasksSize(brt)
 	}
 
-	requestCancelInfoCount := len(req.UpsertRequestCancelInfos)
+	requestCancelInfoCount := len(req.State.RequestCancelInfos)
 
 	totalSize := executionInfoSize
 	totalSize += activityInfoSize

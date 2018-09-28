@@ -102,6 +102,7 @@ func (m *executionManagerImpl) GetWorkflowExecution(request *GetWorkflowExecutio
 		return nil, err
 	}
 
+	newResponse.MutableStateStats = m.statsComputer.computeMutableStateStats(response)
 	return newResponse, nil
 }
 
@@ -322,9 +323,8 @@ func (m *executionManagerImpl) UpdateWorkflowExecution(request *UpdateWorkflowEx
 		ClearBufferedEvents:           request.ClearBufferedEvents,
 		DeleteBufferedReplicationTask: request.DeleteBufferedReplicationTask,
 	}
-	mss := m.statsComputer.computeMutableStateStats(newRequest)
 	msuss := m.statsComputer.computeMutableStateUpdateStats(newRequest)
-	return &UpdateWorkflowExecutionResponse{MutableStateStats: mss, MutableStateUpdateSessionStats: msuss}, m.persistence.UpdateWorkflowExecution(newRequest)
+	return &UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: msuss}, m.persistence.UpdateWorkflowExecution(newRequest)
 }
 
 func (m *executionManagerImpl) SerializeNewBufferedReplicationTask(task *BufferedReplicationTask, encoding common.EncodingType) (*PersistenceBufferedReplicationTask, error) {
