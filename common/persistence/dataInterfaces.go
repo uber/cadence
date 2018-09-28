@@ -1033,6 +1033,15 @@ type (
 		DeleteRequestCancelInfoCount int
 	}
 
+	UpdateWorkflowExecutionResponse struct {
+		MutableStateStats              *MutableStateStats
+		MutableStateUpdateSessionStats *MutableStateUpdateSessionStats
+	}
+
+	AppendHistoryEventsResponse struct {
+		Size int
+	}
+
 	// Closeable is an interface for any entity that supports a close operation to release resources
 	Closeable interface {
 		Close()
@@ -1051,7 +1060,7 @@ type (
 		Closeable
 		CreateWorkflowExecution(request *CreateWorkflowExecutionRequest) (*CreateWorkflowExecutionResponse, error)
 		GetWorkflowExecution(request *GetWorkflowExecutionRequest) (*GetWorkflowExecutionResponse, error)
-		UpdateWorkflowExecution(request *UpdateWorkflowExecutionRequest) (*MutableStateStats, *MutableStateUpdateSessionStats, error)
+		UpdateWorkflowExecution(request *UpdateWorkflowExecutionRequest) (*UpdateWorkflowExecutionResponse, error)
 		ResetMutableState(request *ResetMutableStateRequest) error
 		DeleteWorkflowExecution(request *DeleteWorkflowExecutionRequest) error
 		GetCurrentExecution(request *GetCurrentExecutionRequest) (*GetCurrentExecutionResponse, error)
@@ -1090,7 +1099,7 @@ type (
 	// HistoryManager is used to manage Workflow Execution HistoryEventBatch
 	HistoryManager interface {
 		Closeable
-		AppendHistoryEvents(request *AppendHistoryEventsRequest) error
+		AppendHistoryEvents(request *AppendHistoryEventsRequest) (*AppendHistoryEventsResponse, error)
 		// GetWorkflowExecutionHistory retrieves the paginated list of history events for given execution
 		GetWorkflowExecutionHistory(request *GetWorkflowExecutionHistoryRequest) (*GetWorkflowExecutionHistoryResponse,
 			error)

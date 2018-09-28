@@ -360,7 +360,8 @@ func (s *TestShardContext) UpdateWorkflowExecution(request *persistence.UpdateWo
 		s.logger.Infof("%v: TestShardContext: Assigning timer (timestamp: %v, seq: %v)",
 			time.Now().UTC(), visibilityTs, task.GetTaskID())
 	}
-	return s.executionMgr.UpdateWorkflowExecution(request)
+	_, err := s.executionMgr.UpdateWorkflowExecution(request)
+	return err
 }
 
 // UpdateTimerMaxReadLevel test implementation

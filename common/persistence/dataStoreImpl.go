@@ -269,26 +269,26 @@ func (m *executionManagerImpl) DeserializeActivityInfos(infos map[int64]*Persist
 	return newInfos, nil
 }
 
-func (m *executionManagerImpl) UpdateWorkflowExecution(request *UpdateWorkflowExecutionRequest) (*MutableStateStats, *MutableStateUpdateSessionStats, error) {
+func (m *executionManagerImpl) UpdateWorkflowExecution(request *UpdateWorkflowExecutionRequest) (*UpdateWorkflowExecutionResponse, error) {
 	executionInfo, err := m.SerializeExecutionInfo(request.ExecutionInfo, request.Encoding)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	upsertActivityInfos, err := m.SerializeUpsertActivityInfos(request.UpsertActivityInfos, request.Encoding)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	upsertChildExecutionInfos, err := m.SerializeUpsertChildExecutionInfos(request.UpsertChildExecutionInfos, request.Encoding)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	newBufferedEvents, err := m.serializer.SerializeBatchEvents(&workflow.History{Events: request.NewBufferedEvents}, request.Encoding)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	newBufferedReplicationTask, err := m.SerializeNewBufferedReplicationTask(request.NewBufferedReplicationTask, request.Encoding)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	newRequest := &PersistenceUpdateWorkflowExecutionRequest{
@@ -323,7 +323,7 @@ func (m *executionManagerImpl) UpdateWorkflowExecution(request *UpdateWorkflowEx
 	}
 	mss := m.statsComputer.computeMutableStateStats(newRequest)
 	msuss := m.statsComputer.computeMutableStateUpdateStats(newRequest)
-	return mss, msuss, m.persistence.UpdateWorkflowExecution(newRequest)
+	return &UpdateWorkflowExecutionResponse{MutableStateStats: mss, MutableStateUpdateSessionStats: msuss}, m.persistence.UpdateWorkflowExecution(newRequest)
 }
 
 func (m *executionManagerImpl) SerializeNewBufferedReplicationTask(task *BufferedReplicationTask, encoding common.EncodingType) (*PersistenceBufferedReplicationTask, error) {
@@ -551,13 +551,14 @@ func NewHistoryManagerImpl(persistence PersistenceHistoryManager, logger bark.Lo
 	}
 }
 
-func (m *historyManagerImpl) AppendHistoryEvents(request *AppendHistoryEventsRequest) error {
+func (m *historyManagerImpl) AppendHistoryEvents(request *AppendHistoryEventsRequest) (*AppendHistoryEventsResponse, error) {
 	eventsData, err := m.serializer.SerializeBatchEvents(&workflow.History{Events: request.Events}, request.Encoding)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return m.persistence.AppendHistoryEvents(
+	resp := &AppendHistoryEventsResponse{Size: len(eventsData.Data)}
+	return resp, m.persistence.AppendHistoryEvents(
 		&PersistenceAppendHistoryEventsRequest{
 			DomainID:          request.DomainID,
 			Execution:         request.Execution,
