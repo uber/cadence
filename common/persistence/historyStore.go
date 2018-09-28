@@ -58,7 +58,7 @@ func NewHistoryManagerImpl(persistence PersistenceHistoryManager, logger bark.Lo
 }
 
 func (m *historyManagerImpl) AppendHistoryEvents(request *AppendHistoryEventsRequest) (*AppendHistoryEventsResponse, error) {
-	eventsData, err := m.serializer.SerializeBatchEvents(&workflow.History{Events: request.Events}, request.Encoding)
+	eventsData, err := m.serializer.SerializeBatchEvents(request.Events, request.Encoding)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +120,7 @@ func (m *historyManagerImpl) GetWorkflowExecutionHistory(request *GetWorkflowExe
 			return nil, err
 		}
 
-		if len(historyBatch.Events) == 0 || historyBatch.Events[0].GetEventId() > token.LastEventID+1 {
+		if len(historyBatch) == 0 || historyBatch[0].GetEventId() > token.LastEventID+1 {
 			logger := m.logger.WithFields(bark.Fields{
 				logging.TagWorkflowExecutionID: request.Execution.GetWorkflowId(),
 				logging.TagWorkflowRunID:       request.Execution.GetRunId(),
@@ -130,14 +130,14 @@ func (m *historyManagerImpl) GetWorkflowExecutionHistory(request *GetWorkflowExe
 			return nil, fmt.Errorf("corrupted history event batch")
 		}
 
-		if historyBatch.Events[0].GetEventId() != token.LastEventID+1 {
+		if historyBatch[0].GetEventId() != token.LastEventID+1 {
 			// staled event batch, skip it
 			continue
 		}
 
-		lastFirstEventID = historyBatch.Events[0].GetEventId()
-		history.Events = append(history.Events, historyBatch.Events...)
-		token.LastEventID = historyBatch.Events[len(historyBatch.Events)-1].GetEventId()
+		lastFirstEventID = historyBatch[0].GetEventId()
+		history.Events = append(history.Events, historyBatch...)
+		token.LastEventID = historyBatch[len(historyBatch)-1].GetEventId()
 	}
 
 	newResponse.Size = size
