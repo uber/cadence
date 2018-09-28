@@ -1006,6 +1006,7 @@ type (
 		BufferedReplicationTasksCount int
 	}
 
+	// MutableStateUpdateSessionStats is size stats for mutableState updating session
 	MutableStateUpdateSessionStats struct {
 		MutableStateSize int // Total size of mutable state update
 
@@ -1033,11 +1034,13 @@ type (
 		DeleteRequestCancelInfoCount int
 	}
 
+	//UpdateWorkflowExecutionResponse is response for UpdateWorkflowExecutionRequest
 	UpdateWorkflowExecutionResponse struct {
 		MutableStateStats              *MutableStateStats
 		MutableStateUpdateSessionStats *MutableStateUpdateSessionStats
 	}
 
+	// AppendHistoryEventsResponse is response for AppendHistoryEventsRequest
 	AppendHistoryEventsResponse struct {
 		Size int
 	}

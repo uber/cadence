@@ -32,8 +32,11 @@ type (
 	//Persistence interface is a lower layer of dataInterface. The intention is to let different persistence implementation(SQL,Cassandra/etc) share some common logic
 	// Right now the only common part is serialization/deserialization, and only ExecutionManager/HistoryManager need it.
 	// ShardManager/TaskManager/MetadataManager are the same.
-	PersistenceShardManager    = ShardManager
-	PersistenceTaskManager     = TaskManager
+	// PersistenceShardManager is a lower level of ShardManager
+	PersistenceShardManager = ShardManager
+	// PersistenceTaskManager is a lower level of TaskManager
+	PersistenceTaskManager = TaskManager
+	// PersistenceMetadataManager is a lower level of MetadataManager
 	PersistenceMetadataManager = MetadataManager
 
 	// PersistenceExecutionManager is used to manage workflow executions for Persistence layer
@@ -132,7 +135,7 @@ type (
 		NonRetriableErrors []string
 	}
 
-	// WorkflowMutableState indicates workflow related state for Persistence Interface
+	// PersistenceWorkflowMutableState indicates workflow related state for Persistence Interface
 	PersistenceWorkflowMutableState struct {
 		ActivitInfos             map[int64]*PersistenceActivityInfo
 		TimerInfos               map[string]*TimerInfo
@@ -146,7 +149,7 @@ type (
 		BufferedReplicationTasks map[int64]*PersistenceBufferedReplicationTask
 	}
 
-	// ActivityInfo details  for Persistence Interface
+	// PersistenceActivityInfo details  for Persistence Interface
 	PersistenceActivityInfo struct {
 		Version                  int64
 		ScheduleID               int64
@@ -182,7 +185,7 @@ type (
 		LastTimeoutVisibility int64
 	}
 
-	// ChildExecutionInfo has details for pending child executions  for Persistence Interface
+	// PersistenceChildExecutionInfo has details for pending child executions  for Persistence Interface
 	PersistenceChildExecutionInfo struct {
 		Version         int64
 		InitiatedID     int64
@@ -192,7 +195,7 @@ type (
 		CreateRequestID string
 	}
 
-	// BufferedReplicationTask has details to handle out of order receive of history events  for Persistence Interface
+	// PersistenceBufferedReplicationTask has details to handle out of order receive of history events  for Persistence Interface
 	PersistenceBufferedReplicationTask struct {
 		FirstEventID  int64
 		NextEventID   int64
@@ -201,7 +204,7 @@ type (
 		NewRunHistory *DataBlob
 	}
 
-	// UpdateWorkflowExecutionRequest is used to update a workflow execution  for Persistence Interface
+	// PersistenceUpdateWorkflowExecutionRequest is used to update a workflow execution  for Persistence Interface
 	PersistenceUpdateWorkflowExecutionRequest struct {
 		ExecutionInfo        *PersistenceWorkflowExecutionInfo
 		ReplicationState     *ReplicationState
@@ -234,7 +237,7 @@ type (
 		DeleteBufferedReplicationTask *int64
 	}
 
-	// ResetMutableStateRequest is used to reset workflow execution state  for Persistence Interface
+	// PersistenceResetMutableStateRequest is used to reset workflow execution state  for Persistence Interface
 	PersistenceResetMutableStateRequest struct {
 		PrevRunID        string
 		ExecutionInfo    *PersistenceWorkflowExecutionInfo
@@ -251,7 +254,7 @@ type (
 		InsertSignalRequestedIDs  []string
 	}
 
-	// AppendHistoryEventsRequest is used to append new events to workflow execution history  for Persistence Interface
+	// PersistenceAppendHistoryEventsRequest is used to append new events to workflow execution history  for Persistence Interface
 	PersistenceAppendHistoryEventsRequest struct {
 		DomainID          string
 		Execution         workflow.WorkflowExecution
@@ -296,6 +299,7 @@ type (
 	}
 )
 
+// NewDataBlob returns a new DataBlob
 func NewDataBlob(data []byte, encodingType common.EncodingType) *DataBlob {
 	return &DataBlob{
 		Data:     data,

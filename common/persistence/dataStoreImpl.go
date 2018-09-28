@@ -56,6 +56,7 @@ type (
 var _ ExecutionManager = (*executionManagerImpl)(nil)
 var _ HistoryManager = (*historyManagerImpl)(nil)
 
+// NewExecutionManagerImpl returns new ExecutionManager
 func NewExecutionManagerImpl(persistence PersistenceExecutionManager) ExecutionManager {
 	return &executionManagerImpl{
 		serializer:    NewHistorySerializer(),
@@ -543,6 +544,7 @@ func (m *executionManagerImpl) RangeCompleteTimerTask(request *RangeCompleteTime
 	return m.persistence.RangeCompleteTimerTask(request)
 }
 
+//NewHistoryManagerImpl returns new HistoryManager
 func NewHistoryManagerImpl(persistence PersistenceHistoryManager, logger bark.Logger) HistoryManager {
 	return &historyManagerImpl{
 		serializer:  NewHistorySerializer(),
