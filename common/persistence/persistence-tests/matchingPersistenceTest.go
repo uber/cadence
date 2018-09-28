@@ -2491,7 +2491,7 @@ func (s *MatchingPersistenceSuite) TestResetMutableStateCurrentIsSelf() {
 	_, contains = state1.SignalRequestedIDs["00000000-0000-0000-0000-000000000003"]
 	s.True(contains)
 
-	s.Equal(2, len(state1.BufferedReplicationTasks))
+	s.Equal(3, len(state1.BufferedReplicationTasks))
 	s.Equal(2, len(state1.BufferedEvents))
 
 	updatedInfo1 := copyWorkflowExecutionInfo(info1)
