@@ -232,7 +232,6 @@ func (m *sqlHistoryManager) GetWorkflowExecutionHistory(request *p.PersistenceGe
 	lastEventBatchVersion := request.LastEventBatchVersion
 
 	history := make([]*p.DataBlob, 0)
-	size := 0
 	for _, v := range rows {
 		eventBatch := &p.DataBlob{}
 		eventBatch.Data = v.Data
@@ -244,7 +243,6 @@ func (m *sqlHistoryManager) GetWorkflowExecutionHistory(request *p.PersistenceGe
 		if eventBatchVersion >= lastEventBatchVersion {
 			history = append(history, eventBatch)
 			lastEventBatchVersion = eventBatchVersion
-			size += len(eventBatch.Data)
 		}
 
 		eventBatchVersionPointer = new(int64)
@@ -255,7 +253,6 @@ func (m *sqlHistoryManager) GetWorkflowExecutionHistory(request *p.PersistenceGe
 		History:               history,
 		LastEventBatchVersion: lastEventBatchVersion,
 		NextPageToken:         []byte{},
-		Size:                  size,
 	}
 
 	return response, nil

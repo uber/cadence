@@ -291,9 +291,7 @@ type (
 		// Token to read next page if there are more events beyond page size.
 		// Use this to set NextPageToken on GetworkflowExecutionHistoryRequest to read the next page.
 		NextPageToken []byte
-		// the first_event_id of last loaded batch
-		Size int
-		// an extra field passing from GetWorkflowExecutionHistoryResponse
+		// an extra field passing to DataInterface
 		LastEventBatchVersion int64
 	}
 )

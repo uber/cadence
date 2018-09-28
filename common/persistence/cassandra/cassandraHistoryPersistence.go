@@ -171,7 +171,6 @@ func (h *cassandraHistoryPersistence) GetWorkflowExecutionHistory(request *p.Per
 	eventBatch := &p.DataBlob{}
 	history := make([]*p.DataBlob, 0)
 
-	size := 0
 	for iter.Scan(nil, &eventBatchVersionPointer, &eventBatch.Data, &eventBatch.Encoding) {
 		found = true
 
@@ -181,7 +180,6 @@ func (h *cassandraHistoryPersistence) GetWorkflowExecutionHistory(request *p.Per
 		if eventBatchVersion >= lastEventBatchVersion {
 			history = append(history, eventBatch)
 			lastEventBatchVersion = eventBatchVersion
-			size += len(eventBatch.Data)
 		}
 
 		eventBatchVersionPointer = new(int64)
@@ -205,9 +203,8 @@ func (h *cassandraHistoryPersistence) GetWorkflowExecutionHistory(request *p.Per
 	}
 
 	response := &p.PersistenceGetWorkflowExecutionHistoryResponse{
-		NextPageToken: nextPageToken,
-		History:       history,
-		Size:          size,
+		NextPageToken:         nextPageToken,
+		History:               history,
 		LastEventBatchVersion: lastEventBatchVersion,
 	}
 

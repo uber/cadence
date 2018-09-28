@@ -597,9 +597,7 @@ func (m *historyManagerImpl) GetWorkflowExecutionHistory(request *GetWorkflowExe
 	// we store LastEventBatchVersion in the token. The reason we do it here is for historic reason.
 	token.LastEventBatchVersion = response.LastEventBatchVersion
 
-	newResponse := &GetWorkflowExecutionHistoryResponse{
-		Size: response.Size,
-	}
+	newResponse := &GetWorkflowExecutionHistoryResponse{}
 
 	history := &workflow.History{
 		Events: make([]*workflow.HistoryEvent, len(response.History)),
@@ -607,8 +605,10 @@ func (m *historyManagerImpl) GetWorkflowExecutionHistory(request *GetWorkflowExe
 
 	// first_event_id of the last batch
 	lastFirstEventID := common.EmptyEventID
+	size := 0
 
 	for _, b := range response.History {
+		size += len(b.Data)
 		historyBatch, err := m.serializer.DeserializeBatchEvents(b)
 		if err != nil {
 			return nil, err
@@ -636,6 +636,7 @@ func (m *historyManagerImpl) GetWorkflowExecutionHistory(request *GetWorkflowExe
 		history.Events = append(history.Events, historyBatch.Events...)
 	}
 
+	newResponse.Size = size
 	newResponse.LastFirstEventID = lastFirstEventID
 	newResponse.History = history
 	newResponse.NextPageToken, err = m.serializeToken(token)
