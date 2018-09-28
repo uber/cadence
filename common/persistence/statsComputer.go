@@ -25,7 +25,7 @@ type (
 	statsComputer struct{}
 )
 
-func (sc *statsComputer) computeMutableStateStats(req *PersistenceGetWorkflowExecutionResponse) *MutableStateStats {
+func (sc *statsComputer) computeMutableStateStats(req *InternalGetWorkflowExecutionResponse) *MutableStateStats {
 	executionInfoSize := computeExecutionInfoSize(req.State.ExecutionInfo)
 
 	activityInfoCount := 0
@@ -100,7 +100,7 @@ func (sc *statsComputer) computeMutableStateStats(req *PersistenceGetWorkflowExe
 	}
 }
 
-func (sc *statsComputer) computeMutableStateUpdateStats(req *PersistenceUpdateWorkflowExecutionRequest) *MutableStateUpdateSessionStats {
+func (sc *statsComputer) computeMutableStateUpdateStats(req *InternalUpdateWorkflowExecutionRequest) *MutableStateUpdateSessionStats {
 	executionInfoSize := computeExecutionInfoSize(req.ExecutionInfo)
 
 	activityInfoCount := 0
@@ -192,7 +192,7 @@ func (sc *statsComputer) computeMutableStateUpdateStats(req *PersistenceUpdateWo
 	}
 }
 
-func computeExecutionInfoSize(executionInfo *PersistenceWorkflowExecutionInfo) int {
+func computeExecutionInfoSize(executionInfo *InternalWorkflowExecutionInfo) int {
 	size := len(executionInfo.WorkflowID)
 	size += len(executionInfo.TaskList)
 	size += len(executionInfo.WorkflowTypeName)
@@ -201,7 +201,7 @@ func computeExecutionInfoSize(executionInfo *PersistenceWorkflowExecutionInfo) i
 	return size
 }
 
-func computeActivityInfoSize(ai *PersistenceActivityInfo) int {
+func computeActivityInfoSize(ai *InternalActivityInfo) int {
 	size := len(ai.ActivityID)
 	size += len(ai.ScheduledEvent.Data)
 	size += len(ai.StartedEvent.Data)
@@ -216,7 +216,7 @@ func computeTimerInfoSize(ti *TimerInfo) int {
 	return size
 }
 
-func computeChildInfoSize(ci *PersistenceChildExecutionInfo) int {
+func computeChildInfoSize(ci *InternalChildExecutionInfo) int {
 	if ci.InitiatedEvent == nil {
 		return 0
 	}
@@ -234,7 +234,7 @@ func computeSignalInfoSize(si *SignalInfo) int {
 	return size
 }
 
-func computeBufferedReplicationTasksSize(task *PersistenceBufferedReplicationTask) int {
+func computeBufferedReplicationTasksSize(task *InternalBufferedReplicationTask) int {
 	size := 0
 
 	if task != nil {

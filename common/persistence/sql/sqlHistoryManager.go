@@ -112,7 +112,7 @@ func (m *sqlHistoryManager) Close() {
 }
 
 // NewHistoryPersistence creates an instance of HistoryManager
-func NewHistoryPersistence(host string, port int, username, password, dbName string, logger bark.Logger) (p.PersistenceHistoryManager, error) {
+func NewHistoryPersistence(host string, port int, username, password, dbName string, logger bark.Logger) (p.HistoryStore, error) {
 	var db, err = newConnection(host, port, username, password, dbName)
 	if err != nil {
 		return nil, err
@@ -123,7 +123,7 @@ func NewHistoryPersistence(host string, port int, username, password, dbName str
 	}, nil
 }
 
-func (m *sqlHistoryManager) AppendHistoryEvents(request *p.PersistenceAppendHistoryEventsRequest) error {
+func (m *sqlHistoryManager) AppendHistoryEvents(request *p.InternalAppendHistoryEventsRequest) error {
 	arg := &eventsRow{
 		DomainID:     request.DomainID,
 		WorkflowID:   *request.Execution.WorkflowId,
@@ -203,8 +203,8 @@ func (m *sqlHistoryManager) AppendHistoryEvents(request *p.PersistenceAppendHist
 }
 
 // TODO: Pagination
-func (m *sqlHistoryManager) GetWorkflowExecutionHistory(request *p.PersistenceGetWorkflowExecutionHistoryRequest) (
-	*p.PersistenceGetWorkflowExecutionHistoryResponse, error) {
+func (m *sqlHistoryManager) GetWorkflowExecutionHistory(request *p.InternalGetWorkflowExecutionHistoryRequest) (
+	*p.InternalGetWorkflowExecutionHistoryResponse, error) {
 
 	var rows []eventsRow
 	if err := m.db.Select(&rows,
@@ -249,7 +249,7 @@ func (m *sqlHistoryManager) GetWorkflowExecutionHistory(request *p.PersistenceGe
 		eventBatchVersion = common.EmptyVersion
 	}
 
-	response := &p.PersistenceGetWorkflowExecutionHistoryResponse{
+	response := &p.InternalGetWorkflowExecutionHistoryResponse{
 		History:               history,
 		LastEventBatchVersion: lastEventBatchVersion,
 		NextPageToken:         []byte{},

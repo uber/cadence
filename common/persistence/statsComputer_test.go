@@ -51,9 +51,9 @@ func (s *statsComputerSuite) SetupTest() {
 	s.sc = &statsComputer{}
 }
 
-func (s *statsComputerSuite) createRequest() *PersistenceUpdateWorkflowExecutionRequest {
-	return &PersistenceUpdateWorkflowExecutionRequest{
-		ExecutionInfo: &PersistenceWorkflowExecutionInfo{},
+func (s *statsComputerSuite) createRequest() *InternalUpdateWorkflowExecutionRequest {
+	return &InternalUpdateWorkflowExecutionRequest{
+		ExecutionInfo: &InternalWorkflowExecutionInfo{},
 	}
 }
 

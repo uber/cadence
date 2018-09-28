@@ -871,7 +871,7 @@ func NewShardPersistence(hosts string, port int, user, password, dc string, keys
 
 // NewWorkflowExecutionPersistence is used to create an instance of workflowExecutionManager implementation
 func NewWorkflowExecutionPersistence(shardID int, session *gocql.Session,
-	logger bark.Logger) (p.ExecutionManagerStore, error) {
+	logger bark.Logger) (p.ExecutionStore, error) {
 	return &cassandraPersistence{shardID: shardID, session: session, logger: logger}, nil
 }
 
@@ -1392,7 +1392,7 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Cre
 }
 
 func (d *cassandraPersistence) GetWorkflowExecution(request *p.GetWorkflowExecutionRequest) (
-	*p.PersistenceGetWorkflowExecutionResponse, error) {
+	*p.InternalGetWorkflowExecutionResponse, error) {
 	execution := request.Execution
 	query := d.session.Query(templateGetWorkflowExecutionQuery,
 		d.shardID,
@@ -1421,14 +1421,14 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *p.GetWorkflowExecut
 		}
 	}
 
-	state := &p.PersistenceWorkflowMutableState{}
+	state := &p.InternalWorkflowMutableState{}
 	info := createWorkflowExecutionInfo(result["execution"].(map[string]interface{}))
 	state.ExecutionInfo = info
 
 	replicationState := createReplicationState(result["replication_state"].(map[string]interface{}))
 	state.ReplicationState = replicationState
 
-	activityInfos := make(map[int64]*p.PersistenceActivityInfo)
+	activityInfos := make(map[int64]*p.InternalActivityInfo)
 	aMap := result["activity_map"].(map[int64]map[string]interface{})
 	for key, value := range aMap {
 		info := createActivityInfo(value)
@@ -1444,7 +1444,7 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *p.GetWorkflowExecut
 	}
 	state.TimerInfos = timerInfos
 
-	childExecutionInfos := make(map[int64]*p.PersistenceChildExecutionInfo)
+	childExecutionInfos := make(map[int64]*p.InternalChildExecutionInfo)
 	cMap := result["child_executions_map"].(map[int64]map[string]interface{})
 	for key, value := range cMap {
 		info := createChildExecutionInfo(value)
@@ -1483,7 +1483,7 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *p.GetWorkflowExecut
 	}
 	state.BufferedEvents = bufferedEventsBlobs
 
-	bufferedReplicationTasks := make(map[int64]*p.PersistenceBufferedReplicationTask)
+	bufferedReplicationTasks := make(map[int64]*p.InternalBufferedReplicationTask)
 	bufferedRTMap := result["buffered_replication_tasks_map"].(map[int64]map[string]interface{})
 	for k, v := range bufferedRTMap {
 		info := createBufferedReplicationTaskInfo(v)
@@ -1491,10 +1491,10 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *p.GetWorkflowExecut
 	}
 	state.BufferedReplicationTasks = bufferedReplicationTasks
 
-	return &p.PersistenceGetWorkflowExecutionResponse{State: state}, nil
+	return &p.InternalGetWorkflowExecutionResponse{State: state}, nil
 }
 
-func (d *cassandraPersistence) UpdateWorkflowExecution(request *p.PersistenceUpdateWorkflowExecutionRequest) error {
+func (d *cassandraPersistence) UpdateWorkflowExecution(request *p.InternalUpdateWorkflowExecutionRequest) error {
 	batch := d.session.NewBatch(gocql.LoggedBatch)
 	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
 	executionInfo := request.ExecutionInfo
@@ -1769,7 +1769,7 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *p.PersistenceUpd
 	return nil
 }
 
-func (d *cassandraPersistence) ResetMutableState(request *p.PersistenceResetMutableStateRequest) error {
+func (d *cassandraPersistence) ResetMutableState(request *p.InternalResetMutableStateRequest) error {
 	batch := d.session.NewBatch(gocql.LoggedBatch)
 	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
 	executionInfo := request.ExecutionInfo
@@ -2846,7 +2846,7 @@ func (d *cassandraPersistence) createTimerTasks(batch *gocql.Batch, timerTasks [
 	}
 }
 
-func (d *cassandraPersistence) updateActivityInfos(batch *gocql.Batch, activityInfos []*p.PersistenceActivityInfo, deleteInfos []int64,
+func (d *cassandraPersistence) updateActivityInfos(batch *gocql.Batch, activityInfos []*p.InternalActivityInfo, deleteInfos []int64,
 	domainID, workflowID, runID string, condition int64, rangeID int64) error {
 
 	for _, a := range activityInfos {
@@ -2933,7 +2933,7 @@ func (d *cassandraPersistence) resetBufferedEvents(batch *gocql.Batch, domainID,
 		condition)
 }
 
-func (d *cassandraPersistence) resetActivityInfos(batch *gocql.Batch, activityInfos []*p.PersistenceActivityInfo, domainID,
+func (d *cassandraPersistence) resetActivityInfos(batch *gocql.Batch, activityInfos []*p.InternalActivityInfo, domainID,
 	workflowID, runID string, condition int64) error {
 
 	infoMap, err := resetActivityInfoMap(activityInfos)
@@ -3003,7 +3003,7 @@ func (d *cassandraPersistence) resetTimerInfos(batch *gocql.Batch, timerInfos []
 		condition)
 }
 
-func (d *cassandraPersistence) updateChildExecutionInfos(batch *gocql.Batch, childExecutionInfos []*p.PersistenceChildExecutionInfo,
+func (d *cassandraPersistence) updateChildExecutionInfos(batch *gocql.Batch, childExecutionInfos []*p.InternalChildExecutionInfo,
 	deleteInfo *int64, domainID, workflowID, runID string, condition int64, rangeID int64) error {
 
 	for _, c := range childExecutionInfos {
@@ -3046,7 +3046,7 @@ func (d *cassandraPersistence) updateChildExecutionInfos(batch *gocql.Batch, chi
 	return nil
 }
 
-func (d *cassandraPersistence) resetChildExecutionInfos(batch *gocql.Batch, childExecutionInfos []*p.PersistenceChildExecutionInfo,
+func (d *cassandraPersistence) resetChildExecutionInfos(batch *gocql.Batch, childExecutionInfos []*p.InternalChildExecutionInfo,
 	domainID, workflowID, runID string, condition int64) error {
 	infoMap, err := resetChildExecutionInfoMap(childExecutionInfos)
 	if err != nil {
@@ -3241,7 +3241,7 @@ func (d *cassandraPersistence) updateBufferedEvents(batch *gocql.Batch, newBuffe
 	}
 }
 
-func (d *cassandraPersistence) updateBufferedReplicationTasks(batch *gocql.Batch, newBufferedReplicationTask *p.PersistenceBufferedReplicationTask,
+func (d *cassandraPersistence) updateBufferedReplicationTasks(batch *gocql.Batch, newBufferedReplicationTask *p.InternalBufferedReplicationTask,
 	deleteInfo *int64, domainID, workflowID, runID string, condition int64, rangeID int64) {
 
 	if newBufferedReplicationTask != nil {
@@ -3343,8 +3343,8 @@ func createShardInfo(currentCluster string, result map[string]interface{}) *p.Sh
 	return info
 }
 
-func createWorkflowExecutionInfo(result map[string]interface{}) *p.PersistenceWorkflowExecutionInfo {
-	info := &p.PersistenceWorkflowExecutionInfo{
+func createWorkflowExecutionInfo(result map[string]interface{}) *p.InternalWorkflowExecutionInfo {
+	info := &p.InternalWorkflowExecutionInfo{
 		CompletionEvent: &p.DataBlob{},
 	}
 	for k, v := range result {
@@ -3544,8 +3544,8 @@ func createReplicationTaskInfo(result map[string]interface{}) *p.ReplicationTask
 	return info
 }
 
-func createActivityInfo(result map[string]interface{}) *p.PersistenceActivityInfo {
-	info := &p.PersistenceActivityInfo{
+func createActivityInfo(result map[string]interface{}) *p.InternalActivityInfo {
+	info := &p.InternalActivityInfo{
 		ScheduledEvent: &p.DataBlob{},
 		StartedEvent:   &p.DataBlob{},
 	}
@@ -3637,8 +3637,8 @@ func createTimerInfo(result map[string]interface{}) *p.TimerInfo {
 	return info
 }
 
-func createChildExecutionInfo(result map[string]interface{}) *p.PersistenceChildExecutionInfo {
-	info := &p.PersistenceChildExecutionInfo{
+func createChildExecutionInfo(result map[string]interface{}) *p.InternalChildExecutionInfo {
+	info := &p.InternalChildExecutionInfo{
 		InitiatedEvent: &p.DataBlob{},
 		StartedEvent:   &p.DataBlob{},
 	}
@@ -3704,8 +3704,8 @@ func createSignalInfo(result map[string]interface{}) *p.SignalInfo {
 	return info
 }
 
-func createBufferedReplicationTaskInfo(result map[string]interface{}) *p.PersistenceBufferedReplicationTask {
-	info := &p.PersistenceBufferedReplicationTask{
+func createBufferedReplicationTaskInfo(result map[string]interface{}) *p.InternalBufferedReplicationTask {
+	info := &p.InternalBufferedReplicationTask{
 		History:       &p.DataBlob{},
 		NewRunHistory: &p.DataBlob{},
 	}
@@ -3729,7 +3729,7 @@ func createBufferedReplicationTaskInfo(result map[string]interface{}) *p.Persist
 	return info
 }
 
-func resetActivityInfoMap(activityInfos []*p.PersistenceActivityInfo) (map[int64]map[string]interface{}, error) {
+func resetActivityInfoMap(activityInfos []*p.InternalActivityInfo) (map[int64]map[string]interface{}, error) {
 
 	aMap := make(map[int64]map[string]interface{})
 	for _, a := range activityInfos {
@@ -3790,7 +3790,7 @@ func resetTimerInfoMap(timerInfos []*p.TimerInfo) map[string]map[string]interfac
 	return tMap
 }
 
-func resetChildExecutionInfoMap(childExecutionInfos []*p.PersistenceChildExecutionInfo) (map[int64]map[string]interface{}, error) {
+func resetChildExecutionInfoMap(childExecutionInfos []*p.InternalChildExecutionInfo) (map[int64]map[string]interface{}, error) {
 	cMap := make(map[int64]map[string]interface{})
 	for _, c := range childExecutionInfos {
 		if c.StartedEvent.Encoding != c.InitiatedEvent.Encoding {

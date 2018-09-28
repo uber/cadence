@@ -32,10 +32,10 @@ import (
 
 type (
 
-	// historyManagerImpl implements HistoryManager based on PersistenceHistoryManager and HistorySerializer
+	// historyManagerImpl implements HistoryManager based on HistoryStore and HistorySerializer
 	historyManagerImpl struct {
 		serializer  HistorySerializer
-		persistence PersistenceHistoryManager
+		persistence HistoryStore
 		logger      bark.Logger
 	}
 
@@ -49,7 +49,7 @@ type (
 var _ HistoryManager = (*historyManagerImpl)(nil)
 
 //NewHistoryManagerImpl returns new HistoryManager
-func NewHistoryManagerImpl(persistence PersistenceHistoryManager, logger bark.Logger) HistoryManager {
+func NewHistoryManagerImpl(persistence HistoryStore, logger bark.Logger) HistoryManager {
 	return &historyManagerImpl{
 		serializer:  NewHistorySerializer(),
 		persistence: persistence,
@@ -65,7 +65,7 @@ func (m *historyManagerImpl) AppendHistoryEvents(request *AppendHistoryEventsReq
 
 	resp := &AppendHistoryEventsResponse{Size: len(eventsData.Data)}
 	return resp, m.persistence.AppendHistoryEvents(
-		&PersistenceAppendHistoryEventsRequest{
+		&InternalAppendHistoryEventsRequest{
 			DomainID:          request.DomainID,
 			Execution:         request.Execution,
 			FirstEventID:      request.FirstEventID,
@@ -85,7 +85,7 @@ func (m *historyManagerImpl) GetWorkflowExecutionHistory(request *GetWorkflowExe
 	}
 
 	// persistence API expects the actual cassandra paging token
-	newRequest := &PersistenceGetWorkflowExecutionHistoryRequest{
+	newRequest := &InternalGetWorkflowExecutionHistoryRequest{
 		LastEventBatchVersion: token.LastEventBatchVersion,
 		NextPageToken:         token.Data,
 

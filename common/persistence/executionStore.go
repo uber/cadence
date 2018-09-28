@@ -27,10 +27,10 @@ import (
 
 type (
 
-	// executionManagerImpl implements ExecutionManager based on ExecutionManagerStore, statsComputer and HistorySerializer
+	// executionManagerImpl implements ExecutionManager based on ExecutionStore, statsComputer and HistorySerializer
 	executionManagerImpl struct {
 		serializer    HistorySerializer
-		persistence   ExecutionManagerStore
+		persistence   ExecutionStore
 		statsComputer statsComputer
 	}
 )
@@ -38,7 +38,7 @@ type (
 var _ ExecutionManager = (*executionManagerImpl)(nil)
 
 // NewExecutionManagerImpl returns new ExecutionManager
-func NewExecutionManagerImpl(persistence ExecutionManagerStore) ExecutionManager {
+func NewExecutionManagerImpl(persistence ExecutionStore) ExecutionManager {
 	return &executionManagerImpl{
 		serializer:    NewHistorySerializer(),
 		persistence:   persistence,
@@ -87,7 +87,7 @@ func (m *executionManagerImpl) GetWorkflowExecution(request *GetWorkflowExecutio
 	return newResponse, nil
 }
 
-func (m *executionManagerImpl) DeserializeExecutionInfo(info *PersistenceWorkflowExecutionInfo) (*WorkflowExecutionInfo, error) {
+func (m *executionManagerImpl) DeserializeExecutionInfo(info *InternalWorkflowExecutionInfo) (*WorkflowExecutionInfo, error) {
 	completionEvent, err := m.serializer.DeserializeEvent(info.CompletionEvent)
 	if err != nil {
 		return nil, err
@@ -142,7 +142,7 @@ func (m *executionManagerImpl) DeserializeExecutionInfo(info *PersistenceWorkflo
 	return newInfo, nil
 }
 
-func (m *executionManagerImpl) DeserializeBufferedReplicationTasks(tasks map[int64]*PersistenceBufferedReplicationTask) (map[int64]*BufferedReplicationTask, error) {
+func (m *executionManagerImpl) DeserializeBufferedReplicationTasks(tasks map[int64]*InternalBufferedReplicationTask) (map[int64]*BufferedReplicationTask, error) {
 	newBRTs := make(map[int64]*BufferedReplicationTask, 0)
 	for k, v := range tasks {
 		history, err := m.serializer.DeserializeBatchEvents(v.History)
@@ -178,7 +178,7 @@ func (m *executionManagerImpl) DeserializeBufferedEvents(blobs []*DataBlob) ([]*
 	return events, nil
 }
 
-func (m *executionManagerImpl) DeserializeChildExecutionInfos(infos map[int64]*PersistenceChildExecutionInfo) (map[int64]*ChildExecutionInfo, error) {
+func (m *executionManagerImpl) DeserializeChildExecutionInfos(infos map[int64]*InternalChildExecutionInfo) (map[int64]*ChildExecutionInfo, error) {
 	newInfos := make(map[int64]*ChildExecutionInfo, 0)
 	for k, v := range infos {
 		initiatedEvent, err := m.serializer.DeserializeEvent(v.InitiatedEvent)
@@ -203,7 +203,7 @@ func (m *executionManagerImpl) DeserializeChildExecutionInfos(infos map[int64]*P
 	return newInfos, nil
 }
 
-func (m *executionManagerImpl) DeserializeActivityInfos(infos map[int64]*PersistenceActivityInfo) (map[int64]*ActivityInfo, error) {
+func (m *executionManagerImpl) DeserializeActivityInfos(infos map[int64]*InternalActivityInfo) (map[int64]*ActivityInfo, error) {
 	newInfos := make(map[int64]*ActivityInfo, 0)
 	for k, v := range infos {
 		scheduledEvent, err := m.serializer.DeserializeEvent(v.ScheduledEvent)
@@ -274,7 +274,7 @@ func (m *executionManagerImpl) UpdateWorkflowExecution(request *UpdateWorkflowEx
 		return nil, err
 	}
 
-	newRequest := &PersistenceUpdateWorkflowExecutionRequest{
+	newRequest := &InternalUpdateWorkflowExecutionRequest{
 		ExecutionInfo:              executionInfo,
 		UpsertActivityInfos:        upsertActivityInfos,
 		UpsertChildExecutionInfos:  upsertChildExecutionInfos,
@@ -308,7 +308,7 @@ func (m *executionManagerImpl) UpdateWorkflowExecution(request *UpdateWorkflowEx
 	return &UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: msuss}, m.persistence.UpdateWorkflowExecution(newRequest)
 }
 
-func (m *executionManagerImpl) SerializeNewBufferedReplicationTask(task *BufferedReplicationTask, encoding common.EncodingType) (*PersistenceBufferedReplicationTask, error) {
+func (m *executionManagerImpl) SerializeNewBufferedReplicationTask(task *BufferedReplicationTask, encoding common.EncodingType) (*InternalBufferedReplicationTask, error) {
 	if task == nil {
 		return nil, nil
 	}
@@ -328,7 +328,7 @@ func (m *executionManagerImpl) SerializeNewBufferedReplicationTask(task *Buffere
 		}
 	}
 
-	return &PersistenceBufferedReplicationTask{
+	return &InternalBufferedReplicationTask{
 		FirstEventID: task.FirstEventID,
 		NextEventID:  task.NextEventID,
 		Version:      task.Version,
@@ -338,8 +338,8 @@ func (m *executionManagerImpl) SerializeNewBufferedReplicationTask(task *Buffere
 	}, nil
 }
 
-func (m *executionManagerImpl) SerializeUpsertChildExecutionInfos(infos []*ChildExecutionInfo, encoding common.EncodingType) ([]*PersistenceChildExecutionInfo, error) {
-	newInfos := make([]*PersistenceChildExecutionInfo, 0)
+func (m *executionManagerImpl) SerializeUpsertChildExecutionInfos(infos []*ChildExecutionInfo, encoding common.EncodingType) ([]*InternalChildExecutionInfo, error) {
+	newInfos := make([]*InternalChildExecutionInfo, 0)
 	for _, v := range infos {
 		initiatedEvent, err := m.serializer.SerializeEvent(v.InitiatedEvent, encoding)
 		if err != nil {
@@ -349,7 +349,7 @@ func (m *executionManagerImpl) SerializeUpsertChildExecutionInfos(infos []*Child
 		if err != nil {
 			return nil, err
 		}
-		i := &PersistenceChildExecutionInfo{
+		i := &InternalChildExecutionInfo{
 			InitiatedEvent: initiatedEvent,
 			StartedEvent:   startedEvent,
 
@@ -363,8 +363,8 @@ func (m *executionManagerImpl) SerializeUpsertChildExecutionInfos(infos []*Child
 	return newInfos, nil
 }
 
-func (m *executionManagerImpl) SerializeUpsertActivityInfos(infos []*ActivityInfo, encoding common.EncodingType) ([]*PersistenceActivityInfo, error) {
-	newInfos := make([]*PersistenceActivityInfo, 0)
+func (m *executionManagerImpl) SerializeUpsertActivityInfos(infos []*ActivityInfo, encoding common.EncodingType) ([]*InternalActivityInfo, error) {
+	newInfos := make([]*InternalActivityInfo, 0)
 	for _, v := range infos {
 		scheduledEvent, err := m.serializer.SerializeEvent(v.ScheduledEvent, encoding)
 		if err != nil {
@@ -374,7 +374,7 @@ func (m *executionManagerImpl) SerializeUpsertActivityInfos(infos []*ActivityInf
 		if err != nil {
 			return nil, err
 		}
-		i := &PersistenceActivityInfo{
+		i := &InternalActivityInfo{
 			Version:                  v.Version,
 			ScheduleID:               v.ScheduleID,
 			ScheduledEvent:           scheduledEvent,
@@ -411,9 +411,9 @@ func (m *executionManagerImpl) SerializeUpsertActivityInfos(infos []*ActivityInf
 	return newInfos, nil
 }
 
-func (m *executionManagerImpl) SerializeExecutionInfo(info *WorkflowExecutionInfo, encoding common.EncodingType) (*PersistenceWorkflowExecutionInfo, error) {
+func (m *executionManagerImpl) SerializeExecutionInfo(info *WorkflowExecutionInfo, encoding common.EncodingType) (*InternalWorkflowExecutionInfo, error) {
 	if info == nil {
-		return &PersistenceWorkflowExecutionInfo{
+		return &InternalWorkflowExecutionInfo{
 			CompletionEvent: &DataBlob{},
 		}, nil
 	}
@@ -424,7 +424,7 @@ func (m *executionManagerImpl) SerializeExecutionInfo(info *WorkflowExecutionInf
 		return nil, err
 	}
 
-	return &PersistenceWorkflowExecutionInfo{
+	return &InternalWorkflowExecutionInfo{
 		DomainID:                     info.DomainID,
 		WorkflowID:                   info.WorkflowID,
 		RunID:                        info.RunID,
@@ -486,7 +486,7 @@ func (m *executionManagerImpl) ResetMutableState(request *ResetMutableStateReque
 		return err
 	}
 
-	newRequest := &PersistenceResetMutableStateRequest{
+	newRequest := &InternalResetMutableStateRequest{
 		PrevRunID:                 request.PrevRunID,
 		ExecutionInfo:             executionInfo,
 		ReplicationState:          request.ReplicationState,

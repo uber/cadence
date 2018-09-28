@@ -62,7 +62,7 @@ type (
 
 // NewHistoryPersistence is used to create an instance of HistoryManager implementation
 func NewHistoryPersistence(hosts string, port int, user, password, dc string, keyspace string,
-	numConns int, logger bark.Logger) (p.PersistenceHistoryManager,
+	numConns int, logger bark.Logger) (p.HistoryStore,
 	error) {
 	cluster := NewCassandraCluster(hosts, port, user, password, dc)
 	cluster.Keyspace = keyspace
@@ -87,7 +87,7 @@ func (h *cassandraHistoryPersistence) Close() {
 	}
 }
 
-func (h *cassandraHistoryPersistence) AppendHistoryEvents(request *p.PersistenceAppendHistoryEventsRequest) error {
+func (h *cassandraHistoryPersistence) AppendHistoryEvents(request *p.InternalAppendHistoryEventsRequest) error {
 	var query *gocql.Query
 
 	if request.Overwrite {
@@ -142,8 +142,8 @@ func (h *cassandraHistoryPersistence) AppendHistoryEvents(request *p.Persistence
 	return nil
 }
 
-func (h *cassandraHistoryPersistence) GetWorkflowExecutionHistory(request *p.PersistenceGetWorkflowExecutionHistoryRequest) (
-	*p.PersistenceGetWorkflowExecutionHistoryResponse, error) {
+func (h *cassandraHistoryPersistence) GetWorkflowExecutionHistory(request *p.InternalGetWorkflowExecutionHistoryRequest) (
+	*p.InternalGetWorkflowExecutionHistoryResponse, error) {
 	execution := request.Execution
 	query := h.session.Query(templateGetWorkflowExecutionHistory,
 		request.DomainID,
@@ -203,7 +203,7 @@ func (h *cassandraHistoryPersistence) GetWorkflowExecutionHistory(request *p.Per
 		}
 	}
 
-	response := &p.PersistenceGetWorkflowExecutionHistoryResponse{
+	response := &p.InternalGetWorkflowExecutionHistoryResponse{
 		NextPageToken:         nextPageToken,
 		History:               history,
 		LastEventBatchVersion: lastEventBatchVersion,

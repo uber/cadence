@@ -43,14 +43,14 @@ type (
 	// MetadataStore is a lower level of MetadataManager
 	MetadataStore = MetadataManager
 
-	// ExecutionManagerStore is used to manage workflow executions for Persistence layer
-	ExecutionManagerStore interface {
+	// ExecutionStore is used to manage workflow executions for Persistence layer
+	ExecutionStore interface {
 		Closeable
 
 		//The below three APIs are related to serialization/deserialization
-		GetWorkflowExecution(request *GetWorkflowExecutionRequest) (*PersistenceGetWorkflowExecutionResponse, error)
-		UpdateWorkflowExecution(request *PersistenceUpdateWorkflowExecutionRequest) error
-		ResetMutableState(request *PersistenceResetMutableStateRequest) error
+		GetWorkflowExecution(request *GetWorkflowExecutionRequest) (*InternalGetWorkflowExecutionResponse, error)
+		UpdateWorkflowExecution(request *InternalUpdateWorkflowExecutionRequest) error
+		ResetMutableState(request *InternalResetMutableStateRequest) error
 
 		CreateWorkflowExecution(request *CreateWorkflowExecutionRequest) (*CreateWorkflowExecutionResponse, error)
 		DeleteWorkflowExecution(request *DeleteWorkflowExecutionRequest) error
@@ -71,13 +71,13 @@ type (
 		RangeCompleteTimerTask(request *RangeCompleteTimerTaskRequest) error
 	}
 
-	// PersistenceHistoryManager is used to manage Workflow Execution HistoryEventBatch for Persistence layer
-	PersistenceHistoryManager interface {
+	// HistoryStore is used to manage Workflow Execution HistoryEventBatch for Persistence layer
+	HistoryStore interface {
 		Closeable
 
 		//The below two APIs are related to serialization/deserialization
-		AppendHistoryEvents(request *PersistenceAppendHistoryEventsRequest) error
-		GetWorkflowExecutionHistory(request *PersistenceGetWorkflowExecutionHistoryRequest) (*PersistenceGetWorkflowExecutionHistoryResponse, error)
+		AppendHistoryEvents(request *InternalAppendHistoryEventsRequest) error
+		GetWorkflowExecutionHistory(request *InternalGetWorkflowExecutionHistoryRequest) (*InternalGetWorkflowExecutionHistoryResponse, error)
 
 		DeleteWorkflowExecutionHistory(request *DeleteWorkflowExecutionHistoryRequest) error
 	}
@@ -90,8 +90,8 @@ type (
 		Data     []byte
 	}
 
-	// PersistenceWorkflowExecutionInfo describes a workflow execution for Persistence Interface
-	PersistenceWorkflowExecutionInfo struct {
+	// InternalWorkflowExecutionInfo describes a workflow execution for Persistence Interface
+	InternalWorkflowExecutionInfo struct {
 		DomainID                     string
 		WorkflowID                   string
 		RunID                        string
@@ -139,22 +139,22 @@ type (
 		NonRetriableErrors []string
 	}
 
-	// PersistenceWorkflowMutableState indicates workflow related state for Persistence Interface
-	PersistenceWorkflowMutableState struct {
-		ActivitInfos             map[int64]*PersistenceActivityInfo
+	// InternalWorkflowMutableState indicates workflow related state for Persistence Interface
+	InternalWorkflowMutableState struct {
+		ActivitInfos             map[int64]*InternalActivityInfo
 		TimerInfos               map[string]*TimerInfo
-		ChildExecutionInfos      map[int64]*PersistenceChildExecutionInfo
+		ChildExecutionInfos      map[int64]*InternalChildExecutionInfo
 		RequestCancelInfos       map[int64]*RequestCancelInfo
 		SignalInfos              map[int64]*SignalInfo
 		SignalRequestedIDs       map[string]struct{}
-		ExecutionInfo            *PersistenceWorkflowExecutionInfo
+		ExecutionInfo            *InternalWorkflowExecutionInfo
 		ReplicationState         *ReplicationState
 		BufferedEvents           []*DataBlob
-		BufferedReplicationTasks map[int64]*PersistenceBufferedReplicationTask
+		BufferedReplicationTasks map[int64]*InternalBufferedReplicationTask
 	}
 
-	// PersistenceActivityInfo details  for Persistence Interface
-	PersistenceActivityInfo struct {
+	// InternalActivityInfo details  for Persistence Interface
+	InternalActivityInfo struct {
 		Version                  int64
 		ScheduleID               int64
 		ScheduledEvent           *DataBlob
@@ -189,8 +189,8 @@ type (
 		LastTimeoutVisibility int64
 	}
 
-	// PersistenceChildExecutionInfo has details for pending child executions  for Persistence Interface
-	PersistenceChildExecutionInfo struct {
+	// InternalChildExecutionInfo has details for pending child executions  for Persistence Interface
+	InternalChildExecutionInfo struct {
 		Version         int64
 		InitiatedID     int64
 		InitiatedEvent  *DataBlob
@@ -199,8 +199,8 @@ type (
 		CreateRequestID string
 	}
 
-	// PersistenceBufferedReplicationTask has details to handle out of order receive of history events  for Persistence Interface
-	PersistenceBufferedReplicationTask struct {
+	// InternalBufferedReplicationTask has details to handle out of order receive of history events  for Persistence Interface
+	InternalBufferedReplicationTask struct {
 		FirstEventID  int64
 		NextEventID   int64
 		Version       int64
@@ -208,9 +208,9 @@ type (
 		NewRunHistory *DataBlob
 	}
 
-	// PersistenceUpdateWorkflowExecutionRequest is used to update a workflow execution  for Persistence Interface
-	PersistenceUpdateWorkflowExecutionRequest struct {
-		ExecutionInfo        *PersistenceWorkflowExecutionInfo
+	// InternalUpdateWorkflowExecutionRequest is used to update a workflow execution  for Persistence Interface
+	InternalUpdateWorkflowExecutionRequest struct {
+		ExecutionInfo        *InternalWorkflowExecutionInfo
 		ReplicationState     *ReplicationState
 		TransferTasks        []Task
 		TimerTasks           []Task
@@ -223,11 +223,11 @@ type (
 		FinishedExecutionTTL int32
 
 		// Mutable state
-		UpsertActivityInfos           []*PersistenceActivityInfo
+		UpsertActivityInfos           []*InternalActivityInfo
 		DeleteActivityInfos           []int64
 		UpserTimerInfos               []*TimerInfo
 		DeleteTimerInfos              []string
-		UpsertChildExecutionInfos     []*PersistenceChildExecutionInfo
+		UpsertChildExecutionInfos     []*InternalChildExecutionInfo
 		DeleteChildExecutionInfo      *int64
 		UpsertRequestCancelInfos      []*RequestCancelInfo
 		DeleteRequestCancelInfo       *int64
@@ -237,29 +237,29 @@ type (
 		DeleteSignalRequestedID       string
 		NewBufferedEvents             *DataBlob
 		ClearBufferedEvents           bool
-		NewBufferedReplicationTask    *PersistenceBufferedReplicationTask
+		NewBufferedReplicationTask    *InternalBufferedReplicationTask
 		DeleteBufferedReplicationTask *int64
 	}
 
-	// PersistenceResetMutableStateRequest is used to reset workflow execution state  for Persistence Interface
-	PersistenceResetMutableStateRequest struct {
+	// InternalResetMutableStateRequest is used to reset workflow execution state  for Persistence Interface
+	InternalResetMutableStateRequest struct {
 		PrevRunID        string
-		ExecutionInfo    *PersistenceWorkflowExecutionInfo
+		ExecutionInfo    *InternalWorkflowExecutionInfo
 		ReplicationState *ReplicationState
 		Condition        int64
 		RangeID          int64
 
 		// Mutable state
-		InsertActivityInfos       []*PersistenceActivityInfo
+		InsertActivityInfos       []*InternalActivityInfo
 		InsertTimerInfos          []*TimerInfo
-		InsertChildExecutionInfos []*PersistenceChildExecutionInfo
+		InsertChildExecutionInfos []*InternalChildExecutionInfo
 		InsertRequestCancelInfos  []*RequestCancelInfo
 		InsertSignalInfos         []*SignalInfo
 		InsertSignalRequestedIDs  []string
 	}
 
-	// PersistenceAppendHistoryEventsRequest is used to append new events to workflow execution history  for Persistence Interface
-	PersistenceAppendHistoryEventsRequest struct {
+	// InternalAppendHistoryEventsRequest is used to append new events to workflow execution history  for Persistence Interface
+	InternalAppendHistoryEventsRequest struct {
 		DomainID          string
 		Execution         workflow.WorkflowExecution
 		FirstEventID      int64
@@ -270,13 +270,13 @@ type (
 		Overwrite         bool
 	}
 
-	// PersistenceGetWorkflowExecutionResponse is the response to GetworkflowExecutionRequest for Persistence Interface
-	PersistenceGetWorkflowExecutionResponse struct {
-		State *PersistenceWorkflowMutableState
+	// InternalGetWorkflowExecutionResponse is the response to GetworkflowExecutionRequest for Persistence Interface
+	InternalGetWorkflowExecutionResponse struct {
+		State *InternalWorkflowMutableState
 	}
 
-	// PersistenceGetWorkflowExecutionHistoryRequest is used to retrieve history of a workflow execution
-	PersistenceGetWorkflowExecutionHistoryRequest struct {
+	// InternalGetWorkflowExecutionHistoryRequest is used to retrieve history of a workflow execution
+	InternalGetWorkflowExecutionHistoryRequest struct {
 		// an extra field passing from GetWorkflowExecutionHistoryRequest
 		LastEventBatchVersion int64
 
@@ -292,8 +292,8 @@ type (
 		NextPageToken []byte
 	}
 
-	// PersistenceGetWorkflowExecutionHistoryResponse is the response to GetWorkflowExecutionHistoryRequest for Persistence Interface
-	PersistenceGetWorkflowExecutionHistoryResponse struct {
+	// InternalGetWorkflowExecutionHistoryResponse is the response to GetWorkflowExecutionHistoryRequest for Persistence Interface
+	InternalGetWorkflowExecutionHistoryResponse struct {
 		History []*DataBlob
 		// Token to read next page if there are more events beyond page size.
 		// Use this to set NextPageToken on GetworkflowExecutionHistoryRequest to read the next page.
