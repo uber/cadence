@@ -2391,11 +2391,9 @@ func (s *MatchingPersistenceSuite) TestResetMutableStateCurrentIsSelf() {
 	s.NoError(err2)
 	err2 = s.UpdateWorklowStateAndReplication(bufferUpdateInfo, nil, bufferedTask2, nil, bufferUpdateInfo.NextEventID, nil)
 	s.NoError(err2)
-	err2 = s.UpdateWorkflowExecutionForBufferEvents(bufferUpdateInfo, nil, bufferUpdateInfo.NextEventID,
-		&gen.History{Events: eventsBatch1})
+	err2 = s.UpdateWorkflowExecutionForBufferEvents(bufferUpdateInfo, nil, bufferUpdateInfo.NextEventID, eventsBatch1)
 	s.NoError(err2)
-	err2 = s.UpdateWorkflowExecutionForBufferEvents(bufferUpdateInfo, nil, bufferUpdateInfo.NextEventID,
-		&gen.History{Events: eventsBatch2})
+	err2 = s.UpdateWorkflowExecutionForBufferEvents(bufferUpdateInfo, nil, bufferUpdateInfo.NextEventID, eventsBatch2)
 	s.NoError(err2)
 
 	state1, err1 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)

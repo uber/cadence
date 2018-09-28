@@ -307,7 +307,7 @@ func (s *HistoryPersistenceSuite) TestOverwriteAndShadowingHistoryEvents() {
 func (s *HistoryPersistenceSuite) AppendHistoryEvents(domainID string, workflowExecution gen.WorkflowExecution,
 	firstEventID, eventBatchVersion int64, rangeID, txID int64, eventsBatch *gen.History, overwrite bool) error {
 
-	return s.HistoryMgr.AppendHistoryEvents(&p.AppendHistoryEventsRequest{
+	_, err := s.HistoryMgr.AppendHistoryEvents(&p.AppendHistoryEventsRequest{
 		DomainID:          domainID,
 		Execution:         workflowExecution,
 		FirstEventID:      firstEventID,
@@ -318,6 +318,7 @@ func (s *HistoryPersistenceSuite) AppendHistoryEvents(domainID string, workflowE
 		Overwrite:         overwrite,
 		Encoding:          pickRandomEncoding(),
 	})
+	return err
 }
 
 // GetWorkflowExecutionHistory helper

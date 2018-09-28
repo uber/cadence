@@ -29,9 +29,13 @@ import (
 
 type (
 
-	//Persistence interface is a lower layer of dataInterface. The intention is to let different persistence implementation(SQL,Cassandra/etc) share some common logic
+	//////////////////////////////////////////////////////////////////////
+	// Persistence interface is a lower layer of dataInterface.
+	// The intention is to let different persistence implementation(SQL,Cassandra/etc) share some common logic
 	// Right now the only common part is serialization/deserialization, and only ExecutionManager/HistoryManager need it.
 	// ShardManager/TaskManager/MetadataManager are the same.
+	//////////////////////////////////////////////////////////////////////
+
 	// PersistenceShardManager is a lower level of ShardManager
 	PersistenceShardManager = ShardManager
 	// PersistenceTaskManager is a lower level of TaskManager
