@@ -32,10 +32,11 @@ import (
 
 type (
 
-	// executionManagerImpl implements ExecutionManager based on PersistenceExecutionManager and HistorySerializer
+	// executionManagerImpl implements ExecutionManager based on PersistenceExecutionManager, statsComputer and HistorySerializer
 	executionManagerImpl struct {
-		serializer  HistorySerializer
-		persistence PersistenceExecutionManager
+		serializer    HistorySerializer
+		persistence   PersistenceExecutionManager
+		statsComputer statsComputer
 	}
 
 	// historyManagerImpl implements HistoryManager based on PersistenceHistoryManager and HistorySerializer
@@ -57,8 +58,9 @@ var _ HistoryManager = (*historyManagerImpl)(nil)
 
 func NewExecutionManagerImpl(persistence PersistenceExecutionManager) ExecutionManager {
 	return &executionManagerImpl{
-		serializer:  NewHistorySerializer(),
-		persistence: persistence,
+		serializer:    NewHistorySerializer(),
+		persistence:   persistence,
+		statsComputer: statsComputer{},
 	}
 }
 
@@ -267,26 +269,26 @@ func (m *executionManagerImpl) DeserializeActivityInfos(infos map[int64]*Persist
 	return newInfos, nil
 }
 
-func (m *executionManagerImpl) UpdateWorkflowExecution(request *UpdateWorkflowExecutionRequest) error {
+func (m *executionManagerImpl) UpdateWorkflowExecution(request *UpdateWorkflowExecutionRequest) (*MutableStateStats, *MutableStateUpdateSessionStats, error) {
 	executionInfo, err := m.SerializeExecutionInfo(request.ExecutionInfo, request.Encoding)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	upsertActivityInfos, err := m.SerializeUpsertActivityInfos(request.UpsertActivityInfos, request.Encoding)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	upsertChildExecutionInfos, err := m.SerializeUpsertChildExecutionInfos(request.UpsertChildExecutionInfos, request.Encoding)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	newBufferedEvents, err := m.serializer.SerializeBatchEvents(&workflow.History{Events: request.NewBufferedEvents}, request.Encoding)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	newBufferedReplicationTask, err := m.SerializeNewBufferedReplicationTask(request.NewBufferedReplicationTask, request.Encoding)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	newRequest := &PersistenceUpdateWorkflowExecutionRequest{
@@ -319,7 +321,9 @@ func (m *executionManagerImpl) UpdateWorkflowExecution(request *UpdateWorkflowEx
 		ClearBufferedEvents:           request.ClearBufferedEvents,
 		DeleteBufferedReplicationTask: request.DeleteBufferedReplicationTask,
 	}
-	return m.persistence.UpdateWorkflowExecution(newRequest)
+	mss := m.statsComputer.computeMutableStateStats(newRequest)
+	msuss := m.statsComputer.computeMutableStateUpdateStats(newRequest)
+	return mss, msuss, m.persistence.UpdateWorkflowExecution(newRequest)
 }
 
 func (m *executionManagerImpl) SerializeNewBufferedReplicationTask(task *BufferedReplicationTask, encoding common.EncodingType) (*PersistenceBufferedReplicationTask, error) {

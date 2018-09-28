@@ -982,6 +982,57 @@ type (
 		NotificationVersion int64
 	}
 
+	// MutableStateStats is the size stats for MutableState
+	MutableStateStats struct {
+		// Total size of mutable state
+		MutableStateSize int
+
+		// Breakdown of size into more granular stats
+		ExecutionInfoSize            int
+		ActivityInfoSize             int
+		TimerInfoSize                int
+		ChildInfoSize                int
+		SignalInfoSize               int
+		BufferedEventsSize           int
+		BufferedReplicationTasksSize int
+
+		// Item count for various information captured within mutable state
+		ActivityInfoCount             int
+		TimerInfoCount                int
+		ChildInfoCount                int
+		SignalInfoCount               int
+		RequestCancelInfoCount        int
+		BufferedEventsCount           int
+		BufferedReplicationTasksCount int
+	}
+
+	MutableStateUpdateSessionStats struct {
+		MutableStateSize int // Total size of mutable state update
+
+		// Breakdown of mutable state size update for more granular stats
+		ExecutionInfoSize            int
+		ActivityInfoSize             int
+		TimerInfoSize                int
+		ChildInfoSize                int
+		SignalInfoSize               int
+		BufferedEventsSize           int
+		BufferedReplicationTasksSize int
+
+		// Item counts in this session update
+		ActivityInfoCount      int
+		TimerInfoCount         int
+		ChildInfoCount         int
+		SignalInfoCount        int
+		RequestCancelInfoCount int
+
+		// Deleted item counts in this session update
+		DeleteActivityInfoCount      int
+		DeleteTimerInfoCount         int
+		DeleteChildInfoCount         int
+		DeleteSignalInfoCount        int
+		DeleteRequestCancelInfoCount int
+	}
+
 	// Closeable is an interface for any entity that supports a close operation to release resources
 	Closeable interface {
 		Close()
@@ -1000,7 +1051,7 @@ type (
 		Closeable
 		CreateWorkflowExecution(request *CreateWorkflowExecutionRequest) (*CreateWorkflowExecutionResponse, error)
 		GetWorkflowExecution(request *GetWorkflowExecutionRequest) (*GetWorkflowExecutionResponse, error)
-		UpdateWorkflowExecution(request *UpdateWorkflowExecutionRequest) error
+		UpdateWorkflowExecution(request *UpdateWorkflowExecutionRequest) (*MutableStateStats, *MutableStateUpdateSessionStats, error)
 		ResetMutableState(request *ResetMutableStateRequest) error
 		DeleteWorkflowExecution(request *DeleteWorkflowExecutionRequest) error
 		GetCurrentExecution(request *GetCurrentExecutionRequest) (*GetCurrentExecutionResponse, error)

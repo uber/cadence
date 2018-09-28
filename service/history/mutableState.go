@@ -43,29 +43,6 @@ type (
 		Timestamp       int64
 	}
 
-	mutableStateStats struct {
-		// Total size of mutable state
-		mutableStateSize int
-
-		// Breakdown of size into more granular stats
-		executionInfoSize            int
-		activityInfoSize             int
-		timerInfoSize                int
-		childInfoSize                int
-		signalInfoSize               int
-		bufferedEventsSize           int
-		bufferedReplicationTasksSize int
-
-		// Item count for various information captured within mutable state
-		activityInfoCount             int
-		timerInfoCount                int
-		childInfoCount                int
-		signalInfoCount               int
-		requestCancelInfoCount        int
-		bufferedEventsCount           int
-		bufferedReplicationTasksCount int
-	}
-
 	mutableState interface {
 		AddActivityTaskCancelRequestedEvent(int64, string, string) (*workflow.HistoryEvent, *persistence.ActivityInfo, bool)
 		AddActivityTaskCanceledEvent(int64, int64, int64, []uint8, string) *workflow.HistoryEvent
@@ -159,7 +136,6 @@ type (
 		GetRetryBackoffDuration(errReason string) time.Duration
 		GetScheduleIDByActivityID(string) (int64, bool)
 		GetSignalInfo(int64) (*persistence.SignalInfo, bool)
-		GetStats() *mutableStateStats
 		GetStartVersion() int64
 		GetUserTimer(string) (bool, *persistence.TimerInfo)
 		GetWorkflowType() *workflow.WorkflowType

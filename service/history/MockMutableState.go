@@ -1558,20 +1558,6 @@ func (_m *mockMutableState) GetSignalInfo(_a0 int64) (*persistence.SignalInfo, b
 	return r0, r1
 }
 
-// GetStats provides a mock function with given fields:
-func (_m *mockMutableState) GetStats() *mutableStateStats {
-	ret := _m.Called()
-
-	var r0 *mutableStateStats
-	if rf, ok := ret.Get(0).(func() *mutableStateStats); ok {
-		r0 = rf()
-	} else {
-		r0 = ret.Get(0).(*mutableStateStats)
-	}
-
-	return r0
-}
-
 // GetStartVersion provides a mock function with given fields:
 func (_m *mockMutableState) GetStartVersion() int64 {
 	ret := _m.Called()
