@@ -157,7 +157,7 @@ func (m *sqlTaskManager) LeaseTaskList(request *persistence.LeaseTaskListRequest
 		// We need to separately check the condition and do the
 		// update because we want to throw different error codes.
 		// Since we need to do things separately (in a transaction), we need to take a lock.
-		if err1 := lockTaskList(tx, request.DomainID, request.TaskList, request.TaskType, row.RangeID); err != nil {
+		if err1 := lockTaskList(tx, request.DomainID, request.TaskList, request.TaskType, row.RangeID); err1 != nil {
 			return err1
 		}
 		result, err1 := tx.NamedExec(updateTaskListSQLQuery,
