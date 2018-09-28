@@ -161,7 +161,7 @@ func (m *executionManagerImpl) DeserializeExecutionInfo(info *PersistenceWorkflo
 }
 
 func (m *executionManagerImpl) DeserializeBufferedReplicationTasks(tasks map[int64]*PersistenceBufferedReplicationTask) (map[int64]*BufferedReplicationTask, error) {
-	newBRTs := make(map[int64]*BufferedReplicationTask, len(tasks))
+	newBRTs := make(map[int64]*BufferedReplicationTask, 0)
 	for k, v := range tasks {
 		history, err := m.serializer.DeserializeBatchEvents(v.History)
 		if err != nil {
@@ -185,7 +185,7 @@ func (m *executionManagerImpl) DeserializeBufferedReplicationTasks(tasks map[int
 }
 
 func (m *executionManagerImpl) DeserializeBufferedEvents(blobs []*DataBlob) ([]*workflow.HistoryEvent, error) {
-	events := make([]*workflow.HistoryEvent, len(blobs))
+	events := make([]*workflow.HistoryEvent, 0)
 	for _, b := range blobs {
 		history, err := m.serializer.DeserializeBatchEvents(b)
 		if err != nil {
@@ -197,7 +197,7 @@ func (m *executionManagerImpl) DeserializeBufferedEvents(blobs []*DataBlob) ([]*
 }
 
 func (m *executionManagerImpl) DeserializeChildExecutionInfos(infos map[int64]*PersistenceChildExecutionInfo) (map[int64]*ChildExecutionInfo, error) {
-	newInfos := make(map[int64]*ChildExecutionInfo, len(infos))
+	newInfos := make(map[int64]*ChildExecutionInfo, 0)
 	for k, v := range infos {
 		initiatedEvent, err := m.serializer.DeserializeEvent(v.InitiatedEvent)
 		if err != nil {
@@ -222,7 +222,7 @@ func (m *executionManagerImpl) DeserializeChildExecutionInfos(infos map[int64]*P
 }
 
 func (m *executionManagerImpl) DeserializeActivityInfos(infos map[int64]*PersistenceActivityInfo) (map[int64]*ActivityInfo, error) {
-	newInfos := make(map[int64]*ActivityInfo, len(infos))
+	newInfos := make(map[int64]*ActivityInfo, 0)
 	for k, v := range infos {
 		scheduledEvent, err := m.serializer.DeserializeEvent(v.ScheduledEvent)
 		if err != nil {
@@ -361,7 +361,7 @@ func (m *executionManagerImpl) SerializeNewBufferedReplicationTask(task *Buffere
 }
 
 func (m *executionManagerImpl) SerializeUpsertChildExecutionInfos(infos []*ChildExecutionInfo, encoding common.EncodingType) ([]*PersistenceChildExecutionInfo, error) {
-	newInfos := make([]*PersistenceChildExecutionInfo, len(infos))
+	newInfos := make([]*PersistenceChildExecutionInfo, 0)
 	for _, v := range infos {
 		initiatedEvent, err := m.serializer.SerializeEvent(v.InitiatedEvent, encoding)
 		if err != nil {
@@ -386,8 +386,9 @@ func (m *executionManagerImpl) SerializeUpsertChildExecutionInfos(infos []*Child
 }
 
 func (m *executionManagerImpl) SerializeUpsertActivityInfos(infos []*ActivityInfo, encoding common.EncodingType) ([]*PersistenceActivityInfo, error) {
-	newInfos := make([]*PersistenceActivityInfo, len(infos))
+	newInfos := make([]*PersistenceActivityInfo, 0)
 	for _, v := range infos {
+		fmt.Printf("longer: %+v\n", v)
 		scheduledEvent, err := m.serializer.SerializeEvent(v.ScheduledEvent, encoding)
 		if err != nil {
 			return nil, err
@@ -428,6 +429,7 @@ func (m *executionManagerImpl) SerializeUpsertActivityInfos(infos []*ActivityInf
 			NonRetriableErrors:       v.NonRetriableErrors,
 			LastTimeoutVisibility:    v.LastTimeoutVisibility,
 		}
+		fmt.Printf("longer: %+v\n", *i)
 		newInfos = append(newInfos, i)
 	}
 	return newInfos, nil
@@ -625,7 +627,7 @@ func (m *historyManagerImpl) GetWorkflowExecutionHistory(request *GetWorkflowExe
 	newResponse := &GetWorkflowExecutionHistoryResponse{}
 
 	history := &workflow.History{
-		Events: make([]*workflow.HistoryEvent, len(response.History)),
+		Events: make([]*workflow.HistoryEvent, 0),
 	}
 
 	// first_event_id of the last batch
