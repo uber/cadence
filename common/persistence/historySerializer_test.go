@@ -103,20 +103,20 @@ func (s *historySerializerSuite) TestSerializer() {
 			s.Nil(err)
 			s.NotNil(dEmpty)
 
-			_, err = serializer.SerializeBatchEvents(history0, common.EncodingTypeGob)
+			_, err = serializer.SerializeBatchEvents(history0.Events, common.EncodingTypeGob)
 			s.NotNil(err)
 			_, ok = err.(*UnknownEncodingTypeError)
 			s.True(ok)
 
-			dsJSON, err := serializer.SerializeBatchEvents(history0, common.EncodingTypeJSON)
+			dsJSON, err := serializer.SerializeBatchEvents(history0.Events, common.EncodingTypeJSON)
 			s.Nil(err)
 			s.NotNil(dsJSON)
 
-			dsThrift, err := serializer.SerializeBatchEvents(history0, common.EncodingTypeThriftRW)
+			dsThrift, err := serializer.SerializeBatchEvents(history0.Events, common.EncodingTypeThriftRW)
 			s.Nil(err)
 			s.NotNil(dsThrift)
 
-			dsEmpty, err := serializer.SerializeBatchEvents(history0, common.EncodingType(""))
+			dsEmpty, err := serializer.SerializeBatchEvents(history0.Events, common.EncodingType(""))
 			s.Nil(err)
 			s.NotNil(dsEmpty)
 
@@ -132,15 +132,18 @@ func (s *historySerializerSuite) TestSerializer() {
 			s.Nil(err)
 			event0.Equals(event3)
 
-			history1, err := serializer.DeserializeBatchEvents(dsJSON)
+			events, err := serializer.DeserializeBatchEvents(dsJSON)
+			history1 := &workflow.History{Events: events}
 			s.Nil(err)
 			history0.Equals(history1)
 
-			history2, err := serializer.DeserializeBatchEvents(dsThrift)
+			events, err = serializer.DeserializeBatchEvents(dsThrift)
+			history2 := &workflow.History{Events: events}
 			s.Nil(err)
 			history0.Equals(history2)
 
-			history3, err := serializer.DeserializeBatchEvents(dsEmpty)
+			events, err = serializer.DeserializeBatchEvents(dsEmpty)
+			history3 := &workflow.History{Events: events}
 			s.Nil(err)
 			history0.Equals(history3)
 		}()

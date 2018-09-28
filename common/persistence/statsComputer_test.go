@@ -79,6 +79,6 @@ func (s *statsComputerSuite) TestStatsWithStartedEvent() {
 
 	expectedSize := len(execution.GetWorkflowId()) + len(workflowType.GetName()) + len(tasklist.GetName())
 
-	stats := s.sc.computeMutableStateStats(ms)
+	stats := s.sc.computeMutableStateUpdateStats(ms)
 	s.Equal(stats.ExecutionInfoSize, expectedSize)
 }
