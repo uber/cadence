@@ -2523,15 +2523,15 @@ func (e *historyEngineImpl) getTimerBuilder(we *workflow.WorkflowExecution) *tim
 	return newTimerBuilder(e.shard.GetConfig(), lg, common.NewRealTimeSource())
 }
 
-func (s *shardContextWrapper) UpdateWorkflowExecution(request *persistence.UpdateWorkflowExecutionRequest) error {
-	_, err := s.ShardContext.UpdateWorkflowExecution(request)
+func (s *shardContextWrapper) UpdateWorkflowExecution(request *persistence.UpdateWorkflowExecutionRequest) (*persistence.UpdateWorkflowExecutionResponse, error) {
+	resp, err := s.ShardContext.UpdateWorkflowExecution(request)
 	if err == nil {
 		s.txProcessor.NotifyNewTask(s.currentClusterName, request.TransferTasks)
 		if len(request.ReplicationTasks) > 0 {
 			s.replcatorProcessor.notifyNewTask()
 		}
 	}
-	return err
+	return resp, err
 }
 
 func (s *shardContextWrapper) CreateWorkflowExecution(request *persistence.CreateWorkflowExecutionRequest) (
