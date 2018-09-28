@@ -463,9 +463,14 @@ workflow_id = ? AND
 run_id = ?
 FOR UPDATE`
 
-	insertBufferedEventsQuery = `INSERT INTO buffered_events 
-(shard_id, domain_id, workflow_id, run_id, buffered_id,data, data_encoding, data_version) 
+	bufferedEventsColumns     = `shard_id, domain_id, workflow_id, run_id, buffered_id,data, data_encoding, data_version`
+	insertBufferedEventsQuery = `INSERT INTO buffered_events(` + bufferedEventsColumns + `)
 VALUES (:shard_id, :domain_id, workflow_id, :run_id, :buffered_id, :data, :data_encoding, :data_version)`
+
+	bufferedEventsConditions  = `shard_id=:shard_id AND domain_id=:domain_id AND workflow_id=:workflow_id AND run_id=:run_id`
+	deleteBufferedEventsQuery = `DELETE FROM buffered_events WHERE ` + bufferedEventsConditions
+	getBufferedEventsQuery    = `SELECT ` + bufferedEventsColumns + ` FROM buffered_events WHERE ` +
+		bufferedEventsConditions
 )
 
 func (m *sqlExecutionManager) Close() {
@@ -762,6 +767,20 @@ func (m *sqlExecutionManager) GetWorkflowExecution(request *p.GetWorkflowExecuti
 
 	{
 		var err error
+		state.BufferedEvents, err = getBufferedEvents(tx,
+			m.shardID,
+			request.DomainID,
+			*request.Execution.WorkflowId,
+			*request.Execution.RunId)
+		if err != nil {
+			return nil, &workflow.InternalServiceError{
+				Message: fmt.Sprintf("GetWorkflowExecution failed. Failed to get buffered events. Error: %v", err),
+			}
+		}
+	}
+
+	{
+		var err error
 		state.BufferedReplicationTasks, err = getBufferedReplicationTasks(tx,
 			m.shardID,
 			request.DomainID,
@@ -789,6 +808,16 @@ func (m *sqlExecutionManager) GetWorkflowExecution(request *p.GetWorkflowExecuti
 	}
 
 	return &p.GetWorkflowExecutionResponse{State: &state}, nil
+}
+func getBufferedEvents(tx *sqlx.Tx, shardID int, domainID string, workflowID string, runID string) ([]*p.SerializedHistoryEventBatch, error) {
+	var rows []replicationTasksRow
+
+	if err := tx.Select(&rows, getBufferedEventsQuery, shardID, domainID, workflowID, runID); err != nil {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("getBufferedEvents operation failed. Select failed: %v", err),
+		}
+	}
+
 }
 
 func (m *sqlExecutionManager) UpdateWorkflowExecution(request *p.UpdateWorkflowExecutionRequest) error {
@@ -951,6 +980,19 @@ func (m *sqlExecutionManager) updateWorkflowExecutionTx(tx *sqlx.Tx, request *p.
 }
 func updateBufferedEvents(tx *sqlx.Tx, batch *p.SerializedHistoryEventBatch, clear bool, shardID int, domainID,
 	workflowID, runID string, condition int64, rangeID int64) error {
+	if clear {
+		if _, err := tx.NamedExec(deleteBufferedEventsQuery, &struct {
+			ShardID    int
+			DomainID   string
+			WorkflowID string
+			RunID      string
+		}{shardID, domainID, workflowID, runID}); err != nil {
+			return &workflow.InternalServiceError{
+				Message: fmt.Sprintf("updateBufferedEvents delete operation failed. Error: %v", err),
+			}
+		}
+		return nil
+	}
 	if batch == nil {
 		return nil
 	}
