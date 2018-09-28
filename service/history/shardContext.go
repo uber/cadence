@@ -882,18 +882,18 @@ func acquireShard(shardItem *historyShardsItem, closeCh chan<- int) (ShardContex
 	}
 
 	context := &shardContextImpl{
-		shardItem:        shardItem,
-		shardID:          shardItem.shardID,
-		currentCluster:   shardItem.service.GetClusterMetadata().GetCurrentClusterName(),
-		service:          shardItem.service,
-		shardManager:     shardItem.shardMgr,
-		historyMgr:       shardItem.historyMgr,
-		executionManager: shardItem.executionMgr,
-		domainCache:      shardItem.domainCache,
-		shardInfo:        updatedShardInfo,
-		closeCh:          closeCh,
-		metricsClient:    shardItem.metricsClient,
-		config:           shardItem.config,
+		shardItem:                 shardItem,
+		shardID:                   shardItem.shardID,
+		currentCluster:            shardItem.service.GetClusterMetadata().GetCurrentClusterName(),
+		service:                   shardItem.service,
+		shardManager:              shardItem.shardMgr,
+		historyMgr:                shardItem.historyMgr,
+		executionManager:          shardItem.executionMgr,
+		domainCache:               shardItem.domainCache,
+		shardInfo:                 updatedShardInfo,
+		closeCh:                   closeCh,
+		metricsClient:             shardItem.metricsClient,
+		config:                    shardItem.config,
 		standbyClusterCurrentTime: standbyClusterCurrentTime,
 		timerMaxReadLevel:         updatedShardInfo.TimerAckLevel, // use ack to init read level
 	}
