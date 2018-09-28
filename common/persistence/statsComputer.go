@@ -39,13 +39,17 @@ func (sc *statsComputer) computeMutableStateStats(req *PersistenceUpdateWorkflow
 	bufferedEventsCount := 0
 	bufferedEventsSize := 0
 
-	bufferedEventsCount++
-	bufferedEventsSize += len(req.NewBufferedEvents.Data)
+	if req.NewBufferedEvents != nil {
+		bufferedEventsCount++
+		bufferedEventsSize += len(req.NewBufferedEvents.Data)
+	}
 
 	bufferedReplicationTasksCount := 0
 	bufferedReplicationTasksSize := 0
-	bufferedReplicationTasksCount++
-	bufferedReplicationTasksSize += computeBufferedReplicationTasksSize(req.NewBufferedReplicationTask)
+	if req.NewBufferedReplicationTask != nil {
+		bufferedReplicationTasksCount++
+		bufferedReplicationTasksSize += computeBufferedReplicationTasksSize(req.NewBufferedReplicationTask)
+	}
 
 	requestCancelInfoCount := len(req.UpsertRequestCancelInfos)
 
@@ -107,9 +111,15 @@ func (sc *statsComputer) computeMutableStateUpdateStats(req *PersistenceUpdateWo
 		signalInfoSize += computeSignalInfoSize(si)
 	}
 
-	bufferedEventsSize := len(req.NewBufferedEvents.Data)
+	bufferedEventsSize := 0
+	if req.NewBufferedEvents != nil {
+		bufferedEventsSize = len(req.NewBufferedEvents.Data)
+	}
 
-	bufferedReplicationTasksSize := computeBufferedReplicationTasksSize(req.NewBufferedReplicationTask)
+	bufferedReplicationTasksSize := 0
+	if req.NewBufferedReplicationTask != nil {
+		bufferedReplicationTasksSize = computeBufferedReplicationTasksSize(req.NewBufferedReplicationTask)
+	}
 
 	requestCancelInfoCount := len(req.UpsertRequestCancelInfos)
 
@@ -187,6 +197,9 @@ func computeTimerInfoSize(ti *TimerInfo) int {
 }
 
 func computeChildInfoSize(ci *PersistenceChildExecutionInfo) int {
+	if ci.InitiatedEvent == nil {
+		return 0
+	}
 	size := len(ci.InitiatedEvent.Data)
 	size += len(ci.StartedEvent.Data)
 
