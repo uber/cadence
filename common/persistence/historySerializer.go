@@ -34,8 +34,8 @@ type (
 	// It will only be used inside persistence, so that serialize/deserialize is transparent for application
 	HistorySerializer interface {
 		// serialize/deserialize history events
-		SerializeBatchEvents(batch *workflow.History, encodingType common.EncodingType) (*DataBlob, error)
-		DeserializeBatchEvents(data *DataBlob) (*workflow.History, error)
+		SerializeBatchEvents(batch []*workflow.HistoryEvent, encodingType common.EncodingType) (*DataBlob, error)
+		DeserializeBatchEvents(data *DataBlob) ([]*workflow.HistoryEvent, error)
 
 		// serialize/deserialize a single history event
 		SerializeEvent(event *workflow.HistoryEvent, encodingType common.EncodingType) (*DataBlob, error)
@@ -73,7 +73,8 @@ func NewHistorySerializer() HistorySerializer {
 	}
 }
 
-func (t *serializerImpl) SerializeBatchEvents(batch *workflow.History, encodingType common.EncodingType) (*DataBlob, error) {
+func (t *serializerImpl) SerializeBatchEvents(events []*workflow.HistoryEvent, encodingType common.EncodingType) (*DataBlob, error) {
+	batch := &workflow.History{Events: events}
 	if batch == nil {
 		batch = &workflow.History{}
 	}
@@ -101,7 +102,7 @@ func (t *serializerImpl) SerializeBatchEvents(batch *workflow.History, encodingT
 	}
 }
 
-func (t *serializerImpl) DeserializeBatchEvents(data *DataBlob) (*workflow.History, error) {
+func (t *serializerImpl) DeserializeBatchEvents(data *DataBlob) ([]*workflow.HistoryEvent, error) {
 	switch data.GetEncoding() {
 	//As backward-compatibility, unknown should be json
 	case common.EncodingTypeUnknown:
@@ -109,20 +110,20 @@ func (t *serializerImpl) DeserializeBatchEvents(data *DataBlob) (*workflow.Histo
 	case common.EncodingTypeJSON:
 		var events []*workflow.HistoryEvent
 		if len(data.Data) == 0 {
-			return &workflow.History{Events: events}, nil
+			return events, nil
 		}
 		err := json.Unmarshal(data.Data, &events)
 		if err != nil {
 			return nil, &HistoryDeserializationError{msg: err.Error()}
 		}
-		return &workflow.History{Events: events}, nil
+		return events, nil
 	case common.EncodingTypeThriftRW:
 		var history workflow.History
 		err := t.thriftrwEncoder.Decode(data.Data, &history)
 		if err != nil {
 			return nil, &HistoryDeserializationError{msg: err.Error()}
 		}
-		return &history, nil
+		return history.Events, nil
 	default:
 		return nil, NewUnknownEncodingTypeError(data.GetEncoding())
 	}

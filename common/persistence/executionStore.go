@@ -21,13 +21,8 @@
 package persistence
 
 import (
-	"encoding/json"
-	"fmt"
-
-	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/logging"
 )
 
 type (
@@ -38,23 +33,9 @@ type (
 		persistence   PersistenceExecutionManager
 		statsComputer statsComputer
 	}
-
-	// historyManagerImpl implements HistoryManager based on PersistenceHistoryManager and HistorySerializer
-	historyManagerImpl struct {
-		serializer  HistorySerializer
-		persistence PersistenceHistoryManager
-		logger      bark.Logger
-	}
-
-	historyToken struct {
-		LastEventBatchVersion int64
-		LastEventID           int64
-		Data                  []byte
-	}
 )
 
 var _ ExecutionManager = (*executionManagerImpl)(nil)
-var _ HistoryManager = (*historyManagerImpl)(nil)
 
 // NewExecutionManagerImpl returns new ExecutionManager
 func NewExecutionManagerImpl(persistence PersistenceExecutionManager) ExecutionManager {
@@ -177,8 +158,8 @@ func (m *executionManagerImpl) DeserializeBufferedReplicationTasks(tasks map[int
 			NextEventID:  v.NextEventID,
 			Version:      v.Version,
 
-			History:       history.Events,
-			NewRunHistory: newHistory.Events,
+			History:       history,
+			NewRunHistory: newHistory,
 		}
 		newBRTs[k] = b
 	}
@@ -192,7 +173,7 @@ func (m *executionManagerImpl) DeserializeBufferedEvents(blobs []*DataBlob) ([]*
 		if err != nil {
 			return nil, err
 		}
-		events = append(events, history.Events...)
+		events = append(events, history...)
 	}
 	return events, nil
 }
@@ -284,7 +265,7 @@ func (m *executionManagerImpl) UpdateWorkflowExecution(request *UpdateWorkflowEx
 	if err != nil {
 		return nil, err
 	}
-	newBufferedEvents, err := m.serializer.SerializeBatchEvents(&workflow.History{Events: request.NewBufferedEvents}, request.Encoding)
+	newBufferedEvents, err := m.serializer.SerializeBatchEvents(request.NewBufferedEvents, request.Encoding)
 	if err != nil {
 		return nil, err
 	}
@@ -334,14 +315,14 @@ func (m *executionManagerImpl) SerializeNewBufferedReplicationTask(task *Buffere
 	var history, newHistory *DataBlob
 	var err error
 	if task.History != nil {
-		history, err = m.serializer.SerializeBatchEvents(&workflow.History{Events: task.History}, encoding)
+		history, err = m.serializer.SerializeBatchEvents(task.History, encoding)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	if task.NewRunHistory != nil {
-		newHistory, err = m.serializer.SerializeBatchEvents(&workflow.History{Events: task.NewRunHistory}, encoding)
+		newHistory, err = m.serializer.SerializeBatchEvents(task.NewRunHistory, encoding)
 		if err != nil {
 			return nil, err
 		}
@@ -562,149 +543,6 @@ func (m *executionManagerImpl) RangeCompleteTimerTask(request *RangeCompleteTime
 	return m.persistence.RangeCompleteTimerTask(request)
 }
 
-//NewHistoryManagerImpl returns new HistoryManager
-func NewHistoryManagerImpl(persistence PersistenceHistoryManager, logger bark.Logger) HistoryManager {
-	return &historyManagerImpl{
-		serializer:  NewHistorySerializer(),
-		persistence: persistence,
-		logger:      logger,
-	}
-}
-
-func (m *historyManagerImpl) AppendHistoryEvents(request *AppendHistoryEventsRequest) (*AppendHistoryEventsResponse, error) {
-	eventsData, err := m.serializer.SerializeBatchEvents(&workflow.History{Events: request.Events}, request.Encoding)
-	if err != nil {
-		return nil, err
-	}
-
-	resp := &AppendHistoryEventsResponse{Size: len(eventsData.Data)}
-	return resp, m.persistence.AppendHistoryEvents(
-		&PersistenceAppendHistoryEventsRequest{
-			DomainID:          request.DomainID,
-			Execution:         request.Execution,
-			FirstEventID:      request.FirstEventID,
-			EventBatchVersion: request.EventBatchVersion,
-			RangeID:           request.RangeID,
-			TransactionID:     request.TransactionID,
-			Events:            eventsData,
-			Overwrite:         request.Overwrite,
-		})
-}
-
-// GetWorkflowExecutionHistory retrieves the paginated list of history events for given execution
-func (m *historyManagerImpl) GetWorkflowExecutionHistory(request *GetWorkflowExecutionHistoryRequest) (*GetWorkflowExecutionHistoryResponse, error) {
-	token, err := m.deserializeToken(request)
-	if err != nil {
-		return nil, err
-	}
-
-	// persistence API expects the actual cassandra paging token
-	newRequest := &PersistenceGetWorkflowExecutionHistoryRequest{
-		LastEventBatchVersion: token.LastEventBatchVersion,
-		NextPageToken:         token.Data,
-
-		DomainID:     request.DomainID,
-		Execution:    request.Execution,
-		FirstEventID: request.FirstEventID,
-		NextEventID:  request.NextEventID,
-		PageSize:     request.PageSize,
-	}
-	response, err := m.persistence.GetWorkflowExecutionHistory(newRequest)
-	if err != nil {
-		return nil, err
-	}
-	// we store LastEventBatchVersion in the token. The reason we do it here is for historic reason.
-	token.LastEventBatchVersion = response.LastEventBatchVersion
-	token.Data = response.NextPageToken
-
-	newResponse := &GetWorkflowExecutionHistoryResponse{}
-
-	history := &workflow.History{
-		Events: make([]*workflow.HistoryEvent, 0),
-	}
-
-	// first_event_id of the last batch
-	lastFirstEventID := common.EmptyEventID
-	size := 0
-
-	for _, b := range response.History {
-		size += len(b.Data)
-		historyBatch, err := m.serializer.DeserializeBatchEvents(b)
-		if err != nil {
-			return nil, err
-		}
-
-		if len(historyBatch.Events) == 0 || historyBatch.Events[0].GetEventId() > token.LastEventID+1 {
-			logger := m.logger.WithFields(bark.Fields{
-				logging.TagWorkflowExecutionID: request.Execution.GetWorkflowId(),
-				logging.TagWorkflowRunID:       request.Execution.GetRunId(),
-				logging.TagDomainID:            request.DomainID,
-			})
-			logger.Error("Unexpected event batch")
-			return nil, fmt.Errorf("corrupted history event batch")
-		}
-
-		if historyBatch.Events[0].GetEventId() != token.LastEventID+1 {
-			// staled event batch, skip it
-			continue
-		}
-
-		lastFirstEventID = historyBatch.Events[0].GetEventId()
-		history.Events = append(history.Events, historyBatch.Events...)
-		token.LastEventID = historyBatch.Events[len(historyBatch.Events)-1].GetEventId()
-	}
-
-	newResponse.Size = size
-	newResponse.LastFirstEventID = lastFirstEventID
-	newResponse.History = history
-	newResponse.NextPageToken, err = m.serializeToken(token)
-	if err != nil {
-		return nil, err
-	}
-
-	return newResponse, nil
-}
-
-func (m *historyManagerImpl) deserializeToken(request *GetWorkflowExecutionHistoryRequest) (*historyToken, error) {
-	token := &historyToken{
-		LastEventBatchVersion: common.EmptyVersion,
-		LastEventID:           request.FirstEventID - 1,
-	}
-
-	if len(request.NextPageToken) == 0 {
-		return token, nil
-	}
-
-	err := json.Unmarshal(request.NextPageToken, token)
-	if err == nil {
-		return token, nil
-	}
-
-	// for backward compatible reason, the input data can be raw Cassandra token
-	token.Data = request.NextPageToken
-	return token, nil
-}
-
-func (m *historyManagerImpl) serializeToken(token *historyToken) ([]byte, error) {
-	if len(token.Data) == 0 {
-		return nil, nil
-	}
-
-	data, err := json.Marshal(token)
-	if err != nil {
-		return nil, &workflow.InternalServiceError{Message: "Error generating history event token."}
-	}
-	return data, nil
-}
-
-func (m *historyManagerImpl) DeleteWorkflowExecutionHistory(request *DeleteWorkflowExecutionHistoryRequest) error {
-	return m.persistence.DeleteWorkflowExecutionHistory(request)
-}
-
 func (m *executionManagerImpl) Close() {
-	m.persistence.Close()
-}
-
-func (m *historyManagerImpl) Close() {
 	m.persistence.Close()
 }

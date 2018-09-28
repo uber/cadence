@@ -51,15 +51,14 @@ type (
 	mutableStateProvider     func(version int64, logger bark.Logger) mutableState
 
 	historyReplicator struct {
-		shard             ShardContext
-		historyEngine     *historyEngineImpl
-		historyCache      *historyCache
-		domainCache       cache.DomainCache
-		historyMgr        persistence.HistoryManager
-		historySerializer persistence.HistorySerializer
-		clusterMetadata   cluster.Metadata
-		metricsClient     metrics.Client
-		logger            bark.Logger
+		shard           ShardContext
+		historyEngine   *historyEngineImpl
+		historyCache    *historyCache
+		domainCache     cache.DomainCache
+		historyMgr      persistence.HistoryManager
+		clusterMetadata cluster.Metadata
+		metricsClient   metrics.Client
+		logger          bark.Logger
 
 		getNewConflictResolver conflictResolverProvider
 		getNewStateBuilder     stateBuilderProvider
