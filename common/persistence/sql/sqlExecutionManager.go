@@ -1325,7 +1325,7 @@ func (m *sqlExecutionManager) RangeCompleteTimerTask(request *p.RangeCompleteTim
 }
 
 // NewSQLMatchingPersistence creates an instance of ExecutionManager
-func NewSQLMatchingPersistence(host string, port int, username, password, dbName string, logger bark.Logger) (p.PersistenceExecutionManager, error) {
+func NewSQLMatchingPersistence(host string, port int, username, password, dbName string, logger bark.Logger) (p.ExecutionManagerStore, error) {
 	var _, err = newConnection(host, port, username, password, dbName)
 	if err != nil {
 		return nil, err
@@ -1345,14 +1345,14 @@ func getCurrentExecutionIfExists(tx *sqlx.Tx, shardID int64, domainID string, wo
 
 func createExecution(tx *sqlx.Tx, request *p.CreateWorkflowExecutionRequest, shardID int, nowTimestamp time.Time) error {
 	args := &executionRow{
-		ShardID:                      int64(shardID),
-		DomainID:                     request.DomainID,
-		WorkflowID:                   *request.Execution.WorkflowId,
-		RunID:                        *request.Execution.RunId,
-		TaskList:                     request.TaskList,
-		WorkflowTypeName:             request.WorkflowTypeName,
-		WorkflowTimeoutSeconds:       int64(request.WorkflowTimeout),
-		DecisionTaskTimeoutMinutes:   int64(request.DecisionTimeoutValue),
+		ShardID:                    int64(shardID),
+		DomainID:                   request.DomainID,
+		WorkflowID:                 *request.Execution.WorkflowId,
+		RunID:                      *request.Execution.RunId,
+		TaskList:                   request.TaskList,
+		WorkflowTypeName:           request.WorkflowTypeName,
+		WorkflowTimeoutSeconds:     int64(request.WorkflowTimeout),
+		DecisionTaskTimeoutMinutes: int64(request.DecisionTimeoutValue),
 		State:                        p.WorkflowStateCreated,
 		CloseStatus:                  p.WorkflowCloseStatusNone,
 		LastFirstEventID:             common.FirstEventID,
@@ -1842,18 +1842,18 @@ func updateExecution(tx *sqlx.Tx,
 	condition int64) error {
 	args := updateExecutionRow{
 		executionRow{
-			DomainID:                     executionInfo.DomainID,
-			WorkflowID:                   executionInfo.WorkflowID,
-			RunID:                        executionInfo.RunID,
-			ParentDomainID:               &executionInfo.ParentDomainID,
-			ParentWorkflowID:             &executionInfo.ParentWorkflowID,
-			ParentRunID:                  &executionInfo.ParentRunID,
-			InitiatedID:                  &executionInfo.InitiatedID,
-			CompletionEvent:              nil,
-			TaskList:                     executionInfo.TaskList,
-			WorkflowTypeName:             executionInfo.WorkflowTypeName,
-			WorkflowTimeoutSeconds:       int64(executionInfo.WorkflowTimeout),
-			DecisionTaskTimeoutMinutes:   int64(executionInfo.DecisionTimeoutValue),
+			DomainID:                   executionInfo.DomainID,
+			WorkflowID:                 executionInfo.WorkflowID,
+			RunID:                      executionInfo.RunID,
+			ParentDomainID:             &executionInfo.ParentDomainID,
+			ParentWorkflowID:           &executionInfo.ParentWorkflowID,
+			ParentRunID:                &executionInfo.ParentRunID,
+			InitiatedID:                &executionInfo.InitiatedID,
+			CompletionEvent:            nil,
+			TaskList:                   executionInfo.TaskList,
+			WorkflowTypeName:           executionInfo.WorkflowTypeName,
+			WorkflowTimeoutSeconds:     int64(executionInfo.WorkflowTimeout),
+			DecisionTaskTimeoutMinutes: int64(executionInfo.DecisionTimeoutValue),
 			State:                        int64(executionInfo.State),
 			CloseStatus:                  int64(executionInfo.CloseStatus),
 			LastFirstEventID:             int64(executionInfo.LastFirstEventID),

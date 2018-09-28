@@ -36,15 +36,15 @@ type (
 	// ShardManager/TaskManager/MetadataManager are the same.
 	//////////////////////////////////////////////////////////////////////
 
-	// PersistenceShardManager is a lower level of ShardManager
-	PersistenceShardManager = ShardManager
-	// PersistenceTaskManager is a lower level of TaskManager
-	PersistenceTaskManager = TaskManager
-	// PersistenceMetadataManager is a lower level of MetadataManager
-	PersistenceMetadataManager = MetadataManager
+	// ShardStore is a lower level of ShardManager
+	ShardStore = ShardManager
+	// TaskStore is a lower level of TaskManager
+	TaskStore = TaskManager
+	// MetadataStore is a lower level of MetadataManager
+	MetadataStore = MetadataManager
 
-	// PersistenceExecutionManager is used to manage workflow executions for Persistence layer
-	PersistenceExecutionManager interface {
+	// ExecutionManagerStore is used to manage workflow executions for Persistence layer
+	ExecutionManagerStore interface {
 		Closeable
 
 		//The below three APIs are related to serialization/deserialization

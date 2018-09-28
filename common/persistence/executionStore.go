@@ -27,10 +27,10 @@ import (
 
 type (
 
-	// executionManagerImpl implements ExecutionManager based on PersistenceExecutionManager, statsComputer and HistorySerializer
+	// executionManagerImpl implements ExecutionManager based on ExecutionManagerStore, statsComputer and HistorySerializer
 	executionManagerImpl struct {
 		serializer    HistorySerializer
-		persistence   PersistenceExecutionManager
+		persistence   ExecutionManagerStore
 		statsComputer statsComputer
 	}
 )
@@ -38,7 +38,7 @@ type (
 var _ ExecutionManager = (*executionManagerImpl)(nil)
 
 // NewExecutionManagerImpl returns new ExecutionManager
-func NewExecutionManagerImpl(persistence PersistenceExecutionManager) ExecutionManager {
+func NewExecutionManagerImpl(persistence ExecutionManagerStore) ExecutionManager {
 	return &executionManagerImpl{
 		serializer:    NewHistorySerializer(),
 		persistence:   persistence,

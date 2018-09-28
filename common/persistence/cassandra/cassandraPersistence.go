@@ -853,7 +853,7 @@ type (
 
 // NewShardPersistence is used to create an instance of ShardManager implementation
 func NewShardPersistence(hosts string, port int, user, password, dc string, keyspace string,
-	currentClusterName string, logger bark.Logger) (p.PersistenceShardManager, error) {
+	currentClusterName string, logger bark.Logger) (p.ShardStore, error) {
 	cluster := NewCassandraCluster(hosts, port, user, password, dc)
 	cluster.Keyspace = keyspace
 	cluster.ProtoVersion = cassandraProtoVersion
@@ -871,13 +871,13 @@ func NewShardPersistence(hosts string, port int, user, password, dc string, keys
 
 // NewWorkflowExecutionPersistence is used to create an instance of workflowExecutionManager implementation
 func NewWorkflowExecutionPersistence(shardID int, session *gocql.Session,
-	logger bark.Logger) (p.PersistenceExecutionManager, error) {
+	logger bark.Logger) (p.ExecutionManagerStore, error) {
 	return &cassandraPersistence{shardID: shardID, session: session, logger: logger}, nil
 }
 
 // NewTaskPersistence is used to create an instance of TaskManager implementation
 func NewTaskPersistence(hosts string, port int, user, password, dc string, keyspace string,
-	logger bark.Logger) (p.PersistenceTaskManager, error) {
+	logger bark.Logger) (p.TaskStore, error) {
 	cluster := NewCassandraCluster(hosts, port, user, password, dc)
 	cluster.Keyspace = keyspace
 	cluster.ProtoVersion = cassandraProtoVersion
