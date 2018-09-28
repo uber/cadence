@@ -61,8 +61,7 @@ var (
 )
 
 func newReplicatorQueueProcessor(shard ShardContext, replicator messaging.Producer,
-	executionMgr persistence.ExecutionManager, historyMgr persistence.HistoryManager,
-	hSerializerFactory persistence.HistorySerializerFactory, logger bark.Logger) queueProcessor {
+	executionMgr persistence.ExecutionManager, historyMgr persistence.HistoryManager, logger bark.Logger) queueProcessor {
 
 	currentClusterNamer := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 
