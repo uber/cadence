@@ -93,7 +93,7 @@ func dereferenceIfNotNil(a *[]byte) []byte {
 func runTransaction(name string, db *sqlx.DB, txFunc func(tx *sqlx.Tx) error) error {
 	convertErr := func(err error) error {
 		switch err.(type) {
-		case *p.ConditionFailedError, *workflow.InternalServiceError:
+		case *p.ConditionFailedError, *workflow.InternalServiceError, *workflow.DomainAlreadyExistsError:
 			return err
 		default:
 			return &workflow.InternalServiceError{

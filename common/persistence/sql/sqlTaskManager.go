@@ -21,6 +21,7 @@
 package sql
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/uber-common/bark"
@@ -66,10 +67,8 @@ type (
 )
 
 const (
-	taskListCreatePart = `INTO task_lists 
-(domain_id, name, task_type, range_id, ack_level, kind, expiry_ts)
-VALUES
-(:domain_id, :name, :task_type, :range_id, :ack_level, :kind, :expiry_ts)`
+	taskListCreatePart = `INTO task_lists(domain_id, range_id, name, task_type, ack_level, kind, expiry_ts) ` +
+		`VALUES (:domain_id, :range_id, :name, :task_type, :ack_level, :kind, :expiry_ts)`
 
 	// (default range ID: initialRangeID == 1)
 	createTaskListSQLQuery = `INSERT ` + taskListCreatePart
@@ -90,33 +89,20 @@ name = :name AND
 task_type = :task_type
 `
 
-	getTaskListSQLQuery = `SELECT domain_id, range_id, name, task_type, ack_level, kind, expiry_ts FROM task_lists WHERE
-domain_id = ? AND 
-name = ? AND 
-task_type = ?`
+	getTaskListSQLQuery = `SELECT domain_id, range_id, name, task_type, ack_level, kind, expiry_ts ` +
+		`FROM task_lists ` +
+		`WHERE domain_id = ? AND name = ? AND task_type = ?`
 
-	lockTaskListSQLQuery = `SELECT range_id FROM task_lists WHERE
-domain_id = ? AND
-name = ? AND
-task_type = ?
-FOR UPDATE
-`
+	lockTaskListSQLQuery = `SELECT range_id FROM task_lists ` +
+		`WHERE domain_id = ? AND name = ? AND task_type = ? FOR UPDATE`
 
-	getTaskSQLQuery = `SELECT
-domain_id, workflow_id, run_id, schedule_id, task_list_name, task_list_type, task_id, expiry_ts
-FROM tasks
-WHERE
-domain_id = ? AND
-task_list_name = ? AND 
-task_list_type = ? AND
-task_id > ? AND
-task_id <= ?
-`
+	getTaskSQLQuery = `SELECT workflow_id, run_id, schedule_id, task_id ` +
+		`FROM tasks ` +
+		`WHERE domain_id = ? AND task_list_name = ? AND task_list_type = ? AND task_id > ? AND task_id <= ?`
 
-	createTaskSQLQuery = `INSERT INTO tasks
-(domain_id, task_list_name, task_list_type, task_id, workflow_id, run_id, schedule_id, expiry_ts)
-VALUES
-(:domain_id, :task_list_name, :task_list_type, :task_id, :workflow_id, :run_id, :schedule_id, :expiry_ts)`
+	createTaskSQLQuery = `INSERT INTO ` +
+		`tasks(domain_id, workflow_id, run_id, schedule_id, task_list_name, task_list_type, task_id, expiry_ts) ` +
+		`VALUES(:domain_id, :workflow_id, :run_id, :schedule_id, :task_list_name, :task_list_type, :task_id, :expiry_ts)`
 )
 
 // NewTaskPersistence creates a new instance of TaskManager
@@ -162,33 +148,19 @@ func (m *sqlTaskManager) LeaseTaskList(request *persistence.LeaseTaskListRequest
 				Message: fmt.Sprintf("LeaseTaskList operation failed. Failed to check if task list existed. Error: %v", err),
 			}
 		}
-	} else {
-		// The task list exists.
+	}
+
+	var resp *persistence.LeaseTaskListResponse
+	err := runTransaction("LeaseTaskList", m.db, func(tx *sqlx.Tx) error {
 		rangeID = row.RangeID
 		ackLevel = row.AckLevel
-
 		// We need to separately check the condition and do the
 		// update because we want to throw different error codes.
 		// Since we need to do things separately (in a transaction), we need to take a lock.
-		tx, err := m.db.Beginx()
-		if err != nil {
-			return nil, &workflow.InternalServiceError{
-				Message: fmt.Sprintf("LeaseTaskList operation failed. Failed to begin transaction. Error: %v", err),
-			}
+		if err1 := lockTaskList(tx, request.DomainID, request.TaskList, request.TaskType, row.RangeID); err != nil {
+			return err1
 		}
-		defer tx.Rollback()
-
-		if err := lockAndCheckTaskListRangeID(tx, request.DomainID, request.TaskList, request.TaskType, row.RangeID); err != nil {
-			switch err.(type) {
-			case *persistence.ConditionFailedError:
-				return nil, err
-			default:
-				return nil, &workflow.InternalServiceError{
-					Message: fmt.Sprintf("LeaseTaskList operation failed. Error: %v", err),
-				}
-			}
-		}
-		result, err := tx.NamedExec(updateTaskListSQLQuery,
+		result, err1 := tx.NamedExec(updateTaskListSQLQuery,
 			&updateTaskListsRow{
 				tasksListsRow{
 					DomainID: row.DomainID,
@@ -201,39 +173,27 @@ func (m *sqlTaskManager) LeaseTaskList(request *persistence.LeaseTaskListRequest
 				},
 				row.RangeID,
 			})
-		if err != nil {
-			return nil, &workflow.InternalServiceError{
-				Message: fmt.Sprintf("LeaseTaskList operation failed. Failed to lease task list %v of type %v. Error: %v", request.TaskList, request.TaskType, err),
-			}
+		if err1 != nil {
+			return err1
 		}
-		rowsAffected, err := result.RowsAffected()
-		if err != nil {
-			return nil, &workflow.InternalServiceError{
-				Message: fmt.Sprintf("LeaseTaskList operation failed. Failed to check if lease was successful. Error: %v", err),
-			}
+		rowsAffected, err1 := result.RowsAffected()
+		if err1 != nil {
+			return fmt.Errorf("rowsAffected error: %v", err1)
 		}
 		if rowsAffected == 0 {
-			return nil, &workflow.InternalServiceError{
-				Message: fmt.Sprintf("LeaseTaskList operation failed. Updated %v rows instead of 1", rowsAffected),
-			}
+			return fmt.Errorf("%v rows affected instead of 1", rowsAffected)
 		}
-
-		if err := tx.Commit(); err != nil {
-			return nil, &workflow.InternalServiceError{
-				Message: fmt.Sprintf("LeaseTaskList operation failed. Failed to commit transaction. Error: %v", err),
-			}
-		}
-
-	}
-
-	return &persistence.LeaseTaskListResponse{&persistence.TaskListInfo{
-		DomainID: request.DomainID,
-		Name:     request.TaskList,
-		TaskType: request.TaskType,
-		RangeID:  rangeID + 1,
-		AckLevel: ackLevel,
-		Kind:     request.TaskListKind,
-	}}, nil
+		resp = &persistence.LeaseTaskListResponse{TaskListInfo: &persistence.TaskListInfo{
+			DomainID: request.DomainID,
+			Name:     request.TaskList,
+			TaskType: request.TaskType,
+			RangeID:  rangeID + 1,
+			AckLevel: ackLevel,
+			Kind:     request.TaskListKind,
+		}}
+		return nil
+	})
+	return resp, err
 }
 
 func (m *sqlTaskManager) UpdateTaskList(request *persistence.UpdateTaskListRequest) (*persistence.UpdateTaskListResponse, error) {
@@ -252,26 +212,15 @@ func (m *sqlTaskManager) UpdateTaskList(request *persistence.UpdateTaskListReque
 				Message: fmt.Sprintf("UpdateTaskList operation failed. Failed to make sticky task list. Error: %v", err),
 			}
 		}
-	} else {
-		tx, err := m.db.Beginx()
-		if err != nil {
-			return nil, &workflow.InternalServiceError{
-				Message: fmt.Sprintf("UpdateTaskList operation failed. Failed to begin transaction. Error: %v", err),
-			}
+	}
+	var resp *persistence.UpdateTaskListResponse
+	err := runTransaction("UpdateTaskList", m.db, func(tx *sqlx.Tx) error {
+		err1 := lockTaskList(
+			tx, request.TaskListInfo.DomainID, request.TaskListInfo.Name, request.TaskListInfo.TaskType, request.TaskListInfo.RangeID)
+		if err1 != nil {
+			return err1
 		}
-		defer tx.Rollback()
-
-		if err := lockAndCheckTaskListRangeID(tx, request.TaskListInfo.DomainID, request.TaskListInfo.Name, request.TaskListInfo.TaskType, request.TaskListInfo.RangeID); err != nil {
-			switch err.(type) {
-			case *persistence.ConditionFailedError:
-				return nil, err
-			default:
-				return nil, &workflow.InternalServiceError{
-					Message: fmt.Sprintf("UpdateTaskList operation failed. Error: %v", err),
-				}
-			}
-		}
-		result, err := tx.NamedExec(updateTaskListSQLQuery,
+		result, err1 := tx.NamedExec(updateTaskListSQLQuery,
 			&updateTaskListsRow{
 				tasksListsRow{
 					request.TaskListInfo.DomainID,
@@ -284,41 +233,23 @@ func (m *sqlTaskManager) UpdateTaskList(request *persistence.UpdateTaskListReque
 				},
 				request.TaskListInfo.RangeID,
 			})
-		if err != nil {
-			return nil, &workflow.InternalServiceError{
-				Message: fmt.Sprintf("UpdateTaskList operation failed. Failed to update task list. Error: %v", err),
-			}
+		if err1 != nil {
+			return err1
 		}
-		rowsAffected, err := result.RowsAffected()
-		if err != nil {
-			return nil, &workflow.InternalServiceError{
-				Message: fmt.Sprintf("UpdateTaskList operation failed. Failed to verify how many rows were affected. Error: %v", err),
-			}
+		rowsAffected, err1 := result.RowsAffected()
+		if err1 != nil {
+			return err1
 		}
 		if rowsAffected != 1 {
-			return nil, &workflow.InternalServiceError{
-				Message: fmt.Sprintf("UpdateTaskList operation failed. %v rows were affected instead of 1.", rowsAffected),
-			}
+			return fmt.Errorf("%v rows were affected instead of 1", rowsAffected)
 		}
-		if err := tx.Commit(); err != nil {
-			return nil, &workflow.InternalServiceError{
-				Message: fmt.Sprintf("UpdateTaskList operation failed. Failed to commit transaction. Error: %v", err),
-			}
-		}
-	}
-
-	return &persistence.UpdateTaskListResponse{}, nil
+		resp = &persistence.UpdateTaskListResponse{}
+		return nil
+	})
+	return resp, err
 }
 
 func (m *sqlTaskManager) CreateTasks(request *persistence.CreateTasksRequest) (*persistence.CreateTasksResponse, error) {
-	tx, err := m.db.Beginx()
-	if err != nil {
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("CreateTasks operation failed. Failed to begin transaction. Error: %v", err),
-		}
-	}
-	defer tx.Rollback()
-
 	tasksRows := make([]tasksRow, len(request.Tasks))
 	for i, v := range request.Tasks {
 		tasksRows[i] = tasksRow{
@@ -332,40 +263,25 @@ func (m *sqlTaskManager) CreateTasks(request *persistence.CreateTasksRequest) (*
 			ExpiryTs:     maximumExpiryTs,
 		}
 	}
-
-	query, args, err := m.db.BindNamed(createTaskSQLQuery, tasksRows)
-	if err != nil {
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("CreateTasks operation failed. Failed to bind statement. Error: %v", err),
+	var resp *persistence.CreateTasksResponse
+	err := runTransaction("CreateTasks", m.db, func(tx *sqlx.Tx) error {
+		query, args, err1 := m.db.BindNamed(createTaskSQLQuery, tasksRows)
+		if err1 != nil {
+			return err1
 		}
-	}
-
-	if _, err := tx.Exec(query, args...); err != nil {
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("CreateTasks operation failed. Failed to create tasks. Error: %v", err),
+		if _, err1 := tx.Exec(query, args...); err1 != nil {
+			return err1
 		}
-	}
-
-	// Lock task list before committing.
-
-	if err := lockAndCheckTaskListRangeID(tx, request.TaskListInfo.DomainID, request.TaskListInfo.Name, request.TaskListInfo.TaskType, request.TaskListInfo.RangeID); err != nil {
-		switch err.(type) {
-		case *persistence.ConditionFailedError:
-			return nil, err
-		default:
-			return nil, &workflow.InternalServiceError{
-				Message: fmt.Sprintf("CreateTasks operation failed. Error: %v", err),
-			}
+		// Lock task list before committing.
+		err1 = lockTaskList(tx,
+			request.TaskListInfo.DomainID, request.TaskListInfo.Name, request.TaskListInfo.TaskType, request.TaskListInfo.RangeID)
+		if err1 != nil {
+			return err1
 		}
-	}
-
-	if err := tx.Commit(); err != nil {
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("CreateTasks operation failed. Failed to commit transaction. Error: %v", err),
-		}
-	}
-
-	return &persistence.CreateTasksResponse{}, nil
+		resp = &persistence.CreateTasksResponse{}
+		return nil
+	})
+	return resp, err
 }
 
 func (m *sqlTaskManager) GetTasks(request *persistence.GetTasksRequest) (*persistence.GetTasksResponse, error) {
@@ -379,23 +295,23 @@ func (m *sqlTaskManager) GetTasks(request *persistence.GetTasksRequest) (*persis
 	var tasks = make([]*persistence.TaskInfo, len(rows))
 	for i, v := range rows {
 		tasks[i] = &persistence.TaskInfo{
-			DomainID:               v.DomainID,
-			WorkflowID:             v.WorkflowID,
-			RunID:                  v.RunID,
-			TaskID:                 v.TaskID,
-			ScheduleID:             v.ScheduleID,
-			ScheduleToStartTimeout: 0,
+			DomainID:   request.DomainID,
+			WorkflowID: v.WorkflowID,
+			RunID:      v.RunID,
+			TaskID:     v.TaskID,
+			ScheduleID: v.ScheduleID,
 		}
 	}
 
-	return &persistence.GetTasksResponse{tasks}, nil
+	return &persistence.GetTasksResponse{Tasks: tasks}, nil
 }
 
+// Deprecated
 func (m *sqlTaskManager) CompleteTask(request *persistence.CompleteTaskRequest) error {
-	return nil
+	return errors.New("not implemented")
 }
 
-func lockAndCheckTaskListRangeID(tx *sqlx.Tx, domainID, name string, taskListType int, oldRangeID int64) error {
+func lockTaskList(tx *sqlx.Tx, domainID, name string, taskListType int, oldRangeID int64) error {
 	var rangeID int64
 	if err := tx.Get(&rangeID, lockTaskListSQLQuery, domainID, name, taskListType); err != nil {
 		return &workflow.InternalServiceError{
