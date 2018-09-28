@@ -1143,7 +1143,7 @@ func getBufferedReplicationTasks(tx *sqlx.Tx,
 		}
 
 		if v.History != nil {
-			ret[v.FirstEventID].History = &persistence.SerializedHistoryEventBatch{}
+			ret[v.FirstEventID].History = make([]*workflow.HistoryEvent, 0)
 			if err := gobDeserialize(*v.History, &ret[v.FirstEventID].History); err != nil {
 				return nil, &workflow.InternalServiceError{
 					Message: fmt.Sprintf("Failed to get buffered replication tasks. Failed to deserialize a BufferedReplicationTask.History. Error: %v", err),
@@ -1152,7 +1152,7 @@ func getBufferedReplicationTasks(tx *sqlx.Tx,
 		}
 
 		if v.NewRunHistory != nil {
-			ret[v.FirstEventID].NewRunHistory = &persistence.SerializedHistoryEventBatch{}
+			ret[v.FirstEventID].NewRunHistory = make([]*workflow.HistoryEvent, 0)
 			if err := gobDeserialize(*v.NewRunHistory, &ret[v.FirstEventID].NewRunHistory); err != nil {
 				return nil, &workflow.InternalServiceError{
 					Message: fmt.Sprintf("Failed to get buffered replication tasks. Failed to deserialize a BufferedReplicationTask.NewRunHistory. Error: %v", err),
