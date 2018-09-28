@@ -203,10 +203,10 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionTimedOut()
 	now := time.Now()
 	evenType := shared.EventTypeWorkflowExecutionTimedOut
 	event := &shared.HistoryEvent{
-		Version:                                  common.Int64Ptr(version),
-		EventId:                                  common.Int64Ptr(130),
-		Timestamp:                                common.Int64Ptr(now.UnixNano()),
-		EventType:                                &evenType,
+		Version:   common.Int64Ptr(version),
+		EventId:   common.Int64Ptr(130),
+		Timestamp: common.Int64Ptr(now.UnixNano()),
+		EventType: &evenType,
 		WorkflowExecutionTimedOutEventAttributes: &shared.WorkflowExecutionTimedOutEventAttributes{},
 	}
 
@@ -299,10 +299,10 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionSignaled()
 	now := time.Now()
 	evenType := shared.EventTypeWorkflowExecutionSignaled
 	event := &shared.HistoryEvent{
-		Version:                                  common.Int64Ptr(version),
-		EventId:                                  common.Int64Ptr(130),
-		Timestamp:                                common.Int64Ptr(now.UnixNano()),
-		EventType:                                &evenType,
+		Version:   common.Int64Ptr(version),
+		EventId:   common.Int64Ptr(130),
+		Timestamp: common.Int64Ptr(now.UnixNano()),
+		EventType: &evenType,
 		WorkflowExecutionSignaledEventAttributes: &shared.WorkflowExecutionSignaledEventAttributes{},
 	}
 	s.mockUpdateVersion(event)
@@ -329,10 +329,10 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionFailed() {
 	now := time.Now()
 	evenType := shared.EventTypeWorkflowExecutionFailed
 	event := &shared.HistoryEvent{
-		Version:                                common.Int64Ptr(version),
-		EventId:                                common.Int64Ptr(130),
-		Timestamp:                              common.Int64Ptr(now.UnixNano()),
-		EventType:                              &evenType,
+		Version:   common.Int64Ptr(version),
+		EventId:   common.Int64Ptr(130),
+		Timestamp: common.Int64Ptr(now.UnixNano()),
+		EventType: &evenType,
 		WorkflowExecutionFailedEventAttributes: &shared.WorkflowExecutionFailedEventAttributes{},
 	}
 
@@ -592,10 +592,10 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionCanceled()
 	now := time.Now()
 	evenType := shared.EventTypeWorkflowExecutionCanceled
 	event := &shared.HistoryEvent{
-		Version:                                  common.Int64Ptr(version),
-		EventId:                                  common.Int64Ptr(130),
-		Timestamp:                                common.Int64Ptr(now.UnixNano()),
-		EventType:                                &evenType,
+		Version:   common.Int64Ptr(version),
+		EventId:   common.Int64Ptr(130),
+		Timestamp: common.Int64Ptr(now.UnixNano()),
+		EventType: &evenType,
 		WorkflowExecutionCanceledEventAttributes: &shared.WorkflowExecutionCanceledEventAttributes{},
 	}
 
@@ -820,12 +820,10 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeStartChildWorkflowExecution
 		},
 	}
 
-	initiatedEvent, err := newJSONHistoryEventSerializer().Serialize(event)
-	s.Nil(err)
 	ci := &persistence.ChildExecutionInfo{
 		Version:         event.GetVersion(),
 		InitiatedID:     event.GetEventId(),
-		InitiatedEvent:  initiatedEvent,
+		InitiatedEvent:  event,
 		StartedID:       common.EmptyEventID,
 		CreateRequestID: createRequestID,
 	}
@@ -1696,10 +1694,10 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskStarted() {
 	timeoutSecond := int32(10)
 	evenType := shared.EventTypeActivityTaskScheduled
 	scheduledEvent := &shared.HistoryEvent{
-		Version:                              common.Int64Ptr(version),
-		EventId:                              common.Int64Ptr(130),
-		Timestamp:                            common.Int64Ptr(now.UnixNano()),
-		EventType:                            &evenType,
+		Version:   common.Int64Ptr(version),
+		EventId:   common.Int64Ptr(130),
+		Timestamp: common.Int64Ptr(now.UnixNano()),
+		EventType: &evenType,
 		ActivityTaskScheduledEventAttributes: &shared.ActivityTaskScheduledEventAttributes{},
 	}
 
@@ -1712,17 +1710,13 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskStarted() {
 		ActivityTaskStartedEventAttributes: &shared.ActivityTaskStartedEventAttributes{},
 	}
 
-	serializedScheduledEvent, err := newJSONHistoryEventSerializer().Serialize(scheduledEvent)
-	s.Nil(err)
-	serializedStartedEvent, err := newJSONHistoryEventSerializer().Serialize(startedEvent)
-	s.Nil(err)
 	ai := &persistence.ActivityInfo{
 		Version:                  version,
 		ScheduleID:               scheduledEvent.GetEventId(),
-		ScheduledEvent:           serializedScheduledEvent,
+		ScheduledEvent:           scheduledEvent,
 		ScheduledTime:            time.Unix(0, scheduledEvent.GetTimestamp()),
 		StartedID:                startedEvent.GetEventId(),
-		StartedEvent:             serializedStartedEvent,
+		StartedEvent:             startedEvent,
 		StartedTime:              time.Unix(0, startedEvent.GetTimestamp()),
 		ActivityID:               activityID,
 		ScheduleToStartTimeout:   timeoutSecond,
@@ -1771,19 +1765,17 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskScheduled() {
 	timeoutSecond := int32(10)
 	evenType := shared.EventTypeActivityTaskScheduled
 	event := &shared.HistoryEvent{
-		Version:                              common.Int64Ptr(version),
-		EventId:                              common.Int64Ptr(130),
-		Timestamp:                            common.Int64Ptr(now.UnixNano()),
-		EventType:                            &evenType,
+		Version:   common.Int64Ptr(version),
+		EventId:   common.Int64Ptr(130),
+		Timestamp: common.Int64Ptr(now.UnixNano()),
+		EventType: &evenType,
 		ActivityTaskScheduledEventAttributes: &shared.ActivityTaskScheduledEventAttributes{},
 	}
 
-	scheduledEvent, err := newJSONHistoryEventSerializer().Serialize(event)
-	s.Nil(err)
 	ai := &persistence.ActivityInfo{
 		Version:                  event.GetVersion(),
 		ScheduleID:               event.GetEventId(),
-		ScheduledEvent:           scheduledEvent,
+		ScheduledEvent:           event,
 		ScheduledTime:            time.Unix(0, event.GetTimestamp()),
 		StartedID:                common.EmptyEventID,
 		StartedTime:              time.Time{},
@@ -1892,10 +1884,10 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskCompleted() {
 	now := time.Now()
 	evenType := shared.EventTypeActivityTaskCompleted
 	event := &shared.HistoryEvent{
-		Version:                              common.Int64Ptr(version),
-		EventId:                              common.Int64Ptr(130),
-		Timestamp:                            common.Int64Ptr(now.UnixNano()),
-		EventType:                            &evenType,
+		Version:   common.Int64Ptr(version),
+		EventId:   common.Int64Ptr(130),
+		Timestamp: common.Int64Ptr(now.UnixNano()),
+		EventType: &evenType,
 		ActivityTaskCompletedEventAttributes: &shared.ActivityTaskCompletedEventAttributes{},
 	}
 

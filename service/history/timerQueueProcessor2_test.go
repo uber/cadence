@@ -144,7 +144,6 @@ func (s *timerQueueProcessor2Suite) SetupTest() {
 		historyCache:       historyCache,
 		logger:             s.logger,
 		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
-		hSerializerFactory: persistence.NewHistorySerializerFactory(),
 		metricsClient:      s.mockShard.GetMetricsClient(),
 	}
 	h.txProcessor = newTransferQueueProcessor(s.mockShard, h, s.mockVisibilityMgr, s.mockMatchingClient, &mocks.HistoryClient{}, s.logger)
@@ -171,8 +170,8 @@ func (s *timerQueueProcessor2Suite) TestTimerUpdateTimesOut() {
 
 	builder := newMutableStateBuilder(cluster.TestCurrentClusterName, s.config, s.logger)
 	startRequest := &workflow.StartWorkflowExecutionRequest{
-		WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr("wType")},
-		TaskList:                            common.TaskListPtr(workflow.TaskList{Name: common.StringPtr(taskList)}),
+		WorkflowType: &workflow.WorkflowType{Name: common.StringPtr("wType")},
+		TaskList:     common.TaskListPtr(workflow.TaskList{Name: common.StringPtr(taskList)}),
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 	}
@@ -243,8 +242,8 @@ func (s *timerQueueProcessor2Suite) TestWorkflowTimeout() {
 
 	builder := newMutableStateBuilder(cluster.TestCurrentClusterName, s.config, s.logger)
 	startRequest := &workflow.StartWorkflowExecutionRequest{
-		WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr("wType")},
-		TaskList:                            common.TaskListPtr(workflow.TaskList{Name: common.StringPtr(taskList)}),
+		WorkflowType: &workflow.WorkflowType{Name: common.StringPtr("wType")},
+		TaskList:     common.TaskListPtr(workflow.TaskList{Name: common.StringPtr(taskList)}),
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 	}

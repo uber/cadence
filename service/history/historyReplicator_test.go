@@ -122,7 +122,6 @@ func (s *historyReplicatorSuite) SetupTest() {
 		historyCache:       historyCache,
 		logger:             s.logger,
 		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
-		hSerializerFactory: persistence.NewHistorySerializerFactory(),
 		metricsClient:      s.mockShard.GetMetricsClient(),
 	}
 	s.historyReplicator = newHistoryReplicator(s.mockShard, h, historyCache, s.mockShard.domainCache, s.mockHistoryMgr, s.logger)
@@ -828,17 +827,12 @@ func (s *historyReplicatorSuite) TestApplyOtherEvents_IncomingGreaterThanCurrent
 		History:           &shared.History{Events: []*shared.HistoryEvent{&shared.HistoryEvent{}}},
 	}
 
-	serializedHistoryBatch := &persistence.SerializedHistoryEventBatch{
-		EncodingType: common.EncodingTypeJSON,
-		Version:      144,
-		Data:         []byte("some random history"),
-	}
-
+	history := []*shared.HistoryEvent{&shared.HistoryEvent{EventId: common.Int64Ptr(144)}}
 	bufferedReplicationTask := &persistence.BufferedReplicationTask{
 		FirstEventID: request.GetFirstEventId(),
 		NextEventID:  request.GetNextEventId(),
 		Version:      request.GetVersion(),
-		History:      serializedHistoryBatch,
+		History:      history,
 	}
 
 	executionInfo := &persistence.WorkflowExecutionInfo{
@@ -867,7 +861,6 @@ func (s *historyReplicatorSuite) TestApplyOtherEvents_IncomingGreaterThanCurrent
 	}, nil).Once()
 	msBuilder.On("GetExecutionInfo").Return(executionInfo)
 	msBuilder.On("UpdateReplicationStateLastEventID", currentSourceCluster, currentVersion, currentNextEventID-1).Once()
-	msBuilder.On("GetStats").Return(&mutableStateStats{}).Once()
 
 	// these does not matter, but will be used by ms builder change notification
 	msBuilder.On("GetLastFirstEventID").Return(currentNextEventID - 4)
@@ -941,17 +934,12 @@ func (s *historyReplicatorSuite) TestApplyOtherEvents_IncomingGreaterThanCurrent
 		History:           &shared.History{Events: []*shared.HistoryEvent{&shared.HistoryEvent{}}},
 	}
 
-	serializedHistoryBatch := &persistence.SerializedHistoryEventBatch{
-		EncodingType: common.EncodingTypeJSON,
-		Version:      144,
-		Data:         []byte("some random history"),
-	}
-
+	history := []*shared.HistoryEvent{&shared.HistoryEvent{EventId: common.Int64Ptr(144)}}
 	bufferedReplicationTask := &persistence.BufferedReplicationTask{
 		FirstEventID: request.GetFirstEventId(),
 		NextEventID:  request.GetNextEventId(),
 		Version:      request.GetVersion(),
-		History:      serializedHistoryBatch,
+		History:      history,
 	}
 
 	executionInfo := &persistence.WorkflowExecutionInfo{
@@ -980,7 +968,6 @@ func (s *historyReplicatorSuite) TestApplyOtherEvents_IncomingGreaterThanCurrent
 	}, nil).Once()
 	msBuilder.On("GetExecutionInfo").Return(executionInfo)
 	msBuilder.On("UpdateReplicationStateLastEventID", currentSourceCluster, currentVersion, currentNextEventID-1).Once()
-	msBuilder.On("GetStats").Return(&mutableStateStats{}).Once()
 
 	// these does not matter, but will be used by ms builder change notification
 	msBuilder.On("GetLastFirstEventID").Return(currentNextEventID - 4)
@@ -1021,17 +1008,12 @@ func (s *historyReplicatorSuite) TestApplyOtherEvents_IncomingGreaterThanCurrent
 		History:           &shared.History{Events: []*shared.HistoryEvent{&shared.HistoryEvent{}}},
 	}
 
-	serializedHistoryBatch := &persistence.SerializedHistoryEventBatch{
-		EncodingType: common.EncodingTypeJSON,
-		Version:      144,
-		Data:         []byte("some random history"),
-	}
-
+	history := []*shared.HistoryEvent{&shared.HistoryEvent{EventId: common.Int64Ptr(144)}}
 	bufferedReplicationTask := &persistence.BufferedReplicationTask{
 		FirstEventID: request.GetFirstEventId(),
 		NextEventID:  request.GetNextEventId(),
 		Version:      request.GetVersion(),
-		History:      serializedHistoryBatch,
+		History:      history,
 	}
 
 	executionInfo := &persistence.WorkflowExecutionInfo{
@@ -1065,7 +1047,6 @@ func (s *historyReplicatorSuite) TestApplyOtherEvents_IncomingGreaterThanCurrent
 	}, nil).Once()
 	msBuilder.On("GetExecutionInfo").Return(executionInfo)
 	msBuilder.On("UpdateReplicationStateLastEventID", currentSourceCluster, currentVersion, currentNextEventID-1).Once()
-	msBuilder.On("GetStats").Return(&mutableStateStats{}).Once()
 
 	// these does not matter, but will be used by ms builder change notification
 	msBuilder.On("GetLastFirstEventID").Return(currentNextEventID - 4)

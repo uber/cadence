@@ -178,6 +178,10 @@ func (e *mutableStateBuilder) IncrementHistorySize(appendSize int) {
 	e.executionInfo.HistorySize += int64(appendSize)
 }
 
+func (e *mutableStateBuilder) GetHistorySize() int64 {
+	return e.executionInfo.HistorySize
+}
+
 func (e *mutableStateBuilder) SetNewRunSize(size int) {
 	if e.continueAsNew != nil {
 		e.continueAsNew.HistorySize = int64(size)

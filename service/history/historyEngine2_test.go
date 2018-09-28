@@ -66,7 +66,6 @@ type (
 		mockMessagingClient messaging.Client
 		mockService         service.Service
 		shardClosedCh       chan int
-		eventSerializer     historyEventSerializer
 		config              *Config
 		logger              bark.Logger
 	}
@@ -106,7 +105,6 @@ func (s *engine2Suite) SetupTest() {
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
 	s.mockProducer = &mocks.KafkaProducer{}
 	s.shardClosedCh = make(chan int, 100)
-	s.eventSerializer = newJSONHistoryEventSerializer()
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
 	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, metricsClient, s.logger)
@@ -140,7 +138,6 @@ func (s *engine2Suite) SetupTest() {
 		logger:             s.logger,
 		metricsClient:      metrics.NewClient(tally.NoopScope, metrics.History),
 		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
-		hSerializerFactory: p.NewHistorySerializerFactory(),
 	}
 	h.txProcessor = newTransferQueueProcessor(mockShard, h, s.mockVisibilityMgr, s.mockMatchingClient, s.mockHistoryClient, s.logger)
 	h.timerProcessor = newTimerQueueProcessor(mockShard, h, s.mockMatchingClient, s.logger)
@@ -915,13 +912,7 @@ func (s *engine2Suite) createExecutionStartedState(we workflow.WorkflowExecution
 }
 
 func (s *engine2Suite) printHistory(builder mutableState) string {
-	history, err := builder.GetHistoryBuilder().Serialize()
-	if err != nil {
-		s.logger.Errorf("Error serializing history: %v", err)
-		return ""
-	}
-	s.logger.Infof("Printing History: %v", history)
-	return history.String()
+	return builder.GetHistoryBuilder().GetHistory().String()
 }
 
 func (s *engine2Suite) TestRespondDecisionTaskCompletedRecordMarkerDecision() {
@@ -1018,10 +1009,10 @@ func (s *engine2Suite) TestStartWorkflowExecution_BrandNew() {
 	resp, err := s.historyEngine.StartWorkflowExecution(&h.StartWorkflowExecutionRequest{
 		DomainUUID: common.StringPtr(domainID),
 		StartRequest: &workflow.StartWorkflowExecutionRequest{
-			Domain:                              common.StringPtr(domainID),
-			WorkflowId:                          common.StringPtr(workflowID),
-			WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
-			TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskList)},
+			Domain:       common.StringPtr(domainID),
+			WorkflowId:   common.StringPtr(workflowID),
+			WorkflowType: &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
+			TaskList:     &workflow.TaskList{Name: common.StringPtr(taskList)},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 			Identity:                            common.StringPtr(identity),
@@ -1069,10 +1060,10 @@ func (s *engine2Suite) TestStartWorkflowExecution_StillRunning_Dedup() {
 	resp, err := s.historyEngine.StartWorkflowExecution(&h.StartWorkflowExecutionRequest{
 		DomainUUID: common.StringPtr(domainID),
 		StartRequest: &workflow.StartWorkflowExecutionRequest{
-			Domain:                              common.StringPtr(domainID),
-			WorkflowId:                          common.StringPtr(workflowID),
-			WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
-			TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskList)},
+			Domain:       common.StringPtr(domainID),
+			WorkflowId:   common.StringPtr(workflowID),
+			WorkflowType: &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
+			TaskList:     &workflow.TaskList{Name: common.StringPtr(taskList)},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 			Identity:                            common.StringPtr(identity),
@@ -1120,10 +1111,10 @@ func (s *engine2Suite) TestStartWorkflowExecution_StillRunning_NonDeDup() {
 	resp, err := s.historyEngine.StartWorkflowExecution(&h.StartWorkflowExecutionRequest{
 		DomainUUID: common.StringPtr(domainID),
 		StartRequest: &workflow.StartWorkflowExecutionRequest{
-			Domain:                              common.StringPtr(domainID),
-			WorkflowId:                          common.StringPtr(workflowID),
-			WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
-			TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskList)},
+			Domain:       common.StringPtr(domainID),
+			WorkflowId:   common.StringPtr(workflowID),
+			WorkflowType: &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
+			TaskList:     &workflow.TaskList{Name: common.StringPtr(taskList)},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 			Identity:                            common.StringPtr(identity),
@@ -1199,10 +1190,10 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevSuccess() {
 		resp, err := s.historyEngine.StartWorkflowExecution(&h.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(domainID),
 			StartRequest: &workflow.StartWorkflowExecutionRequest{
-				Domain:                              common.StringPtr(domainID),
-				WorkflowId:                          common.StringPtr(workflowID),
-				WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskList)},
+				Domain:       common.StringPtr(domainID),
+				WorkflowId:   common.StringPtr(workflowID),
+				WorkflowType: &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
+				TaskList:     &workflow.TaskList{Name: common.StringPtr(taskList)},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 				Identity:                            common.StringPtr(identity),
@@ -1296,10 +1287,10 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevFail() {
 			resp, err := s.historyEngine.StartWorkflowExecution(&h.StartWorkflowExecutionRequest{
 				DomainUUID: common.StringPtr(domainID),
 				StartRequest: &workflow.StartWorkflowExecutionRequest{
-					Domain:                              common.StringPtr(domainID),
-					WorkflowId:                          common.StringPtr(workflowID),
-					WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
-					TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskList)},
+					Domain:       common.StringPtr(domainID),
+					WorkflowId:   common.StringPtr(workflowID),
+					WorkflowType: &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
+					TaskList:     &workflow.TaskList{Name: common.StringPtr(taskList)},
 					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 					Identity:                            common.StringPtr(identity),
@@ -1387,10 +1378,10 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotExist() {
 	sRequest = &h.SignalWithStartWorkflowExecutionRequest{
 		DomainUUID: common.StringPtr(domainID),
 		SignalWithStartRequest: &workflow.SignalWithStartWorkflowExecutionRequest{
-			Domain:                              common.StringPtr(domainID),
-			WorkflowId:                          common.StringPtr(workflowID),
-			WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
-			TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskList)},
+			Domain:       common.StringPtr(domainID),
+			WorkflowId:   common.StringPtr(workflowID),
+			WorkflowType: &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
+			TaskList:     &workflow.TaskList{Name: common.StringPtr(taskList)},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 			Identity:                            common.StringPtr(identity),
@@ -1440,10 +1431,10 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotRunning()
 	sRequest = &h.SignalWithStartWorkflowExecutionRequest{
 		DomainUUID: common.StringPtr(domainID),
 		SignalWithStartRequest: &workflow.SignalWithStartWorkflowExecutionRequest{
-			Domain:                              common.StringPtr(domainID),
-			WorkflowId:                          common.StringPtr(workflowID),
-			WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
-			TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskList)},
+			Domain:       common.StringPtr(domainID),
+			WorkflowId:   common.StringPtr(workflowID),
+			WorkflowType: &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
+			TaskList:     &workflow.TaskList{Name: common.StringPtr(taskList)},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 			Identity:                            common.StringPtr(identity),

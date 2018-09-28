@@ -145,6 +145,7 @@ type (
 		HasParentExecution() bool
 		HasPendingDecisionTask() bool
 		IncrementHistorySize(int)
+		GetHistorySize() int64
 		IsCancelRequested() (bool, string)
 		IsSignalRequested(requestID string) bool
 		IsStickyTaskListEnabled() bool

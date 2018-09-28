@@ -69,7 +69,6 @@ type (
 		mockService         service.Service
 		mockMetricClient    metrics.Client
 		shardClosedCh       chan int
-		eventSerializer     historyEventSerializer
 		config              *Config
 		logger              bark.Logger
 	}
@@ -111,7 +110,6 @@ func (s *engineSuite) SetupTest() {
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
 	s.mockProducer = &mocks.KafkaProducer{}
 	s.shardClosedCh = make(chan int, 100)
-	s.eventSerializer = newJSONHistoryEventSerializer()
 	s.mockMetricClient = metrics.NewClient(tally.NoopScope, metrics.History)
 	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
 	s.mockService = service.NewTestService(s.mockClusterMetadata, s.mockMessagingClient, s.mockMetricClient, s.logger)
@@ -160,7 +158,6 @@ func (s *engineSuite) SetupTest() {
 		logger:               s.logger,
 		metricsClient:        metrics.NewClient(tally.NoopScope, metrics.History),
 		tokenSerializer:      common.NewJSONTaskTokenSerializer(),
-		hSerializerFactory:   persistence.NewHistorySerializerFactory(),
 		historyEventNotifier: historyEventNotifier,
 	}
 	h.txProcessor = newTransferQueueProcessor(shardContextWrapper, h, s.mockVisibilityMgr, s.mockMatchingClient, s.mockHistoryClient, s.logger)
@@ -676,10 +673,10 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedConflictOnUpdate() {
 	decisions := []*workflow.Decision{{
 		DecisionType: common.DecisionTypePtr(workflow.DecisionTypeScheduleActivityTask),
 		ScheduleActivityTaskDecisionAttributes: &workflow.ScheduleActivityTaskDecisionAttributes{
-			ActivityId:                    common.StringPtr(activity3ID),
-			ActivityType:                  &workflow.ActivityType{Name: common.StringPtr(activity3Type)},
-			TaskList:                      &workflow.TaskList{Name: &tl},
-			Input:                         activity3Input,
+			ActivityId:   common.StringPtr(activity3ID),
+			ActivityType: &workflow.ActivityType{Name: common.StringPtr(activity3Type)},
+			TaskList:     &workflow.TaskList{Name: &tl},
+			Input:        activity3Input,
 			ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
 			ScheduleToStartTimeoutSeconds: common.Int32Ptr(10),
 			StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
@@ -774,10 +771,10 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedMaxAttemptsExceeded() {
 	decisions := []*workflow.Decision{{
 		DecisionType: common.DecisionTypePtr(workflow.DecisionTypeScheduleActivityTask),
 		ScheduleActivityTaskDecisionAttributes: &workflow.ScheduleActivityTaskDecisionAttributes{
-			ActivityId:                    common.StringPtr("activity1"),
-			ActivityType:                  &workflow.ActivityType{Name: common.StringPtr("activity_type1")},
-			TaskList:                      &workflow.TaskList{Name: &tl},
-			Input:                         input,
+			ActivityId:   common.StringPtr("activity1"),
+			ActivityType: &workflow.ActivityType{Name: common.StringPtr("activity_type1")},
+			TaskList:     &workflow.TaskList{Name: &tl},
+			Input:        input,
 			ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
 			ScheduleToStartTimeoutSeconds: common.Int32Ptr(10),
 			StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
@@ -1166,10 +1163,10 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledAtt
 		decisions := []*workflow.Decision{{
 			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeScheduleActivityTask),
 			ScheduleActivityTaskDecisionAttributes: &workflow.ScheduleActivityTaskDecisionAttributes{
-				ActivityId:                    common.StringPtr("activity1"),
-				ActivityType:                  &workflow.ActivityType{Name: common.StringPtr("activity_type1")},
-				TaskList:                      &workflow.TaskList{Name: &tl},
-				Input:                         input,
+				ActivityId:   common.StringPtr("activity1"),
+				ActivityType: &workflow.ActivityType{Name: common.StringPtr("activity_type1")},
+				TaskList:     &workflow.TaskList{Name: &tl},
+				Input:        input,
 				ScheduleToCloseTimeoutSeconds: iVar.scheduleToClose,
 				ScheduleToStartTimeoutSeconds: iVar.scheduleToStart,
 				StartToCloseTimeoutSeconds:    iVar.startToClose,
@@ -1250,10 +1247,10 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledDec
 	decisions := []*workflow.Decision{{
 		DecisionType: common.DecisionTypePtr(workflow.DecisionTypeScheduleActivityTask),
 		ScheduleActivityTaskDecisionAttributes: &workflow.ScheduleActivityTaskDecisionAttributes{
-			ActivityId:                    common.StringPtr("activity1"),
-			ActivityType:                  &workflow.ActivityType{Name: common.StringPtr("activity_type1")},
-			TaskList:                      &workflow.TaskList{Name: &tl},
-			Input:                         input,
+			ActivityId:   common.StringPtr("activity1"),
+			ActivityType: &workflow.ActivityType{Name: common.StringPtr("activity_type1")},
+			TaskList:     &workflow.TaskList{Name: &tl},
+			Input:        input,
 			ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
 			ScheduleToStartTimeoutSeconds: common.Int32Ptr(10),
 			StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
@@ -4016,13 +4013,8 @@ func (s *engineSuite) TestStarTimer_DuplicateTimerID() {
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything).Return(gwmsResponse2, nil).Once()
 	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(nil).Run(func(arguments mock.Arguments) {
 		req := arguments.Get(0).(*persistence.AppendHistoryEventsRequest)
-		hs := persistence.NewJSONHistorySerializer()
-		h, err := hs.Deserialize(req.Events)
-		if err != nil {
-			panic(err)
-		}
-		decTaskIndex := len(h.Events) - 1
-		if decTaskIndex >= 0 && *h.Events[decTaskIndex].EventType == workflow.EventTypeDecisionTaskFailed {
+		decTaskIndex := len(req.Events) - 1
+		if decTaskIndex >= 0 && req.Events[decTaskIndex].EventType == workflow.EventTypeDecisionTaskFailed {
 			decisionFailedEvent = true
 		}
 	}).Once()
@@ -4430,12 +4422,7 @@ func (s *engineSuite) getActivityScheduledEvent(msBuilder mutableState,
 		return nil
 	}
 
-	event, err := s.eventSerializer.Deserialize(ai.ScheduledEvent)
-	if err != nil {
-		s.logger.Errorf("Error Deserializing Event: %v", err)
-	}
-
-	return event
+	return ai.ScheduledEvent
 }
 
 func (s *engineSuite) getActivityStartedEvent(msBuilder mutableState,
@@ -4446,23 +4433,11 @@ func (s *engineSuite) getActivityStartedEvent(msBuilder mutableState,
 		return nil
 	}
 
-	event, err := s.eventSerializer.Deserialize(ai.StartedEvent)
-	if err != nil {
-		s.logger.Errorf("Error Deserializing Event: %v", err)
-	}
-
-	return event
+	return ai.StartedEvent
 }
 
 func (s *engineSuite) printHistory(builder mutableState) string {
-	history, err := builder.GetHistoryBuilder().Serialize()
-	if err != nil {
-		s.logger.Errorf("Error serializing history: %v", err)
-		return ""
-	}
-
-	//s.logger.Info(string(history))
-	return history.String()
+	return builder.GetHistoryBuilder().GetHistory().String()
 }
 
 func addWorkflowExecutionStartedEventWithParent(builder mutableState, workflowExecution workflow.WorkflowExecution,
@@ -4470,10 +4445,10 @@ func addWorkflowExecutionStartedEventWithParent(builder mutableState, workflowEx
 	parentInfo *history.ParentExecutionInfo, identity string) *workflow.HistoryEvent {
 	domainID := validDomainID
 	startRequest := &workflow.StartWorkflowExecutionRequest{
-		WorkflowId:                          common.StringPtr(*workflowExecution.WorkflowId),
-		WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
-		TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskList)},
-		Input:                               input,
+		WorkflowId:   common.StringPtr(*workflowExecution.WorkflowId),
+		WorkflowType: &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
+		TaskList:     &workflow.TaskList{Name: common.StringPtr(taskList)},
+		Input:        input,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(executionStartToCloseTimeout),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(taskStartToCloseTimeout),
 		Identity:                            common.StringPtr(identity),
@@ -4530,10 +4505,10 @@ func addActivityTaskScheduledEvent(builder mutableState, decisionCompletedID int
 	taskList string, input []byte, timeout, queueTimeout, heartbeatTimeout int32) (*workflow.HistoryEvent,
 	*persistence.ActivityInfo) {
 	return builder.AddActivityTaskScheduledEvent(decisionCompletedID, &workflow.ScheduleActivityTaskDecisionAttributes{
-		ActivityId:                    common.StringPtr(activityID),
-		ActivityType:                  &workflow.ActivityType{Name: common.StringPtr(activityType)},
-		TaskList:                      &workflow.TaskList{Name: common.StringPtr(taskList)},
-		Input:                         input,
+		ActivityId:   common.StringPtr(activityID),
+		ActivityType: &workflow.ActivityType{Name: common.StringPtr(activityType)},
+		TaskList:     &workflow.TaskList{Name: common.StringPtr(taskList)},
+		Input:        input,
 		ScheduleToCloseTimeoutSeconds: common.Int32Ptr(timeout),
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(queueTimeout),
 		HeartbeatTimeoutSeconds:       common.Int32Ptr(heartbeatTimeout),
@@ -4626,11 +4601,11 @@ func addStartChildWorkflowExecutionInitiatedEvent(builder mutableState, decision
 	*persistence.ChildExecutionInfo) {
 	return builder.AddStartChildWorkflowExecutionInitiatedEvent(decisionCompletedID, createRequestID,
 		&workflow.StartChildWorkflowExecutionDecisionAttributes{
-			Domain:                              common.StringPtr(domain),
-			WorkflowId:                          common.StringPtr(workflowID),
-			WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
-			TaskList:                            &workflow.TaskList{Name: common.StringPtr(tasklist)},
-			Input:                               input,
+			Domain:       common.StringPtr(domain),
+			WorkflowId:   common.StringPtr(workflowID),
+			WorkflowType: &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
+			TaskList:     &workflow.TaskList{Name: common.StringPtr(tasklist)},
+			Input:        input,
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(executionStartToCloseTimeout),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(taskStartToCloseTimeout),
 			ChildPolicy:                         common.ChildPolicyPtr(workflow.ChildPolicyTerminate),
@@ -4818,10 +4793,28 @@ func copyChildInfo(sourceInfo *persistence.ChildExecutionInfo) *persistence.Chil
 		CreateRequestID: sourceInfo.CreateRequestID,
 	}
 
-	result.InitiatedEvent = make([]byte, len(sourceInfo.InitiatedEvent))
-	copy(result.InitiatedEvent, sourceInfo.InitiatedEvent)
-	result.StartedEvent = make([]byte, len(sourceInfo.StartedEvent))
-	copy(result.StartedEvent, sourceInfo.StartedEvent)
+	if sourceInfo.InitiatedEvent != nil {
+		result.InitiatedEvent = &workflow.HistoryEvent{}
+		wv, err := sourceInfo.InitiatedEvent.ToWire()
+		if err != nil {
+			panic(err)
+		}
+		err = result.InitiatedEvent.FromWire(wv)
+		if err != nil {
+			panic(err)
+		}
+	}
+	if sourceInfo.StartedEvent != nil {
+		result.StartedEvent = &workflow.HistoryEvent{}
+		wv, err := sourceInfo.StartedEvent.ToWire()
+		if err != nil {
+			panic(err)
+		}
+		err = result.StartedEvent.FromWire(wv)
+		if err != nil {
+			panic(err)
+		}
+	}
 	return result
 }
 

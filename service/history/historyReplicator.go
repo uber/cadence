@@ -28,6 +28,7 @@ import (
 	"github.com/uber-common/bark"
 	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/shared"
+	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
@@ -94,15 +95,14 @@ var (
 func newHistoryReplicator(shard ShardContext, historyEngine *historyEngineImpl, historyCache *historyCache, domainCache cache.DomainCache,
 	historyMgr persistence.HistoryManager, logger bark.Logger) *historyReplicator {
 	replicator := &historyReplicator{
-		shard:             shard,
-		historyEngine:     historyEngine,
-		historyCache:      historyCache,
-		domainCache:       domainCache,
-		historyMgr:        historyMgr,
-		historySerializer: persistence.NewJSONHistorySerializer(),
-		clusterMetadata:   shard.GetService().GetClusterMetadata(),
-		metricsClient:     shard.GetMetricsClient(),
-		logger:            logger.WithField(logging.TagWorkflowComponent, logging.TagValueHistoryReplicatorComponent),
+		shard:           shard,
+		historyEngine:   historyEngine,
+		historyCache:    historyCache,
+		domainCache:     domainCache,
+		historyMgr:      historyMgr,
+		clusterMetadata: shard.GetService().GetClusterMetadata(),
+		metricsClient:   shard.GetMetricsClient(),
+		logger:          logger.WithField(logging.TagWorkflowComponent, logging.TagValueHistoryReplicatorComponent),
 
 		getNewConflictResolver: func(context *workflowExecutionContext, logger bark.Logger) conflictResolver {
 			return newConflictResolver(shard, context, historyMgr, logger)
@@ -533,8 +533,8 @@ func (r *historyReplicator) FlushBuffer(ctx context.Context, context *workflowEx
 			FirstEventId:      common.Int64Ptr(bt.FirstEventID),
 			NextEventId:       common.Int64Ptr(bt.NextEventID),
 			Version:           common.Int64Ptr(bt.Version),
-			History:           msBuilder.GetBufferedHistory(bt.History),
-			NewRunHistory:     msBuilder.GetBufferedHistory(bt.NewRunHistory),
+			History:           &workflow.History{Events: bt.History},
+			NewRunHistory:     &workflow.History{Events: bt.NewRunHistory},
 		}
 
 		// Apply replication task to workflow execution
@@ -570,13 +570,6 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 	firstEvent := history.Events[0]
 	lastEvent := history.Events[len(history.Events)-1]
 
-	// Serialize the history
-	serializedHistory, serializedError := r.Serialize(history)
-	if serializedError != nil {
-		logging.LogHistorySerializationErrorEvent(logger, serializedError, "HistoryEventBatch serialization error on start workflow.")
-		return serializedError
-	}
-
 	// Generate a transaction ID for appending events to history
 	transactionID, err := r.shard.GetNextTransferTaskID()
 	if err != nil {
@@ -590,7 +583,7 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 		TransactionID:     transactionID,
 		FirstEventID:      firstEvent.GetEventId(),
 		EventBatchVersion: firstEvent.GetVersion(),
-		Events:            serializedHistory,
+		Events:            history.Events,
 	})
 	if err != nil {
 		return err
@@ -798,15 +791,6 @@ func (r *historyReplicator) conflictResolutionTerminateCurrentRunningIfNotSelf(c
 		logError(logger, "Conflict resolution err terminating current workflow.", err)
 	}
 	return currentRunID, err
-}
-
-func (r *historyReplicator) Serialize(history *shared.History) (*persistence.SerializedHistoryEventBatch, error) {
-	eventBatch := persistence.NewHistoryEventBatch(persistence.GetDefaultHistoryVersion(), history.Events)
-	h, err := r.historySerializer.Serialize(eventBatch)
-	if err != nil {
-		return nil, err
-	}
-	return h, nil
 }
 
 // func (r *historyReplicator) getCurrentWorkflowInfo(domainID string, workflowID string) (runID string, lastWriteVersion int64, closeStatus int, retError error) {

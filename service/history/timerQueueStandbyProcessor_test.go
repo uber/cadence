@@ -138,7 +138,6 @@ func (s *timerQueueStandbyProcessorSuite) SetupTest() {
 		historyCache:       historyCache,
 		logger:             s.logger,
 		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
-		hSerializerFactory: persistence.NewHistorySerializerFactory(),
 		metricsClient:      s.mockShard.GetMetricsClient(),
 	}
 	s.mockHistoryEngine = h
@@ -178,8 +177,8 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Pending() 
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(domainID),
 			StartRequest: &workflow.StartWorkflowExecutionRequest{
-				WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType: &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
+				TaskList:     &workflow.TaskList{Name: common.StringPtr(taskListName)},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -231,8 +230,8 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Success() 
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(domainID),
 			StartRequest: &workflow.StartWorkflowExecutionRequest{
-				WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType: &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
+				TaskList:     &workflow.TaskList{Name: common.StringPtr(taskListName)},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -287,8 +286,8 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessExpiredUserTimer_Multiple()
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(domainID),
 			StartRequest: &workflow.StartWorkflowExecutionRequest{
-				WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType: &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
+				TaskList:     &workflow.TaskList{Name: common.StringPtr(taskListName)},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -349,8 +348,8 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Pending() {
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(domainID),
 			StartRequest: &workflow.StartWorkflowExecutionRequest{
-				WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType: &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
+				TaskList:     &workflow.TaskList{Name: common.StringPtr(taskListName)},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -405,8 +404,8 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Success() {
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(domainID),
 			StartRequest: &workflow.StartWorkflowExecutionRequest{
-				WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType: &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
+				TaskList:     &workflow.TaskList{Name: common.StringPtr(taskListName)},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -467,8 +466,8 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessActivityTimeout_Multiple() 
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(domainID),
 			StartRequest: &workflow.StartWorkflowExecutionRequest{
-				WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType: &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
+				TaskList:     &workflow.TaskList{Name: common.StringPtr(taskListName)},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -536,8 +535,8 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessDecisionTimeout_Pending() {
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(domainID),
 			StartRequest: &workflow.StartWorkflowExecutionRequest{
-				WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType: &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
+				TaskList:     &workflow.TaskList{Name: common.StringPtr(taskListName)},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -581,8 +580,8 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessDecisionTimeout_Success() {
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(domainID),
 			StartRequest: &workflow.StartWorkflowExecutionRequest{
-				WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType: &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
+				TaskList:     &workflow.TaskList{Name: common.StringPtr(taskListName)},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -629,8 +628,8 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessWorkflowTimeout_Pending() {
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(domainID),
 			StartRequest: &workflow.StartWorkflowExecutionRequest{
-				WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType: &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
+				TaskList:     &workflow.TaskList{Name: common.StringPtr(taskListName)},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -675,8 +674,8 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessWorkflowTimeout_Success() {
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(domainID),
 			StartRequest: &workflow.StartWorkflowExecutionRequest{
-				WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType: &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
+				TaskList:     &workflow.TaskList{Name: common.StringPtr(taskListName)},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -723,8 +722,8 @@ func (s *timerQueueStandbyProcessorSuite) TestProcessRetryTimeout() {
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(domainID),
 			StartRequest: &workflow.StartWorkflowExecutionRequest{
-				WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType: &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
+				TaskList:     &workflow.TaskList{Name: common.StringPtr(taskListName)},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},

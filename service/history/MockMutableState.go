@@ -1041,6 +1041,20 @@ func (_m *mockMutableState) FlushBufferedEvents() error {
 	return r0
 }
 
+// FlushBufferedEvents provides a mock function with given fields:
+func (_m *mockMutableState) GetHistorySize() int64 {
+	ret := _m.Called()
+
+	var r0 int64
+	if rf, ok := ret.Get(0).(func() int64); ok {
+		r0 = rf()
+	} else {
+		r0 = 0
+	}
+
+	return r0
+}
+
 // GetActivityByActivityID provides a mock function with given fields: _a0
 func (_m *mockMutableState) GetActivityByActivityID(_a0 string) (*persistence.ActivityInfo, bool) {
 	ret := _m.Called(_a0)
