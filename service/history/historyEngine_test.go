@@ -4014,7 +4014,7 @@ func (s *engineSuite) TestStarTimer_DuplicateTimerID() {
 	s.mockHistoryMgr.On("AppendHistoryEvents", mock.Anything).Return(nil).Run(func(arguments mock.Arguments) {
 		req := arguments.Get(0).(*persistence.AppendHistoryEventsRequest)
 		decTaskIndex := len(req.Events) - 1
-		if decTaskIndex >= 0 && req.Events[decTaskIndex].EventType == workflow.EventTypeDecisionTaskFailed {
+		if decTaskIndex >= 0 && *req.Events[decTaskIndex].EventType == workflow.EventTypeDecisionTaskFailed {
 			decisionFailedEvent = true
 		}
 	}).Once()
@@ -4668,12 +4668,12 @@ func createMutableState(ms mutableState) *persistence.WorkflowMutableState {
 	}
 
 	builder.FlushBufferedEvents()
-	var bufferedEvents []*persistence.SerializedHistoryEventBatch
+	var bufferedEvents []*workflow.HistoryEvent
 	if len(builder.bufferedEvents) > 0 {
 		bufferedEvents = append(bufferedEvents, builder.bufferedEvents...)
 	}
 	if builder.updateBufferedEvents != nil {
-		bufferedEvents = append(bufferedEvents, builder.updateBufferedEvents)
+		bufferedEvents = append(bufferedEvents, builder.updateBufferedEvents...)
 	}
 	var replicationState *persistence.ReplicationState
 	if builder.replicationState != nil {
