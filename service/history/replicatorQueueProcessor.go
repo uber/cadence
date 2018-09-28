@@ -122,7 +122,7 @@ func (p *replicatorQueueProcessorImpl) process(qTask queueTaskInfo) (int, error)
 		}
 		return metrics.ReplicatorTaskHistoryScope, err
 	default:
-		return 0, errUnknownReplicationTask
+		return metrics.ReplicatorQueueProcessorScope, errUnknownReplicationTask
 	}
 }
 

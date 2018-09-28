@@ -56,7 +56,7 @@ func LogOperationFailedEvent(logger bark.Logger, msg string, err error) {
 	}).Warnf("%v.  Error: %v", msg, err)
 }
 
-// LogOperationStuckEvent is used to log fatal errors by application to cause panic
+// LogOperationStuckEvent is used to log task processing stuck
 func LogOperationStuckEvent(logger bark.Logger, msg string, err error) {
 	logger.WithFields(bark.Fields{
 		TagWorkflowEventID: OperationPanic,

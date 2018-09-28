@@ -353,7 +353,7 @@ func (p *queueProcessorBase) handleTaskError(scope int, startTime time.Time,
 	p.metricsClient.IncCounter(scope, metrics.TaskFailures)
 
 	if _, ok := err.(*persistence.CurrentWorkflowConditionFailedError); ok {
-		logging.LogTaskProcessingFailedEvent(logger, "More than 2 workflow is running.", err)
+		logging.LogTaskProcessingFailedEvent(logger, "More than 2 workflow are running.", err)
 		return nil
 	}
 

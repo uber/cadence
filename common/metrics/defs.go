@@ -428,8 +428,8 @@ const (
 	TimerActiveTaskActivityRetryTimerScope
 	// TimerActiveTaskWorkflowRetryTimerScope is the scope used by metric emitted by timer queue processor for processing retry task.
 	TimerActiveTaskWorkflowRetryTimerScope
-	// TimerActiveTaskDeleteHistoryEvent is the scope used by metric emitted by timer queue processor for processing history event cleanup
-	TimerActiveTaskDeleteHistoryEvent
+	// TimerActiveTaskDeleteHistoryEventScope is the scope used by metric emitted by timer queue processor for processing history event cleanup
+	TimerActiveTaskDeleteHistoryEventScope
 	// TimerStandbyTaskActivityTimeoutScope is the scope used by metric emitted by timer queue processor for processing activity timeouts
 	TimerStandbyTaskActivityTimeoutScope
 	// TimerStandbyTaskDecisionTimeoutScope is the scope used by metric emitted by timer queue processor for processing decision timeouts
@@ -440,8 +440,8 @@ const (
 	TimerStandbyTaskWorkflowTimeoutScope
 	// TimerStandbyTaskActivityRetryTimerScope is the scope used by metric emitted by timer queue processor for processing retry task.
 	TimerStandbyTaskActivityRetryTimerScope
-	// TimerStandbyTaskDeleteHistoryEvent is the scope used by metric emitted by timer queue processor for processing history event cleanup
-	TimerStandbyTaskDeleteHistoryEvent
+	// TimerStandbyTaskDeleteHistoryEventScope is the scope used by metric emitted by timer queue processor for processing history event cleanup
+	TimerStandbyTaskDeleteHistoryEventScope
 	// TimerStandbyTaskWorkflowRetryTimerScope is the scope used by metric emitted by timer queue processor for processing retry task.
 	TimerStandbyTaskWorkflowRetryTimerScope
 	// HistoryEventNotificationScope is the scope used by shard history event nitification
@@ -671,14 +671,14 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		TimerActiveTaskWorkflowTimeoutScope:          {operation: "TimerActiveTaskWorkflowTimeout"},
 		TimerActiveTaskActivityRetryTimerScope:       {operation: "TimerActiveTaskActivityRetryTimer"},
 		TimerActiveTaskWorkflowRetryTimerScope:       {operation: "TimerActiveTaskWorkflowRetryTimer"},
-		TimerActiveTaskDeleteHistoryEvent:            {operation: "TimerActiveTaskDeleteHistoryEvent"},
+		TimerActiveTaskDeleteHistoryEventScope:       {operation: "TimerActiveTaskDeleteHistoryEvent"},
 		TimerStandbyTaskActivityTimeoutScope:         {operation: "TimerStandbyTaskActivityTimeout"},
 		TimerStandbyTaskDecisionTimeoutScope:         {operation: "TimerStandbyTaskDecisionTimeout"},
 		TimerStandbyTaskUserTimerScope:               {operation: "TimerStandbyTaskUserTimer"},
 		TimerStandbyTaskWorkflowTimeoutScope:         {operation: "TimerStandbyTaskWorkflowTimeout"},
 		TimerStandbyTaskActivityRetryTimerScope:      {operation: "TimerStandbyTaskActivityRetryTimer"},
 		TimerStandbyTaskWorkflowRetryTimerScope:      {operation: "TimerStandbyTaskWorkflowRetryTimer"},
-		TimerStandbyTaskDeleteHistoryEvent:           {operation: "TimerStandbyTaskDeleteHistoryEvent"},
+		TimerStandbyTaskDeleteHistoryEventScope:      {operation: "TimerStandbyTaskDeleteHistoryEvent"},
 		HistoryEventNotificationScope:                {operation: "HistoryEventNotification"},
 		ReplicatorQueueProcessorScope:                {operation: "ReplicatorQueueProcessor"},
 		ReplicatorTaskHistoryScope:                   {operation: "ReplicatorTaskHistory"},
