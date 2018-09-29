@@ -325,6 +325,10 @@ func (p *queueProcessorBase) processTaskOnce(notificationChan <-chan struct{}, t
 func (p *queueProcessorBase) handleTaskError(scope int, startTime time.Time,
 	notificationChan <-chan struct{}, err error, logger bark.Logger) error {
 
+	if err == nil {
+		return nil
+	}
+
 	if _, ok := err.(*workflow.EntityNotExistsError); ok {
 		return nil
 	}

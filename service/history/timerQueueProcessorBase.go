@@ -447,6 +447,10 @@ func (t *timerQueueProcessorBase) processTaskOnce(notificationChan <-chan struct
 func (t *timerQueueProcessorBase) handleTaskError(scope int, startTime time.Time,
 	notificationChan <-chan struct{}, err error, logger bark.Logger) error {
 
+	if err == nil {
+		return nil
+	}
+
 	if _, ok := err.(*workflow.EntityNotExistsError); ok {
 		return nil
 	}
