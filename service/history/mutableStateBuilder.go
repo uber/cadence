@@ -403,11 +403,16 @@ func (e *mutableStateBuilder) CloseUpdateSession() (*mutableStateSessionUpdates,
 func (e *mutableStateBuilder) BufferReplicationTask(
 	request *h.ReplicateEventsRequest) error {
 	bt := &persistence.BufferedReplicationTask{
-		FirstEventID:  request.GetFirstEventId(),
-		NextEventID:   request.GetNextEventId(),
-		Version:       request.GetVersion(),
-		History:       request.History.Events,
-		NewRunHistory: request.NewRunHistory.Events,
+		FirstEventID: request.GetFirstEventId(),
+		NextEventID:  request.GetNextEventId(),
+		Version:      request.GetVersion(),
+	}
+
+	if request.History != nil {
+		bt.History = request.History.Events
+	}
+	if request.NewRunHistory != nil {
+		bt.NewRunHistory = request.NewRunHistory.Events
 	}
 
 	e.bufferedReplicationTasks[request.GetFirstEventId()] = bt
@@ -1066,8 +1071,8 @@ func (e *mutableStateBuilder) AddWorkflowExecutionStartedEventForContinueAsNew(d
 		WorkflowType:                        wType,
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(decisionTimeout),
 		ExecutionStartToCloseTimeoutSeconds: attributes.ExecutionStartToCloseTimeoutSeconds,
-		Input:                               attributes.Input,
-		RetryPolicy:                         attributes.RetryPolicy,
+		Input:       attributes.Input,
+		RetryPolicy: attributes.RetryPolicy,
 	}
 
 	req := &h.StartWorkflowExecutionRequest{
