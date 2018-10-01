@@ -854,6 +854,7 @@ type (
 	}
 
 	// AppendHistoryEventsRequest is used to append new events to workflow execution history
+	//Deprecated: use v2 API-AppendHistoryNode() instead
 	AppendHistoryEventsRequest struct {
 		DomainID          string
 		Execution         workflow.WorkflowExecution
@@ -868,6 +869,7 @@ type (
 	}
 
 	// GetWorkflowExecutionHistoryRequest is used to retrieve history of a workflow execution
+	//Deprecated: use v2 API-AppendHistoryNode() instead
 	GetWorkflowExecutionHistoryRequest struct {
 		DomainID  string
 		Execution workflow.WorkflowExecution
@@ -881,6 +883,7 @@ type (
 		NextPageToken []byte
 	}
 
+	// Deprecated: use V2 API instead-
 	// GetWorkflowExecutionHistoryResponse is the response to GetWorkflowExecutionHistoryRequest
 	GetWorkflowExecutionHistoryResponse struct {
 		History *workflow.History
@@ -894,6 +897,7 @@ type (
 	}
 
 	// DeleteWorkflowExecutionHistoryRequest is used to delete workflow execution history
+	//Deprecated: use v2 API-AppendHistoryNode() instead
 	DeleteWorkflowExecutionHistoryRequest struct {
 		DomainID  string
 		Execution workflow.WorkflowExecution
@@ -1057,6 +1061,107 @@ type (
 		MutableStateUpdateSessionStats *MutableStateUpdateSessionStats
 	}
 
+	// HistoryBranchRange represents a range of nodes of a branch
+	HistoryBranchRange struct {
+		// A UUID of a branch
+		BranchID string
+		// Beginning node of the branch, inclusive
+		BeginNodeID int64
+		// Ending node of the branch, exclusive
+		EndNodeID int64
+	}
+
+	// HistoryBranch represents a history branch
+	HistoryBranch struct {
+		// A UUID of a tree
+		TreeID string
+		// A UUID of a branch
+		BranchID string
+		// All the ancestors of the branch
+		Ancestors []HistoryBranchRange
+	}
+
+	// NewHistoryBranchRequest is used to create a new history branch
+	NewHistoryBranchRequest struct {
+		BranchInfo HistoryBranch
+	}
+
+	// AppendHistoryNodeRequest is used to append a history node
+	AppendHistoryNodeRequest struct {
+		// The branch to be appended
+		BranchInfo HistoryBranch
+		// The nodeID to be appended
+		NextNodeID int64
+		// The events to be appended
+		Events []*workflow.HistoryEvent
+		// Override the node if this true and existing TransactionID < requested TransactionID
+		Overwrite bool
+		// requested TransactionID for override
+		TransactionID int64
+	}
+
+	// ReadHistoryBranchRequest is used to read a history branch
+	ReadHistoryBranchRequest struct {
+		// The branch to be read
+		BranchInfo HistoryBranch
+		// Get the history nodes from MinNodeID. Inclusive.
+		MinNodeID int64
+		// Get the history nodes upto MaxNodeID.  Exclusive.
+		MaxNodeID int64
+		// Maximum number of history nodes per page
+		PageSize int
+		// Token to continue reading next page of history append transactions.  Pass in empty slice for first page
+		NextPageToken []byte
+	}
+
+	// ReadHistoryBranchResponse is the response to ReadHistoryBranchRequest
+	ReadHistoryBranchResponse struct {
+		// The branch to be read
+		BranchInfo HistoryBranch
+		// History events
+		History *workflow.History
+		// Token to read next page if there are more events beyond page size.
+		// Use this to set NextPageToken on ReadHistoryBranchRequest to read the next page.
+		NextPageToken []byte
+		// the MinNodeID of last loaded batch
+		LastMinNodeID int64
+	}
+
+	// ForkHistoryBranchRequest is used to fork a history branch
+	ForkHistoryBranchRequest struct {
+		// The branch to be fork
+		BranchInfo HistoryBranch
+		// The nodeID to fork from
+		ForkFromNodeID int64
+		// UUID of the new branch
+		NewBranchID string
+	}
+
+	// ForkHistoryBranchResponse is the response to ForkHistoryBranchRequest
+	ForkHistoryBranchResponse struct {
+		// branchInfo of the new branch
+		BranchInfo HistoryBranch
+	}
+
+	// DeleteHistoryBranchRequest is used to remove a history branch
+	DeleteHistoryBranchRequest struct {
+		// branch to be deleted
+		BranchInfo HistoryBranch
+	}
+
+	// GetHistoryTreeRequest is used to retrieve branch info of a history tree
+	GetHistoryTreeRequest struct {
+		// A UUID of a tree
+		TreeID string
+	}
+
+	// GetHistoryTreeResponse is a response to GetHistoryTreeRequest
+	GetHistoryTreeResponse struct {
+		// all branches of a tree
+		Branches []HistoryBranch
+	}
+
+	// Deprecated: uses V2 API-AppendHistoryNodeRequest
 	// AppendHistoryEventsResponse is response for AppendHistoryEventsRequest
 	AppendHistoryEventsResponse struct {
 		Size int
@@ -1124,11 +1229,34 @@ type (
 	HistoryManager interface {
 		Closeable
 		GetName() string
+
+		// The below 3 APIs are deprecated, they will be deleted after we fully migrate to new API
+
+		//Deprecated: use v2 API-AppendHistoryNode() instead
 		AppendHistoryEvents(request *AppendHistoryEventsRequest) (*AppendHistoryEventsResponse, error)
 		// GetWorkflowExecutionHistory retrieves the paginated list of history events for given execution
-		GetWorkflowExecutionHistory(request *GetWorkflowExecutionHistoryRequest) (*GetWorkflowExecutionHistoryResponse,
-			error)
+		//Deprecated: use v2 API-ReadHistoryBranch() instead
+		GetWorkflowExecutionHistory(request *GetWorkflowExecutionHistoryRequest) (*GetWorkflowExecutionHistoryResponse, error)
+		//Deprecated: use v2 API-DeleteHistoryBranch instead
 		DeleteWorkflowExecutionHistory(request *DeleteWorkflowExecutionHistoryRequest) error
+
+		// The below are history V2 APIs
+		// V2 regards history events growing as a tree, decoupled from workflow concepts
+		// For Cadence, treeID will be a UUID, shared for the same workflow_id,
+		//     a workflow run may have one or more than one branchID
+		//     NodeID is the same as EventID, except that it will grow continuously in a branch.
+		// NewHistoryBranch creates a new branch from tree root. If tree doesn't exist, then create one. Return error if the branch already exists.
+		NewHistoryBranch(request *NewHistoryBranchRequest) error
+		// AppendHistoryNode add(or override) a node to a history branch
+		AppendHistoryNode(request *AppendHistoryNodeRequest) error
+		// ReadHistoryBranch returns history node data for a branch
+		ReadHistoryBranch(request *ReadHistoryBranchRequest) (*ReadHistoryBranchResponse, error)
+		// ForkHistoryBranch forks a new branch from a old branch
+		ForkHistoryBranch(request *ForkHistoryBranchRequest) (*ForkHistoryBranchResponse, error)
+		// DeleteHistoryBranch removes a branch
+		DeleteHistoryBranch(request *DeleteHistoryBranchRequest) error
+		// GetHistoryTree returns all branch information of a tree
+		GetHistoryTree(request *GetHistoryTreeRequest) (*GetHistoryTreeResponse, error)
 	}
 
 	// MetadataManager is used to manage metadata CRUD for domain entities

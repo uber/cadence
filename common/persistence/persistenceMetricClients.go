@@ -892,3 +892,75 @@ func (p *visibilityPersistenceClient) updateErrorMetric(scope int, err error) {
 func (p *visibilityPersistenceClient) Close() {
 	p.persistence.Close()
 }
+
+// NewHistoryBranch creates a new branch from tree root. If tree doesn't exist, then create one. Return error if the branch already exists.
+func (p *historyPersistenceClient) NewHistoryBranch(request *NewHistoryBranchRequest) error {
+	p.metricClient.IncCounter(metrics.PersistenceNewHistoryBranchScope, metrics.PersistenceRequests)
+	sw := p.metricClient.StartTimer(metrics.PersistenceNewHistoryBranchScope, metrics.PersistenceLatency)
+	err := p.persistence.NewHistoryBranch(request)
+	sw.Stop()
+	if err != nil {
+		p.updateErrorMetric(metrics.PersistenceNewHistoryBranchScope, err)
+	}
+	return err
+}
+
+// AppendHistoryNode add(or override) a node to a history branch
+func (p *historyPersistenceClient) AppendHistoryNode(request *AppendHistoryNodeRequest) error {
+	p.metricClient.IncCounter(metrics.PersistenceAppendHistoryNodeScope, metrics.PersistenceRequests)
+	sw := p.metricClient.StartTimer(metrics.PersistenceAppendHistoryNodeScope, metrics.PersistenceLatency)
+	err := p.persistence.AppendHistoryNode(request)
+	sw.Stop()
+	if err != nil {
+		p.updateErrorMetric(metrics.PersistenceAppendHistoryNodeScope, err)
+	}
+	return err
+}
+
+// ReadHistoryBranch returns history node data for a branch
+func (p *historyPersistenceClient) ReadHistoryBranch(request *ReadHistoryBranchRequest) (*ReadHistoryBranchResponse, error) {
+	p.metricClient.IncCounter(metrics.PersistenceReadHistoryBranchScope, metrics.PersistenceRequests)
+	sw := p.metricClient.StartTimer(metrics.PersistenceReadHistoryBranchScope, metrics.PersistenceLatency)
+	response, err := p.persistence.ReadHistoryBranch(request)
+	sw.Stop()
+	if err != nil {
+		p.updateErrorMetric(metrics.PersistenceReadHistoryBranchScope, err)
+	}
+	return response, err
+}
+
+// ForkHistoryBranch forks a new branch from a old branch
+func (p *historyPersistenceClient) ForkHistoryBranch(request *ForkHistoryBranchRequest) (*ForkHistoryBranchResponse, error) {
+	p.metricClient.IncCounter(metrics.PersistenceForkHistoryBranchScope, metrics.PersistenceRequests)
+	sw := p.metricClient.StartTimer(metrics.PersistenceForkHistoryBranchScope, metrics.PersistenceLatency)
+	response, err := p.persistence.ForkHistoryBranch(request)
+	sw.Stop()
+	if err != nil {
+		p.updateErrorMetric(metrics.PersistenceForkHistoryBranchScope, err)
+	}
+	return response, err
+}
+
+// DeleteHistoryBranch removes a branch
+func (p *historyPersistenceClient) DeleteHistoryBranch(request *DeleteHistoryBranchRequest) error {
+	p.metricClient.IncCounter(metrics.PersistenceDeleteHistoryBranchScope, metrics.PersistenceRequests)
+	sw := p.metricClient.StartTimer(metrics.PersistenceDeleteHistoryBranchScope, metrics.PersistenceLatency)
+	err := p.persistence.DeleteHistoryBranch(request)
+	sw.Stop()
+	if err != nil {
+		p.updateErrorMetric(metrics.PersistenceDeleteHistoryBranchScope, err)
+	}
+	return err
+}
+
+// GetHistoryTree returns all branch information of a tree
+func (p *historyPersistenceClient) GetHistoryTree(request *GetHistoryTreeRequest) (*GetHistoryTreeResponse, error) {
+	p.metricClient.IncCounter(metrics.PersistenceGetHistoryTreeScope, metrics.PersistenceRequests)
+	sw := p.metricClient.StartTimer(metrics.PersistenceGetHistoryTreeScope, metrics.PersistenceLatency)
+	response, err := p.persistence.GetHistoryTree(request)
+	sw.Stop()
+	if err != nil {
+		p.updateErrorMetric(metrics.PersistenceGetHistoryTreeScope, err)
+	}
+	return response, err
+}
