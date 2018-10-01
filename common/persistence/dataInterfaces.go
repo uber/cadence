@@ -1112,6 +1112,8 @@ type (
 		PageSize int
 		// Token to continue reading next page of history append transactions.  Pass in empty slice for first page
 		NextPageToken []byte
+		// Starting version of the events returned
+		LastEventBatchVersion int64
 	}
 
 	// ReadHistoryBranchResponse is the response to ReadHistoryBranchRequest
@@ -1119,7 +1121,7 @@ type (
 		// The branch to be read
 		BranchInfo HistoryBranch
 		// History events
-		History *workflow.History
+		History []*workflow.HistoryEvent
 		// Token to read next page if there are more events beyond page size.
 		// Use this to set NextPageToken on ReadHistoryBranchRequest to read the next page.
 		NextPageToken []byte

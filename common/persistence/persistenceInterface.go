@@ -79,10 +79,31 @@ type (
 		Closeable
 		GetName() string
 		//The below two APIs are related to serialization/deserialization
-		AppendHistoryEvents(request *InternalAppendHistoryEventsRequest) error
-		GetWorkflowExecutionHistory(request *InternalGetWorkflowExecutionHistoryRequest) (*InternalGetWorkflowExecutionHistoryResponse, error)
 
+		//DEPRECATED in favor of V2 APIs-AppendHistoryNode
+		AppendHistoryEvents(request *InternalAppendHistoryEventsRequest) error
+		//DEPRECATED in favor of V2 APIs-ReadHistoryBranch
+		GetWorkflowExecutionHistory(request *InternalGetWorkflowExecutionHistoryRequest) (*InternalGetWorkflowExecutionHistoryResponse, error)
+		//DEPRECATED in favor of V2 APIs-DeleteHistoryBranch
 		DeleteWorkflowExecutionHistory(request *DeleteWorkflowExecutionHistoryRequest) error
+
+		// The below are history V2 APIs
+		// V2 regards history events growing as a tree, decoupled from workflow concepts
+		// For Cadence, treeID will be a UUID, shared for the same workflow_id,
+		//     a workflow run may have one or more than one branchID
+		//     NodeID is the same as EventID, except that it will grow continuously in a branch.
+		// NewHistoryBranch creates a new branch from tree root. If tree doesn't exist, then create one. Return error if the branch already exists.
+		NewHistoryBranch(request *NewHistoryBranchRequest) error
+		// AppendHistoryNode add(or override) a node to a history branch
+		AppendHistoryNode(request *InternalAppendHistoryNodeRequest) error
+		// ReadHistoryBranch returns history node data for a branch
+		ReadHistoryBranch(request *InternalReadHistoryBranchRequest) (*InternalReadHistoryBranchResponse, error)
+		// ForkHistoryBranch forks a new branch from a old branch
+		ForkHistoryBranch(request *ForkHistoryBranchRequest) (*ForkHistoryBranchResponse, error)
+		// DeleteHistoryBranch removes a branch
+		DeleteHistoryBranch(request *DeleteHistoryBranchRequest) error
+		// GetHistoryTree returns all branch information of a tree
+		GetHistoryTree(request *GetHistoryTreeRequest) (*GetHistoryTreeResponse, error)
 	}
 
 	// DataBlob represents a blob for any binary data.
@@ -273,6 +294,20 @@ type (
 		Overwrite         bool
 	}
 
+	// InternalAppendHistoryNodeRequest is used to append a history node
+	InternalAppendHistoryNodeRequest struct {
+		// The branch to be appended
+		BranchInfo HistoryBranch
+		// The nodeID to be appended
+		NextNodeID int64
+		// The events to be appended
+		Events *DataBlob
+		// Override the node if this true and existing TransactionID < requested TransactionID
+		Overwrite bool
+		// requested TransactionID for override
+		TransactionID int64
+	}
+
 	// InternalGetWorkflowExecutionResponse is the response to GetworkflowExecutionRequest for Persistence Interface
 	InternalGetWorkflowExecutionResponse struct {
 		State *InternalWorkflowMutableState
@@ -303,6 +338,33 @@ type (
 		NextPageToken []byte
 		// an extra field passing to DataInterface
 		LastEventBatchVersion int64
+	}
+
+	// InternalReadHistoryBranchRequest is used to read a history branch
+	InternalReadHistoryBranchRequest struct {
+		// The branch to be read
+		BranchInfo HistoryBranch
+		// Get the history nodes from MinNodeID. Inclusive.
+		MinNodeID int64
+		// Get the history nodes upto MaxNodeID.  Exclusive.
+		MaxNodeID int64
+		// Maximum number of history nodes per page
+		PageSize int
+		// Token to continue reading next page of history append transactions.  Pass in empty slice for first page
+		NextPageToken []byte
+	}
+
+	// InternalReadHistoryBranchResponse is the response to ReadHistoryBranchRequest
+	InternalReadHistoryBranchResponse struct {
+		// The branch to be read
+		BranchInfo HistoryBranch
+		// History events
+		History []*DataBlob
+		// Token to read next page if there are more events beyond page size.
+		// Use this to set NextPageToken on ReadHistoryBranchRequest to read the next page.
+		NextPageToken []byte
+		// the MinNodeID of last loaded batch
+		LastMinNodeID int64
 	}
 )
 
