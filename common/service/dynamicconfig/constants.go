@@ -129,7 +129,7 @@ var keys = map[Key]string{
 	MaximumBufferedEventsBatch:                            "history.maximumBufferedEventsBatch",
 	ShardUpdateMinInterval:                                "history.shardUpdateMinInterval",
 	ShardSyncMinInterval:                                  "history.shardSyncMinInterval",
-	EventEncodingPropertyFilteredByDomainKey:              "history.eventEncodingPropertyFilteredByDomainKey",
+	DefaultEventEncoding:                                  "history.defaultEventEncoding",
 
 	// worker settings
 	WorkerPersistenceMaxQPS: "worker.persistenceMaxQPS",
@@ -309,8 +309,8 @@ const (
 	ShardUpdateMinInterval
 	// ShardSyncMinInterval is the minimal time interval which the shard info should be sync to remote
 	ShardSyncMinInterval
-	// EventEncodingPropertyFilteredByDomainKey is the encoding type for history events
-	EventEncodingPropertyFilteredByDomainKey
+	// DefaultEventEncoding is the encoding type for history events
+	DefaultEventEncoding
 	// key for histoworkerry
 
 	// WorkerPersistenceMaxQPS is the max qps worker host can query DB

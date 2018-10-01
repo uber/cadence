@@ -179,7 +179,7 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int) *Config {
 		LongPollExpirationInterval: dc.GetDurationPropertyFilteredByDomain(
 			dynamicconfig.HistoryLongPollExpirationInterval, time.Second*20,
 		),
-		EventEncodingType: dc.GetStringPropertyFnWithDomainFilter(dynamicconfig.EventEncodingPropertyFilteredByDomainKey, string(common.EncodingTypeJSON)),
+		EventEncodingType: dc.GetStringPropertyFnWithDomainFilter(dynamicconfig.DefaultEventEncoding, string(common.EncodingTypeJSON)),
 	}
 }
 
