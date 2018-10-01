@@ -36,8 +36,6 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 
-	"runtime/debug"
-
 	"github.com/uber-common/bark"
 )
 
@@ -352,7 +350,6 @@ func (c *domainCache) loadDomain(name string, id string) (*persistence.GetDomain
 			// if this actually happen, just discard the result
 			// since we need to guarantee that domainNotificationVersion > all notification versions
 			// inside the cache
-			debug.PrintStack()
 			return nil, &workflow.EntityNotExistsError{}
 		}
 	}
