@@ -3,6 +3,6 @@
   "MinCompatibleVersion": "0.12",
   "Description": "Support history events v2",
   "SchemaUpdateCqlFiles": [
-    "event_v2.cql"
+    "events_v2.cql"
   ]
 }
