@@ -288,14 +288,15 @@ func (p *queueProcessorBase) processTaskAndAck(notificationChan <-chan struct{},
 		default:
 			err = backoff.Retry(op, p.retryPolicy, retryCondition)
 			if err == nil {
+				p.metricsClient.RecordTimer(scope, metrics.TaskAttemptTimer, time.Duration(attempt))
 				p.ackTaskOnce(task, scope)
 				return
 			}
 
 			attempt++
-			p.metricsClient.IncCounter(scope, metrics.TaskRetryCounter)
 
 			if attempt >= p.options.MaxRetryCount() {
+				p.metricsClient.RecordTimer(scope, metrics.TaskAttemptTimer, time.Duration(attempt))
 				switch task.(type) {
 				case *persistence.TransferTaskInfo:
 					logging.LogCriticalErrorEvent(logger, "Critical error processing transfer task, retrying.", err)
@@ -335,6 +336,7 @@ func (p *queueProcessorBase) handleTaskError(scope int, startTime time.Time,
 
 	// this is a transient error
 	if err == ErrTaskRetry {
+		p.metricsClient.IncCounter(scope, metrics.TaskStandbyRetryCounter)
 		<-notificationChan
 		return err
 	}

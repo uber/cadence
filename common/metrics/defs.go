@@ -762,7 +762,8 @@ const (
 	TaskRequests = iota + NumCommonMetrics
 	TaskFailures
 	TaskDiscarded
-	TaskRetryCounter
+	TaskAttemptTimer
+	TaskStandbyRetryCounter
 	TaskNotActiveCounter
 	TaskLimitExceededCounter
 	TaskBatchCompleteCounter
@@ -928,9 +929,10 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 	Frontend: {},
 	History: {
 		TaskRequests:                                 {metricName: "task.requests", metricType: Counter},
+		TaskAttemptTimer:                             {metricName: "task.attempt", metricType: Timer},
 		TaskFailures:                                 {metricName: "task.errors", metricType: Counter},
 		TaskDiscarded:                                {metricName: "task.errors.discarded", metricType: Counter},
-		TaskRetryCounter:                             {metricName: "task.errors.standby-retry-counter", metricType: Counter},
+		TaskStandbyRetryCounter:                      {metricName: "task.errors.standby-retry-counter", metricType: Counter},
 		TaskNotActiveCounter:                         {metricName: "task.errors.not-active-counter", metricType: Counter},
 		TaskLimitExceededCounter:                     {metricName: "task.errors.limit-exceeded-counter", metricType: Counter},
 		TaskProcessingLatency:                        {metricName: "task.latency.processing", metricType: Timer},

@@ -415,14 +415,15 @@ func (t *timerQueueProcessorBase) processTaskAndAck(notificationChan <-chan stru
 		default:
 			err = backoff.Retry(op, t.retryPolicy, retryCondition)
 			if err == nil {
+				t.metricsClient.RecordTimer(scope, metrics.TaskAttemptTimer, time.Duration(attempt))
 				t.ackTaskOnce(task, scope)
 				return
 			}
 
 			attempt++
-			t.metricsClient.IncCounter(scope, metrics.TaskRetryCounter)
 
 			if attempt >= t.config.TimerTaskMaxRetryCount() {
+				t.metricsClient.RecordTimer(scope, metrics.TaskAttemptTimer, time.Duration(attempt))
 				logging.LogCriticalErrorEvent(logger, "Critical error processing timer task, retrying.", err)
 			}
 		}
@@ -457,6 +458,7 @@ func (t *timerQueueProcessorBase) handleTaskError(scope int, startTime time.Time
 
 	// this is a transient error
 	if err == ErrTaskRetry {
+		t.metricsClient.IncCounter(scope, metrics.TaskStandbyRetryCounter)
 		<-notificationChan
 		return err
 	}
