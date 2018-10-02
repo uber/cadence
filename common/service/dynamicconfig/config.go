@@ -24,8 +24,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/uber-common/bark"
 	"fmt"
+	"github.com/uber-common/bark"
 )
 
 // NewCollection creates a new collection
@@ -54,8 +54,8 @@ func (c *Collection) logValue(key Key, value, defaultValue interface{}) {
 	_, loaded := c.keys.LoadOrStore(k, struct{}{})
 	if !loaded {
 		c.logger.WithFields(bark.Fields{
-			"configName": key.String(),
-			"configVal": fmt.Sprintf("%v", value),
+			"configName":       key.String(),
+			"configVal":        fmt.Sprintf("%v", value),
 			"configDefaultVal": fmt.Sprintf("%v", defaultValue),
 		}).Info("Get dynamic config")
 	}
