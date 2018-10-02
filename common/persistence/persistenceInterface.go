@@ -301,7 +301,7 @@ type (
 		// The nodeID to be appended
 		NextNodeID int64
 		// The events to be appended
-		Events *DataBlob
+		Events []*DataBlob
 		// Override the node if this true and existing TransactionID < requested TransactionID
 		Overwrite bool
 		// requested TransactionID for override

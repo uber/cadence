@@ -61,7 +61,66 @@ func (m *historyManagerImpl) GetName() string {
 	return m.persistence.GetName()
 }
 
+// NewHistoryBranch creates a new branch from tree root. If tree doesn't exist, then create one. Return error if the branch already exists.
+func (m *historyManagerImpl) NewHistoryBranch(request *NewHistoryBranchRequest) error {
+	return m.persistence.NewHistoryBranch(request)
+}
+
+// AppendHistoryNode add(or override) a node to a history branch
+func (m *historyManagerImpl) AppendHistoryNode(request *AppendHistoryNodeRequest) (*AppendHistoryNodeResponse, error) {
+	if len(request.Events) == 0 {
+		return nil, fmt.Errorf("events to be appended cannot be empty")
+	}
+	eventBlobs := []*DataBlob{}
+	size := 0
+	for _, e := range request.Events {
+		b, err := m.serializer.SerializeEvent(e, request.Encoding)
+		if err != nil {
+			return nil, err
+		}
+		eventBlobs = append(eventBlobs, b)
+		size += len(b.Data)
+	}
+	resp := &AppendHistoryNodeResponse{Size: size}
+	return resp, m.persistence.AppendHistoryNode(&InternalAppendHistoryNodeRequest{
+		BranchInfo:    request.BranchInfo,
+		NextNodeID:    request.NextNodeID,
+		Events:        eventBlobs,
+		Overwrite:     request.Overwrite,
+		TransactionID: request.TransactionID,
+	})
+}
+
+// ReadHistoryBranch returns history node data for a branch
+func (m *historyManagerImpl) ReadHistoryBranch(request *ReadHistoryBranchRequest) (*ReadHistoryBranchResponse, error) {
+	//TODO
+	//events := []*workflow.HistoryEvent{}
+	//size := 0
+	return nil, nil
+}
+
+// ForkHistoryBranch forks a new branch from a old branch
+func (m *historyManagerImpl) ForkHistoryBranch(request *ForkHistoryBranchRequest) (*ForkHistoryBranchResponse, error) {
+	//TODO
+	return nil, nil
+}
+
+// DeleteHistoryBranch removes a branch
+func (m *historyManagerImpl) DeleteHistoryBranch(request *DeleteHistoryBranchRequest) error {
+	//TODO
+	return nil
+}
+
+// GetHistoryTree returns all branch information of a tree
+func (m *historyManagerImpl) GetHistoryTree(request *GetHistoryTreeRequest) (*GetHistoryTreeResponse, error) {
+	//TODO
+	return nil, nil
+}
+
 func (m *historyManagerImpl) AppendHistoryEvents(request *AppendHistoryEventsRequest) (*AppendHistoryEventsResponse, error) {
+	if len(request.Events) == 0 {
+		return nil, fmt.Errorf("events to be appended cannot be empty")
+	}
 	eventsData, err := m.serializer.SerializeBatchEvents(request.Events, request.Encoding)
 	if err != nil {
 		return nil, err

@@ -97,6 +97,42 @@ func newHistoryPersistence(cfg config.SQL, logger bark.Logger) (p.HistoryStore, 
 	}, nil
 }
 
+// NewHistoryBranch creates a new branch from tree root. If tree doesn't exist, then create one. Return error if the branch already exists.
+func (m *sqlHistoryManager) NewHistoryBranch(request *p.NewHistoryBranchRequest) error {
+	//TODO
+	return nil
+}
+
+// AppendHistoryNode add(or override) a node to a history branch
+func (m *sqlHistoryManager) AppendHistoryNode(request *p.InternalAppendHistoryNodeRequest) error {
+	//TODO
+	return nil
+}
+
+// ReadHistoryBranch returns history node data for a branch
+func (m *sqlHistoryManager) ReadHistoryBranch(request *p.InternalReadHistoryBranchRequest) (*p.InternalReadHistoryBranchResponse, error) {
+	//TODO
+	return nil, nil
+}
+
+// ForkHistoryBranch forks a new branch from a old branch
+func (m *sqlHistoryManager) ForkHistoryBranch(request *p.ForkHistoryBranchRequest) (*p.ForkHistoryBranchResponse, error) {
+	//TODO
+	return nil, nil
+}
+
+// DeleteHistoryBranch removes a branch
+func (m *sqlHistoryManager) DeleteHistoryBranch(request *p.DeleteHistoryBranchRequest) error {
+	//TODO
+	return nil
+}
+
+// GetHistoryTree returns all branch information of a tree
+func (m *sqlHistoryManager) GetHistoryTree(request *p.GetHistoryTreeRequest) (*p.GetHistoryTreeResponse, error) {
+	//TODO
+	return nil, nil
+}
+
 func (m *sqlHistoryManager) AppendHistoryEvents(request *p.InternalAppendHistoryEventsRequest) error {
 	arg := &eventsRow{
 		DomainID:     request.DomainID,

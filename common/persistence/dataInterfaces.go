@@ -1098,6 +1098,13 @@ type (
 		Overwrite bool
 		// requested TransactionID for override
 		TransactionID int64
+		//Optional. It is to suggest a binary encoding type to serialize history events
+		Encoding common.EncodingType
+	}
+
+	// AppendHistoryNodeResponse is a response to AppendHistoryNodeRequest
+	AppendHistoryNodeResponse struct {
+		Size int
 	}
 
 	// ReadHistoryBranchRequest is used to read a history branch
@@ -1127,6 +1134,8 @@ type (
 		NextPageToken []byte
 		// the MinNodeID of last loaded batch
 		LastMinNodeID int64
+		// Size of history read from store
+		Size int
 	}
 
 	// ForkHistoryBranchRequest is used to fork a history branch
@@ -1250,7 +1259,7 @@ type (
 		// NewHistoryBranch creates a new branch from tree root. If tree doesn't exist, then create one. Return error if the branch already exists.
 		NewHistoryBranch(request *NewHistoryBranchRequest) error
 		// AppendHistoryNode add(or override) a node to a history branch
-		AppendHistoryNode(request *AppendHistoryNodeRequest) error
+		AppendHistoryNode(request *AppendHistoryNodeRequest) (*AppendHistoryNodeResponse, error)
 		// ReadHistoryBranch returns history node data for a branch
 		ReadHistoryBranch(request *ReadHistoryBranchRequest) (*ReadHistoryBranchResponse, error)
 		// ForkHistoryBranch forks a new branch from a old branch

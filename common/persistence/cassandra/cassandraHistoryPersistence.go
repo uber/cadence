@@ -87,6 +87,42 @@ func (h *cassandraHistoryPersistence) Close() {
 	}
 }
 
+// NewHistoryBranch creates a new branch from tree root. If tree doesn't exist, then create one. Return error if the branch already exists.
+func (h *cassandraHistoryPersistence) NewHistoryBranch(request *p.NewHistoryBranchRequest) error {
+	//TODO
+	return nil
+}
+
+// AppendHistoryNode add(or override) a node to a history branch
+func (h *cassandraHistoryPersistence) AppendHistoryNode(request *p.InternalAppendHistoryNodeRequest) error {
+	//TODO
+	return nil
+}
+
+// ReadHistoryBranch returns history node data for a branch
+func (h *cassandraHistoryPersistence) ReadHistoryBranch(request *p.InternalReadHistoryBranchRequest) (*p.InternalReadHistoryBranchResponse, error) {
+	//TODO
+	return nil, nil
+}
+
+// ForkHistoryBranch forks a new branch from a old branch
+func (h *cassandraHistoryPersistence) ForkHistoryBranch(request *p.ForkHistoryBranchRequest) (*p.ForkHistoryBranchResponse, error) {
+	//TODO
+	return nil, nil
+}
+
+// DeleteHistoryBranch removes a branch
+func (h *cassandraHistoryPersistence) DeleteHistoryBranch(request *p.DeleteHistoryBranchRequest) error {
+	//TODO
+	return nil
+}
+
+// GetHistoryTree returns all branch information of a tree
+func (h *cassandraHistoryPersistence) GetHistoryTree(request *p.GetHistoryTreeRequest) (*p.GetHistoryTreeResponse, error) {
+	//TODO
+	return nil, nil
+}
+
 func (h *cassandraHistoryPersistence) AppendHistoryEvents(request *p.InternalAppendHistoryEventsRequest) error {
 	var query *gocql.Query
 
