@@ -883,8 +883,8 @@ type (
 		NextPageToken []byte
 	}
 
-	// Deprecated: use V2 API instead-
 	// GetWorkflowExecutionHistoryResponse is the response to GetWorkflowExecutionHistoryRequest
+	// Deprecated: use V2 API instead-ReadHistoryBranch()
 	GetWorkflowExecutionHistoryResponse struct {
 		History *workflow.History
 		// Token to read next page if there are more events beyond page size.
@@ -1172,8 +1172,8 @@ type (
 		Branches []HistoryBranch
 	}
 
-	// Deprecated: uses V2 API-AppendHistoryNodeRequest
 	// AppendHistoryEventsResponse is response for AppendHistoryEventsRequest
+	// Deprecated: uses V2 API-AppendHistoryNodeRequest
 	AppendHistoryEventsResponse struct {
 		Size int
 	}
