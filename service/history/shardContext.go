@@ -69,7 +69,7 @@ type (
 		UpdateDomainNotificationVersion(domainNotificationVersion int64) error
 		CreateWorkflowExecution(request *persistence.CreateWorkflowExecutionRequest) (
 			*persistence.CreateWorkflowExecutionResponse, error)
-		UpdateWorkflowExecution(request *persistence.UpdateWorkflowExecutionRequest) error
+		UpdateWorkflowExecution(request *persistence.UpdateWorkflowExecutionRequest) (*persistence.UpdateWorkflowExecutionResponse, error)
 		ResetMutableState(request *persistence.ResetMutableStateRequest) error
 		AppendHistoryEvents(request *persistence.AppendHistoryEventsRequest) (int, error)
 		NotifyNewHistoryEvent(event *historyEventNotification) error
@@ -407,9 +407,23 @@ Create_Loop:
 	return nil, ErrMaxAttemptsExceeded
 }
 
-func (s *shardContextImpl) UpdateWorkflowExecution(request *persistence.UpdateWorkflowExecutionRequest) error {
+func (s *shardContextImpl) getDefaultEncoding(domainID string) (common.EncodingType, error) {
+	dm, err := s.domainCache.GetDomainByID(domainID)
+	if err != nil {
+		return "", err
+	}
+	return common.EncodingType(s.config.EventEncodingType(dm.GetInfo().Name)), nil
+}
+
+func (s *shardContextImpl) UpdateWorkflowExecution(request *persistence.UpdateWorkflowExecutionRequest) (*persistence.UpdateWorkflowExecutionResponse, error) {
 	s.Lock()
 	defer s.Unlock()
+
+	encoding, err := s.getDefaultEncoding(request.ExecutionInfo.DomainID)
+	if err != nil {
+		return nil, err
+	}
+	request.Encoding = encoding
 
 	transferMaxReadLevel := int64(0)
 	// assign IDs for the transfer tasks
@@ -418,7 +432,7 @@ func (s *shardContextImpl) UpdateWorkflowExecution(request *persistence.UpdateWo
 	for _, task := range request.TransferTasks {
 		id, err := s.getNextTransferTaskIDLocked()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		s.logger.Debugf("Assigning transfer task ID: %v", id)
 		task.SetTaskID(id)
@@ -428,7 +442,7 @@ func (s *shardContextImpl) UpdateWorkflowExecution(request *persistence.UpdateWo
 	for _, task := range request.ReplicationTasks {
 		id, err := s.getNextTransferTaskIDLocked()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		s.logger.Debugf("Assigning replication task ID: %v", id)
 		task.SetTaskID(id)
@@ -439,7 +453,7 @@ func (s *shardContextImpl) UpdateWorkflowExecution(request *persistence.UpdateWo
 		for _, task := range request.ContinueAsNew.TransferTasks {
 			id, err := s.getNextTransferTaskIDLocked()
 			if err != nil {
-				return err
+				return nil, err
 			}
 			s.logger.Debugf("Assigning transfer task ID: %v", id)
 			task.SetTaskID(id)
@@ -449,7 +463,7 @@ func (s *shardContextImpl) UpdateWorkflowExecution(request *persistence.UpdateWo
 		for _, task := range request.ContinueAsNew.ReplicationTasks {
 			id, err := s.getNextTransferTaskIDLocked()
 			if err != nil {
-				return err
+				return nil, err
 			}
 			s.logger.Debugf("Assigning replication task ID: %v", id)
 			task.SetTaskID(id)
@@ -464,7 +478,7 @@ Update_Loop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
 		currentRangeID := s.getRangeID()
 		request.RangeID = currentRangeID
-		err := s.executionManager.UpdateWorkflowExecution(request)
+		resp, err := s.executionManager.UpdateWorkflowExecution(request)
 		if err != nil {
 			switch err.(type) {
 			case *persistence.ConditionFailedError,
@@ -499,15 +513,21 @@ Update_Loop:
 			}
 		}
 
-		return err
+		return resp, err
 	}
 
-	return ErrMaxAttemptsExceeded
+	return nil, ErrMaxAttemptsExceeded
 }
 
 func (s *shardContextImpl) ResetMutableState(request *persistence.ResetMutableStateRequest) error {
 	s.Lock()
 	defer s.Unlock()
+
+	encoding, err := s.getDefaultEncoding(request.ExecutionInfo.DomainID)
+	if err != nil {
+		return err
+	}
+	request.Encoding = encoding
 
 Reset_Loop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
@@ -555,21 +575,34 @@ Reset_Loop:
 }
 
 func (s *shardContextImpl) AppendHistoryEvents(request *persistence.AppendHistoryEventsRequest) (int, error) {
-	size := 0
-	if request.Events != nil {
-		size = len(request.Events.Data)
-		s.metricsClient.RecordTimer(metrics.SessionSizeStatsScope, metrics.HistorySize, time.Duration(size))
+	encoding, err := s.getDefaultEncoding(request.DomainID)
+	if err != nil {
+		return 0, err
 	}
+	request.Encoding = encoding
+
+	size := 0
+	defer func() {
+		s.metricsClient.RecordTimer(metrics.SessionSizeStatsScope, metrics.HistorySize, time.Duration(size))
+	}()
 
 	// No need to lock context here, as we can write concurrently to append history events
 	currentRangeID := atomic.LoadInt64(&s.rangeID)
 	request.RangeID = currentRangeID
-	err0 := s.historyMgr.AppendHistoryEvents(request)
+	resp, err0 := s.historyMgr.AppendHistoryEvents(request)
+	if resp != nil {
+		size = resp.Size
+	}
+
 	if err0 != nil {
 		if _, ok := err0.(*persistence.ConditionFailedError); ok {
 			// Inserting a new event failed, lets try to overwrite the tail
 			request.Overwrite = true
-			return size, s.historyMgr.AppendHistoryEvents(request)
+			resp, err1 := s.historyMgr.AppendHistoryEvents(request)
+			if resp != nil {
+				size = resp.Size
+			}
+			return size, err1
 		}
 	}
 
