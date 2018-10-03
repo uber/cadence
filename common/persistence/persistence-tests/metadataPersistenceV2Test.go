@@ -164,7 +164,7 @@ func (m *MetadataPersistenceSuiteV2) TestCreateDomain() {
 		failoverVersion,
 	)
 	m.Error(err2)
-	m.IsType(&gen.DomainAlreadyExistsError{}, err2, "error=%v", err2)
+	m.IsType(&gen.DomainAlreadyExistsError{}, err2)
 	m.Nil(resp2)
 }
 

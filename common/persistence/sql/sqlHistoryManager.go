@@ -134,7 +134,7 @@ func (m *sqlHistoryManager) GetWorkflowExecutionHistory(request *p.InternalGetWo
 	*p.InternalGetWorkflowExecutionHistoryResponse, error) {
 
 	token := newHistoryPageToken(request.FirstEventID - 1)
-	if request.NextPageToken != nil {
+	if request.NextPageToken != nil && len(request.NextPageToken) > 0 {
 		if err := token.deserialize(request.NextPageToken); err != nil {
 			return nil, &workflow.InternalServiceError{
 				Message: fmt.Sprintf("invalid next page token %v", request.NextPageToken)}

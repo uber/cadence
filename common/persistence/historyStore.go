@@ -172,7 +172,7 @@ func (m *historyManagerImpl) deserializeToken(request *GetWorkflowExecutionHisto
 }
 
 func (m *historyManagerImpl) serializeToken(token *historyToken, nextEventID int64) ([]byte, error) {
-	if token.LastEventID+1 >= nextEventID || token == nil {
+	if token.LastEventID+1 >= nextEventID || len(token.Data) == 0 {
 		return nil, nil
 	}
 	data, err := json.Marshal(token)
