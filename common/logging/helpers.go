@@ -59,7 +59,7 @@ func LogOperationFailedEvent(logger bark.Logger, msg string, err error) {
 // LogOperationStuckEvent is used to log task processing stuck
 func LogOperationStuckEvent(logger bark.Logger, msg string, err error) {
 	logger.WithFields(bark.Fields{
-		TagWorkflowEventID: OperationPanic,
+		TagWorkflowEventID: OperationStuck,
 		TagWorkflowErr:     err,
 	}).Error(msg)
 }

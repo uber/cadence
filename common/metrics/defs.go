@@ -760,6 +760,7 @@ const (
 // History Metrics enum
 const (
 	TaskRequests = iota + NumCommonMetrics
+	TaskLatency
 	TaskFailures
 	TaskDiscarded
 	TaskAttemptTimer
@@ -929,6 +930,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 	Frontend: {},
 	History: {
 		TaskRequests:                                 {metricName: "task.requests", metricType: Counter},
+		TaskLatency:                                  {metricName: "task.latency", metricType: Timer},
 		TaskAttemptTimer:                             {metricName: "task.attempt", metricType: Timer},
 		TaskFailures:                                 {metricName: "task.errors", metricType: Counter},
 		TaskDiscarded:                                {metricName: "task.errors.discarded", metricType: Counter},
