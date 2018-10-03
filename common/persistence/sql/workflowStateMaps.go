@@ -1005,6 +1005,20 @@ func deleteSignalInfoMap(tx *sqlx.Tx, shardID int, domainID, workflowID, runID s
 	return nil
 }
 
+func deleteBufferedReplicationTasksMap(tx *sqlx.Tx, shardID int, domainID, workflowID, runID string) error {
+	if _, err := tx.NamedExec(deleteBufferedReplicationTasksMapSQLQuery, &requestCancelInfoMapsPrimaryKey{
+		ShardID:    int64(shardID),
+		DomainID:   domainID,
+		WorkflowID: workflowID,
+		RunID:      runID,
+	}); err != nil {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("Failed to delete buffered replication tasks map. Error: %v", err),
+		}
+	}
+	return nil
+}
+
 var (
 	bufferedReplicationTasksMapColumns = []string{
 		"version",

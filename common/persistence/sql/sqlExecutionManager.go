@@ -149,7 +149,6 @@ type (
 		DomainID     string
 		WorkflowID   string
 		RunID        string
-		BufferedID   int64
 		Data         []byte
 		DataEncoding string
 		DataVersion  int64
@@ -463,14 +462,14 @@ workflow_id = ? AND
 run_id = ?
 FOR UPDATE`
 
-	bufferedEventsColumns     = `shard_id, domain_id, workflow_id, run_id, buffered_id,data, data_encoding, data_version`
+	bufferedEventsColumns     = `shard_id, domain_id, workflow_id, run_id, data, data_encoding, data_version`
 	insertBufferedEventsQuery = `INSERT INTO buffered_events(` + bufferedEventsColumns + `)
-VALUES (:shard_id, :domain_id, workflow_id, :run_id, :buffered_id, :data, :data_encoding, :data_version)`
+VALUES (:shard_id, :domain_id, :workflow_id, :run_id, :data, :data_encoding, :data_version)`
 
 	bufferedEventsConditions  = `shard_id=:shard_id AND domain_id=:domain_id AND workflow_id=:workflow_id AND run_id=:run_id`
 	deleteBufferedEventsQuery = `DELETE FROM buffered_events WHERE ` + bufferedEventsConditions
-	getBufferedEventsQuery    = `SELECT ` + bufferedEventsColumns + ` FROM buffered_events WHERE ` +
-		bufferedEventsConditions
+	getBufferedEventsQuery    = `SELECT data, data_encoding, data_version FROM buffered_events WHERE
+shard_id=? AND domain_id=? AND workflow_id=? AND run_id=?`
 )
 
 func (m *sqlExecutionManager) Close() {
@@ -809,15 +808,22 @@ func (m *sqlExecutionManager) GetWorkflowExecution(request *p.GetWorkflowExecuti
 
 	return &p.GetWorkflowExecutionResponse{State: &state}, nil
 }
-func getBufferedEvents(tx *sqlx.Tx, shardID int, domainID string, workflowID string, runID string) ([]*p.SerializedHistoryEventBatch, error) {
-	var rows []replicationTasksRow
+func getBufferedEvents(tx *sqlx.Tx, shardID int, domainID string, workflowID string, runID string) (result []*p.SerializedHistoryEventBatch, err error) {
+	var rows []bufferedEventsRow
 
 	if err := tx.Select(&rows, getBufferedEventsQuery, shardID, domainID, workflowID, runID); err != nil {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("getBufferedEvents operation failed. Select failed: %v", err),
 		}
 	}
-
+	for _, row := range rows {
+		result = append(result, &p.SerializedHistoryEventBatch{
+			EncodingType: common.EncodingType(row.DataEncoding),
+			Version:      int(row.DataVersion),
+			Data:         row.Data,
+		})
+	}
+	return
 }
 
 func (m *sqlExecutionManager) UpdateWorkflowExecution(request *p.UpdateWorkflowExecutionRequest) error {
@@ -1001,7 +1007,6 @@ func updateBufferedEvents(tx *sqlx.Tx, batch *p.SerializedHistoryEventBatch, cle
 		DomainID:     domainID,
 		WorkflowID:   workflowID,
 		RunID:        runID,
-		BufferedID:   condition, // TODO: HACK!!!! This is going to break for multiple buffered batches
 		Data:         batch.Data,
 		DataEncoding: string(batch.EncodingType),
 		DataVersion:  int64(batch.Version),
@@ -1142,6 +1147,27 @@ func (m *sqlExecutionManager) ResetMutableState(request *p.ResetMutableStateRequ
 		request.ExecutionInfo.RunID); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("ResetMutableState operation failed. Failed to clear signal info map. Error: %v", err),
+		}
+	}
+
+	if err := deleteBufferedReplicationTasksMap(tx,
+		m.shardID,
+		request.ExecutionInfo.DomainID,
+		request.ExecutionInfo.WorkflowID,
+		request.ExecutionInfo.RunID); err != nil {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("ResetMutableState operation failed. Failed to clear buffered replications tasks map. Error: %v", err),
+		}
+	}
+
+	if err := updateBufferedEvents(tx, nil,
+		true,
+		m.shardID,
+		request.ExecutionInfo.DomainID,
+		request.ExecutionInfo.WorkflowID,
+		request.ExecutionInfo.RunID, 0, 0); err != nil {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("ResetMutableState operation failed. Failed to clear buffered events. Error: %v", err),
 		}
 	}
 
