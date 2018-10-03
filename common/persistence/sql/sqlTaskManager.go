@@ -21,7 +21,6 @@
 package sql
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/uber-common/bark"
@@ -103,6 +102,9 @@ task_type = :task_type
 	createTaskSQLQuery = `INSERT INTO ` +
 		`tasks(domain_id, workflow_id, run_id, schedule_id, task_list_name, task_list_type, task_id, expiry_ts) ` +
 		`VALUES(:domain_id, :workflow_id, :run_id, :schedule_id, :task_list_name, :task_list_type, :task_id, :expiry_ts)`
+
+	deleteTasksSQLQuery = `DELETE FROM tasks ` +
+		`WHERE domain_id = ? AND task_list_name = ? AND task_list_type = ? AND task_id = ?`
 )
 
 // NewTaskPersistence creates a new instance of TaskManager
@@ -128,17 +130,15 @@ func (m *sqlTaskManager) LeaseTaskList(request *persistence.LeaseTaskListRequest
 	var ackLevel int64
 	if err := m.db.Get(&row, getTaskListSQLQuery, request.DomainID, request.TaskList, request.TaskType); err != nil {
 		if err == sql.ErrNoRows {
-			// The task list does not exist. Create it.
-			if _, err := m.db.NamedExec(createTaskListSQLQuery,
-				&tasksListsRow{
-					DomainID: request.DomainID,
-					RangeID:  rangeID + 1,
-					Name:     request.TaskList,
-					TaskType: int64(request.TaskType),
-					AckLevel: ackLevel,
-					Kind:     int64(request.TaskListKind),
-					ExpiryTs: maximumExpiryTs,
-				}); err != nil {
+			row = tasksListsRow{
+				DomainID: request.DomainID,
+				Name:     request.TaskList,
+				TaskType: int64(request.TaskType),
+				AckLevel: ackLevel,
+				Kind:     int64(request.TaskListKind),
+				ExpiryTs: time.Time{},
+			}
+			if _, err := m.db.NamedExec(createTaskListSQLQuery, &row); err != nil {
 				return nil, &workflow.InternalServiceError{
 					Message: fmt.Sprintf("LeaseTaskList operation failed. Failed to make task list %v of type %v. Error: %v", request.TaskList, request.TaskType, err),
 				}
@@ -229,7 +229,7 @@ func (m *sqlTaskManager) UpdateTaskList(request *persistence.UpdateTaskListReque
 					int64(request.TaskListInfo.TaskType),
 					request.TaskListInfo.AckLevel,
 					int64(request.TaskListInfo.Kind),
-					maximumExpiryTs,
+					time.Time{},
 				},
 				request.TaskListInfo.RangeID,
 			})
@@ -252,6 +252,10 @@ func (m *sqlTaskManager) UpdateTaskList(request *persistence.UpdateTaskListReque
 func (m *sqlTaskManager) CreateTasks(request *persistence.CreateTasksRequest) (*persistence.CreateTasksResponse, error) {
 	tasksRows := make([]tasksRow, len(request.Tasks))
 	for i, v := range request.Tasks {
+		var expiryTime time.Time
+		if v.Data.ScheduleToStartTimeout > 0 {
+			expiryTime = time.Now().Add(time.Second * time.Duration(v.Data.ScheduleToStartTimeout))
+		}
 		tasksRows[i] = tasksRow{
 			DomainID:     v.Data.DomainID,
 			WorkflowID:   v.Data.WorkflowID,
@@ -260,7 +264,7 @@ func (m *sqlTaskManager) CreateTasks(request *persistence.CreateTasksRequest) (*
 			TaskListName: request.TaskListInfo.Name,
 			TaskListType: int64(request.TaskListInfo.TaskType),
 			TaskID:       v.TaskID,
-			ExpiryTs:     maximumExpiryTs,
+			ExpiryTs:     expiryTime,
 		}
 	}
 	var resp *persistence.CreateTasksResponse
@@ -308,7 +312,13 @@ func (m *sqlTaskManager) GetTasks(request *persistence.GetTasksRequest) (*persis
 
 // Deprecated
 func (m *sqlTaskManager) CompleteTask(request *persistence.CompleteTaskRequest) error {
-	return errors.New("not implemented")
+	taskID := request.TaskID
+	taskList := request.TaskList
+	_, err := m.db.Exec(deleteTasksSQLQuery, taskList.DomainID, taskList.Name, int64(taskList.TaskType), taskID)
+	if err != nil && err != sql.ErrNoRows {
+		return &workflow.InternalServiceError{Message: err.Error()}
+	}
+	return nil
 }
 
 func lockTaskList(tx *sqlx.Tx, domainID, name string, taskListType int, oldRangeID int64) error {

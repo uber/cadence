@@ -24,7 +24,6 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
-	"time"
 
 	"github.com/jmoiron/sqlx"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -60,8 +59,6 @@ const (
 	dataSourceName = "%s:%s@tcp(%s:%d)/%s?multiStatements=true&tx_isolation=%%27READ-COMMITTED%%27&parseTime=true&clientFoundRows=true"
 )
 
-var maximumExpiryTs = time.Unix(1<<63-62135596801, 999999999)
-
 func boolToInt64(b bool) int64 {
 	if b {
 		return 1
@@ -93,7 +90,9 @@ func dereferenceIfNotNil(a *[]byte) []byte {
 func runTransaction(name string, db *sqlx.DB, txFunc func(tx *sqlx.Tx) error) error {
 	convertErr := func(err error) error {
 		switch err.(type) {
-		case *p.ConditionFailedError, *workflow.InternalServiceError, *workflow.DomainAlreadyExistsError:
+		case *workflow.InternalServiceError, *workflow.DomainAlreadyExistsError:
+			return err
+		case *p.ShardOwnershipLostError, *p.ConditionFailedError:
 			return err
 		default:
 			return &workflow.InternalServiceError{

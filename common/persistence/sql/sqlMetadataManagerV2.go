@@ -209,7 +209,8 @@ func updateMetadata(tx *sqlx.Tx, oldNotificationVersion int64) error {
 }
 
 func lockMetadata(tx *sqlx.Tx) error {
-	_, err := tx.Exec(lockMetadataSQLQuery)
+	var notificationVersion int
+	err := tx.Get(&notificationVersion, lockMetadataSQLQuery)
 	if err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("Failed to lock domain metadata. Error: %v", err),
@@ -264,7 +265,7 @@ func (m *sqlMetadataManagerV2) CreateDomain(request *persistence.CreateDomainReq
 			FailoverNotificationVersion: persistence.InitialFailoverNotificationVersion,
 			IsGlobalDomain:              request.IsGlobalDomain,
 		}); err1 != nil {
-			if sqlErr, ok := err.(*mysql.MySQLError); ok && sqlErr.Number == ErrDupEntry {
+			if sqlErr, ok := err1.(*mysql.MySQLError); ok && sqlErr.Number == ErrDupEntry {
 				return &workflow.DomainAlreadyExistsError{
 					Message: fmt.Sprintf("name: %v", request.Info.Name),
 				}
@@ -456,6 +457,9 @@ func (m *sqlMetadataManagerV2) GetMetadata() (*persistence.GetMetadataResponse, 
 func (m *sqlMetadataManagerV2) ListDomains(request *persistence.ListDomainsRequest) (*persistence.ListDomainsResponse, error) {
 	rows, err := m.db.Queryx(listDomainsSQLQuery)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return &persistence.ListDomainsResponse{}, nil
+		}
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("ListDomains operation failed. Failed to get domain rows. Error: %v", err),
 		}

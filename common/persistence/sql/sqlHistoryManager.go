@@ -21,10 +21,11 @@
 package sql
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"database/sql"
+
+	"strconv"
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
@@ -53,9 +54,8 @@ type (
 		DataEncoding string
 	}
 
-	historyToken struct {
-		LastEventBatchVersion int64
-		LastEventID           int64
+	historyPageToken struct {
+		LastEventID int64
 	}
 )
 
@@ -130,17 +130,19 @@ func (m *sqlHistoryManager) AppendHistoryEvents(request *p.InternalAppendHistory
 	return nil
 }
 
-// TODO: Pagination
 func (m *sqlHistoryManager) GetWorkflowExecutionHistory(request *p.InternalGetWorkflowExecutionHistoryRequest) (
 	*p.InternalGetWorkflowExecutionHistoryResponse, error) {
 
-	token, err := m.deserializeToken(request)
-	if err != nil {
-		return nil, err
+	token := newHistoryPageToken(request.FirstEventID - 1)
+	if request.NextPageToken != nil {
+		if err := token.deserialize(request.NextPageToken); err != nil {
+			return nil, &workflow.InternalServiceError{
+				Message: fmt.Sprintf("invalid next page token %v", request.NextPageToken)}
+		}
 	}
 
 	var rows []eventsRow
-	err = m.db.Select(&rows, getWorkflowExecutionHistorySQLQuery,
+	err := m.db.Select(&rows, getWorkflowExecutionHistorySQLQuery,
 		request.DomainID,
 		request.Execution.WorkflowId,
 		request.Execution.RunId,
@@ -176,19 +178,13 @@ func (m *sqlHistoryManager) GetWorkflowExecutionHistory(request *p.InternalGetWo
 			history = append(history, eventBatch)
 			lastEventBatchVersion = eventBatchVersion
 		}
-	}
-	var nextToken []byte
-	if (token.LastEventID + 1) < request.NextEventID {
-		nextToken, err = m.serializeToken(token)
-		if err != nil {
-			return nil, err
-		}
+		token.LastEventID = v.FirstEventID
 	}
 
 	return &p.InternalGetWorkflowExecutionHistoryResponse{
 		History:               history,
 		LastEventBatchVersion: lastEventBatchVersion,
-		NextPageToken:         nextToken,
+		NextPageToken:         token.serialize(),
 	}, nil
 }
 
@@ -246,25 +242,20 @@ func lockEventForUpdate(tx *sqlx.Tx, req *p.InternalAppendHistoryEventsRequest) 
 	return nil
 }
 
-func (m *sqlHistoryManager) serializeToken(token *historyToken) ([]byte, error) {
-	data, err := json.Marshal(token)
-	if err != nil {
-		return nil, &workflow.InternalServiceError{Message: "Error generating history event token."}
-	}
-	return data, nil
+func newHistoryPageToken(eventID int64) *historyPageToken {
+	return &historyPageToken{LastEventID: eventID}
 }
 
-func (m *sqlHistoryManager) deserializeToken(request *p.InternalGetWorkflowExecutionHistoryRequest) (*historyToken, error) {
-	token := &historyToken{
-		LastEventBatchVersion: common.EmptyVersion,
-		LastEventID:           request.FirstEventID - 1,
+func (t *historyPageToken) serialize() []byte {
+	s := strconv.FormatInt(t.LastEventID, 10)
+	return []byte(s)
+}
+
+func (t *historyPageToken) deserialize(payload []byte) error {
+	eventID, err := strconv.ParseInt(string(payload), 10, 64)
+	if err != nil {
+		return err
 	}
-	if len(request.NextPageToken) == 0 {
-		return token, nil
-	}
-	err := json.Unmarshal(request.NextPageToken, token)
-	if err == nil {
-		return token, nil
-	}
-	return token, nil
+	t.LastEventID = eventID
+	return nil
 }
