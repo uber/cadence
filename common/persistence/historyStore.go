@@ -94,7 +94,7 @@ func (m *historyManagerImpl) AppendHistoryNode(request *AppendHistoryNodeRequest
 
 // ReadHistoryBranch returns history node data for a branch
 func (m *historyManagerImpl) ReadHistoryBranch(request *ReadHistoryBranchRequest) (*ReadHistoryBranchResponse, error) {
-	token, err := m.deserializeToken(request.MaxNodeID, request.NextPageToken, request.LastEventBatchVersion)
+	token, err := m.deserializeToken(request.MinNodeID, request.NextPageToken, request.LastEventBatchVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +132,7 @@ func (m *historyManagerImpl) ReadHistoryBranch(request *ReadHistoryBranchRequest
 				logging.TagTreeID:   request.BranchInfo.TreeID,
 			})
 			logger.Error("Unexpected event batch")
-			return nil, fmt.Errorf("corrupted history event batch")
+			return nil, fmt.Errorf("corrupted history event batch, eventID is not continous")
 		}
 
 		found = true
@@ -141,12 +141,23 @@ func (m *historyManagerImpl) ReadHistoryBranch(request *ReadHistoryBranchRequest
 		events = append(events, e)
 		size += len(b.Data)
 	}
-	if !found && len(request.NextPageToken) == 0 {
-		// adding the check of request next token being not nil, since
-		// there can be case when found == false at the very end of pagination.
-		return nil, &workflow.EntityNotExistsError{
-			Message: fmt.Sprintf("Branch nodes not found.  TreeId: %v, BranchId: %v",
-				request.BranchInfo.TreeID, request.BranchInfo.BranchID),
+
+	if len(request.NextPageToken) == 0 {
+		// checking for the very first page
+		if !found {
+			return nil, &workflow.EntityNotExistsError{
+				Message: fmt.Sprintf("Branch nodes not found.  TreeId: %v, BranchId: %v",
+					request.BranchInfo.TreeID, request.BranchInfo.BranchID),
+			}
+		}
+		// our nodeID should be strictly equal to eventID
+		if *events[0].EventId != request.MinNodeID {
+			logger := m.logger.WithFields(bark.Fields{
+				logging.TagBranchID: request.BranchInfo.BranchID,
+				logging.TagTreeID:   request.BranchInfo.TreeID,
+			})
+			logger.Error("Unexpected event batch")
+			return nil, fmt.Errorf("corrupted history event batch, eventID does not match with nodeID")
 		}
 	}
 
