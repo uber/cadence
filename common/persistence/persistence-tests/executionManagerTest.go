@@ -30,6 +30,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
+	"fmt"
+
 	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
@@ -2351,9 +2353,16 @@ func (s *ExecutionManagerSuite) TestUpdateAndClearBufferedEvents() {
 	s.NoError(err2)
 	err2 = s.UpdateWorkflowExecutionForBufferEvents(bufferUpdateInfo, nil, bufferUpdateInfo.NextEventID, eventsBatch1, false)
 	s.NoError(err2)
-	stats0, _, err2 = s.GetWorkflowExecutionInfoWithStats(domainID, workflowExecution)
+	stats0, state0, err2 = s.GetWorkflowExecutionInfoWithStats(domainID, workflowExecution)
 	s.NoError(err2)
 	s.Equal(1, stats0.BufferedEventsCount)
+	// BufferedEventsSize shouldn't change unless we change the IDL for histiryEvent or thriftRW
+	fmt.Println("stats0.BufferedEventsSize", stats0.BufferedEventsSize)
+	history := &gen.History{Events: make([]*gen.HistoryEvent, 0)}
+	history.Events = append(history.Events, eventsBatch1...)
+	history0 := &gen.History{Events: state0.BufferedEvents}
+	s.True(history.Equals(history0))
+	history.Events = append(history.Events, eventsBatch2...)
 
 	err2 = s.UpdateWorkflowExecutionForBufferEvents(bufferUpdateInfo, nil, bufferUpdateInfo.NextEventID, eventsBatch2, false)
 	s.NoError(err2)
@@ -2364,6 +2373,11 @@ func (s *ExecutionManagerSuite) TestUpdateAndClearBufferedEvents() {
 	info1 := state1.ExecutionInfo
 	s.NotNil(info1, "Valid Workflow info expected.")
 	s.Equal(2, stats1.BufferedEventsCount)
+	// BufferedEventsSize shouldn't change unless we change the IDL for histiryEvent or thriftRW
+	fmt.Println("stats1.BufferedEventsSize", stats1.BufferedEventsSize)
+	//s.Equal(267, stats1.BufferedEventsSize)
+	history1 := &gen.History{Events: state1.BufferedEvents}
+	s.True(history.Equals(history1))
 
 	err3 := s.UpdateWorkflowExecutionForBufferEvents(bufferUpdateInfo, nil, bufferUpdateInfo.NextEventID, nil, true)
 	s.NoError(err3)
@@ -2375,7 +2389,6 @@ func (s *ExecutionManagerSuite) TestUpdateAndClearBufferedEvents() {
 	s.NotNil(info3, "Valid Workflow info expected.")
 	s.Equal(0, stats3.BufferedEventsCount)
 	s.Equal(0, stats3.BufferedEventsSize)
-
 }
 
 // TestResetMutableStateCurrentIsSelf test
@@ -2559,9 +2572,17 @@ func (s *ExecutionManagerSuite) TestResetMutableStateCurrentIsSelf() {
 	s.NoError(err2)
 	err2 = s.UpdateWorkflowExecutionForBufferEvents(bufferUpdateInfo, nil, bufferUpdateInfo.NextEventID, eventsBatch1, false)
 	s.NoError(err2)
-	stats0, _, err2 = s.GetWorkflowExecutionInfoWithStats(domainID, workflowExecution)
+	stats0, state0, err2 = s.GetWorkflowExecutionInfoWithStats(domainID, workflowExecution)
 	s.NoError(err2)
 	s.Equal(1, stats0.BufferedEventsCount)
+	// BufferedEventsSize shouldn't change unless we change the IDL for histiryEvent or thriftRW
+	fmt.Println("stats0.BufferedEventsSize", stats0.BufferedEventsSize)
+	//s.Equal(337, stats0.BufferedEventsSize)
+	history := &gen.History{Events: make([]*gen.HistoryEvent, 0)}
+	history.Events = append(history.Events, eventsBatch1...)
+	history0 := &gen.History{Events: state0.BufferedEvents}
+	s.True(history.Equals(history0))
+	history.Events = append(history.Events, eventsBatch2...)
 
 	err2 = s.UpdateWorkflowExecutionForBufferEvents(bufferUpdateInfo, nil, bufferUpdateInfo.NextEventID, eventsBatch2, false)
 	s.NoError(err2)
@@ -2572,6 +2593,11 @@ func (s *ExecutionManagerSuite) TestResetMutableStateCurrentIsSelf() {
 	info1 := state1.ExecutionInfo
 	s.NotNil(info1, "Valid Workflow info expected.")
 	s.Equal(2, stats1.BufferedEventsCount)
+	// BufferedEventsSize shouldn't change unless we change the IDL for histiryEvent or thriftRW
+	fmt.Println("stats1.BufferedEventsSize", stats1.BufferedEventsSize)
+	//s.Equal(454, stats1.BufferedEventsSize)
+	history1 := &gen.History{Events: state1.BufferedEvents}
+	s.True(history.Equals(history1))
 
 	s.Equal(2, len(state1.ActivitInfos))
 	ai, ok := state1.ActivitInfos[4]
