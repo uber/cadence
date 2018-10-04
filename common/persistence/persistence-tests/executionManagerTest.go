@@ -1431,19 +1431,11 @@ func (s *ExecutionManagerSuite) TestWorkflowMutableStateActivities() {
 	s.NotNil(ai)
 	s.Equal(int64(7789), ai.Version)
 	s.Equal(int64(1), ai.ScheduleID)
-<<<<<<< HEAD
-	s.Equal([]byte("scheduled_event_1"), ai.ScheduledEvent)
+	s.Equal(int64(1), *ai.ScheduledEvent.EventId)
 	s.EqualTimes(currentTime, ai.ScheduledTime)
 	s.Equal(int64(2), ai.StartedID)
-	s.Equal([]byte("started_event_1"), ai.StartedEvent)
-	s.EqualTimes(currentTime, ai.StartedTime)
-=======
-	s.Equal(int64(1), *ai.ScheduledEvent.EventId)
-	s.Equal(currentTime.Unix(), ai.ScheduledTime.Unix()) // This line is flakey
-	s.Equal(int64(2), ai.StartedID)
 	s.Equal(int64(2), *ai.StartedEvent.EventId)
-	s.Equal(currentTime.Unix(), ai.StartedTime.Unix())
->>>>>>> master
+	s.EqualTimes(currentTime, ai.StartedTime)
 	s.Equal(int32(1), ai.ScheduleToCloseTimeout)
 	s.Equal(int32(2), ai.ScheduleToStartTimeout)
 	s.Equal(int32(3), ai.StartToCloseTimeout)
@@ -2603,13 +2595,8 @@ func (s *ExecutionManagerSuite) TestResetMutableStateCurrentIsSelf() {
 	s.NotNil(ai)
 	s.Equal(int64(7789), ai.Version)
 	s.Equal(int64(4), ai.ScheduleID)
-<<<<<<< HEAD
-	s.Equal([]byte("scheduled_event_4"), ai.ScheduledEvent)
-	s.EqualTimes(currentTime, ai.ScheduledTime)
-=======
 	s.Equal(int64(40), *ai.ScheduledEvent.EventId)
-	s.Equal(currentTime.Unix(), ai.ScheduledTime.Unix()) // flakey test
->>>>>>> master
+	s.EqualTimes(currentTime, ai.ScheduledTime)
 	s.Equal(int64(6), ai.StartedID)
 	s.Equal(int64(60), *ai.StartedEvent.EventId)
 	s.Equal(currentTime.Unix(), ai.StartedTime.Unix())
