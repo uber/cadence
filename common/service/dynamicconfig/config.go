@@ -24,6 +24,7 @@ import (
 	"sync"
 	"time"
 
+	"fmt"
 	"github.com/uber-common/bark"
 )
 
@@ -42,9 +43,21 @@ type Collection struct {
 }
 
 func (c *Collection) logNoValue(key Key, err error) {
-	_, loaded := c.keys.LoadOrStore(key, key)
+	_, loaded := c.keys.LoadOrStore(key, struct{}{})
 	if !loaded {
 		c.logger.Debugf("Failed to fetch key: %s from dynamic config with err: %s", key.String(), err.Error())
+	}
+}
+
+func (c *Collection) logValue(key Key, value, defaultValue interface{}) {
+	k := fmt.Sprintf("%s-%s", key.String(), value)
+	_, loaded := c.keys.LoadOrStore(k, struct{}{})
+	if !loaded {
+		c.logger.WithFields(bark.Fields{
+			"configName":       key.String(),
+			"configVal":        fmt.Sprintf("%v", value),
+			"configDefaultVal": fmt.Sprintf("%v", defaultValue),
+		}).Info("Get dynamic config")
 	}
 }
 
@@ -75,16 +88,20 @@ type DurationPropertyFnWithTaskListInfoFilters func(domain string, taskList stri
 // BoolPropertyFn is a wrapper to get bool property from dynamic config
 type BoolPropertyFn func(opts ...FilterOption) bool
 
+// StringPropertyFnWithDomainFilter is a wrapper to get string property from dynamic config
+type StringPropertyFnWithDomainFilter func(domain string) string
+
 // BoolPropertyFnWithTaskListInfoFilters is a wrapper to get bool property from dynamic config with three filters: domain, taskList, taskType
 type BoolPropertyFnWithTaskListInfoFilters func(domain string, taskList string, taskType int) bool
 
-// GetProperty gets a eface property and returns defaultValue if property is not found
+// GetProperty gets a interface property and returns defaultValue if property is not found
 func (c *Collection) GetProperty(key Key, defaultValue interface{}) PropertyFn {
 	return func() interface{} {
 		val, err := c.client.GetValue(key, defaultValue)
 		if err != nil {
 			c.logNoValue(key, err)
 		}
+		c.logValue(key, val, defaultValue)
 		return val
 	}
 }
@@ -105,6 +122,7 @@ func (c *Collection) GetIntProperty(key Key, defaultValue int) IntPropertyFn {
 		if err != nil {
 			c.logNoValue(key, err)
 		}
+		c.logValue(key, val, defaultValue)
 		return val
 	}
 }
@@ -116,6 +134,7 @@ func (c *Collection) GetIntPropertyFilteredByDomain(key Key, defaultValue int) I
 		if err != nil {
 			c.logNoValue(key, err)
 		}
+		c.logValue(key, val, defaultValue)
 		return val
 	}
 }
@@ -131,6 +150,7 @@ func (c *Collection) GetIntPropertyFilteredByTaskListInfo(key Key, defaultValue 
 		if err != nil {
 			c.logNoValue(key, err)
 		}
+		c.logValue(key, val, defaultValue)
 		return val
 	}
 }
@@ -142,6 +162,7 @@ func (c *Collection) GetFloat64Property(key Key, defaultValue float64) FloatProp
 		if err != nil {
 			c.logNoValue(key, err)
 		}
+		c.logValue(key, val, defaultValue)
 		return val
 	}
 }
@@ -153,6 +174,7 @@ func (c *Collection) GetDurationProperty(key Key, defaultValue time.Duration) Du
 		if err != nil {
 			c.logNoValue(key, err)
 		}
+		c.logValue(key, val, defaultValue)
 		return val
 	}
 }
@@ -164,6 +186,7 @@ func (c *Collection) GetDurationPropertyFilteredByDomain(key Key, defaultValue t
 		if err != nil {
 			c.logNoValue(key, err)
 		}
+		c.logValue(key, val, defaultValue)
 		return val
 	}
 }
@@ -179,6 +202,7 @@ func (c *Collection) GetDurationPropertyFilteredByTaskListInfo(key Key, defaultV
 		if err != nil {
 			c.logNoValue(key, err)
 		}
+		c.logValue(key, val, defaultValue)
 		return val
 	}
 }
@@ -190,6 +214,19 @@ func (c *Collection) GetBoolProperty(key Key, defaultValue bool) BoolPropertyFn 
 		if err != nil {
 			c.logNoValue(key, err)
 		}
+		c.logValue(key, val, defaultValue)
+		return val
+	}
+}
+
+// GetStringPropertyFnWithDomainFilter gets property with domain filter and asserts that its domain
+func (c *Collection) GetStringPropertyFnWithDomainFilter(key Key, defaultValue string) StringPropertyFnWithDomainFilter {
+	return func(domain string) string {
+		val, err := c.client.GetStringValue(key, getFilterMap(DomainFilter(domain)), defaultValue)
+		if err != nil {
+			c.logNoValue(key, err)
+		}
+		c.logValue(key, val, defaultValue)
 		return val
 	}
 }
@@ -205,6 +242,7 @@ func (c *Collection) GetBoolPropertyFilteredByTaskListInfo(key Key, defaultValue
 		if err != nil {
 			c.logNoValue(key, err)
 		}
+		c.logValue(key, val, defaultValue)
 		return val
 	}
 }

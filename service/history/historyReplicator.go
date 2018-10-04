@@ -28,6 +28,7 @@ import (
 	"github.com/uber-common/bark"
 	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/shared"
+	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
@@ -50,15 +51,14 @@ type (
 	mutableStateProvider     func(version int64, logger bark.Logger) mutableState
 
 	historyReplicator struct {
-		shard             ShardContext
-		historyEngine     *historyEngineImpl
-		historyCache      *historyCache
-		domainCache       cache.DomainCache
-		historyMgr        persistence.HistoryManager
-		historySerializer persistence.HistorySerializer
-		clusterMetadata   cluster.Metadata
-		metricsClient     metrics.Client
-		logger            bark.Logger
+		shard           ShardContext
+		historyEngine   *historyEngineImpl
+		historyCache    *historyCache
+		domainCache     cache.DomainCache
+		historyMgr      persistence.HistoryManager
+		clusterMetadata cluster.Metadata
+		metricsClient   metrics.Client
+		logger          bark.Logger
 
 		getNewConflictResolver conflictResolverProvider
 		getNewStateBuilder     stateBuilderProvider
@@ -94,15 +94,14 @@ var (
 func newHistoryReplicator(shard ShardContext, historyEngine *historyEngineImpl, historyCache *historyCache, domainCache cache.DomainCache,
 	historyMgr persistence.HistoryManager, logger bark.Logger) *historyReplicator {
 	replicator := &historyReplicator{
-		shard:             shard,
-		historyEngine:     historyEngine,
-		historyCache:      historyCache,
-		domainCache:       domainCache,
-		historyMgr:        historyMgr,
-		historySerializer: persistence.NewJSONHistorySerializer(),
-		clusterMetadata:   shard.GetService().GetClusterMetadata(),
-		metricsClient:     shard.GetMetricsClient(),
-		logger:            logger.WithField(logging.TagWorkflowComponent, logging.TagValueHistoryReplicatorComponent),
+		shard:           shard,
+		historyEngine:   historyEngine,
+		historyCache:    historyCache,
+		domainCache:     domainCache,
+		historyMgr:      historyMgr,
+		clusterMetadata: shard.GetService().GetClusterMetadata(),
+		metricsClient:   shard.GetMetricsClient(),
+		logger:          logger.WithField(logging.TagWorkflowComponent, logging.TagValueHistoryReplicatorComponent),
 
 		getNewConflictResolver: func(context *workflowExecutionContext, logger bark.Logger) conflictResolver {
 			return newConflictResolver(shard, context, historyMgr, logger)
@@ -175,7 +174,13 @@ func (r *historyReplicator) ApplyEvents(ctx context.Context, request *h.Replicat
 		// err will not be of type EntityNotExistsError
 		return err
 	}
-	defer func() { release(retError) }()
+	defer func() {
+		if retError == ErrRetryBufferEvents {
+			release(nil)
+		} else {
+			release(retError)
+		}
+	}()
 
 	firstEvent := request.History.Events[0]
 	switch firstEvent.GetEventType() {
@@ -533,8 +538,8 @@ func (r *historyReplicator) FlushBuffer(ctx context.Context, context *workflowEx
 			FirstEventId:      common.Int64Ptr(bt.FirstEventID),
 			NextEventId:       common.Int64Ptr(bt.NextEventID),
 			Version:           common.Int64Ptr(bt.Version),
-			History:           msBuilder.GetBufferedHistory(bt.History),
-			NewRunHistory:     msBuilder.GetBufferedHistory(bt.NewRunHistory),
+			History:           &workflow.History{Events: bt.History},
+			NewRunHistory:     &workflow.History{Events: bt.NewRunHistory},
 		}
 
 		// Apply replication task to workflow execution
@@ -570,13 +575,6 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 	firstEvent := history.Events[0]
 	lastEvent := history.Events[len(history.Events)-1]
 
-	// Serialize the history
-	serializedHistory, serializedError := r.Serialize(history)
-	if serializedError != nil {
-		logging.LogHistorySerializationErrorEvent(logger, serializedError, "HistoryEventBatch serialization error on start workflow.")
-		return serializedError
-	}
-
 	// Generate a transaction ID for appending events to history
 	transactionID, err := r.shard.GetNextTransferTaskID()
 	if err != nil {
@@ -590,7 +588,7 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 		TransactionID:     transactionID,
 		FirstEventID:      firstEvent.GetEventId(),
 		EventBatchVersion: firstEvent.GetVersion(),
-		Events:            serializedHistory,
+		Events:            history.Events,
 	})
 	if err != nil {
 		return err
@@ -623,8 +621,8 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 		timerTasks,
 	)
 
-	createWorkflow := func(isBrandNew bool, prevRunID string) error {
-		_, err = r.shard.CreateWorkflowExecution(&persistence.CreateWorkflowExecutionRequest{
+	createWorkflow := func(isBrandNew bool, prevRunID string, prevLastWriteVersion int64) error {
+		createRequest := &persistence.CreateWorkflowExecutionRequest{
 			// NOTE: should not set the replication task, since we are in the standby
 			RequestID:                   executionInfo.CreateRequestID,
 			DomainID:                    domainID,
@@ -646,10 +644,15 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 			DecisionStartedID:           decisionStartID,
 			DecisionStartToCloseTimeout: decisionTimeout,
 			TimerTasks:                  timerTasks,
-			ContinueAsNew:               !isBrandNew,
 			PreviousRunID:               prevRunID,
+			PreviousLastWriteVersion:    prevLastWriteVersion,
 			ReplicationState:            replicationState,
-		})
+		}
+		createRequest.CreateWorkflowMode = persistence.CreateWorkflowModeBrandNew
+		if !isBrandNew {
+			createRequest.CreateWorkflowMode = persistence.CreateWorkflowModeWorkflowIDReuse
+		}
+		_, err = r.shard.CreateWorkflowExecution(createRequest)
 		return err
 	}
 	deleteHistory := func() {
@@ -662,7 +665,7 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 
 	// try to create the workflow execution
 	isBrandNew := true
-	err = createWorkflow(isBrandNew, "")
+	err = createWorkflow(isBrandNew, "", 0)
 	if err == nil {
 		return nil
 	}
@@ -694,7 +697,7 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 		}
 		// proceed to create workflow
 		isBrandNew = false
-		return createWorkflow(isBrandNew, currentRunID)
+		return createWorkflow(isBrandNew, currentRunID, currentLastWriteVersion)
 	}
 
 	// current workflow is still running
@@ -731,7 +734,7 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 		// there will be retry on the worker level
 	}
 	isBrandNew = false
-	return createWorkflow(isBrandNew, currentRunID)
+	return createWorkflow(isBrandNew, currentRunID, incomingVersion)
 }
 
 func (r *historyReplicator) flushCurrentWorkflowBuffer(ctx context.Context, domainID string, workflowID string,
@@ -793,15 +796,6 @@ func (r *historyReplicator) conflictResolutionTerminateCurrentRunningIfNotSelf(c
 		logError(logger, "Conflict resolution err terminating current workflow.", err)
 	}
 	return currentRunID, err
-}
-
-func (r *historyReplicator) Serialize(history *shared.History) (*persistence.SerializedHistoryEventBatch, error) {
-	eventBatch := persistence.NewHistoryEventBatch(persistence.GetDefaultHistoryVersion(), history.Events)
-	h, err := r.historySerializer.Serialize(eventBatch)
-	if err != nil {
-		return nil, err
-	}
-	return h, nil
 }
 
 // func (r *historyReplicator) getCurrentWorkflowInfo(domainID string, workflowID string) (runID string, lastWriteVersion int64, closeStatus int, retError error) {

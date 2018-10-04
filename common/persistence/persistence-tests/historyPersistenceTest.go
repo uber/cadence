@@ -60,6 +60,10 @@ func (s *HistoryPersistenceSuite) TearDownSuite() {
 	s.TearDownWorkflowStore()
 }
 
+func int64Ptr(i int64) *int64 {
+	return &(i)
+}
+
 // TestAppendHistoryEvents test
 func (s *HistoryPersistenceSuite) TestAppendHistoryEvents() {
 	domainID := "ff03c29f-fcf1-4aea-893d-1a7ec421e3ec"
@@ -68,23 +72,21 @@ func (s *HistoryPersistenceSuite) TestAppendHistoryEvents() {
 		RunId:      common.StringPtr("986fc9cd-4a2d-4964-bf9f-5130116d5851"),
 	}
 
-	events1 := []byte("event1;event2")
-	serializedHistory := &p.SerializedHistoryEventBatch{Version: 1, EncodingType: common.EncodingTypeJSON, Data: events1}
-	err0 := s.AppendHistoryEvents(domainID, workflowExecution, 1, common.EmptyVersion, 1, 1, serializedHistory, false)
+	events1 := &gen.History{Events: []*gen.HistoryEvent{{EventId: int64Ptr(1)}, {EventId: int64Ptr(2)}}}
+	err0 := s.AppendHistoryEvents(domainID, workflowExecution, 1, common.EmptyVersion, 1, 1, events1, false)
 	s.Nil(err0)
 
-	events2 := []byte("event3;")
-	serializedHistory.Data = events2
-	err1 := s.AppendHistoryEvents(domainID, workflowExecution, 3, common.EmptyVersion, 1, 1, serializedHistory, false)
+	events2 := &gen.History{Events: []*gen.HistoryEvent{{EventId: int64Ptr(3)}}}
+	err1 := s.AppendHistoryEvents(domainID, workflowExecution, 3, common.EmptyVersion, 1, 1, events2, false)
 	s.Nil(err1)
 
-	events2New := []byte("event3new;")
-	serializedHistory.Data = events2New
-	err2 := s.AppendHistoryEvents(domainID, workflowExecution, 3, common.EmptyVersion, 1, 1, serializedHistory, false)
+	events2New := &gen.History{Events: []*gen.HistoryEvent{{EventId: int64Ptr(4)}}}
+	err2 := s.AppendHistoryEvents(domainID, workflowExecution, 3, common.EmptyVersion, 1, 1, events2New, false)
 	s.NotNil(err2)
 	s.IsType(&p.ConditionFailedError{}, err2)
 
-	err3 := s.AppendHistoryEvents(domainID, workflowExecution, 3, common.EmptyVersion, 1, 2, serializedHistory, true)
+	// overwrite with higher txnID
+	err3 := s.AppendHistoryEvents(domainID, workflowExecution, 3, common.EmptyVersion, 1, 2, events2New, true)
 	s.Nil(err3)
 }
 
@@ -97,7 +99,7 @@ func (s *HistoryPersistenceSuite) TestGetHistoryEvents() {
 	}
 
 	batchEvents := newBatchEventForTest([]int64{1, 2}, 1)
-	err0 := s.AppendHistoryEvents(domainID, workflowExecution, 1, common.EmptyVersion, 1, 1, batchEvents.batch, false)
+	err0 := s.AppendHistoryEvents(domainID, workflowExecution, 1, common.EmptyVersion, 1, 1, batchEvents, false)
 	s.Nil(err0)
 
 	history, token, err1 := s.GetWorkflowExecutionHistory(domainID, workflowExecution, 1, 2, 10, nil)
@@ -107,24 +109,14 @@ func (s *HistoryPersistenceSuite) TestGetHistoryEvents() {
 	s.Equal(int64(1), history.Events[0].GetVersion())
 }
 
-type testBatchEvent struct {
-	batch  *p.SerializedHistoryEventBatch
-	events []*gen.HistoryEvent
-}
-
-func newBatchEventForTest(eventIDs []int64, version int64) *testBatchEvent {
+func newBatchEventForTest(eventIDs []int64, version int64) *gen.History {
 	var events []*gen.HistoryEvent
 	for _, eid := range eventIDs {
 		e := &gen.HistoryEvent{EventId: common.Int64Ptr(eid), Version: common.Int64Ptr(version)}
 		events = append(events, e)
 	}
 
-	historySerializer := p.NewJSONHistorySerializer()
-	batch, err := historySerializer.Serialize(p.NewHistoryEventBatch(p.GetDefaultHistoryVersion(), events))
-	if err != nil {
-		panic(err)
-	}
-	return &testBatchEvent{batch: batch, events: events}
+	return &gen.History{Events: events}
 }
 
 // TestGetHistoryEventsCompatibility test
@@ -135,7 +127,7 @@ func (s *HistoryPersistenceSuite) TestGetHistoryEventsCompatibility() {
 		RunId:      common.StringPtr(uuid.New()),
 	}
 
-	batches := []*testBatchEvent{
+	batches := []*gen.History{
 		newBatchEventForTest([]int64{1, 2}, 1),
 		newBatchEventForTest([]int64{3}, 1),
 		newBatchEventForTest([]int64{4, 5}, 1),
@@ -144,7 +136,7 @@ func (s *HistoryPersistenceSuite) TestGetHistoryEventsCompatibility() {
 	}
 
 	for i, be := range batches {
-		err0 := s.AppendHistoryEvents(domainID, workflowExecution, be.events[0].GetEventId(), common.EmptyVersion, 1, int64(i), be.batch, false)
+		err0 := s.AppendHistoryEvents(domainID, workflowExecution, be.Events[0].GetEventId(), common.EmptyVersion, 1, int64(i), be, false)
 		s.Nil(err0)
 	}
 
@@ -174,7 +166,7 @@ func (s *HistoryPersistenceSuite) TestDeleteHistoryEvents() {
 		RunId:      common.StringPtr("2122fd8d-f583-459e-a2e2-d1fb273a43cb"),
 	}
 
-	events := []*testBatchEvent{
+	events := []*gen.History{
 		newBatchEventForTest([]int64{1, 2}, 1),
 		newBatchEventForTest([]int64{3}, 1),
 		newBatchEventForTest([]int64{4, 5}, 1),
@@ -182,7 +174,7 @@ func (s *HistoryPersistenceSuite) TestDeleteHistoryEvents() {
 		newBatchEventForTest([]int64{6, 7}, 1),
 	}
 	for i, be := range events {
-		err0 := s.AppendHistoryEvents(domainID, workflowExecution, be.events[0].GetEventId(), common.EmptyVersion, 1, int64(i), be.batch, false)
+		err0 := s.AppendHistoryEvents(domainID, workflowExecution, be.Events[0].GetEventId(), common.EmptyVersion, 1, int64(i), be, false)
 		s.Nil(err0)
 	}
 
@@ -211,7 +203,7 @@ func (s *HistoryPersistenceSuite) TestAppendAndGet() {
 		WorkflowId: common.StringPtr("append-and-get-test"),
 		RunId:      common.StringPtr(uuid.New()),
 	}
-	batches := []*testBatchEvent{
+	batches := []*gen.History{
 		newBatchEventForTest([]int64{1, 2}, 0),
 		newBatchEventForTest([]int64{3, 4}, 1),
 		newBatchEventForTest([]int64{5, 6}, 2),
@@ -220,8 +212,8 @@ func (s *HistoryPersistenceSuite) TestAppendAndGet() {
 
 	for i := 0; i < len(batches); i++ {
 
-		events := batches[i].events
-		err0 := s.AppendHistoryEvents(domainID, workflowExecution, events[0].GetEventId(), common.EmptyVersion, 1, int64(i), batches[i].batch, false)
+		events := batches[i].Events
+		err0 := s.AppendHistoryEvents(domainID, workflowExecution, events[0].GetEventId(), common.EmptyVersion, 1, int64(i), batches[i], false)
 		s.Nil(err0)
 
 		nextEventID := events[len(events)-1].GetEventId()
@@ -247,7 +239,7 @@ func (s *HistoryPersistenceSuite) TestOverwriteAndShadowingHistoryEvents() {
 	version2 := int64(1234)
 	var err error
 
-	eventBatches := []*testBatchEvent{
+	eventBatches := []*gen.History{
 		newBatchEventForTest([]int64{1, 2}, 1),
 		newBatchEventForTest([]int64{3}, 1),
 		newBatchEventForTest([]int64{4, 5}, 1),
@@ -261,7 +253,7 @@ func (s *HistoryPersistenceSuite) TestOverwriteAndShadowingHistoryEvents() {
 	}
 
 	for i, be := range eventBatches {
-		err = s.AppendHistoryEvents(domainID, workflowExecution, be.events[0].GetEventId(), version1, 1, int64(i), be.batch, false)
+		err = s.AppendHistoryEvents(domainID, workflowExecution, be.Events[0].GetEventId(), version1, 1, int64(i), be, false)
 		s.Nil(err)
 	}
 
@@ -273,7 +265,7 @@ func (s *HistoryPersistenceSuite) TestOverwriteAndShadowingHistoryEvents() {
 		s.Equal(int64(i+1), e.GetEventId())
 	}
 
-	newEventBatchs := []*testBatchEvent{
+	newEventBatchs := []*gen.History{
 		newBatchEventForTest([]int64{8, 9, 10, 11, 12}, 1),
 		newBatchEventForTest([]int64{13, 14, 15, 16}, 1),
 		newBatchEventForTest([]int64{17, 18}, 1),
@@ -284,12 +276,12 @@ func (s *HistoryPersistenceSuite) TestOverwriteAndShadowingHistoryEvents() {
 	for _, be := range newEventBatchs {
 		override := false
 		for _, oe := range eventBatches {
-			if oe.events[0].GetEventId() == be.events[0].GetEventId() {
+			if oe.Events[0].GetEventId() == be.Events[0].GetEventId() {
 				override = true
 				break
 			}
 		}
-		err = s.AppendHistoryEvents(domainID, workflowExecution, be.events[0].GetEventId(), version2, 1, 999, be.batch, override)
+		err = s.AppendHistoryEvents(domainID, workflowExecution, be.Events[0].GetEventId(), version2, 1, 999, be, override)
 		s.Nil(err)
 	}
 	historyEvents := []*gen.HistoryEvent{}
@@ -311,18 +303,20 @@ func (s *HistoryPersistenceSuite) TestOverwriteAndShadowingHistoryEvents() {
 
 // AppendHistoryEvents helper
 func (s *HistoryPersistenceSuite) AppendHistoryEvents(domainID string, workflowExecution gen.WorkflowExecution,
-	firstEventID, eventBatchVersion int64, rangeID, txID int64, eventsBatch *p.SerializedHistoryEventBatch, overwrite bool) error {
+	firstEventID, eventBatchVersion int64, rangeID, txID int64, eventsBatch *gen.History, overwrite bool) error {
 
-	return s.HistoryMgr.AppendHistoryEvents(&p.AppendHistoryEventsRequest{
+	_, err := s.HistoryMgr.AppendHistoryEvents(&p.AppendHistoryEventsRequest{
 		DomainID:          domainID,
 		Execution:         workflowExecution,
 		FirstEventID:      firstEventID,
 		EventBatchVersion: eventBatchVersion,
 		RangeID:           rangeID,
 		TransactionID:     txID,
-		Events:            eventsBatch,
+		Events:            eventsBatch.Events,
 		Overwrite:         overwrite,
+		Encoding:          pickRandomEncoding(),
 	})
+	return err
 }
 
 // GetWorkflowExecutionHistory helper

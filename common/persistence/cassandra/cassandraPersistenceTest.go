@@ -111,11 +111,13 @@ func InitTestSuiteWithMetadata(tb *persistencetests.TestBase, options *persisten
 	if err != nil {
 		log.Fatal(err)
 	}
-	tb.HistoryMgr, err = NewHistoryPersistence(options.DBHost, options.DBPort, options.DBUser,
+	pHisMgr, err := NewHistoryPersistence(options.DBHost, options.DBPort, options.DBUser,
 		options.DBPassword, options.Datacenter, keyspace, 2, log)
 	if err != nil {
 		log.Fatal(err)
 	}
+	tb.HistoryMgr = p.NewHistoryManagerImpl(pHisMgr, log)
+
 	tb.MetadataManager, err = NewMetadataPersistence(options.DBHost, options.DBPort, options.DBUser,
 		options.DBPassword, options.Datacenter, keyspace, currentClusterName, log)
 	if err != nil {
@@ -184,11 +186,16 @@ func (s *TestCluster) SetupTestDatabase(options *persistencetests.TestBaseOption
 
 	s.CreateSession(options)
 	s.CreateDatabase(1, options.DropDatabase)
-	cadencePackageDir, err := getCadencePackageDir()
-	if err != nil {
-		log.Fatal(err)
+	schemaDir := options.SchemaDir + "/"
+
+	if !strings.HasPrefix(schemaDir, "/") && !strings.HasPrefix(schemaDir, "../") {
+		cadencePackageDir, err := getCadencePackageDir()
+		if err != nil {
+			log.Fatal(err)
+		}
+		schemaDir = cadencePackageDir + schemaDir
 	}
-	schemaDir := cadencePackageDir + options.SchemaDir + "/"
+
 	s.LoadSchema([]string{"schema.cql"}, schemaDir)
 	s.LoadVisibilitySchema([]string{"schema.cql"}, schemaDir)
 }

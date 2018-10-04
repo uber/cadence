@@ -38,6 +38,7 @@ import (
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	ce "github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
@@ -45,7 +46,8 @@ import (
 )
 
 const (
-	signalInputSizeLimit                     = 256 * 1024
+	signalInputWarnSizeLimit                 = 256 * 1024
+	signalInputErrSizeLimit                  = 2 * 1024 * 1024
 	conditionalRetryCount                    = 5
 	activityCancelationMsgActivityIDUnknown  = "ACTIVITY_ID_UNKNOWN"
 	activityCancelationMsgActivityNotStarted = "ACTIVITY_ID_NOT_STARTED"
@@ -64,7 +66,6 @@ type (
 		replicatorProcessor  queueProcessor
 		historyEventNotifier historyEventNotifier
 		tokenSerializer      common.TaskTokenSerializer
-		hSerializerFactory   persistence.HistorySerializerFactory
 		historyCache         *historyCache
 		metricsClient        metrics.Client
 		logger               bark.Logger
@@ -134,14 +135,12 @@ func NewEngineWithShardContext(shard ShardContext, visibilityMgr persistence.Vis
 	executionManager := shard.GetExecutionManager()
 	historyManager := shard.GetHistoryManager()
 	historyCache := newHistoryCache(shard)
-	historySerializerFactory := persistence.NewHistorySerializerFactory()
 	historyEngImpl := &historyEngineImpl{
 		currentClusterName: currentClusterName,
 		shard:              shard,
 		historyMgr:         historyManager,
 		executionManager:   executionManager,
 		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
-		hSerializerFactory: historySerializerFactory,
 		historyCache:       historyCache,
 		logger: logger.WithFields(bark.Fields{
 			logging.TagWorkflowComponent: logging.TagValueHistoryEngineComponent,
@@ -156,8 +155,7 @@ func NewEngineWithShardContext(shard ShardContext, visibilityMgr persistence.Vis
 
 	// Only start the replicator processor if valid publisher is passed in
 	if publisher != nil {
-		replicatorProcessor := newReplicatorQueueProcessor(shard, publisher, executionManager, historyManager,
-			historySerializerFactory, logger)
+		replicatorProcessor := newReplicatorQueueProcessor(shard, publisher, executionManager, historyManager, logger)
 		historyEngImpl.replicatorProcessor = replicatorProcessor
 		shardWrapper.replcatorProcessor = replicatorProcessor
 		historyEngImpl.replicator = newHistoryReplicator(shard, historyEngImpl, historyCache, shard.GetDomainCache(), historyManager,
@@ -332,14 +330,6 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 	timerTasks := []persistence.Task{&persistence.WorkflowTimeoutTask{
 		VisibilityTimestamp: e.shard.GetTimeSource().Now().Add(duration),
 	}}
-	// Serialize the history
-	serializedHistory, serializedError := msBuilder.GetHistoryBuilder().Serialize()
-	if serializedError != nil {
-		logging.LogHistorySerializationErrorEvent(e.logger, serializedError, fmt.Sprintf(
-			"HistoryEventBatch serialization error on start workflow.  WorkflowID: %v, RunID: %v",
-			execution.GetWorkflowId(), execution.GetRunId()))
-		return nil, serializedError
-	}
 
 	var historySize int
 	historySize, err = e.shard.AppendHistoryEvents(&persistence.AppendHistoryEventsRequest{
@@ -350,7 +340,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 		TransactionID:     0,
 		FirstEventID:      startedEvent.GetEventId(),
 		EventBatchVersion: startedEvent.GetVersion(),
-		Events:            serializedHistory,
+		Events:            msBuilder.GetHistoryBuilder().GetHistory().Events,
 	})
 	if err != nil {
 		return nil, err
@@ -379,7 +369,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 	}
 	setTaskInfo(msBuilder.GetCurrentVersion(), time.Now(), transferTasks, timerTasks)
 
-	createWorkflow := func(isBrandNew bool, prevRunID string) (string, error) {
+	createWorkflow := func(isBrandNew bool, prevRunID string, prevLastWriteVersion int64) (string, error) {
 		createRequest := &persistence.CreateWorkflowExecutionRequest{
 			RequestID:                   common.StringDefault(request.RequestId),
 			DomainID:                    domainID,
@@ -402,11 +392,16 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 			DecisionStartedID:           decisionStartID,
 			DecisionStartToCloseTimeout: decisionTimeout,
 			TimerTasks:                  timerTasks,
-			ContinueAsNew:               !isBrandNew,
 			PreviousRunID:               prevRunID,
+			PreviousLastWriteVersion:    prevLastWriteVersion,
 			ReplicationState:            replicationState,
 			HasRetryPolicy:              request.RetryPolicy != nil,
 		}
+		createRequest.CreateWorkflowMode = persistence.CreateWorkflowModeBrandNew
+		if !isBrandNew {
+			createRequest.CreateWorkflowMode = persistence.CreateWorkflowModeWorkflowIDReuse
+		}
+
 		if createRequest.HasRetryPolicy {
 			createRequest.InitialInterval = request.RetryPolicy.GetInitialIntervalInSeconds()
 			createRequest.BackoffCoefficient = request.RetryPolicy.GetBackoffCoefficient()
@@ -482,12 +477,20 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 	// try to create the workflow execution
 	isBrandNew := true
 	resultRunID := ""
-	resultRunID, err = createWorkflow(isBrandNew, "")
+	resultRunID, err = createWorkflow(isBrandNew, "", 0)
 	// if err still non nil, see if retry
 	if errExist, ok := err.(*persistence.WorkflowExecutionAlreadyStartedError); ok {
+		if msBuilder.GetCurrentVersion() < errExist.LastWriteVersion {
+			return nil, ce.NewDomainNotActiveError(
+				domainEntry.GetInfo().Name,
+				clusterMetadata.GetCurrentClusterName(),
+				clusterMetadata.ClusterNameForFailoverVersion(errExist.LastWriteVersion),
+			)
+		}
+
 		if err = workflowExistsErrHandler(errExist); err == nil {
 			isBrandNew = false
-			resultRunID, err = createWorkflow(isBrandNew, errExist.RunID)
+			resultRunID, err = createWorkflow(isBrandNew, errExist.RunID, errExist.LastWriteVersion)
 		}
 	}
 
@@ -736,9 +739,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(ctx context.Context,
 				ai.LastHeartbeatTimestamp = common.Int64Ptr(lastHeartbeatUnixNano)
 				ai.HeartbeatDetails = pi.Details
 			}
-			if scheduledEvent, ok := msBuilder.GetHistoryEvent(pi.ScheduledEvent); ok {
-				ai.ActivityType = scheduledEvent.ActivityTaskScheduledEventAttributes.ActivityType
-			}
+			ai.ActivityType = pi.ScheduledEvent.ActivityTaskScheduledEventAttributes.ActivityType
 			result.PendingActivities = append(result.PendingActivities, ai)
 		}
 	}
@@ -1281,8 +1282,8 @@ Update_History_Loop:
 					failCause = workflow.DecisionTaskFailedCauseBadSignalWorkflowExecutionAttributes
 					break Process_Decision_Loop
 				}
-				if err = validateSignalInput(attributes.Input, e.metricsClient,
-					metrics.HistoryRespondDecisionTaskCompletedScope); err != nil {
+				if err = validateSignalInput(domainID, &workflowExecution, attributes.Input, e.metricsClient,
+					metrics.HistoryRespondDecisionTaskCompletedScope, e.logger); err != nil {
 					failDecision = true
 					failCause = workflow.DecisionTaskFailedCauseBadSignalInputSize
 					break Process_Decision_Loop
@@ -1403,6 +1404,7 @@ Update_History_Loop:
 			if err1 != nil {
 				return nil, err1
 			}
+			tBuilder = e.getTimerBuilder(&context.workflowExecution)
 			isComplete = false
 			hasUnhandledEvents = true
 			continueAsNewBuilder = nil
@@ -1866,8 +1868,8 @@ func (e *historyEngineImpl) SignalWorkflowExecution(ctx context.Context, signalR
 		RunId:      request.WorkflowExecution.RunId,
 	}
 
-	if err := validateSignalInput(request.GetInput(), e.metricsClient,
-		metrics.HistorySignalWorkflowExecutionScope); err != nil {
+	if err := validateSignalInput(domainID, &execution, request.GetInput(), e.metricsClient,
+		metrics.HistorySignalWorkflowExecutionScope, e.logger); err != nil {
 		return err
 	}
 
@@ -1917,13 +1919,14 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 		WorkflowId: sRequest.WorkflowId,
 	}
 
-	if err := validateSignalInput(sRequest.GetSignalInput(), e.metricsClient,
-		metrics.HistorySignalWithStartWorkflowExecutionScope); err != nil {
+	if err := validateSignalInput(domainID, &execution, sRequest.GetSignalInput(), e.metricsClient,
+		metrics.HistorySignalWithStartWorkflowExecutionScope, e.logger); err != nil {
 		return nil, err
 	}
 
 	isBrandNew := false
 	prevRunID := ""
+	prevLastWriteVersion := common.EmptyVersion
 	attempt := 0
 
 	context, release, err0 := e.historyCache.getOrCreateWorkflowExecutionWithTimeout(ctx, domainID, execution)
@@ -1941,7 +1944,8 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 				return nil, err1
 			}
 			if !msBuilder.IsWorkflowExecutionRunning() {
-				prevRunID = context.workflowExecution.GetRunId()
+				prevRunID = msBuilder.GetExecutionInfo().RunID
+				prevLastWriteVersion = msBuilder.GetLastWriteVersion()
 				break
 			}
 			executionInfo := msBuilder.GetExecutionInfo()
@@ -2057,14 +2061,6 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 	timerTasks := []persistence.Task{&persistence.WorkflowTimeoutTask{
 		VisibilityTimestamp: e.shard.GetTimeSource().Now().Add(duration),
 	}}
-	// Serialize the history
-	serializedHistory, serializedError := msBuilder.GetHistoryBuilder().Serialize()
-	if serializedError != nil {
-		logging.LogHistorySerializationErrorEvent(e.logger, serializedError, fmt.Sprintf(
-			"HistoryEventBatch serialization error on start workflow.  WorkflowID: %v, RunID: %v",
-			execution.GetWorkflowId(), execution.GetRunId()))
-		return nil, serializedError
-	}
 
 	var historySize int
 	historySize, err = e.shard.AppendHistoryEvents(&persistence.AppendHistoryEventsRequest{
@@ -2075,7 +2071,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 		TransactionID:     0,
 		FirstEventID:      startedEvent.GetEventId(),
 		EventBatchVersion: startedEvent.GetVersion(),
-		Events:            serializedHistory,
+		Events:            msBuilder.GetHistoryBuilder().GetHistory().Events,
 	})
 	if err != nil {
 		return nil, err
@@ -2104,8 +2100,8 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 	}
 	setTaskInfo(msBuilder.GetCurrentVersion(), time.Now(), transferTasks, timerTasks)
 
-	createWorkflow := func(isBrandNew bool, prevRunID string) (string, error) {
-		_, err = e.shard.CreateWorkflowExecution(&persistence.CreateWorkflowExecutionRequest{
+	createWorkflow := func(isBrandNew bool, prevRunID string, prevLastWriteVersion int64) (string, error) {
+		createRequest := &persistence.CreateWorkflowExecutionRequest{
 			RequestID:                   common.StringDefault(request.RequestId),
 			DomainID:                    domainID,
 			Execution:                   execution,
@@ -2125,10 +2121,15 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 			DecisionStartedID:           decisionStartID,
 			DecisionStartToCloseTimeout: decisionTimeout,
 			TimerTasks:                  timerTasks,
-			ContinueAsNew:               !isBrandNew,
 			PreviousRunID:               prevRunID,
+			PreviousLastWriteVersion:    prevLastWriteVersion,
 			ReplicationState:            replicationState,
-		})
+		}
+		createRequest.CreateWorkflowMode = persistence.CreateWorkflowModeBrandNew
+		if !isBrandNew {
+			createRequest.CreateWorkflowMode = persistence.CreateWorkflowModeWorkflowIDReuse
+		}
+		_, err = e.shard.CreateWorkflowExecution(createRequest)
 
 		if err != nil {
 			switch t := err.(type) {
@@ -2146,7 +2147,14 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 	}
 
 	// try to create the workflow execution
-	resultRunID, err := createWorkflow(isBrandNew, prevRunID) // (true, "") or (false, "prevRunID")
+	if !isBrandNew && msBuilder.GetCurrentVersion() < prevLastWriteVersion {
+		return nil, ce.NewDomainNotActiveError(
+			domainEntry.GetInfo().Name,
+			clusterMetadata.GetCurrentClusterName(),
+			clusterMetadata.ClusterNameForFailoverVersion(prevLastWriteVersion),
+		)
+	}
+	resultRunID, err := createWorkflow(isBrandNew, prevRunID, prevLastWriteVersion) // (true, "", 0) or (false, "prevRunID", "prevLastWriteVersion")
 	if err == nil {
 		e.timerProcessor.NotifyNewTimers(e.currentClusterName, e.shard.GetCurrentTime(e.currentClusterName), timerTasks)
 
@@ -2515,15 +2523,15 @@ func (e *historyEngineImpl) getTimerBuilder(we *workflow.WorkflowExecution) *tim
 	return newTimerBuilder(e.shard.GetConfig(), lg, common.NewRealTimeSource())
 }
 
-func (s *shardContextWrapper) UpdateWorkflowExecution(request *persistence.UpdateWorkflowExecutionRequest) error {
-	err := s.ShardContext.UpdateWorkflowExecution(request)
+func (s *shardContextWrapper) UpdateWorkflowExecution(request *persistence.UpdateWorkflowExecutionRequest) (*persistence.UpdateWorkflowExecutionResponse, error) {
+	resp, err := s.ShardContext.UpdateWorkflowExecution(request)
 	if err == nil {
 		s.txProcessor.NotifyNewTask(s.currentClusterName, request.TransferTasks)
 		if len(request.ReplicationTasks) > 0 {
 			s.replcatorProcessor.notifyNewTask()
 		}
 	}
-	return err
+	return resp, err
 }
 
 func (s *shardContextWrapper) CreateWorkflowExecution(request *persistence.CreateWorkflowExecutionRequest) (
@@ -2808,15 +2816,25 @@ func validateStartWorkflowExecutionRequest(request *workflow.StartWorkflowExecut
 	return common.ValidateRetryPolicy(request.RetryPolicy)
 }
 
-func validateSignalInput(signalInput []byte, metricsClient metrics.Client, scope int) error {
+func validateSignalInput(domainID string, execution *workflow.WorkflowExecution, signalInput []byte, metricsClient metrics.Client, scope int, logger bark.Logger) error {
 	size := len(signalInput)
 	metricsClient.RecordTimer(
 		scope,
 		metrics.SignalSizeTimer,
 		time.Duration(size),
 	)
-	if size > signalInputSizeLimit {
-		return ErrSignalOverSize
+
+	if size > signalInputWarnSizeLimit {
+		logger.WithFields(bark.Fields{
+			logging.TagDomainID:            domainID,
+			logging.TagWorkflowExecutionID: execution.GetWorkflowId(),
+			logging.TagWorkflowRunID:       execution.GetRunId(),
+			logging.TagSize:                size,
+		}).Warn("Large signal size encountered.")
+
+		if size > signalInputErrSizeLimit {
+			return ErrSignalOverSize
+		}
 	}
 	return nil
 }

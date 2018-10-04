@@ -81,11 +81,6 @@ type (
 		CreateEngine(context ShardContext) Engine
 	}
 
-	historyEventSerializer interface {
-		Serialize(event *workflow.HistoryEvent) ([]byte, error)
-		Deserialize(data []byte) (*workflow.HistoryEvent, error)
-	}
-
 	queueProcessor interface {
 		common.Daemon
 		notifyNewTask()
@@ -94,7 +89,7 @@ type (
 	queueAckMgr interface {
 		getFinishedChan() <-chan struct{}
 		readQueueTasks() ([]queueTaskInfo, bool, error)
-		completeQueueTask(taskID int64) error
+		completeQueueTask(taskID int64)
 		getQueueAckLevel() int64
 		getQueueReadLevel() int64
 		updateQueueAckLevel()
@@ -108,9 +103,8 @@ type (
 	}
 
 	processor interface {
-		process(task queueTaskInfo) error
+		process(task queueTaskInfo) (int, error)
 		readTasks(readLevel int64) ([]queueTaskInfo, bool, error)
-		completeTask(taskID int64) error
 		updateAckLevel(taskID int64) error
 		queueShutdown() error
 	}
@@ -132,7 +126,7 @@ type (
 
 	timerProcessor interface {
 		notifyNewTimers(timerTask []persistence.Task)
-		process(task *persistence.TimerTaskInfo) error
+		process(task *persistence.TimerTaskInfo) (int, error)
 		getTimerGate() TimerGate
 	}
 
@@ -148,7 +142,15 @@ type (
 	historyEventNotifier interface {
 		common.Daemon
 		NotifyNewHistoryEvent(event *historyEventNotification)
-		WatchHistoryEvent(identifier *workflowIdentifier) (string, chan *historyEventNotification, error)
-		UnwatchHistoryEvent(identifier *workflowIdentifier, subscriberID string) error
+		WatchHistoryEvent(identifier workflowIdentifier) (string, chan *historyEventNotification, error)
+		UnwatchHistoryEvent(identifier workflowIdentifier, subscriberID string) error
 	}
 )
+
+func newWorkflowIdentifier(domainID string, execution *workflow.WorkflowExecution) workflowIdentifier {
+	return workflowIdentifier{
+		domainID:   domainID,
+		workflowID: execution.GetWorkflowId(),
+		runID:      execution.GetRunId(),
+	}
+}

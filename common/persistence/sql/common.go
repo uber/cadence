@@ -24,13 +24,13 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
-	"time"
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/persistence"
+	p "github.com/uber/cadence/common/persistence"
 )
 
 type sqlManager struct {
@@ -107,8 +107,6 @@ const (
 	dataSourceName = "%s:%s@tcp(%s:%d)/%s?multiStatements=true&tx_isolation=%%27READ-COMMITTED%%27&parseTime=true&clientFoundRows=true"
 )
 
-var maximumExpiryTs = time.Unix(1<<63-62135596801, 999999999)
-
 func boolToInt64(b bool) int64 {
 	if b {
 		return 1
@@ -133,6 +131,35 @@ func takeAddressIfNotNil(a []byte) *[]byte {
 func dereferenceIfNotNil(a *[]byte) []byte {
 	if a != nil {
 		return *a
+	}
+	return nil
+}
+
+func runTransaction(name string, db *sqlx.DB, txFunc func(tx *sqlx.Tx) error) error {
+	convertErr := func(err error) error {
+		switch err.(type) {
+		case *workflow.InternalServiceError, *workflow.DomainAlreadyExistsError:
+			return err
+		case *p.ShardOwnershipLostError, *p.ConditionFailedError:
+			return err
+		default:
+			return &workflow.InternalServiceError{
+				Message: fmt.Sprintf("%v: %v", name, err),
+			}
+		}
+	}
+	tx, err := db.Beginx()
+	if err != nil {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("%v: failed to begin transaction: %v", name, err),
+		}
+	}
+	if err := txFunc(tx); err != nil {
+		tx.Rollback()
+		return convertErr(err)
+	}
+	if err := tx.Commit(); err != nil {
+		return convertErr(err)
 	}
 	return nil
 }

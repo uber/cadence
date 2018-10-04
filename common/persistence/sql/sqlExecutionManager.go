@@ -157,11 +157,11 @@ type (
 
 const (
 	executionsNonNullableColumns = `shard_id,
-domain_id, 
-workflow_id, 
-run_id, 
-task_list, 
-workflow_type_name, 
+domain_id,
+workflow_id,
+run_id,
+task_list,
+workflow_type_name,
 workflow_timeout_seconds,
 decision_task_timeout_minutes,
 state,
@@ -238,7 +238,7 @@ cancel_request_id`
 	executionsReplicationStateColumns     = `start_version, current_version, last_write_version, last_write_event_id, last_replication_info`
 	executionsReplicationStateColumnsTags = `:start_version, :current_version, :last_write_version, :last_write_event_id, :last_replication_info`
 
-	createExecutionSQLQuery = `INSERT INTO executions 
+	createExecutionSQLQuery = `INSERT INTO executions
 (` + executionsNonNullableColumns + `,` +
 		executionsNonblobParentColumns +
 		`,
@@ -323,10 +323,10 @@ domain_id = ? AND
 workflow_id = ? AND
 run_id = ?`
 
-	transferTaskInfoColumns = `domain_id,
+	transferTaskInfoColumns = `task_id, 
+domain_id,
 workflow_id,
 run_id,
-task_id,
 task_type,
 target_domain_id,
 target_workflow_id,
@@ -337,10 +337,10 @@ schedule_id,
 visibility_timestamp,
 version`
 
-	transferTaskInfoColumnsTags = `:domain_id,
+	transferTaskInfoColumnsTags = `:task_id,
+:domain_id,
 :workflow_id,
 :run_id,
-:task_id,
 :task_type,
 :target_domain_id,
 :target_workflow_id,
@@ -386,6 +386,16 @@ domain_id = ? AND
 workflow_id = ?
 FOR UPDATE`
 
+	// The workflowIDReuseSQLQuery and continueAsNewUpdateCurrentExecutionsSQLQuery together comprise workflowIDReuse.
+	// The updates must be executed only after locking current_run_id, current_state and current_last_write_version of
+	// the current_executions row that we are going to update,
+	// and asserting that it is PreviousRunId.
+	workflowIDReuseSQLQuery = `SELECT run_id, state, last_write_version FROM current_executions WHERE
+shard_id = ? AND
+domain_id = ? AND
+workflow_id = ?
+FOR UPDATE`
+
 	continueAsNewUpdateCurrentExecutionsSQLQuery = `UPDATE current_executions SET
 run_id = :run_id,
 create_request_id = :create_request_id,
@@ -408,20 +418,20 @@ VALUES
 	completeTransferTaskSQLQuery      = `DELETE FROM transfer_tasks WHERE shard_id = :shard_id AND task_id = :task_id`
 	rangeCompleteTransferTaskSQLQuery = `DELETE FROM transfer_tasks WHERE shard_id = ? AND task_id > ? AND task_id <= ?`
 
-	replicationTaskInfoColumns = `domain_id,
+	replicationTaskInfoColumns = `task_id,
+domain_id,
 workflow_id,
 run_id,
-task_id,
 task_type,
 first_event_id,
 next_event_id,
 version,
 last_replication_info`
 
-	replicationTaskInfoColumnsTags = `:domain_id,
+	replicationTaskInfoColumnsTags = `:task_id,
+:domain_id,
 :workflow_id,
 :run_id,
-:task_id,
 :task_type,
 :first_event_id,
 :next_event_id,
@@ -437,13 +447,13 @@ last_replication_info`
 
 	getReplicationTasksSQLQuery = `SELECT ` + replicationTaskInfoColumns +
 		`
-FROM replication_tasks WHERE 
+FROM replication_tasks WHERE
 shard_id = ? AND
 task_id > ? AND
 task_id <= ?`
 
-	timerTaskInfoColumns     = `domain_id, workflow_id, run_id, visibility_timestamp, task_id, task_type, timeout_type, event_id, schedule_attempt, version`
-	timerTaskInfoColumnsTags = `:domain_id, :workflow_id, :run_id, :visibility_timestamp, :task_id, :task_type, :timeout_type, :event_id, :schedule_attempt, :version`
+	timerTaskInfoColumns     = `visibility_timestamp, task_id, domain_id, workflow_id, run_id, task_type, timeout_type, event_id, schedule_attempt, version`
+	timerTaskInfoColumnsTags = `:visibility_timestamp, :task_id, :domain_id, :workflow_id, :run_id, :task_type, :timeout_type, :event_id, :schedule_attempt, :version`
 	timerTasksColumns        = `shard_id,` + timerTaskInfoColumns
 	timerTasksColumnsTags    = `:shard_id,` + timerTaskInfoColumnsTags
 	createTimerTasksSQLQuery = `INSERT INTO timer_tasks (` +
@@ -519,7 +529,6 @@ func (m *sqlExecutionManager) createWorkflowExecutionTx(tx *sqlx.Tx, request *p.
 				LastWriteVersion: lastWriteVersion,
 			}
 		}
-
 		return nil, &p.WorkflowExecutionAlreadyStartedError{
 			Msg:              fmt.Sprintf("Workflow execution already running. WorkflowId: %v", row.WorkflowID),
 			StartRequestID:   row.CreateRequestID,
@@ -687,7 +696,7 @@ func (m *sqlExecutionManager) GetWorkflowExecution(request *p.GetWorkflowExecuti
 		state.ExecutionInfo.ParentRunID = *execution.ParentRunID
 		state.ExecutionInfo.InitiatedID = *execution.InitiatedID
 		if state.ExecutionInfo.CompletionEvent != nil {
-			state.ExecutionInfo.CompletionEvent = *execution.CompletionEvent
+			state.ExecutionInfo.CompletionEvent = nil
 		}
 	}
 
@@ -810,6 +819,7 @@ func (m *sqlExecutionManager) GetWorkflowExecution(request *p.GetWorkflowExecuti
 
 	return &p.GetWorkflowExecutionResponse{State: &state}, nil
 }
+
 func getBufferedEvents(tx *sqlx.Tx, shardID int, domainID string, workflowID string, runID string) (result []*p.SerializedHistoryEventBatch, err error) {
 	var rows []bufferedEventsRow
 
@@ -982,6 +992,34 @@ func (m *sqlExecutionManager) updateWorkflowExecutionTx(tx *sqlx.Tx, request *p.
 			request.ContinueAsNew.Execution.GetWorkflowId(),
 			request.ContinueAsNew.Execution.GetRunId()); err != nil {
 			return err
+		}
+	} else {
+		executionInfo := request.ExecutionInfo
+		startVersion := common.EmptyVersion
+		lastWriteVersion := common.EmptyVersion
+		if request.ReplicationState != nil {
+			startVersion = request.ReplicationState.StartVersion
+			lastWriteVersion = request.ReplicationState.LastWriteVersion
+		}
+		if request.FinishExecution {
+			// TODO when finish execution, the current record should be marked with a TTL
+		} else {
+			// this is only to update the current record
+			if err := continueAsNew(tx,
+				m.shardID,
+				executionInfo.DomainID,
+				executionInfo.WorkflowID,
+				executionInfo.RunID,
+				executionInfo.RunID,
+				executionInfo.CreateRequestID,
+				int64(executionInfo.State),
+				int64(executionInfo.CloseStatus),
+				startVersion,
+				lastWriteVersion); err != nil {
+				return &workflow.InternalServiceError{
+					Message: fmt.Sprintf("UpdateWorkflowExecution operation failed. Failed to update current execution. Error: %v", err),
+				}
+			}
 		}
 	}
 	return nil
@@ -1369,8 +1407,8 @@ func (m *sqlExecutionManager) RangeCompleteTimerTask(request *p.RangeCompleteTim
 }
 
 // NewSQLMatchingPersistence creates an instance of ExecutionManager
-func NewSQLMatchingPersistence(host string, port int, username, password, dbName string, logger bark.Logger) (p.ExecutionManager, error) {
-	var db, err = newConnection(host, port, username, password, dbName)
+func NewSQLMatchingPersistence(host string, port int, username, password, dbName string, logger bark.Logger) (p.ExecutionStore, error) {
+	var _, err = newConnection(host, port, username, password, dbName)
 	if err != nil {
 		return nil, err
 	}
@@ -1474,7 +1512,8 @@ func createCurrentExecution(tx *sqlx.Tx, request *p.CreateWorkflowExecutionReque
 		arg.State = p.WorkflowStateCreated
 	}
 
-	if request.ContinueAsNew {
+	switch request.CreateWorkflowMode {
+	case p.CreateWorkflowModeContinueAsNew:
 		if err := continueAsNew(tx,
 			shardID,
 			request.DomainID,
@@ -1484,17 +1523,38 @@ func createCurrentExecution(tx *sqlx.Tx, request *p.CreateWorkflowExecutionReque
 			request.RequestID,
 			p.WorkflowStateRunning,
 			p.WorkflowCloseStatusNone,
-			0); err != nil {
+			arg.StartVersion,
+			arg.LastWriteVersion); err != nil {
 			return &workflow.InternalServiceError{
 				Message: fmt.Sprintf("CreateWorkflowExecution operation failed. Failed to continue as new. Error: %v", err),
 			}
 		}
-	} else {
+	case p.CreateWorkflowModeWorkflowIDReuse:
+		if err := workflowIDReuse(tx,
+			shardID,
+			request.DomainID,
+			*request.Execution.WorkflowId,
+			*request.Execution.RunId,
+			request.PreviousRunID,
+			request.PreviousLastWriteVersion,
+			p.WorkflowCloseStatusCompleted,
+			request.RequestID,
+			p.WorkflowStateRunning,
+			p.WorkflowCloseStatusNone,
+			arg.StartVersion,
+			arg.LastWriteVersion); err != nil {
+			return &workflow.InternalServiceError{
+				Message: fmt.Sprintf("CreateWorkflowExecution operation failed. Failed to reuse workflow ID. Error: %v", err),
+			}
+		}
+	case p.CreateWorkflowModeBrandNew:
 		if _, err := tx.NamedExec(createCurrentExecutionSQLQuery, &arg); err != nil {
 			return &workflow.InternalServiceError{
 				Message: fmt.Sprintf("CreateWorkflowExecution operation failed. Failed to insert into current_executions table. Error: %v", err),
 			}
 		}
+	default:
+		return fmt.Errorf("Unknown workflow creation mode: %v", request.CreateWorkflowMode)
 	}
 
 	return nil
@@ -1776,7 +1836,7 @@ func createTimerTasks(tx *sqlx.Tx, timerTasks []p.Task, deleteTimerTask p.Task, 
 }
 
 func continueAsNew(tx *sqlx.Tx, shardID int, domainID, workflowID, runID, previousRunID string,
-	createRequestID string, state int64, closeStatus int64, startVersion int64) error {
+	createRequestID string, state int64, closeStatus int64, startVersion int64, lastWriteVersion int64) error {
 
 	var currentRunID string
 	if err := tx.Get(&currentRunID, continueAsNewLockRunIDSQLQuery, int64(shardID), domainID, workflowID); err != nil {
@@ -1789,15 +1849,46 @@ func continueAsNew(tx *sqlx.Tx, shardID int, domainID, workflowID, runID, previo
 			Msg: fmt.Sprintf("ContinueAsNew failed. Current run ID was %v, expected %v", currentRunID, previousRunID),
 		}
 	}
+	return conditionalUpdateCurrentExecution(tx, shardID, domainID, workflowID, runID, createRequestID, state, closeStatus, startVersion, lastWriteVersion)
+}
+
+func workflowIDReuse(tx *sqlx.Tx, shardID int, domainID, workflowID, runID, previousRunID string,
+	previousLastWriteVersion int64, previousState int64,
+	createRequestID string, state int64, closeStatus int64, startVersion int64, lastWriteVersion int64) error {
+
+	var currentExecutionRow currentExecutionRow
+	if err := tx.Get(&currentExecutionRow, workflowIDReuseSQLQuery, int64(shardID), domainID, workflowID); err != nil {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("WorkfowIDReuse failed. Failed to check current run ID or current state or current last write version. Error: %v", err),
+		}
+	}
+	if currentExecutionRow.RunID != previousRunID ||
+		currentExecutionRow.State != previousState ||
+		currentExecutionRow.LastWriteVersion != previousLastWriteVersion {
+		return &p.ConditionFailedError{
+			Msg: fmt.Sprintf("ContinueAsNew failed. Current run ID %v, expected %v, current state: %v, expected: %v, current last write version: %v, expected: %v",
+				currentExecutionRow.RunID, previousRunID,
+				currentExecutionRow.State, previousState,
+				currentExecutionRow.LastWriteVersion, previousLastWriteVersion,
+			),
+		}
+	}
+	return conditionalUpdateCurrentExecution(tx, shardID, domainID, workflowID, runID, createRequestID, state, closeStatus, startVersion, lastWriteVersion)
+}
+
+func conditionalUpdateCurrentExecution(tx *sqlx.Tx, shardID int, domainID, workflowID, runID,
+	createRequestID string, state int64, closeStatus int64, startVersion int64, lastWriteVersion int64) error {
+
 	result, err := tx.NamedExec(continueAsNewUpdateCurrentExecutionsSQLQuery, &currentExecutionRow{
-		ShardID:         int64(shardID),
-		DomainID:        domainID,
-		WorkflowID:      workflowID,
-		RunID:           runID,
-		CreateRequestID: createRequestID,
-		State:           state,
-		CloseStatus:     closeStatus,
-		StartVersion:    &startVersion,
+		ShardID:          int64(shardID),
+		DomainID:         domainID,
+		WorkflowID:       workflowID,
+		RunID:            runID,
+		CreateRequestID:  createRequestID,
+		State:            state,
+		CloseStatus:      closeStatus,
+		StartVersion:     common.Int64Ptr(startVersion),
+		LastWriteVersion: common.Int64Ptr(lastWriteVersion),
 	})
 	// The current_executions row is locked, and the run ID has been verified. We can do the updates.
 	if err != nil {
@@ -1832,7 +1923,7 @@ func updateExecution(tx *sqlx.Tx,
 			ParentWorkflowID:             &executionInfo.ParentWorkflowID,
 			ParentRunID:                  &executionInfo.ParentRunID,
 			InitiatedID:                  &executionInfo.InitiatedID,
-			CompletionEvent:              &executionInfo.CompletionEvent,
+			CompletionEvent:              nil,
 			TaskList:                     executionInfo.TaskList,
 			WorkflowTypeName:             executionInfo.WorkflowTypeName,
 			WorkflowTimeoutSeconds:       int64(executionInfo.WorkflowTimeout),
@@ -1884,7 +1975,7 @@ func updateExecution(tx *sqlx.Tx,
 		args.ParentWorkflowID = &executionInfo.ParentWorkflowID
 		args.ParentRunID = &executionInfo.ParentRunID
 		args.InitiatedID = &executionInfo.InitiatedID
-		args.CompletionEvent = &executionInfo.CompletionEvent
+		args.CompletionEvent = nil
 	}
 
 	if executionInfo.CancelRequested {

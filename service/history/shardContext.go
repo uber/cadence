@@ -69,7 +69,7 @@ type (
 		UpdateDomainNotificationVersion(domainNotificationVersion int64) error
 		CreateWorkflowExecution(request *persistence.CreateWorkflowExecutionRequest) (
 			*persistence.CreateWorkflowExecutionResponse, error)
-		UpdateWorkflowExecution(request *persistence.UpdateWorkflowExecutionRequest) error
+		UpdateWorkflowExecution(request *persistence.UpdateWorkflowExecutionRequest) (*persistence.UpdateWorkflowExecutionResponse, error)
 		ResetMutableState(request *persistence.ResetMutableStateRequest) error
 		AppendHistoryEvents(request *persistence.AppendHistoryEventsRequest) (int, error)
 		NotifyNewHistoryEvent(event *historyEventNotification) error
@@ -84,6 +84,7 @@ type (
 	}
 
 	shardContextImpl struct {
+		shardItem        *historyShardsItem
 		shardID          int
 		currentCluster   string
 		service          service.Service
@@ -406,9 +407,23 @@ Create_Loop:
 	return nil, ErrMaxAttemptsExceeded
 }
 
-func (s *shardContextImpl) UpdateWorkflowExecution(request *persistence.UpdateWorkflowExecutionRequest) error {
+func (s *shardContextImpl) getDefaultEncoding(domainID string) (common.EncodingType, error) {
+	dm, err := s.domainCache.GetDomainByID(domainID)
+	if err != nil {
+		return "", err
+	}
+	return common.EncodingType(s.config.EventEncodingType(dm.GetInfo().Name)), nil
+}
+
+func (s *shardContextImpl) UpdateWorkflowExecution(request *persistence.UpdateWorkflowExecutionRequest) (*persistence.UpdateWorkflowExecutionResponse, error) {
 	s.Lock()
 	defer s.Unlock()
+
+	encoding, err := s.getDefaultEncoding(request.ExecutionInfo.DomainID)
+	if err != nil {
+		return nil, err
+	}
+	request.Encoding = encoding
 
 	transferMaxReadLevel := int64(0)
 	// assign IDs for the transfer tasks
@@ -417,7 +432,7 @@ func (s *shardContextImpl) UpdateWorkflowExecution(request *persistence.UpdateWo
 	for _, task := range request.TransferTasks {
 		id, err := s.getNextTransferTaskIDLocked()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		s.logger.Debugf("Assigning transfer task ID: %v", id)
 		task.SetTaskID(id)
@@ -427,7 +442,7 @@ func (s *shardContextImpl) UpdateWorkflowExecution(request *persistence.UpdateWo
 	for _, task := range request.ReplicationTasks {
 		id, err := s.getNextTransferTaskIDLocked()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		s.logger.Debugf("Assigning replication task ID: %v", id)
 		task.SetTaskID(id)
@@ -438,7 +453,7 @@ func (s *shardContextImpl) UpdateWorkflowExecution(request *persistence.UpdateWo
 		for _, task := range request.ContinueAsNew.TransferTasks {
 			id, err := s.getNextTransferTaskIDLocked()
 			if err != nil {
-				return err
+				return nil, err
 			}
 			s.logger.Debugf("Assigning transfer task ID: %v", id)
 			task.SetTaskID(id)
@@ -448,7 +463,7 @@ func (s *shardContextImpl) UpdateWorkflowExecution(request *persistence.UpdateWo
 		for _, task := range request.ContinueAsNew.ReplicationTasks {
 			id, err := s.getNextTransferTaskIDLocked()
 			if err != nil {
-				return err
+				return nil, err
 			}
 			s.logger.Debugf("Assigning replication task ID: %v", id)
 			task.SetTaskID(id)
@@ -463,7 +478,7 @@ Update_Loop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
 		currentRangeID := s.getRangeID()
 		request.RangeID = currentRangeID
-		err := s.executionManager.UpdateWorkflowExecution(request)
+		resp, err := s.executionManager.UpdateWorkflowExecution(request)
 		if err != nil {
 			switch err.(type) {
 			case *persistence.ConditionFailedError,
@@ -498,15 +513,21 @@ Update_Loop:
 			}
 		}
 
-		return err
+		return resp, err
 	}
 
-	return ErrMaxAttemptsExceeded
+	return nil, ErrMaxAttemptsExceeded
 }
 
 func (s *shardContextImpl) ResetMutableState(request *persistence.ResetMutableStateRequest) error {
 	s.Lock()
 	defer s.Unlock()
+
+	encoding, err := s.getDefaultEncoding(request.ExecutionInfo.DomainID)
+	if err != nil {
+		return err
+	}
+	request.Encoding = encoding
 
 Reset_Loop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
@@ -554,21 +575,34 @@ Reset_Loop:
 }
 
 func (s *shardContextImpl) AppendHistoryEvents(request *persistence.AppendHistoryEventsRequest) (int, error) {
-	size := 0
-	if request.Events != nil {
-		size = len(request.Events.Data)
-		s.metricsClient.RecordTimer(metrics.SessionSizeStatsScope, metrics.HistorySize, time.Duration(size))
+	encoding, err := s.getDefaultEncoding(request.DomainID)
+	if err != nil {
+		return 0, err
 	}
+	request.Encoding = encoding
+
+	size := 0
+	defer func() {
+		s.metricsClient.RecordTimer(metrics.SessionSizeStatsScope, metrics.HistorySize, time.Duration(size))
+	}()
 
 	// No need to lock context here, as we can write concurrently to append history events
 	currentRangeID := atomic.LoadInt64(&s.rangeID)
 	request.RangeID = currentRangeID
-	err0 := s.historyMgr.AppendHistoryEvents(request)
+	resp, err0 := s.historyMgr.AppendHistoryEvents(request)
+	if resp != nil {
+		size = resp.Size
+	}
+
 	if err0 != nil {
 		if _, ok := err0.(*persistence.ConditionFailedError); ok {
 			// Inserting a new event failed, lets try to overwrite the tail
 			request.Overwrite = true
-			return size, s.historyMgr.AppendHistoryEvents(request)
+			resp, err1 := s.historyMgr.AppendHistoryEvents(request)
+			if resp != nil {
+				size = resp.Size
+			}
+			return size, err1
 		}
 	}
 
@@ -604,6 +638,8 @@ func (s *shardContextImpl) closeShard() {
 	}
 
 	s.isClosed = true
+
+	go s.shardItem.stopEngine()
 
 	// fails any writes that may start after this point.
 	s.shardInfo.RangeID = -1
@@ -806,9 +842,7 @@ func (s *shardContextImpl) GetCurrentTime(cluster string) time.Time {
 }
 
 // TODO: This method has too many parameters.  Clean it up.  Maybe create a struct to pass in as parameter.
-func acquireShard(shardID int, svc service.Service, shardManager persistence.ShardManager,
-	historyMgr persistence.HistoryManager, executionMgr persistence.ExecutionManager, domainCache cache.DomainCache,
-	owner string, closeCh chan<- int, config *Config, logger bark.Logger, metricsClient metrics.Client) (ShardContext,
+func acquireShard(shardItem *historyShardsItem, closeCh chan<- int) (ShardContext,
 	error) {
 
 	var shardInfo *persistence.ShardInfo
@@ -827,8 +861,8 @@ func acquireShard(shardID int, svc service.Service, shardManager persistence.Sha
 	}
 
 	getShard := func() error {
-		resp, err := shardManager.GetShard(&persistence.GetShardRequest{
-			ShardID: shardID,
+		resp, err := shardItem.shardMgr.GetShard(&persistence.GetShardRequest{
+			ShardID: shardItem.shardID,
 		})
 		if err == nil {
 			shardInfo = resp.ShardInfo
@@ -840,29 +874,29 @@ func acquireShard(shardID int, svc service.Service, shardManager persistence.Sha
 
 		// EntityNotExistsError error
 		shardInfo = &persistence.ShardInfo{
-			ShardID:          shardID,
+			ShardID:          shardItem.shardID,
 			RangeID:          0,
 			TransferAckLevel: 0,
 		}
-		return shardManager.CreateShard(&persistence.CreateShardRequest{ShardInfo: shardInfo})
+		return shardItem.shardMgr.CreateShard(&persistence.CreateShardRequest{ShardInfo: shardInfo})
 	}
 
 	err := backoff.Retry(getShard, retryPolicy, retryPredicate)
 	if err != nil {
-		logger.WithFields(bark.Fields{
-			logging.TagHistoryShardID: shardID,
+		shardItem.logger.WithFields(bark.Fields{
+			logging.TagHistoryShardID: shardItem.shardID,
 			logging.TagErr:            err,
 		}).Error("Fail to acquire shard.")
 		return nil, err
 	}
 
 	updatedShardInfo := copyShardInfo(shardInfo)
-	updatedShardInfo.Owner = owner
+	updatedShardInfo.Owner = shardItem.host.Identity()
 
 	// initialize the cluster current time to be the same as ack level
 	standbyClusterCurrentTime := make(map[string]time.Time)
-	for clusterName := range svc.GetClusterMetadata().GetAllClusterFailoverVersions() {
-		if clusterName != svc.GetClusterMetadata().GetCurrentClusterName() {
+	for clusterName := range shardItem.service.GetClusterMetadata().GetAllClusterFailoverVersions() {
+		if clusterName != shardItem.service.GetClusterMetadata().GetCurrentClusterName() {
 			if currentTime, ok := shardInfo.ClusterTimerAckLevel[clusterName]; ok {
 				standbyClusterCurrentTime[clusterName] = currentTime
 			} else {
@@ -872,22 +906,23 @@ func acquireShard(shardID int, svc service.Service, shardManager persistence.Sha
 	}
 
 	context := &shardContextImpl{
-		shardID:                   shardID,
-		currentCluster:            svc.GetClusterMetadata().GetCurrentClusterName(),
-		service:                   svc,
-		shardManager:              shardManager,
-		historyMgr:                historyMgr,
-		executionManager:          executionMgr,
-		domainCache:               domainCache,
+		shardItem:                 shardItem,
+		shardID:                   shardItem.shardID,
+		currentCluster:            shardItem.service.GetClusterMetadata().GetCurrentClusterName(),
+		service:                   shardItem.service,
+		shardManager:              shardItem.shardMgr,
+		historyMgr:                shardItem.historyMgr,
+		executionManager:          shardItem.executionMgr,
+		domainCache:               shardItem.domainCache,
 		shardInfo:                 updatedShardInfo,
 		closeCh:                   closeCh,
-		metricsClient:             metricsClient,
-		config:                    config,
+		metricsClient:             shardItem.metricsClient,
+		config:                    shardItem.config,
 		standbyClusterCurrentTime: standbyClusterCurrentTime,
 		timerMaxReadLevel:         updatedShardInfo.TimerAckLevel, // use ack to init read level
 	}
-	context.logger = logger.WithFields(bark.Fields{
-		logging.TagHistoryShardID: shardID,
+	context.logger = shardItem.logger.WithFields(bark.Fields{
+		logging.TagHistoryShardID: shardItem.shardID,
 	})
 
 	err1 := context.renewRangeLocked(true)

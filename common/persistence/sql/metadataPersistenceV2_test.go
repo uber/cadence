@@ -21,8 +21,9 @@
 package sql_test
 
 import (
-	"github.com/uber/cadence/common/persistence/sql"
 	"testing"
+
+	"github.com/uber/cadence/common/persistence/sql"
 
 	"github.com/stretchr/testify/suite"
 	"github.com/uber/cadence/common/persistence/persistence-tests"
