@@ -2736,8 +2736,7 @@ func (d *cassandraPersistence) createTimerTasks(batch *gocql.Batch, timerTasks [
 		}
 
 		// Ignoring possible type cast errors.
-		t, _ := p.GetVisibilityTSFrom(task)
-		ts := p.UnixNanoToDBTimestamp(t.UnixNano())
+		ts := p.UnixNanoToDBTimestamp(task.GetVisibilityTimestamp().UnixNano())
 
 		batch.Query(templateCreateTimerTaskQuery,
 			d.shardID,
@@ -2761,8 +2760,7 @@ func (d *cassandraPersistence) createTimerTasks(batch *gocql.Batch, timerTasks [
 
 	if deleteTimerTask != nil {
 		// Ignoring possible type cast errors.
-		t, _ := p.GetVisibilityTSFrom(deleteTimerTask)
-		ts := p.UnixNanoToDBTimestamp(t.UnixNano())
+		ts := p.UnixNanoToDBTimestamp(deleteTimerTask.GetVisibilityTimestamp().UnixNano())
 
 		batch.Query(templateCompleteTimerTaskQuery,
 			d.shardID,

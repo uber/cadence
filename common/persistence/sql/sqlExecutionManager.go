@@ -334,6 +334,7 @@ target_run_id,
 target_child_workflow_only,
 task_list,
 schedule_id,
+visibility_timestamp,
 version`
 
 	transferTaskInfoColumnsTags = `:domain_id,
@@ -347,6 +348,7 @@ version`
 :target_child_workflow_only,
 :task_list,
 :schedule_id,
+:visibility_timestamp,
 :version`
 
 	transferTasksColumns = `shard_id,` + transferTaskInfoColumns
@@ -1356,8 +1358,8 @@ func (m *sqlExecutionManager) CompleteTimerTask(request *p.CompleteTimerTaskRequ
 }
 
 func (m *sqlExecutionManager) RangeCompleteTimerTask(request *p.RangeCompleteTimerTaskRequest) error {
-	start := p.UnixNanoToDBTimestamp(request.InclusiveBeginTimestamp.UnixNano())
-	end := p.UnixNanoToDBTimestamp(request.ExclusiveEndTimestamp.UnixNano())
+	start := request.InclusiveBeginTimestamp
+	end := request.ExclusiveEndTimestamp
 	if _, err := m.db.Exec(rangeCompleteTimerTaskSQLQuery, m.shardID, start, end); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("CompleteTimerTask operation failed. Error: %v", err),
@@ -1588,6 +1590,7 @@ func createTransferTasks(tx *sqlx.Tx, transferTasks []p.Task, shardID int, domai
 		transferTasksRows[i].TaskID = task.GetTaskID()
 		transferTasksRows[i].TaskType = task.GetType()
 		transferTasksRows[i].Version = task.GetVersion()
+		transferTasksRows[i].VisibilityTimestamp = task.GetVisibilityTimestamp()
 	}
 
 	query, args, err := tx.BindNamed(createTransferTasksSQLQuery, transferTasksRows)
@@ -1728,13 +1731,7 @@ func createTimerTasks(tx *sqlx.Tx, timerTasks []p.Task, deleteTimerTask p.Task, 
 			timerTasksRows[i].DomainID = domainID
 			timerTasksRows[i].WorkflowID = workflowID
 			timerTasksRows[i].RunID = runID
-			t, err := p.GetVisibilityTSFrom(task)
-			if err != nil {
-				return &workflow.InternalServiceError{
-					Message: fmt.Sprintf("Failed to create timer tasks. Error: %v", err),
-				}
-			}
-			timerTasksRows[i].VisibilityTimestamp = t
+			timerTasksRows[i].VisibilityTimestamp = task.GetVisibilityTimestamp()
 			timerTasksRows[i].TaskID = task.GetTaskID()
 			timerTasksRows[i].Version = task.GetVersion()
 			timerTasksRows[i].TaskType = task.GetType()
@@ -1767,13 +1764,7 @@ func createTimerTasks(tx *sqlx.Tx, timerTasks []p.Task, deleteTimerTask p.Task, 
 	}
 
 	if deleteTimerTask != nil {
-		ts, err := p.GetVisibilityTSFrom(deleteTimerTask)
-		if err != nil {
-			return &workflow.InternalServiceError{
-				Message: fmt.Sprintf("Failed to delete timer task. Task: %v. Error: %v", deleteTimerTask, err),
-			}
-		}
-
+		ts := deleteTimerTask.GetVisibilityTimestamp()
 		if _, err := tx.Exec(completeTimerTaskSQLQuery, shardID, ts, deleteTimerTask.GetTaskID()); err != nil {
 			return &workflow.InternalServiceError{
 				Message: fmt.Sprintf("Failed to delete timer task. Task: %v. Error: %v", deleteTimerTask, err),

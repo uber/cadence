@@ -50,9 +50,9 @@ func (m *sqlManager) txExecute(operation string, f func(tx *sqlx.Tx) error) erro
 		tx.Rollback()
 		switch err.(type) {
 		case *persistence.ConditionFailedError,
-		*workflow.InternalServiceError,
-		*persistence.WorkflowExecutionAlreadyStartedError,
-		*persistence.ShardOwnershipLostError:
+			*workflow.InternalServiceError,
+			*persistence.WorkflowExecutionAlreadyStartedError,
+			*persistence.ShardOwnershipLostError:
 			return err
 		default:
 			return &workflow.InternalServiceError{

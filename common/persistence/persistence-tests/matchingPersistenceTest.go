@@ -28,8 +28,6 @@ import (
 	"github.com/pborman/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
-
 	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	p "github.com/uber/cadence/common/persistence"
@@ -38,7 +36,6 @@ import (
 type (
 	// MatchingPersistenceSuite contains matching persistence tests
 	MatchingPersistenceSuite struct {
-		suite.Suite
 		TestBase
 		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
 		// not merely log an error
@@ -48,7 +45,7 @@ type (
 
 // Cassandra only provides milliseconds timestamp precision, so
 // we need to use tolerance when doing comparison
-var timePrecision = 2 * time.Millisecond
+const TimePrecision = 2 * time.Millisecond
 
 // SetupSuite implementation
 func (s *MatchingPersistenceSuite) SetupSuite() {

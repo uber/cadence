@@ -758,16 +758,13 @@ func (s *shardContextImpl) emitShardInfoMetricsLogsLocked() {
 func (s *shardContextImpl) allocateTimerIDsLocked(timerTasks []persistence.Task) error {
 	// assign IDs for the timer tasks. They need to be assigned under shard lock.
 	for _, task := range timerTasks {
-		ts, err := persistence.GetVisibilityTSFrom(task)
-		if err != nil {
-			panic(err)
-		}
+		ts := task.GetVisibilityTimestamp()
 		if ts.Before(s.timerMaxReadLevel) {
 			// This can happen if shard move and new host have a time SKU, or there is db write delay.
 			// We generate a new timer ID using timerMaxReadLevel.
 			s.logger.Warnf("%v: New timer generated is less than read level. timestamp: %v, timerMaxReadLevel: %v",
 				time.Now(), ts, s.timerMaxReadLevel)
-			persistence.SetVisibilityTSFrom(task, s.timerMaxReadLevel.Add(time.Millisecond))
+			task.SetVisibilityTimestamp(s.timerMaxReadLevel.Add(time.Millisecond))
 		}
 
 		seqNum, err := s.getNextTransferTaskIDLocked()
@@ -775,10 +772,7 @@ func (s *shardContextImpl) allocateTimerIDsLocked(timerTasks []persistence.Task)
 			return err
 		}
 		task.SetTaskID(seqNum)
-		visibilityTs, err := persistence.GetVisibilityTSFrom(task)
-		if err != nil {
-			return err
-		}
+		visibilityTs := task.GetVisibilityTimestamp()
 		s.logger.Debugf("Assigning new timer (timestamp: %v, seq: %v) ackLeveL: %v",
 			visibilityTs, task.GetTaskID(), s.shardInfo.TimerAckLevel)
 	}

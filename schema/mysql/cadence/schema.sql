@@ -56,6 +56,7 @@ CREATE TABLE transfer_tasks(
 	task_list VARCHAR(255) NOT NULL,
 	schedule_id BIGINT NOT NULL,
 	version BIGINT NOT NULL,
+	visibility_timestamp TIMESTAMP(3) NOT NULL,
 	PRIMARY KEY (shard_id, task_id)
 );
 

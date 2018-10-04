@@ -21,6 +21,7 @@
 package persistencetests
 
 import (
+	"github.com/stretchr/testify/suite"
 	"math"
 	"math/rand"
 	"sync/atomic"
@@ -58,6 +59,7 @@ type (
 
 	// TestBase wraps the base setup needed to create workflows over persistence layer.
 	TestBase struct {
+		suite.Suite
 		ShardMgr               p.ShardManager
 		ExecutionMgrFactory    p.ExecutionManagerFactory
 		ExecutionManager       p.ExecutionManager
@@ -149,10 +151,11 @@ func (s *TestBase) CreateWorkflowExecution(domainID string, workflowExecution wo
 		RangeID:              s.ShardInfo.RangeID,
 		TransferTasks: []p.Task{
 			&p.DecisionTask{
-				TaskID:     s.GetNextSequenceNumber(),
-				DomainID:   domainID,
-				TaskList:   taskList,
-				ScheduleID: decisionScheduleID,
+				TaskID:              s.GetNextSequenceNumber(),
+				DomainID:            domainID,
+				TaskList:            taskList,
+				ScheduleID:          decisionScheduleID,
+				VisibilityTimestamp: time.Now(),
 			},
 		},
 		TimerTasks:                  timerTasks,
@@ -1013,6 +1016,18 @@ func (s *TestBase) ClearReplicationQueue() {
 
 	log.Infof("Deleted '%v' replication tasks.", counter)
 	atomic.StoreInt64(&s.ReplicationReadLevel, 0)
+}
+
+func (s *TestBase) EqualTimesWithPrecision(t1, t2 time.Time, precision time.Duration) {
+	s.True(timeComparator(t1, t2, precision),
+		"Not equal: \n"+
+			"expected: %s\n"+
+			"actual  : %s%s", t1, t2,
+	)
+}
+
+func (s *TestBase) EqualTimes(t1, t2 time.Time) {
+	s.EqualTimesWithPrecision(t1, t2, TimePrecision)
 }
 
 func validateTimeRange(t time.Time, expectedDuration time.Duration) bool {
