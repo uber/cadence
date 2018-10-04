@@ -52,6 +52,32 @@ const (
 		`WHERE domain_id = ? ` +
 		`AND workflow_id = ? ` +
 		`AND run_id = ? `
+
+	//Below are V2 templates
+	v2templateInsertNode = `INSERT INTO events_v2 (` +
+		`tree_id, branch_id, row_type, ancestors, deleted, node_id, txn_id, data, data_encoding) ` +
+		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) IF NOT EXISTS `
+
+	v2templateOverrideNode = `UPDATE events_v2 ` +
+		`SET txn_id = ?, data = ?, data_encoding = ? ` +
+		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id = ? ` +
+		`IF txn_id < ? `
+
+	v2templateReadNode = `SELECT tree_id, branch_id, row_type, ancestors, deleted, node_id, txn_id, data, data_encoding FROM events_v2 ` +
+		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id >= ? AND node_id < ? `
+
+	v2templateUpdateTreeRoot = `UPDATE events_v2 ` +
+		`SET txn_id = ? ` +
+		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id = ? ` +
+		`IF txn_id = ? `
+
+	v2templateUpdateBranch = `UPDATE events_v2 ` +
+		`SET deleted = true ` +
+		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id = ? ` +
+		`IF deleted = false `
+
+	v2templateDeleteNodes = `DELETE FROM events_v2 ` +
+		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id >= ? AND node_id < ?`
 )
 
 type (
