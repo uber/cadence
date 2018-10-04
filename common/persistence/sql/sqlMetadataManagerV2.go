@@ -272,7 +272,7 @@ func (m *sqlMetadataManagerV2) CreateDomain(request *persistence.CreateDomainReq
 			}
 			return err1
 		}
-		if err1 := lockMetadata(tx); err != nil {
+		if err1 := lockMetadata(tx); err1 != nil {
 			return err1
 		}
 		if err1 := updateMetadata(tx, metadata.NotificationVersion); err1 != nil {

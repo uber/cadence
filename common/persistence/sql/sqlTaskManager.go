@@ -103,7 +103,7 @@ task_type = :task_type
 		`tasks(domain_id, workflow_id, run_id, schedule_id, task_list_name, task_list_type, task_id, expiry_ts) ` +
 		`VALUES(:domain_id, :workflow_id, :run_id, :schedule_id, :task_list_name, :task_list_type, :task_id, :expiry_ts)`
 
-	deleteTasksSQLQuery = `DELETE FROM tasks ` +
+	deleteTaskSQLQuery = `DELETE FROM tasks ` +
 		`WHERE domain_id = ? AND task_list_name = ? AND task_list_type = ? AND task_id = ?`
 )
 
@@ -314,7 +314,7 @@ func (m *sqlTaskManager) GetTasks(request *persistence.GetTasksRequest) (*persis
 func (m *sqlTaskManager) CompleteTask(request *persistence.CompleteTaskRequest) error {
 	taskID := request.TaskID
 	taskList := request.TaskList
-	_, err := m.db.Exec(deleteTasksSQLQuery, taskList.DomainID, taskList.Name, int64(taskList.TaskType), taskID)
+	_, err := m.db.Exec(deleteTaskSQLQuery, taskList.DomainID, taskList.Name, int64(taskList.TaskType), taskID)
 	if err != nil && err != sql.ErrNoRows {
 		return &workflow.InternalServiceError{Message: err.Error()}
 	}

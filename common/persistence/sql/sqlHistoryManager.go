@@ -121,7 +121,6 @@ func (m *sqlHistoryManager) AppendHistoryEvents(request *p.InternalAppendHistory
 		return m.overWriteHistoryEvents(request, arg)
 	}
 	if _, err := m.db.NamedExec(appendHistorySQLQuery, arg); err != nil {
-		// TODO Find another way to do this without inspecting the error message (?)
 		if sqlErr, ok := err.(*mysql.MySQLError); ok && sqlErr.Number == ErrDupEntry {
 			return &p.ConditionFailedError{Msg: fmt.Sprintf("AppendHistoryEvents: event already exist: %v", err)}
 		}
