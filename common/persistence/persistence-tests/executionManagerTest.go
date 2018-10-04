@@ -30,8 +30,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"fmt"
-
 	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
@@ -2356,8 +2354,7 @@ func (s *ExecutionManagerSuite) TestUpdateAndClearBufferedEvents() {
 	stats0, state0, err2 = s.GetWorkflowExecutionInfoWithStats(domainID, workflowExecution)
 	s.NoError(err2)
 	s.Equal(1, stats0.BufferedEventsCount)
-	// BufferedEventsSize shouldn't change unless we change the IDL for histiryEvent or thriftRW
-	fmt.Println("stats0.BufferedEventsSize", stats0.BufferedEventsSize)
+	s.True(stats0.BufferedEventsSize > 0)
 	history := &gen.History{Events: make([]*gen.HistoryEvent, 0)}
 	history.Events = append(history.Events, eventsBatch1...)
 	history0 := &gen.History{Events: state0.BufferedEvents}
@@ -2373,9 +2370,7 @@ func (s *ExecutionManagerSuite) TestUpdateAndClearBufferedEvents() {
 	info1 := state1.ExecutionInfo
 	s.NotNil(info1, "Valid Workflow info expected.")
 	s.Equal(2, stats1.BufferedEventsCount)
-	// BufferedEventsSize shouldn't change unless we change the IDL for histiryEvent or thriftRW
-	fmt.Println("stats1.BufferedEventsSize", stats1.BufferedEventsSize)
-	//s.Equal(267, stats1.BufferedEventsSize)
+	s.True(stats1.BufferedEventsSize > 0)
 	history1 := &gen.History{Events: state1.BufferedEvents}
 	s.True(history.Equals(history1))
 
@@ -2575,9 +2570,7 @@ func (s *ExecutionManagerSuite) TestResetMutableStateCurrentIsSelf() {
 	stats0, state0, err2 = s.GetWorkflowExecutionInfoWithStats(domainID, workflowExecution)
 	s.NoError(err2)
 	s.Equal(1, stats0.BufferedEventsCount)
-	// BufferedEventsSize shouldn't change unless we change the IDL for histiryEvent or thriftRW
-	fmt.Println("stats0.BufferedEventsSize", stats0.BufferedEventsSize)
-	//s.Equal(337, stats0.BufferedEventsSize)
+	s.True(stats0.BufferedEventsSize > 0)
 	history := &gen.History{Events: make([]*gen.HistoryEvent, 0)}
 	history.Events = append(history.Events, eventsBatch1...)
 	history0 := &gen.History{Events: state0.BufferedEvents}
@@ -2593,9 +2586,7 @@ func (s *ExecutionManagerSuite) TestResetMutableStateCurrentIsSelf() {
 	info1 := state1.ExecutionInfo
 	s.NotNil(info1, "Valid Workflow info expected.")
 	s.Equal(2, stats1.BufferedEventsCount)
-	// BufferedEventsSize shouldn't change unless we change the IDL for histiryEvent or thriftRW
-	fmt.Println("stats1.BufferedEventsSize", stats1.BufferedEventsSize)
-	//s.Equal(454, stats1.BufferedEventsSize)
+	s.True(stats1.BufferedEventsSize > 0)
 	history1 := &gen.History{Events: state1.BufferedEvents}
 	s.True(history.Equals(history1))
 
