@@ -32,6 +32,7 @@ import (
 	"github.com/uber/cadence/common/logging"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/persistence-tests"
+	"github.com/uber/cadence/common/service/config"
 )
 
 const (
@@ -105,36 +106,40 @@ func InitTestSuiteWithMetadata(tb *persistencetests.TestBase, options *persisten
 	if err != nil {
 		log.Fatal(err)
 	}
-	tb.TaskMgr, err = NewTaskPersistence(options.DBHost, options.DBPort, options.DBUser,
-		options.DBPassword, options.Datacenter, keyspace,
-		log)
+	cfg := &config.Cassandra{
+		Hosts:              options.DBHost,
+		Port:               options.DBPort,
+		User:               options.DBUser,
+		Password:           options.DBPassword,
+		Datacenter:         options.Datacenter,
+		Keyspace:           keyspace,
+		VisibilityKeyspace: keyspace,
+	}
+	tb.TaskMgr, err = NewTaskPersistence(cfg, log)
 	if err != nil {
 		log.Fatal(err)
 	}
-	pHisMgr, err := NewHistoryPersistence(options.DBHost, options.DBPort, options.DBUser,
-		options.DBPassword, options.Datacenter, keyspace, 2, log)
+	hCfg := *cfg
+	hCfg.ConnectionPoolSize = 2
+	pHisMgr, err := NewHistoryPersistence(&hCfg, log)
 	if err != nil {
 		log.Fatal(err)
 	}
 	tb.HistoryMgr = p.NewHistoryManagerImpl(pHisMgr, log)
 
-	tb.MetadataManager, err = NewMetadataPersistence(options.DBHost, options.DBPort, options.DBUser,
-		options.DBPassword, options.Datacenter, keyspace, currentClusterName, log)
+	tb.MetadataManager, err = NewMetadataPersistence(cfg, currentClusterName, log)
 	if err != nil {
 		log.Fatal(err)
 	}
-	tb.MetadataManagerV2, err = NewMetadataPersistenceV2(options.DBHost, options.DBPort, options.DBUser,
-		options.DBPassword, options.Datacenter, keyspace, currentClusterName, log)
+	tb.MetadataManagerV2, err = NewMetadataPersistenceV2(cfg, currentClusterName, log)
 	if err != nil {
 		log.Fatal(err)
 	}
-	tb.MetadataProxy, err = NewMetadataManagerProxy(options.DBHost, options.DBPort, options.DBUser,
-		options.DBPassword, options.Datacenter, keyspace, currentClusterName, log)
+	tb.MetadataProxy, err = NewMetadataManagerProxy(cfg, currentClusterName, log)
 	if err != nil {
 		log.Fatal(err)
 	}
-	tb.VisibilityMgr, err = NewVisibilityPersistence(options.DBHost, options.DBPort,
-		options.DBUser, options.DBPassword, options.Datacenter, keyspace, log)
+	tb.VisibilityMgr, err = NewVisibilityPersistence(cfg, log)
 	if err != nil {
 		log.Fatal(err)
 	}

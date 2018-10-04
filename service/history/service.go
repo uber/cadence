@@ -239,12 +239,7 @@ func (s *Service) Start() {
 	shardMgr = persistence.NewShardPersistenceRateLimitedClient(shardMgr, persistenceRateLimiter, log)
 	shardMgr = persistence.NewShardPersistenceMetricsClient(shardMgr, base.GetMetricsClient(), log)
 
-	metadata, err := cassandra.NewMetadataManagerProxy(p.CassandraConfig.Hosts,
-		p.CassandraConfig.Port,
-		p.CassandraConfig.User,
-		p.CassandraConfig.Password,
-		p.CassandraConfig.Datacenter,
-		p.CassandraConfig.Keyspace,
+	metadata, err := cassandra.NewMetadataManagerProxy(&p.CassandraConfig,
 		p.ClusterMetadata.GetCurrentClusterName(),
 		p.Logger)
 
@@ -254,14 +249,7 @@ func (s *Service) Start() {
 	metadata = persistence.NewMetadataPersistenceRateLimitedClient(metadata, persistenceRateLimiter, log)
 	metadata = persistence.NewMetadataPersistenceMetricsClient(metadata, base.GetMetricsClient(), log)
 
-	visibility, err := cassandra.NewVisibilityPersistence(p.CassandraConfig.Hosts,
-		p.CassandraConfig.Port,
-		p.CassandraConfig.User,
-		p.CassandraConfig.Password,
-		p.CassandraConfig.Datacenter,
-		p.CassandraConfig.VisibilityKeyspace,
-		p.Logger)
-
+	visibility, err := cassandra.NewVisibilityPersistence(&p.CassandraConfig, p.Logger)
 	if err != nil {
 		log.Fatalf("failed to create visibility manager: %v", err)
 	}
@@ -271,14 +259,9 @@ func (s *Service) Start() {
 	}
 	visibility = persistence.NewVisibilityPersistenceMetricsClient(visibility, base.GetMetricsClient(), log)
 
-	phistory, err := cassandra.NewHistoryPersistence(p.CassandraConfig.Hosts,
-		p.CassandraConfig.Port,
-		p.CassandraConfig.User,
-		p.CassandraConfig.Password,
-		p.CassandraConfig.Datacenter,
-		p.CassandraConfig.Keyspace,
-		s.config.HistoryMgrNumConns(),
-		log)
+	cfg := p.CassandraConfig // make a copy before modifying
+	cfg.ConnectionPoolSize = s.config.HistoryMgrNumConns()
+	phistory, err := cassandra.NewHistoryPersistence(&cfg, log)
 
 	if err != nil {
 		log.Fatalf("Creating Cassandra history manager persistence failed: %v", err)

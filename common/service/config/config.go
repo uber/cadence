@@ -90,6 +90,18 @@ type (
 		DiscoveryProvider discovery.DiscoverProvider `yaml:"-"`
 	}
 
+	Persistence struct {
+		DefaultStore     string
+		VisibilityStore  string
+		DataStores       map[string]DataStore `yaml:"datastores"`
+		NumHistoryShards int                  `yaml:"numHistoryShards" validate:"nonzero"`
+	}
+
+	DataStore struct {
+		Cassandra *Cassandra `yaml:"cassandra"`
+		SQL       *SQL       `yaml:"sql"`
+	}
+
 	// Cassandra contains configuration to connect to Cassandra cluster
 	Cassandra struct {
 		// Hosts is a csv of cassandra endpoints
@@ -109,7 +121,18 @@ type (
 		// Datacenter is the data center filter arg for cassandra
 		Datacenter string `yaml:"datacenter"`
 		// NumHistoryShards is the desired number of history shards
-		NumHistoryShards int `yaml:"numHistoryShards" validate:"nonzero"`
+		NumHistoryShards   int `yaml:"numHistoryShards" validate:"nonzero"`
+		ConnectionPoolSize int `yaml:"connectionPoolSize"`
+	}
+
+	SQL struct {
+		User               string `yaml:"user"`
+		Password           string `yaml:"password"`
+		DriverName         string `yaml:"driverName"`
+		DatabaseName       string `yaml:"databaseName"`
+		ConnectAddr        string `yaml:"connectAddr"`
+		ConnectProtocol    string `yaml:"connectProtocol"`
+		ConnectionPoolSize int    `yaml:"connectionPoolSize"`
 	}
 
 	// Replicator describes the configuration of replicator

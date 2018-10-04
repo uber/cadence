@@ -31,6 +31,7 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/service/config"
 )
 
 // Guidelines for creating new special UUID constants
@@ -876,10 +877,9 @@ func NewWorkflowExecutionPersistence(shardID int, session *gocql.Session,
 }
 
 // NewTaskPersistence is used to create an instance of TaskManager implementation
-func NewTaskPersistence(hosts string, port int, user, password, dc string, keyspace string,
-	logger bark.Logger) (p.TaskStore, error) {
-	cluster := NewCassandraCluster(hosts, port, user, password, dc)
-	cluster.Keyspace = keyspace
+func NewTaskPersistence(cfg *config.Cassandra, logger bark.Logger) (p.TaskStore, error) {
+	cluster := NewCassandraCluster(cfg.Hosts, cfg.Port, cfg.User, cfg.Password, cfg.Datacenter)
+	cluster.Keyspace = cfg.Keyspace
 	cluster.ProtoVersion = cassandraProtoVersion
 	cluster.Consistency = gocql.LocalQuorum
 	cluster.SerialConsistency = gocql.LocalSerial

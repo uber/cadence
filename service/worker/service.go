@@ -85,12 +85,7 @@ func (s *Service) Start() {
 	s.metricsClient = base.GetMetricsClient()
 
 	// worker only use the v2
-	metadataManager, err := cassandra.NewMetadataPersistenceV2(p.CassandraConfig.Hosts,
-		p.CassandraConfig.Port,
-		p.CassandraConfig.User,
-		p.CassandraConfig.Password,
-		p.CassandraConfig.Datacenter,
-		p.CassandraConfig.Keyspace,
+	metadataManager, err := cassandra.NewMetadataPersistenceV2(&p.CassandraConfig,
 		p.ClusterMetadata.GetCurrentClusterName(),
 		p.Logger)
 

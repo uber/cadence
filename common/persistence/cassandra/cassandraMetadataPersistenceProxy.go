@@ -26,6 +26,7 @@ import (
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/shared"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/service/config"
 )
 
 type (
@@ -39,13 +40,13 @@ type (
 )
 
 // NewMetadataManagerProxy is used for merging the functionality the v1 and v2 MetadataManager
-func NewMetadataManagerProxy(hosts string, port int, user, password, dc string, keyspace string,
+func NewMetadataManagerProxy(cfg *config.Cassandra,
 	currentClusterName string, logger bark.Logger) (p.MetadataManager, error) {
-	metadataMgr, err := NewMetadataPersistence(hosts, port, user, password, dc, keyspace, currentClusterName, logger)
+	metadataMgr, err := NewMetadataPersistence(cfg, currentClusterName, logger)
 	if err != nil {
 		return nil, err
 	}
-	metadataMgrV2, err := NewMetadataPersistenceV2(hosts, port, user, password, dc, keyspace, currentClusterName, logger)
+	metadataMgrV2, err := NewMetadataPersistenceV2(cfg, currentClusterName, logger)
 	if err != nil {
 		return nil, err
 	}
