@@ -1132,10 +1132,10 @@ type (
 		// Token to read next page if there are more events beyond page size.
 		// Use this to set NextPageToken on ReadHistoryBranchRequest to read the next page.
 		NextPageToken []byte
-		// the MinNodeID of last loaded batch
-		LastMinNodeID int64
 		// Size of history read from store
 		Size int
+		// The NodeID of the last node
+		LastNodeID int64
 	}
 
 	// ForkHistoryBranchRequest is used to fork a history branch

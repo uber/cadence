@@ -198,7 +198,7 @@ func (h *cassandraHistoryPersistence) GetWorkflowExecutionHistory(request *p.Int
 	found := false
 	nextPageToken := iter.PageState()
 
-	//NOTE: in this method, we need to make sure is NOT decreasing(otherwise we skip the events)
+	//NOTE: in this method, we need to make sure eventBatchVersion is NOT decreasing(otherwise we skip the events)
 	lastEventBatchVersion := request.LastEventBatchVersion
 
 	eventBatchVersionPointer := new(int64)
