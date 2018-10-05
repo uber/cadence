@@ -113,20 +113,20 @@ func (_m *HistoryManager) NewHistoryBranch(request *persistence.NewHistoryBranch
 	return r0
 }
 
-// AppendHistoryNode provides a mock function with given fields: request
-func (_m *HistoryManager) AppendHistoryNode(request *persistence.AppendHistoryNodeRequest) (*persistence.AppendHistoryNodeResponse, error) {
+// AppendHistoryNodes provides a mock function with given fields: request
+func (_m *HistoryManager) AppendHistoryNode(request *persistence.AppendHistoryNodesRequest) (*persistence.AppendHistoryNodesResponse, error) {
 	ret := _m.Called(request)
-	var r0 *persistence.AppendHistoryNodeResponse
-	if rf, ok := ret.Get(0).(func(*persistence.AppendHistoryNodeRequest) *persistence.AppendHistoryNodeResponse); ok {
+	var r0 *persistence.AppendHistoryNodesResponse
+	if rf, ok := ret.Get(0).(func(*persistence.AppendHistoryNodesRequest) *persistence.AppendHistoryNodesResponse); ok {
 		r0 = rf(request)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*persistence.AppendHistoryNodeResponse)
+			r0 = ret.Get(0).(*persistence.AppendHistoryNodesResponse)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(*persistence.AppendHistoryNodeRequest) error); ok {
+	if rf, ok := ret.Get(1).(func(*persistence.AppendHistoryNodesRequest) error); ok {
 		r1 = rf(request)
 	} else {
 		r1 = ret.Error(1)

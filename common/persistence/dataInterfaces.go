@@ -854,7 +854,7 @@ type (
 	}
 
 	// AppendHistoryEventsRequest is used to append new events to workflow execution history
-	//Deprecated: use v2 API-AppendHistoryNode() instead
+	//Deprecated: use v2 API-AppendHistoryNodes() instead
 	AppendHistoryEventsRequest struct {
 		DomainID          string
 		Execution         workflow.WorkflowExecution
@@ -869,7 +869,7 @@ type (
 	}
 
 	// GetWorkflowExecutionHistoryRequest is used to retrieve history of a workflow execution
-	//Deprecated: use v2 API-AppendHistoryNode() instead
+	//Deprecated: use v2 API-AppendHistoryNodes() instead
 	GetWorkflowExecutionHistoryRequest struct {
 		DomainID  string
 		Execution workflow.WorkflowExecution
@@ -897,7 +897,7 @@ type (
 	}
 
 	// DeleteWorkflowExecutionHistoryRequest is used to delete workflow execution history
-	//Deprecated: use v2 API-AppendHistoryNode() instead
+	//Deprecated: use v2 API-AppendHistoryNodes() instead
 	DeleteWorkflowExecutionHistoryRequest struct {
 		DomainID  string
 		Execution workflow.WorkflowExecution
@@ -1087,8 +1087,8 @@ type (
 		IsNewTree  bool
 	}
 
-	// AppendHistoryNodeRequest is used to append a batch of history nodes
-	AppendHistoryNodeRequest struct {
+	// AppendHistoryNodesRequest is used to append a batch of history nodes
+	AppendHistoryNodesRequest struct {
 		// The branch to be appended
 		BranchInfo HistoryBranch
 		// The first nodeID of the nodes to be appended
@@ -1101,8 +1101,8 @@ type (
 		Encoding common.EncodingType
 	}
 
-	// AppendHistoryNodeResponse is a response to AppendHistoryNodeRequest
-	AppendHistoryNodeResponse struct {
+	// AppendHistoryNodesResponse is a response to AppendHistoryNodesRequest
+	AppendHistoryNodesResponse struct {
 		// the size of the event data that has been appended
 		Size int
 		// the number of events that has been appended with override instead of using insert if not exist
@@ -1176,7 +1176,7 @@ type (
 	}
 
 	// AppendHistoryEventsResponse is response for AppendHistoryEventsRequest
-	// Deprecated: uses V2 API-AppendHistoryNodeRequest
+	// Deprecated: uses V2 API-AppendHistoryNodesRequest
 	AppendHistoryEventsResponse struct {
 		Size int
 	}
@@ -1246,7 +1246,7 @@ type (
 
 		// The below 3 APIs are deprecated, they will be deleted after we fully migrate to new API
 
-		//Deprecated: use v2 API-AppendHistoryNode() instead
+		//Deprecated: use v2 API-AppendHistoryNodes() instead
 		AppendHistoryEvents(request *AppendHistoryEventsRequest) (*AppendHistoryEventsResponse, error)
 		// GetWorkflowExecutionHistory retrieves the paginated list of history events for given execution
 		//Deprecated: use v2 API-ReadHistoryBranch() instead
@@ -1261,8 +1261,8 @@ type (
 		//     NodeID is the same as EventID, except that it will grow continuously in a branch.
 		// NewHistoryBranch creates a new branch from tree root. If tree doesn't exist, then create one. Return error if the branch already exists.
 		NewHistoryBranch(request *NewHistoryBranchRequest) error
-		// AppendHistoryNode add(or override) a node to a history branch
-		AppendHistoryNode(request *AppendHistoryNodeRequest) (*AppendHistoryNodeResponse, error)
+		// AppendHistoryNodes add(or override) a batach of nodes to a history branch
+		AppendHistoryNodes(request *AppendHistoryNodesRequest) (*AppendHistoryNodesResponse, error)
 		// ReadHistoryBranch returns history node data for a branch
 		ReadHistoryBranch(request *ReadHistoryBranchRequest) (*ReadHistoryBranchResponse, error)
 		// ForkHistoryBranch forks a new branch from a old branch

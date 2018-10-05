@@ -565,12 +565,12 @@ func (p *historyRateLimitedPersistenceClient) NewHistoryBranch(request *NewHisto
 	return err
 }
 
-// AppendHistoryNode add(or override) a node to a history branch
-func (p *historyRateLimitedPersistenceClient) AppendHistoryNode(request *AppendHistoryNodeRequest) (*AppendHistoryNodeResponse, error) {
+// AppendHistoryNodes add(or override) a node to a history branch
+func (p *historyRateLimitedPersistenceClient) AppendHistoryNode(request *AppendHistoryNodesRequest) (*AppendHistoryNodesResponse, error) {
 	if ok, _ := p.rateLimiter.TryConsume(1); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
-	return p.persistence.AppendHistoryNode(request)
+	return p.persistence.AppendHistoryNodes(request)
 }
 
 // ReadHistoryBranch returns history node data for a branch

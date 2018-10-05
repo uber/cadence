@@ -268,8 +268,8 @@ const (
 	DomainCacheScope
 	// PersistenceNewHistoryBranchScope tracks NewHistoryBranch calls made by service to persistence layer
 	PersistenceNewHistoryBranchScope
-	// PersistenceAppendHistoryNodeScope tracks AppendHistoryNode calls made by service to persistence layer
-	PersistenceAppendHistoryNodeScope
+	// PersistenceAppendHistoryNodesScope tracks AppendHistoryNodes calls made by service to persistence layer
+	PersistenceAppendHistoryNodesScope
 	// PersistenceReadHistoryBranchScope tracks ReadHistoryBranch calls made by service to persistence layer
 	PersistenceReadHistoryBranchScope
 	// PersistenceForkHistoryBranchScope tracks ForkHistoryBranch calls made by service to persistence layer
@@ -579,7 +579,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceListClosedWorkflowExecutionsByStatusScope:     {operation: "ListClosedWorkflowExecutionsByStatus"},
 		PersistenceGetClosedWorkflowExecutionScope:               {operation: "GetClosedWorkflowExecution"},
 		PersistenceNewHistoryBranchScope:                         {operation: "NewHistoryBranch", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
-		PersistenceAppendHistoryNodeScope:                        {operation: "AppendHistoryNode", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceAppendHistoryNodesScope:                       {operation: "AppendHistoryNodes", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 		PersistenceReadHistoryBranchScope:                        {operation: "ReadHistoryBranch", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 		PersistenceForkHistoryBranchScope:                        {operation: "ForkHistoryBranch", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 		PersistenceDeleteHistoryBranchScope:                      {operation: "DeleteHistoryBranch", tags: map[string]string{ShardTagName: NoneShardsTagValue}},

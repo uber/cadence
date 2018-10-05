@@ -80,7 +80,7 @@ type (
 		GetName() string
 		//The below two APIs are related to serialization/deserialization
 
-		//DEPRECATED in favor of V2 APIs-AppendHistoryNode
+		//DEPRECATED in favor of V2 APIs-AppendHistoryNodes
 		AppendHistoryEvents(request *InternalAppendHistoryEventsRequest) error
 		//DEPRECATED in favor of V2 APIs-ReadHistoryBranch
 		GetWorkflowExecutionHistory(request *InternalGetWorkflowExecutionHistoryRequest) (*InternalGetWorkflowExecutionHistoryResponse, error)
@@ -94,7 +94,7 @@ type (
 		//     NodeID is the same as EventID, except that it will grow continuously in a branch.
 		// NewHistoryBranch creates a new branch from tree root. If tree doesn't exist, then create one. Return error if the branch already exists.
 		NewHistoryBranch(request *NewHistoryBranchRequest) error
-		// AppendHistoryNode add(or override) a node to a history branch
+		// AppendHistoryNodes add(or override) a node to a history branch
 		AppendHistoryNode(request *InternalAppendHistoryNodeRequest) error
 		// ReadHistoryBranch returns history node data for a branch
 		ReadHistoryBranch(request *InternalReadHistoryBranchRequest) (*InternalReadHistoryBranchResponse, error)

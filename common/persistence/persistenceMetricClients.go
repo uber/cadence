@@ -905,14 +905,14 @@ func (p *historyPersistenceClient) NewHistoryBranch(request *NewHistoryBranchReq
 	return err
 }
 
-// AppendHistoryNode add(or override) a node to a history branch
-func (p *historyPersistenceClient) AppendHistoryNode(request *AppendHistoryNodeRequest) (*AppendHistoryNodeResponse, error) {
-	p.metricClient.IncCounter(metrics.PersistenceAppendHistoryNodeScope, metrics.PersistenceRequests)
-	sw := p.metricClient.StartTimer(metrics.PersistenceAppendHistoryNodeScope, metrics.PersistenceLatency)
-	resp, err := p.persistence.AppendHistoryNode(request)
+// AppendHistoryNodes add(or override) a node to a history branch
+func (p *historyPersistenceClient) AppendHistoryNode(request *AppendHistoryNodesRequest) (*AppendHistoryNodesResponse, error) {
+	p.metricClient.IncCounter(metrics.PersistenceAppendHistoryNodesScope, metrics.PersistenceRequests)
+	sw := p.metricClient.StartTimer(metrics.PersistenceAppendHistoryNodesScope, metrics.PersistenceLatency)
+	resp, err := p.persistence.AppendHistoryNodes(request)
 	sw.Stop()
 	if err != nil {
-		p.updateErrorMetric(metrics.PersistenceAppendHistoryNodeScope, err)
+		p.updateErrorMetric(metrics.PersistenceAppendHistoryNodesScope, err)
 	}
 	return resp, err
 }

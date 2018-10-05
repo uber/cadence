@@ -170,7 +170,7 @@ func (h *cassandraHistoryPersistence) createRoot(treeID string) (bool, error) {
 	return applied, nil
 }
 
-// AppendHistoryNode add(or override) a node to a history branch
+// AppendHistoryNodes add(or override) a node to a history branch
 func (h *cassandraHistoryPersistence) AppendHistoryNode(request *p.InternalAppendHistoryNodeRequest) error {
 	//TODO
 	return nil
