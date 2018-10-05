@@ -294,17 +294,18 @@ type (
 		Overwrite         bool
 	}
 
-	// InternalAppendHistoryNodeRequest is used to append a history node
+	// InternalAppendHistoryNodeRequest is used to append a batch of history nodes
 	InternalAppendHistoryNodeRequest struct {
 		// The branch to be appended
 		BranchInfo HistoryBranch
-		// The nodeID to be appended
-		NextNodeID int64
+		// The first nodeID of the nodes to be updated conditionally with transactionID
+		NextNodeIDToUpdate int64
+		// The first nodeID of the nodes to be insert if not exist
+		// NextNodeIDToInsert >= NextNodeIDToUpdate
+		NextNodeIDToInsert int64
 		// The events to be appended
 		Events []*DataBlob
-		// Override the node if this true and existing TransactionID < requested TransactionID
-		Overwrite bool
-		// requested TransactionID for override
+		// requested TransactionID for conditional update
 		TransactionID int64
 	}
 

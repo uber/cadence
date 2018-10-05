@@ -83,13 +83,42 @@ func (m *historyManagerImpl) AppendHistoryNode(request *AppendHistoryNodeRequest
 		size += len(b.Data)
 	}
 	resp := &AppendHistoryNodeResponse{Size: size}
-	return resp, m.persistence.AppendHistoryNode(&InternalAppendHistoryNodeRequest{
-		BranchInfo:    request.BranchInfo,
-		NextNodeID:    request.NextNodeID,
-		Events:        eventBlobs,
-		Overwrite:     request.Overwrite,
-		TransactionID: request.TransactionID,
+
+	// first try to do purely insert if not exist
+	err := m.persistence.AppendHistoryNode(&InternalAppendHistoryNodeRequest{
+		BranchInfo:         request.BranchInfo,
+		NextNodeIDToUpdate: request.NextNodeID,
+		NextNodeIDToInsert: request.NextNodeID,
+		Events:             eventBlobs,
 	})
+	if err == nil {
+		return resp, nil
+	} else {
+		if _, ok := err.(*ConditionFailedError); ok {
+			// if condition fails, than try to do update on the existing nodes
+			readReq := &InternalReadHistoryBranchRequest{
+				BranchInfo: request.BranchInfo,
+				MinNodeID:  request.NextNodeID,
+				MaxNodeID:  request.NextNodeID + int64(len(request.Events)),
+				PageSize:   len(request.Events),
+			}
+			readResp, err := m.persistence.ReadHistoryBranch(readReq)
+			if err != nil {
+				return nil, err
+			}
+			resp.OverrideCount = len(readResp.History)
+			err = m.persistence.AppendHistoryNode(&InternalAppendHistoryNodeRequest{
+				BranchInfo:         request.BranchInfo,
+				NextNodeIDToUpdate: request.NextNodeID,
+				NextNodeIDToInsert: request.NextNodeID + int64(resp.OverrideCount),
+				Events:             eventBlobs,
+				TransactionID:      request.TransactionID,
+			})
+			return resp, err
+		} else {
+			return nil, err
+		}
+	}
 }
 
 // ReadHistoryBranch returns history node data for a branch

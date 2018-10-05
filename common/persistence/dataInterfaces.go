@@ -1087,16 +1087,14 @@ type (
 		IsNewTree  bool
 	}
 
-	// AppendHistoryNodeRequest is used to append a history node
+	// AppendHistoryNodeRequest is used to append a batch of history nodes
 	AppendHistoryNodeRequest struct {
 		// The branch to be appended
 		BranchInfo HistoryBranch
-		// The nodeID to be appended
+		// The first nodeID of the nodes to be appended
 		NextNodeID int64
 		// The events to be appended
 		Events []*workflow.HistoryEvent
-		// Override the node if this true and existing TransactionID < requested TransactionID
-		Overwrite bool
 		// requested TransactionID for override
 		TransactionID int64
 		//Optional. It is to suggest a binary encoding type to serialize history events
@@ -1105,7 +1103,10 @@ type (
 
 	// AppendHistoryNodeResponse is a response to AppendHistoryNodeRequest
 	AppendHistoryNodeResponse struct {
+		// the size of the event data that has been appended
 		Size int
+		// the number of events that has been appended with override instead of using insert if not exist
+		OverrideCount int
 	}
 
 	// ReadHistoryBranchRequest is used to read a history branch
@@ -1120,7 +1121,8 @@ type (
 		PageSize int
 		// Token to continue reading next page of history append transactions.  Pass in empty slice for first page
 		NextPageToken []byte
-		// Starting version of the events returned
+		// For validating event version. The starting version of the events returned need to be greater than it and should never decrease.
+		// Using zero will also work if don't want to check the version of the first event
 		LastEventBatchVersion int64
 	}
 
