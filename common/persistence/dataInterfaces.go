@@ -1084,6 +1084,7 @@ type (
 	// NewHistoryBranchRequest is used to create a new history branch
 	NewHistoryBranchRequest struct {
 		BranchInfo HistoryBranch
+		IsNewTree  bool
 	}
 
 	// AppendHistoryNodeRequest is used to append a history node

@@ -78,6 +78,23 @@ const (
 
 	v2templateDeleteNodes = `DELETE FROM events_v2 ` +
 		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id >= ? AND node_id < ?`
+
+	v2templateDeleteRoot = `DELETE FROM events_v2 ` +
+		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id = ? ` +
+		`IF txn_id =? `
+)
+
+const (
+	// nodeID of the tree root
+	rootNodeID = 0
+	// constant branchID for the tree root
+	rootNodeBranchId = "10000000-0000-f000-f000-000000000000"
+	// the initial txn_id of each node(including root node)
+	initialTransactionID = 0
+
+	// Row types for table events_v2
+	rowTypeHistoryBranch = iota
+	rowTypeHistoryNode
 )
 
 type (
@@ -117,6 +134,40 @@ func (h *cassandraHistoryPersistence) Close() {
 func (h *cassandraHistoryPersistence) NewHistoryBranch(request *p.NewHistoryBranchRequest) error {
 	//TODO
 	return nil
+}
+
+func (h *cassandraHistoryPersistence) createRoot(treeID string) (bool, error) {
+	var query *gocql.Query
+
+	query = h.session.Query(v2templateInsertNode,
+		treeID,
+		rootNodeBranchId,
+		rowTypeHistoryNode,
+		nil,
+		false,
+		rootNodeID,
+		initialTransactionID,
+		nil, //data
+		nil) //data_encoding
+
+	previous := make(map[string]interface{})
+	applied, err := query.MapScanCAS(previous)
+	if err != nil {
+		if isThrottlingError(err) {
+			return false, &workflow.ServiceBusyError{
+				Message: fmt.Sprintf("createRoot operation failed. Error: %v", err),
+			}
+		} else if isTimeoutError(err) {
+			// Write may have succeeded, but we don't know
+			// return this info to the caller so they have the option of trying to find out by executing a read
+			return false, &p.TimeoutError{Msg: fmt.Sprintf("createRoot timed out. Error: %v", err)}
+		}
+		return false, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("createRoot operation failed. Error: %v", err),
+		}
+	}
+
+	return applied, nil
 }
 
 // AppendHistoryNode add(or override) a node to a history branch
