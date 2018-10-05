@@ -85,7 +85,7 @@ func (m *historyManagerImpl) AppendHistoryNodes(request *AppendHistoryNodesReque
 	resp := &AppendHistoryNodesResponse{Size: size}
 
 	// first try to do purely insert if not exist
-	err := m.persistence.AppendHistoryNode(&InternalAppendHistoryNodeRequest{
+	err := m.persistence.AppendHistoryNodes(&InternalAppendHistoryNodesRequest{
 		BranchInfo:         request.BranchInfo,
 		NextNodeIDToUpdate: request.NextNodeID,
 		NextNodeIDToInsert: request.NextNodeID,
@@ -107,7 +107,7 @@ func (m *historyManagerImpl) AppendHistoryNodes(request *AppendHistoryNodesReque
 				return nil, err
 			}
 			resp.OverrideCount = len(readResp.History)
-			err = m.persistence.AppendHistoryNode(&InternalAppendHistoryNodeRequest{
+			err = m.persistence.AppendHistoryNodes(&InternalAppendHistoryNodesRequest{
 				BranchInfo:         request.BranchInfo,
 				NextNodeIDToUpdate: request.NextNodeID,
 				NextNodeIDToInsert: request.NextNodeID + int64(resp.OverrideCount),

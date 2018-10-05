@@ -95,7 +95,7 @@ type (
 		// NewHistoryBranch creates a new branch from tree root. If tree doesn't exist, then create one. Return error if the branch already exists.
 		NewHistoryBranch(request *NewHistoryBranchRequest) error
 		// AppendHistoryNodes add(or override) a node to a history branch
-		AppendHistoryNode(request *InternalAppendHistoryNodeRequest) error
+		AppendHistoryNodes(request *InternalAppendHistoryNodesRequest) error
 		// ReadHistoryBranch returns history node data for a branch
 		ReadHistoryBranch(request *InternalReadHistoryBranchRequest) (*InternalReadHistoryBranchResponse, error)
 		// ForkHistoryBranch forks a new branch from a old branch
@@ -294,8 +294,8 @@ type (
 		Overwrite         bool
 	}
 
-	// InternalAppendHistoryNodeRequest is used to append a batch of history nodes
-	InternalAppendHistoryNodeRequest struct {
+	// InternalAppendHistoryNodesRequest is used to append a batch of history nodes
+	InternalAppendHistoryNodesRequest struct {
 		// The branch to be appended
 		BranchInfo HistoryBranch
 		// The first nodeID of the nodes to be updated conditionally with transactionID
