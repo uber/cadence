@@ -22,6 +22,7 @@ package sql
 
 import (
 	"fmt"
+	"github.com/uber/cadence/common"
 	"time"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -172,10 +173,10 @@ type (
 	activityInfoMapsRow struct {
 		activityInfoMapsPrimaryKey
 		Version                  int64
-		ScheduledEvent           *[]byte
+		ScheduledEvent           *persistence.DataBlob
 		ScheduledTime            time.Time
 		StartedID                int64
-		StartedEvent             *[]byte
+		StartedEvent             *persistence.DataBlob
 		StartedTime              time.Time
 		ActivityID               string
 		RequestID                string
@@ -202,7 +203,7 @@ type (
 )
 
 func updateActivityInfos(tx *sqlx.Tx,
-	activityInfos []*persistence.ActivityInfo,
+	activityInfos []*persistence.InternalActivityInfo,
 	deleteInfos []int64,
 	shardID int,
 	domainID,
@@ -221,10 +222,10 @@ func updateActivityInfos(tx *sqlx.Tx,
 					ScheduleID: v.ScheduleID,
 				},
 				Version:                  v.Version,
-				ScheduledEvent:           nil,
+				ScheduledEvent:           v.ScheduledEvent,
 				ScheduledTime:            v.ScheduledTime,
 				StartedID:                v.StartedID,
-				StartedEvent:             nil,
+				StartedEvent:             v.StartedEvent,
 				StartedTime:              v.StartedTime,
 				ActivityID:               v.ActivityID,
 				RequestID:                v.RequestID,
@@ -339,7 +340,7 @@ func getActivityInfoMap(tx *sqlx.Tx,
 	shardID int,
 	domainID,
 	workflowID,
-	runID string) (map[int64]*persistence.ActivityInfo, error) {
+	runID string) (map[int64]*persistence.InternalActivityInfo, error) {
 	var activityInfoMapsRows []activityInfoMapsRow
 
 	if err := tx.Select(&activityInfoMapsRows,
@@ -353,9 +354,9 @@ func getActivityInfoMap(tx *sqlx.Tx,
 		}
 	}
 
-	ret := make(map[int64]*persistence.ActivityInfo)
+	ret := make(map[int64]*persistence.InternalActivityInfo)
 	for _, v := range activityInfoMapsRows {
-		ret[v.ScheduleID] = &persistence.ActivityInfo{
+		ret[v.ScheduleID] = &persistence.InternalActivityInfo{
 			Version:                  v.Version,
 			ScheduleID:               v.ScheduleID,
 			ScheduledEvent:           nil,
@@ -611,7 +612,7 @@ type (
 )
 
 func updateChildExecutionInfos(tx *sqlx.Tx,
-	childExecutionInfos []*persistence.ChildExecutionInfo,
+	childExecutionInfos []*persistence.InternalChildExecutionInfo,
 	deleteInfos *int64,
 	shardID int,
 	domainID,
@@ -671,7 +672,7 @@ func getChildExecutionInfoMap(tx *sqlx.Tx,
 	shardID int,
 	domainID,
 	workflowID,
-	runID string) (map[int64]*persistence.ChildExecutionInfo, error) {
+	runID string) (map[int64]*persistence.InternalChildExecutionInfo, error) {
 	var childExecutionInfoMapsRows []childExecutionInfoMapsRow
 
 	if err := tx.Select(&childExecutionInfoMapsRows,
@@ -685,9 +686,9 @@ func getChildExecutionInfoMap(tx *sqlx.Tx,
 		}
 	}
 
-	ret := make(map[int64]*persistence.ChildExecutionInfo)
+	ret := make(map[int64]*persistence.InternalChildExecutionInfo)
 	for _, v := range childExecutionInfoMapsRows {
-		ret[v.InitiatedID] = &persistence.ChildExecutionInfo{
+		ret[v.InitiatedID] = &persistence.InternalChildExecutionInfo{
 			InitiatedID:     v.InitiatedID,
 			Version:         v.Version,
 			InitiatedEvent:  nil,
@@ -1025,7 +1026,9 @@ var (
 		"version",
 		"next_event_id",
 		"history",
+		"history_encoding",
 		"new_run_history",
+		"new_run_history_encoding",
 	}
 	bufferedReplicationTasksTableName = "buffered_replication_task_maps"
 	bufferedReplicationTasksKey       = "first_event_id"
@@ -1047,15 +1050,17 @@ type (
 
 	bufferedReplicationTaskMapsRow struct {
 		bufferedReplicationTaskMapsPrimaryKey
-		NextEventID   int64
-		Version       int64
-		History       *[]byte
-		NewRunHistory *[]byte
+		NextEventID           int64
+		Version               int64
+		History               *[]byte
+		HistoryEncoding       string
+		NewRunHistory         *[]byte
+		NewRunHistoryEncoding string
 	}
 )
 
 func updateBufferedReplicationTasks(tx *sqlx.Tx,
-	newBufferedReplicationTask *persistence.BufferedReplicationTask,
+	newBufferedReplicationTask *persistence.InternalBufferedReplicationTask,
 	deleteInfo *int64,
 	shardID int,
 	domainID,
@@ -1074,24 +1079,16 @@ func updateBufferedReplicationTasks(tx *sqlx.Tx,
 			NextEventID: newBufferedReplicationTask.NextEventID,
 		}
 
-		if newBufferedReplicationTask.History != nil {
-			b, err := gobSerialize(&newBufferedReplicationTask.History)
-			if err != nil {
-				return &workflow.InternalServiceError{
-					Message: fmt.Sprintf("Failed to update buffered replication tasks. Failed to serialize a BufferedReplicationTask.History. Error: %v", err),
-				}
-			}
-			arg.History = &b
+		historyBlob := newBufferedReplicationTask.History
+		if historyBlob != nil {
+			arg.History = &historyBlob.Data
+			arg.HistoryEncoding = string(historyBlob.Encoding)
 		}
 
-		if newBufferedReplicationTask.NewRunHistory != nil {
-			b, err := gobSerialize(&newBufferedReplicationTask.NewRunHistory)
-			if err != nil {
-				return &workflow.InternalServiceError{
-					Message: fmt.Sprintf("Failed to update buffered replication tasks. Failed to serialize a BufferedReplicationTask.NewRunHistory. Error: %v", err),
-				}
-			}
-			arg.NewRunHistory = &b
+		newRunHistory := newBufferedReplicationTask.NewRunHistory
+		if newRunHistory != nil {
+			arg.NewRunHistory = &historyBlob.Data
+			arg.NewRunHistoryEncoding = string(historyBlob.Encoding)
 		}
 
 		if _, err := tx.NamedExec(setKeyInBufferedReplicationTasksMapSQLQuery, arg); err != nil {
@@ -1134,7 +1131,7 @@ func getBufferedReplicationTasks(tx *sqlx.Tx,
 	shardID int,
 	domainID,
 	workflowID,
-	runID string) (map[int64]*persistence.BufferedReplicationTask, error) {
+	runID string) (map[int64]*persistence.InternalBufferedReplicationTask, error) {
 	var bufferedReplicationTaskMapsRows []bufferedReplicationTaskMapsRow
 
 	if err := tx.Select(&bufferedReplicationTaskMapsRows,
@@ -1148,30 +1145,21 @@ func getBufferedReplicationTasks(tx *sqlx.Tx,
 		}
 	}
 
-	ret := make(map[int64]*persistence.BufferedReplicationTask)
+	ret := make(map[int64]*persistence.InternalBufferedReplicationTask)
 	for _, v := range bufferedReplicationTaskMapsRows {
-		ret[v.FirstEventID] = &persistence.BufferedReplicationTask{
+		ret[v.FirstEventID] = &persistence.InternalBufferedReplicationTask{
 			Version:      v.Version,
 			FirstEventID: v.FirstEventID,
 			NextEventID:  v.NextEventID,
 		}
 
 		if v.History != nil {
-			ret[v.FirstEventID].History = make([]*workflow.HistoryEvent, 0)
-			if err := gobDeserialize(*v.History, &ret[v.FirstEventID].History); err != nil {
-				return nil, &workflow.InternalServiceError{
-					Message: fmt.Sprintf("Failed to get buffered replication tasks. Failed to deserialize a BufferedReplicationTask.History. Error: %v", err),
-				}
-			}
+			ret[v.FirstEventID].History = persistence.NewDataBlob(*v.History, common.EncodingType(v.HistoryEncoding))
 		}
 
 		if v.NewRunHistory != nil {
-			ret[v.FirstEventID].NewRunHistory = make([]*workflow.HistoryEvent, 0)
-			if err := gobDeserialize(*v.NewRunHistory, &ret[v.FirstEventID].NewRunHistory); err != nil {
-				return nil, &workflow.InternalServiceError{
-					Message: fmt.Sprintf("Failed to get buffered replication tasks. Failed to deserialize a BufferedReplicationTask.NewRunHistory. Error: %v", err),
-				}
-			}
+			ret[v.FirstEventID].NewRunHistory = persistence.NewDataBlob(*v.NewRunHistory,
+				common.EncodingType(v.NewRunHistoryEncoding))
 		}
 	}
 

@@ -71,6 +71,7 @@ CREATE TABLE executions(
 	parent_run_id CHAR(64), -- 3.
 	initiated_id BIGINT, -- 4. these (parent-related fields) are nullable as their default values are not checked by tests
 	completion_event BLOB, -- 5.
+	completion_event_data_encoding VARCHAR(64),
 	task_list VARCHAR(255) NOT NULL,
 	workflow_type_name VARCHAR(255) NOT NULL,
 	workflow_timeout_seconds INT UNSIGNED NOT NULL,
@@ -131,7 +132,6 @@ CREATE TABLE buffered_events (
 	--
 	data BLOB NOT NULL,
 	data_encoding VARCHAR(64) NOT NULL,
-	data_version INT NOT NULL,
 	PRIMARY KEY (id)
 );
 
@@ -286,7 +286,7 @@ PRIMARY KEY (shard_id, domain_id, workflow_id, run_id, initiated_id)
 
 
 CREATE TABLE signal_info_maps (
- shard_id INT NOT NULL,
+shard_id INT NOT NULL,
 domain_id CHAR(64) NOT NULL,
 workflow_id VARCHAR(255) NOT NULL,
 run_id CHAR(64) NOT NULL,
@@ -311,7 +311,9 @@ first_event_id BIGINT NOT NULL,
 version BIGINT NOT NULL,
 next_event_id BIGINT NOT NULL,
 history BLOB,
+history_encoding VARCHAR(64) NOT NULL,
 new_run_history BLOB,
+new_run_history_encoding VARCHAR(64) NOT NULL,
 PRIMARY KEY (shard_id, domain_id, workflow_id, run_id, first_event_id)
 );
 

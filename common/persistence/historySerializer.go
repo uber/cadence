@@ -154,6 +154,9 @@ func (t *serializerImpl) SerializeEvent(event *workflow.HistoryEvent, encodingTy
 }
 
 func (t *serializerImpl) DeserializeEvent(data *DataBlob) (*workflow.HistoryEvent, error) {
+	if data == nil {
+		return nil, nil
+	}
 	var event workflow.HistoryEvent
 	switch data.GetEncoding() {
 	//As backward-compatibility, unknown should be json

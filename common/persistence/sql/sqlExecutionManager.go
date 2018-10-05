@@ -34,7 +34,7 @@ import (
 )
 
 type (
-	// Implements ExecutionManager
+	// Implements ExecutionStore
 	sqlExecutionManager struct {
 		sqlManager
 		shardID int
@@ -67,6 +67,7 @@ type (
 		ParentRunID                  *string
 		InitiatedID                  *int64
 		CompletionEvent              *[]byte
+		CompletionEventDataEncoding  *string
 		TaskList                     string
 		WorkflowTypeName             string
 		WorkflowTimeoutSeconds       int64
@@ -151,7 +152,6 @@ type (
 		RunID        string
 		Data         []byte
 		DataEncoding string
-		DataVersion  int64
 	}
 )
 
@@ -182,7 +182,8 @@ sticky_task_list,
 sticky_schedule_to_start_timeout,
 client_library_version,
 client_feature_version,
-client_impl`
+client_impl,
+completion_event_data_encoding`
 
 	executionsNonNullableColumnsTags = `:shard_id,
 :domain_id,
@@ -210,7 +211,8 @@ client_impl`
 :sticky_schedule_to_start_timeout,
 :client_library_version,
 :client_feature_version,
-:client_impl`
+:client_impl,
+:completion_event_data_encoding`
 
 	executionsBlobColumns = `completion_event,
 execution_context`
@@ -266,6 +268,7 @@ parent_workflow_id = :parent_workflow_id,
 parent_run_id = :parent_run_id,
 initiated_id = :initiated_id,
 completion_event = :completion_event,
+completion_event_data_encoding = :completion_event_data_encoding,
 task_list = :task_list,
 workflow_type_name = :workflow_type_name,
 workflow_timeout_seconds = :workflow_timeout_seconds,
@@ -474,13 +477,13 @@ workflow_id = ? AND
 run_id = ?
 FOR UPDATE`
 
-	bufferedEventsColumns     = `shard_id, domain_id, workflow_id, run_id, data, data_encoding, data_version`
+	bufferedEventsColumns     = `shard_id, domain_id, workflow_id, run_id, data, data_encoding`
 	insertBufferedEventsQuery = `INSERT INTO buffered_events(` + bufferedEventsColumns + `)
-VALUES (:shard_id, :domain_id, :workflow_id, :run_id, :data, :data_encoding, :data_version)`
+VALUES (:shard_id, :domain_id, :workflow_id, :run_id, :data, :data_encoding)`
 
 	bufferedEventsConditions  = `shard_id=:shard_id AND domain_id=:domain_id AND workflow_id=:workflow_id AND run_id=:run_id`
 	deleteBufferedEventsQuery = `DELETE FROM buffered_events WHERE ` + bufferedEventsConditions
-	getBufferedEventsQuery    = `SELECT data, data_encoding, data_version FROM buffered_events WHERE
+	getBufferedEventsQuery    = `SELECT data, data_encoding FROM buffered_events WHERE
 shard_id=? AND domain_id=? AND workflow_id=? AND run_id=?`
 )
 
@@ -589,7 +592,7 @@ func (m *sqlExecutionManager) createWorkflowExecutionTx(tx *sqlx.Tx, request *p.
 	return &p.CreateWorkflowExecutionResponse{}, nil
 }
 
-func (m *sqlExecutionManager) GetWorkflowExecution(request *p.GetWorkflowExecutionRequest) (*p.GetWorkflowExecutionResponse, error) {
+func (m *sqlExecutionManager) GetWorkflowExecution(request *p.GetWorkflowExecutionRequest) (*p.InternalGetWorkflowExecutionResponse, error) {
 	tx, err := m.db.Beginx()
 	if err != nil {
 		return nil, &workflow.InternalServiceError{
@@ -633,8 +636,8 @@ func (m *sqlExecutionManager) GetWorkflowExecution(request *p.GetWorkflowExecuti
 		}
 	}
 
-	var state p.WorkflowMutableState
-	state.ExecutionInfo = &p.WorkflowExecutionInfo{
+	var state p.InternalWorkflowMutableState
+	state.ExecutionInfo = &p.InternalWorkflowExecutionInfo{
 		DomainID:                     execution.DomainID,
 		WorkflowID:                   execution.WorkflowID,
 		RunID:                        execution.RunID,
@@ -705,6 +708,10 @@ func (m *sqlExecutionManager) GetWorkflowExecution(request *p.GetWorkflowExecuti
 		state.ExecutionInfo.CancelRequestID = *execution.CancelRequestID
 	}
 
+	if execution.CompletionEvent != nil {
+		state.ExecutionInfo.CompletionEvent = p.NewDataBlob(*execution.CompletionEvent,
+			common.EncodingType(*execution.CompletionEventDataEncoding))
+	}
 	{
 		var err error
 		state.ActivitInfos, err = getActivityInfoMap(tx,
@@ -817,10 +824,10 @@ func (m *sqlExecutionManager) GetWorkflowExecution(request *p.GetWorkflowExecuti
 		}
 	}
 
-	return &p.GetWorkflowExecutionResponse{State: &state}, nil
+	return &p.InternalGetWorkflowExecutionResponse{State: &state}, nil
 }
 
-func getBufferedEvents(tx *sqlx.Tx, shardID int, domainID string, workflowID string, runID string) (result []*p.SerializedHistoryEventBatch, err error) {
+func getBufferedEvents(tx *sqlx.Tx, shardID int, domainID string, workflowID string, runID string) (result []*p.DataBlob, err error) {
 	var rows []bufferedEventsRow
 
 	if err := tx.Select(&rows, getBufferedEventsQuery, shardID, domainID, workflowID, runID); err != nil {
@@ -829,22 +836,18 @@ func getBufferedEvents(tx *sqlx.Tx, shardID int, domainID string, workflowID str
 		}
 	}
 	for _, row := range rows {
-		result = append(result, &p.SerializedHistoryEventBatch{
-			EncodingType: common.EncodingType(row.DataEncoding),
-			Version:      int(row.DataVersion),
-			Data:         row.Data,
-		})
+		result = append(result, p.NewDataBlob(row.Data, common.EncodingType(row.DataEncoding)))
 	}
 	return
 }
 
-func (m *sqlExecutionManager) UpdateWorkflowExecution(request *p.UpdateWorkflowExecutionRequest) error {
+func (m *sqlExecutionManager) UpdateWorkflowExecution(request *p.InternalUpdateWorkflowExecutionRequest) error {
 	return m.txExecute("UpdateWorkflowExecution", func(tx *sqlx.Tx) error {
 		return m.updateWorkflowExecutionTx(tx, request)
 	})
 }
 
-func (m *sqlExecutionManager) updateWorkflowExecutionTx(tx *sqlx.Tx, request *p.UpdateWorkflowExecutionRequest) error {
+func (m *sqlExecutionManager) updateWorkflowExecutionTx(tx *sqlx.Tx, request *p.InternalUpdateWorkflowExecutionRequest) error {
 	executionInfo := request.ExecutionInfo
 	domainID := executionInfo.DomainID
 	workflowID := executionInfo.WorkflowID
@@ -995,11 +998,11 @@ func (m *sqlExecutionManager) updateWorkflowExecutionTx(tx *sqlx.Tx, request *p.
 		}
 	} else {
 		executionInfo := request.ExecutionInfo
-		startVersion := common.EmptyVersion
-		lastWriteVersion := common.EmptyVersion
+		var startVersion *int64
+		var lastWriteVersion *int64
 		if request.ReplicationState != nil {
-			startVersion = request.ReplicationState.StartVersion
-			lastWriteVersion = request.ReplicationState.LastWriteVersion
+			startVersion = common.Int64Ptr(request.ReplicationState.StartVersion)
+			lastWriteVersion = common.Int64Ptr(request.ReplicationState.LastWriteVersion)
 		}
 		if request.FinishExecution {
 			// TODO when finish execution, the current record should be marked with a TTL
@@ -1024,7 +1027,8 @@ func (m *sqlExecutionManager) updateWorkflowExecutionTx(tx *sqlx.Tx, request *p.
 	}
 	return nil
 }
-func updateBufferedEvents(tx *sqlx.Tx, batch *p.SerializedHistoryEventBatch, clear bool, shardID int, domainID,
+
+func updateBufferedEvents(tx *sqlx.Tx, batch *p.DataBlob, clear bool, shardID int, domainID,
 	workflowID, runID string, condition int64, rangeID int64) error {
 	if clear {
 		if _, err := tx.NamedExec(deleteBufferedEventsQuery, &struct {
@@ -1048,8 +1052,7 @@ func updateBufferedEvents(tx *sqlx.Tx, batch *p.SerializedHistoryEventBatch, cle
 		WorkflowID:   workflowID,
 		RunID:        runID,
 		Data:         batch.Data,
-		DataEncoding: string(batch.EncodingType),
-		DataVersion:  int64(batch.Version),
+		DataEncoding: string(batch.Encoding),
 	}
 
 	if _, err := tx.NamedExec(insertBufferedEventsQuery, events); err != nil {
@@ -1060,7 +1063,7 @@ func updateBufferedEvents(tx *sqlx.Tx, batch *p.SerializedHistoryEventBatch, cle
 	return nil
 }
 
-func (m *sqlExecutionManager) ResetMutableState(request *p.ResetMutableStateRequest) error {
+func (m *sqlExecutionManager) ResetMutableState(request *p.InternalResetMutableStateRequest) error {
 	tx, err := m.db.Beginx()
 	if err != nil {
 		return &workflow.InternalServiceError{
@@ -1408,7 +1411,7 @@ func (m *sqlExecutionManager) RangeCompleteTimerTask(request *p.RangeCompleteTim
 
 // NewSQLMatchingPersistence creates an instance of ExecutionManager
 func NewSQLMatchingPersistence(host string, port int, username, password, dbName string, logger bark.Logger) (p.ExecutionStore, error) {
-	var _, err = newConnection(host, port, username, password, dbName)
+	var db, err = newConnection(host, port, username, password, dbName)
 	if err != nil {
 		return nil, err
 	}
@@ -1836,7 +1839,7 @@ func createTimerTasks(tx *sqlx.Tx, timerTasks []p.Task, deleteTimerTask p.Task, 
 }
 
 func continueAsNew(tx *sqlx.Tx, shardID int, domainID, workflowID, runID, previousRunID string,
-	createRequestID string, state int64, closeStatus int64, startVersion int64, lastWriteVersion int64) error {
+	createRequestID string, state int64, closeStatus int64, startVersion *int64, lastWriteVersion *int64) error {
 
 	var currentRunID string
 	if err := tx.Get(&currentRunID, continueAsNewLockRunIDSQLQuery, int64(shardID), domainID, workflowID); err != nil {
@@ -1854,7 +1857,7 @@ func continueAsNew(tx *sqlx.Tx, shardID int, domainID, workflowID, runID, previo
 
 func workflowIDReuse(tx *sqlx.Tx, shardID int, domainID, workflowID, runID, previousRunID string,
 	previousLastWriteVersion int64, previousState int64,
-	createRequestID string, state int64, closeStatus int64, startVersion int64, lastWriteVersion int64) error {
+	createRequestID string, state int64, closeStatus int64, startVersion *int64, lastWriteVersion *int64) error {
 
 	var currentExecutionRow currentExecutionRow
 	if err := tx.Get(&currentExecutionRow, workflowIDReuseSQLQuery, int64(shardID), domainID, workflowID); err != nil {
@@ -1864,7 +1867,7 @@ func workflowIDReuse(tx *sqlx.Tx, shardID int, domainID, workflowID, runID, prev
 	}
 	if currentExecutionRow.RunID != previousRunID ||
 		currentExecutionRow.State != previousState ||
-		currentExecutionRow.LastWriteVersion != previousLastWriteVersion {
+		(currentExecutionRow.LastWriteVersion != nil && *currentExecutionRow.LastWriteVersion != previousLastWriteVersion) {
 		return &p.ConditionFailedError{
 			Msg: fmt.Sprintf("ContinueAsNew failed. Current run ID %v, expected %v, current state: %v, expected: %v, current last write version: %v, expected: %v",
 				currentExecutionRow.RunID, previousRunID,
@@ -1877,7 +1880,7 @@ func workflowIDReuse(tx *sqlx.Tx, shardID int, domainID, workflowID, runID, prev
 }
 
 func conditionalUpdateCurrentExecution(tx *sqlx.Tx, shardID int, domainID, workflowID, runID,
-	createRequestID string, state int64, closeStatus int64, startVersion int64, lastWriteVersion int64) error {
+	createRequestID string, state int64, closeStatus int64, startVersion *int64, lastWriteVersion *int64) error {
 
 	result, err := tx.NamedExec(continueAsNewUpdateCurrentExecutionsSQLQuery, &currentExecutionRow{
 		ShardID:          int64(shardID),
@@ -1887,8 +1890,8 @@ func conditionalUpdateCurrentExecution(tx *sqlx.Tx, shardID int, domainID, workf
 		CreateRequestID:  createRequestID,
 		State:            state,
 		CloseStatus:      closeStatus,
-		StartVersion:     common.Int64Ptr(startVersion),
-		LastWriteVersion: common.Int64Ptr(lastWriteVersion),
+		StartVersion:     startVersion,
+		LastWriteVersion: lastWriteVersion,
 	})
 	// The current_executions row is locked, and the run ID has been verified. We can do the updates.
 	if err != nil {
@@ -1911,7 +1914,7 @@ func conditionalUpdateCurrentExecution(tx *sqlx.Tx, shardID int, domainID, workf
 }
 
 func updateExecution(tx *sqlx.Tx,
-	executionInfo *p.WorkflowExecutionInfo,
+	executionInfo *p.InternalWorkflowExecutionInfo,
 	replicationState *p.ReplicationState,
 	condition int64) error {
 	args := updateExecutionRow{
@@ -1923,7 +1926,6 @@ func updateExecution(tx *sqlx.Tx,
 			ParentWorkflowID:             &executionInfo.ParentWorkflowID,
 			ParentRunID:                  &executionInfo.ParentRunID,
 			InitiatedID:                  &executionInfo.InitiatedID,
-			CompletionEvent:              nil,
 			TaskList:                     executionInfo.TaskList,
 			WorkflowTypeName:             executionInfo.WorkflowTypeName,
 			WorkflowTimeoutSeconds:       int64(executionInfo.WorkflowTimeout),
@@ -1956,6 +1958,11 @@ func updateExecution(tx *sqlx.Tx,
 		args.executionRow.ExecutionContext = &executionInfo.ExecutionContext
 	}
 
+	completionEvent := executionInfo.CompletionEvent
+	if completionEvent != nil {
+		args.executionRow.CompletionEvent = &completionEvent.Data
+		args.executionRow.CompletionEventDataEncoding = common.StringPtr(string(completionEvent.Encoding))
+	}
 	if replicationState != nil {
 		args.StartVersion = &replicationState.StartVersion
 		args.CurrentVersion = &replicationState.CurrentVersion
