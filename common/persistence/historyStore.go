@@ -68,7 +68,7 @@ func (m *historyManagerImpl) NewHistoryBranch(request *NewHistoryBranchRequest) 
 }
 
 // AppendHistoryNodes add(or override) a node to a history branch
-func (m *historyManagerImpl) AppendHistoryNode(request *AppendHistoryNodesRequest) (*AppendHistoryNodesResponse, error) {
+func (m *historyManagerImpl) AppendHistoryNodes(request *AppendHistoryNodesRequest) (*AppendHistoryNodesResponse, error) {
 	if len(request.Events) == 0 {
 		return nil, fmt.Errorf("events to be appended cannot be empty")
 	}
