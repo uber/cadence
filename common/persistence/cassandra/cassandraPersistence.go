@@ -1259,7 +1259,7 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Cre
 			state,
 		)
 	default:
-		d.logger.Panic(fmt.Sprintf("Unknown CreateWorkflowContinueAsNew Mode: %v", request.CreateWorkflowMode))
+		d.logger.Panic(fmt.Sprintf("Unknown CreateWorkflowMode: %v", request.CreateWorkflowMode))
 	}
 
 	if request.ReplicationState == nil {
