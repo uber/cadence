@@ -71,7 +71,7 @@ CREATE TABLE executions(
 	parent_run_id CHAR(64), -- 3.
 	initiated_id BIGINT, -- 4. these (parent-related fields) are nullable as their default values are not checked by tests
 	completion_event BLOB, -- 5.
-	completion_event_data_encoding VARCHAR(64),
+	completion_event_encoding VARCHAR(64),
 	task_list VARCHAR(255) NOT NULL,
 	workflow_type_name VARCHAR(255) NOT NULL,
 	workflow_timeout_seconds INT UNSIGNED NOT NULL,
@@ -215,9 +215,11 @@ CREATE TABLE activity_info_maps (
 -- fields of activity_info type follow
 version                   BIGINT NOT NULL,
 scheduled_event           BLOB,
+scheduled_event_encoding  VARCHAR(64),
 scheduled_time            TIMESTAMP NOT NULL,
 started_id                BIGINT NOT NULL,
 started_event             BLOB,
+started_event_encoding    VARCHAR(64),
 started_time              TIMESTAMP NOT NULL,
 activity_id               VARCHAR(255) NOT NULL,
 request_id                VARCHAR(255) NOT NULL,
@@ -266,14 +268,16 @@ initiated_id BIGINT NOT NULL,
 --
 version BIGINT NOT NULL,
 initiated_event BLOB,
+initiated_event_encoding  VARCHAR(64),
 started_id BIGINT NOT NULL,
 started_event BLOB,
+started_event_encoding  VARCHAR(64),
 create_request_id CHAR(64),
 PRIMARY KEY (shard_id, domain_id, workflow_id, run_id, initiated_id)
 );
 
 CREATE TABLE request_cancel_info_maps (
- shard_id INT NOT NULL,
+shard_id INT NOT NULL,
 domain_id CHAR(64) NOT NULL,
 workflow_id VARCHAR(255) NOT NULL,
 run_id CHAR(64) NOT NULL,

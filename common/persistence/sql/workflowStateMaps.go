@@ -126,9 +126,11 @@ var (
 	activityInfoColumns = []string{
 		"version",
 		"scheduled_event",
+		"scheduled_event_encoding",
 		"scheduled_time",
 		"started_id",
 		"started_event",
+		"started_event_encoding",
 		"started_time",
 		"activity_id",
 		"request_id",
@@ -173,10 +175,12 @@ type (
 	activityInfoMapsRow struct {
 		activityInfoMapsPrimaryKey
 		Version                  int64
-		ScheduledEvent           *persistence.DataBlob
+		ScheduledEvent           []byte
+		ScheduledEventEncoding   string
 		ScheduledTime            time.Time
 		StartedID                int64
-		StartedEvent             *persistence.DataBlob
+		StartedEvent             *[]byte
+		StartedEventEncoding     string
 		StartedTime              time.Time
 		ActivityID               string
 		RequestID                string
@@ -213,7 +217,7 @@ func updateActivityInfos(tx *sqlx.Tx,
 	if len(activityInfos) > 0 {
 		activityInfoMapsRows := make([]*activityInfoMapsRow, len(activityInfos))
 		for i, v := range activityInfos {
-			activityInfoMapsRows[i] = &activityInfoMapsRow{
+			row := &activityInfoMapsRow{
 				activityInfoMapsPrimaryKey: activityInfoMapsPrimaryKey{
 					ShardID:    int64(shardID),
 					DomainID:   domainID,
@@ -222,10 +226,10 @@ func updateActivityInfos(tx *sqlx.Tx,
 					ScheduleID: v.ScheduleID,
 				},
 				Version:                  v.Version,
-				ScheduledEvent:           v.ScheduledEvent,
+				ScheduledEvent:           v.ScheduledEvent.Data,
+				ScheduledEventEncoding:   string(v.ScheduledEvent.Encoding),
 				ScheduledTime:            v.ScheduledTime,
 				StartedID:                v.StartedID,
-				StartedEvent:             v.StartedEvent,
 				StartedTime:              v.StartedTime,
 				ActivityID:               v.ActivityID,
 				RequestID:                v.RequestID,
@@ -247,6 +251,11 @@ func updateActivityInfos(tx *sqlx.Tx,
 				ExpirationTime:           v.ExpirationTime,
 				MaxAttempts:              int64(v.MaximumAttempts),
 			}
+			if v.StartedEvent != nil {
+				row.StartedEvent = &v.StartedEvent.Data
+				row.StartedEventEncoding = string(v.StartedEvent.Encoding)
+			}
+			activityInfoMapsRows[i] = row
 
 			if v.Details != nil {
 				activityInfoMapsRows[i].Details = &v.Details
@@ -356,13 +365,12 @@ func getActivityInfoMap(tx *sqlx.Tx,
 
 	ret := make(map[int64]*persistence.InternalActivityInfo)
 	for _, v := range activityInfoMapsRows {
-		ret[v.ScheduleID] = &persistence.InternalActivityInfo{
+		info := &persistence.InternalActivityInfo{
 			Version:                  v.Version,
 			ScheduleID:               v.ScheduleID,
-			ScheduledEvent:           nil,
+			ScheduledEvent:           persistence.NewDataBlob(v.ScheduledEvent, common.EncodingType(v.ScheduledEventEncoding)),
 			ScheduledTime:            v.ScheduledTime,
 			StartedID:                v.StartedID,
-			StartedEvent:             nil,
 			StartedTime:              v.StartedTime,
 			ActivityID:               v.ActivityID,
 			RequestID:                v.RequestID,
@@ -385,6 +393,10 @@ func getActivityInfoMap(tx *sqlx.Tx,
 			ExpirationTime:           v.ExpirationTime,
 			MaximumAttempts:          int32(v.MaxAttempts),
 		}
+		if v.StartedEvent != nil {
+			info.StartedEvent = persistence.NewDataBlob(*v.StartedEvent, common.EncodingType(v.ScheduledEventEncoding))
+		}
+		ret[v.ScheduleID] = info
 
 		if v.Details != nil {
 			ret[v.ScheduleID].Details = *v.Details
@@ -579,8 +591,10 @@ var (
 	childExecutionInfoColumns = []string{
 		"version",
 		"initiated_event",
+		"initiated_event_encoding",
 		"started_id",
 		"started_event",
+		"started_event_encoding",
 		"create_request_id",
 	}
 	childExecutionInfoTableName = "child_execution_info_maps"
@@ -603,11 +617,13 @@ type (
 
 	childExecutionInfoMapsRow struct {
 		childExecutionInfoMapsPrimaryKey
-		Version         int64
-		InitiatedEvent  *[]byte
-		StartedID       int64
-		StartedEvent    *[]byte
-		CreateRequestID string
+		Version                int64
+		InitiatedEvent         *[]byte
+		InitiatedEventEncoding string
+		StartedID              int64
+		StartedEvent           *[]byte
+		StartedEventEncoding   string
+		CreateRequestID        string
 	}
 )
 
@@ -621,7 +637,7 @@ func updateChildExecutionInfos(tx *sqlx.Tx,
 	if len(childExecutionInfos) > 0 {
 		timerInfoMapsRows := make([]*childExecutionInfoMapsRow, len(childExecutionInfos))
 		for i, v := range childExecutionInfos {
-			timerInfoMapsRows[i] = &childExecutionInfoMapsRow{
+			row := &childExecutionInfoMapsRow{
 				childExecutionInfoMapsPrimaryKey: childExecutionInfoMapsPrimaryKey{
 					ShardID:     int64(shardID),
 					DomainID:    domainID,
@@ -630,11 +646,18 @@ func updateChildExecutionInfos(tx *sqlx.Tx,
 					InitiatedID: v.InitiatedID,
 				},
 				Version:         v.Version,
-				InitiatedEvent:  nil,
 				StartedID:       v.StartedID,
-				StartedEvent:    nil,
 				CreateRequestID: v.CreateRequestID,
 			}
+			if v.InitiatedEvent != nil {
+				row.InitiatedEvent = &v.InitiatedEvent.Data
+				row.InitiatedEventEncoding = string(v.InitiatedEvent.Encoding)
+			}
+			if v.StartedEvent != nil {
+				row.StartedEvent = &v.StartedEvent.Data
+				row.StartedEventEncoding = string(v.StartedEvent.Encoding)
+			}
+			timerInfoMapsRows[i] = row
 		}
 
 		query, args, err := tx.BindNamed(setKeyInChildExecutionInfoMapSQLQuery, timerInfoMapsRows)
@@ -688,14 +711,19 @@ func getChildExecutionInfoMap(tx *sqlx.Tx,
 
 	ret := make(map[int64]*persistence.InternalChildExecutionInfo)
 	for _, v := range childExecutionInfoMapsRows {
-		ret[v.InitiatedID] = &persistence.InternalChildExecutionInfo{
+		info := &persistence.InternalChildExecutionInfo{
 			InitiatedID:     v.InitiatedID,
 			Version:         v.Version,
-			InitiatedEvent:  nil,
 			StartedID:       v.StartedID,
-			StartedEvent:    nil,
 			CreateRequestID: v.CreateRequestID,
 		}
+		if v.InitiatedEvent != nil {
+			info.InitiatedEvent = persistence.NewDataBlob(*v.InitiatedEvent, common.EncodingType(v.InitiatedEventEncoding))
+		}
+		if v.StartedEvent != nil {
+			info.StartedEvent = persistence.NewDataBlob(*v.StartedEvent, common.EncodingType(v.InitiatedEventEncoding))
+		}
+		ret[v.InitiatedID] = info
 
 	}
 

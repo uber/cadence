@@ -67,7 +67,7 @@ type (
 		ParentRunID                  *string
 		InitiatedID                  *int64
 		CompletionEvent              *[]byte
-		CompletionEventDataEncoding  *string
+		CompletionEventEncoding      *string
 		TaskList                     string
 		WorkflowTypeName             string
 		WorkflowTimeoutSeconds       int64
@@ -183,7 +183,7 @@ sticky_schedule_to_start_timeout,
 client_library_version,
 client_feature_version,
 client_impl,
-completion_event_data_encoding`
+completion_event_encoding`
 
 	executionsNonNullableColumnsTags = `:shard_id,
 :domain_id,
@@ -212,7 +212,7 @@ completion_event_data_encoding`
 :client_library_version,
 :client_feature_version,
 :client_impl,
-:completion_event_data_encoding`
+:completion_event_encoding`
 
 	executionsBlobColumns = `completion_event,
 execution_context`
@@ -268,7 +268,7 @@ parent_workflow_id = :parent_workflow_id,
 parent_run_id = :parent_run_id,
 initiated_id = :initiated_id,
 completion_event = :completion_event,
-completion_event_data_encoding = :completion_event_data_encoding,
+completion_event_encoding = :completion_event_encoding,
 task_list = :task_list,
 workflow_type_name = :workflow_type_name,
 workflow_timeout_seconds = :workflow_timeout_seconds,
@@ -710,7 +710,7 @@ func (m *sqlExecutionManager) GetWorkflowExecution(request *p.GetWorkflowExecuti
 
 	if execution.CompletionEvent != nil {
 		state.ExecutionInfo.CompletionEvent = p.NewDataBlob(*execution.CompletionEvent,
-			common.EncodingType(*execution.CompletionEventDataEncoding))
+			common.EncodingType(*execution.CompletionEventEncoding))
 	}
 	{
 		var err error
@@ -1961,7 +1961,7 @@ func updateExecution(tx *sqlx.Tx,
 	completionEvent := executionInfo.CompletionEvent
 	if completionEvent != nil {
 		args.executionRow.CompletionEvent = &completionEvent.Data
-		args.executionRow.CompletionEventDataEncoding = common.StringPtr(string(completionEvent.Encoding))
+		args.executionRow.CompletionEventEncoding = common.StringPtr(string(completionEvent.Encoding))
 	}
 	if replicationState != nil {
 		args.StartVersion = &replicationState.StartVersion

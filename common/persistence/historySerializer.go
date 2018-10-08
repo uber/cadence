@@ -103,6 +103,9 @@ func (t *serializerImpl) SerializeBatchEvents(events []*workflow.HistoryEvent, e
 }
 
 func (t *serializerImpl) DeserializeBatchEvents(data *DataBlob) ([]*workflow.HistoryEvent, error) {
+	if data == nil {
+		return nil, nil
+	}
 	switch data.GetEncoding() {
 	//As backward-compatibility, unknown should be json
 	case common.EncodingTypeUnknown:
@@ -131,7 +134,7 @@ func (t *serializerImpl) DeserializeBatchEvents(data *DataBlob) ([]*workflow.His
 
 func (t *serializerImpl) SerializeEvent(event *workflow.HistoryEvent, encodingType common.EncodingType) (*DataBlob, error) {
 	if event == nil {
-		event = &workflow.HistoryEvent{}
+		return nil, nil
 	}
 	switch encodingType {
 	case common.EncodingTypeGob:
