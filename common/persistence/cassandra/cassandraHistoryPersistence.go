@@ -160,18 +160,7 @@ func (h *cassandraHistoryPersistence) NewHistoryBranch(request *p.NewHistoryBran
 	}()
 
 	if err != nil {
-		if isTimeoutError(err) {
-			// Write may have succeeded, but we don't know
-			// return this info to the caller so they have the option of trying to find out by executing a read
-			return nil, &p.TimeoutError{Msg: fmt.Sprintf("NewHistoryBranch timed out. Error: %v", err)}
-		} else if isThrottlingError(err) {
-			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("NewHistoryBranch operation failed. Error: %v", err),
-			}
-		}
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("NewHistoryBranch operation failed. Error: %v", err),
-		}
+		return nil, processCommonErrors("NewHistoryBranch", err)
 	}
 
 	if !applied {
@@ -256,19 +245,7 @@ func (h *cassandraHistoryPersistence) getTreeTransactionID(treeID string) (int64
 
 	result := make(map[string]interface{})
 	if err := query.MapScan(result); err != nil {
-		if err == gocql.ErrNotFound {
-			return 0, &workflow.EntityNotExistsError{
-				Message: fmt.Sprintf("getTreeTransactionID failed.  TreeID: %v Error: %v ", treeID, err),
-			}
-		} else if isThrottlingError(err) {
-			return 0, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("getTreeTransactionID failed.  TreeID: %v Error: %v", treeID, err),
-			}
-		}
-
-		return 0, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("getTreeTransactionID failed.  TreeID: %v Error: %v", treeID, err),
-		}
+		return 0, processCommonErrors("getTreeTransactionID", err)
 	}
 
 	txnID := result["txn_id"].(int64)
@@ -285,19 +262,7 @@ func (h *cassandraHistoryPersistence) getBranchStatus(treeID string, branchID st
 
 	result := make(map[string]interface{})
 	if err := query.MapScan(result); err != nil {
-		if err == gocql.ErrNotFound {
-			return false, &workflow.EntityNotExistsError{
-				Message: fmt.Sprintf("getBranchStatus failed.  TreeID: %v, branchID: %v Error: %v", treeID, branchID, err),
-			}
-		} else if isThrottlingError(err) {
-			return false, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("getBranchStatus failed.  TreeID: %v, branchID: %v Error: %v", treeID, branchID, err),
-			}
-		}
-
-		return false, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("getBranchStatus failed.  TreeID: %v, branchID: %v Error: %v", treeID, branchID, err),
-		}
+		return false, processCommonErrors("getBranchStatus", err)
 	}
 
 	deleted := result["deleted"].(bool)
@@ -321,18 +286,7 @@ func (h *cassandraHistoryPersistence) createRoot(treeID string) (bool, error) {
 	previous := make(map[string]interface{})
 	applied, err := query.MapScanCAS(previous)
 	if err != nil {
-		if isThrottlingError(err) {
-			return false, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("createRoot operation failed. Error: %v", err),
-			}
-		} else if isTimeoutError(err) {
-			// Write may have succeeded, but we don't know
-			// return this info to the caller so they have the option of trying to find out by executing a read
-			return false, &p.TimeoutError{Msg: fmt.Sprintf("createRoot timed out. Error: %v", err)}
-		}
-		return false, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("createRoot operation failed. Error: %v", err),
-		}
+		return false, processCommonErrors("createRoot", err)
 	}
 
 	return applied, nil
@@ -409,9 +363,11 @@ func (h *cassandraHistoryPersistence) AppendHistoryNodes(request *p.InternalAppe
 }
 
 func processCommonErrors(operation string, err error) error {
-	if isTimeoutError(err) {
-		// Write may have succeeded, but we don't know
-		// return this info to the caller so they have the option of trying to find out by executing a read
+	if err == gocql.ErrNotFound {
+		return &workflow.EntityNotExistsError{
+			Message: fmt.Sprintf("%v failed, %v. Error: %v ", operation, err),
+		}
+	} else if isTimeoutError(err) {
 		return &p.TimeoutError{Msg: fmt.Sprintf("%v timed out. Error: %v", operation, err)}
 	} else if isThrottlingError(err) {
 		return &workflow.ServiceBusyError{
