@@ -100,7 +100,6 @@ func (m *historyManagerImpl) AppendHistoryNodes(request *AppendHistoryNodesReque
 				BranchInfo: request.BranchInfo,
 				MinNodeID:  request.NextNodeID,
 				MaxNodeID:  request.NextNodeID + int64(len(request.Events)),
-				PageSize:   len(request.Events),
 			}
 			readResp, err := m.persistence.ReadHistoryBranch(readReq)
 			if err != nil {
@@ -129,13 +128,16 @@ func (m *historyManagerImpl) ReadHistoryBranch(request *ReadHistoryBranchRequest
 	}
 
 	events := []*workflow.HistoryEvent{}
-	size := 0
+	dataSize := 0
+	minNodeID := token.LastEventID + 1
+	maxNodeID := minNodeID + int64(request.PageSize)
+	if request.MaxNodeID < maxNodeID {
+		maxNodeID = request.MaxNodeID
+	}
 	ir := &InternalReadHistoryBranchRequest{
-		BranchInfo:    request.BranchInfo,
-		MinNodeID:     request.MinNodeID,
-		MaxNodeID:     request.MaxNodeID,
-		PageSize:      request.PageSize,
-		NextPageToken: token.Data,
+		BranchInfo: request.BranchInfo,
+		MinNodeID:  minNodeID,
+		MaxNodeID:  maxNodeID,
 	}
 	resp, err := m.persistence.ReadHistoryBranch(ir)
 	if err != nil {
@@ -168,7 +170,7 @@ func (m *historyManagerImpl) ReadHistoryBranch(request *ReadHistoryBranchRequest
 		lastEventBatchVersion = *e.Version
 		lastEventID = *e.EventId
 		events = append(events, e)
-		size += len(b.Data)
+		dataSize += len(b.Data)
 	}
 
 	if len(request.NextPageToken) == 0 {
@@ -191,12 +193,11 @@ func (m *historyManagerImpl) ReadHistoryBranch(request *ReadHistoryBranchRequest
 	}
 
 	newResponse := &ReadHistoryBranchResponse{}
-	newResponse.Size = size
+	newResponse.Size = dataSize
 	newResponse.History = events
 	newResponse.LastNodeID = lastEventID
 	token.LastEventID = lastEventID
 	token.LastEventBatchVersion = lastEventBatchVersion
-	token.Data = resp.NextPageToken
 	newResponse.NextPageToken, err = m.serializeToken(token)
 	if err != nil {
 		return nil, err

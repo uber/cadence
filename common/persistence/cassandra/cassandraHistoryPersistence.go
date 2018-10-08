@@ -23,6 +23,10 @@ package cassandra
 import (
 	"fmt"
 
+	"sort"
+
+	"strings"
+
 	"github.com/gocql/gocql"
 	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -63,8 +67,11 @@ const (
 		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id = ? ` +
 		`IF txn_id < ? `
 
-	v2templateReadNode = `SELECT tree_id, branch_id, row_type, ancestors, deleted, node_id, txn_id, data, data_encoding FROM events_v2 ` +
+	v2templateReadOneNode = `SELECT tree_id, branch_id, row_type, ancestors, deleted, node_id, txn_id FROM events_v2 ` +
 		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id >= ? AND node_id < ? `
+
+	v2templateReadNodes = `SELECT node_id, data, data_encoding FROM events_v2 ` +
+		`WHERE tree_id = ? AND branch_id IN ( ? ) AND row_type = ? AND node_id >= ? AND node_id < ? `
 
 	v2templateUpdateTreeRoot = `UPDATE events_v2 ` +
 		`SET txn_id = ? ` +
@@ -129,6 +136,23 @@ func newHistoryPersistence(cfg config.Cassandra, logger bark.Logger) (p.HistoryS
 func (h *cassandraHistoryPersistence) Close() {
 	if h.session != nil {
 		h.session.Close()
+	}
+}
+
+func processCommonErrors(operation string, err error) error {
+	if err == gocql.ErrNotFound {
+		return &workflow.EntityNotExistsError{
+			Message: fmt.Sprintf("%v failed, %v. Error: %v ", operation, err),
+		}
+	} else if isTimeoutError(err) {
+		return &p.TimeoutError{Msg: fmt.Sprintf("%v timed out. Error: %v", operation, err)}
+	} else if isThrottlingError(err) {
+		return &workflow.ServiceBusyError{
+			Message: fmt.Sprintf("%v operation failed. Error: %v", operation, err),
+		}
+	}
+	return &workflow.InternalServiceError{
+		Message: fmt.Sprintf("%v operation failed. Error: %v", operation, err),
 	}
 }
 
@@ -236,7 +260,7 @@ func (h *cassandraHistoryPersistence) updateTreeTransactionID(batch *gocql.Batch
 }
 
 func (h *cassandraHistoryPersistence) getTreeTransactionID(treeID string) (int64, error) {
-	query := h.session.Query(v2templateReadNode,
+	query := h.session.Query(v2templateReadOneNode,
 		treeID,
 		rootNodeBranchId,
 		rowTypeHistoryNode,
@@ -253,7 +277,7 @@ func (h *cassandraHistoryPersistence) getTreeTransactionID(treeID string) (int64
 }
 
 func (h *cassandraHistoryPersistence) getBranchStatus(treeID string, branchID string) (bool, error) {
-	query := h.session.Query(v2templateReadNode,
+	query := h.session.Query(v2templateReadOneNode,
 		treeID,
 		branchID,
 		rowTypeHistoryBranch,
@@ -362,23 +386,6 @@ func (h *cassandraHistoryPersistence) AppendHistoryNodes(request *p.InternalAppe
 	return nil
 }
 
-func processCommonErrors(operation string, err error) error {
-	if err == gocql.ErrNotFound {
-		return &workflow.EntityNotExistsError{
-			Message: fmt.Sprintf("%v failed, %v. Error: %v ", operation, err),
-		}
-	} else if isTimeoutError(err) {
-		return &p.TimeoutError{Msg: fmt.Sprintf("%v timed out. Error: %v", operation, err)}
-	} else if isThrottlingError(err) {
-		return &workflow.ServiceBusyError{
-			Message: fmt.Sprintf("%v operation failed. Error: %v", operation, err),
-		}
-	}
-	return &workflow.InternalServiceError{
-		Message: fmt.Sprintf("%v operation failed. Error: %v", operation, err),
-	}
-}
-
 func (h *cassandraHistoryPersistence) getAppendHistoryNodesFailure(previous map[string]interface{}, iter *gocql.Iter, reqTreeTxnID, reqEventTxnID, nextNodeIDToInsert int64, reqTreeID, reqBranchID string) error {
 	//if not applied, then there are three possibilities:
 	// 1. tree transactionID condition fails
@@ -449,8 +456,128 @@ GetFailureReasonLoop:
 
 // ReadHistoryBranch returns history node data for a branch
 func (h *cassandraHistoryPersistence) ReadHistoryBranch(request *p.InternalReadHistoryBranchRequest) (*p.InternalReadHistoryBranchResponse, error) {
-	//TODO
-	return nil, nil
+	branchInfo := request.BranchInfo
+	treeID := branchInfo.TreeID
+	branchID := branchInfo.BranchID
+	allAncestors := branchInfo.Ancestors
+	var err error
+	if branchInfo.Ancestors == nil {
+		allAncestors, err = h.getBranchAncestors(treeID, branchID)
+		if err != nil {
+			return nil, err
+		}
+	}
+	branchInfo.Ancestors = allAncestors
+
+	branchesToQuery := make([]string, 0)
+	// NOTE: theoretically, the following code can be improved by binary search. But we shouldn't have many branch ranges. So linear search is sufficient here.
+	for _, an := range allAncestors {
+		// this range won't contain any nodes needed, since the last node(EndNodeID-1) in the range is strictly less than MinNodeID
+		if an.EndNodeID <= request.MinNodeID {
+			continue
+		}
+		// summarily, this range won't contain any nodes needed, since the first node(BeginNodeID) in the range is greater than or equal to MaxNodeID, where MaxNodeID is exclusive for the request
+		if an.BeginNodeID >= request.MaxNodeID {
+			continue
+		}
+		branchesToQuery = append(branchesToQuery, fmt.Sprintf("'%v'", an.BranchID))
+	}
+
+	// If we haven't got enough branch ranges, then also query the current branch
+	var lastEndNodeID int64
+	if len(allAncestors) == 0 {
+		lastEndNodeID = 1
+	} else {
+		lastEndNodeID = allAncestors[len(allAncestors)-1].EndNodeID
+	}
+	if lastEndNodeID < request.MaxNodeID {
+		branchesToQuery = append(branchesToQuery, fmt.Sprintf("'%v'", branchID))
+	}
+	branchesInStr := strings.Join(branchesToQuery, ",")
+
+	query := h.session.Query(v2templateReadNodes,
+		treeID, branchesInStr, rowTypeHistoryNode, request.MinNodeID, request.MaxNodeID)
+
+	numOfExpectedEvents := int(request.MaxNodeID - request.MinNodeID)
+	iter := query.PageSize(numOfExpectedEvents).Iter()
+	if iter == nil {
+		return nil, &workflow.InternalServiceError{
+			Message: "ReadHistoryBranch operation failed.  Not able to create query iterator.",
+		}
+	}
+
+	eventBlob := &p.DataBlob{}
+	history := make([]*p.DataBlob, 0)
+
+	for iter.Scan(&eventBlob.ID, &eventBlob.Data, &eventBlob.Encoding) {
+		history = append(history, eventBlob)
+		eventBlob = &p.DataBlob{}
+	}
+
+	if err := iter.Close(); err != nil {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("ReadHistoryBranch. Close operation failed. Error: %v", err),
+		}
+	}
+	if len(history) != numOfExpectedEvents {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("ReadHistoryBranch. Expected %v events, but only got %v.", numOfExpectedEvents, len(history)),
+		}
+	}
+
+	sort.Slice(history, func(i, j int) bool { return history[i].ID < history[j].ID })
+
+	if history[0].ID != request.MinNodeID || history[len(history)-1].ID != request.MaxNodeID-1 {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("ReadHistoryBranch. History events corrupted. Expected first/last eventIDs: %v/%v, but got %v/%v", request.MinNodeID, request.MaxNodeID-1, history[0].ID, history[len(history)-1].ID),
+		}
+	}
+
+	response := &p.InternalReadHistoryBranchResponse{
+		History:    history,
+		BranchInfo: branchInfo,
+	}
+
+	return response, nil
+}
+
+func (h *cassandraHistoryPersistence) getBranchAncestors(treeID, branchID string) ([]p.HistoryBranchRange, error) {
+	query := h.session.Query(v2templateReadOneNode,
+		treeID,
+		branchID,
+		rowTypeHistoryBranch,
+		branchNodeID,
+		branchNodeID+1)
+
+	result := make(map[string]interface{})
+	if err := query.MapScan(result); err != nil {
+		return nil, processCommonErrors("getBranchAncestors", err)
+	}
+
+	ans := make([]p.HistoryBranchRange, 0)
+	eList := result["ancestors"].([]map[string]interface{})
+	for _, e := range eList {
+		an := p.HistoryBranchRange{}
+		for k, v := range e {
+			switch k {
+			case "branch_id":
+				an.BranchID = v.(gocql.UUID).String()
+			case "forked_node_id":
+				an.EndNodeID = v.(int64)
+			}
+		}
+	}
+
+	if len(ans) > 0 {
+		// sort ans based onf EndNodeID so that we can set BeginNodeID
+		sort.Slice(ans, func(i, j int) bool { return ans[i].EndNodeID < ans[j].EndNodeID })
+		ans[0].BeginNodeID = 1
+		for i := 1; i < len(ans); i++ {
+			ans[i].BeginNodeID = ans[i-1].EndNodeID
+		}
+	}
+
+	return ans, nil
 }
 
 // ForkHistoryBranch forks a new branch from a old branch

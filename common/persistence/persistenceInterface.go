@@ -112,6 +112,8 @@ type (
 	DataBlob struct {
 		Encoding common.EncodingType
 		Data     []byte
+		// this field is just to help sorting, we don't have to store it anywhere
+		ID int64
 	}
 
 	// InternalWorkflowExecutionInfo describes a workflow execution for Persistence Interface
@@ -350,10 +352,6 @@ type (
 		MinNodeID int64
 		// Get the history nodes upto MaxNodeID.  Exclusive.
 		MaxNodeID int64
-		// Maximum number of history nodes per page
-		PageSize int
-		// Token to continue reading next page of history append transactions.  Pass in empty slice for first page
-		NextPageToken []byte
 	}
 
 	// InternalReadHistoryBranchResponse is the response to ReadHistoryBranchRequest
@@ -362,9 +360,6 @@ type (
 		BranchInfo HistoryBranch
 		// History events
 		History []*DataBlob
-		// Token to read next page if there are more events beyond page size.
-		// Use this to set NextPageToken on ReadHistoryBranchRequest to read the next page.
-		NextPageToken []byte
 	}
 )
 
