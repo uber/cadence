@@ -126,6 +126,11 @@ const (
 )
 
 type (
+	// InvalidPersistenceRequestError represents invalid request to persistence
+	InvalidPersistenceRequestError struct {
+		Msg string
+	}
+
 	// CurrentWorkflowConditionFailedError represents a failed conditional update for current workflow record
 	CurrentWorkflowConditionFailedError struct {
 		Msg string
@@ -1289,6 +1294,10 @@ type (
 		GetMetadata() (*GetMetadataResponse, error)
 	}
 )
+
+func (e *InvalidPersistenceRequestError) Error() string {
+	return e.Msg
+}
 
 func (e *CurrentWorkflowConditionFailedError) Error() string {
 	return e.Msg

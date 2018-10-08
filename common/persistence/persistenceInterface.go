@@ -299,6 +299,7 @@ type (
 		// The branch to be appended
 		BranchInfo HistoryBranch
 		// The first nodeID of the nodes to be updated conditionally with transactionID
+		// If NextNodeIDToUpdate == NextNodeIDToInsert, it won't do any update
 		NextNodeIDToUpdate int64
 		// The first nodeID of the nodes to be insert if not exist
 		// NextNodeIDToInsert >= NextNodeIDToUpdate

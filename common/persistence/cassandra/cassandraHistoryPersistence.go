@@ -135,6 +135,7 @@ func (h *cassandraHistoryPersistence) Close() {
 // NewHistoryBranch creates a new branch from tree root. If tree doesn't exist, then create one. Return error if the branch already exists.
 func (h *cassandraHistoryPersistence) NewHistoryBranch(request *p.NewHistoryBranchRequest) (*p.NewHistoryBranchResponse, error) {
 	treeID := request.BranchInfo.TreeID
+	branchID := request.BranchInfo.BranchID
 	isNewTree, err := h.createRoot(treeID)
 	if err != nil {
 		return nil, err
@@ -145,10 +146,10 @@ func (h *cassandraHistoryPersistence) NewHistoryBranch(request *p.NewHistoryBran
 		return nil, err
 	}
 	batch := h.session.NewBatch(gocql.LoggedBatch)
-	h.doTreeTransactionalOperation(batch, treeID, txnID, txnID+1)
+	h.updateTreeTransactionID(batch, treeID, txnID, txnID+1)
 
 	batch.Query(v2templateInsertNode,
-		treeID, request.BranchInfo.BranchID, rowTypeHistoryBranch, nil, false, branchNodeID, nil, nil, nil)
+		treeID, branchID, rowTypeHistoryBranch, nil, false, branchNodeID, nil, nil, nil)
 
 	previous := make(map[string]interface{})
 	applied, iter, err := h.session.MapExecuteBatchCAS(batch, previous)
@@ -173,17 +174,74 @@ func (h *cassandraHistoryPersistence) NewHistoryBranch(request *p.NewHistoryBran
 		}
 	}
 
-	//if not applied, then there will be two possibilities:
-	// 1. tree transactionID condition fails
-	// 2. the branch already exists
 	if !applied {
-
+		return nil, h.getNewHistoryBranchFailure(previous, iter, txnID, treeID, branchID)
 	}
 
 	return resp, nil
 }
 
-func (h *cassandraHistoryPersistence) doTreeTransactionalOperation(batch *gocql.Batch, treeID string, currentTxnID int64, NextTxnID int64) {
+func (h *cassandraHistoryPersistence) getNewHistoryBranchFailure(previous map[string]interface{}, iter *gocql.Iter, reqTxnID int64, reqTreeID, reqBranchID string) error {
+	//if not applied, then there are two possibilities:
+	// 1. tree transactionID condition fails
+	// 2. the branch already exists
+
+	txnIDUnmatch := false
+	actualTxnID := int64(-1)
+	branchAlreadyExits := false
+	allPrevious := []map[string]interface{}{}
+
+GetFailureReasonLoop:
+	for {
+		rowType, ok := previous["row_type"].(int)
+		if !ok {
+			// This should never happen, as all our rows have the type field.
+			break GetFailureReasonLoop
+		}
+
+		treeID := previous["tree_id"].(gocql.UUID).String()
+		branchID := previous["branch_id"].(gocql.UUID).String()
+		nodeID := previous["node_id"].(int64)
+
+		if rowType == rowTypeHistoryNode && treeID == reqTreeID && branchID == rootNodeBranchId && nodeID == rootNodeID {
+			actualTxnID = previous["txn_id"].(int64)
+			if actualTxnID != reqTxnID {
+				txnIDUnmatch = true
+			}
+		} else if rowType == rowTypeHistoryBranch && treeID == reqTreeID && branchID == reqBranchID {
+			branchAlreadyExits = true
+		}
+
+		allPrevious = append(allPrevious, previous)
+		previous = make(map[string]interface{})
+		if !iter.MapScan(previous) {
+			break GetFailureReasonLoop
+		}
+	}
+
+	if txnIDUnmatch || branchAlreadyExits {
+		return &p.ConditionFailedError{
+			Msg: fmt.Sprintf("Failed to create a new branch. txnIDUnmatch: %v, branchAlreadyExits: %v . Request txn_id: %v, Actual Value: %v",
+				txnIDUnmatch, branchAlreadyExits, reqTxnID, actualTxnID),
+		}
+	}
+
+	// At this point we only know that the write was not applied.
+	var columns []string
+	columnID := 0
+	for _, previous := range allPrevious {
+		for k, v := range previous {
+			columns = append(columns, fmt.Sprintf("%v: %s=%v", columnID, k, v))
+		}
+		columnID++
+	}
+	return &p.ConditionFailedError{
+		Msg: fmt.Sprintf("Failed to create a new branch. Request txn_id: %v, Actual Value: %v, columns: (%v)",
+			reqTxnID, actualTxnID, columns),
+	}
+}
+
+func (h *cassandraHistoryPersistence) updateTreeTransactionID(batch *gocql.Batch, treeID string, currentTxnID int64, NextTxnID int64) {
 	batch.Query(v2templateUpdateTreeRoot,
 		NextTxnID, treeID, rootNodeBranchId, rowTypeHistoryNode, rootNodeID, currentTxnID)
 }
@@ -200,21 +258,50 @@ func (h *cassandraHistoryPersistence) getTreeTransactionID(treeID string) (int64
 	if err := query.MapScan(result); err != nil {
 		if err == gocql.ErrNotFound {
 			return 0, &workflow.EntityNotExistsError{
-				Message: fmt.Sprintf("getTreeTransactionID failed.  TreeID: %v", treeID),
+				Message: fmt.Sprintf("getTreeTransactionID failed.  TreeID: %v Error: %v ", treeID, err),
 			}
 		} else if isThrottlingError(err) {
 			return 0, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("getTreeTransactionID failed.  TreeID: %v", treeID),
+				Message: fmt.Sprintf("getTreeTransactionID failed.  TreeID: %v Error: %v", treeID, err),
 			}
 		}
 
 		return 0, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("getTreeTransactionID failed.  TreeID: %v", treeID),
+			Message: fmt.Sprintf("getTreeTransactionID failed.  TreeID: %v Error: %v", treeID, err),
 		}
 	}
 
 	txnID := result["txn_id"].(int64)
 	return txnID, nil
+}
+
+func (h *cassandraHistoryPersistence) getBranchStatus(treeID string, branchID string) (bool, error) {
+	query := h.session.Query(v2templateReadNode,
+		treeID,
+		branchID,
+		rowTypeHistoryBranch,
+		branchNodeID,
+		branchNodeID+1)
+
+	result := make(map[string]interface{})
+	if err := query.MapScan(result); err != nil {
+		if err == gocql.ErrNotFound {
+			return false, &workflow.EntityNotExistsError{
+				Message: fmt.Sprintf("getBranchStatus failed.  TreeID: %v, branchID: %v Error: %v", treeID, branchID, err),
+			}
+		} else if isThrottlingError(err) {
+			return false, &workflow.ServiceBusyError{
+				Message: fmt.Sprintf("getBranchStatus failed.  TreeID: %v, branchID: %v Error: %v", treeID, branchID, err),
+			}
+		}
+
+		return false, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("getBranchStatus failed.  TreeID: %v, branchID: %v Error: %v", treeID, branchID, err),
+		}
+	}
+
+	deleted := result["deleted"].(bool)
+	return deleted, nil
 }
 
 func (h *cassandraHistoryPersistence) createRoot(treeID string) (bool, error) {
@@ -251,10 +338,157 @@ func (h *cassandraHistoryPersistence) createRoot(treeID string) (bool, error) {
 	return applied, nil
 }
 
-// AppendHistoryNodes add(or override) a node to a history branch
+// AppendHistoryNodes add(or override) a batch of nodes to a history branch
 func (h *cassandraHistoryPersistence) AppendHistoryNodes(request *p.InternalAppendHistoryNodesRequest) error {
-	//TODO
+	if request.NextNodeIDToInsert <= 0 || request.NextNodeIDToUpdate <= 0 {
+		return &p.InvalidPersistenceRequestError{
+			Msg: fmt.Sprintf("NextNodeIDToInsert and NextNodeIDToUpdate must be greater than zero. Actual: %v, %v", request.NextNodeIDToUpdate, request.NextNodeIDToInsert),
+		}
+	}
+	if request.NextNodeIDToInsert-request.NextNodeIDToUpdate < int64(len(request.Events)) {
+		return &p.InvalidPersistenceRequestError{
+			Msg: fmt.Sprintf("No enough events to update. Actual: %v, %v, %v", request.NextNodeIDToUpdate, request.NextNodeIDToInsert, len(request.Events)),
+		}
+	}
+	treeID := request.BranchInfo.TreeID
+	branchID := request.BranchInfo.BranchID
+	treeTxnID, err := h.getTreeTransactionID(treeID)
+	if err != nil {
+		return err
+	}
+	deleted, err := h.getBranchStatus(treeID, branchID)
+	if err != nil {
+		return err
+	}
+	if deleted {
+		return &p.ConditionFailedError{
+			Msg: fmt.Sprintf("Failed to AppendHistoryNodes, the branch is already deleted. TreeID:%v, BranchID:%v",
+				treeID, branchID),
+		}
+	}
+	batch := h.session.NewBatch(gocql.LoggedBatch)
+	// NOTE, we don't increase treeTxnID here because this operation doesn't change tree status
+	h.updateTreeTransactionID(batch, treeID, treeTxnID, treeTxnID)
+
+	currIdx := 0
+	// First update/override existing events
+	// If NextNodeIDToUpdate == NextNodeIDToInsert, it won't do any update
+	for nodeID := request.NextNodeIDToUpdate; nodeID < request.NextNodeIDToInsert; nodeID++ {
+		currIdx++
+		event := request.Events[currIdx]
+		batch.Query(v2templateOverrideNode,
+			request.TransactionID, event.Data, event.Encoding, treeID, branchID, rowTypeHistoryNode, nodeID, request.TransactionID)
+	}
+
+	// Then insert new events until we reach the last event
+	nodeID := request.NextNodeIDToInsert
+	for ; currIdx < len(request.Events); currIdx++ {
+		event := request.Events[currIdx]
+		batch.Query(v2templateInsertNode,
+			treeID, branchID, rowTypeHistoryNode, nil, false, nodeID, request.TransactionID, event.Data, event.Encoding)
+		nodeID++
+	}
+
+	previous := make(map[string]interface{})
+	applied, iter, err := h.session.MapExecuteBatchCAS(batch, previous)
+	defer func() {
+		if iter != nil {
+			iter.Close()
+		}
+	}()
+
+	if err != nil {
+		return processCommonErrors("AppendHistoryNodes", err)
+	}
+
+	if !applied {
+		return h.getAppendHistoryNodesFailure(previous, iter, treeTxnID, request.TransactionID, request.NextNodeIDToInsert, treeID, branchID)
+	}
+
 	return nil
+}
+
+func processCommonErrors(operation string, err error) error {
+	if isTimeoutError(err) {
+		// Write may have succeeded, but we don't know
+		// return this info to the caller so they have the option of trying to find out by executing a read
+		return &p.TimeoutError{Msg: fmt.Sprintf("%v timed out. Error: %v", operation, err)}
+	} else if isThrottlingError(err) {
+		return &workflow.ServiceBusyError{
+			Message: fmt.Sprintf("%v operation failed. Error: %v", operation, err),
+		}
+	}
+	return &workflow.InternalServiceError{
+		Message: fmt.Sprintf("%v operation failed. Error: %v", operation, err),
+	}
+}
+
+func (h *cassandraHistoryPersistence) getAppendHistoryNodesFailure(previous map[string]interface{}, iter *gocql.Iter, reqTreeTxnID, reqEventTxnID, nextNodeIDToInsert int64, reqTreeID, reqBranchID string) error {
+	//if not applied, then there are three possibilities:
+	// 1. tree transactionID condition fails
+	// 2. update existing fails because of txn_id
+	// 3. insert new events fails because of the event_id(node_id) already exists
+
+	treeTxnIDUnmatch := false
+	actualTreeTxnID := int64(-1)
+	eventTxnIDUnmatch := false
+	actualEventTxnID := int64(-1) // NOTE: there can be multiple conflicting txn_id, for now we only get one of them
+	eventAlreadyExits := false
+	allPrevious := []map[string]interface{}{}
+
+GetFailureReasonLoop:
+	for {
+		rowType, ok := previous["row_type"].(int)
+		if !ok {
+			// This should never happen, as all our rows have the type field.
+			break GetFailureReasonLoop
+		}
+
+		treeID := previous["tree_id"].(gocql.UUID).String()
+		branchID := previous["branch_id"].(gocql.UUID).String()
+		nodeID := previous["node_id"].(int64)
+
+		if rowType == rowTypeHistoryNode && treeID == reqTreeID && branchID == rootNodeBranchId && nodeID == rootNodeID {
+			actualTreeTxnID = previous["txn_id"].(int64)
+			if actualTreeTxnID != reqTreeTxnID {
+				treeTxnIDUnmatch = true
+			}
+		} else if rowType == rowTypeHistoryNode && treeID == reqTreeID && branchID == branchID && nodeID < nextNodeIDToInsert {
+			actualEventTxnID = previous["txn_id"].(int64)
+			if actualEventTxnID != reqEventTxnID {
+				eventTxnIDUnmatch = true
+			}
+		} else if rowType == rowTypeHistoryNode && treeID == reqTreeID && branchID == branchID && nodeID >= nextNodeIDToInsert {
+			eventAlreadyExits = true
+		}
+
+		allPrevious = append(allPrevious, previous)
+		previous = make(map[string]interface{})
+		if !iter.MapScan(previous) {
+			break GetFailureReasonLoop
+		}
+	}
+
+	if treeTxnIDUnmatch || eventTxnIDUnmatch || eventAlreadyExits {
+		return &p.ConditionFailedError{
+			Msg: fmt.Sprintf("Failed to append history nodes. treeTxnIDUnmatch: %v, eventTxnIDUnmatch: %v, eventAlreadyExits: %v. reqTreeTxnID: %v, Actual Value: %v, Request reqEventTxnID: %v, Actual Value: %v",
+				treeTxnIDUnmatch, eventTxnIDUnmatch, eventAlreadyExits, reqTreeTxnID, actualTreeTxnID, reqEventTxnID, actualEventTxnID),
+		}
+	}
+
+	// At this point we only know that the write was not applied.
+	var columns []string
+	columnID := 0
+	for _, previous := range allPrevious {
+		for k, v := range previous {
+			columns = append(columns, fmt.Sprintf("%v: %s=%v", columnID, k, v))
+		}
+		columnID++
+	}
+	return &p.ConditionFailedError{
+		Msg: fmt.Sprintf("Failed to append history nodes. reqTreeTxnID: %v, Actual Value: %v, Request reqEventTxnID: %v, Actual Value: %v, columns: (%v)",
+			reqTreeTxnID, actualTreeTxnID, reqEventTxnID, actualEventTxnID, columns),
+	}
 }
 
 // ReadHistoryBranch returns history node data for a branch
