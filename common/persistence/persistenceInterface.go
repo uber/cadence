@@ -93,7 +93,7 @@ type (
 		//     a workflow run may have one or more than one branchID
 		//     NodeID is the same as EventID, except that it will grow continuously in a branch.
 		// NewHistoryBranch creates a new branch from tree root. If tree doesn't exist, then create one. Return error if the branch already exists.
-		NewHistoryBranch(request *NewHistoryBranchRequest) error
+		NewHistoryBranch(request *NewHistoryBranchRequest) (*NewHistoryBranchResponse, error)
 		// AppendHistoryNodes add(or override) a node to a history branch
 		AppendHistoryNodes(request *InternalAppendHistoryNodesRequest) error
 		// ReadHistoryBranch returns history node data for a branch

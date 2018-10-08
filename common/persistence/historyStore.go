@@ -63,7 +63,7 @@ func (m *historyManagerImpl) GetName() string {
 }
 
 // NewHistoryBranch creates a new branch from tree root. If tree doesn't exist, then create one. Return error if the branch already exists.
-func (m *historyManagerImpl) NewHistoryBranch(request *NewHistoryBranchRequest) error {
+func (m *historyManagerImpl) NewHistoryBranch(request *NewHistoryBranchRequest) (*NewHistoryBranchResponse, error) {
 	return m.persistence.NewHistoryBranch(request)
 }
 

@@ -85,6 +85,8 @@ const (
 )
 
 const (
+	// fake nodeID for branch record
+	branchNodeID = -1
 	// nodeID of the tree root
 	rootNodeID = 0
 	// constant branchID for the tree root
@@ -131,9 +133,88 @@ func (h *cassandraHistoryPersistence) Close() {
 }
 
 // NewHistoryBranch creates a new branch from tree root. If tree doesn't exist, then create one. Return error if the branch already exists.
-func (h *cassandraHistoryPersistence) NewHistoryBranch(request *p.NewHistoryBranchRequest) error {
-	//TODO
-	return nil
+func (h *cassandraHistoryPersistence) NewHistoryBranch(request *p.NewHistoryBranchRequest) (*p.NewHistoryBranchResponse, error) {
+	treeID := request.BranchInfo.TreeID
+	isNewTree, err := h.createRoot(treeID)
+	if err != nil {
+		return nil, err
+	}
+	resp := &p.NewHistoryBranchResponse{IsNewTree: isNewTree}
+	txnID, err := h.getTreeTransactionID(treeID)
+	if err != nil {
+		return nil, err
+	}
+	batch := h.session.NewBatch(gocql.LoggedBatch)
+	h.doTreeTransactionalOperation(batch, treeID, txnID, txnID+1)
+
+	batch.Query(v2templateInsertNode,
+		treeID, request.BranchInfo.BranchID, rowTypeHistoryBranch, nil, false, branchNodeID, nil, nil, nil)
+
+	previous := make(map[string]interface{})
+	applied, iter, err := h.session.MapExecuteBatchCAS(batch, previous)
+	defer func() {
+		if iter != nil {
+			iter.Close()
+		}
+	}()
+
+	if err != nil {
+		if isTimeoutError(err) {
+			// Write may have succeeded, but we don't know
+			// return this info to the caller so they have the option of trying to find out by executing a read
+			return nil, &p.TimeoutError{Msg: fmt.Sprintf("NewHistoryBranch timed out. Error: %v", err)}
+		} else if isThrottlingError(err) {
+			return nil, &workflow.ServiceBusyError{
+				Message: fmt.Sprintf("NewHistoryBranch operation failed. Error: %v", err),
+			}
+		}
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("NewHistoryBranch operation failed. Error: %v", err),
+		}
+	}
+
+	//if not applied, then there will be two possibilities:
+	// 1. tree transactionID condition fails
+	// 2. the branch already exists
+	if !applied {
+
+	}
+
+	return resp, nil
+}
+
+func (h *cassandraHistoryPersistence) doTreeTransactionalOperation(batch *gocql.Batch, treeID string, currentTxnID int64, NextTxnID int64) {
+	batch.Query(v2templateUpdateTreeRoot,
+		NextTxnID, treeID, rootNodeBranchId, rowTypeHistoryNode, rootNodeID, currentTxnID)
+}
+
+func (h *cassandraHistoryPersistence) getTreeTransactionID(treeID string) (int64, error) {
+	query := h.session.Query(v2templateReadNode,
+		treeID,
+		rootNodeBranchId,
+		rowTypeHistoryNode,
+		rootNodeID,
+		rootNodeID+1)
+
+	result := make(map[string]interface{})
+	if err := query.MapScan(result); err != nil {
+		if err == gocql.ErrNotFound {
+			return 0, &workflow.EntityNotExistsError{
+				Message: fmt.Sprintf("getTreeTransactionID failed.  TreeID: %v", treeID),
+			}
+		} else if isThrottlingError(err) {
+			return 0, &workflow.ServiceBusyError{
+				Message: fmt.Sprintf("getTreeTransactionID failed.  TreeID: %v", treeID),
+			}
+		}
+
+		return 0, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("getTreeTransactionID failed.  TreeID: %v", treeID),
+		}
+	}
+
+	txnID := result["txn_id"].(int64)
+	return txnID, nil
 }
 
 func (h *cassandraHistoryPersistence) createRoot(treeID string) (bool, error) {
@@ -143,7 +224,7 @@ func (h *cassandraHistoryPersistence) createRoot(treeID string) (bool, error) {
 		treeID,
 		rootNodeBranchId,
 		rowTypeHistoryNode,
-		nil,
+		nil, // ancestors
 		false,
 		rootNodeID,
 		initialTransactionID,

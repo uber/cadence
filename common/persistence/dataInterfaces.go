@@ -1084,7 +1084,10 @@ type (
 	// NewHistoryBranchRequest is used to create a new history branch
 	NewHistoryBranchRequest struct {
 		BranchInfo HistoryBranch
-		IsNewTree  bool
+	}
+
+	NewHistoryBranchResponse struct {
+		IsNewTree bool
 	}
 
 	// AppendHistoryNodesRequest is used to append a batch of history nodes
@@ -1260,7 +1263,7 @@ type (
 		//     a workflow run may have one or more than one branchID
 		//     NodeID is the same as EventID, except that it will grow continuously in a branch.
 		// NewHistoryBranch creates a new branch from tree root. If tree doesn't exist, then create one. Return error if the branch already exists.
-		NewHistoryBranch(request *NewHistoryBranchRequest) error
+		NewHistoryBranch(request *NewHistoryBranchRequest) (*NewHistoryBranchResponse, error)
 		// AppendHistoryNodes add(or override) a batach of nodes to a history branch
 		AppendHistoryNodes(request *AppendHistoryNodesRequest) (*AppendHistoryNodesResponse, error)
 		// ReadHistoryBranch returns history node data for a branch
