@@ -43,7 +43,8 @@ type (
 	historyToken struct {
 		LastEventBatchVersion int64
 		LastEventID           int64
-		Data                  []byte
+		// Deprecated in V2
+		Data []byte
 	}
 )
 
@@ -198,7 +199,7 @@ func (m *historyManagerImpl) ReadHistoryBranch(request *ReadHistoryBranchRequest
 	newResponse.LastNodeID = lastEventID
 	token.LastEventID = lastEventID
 	token.LastEventBatchVersion = lastEventBatchVersion
-	newResponse.NextPageToken, err = m.serializeToken(token)
+	newResponse.NextPageToken, err = m.serializeToken(token, request.MaxNodeID)
 	if err != nil {
 		return nil, err
 	}

@@ -145,7 +145,7 @@ func (h *cassandraHistoryPersistence) Close() {
 	}
 }
 
-func processCommonErrors(operation string, err error) error {
+func convertCommonErrors(operation string, err error) error {
 	if err == gocql.ErrNotFound {
 		return &workflow.EntityNotExistsError{
 			Message: fmt.Sprintf("%v failed, %v. Error: %v ", operation, err),
@@ -190,7 +190,7 @@ func (h *cassandraHistoryPersistence) NewHistoryBranch(request *p.NewHistoryBran
 	}()
 
 	if err != nil {
-		return nil, processCommonErrors("NewHistoryBranch", err)
+		return nil, convertCommonErrors("NewHistoryBranch", err)
 	}
 
 	if !applied {
@@ -254,7 +254,7 @@ GetFailureReasonLoop:
 		}
 		columnID++
 	}
-	return &p.ConditionFailedError{
+	return &p.UnexpectedConditionFailedError{
 		Msg: fmt.Sprintf("Failed to create a new branch. Request txn_id: %v, Actual Value: %v, columns: (%v)",
 			reqTxnID, actualTxnID, columns),
 	}
@@ -274,7 +274,7 @@ func (h *cassandraHistoryPersistence) getTreeTransactionID(treeID string) (int64
 
 	result := make(map[string]interface{})
 	if err := query.MapScan(result); err != nil {
-		return 0, processCommonErrors("getTreeTransactionID", err)
+		return 0, convertCommonErrors("getTreeTransactionID", err)
 	}
 
 	txnID := result["txn_id"].(int64)
@@ -290,7 +290,7 @@ func (h *cassandraHistoryPersistence) getBranchStatus(treeID string, branchID st
 
 	result := make(map[string]interface{})
 	if err := query.MapScan(result); err != nil {
-		return false, processCommonErrors("getBranchStatus", err)
+		return false, convertCommonErrors("getBranchStatus", err)
 	}
 
 	deleted := result["deleted"].(bool)
@@ -314,7 +314,7 @@ func (h *cassandraHistoryPersistence) createRoot(treeID string) (bool, error) {
 	previous := make(map[string]interface{})
 	applied, err := query.MapScanCAS(previous)
 	if err != nil {
-		return false, processCommonErrors("createRoot", err)
+		return false, convertCommonErrors("createRoot", err)
 	}
 
 	return applied, nil
@@ -380,7 +380,7 @@ func (h *cassandraHistoryPersistence) AppendHistoryNodes(request *p.InternalAppe
 	}()
 
 	if err != nil {
-		return processCommonErrors("AppendHistoryNodes", err)
+		return convertCommonErrors("AppendHistoryNodes", err)
 	}
 
 	if !applied {
@@ -452,7 +452,7 @@ GetFailureReasonLoop:
 		}
 		columnID++
 	}
-	return &p.ConditionFailedError{
+	return &p.UnexpectedConditionFailedError{
 		Msg: fmt.Sprintf("Failed to append history nodes. reqTreeTxnID: %v, Actual Value: %v, Request reqEventTxnID: %v, Actual Value: %v, columns: (%v)",
 			reqTreeTxnID, actualTreeTxnID, reqEventTxnID, actualEventTxnID, columns),
 	}
@@ -545,6 +545,22 @@ func (h *cassandraHistoryPersistence) ReadHistoryBranch(request *p.InternalReadH
 	return response, nil
 }
 
+func (h *cassandraHistoryPersistence) checkIfNodeExists(treeID, branchID string, nodeID int64) (bool, error) {
+	query := h.session.Query(v2templateReadOneNode,
+		treeID,
+		branchID,
+		rowTypeHistoryNode,
+		nodeID)
+
+	result := make(map[string]interface{})
+	if err := query.MapScan(result); err != nil {
+		return false, convertCommonErrors("getBranchAncestors", err)
+	}
+
+	deleted := result["deleted"].(bool)
+	return !deleted, nil
+}
+
 func (h *cassandraHistoryPersistence) getBranchAncestors(treeID, branchID string) ([]p.HistoryBranchRange, error) {
 	query := h.session.Query(v2templateReadOneNode,
 		treeID,
@@ -554,7 +570,7 @@ func (h *cassandraHistoryPersistence) getBranchAncestors(treeID, branchID string
 
 	result := make(map[string]interface{})
 	if err := query.MapScan(result); err != nil {
-		return nil, processCommonErrors("getBranchAncestors", err)
+		return nil, convertCommonErrors("getBranchAncestors", err)
 	}
 
 	eList := result["ancestors"].([]map[string]interface{})
@@ -587,30 +603,51 @@ func (h *cassandraHistoryPersistence) parseBranchAncestors(ancestors []map[strin
 }
 
 // ForkHistoryBranch forks a new branch from a old branch
+// We will only take the ancestors up to the forking point. For example:
+// Assume we have B2 forked from B1 at 10, B3 forked from B2 at 20.
+//           B1 [1~10]
+//           /
+//         B2 [11~20]
+//        /
+//      B3[21~30]
+// If we fork B4 from B3 at node 25, the new branch is like:
+//           B1[1~10]
+//           /
+//         B2 [11~20]
+//        /
+//      B3[21~25]
+//     /
+//   B4[...]
+// However, if we fork from node 15, then the new branch should be
+//           B1[1~10]
+//           /
+//         B2 [11~15]
+//        /
+//      B4[...]
+// So even though it fork from B3, its ancestor doesn't have to have B3 in its branch ranges
 func (h *cassandraHistoryPersistence) ForkHistoryBranch(request *p.ForkHistoryBranchRequest) (*p.ForkHistoryBranchResponse, error) {
-	forkingBranchInfo := request.BranchInfo
-	treeID := forkingBranchInfo.TreeID
-	branchID := forkingBranchInfo.BranchID
+	forkB := request.BranchInfo
+	treeID := forkB.TreeID
+	newAncestors := make([]p.HistoryBranchRange, 0)
 
 	txnID, err := h.getTreeTransactionID(treeID)
 	if err != nil {
 		return nil, err
 	}
-	deleted, err := h.getBranchStatus(treeID, branchID)
+	deleted, err := h.getBranchStatus(treeID, forkB.BranchID)
 	if err != nil {
 		return nil, err
 	}
 	if deleted {
 		return nil, &p.ConditionFailedError{
 			Msg: fmt.Sprintf("Failed to ForkHistoryBranch, the branch is already deleted. TreeID:%v, BranchID:%v",
-				treeID, branchID),
+				treeID, forkB.BranchID),
 		}
 	}
 
 	// read Ancestors if needed
-	allAncestors := forkingBranchInfo.Ancestors
-	if forkingBranchInfo.Ancestors == nil {
-		allAncestors, err = h.getBranchAncestors(treeID, branchID)
+	if forkB.Ancestors == nil {
+		forkB.Ancestors, err = h.getBranchAncestors(treeID, forkB.BranchID)
 		if err != nil {
 			return nil, err
 		}
@@ -618,22 +655,48 @@ func (h *cassandraHistoryPersistence) ForkHistoryBranch(request *p.ForkHistoryBr
 
 	//add the new forking from branch
 	lastEndNodeID := int64(1)
-	if len(allAncestors) > 0 {
-		lastEndNodeID = allAncestors[len(allAncestors)-1].EndNodeID
+	if len(forkB.Ancestors) > 0 {
+		lastEndNodeID = forkB.Ancestors[len(forkB.Ancestors)-1].EndNodeID
 	}
-	allAncestors = append(allAncestors, p.HistoryBranchRange{
-		BranchID:    branchID,
-		BeginNodeID: lastEndNodeID,
-		EndNodeID:   request.ForkFromNodeID + 1,
-	})
-	forkingBranchInfo.Ancestors = allAncestors
-	resp := &p.ForkHistoryBranchResponse{BranchInfo: forkingBranchInfo}
+	if lastEndNodeID > request.ForkFromNodeID {
+		// this is the case that new branch's ancestor doesn't have forking branch
+		for _, br := range forkB.Ancestors {
+			newAncestors = append(newAncestors, br)
+			if br.EndNodeID > request.ForkFromNodeID {
+				break
+			}
+		}
+	} else {
+		// first we need to check if the branch has a valid nodeID to fork from
+		exits, err := h.checkIfNodeExists(treeID, forkB.BranchID, request.ForkFromNodeID)
+		if err != nil {
+			return nil, err
+		}
+		if !exits {
+			return nil, &p.InvalidPersistenceRequestError{
+				Msg: fmt.Sprintf("forking branch %v doesn't have node %v", forkB.BranchID, request.ForkFromNodeID),
+			}
+		}
+
+		newAncestors = append(newAncestors, forkB.Ancestors...)
+		newAncestors = append(newAncestors, p.HistoryBranchRange{
+			BranchID:    forkB.BranchID,
+			BeginNodeID: lastEndNodeID,
+			EndNodeID:   request.ForkFromNodeID + 1,
+		})
+	}
+
+	resp := &p.ForkHistoryBranchResponse{BranchInfo: p.HistoryBranch{
+		TreeID:    treeID,
+		BranchID:  request.NewBranchID,
+		Ancestors: newAncestors,
+	}}
 
 	batch := h.session.NewBatch(gocql.LoggedBatch)
 	h.updateTreeTransactionID(batch, treeID, txnID, txnID+1)
 
 	ancs := []map[string]interface{}{}
-	for _, an := range allAncestors {
+	for _, an := range newAncestors {
 		value := make(map[string]interface{})
 		value["forked_node_id"] = an.EndNodeID - 1
 		value["branch_id"] = an.BranchID
@@ -651,11 +714,11 @@ func (h *cassandraHistoryPersistence) ForkHistoryBranch(request *p.ForkHistoryBr
 	}()
 
 	if err != nil {
-		return nil, processCommonErrors("ForkHistoryBranch", err)
+		return nil, convertCommonErrors("ForkHistoryBranch", err)
 	}
 
 	if !applied {
-		return nil, h.getInsertHistoryBranchFailure(previous, iter, txnID, treeID, branchID)
+		return nil, h.getInsertHistoryBranchFailure(previous, iter, txnID, treeID, request.NewBranchID)
 	}
 
 	return resp, nil
@@ -663,14 +726,22 @@ func (h *cassandraHistoryPersistence) ForkHistoryBranch(request *p.ForkHistoryBr
 
 // DeleteHistoryBranch removes a branch
 func (h *cassandraHistoryPersistence) DeleteHistoryBranch(request *p.DeleteHistoryBranchRequest) error {
-	// We break the operation into two parts, first one only mark the branch as deleted, second will actually delete branch/data nodes
+	// We break the operation into three phases:
+	// 1. Mark the branch as deleted
+	// 2. Delete branch/data nodes
+	// 3. Delete the root node if the branch is the last branch
 
 	err := h.markBranchAsDeleted(request.BranchInfo)
 	if err != nil {
 		return err
 	}
 
-	return h.doDeleteBranchAndNodes(request.BranchInfo)
+	err = h.doDeleteBranchAndNodes(request.BranchInfo)
+	if err != nil {
+		return err
+	}
+
+	return h.deleteRootNode(request.BranchInfo)
 }
 
 func (h *cassandraHistoryPersistence) markBranchAsDeleted(branch p.HistoryBranch) error {
@@ -694,16 +765,87 @@ func (h *cassandraHistoryPersistence) markBranchAsDeleted(branch p.HistoryBranch
 	}()
 
 	if err != nil {
-		return processCommonErrors("markBranchAsDeleted", err)
+		return convertCommonErrors("markBranchAsDeleted", err)
 	}
 
 	if !applied {
-		// if not applied because of the branch is already deleted, then we will skip
+		return h.getMarkBranchAsDeletedFailure(previous, iter, txnID, treeID, branch.BranchID)
 	}
 	return nil
 }
 
+func (h *cassandraHistoryPersistence) getMarkBranchAsDeletedFailure(previous map[string]interface{}, iter *gocql.Iter, reqTxnID int64, reqTreeID, reqBranchID string) error {
+	//if not applied, then there are two possibilities:
+	// 1. tree transactionID condition fails
+	// 2. the branch already deleted: in this case, we won't return error
+
+	txnIDUnmatch := false
+	actualTxnID := int64(-1)
+	branchAlreadyDeleted := false
+	allPrevious := []map[string]interface{}{}
+
+GetFailureReasonLoop:
+	for {
+		rowType, ok := previous["row_type"].(int)
+		if !ok {
+			// This should never happen, as all our rows have the type field.
+			break GetFailureReasonLoop
+		}
+
+		treeID := previous["tree_id"].(gocql.UUID).String()
+		branchID := previous["branch_id"].(gocql.UUID).String()
+		nodeID := previous["node_id"].(int64)
+		deleted := previous["deleted"].(bool)
+
+		if rowType == rowTypeHistoryNode && treeID == reqTreeID && branchID == rootNodeBranchId && nodeID == rootNodeID {
+			actualTxnID = previous["txn_id"].(int64)
+			if actualTxnID != reqTxnID {
+				txnIDUnmatch = true
+			}
+		} else if rowType == rowTypeHistoryBranch && treeID == reqTreeID && branchID == reqBranchID {
+			if deleted {
+				branchAlreadyDeleted = true
+			}
+		}
+
+		allPrevious = append(allPrevious, previous)
+		previous = make(map[string]interface{})
+		if !iter.MapScan(previous) {
+			break GetFailureReasonLoop
+		}
+	}
+
+	if branchAlreadyDeleted {
+		return nil
+	}
+
+	if txnIDUnmatch {
+		return &p.ConditionFailedError{
+			Msg: fmt.Sprintf("Failed to create a new branch. txnIDUnmatch: %v . Request txn_id: %v, Actual Value: %v",
+				txnIDUnmatch, reqTxnID, actualTxnID),
+		}
+	}
+
+	// At this point we only know that the write was not applied.
+	var columns []string
+	columnID := 0
+	for _, previous := range allPrevious {
+		for k, v := range previous {
+			columns = append(columns, fmt.Sprintf("%v: %s=%v", columnID, k, v))
+		}
+		columnID++
+	}
+	return &p.UnexpectedConditionFailedError{
+		Msg: fmt.Sprintf("Failed to create a new branch. Request txn_id: %v, Actual Value: %v, columns: (%v)",
+			reqTxnID, actualTxnID, columns),
+	}
+}
+
 func (h *cassandraHistoryPersistence) doDeleteBranchAndNodes(branch p.HistoryBranch) error {
+
+}
+
+func (h *cassandraHistoryPersistence) deleteRootNode(branch p.HistoryBranch) error {
 
 }
 
