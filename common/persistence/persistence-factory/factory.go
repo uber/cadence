@@ -132,13 +132,16 @@ func New(
 		metricsClient: metricsClient,
 		logger:        logger,
 	}
+	defaultCfg := cfg.DataStores[cfg.DefaultStore]
+	visibilityCfg := cfg.DataStores[cfg.VisibilityStore]
+	limiters := buildRatelimiters(cfg)
 	factory.datastores = map[storeType]Datastore{
-		storeTypeTask:       newStore(cfg.DataStores[cfg.DefaultStore], clusterName, 0, logger),
-		storeTypeShard:      newStore(cfg.DataStores[cfg.DefaultStore], clusterName, 0, logger),
-		storeTypeMetadata:   newStore(cfg.DataStores[cfg.DefaultStore], clusterName, 0, logger),
-		storeTypeExecution:  newStore(cfg.DataStores[cfg.DefaultStore], clusterName, 0, logger),
-		storeTypeHistory:    newStore(cfg.DataStores[cfg.DefaultStore], clusterName, cfg.HistoryMaxConns, logger),
-		storeTypeVisibility: newStore(cfg.DataStores[cfg.VisibilityStore], clusterName, 0, logger),
+		storeTypeTask:       newStore(defaultCfg, limiters[cfg.DefaultStore], clusterName, 0, logger),
+		storeTypeShard:      newStore(defaultCfg, limiters[cfg.DefaultStore], clusterName, 0, logger),
+		storeTypeMetadata:   newStore(defaultCfg, limiters[cfg.DefaultStore], clusterName, 0, logger),
+		storeTypeExecution:  newStore(defaultCfg, limiters[cfg.DefaultStore], clusterName, 0, logger),
+		storeTypeHistory:    newStore(defaultCfg, limiters[cfg.DefaultStore], clusterName, cfg.HistoryMaxConns, logger),
+		storeTypeVisibility: newStore(visibilityCfg, limiters[cfg.VisibilityStore], clusterName, 0, logger),
 	}
 	return factory
 }
@@ -260,33 +263,44 @@ func (f *factoryImpl) Close() {
 	ds.factory.Close()
 }
 
-func newStore(cfg config.DataStore, clusterName string, maxConnsOverride int, logger bark.Logger) Datastore {
+func newStore(cfg config.DataStore, tb common.TokenBucket, clusterName string, maxConnsOverride int, logger bark.Logger) Datastore {
+	var ds Datastore
+	ds.ratelimit = tb
 	if cfg.SQL != nil {
-		return newSQLStore(*cfg.SQL, clusterName, maxConnsOverride, logger)
+		ds.factory = newSQLStore(*cfg.SQL, clusterName, maxConnsOverride, logger)
+		return ds
 	}
-	return newCassandraStore(*cfg.Cassandra, clusterName, maxConnsOverride, logger)
-}
-
-func newSQLStore(cfg config.SQL, clusterName string, maxConnsOverride int, logger bark.Logger) Datastore {
-	if maxConnsOverride > 0 {
-		cfg.MaxConns = maxConnsOverride
-	}
-	var ds Datastore
-	if cfg.MaxQPS > 0 {
-		ds.ratelimit = common.NewTokenBucket(cfg.MaxQPS, common.NewRealTimeSource())
-	}
-	ds.factory = sql.NewFactory(cfg, clusterName, logger)
+	ds.factory = newCassandraStore(*cfg.Cassandra, clusterName, maxConnsOverride, logger)
 	return ds
 }
 
-func newCassandraStore(cfg config.Cassandra, clusterName string, maxConnsOverride int, logger bark.Logger) Datastore {
+func newSQLStore(cfg config.SQL, clusterName string, maxConnsOverride int, logger bark.Logger) DataStoreFactory {
 	if maxConnsOverride > 0 {
 		cfg.MaxConns = maxConnsOverride
 	}
-	var ds Datastore
-	if cfg.MaxQPS > 0 {
-		ds.ratelimit = common.NewTokenBucket(cfg.MaxQPS, common.NewRealTimeSource())
+	return sql.NewFactory(cfg, clusterName, logger)
+}
+
+func newCassandraStore(cfg config.Cassandra, clusterName string, maxConnsOverride int, logger bark.Logger) DataStoreFactory {
+	if maxConnsOverride > 0 {
+		cfg.MaxConns = maxConnsOverride
 	}
-	ds.factory = cassandra.NewFactory(cfg, clusterName, logger)
-	return ds
+	return cassandra.NewFactory(cfg, clusterName, logger)
+}
+
+func buildRatelimiters(cfg *config.Persistence) map[string]common.TokenBucket {
+	result := make(map[string]common.TokenBucket, len(cfg.DataStores))
+	for dsName, ds := range cfg.DataStores {
+		qps := 0
+		if ds.Cassandra != nil {
+			qps = ds.Cassandra.MaxQPS
+		}
+		if ds.SQL != nil {
+			qps = ds.SQL.MaxQPS
+		}
+		if qps > 0 {
+			result[dsName] = common.NewTokenBucket(ds.Cassandra.MaxQPS, common.NewRealTimeSource())
+		}
+	}
+	return result
 }
