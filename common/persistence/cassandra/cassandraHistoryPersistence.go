@@ -85,12 +85,15 @@ const (
 		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id = ? ` +
 		`IF deleted = false `
 
-	v2templateDeleteNodes = `DELETE FROM events_v2 ` +
-		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id >= ? AND node_id < ?`
+	v2templateRangeDeleteNodes = `DELETE FROM events_v2 ` +
+		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id >= ? `
+
+	v2templateDeleteOneNode = `DELETE FROM events_v2 ` +
+		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id = ? `
 
 	v2templateDeleteRoot = `DELETE FROM events_v2 ` +
 		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id = ? ` +
-		`IF txn_id =? `
+		`IF txn_id = ? `
 
 	// Assume that we won't have branches more than that in a single tree
 	// This assumption simplifies our code here.
@@ -176,7 +179,7 @@ func (h *cassandraHistoryPersistence) NewHistoryBranch(request *p.NewHistoryBran
 		return nil, err
 	}
 	batch := h.session.NewBatch(gocql.LoggedBatch)
-	h.updateTreeTransactionID(batch, treeID, txnID, txnID+1)
+	h.doTreeWriteTransaction(batch, treeID, txnID)
 
 	batch.Query(v2templateInsertNode,
 		treeID, branchID, rowTypeHistoryBranch, nil, false, branchNodeID, nil, nil, nil)
@@ -260,9 +263,14 @@ GetFailureReasonLoop:
 	}
 }
 
-func (h *cassandraHistoryPersistence) updateTreeTransactionID(batch *gocql.Batch, treeID string, currentTxnID int64, NextTxnID int64) {
+func (h *cassandraHistoryPersistence) doTreeWriteTransaction(batch *gocql.Batch, treeID string, currentTxnID int64) {
 	batch.Query(v2templateUpdateTreeRoot,
-		NextTxnID, treeID, rootNodeBranchId, rowTypeHistoryNode, rootNodeID, currentTxnID)
+		currentTxnID+1, treeID, rootNodeBranchId, rowTypeHistoryNode, rootNodeID, currentTxnID)
+}
+
+func (h *cassandraHistoryPersistence) doTreeReadTransaction(batch *gocql.Batch, treeID string, currentTxnID int64) {
+	batch.Query(v2templateUpdateTreeRoot,
+		currentTxnID, treeID, rootNodeBranchId, rowTypeHistoryNode, rootNodeID, currentTxnID)
 }
 
 func (h *cassandraHistoryPersistence) getTreeTransactionID(treeID string) (int64, error) {
@@ -350,7 +358,7 @@ func (h *cassandraHistoryPersistence) AppendHistoryNodes(request *p.InternalAppe
 	}
 	batch := h.session.NewBatch(gocql.LoggedBatch)
 	// NOTE, we don't increase treeTxnID here because this operation doesn't change tree status
-	h.updateTreeTransactionID(batch, treeID, treeTxnID, treeTxnID)
+	h.doTreeReadTransaction(batch, treeID, treeTxnID)
 
 	currIdx := 0
 	// First update/override existing events
@@ -693,7 +701,7 @@ func (h *cassandraHistoryPersistence) ForkHistoryBranch(request *p.ForkHistoryBr
 	}}
 
 	batch := h.session.NewBatch(gocql.LoggedBatch)
-	h.updateTreeTransactionID(batch, treeID, txnID, txnID+1)
+	h.doTreeWriteTransaction(batch, treeID, txnID)
 
 	ancs := []map[string]interface{}{}
 	for _, an := range newAncestors {
@@ -728,20 +736,20 @@ func (h *cassandraHistoryPersistence) ForkHistoryBranch(request *p.ForkHistoryBr
 func (h *cassandraHistoryPersistence) DeleteHistoryBranch(request *p.DeleteHistoryBranchRequest) error {
 	// We break the operation into three phases:
 	// 1. Mark the branch as deleted
-	// 2. Delete branch/data nodes
-	// 3. Delete the root node if the branch is the last branch
+	// 2. Delete data nodes
+	// 3. Delete the branch node, also delete root node if the branch is the last branch
 
 	err := h.markBranchAsDeleted(request.BranchInfo)
 	if err != nil {
 		return err
 	}
 
-	err = h.doDeleteBranchAndNodes(request.BranchInfo)
+	err = h.deleteDataNodes(request.BranchInfo)
 	if err != nil {
 		return err
 	}
 
-	return h.deleteRootNode(request.BranchInfo)
+	return h.deleteBranchAndRootNode(request.BranchInfo)
 }
 
 func (h *cassandraHistoryPersistence) markBranchAsDeleted(branch p.HistoryBranch) error {
@@ -751,7 +759,7 @@ func (h *cassandraHistoryPersistence) markBranchAsDeleted(branch p.HistoryBranch
 		return err
 	}
 	batch := h.session.NewBatch(gocql.LoggedBatch)
-	h.updateTreeTransactionID(batch, treeID, txnID, txnID+1)
+	h.doTreeWriteTransaction(batch, treeID, txnID)
 
 	batch.Query(v2templateUpdateBranch,
 		treeID, branch.BranchID, rowTypeHistoryBranch, branchNodeID)
@@ -841,12 +849,177 @@ GetFailureReasonLoop:
 	}
 }
 
-func (h *cassandraHistoryPersistence) doDeleteBranchAndNodes(branch p.HistoryBranch) error {
+func (h *cassandraHistoryPersistence) deleteDataNodes(branch p.HistoryBranch) error {
+	treeID := branch.TreeID
+	var err error
+	if branch.Ancestors == nil {
+		branch.Ancestors, err = h.getBranchAncestors(treeID, branch.BranchID)
+		if err != nil {
+			return err
+		}
+	}
+	brsToDelete := branch.Ancestors
+	lastEndNodeID := int64(1)
+	if len(brsToDelete) > 0 {
+		lastEndNodeID = brsToDelete[len(brsToDelete)-1].EndNodeID
+	}
+	brsToDelete = append(brsToDelete, p.HistoryBranchRange{
+		BranchID:    branch.BranchID,
+		BeginNodeID: lastEndNodeID,
+	})
 
+	txnID, err := h.getTreeTransactionID(treeID)
+	if err != nil {
+		return err
+	}
+	batch := h.session.NewBatch(gocql.LoggedBatch)
+	h.doTreeReadTransaction(batch, treeID, txnID)
+
+	resp1, err := h.GetHistoryTree(&p.GetHistoryTreeRequest{
+		TreeID: treeID,
+	})
+	if err != nil {
+		return err
+	}
+	// for each branch range that is being used, we want to know what is the max nodeID referred
+	validBRsEndNode := map[string]int64{}
+	for _, b := range resp1.Branches {
+		for _, br := range b.Ancestors {
+			curr, ok := validBRsEndNode[br.BranchID]
+			if !ok || curr < br.EndNodeID {
+				validBRsEndNode[br.BranchID] = br.EndNodeID
+			}
+		}
+	}
+
+	for i := len(brsToDelete) - 1; i >= 0; i-- {
+		br := brsToDelete[i]
+		maxEndNodeID, ok := validBRsEndNode[br.BranchID]
+		if ok {
+			// we can only delete from the maxEndNode
+			batch.Query(v2templateRangeDeleteNodes,
+				treeID, br.BranchID, rowTypeHistoryNode, maxEndNodeID)
+			break
+		} else {
+			// No any branch is using this range, we can delete all of it
+			batch.Query(v2templateRangeDeleteNodes,
+				treeID, br.BranchID, rowTypeHistoryNode, br.BeginNodeID)
+		}
+	}
+
+	previous := make(map[string]interface{})
+	applied, iter, err := h.session.MapExecuteBatchCAS(batch, previous)
+	defer func() {
+		if iter != nil {
+			iter.Close()
+		}
+	}()
+
+	if err != nil {
+		return convertCommonErrors("deleteDataNodes", err)
+	}
+
+	if !applied {
+		return h.getReadTreeTrasactionFailure(previous, iter, txnID, treeID, branch.BranchID)
+	}
+	return nil
 }
 
-func (h *cassandraHistoryPersistence) deleteRootNode(branch p.HistoryBranch) error {
+func (h *cassandraHistoryPersistence) getReadTreeTrasactionFailure(previous map[string]interface{}, iter *gocql.Iter, reqTxnID int64, reqTreeID, reqBranchID string) error {
+	//if not applied then it is only possible that the tree's txn_id has changed
 
+	txnIDUnmatch := false
+	actualTxnID := int64(-1)
+	allPrevious := []map[string]interface{}{}
+
+GetFailureReasonLoop:
+	for {
+		rowType, ok := previous["row_type"].(int)
+		if !ok {
+			// This should never happen, as all our rows have the type field.
+			break GetFailureReasonLoop
+		}
+
+		treeID := previous["tree_id"].(gocql.UUID).String()
+		branchID := previous["branch_id"].(gocql.UUID).String()
+		nodeID := previous["node_id"].(int64)
+
+		if rowType == rowTypeHistoryNode && treeID == reqTreeID && branchID == rootNodeBranchId && nodeID == rootNodeID {
+			actualTxnID = previous["txn_id"].(int64)
+			if actualTxnID != reqTxnID {
+				txnIDUnmatch = true
+			}
+		}
+
+		allPrevious = append(allPrevious, previous)
+		previous = make(map[string]interface{})
+		if !iter.MapScan(previous) {
+			break GetFailureReasonLoop
+		}
+	}
+
+	if txnIDUnmatch {
+		return &p.ConditionFailedError{
+			Msg: fmt.Sprintf("Failed to create a new branch. txnIDUnmatch: %v . Request txn_id: %v, Actual Value: %v",
+				txnIDUnmatch, reqTxnID, actualTxnID),
+		}
+	}
+
+	// At this point we only know that the write was not applied.
+	var columns []string
+	columnID := 0
+	for _, previous := range allPrevious {
+		for k, v := range previous {
+			columns = append(columns, fmt.Sprintf("%v: %s=%v", columnID, k, v))
+		}
+		columnID++
+	}
+	return &p.UnexpectedConditionFailedError{
+		Msg: fmt.Sprintf("Failed to create a new branch. Request txn_id: %v, Actual Value: %v, columns: (%v)",
+			reqTxnID, actualTxnID, columns),
+	}
+}
+
+func (h *cassandraHistoryPersistence) deleteBranchAndRootNode(branch p.HistoryBranch) error {
+	treeID := branch.TreeID
+	txnID, err := h.getTreeTransactionID(treeID)
+	if err != nil {
+		return err
+	}
+	batch := h.session.NewBatch(gocql.LoggedBatch)
+
+	batch.Query(v2templateDeleteOneNode,
+		treeID, branch.BranchID, rowTypeHistoryBranch, branchNodeID)
+
+	resp1, err := h.GetHistoryTree(&p.GetHistoryTreeRequest{
+		TreeID: treeID,
+	})
+	if err != nil {
+		return err
+	}
+	if len(resp1.Branches) == 0 {
+		batch.Query(v2templateDeleteRoot,
+			treeID, branch.BranchID, rowTypeHistoryBranch, branchNodeID, txnID)
+	} else {
+		h.doTreeReadTransaction(batch, treeID, txnID)
+	}
+
+	previous := make(map[string]interface{})
+	applied, iter, err := h.session.MapExecuteBatchCAS(batch, previous)
+	defer func() {
+		if iter != nil {
+			iter.Close()
+		}
+	}()
+
+	if err != nil {
+		return convertCommonErrors("deleteBranchAndRootNode", err)
+	}
+
+	if !applied {
+		return h.getReadTreeTrasactionFailure(previous, iter, txnID, treeID, branch.BranchID)
+	}
+	return nil
 }
 
 // GetHistoryTree returns all branch information of a tree
