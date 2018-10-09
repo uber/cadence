@@ -663,8 +663,48 @@ func (h *cassandraHistoryPersistence) ForkHistoryBranch(request *p.ForkHistoryBr
 
 // DeleteHistoryBranch removes a branch
 func (h *cassandraHistoryPersistence) DeleteHistoryBranch(request *p.DeleteHistoryBranchRequest) error {
-	//TODO
+	// We break the operation into two parts, first one only mark the branch as deleted, second will actually delete branch/data nodes
+
+	err := h.markBranchAsDeleted(request.BranchInfo)
+	if err != nil {
+		return err
+	}
+
+	return h.doDeleteBranchAndNodes(request.BranchInfo)
+}
+
+func (h *cassandraHistoryPersistence) markBranchAsDeleted(branch p.HistoryBranch) error {
+	treeID := branch.TreeID
+	txnID, err := h.getTreeTransactionID(treeID)
+	if err != nil {
+		return err
+	}
+	batch := h.session.NewBatch(gocql.LoggedBatch)
+	h.updateTreeTransactionID(batch, treeID, txnID, txnID+1)
+
+	batch.Query(v2templateUpdateBranch,
+		treeID, branch.BranchID, rowTypeHistoryBranch, branchNodeID)
+
+	previous := make(map[string]interface{})
+	applied, iter, err := h.session.MapExecuteBatchCAS(batch, previous)
+	defer func() {
+		if iter != nil {
+			iter.Close()
+		}
+	}()
+
+	if err != nil {
+		return processCommonErrors("markBranchAsDeleted", err)
+	}
+
+	if !applied {
+		// if not applied because of the branch is already deleted, then we will skip
+	}
 	return nil
+}
+
+func (h *cassandraHistoryPersistence) doDeleteBranchAndNodes(branch p.HistoryBranch) error {
+
 }
 
 // GetHistoryTree returns all branch information of a tree
