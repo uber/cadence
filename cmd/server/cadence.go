@@ -66,7 +66,7 @@ func startHandler(c *cli.Context) {
 	if err != nil {
 		log.Fatal("Unable to get current directory")
 	}
-	if cassandra.VerifyCompatibleVersion(cfg.Persistence, dir); err != nil {
+	if err := cassandra.VerifyCompatibleVersion(cfg.Persistence, dir); err != nil {
 		log.Fatal("Incompatible versions", err)
 	}
 
