@@ -24,7 +24,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
-	_ "github.com/uber/cadence/sql"
 )
 
 func TestSQLHistoryPersistenceSuite(t *testing.T) {
