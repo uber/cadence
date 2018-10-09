@@ -188,13 +188,13 @@ func (h *cassandraHistoryPersistence) NewHistoryBranch(request *p.NewHistoryBran
 	}
 
 	if !applied {
-		return nil, h.getNewHistoryBranchFailure(previous, iter, txnID, treeID, branchID)
+		return nil, h.getInsertHistoryBranchFailure(previous, iter, txnID, treeID, branchID)
 	}
 
 	return resp, nil
 }
 
-func (h *cassandraHistoryPersistence) getNewHistoryBranchFailure(previous map[string]interface{}, iter *gocql.Iter, reqTxnID int64, reqTreeID, reqBranchID string) error {
+func (h *cassandraHistoryPersistence) getInsertHistoryBranchFailure(previous map[string]interface{}, iter *gocql.Iter, reqTxnID int64, reqTreeID, reqBranchID string) error {
 	//if not applied, then there are two possibilities:
 	// 1. tree transactionID condition fails
 	// 2. the branch already exists
@@ -563,7 +563,7 @@ func (h *cassandraHistoryPersistence) getBranchAncestors(treeID, branchID string
 			case "branch_id":
 				an.BranchID = v.(gocql.UUID).String()
 			case "forked_node_id":
-				an.EndNodeID = v.(int64)
+				an.EndNodeID = v.(int64) + 1
 			}
 		}
 	}
@@ -582,8 +582,77 @@ func (h *cassandraHistoryPersistence) getBranchAncestors(treeID, branchID string
 
 // ForkHistoryBranch forks a new branch from a old branch
 func (h *cassandraHistoryPersistence) ForkHistoryBranch(request *p.ForkHistoryBranchRequest) (*p.ForkHistoryBranchResponse, error) {
-	//TODO
-	return nil, nil
+	forkingBranchInfo := request.BranchInfo
+	treeID := forkingBranchInfo.TreeID
+	branchID := forkingBranchInfo.BranchID
+
+	txnID, err := h.getTreeTransactionID(treeID)
+	if err != nil {
+		return nil, err
+	}
+	deleted, err := h.getBranchStatus(treeID, branchID)
+	if err != nil {
+		return nil, err
+	}
+	if deleted {
+		return nil, &p.ConditionFailedError{
+			Msg: fmt.Sprintf("Failed to ForkHistoryBranch, the branch is already deleted. TreeID:%v, BranchID:%v",
+				treeID, branchID),
+		}
+	}
+
+	// read Ancestors if needed
+	allAncestors := forkingBranchInfo.Ancestors
+	if forkingBranchInfo.Ancestors == nil {
+		allAncestors, err = h.getBranchAncestors(treeID, branchID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	//add the new forking from branch
+	lastEndNodeID := int64(1)
+	if len(allAncestors) > 0 {
+		lastEndNodeID = allAncestors[len(allAncestors)-1].EndNodeID
+	}
+	allAncestors = append(allAncestors, p.HistoryBranchRange{
+		BranchID:    branchID,
+		BeginNodeID: lastEndNodeID,
+		EndNodeID:   request.ForkFromNodeID + 1,
+	})
+	forkingBranchInfo.Ancestors = allAncestors
+	resp := &p.ForkHistoryBranchResponse{BranchInfo: forkingBranchInfo}
+
+	batch := h.session.NewBatch(gocql.LoggedBatch)
+	h.updateTreeTransactionID(batch, treeID, txnID, txnID+1)
+
+	ancs := []map[string]interface{}{}
+	for _, an := range allAncestors {
+		value := make(map[string]interface{})
+		value["forked_node_id"] = an.EndNodeID - 1
+		value["branch_id"] = an.BranchID
+	}
+
+	batch.Query(v2templateInsertNode,
+		treeID, request.NewBranchID, rowTypeHistoryBranch, ancs, false, branchNodeID, nil, nil, nil)
+
+	previous := make(map[string]interface{})
+	applied, iter, err := h.session.MapExecuteBatchCAS(batch, previous)
+	defer func() {
+		if iter != nil {
+			iter.Close()
+		}
+	}()
+
+	if err != nil {
+		return nil, processCommonErrors("ForkHistoryBranch", err)
+	}
+
+	if !applied {
+		return nil, h.getInsertHistoryBranchFailure(previous, iter, txnID, treeID, branchID)
+	}
+
+	return resp, nil
 }
 
 // DeleteHistoryBranch removes a branch

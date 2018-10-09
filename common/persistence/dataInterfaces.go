@@ -1153,7 +1153,7 @@ type (
 	ForkHistoryBranchRequest struct {
 		// The branch to be fork
 		BranchInfo HistoryBranch
-		// The nodeID to fork from
+		// The nodeID to fork from, the new branch will start from ForkFromNodeID + 1
 		ForkFromNodeID int64
 		// UUID of the new branch
 		NewBranchID string
