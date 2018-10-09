@@ -33,7 +33,8 @@ type (
 	// Config contains the configuration for a set of cadence services
 	Config struct {
 		// Ringpop is the ringpop related configuration
-		Ringpop     Ringpop     `yaml:"ringpop"`
+		Ringpop Ringpop `yaml:"ringpop"`
+		// Persistence contains the configuration for cadence datastores
 		Persistence Persistence `yaml:"persistence"`
 		// Log is the logging config
 		Log Logger `yaml:"log"`
