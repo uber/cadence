@@ -134,10 +134,10 @@ type (
 	}
 )
 
-// NewVisibilityPersistence is used to create an instance of VisibilityManager implementation
-func NewVisibilityPersistence(cfg *config.Cassandra, logger bark.Logger) (p.VisibilityManager, error) {
+// newVisibilityPersistence is used to create an instance of VisibilityManager implementation
+func newVisibilityPersistence(cfg config.Cassandra, logger bark.Logger) (p.VisibilityManager, error) {
 	cluster := NewCassandraCluster(cfg.Hosts, cfg.Port, cfg.User, cfg.Password, cfg.Datacenter)
-	cluster.Keyspace = cfg.VisibilityKeyspace
+	cluster.Keyspace = cfg.Keyspace
 	cluster.ProtoVersion = cassandraProtoVersion
 	cluster.Consistency = gocql.LocalQuorum
 	cluster.SerialConsistency = gocql.LocalSerial

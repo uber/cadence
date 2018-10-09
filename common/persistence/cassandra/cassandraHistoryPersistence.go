@@ -61,8 +61,8 @@ type (
 	}
 )
 
-// NewHistoryPersistence is used to create an instance of HistoryManager implementation
-func NewHistoryPersistence(cfg *config.Cassandra, logger bark.Logger) (p.HistoryStore,
+// newHistoryPersistence is used to create an instance of HistoryManager implementation
+func newHistoryPersistence(cfg config.Cassandra, logger bark.Logger) (p.HistoryStore,
 	error) {
 	cluster := NewCassandraCluster(cfg.Hosts, cfg.Port, cfg.User, cfg.Password, cfg.Datacenter)
 	cluster.Keyspace = cfg.Keyspace
@@ -70,8 +70,9 @@ func NewHistoryPersistence(cfg *config.Cassandra, logger bark.Logger) (p.History
 	cluster.Consistency = gocql.LocalQuorum
 	cluster.SerialConsistency = gocql.LocalSerial
 	cluster.Timeout = defaultSessionTimeout
-	cluster.NumConns = cfg.ConnectionPoolSize
-
+	if cfg.MaxConns > 0 {
+		cluster.NumConns = cfg.MaxConns
+	}
 	session, err := cluster.CreateSession()
 	if err != nil {
 		return nil, err

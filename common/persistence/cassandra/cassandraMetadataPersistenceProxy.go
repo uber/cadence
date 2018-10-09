@@ -39,14 +39,14 @@ type (
 	}
 )
 
-// NewMetadataManagerProxy is used for merging the functionality the v1 and v2 MetadataManager
-func NewMetadataManagerProxy(cfg *config.Cassandra,
-	currentClusterName string, logger bark.Logger) (p.MetadataManager, error) {
-	metadataMgr, err := NewMetadataPersistence(cfg, currentClusterName, logger)
+// newMetadataManagerProxy is used for merging the functionality the v1 and v2 MetadataManager
+func newMetadataManagerProxy(cfg config.Cassandra,
+	currentClusterName string, logger bark.Logger) (p.MetadataStore, error) {
+	metadataMgr, err := newMetadataPersistence(cfg, currentClusterName, logger)
 	if err != nil {
 		return nil, err
 	}
-	metadataMgrV2, err := NewMetadataPersistenceV2(cfg, currentClusterName, logger)
+	metadataMgrV2, err := newMetadataPersistenceV2(cfg, currentClusterName, logger)
 	if err != nil {
 		return nil, err
 	}

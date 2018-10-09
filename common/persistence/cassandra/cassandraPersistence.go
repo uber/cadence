@@ -852,11 +852,10 @@ type (
 	}
 )
 
-// NewShardPersistence is used to create an instance of ShardManager implementation
-func NewShardPersistence(hosts string, port int, user, password, dc string, keyspace string,
-	currentClusterName string, logger bark.Logger) (p.ShardStore, error) {
-	cluster := NewCassandraCluster(hosts, port, user, password, dc)
-	cluster.Keyspace = keyspace
+// newShardPersistence is used to create an instance of ShardManager implementation
+func newShardPersistence(cfg config.Cassandra, clusterName string, logger bark.Logger) (p.ShardStore, error) {
+	cluster := NewCassandraCluster(cfg.Hosts, cfg.Port, cfg.User, cfg.Password, cfg.Datacenter)
+	cluster.Keyspace = cfg.Keyspace
 	cluster.ProtoVersion = cassandraProtoVersion
 	cluster.Consistency = gocql.LocalQuorum
 	cluster.SerialConsistency = gocql.LocalSerial
@@ -867,7 +866,7 @@ func NewShardPersistence(hosts string, port int, user, password, dc string, keys
 		return nil, err
 	}
 
-	return &cassandraPersistence{shardID: -1, session: session, currentClusterName: currentClusterName, logger: logger}, nil
+	return &cassandraPersistence{shardID: -1, session: session, currentClusterName: clusterName, logger: logger}, nil
 }
 
 // NewWorkflowExecutionPersistence is used to create an instance of workflowExecutionManager implementation
@@ -876,15 +875,14 @@ func NewWorkflowExecutionPersistence(shardID int, session *gocql.Session,
 	return &cassandraPersistence{shardID: shardID, session: session, logger: logger}, nil
 }
 
-// NewTaskPersistence is used to create an instance of TaskManager implementation
-func NewTaskPersistence(cfg *config.Cassandra, logger bark.Logger) (p.TaskStore, error) {
+// newTaskPersistence is used to create an instance of TaskManager implementation
+func newTaskPersistence(cfg config.Cassandra, logger bark.Logger) (p.TaskStore, error) {
 	cluster := NewCassandraCluster(cfg.Hosts, cfg.Port, cfg.User, cfg.Password, cfg.Datacenter)
 	cluster.Keyspace = cfg.Keyspace
 	cluster.ProtoVersion = cassandraProtoVersion
 	cluster.Consistency = gocql.LocalQuorum
 	cluster.SerialConsistency = gocql.LocalSerial
 	cluster.Timeout = defaultSessionTimeout
-
 	session, err := cluster.CreateSession()
 	if err != nil {
 		return nil, err

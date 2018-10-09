@@ -97,8 +97,8 @@ type (
 	}
 )
 
-// NewMetadataPersistence is used to create an instance of HistoryManager implementation
-func NewMetadataPersistence(cfg *config.Cassandra, clusterName string, logger bark.Logger) (p.MetadataStore,
+// newMetadataPersistence is used to create an instance of HistoryManager implementation
+func newMetadataPersistence(cfg config.Cassandra, clusterName string, logger bark.Logger) (p.MetadataStore,
 	error) {
 	cluster := NewCassandraCluster(cfg.Hosts, cfg.Port, cfg.User, cfg.Password, cfg.Datacenter)
 	cluster.Keyspace = cfg.Keyspace
