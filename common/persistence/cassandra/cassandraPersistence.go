@@ -1203,7 +1203,6 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Cre
 			request.CreateWorkflowMode = p.CreateWorkflowModeContinueAsNew
 		}
 	}
-	fmt.Println("vancexu: request.CreateWorkflowMode ", request.CreateWorkflowMode)
 	switch request.CreateWorkflowMode {
 	case p.CreateWorkflowModeContinueAsNew:
 		batch.Query(templateUpdateCurrentWorkflowExecutionQuery,
