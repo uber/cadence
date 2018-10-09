@@ -80,10 +80,9 @@ const (
 		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id = ? ` +
 		`IF txn_id = ? `
 
-	v2templateUpdateBranch = `UPDATE events_v2 ` +
+	v2templateMarkBranchDeleted = `UPDATE events_v2 ` +
 		`SET deleted = true ` +
-		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id = ? ` +
-		`IF deleted = false `
+		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id = ? `
 
 	v2templateRangeDeleteNodes = `DELETE FROM events_v2 ` +
 		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id >= ? `
@@ -468,6 +467,12 @@ GetFailureReasonLoop:
 
 // ReadHistoryBranch returns history node data for a branch
 func (h *cassandraHistoryPersistence) ReadHistoryBranch(request *p.InternalReadHistoryBranchRequest) (*p.InternalReadHistoryBranchResponse, error) {
+	if request.MaxNodeID <= request.MinNodeID {
+		return nil, &p.InvalidPersistenceRequestError{
+			Msg: fmt.Sprintf("MaxNodeID %v must be greater than MinNodeID %v", request.MaxNodeID, request.MinNodeID),
+		}
+	}
+	numOfExpectedEvents := int(request.MaxNodeID - request.MinNodeID)
 	branchInfo := request.BranchInfo
 	treeID := branchInfo.TreeID
 	branchID := branchInfo.BranchID
@@ -488,7 +493,7 @@ func (h *cassandraHistoryPersistence) ReadHistoryBranch(request *p.InternalReadH
 		if an.EndNodeID <= request.MinNodeID {
 			continue
 		}
-		// summarily, this range won't contain any nodes needed, since the first node(BeginNodeID) in the range is greater than or equal to MaxNodeID, where MaxNodeID is exclusive for the request
+		// similarly, this range won't contain any nodes needed, since the first node(BeginNodeID) in the range is greater than or equal to MaxNodeID, where MaxNodeID is exclusive for the request
 		if an.BeginNodeID >= request.MaxNodeID {
 			continue
 		}
@@ -510,7 +515,6 @@ func (h *cassandraHistoryPersistence) ReadHistoryBranch(request *p.InternalReadH
 	query := h.session.Query(v2templateReadNodes,
 		treeID, branchesInStr, rowTypeHistoryNode, request.MinNodeID, request.MaxNodeID)
 
-	numOfExpectedEvents := int(request.MaxNodeID - request.MinNodeID)
 	iter := query.PageSize(numOfExpectedEvents).Iter()
 	if iter == nil {
 		return nil, &workflow.InternalServiceError{
@@ -562,11 +566,14 @@ func (h *cassandraHistoryPersistence) checkIfNodeExists(treeID, branchID string,
 
 	result := make(map[string]interface{})
 	if err := query.MapScan(result); err != nil {
-		return false, convertCommonErrors("getBranchAncestors", err)
+		if err == gocql.ErrNotFound {
+			return false, nil
+		} else {
+			return false, convertCommonErrors("getBranchAncestors", err)
+		}
 	}
 
-	deleted := result["deleted"].(bool)
-	return !deleted, nil
+	return true, nil
 }
 
 func (h *cassandraHistoryPersistence) getBranchAncestors(treeID, branchID string) ([]p.HistoryBranchRange, error) {
@@ -761,7 +768,7 @@ func (h *cassandraHistoryPersistence) markBranchAsDeleted(branch p.HistoryBranch
 	batch := h.session.NewBatch(gocql.LoggedBatch)
 	h.doTreeWriteTransaction(batch, treeID, txnID)
 
-	batch.Query(v2templateUpdateBranch,
+	batch.Query(v2templateMarkBranchDeleted,
 		treeID, branch.BranchID, rowTypeHistoryBranch, branchNodeID)
 
 	previous := make(map[string]interface{})
@@ -777,76 +784,9 @@ func (h *cassandraHistoryPersistence) markBranchAsDeleted(branch p.HistoryBranch
 	}
 
 	if !applied {
-		return h.getMarkBranchAsDeletedFailure(previous, iter, txnID, treeID, branch.BranchID)
+		return h.getReadTreeTrasactionFailure(previous, iter, txnID, treeID, branch.BranchID)
 	}
 	return nil
-}
-
-func (h *cassandraHistoryPersistence) getMarkBranchAsDeletedFailure(previous map[string]interface{}, iter *gocql.Iter, reqTxnID int64, reqTreeID, reqBranchID string) error {
-	//if not applied, then there are two possibilities:
-	// 1. tree transactionID condition fails
-	// 2. the branch already deleted: in this case, we won't return error
-
-	txnIDUnmatch := false
-	actualTxnID := int64(-1)
-	branchAlreadyDeleted := false
-	allPrevious := []map[string]interface{}{}
-
-GetFailureReasonLoop:
-	for {
-		rowType, ok := previous["row_type"].(int)
-		if !ok {
-			// This should never happen, as all our rows have the type field.
-			break GetFailureReasonLoop
-		}
-
-		treeID := previous["tree_id"].(gocql.UUID).String()
-		branchID := previous["branch_id"].(gocql.UUID).String()
-		nodeID := previous["node_id"].(int64)
-		deleted := previous["deleted"].(bool)
-
-		if rowType == rowTypeHistoryNode && treeID == reqTreeID && branchID == rootNodeBranchId && nodeID == rootNodeID {
-			actualTxnID = previous["txn_id"].(int64)
-			if actualTxnID != reqTxnID {
-				txnIDUnmatch = true
-			}
-		} else if rowType == rowTypeHistoryBranch && treeID == reqTreeID && branchID == reqBranchID {
-			if deleted {
-				branchAlreadyDeleted = true
-			}
-		}
-
-		allPrevious = append(allPrevious, previous)
-		previous = make(map[string]interface{})
-		if !iter.MapScan(previous) {
-			break GetFailureReasonLoop
-		}
-	}
-
-	if branchAlreadyDeleted {
-		return nil
-	}
-
-	if txnIDUnmatch {
-		return &p.ConditionFailedError{
-			Msg: fmt.Sprintf("Failed to create a new branch. txnIDUnmatch: %v . Request txn_id: %v, Actual Value: %v",
-				txnIDUnmatch, reqTxnID, actualTxnID),
-		}
-	}
-
-	// At this point we only know that the write was not applied.
-	var columns []string
-	columnID := 0
-	for _, previous := range allPrevious {
-		for k, v := range previous {
-			columns = append(columns, fmt.Sprintf("%v: %s=%v", columnID, k, v))
-		}
-		columnID++
-	}
-	return &p.UnexpectedConditionFailedError{
-		Msg: fmt.Sprintf("Failed to create a new branch. Request txn_id: %v, Actual Value: %v, columns: (%v)",
-			reqTxnID, actualTxnID, columns),
-	}
 }
 
 func (h *cassandraHistoryPersistence) deleteDataNodes(branch p.HistoryBranch) error {
@@ -1040,7 +980,7 @@ func (h *cassandraHistoryPersistence) GetHistoryTree(request *p.GetHistoryTreeRe
 	deleted := false
 	branches := make([]p.HistoryBranch, 0)
 
-	for iter.Scan(&branchUUID, ancs, deleted) {
+	for iter.Scan(&branchUUID, &ancs, &deleted) {
 		if deleted {
 			continue
 		}
