@@ -1135,7 +1135,7 @@ func (d *cassandraPersistence) CreateWorkflowExecution(request *p.CreateWorkflow
 					}
 				}
 
-				if prevRunID, ok := previous["current_run_id"]; ok && prevRunID != request.Execution.GetRunId() {
+				if prevRunID := previous["current_run_id"].(gocql.UUID).String(); prevRunID != request.Execution.GetRunId() {
 					// currentRunID on previous run has been changed, return to caller to handle
 					msg := fmt.Sprintf("Workflow execution creation condition failed by mismatch runID. WorkflowId: %v, CurrentRunID: %v, columns: (%v)",
 						request.Execution.GetWorkflowId(), request.Execution.GetRunId(), strings.Join(columns, ","))
