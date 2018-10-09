@@ -67,8 +67,10 @@ const (
 		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id = ? ` +
 		`IF txn_id < ? `
 
-	v2templateReadOneNode = `SELECT tree_id, branch_id, row_type, ancestors, deleted, node_id, txn_id FROM events_v2 ` +
-		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id >= ? AND node_id < ? `
+	v2templateReadAllBranches = `SELECT branch_id, ancestors, deleted FROM events_v2 WHERE tree_id = ? `
+
+	v2templateReadOneNode = `SELECT ancestors, deleted, txn_id FROM events_v2 ` +
+		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id == ? `
 
 	v2templateReadNodes = `SELECT node_id, data, data_encoding FROM events_v2 ` +
 		`WHERE tree_id = ? AND branch_id IN ( ? ) AND row_type = ? AND node_id >= ? AND node_id < ? `
@@ -89,6 +91,10 @@ const (
 	v2templateDeleteRoot = `DELETE FROM events_v2 ` +
 		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id = ? ` +
 		`IF txn_id =? `
+
+	// Assume that we won't have branches more than that in a single tree
+	// This assumption simplifies our code here.
+	maxBranchesReturnForOneTree = 1000
 )
 
 const (
@@ -264,8 +270,7 @@ func (h *cassandraHistoryPersistence) getTreeTransactionID(treeID string) (int64
 		treeID,
 		rootNodeBranchId,
 		rowTypeHistoryNode,
-		rootNodeID,
-		rootNodeID+1)
+		rootNodeID)
 
 	result := make(map[string]interface{})
 	if err := query.MapScan(result); err != nil {
@@ -281,8 +286,7 @@ func (h *cassandraHistoryPersistence) getBranchStatus(treeID string, branchID st
 		treeID,
 		branchID,
 		rowTypeHistoryBranch,
-		branchNodeID,
-		branchNodeID+1)
+		branchNodeID)
 
 	result := make(map[string]interface{})
 	if err := query.MapScan(result); err != nil {
@@ -470,7 +474,7 @@ func (h *cassandraHistoryPersistence) ReadHistoryBranch(request *p.InternalReadH
 	branchInfo.Ancestors = allAncestors
 
 	branchesToQuery := make([]string, 0)
-	// NOTE: theoretically, the following code can be improved by binary search. But we shouldn't have many branch ranges. So linear search is sufficient here.
+	// NOTE: theoretically, the following code can be improved by binary search. But we shouldn't have many branch ranges, see maxBranchesReturnForOneTree. So linear search is sufficient here.
 	for _, an := range allAncestors {
 		// this range won't contain any nodes needed, since the last node(EndNodeID-1) in the range is strictly less than MinNodeID
 		if an.EndNodeID <= request.MinNodeID {
@@ -546,17 +550,20 @@ func (h *cassandraHistoryPersistence) getBranchAncestors(treeID, branchID string
 		treeID,
 		branchID,
 		rowTypeHistoryBranch,
-		branchNodeID,
-		branchNodeID+1)
+		branchNodeID)
 
 	result := make(map[string]interface{})
 	if err := query.MapScan(result); err != nil {
 		return nil, processCommonErrors("getBranchAncestors", err)
 	}
 
-	ans := make([]p.HistoryBranchRange, 0)
 	eList := result["ancestors"].([]map[string]interface{})
-	for _, e := range eList {
+	return h.parseBranchAncestors(eList), nil
+}
+
+func (h *cassandraHistoryPersistence) parseBranchAncestors(ancestors []map[string]interface{}) []p.HistoryBranchRange {
+	ans := make([]p.HistoryBranchRange, 0)
+	for _, e := range ancestors {
 		an := p.HistoryBranchRange{}
 		for k, v := range e {
 			switch k {
@@ -576,8 +583,7 @@ func (h *cassandraHistoryPersistence) getBranchAncestors(treeID, branchID string
 			ans[i].BeginNodeID = ans[i-1].EndNodeID
 		}
 	}
-
-	return ans, nil
+	return ans
 }
 
 // ForkHistoryBranch forks a new branch from a old branch
@@ -663,8 +669,52 @@ func (h *cassandraHistoryPersistence) DeleteHistoryBranch(request *p.DeleteHisto
 
 // GetHistoryTree returns all branch information of a tree
 func (h *cassandraHistoryPersistence) GetHistoryTree(request *p.GetHistoryTreeRequest) (*p.GetHistoryTreeResponse, error) {
-	//TODO
-	return nil, nil
+	treeID := request.TreeID
+
+	query := h.session.Query(v2templateReadAllBranches, treeID)
+
+	iter := query.PageSize(maxBranchesReturnForOneTree).Iter()
+	if iter == nil {
+		return nil, &workflow.InternalServiceError{
+			Message: "GetHistoryTree operation failed.  Not able to create query iterator.",
+		}
+	}
+
+	branchUUID := gocql.UUID{}
+	ancs := []map[string]interface{}{}
+	deleted := false
+	branches := make([]p.HistoryBranch, 0)
+
+	for iter.Scan(&branchUUID, ancs, deleted) {
+		if deleted {
+			continue
+		}
+		b := p.HistoryBranch{
+			TreeID:    treeID,
+			BranchID:  branchUUID.String(),
+			Ancestors: h.parseBranchAncestors(ancs),
+		}
+		branches = append(branches, b)
+
+		branchUUID = gocql.UUID{}
+		ancs = []map[string]interface{}{}
+		deleted = false
+	}
+
+	if err := iter.Close(); err != nil {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("ReadHistoryBranch. Close operation failed. Error: %v", err),
+		}
+	}
+	if len(branches) >= maxBranchesReturnForOneTree {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("Too many branches in a tree"),
+		}
+	}
+
+	return &p.GetHistoryTreeResponse{
+		Branches: branches,
+	}, nil
 }
 
 func (h *cassandraHistoryPersistence) AppendHistoryEvents(request *p.InternalAppendHistoryEventsRequest) error {
