@@ -82,6 +82,7 @@ func (s *Service) Start() {
 	base := service.New(params)
 
 	pConfig := params.PersistenceConfig
+	pConfig.HistoryMaxConns = s.config.HistoryMgrNumConns()
 	pConfig.SetMaxQPS(pConfig.DefaultStore, s.config.PersistenceMaxQPS())
 	pFactory := persistencefactory.New(&pConfig, params.ClusterMetadata.GetCurrentClusterName(), base.GetMetricsClient(), log)
 
