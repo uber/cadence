@@ -98,9 +98,9 @@ func newHistoryPersistence(cfg config.SQL, logger bark.Logger) (p.HistoryStore, 
 }
 
 // NewHistoryBranch creates a new branch from tree root. If tree doesn't exist, then create one. Return error if the branch already exists.
-func (m *sqlHistoryManager) NewHistoryBranch(request *p.NewHistoryBranchRequest) error {
+func (m *sqlHistoryManager) NewHistoryBranch(request *p.NewHistoryBranchRequest) (*p.NewHistoryBranchResponse, error) {
 	//TODO
-	return nil
+	return nil, nil
 }
 
 // AppendHistoryNodes add(or override) a node to a history branch
