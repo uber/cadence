@@ -26,7 +26,9 @@ import (
 
 	"time"
 
-	"fmt"
+	"sync/atomic"
+
+	"sync"
 
 	"github.com/gocql/gocql"
 	log "github.com/sirupsen/logrus"
@@ -51,8 +53,8 @@ var historyTestRetryPolicy = createHistoryTestRetryPolicy()
 
 func createHistoryTestRetryPolicy() backoff.RetryPolicy {
 	policy := backoff.NewExponentialRetryPolicy(time.Millisecond * 50)
-	policy.SetMaximumInterval(time.Second * 5)
-	policy.SetExpirationInterval(time.Second * 15)
+	policy.SetMaximumInterval(time.Second * 3)
+	policy.SetExpirationInterval(time.Second * 30)
 
 	return policy
 }
@@ -93,60 +95,67 @@ func (s *HistoryV2PersistenceSuite) genRandomUUIDString() string {
 	return uuid.String()
 }
 
-// TestAppendHistoryEvents test
-func (s *HistoryV2PersistenceSuite) TestNewBranch() {
+func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndDeleteEmptyBranches() {
 	treeID := s.genRandomUUIDString()
 
-	isNewCount := 0
-	concurrency := 10
+	wg := sync.WaitGroup{}
+	newCount := int32(0)
+	concurrency := 5
 	for i := 0; i < concurrency; i++ {
+		wg.Add(1)
 		go func() {
 			brID := s.genRandomUUIDString()
 			IsNewTree, err := s.newHistoryBranch(treeID, brID)
-			fmt.Println("err from newHistoryBranch", err)
 			s.Nil(err)
 			if IsNewTree {
-				isNewCount++
+				atomic.AddInt32(&newCount, 1)
 			}
+			wg.Done()
 		}()
 	}
-	s.Equal(1, isNewCount)
+
+	wg.Wait()
+	newCount = atomic.LoadInt32(&newCount)
+	s.Equal(int32(1), newCount)
 
 	branches := s.descTree(treeID)
-	s.Equal(concurrency, branches)
+	s.Equal(concurrency, len(branches))
 
+	wg = sync.WaitGroup{}
 	for i := 0; i < concurrency; i++ {
+		wg.Add(1)
 		go func(brID string) {
 			s.deleteHistoryBranch(treeID, brID)
+			wg.Done()
 		}(branches[i].BranchID)
 	}
 
+	wg.Wait()
 	branches = s.descTree(treeID)
-	s.Equal(0, branches)
+	s.Equal(0, len(branches))
 
 }
 
 // NewHistoryBranch helper
 func (s *HistoryV2PersistenceSuite) newHistoryBranch(treeID, branchID string) (bool, error) {
 
-	var resp *p.NewHistoryBranchResponse
+	isNewT := false
 
 	op := func() error {
 		var err error
-		resp, err = s.HistoryMgr.NewHistoryBranch(&p.NewHistoryBranchRequest{
+		resp, err := s.HistoryMgr.NewHistoryBranch(&p.NewHistoryBranchRequest{
 			BranchInfo: p.HistoryBranch{
 				TreeID:   treeID,
 				BranchID: branchID,
 			},
 		})
+		if resp != nil && resp.IsNewTree {
+			isNewT = true
+		}
 		return err
 	}
 
-	isNewT := false
 	err := backoff.Retry(op, historyTestRetryPolicy, isConditionFail)
-	if resp != nil {
-		isNewT = resp.IsNewTree
-	}
 	return isNewT, err
 }
 

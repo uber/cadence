@@ -36,6 +36,7 @@ import (
 )
 
 const (
+	// Belows are V2 templates
 	templateAppendHistoryEvents = `INSERT INTO events (` +
 		`domain_id, workflow_id, run_id, first_event_id, event_batch_version, range_id, tx_id, data, data_encoding) ` +
 		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) IF NOT EXISTS`
@@ -67,7 +68,7 @@ const (
 		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id = ? ` +
 		`IF txn_id < ? `
 
-	v2templateReadAllBranches = `SELECT branch_id, ancestors, deleted FROM events_v2 WHERE tree_id = ? `
+	v2templateReadRowType = `SELECT branch_id, ancestors, deleted FROM events_v2 WHERE tree_id = ? AND row_type = ? `
 
 	v2templateReadOneNode = `SELECT ancestors, deleted, txn_id FROM events_v2 ` +
 		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id = ? `
@@ -979,7 +980,7 @@ func (h *cassandraHistoryPersistence) deleteBranchAndRootNode(branch p.HistoryBr
 func (h *cassandraHistoryPersistence) GetHistoryTree(request *p.GetHistoryTreeRequest) (*p.GetHistoryTreeResponse, error) {
 	treeID := request.TreeID
 
-	query := h.session.Query(v2templateReadAllBranches, treeID)
+	query := h.session.Query(v2templateReadRowType, treeID, rowTypeHistoryBranch)
 
 	iter := query.PageSize(maxBranchesReturnForOneTree).Iter()
 	if iter == nil {
