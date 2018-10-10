@@ -1088,6 +1088,7 @@ type (
 		// A UUID of a branch
 		BranchID string
 		// All the ancestors of the branch
+		// Optional for request, but it will improve performance if not nil
 		Ancestors []HistoryBranchRange
 	}
 
