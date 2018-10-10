@@ -557,16 +557,15 @@ func (p *visibilityRateLimitedPersistenceClient) Close() {
 }
 
 // NewHistoryBranch creates a new branch from tree root. If tree doesn't exist, then create one. Return error if the branch already exists.
-func (p *historyRateLimitedPersistenceClient) NewHistoryBranch(request *NewHistoryBranchRequest) error {
+func (p *historyRateLimitedPersistenceClient) NewHistoryBranch(request *NewHistoryBranchRequest) (*NewHistoryBranchResponse, error) {
 	if ok, _ := p.rateLimiter.TryConsume(1); !ok {
-		return ErrPersistenceLimitExceeded
+		return nil, ErrPersistenceLimitExceeded
 	}
-	err := p.persistence.NewHistoryBranch(request)
-	return err
+	return p.persistence.NewHistoryBranch(request)
 }
 
 // AppendHistoryNodes add(or override) a node to a history branch
-func (p *historyRateLimitedPersistenceClient) AppendHistoryNode(request *AppendHistoryNodesRequest) (*AppendHistoryNodesResponse, error) {
+func (p *historyRateLimitedPersistenceClient) AppendHistoryNodes(request *AppendHistoryNodesRequest) (*AppendHistoryNodesResponse, error) {
 	if ok, _ := p.rateLimiter.TryConsume(1); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}

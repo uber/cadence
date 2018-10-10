@@ -102,19 +102,29 @@ func (_m *HistoryManager) DeleteWorkflowExecutionHistory(request *persistence.De
 }
 
 // NewHistoryBranch provides a mock function with given fields: request
-func (_m *HistoryManager) NewHistoryBranch(request *persistence.NewHistoryBranchRequest) error {
+func (_m *HistoryManager) NewHistoryBranch(request *persistence.NewHistoryBranchRequest) (*persistence.NewHistoryBranchResponse, error) {
 	ret := _m.Called(request)
-	var r0 error
-	if rf, ok := ret.Get(0).(func(*persistence.NewHistoryBranchRequest) error); ok {
+
+	var r0 *persistence.NewHistoryBranchResponse
+	if rf, ok := ret.Get(0).(func(*persistence.NewHistoryBranchRequest) *persistence.NewHistoryBranchResponse); ok {
 		r0 = rf(request)
 	} else {
-		r0 = ret.Error(0)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*persistence.NewHistoryBranchResponse)
+		}
 	}
-	return r0
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*persistence.NewHistoryBranchRequest) error); ok {
+		r1 = rf(request)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
 // AppendHistoryNodes provides a mock function with given fields: request
-func (_m *HistoryManager) AppendHistoryNode(request *persistence.AppendHistoryNodesRequest) (*persistence.AppendHistoryNodesResponse, error) {
+func (_m *HistoryManager) AppendHistoryNodes(request *persistence.AppendHistoryNodesRequest) (*persistence.AppendHistoryNodesResponse, error) {
 	ret := _m.Called(request)
 	var r0 *persistence.AppendHistoryNodesResponse
 	if rf, ok := ret.Get(0).(func(*persistence.AppendHistoryNodesRequest) *persistence.AppendHistoryNodesResponse); ok {

@@ -894,19 +894,19 @@ func (p *visibilityPersistenceClient) Close() {
 }
 
 // NewHistoryBranch creates a new branch from tree root. If tree doesn't exist, then create one. Return error if the branch already exists.
-func (p *historyPersistenceClient) NewHistoryBranch(request *NewHistoryBranchRequest) error {
+func (p *historyPersistenceClient) NewHistoryBranch(request *NewHistoryBranchRequest) (*NewHistoryBranchResponse, error) {
 	p.metricClient.IncCounter(metrics.PersistenceNewHistoryBranchScope, metrics.PersistenceRequests)
 	sw := p.metricClient.StartTimer(metrics.PersistenceNewHistoryBranchScope, metrics.PersistenceLatency)
-	err := p.persistence.NewHistoryBranch(request)
+	resp, err := p.persistence.NewHistoryBranch(request)
 	sw.Stop()
 	if err != nil {
 		p.updateErrorMetric(metrics.PersistenceNewHistoryBranchScope, err)
 	}
-	return err
+	return resp, err
 }
 
 // AppendHistoryNodes add(or override) a node to a history branch
-func (p *historyPersistenceClient) AppendHistoryNode(request *AppendHistoryNodesRequest) (*AppendHistoryNodesResponse, error) {
+func (p *historyPersistenceClient) AppendHistoryNodes(request *AppendHistoryNodesRequest) (*AppendHistoryNodesResponse, error) {
 	p.metricClient.IncCounter(metrics.PersistenceAppendHistoryNodesScope, metrics.PersistenceRequests)
 	sw := p.metricClient.StartTimer(metrics.PersistenceAppendHistoryNodesScope, metrics.PersistenceLatency)
 	resp, err := p.persistence.AppendHistoryNodes(request)

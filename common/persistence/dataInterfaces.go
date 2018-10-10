@@ -1096,6 +1096,7 @@ type (
 		BranchInfo HistoryBranch
 	}
 
+	// NewHistoryBranchResponse is a response to NewHistoryBranchRequest
 	NewHistoryBranchResponse struct {
 		IsNewTree bool
 	}

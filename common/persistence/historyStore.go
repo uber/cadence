@@ -94,31 +94,30 @@ func (m *historyManagerImpl) AppendHistoryNodes(request *AppendHistoryNodesReque
 	})
 	if err == nil {
 		return resp, nil
-	} else {
-		if _, ok := err.(*ConditionFailedError); ok {
-			// if condition fails, than try to do update on the existing nodes
-			readReq := &InternalReadHistoryBranchRequest{
-				BranchInfo: request.BranchInfo,
-				MinNodeID:  request.NextNodeID,
-				MaxNodeID:  request.NextNodeID + int64(len(request.Events)),
-			}
-			readResp, err := m.persistence.ReadHistoryBranch(readReq)
-			if err != nil {
-				return nil, err
-			}
-			resp.OverrideCount = len(readResp.History)
-			err = m.persistence.AppendHistoryNodes(&InternalAppendHistoryNodesRequest{
-				BranchInfo:         request.BranchInfo,
-				NextNodeIDToUpdate: request.NextNodeID,
-				NextNodeIDToInsert: request.NextNodeID + int64(resp.OverrideCount),
-				Events:             eventBlobs,
-				TransactionID:      request.TransactionID,
-			})
-			return resp, err
-		} else {
+	}
+	if _, ok := err.(*ConditionFailedError); ok {
+		// if condition fails, than try to do update on the existing nodes
+		readReq := &InternalReadHistoryBranchRequest{
+			BranchInfo: request.BranchInfo,
+			MinNodeID:  request.NextNodeID,
+			MaxNodeID:  request.NextNodeID + int64(len(request.Events)),
+		}
+		readResp, err := m.persistence.ReadHistoryBranch(readReq)
+		if err != nil {
 			return nil, err
 		}
+		resp.OverrideCount = len(readResp.History)
+		err = m.persistence.AppendHistoryNodes(&InternalAppendHistoryNodesRequest{
+			BranchInfo:         request.BranchInfo,
+			NextNodeIDToUpdate: request.NextNodeID,
+			NextNodeIDToInsert: request.NextNodeID + int64(resp.OverrideCount),
+			Events:             eventBlobs,
+			TransactionID:      request.TransactionID,
+		})
+		return resp, err
 	}
+	return nil, err
+
 }
 
 // ReadHistoryBranch returns history node data for a branch
