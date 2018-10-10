@@ -105,9 +105,9 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndDeleteEmptyBranches
 		wg.Add(1)
 		go func() {
 			brID := s.genRandomUUIDString()
-			IsNewTree, err := s.newHistoryBranch(treeID, brID)
+			isNewTree, err := s.newHistoryBranch(treeID, brID)
 			s.Nil(err)
-			if IsNewTree {
+			if isNewTree {
 				atomic.AddInt32(&newCount, 1)
 			}
 			wg.Done()
@@ -134,6 +134,11 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndDeleteEmptyBranches
 	branches = s.descTree(treeID)
 	s.Equal(0, len(branches))
 
+	// create one more try after delete the whole tree
+	brID := s.genRandomUUIDString()
+	isNewTree, err := s.newHistoryBranch(treeID, brID)
+	s.Nil(err)
+	s.Equal(true, isNewTree)
 }
 
 // NewHistoryBranch helper

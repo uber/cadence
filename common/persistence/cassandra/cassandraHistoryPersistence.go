@@ -879,6 +879,48 @@ func (h *cassandraHistoryPersistence) deleteDataNodes(branch p.HistoryBranch) er
 	return nil
 }
 
+func (h *cassandraHistoryPersistence) deleteBranchAndRootNode(branch p.HistoryBranch) error {
+	treeID := branch.TreeID
+	txnID, err := h.prepareTreeTransaction(treeID)
+	if err != nil {
+		return err
+	}
+	batch := h.session.NewBatch(gocql.LoggedBatch)
+
+	batch.Query(v2templateDeleteOneNode,
+		treeID, branch.BranchID, rowTypeHistoryBranch, branchNodeID)
+
+	rsp, err := h.GetHistoryTree(&p.GetHistoryTreeRequest{
+		TreeID: treeID,
+	})
+	if err != nil {
+		return err
+	}
+	if len(rsp.Branches) == 0 {
+		batch.Query(v2templateDeleteRoot,
+			treeID, rootNodeBranchID, rowTypeHistoryNode, rootNodeID, txnID)
+	} else {
+		h.beginReadTransaction(batch, treeID, txnID)
+	}
+
+	previous := make(map[string]interface{})
+	applied, iter, err := h.session.MapExecuteBatchCAS(batch, previous)
+	defer func() {
+		if iter != nil {
+			iter.Close()
+		}
+	}()
+
+	if err != nil {
+		return convertCommonErrors("deleteBranchAndRootNode", err)
+	}
+
+	if !applied {
+		return h.getTreeTrasactionFailure(previous, iter, txnID, treeID, branch.BranchID)
+	}
+	return nil
+}
+
 func (h *cassandraHistoryPersistence) getTreeTrasactionFailure(previous map[string]interface{}, iter *gocql.Iter, reqTxnID int64, reqTreeID, reqBranchID string) error {
 	//if not applied then it is only possible that the tree's txn_id has changed
 
@@ -932,48 +974,6 @@ GetFailureReasonLoop:
 		Msg: fmt.Sprintf("Failed to create a new branch. Request txn_id: %v, Actual Value: %v, columns: (%v)",
 			reqTxnID, actualTxnID, columns),
 	}
-}
-
-func (h *cassandraHistoryPersistence) deleteBranchAndRootNode(branch p.HistoryBranch) error {
-	treeID := branch.TreeID
-	txnID, err := h.prepareTreeTransaction(treeID)
-	if err != nil {
-		return err
-	}
-	batch := h.session.NewBatch(gocql.LoggedBatch)
-
-	batch.Query(v2templateDeleteOneNode,
-		treeID, branch.BranchID, rowTypeHistoryBranch, branchNodeID)
-
-	rsp, err := h.GetHistoryTree(&p.GetHistoryTreeRequest{
-		TreeID: treeID,
-	})
-	if err != nil {
-		return err
-	}
-	if len(rsp.Branches) == 0 {
-		batch.Query(v2templateDeleteRoot,
-			treeID, branch.BranchID, rowTypeHistoryBranch, branchNodeID, txnID)
-	} else {
-		h.beginReadTransaction(batch, treeID, txnID)
-	}
-
-	previous := make(map[string]interface{})
-	applied, iter, err := h.session.MapExecuteBatchCAS(batch, previous)
-	defer func() {
-		if iter != nil {
-			iter.Close()
-		}
-	}()
-
-	if err != nil {
-		return convertCommonErrors("deleteBranchAndRootNode", err)
-	}
-
-	if !applied {
-		return h.getTreeTrasactionFailure(previous, iter, txnID, treeID, branch.BranchID)
-	}
-	return nil
 }
 
 // GetHistoryTree returns all branch information of a tree
