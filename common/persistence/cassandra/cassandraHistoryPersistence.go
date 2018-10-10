@@ -70,7 +70,7 @@ const (
 	v2templateReadAllBranches = `SELECT branch_id, ancestors, deleted FROM events_v2 WHERE tree_id = ? `
 
 	v2templateReadOneNode = `SELECT ancestors, deleted, txn_id FROM events_v2 ` +
-		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id == ? `
+		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id = ? `
 
 	v2templateReadNodes = `SELECT node_id, data, data_encoding FROM events_v2 ` +
 		`WHERE tree_id = ? AND branch_id IN ( ? ) AND row_type = ? AND node_id >= ? AND node_id < ? `
@@ -138,6 +138,43 @@ func newHistoryPersistence(cfg config.Cassandra, logger bark.Logger) (p.HistoryS
 	}
 
 	return &cassandraHistoryPersistence{cassandraStore: cassandraStore{session: session, logger: logger}}, nil
+}
+
+// We have two types of transactions for eventsV2 APIs: read/write trasaction.
+// Like RWLock, read will not conflict with any other read, but write will conflict with other read/write:
+// 		When Read/Write happens concurrently, write will succeed but read will fail.
+// 		When Write/Write happens concurrently, only one of them will succeed.
+// WriteTransaction is used by: NewBranch/ForkBranch/MarkBranchAsDeleted
+// ReadTransaction is used by: AppendNodes/DeleteDataNode
+// ReadHistoryBranch doesn't do any transaction
+
+// write transaction will increase the txn_id of tree(root node) by one
+func (h *cassandraHistoryPersistence) doTreeWriteTransaction(batch *gocql.Batch, treeID string, currentTxnID int64) {
+	batch.Query(v2templateUpdateTreeRoot,
+		currentTxnID+1, treeID, rootNodeBranchId, rowTypeHistoryNode, rootNodeID, currentTxnID)
+}
+
+// read transaction will not change the txn_id of tree(root node)
+func (h *cassandraHistoryPersistence) doTreeReadTransaction(batch *gocql.Batch, treeID string, currentTxnID int64) {
+	batch.Query(v2templateUpdateTreeRoot,
+		currentTxnID, treeID, rootNodeBranchId, rowTypeHistoryNode, rootNodeID, currentTxnID)
+}
+
+// getTreeTransactionID is an operation required for any read/write transaction
+func (h *cassandraHistoryPersistence) getTreeTransactionID(treeID string) (int64, error) {
+	query := h.session.Query(v2templateReadOneNode,
+		treeID,
+		rootNodeBranchId,
+		rowTypeHistoryNode,
+		rootNodeID)
+
+	result := make(map[string]interface{})
+	if err := query.MapScan(result); err != nil {
+		return 0, convertCommonErrors("getTreeTransactionID", err)
+	}
+
+	txnID := result["txn_id"].(int64)
+	return txnID, nil
 }
 
 // Close gracefully releases the resources held by this object
@@ -262,33 +299,8 @@ GetFailureReasonLoop:
 	}
 }
 
-func (h *cassandraHistoryPersistence) doTreeWriteTransaction(batch *gocql.Batch, treeID string, currentTxnID int64) {
-	batch.Query(v2templateUpdateTreeRoot,
-		currentTxnID+1, treeID, rootNodeBranchId, rowTypeHistoryNode, rootNodeID, currentTxnID)
-}
-
-func (h *cassandraHistoryPersistence) doTreeReadTransaction(batch *gocql.Batch, treeID string, currentTxnID int64) {
-	batch.Query(v2templateUpdateTreeRoot,
-		currentTxnID, treeID, rootNodeBranchId, rowTypeHistoryNode, rootNodeID, currentTxnID)
-}
-
-func (h *cassandraHistoryPersistence) getTreeTransactionID(treeID string) (int64, error) {
-	query := h.session.Query(v2templateReadOneNode,
-		treeID,
-		rootNodeBranchId,
-		rowTypeHistoryNode,
-		rootNodeID)
-
-	result := make(map[string]interface{})
-	if err := query.MapScan(result); err != nil {
-		return 0, convertCommonErrors("getTreeTransactionID", err)
-	}
-
-	txnID := result["txn_id"].(int64)
-	return txnID, nil
-}
-
-func (h *cassandraHistoryPersistence) getBranchStatus(treeID string, branchID string) (bool, error) {
+// return error is branch is already deleted/not exists
+func (h *cassandraHistoryPersistence) validateBranchStatus(treeID string, branchID string) error {
 	query := h.session.Query(v2templateReadOneNode,
 		treeID,
 		branchID,
@@ -297,11 +309,16 @@ func (h *cassandraHistoryPersistence) getBranchStatus(treeID string, branchID st
 
 	result := make(map[string]interface{})
 	if err := query.MapScan(result); err != nil {
-		return false, convertCommonErrors("getBranchStatus", err)
+		return convertCommonErrors("validateBranchStatus", err)
 	}
 
 	deleted := result["deleted"].(bool)
-	return deleted, nil
+	if deleted {
+		return &workflow.EntityNotExistsError{
+			Message: fmt.Sprintf("branch %v of tree %v is already deleted", branchID, treeID),
+		}
+	}
+	return nil
 }
 
 func (h *cassandraHistoryPersistence) createRoot(treeID string) (bool, error) {
@@ -334,9 +351,14 @@ func (h *cassandraHistoryPersistence) AppendHistoryNodes(request *p.InternalAppe
 			Msg: fmt.Sprintf("NextNodeIDToInsert and NextNodeIDToUpdate must be greater than zero. Actual: %v, %v", request.NextNodeIDToUpdate, request.NextNodeIDToInsert),
 		}
 	}
+	if len(request.Events) == 0 {
+		return &p.InvalidPersistenceRequestError{
+			Msg: fmt.Sprintf("events to append cannot be empty"),
+		}
+	}
 	if request.NextNodeIDToInsert-request.NextNodeIDToUpdate < int64(len(request.Events)) {
 		return &p.InvalidPersistenceRequestError{
-			Msg: fmt.Sprintf("No enough events to update. Actual: %v, %v, %v", request.NextNodeIDToUpdate, request.NextNodeIDToInsert, len(request.Events)),
+			Msg: fmt.Sprintf("no enough events to update. Actual: %v, %v, %v", request.NextNodeIDToUpdate, request.NextNodeIDToInsert, len(request.Events)),
 		}
 	}
 	treeID := request.BranchInfo.TreeID
@@ -345,15 +367,9 @@ func (h *cassandraHistoryPersistence) AppendHistoryNodes(request *p.InternalAppe
 	if err != nil {
 		return err
 	}
-	deleted, err := h.getBranchStatus(treeID, branchID)
+	err = h.validateBranchStatus(treeID, branchID)
 	if err != nil {
 		return err
-	}
-	if deleted {
-		return &p.ConditionFailedError{
-			Msg: fmt.Sprintf("Failed to AppendHistoryNodes, the branch is already deleted. TreeID:%v, BranchID:%v",
-				treeID, branchID),
-		}
 	}
 	batch := h.session.NewBatch(gocql.LoggedBatch)
 	// NOTE, we don't increase treeTxnID here because this operation doesn't change tree status
@@ -569,7 +585,7 @@ func (h *cassandraHistoryPersistence) checkIfNodeExists(treeID, branchID string,
 		if err == gocql.ErrNotFound {
 			return false, nil
 		} else {
-			return false, convertCommonErrors("getBranchAncestors", err)
+			return false, convertCommonErrors("checkIfNodeExists", err)
 		}
 	}
 
@@ -649,15 +665,9 @@ func (h *cassandraHistoryPersistence) ForkHistoryBranch(request *p.ForkHistoryBr
 	if err != nil {
 		return nil, err
 	}
-	deleted, err := h.getBranchStatus(treeID, forkB.BranchID)
+	err = h.validateBranchStatus(treeID, forkB.BranchID)
 	if err != nil {
 		return nil, err
-	}
-	if deleted {
-		return nil, &p.ConditionFailedError{
-			Msg: fmt.Sprintf("Failed to ForkHistoryBranch, the branch is already deleted. TreeID:%v, BranchID:%v",
-				treeID, forkB.BranchID),
-		}
 	}
 
 	// read Ancestors if needed
