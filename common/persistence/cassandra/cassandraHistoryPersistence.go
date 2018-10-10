@@ -142,7 +142,7 @@ func newHistoryPersistence(cfg config.Cassandra, logger bark.Logger) (p.HistoryS
 
 // We have two types of transactions for eventsV2 APIs: read/write trasaction.
 // Like RWLock, read will not conflict with any other read, but write will conflict with other read/write:
-// 		When Read/Write happens concurrently, write will succeed but read will fail.
+// 		When Read/Write happens concurrently, write will succeed but read will fail if write committed before read.
 // 		When Write/Write happens concurrently, only one of them will succeed.
 // WriteTransaction is used by: NewBranch/ForkBranch/MarkBranchAsDeleted
 // ReadTransaction is used by: AppendNodes/DeleteDataNode
