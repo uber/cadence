@@ -1425,6 +1425,9 @@ Update_History_Loop:
 		var newDecisionTaskScheduledID int64
 		if createNewDecisionTask {
 			di := msBuilder.AddDecisionTaskScheduledEvent()
+			if di == nil {
+				return nil, &workflow.InternalServiceError{Message: "Failed to add decision scheduled event."}
+			}
 			newDecisionTaskScheduledID = di.ScheduleID
 			// skip transfer task for decision if request asking to return new decision task
 			if !request.GetReturnNewDecisionTask() {
@@ -1959,6 +1962,9 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 			// Create a transfer task to schedule a decision task
 			if !msBuilder.HasPendingDecisionTask() {
 				di := msBuilder.AddDecisionTaskScheduledEvent()
+				if di == nil {
+					return nil, &workflow.InternalServiceError{Message: "Failed to add decision scheduled event."}
+				}
 				transferTasks = append(transferTasks, &persistence.DecisionTask{
 					DomainID:   domainID,
 					TaskList:   di.TaskList,
@@ -2372,6 +2378,9 @@ Update_History_Loop:
 			// Create a transfer task to schedule a decision task
 			if !msBuilder.HasPendingDecisionTask() {
 				di := msBuilder.AddDecisionTaskScheduledEvent()
+				if di == nil {
+					return &workflow.InternalServiceError{Message: "Failed to add decision scheduled event."}
+				}
 				transferTasks = append(transferTasks, &persistence.DecisionTask{
 					DomainID:   domainID,
 					TaskList:   di.TaskList,
