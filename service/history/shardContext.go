@@ -324,7 +324,7 @@ func (s *shardContextImpl) UpdateTimerMaxReadLevel(cluster string) time.Time {
 	defer s.Unlock()
 
 	currentTime := s.GetTimeSource().Now()
-	if cluster != s.GetService().GetClusterMetadata().GetCurrentClusterName() {
+	if cluster != "" && cluster != s.GetService().GetClusterMetadata().GetCurrentClusterName() {
 		currentTime = s.standbyClusterCurrentTime[cluster]
 	}
 
