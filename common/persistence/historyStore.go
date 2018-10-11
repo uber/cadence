@@ -76,11 +76,30 @@ func (m *historyManagerImpl) NewHistoryBranch(request *NewHistoryBranchRequest) 
 // AppendHistoryNodes add(or override) a node to a history branch
 func (m *historyManagerImpl) AppendHistoryNodes(request *AppendHistoryNodesRequest) (*AppendHistoryNodesResponse, error) {
 	if len(request.Events) == 0 {
-		return nil, fmt.Errorf("events to be appended cannot be empty")
+		return nil, &InvalidPersistenceRequestError{
+			Msg: fmt.Sprintf("events to be appended cannot be empty"),
+		}
+	}
+	events := request.Events
+	nextNodeID := *request.Events[0].EventId
+	lastNodeID := *events[len(events)-1].EventId
+	if lastNodeID-nextNodeID != int64(len(events))-1 {
+		return nil, &InvalidPersistenceRequestError{
+			Msg: fmt.Sprintf("eventIDs must be continuous"),
+		}
 	}
 	eventBlobs := []*DataBlob{}
 	size := 0
-	for _, e := range request.Events {
+	lastEventVersion := int64(0)
+	for _, e := range events {
+		if *e.Version < lastEventVersion {
+			return nil, &InvalidPersistenceRequestError{
+				Msg: fmt.Sprintf("eventVersion cannot be decreasing"),
+			}
+		} else {
+			lastEventVersion = *e.Version
+		}
+
 		b, err := m.serializer.SerializeEvent(e, request.Encoding)
 		if err != nil {
 			return nil, err
@@ -93,8 +112,8 @@ func (m *historyManagerImpl) AppendHistoryNodes(request *AppendHistoryNodesReque
 	// first try to do purely insert if not exist
 	err := m.persistence.AppendHistoryNodes(&InternalAppendHistoryNodesRequest{
 		BranchInfo:         request.BranchInfo,
-		NextNodeIDToUpdate: request.NextNodeID,
-		NextNodeIDToInsert: request.NextNodeID,
+		NextNodeIDToUpdate: nextNodeID,
+		NextNodeIDToInsert: nextNodeID,
 		Events:             eventBlobs,
 	})
 	if err == nil {
@@ -102,20 +121,24 @@ func (m *historyManagerImpl) AppendHistoryNodes(request *AppendHistoryNodesReque
 	}
 	if _, ok := err.(*ConditionFailedError); ok {
 		// if condition fails, than try to do update on the existing nodes
+
+		// first get the existing nodes
 		readReq := &InternalReadHistoryBranchRequest{
 			BranchInfo: request.BranchInfo,
-			MinNodeID:  request.NextNodeID,
-			MaxNodeID:  request.NextNodeID + int64(len(request.Events)),
+			MinNodeID:  nextNodeID,
+			MaxNodeID:  nextNodeID + int64(len(events)),
 		}
 		readResp, err := m.persistence.ReadHistoryBranch(readReq)
 		if err != nil {
 			return nil, err
 		}
 		resp.OverrideCount = len(readResp.History)
+
+		// append with override
 		err = m.persistence.AppendHistoryNodes(&InternalAppendHistoryNodesRequest{
 			BranchInfo:         request.BranchInfo,
-			NextNodeIDToUpdate: request.NextNodeID,
-			NextNodeIDToInsert: request.NextNodeID + int64(resp.OverrideCount),
+			NextNodeIDToUpdate: nextNodeID,
+			NextNodeIDToInsert: nextNodeID + int64(resp.OverrideCount),
 			Events:             eventBlobs,
 			TransactionID:      request.TransactionID,
 		})
@@ -126,10 +149,10 @@ func (m *historyManagerImpl) AppendHistoryNodes(request *AppendHistoryNodesReque
 }
 
 func (m *historyManagerImpl) deserializeV2Token(request *ReadHistoryBranchRequest) (*historyV2Token, error) {
-	// first batch will start from MinNodeID
+	// first batch will start from MinEventID
 	token := &historyV2Token{
 		LastEventVersion: request.LastEventVersion,
-		LastNodeID:       request.MinNodeID - 1,
+		LastNodeID:       request.MinEventID - 1,
 	}
 
 	if len(request.NextPageToken) == 0 {
@@ -175,8 +198,8 @@ func (m *historyManagerImpl) ReadHistoryBranch(request *ReadHistoryBranchRequest
 
 	minNodeID := token.LastNodeID + 1
 	maxNodeID := minNodeID + int64(request.PageSize)
-	if request.MaxNodeID < maxNodeID {
-		maxNodeID = request.MaxNodeID
+	if request.MaxEventID < maxNodeID {
+		maxNodeID = request.MaxEventID
 	}
 
 	response := &ReadHistoryBranchResponse{

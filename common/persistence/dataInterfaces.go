@@ -1106,8 +1106,6 @@ type (
 	AppendHistoryNodesRequest struct {
 		// The branch to be appended
 		BranchInfo HistoryBranch
-		// The first nodeID of the nodes to be appended
-		NextNodeID int64
 		// The events to be appended
 		Events []*workflow.HistoryEvent
 		// requested TransactionID for override
@@ -1128,10 +1126,10 @@ type (
 	ReadHistoryBranchRequest struct {
 		// The branch to be read
 		BranchInfo HistoryBranch
-		// Get the history nodes from MinNodeID. Inclusive.
-		MinNodeID int64
-		// Get the history nodes upto MaxNodeID.  Exclusive.
-		MaxNodeID int64
+		// Get the history nodes from MinEventID. Inclusive.
+		MinEventID int64
+		// Get the history nodes upto MaxEventID.  Exclusive.
+		MaxEventID int64
 		// Maximum number of history nodes per page
 		// If returned events less than it, that means we reach the last page
 		PageSize int
