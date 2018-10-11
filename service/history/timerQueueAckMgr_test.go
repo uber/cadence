@@ -138,7 +138,7 @@ func (s *timerQueueAckMgrSuite) SetupTest() {
 	}
 	s.mockShard.config.ShardUpdateMinInterval = dynamicconfig.GetDurationPropertyFn(0 * time.Second)
 
-	// this is used by shard context, not relevent to this test, so we do not care how many times "GetCurrentClusterName" os called
+	// this is used by shard context, not relevant to this test, so we do not care how many times "GetCurrentClusterName" is called
 	s.clusterName = cluster.TestCurrentClusterName
 	s.timerQueueAckMgr = newTimerQueueAckMgr(
 		0,
