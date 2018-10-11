@@ -1133,12 +1133,13 @@ type (
 		// Get the history nodes upto MaxNodeID.  Exclusive.
 		MaxNodeID int64
 		// Maximum number of history nodes per page
+		// If returned events less than it, that means we reach the last page
 		PageSize int
 		// Token to continue reading next page of history append transactions.  Pass in empty slice for first page
 		NextPageToken []byte
-		// For validating event version. The starting version of the events returned need to be greater than it and should never decrease.
-		// Using zero will also work if don't want to check the version of the first event
-		LastEventBatchVersion int64
+		// Optional parameter for validating event version. The starting version of the events returned need to be greater than it and should never decrease.
+		// Using zero if don't you want to check the version of the first event
+		LastEventVersion int64
 	}
 
 	// ReadHistoryBranchResponse is the response to ReadHistoryBranchRequest
@@ -1152,8 +1153,6 @@ type (
 		NextPageToken []byte
 		// Size of history read from store
 		Size int
-		// The NodeID of the last node
-		LastNodeID int64
 	}
 
 	// ForkHistoryBranchRequest is used to fork a history branch

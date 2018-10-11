@@ -39,12 +39,17 @@ type (
 		logger      bark.Logger
 	}
 
-	// historyToken is used to serialize/deserialize pagination token for ReadHistoryBranchRequest
+	// historyV2Token is used to serialize/deserialize pagination token for ReadHistoryBranchRequest
+	historyV2Token struct {
+		LastEventVersion int64
+		LastNodeID       int64
+	}
+
+	// historyToken is used to serialize/deserialize pagination token for GetWorkflowExecutionHistory
 	historyToken struct {
 		LastEventBatchVersion int64
 		LastEventID           int64
-		// Deprecated in V2
-		Data []byte
+		Data                  []byte
 	}
 )
 
@@ -120,20 +125,72 @@ func (m *historyManagerImpl) AppendHistoryNodes(request *AppendHistoryNodesReque
 
 }
 
+func (m *historyManagerImpl) deserializeV2Token(request *ReadHistoryBranchRequest) (*historyV2Token, error) {
+	// first batch will start from MinNodeID
+	token := &historyV2Token{
+		LastEventVersion: request.LastEventVersion,
+		LastNodeID:       request.MinNodeID - 1,
+	}
+
+	if len(request.NextPageToken) == 0 {
+		return token, nil
+	}
+
+	err := json.Unmarshal(request.NextPageToken, token)
+	if err != nil {
+		return nil, err
+	}
+
+	return token, nil
+}
+
+func (m *historyManagerImpl) serializeV2Token(lastEventVersion, lastNodeID int64) ([]byte, error) {
+	token := &historyV2Token{
+		LastEventVersion: lastEventVersion,
+		LastNodeID:       lastNodeID,
+	}
+	data, err := json.Marshal(token)
+	if err != nil {
+		return nil, &workflow.InternalServiceError{Message: "Error generating history event token."}
+	}
+	return data, nil
+}
+
 // ReadHistoryBranch returns history node data for a branch
+// Pagination is implemented here, the actual minNodeID passing to persistence layer is calculated along with token's LastNodeID
 func (m *historyManagerImpl) ReadHistoryBranch(request *ReadHistoryBranchRequest) (*ReadHistoryBranchResponse, error) {
-	token, err := m.deserializeToken(request.MinNodeID, request.NextPageToken, request.LastEventBatchVersion)
+	if request.PageSize <= 0 {
+		return nil, &InvalidPersistenceRequestError{
+			Msg: fmt.Sprintf("page size must be greater than 0: %v", request.PageSize),
+		}
+	}
+
+	token, err := m.deserializeV2Token(request)
 	if err != nil {
 		return nil, err
 	}
 
 	events := []*workflow.HistoryEvent{}
 	dataSize := 0
-	minNodeID := token.LastEventID + 1
+
+	minNodeID := token.LastNodeID + 1
 	maxNodeID := minNodeID + int64(request.PageSize)
 	if request.MaxNodeID < maxNodeID {
 		maxNodeID = request.MaxNodeID
 	}
+
+	response := &ReadHistoryBranchResponse{
+		BranchInfo:    request.BranchInfo,
+		History:       events,
+		NextPageToken: request.NextPageToken,
+		Size:          0,
+	}
+
+	// this means that we had reached the final page
+	if minNodeID >= maxNodeID {
+		return response, nil
+	}
+
 	ir := &InternalReadHistoryBranchRequest{
 		BranchInfo: request.BranchInfo,
 		MinNodeID:  minNodeID,
@@ -144,66 +201,54 @@ func (m *historyManagerImpl) ReadHistoryBranch(request *ReadHistoryBranchRequest
 		return nil, err
 	}
 
-	//NOTE: in this method, we need to make sure eventBatchVersion is NOT decreasing(otherwise we skip the events), eventID should be continuous(otherwise return error)
-	lastEventBatchVersion := token.LastEventBatchVersion
-	lastEventID := token.LastEventID
-	found := false
+	// this also means that we had reached the final page
+	if len(resp.History) == 0 {
+		return response, nil
+	}
+
+	//NOTE: in this method, we need to make sure eventVersion is NOT decreasing(otherwise we skip the events), eventID should be continuous(otherwise return error)
+	lastEventVersion := token.LastEventVersion
+	lastNodeID := token.LastNodeID
+
 	for _, b := range resp.History {
 		e, err := m.serializer.DeserializeEvent(b)
 		if err != nil {
 			return nil, err
 		}
-		// Skip if version is decreasing
-		if *e.Version < lastEventBatchVersion {
-			continue
-		}
-		if lastEventID+1 != *e.EventId {
+
+		if *e.Version < lastEventVersion || lastNodeID+1 != *e.EventId {
 			logger := m.logger.WithFields(bark.Fields{
 				logging.TagBranchID: request.BranchInfo.BranchID,
 				logging.TagTreeID:   request.BranchInfo.TreeID,
 			})
-			logger.Error("Unexpected event batch")
-			return nil, fmt.Errorf("corrupted history event batch, eventID is not continous")
+			logger.Error("Unexpected event ID and version")
+			return nil, fmt.Errorf("corrupted history event batch, unexpected eventID/eventVersion")
 		}
 
-		found = true
-		lastEventBatchVersion = *e.Version
-		lastEventID = *e.EventId
+		lastEventVersion = *e.Version
+		lastNodeID = *e.EventId
 		events = append(events, e)
 		dataSize += len(b.Data)
 	}
 
-	if len(request.NextPageToken) == 0 {
-		// checking for the very first page
-		if !found {
-			return nil, &workflow.EntityNotExistsError{
-				Message: fmt.Sprintf("Branch nodes not found.  TreeId: %v, BranchId: %v",
-					request.BranchInfo.TreeID, request.BranchInfo.BranchID),
-			}
-		}
-		// our nodeID should be strictly equal to eventID
-		if *events[0].EventId != request.MinNodeID {
-			logger := m.logger.WithFields(bark.Fields{
-				logging.TagBranchID: request.BranchInfo.BranchID,
-				logging.TagTreeID:   request.BranchInfo.TreeID,
-			})
-			logger.Error("Unexpected event batch")
-			return nil, fmt.Errorf("corrupted history event batch, eventID does not match with nodeID")
-		}
+	// our first nodeID should be strictly equal to first eventID
+	if *events[0].EventId != minNodeID {
+		logger := m.logger.WithFields(bark.Fields{
+			logging.TagBranchID: request.BranchInfo.BranchID,
+			logging.TagTreeID:   request.BranchInfo.TreeID,
+		})
+		logger.Error("Unexpected event batch")
+		return nil, fmt.Errorf("corrupted history event batch, eventID does not match with nodeID")
 	}
 
-	newResponse := &ReadHistoryBranchResponse{}
-	newResponse.Size = dataSize
-	newResponse.History = events
-	newResponse.LastNodeID = lastEventID
-	token.LastEventID = lastEventID
-	token.LastEventBatchVersion = lastEventBatchVersion
-	newResponse.NextPageToken, err = m.serializeToken(token, request.MaxNodeID)
+	response.Size = dataSize
+	response.History = events
+	response.NextPageToken, err = m.serializeV2Token(lastEventVersion, lastNodeID)
 	if err != nil {
 		return nil, err
 	}
 
-	return newResponse, nil
+	return response, nil
 }
 
 // ForkHistoryBranch forks a new branch from a old branch
@@ -246,7 +291,7 @@ func (m *historyManagerImpl) AppendHistoryEvents(request *AppendHistoryEventsReq
 
 // GetWorkflowExecutionHistory retrieves the paginated list of history events for given execution
 func (m *historyManagerImpl) GetWorkflowExecutionHistory(request *GetWorkflowExecutionHistoryRequest) (*GetWorkflowExecutionHistoryResponse, error) {
-	token, err := m.deserializeToken(request.FirstEventID, request.NextPageToken, common.EmptyVersion)
+	token, err := m.deserializeToken(request)
 	if err != nil {
 		return nil, err
 	}
@@ -318,23 +363,23 @@ func (m *historyManagerImpl) GetWorkflowExecutionHistory(request *GetWorkflowExe
 	return newResponse, nil
 }
 
-func (m *historyManagerImpl) deserializeToken(initialFirstEventID int64, nextPageToken []byte, initialLastEventBatchVersion int64) (*historyToken, error) {
+func (m *historyManagerImpl) deserializeToken(request *GetWorkflowExecutionHistoryRequest) (*historyToken, error) {
 	token := &historyToken{
-		LastEventBatchVersion: initialLastEventBatchVersion,
-		LastEventID:           initialFirstEventID - 1,
+		LastEventBatchVersion: common.EmptyVersion,
+		LastEventID:           request.FirstEventID - 1,
 	}
 
-	if len(nextPageToken) == 0 {
+	if len(request.NextPageToken) == 0 {
 		return token, nil
 	}
 
-	err := json.Unmarshal(nextPageToken, token)
+	err := json.Unmarshal(request.NextPageToken, token)
 	if err == nil {
 		return token, nil
 	}
 
 	// for backward compatible reason, the input data can be raw Cassandra token
-	token.Data = nextPageToken
+	token.Data = request.NextPageToken
 	return token, nil
 }
 

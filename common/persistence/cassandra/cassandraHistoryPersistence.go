@@ -111,8 +111,8 @@ const (
 	initialTransactionID = 0
 
 	// Row types for table events_v2
-	rowTypeHistoryBranch = iota
-	rowTypeHistoryNode
+	rowTypeHistoryBranch = 0
+	rowTypeHistoryNode   = 1
 )
 
 type (
@@ -347,9 +347,9 @@ func (h *cassandraHistoryPersistence) createRoot(treeID string) (bool, error) {
 
 // AppendHistoryNodes add(or override) a batch of nodes to a history branch
 func (h *cassandraHistoryPersistence) AppendHistoryNodes(request *p.InternalAppendHistoryNodesRequest) error {
-	if request.NextNodeIDToInsert <= 0 || request.NextNodeIDToUpdate <= 0 {
+	if request.NextNodeIDToUpdate <= 0 || request.NextNodeIDToInsert < request.NextNodeIDToUpdate {
 		return &p.InvalidPersistenceRequestError{
-			Msg: fmt.Sprintf("NextNodeIDToInsert and NextNodeIDToUpdate must be greater than zero. Actual: %v, %v", request.NextNodeIDToUpdate, request.NextNodeIDToInsert),
+			Msg: fmt.Sprintf("NextNodeIDToUpdate,NextNodeIDToInsert must be: 0 < NextNodeIDToUpdate <= NextNodeIDToInsert. Actual: %v, %v", request.NextNodeIDToUpdate, request.NextNodeIDToInsert),
 		}
 	}
 	if len(request.Events) == 0 {
@@ -357,7 +357,7 @@ func (h *cassandraHistoryPersistence) AppendHistoryNodes(request *p.InternalAppe
 			Msg: fmt.Sprintf("events to append cannot be empty"),
 		}
 	}
-	if request.NextNodeIDToInsert-request.NextNodeIDToUpdate < int64(len(request.Events)) {
+	if request.NextNodeIDToInsert-request.NextNodeIDToUpdate > int64(len(request.Events)) {
 		return &p.InvalidPersistenceRequestError{
 			Msg: fmt.Sprintf("no enough events to update. Actual: %v, %v, %v", request.NextNodeIDToUpdate, request.NextNodeIDToInsert, len(request.Events)),
 		}
@@ -489,7 +489,6 @@ func (h *cassandraHistoryPersistence) ReadHistoryBranch(request *p.InternalReadH
 			Msg: fmt.Sprintf("MaxNodeID %v must be greater than MinNodeID %v", request.MaxNodeID, request.MinNodeID),
 		}
 	}
-	numOfExpectedEvents := int(request.MaxNodeID - request.MinNodeID)
 	branchInfo := request.BranchInfo
 	treeID := branchInfo.TreeID
 	branchID := branchInfo.BranchID
@@ -514,7 +513,7 @@ func (h *cassandraHistoryPersistence) ReadHistoryBranch(request *p.InternalReadH
 		if an.BeginNodeID >= request.MaxNodeID {
 			continue
 		}
-		branchesToQuery = append(branchesToQuery, fmt.Sprintf("'%v'", an.BranchID))
+		branchesToQuery = append(branchesToQuery, an.BranchID)
 	}
 
 	// If we haven't got enough branch ranges, then also query the current branch
@@ -525,14 +524,14 @@ func (h *cassandraHistoryPersistence) ReadHistoryBranch(request *p.InternalReadH
 		lastEndNodeID = allAncestors[len(allAncestors)-1].EndNodeID
 	}
 	if lastEndNodeID < request.MaxNodeID {
-		branchesToQuery = append(branchesToQuery, fmt.Sprintf("'%v'", branchID))
+		branchesToQuery = append(branchesToQuery, branchID)
 	}
 	branchesInStr := strings.Join(branchesToQuery, ",")
 
 	query := h.session.Query(v2templateReadNodes,
 		treeID, branchesInStr, rowTypeHistoryNode, request.MinNodeID, request.MaxNodeID)
 
-	iter := query.PageSize(numOfExpectedEvents).Iter()
+	iter := query.PageSize(int(request.MaxNodeID - request.MinNodeID)).Iter()
 	if iter == nil {
 		return nil, &workflow.InternalServiceError{
 			Message: "ReadHistoryBranch operation failed.  Not able to create query iterator.",
@@ -552,23 +551,24 @@ func (h *cassandraHistoryPersistence) ReadHistoryBranch(request *p.InternalReadH
 			Message: fmt.Sprintf("ReadHistoryBranch. Close operation failed. Error: %v", err),
 		}
 	}
-	if len(history) != numOfExpectedEvents {
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("ReadHistoryBranch. Expected %v events, but only got %v.", numOfExpectedEvents, len(history)),
-		}
-	}
-
-	sort.Slice(history, func(i, j int) bool { return history[i].ID < history[j].ID })
-
-	if history[0].ID != request.MinNodeID || history[len(history)-1].ID != request.MaxNodeID-1 {
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("ReadHistoryBranch. History events corrupted. Expected first/last eventIDs: %v/%v, but got %v/%v", request.MinNodeID, request.MaxNodeID-1, history[0].ID, history[len(history)-1].ID),
-		}
-	}
 
 	response := &p.InternalReadHistoryBranchResponse{
 		History:    history,
 		BranchInfo: branchInfo,
+	}
+
+	//len(history) can be 0 if there is no events at all
+	if len(history) != 0 {
+		// sort all events into ascending order
+		sort.Slice(history, func(i, j int) bool { return history[i].ID < history[j].ID })
+		response.History = history
+
+		// checking nodeIDs are continuous after sorting
+		if history[0].ID != request.MinNodeID || history[len(history)-1].ID-history[0].ID != int64(len(history))-1 {
+			return nil, &workflow.InternalServiceError{
+				Message: fmt.Sprintf("ReadHistoryBranch. History events corrupted. Got first/last eventIDs/len: %v/%v/%v", history[0].ID, history[len(history)-1].ID, len(history)),
+			}
+		}
 	}
 
 	return response, nil
