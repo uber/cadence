@@ -132,6 +132,7 @@ type (
 		NextEventID         int64
 		Version             int64
 		LastReplicationInfo []byte
+		ActivityScheduledID int64
 		ShardID             int
 	}
 
@@ -314,7 +315,7 @@ domain_id = ? AND
 workflow_id = ? AND
 run_id = ?`
 
-	transferTaskInfoColumns = `task_id, 
+	transferTaskInfoColumns = `task_id,
 domain_id,
 workflow_id,
 run_id,
@@ -414,7 +415,8 @@ task_type,
 first_event_id,
 next_event_id,
 version,
-last_replication_info`
+last_replication_info,
+activity_scheduled_id`
 
 	replicationTaskInfoColumnsTags = `:task_id,
 :domain_id,
@@ -424,7 +426,8 @@ last_replication_info`
 :first_event_id,
 :next_event_id,
 :version,
-:last_replication_info`
+:last_replication_info,
+activity_scheduled_ids`
 
 	replicationTasksColumns     = `shard_id, ` + replicationTaskInfoColumns
 	replicationTasksColumnsTags = `:shard_id, ` + replicationTaskInfoColumnsTags
@@ -1614,7 +1617,8 @@ func createReplicationTasks(tx *sqlx.Tx, replicationTasks []p.Task, shardID int,
 
 		firstEventID := common.EmptyEventID
 		nextEventID := common.EmptyEventID
-		version := int64(0)
+		version := common.EmptyVersion
+		activityScheduleID := common.EmptyEventID
 		var lastReplicationInfo []byte
 		var err error
 
@@ -1637,6 +1641,11 @@ func createReplicationTasks(tx *sqlx.Tx, replicationTasks []p.Task, shardID int,
 				}
 			}
 
+		case p.ReplicationTaskTypeSyncActivity:
+			version = task.GetVersion()
+			activityScheduleID = task.(*p.SyncActivityTask).ScheduledID
+			lastReplicationInfo = []byte{}
+
 		default:
 			return &workflow.InternalServiceError{
 				Message: fmt.Sprintf("Unknown replication task: %v", task),
@@ -1647,6 +1656,7 @@ func createReplicationTasks(tx *sqlx.Tx, replicationTasks []p.Task, shardID int,
 		replicationTasksRows[i].NextEventID = nextEventID
 		replicationTasksRows[i].Version = version
 		replicationTasksRows[i].LastReplicationInfo = lastReplicationInfo
+		replicationTasksRows[i].ActivityScheduledID = activityScheduleID
 	}
 
 	query, args, err := tx.BindNamed(createReplicationTasksSQLQuery, replicationTasksRows)

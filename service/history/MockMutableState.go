@@ -932,8 +932,8 @@ func (_m *mockMutableState) CreateReplicationTask() *persistence.HistoryReplicat
 	return r0
 }
 
-// CreateRetryTimer provides a mock function with given fields: _a0, _a1
-func (_m *mockMutableState) CreateRetryTimer(_a0 *persistence.ActivityInfo, _a1 string) persistence.Task {
+// CreateActivityRetryTimer provides a mock function with given fields: _a0, _a1
+func (_m *mockMutableState) CreateActivityRetryTimer(_a0 *persistence.ActivityInfo, _a1 string) persistence.Task {
 	ret := _m.Called(_a0, _a1)
 
 	var r0 persistence.Task

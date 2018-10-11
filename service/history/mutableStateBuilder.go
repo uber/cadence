@@ -46,6 +46,7 @@ type (
 		pendingActivityInfoByActivityID map[string]int64                       // Activity ID -> Schedule Event ID of the activity.
 		updateActivityInfos             map[*persistence.ActivityInfo]struct{} // Modified activities from last update.
 		deleteActivityInfos             map[int64]struct{}                     // Deleted activities from last update.
+		syncActivityTasks               map[int64]struct{}                     // Activity to be sync to remote
 
 		pendingTimerInfoIDs map[string]*persistence.TimerInfo   // User Timer ID -> Timer Info.
 		updateTimerInfos    map[*persistence.TimerInfo]struct{} // Modified timers from last update.
@@ -92,6 +93,7 @@ func newMutableStateBuilder(currentCluster string, config *Config, logger bark.L
 		pendingActivityInfoIDs:          make(map[int64]*persistence.ActivityInfo),
 		pendingActivityInfoByActivityID: make(map[string]int64),
 		deleteActivityInfos:             make(map[int64]struct{}),
+		syncActivityTasks:               make(map[int64]struct{}),
 
 		pendingTimerInfoIDs: make(map[string]*persistence.TimerInfo),
 		updateTimerInfos:    make(map[*persistence.TimerInfo]struct{}),
@@ -354,6 +356,7 @@ func (e *mutableStateBuilder) CloseUpdateSession() (*mutableStateSessionUpdates,
 		newEventsBuilder:                 e.hBuilder,
 		updateActivityInfos:              convertUpdateActivityInfos(e.updateActivityInfos),
 		deleteActivityInfos:              convertDeleteActivityInfos(e.deleteActivityInfos),
+		syncActivityTasks:                convertSyncActivityInfos(e.pendingActivityInfoIDs, e.syncActivityTasks),
 		updateTimerInfos:                 convertUpdateTimerInfos(e.updateTimerInfos),
 		deleteTimerInfos:                 convertDeleteTimerInfos(e.deleteTimerInfos),
 		updateChildExecutionInfos:        convertUpdateChildExecutionInfos(e.updateChildExecutionInfos),
@@ -375,6 +378,7 @@ func (e *mutableStateBuilder) CloseUpdateSession() (*mutableStateSessionUpdates,
 	e.hBuilder = newHistoryBuilder(e, e.logger)
 	e.updateActivityInfos = make(map[*persistence.ActivityInfo]struct{})
 	e.deleteActivityInfos = make(map[int64]struct{})
+	e.syncActivityTasks = make(map[int64]struct{})
 	e.updateTimerInfos = make(map[*persistence.TimerInfo]struct{})
 	e.deleteTimerInfos = make(map[string]struct{})
 	e.updateChildExecutionInfos = make(map[*persistence.ChildExecutionInfo]struct{})
@@ -453,6 +457,17 @@ func convertDeleteActivityInfos(inputs map[int64]struct{}) []int64 {
 	outputs := []int64{}
 	for item := range inputs {
 		outputs = append(outputs, item)
+	}
+	return outputs
+}
+
+func convertSyncActivityInfos(activityInfos map[int64]*persistence.ActivityInfo, inputs map[int64]struct{}) []persistence.Task {
+	outputs := []persistence.Task{}
+	for item := range inputs {
+		activityInfo, ok := activityInfos[item]
+		if ok {
+			outputs = append(outputs, &persistence.SyncActivityTask{Version: activityInfo.Version, ScheduledID: activityInfo.ScheduleID})
+		}
 	}
 	return outputs
 }
@@ -815,9 +830,11 @@ func (e *mutableStateBuilder) HasParentExecution() bool {
 
 func (e *mutableStateBuilder) UpdateActivityProgress(ai *persistence.ActivityInfo,
 	request *workflow.RecordActivityTaskHeartbeatRequest) {
+	ai.Version = e.GetCurrentVersion()
 	ai.Details = request.Details
 	ai.LastHeartBeatUpdatedTime = time.Now()
 	e.updateActivityInfos[ai] = struct{}{}
+	e.syncActivityTasks[ai.ScheduleID] = struct{}{}
 }
 
 // UpdateActivity updates an activity
@@ -1478,11 +1495,13 @@ func (e *mutableStateBuilder) AddActivityTaskStartedEvent(ai *persistence.Activi
 
 	// we might need to retry, so do not append started event just yet,
 	// instead update mutable state and will record started event when activity task is closed
+	ai.Version = e.GetCurrentVersion()
 	ai.StartedID = common.TransientEventID
 	ai.RequestID = requestID
 	ai.StartedTime = time.Now()
 	ai.StartedIdentity = identity
 	e.UpdateActivity(ai)
+	e.syncActivityTasks[ai.ScheduleID] = struct{}{}
 	return nil
 }
 
@@ -1491,6 +1510,7 @@ func (e *mutableStateBuilder) ReplicateActivityTaskStartedEvent(event *workflow.
 	scheduleID := attributes.GetScheduledEventId()
 	ai, _ := e.GetActivityInfo(scheduleID)
 
+	ai.Version = event.GetVersion()
 	ai.StartedID = event.GetEventId()
 	ai.RequestID = attributes.GetRequestId()
 	ai.StartedTime = time.Unix(0, event.GetTimestamp())
@@ -1592,6 +1612,8 @@ func (e *mutableStateBuilder) ReplicateActivityTaskCancelRequestedEvent(event *w
 	attributes := event.ActivityTaskCancelRequestedEventAttributes
 	activityID := attributes.GetActivityId()
 	ai, _ := e.GetActivityByActivityID(activityID)
+
+	ai.Version = event.GetVersion()
 
 	// - We have the activity dispatched to worker.
 	// - The activity might not be heartbeat'ing, but the activity can still call RecordActivityHeartBeat()
@@ -2404,10 +2426,11 @@ func (e *mutableStateBuilder) ReplicateChildWorkflowExecutionTimedOutEvent(event
 	e.DeletePendingChildExecution(initiatedID)
 }
 
-func (e *mutableStateBuilder) CreateRetryTimer(ai *persistence.ActivityInfo, failureReason string) persistence.Task {
-	retryTask := prepareNextRetry(ai, failureReason)
+func (e *mutableStateBuilder) CreateActivityRetryTimer(ai *persistence.ActivityInfo, failureReason string) persistence.Task {
+	retryTask := prepareActivityNextRetry(e.GetCurrentVersion(), ai, failureReason)
 	if retryTask != nil {
 		e.updateActivityInfos[ai] = struct{}{}
+		e.syncActivityTasks[ai.ScheduleID] = struct{}{}
 	}
 
 	return retryTask

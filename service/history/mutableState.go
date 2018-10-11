@@ -94,9 +94,9 @@ type (
 		ClearStickyness()
 		CloseUpdateSession() (*mutableStateSessionUpdates, error)
 		CopyToPersistence() *persistence.WorkflowMutableState
+		CreateActivityRetryTimer(*persistence.ActivityInfo, string) persistence.Task
 		CreateNewHistoryEvent(eventType workflow.EventType) *workflow.HistoryEvent
 		CreateNewHistoryEventWithTimestamp(eventType workflow.EventType, timestamp int64) *workflow.HistoryEvent
-		CreateRetryTimer(*persistence.ActivityInfo, string) persistence.Task
 		CreateReplicationTask() *persistence.HistoryReplicationTask
 		CreateTransientDecisionEvents(di *decisionInfo, identity string) (*workflow.HistoryEvent, *workflow.HistoryEvent)
 		DeleteActivity(int64) error

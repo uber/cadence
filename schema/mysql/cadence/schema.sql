@@ -155,6 +155,7 @@ CREATE TABLE replication_tasks (
 	next_event_id BIGINT NOT NULL,
 	version BIGINT NOT NULL,
   last_replication_info BLOB NOT NULL,
+	activity_scheduled_id BIGINT NOT NULL,
 --
 shard_id INT NOT NULL,
 PRIMARY KEY (shard_id, task_id)
