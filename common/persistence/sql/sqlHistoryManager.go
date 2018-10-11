@@ -25,8 +25,6 @@ import (
 
 	"database/sql"
 
-	"strconv"
-
 	"github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 	"github.com/uber-common/bark"
@@ -52,10 +50,6 @@ type (
 		TxID         int64
 		Data         []byte
 		DataEncoding string
-	}
-
-	historyPageToken struct {
-		LastEventID int64
 	}
 )
 
@@ -128,11 +122,13 @@ func (m *sqlHistoryManager) AppendHistoryEvents(request *p.InternalAppendHistory
 func (m *sqlHistoryManager) GetWorkflowExecutionHistory(request *p.InternalGetWorkflowExecutionHistoryRequest) (
 	*p.InternalGetWorkflowExecutionHistoryResponse, error) {
 
-	token := newHistoryPageToken(request.FirstEventID - 1)
+	offset := request.FirstEventID - 1
 	if request.NextPageToken != nil && len(request.NextPageToken) > 0 {
-		if err := token.deserialize(request.NextPageToken); err != nil {
+		if newOffset, err := deserializePageToken(request.NextPageToken); err != nil {
 			return nil, &workflow.InternalServiceError{
 				Message: fmt.Sprintf("invalid next page token %v", request.NextPageToken)}
+		} else {
+			offset = newOffset
 		}
 	}
 
@@ -141,10 +137,11 @@ func (m *sqlHistoryManager) GetWorkflowExecutionHistory(request *p.InternalGetWo
 		request.DomainID,
 		request.Execution.WorkflowId,
 		request.Execution.RunId,
-		token.LastEventID+1,
+		offset+1,
 		request.NextEventID,
 		request.PageSize)
 
+	// TODO: Ensure that no last empty page is requested
 	if err == sql.ErrNoRows || (err == nil && len(rows) == 0) {
 		return nil, &workflow.EntityNotExistsError{
 			Message: fmt.Sprintf("Workflow execution history not found.  WorkflowId: %v, RunId: %v",
@@ -173,13 +170,14 @@ func (m *sqlHistoryManager) GetWorkflowExecutionHistory(request *p.InternalGetWo
 			history = append(history, eventBatch)
 			lastEventBatchVersion = eventBatchVersion
 		}
-		token.LastEventID = v.FirstEventID
+		offset = v.FirstEventID
 	}
 
+	nextPageToken := serializePageToken(offset)
 	return &p.InternalGetWorkflowExecutionHistoryResponse{
 		History:               history,
 		LastEventBatchVersion: lastEventBatchVersion,
-		NextPageToken:         token.serialize(),
+		NextPageToken:         nextPageToken,
 	}, nil
 }
 
@@ -234,23 +232,5 @@ func lockEventForUpdate(tx *sqlx.Tx, req *p.InternalAppendHistoryEventsRequest) 
 			Msg: fmt.Sprintf("expected txID < %v, got %v", req.TransactionID, row.TxID),
 		}
 	}
-	return nil
-}
-
-func newHistoryPageToken(eventID int64) *historyPageToken {
-	return &historyPageToken{LastEventID: eventID}
-}
-
-func (t *historyPageToken) serialize() []byte {
-	s := strconv.FormatInt(t.LastEventID, 10)
-	return []byte(s)
-}
-
-func (t *historyPageToken) deserialize(payload []byte) error {
-	eventID, err := strconv.ParseInt(string(payload), 10, 64)
-	if err != nil {
-		return err
-	}
-	t.LastEventID = eventID
 	return nil
 }

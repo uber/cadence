@@ -23,6 +23,7 @@ package sql
 import (
 	"database/sql"
 	"fmt"
+	"github.com/uber/cadence/common/collection"
 	"time"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -379,6 +380,9 @@ INNER JOIN executions e ON s.shard_id = e.shard_id AND e.domain_id = ce.domain_i
                            AND ce.run_id = e.run_id 
 WHERE ce.shard_id = ? AND ce.domain_id = ? AND ce.workflow_id = ?
 `
+
+	getCurrentExecutionSQLQueryForUpdate = getCurrentExecutionSQLQuery + " FOR UPDATE"
+
 	// The following queries together comprise ContinueAsNew.
 	// The updates must be executed only after locking current_run_id of
 	// the current_executions row that we are going to update,
@@ -453,7 +457,10 @@ last_replication_info`
 FROM replication_tasks WHERE
 shard_id = ? AND
 task_id > ? AND
-task_id <= ?`
+task_id <= ?
+LIMIT ?`
+
+	completeReplicationTaskSQLQuery = `DELETE FROM replication_tasks WHERE shard_id = ? AND task_id = ?`
 
 	timerTaskInfoColumns     = `visibility_timestamp, task_id, domain_id, workflow_id, run_id, task_type, timeout_type, event_id, schedule_attempt, version`
 	timerTaskInfoColumnsTags = `:visibility_timestamp, :task_id, :domain_id, :workflow_id, :run_id, :task_type, :timeout_type, :event_id, :schedule_attempt, :version`
@@ -502,47 +509,69 @@ func (m *sqlExecutionManager) CreateWorkflowExecution(request *p.CreateWorkflowE
 }
 
 func (m *sqlExecutionManager) createWorkflowExecutionTx(tx *sqlx.Tx, request *p.CreateWorkflowExecutionRequest) (*p.CreateWorkflowExecutionResponse, error) {
+	if request.CreateWorkflowMode == p.CreateWorkflowModeContinueAsNew {
+		return nil, &workflow.InternalServiceError{
+			Message: "CreateWorkflowExecution operation failed. Invalid CreateWorkflowModeContinueAsNew is used",
+		}
+	}
 	/*
 		(x) make a transaction
 		( ) check for a parent
 		(x) check for ContinueAsNew, update the current exec or create one for this new workflow
 		(x) create a workflow with/without cross dc
 	*/
-	if row, err := getCurrentExecutionIfExists(tx, int64(m.shardID), request.DomainID, *request.Execution.WorkflowId); err == nil {
-		if request.RangeID != row.RangeID {
-			return nil, &p.ShardOwnershipLostError{
-				Msg: fmt.Sprintf("Failed to create workflow execution.  Request RangeID: %v, Actual RangeID: %v",
-					request.RangeID, row.RangeID),
-			}
+	var row *currentExecutionRow
+	var err error
+	workflowID := *request.Execution.WorkflowId
+	if row, err = getCurrentExecutionIfExists(tx, int64(m.shardID), request.DomainID, workflowID); err != nil {
+		return nil, err
+	}
+	if row != nil && request.RangeID != row.RangeID {
+		return nil, &p.ShardOwnershipLostError{
+			Msg: fmt.Sprintf("Failed to create workflow execution.  Request RangeID: %v, Actual RangeID: %v",
+				request.RangeID, row.RangeID),
 		}
-		lastWriteVersion := common.EmptyVersion
-		if row.LastWriteVersion != nil {
-			lastWriteVersion = *row.LastWriteVersion
-		}
-
-		if isDupEntry(err) {
-			msg := fmt.Sprintf("Workflow execution already running. WorkflowId: %v, RunId: %v, rangeID: %v",
-				request.Execution.GetWorkflowId(), row.RunID, row.RangeID)
+	}
+	lastWriteVersion := common.EmptyVersion
+	if row != nil {
+		switch request.CreateWorkflowMode {
+		case p.CreateWorkflowModeBrandNew:
 			return nil, &p.WorkflowExecutionAlreadyStartedError{
-				Msg:              msg,
-				StartRequestID:   request.RequestID,
+				Msg:              fmt.Sprintf("Workflow execution already running. WorkflowId: %v", row.WorkflowID),
+				StartRequestID:   row.CreateRequestID,
 				RunID:            row.RunID,
 				State:            int(row.State),
 				CloseStatus:      int(row.CloseStatus),
 				LastWriteVersion: lastWriteVersion,
 			}
-		}
-		return nil, &p.WorkflowExecutionAlreadyStartedError{
-			Msg:              fmt.Sprintf("Workflow execution already running. WorkflowId: %v", row.WorkflowID),
-			StartRequestID:   row.CreateRequestID,
-			RunID:            row.RunID,
-			State:            int(row.State),
-			CloseStatus:      int(row.CloseStatus),
-			LastWriteVersion: lastWriteVersion,
+		case p.CreateWorkflowModeWorkflowIDReuse:
+			if row.LastWriteVersion != nil {
+				if request.PreviousLastWriteVersion != *row.LastWriteVersion {
+					return nil, &p.ConditionFailedError{
+						Msg: fmt.Sprintf("Workflow execution creation condition failed. WorkflowId: %v, "+
+							"LastWriteVersion: %v, PreviousLastWriteVersion: %v",
+							workflowID, *row.LastWriteVersion, request.PreviousLastWriteVersion),
+					}
+				}
+				lastWriteVersion = *row.LastWriteVersion
+			}
+			if row.State != p.WorkflowStateCompleted {
+				return nil, &p.ConditionFailedError{
+					Msg: fmt.Sprintf("Workflow execution creation condition failed. WorkflowId: %v, "+
+						"State: %v, Expected: %v",
+						workflowID, row.State, p.WorkflowStateCompleted),
+				}
+			}
+			if row.RunID != request.PreviousRunID {
+				return nil, &p.ConditionFailedError{
+					Msg: fmt.Sprintf("Workflow execution creation condition failed. WorkflowId: %v, "+
+						"RunID: %v, PreviousRunID: %v",
+						workflowID, row.RunID, request.PreviousRunID),
+				}
+			}
 		}
 	}
-
-	if err := createCurrentExecution(tx, request, m.shardID); err != nil {
+	if err := createOrUpdateCurrentExecution(tx, request, m.shardID); err != nil {
 		return nil, err
 	}
 
@@ -550,7 +579,7 @@ func (m *sqlExecutionManager) createWorkflowExecutionTx(tx *sqlx.Tx, request *p.
 		return nil, err
 	}
 
-	if err := createTransferTasks(tx, request.TransferTasks, m.shardID, request.DomainID, *request.Execution.WorkflowId, *request.Execution.RunId); err != nil {
+	if err := createTransferTasks(tx, request.TransferTasks, m.shardID, request.DomainID, workflowID, *request.Execution.RunId); err != nil {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("CreateWorkflowExecution operation failed. Failed to create transfer tasks. Error: %v", err),
 		}
@@ -560,7 +589,7 @@ func (m *sqlExecutionManager) createWorkflowExecutionTx(tx *sqlx.Tx, request *p.
 		request.ReplicationTasks,
 		m.shardID,
 		request.DomainID,
-		*request.Execution.WorkflowId,
+		workflowID,
 		*request.Execution.RunId); err != nil {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("CreateWorkflowExecution operation failed. Failed to create replication tasks. Error: %v", err),
@@ -572,7 +601,7 @@ func (m *sqlExecutionManager) createWorkflowExecutionTx(tx *sqlx.Tx, request *p.
 		nil,
 		m.shardID,
 		request.DomainID,
-		*request.Execution.WorkflowId,
+		workflowID,
 		*request.Execution.RunId); err != nil {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("CreateWorkflowExecution operation failed. Failed to create timer tasks. Error: %v", err),
@@ -970,7 +999,7 @@ func (m *sqlExecutionManager) updateWorkflowExecutionTx(tx *sqlx.Tx, request *p.
 	}
 
 	if request.ContinueAsNew != nil {
-		if err := createCurrentExecution(tx, request.ContinueAsNew, shardID); err != nil {
+		if err := createOrUpdateCurrentExecution(tx, request.ContinueAsNew, shardID); err != nil {
 			return err
 		}
 
@@ -1005,25 +1034,26 @@ func (m *sqlExecutionManager) updateWorkflowExecutionTx(tx *sqlx.Tx, request *p.
 			lastWriteVersion = common.Int64Ptr(request.ReplicationState.LastWriteVersion)
 		}
 		if request.FinishExecution {
+			m.logger.Info("Finish Execution")
 			// TODO when finish execution, the current record should be marked with a TTL
-		} else {
-			// this is only to update the current record
-			if err := continueAsNew(tx,
-				m.shardID,
-				executionInfo.DomainID,
-				executionInfo.WorkflowID,
-				executionInfo.RunID,
-				executionInfo.RunID,
-				executionInfo.CreateRequestID,
-				int64(executionInfo.State),
-				int64(executionInfo.CloseStatus),
-				startVersion,
-				lastWriteVersion); err != nil {
-				return &workflow.InternalServiceError{
-					Message: fmt.Sprintf("UpdateWorkflowExecution operation failed. Failed to update current execution. Error: %v", err),
-				}
+		} //else {
+		// this is only to update the current record
+		if err := continueAsNew(tx,
+			m.shardID,
+			executionInfo.DomainID,
+			executionInfo.WorkflowID,
+			executionInfo.RunID,
+			executionInfo.RunID,
+			executionInfo.CreateRequestID,
+			int64(executionInfo.State),
+			int64(executionInfo.CloseStatus),
+			startVersion,
+			lastWriteVersion); err != nil {
+			return &workflow.InternalServiceError{
+				Message: fmt.Sprintf("UpdateWorkflowExecution operation failed. Failed to update current execution. Error: %v", err),
 			}
 		}
+		//}
 	}
 	return nil
 }
@@ -1330,19 +1360,34 @@ func (m *sqlExecutionManager) RangeCompleteTransferTask(request *p.RangeComplete
 
 func (m *sqlExecutionManager) GetReplicationTasks(request *p.GetReplicationTasksRequest) (*p.GetReplicationTasksResponse, error) {
 	var rows []replicationTasksRow
-
+	var readLevel int64
+	var maxReadLevelInclusive int64
+	var err error
+	if len(request.NextPageToken) > 0 {
+		readLevel, err = deserializePageToken(request.NextPageToken)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		readLevel = request.ReadLevel
+	}
+	maxReadLevelInclusive = collection.MaxInt64(
+		readLevel+int64(request.BatchSize), request.MaxReadLevel)
 	if err := m.db.Select(&rows,
 		getReplicationTasksSQLQuery,
 		m.shardID,
-		request.ReadLevel,
-		request.MaxReadLevel); err != nil {
+		readLevel,
+		maxReadLevelInclusive,
+		request.BatchSize); err != nil {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("GetReplicationTasks operation failed. Select failed: %v", err),
 		}
 	}
+	if len(rows) == 0 {
+		return &p.GetReplicationTasksResponse{}, nil
+	}
 
 	var tasks = make([]*p.ReplicationTaskInfo, len(rows))
-
 	for i, row := range rows {
 		var lastReplicationInfo map[string]*p.ReplicationInfo
 		if err := gobDeserialize(row.LastReplicationInfo, &lastReplicationInfo); err != nil {
@@ -1362,15 +1407,24 @@ func (m *sqlExecutionManager) GetReplicationTasks(request *p.GetReplicationTasks
 			Version:             row.Version,
 			LastReplicationInfo: lastReplicationInfo,
 		}
-
 	}
-
+	var nextPageToken []byte
+	lastTaskID := rows[len(rows)-1].TaskID
+	if lastTaskID < request.MaxReadLevel {
+		nextPageToken = serializePageToken(lastTaskID)
+	}
 	return &p.GetReplicationTasksResponse{
-		Tasks: tasks,
+		Tasks:         tasks,
+		NextPageToken: nextPageToken,
 	}, nil
 }
 
 func (m *sqlExecutionManager) CompleteReplicationTask(request *p.CompleteReplicationTaskRequest) error {
+	if _, err := m.db.Exec(completeReplicationTaskSQLQuery, m.shardID, request.TaskID); err != nil {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("CompleteReplicationTask operation failed. Error: %v", err),
+		}
+	}
 	return nil
 }
 
@@ -1423,14 +1477,25 @@ func NewSQLMatchingPersistence(host string, port int, username, password, dbName
 	}, nil
 }
 
+// getCurrentExecutionIfExists returns current execution or nil if none is found for the workflowID
+// locking it in the DB
 func getCurrentExecutionIfExists(tx *sqlx.Tx, shardID int64, domainID string, workflowID string) (*currentExecutionRow, error) {
-	var row currentExecutionRow
-	if err := tx.Get(&row, getCurrentExecutionSQLQuery, shardID, domainID, workflowID); err != nil {
+	var rows []*currentExecutionRow
+	if err := tx.Select(&rows, getCurrentExecutionSQLQueryForUpdate, shardID, domainID, workflowID); err != nil {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("Failed to get current_executions row for (shard,domain,workflow) = (%v, %v, %v). Error: %v", shardID, domainID, workflowID, err),
 		}
 	}
-	return &row, nil
+	size := len(rows)
+	if size > 1 {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("Multiple current_executions rows for (shard,domain,workflow) = (%v, %v, %v). Error: %v", shardID, domainID, workflowID),
+		}
+	}
+	if size == 0 {
+		return nil, nil
+	}
+	return rows[0], nil
 }
 
 func createExecution(tx *sqlx.Tx, request *p.CreateWorkflowExecutionRequest, shardID int, nowTimestamp time.Time) error {
@@ -1496,7 +1561,7 @@ func createExecution(tx *sqlx.Tx, request *p.CreateWorkflowExecutionRequest, sha
 	return nil
 }
 
-func createCurrentExecution(tx *sqlx.Tx, request *p.CreateWorkflowExecutionRequest, shardID int) error {
+func createOrUpdateCurrentExecution(tx *sqlx.Tx, request *p.CreateWorkflowExecutionRequest, shardID int) error {
 	arg := currentExecutionRow{
 		ShardID:         int64(shardID),
 		DomainID:        request.DomainID,
@@ -1517,12 +1582,11 @@ func createCurrentExecution(tx *sqlx.Tx, request *p.CreateWorkflowExecutionReque
 
 	switch request.CreateWorkflowMode {
 	case p.CreateWorkflowModeContinueAsNew:
-		if err := continueAsNew(tx,
+		if err := conditionalUpdateCurrentExecution(tx,
 			shardID,
 			request.DomainID,
 			*request.Execution.WorkflowId,
 			*request.Execution.RunId,
-			request.PreviousRunID,
 			request.RequestID,
 			p.WorkflowStateRunning,
 			p.WorkflowCloseStatusNone,
@@ -1533,14 +1597,11 @@ func createCurrentExecution(tx *sqlx.Tx, request *p.CreateWorkflowExecutionReque
 			}
 		}
 	case p.CreateWorkflowModeWorkflowIDReuse:
-		if err := workflowIDReuse(tx,
+		if err := conditionalUpdateCurrentExecution(tx,
 			shardID,
 			request.DomainID,
 			*request.Execution.WorkflowId,
 			*request.Execution.RunId,
-			request.PreviousRunID,
-			request.PreviousLastWriteVersion,
-			p.WorkflowCloseStatusCompleted,
 			request.RequestID,
 			p.WorkflowStateRunning,
 			p.WorkflowCloseStatusNone,
@@ -1855,30 +1916,6 @@ func continueAsNew(tx *sqlx.Tx, shardID int, domainID, workflowID, runID, previo
 	return conditionalUpdateCurrentExecution(tx, shardID, domainID, workflowID, runID, createRequestID, state, closeStatus, startVersion, lastWriteVersion)
 }
 
-func workflowIDReuse(tx *sqlx.Tx, shardID int, domainID, workflowID, runID, previousRunID string,
-	previousLastWriteVersion int64, previousState int64,
-	createRequestID string, state int64, closeStatus int64, startVersion *int64, lastWriteVersion *int64) error {
-
-	var currentExecutionRow currentExecutionRow
-	if err := tx.Get(&currentExecutionRow, workflowIDReuseSQLQuery, int64(shardID), domainID, workflowID); err != nil {
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("WorkfowIDReuse failed. Failed to check current run ID or current state or current last write version. Error: %v", err),
-		}
-	}
-	if currentExecutionRow.RunID != previousRunID ||
-		currentExecutionRow.State != previousState ||
-		(currentExecutionRow.LastWriteVersion != nil && *currentExecutionRow.LastWriteVersion != previousLastWriteVersion) {
-		return &p.ConditionFailedError{
-			Msg: fmt.Sprintf("ContinueAsNew failed. Current run ID %v, expected %v, current state: %v, expected: %v, current last write version: %v, expected: %v",
-				currentExecutionRow.RunID, previousRunID,
-				currentExecutionRow.State, previousState,
-				currentExecutionRow.LastWriteVersion, previousLastWriteVersion,
-			),
-		}
-	}
-	return conditionalUpdateCurrentExecution(tx, shardID, domainID, workflowID, runID, createRequestID, state, closeStatus, startVersion, lastWriteVersion)
-}
-
 func conditionalUpdateCurrentExecution(tx *sqlx.Tx, shardID int, domainID, workflowID, runID,
 	createRequestID string, state int64, closeStatus int64, startVersion *int64, lastWriteVersion *int64) error {
 
@@ -1893,7 +1930,6 @@ func conditionalUpdateCurrentExecution(tx *sqlx.Tx, shardID int, domainID, workf
 		StartVersion:     startVersion,
 		LastWriteVersion: lastWriteVersion,
 	})
-	// The current_executions row is locked, and the run ID has been verified. We can do the updates.
 	if err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("ContinueAsNew failed. Failed to update current_executions table. Error: %v", err),

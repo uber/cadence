@@ -45,8 +45,14 @@ const (
 
 // Create Workflow Execution Mode
 const (
+	// Fail if current record exists
+	// Only applicable for CreateWorkflowExecution
 	CreateWorkflowModeBrandNew = iota
+	// Update current record only if workflow is closed
+	// Only applicable for CreateWorkflowExecution
 	CreateWorkflowModeWorkflowIDReuse
+	// Update current record only if workflow is open
+	// Only applicable for UpdateWorkflowExecution
 	CreateWorkflowModeContinueAsNew
 )
 

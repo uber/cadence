@@ -240,48 +240,6 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionRunIDReuseWithoutRepl
 	s.Nil(err)
 }
 
-// TestCreateWorkflowExecutionContinueAsNew test
-func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionContinueAsNew() {
-	domainID := uuid.New()
-	workflowExecution := gen.WorkflowExecution{
-		WorkflowId: common.StringPtr("create-workflow-test-continue-as-new"),
-		RunId:      common.StringPtr(uuid.New()),
-	}
-	tasklist := "some random tasklist"
-	workflowType := "some random workflow type"
-	workflowTimeout := int32(10)
-	decisionTimeout := int32(14)
-	lastProcessedEventID := int64(0)
-	nextEventID := int64(3)
-	decisionScheduleID := int64(2)
-
-	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, tasklist,
-		workflowType, workflowTimeout, decisionTimeout, nil, nextEventID,
-		lastProcessedEventID, decisionScheduleID, nil)
-	s.Nil(err0, "No error expected.")
-	s.NotNil(task0, "Expected non empty task identifier.")
-
-	newExecution := gen.WorkflowExecution{
-		WorkflowId: workflowExecution.WorkflowId,
-		RunId:      common.StringPtr(uuid.New()),
-	}
-	_, err := s.ExecutionManager.CreateWorkflowExecution(&p.CreateWorkflowExecutionRequest{
-		RequestID:            uuid.New(),
-		DomainID:             domainID,
-		Execution:            newExecution,
-		TaskList:             tasklist,
-		WorkflowTypeName:     workflowType,
-		WorkflowTimeout:      workflowTimeout,
-		DecisionTimeoutValue: decisionTimeout,
-		NextEventID:          nextEventID,
-		LastProcessedEvent:   lastProcessedEventID,
-		RangeID:              s.ShardInfo.RangeID,
-		CreateWorkflowMode:   p.CreateWorkflowModeContinueAsNew,
-		PreviousRunID:        workflowExecution.GetRunId(),
-	})
-	s.Nil(err)
-}
-
 // TestPersistenceStartWorkflow test
 func (s *ExecutionManagerSuite) TestPersistenceStartWorkflow() {
 	domainID := "2d7994bf-9de8-459d-9c81-e723daedb246"

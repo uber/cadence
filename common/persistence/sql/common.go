@@ -22,9 +22,9 @@ package sql
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/gob"
 	"fmt"
-
 	"github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 	"github.com/uber-common/bark"
@@ -162,4 +162,17 @@ func runTransaction(name string, db *sqlx.DB, txFunc func(tx *sqlx.Tx) error) er
 		return convertErr(err)
 	}
 	return nil
+}
+
+func serializePageToken(offset int64) []byte {
+	b := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b, uint64(offset))
+	return b
+}
+
+func deserializePageToken(payload []byte) (int64, error) {
+	if len(payload) != 8 {
+		return 0, fmt.Errorf("Invalid token of %v length", len(payload))
+	}
+	return int64(binary.LittleEndian.Uint64(payload)), nil
 }
