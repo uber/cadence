@@ -1768,6 +1768,20 @@ func (_m *mockMutableState) Load(_a0 *persistence.WorkflowMutableState) {
 	_m.Called(_a0)
 }
 
+// ReplicateActivityInfo provides a mock function with given fields: _a0
+func (_m *mockMutableState) ReplicateActivityInfo(_a0 *h.SyncActivityRequest) error {
+	ret := _m.Called(_a0)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*h.SyncActivityRequest) error); ok {
+		r0 = rf(_a0)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // ReplicateActivityTaskCancelRequestedEvent provides a mock function with given fields: _a0
 func (_m *mockMutableState) ReplicateActivityTaskCancelRequestedEvent(_a0 *shared.HistoryEvent) {
 	_m.Called(_a0)

@@ -201,14 +201,7 @@ func (r *historyReplicator) SyncActivity(ctx context.Context, request *h.SyncAct
 	}
 	// version latger then existing, should update activity
 
-	ai.Version = request.GetVersion()
-	ai.ScheduledTime = time.Unix(0, request.GetScheduledTime())
-	ai.StartedID = request.GetStartedId()
-	ai.StartedTime = time.Unix(0, request.GetStartedTime())
-	ai.LastHeartBeatUpdatedTime = lastHeartbeatTime
-	ai.Details = request.GetDetails()
-
-	err = msBuilder.UpdateActivity(ai)
+	err = msBuilder.ReplicateActivityInfo(request)
 	if err != nil {
 		return err
 	}

@@ -491,15 +491,7 @@ func (s *historyReplicatorSuite) TestSyncActivity_ActivityRunning_UpdateSuccess(
 		ScheduleID: scheduleID,
 	}, true)
 	expectedErr := errors.New("this is error is used to by pass lots of mocking")
-	msBuilder.On("UpdateActivity", &persistence.ActivityInfo{
-		Version:                  request.GetVersion(),
-		ScheduleID:               request.GetScheduledId(),
-		ScheduledTime:            time.Unix(0, request.GetScheduledTime()),
-		StartedID:                request.GetStartedId(),
-		StartedTime:              time.Unix(0, request.GetStartedTime()),
-		LastHeartBeatUpdatedTime: time.Unix(0, request.GetLastHeartbeatTime()),
-		Details:                  request.GetDetails(),
-	}).Return(expectedErr)
+	msBuilder.On("ReplicateActivityInfo", request).Return(expectedErr)
 
 	err = s.historyReplicator.SyncActivity(ctx.Background(), request)
 	s.Equal(expectedErr, err)

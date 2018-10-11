@@ -276,7 +276,7 @@ type (
 		NextEventID         int64
 		Version             int64
 		LastReplicationInfo map[string]*ReplicationInfo
-		ActivityScheduledID int64
+		ScheduledID         int64
 	}
 
 	// TimerTaskInfo describes a timer task.

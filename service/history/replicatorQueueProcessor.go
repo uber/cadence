@@ -160,7 +160,7 @@ func (p *replicatorQueueProcessorImpl) processSyncActivityTask(task *persistence
 		return nil
 	}
 
-	activityInfo, ok := msBuilder.GetActivityInfo(task.ActivityScheduledID)
+	activityInfo, ok := msBuilder.GetActivityInfo(task.ScheduledID)
 	if !ok {
 		return nil
 	}

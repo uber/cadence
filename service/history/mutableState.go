@@ -151,6 +151,7 @@ type (
 		IsStickyTaskListEnabled() bool
 		IsWorkflowExecutionRunning() bool
 		Load(*persistence.WorkflowMutableState)
+		ReplicateActivityInfo(request *h.SyncActivityRequest) error
 		ReplicateActivityTaskCancelRequestedEvent(*workflow.HistoryEvent)
 		ReplicateActivityTaskCanceledEvent(*workflow.HistoryEvent) error
 		ReplicateActivityTaskCompletedEvent(*workflow.HistoryEvent) error

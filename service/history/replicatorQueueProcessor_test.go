@@ -124,12 +124,12 @@ func (s *replicatorQueueProcessorSuite) TestSyncActivity_WorkflowMissing() {
 	scheduleID := int64(144)
 	taskID := int64(1444)
 	task := &persistence.ReplicationTaskInfo{
-		TaskType:            persistence.ReplicationTaskTypeSyncActivity,
-		TaskID:              taskID,
-		DomainID:            domainID,
-		WorkflowID:          workflowID,
-		RunID:               runID,
-		ActivityScheduledID: scheduleID,
+		TaskType:    persistence.ReplicationTaskTypeSyncActivity,
+		TaskID:      taskID,
+		DomainID:    domainID,
+		WorkflowID:  workflowID,
+		RunID:       runID,
+		ScheduledID: scheduleID,
 	}
 	s.mockExecutionMgr.On("CompleteReplicationTask", &persistence.CompleteReplicationTaskRequest{TaskID: taskID}).Return(nil).Once()
 	s.mockExecutionMgr.On("GetWorkflowExecution", &persistence.GetWorkflowExecutionRequest{
@@ -153,12 +153,12 @@ func (s *replicatorQueueProcessorSuite) TestSyncActivity_WorkflowCompleted() {
 	version := int64(2333)
 	nextEventID := int64(133)
 	task := &persistence.ReplicationTaskInfo{
-		TaskType:            persistence.ReplicationTaskTypeSyncActivity,
-		TaskID:              taskID,
-		DomainID:            domainID,
-		WorkflowID:          workflowID,
-		RunID:               runID,
-		ActivityScheduledID: scheduleID,
+		TaskType:    persistence.ReplicationTaskTypeSyncActivity,
+		TaskID:      taskID,
+		DomainID:    domainID,
+		WorkflowID:  workflowID,
+		RunID:       runID,
+		ScheduledID: scheduleID,
 	}
 	s.mockExecutionMgr.On("CompleteReplicationTask", &persistence.CompleteReplicationTaskRequest{TaskID: taskID}).Return(nil).Once()
 
@@ -194,12 +194,12 @@ func (s *replicatorQueueProcessorSuite) TestSyncActivity_ActivityCompleted() {
 	version := int64(2333)
 	nextEventID := int64(133)
 	task := &persistence.ReplicationTaskInfo{
-		TaskType:            persistence.ReplicationTaskTypeSyncActivity,
-		TaskID:              taskID,
-		DomainID:            domainID,
-		WorkflowID:          workflowID,
-		RunID:               runID,
-		ActivityScheduledID: scheduleID,
+		TaskType:    persistence.ReplicationTaskTypeSyncActivity,
+		TaskID:      taskID,
+		DomainID:    domainID,
+		WorkflowID:  workflowID,
+		RunID:       runID,
+		ScheduledID: scheduleID,
 	}
 	s.mockExecutionMgr.On("CompleteReplicationTask", &persistence.CompleteReplicationTaskRequest{TaskID: taskID}).Return(nil).Once()
 
@@ -254,12 +254,12 @@ func (s *replicatorQueueProcessorSuite) TestSyncActivity_ActivityRunning() {
 	version := int64(2333)
 	nextEventID := int64(133)
 	task := &persistence.ReplicationTaskInfo{
-		TaskType:            persistence.ReplicationTaskTypeSyncActivity,
-		TaskID:              taskID,
-		DomainID:            domainID,
-		WorkflowID:          workflowID,
-		RunID:               runID,
-		ActivityScheduledID: scheduleID,
+		TaskType:    persistence.ReplicationTaskTypeSyncActivity,
+		TaskID:      taskID,
+		DomainID:    domainID,
+		WorkflowID:  workflowID,
+		RunID:       runID,
+		ScheduledID: scheduleID,
 	}
 	s.mockExecutionMgr.On("CompleteReplicationTask", &persistence.CompleteReplicationTaskRequest{TaskID: taskID}).Return(nil).Once()
 

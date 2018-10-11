@@ -132,7 +132,7 @@ type (
 		NextEventID         int64
 		Version             int64
 		LastReplicationInfo []byte
-		ActivityScheduledID int64
+		ScheduledID         int64
 		ShardID             int
 	}
 
@@ -416,7 +416,7 @@ first_event_id,
 next_event_id,
 version,
 last_replication_info,
-activity_scheduled_id`
+scheduled_id`
 
 	replicationTaskInfoColumnsTags = `:task_id,
 :domain_id,
@@ -427,7 +427,7 @@ activity_scheduled_id`
 :next_event_id,
 :version,
 :last_replication_info,
-activity_scheduled_ids`
+:scheduled_id`
 
 	replicationTasksColumns     = `shard_id, ` + replicationTaskInfoColumns
 	replicationTasksColumnsTags = `:shard_id, ` + replicationTaskInfoColumnsTags
@@ -1656,7 +1656,7 @@ func createReplicationTasks(tx *sqlx.Tx, replicationTasks []p.Task, shardID int,
 		replicationTasksRows[i].NextEventID = nextEventID
 		replicationTasksRows[i].Version = version
 		replicationTasksRows[i].LastReplicationInfo = lastReplicationInfo
-		replicationTasksRows[i].ActivityScheduledID = activityScheduleID
+		replicationTasksRows[i].ScheduledID = activityScheduleID
 	}
 
 	query, args, err := tx.BindNamed(createReplicationTasksSQLQuery, replicationTasksRows)

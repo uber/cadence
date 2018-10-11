@@ -1,1 +1,1 @@
-ALTER TYPE replication_task ADD activity_scheduled_id bigint;
+ALTER TYPE replication_task ADD scheduled_id bigint;

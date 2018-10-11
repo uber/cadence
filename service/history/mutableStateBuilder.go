@@ -837,6 +837,24 @@ func (e *mutableStateBuilder) UpdateActivityProgress(ai *persistence.ActivityInf
 	e.syncActivityTasks[ai.ScheduleID] = struct{}{}
 }
 
+// ReplicateActivityInfo replicate the necessary activity information
+func (e *mutableStateBuilder) ReplicateActivityInfo(request *h.SyncActivityRequest) error {
+	ai, ok := e.pendingActivityInfoIDs[request.GetScheduledId()]
+	if !ok {
+		return fmt.Errorf("Unable to find activity with schedule event id: %v in mutable state", ai.ScheduleID)
+	}
+
+	ai.Version = request.GetVersion()
+	ai.ScheduledTime = time.Unix(0, request.GetScheduledTime())
+	ai.StartedID = request.GetStartedId()
+	ai.StartedTime = time.Unix(0, request.GetStartedTime())
+	ai.LastHeartBeatUpdatedTime = time.Unix(0, request.GetLastHeartbeatTime())
+	ai.Details = request.GetDetails()
+
+	e.updateActivityInfos[ai] = struct{}{}
+	return nil
+}
+
 // UpdateActivity updates an activity
 func (e *mutableStateBuilder) UpdateActivity(ai *persistence.ActivityInfo) error {
 	_, ok := e.pendingActivityInfoIDs[ai.ScheduleID]

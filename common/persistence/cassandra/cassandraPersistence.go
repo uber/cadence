@@ -193,7 +193,7 @@ const (
 		`next_event_id: ?,` +
 		`version: ?,` +
 		`last_replication_info: ?, ` +
-		`activity_scheduled_id: ?` +
+		`scheduled_id: ?` +
 		`}`
 
 	templateTimerTaskType = `{` +
@@ -3545,8 +3545,8 @@ func createReplicationTaskInfo(result map[string]interface{}) *p.ReplicationTask
 			for key, value := range replicationInfoMap {
 				info.LastReplicationInfo[key] = createReplicationInfo(value)
 			}
-		case "activity_scheduled_id":
-			info.ActivityScheduledID = v.(int64)
+		case "scheduled_id":
+			info.ScheduledID = v.(int64)
 		}
 	}
 
