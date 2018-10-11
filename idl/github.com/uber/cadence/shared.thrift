@@ -446,7 +446,7 @@ struct DecisionTaskCompletedEventAttributes {
   20: optional i64 (js.type = "Long") scheduledEventId
   30: optional i64 (js.type = "Long") startedEventId
   40: optional string identity
-  50: optional string exeChecksum
+  50: optional string binaryChecksum
 }
 
 struct DecisionTaskTimedOutEventAttributes {
@@ -907,7 +907,7 @@ struct RespondDecisionTaskCompletedRequest {
   50: optional StickyExecutionAttributes stickyAttributes
   60: optional bool returnNewDecisionTask
   70: optional bool forceCreateNewDecisionTask
-  80: optional string exeChecksum
+  80: optional string binaryChecksum
 }
 
 struct RespondDecisionTaskCompletedResponse {

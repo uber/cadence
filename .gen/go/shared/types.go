@@ -6113,7 +6113,7 @@ type DecisionTaskCompletedEventAttributes struct {
 	ScheduledEventId *int64  `json:"scheduledEventId,omitempty"`
 	StartedEventId   *int64  `json:"startedEventId,omitempty"`
 	Identity         *string `json:"identity,omitempty"`
-	ExeChecksum      *string `json:"exeChecksum,omitempty"`
+	BinaryChecksum   *string `json:"binaryChecksum,omitempty"`
 }
 
 // ToWire translates a DecisionTaskCompletedEventAttributes struct into a Thrift-level intermediate
@@ -6171,8 +6171,8 @@ func (v *DecisionTaskCompletedEventAttributes) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 40, Value: w}
 		i++
 	}
-	if v.ExeChecksum != nil {
-		w, err = wire.NewValueString(*(v.ExeChecksum)), error(nil)
+	if v.BinaryChecksum != nil {
+		w, err = wire.NewValueString(*(v.BinaryChecksum)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -6247,7 +6247,7 @@ func (v *DecisionTaskCompletedEventAttributes) FromWire(w wire.Value) error {
 			if field.Value.Type() == wire.TBinary {
 				var x string
 				x, err = field.Value.GetString(), error(nil)
-				v.ExeChecksum = &x
+				v.BinaryChecksum = &x
 				if err != nil {
 					return err
 				}
@@ -6284,8 +6284,8 @@ func (v *DecisionTaskCompletedEventAttributes) String() string {
 		fields[i] = fmt.Sprintf("Identity: %v", *(v.Identity))
 		i++
 	}
-	if v.ExeChecksum != nil {
-		fields[i] = fmt.Sprintf("ExeChecksum: %v", *(v.ExeChecksum))
+	if v.BinaryChecksum != nil {
+		fields[i] = fmt.Sprintf("BinaryChecksum: %v", *(v.BinaryChecksum))
 		i++
 	}
 
@@ -6309,7 +6309,7 @@ func (v *DecisionTaskCompletedEventAttributes) Equals(rhs *DecisionTaskCompleted
 	if !_String_EqualsPtr(v.Identity, rhs.Identity) {
 		return false
 	}
-	if !_String_EqualsPtr(v.ExeChecksum, rhs.ExeChecksum) {
+	if !_String_EqualsPtr(v.BinaryChecksum, rhs.BinaryChecksum) {
 		return false
 	}
 
@@ -6356,11 +6356,11 @@ func (v *DecisionTaskCompletedEventAttributes) GetIdentity() (o string) {
 	return
 }
 
-// GetExeChecksum returns the value of ExeChecksum if it is set or its
+// GetBinaryChecksum returns the value of BinaryChecksum if it is set or its
 // zero value if it is unset.
-func (v *DecisionTaskCompletedEventAttributes) GetExeChecksum() (o string) {
-	if v.ExeChecksum != nil {
-		return *v.ExeChecksum
+func (v *DecisionTaskCompletedEventAttributes) GetBinaryChecksum() (o string) {
+	if v.BinaryChecksum != nil {
+		return *v.BinaryChecksum
 	}
 
 	return
@@ -23717,7 +23717,7 @@ type RespondDecisionTaskCompletedRequest struct {
 	StickyAttributes           *StickyExecutionAttributes `json:"stickyAttributes,omitempty"`
 	ReturnNewDecisionTask      *bool                      `json:"returnNewDecisionTask,omitempty"`
 	ForceCreateNewDecisionTask *bool                      `json:"forceCreateNewDecisionTask,omitempty"`
-	ExeChecksum                *string                    `json:"exeChecksum,omitempty"`
+	BinaryChecksum             *string                    `json:"binaryChecksum,omitempty"`
 }
 
 type _List_Decision_ValueList []*Decision
@@ -23828,8 +23828,8 @@ func (v *RespondDecisionTaskCompletedRequest) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 70, Value: w}
 		i++
 	}
-	if v.ExeChecksum != nil {
-		w, err = wire.NewValueString(*(v.ExeChecksum)), error(nil)
+	if v.BinaryChecksum != nil {
+		w, err = wire.NewValueString(*(v.BinaryChecksum)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -23958,7 +23958,7 @@ func (v *RespondDecisionTaskCompletedRequest) FromWire(w wire.Value) error {
 			if field.Value.Type() == wire.TBinary {
 				var x string
 				x, err = field.Value.GetString(), error(nil)
-				v.ExeChecksum = &x
+				v.BinaryChecksum = &x
 				if err != nil {
 					return err
 				}
@@ -24007,8 +24007,8 @@ func (v *RespondDecisionTaskCompletedRequest) String() string {
 		fields[i] = fmt.Sprintf("ForceCreateNewDecisionTask: %v", *(v.ForceCreateNewDecisionTask))
 		i++
 	}
-	if v.ExeChecksum != nil {
-		fields[i] = fmt.Sprintf("ExeChecksum: %v", *(v.ExeChecksum))
+	if v.BinaryChecksum != nil {
+		fields[i] = fmt.Sprintf("BinaryChecksum: %v", *(v.BinaryChecksum))
 		i++
 	}
 
@@ -24056,7 +24056,7 @@ func (v *RespondDecisionTaskCompletedRequest) Equals(rhs *RespondDecisionTaskCom
 	if !_Bool_EqualsPtr(v.ForceCreateNewDecisionTask, rhs.ForceCreateNewDecisionTask) {
 		return false
 	}
-	if !_String_EqualsPtr(v.ExeChecksum, rhs.ExeChecksum) {
+	if !_String_EqualsPtr(v.BinaryChecksum, rhs.BinaryChecksum) {
 		return false
 	}
 
@@ -24133,11 +24133,11 @@ func (v *RespondDecisionTaskCompletedRequest) GetForceCreateNewDecisionTask() (o
 	return
 }
 
-// GetExeChecksum returns the value of ExeChecksum if it is set or its
+// GetBinaryChecksum returns the value of BinaryChecksum if it is set or its
 // zero value if it is unset.
-func (v *RespondDecisionTaskCompletedRequest) GetExeChecksum() (o string) {
-	if v.ExeChecksum != nil {
-		return *v.ExeChecksum
+func (v *RespondDecisionTaskCompletedRequest) GetBinaryChecksum() (o string) {
+	if v.BinaryChecksum != nil {
+		return *v.BinaryChecksum
 	}
 
 	return
