@@ -30,7 +30,7 @@ import (
 
 	"sync"
 
-	"fmt"
+	"math/rand"
 
 	"github.com/gocql/gocql"
 	log "github.com/sirupsen/logrus"
@@ -53,6 +53,7 @@ type (
 	}
 )
 
+var increasingVersion int64
 var historyTestRetryPolicy = createHistoryTestRetryPolicy()
 
 func createHistoryTestRetryPolicy() backoff.RetryPolicy {
@@ -66,9 +67,6 @@ func createHistoryTestRetryPolicy() backoff.RetryPolicy {
 func isConditionFail(err error) bool {
 	switch err.(type) {
 	case *p.ConditionFailedError:
-		return true
-	case *p.UnexpectedConditionFailedError:
-		//TODO we need to understand why it can return UnexpectedConditionFailedError
 		return true
 	default:
 		return false
@@ -94,8 +92,8 @@ func (s *HistoryV2PersistenceSuite) TearDownSuite() {
 }
 
 func (s *HistoryV2PersistenceSuite) genRandomUUIDString() string {
-	uuid, err := gocql.RandomUUID()
-	s.Nil(err)
+	at := time.Unix(rand.Int63(), rand.Int63())
+	uuid := gocql.UUIDFromTime(at)
 	return uuid.String()
 }
 
@@ -104,7 +102,7 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndDeleteEmptyBranches
 
 	wg := sync.WaitGroup{}
 	newCount := int32(0)
-	concurrency := 5
+	concurrency := 10
 	for i := 0; i < concurrency; i++ {
 		wg.Add(1)
 		go func() {
@@ -151,7 +149,7 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndAppendBranches() {
 
 	wg := sync.WaitGroup{}
 	newCount := int32(0)
-	concurrency := 1
+	concurrency := 10
 
 	// test create new branch along with appending new nodes
 	for i := 0; i < concurrency; i++ {
@@ -164,28 +162,27 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndAppendBranches() {
 			if isNewTree {
 				atomic.AddInt32(&newCount, 1)
 			}
-			fmt.Printf("done created branch %v \n", brID)
 			historyW := &workflow.History{}
-			events := s.genRandomEvents([]int64{1, 2, 3}, 1, 100*int64(1+idx))
+			events := s.genRandomEvents([]int64{1, 2, 3})
 
 			overrides, err := s.append(treeID, brID, events, 0)
 			s.Nil(err)
 			s.Equal(0, overrides)
 			historyW.Events = events
 
-			events = s.genRandomEvents([]int64{4}, 1, 100*int64(1+idx))
+			events = s.genRandomEvents([]int64{4})
 			overrides, err = s.append(treeID, brID, events, 0)
 			s.Nil(err)
 			s.Equal(0, overrides)
 			historyW.Events = append(historyW.Events, events...)
 
-			events = s.genRandomEvents([]int64{5, 6, 7, 8}, 1, 100*int64(1+idx))
+			events = s.genRandomEvents([]int64{5, 6, 7, 8})
 			overrides, err = s.append(treeID, brID, events, 0)
 			s.Nil(err)
 			s.Equal(0, overrides)
 			historyW.Events = append(historyW.Events, events...)
 
-			events = s.genRandomEvents([]int64{9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}, 1, 100*int64(1+idx))
+			events = s.genRandomEvents([]int64{9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20})
 			overrides, err = s.append(treeID, brID, events, 0)
 			s.Nil(err)
 			s.Equal(0, overrides)
@@ -198,18 +195,18 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndAppendBranches() {
 				Ancestors: nil,
 			}
 			historyR := &workflow.History{}
-			bi, events, token, err := s.read(branch, 1, 21, 1, 10, nil)
+			bi, events, token, err := s.read(branch, 1, 21, 0, 10, nil)
 			s.Nil(err)
 			s.Equal(10, len(events))
 			historyR.Events = events
 
-			_, events, token, err = s.read(*bi, 1, 21, 1, 10, token)
+			_, events, token, err = s.read(*bi, 1, 21, 0, 10, token)
 			s.Nil(err)
 			s.Equal(10, len(events))
 			historyR.Events = append(historyR.Events, events...)
 
 			// the next page should return empty events
-			_, events, token, err = s.read(*bi, 1, 21, 1, 10, token)
+			_, events, token, err = s.read(*bi, 1, 21, 0, 10, token)
 			s.Nil(err)
 			s.Equal(0, len(events))
 
@@ -229,9 +226,43 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndAppendBranches() {
 		go func(idx int) {
 			defer wg.Done()
 
+			brID := branches[idx].BranchID
+			branch := p.HistoryBranch{
+				TreeID:    treeID,
+				BranchID:  brID,
+				Ancestors: nil,
+			}
+
+			events := s.genRandomEvents([]int64{5})
+			overrides, err := s.append(treeID, brID, events, 1)
+			s.Nil(err)
+			s.Equal(1, overrides)
+			// read to verify override
+			_, events, _, err = s.read(branch, 1, 25, 0, 10, nil)
+			s.Nil(err)
+			s.Equal(5, len(events))
+
+			events = s.genRandomEvents([]int64{6, 7, 8})
+			overrides, err = s.append(treeID, brID, events, 2)
+			s.Nil(err)
+			s.Equal(3, overrides)
+			// read to verify override
+			_, events, _, err = s.read(branch, 1, 25, 0, 10, nil)
+			s.Nil(err)
+			s.Equal(8, len(events))
+
+			events = s.genRandomEvents([]int64{9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23})
+			overrides, err = s.append(treeID, brID, events, 2)
+			s.Nil(err)
+			s.Equal(12, overrides)
+
+			_, events, _, err = s.read(branch, 1, 25, 0, 25, nil)
+			s.Nil(err)
+			s.Equal(23, len(events))
 		}(i)
 	}
 
+	wg.Wait()
 	// Finally lets clean up all branches
 	wg = sync.WaitGroup{}
 	for i := 0; i < concurrency; i++ {
@@ -249,10 +280,13 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndAppendBranches() {
 
 }
 
-func (s *HistoryV2PersistenceSuite) genRandomEvents(eventIDs []int64, version int64, timestamp int64) []*workflow.HistoryEvent {
+func (s *HistoryV2PersistenceSuite) genRandomEvents(eventIDs []int64) []*workflow.HistoryEvent {
+	atomic.AddInt64(&increasingVersion, 1)
 	var events []*workflow.HistoryEvent
+
+	timestamp := time.Now().UnixNano()
 	for _, eid := range eventIDs {
-		e := &workflow.HistoryEvent{EventId: common.Int64Ptr(eid), Version: common.Int64Ptr(version), Timestamp: int64Ptr(timestamp)}
+		e := &workflow.HistoryEvent{EventId: common.Int64Ptr(eid), Version: common.Int64Ptr(increasingVersion), Timestamp: int64Ptr(timestamp)}
 		events = append(events, e)
 	}
 
@@ -272,6 +306,7 @@ func (s *HistoryV2PersistenceSuite) newHistoryBranch(treeID, branchID string) (b
 				BranchID: branchID,
 			},
 		})
+		//fmt.Println("newBr ret:", resp, err, treeID, branchID)
 		if resp != nil && resp.IsNewTree {
 			isNewT = true
 		}
@@ -292,6 +327,7 @@ func (s *HistoryV2PersistenceSuite) deleteHistoryBranch(treeID, branchID string)
 				BranchID: branchID,
 			},
 		})
+		//fmt.Println("delete ret:", err, treeID, branchID)
 		return err
 	}
 

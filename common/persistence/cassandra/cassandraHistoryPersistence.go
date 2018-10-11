@@ -24,7 +24,6 @@ import (
 	"fmt"
 
 	"sort"
-
 	"strings"
 
 	"github.com/gocql/gocql"
@@ -213,7 +212,7 @@ func (h *cassandraHistoryPersistence) NewHistoryBranch(request *p.NewHistoryBran
 	resp := &p.NewHistoryBranchResponse{IsNewTree: isNewTree}
 	txnID, err := h.prepareTreeTransaction(treeID)
 	if err != nil {
-		return nil, err
+		return resp, err
 	}
 	batch := h.session.NewBatch(gocql.LoggedBatch)
 	h.beginWriteTransaction(batch, treeID, txnID)
@@ -230,11 +229,11 @@ func (h *cassandraHistoryPersistence) NewHistoryBranch(request *p.NewHistoryBran
 	}()
 
 	if err != nil {
-		return nil, convertCommonErrors("NewHistoryBranch", err)
+		return resp, convertCommonErrors("NewHistoryBranch", err)
 	}
 
 	if !applied {
-		return nil, h.getInsertHistoryBranchFailure(previous, iter, txnID, treeID, branchID)
+		return resp, h.getInsertHistoryBranchFailure(previous, iter, txnID, treeID, branchID)
 	}
 
 	return resp, nil
@@ -252,7 +251,8 @@ func (h *cassandraHistoryPersistence) getInsertHistoryBranchFailure(previous map
 
 GetFailureReasonLoop:
 	for {
-		rowType, ok := previous["row_type"].(int)
+		allPrevious = append(allPrevious, previous)
+		rowType, ok := previous["row_type"].(int64)
 		if !ok {
 			// This should never happen, as all our rows have the type field.
 			break GetFailureReasonLoop
@@ -271,7 +271,6 @@ GetFailureReasonLoop:
 			branchAlreadyExits = true
 		}
 
-		allPrevious = append(allPrevious, previous)
 		previous = make(map[string]interface{})
 		if !iter.MapScan(previous) {
 			break GetFailureReasonLoop
@@ -380,10 +379,10 @@ func (h *cassandraHistoryPersistence) AppendHistoryNodes(request *p.InternalAppe
 	// First update/override existing events
 	// If NextNodeIDToUpdate == NextNodeIDToInsert, it won't do any update
 	for nodeID := request.NextNodeIDToUpdate; nodeID < request.NextNodeIDToInsert; nodeID++ {
-		currIdx++
 		event := request.Events[currIdx]
 		batch.Query(v2templateOverrideNode,
 			request.TransactionID, event.Data, event.Encoding, treeID, branchID, rowTypeHistoryNode, nodeID, request.TransactionID)
+		currIdx++
 	}
 
 	// Then insert new events until we reach the last event
@@ -429,7 +428,8 @@ func (h *cassandraHistoryPersistence) getAppendHistoryNodesFailure(previous map[
 
 GetFailureReasonLoop:
 	for {
-		rowType, ok := previous["row_type"].(int)
+		allPrevious = append(allPrevious, previous)
+		rowType, ok := previous["row_type"].(int64)
 		if !ok {
 			// This should never happen, as all our rows have the type field.
 			break GetFailureReasonLoop
@@ -453,7 +453,6 @@ GetFailureReasonLoop:
 			eventAlreadyExits = true
 		}
 
-		allPrevious = append(allPrevious, previous)
 		previous = make(map[string]interface{})
 		if !iter.MapScan(previous) {
 			break GetFailureReasonLoop
@@ -769,8 +768,9 @@ func (h *cassandraHistoryPersistence) DeleteHistoryBranch(request *p.DeleteHisto
 		return err
 	}
 
-	// this may do a read transaction or a special write transaction(delete the root node)
-	return h.deleteBranchAndRootNode(request.BranchInfo)
+	// this may do a write transaction or a special write transaction(delete the root node)
+	err = h.deleteBranchAndRootNode(request.BranchInfo)
+	return err
 }
 
 func (h *cassandraHistoryPersistence) markBranchAsDeleted(branch p.HistoryBranch) error {
@@ -890,17 +890,15 @@ func (h *cassandraHistoryPersistence) deleteBranchAndRootNode(branch p.HistoryBr
 	batch.Query(v2templateDeleteOneNode,
 		treeID, branch.BranchID, rowTypeHistoryBranch, branchNodeID)
 
-	rsp, err := h.GetHistoryTree(&p.GetHistoryTreeRequest{
-		TreeID: treeID,
-	})
+	isLast, err := h.isLastBranch(branch.TreeID)
 	if err != nil {
 		return err
 	}
-	if len(rsp.Branches) == 0 {
+	if isLast {
 		batch.Query(v2templateDeleteRoot,
 			treeID, rootNodeBranchID, rowTypeHistoryNode, rootNodeID, txnID)
 	} else {
-		h.beginReadTransaction(batch, treeID, txnID)
+		h.beginWriteTransaction(batch, treeID, txnID)
 	}
 
 	previous := make(map[string]interface{})
@@ -930,7 +928,8 @@ func (h *cassandraHistoryPersistence) getTreeTrasactionFailure(previous map[stri
 
 GetFailureReasonLoop:
 	for {
-		rowType, ok := previous["row_type"].(int)
+		allPrevious = append(allPrevious, previous)
+		rowType, ok := previous["row_type"].(int64)
 		if !ok {
 			// This should never happen, as all our rows have the type field.
 			break GetFailureReasonLoop
@@ -947,7 +946,6 @@ GetFailureReasonLoop:
 			}
 		}
 
-		allPrevious = append(allPrevious, previous)
 		previous = make(map[string]interface{})
 		if !iter.MapScan(previous) {
 			break GetFailureReasonLoop
@@ -956,7 +954,7 @@ GetFailureReasonLoop:
 
 	if txnIDUnmatch {
 		return &p.ConditionFailedError{
-			Msg: fmt.Sprintf("Failed to create a new branch. txnIDUnmatch: %v . Request txn_id: %v, Actual Value: %v",
+			Msg: fmt.Sprintf("Failed to do a tree transation. txnIDUnmatch: %v . Request txn_id: %v, Actual Value: %v",
 				txnIDUnmatch, reqTxnID, actualTxnID),
 		}
 	}
@@ -971,9 +969,33 @@ GetFailureReasonLoop:
 		columnID++
 	}
 	return &p.UnexpectedConditionFailedError{
-		Msg: fmt.Sprintf("Failed to create a new branch. Request txn_id: %v, Actual Value: %v, columns: (%v)",
+		Msg: fmt.Sprintf("Failed to do a tree transation. Request txn_id: %v, Actual Value: %v, columns: (%v)",
 			reqTxnID, actualTxnID, columns),
 	}
+}
+
+func (h *cassandraHistoryPersistence) isLastBranch(treeID string) (bool, error) {
+	query := h.session.Query(v2templateReadRowType, treeID, rowTypeHistoryBranch)
+
+	iter := query.PageSize(2).Iter()
+	if iter == nil {
+		return false, &workflow.InternalServiceError{
+			Message: "isLastBranch operation failed.  Not able to create query iterator.",
+		}
+	}
+
+	brCount := 0
+	for iter.Scan(nil, nil, nil) {
+		brCount++
+	}
+
+	if err := iter.Close(); err != nil {
+		return false, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("isLastBranch. Close operation failed. Error: %v", err),
+		}
+	}
+
+	return brCount == 1, nil
 }
 
 // GetHistoryTree returns all branch information of a tree

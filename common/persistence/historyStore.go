@@ -91,6 +91,7 @@ func (m *historyManagerImpl) AppendHistoryNodes(request *AppendHistoryNodesReque
 	eventBlobs := []*DataBlob{}
 	size := 0
 	lastEventVersion := int64(0)
+	lastEventID := nextNodeID - 1
 	for _, e := range events {
 		if *e.Version < lastEventVersion {
 			return nil, &InvalidPersistenceRequestError{
@@ -98,6 +99,14 @@ func (m *historyManagerImpl) AppendHistoryNodes(request *AppendHistoryNodesReque
 			}
 		} else {
 			lastEventVersion = *e.Version
+		}
+
+		if *e.EventId != lastEventID+1 {
+			return nil, &InvalidPersistenceRequestError{
+				Msg: fmt.Sprintf("eventID must be continuous"),
+			}
+		} else {
+			lastEventID = *e.EventId
 		}
 
 		b, err := m.serializer.SerializeEvent(e, request.Encoding)
@@ -115,6 +124,7 @@ func (m *historyManagerImpl) AppendHistoryNodes(request *AppendHistoryNodesReque
 		NextNodeIDToUpdate: nextNodeID,
 		NextNodeIDToInsert: nextNodeID,
 		Events:             eventBlobs,
+		TransactionID:      request.TransactionID,
 	})
 	if err == nil {
 		return resp, nil
@@ -224,11 +234,6 @@ func (m *historyManagerImpl) ReadHistoryBranch(request *ReadHistoryBranchRequest
 		return nil, err
 	}
 
-	// this also means that we had reached the final page
-	if len(resp.History) == 0 {
-		return response, nil
-	}
-
 	//NOTE: in this method, we need to make sure eventVersion is NOT decreasing(otherwise we skip the events), eventID should be continuous(otherwise return error)
 	lastEventVersion := token.LastEventVersion
 	lastNodeID := token.LastNodeID
@@ -239,19 +244,28 @@ func (m *historyManagerImpl) ReadHistoryBranch(request *ReadHistoryBranchRequest
 			return nil, err
 		}
 
-		if *e.Version < lastEventVersion || lastNodeID+1 != *e.EventId {
+		if *e.Version < lastEventVersion {
+			//version decrease means the rest are all stale events
+			break
+		}
+		if lastNodeID+1 != *e.EventId {
 			logger := m.logger.WithFields(bark.Fields{
 				logging.TagBranchID: request.BranchInfo.BranchID,
 				logging.TagTreeID:   request.BranchInfo.TreeID,
 			})
-			logger.Error("Unexpected event ID and version")
-			return nil, fmt.Errorf("corrupted history event batch, unexpected eventID/eventVersion")
+			logger.Error("Unexpected event ID")
+			return nil, fmt.Errorf("corrupted history event batch, unexpected eventID")
 		}
 
 		lastEventVersion = *e.Version
 		lastNodeID = *e.EventId
 		events = append(events, e)
 		dataSize += len(b.Data)
+	}
+
+	// this also means that we had reached the final page
+	if len(events) == 0 {
+		return response, nil
 	}
 
 	// our first nodeID should be strictly equal to first eventID
