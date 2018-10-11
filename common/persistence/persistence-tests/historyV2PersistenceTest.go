@@ -128,6 +128,26 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndDeleteEmptyBranches
 		wg.Add(1)
 		go func(brID string) {
 			defer wg.Done()
+			// delete old branches along with create new branches
+			err := s.deleteHistoryBranch(treeID, brID)
+			s.Nil(err)
+
+			brID2 := s.genRandomUUIDString()
+			_, err = s.newHistoryBranch(treeID, brID2)
+			s.Nil(err)
+		}(branches[i].BranchID)
+	}
+
+	wg.Wait()
+	branches = s.descTree(treeID)
+	s.Equal(10, len(branches))
+
+	// delete the newly empty branches
+	wg = sync.WaitGroup{}
+	for i := 0; i < concurrency; i++ {
+		wg.Add(1)
+		go func(brID string) {
+			defer wg.Done()
 			err := s.deleteHistoryBranch(treeID, brID)
 			s.Nil(err)
 		}(branches[i].BranchID)
@@ -142,6 +162,14 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndDeleteEmptyBranches
 	isNewTree, err := s.newHistoryBranch(treeID, brID)
 	s.Nil(err)
 	s.Equal(true, isNewTree)
+	branches = s.descTree(treeID)
+	s.Equal(1, len(branches))
+
+	// a final clean up
+	err = s.deleteHistoryBranch(treeID, brID)
+	s.Nil(err)
+	branches = s.descTree(treeID)
+	s.Equal(0, len(branches))
 }
 
 func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndAppendBranches() {
@@ -293,7 +321,7 @@ func (s *HistoryV2PersistenceSuite) genRandomEvents(eventIDs []int64) []*workflo
 	return events
 }
 
-// NewHistoryBranch helper
+// persistence helper
 func (s *HistoryV2PersistenceSuite) newHistoryBranch(treeID, branchID string) (bool, error) {
 
 	isNewT := false
@@ -306,7 +334,6 @@ func (s *HistoryV2PersistenceSuite) newHistoryBranch(treeID, branchID string) (b
 				BranchID: branchID,
 			},
 		})
-		//fmt.Println("newBr ret:", resp, err, treeID, branchID)
 		if resp != nil && resp.IsNewTree {
 			isNewT = true
 		}
@@ -317,6 +344,7 @@ func (s *HistoryV2PersistenceSuite) newHistoryBranch(treeID, branchID string) (b
 	return isNewT, err
 }
 
+// persistence helper
 func (s *HistoryV2PersistenceSuite) deleteHistoryBranch(treeID, branchID string) error {
 
 	op := func() error {
@@ -327,13 +355,13 @@ func (s *HistoryV2PersistenceSuite) deleteHistoryBranch(treeID, branchID string)
 				BranchID: branchID,
 			},
 		})
-		//fmt.Println("delete ret:", err, treeID, branchID)
 		return err
 	}
 
 	return backoff.Retry(op, historyTestRetryPolicy, isConditionFail)
 }
 
+// helper
 func (s *HistoryV2PersistenceSuite) descTree(treeID string) []p.HistoryBranch {
 	resp, err := s.HistoryMgr.GetHistoryTree(&p.GetHistoryTreeRequest{
 		TreeID: treeID,
@@ -361,6 +389,7 @@ func (s *HistoryV2PersistenceSuite) read(branch p.HistoryBranch, minID, maxID, l
 	return &resp.BranchInfo, resp.History, resp.NextPageToken, nil
 }
 
+// persistence helper
 func (s *HistoryV2PersistenceSuite) append(treeID, branchID string, events []*workflow.HistoryEvent, txnID int64) (int, error) {
 
 	var resp *p.AppendHistoryNodesResponse
