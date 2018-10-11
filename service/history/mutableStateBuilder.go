@@ -1201,6 +1201,25 @@ func (e *mutableStateBuilder) AddDecisionTaskScheduledEvent() *decisionInfo {
 	)
 }
 
+func (e *mutableStateBuilder) ReplicateTransientDecisionTaskScheduled() *decisionInfo {
+	if e.HasPendingDecisionTask() || e.GetExecutionInfo().DecisionAttempt == 0 {
+		return nil
+	}
+
+	di := &decisionInfo{
+		Version:         e.GetCurrentVersion(),
+		ScheduleID:      e.GetNextEventID(),
+		StartedID:       common.EmptyEventID,
+		RequestID:       emptyUUID,
+		DecisionTimeout: e.GetExecutionInfo().DecisionTimeoutValue,
+		TaskList:        e.GetExecutionInfo().TaskList,
+		Attempt:         e.GetExecutionInfo().DecisionAttempt,
+	}
+
+	e.UpdateDecision(di)
+	return di
+}
+
 func (e *mutableStateBuilder) ReplicateDecisionTaskScheduledEvent(version, scheduleID int64, taskList string,
 	startToCloseTimeoutSeconds int32, attempt int64) *decisionInfo {
 	di := &decisionInfo{
