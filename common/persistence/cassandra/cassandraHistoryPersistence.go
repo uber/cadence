@@ -80,6 +80,10 @@ func NewHistoryPersistence(hosts string, port int, user, password, dc string, ke
 	return &cassandraHistoryPersistence{session: session, logger: logger}, nil
 }
 
+func (h *cassandraHistoryPersistence) GetName() string {
+	return cassandraPersistenceName
+}
+
 // Close gracefully releases the resources held by this object
 func (h *cassandraHistoryPersistence) Close() {
 	if h.session != nil {

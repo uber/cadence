@@ -35,9 +35,8 @@ import (
 
 type (
 	sqlHistoryManager struct {
-		db      *sqlx.DB
+		sqlManager
 		shardID int
-		logger  bark.Logger
 	}
 
 	eventsRow struct {
@@ -90,8 +89,10 @@ func NewHistoryPersistence(host string, port int, username, password, dbName str
 		return nil, err
 	}
 	return &sqlHistoryManager{
-		db:     db,
-		logger: logger,
+		sqlManager: sqlManager{
+			db:     db,
+			logger: logger,
+		},
 	}, nil
 }
 
@@ -124,12 +125,13 @@ func (m *sqlHistoryManager) GetWorkflowExecutionHistory(request *p.InternalGetWo
 
 	offset := request.FirstEventID - 1
 	if request.NextPageToken != nil && len(request.NextPageToken) > 0 {
-		if newOffset, err := deserializePageToken(request.NextPageToken); err != nil {
+		var newOffset int64
+		var err error
+		if newOffset, err = deserializePageToken(request.NextPageToken); err != nil {
 			return nil, &workflow.InternalServiceError{
 				Message: fmt.Sprintf("invalid next page token %v", request.NextPageToken)}
-		} else {
-			offset = newOffset
 		}
+		offset = newOffset
 	}
 
 	var rows []eventsRow

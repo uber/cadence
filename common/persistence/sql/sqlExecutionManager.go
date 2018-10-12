@@ -1489,7 +1489,7 @@ func getCurrentExecutionIfExists(tx *sqlx.Tx, shardID int64, domainID string, wo
 	size := len(rows)
 	if size > 1 {
 		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("Multiple current_executions rows for (shard,domain,workflow) = (%v, %v, %v). Error: %v", shardID, domainID, workflowID),
+			Message: fmt.Sprintf("Multiple current_executions rows for (shard,domain,workflow) = (%v, %v, %v).", shardID, domainID, workflowID),
 		}
 	}
 	if size == 0 {

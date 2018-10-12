@@ -92,7 +92,7 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionBrandNew() {
 		RangeID:              s.ShardInfo.RangeID,
 		CreateWorkflowMode:   p.CreateWorkflowModeBrandNew,
 	})
-	s.Nil(err)
+	s.NoError(err)
 }
 
 // TestCreateWorkflowExecutionRunIDReuseWithReplication test
@@ -120,7 +120,7 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionRunIDReuseWithReplica
 	task0, err0 := s.CreateWorkflowExecutionWithReplication(domainID, workflowExecution, tasklist,
 		workflowType, workflowTimeout, decisionTimeout, nextEventID,
 		lastProcessedEventID, decisionScheduleID, replicationState, nil)
-	s.Nil(err0, "No error expected.")
+	s.NoError(err0)
 	s.NotNil(task0, "Expected non empty task identifier.")
 
 	newExecution := gen.WorkflowExecution{
@@ -147,7 +147,7 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionRunIDReuseWithReplica
 	s.IsType(&p.ConditionFailedError{}, err)
 
 	info, err := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
-	s.Nil(err)
+	s.NoError(err)
 
 	updatedInfo := copyWorkflowExecutionInfo(info.ExecutionInfo)
 	updatedInfo.State = p.WorkflowStateCompleted
@@ -175,7 +175,7 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionRunIDReuseWithReplica
 		FinishExecution:      true,
 		ReplicationState:     updateReplicationState,
 	})
-	s.Nil(err)
+	s.NoError(err)
 
 	_, err = s.ExecutionManager.CreateWorkflowExecution(&p.CreateWorkflowExecutionRequest{
 		RequestID:                uuid.New(),
@@ -193,7 +193,7 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionRunIDReuseWithReplica
 		PreviousLastWriteVersion: version,
 		ReplicationState:         replicationState,
 	})
-	s.Nil(err)
+	s.NoError(err)
 }
 
 // TestCreateWorkflowExecutionRunIDReuseWithoutReplication test
@@ -214,8 +214,20 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionRunIDReuseWithoutRepl
 	task0, err0 := s.CreateWorkflowExecution(domainID, workflowExecution, tasklist,
 		workflowType, workflowTimeout, decisionTimeout, nil, nextEventID,
 		lastProcessedEventID, decisionScheduleID, nil)
-	s.Nil(err0, "No error expected.")
+	s.NoError(err0)
 	s.NotNil(task0, "Expected non empty task identifier.")
+
+	state0, err1 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
+	s.NoError(err1)
+	info0 := state0.ExecutionInfo
+	closeInfo := copyWorkflowExecutionInfo(info0)
+	closeInfo.State = p.WorkflowStateCompleted
+	closeInfo.NextEventID = int64(5)
+	closeInfo.LastProcessedEvent = int64(2)
+
+	err2 := s.UpdateWorkflowExecution(closeInfo, nil, nil, nextEventID,
+		nil, nil, nil, nil, nil, nil)
+	s.NoError(err2)
 
 	newExecution := gen.WorkflowExecution{
 		WorkflowId: workflowExecution.WorkflowId,
@@ -223,7 +235,7 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionRunIDReuseWithoutRepl
 	}
 	// this create should work since we are relying the business logic in history engine
 	// to check whether the existing running workflow has finished
-	_, err := s.ExecutionManager.CreateWorkflowExecution(&p.CreateWorkflowExecutionRequest{
+	_, err3 := s.ExecutionManager.CreateWorkflowExecution(&p.CreateWorkflowExecutionRequest{
 		RequestID:            uuid.New(),
 		DomainID:             domainID,
 		Execution:            newExecution,
@@ -237,7 +249,7 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionRunIDReuseWithoutRepl
 		CreateWorkflowMode:   p.CreateWorkflowModeWorkflowIDReuse,
 		PreviousRunID:        workflowExecution.GetRunId(),
 	})
-	s.Nil(err)
+	s.NoError(err3)
 }
 
 // TestPersistenceStartWorkflow test
@@ -616,7 +628,9 @@ func (s *ExecutionManagerSuite) TestDeleteWorkflow() {
 
 // TestDeleteCurrentWorkflow test
 func (s *ExecutionManagerSuite) TestDeleteCurrentWorkflow() {
-	s.T().Skip("SQL doesn't support retention yet")
+	if s.ExecutionManager.GetName() != "cassandra" {
+		s.T().Skip("SQL doesn't support retention yet")
+	}
 	finishedCurrentExecutionRetentionTTL := int32(3) // 3 seconds
 	domainID := "54d15308-e20e-4b91-a00f-a518a3892790"
 	workflowExecution := gen.WorkflowExecution{
@@ -1399,7 +1413,7 @@ func (s *ExecutionManagerSuite) TestWorkflowMutableStateActivities() {
 	s.Equal(int32(2), ai.ScheduleToStartTimeout)
 	s.Equal(int32(3), ai.StartToCloseTimeout)
 	s.Equal(int32(4), ai.HeartbeatTimeout)
-	s.Equal(currentTime.Unix(), ai.LastHeartBeatUpdatedTime.Unix())
+	s.EqualTimes(currentTime, ai.LastHeartBeatUpdatedTime)
 	s.Equal(int32(1), ai.TimerTaskStatus)
 
 	err2 = s.UpdateWorkflowExecution(updatedInfo, nil, nil, int64(5), nil, nil, nil, []int64{1}, nil, nil)
@@ -2223,7 +2237,7 @@ func (s *ExecutionManagerSuite) TestWorkflowReplicationState() {
 	}
 }
 
-// TestResetMutableStateCurrentIsSelf test
+// TestUpdateAndClearBufferedEvents test
 func (s *ExecutionManagerSuite) TestUpdateAndClearBufferedEvents() {
 	domainID := "4ca1faac-1a3a-47af-8e51-fdaa2b3d45b9"
 	workflowExecution := gen.WorkflowExecution{
@@ -2476,7 +2490,7 @@ func (s *ExecutionManagerSuite) TestResetMutableStateCurrentIsSelf() {
 			9: {
 				Version:         2334,
 				InitiatedID:     9,
-				InitiatedEvent:  nil,
+				InitiatedEvent:  &gen.HistoryEvent{EventId: int64Ptr(123)},
 				StartedID:       11,
 				StartedEvent:    nil,
 				CreateRequestID: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
@@ -2558,12 +2572,12 @@ func (s *ExecutionManagerSuite) TestResetMutableStateCurrentIsSelf() {
 	s.EqualTimes(currentTime, ai.ScheduledTime)
 	s.Equal(int64(6), ai.StartedID)
 	s.Equal(int64(60), *ai.StartedEvent.EventId)
-	s.Equal(currentTime.Unix(), ai.StartedTime.Unix())
+	s.EqualTimes(currentTime, ai.StartedTime)
 	s.Equal(int32(1), ai.ScheduleToCloseTimeout)
 	s.Equal(int32(2), ai.ScheduleToStartTimeout)
 	s.Equal(int32(3), ai.StartToCloseTimeout)
 	s.Equal(int32(4), ai.HeartbeatTimeout)
-	s.Equal(currentTime.Unix(), ai.LastHeartBeatUpdatedTime.Unix())
+	s.EqualTimes(currentTime, ai.LastHeartBeatUpdatedTime)
 	s.Equal(int32(1), ai.TimerTaskStatus)
 
 	ai, ok = state1.ActivitInfos[5]
@@ -2572,15 +2586,15 @@ func (s *ExecutionManagerSuite) TestResetMutableStateCurrentIsSelf() {
 	s.Equal(int64(7789), ai.Version)
 	s.Equal(int64(5), ai.ScheduleID)
 	s.Equal(int64(50), *ai.ScheduledEvent.EventId)
-	s.Equal(currentTime.Unix(), ai.ScheduledTime.Unix())
+	s.EqualTimes(currentTime, ai.ScheduledTime)
 	s.Equal(int64(7), ai.StartedID)
 	s.Equal(int64(70), *ai.StartedEvent.EventId)
-	s.Equal(currentTime.Unix(), ai.StartedTime.Unix())
+	s.EqualTimes(currentTime, ai.StartedTime)
 	s.Equal(int32(1), ai.ScheduleToCloseTimeout)
 	s.Equal(int32(2), ai.ScheduleToStartTimeout)
 	s.Equal(int32(3), ai.StartToCloseTimeout)
 	s.Equal(int32(4), ai.HeartbeatTimeout)
-	s.Equal(currentTime.Unix(), ai.LastHeartBeatUpdatedTime.Unix())
+	s.EqualTimes(currentTime, ai.LastHeartBeatUpdatedTime)
 	s.Equal(int32(1), ai.TimerTaskStatus)
 
 	s.Equal(3, len(state1.TimerInfos))
@@ -2679,7 +2693,7 @@ func (s *ExecutionManagerSuite) TestResetMutableStateCurrentIsSelf() {
 		{
 			Version:         3334,
 			InitiatedID:     10,
-			InitiatedEvent:  nil,
+			InitiatedEvent:  &gen.HistoryEvent{EventId: common.Int64Ptr(10)},
 			StartedID:       15,
 			StartedEvent:    nil,
 			CreateRequestID: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",

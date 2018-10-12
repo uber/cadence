@@ -151,6 +151,10 @@ func NewVisibilityPersistence(
 	return &cassandraVisibilityPersistence{session: session, lowConslevel: gocql.One, logger: logger}, nil
 }
 
+func (v *cassandraVisibilityPersistence) GetName() string {
+	return cassandraPersistenceName
+}
+
 // Close releases the resources held by this object
 func (v *cassandraVisibilityPersistence) Close() {
 	if v.session != nil {

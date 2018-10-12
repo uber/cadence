@@ -1053,6 +1053,7 @@ func (s *TestBase) ClearReplicationQueue() {
 	atomic.StoreInt64(&s.ReplicationReadLevel, 0)
 }
 
+// EqualTimesWithPrecision assertion that two times are equal within precision
 func (s *TestBase) EqualTimesWithPrecision(t1, t2 time.Time, precision time.Duration) {
 	s.True(timeComparator(t1, t2, precision),
 		"Not equal: \n"+
@@ -1061,6 +1062,7 @@ func (s *TestBase) EqualTimesWithPrecision(t1, t2 time.Time, precision time.Dura
 	)
 }
 
+// EqualTimes assertion that two times are equal within two millisecond precision
 func (s *TestBase) EqualTimes(t1, t2 time.Time) {
 	s.EqualTimesWithPrecision(t1, t2, TimePrecision)
 }

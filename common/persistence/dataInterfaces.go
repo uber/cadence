@@ -1059,6 +1059,7 @@ type (
 	// ShardManager is used to manage all shards
 	ShardManager interface {
 		Closeable
+		GetName() string
 		CreateShard(request *CreateShardRequest) error
 		GetShard(request *GetShardRequest) (*GetShardResponse, error)
 		UpdateShard(request *UpdateShardRequest) error
@@ -1067,6 +1068,8 @@ type (
 	// ExecutionManager is used to manage workflow executions
 	ExecutionManager interface {
 		Closeable
+		GetName() string
+
 		CreateWorkflowExecution(request *CreateWorkflowExecutionRequest) (*CreateWorkflowExecutionResponse, error)
 		GetWorkflowExecution(request *GetWorkflowExecutionRequest) (*GetWorkflowExecutionResponse, error)
 		UpdateWorkflowExecution(request *UpdateWorkflowExecutionRequest) (*UpdateWorkflowExecutionResponse, error)
@@ -1098,6 +1101,7 @@ type (
 	// TaskManager is used to manage tasks
 	TaskManager interface {
 		Closeable
+		GetName() string
 		LeaseTaskList(request *LeaseTaskListRequest) (*LeaseTaskListResponse, error)
 		UpdateTaskList(request *UpdateTaskListRequest) (*UpdateTaskListResponse, error)
 		CreateTasks(request *CreateTasksRequest) (*CreateTasksResponse, error)
@@ -1108,6 +1112,7 @@ type (
 	// HistoryManager is used to manage Workflow Execution HistoryEventBatch
 	HistoryManager interface {
 		Closeable
+		GetName() string
 		AppendHistoryEvents(request *AppendHistoryEventsRequest) (*AppendHistoryEventsResponse, error)
 		// GetWorkflowExecutionHistory retrieves the paginated list of history events for given execution
 		GetWorkflowExecutionHistory(request *GetWorkflowExecutionHistoryRequest) (*GetWorkflowExecutionHistoryResponse,
@@ -1118,6 +1123,7 @@ type (
 	// MetadataManager is used to manage metadata CRUD for domain entities
 	MetadataManager interface {
 		Closeable
+		GetName() string
 		CreateDomain(request *CreateDomainRequest) (*CreateDomainResponse, error)
 		GetDomain(request *GetDomainRequest) (*GetDomainResponse, error)
 		UpdateDomain(request *UpdateDomainRequest) error

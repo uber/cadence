@@ -88,7 +88,7 @@ func (t *serializerImpl) SerializeBatchEvents(events []*workflow.HistoryEvent, e
 		}
 		data, err := t.thriftrwEncoder.Encode(history)
 		if err != nil {
-			return nil, &HistorySerializationError{msg: err.Error()}
+			return nil, NewHistorySerializationError(err.Error())
 		}
 		return NewDataBlob(data, encodingType), nil
 	default:
@@ -96,7 +96,7 @@ func (t *serializerImpl) SerializeBatchEvents(events []*workflow.HistoryEvent, e
 	case common.EncodingTypeJSON:
 		data, err := json.Marshal(batch.Events)
 		if err != nil {
-			return nil, &HistorySerializationError{msg: err.Error()}
+			return nil, NewHistorySerializationError(err.Error())
 		}
 		return NewDataBlob(data, common.EncodingTypeJSON), nil
 	}
@@ -117,14 +117,14 @@ func (t *serializerImpl) DeserializeBatchEvents(data *DataBlob) ([]*workflow.His
 		}
 		err := json.Unmarshal(data.Data, &events)
 		if err != nil {
-			return nil, &HistoryDeserializationError{msg: err.Error()}
+			return nil, NewHistoryDeserializationError(fmt.Sprintf("DeserializeBatchEvents encoding: \"%v\", error: %v", data.Encoding, err.Error()))
 		}
 		return events, nil
 	case common.EncodingTypeThriftRW:
 		var history workflow.History
 		err := t.thriftrwEncoder.Decode(data.Data, &history)
 		if err != nil {
-			return nil, &HistoryDeserializationError{msg: err.Error()}
+			return nil, NewHistoryDeserializationError(fmt.Sprintf("DeserializeBatchEvents encoding: \"%v\", error: %v", data.Encoding, err.Error()))
 		}
 		return history.Events, nil
 	default:
@@ -142,7 +142,7 @@ func (t *serializerImpl) SerializeEvent(event *workflow.HistoryEvent, encodingTy
 	case common.EncodingTypeThriftRW:
 		data, err := t.thriftrwEncoder.Encode(event)
 		if err != nil {
-			return nil, &HistorySerializationError{msg: err.Error()}
+			return nil, NewHistorySerializationError(err.Error())
 		}
 		return NewDataBlob(data, encodingType), nil
 	default:
@@ -150,7 +150,7 @@ func (t *serializerImpl) SerializeEvent(event *workflow.HistoryEvent, encodingTy
 	case common.EncodingTypeJSON:
 		data, err := json.Marshal(event)
 		if err != nil {
-			return nil, &HistorySerializationError{msg: err.Error()}
+			return nil, NewHistorySerializationError(err.Error())
 		}
 		return NewDataBlob(data, common.EncodingTypeJSON), nil
 	}
@@ -171,13 +171,13 @@ func (t *serializerImpl) DeserializeEvent(data *DataBlob) (*workflow.HistoryEven
 		}
 		err := json.Unmarshal(data.Data, &event)
 		if err != nil {
-			return nil, &HistoryDeserializationError{msg: err.Error()}
+			return nil, NewHistoryDeserializationError(fmt.Sprintf("DeserializeEvent encoding: \"%v\", error: %v", data.Encoding, err.Error()))
 		}
 		return &event, nil
 	case common.EncodingTypeThriftRW:
 		err := t.thriftrwEncoder.Decode(data.Data, &event)
 		if err != nil {
-			return nil, &HistoryDeserializationError{msg: err.Error()}
+			return nil, NewHistoryDeserializationError(fmt.Sprintf("DeserializeEvent encoding: \"%v\", error: %v", data.Encoding, err.Error()))
 		}
 		return &event, nil
 	default:
@@ -194,13 +194,18 @@ func (e *UnknownEncodingTypeError) Error() string {
 	return fmt.Sprintf("unknown or unsupported encoding type %v", e.encodingType)
 }
 
-//NewHistorySerializationError returns a HistorySerializationError
+// NewHistorySerializationError returns a HistorySerializationError
 func NewHistorySerializationError(msg string) *HistorySerializationError {
 	return &HistorySerializationError{msg: msg}
 }
 
 func (e *HistorySerializationError) Error() string {
 	return fmt.Sprintf("history serialization error: %v", e.msg)
+}
+
+// NewHistoryDeserializationError returns a HistoryDeserializationError
+func NewHistoryDeserializationError(msg string) *HistoryDeserializationError {
+	return &HistoryDeserializationError{msg: msg}
 }
 
 func (e *HistoryDeserializationError) Error() string {

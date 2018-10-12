@@ -118,6 +118,10 @@ func NewMetadataPersistenceV2(hosts string, port int, user, password, dc string,
 	}, nil
 }
 
+func (m *cassandraMetadataPersistenceV2) GetName() string {
+	return cassandraPersistenceName
+}
+
 // Close releases the resources held by this object
 func (m *cassandraMetadataPersistenceV2) Close() {
 	if m.session != nil {

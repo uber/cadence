@@ -36,9 +36,8 @@ import (
 type (
 	// Implements MetadataManager
 	sqlMetadataManagerV2 struct {
-		db                *sqlx.DB
+		sqlManager
 		activeClusterName string
-		logger            bark.Logger
 	}
 
 	domainCommon struct {
@@ -177,9 +176,11 @@ func NewMetadataPersistenceV2(host string, port int, username, password, dbName 
 		return nil, err
 	}
 	return &sqlMetadataManagerV2{
-		db:                db,
+		sqlManager: sqlManager{
+			db:     db,
+			logger: logger,
+		},
 		activeClusterName: currentClusterName,
-		logger:            logger,
 	}, nil
 }
 

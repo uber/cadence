@@ -109,26 +109,20 @@ func (s *timerQueueProcessorSuite) TearDownTest() {
 
 func (s *timerQueueProcessorSuite) updateTimerSeqNumbers(timerTasks []persistence.Task) {
 	for _, task := range timerTasks {
-		ts, err := persistence.GetVisibilityTSFrom(task)
-		if err != nil {
-			panic(err)
-		}
+		ts := task.GetVisibilityTimestamp()
 		if ts.Before(s.engineImpl.shard.GetTimerMaxReadLevel()) {
 			// This can happen if shard move and new host have a time SKU, or there is db write delay.
 			// We generate a new timer ID using timerMaxReadLevel.
 			s.logger.Warnf("%v: New timer generated is less than read level. timestamp: %v, timerMaxReadLevel: %v",
 				time.Now(), ts, s.engineImpl.shard.GetTimerMaxReadLevel())
-			persistence.SetVisibilityTSFrom(task, s.engineImpl.shard.GetTimerMaxReadLevel().Add(time.Millisecond))
+			task.SetVisibilityTimestamp(s.engineImpl.shard.GetTimerMaxReadLevel().Add(time.Millisecond))
 		}
 		taskID, err := s.ShardContext.GetNextTransferTaskID()
 		if err != nil {
 			panic(err)
 		}
 		task.SetTaskID(taskID)
-		ts, err = persistence.GetVisibilityTSFrom(task)
-		if err != nil {
-			panic(err)
-		}
+		ts = task.GetVisibilityTimestamp()
 		s.logger.Infof("%v: TestTimerQueueProcessorSuite: Assigning timer: %s",
 			time.Now().UTC(), TimerSequenceID{VisibilityTimestamp: ts, TaskID: task.GetTaskID()})
 	}

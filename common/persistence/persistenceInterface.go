@@ -46,7 +46,7 @@ type (
 	// ExecutionStore is used to manage workflow executions for Persistence layer
 	ExecutionStore interface {
 		Closeable
-
+		GetName() string
 		//The below three APIs are related to serialization/deserialization
 		GetWorkflowExecution(request *GetWorkflowExecutionRequest) (*InternalGetWorkflowExecutionResponse, error)
 		UpdateWorkflowExecution(request *InternalUpdateWorkflowExecutionRequest) error
@@ -74,7 +74,7 @@ type (
 	// HistoryStore is used to manage Workflow Execution HistoryEventBatch for Persistence layer
 	HistoryStore interface {
 		Closeable
-
+		GetName() string
 		//The below two APIs are related to serialization/deserialization
 		AppendHistoryEvents(request *InternalAppendHistoryEventsRequest) error
 		GetWorkflowExecutionHistory(request *InternalGetWorkflowExecutionHistoryRequest) (*InternalGetWorkflowExecutionHistoryResponse, error)
@@ -193,7 +193,7 @@ type (
 	InternalChildExecutionInfo struct {
 		Version         int64
 		InitiatedID     int64
-		InitiatedEvent  *DataBlob
+		InitiatedEvent  DataBlob
 		StartedID       int64
 		StartedEvent    *DataBlob
 		CreateRequestID string
@@ -309,6 +309,13 @@ func NewDataBlob(data []byte, encodingType common.EncodingType) *DataBlob {
 		Data:     data,
 		Encoding: encodingType,
 	}
+}
+
+func FromDataBlob(blob *DataBlob) ([]byte, string) {
+	if blob == nil {
+		return nil, ""
+	}
+	return blob.Data, string(blob.Encoding)
 }
 
 // GetEncoding returns encoding type

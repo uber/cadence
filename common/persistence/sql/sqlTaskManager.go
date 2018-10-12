@@ -35,7 +35,7 @@ import (
 
 type (
 	sqlTaskManager struct {
-		db *sqlx.DB
+		sqlManager
 	}
 
 	tasksRow struct {
@@ -114,7 +114,10 @@ func NewTaskPersistence(host string, port int, username, password, dbName string
 		return nil, err
 	}
 	return &sqlTaskManager{
-		db: db,
+		sqlManager: sqlManager{
+			db:     db,
+			logger: logger,
+		},
 	}, nil
 }
 

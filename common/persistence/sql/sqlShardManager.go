@@ -34,9 +34,8 @@ import (
 
 type (
 	sqlShardManager struct {
-		db                 *sqlx.DB
+		sqlManager
 		currentClusterName string
-		log                bark.Logger
 	}
 
 	shardsRow struct {
@@ -118,15 +117,17 @@ shard_id = :shard_id
 )
 
 // NewShardPersistence creates an instance of ShardManager
-func NewShardPersistence(host string, port int, username, password, dbName string, currentClusterName string, log bark.Logger) (persistence.ShardManager, error) {
+func NewShardPersistence(host string, port int, username, password, dbName string, currentClusterName string, logger bark.Logger) (persistence.ShardManager, error) {
 	var db, err = newConnection(host, port, username, password, dbName)
 	if err != nil {
 		return nil, err
 	}
 	return &sqlShardManager{
-		db:                 db,
+		sqlManager: sqlManager{
+			db:     db,
+			logger: logger,
+		},
 		currentClusterName: currentClusterName,
-		log:                log,
 	}, nil
 }
 

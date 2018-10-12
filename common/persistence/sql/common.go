@@ -38,6 +38,10 @@ type sqlManager struct {
 	logger bark.Logger
 }
 
+func (m *sqlManager) GetName() string {
+	return m.db.DriverName()
+}
+
 func (m *sqlManager) txExecute(operation string, f func(tx *sqlx.Tx) error) error {
 	tx, err := m.db.Beginx()
 	if err != nil {

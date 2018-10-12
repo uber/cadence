@@ -43,8 +43,8 @@ type (
 	}
 )
 
-// Cassandra only provides milliseconds timestamp precision, so
-// we need to use tolerance when doing comparison
+// TimePrecision is needed to account for database timestamp precision.
+// Cassandra only provides milliseconds timestamp precision, so we need to use tolerance when doing comparison
 const TimePrecision = 2 * time.Millisecond
 
 // SetupSuite implementation
