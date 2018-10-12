@@ -21,7 +21,6 @@
 package cassandra
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -3026,7 +3025,6 @@ func (d *cassandraPersistence) updateChildExecutionInfos(batch *gocql.Batch, chi
 				return p.NewHistorySerializationError(fmt.Sprintf("expect to have the same encoding, but %v != %v", encoding, c.StartedEvent.GetEncoding()))
 			}
 		}
-		d.logger.Infof("updateChildExecutionInfos initiatedEventData=%v, encoding=%v", c.InitiatedEvent.Data, encoding)
 		batch.Query(templateUpdateChildExecutionInfoQuery,
 			c.InitiatedID,
 			c.Version,
@@ -3655,8 +3653,6 @@ func createTimerInfo(result map[string]interface{}) *p.TimerInfo {
 
 func createChildExecutionInfo(result map[string]interface{}, logger bark.Logger) *p.InternalChildExecutionInfo {
 	info := &p.InternalChildExecutionInfo{}
-	m, _ := json.Marshal(result)
-	logger.Infof("createChildExecutionInfo result=%v", string(m))
 	var startedData []byte
 	for k, v := range result {
 		switch k {
@@ -3679,9 +3675,6 @@ func createChildExecutionInfo(result map[string]interface{}, logger bark.Logger)
 	if len(startedData) > 0 {
 		info.StartedEvent = p.NewDataBlob(startedData, info.InitiatedEvent.Encoding)
 	}
-	m, _ = json.Marshal(info)
-	logger.Infof("createChildExecutionInfo info=%v", string(m))
-
 	return info
 }
 
@@ -3825,7 +3818,6 @@ func resetChildExecutionInfoMap(childExecutionInfos []*p.InternalChildExecutionI
 		cInfo["event_data_encoding"] = c.InitiatedEvent.Encoding
 		cInfo["version"] = c.Version
 		cInfo["initiated_id"] = c.InitiatedID
-		logger.Infof("resetChildExecutionInfoMap initiated_event data=%v", c.InitiatedEvent.Data)
 		cInfo["initiated_event"] = c.InitiatedEvent.Data
 		cInfo["create_request_id"] = c.CreateRequestID
 		cInfo["started_id"] = c.StartedID
