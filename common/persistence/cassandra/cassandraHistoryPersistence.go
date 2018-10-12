@@ -72,7 +72,7 @@ const (
 		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id = ? `
 
 	v2templateReadNodes = `SELECT node_id, data, data_encoding FROM events_v2 ` +
-		`WHERE tree_id = ? AND branch_id IN ? AND row_type = ? AND node_id >= ? AND node_id < ? `
+		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id >= ? AND node_id < ? `
 
 	v2templateUpdateTreeRoot = `UPDATE events_v2 ` +
 		`SET txn_id = ? ` +
@@ -95,7 +95,7 @@ const (
 
 	// Assume that we won't have branches more than that in a single tree
 	// This assumption simplifies our code here.
-	maxBranchesReturnForOneTree = 1000
+	maxBranchesReturnForOneTree = 100
 )
 
 const (
@@ -525,7 +525,36 @@ func (h *cassandraHistoryPersistence) getForkingNode(bi p.HistoryBranch) (int64,
 	}
 }
 
+func (h *cassandraHistoryPersistence) readBranchRange(treeID, branchID string, minID, maxID int64) ([]*p.DataBlob, error) {
+	bs := make([]*p.DataBlob, 0)
+
+	query := h.session.Query(v2templateReadNodes,
+		treeID, branchID, rowTypeHistoryNode, minID, maxID)
+
+	iter := query.PageSize(int(maxID - minID)).Iter()
+	if iter == nil {
+		return nil, &workflow.InternalServiceError{
+			Message: "ReadHistoryBranch operation failed.  Not able to create query iterator.",
+		}
+	}
+
+	eventBlob := &p.DataBlob{}
+
+	for iter.Scan(&eventBlob.ID, &eventBlob.Data, &eventBlob.Encoding) {
+		bs = append(bs, eventBlob)
+		eventBlob = &p.DataBlob{}
+	}
+
+	if err := iter.Close(); err != nil {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("ReadHistoryBranch. Close operation failed. Error: %v", err),
+		}
+	}
+	return bs, nil
+}
+
 // ReadHistoryBranch returns history node data for a branch
+// NOTE: For branch that has ancestors, we need to query Cassandra multiple times, because it doesn't support OR/UNION operator
 func (h *cassandraHistoryPersistence) ReadHistoryBranch(request *p.InternalReadHistoryBranchRequest) (*p.InternalReadHistoryBranchResponse, error) {
 	if request.MaxNodeID <= request.MinNodeID {
 		return nil, &p.InvalidPersistenceRequestError{
@@ -539,60 +568,44 @@ func (h *cassandraHistoryPersistence) ReadHistoryBranch(request *p.InternalReadH
 
 	treeID := branchInfo.TreeID
 	branchID := branchInfo.BranchID
-
-	branchesToQuery := []gocql.UUID{}
-	// NOTE: theoretically, the following code can be improved by binary search. But we shouldn't have many branch ranges, see maxBranchesReturnForOneTree. So linear search is sufficient here.
-	for _, an := range branchInfo.Ancestors {
-		// this range won't contain any nodes needed, since the last node(EndNodeID-1) in the range is strictly less than MinNodeID
-		if an.EndNodeID <= request.MinNodeID {
-			continue
-		}
-		// similarly, this range won't contain any nodes needed, since the first node(BeginNodeID) in the range is greater than or equal to MaxNodeID, where MaxNodeID is exclusive for the request
-		if an.BeginNodeID >= request.MaxNodeID {
-			continue
-		}
-		brUUID, err := gocql.ParseUUID(an.BranchID)
-		if err != nil {
-			return nil, err
-		}
-		branchesToQuery = append(branchesToQuery, brUUID)
-	}
-
-	// If we haven't got enough nodes from ancestor, then also query the current branch
+	// We also query the current branch
 	forkingNodeID, err := h.getForkingNode(branchInfo)
 	if err != nil {
 		return nil, err
 	}
-	if forkingNodeID < request.MaxNodeID-1 {
-		brUUID, err := gocql.ParseUUID(branchID)
+
+	allBRs := branchInfo.Ancestors
+	allBRs = append(allBRs, p.HistoryBranchRange{
+		BranchID:    branchID,
+		BeginNodeID: forkingNodeID + 1,
+		EndNodeID:   request.MaxNodeID,
+	})
+
+	history := make([]*p.DataBlob, 0)
+	for _, br := range allBRs {
+		// this range won't contain any nodes needed, since the last node(EndNodeID-1) in the range is strictly less than MinNodeID
+		if br.EndNodeID <= request.MinNodeID {
+			continue
+		}
+		// similarly, this range won't contain any nodes needed, since the first node(BeginNodeID) in the range is greater than or equal to MaxNodeID, where MaxNodeID is exclusive for the request
+		if br.BeginNodeID >= request.MaxNodeID {
+			// since they are sorted, the rest branch range can be skipped
+			break
+		}
+
+		minID := br.BeginNodeID
+		if request.MinNodeID > minID {
+			minID = request.MinNodeID
+		}
+		maxID := br.EndNodeID
+		if request.MaxNodeID < maxID {
+			maxID = request.MaxNodeID
+		}
+		bs, err := h.readBranchRange(treeID, br.BranchID, minID, maxID)
 		if err != nil {
 			return nil, err
 		}
-		branchesToQuery = append(branchesToQuery, brUUID)
-	}
-
-	query := h.session.Query(v2templateReadNodes,
-		treeID, branchesToQuery, rowTypeHistoryNode, request.MinNodeID, request.MaxNodeID)
-
-	iter := query.PageSize(int(request.MaxNodeID - request.MinNodeID)).Iter()
-	if iter == nil {
-		return nil, &workflow.InternalServiceError{
-			Message: "ReadHistoryBranch operation failed.  Not able to create query iterator.",
-		}
-	}
-
-	eventBlob := &p.DataBlob{}
-	history := make([]*p.DataBlob, 0)
-
-	for iter.Scan(&eventBlob.ID, &eventBlob.Data, &eventBlob.Encoding) {
-		history = append(history, eventBlob)
-		eventBlob = &p.DataBlob{}
-	}
-
-	if err := iter.Close(); err != nil {
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("ReadHistoryBranch. Close operation failed. Error: %v", err),
-		}
+		history = append(history, bs...)
 	}
 
 	response := &p.InternalReadHistoryBranchResponse{
@@ -609,7 +622,7 @@ func (h *cassandraHistoryPersistence) ReadHistoryBranch(request *p.InternalReadH
 		// checking nodeIDs are continuous after sorting
 		if history[0].ID != request.MinNodeID || history[len(history)-1].ID-history[0].ID != int64(len(history))-1 {
 			return nil, &workflow.InternalServiceError{
-				Message: fmt.Sprintf("ReadHistoryBranch. History events corrupted. Got first/last eventIDs/len: %v/%v/%v", history[0].ID, history[len(history)-1].ID, len(history)),
+				Message: fmt.Sprintf("ReadHistoryBranch. History events corrupted. Got first/last eventIDs/len: %v/%v/%v for %v", history[0].ID, history[len(history)-1].ID, len(history), request.MinNodeID),
 			}
 		}
 	}
