@@ -209,7 +209,14 @@ func (h *cassandraHistoryPersistence) NewHistoryBranch(request *p.NewHistoryBran
 	if err != nil {
 		return nil, err
 	}
-	resp := &p.NewHistoryBranchResponse{IsNewTree: isNewTree}
+	resp := &p.NewHistoryBranchResponse{
+		IsNewTree: isNewTree,
+		BranchInfo: p.HistoryBranch{
+			TreeID:    treeID,
+			BranchID:  branchID,
+			Ancestors: []p.HistoryBranchRange{},
+		},
+	}
 	txnID, err := h.prepareTreeTransaction(treeID)
 	if err != nil {
 		return resp, err
@@ -345,10 +352,20 @@ func (h *cassandraHistoryPersistence) createRoot(treeID string) (bool, error) {
 }
 
 // AppendHistoryNodes add(or override) a batch of nodes to a history branch
+// Note that it's not allowed to override the ancestors' nodes, which means NextNodeIDToUpdate > forking point
 func (h *cassandraHistoryPersistence) AppendHistoryNodes(request *p.InternalAppendHistoryNodesRequest) error {
-	if request.NextNodeIDToUpdate <= 0 || request.NextNodeIDToInsert < request.NextNodeIDToUpdate {
+	branchInfo, err := h.refillAncestors(request.BranchInfo)
+	if err != nil {
+		return err
+	}
+	forkingNodeID, err := h.getForkingNode(branchInfo)
+	if err != nil {
+		return err
+	}
+
+	if request.NextNodeIDToUpdate <= forkingNodeID || request.NextNodeIDToInsert < request.NextNodeIDToUpdate {
 		return &p.InvalidPersistenceRequestError{
-			Msg: fmt.Sprintf("NextNodeIDToUpdate,NextNodeIDToInsert must be: 0 < NextNodeIDToUpdate <= NextNodeIDToInsert. Actual: %v, %v", request.NextNodeIDToUpdate, request.NextNodeIDToInsert),
+			Msg: fmt.Sprintf("NextNodeIDToUpdate,NextNodeIDToInsert must be: forkingNodeID < NextNodeIDToUpdate <= NextNodeIDToInsert. Actual:%v, %v, %v", forkingNodeID, request.NextNodeIDToUpdate, request.NextNodeIDToInsert),
 		}
 	}
 	if len(request.Events) == 0 {
@@ -361,8 +378,8 @@ func (h *cassandraHistoryPersistence) AppendHistoryNodes(request *p.InternalAppe
 			Msg: fmt.Sprintf("no enough events to update. Actual: %v, %v, %v", request.NextNodeIDToUpdate, request.NextNodeIDToInsert, len(request.Events)),
 		}
 	}
-	treeID := request.BranchInfo.TreeID
-	branchID := request.BranchInfo.BranchID
+	treeID := branchInfo.TreeID
+	branchID := branchInfo.BranchID
 	treeTxnID, err := h.prepareTreeTransaction(treeID)
 	if err != nil {
 		return err
@@ -481,6 +498,33 @@ GetFailureReasonLoop:
 	}
 }
 
+// refill the ancestors if needed(nil)
+func (h *cassandraHistoryPersistence) refillAncestors(bi p.HistoryBranch) (p.HistoryBranch, error) {
+	if bi.Ancestors == nil {
+		allAncestors, err := h.getBranchAncestors(bi.TreeID, bi.BranchID)
+		if err != nil {
+			return bi, err
+		}
+		bi.Ancestors = allAncestors
+	}
+
+	return bi, nil
+}
+
+func (h *cassandraHistoryPersistence) getForkingNode(bi p.HistoryBranch) (int64, error) {
+	bi, err := h.refillAncestors(bi)
+	if err != nil {
+		return 0, err
+	}
+
+	if len(bi.Ancestors) == 0 {
+		// root branch
+		return 0, nil
+	} else {
+		return bi.Ancestors[len(bi.Ancestors)-1].EndNodeID - 1, nil
+	}
+}
+
 // ReadHistoryBranch returns history node data for a branch
 func (h *cassandraHistoryPersistence) ReadHistoryBranch(request *p.InternalReadHistoryBranchRequest) (*p.InternalReadHistoryBranchResponse, error) {
 	if request.MaxNodeID <= request.MinNodeID {
@@ -488,22 +532,17 @@ func (h *cassandraHistoryPersistence) ReadHistoryBranch(request *p.InternalReadH
 			Msg: fmt.Sprintf("MaxNodeID %v must be greater than MinNodeID %v", request.MaxNodeID, request.MinNodeID),
 		}
 	}
-	branchInfo := request.BranchInfo
+	branchInfo, err := h.refillAncestors(request.BranchInfo)
+	if err != nil {
+		return nil, err
+	}
+
 	treeID := branchInfo.TreeID
 	branchID := branchInfo.BranchID
-	allAncestors := branchInfo.Ancestors
-	var err error
-	if branchInfo.Ancestors == nil {
-		allAncestors, err = h.getBranchAncestors(treeID, branchID)
-		if err != nil {
-			return nil, err
-		}
-	}
-	branchInfo.Ancestors = allAncestors
 
 	branchesToQuery := make([]string, 0)
 	// NOTE: theoretically, the following code can be improved by binary search. But we shouldn't have many branch ranges, see maxBranchesReturnForOneTree. So linear search is sufficient here.
-	for _, an := range allAncestors {
+	for _, an := range branchInfo.Ancestors {
 		// this range won't contain any nodes needed, since the last node(EndNodeID-1) in the range is strictly less than MinNodeID
 		if an.EndNodeID <= request.MinNodeID {
 			continue
@@ -515,14 +554,12 @@ func (h *cassandraHistoryPersistence) ReadHistoryBranch(request *p.InternalReadH
 		branchesToQuery = append(branchesToQuery, an.BranchID)
 	}
 
-	// If we haven't got enough branch ranges, then also query the current branch
-	var lastEndNodeID int64
-	if len(allAncestors) == 0 {
-		lastEndNodeID = 1
-	} else {
-		lastEndNodeID = allAncestors[len(allAncestors)-1].EndNodeID
+	// If we haven't got enough nodes from ancestor, then also query the current branch
+	forkingNodeID, err := h.getForkingNode(branchInfo)
+	if err != nil {
+		return nil, err
 	}
-	if lastEndNodeID < request.MaxNodeID {
+	if forkingNodeID < request.MaxNodeID-1 {
 		branchesToQuery = append(branchesToQuery, branchID)
 	}
 	branchesInStr := strings.Join(branchesToQuery, ",")
@@ -657,7 +694,10 @@ func (h *cassandraHistoryPersistence) parseBranchAncestors(ancestors []map[strin
 //      B4[...]
 // So even though it fork from B3, its ancestor doesn't have to have B3 in its branch ranges
 func (h *cassandraHistoryPersistence) ForkHistoryBranch(request *p.ForkHistoryBranchRequest) (*p.ForkHistoryBranchResponse, error) {
-	forkB := request.BranchInfo
+	forkB, err := h.refillAncestors(request.BranchInfo)
+	if err != nil {
+		return nil, err
+	}
 	treeID := forkB.TreeID
 	newAncestors := make([]p.HistoryBranchRange, 0)
 
@@ -670,21 +710,13 @@ func (h *cassandraHistoryPersistence) ForkHistoryBranch(request *p.ForkHistoryBr
 		return nil, err
 	}
 
-	// read Ancestors if needed
-	if forkB.Ancestors == nil {
-		forkB.Ancestors, err = h.getBranchAncestors(treeID, forkB.BranchID)
-		if err != nil {
-			return nil, err
-		}
+	lastForkingNodeID, err := h.getForkingNode(forkB)
+	if err != nil {
+		return nil, err
 	}
 
-	//add the new forking from branch
-	lastEndNodeID := int64(1)
-	if len(forkB.Ancestors) > 0 {
-		lastEndNodeID = forkB.Ancestors[len(forkB.Ancestors)-1].EndNodeID
-	}
-	if lastEndNodeID > request.ForkFromNodeID {
-		// this is the case that new branch's ancestor doesn't have forking branch
+	if lastForkingNodeID >= request.ForkFromNodeID {
+		// this is the case that new branch's ancestors doesn't include the forking branch
 		for _, br := range forkB.Ancestors {
 			newAncestors = append(newAncestors, br)
 			if br.EndNodeID > request.ForkFromNodeID {
@@ -692,6 +724,8 @@ func (h *cassandraHistoryPersistence) ForkHistoryBranch(request *p.ForkHistoryBr
 			}
 		}
 	} else {
+		// this is the case the new branch will inherit all ancestors from forking branch
+
 		// first we need to check if the branch has a valid nodeID to fork from
 		exits, err := h.checkIfNodeExists(treeID, forkB.BranchID, request.ForkFromNodeID)
 		if err != nil {
@@ -706,7 +740,7 @@ func (h *cassandraHistoryPersistence) ForkHistoryBranch(request *p.ForkHistoryBr
 		newAncestors = append(newAncestors, forkB.Ancestors...)
 		newAncestors = append(newAncestors, p.HistoryBranchRange{
 			BranchID:    forkB.BranchID,
-			BeginNodeID: lastEndNodeID,
+			BeginNodeID: lastForkingNodeID + 1,
 			EndNodeID:   request.ForkFromNodeID + 1,
 		})
 	}
@@ -804,14 +838,12 @@ func (h *cassandraHistoryPersistence) markBranchAsDeleted(branch p.HistoryBranch
 }
 
 func (h *cassandraHistoryPersistence) deleteDataNodes(branch p.HistoryBranch) error {
-	treeID := branch.TreeID
-	var err error
-	if branch.Ancestors == nil {
-		branch.Ancestors, err = h.getBranchAncestors(treeID, branch.BranchID)
-		if err != nil {
-			return err
-		}
+	branch, err := h.refillAncestors(branch)
+	if err != nil {
+		return err
 	}
+
+	treeID := branch.TreeID
 	brsToDelete := branch.Ancestors
 	lastEndNodeID := int64(1)
 	if len(brsToDelete) > 0 {

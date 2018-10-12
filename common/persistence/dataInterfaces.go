@@ -1099,7 +1099,8 @@ type (
 
 	// NewHistoryBranchResponse is a response to NewHistoryBranchRequest
 	NewHistoryBranchResponse struct {
-		IsNewTree bool
+		BranchInfo HistoryBranch
+		IsNewTree  bool
 	}
 
 	// AppendHistoryNodesRequest is used to append a batch of history nodes
