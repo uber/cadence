@@ -6229,7 +6229,7 @@ func (s *integrationSuite) TestStickyTimeout_NonTransientDecision() {
 	s.logger.Infof("StartWorkflowExecution: response: %v \n", *we.RunId)
 	workflowExecution := &workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr(id),
-		RunId: we.RunId,
+		RunId:      we.RunId,
 	}
 
 	// decider logic
@@ -6244,8 +6244,8 @@ func (s *integrationSuite) TestStickyTimeout_NonTransientDecision() {
 			return nil, []*workflow.Decision{{
 				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeRecordMarker),
 				RecordMarkerDecisionAttributes: &workflow.RecordMarkerDecisionAttributes{
-					MarkerName:                    common.StringPtr("local activity marker"),
-					Details:                       []byte("local activity data"),
+					MarkerName: common.StringPtr("local activity marker"),
+					Details:    []byte("local activity data"),
 				},
 			}}, nil
 		}
@@ -6302,7 +6302,7 @@ func (s *integrationSuite) TestStickyTimeout_NonTransientDecision() {
 
 	// Wait for decision timeout
 	stickyTimeout := false
-	WaitForStickyTimeoutLoop:
+WaitForStickyTimeoutLoop:
 	for i := 0; i < 10; i++ {
 		events := s.getHistory(s.domainName, workflowExecution)
 		for _, event := range events {
