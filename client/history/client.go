@@ -589,12 +589,10 @@ func (c *clientImpl) SyncActivity(
 	request *h.SyncActivityRequest,
 	opts ...yarpc.CallOption) error {
 
-	host, err := c.resolver.Lookup(string(request.GetWorkflowId()))
+	client, err := c.getHostForRequest(request.GetWorkflowId())
 	if err != nil {
 		return err
 	}
-	client := c.getThriftClient(host.GetAddress())
-
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	op := func(ctx context.Context, client historyserviceclient.Interface) error {
 		ctx, cancel := c.createContext(ctx)

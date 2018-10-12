@@ -850,6 +850,9 @@ func (e *mutableStateBuilder) ReplicateActivityInfo(request *h.SyncActivityReque
 	ai.StartedTime = time.Unix(0, request.GetStartedTime())
 	ai.LastHeartBeatUpdatedTime = time.Unix(0, request.GetLastHeartbeatTime())
 	ai.Details = request.GetDetails()
+	if ai.StartedID == common.EmptyEventID {
+		ai.TimerTaskStatus = TimerTaskStatusNone
+	}
 
 	e.updateActivityInfos[ai] = struct{}{}
 	return nil

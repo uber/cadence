@@ -206,7 +206,24 @@ func (r *historyReplicator) SyncActivity(ctx context.Context, request *h.SyncAct
 		return err
 	}
 
-	return r.updateMutableStateOnly(context, msBuilder)
+	// see whether we need to refresh the activity timer
+	eventTime := request.GetScheduledTime()
+	if eventTime < request.GetStartedTime() {
+		eventTime = request.GetStartedTime()
+	}
+	if eventTime < request.GetLastHeartbeatTime() {
+		eventTime = request.GetLastHeartbeatTime()
+	}
+	now := time.Unix(0, eventTime)
+	timerTasks := []persistence.Task{}
+	timeSource := common.NewEventTimeSource()
+	timeSource.Update(now)
+	timerBuilder := newTimerBuilder(r.shard.GetConfig(), r.logger, timeSource)
+	if tt := timerBuilder.GetActivityTimerTaskIfNeeded(msBuilder); tt != nil {
+		timerTasks = append(timerTasks, tt)
+	}
+
+	return r.updateMutableStateWithTimer(context, msBuilder, now, timerTasks)
 }
 
 func (r *historyReplicator) ApplyEvents(ctx context.Context, request *h.ReplicateEventsRequest) (retError error) {
@@ -1003,6 +1020,10 @@ func (r *historyReplicator) resetMutableState(ctx context.Context, context *work
 }
 
 func (r *historyReplicator) updateMutableStateOnly(context *workflowExecutionContext, msBuilder mutableState) error {
+	return r.updateMutableStateWithTimer(context, msBuilder, time.Time{}, nil)
+}
+
+func (r *historyReplicator) updateMutableStateWithTimer(context *workflowExecutionContext, msBuilder mutableState, now time.Time, timerTasks []persistence.Task) error {
 	// Generate a transaction ID for appending events to history
 	transactionID, err := r.shard.GetNextTransferTaskID()
 	if err != nil {
@@ -1013,7 +1034,7 @@ func (r *historyReplicator) updateMutableStateOnly(context *workflowExecutionCon
 	// so nothing on the replication state should be changed
 	lastWriteVersion := msBuilder.GetLastWriteVersion()
 	sourceCluster := r.clusterMetadata.ClusterNameForFailoverVersion(lastWriteVersion)
-	return context.updateHelper(nil, nil, transactionID, time.Time{}, false, nil, sourceCluster)
+	return context.updateHelper(nil, timerTasks, transactionID, now, false, nil, sourceCluster)
 }
 
 func (r *historyReplicator) notify(clusterName string, now time.Time, transferTasks []persistence.Task,

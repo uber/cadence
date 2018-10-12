@@ -1098,7 +1098,7 @@ func (h *Handler) SyncShardStatus(ctx context.Context, syncShardStatusRequest *h
 func (h *Handler) SyncActivity(ctx context.Context, syncActivityRequest *hist.SyncActivityRequest) error {
 	h.startWG.Wait()
 
-	scope := metrics.HistorySyncShardStatusScope
+	scope := metrics.HistorySyncActivityScope
 	h.metricsClient.IncCounter(scope, metrics.CadenceRequests)
 	sw := h.metricsClient.StartTimer(scope, metrics.CadenceLatency)
 	defer sw.Stop()
