@@ -24,7 +24,6 @@ import (
 	"fmt"
 
 	"sort"
-	"strings"
 
 	"github.com/gocql/gocql"
 	"github.com/uber-common/bark"
@@ -73,7 +72,7 @@ const (
 		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id = ? `
 
 	v2templateReadNodes = `SELECT node_id, data, data_encoding FROM events_v2 ` +
-		`WHERE tree_id = ? AND branch_id IN ( ? ) AND row_type = ? AND node_id >= ? AND node_id < ? `
+		`WHERE tree_id = ? AND branch_id IN ? AND row_type = ? AND node_id >= ? AND node_id < ? `
 
 	v2templateUpdateTreeRoot = `UPDATE events_v2 ` +
 		`SET txn_id = ? ` +
@@ -541,7 +540,7 @@ func (h *cassandraHistoryPersistence) ReadHistoryBranch(request *p.InternalReadH
 	treeID := branchInfo.TreeID
 	branchID := branchInfo.BranchID
 
-	branchesToQuery := make([]string, 0)
+	branchesToQuery := []gocql.UUID{}
 	// NOTE: theoretically, the following code can be improved by binary search. But we shouldn't have many branch ranges, see maxBranchesReturnForOneTree. So linear search is sufficient here.
 	for _, an := range branchInfo.Ancestors {
 		// this range won't contain any nodes needed, since the last node(EndNodeID-1) in the range is strictly less than MinNodeID
@@ -552,7 +551,11 @@ func (h *cassandraHistoryPersistence) ReadHistoryBranch(request *p.InternalReadH
 		if an.BeginNodeID >= request.MaxNodeID {
 			continue
 		}
-		branchesToQuery = append(branchesToQuery, an.BranchID)
+		brUUID, err := gocql.ParseUUID(an.BranchID)
+		if err != nil {
+			return nil, err
+		}
+		branchesToQuery = append(branchesToQuery, brUUID)
 	}
 
 	// If we haven't got enough nodes from ancestor, then also query the current branch
@@ -561,12 +564,15 @@ func (h *cassandraHistoryPersistence) ReadHistoryBranch(request *p.InternalReadH
 		return nil, err
 	}
 	if forkingNodeID < request.MaxNodeID-1 {
-		branchesToQuery = append(branchesToQuery, branchID)
+		brUUID, err := gocql.ParseUUID(branchID)
+		if err != nil {
+			return nil, err
+		}
+		branchesToQuery = append(branchesToQuery, brUUID)
 	}
-	branchesInStr := strings.Join(branchesToQuery, ",")
 
 	query := h.session.Query(v2templateReadNodes,
-		treeID, branchesInStr, rowTypeHistoryNode, request.MinNodeID, request.MaxNodeID)
+		treeID, branchesToQuery, rowTypeHistoryNode, request.MinNodeID, request.MaxNodeID)
 
 	iter := query.PageSize(int(request.MaxNodeID - request.MinNodeID)).Iter()
 	if iter == nil {
@@ -1067,7 +1073,7 @@ func (h *cassandraHistoryPersistence) GetHistoryTree(request *p.GetHistoryTreeRe
 
 	if err := iter.Close(); err != nil {
 		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("ReadHistoryBranch. Close operation failed. Error: %v", err),
+			Message: fmt.Sprintf("GetHistoryTree. Close operation failed. Error: %v", err),
 		}
 	}
 	if len(branches) >= maxBranchesReturnForOneTree {
