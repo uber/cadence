@@ -27,6 +27,7 @@ import (
 
 	"github.com/pborman/uuid"
 	log "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
@@ -108,9 +109,16 @@ func (s *timerQueueProcessorSuite) TearDownTest() {
 }
 
 func (s *timerQueueProcessorSuite) updateTimerSeqNumbers(timerTasks []persistence.Task) {
+	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", mock.Anything).Return(cluster.TestCurrentClusterName)
+
+	clusterMetadata := s.mockClusterMetadata
+	cluster := clusterMetadata.GetCurrentClusterName()
 	for _, task := range timerTasks {
 		ts := task.GetVisibilityTimestamp()
-		if ts.Before(s.engineImpl.shard.GetTimerMaxReadLevel()) {
+		if task.GetVersion() != common.EmptyVersion {
+			cluster = clusterMetadata.ClusterNameForFailoverVersion(task.GetVersion())
+		}
+		if ts.Before(s.engineImpl.shard.GetTimerMaxReadLevel(cluster)) {
 			// This can happen if shard move and new host have a time SKU, or there is db write delay.
 			// We generate a new timer ID using timerMaxReadLevel.
 			s.logger.Warnf("%v: New timer generated is less than read level. timestamp: %v, timerMaxReadLevel: %v",

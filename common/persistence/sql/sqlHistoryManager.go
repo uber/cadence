@@ -31,6 +31,7 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/service/config"
 )
 
 type (
@@ -82,9 +83,9 @@ first_event_id = :first_event_id`
 		`FOR UPDATE`
 )
 
-// NewHistoryPersistence creates an instance of HistoryManager
-func NewHistoryPersistence(host string, port int, username, password, dbName string, logger bark.Logger) (p.HistoryStore, error) {
-	var db, err = newConnection(host, port, username, password, dbName)
+// newHistoryPersistence creates an instance of HistoryManager
+func newHistoryPersistence(cfg config.SQL, logger bark.Logger) (p.HistoryStore, error) {
+	var db, err = newConnection(cfg)
 	if err != nil {
 		return nil, err
 	}

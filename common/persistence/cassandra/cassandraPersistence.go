@@ -32,6 +32,7 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/service/config"
 )
 
 // Guidelines for creating new special UUID constants
@@ -852,11 +853,10 @@ type (
 	}
 )
 
-// NewShardPersistence is used to create an instance of ShardManager implementation
-func NewShardPersistence(hosts string, port int, user, password, dc string, keyspace string,
-	currentClusterName string, logger bark.Logger) (p.ShardStore, error) {
-	cluster := NewCassandraCluster(hosts, port, user, password, dc)
-	cluster.Keyspace = keyspace
+// newShardPersistence is used to create an instance of ShardManager implementation
+func newShardPersistence(cfg config.Cassandra, clusterName string, logger bark.Logger) (p.ShardStore, error) {
+	cluster := NewCassandraCluster(cfg.Hosts, cfg.Port, cfg.User, cfg.Password, cfg.Datacenter)
+	cluster.Keyspace = cfg.Keyspace
 	cluster.ProtoVersion = cassandraProtoVersion
 	cluster.Consistency = gocql.LocalQuorum
 	cluster.SerialConsistency = gocql.LocalSerial
@@ -867,7 +867,7 @@ func NewShardPersistence(hosts string, port int, user, password, dc string, keys
 		return nil, err
 	}
 
-	return &cassandraPersistence{shardID: -1, session: session, currentClusterName: currentClusterName, logger: logger}, nil
+	return &cassandraPersistence{shardID: -1, session: session, currentClusterName: clusterName, logger: logger}, nil
 }
 
 // NewWorkflowExecutionPersistence is used to create an instance of workflowExecutionManager implementation
@@ -876,16 +876,14 @@ func NewWorkflowExecutionPersistence(shardID int, session *gocql.Session,
 	return &cassandraPersistence{shardID: shardID, session: session, logger: logger}, nil
 }
 
-// NewTaskPersistence is used to create an instance of TaskManager implementation
-func NewTaskPersistence(hosts string, port int, user, password, dc string, keyspace string,
-	logger bark.Logger) (p.TaskStore, error) {
-	cluster := NewCassandraCluster(hosts, port, user, password, dc)
-	cluster.Keyspace = keyspace
+// newTaskPersistence is used to create an instance of TaskManager implementation
+func newTaskPersistence(cfg config.Cassandra, logger bark.Logger) (p.TaskStore, error) {
+	cluster := NewCassandraCluster(cfg.Hosts, cfg.Port, cfg.User, cfg.Password, cfg.Datacenter)
+	cluster.Keyspace = cfg.Keyspace
 	cluster.ProtoVersion = cassandraProtoVersion
 	cluster.Consistency = gocql.LocalQuorum
 	cluster.SerialConsistency = gocql.LocalSerial
 	cluster.Timeout = defaultSessionTimeout
-
 	session, err := cluster.CreateSession()
 	if err != nil {
 		return nil, err
@@ -1140,8 +1138,15 @@ func (d *cassandraPersistence) CreateWorkflowExecution(request *p.CreateWorkflow
 					}
 				}
 
-				msg := fmt.Sprintf("Workflow execution creation condition failed. WorkflowId: %v, columns: (%v)",
-					request.Execution.GetWorkflowId(), strings.Join(columns, ","))
+				if prevRunID := previous["current_run_id"].(gocql.UUID).String(); prevRunID != request.Execution.GetRunId() {
+					// currentRunID on previous run has been changed, return to caller to handle
+					msg := fmt.Sprintf("Workflow execution creation condition failed by mismatch runID. WorkflowId: %v, CurrentRunID: %v, columns: (%v)",
+						request.Execution.GetWorkflowId(), request.Execution.GetRunId(), strings.Join(columns, ","))
+					return nil, &p.CurrentWorkflowConditionFailedError{Msg: msg}
+				}
+
+				msg := fmt.Sprintf("Workflow execution creation condition failed. WorkflowId: %v, CurrentRunID: %v, columns: (%v)",
+					request.Execution.GetWorkflowId(), request.Execution.GetRunId(), strings.Join(columns, ","))
 				return nil, &p.ConditionFailedError{Msg: msg}
 			}
 
@@ -1264,7 +1269,7 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Cre
 			state,
 		)
 	default:
-		d.logger.Panic(fmt.Sprintf("Unknown CreateWorkflowContinueAsNew Mode: %v", request.CreateWorkflowMode))
+		d.logger.Panic(fmt.Sprintf("Unknown CreateWorkflowMode: %v", request.CreateWorkflowMode))
 	}
 
 	if request.ReplicationState == nil {

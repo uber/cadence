@@ -34,7 +34,6 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	cassandra_persistence "github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/dynamicconfig"
@@ -77,7 +76,7 @@ type (
 		logger                    bark.Logger
 		metricsClient             metrics.Client
 		standbyClusterCurrentTime map[string]time.Time
-		timerMaxReadLevel         time.Time
+		timerMaxReadLevelMap      map[string]time.Time
 	}
 
 	// TestBase wraps the base setup needed to create workflows over engine layer.
@@ -98,13 +97,18 @@ func newTestShardContext(shardInfo *persistence.ShardInfo, transferSequenceNumbe
 
 	// initialize the cluster current time to be the same as ack level
 	standbyClusterCurrentTime := make(map[string]time.Time)
+	timerMaxReadLevelMap := make(map[string]time.Time)
 	for clusterName := range clusterMetadata.GetAllClusterFailoverVersions() {
 		if clusterName != clusterMetadata.GetCurrentClusterName() {
 			if currentTime, ok := shardInfo.ClusterTimerAckLevel[clusterName]; ok {
 				standbyClusterCurrentTime[clusterName] = currentTime
+				timerMaxReadLevelMap[clusterName] = currentTime
 			} else {
 				standbyClusterCurrentTime[clusterName] = shardInfo.TimerAckLevel
+				timerMaxReadLevelMap[clusterName] = shardInfo.TimerAckLevel
 			}
+		} else { // active cluster
+			timerMaxReadLevelMap[clusterName] = shardInfo.TimerAckLevel
 		}
 	}
 
@@ -120,7 +124,7 @@ func newTestShardContext(shardInfo *persistence.ShardInfo, transferSequenceNumbe
 		logger:                    logger,
 		metricsClient:             metricsClient,
 		standbyClusterCurrentTime: standbyClusterCurrentTime,
-		timerMaxReadLevel:         shardInfo.TimerAckLevel,
+		timerMaxReadLevelMap:      timerMaxReadLevelMap,
 	}
 }
 
@@ -336,14 +340,19 @@ func (s *TestShardContext) CreateWorkflowExecution(request *persistence.CreateWo
 // UpdateWorkflowExecution test implementation
 func (s *TestShardContext) UpdateWorkflowExecution(request *persistence.UpdateWorkflowExecutionRequest) (*persistence.UpdateWorkflowExecutionResponse, error) {
 	// assign IDs for the timer tasks. They need to be assigned under shard lock.
+	clusterMetadata := s.GetService().GetClusterMetadata()
+	clusterName := clusterMetadata.GetCurrentClusterName()
 	for _, task := range request.TimerTasks {
 		ts := task.GetVisibilityTimestamp()
-		if ts.Before(s.timerMaxReadLevel) {
+		if task.GetVersion() != common.EmptyVersion {
+			clusterName = clusterMetadata.ClusterNameForFailoverVersion(task.GetVersion())
+		}
+		if ts.Before(s.timerMaxReadLevelMap[clusterName]) {
 			// This can happen if shard move and new host have a time SKU, or there is db write delay.
 			// We generate a new timer ID using timerMaxReadLevel.
-			s.logger.Warnf("%v: New timer generated is less than read level. timestamp: %v, timerMaxReadLevel: %v",
-				time.Now(), ts, s.timerMaxReadLevel)
-			task.SetVisibilityTimestamp(s.timerMaxReadLevel.Add(time.Millisecond))
+			s.logger.WithField("Cluster", clusterName).Warnf("%v: New timer generated is less than read level. timestamp: %v, timerMaxReadLevel: %v",
+				time.Now(), ts, s.timerMaxReadLevelMap[clusterName])
+			task.SetVisibilityTimestamp(s.timerMaxReadLevelMap[clusterName].Add(time.Millisecond))
 		}
 		seqID, err := s.GetNextTransferTaskID()
 		if err != nil {
@@ -359,17 +368,23 @@ func (s *TestShardContext) UpdateWorkflowExecution(request *persistence.UpdateWo
 }
 
 // UpdateTimerMaxReadLevel test implementation
-func (s *TestShardContext) UpdateTimerMaxReadLevel() time.Time {
+func (s *TestShardContext) UpdateTimerMaxReadLevel(cluster string) time.Time {
 	s.Lock()
 	defer s.Unlock()
-	s.timerMaxReadLevel = s.GetTimeSource().Now().Add(s.GetConfig().TimerProcessorMaxTimeShift())
-	return s.timerMaxReadLevel
+
+	currentTime := time.Now()
+	if cluster != "" && cluster != s.GetService().GetClusterMetadata().GetCurrentClusterName() {
+		currentTime = s.standbyClusterCurrentTime[cluster]
+	}
+
+	s.timerMaxReadLevelMap[cluster] = currentTime.Add(s.GetConfig().TimerProcessorMaxTimeShift())
+	return s.timerMaxReadLevelMap[cluster]
 }
 
 // GetTimerMaxReadLevel test implementation
-func (s *TestShardContext) GetTimerMaxReadLevel() time.Time {
+func (s *TestShardContext) GetTimerMaxReadLevel(cluster string) time.Time {
 	// This test method is called with shard lock
-	return s.timerMaxReadLevel
+	return s.timerMaxReadLevelMap[cluster]
 }
 
 // ResetMutableState test implementation
@@ -445,7 +460,8 @@ func (s *TestShardContext) GetCurrentTime(cluster string) time.Time {
 
 // SetupWorkflowStoreWithOptions to setup workflow test base
 func (s *TestBase) SetupWorkflowStoreWithOptions(options persistencetests.TestBaseOptions) {
-	cassandra_persistence.InitTestSuite(&s.TestBase)
+	s.TestBase = persistencetests.NewTestBaseWithCassandra(&persistencetests.TestBaseOptions{})
+	s.TestBase.Setup()
 	log := bark.NewLoggerFromLogrus(log.New())
 	config := NewConfig(dynamicconfig.NewNopCollection(), 1)
 	clusterMetadata := cluster.GetTestClusterMetadata(options.EnableGlobalDomain, options.IsMasterCluster)
@@ -456,7 +472,8 @@ func (s *TestBase) SetupWorkflowStoreWithOptions(options persistencetests.TestBa
 
 // SetupWorkflowStore to setup workflow test base
 func (s *TestBase) SetupWorkflowStore() {
-	cassandra_persistence.InitTestSuite(&s.TestBase)
+	s.TestBase = persistencetests.NewTestBaseWithCassandra(&persistencetests.TestBaseOptions{})
+	s.TestBase.Setup()
 	log := bark.NewLoggerFromLogrus(log.New())
 	config := NewConfig(dynamicconfig.NewNopCollection(), 1)
 	clusterMetadata := cluster.GetTestClusterMetadata(false, false)

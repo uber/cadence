@@ -32,6 +32,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/service/config"
 )
 
 type (
@@ -1454,9 +1455,9 @@ func (m *sqlExecutionManager) RangeCompleteTimerTask(request *p.RangeCompleteTim
 	return nil
 }
 
-// NewSQLMatchingPersistence creates an instance of ExecutionManager
-func NewSQLMatchingPersistence(host string, port int, username, password, dbName string, logger bark.Logger) (p.ExecutionStore, error) {
-	var db, err = newConnection(host, port, username, password, dbName)
+// NewSQLMatchingPersistence creates an instance of ExecutionStore
+func NewSQLMatchingPersistence(cfg config.SQL, logger bark.Logger) (p.ExecutionStore, error) {
+	db, err := newConnection(cfg)
 	if err != nil {
 		return nil, err
 	}
