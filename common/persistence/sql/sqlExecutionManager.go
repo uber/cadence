@@ -1094,14 +1094,12 @@ func updateBufferedEvents(tx *sqlx.Tx, batch *p.DataBlob, clear bool, shardID in
 }
 
 func (m *sqlExecutionManager) ResetMutableState(request *p.InternalResetMutableStateRequest) error {
-	tx, err := m.db.Beginx()
-	if err != nil {
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("ResetMutableState operation failed. Failed to start transaction. Error: %v", err),
-		}
-	}
-	defer tx.Rollback()
+	return m.txExecute("ResetMutableState", func(tx *sqlx.Tx) error {
+		return m.resetMutableStateTx(tx, request)
+	})
+}
 
+func (m *sqlExecutionManager) resetMutableStateTx(tx *sqlx.Tx, request *p.InternalResetMutableStateRequest) error {
 	// TODO Is there a way to modify the various map tables without fear of other people adding rows after we delete, without locking the executions row?
 	if err := lockAndCheckNextEventID(tx,
 		m.shardID,
@@ -1288,13 +1286,6 @@ func (m *sqlExecutionManager) ResetMutableState(request *p.InternalResetMutableS
 			}
 		}
 	}
-
-	if err := tx.Commit(); err != nil {
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("ResetMutableState operation failed. Failed to commit transaction. Error: %v", err),
-		}
-	}
-
 	return nil
 }
 
