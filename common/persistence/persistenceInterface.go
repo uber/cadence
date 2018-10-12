@@ -95,7 +95,7 @@ type (
 		// NewHistoryBranch creates a new branch from tree root. If tree doesn't exist, then create one. Return error if the branch already exists.
 		NewHistoryBranch(request *NewHistoryBranchRequest) (*NewHistoryBranchResponse, error)
 		// AppendHistoryNodes add(or override) a node to a history branch
-		AppendHistoryNodes(request *InternalAppendHistoryNodesRequest) error
+		AppendHistoryNodes(request *InternalAppendHistoryNodesRequest) (*InternalAppendHistoryNodesResponse, error)
 		// ReadHistoryBranch returns history node data for a branch
 		ReadHistoryBranch(request *InternalReadHistoryBranchRequest) (*InternalReadHistoryBranchResponse, error)
 		// ForkHistoryBranch forks a new branch from a old branch
@@ -310,6 +310,12 @@ type (
 		Events []*DataBlob
 		// requested TransactionID for conditional update
 		TransactionID int64
+	}
+
+	// InternalAppendHistoryNodesResponse is a response to InternalAppendHistoryNodesRequest
+	InternalAppendHistoryNodesResponse struct {
+		//BranchInfo which contains internal details like ancestors
+		BranchInfo HistoryBranch
 	}
 
 	// InternalGetWorkflowExecutionResponse is the response to GetworkflowExecutionRequest for Persistence Interface

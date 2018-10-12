@@ -104,9 +104,9 @@ func (m *sqlHistoryManager) NewHistoryBranch(request *p.NewHistoryBranchRequest)
 }
 
 // AppendHistoryNodes add(or override) a node to a history branch
-func (m *sqlHistoryManager) AppendHistoryNodes(request *p.InternalAppendHistoryNodesRequest) error {
+func (m *sqlHistoryManager) AppendHistoryNodes(request *p.InternalAppendHistoryNodesRequest) (*p.InternalAppendHistoryNodesResponse, error) {
 	//TODO
-	return nil
+	return nil, nil
 }
 
 // ReadHistoryBranch returns history node data for a branch

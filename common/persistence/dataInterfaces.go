@@ -1099,6 +1099,7 @@ type (
 
 	// NewHistoryBranchResponse is a response to NewHistoryBranchRequest
 	NewHistoryBranchResponse struct {
+		//BranchInfo which contains internal details like ancestors
 		BranchInfo HistoryBranch
 		IsNewTree  bool
 	}
@@ -1117,6 +1118,8 @@ type (
 
 	// AppendHistoryNodesResponse is a response to AppendHistoryNodesRequest
 	AppendHistoryNodesResponse struct {
+		//BranchInfo which contains internal details like ancestors
+		BranchInfo HistoryBranch
 		// the size of the event data that has been appended
 		Size int
 		// the number of events that has been appended with override instead of using insert if not exist

@@ -119,7 +119,7 @@ func (m *historyManagerImpl) AppendHistoryNodes(request *AppendHistoryNodesReque
 	resp := &AppendHistoryNodesResponse{Size: size}
 
 	// first try to do purely insert if not exist
-	err := m.persistence.AppendHistoryNodes(&InternalAppendHistoryNodesRequest{
+	intResp, err := m.persistence.AppendHistoryNodes(&InternalAppendHistoryNodesRequest{
 		BranchInfo:         request.BranchInfo,
 		NextNodeIDToUpdate: nextNodeID,
 		NextNodeIDToInsert: nextNodeID,
@@ -127,6 +127,7 @@ func (m *historyManagerImpl) AppendHistoryNodes(request *AppendHistoryNodesReque
 		TransactionID:      request.TransactionID,
 	})
 	if err == nil {
+		resp.BranchInfo = intResp.BranchInfo
 		return resp, nil
 	}
 	if _, ok := err.(*ConditionFailedError); ok {
@@ -145,13 +146,16 @@ func (m *historyManagerImpl) AppendHistoryNodes(request *AppendHistoryNodesReque
 		resp.OverrideCount = len(readResp.History)
 
 		// append with override
-		err = m.persistence.AppendHistoryNodes(&InternalAppendHistoryNodesRequest{
+		intResp, err = m.persistence.AppendHistoryNodes(&InternalAppendHistoryNodesRequest{
 			BranchInfo:         request.BranchInfo,
 			NextNodeIDToUpdate: nextNodeID,
 			NextNodeIDToInsert: nextNodeID + int64(resp.OverrideCount),
 			Events:             eventBlobs,
 			TransactionID:      request.TransactionID,
 		})
+		if err == nil {
+			resp.BranchInfo = intResp.BranchInfo
+		}
 		return resp, err
 	}
 	return nil, err

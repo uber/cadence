@@ -353,28 +353,28 @@ func (h *cassandraHistoryPersistence) createRoot(treeID string) (bool, error) {
 
 // AppendHistoryNodes add(or override) a batch of nodes to a history branch
 // Note that it's not allowed to override the ancestors' nodes, which means NextNodeIDToUpdate > forking point
-func (h *cassandraHistoryPersistence) AppendHistoryNodes(request *p.InternalAppendHistoryNodesRequest) error {
+func (h *cassandraHistoryPersistence) AppendHistoryNodes(request *p.InternalAppendHistoryNodesRequest) (*p.InternalAppendHistoryNodesResponse, error) {
 	branchInfo, err := h.refillAncestors(request.BranchInfo)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	forkingNodeID, err := h.getForkingNode(branchInfo)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if request.NextNodeIDToUpdate <= forkingNodeID || request.NextNodeIDToInsert < request.NextNodeIDToUpdate {
-		return &p.InvalidPersistenceRequestError{
+		return nil, &p.InvalidPersistenceRequestError{
 			Msg: fmt.Sprintf("NextNodeIDToUpdate,NextNodeIDToInsert must be: forkingNodeID < NextNodeIDToUpdate <= NextNodeIDToInsert. Actual:%v, %v, %v", forkingNodeID, request.NextNodeIDToUpdate, request.NextNodeIDToInsert),
 		}
 	}
 	if len(request.Events) == 0 {
-		return &p.InvalidPersistenceRequestError{
+		return nil, &p.InvalidPersistenceRequestError{
 			Msg: fmt.Sprintf("events to append cannot be empty"),
 		}
 	}
 	if request.NextNodeIDToInsert-request.NextNodeIDToUpdate > int64(len(request.Events)) {
-		return &p.InvalidPersistenceRequestError{
+		return nil, &p.InvalidPersistenceRequestError{
 			Msg: fmt.Sprintf("no enough events to update. Actual: %v, %v, %v", request.NextNodeIDToUpdate, request.NextNodeIDToInsert, len(request.Events)),
 		}
 	}
@@ -382,11 +382,11 @@ func (h *cassandraHistoryPersistence) AppendHistoryNodes(request *p.InternalAppe
 	branchID := branchInfo.BranchID
 	treeTxnID, err := h.prepareTreeTransaction(treeID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	err = h.validateBranchStatus(treeID, branchID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	batch := h.session.NewBatch(gocql.LoggedBatch)
 	// NOTE, we don't increase treeTxnID here because this operation doesn't change tree status
@@ -420,14 +420,16 @@ func (h *cassandraHistoryPersistence) AppendHistoryNodes(request *p.InternalAppe
 	}()
 
 	if err != nil {
-		return convertCommonErrors("AppendHistoryNodes", err)
+		return nil, convertCommonErrors("AppendHistoryNodes", err)
 	}
 
 	if !applied {
-		return h.getAppendHistoryNodesFailure(previous, iter, treeTxnID, request.TransactionID, request.NextNodeIDToInsert, treeID, branchID)
+		return nil, h.getAppendHistoryNodesFailure(previous, iter, treeTxnID, request.TransactionID, request.NextNodeIDToInsert, treeID, branchID)
 	}
 
-	return nil
+	return &p.InternalAppendHistoryNodesResponse{
+		BranchInfo: branchInfo,
+	}, nil
 }
 
 func (h *cassandraHistoryPersistence) getAppendHistoryNodesFailure(previous map[string]interface{}, iter *gocql.Iter, reqTreeTxnID, reqEventTxnID, nextNodeIDToInsert int64, reqTreeID, reqBranchID string) error {
@@ -507,7 +509,6 @@ func (h *cassandraHistoryPersistence) refillAncestors(bi p.HistoryBranch) (p.His
 		}
 		bi.Ancestors = allAncestors
 	}
-
 	return bi, nil
 }
 

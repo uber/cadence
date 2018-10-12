@@ -193,13 +193,13 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndAppendBranches() {
 			historyW := &workflow.History{}
 			events := s.genRandomEvents([]int64{1, 2, 3})
 
-			overrides, err := s.append(bi, events, 0)
+			_, overrides, err := s.append(bi, events, 0)
 			s.Nil(err)
 			s.Equal(0, overrides)
 			historyW.Events = events
 
 			events = s.genRandomEvents([]int64{4})
-			overrides, err = s.append(bi, events, 0)
+			_, overrides, err = s.append(bi, events, 0)
 			s.Nil(err)
 			s.Equal(0, overrides)
 			historyW.Events = append(historyW.Events, events...)
@@ -211,13 +211,13 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndAppendBranches() {
 			}
 
 			events = s.genRandomEvents([]int64{5, 6, 7, 8})
-			overrides, err = s.append(bi, events, 0)
+			_, overrides, err = s.append(bi, events, 0)
 			s.Nil(err)
 			s.Equal(0, overrides)
 			historyW.Events = append(historyW.Events, events...)
 
 			events = s.genRandomEvents([]int64{9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20})
-			overrides, err = s.append(bi, events, 0)
+			_, overrides, err = s.append(bi, events, 0)
 			s.Nil(err)
 			s.Equal(0, overrides)
 			historyW.Events = append(historyW.Events, events...)
@@ -263,7 +263,7 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndAppendBranches() {
 			}
 
 			events := s.genRandomEvents([]int64{5})
-			overrides, err := s.append(branch, events, 1)
+			branch, overrides, err := s.append(branch, events, 1)
 			s.Nil(err)
 			s.Equal(1, overrides)
 			// read to verify override
@@ -272,7 +272,7 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndAppendBranches() {
 			s.Equal(5, len(events))
 
 			events = s.genRandomEvents([]int64{6, 7, 8})
-			overrides, err = s.append(branch, events, 2)
+			branch, overrides, err = s.append(branch, events, 2)
 			s.Nil(err)
 			s.Equal(3, overrides)
 			// read to verify override
@@ -281,7 +281,7 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndAppendBranches() {
 			s.Equal(8, len(events))
 
 			events = s.genRandomEvents([]int64{9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23})
-			overrides, err = s.append(branch, events, 2)
+			branch, overrides, err = s.append(branch, events, 2)
 			s.Nil(err)
 			s.Equal(12, overrides)
 
@@ -548,7 +548,7 @@ func (s *HistoryV2PersistenceSuite) read(branch p.HistoryBranch, minID, maxID, l
 }
 
 // persistence helper
-func (s *HistoryV2PersistenceSuite) append(bi p.HistoryBranch, events []*workflow.HistoryEvent, txnID int64) (int, error) {
+func (s *HistoryV2PersistenceSuite) append(bi p.HistoryBranch, events []*workflow.HistoryEvent, txnID int64) (p.HistoryBranch, int, error) {
 
 	var resp *p.AppendHistoryNodesResponse
 
@@ -565,11 +565,11 @@ func (s *HistoryV2PersistenceSuite) append(bi p.HistoryBranch, events []*workflo
 
 	err := backoff.Retry(op, historyTestRetryPolicy, isConditionFail)
 	if err != nil {
-		return 0, err
+		return p.HistoryBranch{}, 0, err
 	}
 	s.True(resp.Size > 0)
 
-	return resp.OverrideCount, err
+	return resp.BranchInfo, resp.OverrideCount, err
 }
 
 // persistence helper
