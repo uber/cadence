@@ -699,7 +699,7 @@ func (h *cassandraHistoryPersistence) parseBranchAncestors(ancestors []map[strin
 //         B2 [11~20]
 //        /
 //      B3[21~30]
-// If we fork B4 from B3 at node 25, the new branch is like:
+// If we fork B4 from B3 at node 22/25, the new branch is like:
 //           B1[1~10]
 //           /
 //         B2 [11~20]
@@ -707,10 +707,10 @@ func (h *cassandraHistoryPersistence) parseBranchAncestors(ancestors []map[strin
 //      B3[21~22/25]
 //     /
 //   B4[...]
-// However, if we fork from node 15, then the new branch should be
+// However, if we fork from node 12/15, then the new branch should be
 //           B1[1~10]
 //           /
-//         B2 [11~15]
+//         B2 [11~12/15]
 //        /
 //      B4[...]
 // So even though it fork from B3, its ancestor doesn't have to have B3 in its branch ranges
