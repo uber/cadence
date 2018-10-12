@@ -548,7 +548,7 @@ func (m *sqlExecutionManager) createWorkflowExecutionTx(tx *sqlx.Tx, request *p.
 		case p.CreateWorkflowModeWorkflowIDReuse:
 			if row.LastWriteVersion != nil {
 				if request.PreviousLastWriteVersion != *row.LastWriteVersion {
-					return nil, &p.ConditionFailedError{
+					return nil, &p.CurrentWorkflowConditionFailedError{
 						Msg: fmt.Sprintf("Workflow execution creation condition failed. WorkflowId: %v, "+
 							"LastWriteVersion: %v, PreviousLastWriteVersion: %v",
 							workflowID, *row.LastWriteVersion, request.PreviousLastWriteVersion),
@@ -557,14 +557,14 @@ func (m *sqlExecutionManager) createWorkflowExecutionTx(tx *sqlx.Tx, request *p.
 				lastWriteVersion = *row.LastWriteVersion
 			}
 			if row.State != p.WorkflowStateCompleted {
-				return nil, &p.ConditionFailedError{
+				return nil, &p.CurrentWorkflowConditionFailedError{
 					Msg: fmt.Sprintf("Workflow execution creation condition failed. WorkflowId: %v, "+
 						"State: %v, Expected: %v",
 						workflowID, row.State, p.WorkflowStateCompleted),
 				}
 			}
 			if row.RunID != request.PreviousRunID {
-				return nil, &p.ConditionFailedError{
+				return nil, &p.CurrentWorkflowConditionFailedError{
 					Msg: fmt.Sprintf("Workflow execution creation condition failed. WorkflowId: %v, "+
 						"RunID: %v, PreviousRunID: %v",
 						workflowID, row.RunID, request.PreviousRunID),

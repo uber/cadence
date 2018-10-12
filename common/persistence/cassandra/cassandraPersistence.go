@@ -2860,7 +2860,8 @@ func (d *cassandraPersistence) updateActivityInfos(batch *gocql.Batch, activityI
 	domainID, workflowID, runID string, condition int64, rangeID int64) error {
 
 	for _, a := range activityInfos {
-		if a.StartedEvent.Encoding != a.ScheduledEvent.Encoding {
+		startedEventData, startedEventEncoding := p.FromDataBlob(a.StartedEvent)
+		if a.StartedEvent != nil && a.StartedEvent.Encoding != a.ScheduledEvent.Encoding {
 			return p.NewHistorySerializationError(fmt.Sprintf("expect to have the same encoding, but %v != %v", a.ScheduledEvent.Encoding, a.StartedEvent.Encoding))
 		}
 
@@ -2871,7 +2872,7 @@ func (d *cassandraPersistence) updateActivityInfos(batch *gocql.Batch, activityI
 			a.ScheduledEvent.Data,
 			a.ScheduledTime,
 			a.StartedID,
-			a.StartedEvent.Data,
+			startedEventData,
 			a.StartedTime,
 			a.ActivityID,
 			a.RequestID,
@@ -2894,7 +2895,7 @@ func (d *cassandraPersistence) updateActivityInfos(batch *gocql.Batch, activityI
 			a.ExpirationTime,
 			a.MaximumAttempts,
 			a.NonRetriableErrors,
-			a.StartedEvent.Encoding,
+			startedEventEncoding,
 			d.shardID,
 			rowTypeExecution,
 			domainID,

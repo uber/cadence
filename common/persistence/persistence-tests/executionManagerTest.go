@@ -23,6 +23,7 @@ package persistencetests
 import (
 	"fmt"
 	"os"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -151,7 +152,7 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionRunIDReuseWithReplica
 		ReplicationState:         replicationState,
 	})
 	s.NotNil(err)
-	s.IsType(&p.CurrentWorkflowConditionFailedError{}, err)
+	s.IsType(&p.CurrentWorkflowConditionFailedError{}, err, err.Error())
 
 	info, err := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.NoError(err)
@@ -283,35 +284,38 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionConcurrentCreate() {
 	times := 2
 	var wg sync.WaitGroup
 	wg.Add(times)
-	numOfErr := 0
+	var numOfErr int32
+	var lastError error
 	for i := 0; i < times; i++ {
 		go func() {
 			newExecution := gen.WorkflowExecution{
 				WorkflowId: workflowExecution.WorkflowId,
 				RunId:      common.StringPtr(uuid.New()),
 			}
-			_, err := s.ExecutionManager.CreateWorkflowExecution(&p.CreateWorkflowExecutionRequest{
-				RequestID:            uuid.New(),
-				DomainID:             domainID,
-				Execution:            newExecution,
-				TaskList:             tasklist,
-				WorkflowTypeName:     workflowType,
-				WorkflowTimeout:      workflowTimeout,
-				DecisionTimeoutValue: decisionTimeout,
-				NextEventID:          nextEventID,
-				LastProcessedEvent:   lastProcessedEventID,
-				RangeID:              s.ShardInfo.RangeID,
-				CreateWorkflowMode:   p.CreateWorkflowModeContinueAsNew,
-				PreviousRunID:        workflowExecution.GetRunId(),
-			})
-			if err != nil {
-				numOfErr++
+
+			state0, err1 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
+			s.NoError(err1)
+			info0 := state0.ExecutionInfo
+			continueAsNewInfo := copyWorkflowExecutionInfo(info0)
+			continueAsNewInfo.State = p.WorkflowStateCompleted
+			continueAsNewInfo.NextEventID = int64(5)
+			continueAsNewInfo.LastProcessedEvent = int64(2)
+
+			err2 := s.ContinueAsNewExecution(continueAsNewInfo, info0.NextEventID, newExecution, int64(3), int64(2))
+			if err2 != nil {
+				errCount := atomic.AddInt32(&numOfErr, 1)
+				if errCount > 1 {
+					lastError = err2
+				}
 			}
 			wg.Done()
 		}()
 	}
 	wg.Wait()
-	s.Equal(1, numOfErr)
+	if lastError != nil {
+		s.Fail("More than one error: %v", lastError.Error())
+	}
+	s.Equal(int32(1), atomic.LoadInt32(&numOfErr))
 }
 
 // TestPersistenceStartWorkflow test
