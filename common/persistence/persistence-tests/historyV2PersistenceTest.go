@@ -411,6 +411,12 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyForkAndAppendBranches() {
 			s.Nil(err)
 			s.Equal(0, overrides)
 
+			// try override one event
+			events2 = s.genRandomEvents([]int64{int64(concurrency) * 3})
+			_, overrides, err = s.append(bi, events2, 1)
+			s.Nil(err)
+			s.Equal(1, overrides)
+
 			_, events2, _, err = s.read(bi, 1, int64(concurrency)*3+1, 0, (concurrency)*3, nil)
 			s.Nil(err)
 			s.Equal((concurrency)*3, len(events2))

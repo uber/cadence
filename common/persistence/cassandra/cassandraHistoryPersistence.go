@@ -464,7 +464,7 @@ GetFailureReasonLoop:
 			}
 		} else if rowType == rowTypeHistoryNode && treeID == reqTreeID && branchID == branchID && nodeID < nextNodeIDToInsert {
 			actualEventTxnID = previous["txn_id"].(int64)
-			if actualEventTxnID != reqEventTxnID {
+			if actualEventTxnID >= reqEventTxnID {
 				eventTxnIDUnmatch = true
 			}
 		} else if rowType == rowTypeHistoryNode && treeID == reqTreeID && branchID == branchID && nodeID >= nextNodeIDToInsert {
