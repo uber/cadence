@@ -33,16 +33,17 @@ import (
 	p "github.com/uber/cadence/common/persistence"
 )
 
-type sqlManager struct {
+// TODO: Rename all SQL Managers to Stores
+type sqlStore struct {
 	db     *sqlx.DB
 	logger bark.Logger
 }
 
-func (m *sqlManager) GetName() string {
+func (m *sqlStore) GetName() string {
 	return m.db.DriverName()
 }
 
-func (m *sqlManager) txExecute(operation string, f func(tx *sqlx.Tx) error) error {
+func (m *sqlStore) txExecute(operation string, f func(tx *sqlx.Tx) error) error {
 	tx, err := m.db.Beginx()
 	if err != nil {
 		return &workflow.InternalServiceError{

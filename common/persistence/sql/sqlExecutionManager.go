@@ -38,7 +38,7 @@ import (
 type (
 	// Implements ExecutionStore
 	sqlExecutionManager struct {
-		sqlManager
+		sqlStore
 		shardID int
 	}
 
@@ -515,16 +515,10 @@ func (m *sqlExecutionManager) createWorkflowExecutionTx(tx *sqlx.Tx, request *p.
 			Message: "CreateWorkflowExecution operation failed. Invalid CreateWorkflowModeContinueAsNew is used",
 		}
 	}
-	/*
-		(x) make a transaction
-		( ) check for a parent
-		(x) check for ContinueAsNew, update the current exec or create one for this new workflow
-		(x) create a workflow with/without cross dc
-	*/
 	var row *currentExecutionRow
 	var err error
 	workflowID := *request.Execution.WorkflowId
-	if row, err = getCurrentExecutionIfExists(tx, int64(m.shardID), request.DomainID, workflowID); err != nil {
+	if row, err = lockCurrentExecutionIfExists(tx, int64(m.shardID), request.DomainID, workflowID); err != nil {
 		return nil, err
 	}
 	if row != nil && request.RangeID != row.RangeID {
@@ -1462,16 +1456,16 @@ func NewSQLMatchingPersistence(cfg config.SQL, logger bark.Logger) (p.ExecutionS
 		return nil, err
 	}
 	return &sqlExecutionManager{
-		sqlManager: sqlManager{
+		sqlStore: sqlStore{
 			db:     db,
 			logger: logger,
 		},
 	}, nil
 }
 
-// getCurrentExecutionIfExists returns current execution or nil if none is found for the workflowID
+// lockCurrentExecutionIfExists returns current execution or nil if none is found for the workflowID
 // locking it in the DB
-func getCurrentExecutionIfExists(tx *sqlx.Tx, shardID int64, domainID string, workflowID string) (*currentExecutionRow, error) {
+func lockCurrentExecutionIfExists(tx *sqlx.Tx, shardID int64, domainID string, workflowID string) (*currentExecutionRow, error) {
 	var rows []*currentExecutionRow
 	if err := tx.Select(&rows, getCurrentExecutionSQLQueryForUpdate, shardID, domainID, workflowID); err != nil {
 		return nil, &workflow.InternalServiceError{
@@ -1574,7 +1568,7 @@ func createOrUpdateCurrentExecution(tx *sqlx.Tx, request *p.CreateWorkflowExecut
 
 	switch request.CreateWorkflowMode {
 	case p.CreateWorkflowModeContinueAsNew:
-		if err := conditionalUpdateCurrentExecution(tx,
+		if err := updateCurrentExecution(tx,
 			shardID,
 			request.DomainID,
 			*request.Execution.WorkflowId,
@@ -1589,7 +1583,7 @@ func createOrUpdateCurrentExecution(tx *sqlx.Tx, request *p.CreateWorkflowExecut
 			}
 		}
 	case p.CreateWorkflowModeWorkflowIDReuse:
-		if err := conditionalUpdateCurrentExecution(tx,
+		if err := updateCurrentExecution(tx,
 			shardID,
 			request.DomainID,
 			*request.Execution.WorkflowId,
@@ -1905,10 +1899,10 @@ func continueAsNew(tx *sqlx.Tx, shardID int, domainID, workflowID, runID, previo
 			Msg: fmt.Sprintf("ContinueAsNew failed. Current run ID was %v, expected %v", currentRunID, previousRunID),
 		}
 	}
-	return conditionalUpdateCurrentExecution(tx, shardID, domainID, workflowID, runID, createRequestID, state, closeStatus, startVersion, lastWriteVersion)
+	return updateCurrentExecution(tx, shardID, domainID, workflowID, runID, createRequestID, state, closeStatus, startVersion, lastWriteVersion)
 }
 
-func conditionalUpdateCurrentExecution(tx *sqlx.Tx, shardID int, domainID, workflowID, runID,
+func updateCurrentExecution(tx *sqlx.Tx, shardID int, domainID, workflowID, runID,
 	createRequestID string, state int64, closeStatus int64, startVersion *int64, lastWriteVersion *int64) error {
 
 	result, err := tx.NamedExec(continueAsNewUpdateCurrentExecutionsSQLQuery, &currentExecutionRow{

@@ -21,8 +21,6 @@
 package persistence
 
 import (
-	"encoding/json"
-	"fmt"
 	"github.com/prometheus/common/log"
 	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -355,14 +353,12 @@ func (m *executionManagerImpl) SerializeUpsertChildExecutionInfos(infos []*Child
 	newInfos := make([]*InternalChildExecutionInfo, 0)
 	for _, v := range infos {
 		if v.InitiatedEvent == nil {
-			panic(fmt.Sprintf("nil InitiatedEvent for %v", v.InitiatedID))
+			log.Fatalf("nil InitiatedEvent for %v", v.InitiatedID)
 		}
 		initiatedEvent, err := m.serializer.SerializeEvent(v.InitiatedEvent, encoding)
 		if err != nil {
 			return nil, err
 		}
-		se, _ := json.Marshal(v.StartedEvent)
-		m.logger.Infof("SerializeUpsertChildExecutionInfos event: %v, encoding: %v", se, encoding)
 		startedEvent, err := m.serializer.SerializeEvent(v.StartedEvent, encoding)
 		if err != nil {
 			return nil, err
@@ -391,8 +387,6 @@ func (m *executionManagerImpl) SerializeUpsertActivityInfos(infos []*ActivityInf
 		if err != nil {
 			return nil, err
 		}
-		se, _ := json.Marshal(v.StartedEvent)
-		m.logger.Infof("SerializeUpsertActivityInfos started event: %v, encoding: %v", se, encoding)
 		startedEvent, err := m.serializer.SerializeEvent(v.StartedEvent, encoding)
 		if err != nil {
 			return nil, err

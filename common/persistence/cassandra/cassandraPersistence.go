@@ -3810,7 +3810,7 @@ func resetChildExecutionInfoMap(childExecutionInfos []*p.InternalChildExecutionI
 			}
 			cInfo["started_event"] = startedEvent.Data
 		} else {
-			cInfo["started_event"] = &[]byte{}
+			cInfo["started_event"] = []byte{}
 		}
 		cInfo["event_data_encoding"] = c.InitiatedEvent.Encoding
 		cInfo["version"] = c.Version

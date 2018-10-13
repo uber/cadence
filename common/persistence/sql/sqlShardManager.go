@@ -35,7 +35,7 @@ import (
 
 type (
 	sqlShardManager struct {
-		sqlManager
+		sqlStore
 		currentClusterName string
 	}
 
@@ -124,7 +124,7 @@ func newShardPersistence(cfg config.SQL, currentClusterName string, log bark.Log
 		return nil, err
 	}
 	return &sqlShardManager{
-		sqlManager: sqlManager{
+		sqlStore: sqlStore{
 			db:     db,
 			logger: log,
 		},
@@ -244,6 +244,8 @@ func (m *sqlShardManager) UpdateShard(request *persistence.UpdateShardRequest) e
 	})
 }
 
+// TODO: Add read only lock (SELECT ... FOR SHARE) as most of the time it can be shared by all transactions
+// initiated by the owning shard
 func lockShard(tx *sqlx.Tx, shardID int, oldRangeID int64) error {
 	var rangeID int64
 

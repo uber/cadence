@@ -36,7 +36,7 @@ import (
 
 type (
 	sqlHistoryManager struct {
-		sqlManager
+		sqlStore
 		shardID int
 	}
 
@@ -90,7 +90,7 @@ func newHistoryPersistence(cfg config.SQL, logger bark.Logger) (p.HistoryStore, 
 		return nil, err
 	}
 	return &sqlHistoryManager{
-		sqlManager: sqlManager{
+		sqlStore: sqlStore{
 			db:     db,
 			logger: logger,
 		},

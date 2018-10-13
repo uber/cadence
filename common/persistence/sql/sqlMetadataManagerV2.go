@@ -37,7 +37,7 @@ import (
 type (
 	// Implements MetadataManager
 	sqlMetadataManagerV2 struct {
-		sqlManager
+		sqlStore
 		activeClusterName string
 	}
 
@@ -177,7 +177,7 @@ func newMetadataPersistenceV2(cfg config.SQL, currentClusterName string,
 		return nil, err
 	}
 	return &sqlMetadataManagerV2{
-		sqlManager: sqlManager{
+		sqlStore: sqlStore{
 			db:     db,
 			logger: logger,
 		},

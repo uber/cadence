@@ -35,7 +35,7 @@ import (
 
 type (
 	sqlTaskManager struct {
-		sqlManager
+		sqlStore
 	}
 
 	tasksRow struct {
@@ -114,7 +114,7 @@ func newTaskPersistence(cfg config.SQL, log bark.Logger) (persistence.TaskManage
 		return nil, err
 	}
 	return &sqlTaskManager{
-		sqlManager: sqlManager{
+		sqlStore: sqlStore{
 			db:     db,
 			logger: log,
 		},
