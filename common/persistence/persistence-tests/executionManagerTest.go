@@ -1463,9 +1463,9 @@ func (s *ExecutionManagerSuite) TestWorkflowMutableStateActivities() {
 	state, err1 := s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.NoError(err1)
 	s.NotNil(state, "expected valid state.")
-	s.Equal(1, len(state.ActivitInfos))
-	log.Printf("%+v", state.ActivitInfos)
-	ai, ok := state.ActivitInfos[1]
+	s.Equal(1, len(state.ActivityInfos))
+	log.Printf("%+v", state.ActivityInfos)
+	ai, ok := state.ActivityInfos[1]
 	s.True(ok)
 	s.NotNil(ai)
 	s.Equal(int64(7789), ai.Version)
@@ -1488,7 +1488,7 @@ func (s *ExecutionManagerSuite) TestWorkflowMutableStateActivities() {
 	state, err1 = s.GetWorkflowExecutionInfo(domainID, workflowExecution)
 	s.NoError(err2)
 	s.NotNil(state, "expected valid state.")
-	s.Equal(0, len(state.ActivitInfos))
+	s.Equal(0, len(state.ActivityInfos))
 }
 
 // TestWorkflowMutableStateTimers test
@@ -2502,7 +2502,7 @@ func (s *ExecutionManagerSuite) TestResetMutableStateCurrentIsSelf() {
 	}
 	updatedState := &p.WorkflowMutableState{
 		ExecutionInfo: updatedInfo,
-		ActivitInfos: map[int64]*p.ActivityInfo{
+		ActivityInfos: map[int64]*p.ActivityInfo{
 			4: {
 				Version:                  7789,
 				ScheduleID:               4,
@@ -2634,8 +2634,8 @@ func (s *ExecutionManagerSuite) TestResetMutableStateCurrentIsSelf() {
 	history1 := &gen.History{Events: state1.BufferedEvents}
 	s.True(history.Equals(history1))
 
-	s.Equal(2, len(state1.ActivitInfos))
-	ai, ok := state1.ActivitInfos[4]
+	s.Equal(2, len(state1.ActivityInfos))
+	ai, ok := state1.ActivityInfos[4]
 	s.True(ok)
 	s.NotNil(ai)
 	s.Equal(int64(7789), ai.Version)
@@ -2652,7 +2652,7 @@ func (s *ExecutionManagerSuite) TestResetMutableStateCurrentIsSelf() {
 	s.EqualTimes(currentTime, ai.LastHeartBeatUpdatedTime)
 	s.Equal(int32(1), ai.TimerTaskStatus)
 
-	ai, ok = state1.ActivitInfos[5]
+	ai, ok = state1.ActivityInfos[5]
 	s.True(ok)
 	s.NotNil(ai)
 	s.Equal(int64(7789), ai.Version)
@@ -2816,8 +2816,8 @@ func (s *ExecutionManagerSuite) TestResetMutableStateCurrentIsSelf() {
 	s.NotNil(info4, "Valid Workflow info expected.")
 	s.Equal(int64(3), info4.NextEventID)
 
-	s.Equal(1, len(state4.ActivitInfos))
-	ai, ok = state4.ActivitInfos[40]
+	s.Equal(1, len(state4.ActivityInfos))
+	ai, ok = state4.ActivityInfos[40]
 	s.True(ok)
 	s.NotNil(ai)
 	s.Equal(int64(8789), ai.Version)

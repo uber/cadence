@@ -467,7 +467,7 @@ type (
 
 	// WorkflowMutableState indicates workflow related state
 	WorkflowMutableState struct {
-		ActivitInfos             map[int64]*ActivityInfo
+		ActivityInfos            map[int64]*ActivityInfo
 		TimerInfos               map[string]*TimerInfo
 		ChildExecutionInfos      map[int64]*ChildExecutionInfo
 		RequestCancelInfos       map[int64]*RequestCancelInfo

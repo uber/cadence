@@ -21,7 +21,10 @@
 package persistence
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/prometheus/common/log"
+	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 )
@@ -33,17 +36,19 @@ type (
 		serializer    HistorySerializer
 		persistence   ExecutionStore
 		statsComputer statsComputer
+		logger        bark.Logger
 	}
 )
 
 var _ ExecutionManager = (*executionManagerImpl)(nil)
 
 // NewExecutionManagerImpl returns new ExecutionManager
-func NewExecutionManagerImpl(persistence ExecutionStore) ExecutionManager {
+func NewExecutionManagerImpl(persistence ExecutionStore, logger bark.Logger) ExecutionManager {
 	return &executionManagerImpl{
 		serializer:    NewHistorySerializer(),
 		persistence:   persistence,
 		statsComputer: statsComputer{},
+		logger:        logger,
 	}
 }
 
@@ -67,7 +72,7 @@ func (m *executionManagerImpl) GetWorkflowExecution(request *GetWorkflowExecutio
 		},
 	}
 
-	newResponse.State.ActivitInfos, err = m.DeserializeActivityInfos(response.State.ActivitInfos)
+	newResponse.State.ActivityInfos, err = m.DeserializeActivityInfos(response.State.ActivitInfos)
 	if err != nil {
 		return nil, err
 	}
@@ -356,6 +361,8 @@ func (m *executionManagerImpl) SerializeUpsertChildExecutionInfos(infos []*Child
 		if err != nil {
 			return nil, err
 		}
+		se, _ := json.Marshal(v.StartedEvent)
+		m.logger.Infof("SerializeUpsertChildExecutionInfos event: %v, encoding: %v", se, encoding)
 		startedEvent, err := m.serializer.SerializeEvent(v.StartedEvent, encoding)
 		if err != nil {
 			return nil, err
@@ -378,12 +385,14 @@ func (m *executionManagerImpl) SerializeUpsertActivityInfos(infos []*ActivityInf
 	newInfos := make([]*InternalActivityInfo, 0)
 	for _, v := range infos {
 		if v.ScheduledEvent == nil {
-			panic("SerializeUpsertActivityInfos ScheduledEvent is required")
+			log.Fatal("SerializeUpsertActivityInfos ScheduledEvent is required")
 		}
 		scheduledEvent, err := m.serializer.SerializeEvent(v.ScheduledEvent, encoding)
 		if err != nil {
 			return nil, err
 		}
+		se, _ := json.Marshal(v.StartedEvent)
+		m.logger.Infof("SerializeUpsertActivityInfos started event: %v, encoding: %v", se, encoding)
 		startedEvent, err := m.serializer.SerializeEvent(v.StartedEvent, encoding)
 		if err != nil {
 			return nil, err
@@ -427,13 +436,9 @@ func (m *executionManagerImpl) SerializeUpsertActivityInfos(infos []*ActivityInf
 
 func (m *executionManagerImpl) SerializeExecutionInfo(info *WorkflowExecutionInfo, encoding common.EncodingType) (*InternalWorkflowExecutionInfo, error) {
 	if info == nil {
-		return &InternalWorkflowExecutionInfo{
-			CompletionEvent: &DataBlob{},
-		}, nil
+		return &InternalWorkflowExecutionInfo{}, nil
 	}
-	var completionEvent *DataBlob
-	var err error
-	completionEvent, err = m.serializer.SerializeEvent(info.CompletionEvent, encoding)
+	completionEvent, err := m.serializer.SerializeEvent(info.CompletionEvent, encoding)
 	if err != nil {
 		return nil, err
 	}

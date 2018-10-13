@@ -2860,7 +2860,7 @@ func (d *cassandraPersistence) updateActivityInfos(batch *gocql.Batch, activityI
 	domainID, workflowID, runID string, condition int64, rangeID int64) error {
 
 	for _, a := range activityInfos {
-		startedEventData, startedEventEncoding := p.FromDataBlob(a.StartedEvent)
+		startedEventData, _ := p.FromDataBlob(a.StartedEvent)
 		if a.StartedEvent != nil && a.StartedEvent.Encoding != a.ScheduledEvent.Encoding {
 			return p.NewHistorySerializationError(fmt.Sprintf("expect to have the same encoding, but %v != %v", a.ScheduledEvent.Encoding, a.StartedEvent.Encoding))
 		}
@@ -2895,7 +2895,7 @@ func (d *cassandraPersistence) updateActivityInfos(batch *gocql.Batch, activityI
 			a.ExpirationTime,
 			a.MaximumAttempts,
 			a.NonRetriableErrors,
-			startedEventEncoding,
+			a.ScheduledEvent.Encoding,
 			d.shardID,
 			rowTypeExecution,
 			domainID,
@@ -3359,9 +3359,9 @@ func createShardInfo(currentCluster string, result map[string]interface{}) *p.Sh
 }
 
 func createWorkflowExecutionInfo(result map[string]interface{}) *p.InternalWorkflowExecutionInfo {
-	info := &p.InternalWorkflowExecutionInfo{
-		CompletionEvent: &p.DataBlob{},
-	}
+	info := &p.InternalWorkflowExecutionInfo{}
+	var completionEventData []byte
+	var completionEventEncoding common.EncodingType
 	for k, v := range result {
 		switch k {
 		case "domain_id":
@@ -3379,9 +3379,9 @@ func createWorkflowExecutionInfo(result map[string]interface{}) *p.InternalWorkf
 		case "initiated_id":
 			info.InitiatedID = v.(int64)
 		case "completion_event":
-			info.CompletionEvent.Data = v.([]byte)
+			completionEventData = v.([]byte)
 		case "completion_event_data_encoding":
-			info.CompletionEvent.Encoding = common.EncodingType(v.(string))
+			completionEventEncoding = common.EncodingType(v.(string))
 		case "task_list":
 			info.TaskList = v.(string)
 		case "workflow_type_name":
@@ -3456,7 +3456,7 @@ func createWorkflowExecutionInfo(result map[string]interface{}) *p.InternalWorkf
 			info.NonRetriableErrors = v.([]string)
 		}
 	}
-
+	info.CompletionEvent = p.NewDataBlob(completionEventData, completionEventEncoding)
 	return info
 }
 
@@ -3560,11 +3560,9 @@ func createReplicationTaskInfo(result map[string]interface{}) *p.ReplicationTask
 }
 
 func createActivityInfo(result map[string]interface{}) *p.InternalActivityInfo {
-	info := &p.InternalActivityInfo{
-		ScheduledEvent: &p.DataBlob{},
-		StartedEvent:   &p.DataBlob{},
-	}
+	info := &p.InternalActivityInfo{}
 	var sharedEncoding common.EncodingType
+	var scheduledEventData, startedEventData []byte
 	for k, v := range result {
 		switch k {
 		case "version":
@@ -3572,13 +3570,13 @@ func createActivityInfo(result map[string]interface{}) *p.InternalActivityInfo {
 		case "schedule_id":
 			info.ScheduleID = v.(int64)
 		case "scheduled_event":
-			info.ScheduledEvent.Data = v.([]byte)
+			scheduledEventData = v.([]byte)
 		case "scheduled_time":
 			info.ScheduledTime = v.(time.Time)
 		case "started_id":
 			info.StartedID = v.(int64)
 		case "started_event":
-			info.StartedEvent.Data = v.([]byte)
+			startedEventData = v.([]byte)
 		case "started_time":
 			info.StartedTime = v.(time.Time)
 		case "activity_id":
@@ -3627,8 +3625,8 @@ func createActivityInfo(result map[string]interface{}) *p.InternalActivityInfo {
 			sharedEncoding = common.EncodingType(v.(string))
 		}
 	}
-	info.ScheduledEvent.Encoding = sharedEncoding
-	info.StartedEvent.Encoding = sharedEncoding
+	info.ScheduledEvent = p.NewDataBlob(scheduledEventData, sharedEncoding)
+	info.StartedEvent = p.NewDataBlob(startedEventData, sharedEncoding)
 
 	return info
 }
@@ -3673,9 +3671,7 @@ func createChildExecutionInfo(result map[string]interface{}, logger bark.Logger)
 			info.InitiatedEvent.Encoding = common.EncodingType(v.(string))
 		}
 	}
-	if len(startedData) > 0 {
-		info.StartedEvent = p.NewDataBlob(startedData, info.InitiatedEvent.Encoding)
-	}
+	info.StartedEvent = p.NewDataBlob(startedData, info.InitiatedEvent.Encoding)
 	return info
 }
 
@@ -3746,17 +3742,17 @@ func resetActivityInfoMap(activityInfos []*p.InternalActivityInfo) (map[int64]ma
 
 	aMap := make(map[int64]map[string]interface{})
 	for _, a := range activityInfos {
-		if a.ScheduledEvent.Encoding != a.StartedEvent.Encoding {
+		if a.StartedEvent != nil && a.ScheduledEvent.Encoding != a.StartedEvent.Encoding {
 			return nil, p.NewHistorySerializationError(fmt.Sprintf("expect to have the same encoding, but %v != %v", a.ScheduledEvent.Encoding, a.StartedEvent.Encoding))
 		}
-
+		startedEventData, _ := p.FromDataBlob(a.StartedEvent)
 		aInfo := make(map[string]interface{})
 		aInfo["version"] = a.Version
 		aInfo["schedule_id"] = a.ScheduleID
 		aInfo["scheduled_event"] = a.ScheduledEvent.Data
 		aInfo["scheduled_time"] = a.ScheduledTime
 		aInfo["started_id"] = a.StartedID
-		aInfo["started_event"] = a.StartedEvent.Data
+		aInfo["started_event"] = startedEventData
 		aInfo["started_time"] = a.StartedTime
 		aInfo["activity_id"] = a.ActivityID
 		aInfo["request_id"] = a.RequestID
@@ -3779,7 +3775,7 @@ func resetActivityInfoMap(activityInfos []*p.InternalActivityInfo) (map[int64]ma
 		aInfo["expiration_time"] = a.ExpirationTime
 		aInfo["max_attempts"] = a.MaximumAttempts
 		aInfo["non_retriable_errors"] = a.NonRetriableErrors
-		aInfo["event_data_encoding"] = a.StartedEvent.Encoding
+		aInfo["event_data_encoding"] = a.ScheduledEvent.Encoding
 
 		aMap[a.ScheduleID] = aInfo
 	}

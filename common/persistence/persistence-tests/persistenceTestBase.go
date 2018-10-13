@@ -739,7 +739,7 @@ func (s *TestBase) UpdateWorkflowExecutionForBufferEvents(
 // UpdateAllMutableState is a utility method to update workflow execution
 func (s *TestBase) UpdateAllMutableState(updatedMutableState *p.WorkflowMutableState, condition int64) error {
 	var aInfos []*p.ActivityInfo
-	for _, ai := range updatedMutableState.ActivitInfos {
+	for _, ai := range updatedMutableState.ActivityInfos {
 		aInfos = append(aInfos, ai)
 	}
 

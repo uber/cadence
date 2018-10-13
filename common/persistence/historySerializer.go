@@ -160,15 +160,15 @@ func (t *serializerImpl) DeserializeEvent(data *DataBlob) (*workflow.HistoryEven
 	if data == nil {
 		return nil, nil
 	}
+	if len(data.Data) == 0 {
+		return nil, NewHistoryDeserializationError("DeserializeEvent empty data")
+	}
 	var event workflow.HistoryEvent
 	switch data.GetEncoding() {
 	//As backward-compatibility, unknown should be json
 	case common.EncodingTypeUnknown:
 		fallthrough
 	case common.EncodingTypeJSON:
-		if len(data.Data) == 0 {
-			return &event, nil
-		}
 		err := json.Unmarshal(data.Data, &event)
 		if err != nil {
 			return nil, NewHistoryDeserializationError(fmt.Sprintf("DeserializeEvent encoding: \"%v\", error: %v", data.Encoding, err.Error()))
