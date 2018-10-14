@@ -113,8 +113,8 @@ type (
 
 		RunID            string
 		CreateRequestID  string
-		State            int64
-		CloseStatus      int64
+		State            int
+		CloseStatus      int
 		LastWriteVersion *int64
 		StartVersion     *int64
 	}
@@ -404,12 +404,13 @@ domain_id = ? AND
 workflow_id = ?
 FOR UPDATE`
 
-	continueAsNewUpdateCurrentExecutionsSQLQuery = `UPDATE current_executions SET
+	updateCurrentExecutionsSQLQuery = `UPDATE current_executions SET
 run_id = :run_id,
 create_request_id = :create_request_id,
 state = :state,
 close_status = :close_status,
-start_version = :start_version
+start_version = :start_version,
+last_write_version = :last_write_version
 WHERE
 shard_id = :shard_id AND
 domain_id = :domain_id AND
@@ -1040,8 +1041,8 @@ func (m *sqlExecutionManager) updateWorkflowExecutionTx(tx *sqlx.Tx, request *p.
 			executionInfo.RunID,
 			executionInfo.RunID,
 			executionInfo.CreateRequestID,
-			int64(executionInfo.State),
-			int64(executionInfo.CloseStatus),
+			executionInfo.State,
+			executionInfo.CloseStatus,
 			startVersion,
 			lastWriteVersion); err != nil {
 			return &workflow.InternalServiceError{
@@ -1095,12 +1096,31 @@ func (m *sqlExecutionManager) ResetMutableState(request *p.InternalResetMutableS
 }
 
 func (m *sqlExecutionManager) resetMutableStateTx(tx *sqlx.Tx, request *p.InternalResetMutableStateRequest) error {
+	info := request.ExecutionInfo
+	replicationState := request.ReplicationState
+
+	if err := updateCurrentExecution(tx,
+		m.shardID,
+		info.DomainID,
+		info.WorkflowID,
+		info.RunID,
+		info.CreateRequestID,
+		info.State,
+		info.CloseStatus,
+		&replicationState.StartVersion,
+		&replicationState.LastWriteVersion,
+	); err != nil {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("CreateWorkflowExecution operation failed. Failed to continue as new. Error: %v", err),
+		}
+	}
+
 	// TODO Is there a way to modify the various map tables without fear of other people adding rows after we delete, without locking the executions row?
 	if err := lockAndCheckNextEventID(tx,
 		m.shardID,
-		request.ExecutionInfo.DomainID,
-		request.ExecutionInfo.WorkflowID,
-		request.ExecutionInfo.RunID,
+		info.DomainID,
+		info.WorkflowID,
+		info.RunID,
 		request.Condition); err != nil {
 		switch err.(type) {
 		case *p.ConditionFailedError:
@@ -1112,7 +1132,7 @@ func (m *sqlExecutionManager) resetMutableStateTx(tx *sqlx.Tx, request *p.Intern
 		}
 	}
 
-	if err := updateExecution(tx, request.ExecutionInfo, request.ReplicationState, request.Condition); err != nil {
+	if err := updateExecution(tx, info, request.ReplicationState, request.Condition); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("UpdateWorkflowExecution operation failed. Failed to update executions row. Erorr: %v", err),
 		}
@@ -1120,9 +1140,9 @@ func (m *sqlExecutionManager) resetMutableStateTx(tx *sqlx.Tx, request *p.Intern
 
 	if err := deleteActivityInfoMap(tx,
 		m.shardID,
-		request.ExecutionInfo.DomainID,
-		request.ExecutionInfo.WorkflowID,
-		request.ExecutionInfo.RunID); err != nil {
+		info.DomainID,
+		info.WorkflowID,
+		info.RunID); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("ResetMutableState operation failed. Failed to clear activity info map. Error: %v", err),
 		}
@@ -1132,9 +1152,9 @@ func (m *sqlExecutionManager) resetMutableStateTx(tx *sqlx.Tx, request *p.Intern
 		request.InsertActivityInfos,
 		nil,
 		m.shardID,
-		request.ExecutionInfo.DomainID,
-		request.ExecutionInfo.WorkflowID,
-		request.ExecutionInfo.RunID,
+		info.DomainID,
+		info.WorkflowID,
+		info.RunID,
 		m.logger); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("ResetMutableState operation failed. Failed to insert into activity info map after clearing. Error: %v", err),
@@ -1143,9 +1163,9 @@ func (m *sqlExecutionManager) resetMutableStateTx(tx *sqlx.Tx, request *p.Intern
 
 	if err := deleteTimerInfoMap(tx,
 		m.shardID,
-		request.ExecutionInfo.DomainID,
-		request.ExecutionInfo.WorkflowID,
-		request.ExecutionInfo.RunID); err != nil {
+		info.DomainID,
+		info.WorkflowID,
+		info.RunID); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("ResetMutableState operation failed. Failed to clear timer info map. Error: %v", err),
 		}
@@ -1155,9 +1175,9 @@ func (m *sqlExecutionManager) resetMutableStateTx(tx *sqlx.Tx, request *p.Intern
 		request.InsertTimerInfos,
 		nil,
 		m.shardID,
-		request.ExecutionInfo.DomainID,
-		request.ExecutionInfo.WorkflowID,
-		request.ExecutionInfo.RunID); err != nil {
+		info.DomainID,
+		info.WorkflowID,
+		info.RunID); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("ResetMutableState operation failed. Failed to insert into timer info map after clearing. Error: %v", err),
 		}
@@ -1165,9 +1185,9 @@ func (m *sqlExecutionManager) resetMutableStateTx(tx *sqlx.Tx, request *p.Intern
 
 	if err := deleteChildExecutionInfoMap(tx,
 		m.shardID,
-		request.ExecutionInfo.DomainID,
-		request.ExecutionInfo.WorkflowID,
-		request.ExecutionInfo.RunID); err != nil {
+		info.DomainID,
+		info.WorkflowID,
+		info.RunID); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("ResetMutableState operation failed. Failed to clear child execution info map. Error: %v", err),
 		}
@@ -1177,9 +1197,9 @@ func (m *sqlExecutionManager) resetMutableStateTx(tx *sqlx.Tx, request *p.Intern
 		request.InsertChildExecutionInfos,
 		nil,
 		m.shardID,
-		request.ExecutionInfo.DomainID,
-		request.ExecutionInfo.WorkflowID,
-		request.ExecutionInfo.RunID); err != nil {
+		info.DomainID,
+		info.WorkflowID,
+		info.RunID); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("ResetMutableState operation failed. Failed to insert into activity info map after clearing. Error: %v", err),
 		}
@@ -1187,9 +1207,9 @@ func (m *sqlExecutionManager) resetMutableStateTx(tx *sqlx.Tx, request *p.Intern
 
 	if err := deleteRequestCancelInfoMap(tx,
 		m.shardID,
-		request.ExecutionInfo.DomainID,
-		request.ExecutionInfo.WorkflowID,
-		request.ExecutionInfo.RunID); err != nil {
+		info.DomainID,
+		info.WorkflowID,
+		info.RunID); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("ResetMutableState operation failed. Failed to clear request cancel info map. Error: %v", err),
 		}
@@ -1199,9 +1219,9 @@ func (m *sqlExecutionManager) resetMutableStateTx(tx *sqlx.Tx, request *p.Intern
 		request.InsertRequestCancelInfos,
 		nil,
 		m.shardID,
-		request.ExecutionInfo.DomainID,
-		request.ExecutionInfo.WorkflowID,
-		request.ExecutionInfo.RunID); err != nil {
+		info.DomainID,
+		info.WorkflowID,
+		info.RunID); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("ResetMutableState operation failed. Failed to insert into request cancel info map after clearing. Error: %v", err),
 		}
@@ -1209,9 +1229,9 @@ func (m *sqlExecutionManager) resetMutableStateTx(tx *sqlx.Tx, request *p.Intern
 
 	if err := deleteSignalInfoMap(tx,
 		m.shardID,
-		request.ExecutionInfo.DomainID,
-		request.ExecutionInfo.WorkflowID,
-		request.ExecutionInfo.RunID); err != nil {
+		info.DomainID,
+		info.WorkflowID,
+		info.RunID); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("ResetMutableState operation failed. Failed to clear signal info map. Error: %v", err),
 		}
@@ -1219,9 +1239,9 @@ func (m *sqlExecutionManager) resetMutableStateTx(tx *sqlx.Tx, request *p.Intern
 
 	if err := deleteBufferedReplicationTasksMap(tx,
 		m.shardID,
-		request.ExecutionInfo.DomainID,
-		request.ExecutionInfo.WorkflowID,
-		request.ExecutionInfo.RunID); err != nil {
+		info.DomainID,
+		info.WorkflowID,
+		info.RunID); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("ResetMutableState operation failed. Failed to clear buffered replications tasks map. Error: %v", err),
 		}
@@ -1230,9 +1250,9 @@ func (m *sqlExecutionManager) resetMutableStateTx(tx *sqlx.Tx, request *p.Intern
 	if err := updateBufferedEvents(tx, nil,
 		true,
 		m.shardID,
-		request.ExecutionInfo.DomainID,
-		request.ExecutionInfo.WorkflowID,
-		request.ExecutionInfo.RunID, 0, 0); err != nil {
+		info.DomainID,
+		info.WorkflowID,
+		info.RunID, 0, 0); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("ResetMutableState operation failed. Failed to clear buffered events. Error: %v", err),
 		}
@@ -1242,9 +1262,9 @@ func (m *sqlExecutionManager) resetMutableStateTx(tx *sqlx.Tx, request *p.Intern
 		request.InsertSignalInfos,
 		nil,
 		m.shardID,
-		request.ExecutionInfo.DomainID,
-		request.ExecutionInfo.WorkflowID,
-		request.ExecutionInfo.RunID); err != nil {
+		info.DomainID,
+		info.WorkflowID,
+		info.RunID); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("ResetMutableState operation failed. Failed to insert into signal info map after clearing. Error: %v", err),
 		}
@@ -1252,9 +1272,9 @@ func (m *sqlExecutionManager) resetMutableStateTx(tx *sqlx.Tx, request *p.Intern
 
 	if err := deleteSignalsRequestedSet(tx,
 		m.shardID,
-		request.ExecutionInfo.DomainID,
-		request.ExecutionInfo.WorkflowID,
-		request.ExecutionInfo.RunID); err != nil {
+		info.DomainID,
+		info.WorkflowID,
+		info.RunID); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("ResetMutableState operation failed. Failed to clear signals requested set. Error: %v", err),
 		}
@@ -1264,9 +1284,9 @@ func (m *sqlExecutionManager) resetMutableStateTx(tx *sqlx.Tx, request *p.Intern
 		request.InsertSignalRequestedIDs,
 		"",
 		m.shardID,
-		request.ExecutionInfo.DomainID,
-		request.ExecutionInfo.WorkflowID,
-		request.ExecutionInfo.RunID); err != nil {
+		info.DomainID,
+		info.WorkflowID,
+		info.RunID); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("ResetMutableState operation failed. Failed to insert into signals requested set after clearing. Error: %v", err),
 		}
@@ -1887,7 +1907,7 @@ func createTimerTasks(tx *sqlx.Tx, timerTasks []p.Task, deleteTimerTask p.Task, 
 }
 
 func continueAsNew(tx *sqlx.Tx, shardID int, domainID, workflowID, runID, previousRunID string,
-	createRequestID string, state int64, closeStatus int64, startVersion *int64, lastWriteVersion *int64) error {
+	createRequestID string, state int, closeStatus int, startVersion *int64, lastWriteVersion *int64) error {
 
 	var currentRunID string
 	if err := tx.Get(&currentRunID, continueAsNewLockRunIDSQLQuery, int64(shardID), domainID, workflowID); err != nil {
@@ -1904,9 +1924,9 @@ func continueAsNew(tx *sqlx.Tx, shardID int, domainID, workflowID, runID, previo
 }
 
 func updateCurrentExecution(tx *sqlx.Tx, shardID int, domainID, workflowID, runID,
-	createRequestID string, state int64, closeStatus int64, startVersion *int64, lastWriteVersion *int64) error {
+	createRequestID string, state int, closeStatus int, startVersion *int64, lastWriteVersion *int64) error {
 
-	result, err := tx.NamedExec(continueAsNewUpdateCurrentExecutionsSQLQuery, &currentExecutionRow{
+	result, err := tx.NamedExec(updateCurrentExecutionsSQLQuery, &currentExecutionRow{
 		ShardID:          int64(shardID),
 		DomainID:         domainID,
 		WorkflowID:       workflowID,

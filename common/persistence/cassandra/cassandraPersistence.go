@@ -335,7 +335,11 @@ const (
 		`IF range_id = ?`
 
 	templateUpdateCurrentWorkflowExecutionQuery = `UPDATE executions USING TTL 0 ` +
-		`SET current_run_id = ?, execution = {run_id: ?, create_request_id: ?, state: ?, close_status: ?}, replication_state = {start_version: ?, last_write_version: ?}, workflow_last_write_version = ?, workflow_state = ? ` +
+		`SET current_run_id = ?, 
+execution = {run_id: ?, create_request_id: ?, state: ?, close_status: ?}, 
+replication_state = {start_version: ?, last_write_version: ?}, 
+workflow_last_write_version = ?, 
+workflow_state = ? ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
 		`and domain_id = ? ` +

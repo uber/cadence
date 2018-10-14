@@ -2426,9 +2426,6 @@ func (s *ExecutionManagerSuite) TestUpdateAndClearBufferedEvents() {
 
 // TestResetMutableStateCurrentIsSelf test
 func (s *ExecutionManagerSuite) TestResetMutableStateCurrentIsSelf() {
-	if s.ExecutionManager.GetName() != "cassandra" {
-		//s.T().Skip("Reset is still broken for SQL")
-	}
 	domainID := "4ca1faac-1a3a-47af-8e51-fdaa2b3d45b9"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("test-reset-mutable-state-test-current-is-self"),
@@ -2894,9 +2891,6 @@ func (s *ExecutionManagerSuite) TestResetMutableStateCurrentIsSelf() {
 
 // TestResetMutableStateCurrentIsNotSelf test
 func (s *ExecutionManagerSuite) TestResetMutableStateCurrentIsNotSelf() {
-	if s.ExecutionManager.GetName() != "cassandra" {
-		s.T().Skip("Reset is still broken for SQL")
-	}
 	domainID := "4ca1faac-1a3a-47af-8e51-fdaa2b3d45b9"
 	workflowID := "test-reset-mutable-state-test-current-is-not-self"
 
