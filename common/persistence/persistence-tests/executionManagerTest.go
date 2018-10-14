@@ -1471,15 +1471,15 @@ func (s *ExecutionManagerSuite) TestWorkflowMutableStateActivities() {
 	s.Equal(int64(7789), ai.Version)
 	s.Equal(int64(1), ai.ScheduleID)
 	s.Equal(int64(1), *ai.ScheduledEvent.EventId)
-	s.EqualTimesWithPrecision(currentTime, ai.ScheduledTime, time.Second)
+	s.EqualTimes(currentTime, ai.ScheduledTime)
 	s.Equal(int64(2), ai.StartedID)
 	s.Equal(int64(2), *ai.StartedEvent.EventId)
-	s.EqualTimesWithPrecision(currentTime, ai.StartedTime, time.Second)
+	s.EqualTimes(currentTime, ai.StartedTime)
 	s.Equal(int32(1), ai.ScheduleToCloseTimeout)
 	s.Equal(int32(2), ai.ScheduleToStartTimeout)
 	s.Equal(int32(3), ai.StartToCloseTimeout)
 	s.Equal(int32(4), ai.HeartbeatTimeout)
-	s.EqualTimesWithPrecision(currentTime, ai.LastHeartBeatUpdatedTime, time.Second)
+	s.EqualTimes(currentTime, ai.LastHeartBeatUpdatedTime)
 	s.Equal(int32(1), ai.TimerTaskStatus)
 
 	err2 = s.UpdateWorkflowExecution(updatedInfo, nil, nil, int64(5), nil, nil, nil, []int64{1}, nil, nil)
@@ -2427,7 +2427,7 @@ func (s *ExecutionManagerSuite) TestUpdateAndClearBufferedEvents() {
 // TestResetMutableStateCurrentIsSelf test
 func (s *ExecutionManagerSuite) TestResetMutableStateCurrentIsSelf() {
 	if s.ExecutionManager.GetName() != "cassandra" {
-		s.T().Skip("Reset is still broken for SQL")
+		//s.T().Skip("Reset is still broken for SQL")
 	}
 	domainID := "4ca1faac-1a3a-47af-8e51-fdaa2b3d45b9"
 	workflowExecution := gen.WorkflowExecution{

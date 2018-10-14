@@ -928,7 +928,7 @@ func (m *sqlExecutionManager) updateWorkflowExecutionTx(tx *sqlx.Tx, request *p.
 	}
 
 	if err := updateActivityInfos(tx, request.UpsertActivityInfos, request.DeleteActivityInfos, shardID, domainID,
-		workflowID, runID); err != nil {
+		workflowID, runID, m.logger); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("UpdateWorkflowExecution operation failed. Error: %v", err),
 		}
@@ -1134,7 +1134,8 @@ func (m *sqlExecutionManager) resetMutableStateTx(tx *sqlx.Tx, request *p.Intern
 		m.shardID,
 		request.ExecutionInfo.DomainID,
 		request.ExecutionInfo.WorkflowID,
-		request.ExecutionInfo.RunID); err != nil {
+		request.ExecutionInfo.RunID,
+		m.logger); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("ResetMutableState operation failed. Failed to insert into activity info map after clearing. Error: %v", err),
 		}
