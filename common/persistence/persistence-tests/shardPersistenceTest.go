@@ -132,7 +132,7 @@ func (s *ShardPersistenceSuite) TestUpdateShard() {
 	s.Equal(updatedTransferAckLevel, info1.TransferAckLevel)
 	s.Equal(updatedReplicationAckLevel, info1.ReplicationAckLevel)
 	s.Equal(updatedStolenSinceRenew, info1.StolenSinceRenew)
-	s.Equal(updatedTimerAckLevel.Unix(), info1.TimerAckLevel.Unix())
+	s.EqualTimes(updatedTimerAckLevel, info1.TimerAckLevel)
 
 	failedUpdateInfo := copyShardInfo(shardInfo)
 	failedUpdateInfo.Owner = "failed_owner"
@@ -151,7 +151,7 @@ func (s *ShardPersistenceSuite) TestUpdateShard() {
 	s.Equal(updatedTransferAckLevel, info2.TransferAckLevel)
 	s.Equal(updatedReplicationAckLevel, info2.ReplicationAckLevel)
 	s.Equal(updatedStolenSinceRenew, info2.StolenSinceRenew)
-	s.Equal(updatedTimerAckLevel.Unix(), info1.TimerAckLevel.Unix())
+	s.EqualTimes(updatedTimerAckLevel, info1.TimerAckLevel)
 }
 
 func copyShardInfo(sourceInfo *p.ShardInfo) *p.ShardInfo {

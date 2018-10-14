@@ -1109,9 +1109,9 @@ func updateBufferedReplicationTasks(tx *sqlx.Tx,
 	workflowID,
 	runID string) error {
 	if newBufferedReplicationTask != nil {
-		newRunHistoryBlob := newBufferedReplicationTask.NewRunHistory
+		newRunHistoryData, newRunHistoryEncoding := persistence.FromDataBlob(newBufferedReplicationTask.NewRunHistory)
 		historyBlob := newBufferedReplicationTask.History
-		if newRunHistoryBlob != nil {
+		if newRunHistoryData != nil {
 			arg := &bufferedReplicationTaskMapsRow{
 				bufferedReplicationTaskMapsPrimaryKey: bufferedReplicationTaskMapsPrimaryKey{
 					ShardID:      int64(shardID),
@@ -1122,8 +1122,8 @@ func updateBufferedReplicationTasks(tx *sqlx.Tx,
 				},
 				Version:               newBufferedReplicationTask.Version,
 				NextEventID:           newBufferedReplicationTask.NextEventID,
-				NewRunHistory:         &historyBlob.Data,
-				NewRunHistoryEncoding: string(historyBlob.Encoding),
+				NewRunHistory:         &newRunHistoryData,
+				NewRunHistoryEncoding: newRunHistoryEncoding,
 			}
 			if historyBlob != nil {
 				arg.History = &historyBlob.Data

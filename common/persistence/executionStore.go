@@ -316,7 +316,8 @@ func (m *executionManagerImpl) UpdateWorkflowExecution(request *UpdateWorkflowEx
 		DeleteBufferedReplicationTask: request.DeleteBufferedReplicationTask,
 	}
 	msuss := m.statsComputer.computeMutableStateUpdateStats(newRequest)
-	return &UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: msuss}, m.persistence.UpdateWorkflowExecution(newRequest)
+	err1 := m.persistence.UpdateWorkflowExecution(newRequest)
+	return &UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: msuss}, err1
 }
 
 func (m *executionManagerImpl) SerializeNewBufferedReplicationTask(task *BufferedReplicationTask, encoding common.EncodingType) (*InternalBufferedReplicationTask, error) {

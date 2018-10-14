@@ -1761,9 +1761,6 @@ func (s *ExecutionManagerSuite) TestWorkflowMutableStateSignalRequested() {
 
 // TestWorkflowMutableStateBufferedReplicationTasks test
 func (s *ExecutionManagerSuite) TestWorkflowMutableStateBufferedReplicationTasks() {
-	if s.ExecutionManager.GetName() != "cassandra" {
-		s.T().Skip("Replication tasksk are still broken for SQL")
-	}
 	domainID := "714f8491-a34e-4301-a5af-f0cf5d8660c6"
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("test-workflow-mutable-buffered-replication-tasks-test"),
