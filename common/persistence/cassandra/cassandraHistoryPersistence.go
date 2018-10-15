@@ -83,7 +83,12 @@ const (
 		`SET deleted = true ` +
 		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id = ? `
 
-	v2templateRangeDeleteNodes = `DELETE FROM events_v2 ` +
+	// NOTE: Range deletion in batch is not supported on our production version  of Cassandra, we have to workaround by deleting one by one in a batch
+	//v2templateRangeDeleteNodes = `DELETE FROM events_v2 ` +
+	//	`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id >= ? `
+
+	// to workaround the above issue, we need to know what is the maxium node_id in a branch
+	v2templateGetMaxNodeID = `select max(node_id) AS max_id FROM events_v2 ` +
 		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id >= ? `
 
 	v2templateDeleteOneNode = `DELETE FROM events_v2 ` +
@@ -911,13 +916,11 @@ func (h *cassandraHistoryPersistence) deleteDataNodes(branch p.HistoryBranch) er
 		maxEndNodeID, ok := validBRsEndNode[br.BranchID]
 		if ok {
 			// we can only delete from the maxEndNode
-			batch.Query(v2templateRangeDeleteNodes,
-				treeID, br.BranchID, rowTypeHistoryNode, maxEndNodeID)
+			h.doRangeDeleteBranch(batch, treeID, br.BranchID, maxEndNodeID)
 			break
 		} else {
 			// No any branch is using this range, we can delete all of it
-			batch.Query(v2templateRangeDeleteNodes,
-				treeID, br.BranchID, rowTypeHistoryNode, br.BeginNodeID)
+			h.doRangeDeleteBranch(batch, treeID, br.BranchID, br.BeginNodeID)
 		}
 	}
 
@@ -935,6 +938,35 @@ func (h *cassandraHistoryPersistence) deleteDataNodes(branch p.HistoryBranch) er
 
 	if !applied {
 		return h.getTreeTrasactionFailure(previous, iter, txnID, treeID, branch.BranchID)
+	}
+	return nil
+}
+
+// NOTE: ideally we should do
+// batch.Query(v2templateRangeDeleteNodes,
+//				treeID, br.BranchID, rowTypeHistoryNode, maxEndNodeID)
+// However Cassandra doesn't support range deletion in our production version
+func (h *cassandraHistoryPersistence) doRangeDeleteBranch(batch *gocql.Batch, treeID, branchID string, beginNodeID int64) error {
+	// first we need to get the last nodeID to delete
+	query := h.session.Query(v2templateGetMaxNodeID,
+		treeID,
+		branchID,
+		rowTypeHistoryNode,
+		beginNodeID)
+
+	result := make(map[string]interface{})
+	if err := query.MapScan(result); err != nil {
+		if err == gocql.ErrNotFound {
+			// return if the branch doesn't have any node to delete
+			return nil
+		}
+		return convertCommonErrors("doRangeDeleteBranch", err)
+	}
+
+	lastNodeID := result["max_id"].(int64)
+	for nodeID := beginNodeID; nodeID <= lastNodeID; nodeID++ {
+		batch.Query(v2templateDeleteOneNode,
+			treeID, branchID, rowTypeHistoryNode, nodeID)
 	}
 	return nil
 }
