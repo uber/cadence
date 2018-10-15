@@ -112,8 +112,6 @@ type (
 	DataBlob struct {
 		Encoding common.EncodingType
 		Data     []byte
-		// this field is just to help sorting, we don't have to store it anywhere
-		ID int64
 	}
 
 	// InternalWorkflowExecutionInfo describes a workflow execution for Persistence Interface

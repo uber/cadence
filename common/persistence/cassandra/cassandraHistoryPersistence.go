@@ -545,7 +545,7 @@ func (h *cassandraHistoryPersistence) readBranchRange(treeID, branchID string, m
 
 	eventBlob := &p.DataBlob{}
 
-	for iter.Scan(&eventBlob.ID, &eventBlob.Data, &eventBlob.Encoding) {
+	for iter.Scan(nil, &eventBlob.Data, &eventBlob.Encoding) {
 		bs = append(bs, eventBlob)
 		eventBlob = &p.DataBlob{}
 	}
@@ -616,20 +616,6 @@ func (h *cassandraHistoryPersistence) ReadHistoryBranch(request *p.InternalReadH
 	response := &p.InternalReadHistoryBranchResponse{
 		History:    history,
 		BranchInfo: branchInfo,
-	}
-
-	//len(history) can be 0 if there is no events at all
-	if len(history) != 0 {
-		// sort all events into ascending order
-		sort.Slice(history, func(i, j int) bool { return history[i].ID < history[j].ID })
-		response.History = history
-
-		// checking nodeIDs are continuous after sorting
-		if history[0].ID != request.MinNodeID || history[len(history)-1].ID-history[0].ID != int64(len(history))-1 {
-			return nil, &workflow.InternalServiceError{
-				Message: fmt.Sprintf("ReadHistoryBranch. History events corrupted. Got first/last eventIDs/len: %v/%v/%v for %v", history[0].ID, history[len(history)-1].ID, len(history), request.MinNodeID),
-			}
-		}
 	}
 
 	return response, nil
