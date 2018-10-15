@@ -496,6 +496,20 @@ VALUES (:shard_id, :domain_id, :workflow_id, :run_id, :data, :data_encoding)`
 shard_id=? AND domain_id=? AND workflow_id=? AND run_id=?`
 )
 
+// txExecuteShardLocked executes f under transaction and with read lock on shard row
+func (m *sqlExecutionManager) txExecuteShardLocked(operation string, rangeID int64, f func(tx *sqlx.Tx) error) error {
+	return m.txExecute(operation, func(tx *sqlx.Tx) error {
+		if err := readLockShard(tx, m.shardID, rangeID); err != nil {
+			return err
+		}
+		err := f(tx)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
 func (m *sqlExecutionManager) Close() {
 	if m.db != nil {
 		m.db.Close()
@@ -503,7 +517,7 @@ func (m *sqlExecutionManager) Close() {
 }
 
 func (m *sqlExecutionManager) CreateWorkflowExecution(request *p.CreateWorkflowExecutionRequest) (response *p.CreateWorkflowExecutionResponse, err error) {
-	err = m.txExecute("CreateWorkflowExecution", func(tx *sqlx.Tx) error {
+	err = m.txExecuteShardLocked("CreateWorkflowExecution", request.RangeID, func(tx *sqlx.Tx) error {
 		response, err = m.createWorkflowExecutionTx(tx, request)
 		return err
 	})
@@ -601,17 +615,6 @@ func (m *sqlExecutionManager) createWorkflowExecutionTx(tx *sqlx.Tx, request *p.
 		*request.Execution.RunId); err != nil {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("CreateWorkflowExecution operation failed. Failed to create timer tasks. Error: %v", err),
-		}
-	}
-
-	if err := lockShard(tx, m.shardID, request.RangeID); err != nil {
-		switch err.(type) {
-		case *p.ShardOwnershipLostError:
-			return nil, err
-		default:
-			return nil, &workflow.InternalServiceError{
-				Message: fmt.Sprintf("CreateWorkflowExecution operation failed. Error: %v", err),
-			}
 		}
 	}
 	return &p.CreateWorkflowExecutionResponse{}, nil
@@ -867,7 +870,7 @@ func getBufferedEvents(tx *sqlx.Tx, shardID int, domainID string, workflowID str
 }
 
 func (m *sqlExecutionManager) UpdateWorkflowExecution(request *p.InternalUpdateWorkflowExecutionRequest) error {
-	return m.txExecute("UpdateWorkflowExecution", func(tx *sqlx.Tx) error {
+	return m.txExecuteShardLocked("UpdateWorkflowExecution", request.RangeID, func(tx *sqlx.Tx) error {
 		return m.updateWorkflowExecutionTx(tx, request)
 	})
 }
@@ -893,20 +896,6 @@ func (m *sqlExecutionManager) updateWorkflowExecutionTx(tx *sqlx.Tx, request *p.
 	if err := createTimerTasks(tx, request.TimerTasks, request.DeleteTimerTask, shardID, domainID, workflowID, runID); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("UpdateWorkflowExecution operation failed. Failed to create timer tasks. Error: %v", err),
-		}
-	}
-
-	// TODO Note to self: The only reason that this is up here because a certain test was required
-	// TODO to fail due to ShardOwnershipLostError and not due to ConditionFailedError
-	// TODO Otherwise, it'd probably be OK to put this right before the .Commit()
-	if err := lockShard(tx, shardID, request.RangeID); err != nil {
-		switch err.(type) {
-		case *p.ShardOwnershipLostError:
-			return err
-		default:
-			return &workflow.InternalServiceError{
-				Message: fmt.Sprintf("UpdateWorkflowExecution operation failed. Error: %v", err),
-			}
 		}
 	}
 
@@ -1090,7 +1079,7 @@ func updateBufferedEvents(tx *sqlx.Tx, batch *p.DataBlob, clear bool, shardID in
 }
 
 func (m *sqlExecutionManager) ResetMutableState(request *p.InternalResetMutableStateRequest) error {
-	return m.txExecute("ResetMutableState", func(tx *sqlx.Tx) error {
+	return m.txExecuteShardLocked("ResetMutableState", request.RangeID, func(tx *sqlx.Tx) error {
 		return m.resetMutableStateTx(tx, request)
 	})
 }
@@ -1289,17 +1278,6 @@ func (m *sqlExecutionManager) resetMutableStateTx(tx *sqlx.Tx, request *p.Intern
 		info.RunID); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("ResetMutableState operation failed. Failed to insert into signals requested set after clearing. Error: %v", err),
-		}
-	}
-
-	if err := lockShard(tx, m.shardID, request.RangeID); err != nil {
-		switch err.(type) {
-		case *p.ShardOwnershipLostError:
-			return err
-		default:
-			return &workflow.InternalServiceError{
-				Message: fmt.Sprintf("ResetMutableState operation failed. Error: %v", err),
-			}
 		}
 	}
 	return nil

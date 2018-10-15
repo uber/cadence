@@ -114,7 +114,8 @@ WHERE
 shard_id = :shard_id
 `
 
-	lockShardSQLQuery = `SELECT range_id FROM shards WHERE shard_id = ? FOR UPDATE`
+	lockShardSQLQuery     = `SELECT range_id FROM shards WHERE shard_id = ? FOR UPDATE`
+	readLockShardSQLQuery = `SELECT range_id FROM shards WHERE shard_id = ? LOCK IN SHARE MODE`
 )
 
 // newShardPersistence creates an instance of ShardManager
@@ -244,7 +245,6 @@ func (m *sqlShardManager) UpdateShard(request *persistence.UpdateShardRequest) e
 	})
 }
 
-// TODO: Add read only lock (SELECT ... FOR SHARE) as most of the time it can be shared by all transactions
 // initiated by the owning shard
 func lockShard(tx *sqlx.Tx, shardID int, oldRangeID int64) error {
 	var rangeID int64
@@ -269,6 +269,32 @@ func lockShard(tx *sqlx.Tx, shardID int, oldRangeID int64) error {
 		}
 	}
 
+	return nil
+}
+
+// initiated by the owning shard
+func readLockShard(tx *sqlx.Tx, shardID int, oldRangeID int64) error {
+	var rangeID int64
+
+	err := tx.Get(&rangeID, readLockShardSQLQuery, shardID)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return &workflow.InternalServiceError{
+				Message: fmt.Sprintf("Failed to lock shard with ID %v that does not exist.", shardID),
+			}
+		}
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("Failed to lock shard with ID: %v. Error: %v", shardID, err),
+		}
+	}
+
+	if rangeID != oldRangeID {
+		return &persistence.ShardOwnershipLostError{
+			ShardID: shardID,
+			Msg:     fmt.Sprintf("Failed to lock shard. Previous range ID: %v; new range ID: %v", oldRangeID, rangeID),
+		}
+	}
 	return nil
 }
 
