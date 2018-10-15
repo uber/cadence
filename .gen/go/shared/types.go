@@ -17595,7 +17595,7 @@ type PollForActivityTaskResponse struct {
 	ScheduledTimestampOfThisAttempt *int64             `json:"scheduledTimestampOfThisAttempt,omitempty"`
 	HeartbeatDetails                []byte             `json:"heartbeatDetails,omitempty"`
 	WorkflowType                    *WorkflowType      `json:"workflowType,omitempty"`
-	DomainID                        *string            `json:"domainID,omitempty"`
+	WorkflowDomain                  *string            `json:"workflowDomain,omitempty"`
 }
 
 // ToWire translates a PollForActivityTaskResponse struct into a Thrift-level intermediate
@@ -17733,8 +17733,8 @@ func (v *PollForActivityTaskResponse) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 150, Value: w}
 		i++
 	}
-	if v.DomainID != nil {
-		w, err = wire.NewValueString(*(v.DomainID)), error(nil)
+	if v.WorkflowDomain != nil {
+		w, err = wire.NewValueString(*(v.WorkflowDomain)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -17899,7 +17899,7 @@ func (v *PollForActivityTaskResponse) FromWire(w wire.Value) error {
 			if field.Value.Type() == wire.TBinary {
 				var x string
 				x, err = field.Value.GetString(), error(nil)
-				v.DomainID = &x
+				v.WorkflowDomain = &x
 				if err != nil {
 					return err
 				}
@@ -17976,8 +17976,8 @@ func (v *PollForActivityTaskResponse) String() string {
 		fields[i] = fmt.Sprintf("WorkflowType: %v", v.WorkflowType)
 		i++
 	}
-	if v.DomainID != nil {
-		fields[i] = fmt.Sprintf("DomainID: %v", *(v.DomainID))
+	if v.WorkflowDomain != nil {
+		fields[i] = fmt.Sprintf("WorkflowDomain: %v", *(v.WorkflowDomain))
 		i++
 	}
 
@@ -18031,7 +18031,7 @@ func (v *PollForActivityTaskResponse) Equals(rhs *PollForActivityTaskResponse) b
 	if !((v.WorkflowType == nil && rhs.WorkflowType == nil) || (v.WorkflowType != nil && rhs.WorkflowType != nil && v.WorkflowType.Equals(rhs.WorkflowType))) {
 		return false
 	}
-	if !_String_EqualsPtr(v.DomainID, rhs.DomainID) {
+	if !_String_EqualsPtr(v.WorkflowDomain, rhs.WorkflowDomain) {
 		return false
 	}
 
@@ -18178,11 +18178,11 @@ func (v *PollForActivityTaskResponse) GetWorkflowType() (o *WorkflowType) {
 	return
 }
 
-// GetDomainID returns the value of DomainID if it is set or its
+// GetWorkflowDomain returns the value of WorkflowDomain if it is set or its
 // zero value if it is unset.
-func (v *PollForActivityTaskResponse) GetDomainID() (o string) {
-	if v.DomainID != nil {
-		return *v.DomainID
+func (v *PollForActivityTaskResponse) GetWorkflowDomain() (o string) {
+	if v.WorkflowDomain != nil {
+		return *v.WorkflowDomain
 	}
 
 	return
