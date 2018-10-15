@@ -923,6 +923,7 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(ctx context.Context,
 			response.WorkflowType = common.WorkflowTypePtr(workflow.WorkflowType{
 				Name: &ei.WorkflowTypeName,
 			})
+			response.DomainID = common.StringPtr(ei.DomainID)
 
 			// Start a timer for the activity task.
 			timerTasks := []persistence.Task{}
