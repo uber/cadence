@@ -91,9 +91,8 @@ const (
 
 type (
 	cassandraMetadataPersistenceV2 struct {
-		session            *gocql.Session
+		cassandraStore
 		currentClusterName string
-		logger             bark.Logger
 	}
 )
 
@@ -112,14 +111,9 @@ func newMetadataPersistenceV2(cfg config.Cassandra, currentClusterName string, l
 	}
 
 	return &cassandraMetadataPersistenceV2{
-		session:            session,
+		cassandraStore:     cassandraStore{session: session, logger: logger},
 		currentClusterName: currentClusterName,
-		logger:             logger,
 	}, nil
-}
-
-func (m *cassandraMetadataPersistenceV2) GetName() string {
-	return cassandraPersistenceName
 }
 
 // Close releases the resources held by this object

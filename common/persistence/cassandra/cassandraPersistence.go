@@ -847,12 +847,16 @@ var (
 )
 
 type (
+	cassandraStore struct {
+		session *gocql.Session
+		logger  bark.Logger
+	}
+
 	// Implements ExecutionManager, ShardManager and TaskManager
 	cassandraPersistence struct {
-		session            *gocql.Session
+		cassandraStore
 		shardID            int
 		currentClusterName string
-		logger             bark.Logger
 	}
 )
 
@@ -870,13 +874,17 @@ func newShardPersistence(cfg config.Cassandra, clusterName string, logger bark.L
 		return nil, err
 	}
 
-	return &cassandraPersistence{shardID: -1, session: session, currentClusterName: clusterName, logger: logger}, nil
+	return &cassandraPersistence{
+		cassandraStore:     cassandraStore{session: session, logger: logger},
+		shardID:            -1,
+		currentClusterName: clusterName,
+	}, nil
 }
 
 // NewWorkflowExecutionPersistence is used to create an instance of workflowExecutionManager implementation
 func NewWorkflowExecutionPersistence(shardID int, session *gocql.Session,
 	logger bark.Logger) (p.ExecutionStore, error) {
-	return &cassandraPersistence{shardID: shardID, session: session, logger: logger}, nil
+	return &cassandraPersistence{cassandraStore: cassandraStore{session: session, logger: logger}, shardID: shardID}, nil
 }
 
 // newTaskPersistence is used to create an instance of TaskManager implementation
@@ -891,15 +899,15 @@ func newTaskPersistence(cfg config.Cassandra, logger bark.Logger) (p.TaskStore, 
 	if err != nil {
 		return nil, err
 	}
-	return &cassandraPersistence{shardID: -1, session: session, logger: logger}, nil
+	return &cassandraPersistence{cassandraStore: cassandraStore{session: session, logger: logger}, shardID: -1}, nil
 }
 
-func (d *cassandraPersistence) GetName() string {
+func (d *cassandraStore) GetName() string {
 	return cassandraPersistenceName
 }
 
 // Close releases the underlying resources held by this object
-func (d *cassandraPersistence) Close() {
+func (d *cassandraStore) Close() {
 	if d.session != nil {
 		d.session.Close()
 	}
