@@ -136,6 +136,7 @@ struct RecordActivityTaskStartedResponse {
   50: optional i64 (js.type = "Long") scheduledTimestampOfThisAttempt
   60: optional binary heartbeatDetails
   70: optional shared.WorkflowType workflowType
+  80: optional string workflowDomain
 }
 
 struct RecordDecisionTaskStartedRequest {
