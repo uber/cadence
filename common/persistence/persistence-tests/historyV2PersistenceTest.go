@@ -53,7 +53,6 @@ type (
 	}
 )
 
-var increasingVersion int64
 var historyTestRetryPolicy = createHistoryTestRetryPolicy()
 
 func createHistoryTestRetryPolicy() backoff.RetryPolicy {
@@ -449,12 +448,11 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyForkAndAppendBranches() {
 }
 
 func (s *HistoryV2PersistenceSuite) genRandomEvents(eventIDs []int64) []*workflow.HistoryEvent {
-	atomic.AddInt64(&increasingVersion, 1)
 	var events []*workflow.HistoryEvent
 
 	timestamp := time.Now().UnixNano()
 	for _, eid := range eventIDs {
-		e := &workflow.HistoryEvent{EventId: common.Int64Ptr(eid), Version: common.Int64Ptr(increasingVersion), Timestamp: int64Ptr(timestamp)}
+		e := &workflow.HistoryEvent{EventId: common.Int64Ptr(eid), Version: common.Int64Ptr(timestamp), Timestamp: int64Ptr(timestamp)}
 		events = append(events, e)
 	}
 
