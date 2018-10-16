@@ -37,7 +37,7 @@ const (
 	testPort                 = 3306
 	testUser                 = "uber"
 	testPassword             = "uber"
-	testSchemaDir            = "schema/mysql/v57"
+	testSchemaDir            = "schema/mysql/v56"
 )
 
 // TestCluster allows executing cassandra operations in testing.

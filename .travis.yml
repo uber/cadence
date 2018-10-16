@@ -14,8 +14,6 @@ env:
 
 addons:
   apt:
-    sources:
-      - mysql-5.7-trusty
     packages:
       - gettext-base
       - libyaml-dev
@@ -23,8 +21,9 @@ addons:
       - python
       - python-dev
       - python-pip
-      - mysql-server
-      - mysql-client
+
+services:
+  - mysql
 
 before_install:
   - pip install --user ccm
@@ -32,8 +31,6 @@ before_install:
   - mkdir -p kafka && tar xzf kafka.tgz -C kafka --strip-components 1
   - nohup bash -c "cd kafka && bin/zookeeper-server-start.sh config/zookeeper.properties &"
   - nohup bash -c "cd kafka && bin/kafka-server-start.sh config/server.properties &"
-  - sudo mysql_upgrade -u root
-  - sudo service mysql restart
 
 install:
   - go get -u github.com/Masterminds/glide
