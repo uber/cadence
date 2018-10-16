@@ -78,7 +78,7 @@ func (f *Factory) NewMetadataStoreV2() (p.MetadataStore, error) {
 // NewExecutionStore returns an ExecutionStore for a given shardID
 func (f *Factory) NewExecutionStore(shardID int) (p.ExecutionStore, error) {
 	// todo: this is only a placeholder
-	return NewSQLMatchingPersistence(f.cfg, f.logger)
+	return NewSQLExecutionManager(f.cfg, f.logger)
 }
 
 // NewVisibilityStore returns a visibility store

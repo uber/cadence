@@ -23,16 +23,16 @@ package sql
 import (
 	"database/sql"
 	"fmt"
+	"github.com/uber-common/bark"
 	"github.com/uber/cadence/common/collection"
+	"github.com/uber/cadence/common/service/config"
 	"time"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	p "github.com/uber/cadence/common/persistence"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/uber-common/bark"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/service/config"
 )
 
 type (
@@ -496,6 +496,20 @@ VALUES (:shard_id, :domain_id, :workflow_id, :run_id, :data, :data_encoding)`
 shard_id=? AND domain_id=? AND workflow_id=? AND run_id=?`
 )
 
+// NewSQLExecutionManager creates an instance of ExecutionStore
+func NewSQLExecutionManager(cfg config.SQL, logger bark.Logger) (p.ExecutionStore, error) {
+	db, err := newConnection(cfg)
+	if err != nil {
+		return nil, err
+	}
+	return &sqlExecutionManager{
+		sqlStore: sqlStore{
+			db:     db,
+			logger: logger,
+		},
+	}, nil
+}
+
 // txExecuteShardLocked executes f under transaction and with read lock on shard row
 func (m *sqlExecutionManager) txExecuteShardLocked(operation string, rangeID int64, f func(tx *sqlx.Tx) error) error {
 	return m.txExecute(operation, func(tx *sqlx.Tx) error {
@@ -508,12 +522,6 @@ func (m *sqlExecutionManager) txExecuteShardLocked(operation string, rangeID int
 		}
 		return nil
 	})
-}
-
-func (m *sqlExecutionManager) Close() {
-	if m.db != nil {
-		m.db.Close()
-	}
 }
 
 func (m *sqlExecutionManager) CreateWorkflowExecution(request *p.CreateWorkflowExecutionRequest) (response *p.CreateWorkflowExecutionResponse, err error) {
@@ -1446,20 +1454,6 @@ func (m *sqlExecutionManager) RangeCompleteTimerTask(request *p.RangeCompleteTim
 		}
 	}
 	return nil
-}
-
-// NewSQLMatchingPersistence creates an instance of ExecutionStore
-func NewSQLMatchingPersistence(cfg config.SQL, logger bark.Logger) (p.ExecutionStore, error) {
-	db, err := newConnection(cfg)
-	if err != nil {
-		return nil, err
-	}
-	return &sqlExecutionManager{
-		sqlStore: sqlStore{
-			db:     db,
-			logger: logger,
-		},
-	}, nil
 }
 
 // lockCurrentExecutionIfExists returns current execution or nil if none is found for the workflowID

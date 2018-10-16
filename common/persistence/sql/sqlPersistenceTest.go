@@ -85,8 +85,7 @@ func (s *TestCluster) SetupTestDatabase() {
 	}
 	schemaDir := cadencePackageDir + s.schemaDir + "/"
 	s.LoadSchema([]string{"schema.sql"}, schemaDir)
-	// TODO: Visibility
-	//s.LoadVisibilitySchema([]string{"schema.sql"}, schemaDir)
+	s.LoadVisibilitySchema([]string{"schema.sql"}, schemaDir)
 }
 
 // Config returns the persistence config for connecting to this test cluster
@@ -143,7 +142,11 @@ func (s *TestCluster) LoadSchema(fileNames []string, schemaDir string) {
 
 // LoadVisibilitySchema from PersistenceTestCluster interface
 func (s *TestCluster) LoadVisibilitySchema(fileNames []string, schemaDir string) {
-	log.Fatal("LoadVisibilitySchema is not supportedy by SQL yet")
+	workflowSchemaDir := schemaDir + "/visibility"
+	err := loadDatabaseSchema(workflowSchemaDir, fileNames, s.db, true)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func getCadencePackageDir() (string, error) {

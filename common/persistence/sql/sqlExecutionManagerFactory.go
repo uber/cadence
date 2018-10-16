@@ -45,7 +45,7 @@ func newExecutionManagerFactory(cfg config.SQL, currentClusterName string, logge
 }
 
 func (f *sqlExecutionManagerFactory) NewExecutionManager(shardID int) (persistence.ExecutionManager, error) {
-	pMgr, err := NewSQLMatchingPersistence(f.config, f.logger)
+	pMgr, err := NewSQLExecutionManager(f.config, f.logger)
 	if err != nil {
 		return nil, err
 	}
