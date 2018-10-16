@@ -141,11 +141,6 @@ type (
 		Msg string
 	}
 
-	// UnexpectedConditionFailedError represents a failed conditional update for some unexpected reasons
-	UnexpectedConditionFailedError struct {
-		Msg string
-	}
-
 	// ShardAlreadyExistError is returned when conditionally creating a shard fails
 	ShardAlreadyExistError struct {
 		Msg string
@@ -1313,10 +1308,6 @@ func (e *CurrentWorkflowConditionFailedError) Error() string {
 }
 
 func (e *ConditionFailedError) Error() string {
-	return e.Msg
-}
-
-func (e *UnexpectedConditionFailedError) Error() string {
 	return e.Msg
 }
 
