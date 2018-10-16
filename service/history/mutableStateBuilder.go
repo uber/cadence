@@ -87,6 +87,8 @@ type (
 	}
 )
 
+//var _ mutableState = (mutableStateBuilder)(nil)
+
 func newMutableStateBuilder(currentCluster string, config *Config, logger bark.Logger) *mutableStateBuilder {
 	s := &mutableStateBuilder{
 		updateActivityInfos:             make(map[*persistence.ActivityInfo]struct{}),
@@ -145,7 +147,7 @@ func newMutableStateBuilderWithReplicationState(currentCluster string, config *C
 func (e *mutableStateBuilder) CopyToPersistence() *persistence.WorkflowMutableState {
 	state := &persistence.WorkflowMutableState{}
 
-	state.ActivitInfos = e.pendingActivityInfoIDs
+	state.ActivityInfos = e.pendingActivityInfoIDs
 	state.TimerInfos = e.pendingTimerInfoIDs
 	state.ChildExecutionInfos = e.pendingChildExecutionInfoIDs
 	state.RequestCancelInfos = e.pendingRequestCancelInfoIDs
@@ -160,7 +162,7 @@ func (e *mutableStateBuilder) CopyToPersistence() *persistence.WorkflowMutableSt
 
 func (e *mutableStateBuilder) Load(state *persistence.WorkflowMutableState) {
 
-	e.pendingActivityInfoIDs = state.ActivitInfos
+	e.pendingActivityInfoIDs = state.ActivityInfos
 	e.pendingTimerInfoIDs = state.TimerInfos
 	e.pendingChildExecutionInfoIDs = state.ChildExecutionInfos
 	e.pendingRequestCancelInfoIDs = state.RequestCancelInfos
@@ -171,7 +173,7 @@ func (e *mutableStateBuilder) Load(state *persistence.WorkflowMutableState) {
 	e.replicationState = state.ReplicationState
 	e.bufferedEvents = state.BufferedEvents
 	e.bufferedReplicationTasks = state.BufferedReplicationTasks
-	for _, ai := range state.ActivitInfos {
+	for _, ai := range state.ActivityInfos {
 		e.pendingActivityInfoByActivityID[ai.ActivityID] = ai.ScheduleID
 	}
 }
@@ -1009,7 +1011,7 @@ func (e *mutableStateBuilder) DeleteDecision() {
 	e.UpdateDecision(emptyDecisionInfo)
 }
 
-func (e *mutableStateBuilder) FailDecision() {
+func (e *mutableStateBuilder) FailDecision(incrementAttempt bool) {
 	// Clear stickiness whenever decision fails
 	e.ClearStickyness()
 
@@ -1019,7 +1021,9 @@ func (e *mutableStateBuilder) FailDecision() {
 		StartedID:       common.EmptyEventID,
 		RequestID:       emptyUUID,
 		DecisionTimeout: 0,
-		Attempt:         e.executionInfo.DecisionAttempt + 1,
+	}
+	if incrementAttempt {
+		failDecisionInfo.Attempt = e.executionInfo.DecisionAttempt + 1
 	}
 	e.UpdateDecision(failDecisionInfo)
 }
@@ -1379,12 +1383,17 @@ func (e *mutableStateBuilder) AddDecisionTaskTimedOutEvent(scheduleEventID int64
 		event = e.hBuilder.AddDecisionTaskTimedOutEvent(scheduleEventID, startedEventID, workflow.TimeoutTypeStartToClose)
 	}
 
-	e.ReplicateDecisionTaskTimedOutEvent(scheduleEventID, startedEventID)
+	e.ReplicateDecisionTaskTimedOutEvent(workflow.TimeoutTypeStartToClose)
 	return event
 }
 
-func (e *mutableStateBuilder) ReplicateDecisionTaskTimedOutEvent(scheduleID, startedID int64) {
-	e.FailDecision()
+func (e *mutableStateBuilder) ReplicateDecisionTaskTimedOutEvent(timeoutType workflow.TimeoutType) {
+	incrementAttempt := true
+	// Do not increment decision attempt in the case of sticky timeout to prevent creating next decision as transient
+	if timeoutType == workflow.TimeoutTypeScheduleToStart {
+		incrementAttempt = false
+	}
+	e.FailDecision(incrementAttempt)
 }
 
 func (e *mutableStateBuilder) AddDecisionTaskScheduleToStartTimeoutEvent(scheduleEventID int64) *workflow.HistoryEvent {
@@ -1400,7 +1409,7 @@ func (e *mutableStateBuilder) AddDecisionTaskScheduleToStartTimeoutEvent(schedul
 
 	event := e.hBuilder.AddDecisionTaskTimedOutEvent(scheduleEventID, 0, workflow.TimeoutTypeScheduleToStart)
 
-	e.ReplicateDecisionTaskTimedOutEvent(scheduleEventID, common.EmptyEventID)
+	e.ReplicateDecisionTaskTimedOutEvent(workflow.TimeoutTypeScheduleToStart)
 	return event
 }
 
@@ -1422,12 +1431,12 @@ func (e *mutableStateBuilder) AddDecisionTaskFailedEvent(scheduleEventID int64,
 		event = e.hBuilder.AddDecisionTaskFailedEvent(scheduleEventID, startedEventID, cause, details, identity)
 	}
 
-	e.ReplicateDecisionTaskFailedEvent(scheduleEventID, startedEventID)
+	e.ReplicateDecisionTaskFailedEvent()
 	return event
 }
 
-func (e *mutableStateBuilder) ReplicateDecisionTaskFailedEvent(scheduleID, startedID int64) {
-	e.FailDecision()
+func (e *mutableStateBuilder) ReplicateDecisionTaskFailedEvent() {
+	e.FailDecision(true)
 }
 
 func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(decisionCompletedEventID int64,

@@ -73,6 +73,7 @@ func newTimerQueueStandbyProcessor(shard ShardContext, historyService *historyEn
 		timeNow,
 		updateShardAckLevel,
 		logger,
+		clusterName,
 	)
 	processor := &timerQueueStandbyProcessorImpl{
 		shard:           shard,
