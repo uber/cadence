@@ -207,7 +207,7 @@ func (m *historyManagerImpl) ReadHistoryBranch(request *ReadHistoryBranchRequest
 		return nil, err
 	}
 
-	events := []*workflow.HistoryEvent{}
+	events := make([]*workflow.HistoryEvent, 0, request.PageSize)
 	dataSize := 0
 
 	minNodeID := token.LastNodeID + 1
@@ -359,7 +359,7 @@ func (m *historyManagerImpl) GetWorkflowExecutionHistory(request *GetWorkflowExe
 	newResponse := &GetWorkflowExecutionHistoryResponse{}
 
 	history := &workflow.History{
-		Events: make([]*workflow.HistoryEvent, 0),
+		Events: make([]*workflow.HistoryEvent, 0, request.PageSize),
 	}
 
 	// first_event_id of the last batch

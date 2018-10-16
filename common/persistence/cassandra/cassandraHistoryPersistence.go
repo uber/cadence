@@ -527,7 +527,7 @@ func (h *cassandraHistoryPersistence) getForkingNode(bi p.HistoryBranch) (int64,
 }
 
 func (h *cassandraHistoryPersistence) readBranchRange(treeID, branchID string, minID, maxID int64) ([]*p.DataBlob, error) {
-	bs := make([]*p.DataBlob, 0)
+	bs := make([]*p.DataBlob, 0, int(maxID-minID))
 
 	query := h.session.Query(v2templateReadNodes,
 		treeID, branchID, rowTypeHistoryNode, minID, maxID)
@@ -582,7 +582,7 @@ func (h *cassandraHistoryPersistence) ReadHistoryBranch(request *p.InternalReadH
 		EndNodeID:   request.MaxNodeID,
 	})
 
-	history := make([]*p.DataBlob, 0)
+	history := make([]*p.DataBlob, 0, request.MaxNodeID-request.MinNodeID)
 	for _, br := range allBRs {
 		// this range won't contain any nodes needed, since the last node(EndNodeID-1) in the range is strictly less than MinNodeID
 		if br.EndNodeID <= request.MinNodeID {
@@ -653,7 +653,7 @@ func (h *cassandraHistoryPersistence) getBranchAncestors(treeID, branchID string
 }
 
 func (h *cassandraHistoryPersistence) parseBranchAncestors(ancestors []map[string]interface{}) []p.HistoryBranchRange {
-	ans := make([]p.HistoryBranchRange, 0)
+	ans := make([]p.HistoryBranchRange, 0, len(ancestors))
 	for _, e := range ancestors {
 		an := p.HistoryBranchRange{}
 		for k, v := range e {
@@ -707,7 +707,7 @@ func (h *cassandraHistoryPersistence) ForkHistoryBranch(request *p.ForkHistoryBr
 		return nil, err
 	}
 	treeID := forkB.TreeID
-	newAncestors := make([]p.HistoryBranchRange, 0)
+	newAncestors := make([]p.HistoryBranchRange, 0, len(forkB.Ancestors)+1)
 
 	txnID, err := h.prepareTreeTransaction(treeID)
 	if err != nil {
@@ -1270,7 +1270,7 @@ func (h *cassandraHistoryPersistence) GetWorkflowExecutionHistory(request *p.Int
 	eventBatchVersion := common.EmptyVersion
 
 	eventBatch := &p.DataBlob{}
-	history := make([]*p.DataBlob, 0)
+	history := make([]*p.DataBlob, 0, request.PageSize)
 
 	for iter.Scan(nil, &eventBatchVersionPointer, &eventBatch.Data, &eventBatch.Encoding) {
 		found = true
