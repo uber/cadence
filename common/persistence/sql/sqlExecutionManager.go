@@ -697,7 +697,7 @@ func (m *sqlExecutionManager) GetWorkflowExecution(request *p.GetWorkflowExecuti
 		ClientImpl:                   execution.ClientImpl,
 	}
 
-	if execution.ExecutionContext != nil {
+	if execution.ExecutionContext != nil && len(*execution.ExecutionContext) > 0 {
 		state.ExecutionInfo.ExecutionContext = *execution.ExecutionContext
 	}
 
@@ -714,7 +714,7 @@ func (m *sqlExecutionManager) GetWorkflowExecution(request *p.GetWorkflowExecuti
 	if execution.LastWriteEventID != nil {
 		state.ReplicationState.LastWriteEventID = *execution.LastWriteEventID
 	}
-	if execution.LastReplicationInfo != nil {
+	if execution.LastReplicationInfo != nil && len(*execution.LastReplicationInfo) > 0 {
 		state.ReplicationState.LastReplicationInfo = make(map[string]*p.ReplicationInfo)
 		if err := gobDeserialize(*execution.LastReplicationInfo, &state.ReplicationState.LastReplicationInfo); err != nil {
 			return nil, &workflow.InternalServiceError{
@@ -860,7 +860,7 @@ func (m *sqlExecutionManager) GetWorkflowExecution(request *p.GetWorkflowExecuti
 func getBufferedEvents(tx *sqlx.Tx, shardID int, domainID string, workflowID string, runID string) (result []*p.DataBlob, err error) {
 	var rows []bufferedEventsRow
 
-	if err := tx.Select(&rows, getBufferedEventsQuery, shardID, domainID, workflowID, runID); err != nil {
+	if err := tx.Select(&rows, getBufferedEventsQuery, shardID, domainID, workflowID, runID); err != nil && err != sql.ErrNoRows {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("getBufferedEvents operation failed. Select failed: %v", err),
 		}
@@ -1316,11 +1316,12 @@ func (m *sqlExecutionManager) GetTransferTasks(request *p.GetTransferTasksReques
 		m.shardID,
 		request.ReadLevel,
 		request.MaxReadLevel); err != nil {
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("GetTransferTasks operation failed. Select failed. Error: %v", err),
+		if err != sql.ErrNoRows {
+			return nil, &workflow.InternalServiceError{
+				Message: fmt.Sprintf("GetTransferTasks operation failed. Select failed. Error: %v", err),
+			}
 		}
 	}
-
 	return &resp, nil
 }
 
@@ -1366,8 +1367,10 @@ func (m *sqlExecutionManager) GetReplicationTasks(request *p.GetReplicationTasks
 		readLevel,
 		maxReadLevelInclusive,
 		request.BatchSize); err != nil {
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("GetReplicationTasks operation failed. Select failed: %v", err),
+		if err != sql.ErrNoRows {
+			return nil, &workflow.InternalServiceError{
+				Message: fmt.Sprintf("GetReplicationTasks operation failed. Select failed: %v", err),
+			}
 		}
 	}
 	if len(rows) == 0 {
@@ -1423,7 +1426,7 @@ func (m *sqlExecutionManager) GetTimerIndexTasks(request *p.GetTimerIndexTasksRe
 	if err := m.db.Select(&resp.Timers, getTimerTasksSQLQuery,
 		m.shardID,
 		request.MinTimestamp,
-		request.MaxTimestamp); err != nil {
+		request.MaxTimestamp); err != nil && err != sql.ErrNoRows {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("GetTimerTasks operation failed. Select failed. Error: %v", err),
 		}
@@ -1471,8 +1474,10 @@ func NewSQLMatchingPersistence(cfg config.SQL, logger bark.Logger) (p.ExecutionS
 func lockCurrentExecutionIfExists(tx *sqlx.Tx, shardID int64, domainID string, workflowID string) (*currentExecutionRow, error) {
 	var rows []*currentExecutionRow
 	if err := tx.Select(&rows, getCurrentExecutionSQLQueryForUpdate, shardID, domainID, workflowID); err != nil {
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("Failed to get current_executions row for (shard,domain,workflow) = (%v, %v, %v). Error: %v", shardID, domainID, workflowID, err),
+		if err != sql.ErrNoRows {
+			return nil, &workflow.InternalServiceError{
+				Message: fmt.Sprintf("Failed to get current_executions row for (shard,domain,workflow) = (%v, %v, %v). Error: %v", shardID, domainID, workflowID, err),
+			}
 		}
 	}
 	size := len(rows)
@@ -1489,14 +1494,14 @@ func lockCurrentExecutionIfExists(tx *sqlx.Tx, shardID int64, domainID string, w
 
 func createExecution(tx *sqlx.Tx, request *p.CreateWorkflowExecutionRequest, shardID int, nowTimestamp time.Time) error {
 	args := &executionRow{
-		ShardID:                      int64(shardID),
-		DomainID:                     request.DomainID,
-		WorkflowID:                   *request.Execution.WorkflowId,
-		RunID:                        *request.Execution.RunId,
-		TaskList:                     request.TaskList,
-		WorkflowTypeName:             request.WorkflowTypeName,
-		WorkflowTimeoutSeconds:       int64(request.WorkflowTimeout),
-		DecisionTaskTimeoutMinutes:   int64(request.DecisionTimeoutValue),
+		ShardID:                    int64(shardID),
+		DomainID:                   request.DomainID,
+		WorkflowID:                 *request.Execution.WorkflowId,
+		RunID:                      *request.Execution.RunId,
+		TaskList:                   request.TaskList,
+		WorkflowTypeName:           request.WorkflowTypeName,
+		WorkflowTimeoutSeconds:     int64(request.WorkflowTimeout),
+		DecisionTaskTimeoutMinutes: int64(request.DecisionTimeoutValue),
 		State:                        p.WorkflowStateCreated,
 		CloseStatus:                  p.WorkflowCloseStatusNone,
 		LastFirstEventID:             common.FirstEventID,
@@ -1951,17 +1956,17 @@ func updateExecution(tx *sqlx.Tx,
 	condition int64) error {
 	args := updateExecutionRow{
 		executionRow{
-			DomainID:                     executionInfo.DomainID,
-			WorkflowID:                   executionInfo.WorkflowID,
-			RunID:                        executionInfo.RunID,
-			ParentDomainID:               &executionInfo.ParentDomainID,
-			ParentWorkflowID:             &executionInfo.ParentWorkflowID,
-			ParentRunID:                  &executionInfo.ParentRunID,
-			InitiatedID:                  &executionInfo.InitiatedID,
-			TaskList:                     executionInfo.TaskList,
-			WorkflowTypeName:             executionInfo.WorkflowTypeName,
-			WorkflowTimeoutSeconds:       int64(executionInfo.WorkflowTimeout),
-			DecisionTaskTimeoutMinutes:   int64(executionInfo.DecisionTimeoutValue),
+			DomainID:                   executionInfo.DomainID,
+			WorkflowID:                 executionInfo.WorkflowID,
+			RunID:                      executionInfo.RunID,
+			ParentDomainID:             &executionInfo.ParentDomainID,
+			ParentWorkflowID:           &executionInfo.ParentWorkflowID,
+			ParentRunID:                &executionInfo.ParentRunID,
+			InitiatedID:                &executionInfo.InitiatedID,
+			TaskList:                   executionInfo.TaskList,
+			WorkflowTypeName:           executionInfo.WorkflowTypeName,
+			WorkflowTimeoutSeconds:     int64(executionInfo.WorkflowTimeout),
+			DecisionTaskTimeoutMinutes: int64(executionInfo.DecisionTimeoutValue),
 			State:                        int64(executionInfo.State),
 			CloseStatus:                  int64(executionInfo.CloseStatus),
 			LastFirstEventID:             int64(executionInfo.LastFirstEventID),

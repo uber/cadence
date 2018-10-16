@@ -22,15 +22,18 @@ package sql
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/prometheus/common/log"
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/common"
-	"time"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/persistence"
 
 	"strings"
+
+	"database/sql"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -361,7 +364,7 @@ func getActivityInfoMap(tx *sqlx.Tx,
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID); err != nil && err != sql.ErrNoRows {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("Failed to get activity info. Error: %v", err),
 		}
@@ -559,7 +562,7 @@ func getTimerInfoMap(tx *sqlx.Tx,
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID); err != nil && err != sql.ErrNoRows {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("Failed to get timer info. Error: %v", err),
 		}
@@ -707,7 +710,7 @@ func getChildExecutionInfoMap(tx *sqlx.Tx,
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID); err != nil && err != sql.ErrNoRows {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("Failed to get timer info. Error: %v", err),
 		}
@@ -857,7 +860,7 @@ func getRequestCancelInfoMap(tx *sqlx.Tx,
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID); err != nil && err != sql.ErrNoRows {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("Failed to get request cancel info. Error: %v", err),
 		}
@@ -1005,7 +1008,7 @@ func getSignalInfoMap(tx *sqlx.Tx,
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID); err != nil && err != sql.ErrNoRows {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("Failed to get signal info. Error: %v", err),
 		}
@@ -1205,7 +1208,7 @@ func getBufferedReplicationTasks(tx *sqlx.Tx,
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID); err != nil && err != sql.ErrNoRows {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("Failed to get buffered replication tasks. Error: %v", err),
 		}
