@@ -88,7 +88,7 @@ func (m *historyManagerImpl) AppendHistoryNodes(request *AppendHistoryNodesReque
 			Msg: fmt.Sprintf("eventIDs must be continuous"),
 		}
 	}
-	eventBlobs := []*DataBlob{}
+	eventBlobs := make([]*DataBlob, 0, len(events))
 	size := 0
 	lastEventVersion := int64(0)
 	lastEventID := nextNodeID - 1
