@@ -840,7 +840,7 @@ func (e *mutableStateBuilder) UpdateActivityProgress(ai *persistence.ActivityInf
 }
 
 // ReplicateActivityInfo replicate the necessary activity information
-func (e *mutableStateBuilder) ReplicateActivityInfo(request *h.SyncActivityRequest) error {
+func (e *mutableStateBuilder) ReplicateActivityInfo(request *h.SyncActivityRequest, resetActivityTimerTaskStatus bool) error {
 	ai, ok := e.pendingActivityInfoIDs[request.GetScheduledId()]
 	if !ok {
 		return fmt.Errorf("Unable to find activity with schedule event id: %v in mutable state", ai.ScheduleID)
@@ -852,7 +852,8 @@ func (e *mutableStateBuilder) ReplicateActivityInfo(request *h.SyncActivityReque
 	ai.StartedTime = time.Unix(0, request.GetStartedTime())
 	ai.LastHeartBeatUpdatedTime = time.Unix(0, request.GetLastHeartbeatTime())
 	ai.Details = request.GetDetails()
-	if ai.StartedID == common.EmptyEventID {
+	ai.Attempt = request.GetAttempt()
+	if resetActivityTimerTaskStatus {
 		ai.TimerTaskStatus = TimerTaskStatusNone
 	}
 
@@ -2460,7 +2461,6 @@ func (e *mutableStateBuilder) CreateActivityRetryTimer(ai *persistence.ActivityI
 	retryTask := prepareActivityNextRetry(e.GetCurrentVersion(), ai, failureReason)
 	if retryTask != nil {
 		e.updateActivityInfos[ai] = struct{}{}
-		e.syncActivityTasks[ai.ScheduleID] = struct{}{}
 	}
 
 	return retryTask

@@ -125,6 +125,13 @@ func newHistoryReplicator(shard ShardContext, historyEngine *historyEngineImpl, 
 }
 
 func (r *historyReplicator) SyncActivity(ctx context.Context, request *h.SyncActivityRequest) (retError error) {
+
+	// sync activity info will only be sent from active side, when
+	// 1. activity has retry policy and activity got started
+	// 2. activity heart beat
+	// no sync activity task will be sent when active side fail / timeout activity,
+	// since standby side does not have activity retry timer
+
 	domainID := request.GetDomainId()
 	execution := workflow.WorkflowExecution{
 		WorkflowId: request.WorkflowId,
@@ -201,7 +208,17 @@ func (r *historyReplicator) SyncActivity(ctx context.Context, request *h.SyncAct
 	}
 	// version latger then existing, should update activity
 
-	err = msBuilder.ReplicateActivityInfo(request)
+	// calculate whether to reset the activity timer task status bits
+	// reset timer task status bits if
+	// 1. same source cluster & attemp changes
+	// 2. different source cluster
+	resetActivityTimerTaskStatus := false
+	if !r.clusterMetadata.IsVersionFromSameCluster(request.GetVersion(), ai.Version) {
+		resetActivityTimerTaskStatus = true
+	} else if ai.Attempt < request.GetAttempt() {
+		resetActivityTimerTaskStatus = true
+	}
+	err = msBuilder.ReplicateActivityInfo(request, resetActivityTimerTaskStatus)
 	if err != nil {
 		return err
 	}
