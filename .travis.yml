@@ -14,6 +14,8 @@ env:
 
 addons:
   apt:
+    sources:
+      - mysql-5.7-trusty
     packages:
       - gettext-base
       - libyaml-dev
@@ -21,9 +23,8 @@ addons:
       - python
       - python-dev
       - python-pip
-
-services:
-  - mysql
+      - mysql-server
+      - mysql-client
 
 before_install:
   - pip install --user ccm
