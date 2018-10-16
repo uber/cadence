@@ -1084,6 +1084,8 @@ func (s *integrationClustersTestSuite) TestActivityHeartbeatFailover() {
 	resp, err := client1.DescribeDomain(createContext(), descReq)
 	s.NoError(err)
 	s.NotNil(resp)
+	// Wait for domain cache to pick the chenge
+	time.Sleep(11 * time.Second)
 
 	client2 := s.cluster2.host.GetFrontendClient() // standby
 
@@ -1158,7 +1160,7 @@ func (s *integrationClustersTestSuite) TestActivityHeartbeatFailover() {
 	atHandler1 := func(execution *workflow.WorkflowExecution, activityType *workflow.ActivityType,
 		activityID string, input []byte, taskToken []byte) ([]byte, bool, error) {
 		activity1Called = true
-		time.Sleep(4 * time.Second)
+		time.Sleep(5 * time.Second)
 		return []byte("Activity Result."), false, nil
 	}
 
@@ -1223,4 +1225,25 @@ func (s *integrationClustersTestSuite) TestActivityHeartbeatFailover() {
 
 	s.True(activity1Called)
 	s.True(activity2Called)
+
+	// TODO when EnableSyncActivityHeartbeat is enabled by default, uncomment the code below
+	// historyResponse, err := client2.GetWorkflowExecutionHistory(createContext(), &workflow.GetWorkflowExecutionHistoryRequest{
+	// 	Domain: common.StringPtr(domainName),
+	// 	Execution: &workflow.WorkflowExecution{
+	// 		WorkflowId: common.StringPtr(id),
+	// 	},
+	// })
+	// s.Nil(err)
+	// history := historyResponse.History
+	// common.PrettyPrintHistory(history, s.logger)
+
+	// activityRetryFound := false
+	// for _, event := range history.Events {
+	// 	if event.GetEventType() == workflow.EventTypeActivityTaskStarted {
+	// 		attribute := event.ActivityTaskStartedEventAttributes
+	// 		s.True(attribute.GetAttempt() > 0)
+	// 		activityRetryFound = true
+	// 	}
+	// }
+	// s.True(activityRetryFound)
 }
