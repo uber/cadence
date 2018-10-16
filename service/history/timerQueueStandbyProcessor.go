@@ -183,9 +183,6 @@ func (t *timerQueueStandbyProcessorImpl) processExpiredUserTimer(timerTask *pers
 				t.logger.Debugf("Failed to find in memory user timer: %s", td.TimerID)
 				return fmt.Errorf("Failed to find in memory user timer: %s", td.TimerID)
 			}
-			if !td.TaskCreated {
-				break ExpireUserTimers
-			}
 
 			if isExpired := tBuilder.IsTimerExpired(td, timerTask.VisibilityTimestamp); isExpired {
 				// active cluster will add an timer fired event and schedule a decision if necessary
@@ -234,9 +231,6 @@ func (t *timerQueueStandbyProcessorImpl) processActivityTimeout(timerTask *persi
 				//  We might have time out this activity already.
 				continue ExpireActivityTimers
 			}
-			if !td.TaskCreated {
-				break ExpireActivityTimers
-			}
 
 			if isExpired := tBuilder.IsTimerExpired(td, timerTask.VisibilityTimestamp); isExpired {
 				if t.discardTask(timerTask) {
@@ -255,22 +249,24 @@ func (t *timerQueueStandbyProcessorImpl) processActivityTimeout(timerTask *persi
 		// see comments at the begining of this function.
 		// NOTE: this is the only place in the standby logic where mutable state can be updated
 
-		// check whether the mutable state can be safely updated
+		// need to clear the activity heartbeat timer task marks
+		doUpdate := false
 		lastWriteVersion := msBuilder.GetLastWriteVersion()
 		sourceCluster := t.clusterMetadata.ClusterNameForFailoverVersion(lastWriteVersion)
-		if sourceCluster != t.clusterName {
-			return nil
-		}
-
-		// need to clear the activity heartbeat timer task marks
 		isHeartBeatTask := timerTask.TimeoutType == int(workflow.TimeoutTypeHeartbeat)
 		if activityInfo, pending := msBuilder.GetActivityInfo(timerTask.EventID); isHeartBeatTask && pending {
+			doUpdate = true
 			activityInfo.TimerTaskStatus = activityInfo.TimerTaskStatus &^ TimerTaskStatusCreatedHeartbeat
 			msBuilder.UpdateActivity(activityInfo)
 		}
 		newTimerTasks := []persistence.Task{}
 		if newTimerTask := t.getTimerBuilder().GetActivityTimerTaskIfNeeded(msBuilder); newTimerTask != nil {
+			doUpdate = true
 			newTimerTasks = append(newTimerTasks, newTimerTask)
+		}
+
+		if !doUpdate {
+			return nil
 		}
 
 		// code below does the update of activity and possible generation of a new activity timer task
