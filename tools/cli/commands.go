@@ -189,10 +189,11 @@ func RegisterDomain(c *cli.Context) {
 	description := c.String(FlagDescription)
 	ownerEmail := c.String(FlagOwnerEmail)
 	retentionDays := defaultDomainRetentionDays
-	securityToken := c.String(FlagSecurityToken)
+
 	if c.IsSet(FlagRetentionDays) {
 		retentionDays = c.Int(FlagRetentionDays)
 	}
+	securityToken := c.String(FlagSecurityToken)
 	emitMetric := false
 	var err error
 	if c.IsSet(FlagEmitMetric) {
