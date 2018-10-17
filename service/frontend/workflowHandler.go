@@ -2072,7 +2072,8 @@ func (wh *WorkflowHandler) QueryWorkflow(ctx context.Context,
 		}
 		// this means sticky timeout, should try using the normal tasklist
 		// we should clear the stickyness of this workflow
-		_, err = wh.history.ResetStickyTaskList(ctx, &h.ResetStickyTaskListRequest{
+		resetContext, _ := context.WithTimeout(context.Background(), 5*time.Second)
+		_, err = wh.history.ResetStickyTaskList(resetContext, &h.ResetStickyTaskListRequest{
 			DomainUUID: common.StringPtr(domainID),
 			Execution:  queryRequest.Execution,
 		})
