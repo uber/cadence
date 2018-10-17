@@ -52,6 +52,12 @@ type (
 		logger       bark.Logger
 	}
 
+	historyV2PersistenceClient struct {
+		metricClient metrics.Client
+		persistence  HistoryV2Manager
+		logger       bark.Logger
+	}
+
 	metadataPersistenceClient struct {
 		metricClient metrics.Client
 		persistence  MetadataManager
@@ -69,6 +75,7 @@ var _ ShardManager = (*shardPersistenceClient)(nil)
 var _ ExecutionManager = (*workflowExecutionPersistenceClient)(nil)
 var _ TaskManager = (*taskPersistenceClient)(nil)
 var _ HistoryManager = (*historyPersistenceClient)(nil)
+var _ HistoryV2Manager = (*historyV2PersistenceClient)(nil)
 var _ MetadataManager = (*metadataPersistenceClient)(nil)
 var _ VisibilityManager = (*visibilityPersistenceClient)(nil)
 
@@ -102,6 +109,15 @@ func NewTaskPersistenceMetricsClient(persistence TaskManager, metricClient metri
 // NewHistoryPersistenceMetricsClient creates a HistoryManager client to manage workflow execution history
 func NewHistoryPersistenceMetricsClient(persistence HistoryManager, metricClient metrics.Client, logger bark.Logger) HistoryManager {
 	return &historyPersistenceClient{
+		persistence:  persistence,
+		metricClient: metricClient,
+		logger:       logger,
+	}
+}
+
+// NewHistoryV2PersistenceMetricsClient creates a HistoryManager client to manage workflow execution history
+func NewHistoryV2PersistenceMetricsClient(persistence HistoryV2Manager, metricClient metrics.Client, logger bark.Logger) HistoryV2Manager {
+	return &historyV2PersistenceClient{
 		persistence:  persistence,
 		metricClient: metricClient,
 		logger:       logger,
@@ -893,8 +909,16 @@ func (p *visibilityPersistenceClient) Close() {
 	p.persistence.Close()
 }
 
+func (p *historyV2PersistenceClient) GetName() string {
+	return p.persistence.GetName()
+}
+
+func (p *historyV2PersistenceClient) Close() {
+	p.persistence.Close()
+}
+
 // NewHistoryBranch creates a new branch from tree root. If tree doesn't exist, then create one. Return error if the branch already exists.
-func (p *historyPersistenceClient) NewHistoryBranch(request *NewHistoryBranchRequest) (*NewHistoryBranchResponse, error) {
+func (p *historyV2PersistenceClient) NewHistoryBranch(request *NewHistoryBranchRequest) (*NewHistoryBranchResponse, error) {
 	p.metricClient.IncCounter(metrics.PersistenceNewHistoryBranchScope, metrics.PersistenceRequests)
 	sw := p.metricClient.StartTimer(metrics.PersistenceNewHistoryBranchScope, metrics.PersistenceLatency)
 	resp, err := p.persistence.NewHistoryBranch(request)
@@ -906,7 +930,7 @@ func (p *historyPersistenceClient) NewHistoryBranch(request *NewHistoryBranchReq
 }
 
 // AppendHistoryNodes add(or override) a node to a history branch
-func (p *historyPersistenceClient) AppendHistoryNodes(request *AppendHistoryNodesRequest) (*AppendHistoryNodesResponse, error) {
+func (p *historyV2PersistenceClient) AppendHistoryNodes(request *AppendHistoryNodesRequest) (*AppendHistoryNodesResponse, error) {
 	p.metricClient.IncCounter(metrics.PersistenceAppendHistoryNodesScope, metrics.PersistenceRequests)
 	sw := p.metricClient.StartTimer(metrics.PersistenceAppendHistoryNodesScope, metrics.PersistenceLatency)
 	resp, err := p.persistence.AppendHistoryNodes(request)
@@ -918,7 +942,7 @@ func (p *historyPersistenceClient) AppendHistoryNodes(request *AppendHistoryNode
 }
 
 // ReadHistoryBranch returns history node data for a branch
-func (p *historyPersistenceClient) ReadHistoryBranch(request *ReadHistoryBranchRequest) (*ReadHistoryBranchResponse, error) {
+func (p *historyV2PersistenceClient) ReadHistoryBranch(request *ReadHistoryBranchRequest) (*ReadHistoryBranchResponse, error) {
 	p.metricClient.IncCounter(metrics.PersistenceReadHistoryBranchScope, metrics.PersistenceRequests)
 	sw := p.metricClient.StartTimer(metrics.PersistenceReadHistoryBranchScope, metrics.PersistenceLatency)
 	response, err := p.persistence.ReadHistoryBranch(request)
@@ -930,7 +954,7 @@ func (p *historyPersistenceClient) ReadHistoryBranch(request *ReadHistoryBranchR
 }
 
 // ForkHistoryBranch forks a new branch from a old branch
-func (p *historyPersistenceClient) ForkHistoryBranch(request *ForkHistoryBranchRequest) (*ForkHistoryBranchResponse, error) {
+func (p *historyV2PersistenceClient) ForkHistoryBranch(request *ForkHistoryBranchRequest) (*ForkHistoryBranchResponse, error) {
 	p.metricClient.IncCounter(metrics.PersistenceForkHistoryBranchScope, metrics.PersistenceRequests)
 	sw := p.metricClient.StartTimer(metrics.PersistenceForkHistoryBranchScope, metrics.PersistenceLatency)
 	response, err := p.persistence.ForkHistoryBranch(request)
@@ -942,7 +966,7 @@ func (p *historyPersistenceClient) ForkHistoryBranch(request *ForkHistoryBranchR
 }
 
 // DeleteHistoryBranch removes a branch
-func (p *historyPersistenceClient) DeleteHistoryBranch(request *DeleteHistoryBranchRequest) error {
+func (p *historyV2PersistenceClient) DeleteHistoryBranch(request *DeleteHistoryBranchRequest) error {
 	p.metricClient.IncCounter(metrics.PersistenceDeleteHistoryBranchScope, metrics.PersistenceRequests)
 	sw := p.metricClient.StartTimer(metrics.PersistenceDeleteHistoryBranchScope, metrics.PersistenceLatency)
 	err := p.persistence.DeleteHistoryBranch(request)
@@ -954,7 +978,7 @@ func (p *historyPersistenceClient) DeleteHistoryBranch(request *DeleteHistoryBra
 }
 
 // GetHistoryTree returns all branch information of a tree
-func (p *historyPersistenceClient) GetHistoryTree(request *GetHistoryTreeRequest) (*GetHistoryTreeResponse, error) {
+func (p *historyV2PersistenceClient) GetHistoryTree(request *GetHistoryTreeRequest) (*GetHistoryTreeResponse, error) {
 	p.metricClient.IncCounter(metrics.PersistenceGetHistoryTreeScope, metrics.PersistenceRequests)
 	sw := p.metricClient.StartTimer(metrics.PersistenceGetHistoryTreeScope, metrics.PersistenceLatency)
 	response, err := p.persistence.GetHistoryTree(request)
@@ -963,4 +987,25 @@ func (p *historyPersistenceClient) GetHistoryTree(request *GetHistoryTreeRequest
 		p.updateErrorMetric(metrics.PersistenceGetHistoryTreeScope, err)
 	}
 	return response, err
+}
+
+func (p *historyV2PersistenceClient) updateErrorMetric(scope int, err error) {
+	switch err.(type) {
+	case *workflow.EntityNotExistsError:
+		p.metricClient.IncCounter(scope, metrics.PersistenceErrEntityNotExistsCounter)
+	case *ConditionFailedError:
+		p.metricClient.IncCounter(scope, metrics.PersistenceErrConditionFailedCounter)
+	case *TimeoutError:
+		p.metricClient.IncCounter(scope, metrics.PersistenceErrTimeoutCounter)
+		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
+	case *workflow.ServiceBusyError:
+		p.metricClient.IncCounter(scope, metrics.PersistenceErrBusyCounter)
+		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
+	default:
+		p.logger.WithFields(bark.Fields{
+			logging.TagScope: scope,
+			logging.TagErr:   err,
+		}).Error("Operation failed with internal error.")
+		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
+	}
 }

@@ -2,17 +2,27 @@ CREATE TYPE branch_range (
   branch_id   uuid,
   forked_node_id bigint,
 );
-CREATE TABLE events_v2 (
+CREATE TABLE history_node (
   tree_id           uuid,
   branch_id         uuid,
-  row_type          bigint, -- 0: branch row, 1: node row
-  ancestors         list<frozen<branch_range>>, -- Only for branch row.
-  deleted           boolean, -- Only for branch row
-  node_id           bigint, -- Only for node row: 0: root node, others: regular node
-  txn_id            bigint, -- Only for node row: for optimistic locking. For root node it is a tree operation transactionID, for regular node it is for override update when 2PC update fails.
-  data                blob, -- Only for node row: Batch of workflow execution history events as a blob
-  data_encoding       text, -- Only for node row: Protocol used for history serialization
-  PRIMARY KEY ((tree_id), row_type, branch_id, node_id )
-  ) WITH COMPACTION = {
+  node_id           bigint, -- node_id: first eventID in a batch of events
+  txn_id            bigint, -- for override the same node_id: bigger txn_id wins
+  data                blob, -- Batch of workflow execution history events as a blob
+  data_encoding       text, -- Protocol used for history serialization
+  PRIMARY KEY ((tree_id), row_type, branch_id, node_id, txn_id )
+  ) WITH CLUSTERING ORDER BY (tree_id ASC, row_type ASC, branch_id ASC, node_id ASC, txn_id DESC)
+    AND COMPACTION = {
+     'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'
+    };
+
+CREATE TABLE history_tree (
+tree_id           uuid,
+row_type          bigint, -- 0: root node row, 1: branch row
+branch_id         uuid, -- for branch row
+ancestors         list<frozen<branch_range>>, -- Only for branch row.
+deleted           boolean, -- Only for branch row to mark a branch as deleted
+txn_id            bigint, -- For root node it is a tree operation transactionID
+PRIMARY KEY ((tree_id), row_type, branch_id )
+) WITH COMPACTION = {
     'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'
-};
+  };

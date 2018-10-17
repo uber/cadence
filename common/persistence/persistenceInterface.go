@@ -75,6 +75,7 @@ type (
 	}
 
 	// HistoryStore is used to manage Workflow Execution HistoryEventBatch for Persistence layer
+	// DEPRECATED: use HistoryV2Store instead
 	HistoryStore interface {
 		Closeable
 		GetName() string
@@ -86,16 +87,18 @@ type (
 		GetWorkflowExecutionHistory(request *InternalGetWorkflowExecutionHistoryRequest) (*InternalGetWorkflowExecutionHistoryResponse, error)
 		//DEPRECATED in favor of V2 APIs-DeleteHistoryBranch
 		DeleteWorkflowExecutionHistory(request *DeleteWorkflowExecutionHistoryRequest) error
+	}
 
+	HistoryV2Store interface {
 		// The below are history V2 APIs
 		// V2 regards history events growing as a tree, decoupled from workflow concepts
 		// For Cadence, treeID will be a UUID, shared for the same workflow_id,
 		//     a workflow run may have one or more than one branchID
 		//     NodeID is the same as EventID, except that it will grow continuously in a branch.
 		// NewHistoryBranch creates a new branch from tree root. If tree doesn't exist, then create one. Return error if the branch already exists.
-		NewHistoryBranch(request *NewHistoryBranchRequest) (*NewHistoryBranchResponse, error)
+		NewHistoryBranch(request *NewHistoryBranchRequest) (*InternalNewHistoryBranchResponse, error)
 		// AppendHistoryNodes add(or override) a node to a history branch
-		AppendHistoryNodes(request *InternalAppendHistoryNodesRequest) (*InternalAppendHistoryNodesResponse, error)
+		AppendHistoryNodes(request *InternalAppendHistoryNodesRequest) error
 		// ReadHistoryBranch returns history node data for a branch
 		ReadHistoryBranch(request *InternalReadHistoryBranchRequest) (*InternalReadHistoryBranchResponse, error)
 		// ForkHistoryBranch forks a new branch from a old branch
@@ -294,26 +297,24 @@ type (
 		Overwrite         bool
 	}
 
+	// NewHistoryBranchResponse is a response to NewHistoryBranchRequest
+	InternalNewHistoryBranchResponse struct {
+		//BranchInfo represents a branch
+		BranchInfo workflow.HistoryBranch
+		// TODO remove it after testing is done
+		IsNewTree bool
+	}
+
 	// InternalAppendHistoryNodesRequest is used to append a batch of history nodes
 	InternalAppendHistoryNodesRequest struct {
 		// The branch to be appended
-		BranchInfo HistoryBranch
-		// The first nodeID of the nodes to be updated conditionally with transactionID
-		// If NextNodeIDToUpdate == NextNodeIDToInsert, it won't do any update
-		NextNodeIDToUpdate int64
-		// The first nodeID of the nodes to be insert if not exist
-		// NextNodeIDToInsert >= NextNodeIDToUpdate
-		NextNodeIDToInsert int64
+		BranchInfo workflow.HistoryBranch
+		// The first eventID becomes the nodeID to be appended
+		NodeID int64
 		// The events to be appended
-		Events []*DataBlob
+		Events *DataBlob
 		// requested TransactionID for conditional update
 		TransactionID int64
-	}
-
-	// InternalAppendHistoryNodesResponse is a response to InternalAppendHistoryNodesRequest
-	InternalAppendHistoryNodesResponse struct {
-		//BranchInfo which contains internal details like ancestors
-		BranchInfo HistoryBranch
 	}
 
 	// InternalGetWorkflowExecutionResponse is the response to GetworkflowExecutionRequest for Persistence Interface
@@ -351,7 +352,7 @@ type (
 	// InternalReadHistoryBranchRequest is used to read a history branch
 	InternalReadHistoryBranchRequest struct {
 		// The branch to be read
-		BranchInfo HistoryBranch
+		BranchInfo workflow.HistoryBranch
 		// Get the history nodes from MinNodeID. Inclusive.
 		MinNodeID int64
 		// Get the history nodes upto MaxNodeID.  Exclusive.
@@ -360,8 +361,6 @@ type (
 
 	// InternalReadHistoryBranchResponse is the response to ReadHistoryBranchRequest
 	InternalReadHistoryBranchResponse struct {
-		// The branch to be read
-		BranchInfo HistoryBranch
 		// History events
 		History []*DataBlob
 	}

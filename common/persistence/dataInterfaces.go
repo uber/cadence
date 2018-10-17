@@ -1066,46 +1066,26 @@ type (
 		MutableStateUpdateSessionStats *MutableStateUpdateSessionStats
 	}
 
-	// HistoryBranchRange represents a range of nodes of a branch
-	HistoryBranchRange struct {
-		// A UUID of a branch
-		BranchID string
-		// Beginning node of the branch, inclusive
-		BeginNodeID int64
-		// Ending node of the branch, exclusive
-		EndNodeID int64
-	}
-
-	// HistoryBranch represents a history branch
-	HistoryBranch struct {
-		// A UUID of a tree
-		TreeID string
-		// A UUID of a branch
-		BranchID string
-		// All the ancestors of the branch
-		// Optional for request, but it will improve performance if not nil
-		Ancestors []HistoryBranchRange
-	}
-
 	// NewHistoryBranchRequest is used to create a new history branch
 	NewHistoryBranchRequest struct {
-		BranchInfo HistoryBranch
+		TreeID string
 	}
 
 	// NewHistoryBranchResponse is a response to NewHistoryBranchRequest
 	NewHistoryBranchResponse struct {
-		//BranchInfo which contains internal details like ancestors
-		BranchInfo HistoryBranch
-		IsNewTree  bool
+		//BranchToken represents a branch
+		BranchToken []byte
+		// TODO remove it after testing is done
+		IsNewTree bool
 	}
 
 	// AppendHistoryNodesRequest is used to append a batch of history nodes
 	AppendHistoryNodesRequest struct {
 		// The branch to be appended
-		BranchInfo HistoryBranch
-		// The events to be appended
+		BranchToken []byte
+		// The batch of events to be appended. The first eventID will become the nodeID of this batch
 		Events []*workflow.HistoryEvent
-		// requested TransactionID for override
+		// requested TransactionID for this write operation. For the same eventID, the node with larger TransactionID always wins
 		TransactionID int64
 		//Optional. It is to suggest a binary encoding type to serialize history events
 		Encoding common.EncodingType
@@ -1113,10 +1093,9 @@ type (
 
 	// AppendHistoryNodesResponse is a response to AppendHistoryNodesRequest
 	AppendHistoryNodesResponse struct {
-		//BranchInfo which contains internal details like ancestors
-		BranchInfo HistoryBranch
 		// the size of the event data that has been appended
 		Size int
+		// TODO remove it after testing is done
 		// the number of events that has been appended with override instead of using insert if not exist
 		OverrideCount int
 	}
@@ -1124,7 +1103,7 @@ type (
 	// ReadHistoryBranchRequest is used to read a history branch
 	ReadHistoryBranchRequest struct {
 		// The branch to be read
-		BranchInfo HistoryBranch
+		BranchToken []byte
 		// Get the history nodes from MinEventID. Inclusive.
 		MinEventID int64
 		// Get the history nodes upto MaxEventID.  Exclusive.
@@ -1141,8 +1120,6 @@ type (
 
 	// ReadHistoryBranchResponse is the response to ReadHistoryBranchRequest
 	ReadHistoryBranchResponse struct {
-		// The branch to be read
-		BranchInfo HistoryBranch
 		// History events
 		History []*workflow.HistoryEvent
 		// Token to read next page if there are more events beyond page size.
@@ -1155,23 +1132,21 @@ type (
 	// ForkHistoryBranchRequest is used to fork a history branch
 	ForkHistoryBranchRequest struct {
 		// The branch to be fork
-		BranchInfo HistoryBranch
+		ForkBranchToken []byte
 		// The nodeID to fork from, the new branch will start from ForkFromNodeID + 1
 		ForkFromNodeID int64
-		// UUID of the new branch
-		NewBranchID string
 	}
 
 	// ForkHistoryBranchResponse is the response to ForkHistoryBranchRequest
 	ForkHistoryBranchResponse struct {
-		// branchInfo of the new branch
-		BranchInfo HistoryBranch
+		// branchToken to represent the new branch
+		NewBranchToken []byte
 	}
 
 	// DeleteHistoryBranchRequest is used to remove a history branch
 	DeleteHistoryBranchRequest struct {
 		// branch to be deleted
-		BranchInfo HistoryBranch
+		BranchToken []byte
 	}
 
 	// GetHistoryTreeRequest is used to retrieve branch info of a history tree
@@ -1183,7 +1158,7 @@ type (
 	// GetHistoryTreeResponse is a response to GetHistoryTreeRequest
 	GetHistoryTreeResponse struct {
 		// all branches of a tree
-		Branches []HistoryBranch
+		Branches []workflow.HistoryBranch
 	}
 
 	// AppendHistoryEventsResponse is response for AppendHistoryEventsRequest
@@ -1251,11 +1226,10 @@ type (
 	}
 
 	// HistoryManager is used to manage Workflow Execution HistoryEventBatch
+	// Deprecated: use HistoryV2Manager instead
 	HistoryManager interface {
 		Closeable
 		GetName() string
-
-		// The below 3 APIs are deprecated, they will be deleted after we fully migrate to new API
 
 		//Deprecated: use v2 API-AppendHistoryNodes() instead
 		AppendHistoryEvents(request *AppendHistoryEventsRequest) (*AppendHistoryEventsResponse, error)
@@ -1264,12 +1238,17 @@ type (
 		GetWorkflowExecutionHistory(request *GetWorkflowExecutionHistoryRequest) (*GetWorkflowExecutionHistoryResponse, error)
 		//Deprecated: use v2 API-DeleteHistoryBranch instead
 		DeleteWorkflowExecutionHistory(request *DeleteWorkflowExecutionHistoryRequest) error
+	}
+
+	HistoryV2Manager interface {
+		Closeable
+		GetName() string
 
 		// The below are history V2 APIs
 		// V2 regards history events growing as a tree, decoupled from workflow concepts
 		// For Cadence, treeID will be a UUID, shared for the same workflow_id,
-		//     a workflow run may have one or more than one branchID
-		//     NodeID is the same as EventID, except that it will grow continuously in a branch.
+		//     a workflow run may have one or more than one branchID(after reset/continueAsNew/etc)
+		//     NodeID is the same as EventID
 		// NewHistoryBranch creates a new branch from tree root. If tree doesn't exist, then create one. Return error if the branch already exists.
 		NewHistoryBranch(request *NewHistoryBranchRequest) (*NewHistoryBranchResponse, error)
 		// AppendHistoryNodes add(or override) a batach of nodes to a history branch

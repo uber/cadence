@@ -56,6 +56,12 @@ type (
 		logger      bark.Logger
 	}
 
+	historyV2RateLimitedPersistenceClient struct {
+		rateLimiter common.TokenBucket
+		persistence HistoryV2Manager
+		logger      bark.Logger
+	}
+
 	metadataRateLimitedPersistenceClient struct {
 		rateLimiter common.TokenBucket
 		persistence MetadataManager
@@ -73,6 +79,7 @@ var _ ShardManager = (*shardRateLimitedPersistenceClient)(nil)
 var _ ExecutionManager = (*workflowExecutionRateLimitedPersistenceClient)(nil)
 var _ TaskManager = (*taskRateLimitedPersistenceClient)(nil)
 var _ HistoryManager = (*historyRateLimitedPersistenceClient)(nil)
+var _ HistoryV2Manager = (*historyV2RateLimitedPersistenceClient)(nil)
 var _ MetadataManager = (*metadataRateLimitedPersistenceClient)(nil)
 var _ VisibilityManager = (*visibilityRateLimitedPersistenceClient)(nil)
 
@@ -106,6 +113,15 @@ func NewTaskPersistenceRateLimitedClient(persistence TaskManager, rateLimiter co
 // NewHistoryPersistenceRateLimitedClient creates a HistoryManager client to manage workflow execution history
 func NewHistoryPersistenceRateLimitedClient(persistence HistoryManager, rateLimiter common.TokenBucket, logger bark.Logger) HistoryManager {
 	return &historyRateLimitedPersistenceClient{
+		persistence: persistence,
+		rateLimiter: rateLimiter,
+		logger:      logger,
+	}
+}
+
+// NewHistoryPersistenceRateLimitedClient creates a HistoryManager client to manage workflow execution history
+func NewHistoryV2PersistenceRateLimitedClient(persistence HistoryV2Manager, rateLimiter common.TokenBucket, logger bark.Logger) HistoryV2Manager {
+	return &historyV2RateLimitedPersistenceClient{
 		persistence: persistence,
 		rateLimiter: rateLimiter,
 		logger:      logger,
@@ -556,8 +572,16 @@ func (p *visibilityRateLimitedPersistenceClient) Close() {
 	p.persistence.Close()
 }
 
+func (p *historyV2RateLimitedPersistenceClient) GetName() string {
+	return p.persistence.GetName()
+}
+
+func (p *historyV2RateLimitedPersistenceClient) Close() {
+	p.persistence.Close()
+}
+
 // NewHistoryBranch creates a new branch from tree root. If tree doesn't exist, then create one. Return error if the branch already exists.
-func (p *historyRateLimitedPersistenceClient) NewHistoryBranch(request *NewHistoryBranchRequest) (*NewHistoryBranchResponse, error) {
+func (p *historyV2RateLimitedPersistenceClient) NewHistoryBranch(request *NewHistoryBranchRequest) (*NewHistoryBranchResponse, error) {
 	if ok, _ := p.rateLimiter.TryConsume(1); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
@@ -565,7 +589,7 @@ func (p *historyRateLimitedPersistenceClient) NewHistoryBranch(request *NewHisto
 }
 
 // AppendHistoryNodes add(or override) a node to a history branch
-func (p *historyRateLimitedPersistenceClient) AppendHistoryNodes(request *AppendHistoryNodesRequest) (*AppendHistoryNodesResponse, error) {
+func (p *historyV2RateLimitedPersistenceClient) AppendHistoryNodes(request *AppendHistoryNodesRequest) (*AppendHistoryNodesResponse, error) {
 	if ok, _ := p.rateLimiter.TryConsume(1); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
@@ -573,7 +597,7 @@ func (p *historyRateLimitedPersistenceClient) AppendHistoryNodes(request *Append
 }
 
 // ReadHistoryBranch returns history node data for a branch
-func (p *historyRateLimitedPersistenceClient) ReadHistoryBranch(request *ReadHistoryBranchRequest) (*ReadHistoryBranchResponse, error) {
+func (p *historyV2RateLimitedPersistenceClient) ReadHistoryBranch(request *ReadHistoryBranchRequest) (*ReadHistoryBranchResponse, error) {
 	if ok, _ := p.rateLimiter.TryConsume(1); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
@@ -582,7 +606,7 @@ func (p *historyRateLimitedPersistenceClient) ReadHistoryBranch(request *ReadHis
 }
 
 // ForkHistoryBranch forks a new branch from a old branch
-func (p *historyRateLimitedPersistenceClient) ForkHistoryBranch(request *ForkHistoryBranchRequest) (*ForkHistoryBranchResponse, error) {
+func (p *historyV2RateLimitedPersistenceClient) ForkHistoryBranch(request *ForkHistoryBranchRequest) (*ForkHistoryBranchResponse, error) {
 	if ok, _ := p.rateLimiter.TryConsume(1); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
@@ -591,7 +615,7 @@ func (p *historyRateLimitedPersistenceClient) ForkHistoryBranch(request *ForkHis
 }
 
 // DeleteHistoryBranch removes a branch
-func (p *historyRateLimitedPersistenceClient) DeleteHistoryBranch(request *DeleteHistoryBranchRequest) error {
+func (p *historyV2RateLimitedPersistenceClient) DeleteHistoryBranch(request *DeleteHistoryBranchRequest) error {
 	if ok, _ := p.rateLimiter.TryConsume(1); !ok {
 		return ErrPersistenceLimitExceeded
 	}
@@ -600,7 +624,7 @@ func (p *historyRateLimitedPersistenceClient) DeleteHistoryBranch(request *Delet
 }
 
 // GetHistoryTree returns all branch information of a tree
-func (p *historyRateLimitedPersistenceClient) GetHistoryTree(request *GetHistoryTreeRequest) (*GetHistoryTreeResponse, error) {
+func (p *historyV2RateLimitedPersistenceClient) GetHistoryTree(request *GetHistoryTreeRequest) (*GetHistoryTreeResponse, error) {
 	if ok, _ := p.rateLimiter.TryConsume(1); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
