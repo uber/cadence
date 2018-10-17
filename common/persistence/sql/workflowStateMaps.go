@@ -24,8 +24,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prometheus/common/log"
-	"github.com/uber-common/bark"
 	"github.com/uber/cadence/common"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -217,13 +215,11 @@ func updateActivityInfos(tx *sqlx.Tx,
 	shardID int,
 	domainID,
 	workflowID,
-	runID string,
-	logger bark.Logger) error {
+	runID string) error {
 
 	if len(activityInfos) > 0 {
 		activityInfoMapsRows := make([]*activityInfoMapsRow, len(activityInfos))
 		for i, v := range activityInfos {
-			log.Infof("updateActivityInfos activityId=%v, scheduledTime=%v", v.ActivityID, v.ScheduledTime)
 			row := &activityInfoMapsRow{
 				activityInfoMapsPrimaryKey: activityInfoMapsPrimaryKey{
 					ShardID:    int64(shardID),
@@ -372,7 +368,6 @@ func getActivityInfoMap(tx *sqlx.Tx,
 
 	ret := make(map[int64]*persistence.InternalActivityInfo)
 	for _, v := range activityInfoMapsRows {
-		log.Infof("getActivityInfoMap activityId=%v, scheduledTime=%v", v.ActivityID, v.ScheduledTime)
 
 		info := &persistence.InternalActivityInfo{
 			Version:                  v.Version,
