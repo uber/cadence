@@ -100,6 +100,7 @@ var (
 	errQueryNotSet                = &gen.BadRequestError{Message: "WorkflowQuery is not set on request."}
 	errQueryTypeNotSet            = &gen.BadRequestError{Message: "QueryType is not set on request."}
 	errRequestNotSet              = &gen.BadRequestError{Message: "Request is nil."}
+	errNoPermission               = &gen.BadRequestError{Message: "No permission to do this operation."}
 
 	// err indicating that this cluster is not the master, so cannot do domain registration or update
 	errNotMasterCluster                = &gen.BadRequestError{Message: "Cluster is not master cluster, cannot do domain registration or domain update."}
@@ -170,6 +171,19 @@ func (wh *WorkflowHandler) Health(ctx context.Context) (*health.HealthStatus, er
 	return hs, nil
 }
 
+func (wh *WorkflowHandler) checkPermission(securityToken *string, scope int) error {
+	if wh.config.EnableAdminProtection() {
+		if securityToken == nil {
+			return wh.error(errNoPermission, scope)
+		}
+		requiredToken := wh.config.AdminOperationToken()
+		if *securityToken != requiredToken {
+			return wh.error(errNoPermission, scope)
+		}
+	}
+	return nil
+}
+
 // RegisterDomain creates a new domain which can be used as a container for all resources.  Domain is a top level
 // entity within Cadence, used as a container for all resources like workflow executions, tasklists, etc.  Domain
 // acts as a sandbox and provides isolation for all resources within the domain.  All resources belongs to exactly one
@@ -181,6 +195,10 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 
 	if registerRequest == nil {
 		return wh.error(errRequestNotSet, scope)
+	}
+
+	if err := wh.checkPermission(registerRequest.SecurityToken, scope); err != nil {
+		return err
 	}
 
 	clusterMetadata := wh.GetClusterMetadata()
@@ -365,6 +383,10 @@ func (wh *WorkflowHandler) UpdateDomain(ctx context.Context,
 
 	if updateRequest == nil {
 		return nil, wh.error(errRequestNotSet, scope)
+	}
+
+	if err := wh.checkPermission(updateRequest.SecurityToken, scope); err != nil {
+		return nil, err
 	}
 
 	clusterMetadata := wh.GetClusterMetadata()
@@ -588,6 +610,10 @@ func (wh *WorkflowHandler) DeprecateDomain(ctx context.Context, deprecateRequest
 
 	if deprecateRequest == nil {
 		return wh.error(errRequestNotSet, scope)
+	}
+
+	if err := wh.checkPermission(deprecateRequest.SecurityToken, scope); err != nil {
+		return err
 	}
 
 	clusterMetadata := wh.GetClusterMetadata()
