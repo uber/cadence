@@ -2122,7 +2122,8 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 	if prevExecutionInfo == nil { // create workflow as brand new
 		resultRunID, err = createWorkflow(true, "", prevLastWriteVersion)
 	} else { // start workflow with policy
-		err = e.applyWorkflowIDReusePolicyForSigStart(prevExecutionInfo, domainID, execution, startRequest.StartRequest.GetWorkflowIdReusePolicy())
+		policy := getWorkflowIdReusePolicyForSigStart(startRequest.StartRequest.WorkflowIdReusePolicy)
+		err = e.applyWorkflowIDReusePolicyForSigStart(prevExecutionInfo, domainID, execution, policy)
 		if err != nil {
 			return nil, err
 		}
@@ -2989,4 +2990,12 @@ func getWorkflowAlreadyStartedError(errMsg string, createRequestID string, workf
 		StartRequestId: common.StringPtr(fmt.Sprintf("%v", createRequestID)),
 		RunId:          common.StringPtr(fmt.Sprintf("%v", runID)),
 	}
+}
+
+// change default policy to "AllowDuplicate" for signalWithStart if not set in request.
+func getWorkflowIdReusePolicyForSigStart(policy *workflow.WorkflowIdReusePolicy) workflow.WorkflowIdReusePolicy {
+	if policy == nil {
+		return workflow.WorkflowIdReusePolicyAllowDuplicate
+	}
+	return *policy
 }
