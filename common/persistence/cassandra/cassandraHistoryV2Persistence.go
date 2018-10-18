@@ -87,9 +87,6 @@ const (
 	// Row types for history_tree table
 	rowTypeHistoryBranch = 0
 	rowTypeHistoryRoot   = 1
-
-	// assume we don't have branches more than this number, otherwise CLI won't get all branches with GetHistoryTree() API
-	maxBranchesReturnForOneTree = 10000
 )
 
 type (
@@ -867,43 +864,48 @@ func (h *cassandraHistoryV2Persistence) GetHistoryTree(request *p.GetHistoryTree
 
 	query := h.session.Query(v2templateReadAllBranches, treeID, rowTypeHistoryBranch)
 
-	iter := query.PageSize(maxBranchesReturnForOneTree).Iter()
-	if iter == nil {
-		return nil, &workflow.InternalServiceError{
-			Message: "GetHistoryTree operation failed.  Not able to create query iterator.",
-		}
-	}
-
-	branchUUID := gocql.UUID{}
-	ancsResult := []map[string]interface{}{}
-	deleted := false
+	pagingToken := []byte{}
 	branches := make([]workflow.HistoryBranch, 0)
 
-	for iter.Scan(&branchUUID, &ancsResult, &deleted) {
-		if deleted {
-			continue
+	var iter *gocql.Iter
+	for {
+		iter = query.PageSize(1000).PageState(pagingToken).Iter()
+		if iter == nil {
+			return nil, &workflow.InternalServiceError{
+				Message: "GetHistoryTree operation failed.  Not able to create query iterator.",
+			}
 		}
-		ancs := h.parseBranchAncestors(ancsResult)
-		b := workflow.HistoryBranch{
-			TreeID:    &treeID,
-			BranchID:  common.StringPtr(branchUUID.String()),
-			Ancestors: ancs,
-		}
-		branches = append(branches, b)
+		pagingToken = iter.PageState()
 
-		branchUUID = gocql.UUID{}
-		ancsResult = []map[string]interface{}{}
-		deleted = false
+		branchUUID := gocql.UUID{}
+		ancsResult := []map[string]interface{}{}
+		deleted := false
+
+		for iter.Scan(&branchUUID, &ancsResult, &deleted) {
+			if deleted {
+				continue
+			}
+			ancs := h.parseBranchAncestors(ancsResult)
+			br := workflow.HistoryBranch{
+				TreeID:    &treeID,
+				BranchID:  common.StringPtr(branchUUID.String()),
+				Ancestors: ancs,
+			}
+			branches = append(branches, br)
+
+			branchUUID = gocql.UUID{}
+			ancsResult = []map[string]interface{}{}
+			deleted = false
+		}
+
+		if len(pagingToken) == 0 {
+			break
+		}
 	}
 
 	if err := iter.Close(); err != nil {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("GetHistoryTree. Close operation failed. Error: %v", err),
-		}
-	}
-	if len(branches) >= maxBranchesReturnForOneTree {
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("Too many branches in a tree"),
 		}
 	}
 
