@@ -79,11 +79,15 @@ func (s *TestCluster) DatabaseName() string {
 func (s *TestCluster) SetupTestDatabase() {
 	s.CreateDatabase()
 	s.CreateSession()
-	cadencePackageDir, err := getCadencePackageDir()
-	if err != nil {
-		log.Fatal(err)
+
+	schemaDir := s.schemaDir + "/"
+	if !strings.HasPrefix(schemaDir, "/") && !strings.HasPrefix(schemaDir, "../") {
+		cadencePackageDir, err := getCadencePackageDir()
+		if err != nil {
+			log.Fatal(err)
+		}
+		schemaDir = cadencePackageDir + schemaDir
 	}
-	schemaDir := cadencePackageDir + s.schemaDir + "/"
 	s.LoadSchema([]string{"schema.sql"}, schemaDir)
 	// TODO: Visibility
 	//s.LoadVisibilitySchema([]string{"schema.sql"}, schemaDir)
