@@ -271,10 +271,11 @@ Loop:
 	return false, nil, matching.ErrNoTasks
 }
 
-func (p *TaskPoller) HandlePartialDecision(response *workflow.PollForDecisionTaskResponse) error {
+func (p *TaskPoller) HandlePartialDecision(response *workflow.PollForDecisionTaskResponse) (
+	*workflow.RespondDecisionTaskCompletedResponse, error) {
 	if response == nil || len(response.TaskToken) == 0 {
 		p.Logger.Info("Empty Decision task: Polling again.")
-		return nil
+		return nil, nil
 	}
 
 	var events []*workflow.HistoryEvent
@@ -297,7 +298,7 @@ func (p *TaskPoller) HandlePartialDecision(response *workflow.PollForDecisionTas
 		})
 
 		if err2 != nil {
-			return err2
+			return nil, err2
 		}
 
 		events = append(events, resp.History.Events...)
@@ -308,7 +309,7 @@ func (p *TaskPoller) HandlePartialDecision(response *workflow.PollForDecisionTas
 		common.Int64Default(response.PreviousStartedEventId), common.Int64Default(response.StartedEventId), response.History)
 	if err != nil {
 		p.Logger.Infof("Failing Decision. Decision handler failed with error: %v", err)
-		return p.Engine.RespondDecisionTaskFailed(createContext(), &workflow.RespondDecisionTaskFailedRequest{
+		return nil, p.Engine.RespondDecisionTaskFailed(createContext(), &workflow.RespondDecisionTaskFailedRequest{
 			TaskToken: response.TaskToken,
 			Cause:     common.DecisionTaskFailedCausePtr(workflow.DecisionTaskFailedCauseWorkflowWorkerUnhandledFailure),
 			Details:   []byte(err.Error()),
@@ -319,7 +320,7 @@ func (p *TaskPoller) HandlePartialDecision(response *workflow.PollForDecisionTas
 	p.Logger.Infof("Completing Decision.  Decisions: %v", decisions)
 
 	// sticky tasklist
-	_, err = p.Engine.RespondDecisionTaskCompleted(
+	newTask, err := p.Engine.RespondDecisionTaskCompleted(
 		createContext(),
 		&workflow.RespondDecisionTaskCompletedRequest{
 			TaskToken:        response.TaskToken,
@@ -338,7 +339,7 @@ func (p *TaskPoller) HandlePartialDecision(response *workflow.PollForDecisionTas
 		yarpc.WithHeader(common.ClientImplHeaderName, "go"),
 	)
 
-	return err
+	return newTask, err
 }
 
 // PollAndProcessActivityTask for activity tasks
