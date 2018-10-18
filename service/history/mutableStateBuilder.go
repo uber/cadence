@@ -278,8 +278,13 @@ func (e *mutableStateBuilder) FlushBufferedEvents() error {
 			case workflow.EventTypeActivityTaskCompleted,
 				workflow.EventTypeActivityTaskFailed,
 				workflow.EventTypeActivityTaskCanceled,
-				workflow.EventTypeActivityTaskCancelRequested,
 				workflow.EventTypeActivityTaskTimedOut:
+				reorderedEvents = append(reorderedEvents, e)
+			case workflow.EventTypeChildWorkflowExecutionCompleted,
+				workflow.EventTypeChildWorkflowExecutionFailed,
+				workflow.EventTypeChildWorkflowExecutionCanceled,
+				workflow.EventTypeChildWorkflowExecutionTimedOut,
+				workflow.EventTypeChildWorkflowExecutionTerminated:
 				reorderedEvents = append(reorderedEvents, e)
 			default:
 				newCommittedEvents = append(newCommittedEvents, e)
