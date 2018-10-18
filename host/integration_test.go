@@ -23,6 +23,7 @@ package host
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -6342,6 +6343,167 @@ func (s *integrationSuite) TestTaskProcessingProtectionForRateLimitError() {
 
 	s.True(workflowComplete)
 	s.Equal(101, signalCount)
+}
+
+func (s *integrationSuite) TestBufferedEventsTmp() {
+	id := "interation-buffered-events-test-tmp"
+	wt := "interation-buffered-events-test-tmp-type"
+	tl := "interation-buffered-events-test-tmp-tasklist"
+	identity := "worker1"
+
+	workflowType := &workflow.WorkflowType{Name: &wt}
+	taskList := &workflow.TaskList{Name: &tl}
+
+	// Start workflow execution
+	request := &workflow.StartWorkflowExecutionRequest{
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(20),
+		Identity:                            common.StringPtr(identity),
+	}
+
+	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
+	s.Nil(err0)
+
+	s.logger.Infof("StartWorkflowExecution: response: %v \n", *we.RunId)
+
+	// decider logic
+	workflowComplete := false
+	firstDecision := false
+	secondDecision := false
+	waitGroup := sync.WaitGroup{}
+	waitGroup.Add(1)
+	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
+		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
+
+		if !firstDecision {
+			firstDecision = true
+			return nil, []*workflow.Decision{{
+				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeRecordMarker),
+				RecordMarkerDecisionAttributes: &workflow.RecordMarkerDecisionAttributes{
+					MarkerName: common.StringPtr("some random marker name"),
+					Details:    []byte("some random marker details"),
+				},
+			}, {
+				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeScheduleActivityTask),
+				ScheduleActivityTaskDecisionAttributes: &workflow.ScheduleActivityTaskDecisionAttributes{
+					ActivityId:                    common.StringPtr("Activity-1"),
+					ActivityType:                  &workflow.ActivityType{Name: common.StringPtr("ActivityType")},
+					Domain:                        common.StringPtr(s.domainName),
+					TaskList:                      taskList,
+					Input:                         []byte("some random activity input"),
+					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
+					ScheduleToStartTimeoutSeconds: common.Int32Ptr(100),
+					StartToCloseTimeoutSeconds:    common.Int32Ptr(100),
+					HeartbeatTimeoutSeconds:       common.Int32Ptr(100),
+				},
+			}}, nil
+		}
+
+		if !secondDecision {
+			secondDecision = true
+			return nil, []*workflow.Decision{{
+				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeRecordMarker),
+				RecordMarkerDecisionAttributes: &workflow.RecordMarkerDecisionAttributes{
+					MarkerName: common.StringPtr("some random marker name"),
+					Details:    []byte("some random marker details"),
+				},
+			}}, nil
+		}
+
+		workflowComplete = true
+		return nil, []*workflow.Decision{{
+			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
+			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
+				Result: []byte("Done."),
+			},
+		}}, nil
+	}
+	// activity handler
+	atHandler := func(execution *workflow.WorkflowExecution, activityType *workflow.ActivityType,
+		activityID string, input []byte, taskToken []byte) ([]byte, bool, error) {
+		defer waitGroup.Done()
+		return []byte("Activity Result."), false, nil
+	}
+
+	poller := &TaskPoller{
+		Engine:          s.engine,
+		Domain:          s.domainName,
+		TaskList:        taskList,
+		Identity:        identity,
+		DecisionHandler: dtHandler,
+		ActivityHandler: atHandler,
+		Logger:          s.logger,
+		T:               s.T(),
+	}
+
+	// first decision, which will schedule an activity and signal
+	_, task, err := poller.PollAndProcessDecisionTaskWithAttemptAndRetryAndForceNewDecision(true, false, false, false, int64(0), 1, true)
+	s.logger.Infof("pollAndProcessDecisionTask: %v", err)
+	s.Nil(err)
+
+	err = poller.PollAndProcessActivityTask(false)
+	s.logger.Infof("pollAndProcessActivityTask: %v", err)
+	s.Nil(err)
+
+	// second decision, which will process signal
+	newDecisionTask := task.GetDecisionTask()
+	s.NotNil(newDecisionTask)
+	err = poller.HandlePartialDecision(newDecisionTask)
+	s.logger.Infof("pollAndProcessDecisionTask: %v", err)
+	s.Nil(err)
+
+	go func() {
+		// check history, the signal event should be after the complete decision task
+		histResp, err := s.engine.GetWorkflowExecutionHistory(createContext(), &workflow.GetWorkflowExecutionHistoryRequest{
+			Domain: common.StringPtr(s.domainName),
+			Execution: &workflow.WorkflowExecution{
+				WorkflowId: common.StringPtr(id),
+				RunId:      we.RunId,
+			},
+		})
+		s.NoError(err)
+		s.NotNil(histResp.History.Events)
+
+		print := func(value interface{}) string {
+			bytes, _ := json.MarshalIndent(value, "", "  ")
+			return string(bytes)
+		}
+		fmt.Printf("++++++++++\n")
+		fmt.Printf("## @ Events:\n%v\n.", print(histResp.History.Events))
+		fmt.Printf("++++++++++\n")
+	}()
+
+	// third decision, which will close workflow
+	_, err = poller.PollAndProcessDecisionTask(true, false)
+	s.logger.Infof("pollAndProcessDecisionTask: %v", err)
+	s.Nil(err)
+
+	// check history, the signal event should be after the complete decision task
+	histResp, err := s.engine.GetWorkflowExecutionHistory(createContext(), &workflow.GetWorkflowExecutionHistoryRequest{
+		Domain: common.StringPtr(s.domainName),
+		Execution: &workflow.WorkflowExecution{
+			WorkflowId: common.StringPtr(id),
+			RunId:      we.RunId,
+		},
+	})
+	s.NoError(err)
+	s.NotNil(histResp.History.Events)
+	s.True(workflowComplete)
+
+	print := func(value interface{}) string {
+		bytes, _ := json.MarshalIndent(value, "", "  ")
+		return string(bytes)
+	}
+	fmt.Printf("++++++++++\n")
+	fmt.Printf("## Events:\n%v\n.", print(histResp.History.Events))
+	fmt.Printf("++++++++++\n")
+	panic("i++")
 }
 
 func (s *integrationSuite) TestStickyTimeout_NonTransientDecision() {
