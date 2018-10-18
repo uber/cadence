@@ -90,21 +90,24 @@ type (
 	}
 
 	HistoryV2Store interface {
+		Closeable
+		GetName() string
+
 		// The below are history V2 APIs
 		// V2 regards history events growing as a tree, decoupled from workflow concepts
 		// For Cadence, treeID will be a UUID, shared for the same workflow_id,
 		//     a workflow run may have one or more than one branchID
 		//     NodeID is the same as EventID, except that it will grow continuously in a branch.
 		// NewHistoryBranch creates a new branch from tree root. If tree doesn't exist, then create one. Return error if the branch already exists.
-		NewHistoryBranch(request *NewHistoryBranchRequest) (*InternalNewHistoryBranchResponse, error)
+		NewHistoryBranch(request *InternalNewHistoryBranchRequest) (*InternalNewHistoryBranchResponse, error)
 		// AppendHistoryNodes add(or override) a node to a history branch
 		AppendHistoryNodes(request *InternalAppendHistoryNodesRequest) error
 		// ReadHistoryBranch returns history node data for a branch
 		ReadHistoryBranch(request *InternalReadHistoryBranchRequest) (*InternalReadHistoryBranchResponse, error)
 		// ForkHistoryBranch forks a new branch from a old branch
-		ForkHistoryBranch(request *ForkHistoryBranchRequest) (*ForkHistoryBranchResponse, error)
+		ForkHistoryBranch(request *InternalForkHistoryBranchRequest) (*InternalForkHistoryBranchResponse, error)
 		// DeleteHistoryBranch removes a branch
-		DeleteHistoryBranch(request *DeleteHistoryBranchRequest) error
+		DeleteHistoryBranch(request *InternalDeleteHistoryBranchRequest) error
 		// GetHistoryTree returns all branch information of a tree
 		GetHistoryTree(request *GetHistoryTreeRequest) (*GetHistoryTreeResponse, error)
 	}
@@ -297,6 +300,12 @@ type (
 		Overwrite         bool
 	}
 
+	// InternalNewHistoryBranchRequest is used to create a new history branch
+	InternalNewHistoryBranchRequest struct {
+		TreeID   string
+		BranchID string
+	}
+
 	// NewHistoryBranchResponse is a response to NewHistoryBranchRequest
 	InternalNewHistoryBranchResponse struct {
 		//BranchInfo represents a branch
@@ -347,6 +356,28 @@ type (
 		NextPageToken []byte
 		// an extra field passing to DataInterface
 		LastEventBatchVersion int64
+	}
+
+	// InternalForkHistoryBranchRequest is used to fork a history branch
+	InternalForkHistoryBranchRequest struct {
+		// The branch to be fork
+		ForkBranchToken []byte
+		// The nodeID to fork from, the new branch will start from ForkFromNodeID + 1
+		ForkFromNodeID int64
+		// branchID of the new branch
+		NewBranchID string
+	}
+
+	// InternalForkHistoryBranchResponse is the response to ForkHistoryBranchRequest
+	InternalForkHistoryBranchResponse struct {
+		// branchInfo to represent the new branch
+		NewBranchInfo workflow.HistoryBranch
+	}
+
+	// InternalDeleteHistoryBranchRequest is used to remove a history branch
+	InternalDeleteHistoryBranchRequest struct {
+		// branch to be deleted
+		BranchInfo workflow.HistoryBranch
 	}
 
 	// InternalReadHistoryBranchRequest is used to read a history branch

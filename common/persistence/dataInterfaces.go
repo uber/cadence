@@ -1095,9 +1095,6 @@ type (
 	AppendHistoryNodesResponse struct {
 		// the size of the event data that has been appended
 		Size int
-		// TODO remove it after testing is done
-		// the number of events that has been appended with override instead of using insert if not exist
-		OverrideCount int
 	}
 
 	// ReadHistoryBranchRequest is used to read a history branch
