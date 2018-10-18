@@ -1106,6 +1106,7 @@ type (
 		// Get the history nodes upto MaxEventID.  Exclusive.
 		MaxEventID int64
 		// Maximum number of batches of events per page. Not that number of events in a batch >=1, it is not number of events per page.
+		// However for a single page, it is also possible that the returned events is less than PageSize (event zero events) due to stale events.
 		PageSize int
 		// Token to continue reading next page of history append transactions.  Pass in empty slice for first page
 		NextPageToken []byte

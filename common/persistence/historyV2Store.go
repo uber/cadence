@@ -141,6 +141,11 @@ func (m *historyV2ManagerImpl) AppendHistoryNodes(request *AppendHistoryNodesReq
 	nodeID := *request.Events[0].EventId
 	lastId := nodeID - 1
 
+	if nodeID <= 0 {
+		return nil, &InvalidPersistenceRequestError{
+			Msg: fmt.Sprintf("eventID cannot be less than 1"),
+		}
+	}
 	for _, e := range request.Events {
 		if *e.Version != version {
 			return nil, &InvalidPersistenceRequestError{
@@ -261,7 +266,7 @@ func (m *historyV2ManagerImpl) ReadHistoryBranch(request *ReadHistoryBranchReque
 
 		if *fe.EventId != lastNodeID+1 {
 			logger.Errorf("Unexpected eventID %v", *fe.EventId)
-			return nil, fmt.Errorf("corrupted history event batch, unexpected eventID")
+			continue
 		}
 
 		lastEventVersion = *fe.Version
