@@ -1087,7 +1087,7 @@ type (
 		Events []*workflow.HistoryEvent
 		// requested TransactionID for this write operation. For the same eventID, the node with larger TransactionID always wins
 		TransactionID int64
-		//Optional. It is to suggest a binary encoding type to serialize history events
+		// It is to suggest a binary encoding type to serialize history events
 		Encoding common.EncodingType
 	}
 
@@ -1105,8 +1105,7 @@ type (
 		MinEventID int64
 		// Get the history nodes upto MaxEventID.  Exclusive.
 		MaxEventID int64
-		// Maximum number of history nodes per page
-		// If returned events less than it, that means we reach the last page
+		// Maximum number of batches of events per page. Not that number of events in a batch >=1, it is not number of events per page.
 		PageSize int
 		// Token to continue reading next page of history append transactions.  Pass in empty slice for first page
 		NextPageToken []byte
@@ -1121,6 +1120,7 @@ type (
 		History []*workflow.HistoryEvent
 		// Token to read next page if there are more events beyond page size.
 		// Use this to set NextPageToken on ReadHistoryBranchRequest to read the next page.
+		// Empty means we have reached the last page, not need to continue
 		NextPageToken []byte
 		// Size of history read from store
 		Size int

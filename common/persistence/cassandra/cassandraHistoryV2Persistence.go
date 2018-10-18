@@ -55,6 +55,71 @@ const (
 		`WHERE domain_id = ? ` +
 		`AND workflow_id = ? ` +
 		`AND run_id = ? `
+
+	//Below are V2 templates
+	v2templateInsertNode = `INSERT INTO events_v2 (` +
+		`tree_id, branch_id, row_type, ancestors, deleted, node_id, txn_id, data, data_encoding) ` +
+		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) IF NOT EXISTS `
+
+	v2templateOverrideNode = `UPDATE events_v2 ` +
+		`SET txn_id = ?, data = ?, data_encoding = ? ` +
+		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id = ? ` +
+		`IF txn_id < ? `
+
+	v2templateReadRowType = `SELECT branch_id, ancestors, deleted FROM events_v2 WHERE tree_id = ? AND row_type = ? `
+
+	v2templateReadOneNode = `SELECT ancestors, deleted, txn_id FROM events_v2 ` +
+		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id = ? `
+
+	v2templateReadNodes = `SELECT node_id, data, data_encoding FROM events_v2 ` +
+		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id >= ? AND node_id < ? `
+
+	v2templateUpdateTreeRoot = `UPDATE events_v2 ` +
+		`SET txn_id = ? ` +
+		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id = ? ` +
+		`IF txn_id = ? `
+
+	v2templateValidateBranchStatus = `UPDATE events_v2 ` +
+		`SET deleted = false ` +
+		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id = ? if deleted = false `
+
+	v2templateMarkBranchDeleted = `UPDATE events_v2 ` +
+		`SET deleted = true ` +
+		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id = ? `
+
+	// NOTE: Range deletion in batch is not supported on our production version  of Cassandra, we have to workaround by deleting one by one in a batch
+	//v2templateRangeDeleteNodes = `DELETE FROM events_v2 ` +
+	//	`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id >= ? `
+
+	// to workaround the above issue, we need to know what is the maxium node_id in a branch
+	v2templateGetMaxNodeID = `select max(node_id) AS max_id FROM events_v2 ` +
+		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id >= ? `
+
+	v2templateDeleteOneNode = `DELETE FROM events_v2 ` +
+		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id = ? `
+
+	v2templateDeleteRoot = `DELETE FROM events_v2 ` +
+		`WHERE tree_id = ? AND branch_id = ? AND row_type = ? AND node_id = ? ` +
+		`IF txn_id = ? `
+
+	// Assume that we won't have branches more than that in a single tree
+	// This assumption simplifies our code here.
+	maxBranchesReturnForOneTree = 100
+)
+
+const (
+	// fake nodeID for branch record
+	branchNodeID = -1
+	// nodeID of the tree root
+	rootNodeID = 0
+	// constant branchID for the tree root
+	rootNodeBranchID = "10000000-0000-f000-f000-000000000000"
+	// the initial txn_id of each node(including root node)
+	initialTransactionID = 0
+
+	// Row types for table events_v2
+	rowTypeHistoryBranch = 0
+	rowTypeHistoryNode   = 1
 )
 
 type (

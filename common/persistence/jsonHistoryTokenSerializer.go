@@ -1,0 +1,60 @@
+// Copyright (c) 2017 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+package persistence
+
+import "encoding/json"
+
+type (
+	jsonHistoryTokenSerializer struct{}
+
+	// historyV2PagingToken is used to serialize/deserialize pagination token for ReadHistoryBranchRequest
+	historyV2PagingToken struct {
+		LastEventVersion int64
+		LastNodeID       int64
+	}
+)
+
+// NewJSONTaskTokenSerializer creates a new instance of TaskTokenSerializer
+func NewJSONHistoryTokenSerializer() *jsonHistoryTokenSerializer {
+	return &jsonHistoryTokenSerializer{}
+}
+
+func (j *jsonHistoryTokenSerializer) Serialize(lastNodeID, lastEventVersion int64) ([]byte, error) {
+	token := &historyV2PagingToken{
+		LastNodeID:       lastNodeID,
+		LastEventVersion: lastEventVersion,
+	}
+	data, err := json.Marshal(token)
+	return data, err
+}
+
+func (j *jsonHistoryTokenSerializer) Deserialize(data []byte, defaultLastNodeID, defaultLastEventVersion int64) (*historyV2PagingToken, error) {
+	token := historyV2PagingToken{
+		LastEventVersion: defaultLastEventVersion,
+		LastNodeID:       defaultLastNodeID,
+	}
+	if len(data) == 0 {
+		return &token, nil
+	}
+	err := json.Unmarshal(data, &token)
+
+	return &token, err
+}
