@@ -23,6 +23,7 @@ package persistencetests
 import (
 	"fmt"
 	"os"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -30,8 +31,6 @@ import (
 	"github.com/pborman/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
-
-	"sync"
 
 	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -2676,7 +2675,7 @@ func (s *ExecutionManagerSuite) TestResetMutableStateCurrentIsSelf() {
 	s.Equal(int64(2333), ti.Version)
 	s.Equal("t1", ti.TimerID)
 	s.Equal(int64(1), ti.StartedID)
-	s.True(timeComparator(expiryTime, ti.ExpiryTime, time.Millisecond))
+	s.EqualTimes(expiryTime, ti.ExpiryTime)
 	s.Equal(int64(500), ti.TaskID)
 
 	ti, ok = state1.TimerInfos["t2"]
@@ -2685,7 +2684,7 @@ func (s *ExecutionManagerSuite) TestResetMutableStateCurrentIsSelf() {
 	s.Equal(int64(2333), ti.Version)
 	s.Equal("t2", ti.TimerID)
 	s.Equal(int64(2), ti.StartedID)
-	s.True(timeComparator(expiryTime, ti.ExpiryTime, time.Millisecond))
+	s.EqualTimes(expiryTime, ti.ExpiryTime)
 	s.Equal(int64(501), ti.TaskID)
 
 	ti, ok = state1.TimerInfos["t3"]
@@ -2694,7 +2693,7 @@ func (s *ExecutionManagerSuite) TestResetMutableStateCurrentIsSelf() {
 	s.Equal(int64(2333), ti.Version)
 	s.Equal("t3", ti.TimerID)
 	s.Equal(int64(3), ti.StartedID)
-	s.True(timeComparator(expiryTime, ti.ExpiryTime, time.Millisecond))
+	s.EqualTimes(expiryTime, ti.ExpiryTime)
 	s.Equal(int64(502), ti.TaskID)
 
 	s.Equal(1, len(state1.ChildExecutionInfos))
@@ -2841,7 +2840,7 @@ func (s *ExecutionManagerSuite) TestResetMutableStateCurrentIsSelf() {
 	s.Equal(int64(3333), ti.Version)
 	s.Equal("t1_new", ti.TimerID)
 	s.Equal(int64(1), ti.StartedID)
-	s.True(timeComparator(expiryTime, ti.ExpiryTime, time.Millisecond))
+	s.EqualTimes(expiryTime, ti.ExpiryTime)
 	s.Equal(int64(600), ti.TaskID)
 
 	ti, ok = state4.TimerInfos["t2_new"]
@@ -2850,7 +2849,7 @@ func (s *ExecutionManagerSuite) TestResetMutableStateCurrentIsSelf() {
 	s.Equal(int64(3333), ti.Version)
 	s.Equal("t2_new", ti.TimerID)
 	s.Equal(int64(2), ti.StartedID)
-	s.True(timeComparator(expiryTime, ti.ExpiryTime, time.Millisecond))
+	s.EqualTimes(expiryTime, ti.ExpiryTime)
 	s.Equal(int64(601), ti.TaskID)
 
 	s.Equal(1, len(state4.ChildExecutionInfos))

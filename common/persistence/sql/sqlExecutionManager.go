@@ -31,7 +31,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/collection"
 	p "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/service/config"
 )
 
 type (
@@ -913,7 +912,7 @@ func (m *sqlExecutionManager) updateWorkflowExecutionTx(tx *sqlx.Tx, request *p.
 		}
 	}
 
-	if err := updateExecution(tx, executionInfo, request.ReplicationState, request.Condition); err != nil {
+	if err := updateExecution(tx, executionInfo, request.ReplicationState, request.Condition, shardID); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("UpdateWorkflowExecution operation failed. Failed to update executions row. Erorr: %v", err),
 		}
@@ -1123,7 +1122,7 @@ func (m *sqlExecutionManager) resetMutableStateTx(tx *sqlx.Tx, request *p.Intern
 		}
 	}
 
-	if err := updateExecution(tx, info, request.ReplicationState, request.Condition); err != nil {
+	if err := updateExecution(tx, info, request.ReplicationState, request.Condition, m.shardID); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("UpdateWorkflowExecution operation failed. Failed to update executions row. Erorr: %v", err),
 		}
@@ -1455,12 +1454,9 @@ func (m *sqlExecutionManager) RangeCompleteTimerTask(request *p.RangeCompleteTim
 }
 
 // NewSQLMatchingPersistence creates an instance of ExecutionStore
-func NewSQLMatchingPersistence(cfg config.SQL, logger bark.Logger) (p.ExecutionStore, error) {
-	db, err := newConnection(cfg)
-	if err != nil {
-		return nil, err
-	}
+func NewSQLMatchingPersistence(db *sqlx.DB, logger bark.Logger, shardID int) (p.ExecutionStore, error) {
 	return &sqlExecutionManager{
+		shardID: shardID,
 		sqlStore: sqlStore{
 			db:     db,
 			logger: logger,
@@ -1952,7 +1948,8 @@ func updateCurrentExecution(tx *sqlx.Tx, shardID int, domainID, workflowID, runI
 func updateExecution(tx *sqlx.Tx,
 	executionInfo *p.InternalWorkflowExecutionInfo,
 	replicationState *p.ReplicationState,
-	condition int64) error {
+	condition int64,
+	shardID int) error {
 	args := updateExecutionRow{
 		executionRow{
 			DomainID:                     executionInfo.DomainID,
@@ -1986,6 +1983,7 @@ func updateExecution(tx *sqlx.Tx,
 			ClientLibraryVersion:         executionInfo.ClientLibraryVersion,
 			ClientFeatureVersion:         executionInfo.ClientFeatureVersion,
 			ClientImpl:                   executionInfo.ClientImpl,
+			ShardID:                      int64(shardID),
 		},
 		condition,
 	}
