@@ -166,10 +166,10 @@ func (s *mutableStateSuite) TestReorderEvents() {
 		NextEventID:          int64(8),
 		LastProcessedEvent:   int64(3),
 		LastUpdatedTimestamp: time.Now(),
-		DecisionVersion:    common.EmptyVersion,
-		DecisionScheduleID: common.EmptyEventID,
-		DecisionStartedID:  common.EmptyEventID,
-		DecisionTimeout:    100,
+		DecisionVersion:      common.EmptyVersion,
+		DecisionScheduleID:   common.EmptyEventID,
+		DecisionStartedID:    common.EmptyEventID,
+		DecisionTimeout:      100,
 	}
 
 	activityInfos := map[int64]*persistence.ActivityInfo{
