@@ -29,6 +29,7 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -5637,6 +5638,7 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 	// Send a signal
 	signalName := "my signal"
 	signalInput := []byte("my signal input.")
+	wfIDReusePolicy := workflow.WorkflowIdReusePolicyAllowDuplicate
 	sRequest := &workflow.SignalWithStartWorkflowExecutionRequest{
 		RequestId:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
@@ -5649,6 +5651,7 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 		SignalName:                          common.StringPtr(signalName),
 		SignalInput:                         signalInput,
 		Identity:                            common.StringPtr(identity),
+		WorkflowIdReusePolicy:               &wfIDReusePolicy,
 	}
 	resp, err := s.engine.SignalWithStartWorkflowExecution(createContext(), sRequest)
 	s.Nil(err)
@@ -5776,6 +5779,153 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 	listClosedResp, err := s.engine.ListClosedWorkflowExecutions(createContext(), listClosedRequest)
 	s.NoError(err)
 	s.Equal(1, len(listClosedResp.Executions))
+}
+
+func (s *integrationSuite) TestSignalWithStartWorkflow_IDReusePolicy() {
+	id := "integration-signal-with-start-workflow-id-reuse-test"
+	wt := "integration-signal-with-start-workflow-id-reuse-test-type"
+	tl := "integration-signal-with-start-workflow-id-reuse-test-tasklist"
+	identity := "worker1"
+	activityName := "activity_type1"
+
+	workflowType := &workflow.WorkflowType{}
+	workflowType.Name = common.StringPtr(wt)
+
+	taskList := &workflow.TaskList{}
+	taskList.Name = common.StringPtr(tl)
+
+	// Start a workflow
+	request := &workflow.StartWorkflowExecutionRequest{
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		Identity:                            common.StringPtr(identity),
+	}
+
+	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
+	s.Nil(err0)
+
+	s.logger.Infof("StartWorkflowExecution: response: %v \n", *we.RunId)
+
+	workflowComplete := false
+	activityCount := int32(1)
+	activityCounter := int32(0)
+	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
+		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
+		if activityCounter < activityCount {
+			activityCounter++
+			buf := new(bytes.Buffer)
+			s.Nil(binary.Write(buf, binary.LittleEndian, activityCounter))
+
+			return []byte(strconv.Itoa(int(activityCounter))), []*workflow.Decision{{
+				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeScheduleActivityTask),
+				ScheduleActivityTaskDecisionAttributes: &workflow.ScheduleActivityTaskDecisionAttributes{
+					ActivityId:                    common.StringPtr(strconv.Itoa(int(activityCounter))),
+					ActivityType:                  &workflow.ActivityType{Name: common.StringPtr(activityName)},
+					TaskList:                      &workflow.TaskList{Name: &tl},
+					Input:                         buf.Bytes(),
+					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
+					ScheduleToStartTimeoutSeconds: common.Int32Ptr(10),
+					StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
+					HeartbeatTimeoutSeconds:       common.Int32Ptr(5),
+				},
+			}}, nil
+		}
+
+		workflowComplete = true
+		return []byte(strconv.Itoa(int(activityCounter))), []*workflow.Decision{{
+			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
+			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
+				Result: []byte("Done."),
+			},
+		}}, nil
+	}
+
+	atHandler := func(execution *workflow.WorkflowExecution, activityType *workflow.ActivityType,
+		activityID string, input []byte, taskToken []byte) ([]byte, bool, error) {
+		return []byte("Activity Result."), false, nil
+	}
+
+	poller := &TaskPoller{
+		Engine:          s.engine,
+		Domain:          s.domainName,
+		TaskList:        taskList,
+		Identity:        identity,
+		DecisionHandler: dtHandler,
+		ActivityHandler: atHandler,
+		Logger:          s.logger,
+		T:               s.T(),
+	}
+
+	// Start workflows, make some progress and complete workflow
+	_, err := poller.PollAndProcessDecisionTask(false, false)
+	s.logger.Infof("PollAndProcessDecisionTask: %v", err)
+	s.Nil(err)
+	_, err = poller.PollAndProcessDecisionTask(false, false)
+	s.logger.Infof("PollAndProcessDecisionTask: %v", err)
+	s.Nil(err)
+	s.True(workflowComplete)
+
+	// test policy WorkflowIdReusePolicyRejectDuplicate
+	signalName := "my signal"
+	signalInput := []byte("my signal input.")
+	wfIDReusePolicy := workflow.WorkflowIdReusePolicyRejectDuplicate
+	sRequest := &workflow.SignalWithStartWorkflowExecutionRequest{
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		SignalName:                          common.StringPtr(signalName),
+		SignalInput:                         signalInput,
+		Identity:                            common.StringPtr(identity),
+		WorkflowIdReusePolicy:               &wfIDReusePolicy,
+	}
+	resp, err := s.engine.SignalWithStartWorkflowExecution(createContext(), sRequest)
+	s.Nil(resp)
+	s.Error(err)
+	errMsg := err.(*workflow.WorkflowExecutionAlreadyStartedError).GetMessage()
+	s.True(strings.Contains(errMsg, "reject duplicate workflow ID"))
+
+	// test policy WorkflowIdReusePolicyAllowDuplicateFailedOnly
+	wfIDReusePolicy = workflow.WorkflowIdReusePolicyAllowDuplicateFailedOnly
+	resp, err = s.engine.SignalWithStartWorkflowExecution(createContext(), sRequest)
+	s.Nil(resp)
+	s.Error(err)
+	errMsg = err.(*workflow.WorkflowExecutionAlreadyStartedError).GetMessage()
+	s.True(strings.Contains(errMsg, "allow duplicate workflow ID if last run failed"))
+
+	// test policy WorkflowIdReusePolicyAllowDuplicate
+	wfIDReusePolicy = workflow.WorkflowIdReusePolicyAllowDuplicate
+	resp, err = s.engine.SignalWithStartWorkflowExecution(createContext(), sRequest)
+	s.Nil(err)
+	s.NotEmpty(resp.GetRunId())
+
+	// Terminate workflow execution
+	err = s.engine.TerminateWorkflowExecution(createContext(), &workflow.TerminateWorkflowExecutionRequest{
+		Domain: common.StringPtr(s.domainName),
+		WorkflowExecution: &workflow.WorkflowExecution{
+			WorkflowId: common.StringPtr(id),
+		},
+		Reason:   common.StringPtr("test WorkflowIdReusePolicyAllowDuplicateFailedOnly"),
+		Details:  nil,
+		Identity: common.StringPtr(identity),
+	})
+	s.Nil(err)
+
+	// test policy WorkflowIdReusePolicyAllowDuplicateFailedOnly success start
+	wfIDReusePolicy = workflow.WorkflowIdReusePolicyAllowDuplicateFailedOnly
+	resp, err = s.engine.SignalWithStartWorkflowExecution(createContext(), sRequest)
+	s.Nil(err)
+	s.NotEmpty(resp.GetRunId())
 }
 
 func (s *integrationSuite) TestTransientDecisionTimeout() {
@@ -6365,6 +6515,157 @@ WaitForStickyTimeoutLoop:
 	}
 	s.True(workflowComplete, "Workflow not complete")
 	s.Equal(2, failedDecisions, "Mismatched failed decision count")
+	s.printWorkflowHistory(s.domainName, workflowExecution)
+}
+
+func (s *integrationSuite) TestBufferedEventsOutOfOrder() {
+	id := "interation-buffered-events-out-of-order-test"
+	wt := "interation-buffered-events-out-of-order-test-type"
+	tl := "interation-buffered-events-out-of-order-test-tasklist"
+	identity := "worker1"
+
+	workflowType := &workflow.WorkflowType{Name: &wt}
+	taskList := &workflow.TaskList{Name: &tl}
+
+	// Start workflow execution
+	request := &workflow.StartWorkflowExecutionRequest{
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(20),
+		Identity:                            common.StringPtr(identity),
+	}
+
+	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
+	s.Nil(err0)
+
+	s.logger.Infof("StartWorkflowExecution: response: %v \n", *we.RunId)
+	workflowExecution := &workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr(id),
+		RunId:      we.RunId,
+	}
+
+	// decider logic
+	workflowComplete := false
+	firstDecision := false
+	secondDecision := false
+	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
+		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
+
+		s.logger.Infof("Decider called: first: %v, second: %v, complete: %v\n", firstDecision, secondDecision, workflowComplete)
+
+		if !firstDecision {
+			firstDecision = true
+			return nil, []*workflow.Decision{{
+				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeRecordMarker),
+				RecordMarkerDecisionAttributes: &workflow.RecordMarkerDecisionAttributes{
+					MarkerName: common.StringPtr("some random marker name"),
+					Details:    []byte("some random marker details"),
+				},
+			}, {
+				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeScheduleActivityTask),
+				ScheduleActivityTaskDecisionAttributes: &workflow.ScheduleActivityTaskDecisionAttributes{
+					ActivityId:                    common.StringPtr("Activity-1"),
+					ActivityType:                  &workflow.ActivityType{Name: common.StringPtr("ActivityType")},
+					Domain:                        common.StringPtr(s.domainName),
+					TaskList:                      taskList,
+					Input:                         []byte("some random activity input"),
+					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
+					ScheduleToStartTimeoutSeconds: common.Int32Ptr(100),
+					StartToCloseTimeoutSeconds:    common.Int32Ptr(100),
+					HeartbeatTimeoutSeconds:       common.Int32Ptr(100),
+				},
+			}}, nil
+		}
+
+		if !secondDecision {
+			secondDecision = true
+			return nil, []*workflow.Decision{{
+				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeRecordMarker),
+				RecordMarkerDecisionAttributes: &workflow.RecordMarkerDecisionAttributes{
+					MarkerName: common.StringPtr("some random marker name"),
+					Details:    []byte("some random marker details"),
+				},
+			}}, nil
+		}
+
+		workflowComplete = true
+		return nil, []*workflow.Decision{{
+			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
+			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
+				Result: []byte("Done."),
+			},
+		}}, nil
+	}
+	// activity handler
+	atHandler := func(execution *workflow.WorkflowExecution, activityType *workflow.ActivityType,
+		activityID string, input []byte, taskToken []byte) ([]byte, bool, error) {
+		return []byte("Activity Result."), false, nil
+	}
+
+	poller := &TaskPoller{
+		Engine:          s.engine,
+		Domain:          s.domainName,
+		TaskList:        taskList,
+		Identity:        identity,
+		DecisionHandler: dtHandler,
+		ActivityHandler: atHandler,
+		Logger:          s.logger,
+		T:               s.T(),
+	}
+
+	// first decision, which will schedule an activity and add marker
+	_, task, err := poller.PollAndProcessDecisionTaskWithAttemptAndRetryAndForceNewDecision(true, false, false, false, int64(0), 1, true)
+	s.logger.Infof("pollAndProcessDecisionTask: %v", err)
+	s.Nil(err)
+
+	// This will cause activity start and complete to be buffered
+	err = poller.PollAndProcessActivityTask(false)
+	s.logger.Infof("pollAndProcessActivityTask: %v", err)
+	s.Nil(err)
+
+	// second decision, completes another local activity and forces flush of buffered activity events
+	newDecisionTask := task.GetDecisionTask()
+	s.NotNil(newDecisionTask)
+	task, err = poller.HandlePartialDecision(newDecisionTask)
+	s.logger.Infof("pollAndProcessDecisionTask: %v", err)
+	s.Nil(err)
+	s.NotNil(task)
+
+	// third decision, which will close workflow
+	newDecisionTask = task.GetDecisionTask()
+	s.NotNil(newDecisionTask)
+	task, err = poller.HandlePartialDecision(newDecisionTask)
+	s.logger.Infof("pollAndProcessDecisionTask: %v", err)
+	s.Nil(err)
+	s.Nil(task.DecisionTask)
+
+	events := s.getHistory(s.domainName, workflowExecution)
+	var scheduleEvent, startedEvent, completedEvent *workflow.HistoryEvent
+	for _, event := range events {
+		switch event.GetEventType() {
+		case workflow.EventTypeActivityTaskScheduled:
+			scheduleEvent = event
+		case workflow.EventTypeActivityTaskStarted:
+			startedEvent = event
+		case workflow.EventTypeActivityTaskCompleted:
+			completedEvent = event
+		}
+	}
+
+	s.NotNil(scheduleEvent)
+	s.NotNil(startedEvent)
+	s.NotNil(completedEvent)
+	s.True(startedEvent.GetEventId() < completedEvent.GetEventId())
+	s.Equal(scheduleEvent.GetEventId(), startedEvent.ActivityTaskStartedEventAttributes.GetScheduledEventId())
+	s.Equal(scheduleEvent.GetEventId(), completedEvent.ActivityTaskCompletedEventAttributes.GetScheduledEventId())
+	s.Equal(startedEvent.GetEventId(), completedEvent.ActivityTaskCompletedEventAttributes.GetStartedEventId())
+	s.True(workflowComplete)
+
 	s.printWorkflowHistory(s.domainName, workflowExecution)
 }
 

@@ -21,11 +21,12 @@
 package persistencetests
 
 import (
-	"github.com/stretchr/testify/suite"
 	"math"
 	"math/rand"
 	"sync/atomic"
 	"time"
+
+	"github.com/stretchr/testify/suite"
 
 	"github.com/pborman/uuid"
 	log "github.com/sirupsen/logrus"
@@ -48,9 +49,16 @@ type (
 
 	// TestBaseOptions options to configure workflow test base.
 	TestBaseOptions struct {
-		DBPort    int
 		DBName    string
-		SchemaDir string
+		Cassandra struct {
+			DBPort    int
+			SchemaDir string
+		}
+		SQL struct {
+			DBPort     int
+			SchemaDir  string
+			DriverName string
+		}
 		// TODO this is used for global domain test
 		// when crtoss DC is public, remove EnableGlobalDomain
 		EnableGlobalDomain bool // is global domain enabled
@@ -61,21 +69,22 @@ type (
 	// TestBase wraps the base setup needed to create workflows over persistence layer.
 	TestBase struct {
 		suite.Suite
-		ShardMgr               p.ShardManager
-		ExecutionMgrFactory    pfactory.Factory
-		ExecutionManager       p.ExecutionManager
-		TaskMgr                p.TaskManager
-		HistoryMgr             p.HistoryManager
-		MetadataManager        p.MetadataManager
-		MetadataManagerV2      p.MetadataManager
-		MetadataProxy          p.MetadataManager
-		VisibilityMgr          p.VisibilityManager
-		ShardInfo              *p.ShardInfo
-		TaskIDGenerator        TransferTaskIDGenerator
-		ClusterMetadata        cluster.Metadata
-		ReadLevel              int64
-		ReplicationReadLevel   int64
-		PersistenceTestCluster PersistenceTestCluster
+		ShardMgr              p.ShardManager
+		ExecutionMgrFactory   pfactory.Factory
+		ExecutionManager      p.ExecutionManager
+		TaskMgr               p.TaskManager
+		HistoryMgr            p.HistoryManager
+		MetadataManager       p.MetadataManager
+		MetadataManagerV2     p.MetadataManager
+		MetadataProxy         p.MetadataManager
+		VisibilityMgr         p.VisibilityManager
+		ShardInfo             *p.ShardInfo
+		TaskIDGenerator       TransferTaskIDGenerator
+		ClusterMetadata       cluster.Metadata
+		ReadLevel             int64
+		ReplicationReadLevel  int64
+		DefaultTestCluster    PersistenceTestCluster
+		VisibilityTestCluster PersistenceTestCluster
 	}
 
 	// PersistenceTestCluster exposes management operations on a database
@@ -101,8 +110,8 @@ func NewTestBaseWithCassandra(options *TestBaseOptions) TestBase {
 	if options.DBName == "" {
 		options.DBName = GenerateRandomDBName(10)
 	}
-	testCluster := cassandra.NewTestCluster(options.DBPort, options.DBName, options.SchemaDir)
-	return newTestBase(options, testCluster)
+	testCluster := cassandra.NewTestCluster(options.Cassandra.DBPort, options.DBName, options.Cassandra.SchemaDir)
+	return newTestBase(options, testCluster, testCluster)
 }
 
 // NewTestBaseWithSQL returns a new persistence test base backed by SQL
@@ -110,17 +119,24 @@ func NewTestBaseWithSQL(options *TestBaseOptions) TestBase {
 	if options.DBName == "" {
 		options.DBName = GenerateRandomDBName(10)
 	}
-	testCluster := sql.NewTestCluster(options.DBPort, options.DBName, options.SchemaDir)
-	return newTestBase(options, testCluster)
+	sqlOpts := options.SQL
+	defaultCluster := sql.NewTestCluster(sqlOpts.DBPort, options.DBName, sqlOpts.SchemaDir, sqlOpts.DriverName)
+	visibilityCluster := cassandra.NewTestCluster(options.Cassandra.DBPort, options.DBName, options.Cassandra.SchemaDir)
+	return newTestBase(options, defaultCluster, visibilityCluster)
 }
 
-func newTestBase(options *TestBaseOptions, testCluster PersistenceTestCluster) TestBase {
+func newTestBase(options *TestBaseOptions,
+	defaultCluster PersistenceTestCluster, visibilityCluster PersistenceTestCluster) TestBase {
 	metadata := options.ClusterMetadata
 	if metadata == nil {
 		metadata = cluster.GetTestClusterMetadata(options.EnableGlobalDomain, options.IsMasterCluster)
 	}
 	options.ClusterMetadata = metadata
-	return TestBase{PersistenceTestCluster: testCluster, ClusterMetadata: metadata}
+	return TestBase{
+		DefaultTestCluster:    defaultCluster,
+		VisibilityTestCluster: visibilityCluster,
+		ClusterMetadata:       metadata,
+	}
 }
 
 // Setup sets up the test base, must be called as part of SetupSuite
@@ -130,9 +146,12 @@ func (s *TestBase) Setup() {
 	clusterName := s.ClusterMetadata.GetCurrentClusterName()
 	log := bark.NewLoggerFromLogrus(log.New())
 
-	s.PersistenceTestCluster.SetupTestDatabase()
+	s.DefaultTestCluster.SetupTestDatabase()
+	if s.VisibilityTestCluster != s.DefaultTestCluster {
+		s.VisibilityTestCluster.SetupTestDatabase()
+	}
 
-	cfg := s.PersistenceTestCluster.Config()
+	cfg := s.DefaultTestCluster.Config()
 	factory := pfactory.New(&cfg, clusterName, nil, log)
 
 	s.TaskMgr, err = factory.NewTaskManager()
@@ -157,10 +176,15 @@ func (s *TestBase) Setup() {
 	s.ExecutionManager, err = factory.NewExecutionManager(shardID)
 	s.fatalOnError("NewExecutionManager", err)
 
+	visibilityFactory := factory
+	if s.VisibilityTestCluster != s.DefaultTestCluster {
+		vCfg := s.VisibilityTestCluster.Config()
+		visibilityFactory = pfactory.New(&vCfg, clusterName, nil, log)
+	}
 	// SQL currently doesn't have support for visibility manager
-	s.VisibilityMgr, err = factory.NewVisibilityManager()
+	s.VisibilityMgr, err = visibilityFactory.NewVisibilityManager()
 	if err != nil {
-		log.Warn("testBase.Setup: error creating visibility manager: %v", err)
+		s.fatalOnError("NewVisibilityManager", err)
 	}
 
 	s.ReadLevel = 0
@@ -611,7 +635,7 @@ func (s *TestBase) UpdateWorkflowExecutionWithReplication(updatedInfo *p.Workflo
 		switch t := task.(type) {
 		case *p.DecisionTask, *p.ActivityTask, *p.CloseExecutionTask, *p.CancelExecutionTask, *p.StartChildExecutionTask, *p.SignalExecutionTask:
 			transferTasks = append(transferTasks, t)
-		case *p.HistoryReplicationTask:
+		case *p.HistoryReplicationTask, *p.SyncActivityTask:
 			replicationTasks = append(replicationTasks, t)
 		default:
 			panic("Unknown transfer task type.")
@@ -1075,7 +1099,7 @@ func (s *TestBase) CompleteTask(domainID, taskList string, taskType int, taskID 
 
 // TearDownWorkflowStore to cleanup
 func (s *TestBase) TearDownWorkflowStore() {
-	s.PersistenceTestCluster.TearDownTestDatabase()
+	s.DefaultTestCluster.TearDownTestDatabase()
 }
 
 // GetNextSequenceNumber generates a unique sequence number for can be used for transfer queue taskId

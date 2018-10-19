@@ -328,13 +328,21 @@ func (c *workflowExecutionContext) updateHelper(transferTasks []persistence.Task
 		}
 		// NOTE: domain retention is in days, so we need to do a conversion
 		finishExecutionTTL = domainEntry.GetRetentionDays(executionInfo.WorkflowID) * secondsInDay
+
+		// clear stickness
+		c.msBuilder.ClearStickyness()
 	}
 
 	var replicationTasks []persistence.Task
 	// Check if the update resulted in new history events before generating replication task
-	if hasNewActiveHistoryEvents && createReplicationTask {
+	if createReplicationTask {
 		// Let's create a replication task as part of this update
-		replicationTasks = append(replicationTasks, c.msBuilder.CreateReplicationTask())
+		if hasNewActiveHistoryEvents {
+			replicationTasks = append(replicationTasks, c.msBuilder.CreateReplicationTask())
+		}
+		if c.shard.GetConfig().EnableSyncActivityHeartbeat() {
+			replicationTasks = append(replicationTasks, updates.syncActivityTasks...)
+		}
 	}
 
 	setTaskInfo(c.msBuilder.GetCurrentVersion(), now, transferTasks, timerTasks)
@@ -531,6 +539,9 @@ func (c *workflowExecutionContext) scheduleNewDecision(transferTasks []persisten
 	executionInfo := msBuilder.GetExecutionInfo()
 	if !msBuilder.HasPendingDecisionTask() {
 		di := msBuilder.AddDecisionTaskScheduledEvent()
+		if di == nil {
+			return nil, nil, &workflow.InternalServiceError{Message: "Failed to add decision scheduled event."}
+		}
 		transferTasks = append(transferTasks, &persistence.DecisionTask{
 			DomainID:   executionInfo.DomainID,
 			TaskList:   di.TaskList,

@@ -32,10 +32,10 @@ CREATE TABLE shards (
 	owner VARCHAR(255) NOT NULL,
 	range_id BIGINT NOT NULL,
 	stolen_since_renew INT NOT NULL,
-	updated_at DATETIME(6) NOT NULL,
+	updated_at TIMESTAMP(3) NOT NULL,
 	replication_ack_level BIGINT NOT NULL,
 	transfer_ack_level BIGINT NOT NULL,
-	timer_ack_level DATETIME(6) NOT NULL,
+	timer_ack_level TIMESTAMP(3) NOT NULL DEFAULT '1970-01-01 00:00:01.000',
 	cluster_transfer_ack_level BLOB NOT NULL,
 	cluster_timer_ack_level BLOB NOT NULL,
 	domain_notification_version BIGINT NOT NULL,
@@ -56,7 +56,7 @@ CREATE TABLE transfer_tasks(
 	task_list VARCHAR(255) NOT NULL,
 	schedule_id BIGINT NOT NULL,
 	version BIGINT NOT NULL,
-	visibility_timestamp DATETIME(6) NOT NULL,
+	visibility_timestamp TIMESTAMP(3) NOT NULL DEFAULT '1970-01-01 00:00:01.000',
 	PRIMARY KEY (shard_id, task_id)
 );
 
@@ -89,8 +89,8 @@ CREATE TABLE executions(
 	last_first_event_id BIGINT NOT NULL,
 	next_event_id BIGINT NOT NULL, -- very important! for conditional updates of all the dependent tables.
 	last_processed_event BIGINT NOT NULL,
-	start_time DATETIME(6) NOT NULL,
-	last_updated_time DATETIME(6) NOT NULL,
+	start_time TIMESTAMP(3) NOT NULL DEFAULT '1970-01-01 00:00:01.000',
+	last_updated_time TIMESTAMP(3) NOT NULL DEFAULT '1970-01-01 00:00:01.000',
 	create_request_id CHAR(64) NOT NULL,
 	decision_version BIGINT NOT NULL, -- 1.
 	decision_schedule_id BIGINT NOT NULL, -- 2.
@@ -138,7 +138,7 @@ CREATE TABLE buffered_events (
 CREATE INDEX buffered_events_by_events_ids ON buffered_events(shard_id, domain_id, workflow_id, run_id);
 
 CREATE TABLE tasks (
-  shard_id INT NOT NULL,
+  shard_id INT NOT NULL DEFAULT 0,
   domain_id CHAR(64) NOT NULL,
   workflow_id VARCHAR(255) NOT NULL,
   run_id CHAR(64) NOT NULL,
@@ -146,7 +146,7 @@ CREATE TABLE tasks (
   task_list_name VARCHAR(255) NOT NULL,
   task_list_type TINYINT NOT NULL,
   task_id BIGINT NOT NULL,
-  expiry_ts DATETIME(6) NOT NULL,
+  expiry_ts TIMESTAMP(3) NOT NULL,
   PRIMARY KEY (shard_id, domain_id, task_list_name, task_list_type, task_id)
 );
 
@@ -157,7 +157,7 @@ CREATE TABLE task_lists (
 	task_type TINYINT NOT NULL, -- {Activity, Decision}
 	ack_level BIGINT NOT NULL DEFAULT 0,
 	kind TINYINT NOT NULL, -- {Normal, Sticky}
-	expiry_ts DATETIME(6) NOT NULL,
+	expiry_ts TIMESTAMP(3) NOT NULL DEFAULT '1970-01-01 00:00:01.000',
 	PRIMARY KEY (domain_id, name, task_type)
 );
 
@@ -178,7 +178,7 @@ PRIMARY KEY (shard_id, task_id)
 
 CREATE TABLE timer_tasks (
 	shard_id INT NOT NULL,
-	visibility_timestamp DATETIME(6) NOT NULL,
+	visibility_timestamp TIMESTAMP(3) NOT NULL DEFAULT '1970-01-01 00:00:01.000',
 	task_id BIGINT NOT NULL,
 	--
 	domain_id CHAR(64) NOT NULL,
@@ -216,11 +216,11 @@ CREATE TABLE activity_info_maps (
 version                     BIGINT NOT NULL,
 scheduled_event             BLOB,
 scheduled_event_encoding    VARCHAR(64),
-scheduled_time              DATETIME(6) NOT NULL,
+scheduled_time              TIMESTAMP(3) NOT NULL DEFAULT '1970-01-01 00:00:01.000',
 started_id                  BIGINT NOT NULL,
 started_event               BLOB,
 started_event_encoding      VARCHAR(64),
-started_time                DATETIME(6) NOT NULL,
+started_time                TIMESTAMP(3) NOT NULL DEFAULT '1970-01-01 00:00:01.000',
 activity_id                 VARCHAR(255) NOT NULL,
 request_id                  VARCHAR(255) NOT NULL,
 details                     BLOB,
@@ -230,7 +230,7 @@ start_to_close_timeout      INT NOT NULL,
 heartbeat_timeout           INT NOT NULL,
 cancel_requested            TINYINT(1),
 cancel_request_id           BIGINT NOT NULL,
-last_heartbeat_updated_time DATETIME(6) NOT NULL,
+last_heartbeat_updated_time TIMESTAMP(3) NOT NULL DEFAULT '1970-01-01 00:00:01.000',
 timer_task_status           INT NOT NULL,
 attempt                     INT NOT NULL,
 task_list                   VARCHAR(255) NOT NULL,
@@ -239,7 +239,7 @@ has_retry_policy            BOOLEAN NOT NULL,
 init_interval               INT NOT NULL,
 backoff_coefficient         DOUBLE NOT NULL,
 max_interval                INT NOT NULL,
-expiration_time             DATETIME(6) NOT NULL,
+expiration_time             TIMESTAMP(3) NOT NULL DEFAULT '1970-01-01 00:00:01.000',
 max_attempts                INT NOT NULL,
 non_retriable_errors        BLOB, -- this was a list<text>. The use pattern is to replace, no modifications.
 	PRIMARY KEY (shard_id, domain_id, workflow_id, run_id, schedule_id)
@@ -254,7 +254,7 @@ timer_id VARCHAR(255) NOT NULL, -- what string type should this be?
 --
   version BIGINT NOT NULL,
   started_id BIGINT NOT NULL,
-  expiry_time DATETIME(6) NOT NULL,
+  expiry_time TIMESTAMP(3) NOT NULL DEFAULT '1970-01-01 00:00:01.000',
   task_id BIGINT NOT NULL,
   PRIMARY KEY (shard_id, domain_id, workflow_id, run_id, timer_id)
 );
@@ -316,7 +316,7 @@ next_event_id BIGINT NOT NULL,
 history BLOB,
 history_encoding VARCHAR(64) NOT NULL,
 new_run_history BLOB,
-new_run_history_encoding VARCHAR(64) NOT NULL,
+new_run_history_encoding VARCHAR(64) NOT NULL DEFAULT 'json',
 PRIMARY KEY (shard_id, domain_id, workflow_id, run_id, first_event_id)
 );
 
@@ -329,4 +329,3 @@ CREATE TABLE signals_requested_sets (
 	--
 	PRIMARY KEY (shard_id, domain_id, workflow_id, run_id, signal_id)
 );
-
