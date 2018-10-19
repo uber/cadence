@@ -44,85 +44,33 @@ const (
         history_length = ?
         WHERE domain_id = ? AND run_id = ?`
 
-	templateGetOpenWorkflowExecutions = `SELECT workflow_id, run_id, start_time, workflow_type_name
-		 FROM executions_visibility
-		 WHERE domain_id = ?
-         AND close_status IS NULL
+	// RunID condition is needed for correct pagination
+	templateConditions = ` AND domain_id = ?
 		 AND start_time >= ?
 		 AND start_time <= ?
  		 AND (run_id > ? OR start_time < ?)
          ORDER BY start_time DESC, run_id
          LIMIT ?`
 
-	templateGetClosedWorkflowExecutions = `SELECT workflow_id, run_id, start_time, workflow_type_name
-		FROM executions_visibility
- 		WHERE domain_id = ?
-		AND close_status IS NOT NULL
-		AND start_time >= ?
-		AND start_time <= ? 
-		AND (run_id > ? OR start_time < ?)
-		ORDER BY start_time DESC, run_id
-        LIMIT ?`
+	templateOpenFieldNames = `workflow_id, run_id, start_time, workflow_type_name`
+	templateOpenSelect     = `SELECT ` + templateOpenFieldNames + ` FROM executions_visibility WHERE close_status IS NULL `
 
-	templateGetOpenWorkflowExecutionsByType = `SELECT workflow_id, run_id, start_time, workflow_type_name
-		FROM executions_visibility
-		WHERE domain_id = ?
-		AND workflow_type_name = ?
-		AND close_status IS NULL
-		AND start_time >= ?
-		AND start_time <= ?
-		AND (run_id > ? OR start_time < ?)
-		ORDER BY start_time DESC, run_id
-        LIMIT ?`
+	templateClosedSelect = `SELECT ` + templateOpenFieldNames + `, close_time, close_status, history_length
+		 FROM executions_visibility WHERE close_status IS NOT NULL `
 
-	templateGetClosedWorkflowExecutionsByType = `SELECT 
-			workflow_id, run_id, start_time, close_time, workflow_type_name, close_status, history_length
-		FROM executions_visibility
-		WHERE domain_id = ?
-		AND workflow_type_name = ?
-		AND close_status IS NOT NULL
-		AND start_time >= ?
-		AND start_time <= ?
-		AND (run_id > ? OR start_time < ?)
-		ORDER BY start_time DESC, run_id
-        LIMIT ?`
+	templateGetOpenWorkflowExecutions = templateOpenSelect + templateConditions
 
-	templateGetOpenWorkflowExecutionsByID = `SELECT workflow_id, run_id, start_time, workflow_type_name
-		FROM executions_visibility
-		WHERE domain_id = ?
-		AND workflow_id = ?
-		AND close_status IS NULL
-		AND start_time >= ?
-		AND start_time <= ?
-		AND (run_id > ? OR start_time < ?)
-		ORDER BY start_time DESC, run_id
-        LIMIT ?`
+	templateGetClosedWorkflowExecutions = templateClosedSelect + templateConditions
 
-	templateGetClosedWorkflowExecutionsByID = `SELECT workflow_id, run_id, start_time, close_time, workflow_type_name, close_status, history_length
-		 FROM executions_visibility
-		 WHERE domain_id = ?
-		 AND workflow_id = ?
-		 AND close_status IS NOT NULL
-		 AND start_time >= ?
-		 AND start_time <= ?
-		 AND (run_id > ? OR start_time < ?)
-		 ORDER BY start_time DESC, run_id
-         LIMIT ?`
+	templateGetOpenWorkflowExecutionsByType = templateOpenSelect + `AND workflow_type_name = ?` + templateConditions
 
-	templateGetClosedWorkflowExecutionsByStatus = `SELECT workflow_id, run_id, start_time, close_time, workflow_type_name, close_status, history_length
-		 FROM executions_visibility
-		 WHERE domain_id = ?
-		 AND close_status = ?
-		 AND start_time >= ?
-		 AND start_time <= ?
- 		 AND (run_id > ? OR start_time < ?)
-		 ORDER BY start_time DESC, run_id
-         LIMIT ?`
+	templateGetClosedWorkflowExecutionsByType = templateClosedSelect + `AND workflow_type_name = ?` + templateConditions
 
-	templateGetOpenWorkflowExecution = `SELECT workflow_id, run_id, start_time, close_time, workflow_type_name, history_length
-		 FROM executions_visibility
-		 WHERE domain_id = ? AND close_status IS NULL
-		 AND run_id = ?`
+	templateGetOpenWorkflowExecutionsByID = templateOpenSelect + `AND workflow_id = ?` + templateConditions
+
+	templateGetClosedWorkflowExecutionsByID = templateClosedSelect + `AND workflow_id = ?` + templateConditions
+
+	templateGetClosedWorkflowExecutionsByStatus = templateClosedSelect + `AND close_status = ?` + templateConditions
 
 	templateGetClosedWorkflowExecution = `SELECT workflow_id, run_id, start_time, close_time, workflow_type_name, close_status, history_length
 		 FROM executions_visibility
@@ -239,8 +187,8 @@ func (s *sqlVisibilityStore) ListOpenWorkflowExecutionsByType(request *p.ListWor
 		func(readLevel *visibilityPageToken, rows *[]executionVisibilityRow) error {
 			return s.db.Select(rows,
 				templateGetOpenWorkflowExecutionsByType,
-				request.DomainUUID,
 				request.WorkflowTypeName,
+				request.DomainUUID,
 				time.Unix(0, request.EarliestStartTime),
 				readLevel.Time,
 				readLevel.RunID,
@@ -254,8 +202,8 @@ func (s *sqlVisibilityStore) ListClosedWorkflowExecutionsByType(request *p.ListW
 		func(readLevel *visibilityPageToken, rows *[]executionVisibilityRow) error {
 			return s.db.Select(rows,
 				templateGetClosedWorkflowExecutionsByType,
-				request.DomainUUID,
 				request.WorkflowTypeName,
+				request.DomainUUID,
 				time.Unix(0, request.EarliestStartTime),
 				readLevel.Time,
 				readLevel.RunID,
@@ -269,8 +217,8 @@ func (s *sqlVisibilityStore) ListOpenWorkflowExecutionsByWorkflowID(request *p.L
 		func(readLevel *visibilityPageToken, rows *[]executionVisibilityRow) error {
 			return s.db.Select(rows,
 				templateGetOpenWorkflowExecutionsByID,
-				request.DomainUUID,
 				request.WorkflowID,
+				request.DomainUUID,
 				time.Unix(0, request.EarliestStartTime),
 				readLevel.Time,
 				readLevel.RunID,
@@ -284,8 +232,8 @@ func (s *sqlVisibilityStore) ListClosedWorkflowExecutionsByWorkflowID(request *p
 		func(readLevel *visibilityPageToken, rows *[]executionVisibilityRow) error {
 			return s.db.Select(rows,
 				templateGetClosedWorkflowExecutionsByID,
-				request.DomainUUID,
 				request.WorkflowID,
+				request.DomainUUID,
 				time.Unix(0, request.EarliestStartTime),
 				readLevel.Time,
 				readLevel.RunID,
@@ -299,8 +247,8 @@ func (s *sqlVisibilityStore) ListClosedWorkflowExecutionsByStatus(request *p.Lis
 		func(readLevel *visibilityPageToken, rows *[]executionVisibilityRow) error {
 			return s.db.Select(rows,
 				templateGetClosedWorkflowExecutionsByStatus,
-				request.DomainUUID,
 				request.Status,
+				request.DomainUUID,
 				time.Unix(0, request.EarliestStartTime),
 				readLevel.Time,
 				readLevel.RunID,
