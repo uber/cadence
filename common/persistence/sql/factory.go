@@ -83,7 +83,7 @@ func (f *Factory) NewExecutionStore(shardID int) (p.ExecutionStore, error) {
 
 // NewVisibilityStore returns a visibility store
 func (f *Factory) NewVisibilityStore() (p.VisibilityStore, error) {
-	return nil, errNoVisibility
+	return NewSQLVisibilityStore(f.cfg, f.logger)
 }
 
 // Close closes the factory
