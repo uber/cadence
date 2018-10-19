@@ -78,15 +78,42 @@ func (m *historyV2ManagerImpl) NewHistoryBranch(request *NewHistoryBranchRequest
 
 // ForkHistoryBranch forks a new branch from a old branch
 func (m *historyV2ManagerImpl) ForkHistoryBranch(request *ForkHistoryBranchRequest) (*ForkHistoryBranchResponse, error) {
+	if request.ForkNodeID <= 1 {
+		return nil, &InvalidPersistenceRequestError{
+			Msg: fmt.Sprintf("ForkNodeID must be > 1"),
+		}
+	}
+
 	var forkBranch workflow.HistoryBranch
 	err := m.thrifteEncoder.Decode(request.ForkBranchToken, &forkBranch)
 	if err != nil {
 		return nil, err
 	}
 
+	// We read the forking node to validate the forking point.
+	// This is mostly correctly. But in some very rarely corner case, it will cause currupted history bug:
+	//		The bug is: it is possible that the node we read exists, but it is a stale batch of events.
+	// Therefore the safest way is to read from very beginning to validate the forking point. But it will be very complex and inefficient.
+	// Talking to team we can start with this implementation.
+	// If a customer run into this bug, we can do another reset(fork) to correct it.
+	readReq := &InternalReadHistoryBranchRequest{
+		BranchInfo: forkBranch,
+		MinNodeID:  request.ForkNodeID,
+		MaxNodeID:  request.ForkNodeID + 1,
+	}
+	readResp, err := m.persistence.ReadHistoryBranch(readReq)
+	if err != nil {
+		return nil, err
+	}
+	if len(readResp.History) != 1 {
+		return nil, &InvalidPersistenceRequestError{
+			Msg: fmt.Sprintf("ForkNodeID is invalid"),
+		}
+	}
+
 	req := &InternalForkHistoryBranchRequest{
 		ForkBranchInfo: forkBranch,
-		ForkFromNodeID: request.ForkFromNodeID,
+		ForkNodeID:     request.ForkNodeID,
 		NewBranchID:    uuid.New(),
 	}
 

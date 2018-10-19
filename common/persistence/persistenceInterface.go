@@ -362,8 +362,8 @@ type (
 	InternalForkHistoryBranchRequest struct {
 		// The branch to be fork
 		ForkBranchInfo workflow.HistoryBranch
-		// The nodeID to fork from, the new branch will start from ForkFromNodeID + 1
-		ForkFromNodeID int64
+		// The nodeID to fork from, the new branch will start from ForkNodeID
+		ForkNodeID int64
 		// branchID of the new branch
 		NewBranchID string
 	}

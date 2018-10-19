@@ -314,12 +314,12 @@ func (h *cassandraHistoryV2Persistence) validateBranchStatus(batch *gocql.Batch,
 }
 
 // AppendHistoryNodes upsert a batch of events as a single node to a history branch
-// Note that it's not allowed to append above the branch's ancestors' nodes, which means nodeID > forking point
+// Note that it's not allowed to append above the branch's ancestors' nodes, which means nodeID >= ForkNodeID
 func (h *cassandraHistoryV2Persistence) AppendHistoryNodes(request *p.InternalAppendHistoryNodesRequest) error {
 	branchInfo := request.BranchInfo
-	forkingNodeID := h.getForkingNode(branchInfo)
+	beginNodeID := h.getBeginNodeID(branchInfo)
 
-	if request.NodeID <= forkingNodeID {
+	if request.NodeID < beginNodeID {
 		return &p.InvalidPersistenceRequestError{
 			Msg: fmt.Sprintf("cannot append to ancestors' nodes"),
 		}
@@ -330,13 +330,13 @@ func (h *cassandraHistoryV2Persistence) AppendHistoryNodes(request *p.InternalAp
 	return query.Exec()
 }
 
-func (h *cassandraHistoryV2Persistence) getForkingNode(bi workflow.HistoryBranch) int64 {
+func (h *cassandraHistoryV2Persistence) getBeginNodeID(bi workflow.HistoryBranch) int64 {
 	if len(bi.Ancestors) == 0 {
 		// root branch
-		return 0
+		return 1
 	} else {
 		idx := len(bi.Ancestors) - 1
-		return *bi.Ancestors[idx].EndNodeID - 1
+		return *bi.Ancestors[idx].EndNodeID
 	}
 }
 
@@ -382,11 +382,11 @@ func (h *cassandraHistoryV2Persistence) ReadHistoryBranch(request *p.InternalRea
 	branchID := request.BranchInfo.BranchID
 
 	allBRs := request.BranchInfo.Ancestors
-	// We may also query the current branch from forkingNodeID
-	forkingNodeID := h.getForkingNode(request.BranchInfo)
+	// We may also query the current branch from beginNodeID
+	beginNodeID := h.getBeginNodeID(request.BranchInfo)
 	allBRs = append(allBRs, &workflow.HistoryBranchRange{
 		BranchID:    branchID,
-		BeginNodeID: common.Int64Ptr(forkingNodeID + 1),
+		BeginNodeID: common.Int64Ptr(beginNodeID),
 		EndNodeID:   common.Int64Ptr(request.MaxNodeID),
 	})
 
@@ -427,61 +427,56 @@ func (h *cassandraHistoryV2Persistence) ReadHistoryBranch(request *p.InternalRea
 	return response, nil
 }
 
-func (h *cassandraHistoryV2Persistence) checkIfNodeExists(treeID, branchID string, nodeID int64) (bool, error) {
-	query := h.session.Query(v2templateCheckNodeExists,
-		treeID,
-		branchID,
-		nodeID)
-
-	result := make(map[string]interface{})
-	if err := query.MapScan(result); err != nil {
-		if err == gocql.ErrNotFound {
-			return false, nil
-		}
-		return false, convertCommonErrors("checkIfNodeExists", err)
-
-	}
-
-	return true, nil
-}
-
-// ForkHistoryBranch forks a new branch from a old branch
-// We will only take the ancestors up to the forking point. For example:
-// Assume we have B2 forked from B1 at 10, B3 forked from B2 at 20.
-//           B1 [1~10]
+// ForkHistoryBranch forks a new branch from an existing old branch
+// Note that application must provide a void forking nodeID, it must be a valid nodeID in that branch.
+// Essentially the new branch can fork from an ancestor of the existing branch
+// For example, we have branch B2 which contains ancestor B1 stopping at 3[3,4,5]. 3 is the nodeID, [3,4,5] are nodeIDs in that batch.
+// Internally we represent B2 by [B1:6] because it  contains a ancestor which stops at 6(exclusive).
+// B2 looks like this:
+//           1[1,2]
 //           /
-//         B2 [11~20]
+//         3[3,4,5]
 //        /
-//      B3[21~30]
-// If we fork B4 from B3 at node 22/25, the new branch is like:
-//           B1[1~10]
-//           /
-//         B2 [11~20]
-//        /
-//      B3[21~22/25]
+//      6[6,7]
 //     /
-//   B4[...]
-// However, if we fork from node 12/15, then the new branch should be
-//           B1[1~10]
+//    8[8]
+//
+//Now we want to fork a new branch B3 from B2.
+// Note that we can only fork from nodeID 3,6 or 8. 1 is not valid because we can't fork from first node. 2/4/5 is NOT valid either because they are inside a batch.
+//
+// If we fork from nodeID 6, then B3 will be B3[B1:6] since it contains an ancestor which stops at 6.
+// As we append a batch of events[6,7,8,9] to B3, it will look like :
+//           1[1,2]
 //           /
-//         B2 [11~12/15]
+//         3[3,4,5]
+//          \
+//         6[6,7,8,9]
+//
+// However, if we fork from node 8, then B3 will be B3[B1:6, B2:8], since it contains ancestor B1 stops at 6 and ancestor B2 stops at 8
+// As we append a batch of events[8,9] to B3, it will look like:
+//           1[1,2]
+//           /
+//         3[3,4,5]
 //        /
-//      B4[...]
+//      6[6,7]
+//     /
+//    8[8,9]
+//
 // So even though it fork from B3, its ancestor doesn't have to have B3 in its branch ranges
 func (h *cassandraHistoryV2Persistence) ForkHistoryBranch(request *p.InternalForkHistoryBranchRequest) (*p.InternalForkHistoryBranchResponse, error) {
 	forkB := request.ForkBranchInfo
 	treeID := *forkB.TreeID
 	newAncestors := make([]*workflow.HistoryBranchRange, 0, len(forkB.Ancestors)+1)
 
-	lastForkingNodeID := h.getForkingNode(forkB)
-	if lastForkingNodeID >= request.ForkFromNodeID {
+	beginNodeID := h.getBeginNodeID(forkB)
+	if beginNodeID > request.ForkNodeID {
 		// this is the case that new branch's ancestors doesn't include the forking branch
 		for _, br := range forkB.Ancestors {
-			if *br.EndNodeID > request.ForkFromNodeID {
+			if *br.EndNodeID > request.ForkNodeID {
 				newAncestors = append(newAncestors, &workflow.HistoryBranchRange{
 					BranchID:    br.BranchID,
 					BeginNodeID: br.BeginNodeID,
-					EndNodeID:   common.Int64Ptr(request.ForkFromNodeID + 1),
+					EndNodeID:   common.Int64Ptr(request.ForkNodeID),
 				})
 				break
 			} else {
@@ -491,22 +486,11 @@ func (h *cassandraHistoryV2Persistence) ForkHistoryBranch(request *p.InternalFor
 	} else {
 		// this is the case the new branch will inherit all ancestors from forking branch
 
-		// first we need to check if the branch has a valid nodeID to fork from
-		exits, err := h.checkIfNodeExists(treeID, *forkB.BranchID, request.ForkFromNodeID)
-		if err != nil {
-			return nil, err
-		}
-		if !exits {
-			return nil, &p.InvalidPersistenceRequestError{
-				Msg: fmt.Sprintf("forking branch %v doesn't have node %v", *forkB.BranchID, request.ForkFromNodeID),
-			}
-		}
-
 		newAncestors = forkB.Ancestors
 		newAncestors = append(newAncestors, &workflow.HistoryBranchRange{
 			BranchID:    forkB.BranchID,
-			BeginNodeID: common.Int64Ptr(lastForkingNodeID + 1),
-			EndNodeID:   common.Int64Ptr(request.ForkFromNodeID + 1),
+			BeginNodeID: common.Int64Ptr(beginNodeID),
+			EndNodeID:   common.Int64Ptr(request.ForkNodeID),
 		})
 	}
 
@@ -527,7 +511,7 @@ func (h *cassandraHistoryV2Persistence) ForkHistoryBranch(request *p.InternalFor
 	ancs := []map[string]interface{}{}
 	for _, an := range newAncestors {
 		value := make(map[string]interface{})
-		value["forked_node_id"] = *an.EndNodeID - 1
+		value["end_node_id"] = *an.EndNodeID
 		value["branch_id"] = an.BranchID
 		ancs = append(ancs, value)
 	}
@@ -678,10 +662,10 @@ func (h *cassandraHistoryV2Persistence) markBranchAsDeleted(branch workflow.Hist
 func (h *cassandraHistoryV2Persistence) deleteDataNodes(branch workflow.HistoryBranch) error {
 	treeID := *branch.TreeID
 	brsToDelete := branch.Ancestors
-	forkingNodeID := h.getForkingNode(branch)
+	beginNodeID := h.getBeginNodeID(branch)
 	brsToDelete = append(brsToDelete, &workflow.HistoryBranchRange{
 		BranchID:    branch.BranchID,
-		BeginNodeID: common.Int64Ptr(forkingNodeID + 1),
+		BeginNodeID: common.Int64Ptr(beginNodeID),
 	})
 
 	rsp, err := h.GetHistoryTree(&p.GetHistoryTreeRequest{
@@ -898,14 +882,14 @@ func (h *cassandraHistoryV2Persistence) GetHistoryTree(request *p.GetHistoryTree
 			deleted = false
 		}
 
+		if err := iter.Close(); err != nil {
+			return nil, &workflow.InternalServiceError{
+				Message: fmt.Sprintf("GetHistoryTree. Close operation failed. Error: %v", err),
+			}
+		}
+
 		if len(pagingToken) == 0 {
 			break
-		}
-	}
-
-	if err := iter.Close(); err != nil {
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("GetHistoryTree. Close operation failed. Error: %v", err),
 		}
 	}
 
@@ -922,8 +906,8 @@ func (h *cassandraHistoryV2Persistence) parseBranchAncestors(ancestors []map[str
 			switch k {
 			case "branch_id":
 				an.BranchID = common.StringPtr(v.(gocql.UUID).String())
-			case "forked_node_id":
-				an.EndNodeID = common.Int64Ptr(v.(int64) + 1)
+			case "end_node_id":
+				an.EndNodeID = common.Int64Ptr(v.(int64))
 			}
 		}
 		ans = append(ans, an)

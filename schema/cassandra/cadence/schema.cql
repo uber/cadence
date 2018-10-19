@@ -251,7 +251,7 @@ CREATE TYPE buffered_replication_task_info (
 -- for history v2 events
 CREATE TYPE branch_range (
   branch_id   uuid,
-  forked_node_id bigint,
+  end_node_id bigint, -- exclusive node_id to represent the stopping point for this range
 );
 
 CREATE TABLE executions (
