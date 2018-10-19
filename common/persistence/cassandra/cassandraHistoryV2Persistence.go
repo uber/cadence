@@ -849,7 +849,7 @@ func (h *cassandraHistoryV2Persistence) GetHistoryTree(request *p.GetHistoryTree
 	query := h.session.Query(v2templateReadAllBranches, treeID, rowTypeHistoryBranch)
 
 	pagingToken := []byte{}
-	branches := make([]workflow.HistoryBranch, 0)
+	branches := make([]*workflow.HistoryBranch, 0)
 
 	var iter *gocql.Iter
 	for {
@@ -870,7 +870,7 @@ func (h *cassandraHistoryV2Persistence) GetHistoryTree(request *p.GetHistoryTree
 				continue
 			}
 			ancs := h.parseBranchAncestors(ancsResult)
-			br := workflow.HistoryBranch{
+			br := &workflow.HistoryBranch{
 				TreeID:    &treeID,
 				BranchID:  common.StringPtr(branchUUID.String()),
 				Ancestors: ancs,

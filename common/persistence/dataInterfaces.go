@@ -1158,7 +1158,7 @@ type (
 	// GetHistoryTreeResponse is a response to GetHistoryTreeRequest
 	GetHistoryTreeResponse struct {
 		// all branches of a tree
-		Branches []workflow.HistoryBranch
+		Branches []*workflow.HistoryBranch
 	}
 
 	// AppendHistoryEventsResponse is response for AppendHistoryEventsRequest
