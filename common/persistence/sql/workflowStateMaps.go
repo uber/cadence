@@ -321,7 +321,7 @@ func updateActivityInfos(tx *sqlx.Tx,
 			query, args, err := tx.BindNamed(deleteKeyInActivityInfoMapSQLQuery, deleteKeys)
 			if err != nil {
 				return &workflow.InternalServiceError{
-					Message: fmt.Sprintf("Failed to update activity info. Failed to bind query. Error: %v", err),
+					Message: fmt.Sprintf("Failed to update activity info. BindNamed failed. Error: %v", err),
 				}
 			}
 			result, err := tx.Exec(query, args...)
@@ -518,7 +518,7 @@ func updateTimerInfos(tx *sqlx.Tx,
 			query, args, err := tx.BindNamed(deleteKeyInTimerInfoMapSQLQuery, deleteKeys)
 			if err != nil {
 				return &workflow.InternalServiceError{
-					Message: fmt.Sprintf("Failed to update timer info. Failed to bind query. Error: %v", err),
+					Message: fmt.Sprintf("Failed to update timer info. BindNamed failed. Error: %v", err),
 				}
 			}
 			result, err := tx.Exec(query, args...)
