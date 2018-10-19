@@ -49,12 +49,15 @@ type TestCluster struct {
 }
 
 // NewTestCluster returns a new SQL test cluster
-func NewTestCluster(port int, dbName string, schemaDir string) *TestCluster {
+func NewTestCluster(port int, dbName string, schemaDir string, driverName string) *TestCluster {
 	if schemaDir == "" {
 		schemaDir = testSchemaDir
 	}
 	if port == 0 {
 		port = testPort
+	}
+	if driverName == "" {
+		driverName = defaultDriverName
 	}
 	var result TestCluster
 	result.dbName = dbName
@@ -122,7 +125,7 @@ func (s *TestCluster) CreateSession() {
 
 // CreateDatabase from PersistenceTestCluster interface
 func (s *TestCluster) CreateDatabase() {
-	err := createDatabase(driverName, s.cfg.ConnectAddr, testUser, testPassword, s.dbName, true)
+	err := createDatabase(s.cfg.DriverName, s.cfg.ConnectAddr, testUser, testPassword, s.dbName, true)
 	if err != nil {
 		log.Fatal(err)
 	}
