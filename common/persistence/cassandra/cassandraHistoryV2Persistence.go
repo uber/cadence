@@ -465,10 +465,10 @@ func (h *cassandraHistoryV2Persistence) ForkHistoryBranch(request *p.InternalFor
 	newAncestors := make([]*workflow.HistoryBranchRange, 0, len(forkB.Ancestors)+1)
 
 	beginNodeID := h.getBeginNodeID(forkB)
-	if beginNodeID > request.ForkNodeID {
+	if beginNodeID >= request.ForkNodeID {
 		// this is the case that new branch's ancestors doesn't include the forking branch
 		for _, br := range forkB.Ancestors {
-			if *br.EndNodeID > request.ForkNodeID {
+			if *br.EndNodeID >= request.ForkNodeID {
 				newAncestors = append(newAncestors, &workflow.HistoryBranchRange{
 					BranchID:    br.BranchID,
 					BeginNodeID: br.BeginNodeID,
