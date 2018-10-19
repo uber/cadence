@@ -1998,6 +1998,8 @@ type RecordActivityTaskStartedResponse struct {
 	Attempt                         *int64               `json:"attempt,omitempty"`
 	ScheduledTimestampOfThisAttempt *int64               `json:"scheduledTimestampOfThisAttempt,omitempty"`
 	HeartbeatDetails                []byte               `json:"heartbeatDetails,omitempty"`
+	WorkflowType                    *shared.WorkflowType `json:"workflowType,omitempty"`
+	WorkflowDomain                  *string              `json:"workflowDomain,omitempty"`
 }
 
 // ToWire translates a RecordActivityTaskStartedResponse struct into a Thrift-level intermediate
@@ -2017,7 +2019,7 @@ type RecordActivityTaskStartedResponse struct {
 //   }
 func (v *RecordActivityTaskStartedResponse) ToWire() (wire.Value, error) {
 	var (
-		fields [5]wire.Field
+		fields [7]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -2061,6 +2063,22 @@ func (v *RecordActivityTaskStartedResponse) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 60, Value: w}
+		i++
+	}
+	if v.WorkflowType != nil {
+		w, err = v.WorkflowType.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 70, Value: w}
+		i++
+	}
+	if v.WorkflowDomain != nil {
+		w, err = wire.NewValueString(*(v.WorkflowDomain)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 80, Value: w}
 		i++
 	}
 
@@ -2141,6 +2159,24 @@ func (v *RecordActivityTaskStartedResponse) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 70:
+			if field.Value.Type() == wire.TStruct {
+				v.WorkflowType, err = _WorkflowType_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 80:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.WorkflowDomain = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -2154,7 +2190,7 @@ func (v *RecordActivityTaskStartedResponse) String() string {
 		return "<nil>"
 	}
 
-	var fields [5]string
+	var fields [7]string
 	i := 0
 	if v.ScheduledEvent != nil {
 		fields[i] = fmt.Sprintf("ScheduledEvent: %v", v.ScheduledEvent)
@@ -2174,6 +2210,14 @@ func (v *RecordActivityTaskStartedResponse) String() string {
 	}
 	if v.HeartbeatDetails != nil {
 		fields[i] = fmt.Sprintf("HeartbeatDetails: %v", v.HeartbeatDetails)
+		i++
+	}
+	if v.WorkflowType != nil {
+		fields[i] = fmt.Sprintf("WorkflowType: %v", v.WorkflowType)
+		i++
+	}
+	if v.WorkflowDomain != nil {
+		fields[i] = fmt.Sprintf("WorkflowDomain: %v", *(v.WorkflowDomain))
 		i++
 	}
 
@@ -2198,6 +2242,12 @@ func (v *RecordActivityTaskStartedResponse) Equals(rhs *RecordActivityTaskStarte
 		return false
 	}
 	if !((v.HeartbeatDetails == nil && rhs.HeartbeatDetails == nil) || (v.HeartbeatDetails != nil && rhs.HeartbeatDetails != nil && bytes.Equal(v.HeartbeatDetails, rhs.HeartbeatDetails))) {
+		return false
+	}
+	if !((v.WorkflowType == nil && rhs.WorkflowType == nil) || (v.WorkflowType != nil && rhs.WorkflowType != nil && v.WorkflowType.Equals(rhs.WorkflowType))) {
+		return false
+	}
+	if !_String_EqualsPtr(v.WorkflowDomain, rhs.WorkflowDomain) {
 		return false
 	}
 
@@ -2249,6 +2299,26 @@ func (v *RecordActivityTaskStartedResponse) GetScheduledTimestampOfThisAttempt()
 func (v *RecordActivityTaskStartedResponse) GetHeartbeatDetails() (o []byte) {
 	if v.HeartbeatDetails != nil {
 		return v.HeartbeatDetails
+	}
+
+	return
+}
+
+// GetWorkflowType returns the value of WorkflowType if it is set or its
+// zero value if it is unset.
+func (v *RecordActivityTaskStartedResponse) GetWorkflowType() (o *shared.WorkflowType) {
+	if v.WorkflowType != nil {
+		return v.WorkflowType
+	}
+
+	return
+}
+
+// GetWorkflowDomain returns the value of WorkflowDomain if it is set or its
+// zero value if it is unset.
+func (v *RecordActivityTaskStartedResponse) GetWorkflowDomain() (o string) {
+	if v.WorkflowDomain != nil {
+		return *v.WorkflowDomain
 	}
 
 	return
@@ -6419,6 +6489,480 @@ func (v *StartWorkflowExecutionRequest) GetAttempt() (o int32) {
 func (v *StartWorkflowExecutionRequest) GetExpirationTimestamp() (o int64) {
 	if v.ExpirationTimestamp != nil {
 		return *v.ExpirationTimestamp
+	}
+
+	return
+}
+
+type SyncActivityRequest struct {
+	DomainId          *string `json:"domainId,omitempty"`
+	WorkflowId        *string `json:"workflowId,omitempty"`
+	RunId             *string `json:"runId,omitempty"`
+	Version           *int64  `json:"version,omitempty"`
+	ScheduledId       *int64  `json:"scheduledId,omitempty"`
+	ScheduledTime     *int64  `json:"scheduledTime,omitempty"`
+	StartedId         *int64  `json:"startedId,omitempty"`
+	StartedTime       *int64  `json:"startedTime,omitempty"`
+	LastHeartbeatTime *int64  `json:"lastHeartbeatTime,omitempty"`
+	Details           []byte  `json:"details,omitempty"`
+	Attempt           *int32  `json:"attempt,omitempty"`
+}
+
+// ToWire translates a SyncActivityRequest struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *SyncActivityRequest) ToWire() (wire.Value, error) {
+	var (
+		fields [11]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.DomainId != nil {
+		w, err = wire.NewValueString(*(v.DomainId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.WorkflowId != nil {
+		w, err = wire.NewValueString(*(v.WorkflowId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	if v.RunId != nil {
+		w, err = wire.NewValueString(*(v.RunId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 30, Value: w}
+		i++
+	}
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 40, Value: w}
+		i++
+	}
+	if v.ScheduledId != nil {
+		w, err = wire.NewValueI64(*(v.ScheduledId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 50, Value: w}
+		i++
+	}
+	if v.ScheduledTime != nil {
+		w, err = wire.NewValueI64(*(v.ScheduledTime)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 60, Value: w}
+		i++
+	}
+	if v.StartedId != nil {
+		w, err = wire.NewValueI64(*(v.StartedId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 70, Value: w}
+		i++
+	}
+	if v.StartedTime != nil {
+		w, err = wire.NewValueI64(*(v.StartedTime)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 80, Value: w}
+		i++
+	}
+	if v.LastHeartbeatTime != nil {
+		w, err = wire.NewValueI64(*(v.LastHeartbeatTime)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 90, Value: w}
+		i++
+	}
+	if v.Details != nil {
+		w, err = wire.NewValueBinary(v.Details), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 100, Value: w}
+		i++
+	}
+	if v.Attempt != nil {
+		w, err = wire.NewValueI32(*(v.Attempt)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 110, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a SyncActivityRequest struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a SyncActivityRequest struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v SyncActivityRequest
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *SyncActivityRequest) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.DomainId = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.WorkflowId = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 30:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.RunId = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 40:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 50:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.ScheduledId = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 60:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.ScheduledTime = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 70:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.StartedId = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 80:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.StartedTime = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 90:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.LastHeartbeatTime = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 100:
+			if field.Value.Type() == wire.TBinary {
+				v.Details, err = field.Value.GetBinary(), error(nil)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 110:
+			if field.Value.Type() == wire.TI32 {
+				var x int32
+				x, err = field.Value.GetI32(), error(nil)
+				v.Attempt = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a SyncActivityRequest
+// struct.
+func (v *SyncActivityRequest) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [11]string
+	i := 0
+	if v.DomainId != nil {
+		fields[i] = fmt.Sprintf("DomainId: %v", *(v.DomainId))
+		i++
+	}
+	if v.WorkflowId != nil {
+		fields[i] = fmt.Sprintf("WorkflowId: %v", *(v.WorkflowId))
+		i++
+	}
+	if v.RunId != nil {
+		fields[i] = fmt.Sprintf("RunId: %v", *(v.RunId))
+		i++
+	}
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
+	if v.ScheduledId != nil {
+		fields[i] = fmt.Sprintf("ScheduledId: %v", *(v.ScheduledId))
+		i++
+	}
+	if v.ScheduledTime != nil {
+		fields[i] = fmt.Sprintf("ScheduledTime: %v", *(v.ScheduledTime))
+		i++
+	}
+	if v.StartedId != nil {
+		fields[i] = fmt.Sprintf("StartedId: %v", *(v.StartedId))
+		i++
+	}
+	if v.StartedTime != nil {
+		fields[i] = fmt.Sprintf("StartedTime: %v", *(v.StartedTime))
+		i++
+	}
+	if v.LastHeartbeatTime != nil {
+		fields[i] = fmt.Sprintf("LastHeartbeatTime: %v", *(v.LastHeartbeatTime))
+		i++
+	}
+	if v.Details != nil {
+		fields[i] = fmt.Sprintf("Details: %v", v.Details)
+		i++
+	}
+	if v.Attempt != nil {
+		fields[i] = fmt.Sprintf("Attempt: %v", *(v.Attempt))
+		i++
+	}
+
+	return fmt.Sprintf("SyncActivityRequest{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this SyncActivityRequest match the
+// provided SyncActivityRequest.
+//
+// This function performs a deep comparison.
+func (v *SyncActivityRequest) Equals(rhs *SyncActivityRequest) bool {
+	if !_String_EqualsPtr(v.DomainId, rhs.DomainId) {
+		return false
+	}
+	if !_String_EqualsPtr(v.WorkflowId, rhs.WorkflowId) {
+		return false
+	}
+	if !_String_EqualsPtr(v.RunId, rhs.RunId) {
+		return false
+	}
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
+	if !_I64_EqualsPtr(v.ScheduledId, rhs.ScheduledId) {
+		return false
+	}
+	if !_I64_EqualsPtr(v.ScheduledTime, rhs.ScheduledTime) {
+		return false
+	}
+	if !_I64_EqualsPtr(v.StartedId, rhs.StartedId) {
+		return false
+	}
+	if !_I64_EqualsPtr(v.StartedTime, rhs.StartedTime) {
+		return false
+	}
+	if !_I64_EqualsPtr(v.LastHeartbeatTime, rhs.LastHeartbeatTime) {
+		return false
+	}
+	if !((v.Details == nil && rhs.Details == nil) || (v.Details != nil && rhs.Details != nil && bytes.Equal(v.Details, rhs.Details))) {
+		return false
+	}
+	if !_I32_EqualsPtr(v.Attempt, rhs.Attempt) {
+		return false
+	}
+
+	return true
+}
+
+// GetDomainId returns the value of DomainId if it is set or its
+// zero value if it is unset.
+func (v *SyncActivityRequest) GetDomainId() (o string) {
+	if v.DomainId != nil {
+		return *v.DomainId
+	}
+
+	return
+}
+
+// GetWorkflowId returns the value of WorkflowId if it is set or its
+// zero value if it is unset.
+func (v *SyncActivityRequest) GetWorkflowId() (o string) {
+	if v.WorkflowId != nil {
+		return *v.WorkflowId
+	}
+
+	return
+}
+
+// GetRunId returns the value of RunId if it is set or its
+// zero value if it is unset.
+func (v *SyncActivityRequest) GetRunId() (o string) {
+	if v.RunId != nil {
+		return *v.RunId
+	}
+
+	return
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *SyncActivityRequest) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
+}
+
+// GetScheduledId returns the value of ScheduledId if it is set or its
+// zero value if it is unset.
+func (v *SyncActivityRequest) GetScheduledId() (o int64) {
+	if v.ScheduledId != nil {
+		return *v.ScheduledId
+	}
+
+	return
+}
+
+// GetScheduledTime returns the value of ScheduledTime if it is set or its
+// zero value if it is unset.
+func (v *SyncActivityRequest) GetScheduledTime() (o int64) {
+	if v.ScheduledTime != nil {
+		return *v.ScheduledTime
+	}
+
+	return
+}
+
+// GetStartedId returns the value of StartedId if it is set or its
+// zero value if it is unset.
+func (v *SyncActivityRequest) GetStartedId() (o int64) {
+	if v.StartedId != nil {
+		return *v.StartedId
+	}
+
+	return
+}
+
+// GetStartedTime returns the value of StartedTime if it is set or its
+// zero value if it is unset.
+func (v *SyncActivityRequest) GetStartedTime() (o int64) {
+	if v.StartedTime != nil {
+		return *v.StartedTime
+	}
+
+	return
+}
+
+// GetLastHeartbeatTime returns the value of LastHeartbeatTime if it is set or its
+// zero value if it is unset.
+func (v *SyncActivityRequest) GetLastHeartbeatTime() (o int64) {
+	if v.LastHeartbeatTime != nil {
+		return *v.LastHeartbeatTime
+	}
+
+	return
+}
+
+// GetDetails returns the value of Details if it is set or its
+// zero value if it is unset.
+func (v *SyncActivityRequest) GetDetails() (o []byte) {
+	if v.Details != nil {
+		return v.Details
+	}
+
+	return
+}
+
+// GetAttempt returns the value of Attempt if it is set or its
+// zero value if it is unset.
+func (v *SyncActivityRequest) GetAttempt() (o int32) {
+	if v.Attempt != nil {
+		return *v.Attempt
 	}
 
 	return

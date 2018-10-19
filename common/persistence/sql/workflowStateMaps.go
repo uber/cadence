@@ -22,15 +22,16 @@ package sql
 
 import (
 	"fmt"
-	"github.com/prometheus/common/log"
-	"github.com/uber-common/bark"
-	"github.com/uber/cadence/common"
 	"time"
+
+	"github.com/uber/cadence/common"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/persistence"
 
 	"strings"
+
+	"database/sql"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -214,13 +215,11 @@ func updateActivityInfos(tx *sqlx.Tx,
 	shardID int,
 	domainID,
 	workflowID,
-	runID string,
-	logger bark.Logger) error {
+	runID string) error {
 
 	if len(activityInfos) > 0 {
 		activityInfoMapsRows := make([]*activityInfoMapsRow, len(activityInfos))
 		for i, v := range activityInfos {
-			log.Infof("updateActivityInfos activityId=%v, scheduledTime=%v", v.ActivityID, v.ScheduledTime)
 			row := &activityInfoMapsRow{
 				activityInfoMapsPrimaryKey: activityInfoMapsPrimaryKey{
 					ShardID:    int64(shardID),
@@ -310,38 +309,37 @@ func updateActivityInfos(tx *sqlx.Tx,
 	}
 
 	if len(deleteInfos) > 0 {
-		activityInfoMapsPrimaryKeys := make([]*activityInfoMapsPrimaryKey, len(deleteInfos))
-		for i, v := range deleteInfos {
-			activityInfoMapsPrimaryKeys[i] = &activityInfoMapsPrimaryKey{
+		for _, v := range deleteInfos {
+			deleteKeys := &activityInfoMapsPrimaryKey{
 				ShardID:    int64(shardID),
 				DomainID:   domainID,
 				WorkflowID: workflowID,
 				RunID:      runID,
 				ScheduleID: v,
 			}
-		}
 
-		query, args, err := tx.BindNamed(deleteKeyInActivityInfoMapSQLQuery, activityInfoMapsPrimaryKeys)
-		if err != nil {
-			return &workflow.InternalServiceError{
-				Message: fmt.Sprintf("Failed to update activity info. Failed to bind query. Error: %v", err),
+			query, args, err := tx.BindNamed(deleteKeyInActivityInfoMapSQLQuery, deleteKeys)
+			if err != nil {
+				return &workflow.InternalServiceError{
+					Message: fmt.Sprintf("Failed to update activity info. BindNamed failed. Error: %v", err),
+				}
 			}
-		}
-		result, err := tx.Exec(query, args...)
-		if err != nil {
-			return &workflow.InternalServiceError{
-				Message: fmt.Sprintf("Failed to update activity info. Failed to execute delete query. Error: %v", err),
+			result, err := tx.Exec(query, args...)
+			if err != nil {
+				return &workflow.InternalServiceError{
+					Message: fmt.Sprintf("Failed to update activity info. Failed to execute delete query. Error: %v", err),
+				}
 			}
-		}
-		rowsAffected, err := result.RowsAffected()
-		if err != nil {
-			return &workflow.InternalServiceError{
-				Message: fmt.Sprintf("Failed to update activity info. Failed to verify number of rows deleted. Error: %v", err),
+			rowsAffected, err := result.RowsAffected()
+			if err != nil {
+				return &workflow.InternalServiceError{
+					Message: fmt.Sprintf("Failed to update activity info. Failed to verify number of rows deleted. Error: %v", err),
+				}
 			}
-		}
-		if int(rowsAffected) != len(deleteInfos) {
-			return &workflow.InternalServiceError{
-				Message: fmt.Sprintf("Failed to update activity info. Deleted %v rows instead of %v", rowsAffected, len(activityInfos)),
+			if int(rowsAffected) != 1 {
+				return &workflow.InternalServiceError{
+					Message: fmt.Sprintf("Failed to update activity info. Deleted %v rows instead of 1", rowsAffected),
+				}
 			}
 		}
 	}
@@ -361,7 +359,7 @@ func getActivityInfoMap(tx *sqlx.Tx,
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID); err != nil && err != sql.ErrNoRows {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("Failed to get activity info. Error: %v", err),
 		}
@@ -369,7 +367,6 @@ func getActivityInfoMap(tx *sqlx.Tx,
 
 	ret := make(map[int64]*persistence.InternalActivityInfo)
 	for _, v := range activityInfoMapsRows {
-		log.Infof("getActivityInfoMap activityId=%v, scheduledTime=%v", v.ActivityID, v.ScheduledTime)
 
 		info := &persistence.InternalActivityInfo{
 			Version:                  v.Version,
@@ -509,38 +506,37 @@ func updateTimerInfos(tx *sqlx.Tx,
 
 	}
 	if len(deleteInfos) > 0 {
-		timerInfoMapsPrimaryKeys := make([]*timerInfoMapsPrimaryKey, len(deleteInfos))
-		for i, v := range deleteInfos {
-			timerInfoMapsPrimaryKeys[i] = &timerInfoMapsPrimaryKey{
+		for _, v := range deleteInfos {
+			deleteKeys := &timerInfoMapsPrimaryKey{
 				ShardID:    int64(shardID),
 				DomainID:   domainID,
 				WorkflowID: workflowID,
 				RunID:      runID,
 				TimerID:    v,
 			}
-		}
 
-		query, args, err := tx.BindNamed(deleteKeyInTimerInfoMapSQLQuery, timerInfoMapsPrimaryKeys)
-		if err != nil {
-			return &workflow.InternalServiceError{
-				Message: fmt.Sprintf("Failed to update timer info. Failed to bind query. Error: %v", err),
+			query, args, err := tx.BindNamed(deleteKeyInTimerInfoMapSQLQuery, deleteKeys)
+			if err != nil {
+				return &workflow.InternalServiceError{
+					Message: fmt.Sprintf("Failed to update timer info. BindNamed failed. Error: %v", err),
+				}
 			}
-		}
-		result, err := tx.Exec(query, args...)
-		if err != nil {
-			return &workflow.InternalServiceError{
-				Message: fmt.Sprintf("Failed to update timer info. Failed to execute delete query. Error: %v", err),
+			result, err := tx.Exec(query, args...)
+			if err != nil {
+				return &workflow.InternalServiceError{
+					Message: fmt.Sprintf("Failed to update timer info. Failed to execute delete query. Error: %v", err),
+				}
 			}
-		}
-		rowsAffected, err := result.RowsAffected()
-		if err != nil {
-			return &workflow.InternalServiceError{
-				Message: fmt.Sprintf("Failed to update timer info. Failed to verify number of rows deleted. Error: %v", err),
+			rowsAffected, err := result.RowsAffected()
+			if err != nil {
+				return &workflow.InternalServiceError{
+					Message: fmt.Sprintf("Failed to update timer info. Failed to verify number of rows deleted. Error: %v", err),
+				}
 			}
-		}
-		if int(rowsAffected) != len(deleteInfos) {
-			return &workflow.InternalServiceError{
-				Message: fmt.Sprintf("Failed to update timer info. Deleted %v rows instead of %v", rowsAffected, len(timerInfos)),
+			if int(rowsAffected) != 1 {
+				return &workflow.InternalServiceError{
+					Message: fmt.Sprintf("Failed to update timer info. Deleted %v rows instead of 1", rowsAffected),
+				}
 			}
 		}
 	}
@@ -559,7 +555,7 @@ func getTimerInfoMap(tx *sqlx.Tx,
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID); err != nil && err != sql.ErrNoRows {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("Failed to get timer info. Error: %v", err),
 		}
@@ -707,7 +703,7 @@ func getChildExecutionInfoMap(tx *sqlx.Tx,
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID); err != nil && err != sql.ErrNoRows {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("Failed to get timer info. Error: %v", err),
 		}
@@ -857,7 +853,7 @@ func getRequestCancelInfoMap(tx *sqlx.Tx,
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID); err != nil && err != sql.ErrNoRows {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("Failed to get request cancel info. Error: %v", err),
 		}
@@ -1005,7 +1001,7 @@ func getSignalInfoMap(tx *sqlx.Tx,
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID); err != nil && err != sql.ErrNoRows {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("Failed to get signal info. Error: %v", err),
 		}
@@ -1205,7 +1201,7 @@ func getBufferedReplicationTasks(tx *sqlx.Tx,
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID); err != nil && err != sql.ErrNoRows {
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("Failed to get buffered replication tasks. Error: %v", err),
 		}

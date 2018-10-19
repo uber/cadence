@@ -44,6 +44,8 @@ var (
 	errFailedToAddTimerFiredEvent = errors.New("Failed to add timer fired event")
 	emptyTime                     = time.Time{}
 	maxTimestamp                  = time.Unix(0, math.MaxInt64)
+
+	loadTimerTaskThrottleRetryDelay = 5 * time.Second
 )
 
 type (
@@ -350,7 +352,7 @@ func (t *timerQueueProcessorBase) internalProcessor() error {
 }
 
 func (t *timerQueueProcessorBase) readAndFanoutTimerTasks() (*persistence.TimerTaskInfo, error) {
-	if !t.rateLimiter.Consume(1, t.shard.GetConfig().TimerProcessorMaxPollInterval()) {
+	if !t.rateLimiter.Consume(1, loadTimerTaskThrottleRetryDelay) {
 		t.notifyNewTimer(time.Time{}) // re-enqueue the event
 		return nil, nil
 	}
@@ -400,6 +402,7 @@ func (t *timerQueueProcessorBase) processTaskAndAck(notificationChan <-chan stru
 		return t.handleTaskError(scope, startTime, notificationChan, err, logger)
 	}
 	retryCondition := func(err error) bool { return true }
+	defer func() { t.metricsClient.RecordTimer(scope, metrics.TaskLatency, time.Since(startTime)) }()
 
 	for {
 		select {

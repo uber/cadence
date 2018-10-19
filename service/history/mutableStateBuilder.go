@@ -24,6 +24,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/pborman/uuid"
+	"github.com/uber-common/bark"
 	h "github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -31,9 +33,6 @@ import (
 	"github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/persistence"
-
-	"github.com/pborman/uuid"
-	"github.com/uber-common/bark"
 )
 
 const (
@@ -46,6 +45,7 @@ type (
 		pendingActivityInfoByActivityID map[string]int64                       // Activity ID -> Schedule Event ID of the activity.
 		updateActivityInfos             map[*persistence.ActivityInfo]struct{} // Modified activities from last update.
 		deleteActivityInfos             map[int64]struct{}                     // Deleted activities from last update.
+		syncActivityTasks               map[int64]struct{}                     // Activity to be sync to remote
 
 		pendingTimerInfoIDs map[string]*persistence.TimerInfo   // User Timer ID -> Timer Info.
 		updateTimerInfos    map[*persistence.TimerInfo]struct{} // Modified timers from last update.
@@ -94,6 +94,7 @@ func newMutableStateBuilder(currentCluster string, config *Config, logger bark.L
 		pendingActivityInfoIDs:          make(map[int64]*persistence.ActivityInfo),
 		pendingActivityInfoByActivityID: make(map[string]int64),
 		deleteActivityInfos:             make(map[int64]struct{}),
+		syncActivityTasks:               make(map[int64]struct{}),
 
 		pendingTimerInfoIDs: make(map[string]*persistence.TimerInfo),
 		updateTimerInfos:    make(map[*persistence.TimerInfo]struct{}),
@@ -266,14 +267,44 @@ func (e *mutableStateBuilder) FlushBufferedEvents() error {
 		}
 	}
 
+	// Sometimes we see buffered events are out of order when read back from database.  This is mostly not an issue
+	// except in the Activity case where ActivityStarted and ActivityCompleted gets out of order.  The following code
+	// is added to reorder buffered events to guarantee all activity completion events will always be processed at the end.
+	var reorderedEvents []*workflow.HistoryEvent
+	reorderFunc := func(bufferedEvents []*workflow.HistoryEvent) {
+		for _, e := range bufferedEvents {
+			switch e.GetEventType() {
+			case workflow.EventTypeActivityTaskCompleted,
+				workflow.EventTypeActivityTaskFailed,
+				workflow.EventTypeActivityTaskCanceled,
+				workflow.EventTypeActivityTaskTimedOut:
+				reorderedEvents = append(reorderedEvents, e)
+			case workflow.EventTypeChildWorkflowExecutionCompleted,
+				workflow.EventTypeChildWorkflowExecutionFailed,
+				workflow.EventTypeChildWorkflowExecutionCanceled,
+				workflow.EventTypeChildWorkflowExecutionTimedOut,
+				workflow.EventTypeChildWorkflowExecutionTerminated:
+				reorderedEvents = append(reorderedEvents, e)
+			default:
+				newCommittedEvents = append(newCommittedEvents, e)
+			}
+		}
+	}
+
 	// no decision in-flight, flush all buffered events to committed bucket
 	if !e.HasInFlightDecisionTask() {
 
 		// flush persisted buffered events
-		newCommittedEvents = append(newCommittedEvents, e.bufferedEvents...)
+		reorderFunc(e.bufferedEvents)
+
 		// flush pending buffered events
 		if e.updateBufferedEvents != nil {
-			newCommittedEvents = append(newCommittedEvents, e.updateBufferedEvents...)
+			reorderFunc(e.updateBufferedEvents)
+		}
+
+		// Put back all the reordered buffer events at the end
+		if len(reorderedEvents) > 0 {
+			newCommittedEvents = append(newCommittedEvents, reorderedEvents...)
 		}
 
 		// flush new buffered events that were not saved to persistence yet
@@ -356,6 +387,7 @@ func (e *mutableStateBuilder) CloseUpdateSession() (*mutableStateSessionUpdates,
 		newEventsBuilder:                 e.hBuilder,
 		updateActivityInfos:              convertUpdateActivityInfos(e.updateActivityInfos),
 		deleteActivityInfos:              convertDeleteActivityInfos(e.deleteActivityInfos),
+		syncActivityTasks:                convertSyncActivityInfos(e.pendingActivityInfoIDs, e.syncActivityTasks),
 		updateTimerInfos:                 convertUpdateTimerInfos(e.updateTimerInfos),
 		deleteTimerInfos:                 convertDeleteTimerInfos(e.deleteTimerInfos),
 		updateChildExecutionInfos:        convertUpdateChildExecutionInfos(e.updateChildExecutionInfos),
@@ -377,6 +409,7 @@ func (e *mutableStateBuilder) CloseUpdateSession() (*mutableStateSessionUpdates,
 	e.hBuilder = newHistoryBuilder(e, e.logger)
 	e.updateActivityInfos = make(map[*persistence.ActivityInfo]struct{})
 	e.deleteActivityInfos = make(map[int64]struct{})
+	e.syncActivityTasks = make(map[int64]struct{})
 	e.updateTimerInfos = make(map[*persistence.TimerInfo]struct{})
 	e.deleteTimerInfos = make(map[string]struct{})
 	e.updateChildExecutionInfos = make(map[*persistence.ChildExecutionInfo]struct{})
@@ -455,6 +488,17 @@ func convertDeleteActivityInfos(inputs map[int64]struct{}) []int64 {
 	outputs := []int64{}
 	for item := range inputs {
 		outputs = append(outputs, item)
+	}
+	return outputs
+}
+
+func convertSyncActivityInfos(activityInfos map[int64]*persistence.ActivityInfo, inputs map[int64]struct{}) []persistence.Task {
+	outputs := []persistence.Task{}
+	for item := range inputs {
+		activityInfo, ok := activityInfos[item]
+		if ok {
+			outputs = append(outputs, &persistence.SyncActivityTask{Version: activityInfo.Version, ScheduledID: activityInfo.ScheduleID})
+		}
 	}
 	return outputs
 }
@@ -817,9 +861,33 @@ func (e *mutableStateBuilder) HasParentExecution() bool {
 
 func (e *mutableStateBuilder) UpdateActivityProgress(ai *persistence.ActivityInfo,
 	request *workflow.RecordActivityTaskHeartbeatRequest) {
+	ai.Version = e.GetCurrentVersion()
 	ai.Details = request.Details
 	ai.LastHeartBeatUpdatedTime = time.Now()
 	e.updateActivityInfos[ai] = struct{}{}
+	e.syncActivityTasks[ai.ScheduleID] = struct{}{}
+}
+
+// ReplicateActivityInfo replicate the necessary activity information
+func (e *mutableStateBuilder) ReplicateActivityInfo(request *h.SyncActivityRequest, resetActivityTimerTaskStatus bool) error {
+	ai, ok := e.pendingActivityInfoIDs[request.GetScheduledId()]
+	if !ok {
+		return fmt.Errorf("Unable to find activity with schedule event id: %v in mutable state", ai.ScheduleID)
+	}
+
+	ai.Version = request.GetVersion()
+	ai.ScheduledTime = time.Unix(0, request.GetScheduledTime())
+	ai.StartedID = request.GetStartedId()
+	ai.StartedTime = time.Unix(0, request.GetStartedTime())
+	ai.LastHeartBeatUpdatedTime = time.Unix(0, request.GetLastHeartbeatTime())
+	ai.Details = request.GetDetails()
+	ai.Attempt = request.GetAttempt()
+	if resetActivityTimerTaskStatus {
+		ai.TimerTaskStatus = TimerTaskStatusNone
+	}
+
+	e.updateActivityInfos[ai] = struct{}{}
+	return nil
 }
 
 // UpdateActivity updates an activity
@@ -1201,6 +1269,35 @@ func (e *mutableStateBuilder) AddDecisionTaskScheduledEvent() *decisionInfo {
 	)
 }
 
+func (e *mutableStateBuilder) ReplicateTransientDecisionTaskScheduled() *decisionInfo {
+	if e.HasPendingDecisionTask() || e.GetExecutionInfo().DecisionAttempt == 0 {
+		return nil
+	}
+
+	// the schedule ID for this decision is guaranteed to be wrong
+	// since the next event ID is assigned at the very end of when
+	// all events are applied for replication.
+	// this is OK
+	// 1. if a failover happen just after this transient decisioon,
+	// AddDecisionTaskStartedEvent will handle the correction of schedule ID
+	// and set the attempt to 0
+	// 2. if no failover happen during the life time of this transient decision
+	// then ReplicateDecisionTaskScheduledEvent will overwrite evenything
+	// including the decision schedule ID
+	di := &decisionInfo{
+		Version:         e.GetCurrentVersion(),
+		ScheduleID:      e.GetNextEventID(),
+		StartedID:       common.EmptyEventID,
+		RequestID:       emptyUUID,
+		DecisionTimeout: e.GetExecutionInfo().DecisionTimeoutValue,
+		TaskList:        e.GetExecutionInfo().TaskList,
+		Attempt:         e.GetExecutionInfo().DecisionAttempt,
+	}
+
+	e.UpdateDecision(di)
+	return di
+}
+
 func (e *mutableStateBuilder) ReplicateDecisionTaskScheduledEvent(version, scheduleID int64, taskList string,
 	startToCloseTimeoutSeconds int32, attempt int64) *decisionInfo {
 	di := &decisionInfo{
@@ -1487,11 +1584,13 @@ func (e *mutableStateBuilder) AddActivityTaskStartedEvent(ai *persistence.Activi
 
 	// we might need to retry, so do not append started event just yet,
 	// instead update mutable state and will record started event when activity task is closed
+	ai.Version = e.GetCurrentVersion()
 	ai.StartedID = common.TransientEventID
 	ai.RequestID = requestID
 	ai.StartedTime = time.Now()
 	ai.StartedIdentity = identity
 	e.UpdateActivity(ai)
+	e.syncActivityTasks[ai.ScheduleID] = struct{}{}
 	return nil
 }
 
@@ -1500,6 +1599,7 @@ func (e *mutableStateBuilder) ReplicateActivityTaskStartedEvent(event *workflow.
 	scheduleID := attributes.GetScheduledEventId()
 	ai, _ := e.GetActivityInfo(scheduleID)
 
+	ai.Version = event.GetVersion()
 	ai.StartedID = event.GetEventId()
 	ai.RequestID = attributes.GetRequestId()
 	ai.StartedTime = time.Unix(0, event.GetTimestamp())
@@ -1601,6 +1701,8 @@ func (e *mutableStateBuilder) ReplicateActivityTaskCancelRequestedEvent(event *w
 	attributes := event.ActivityTaskCancelRequestedEventAttributes
 	activityID := attributes.GetActivityId()
 	ai, _ := e.GetActivityByActivityID(activityID)
+
+	ai.Version = event.GetVersion()
 
 	// - We have the activity dispatched to worker.
 	// - The activity might not be heartbeat'ing, but the activity can still call RecordActivityHeartBeat()
@@ -2413,8 +2515,8 @@ func (e *mutableStateBuilder) ReplicateChildWorkflowExecutionTimedOutEvent(event
 	e.DeletePendingChildExecution(initiatedID)
 }
 
-func (e *mutableStateBuilder) CreateRetryTimer(ai *persistence.ActivityInfo, failureReason string) persistence.Task {
-	retryTask := prepareNextRetry(ai, failureReason)
+func (e *mutableStateBuilder) CreateActivityRetryTimer(ai *persistence.ActivityInfo, failureReason string) persistence.Task {
+	retryTask := prepareActivityNextRetry(e.GetCurrentVersion(), ai, failureReason)
 	if retryTask != nil {
 		e.updateActivityInfos[ai] = struct{}{}
 	}

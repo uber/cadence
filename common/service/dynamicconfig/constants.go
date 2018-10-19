@@ -74,6 +74,7 @@ var keys = map[Key]string{
 	MatchingMaxTaskBatchSize:                "matching.maxTaskBatchSize",
 
 	// history settings
+	EnableSyncActivityHeartbeat:                           "history.enableSyncActivityHeartbeat",
 	HistoryRPS:                                            "history.rps",
 	HistoryPersistenceMaxQPS:                              "history.persistenceMaxQPS",
 	HistoryVisibilityOpenMaxQPS:                           "history.historyVisibilityOpenMaxQPS",
@@ -130,8 +131,9 @@ var keys = map[Key]string{
 	ShardUpdateMinInterval:                                "history.shardUpdateMinInterval",
 	ShardSyncMinInterval:                                  "history.shardSyncMinInterval",
 	DefaultEventEncoding:                                  "history.defaultEventEncoding",
+	EnableAdminProtection:                                 "history.enableAdminProtection",
+	AdminOperationToken:                                   "history.adminOperationToken",
 
-	// worker settings
 	WorkerPersistenceMaxQPS: "worker.persistenceMaxQPS",
 }
 
@@ -199,6 +201,8 @@ const (
 
 	// key for history
 
+	// EnableSyncActivityHeartbeat whether enable sending out sync activity heartbeat replication task
+	EnableSyncActivityHeartbeat
 	// HistoryRPS is request rate per second for each history host
 	HistoryRPS
 	// HistoryPersistenceMaxQPS is the max qps history host can query DB
@@ -311,6 +315,12 @@ const (
 	ShardSyncMinInterval
 	// DefaultEventEncoding is the encoding type for history events
 	DefaultEventEncoding
+
+	// EnableAdminProtection is whether to enable admin checking
+	EnableAdminProtection
+	// AdminOperationToken is the token to pass admin checking
+	AdminOperationToken
+
 	// key for histoworkerry
 
 	// WorkerPersistenceMaxQPS is the max qps worker host can query DB
