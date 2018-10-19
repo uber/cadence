@@ -74,6 +74,7 @@ type (
 		ExecutionManager      p.ExecutionManager
 		TaskMgr               p.TaskManager
 		HistoryMgr            p.HistoryManager
+		HistoryV2Mgr          p.HistoryV2Manager
 		MetadataManager       p.MetadataManager
 		MetadataManagerV2     p.MetadataManager
 		MetadataProxy         p.MetadataManager
@@ -168,6 +169,9 @@ func (s *TestBase) Setup() {
 
 	s.HistoryMgr, err = factory.NewHistoryManager()
 	s.fatalOnError("NewHistoryManager", err)
+
+	s.HistoryV2Mgr, err = factory.NewHistoryV2Manager()
+	s.fatalOnError("NewHistoryV2Manager", err)
 
 	s.ShardMgr, err = factory.NewShardManager()
 	s.fatalOnError("NewShardManager", err)
