@@ -32,7 +32,7 @@ import (
 
 	"math/rand"
 
-	"github.com/gocql/gocql"
+	"github.com/pborman/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -90,29 +90,47 @@ func (s *HistoryV2PersistenceSuite) TearDownSuite() {
 	s.TearDownWorkflowStore()
 }
 
-func (s *HistoryV2PersistenceSuite) genRandomUUIDString() string {
-	at := time.Unix(rand.Int63(), rand.Int63())
-	uuid := gocql.UUIDFromTime(at)
-	return uuid.String()
-}
-
-func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndDeleteEmptyBranches() {
-	treeID := s.genRandomUUIDString()
-
+// testing  uuid.New() can generate unique UUID
+func (s *HistoryV2PersistenceSuite) TestGenUUIDs() {
 	wg := sync.WaitGroup{}
-	newCount := int32(0)
-	concurrency := 10
+	m := sync.Map{}
+	concurrency := 1000
 	for i := 0; i < concurrency; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			brID := s.genRandomUUIDString()
-			_, isNewTree, err := s.newHistoryBranch(treeID, brID)
+			u := uuid.New()
+			m.Store(u, true)
+		}()
+	}
+	wg.Wait()
+	cnt := 0
+	m.Range(func(k, v interface{}) bool {
+		cnt++
+		return true
+	})
+	s.Equal(concurrency, cnt)
+}
+
+func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndDeleteEmptyBranches() {
+	treeID := uuid.New()
+
+	wg := sync.WaitGroup{}
+	newCount := int32(0)
+	//manually try use 1001 to test pagination for GetHistoryTree
+	concurrency := 10
+	m := sync.Map{}
+	for i := 0; i < concurrency; i++ {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			br, isNewTree, err := s.newHistoryBranch(treeID)
 			s.Nil(err)
 			if isNewTree {
 				atomic.AddInt32(&newCount, 1)
 			}
-		}()
+			m.Store(idx, br)
+		}(i)
 	}
 
 	wg.Wait()
@@ -123,120 +141,103 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndDeleteEmptyBranches
 	s.Equal(concurrency, len(branches))
 
 	wg = sync.WaitGroup{}
+	m2 := sync.Map{}
 	for i := 0; i < concurrency; i++ {
 		wg.Add(1)
-		go func(brID string) {
+		go func(idx int) {
 			defer wg.Done()
-			// delete old branches along with create new branches
-			err := s.deleteHistoryBranch(treeID, brID)
+			br, _, err := s.newHistoryBranch(treeID)
 			s.Nil(err)
-
-			brID2 := s.genRandomUUIDString()
-			_, _, err = s.newHistoryBranch(treeID, brID2)
-			s.Nil(err)
-		}(branches[i].BranchID)
+			m2.Store(idx, br)
+		}(i)
 	}
+
+	m.Range(func(k, v interface{}) bool {
+		br := v.([]byte)
+		// delete old branches along with create new branches
+		err := s.deleteHistoryBranch(br)
+		s.Nil(err)
+
+		return true
+	})
 
 	wg.Wait()
 	branches = s.descTree(treeID)
 	s.Equal(10, len(branches))
 
 	// delete the newly empty branches
-	wg = sync.WaitGroup{}
-	for i := 0; i < concurrency; i++ {
-		wg.Add(1)
-		go func(brID string) {
-			defer wg.Done()
-			err := s.deleteHistoryBranch(treeID, brID)
-			s.Nil(err)
-		}(branches[i].BranchID)
-	}
+	m2.Range(func(k, v interface{}) bool {
+		br := v.([]byte)
+		// delete old branches along with create new branches
+		err := s.deleteHistoryBranch(br)
+		s.Nil(err)
 
-	wg.Wait()
+		return true
+	})
+
 	branches = s.descTree(treeID)
 	s.Equal(0, len(branches))
 
 	// create one more try after delete the whole tree
-	brID := s.genRandomUUIDString()
-	_, isNewTree, err := s.newHistoryBranch(treeID, brID)
+	br, isNewTree, err := s.newHistoryBranch(treeID)
 	s.Nil(err)
 	s.Equal(true, isNewTree)
 	branches = s.descTree(treeID)
 	s.Equal(1, len(branches))
 
 	// a final clean up
-	err = s.deleteHistoryBranch(treeID, brID)
+	err = s.deleteHistoryBranch(br)
 	s.Nil(err)
 	branches = s.descTree(treeID)
 	s.Equal(0, len(branches))
 }
 
 func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndAppendBranches() {
-	treeID := s.genRandomUUIDString()
+	treeID := uuid.New()
 
 	wg := sync.WaitGroup{}
 	newCount := int32(0)
 	concurrency := 10
+	m := sync.Map{}
 
 	// test create new branch along with appending new nodes
 	for i := 0; i < concurrency; i++ {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
-			brID := s.genRandomUUIDString()
-			bi, isNewTree, err := s.newHistoryBranch(treeID, brID)
+			bi, isNewTree, err := s.newHistoryBranch(treeID)
 			s.Nil(err)
 			if isNewTree {
 				atomic.AddInt32(&newCount, 1)
 			}
 			historyW := &workflow.History{}
-			events := s.genRandomEvents([]int64{1, 2, 3})
+			m.Store(idx, bi)
 
-			_, overrides, err := s.append(bi, events, 0)
+			events := s.genRandomEvents([]int64{1, 2, 3})
+			err = s.append(bi, events, 0)
 			s.Nil(err)
-			s.Equal(0, overrides)
 			historyW.Events = events
 
 			events = s.genRandomEvents([]int64{4})
-			_, overrides, err = s.append(bi, events, 0)
+			err = s.append(bi, events, 0)
 			s.Nil(err)
-			s.Equal(0, overrides)
 			historyW.Events = append(historyW.Events, events...)
 
-			//try empty ancestor
-			bi = p.HistoryBranch{
-				TreeID:   treeID,
-				BranchID: brID,
-			}
-
 			events = s.genRandomEvents([]int64{5, 6, 7, 8})
-			_, overrides, err = s.append(bi, events, 0)
+			err = s.append(bi, events, 0)
 			s.Nil(err)
-			s.Equal(0, overrides)
 			historyW.Events = append(historyW.Events, events...)
 
 			events = s.genRandomEvents([]int64{9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20})
-			_, overrides, err = s.append(bi, events, 0)
+			err = s.append(bi, events, 0)
 			s.Nil(err)
-			s.Equal(0, overrides)
 			historyW.Events = append(historyW.Events, events...)
 
 			//read branch to verify
 			historyR := &workflow.History{}
-			bi, events, token, err := s.read(bi, 1, 21, 0, 10, nil)
-			s.Nil(err)
-			s.Equal(10, len(events))
+			events = s.read(bi, 1, 21)
+			s.Equal(20, len(events))
 			historyR.Events = events
-
-			_, events, token, err = s.read(bi, 1, 21, 0, 10, token)
-			s.Nil(err)
-			s.Equal(10, len(events))
-			historyR.Events = append(historyR.Events, events...)
-
-			// the next page should return empty events
-			_, events, token, err = s.read(bi, 1, 21, 0, 10, token)
-			s.Nil(err)
-			s.Equal(0, len(events))
 
 			s.True(historyW.Equals(historyR))
 		}(i)
@@ -254,197 +255,219 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndAppendBranches() {
 		go func(idx int) {
 			defer wg.Done()
 
-			brID := branches[idx].BranchID
-			branch := p.HistoryBranch{
-				TreeID:    treeID,
-				BranchID:  brID,
-				Ancestors: nil,
-			}
+			branch := s.getBranchByKey(m, idx)
 
+			// override with same txn_id
 			events := s.genRandomEvents([]int64{5})
-			branch, overrides, err := s.append(branch, events, 1)
+			err := s.append(branch, events, 0)
 			s.Nil(err)
-			s.Equal(1, overrides)
-			// read to verify override
-			_, events, _, err = s.read(branch, 1, 25, 0, 10, nil)
+
+			// read to verify override fails
+			events = s.read(branch, 1, 25)
+			s.Equal(20, len(events))
+
+			// override with larger txn_id
+			events = s.genRandomEvents([]int64{5})
+			err = s.append(branch, events, 1)
 			s.Nil(err)
+
+			// read to verify override fails
+			events = s.read(branch, 1, 25)
 			s.Equal(5, len(events))
 
+			// override more
 			events = s.genRandomEvents([]int64{6, 7, 8})
-			branch, overrides, err = s.append(branch, events, 2)
+			err = s.append(branch, events, 2)
 			s.Nil(err)
-			s.Equal(3, overrides)
+
 			// read to verify override
-			_, events, _, err = s.read(branch, 1, 25, 0, 10, nil)
-			s.Nil(err)
+			events = s.read(branch, 1, 25)
 			s.Equal(8, len(events))
 
 			events = s.genRandomEvents([]int64{9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23})
-			branch, overrides, err = s.append(branch, events, 2)
+			err = s.append(branch, events, 2)
 			s.Nil(err)
-			s.Equal(12, overrides)
 
-			_, events, _, err = s.read(branch, 1, 25, 0, 25, nil)
-			s.Nil(err)
+			events = s.read(branch, 1, 25)
 			s.Equal(23, len(events))
 		}(i)
 	}
 
 	wg.Wait()
 	// Finally lets clean up all branches
-	wg = sync.WaitGroup{}
-	for i := 0; i < concurrency; i++ {
-		wg.Add(1)
-		go func(brID string) {
-			defer wg.Done()
-			err := s.deleteHistoryBranch(treeID, brID)
-			s.Nil(err)
-		}(branches[i].BranchID)
-	}
+	m.Range(func(k, v interface{}) bool {
+		br := v.([]byte)
+		// delete old branches along with create new branches
+		err := s.deleteHistoryBranch(br)
+		s.Nil(err)
 
-	wg.Wait()
+		return true
+	})
+
 	branches = s.descTree(treeID)
 	s.Equal(0, len(branches))
 
 }
 
+//TODO test corrupted history: append [1,2,3],[2,3]
+
+//TODO test fork on a wrong nodeID : append[123][4,5], try fork on 2,3,5
+
 func (s *HistoryV2PersistenceSuite) TestConcurrentlyForkAndAppendBranches() {
-	treeID := s.genRandomUUIDString()
+	treeID := uuid.New()
 
 	wg := sync.WaitGroup{}
 	concurrency := 10
-	masterBrID := s.genRandomUUIDString()
-	masterBr, isNewTree, err := s.newHistoryBranch(treeID, masterBrID)
+	masterBr, isNewTree, err := s.newHistoryBranch(treeID)
 	s.Nil(err)
 	s.Equal(true, isNewTree)
 
 	// append first batch to master branch
 	eids := []int64{}
-	for i := int64(1); i <= int64(concurrency); i++ {
+	for i := int64(1); i <= int64(concurrency)+1; i++ {
 		eids = append(eids, i)
 	}
 	events0 := s.genRandomEvents(eids)
-	_, overrides, err := s.append(masterBr, events0, 0)
+	err = s.appendOneByOne(masterBr, events0, 0)
 	s.Nil(err)
-	s.Equal(0, overrides)
 
-	level1 := sync.Map{}
+	level1ID := sync.Map{}
+	level1Br := sync.Map{}
 	// test forking from master branch and append nodes
 	for i := 0; i < concurrency; i++ {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
-			brID := s.genRandomUUIDString()
-			forkNodeID := rand.Int63n(int64(concurrency)) + 1
-			level1.Store(brID, forkNodeID)
+			forkNodeID := rand.Int63n(int64(concurrency)) + 2
+			level1ID.Store(idx, forkNodeID)
 
-			bi, err := s.fork(masterBr, forkNodeID, brID)
+			bi, err := s.fork(masterBr, forkNodeID)
 			s.Nil(err)
-			s.Equal(1, len(bi.Ancestors))
-			s.Equal(masterBrID, bi.Ancestors[0].BranchID)
+			level1Br.Store(idx, bi)
 
 			// append second batch to first level
 			eids = []int64{}
-			for i := forkNodeID + 1; i <= int64(concurrency)*2; i++ {
+			for i := forkNodeID; i <= int64(concurrency)*2+1; i++ {
 				eids = append(eids, i)
 			}
-			events1 := s.genRandomEvents(eids)
+			events := s.genRandomEvents(eids)
 
-			_, overrides, err := s.append(bi, events1, 0)
+			err = s.appendOneByOne(bi, events, 0)
 			s.Nil(err)
-			s.Equal(0, overrides)
 
-			_, events1, _, err = s.read(bi, 1, int64(concurrency)*2+1, 0, (concurrency)*2, nil)
+			events = s.read(bi, 1, int64(concurrency)*2+2)
 			s.Nil(err)
-			s.Equal((concurrency)*2, len(events1))
+			s.Equal((concurrency)*2+1, len(events))
 		}(i)
 	}
 
 	wg.Wait()
 	branches := s.descTree(treeID)
 	s.Equal(concurrency+1, len(branches))
-	level1Brs := []p.HistoryBranch{}
-	for _, bi := range branches {
-		if bi.BranchID != masterBrID {
-			level1Brs = append(level1Brs, bi)
-		}
-	}
-
+	forkOnLevel1 := int32(0)
+	level2Br := sync.Map{}
 	// test forking for second level of branch
 	for i := 0; i < concurrency; i++ {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
 
-			brID := s.genRandomUUIDString()
-			// so it is possible that the new branch will fork from master branch
-			forkNodeID := rand.Int63n(int64(concurrency)*2) + 1
-			forkBr := level1Brs[idx]
-			v, ok := level1.Load(forkBr.BranchID)
-			s.Equal(true, ok)
-			lastForkNodeID, ok := v.(int64)
-			s.Equal(true, ok)
-			forkOnMaster := false
-			if forkNodeID <= lastForkNodeID {
-				forkOnMaster = true
+			// Event we fork from level1 branch, it is possible that the new branch will fork from master branch
+			forkNodeID := rand.Int63n(int64(concurrency)*2) + 2
+			forkBr := s.getBranchByKey(level1Br, idx)
+			lastForkNodeID := s.getIDByKey(level1ID, idx)
+
+			if forkNodeID > lastForkNodeID {
+				atomic.AddInt32(&forkOnLevel1, int32(1))
 			}
 
-			bi, err := s.fork(forkBr, forkNodeID, brID)
+			bi, err := s.fork(forkBr, forkNodeID)
 			s.Nil(err)
-
-			if forkOnMaster {
-				s.Equal(1, len(bi.Ancestors))
-				s.Equal(masterBrID, bi.Ancestors[0].BranchID)
-			} else {
-				s.Equal(2, len(bi.Ancestors))
-			}
+			level2Br.Store(idx, bi)
 
 			// append second batch to second level
 			eids = []int64{}
-			for i := forkNodeID + 1; i <= int64(concurrency)*3; i++ {
+			for i := forkNodeID + 1; i <= int64(concurrency)*3+1; i++ {
 				eids = append(eids, i)
 			}
 			events2 := s.genRandomEvents(eids)
 
-			_, overrides, err := s.append(bi, events2, 0)
+			err = s.appendOneByOne(bi, events2, 0)
 			s.Nil(err)
-			s.Equal(0, overrides)
 
-			// try override one event
-			events2 = s.genRandomEvents([]int64{int64(concurrency) * 3})
-			_, overrides, err = s.append(bi, events2, 1)
+			// try override last event
+			events2 = s.genRandomEvents([]int64{int64(concurrency)*3 + 1})
+			err = s.append(bi, events2, 1)
 			s.Nil(err)
-			s.Equal(1, overrides)
 
-			_, events2, _, err = s.read(bi, 1, int64(concurrency)*3+1, 0, (concurrency)*3, nil)
+			events2 = s.read(bi, 1, int64(concurrency)*3+2)
 			s.Nil(err)
-			s.Equal((concurrency)*3, len(events2))
+			s.Equal((concurrency)*3+1, len(events2))
 
 			//test fork and newBranch concurrently
-			brID2 := s.genRandomUUIDString()
-			_, _, err = s.newHistoryBranch(treeID, brID2)
+			bi, _, err = s.newHistoryBranch(treeID)
 			s.Nil(err)
+			level2Br.Store(concurrency+idx, bi)
 		}(i)
 	}
 
 	wg.Wait()
 	branches = s.descTree(treeID)
 	s.Equal(int(concurrency*3+1), len(branches))
-	// Finally lets clean up all branches
-	wg = sync.WaitGroup{}
-	for i := 0; i < concurrency*3+1; i++ {
-		wg.Add(1)
-		go func(brID string) {
-			defer wg.Done()
-			err := s.deleteHistoryBranch(treeID, brID)
-			s.Nil(err)
-		}(branches[i].BranchID)
+	actualForkOnLevel1 := int32(0)
+	masterCnt := 0
+	mbr := &workflow.HistoryBranch{}
+	for _, b := range branches {
+		if len(b.Ancestors) == 2 {
+			actualForkOnLevel1++
+		} else if len(b.Ancestors) == 0 {
+			masterCnt++
+			mbr = b
+		} else {
+			s.Equal(1, len(b.Ancestors))
+			s.Equal(*mbr.BranchID, *b.Ancestors[0].BranchID)
+		}
 	}
+	s.Equal(forkOnLevel1, actualForkOnLevel1)
+	s.Equal(1, masterCnt)
 
-	wg.Wait()
+	// Finally lets clean up all branches
+	level1Br.Range(func(k, v interface{}) bool {
+		br := v.([]byte)
+		// delete old branches along with create new branches
+		err := s.deleteHistoryBranch(br)
+		s.Nil(err)
+
+		return true
+	})
+	level2Br.Range(func(k, v interface{}) bool {
+		br := v.([]byte)
+		// delete old branches along with create new branches
+		err := s.deleteHistoryBranch(br)
+		s.Nil(err)
+
+		return true
+	})
+	err = s.deleteHistoryBranch(masterBr)
+	s.Nil(err)
+
 	branches = s.descTree(treeID)
 	s.Equal(0, len(branches))
 
+}
+
+func (s *HistoryV2PersistenceSuite) getBranchByKey(m sync.Map, k int) []byte {
+	v, ok := m.Load(k)
+	s.Equal(true, ok)
+	br := v.([]byte)
+	return br
+}
+
+func (s *HistoryV2PersistenceSuite) getIDByKey(m sync.Map, k int) int64 {
+	v, ok := m.Load(k)
+	s.Equal(true, ok)
+	id := v.(int64)
+	return id
 }
 
 func (s *HistoryV2PersistenceSuite) genRandomEvents(eventIDs []int64) []*workflow.HistoryEvent {
@@ -460,24 +483,21 @@ func (s *HistoryV2PersistenceSuite) genRandomEvents(eventIDs []int64) []*workflo
 }
 
 // persistence helper
-func (s *HistoryV2PersistenceSuite) newHistoryBranch(treeID, branchID string) (p.HistoryBranch, bool, error) {
+func (s *HistoryV2PersistenceSuite) newHistoryBranch(treeID string) ([]byte, bool, error) {
 
 	isNewT := false
-	var bi p.HistoryBranch
+	var bi []byte
 
 	op := func() error {
 		var err error
-		resp, err := s.HistoryMgr.NewHistoryBranch(&p.NewHistoryBranchRequest{
-			BranchInfo: p.HistoryBranch{
-				TreeID:   treeID,
-				BranchID: branchID,
-			},
+		resp, err := s.HistoryV2Mgr.NewHistoryBranch(&p.NewHistoryBranchRequest{
+			TreeID: treeID,
 		})
 		if resp != nil && resp.IsNewTree {
 			isNewT = true
 		}
 		if resp != nil {
-			bi = resp.BranchInfo
+			bi = resp.BranchToken
 		}
 		return err
 	}
@@ -487,15 +507,12 @@ func (s *HistoryV2PersistenceSuite) newHistoryBranch(treeID, branchID string) (p
 }
 
 // persistence helper
-func (s *HistoryV2PersistenceSuite) deleteHistoryBranch(treeID, branchID string) error {
+func (s *HistoryV2PersistenceSuite) deleteHistoryBranch(branch []byte) error {
 
 	op := func() error {
 		var err error
-		err = s.HistoryMgr.DeleteHistoryBranch(&p.DeleteHistoryBranchRequest{
-			BranchInfo: p.HistoryBranch{
-				TreeID:   treeID,
-				BranchID: branchID,
-			},
+		err = s.HistoryV2Mgr.DeleteHistoryBranch(&p.DeleteHistoryBranchRequest{
+			BranchToken: branch,
 		})
 		return err
 	}
@@ -504,8 +521,8 @@ func (s *HistoryV2PersistenceSuite) deleteHistoryBranch(treeID, branchID string)
 }
 
 // persistence helper
-func (s *HistoryV2PersistenceSuite) descTree(treeID string) []p.HistoryBranch {
-	resp, err := s.HistoryMgr.GetHistoryTree(&p.GetHistoryTreeRequest{
+func (s *HistoryV2PersistenceSuite) descTree(treeID string) []*workflow.HistoryBranch {
+	resp, err := s.HistoryV2Mgr.GetHistoryTree(&p.GetHistoryTreeRequest{
 		TreeID: treeID,
 	})
 	s.Nil(err)
@@ -513,34 +530,52 @@ func (s *HistoryV2PersistenceSuite) descTree(treeID string) []p.HistoryBranch {
 }
 
 // persistence helper
-func (s *HistoryV2PersistenceSuite) read(branch p.HistoryBranch, minID, maxID, lastVersion int64, pageSize int, token []byte) (p.HistoryBranch, []*workflow.HistoryEvent, []byte, error) {
+func (s *HistoryV2PersistenceSuite) read(branch []byte, minID, maxID int64) []*workflow.HistoryEvent {
 
-	resp, err := s.HistoryMgr.ReadHistoryBranch(&p.ReadHistoryBranchRequest{
-		BranchInfo:       branch,
-		MinEventID:       minID,
-		MaxEventID:       maxID,
-		PageSize:         pageSize,
-		NextPageToken:    token,
-		LastEventVersion: lastVersion,
-	})
-	if err != nil {
-		return p.HistoryBranch{}, nil, nil, err
+	res := make([]*workflow.HistoryEvent, 0)
+	token := []byte{}
+	for {
+		resp, err := s.HistoryV2Mgr.ReadHistoryBranch(&p.ReadHistoryBranchRequest{
+			BranchToken:      branch,
+			MinEventID:       minID,
+			MaxEventID:       maxID,
+			PageSize:         100,
+			NextPageToken:    token,
+			LastEventVersion: int64(0),
+		})
+		s.Nil(err)
+		if len(resp.History) > 0 {
+			s.True(resp.Size > 0)
+		}
+		res = append(res, resp.History...)
+		token = resp.NextPageToken
+		if len(token) == 0 {
+			break
+		}
 	}
-	if len(resp.History) > 0 {
-		s.True(resp.Size > 0)
+
+	return res
+}
+
+func (s *HistoryV2PersistenceSuite) appendOneByOne(branch []byte, events []*workflow.HistoryEvent, txnID int64) error {
+	for _, e := range events {
+		err := s.append(branch, []*workflow.HistoryEvent{e}, txnID)
+		if err != nil {
+			return err
+		}
 	}
-	return resp.BranchInfo, resp.History, resp.NextPageToken, nil
+	return nil
 }
 
 // persistence helper
-func (s *HistoryV2PersistenceSuite) append(bi p.HistoryBranch, events []*workflow.HistoryEvent, txnID int64) (p.HistoryBranch, int, error) {
+func (s *HistoryV2PersistenceSuite) append(branch []byte, events []*workflow.HistoryEvent, txnID int64) error {
 
 	var resp *p.AppendHistoryNodesResponse
 
 	op := func() error {
 		var err error
-		resp, err = s.HistoryMgr.AppendHistoryNodes(&p.AppendHistoryNodesRequest{
-			BranchInfo:    bi,
+		resp, err = s.HistoryV2Mgr.AppendHistoryNodes(&p.AppendHistoryNodesRequest{
+			BranchToken:   branch,
 			Events:        events,
 			TransactionID: txnID,
 			Encoding:      pickRandomEncoding(),
@@ -550,27 +585,26 @@ func (s *HistoryV2PersistenceSuite) append(bi p.HistoryBranch, events []*workflo
 
 	err := backoff.Retry(op, historyTestRetryPolicy, isConditionFail)
 	if err != nil {
-		return p.HistoryBranch{}, 0, err
+		return err
 	}
 	s.True(resp.Size > 0)
 
-	return resp.BranchInfo, resp.OverrideCount, err
+	return err
 }
 
 // persistence helper
-func (s *HistoryV2PersistenceSuite) fork(forkBranch p.HistoryBranch, forkNodeID int64, newBranchID string) (p.HistoryBranch, error) {
+func (s *HistoryV2PersistenceSuite) fork(forkBranch []byte, forkNodeID int64) ([]byte, error) {
 
-	bi := p.HistoryBranch{}
+	bi := []byte{}
 
 	op := func() error {
 		var err error
-		resp, err := s.HistoryMgr.ForkHistoryBranch(&p.ForkHistoryBranchRequest{
-			BranchInfo:     forkBranch,
-			ForkFromNodeID: forkNodeID,
-			NewBranchID:    newBranchID,
+		resp, err := s.HistoryV2Mgr.ForkHistoryBranch(&p.ForkHistoryBranchRequest{
+			ForkBranchToken: forkBranch,
+			ForkNodeID:      forkNodeID,
 		})
 		if resp != nil {
-			bi = resp.BranchInfo
+			bi = resp.NewBranchToken
 		}
 		return err
 	}
