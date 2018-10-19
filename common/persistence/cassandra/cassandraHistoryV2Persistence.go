@@ -42,16 +42,13 @@ const (
 	v2templateReadData = `SELECT node_id, txn_id, data, data_encoding FROM history_node ` +
 		`WHERE tree_id = ? AND branch_id = ? AND node_id >= ? AND node_id < ? `
 
-	v2templateCheckNodeExists = `SELECT node_id FROM history_node ` +
-		`WHERE tree_id = ? AND branch_id = ? AND node_id = ? LIMIT 1`
-
 	v2templateRangeDeleteData = `DELETE FROM history_node ` +
 		`WHERE tree_id = ? AND branch_id = ? AND node_id >= ? `
 
 	// below are templates for history_tree table
 	v2templateInsertTree = `INSERT INTO history_tree (` +
 		`tree_id, branch_id, row_type, ancestors, deleted, txn_id) ` +
-		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) IF NOT EXISTS `
+		`VALUES (?, ?, ?, ?, ?, ?) IF NOT EXISTS `
 
 	v2templateReadTwoBranches = `SELECT branch_id FROM history_tree WHERE tree_id = ? AND row_type = ? LIMIT 2 `
 
@@ -191,8 +188,7 @@ func (h *cassandraHistoryV2Persistence) NewHistoryBranch(request *p.InternalNewH
 		return nil, err
 	}
 	resp := &p.InternalNewHistoryBranchResponse{
-		IsNewTree:  isNewTree,
-		BranchInfo: nil,
+		IsNewTree: isNewTree,
 	}
 	txnID, batch, err := h.beginWriteTransaction(treeID)
 	if err != nil {
@@ -299,7 +295,7 @@ func (h *cassandraHistoryV2Persistence) createRoot(treeID string) (bool, error) 
 	previous := make(map[string]interface{})
 	applied, err := query.MapScanCAS(previous)
 	if err != nil {
-		return false, convertCommonErrors("createRoot", err)
+		return applied, convertCommonErrors("createRoot", err)
 	}
 
 	return applied, nil
@@ -829,7 +825,7 @@ func (h *cassandraHistoryV2Persistence) isLastBranch(treeID string) (bool, error
 	}
 
 	brCount := 0
-	for iter.Scan(nil, nil, nil) {
+	for iter.Scan(nil) {
 		brCount++
 	}
 

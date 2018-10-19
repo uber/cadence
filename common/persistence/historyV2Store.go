@@ -66,6 +66,9 @@ func (m *historyV2ManagerImpl) NewHistoryBranch(request *NewHistoryBranchRequest
 		BranchID: uuid.New(),
 	}
 	resp, err := m.persistence.NewHistoryBranch(req)
+	if err != nil {
+		return nil, err
+	}
 	token, err := m.thrifteEncoder.Encode(&resp.BranchInfo)
 	if err != nil {
 		return nil, err
