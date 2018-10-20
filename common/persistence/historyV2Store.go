@@ -67,12 +67,15 @@ func (m *historyV2ManagerImpl) NewHistoryBranch(request *NewHistoryBranchRequest
 		BranchID: uuid.New(),
 	}
 	resp, err := m.persistence.NewHistoryBranch(req)
+	response := &NewHistoryBranchResponse{
+		IsNewTree: resp.IsNewTree,
+	}
 	if err != nil {
-		return nil, err
+		return response, err
 	}
 	token, err := m.thrifteEncoder.Encode(&resp.BranchInfo)
 	if err != nil {
-		return nil, err
+		return response, err
 	}
 	return &NewHistoryBranchResponse{
 		BranchToken: token,
@@ -95,25 +98,24 @@ func (m *historyV2ManagerImpl) ForkHistoryBranch(request *ForkHistoryBranchReque
 	}
 
 	// We read the forking node to validate the forking point.
-	// This is mostly correctly. But in some very rarely corner case, it will cause currupted history bug:
-	//		The bug is: it is possible that the node we read exists, but it is a stale batch of events.
+	// This is mostly correctly. But in some very rarely corner case, it can be incorrect because of corrupted history:
+	//		It is possible that the node we read exists, but it is a stale batch of events. Forking incorrectly can cause corrupted history.
 	// Therefore the safest way is to read from very beginning to validate the forking point. But it will be very complex and inefficient.
 	// Talking to team we can start with this implementation.
 	// If a customer run into this bug, we can do another reset(fork) to correct it.
-	readReq := &InternalReadHistoryBranchRequest{
-		TreeID:    *forkBranch.TreeID,
-		BranchID:  *forkBranch.BranchID,
-		MinNodeID: request.ForkNodeID,
-		MaxNodeID: request.ForkNodeID + 1,
-		PageSize:  1,
+	readReq := &ReadHistoryBranchRequest{
+		BranchToken: request.ForkBranchToken,
+		MinEventID:  request.ForkNodeID,
+		MaxEventID:  request.ForkNodeID + 1,
+		PageSize:    1,
 	}
-	readResp, err := m.persistence.ReadHistoryBranch(readReq)
+	readResp, err := m.ReadHistoryBranch(readReq)
 	if err != nil {
 		return nil, err
 	}
 	if len(readResp.History) != 1 {
 		return nil, &InvalidPersistenceRequestError{
-			Msg: fmt.Sprintf("ForkNodeID is invalid"),
+			Msg: fmt.Sprintf("ForkNodeID is invalid: %v for %+v", request.ForkNodeID, forkBranch),
 		}
 	}
 
@@ -204,7 +206,6 @@ func (m *historyV2ManagerImpl) AppendHistoryNodes(request *AppendHistoryNodesReq
 		TransactionID: request.TransactionID,
 	}
 
-	fmt.Println("InternalAppendHistoryNodesRequest", *req)
 	err = m.persistence.AppendHistoryNodes(req)
 
 	return &AppendHistoryNodesResponse{
@@ -278,7 +279,7 @@ func (m *historyV2ManagerImpl) ReadHistoryBranch(request *ReadHistoryBranchReque
 
 	req := &InternalReadHistoryBranchRequest{
 		TreeID:        treeID,
-		BranchID:      branchID,
+		BranchID:      *allBRs[token.CurrentRangeIndex].BranchID,
 		MinNodeID:     minNodeID,
 		MaxNodeID:     maxNodeID,
 		PageSize:      request.PageSize,
@@ -286,7 +287,6 @@ func (m *historyV2ManagerImpl) ReadHistoryBranch(request *ReadHistoryBranchReque
 	}
 
 	resp, err := m.persistence.ReadHistoryBranch(req)
-	fmt.Println("request, readReq,readResp:", req, resp)
 	if err != nil {
 		return nil, err
 	}
@@ -307,7 +307,9 @@ func (m *historyV2ManagerImpl) ReadHistoryBranch(request *ReadHistoryBranchReque
 		}
 		if len(es) == 0 {
 			logger.Error("Empty events in a batch")
-			return nil, fmt.Errorf("corrupted history event batch, empty events")
+			return nil, &workflow.InternalServiceError{
+				Message: fmt.Sprintf("corrupted history event batch, empty events"),
+			}
 		}
 
 		fe := es[0]    // first
@@ -317,17 +319,27 @@ func (m *historyV2ManagerImpl) ReadHistoryBranch(request *ReadHistoryBranchReque
 		if *fe.Version != *le.Version || *fe.EventId+int64(el-1) != *le.EventId {
 			// in a single batch, version should be the same, and ID should be continous
 			logger.Errorf("Corrupted event batch, %v, %v, %v, %v, %v", *fe.Version, *le.Version, *fe.EventId, *le.EventId, el)
-			return nil, fmt.Errorf("corrupted history event batch, wrong version and IDs")
+			return nil, &workflow.InternalServiceError{
+				Message: fmt.Sprintf("corrupted history event batch, wrong version and IDs"),
+			}
 		}
 
 		if *fe.Version < token.LastEventVersion {
 			// version decrease means the this batch are all stale events, we should skip
+			logger.Infof("Stale event batch with version: %v", *fe.Version)
 			continue
 		}
 
-		if *fe.EventId != token.LastEventID+1 {
+		if *fe.EventId == token.LastEventID {
 			// we could see it because of batch with smaller txn_id
+			logger.Infof("Stale event batch with eventID: %v", *fe.EventId)
 			continue
+		}
+		if *fe.EventId != token.LastEventID+1 {
+			logger.Errorf("Corrupted incontinouous event batch, %v, %v, %v, %v, %v", *fe.Version, *le.Version, *fe.EventId, *le.EventId, el)
+			return nil, &workflow.InternalServiceError{
+				Message: fmt.Sprintf("corrupted history event batch, eventID is not continouous"),
+			}
 		}
 
 		token.LastEventVersion = *fe.Version

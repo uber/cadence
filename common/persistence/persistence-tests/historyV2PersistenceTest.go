@@ -117,8 +117,8 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndDeleteEmptyBranches
 
 	wg := sync.WaitGroup{}
 	newCount := int32(0)
-	//manually try use 1001 to test pagination for GetHistoryTree
-	concurrency := 10
+	//page size in GetHistoryTree is 100
+	concurrency := 101
 	m := sync.Map{}
 	for i := 0; i < concurrency; i++ {
 		wg.Add(1)
@@ -163,7 +163,7 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndDeleteEmptyBranches
 
 	wg.Wait()
 	branches = s.descTree(treeID)
-	s.Equal(10, len(branches))
+	s.Equal(concurrency, len(branches))
 
 	// delete the newly empty branches
 	m2.Range(func(k, v interface{}) bool {
@@ -197,7 +197,7 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndAppendBranches() {
 
 	wg := sync.WaitGroup{}
 	newCount := int32(0)
-	concurrency := 10
+	concurrency := 20
 	m := sync.Map{}
 
 	// test create new branch along with appending new nodes
@@ -213,23 +213,23 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndAppendBranches() {
 			historyW := &workflow.History{}
 			m.Store(idx, bi)
 
-			events := s.genRandomEvents([]int64{1, 2, 3})
-			err = s.append(bi, events, 0)
+			events := s.genRandomEvents([]int64{1, 2, 3}, 1)
+			err = s.append(bi, events, 1)
 			s.Nil(err)
 			historyW.Events = events
 
-			events = s.genRandomEvents([]int64{4})
-			err = s.append(bi, events, 0)
+			events = s.genRandomEvents([]int64{4}, 1)
+			err = s.append(bi, events, 1)
 			s.Nil(err)
 			historyW.Events = append(historyW.Events, events...)
 
-			events = s.genRandomEvents([]int64{5, 6, 7, 8})
-			err = s.append(bi, events, 0)
+			events = s.genRandomEvents([]int64{5, 6, 7, 8}, 1)
+			err = s.append(bi, events, 1)
 			s.Nil(err)
 			historyW.Events = append(historyW.Events, events...)
 
-			events = s.genRandomEvents([]int64{9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20})
-			err = s.append(bi, events, 0)
+			events = s.genRandomEvents([]int64{9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}, 1)
+			err = s.append(bi, events, 1)
 			s.Nil(err)
 			historyW.Events = append(historyW.Events, events...)
 
@@ -249,6 +249,7 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndAppendBranches() {
 	branches := s.descTree(treeID)
 	s.Equal(concurrency, len(branches))
 
+	wg = sync.WaitGroup{}
 	// test appending nodes(override and new nodes) on each branch concurrently
 	for i := 0; i < concurrency; i++ {
 		wg.Add(1)
@@ -257,34 +258,46 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndAppendBranches() {
 
 			branch := s.getBranchByKey(m, idx)
 
-			// override with same txn_id
-			events := s.genRandomEvents([]int64{5})
+			// override with smaller txn_id
+			events := s.genRandomEvents([]int64{5}, 1)
 			err := s.append(branch, events, 0)
 			s.Nil(err)
-
-			// read to verify override fails
+			// it shouldn't change anything
 			events = s.read(branch, 1, 25)
 			s.Equal(20, len(events))
 
-			// override with larger txn_id
-			events = s.genRandomEvents([]int64{5})
+			// override with same txn_id but greater version
+			events = s.genRandomEvents([]int64{5}, 2)
 			err = s.append(branch, events, 1)
 			s.Nil(err)
 
-			// read to verify override fails
+			// read to verify override success
 			events = s.read(branch, 1, 25)
 			s.Equal(5, len(events))
 
-			// override more
-			events = s.genRandomEvents([]int64{6, 7, 8})
+			// override with larger txn_id and same version
+			events = s.genRandomEvents([]int64{5, 6}, 1)
+			err = s.append(branch, events, 2)
+			s.Nil(err)
+
+			// read to verify override success, at this point history is corrupted, missing 7/8, so we should only see 6 events
+			_, err = s.readWithError(branch, 1, 25)
+			_, ok := err.(*workflow.InternalServiceError)
+			s.Equal(true, ok)
+
+			events = s.read(branch, 1, 7)
+			s.Equal(6, len(events))
+
+			// override more with larger txn_id, this would fix the corrupted hole so that we cna get 20 events again
+			events = s.genRandomEvents([]int64{7, 8}, 1)
 			err = s.append(branch, events, 2)
 			s.Nil(err)
 
 			// read to verify override
 			events = s.read(branch, 1, 25)
-			s.Equal(8, len(events))
+			s.Equal(20, len(events))
 
-			events = s.genRandomEvents([]int64{9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23})
+			events = s.genRandomEvents([]int64{9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23}, 1)
 			err = s.append(branch, events, 2)
 			s.Nil(err)
 
@@ -309,10 +322,6 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndAppendBranches() {
 
 }
 
-//TODO test corrupted history: append [1,2,3],[2,3]
-
-//TODO test fork on a wrong nodeID : append[123][4,5], try fork on 2,3,5
-
 func (s *HistoryV2PersistenceSuite) TestConcurrentlyForkAndAppendBranches() {
 	treeID := uuid.New()
 
@@ -321,15 +330,21 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyForkAndAppendBranches() {
 	masterBr, isNewTree, err := s.newHistoryBranch(treeID)
 	s.Nil(err)
 	s.Equal(true, isNewTree)
+	branches := s.descTree(treeID)
+	s.Equal(1, len(branches))
+	mbrID := *branches[0].BranchID
 
 	// append first batch to master branch
 	eids := []int64{}
 	for i := int64(1); i <= int64(concurrency)+1; i++ {
 		eids = append(eids, i)
 	}
-	events0 := s.genRandomEvents(eids)
-	err = s.appendOneByOne(masterBr, events0, 0)
+	events := s.genRandomEvents(eids, 1)
+	err = s.appendOneByOne(masterBr, events, 1)
 	s.Nil(err)
+	events = s.read(masterBr, 1, int64(concurrency)+2)
+	s.Nil(err)
+	s.Equal((concurrency)+1, len(events))
 
 	level1ID := sync.Map{}
 	level1Br := sync.Map{}
@@ -350,9 +365,9 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyForkAndAppendBranches() {
 			for i := forkNodeID; i <= int64(concurrency)*2+1; i++ {
 				eids = append(eids, i)
 			}
-			events := s.genRandomEvents(eids)
+			events := s.genRandomEvents(eids, 1)
 
-			err = s.appendOneByOne(bi, events, 0)
+			err = s.appendOneByOne(bi, events, 1)
 			s.Nil(err)
 
 			events = s.read(bi, 1, int64(concurrency)*2+2)
@@ -362,10 +377,12 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyForkAndAppendBranches() {
 	}
 
 	wg.Wait()
-	branches := s.descTree(treeID)
+	branches = s.descTree(treeID)
 	s.Equal(concurrency+1, len(branches))
 	forkOnLevel1 := int32(0)
 	level2Br := sync.Map{}
+	wg = sync.WaitGroup{}
+
 	// test forking for second level of branch
 	for i := 0; i < concurrency; i++ {
 		wg.Add(1)
@@ -387,22 +404,23 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyForkAndAppendBranches() {
 
 			// append second batch to second level
 			eids = []int64{}
-			for i := forkNodeID + 1; i <= int64(concurrency)*3+1; i++ {
+			for i := forkNodeID; i <= int64(concurrency)*3+1; i++ {
 				eids = append(eids, i)
 			}
-			events2 := s.genRandomEvents(eids)
-
-			err = s.appendOneByOne(bi, events2, 0)
+			events := s.genRandomEvents(eids, 1)
+			err = s.appendOneByOne(bi, events, 1)
 			s.Nil(err)
+			events = s.read(bi, 1, int64(concurrency)*3+2)
+			s.Nil(err)
+			s.Equal((concurrency)*3+1, len(events))
 
 			// try override last event
-			events2 = s.genRandomEvents([]int64{int64(concurrency)*3 + 1})
-			err = s.append(bi, events2, 1)
+			events = s.genRandomEvents([]int64{int64(concurrency)*3 + 1}, 1)
+			err = s.append(bi, events, 2)
 			s.Nil(err)
-
-			events2 = s.read(bi, 1, int64(concurrency)*3+2)
+			events = s.read(bi, 1, int64(concurrency)*3+2)
 			s.Nil(err)
-			s.Equal((concurrency)*3+1, len(events2))
+			s.Equal((concurrency)*3+1, len(events))
 
 			//test fork and newBranch concurrently
 			bi, _, err = s.newHistoryBranch(treeID)
@@ -416,20 +434,18 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyForkAndAppendBranches() {
 	s.Equal(int(concurrency*3+1), len(branches))
 	actualForkOnLevel1 := int32(0)
 	masterCnt := 0
-	mbr := &workflow.HistoryBranch{}
 	for _, b := range branches {
 		if len(b.Ancestors) == 2 {
 			actualForkOnLevel1++
 		} else if len(b.Ancestors) == 0 {
 			masterCnt++
-			mbr = b
 		} else {
 			s.Equal(1, len(b.Ancestors))
-			s.Equal(*mbr.BranchID, *b.Ancestors[0].BranchID)
+			s.Equal(mbrID, *b.Ancestors[0].BranchID)
 		}
 	}
 	s.Equal(forkOnLevel1, actualForkOnLevel1)
-	s.Equal(1, masterCnt)
+	s.Equal(1+concurrency, masterCnt)
 
 	// Finally lets clean up all branches
 	level1Br.Range(func(k, v interface{}) bool {
@@ -470,12 +486,12 @@ func (s *HistoryV2PersistenceSuite) getIDByKey(m sync.Map, k int) int64 {
 	return id
 }
 
-func (s *HistoryV2PersistenceSuite) genRandomEvents(eventIDs []int64) []*workflow.HistoryEvent {
+func (s *HistoryV2PersistenceSuite) genRandomEvents(eventIDs []int64, version int64) []*workflow.HistoryEvent {
 	var events []*workflow.HistoryEvent
 
 	timestamp := time.Now().UnixNano()
 	for _, eid := range eventIDs {
-		e := &workflow.HistoryEvent{EventId: common.Int64Ptr(eid), Version: common.Int64Ptr(timestamp), Timestamp: int64Ptr(timestamp)}
+		e := &workflow.HistoryEvent{EventId: common.Int64Ptr(eid), Version: common.Int64Ptr(version), Timestamp: int64Ptr(timestamp)}
 		events = append(events, e)
 	}
 
@@ -531,7 +547,18 @@ func (s *HistoryV2PersistenceSuite) descTree(treeID string) []*workflow.HistoryB
 
 // persistence helper
 func (s *HistoryV2PersistenceSuite) read(branch []byte, minID, maxID int64) []*workflow.HistoryEvent {
+	res, err := s.readWithError(branch, minID, maxID)
+	s.Nil(err)
+	return res
+}
 
+func (s *HistoryV2PersistenceSuite) readWithError(branch []byte, minID, maxID int64) ([]*workflow.HistoryEvent, error) {
+
+	ri := rand.Intn(1)
+	randPageSize := 2
+	if ri == 0 {
+		randPageSize = 100
+	}
 	res := make([]*workflow.HistoryEvent, 0)
 	token := []byte{}
 	for {
@@ -539,11 +566,13 @@ func (s *HistoryV2PersistenceSuite) read(branch []byte, minID, maxID int64) []*w
 			BranchToken:      branch,
 			MinEventID:       minID,
 			MaxEventID:       maxID,
-			PageSize:         100,
+			PageSize:         randPageSize,
 			NextPageToken:    token,
 			LastEventVersion: int64(0),
 		})
-		s.Nil(err)
+		if err != nil {
+			return nil, err
+		}
 		if len(resp.History) > 0 {
 			s.True(resp.Size > 0)
 		}
@@ -554,7 +583,7 @@ func (s *HistoryV2PersistenceSuite) read(branch []byte, minID, maxID int64) []*w
 		}
 	}
 
-	return res
+	return res, nil
 }
 
 func (s *HistoryV2PersistenceSuite) appendOneByOne(branch []byte, events []*workflow.HistoryEvent, txnID int64) error {

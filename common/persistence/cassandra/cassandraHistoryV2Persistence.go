@@ -808,7 +808,7 @@ func (h *cassandraHistoryV2Persistence) GetHistoryTree(request *p.GetHistoryTree
 
 	var iter *gocql.Iter
 	for {
-		iter = query.PageSize(10).PageState(pagingToken).Iter()
+		iter = query.PageSize(100).PageState(pagingToken).Iter()
 		if iter == nil {
 			return nil, &workflow.InternalServiceError{
 				Message: "GetHistoryTree operation failed.  Not able to create query iterator.",

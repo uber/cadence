@@ -109,7 +109,7 @@ type (
 // NewTestBaseWithCassandra returns a persistence test base backed by cassandra datastore
 func NewTestBaseWithCassandra(options *TestBaseOptions) TestBase {
 	if options.DBName == "" {
-		options.DBName = GenerateRandomDBName(10)
+		options.DBName = "test_" + GenerateRandomDBName(10)
 	}
 	testCluster := cassandra.NewTestCluster(options.Cassandra.DBPort, options.DBName, options.Cassandra.SchemaDir)
 	return newTestBase(options, testCluster, testCluster)
