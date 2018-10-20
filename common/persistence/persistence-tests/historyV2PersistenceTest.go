@@ -365,12 +365,18 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyForkAndAppendBranches() {
 			s.Nil(err)
 			level1Br.Store(idx, bi)
 
+			//cannot append to ancestors
+			events := s.genRandomEvents([]int64{forkNodeID - 1}, 1)
+			err = s.append(bi, events, 1)
+			_, ok := err.(*p.InvalidPersistenceRequestError)
+			s.Equal(true, ok)
+
 			// append second batch to first level
 			eids = []int64{}
 			for i := forkNodeID; i <= int64(concurrency)*2+1; i++ {
 				eids = append(eids, i)
 			}
-			events := s.genRandomEvents(eids, 1)
+			events = s.genRandomEvents(eids, 1)
 
 			err = s.appendOneByOne(bi, events, 1)
 			s.Nil(err)
