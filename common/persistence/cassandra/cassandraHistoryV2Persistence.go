@@ -295,7 +295,7 @@ func (h *cassandraHistoryV2Persistence) createRoot(treeID string) (bool, error) 
 	previous := make(map[string]interface{})
 	applied, err := query.MapScanCAS(previous)
 	if err != nil {
-		return applied, convertCommonErrors("createRoot", err)
+		return false, convertCommonErrors("createRoot", err)
 	}
 
 	return applied, nil
@@ -336,19 +336,24 @@ func (h *cassandraHistoryV2Persistence) getBeginNodeID(bi workflow.HistoryBranch
 	}
 }
 
-func (h *cassandraHistoryV2Persistence) readBranchRange(treeID, branchID string, minID, maxID int64) ([]*p.DataBlob, error) {
-	bs := make([]*p.DataBlob, 0, int(maxID-minID))
+// ReadHistoryBranch returns history node data for a branch
+// NOTE: For branch that has ancestors, we need to query Cassandra multiple times, because it doesn't support OR/UNION operator
+func (h *cassandraHistoryV2Persistence) ReadHistoryBranch(request *p.InternalReadHistoryBranchRequest) (*p.InternalReadHistoryBranchResponse, error) {
+	treeID := request.TreeID
+	branchID := request.BranchID
 
 	query := h.session.Query(v2templateReadData,
-		treeID, branchID, minID, maxID)
+		treeID, branchID, request.MinNodeID, request.MaxNodeID)
 
-	iter := query.PageSize(int(maxID - minID)).Iter()
+	iter := query.PageSize(int(request.PageSize)).Iter()
 	if iter == nil {
 		return nil, &workflow.InternalServiceError{
-			Message: "readBranchRange operation failed.  Not able to create query iterator.",
+			Message: "ReadHistoryBranch operation failed.  Not able to create query iterator.",
 		}
 	}
+	pagingToken := iter.PageState()
 
+	history := make([]*p.DataBlob, 0, int(request.PageSize))
 	lastNodeID := int64(-1)
 	eventBlob := &p.DataBlob{}
 	nodeID := int64(0)
@@ -359,65 +364,19 @@ func (h *cassandraHistoryV2Persistence) readBranchRange(treeID, branchID string,
 			continue
 		}
 		lastNodeID = nodeID
-		bs = append(bs, eventBlob)
+		history = append(history, eventBlob)
 		eventBlob = &p.DataBlob{}
 	}
 
 	if err := iter.Close(); err != nil {
 		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("readBranchRange. Close operation failed. Error: %v", err),
+			Message: fmt.Sprintf("ReadHistoryBranch. Close operation failed. Error: %v", err),
 		}
-	}
-	return bs, nil
-}
-
-// ReadHistoryBranch returns history node data for a branch
-// NOTE: For branch that has ancestors, we need to query Cassandra multiple times, because it doesn't support OR/UNION operator
-func (h *cassandraHistoryV2Persistence) ReadHistoryBranch(request *p.InternalReadHistoryBranchRequest) (*p.InternalReadHistoryBranchResponse, error) {
-	treeID := *request.BranchInfo.TreeID
-	branchID := request.BranchInfo.BranchID
-
-	allBRs := request.BranchInfo.Ancestors
-	// We may also query the current branch from beginNodeID
-	beginNodeID := h.getBeginNodeID(request.BranchInfo)
-	allBRs = append(allBRs, &workflow.HistoryBranchRange{
-		BranchID:    branchID,
-		BeginNodeID: common.Int64Ptr(beginNodeID),
-		EndNodeID:   common.Int64Ptr(request.MaxNodeID),
-	})
-
-	history := make([]*p.DataBlob, 0, request.MaxNodeID-request.MinNodeID)
-	for _, br := range allBRs {
-		// this range won't contain any nodes needed, since the last node(EndNodeID-1) in the range is strictly less than MinNodeID
-		if *br.EndNodeID <= request.MinNodeID {
-			continue
-		}
-		// similarly, this range won't contain any nodes needed, since the first node(BeginNodeID) in the range is greater than or equal to MaxNodeID, where MaxNodeID is exclusive for the request
-		if *br.BeginNodeID >= request.MaxNodeID {
-			// since they are sorted, the rest branch range can be skipped
-			break
-		}
-
-		minID := *br.BeginNodeID
-		if request.MinNodeID > minID {
-			minID = request.MinNodeID
-		}
-		maxID := *br.EndNodeID
-		if request.MaxNodeID < maxID {
-			maxID = request.MaxNodeID
-		}
-
-		var err error
-		history, err = h.readBranchRange(treeID, *br.BranchID, minID, maxID)
-		if err != nil {
-			return nil, err
-		}
-		// NOTE: we will break here for simplicity. Since we do batching, the pagination is already broken anyway for PageSize
-		break
 	}
 
 	response := &p.InternalReadHistoryBranchResponse{
-		History: history,
+		History:       history,
+		NextPageToken: pagingToken,
 	}
 
 	return response, nil
@@ -849,7 +808,7 @@ func (h *cassandraHistoryV2Persistence) GetHistoryTree(request *p.GetHistoryTree
 
 	var iter *gocql.Iter
 	for {
-		iter = query.PageSize(1000).PageState(pagingToken).Iter()
+		iter = query.PageSize(10).PageState(pagingToken).Iter()
 		if iter == nil {
 			return nil, &workflow.InternalServiceError{
 				Message: "GetHistoryTree operation failed.  Not able to create query iterator.",

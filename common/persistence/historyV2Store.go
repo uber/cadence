@@ -26,6 +26,7 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/logging"
 )
@@ -100,9 +101,11 @@ func (m *historyV2ManagerImpl) ForkHistoryBranch(request *ForkHistoryBranchReque
 	// Talking to team we can start with this implementation.
 	// If a customer run into this bug, we can do another reset(fork) to correct it.
 	readReq := &InternalReadHistoryBranchRequest{
-		BranchInfo: forkBranch,
-		MinNodeID:  request.ForkNodeID,
-		MaxNodeID:  request.ForkNodeID + 1,
+		TreeID:    *forkBranch.TreeID,
+		BranchID:  *forkBranch.BranchID,
+		MinNodeID: request.ForkNodeID,
+		MaxNodeID: request.ForkNodeID + 1,
+		PageSize:  1,
 	}
 	readResp, err := m.persistence.ReadHistoryBranch(readReq)
 	if err != nil {
@@ -201,6 +204,7 @@ func (m *historyV2ManagerImpl) AppendHistoryNodes(request *AppendHistoryNodesReq
 		TransactionID: request.TransactionID,
 	}
 
+	fmt.Println("InternalAppendHistoryNodesRequest", *req)
 	err = m.persistence.AppendHistoryNodes(req)
 
 	return &AppendHistoryNodesResponse{
@@ -216,10 +220,12 @@ func (m *historyV2ManagerImpl) ReadHistoryBranch(request *ReadHistoryBranchReque
 	if err != nil {
 		return nil, err
 	}
+	treeID := *branch.TreeID
+	branchID := *branch.BranchID
 
-	if request.PageSize <= 0 {
+	if request.PageSize <= 0 || request.MinEventID >= request.MaxEventID {
 		return nil, &InvalidPersistenceRequestError{
-			Msg: fmt.Sprintf("page size must be greater than 0: %v", request.PageSize),
+			Msg: fmt.Sprintf("no events can be found for pageSize %v, minEventID %v, maxEventID: %v", request.PageSize, request.MinEventID, request.MaxEventID),
 		}
 	}
 
@@ -228,45 +234,70 @@ func (m *historyV2ManagerImpl) ReadHistoryBranch(request *ReadHistoryBranchReque
 		return nil, err
 	}
 
-	response := &ReadHistoryBranchResponse{
-		History:       nil,
-		NextPageToken: nil,
-		Size:          0,
+	allBRs := branch.Ancestors
+	// We may also query the current branch from beginNodeID
+	beginNodeID := int64(1)
+	if len(branch.Ancestors) > 0 {
+		beginNodeID = *branch.Ancestors[len(branch.Ancestors)-1].EndNodeID
+	}
+	allBRs = append(allBRs, &workflow.HistoryBranchRange{
+		BranchID:    &branchID,
+		BeginNodeID: common.Int64Ptr(beginNodeID),
+		EndNodeID:   common.Int64Ptr(request.MaxEventID),
+	})
+
+	if token.CurrentRangeIndex == notStartedIndex {
+		for idx, br := range allBRs {
+			// this range won't contain any nodes needed
+			if request.MinEventID >= *br.EndNodeID {
+				continue
+			}
+			// similarly, the ranges and the rest won't contain any nodes needed,
+			if request.MaxEventID <= *br.BeginNodeID {
+				break
+			}
+
+			if token.CurrentRangeIndex == notStartedIndex {
+				token.CurrentRangeIndex = idx
+			}
+			token.FinalRangeIndex = idx
+		}
+
+		if token.CurrentRangeIndex == notStartedIndex {
+			return nil, &workflow.InternalServiceError{
+				Message: fmt.Sprintf("branchRange is corrupted"),
+			}
+		}
 	}
 
-	// this means that we had reached the final page
-	if token.LastNodeID >= request.MaxEventID-1 {
-		return response, nil
-	}
-
-	minNodeID := token.LastNodeID + 1
-	maxNodeID := minNodeID + int64(request.PageSize)
+	minNodeID := token.LastEventID + 1
+	maxNodeID := *allBRs[token.CurrentRangeIndex].EndNodeID
 	if request.MaxEventID < maxNodeID {
 		maxNodeID = request.MaxEventID
 	}
 
 	req := &InternalReadHistoryBranchRequest{
-		BranchInfo: branch,
-		MinNodeID:  minNodeID,
-		MaxNodeID:  maxNodeID,
+		TreeID:        treeID,
+		BranchID:      branchID,
+		MinNodeID:     minNodeID,
+		MaxNodeID:     maxNodeID,
+		PageSize:      request.PageSize,
+		NextPageToken: token.StoreToken,
 	}
+
 	resp, err := m.persistence.ReadHistoryBranch(req)
+	fmt.Println("request, readReq,readResp:", req, resp)
 	if err != nil {
 		return nil, err
-	}
-	if len(resp.History) == 0 {
-		return response, nil
 	}
 
 	events := make([]*workflow.HistoryEvent, 0, request.PageSize)
 	dataSize := 0
 
 	//NOTE: in this method, we need to make sure eventVersion is NOT decreasing(otherwise we skip the events), eventID should be continuous(otherwise return error)
-	lastEventVersion := token.LastEventVersion
-	lastNodeID := token.LastNodeID
 	logger := m.logger.WithFields(bark.Fields{
-		logging.TagBranchID: branch.BranchID,
-		logging.TagTreeID:   branch.TreeID,
+		logging.TagBranchID: *branch.BranchID,
+		logging.TagTreeID:   *branch.TreeID,
 	})
 
 	for _, b := range resp.History {
@@ -289,27 +320,45 @@ func (m *historyV2ManagerImpl) ReadHistoryBranch(request *ReadHistoryBranchReque
 			return nil, fmt.Errorf("corrupted history event batch, wrong version and IDs")
 		}
 
-		if *fe.Version < lastEventVersion {
+		if *fe.Version < token.LastEventVersion {
 			// version decrease means the this batch are all stale events, we should skip
 			continue
 		}
 
-		if *fe.EventId != lastNodeID+1 {
-			logger.Errorf("Unexpected eventID %v", *fe.EventId)
+		if *fe.EventId != token.LastEventID+1 {
+			// we could see it because of batch with smaller txn_id
 			continue
 		}
 
-		lastEventVersion = *fe.Version
-		lastNodeID = *le.EventId
+		token.LastEventVersion = *fe.Version
+		token.LastEventID = *le.EventId
 		events = append(events, es...)
 		dataSize += len(b.Data)
 	}
 
-	response.Size = dataSize
-	response.History = events
-	response.NextPageToken, err = m.pagingTokenSerializer.Serialize(lastNodeID, lastEventVersion)
-	if err != nil {
-		return nil, err
+	response := &ReadHistoryBranchResponse{
+		History: events,
+		Size:    dataSize,
+	}
+
+	if len(token.StoreToken) == 0 {
+		if token.CurrentRangeIndex == token.FinalRangeIndex {
+			// this means that we have reached the final page of final branchRange
+			response.NextPageToken = nil
+		} else {
+			token.CurrentRangeIndex++
+			token.StoreToken = nil
+			response.NextPageToken, err = m.pagingTokenSerializer.Serialize(token)
+			if err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		token.StoreToken = resp.NextPageToken
+		response.NextPageToken, err = m.pagingTokenSerializer.Serialize(token)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return response, nil

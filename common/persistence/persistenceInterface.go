@@ -382,18 +382,26 @@ type (
 
 	// InternalReadHistoryBranchRequest is used to read a history branch
 	InternalReadHistoryBranchRequest struct {
-		// The branch to be read
-		BranchInfo workflow.HistoryBranch
+		// The tree of branch range to be read
+		TreeID string
+		// The branch range to be read
+		BranchID string
 		// Get the history nodes from MinNodeID. Inclusive.
 		MinNodeID int64
 		// Get the history nodes upto MaxNodeID.  Exclusive.
 		MaxNodeID int64
+		// passing thru for pagination
+		PageSize int
+		// Pagination token
+		NextPageToken []byte
 	}
 
 	// InternalReadHistoryBranchResponse is the response to ReadHistoryBranchRequest
 	InternalReadHistoryBranchResponse struct {
 		// History events
 		History []*DataBlob
+		// Pagination token
+		NextPageToken []byte
 	}
 )
 
