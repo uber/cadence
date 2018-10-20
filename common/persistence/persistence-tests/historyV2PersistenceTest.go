@@ -346,6 +346,11 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyForkAndAppendBranches() {
 	s.Nil(err)
 	s.Equal((concurrency)+1, len(events))
 
+	// cannot fork on un-existing node
+	_, err = s.fork(masterBr, int64(concurrency)+2)
+	_, ok := err.(*p.InvalidPersistenceRequestError)
+	s.Equal(true, ok)
+
 	level1ID := sync.Map{}
 	level1Br := sync.Map{}
 	// test forking from master branch and append nodes
