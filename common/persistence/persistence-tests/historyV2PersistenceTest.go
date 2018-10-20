@@ -565,7 +565,8 @@ func (s *HistoryV2PersistenceSuite) read(branch []byte, minID, maxID int64) []*w
 
 func (s *HistoryV2PersistenceSuite) readWithError(branch []byte, minID, maxID int64) ([]*workflow.HistoryEvent, error) {
 
-	ri := rand.Intn(1)
+	// 0 or 1, randomly use small page size or large page size
+	ri := rand.Intn(2)
 	randPageSize := 2
 	if ri == 0 {
 		randPageSize = 100
