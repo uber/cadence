@@ -39,7 +39,7 @@ const (
 		`tree_id, branch_id, node_id, txn_id, data, data_encoding) ` +
 		`VALUES (?, ?, ?, ?, ?, ?) `
 
-	v2templateReadData = `SELECT node_id, txn_id, data, data_encoding FROM history_node ` +
+	v2templateReadData = `SELECT node_id, data, data_encoding FROM history_node ` +
 		`WHERE tree_id = ? AND branch_id = ? AND node_id >= ? AND node_id < ? `
 
 	v2templateRangeDeleteData = `DELETE FROM history_node ` +
@@ -358,7 +358,7 @@ func (h *cassandraHistoryV2Persistence) ReadHistoryBranch(request *p.InternalRea
 	eventBlob := &p.DataBlob{}
 	nodeID := int64(0)
 
-	for iter.Scan(&nodeID, nil, &eventBlob.Data, &eventBlob.Encoding) {
+	for iter.Scan(&nodeID, &eventBlob.Data, &eventBlob.Encoding) {
 		if nodeID == lastNodeID {
 			// skip the nodes with smaller txn_id
 			continue

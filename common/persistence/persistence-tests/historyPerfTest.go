@@ -79,95 +79,126 @@ func (s *HistoryPerfSuite) startProfile() int64 {
 
 func (s *HistoryPerfSuite) stopProfile(startT int64, name string) {
 	du := time.Now().UnixNano() - startT
-	fmt.Printf("%v time eslapsed: %v milliseconds\n", name, float64(du)/float64(1000000))
+	fmt.Printf("%v , time eslapsed: %v milliseconds\n", name, float64(du)/float64(1000000))
 }
 
+/*
+=== RUN   TestCassandraHistoryPerformance/TestPerf
+appendV1-batch size: 1 , time eslapsed: 3543.659 milliseconds
+appendV2-batch size: 1 , time eslapsed: 958.665 milliseconds
+appendV1-batch size: 5 , time eslapsed: 656.35 milliseconds
+appendV2-batch size: 5 , time eslapsed: 197.422 milliseconds
+appendV1-batch size: 10 , time eslapsed: 328.444 milliseconds
+appendV2-batch size: 10 , time eslapsed: 106.208 milliseconds
+appendV1-batch size: 100 , time eslapsed: 46.533 milliseconds
+appendV2-batch size: 100 , time eslapsed: 19.485 milliseconds
+appendV1-batch size: 1000 , time eslapsed: 16.503 milliseconds
+appendV2-batch size: 1000 , time eslapsed: 17.835 milliseconds
+readv2-batch size: 1 , time eslapsed: 1856.21 milliseconds
+readV1-batch size: 1 , time eslapsed: 998.079 milliseconds
+readv2-batch size: 5 , time eslapsed: 220.197 milliseconds
+readV1-batch size: 5 , time eslapsed: 216.845 milliseconds
+readv2-batch size: 10 , time eslapsed: 109.88 milliseconds
+readV1-batch size: 10 , time eslapsed: 112.853 milliseconds
+readv2-batch size: 100 , time eslapsed: 15.682 milliseconds
+readV1-batch size: 100 , time eslapsed: 17.451 milliseconds
+readv2-batch size: 1000 , time eslapsed: 6.693 milliseconds
+readV1-batch size: 1000 , time eslapsed: 6.634 milliseconds
+time="2018-10-20T16:13:59-07:00" level=info msg="dropped namespace" keyspace=test_owfrwroowo
+--- PASS: TestCassandraHistoryPerformance (11.10s)
+    --- PASS: TestCassandraHistoryPerformance/TestPerf (9.46s)
+PASS
+ok  	github.com/uber/cadence/common/persistence/persistence-tests	11.123s
+*/
 func (s *HistoryPerfSuite) TestPerf() {
 	treeID := s.genRandomUUIDString()
-	brID := s.genRandomUUIDString()
-
-	br, err := s.newHistoryBranch(treeID, brID)
-	s.Nil(err)
-	s.NotNil(br)
 
 	//for v1
 	domainID := treeID
-	wf := workflow.WorkflowExecution{
-		WorkflowId: &brID,
-		RunId:      &brID,
-	}
 
-	total := 1000
-	sizes := []int{1, 5, 10, 100, 1000}
-	//1. test append 4*1000 events:
-	//batch size = 1
-	//batch size = 5
-	//batch size = 10
-	//batch size = 100
-	//batch size = 1000
-	firstIDV1 := int64(1)
-	firstIDV2 := int64(1)
+	total := 5000
+	allBatches := []int{1, 5, 10, 100, 1000}
+	//1. test append different batch allBatches of events:
+	wfs := [5]workflow.WorkflowExecution{}
+	brs := [5][]byte{}
 
-	for _, size := range sizes {
+	for idx, batchSize := range allBatches {
 
+		uuid := s.genRandomUUIDString()
+		wfs[idx] = workflow.WorkflowExecution{
+			WorkflowId: &uuid,
+			RunId:      &uuid,
+		}
+
+		br, err := s.newHistoryBranch(treeID)
+		s.Nil(err)
+		s.NotNil(br)
+		brs[idx] = br
+
+		firstIDV1 := int64(1)
+		firstIDV2 := int64(1)
 		st := s.startProfile()
-		for i := 0; i < total/size; i++ {
-			lastID := firstIDV1 + int64(size)
+		for i := 0; i < total/batchSize; i++ {
+			lastID := firstIDV1 + int64(batchSize)
 			events := s.genRandomEvents(firstIDV1, lastID)
 			history := &workflow.History{
 				Events: events,
 			}
 
-			err := s.appendV1(domainID, wf, firstIDV1, 0, 0, 0, history, false)
+			err := s.appendV1(domainID, wfs[idx], firstIDV1, 0, 0, 0, history, false)
 			s.Nil(err)
-
 			firstIDV1 = lastID
 		}
-		s.stopProfile(st, fmt.Sprintf("appendV1-batch size: %v", size))
+		s.stopProfile(st, fmt.Sprintf("appendV1-batch size: %v", batchSize))
 
 		st = s.startProfile()
-		for i := 0; i < total/size; i++ {
-			lastID := firstIDV2 + int64(size)
+		for i := 0; i < total/batchSize; i++ {
+			lastID := firstIDV2 + int64(batchSize)
 			events := s.genRandomEvents(firstIDV2, lastID)
 
-			_, ow, err := s.appendV2(br, events, 0)
+			err := s.appendV2(brs[idx], events, 0)
 
-			s.Equal(ow, 0)
 			s.Nil(err)
 			firstIDV2 = lastID
 		}
-		s.stopProfile(st, fmt.Sprintf("appendV2-batch size: %v", size))
+		s.stopProfile(st, fmt.Sprintf("appendV2-batch size: %v", batchSize))
 
 	}
 
-	firstIDV1 = int64(1)
-	firstIDV2 = int64(1)
-	//2. test read 4*1000 events:
-	for _, size := range sizes {
+	//2. test read events:
+	for idx, batchSize := range allBatches {
+
+		firstIDV1 := int64(1)
+		firstIDV2 := int64(1)
 
 		st := s.startProfile()
-		for i := 0; i < total/size; i++ {
-			lastID := firstIDV1 + int64(size)
 
-			historyR, _, err := s.readV1(domainID, wf, firstIDV1, lastID, int(lastID-firstIDV1), nil)
-			s.Equal(size, len(historyR.Events))
+		for i := 0; i < total/batchSize; i++ {
+			lastID := firstIDV2 + int64(batchSize)
+
+			events, token, err := s.readv2(brs[idx], firstIDV2, lastID, 0, int(lastID-firstIDV2), nil)
+
+			s.Equal(batchSize, len(events))
 			s.Nil(err)
-
-			firstIDV1 = lastID
-		}
-		s.stopProfile(st, fmt.Sprintf("readV1-batch size: %v", size))
-
-		st = s.startProfile()
-		for i := 0; i < total/size; i++ {
-			lastID := firstIDV2 + int64(size)
-
-			_, events, _, err := s.readv2(br, firstIDV2, lastID, 0, int(lastID-firstIDV2), nil)
-
-			s.Equal(size, len(events))
-			s.Nil(err)
+			s.Equal(0, len(token))
+			s.Equal(*events[len(events)-1].EventId, lastID-1)
 			firstIDV2 = lastID
 		}
-		s.stopProfile(st, fmt.Sprintf("readv2-batch size: %v", size))
+		s.stopProfile(st, fmt.Sprintf("readv2-batch size: %v", batchSize))
+
+		st = s.startProfile()
+		for i := 0; i < total/batchSize; i++ {
+			lastID := firstIDV1 + int64(batchSize)
+
+			historyR, token, err := s.readV1(domainID, wfs[idx], firstIDV1, lastID, int(lastID-firstIDV1), nil)
+			s.Equal(0, len(token))
+			s.Equal(batchSize, len(historyR.Events))
+			events := historyR.Events
+			s.Nil(err)
+			s.Equal(*events[len(events)-1].EventId, lastID-1)
+			firstIDV1 = lastID
+		}
+		s.stopProfile(st, fmt.Sprintf("readV1-batch size: %v", batchSize))
 
 	}
 }
@@ -186,23 +217,20 @@ func (s *HistoryPerfSuite) genRandomEvents(firstID, lastID int64) []*workflow.Hi
 }
 
 // persistence helper
-func (s *HistoryPerfSuite) newHistoryBranch(treeID, branchID string) (p.HistoryBranch, error) {
+func (s *HistoryPerfSuite) newHistoryBranch(treeID string) ([]byte, error) {
 
-	resp, err := s.HistoryMgr.NewHistoryBranch(&p.NewHistoryBranchRequest{
-		BranchInfo: p.HistoryBranch{
-			TreeID:   treeID,
-			BranchID: branchID,
-		},
+	resp, err := s.HistoryV2Mgr.NewHistoryBranch(&p.NewHistoryBranchRequest{
+		TreeID: treeID,
 	})
 
-	return resp.BranchInfo, err
+	return resp.BranchToken, err
 }
 
 // persistence helper
-func (s *HistoryPerfSuite) readv2(branch p.HistoryBranch, minID, maxID, lastVersion int64, pageSize int, token []byte) (p.HistoryBranch, []*workflow.HistoryEvent, []byte, error) {
+func (s *HistoryPerfSuite) readv2(branch []byte, minID, maxID, lastVersion int64, pageSize int, token []byte) ([]*workflow.HistoryEvent, []byte, error) {
 
-	resp, err := s.HistoryMgr.ReadHistoryBranch(&p.ReadHistoryBranchRequest{
-		BranchInfo:       branch,
+	resp, err := s.HistoryV2Mgr.ReadHistoryBranch(&p.ReadHistoryBranchRequest{
+		BranchToken:      branch,
 		MinEventID:       minID,
 		MaxEventID:       maxID,
 		PageSize:         pageSize,
@@ -210,33 +238,30 @@ func (s *HistoryPerfSuite) readv2(branch p.HistoryBranch, minID, maxID, lastVers
 		LastEventVersion: lastVersion,
 	})
 	if err != nil {
-		return p.HistoryBranch{}, nil, nil, err
+		return nil, nil, err
 	}
 	if len(resp.History) > 0 {
 		s.True(resp.Size > 0)
 	}
-	return resp.BranchInfo, resp.History, resp.NextPageToken, nil
+	return resp.History, resp.NextPageToken, nil
 }
 
 // persistence helper
-func (s *HistoryPerfSuite) appendV2(bi p.HistoryBranch, events []*workflow.HistoryEvent, txnID int64) (p.HistoryBranch, int, error) {
+func (s *HistoryPerfSuite) appendV2(br []byte, events []*workflow.HistoryEvent, txnID int64) error {
 
 	var resp *p.AppendHistoryNodesResponse
 	var err error
 
-	resp, err = s.HistoryMgr.AppendHistoryNodes(&p.AppendHistoryNodesRequest{
-		BranchInfo:    bi,
+	resp, err = s.HistoryV2Mgr.AppendHistoryNodes(&p.AppendHistoryNodesRequest{
+		BranchToken:   br,
 		Events:        events,
 		TransactionID: txnID,
-		Encoding:      pickRandomEncoding(),
+		Encoding:      common.EncodingTypeThriftRW,
 	})
-
 	if err != nil {
-		return p.HistoryBranch{}, 0, err
+		s.True(resp.Size > 0)
 	}
-	s.True(resp.Size > 0)
-
-	return resp.BranchInfo, resp.OverrideCount, err
+	return err
 }
 
 // AppendHistoryEvents helper
@@ -252,7 +277,7 @@ func (s *HistoryPerfSuite) appendV1(domainID string, workflowExecution workflow.
 		TransactionID:     txID,
 		Events:            eventsBatch.Events,
 		Overwrite:         overwrite,
-		Encoding:          pickRandomEncoding(),
+		Encoding:          common.EncodingTypeThriftRW,
 	})
 	return err
 }
