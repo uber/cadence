@@ -39,7 +39,7 @@ const (
 		`tree_id, branch_id, node_id, txn_id, data, data_encoding) ` +
 		`VALUES (?, ?, ?, ?, ?, ?) `
 
-	v2templateReadData = `SELECT node_id, data, data_encoding FROM history_node ` +
+	v2templateReadData = `SELECT node_id, txn_id, data, data_encoding FROM history_node ` +
 		`WHERE tree_id = ? AND branch_id = ? AND node_id >= ? AND node_id < ? `
 
 	v2templateRangeDeleteData = `DELETE FROM history_node ` +
@@ -355,14 +355,23 @@ func (h *cassandraHistoryV2Persistence) ReadHistoryBranch(request *p.InternalRea
 
 	history := make([]*p.DataBlob, 0, int(request.PageSize))
 	lastNodeID := int64(-1)
+	lastTxnID := int64(-1)
 	eventBlob := &p.DataBlob{}
 	nodeID := int64(0)
+	txnID := int64(0)
 
-	for iter.Scan(&nodeID, &eventBlob.Data, &eventBlob.Encoding) {
+	for iter.Scan(&nodeID, &txnID, &eventBlob.Data, &eventBlob.Encoding) {
 		if nodeID == lastNodeID {
-			// skip the nodes with smaller txn_id
-			continue
+			if txnID < lastTxnID {
+				// skip the nodes with smaller txn_id
+				continue
+			} else {
+				return nil, &workflow.InternalServiceError{
+					Message: fmt.Sprintf("corrupted data, same nodeID must have smaller txnID"),
+				}
+			}
 		}
+		lastTxnID = txnID
 		lastNodeID = nodeID
 		history = append(history, eventBlob)
 		eventBlob = &p.DataBlob{}
