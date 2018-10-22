@@ -290,7 +290,7 @@ func (s *HistoryPerfSuite) appendV1(domainID string, workflowExecution workflow.
 		TransactionID:     txID,
 		Events:            eventsBatch.Events,
 		Overwrite:         overwrite,
-		Encoding:          common.EncodingTypeJSON,
+		Encoding:          common.EncodingTypeThriftRW,
 	})
 	return err
 }
