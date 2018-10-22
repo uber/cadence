@@ -84,31 +84,38 @@ func (s *HistoryPerfSuite) stopProfile(startT int64, name string) {
 
 /*
 === RUN   TestCassandraHistoryPerformance/TestPerf
-appendV1-batch size: 1 , time eslapsed: 3543.659 milliseconds
-appendV2-batch size: 1 , time eslapsed: 958.665 milliseconds
-appendV1-batch size: 5 , time eslapsed: 656.35 milliseconds
-appendV2-batch size: 5 , time eslapsed: 197.422 milliseconds
-appendV1-batch size: 10 , time eslapsed: 328.444 milliseconds
-appendV2-batch size: 10 , time eslapsed: 106.208 milliseconds
-appendV1-batch size: 100 , time eslapsed: 46.533 milliseconds
-appendV2-batch size: 100 , time eslapsed: 19.485 milliseconds
-appendV1-batch size: 1000 , time eslapsed: 16.503 milliseconds
-appendV2-batch size: 1000 , time eslapsed: 17.835 milliseconds
-readv2-batch size: 1 , time eslapsed: 1856.21 milliseconds
-readV1-batch size: 1 , time eslapsed: 998.079 milliseconds
-readv2-batch size: 5 , time eslapsed: 220.197 milliseconds
-readV1-batch size: 5 , time eslapsed: 216.845 milliseconds
-readv2-batch size: 10 , time eslapsed: 109.88 milliseconds
-readV1-batch size: 10 , time eslapsed: 112.853 milliseconds
-readv2-batch size: 100 , time eslapsed: 15.682 milliseconds
-readV1-batch size: 100 , time eslapsed: 17.451 milliseconds
-readv2-batch size: 1000 , time eslapsed: 6.693 milliseconds
-readV1-batch size: 1000 , time eslapsed: 6.634 milliseconds
-time="2018-10-20T16:13:59-07:00" level=info msg="dropped namespace" keyspace=test_owfrwroowo
---- PASS: TestCassandraHistoryPerformance (11.10s)
-    --- PASS: TestCassandraHistoryPerformance/TestPerf (9.46s)
+appendV1-batch size: 1 , time eslapsed: 3454.098 milliseconds
+appendV2-batch size: 1 , time eslapsed: 1022.303 milliseconds
+appendV1-batch size: 2 , time eslapsed: 1579.684 milliseconds
+appendV2-batch size: 2 , time eslapsed: 457.522 milliseconds
+appendV1-batch size: 5 , time eslapsed: 627.084 milliseconds
+appendV2-batch size: 5 , time eslapsed: 191.902 milliseconds
+appendV1-batch size: 10 , time eslapsed: 324.444 milliseconds
+appendV2-batch size: 10 , time eslapsed: 106.51 milliseconds
+appendV1-batch size: 100 , time eslapsed: 45.617 milliseconds
+appendV2-batch size: 100 , time eslapsed: 18.488 milliseconds
+appendV1-batch size: 500 , time eslapsed: 28.697 milliseconds
+appendV2-batch size: 500 , time eslapsed: 14.168 milliseconds
+appendV1-batch size: 1000 , time eslapsed: 28.188 milliseconds
+appendV2-batch size: 1000 , time eslapsed: 12.643 milliseconds
+readV1-batch size: 1 , time eslapsed: 31.842 milliseconds
+readv2-batch size: 1 , time eslapsed: 23.431 milliseconds
+readV1-batch size: 2 , time eslapsed: 26.428 milliseconds
+readv2-batch size: 2 , time eslapsed: 19.373 milliseconds
+readV1-batch size: 5 , time eslapsed: 18.031 milliseconds
+readv2-batch size: 5 , time eslapsed: 11.139 milliseconds
+readV1-batch size: 10 , time eslapsed: 13.673 milliseconds
+readv2-batch size: 10 , time eslapsed: 8.602 milliseconds
+readV1-batch size: 100 , time eslapsed: 11.497 milliseconds
+readv2-batch size: 100 , time eslapsed: 6.315 milliseconds
+readV1-batch size: 500 , time eslapsed: 11.975 milliseconds
+readv2-batch size: 500 , time eslapsed: 5.927 milliseconds
+readV1-batch size: 1000 , time eslapsed: 9.965 milliseconds
+readv2-batch size: 1000 , time eslapsed: 5.758 milliseconds
+time="2018-10-21T19:33:02-07:00" level=info msg="dropped namespace" keyspace=test_wofofrfwrw
+--- PASS: TestCassandraHistoryPerformance (10.07s)
+    --- PASS: TestCassandraHistoryPerformance/TestPerf (8.13s)
 PASS
-ok  	github.com/uber/cadence/common/persistence/persistence-tests	11.123s
 */
 func (s *HistoryPerfSuite) TestPerf() {
 	treeID := s.genRandomUUIDString()
@@ -117,10 +124,10 @@ func (s *HistoryPerfSuite) TestPerf() {
 	domainID := treeID
 
 	total := 5000
-	allBatches := []int{1, 5, 10, 100, 1000}
+	allBatches := []int{1, 2, 5, 10, 100, 500, 1000}
 	//1. test append different batch allBatches of events:
-	wfs := [5]workflow.WorkflowExecution{}
-	brs := [5][]byte{}
+	wfs := [7]workflow.WorkflowExecution{}
+	brs := [7][]byte{}
 
 	for idx, batchSize := range allBatches {
 
@@ -165,40 +172,46 @@ func (s *HistoryPerfSuite) TestPerf() {
 
 	}
 
+	pageSize := 1000
 	//2. test read events:
 	for idx, batchSize := range allBatches {
 
-		firstIDV1 := int64(1)
-		firstIDV2 := int64(1)
-
 		st := s.startProfile()
 
-		for i := 0; i < total/batchSize; i++ {
-			lastID := firstIDV2 + int64(batchSize)
-
-			events, token, err := s.readv2(brs[idx], firstIDV2, lastID, 0, int(lastID-firstIDV2), nil)
-
-			s.Equal(batchSize, len(events))
+		var err error
+		token := []byte{}
+		events := make([]*workflow.HistoryEvent, 0, total)
+		for {
+			var historyR *workflow.History
+			historyR, token, err = s.readV1(domainID, wfs[idx], 1, int64(total+1), pageSize, token)
 			s.Nil(err)
-			s.Equal(0, len(token))
-			s.Equal(*events[len(events)-1].EventId, lastID-1)
-			firstIDV2 = lastID
+			events = append(events, historyR.Events...)
+			if len(token) == 0 {
+				break
+			}
 		}
-		s.stopProfile(st, fmt.Sprintf("readv2-batch size: %v", batchSize))
+		s.Equal(total, len(events))
+		s.Equal(int64(1), *events[0].EventId)
+		s.Equal(int64(total), *events[total-1].EventId)
+		s.stopProfile(st, fmt.Sprintf("readV1-batch size: %v", batchSize))
 
 		st = s.startProfile()
-		for i := 0; i < total/batchSize; i++ {
-			lastID := firstIDV1 + int64(batchSize)
-
-			historyR, token, err := s.readV1(domainID, wfs[idx], firstIDV1, lastID, int(lastID-firstIDV1), nil)
-			s.Equal(0, len(token))
-			s.Equal(batchSize, len(historyR.Events))
-			events := historyR.Events
+		token = []byte{}
+		events = make([]*workflow.HistoryEvent, 0, total)
+		for {
+			var events2 []*workflow.HistoryEvent
+			events2, token, err = s.readv2(brs[idx], 1, int64(total+1), 0, pageSize, token)
 			s.Nil(err)
-			s.Equal(*events[len(events)-1].EventId, lastID-1)
-			firstIDV1 = lastID
+			events = append(events, events2...)
+			if len(token) == 0 {
+				break
+			}
 		}
-		s.stopProfile(st, fmt.Sprintf("readV1-batch size: %v", batchSize))
+		s.Equal(total, len(events))
+		s.Equal(int64(1), *events[0].EventId)
+		s.Equal(int64(total), *events[total-1].EventId)
+
+		s.stopProfile(st, fmt.Sprintf("readv2-batch size: %v", batchSize))
 
 	}
 }
@@ -277,7 +290,7 @@ func (s *HistoryPerfSuite) appendV1(domainID string, workflowExecution workflow.
 		TransactionID:     txID,
 		Events:            eventsBatch.Events,
 		Overwrite:         overwrite,
-		Encoding:          common.EncodingTypeThriftRW,
+		Encoding:          common.EncodingTypeJSON,
 	})
 	return err
 }
