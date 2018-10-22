@@ -20,16 +20,10 @@
 
 package persistencetests
 
-import (
-	"testing"
-
-	"github.com/stretchr/testify/suite"
-)
-
 // Manually enable the test when needed
-func TestCassandraHistoryPerformance(t *testing.T) {
-	s := new(HistoryPerfSuite)
-	s.TestBase = NewTestBaseWithCassandra(&TestBaseOptions{})
-	s.TestBase.Setup()
-	suite.Run(t, s)
-}
+//func TestCassandraHistoryPerformance(t *testing.T) {
+//	s := new(HistoryPerfSuite)
+//	s.TestBase = NewTestBaseWithCassandra(&TestBaseOptions{})
+//	s.TestBase.Setup()
+//	suite.Run(t, s)
+//}
