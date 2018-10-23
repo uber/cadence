@@ -310,8 +310,6 @@ type (
 	InternalNewHistoryBranchResponse struct {
 		//BranchInfo represents a branch
 		BranchInfo workflow.HistoryBranch
-		// TODO remove it after testing is done
-		IsNewTree bool
 	}
 
 	// InternalAppendHistoryNodesRequest is used to append a batch of history nodes

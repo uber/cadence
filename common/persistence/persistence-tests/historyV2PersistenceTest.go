@@ -116,7 +116,6 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndDeleteEmptyBranches
 	treeID := uuid.New()
 
 	wg := sync.WaitGroup{}
-	newCount := int32(0)
 	//page size in GetHistoryTree is 100
 	concurrency := 101
 	m := sync.Map{}
@@ -124,18 +123,13 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndDeleteEmptyBranches
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
-			br, isNewTree, err := s.newHistoryBranch(treeID)
+			br, err := s.newHistoryBranch(treeID)
 			s.Nil(err)
-			if isNewTree {
-				atomic.AddInt32(&newCount, 1)
-			}
 			m.Store(idx, br)
 		}(i)
 	}
 
 	wg.Wait()
-	newCount = atomic.LoadInt32(&newCount)
-	s.Equal(int32(1), newCount)
 
 	branches := s.descTree(treeID)
 	s.Equal(concurrency, len(branches))
@@ -146,7 +140,7 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndDeleteEmptyBranches
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
-			br, _, err := s.newHistoryBranch(treeID)
+			br, err := s.newHistoryBranch(treeID)
 			s.Nil(err)
 			m2.Store(idx, br)
 		}(i)
@@ -179,9 +173,8 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndDeleteEmptyBranches
 	s.Equal(0, len(branches))
 
 	// create one more try after delete the whole tree
-	br, isNewTree, err := s.newHistoryBranch(treeID)
+	br, err := s.newHistoryBranch(treeID)
 	s.Nil(err)
-	s.Equal(true, isNewTree)
 	branches = s.descTree(treeID)
 	s.Equal(1, len(branches))
 
@@ -196,7 +189,6 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndAppendBranches() {
 	treeID := uuid.New()
 
 	wg := sync.WaitGroup{}
-	newCount := int32(0)
 	concurrency := 20
 	m := sync.Map{}
 
@@ -205,11 +197,8 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndAppendBranches() {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
-			bi, isNewTree, err := s.newHistoryBranch(treeID)
+			bi, err := s.newHistoryBranch(treeID)
 			s.Nil(err)
-			if isNewTree {
-				atomic.AddInt32(&newCount, 1)
-			}
 			historyW := &workflow.History{}
 			m.Store(idx, bi)
 
@@ -244,8 +233,6 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndAppendBranches() {
 	}
 
 	wg.Wait()
-	newCount = atomic.LoadInt32(&newCount)
-	s.Equal(int32(1), newCount)
 	branches := s.descTree(treeID)
 	s.Equal(concurrency, len(branches))
 
@@ -327,9 +314,8 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyForkAndAppendBranches() {
 
 	wg := sync.WaitGroup{}
 	concurrency := 10
-	masterBr, isNewTree, err := s.newHistoryBranch(treeID)
+	masterBr, err := s.newHistoryBranch(treeID)
 	s.Nil(err)
-	s.Equal(true, isNewTree)
 	branches := s.descTree(treeID)
 	s.Equal(1, len(branches))
 	mbrID := *branches[0].BranchID
@@ -434,7 +420,7 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyForkAndAppendBranches() {
 			s.Equal((concurrency)*3+1, len(events))
 
 			//test fork and newBranch concurrently
-			bi, _, err = s.newHistoryBranch(treeID)
+			bi, err = s.newHistoryBranch(treeID)
 			s.Nil(err)
 			level2Br.Store(concurrency+idx, bi)
 		}(i)
@@ -510,9 +496,8 @@ func (s *HistoryV2PersistenceSuite) genRandomEvents(eventIDs []int64, version in
 }
 
 // persistence helper
-func (s *HistoryV2PersistenceSuite) newHistoryBranch(treeID string) ([]byte, bool, error) {
+func (s *HistoryV2PersistenceSuite) newHistoryBranch(treeID string) ([]byte, error) {
 
-	isNewT := false
 	var bi []byte
 
 	op := func() error {
@@ -520,9 +505,6 @@ func (s *HistoryV2PersistenceSuite) newHistoryBranch(treeID string) ([]byte, boo
 		resp, err := s.HistoryV2Mgr.NewHistoryBranch(&p.NewHistoryBranchRequest{
 			TreeID: treeID,
 		})
-		if resp != nil && resp.IsNewTree {
-			isNewT = true
-		}
 		if resp != nil {
 			bi = resp.BranchToken
 		}
@@ -530,7 +512,7 @@ func (s *HistoryV2PersistenceSuite) newHistoryBranch(treeID string) ([]byte, boo
 	}
 
 	err := backoff.Retry(op, historyTestRetryPolicy, isConditionFail)
-	return bi, isNewT, err
+	return bi, err
 }
 
 // persistence helper

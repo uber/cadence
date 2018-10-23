@@ -1075,8 +1075,6 @@ type (
 	NewHistoryBranchResponse struct {
 		//BranchToken represents a branch
 		BranchToken []byte
-		// TODO remove it after testing is done
-		IsNewTree bool
 	}
 
 	// AppendHistoryNodesRequest is used to append a batch of history nodes

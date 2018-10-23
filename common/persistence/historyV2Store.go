@@ -67,9 +67,7 @@ func (m *historyV2ManagerImpl) NewHistoryBranch(request *NewHistoryBranchRequest
 		BranchID: uuid.New(),
 	}
 	resp, err := m.persistence.NewHistoryBranch(req)
-	response := &NewHistoryBranchResponse{
-		IsNewTree: resp.IsNewTree,
-	}
+	response := &NewHistoryBranchResponse{}
 	if err != nil {
 		return response, err
 	}
@@ -79,7 +77,6 @@ func (m *historyV2ManagerImpl) NewHistoryBranch(request *NewHistoryBranchRequest
 	}
 	return &NewHistoryBranchResponse{
 		BranchToken: token,
-		IsNewTree:   resp.IsNewTree,
 	}, nil
 }
 

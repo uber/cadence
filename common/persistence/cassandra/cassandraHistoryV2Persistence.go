@@ -183,13 +183,11 @@ func convertCommonErrors(operation string, err error) error {
 func (h *cassandraHistoryV2Persistence) NewHistoryBranch(request *p.InternalNewHistoryBranchRequest) (*p.InternalNewHistoryBranchResponse, error) {
 	treeID := request.TreeID
 	branchID := request.BranchID
-	isNewTree, err := h.createRoot(treeID)
+	_, err := h.createRoot(treeID)
 	if err != nil {
 		return nil, err
 	}
-	resp := &p.InternalNewHistoryBranchResponse{
-		IsNewTree: isNewTree,
-	}
+	resp := &p.InternalNewHistoryBranchResponse{}
 	txnID, batch, err := h.beginWriteTransaction(treeID)
 	if err != nil {
 		return resp, err
