@@ -374,7 +374,7 @@ task_id <= ?
 (:shard_id, :domain_id, :workflow_id, :run_id, :create_request_id, :state, :close_status, :start_version)`
 
 	getCurrentExecutionSQLQuery = `SELECT
-ce.shard_id, s.range_id, ce.domain_id, ce.workflow_id, ce.run_id, ce.state, ce.close_status, ce.start_version, e.last_write_version
+ce.shard_id, s.range_id, ce.domain_id, ce.workflow_id, ce.run_id, ce.create_request_id, ce.state, ce.close_status, ce.start_version, e.last_write_version
 FROM current_executions ce
 INNER JOIN shards s ON s.shard_id = ce.shard_id
 INNER JOIN executions e ON s.shard_id = e.shard_id AND e.domain_id = ce.domain_id AND e.workflow_id = ce.workflow_id
