@@ -352,7 +352,7 @@ func (c *domainCache) loadDomain(name string, id string) (*persistence.GetDomain
 			// since we need to guarantee that domainNotificationVersion > all notification versions
 			// inside the cache
 			return nil, &workflow.EntityNotExistsError{
-				Message:fmt.Sprintf("Domain: %v", name),
+				Message: fmt.Sprintf("Domain: %v", name),
 			}
 		}
 	}
