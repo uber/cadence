@@ -100,7 +100,12 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionBrandNew() {
 
 	_, err = s.ExecutionManager.CreateWorkflowExecution(req)
 	s.NotNil(err)
-	s.IsType(&p.WorkflowExecutionAlreadyStartedError{}, err)
+	alreadyStartedErr, ok := err.(*p.WorkflowExecutionAlreadyStartedError)
+	s.True(ok, "err is not WorkflowExecutionAlreadyStartedError")
+	s.Equal(req.RequestID, alreadyStartedErr.StartRequestID)
+	s.Equal(workflowExecution.GetRunId(), alreadyStartedErr.RunID)
+	s.Equal(0, alreadyStartedErr.CloseStatus)
+	s.Equal(p.WorkflowStateRunning, alreadyStartedErr.State)
 }
 
 // TestCreateWorkflowExecutionRunIDReuseWithReplication test
