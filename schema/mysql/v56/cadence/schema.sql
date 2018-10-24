@@ -80,9 +80,9 @@ CREATE TABLE executions(
 	state INT NOT NULL,
 	close_status INT NOT NULL,
 	-- replication_state members
-  start_version BIGINT,
-  current_version BIGINT,
-  last_write_version BIGINT,
+  start_version BIGINT NOT NULL,
+  current_version BIGINT NOT NULL,
+  last_write_version BIGINT NOT NULL,
   last_write_event_id BIGINT,
   last_replication_info BLOB,
   -- replication_state members end
@@ -118,8 +118,8 @@ CREATE TABLE current_executions(
   create_request_id CHAR(64) NOT NULL,
 	state INT NOT NULL,
 	close_status INT NOT NULL,
-  start_version BIGINT,
-	last_write_version BIGINT,
+  start_version BIGINT NOT NULL,
+	last_write_version BIGINT NOT NULL,
   PRIMARY KEY (shard_id, domain_id, workflow_id)
 );
 

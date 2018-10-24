@@ -249,18 +249,19 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionRunIDReuseWithoutRepl
 	// this create should work since we are relying the business logic in history engine
 	// to check whether the existing running workflow has finished
 	_, err3 := s.ExecutionManager.CreateWorkflowExecution(&p.CreateWorkflowExecutionRequest{
-		RequestID:            uuid.New(),
-		DomainID:             domainID,
-		Execution:            newExecution,
-		TaskList:             tasklist,
-		WorkflowTypeName:     workflowType,
-		WorkflowTimeout:      workflowTimeout,
-		DecisionTimeoutValue: decisionTimeout,
-		NextEventID:          nextEventID,
-		LastProcessedEvent:   lastProcessedEventID,
-		RangeID:              s.ShardInfo.RangeID,
-		CreateWorkflowMode:   p.CreateWorkflowModeWorkflowIDReuse,
-		PreviousRunID:        workflowExecution.GetRunId(),
+		RequestID:                uuid.New(),
+		DomainID:                 domainID,
+		Execution:                newExecution,
+		TaskList:                 tasklist,
+		WorkflowTypeName:         workflowType,
+		WorkflowTimeout:          workflowTimeout,
+		DecisionTimeoutValue:     decisionTimeout,
+		NextEventID:              nextEventID,
+		LastProcessedEvent:       lastProcessedEventID,
+		RangeID:                  s.ShardInfo.RangeID,
+		CreateWorkflowMode:       p.CreateWorkflowModeWorkflowIDReuse,
+		PreviousRunID:            workflowExecution.GetRunId(),
+		PreviousLastWriteVersion: common.EmptyVersion,
 	})
 	s.NoError(err3)
 }
