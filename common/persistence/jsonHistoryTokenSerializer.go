@@ -39,8 +39,8 @@ type (
 
 const notStartedIndex = -1
 
-// NewJSONTaskTokenSerializer creates a new instance of TaskTokenSerializer
-func NewJSONHistoryTokenSerializer() *jsonHistoryTokenSerializer {
+// newJSONHistoryTokenSerializer creates a new instance of TaskTokenSerializer
+func newJSONHistoryTokenSerializer() *jsonHistoryTokenSerializer {
 	return &jsonHistoryTokenSerializer{}
 }
 
@@ -62,9 +62,9 @@ func (j *jsonHistoryTokenSerializer) Deserialize(data []byte, defaultLastNodeID,
 			CurrentRangeIndex: notStartedIndex,
 		}
 		return &token, nil
-	} else {
-		token := historyV2PagingToken{}
-		err := json.Unmarshal(data, &token)
-		return &token, err
 	}
+
+	token := historyV2PagingToken{}
+	err := json.Unmarshal(data, &token)
+	return &token, err
 }

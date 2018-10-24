@@ -45,14 +45,14 @@ type (
 
 var _ HistoryV2Manager = (*historyV2ManagerImpl)(nil)
 
-//NewHistoryManagerImpl returns new HistoryManager
+//NewHistoryV2ManagerImpl returns new HistoryManager
 func NewHistoryV2ManagerImpl(persistence HistoryV2Store, logger bark.Logger) HistoryV2Manager {
 	return &historyV2ManagerImpl{
 		historySerializer:     NewHistorySerializer(),
 		persistence:           persistence,
 		logger:                logger,
 		thrifteEncoder:        codec.NewThriftRWEncoder(),
-		pagingTokenSerializer: NewJSONHistoryTokenSerializer(),
+		pagingTokenSerializer: newJSONHistoryTokenSerializer(),
 	}
 }
 
@@ -171,7 +171,7 @@ func (m *historyV2ManagerImpl) AppendHistoryNodes(request *AppendHistoryNodesReq
 	}
 	version := *request.Events[0].Version
 	nodeID := *request.Events[0].EventId
-	lastId := nodeID - 1
+	lastID := nodeID - 1
 
 	if nodeID <= 0 {
 		return nil, &InvalidPersistenceRequestError{
@@ -184,12 +184,12 @@ func (m *historyV2ManagerImpl) AppendHistoryNodes(request *AppendHistoryNodesReq
 				Msg: fmt.Sprintf("event version must be the same inside a batch"),
 			}
 		}
-		if *e.EventId != lastId+1 {
+		if *e.EventId != lastID+1 {
 			return nil, &InvalidPersistenceRequestError{
 				Msg: fmt.Sprintf("event ID must be continous"),
 			}
 		}
-		lastId++
+		lastID++
 	}
 
 	// nodeID will be the first eventID

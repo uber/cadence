@@ -70,7 +70,7 @@ func (f *Factory) NewHistoryStore() (p.HistoryStore, error) {
 	return newHistoryPersistence(f.cfg, f.logger)
 }
 
-// NewHistoryStore returns a new history store
+// NewHistoryV2Store returns a new history store
 func (f *Factory) NewHistoryV2Store() (p.HistoryV2Store, error) {
 	return nil, fmt.Errorf("Not implemented")
 }

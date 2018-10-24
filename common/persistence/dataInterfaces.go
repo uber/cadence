@@ -1238,6 +1238,7 @@ type (
 		DeleteWorkflowExecutionHistory(request *DeleteWorkflowExecutionHistoryRequest) error
 	}
 
+	// HistoryV2Manager is used to manager workflow history events
 	HistoryV2Manager interface {
 		Closeable
 		GetName() string

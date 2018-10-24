@@ -90,7 +90,7 @@ func (s *HistoryV2PersistenceSuite) TearDownSuite() {
 	s.TearDownWorkflowStore()
 }
 
-// testing  uuid.New() can generate unique UUID
+// TestGenUUIDs testing  uuid.New() can generate unique UUID
 func (s *HistoryV2PersistenceSuite) TestGenUUIDs() {
 	wg := sync.WaitGroup{}
 	m := sync.Map{}
@@ -112,6 +112,7 @@ func (s *HistoryV2PersistenceSuite) TestGenUUIDs() {
 	s.Equal(concurrency, cnt)
 }
 
+// TestConcurrentlyCreateAndDeleteEmptyBranches test
 func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndDeleteEmptyBranches() {
 	treeID := uuid.New()
 
@@ -185,6 +186,7 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndDeleteEmptyBranches
 	s.Equal(0, len(branches))
 }
 
+//TestConcurrentlyCreateAndAppendBranches test
 func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndAppendBranches() {
 	treeID := uuid.New()
 
@@ -309,6 +311,7 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndAppendBranches() {
 
 }
 
+// TestConcurrentlyForkAndAppendBranches test
 func (s *HistoryV2PersistenceSuite) TestConcurrentlyForkAndAppendBranches() {
 	treeID := uuid.New()
 

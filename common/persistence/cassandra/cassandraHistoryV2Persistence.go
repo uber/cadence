@@ -328,10 +328,9 @@ func (h *cassandraHistoryV2Persistence) getBeginNodeID(bi workflow.HistoryBranch
 	if len(bi.Ancestors) == 0 {
 		// root branch
 		return 1
-	} else {
-		idx := len(bi.Ancestors) - 1
-		return *bi.Ancestors[idx].EndNodeID
 	}
+	idx := len(bi.Ancestors) - 1
+	return *bi.Ancestors[idx].EndNodeID
 }
 
 // ReadHistoryBranch returns history node data for a branch

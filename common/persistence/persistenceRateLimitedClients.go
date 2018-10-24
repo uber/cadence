@@ -119,7 +119,7 @@ func NewHistoryPersistenceRateLimitedClient(persistence HistoryManager, rateLimi
 	}
 }
 
-// NewHistoryPersistenceRateLimitedClient creates a HistoryManager client to manage workflow execution history
+// NewHistoryV2PersistenceRateLimitedClient creates a HistoryManager client to manage workflow execution history
 func NewHistoryV2PersistenceRateLimitedClient(persistence HistoryV2Manager, rateLimiter common.TokenBucket, logger bark.Logger) HistoryV2Manager {
 	return &historyV2RateLimitedPersistenceClient{
 		persistence: persistence,

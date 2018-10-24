@@ -39,7 +39,7 @@ import (
 )
 
 type (
-	// HistoryV2PersistenceSuite contains history persistence tests
+	// HistoryPerfSuite contains history persistence tests
 	HistoryPerfSuite struct {
 		suite.Suite
 		TestBase
@@ -83,6 +83,7 @@ func (s *HistoryPerfSuite) stopProfile(startT int64, name string) {
 }
 
 /*
+TestPerf is the test entry
 === RUN   TestCassandraHistoryPerformance/TestPerf
 appendV1-batch size: 1 , time eslapsed: 3454.098 milliseconds
 appendV2-batch size: 1 , time eslapsed: 1022.303 milliseconds

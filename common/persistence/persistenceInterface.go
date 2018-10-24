@@ -89,6 +89,7 @@ type (
 		DeleteWorkflowExecutionHistory(request *DeleteWorkflowExecutionHistoryRequest) error
 	}
 
+	// HistoryV2Store is to manager workflow history events
 	HistoryV2Store interface {
 		Closeable
 		GetName() string
@@ -306,7 +307,7 @@ type (
 		BranchID string
 	}
 
-	// NewHistoryBranchResponse is a response to NewHistoryBranchRequest
+	// InternalNewHistoryBranchResponse is a response to NewHistoryBranchRequest
 	InternalNewHistoryBranchResponse struct {
 		//BranchInfo represents a branch
 		BranchInfo workflow.HistoryBranch
