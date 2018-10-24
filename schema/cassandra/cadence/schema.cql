@@ -35,8 +35,6 @@ CREATE TYPE workflow_execution (
   execution_context                blob,
   state                            int,  -- enum WorkflowState {Created, Running, Completed}
   close_status                     int,  -- enum WorkflowCloseStatus {None, Completed, Failed, Canceled, Terminated, ContinuedAsNew, TimedOut}
-  last_first_event_id              bigint,
-  next_event_id                    bigint,
   last_processed_event             bigint,
   start_time                       timestamp,
   last_updated_time                timestamp,
@@ -63,6 +61,21 @@ CREATE TYPE workflow_execution (
   expiration_time                  timestamp, -- retry expiration time
   max_attempts                     int,    -- max number of attempts including initial non-retry attempt
   non_retriable_errors             list<text>,
+  events_table_version             int, -- to indicates which events table is using
+  current_reset_version            int, -- works with eventsV2
+  history_tree_id                  uuid, -- for eventsV2
+  history_branches                 map<int, frozen<history_branch_info>> -- map from reset_version to the associated branch infomation
+
+  history_size                     bigint, --deprecated in eventsV2 in favor of history_branch_info
+  last_first_event_id              bigint, --deprecated in eventsV2 in favor of history_branch_info
+  next_event_id                    bigint, --deprecated in eventsV2 in favor of history_branch_info
+);
+
+-- History branch information
+CREATE TYPE history_branch_info (
+  branch_token                     blob,
+  next_event_id                    bigint,
+  last_first_event_id              bigint,
   history_size                     bigint,
 );
 

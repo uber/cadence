@@ -25,3 +25,10 @@ CREATE TABLE history_tree (
 ) WITH COMPACTION = {
   'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'
 };
+
+--- using eventsV2
+ALTER TYPE workflow_execution ADD  events_table_version             int;
+ALTER TYPE workflow_execution ADD  current_reset_version            int;
+ALTER TYPE workflow_execution ADD  history_tree_id                  uuid;
+ALTER TYPE workflow_execution ADD  history_branches                 map<int, frozen<history_branch_info>>;
+
