@@ -37,5 +37,5 @@ CREATE TYPE history_branch_info (
 ALTER TYPE workflow_execution ADD  events_table_version             int;
 ALTER TYPE workflow_execution ADD  current_reset_version            int;
 ALTER TYPE workflow_execution ADD  history_tree_id                  uuid;
-ALTER TYPE workflow_execution ADD  history_branches                 map<int, frozen<history_branch_info>>;
+ALTER TYPE workflow_execution ADD  history_branches                 frozen<map<int, history_branch_info>>;
 

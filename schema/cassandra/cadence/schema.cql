@@ -64,7 +64,7 @@ CREATE TYPE workflow_execution (
   events_table_version             int, -- to indicates which events table is using
   current_reset_version            int, -- works with eventsV2
   history_tree_id                  uuid, -- for eventsV2
-  history_branches                 map<int, frozen<history_branch_info>> -- map from reset_version to the associated branch infomation
+  history_branches                 frozen<map<int, history_branch_info>> -- map from reset_version to the associated branch infomation
 
   history_size                     bigint, --deprecated in eventsV2 in favor of history_branch_info
   last_first_event_id              bigint, --deprecated in eventsV2 in favor of history_branch_info
