@@ -149,6 +149,10 @@ func (m *executionManagerImpl) DeserializeExecutionInfo(info *InternalWorkflowEx
 		ExpirationTime:               info.ExpirationTime,
 		MaximumAttempts:              info.MaximumAttempts,
 		NonRetriableErrors:           info.NonRetriableErrors,
+		EventsTableVersion:           info.EventsTableVersion,
+		CurrentResetVersion:          info.CurrentResetVersion,
+		HistoryTreeID:                info.HistoryTreeID,
+		HistoryBranches:              info.HistoryBranches,
 	}
 	return newInfo, nil
 }
@@ -486,6 +490,10 @@ func (m *executionManagerImpl) SerializeExecutionInfo(info *WorkflowExecutionInf
 		ExpirationTime:               info.ExpirationTime,
 		MaximumAttempts:              info.MaximumAttempts,
 		NonRetriableErrors:           info.NonRetriableErrors,
+		EventsTableVersion:           info.EventsTableVersion,
+		CurrentResetVersion:          info.CurrentResetVersion,
+		HistoryTreeID:                info.HistoryTreeID,
+		HistoryBranches:              info.HistoryBranches,
 	}, nil
 }
 

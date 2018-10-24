@@ -251,7 +251,7 @@ type (
 		ExpirationTime     time.Time
 		MaximumAttempts    int32
 		NonRetriableErrors []string
-		//
+		// events V2 related
 		EventsTableVersion  int32
 		CurrentResetVersion int32
 		HistoryTreeID       string
