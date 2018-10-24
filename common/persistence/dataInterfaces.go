@@ -251,6 +251,18 @@ type (
 		ExpirationTime     time.Time
 		MaximumAttempts    int32
 		NonRetriableErrors []string
+		//
+		EventsTableVersion  int32
+		CurrentResetVersion int32
+		HistoryTreeID       string
+		HistoryBranches     map[int32]HistoryBranch // map from each resetVersion to the associated branch
+	}
+
+	HistoryBranch struct {
+		BranchToken      []byte
+		NextEventID      int64
+		HistorySize      int64
+		LastFirstEventID int64
 	}
 
 	// ReplicationState represents mutable state information for global domains.
@@ -635,6 +647,12 @@ type (
 		ExpirationTime              time.Time
 		MaximumAttempts             int32
 		NonRetriableErrors          []string
+		// 2 means using eventsV2, empty/0/1 means using events(V1)
+		EventsTableVersion int32
+		// for eventsV2: treeID for forking/creating new branch
+		HistoryTreeID string
+		// for eventsV2: branchToken from historyPersistence
+		BranchToken []byte
 	}
 
 	// CreateWorkflowExecutionResponse is the response to CreateWorkflowExecutionRequest
