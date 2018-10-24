@@ -115,6 +115,8 @@ type Config struct {
 
 	// encoding the history events
 	EventEncodingType dynamicconfig.StringPropertyFnWithDomainFilter
+	// whether or not using eventsV2
+	EnableEventsV2 dynamicconfig.BoolPropertyFnWithDomainFilter
 }
 
 // NewConfig returns new service config with default values
@@ -177,10 +179,9 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int) *Config {
 		ShardSyncMinInterval:                                  dc.GetDurationProperty(dynamicconfig.ShardSyncMinInterval, 5*time.Minute),
 
 		// history client: client/history/client.go set the client timeout 30s
-		LongPollExpirationInterval: dc.GetDurationPropertyFilteredByDomain(
-			dynamicconfig.HistoryLongPollExpirationInterval, time.Second*20,
-		),
-		EventEncodingType: dc.GetStringPropertyFnWithDomainFilter(dynamicconfig.DefaultEventEncoding, string(common.EncodingTypeJSON)),
+		LongPollExpirationInterval: dc.GetDurationPropertyFilteredByDomain(dynamicconfig.HistoryLongPollExpirationInterval, time.Second*20),
+		EventEncodingType:          dc.GetStringPropertyFnWithDomainFilter(dynamicconfig.DefaultEventEncoding, string(common.EncodingTypeJSON)),
+		EnableEventsV2:             dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableEventsV2, false),
 	}
 }
 

@@ -69,6 +69,7 @@ type (
 		historyCache         *historyCache
 		metricsClient        metrics.Client
 		logger               bark.Logger
+		config               *Config
 	}
 
 	// shardContextWrapper wraps ShardContext to notify transferQueueProcessor on new tasks.
@@ -123,7 +124,7 @@ var (
 
 // NewEngineWithShardContext creates an instance of history engine
 func NewEngineWithShardContext(shard ShardContext, visibilityMgr persistence.VisibilityManager,
-	matching matching.Client, historyClient hc.Client, historyEventNotifier historyEventNotifier, publisher messaging.Producer) Engine {
+	matching matching.Client, historyClient hc.Client, historyEventNotifier historyEventNotifier, publisher messaging.Producer, config *Config) Engine {
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 	shardWrapper := &shardContextWrapper{
 		currentClusterName:   currentClusterName,
@@ -147,6 +148,7 @@ func NewEngineWithShardContext(shard ShardContext, visibilityMgr persistence.Vis
 		}),
 		metricsClient:        shard.GetMetricsClient(),
 		historyEventNotifier: historyEventNotifier,
+		config:               config,
 	}
 	txProcessor := newTransferQueueProcessor(shard, historyEngImpl, visibilityMgr, matching, historyClient, logger)
 	historyEngImpl.timerProcessor = newTimerQueueProcessor(shard, historyEngImpl, matching, logger)
@@ -331,17 +333,23 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 		VisibilityTimestamp: e.shard.GetTimeSource().Now().Add(duration),
 	}}
 
+	useEventsV2 := e.config.EnableEventsV2(request.GetDomain())
 	var historySize int
-	historySize, err = e.shard.AppendHistoryEvents(&persistence.AppendHistoryEventsRequest{
-		DomainID:  domainID,
-		Execution: execution,
-		// It is ok to use 0 for TransactionID because RunID is unique so there are
-		// no potential duplicates to override.
-		TransactionID:     0,
-		FirstEventID:      startedEvent.GetEventId(),
-		EventBatchVersion: startedEvent.GetVersion(),
-		Events:            msBuilder.GetHistoryBuilder().GetHistory().Events,
-	})
+	if useEventsV2 {
+
+	} else {
+		historySize, err = e.shard.AppendHistoryEvents(&persistence.AppendHistoryEventsRequest{
+			DomainID:  domainID,
+			Execution: execution,
+			// It is ok to use 0 for TransactionID because RunID is unique so there are
+			// no potential duplicates to override.
+			TransactionID:     0,
+			FirstEventID:      startedEvent.GetEventId(),
+			EventBatchVersion: startedEvent.GetVersion(),
+			Events:            msBuilder.GetHistoryBuilder().GetHistory().Events,
+		})
+	}
+
 	if err != nil {
 		return nil, err
 	}
