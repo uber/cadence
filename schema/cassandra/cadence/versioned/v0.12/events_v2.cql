@@ -26,6 +26,13 @@ CREATE TABLE history_tree (
   'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'
 };
 
+CREATE TYPE history_branch_info (
+  branch_token                     blob,
+  next_event_id                    bigint,
+  last_first_event_id              bigint,
+  history_size                     bigint,
+);
+
 --- using eventsV2
 ALTER TYPE workflow_execution ADD  events_table_version             int;
 ALTER TYPE workflow_execution ADD  current_reset_version            int;
