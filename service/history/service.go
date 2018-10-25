@@ -250,12 +250,19 @@ func (s *Service) Start() {
 		log.Fatalf("Creating Cassandra history manager persistence failed: %v", err)
 	}
 
+	historyV2, err := pFactory.NewHistoryV2Manager()
+	if err != nil {
+		// TODO change this to Fatalf when SQL also support eventsV2
+		log.Warnf("Creating Cassandra historyV2 manager persistence failed: %v, cannot use eventsV2 features", err)
+	}
+
 	handler := NewHandler(base,
 		s.config,
 		shardMgr,
 		metadata,
 		visibility,
 		history,
+		historyV2,
 		pFactory)
 
 	handler.Start()

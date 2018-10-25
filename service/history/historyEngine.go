@@ -336,6 +336,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 	useEventsV2 := e.config.EnableEventsV2(request.GetDomain())
 	var historySize int
 	if useEventsV2 {
+		historyV2Mgr := e.shard.GetHistoryV2Manager()
 
 	} else {
 		historySize, err = e.shard.AppendHistoryEvents(&persistence.AppendHistoryEventsRequest{

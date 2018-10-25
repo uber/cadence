@@ -51,6 +51,7 @@ type (
 		metadataMgr           persistence.MetadataManager
 		visibilityMgr         persistence.VisibilityManager
 		historyMgr            persistence.HistoryManager
+		historyV2Mgr          persistence.HistoryV2Manager
 		executionMgrFactory   persistence.ExecutionManagerFactory
 		domainCache           cache.DomainCache
 		historyServiceClient  hc.Client
@@ -86,13 +87,15 @@ var (
 // NewHandler creates a thrift handler for the history service
 func NewHandler(sVice service.Service, config *Config, shardManager persistence.ShardManager,
 	metadataMgr persistence.MetadataManager, visibilityMgr persistence.VisibilityManager,
-	historyMgr persistence.HistoryManager, executionMgrFactory persistence.ExecutionManagerFactory) *Handler {
+	historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager,
+	executionMgrFactory persistence.ExecutionManagerFactory) *Handler {
 	handler := &Handler{
 		Service:             sVice,
 		config:              config,
 		shardManager:        shardManager,
 		metadataMgr:         metadataMgr,
 		historyMgr:          historyMgr,
+		historyV2Mgr:        historyV2Mgr,
 		visibilityMgr:       visibilityMgr,
 		executionMgrFactory: executionMgrFactory,
 		tokenSerializer:     common.NewJSONTaskTokenSerializer(),
@@ -140,7 +143,7 @@ func (h *Handler) Start() error {
 
 	h.domainCache = cache.NewDomainCache(h.metadataMgr, h.GetClusterMetadata(), h.GetMetricsClient(), h.GetLogger())
 	h.domainCache.Start()
-	h.controller = newShardController(h.Service, h.GetHostInfo(), hServiceResolver, h.shardManager, h.historyMgr,
+	h.controller = newShardController(h.Service, h.GetHostInfo(), hServiceResolver, h.shardManager, h.historyMgr, h.historyV2Mgr,
 		h.domainCache, h.executionMgrFactory, h, h.config, h.GetLogger(), h.GetMetricsClient())
 	h.metricsClient = h.GetMetricsClient()
 	h.historyEventNotifier = newHistoryEventNotifier(h.GetMetricsClient(), h.config.GetShardID)
@@ -157,6 +160,7 @@ func (h *Handler) Stop() {
 	h.controller.Stop()
 	h.shardManager.Close()
 	h.historyMgr.Close()
+	h.historyV2Mgr.Close()
 	h.executionMgrFactory.Close()
 	h.metadataMgr.Close()
 	h.visibilityMgr.Close()

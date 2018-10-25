@@ -44,6 +44,7 @@ type (
 		GetService() service.Service
 		GetExecutionManager() persistence.ExecutionManager
 		GetHistoryManager() persistence.HistoryManager
+		GetHistoryV2Manager() persistence.HistoryV2Manager
 		GetDomainCache() cache.DomainCache
 		GetNextTransferTaskID() (int64, error)
 		GetTransferMaxReadLevel() int64
@@ -89,6 +90,7 @@ type (
 		rangeID          int64
 		shardManager     persistence.ShardManager
 		historyMgr       persistence.HistoryManager
+		historyV2Mgr     persistence.HistoryV2Manager
 		executionManager persistence.ExecutionManager
 		domainCache      cache.DomainCache
 		closeCh          chan<- int
@@ -131,6 +133,10 @@ func (s *shardContextImpl) GetExecutionManager() persistence.ExecutionManager {
 
 func (s *shardContextImpl) GetHistoryManager() persistence.HistoryManager {
 	return s.historyMgr
+}
+
+func (s *shardContextImpl) GetHistoryV2Manager() persistence.HistoryV2Manager {
+	return s.historyV2Mgr
 }
 
 func (s *shardContextImpl) GetDomainCache() cache.DomainCache {
@@ -941,6 +947,7 @@ func acquireShard(shardItem *historyShardsItem, closeCh chan<- int) (ShardContex
 		service:                   shardItem.service,
 		shardManager:              shardItem.shardMgr,
 		historyMgr:                shardItem.historyMgr,
+		historyV2Mgr:              shardItem.historyV2Mgr,
 		executionManager:          shardItem.executionMgr,
 		domainCache:               shardItem.domainCache,
 		shardInfo:                 updatedShardInfo,
