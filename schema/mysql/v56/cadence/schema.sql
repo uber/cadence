@@ -138,7 +138,7 @@ CREATE TABLE buffered_events (
 CREATE INDEX buffered_events_by_events_ids ON buffered_events(shard_id, domain_id, workflow_id, run_id);
 
 CREATE TABLE tasks (
-  shard_id INT NOT NULL,
+  shard_id INT NOT NULL DEFAULT 0,
   domain_id CHAR(64) NOT NULL,
   workflow_id VARCHAR(255) NOT NULL,
   run_id CHAR(64) NOT NULL,
@@ -317,7 +317,7 @@ next_event_id BIGINT NOT NULL,
 history BLOB,
 history_encoding VARCHAR(64) NOT NULL,
 new_run_history BLOB,
-new_run_history_encoding VARCHAR(64) NOT NULL,
+new_run_history_encoding VARCHAR(64) NOT NULL DEFAULT 'json',
 PRIMARY KEY (shard_id, domain_id, workflow_id, run_id, first_event_id)
 );
 
