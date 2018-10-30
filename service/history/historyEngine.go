@@ -107,6 +107,8 @@ var (
 	ErrDeserializingToken = &workflow.BadRequestError{Message: "Error deserializing task token."}
 	// ErrSignalOverSize is the error to indicate signal input size is > 256K
 	ErrSignalOverSize = &workflow.BadRequestError{Message: "Signal input size is over 256K."}
+	// ErrTerminateTooEarly is the error to terminate a WF that just started
+	ErrTerminateTooEarly = &workflow.BadRequestError{Message: "Cannot terminate a WF that just get started"}
 	// ErrCancellationAlreadyRequested is the error indicating cancellation for target workflow is already requested
 	ErrCancellationAlreadyRequested = &workflow.CancellationAlreadyRequestedError{Message: "Cancellation already requested for this workflow execution."}
 	// ErrBufferedEventsLimitExceeded is the error indicating limit reached for maximum number of buffered events
@@ -2321,6 +2323,10 @@ Update_History_Loop:
 		msBuilder, err1 := context.loadWorkflowExecution()
 		if err1 != nil {
 			return err1
+		}
+		// terminating a WF that just get started would be wasting resources, and causing problem without eventsV2
+		if time.Now().Before(msBuilder.GetExecutionInfo().StartTimestamp.Add(time.Second * 3)) {
+			return ErrTerminateTooEarly
 		}
 		tBuilder := e.getTimerBuilder(&context.workflowExecution)
 
