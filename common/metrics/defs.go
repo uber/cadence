@@ -784,6 +784,8 @@ const (
 	DomainCacheBeforeCallbackLatency
 	DomainCacheAfterCallbackLatency
 
+	HistorySize
+
 	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
 
@@ -872,7 +874,6 @@ const (
 	CacheMissCounter
 	AcquireLockFailedCounter
 	WorkflowContextCleared
-	HistorySize
 	MutableStateSize
 	ExecutionInfoSize
 	ActivityInfoSize
