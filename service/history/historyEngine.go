@@ -59,6 +59,7 @@ type (
 		currentClusterName   string
 		shard                ShardContext
 		historyMgr           persistence.HistoryManager
+		historyV2Mgr         persistence.HistoryV2Manager
 		executionManager     persistence.ExecutionManager
 		txProcessor          transferQueueProcessor
 		timerProcessor       timerQueueProcessor
@@ -135,11 +136,13 @@ func NewEngineWithShardContext(shard ShardContext, visibilityMgr persistence.Vis
 	logger := shard.GetLogger()
 	executionManager := shard.GetExecutionManager()
 	historyManager := shard.GetHistoryManager()
+	historyV2Manager := shard.GetHistoryV2Manager()
 	historyCache := newHistoryCache(shard)
 	historyEngImpl := &historyEngineImpl{
 		currentClusterName: currentClusterName,
 		shard:              shard,
 		historyMgr:         historyManager,
+		historyV2Mgr:       historyV2Manager,
 		executionManager:   executionManager,
 		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
 		historyCache:       historyCache,
@@ -334,11 +337,31 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 	}}
 
 	useEventsV2 := e.config.EnableEventsV2(request.GetDomain())
+	var treeID string
+	var branchToken []byte
 	var historySize int
+	var eventsTableVersion int32
 	if useEventsV2 {
+		eventsTableVersion = 2
 		historyV2Mgr := e.shard.GetHistoryV2Manager()
-
+		treeID = uuid.New()
+		resp0, err := historyV2Mgr.NewHistoryBranch(&persistence.NewHistoryBranchRequest{
+			TreeID: treeID,
+		})
+		if err != nil {
+			return nil, err
+		}
+		branchToken = resp0.BranchToken
+		historySize, err = e.shard.AppendHistoryV2Events(&persistence.AppendHistoryNodesRequest{
+			BranchToken:   branchToken,
+			Events:        msBuilder.GetHistoryBuilder().GetHistory().Events,
+			TransactionID: 0,
+		}, domainID)
+		if err != nil {
+			return nil, err
+		}
 	} else {
+		eventsTableVersion = 1
 		historySize, err = e.shard.AppendHistoryEvents(&persistence.AppendHistoryEventsRequest{
 			DomainID:  domainID,
 			Execution: execution,
@@ -405,6 +428,9 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 			PreviousLastWriteVersion:    prevLastWriteVersion,
 			ReplicationState:            replicationState,
 			HasRetryPolicy:              request.RetryPolicy != nil,
+			EventsTableVersion:          eventsTableVersion,
+			HistoryTreeID:               treeID,
+			BranchToken:                 branchToken,
 		}
 		createRequest.CreateWorkflowMode = persistence.CreateWorkflowModeBrandNew
 		if !isBrandNew {
@@ -428,11 +454,11 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 			switch t := err.(type) {
 			case *persistence.WorkflowExecutionAlreadyStartedError:
 				if t.StartRequestID == common.StringDefault(request.RequestId) {
-					e.deleteEvents(domainID, execution)
+					e.deleteEvents(domainID, execution, useEventsV2, branchToken)
 					return t.RunID, nil
 				}
 			case *persistence.ShardOwnershipLostError:
-				e.deleteEvents(domainID, execution)
+				e.deleteEvents(domainID, execution, useEventsV2, branchToken)
 			}
 			return "", err
 		}
@@ -453,8 +479,28 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 			)
 		}
 
-		err = e.applyWorkflowIDReusePolicy(errExist, domainID, execution, startRequest.StartRequest.GetWorkflowIdReusePolicy())
+		err = e.applyWorkflowIDReusePolicy(errExist, domainID, execution, startRequest.StartRequest.GetWorkflowIdReusePolicy(), useEventsV2, branchToken)
 		if err == nil {
+
+			// for eventsV2 only: we need to fork a new branch with the old treeID if that exists, instead of using the new treeID we generated
+			if useEventsV2 && len(errExist.TreeID) > 0 {
+				e.deleteEvents(domainID, execution, useEventsV2, branchToken)
+				treeID = errExist.TreeID
+				resp, err := e.historyV2Mgr.NewHistoryBranch(&persistence.NewHistoryBranchRequest{TreeID: treeID})
+				if err != nil {
+					return nil, err
+				}
+				branchToken = resp.BranchToken
+				historySize, err = e.shard.AppendHistoryV2Events(&persistence.AppendHistoryNodesRequest{
+					BranchToken:   branchToken,
+					Events:        msBuilder.GetHistoryBuilder().GetHistory().Events,
+					TransactionID: 0,
+				}, domainID)
+				if err != nil {
+					return nil, err
+				}
+			}
+
 			isBrandNew = false
 			resultRunID, err = createWorkflow(isBrandNew, errExist.RunID, errExist.LastWriteVersion)
 		}
@@ -2478,15 +2524,21 @@ func (e *historyEngineImpl) createRecordDecisionTaskStartedResponse(domainID str
 	return response
 }
 
-func (e *historyEngineImpl) deleteEvents(domainID string, execution workflow.WorkflowExecution) {
+func (e *historyEngineImpl) deleteEvents(domainID string, execution workflow.WorkflowExecution, useEventsV2 bool, branchToken []byte) {
 	// We created the history events but failed to create workflow execution, so cleanup the history which could cause
 	// us to leak history events which are never cleaned up. Cleaning up the events is absolutely safe here as they
 	// are always created for a unique run_id which is not visible beyond this call yet.
 	// TODO: Handle error on deletion of execution history
-	e.historyMgr.DeleteWorkflowExecutionHistory(&persistence.DeleteWorkflowExecutionHistoryRequest{
-		DomainID:  domainID,
-		Execution: execution,
-	})
+	if useEventsV2 {
+		e.historyV2Mgr.DeleteHistoryBranch(&persistence.DeleteHistoryBranchRequest{
+			BranchToken: branchToken,
+		})
+	} else {
+		e.historyMgr.DeleteWorkflowExecutionHistory(&persistence.DeleteWorkflowExecutionHistoryRequest{
+			DomainID:  domainID,
+			Execution: execution,
+		})
+	}
 }
 
 func (e *historyEngineImpl) failDecision(context *workflowExecutionContext, scheduleID, startedID int64,
@@ -2949,54 +3001,54 @@ func setTaskInfo(version int64, timestamp time.Time, transferTasks []persistence
 
 // for startWorkflowExecution to handle workflow reuse policy
 func (e *historyEngineImpl) applyWorkflowIDReusePolicy(err *persistence.WorkflowExecutionAlreadyStartedError,
-	domainID string, execution workflow.WorkflowExecution, wfIDReusePolicy workflow.WorkflowIdReusePolicy) error {
+	domainID string, execution workflow.WorkflowExecution, wfIDReusePolicy workflow.WorkflowIdReusePolicy, useEventsV2 bool, branchToken []byte) error {
 	// set the prev run ID for database conditional update
 	prevStartRequestID := err.StartRequestID
 	prevRunID := err.RunID
 	prevState := err.State
 	prevCloseState := err.CloseStatus
 
-	return e.applyWorkflowIDReusePolicyHelper(prevStartRequestID, prevRunID, prevState, prevCloseState, domainID, execution, wfIDReusePolicy)
+	return e.applyWorkflowIDReusePolicyHelper(prevStartRequestID, prevRunID, prevState, prevCloseState, domainID, execution, wfIDReusePolicy, useEventsV2, branchToken)
 }
 
 // for signalWithStart to handle workflow reuse policy
 func (e *historyEngineImpl) applyWorkflowIDReusePolicyForSigStart(prevExecutionInfo *persistence.WorkflowExecutionInfo,
-	domainID string, execution workflow.WorkflowExecution, wfIDReusePolicy workflow.WorkflowIdReusePolicy) error {
+	domainID string, execution workflow.WorkflowExecution, wfIDReusePolicy workflow.WorkflowIdReusePolicy, useEventsV2 bool, branchToken []byte) error {
 
 	prevStartRequestID := prevExecutionInfo.CreateRequestID
 	prevRunID := prevExecutionInfo.RunID
 	prevState := prevExecutionInfo.State
 	prevCloseState := prevExecutionInfo.CloseStatus
 
-	return e.applyWorkflowIDReusePolicyHelper(prevStartRequestID, prevRunID, prevState, prevCloseState, domainID, execution, wfIDReusePolicy)
+	return e.applyWorkflowIDReusePolicyHelper(prevStartRequestID, prevRunID, prevState, prevCloseState, domainID, execution, wfIDReusePolicy, useEventsV2, branchToken)
 
 }
 
 func (e *historyEngineImpl) applyWorkflowIDReusePolicyHelper(prevStartRequestID, prevRunID string, prevState, prevCloseState int,
-	domainID string, execution workflow.WorkflowExecution, wfIDReusePolicy workflow.WorkflowIdReusePolicy) error {
+	domainID string, execution workflow.WorkflowExecution, wfIDReusePolicy workflow.WorkflowIdReusePolicy, useEventsV2 bool, branchToken []byte) error {
 
 	// here we know there is some information about the prev workflow, i.e. either running right now
 	// or has history check if the this workflow is finished
 	if prevState != persistence.WorkflowStateCompleted {
-		e.deleteEvents(domainID, execution)
+		e.deleteEvents(domainID, execution, useEventsV2, branchToken)
 		msg := "Workflow execution is already running. WorkflowId: %v, RunId: %v."
 		return getWorkflowAlreadyStartedError(msg, prevStartRequestID, execution.GetWorkflowId(), prevRunID)
 	}
 	switch wfIDReusePolicy {
 	case workflow.WorkflowIdReusePolicyAllowDuplicateFailedOnly:
 		if _, ok := FailedWorkflowCloseState[prevCloseState]; !ok {
-			e.deleteEvents(domainID, execution)
+			e.deleteEvents(domainID, execution, useEventsV2, branchToken)
 			msg := "Workflow execution already finished successfully. WorkflowId: %v, RunId: %v. Workflow ID reuse policy: allow duplicate workflow ID if last run failed."
 			return getWorkflowAlreadyStartedError(msg, prevStartRequestID, execution.GetWorkflowId(), prevRunID)
 		}
 	case workflow.WorkflowIdReusePolicyAllowDuplicate:
 		// as long as workflow not running, so this case has no check
 	case workflow.WorkflowIdReusePolicyRejectDuplicate:
-		e.deleteEvents(domainID, execution)
+		e.deleteEvents(domainID, execution, useEventsV2, branchToken)
 		msg := "Workflow execution already finished. WorkflowId: %v, RunId: %v. Workflow ID reuse policy: reject duplicate workflow ID."
 		return getWorkflowAlreadyStartedError(msg, prevStartRequestID, execution.GetWorkflowId(), prevRunID)
 	default:
-		e.deleteEvents(domainID, execution)
+		e.deleteEvents(domainID, execution, useEventsV2, branchToken)
 		return &workflow.InternalServiceError{Message: "Failed to process start workflow reuse policy."}
 	}
 

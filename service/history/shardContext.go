@@ -71,6 +71,7 @@ type (
 		UpdateWorkflowExecution(request *persistence.UpdateWorkflowExecutionRequest) (*persistence.UpdateWorkflowExecutionResponse, error)
 		ResetMutableState(request *persistence.ResetMutableStateRequest) error
 		AppendHistoryEvents(request *persistence.AppendHistoryEventsRequest) (int, error)
+		AppendHistoryV2Events(request *persistence.AppendHistoryNodesRequest, domainID string) (int, error)
 		NotifyNewHistoryEvent(event *historyEventNotification) error
 		GetConfig() *Config
 		GetLogger() bark.Logger
@@ -587,6 +588,23 @@ Reset_Loop:
 	}
 
 	return ErrMaxAttemptsExceeded
+}
+
+func (s *shardContextImpl) AppendHistoryV2Events(request *persistence.AppendHistoryNodesRequest, domainID string) (int, error) {
+	encoding, err := s.getDefaultEncoding(domainID)
+	if err != nil {
+		return 0, err
+	}
+	request.Encoding = encoding
+	size := 0
+	defer func() {
+		s.metricsClient.RecordTimer(metrics.SessionSizeStatsScope, metrics.HistorySize, time.Duration(size))
+	}()
+	resp, err0 := s.historyV2Mgr.AppendHistoryNodes(request)
+	if resp != nil {
+		size = resp.Size
+	}
+	return size, err0
 }
 
 func (s *shardContextImpl) AppendHistoryEvents(request *persistence.AppendHistoryEventsRequest) (int, error) {

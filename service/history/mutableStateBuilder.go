@@ -86,7 +86,7 @@ type (
 	}
 )
 
-//var _ mutableState = (mutableStateBuilder)(nil)
+var _ mutableState = (*mutableStateBuilder)(nil)
 
 func newMutableStateBuilder(currentCluster string, config *Config, logger bark.Logger) *mutableStateBuilder {
 	s := &mutableStateBuilder{
