@@ -2269,7 +2269,7 @@ func (wh *WorkflowHandler) getHistory(scope int, domainID string, execution gen.
 				logging.TagWorkflowRunID:       execution.GetRunId(),
 				logging.TagDomainID:            domainID,
 				logging.TagSize:                response.Size,
-			})
+			}).Warn("GetHistory size threshold breached")
 		}
 	}
 
