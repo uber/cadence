@@ -2175,7 +2175,7 @@ func (e *historyEngineImpl) RemoveSignalMutableState(ctx context.Context, reques
 		})
 }
 
-func (e *historyEngineImpl) TerminateWorkflowExecution(ctx context.Context, terminateRequest *h.TerminateWorkflowExecutionRequest) error {
+func (e *historyEngineImpl) TerminateWorkflowExecution(ctx context.Context, terminateRequest *h.TerminateWorkflowExecutionRequest) (retError error) {
 
 	domainEntry, err := e.getActiveDomainEntry(terminateRequest.DomainUUID)
 	if err != nil {
@@ -2187,6 +2187,20 @@ func (e *historyEngineImpl) TerminateWorkflowExecution(ctx context.Context, term
 	execution := workflow.WorkflowExecution{
 		WorkflowId: request.WorkflowExecution.WorkflowId,
 		RunId:      request.WorkflowExecution.RunId,
+	}
+
+	context, release, err0 := e.historyCache.getOrCreateWorkflowExecutionWithTimeout(ctx, domainID, execution)
+	if err0 != nil {
+		return err0
+	}
+	defer func() { release(retError) }()
+	msBuilder, retError := context.loadWorkflowExecution()
+	if retError != nil {
+		return retError
+	}
+	// terminating a WF that just get started would be wasting resources, and causing problem without eventsV2
+	if time.Now().Before(msBuilder.GetExecutionInfo().StartTimestamp.Add(time.Second * 3)) {
+		return ErrTerminateTooEarly
 	}
 
 	return e.updateWorkflowExecution(ctx, domainID, execution, true, false,
@@ -2323,10 +2337,6 @@ Update_History_Loop:
 		msBuilder, err1 := context.loadWorkflowExecution()
 		if err1 != nil {
 			return err1
-		}
-		// terminating a WF that just get started would be wasting resources, and causing problem without eventsV2
-		if time.Now().Before(msBuilder.GetExecutionInfo().StartTimestamp.Add(time.Second * 3)) {
-			return ErrTerminateTooEarly
 		}
 		tBuilder := e.getTimerBuilder(&context.workflowExecution)
 
