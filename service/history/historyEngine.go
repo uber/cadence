@@ -2175,7 +2175,24 @@ func (e *historyEngineImpl) RemoveSignalMutableState(ctx context.Context, reques
 		})
 }
 
-func (e *historyEngineImpl) TerminateWorkflowExecution(ctx context.Context, terminateRequest *h.TerminateWorkflowExecutionRequest) (retError error) {
+func (e *historyEngineImpl) validateTerminateRequest(ctx context.Context, domainID string, execution workflow.WorkflowExecution) (retError error) {
+	context, release, err0 := e.historyCache.getOrCreateWorkflowExecutionWithTimeout(ctx, domainID, execution)
+	if err0 != nil {
+		return err0
+	}
+	defer func() { release(retError) }()
+	msBuilder, retError := context.loadWorkflowExecution()
+	if retError != nil {
+		return retError
+	}
+	// terminating a WF that just get started would be wasting resources, and causing problem without eventsV2
+	if time.Now().Before(msBuilder.GetExecutionInfo().StartTimestamp.Add(time.Second * 3)) {
+		return ErrTerminateTooEarly
+	}
+	return nil
+}
+
+func (e *historyEngineImpl) TerminateWorkflowExecution(ctx context.Context, terminateRequest *h.TerminateWorkflowExecutionRequest) error {
 
 	domainEntry, err := e.getActiveDomainEntry(terminateRequest.DomainUUID)
 	if err != nil {
@@ -2189,18 +2206,8 @@ func (e *historyEngineImpl) TerminateWorkflowExecution(ctx context.Context, term
 		RunId:      request.WorkflowExecution.RunId,
 	}
 
-	context, release, err0 := e.historyCache.getOrCreateWorkflowExecutionWithTimeout(ctx, domainID, execution)
-	if err0 != nil {
-		return err0
-	}
-	defer func() { release(retError) }()
-	msBuilder, retError := context.loadWorkflowExecution()
-	if retError != nil {
-		return retError
-	}
-	// terminating a WF that just get started would be wasting resources, and causing problem without eventsV2
-	if time.Now().Before(msBuilder.GetExecutionInfo().StartTimestamp.Add(time.Second * 3)) {
-		return ErrTerminateTooEarly
+	if err = e.validateTerminateRequest(ctx, domainID, execution); err != nil {
+		return err
 	}
 
 	return e.updateWorkflowExecution(ctx, domainID, execution, true, false,
