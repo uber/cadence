@@ -177,6 +177,22 @@ func (e *mutableStateBuilder) Load(state *persistence.WorkflowMutableState) {
 	}
 }
 
+//TODO
+func (e *mutableStateBuilder) GetEventsTableVersion() int32 {
+	return int32(0)
+}
+
+//TODO
+func (e *mutableStateBuilder) GetCurrentBranch() []byte {
+	return nil
+}
+
+//TODO
+// set eventsTableVersion/treeID/historyBranches
+func (e *mutableStateBuilder) InitializeEventsV2Info(treeID string, initialBranchToken []byte) {
+
+}
+
 func (e *mutableStateBuilder) IncrementHistorySize(appendSize int) {
 	e.executionInfo.HistorySize += int64(appendSize)
 }

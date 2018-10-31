@@ -119,9 +119,12 @@ type (
 		GetChildExecutionStartedEvent(int64) (*workflow.HistoryEvent, bool)
 		GetCompletionEvent() (*workflow.HistoryEvent, bool)
 		GetContinueAsNew() *persistence.CreateWorkflowExecutionRequest
+		GetCurrentBranch() []byte
 		GetCurrentVersion() int64
 		GetExecutionInfo() *persistence.WorkflowExecutionInfo
+		GetEventsTableVersion() int32
 		GetHistoryBuilder() *historyBuilder
+		GetHistorySize() int64
 		GetInFlightDecisionTask() (*decisionInfo, bool)
 		GetLastFirstEventID() int64
 		GetLastUpdatedTimestamp() int64
@@ -145,7 +148,7 @@ type (
 		HasParentExecution() bool
 		HasPendingDecisionTask() bool
 		IncrementHistorySize(int)
-		GetHistorySize() int64
+		InitializeEventsV2Info(treeID string, initialBranchToken []byte)
 		IsCancelRequested() (bool, string)
 		IsSignalRequested(requestID string) bool
 		IsStickyTaskListEnabled() bool

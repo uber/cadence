@@ -583,7 +583,7 @@ func (h *Handler) StartWorkflowExecution(ctx context.Context,
 		return nil, err1
 	}
 
-	response, err2 := engine.StartWorkflowExecution(wrappedRequest)
+	response, err2 := engine.StartWorkflowExecution(ctx, wrappedRequest)
 	if err2 != nil {
 		tmpErr := h.convertError(err2)
 		h.updateErrorMetric(scope, tmpErr)

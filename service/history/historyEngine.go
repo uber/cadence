@@ -38,6 +38,7 @@ import (
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/cluster"
 	ce "github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/logging"
 	"github.com/uber/cadence/common/messaging"
@@ -253,41 +254,41 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 	)
 }
 
-// StartWorkflowExecution starts a workflow execution
-func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflowExecutionRequest) (
-	*workflow.StartWorkflowExecutionResponse, error) {
-	domainEntry, err := e.getActiveDomainEntry(startRequest.DomainUUID)
-	if err != nil {
-		return nil, err
-	}
-	domainID := domainEntry.GetInfo().ID
-
-	request := startRequest.StartRequest
-	err = validateStartWorkflowExecutionRequest(request)
-	if err != nil {
-		return nil, err
-	}
-
-	execution := workflow.WorkflowExecution{
-		WorkflowId: request.WorkflowId,
-		RunId:      common.StringPtr(uuid.New()),
-	}
-
-	var parentExecution *workflow.WorkflowExecution
-	initiatedID := common.EmptyEventID
-	parentDomainID := ""
-	parentInfo := startRequest.ParentExecutionInfo
+func getParentInfo(parentInfo *h.ParentExecutionInfo) (*workflow.WorkflowExecution, int64, string, *h.ParentExecutionInfo) {
 	if parentInfo != nil {
-		parentDomainID = *parentInfo.DomainUUID
-		parentExecution = parentInfo.Execution
-		initiatedID = *parentInfo.InitiatedId
+		return parentInfo.Execution, *parentInfo.InitiatedId, *parentInfo.DomainUUID, parentInfo
+	} else {
+		return nil, common.EmptyEventID, "", parentInfo
 	}
+}
 
-	clusterMetadata := e.shard.GetService().GetClusterMetadata()
+func isBrandNewNeeded(context *workflowExecutionContext, ctxError error) (mutableState, bool, error) {
+	if ctxError != nil {
+		if _, ok := ctxError.(*workflow.EntityNotExistsError); !ok {
+			return nil, false, ctxError
+		}
+		// for EntityNotExistsError, we will create brandly new execution
+		return nil, true, nil
+	} else {
+		msBuilder, loadErr := context.loadWorkflowExecution()
+		if loadErr != nil {
+			if _, ok := loadErr.(*workflow.EntityNotExistsError); !ok {
+				return nil, false, ctxError
+			}
+			// for EntityNotExistsError, we will create brandly new execution
+			return nil, true, nil
+		}
+		if msBuilder.IsWorkflowExecutionRunning() {
+			msg := "Workflow execution is already running. WorkflowId: %v, RunId: %v."
+			execInfo := msBuilder.GetExecutionInfo()
+			return nil, false, getWorkflowAlreadyStartedError(msg, execInfo.CreateRequestID, execInfo.WorkflowID, execInfo.RunID)
+		}
+		// we will create new run based on ID reuse policy
+		return msBuilder, false, nil
+	}
+}
 
-	// Generate first decision task event.
-	taskList := request.TaskList.GetName()
-	// TODO when the workflow is going to be replicated, use the
+func (e *historyEngineImpl) createMutableState(clusterMetadata cluster.Metadata, domainEntry *cache.DomainCacheEntry, prevMutableState mutableState) mutableState {
 	var msBuilder mutableState
 	if clusterMetadata.IsGlobalDomainEnabled() && domainEntry.IsGlobalDomain() {
 		// all workflows within a global domain should have replication state, no matter whether it will be replicated to multiple
@@ -305,6 +306,47 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 			e.logger,
 		)
 	}
+
+	return msBuilder
+}
+
+// StartWorkflowExecution starts a workflow execution
+func (e *historyEngineImpl) StartWorkflowExecution(ctx context.Context, startRequest *h.StartWorkflowExecutionRequest) (
+	resp *workflow.StartWorkflowExecutionResponse, retError error) {
+	domainEntry, err := e.getActiveDomainEntry(startRequest.DomainUUID)
+	if err != nil {
+		return nil, err
+	}
+	domainID := domainEntry.GetInfo().ID
+
+	request := startRequest.StartRequest
+	err = validateStartWorkflowExecutionRequest(request)
+	if err != nil {
+		return nil, err
+	}
+
+	execution := workflow.WorkflowExecution{
+		WorkflowId: request.WorkflowId,
+		RunId:      common.StringPtr(uuid.New()),
+	}
+
+	parentExecution, initiatedID, parentDomainID, parentInfo := getParentInfo(startRequest.ParentExecutionInfo)
+
+	context, release, ctxError := e.historyCache.getOrCreateWorkflowExecutionWithTimeout(ctx, domainID, execution)
+	if ctxError == nil {
+		defer func() { release(retError) }()
+	}
+	prevMutableState, isBrandNew, retError := isBrandNewNeeded(context, ctxError)
+	if retError != nil {
+		return
+	}
+
+	clusterMetadata := e.shard.GetService().GetClusterMetadata()
+	msBuilder := e.createMutableState(clusterMetadata, domainEntry, prevMutableState)
+
+	// Generate first decision task event.
+	taskList := request.TaskList.GetName()
+
 	startedEvent := msBuilder.AddWorkflowExecutionStartedEvent(execution, startRequest)
 	if startedEvent == nil {
 		return nil, &workflow.InternalServiceError{Message: "Failed to add workflow execution started event."}
@@ -466,7 +508,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 	}
 
 	// try to create the workflow execution
-	isBrandNew := true
+
 	resultRunID := ""
 	resultRunID, err = createWorkflow(isBrandNew, "", 0)
 	// if err still non nil, see if retry

@@ -256,7 +256,7 @@ type (
 		EventsTableVersion  int32
 		CurrentResetVersion int32
 		HistoryTreeID       string
-		HistoryBranches     map[int32]HistoryBranch // map from each resetVersion to the associated branch
+		HistoryBranches     map[int32]HistoryBranch // map from each resetVersion to the associated branch, resetVersion increase from 0
 	}
 
 	HistoryBranch struct {
