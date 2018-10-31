@@ -52,6 +52,7 @@ const (
 	activityCancelationMsgActivityIDUnknown  = "ACTIVITY_ID_UNKNOWN"
 	activityCancelationMsgActivityNotStarted = "ACTIVITY_ID_NOT_STARTED"
 	timerCancelationMsgTimerIDUnknown        = "TIMER_ID_UNKNOWN"
+	minDurationSinceStarted                  = time.Second * 3
 )
 
 type (
@@ -2186,7 +2187,7 @@ func (e *historyEngineImpl) validateTerminateRequest(ctx context.Context, domain
 		return retError
 	}
 	// terminating a WF that just get started would be wasting resources, and causing problem without eventsV2
-	if time.Now().Before(msBuilder.GetExecutionInfo().StartTimestamp.Add(time.Second * 3)) {
+	if time.Now().Before(msBuilder.GetExecutionInfo().StartTimestamp.Add(minDurationSinceStarted)) {
 		return ErrTerminateTooEarly
 	}
 	return nil
