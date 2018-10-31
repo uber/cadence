@@ -23,7 +23,6 @@ package sql
 import (
 	"database/sql"
 	"fmt"
-	"github.com/uber/cadence/common/service/config"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -497,20 +496,6 @@ VALUES (:shard_id, :domain_id, :workflow_id, :run_id, :data, :data_encoding)`
 	getBufferedEventsQuery    = `SELECT data, data_encoding FROM buffered_events WHERE
 shard_id=? AND domain_id=? AND workflow_id=? AND run_id=?`
 )
-
-// NewSQLExecutionManager creates an instance of ExecutionStore
-func NewSQLExecutionManager(cfg config.SQL, logger bark.Logger) (p.ExecutionStore, error) {
-	db, err := newConnection(cfg)
-	if err != nil {
-		return nil, err
-	}
-	return &sqlExecutionManager{
-		sqlStore: sqlStore{
-			db:     db,
-			logger: logger,
-		},
-	}, nil
-}
 
 // txExecuteShardLocked executes f under transaction and with read lock on shard row
 func (m *sqlExecutionManager) txExecuteShardLocked(operation string, rangeID int64, f func(tx *sqlx.Tx) error) error {
@@ -1458,8 +1443,8 @@ func (m *sqlExecutionManager) RangeCompleteTimerTask(request *p.RangeCompleteTim
 	return nil
 }
 
-// NewSQLMatchingPersistence creates an instance of ExecutionStore
-func NewSQLMatchingPersistence(db *sqlx.DB, logger bark.Logger, shardID int) (p.ExecutionStore, error) {
+// NewSQLExecutionStore creates an instance of ExecutionStore
+func NewSQLExecutionStore(db *sqlx.DB, logger bark.Logger, shardID int) (p.ExecutionStore, error) {
 	return &sqlExecutionManager{
 		shardID: shardID,
 		sqlStore: sqlStore{
