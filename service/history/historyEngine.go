@@ -254,14 +254,6 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 	)
 }
 
-func getParentInfo(parentInfo *h.ParentExecutionInfo) (*workflow.WorkflowExecution, int64, string, *h.ParentExecutionInfo) {
-	if parentInfo != nil {
-		return parentInfo.Execution, *parentInfo.InitiatedId, *parentInfo.DomainUUID, parentInfo
-	} else {
-		return nil, common.EmptyEventID, "", parentInfo
-	}
-}
-
 func isBrandNewNeeded(context *workflowExecutionContext, ctxError error) (mutableState, bool, error) {
 	if ctxError != nil {
 		if _, ok := ctxError.(*workflow.EntityNotExistsError); !ok {
@@ -380,15 +372,11 @@ func (e *historyEngineImpl) appendHistoryEvents(msBuilder mutableState, domainID
 	return
 }
 
-func fullfillExecutionInfo(msBuilder mutableState, domainID, parentDomainID, taskList string, execution, parentExecution workflow.WorkflowExecution, initiatedID, lastFirstEventID int64) {
+func fullfillExecutionInfo(msBuilder mutableState, domainID, taskList string, execution workflow.WorkflowExecution, lastFirstEventID int64) {
 	info := msBuilder.GetExecutionInfo()
 	info.DomainID = domainID
-	info.ParentDomainID = parentDomainID
 	info.WorkflowID = *execution.WorkflowId
 	info.RunID = *execution.RunId
-	info.ParentWorkflowID = *parentExecution.WorkflowId
-	info.ParentRunID = *parentExecution.RunId
-	info.InitiatedID = initiatedID
 	info.LastFirstEventID = lastFirstEventID
 	info.TaskList = taskList
 }
@@ -431,16 +419,23 @@ func (e *historyEngineImpl) createWorkflow(startRequest *h.StartWorkflowExecutio
 		RunId:      &currExeInfo.RunID,
 	}
 
+	var parentExecution *workflow.WorkflowExecution
+	initiatedID := common.EmptyEventID
+	parentDomainID := ""
+	parentInfo := startRequest.ParentExecutionInfo
+	if startRequest.ParentExecutionInfo != nil {
+		parentDomainID = *parentInfo.DomainUUID
+		parentExecution = parentInfo.Execution
+		initiatedID = *parentInfo.InitiatedId
+	}
+
 	createRequest := &persistence.CreateWorkflowExecutionRequest{
-		RequestID:      common.StringDefault(request.RequestId),
-		DomainID:       currExeInfo.DomainID,
-		Execution:      execution,
-		ParentDomainID: currExeInfo.ParentDomainID,
-		ParentExecution: &workflow.WorkflowExecution{
-			WorkflowId: &currExeInfo.ParentWorkflowID,
-			RunId:      &currExeInfo.ParentRunID,
-		},
-		InitiatedID:                 currExeInfo.InitiatedID,
+		RequestID:                   common.StringDefault(request.RequestId),
+		DomainID:                    currExeInfo.DomainID,
+		Execution:                   execution,
+		ParentDomainID:              parentDomainID,
+		ParentExecution:             parentExecution,
+		InitiatedID:                 initiatedID,
 		TaskList:                    *request.TaskList.Name,
 		WorkflowTypeName:            *request.WorkflowType.Name,
 		WorkflowTimeout:             *request.ExecutionStartToCloseTimeoutSeconds,
@@ -527,8 +522,6 @@ func (e *historyEngineImpl) StartWorkflowExecution(ctx context.Context, startReq
 		RunId:      common.StringPtr(uuid.New()),
 	}
 
-	parentExecution, initiatedID, parentDomainID, parentInfo := getParentInfo(startRequest.ParentExecutionInfo)
-
 	context, release, ctxError := e.historyCache.getOrCreateWorkflowExecutionWithTimeout(ctx, domainID, execution)
 	if ctxError == nil {
 		defer func() { release(retError) }()
@@ -562,7 +555,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(ctx context.Context, startReq
 
 	taskList := request.TaskList.GetName()
 	// Generate first decision task event if not child WF
-	transferTasks, firstDecisionTask, retError := e.generateFirstDecisionTask(domainID, msBuilder, parentInfo, taskList)
+	transferTasks, firstDecisionTask, retError := e.generateFirstDecisionTask(domainID, msBuilder, startRequest.ParentExecutionInfo, taskList)
 	// Generate first timer task : WF timeout task
 	duration := time.Duration(*request.ExecutionStartToCloseTimeoutSeconds) * time.Second
 	timerTasks := []persistence.Task{&persistence.WorkflowTimeoutTask{
@@ -579,7 +572,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(ctx context.Context, startReq
 	}
 	msBuilder.IncrementHistorySize(historySize)
 
-	fullfillExecutionInfo(msBuilder, domainID, parentDomainID, taskList, execution, *parentExecution, initiatedID, startedEvent.GetEventId())
+	fullfillExecutionInfo(msBuilder, domainID, taskList, execution, startedEvent.GetEventId())
 
 	resultRunID, retError := e.createWorkflow(startRequest, isBrandNew, msBuilder, prevMutableState, firstDecisionTask, transferTasks, timerTasks, replicationTasks, clusterMetadata)
 	if retError == nil {
@@ -2265,7 +2258,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 			policy = *request.WorkflowIdReusePolicy
 		}
 
-		err = e.applyWorkflowIDReusePolicyForSigStart(prevExecutionInfo, domainID, execution, policy)
+		err = e.applyWorkflowIDReusePolicy(prevExecutionInfo, domainID, execution, policy)
 		if err != nil {
 			return nil, err
 		}
