@@ -479,13 +479,13 @@ func (e *historyEngineImpl) createWorkflow(startRequest *h.StartWorkflowExecutio
 	_, err := e.shard.CreateWorkflowExecution(createRequest)
 
 	if err != nil {
+		// delete the branch here, otherwise it will becomes zombie data
 		e.deleteEvents(currExeInfo.DomainID, execution, msBuilder.GetEventsTableVersion() == 2, msBuilder.GetCurrentBranch())
 
 		switch t := err.(type) {
 		case *persistence.WorkflowExecutionAlreadyStartedError:
-
 			if t.StartRequestID == common.StringDefault(request.RequestId) {
-				// treat it as no error
+				// treat it as no error as a special case
 				return t.RunID, nil
 			}
 
@@ -522,6 +522,9 @@ func (e *historyEngineImpl) StartWorkflowExecution(ctx context.Context, startReq
 		RunId:      common.StringPtr(uuid.New()),
 	}
 
+	clusterMetadata := e.shard.GetService().GetClusterMetadata()
+	msBuilder := e.createMutableState(clusterMetadata, domainEntry)
+
 	context, release, ctxError := e.historyCache.getOrCreateWorkflowExecutionWithTimeout(ctx, domainID, execution)
 	if ctxError == nil {
 		defer func() { release(retError) }()
@@ -532,30 +535,32 @@ func (e *historyEngineImpl) StartWorkflowExecution(ctx context.Context, startReq
 	}
 
 	if !isBrandNew {
+		if prevMutableState.GetLastWriteVersion() > msBuilder.GetLastWriteVersion() {
+			retError = ce.NewDomainNotActiveError(
+				domainEntry.GetInfo().Name,
+				clusterMetadata.GetCurrentClusterName(),
+				clusterMetadata.ClusterNameForFailoverVersion(prevMutableState.GetLastWriteVersion()),
+			)
+			return
+		}
 		retError = e.applyWorkflowIDReusePolicy(prevMutableState.GetExecutionInfo(), domainID, execution, startRequest.StartRequest.GetWorkflowIdReusePolicy())
 		if retError != nil {
 			return
 		}
 	}
 
-	clusterMetadata := e.shard.GetService().GetClusterMetadata()
-	msBuilder := e.createMutableState(clusterMetadata, domainEntry)
-
-	useEventsV2 := e.config.EnableEventsV2(request.GetDomain())
-	if useEventsV2 {
-		if retError = e.initializeEventsV2(prevMutableState, msBuilder); retError != nil {
-			return
-		}
-	}
-
 	startedEvent := msBuilder.AddWorkflowExecutionStartedEvent(execution, startRequest)
 	if startedEvent == nil {
-		return nil, &workflow.InternalServiceError{Message: "Failed to add workflow execution started event."}
+		retError = &workflow.InternalServiceError{Message: "Failed to add workflow execution started event."}
+		return
 	}
 
 	taskList := request.TaskList.GetName()
 	// Generate first decision task event if not child WF
 	transferTasks, firstDecisionTask, retError := e.generateFirstDecisionTask(domainID, msBuilder, startRequest.ParentExecutionInfo, taskList)
+	if retError != nil {
+		return
+	}
 	// Generate first timer task : WF timeout task
 	duration := time.Duration(*request.ExecutionStartToCloseTimeoutSeconds) * time.Second
 	timerTasks := []persistence.Task{&persistence.WorkflowTimeoutTask{
@@ -566,6 +571,11 @@ func (e *historyEngineImpl) StartWorkflowExecution(ctx context.Context, startReq
 	// set versions and timestamp for timer and transfer tasks
 	setTaskInfo(msBuilder.GetCurrentVersion(), time.Now(), transferTasks, timerTasks)
 
+	if e.config.EnableEventsV2(request.GetDomain()) {
+		if retError = e.initializeEventsV2(prevMutableState, msBuilder); retError != nil {
+			return
+		}
+	}
 	historySize, retError := e.appendHistoryEvents(msBuilder, domainID, execution)
 	if retError != nil {
 		return
@@ -1999,9 +2009,9 @@ func (e *historyEngineImpl) SignalWorkflowExecution(ctx context.Context, signalR
 func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context, signalWithStartRequest *h.SignalWithStartWorkflowExecutionRequest) (
 	retResp *workflow.StartWorkflowExecutionResponse, retError error) {
 
-	domainEntry, err := e.getActiveDomainEntry(signalWithStartRequest.DomainUUID)
-	if err != nil {
-		return nil, err
+	domainEntry, retError := e.getActiveDomainEntry(signalWithStartRequest.DomainUUID)
+	if retError != nil {
+		return
 	}
 	domainID := domainEntry.GetInfo().ID
 
@@ -2010,13 +2020,12 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 		WorkflowId: sRequest.WorkflowId,
 	}
 
-	if err := validateSignalInput(domainID, &execution, sRequest.GetSignalInput(), e.metricsClient,
-		metrics.HistorySignalWithStartWorkflowExecutionScope, e.logger); err != nil {
-		return nil, err
+	if retError = validateSignalInput(domainID, &execution, sRequest.GetSignalInput(), e.metricsClient,
+		metrics.HistorySignalWithStartWorkflowExecutionScope, e.logger); retError != nil {
+		return
 	}
 
-	var prevExecutionInfo *persistence.WorkflowExecutionInfo
-	prevLastWriteVersion := common.EmptyVersion
+	var prevMutableState mutableState
 	attempt := 0
 
 	context, release, err0 := e.historyCache.getOrCreateWorkflowExecutionWithTimeout(ctx, domainID, execution)
@@ -2035,8 +2044,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 			}
 			// workflow exist but not running, will restart workflow then signal
 			if !msBuilder.IsWorkflowExecutionRunning() {
-				prevExecutionInfo = msBuilder.GetExecutionInfo()
-				prevLastWriteVersion = msBuilder.GetLastWriteVersion()
+				prevMutableState = msBuilder
 				break
 			}
 			executionInfo := msBuilder.GetExecutionInfo()
@@ -2066,9 +2074,9 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 				}
 			}
 			// Generate a transaction ID for appending events to history
-			transactionID, err2 := e.shard.GetNextTransferTaskID()
-			if err2 != nil {
-				return nil, err2
+			transactionID, retError := e.shard.GetNextTransferTaskID()
+			if retError != nil {
+				return
 			}
 
 			// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict then reload
@@ -2095,9 +2103,9 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 	// Start workflow and signal
 	startRequest := getStartRequest(domainID, sRequest)
 	request := startRequest.StartRequest
-	err = validateStartWorkflowExecutionRequest(request)
-	if err != nil {
-		return nil, err
+	retError = validateStartWorkflowExecutionRequest(request)
+	if retError != nil {
+		return
 	}
 
 	execution = workflow.WorkflowExecution{
@@ -2106,173 +2114,81 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 	}
 
 	clusterMetadata := e.shard.GetService().GetClusterMetadata()
+	msBuilder := e.createMutableState(clusterMetadata, domainEntry)
 
-	// Generate first decision task event.
-	taskList := request.TaskList.GetName()
-	// TODO when the workflow is going to be replicated, use the
-	var msBuilder mutableState
-	if clusterMetadata.IsGlobalDomainEnabled() && domainEntry.IsGlobalDomain() {
-		// all workflows within a global domain should have replication state, no matter whether it will be replicated to multiple
-		// target clusters or not
-		msBuilder = newMutableStateBuilderWithReplicationState(
-			clusterMetadata.GetCurrentClusterName(),
-			e.shard.GetConfig(),
-			e.logger,
-			domainEntry.GetFailoverVersion(),
-		)
-	} else {
-		msBuilder = newMutableStateBuilder(
-			clusterMetadata.GetCurrentClusterName(),
-			e.shard.GetConfig(),
-			e.logger,
-		)
-	}
-	startedEvent := msBuilder.AddWorkflowExecutionStartedEvent(execution, startRequest)
-	if startedEvent == nil {
-		return nil, &workflow.InternalServiceError{Message: "Failed to add workflow execution started event."}
-	}
-
-	if msBuilder.AddWorkflowExecutionSignaled(getSignalRequest(sRequest)) == nil {
-		return nil, &workflow.InternalServiceError{Message: "Failed to add workflow execution signaled event."}
-	}
-
-	var transferTasks []persistence.Task
-	di := msBuilder.AddDecisionTaskScheduledEvent()
-	if di == nil {
-		return nil, &workflow.InternalServiceError{Message: "Failed to add decision scheduled event."}
-	}
-
-	transferTasks = []persistence.Task{&persistence.DecisionTask{
-		DomainID: domainID, TaskList: taskList, ScheduleID: di.ScheduleID,
-	}}
-	decisionVersion := di.Version
-	decisionScheduleID := di.ScheduleID
-	decisionStartID := di.StartedID
-	decisionTimeout := di.DecisionTimeout
-
-	duration := time.Duration(*request.ExecutionStartToCloseTimeoutSeconds) * time.Second
-	timerTasks := []persistence.Task{&persistence.WorkflowTimeoutTask{
-		VisibilityTimestamp: e.shard.GetTimeSource().Now().Add(duration),
-	}}
-
-	var historySize int
-	historySize, err = e.shard.AppendHistoryEvents(&persistence.AppendHistoryEventsRequest{
-		DomainID:  domainID,
-		Execution: execution,
-		// It is ok to use 0 for TransactionID because RunID is unique so there are
-		// no potential duplicates to override.
-		TransactionID:     0,
-		FirstEventID:      startedEvent.GetEventId(),
-		EventBatchVersion: startedEvent.GetVersion(),
-		Events:            msBuilder.GetHistoryBuilder().GetHistory().Events,
-	})
-	if err != nil {
-		return nil, err
-	}
-	msBuilder.GetExecutionInfo().LastFirstEventID = startedEvent.GetEventId()
-
-	var replicationState *persistence.ReplicationState
-	var replicationTasks []persistence.Task
-	if msBuilder.GetReplicationState() != nil {
-		msBuilder.UpdateReplicationStateLastEventID(
-			clusterMetadata.GetCurrentClusterName(),
-			msBuilder.GetCurrentVersion(),
-			msBuilder.GetNextEventID()-1,
-		)
-		replicationState = msBuilder.GetReplicationState()
-		// this is a hack, only create replication task if have # target cluster > 1, for more see #868
-		if domainEntry.CanReplicateEvent() {
-			replicationTask := &persistence.HistoryReplicationTask{
-				FirstEventID:        common.FirstEventID,
-				NextEventID:         msBuilder.GetNextEventID(),
-				Version:             msBuilder.GetCurrentVersion(),
-				LastReplicationInfo: nil,
-			}
-			replicationTasks = append(replicationTasks, replicationTask)
+	isBrandNew := true
+	if prevMutableState != nil {
+		isBrandNew = false
+		if prevMutableState.GetLastWriteVersion() > msBuilder.GetLastWriteVersion() {
+			return nil, ce.NewDomainNotActiveError(
+				domainEntry.GetInfo().Name,
+				clusterMetadata.GetCurrentClusterName(),
+				clusterMetadata.ClusterNameForFailoverVersion(prevMutableState.GetLastWriteVersion()),
+			)
 		}
-	}
-	setTaskInfo(msBuilder.GetCurrentVersion(), time.Now(), transferTasks, timerTasks)
-
-	createWorkflow := func(isBrandNew bool, prevRunID string, prevLastWriteVersion int64) (string, error) {
-		createRequest := &persistence.CreateWorkflowExecutionRequest{
-			RequestID:                   common.StringDefault(request.RequestId),
-			DomainID:                    domainID,
-			Execution:                   execution,
-			InitiatedID:                 common.EmptyEventID,
-			TaskList:                    *request.TaskList.Name,
-			WorkflowTypeName:            *request.WorkflowType.Name,
-			WorkflowTimeout:             *request.ExecutionStartToCloseTimeoutSeconds,
-			DecisionTimeoutValue:        *request.TaskStartToCloseTimeoutSeconds,
-			ExecutionContext:            nil,
-			NextEventID:                 msBuilder.GetNextEventID(),
-			LastProcessedEvent:          common.EmptyEventID,
-			HistorySize:                 int64(historySize),
-			TransferTasks:               transferTasks,
-			ReplicationTasks:            replicationTasks,
-			DecisionVersion:             decisionVersion,
-			DecisionScheduleID:          decisionScheduleID,
-			DecisionStartedID:           decisionStartID,
-			DecisionStartToCloseTimeout: decisionTimeout,
-			TimerTasks:                  timerTasks,
-			PreviousRunID:               prevRunID,
-			PreviousLastWriteVersion:    prevLastWriteVersion,
-			ReplicationState:            replicationState,
-		}
-		createRequest.CreateWorkflowMode = persistence.CreateWorkflowModeBrandNew
-		if !isBrandNew {
-			createRequest.CreateWorkflowMode = persistence.CreateWorkflowModeWorkflowIDReuse
-		}
-		_, err = e.shard.CreateWorkflowExecution(createRequest)
-
-		if err != nil {
-			switch t := err.(type) {
-			case *persistence.WorkflowExecutionAlreadyStartedError:
-				if t.StartRequestID == common.StringDefault(request.RequestId) {
-					e.deleteEvents(domainID, execution)
-					return t.RunID, nil
-				}
-			case *persistence.ShardOwnershipLostError:
-				e.deleteEvents(domainID, execution)
-			}
-			return "", err
-		}
-		return execution.GetRunId(), nil
-	}
-
-	if prevExecutionInfo != nil && msBuilder.GetCurrentVersion() < prevLastWriteVersion {
-		return nil, ce.NewDomainNotActiveError(
-			domainEntry.GetInfo().Name,
-			clusterMetadata.GetCurrentClusterName(),
-			clusterMetadata.ClusterNameForFailoverVersion(prevLastWriteVersion),
-		)
-	}
-
-	// try to create the workflow execution
-	var resultRunID string
-	if prevExecutionInfo == nil { // create workflow as brand new
-		resultRunID, err = createWorkflow(true, "", prevLastWriteVersion)
-	} else { // start workflow with policy
-		// default policy to "AllowDuplicate" for signalWithStart if not set in request.
 		policy := workflow.WorkflowIdReusePolicyAllowDuplicate
 		if request.WorkflowIdReusePolicy != nil {
 			policy = *request.WorkflowIdReusePolicy
 		}
 
-		err = e.applyWorkflowIDReusePolicy(prevExecutionInfo, domainID, execution, policy)
-		if err != nil {
-			return nil, err
+		retError = e.applyWorkflowIDReusePolicy(prevMutableState.GetExecutionInfo(), domainID, execution, policy)
+		if retError != nil {
+			return
 		}
-		resultRunID, err = createWorkflow(false, prevExecutionInfo.RunID, prevLastWriteVersion)
 	}
 
-	if err == nil {
+	// Generate first decision task event.
+	taskList := request.TaskList.GetName()
+	// Add WF start event
+	startedEvent := msBuilder.AddWorkflowExecutionStartedEvent(execution, startRequest)
+	if startedEvent == nil {
+		return nil, &workflow.InternalServiceError{Message: "Failed to add workflow execution started event."}
+	}
+	// Add signal event
+	if msBuilder.AddWorkflowExecutionSignaled(getSignalRequest(sRequest)) == nil {
+		return nil, &workflow.InternalServiceError{Message: "Failed to add workflow execution signaled event."}
+	}
+	// first decision task
+	firstDecisionTask := msBuilder.AddDecisionTaskScheduledEvent()
+	if firstDecisionTask == nil {
+		return nil, &workflow.InternalServiceError{Message: "Failed to add decision scheduled event."}
+	}
+	transferTasks := []persistence.Task{&persistence.DecisionTask{
+		DomainID: domainID, TaskList: taskList, ScheduleID: firstDecisionTask.ScheduleID,
+	}}
+	// first timer task
+	duration := time.Duration(*request.ExecutionStartToCloseTimeoutSeconds) * time.Second
+	timerTasks := []persistence.Task{&persistence.WorkflowTimeoutTask{
+		VisibilityTimestamp: e.shard.GetTimeSource().Now().Add(duration),
+	}}
+	// first replication task
+	replicationTasks := generateFirstReplicationTask(msBuilder, clusterMetadata, domainEntry)
+	// set versions and timestamp for timer and transfer tasks
+	setTaskInfo(msBuilder.GetCurrentVersion(), time.Now(), transferTasks, timerTasks)
+
+	if e.config.EnableEventsV2(request.GetDomain()) {
+		if retError = e.initializeEventsV2(prevMutableState, msBuilder); retError != nil {
+			return
+		}
+	}
+	historySize, retError := e.appendHistoryEvents(msBuilder, domainID, execution)
+	if retError != nil {
+		return
+	}
+	msBuilder.IncrementHistorySize(historySize)
+
+	fullfillExecutionInfo(msBuilder, domainID, taskList, execution, startedEvent.GetEventId())
+
+	resultRunID, retError := e.createWorkflow(startRequest, isBrandNew, msBuilder, prevMutableState, firstDecisionTask, transferTasks, timerTasks, replicationTasks, clusterMetadata)
+
+	if retError == nil {
 		e.timerProcessor.NotifyNewTimers(e.currentClusterName, e.shard.GetCurrentTime(e.currentClusterName), timerTasks)
 
 		return &workflow.StartWorkflowExecutionResponse{
 			RunId: common.StringPtr(resultRunID),
 		}, nil
 	}
-	return nil, err
+	return
 }
 
 // RemoveSignalMutableState remove the signal request id in signal_requested for deduplicate
