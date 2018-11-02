@@ -1885,13 +1885,15 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx context.Context,
 		listRequest.MaximumPageSize = common.Int32Ptr(int32(wh.config.VisibilityMaxPageSize(listRequest.GetDomain())))
 	}
 
-	domainID, err := wh.domainCache.GetDomainID(listRequest.GetDomain())
+	domain := listRequest.GetDomain()
+	domainID, err := wh.domainCache.GetDomainID(domain)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
 
 	baseReq := persistence.ListWorkflowExecutionsRequest{
 		DomainUUID:        domainID,
+		Domain:            domain,
 		PageSize:          int(listRequest.GetMaximumPageSize()),
 		NextPageToken:     listRequest.NextPageToken,
 		EarliestStartTime: listRequest.StartTimeFilter.GetEarliestTime(),
@@ -1905,11 +1907,13 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx context.Context,
 				ListWorkflowExecutionsRequest: baseReq,
 				WorkflowID:                    listRequest.ExecutionFilter.GetWorkflowId(),
 			})
+		logging.LogListOpenWorkflowByFilter(wh.GetLogger(), listRequest.GetDomain(), logging.ListWorkflowFilterByID)
 	} else if listRequest.TypeFilter != nil {
 		persistenceResp, err = wh.visibitiltyMgr.ListOpenWorkflowExecutionsByType(&persistence.ListWorkflowExecutionsByTypeRequest{
 			ListWorkflowExecutionsRequest: baseReq,
 			WorkflowTypeName:              listRequest.TypeFilter.GetName(),
 		})
+		logging.LogListOpenWorkflowByFilter(wh.GetLogger(), listRequest.GetDomain(), logging.ListWorkflowFilterByType)
 	} else {
 		persistenceResp, err = wh.visibitiltyMgr.ListOpenWorkflowExecutions(&baseReq)
 	}
@@ -1976,13 +1980,15 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx context.Context,
 		listRequest.MaximumPageSize = common.Int32Ptr(int32(wh.config.VisibilityMaxPageSize(listRequest.GetDomain())))
 	}
 
-	domainID, err := wh.domainCache.GetDomainID(listRequest.GetDomain())
+	domain := listRequest.GetDomain()
+	domainID, err := wh.domainCache.GetDomainID(domain)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
 
 	baseReq := persistence.ListWorkflowExecutionsRequest{
 		DomainUUID:        domainID,
+		Domain:            domain,
 		PageSize:          int(listRequest.GetMaximumPageSize()),
 		NextPageToken:     listRequest.NextPageToken,
 		EarliestStartTime: listRequest.StartTimeFilter.GetEarliestTime(),
@@ -1996,16 +2002,19 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx context.Context,
 				ListWorkflowExecutionsRequest: baseReq,
 				WorkflowID:                    listRequest.ExecutionFilter.GetWorkflowId(),
 			})
+		logging.LogListClosedWorkflowByFilter(wh.GetLogger(), listRequest.GetDomain(), logging.ListWorkflowFilterByID)
 	} else if listRequest.TypeFilter != nil {
 		persistenceResp, err = wh.visibitiltyMgr.ListClosedWorkflowExecutionsByType(&persistence.ListWorkflowExecutionsByTypeRequest{
 			ListWorkflowExecutionsRequest: baseReq,
 			WorkflowTypeName:              listRequest.TypeFilter.GetName(),
 		})
+		logging.LogListClosedWorkflowByFilter(wh.GetLogger(), listRequest.GetDomain(), logging.ListWorkflowFilterByType)
 	} else if listRequest.StatusFilter != nil {
 		persistenceResp, err = wh.visibitiltyMgr.ListClosedWorkflowExecutionsByStatus(&persistence.ListClosedWorkflowExecutionsByStatusRequest{
 			ListWorkflowExecutionsRequest: baseReq,
 			Status:                        listRequest.GetStatusFilter(),
 		})
+		logging.LogListClosedWorkflowByFilter(wh.GetLogger(), listRequest.GetDomain(), logging.ListWorkflowFilterByStatus)
 	} else {
 		persistenceResp, err = wh.visibitiltyMgr.ListClosedWorkflowExecutions(&baseReq)
 	}
