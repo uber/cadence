@@ -114,10 +114,6 @@ var (
 
 const (
 	getHistoryWarnSizeLimit = 500 * 1024 // Warn when size goes over 500KB
-
-	listWorkflowFilterByID     = "WID"
-	listWorkflowFilterByType   = "WType"
-	listWorkflowFilterByStatus = "status"
 )
 
 // NewWorkflowHandler creates a thrift handler for the cadence service
@@ -1909,13 +1905,13 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(ctx context.Context,
 				ListWorkflowExecutionsRequest: baseReq,
 				WorkflowID:                    listRequest.ExecutionFilter.GetWorkflowId(),
 			})
-		logging.LogListOpenWorkflowByFilter(wh.GetLogger(), listRequest.GetDomain(), listWorkflowFilterByID)
+		logging.LogListOpenWorkflowByFilter(wh.GetLogger(), listRequest.GetDomain(), logging.ListWorkflowFilterByID)
 	} else if listRequest.TypeFilter != nil {
 		persistenceResp, err = wh.visibitiltyMgr.ListOpenWorkflowExecutionsByType(&persistence.ListWorkflowExecutionsByTypeRequest{
 			ListWorkflowExecutionsRequest: baseReq,
 			WorkflowTypeName:              listRequest.TypeFilter.GetName(),
 		})
-		logging.LogListOpenWorkflowByFilter(wh.GetLogger(), listRequest.GetDomain(), listWorkflowFilterByType)
+		logging.LogListOpenWorkflowByFilter(wh.GetLogger(), listRequest.GetDomain(), logging.ListWorkflowFilterByType)
 	} else {
 		persistenceResp, err = wh.visibitiltyMgr.ListOpenWorkflowExecutions(&baseReq)
 	}
@@ -2002,19 +1998,19 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(ctx context.Context,
 				ListWorkflowExecutionsRequest: baseReq,
 				WorkflowID:                    listRequest.ExecutionFilter.GetWorkflowId(),
 			})
-		logging.LogListClosedWorkflowByFilter(wh.GetLogger(), listRequest.GetDomain(), listWorkflowFilterByID)
+		logging.LogListClosedWorkflowByFilter(wh.GetLogger(), listRequest.GetDomain(), logging.ListWorkflowFilterByID)
 	} else if listRequest.TypeFilter != nil {
 		persistenceResp, err = wh.visibitiltyMgr.ListClosedWorkflowExecutionsByType(&persistence.ListWorkflowExecutionsByTypeRequest{
 			ListWorkflowExecutionsRequest: baseReq,
 			WorkflowTypeName:              listRequest.TypeFilter.GetName(),
 		})
-		logging.LogListClosedWorkflowByFilter(wh.GetLogger(), listRequest.GetDomain(), listWorkflowFilterByType)
+		logging.LogListClosedWorkflowByFilter(wh.GetLogger(), listRequest.GetDomain(), logging.ListWorkflowFilterByType)
 	} else if listRequest.StatusFilter != nil {
 		persistenceResp, err = wh.visibitiltyMgr.ListClosedWorkflowExecutionsByStatus(&persistence.ListClosedWorkflowExecutionsByStatusRequest{
 			ListWorkflowExecutionsRequest: baseReq,
 			Status:                        listRequest.GetStatusFilter(),
 		})
-		logging.LogListClosedWorkflowByFilter(wh.GetLogger(), listRequest.GetDomain(), listWorkflowFilterByStatus)
+		logging.LogListClosedWorkflowByFilter(wh.GetLogger(), listRequest.GetDomain(), logging.ListWorkflowFilterByStatus)
 	} else {
 		persistenceResp, err = wh.visibitiltyMgr.ListClosedWorkflowExecutions(&baseReq)
 	}
