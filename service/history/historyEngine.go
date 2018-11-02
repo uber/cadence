@@ -265,7 +265,7 @@ func getPreviousMutableState(context *workflowExecutionContext, ctxError error) 
 		msBuilder, loadErr := context.loadWorkflowExecution()
 		if loadErr != nil {
 			if _, ok := loadErr.(*workflow.EntityNotExistsError); !ok {
-				return nil, ctxError
+				return nil, loadErr
 			}
 			// for EntityNotExistsError, we will create brandly new execution
 			return nil, nil
