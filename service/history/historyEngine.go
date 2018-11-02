@@ -254,50 +254,52 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 	)
 }
 
-func isBrandNewNeeded(context *workflowExecutionContext, ctxError error) (mutableState, bool, error) {
+func getPreviousMutableState(context *workflowExecutionContext, ctxError error) (mutableState, error) {
 	if ctxError != nil {
 		if _, ok := ctxError.(*workflow.EntityNotExistsError); !ok {
-			return nil, false, ctxError
+			return nil, ctxError
 		}
 		// for EntityNotExistsError, we will create brandly new execution
-		return nil, true, nil
+		return nil, nil
 	} else {
 		msBuilder, loadErr := context.loadWorkflowExecution()
 		if loadErr != nil {
 			if _, ok := loadErr.(*workflow.EntityNotExistsError); !ok {
-				return nil, false, ctxError
+				return nil, ctxError
 			}
 			// for EntityNotExistsError, we will create brandly new execution
-			return nil, true, nil
+			return nil, nil
 		}
 		if msBuilder.IsWorkflowExecutionRunning() {
 			msg := "Workflow execution is already running. WorkflowId: %v, RunId: %v."
 			execInfo := msBuilder.GetExecutionInfo()
-			return nil, false, getWorkflowAlreadyStartedError(msg, execInfo.CreateRequestID, execInfo.WorkflowID, execInfo.RunID)
+			return nil, getWorkflowAlreadyStartedError(msg, execInfo.CreateRequestID, execInfo.WorkflowID, execInfo.RunID)
 		}
 		// we will create new run based on ID reuse policy
-		return msBuilder, false, nil
+		return msBuilder, nil
 	}
 }
 
-func (e *historyEngineImpl) initializeEventsV2(prevMutableState, currMutableState mutableState) error {
+func (e *historyEngineImpl) initializeEventsV2(prevMutableState, currMutableState mutableState) (isNewTree bool, err error) {
 	historyV2Mgr := e.shard.GetHistoryV2Manager()
+	isNewTree = false
 	var treeID string
 	if prevMutableState != nil && prevMutableState.GetEventsTableVersion() == 2 {
 		treeID = prevMutableState.GetExecutionInfo().HistoryTreeID
 	} else {
 		treeID = uuid.New()
+		isNewTree = true
 	}
 
 	resp0, err := historyV2Mgr.NewHistoryBranch(&persistence.NewHistoryBranchRequest{
 		TreeID: treeID,
 	})
 	if err != nil {
-		return err
+		return
 	}
 	branchToken := resp0.BranchToken
 	currMutableState.InitializeEventsV2Info(treeID, branchToken)
-	return nil
+	return
 }
 
 func (e *historyEngineImpl) createMutableState(clusterMetadata cluster.Metadata, domainEntry *cache.DomainCacheEntry) mutableState {
@@ -345,12 +347,14 @@ func (e *historyEngineImpl) generateFirstDecisionTask(domainID string, msBuilder
 	return transferTasks, di, nil
 }
 
-func (e *historyEngineImpl) appendHistoryEvents(msBuilder mutableState, domainID string, execution workflow.WorkflowExecution) (historySize int, err error) {
+func (e *historyEngineImpl) appendHistoryEvents(msBuilder mutableState, domainID string, execution workflow.WorkflowExecution, isNewTree, isNewBranch bool) (historySize int, err error) {
 	events := msBuilder.GetHistoryBuilder().GetHistory().Events
 	startedEvent := events[0]
 	if msBuilder.GetEventsTableVersion() == 2 {
 		branchToken := msBuilder.GetCurrentBranch()
 		historySize, err = e.shard.AppendHistoryV2Events(&persistence.AppendHistoryNodesRequest{
+			IsNewTree:   isNewTree,
+			IsNewBranch: isNewBranch,
 			BranchToken: branchToken,
 			Events:      events,
 			// It is ok to use 0 for TransactionID because RunID is unique so there are
@@ -403,14 +407,14 @@ func generateFirstReplicationTask(msBuilder mutableState, clusterMetadata cluste
 	return replicationTasks
 }
 
-func (e *historyEngineImpl) createWorkflow(startRequest *h.StartWorkflowExecutionRequest, isBrandNew bool, msBuilder, prevMutableState mutableState,
-	firstDecisionTask *decisionInfo, transferTasks, timerTasks, replicationTasks []persistence.Task, clusterMetadata cluster.Metadata) (string, error) {
+func (e *historyEngineImpl) createWorkflow(startRequest *h.StartWorkflowExecutionRequest, msBuilder, prevMutableState mutableState,
+	firstDecisionTask *decisionInfo, transferTasks, timerTasks, replicationTasks []persistence.Task, clusterMetadata cluster.Metadata) (runID string, needDeleteHistory bool, err error) {
 
 	request := startRequest.StartRequest
 	currExeInfo := msBuilder.GetExecutionInfo()
 	prevRunID := ""
 	prevLastWriteVersion := int64(0)
-	if !isBrandNew {
+	if prevMutableState != nil {
 		prevRunID = prevMutableState.GetExecutionInfo().RunID
 		prevLastWriteVersion = prevMutableState.GetLastWriteVersion()
 	}
@@ -460,7 +464,7 @@ func (e *historyEngineImpl) createWorkflow(startRequest *h.StartWorkflowExecutio
 		BranchToken:                 msBuilder.GetCurrentBranch(),
 	}
 	createRequest.CreateWorkflowMode = persistence.CreateWorkflowModeBrandNew
-	if !isBrandNew {
+	if prevMutableState != nil {
 		createRequest.CreateWorkflowMode = persistence.CreateWorkflowModeWorkflowIDReuse
 	}
 
@@ -476,30 +480,33 @@ func (e *historyEngineImpl) createWorkflow(startRequest *h.StartWorkflowExecutio
 		createRequest.MaximumAttempts = request.RetryPolicy.GetMaximumAttempts()
 		createRequest.NonRetriableErrors = request.RetryPolicy.NonRetriableErrorReasons
 	}
-	_, err := e.shard.CreateWorkflowExecution(createRequest)
+	_, err = e.shard.CreateWorkflowExecution(createRequest)
 
 	if err != nil {
-		// delete the branch here, otherwise it will becomes zombie data
-		e.deleteEvents(currExeInfo.DomainID, execution, msBuilder.GetEventsTableVersion() == 2, msBuilder.GetCurrentBranch())
+		// tell the caller to delete the branch, otherwise it will becomes zombie data
+		needDeleteHistory = true
 
 		switch t := err.(type) {
 		case *persistence.WorkflowExecutionAlreadyStartedError:
 			if t.StartRequestID == common.StringDefault(request.RequestId) {
 				// treat it as no error as a special case
-				return t.RunID, nil
+				runID = t.RunID
+				return
 			}
 
 			if msBuilder.GetCurrentVersion() < t.LastWriteVersion {
-				return "", ce.NewDomainNotActiveError(
+				err = ce.NewDomainNotActiveError(
 					*request.Domain,
 					clusterMetadata.GetCurrentClusterName(),
 					clusterMetadata.ClusterNameForFailoverVersion(t.LastWriteVersion),
 				)
+				return
 			}
 		}
-		return "", err
+		return
 	}
-	return execution.GetRunId(), nil
+	runID = execution.GetRunId()
+	return
 }
 
 // StartWorkflowExecution starts a workflow execution
@@ -522,19 +529,26 @@ func (e *historyEngineImpl) StartWorkflowExecution(ctx context.Context, startReq
 		RunId:      common.StringPtr(uuid.New()),
 	}
 
-	clusterMetadata := e.shard.GetService().GetClusterMetadata()
-	msBuilder := e.createMutableState(clusterMetadata, domainEntry)
-
 	context, release, ctxError := e.historyCache.getOrCreateWorkflowExecutionWithTimeout(ctx, domainID, execution)
 	if ctxError == nil {
 		defer func() { release(retError) }()
 	}
-	prevMutableState, isBrandNew, retError := isBrandNewNeeded(context, ctxError)
+	prevMutableState, retError := getPreviousMutableState(context, ctxError)
 	if retError != nil {
 		return
 	}
 
-	if !isBrandNew {
+	clusterMetadata := e.shard.GetService().GetClusterMetadata()
+	msBuilder := e.createMutableState(clusterMetadata, domainEntry)
+	isNewTree := false
+	useEventsV2 := e.config.EnableEventsV2(request.GetDomain())
+	if useEventsV2 {
+		if isNewTree, retError = e.initializeEventsV2(prevMutableState, msBuilder); retError != nil {
+			return
+		}
+	}
+
+	if prevMutableState != nil {
 		if prevMutableState.GetLastWriteVersion() > msBuilder.GetLastWriteVersion() {
 			retError = ce.NewDomainNotActiveError(
 				domainEntry.GetInfo().Name,
@@ -571,20 +585,23 @@ func (e *historyEngineImpl) StartWorkflowExecution(ctx context.Context, startReq
 	// set versions and timestamp for timer and transfer tasks
 	setTaskInfo(msBuilder.GetCurrentVersion(), time.Now(), transferTasks, timerTasks)
 
-	if e.config.EnableEventsV2(request.GetDomain()) {
-		if retError = e.initializeEventsV2(prevMutableState, msBuilder); retError != nil {
-			return
-		}
-	}
-	historySize, retError := e.appendHistoryEvents(msBuilder, domainID, execution)
+	needDeleteHistory := true
+	historySize, retError := e.appendHistoryEvents(msBuilder, domainID, execution, isNewTree, true)
 	if retError != nil {
 		return
 	}
-	msBuilder.IncrementHistorySize(historySize)
+	// delete the history if this API call is not successful, otherwise the history events will be zombie data
+	defer func() {
+		if needDeleteHistory {
+			e.deleteEvents(domainID, execution, useEventsV2, msBuilder.GetCurrentBranch())
+		}
+	}()
 
+	// prepare for execution persistence operation
+	msBuilder.IncrementHistorySize(historySize)
 	fullfillExecutionInfo(msBuilder, domainID, taskList, execution, startedEvent.GetEventId())
 
-	resultRunID, retError := e.createWorkflow(startRequest, isBrandNew, msBuilder, prevMutableState, firstDecisionTask, transferTasks, timerTasks, replicationTasks, clusterMetadata)
+	resultRunID, needDeleteHistory, retError := e.createWorkflow(startRequest, msBuilder, prevMutableState, firstDecisionTask, transferTasks, timerTasks, replicationTasks, clusterMetadata)
 	if retError == nil {
 		e.timerProcessor.NotifyNewTimers(e.currentClusterName, e.shard.GetCurrentTime(e.currentClusterName), timerTasks)
 		return &workflow.StartWorkflowExecutionResponse{
@@ -2115,10 +2132,15 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 
 	clusterMetadata := e.shard.GetService().GetClusterMetadata()
 	msBuilder := e.createMutableState(clusterMetadata, domainEntry)
+	isNewTree := false
+	useEventsV2 := e.config.EnableEventsV2(request.GetDomain())
+	if useEventsV2 {
+		if isNewTree, retError = e.initializeEventsV2(prevMutableState, msBuilder); retError != nil {
+			return
+		}
+	}
 
-	isBrandNew := true
 	if prevMutableState != nil {
-		isBrandNew = false
 		if prevMutableState.GetLastWriteVersion() > msBuilder.GetLastWriteVersion() {
 			return nil, ce.NewDomainNotActiveError(
 				domainEntry.GetInfo().Name,
@@ -2166,21 +2188,22 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 	// set versions and timestamp for timer and transfer tasks
 	setTaskInfo(msBuilder.GetCurrentVersion(), time.Now(), transferTasks, timerTasks)
 
-	if e.config.EnableEventsV2(request.GetDomain()) {
-		if retError = e.initializeEventsV2(prevMutableState, msBuilder); retError != nil {
-			return
-		}
-	}
-	historySize, retError := e.appendHistoryEvents(msBuilder, domainID, execution)
+	needDeleteHistory := true
+	historySize, retError := e.appendHistoryEvents(msBuilder, domainID, execution, isNewTree, true)
 	if retError != nil {
 		return
 	}
-	msBuilder.IncrementHistorySize(historySize)
+	// delete the history if this API call is not successful, otherwise the history events will be zombie data
+	defer func() {
+		if needDeleteHistory {
+			e.deleteEvents(domainID, execution, useEventsV2, msBuilder.GetCurrentBranch())
+		}
+	}()
 
+	msBuilder.IncrementHistorySize(historySize)
 	fullfillExecutionInfo(msBuilder, domainID, taskList, execution, startedEvent.GetEventId())
 
-	resultRunID, retError := e.createWorkflow(startRequest, isBrandNew, msBuilder, prevMutableState, firstDecisionTask, transferTasks, timerTasks, replicationTasks, clusterMetadata)
-
+	resultRunID, needDeleteHistory, retError := e.createWorkflow(startRequest, msBuilder, prevMutableState, firstDecisionTask, transferTasks, timerTasks, replicationTasks, clusterMetadata)
 	if retError == nil {
 		e.timerProcessor.NotifyNewTimers(e.currentClusterName, e.shard.GetCurrentTime(e.currentClusterName), timerTasks)
 
