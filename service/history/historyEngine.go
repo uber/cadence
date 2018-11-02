@@ -280,15 +280,13 @@ func getPreviousMutableState(context *workflowExecutionContext, ctxError error) 
 	}
 }
 
-func (e *historyEngineImpl) initializeEventsV2(prevMutableState, currMutableState mutableState) (isNewTree bool, err error) {
+func (e *historyEngineImpl) initializeEventsV2(prevMutableState, currMutableState mutableState) (err error) {
 	historyV2Mgr := e.shard.GetHistoryV2Manager()
-	isNewTree = false
 	var treeID string
 	if prevMutableState != nil && prevMutableState.GetEventsTableVersion() == 2 {
 		treeID = prevMutableState.GetExecutionInfo().HistoryTreeID
 	} else {
 		treeID = uuid.New()
-		isNewTree = true
 	}
 
 	resp0, err := historyV2Mgr.NewHistoryBranch(&persistence.NewHistoryBranchRequest{
@@ -347,13 +345,12 @@ func (e *historyEngineImpl) generateFirstDecisionTask(domainID string, msBuilder
 	return transferTasks, di, nil
 }
 
-func (e *historyEngineImpl) appendHistoryEvents(msBuilder mutableState, domainID string, execution workflow.WorkflowExecution, isNewTree, isNewBranch bool) (historySize int, err error) {
+func (e *historyEngineImpl) appendHistoryEvents(msBuilder mutableState, domainID string, execution workflow.WorkflowExecution, isNewBranch bool) (historySize int, err error) {
 	events := msBuilder.GetHistoryBuilder().GetHistory().Events
 	startedEvent := events[0]
 	if msBuilder.GetEventsTableVersion() == 2 {
 		branchToken := msBuilder.GetCurrentBranch()
 		historySize, err = e.shard.AppendHistoryV2Events(&persistence.AppendHistoryNodesRequest{
-			IsNewTree:   isNewTree,
 			IsNewBranch: isNewBranch,
 			BranchToken: branchToken,
 			Events:      events,
@@ -540,10 +537,9 @@ func (e *historyEngineImpl) StartWorkflowExecution(ctx context.Context, startReq
 
 	clusterMetadata := e.shard.GetService().GetClusterMetadata()
 	msBuilder := e.createMutableState(clusterMetadata, domainEntry)
-	isNewTree := false
 	useEventsV2 := e.config.EnableEventsV2(request.GetDomain())
 	if useEventsV2 {
-		if isNewTree, retError = e.initializeEventsV2(prevMutableState, msBuilder); retError != nil {
+		if retError = e.initializeEventsV2(prevMutableState, msBuilder); retError != nil {
 			return
 		}
 	}
@@ -586,7 +582,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(ctx context.Context, startReq
 	setTaskInfo(msBuilder.GetCurrentVersion(), time.Now(), transferTasks, timerTasks)
 
 	needDeleteHistory := true
-	historySize, retError := e.appendHistoryEvents(msBuilder, domainID, execution, isNewTree, true)
+	historySize, retError := e.appendHistoryEvents(msBuilder, domainID, execution, true)
 	if retError != nil {
 		return
 	}
@@ -2132,10 +2128,9 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 
 	clusterMetadata := e.shard.GetService().GetClusterMetadata()
 	msBuilder := e.createMutableState(clusterMetadata, domainEntry)
-	isNewTree := false
 	useEventsV2 := e.config.EnableEventsV2(request.GetDomain())
 	if useEventsV2 {
-		if isNewTree, retError = e.initializeEventsV2(prevMutableState, msBuilder); retError != nil {
+		if retError = e.initializeEventsV2(prevMutableState, msBuilder); retError != nil {
 			return
 		}
 	}
@@ -2189,7 +2184,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 	setTaskInfo(msBuilder.GetCurrentVersion(), time.Now(), transferTasks, timerTasks)
 
 	needDeleteHistory := true
-	historySize, retError := e.appendHistoryEvents(msBuilder, domainID, execution, isNewTree, true)
+	historySize, retError := e.appendHistoryEvents(msBuilder, domainID, execution, true)
 	if retError != nil {
 		return
 	}
