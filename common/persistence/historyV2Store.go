@@ -60,20 +60,17 @@ func (m *historyV2ManagerImpl) GetName() string {
 	return m.persistence.GetName()
 }
 
-// NewHistoryBranch creates a new branch from tree root. If tree doesn't exist, then create one. Return error if the branch already exists.
+// NewHistoryBranch creates a new branch without persistent to DB
 func (m *historyV2ManagerImpl) NewHistoryBranch(request *NewHistoryBranchRequest) (*NewHistoryBranchResponse, error) {
-	req := &InternalNewHistoryBranchRequest{
-		TreeID:   request.TreeID,
-		BranchID: uuid.New(),
+	branchID := uuid.New()
+	bi := workflow.HistoryBranch{
+		TreeID:    &request.TreeID,
+		BranchID:  &branchID,
+		Ancestors: []*workflow.HistoryBranchRange{},
 	}
-	resp, err := m.persistence.NewHistoryBranch(req)
-	response := &NewHistoryBranchResponse{}
+	token, err := m.thrifteEncoder.Encode(&bi)
 	if err != nil {
-		return response, err
-	}
-	token, err := m.thrifteEncoder.Encode(&resp.BranchInfo)
-	if err != nil {
-		return response, err
+		return nil, err
 	}
 	return &NewHistoryBranchResponse{
 		BranchToken: token,
@@ -197,6 +194,7 @@ func (m *historyV2ManagerImpl) AppendHistoryNodes(request *AppendHistoryNodesReq
 	size := len(blob.Data)
 
 	req := &InternalAppendHistoryNodesRequest{
+		IsNewBranch:   request.IsNewBranch,
 		BranchInfo:    branch,
 		NodeID:        nodeID,
 		Events:        blob,

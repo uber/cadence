@@ -1079,6 +1079,8 @@ type (
 
 	// AppendHistoryNodesRequest is used to append a batch of history nodes
 	AppendHistoryNodesRequest struct {
+		// true if it is the first append request to the branch
+		IsNewBranch bool
 		// The branch to be appended
 		BranchToken []byte
 		// The batch of events to be appended. The first eventID will become the nodeID of this batch
@@ -1245,10 +1247,8 @@ type (
 
 		// The below are history V2 APIs
 		// V2 regards history events growing as a tree, decoupled from workflow concepts
-		// For Cadence, treeID will be a UUID, shared for the same workflow_id,
-		//     a workflow run may have one or more than one branchID(after reset/continueAsNew/etc)
-		//     NodeID is the same as EventID
-		// NewHistoryBranch creates a new branch from tree root. If tree doesn't exist, then create one. Return error if the branch already exists.
+
+		// NewHistoryBranch creates a new branchToken, without persistent to database
 		NewHistoryBranch(request *NewHistoryBranchRequest) (*NewHistoryBranchResponse, error)
 		// AppendHistoryNodes add(or override) a batach of nodes to a history branch
 		AppendHistoryNodes(request *AppendHistoryNodesRequest) (*AppendHistoryNodesResponse, error)
