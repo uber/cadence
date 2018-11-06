@@ -252,7 +252,7 @@ type (
 		MaximumAttempts    int32
 		NonRetriableErrors []string
 		// events V2 related
-		EventsTableVersion  int32
+		EventStoreVersion   int32
 		CurrentResetVersion int32
 		HistoryTreeID       string
 		HistoryBranches     map[int32]HistoryBranch // map from each resetVersion to the associated branch, resetVersion increase from 0
@@ -648,7 +648,7 @@ type (
 		MaximumAttempts             int32
 		NonRetriableErrors          []string
 		// 2 means using eventsV2, empty/0/1 means using events(V1)
-		EventsTableVersion int32
+		EventStoreVersion int32
 		// for eventsV2: treeID for forking/creating new branch
 		HistoryTreeID string
 		// for eventsV2: branchToken from historyPersistence

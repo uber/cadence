@@ -61,7 +61,7 @@ CREATE TYPE workflow_execution (
   expiration_time                  timestamp, -- retry expiration time
   max_attempts                     int,    -- max number of attempts including initial non-retry attempt
   non_retriable_errors             list<text>,
-  events_table_version             int, -- to indicates which events table is using
+  event_store_version              int, -- to indicates which version of events persistence is using
   current_reset_version            int, -- works with eventsV2
   history_tree_id                  uuid, -- for eventsV2
   history_branches                 frozen<map<int, history_branch_info>> -- map from reset_version to the associated branch infomation

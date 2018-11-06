@@ -166,7 +166,7 @@ type (
 		MaximumAttempts    int32
 		NonRetriableErrors []string
 		// events V2 related
-		EventsTableVersion  int32
+		EventStoreVersion   int32
 		CurrentResetVersion int32
 		HistoryTreeID       string
 		HistoryBranches     map[int32]HistoryBranch // map from each resetVersion to the associated branch

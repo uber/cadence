@@ -39725,6 +39725,7 @@ type WorkflowExecutionStartedEventAttributes struct {
 	RetryPolicy                         *RetryPolicy       `json:"retryPolicy,omitempty"`
 	Attempt                             *int32             `json:"attempt,omitempty"`
 	ExpirationTimestamp                 *int64             `json:"expirationTimestamp,omitempty"`
+	EventStoreVersion                   *int32             `json:"eventStoreVersion,omitempty"`
 }
 
 // ToWire translates a WorkflowExecutionStartedEventAttributes struct into a Thrift-level intermediate
@@ -39744,7 +39745,7 @@ type WorkflowExecutionStartedEventAttributes struct {
 //   }
 func (v *WorkflowExecutionStartedEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [14]wire.Field
+		fields [15]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -39860,6 +39861,14 @@ func (v *WorkflowExecutionStartedEventAttributes) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 90, Value: w}
+		i++
+	}
+	if v.EventStoreVersion != nil {
+		w, err = wire.NewValueI32(*(v.EventStoreVersion)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 100, Value: w}
 		i++
 	}
 
@@ -40018,6 +40027,16 @@ func (v *WorkflowExecutionStartedEventAttributes) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 100:
+			if field.Value.Type() == wire.TI32 {
+				var x int32
+				x, err = field.Value.GetI32(), error(nil)
+				v.EventStoreVersion = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -40031,7 +40050,7 @@ func (v *WorkflowExecutionStartedEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [14]string
+	var fields [15]string
 	i := 0
 	if v.WorkflowType != nil {
 		fields[i] = fmt.Sprintf("WorkflowType: %v", v.WorkflowType)
@@ -40087,6 +40106,10 @@ func (v *WorkflowExecutionStartedEventAttributes) String() string {
 	}
 	if v.ExpirationTimestamp != nil {
 		fields[i] = fmt.Sprintf("ExpirationTimestamp: %v", *(v.ExpirationTimestamp))
+		i++
+	}
+	if v.EventStoreVersion != nil {
+		fields[i] = fmt.Sprintf("EventStoreVersion: %v", *(v.EventStoreVersion))
 		i++
 	}
 
@@ -40145,6 +40168,9 @@ func (v *WorkflowExecutionStartedEventAttributes) Equals(rhs *WorkflowExecutionS
 	if !_I64_EqualsPtr(v.ExpirationTimestamp, rhs.ExpirationTimestamp) {
 		return false
 	}
+	if !_I32_EqualsPtr(v.EventStoreVersion, rhs.EventStoreVersion) {
+		return false
+	}
 
 	return true
 }
@@ -40196,6 +40222,9 @@ func (v *WorkflowExecutionStartedEventAttributes) MarshalLogObject(enc zapcore.O
 	}
 	if v.ExpirationTimestamp != nil {
 		enc.AddInt64("expirationTimestamp", *v.ExpirationTimestamp)
+	}
+	if v.EventStoreVersion != nil {
+		enc.AddInt32("eventStoreVersion", *v.EventStoreVersion)
 	}
 	return err
 }
@@ -40335,6 +40364,16 @@ func (v *WorkflowExecutionStartedEventAttributes) GetAttempt() (o int32) {
 func (v *WorkflowExecutionStartedEventAttributes) GetExpirationTimestamp() (o int64) {
 	if v.ExpirationTimestamp != nil {
 		return *v.ExpirationTimestamp
+	}
+
+	return
+}
+
+// GetEventStoreVersion returns the value of EventStoreVersion if it is set or its
+// zero value if it is unset.
+func (v *WorkflowExecutionStartedEventAttributes) GetEventStoreVersion() (o int32) {
+	if v.EventStoreVersion != nil {
+		return *v.EventStoreVersion
 	}
 
 	return
