@@ -481,7 +481,7 @@ FROM timer_tasks WHERE
 shard_id = ? AND
 ((visibility_timestamp >= ? AND task_id >= ?) OR visibility_timestamp > ?) AND
 visibility_timestamp < ?
-LIMIT ?`
+ORDER BY visibility_timestamp,task_id LIMIT ?`
 	completeTimerTaskSQLQuery       = `DELETE FROM timer_tasks WHERE shard_id = ? AND visibility_timestamp = ? AND task_id = ?`
 	rangeCompleteTimerTaskSQLQuery  = `DELETE FROM timer_tasks WHERE shard_id = ? AND visibility_timestamp >= ? AND visibility_timestamp < ?`
 	lockAndCheckNextEventIDSQLQuery = `SELECT next_event_id FROM executions WHERE
