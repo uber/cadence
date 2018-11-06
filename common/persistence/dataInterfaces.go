@@ -162,7 +162,6 @@ type (
 		State            int
 		CloseStatus      int
 		LastWriteVersion int64
-		TreeID           string
 	}
 
 	// TimeoutError is returned when a write operation fails due to a timeout
