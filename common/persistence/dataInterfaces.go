@@ -1957,23 +1957,6 @@ func UnixNanoToDBTimestamp(timestamp int64) int64 {
 	return timestamp / (1000 * 1000) // Milliseconds are 10⁻³, nanoseconds are 10⁻⁹, (-9) - (-3) = -6, so divide by 10⁶
 }
 
-var internalThriftEncoder = codec.NewThriftRWEncoder()
-
-// NewHistoryBranchToken return a new branch token
-func NewHistoryBranchToken(treeID string) ([]byte, error) {
-	branchID := uuid.New()
-	bi := &workflow.HistoryBranch{
-		TreeID:    &treeID,
-		BranchID:  &branchID,
-		Ancestors: []*workflow.HistoryBranchRange{},
-	}
-	token, err := internalThriftEncoder.Encode(bi)
-	if err != nil {
-		return nil, err
-	}
-	return token, nil
-}
-
 func (e *WorkflowExecutionInfo) SetHistorySize(size int64) {
 	e.HistorySize = size
 	if e.EventStoreVersion == 2 {
@@ -2007,4 +1990,21 @@ func (e *WorkflowExecutionInfo) SetLastFirstEventID(id int64) {
 	if e.EventStoreVersion == 2 {
 		e.HistoryBranches[e.CurrentResetVersion].LastFirstEventID = id
 	}
+}
+
+var internalThriftEncoder = codec.NewThriftRWEncoder()
+
+// NewHistoryBranchToken return a new branch token
+func NewHistoryBranchToken(treeID string) ([]byte, error) {
+	branchID := uuid.New()
+	bi := &workflow.HistoryBranch{
+		TreeID:    &treeID,
+		BranchID:  &branchID,
+		Ancestors: []*workflow.HistoryBranchRange{},
+	}
+	token, err := internalThriftEncoder.Encode(bi)
+	if err != nil {
+		return nil, err
+	}
+	return token, nil
 }

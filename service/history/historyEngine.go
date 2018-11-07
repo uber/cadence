@@ -480,7 +480,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(ctx context.Context, startReq
 	if useEventsV2 {
 		eventStoreVersion = 2
 		// NOTE: except for fork(reset), we use runID as treeID for simplicity
-		if retError = initializeEventsV2(e.shard.GetHistoryV2Manager(), *execution.RunId, msBuilder); retError != nil {
+		if retError = msBuilder.SetHistoryTree(*execution.RunId); retError != nil {
 			return
 		}
 	}
@@ -1554,7 +1554,9 @@ Update_History_Loop:
 		if continueAsNewBuilder != nil {
 			continueAsNewTimerTasks = msBuilder.GetContinueAsNew().TimerTasks
 			if useEventsV2 {
-				initializeEventsV2(e.shard.GetHistoryV2Manager(), continueAsNewBuilder.GetExecutionInfo().RunID, continueAsNewBuilder)
+				if updateErr = continueAsNewBuilder.SetHistoryTree(continueAsNewBuilder.GetExecutionInfo().RunID); updateErr != nil {
+					return nil, updateErr
+				}
 			}
 			updateErr = context.continueAsNewWorkflowExecution(request.ExecutionContext, continueAsNewBuilder,
 				transferTasks, timerTasks, transactionID)
@@ -2103,7 +2105,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 	eventStoreVersion := int32(1)
 	if useEventsV2 {
 		eventStoreVersion = int32(2)
-		if retError = initializeEventsV2(e.shard.GetHistoryV2Manager(), *execution.RunId, msBuilder); retError != nil {
+		if retError = msBuilder.SetHistoryTree(*execution.RunId); retError != nil {
 			return
 		}
 	}

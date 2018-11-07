@@ -734,7 +734,9 @@ Update_History_Loop:
 
 		timersToNotify := append(timerTasks, msBuilder.GetContinueAsNew().TimerTasks...)
 		if useEventsV2 {
-			initializeEventsV2(t.shard.GetHistoryV2Manager(), continueAsNewBuilder.GetExecutionInfo().RunID, continueAsNewBuilder)
+			if err = continueAsNewBuilder.SetHistoryTree(continueAsNewBuilder.GetExecutionInfo().RunID); err != nil {
+				return err
+			}
 		}
 		err = context.continueAsNewWorkflowExecution(nil, continueAsNewBuilder, transferTasks, timerTasks, transactionID)
 		t.notifyNewTimers(timersToNotify)

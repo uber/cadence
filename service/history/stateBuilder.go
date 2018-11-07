@@ -109,7 +109,7 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 
 			b.timerTasks = append(b.timerTasks, b.scheduleWorkflowTimerTask(event, b.msBuilder))
 			if *attributes.EventStoreVersion == 2 {
-				//TODO
+				b.msBuilder.SetHistoryTree(*execution.RunId)
 			}
 
 		case shared.EventTypeDecisionTaskScheduled:
@@ -446,7 +446,7 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 			b.timerTasks = append(b.timerTasks, timerTask)
 
 			if *startedAttributes.EventStoreVersion == 2 {
-				//TODO
+				newRunStateBuilder.SetHistoryTree(*newExecution.RunId)
 			}
 		}
 	}

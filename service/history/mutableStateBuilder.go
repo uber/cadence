@@ -188,7 +188,11 @@ func (e *mutableStateBuilder) GetCurrentBranch() []byte {
 }
 
 // set eventStoreVersion/treeID/historyBranches
-func (e *mutableStateBuilder) InitializeEventsV2Info(treeID string, initialBranchToken []byte) {
+func (e *mutableStateBuilder) SetHistoryTree(treeID string) error {
+	initialBranchToken, err := persistence.NewHistoryBranchToken(treeID)
+	if err != nil {
+		return err
+	}
 	exeInfo := e.GetExecutionInfo()
 	exeInfo.HistoryTreeID = treeID
 	exeInfo.EventStoreVersion = 2
@@ -199,6 +203,7 @@ func (e *mutableStateBuilder) InitializeEventsV2Info(treeID string, initialBranc
 		LastFirstEventID: common.EmptyEventID,
 		HistorySize:      int64(0),
 	}
+	return nil
 }
 
 func (e *mutableStateBuilder) IncrementHistorySize(appendSize int) {

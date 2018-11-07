@@ -147,7 +147,6 @@ type (
 		HasParentExecution() bool
 		HasPendingDecisionTask() bool
 		IncrementHistorySize(int)
-		InitializeEventsV2Info(treeID string, initialBranchToken []byte)
 		IsCancelRequested() (bool, string)
 		IsSignalRequested(requestID string) bool
 		IsStickyTaskListEnabled() bool
@@ -194,6 +193,7 @@ type (
 		ReplicateWorkflowExecutionTimedoutEvent(*workflow.HistoryEvent)
 		ResetSnapshot(string) *persistence.ResetMutableStateRequest
 		SetHistoryBuilder(hBuilder *historyBuilder)
+		SetHistoryTree(treeID string) error
 		SetNewRunSize(size int)
 		UpdateActivity(*persistence.ActivityInfo) error
 		UpdateActivityProgress(ai *persistence.ActivityInfo, request *workflow.RecordActivityTaskHeartbeatRequest)
@@ -203,15 +203,3 @@ type (
 		UpdateUserTimer(string, *persistence.TimerInfo)
 	}
 )
-
-func initializeEventsV2(historyV2Mgr persistence.HistoryV2Manager, treeID string, msBuilder mutableState) (err error) {
-	resp0, err := historyV2Mgr.NewHistoryBranch(&persistence.NewHistoryBranchRequest{
-		TreeID: treeID,
-	})
-	if err != nil {
-		return
-	}
-	branchToken := resp0.BranchToken
-	msBuilder.InitializeEventsV2Info(treeID, branchToken)
-	return
-}
