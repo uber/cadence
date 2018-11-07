@@ -1119,9 +1119,6 @@ type (
 		PageSize int
 		// Token to continue reading next page of history append transactions.  Pass in empty slice for first page
 		NextPageToken []byte
-		// Optional parameter for validating event version. The starting version of the events returned need to be greater than it and should never decrease.
-		// Using zero if don't you want to check the version of the first event
-		LastEventVersion int64
 	}
 
 	// ReadHistoryBranchResponse is the response to ReadHistoryBranchRequest

@@ -208,7 +208,7 @@ func (m *historyV2ManagerImpl) ReadHistoryBranch(request *ReadHistoryBranchReque
 		}
 	}
 
-	token, err := m.pagingTokenSerializer.Deserialize(request.NextPageToken, request.MinEventID-1, request.LastEventVersion)
+	token, err := m.pagingTokenSerializer.Deserialize(request.NextPageToken, request.MinEventID-1, common.EmptyVersion)
 	if err != nil {
 		return nil, err
 	}

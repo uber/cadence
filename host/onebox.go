@@ -297,7 +297,7 @@ func (c *cadenceImpl) startFrontend(rpHosts []string, startWG *sync.WaitGroup) {
 
 	c.frontEndService = service.New(params)
 	c.frontendHandler = frontend.NewWorkflowHandler(
-		c.frontEndService, frontend.NewConfig(dynamicconfig.NewNopCollection()), c.metadataMgr, c.historyMgr, c.visibilityMgr, kafkaProducer)
+		c.frontEndService, frontend.NewConfig(dynamicconfig.NewNopCollection()), c.metadataMgr, c.historyMgr, nil, c.visibilityMgr, kafkaProducer)
 	err = c.frontendHandler.Start()
 	if err != nil {
 		c.logger.WithField("error", err).Fatal("Failed to start frontend")
