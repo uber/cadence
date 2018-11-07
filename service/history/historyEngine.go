@@ -669,6 +669,8 @@ func (e *historyEngineImpl) getMutableState(ctx context.Context,
 		ClientImpl:                           common.StringPtr(executionInfo.ClientImpl),
 		IsWorkflowRunning:                    common.BoolPtr(msBuilder.IsWorkflowExecutionRunning()),
 		StickyTaskListScheduleToStartTimeout: common.Int32Ptr(executionInfo.StickyScheduleToStartTimeout),
+		EventStoreVersion:                    common.Int32Ptr(msBuilder.GetEventStoreVersion()),
+		BranchToken:                          msBuilder.GetCurrentBranch(),
 	}
 
 	return
@@ -2521,6 +2523,8 @@ func (e *historyEngineImpl) createRecordDecisionTaskStartedResponse(domainID str
 		response.DecisionInfo.ScheduledEvent = scheduledEvent
 		response.DecisionInfo.StartedEvent = startedEvent
 	}
+	response.EventStoreVersion = common.Int32Ptr(msBuilder.GetEventStoreVersion())
+	response.BranchToken = msBuilder.GetCurrentBranch()
 
 	return response
 }
