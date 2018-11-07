@@ -280,20 +280,6 @@ func getPreviousMutableState(context *workflowExecutionContext, ctxError error) 
 	}
 }
 
-func (e *historyEngineImpl) initializeEventsV2(treeID string, msBuilder mutableState) (err error) {
-	historyV2Mgr := e.shard.GetHistoryV2Manager()
-
-	resp0, err := historyV2Mgr.NewHistoryBranch(&persistence.NewHistoryBranchRequest{
-		TreeID: treeID,
-	})
-	if err != nil {
-		return
-	}
-	branchToken := resp0.BranchToken
-	msBuilder.InitializeEventsV2Info(treeID, branchToken)
-	return
-}
-
 func (e *historyEngineImpl) createMutableState(clusterMetadata cluster.Metadata, domainEntry *cache.DomainCacheEntry) mutableState {
 	var msBuilder mutableState
 	if clusterMetadata.IsGlobalDomainEnabled() && domainEntry.IsGlobalDomain() {
@@ -339,13 +325,13 @@ func (e *historyEngineImpl) generateFirstDecisionTask(domainID string, msBuilder
 	return transferTasks, di, nil
 }
 
-func (e *historyEngineImpl) appendHistoryEvents(msBuilder mutableState, domainID string, execution workflow.WorkflowExecution, isNewBranch bool) (historySize int, err error) {
+func (e *historyEngineImpl) appendFirstBatchHistoryEvents(msBuilder mutableState, domainID string, execution workflow.WorkflowExecution) (historySize int, err error) {
 	events := msBuilder.GetHistoryBuilder().GetHistory().Events
 	startedEvent := events[0]
-	if msBuilder.GetEventsTableVersion() == 2 {
+	if msBuilder.GetEventStoreVersion() == 2 {
 		branchToken := msBuilder.GetCurrentBranch()
 		historySize, err = e.shard.AppendHistoryV2Events(&persistence.AppendHistoryNodesRequest{
-			IsNewBranch: isNewBranch,
+			IsNewBranch: true,
 			BranchToken: branchToken,
 			Events:      events,
 			// It is ok to use 0 for TransactionID because RunID is unique so there are
@@ -444,7 +430,7 @@ func (e *historyEngineImpl) createWorkflow(startRequest *h.StartWorkflowExecutio
 		PreviousLastWriteVersion:    prevLastWriteVersion,
 		ReplicationState:            msBuilder.GetReplicationState(),
 		HasRetryPolicy:              request.RetryPolicy != nil,
-		EventsTableVersion:          msBuilder.GetEventsTableVersion(),
+		EventStoreVersion:           msBuilder.GetEventStoreVersion(),
 		HistoryTreeID:               currExeInfo.HistoryTreeID,
 		BranchToken:                 msBuilder.GetCurrentBranch(),
 		CreateWorkflowMode:          createMode,
@@ -490,14 +476,16 @@ func (e *historyEngineImpl) StartWorkflowExecution(ctx context.Context, startReq
 	clusterMetadata := e.shard.GetService().GetClusterMetadata()
 	msBuilder := e.createMutableState(clusterMetadata, domainEntry)
 	useEventsV2 := e.config.EnableEventsV2(request.GetDomain())
+	eventStoreVersion := int32(1)
 	if useEventsV2 {
+		eventStoreVersion = 2
 		// NOTE: except for fork(reset), we use runID as treeID for simplicity
-		if retError = e.initializeEventsV2(*execution.RunId, msBuilder); retError != nil {
+		if retError = initializeEventsV2(e.shard.GetHistoryV2Manager(), *execution.RunId, msBuilder); retError != nil {
 			return
 		}
 	}
 
-	startedEvent := msBuilder.AddWorkflowExecutionStartedEvent(execution, startRequest)
+	startedEvent := msBuilder.AddWorkflowExecutionStartedEvent(execution, startRequest, eventStoreVersion)
 	if startedEvent == nil {
 		retError = &workflow.InternalServiceError{Message: "Failed to add workflow execution started event."}
 		return
@@ -520,7 +508,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(ctx context.Context, startReq
 	setTaskInfo(msBuilder.GetCurrentVersion(), time.Now(), transferTasks, timerTasks)
 
 	needDeleteHistory := true
-	historySize, retError := e.appendHistoryEvents(msBuilder, domainID, execution, true)
+	historySize, retError := e.appendFirstBatchHistoryEvents(msBuilder, domainID, execution)
 	if retError != nil {
 		return
 	}
@@ -1028,6 +1016,11 @@ func (e *historyEngineImpl) RespondDecisionTaskCompleted(ctx context.Context, re
 	}
 	domainID := domainEntry.GetInfo().ID
 
+	useEventsV2 := e.config.EnableEventsV2(domainEntry.GetInfo().Name)
+	eventStoreVersion := int32(1)
+	if useEventsV2 {
+		eventStoreVersion = int32(2)
+	}
 	request := req.CompleteRequest
 	token, err0 := e.tokenSerializer.Deserialize(request.TaskToken)
 	if err0 != nil {
@@ -1216,7 +1209,8 @@ Update_History_Loop:
 						TaskStartToCloseTimeoutSeconds:      startAttributes.TaskStartToCloseTimeoutSeconds,
 						BackoffStartIntervalInSeconds:       common.Int32Ptr(int32(retryBackoffInterval.Seconds())),
 					}
-					if _, continueAsNewBuilder, err = msBuilder.AddContinueAsNewEvent(completedID, domainEntry, startAttributes.GetParentWorkflowDomain(), continueAsnewAttributes); err != nil {
+
+					if _, continueAsNewBuilder, err = msBuilder.AddContinueAsNewEvent(completedID, domainEntry, startAttributes.GetParentWorkflowDomain(), continueAsnewAttributes, eventStoreVersion); err != nil {
 						return nil, err
 					}
 				}
@@ -1434,7 +1428,7 @@ Update_History_Loop:
 					parentDomainName = parentDomainEntry.GetInfo().Name
 				}
 
-				_, newStateBuilder, err := msBuilder.AddContinueAsNewEvent(completedID, domainEntry, parentDomainName, attributes)
+				_, newStateBuilder, err := msBuilder.AddContinueAsNewEvent(completedID, domainEntry, parentDomainName, attributes, eventStoreVersion)
 				if err != nil {
 					return nil, err
 				}
@@ -1559,6 +1553,9 @@ Update_History_Loop:
 		var updateErr error
 		if continueAsNewBuilder != nil {
 			continueAsNewTimerTasks = msBuilder.GetContinueAsNew().TimerTasks
+			if useEventsV2 {
+				initializeEventsV2(e.shard.GetHistoryV2Manager(), continueAsNewBuilder.GetExecutionInfo().RunID, continueAsNewBuilder)
+			}
 			updateErr = context.continueAsNewWorkflowExecution(request.ExecutionContext, continueAsNewBuilder,
 				transferTasks, timerTasks, transactionID)
 		} else {
@@ -2103,8 +2100,10 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 	clusterMetadata := e.shard.GetService().GetClusterMetadata()
 	msBuilder := e.createMutableState(clusterMetadata, domainEntry)
 	useEventsV2 := e.config.EnableEventsV2(request.GetDomain())
+	eventStoreVersion := int32(1)
 	if useEventsV2 {
-		if retError = e.initializeEventsV2(*execution.RunId, msBuilder); retError != nil {
+		eventStoreVersion = int32(2)
+		if retError = initializeEventsV2(e.shard.GetHistoryV2Manager(), *execution.RunId, msBuilder); retError != nil {
 			return
 		}
 	}
@@ -2131,7 +2130,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 	// Generate first decision task event.
 	taskList := request.TaskList.GetName()
 	// Add WF start event
-	startedEvent := msBuilder.AddWorkflowExecutionStartedEvent(execution, startRequest)
+	startedEvent := msBuilder.AddWorkflowExecutionStartedEvent(execution, startRequest, eventStoreVersion)
 	if startedEvent == nil {
 		return nil, &workflow.InternalServiceError{Message: "Failed to add workflow execution started event."}
 	}
@@ -2158,7 +2157,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 	setTaskInfo(msBuilder.GetCurrentVersion(), time.Now(), transferTasks, timerTasks)
 
 	needDeleteHistory := true
-	historySize, retError := e.appendHistoryEvents(msBuilder, domainID, execution, true)
+	historySize, retError := e.appendFirstBatchHistoryEvents(msBuilder, domainID, execution)
 	if retError != nil {
 		return
 	}

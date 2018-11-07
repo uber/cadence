@@ -108,6 +108,9 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 			b.msBuilder.ReplicateWorkflowExecutionStartedEvent(domainID, parentDomainID, execution, requestID, attributes)
 
 			b.timerTasks = append(b.timerTasks, b.scheduleWorkflowTimerTask(event, b.msBuilder))
+			if *attributes.EventStoreVersion == 2 {
+				//TODO
+			}
 
 		case shared.EventTypeDecisionTaskScheduled:
 			attributes := event.DecisionTaskScheduledEventAttributes
@@ -441,6 +444,10 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 				return nil, nil, nil, err
 			}
 			b.timerTasks = append(b.timerTasks, timerTask)
+
+			if *startedAttributes.EventStoreVersion == 2 {
+				//TODO
+			}
 		}
 	}
 

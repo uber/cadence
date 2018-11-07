@@ -48,6 +48,7 @@ type (
 		timerGate               LocalTimerGate
 		timerQueueProcessorBase *timerQueueProcessorBase
 		timerQueueAckMgr        timerQueueAckMgr
+		config                  *Config
 	}
 )
 
@@ -98,6 +99,7 @@ func newTimerQueueActiveProcessor(shard ShardContext, historyService *historyEng
 			logger,
 		),
 		timerQueueAckMgr: timerQueueAckMgr,
+		config:           shard.GetConfig(),
 	}
 	processor.timerQueueProcessorBase.timerProcessor = processor
 	return processor
@@ -705,7 +707,12 @@ Update_History_Loop:
 		if err != nil {
 			return err
 		}
-		_, continueAsNewBuilder, err := msBuilder.AddContinueAsNewEvent(common.EmptyEventID, domainEntry, startAttributes.GetParentWorkflowDomain(), continueAsnewAttributes)
+		useEventsV2 := t.config.EnableEventsV2(domainEntry.GetInfo().Name)
+		eventStoreVersion := int32(1)
+		if useEventsV2 {
+			eventStoreVersion = 2
+		}
+		_, continueAsNewBuilder, err := msBuilder.AddContinueAsNewEvent(common.EmptyEventID, domainEntry, startAttributes.GetParentWorkflowDomain(), continueAsnewAttributes, eventStoreVersion)
 		if err != nil {
 			return err
 		}
@@ -726,6 +733,9 @@ Update_History_Loop:
 		}
 
 		timersToNotify := append(timerTasks, msBuilder.GetContinueAsNew().TimerTasks...)
+		if useEventsV2 {
+			initializeEventsV2(t.shard.GetHistoryV2Manager(), continueAsNewBuilder.GetExecutionInfo().RunID, continueAsNewBuilder)
+		}
 		err = context.continueAsNewWorkflowExecution(nil, continueAsNewBuilder, transferTasks, timerTasks, transactionID)
 		t.notifyNewTimers(timersToNotify)
 

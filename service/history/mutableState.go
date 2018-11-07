@@ -59,7 +59,7 @@ type (
 		AddChildWorkflowExecutionTerminatedEvent(int64, *workflow.WorkflowExecution, *workflow.WorkflowExecutionTerminatedEventAttributes) *workflow.HistoryEvent
 		AddChildWorkflowExecutionTimedOutEvent(int64, *workflow.WorkflowExecution, *workflow.WorkflowExecutionTimedOutEventAttributes) *workflow.HistoryEvent
 		AddCompletedWorkflowEvent(int64, *workflow.CompleteWorkflowExecutionDecisionAttributes) *workflow.HistoryEvent
-		AddContinueAsNewEvent(int64, *cache.DomainCacheEntry, string, *workflow.ContinueAsNewWorkflowExecutionDecisionAttributes) (*workflow.HistoryEvent, mutableState, error)
+		AddContinueAsNewEvent(int64, *cache.DomainCacheEntry, string, *workflow.ContinueAsNewWorkflowExecutionDecisionAttributes, int32) (*workflow.HistoryEvent, mutableState, error)
 		AddDecisionTaskCompletedEvent(int64, int64, *workflow.RespondDecisionTaskCompletedRequest) *workflow.HistoryEvent
 		AddDecisionTaskFailedEvent(int64, int64, workflow.DecisionTaskFailedCause, []uint8, string) *workflow.HistoryEvent
 		AddDecisionTaskScheduleToStartTimeoutEvent(int64) *workflow.HistoryEvent
@@ -85,8 +85,7 @@ type (
 		AddWorkflowExecutionCancelRequestedEvent(string, *h.RequestCancelWorkflowExecutionRequest) *workflow.HistoryEvent
 		AddWorkflowExecutionCanceledEvent(int64, *workflow.CancelWorkflowExecutionDecisionAttributes) *workflow.HistoryEvent
 		AddWorkflowExecutionSignaled(*workflow.SignalWorkflowExecutionRequest) *workflow.HistoryEvent
-		AddWorkflowExecutionStartedEvent(workflow.WorkflowExecution, *h.StartWorkflowExecutionRequest) *workflow.HistoryEvent
-		AddWorkflowExecutionStartedEventForContinueAsNew(string, *h.ParentExecutionInfo, workflow.WorkflowExecution, mutableState, *workflow.ContinueAsNewWorkflowExecutionDecisionAttributes) *workflow.HistoryEvent
+		AddWorkflowExecutionStartedEvent(workflow.WorkflowExecution, *h.StartWorkflowExecutionRequest, int32) *workflow.HistoryEvent
 		AddWorkflowExecutionTerminatedEvent(*workflow.TerminateWorkflowExecutionRequest) *workflow.HistoryEvent
 		AfterAddDecisionTaskCompletedEvent(int64)
 		BeforeAddDecisionTaskCompletedEvent()
@@ -122,7 +121,7 @@ type (
 		GetCurrentBranch() []byte
 		GetCurrentVersion() int64
 		GetExecutionInfo() *persistence.WorkflowExecutionInfo
-		GetEventsTableVersion() int32
+		GetEventStoreVersion() int32
 		GetHistoryBuilder() *historyBuilder
 		GetHistorySize() int64
 		GetInFlightDecisionTask() (*decisionInfo, bool)
@@ -204,3 +203,15 @@ type (
 		UpdateUserTimer(string, *persistence.TimerInfo)
 	}
 )
+
+func initializeEventsV2(historyV2Mgr persistence.HistoryV2Manager, treeID string, msBuilder mutableState) (err error) {
+	resp0, err := historyV2Mgr.NewHistoryBranch(&persistence.NewHistoryBranchRequest{
+		TreeID: treeID,
+	})
+	if err != nil {
+		return
+	}
+	branchToken := resp0.BranchToken
+	msBuilder.InitializeEventsV2Info(treeID, branchToken)
+	return
+}

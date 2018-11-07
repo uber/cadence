@@ -178,7 +178,7 @@ func (e *mutableStateBuilder) Load(state *persistence.WorkflowMutableState) {
 }
 
 //TODO
-func (e *mutableStateBuilder) GetEventsTableVersion() int32 {
+func (e *mutableStateBuilder) GetEventStoreVersion() int32 {
 	return int32(0)
 }
 
@@ -188,7 +188,7 @@ func (e *mutableStateBuilder) GetCurrentBranch() []byte {
 }
 
 //TODO
-// set eventsTableVersion/treeID/historyBranches
+// set eventStoreVersion/treeID/historyBranches
 func (e *mutableStateBuilder) InitializeEventsV2Info(treeID string, initialBranchToken []byte) {
 
 }
@@ -1128,9 +1128,9 @@ func (e *mutableStateBuilder) DeleteSignalRequested(requestID string) {
 	e.deleteSignalRequestedID = requestID
 }
 
-func (e *mutableStateBuilder) AddWorkflowExecutionStartedEventForContinueAsNew(domainID string,
+func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(domainID string,
 	parentExecutionInfo *h.ParentExecutionInfo, execution workflow.WorkflowExecution, previousExecutionState mutableState,
-	attributes *workflow.ContinueAsNewWorkflowExecutionDecisionAttributes) *workflow.HistoryEvent {
+	attributes *workflow.ContinueAsNewWorkflowExecutionDecisionAttributes, eventStoreVersion int32) *workflow.HistoryEvent {
 	previousExecutionInfo := previousExecutionState.GetExecutionInfo()
 	taskList := previousExecutionInfo.TaskList
 	if attributes.TaskList != nil {
@@ -1182,7 +1182,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionStartedEventForContinueAsNew(d
 		parentDomainID = parentExecutionInfo.DomainUUID
 	}
 
-	event := e.hBuilder.AddWorkflowExecutionStartedEvent(req, &previousExecutionInfo.RunID)
+	event := e.hBuilder.AddWorkflowExecutionStartedEvent(req, &previousExecutionInfo.RunID, eventStoreVersion)
 	e.ReplicateWorkflowExecutionStartedEvent(domainID, parentDomainID, execution, createRequest.GetRequestId(),
 		event.WorkflowExecutionStartedEventAttributes)
 
@@ -1190,7 +1190,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionStartedEventForContinueAsNew(d
 }
 
 func (e *mutableStateBuilder) AddWorkflowExecutionStartedEvent(execution workflow.WorkflowExecution,
-	startRequest *h.StartWorkflowExecutionRequest) *workflow.HistoryEvent {
+	startRequest *h.StartWorkflowExecutionRequest, eventStoreVersion int32) *workflow.HistoryEvent {
 	request := startRequest.StartRequest
 	eventID := e.GetNextEventID()
 	if eventID != common.FirstEventID {
@@ -1198,7 +1198,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionStartedEvent(execution workflo
 		return nil
 	}
 
-	event := e.hBuilder.AddWorkflowExecutionStartedEvent(startRequest, nil)
+	event := e.hBuilder.AddWorkflowExecutionStartedEvent(startRequest, nil, eventStoreVersion)
 
 	var parentDomainID *string
 	if startRequest.ParentExecutionInfo != nil {
@@ -2145,7 +2145,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionSignaled(
 }
 
 func (e *mutableStateBuilder) AddContinueAsNewEvent(decisionCompletedEventID int64, domainEntry *cache.DomainCacheEntry,
-	parentDomainName string, attributes *workflow.ContinueAsNewWorkflowExecutionDecisionAttributes) (*workflow.HistoryEvent, mutableState,
+	parentDomainName string, attributes *workflow.ContinueAsNewWorkflowExecutionDecisionAttributes, eventStoreVersion int32) (*workflow.HistoryEvent, mutableState,
 	error) {
 
 	newRunID := uuid.New()
@@ -2179,7 +2179,7 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(decisionCompletedEventID int
 		newStateBuilder = newMutableStateBuilder(e.currentCluster, e.config, e.logger)
 	}
 	domainID := domainEntry.GetInfo().ID
-	startedEvent := newStateBuilder.AddWorkflowExecutionStartedEventForContinueAsNew(domainID, parentInfo, newExecution, e, attributes)
+	startedEvent := newStateBuilder.addWorkflowExecutionStartedEventForContinueAsNew(domainID, parentInfo, newExecution, e, attributes, eventStoreVersion)
 	if startedEvent == nil {
 		return nil, nil, &workflow.InternalServiceError{Message: "Failed to add workflow execution started event."}
 	}

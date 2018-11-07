@@ -703,14 +703,24 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 	}
 
 	var historySize int
-	historySize, err = r.shard.AppendHistoryEvents(&persistence.AppendHistoryEventsRequest{
-		DomainID:          domainID,
-		Execution:         execution,
-		TransactionID:     transactionID,
-		FirstEventID:      firstEvent.GetEventId(),
-		EventBatchVersion: firstEvent.GetVersion(),
-		Events:            history.Events,
-	})
+	if msBuilder.GetEventStoreVersion() == 2 {
+		historySize, err = r.shard.AppendHistoryV2Events(&persistence.AppendHistoryNodesRequest{
+			IsNewBranch:   true,
+			BranchToken:   msBuilder.GetCurrentBranch(),
+			Events:        history.Events,
+			TransactionID: transactionID,
+		}, msBuilder.GetExecutionInfo().DomainID)
+	} else {
+		historySize, err = r.shard.AppendHistoryEvents(&persistence.AppendHistoryEventsRequest{
+			DomainID:          domainID,
+			Execution:         execution,
+			TransactionID:     transactionID,
+			FirstEventID:      firstEvent.GetEventId(),
+			EventBatchVersion: firstEvent.GetVersion(),
+			Events:            history.Events,
+		})
+	}
+
 	if err != nil {
 		return err
 	}

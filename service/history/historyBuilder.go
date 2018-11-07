@@ -71,8 +71,8 @@ func (b *historyBuilder) HasTransientEvents() bool {
 }
 
 func (b *historyBuilder) AddWorkflowExecutionStartedEvent(request *h.StartWorkflowExecutionRequest,
-	previousRunID *string) *workflow.HistoryEvent {
-	event := b.newWorkflowExecutionStartedEvent(request, previousRunID)
+	previousRunID *string, eventStoreVersion int32) *workflow.HistoryEvent {
+	event := b.newWorkflowExecutionStartedEvent(request, previousRunID, eventStoreVersion)
 
 	return b.addEventToHistory(event)
 }
@@ -447,7 +447,7 @@ func (b *historyBuilder) addTransientEvent(event *workflow.HistoryEvent) *workfl
 }
 
 func (b *historyBuilder) newWorkflowExecutionStartedEvent(
-	startRequest *h.StartWorkflowExecutionRequest, previousRunID *string) *workflow.HistoryEvent {
+	startRequest *h.StartWorkflowExecutionRequest, previousRunID *string, eventStoreVersion int32) *workflow.HistoryEvent {
 	request := startRequest.StartRequest
 	historyEvent := b.msBuilder.CreateNewHistoryEvent(workflow.EventTypeWorkflowExecutionStarted)
 	attributes := &workflow.WorkflowExecutionStartedEventAttributes{}
@@ -462,6 +462,7 @@ func (b *historyBuilder) newWorkflowExecutionStartedEvent(
 	attributes.RetryPolicy = request.RetryPolicy
 	attributes.Attempt = common.Int32Ptr(startRequest.GetAttempt())
 	attributes.ExpirationTimestamp = startRequest.ExpirationTimestamp
+	attributes.EventStoreVersion = &eventStoreVersion
 
 	parentInfo := startRequest.ParentExecutionInfo
 	if parentInfo != nil {
