@@ -154,7 +154,7 @@ func (c *workflowExecutionContext) updateWorkflowExecutionWithDeleteTask(transfe
 func (c *workflowExecutionContext) replicateWorkflowExecution(request *h.ReplicateEventsRequest,
 	transferTasks []persistence.Task, timerTasks []persistence.Task, lastEventID, transactionID int64, now time.Time) error {
 	nextEventID := lastEventID + 1
-	c.msBuilder.GetExecutionInfo().NextEventID = nextEventID
+	c.msBuilder.GetExecutionInfo().SetNextEventID(nextEventID)
 
 	standbyHistoryBuilder := newHistoryBuilderFromEvents(request.History.Events, c.logger)
 	return c.updateHelper(transferTasks, timerTasks, transactionID, now, false, standbyHistoryBuilder, request.GetSourceCluster())
@@ -290,7 +290,7 @@ func (c *workflowExecutionContext) updateHelper(transferTasks []persistence.Task
 			return err
 		}
 
-		executionInfo.LastFirstEventID = firstEvent.GetEventId()
+		executionInfo.SetLastFirstEventID(firstEvent.GetEventId())
 	}
 
 	// Some operations only update the mutable state. For example RecordActivityTaskHeartbeat.
@@ -310,7 +310,7 @@ func (c *workflowExecutionContext) updateHelper(transferTasks []persistence.Task
 			return err
 		}
 
-		executionInfo.LastFirstEventID = firstEvent.GetEventId()
+		executionInfo.SetLastFirstEventID(firstEvent.GetEventId())
 		historySize += size
 	}
 

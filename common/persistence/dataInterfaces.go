@@ -255,7 +255,7 @@ type (
 		EventStoreVersion   int32
 		CurrentResetVersion int32
 		HistoryTreeID       string
-		HistoryBranches     map[int32]HistoryBranch // map from each resetVersion to the associated branch, resetVersion increase from 0
+		HistoryBranches     map[int32]*HistoryBranch // map from each resetVersion to the associated branch, resetVersion increase from 0
 	}
 
 	HistoryBranch struct {
@@ -1258,11 +1258,7 @@ type (
 		// The below are history V2 APIs
 		// V2 regards history events growing as a tree, decoupled from workflow concepts
 		// For Cadence, treeID is new runID, except for fork(reset), treeID will be the runID that it forks from.
-		// A treeID will be a UUID, shared by all executions of a workflow_id, each run_id will have one or more branches.
-		// NodeID is the same as EventID
-		// NOTE: to avoid multiple round trips to database, NewHistoryBranch ONLY returns the new branchToken, it doesn't create tree/branch records in database.
-		// Application layer need to tell AppendHistoryNodes whether the tree/branch are new or not
-		NewHistoryBranch(request *NewHistoryBranchRequest) (*NewHistoryBranchResponse, error)
+
 		// AppendHistoryNodes add(or override) a batach of nodes to a history branch
 		AppendHistoryNodes(request *AppendHistoryNodesRequest) (*AppendHistoryNodesResponse, error)
 		// ReadHistoryBranch returns history node data for a branch
@@ -1976,4 +1972,39 @@ func NewHistoryBranchToken(treeID string) ([]byte, error) {
 		return nil, err
 	}
 	return token, nil
+}
+
+func (e *WorkflowExecutionInfo) SetHistorySize(size int64) {
+	e.HistorySize = size
+	if e.EventStoreVersion == 2 {
+		e.HistoryBranches[e.CurrentResetVersion].HistorySize = size
+	}
+}
+
+func (e *WorkflowExecutionInfo) IncreaseHistorySize(delta int64) {
+	e.HistorySize += delta
+	if e.EventStoreVersion == 2 {
+		e.HistoryBranches[e.CurrentResetVersion].HistorySize += delta
+	}
+}
+
+func (e *WorkflowExecutionInfo) SetNextEventID(id int64) {
+	e.NextEventID = id
+	if e.EventStoreVersion == 2 {
+		e.HistoryBranches[e.CurrentResetVersion].NextEventID = id
+	}
+}
+
+func (e *WorkflowExecutionInfo) IncreaseNextEventID() {
+	e.NextEventID++
+	if e.EventStoreVersion == 2 {
+		e.HistoryBranches[e.CurrentResetVersion].NextEventID++
+	}
+}
+
+func (e *WorkflowExecutionInfo) SetLastFirstEventID(id int64) {
+	e.LastFirstEventID = id
+	if e.EventStoreVersion == 2 {
+		e.HistoryBranches[e.CurrentResetVersion].LastFirstEventID = id
+	}
 }

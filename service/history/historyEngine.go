@@ -358,7 +358,7 @@ func fullfillExecutionInfo(msBuilder mutableState, domainID, taskList string, ex
 	info.DomainID = domainID
 	info.WorkflowID = *execution.WorkflowId
 	info.RunID = *execution.RunId
-	info.LastFirstEventID = lastFirstEventID
+	info.SetLastFirstEventID(lastFirstEventID)
 	info.TaskList = taskList
 }
 

@@ -177,24 +177,32 @@ func (e *mutableStateBuilder) Load(state *persistence.WorkflowMutableState) {
 	}
 }
 
-//TODO
 func (e *mutableStateBuilder) GetEventStoreVersion() int32 {
-	return int32(0)
+	return e.GetExecutionInfo().EventStoreVersion
 }
 
-//TODO
 func (e *mutableStateBuilder) GetCurrentBranch() []byte {
-	return nil
+	exeInfo := e.GetExecutionInfo()
+	resetIdx := exeInfo.CurrentResetVersion
+	return exeInfo.HistoryBranches[resetIdx].BranchToken
 }
 
-//TODO
 // set eventStoreVersion/treeID/historyBranches
 func (e *mutableStateBuilder) InitializeEventsV2Info(treeID string, initialBranchToken []byte) {
-
+	exeInfo := e.GetExecutionInfo()
+	exeInfo.HistoryTreeID = treeID
+	exeInfo.EventStoreVersion = 2
+	exeInfo.CurrentResetVersion = 0
+	exeInfo.HistoryBranches[exeInfo.CurrentResetVersion] = &persistence.HistoryBranch{
+		BranchToken:      initialBranchToken,
+		NextEventID:      common.FirstEventID,
+		LastFirstEventID: common.EmptyEventID,
+		HistorySize:      int64(0),
+	}
 }
 
 func (e *mutableStateBuilder) IncrementHistorySize(appendSize int) {
-	e.executionInfo.HistorySize += int64(appendSize)
+	e.executionInfo.IncreaseHistorySize(int64(appendSize))
 }
 
 func (e *mutableStateBuilder) GetHistorySize() int64 {
@@ -578,7 +586,7 @@ func (e *mutableStateBuilder) assignEventIDToBufferedEvents() {
 
 		eventID := e.executionInfo.NextEventID
 		event.EventId = common.Int64Ptr(eventID)
-		e.executionInfo.NextEventID++
+		e.executionInfo.IncreaseNextEventID()
 
 		switch event.GetEventType() {
 		case workflow.EventTypeActivityTaskStarted:
@@ -661,7 +669,7 @@ func (e *mutableStateBuilder) CreateNewHistoryEventWithTimestamp(eventType workf
 		eventID = common.BufferedEventID
 	} else {
 		// only increase NextEventID if event is not buffered
-		e.executionInfo.NextEventID++
+		e.executionInfo.IncreaseNextEventID()
 	}
 
 	ts := common.Int64Ptr(timestamp)

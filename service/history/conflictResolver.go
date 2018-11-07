@@ -108,12 +108,12 @@ func (r *conflictResolverImpl) reset(prevRunID string, requestID string, replayE
 			r.logError("Conflict resolution err applying events.", err)
 			return nil, err
 		}
-		resetMutableStateBuilder.executionInfo.LastFirstEventID = lastFirstEventID
+		resetMutableStateBuilder.executionInfo.SetLastFirstEventID(lastFirstEventID)
 		resetMutableStateBuilder.IncrementHistorySize(response.Size)
 	}
 
 	// Applying events to mutableState does not move the nextEventID.  Explicitly set nextEventID to new value
-	resetMutableStateBuilder.executionInfo.NextEventID = replayNextEventID
+	resetMutableStateBuilder.executionInfo.SetNextEventID(replayNextEventID)
 	resetMutableStateBuilder.executionInfo.StartTimestamp = startTime
 	// the last updated time is not important here, since this should be updated with event time afterwards
 	resetMutableStateBuilder.executionInfo.LastUpdatedTimestamp = startTime

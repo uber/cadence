@@ -21,6 +21,7 @@
 package persistence
 
 import (
+	"code.uber.internal/devexp/cadence-iot-demo/.tmp/.go/goroot/src/fmt"
 	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -103,6 +104,25 @@ func (m *executionManagerImpl) DeserializeExecutionInfo(info *InternalWorkflowEx
 	if err != nil {
 		return nil, err
 	}
+
+	if info.EventStoreVersion == 2 {
+		if info.HistorySize != info.HistoryBranches[info.CurrentResetVersion].HistorySize {
+			return nil, &workflow.InternalServiceError{
+				Message: fmt.Sprintf("HistorySizes of V1/V2 don't match"),
+			}
+		}
+		if info.LastFirstEventID != info.HistoryBranches[info.CurrentResetVersion].LastFirstEventID {
+			return nil, &workflow.InternalServiceError{
+				Message: fmt.Sprintf("LastFirstEventIDs of V1/V2 don't match"),
+			}
+		}
+		if info.NextEventID != info.HistoryBranches[info.CurrentResetVersion].NextEventID {
+			return nil, &workflow.InternalServiceError{
+				Message: fmt.Sprintf("NextEventIDs of V1/V2 don't match"),
+			}
+		}
+	}
+
 	newInfo := &WorkflowExecutionInfo{
 		CompletionEvent: completionEvent,
 
@@ -443,6 +463,24 @@ func (m *executionManagerImpl) SerializeExecutionInfo(info *WorkflowExecutionInf
 	completionEvent, err := m.serializer.SerializeEvent(info.CompletionEvent, encoding)
 	if err != nil {
 		return nil, err
+	}
+
+	if info.EventStoreVersion == 2 {
+		if info.HistorySize != info.HistoryBranches[info.CurrentResetVersion].HistorySize {
+			return nil, &workflow.BadRequestError{
+				Message: fmt.Sprintf("HistorySizes of V1/V2 don't match"),
+			}
+		}
+		if info.LastFirstEventID != info.HistoryBranches[info.CurrentResetVersion].LastFirstEventID {
+			return nil, &workflow.BadRequestError{
+				Message: fmt.Sprintf("LastFirstEventIDs of V1/V2 don't match"),
+			}
+		}
+		if info.NextEventID != info.HistoryBranches[info.CurrentResetVersion].NextEventID {
+			return nil, &workflow.BadRequestError{
+				Message: fmt.Sprintf("NextEventIDs of V1/V2 don't match"),
+			}
+		}
 	}
 
 	return &InternalWorkflowExecutionInfo{

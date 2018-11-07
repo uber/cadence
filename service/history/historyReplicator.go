@@ -726,8 +726,8 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 	}
 
 	// TODO this pile of logic should be merge into workflow execution context / mutable state
-	executionInfo.LastFirstEventID = firstEvent.GetEventId()
-	executionInfo.NextEventID = lastEvent.GetEventId() + 1
+	executionInfo.SetLastFirstEventID(firstEvent.GetEventId())
+	executionInfo.SetNextEventID(lastEvent.GetEventId() + 1)
 	incomingVersion := firstEvent.GetVersion()
 	msBuilder.UpdateReplicationStateLastEventID(sourceCluster, incomingVersion, lastEvent.GetEventId())
 	replicationState := msBuilder.GetReplicationState()

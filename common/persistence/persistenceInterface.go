@@ -169,7 +169,7 @@ type (
 		EventStoreVersion   int32
 		CurrentResetVersion int32
 		HistoryTreeID       string
-		HistoryBranches     map[int32]HistoryBranch // map from each resetVersion to the associated branch
+		HistoryBranches     map[int32]*HistoryBranch // map from each resetVersion to the associated branch
 	}
 
 	// InternalWorkflowMutableState indicates workflow related state for Persistence Interface

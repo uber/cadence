@@ -418,8 +418,8 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 				nextEventID = di.ScheduleID + 1
 			}
 			newRunExecutionInfo := newRunStateBuilder.GetExecutionInfo()
-			newRunExecutionInfo.NextEventID = nextEventID
-			newRunExecutionInfo.LastFirstEventID = startedEvent.GetEventId()
+			newRunExecutionInfo.SetNextEventID(nextEventID)
+			newRunExecutionInfo.SetLastFirstEventID(startedEvent.GetEventId())
 			// Set the history from replication task on the newStateBuilder
 			newRunStateBuilder.SetHistoryBuilder(newHistoryBuilderFromEvents(newRunHistory.Events, b.logger))
 			sourceClusterName := b.clusterMetadata.ClusterNameForFailoverVersion(startedEvent.GetVersion())
