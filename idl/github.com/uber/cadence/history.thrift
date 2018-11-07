@@ -95,8 +95,6 @@ struct RespondDecisionTaskCompletedRequest {
 
 struct RespondDecisionTaskCompletedResponse {
   10: optional RecordDecisionTaskStartedResponse startedResponse
-  20: optional i32 eventStoreVersion
-  30: optional binary branchToken
 }
 
 struct RespondDecisionTaskFailedRequest {
@@ -162,6 +160,8 @@ struct RecordDecisionTaskStartedResponse {
   70: optional bool stickyExecutionEnabled
   80: optional shared.TransientDecisionInfo decisionInfo
   90: optional shared.TaskList WorkflowExecutionTaskList
+  100: optional i32 eventStoreVersion
+  110: optional binary branchToken
 }
 
 struct SignalWorkflowExecutionRequest {

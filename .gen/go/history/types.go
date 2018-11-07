@@ -3289,6 +3289,8 @@ type RecordDecisionTaskStartedResponse struct {
 	StickyExecutionEnabled    *bool                         `json:"stickyExecutionEnabled,omitempty"`
 	DecisionInfo              *shared.TransientDecisionInfo `json:"decisionInfo,omitempty"`
 	WorkflowExecutionTaskList *shared.TaskList              `json:"WorkflowExecutionTaskList,omitempty"`
+	EventStoreVersion         *int32                        `json:"eventStoreVersion,omitempty"`
+	BranchToken               []byte                        `json:"branchToken,omitempty"`
 }
 
 // ToWire translates a RecordDecisionTaskStartedResponse struct into a Thrift-level intermediate
@@ -3308,7 +3310,7 @@ type RecordDecisionTaskStartedResponse struct {
 //   }
 func (v *RecordDecisionTaskStartedResponse) ToWire() (wire.Value, error) {
 	var (
-		fields [9]wire.Field
+		fields [11]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -3384,6 +3386,22 @@ func (v *RecordDecisionTaskStartedResponse) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 90, Value: w}
+		i++
+	}
+	if v.EventStoreVersion != nil {
+		w, err = wire.NewValueI32(*(v.EventStoreVersion)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 100, Value: w}
+		i++
+	}
+	if v.BranchToken != nil {
+		w, err = wire.NewValueBinary(v.BranchToken), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 110, Value: w}
 		i++
 	}
 
@@ -3502,6 +3520,24 @@ func (v *RecordDecisionTaskStartedResponse) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 100:
+			if field.Value.Type() == wire.TI32 {
+				var x int32
+				x, err = field.Value.GetI32(), error(nil)
+				v.EventStoreVersion = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 110:
+			if field.Value.Type() == wire.TBinary {
+				v.BranchToken, err = field.Value.GetBinary(), error(nil)
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -3515,7 +3551,7 @@ func (v *RecordDecisionTaskStartedResponse) String() string {
 		return "<nil>"
 	}
 
-	var fields [9]string
+	var fields [11]string
 	i := 0
 	if v.WorkflowType != nil {
 		fields[i] = fmt.Sprintf("WorkflowType: %v", v.WorkflowType)
@@ -3551,6 +3587,14 @@ func (v *RecordDecisionTaskStartedResponse) String() string {
 	}
 	if v.WorkflowExecutionTaskList != nil {
 		fields[i] = fmt.Sprintf("WorkflowExecutionTaskList: %v", v.WorkflowExecutionTaskList)
+		i++
+	}
+	if v.EventStoreVersion != nil {
+		fields[i] = fmt.Sprintf("EventStoreVersion: %v", *(v.EventStoreVersion))
+		i++
+	}
+	if v.BranchToken != nil {
+		fields[i] = fmt.Sprintf("BranchToken: %v", v.BranchToken)
 		i++
 	}
 
@@ -3594,6 +3638,12 @@ func (v *RecordDecisionTaskStartedResponse) Equals(rhs *RecordDecisionTaskStarte
 	if !((v.WorkflowExecutionTaskList == nil && rhs.WorkflowExecutionTaskList == nil) || (v.WorkflowExecutionTaskList != nil && rhs.WorkflowExecutionTaskList != nil && v.WorkflowExecutionTaskList.Equals(rhs.WorkflowExecutionTaskList))) {
 		return false
 	}
+	if !_I32_EqualsPtr(v.EventStoreVersion, rhs.EventStoreVersion) {
+		return false
+	}
+	if !((v.BranchToken == nil && rhs.BranchToken == nil) || (v.BranchToken != nil && rhs.BranchToken != nil && bytes.Equal(v.BranchToken, rhs.BranchToken))) {
+		return false
+	}
 
 	return true
 }
@@ -3630,6 +3680,12 @@ func (v *RecordDecisionTaskStartedResponse) MarshalLogObject(enc zapcore.ObjectE
 	}
 	if v.WorkflowExecutionTaskList != nil {
 		err = multierr.Append(err, enc.AddObject("WorkflowExecutionTaskList", v.WorkflowExecutionTaskList))
+	}
+	if v.EventStoreVersion != nil {
+		enc.AddInt32("eventStoreVersion", *v.EventStoreVersion)
+	}
+	if v.BranchToken != nil {
+		enc.AddString("branchToken", base64.StdEncoding.EncodeToString(v.BranchToken))
 	}
 	return err
 }
@@ -3719,6 +3775,26 @@ func (v *RecordDecisionTaskStartedResponse) GetDecisionInfo() (o *shared.Transie
 func (v *RecordDecisionTaskStartedResponse) GetWorkflowExecutionTaskList() (o *shared.TaskList) {
 	if v.WorkflowExecutionTaskList != nil {
 		return v.WorkflowExecutionTaskList
+	}
+
+	return
+}
+
+// GetEventStoreVersion returns the value of EventStoreVersion if it is set or its
+// zero value if it is unset.
+func (v *RecordDecisionTaskStartedResponse) GetEventStoreVersion() (o int32) {
+	if v.EventStoreVersion != nil {
+		return *v.EventStoreVersion
+	}
+
+	return
+}
+
+// GetBranchToken returns the value of BranchToken if it is set or its
+// zero value if it is unset.
+func (v *RecordDecisionTaskStartedResponse) GetBranchToken() (o []byte) {
+	if v.BranchToken != nil {
+		return v.BranchToken
 	}
 
 	return
@@ -5943,9 +6019,7 @@ func (v *RespondDecisionTaskCompletedRequest) GetCompleteRequest() (o *shared.Re
 }
 
 type RespondDecisionTaskCompletedResponse struct {
-	StartedResponse   *RecordDecisionTaskStartedResponse `json:"startedResponse,omitempty"`
-	EventStoreVersion *int32                             `json:"eventStoreVersion,omitempty"`
-	BranchToken       []byte                             `json:"branchToken,omitempty"`
+	StartedResponse *RecordDecisionTaskStartedResponse `json:"startedResponse,omitempty"`
 }
 
 // ToWire translates a RespondDecisionTaskCompletedResponse struct into a Thrift-level intermediate
@@ -5965,7 +6039,7 @@ type RespondDecisionTaskCompletedResponse struct {
 //   }
 func (v *RespondDecisionTaskCompletedResponse) ToWire() (wire.Value, error) {
 	var (
-		fields [3]wire.Field
+		fields [1]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -5977,22 +6051,6 @@ func (v *RespondDecisionTaskCompletedResponse) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 10, Value: w}
-		i++
-	}
-	if v.EventStoreVersion != nil {
-		w, err = wire.NewValueI32(*(v.EventStoreVersion)), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 20, Value: w}
-		i++
-	}
-	if v.BranchToken != nil {
-		w, err = wire.NewValueBinary(v.BranchToken), error(nil)
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 30, Value: w}
 		i++
 	}
 
@@ -6035,24 +6093,6 @@ func (v *RespondDecisionTaskCompletedResponse) FromWire(w wire.Value) error {
 				}
 
 			}
-		case 20:
-			if field.Value.Type() == wire.TI32 {
-				var x int32
-				x, err = field.Value.GetI32(), error(nil)
-				v.EventStoreVersion = &x
-				if err != nil {
-					return err
-				}
-
-			}
-		case 30:
-			if field.Value.Type() == wire.TBinary {
-				v.BranchToken, err = field.Value.GetBinary(), error(nil)
-				if err != nil {
-					return err
-				}
-
-			}
 		}
 	}
 
@@ -6066,18 +6106,10 @@ func (v *RespondDecisionTaskCompletedResponse) String() string {
 		return "<nil>"
 	}
 
-	var fields [3]string
+	var fields [1]string
 	i := 0
 	if v.StartedResponse != nil {
 		fields[i] = fmt.Sprintf("StartedResponse: %v", v.StartedResponse)
-		i++
-	}
-	if v.EventStoreVersion != nil {
-		fields[i] = fmt.Sprintf("EventStoreVersion: %v", *(v.EventStoreVersion))
-		i++
-	}
-	if v.BranchToken != nil {
-		fields[i] = fmt.Sprintf("BranchToken: %v", v.BranchToken)
 		i++
 	}
 
@@ -6097,12 +6129,6 @@ func (v *RespondDecisionTaskCompletedResponse) Equals(rhs *RespondDecisionTaskCo
 	if !((v.StartedResponse == nil && rhs.StartedResponse == nil) || (v.StartedResponse != nil && rhs.StartedResponse != nil && v.StartedResponse.Equals(rhs.StartedResponse))) {
 		return false
 	}
-	if !_I32_EqualsPtr(v.EventStoreVersion, rhs.EventStoreVersion) {
-		return false
-	}
-	if !((v.BranchToken == nil && rhs.BranchToken == nil) || (v.BranchToken != nil && rhs.BranchToken != nil && bytes.Equal(v.BranchToken, rhs.BranchToken))) {
-		return false
-	}
 
 	return true
 }
@@ -6116,12 +6142,6 @@ func (v *RespondDecisionTaskCompletedResponse) MarshalLogObject(enc zapcore.Obje
 	if v.StartedResponse != nil {
 		err = multierr.Append(err, enc.AddObject("startedResponse", v.StartedResponse))
 	}
-	if v.EventStoreVersion != nil {
-		enc.AddInt32("eventStoreVersion", *v.EventStoreVersion)
-	}
-	if v.BranchToken != nil {
-		enc.AddString("branchToken", base64.StdEncoding.EncodeToString(v.BranchToken))
-	}
 	return err
 }
 
@@ -6130,26 +6150,6 @@ func (v *RespondDecisionTaskCompletedResponse) MarshalLogObject(enc zapcore.Obje
 func (v *RespondDecisionTaskCompletedResponse) GetStartedResponse() (o *RecordDecisionTaskStartedResponse) {
 	if v.StartedResponse != nil {
 		return v.StartedResponse
-	}
-
-	return
-}
-
-// GetEventStoreVersion returns the value of EventStoreVersion if it is set or its
-// zero value if it is unset.
-func (v *RespondDecisionTaskCompletedResponse) GetEventStoreVersion() (o int32) {
-	if v.EventStoreVersion != nil {
-		return *v.EventStoreVersion
-	}
-
-	return
-}
-
-// GetBranchToken returns the value of BranchToken if it is set or its
-// zero value if it is unset.
-func (v *RespondDecisionTaskCompletedResponse) GetBranchToken() (o []byte) {
-	if v.BranchToken != nil {
-		return v.BranchToken
 	}
 
 	return
