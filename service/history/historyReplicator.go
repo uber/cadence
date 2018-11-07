@@ -788,10 +788,17 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 	}
 	deleteHistory := func() {
 		// this function should be only called when we drop start workflow execution
-		r.shard.GetHistoryManager().DeleteWorkflowExecutionHistory(&persistence.DeleteWorkflowExecutionHistoryRequest{
-			DomainID:  domainID,
-			Execution: execution,
-		})
+		if msBuilder.GetEventStoreVersion() == 2 {
+			r.shard.GetHistoryV2Manager().DeleteHistoryBranch(&persistence.DeleteHistoryBranchRequest{
+				BranchToken: msBuilder.GetCurrentBranch(),
+			})
+		} else {
+			r.shard.GetHistoryManager().DeleteWorkflowExecutionHistory(&persistence.DeleteWorkflowExecutionHistoryRequest{
+				DomainID:  domainID,
+				Execution: execution,
+			})
+		}
+
 	}
 
 	// try to create the workflow execution

@@ -565,11 +565,17 @@ func (t *timerQueueProcessorBase) processDeleteHistoryEvent(task *persistence.Ti
 
 	domainID, workflowExecution := t.getDomainIDAndWorkflowExecution(task)
 	op = func() error {
-		return t.historyService.historyMgr.DeleteWorkflowExecutionHistory(
-			&persistence.DeleteWorkflowExecutionHistoryRequest{
-				DomainID:  domainID,
-				Execution: workflowExecution,
+		if msBuilder.GetEventStoreVersion() == 2 {
+			return t.historyService.historyV2Mgr.DeleteHistoryBranch(&persistence.DeleteHistoryBranchRequest{
+				BranchToken: msBuilder.GetCurrentBranch(),
 			})
+		} else {
+			return t.historyService.historyMgr.DeleteWorkflowExecutionHistory(
+				&persistence.DeleteWorkflowExecutionHistoryRequest{
+					DomainID:  domainID,
+					Execution: workflowExecution,
+				})
+		}
 	}
 
 	return backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
