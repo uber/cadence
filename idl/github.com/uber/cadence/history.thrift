@@ -74,6 +74,8 @@ struct GetMutableStateResponse {
   90: optional string clientImpl
   100: optional bool isWorkflowRunning
   110: optional i32 stickyTaskListScheduleToStartTimeout
+  120: optional i32 eventStoreVersion
+  130: optional binary branchToken
 }
 
 struct ResetStickyTaskListRequest {
@@ -93,6 +95,8 @@ struct RespondDecisionTaskCompletedRequest {
 
 struct RespondDecisionTaskCompletedResponse {
   10: optional RecordDecisionTaskStartedResponse startedResponse
+  20: optional i32 eventStoreVersion
+  30: optional binary branchToken
 }
 
 struct RespondDecisionTaskFailedRequest {
