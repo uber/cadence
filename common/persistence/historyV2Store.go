@@ -60,23 +60,6 @@ func (m *historyV2ManagerImpl) GetName() string {
 	return m.persistence.GetName()
 }
 
-// NewHistoryBranch creates a new branch without persistent to DB
-func (m *historyV2ManagerImpl) NewHistoryBranch(request *NewHistoryBranchRequest) (*NewHistoryBranchResponse, error) {
-	branchID := uuid.New()
-	bi := workflow.HistoryBranch{
-		TreeID:    &request.TreeID,
-		BranchID:  &branchID,
-		Ancestors: []*workflow.HistoryBranchRange{},
-	}
-	token, err := m.thrifteEncoder.Encode(&bi)
-	if err != nil {
-		return nil, err
-	}
-	return &NewHistoryBranchResponse{
-		BranchToken: token,
-	}, nil
-}
-
 // ForkHistoryBranch forks a new branch from a old branch
 func (m *historyV2ManagerImpl) ForkHistoryBranch(request *ForkHistoryBranchRequest) (*ForkHistoryBranchResponse, error) {
 	if request.ForkNodeID <= 1 {
