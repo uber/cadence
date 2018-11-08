@@ -22,11 +22,21 @@ package worker
 
 import (
 	"github.com/uber-common/bark"
+	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/metrics"
 	persistencefactory "github.com/uber/cadence/common/persistence/persistence-factory"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"go.uber.org/cadence/worker"
+)
+
+const (
+	// SystemWorkflowDomain is the domain for cadence system workflows
+	SystemWorkflowDomain = "cadence-system"
+
+	// SystemTaskList is the task list worker polls on
+	SystemTaskList = "system-task-list"
 )
 
 type (
@@ -81,25 +91,6 @@ func (s *Service) Start() {
 
 	s.metricsClient = base.GetMetricsClient()
 
-	if s.params.ClusterMetadata.IsGlobalDomainEnabled() {
-		s.startReplicator(params, base, log)
-	}
-
-	log.Infof("%v started", common.WorkerServiceName)
-	<-s.stopC
-	base.Stop()
-}
-
-// Stop is called to stop the service
-func (s *Service) Stop() {
-	select {
-	case s.stopC <- struct{}{}:
-	default:
-	}
-	s.params.Logger.Infof("%v stopped", common.WorkerServiceName)
-}
-
-func (s *Service) startReplicator(params *service.BootstrapParams, base service.Service, log bark.Logger) {
 	pConfig := params.PersistenceConfig
 	pConfig.SetMaxQPS(pConfig.DefaultStore, s.config.PersistenceMaxQPS())
 	pFactory := persistencefactory.New(&pConfig, params.ClusterMetadata.GetCurrentClusterName(), s.metricsClient, log)
@@ -119,5 +110,33 @@ func (s *Service) startReplicator(params *service.BootstrapParams, base service.
 	if err := replicator.Start(); err != nil {
 		replicator.Stop()
 		log.Fatalf("Fail to start replicator: %v", err)
+	}
+
+	client, err := base.GetClientFactory().NewFrontendClient()
+	if err != nil {
+		log.Fatalf("failed to create frontend client: %v", err)
+	}
+	retryableClient := frontend.NewRetryableClient(client, common.CreateFrontendServiceRetryPolicy(),
+		common.IsWhitelistServiceTransientError)
+	s.startWorkers(retryableClient, log)
+
+	log.Infof("%v started", common.WorkerServiceName)
+	<-s.stopC
+	base.Stop()
+}
+
+// Stop is called to stop the service
+func (s *Service) Stop() {
+	select {
+	case s.stopC <- struct{}{}:
+	default:
+	}
+	s.params.Logger.Infof("%v stopped", common.WorkerServiceName)
+}
+
+func (s *Service) startWorkers(frontendClient frontend.Client, log bark.Logger) {
+	w := worker.New(frontendClient, SystemWorkflowDomain, SystemTaskList, worker.Options{})
+	if err := w.Start(); err != nil {
+		log.Fatalf("failed to start worker: %v", err)
 	}
 }

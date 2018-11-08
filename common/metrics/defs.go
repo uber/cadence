@@ -264,6 +264,67 @@ const (
 	MatchingClientCancelOutstandingPollScope
 	// MatchingClientDescribeTaskListScope tracks RPC calls to matching service
 	MatchingClientDescribeTaskListScope
+	// FrontendClientDeprecateDomainScope tracks RPC calls to frontend service
+	FrontendClientDeprecateDomainScop
+	// FrontendClientDescribeDomainScope tracks RPC calls to frontend service
+	FrontendClientDescribeDomainScop
+	// FrontendClientDescribeTaskListScope tracks RPC calls to frontend service
+	FrontendClientDescribeTaskListScop
+	// FrontendClientDescribeWorkflowExecutionScope tracks RPC calls to frontend service
+	FrontendClientDescribeWorkflowExecutionScop
+	// FrontendClientGetWorkflowExecutionHistoryScope tracks RPC calls to frontend service
+	FrontendClientGetWorkflowExecutionHistoryScop
+	// FrontendClientListClosedWorkflowExecutionsScope tracks RPC calls to frontend service
+	FrontendClientListClosedWorkflowExecutionsScop
+	// FrontendClientListDomainsScope tracks RPC calls to frontend service
+	FrontendClientListDomainsScop
+	// FrontendClientListOpenWorkflowExecutionsScope tracks RPC calls to frontend service
+	FrontendClientListOpenWorkflowExecutionsScop
+	// FrontendClientPollForActivityTaskScope tracks RPC calls to frontend service
+	FrontendClientPollForActivityTaskScop
+	// FrontendClientPollForDecisionTaskScope tracks RPC calls to frontend service
+	FrontendClientPollForDecisionTaskScop
+	// FrontendClientQueryWorkflowScope tracks RPC calls to frontend service
+	FrontendClientQueryWorkflowScop
+	// FrontendClientRecordActivityTaskHeartbeatScope tracks RPC calls to frontend service
+	FrontendClientRecordActivityTaskHeartbeatScop
+	// FrontendClientRecordActivityTaskHeartbeatByIDScope tracks RPC calls to frontend service
+	FrontendClientRecordActivityTaskHeartbeatByIDScop
+	// FrontendClientRegisterDomainScope tracks RPC calls to frontend service
+	FrontendClientRegisterDomainScop
+	// FrontendClientRequestCancelWorkflowExecutionScope tracks RPC calls to frontend service
+	FrontendClientRequestCancelWorkflowExecutionScop
+	// FrontendClientResetStickyTaskListScope tracks RPC calls to frontend service
+	FrontendClientResetStickyTaskListScope
+	// FrontendClientRespondActivityTaskCanceledScope tracks RPC calls to frontend service
+	FrontendClientRespondActivityTaskCanceledScope
+	// FrontendClientRespondActivityTaskCanceledByIDScope tracks RPC calls to frontend service
+	FrontendClientRespondActivityTaskCanceledByIDScope
+	// FrontendClientRespondActivityTaskCompletedScope tracks RPC calls to frontend service
+	FrontendClientRespondActivityTaskCompletedScope
+	// FrontendClientRespondActivityTaskCompletedByIDScope tracks RPC calls to frontend service
+	FrontendClientRespondActivityTaskCompletedByIDScope
+	// FrontendClientRespondActivityTaskFailedScope tracks RPC calls to frontend service
+	FrontendClientRespondActivityTaskFailedScope
+	// FrontendClientRespondActivityTaskFailedByIDScope tracks RPC calls to frontend service
+	FrontendClientRespondActivityTaskFailedByIDScope
+	// FrontendClientRespondDecisionTaskCompletedScope tracks RPC calls to frontend service
+	FrontendClientRespondDecisionTaskCompletedScope
+	// FrontendClientRespondDecisionTaskFailedScope tracks RPC calls to frontend service
+	FrontendClientRespondDecisionTaskFailedScope
+	// FrontendClientRespondQueryTaskCompletedScope tracks RPC calls to frontend service
+	FrontendClientRespondQueryTaskCompletedScope
+	// FrontendClientSignalWithStartWorkflowExecutionScope tracks RPC calls to frontend service
+	FrontendClientSignalWithStartWorkflowExecutionScope
+	// FrontendClientSignalWorkflowExecutionScope tracks RPC calls to frontend service
+	FrontendClientSignalWorkflowExecutionScope
+	// FrontendClientStartWorkflowExecutionScope tracks RPC calls to frontend service
+	FrontendClientStartWorkflowExecutionScope
+	// FrontendClientTerminateWorkflowExecutionScope tracks RPC calls to frontend service
+	FrontendClientTerminateWorkflowExecutionScope
+	// FrontendClientUpdateDomainScope tracks RPC calls to frontend service
+	FrontendClientUpdateDomainScope
+
 	// DomainCacheScope tracks domain cache callbacks
 	DomainCacheScope
 	// PersistenceAppendHistoryNodesScope tracks AppendHistoryNodes calls made by service to persistence layer
