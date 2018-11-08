@@ -418,7 +418,7 @@ func (c *workflowExecutionContext) appendHistoryEvents(builder *historyBuilder, 
 	var historySize int
 	var err error
 
-	if c.msBuilder.GetEventStoreVersion() == 2 {
+	if c.msBuilder.GetEventStoreVersion() == persistence.EventStoreVersionV2 {
 		historySize, err = c.shard.AppendHistoryV2Events(&persistence.AppendHistoryNodesRequest{
 			IsNewBranch:   false,
 			BranchToken:   c.msBuilder.GetCurrentBranch(),
@@ -485,7 +485,7 @@ func (c *workflowExecutionContext) appendFirstBatchHistoryForContinueAsNew(conte
 	history := newStateBuilder.GetHistoryBuilder().GetHistory()
 	var historySize int
 	var err error
-	if newStateBuilder.GetEventStoreVersion() == 2 {
+	if newStateBuilder.GetEventStoreVersion() == persistence.EventStoreVersionV2 {
 		historySize, err = c.shard.AppendHistoryV2Events(&persistence.AppendHistoryNodesRequest{
 			IsNewBranch:   true,
 			BranchToken:   newStateBuilder.GetCurrentBranch(),

@@ -703,7 +703,7 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 	}
 
 	var historySize int
-	if msBuilder.GetEventStoreVersion() == 2 {
+	if msBuilder.GetEventStoreVersion() == persistence.EventStoreVersionV2 {
 		historySize, err = r.shard.AppendHistoryV2Events(&persistence.AppendHistoryNodesRequest{
 			IsNewBranch:   true,
 			BranchToken:   msBuilder.GetCurrentBranch(),
@@ -788,7 +788,7 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 	}
 	deleteHistory := func() {
 		// this function should be only called when we drop start workflow execution
-		if msBuilder.GetEventStoreVersion() == 2 {
+		if msBuilder.GetEventStoreVersion() == persistence.EventStoreVersionV2 {
 			r.shard.GetHistoryV2Manager().DeleteHistoryBranch(&persistence.DeleteHistoryBranchRequest{
 				BranchToken: msBuilder.GetCurrentBranch(),
 			})

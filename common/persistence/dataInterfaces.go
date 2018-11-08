@@ -31,11 +31,14 @@ import (
 )
 
 // TODO remove this table version
-// this is a temp version indicating where is the domain resides
-// either V1 or V2
 const (
+	// this is a temp version indicating where is the domain resides
+	// either V1 or V2
 	DomainTableVersionV1 = 1
 	DomainTableVersionV2 = 2
+
+	// 0/1 or empty are all considered as V1
+	EventStoreVersionV2 = 2
 )
 
 // Domain status
@@ -1956,35 +1959,35 @@ func UnixNanoToDBTimestamp(timestamp int64) int64 {
 
 func (e *WorkflowExecutionInfo) SetHistorySize(size int64) {
 	e.HistorySize = size
-	if e.EventStoreVersion == 2 {
+	if e.EventStoreVersion == EventStoreVersionV2 {
 		e.HistoryBranches[e.CurrentResetVersion].HistorySize = size
 	}
 }
 
 func (e *WorkflowExecutionInfo) IncreaseHistorySize(delta int64) {
 	e.HistorySize += delta
-	if e.EventStoreVersion == 2 {
+	if e.EventStoreVersion == EventStoreVersionV2 {
 		e.HistoryBranches[e.CurrentResetVersion].HistorySize += delta
 	}
 }
 
 func (e *WorkflowExecutionInfo) SetNextEventID(id int64) {
 	e.NextEventID = id
-	if e.EventStoreVersion == 2 {
+	if e.EventStoreVersion == EventStoreVersionV2 {
 		e.HistoryBranches[e.CurrentResetVersion].NextEventID = id
 	}
 }
 
 func (e *WorkflowExecutionInfo) IncreaseNextEventID() {
 	e.NextEventID++
-	if e.EventStoreVersion == 2 {
+	if e.EventStoreVersion == EventStoreVersionV2 {
 		e.HistoryBranches[e.CurrentResetVersion].NextEventID++
 	}
 }
 
 func (e *WorkflowExecutionInfo) SetLastFirstEventID(id int64) {
 	e.LastFirstEventID = id
-	if e.EventStoreVersion == 2 {
+	if e.EventStoreVersion == EventStoreVersionV2 {
 		e.HistoryBranches[e.CurrentResetVersion].LastFirstEventID = id
 	}
 }

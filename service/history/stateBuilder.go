@@ -108,7 +108,7 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 			b.msBuilder.ReplicateWorkflowExecutionStartedEvent(domainID, parentDomainID, execution, requestID, attributes)
 
 			b.timerTasks = append(b.timerTasks, b.scheduleWorkflowTimerTask(event, b.msBuilder))
-			if *attributes.EventStoreVersion == 2 {
+			if *attributes.EventStoreVersion == persistence.EventStoreVersionV2 {
 				b.msBuilder.SetHistoryTree(*execution.RunId)
 			}
 
@@ -445,7 +445,7 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 			}
 			b.timerTasks = append(b.timerTasks, timerTask)
 
-			if *startedAttributes.EventStoreVersion == 2 {
+			if *startedAttributes.EventStoreVersion == persistence.EventStoreVersionV2 {
 				newRunStateBuilder.SetHistoryTree(*newExecution.RunId)
 			}
 		}

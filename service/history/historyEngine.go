@@ -302,7 +302,7 @@ func (e *historyEngineImpl) generateFirstDecisionTask(domainID string, msBuilder
 func (e *historyEngineImpl) appendFirstBatchHistoryEvents(msBuilder mutableState, domainID string, execution workflow.WorkflowExecution) (historySize int, err error) {
 	events := msBuilder.GetHistoryBuilder().GetHistory().Events
 	startedEvent := events[0]
-	if msBuilder.GetEventStoreVersion() == 2 {
+	if msBuilder.GetEventStoreVersion() == persistence.EventStoreVersionV2 {
 		branchToken := msBuilder.GetCurrentBranch()
 		historySize, err = e.shard.AppendHistoryV2Events(&persistence.AppendHistoryNodesRequest{
 			IsNewBranch: true,

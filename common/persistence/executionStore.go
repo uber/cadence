@@ -105,7 +105,7 @@ func (m *executionManagerImpl) DeserializeExecutionInfo(info *InternalWorkflowEx
 		return nil, err
 	}
 
-	if info.EventStoreVersion == 2 {
+	if info.EventStoreVersion == EventStoreVersionV2 {
 		if info.HistorySize != info.HistoryBranches[info.CurrentResetVersion].HistorySize {
 			return nil, &workflow.InternalServiceError{
 				Message: fmt.Sprintf("HistorySizes of V1/V2 don't match"),
@@ -465,7 +465,7 @@ func (m *executionManagerImpl) SerializeExecutionInfo(info *WorkflowExecutionInf
 		return nil, err
 	}
 
-	if info.EventStoreVersion == 2 {
+	if info.EventStoreVersion == EventStoreVersionV2 {
 		if info.HistorySize != info.HistoryBranches[info.CurrentResetVersion].HistorySize {
 			return nil, &workflow.BadRequestError{
 				Message: fmt.Sprintf("HistorySizes of V1/V2 don't match"),
