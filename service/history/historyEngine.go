@@ -2944,7 +2944,7 @@ func getWorkflowStartedEvent(historyMgr persistence.HistoryManager, historyV2Mgr
 			BranchToken:   branchToken,
 			MinEventID:    common.FirstEventID,
 			MaxEventID:    common.FirstEventID + 1,
-			PageSize:      1,
+			PageSize:      defaultHistoryPageSize,
 			NextPageToken: nil,
 		})
 		if err != nil {
@@ -2963,7 +2963,7 @@ func getWorkflowStartedEvent(historyMgr persistence.HistoryManager, historyV2Mgr
 			},
 			FirstEventID:  common.FirstEventID,
 			NextEventID:   common.FirstEventID + 1,
-			PageSize:      1,
+			PageSize:      defaultHistoryPageSize,
 			NextPageToken: nil,
 		})
 		if err != nil {
