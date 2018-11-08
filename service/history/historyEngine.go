@@ -1170,7 +1170,7 @@ Update_History_Loop:
 					}
 				} else {
 					// retry with backoff
-					startEvent, err := getWorkflowStartedEvent(e.historyMgr, e.logger, domainID, workflowExecution.GetWorkflowId(), workflowExecution.GetRunId())
+					startEvent, err := getWorkflowStartedEvent(e.historyMgr, e.historyV2Mgr, msBuilder.GetEventStoreVersion(), msBuilder.GetCurrentBranch(), e.logger, domainID, workflowExecution.GetWorkflowId(), workflowExecution.GetRunId())
 					if err != nil {
 						return nil, err
 					}
@@ -2937,25 +2937,45 @@ func getStartRequest(domainID string,
 	return startRequest
 }
 
-func getWorkflowStartedEvent(historyMgr persistence.HistoryManager, logger bark.Logger, domainID, workflowID, runID string) (*workflow.HistoryEvent, error) {
-	response, err := historyMgr.GetWorkflowExecutionHistory(&persistence.GetWorkflowExecutionHistoryRequest{
-		DomainID: domainID,
-		Execution: workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
-		},
-		FirstEventID:  common.FirstEventID,
-		NextEventID:   common.FirstEventID + 1,
-		PageSize:      defaultHistoryPageSize,
-		NextPageToken: nil,
-	})
-	if err != nil {
-		logger.WithFields(bark.Fields{
-			logging.TagErr: err,
-		}).Error("Conflict resolution current workflow finished.", err)
-		return nil, err
+func getWorkflowStartedEvent(historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager, eventStoreVersion int32, branchToken []byte, logger bark.Logger, domainID, workflowID, runID string) (*workflow.HistoryEvent, error) {
+	var events []*workflow.HistoryEvent
+	if eventStoreVersion == persistence.EventStoreVersionV2 {
+		response, err := historyV2Mgr.ReadHistoryBranch(&persistence.ReadHistoryBranchRequest{
+			BranchToken:   branchToken,
+			MinEventID:    common.FirstEventID,
+			MaxEventID:    common.FirstEventID + 1,
+			PageSize:      1,
+			NextPageToken: nil,
+		})
+		if err != nil {
+			logger.WithFields(bark.Fields{
+				logging.TagErr: err,
+			}).Error("Conflict resolution current workflow finished.", err)
+			return nil, err
+		}
+		events = response.History
+	} else {
+		response, err := historyMgr.GetWorkflowExecutionHistory(&persistence.GetWorkflowExecutionHistoryRequest{
+			DomainID: domainID,
+			Execution: workflow.WorkflowExecution{
+				WorkflowId: common.StringPtr(workflowID),
+				RunId:      common.StringPtr(runID),
+			},
+			FirstEventID:  common.FirstEventID,
+			NextEventID:   common.FirstEventID + 1,
+			PageSize:      1,
+			NextPageToken: nil,
+		})
+		if err != nil {
+			logger.WithFields(bark.Fields{
+				logging.TagErr: err,
+			}).Error("Conflict resolution current workflow finished.", err)
+			return nil, err
+		}
+		events = response.History.Events
 	}
-	if len(response.History.Events) == 0 {
+
+	if len(events) == 0 {
 		logger.WithFields(bark.Fields{
 			logging.TagWorkflowExecutionID: workflowID,
 			logging.TagWorkflowRunID:       runID,
@@ -2964,7 +2984,7 @@ func getWorkflowStartedEvent(historyMgr persistence.HistoryManager, logger bark.
 		return nil, errNoHistoryFound
 	}
 
-	return response.History.Events[0], nil
+	return events[0], nil
 }
 
 func setTaskInfo(version int64, timestamp time.Time, transferTasks []persistence.Task, timerTasks []persistence.Task) {

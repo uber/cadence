@@ -688,7 +688,7 @@ Update_History_Loop:
 		}
 
 		// workflow timeout, but a retry is needed, so we do continue as new to retry
-		startEvent, err := getWorkflowStartedEvent(t.historyService.historyMgr, t.logger, domainID, workflowExecution.GetWorkflowId(), workflowExecution.GetRunId())
+		startEvent, err := getWorkflowStartedEvent(t.historyService.historyMgr, t.historyService.historyV2Mgr, msBuilder.GetEventStoreVersion(), msBuilder.GetCurrentBranch(), t.logger, domainID, workflowExecution.GetWorkflowId(), workflowExecution.GetRunId())
 		if err != nil {
 			return err
 		}
