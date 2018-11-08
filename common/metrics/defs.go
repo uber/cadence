@@ -265,35 +265,35 @@ const (
 	// MatchingClientDescribeTaskListScope tracks RPC calls to matching service
 	MatchingClientDescribeTaskListScope
 	// FrontendClientDeprecateDomainScope tracks RPC calls to frontend service
-	FrontendClientDeprecateDomainScop
+	FrontendClientDeprecateDomainScope
 	// FrontendClientDescribeDomainScope tracks RPC calls to frontend service
-	FrontendClientDescribeDomainScop
+	FrontendClientDescribeDomainScope
 	// FrontendClientDescribeTaskListScope tracks RPC calls to frontend service
-	FrontendClientDescribeTaskListScop
+	FrontendClientDescribeTaskListScope
 	// FrontendClientDescribeWorkflowExecutionScope tracks RPC calls to frontend service
-	FrontendClientDescribeWorkflowExecutionScop
+	FrontendClientDescribeWorkflowExecutionScope
 	// FrontendClientGetWorkflowExecutionHistoryScope tracks RPC calls to frontend service
-	FrontendClientGetWorkflowExecutionHistoryScop
+	FrontendClientGetWorkflowExecutionHistoryScope
 	// FrontendClientListClosedWorkflowExecutionsScope tracks RPC calls to frontend service
-	FrontendClientListClosedWorkflowExecutionsScop
+	FrontendClientListClosedWorkflowExecutionsScope
 	// FrontendClientListDomainsScope tracks RPC calls to frontend service
-	FrontendClientListDomainsScop
+	FrontendClientListDomainsScope
 	// FrontendClientListOpenWorkflowExecutionsScope tracks RPC calls to frontend service
-	FrontendClientListOpenWorkflowExecutionsScop
+	FrontendClientListOpenWorkflowExecutionsScope
 	// FrontendClientPollForActivityTaskScope tracks RPC calls to frontend service
-	FrontendClientPollForActivityTaskScop
+	FrontendClientPollForActivityTaskScope
 	// FrontendClientPollForDecisionTaskScope tracks RPC calls to frontend service
-	FrontendClientPollForDecisionTaskScop
+	FrontendClientPollForDecisionTaskScope
 	// FrontendClientQueryWorkflowScope tracks RPC calls to frontend service
-	FrontendClientQueryWorkflowScop
+	FrontendClientQueryWorkflowScope
 	// FrontendClientRecordActivityTaskHeartbeatScope tracks RPC calls to frontend service
-	FrontendClientRecordActivityTaskHeartbeatScop
+	FrontendClientRecordActivityTaskHeartbeatScope
 	// FrontendClientRecordActivityTaskHeartbeatByIDScope tracks RPC calls to frontend service
-	FrontendClientRecordActivityTaskHeartbeatByIDScop
+	FrontendClientRecordActivityTaskHeartbeatByIDScope
 	// FrontendClientRegisterDomainScope tracks RPC calls to frontend service
-	FrontendClientRegisterDomainScop
+	FrontendClientRegisterDomainScope
 	// FrontendClientRequestCancelWorkflowExecutionScope tracks RPC calls to frontend service
-	FrontendClientRequestCancelWorkflowExecutionScop
+	FrontendClientRequestCancelWorkflowExecutionScope
 	// FrontendClientResetStickyTaskListScope tracks RPC calls to frontend service
 	FrontendClientResetStickyTaskListScope
 	// FrontendClientRespondActivityTaskCanceledScope tracks RPC calls to frontend service

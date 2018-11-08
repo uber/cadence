@@ -48,8 +48,17 @@ func (c *metricClient) DeprecateDomain(
 	request *shared.DeprecateDomainRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	return nil
-	// c.metricsClient.IncCounter(metrics.FrontendClient)
+
+	c.metricsClient.IncCounter(metrics.FrontendClientDeprecateDomainScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientDeprecateDomainScope, metrics.CadenceClientLatency)
+	err := c.client.DeprecateDomain(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientDeprecateDomainScope, metrics.CadenceClientFailures)
+	}
+	return err
 }
 
 func (c *metricClient) DescribeDomain(
@@ -57,7 +66,17 @@ func (c *metricClient) DescribeDomain(
 	request *shared.DescribeDomainRequest,
 	opts ...yarpc.CallOption,
 ) (*shared.DescribeDomainResponse, error) {
-	return nil, nil
+
+	c.metricsClient.IncCounter(metrics.FrontendClientDescribeDomainScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientDescribeDomainScope, metrics.CadenceClientLatency)
+	resp, err := c.client.DescribeDomain(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientDescribeDomainScope, metrics.CadenceClientFailures)
+	}
+	return resp, err
 }
 
 func (c *metricClient) DescribeTaskList(
@@ -65,7 +84,17 @@ func (c *metricClient) DescribeTaskList(
 	request *shared.DescribeTaskListRequest,
 	opts ...yarpc.CallOption,
 ) (*shared.DescribeTaskListResponse, error) {
-	return nil, nil
+
+	c.metricsClient.IncCounter(metrics.FrontendClientDescribeTaskListScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientDescribeTaskListScope, metrics.CadenceClientLatency)
+	resp, err := c.client.DescribeTaskList(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientDescribeTaskListScope, metrics.CadenceClientFailures)
+	}
+	return resp, err
 }
 
 func (c *metricClient) DescribeWorkflowExecution(
@@ -73,7 +102,17 @@ func (c *metricClient) DescribeWorkflowExecution(
 	request *shared.DescribeWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
 ) (*shared.DescribeWorkflowExecutionResponse, error) {
-	return nil, nil
+
+	c.metricsClient.IncCounter(metrics.FrontendClientDescribeWorkflowExecutionScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientDescribeWorkflowExecutionScope, metrics.CadenceClientLatency)
+	resp, err := c.client.DescribeWorkflowExecution(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientDescribeWorkflowExecutionScope, metrics.CadenceClientFailures)
+	}
+	return resp, err
 }
 
 func (c *metricClient) GetWorkflowExecutionHistory(
@@ -81,7 +120,17 @@ func (c *metricClient) GetWorkflowExecutionHistory(
 	request *shared.GetWorkflowExecutionHistoryRequest,
 	opts ...yarpc.CallOption,
 ) (*shared.GetWorkflowExecutionHistoryResponse, error) {
-	return nil, nil
+
+	c.metricsClient.IncCounter(metrics.FrontendClientGetWorkflowExecutionHistoryScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientGetWorkflowExecutionHistoryScope, metrics.CadenceClientLatency)
+	resp, err := c.client.GetWorkflowExecutionHistory(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientGetWorkflowExecutionHistoryScope, metrics.CadenceClientFailures)
+	}
+	return resp, err
 }
 
 func (c *metricClient) ListClosedWorkflowExecutions(
@@ -89,7 +138,17 @@ func (c *metricClient) ListClosedWorkflowExecutions(
 	request *shared.ListClosedWorkflowExecutionsRequest,
 	opts ...yarpc.CallOption,
 ) (*shared.ListClosedWorkflowExecutionsResponse, error) {
-	return nil, nil
+
+	c.metricsClient.IncCounter(metrics.FrontendClientListClosedWorkflowExecutionsScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientListClosedWorkflowExecutionsScope, metrics.CadenceClientLatency)
+	resp, err := c.client.ListClosedWorkflowExecutions(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientListClosedWorkflowExecutionsScope, metrics.CadenceClientFailures)
+	}
+	return resp, err
 }
 
 func (c *metricClient) ListDomains(
@@ -97,7 +156,17 @@ func (c *metricClient) ListDomains(
 	request *shared.ListDomainsRequest,
 	opts ...yarpc.CallOption,
 ) (*shared.ListDomainsResponse, error) {
-	return nil, nil
+
+	c.metricsClient.IncCounter(metrics.FrontendClientListDomainsScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientListDomainsScope, metrics.CadenceClientLatency)
+	resp, err := c.client.ListDomains(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientListDomainsScope, metrics.CadenceClientFailures)
+	}
+	return resp, err
 }
 
 func (c *metricClient) ListOpenWorkflowExecutions(
@@ -105,7 +174,17 @@ func (c *metricClient) ListOpenWorkflowExecutions(
 	request *shared.ListOpenWorkflowExecutionsRequest,
 	opts ...yarpc.CallOption,
 ) (*shared.ListOpenWorkflowExecutionsResponse, error) {
-	return nil, nil
+
+	c.metricsClient.IncCounter(metrics.FrontendListOpenWorkflowExecutionsScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientListOpenWorkflowExecutionsScope, metrics.CadenceClientLatency)
+	resp, err := c.client.ListOpenWorkflowExecutions(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientListOpenWorkflowExecutionsScope, metrics.CadenceClientFailures)
+	}
+	return resp, err
 }
 
 func (c *metricClient) PollForActivityTask(
@@ -113,7 +192,17 @@ func (c *metricClient) PollForActivityTask(
 	request *shared.PollForActivityTaskRequest,
 	opts ...yarpc.CallOption,
 ) (*shared.PollForActivityTaskResponse, error) {
-	return nil, nil
+
+	c.metricsClient.IncCounter(metrics.FrontendClientPollForActivityTaskScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientPollForActivityTaskScope, metrics.CadenceClientLatency)
+	resp, err := c.client.PollForActivityTask(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientPollForActivityTaskScope, metrics.CadenceClientFailures)
+	}
+	return resp, err
 }
 
 func (c *metricClient) PollForDecisionTask(
@@ -121,7 +210,17 @@ func (c *metricClient) PollForDecisionTask(
 	request *shared.PollForDecisionTaskRequest,
 	opts ...yarpc.CallOption,
 ) (*shared.PollForDecisionTaskResponse, error) {
-	return nil, nil
+
+	c.metricsClient.IncCounter(metrics.FrontendClientPollForDecisionTaskScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientPollForDecisionTaskScope, metrics.CadenceClientLatency)
+	resp, err := c.client.PollForDecisionTask(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientPollForDecisionTaskScope, metrics.CadenceClientFailures)
+	}
+	return resp, err
 }
 
 func (c *metricClient) QueryWorkflow(
@@ -129,7 +228,17 @@ func (c *metricClient) QueryWorkflow(
 	request *shared.QueryWorkflowRequest,
 	opts ...yarpc.CallOption,
 ) (*shared.QueryWorkflowResponse, error) {
-	return nil, nil
+
+	c.metricsClient.IncCounter(metrics.FrontendClientQueryWorkflowScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientQueryWorkflowScope, metrics.CadenceClientLatency)
+	resp, err := c.client.QueryWorkflow(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientQueryWorkflowScope, metrics.CadenceClientFailures)
+	}
+	return resp, err
 }
 
 func (c *metricClient) RecordActivityTaskHeartbeat(
@@ -137,7 +246,17 @@ func (c *metricClient) RecordActivityTaskHeartbeat(
 	request *shared.RecordActivityTaskHeartbeatRequest,
 	opts ...yarpc.CallOption,
 ) (*shared.RecordActivityTaskHeartbeatResponse, error) {
-	return nil, nil
+
+	c.metricsClient.IncCounter(metrics.FrontendClientRecordActivityTaskHeartbeatScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientRecordActivityTaskHeartbeatScope, metrics.CadenceClientLatency)
+	resp, err := c.client.RecordActivityTaskHeartbeat(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientRecordActivityTaskHeartbeatScope, metrics.CadenceClientFailures)
+	}
+	return resp, err
 }
 
 func (c *metricClient) RecordActivityTaskHeartbeatByID(
@@ -145,7 +264,17 @@ func (c *metricClient) RecordActivityTaskHeartbeatByID(
 	request *shared.RecordActivityTaskHeartbeatByIDRequest,
 	opts ...yarpc.CallOption,
 ) (*shared.RecordActivityTaskHeartbeatResponse, error) {
-	return nil, nil
+
+	c.metricsClient.IncCounter(metrics.FrontendClientRecordActivityTaskHeartbeatByIDScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientRecordActivityTaskHeartbeatByIDScope, metrics.CadenceClientLatency)
+	resp, err := c.client.RecordActivityTaskHeartbeatByID(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientRecordActivityTaskHeartbeatByIDScope, metrics.CadenceClientFailures)
+	}
+	return resp, err
 }
 
 func (c *metricClient) RegisterDomain(
@@ -153,7 +282,17 @@ func (c *metricClient) RegisterDomain(
 	request *shared.RegisterDomainRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	return nil
+
+	c.metricsClient.IncCounter(metrics.FrontendClientRegisterDomainScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientRegisterDomainScope, metrics.CadenceClientLatency)
+	err := c.client.RegisterDomain(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientRegisterDomainScope, metrics.CadenceClientFailures)
+	}
+	return err
 }
 
 func (c *metricClient) RequestCancelWorkflowExecution(
@@ -161,7 +300,17 @@ func (c *metricClient) RequestCancelWorkflowExecution(
 	request *shared.RequestCancelWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	return nil
+
+	c.metricsClient.IncCounter(metrics.FrontendClientRequestCancelWorkflowExecutionScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientRequestCancelWorkflowExecutionScope, metrics.CadenceClientLatency)
+	err := c.client.RequestCancelWorkflowExecution(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientRequestCancelWorkflowExecutionScope, metrics.CadenceClientFailures)
+	}
+	return err
 }
 
 func (c *metricClient) ResetStickyTaskList(
@@ -169,7 +318,17 @@ func (c *metricClient) ResetStickyTaskList(
 	request *shared.ResetStickyTaskListRequest,
 	opts ...yarpc.CallOption,
 ) (*shared.ResetStickyTaskListResponse, error) {
-	return nil, nil
+
+	c.metricsClient.IncCounter(metrics.FrontendClientResetStickyTaskListScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientResetStickyTaskListScope, metrics.CadenceClientLatency)
+	resp, err := c.client.ResetStickyTaskList(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientResetStickyTaskListScope, metrics.CadenceClientFailures)
+	}
+	return resp, err
 }
 
 func (c *metricClient) RespondActivityTaskCanceled(
@@ -177,7 +336,17 @@ func (c *metricClient) RespondActivityTaskCanceled(
 	request *shared.RespondActivityTaskCanceledRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	return nil
+
+	c.metricsClient.IncCounter(metrics.FrontendClientRespondActivityTaskCanceledScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientRespondActivityTaskCanceledScope, metrics.CadenceClientLatency)
+	err := c.client.RespondActivityTaskCanceled(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientRespondActivityTaskCanceledScope, metrics.CadenceClientFailures)
+	}
+	return err
 }
 
 func (c *metricClient) RespondActivityTaskCanceledByID(
@@ -185,7 +354,17 @@ func (c *metricClient) RespondActivityTaskCanceledByID(
 	request *shared.RespondActivityTaskCanceledByIDRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	return nil
+
+	c.metricsClient.IncCounter(metrics.FrontendClientRespondActivityTaskCanceledByIDScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientRespondActivityTaskCanceledByIDScope, metrics.CadenceClientLatency)
+	err := c.client.RespondActivityTaskCanceledByID(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientRespondActivityTaskCanceledByIDScope, metrics.CadenceClientFailures)
+	}
+	return err
 }
 
 func (c *metricClient) RespondActivityTaskCompleted(
@@ -193,7 +372,17 @@ func (c *metricClient) RespondActivityTaskCompleted(
 	request *shared.RespondActivityTaskCompletedRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	return nil
+
+	c.metricsClient.IncCounter(metrics.FrontendClientRespondActivityTaskCompletedScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientRespondActivityTaskCompletedScope, metrics.CadenceClientLatency)
+	err := c.client.RespondActivityTaskCompleted(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientRespondActivityTaskCompletedScope, metrics.CadenceClientFailures)
+	}
+	return err
 }
 
 func (c *metricClient) RespondActivityTaskCompletedByID(
@@ -201,7 +390,17 @@ func (c *metricClient) RespondActivityTaskCompletedByID(
 	request *shared.RespondActivityTaskCompletedByIDRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	return nil
+
+	c.metricsClient.IncCounter(metrics.FrontendClientRespondActivityTaskCompletedByIDScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientRespondActivityTaskCompletedByIDScope, metrics.CadenceClientLatency)
+	err := c.client.RespondActivityTaskCompletedByID(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientRespondActivityTaskCompletedByIDScope, metrics.CadenceClientFailures)
+	}
+	return err
 }
 
 func (c *metricClient) RespondActivityTaskFailed(
@@ -209,7 +408,17 @@ func (c *metricClient) RespondActivityTaskFailed(
 	request *shared.RespondActivityTaskFailedRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	return nil
+
+	c.metricsClient.IncCounter(metrics.FrontendClientRespondActivityTaskFailedScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientRespondActivityTaskFailedScope, metrics.CadenceClientLatency)
+	err := c.client.RespondActivityTaskFailed(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientRespondActivityTaskFailedScope, metrics.CadenceClientFailures)
+	}
+	return err
 }
 
 func (c *metricClient) RespondActivityTaskFailedByID(
@@ -217,7 +426,17 @@ func (c *metricClient) RespondActivityTaskFailedByID(
 	request *shared.RespondActivityTaskFailedByIDRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	return nil
+
+	c.metricsClient.IncCounter(metrics.FrontendClientRespondActivityTaskFailedByIDScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientRespondActivityTaskFailedByIDScope, metrics.CadenceClientLatency)
+	err := c.client.RespondActivityTaskFailedByID(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientRespondActivityTaskFailedByIDScope, metrics.CadenceClientFailures)
+	}
+	return err
 }
 
 func (c *metricClient) RespondDecisionTaskCompleted(
@@ -225,7 +444,17 @@ func (c *metricClient) RespondDecisionTaskCompleted(
 	request *shared.RespondDecisionTaskCompletedRequest,
 	opts ...yarpc.CallOption,
 ) (*shared.RespondDecisionTaskCompletedResponse, error) {
-	return nil, nil
+
+	c.metricsClient.IncCounter(metrics.FrontendClientRespondDecisionTaskCompletedScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientRespondDecisionTaskCompletedScope, metrics.CadenceClientLatency)
+	resp, err := c.client.RespondDecisionTaskCompleted(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientRespondDecisionTaskCompletedScope, metrics.CadenceClientFailures)
+	}
+	return resp, err
 }
 
 func (c *metricClient) RespondDecisionTaskFailed(
@@ -233,7 +462,17 @@ func (c *metricClient) RespondDecisionTaskFailed(
 	request *shared.RespondDecisionTaskFailedRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	return nil
+
+	c.metricsClient.IncCounter(metrics.FrontendClientRespondDecisionTaskFailedScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientRespondDecisionTaskFailedScope, metrics.CadenceClientLatency)
+	err := c.client.RespondDecisionTaskFailed(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientRespondDecisionTaskFailedScope, metrics.CadenceClientFailures)
+	}
+	return err
 }
 
 func (c *metricClient) RespondQueryTaskCompleted(
@@ -241,7 +480,17 @@ func (c *metricClient) RespondQueryTaskCompleted(
 	request *shared.RespondQueryTaskCompletedRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	return nil
+
+	c.metricsClient.IncCounter(metrics.FrontendClientRespondQueryTaskCompletedScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientRespondQueryTaskCompletedScope, metrics.CadenceClientLatency)
+	err := c.client.RespondQueryTaskCompleted(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientRespondQueryTaskCompletedScope, metrics.CadenceClientFailures)
+	}
+	return err
 }
 
 func (c *metricClient) SignalWithStartWorkflowExecution(
@@ -249,7 +498,17 @@ func (c *metricClient) SignalWithStartWorkflowExecution(
 	request *shared.SignalWithStartWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
 ) (*shared.StartWorkflowExecutionResponse, error) {
-	return nil, nil
+
+	c.metricsClient.IncCounter(metrics.FrontendClientSignalWithStartWorkflowExecutionScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientSignalWithStartWorkflowExecutionScope, metrics.CadenceClientLatency)
+	resp, err := c.client.SignalWithStartWorkflowExecution(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientSignalWithStartWorkflowExecutionScope, metrics.CadenceClientFailures)
+	}
+	return resp, err
 }
 
 func (c *metricClient) SignalWorkflowExecution(
@@ -257,7 +516,17 @@ func (c *metricClient) SignalWorkflowExecution(
 	request *shared.SignalWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	return nil
+
+	c.metricsClient.IncCounter(metrics.FrontendClientSignalWorkflowExecutionScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientSignalWorkflowExecutionScope, metrics.CadenceClientLatency)
+	err := c.client.SignalWorkflowExecution(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientSignalWorkflowExecutionScope, metrics.CadenceClientFailures)
+	}
+	return err
 }
 
 func (c *metricClient) StartWorkflowExecution(
@@ -265,7 +534,17 @@ func (c *metricClient) StartWorkflowExecution(
 	request *shared.StartWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
 ) (*shared.StartWorkflowExecutionResponse, error) {
-	return nil, nil
+
+	c.metricsClient.IncCounter(metrics.FrontendClientStartWorkflowExecutionScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientStartWorkflowExecutionScope, metrics.CadenceClientLatency)
+	resp, err := c.client.StartWorkflowExecution(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientStartWorkflowExecutionScope, metrics.CadenceClientFailures)
+	}
+	return resp, err
 }
 
 func (c *metricClient) TerminateWorkflowExecution(
@@ -273,7 +552,17 @@ func (c *metricClient) TerminateWorkflowExecution(
 	request *shared.TerminateWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	return nil
+
+	c.metricsClient.IncCounter(metrics.FrontendClientTerminateWorkflowExecutionScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientTerminateWorkflowExecutionScope, metrics.CadenceClientLatency)
+	err := c.client.TerminateWorkflowExecution(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientTerminateWorkflowExecutionScope, metrics.CadenceClientFailures)
+	}
+	return err
 }
 
 func (c *metricClient) UpdateDomain(
@@ -281,22 +570,15 @@ func (c *metricClient) UpdateDomain(
 	request *shared.UpdateDomainRequest,
 	opts ...yarpc.CallOption,
 ) (*shared.UpdateDomainResponse, error) {
-	return nil, nil
-}
 
-//func (c *metricClient) AddActivityTask(
-//	ctx context.Context,
-//	addRequest *m.AddActivityTaskRequest,
-//	opts ...yarpc.CallOption) error {
-//	c.metricsClient.IncCounter(metrics.MatchingClientAddActivityTaskScope, metrics.CadenceClientRequests)
-//
-//	sw := c.metricsClient.StartTimer(metrics.MatchingClientAddActivityTaskScope, metrics.CadenceClientLatency)
-//	err := c.client.AddActivityTask(ctx, addRequest, opts...)
-//	sw.Stop()
-//
-//	if err != nil {
-//		c.metricsClient.IncCounter(metrics.MatchingClientAddActivityTaskScope, metrics.CadenceClientFailures)
-//	}
-//
-//	return err
-//}
+	c.metricsClient.IncCounter(metrics.FrontendClientUpdateDomainScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientUpdateDomainScope, metrics.CadenceClientLatency)
+	resp, err := c.client.UpdateDomain(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientUpdateDomainScope, metrics.CadenceClientFailures)
+	}
+	return resp, err
+}

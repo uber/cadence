@@ -81,5 +81,8 @@ func (cf *rpcClientFactory) NewFrontendClient() (frontend.Client, error) {
 	if err != nil {
 		return nil, err
 	}
+	if cf.metricsClient != nil {
+		client = frontend.NewMetricClient(client, cf.metricsClient)
+	}
 	return client, nil
 }
