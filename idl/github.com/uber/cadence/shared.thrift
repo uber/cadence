@@ -401,7 +401,6 @@ struct WorkflowExecutionStartedEventAttributes {
   70: optional RetryPolicy retryPolicy
   80: optional i32 attempt
   90: optional i64 (js.type = "Long") expirationTimestamp
-  100: optional i32 eventStoreVersion
 }
 
 struct WorkflowExecutionCompletedEventAttributes {
