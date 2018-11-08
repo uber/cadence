@@ -296,18 +296,20 @@ type (
 
 	// ReplicationTaskInfo describes the replication task created for replication of history events
 	ReplicationTaskInfo struct {
-		DomainID            string
-		WorkflowID          string
-		RunID               string
-		TaskID              int64
-		TaskType            int
-		FirstEventID        int64
-		NextEventID         int64
-		Version             int64
-		LastReplicationInfo map[string]*ReplicationInfo
-		ScheduledID         int64
-		EventStoreVersion   int32
-		BranchToken         []byte
+		DomainID                string
+		WorkflowID              string
+		RunID                   string
+		TaskID                  int64
+		TaskType                int
+		FirstEventID            int64
+		NextEventID             int64
+		Version                 int64
+		LastReplicationInfo     map[string]*ReplicationInfo
+		ScheduledID             int64
+		EventStoreVersion       int32
+		BranchToken             []byte
+		NewRunEventStoreVersion int32
+		NewRunBranchToken       []byte
 	}
 
 	// TimerTaskInfo describes a timer task.
@@ -477,14 +479,16 @@ type (
 
 	// HistoryReplicationTask is the replication task created for shipping history replication events to other clusters
 	HistoryReplicationTask struct {
-		VisibilityTimestamp time.Time
-		TaskID              int64
-		FirstEventID        int64
-		NextEventID         int64
-		Version             int64
-		LastReplicationInfo map[string]*ReplicationInfo
-		EventStoreVersion   int32
-		BranchToken         []byte
+		VisibilityTimestamp     time.Time
+		TaskID                  int64
+		FirstEventID            int64
+		NextEventID             int64
+		Version                 int64
+		LastReplicationInfo     map[string]*ReplicationInfo
+		EventStoreVersion       int32
+		BranchToken             []byte
+		NewRunEventStoreVersion int32
+		NewRunBranchToken       []byte
 	}
 
 	// SyncActivityTask is the replication task created for shipping activity info to other clusters

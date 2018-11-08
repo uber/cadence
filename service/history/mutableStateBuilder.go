@@ -194,7 +194,7 @@ func (e *mutableStateBuilder) SetHistoryTree(treeID string) error {
 		return err
 	}
 	exeInfo := e.GetExecutionInfo()
-	exeInfo.EventStoreVersion = 2
+	exeInfo.EventStoreVersion = persistence.EventStoreVersionV2
 	exeInfo.CurrentResetVersion = 0
 	exeInfo.HistoryBranches[exeInfo.CurrentResetVersion] = &persistence.HistoryBranch{
 		BranchToken:      initialBranchToken,
@@ -495,13 +495,18 @@ func (e *mutableStateBuilder) DeleteBufferedReplicationTask(firstEventID int64) 
 	e.deleteBufferedReplicationEvent = common.Int64Ptr(firstEventID)
 }
 
-func (e *mutableStateBuilder) CreateReplicationTask() *persistence.HistoryReplicationTask {
-	return &persistence.HistoryReplicationTask{
-		FirstEventID:        e.GetLastFirstEventID(),
-		NextEventID:         e.GetNextEventID(),
-		Version:             e.replicationState.CurrentVersion,
-		LastReplicationInfo: e.replicationState.LastReplicationInfo,
+func (e *mutableStateBuilder) CreateReplicationTask(newRunEventStoreVersion int32, newRunBranchToken []byte) *persistence.HistoryReplicationTask {
+	t := &persistence.HistoryReplicationTask{
+		FirstEventID:            e.GetLastFirstEventID(),
+		NextEventID:             e.GetNextEventID(),
+		Version:                 e.replicationState.CurrentVersion,
+		LastReplicationInfo:     e.replicationState.LastReplicationInfo,
+		EventStoreVersion:       e.GetEventStoreVersion(),
+		BranchToken:             e.GetCurrentBranch(),
+		NewRunEventStoreVersion: newRunEventStoreVersion,
+		NewRunBranchToken:       newRunBranchToken,
 	}
+	return t
 }
 
 func convertUpdateActivityInfos(inputs map[*persistence.ActivityInfo]struct{}) []*persistence.ActivityInfo {

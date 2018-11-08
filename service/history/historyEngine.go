@@ -351,7 +351,10 @@ func generateFirstReplicationTask(msBuilder mutableState, clusterMetadata cluste
 				NextEventID:         msBuilder.GetNextEventID(),
 				Version:             msBuilder.GetCurrentVersion(),
 				LastReplicationInfo: nil,
+				EventStoreVersion:   msBuilder.GetEventStoreVersion(),
+				BranchToken:         msBuilder.GetCurrentBranch(),
 			}
+
 			replicationTasks = append(replicationTasks, replicationTask)
 		}
 	}
@@ -449,9 +452,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(ctx context.Context, startReq
 	clusterMetadata := e.shard.GetService().GetClusterMetadata()
 	msBuilder := e.createMutableState(clusterMetadata, domainEntry)
 	useEventsV2 := e.config.EnableEventsV2(request.GetDomain())
-	eventStoreVersion := int32(1)
 	if useEventsV2 {
-		eventStoreVersion = 2
 		// NOTE: except for fork(reset), we use runID as treeID for simplicity
 		if retError = msBuilder.SetHistoryTree(*execution.RunId); retError != nil {
 			return
@@ -992,10 +993,6 @@ func (e *historyEngineImpl) RespondDecisionTaskCompleted(ctx context.Context, re
 	domainID := domainEntry.GetInfo().ID
 
 	useEventsV2 := e.config.EnableEventsV2(domainEntry.GetInfo().Name)
-	eventStoreVersion := int32(1)
-	if useEventsV2 {
-		eventStoreVersion = int32(2)
-	}
 	request := req.CompleteRequest
 	token, err0 := e.tokenSerializer.Deserialize(request.TaskToken)
 	if err0 != nil {
@@ -2077,9 +2074,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 	clusterMetadata := e.shard.GetService().GetClusterMetadata()
 	msBuilder := e.createMutableState(clusterMetadata, domainEntry)
 	useEventsV2 := e.config.EnableEventsV2(request.GetDomain())
-	eventStoreVersion := int32(1)
 	if useEventsV2 {
-		eventStoreVersion = int32(2)
 		if retError = msBuilder.SetHistoryTree(*execution.RunId); retError != nil {
 			return
 		}
