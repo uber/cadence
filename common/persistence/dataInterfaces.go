@@ -1239,6 +1239,7 @@ type (
 		// The below are history V2 APIs
 		// V2 regards history events growing as a tree, decoupled from workflow concepts
 
+		// For Cadence, treeID is new runID, except for fork(reset), treeID will be the runID that it forks from.
 		// AppendHistoryNodes add(or override) a batach of nodes to a history branch
 		AppendHistoryNodes(request *AppendHistoryNodesRequest) (*AppendHistoryNodesResponse, error)
 		// ReadHistoryBranch returns history node data for a branch
