@@ -94,7 +94,7 @@ var (
 )
 
 func newHistoryReplicator(shard ShardContext, historyEngine *historyEngineImpl, historyCache *historyCache, domainCache cache.DomainCache,
-	historyMgr persistence.HistoryManager, logger bark.Logger) *historyReplicator {
+	historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager, logger bark.Logger) *historyReplicator {
 	replicator := &historyReplicator{
 		shard:           shard,
 		historyEngine:   historyEngine,
@@ -106,7 +106,7 @@ func newHistoryReplicator(shard ShardContext, historyEngine *historyEngineImpl, 
 		logger:          logger.WithField(logging.TagWorkflowComponent, logging.TagValueHistoryReplicatorComponent),
 
 		getNewConflictResolver: func(context *workflowExecutionContext, logger bark.Logger) conflictResolver {
-			return newConflictResolver(shard, context, historyMgr, logger)
+			return newConflictResolver(shard, context, historyMgr, historyV2Mgr, logger)
 		},
 		getNewStateBuilder: func(msBuilder mutableState, logger bark.Logger) stateBuilder {
 			return newStateBuilder(shard, msBuilder, logger)
@@ -570,7 +570,11 @@ func (r *historyReplicator) ApplyReplicationTask(ctx context.Context, context *w
 
 	requestID := uuid.New() // requestID used for start workflow execution request.  This is not on the history event.
 	sBuilder := r.getNewStateBuilder(msBuilder, logger)
-	lastEvent, di, newRunStateBuilder, err := sBuilder.applyEvents(domainID, requestID, execution, request.History, request.NewRunHistory)
+	var newRunHistory []*shared.HistoryEvent
+	if request.NewRunHistory != nil {
+		newRunHistory = request.NewRunHistory.Events
+	}
+	lastEvent, di, newRunStateBuilder, err := sBuilder.applyEvents(domainID, requestID, execution, request.History.Events, newRunHistory)
 	if err != nil {
 		return err
 	}
@@ -1045,7 +1049,7 @@ func (r *historyReplicator) resetMutableState(ctx context.Context, context *work
 	}
 
 	resolver := r.getNewConflictResolver(context, logger)
-	msBuilder, err = resolver.reset(currentRunID, uuid.New(), lastEventID, msBuilder.GetExecutionInfo().StartTimestamp)
+	msBuilder, err = resolver.reset(currentRunID, uuid.New(), lastEventID, msBuilder.GetExecutionInfo())
 	logger.Info("Completed Resetting of workflow execution.")
 	if err != nil {
 		return nil, err

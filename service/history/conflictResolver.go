@@ -21,8 +21,6 @@
 package history
 
 import (
-	"time"
-
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -33,7 +31,7 @@ import (
 
 type (
 	conflictResolver interface {
-		reset(prevRunID string, requestID string, replayEventID int64, startTime time.Time) (mutableState, error)
+		reset(prevRunID string, requestID string, replayEventID int64, info *persistence.WorkflowExecutionInfo) (mutableState, error)
 	}
 
 	conflictResolverImpl struct {
@@ -41,11 +39,12 @@ type (
 		clusterMetadata cluster.Metadata
 		context         *workflowExecutionContext
 		historyMgr      persistence.HistoryManager
+		historyV2Mgr    persistence.HistoryV2Manager
 		logger          bark.Logger
 	}
 )
 
-func newConflictResolver(shard ShardContext, context *workflowExecutionContext, historyMgr persistence.HistoryManager,
+func newConflictResolver(shard ShardContext, context *workflowExecutionContext, historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager,
 	logger bark.Logger) *conflictResolverImpl {
 
 	return &conflictResolverImpl{
@@ -53,45 +52,51 @@ func newConflictResolver(shard ShardContext, context *workflowExecutionContext, 
 		clusterMetadata: shard.GetService().GetClusterMetadata(),
 		context:         context,
 		historyMgr:      historyMgr,
+		historyV2Mgr:    historyV2Mgr,
 		logger:          logger,
 	}
 }
 
-func (r *conflictResolverImpl) reset(prevRunID string, requestID string, replayEventID int64, startTime time.Time) (mutableState, error) {
+func (r *conflictResolverImpl) reset(prevRunID string, requestID string, replayEventID int64, info *persistence.WorkflowExecutionInfo) (mutableState, error) {
 	domainID := r.context.domainID
 	execution := r.context.workflowExecution
+	startTime := info.StartTimestamp
+	eventStoreVersion := info.EventStoreVersion
+	branchToken := info.HistoryBranches[info.CurrentResetVersion].BranchToken
 	replayNextEventID := replayEventID + 1
+
 	var nextPageToken []byte
 	var resetMutableStateBuilder *mutableStateBuilder
 	var sBuilder stateBuilder
 	var lastEvent *shared.HistoryEvent
+	var history []*shared.HistoryEvent
+	var size int
+	var lastFirstEventID int64
+	var err error
+
 	eventsToApply := replayNextEventID - common.FirstEventID
 	for hasMore := true; hasMore; hasMore = len(nextPageToken) > 0 {
-		response, err := r.getHistory(domainID, execution, common.FirstEventID, replayNextEventID, nextPageToken)
+		history, size, lastFirstEventID, nextPageToken, err = r.getHistory(domainID, execution, common.FirstEventID, replayNextEventID, nextPageToken, eventStoreVersion, branchToken)
 		if err != nil {
 			r.logError("Conflict resolution err getting history.", err)
 			return nil, err
 		}
 
-		history := response.History
-		lastFirstEventID := response.LastFirstEventID
-		nextPageToken = response.NextPageToken
-
-		batchSize := int64(len(history.Events))
+		batchSize := int64(len(history))
 		// NextEventID could be in the middle of the batch.  Trim the history events to not have more events then what
 		// need to be applied
 		if batchSize > eventsToApply {
-			history.Events = history.Events[0:eventsToApply]
+			history = history[0:eventsToApply]
 		}
 
-		eventsToApply -= int64(len(history.Events))
+		eventsToApply -= int64(len(history))
 
-		if len(history.Events) == 0 {
+		if len(history) == 0 {
 			break
 		}
 
-		firstEvent := history.Events[0]
-		lastEvent = history.Events[len(history.Events)-1]
+		firstEvent := history[0]
+		lastEvent = history[len(history)-1]
 		if firstEvent.GetEventId() == common.FirstEventID {
 			resetMutableStateBuilder = newMutableStateBuilderWithReplicationState(
 				r.clusterMetadata.GetCurrentClusterName(),
@@ -109,7 +114,7 @@ func (r *conflictResolverImpl) reset(prevRunID string, requestID string, replayE
 			return nil, err
 		}
 		resetMutableStateBuilder.executionInfo.SetLastFirstEventID(lastFirstEventID)
-		resetMutableStateBuilder.IncrementHistorySize(response.Size)
+		resetMutableStateBuilder.IncrementHistorySize(size)
 	}
 
 	// Applying events to mutableState does not move the nextEventID.  Explicitly set nextEventID to new value
@@ -130,22 +135,35 @@ func (r *conflictResolverImpl) reset(prevRunID string, requestID string, replayE
 }
 
 func (r *conflictResolverImpl) getHistory(domainID string, execution shared.WorkflowExecution, firstEventID,
-	nextEventID int64, nextPageToken []byte) (*persistence.GetWorkflowExecutionHistoryResponse, error) {
+	nextEventID int64, nextPageToken []byte, eventStoreVersion int32, branchToken []byte) ([]*shared.HistoryEvent, int, int64, []byte, error) {
 
-	response, err := r.historyMgr.GetWorkflowExecutionHistory(&persistence.GetWorkflowExecutionHistoryRequest{
-		DomainID:      domainID,
-		Execution:     execution,
-		FirstEventID:  firstEventID,
-		NextEventID:   nextEventID,
-		PageSize:      defaultHistoryPageSize,
-		NextPageToken: nextPageToken,
-	})
+	if eventStoreVersion == persistence.EventStoreVersionV2 {
+		response, err := r.historyV2Mgr.ReadHistoryBranch(&persistence.ReadHistoryBranchRequest{
+			BranchToken:   branchToken,
+			MinEventID:    firstEventID,
+			MaxEventID:    nextEventID,
+			PageSize:      defaultHistoryPageSize,
+			NextPageToken: nextPageToken,
+		})
+		if err != nil {
+			return nil, 0, 0, nil, err
+		}
+		return response.History, response.Size, response.LastFirstEventID, response.NextPageToken, nil
+	} else {
+		response, err := r.historyMgr.GetWorkflowExecutionHistory(&persistence.GetWorkflowExecutionHistoryRequest{
+			DomainID:      domainID,
+			Execution:     execution,
+			FirstEventID:  firstEventID,
+			NextEventID:   nextEventID,
+			PageSize:      defaultHistoryPageSize,
+			NextPageToken: nextPageToken,
+		})
 
-	if err != nil {
-		return nil, err
+		if err != nil {
+			return nil, 0, 0, nil, err
+		}
+		return response.History.Events, response.Size, response.LastFirstEventID, response.NextPageToken, nil
 	}
-
-	return response, nil
 }
 
 func (r *conflictResolverImpl) logError(msg string, err error) {

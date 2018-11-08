@@ -164,7 +164,7 @@ func NewEngineWithShardContext(shard ShardContext, visibilityMgr persistence.Vis
 		replicatorProcessor := newReplicatorQueueProcessor(shard, historyEngImpl.historyCache, publisher, executionManager, historyManager, logger)
 		historyEngImpl.replicatorProcessor = replicatorProcessor
 		shardWrapper.replcatorProcessor = replicatorProcessor
-		historyEngImpl.replicator = newHistoryReplicator(shard, historyEngImpl, historyCache, shard.GetDomainCache(), historyManager,
+		historyEngImpl.replicator = newHistoryReplicator(shard, historyEngImpl, historyCache, shard.GetDomainCache(), historyManager, historyV2Manager,
 			logger)
 	}
 
