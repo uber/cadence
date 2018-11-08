@@ -274,7 +274,7 @@ func (h *cassandraHistoryV2Persistence) ForkHistoryBranch(request *p.InternalFor
 			Ancestors: newAncestors,
 		}}
 
-	// NOTE: we prevent leaking event data caused by forking, we introduce this in_progress flag.
+	// NOTE: To prevent leaking event data caused by forking, we introduce this in_progress flag.
 	// Insert nil as ancestor here, we assume append will insert the actual ancestors along with setting in_progress to false
 	query := h.session.Query(v2templateInsertTree,
 		treeID, request.NewBranchID, nil, true)
