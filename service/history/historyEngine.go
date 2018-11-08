@@ -254,32 +254,6 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 	)
 }
 
-func getPreviousMutableState(context *workflowExecutionContext, ctxError error) (mutableState, error) {
-	if ctxError != nil {
-		if _, ok := ctxError.(*workflow.EntityNotExistsError); !ok {
-			return nil, ctxError
-		}
-		// for EntityNotExistsError, we will create brandly new execution
-		return nil, nil
-	} else {
-		msBuilder, loadErr := context.loadWorkflowExecution()
-		if loadErr != nil {
-			if _, ok := loadErr.(*workflow.EntityNotExistsError); !ok {
-				return nil, loadErr
-			}
-			// for EntityNotExistsError, we will create brandly new execution
-			return nil, nil
-		}
-		if msBuilder.IsWorkflowExecutionRunning() {
-			msg := "Workflow execution is already running. WorkflowId: %v, RunId: %v."
-			execInfo := msBuilder.GetExecutionInfo()
-			return nil, getWorkflowAlreadyStartedError(msg, execInfo.CreateRequestID, execInfo.WorkflowID, execInfo.RunID)
-		}
-		// we will create new run based on ID reuse policy
-		return msBuilder, nil
-	}
-}
-
 func (e *historyEngineImpl) createMutableState(clusterMetadata cluster.Metadata, domainEntry *cache.DomainCacheEntry) mutableState {
 	var msBuilder mutableState
 	if clusterMetadata.IsGlobalDomainEnabled() && domainEntry.IsGlobalDomain() {
