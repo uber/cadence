@@ -625,18 +625,18 @@ func (v *DomainTaskAttributes) GetFailoverVersion() (o int64) {
 }
 
 type HistoryTaskAttributes struct {
-	TargetClusters    []string                            `json:"targetClusters,omitempty"`
-	DomainId          *string                             `json:"domainId,omitempty"`
-	WorkflowId        *string                             `json:"workflowId,omitempty"`
-	RunId             *string                             `json:"runId,omitempty"`
-	FirstEventId      *int64                              `json:"firstEventId,omitempty"`
-	NextEventId       *int64                              `json:"nextEventId,omitempty"`
-	Version           *int64                              `json:"version,omitempty"`
-	ReplicationInfo   map[string]*history.ReplicationInfo `json:"replicationInfo,omitempty"`
-	History           *shared.History                     `json:"history,omitempty"`
-	NewRunHistory     *shared.History                     `json:"newRunHistory,omitempty"`
-	EventStoreVersion *int32                              `json:"eventStoreVersion,omitempty"`
-	BranchToken       []byte                              `json:"branchToken,omitempty"`
+	TargetClusters          []string                            `json:"targetClusters,omitempty"`
+	DomainId                *string                             `json:"domainId,omitempty"`
+	WorkflowId              *string                             `json:"workflowId,omitempty"`
+	RunId                   *string                             `json:"runId,omitempty"`
+	FirstEventId            *int64                              `json:"firstEventId,omitempty"`
+	NextEventId             *int64                              `json:"nextEventId,omitempty"`
+	Version                 *int64                              `json:"version,omitempty"`
+	ReplicationInfo         map[string]*history.ReplicationInfo `json:"replicationInfo,omitempty"`
+	History                 *shared.History                     `json:"history,omitempty"`
+	NewRunHistory           *shared.History                     `json:"newRunHistory,omitempty"`
+	EventStoreVersion       *int32                              `json:"eventStoreVersion,omitempty"`
+	NewRunEventStoreVersion *int32                              `json:"newRunEventStoreVersion,omitempty"`
 }
 
 type _List_String_ValueList []string
@@ -814,8 +814,8 @@ func (v *HistoryTaskAttributes) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 100, Value: w}
 		i++
 	}
-	if v.BranchToken != nil {
-		w, err = wire.NewValueBinary(v.BranchToken), error(nil)
+	if v.NewRunEventStoreVersion != nil {
+		w, err = wire.NewValueI32(*(v.NewRunEventStoreVersion)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -1009,8 +1009,10 @@ func (v *HistoryTaskAttributes) FromWire(w wire.Value) error {
 
 			}
 		case 110:
-			if field.Value.Type() == wire.TBinary {
-				v.BranchToken, err = field.Value.GetBinary(), error(nil)
+			if field.Value.Type() == wire.TI32 {
+				var x int32
+				x, err = field.Value.GetI32(), error(nil)
+				v.NewRunEventStoreVersion = &x
 				if err != nil {
 					return err
 				}
@@ -1075,8 +1077,8 @@ func (v *HistoryTaskAttributes) String() string {
 		fields[i] = fmt.Sprintf("EventStoreVersion: %v", *(v.EventStoreVersion))
 		i++
 	}
-	if v.BranchToken != nil {
-		fields[i] = fmt.Sprintf("BranchToken: %v", v.BranchToken)
+	if v.NewRunEventStoreVersion != nil {
+		fields[i] = fmt.Sprintf("NewRunEventStoreVersion: %v", *(v.NewRunEventStoreVersion))
 		i++
 	}
 
@@ -1168,7 +1170,7 @@ func (v *HistoryTaskAttributes) Equals(rhs *HistoryTaskAttributes) bool {
 	if !_I32_EqualsPtr(v.EventStoreVersion, rhs.EventStoreVersion) {
 		return false
 	}
-	if !((v.BranchToken == nil && rhs.BranchToken == nil) || (v.BranchToken != nil && rhs.BranchToken != nil && bytes.Equal(v.BranchToken, rhs.BranchToken))) {
+	if !_I32_EqualsPtr(v.NewRunEventStoreVersion, rhs.NewRunEventStoreVersion) {
 		return false
 	}
 
@@ -1236,8 +1238,8 @@ func (v *HistoryTaskAttributes) MarshalLogObject(enc zapcore.ObjectEncoder) (err
 	if v.EventStoreVersion != nil {
 		enc.AddInt32("eventStoreVersion", *v.EventStoreVersion)
 	}
-	if v.BranchToken != nil {
-		enc.AddString("branchToken", base64.StdEncoding.EncodeToString(v.BranchToken))
+	if v.NewRunEventStoreVersion != nil {
+		enc.AddInt32("newRunEventStoreVersion", *v.NewRunEventStoreVersion)
 	}
 	return err
 }
@@ -1352,11 +1354,11 @@ func (v *HistoryTaskAttributes) GetEventStoreVersion() (o int32) {
 	return
 }
 
-// GetBranchToken returns the value of BranchToken if it is set or its
+// GetNewRunEventStoreVersion returns the value of NewRunEventStoreVersion if it is set or its
 // zero value if it is unset.
-func (v *HistoryTaskAttributes) GetBranchToken() (o []byte) {
-	if v.BranchToken != nil {
-		return v.BranchToken
+func (v *HistoryTaskAttributes) GetNewRunEventStoreVersion() (o int32) {
+	if v.NewRunEventStoreVersion != nil {
+		return *v.NewRunEventStoreVersion
 	}
 
 	return

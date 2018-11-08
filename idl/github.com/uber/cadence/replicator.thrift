@@ -57,7 +57,7 @@ struct HistoryTaskAttributes {
   80: optional shared.History history
   90: optional shared.History newRunHistory
   100: optional i32 eventStoreVersion
-  110: optional binary branchToken
+  110: optional i32 newRunEventStoreVersion
 }
 
 struct SyncShardStatusTaskAttributes {
