@@ -21,7 +21,8 @@
 package persistence
 
 import (
-	"code.uber.internal/devexp/cadence-iot-demo/.tmp/.go/goroot/src/fmt"
+	"fmt"
+
 	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
