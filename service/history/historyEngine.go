@@ -459,7 +459,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(ctx context.Context, startReq
 		}
 	}
 
-	startedEvent := msBuilder.AddWorkflowExecutionStartedEvent(execution, startRequest, eventStoreVersion)
+	startedEvent := msBuilder.AddWorkflowExecutionStartedEvent(execution, startRequest)
 	if startedEvent == nil {
 		retError = &workflow.InternalServiceError{Message: "Failed to add workflow execution started event."}
 		return
@@ -1186,7 +1186,7 @@ Update_History_Loop:
 						BackoffStartIntervalInSeconds:       common.Int32Ptr(int32(retryBackoffInterval.Seconds())),
 					}
 
-					if _, continueAsNewBuilder, err = msBuilder.AddContinueAsNewEvent(completedID, domainEntry, startAttributes.GetParentWorkflowDomain(), continueAsnewAttributes, eventStoreVersion); err != nil {
+					if _, continueAsNewBuilder, err = msBuilder.AddContinueAsNewEvent(completedID, domainEntry, startAttributes.GetParentWorkflowDomain(), continueAsnewAttributes); err != nil {
 						return nil, err
 					}
 				}
@@ -1404,7 +1404,7 @@ Update_History_Loop:
 					parentDomainName = parentDomainEntry.GetInfo().Name
 				}
 
-				_, newStateBuilder, err := msBuilder.AddContinueAsNewEvent(completedID, domainEntry, parentDomainName, attributes, eventStoreVersion)
+				_, newStateBuilder, err := msBuilder.AddContinueAsNewEvent(completedID, domainEntry, parentDomainName, attributes)
 				if err != nil {
 					return nil, err
 				}
@@ -2108,7 +2108,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 	// Generate first decision task event.
 	taskList := request.TaskList.GetName()
 	// Add WF start event
-	startedEvent := msBuilder.AddWorkflowExecutionStartedEvent(execution, startRequest, eventStoreVersion)
+	startedEvent := msBuilder.AddWorkflowExecutionStartedEvent(execution, startRequest)
 	if startedEvent == nil {
 		return nil, &workflow.InternalServiceError{Message: "Failed to add workflow execution started event."}
 	}
