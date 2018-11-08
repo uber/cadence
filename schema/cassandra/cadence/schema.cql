@@ -122,6 +122,8 @@ CREATE TYPE replication_task (
   scheduled_id               bigint, -- Used by ReplicationTask to sync activity info
   event_store_version        int, -- indiciates which version of event store to query
   branch_token               blob, -- if eventV2, then query with this token
+  new_run_event_store_version        int, -- indiciates which version of event store to query for new run(continueAsNew)
+  new_run_branch_token               blob, -- if eventV2, then query with this token for new run(continueAsNew)
 );
 
 CREATE TYPE timer_task (
