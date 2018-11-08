@@ -405,7 +405,6 @@ func (e *historyEngineImpl) createWorkflow(startRequest *h.StartWorkflowExecutio
 		ReplicationState:            msBuilder.GetReplicationState(),
 		HasRetryPolicy:              request.RetryPolicy != nil,
 		EventStoreVersion:           msBuilder.GetEventStoreVersion(),
-		HistoryTreeID:               currExeInfo.HistoryTreeID,
 		BranchToken:                 msBuilder.GetCurrentBranch(),
 		CreateWorkflowMode:          createMode,
 	}

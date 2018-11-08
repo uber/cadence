@@ -257,7 +257,6 @@ type (
 		// events V2 related
 		EventStoreVersion   int32
 		CurrentResetVersion int32
-		HistoryTreeID       string
 		HistoryBranches     map[int32]*HistoryBranch // map from each resetVersion to the associated branch, resetVersion increase from 0
 	}
 

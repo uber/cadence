@@ -172,7 +172,6 @@ func (m *executionManagerImpl) DeserializeExecutionInfo(info *InternalWorkflowEx
 		NonRetriableErrors:           info.NonRetriableErrors,
 		EventStoreVersion:            info.EventStoreVersion,
 		CurrentResetVersion:          info.CurrentResetVersion,
-		HistoryTreeID:                info.HistoryTreeID,
 		HistoryBranches:              info.HistoryBranches,
 	}
 	return newInfo, nil
@@ -531,7 +530,6 @@ func (m *executionManagerImpl) SerializeExecutionInfo(info *WorkflowExecutionInf
 		NonRetriableErrors:           info.NonRetriableErrors,
 		EventStoreVersion:            info.EventStoreVersion,
 		CurrentResetVersion:          info.CurrentResetVersion,
-		HistoryTreeID:                info.HistoryTreeID,
 		HistoryBranches:              info.HistoryBranches,
 	}, nil
 }

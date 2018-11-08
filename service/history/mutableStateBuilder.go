@@ -194,7 +194,6 @@ func (e *mutableStateBuilder) SetHistoryTree(treeID string) error {
 		return err
 	}
 	exeInfo := e.GetExecutionInfo()
-	exeInfo.HistoryTreeID = treeID
 	exeInfo.EventStoreVersion = 2
 	exeInfo.CurrentResetVersion = 0
 	exeInfo.HistoryBranches[exeInfo.CurrentResetVersion] = &persistence.HistoryBranch{
