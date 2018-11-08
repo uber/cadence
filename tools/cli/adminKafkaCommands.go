@@ -153,7 +153,7 @@ Loop:
 			buffer = nextBuffer
 			messages, skippedGetMsgCount := getMessages(data, skipErrors)
 			tasks, skippedDeserializeCount := deserializeMessages(messages, skipErrors)
-			*skippedCount = skippedGetMsgCount + skippedDeserializeCount
+			*skippedCount += skippedGetMsgCount + skippedDeserializeCount
 			for _, t := range tasks {
 				writerCh <- t
 			}

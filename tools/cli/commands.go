@@ -127,8 +127,8 @@ const (
 	FlagMaxFieldLengthWithAlias    = FlagMaxFieldLength + ", maxl"
 	FlagSecurityToken              = "security_token"
 	FlagSecurityTokenWithAlias     = FlagSecurityToken + ", st"
-	FlagSkipErrorMode = "skip_errors"
-	FlagSkipErrorModeWithAlias = FlagSkipErrorMode + ", serr"
+	FlagSkipErrorMode              = "skip_errors"
+	FlagSkipErrorModeWithAlias     = FlagSkipErrorMode + ", serr"
 )
 
 const (

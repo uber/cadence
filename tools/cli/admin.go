@@ -100,7 +100,7 @@ func newAdminKafkaCommands() []cli.Command {
 					Usage: "Output file to write to, if not provided output is written to stdout",
 				},
 				cli.BoolFlag{
-					Name: FlagSkipErrorModeWithAlias,
+					Name:  FlagSkipErrorModeWithAlias,
 					Usage: "Skip errors in parsing messages",
 				},
 			},
