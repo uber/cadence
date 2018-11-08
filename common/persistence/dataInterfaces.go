@@ -1134,6 +1134,8 @@ type (
 		NextPageToken []byte
 		// Size of history read from store
 		Size int
+		// the first_event_id of last loaded batch
+		LastFirstEventID int64
 	}
 
 	// ForkHistoryBranchRequest is used to fork a history branch
