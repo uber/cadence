@@ -96,10 +96,15 @@ func (s *Service) Start() {
 	}
 
 	frontendClient := s.getFrontendClient(base, log)
-	s.startWorkers(frontendClient, log)
-
+	w := worker.New(frontendClient, SystemWorkflowDomain, SystemTaskList, worker.Options{})
+	if err := w.Start(); err != nil {
+		w.Stop()
+		log.Fatalf("failed to start worker: %v", err)
+	}
 	log.Infof("%v started", common.WorkerServiceName)
+
 	<-s.stopC
+	w.Stop()
 	base.Stop()
 }
 
@@ -141,12 +146,5 @@ func (s *Service) startReplicator(params *service.BootstrapParams, base service.
 	if err := replicator.Start(); err != nil {
 		replicator.Stop()
 		log.Fatalf("Fail to start replicator: %v", err)
-	}
-}
-
-func (s *Service) startWorkers(frontendClient frontend.Client, log bark.Logger) {
-	w := worker.New(frontendClient, SystemWorkflowDomain, SystemTaskList, worker.Options{})
-	if err := w.Start(); err != nil {
-		log.Fatalf("failed to start worker: %v", err)
 	}
 }
