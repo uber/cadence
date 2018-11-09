@@ -12,11 +12,12 @@ services:
       - "8125:8125"
       - "8126:8126"
   cadence:
-    image: ubercadence/server:0.3.15
+    image: ubercadence/server:0.4.0
     ports:
      - "7933:7933"
      - "7934:7934"
      - "7935:7935"
+     - "7939:7939"
     environment:
       - "CASSANDRA_SEEDS=cassandra"
       - "STATSD_ENDPOINT=statsd:8125"

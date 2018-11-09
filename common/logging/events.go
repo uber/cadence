@@ -49,7 +49,8 @@ const (
 	TransferTaskProcessingFailed           = 2105
 
 	// Shard context events
-	ShardRangeUpdatedEventID = 3000
+	ShardRangeUpdatedEventID     = 3000
+	ShardAllocateTimerBeforeRead = 3001
 
 	// ShardController events
 	ShardControllerStarted          = 4000
@@ -92,4 +93,12 @@ const (
 	OperationFailed   = 9000
 	OperationStuck    = 9001
 	OperationCritical = 9002
+)
+
+// Tag values
+const (
+	// ListWorkflow FilterType values
+	ListWorkflowFilterByID     = "WID"
+	ListWorkflowFilterByType   = "WType"
+	ListWorkflowFilterByStatus = "status"
 )

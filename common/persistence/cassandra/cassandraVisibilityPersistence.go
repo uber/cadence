@@ -64,6 +64,14 @@ const (
 		`domain_id, domain_partition, workflow_id, run_id, start_time, close_time, workflow_type_name, status, history_length) ` +
 		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
+	templateCreateWorkflowExecutionClosedWithTTLV2 = `INSERT INTO closed_executions_v2 (` +
+		`domain_id, domain_partition, workflow_id, run_id, start_time, close_time, workflow_type_name, status, history_length) ` +
+		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) using TTL ?`
+
+	templateCreateWorkflowExecutionClosedV2 = `INSERT INTO closed_executions_v2 (` +
+		`domain_id, domain_partition, workflow_id, run_id, start_time, close_time, workflow_type_name, status, history_length) ` +
+		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+
 	templateGetOpenWorkflowExecutions = `SELECT workflow_id, run_id, start_time, workflow_type_name ` +
 		`FROM open_executions ` +
 		`WHERE domain_id = ? ` +
@@ -232,8 +240,33 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 			request.Status,
 			request.HistoryLength,
 		)
+		// duplicate write to v2 to order by close time
+		batch.Query(templateCreateWorkflowExecutionClosedV2,
+			request.DomainUUID,
+			domainPartition,
+			*request.Execution.WorkflowId,
+			*request.Execution.RunId,
+			p.UnixNanoToDBTimestamp(request.StartTimestamp),
+			p.UnixNanoToDBTimestamp(request.CloseTimestamp),
+			request.WorkflowTypeName,
+			request.Status,
+			request.HistoryLength,
+		)
 	} else {
 		batch.Query(templateCreateWorkflowExecutionClosedWithTTL,
+			request.DomainUUID,
+			domainPartition,
+			*request.Execution.WorkflowId,
+			*request.Execution.RunId,
+			p.UnixNanoToDBTimestamp(request.StartTimestamp),
+			p.UnixNanoToDBTimestamp(request.CloseTimestamp),
+			request.WorkflowTypeName,
+			request.Status,
+			request.HistoryLength,
+			retention,
+		)
+		// duplicate write to v2 to order by close time
+		batch.Query(templateCreateWorkflowExecutionClosedWithTTLV2,
 			request.DomainUUID,
 			domainPartition,
 			*request.Execution.WorkflowId,
@@ -553,8 +586,8 @@ func (v *cassandraVisibilityPersistence) GetClosedWorkflowExecution(
 	query := v.session.Query(templateGetClosedWorkflowExecution,
 		request.DomainUUID,
 		domainPartition,
-		*execution.WorkflowId,
-		*execution.RunId)
+		execution.GetWorkflowId(),
+		execution.GetRunId())
 
 	iter := query.Iter()
 	if iter == nil {
@@ -567,7 +600,7 @@ func (v *cassandraVisibilityPersistence) GetClosedWorkflowExecution(
 	if !has {
 		return nil, &workflow.EntityNotExistsError{
 			Message: fmt.Sprintf("Workflow execution not found.  WorkflowId: %v, RunId: %v",
-				*execution.WorkflowId, *execution.RunId),
+				execution.GetWorkflowId(), execution.GetRunId()),
 		}
 	}
 

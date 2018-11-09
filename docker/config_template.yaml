@@ -2,12 +2,21 @@ log:
   stdout: true
   level: "${LOG_LEVEL}"
 
-cassandra:
-  hosts: "${CASSANDRA_SEEDS}"
-  keyspace: "${KEYSPACE}"
-  visibilityKeyspace: "${VISIBILITY_KEYSPACE}"
-  consistency: "${CASSANDRA_CONSISTENCY}"
+persistence:
+  defaultStore: cass-default
+  visibilityStore: cass-visibility
   numHistoryShards: ${NUM_HISTORY_SHARDS}
+  datastores:
+    cass-default:
+      cassandra:
+        hosts: "${CASSANDRA_SEEDS}"
+        keyspace: "${KEYSPACE}"
+        consistency: "${CASSANDRA_CONSISTENCY}"
+    cass-visibility:
+      cassandra:
+        hosts: "${CASSANDRA_SEEDS}"
+        keyspace: "${VISIBILITY_KEYSPACE}"
+        consistency: "${CASSANDRA_CONSISTENCY}"
 
 ringpop:
   name: cadence
@@ -42,6 +51,15 @@ services:
       statsd:
         hostPort: "${STATSD_ENDPOINT}"
         prefix: "cadence-history"
+
+  worker:
+    rpc:
+      port: 7939
+      bindOnLocalHost: ${BIND_ON_LOCALHOST}
+    metrics:
+      statsd:
+        hostPort: "${STATSD_ENDPOINT}"
+        prefix: "cadence-worker"
 
 clustersInfo:
   enableGlobalDomain: false

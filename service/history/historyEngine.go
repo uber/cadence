@@ -1558,7 +1558,7 @@ func (e *historyEngineImpl) RespondActivityTaskCompleted(ctx context.Context, re
 			}
 
 			if !isRunning || ai.StartedID == common.EmptyEventID ||
-				(token.ScheduleAttempt != 0 && int64(ai.Attempt) != token.ScheduleAttempt) {
+				(token.ScheduleID != common.EmptyEventID && token.ScheduleAttempt != int64(ai.Attempt)) {
 				return nil, ErrActivityTaskNotFound
 			}
 
@@ -2131,7 +2131,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 	if prevExecutionInfo == nil { // create workflow as brand new
 		resultRunID, err = createWorkflow(true, "", prevLastWriteVersion)
 	} else { // start workflow with policy
-		policy := getWorkflowIdReusePolicyForSigStart(startRequest.StartRequest.WorkflowIdReusePolicy)
+		policy := getWorkflowIDReusePolicyForSigStart(startRequest.StartRequest.WorkflowIdReusePolicy)
 		err = e.applyWorkflowIDReusePolicyForSigStart(prevExecutionInfo, domainID, execution, policy)
 		if err != nil {
 			return nil, err
@@ -3005,7 +3005,7 @@ func getWorkflowAlreadyStartedError(errMsg string, createRequestID string, workf
 }
 
 // change default policy to "AllowDuplicate" for signalWithStart if not set in request.
-func getWorkflowIdReusePolicyForSigStart(policy *workflow.WorkflowIdReusePolicy) workflow.WorkflowIdReusePolicy {
+func getWorkflowIDReusePolicyForSigStart(policy *workflow.WorkflowIdReusePolicy) workflow.WorkflowIdReusePolicy {
 	if policy == nil {
 		return workflow.WorkflowIdReusePolicyAllowDuplicate
 	}

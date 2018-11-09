@@ -44,9 +44,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN pip install cqlsh
 
-ENV GOLANG_VERSION 1.10.1
+ENV GOLANG_VERSION 1.11.1
 ENV GOLANG_DOWNLOAD_URL https://golang.org/dl/go$GOLANG_VERSION.linux-amd64.tar.gz
-ENV GOLANG_DOWNLOAD_SHA256 72d820dec546752e5a8303b33b009079c15c2390ce76d67cf514991646c6127b
+ENV GOLANG_DOWNLOAD_SHA256 2871270d8ff0c8c69f161aaae42f9f28739855ff5c5204752a8d92a1c9f63993
 
 RUN set -eux; \
     wget -O golang.tar.gz "$GOLANG_DOWNLOAD_URL" \
@@ -61,13 +61,13 @@ RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" && chmod -R 777 "$GOPATH"
 # get and compile cadence-server
 ENV CADENCE_HOME $GOPATH/src/github.com/uber/cadence
 
-RUN go get -u github.com/Masterminds/glide
+RUN go get -u github.com/golang/dep/cmd/dep
 RUN go get -u github.com/golang/lint/golint
 
 RUN git clone https://github.com/uber/cadence.git $CADENCE_HOME
 RUN cd $CADENCE_HOME && git checkout $git_branch && make bins_nothrift
 
-EXPOSE 7933 7934 7935
+EXPOSE 7933 7934 7935 7939
 
 COPY ./start.sh $CADENCE_HOME/start.sh
 COPY ./config_template.yaml $CADENCE_HOME/config/docker_template.yaml
