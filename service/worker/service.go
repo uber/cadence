@@ -91,6 +91,37 @@ func (s *Service) Start() {
 
 	s.metricsClient = base.GetMetricsClient()
 
+	if s.params.ClusterMetadata.IsGlobalDomainEnabled() {
+		s.startReplicator(params, base, log)
+	}
+
+	frontendClient := s.getFrontendClient(base, log)
+	s.startWorkers(frontendClient, log)
+
+	log.Infof("%v started", common.WorkerServiceName)
+	<-s.stopC
+	base.Stop()
+}
+
+// Stop is called to stop the service
+func (s *Service) Stop() {
+	select {
+	case s.stopC <- struct{}{}:
+	default:
+	}
+	s.params.Logger.Infof("%v stopped", common.WorkerServiceName)
+}
+
+func (s *Service) getFrontendClient(base service.Service, log bark.Logger) frontend.Client {
+	client, err := base.GetClientFactory().NewFrontendClient()
+	if err != nil {
+		log.Fatalf("failed to create frontend client: %v", err)
+	}
+	return frontend.NewRetryableClient(client, common.CreateFrontendServiceRetryPolicy(),
+		common.IsWhitelistServiceTransientError)
+}
+
+func (s *Service) startReplicator(params *service.BootstrapParams, base service.Service, log bark.Logger) {
 	pConfig := params.PersistenceConfig
 	pConfig.SetMaxQPS(pConfig.DefaultStore, s.config.PersistenceMaxQPS())
 	pFactory := persistencefactory.New(&pConfig, params.ClusterMetadata.GetCurrentClusterName(), s.metricsClient, log)
@@ -111,27 +142,6 @@ func (s *Service) Start() {
 		replicator.Stop()
 		log.Fatalf("Fail to start replicator: %v", err)
 	}
-
-	client, err := base.GetClientFactory().NewFrontendClient()
-	if err != nil {
-		log.Fatalf("failed to create frontend client: %v", err)
-	}
-	retryableClient := frontend.NewRetryableClient(client, common.CreateFrontendServiceRetryPolicy(),
-		common.IsWhitelistServiceTransientError)
-	s.startWorkers(retryableClient, log)
-
-	log.Infof("%v started", common.WorkerServiceName)
-	<-s.stopC
-	base.Stop()
-}
-
-// Stop is called to stop the service
-func (s *Service) Stop() {
-	select {
-	case s.stopC <- struct{}{}:
-	default:
-	}
-	s.params.Logger.Infof("%v stopped", common.WorkerServiceName)
 }
 
 func (s *Service) startWorkers(frontendClient frontend.Client, log bark.Logger) {
