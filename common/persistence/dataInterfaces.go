@@ -659,8 +659,6 @@ type (
 		NonRetriableErrors          []string
 		// 2 means using eventsV2, empty/0/1 means using events(V1)
 		EventStoreVersion int32
-		// for eventsV2: treeID for forking/creating new branch
-		HistoryTreeID string
 		// for eventsV2: branchToken from historyPersistence
 		BranchToken []byte
 	}

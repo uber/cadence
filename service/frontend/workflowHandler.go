@@ -1521,7 +1521,6 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		if response.GetEventStoreVersion() == persistence.EventStoreVersionV2 {
 			useEventsV2 = true
 		}
-		//if response.
 		return useEventsV2, response.BranchToken, response.Execution.GetRunId(), response.GetLastFirstEventId(), response.GetNextEventId(), response.GetIsWorkflowRunning(), nil
 	}
 
