@@ -197,7 +197,11 @@ const (
 		`next_event_id: ?,` +
 		`version: ?,` +
 		`last_replication_info: ?, ` +
-		`scheduled_id: ?` +
+		`scheduled_id: ?, ` +
+		`event_store_version: ?, ` +
+		`branch_token: ?, ` +
+		`new_run_event_store_version: ?, ` +
+		`new_run_branch_token: ? ` +
 		`}`
 
 	templateTimerTaskType = `{` +
@@ -2818,14 +2822,20 @@ func (d *cassandraPersistence) createReplicationTasks(batch *gocql.Batch, replic
 		version := common.EmptyVersion
 		var lastReplicationInfo map[string]map[string]interface{}
 		activityScheduleID := common.EmptyEventID
-
+		var eventStoreVersion, newRunEventStoreVersion int32
+		var branchToken, newRunBranchToken []byte
 		switch task.GetType() {
 		case p.ReplicationTaskTypeHistory:
-			firstEventID = task.(*p.HistoryReplicationTask).FirstEventID
-			nextEventID = task.(*p.HistoryReplicationTask).NextEventID
+			histTask := task.(*p.HistoryReplicationTask)
+			eventStoreVersion = histTask.EventStoreVersion
+			newRunEventStoreVersion = histTask.NewRunEventStoreVersion
+			branchToken = histTask.BranchToken
+			newRunBranchToken = histTask.NewRunBranchToken
+			firstEventID = histTask.FirstEventID
+			nextEventID = histTask.NextEventID
 			version = task.GetVersion()
 			lastReplicationInfo = make(map[string]map[string]interface{})
-			for k, v := range task.(*p.HistoryReplicationTask).LastReplicationInfo {
+			for k, v := range histTask.LastReplicationInfo {
 				lastReplicationInfo[k] = createReplicationInfoMap(v)
 			}
 		case p.ReplicationTaskTypeSyncActivity:
@@ -2853,6 +2863,10 @@ func (d *cassandraPersistence) createReplicationTasks(batch *gocql.Batch, replic
 			version,
 			lastReplicationInfo,
 			activityScheduleID,
+			eventStoreVersion,
+			branchToken,
+			newRunEventStoreVersion,
+			newRunBranchToken,
 			defaultVisibilityTimestamp,
 			task.GetTaskID())
 	}
@@ -3622,6 +3636,14 @@ func createReplicationTaskInfo(result map[string]interface{}) *p.ReplicationTask
 			}
 		case "scheduled_id":
 			info.ScheduledID = v.(int64)
+		case "event_store_version":
+			info.EventStoreVersion = v.(int32)
+		case "branch_token":
+			info.BranchToken = v.([]byte)
+		case "new_run_event_store_version":
+			info.NewRunEventStoreVersion = v.(int32)
+		case "new_run_branch_token":
+			info.NewRunBranchToken = v.([]byte)
 		}
 	}
 
