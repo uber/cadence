@@ -95,8 +95,8 @@ func (s *Service) Start() {
 		s.startReplicator(params, base, log)
 	}
 
-	// frontendClient := s.getFrontendClient(base, log)
-	// s.startWorkers(frontendClient, log)
+	frontendClient := s.getFrontendClient(base, log)
+	s.startWorkers(frontendClient, log)
 
 	log.Infof("%v started", common.WorkerServiceName)
 	<-s.stopC
