@@ -4010,16 +4010,18 @@ func (v *RemoveSignalMutableStateRequest) GetRequestId() (o string) {
 }
 
 type ReplicateEventsRequest struct {
-	SourceCluster     *string                     `json:"sourceCluster,omitempty"`
-	DomainUUID        *string                     `json:"domainUUID,omitempty"`
-	WorkflowExecution *shared.WorkflowExecution   `json:"workflowExecution,omitempty"`
-	FirstEventId      *int64                      `json:"firstEventId,omitempty"`
-	NextEventId       *int64                      `json:"nextEventId,omitempty"`
-	Version           *int64                      `json:"version,omitempty"`
-	ReplicationInfo   map[string]*ReplicationInfo `json:"replicationInfo,omitempty"`
-	History           *shared.History             `json:"history,omitempty"`
-	NewRunHistory     *shared.History             `json:"newRunHistory,omitempty"`
-	ForceBufferEvents *bool                       `json:"forceBufferEvents,omitempty"`
+	SourceCluster           *string                     `json:"sourceCluster,omitempty"`
+	DomainUUID              *string                     `json:"domainUUID,omitempty"`
+	WorkflowExecution       *shared.WorkflowExecution   `json:"workflowExecution,omitempty"`
+	FirstEventId            *int64                      `json:"firstEventId,omitempty"`
+	NextEventId             *int64                      `json:"nextEventId,omitempty"`
+	Version                 *int64                      `json:"version,omitempty"`
+	ReplicationInfo         map[string]*ReplicationInfo `json:"replicationInfo,omitempty"`
+	History                 *shared.History             `json:"history,omitempty"`
+	NewRunHistory           *shared.History             `json:"newRunHistory,omitempty"`
+	ForceBufferEvents       *bool                       `json:"forceBufferEvents,omitempty"`
+	EventStoreVersion       *int32                      `json:"eventStoreVersion,omitempty"`
+	NewRunEventStoreVersion *int32                      `json:"newRunEventStoreVersion,omitempty"`
 }
 
 type _Map_String_ReplicationInfo_MapItemList map[string]*ReplicationInfo
@@ -4077,7 +4079,7 @@ func (_Map_String_ReplicationInfo_MapItemList) Close() {}
 //   }
 func (v *ReplicateEventsRequest) ToWire() (wire.Value, error) {
 	var (
-		fields [10]wire.Field
+		fields [12]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -4161,6 +4163,22 @@ func (v *ReplicateEventsRequest) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 100, Value: w}
+		i++
+	}
+	if v.EventStoreVersion != nil {
+		w, err = wire.NewValueI32(*(v.EventStoreVersion)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 110, Value: w}
+		i++
+	}
+	if v.NewRunEventStoreVersion != nil {
+		w, err = wire.NewValueI32(*(v.NewRunEventStoreVersion)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 120, Value: w}
 		i++
 	}
 
@@ -4321,6 +4339,26 @@ func (v *ReplicateEventsRequest) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 110:
+			if field.Value.Type() == wire.TI32 {
+				var x int32
+				x, err = field.Value.GetI32(), error(nil)
+				v.EventStoreVersion = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 120:
+			if field.Value.Type() == wire.TI32 {
+				var x int32
+				x, err = field.Value.GetI32(), error(nil)
+				v.NewRunEventStoreVersion = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -4334,7 +4372,7 @@ func (v *ReplicateEventsRequest) String() string {
 		return "<nil>"
 	}
 
-	var fields [10]string
+	var fields [12]string
 	i := 0
 	if v.SourceCluster != nil {
 		fields[i] = fmt.Sprintf("SourceCluster: %v", *(v.SourceCluster))
@@ -4374,6 +4412,14 @@ func (v *ReplicateEventsRequest) String() string {
 	}
 	if v.ForceBufferEvents != nil {
 		fields[i] = fmt.Sprintf("ForceBufferEvents: %v", *(v.ForceBufferEvents))
+		i++
+	}
+	if v.EventStoreVersion != nil {
+		fields[i] = fmt.Sprintf("EventStoreVersion: %v", *(v.EventStoreVersion))
+		i++
+	}
+	if v.NewRunEventStoreVersion != nil {
+		fields[i] = fmt.Sprintf("NewRunEventStoreVersion: %v", *(v.NewRunEventStoreVersion))
 		i++
 	}
 
@@ -4437,6 +4483,12 @@ func (v *ReplicateEventsRequest) Equals(rhs *ReplicateEventsRequest) bool {
 	if !_Bool_EqualsPtr(v.ForceBufferEvents, rhs.ForceBufferEvents) {
 		return false
 	}
+	if !_I32_EqualsPtr(v.EventStoreVersion, rhs.EventStoreVersion) {
+		return false
+	}
+	if !_I32_EqualsPtr(v.NewRunEventStoreVersion, rhs.NewRunEventStoreVersion) {
+		return false
+	}
 
 	return true
 }
@@ -4487,6 +4539,12 @@ func (v *ReplicateEventsRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (er
 	}
 	if v.ForceBufferEvents != nil {
 		enc.AddBool("forceBufferEvents", *v.ForceBufferEvents)
+	}
+	if v.EventStoreVersion != nil {
+		enc.AddInt32("eventStoreVersion", *v.EventStoreVersion)
+	}
+	if v.NewRunEventStoreVersion != nil {
+		enc.AddInt32("newRunEventStoreVersion", *v.NewRunEventStoreVersion)
 	}
 	return err
 }
@@ -4586,6 +4644,26 @@ func (v *ReplicateEventsRequest) GetNewRunHistory() (o *shared.History) {
 func (v *ReplicateEventsRequest) GetForceBufferEvents() (o bool) {
 	if v.ForceBufferEvents != nil {
 		return *v.ForceBufferEvents
+	}
+
+	return
+}
+
+// GetEventStoreVersion returns the value of EventStoreVersion if it is set or its
+// zero value if it is unset.
+func (v *ReplicateEventsRequest) GetEventStoreVersion() (o int32) {
+	if v.EventStoreVersion != nil {
+		return *v.EventStoreVersion
+	}
+
+	return
+}
+
+// GetNewRunEventStoreVersion returns the value of NewRunEventStoreVersion if it is set or its
+// zero value if it is unset.
+func (v *ReplicateEventsRequest) GetNewRunEventStoreVersion() (o int32) {
+	if v.NewRunEventStoreVersion != nil {
+		return *v.NewRunEventStoreVersion
 	}
 
 	return

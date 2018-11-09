@@ -236,6 +236,8 @@ struct ReplicateEventsRequest {
   80: optional shared.History history
   90: optional shared.History newRunHistory
   100: optional bool forceBufferEvents
+  110: optional i32 eventStoreVersion
+  120: optional i32 newRunEventStoreVersion
 }
 
 struct SyncShardStatusRequest {

@@ -574,7 +574,7 @@ func (r *historyReplicator) ApplyReplicationTask(ctx context.Context, context *w
 	if request.NewRunHistory != nil {
 		newRunHistory = request.NewRunHistory.Events
 	}
-	lastEvent, di, newRunStateBuilder, err := sBuilder.applyEvents(domainID, requestID, execution, request.History.Events, newRunHistory)
+	lastEvent, di, newRunStateBuilder, err := sBuilder.applyEvents(domainID, requestID, execution, request.History.Events, newRunHistory, request.GetEventStoreVersion(), request.GetNewRunEventStoreVersion())
 	if err != nil {
 		return err
 	}

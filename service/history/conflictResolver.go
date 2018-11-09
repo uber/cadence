@@ -108,7 +108,7 @@ func (r *conflictResolverImpl) reset(prevRunID string, requestID string, replayE
 			sBuilder = newStateBuilder(r.shard, resetMutableStateBuilder, r.logger)
 		}
 
-		_, _, _, err = sBuilder.applyEvents(domainID, requestID, execution, history, nil)
+		_, _, _, err = sBuilder.applyEvents(domainID, requestID, execution, history, nil, resetMutableStateBuilder.GetEventStoreVersion(), 0)
 		if err != nil {
 			r.logError("Conflict resolution err applying events.", err)
 			return nil, err

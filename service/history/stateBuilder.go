@@ -34,8 +34,8 @@ import (
 
 type (
 	stateBuilder interface {
-		applyEvents(domainID, requestID string, execution shared.WorkflowExecution,
-			history []*shared.HistoryEvent, newRunHistory []*shared.HistoryEvent) (*shared.HistoryEvent,
+		applyEvents(domainID, requestID string, execution shared.WorkflowExecution, history []*shared.HistoryEvent,
+			newRunHistory []*shared.HistoryEvent, eventStoreVersion, newRunEventStoreVersion int32) (*shared.HistoryEvent,
 			*decisionInfo, mutableState, error)
 		getTransferTasks() []persistence.Task
 		getTimerTasks() []persistence.Task
@@ -87,7 +87,7 @@ func (b *stateBuilderImpl) getNewRunTimerTasks() []persistence.Task {
 }
 
 func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution shared.WorkflowExecution,
-	history []*shared.HistoryEvent, newRunHistory []*shared.HistoryEvent) (*shared.HistoryEvent,
+	history []*shared.HistoryEvent, newRunHistory []*shared.HistoryEvent, eventStoreVersion, newRunEventStoreVersion int32) (*shared.HistoryEvent,
 	*decisionInfo, mutableState, error) {
 	var lastEvent *shared.HistoryEvent
 	var lastDecision *decisionInfo
@@ -110,7 +110,7 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 			b.msBuilder.ReplicateWorkflowExecutionStartedEvent(domainID, parentDomainID, execution, requestID, attributes)
 
 			b.timerTasks = append(b.timerTasks, b.scheduleWorkflowTimerTask(event, b.msBuilder))
-			if *attributes.EventStoreVersion == persistence.EventStoreVersionV2 {
+			if eventStoreVersion == persistence.EventStoreVersionV2 {
 				b.msBuilder.SetHistoryTree(*execution.RunId)
 			}
 
@@ -447,7 +447,7 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 			}
 			b.timerTasks = append(b.timerTasks, timerTask)
 
-			if *startedAttributes.EventStoreVersion == persistence.EventStoreVersionV2 {
+			if newRunEventStoreVersion == persistence.EventStoreVersionV2 {
 				newRunStateBuilder.SetHistoryTree(*newExecution.RunId)
 			}
 		}

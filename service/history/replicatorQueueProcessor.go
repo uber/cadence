@@ -230,16 +230,18 @@ func (p *replicatorQueueProcessorImpl) processHistoryReplicationTask(task *persi
 	replicationTask := &replicator.ReplicationTask{
 		TaskType: replicator.ReplicationTaskType.Ptr(replicator.ReplicationTaskTypeHistory),
 		HistoryTaskAttributes: &replicator.HistoryTaskAttributes{
-			TargetClusters:  targetClusters,
-			DomainId:        common.StringPtr(task.DomainID),
-			WorkflowId:      common.StringPtr(task.WorkflowID),
-			RunId:           common.StringPtr(task.RunID),
-			FirstEventId:    common.Int64Ptr(task.FirstEventID),
-			NextEventId:     common.Int64Ptr(task.NextEventID),
-			Version:         common.Int64Ptr(task.Version),
-			ReplicationInfo: convertLastReplicationInfo(task.LastReplicationInfo),
-			History:         history,
-			NewRunHistory:   newRunHistory,
+			TargetClusters:          targetClusters,
+			DomainId:                common.StringPtr(task.DomainID),
+			WorkflowId:              common.StringPtr(task.WorkflowID),
+			RunId:                   common.StringPtr(task.RunID),
+			FirstEventId:            common.Int64Ptr(task.FirstEventID),
+			NextEventId:             common.Int64Ptr(task.NextEventID),
+			Version:                 common.Int64Ptr(task.Version),
+			ReplicationInfo:         convertLastReplicationInfo(task.LastReplicationInfo),
+			History:                 history,
+			NewRunHistory:           newRunHistory,
+			EventStoreVersion:       common.Int32Ptr(task.EventStoreVersion),
+			NewRunEventStoreVersion: common.Int32Ptr(task.NewRunEventStoreVersion),
 		},
 	}
 
