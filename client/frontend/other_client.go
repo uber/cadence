@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package host
+package frontend
 
 import (
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
@@ -27,11 +27,11 @@ import (
 )
 
 // Client is the interface exposed by frontend service client
-type Client interface {
+type OtherClient interface {
 	workflowserviceclient.Interface
 }
 
 // New creates a client to cadence frontend
-func New(d *yarpc.Dispatcher) Client {
+func New(d *yarpc.Dispatcher) OtherClient {
 	return workflowserviceclient.New(d.ClientConfig(common.FrontendServiceName))
 }
