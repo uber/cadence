@@ -19,6 +19,7 @@
 // THE SOFTWARE.
 
 package frontend
+
 //
 //import (
 //	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
