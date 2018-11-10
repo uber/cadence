@@ -17,6 +17,14 @@ CREATE TYPE shard (
   domain_notification_version bigint, -- the global domain change version this shard is aware of
 );
 
+-- History branch information
+CREATE TYPE history_branch_info (
+  branch_token                     blob,
+  next_event_id                    bigint,
+  last_first_event_id              bigint,
+  history_size                     bigint,
+);
+
 --- Workflow execution and mutable state ---
 CREATE TYPE workflow_execution (
   domain_id                        uuid,
@@ -67,14 +75,6 @@ CREATE TYPE workflow_execution (
   history_size                     bigint, --deprecated in eventsV2 in favor of history_branch_info
   last_first_event_id              bigint, --deprecated in eventsV2 in favor of history_branch_info
   next_event_id                    bigint, --deprecated in eventsV2 in favor of history_branch_info
-);
-
--- History branch information
-CREATE TYPE history_branch_info (
-  branch_token                     blob,
-  next_event_id                    bigint,
-  last_first_event_id              bigint,
-  history_size                     bigint,
 );
 
 -- Replication information for each cluster
