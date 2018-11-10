@@ -32,6 +32,6 @@ type OtherClient interface {
 }
 
 // New creates a client to cadence frontend
-func New(d *yarpc.Dispatcher) OtherClient {
+func NewOther(d *yarpc.Dispatcher) OtherClient {
 	return workflowserviceclient.New(d.ClientConfig(common.FrontendServiceName))
 }
