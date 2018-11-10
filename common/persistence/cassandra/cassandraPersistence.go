@@ -3535,10 +3535,37 @@ func createWorkflowExecutionInfo(result map[string]interface{}) *p.InternalWorkf
 			info.ExpirationTime = v.(time.Time)
 		case "non_retriable_errors":
 			info.NonRetriableErrors = v.([]string)
+		case "event_store_version":
+			info.EventStoreVersion = int32(v.(int))
+		case "current_reset_version":
+			info.CurrentResetVersion = int32(v.(int))
+		case "history_branches":
+			info.HistoryBranches = deserializeHistoryBranch(v.(map[int]map[string]interface{}))
 		}
 	}
 	info.CompletionEvent = p.NewDataBlob(completionEventData, completionEventEncoding)
 	return info
+}
+
+func deserializeHistoryBranch(result map[int]map[string]interface{}) map[int32]*p.HistoryBranch {
+	out := map[int32]*p.HistoryBranch{}
+	for idx, bi := range result {
+		b := &p.HistoryBranch{}
+		for f, fv := range bi {
+			switch f {
+			case "branch_token":
+				b.BranchToken = fv.([]byte)
+			case "next_event_id":
+				b.NextEventID = fv.(int64)
+			case "last_first_event_id":
+				b.LastFirstEventID = fv.(int64)
+			case "history_size":
+				b.HistorySize = fv.(int64)
+			}
+		}
+		out[int32(idx)] = b
+	}
+	return out
 }
 
 func createReplicationState(result map[string]interface{}) *p.ReplicationState {
@@ -3637,11 +3664,11 @@ func createReplicationTaskInfo(result map[string]interface{}) *p.ReplicationTask
 		case "scheduled_id":
 			info.ScheduledID = v.(int64)
 		case "event_store_version":
-			info.EventStoreVersion = v.(int32)
+			info.EventStoreVersion = int32(v.(int))
 		case "branch_token":
 			info.BranchToken = v.([]byte)
 		case "new_run_event_store_version":
-			info.NewRunEventStoreVersion = v.(int32)
+			info.NewRunEventStoreVersion = int32(v.(int))
 		case "new_run_branch_token":
 			info.NewRunBranchToken = v.([]byte)
 		}
