@@ -292,6 +292,8 @@ type (
 		Version             int64
 		LastReplicationInfo map[string]*ReplicationInfo
 		ScheduledID         int64
+		PrevRunID           string
+		PrevVersion         int64
 	}
 
 	// TimerTaskInfo describes a timer task.
@@ -467,6 +469,8 @@ type (
 		NextEventID         int64
 		Version             int64
 		LastReplicationInfo map[string]*ReplicationInfo
+		PrevRunID           string
+		PrevVersion         int64
 	}
 
 	// SyncActivityTask is the replication task created for shipping activity info to other clusters

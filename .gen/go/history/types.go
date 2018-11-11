@@ -3861,6 +3861,8 @@ type ReplicateEventsRequest struct {
 	SourceCluster     *string                     `json:"sourceCluster,omitempty"`
 	DomainUUID        *string                     `json:"domainUUID,omitempty"`
 	WorkflowExecution *shared.WorkflowExecution   `json:"workflowExecution,omitempty"`
+	PrevRunId         *string                     `json:"prevRunId,omitempty"`
+	PrevVersion       *int64                      `json:"prevVersion,omitempty"`
 	FirstEventId      *int64                      `json:"firstEventId,omitempty"`
 	NextEventId       *int64                      `json:"nextEventId,omitempty"`
 	Version           *int64                      `json:"version,omitempty"`
@@ -3925,7 +3927,7 @@ func (_Map_String_ReplicationInfo_MapItemList) Close() {}
 //   }
 func (v *ReplicateEventsRequest) ToWire() (wire.Value, error) {
 	var (
-		fields [10]wire.Field
+		fields [12]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -3953,6 +3955,22 @@ func (v *ReplicateEventsRequest) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 30, Value: w}
+		i++
+	}
+	if v.PrevRunId != nil {
+		w, err = wire.NewValueString(*(v.PrevRunId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 35, Value: w}
+		i++
+	}
+	if v.PrevVersion != nil {
+		w, err = wire.NewValueI64(*(v.PrevVersion)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 36, Value: w}
 		i++
 	}
 	if v.FirstEventId != nil {
@@ -4105,6 +4123,26 @@ func (v *ReplicateEventsRequest) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 35:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.PrevRunId = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 36:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.PrevVersion = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		case 40:
 			if field.Value.Type() == wire.TI64 {
 				var x int64
@@ -4182,7 +4220,7 @@ func (v *ReplicateEventsRequest) String() string {
 		return "<nil>"
 	}
 
-	var fields [10]string
+	var fields [12]string
 	i := 0
 	if v.SourceCluster != nil {
 		fields[i] = fmt.Sprintf("SourceCluster: %v", *(v.SourceCluster))
@@ -4194,6 +4232,14 @@ func (v *ReplicateEventsRequest) String() string {
 	}
 	if v.WorkflowExecution != nil {
 		fields[i] = fmt.Sprintf("WorkflowExecution: %v", v.WorkflowExecution)
+		i++
+	}
+	if v.PrevRunId != nil {
+		fields[i] = fmt.Sprintf("PrevRunId: %v", *(v.PrevRunId))
+		i++
+	}
+	if v.PrevVersion != nil {
+		fields[i] = fmt.Sprintf("PrevVersion: %v", *(v.PrevVersion))
 		i++
 	}
 	if v.FirstEventId != nil {
@@ -4264,6 +4310,12 @@ func (v *ReplicateEventsRequest) Equals(rhs *ReplicateEventsRequest) bool {
 	if !((v.WorkflowExecution == nil && rhs.WorkflowExecution == nil) || (v.WorkflowExecution != nil && rhs.WorkflowExecution != nil && v.WorkflowExecution.Equals(rhs.WorkflowExecution))) {
 		return false
 	}
+	if !_String_EqualsPtr(v.PrevRunId, rhs.PrevRunId) {
+		return false
+	}
+	if !_I64_EqualsPtr(v.PrevVersion, rhs.PrevVersion) {
+		return false
+	}
 	if !_I64_EqualsPtr(v.FirstEventId, rhs.FirstEventId) {
 		return false
 	}
@@ -4315,6 +4367,12 @@ func (v *ReplicateEventsRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (er
 	if v.WorkflowExecution != nil {
 		err = multierr.Append(err, enc.AddObject("workflowExecution", v.WorkflowExecution))
 	}
+	if v.PrevRunId != nil {
+		enc.AddString("prevRunId", *v.PrevRunId)
+	}
+	if v.PrevVersion != nil {
+		enc.AddInt64("prevVersion", *v.PrevVersion)
+	}
 	if v.FirstEventId != nil {
 		enc.AddInt64("firstEventId", *v.FirstEventId)
 	}
@@ -4364,6 +4422,26 @@ func (v *ReplicateEventsRequest) GetDomainUUID() (o string) {
 func (v *ReplicateEventsRequest) GetWorkflowExecution() (o *shared.WorkflowExecution) {
 	if v.WorkflowExecution != nil {
 		return v.WorkflowExecution
+	}
+
+	return
+}
+
+// GetPrevRunId returns the value of PrevRunId if it is set or its
+// zero value if it is unset.
+func (v *ReplicateEventsRequest) GetPrevRunId() (o string) {
+	if v.PrevRunId != nil {
+		return *v.PrevRunId
+	}
+
+	return
+}
+
+// GetPrevVersion returns the value of PrevVersion if it is set or its
+// zero value if it is unset.
+func (v *ReplicateEventsRequest) GetPrevVersion() (o int64) {
+	if v.PrevVersion != nil {
+		return *v.PrevVersion
 	}
 
 	return

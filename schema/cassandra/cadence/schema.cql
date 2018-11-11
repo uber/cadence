@@ -109,6 +109,8 @@ CREATE TYPE replication_task (
   version                    bigint,  -- Used by ReplicationTask to set the failover version of the applied transaction
   last_replication_info      map<text, frozen<replication_info>>, -- Used by replication task to snapshot replication information when the transaction was applied
   scheduled_id               bigint, -- Used by ReplicationTask to sync activity info
+  prev_run_id                uuid, -- Used by ReplicationTask & start event to indicate the previous run ID
+  prev_version               bigint, -- Used by ReplicationTask & start event to indicate the previous run version
 );
 
 CREATE TYPE timer_task (

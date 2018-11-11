@@ -225,6 +225,8 @@ struct ReplicateEventsRequest {
   10: optional string sourceCluster
   20: optional string domainUUID
   30: optional shared.WorkflowExecution workflowExecution
+  35: optional string prevRunId
+  36: optional i64 (js.type = "Long") prevVersion
   40: optional i64 (js.type = "Long") firstEventId
   50: optional i64 (js.type = "Long") nextEventId
   60: optional i64 (js.type = "Long") version

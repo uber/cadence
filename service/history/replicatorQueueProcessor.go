@@ -232,6 +232,8 @@ func (p *replicatorQueueProcessorImpl) processHistoryReplicationTask(task *persi
 			DomainId:        common.StringPtr(task.DomainID),
 			WorkflowId:      common.StringPtr(task.WorkflowID),
 			RunId:           common.StringPtr(task.RunID),
+			PrevRunId:       common.StringPtr(task.PrevRunID),
+			PrevVersion:     common.Int64Ptr(task.PrevVersion),
 			FirstEventId:    common.Int64Ptr(task.FirstEventID),
 			NextEventId:     common.Int64Ptr(task.NextEventID),
 			Version:         common.Int64Ptr(task.Version),
@@ -239,6 +241,11 @@ func (p *replicatorQueueProcessorImpl) processHistoryReplicationTask(task *persi
 			History:         history,
 			NewRunHistory:   newRunHistory,
 		},
+	}
+
+	if !p.shard.GetConfig().EnableWorkflowReplictionOrderProtection() {
+		replicationTask.HistoryTaskAttributes.PrevRunId = nil
+		replicationTask.HistoryTaskAttributes.PrevVersion = nil
 	}
 
 	err = p.replicator.Publish(replicationTask)

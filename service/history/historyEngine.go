@@ -22,13 +22,10 @@ package history
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
-
-	"encoding/json"
-
-	"go.uber.org/yarpc"
 
 	"github.com/pborman/uuid"
 	"github.com/uber-common/bark"
@@ -43,6 +40,7 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"go.uber.org/yarpc"
 )
 
 const (
@@ -370,6 +368,10 @@ func (e *historyEngineImpl) StartWorkflowExecution(startRequest *h.StartWorkflow
 	setTaskInfo(msBuilder.GetCurrentVersion(), time.Now(), transferTasks, timerTasks)
 
 	createWorkflow := func(isBrandNew bool, prevRunID string, prevLastWriteVersion int64) (string, error) {
+		for _, replicationTask := range replicationTasks {
+			replicationTask.(*persistence.HistoryReplicationTask).PrevRunID = prevRunID
+			replicationTask.(*persistence.HistoryReplicationTask).PrevVersion = prevLastWriteVersion
+		}
 		createRequest := &persistence.CreateWorkflowExecutionRequest{
 			RequestID:                   common.StringDefault(request.RequestId),
 			DomainID:                    domainID,
@@ -2071,6 +2073,11 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 	setTaskInfo(msBuilder.GetCurrentVersion(), time.Now(), transferTasks, timerTasks)
 
 	createWorkflow := func(isBrandNew bool, prevRunID string, prevLastWriteVersion int64) (string, error) {
+		for _, replicationTask := range replicationTasks {
+			replicationTask.(*persistence.HistoryReplicationTask).PrevRunID = prevRunID
+			replicationTask.(*persistence.HistoryReplicationTask).PrevVersion = prevLastWriteVersion
+		}
+
 		createRequest := &persistence.CreateWorkflowExecutionRequest{
 			RequestID:                   common.StringDefault(request.RequestId),
 			DomainID:                    domainID,
