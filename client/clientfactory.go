@@ -26,12 +26,14 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/client/frontend"
 )
 
 // Factory can be used to create RPC clients for cadence services
 type Factory interface {
 	NewHistoryClient() (history.Client, error)
 	NewMatchingClient() (matching.Client, error)
+	NewFrontendClient() (frontend.Client, error)
 }
 
 type rpcClientFactory struct {
@@ -70,6 +72,17 @@ func (cf *rpcClientFactory) NewMatchingClient() (matching.Client, error) {
 	}
 	if cf.metricsClient != nil {
 		client = matching.NewMetricClient(client, cf.metricsClient)
+	}
+	return client, nil
+}
+
+func (cf *rpcClientFactory) NewFrontendClient() (frontend.Client, error) {
+	client, err := frontend.NewClient(cf.df, cf.monitor)
+	if err != nil {
+		return nil, err
+	}
+	if cf.metricsClient != nil {
+		client = frontend.NewMetricClient(client, cf.metricsClient)
 	}
 	return client, nil
 }
