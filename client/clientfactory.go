@@ -21,12 +21,12 @@
 package client
 
 import (
+	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/client/frontend"
 )
 
 // Factory can be used to create RPC clients for cadence services
