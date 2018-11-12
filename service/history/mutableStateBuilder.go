@@ -182,7 +182,7 @@ func (e *mutableStateBuilder) GetEventStoreVersion() int32 {
 }
 
 func (e *mutableStateBuilder) GetCurrentBranch() []byte {
-	return e.GetCurrentBranch()
+	return e.executionInfo.GetCurrentBranch()
 }
 
 // set eventStoreVersion/treeID/historyBranches
