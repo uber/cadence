@@ -3,7 +3,6 @@
   "MinCompatibleVersion": "0.12",
   "Description": "Support history events v2",
   "SchemaUpdateCqlFiles": [
-    "workflow_order.cql",
     "events_v2.cql"
   ]
 }

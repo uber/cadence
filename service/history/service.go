@@ -34,8 +34,8 @@ import (
 type Config struct {
 	NumberOfShards int
 
-	EnableSyncActivityHeartbeat             dynamicconfig.BoolPropertyFn
-	EnableWorkflowReplictionOrderProtection dynamicconfig.BoolPropertyFn
+	EnableSyncActivityHeartbeat              dynamicconfig.BoolPropertyFn
+	EnableWorkflowReplicationOrderProtection dynamicconfig.BoolPropertyFn
 
 	RPS                      dynamicconfig.IntPropertyFn
 	PersistenceMaxQPS        dynamicconfig.IntPropertyFn
@@ -124,7 +124,7 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int) *Config {
 	return &Config{
 		NumberOfShards:                                        numberOfShards,
 		EnableSyncActivityHeartbeat:                           dc.GetBoolProperty(dynamicconfig.EnableSyncActivityHeartbeat, false),
-		EnableWorkflowReplictionOrderProtection:               dc.GetBoolProperty(dynamicconfig.EnableWorkflowReplictionOrderProtection, false),
+		EnableWorkflowReplicationOrderProtection:              dc.GetBoolProperty(dynamicconfig.EnableWorkflowReplicationOrderProtection, false),
 		RPS:                                                   dc.GetIntProperty(dynamicconfig.HistoryRPS, 3000),
 		PersistenceMaxQPS:                                     dc.GetIntProperty(dynamicconfig.HistoryPersistenceMaxQPS, 9000),
 		EnableVisibilitySampling:                              dc.GetBoolProperty(dynamicconfig.EnableVisibilitySampling, true),

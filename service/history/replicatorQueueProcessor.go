@@ -243,7 +243,7 @@ func (p *replicatorQueueProcessorImpl) processHistoryReplicationTask(task *persi
 		},
 	}
 
-	if !p.shard.GetConfig().EnableWorkflowReplictionOrderProtection() {
+	if !p.shard.GetConfig().EnableWorkflowReplicationOrderProtection() {
 		replicationTask.HistoryTaskAttributes.PrevRunId = nil
 		replicationTask.HistoryTaskAttributes.PrevVersion = nil
 	}

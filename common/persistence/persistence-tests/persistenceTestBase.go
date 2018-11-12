@@ -196,8 +196,8 @@ func (s *TestBase) Setup() {
 		RangeID:                 0,
 		TransferAckLevel:        0,
 		ReplicationAckLevel:     0,
-		TimerAckLevel:           time.Now(),
-		ClusterTimerAckLevel:    map[string]time.Time{clusterName: time.Now()},
+		TimerAckLevel:           time.Time{},
+		ClusterTimerAckLevel:    map[string]time.Time{clusterName: time.Time{}},
 		ClusterTransferAckLevel: map[string]int64{clusterName: 0},
 		UpdatedAt:               time.Now(),
 	}
