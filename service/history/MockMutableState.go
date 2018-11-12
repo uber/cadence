@@ -784,22 +784,6 @@ func (_m *mockMutableState) AddWorkflowExecutionStartedEvent(_a0 shared.Workflow
 	return r0
 }
 
-// AddWorkflowExecutionStartedEventForContinueAsNew provides a mock function with given fields: _a0, _a1, _a2, _a3, _a4
-func (_m *mockMutableState) AddWorkflowExecutionStartedEventForContinueAsNew(_a0 string, _a1 *h.ParentExecutionInfo, _a2 shared.WorkflowExecution, _a3 mutableState, _a4 *shared.ContinueAsNewWorkflowExecutionDecisionAttributes) *shared.HistoryEvent {
-	ret := _m.Called(_a0, _a1, _a2, _a3, _a4)
-
-	var r0 *shared.HistoryEvent
-	if rf, ok := ret.Get(0).(func(string, *h.ParentExecutionInfo, shared.WorkflowExecution, mutableState, *shared.ContinueAsNewWorkflowExecutionDecisionAttributes) *shared.HistoryEvent); ok {
-		r0 = rf(_a0, _a1, _a2, _a3, _a4)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*shared.HistoryEvent)
-		}
-	}
-
-	return r0
-}
-
 // AddWorkflowExecutionTerminatedEvent provides a mock function with given fields: _a0
 func (_m *mockMutableState) AddWorkflowExecutionTerminatedEvent(_a0 *shared.TerminateWorkflowExecutionRequest) *shared.HistoryEvent {
 	ret := _m.Called(_a0)
@@ -917,12 +901,12 @@ func (_m *mockMutableState) CreateNewHistoryEventWithTimestamp(eventType shared.
 }
 
 // CreateReplicationTask provides a mock function with given fields:
-func (_m *mockMutableState) CreateReplicationTask() *persistence.HistoryReplicationTask {
-	ret := _m.Called()
+func (_m *mockMutableState) CreateReplicationTask(_a0 int32, _a1 []byte) *persistence.HistoryReplicationTask {
+	ret := _m.Called(_a0, _a1)
 
 	var r0 *persistence.HistoryReplicationTask
-	if rf, ok := ret.Get(0).(func() *persistence.HistoryReplicationTask); ok {
-		r0 = rf()
+	if rf, ok := ret.Get(0).(func(_a0 int32, _a1 []byte) *persistence.HistoryReplicationTask); ok {
+		r0 = rf(_a0, _a1)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*persistence.HistoryReplicationTask)

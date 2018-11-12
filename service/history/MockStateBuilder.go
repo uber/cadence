@@ -95,13 +95,13 @@ func (_m *mockStateBuilder) getNewRunTimerTasks() []persistence.Task {
 
 // applyEvents provides a mock function with given fields: domainID, requestID, execution, _a3, newRunHistory
 func (_m *mockStateBuilder) applyEvents(domainID string, requestID string, execution shared.WorkflowExecution, _a3 *shared.History,
-	newRunHistory *shared.History) (*shared.HistoryEvent, *decisionInfo, mutableState, error) {
+	newRunHistory *shared.History, eventStoreVersion, newRunEventStoreVersion int32) (*shared.HistoryEvent, *decisionInfo, mutableState, error) {
 
-	ret := _m.Called(domainID, requestID, execution, _a3, newRunHistory)
+	ret := _m.Called(domainID, requestID, execution, _a3, newRunHistory, eventStoreVersion, newRunEventStoreVersion)
 
 	var r0 *shared.HistoryEvent
-	if rf, ok := ret.Get(0).(func(string, string, shared.WorkflowExecution, *shared.History, *shared.History) *shared.HistoryEvent); ok {
-		r0 = rf(domainID, requestID, execution, _a3, newRunHistory)
+	if rf, ok := ret.Get(0).(func(string, string, shared.WorkflowExecution, *shared.History, *shared.History, int32, int32) *shared.HistoryEvent); ok {
+		r0 = rf(domainID, requestID, execution, _a3, newRunHistory, eventStoreVersion, newRunEventStoreVersion)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*shared.HistoryEvent)
