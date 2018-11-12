@@ -1308,6 +1308,36 @@ func (_m *mockMutableState) GetHistoryBuilder() *historyBuilder {
 	return r0
 }
 
+func (_m *mockMutableState) GetCurrentBranch() []byte {
+	ret := _m.Called()
+
+	var r0 []byte
+	if rf, ok := ret.Get(0).(func() []byte); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]byte)
+		}
+	}
+
+	return r0
+}
+
+func (_m *mockMutableState) GetEventStoreVersion() int32 {
+	ret := _m.Called()
+
+	var r0 int32
+	if rf, ok := ret.Get(0).(func() int32); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(int32)
+		}
+	}
+
+	return r0
+}
+
 func (_m *mockMutableState) GetInFlightDecisionTask() (*decisionInfo, bool) {
 	ret := _m.Called()
 
@@ -2121,6 +2151,19 @@ func (_m *mockMutableState) UpdateActivity(_a0 *persistence.ActivityInfo) error 
 
 	var r0 error
 	if rf, ok := ret.Get(0).(func(*persistence.ActivityInfo) error); ok {
+		r0 = rf(_a0)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+func (_m *mockMutableState) SetHistoryTree(_a0 string) error {
+	ret := _m.Called(_a0)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string) error); ok {
 		r0 = rf(_a0)
 	} else {
 		r0 = ret.Error(0)
