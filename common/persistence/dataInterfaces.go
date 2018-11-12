@@ -1999,6 +1999,16 @@ func (e *WorkflowExecutionInfo) SetLastFirstEventID(id int64) {
 	}
 }
 
+func (e *WorkflowExecutionInfo) GetCurrentBranch() []byte {
+	idx := e.CurrentResetVersion
+	br, ok := e.HistoryBranches[idx]
+	if ok {
+		return br.BranchToken
+	} else {
+		return nil
+	}
+}
+
 var internalThriftEncoder = codec.NewThriftRWEncoder()
 
 // NewHistoryBranchToken return a new branch token

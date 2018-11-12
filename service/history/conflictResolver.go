@@ -62,7 +62,7 @@ func (r *conflictResolverImpl) reset(prevRunID string, requestID string, replayE
 	execution := r.context.workflowExecution
 	startTime := info.StartTimestamp
 	eventStoreVersion := info.EventStoreVersion
-	branchToken := info.HistoryBranches[info.CurrentResetVersion].BranchToken
+	branchToken := info.GetCurrentBranch()
 	replayNextEventID := replayEventID + 1
 
 	var nextPageToken []byte
