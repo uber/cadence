@@ -40,7 +40,6 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 type (
@@ -105,7 +104,7 @@ func (s *conflictResolverSuite) SetupTest() {
 		historyMgr:                s.mockHistoryMgr,
 		maxTransferSequenceNumber: 100000,
 		closeCh:                   make(chan int, 100),
-		config:                    NewConfig(dynamicconfig.NewNopCollection(), 1),
+		config:                    NewDynamicConfigForTest(false, 1),
 		logger:                    s.logger,
 		domainCache:               s.mockDomainCache,
 		metricsClient:             metrics.NewClient(tally.NoopScope, metrics.History),

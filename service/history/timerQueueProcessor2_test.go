@@ -172,8 +172,8 @@ func (s *timerQueueProcessor2Suite) TestTimerUpdateTimesOut() {
 
 	builder := newMutableStateBuilder(cluster.TestCurrentClusterName, s.config, s.logger)
 	startRequest := &workflow.StartWorkflowExecutionRequest{
-		WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr("wType")},
-		TaskList:                            common.TaskListPtr(workflow.TaskList{Name: common.StringPtr(taskList)}),
+		WorkflowType: &workflow.WorkflowType{Name: common.StringPtr("wType")},
+		TaskList:     common.TaskListPtr(workflow.TaskList{Name: common.StringPtr(taskList)}),
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 	}
@@ -244,8 +244,8 @@ func (s *timerQueueProcessor2Suite) TestWorkflowTimeout() {
 
 	builder := newMutableStateBuilder(cluster.TestCurrentClusterName, s.config, s.logger)
 	startRequest := &workflow.StartWorkflowExecutionRequest{
-		WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr("wType")},
-		TaskList:                            common.TaskListPtr(workflow.TaskList{Name: common.StringPtr(taskList)}),
+		WorkflowType: &workflow.WorkflowType{Name: common.StringPtr("wType")},
+		TaskList:     common.TaskListPtr(workflow.TaskList{Name: common.StringPtr(taskList)}),
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 	}
