@@ -2032,7 +2032,8 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 				}
 			}
 			// Generate a transaction ID for appending events to history
-			transactionID, retError := e.shard.GetNextTransferTaskID()
+			var transactionID int64
+			transactionID, retError = e.shard.GetNextTransferTaskID()
 			if retError != nil {
 				return
 			}
