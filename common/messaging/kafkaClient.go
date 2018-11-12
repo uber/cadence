@@ -31,8 +31,6 @@ import (
 	"go.uber.org/zap"
 )
 
-const rcvBufferSize = 2 * 1024
-
 type (
 	// This is a default implementation of Client interface which makes use of uber-go/kafka-client as consumer
 	kafkaClient struct {
@@ -40,15 +38,9 @@ type (
 		client uberKafkaClient.Client
 		logger bark.Logger
 	}
-
-	// a wrapper of uberKafka.Consumer to let the compiler happy
-	kafkaConsumer struct {
-		uConsumer uberKafka.Consumer
-		logger    bark.Logger
-		msgC      chan Message
-		doneC     chan struct{}
-	}
 )
+
+var _ Client = (*kafkaClient)(nil)
 
 // NewKafkaClient is used to create an instance of KafkaClient
 func NewKafkaClient(kc *KafkaConfig, zLogger *zap.Logger, logger bark.Logger, metricScope tally.Scope) Client {
@@ -78,50 +70,6 @@ func NewKafkaClient(kc *KafkaConfig, zLogger *zap.Logger, logger bark.Logger, me
 		client: client,
 		logger: logger,
 	}
-}
-
-var _ Client = (*kafkaClient)(nil)
-var _ Consumer = (*kafkaConsumer)(nil)
-
-func newKafkaConsumer(uConsumer uberKafka.Consumer, logger bark.Logger) Consumer {
-	return &kafkaConsumer{
-		uConsumer: uConsumer,
-		logger:    logger,
-		msgC:      make(chan Message, rcvBufferSize),
-		doneC:     make(chan struct{}),
-	}
-}
-
-func (c *kafkaConsumer) Start() error {
-	if err := c.uConsumer.Start(); err != nil {
-		return err
-	}
-	go func() {
-		for {
-			select {
-			case <-c.doneC:
-				c.logger.Info("Stop consuming messages from channel")
-				return
-				// our Message interface is just a subset of Message interface in kafka-client so we don't need a wrapper here
-			case uMsg := <-c.uConsumer.Messages():
-				c.msgC <- uMsg
-			}
-		}
-	}()
-	return nil
-}
-
-// Stop stops the consumer
-func (c *kafkaConsumer) Stop() {
-	c.logger.Info("Stopping consumer")
-	close(c.doneC)
-	close(c.msgC)
-	c.uConsumer.Stop()
-}
-
-// Messages return the message channel for this consumer
-func (c *kafkaConsumer) Messages() <-chan Message {
-	return c.msgC
 }
 
 // NewConsumer is used to create a Kafka consumer

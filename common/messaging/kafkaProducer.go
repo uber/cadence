@@ -39,6 +39,8 @@ type (
 	}
 )
 
+var _ Producer = (*kafkaProducer)(nil)
+
 // NewKafkaProducer is used to create the Kafka based producer implementation
 func NewKafkaProducer(topic string, producer sarama.SyncProducer, logger bark.Logger) Producer {
 	return &kafkaProducer{
