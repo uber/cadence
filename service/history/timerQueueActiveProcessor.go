@@ -708,10 +708,6 @@ Update_History_Loop:
 			return err
 		}
 		useEventsV2 := t.config.EnableEventsV2(domainEntry.GetInfo().Name)
-		eventStoreVersion := int32(1)
-		if useEventsV2 {
-			eventStoreVersion = 2
-		}
 		_, continueAsNewBuilder, err := msBuilder.AddContinueAsNewEvent(common.EmptyEventID, domainEntry, startAttributes.GetParentWorkflowDomain(), continueAsnewAttributes)
 		if err != nil {
 			return err

@@ -50,6 +50,7 @@ type (
 		mockShard           ShardContext
 		mockExecutionMgr    *mocks.ExecutionManager
 		mockHistoryMgr      *mocks.HistoryManager
+		mockHistoryV2Mgr    *mocks.HistoryV2Manager
 		mockProducer        *mocks.KafkaProducer
 		mockMetadataMgr     *mocks.MetadataManager
 		mockClusterMetadata *mocks.ClusterMetadata
@@ -76,6 +77,7 @@ func (s *replicatorQueueProcessorSuite) SetupSuite() {
 func (s *replicatorQueueProcessorSuite) TearDownSuite() {
 	s.mockExecutionMgr.AssertExpectations(s.T())
 	s.mockHistoryMgr.AssertExpectations(s.T())
+	s.mockHistoryV2Mgr.AssertExpectations(s.T())
 	s.mockProducer.AssertExpectations(s.T())
 }
 
@@ -87,6 +89,7 @@ func (s *replicatorQueueProcessorSuite) SetupTest() {
 	s.logger = bark.NewLoggerFromLogrus(log2)
 	s.mockExecutionMgr = &mocks.ExecutionManager{}
 	s.mockHistoryMgr = &mocks.HistoryManager{}
+	s.mockHistoryV2Mgr = &mocks.HistoryV2Manager{}
 	s.mockProducer = &mocks.KafkaProducer{}
 	s.mockMetadataMgr = &mocks.MetadataManager{}
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
@@ -110,7 +113,7 @@ func (s *replicatorQueueProcessorSuite) SetupTest() {
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(true)
 
 	s.replicatorQueueProcessor = newReplicatorQueueProcessor(
-		s.mockShard, historyCache, s.mockProducer, s.mockExecutionMgr, s.mockHistoryMgr, s.logger,
+		s.mockShard, historyCache, s.mockProducer, s.mockExecutionMgr, s.mockHistoryMgr, s.mockHistoryV2Mgr, s.logger,
 	).(*replicatorQueueProcessorImpl)
 }
 

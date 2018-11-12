@@ -54,6 +54,7 @@ type (
 		logger              bark.Logger
 		mockExecutionMgr    *mocks.ExecutionManager
 		mockHistoryMgr      *mocks.HistoryManager
+		mockHistoryV2Mgr    *mocks.HistoryV2Manager
 		mockShardManager    *mocks.ShardManager
 		mockClusterMetadata *mocks.ClusterMetadata
 		mockProducer        *mocks.KafkaProducer
@@ -88,6 +89,7 @@ func (s *historyReplicatorSuite) SetupTest() {
 	log2.Level = log.DebugLevel
 	s.logger = bark.NewLoggerFromLogrus(log2)
 	s.mockHistoryMgr = &mocks.HistoryManager{}
+	s.mockHistoryV2Mgr = &mocks.HistoryV2Manager{}
 	s.mockExecutionMgr = &mocks.ExecutionManager{}
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
 	s.mockShardManager = &mocks.ShardManager{}
@@ -104,6 +106,7 @@ func (s *historyReplicatorSuite) SetupTest() {
 		executionManager:          s.mockExecutionMgr,
 		shardManager:              s.mockShardManager,
 		historyMgr:                s.mockHistoryMgr,
+		historyV2Mgr:              s.mockHistoryV2Mgr,
 		maxTransferSequenceNumber: 100000,
 		closeCh:                   make(chan int, 100),
 		config:                    NewConfig(dynamicconfig.NewNopCollection(), 1),
@@ -126,7 +129,7 @@ func (s *historyReplicatorSuite) SetupTest() {
 		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
 		metricsClient:      s.mockShard.GetMetricsClient(),
 	}
-	s.historyReplicator = newHistoryReplicator(s.mockShard, h, historyCache, s.mockShard.domainCache, s.mockHistoryMgr, s.logger)
+	s.historyReplicator = newHistoryReplicator(s.mockShard, h, historyCache, s.mockShard.domainCache, s.mockHistoryMgr, s.mockHistoryV2Mgr, s.logger)
 }
 
 func (s *historyReplicatorSuite) TearDownTest() {
