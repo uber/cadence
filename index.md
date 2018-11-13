@@ -1,4 +1,5 @@
 ---
+title: Welcome
 layout: marketing
 callout: Open Source, Scalable, Durable Workflows
 callout_description: Write workflows and activities to orchestrate the business flow of events in your application
