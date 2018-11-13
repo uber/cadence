@@ -469,12 +469,18 @@ func (s *TestShardContext) GetCurrentTime(cluster string) time.Time {
 	return time.Now()
 }
 
+func NewDynamicConfigForTest() *Config {
+	dc := dynamicconfig.NewNopCollection()
+	config := NewConfig(dc, 1)
+	return config
+}
+
 // SetupWorkflowStoreWithOptions to setup workflow test base
 func (s *TestBase) SetupWorkflowStoreWithOptions(options persistencetests.TestBaseOptions) {
 	s.TestBase = persistencetests.NewTestBaseWithCassandra(&persistencetests.TestBaseOptions{})
 	s.TestBase.Setup()
 	log := bark.NewLoggerFromLogrus(log.New())
-	config := NewConfig(dynamicconfig.NewNopCollection(), 1)
+	config := NewDynamicConfigForTest()
 	clusterMetadata := cluster.GetTestClusterMetadata(options.EnableGlobalDomain, options.IsMasterCluster)
 	s.ShardContext = newTestShardContext(s.ShardInfo, 0, s.HistoryMgr, s.HistoryV2Mgr, s.ExecutionManager, s.MetadataManager, s.MetadataManagerV2,
 		clusterMetadata, config, log)
@@ -486,7 +492,7 @@ func (s *TestBase) SetupWorkflowStore() {
 	s.TestBase = persistencetests.NewTestBaseWithCassandra(&persistencetests.TestBaseOptions{})
 	s.TestBase.Setup()
 	log := bark.NewLoggerFromLogrus(log.New())
-	config := NewConfig(dynamicconfig.NewNopCollection(), 1)
+	config := NewDynamicConfigForTest()
 	clusterMetadata := cluster.GetTestClusterMetadata(false, false)
 	s.ShardContext = newTestShardContext(s.ShardInfo, 0, s.HistoryMgr, s.HistoryV2Mgr, s.ExecutionManager, s.MetadataManager, s.MetadataManagerV2,
 		clusterMetadata, config, log)

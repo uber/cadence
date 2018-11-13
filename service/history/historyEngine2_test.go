@@ -44,7 +44,6 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 type (
@@ -86,20 +85,12 @@ func (s *engine2Suite) SetupSuite() {
 	l := log.New()
 	l.Level = log.DebugLevel
 	s.logger = bark.NewLoggerFromLogrus(l)
-	s.config = NewConfig(dynamicconfig.NewNopCollection(), 1)
+	s.config = NewDynamicConfigForTest()
 }
 
 func (s *engine2Suite) TearDownSuite() {
 }
 
-func NewDynamicConfigForTest(enableEventsV2 bool, numberOfShards int) *Config {
-	dc := dynamicconfig.NewNopCollection()
-	config := &Config{
-		NumberOfShards: numberOfShards,
-		EnableEventsV2: dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableEventsV2, enableEventsV2),
-	}
-	return config
-}
 func (s *engine2Suite) SetupTest() {
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
@@ -149,7 +140,7 @@ func (s *engine2Suite) SetupTest() {
 		logger:             s.logger,
 		metricsClient:      metrics.NewClient(tally.NoopScope, metrics.History),
 		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
-		config:             NewDynamicConfigForTest(false, 1),
+		config:             s.config,
 	}
 	h.txProcessor = newTransferQueueProcessor(mockShard, h, s.mockVisibilityMgr, s.mockMatchingClient, s.mockHistoryClient, s.logger)
 	h.timerProcessor = newTimerQueueProcessor(mockShard, h, s.mockMatchingClient, s.logger)

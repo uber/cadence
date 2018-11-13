@@ -104,7 +104,7 @@ func (s *conflictResolverSuite) SetupTest() {
 		historyMgr:                s.mockHistoryMgr,
 		maxTransferSequenceNumber: 100000,
 		closeCh:                   make(chan int, 100),
-		config:                    NewDynamicConfigForTest(false, 1),
+		config:                    NewDynamicConfigForTest(),
 		logger:                    s.logger,
 		domainCache:               s.mockDomainCache,
 		metricsClient:             metrics.NewClient(tally.NoopScope, metrics.History),

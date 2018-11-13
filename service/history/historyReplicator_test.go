@@ -45,7 +45,6 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 type (
@@ -109,7 +108,7 @@ func (s *historyReplicatorSuite) SetupTest() {
 		historyV2Mgr:              s.mockHistoryV2Mgr,
 		maxTransferSequenceNumber: 100000,
 		closeCh:                   make(chan int, 100),
-		config:                    NewConfig(dynamicconfig.NewNopCollection(), 1),
+		config:                    NewDynamicConfigForTest(),
 		logger:                    s.logger,
 		domainCache:               cache.NewDomainCache(s.mockMetadataMgr, s.mockClusterMetadata, metricsClient, s.logger),
 		metricsClient:             metrics.NewClient(tally.NoopScope, metrics.History),
