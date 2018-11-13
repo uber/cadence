@@ -150,6 +150,7 @@ func (s *TestShardContext) GetHistoryManager() persistence.HistoryManager {
 	return s.historyMgr
 }
 
+// GetHistoryV2Manager return historyV2
 func (s *TestShardContext) GetHistoryV2Manager() persistence.HistoryV2Manager {
 	return s.historyV2Mgr
 }
@@ -404,6 +405,7 @@ func (s *TestShardContext) AppendHistoryEvents(request *persistence.AppendHistor
 	return resp.Size, err
 }
 
+// AppendHistoryV2Events append history V2 events
 func (s *TestShardContext) AppendHistoryV2Events(request *persistence.AppendHistoryNodesRequest, domainID string) (int, error) {
 	resp, err := s.historyV2Mgr.AppendHistoryNodes(request)
 	return resp.Size, err
@@ -469,6 +471,7 @@ func (s *TestShardContext) GetCurrentTime(cluster string) time.Time {
 	return time.Now()
 }
 
+// NewDynamicConfigForTest return dc for test
 func NewDynamicConfigForTest() *Config {
 	dc := dynamicconfig.NewNopCollection()
 	config := NewConfig(dc, 1)

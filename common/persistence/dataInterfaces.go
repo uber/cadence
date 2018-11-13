@@ -260,6 +260,7 @@ type (
 		HistoryBranches     map[int32]*HistoryBranch // map from each resetVersion to the associated branch, resetVersion increase from 0
 	}
 
+	// HistoryBranch represents a history branch
 	HistoryBranch struct {
 		BranchToken      []byte
 		NextEventID      int64
@@ -1964,6 +1965,7 @@ func UnixNanoToDBTimestamp(timestamp int64) int64 {
 	return timestamp / (1000 * 1000) // Milliseconds are 10⁻³, nanoseconds are 10⁻⁹, (-9) - (-3) = -6, so divide by 10⁶
 }
 
+// SetHistorySize set the historySize
 func (e *WorkflowExecutionInfo) SetHistorySize(size int64) {
 	e.HistorySize = size
 	if e.EventStoreVersion == EventStoreVersionV2 {
@@ -1971,6 +1973,7 @@ func (e *WorkflowExecutionInfo) SetHistorySize(size int64) {
 	}
 }
 
+// IncreaseHistorySize increase historySize by delta
 func (e *WorkflowExecutionInfo) IncreaseHistorySize(delta int64) {
 	e.HistorySize += delta
 	if e.EventStoreVersion == EventStoreVersionV2 {
@@ -1978,6 +1981,7 @@ func (e *WorkflowExecutionInfo) IncreaseHistorySize(delta int64) {
 	}
 }
 
+// SetNextEventID sets the nextEventID
 func (e *WorkflowExecutionInfo) SetNextEventID(id int64) {
 	e.NextEventID = id
 	if e.EventStoreVersion == EventStoreVersionV2 {
@@ -1985,6 +1989,7 @@ func (e *WorkflowExecutionInfo) SetNextEventID(id int64) {
 	}
 }
 
+// IncreaseNextEventID increase the nextEventID by 1
 func (e *WorkflowExecutionInfo) IncreaseNextEventID() {
 	e.NextEventID++
 	if e.EventStoreVersion == EventStoreVersionV2 {
@@ -1992,6 +1997,7 @@ func (e *WorkflowExecutionInfo) IncreaseNextEventID() {
 	}
 }
 
+// SetLastFirstEventID set the LastFirstEventID
 func (e *WorkflowExecutionInfo) SetLastFirstEventID(id int64) {
 	e.LastFirstEventID = id
 	if e.EventStoreVersion == EventStoreVersionV2 {
@@ -1999,14 +2005,14 @@ func (e *WorkflowExecutionInfo) SetLastFirstEventID(id int64) {
 	}
 }
 
+// GetCurrentBranch return the current branch token
 func (e *WorkflowExecutionInfo) GetCurrentBranch() []byte {
 	idx := e.CurrentResetVersion
 	br, ok := e.HistoryBranches[idx]
 	if ok {
 		return br.BranchToken
-	} else {
-		return nil
 	}
+	return nil
 }
 
 var internalThriftEncoder = codec.NewThriftRWEncoder()

@@ -150,21 +150,20 @@ func (r *conflictResolverImpl) getHistory(domainID string, execution shared.Work
 			return nil, 0, 0, nil, err
 		}
 		return response.History, response.Size, response.LastFirstEventID, response.NextPageToken, nil
-	} else {
-		response, err := r.historyMgr.GetWorkflowExecutionHistory(&persistence.GetWorkflowExecutionHistoryRequest{
-			DomainID:      domainID,
-			Execution:     execution,
-			FirstEventID:  firstEventID,
-			NextEventID:   nextEventID,
-			PageSize:      defaultHistoryPageSize,
-			NextPageToken: nextPageToken,
-		})
-
-		if err != nil {
-			return nil, 0, 0, nil, err
-		}
-		return response.History.Events, response.Size, response.LastFirstEventID, response.NextPageToken, nil
 	}
+	response, err := r.historyMgr.GetWorkflowExecutionHistory(&persistence.GetWorkflowExecutionHistoryRequest{
+		DomainID:      domainID,
+		Execution:     execution,
+		FirstEventID:  firstEventID,
+		NextEventID:   nextEventID,
+		PageSize:      defaultHistoryPageSize,
+		NextPageToken: nextPageToken,
+	})
+
+	if err != nil {
+		return nil, 0, 0, nil, err
+	}
+	return response.History.Events, response.Size, response.LastFirstEventID, response.NextPageToken, nil
 }
 
 func (r *conflictResolverImpl) logError(msg string, err error) {
