@@ -256,7 +256,7 @@ func (c *cadenceImpl) WorkerPProfPort() int {
 }
 
 func (c *cadenceImpl) GetFrontendClient() workflowserviceclient.Interface {
-	return fecli.New(c.frontEndService.GetDispatcher())
+	return fecli.NewOther(c.frontEndService.GetDispatcher())
 }
 
 // For integration tests to get hold of FE instance.

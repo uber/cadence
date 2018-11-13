@@ -70,7 +70,7 @@ type (
 
 	// TaskPoller is used in integration tests to poll decision or activity tasks
 	TaskPoller struct {
-		Engine                              fecli.Client
+		Engine                              fecli.OtherClient
 		Domain                              string
 		TaskList                            *workflow.TaskList
 		StickyTaskList                      *workflow.TaskList
