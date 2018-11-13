@@ -333,7 +333,8 @@ func (s *clientIntegrationSuite) TestClientDataConverter_Failed() {
 	completedAct := 0
 	failedAct := 0
 	for iter.HasNext() {
-		event, _ := iter.Next()
+		event, err := iter.Next()
+		s.Nil(err)
 		if event.GetEventType() == shared.EventTypeActivityTaskCompleted {
 			completedAct++
 		}
