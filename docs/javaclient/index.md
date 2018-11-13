@@ -4,4 +4,4 @@ title: Java Client
 weight: 2
 ---
 
-<p>Go Client</p>
+<p>Java Client</p>
