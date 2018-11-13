@@ -217,6 +217,10 @@ func (p *workflowExecutionPersistenceClient) GetName() string {
 	return p.persistence.GetName()
 }
 
+func (p *workflowExecutionPersistenceClient) GetShardID() int {
+	return p.persistence.GetShardID()
+}
+
 func (p *workflowExecutionPersistenceClient) CreateWorkflowExecution(request *CreateWorkflowExecutionRequest) (*CreateWorkflowExecutionResponse, error) {
 	p.metricClient.IncCounter(metrics.PersistenceCreateWorkflowExecutionScope, metrics.PersistenceRequests)
 
@@ -433,8 +437,9 @@ func (p *workflowExecutionPersistenceClient) updateErrorMetric(scope int, err er
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
 	default:
 		p.logger.WithFields(bark.Fields{
-			logging.TagScope: scope,
-			logging.TagErr:   err,
+			logging.TagScope:          scope,
+			logging.TagHistoryShardID: p.GetShardID(),
+			logging.TagErr:            err,
 		}).Error("Operation failed with internal error.")
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
 	}
@@ -915,18 +920,6 @@ func (p *historyV2PersistenceClient) GetName() string {
 
 func (p *historyV2PersistenceClient) Close() {
 	p.persistence.Close()
-}
-
-// NewHistoryBranch creates a new branch from tree root. If tree doesn't exist, then create one. Return error if the branch already exists.
-func (p *historyV2PersistenceClient) NewHistoryBranch(request *NewHistoryBranchRequest) (*NewHistoryBranchResponse, error) {
-	p.metricClient.IncCounter(metrics.PersistenceNewHistoryBranchScope, metrics.PersistenceRequests)
-	sw := p.metricClient.StartTimer(metrics.PersistenceNewHistoryBranchScope, metrics.PersistenceLatency)
-	resp, err := p.persistence.NewHistoryBranch(request)
-	sw.Stop()
-	if err != nil {
-		p.updateErrorMetric(metrics.PersistenceNewHistoryBranchScope, err)
-	}
-	return resp, err
 }
 
 // AppendHistoryNodes add(or override) a node to a history branch

@@ -187,6 +187,10 @@ func (p *workflowExecutionRateLimitedPersistenceClient) GetName() string {
 	return p.persistence.GetName()
 }
 
+func (p *workflowExecutionRateLimitedPersistenceClient) GetShardID() int {
+	return p.persistence.GetShardID()
+}
+
 func (p *workflowExecutionRateLimitedPersistenceClient) CreateWorkflowExecution(request *CreateWorkflowExecutionRequest) (*CreateWorkflowExecutionResponse, error) {
 	if ok, _ := p.rateLimiter.TryConsume(1); !ok {
 		return nil, ErrPersistenceLimitExceeded
@@ -580,14 +584,6 @@ func (p *historyV2RateLimitedPersistenceClient) GetName() string {
 
 func (p *historyV2RateLimitedPersistenceClient) Close() {
 	p.persistence.Close()
-}
-
-// NewHistoryBranch creates a new branch from tree root. If tree doesn't exist, then create one. Return error if the branch already exists.
-func (p *historyV2RateLimitedPersistenceClient) NewHistoryBranch(request *NewHistoryBranchRequest) (*NewHistoryBranchResponse, error) {
-	if ok, _ := p.rateLimiter.TryConsume(1); !ok {
-		return nil, ErrPersistenceLimitExceeded
-	}
-	return p.persistence.NewHistoryBranch(request)
 }
 
 // AppendHistoryNodes add(or override) a node to a history branch
