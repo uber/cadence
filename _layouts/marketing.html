@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+
+<html lang="en-us">
+{% include head.html %}
+
+<body>
+  {% include top_bar.html %}
+  {% include icons.html %}
+
+  <main class="marketing">
+    <header class="main-callout">
+      <h1>{{ page.callout }}</h1>
+      <p>{{ page.callout_description }}</p>
+    </header>
+
+    {{ content }}
+  </main>
+</body>
+</html>

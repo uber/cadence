@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+
+<html lang="en-us">
+{% include head.html %}
+
+<body>
+  {% include top_bar.html %}
+
+  <main class="documentation">
+      <nav class="documentation-toc">
+        {% assign max_nav_level = page.url | split: '/' | size | minus: -1 | at_least: 3 %}
+        {% include nav.html level=2 base_url='/docs' %}
+      </nav>
+
+      <article>
+        {{ content }}
+      </article>
+    </main>
+</body>
+</html>
