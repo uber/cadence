@@ -28,7 +28,8 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	"code.uber.internal/devexp/cadence-iot-demo/.tmp/.go/goroot/src/fmt"
+	"fmt"
+
 	"github.com/pborman/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/uber-common/bark"
