@@ -1,0 +1,43 @@
+@import "./definitions.sass"
+
+main.marketing
+  max-width: $marketing-page-width
+  margin: 0 auto
+  font-size: 16px
+
+  header.main-callout
+    & > *
+      text-align: center
+    p
+      font-size: 22px
+
+  .features
+    display: flex
+    flex-wrap: wrap
+    margin-top: $layout-spacing-medium
+    .feature
+      flex: 1 1 33%
+      padding: $layout-spacing-small
+      display: flex
+      flex-direction: column
+      align-items: center
+      margin-top: 42px
+    .icon
+      display: flex
+      justify-content: center
+      align-items: center
+      padding: 16px
+      border-radius: 36px
+      border: 1px solid $primary-color
+    span.description
+      font-size: 24px
+      font-weight: 600
+      margin: 10px 0
+      text-align: center
+    svg
+      width: 26px
+      height: 26px
+      color: $primary-color
+
+header.top-bar.marketing > div
+  max-width: $marketing-page-width

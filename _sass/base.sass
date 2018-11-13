@@ -1,0 +1,103 @@
+@import "./definitions.sass"
+
+*
+  box-sizing: border-box
+  &::-webkit-scrollbar
+    width: 10px
+    height: 10px
+  &::-webkit-scrollbar-thumb
+    background-color: rgba($uber-black-60, 0.5)
+  $brdr: 1px solid rgba(0, 0, 0, 0.15)
+  &::-webkit-scrollbar-track
+    background-color: rgba(0, 0, 0, 0.1)
+    box-shadow: none
+    &:horizontal
+      border-top: $brdr
+    &:vertical
+      border-left: $brdr
+  &::-webkit-scrollbar-corner
+    border: $brdr
+
+body
+  font-family: $text-font-family
+  font-size: $base-font-size
+  color: $base-text-color
+  line-height: 1.2em
+  margin: 0
+
+a
+  font-family: $header-font-family
+  text-decoration: none
+  transition: all 150ms linear
+  &[href]
+    color: $uber-blue
+
+
+h1, h2, h3, h4, h5, h6
+  font-family: $header-font-family
+  line-height: 1.2em
+h1
+  font-size: 44px
+h2, h3, h4, h5
+  padding: 0.2em 0
+h2
+  font-size: 36px
+h3
+  font-size: 24px
+h4
+  font-size: 22px
+h5
+  font-size: 16px
+  text-transform: uppercase
+
+a[target="_blank"]::after
+  color: transparent
+  content: '---'
+  background-repeat: no-repeat
+  background-position: center center
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' width='14px' height='14px' fill='#11939A'><g><path d='M52 8H32l6.462 6.462L20 44l29.538-18.462L56 32V12a4 4 0 0 0-4-4z'></path><path d='M48 32.012V48H16V16h15.988l.578-.924L25.49 8H16a8 8 0 0 0-8 8v32a8 8 0 0 0 8 8h32a8 8 0 0 0 8-8v-9.49l-7.076-7.076-.924.578z'></path></g></svg>")
+
+b, strong, em
+  font-weight: 500
+
+li, a, p
+  line-height: 1.2em
+
+pre, code
+  font-family: $monospace-font-family
+
+table
+  width: 100%
+  border-collapse: collapse
+  thead
+    border-bottom: 2px solid $uber-white-60
+  tr:nth-child(2n)
+    background-color: rgba($uber-white-80, 0.2)
+
+li
+  list-style: none
+ul, ol
+  padding: 0 0 0 $layout-spacing-medium
+  margin: 0
+
+header.top-bar
+  color: white
+  background-color: black
+  & > div
+    display: flex
+    justify-content: space-between
+    align-items: stretch
+    padding: 10px 40px
+    margin: 0 auto
+  svg
+    height: 50px
+  nav
+    display: flex
+    align-items: stretch
+    a
+      font-size: $nav-font-size
+      padding: $inline-spacing-large
+      transition: all 200ms ease
+      color: white
+      &:hover, &:focus
+        color: $primary-color
