@@ -287,7 +287,7 @@ func (e *historyEngineImpl) generateFirstDecisionTask(domainID string, msBuilder
 	var transferTasks []persistence.Task
 	if parentInfo == nil {
 		// DecisionTask is only created when it is not a Child Workflow Execution
-		di := msBuilder.AddDecisionTaskScheduledEvent()
+		di = msBuilder.AddDecisionTaskScheduledEvent()
 		if di == nil {
 			return nil, nil, &workflow.InternalServiceError{Message: "Failed to add decision scheduled event."}
 		}
