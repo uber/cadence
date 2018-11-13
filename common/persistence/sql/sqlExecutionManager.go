@@ -515,6 +515,10 @@ func (m *sqlExecutionManager) txExecuteShardLocked(operation string, rangeID int
 	})
 }
 
+func (m *sqlExecutionManager) GetShardID() int {
+	return m.shardID
+}
+
 func (m *sqlExecutionManager) CreateWorkflowExecution(request *p.CreateWorkflowExecutionRequest) (response *p.CreateWorkflowExecutionResponse, err error) {
 	err = m.txExecuteShardLocked("CreateWorkflowExecution", request.RangeID, func(tx *sqlx.Tx) error {
 		response, err = m.createWorkflowExecutionTx(tx, request)
