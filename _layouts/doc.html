@@ -8,7 +8,7 @@
 
   <main class="documentation">
     <nav class="documentation-toc">
-      {% assign max_nav_level = page.url | split: '/' | size | minus: -1 | at_least: 3 %}
+      {% assign max_nav_level = page.url | split: '/' | size | plus: 1 | at_least: 3 %}
       {% include nav.html level=2 base_url='/docs' %}
     </nav>
 

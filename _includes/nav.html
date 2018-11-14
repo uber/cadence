@@ -6,7 +6,7 @@
       {% if include.level == item_url_parts.size %}
         <li class="{% if page.url contains item.url %}active{% endif %} {% if page.url == item.url %}active-page{% endif %} {% if item.name == 'index.md' %}has-children{% endif %}">
           <a href='{{item.url | absolute_url}}'>{{item.title}}</a>
-          {% assign next_level = include.level | minus: -1 %}
+          {% assign next_level = include.level | plus: 1 %}
           {% if page.url contains item.url and next_level <= max_nav_level %}
             {% include nav.html level=next_level base_url=item.url %}
           {% endif %}
