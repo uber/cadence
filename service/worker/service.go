@@ -21,12 +21,15 @@
 package worker
 
 import (
-	"github.com/uber-common/bark"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/metrics"
-	persistencefactory "github.com/uber/cadence/common/persistence/persistence-factory"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	persistencefactory "github.com/uber/cadence/common/persistence/persistence-factory"
+	"github.com/uber-common/bark"
+	"github.com/uber/cadence/client/frontend"
+	"go.uber.org/cadence/worker"
+	"go.uber.org/zap"
 )
 
 const (
@@ -93,16 +96,28 @@ func (s *Service) Start() {
 		s.startReplicator(params, base, log)
 	}
 
-	//frontendClient := s.getFrontendClient(base, log)
-	//w := worker.New(frontendClient, SystemWorkflowDomain, SystemTaskList, worker.Options{})
-	//if err := w.Start(); err != nil {
-	//	w.Stop()
-	//	log.Fatalf("failed to start worker: %v", err)
-	//}
+	log.Info("getting frontend client")
+	frontendClient := s.getFrontendClient(base, log)
+	log.Info("got frontend client")
+	logger, _ := zap.NewDevelopment()
+	log.Info("constructing worker")
+	w := worker.New(frontendClient, SystemWorkflowDomain, SystemTaskList, worker.Options{
+		Logger: logger,
+	})
+	log.Info("successfully constructed worker")
+
+	log.Info("calling worker start")
+	if err := w.Start(); err != nil {
+		log.Info("got an error from calling start")
+		w.Stop()
+		log.Fatalf("failed to start worker: %v", err)
+	}
 	log.Infof("%v started", common.WorkerServiceName)
 
 	<-s.stopC
-	//w.Stop()
+	log.Info("calling worker stop")
+	w.Stop()
+	log.Info("successfully stopped worker")
 	base.Stop()
 }
 
@@ -115,7 +130,6 @@ func (s *Service) Stop() {
 	s.params.Logger.Infof("%v stopped", common.WorkerServiceName)
 }
 
-/*
 func (s *Service) getFrontendClient(base service.Service, log bark.Logger) frontend.Client {
 	client, err := base.GetClientFactory().NewFrontendClient()
 	if err != nil {
@@ -124,7 +138,6 @@ func (s *Service) getFrontendClient(base service.Service, log bark.Logger) front
 	return frontend.NewRetryableClient(client, common.CreateFrontendServiceRetryPolicy(),
 		common.IsWhitelistServiceTransientError)
 }
-*/
 
 func (s *Service) startReplicator(params *service.BootstrapParams, base service.Service, log bark.Logger) {
 	pConfig := params.PersistenceConfig
