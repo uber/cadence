@@ -2228,7 +2228,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 	}
 	// the test above already assert the create workflow request, so here just use anyting
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(nil, errRet).Once()
-	s.mockHistoryMgr.On("DeleteWorkflowExecutionHistory", mock.Anything).Return(nil).Once()
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(&persistence.GetDomainResponse{
 		Info:              &persistence.DomainInfo{ID: domainID, Name: "domain name"},
 		TableVersion:      p.DomainTableVersionV1,
@@ -2494,7 +2493,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentComplete_In
 	}
 	// the test above already assert the create workflow request, so here just use anyting
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(nil, errRet).Once()
-	s.mockHistoryMgr.On("DeleteWorkflowExecutionHistory", mock.Anything).Return(nil).Once()
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(&persistence.GetDomainResponse{
 		Info:              &persistence.DomainInfo{ID: domainID, Name: "domain name"},
 		TableVersion:      p.DomainTableVersionV1,
@@ -2981,7 +2979,6 @@ func (s *historyReplicatorSuite) TestReplicateWorkflowStarted_CurrentRunning_Inc
 	}
 	// the test above already assert the create workflow request, so here just use anyting
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything).Return(nil, errRet).Once()
-	s.mockHistoryMgr.On("DeleteWorkflowExecutionHistory", mock.Anything).Return(nil).Once()
 	s.mockMetadataMgr.On("GetDomain", mock.Anything).Return(&persistence.GetDomainResponse{
 		Info:              &persistence.DomainInfo{ID: domainID, Name: "domain name"},
 		TableVersion:      p.DomainTableVersionV1,

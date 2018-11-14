@@ -23,7 +23,6 @@ package sql
 import (
 	"database/sql"
 	"fmt"
-	"runtime/debug"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -151,7 +150,6 @@ func (m *sqlShardManager) CreateShard(request *persistence.CreateShardRequest) e
 	}
 
 	if _, err := m.db.NamedExec(createShardSQLQuery, &row); err != nil {
-		debug.PrintStack()
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("CreateShard operation failed. Failed to insert into shards table. Error: %v", err),
 		}

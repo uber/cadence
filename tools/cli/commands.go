@@ -39,7 +39,6 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/uber/cadence/common"
 	"github.com/urfave/cli"
-
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	s "go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/client"

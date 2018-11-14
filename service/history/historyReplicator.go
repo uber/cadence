@@ -841,7 +841,6 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 		// proceed to create workflow
 		err = checkOutOfOrder()
 		if err != nil {
-			deleteHistory()
 			return err
 		}
 
@@ -872,7 +871,6 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 
 	err = checkOutOfOrder()
 	if err != nil {
-		deleteHistory()
 		return err
 	}
 
