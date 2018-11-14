@@ -1,0 +1,15 @@
+<header class="top-bar {{ page.layout }}">
+  <div>
+    <a href="/" class="logo">
+      {% include logo.html %}
+    </a>
+    <nav>
+      <div class="doc-search">
+        <input type="search" placeholder="Search the Docs" />
+        <ul class="search-results"></ul>
+      </div>
+      <a href="{{ "/docs" | absolute_url }}">Docs</a>
+      <a href="https://github.com/uber/cadence">Source</a>
+    </nav>
+  </div>
+</header>

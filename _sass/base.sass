@@ -1,0 +1,153 @@
+@import "./definitions.sass"
+
+*
+  box-sizing: border-box
+  &::-webkit-scrollbar
+    width: 10px
+    height: 10px
+  &::-webkit-scrollbar-thumb
+    background-color: rgba($uber-black-60, 0.5)
+  $brdr: 1px solid rgba(0, 0, 0, 0.15)
+  &::-webkit-scrollbar-track
+    background-color: rgba(0, 0, 0, 0.1)
+    box-shadow: none
+    &:horizontal
+      border-top: $brdr
+    &:vertical
+      border-left: $brdr
+  &::-webkit-scrollbar-corner
+    border: $brdr
+
+body
+  font-family: $text-font-family
+  font-size: $base-font-size
+  color: $base-text-color
+  line-height: 1.2em
+  margin: 0
+
+a
+  font-family: $header-font-family
+  text-decoration: none
+  transition: all 150ms linear
+  &[href]
+    color: $uber-blue
+
+
+h1, h2, h3, h4, h5, h6
+  font-family: $header-font-family
+  line-height: 1.2em
+h1
+  font-size: 44px
+h2, h3, h4, h5
+  padding: 0.2em 0
+h2
+  font-size: 36px
+h3
+  font-size: 24px
+h4
+  font-size: 22px
+h5
+  font-size: 16px
+  text-transform: uppercase
+
+a[target="_blank"]::after
+  color: transparent
+  content: '---'
+  background-repeat: no-repeat
+  background-position: center center
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' width='14px' height='14px' fill='#11939A'><g><path d='M52 8H32l6.462 6.462L20 44l29.538-18.462L56 32V12a4 4 0 0 0-4-4z'></path><path d='M48 32.012V48H16V16h15.988l.578-.924L25.49 8H16a8 8 0 0 0-8 8v32a8 8 0 0 0 8 8h32a8 8 0 0 0 8-8v-9.49l-7.076-7.076-.924.578z'></path></g></svg>")
+
+b, strong, em
+  font-weight: 500
+
+li, a, p, span
+  line-height: 1.2em
+
+pre, code
+  font-family: $monospace-font-family
+
+table
+  width: 100%
+  border-collapse: collapse
+  thead
+    border-bottom: 2px solid $uber-white-60
+  tr:nth-child(2n)
+    background-color: rgba($uber-white-80, 0.2)
+
+li
+  list-style: none
+ul, ol
+  padding: 0 0 0 $layout-spacing-medium
+  margin: 0
+
+input[type=search]
+  padding: 8px 18px
+  margin: 0
+  background-color: transparent
+  outline: 0
+  border: none
+  font-size: $base-font-size
+
+header.top-bar
+  color: white
+  background-color: black
+  & > div
+    display: flex
+    justify-content: space-between
+    align-items: stretch
+    padding: 10px 40px
+    margin: 0 auto
+  svg
+    height: 50px
+  nav
+    display: flex
+    align-items: stretch
+    a
+      font-size: $nav-font-size
+      padding: $inline-spacing-large
+      transition: all 200ms ease
+      color: white
+      &:hover, &:focus
+        color: $primary-color
+
+  .doc-search
+    position: relative
+    align-self: center
+    width: 320px
+    display: inline-flex
+    background-color: $uber-black-90
+    border: 1px solid transparent
+    border-radius: 4px
+    padding: 4px 4px 4px 26px
+    background-repeat: no-repeat
+    background-position: $inline-spacing-large center
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='16px' height='16px' fill='none'><path fill-rule='nonzero' clip-rule='nonzero' d='M 21.60009765625 19.500030517578125 L 17.2001953125 15.100006103515625 C 18.300195693969727 13.500005722045898 19 11.600030899047852 19 9.500030517578125 C 19 4.300030708312988 14.699999809265137 0 9.5 0 C 4.300000190734863 0 0 4.300030708312988 0 9.500030517578125 C 0 14.700030326843262 4.300000190734863 19.000030517578125 9.5 19.000030517578125 C 11.600000381469727 19.000030517578125 13.500097274780273 18.29998207092285 15.10009765625 17.199981689453125 L 19.5 21.600006103515625 L 21.60009765625 19.500030517578125 Z M 3 9.600006103515625 C 3 6.000006198883057 5.900000095367432 3.100006103515625 9.5 3.100006103515625 C 13.100000381469727 3.100006103515625 16 6.000006198883057 16 9.600006103515625 C 16 13.200006484985352 13.100000381469727 16.100006103515625 9.5 16.100006103515625 C 5.900000095367432 16.100006103515625 3 13.200006484985352 3 9.600006103515625 Z' fill='#666666'/></svg>")
+
+    input
+      flex: 1 1 auto
+      color: #CCCCCC
+
+    &.active
+      border-color: $primary-color
+      background-color: transparent
+
+    ul.search-results
+      position: absolute
+      top: 59px
+      left: 0
+      background-color: #1F1F1F
+      padding: 12px
+      width: 100%
+      z-index: 4
+      max-height: 50vw
+      overflow-y: auto
+      li
+        padding: 4px
+      a
+        font-size: 16px
+      span.breadcrumb
+        display: block
+        font-size: 11px
+        color: $uber-black-40
+      &:empty
+        display: none
