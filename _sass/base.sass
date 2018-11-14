@@ -80,6 +80,14 @@ ul, ol
   padding: 0 0 0 $layout-spacing-medium
   margin: 0
 
+input[type=search]
+  padding: 8px 18px
+  margin: 0
+  background-color: transparent
+  outline: 0
+  border: none
+  font-size: $base-font-size
+
 header.top-bar
   color: white
   background-color: black
@@ -101,3 +109,45 @@ header.top-bar
       color: white
       &:hover, &:focus
         color: $primary-color
+
+  .doc-search
+    position: relative
+    align-self: center
+    width: 320px
+    display: inline-flex
+    background-color: $uber-black-90
+    border: 1px solid transparent
+    border-radius: 4px
+    padding: 4px 4px 4px 26px
+    background-repeat: no-repeat
+    background-position: $inline-spacing-large center
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='16px' height='16px' fill='none'><path fill-rule='nonzero' clip-rule='nonzero' d='M 21.60009765625 19.500030517578125 L 17.2001953125 15.100006103515625 C 18.300195693969727 13.500005722045898 19 11.600030899047852 19 9.500030517578125 C 19 4.300030708312988 14.699999809265137 0 9.5 0 C 4.300000190734863 0 0 4.300030708312988 0 9.500030517578125 C 0 14.700030326843262 4.300000190734863 19.000030517578125 9.5 19.000030517578125 C 11.600000381469727 19.000030517578125 13.500097274780273 18.29998207092285 15.10009765625 17.199981689453125 L 19.5 21.600006103515625 L 21.60009765625 19.500030517578125 Z M 3 9.600006103515625 C 3 6.000006198883057 5.900000095367432 3.100006103515625 9.5 3.100006103515625 C 13.100000381469727 3.100006103515625 16 6.000006198883057 16 9.600006103515625 C 16 13.200006484985352 13.100000381469727 16.100006103515625 9.5 16.100006103515625 C 5.900000095367432 16.100006103515625 3 13.200006484985352 3 9.600006103515625 Z' fill='#666666'/></svg>")
+
+    input
+      flex: 1 1 auto
+      color: #CCCCCC
+
+    &.active
+      border-color: $primary-color
+      background-color: transparent
+
+    ul.search-results
+      position: absolute
+      top: 59px
+      left: 0
+      background-color: #1F1F1F
+      padding: 12px
+      width: 100%
+      z-index: 4
+      max-height: 50vw
+      overflow-y: auto
+      li
+        padding: 4px
+      a
+        font-size: 16px
+      span.breadcrumb
+        display: block
+        font-size: 11px
+        color: $uber-black-40
+      &:empty
+        display: none

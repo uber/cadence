@@ -7,14 +7,17 @@
   {% include top_bar.html %}
 
   <main class="documentation">
-      <nav class="documentation-toc">
-        {% assign max_nav_level = page.url | split: '/' | size | minus: -1 | at_least: 3 %}
-        {% include nav.html level=2 base_url='/docs' %}
-      </nav>
+    <nav class="documentation-toc">
+      {% assign max_nav_level = page.url | split: '/' | size | minus: -1 | at_least: 3 %}
+      {% include nav.html level=2 base_url='/docs' %}
+    </nav>
 
-      <article>
-        {{ content }}
-      </article>
-    </main>
+    <article>
+      {{ content }}
+    </article>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lunr.js/2.3.5/lunr.js"></script>
+  <script src="{{ "/assets/search.js" | absolute_url }}" async></script>
 </body>
 </html>

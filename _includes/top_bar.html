@@ -4,7 +4,11 @@
       {% include logo.html %}
     </a>
     <nav>
-      <a href="{{ "/docs" | absolute_url }}">Documentation</a>
+      <div class="doc-search">
+        <input type="search" placeholder="Search the Docs" />
+        <ul class="search-results"></ul>
+      </div>
+      <a href="{{ "/docs" | absolute_url }}">Docs</a>
       <a href="https://github.com/uber/cadence">Source</a>
     </nav>
   </div>
