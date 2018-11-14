@@ -63,8 +63,8 @@ func (s *ExecutionManagerSuiteForEventsV2) SetupTest() {
 	s.ClearTasks()
 }
 
-// TestWorkflowMutableStateTimers test
-func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowNormal() {
+// TestWorkflowCreation test
+func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowCreation() {
 	domainID := uuid.New()
 	workflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("test-eventsv2-workflow"),
@@ -164,6 +164,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowNormal() {
 	s.Equal(int64(5), currBr.NextEventID)
 }
 
+//TestContinueAsNew test
 func (s *ExecutionManagerSuiteForEventsV2) TestContinueAsNew() {
 	domainID := uuid.New()
 	workflowExecution := gen.WorkflowExecution{
@@ -256,6 +257,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestContinueAsNew() {
 	s.Equal(*newWorkflowExecution.RunId, newRunID)
 }
 
+// TestWorkflowWithReplicationState test
 func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowWithReplicationState() {
 	domainID := uuid.New()
 	runID := uuid.New()
