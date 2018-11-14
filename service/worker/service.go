@@ -28,7 +28,8 @@ import (
 	persistencefactory "github.com/uber/cadence/common/persistence/persistence-factory"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/dynamicconfig"
-	"go.uber.org/cadence/worker"
+	"github.com/uber/cadence/service/worker/replicator"
+	"github.com/uber/cadence/service/worker/sysworkflow"
 )
 
 const (
@@ -52,11 +53,8 @@ type (
 
 	// Config contains all the service config for worker
 	Config struct {
-		// Replicator settings
-		PersistenceMaxQPS          dynamicconfig.IntPropertyFn
-		ReplicatorConcurrency      dynamicconfig.IntPropertyFn
-		ReplicatorBufferRetryCount int
-		ReplicationTaskMaxRetry    dynamicconfig.IntPropertyFn
+		ReplicationCfg *replicator.Config
+		SysWorkflowCfg *sysworkflow.Config
 	}
 )
 
@@ -73,10 +71,13 @@ func NewService(params *service.BootstrapParams) common.Daemon {
 // NewConfig builds the new Config for cadence-worker service
 func NewConfig(dc *dynamicconfig.Collection) *Config {
 	return &Config{
-		PersistenceMaxQPS:          dc.GetIntProperty(dynamicconfig.WorkerPersistenceMaxQPS, 500),
-		ReplicatorConcurrency:      dc.GetIntProperty(dynamicconfig.WorkerReplicatorConcurrency, 1000),
-		ReplicatorBufferRetryCount: 8,
-		ReplicationTaskMaxRetry:    dc.GetIntProperty(dynamicconfig.WorkerReplicationTaskMaxRetry, 50),
+		ReplicationCfg: &replicator.Config{
+			PersistenceMaxQPS:          dc.GetIntProperty(dynamicconfig.WorkerPersistenceMaxQPS, 500),
+			ReplicatorConcurrency:      dc.GetIntProperty(dynamicconfig.WorkerReplicatorConcurrency, 1000),
+			ReplicatorBufferRetryCount: 8,
+			ReplicationTaskMaxRetry:    dc.GetIntProperty(dynamicconfig.WorkerReplicationTaskMaxRetry, 50),
+		},
+		SysWorkflowCfg: &sysworkflow.Config{},
 	}
 }
 
@@ -94,18 +95,10 @@ func (s *Service) Start() {
 	if s.params.ClusterMetadata.IsGlobalDomainEnabled() {
 		s.startReplicator(params, base, log)
 	}
-
-	frontendClient := s.getFrontendClient(base, log)
-	w := worker.New(frontendClient, SystemWorkflowDomain, SystemTaskList, worker.Options{})
-	if err := w.Start(); err != nil {
-		w.Stop()
-		log.Fatalf("failed to start worker: %v", err)
-	}
+	s.startSysWorker(base, log)
 
 	log.Infof("%v started", common.WorkerServiceName)
-
 	<-s.stopC
-	w.Stop()
 	base.Stop()
 }
 
@@ -129,7 +122,7 @@ func (s *Service) getFrontendClient(base service.Service, log bark.Logger) front
 
 func (s *Service) startReplicator(params *service.BootstrapParams, base service.Service, log bark.Logger) {
 	pConfig := params.PersistenceConfig
-	pConfig.SetMaxQPS(pConfig.DefaultStore, s.config.PersistenceMaxQPS())
+	pConfig.SetMaxQPS(pConfig.DefaultStore, s.config.ReplicationCfg.PersistenceMaxQPS())
 	pFactory := persistencefactory.New(&pConfig, params.ClusterMetadata.GetCurrentClusterName(), s.metricsClient, log)
 
 	metadataManager, err := pFactory.NewMetadataManager(persistencefactory.MetadataV2)
@@ -142,10 +135,25 @@ func (s *Service) startReplicator(params *service.BootstrapParams, base service.
 		log.Fatalf("failed to create history service client: %v", err)
 	}
 
-	replicator := NewReplicator(params.ClusterMetadata, metadataManager, history, s.config, params.MessagingClient, log,
+	replicator := replicator.NewReplicator(params.ClusterMetadata, metadataManager, history, s.config.ReplicationCfg, params.MessagingClient, log,
 		s.metricsClient)
 	if err := replicator.Start(); err != nil {
 		replicator.Stop()
 		log.Fatalf("Fail to start replicator: %v", err)
+	}
+}
+
+func (s *Service) startSysWorker(base service.Service, log bark.Logger) {
+	frontendClient, err := base.GetClientFactory().NewFrontendClient()
+	if err != nil {
+		log.Fatalf("failed to create frontend client: %v", err)
+	}
+	frontendClient = frontend.NewRetryableClient(frontendClient, common.CreateFrontendServiceRetryPolicy(),
+		common.IsWhitelistServiceTransientError)
+
+	sysWorker := sysworkflow.NewSysWorker(frontendClient)
+	if err := sysWorker.Start(); err != nil {
+		sysWorker.Stop()
+		log.Fatalf("failed to start sysworker: %v", err)
 	}
 }
