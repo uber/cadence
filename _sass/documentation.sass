@@ -9,10 +9,12 @@ main.documentation
     a
       padding: 4px
       display: block
+      white-space: nowrap
+      overflow: hidden
+      text-overflow: ellipsis
     li
       font-size: $nav-font-size
       line-height: 1.5em
-      white-space: nowrap
       position: relative
       li
         &.active-page > a
@@ -31,10 +33,6 @@ main.documentation
         background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='16px' height='16px' fill='none'><path fill-rule='nonzero' clip-rule='nonzero' d='M 8.399993896484375 6 L 3.79998779296875 12 L 0 12 L 4.600006103515625 6 L 0 0 L 3.79998779296875 0 L 8.399993896484375 6 Z' fill='black'/></svg>")
       li.active.has-children::before
         background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='16px' height='16px' fill='none'><path fill-rule='nonzero' clip-rule='nonzero' d='M 8.399993896484375 6 L 3.79998779296875 12 L 0 12 L 4.600006103515625 6 L 0 0 L 3.79998779296875 0 L 8.399993896484375 6 Z' fill='#276EF1'/></svg>")
-  @media (max-width: 1200px)
-    flex-direction: column
-    & > nav
-      flex: 0 0 auto
 
   article
     line-height: 1.5em
@@ -45,6 +43,18 @@ main.documentation
       font-family: $header-font-family
       font-size: 1.2em
       line-height: 1.5em
+
+  @media (max-width: 1200px)
+    flex-direction: column
+    & > nav
+      flex: 0 0 auto
+      padding: $layout-spacing-small 0
+    li a
+      font-size: $base-font-size
+      line-height: 1em
+    article
+      padding: 0 $layout-spacing-small
+
 
 pre.highlight
   padding: 4px
