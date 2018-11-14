@@ -22,6 +22,7 @@ package worker
 
 import (
 	"github.com/uber-common/bark"
+	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/metrics"
 	persistencefactory "github.com/uber/cadence/common/persistence/persistence-factory"
@@ -115,7 +116,6 @@ func (s *Service) Stop() {
 	s.params.Logger.Infof("%v stopped", common.WorkerServiceName)
 }
 
-/*
 func (s *Service) getFrontendClient(base service.Service, log bark.Logger) frontend.Client {
 	client, err := base.GetClientFactory().NewFrontendClient()
 	if err != nil {
@@ -124,7 +124,6 @@ func (s *Service) getFrontendClient(base service.Service, log bark.Logger) front
 	return frontend.NewRetryableClient(client, common.CreateFrontendServiceRetryPolicy(),
 		common.IsWhitelistServiceTransientError)
 }
-*/
 
 func (s *Service) startReplicator(params *service.BootstrapParams, base service.Service, log bark.Logger) {
 	pConfig := params.PersistenceConfig
