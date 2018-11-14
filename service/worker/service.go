@@ -29,7 +29,6 @@ import (
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"go.uber.org/cadence/worker"
-	"go.uber.org/zap"
 )
 
 const (
@@ -96,28 +95,17 @@ func (s *Service) Start() {
 		s.startReplicator(params, base, log)
 	}
 
-	log.Info("getting frontend client")
 	frontendClient := s.getFrontendClient(base, log)
-	log.Info("got frontend client")
-	logger, _ := zap.NewDevelopment()
-	log.Info("constructing worker")
-	w := worker.New(frontendClient, SystemWorkflowDomain, SystemTaskList, worker.Options{
-		Logger: logger,
-	})
-	log.Info("successfully constructed worker")
+	w := worker.New(frontendClient, SystemWorkflowDomain, SystemTaskList, worker.Options{})
 
-	log.Info("calling worker start")
 	if err := w.Start(); err != nil {
-		log.Info("got an error from calling start")
 		w.Stop()
 		log.Fatalf("failed to start worker: %v", err)
 	}
 	log.Infof("%v started", common.WorkerServiceName)
 
 	<-s.stopC
-	log.Info("calling worker stop")
 	w.Stop()
-	log.Info("successfully stopped worker")
 	base.Stop()
 }
 
