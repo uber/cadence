@@ -22,6 +22,7 @@ package sysworkflow
 
 import (
 	"context"
+	"fmt"
 	"github.com/uber/cadence/client/frontend"
 	"go.uber.org/cadence/client"
 	"time"
@@ -66,6 +67,7 @@ func (i *initiator) Archive(request *ArchiveRequest) error {
 		RequestType:    ArchivalRequest,
 		ArchiveRequest: request,
 	}
+	fmt.Println("sending signal")
 	_, err := i.cadenceClient.SignalWithStartWorkflow(
 		context.Background(),
 		workflowID,

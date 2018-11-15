@@ -21,6 +21,7 @@
 package worker
 
 import (
+	"context"
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
@@ -30,14 +31,16 @@ import (
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/worker/replicator"
 	"github.com/uber/cadence/service/worker/sysworkflow"
+	"go.uber.org/cadence/.gen/go/shared"
+	"time"
 )
 
 const (
-	// SystemWorkflowDomain is the domain for cadence system workflows
-	SystemWorkflowDomain = "cadence-system"
+	// FrontendRetryLimit is the number of times frontend will try to be connected to before giving up
+	FrontendRetryLimit = 5
 
-	// SystemTaskList is the task list worker polls on
-	SystemTaskList = "system-task-list"
+	// PollingDelay is the amount of time to wait between polling frontend
+	PollingDelay = time.Second
 )
 
 type (
@@ -151,9 +154,32 @@ func (s *Service) startSysWorker(base service.Service, log bark.Logger) {
 	frontendClient = frontend.NewRetryableClient(frontendClient, common.CreateFrontendServiceRetryPolicy(),
 		common.IsWhitelistServiceTransientError)
 
+	s.waitForFrontendStart(frontendClient, log)
 	sysWorker := sysworkflow.NewSysWorker(frontendClient)
 	if err := sysWorker.Start(); err != nil {
 		sysWorker.Stop()
 		log.Fatalf("failed to start sysworker: %v", err)
 	}
+	//<-time.After(time.Second * 5)
+	//ini := sysworkflow.NewInitiator(frontendClient, 10)
+	//
+	//ini.Archive(&sysworkflow.ArchiveRequest{
+	//	UserRunID:      "foo",
+	//	UserWorkflowID: "bar",
+	//})
+}
+
+func (s *Service) waitForFrontendStart(frontendClient frontend.Client, log bark.Logger) {
+	name := sysworkflow.Domain
+	request := &shared.DescribeDomainRequest{
+		Name: &name,
+	}
+
+	for i := 0; i < FrontendRetryLimit; i++ {
+		if _, err := frontendClient.DescribeDomain(context.Background(), request); err == nil {
+			return
+		}
+		<-time.After(time.Second)
+	}
+	log.Fatal("failed to connect to frontend client")
 }
