@@ -23,10 +23,16 @@ package gob
 import (
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
-	"github.com/uber/cadence/common/messaging"
 	"testing"
 	"time"
 )
+
+type testStruct struct {
+	Domain     string
+	WorkflowID string
+	RunID      string
+	StartTime  int64
+}
 
 func TestGobEncoder(t *testing.T) {
 	encoder := NewGobEncoder()
@@ -37,7 +43,7 @@ func TestGobEncoder(t *testing.T) {
 	startTime := time.Now().UnixNano()
 
 	// test encode and decode 1 object
-	msg := &messaging.OpenWorkflowMsg{
+	msg := &testStruct{
 		Domain:     domain,
 		WorkflowID: wid,
 		RunID:      rid,
@@ -45,7 +51,7 @@ func TestGobEncoder(t *testing.T) {
 	}
 	payload, err := encoder.Encode(msg)
 	require.NoError(t, err)
-	var decoded *messaging.OpenWorkflowMsg
+	var decoded *testStruct
 	err = encoder.Decode(payload, &decoded)
 	require.NoError(t, err)
 	require.Equal(t, msg, decoded)
