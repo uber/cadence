@@ -55,36 +55,6 @@ func NewKafkaProducer(topic string, producer sarama.SyncProducer, logger bark.Lo
 	}
 }
 
-//// Publish is used to send messages to other clusters through Kafka topic
-//func (p *kafkaProducer) Publish(task *replicator.ReplicationTask) error {
-//	payload, err := p.serializeTask(task)
-//	if err != nil {
-//		return err
-//	}
-//
-//	partitionKey := p.getKey(task)
-//
-//	msg := &sarama.ProducerMessage{
-//		Topic: p.topic,
-//		Key:   partitionKey,
-//		Value: sarama.ByteEncoder(payload),
-//	}
-//
-//	partition, offset, err := p.producer.SendMessage(msg)
-//	if err != nil {
-//		p.logger.WithFields(bark.Fields{
-//			logging.TagPartition:    partition,
-//			logging.TagPartitionKey: partitionKey,
-//			logging.TagOffset:       offset,
-//			logging.TagErr:          err,
-//		}).Warn("Failed to publish message to kafka")
-//
-//		return err
-//	}
-//
-//	return nil
-//}
-
 // Publish is used to send messages to other clusters through Kafka topic
 func (p *kafkaProducer) Publish(msg interface{}) error {
 	message, err := p.getProducerMessage(msg)
@@ -106,32 +76,27 @@ func (p *kafkaProducer) Publish(msg interface{}) error {
 	return nil
 }
 
-//// PublishBatch is used to send messages to other clusters through Kafka topic
-//func (p *kafkaProducer) PublishBatch(tasks []*replicator.ReplicationTask) error {
-//	var msgs []*sarama.ProducerMessage
-//	for _, task := range tasks {
-//		payload, err := p.serializeTask(task)
-//		if err != nil {
-//			return err
-//		}
-//
-//		msgs = append(msgs, &sarama.ProducerMessage{
-//			Topic: p.topic,
-//			Value: sarama.ByteEncoder(payload),
-//		})
-//	}
-//
-//	err := p.producer.SendMessages(msgs)
-//	if err != nil {
-//		p.logger.WithFields(bark.Fields{
-//			logging.TagErr: err,
-//		}).Warn("Failed to publish batch of messages to kafka")
-//
-//		return err
-//	}
-//
-//	return nil
-//}
+// PublishBatch is used to send messages to other clusters through Kafka topic
+func (p *kafkaProducer) PublishBatch(msgs []interface{}) error {
+	var producerMsgs []*sarama.ProducerMessage
+	for _, msg := range msgs {
+		message, err := p.getProducerMessage(msg)
+		if err != nil {
+			return err
+		}
+		producerMsgs = append(producerMsgs, message)
+	}
+
+	err := p.producer.SendMessages(producerMsgs)
+	if err != nil {
+		p.logger.WithFields(bark.Fields{
+			logging.TagErr: err,
+		}).Warn("Failed to publish batch of messages to kafka")
+		return err
+	}
+
+	return nil
+}
 
 // Close is used to close Kafka publisher
 func (p *kafkaProducer) Close() error {

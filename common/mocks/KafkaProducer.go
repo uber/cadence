@@ -21,8 +21,7 @@
 package mocks
 
 import (
-	mock "github.com/stretchr/testify/mock"
-	"github.com/uber/cadence/.gen/go/replicator"
+	"github.com/stretchr/testify/mock"
 	"github.com/uber/cadence/common/messaging"
 )
 
@@ -45,20 +44,6 @@ func (_m *KafkaProducer) Close() error {
 	return r0
 }
 
-//// Publish provides a mock function with given fields: msg
-//func (_m *KafkaProducer) Publish(msg *replicator.ReplicationTask) error {
-//	ret := _m.Called(msg)
-//
-//	var r0 error
-//	if rf, ok := ret.Get(0).(func(*replicator.ReplicationTask) error); ok {
-//		r0 = rf(msg)
-//	} else {
-//		r0 = ret.Error(0)
-//	}
-//
-//	return r0
-//}
-
 // Publish provides a mock function with given fields: msg
 func (_m *KafkaProducer) Publish(msg interface{}) error {
 	ret := _m.Called(msg)
@@ -74,11 +59,11 @@ func (_m *KafkaProducer) Publish(msg interface{}) error {
 }
 
 // PublishBatch provides a mock function with given fields: msgs
-func (_m *KafkaProducer) PublishBatch(msgs []*replicator.ReplicationTask) error {
+func (_m *KafkaProducer) PublishBatch(msgs []interface{}) error {
 	ret := _m.Called(msgs)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func([]*replicator.ReplicationTask) error); ok {
+	if rf, ok := ret.Get(0).(func([]interface{}) error); ok {
 		r0 = rf(msgs)
 	} else {
 		r0 = ret.Error(0)

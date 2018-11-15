@@ -54,10 +54,9 @@ type (
 
 	// Producer is the interface used to send replication tasks to other clusters through replicator
 	Producer interface {
-		//Publish(msg *replicator.ReplicationTask) error
 		//PublishBatch(msgs []*replicator.ReplicationTask) error
-		//Publish(msg *sarama.ProducerMessage) error
-		Publish(msg interface{}) error
+		PublishBatch(msgs []interface{}) error
+		Publish(msgs interface{}) error
 		Close() error
 	}
 )
