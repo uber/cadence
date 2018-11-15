@@ -281,6 +281,10 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowWithReplicationState() {
 				LastEventID: int64(2),
 			},
 		},
+		EventStoreVersion:       p.EventStoreVersionV2,
+		BranchToken:             []byte("branchToken1"),
+		NewRunEventStoreVersion: p.EventStoreVersionV2,
+		NewRunBranchToken:       []byte("branchToken2"),
 	}}
 
 	task0, err0 := s.createWorkflowExecutionWithReplication(domainID, workflowExecution, "taskList", "wType", 20, 13, 3,
@@ -319,6 +323,10 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowWithReplicationState() {
 	s.Equal(int64(1), tsk.FirstEventID)
 	s.Equal(int64(3), tsk.NextEventID)
 	s.Equal(int64(9), tsk.Version)
+	s.Equal(int32(p.EventStoreVersionV2), tsk.EventStoreVersion)
+	s.Equal(int32(p.EventStoreVersionV2), tsk.NewRunEventStoreVersion)
+	s.Equal([]byte("branchToken1"), tsk.BranchToken)
+	s.Equal([]byte("branchToken2"), tsk.NewRunBranchToken)
 	s.Equal(2, len(tsk.LastReplicationInfo))
 	for k, v := range tsk.LastReplicationInfo {
 		log.Infof("ReplicationInfo for %v: {Version: %v, LastEventID: %v}", k, v.Version, v.LastEventID)
@@ -377,7 +385,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowWithReplicationState() {
 	updatedInfo.LastProcessedEvent = int64(2)
 	updatedInfo.CurrentResetVersion = 1
 	updatedInfo.HistoryBranches[1] = &p.HistoryBranch{
-		BranchToken:      []byte("branchToken2"),
+		BranchToken:      []byte("branchToken3"),
 		NextEventID:      updatedInfo.NextEventID,
 		HistorySize:      updatedInfo.HistorySize,
 		LastFirstEventID: updatedInfo.LastFirstEventID,
@@ -406,6 +414,10 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowWithReplicationState() {
 				LastEventID: int64(2),
 			},
 		},
+		EventStoreVersion:       p.EventStoreVersionV2,
+		BranchToken:             []byte("branchToken3"),
+		NewRunEventStoreVersion: p.EventStoreVersionV2,
+		NewRunBranchToken:       []byte("branchToken4"),
 	}}
 	err2 := s.UpdateWorklowStateAndReplication(updatedInfo, updatedReplicationState, nil, nil, int64(3), replicationTasks1)
 	s.NoError(err2)
@@ -420,6 +432,11 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowWithReplicationState() {
 	s.Equal(int64(3), tsk1.FirstEventID)
 	s.Equal(int64(5), tsk1.NextEventID)
 	s.Equal(int64(10), tsk1.Version)
+	s.Equal(int32(p.EventStoreVersionV2), tsk1.EventStoreVersion)
+	s.Equal(int32(p.EventStoreVersionV2), tsk1.NewRunEventStoreVersion)
+	s.Equal([]byte("branchToken3"), tsk1.BranchToken)
+	s.Equal([]byte("branchToken4"), tsk1.NewRunBranchToken)
+
 	s.Equal(2, len(tsk1.LastReplicationInfo))
 	for k, v := range tsk1.LastReplicationInfo {
 		log.Infof("ReplicationInfo for %v: {Version: %v, LastEventID: %v}", k, v.Version, v.LastEventID)
@@ -450,7 +467,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowWithReplicationState() {
 	s.Equal(int64(5), info1.NextEventID)
 	s.Equal(int32(1), info1.CurrentResetVersion)
 	s.Equal(info1.NextEventID, info1.HistoryBranches[1].NextEventID)
-	s.Equal([]byte("branchToken2"), info1.HistoryBranches[1].BranchToken)
+	s.Equal([]byte("branchToken3"), info1.HistoryBranches[1].BranchToken)
 	s.Equal(int64(2), info1.LastProcessedEvent)
 	s.Equal(int64(2), info1.DecisionScheduleID)
 	s.Equal(int64(10), replicationState1.CurrentVersion)
