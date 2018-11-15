@@ -38,6 +38,7 @@ type (
 		hostInfo          *membership.HostInfo
 		clusterMetadata   cluster.Metadata
 		messagingClient   messaging.Client
+		kafkaClient       messaging.Client
 		clientFactory     client.Factory
 		membershipMonitor membership.Monitor
 
@@ -119,4 +120,9 @@ func (s *serviceTestBase) GetClusterMetadata() cluster.Metadata {
 // GetMessagingClient returns the messaging client against Kafka
 func (s *serviceTestBase) GetMessagingClient() messaging.Client {
 	return s.messagingClient
+}
+
+// GetKafkaClient returns the messaging client against Kafka
+func (s *serviceTestBase) GetKafkaClient() messaging.Client {
+	return s.kafkaClient
 }

@@ -63,6 +63,7 @@ type (
 		ReplicatorConfig  config.Replicator
 		MessagingClient   messaging.Client
 		DynamicConfig     dynamicconfig.Client
+		KafkaClient       messaging.Client
 	}
 
 	// RingpopFactory provides a bootstrapped ringpop
@@ -90,6 +91,7 @@ type (
 		metricsClient          metrics.Client
 		clusterMetadata        cluster.Metadata
 		messagingClient        messaging.Client
+		kafkaClient            messaging.Client
 		dynamicCollection      *dynamicconfig.Collection
 	}
 )
@@ -107,6 +109,7 @@ func New(params *BootstrapParams) Service {
 		numberOfHistoryShards: params.PersistenceConfig.NumHistoryShards,
 		clusterMetadata:       params.ClusterMetadata,
 		messagingClient:       params.MessagingClient,
+		kafkaClient:           params.KafkaClient,
 		dynamicCollection:     dynamicconfig.NewCollection(params.DynamicConfig, params.Logger),
 	}
 	sVice.runtimeMetricsReporter = metrics.NewRuntimeMetricsReporter(params.MetricScope, time.Minute, sVice.logger)
@@ -234,9 +237,14 @@ func (h *serviceImpl) GetClusterMetadata() cluster.Metadata {
 	return h.clusterMetadata
 }
 
-// GetMessagingClient returns the messaging client against Kafka
+// GetMessagingClient returns the messaging client for xdc against Kafka
 func (h *serviceImpl) GetMessagingClient() messaging.Client {
 	return h.messagingClient
+}
+
+// GetKafkaClient returns the messaging client against Kafka
+func (h *serviceImpl) GetKafkaClient() messaging.Client {
+	return h.kafkaClient
 }
 
 func getMetricsServiceIdx(serviceName string, logger bark.Logger) metrics.ServiceIdx {

@@ -123,12 +123,20 @@ func (s *server) startService() common.Daemon {
 	)
 	// TODO: We need to switch Cadence to use zap logger, until then just pass zap.NewNop
 	if params.ClusterMetadata.IsGlobalDomainEnabled() {
-		params.MessagingClient = messaging.NewKafkaClient(&s.cfg.Kafka, zap.NewNop(), params.Logger, params.MetricScope)
+		params.MessagingClient = messaging.NewKafkaClient(&s.cfg.KafkaXDC, zap.NewNop(), params.Logger, params.MetricScope, true)
 	} else {
 		params.MessagingClient = nil
 	}
 
+	enableKafkaCommon := dc.GetBoolProperty(dynamicconfig.EnableKafkaCommon, false)
+	if enableKafkaCommon() {
+		params.KafkaClient = messaging.NewKafkaClient(&s.cfg.KafkaCommon, zap.NewNop(), params.Logger, params.MetricScope, false)
+	} else {
+		params.KafkaClient = nil
+	}
+
 	params.Logger.Info("Starting service " + s.name)
+
 	var daemon common.Daemon
 
 	switch s.name {

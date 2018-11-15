@@ -45,12 +45,26 @@ func (_m *KafkaProducer) Close() error {
 	return r0
 }
 
+//// Publish provides a mock function with given fields: msg
+//func (_m *KafkaProducer) Publish(msg *replicator.ReplicationTask) error {
+//	ret := _m.Called(msg)
+//
+//	var r0 error
+//	if rf, ok := ret.Get(0).(func(*replicator.ReplicationTask) error); ok {
+//		r0 = rf(msg)
+//	} else {
+//		r0 = ret.Error(0)
+//	}
+//
+//	return r0
+//}
+
 // Publish provides a mock function with given fields: msg
-func (_m *KafkaProducer) Publish(msg *replicator.ReplicationTask) error {
+func (_m *KafkaProducer) Publish(msg interface{}) error {
 	ret := _m.Called(msg)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*replicator.ReplicationTask) error); ok {
+	if rf, ok := ret.Get(0).(func(interface{}) error); ok {
 		r0 = rf(msg)
 	} else {
 		r0 = ret.Error(0)

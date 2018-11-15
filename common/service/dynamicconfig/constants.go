@@ -51,6 +51,7 @@ var keys = map[Key]string{
 	EnableGlobalDomain:       "system.enableGlobalDomain",
 	EnableNewKafkaClient:     "system.enableNewKafkaClient",
 	EnableVisibilitySampling: "system.enableVisibilitySampling",
+	EnableKafkaCommon:        "system.enableKafkaCommon",
 
 	// frontend settings
 	FrontendPersistenceMaxQPS:      "frontend.persistenceMaxQPS",
@@ -162,6 +163,8 @@ const (
 	EnableNewKafkaClient
 	// EnableVisibilitySampling is key for enable visibility sampling
 	EnableVisibilitySampling
+	// EnableKafkaCommon is key for enable kafka
+	EnableKafkaCommon
 
 	// key for frontend
 

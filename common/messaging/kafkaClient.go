@@ -43,8 +43,8 @@ type (
 var _ Client = (*kafkaClient)(nil)
 
 // NewKafkaClient is used to create an instance of KafkaClient
-func NewKafkaClient(kc *KafkaConfig, zLogger *zap.Logger, logger bark.Logger, metricScope tally.Scope) Client {
-	kc.Validate()
+func NewKafkaClient(kc *KafkaConfig, zLogger *zap.Logger, logger bark.Logger, metricScope tally.Scope, hasClusters bool) Client {
+	kc.Validate(hasClusters)
 
 	// mapping from cluster name to list of broker ip addresses
 	brokers := map[string][]string{}
@@ -104,8 +104,21 @@ func (c *kafkaClient) NewConsumer(currentCluster, sourceCluster, consumerName st
 	return newKafkaConsumer(uConsumer, c.logger), nil
 }
 
-// NewProducer is used to create a Kafka producer for shipping replication tasks
-func (c *kafkaClient) NewProducer(sourceCluster string) (Producer, error) {
+// NewProducer is used to create a Kafka producer
+func (c *kafkaClient) NewProducer(topic string) (Producer, error) {
+	kafkaClusterName := c.config.getKafkaClusterForTopic(topic)
+	brokers := c.config.getBrokersForKafkaCluster(kafkaClusterName)
+
+	producer, err := sarama.NewSyncProducer(brokers, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewKafkaProducer(topic, producer, c.logger), nil
+}
+
+// NewProducerWithClusterName is used to create a Kafka producer for shipping replication tasks
+func (c *kafkaClient) NewProducerWithClusterName(sourceCluster string) (Producer, error) {
 	topics := c.config.getTopicsForCadenceCluster(sourceCluster)
 	kafkaClusterName := c.config.getKafkaClusterForTopic(topics.Topic)
 	brokers := c.config.getBrokersForKafkaCluster(kafkaClusterName)

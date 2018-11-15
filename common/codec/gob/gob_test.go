@@ -18,48 +18,51 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package service
+package gob
 
 import (
-	"github.com/uber-common/bark"
-	"github.com/uber/cadence/client"
-	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/membership"
+	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/require"
 	"github.com/uber/cadence/common/messaging"
-	"github.com/uber/cadence/common/metrics"
-	"go.uber.org/yarpc"
+	"testing"
+	"time"
 )
 
-type (
-	// Service is the interface which must be implemented by all the services
-	Service interface {
-		// GetHostName returns the name of host running the service
-		GetHostName() string
+func TestGobEncoder(t *testing.T) {
+	encoder := NewGobEncoder()
 
-		// Start the service
-		Start()
+	domain := "test-domain"
+	wid := uuid.New()
+	rid := uuid.New()
+	startTime := time.Now().UnixNano()
 
-		// Stop stops the service
-		Stop()
-
-		GetLogger() bark.Logger
-
-		GetMetricsClient() metrics.Client
-
-		GetClientFactory() client.Factory
-
-		GetDispatcher() *yarpc.Dispatcher
-
-		GetMembershipMonitor() membership.Monitor
-
-		GetHostInfo() *membership.HostInfo
-
-		// GetClusterMetadata returns the service cluster metadata
-		GetClusterMetadata() cluster.Metadata
-
-		// GetMessagingClient returns the messaging client against Kafka
-		GetMessagingClient() messaging.Client
-
-		GetKafkaClient() messaging.Client
+	// test encode and decode 1 object
+	msg := &messaging.OpenWorkflowMsg{
+		Domain:     domain,
+		WorkflowID: wid,
+		RunID:      rid,
+		StartTime:  startTime,
 	}
-)
+	payload, err := encoder.Encode(msg)
+	require.NoError(t, err)
+	var decoded *messaging.OpenWorkflowMsg
+	err = encoder.Decode(payload, &decoded)
+	require.NoError(t, err)
+	require.Equal(t, msg, decoded)
+
+	// test encode and decode 2 objects
+	msg2 := "test-string"
+	payload, err = encoder.Encode(msg2, msg)
+	require.NoError(t, err)
+	var decoded2 string
+	err = encoder.Decode(payload, &decoded2, &decoded)
+	require.NoError(t, err)
+	require.Equal(t, msg, decoded)
+	require.Equal(t, msg2, decoded2)
+
+	// test encode and decode 0 object
+	_, err = encoder.Encode()
+	require.Error(t, err)
+	err = encoder.Decode(payload)
+	require.Error(t, err)
+}

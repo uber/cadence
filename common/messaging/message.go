@@ -18,48 +18,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package service
+package messaging
 
-import (
-	"github.com/uber-common/bark"
-	"github.com/uber/cadence/client"
-	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/membership"
-	"github.com/uber/cadence/common/messaging"
-	"github.com/uber/cadence/common/metrics"
-	"go.uber.org/yarpc"
-)
-
-type (
-	// Service is the interface which must be implemented by all the services
-	Service interface {
-		// GetHostName returns the name of host running the service
-		GetHostName() string
-
-		// Start the service
-		Start()
-
-		// Stop stops the service
-		Stop()
-
-		GetLogger() bark.Logger
-
-		GetMetricsClient() metrics.Client
-
-		GetClientFactory() client.Factory
-
-		GetDispatcher() *yarpc.Dispatcher
-
-		GetMembershipMonitor() membership.Monitor
-
-		GetHostInfo() *membership.HostInfo
-
-		// GetClusterMetadata returns the service cluster metadata
-		GetClusterMetadata() cluster.Metadata
-
-		// GetMessagingClient returns the messaging client against Kafka
-		GetMessagingClient() messaging.Client
-
-		GetKafkaClient() messaging.Client
-	}
-)
+// OpenWorkflowMsg is visibility data for open workflow
+type OpenWorkflowMsg struct {
+	Domain     string
+	WorkflowID string
+	RunID      string
+	StartTime  int64
+}
