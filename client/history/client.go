@@ -35,11 +35,6 @@ import (
 
 var _ Client = (*clientImpl)(nil)
 
-const (
-	// DefaultTimeout is the default timeout used to make calls
-	DefaultTimeout = time.Second * 30
-)
-
 type clientImpl struct {
 	resolver        membership.ServiceResolver
 	tokenSerializer common.TaskTokenSerializer
@@ -48,11 +43,10 @@ type clientImpl struct {
 	thriftCacheLock sync.RWMutex
 	thriftCache     map[string]historyserviceclient.Interface
 	rpcFactory      common.RPCFactory
-	timeout         time.Duration
 }
 
 // NewClient creates a new history service TChannel client
-func NewClient(d common.RPCFactory, monitor membership.Monitor, numberOfShards int, timeout time.Duration) (Client, error) {
+func NewClient(d common.RPCFactory, monitor membership.Monitor, numberOfShards int) (Client, error) {
 	sResolver, err := monitor.GetResolver(common.HistoryServiceName)
 	if err != nil {
 		return nil, err
@@ -64,7 +58,6 @@ func NewClient(d common.RPCFactory, monitor membership.Monitor, numberOfShards i
 		tokenSerializer: common.NewJSONTaskTokenSerializer(),
 		numberOfShards:  numberOfShards,
 		thriftCache:     make(map[string]historyserviceclient.Interface),
-		timeout:         timeout,
 	}
 	return client, nil
 }
@@ -621,10 +614,12 @@ func (c *clientImpl) getHostForRequest(workflowID string) (historyserviceclient.
 }
 
 func (c *clientImpl) createContext(parent context.Context) (context.Context, context.CancelFunc) {
+	// TODO: make timeout configurable
+	timeout := time.Second * 30
 	if parent == nil {
-		return context.WithTimeout(context.Background(), c.timeout)
+		return context.WithTimeout(context.Background(), timeout)
 	}
-	return context.WithTimeout(parent, c.timeout)
+	return context.WithTimeout(parent, timeout)
 }
 
 func (c *clientImpl) getThriftClient(hostPort string) historyserviceclient.Interface {
