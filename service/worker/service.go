@@ -160,13 +160,6 @@ func (s *Service) startSysWorker(base service.Service, log bark.Logger) {
 		sysWorker.Stop()
 		log.Fatalf("failed to start sysworker: %v", err)
 	}
-	//<-time.After(time.Second * 5)
-	//ini := sysworkflow.NewInitiator(frontendClient, 10)
-	//
-	//ini.Archive(&sysworkflow.ArchiveRequest{
-	//	UserRunID:      "foo",
-	//	UserWorkflowID: "bar",
-	//})
 }
 
 func (s *Service) waitForFrontendStart(frontendClient frontend.Client, log bark.Logger) {
@@ -179,7 +172,7 @@ func (s *Service) waitForFrontendStart(frontendClient frontend.Client, log bark.
 		if _, err := frontendClient.DescribeDomain(context.Background(), request); err == nil {
 			return
 		}
-		<-time.After(time.Second)
+		<-time.After(PollingDelay)
 	}
 	log.Fatal("failed to connect to frontend client")
 }

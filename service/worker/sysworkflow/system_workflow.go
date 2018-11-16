@@ -33,7 +33,7 @@ import (
 func SystemWorkflow(ctx workflow.Context) error {
 	logger := workflow.GetLogger(ctx)
 	ch := workflow.GetSignalChannel(ctx, SignalName)
-OuterLoop:
+
 	for {
 		var signal Signal
 		if more := ch.Receive(ctx, &signal); !more {
@@ -57,7 +57,6 @@ OuterLoop:
 			workflow.ExecuteActivity(ctx, ArchivalActivity, signal)
 		default:
 			logger.Error("received unknown request type")
-			continue OuterLoop
 		}
 	}
 	return nil
@@ -66,6 +65,8 @@ OuterLoop:
 // ArchivalActivity is the archival activity code
 func ArchivalActivity(ctx context.Context, signal Signal) error {
 	logger := activity.GetLogger(ctx)
-	logger.Info("doing archival", zap.String("user-workflow-id", signal.ArchiveRequest.UserWorkflowID))
+	logger.Info("doing archival",
+		zap.String("user-workflow-id", signal.ArchiveRequest.UserWorkflowID),
+		zap.String("user-run-id", signal.ArchiveRequest.UserRunID))
 	return nil
 }

@@ -22,37 +22,45 @@ package sysworkflow
 
 import (
 	"context"
-	"fmt"
 	"github.com/uber/cadence/client/frontend"
 	"go.uber.org/cadence/client"
 	"time"
 )
 
 type (
+
+	// Initiator is used to trigger system tasks
 	Initiator interface {
 		Archive(request *ArchiveRequest) error
-		// Add any other system tasks you want here...
 	}
+
 	initiator struct {
 		cadenceClient  client.Client
 		sysWorkflowIDs []string
 	}
+
+	// Signal is the data sent to system tasks
 	Signal struct {
 		RequestType    RequestType
 		ArchiveRequest *ArchiveRequest
 	}
+
+	// ArchiveRequest signal used for archival task
 	ArchiveRequest struct {
 		UserWorkflowID string
 		UserRunID      string
 	}
 )
 
+// NewInitiator creates a new Initiator
 func NewInitiator(frontendClient frontend.Client, numSysWorkflows int) Initiator {
 	return &initiator{
 		cadenceClient:  client.NewClient(frontendClient, Domain, &client.Options{}),
 		sysWorkflowIDs: RandomSlice(numSysWorkflows),
 	}
 }
+
+// Archive starts an archival task
 func (i *initiator) Archive(request *ArchiveRequest) error {
 	workflowID := PickRandom(i.sysWorkflowIDs)
 	workflowOptions := client.StartWorkflowOptions{
@@ -67,7 +75,6 @@ func (i *initiator) Archive(request *ArchiveRequest) error {
 		RequestType:    ArchivalRequest,
 		ArchiveRequest: request,
 	}
-	fmt.Println("sending signal")
 	_, err := i.cadenceClient.SignalWithStartWorkflow(
 		context.Background(),
 		workflowID,
