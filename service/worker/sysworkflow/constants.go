@@ -20,6 +20,7 @@
 
 package sysworkflow
 
+// RequestType is the type for signals that can be sent to system workflows
 type RequestType int
 
 const (
