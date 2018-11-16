@@ -97,8 +97,12 @@ header.top-bar
     align-items: stretch
     padding: 10px 40px
     margin: 0 auto
-  svg
+  svg.cadence-logo
     height: 50px
+  svg.slack
+    fill: white
+    height: 50px
+    width: 50px
   nav
     display: flex
     align-items: stretch
@@ -109,6 +113,8 @@ header.top-bar
       color: white
       &:hover, &:focus
         color: $primary-color
+      &.join-slack
+        padding: 0
 
   .doc-search
     position: relative
