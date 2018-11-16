@@ -44,13 +44,13 @@ import (
 	"github.com/uber/cadence/service/history"
 	"github.com/uber/cadence/service/matching"
 	"github.com/uber/cadence/service/worker"
+	"github.com/uber/cadence/service/worker/replicator"
 	ringpop "github.com/uber/ringpop-go"
 	"github.com/uber/ringpop-go/discovery/statichosts"
 	"github.com/uber/ringpop-go/swim"
 	tcg "github.com/uber/tchannel-go"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/tchannel"
-	"github.com/uber/cadence/service/worker/replicator"
 )
 
 const rpAppNamePrefix string = "cadence"
