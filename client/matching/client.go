@@ -37,7 +37,7 @@ var _ Client = (*clientImpl)(nil)
 
 const (
 	// DefaultTimeout is the default timeout used to make calls
-	DefaultTimeout         = time.Minute
+	DefaultTimeout = time.Minute
 	// DefaultLongPollTimeout is the long poll default timeout used to make calls
 	DefaultLongPollTimeout = time.Minute * 2
 )
