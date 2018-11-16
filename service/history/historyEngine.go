@@ -3042,14 +3042,6 @@ func getWorkflowAlreadyStartedError(errMsg string, createRequestID string, workf
 	}
 }
 
-// change default policy to "AllowDuplicate" for signalWithStart if not set in request.
-func getWorkflowIDReusePolicyForSigStart(policy *workflow.WorkflowIdReusePolicy) workflow.WorkflowIdReusePolicy {
-	if policy == nil {
-		return workflow.WorkflowIdReusePolicyAllowDuplicate
-	}
-	return *policy
-}
-
 func getVisibilityProducer(messagingClient messaging.Client) messaging.Producer {
 	if messagingClient == nil {
 		return nil
