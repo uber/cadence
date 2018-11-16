@@ -24,14 +24,14 @@ type RequestType int
 
 const (
 	// Domain is the cadence system workflows domain
-	Domain           = "cadence-system"
+	Domain = "cadence-system"
 
 	// DecisionTaskList is the task list that all system workflows share
 	DecisionTaskList = "cadsys-decision-tl"
 
 	// SignalName is the name of the cadence signal that system tasks are sent on
-	SignalName       = "cadsys-signal-sig"
+	SignalName = "cadsys-signal-sig"
 
 	// ArchivalRequest is the archive signal identifier
-	ArchivalRequest  = iota
+	ArchivalRequest = iota
 )
