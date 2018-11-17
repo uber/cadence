@@ -303,6 +303,8 @@ func AdminRereplicate(c *cli.Context) {
 		if err != nil {
 			fmt.Printf("cannot publish task %v to topic \n", idx)
 			ErrorAndExit("", err)
+		} else {
+			fmt.Printf("replication task sent: %v firstID %v, nextID %v \n", idx, t.HistoryTaskAttributes.GetFirstEventId(), t.HistoryTaskAttributes.GetNextEventId())
 		}
 	}
 
