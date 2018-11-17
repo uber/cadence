@@ -121,8 +121,3 @@ func (s *serviceTestBase) GetClusterMetadata() cluster.Metadata {
 func (s *serviceTestBase) GetMessagingClient() messaging.Client {
 	return s.messagingClient
 }
-
-// GetKafkaClient returns the messaging client against Kafka
-func (s *serviceTestBase) GetKafkaClient() messaging.Client {
-	return s.kafkaClient
-}

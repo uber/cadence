@@ -54,7 +54,7 @@ type (
 const VisibilityTopicName = "visibility-topic"
 
 // Validate will validate config for kafka
-func (k *KafkaConfig) Validate(hasClusters bool) {
+func (k *KafkaConfig) Validate(checkCluster bool) {
 	if len(k.Clusters) == 0 {
 		panic("Empty Kafka Cluster Config")
 	}
@@ -74,7 +74,7 @@ func (k *KafkaConfig) Validate(hasClusters bool) {
 		}
 	}
 
-	if hasClusters {
+	if checkCluster {
 		if len(k.ClusterToTopic) == 0 {
 			panic("Empty Cluster To Topics Config")
 		}

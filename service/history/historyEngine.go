@@ -154,7 +154,10 @@ func NewEngineWithShardContext(shard ShardContext, visibilityMgr persistence.Vis
 		historyEventNotifier: historyEventNotifier,
 		config:               config,
 	}
-	visibilityProducer := getVisibilityProducer(messagingClient)
+	var visibilityProducer messaging.Producer
+	if config.EnableVisibilityToKafka() {
+		visibilityProducer = getVisibilityProducer(messagingClient)
+	}
 	txProcessor := newTransferQueueProcessor(shard, historyEngImpl, visibilityMgr, visibilityProducer, matching, historyClient, logger)
 	historyEngImpl.timerProcessor = newTimerQueueProcessor(shard, historyEngImpl, matching, logger)
 	historyEngImpl.txProcessor = txProcessor

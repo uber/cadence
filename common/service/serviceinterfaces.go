@@ -59,7 +59,5 @@ type (
 
 		// GetMessagingClient returns the messaging client against Kafka
 		GetMessagingClient() messaging.Client
-
-		GetKafkaClient() messaging.Client
 	}
 )

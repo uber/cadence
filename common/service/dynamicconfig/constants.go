@@ -51,7 +51,7 @@ var keys = map[Key]string{
 	EnableGlobalDomain:       "system.enableGlobalDomain",
 	EnableNewKafkaClient:     "system.enableNewKafkaClient",
 	EnableVisibilitySampling: "system.enableVisibilitySampling",
-	EnableKafkaCommon:        "system.enableKafkaCommon",
+	EnableVisibilityToKafka:  "system.enableVisibilityToKafka",
 
 	// frontend settings
 	FrontendPersistenceMaxQPS:      "frontend.persistenceMaxQPS",
@@ -163,8 +163,8 @@ const (
 	EnableNewKafkaClient
 	// EnableVisibilitySampling is key for enable visibility sampling
 	EnableVisibilitySampling
-	// EnableKafkaCommon is key for enable kafka
-	EnableKafkaCommon
+	// EnableVisibilityToKafka is key for enable kafka
+	EnableVisibilityToKafka
 
 	// key for frontend
 
@@ -398,3 +398,6 @@ func TaskTypeFilter(taskType int) FilterOption {
 		filterMap[TaskType] = taskType
 	}
 }
+
+// DefaultEnableVisibilityToKafka default value for config EnableVisibilityToKafka
+const DefaultEnableVisibilityToKafka = false

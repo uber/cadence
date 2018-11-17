@@ -43,8 +43,8 @@ type (
 var _ Client = (*kafkaClient)(nil)
 
 // NewKafkaClient is used to create an instance of KafkaClient
-func NewKafkaClient(kc *KafkaConfig, zLogger *zap.Logger, logger bark.Logger, metricScope tally.Scope, hasClusters bool) Client {
-	kc.Validate(hasClusters)
+func NewKafkaClient(kc *KafkaConfig, zLogger *zap.Logger, logger bark.Logger, metricScope tally.Scope, checkCluster bool) Client {
+	kc.Validate(checkCluster)
 
 	// mapping from cluster name to list of broker ip addresses
 	brokers := map[string][]string{}
