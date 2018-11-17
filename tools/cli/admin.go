@@ -129,7 +129,7 @@ func newAdminKafkaCommands() []cli.Command {
 					Name: FlagHostFile,
 					Usage: "Kafka host config file in format of: " + `
 clusters:
-	kloak-dca-xdc:
+	localKafka:
 		brokers:
 		- 127.0.0.1
 		- 127.0.0.2`,
