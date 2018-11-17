@@ -179,7 +179,7 @@ Loop:
 				if err != nil {
 					fmt.Printf("failed to encode into json, err: %v", err)
 				}
-				output.WriteString(fmt.Sprintf("%v\n", jsonStr))
+				output.WriteString(fmt.Sprintf("%v\n", string(jsonStr)))
 			}
 		}
 	}
