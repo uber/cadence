@@ -127,7 +127,7 @@ func newAdminKafkaCommands() []cli.Command {
 				},
 				cli.StringFlag{
 					Name: FlagHostFile,
-					Usage: "Kafka host config file in format of: +`" + `
+					Usage: "Kafka host config file in format of: " + `
 clusters:
 	kloak-dca-xdc:
 		brokers:
