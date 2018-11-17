@@ -23,15 +23,15 @@ package cli
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"regexp"
+	"strings"
 
-	"code.uber.internal/devexp/cadence-iot-demo/.tmp/.go/goroot/src/encoding/json"
-	"code.uber.internal/devexp/cadence-iot-demo/.tmp/.go/goroot/src/strings"
 	"github.com/Shopify/sarama"
 	"github.com/sirupsen/logrus"
 	"github.com/uber-common/bark"
