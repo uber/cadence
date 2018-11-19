@@ -22,11 +22,21 @@ package worker
 
 import (
 	"github.com/uber-common/bark"
+	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/metrics"
 	persistencefactory "github.com/uber/cadence/common/persistence/persistence-factory"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"go.uber.org/cadence/worker"
+)
+
+const (
+	// SystemWorkflowDomain is the domain for cadence system workflows
+	SystemWorkflowDomain = "cadence-system"
+
+	// SystemTaskList is the task list worker polls on
+	SystemTaskList = "system-task-list"
 )
 
 type (
@@ -44,9 +54,9 @@ type (
 	Config struct {
 		// Replicator settings
 		PersistenceMaxQPS          dynamicconfig.IntPropertyFn
-		ReplicatorConcurrency      int
+		ReplicatorConcurrency      dynamicconfig.IntPropertyFn
 		ReplicatorBufferRetryCount int
-		ReplicationTaskMaxRetry    int
+		ReplicationTaskMaxRetry    dynamicconfig.IntPropertyFn
 	}
 )
 
@@ -64,9 +74,9 @@ func NewService(params *service.BootstrapParams) common.Daemon {
 func NewConfig(dc *dynamicconfig.Collection) *Config {
 	return &Config{
 		PersistenceMaxQPS:          dc.GetIntProperty(dynamicconfig.WorkerPersistenceMaxQPS, 500),
-		ReplicatorConcurrency:      1000,
+		ReplicatorConcurrency:      dc.GetIntProperty(dynamicconfig.WorkerReplicatorConcurrency, 1000),
 		ReplicatorBufferRetryCount: 8,
-		ReplicationTaskMaxRetry:    50,
+		ReplicationTaskMaxRetry:    dc.GetIntProperty(dynamicconfig.WorkerReplicationTaskMaxRetry, 50),
 	}
 }
 
@@ -85,8 +95,17 @@ func (s *Service) Start() {
 		s.startReplicator(params, base, log)
 	}
 
+	frontendClient := s.getFrontendClient(base, log)
+	w := worker.New(frontendClient, SystemWorkflowDomain, SystemTaskList, worker.Options{})
+	if err := w.Start(); err != nil {
+		w.Stop()
+		log.Fatalf("failed to start worker: %v", err)
+	}
+
 	log.Infof("%v started", common.WorkerServiceName)
+
 	<-s.stopC
+	w.Stop()
 	base.Stop()
 }
 
@@ -97,6 +116,15 @@ func (s *Service) Stop() {
 	default:
 	}
 	s.params.Logger.Infof("%v stopped", common.WorkerServiceName)
+}
+
+func (s *Service) getFrontendClient(base service.Service, log bark.Logger) frontend.Client {
+	client, err := base.GetClientFactory().NewFrontendClient()
+	if err != nil {
+		log.Fatalf("failed to create frontend client: %v", err)
+	}
+	return frontend.NewRetryableClient(client, common.CreateFrontendServiceRetryPolicy(),
+		common.IsWhitelistServiceTransientError)
 }
 
 func (s *Service) startReplicator(params *service.BootstrapParams, base service.Service, log bark.Logger) {

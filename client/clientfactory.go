@@ -21,17 +21,24 @@
 package client
 
 import (
+	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
+	"time"
 )
 
 // Factory can be used to create RPC clients for cadence services
 type Factory interface {
 	NewHistoryClient() (history.Client, error)
 	NewMatchingClient() (matching.Client, error)
+	NewFrontendClient() (frontend.Client, error)
+
+	NewHistoryClientWithTimeout(timeout time.Duration) (history.Client, error)
+	NewMatchingClientWithTimeout(timeout time.Duration, longPollTimeout time.Duration) (matching.Client, error)
+	NewFrontendClientWithTimeout(timeout time.Duration, longPollTimeout time.Duration) (frontend.Client, error)
 }
 
 type rpcClientFactory struct {
@@ -53,7 +60,19 @@ func NewRPCClientFactory(df common.RPCFactory,
 }
 
 func (cf *rpcClientFactory) NewHistoryClient() (history.Client, error) {
-	client, err := history.NewClient(cf.df, cf.monitor, cf.numberOfHistoryShards)
+	return cf.NewHistoryClientWithTimeout(history.DefaultTimeout)
+}
+
+func (cf *rpcClientFactory) NewMatchingClient() (matching.Client, error) {
+	return cf.NewMatchingClientWithTimeout(matching.DefaultTimeout, matching.DefaultLongPollTimeout)
+}
+
+func (cf *rpcClientFactory) NewFrontendClient() (frontend.Client, error) {
+	return cf.NewFrontendClientWithTimeout(frontend.DefaultTimeout, frontend.DefaultLongPollTimeout)
+}
+
+func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (history.Client, error) {
+	client, err := history.NewClient(cf.df, cf.monitor, cf.numberOfHistoryShards, timeout)
 	if err != nil {
 		return nil, err
 	}
@@ -63,13 +82,31 @@ func (cf *rpcClientFactory) NewHistoryClient() (history.Client, error) {
 	return client, nil
 }
 
-func (cf *rpcClientFactory) NewMatchingClient() (matching.Client, error) {
-	client, err := matching.NewClient(cf.df, cf.monitor)
+func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
+	timeout time.Duration,
+	longPollTimeout time.Duration,
+) (matching.Client, error) {
+
+	client, err := matching.NewClient(cf.df, cf.monitor, timeout, longPollTimeout)
 	if err != nil {
 		return nil, err
 	}
 	if cf.metricsClient != nil {
 		client = matching.NewMetricClient(client, cf.metricsClient)
+	}
+	return client, nil
+}
+
+func (cf *rpcClientFactory) NewFrontendClientWithTimeout(
+	timeout time.Duration,
+	longPollTimeout time.Duration,
+) (frontend.Client, error) {
+	client, err := frontend.NewClient(cf.df, cf.monitor, timeout, longPollTimeout)
+	if err != nil {
+		return nil, err
+	}
+	if cf.metricsClient != nil {
+		client = frontend.NewMetricClient(client, cf.metricsClient)
 	}
 	return client, nil
 }

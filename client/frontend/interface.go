@@ -18,39 +18,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package history
+package frontend
 
 import (
-	"github.com/stretchr/testify/mock"
-	"github.com/uber/cadence/common/persistence"
+	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 )
 
-// mockConflictResolver is used as mock implementation for conflictResolver
-type mockConflictResolver struct {
-	mock.Mock
-}
-
-var _ conflictResolver = (*mockConflictResolver)(nil)
-
-// reset is mock implementation for reset of conflictResolver
-func (_m *mockConflictResolver) reset(prevRunID string, requestID string, replayEventID int64, info *persistence.WorkflowExecutionInfo) (mutableState, error) {
-	ret := _m.Called(prevRunID, requestID, replayEventID, info)
-
-	var r0 mutableState
-	if rf, ok := ret.Get(0).(func(string, string, int64, *persistence.WorkflowExecutionInfo) mutableState); ok {
-		r0 = rf(prevRunID, requestID, replayEventID, info)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(mutableState)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func() error); ok {
-		r1 = rf()
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
+// Client is the interface exposed by frontend service client
+type Client interface {
+	workflowserviceclient.Interface
 }
