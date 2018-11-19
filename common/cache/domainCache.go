@@ -29,15 +29,13 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
-
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-
-	"github.com/uber-common/bark"
 )
 
 const (
@@ -58,11 +56,13 @@ const (
 )
 
 type (
-	// CallbackFn is function to be called when the domain cache is changed
-	// the callback function will be called within the domain cache entry lock
-	// make sure the callback function will not call domain cache again
-	// in case of deadlock
-	CallbackFn func(prevDomain *DomainCacheEntry, nextDomain *DomainCacheEntry)
+	// PrepareCallbackFn is function to be called before CallbackFn is called,
+	// it is guaranteed that PrepareCallbackFn and CallbackFn pair will be both called or non will be called
+	PrepareCallbackFn func()
+
+	// CallbackFn is function to be called when the domain cache entries are changed
+	// it is guaranteed that PrepareCallbackFn and CallbackFn pair will be both called or non will be called
+	CallbackFn func(prevDomains []*DomainCacheEntry, nextDomains []*DomainCacheEntry)
 
 	// DomainCache is used the cache domain information and configuration to avoid making too many calls to cassandra.
 	// This cache is mainly used by frontend for resolving domain names to domain uuids which are used throughout the
@@ -71,12 +71,11 @@ type (
 	// requests using the stale entry from cache upto an hour
 	DomainCache interface {
 		common.Daemon
-		RegisterDomainChangeCallback(shard int, initialNotificationVersion int64, beforeCallback CallbackFn, afterCallback CallbackFn)
+		RegisterDomainChangeCallback(shard int, initialNotificationVersion int64, prepareCallback PrepareCallbackFn, callback CallbackFn)
 		UnregisterDomainChangeCallback(shard int)
 		GetDomain(name string) (*DomainCacheEntry, error)
 		GetDomainByID(id string) (*DomainCacheEntry, error)
 		GetDomainID(name string) (string, error)
-		GetDomainNotificationVersion() int64
 		GetAllDomain() map[string]*DomainCacheEntry
 		GetCacheSize() (sizeOfCacheByName int64, sizeOfCacheByID int64)
 	}
@@ -93,9 +92,8 @@ type (
 		logger          bark.Logger
 
 		sync.RWMutex
-		domainNotificationVersion int64
-		beforeCallbacks           map[int]CallbackFn
-		afterCallbacks            map[int]CallbackFn
+		prepareCallbacks map[int]PrepareCallbackFn
+		callbacks        map[int]CallbackFn
 	}
 
 	// DomainCacheEntries is DomainCacheEntry slice
@@ -124,17 +122,17 @@ func NewDomainCache(metadataMgr persistence.MetadataManager, clusterMetadata clu
 	opts.TTL = domainCacheTTL
 
 	return &domainCache{
-		status:          domainCacheInitialized,
-		shutdownChan:    make(chan struct{}),
-		cacheNameToID:   New(domainCacheMaxSize, opts),
-		cacheByID:       New(domainCacheMaxSize, opts),
-		metadataMgr:     metadataMgr,
-		clusterMetadata: clusterMetadata,
-		timeSource:      common.NewRealTimeSource(),
-		metricsClient:   metricsClient,
-		logger:          logger,
-		beforeCallbacks: make(map[int]CallbackFn),
-		afterCallbacks:  make(map[int]CallbackFn),
+		status:           domainCacheInitialized,
+		shutdownChan:     make(chan struct{}),
+		cacheNameToID:    New(domainCacheMaxSize, opts),
+		cacheByID:        New(domainCacheMaxSize, opts),
+		metadataMgr:      metadataMgr,
+		clusterMetadata:  clusterMetadata,
+		timeSource:       common.NewRealTimeSource(),
+		metricsClient:    metricsClient,
+		logger:           logger,
+		prepareCallbacks: make(map[int]PrepareCallbackFn),
+		callbacks:        make(map[int]CallbackFn),
 	}
 }
 
@@ -172,12 +170,6 @@ func (c *domainCache) Stop() {
 	close(c.shutdownChan)
 }
 
-func (c *domainCache) GetDomainNotificationVersion() int64 {
-	c.RLock()
-	defer c.RUnlock()
-	return c.domainNotificationVersion
-}
-
 func (c *domainCache) GetAllDomain() map[string]*DomainCacheEntry {
 	result := make(map[string]*DomainCacheEntry)
 	ite := c.cacheByID.Iterator()
@@ -199,29 +191,34 @@ func (c *domainCache) GetAllDomain() map[string]*DomainCacheEntry {
 // WARN: the beforeCallback function will be triggered by domain cache when holding the domain cache lock,
 // make sure the callback function will not call domain cache again in case of dead lock
 // afterCallback will be invoked when NOT holding the domain cache lock.
-func (c *domainCache) RegisterDomainChangeCallback(shard int, initialNotificationVersion int64, beforeCallback CallbackFn, afterCallback CallbackFn) {
+func (c *domainCache) RegisterDomainChangeCallback(shard int, initialNotificationVersion int64,
+	prepareCallback PrepareCallbackFn, callback CallbackFn) {
 	c.Lock()
-	c.beforeCallbacks[shard] = beforeCallback
-	c.afterCallbacks[shard] = afterCallback
-	domainNotificationVersion := c.domainNotificationVersion
+	c.prepareCallbacks[shard] = prepareCallback
+	c.callbacks[shard] = callback
 	c.Unlock()
 
 	// this section is trying to make the shard catch up with domain changes
-	if domainNotificationVersion > initialNotificationVersion {
-		domains := DomainCacheEntries{}
-		for _, domain := range c.GetAllDomain() {
-			domains = append(domains, domain)
+	domains := DomainCacheEntries{}
+	for _, domain := range c.GetAllDomain() {
+		domains = append(domains, domain)
+	}
+	// we mush notify the change in a ordered fashion
+	// since history shard have to update the shard info
+	// with domain change version.
+	sort.Sort(domains)
+
+	prevEntries := []*DomainCacheEntry{}
+	nextEntries := []*DomainCacheEntry{}
+	for _, domain := range domains {
+		if domain.notificationVersion >= initialNotificationVersion {
+			prevEntries = append(prevEntries, nil)
+			nextEntries = append(nextEntries, domain)
 		}
-		// we mush notify the change in a ordered fashion
-		// since history shard have to update the shard info
-		// with domain change version.
-		sort.Sort(domains)
-		for _, domain := range domains {
-			if domain.notificationVersion >= initialNotificationVersion {
-				beforeCallback(nil, domain)
-				afterCallback(nil, domain)
-			}
-		}
+	}
+	if len(prevEntries) > 0 {
+		prepareCallback()
+		callback(prevEntries, nextEntries)
 	}
 }
 
@@ -230,8 +227,7 @@ func (c *domainCache) UnregisterDomainChangeCallback(shard int) {
 	c.Lock()
 	defer c.Unlock()
 
-	delete(c.beforeCallbacks, shard)
-	delete(c.afterCallbacks, shard)
+	delete(c.callbacks, shard)
 }
 
 // GetDomain retrieves the information from the cache if it exists, otherwise retrieves the information from metadata
@@ -288,9 +284,6 @@ func (c *domainCache) refreshDomains() error {
 		return err
 	}
 	domainNotificationVersion := metadata.NotificationVersion
-	c.Lock()
-	c.domainNotificationVersion = domainNotificationVersion
-	c.Unlock()
 
 	var token []byte
 	request := &persistence.ListDomainsRequest{PageSize: domainCacheRefreshPageSize}
@@ -314,11 +307,13 @@ func (c *domainCache) refreshDomains() error {
 	// since history shard have to update the shard info
 	// with domain change version.
 	sort.Sort(domains)
-	c.RLock()
-	domainNotificationVersion = c.domainNotificationVersion
-	c.RUnlock()
 
-	sw := c.metricsClient.StartTimer(metrics.DomainCacheScope, metrics.DomainCacheTotalCallbacksLatency)
+	prevEntries := []*DomainCacheEntry{}
+	nextEntries := []*DomainCacheEntry{}
+
+	c.RLock()
+	defer c.RUnlock()
+	c.triggerDomainChangePrepareCallback()
 UpdateLoop:
 	for _, domain := range domains {
 		if domain.notificationVersion >= domainNotificationVersion {
@@ -329,10 +324,18 @@ UpdateLoop:
 			// will be loaded into cache in the next refresh
 			break UpdateLoop
 		}
-		c.updateIDToDomainCache(domain.info.ID, domain)
-		c.updateNameToIDCache(domain.info.Name, domain.info.ID)
+		prevEntry, nextEntry, err := c.updateIDToDomainCache(domain.info.ID, domain)
+		if err != nil {
+			return nil
+		}
+		c.updateNameToIDCache(nextEntry.info.Name, nextEntry.info.ID)
+		if prevEntry != nil {
+			prevEntries = append(prevEntries, prevEntry)
+			nextEntries = append(nextEntries, nextEntry)
+		}
 	}
-	sw.Stop()
+	c.triggerDomainChangeCallback(prevEntries, nextEntries)
+
 	return nil
 }
 
@@ -363,14 +366,16 @@ func (c *domainCache) updateNameToIDCache(name string, id string) {
 	c.cacheNameToID.Put(name, id)
 }
 
-func (c *domainCache) updateIDToDomainCache(id string, record *DomainCacheEntry) (*DomainCacheEntry, error) {
+func (c *domainCache) updateIDToDomainCache(id string, record *DomainCacheEntry) (*DomainCacheEntry, *DomainCacheEntry, error) {
 	elem, err := c.cacheByID.PutIfNotExist(id, newDomainCacheEntry(c.clusterMetadata))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	entry := elem.(*DomainCacheEntry)
 
 	entry.Lock()
+	defer entry.Unlock()
+
 	var prevDomain *DomainCacheEntry
 	triggerCallback := c.clusterMetadata.IsGlobalDomainEnabled() &&
 		// expiry will be non zero when the entry is initialized / valid
@@ -392,15 +397,8 @@ func (c *domainCache) updateIDToDomainCache(id string, record *DomainCacheEntry)
 	entry.expiry = c.timeSource.Now().Add(domainCacheEntryTTL)
 
 	nextDomain := entry.duplicate()
-	if triggerCallback {
-		c.triggerDomainBeforeChangeCallback(prevDomain, nextDomain)
-	}
-	entry.Unlock()
-	if triggerCallback {
-		c.triggerDomainAfterChangeCallback(prevDomain, nextDomain)
-	}
 
-	return nextDomain, nil
+	return prevDomain, nextDomain, nil
 }
 
 // getDomain retrieves the information from the cache if it exists, otherwise retrieves the information from metadata
@@ -416,7 +414,7 @@ func (c *domainCache) getDomain(name string) (*DomainCacheEntry, error) {
 		return nil, err
 	}
 	id = record.Info.ID
-	newEntry, err := c.updateIDToDomainCache(id, c.buildEntryFromRecord(record))
+	_, newEntry, err := c.updateIDToDomainCache(id, c.buildEntryFromRecord(record))
 	if err != nil {
 		return nil, err
 	}
@@ -457,7 +455,7 @@ func (c *domainCache) getDomainByID(id string) (*DomainCacheEntry, error) {
 		return nil, err
 	}
 
-	newEntry, err := c.updateIDToDomainCache(id, c.buildEntryFromRecord(record))
+	_, newEntry, err := c.updateIDToDomainCache(id, c.buildEntryFromRecord(record))
 	if err != nil {
 		// err updating, use the existing record if record is valid
 		// i.e. expiry is set
@@ -474,25 +472,21 @@ func (c *domainCache) getDomainByID(id string) (*DomainCacheEntry, error) {
 	return newEntry, nil
 }
 
-func (c *domainCache) triggerDomainBeforeChangeCallback(prevDomain *DomainCacheEntry, nextDomain *DomainCacheEntry) {
-	sw := c.metricsClient.StartTimer(metrics.DomainCacheScope, metrics.DomainCacheBeforeCallbackLatency)
+func (c *domainCache) triggerDomainChangePrepareCallback() {
+	sw := c.metricsClient.StartTimer(metrics.DomainCacheScope, metrics.DomainCachePrepareCallbacksLatency)
 	defer sw.Stop()
 
-	c.RLock()
-	defer c.RUnlock()
-	for _, callback := range c.beforeCallbacks {
-		callback(prevDomain, nextDomain)
+	for _, prepareCallback := range c.prepareCallbacks {
+		prepareCallback()
 	}
 }
 
-func (c *domainCache) triggerDomainAfterChangeCallback(prevDomain *DomainCacheEntry, nextDomain *DomainCacheEntry) {
-	sw := c.metricsClient.StartTimer(metrics.DomainCacheScope, metrics.DomainCacheAfterCallbackLatency)
+func (c *domainCache) triggerDomainChangeCallback(prevDomains []*DomainCacheEntry, nextDomains []*DomainCacheEntry) {
+	sw := c.metricsClient.StartTimer(metrics.DomainCacheScope, metrics.DomainCacheCallbacksLatency)
 	defer sw.Stop()
 
-	c.RLock()
-	defer c.RUnlock()
-	for _, callback := range c.afterCallbacks {
-		callback(prevDomain, nextDomain)
+	for _, callback := range c.callbacks {
+		callback(prevDomains, nextDomains)
 	}
 }
 
@@ -514,8 +508,21 @@ func (c *domainCache) buildEntryFromRecord(record *persistence.GetDomainResponse
 func (entry *DomainCacheEntry) duplicate() *DomainCacheEntry {
 	// this is a deep copy
 	result := newDomainCacheEntry(entry.clusterMetadata)
-	result.info = &*entry.info
-	result.config = &*entry.config
+	result.info = &persistence.DomainInfo{
+		ID:          entry.info.ID,
+		Name:        entry.info.Name,
+		Status:      entry.info.Status,
+		Description: entry.info.Description,
+		OwnerEmail:  entry.info.OwnerEmail,
+	}
+	result.info.Data = map[string]string{}
+	for k, v := range entry.info.Data {
+		result.info.Data[k] = v
+	}
+	result.config = &persistence.DomainConfig{
+		Retention:  entry.config.Retention,
+		EmitMetric: entry.config.EmitMetric,
+	}
 	result.replicationConfig = &persistence.DomainReplicationConfig{
 		ActiveClusterName: entry.replicationConfig.ActiveClusterName,
 	}
