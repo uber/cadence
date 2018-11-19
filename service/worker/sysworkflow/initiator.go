@@ -21,10 +21,13 @@
 package sysworkflow
 
 import (
+	"math/rand"
+	"fmt"
 	"context"
 	"github.com/uber/cadence/client/frontend"
 	"go.uber.org/cadence/client"
 	"time"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 type (
@@ -36,7 +39,7 @@ type (
 
 	initiator struct {
 		cadenceClient  client.Client
-		sysWorkflowIDs []string
+		numSWFn dynamicconfig.IntPropertyFn
 	}
 
 	// Signal is the data sent to system tasks
@@ -53,35 +56,36 @@ type (
 )
 
 // NewInitiator creates a new Initiator
-func NewInitiator(frontendClient frontend.Client, numSysWorkflows int) Initiator {
+func NewInitiator(frontendClient frontend.Client, numSWFn dynamicconfig.IntPropertyFn) Initiator {
 	return &initiator{
 		cadenceClient:  client.NewClient(frontendClient, Domain, &client.Options{}),
-		sysWorkflowIDs: RandomSlice(numSysWorkflows),
+		numSWFn: numSWFn,
 	}
 }
 
 // Archive starts an archival task
 func (i *initiator) Archive(request *ArchiveRequest) error {
-	workflowID := PickRandom(i.sysWorkflowIDs)
+	workflowID := fmt.Sprintf("%v-%v", WorkflowIDPrefix, rand.Intn(i.numSWFn()))
 	workflowOptions := client.StartWorkflowOptions{
 		ID: workflowID,
 		// TODO: once we have higher load, this should select one random of X task lists to do load balancing
 		TaskList:                        DecisionTaskList,
-		ExecutionStartToCloseTimeout:    time.Hour * 48,
-		DecisionTaskStartToCloseTimeout: time.Minute * 10,
+		ExecutionStartToCloseTimeout:    time.Hour * 24 * 30,
+		DecisionTaskStartToCloseTimeout: time.Minute,
 		WorkflowIDReusePolicy:           client.WorkflowIDReusePolicyAllowDuplicate,
 	}
 	signal := Signal{
 		RequestType:    ArchivalRequest,
 		ArchiveRequest: request,
 	}
+
 	_, err := i.cadenceClient.SignalWithStartWorkflow(
 		context.Background(),
 		workflowID,
 		SignalName,
 		signal,
 		workflowOptions,
-		SystemWorkflow,
+		"SystemWorkflow",
 	)
 	return err
 }

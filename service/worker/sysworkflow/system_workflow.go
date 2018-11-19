@@ -27,6 +27,8 @@ import (
 	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
 	"time"
+	"github.com/uber/cadence/common/logging"
+	"math/rand"
 )
 
 // SystemWorkflow is the system workflow code
@@ -34,7 +36,7 @@ func SystemWorkflow(ctx workflow.Context) error {
 	logger := workflow.GetLogger(ctx)
 	ch := workflow.GetSignalChannel(ctx, SignalName)
 
-	for {
+	for i := 0; i < SignalsUntilContinueAsNew; i++ {
 		var signal Signal
 		if more := ch.Receive(ctx, &signal); !more {
 			logger.Error("cadence channel was unexpectedly closed")
@@ -43,30 +45,57 @@ func SystemWorkflow(ctx workflow.Context) error {
 		ao := workflow.ActivityOptions{
 			ScheduleToStartTimeout: time.Minute,
 			StartToCloseTimeout:    time.Minute,
+			HeartbeatTimeout:       time.Second * 10,
 			RetryPolicy: &cadence.RetryPolicy{
 				InitialInterval:    time.Second,
 				BackoffCoefficient: 2.0,
-				MaximumInterval:    30 * time.Minute,
+				MaximumInterval:    time.Minute,
 				ExpirationInterval: time.Hour * 24 * 30,
 				MaximumAttempts:    0,
+				NonRetriableErrorReasons: []string{"bad-error"},
 			},
 		}
+
 		ctx = workflow.WithActivityOptions(ctx, ao)
 		switch signal.RequestType {
 		case ArchivalRequest:
-			workflow.ExecuteActivity(ctx, ArchivalActivity, signal)
+			workflow.ExecuteActivity(
+				ctx,
+				"ArchivalActivity",
+				signal.ArchiveRequest.UserWorkflowID,
+				signal.ArchiveRequest.UserRunID,
+			)
 		default:
 			logger.Error("received unknown request type")
 		}
 	}
-	return nil
+
+	logger.Info("Completed current set of iterations, continuing as new",
+		zap.Int(logging.TagIterationsUntilContinueAsNew, SignalsUntilContinueAsNew))
+	return workflow.NewContinueAsNewError(ctx, "SystemWorkflow")
 }
 
 // ArchivalActivity is the archival activity code
-func ArchivalActivity(ctx context.Context, signal Signal) error {
+func ArchivalActivity(ctx context.Context, userWorkflowID string, userRunId string) error {
 	logger := activity.GetLogger(ctx)
-	logger.Info("doing archival",
-		zap.String("user-workflow-id", signal.ArchiveRequest.UserWorkflowID),
-		zap.String("user-run-id", signal.ArchiveRequest.UserRunID))
+	logger.Info("starting archival",
+		zap.String(logging.TagUserWorkflowID, userWorkflowID),
+		zap.String(logging.TagUserRunID, userRunId))
+
+	for i := 0; i < 20; i++ {
+		time.Sleep(time.Second)
+		activity.RecordHeartbeat(ctx, i)
+
+		// if activity failure occurs restart the activity from the beginning
+		if 0 == rand.Intn(20) {
+			logger.Info("activity failed, will retry...")
+			return cadence.NewCustomError("some-retryable-error")
+		}
+	}
+
+	logger.Info("finished archival",
+		zap.String(logging.TagUserWorkflowID, userWorkflowID),
+		zap.String(logging.TagUserRunID, userRunId))
 	return nil
 }
+

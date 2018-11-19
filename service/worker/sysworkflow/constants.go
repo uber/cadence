@@ -33,6 +33,12 @@ const (
 	// SignalName is the name of the cadence signal that system tasks are sent on
 	SignalName = "cadsys-signal-sig"
 
+	// WorkflowIDPrefix is the prefix of all system workflow ids
+	WorkflowIDPrefix = "cadsys-wf"
+
+	// SignalsUntilContinueAsNew is the number of signals system workflow must receive before continuing as new
+	SignalsUntilContinueAsNew = 1000
+
 	// ArchivalRequest is the archive signal identifier
 	ArchivalRequest = iota
 )

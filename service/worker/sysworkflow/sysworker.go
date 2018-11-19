@@ -21,12 +21,12 @@
 package sysworkflow
 
 import (
-	"github.com/uber-go/tally"
 	"github.com/uber/cadence/client/frontend"
 	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/worker"
 	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
+	"github.com/uber-go/tally"
 )
 
 type (
@@ -53,8 +53,8 @@ func NewSysWorker(frontendClient frontend.Client) *SysWorker {
 
 // Start the SysWorker
 func (w *SysWorker) Start() error {
-	workflow.Register(SystemWorkflow)
-	activity.Register(ArchivalActivity)
+	workflow.RegisterWithOptions(SystemWorkflow, workflow.RegisterOptions{Name: "SystemWorkflow"})
+	activity.RegisterWithOptions(ArchivalActivity, activity.RegisterOptions{Name: "ArchivalActivity"})
 	if err := w.worker.Start(); err != nil {
 		w.worker.Stop()
 		return err

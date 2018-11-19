@@ -98,7 +98,7 @@ func (s *Service) Start() {
 	if s.params.ClusterMetadata.IsGlobalDomainEnabled() {
 		s.startReplicator(params, base, log)
 	}
-	s.startSysWorker(base, log)
+	s.startSysWorker(base, log, s.metricsClient)
 
 	log.Infof("%v started", common.WorkerServiceName)
 	<-s.stopC
@@ -146,7 +146,7 @@ func (s *Service) startReplicator(params *service.BootstrapParams, base service.
 	}
 }
 
-func (s *Service) startSysWorker(base service.Service, log bark.Logger) {
+func (s *Service) startSysWorker(base service.Service, log bark.Logger, metricsClient metrics.Client) {
 	frontendClient, err := base.GetClientFactory().NewFrontendClient()
 	if err != nil {
 		log.Fatalf("failed to create frontend client: %v", err)
@@ -155,7 +155,7 @@ func (s *Service) startSysWorker(base service.Service, log bark.Logger) {
 		common.IsWhitelistServiceTransientError)
 
 	s.waitForFrontendStart(frontendClient, log)
-	sysWorker := sysworkflow.NewSysWorker(frontendClient)
+	sysWorker := sysworkflow.NewSysWorker(frontendClient, metricsClient)
 	if err := sysWorker.Start(); err != nil {
 		sysWorker.Stop()
 		log.Fatalf("failed to start sysworker: %v", err)

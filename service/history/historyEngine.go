@@ -163,7 +163,7 @@ func NewEngineWithShardContext(
 		}),
 		metricsClient:        shard.GetMetricsClient(),
 		historyEventNotifier: historyEventNotifier,
-		initiator:            sysworkflow.NewInitiator(frontendClient, shard.GetConfig().NumSysWorkflows()),
+		initiator:            sysworkflow.NewInitiator(frontendClient, shard.GetConfig().NumSysWorkflows),
 		config:               config,
 	}
 	var visibilityProducer messaging.Producer
