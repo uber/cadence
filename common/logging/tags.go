@@ -148,7 +148,7 @@ const (
 	TagBranchID = "branch-id"
 
 	// system workflow tags
-	TagUserWorkflowID = "user-workflow-id"
-	TagUserRunID = "user-run-id"
+	TagUserWorkflowID               = "user-workflow-id"
+	TagUserRunID                    = "user-run-id"
 	TagIterationsUntilContinueAsNew = "iterations-until-continue-as-new"
 )

@@ -21,12 +21,12 @@
 package sysworkflow
 
 import (
+	"github.com/uber-go/tally"
 	"github.com/uber/cadence/client/frontend"
 	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/worker"
 	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
-	"github.com/uber-go/tally"
 )
 
 type (

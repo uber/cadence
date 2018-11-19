@@ -22,13 +22,13 @@ package sysworkflow
 
 import (
 	"context"
+	"github.com/uber/cadence/common/logging"
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
-	"time"
-	"github.com/uber/cadence/common/logging"
 	"math/rand"
+	"time"
 )
 
 // SystemWorkflow is the system workflow code
@@ -47,11 +47,11 @@ func SystemWorkflow(ctx workflow.Context) error {
 			StartToCloseTimeout:    time.Minute,
 			HeartbeatTimeout:       time.Second * 10,
 			RetryPolicy: &cadence.RetryPolicy{
-				InitialInterval:    time.Second,
-				BackoffCoefficient: 2.0,
-				MaximumInterval:    time.Minute,
-				ExpirationInterval: time.Hour * 24 * 30,
-				MaximumAttempts:    0,
+				InitialInterval:          time.Second,
+				BackoffCoefficient:       2.0,
+				MaximumInterval:          time.Minute,
+				ExpirationInterval:       time.Hour * 24 * 30,
+				MaximumAttempts:          0,
 				NonRetriableErrorReasons: []string{"bad-error"},
 			},
 		}
@@ -98,4 +98,3 @@ func ArchivalActivity(ctx context.Context, userWorkflowID string, userRunId stri
 		zap.String(logging.TagUserRunID, userRunId))
 	return nil
 }
-

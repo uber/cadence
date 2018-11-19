@@ -21,13 +21,13 @@
 package sysworkflow
 
 import (
-	"math/rand"
-	"fmt"
 	"context"
+	"fmt"
 	"github.com/uber/cadence/client/frontend"
-	"go.uber.org/cadence/client"
-	"time"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"go.uber.org/cadence/client"
+	"math/rand"
+	"time"
 )
 
 type (
@@ -38,8 +38,8 @@ type (
 	}
 
 	initiator struct {
-		cadenceClient  client.Client
-		numSWFn dynamicconfig.IntPropertyFn
+		cadenceClient client.Client
+		numSWFn       dynamicconfig.IntPropertyFn
 	}
 
 	// Signal is the data sent to system tasks
@@ -58,8 +58,8 @@ type (
 // NewInitiator creates a new Initiator
 func NewInitiator(frontendClient frontend.Client, numSWFn dynamicconfig.IntPropertyFn) Initiator {
 	return &initiator{
-		cadenceClient:  client.NewClient(frontendClient, Domain, &client.Options{}),
-		numSWFn: numSWFn,
+		cadenceClient: client.NewClient(frontendClient, Domain, &client.Options{}),
+		numSWFn:       numSWFn,
 	}
 }
 
