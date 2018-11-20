@@ -38,9 +38,10 @@ func SystemWorkflow(ctx workflow.Context) error {
 	logger := workflow.GetLogger(ctx)
 	scope := workflow.GetMetricsScope(ctx).Tagged(map[string]string{SystemWorkflowIDTag: id})
 	ch := workflow.GetSignalChannel(ctx, SignalName)
-	signalsHandled := 0
+	logger.Info("setting signalsHandled to zero")
 
-	for signalsHandled < SignalsUntilContinueAsNew {
+	signalsHandled := 0
+	for ; signalsHandled < SignalsUntilContinueAsNew; signalsHandled++ {
 		var signal Signal
 		if more := ch.Receive(ctx, &signal); !more {
 			scope.Counter(ChannelClosedUnexpectedlyError).Inc(1)
@@ -48,8 +49,10 @@ func SystemWorkflow(ctx workflow.Context) error {
 			break
 		}
 		selectSystemTask(scope, signal, ctx, logger)
-		signalsHandled++
+		logger.Info("finished iteration of loop", zap.Int("count", signalsHandled), zap.String("system-workflow-id", workflow.GetInfo(ctx).WorkflowExecution.ID))
 	}
+
+	logger.Info("exited first loop")
 
 	for {
 		var signal Signal
@@ -60,6 +63,7 @@ func SystemWorkflow(ctx workflow.Context) error {
 		signalsHandled++
 	}
 
+	logger.Info("exited second loop")
 	logger.Info("completed current set of iterations, continuing as new",
 		zap.Int(logging.TagIterationsUntilContinueAsNew, signalsHandled))
 	return workflow.NewContinueAsNewError(ctx, "SystemWorkflow")
@@ -71,15 +75,15 @@ func selectSystemTask(scope tally.Scope, signal Signal, ctx workflow.Context, lo
 	ao := workflow.ActivityOptions{
 		ScheduleToStartTimeout: time.Minute,
 		StartToCloseTimeout:    time.Minute,
-		HeartbeatTimeout:       time.Second * 10,
-		RetryPolicy: &cadence.RetryPolicy{
-			InitialInterval:          time.Second,
-			BackoffCoefficient:       2.0,
-			MaximumInterval:          time.Minute,
-			ExpirationInterval:       time.Hour * 24 * 30,
-			MaximumAttempts:          0,
-			NonRetriableErrorReasons: []string{"bad-error"},
-		},
+		//HeartbeatTimeout:       time.Second * 10,
+		//RetryPolicy: &cadence.RetryPolicy{
+		//	InitialInterval:          time.Second,
+		//	BackoffCoefficient:       2.0,
+		//	MaximumInterval:          time.Minute,
+		//	ExpirationInterval:       time.Hour * 24 * 30,
+		//	MaximumAttempts:          0,
+		//	NonRetriableErrorReasons: []string{"bad-error"},
+		//},
 	}
 
 	ctx = workflow.WithActivityOptions(ctx, ao)

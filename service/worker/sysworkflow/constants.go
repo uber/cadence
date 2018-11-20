@@ -37,7 +37,7 @@ const (
 	WorkflowIDPrefix = "cadsys-wf"
 
 	// SignalsUntilContinueAsNew is the number of signals system workflow must receive before continuing as new
-	SignalsUntilContinueAsNew = 1000
+	SignalsUntilContinueAsNew = 5
 
 	// SystemWorkflowScope scope for all metrics emitted by system workflow
 	SystemWorkflowScope = "system-workflow"

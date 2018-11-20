@@ -65,7 +65,8 @@ func NewInitiator(frontendClient frontend.Client, numSWFn dynamicconfig.IntPrope
 
 // Archive starts an archival task
 func (i *initiator) Archive(request *ArchiveRequest) error {
-	workflowID := fmt.Sprintf("%v-%v", WorkflowIDPrefix, rand.Intn(i.numSWFn()))
+	//workflowID := fmt.Sprintf("%v-%v", WorkflowIDPrefix, rand.Intn(i.numSWFn()))
+	workflowID := fmt.Sprintf("%v-%v", WorkflowIDPrefix, rand.Intn(1))
 	workflowOptions := client.StartWorkflowOptions{
 		ID: workflowID,
 		// TODO: once we have higher load, this should select one random of X task lists to do load balancing
