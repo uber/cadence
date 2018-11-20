@@ -1,12 +1,3 @@
 log:
   stdout: true
   level: info
-
-kafka:
-  clusters:
-    test:
-      brokers:
-        - 127.0.0.1:9092
-  topics:
-    visibility-topic:
-      cluster: test
