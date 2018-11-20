@@ -22,6 +22,7 @@ package sysworkflow
 
 import (
 	"context"
+	"github.com/uber-go/tally"
 	"github.com/uber/cadence/common/logging"
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/activity"
@@ -29,7 +30,6 @@ import (
 	"go.uber.org/zap"
 	"math/rand"
 	"time"
-	"github.com/uber-go/tally"
 )
 
 // SystemWorkflow is the system workflow code
@@ -96,7 +96,6 @@ func selectSystemTask(scope tally.Scope, signal Signal, ctx workflow.Context, lo
 		logger.Error("received unknown request type")
 	}
 }
-
 
 // ArchivalActivity is the archival activity code
 func ArchivalActivity(ctx context.Context, userWorkflowID string, userRunId string) error {
