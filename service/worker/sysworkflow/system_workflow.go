@@ -87,7 +87,7 @@ func selectSystemTask(scope tally.Scope, signal Signal, ctx workflow.Context, lo
 	case ArchivalRequest:
 		workflow.ExecuteActivity(
 			ctx,
-			"ArchivalActivity",
+			ArchivalActivityFnName,
 			signal.ArchiveRequest.UserWorkflowID,
 			signal.ArchiveRequest.UserRunID,
 		)

@@ -38,6 +38,11 @@ type (
 	}
 )
 
+func init() {
+	workflow.RegisterWithOptions(SystemWorkflow, workflow.RegisterOptions{Name: SystemWorkflowFnName})
+	activity.RegisterWithOptions(ArchivalActivity, activity.RegisterOptions{Name: ArchivalActivityFnName})
+}
+
 // NewSysWorker returns a new SysWorker
 func NewSysWorker(frontendClient frontend.Client, scope tally.Scope) *SysWorker {
 	logger, _ := zap.NewProduction()
@@ -53,8 +58,6 @@ func NewSysWorker(frontendClient frontend.Client, scope tally.Scope) *SysWorker 
 
 // Start the SysWorker
 func (w *SysWorker) Start() error {
-	workflow.RegisterWithOptions(SystemWorkflow, workflow.RegisterOptions{Name: "SystemWorkflow"})
-	activity.RegisterWithOptions(ArchivalActivity, activity.RegisterOptions{Name: "ArchivalActivity"})
 	if err := w.worker.Start(); err != nil {
 		w.worker.Stop()
 		return err

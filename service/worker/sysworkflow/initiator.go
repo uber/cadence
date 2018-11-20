@@ -85,7 +85,7 @@ func (i *initiator) Archive(request *ArchiveRequest) error {
 		SignalName,
 		signal,
 		workflowOptions,
-		"SystemWorkflow",
+		SystemWorkflowFnName,
 	)
 
 	return err

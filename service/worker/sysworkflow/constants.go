@@ -54,6 +54,12 @@ const (
 	// ChannelClosedUnexpectedlyError counter of number of unexpected channel closes in system workflow
 	ChannelClosedUnexpectedlyError = "channel-closed-unexpectedly-err"
 
+	// ArchivalActivityFnName name of archival activity function
+	ArchivalActivityFnName = "ArchivalActivity"
+
+	// SystemWorkflowFnName name of system workflow function
+	SystemWorkflowFnName = "SystemWorkflow"
+
 	// ArchivalRequest is the archive signal identifier
 	ArchivalRequest = iota
 )
