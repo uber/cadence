@@ -104,6 +104,7 @@ type (
 		ClientFeatureVersion         string
 		ClientImpl                   string
 		ShardID                      int64
+		SignalCount                  int
 	}
 
 	currentExecutionRow struct {
@@ -186,6 +187,7 @@ sticky_schedule_to_start_timeout,
 client_library_version,
 client_feature_version,
 client_impl,
+signal_count,
 completion_event_encoding`
 
 	executionsNonNullableColumnsTags = `:shard_id,
@@ -301,6 +303,7 @@ current_version = :current_version,
 last_write_version = :last_write_version,
 last_write_event_id = :last_write_event_id,
 last_replication_info = :last_replication_info
+signal_count = :signal_count,
 WHERE
 shard_id = :shard_id AND
 domain_id = :domain_id AND
@@ -1543,6 +1546,7 @@ func createExecution(tx *sqlx.Tx, request *p.CreateWorkflowExecutionRequest, sha
 		ClientLibraryVersion:         "",
 		ClientFeatureVersion:         "",
 		ClientImpl:                   "",
+		SignalCount:                  int(request.SignalCount),
 	}
 
 	if request.ReplicationState != nil {
@@ -2015,6 +2019,7 @@ func updateExecution(tx *sqlx.Tx,
 			ShardID:                      int64(shardID),
 			LastWriteVersion:             common.EmptyVersion,
 			CurrentVersion:               common.EmptyVersion,
+			SignalCount:                  int(executionInfo.SignalCount),
 		},
 		condition,
 	}
