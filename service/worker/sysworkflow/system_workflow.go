@@ -29,6 +29,7 @@ import (
 	"go.uber.org/zap"
 	"math/rand"
 	"time"
+	"github.com/uber-go/tally"
 )
 
 // SystemWorkflow is the system workflow code
@@ -37,49 +38,65 @@ func SystemWorkflow(ctx workflow.Context) error {
 	logger := workflow.GetLogger(ctx)
 	scope := workflow.GetMetricsScope(ctx).Tagged(map[string]string{SystemWorkflowIDTag: id})
 	ch := workflow.GetSignalChannel(ctx, SignalName)
+	signalsHandled := 0
 
-	for i := 0; i < SignalsUntilContinueAsNew; i++ {
+	for signalsHandled < SignalsUntilContinueAsNew {
 		var signal Signal
 		if more := ch.Receive(ctx, &signal); !more {
 			scope.Counter(ChannelClosedUnexpectedlyError).Inc(1)
 			logger.Error("cadence channel was unexpectedly closed")
 			break
 		}
-		scope.Counter(HandledSignalCount).Inc(1)
+		selectSystemTask(scope, signal, ctx, logger)
+		signalsHandled++
+	}
 
-		ao := workflow.ActivityOptions{
-			ScheduleToStartTimeout: time.Minute,
-			StartToCloseTimeout:    time.Minute,
-			HeartbeatTimeout:       time.Second * 10,
-			RetryPolicy: &cadence.RetryPolicy{
-				InitialInterval:          time.Second,
-				BackoffCoefficient:       2.0,
-				MaximumInterval:          time.Minute,
-				ExpirationInterval:       time.Hour * 24 * 30,
-				MaximumAttempts:          0,
-				NonRetriableErrorReasons: []string{"bad-error"},
-			},
+	for {
+		var signal Signal
+		if ok := ch.ReceiveAsync(&signal); !ok {
+			break
 		}
-
-		ctx = workflow.WithActivityOptions(ctx, ao)
-		switch signal.RequestType {
-		case ArchivalRequest:
-			workflow.ExecuteActivity(
-				ctx,
-				"ArchivalActivity",
-				signal.ArchiveRequest.UserWorkflowID,
-				signal.ArchiveRequest.UserRunID,
-			)
-		default:
-			scope.Counter(UnknownSignalTypeErr).Inc(1)
-			logger.Error("received unknown request type")
-		}
+		selectSystemTask(scope, signal, ctx, logger)
+		signalsHandled++
 	}
 
 	logger.Info("completed current set of iterations, continuing as new",
-		zap.Int(logging.TagIterationsUntilContinueAsNew, SignalsUntilContinueAsNew))
+		zap.Int(logging.TagIterationsUntilContinueAsNew, signalsHandled))
 	return workflow.NewContinueAsNewError(ctx, "SystemWorkflow")
 }
+
+func selectSystemTask(scope tally.Scope, signal Signal, ctx workflow.Context, logger *zap.Logger) {
+	scope.Counter(HandledSignalCount).Inc(1)
+
+	ao := workflow.ActivityOptions{
+		ScheduleToStartTimeout: time.Minute,
+		StartToCloseTimeout:    time.Minute,
+		HeartbeatTimeout:       time.Second * 10,
+		RetryPolicy: &cadence.RetryPolicy{
+			InitialInterval:          time.Second,
+			BackoffCoefficient:       2.0,
+			MaximumInterval:          time.Minute,
+			ExpirationInterval:       time.Hour * 24 * 30,
+			MaximumAttempts:          0,
+			NonRetriableErrorReasons: []string{"bad-error"},
+		},
+	}
+
+	ctx = workflow.WithActivityOptions(ctx, ao)
+	switch signal.RequestType {
+	case ArchivalRequest:
+		workflow.ExecuteActivity(
+			ctx,
+			"ArchivalActivity",
+			signal.ArchiveRequest.UserWorkflowID,
+			signal.ArchiveRequest.UserRunID,
+		)
+	default:
+		scope.Counter(UnknownSignalTypeErr).Inc(1)
+		logger.Error("received unknown request type")
+	}
+}
+
 
 // ArchivalActivity is the archival activity code
 func ArchivalActivity(ctx context.Context, userWorkflowID string, userRunId string) error {
