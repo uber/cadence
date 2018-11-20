@@ -131,6 +131,7 @@ var keys = map[Key]string{
 	ExecutionMgrNumConns:                                  "history.executionMgrNumConns",
 	HistoryMgrNumConns:                                    "history.historyMgrNumConns",
 	MaximumBufferedEventsBatch:                            "history.maximumBufferedEventsBatch",
+	MaximumSignalsPerExecution:                            "history.maximumSignalsPerExecution",
 	ShardUpdateMinInterval:                                "history.shardUpdateMinInterval",
 	ShardSyncMinInterval:                                  "history.shardSyncMinInterval",
 	DefaultEventEncoding:                                  "history.defaultEventEncoding",
