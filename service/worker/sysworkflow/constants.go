@@ -39,6 +39,21 @@ const (
 	// SignalsUntilContinueAsNew is the number of signals system workflow must receive before continuing as new
 	SignalsUntilContinueAsNew = 1000
 
+	// SystemWorkflowScope scope for all metrics emitted by system workflow
+	SystemWorkflowScope = "system-workflow"
+
+	// SystemWorkflowIDTag tag for system workflowID
+	SystemWorkflowIDTag = "system-workflow-id"
+
+	// HandledSignalCount counter of number of signals processed by system workflow
+	HandledSignalCount = "handled-signal"
+
+	// UnknownSignalTypeErr counter of number of unknown signals received by system workflow
+	UnknownSignalTypeErr = "unknown-signal-err"
+
+	// ChannelClosedUnexpectedlyError counter of number of unexpected channel closes in system workflow
+	ChannelClosedUnexpectedlyError = "channel-closed-unexpectedly-err"
+
 	// ArchivalRequest is the archive signal identifier
 	ArchivalRequest = iota
 )

@@ -39,11 +39,11 @@ type (
 )
 
 // NewSysWorker returns a new SysWorker
-func NewSysWorker(frontendClient frontend.Client) *SysWorker {
-	logger, _ := zap.NewDevelopment()
+func NewSysWorker(frontendClient frontend.Client, scope tally.Scope) *SysWorker {
+	logger, _ := zap.NewProduction()
 	wo := worker.Options{
 		Logger:       logger,
-		MetricsScope: tally.NoopScope,
+		MetricsScope: scope.SubScope(SystemWorkflowScope),
 	}
 	return &SysWorker{
 		// TODO: after we do task list fan out workers should listen on all task lists

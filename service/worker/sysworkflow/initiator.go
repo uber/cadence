@@ -87,5 +87,6 @@ func (i *initiator) Archive(request *ArchiveRequest) error {
 		workflowOptions,
 		"SystemWorkflow",
 	)
+
 	return err
 }

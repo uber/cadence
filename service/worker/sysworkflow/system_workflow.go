@@ -33,15 +33,20 @@ import (
 
 // SystemWorkflow is the system workflow code
 func SystemWorkflow(ctx workflow.Context) error {
+	id := workflow.GetInfo(ctx).WorkflowExecution.ID
 	logger := workflow.GetLogger(ctx)
+	scope := workflow.GetMetricsScope(ctx).Tagged(map[string]string{SystemWorkflowIDTag: id})
 	ch := workflow.GetSignalChannel(ctx, SignalName)
 
 	for i := 0; i < SignalsUntilContinueAsNew; i++ {
 		var signal Signal
 		if more := ch.Receive(ctx, &signal); !more {
+			scope.Counter(ChannelClosedUnexpectedlyError).Inc(1)
 			logger.Error("cadence channel was unexpectedly closed")
 			break
 		}
+		scope.Counter(HandledSignalCount).Inc(1)
+
 		ao := workflow.ActivityOptions{
 			ScheduleToStartTimeout: time.Minute,
 			StartToCloseTimeout:    time.Minute,
@@ -66,11 +71,12 @@ func SystemWorkflow(ctx workflow.Context) error {
 				signal.ArchiveRequest.UserRunID,
 			)
 		default:
+			scope.Counter(UnknownSignalTypeErr).Inc(1)
 			logger.Error("received unknown request type")
 		}
 	}
 
-	logger.Info("Completed current set of iterations, continuing as new",
+	logger.Info("completed current set of iterations, continuing as new",
 		zap.Int(logging.TagIterationsUntilContinueAsNew, SignalsUntilContinueAsNew))
 	return workflow.NewContinueAsNewError(ctx, "SystemWorkflow")
 }

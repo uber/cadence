@@ -23,6 +23,7 @@ package worker
 import (
 	"context"
 	"github.com/uber-common/bark"
+	"github.com/uber-go/tally"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/metrics"
@@ -98,7 +99,7 @@ func (s *Service) Start() {
 	if s.params.ClusterMetadata.IsGlobalDomainEnabled() {
 		s.startReplicator(params, base, log)
 	}
-	s.startSysWorker(base, log)
+	s.startSysWorker(base, log, s.params.MetricScope)
 
 	log.Infof("%v started", common.WorkerServiceName)
 	<-s.stopC
@@ -146,7 +147,7 @@ func (s *Service) startReplicator(params *service.BootstrapParams, base service.
 	}
 }
 
-func (s *Service) startSysWorker(base service.Service, log bark.Logger) {
+func (s *Service) startSysWorker(base service.Service, log bark.Logger, scope tally.Scope) {
 	frontendClient, err := base.GetClientFactory().NewFrontendClient()
 	if err != nil {
 		log.Fatalf("failed to create frontend client: %v", err)
@@ -155,7 +156,7 @@ func (s *Service) startSysWorker(base service.Service, log bark.Logger) {
 		common.IsWhitelistServiceTransientError)
 
 	s.waitForFrontendStart(frontendClient, log)
-	sysWorker := sysworkflow.NewSysWorker(frontendClient)
+	sysWorker := sysworkflow.NewSysWorker(frontendClient, scope)
 	if err := sysWorker.Start(); err != nil {
 		sysWorker.Stop()
 		log.Fatalf("failed to start sysworker: %v", err)
