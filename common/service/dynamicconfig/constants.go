@@ -134,8 +134,11 @@ var keys = map[Key]string{
 	DefaultEventEncoding:                                  "history.defaultEventEncoding",
 	EnableAdminProtection:                                 "history.enableAdminProtection",
 	AdminOperationToken:                                   "history.adminOperationToken",
+	EnableEventsV2:                                        "history.enableEventsV2",
 
-	WorkerPersistenceMaxQPS: "worker.persistenceMaxQPS",
+	WorkerPersistenceMaxQPS:       "worker.persistenceMaxQPS",
+	WorkerReplicatorConcurrency:   "worker.replicatorConcurrency",
+	WorkerReplicationTaskMaxRetry: "worker.replicationTaskMaxRetry",
 }
 
 const (
@@ -324,10 +327,16 @@ const (
 	// AdminOperationToken is the token to pass admin checking
 	AdminOperationToken
 
+	// EnableEventsV2 is whether to use eventsV2
+	EnableEventsV2
 	// key for histoworkerry
 
 	// WorkerPersistenceMaxQPS is the max qps worker host can query DB
 	WorkerPersistenceMaxQPS
+	// WorkerReplicatorConcurrency is the max concurrenct tasks to be processed at any given time
+	WorkerReplicatorConcurrency
+	// WorkerReplicationTaskMaxRetry is the max retry for any task
+	WorkerReplicationTaskMaxRetry
 
 	// lastKeyForTest must be the last one in this const group for testing purpose
 	lastKeyForTest

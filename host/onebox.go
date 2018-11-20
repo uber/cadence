@@ -21,19 +21,17 @@
 package host
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"reflect"
 	"sync"
 	"time"
 
-	"errors"
-
 	"github.com/stretchr/testify/mock"
 	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
-	fecli "github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/messaging"
@@ -90,6 +88,7 @@ type (
 		metadataMgrV2         persistence.MetadataManager
 		shardMgr              persistence.ShardManager
 		historyMgr            persistence.HistoryManager
+		historyV2Mgr          persistence.HistoryV2Manager
 		taskMgr               persistence.TaskManager
 		visibilityMgr         persistence.VisibilityManager
 		executionMgrFactory   persistence.ExecutionManagerFactory
@@ -108,7 +107,7 @@ type (
 
 // NewCadence returns an instance that hosts full cadence in one process
 func NewCadence(clusterMetadata cluster.Metadata, messagingClient messaging.Client, metadataMgr persistence.MetadataManager,
-	metadataMgrV2 persistence.MetadataManager, shardMgr persistence.ShardManager, historyMgr persistence.HistoryManager,
+	metadataMgrV2 persistence.MetadataManager, shardMgr persistence.ShardManager, historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager,
 	executionMgrFactory persistence.ExecutionManagerFactory, taskMgr persistence.TaskManager,
 	visibilityMgr persistence.VisibilityManager, numberOfHistoryShards, numberOfHistoryHosts int,
 	logger bark.Logger, clusterNo int, enableWorker bool) Cadence {
@@ -124,6 +123,7 @@ func NewCadence(clusterMetadata cluster.Metadata, messagingClient messaging.Clie
 		visibilityMgr:         visibilityMgr,
 		shardMgr:              shardMgr,
 		historyMgr:            historyMgr,
+		historyV2Mgr:          historyV2Mgr,
 		taskMgr:               taskMgr,
 		executionMgrFactory:   executionMgrFactory,
 		shutdownCh:            make(chan struct{}),
@@ -254,7 +254,7 @@ func (c *cadenceImpl) WorkerPProfPort() int {
 }
 
 func (c *cadenceImpl) GetFrontendClient() workflowserviceclient.Interface {
-	return fecli.New(c.frontEndService.GetDispatcher())
+	return New(c.frontEndService.GetDispatcher())
 }
 
 // For integration tests to get hold of FE instance.
@@ -297,7 +297,7 @@ func (c *cadenceImpl) startFrontend(rpHosts []string, startWG *sync.WaitGroup) {
 
 	c.frontEndService = service.New(params)
 	c.frontendHandler = frontend.NewWorkflowHandler(
-		c.frontEndService, frontend.NewConfig(dynamicconfig.NewNopCollection()), c.metadataMgr, c.historyMgr, c.visibilityMgr, kafkaProducer)
+		c.frontEndService, frontend.NewConfig(dynamicconfig.NewNopCollection()), c.metadataMgr, c.historyMgr, c.historyV2Mgr, c.visibilityMgr, kafkaProducer)
 	err = c.frontendHandler.Start()
 	if err != nil {
 		c.logger.WithField("error", err).Fatal("Failed to start frontend")
@@ -332,7 +332,7 @@ func (c *cadenceImpl) startHistory(rpHosts []string, startWG *sync.WaitGroup) {
 		historyConfig.HistoryMgrNumConns = dynamicconfig.GetIntPropertyFn(c.numberOfHistoryShards)
 		historyConfig.ExecutionMgrNumConns = dynamicconfig.GetIntPropertyFn(c.numberOfHistoryShards)
 		handler := history.NewHandler(service, historyConfig, c.shardMgr, c.metadataMgr,
-			c.visibilityMgr, c.historyMgr, c.executionMgrFactory)
+			c.visibilityMgr, c.historyMgr, c.historyV2Mgr, c.executionMgrFactory)
 		handler.Start()
 		c.historyHandlers = append(c.historyHandlers, handler)
 	}
@@ -394,7 +394,7 @@ func (c *cadenceImpl) startWorker(rpHosts []string, startWG *sync.WaitGroup) {
 	metadataManager := persistence.NewMetadataPersistenceMetricsClient(c.metadataMgrV2, service.GetMetricsClient(), c.logger)
 
 	workerConfig := worker.NewConfig(dynamicconfig.NewNopCollection())
-	workerConfig.ReplicatorConcurrency = 10
+	workerConfig.ReplicatorConcurrency = dynamicconfig.GetIntPropertyFn(10)
 	c.replicator = worker.NewReplicator(c.clusterMetadata, metadataManager, historyClient,
 		workerConfig, c.messagingClient, c.logger, service.GetMetricsClient())
 	if err := c.replicator.Start(); err != nil {
