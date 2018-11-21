@@ -362,7 +362,7 @@ func AdminRereplicate(c *cli.Context) {
 				fmt.Printf("Partition highwatermark offset %v:%v \n", partition, offset)
 			}
 			if offset < startOffset {
-				consumer.ResetPartitionOffset(fromTopic, partition, startOffset, "")
+				consumer.MarkPartitionOffset(fromTopic, partition, startOffset, "")
 				fmt.Printf("reset offset %v:%v \n", partition, startOffset)
 			}
 		}
@@ -374,7 +374,7 @@ func AdminRereplicate(c *cli.Context) {
 					return
 				}
 				if msg.Offset < startOffset {
-					consumer.ResetPartitionOffset(fromTopic, msg.Partition, startOffset, "")
+					consumer.MarkPartitionOffset(fromTopic, msg.Partition, startOffset, "")
 					fmt.Printf("Message [%v],[%v] skipped\n", msg.Partition, msg.Offset)
 
 				} else {
