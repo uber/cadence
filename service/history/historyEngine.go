@@ -1958,7 +1958,7 @@ func (e *historyEngineImpl) SignalWorkflowExecution(ctx context.Context, signalR
 
 			executionInfo := msBuilder.GetExecutionInfo()
 			maxAllowedSignals := e.config.MaximumSignalsPerExecution(domainEntry.GetInfo().Name)
-			if maxAllowedSignals > 0 && int(executionInfo.SignalCount) > maxAllowedSignals {
+			if maxAllowedSignals > 0 && int(executionInfo.SignalCount) >= maxAllowedSignals {
 				e.logger.WithFields(bark.Fields{
 					logging.TagDomainID:            domainID,
 					logging.TagWorkflowExecutionID: execution.GetWorkflowId(),
@@ -2037,7 +2037,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 
 			executionInfo := msBuilder.GetExecutionInfo()
 			maxAllowedSignals := e.config.MaximumSignalsPerExecution(domainEntry.GetInfo().Name)
-			if maxAllowedSignals > 0 && int(executionInfo.SignalCount) > maxAllowedSignals {
+			if maxAllowedSignals > 0 && int(executionInfo.SignalCount) >= maxAllowedSignals {
 				e.logger.WithFields(bark.Fields{
 					logging.TagDomainID:            domainID,
 					logging.TagWorkflowExecutionID: execution.GetWorkflowId(),
