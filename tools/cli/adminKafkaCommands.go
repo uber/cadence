@@ -313,8 +313,8 @@ func AdminRereplicate(c *cli.Context) {
 			}
 		}
 	} else {
-		fromTopic := c.String(FlagInputTopic)
-		fromCluster := c.String(FlagInputCluster)
+		fromTopic := getRequiredOption(c, FlagInputTopic)
+		fromCluster := getRequiredOption(c, FlagInputCluster)
 		startOffset := c.Int64(FlagStartOffset)
 
 		config := cluster.NewConfig()
@@ -332,7 +332,7 @@ func AdminRereplicate(c *cli.Context) {
 			ErrorAndExit("", err)
 		}
 
-		group := "longer-group-test"
+		group := getRequiredOption(c, FlagGroup)
 
 		consumer, err := cluster.NewConsumerFromClient(client, group, []string{fromTopic})
 		if err != nil {
