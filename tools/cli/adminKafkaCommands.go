@@ -375,7 +375,11 @@ func AdminRereplicate(c *cli.Context) {
 				}
 				if msg.Offset < startOffset {
 					fmt.Printf("Message [%v],[%v] skipped\n", msg.Partition, msg.Offset)
-					ErrorAndExit("", fmt.Errorf("offset is not correct"))
+					//ErrorAndExit("", fmt.Errorf("offset is not correct"))
+					consumer.MarkPartitionOffset(fromTopic, msg.Partition, startOffset, "")
+					consumer.ResetPartitionOffset(fromTopic, msg.Partition, startOffset, "")
+					consumer.CommitOffsets()
+					continue
 				} else {
 					var task replicator.ReplicationTask
 					err := decode(msg.Value, &task)
