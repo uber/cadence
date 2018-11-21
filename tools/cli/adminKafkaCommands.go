@@ -324,11 +324,8 @@ func AdminRereplicate(c *cli.Context) {
 
 		config := cluster.NewConfig()
 		config.Consumer.Return.Errors = true
-		if startOffset > 0 {
-			config.Consumer.Offsets.Initial = startOffset
-		} else {
-			config.Consumer.Offsets.Initial = sarama.OffsetOldest
-		}
+		config.Consumer.Offsets.Initial = sarama.OffsetOldest
+
 		config.Group.Return.Notifications = true
 		fromBrokers, err := loadBrokers(hostFile, fromCluster)
 		if err != nil {
@@ -372,18 +369,23 @@ func AdminRereplicate(c *cli.Context) {
 				if !ok {
 					return
 				}
-				var task replicator.ReplicationTask
-				err := decode(msg.Value, &task)
-				if err != nil {
-					ErrorAndExit("failed to deserialize message due to error", err)
-				}
+				if msg.Offset < startOffset {
+					fmt.Printf("Message [%v],[%v] skipped\n", msg.Partition, msg.Offset)
 
-				err = producer.Publish(&task)
-
-				if err != nil {
-					fmt.Printf("[Error] Message [%v],[%v] failed\n", msg.Partition, msg.Offset)
 				} else {
-					fmt.Printf("Message [%v],[%v] succeeded\n", msg.Partition, msg.Offset)
+					var task replicator.ReplicationTask
+					err := decode(msg.Value, &task)
+					if err != nil {
+						ErrorAndExit("failed to deserialize message due to error", err)
+					}
+
+					err = producer.Publish(&task)
+
+					if err != nil {
+						fmt.Printf("[Error] Message [%v],[%v] failed\n", msg.Partition, msg.Offset)
+					} else {
+						fmt.Printf("Message [%v],[%v] succeeded\n", msg.Partition, msg.Offset)
+					}
 				}
 				consumer.MarkOffset(msg, "")
 			case <-time.After(time.Second * 5):
