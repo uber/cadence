@@ -357,11 +357,9 @@ func AdminRereplicate(c *cli.Context) {
 			ErrorAndExit("", fmt.Errorf("cannot find high watermark"))
 		}
 		fmt.Printf("Topic high watermark %v.\n", highWaterMarks)
-		for partition, offset := range highWaterMarks {
-			if offset > 0 {
-				fmt.Printf("Partition highwatermark offset %v:%v \n", partition, offset)
-			}
+		for partition, _ := range highWaterMarks {
 			consumer.MarkPartitionOffset(fromTopic, partition, startOffset, "")
+			consumer.ResetPartitionOffset(fromTopic, partition, startOffset, "")
 			fmt.Printf("reset offset %v:%v \n", partition, startOffset)
 		}
 		err = consumer.CommitOffsets()
@@ -377,7 +375,7 @@ func AdminRereplicate(c *cli.Context) {
 				}
 				if msg.Offset < startOffset {
 					fmt.Printf("Message [%v],[%v] skipped\n", msg.Partition, msg.Offset)
-					ErrorAndExit("", fmt.Errorf("cannot mark offset"))
+					ErrorAndExit("", fmt.Errorf("offset is not correct"))
 				} else {
 					var task replicator.ReplicationTask
 					err := decode(msg.Value, &task)
