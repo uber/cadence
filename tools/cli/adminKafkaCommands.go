@@ -36,7 +36,6 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/bsm/sarama-cluster"
-	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/replicator"
@@ -337,7 +336,7 @@ func AdminRereplicate(c *cli.Context) {
 			ErrorAndExit("", err)
 		}
 
-		group := uuid.New().String()
+		group := "longer-group-test"
 
 		consumer, err := cluster.NewConsumerFromClient(client, group, []string{fromTopic})
 		if err != nil {
@@ -359,7 +358,6 @@ func AdminRereplicate(c *cli.Context) {
 		fmt.Printf("Topic high watermark %v.\n", highWaterMarks)
 		for partition, _ := range highWaterMarks {
 			consumer.MarkPartitionOffset(fromTopic, partition, startOffset, "")
-			consumer.ResetPartitionOffset(fromTopic, partition, startOffset, "")
 			fmt.Printf("reset offset %v:%v \n", partition, startOffset)
 		}
 		err = consumer.CommitOffsets()
@@ -374,14 +372,8 @@ func AdminRereplicate(c *cli.Context) {
 					return
 				}
 				if msg.Offset < startOffset {
-					fmt.Printf("Message [%v],[%v] skipped\n", msg.Partition, msg.Offset)
-					//ErrorAndExit("", fmt.Errorf("offset is not correct"))
-					consumer.MarkPartitionOffset(fromTopic, msg.Partition, startOffset, "")
-					consumer.ResetPartitionOffset(fromTopic, msg.Partition, startOffset, "")
-					consumer.CommitOffsets()
-
-					msg.Offset = startOffset
-					consumer.MarkOffset(msg, "")
+					fmt.Printf("Wrong Message [%v],[%v] \n", msg.Partition, msg.Offset)
+					ErrorAndExit("", fmt.Errorf("offset is not correct"))
 					continue
 				} else {
 					var task replicator.ReplicationTask
