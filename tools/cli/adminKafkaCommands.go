@@ -361,6 +361,10 @@ func AdminRereplicate(c *cli.Context) {
 			if offset > 0 {
 				fmt.Printf("Partition highwatermark offset %v:%v \n", partition, offset)
 			}
+			if offset < startOffset {
+				consumer.ResetPartitionOffset(fromTopic, partition, startOffset, "")
+				fmt.Printf("reset offset %v:%v \n", partition, startOffset)
+			}
 		}
 
 		for {
