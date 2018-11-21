@@ -386,7 +386,7 @@ func AdminRereplicate(c *cli.Context) {
 					fmt.Printf("Message [%v],[%v] succeeded\n", msg.Partition, msg.Offset)
 				}
 				consumer.MarkOffset(msg, "")
-			case <-time.After(time.Second * 60):
+			case <-time.After(time.Second * 5):
 				fmt.Println("heartbeat: waiting for more messages, Ctrl+C to stop any time...")
 			}
 		}
