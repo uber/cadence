@@ -374,6 +374,7 @@ func AdminRereplicate(c *cli.Context) {
 					return
 				}
 				if msg.Offset < startOffset {
+					consumer.ResetPartitionOffset(fromTopic, msg.Partition, startOffset, "")
 					fmt.Printf("Message [%v],[%v] skipped\n", msg.Partition, msg.Offset)
 
 				} else {
