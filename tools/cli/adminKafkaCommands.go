@@ -381,7 +381,7 @@ func AdminRereplicate(c *cli.Context) {
 					err = producer.Publish(&task)
 
 					if err != nil {
-						fmt.Printf("[Error] Message [%v],[%v] failed\n", msg.Partition, msg.Offset)
+						fmt.Printf("[Error] Message [%v],[%v] failed: %v\n", msg.Partition, msg.Offset, err)
 					} else {
 						fmt.Printf("Message [%v],[%v] succeeded\n", msg.Partition, msg.Offset)
 					}
