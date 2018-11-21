@@ -364,6 +364,10 @@ func AdminRereplicate(c *cli.Context) {
 			consumer.MarkPartitionOffset(fromTopic, partition, startOffset, "")
 			fmt.Printf("reset offset %v:%v \n", partition, startOffset)
 		}
+		err = consumer.CommitOffsets()
+		if err != nil {
+			ErrorAndExit("fail to commit offset", err)
+		}
 
 		for {
 			select {
@@ -372,9 +376,8 @@ func AdminRereplicate(c *cli.Context) {
 					return
 				}
 				if msg.Offset < startOffset {
-					consumer.MarkPartitionOffset(fromTopic, msg.Partition, startOffset, "")
 					fmt.Printf("Message [%v],[%v] skipped\n", msg.Partition, msg.Offset)
-
+					ErrorAndExit("", fmt.Errorf("cannot mark offset"))
 				} else {
 					var task replicator.ReplicationTask
 					err := decode(msg.Value, &task)
