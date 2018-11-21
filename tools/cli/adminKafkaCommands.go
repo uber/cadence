@@ -294,16 +294,16 @@ func AdminRereplicate(c *cli.Context) {
 
 	producer := messaging.NewKafkaProducer(destTopic, sproducer, logger)
 
-	var in_file string
+	var inFile string
 	var tasks []*replicator.ReplicationTask
 	if c.IsSet(FlagInputFile) && (c.IsSet(FlagInputCluster) || c.IsSet(FlagInputTopic) || c.IsSet(FlagStartOffset)) {
 		ErrorAndExit("", fmt.Errorf("ONLY Either from JSON file or from DLQ topic"))
 	}
 
 	if c.IsSet(FlagInputFile) {
-		in_file = c.String(FlagInputFile)
+		inFile = c.String(FlagInputFile)
 		// parse json input as replicaiton tasks
-		tasks, err = parseReplicationTask(in_file)
+		tasks, err = parseReplicationTask(inFile)
 		if err != nil {
 			ErrorAndExit("", err)
 		}
@@ -354,7 +354,7 @@ func AdminRereplicate(c *cli.Context) {
 
 		highWaterMarks, ok := consumer.HighWaterMarks()[fromTopic]
 		if !ok {
-			ErrorAndExit("", fmt.Errorf("Cannot find high watermark."))
+			ErrorAndExit("", fmt.Errorf("cannot find high watermark"))
 		}
 		fmt.Printf("Topic high watermark %v.\n", highWaterMarks)
 		for partition, offset := range highWaterMarks {
