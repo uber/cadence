@@ -379,6 +379,9 @@ func AdminRereplicate(c *cli.Context) {
 					consumer.MarkPartitionOffset(fromTopic, msg.Partition, startOffset, "")
 					consumer.ResetPartitionOffset(fromTopic, msg.Partition, startOffset, "")
 					consumer.CommitOffsets()
+
+					msg.Offset = startOffset
+					consumer.MarkOffset(msg, "")
 					continue
 				} else {
 					var task replicator.ReplicationTask
