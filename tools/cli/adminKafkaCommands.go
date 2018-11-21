@@ -36,7 +36,6 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/bsm/sarama-cluster"
-	"github.com/sirupsen/logrus"
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/common/messaging"
@@ -286,10 +285,7 @@ func AdminRereplicate(c *cli.Context) {
 	if err != nil {
 		ErrorAndExit("", err)
 	}
-	logger := bark.NewLoggerFromLogrus(&logrus.Logger{
-		Formatter: new(logrus.JSONFormatter),
-		Level:     logrus.InfoLevel,
-	})
+	logger := bark.NewNopLogger()
 
 	producer := messaging.NewKafkaProducer(destTopic, sproducer, logger)
 
