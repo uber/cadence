@@ -226,7 +226,7 @@ func GenerateReplicationTask(targetClusters []string, task *persistence.Replicat
 	historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager,
 	metricsClient metrics.Client, logger bark.Logger,
 ) (*replicator.ReplicationTask, error) {
-	history, err := getHistory(historyMgr, historyV2Mgr, metricsClient, logger,
+	history, _, err := GetAllHistory(historyMgr, historyV2Mgr, metricsClient, logger, false,
 		task.DomainID, task.WorkflowID, task.RunID, task.FirstEventID, task.NextEventID, task.EventStoreVersion, task.BranchToken)
 	if err != nil {
 		return nil, err
@@ -239,7 +239,7 @@ func GenerateReplicationTask(targetClusters []string, task *persistence.Replicat
 		lastEvent := events[len(events)-1]
 		if lastEvent.GetEventType() == shared.EventTypeWorkflowExecutionContinuedAsNew {
 			newRunID := lastEvent.WorkflowExecutionContinuedAsNewEventAttributes.GetNewExecutionRunId()
-			newRunHistory, err = getHistory(historyMgr, historyV2Mgr, metricsClient, logger,
+			newRunHistory, _, err = GetAllHistory(historyMgr, historyV2Mgr, metricsClient, logger, false,
 				task.DomainID, task.WorkflowID, newRunID, common.FirstEventID, int64(3), task.NewRunEventStoreVersion, task.NewRunBranchToken)
 			if err != nil {
 				return nil, err
@@ -315,35 +315,41 @@ func (p *replicatorQueueProcessorImpl) updateAckLevel(ackLevel int64) error {
 	return err
 }
 
-func getHistory(historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager,
-	metricsClient metrics.Client, logger bark.Logger,
+func GetAllHistory(historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager,
+	metricsClient metrics.Client, logger bark.Logger, byBatch bool,
 	domainID, workflowID, runID string, firstEventID,
-	nextEventID int64, eventStoreVersion int32, branchToken []byte) (*shared.History, error) {
+	nextEventID int64, eventStoreVersion int32, branchToken []byte) (*shared.History, []*shared.History, error) {
 
+	historyBatches := []*shared.History{}
 	var nextPageToken []byte
 	historyEvents := []*shared.HistoryEvent{}
 	historySize := 0
 	for hasMore := true; hasMore; hasMore = len(nextPageToken) > 0 {
 		if eventStoreVersion == persistence.EventStoreVersionV2 {
-			response, err := historyV2Mgr.ReadHistoryBranch(&persistence.ReadHistoryBranchRequest{
+			req := &persistence.ReadHistoryBranchRequest{
 				BranchToken:   branchToken,
 				MinEventID:    firstEventID,
 				MaxEventID:    nextEventID,
 				PageSize:      defaultHistoryPageSize,
 				NextPageToken: nextPageToken,
-			})
-
-			if err != nil {
-				return nil, err
 			}
+			if byBatch {
+				panic("not implemented yet")
+			} else {
+				response, err := historyV2Mgr.ReadHistoryBranch(req)
 
-			// Keep track of total history size
-			historySize += response.Size
+				if err != nil {
+					return nil, nil, err
+				}
 
-			historyEvents = append(historyEvents, response.History...)
-			nextPageToken = response.NextPageToken
+				// Keep track of total history size
+				historySize += response.Size
+
+				historyEvents = append(historyEvents, response.History...)
+				nextPageToken = response.NextPageToken
+			}
 		} else {
-			response, err := historyMgr.GetWorkflowExecutionHistory(&persistence.GetWorkflowExecutionHistoryRequest{
+			req := &persistence.GetWorkflowExecutionHistoryRequest{
 				DomainID: domainID,
 				Execution: shared.WorkflowExecution{
 					WorkflowId: common.StringPtr(workflowID),
@@ -353,17 +359,22 @@ func getHistory(historyMgr persistence.HistoryManager, historyV2Mgr persistence.
 				NextEventID:   nextEventID,
 				PageSize:      defaultHistoryPageSize,
 				NextPageToken: nextPageToken,
-			})
-
-			if err != nil {
-				return nil, err
 			}
+			if byBatch {
+				panic("not implemented yet")
+			} else {
+				response, err := historyMgr.GetWorkflowExecutionHistory(req)
 
-			// Keep track of total history size
-			historySize += response.Size
+				if err != nil {
+					return nil, nil, err
+				}
 
-			historyEvents = append(historyEvents, response.History.Events...)
-			nextPageToken = response.NextPageToken
+				// Keep track of total history size
+				historySize += response.Size
+
+				historyEvents = append(historyEvents, response.History.Events...)
+				nextPageToken = response.NextPageToken
+			}
 		}
 	}
 
@@ -380,7 +391,7 @@ func getHistory(historyMgr persistence.HistoryManager, historyV2Mgr persistence.
 
 	executionHistory := &shared.History{}
 	executionHistory.Events = historyEvents
-	return executionHistory, nil
+	return executionHistory, historyBatches, nil
 }
 
 func convertLastReplicationInfo(info map[string]*persistence.ReplicationInfo) map[string]*h.ReplicationInfo {
