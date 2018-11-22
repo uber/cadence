@@ -68,9 +68,7 @@ func (i *initiator) Archive(request *ArchiveRequest) error {
 	if request.Domain == Domain {
 		return nil
 	}
-	//workflowID := fmt.Sprintf("%v-%v", WorkflowIDPrefix, rand.Intn(i.numSWFn()))
-	// TODO: change this back
-	workflowID := fmt.Sprintf("%v-%v", WorkflowIDPrefix, rand.Intn(1))
+	workflowID := fmt.Sprintf("%v-%v", WorkflowIDPrefix, rand.Intn(i.numSWFn()))
 	workflowOptions := client.StartWorkflowOptions{
 		ID: workflowID,
 		// TODO: once we have higher load, this should select one random of X task lists to do load balancing

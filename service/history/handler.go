@@ -803,13 +803,6 @@ func (h *Handler) SignalWorkflowExecution(ctx context.Context,
 // event recorded in history, and a decision task being created for the execution
 func (h *Handler) SignalWithStartWorkflowExecution(ctx context.Context,
 	wrappedRequest *hist.SignalWithStartWorkflowExecutionRequest) (*gen.StartWorkflowExecutionResponse, error) {
-
-	h.GetLogger().Info("history signal with start called")
-
-	defer func() {
-		h.GetLogger().Info("finished method in history...")
-	}()
-
 	h.startWG.Wait()
 
 	scope := metrics.HistorySignalWithStartWorkflowExecutionScope

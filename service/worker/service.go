@@ -115,15 +115,6 @@ func (s *Service) Stop() {
 	s.params.Logger.Infof("%v stopped", common.WorkerServiceName)
 }
 
-func (s *Service) getFrontendClient(base service.Service, log bark.Logger) frontend.Client {
-	client, err := base.GetClientFactory().NewFrontendClient()
-	if err != nil {
-		log.Fatalf("failed to create frontend client: %v", err)
-	}
-	return frontend.NewRetryableClient(client, common.CreateFrontendServiceRetryPolicy(),
-		common.IsWhitelistServiceTransientError)
-}
-
 func (s *Service) startReplicator(params *service.BootstrapParams, base service.Service, log bark.Logger) {
 	pConfig := params.PersistenceConfig
 	pConfig.SetMaxQPS(pConfig.DefaultStore, s.config.ReplicationCfg.PersistenceMaxQPS())

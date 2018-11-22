@@ -49,10 +49,7 @@ func SystemWorkflow(ctx workflow.Context) error {
 			break
 		}
 		selectSystemTask(scope, signal, ctx, logger)
-		logger.Info("finished iteration of loop", zap.Int("count", signalsHandled), zap.String("system-workflow-id", workflow.GetInfo(ctx).WorkflowExecution.ID))
 	}
-
-	logger.Info("exited first loop")
 
 	for {
 		var signal Signal
@@ -63,7 +60,6 @@ func SystemWorkflow(ctx workflow.Context) error {
 		signalsHandled++
 	}
 
-	logger.Info("exited second loop")
 	logger.Info("completed current set of iterations, continuing as new",
 		zap.Int(logging.TagIterationsUntilContinueAsNew, signalsHandled))
 
