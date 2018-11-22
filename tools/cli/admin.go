@@ -153,7 +153,7 @@ func newAdminDomainCommands() []cli.Command {
 					Name:  FlagDomain,
 					Usage: "DomainName",
 				},
-				cli.IntFlag{
+				cli.StringFlag{
 					Name:  FlagDomainID,
 					Usage: "Domain ID(uuid)",
 				},
