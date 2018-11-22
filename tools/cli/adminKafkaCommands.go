@@ -405,6 +405,7 @@ func AdminRereplicate(c *cli.Context) {
 		if err != nil {
 			ErrorAndExit("Publish task error", err)
 		}
+		fmt.Printf("publish task successfully firstID %v, lastID %v \n", events[0].GetEventId(), lastEvent.GetEventId())
 	}
 }
 
