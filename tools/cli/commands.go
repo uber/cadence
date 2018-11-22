@@ -57,7 +57,7 @@ const (
 	FlagAddressWithAlias           = FlagAddress + ", ad"
 	FlagHistoryAddress             = "history_address"
 	FlagHistoryAddressWithAlias    = FlagHistoryAddress + ", had"
-	FlagDomainID                   = "domainID"
+	FlagDomainID                   = "domain_id"
 	FlagDomain                     = "domain"
 	FlagDomainWithAlias            = FlagDomain + ", do"
 	FlagShardID                    = "shard_id"

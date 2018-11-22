@@ -69,7 +69,7 @@ func AdminDescribeWorkflow(c *cli.Context) {
 
 // AdminDeleteWorkflow describe a new workflow execution for admin
 func AdminDeleteWorkflow(c *cli.Context) {
-	domainID := getRequiredGlobalOption(c, FlagDomainID)
+	domainID := getRequiredOption(c, FlagDomainID)
 	wid := getRequiredOption(c, FlagWorkflowID)
 	rid := getRequiredOption(c, FlagRunID)
 	if !c.IsSet(FlagShardID) {
@@ -82,8 +82,8 @@ func AdminDeleteWorkflow(c *cli.Context) {
 		ErrorAndExit("port is required", nil)
 	}
 	port := c.Int(FlagPort)
-	user := getRequiredOption(c, FlagUsername)
-	pw := getRequiredOption(c, FlagPassword)
+	user := c.String(FlagUsername)
+	pw := c.String(FlagPassword)
 	ksp := getRequiredOption(c, FlagKeyspace)
 
 	clusterCfg, err := cassandra.NewCassandraCluster(host, port, user, pw, ksp, 10)
