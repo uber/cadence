@@ -21,6 +21,8 @@
 package cli
 
 import (
+	"fmt"
+
 	"github.com/uber/cadence/common"
 	"github.com/urfave/cli"
 	"go.uber.org/cadence/.gen/go/admin"
@@ -61,6 +63,44 @@ func AdminDescribeWorkflow(c *cli.Context) {
 	}
 
 	prettyPrintJSONObject(resp)
+}
+
+// AdminDeleteWorkflow describe a new workflow execution for admin
+func AdminDeleteWorkflow(c *cli.Context) {
+	// using service client instead of cadence.Client because we need to directly pass the json blob as input.
+	serviceClient := getAdminServiceClient(c)
+
+	domain := getRequiredGlobalOption(c, FlagDomain)
+	wid := getRequiredOption(c, FlagWorkflowID)
+	rid := c.String(FlagRunID)
+
+	ctx, cancel := newContext()
+	defer cancel()
+
+	resp, err := serviceClient.DescribeWorkflowExecution(ctx, &admin.DescribeWorkflowExecutionRequest{
+		Domain: common.StringPtr(domain),
+		Execution: &s.WorkflowExecution{
+			WorkflowId: common.StringPtr(wid),
+			RunId:      common.StringPtr(rid),
+		},
+	})
+	if err != nil {
+		ErrorAndExit("Describe workflow execution failed", err)
+	}
+
+	prettyPrintJSONObject(resp)
+}
+
+func AdminGetShardID(c *cli.Context) {
+	wid := getRequiredOption(c, FlagWorkflowID)
+	numberOfShards := c.Int(FlagNumberOfShards)
+
+	if numberOfShards <= 0 {
+		ErrorAndExit("numberOfShards is required", nil)
+		return
+	}
+	shardID := common.WorkflowIDToHistoryShard(wid, numberOfShards)
+	fmt.Printf("ShardID for workflowID: %v is %v \n", wid, shardID)
 }
 
 // AdminDescribeHistoryHost describes history host

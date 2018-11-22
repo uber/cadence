@@ -60,6 +60,7 @@ const (
 	FlagWorkflowID                 = "workflow_id"
 	FlagWorkflowIDWithAlias        = FlagWorkflowID + ", wid, w"
 	FlagRunID                      = "run_id"
+	FlagNumberOfShards             = "numberOfShards"
 	FlagRunIDWithAlias             = FlagRunID + ", rid, r"
 	FlagTaskList                   = "tasklist"
 	FlagTaskListWithAlias          = FlagTaskList + ", tl"

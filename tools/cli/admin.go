@@ -42,6 +42,24 @@ func newAdminWorkflowCommands() []cli.Command {
 				AdminDescribeWorkflow(c)
 			},
 		},
+		{
+			Name:    "delete",
+			Aliases: []string{"del"},
+			Usage:   "Delete current workflow execution and the mutableState record",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagWorkflowIDWithAlias,
+					Usage: "WorkflowID",
+				},
+				cli.StringFlag{
+					Name:  FlagRunIDWithAlias,
+					Usage: "RunID",
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminDeleteWorkflow(c)
+			},
+		},
 	}
 }
 
@@ -71,6 +89,24 @@ func newAdminHistoryHostCommands() []cli.Command {
 			},
 			Action: func(c *cli.Context) {
 				AdminDescribeHistoryHost(c)
+			},
+		},
+		{
+			Name:    "getshard",
+			Aliases: []string{"gsh"},
+			Usage:   "Get shardID for a workflowID",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagWorkflowIDWithAlias,
+					Usage: "WorkflowID",
+				},
+				cli.IntFlag{
+					Name:  FlagNumberOfShards,
+					Usage: "NumberOfShards for the cadence cluster(see config for numHistoryShards)",
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminGetShardID(c)
 			},
 		},
 	}
