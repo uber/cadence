@@ -20,6 +20,10 @@
 
 package sysworkflow
 
+import (
+	"time"
+)
+
 // RequestType is the type for signals that can be sent to system workflows
 type RequestType int
 
@@ -37,6 +41,7 @@ const (
 	WorkflowIDPrefix = "cadsys-wf"
 
 	// SignalsUntilContinueAsNew is the number of signals system workflow must receive before continuing as new
+	// TODO: change this to 1000
 	SignalsUntilContinueAsNew = 5
 
 	// SystemWorkflowScope scope for all metrics emitted by system workflow
@@ -51,6 +56,9 @@ const (
 	// UnknownSignalTypeErr counter of number of unknown signals received by system workflow
 	UnknownSignalTypeErr = "unknown-signal-err"
 
+	// ArchivalFailureErr counter of number of archival activity failures
+	ArchivalFailureErr = "archival-failure"
+
 	// ChannelClosedUnexpectedlyError counter of number of unexpected channel closes in system workflow
 	ChannelClosedUnexpectedlyError = "channel-closed-unexpectedly-err"
 
@@ -59,6 +67,12 @@ const (
 
 	// SystemWorkflowFnName name of system workflow function
 	SystemWorkflowFnName = "SystemWorkflow"
+
+	// WorkflowStartToCloseTimeout is the time for the workflow to finish
+	WorkflowStartToCloseTimeout = time.Hour * 24 * 30
+
+	// DecisionTaskStartToCloseTimeout is the time for decision to finish
+	DecisionTaskStartToCloseTimeout = time.Minute
 
 	// ArchivalRequest is the archive signal identifier
 	ArchivalRequest = iota

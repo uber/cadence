@@ -23,6 +23,7 @@ package logging
 import (
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/shared"
+	"runtime/debug"
 )
 
 //
@@ -73,6 +74,7 @@ func LogInternalServiceError(logger bark.Logger, err error) {
 
 // LogUncategorizedError is used to log error that are uncategorized
 func LogUncategorizedError(logger bark.Logger, err error) {
+	debug.PrintStack()
 	logger.WithFields(bark.Fields{
 		TagErr: err,
 	}).Error("Uncategorized error")

@@ -127,6 +127,7 @@ var (
 	}
 )
 
+// NewEngineWithShardContext creates an instance of history engine
 func NewEngineWithShardContext(
 	shard ShardContext,
 	visibilityMgr persistence.VisibilityManager,
@@ -1532,6 +1533,7 @@ Update_History_Loop:
 			timerTasks = append(timerTasks, timerT)
 
 			request := &sysworkflow.ArchiveRequest{
+				Domain:         domainEntry.GetInfo().Name,
 				UserWorkflowID: workflowExecution.GetWorkflowId(),
 				UserRunID:      workflowExecution.GetRunId(),
 			}

@@ -38,8 +38,8 @@ func SystemWorkflow(ctx workflow.Context) error {
 	logger := workflow.GetLogger(ctx)
 	scope := workflow.GetMetricsScope(ctx).Tagged(map[string]string{SystemWorkflowIDTag: id})
 	ch := workflow.GetSignalChannel(ctx, SignalName)
-	logger.Info("setting signalsHandled to zero")
 
+	logger.Info("started new system workflow")
 	signalsHandled := 0
 	for ; signalsHandled < SignalsUntilContinueAsNew; signalsHandled++ {
 		var signal Signal
@@ -66,7 +66,10 @@ func SystemWorkflow(ctx workflow.Context) error {
 	logger.Info("exited second loop")
 	logger.Info("completed current set of iterations, continuing as new",
 		zap.Int(logging.TagIterationsUntilContinueAsNew, signalsHandled))
-	return workflow.NewContinueAsNewError(ctx, "SystemWorkflow")
+
+	ctx = workflow.WithExecutionStartToCloseTimeout(ctx, WorkflowStartToCloseTimeout)
+	ctx = workflow.WithWorkflowTaskStartToCloseTimeout(ctx, DecisionTaskStartToCloseTimeout)
+	return workflow.NewContinueAsNewError(ctx, SystemWorkflowFnName)
 }
 
 func selectSystemTask(scope tally.Scope, signal Signal, ctx workflow.Context, logger *zap.Logger) {
@@ -75,26 +78,29 @@ func selectSystemTask(scope tally.Scope, signal Signal, ctx workflow.Context, lo
 	ao := workflow.ActivityOptions{
 		ScheduleToStartTimeout: time.Minute,
 		StartToCloseTimeout:    time.Minute,
-		//HeartbeatTimeout:       time.Second * 10,
-		//RetryPolicy: &cadence.RetryPolicy{
-		//	InitialInterval:          time.Second,
-		//	BackoffCoefficient:       2.0,
-		//	MaximumInterval:          time.Minute,
-		//	ExpirationInterval:       time.Hour * 24 * 30,
-		//	MaximumAttempts:          0,
-		//	NonRetriableErrorReasons: []string{"bad-error"},
-		//},
+		HeartbeatTimeout:       time.Second * 10,
+		RetryPolicy: &cadence.RetryPolicy{
+			InitialInterval:          time.Second,
+			BackoffCoefficient:       2.0,
+			MaximumInterval:          time.Minute,
+			ExpirationInterval:       time.Hour * 24 * 30,
+			MaximumAttempts:          0,
+			NonRetriableErrorReasons: []string{"bad-error"},
+		},
 	}
 
-	ctx = workflow.WithActivityOptions(ctx, ao)
+	actCtx := workflow.WithActivityOptions(ctx, ao)
 	switch signal.RequestType {
 	case ArchivalRequest:
-		workflow.ExecuteActivity(
-			ctx,
+		if err := workflow.ExecuteActivity(
+			actCtx,
 			ArchivalActivityFnName,
 			signal.ArchiveRequest.UserWorkflowID,
 			signal.ArchiveRequest.UserRunID,
-		)
+		).Get(ctx, nil); err != nil {
+			scope.Counter(ArchivalFailureErr)
+			logger.Error("failed to execute archival activity", zap.Error(err))
+		}
 	default:
 		scope.Counter(UnknownSignalTypeErr).Inc(1)
 		logger.Error("received unknown request type")
@@ -102,18 +108,18 @@ func selectSystemTask(scope tally.Scope, signal Signal, ctx workflow.Context, lo
 }
 
 // ArchivalActivity is the archival activity code
-func ArchivalActivity(ctx context.Context, userWorkflowID string, userRunId string) error {
+func ArchivalActivity(ctx context.Context, userWorkflowID string, userRunID string) error {
 	logger := activity.GetLogger(ctx)
 	logger.Info("starting archival",
 		zap.String(logging.TagUserWorkflowID, userWorkflowID),
-		zap.String(logging.TagUserRunID, userRunId))
+		zap.String(logging.TagUserRunID, userRunID))
 
 	for i := 0; i < 20; i++ {
-		time.Sleep(time.Second)
+		time.Sleep(100 * time.Millisecond)
 		activity.RecordHeartbeat(ctx, i)
 
 		// if activity failure occurs restart the activity from the beginning
-		if 0 == rand.Intn(20) {
+		if 0 == rand.Intn(40) {
 			logger.Info("activity failed, will retry...")
 			return cadence.NewCustomError("some-retryable-error")
 		}
@@ -121,6 +127,6 @@ func ArchivalActivity(ctx context.Context, userWorkflowID string, userRunId stri
 
 	logger.Info("finished archival",
 		zap.String(logging.TagUserWorkflowID, userWorkflowID),
-		zap.String(logging.TagUserRunID, userRunId))
+		zap.String(logging.TagUserRunID, userRunID))
 	return nil
 }
