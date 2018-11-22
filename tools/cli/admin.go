@@ -224,9 +224,9 @@ func newAdminKafkaCommands() []cli.Command {
 			},
 		},
 		{
-			Name:    "rereplicate",
-			Aliases: []string{"rrp"},
-			Usage:   "Rereplicate replication tasks to topic(from input file or DLQ topic)",
+			Name:    "mergeDLQ",
+			Aliases: []string{"mgdlq"},
+			Usage:   "Merge replication tasks to target topic(from input file or DLQ topic)",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  FlagInputFileWithAlias,
@@ -255,6 +255,64 @@ func newAdminKafkaCommands() []cli.Command {
 				cli.StringFlag{
 					Name:  FlagGroup,
 					Usage: "Group to read DLQ",
+				},
+				cli.StringFlag{
+					Name: FlagHostFile,
+					Usage: "Kafka host config file in format of: " + `
+clusters:
+	localKafka:
+		brokers:
+		- 127.0.0.1
+		- 127.0.0.2`,
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminMergeDLQ(c)
+			},
+		},
+		{
+			Name:    "rereplicate",
+			Aliases: []string{"rrp"},
+			Usage:   "Rereplicate replication tasks to target topic from history tables",
+			Flags: []cli.Flag{
+
+				cli.StringFlag{
+					Name:  FlagTargetCluster,
+					Usage: "Name of targetCluster to receive the replication task",
+				},
+
+				cli.Int64Flag{
+					Name:  FlagMinEventID,
+					Usage: "MinEventID",
+				},
+				cli.Int64Flag{
+					Name:  FlagMaxEventID,
+					Usage: "MaxEventID",
+				},
+				cli.StringFlag{
+					Name:  FlagWorkflowIDWithAlias,
+					Usage: "WorkflowID",
+				},
+				cli.StringFlag{
+					Name:  FlagRunIDWithAlias,
+					Usage: "RunID",
+				},
+				cli.StringFlag{
+					Name:  FlagDomainID,
+					Usage: "DomainID",
+				},
+				cli.IntFlag{
+					Name:  FlagShardID,
+					Usage: "ShardID",
+				},
+
+				cli.StringFlag{
+					Name:  FlagCluster,
+					Usage: "Name of the Kafka cluster to publish replicationTasks",
+				},
+				cli.StringFlag{
+					Name:  FlagTopic,
+					Usage: "Topic to publish replication task",
 				},
 				cli.StringFlag{
 					Name: FlagHostFile,

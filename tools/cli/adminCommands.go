@@ -77,24 +77,9 @@ func AdminDeleteWorkflow(c *cli.Context) {
 	}
 	shardID := c.Int(FlagShardID)
 
-	host := getRequiredOption(c, FlagAddress)
-	if !c.IsSet(FlagPort) {
-		ErrorAndExit("port is required", nil)
-	}
-	port := c.Int(FlagPort)
-	user := c.String(FlagUsername)
-	pw := c.String(FlagPassword)
-	ksp := getRequiredOption(c, FlagKeyspace)
+	session := connectToCassandra(c)
 
-	clusterCfg, err := cassandra.NewCassandraCluster(host, port, user, pw, ksp, 10)
-	if err != nil {
-		ErrorAndExit("connect to Cassandra failed", err)
-	}
-	session, err := clusterCfg.CreateSession()
-	if err != nil {
-		ErrorAndExit("connect to Cassandra failed", err)
-	}
-
+	var err error
 	permanentRunID := "30000000-0000-f000-f000-000000000001"
 	selectTmpl := "select execution from executions where shard_id = ? and type = 1 and domain_id = ? and workflow_id = ? and run_id = ? "
 	deleteTmpl := "delete from executions where shard_id = ? and type = 1 and domain_id = ? and workflow_id = ? and run_id = ? "
@@ -134,14 +119,7 @@ func readOneRow(query *gocql.Query) (map[string]interface{}, error) {
 	return result, err
 }
 
-// AdminGetDomainIDOrName map domain
-func AdminGetDomainIDOrName(c *cli.Context) {
-	domainID := c.String(FlagDomainID)
-	domainName := c.String(FlagDomain)
-	if len(domainID) == 0 && len(domainName) == 0 {
-		ErrorAndExit("Need either domainName or domainID", nil)
-	}
-
+func connectToCassandra(c *cli.Context) *gocql.Session {
 	host := getRequiredOption(c, FlagAddress)
 	if !c.IsSet(FlagPort) {
 		ErrorAndExit("port is required", nil)
@@ -159,6 +137,18 @@ func AdminGetDomainIDOrName(c *cli.Context) {
 	if err != nil {
 		ErrorAndExit("connect to Cassandra failed", err)
 	}
+	return session
+}
+
+// AdminGetDomainIDOrName map domain
+func AdminGetDomainIDOrName(c *cli.Context) {
+	domainID := c.String(FlagDomainID)
+	domainName := c.String(FlagDomain)
+	if len(domainID) == 0 && len(domainName) == 0 {
+		ErrorAndExit("Need either domainName or domainID", nil)
+	}
+
+	session := connectToCassandra(c)
 
 	if len(domainID) > 0 {
 		tmpl := "select domain from domains where id = ? "

@@ -38,8 +38,16 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/bsm/sarama-cluster"
 	"github.com/uber-common/bark"
+	"github.com/uber-go/tally"
 	"github.com/uber/cadence/.gen/go/replicator"
+	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/messaging"
+	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/cassandra"
+	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/service/history"
 	"github.com/urfave/cli"
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/wire"
@@ -299,6 +307,128 @@ type ClustersConfig struct {
 
 // AdminRereplicate parses will re-publish replication tasks to topic
 func AdminRereplicate(c *cli.Context) {
+	producer := newKafkaProducer(c)
+	cFactory := createCassandraFactory(c)
+	histV1, err := cFactory.NewHistoryStore()
+	if err != nil {
+		ErrorAndExit("connect to cassandra error", err)
+	}
+	historyMgr := persistence.NewHistoryManagerImpl(histV1, bark.NewNopLogger())
+	histV2, err := cFactory.NewHistoryV2Store()
+	if err != nil {
+		ErrorAndExit("connect to cassandra error", err)
+	}
+	historyV2Mgr := persistence.NewHistoryV2ManagerImpl(histV2, bark.NewNopLogger())
+
+	if !c.IsSet(FlagShardID) {
+		ErrorAndExit("shardID is required", nil)
+	}
+	shardID := c.Int(FlagShardID)
+	exeM, err := cFactory.NewExecutionStore(shardID)
+	if err != nil {
+		ErrorAndExit("connect to cassandra error", err)
+	}
+	exeMgr := persistence.NewExecutionManagerImpl(exeM, bark.NewNopLogger())
+
+	domainID := getRequiredOption(c, FlagDomainID)
+	wid := getRequiredOption(c, FlagWorkflowID)
+	rid := getRequiredOption(c, FlagRunID)
+
+	minID := c.Int64(FlagMinEventID)
+	maxID := c.Int64(FlagMaxEventID)
+	target := getRequiredOption(c, FlagTargetCluster)
+	targets := []string{target}
+
+	resp, err := exeMgr.GetWorkflowExecution(&persistence.GetWorkflowExecutionRequest{
+		DomainID: domainID,
+		Execution: shared.WorkflowExecution{
+			WorkflowId: common.StringPtr(wid),
+			RunId:      common.StringPtr(rid),
+		},
+	})
+	if err != nil {
+		ErrorAndExit("GetWorkflowExecution error", err)
+	}
+
+	currVersion := resp.State.ReplicationState.CurrentVersion
+	repInfo := map[string]*persistence.ReplicationInfo{
+		"": {
+			Version:     currVersion,
+			LastEventID: 0,
+		},
+	}
+
+	exeInfo := resp.State.ExecutionInfo
+	taskTemplate := &persistence.ReplicationTaskInfo{
+		DomainID:            domainID,
+		WorkflowID:          wid,
+		RunID:               rid,
+		Version:             currVersion,
+		LastReplicationInfo: repInfo,
+		EventStoreVersion:   exeInfo.EventStoreVersion,
+		BranchToken:         exeInfo.GetCurrentBranch(),
+	}
+
+	metricsClient := metrics.NewClient(tally.NoopScope, 0)
+	_, historyBatches, err := history.GetAllHistory(historyMgr, historyV2Mgr, metricsClient, bark.NewNopLogger(), true,
+		domainID, wid, rid, minID, maxID, exeInfo.EventStoreVersion, exeInfo.GetCurrentBranch())
+
+	if err != nil {
+		ErrorAndExit("GetAllHistory error", err)
+	}
+
+	for _, batch := range historyBatches {
+
+		events := batch.Events
+		lastEvent := events[len(events)-1]
+		if lastEvent.GetEventType() == shared.EventTypeWorkflowExecutionContinuedAsNew {
+			newRunID := lastEvent.WorkflowExecutionContinuedAsNewEventAttributes.GetNewExecutionRunId()
+			resp, err := exeMgr.GetWorkflowExecution(&persistence.GetWorkflowExecutionRequest{
+				DomainID: domainID,
+				Execution: shared.WorkflowExecution{
+					WorkflowId: common.StringPtr(wid),
+					RunId:      common.StringPtr(newRunID),
+				},
+			})
+			if err != nil {
+				ErrorAndExit("GetWorkflowExecution error", err)
+			}
+			taskTemplate.NewRunEventStoreVersion = resp.State.ExecutionInfo.EventStoreVersion
+			taskTemplate.NewRunBranchToken = resp.State.ExecutionInfo.GetCurrentBranch()
+		}
+
+		task, err := history.GenerateReplicationTask(targets, taskTemplate, historyMgr, historyV2Mgr, metricsClient, bark.NewNopLogger())
+		if err != nil {
+			ErrorAndExit("GenerateReplicationTask error", err)
+		}
+		err = producer.Publish(task)
+		if err != nil {
+			ErrorAndExit("Publish task error", err)
+		}
+	}
+}
+
+func createCassandraFactory(c *cli.Context) *cassandra.Factory {
+	host := getRequiredOption(c, FlagAddress)
+	if !c.IsSet(FlagPort) {
+		ErrorAndExit("port is required", nil)
+	}
+	port := c.Int(FlagPort)
+	user := c.String(FlagUsername)
+	pw := c.String(FlagPassword)
+	ksp := getRequiredOption(c, FlagKeyspace)
+
+	config := config.Cassandra{
+		Hosts:    host,
+		Port:     port,
+		User:     user,
+		Password: pw,
+		Keyspace: ksp,
+	}
+	factory := cassandra.NewFactory(config, "cass", bark.NewNopLogger())
+	return factory
+}
+func newKafkaProducer(c *cli.Context) messaging.Producer {
 	hostFile := getRequiredOption(c, FlagHostFile)
 	destCluster := getRequiredOption(c, FlagCluster)
 	destTopic := getRequiredOption(c, FlagTopic)
@@ -319,7 +449,15 @@ func AdminRereplicate(c *cli.Context) {
 	logger := bark.NewNopLogger()
 
 	producer := messaging.NewKafkaProducer(destTopic, sproducer, logger)
+	return producer
+}
 
+// AdminMergeDLQ publish replication tasks from DLQ or JSON file
+func AdminMergeDLQ(c *cli.Context) {
+	hostFile := getRequiredOption(c, FlagHostFile)
+	producer := newKafkaProducer(c)
+
+	var err error
 	var inFile string
 	var tasks []*replicator.ReplicationTask
 	if c.IsSet(FlagInputFile) && (c.IsSet(FlagInputCluster) || c.IsSet(FlagInputTopic) || c.IsSet(FlagStartOffset)) {
