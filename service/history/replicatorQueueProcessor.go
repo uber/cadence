@@ -208,9 +208,28 @@ func (p *replicatorQueueProcessorImpl) processHistoryReplicationTask(task *persi
 		targetClusters = append(targetClusters, cluster.ClusterName)
 	}
 
-	history, err := p.getHistory(task.DomainID, task.WorkflowID, task.RunID, task.FirstEventID, task.NextEventID, task.EventStoreVersion, task.BranchToken)
+	replicationTask, err := GenerateReplicationTask(targetClusters, task, p.historyMgr, p.historyV2Mgr, p.metricsClient, p.logger)
 	if err != nil {
 		return err
+	}
+
+	err = p.replicator.Publish(replicationTask)
+	if err == nil {
+		p.Lock()
+		p.lastShardSyncTimestamp = common.NewRealTimeSource().Now()
+		p.Unlock()
+	}
+	return err
+}
+
+func GenerateReplicationTask(targetClusters []string, task *persistence.ReplicationTaskInfo,
+	historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager,
+	metricsClient metrics.Client, logger bark.Logger,
+) (*replicator.ReplicationTask, error) {
+	history, err := getHistory(historyMgr, historyV2Mgr, metricsClient, logger,
+		task.DomainID, task.WorkflowID, task.RunID, task.FirstEventID, task.NextEventID, task.EventStoreVersion, task.BranchToken)
+	if err != nil {
+		return nil, err
 	}
 
 	// Check if this is replication task for ContinueAsNew event, then retrieve the history for new execution
@@ -220,14 +239,15 @@ func (p *replicatorQueueProcessorImpl) processHistoryReplicationTask(task *persi
 		lastEvent := events[len(events)-1]
 		if lastEvent.GetEventType() == shared.EventTypeWorkflowExecutionContinuedAsNew {
 			newRunID := lastEvent.WorkflowExecutionContinuedAsNewEventAttributes.GetNewExecutionRunId()
-			newRunHistory, err = p.getHistory(task.DomainID, task.WorkflowID, newRunID, common.FirstEventID, int64(3), task.NewRunEventStoreVersion, task.NewRunBranchToken)
+			newRunHistory, err = getHistory(historyMgr, historyV2Mgr, metricsClient, logger,
+				task.DomainID, task.WorkflowID, newRunID, common.FirstEventID, int64(3), task.NewRunEventStoreVersion, task.NewRunBranchToken)
 			if err != nil {
-				return err
+				return nil, err
 			}
 		}
 	}
 
-	replicationTask := &replicator.ReplicationTask{
+	ret := &replicator.ReplicationTask{
 		TaskType: replicator.ReplicationTaskType.Ptr(replicator.ReplicationTaskTypeHistory),
 		HistoryTaskAttributes: &replicator.HistoryTaskAttributes{
 			TargetClusters:          targetClusters,
@@ -244,16 +264,8 @@ func (p *replicatorQueueProcessorImpl) processHistoryReplicationTask(task *persi
 			NewRunEventStoreVersion: common.Int32Ptr(task.NewRunEventStoreVersion),
 		},
 	}
-
-	err = p.replicator.Publish(replicationTask)
-	if err == nil {
-		p.Lock()
-		p.lastShardSyncTimestamp = common.NewRealTimeSource().Now()
-		p.Unlock()
-	}
-	return err
+	return ret, nil
 }
-
 func (p *replicatorQueueProcessorImpl) readTasks(readLevel int64) ([]queueTaskInfo, bool, error) {
 	response, err := p.executionMgr.GetReplicationTasks(&persistence.GetReplicationTasksRequest{
 		ReadLevel:    readLevel,
@@ -303,7 +315,9 @@ func (p *replicatorQueueProcessorImpl) updateAckLevel(ackLevel int64) error {
 	return err
 }
 
-func (p *replicatorQueueProcessorImpl) getHistory(domainID, workflowID, runID string, firstEventID,
+func getHistory(historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager,
+	metricsClient metrics.Client, logger bark.Logger,
+	domainID, workflowID, runID string, firstEventID,
 	nextEventID int64, eventStoreVersion int32, branchToken []byte) (*shared.History, error) {
 
 	var nextPageToken []byte
@@ -311,7 +325,7 @@ func (p *replicatorQueueProcessorImpl) getHistory(domainID, workflowID, runID st
 	historySize := 0
 	for hasMore := true; hasMore; hasMore = len(nextPageToken) > 0 {
 		if eventStoreVersion == persistence.EventStoreVersionV2 {
-			response, err := p.historyV2Mgr.ReadHistoryBranch(&persistence.ReadHistoryBranchRequest{
+			response, err := historyV2Mgr.ReadHistoryBranch(&persistence.ReadHistoryBranchRequest{
 				BranchToken:   branchToken,
 				MinEventID:    firstEventID,
 				MaxEventID:    nextEventID,
@@ -329,7 +343,7 @@ func (p *replicatorQueueProcessorImpl) getHistory(domainID, workflowID, runID st
 			historyEvents = append(historyEvents, response.History...)
 			nextPageToken = response.NextPageToken
 		} else {
-			response, err := p.historyMgr.GetWorkflowExecutionHistory(&persistence.GetWorkflowExecutionHistoryRequest{
+			response, err := historyMgr.GetWorkflowExecutionHistory(&persistence.GetWorkflowExecutionHistoryRequest{
 				DomainID: domainID,
 				Execution: shared.WorkflowExecution{
 					WorkflowId: common.StringPtr(workflowID),
@@ -354,9 +368,9 @@ func (p *replicatorQueueProcessorImpl) getHistory(domainID, workflowID, runID st
 	}
 
 	// Emit metric and log for history size
-	p.metricsClient.RecordTimer(metrics.ReplicatorQueueProcessorScope, metrics.HistorySize, time.Duration(historySize))
+	metricsClient.RecordTimer(metrics.ReplicatorQueueProcessorScope, metrics.HistorySize, time.Duration(historySize))
 	if historySize > common.GetHistoryWarnSizeLimit {
-		p.logger.WithFields(bark.Fields{
+		logger.WithFields(bark.Fields{
 			logging.TagWorkflowExecutionID: workflowID,
 			logging.TagWorkflowRunID:       runID,
 			logging.TagDomainID:            domainID,
