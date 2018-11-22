@@ -930,6 +930,19 @@ type (
 		Size int
 	}
 
+	// GetWorkflowExecutionHistoryByBatchResponse is the response to GetWorkflowExecutionHistoryRequest
+	// Deprecated: use V2 API instead-ReadHistoryBranchByBatch()
+	GetWorkflowExecutionHistoryByBatchResponse struct {
+		History []*workflow.History
+		// Token to read next page if there are more events beyond page size.
+		// Use this to set NextPageToken on GetworkflowExecutionHistoryRequest to read the next page.
+		NextPageToken []byte
+		// the first_event_id of last loaded batch
+		LastFirstEventID int64
+		// Size of history read from store
+		Size int
+	}
+
 	// DeleteWorkflowExecutionHistoryRequest is used to delete workflow execution history
 	//Deprecated: use v2 API-AppendHistoryNodes() instead
 	DeleteWorkflowExecutionHistoryRequest struct {
@@ -1254,6 +1267,8 @@ type (
 		// GetWorkflowExecutionHistory retrieves the paginated list of history events for given execution
 		//Deprecated: use v2 API-ReadHistoryBranch() instead
 		GetWorkflowExecutionHistory(request *GetWorkflowExecutionHistoryRequest) (*GetWorkflowExecutionHistoryResponse, error)
+		//Deprecated: use v2 API-ReadHistoryBranchByBatch() instead
+		GetWorkflowExecutionHistoryByBatch(request *GetWorkflowExecutionHistoryRequest) (*GetWorkflowExecutionHistoryByBatchResponse, error)
 		//Deprecated: use v2 API-DeleteHistoryBranch instead
 		DeleteWorkflowExecutionHistory(request *DeleteWorkflowExecutionHistoryRequest) error
 	}

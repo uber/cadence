@@ -396,6 +396,15 @@ func (p *historyRateLimitedPersistenceClient) GetWorkflowExecutionHistory(reques
 	return response, err
 }
 
+func (p *historyRateLimitedPersistenceClient) GetWorkflowExecutionHistoryByBatch(request *GetWorkflowExecutionHistoryRequest) (*GetWorkflowExecutionHistoryByBatchResponse, error) {
+	if ok, _ := p.rateLimiter.TryConsume(1); !ok {
+		return nil, ErrPersistenceLimitExceeded
+	}
+
+	response, err := p.persistence.GetWorkflowExecutionHistoryByBatch(request)
+	return response, err
+}
+
 func (p *historyRateLimitedPersistenceClient) DeleteWorkflowExecutionHistory(request *DeleteWorkflowExecutionHistoryRequest) error {
 	if ok, _ := p.rateLimiter.TryConsume(1); !ok {
 		return ErrPersistenceLimitExceeded
