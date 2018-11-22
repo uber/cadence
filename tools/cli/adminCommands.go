@@ -134,6 +134,7 @@ func readOneRow(query *gocql.Query) (map[string]interface{}, error) {
 	return result, err
 }
 
+// AdminGetDomainIDOrName map domain
 func AdminGetDomainIDOrName(c *cli.Context) {
 	domainID := c.String(FlagDomainID)
 	domainName := c.String(FlagDomain)
@@ -194,6 +195,7 @@ func AdminGetDomainIDOrName(c *cli.Context) {
 	}
 }
 
+// AdminGetShardID get shardID
 func AdminGetShardID(c *cli.Context) {
 	wid := getRequiredOption(c, FlagWorkflowID)
 	numberOfShards := c.Int(FlagNumberOfShards)
