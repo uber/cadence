@@ -142,6 +142,51 @@ func newAdminHistoryHostCommands() []cli.Command {
 	}
 }
 
+func newAdminDomainCommands() []cli.Command {
+	return []cli.Command{
+		{
+			Name:    "getdomainidorname",
+			Aliases: []string{"getdn"},
+			Usage:   "Get domainID or domainName",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagDomain,
+					Usage: "DomainName",
+				},
+				cli.IntFlag{
+					Name:  FlagDomainID,
+					Usage: "Domain ID(uuid)",
+				},
+
+				// for cassandra connection
+				cli.StringFlag{
+					Name:  FlagAddress,
+					Usage: "cassandra host address",
+				},
+				cli.IntFlag{
+					Name:  FlagPort,
+					Usage: "cassandra port for the host (default is 9042)",
+				},
+				cli.StringFlag{
+					Name:  FlagUsername,
+					Usage: "cassandra username",
+				},
+				cli.StringFlag{
+					Name:  FlagPassword,
+					Usage: "cassandra password",
+				},
+				cli.StringFlag{
+					Name:  FlagKeyspace,
+					Usage: "cassandra keyspace",
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminGetDomainIDOrName(c)
+			},
+		},
+	}
+}
+
 func newAdminKafkaCommands() []cli.Command {
 	return []cli.Command{
 		{

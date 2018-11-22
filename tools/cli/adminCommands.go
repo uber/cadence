@@ -134,6 +134,66 @@ func readOneRow(query *gocql.Query) (map[string]interface{}, error) {
 	return result, err
 }
 
+func AdminGetDomainIDOrName(c *cli.Context) {
+	domainID := c.String(FlagDomainID)
+	domainName := c.String(FlagDomain)
+	if len(domainID) == 0 && len(domainName) == 0 {
+		ErrorAndExit("Need either domainName or domainID", nil)
+	}
+
+	host := getRequiredOption(c, FlagAddress)
+	if !c.IsSet(FlagPort) {
+		ErrorAndExit("port is required", nil)
+	}
+	port := c.Int(FlagPort)
+	user := c.String(FlagUsername)
+	pw := c.String(FlagPassword)
+	ksp := getRequiredOption(c, FlagKeyspace)
+
+	clusterCfg, err := cassandra.NewCassandraCluster(host, port, user, pw, ksp, 10)
+	if err != nil {
+		ErrorAndExit("connect to Cassandra failed", err)
+	}
+	session, err := clusterCfg.CreateSession()
+	if err != nil {
+		ErrorAndExit("connect to Cassandra failed", err)
+	}
+
+	if len(domainID) > 0 {
+		tmpl := "select domain from domains where id = ? "
+		query := session.Query(tmpl, domainID)
+		res, err := readOneRow(query)
+		if err != nil {
+			ErrorAndExit("readOneRow", err)
+		}
+		domain := res["domain"].(map[string]interface{})
+		domainName := domain["name"].(string)
+		fmt.Printf("domainName for domainID %v is %v \n", domainID, domainName)
+	} else {
+		tmpl := "select domain from domains_by_name where name = ?"
+		tmplV2 := "select domain from domains_by_name_v2 where domains_partition=0 and name = ?"
+
+		query := session.Query(tmpl, domainName)
+		res, err := readOneRow(query)
+		if err != nil {
+			fmt.Printf("v1 return error: %v , trying v2...\n", err)
+
+			query := session.Query(tmplV2, domainName)
+			res, err := readOneRow(query)
+			if err != nil {
+				ErrorAndExit("readOneRow for v2", err)
+			}
+			domain := res["domain"].(map[string]interface{})
+			domainName := domain["id"].(gocql.UUID).String()
+			fmt.Printf("domainID for domainName %v is %v \n", domainName, domainID)
+		} else {
+			domain := res["domain"].(map[string]interface{})
+			domainName := domain["id"].(gocql.UUID).String()
+			fmt.Printf("domainID for domainName %v is %v \n", domainName, domainID)
+		}
+	}
+}
+
 func AdminGetShardID(c *cli.Context) {
 	wid := getRequiredOption(c, FlagWorkflowID)
 	numberOfShards := c.Int(FlagNumberOfShards)
