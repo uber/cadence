@@ -185,11 +185,11 @@ func AdminGetDomainIDOrName(c *cli.Context) {
 				ErrorAndExit("readOneRow for v2", err)
 			}
 			domain := res["domain"].(map[string]interface{})
-			domainName := domain["id"].(gocql.UUID).String()
+			domainID := domain["id"].(gocql.UUID).String()
 			fmt.Printf("domainID for domainName %v is %v \n", domainName, domainID)
 		} else {
 			domain := res["domain"].(map[string]interface{})
-			domainName := domain["id"].(gocql.UUID).String()
+			domainID := domain["id"].(gocql.UUID).String()
 			fmt.Printf("domainID for domainName %v is %v \n", domainName, domainID)
 		}
 	}
