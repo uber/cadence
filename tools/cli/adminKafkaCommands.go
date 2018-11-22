@@ -323,16 +323,7 @@ func AdminRereplicate(c *cli.Context) {
 			ErrorAndExit("", err)
 		}
 
-		config := cluster.NewConfig()
-		config.Consumer.Return.Errors = true
-		config.Consumer.Offsets.Initial = sarama.OffsetOldest
-		config.Group.Return.Notifications = true
-		client, err := cluster.NewClient(fromBrokers, config)
-		if err != nil {
-			ErrorAndExit("", err)
-		}
-
-		consumer := createConsumerAndWaitForReady(client, group, fromTopic)
+		consumer := createConsumerAndWaitForReady(fromBrokers, group, fromTopic)
 
 		highWaterMarks, ok := consumer.HighWaterMarks()[fromTopic]
 		if !ok {
@@ -348,7 +339,7 @@ func AdminRereplicate(c *cli.Context) {
 			ErrorAndExit("fail to commit offset", err)
 		}
 		// create consumer again to make sure MarkPartitionOffset works
-		consumer = createConsumerAndWaitForReady(client, group, fromTopic)
+		consumer = createConsumerAndWaitForReady(fromBrokers, group, fromTopic)
 
 		for {
 			select {
@@ -383,7 +374,17 @@ func AdminRereplicate(c *cli.Context) {
 	}
 }
 
-func createConsumerAndWaitForReady(client *cluster.Client, group, fromTopic string) *cluster.Consumer {
+func createConsumerAndWaitForReady(brokers []string, group, fromTopic string) *cluster.Consumer {
+	config := cluster.NewConfig()
+	config.Consumer.Return.Errors = true
+	config.Consumer.Offsets.Initial = sarama.OffsetOldest
+	config.Group.Return.Notifications = true
+
+	client, err := cluster.NewClient(brokers, config)
+	if err != nil {
+		ErrorAndExit("", err)
+	}
+
 	consumer, err := cluster.NewConsumerFromClient(client, group, []string{fromTopic})
 	if err != nil {
 		ErrorAndExit("", err)
