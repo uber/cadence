@@ -23,7 +23,9 @@ package cli
 import (
 	"fmt"
 
+	"github.com/gocql/gocql"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/tools/cassandra"
 	"github.com/urfave/cli"
 	"go.uber.org/cadence/.gen/go/admin"
 	"go.uber.org/cadence/.gen/go/admin/adminserviceclient"
@@ -67,28 +69,69 @@ func AdminDescribeWorkflow(c *cli.Context) {
 
 // AdminDeleteWorkflow describe a new workflow execution for admin
 func AdminDeleteWorkflow(c *cli.Context) {
-	// using service client instead of cadence.Client because we need to directly pass the json blob as input.
-	serviceClient := getAdminServiceClient(c)
-
-	domain := getRequiredGlobalOption(c, FlagDomain)
+	domainID := getRequiredGlobalOption(c, FlagDomainID)
 	wid := getRequiredOption(c, FlagWorkflowID)
-	rid := c.String(FlagRunID)
+	rid := getRequiredOption(c, FlagRunID)
+	if !c.IsSet(FlagShardID) {
+		ErrorAndExit("shardID is required", nil)
+	}
+	shardID := c.Int(FlagShardID)
 
-	ctx, cancel := newContext()
-	defer cancel()
+	host := getRequiredOption(c, FlagAddress)
+	if !c.IsSet(FlagPort) {
+		ErrorAndExit("port is required", nil)
+	}
+	port := c.Int(FlagPort)
+	user := getRequiredOption(c, FlagUsername)
+	pw := getRequiredOption(c, FlagPassword)
+	ksp := getRequiredOption(c, FlagKeyspace)
 
-	resp, err := serviceClient.DescribeWorkflowExecution(ctx, &admin.DescribeWorkflowExecutionRequest{
-		Domain: common.StringPtr(domain),
-		Execution: &s.WorkflowExecution{
-			WorkflowId: common.StringPtr(wid),
-			RunId:      common.StringPtr(rid),
-		},
-	})
+	clusterCfg, err := cassandra.NewCassandraCluster(host, port, user, pw, ksp, 10)
 	if err != nil {
-		ErrorAndExit("Describe workflow execution failed", err)
+		ErrorAndExit("connect to Cassandra failed", err)
+	}
+	session, err := clusterCfg.CreateSession()
+	if err != nil {
+		ErrorAndExit("connect to Cassandra failed", err)
 	}
 
-	prettyPrintJSONObject(resp)
+	permanentRunID := "30000000-0000-f000-f000-000000000001"
+	selectTmpl := "select execution from executions where shard_id = ? and type = 1 and domain_id = ? and workflow_id = ? and run_id = ? "
+	deleteTmpl := "delete from executions where shard_id = ? and type = 1 and domain_id = ? and workflow_id = ? and run_id = ? "
+
+	query := session.Query(selectTmpl, shardID, domainID, wid, permanentRunID)
+	_, err = readOneRow(query)
+	if err != nil {
+		fmt.Printf("readOneRow for permanentRunID, %v, skip \n", err)
+	} else {
+
+		query := session.Query(deleteTmpl, shardID, domainID, wid, permanentRunID)
+		err := query.Exec()
+		if err != nil {
+			ErrorAndExit("delete row failed", err)
+		}
+		fmt.Println("delete row successfully")
+	}
+
+	query = session.Query(selectTmpl, shardID, domainID, wid, rid)
+	_, err = readOneRow(query)
+	if err != nil {
+		fmt.Printf("readOneRow for rid %v, %v, skip \n", rid, err)
+	} else {
+
+		query := session.Query(deleteTmpl, shardID, domainID, wid, rid)
+		err := query.Exec()
+		if err != nil {
+			ErrorAndExit("delete row failed", err)
+		}
+		fmt.Println("delete row successfully")
+	}
+}
+
+func readOneRow(query *gocql.Query) (map[string]interface{}, error) {
+	result := make(map[string]interface{})
+	err := query.MapScan(result)
+	return result, err
 }
 
 func AdminGetShardID(c *cli.Context) {

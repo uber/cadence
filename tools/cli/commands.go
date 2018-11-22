@@ -49,10 +49,15 @@ import (
 Flags used to specify cli command line arguments
 */
 const (
+	FlagPort                       = "port"
+	FlagUsername                   = "username"
+	FlagPassword                   = "password"
+	FlagKeyspace                   = "keyspace"
 	FlagAddress                    = "address"
 	FlagAddressWithAlias           = FlagAddress + ", ad"
 	FlagHistoryAddress             = "history_address"
 	FlagHistoryAddressWithAlias    = FlagHistoryAddress + ", had"
+	FlagDomainID                   = "domainID"
 	FlagDomain                     = "domain"
 	FlagDomainWithAlias            = FlagDomain + ", do"
 	FlagShardID                    = "shard_id"

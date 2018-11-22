@@ -55,6 +55,36 @@ func newAdminWorkflowCommands() []cli.Command {
 					Name:  FlagRunIDWithAlias,
 					Usage: "RunID",
 				},
+				cli.StringFlag{
+					Name:  FlagDomainID,
+					Usage: "DomainID",
+				},
+				cli.IntFlag{
+					Name:  FlagShardID,
+					Usage: "ShardID",
+				},
+
+				// for cassandra connection
+				cli.StringFlag{
+					Name:  FlagAddress,
+					Usage: "cassandra host address",
+				},
+				cli.IntFlag{
+					Name:  FlagPort,
+					Usage: "cassandra port for the host (default is 9042)",
+				},
+				cli.StringFlag{
+					Name:  FlagUsername,
+					Usage: "cassandra username",
+				},
+				cli.StringFlag{
+					Name:  FlagPassword,
+					Usage: "cassandra password",
+				},
+				cli.StringFlag{
+					Name:  FlagKeyspace,
+					Usage: "cassandra keyspace",
+				},
 			},
 			Action: func(c *cli.Context) {
 				AdminDeleteWorkflow(c)
