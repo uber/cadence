@@ -316,36 +316,23 @@ func AdminRereplicate(c *cli.Context) {
 		fromTopic := getRequiredOption(c, FlagInputTopic)
 		fromCluster := getRequiredOption(c, FlagInputCluster)
 		startOffset := c.Int64(FlagStartOffset)
+		group := getRequiredOption(c, FlagGroup)
 
-		config := cluster.NewConfig()
-		config.Consumer.Return.Errors = true
-		config.Consumer.Offsets.Initial = sarama.OffsetOldest
-
-		config.Group.Return.Notifications = true
 		fromBrokers, err := loadBrokers(hostFile, fromCluster)
 		if err != nil {
 			ErrorAndExit("", err)
 		}
 
+		config := cluster.NewConfig()
+		config.Consumer.Return.Errors = true
+		config.Consumer.Offsets.Initial = sarama.OffsetOldest
+		config.Group.Return.Notifications = true
 		client, err := cluster.NewClient(fromBrokers, config)
 		if err != nil {
 			ErrorAndExit("", err)
 		}
 
-		group := getRequiredOption(c, FlagGroup)
-
-		consumer, err := cluster.NewConsumerFromClient(client, group, []string{fromTopic})
-		if err != nil {
-			ErrorAndExit("", err)
-		}
-
-		for ntf := range consumer.Notifications() {
-			if partitions := ntf.Current[fromTopic]; len(partitions) > 0 && ntf.Type == cluster.RebalanceOK {
-				time.Sleep(time.Second)
-				fmt.Println("Wait for consumer ready...")
-				break
-			}
-		}
+		consumer := createConsumerAndWaitForReady(client, group, fromTopic)
 
 		highWaterMarks, ok := consumer.HighWaterMarks()[fromTopic]
 		if !ok {
@@ -360,6 +347,8 @@ func AdminRereplicate(c *cli.Context) {
 		if err != nil {
 			ErrorAndExit("fail to commit offset", err)
 		}
+		// create consumer again to make sure MarkPartitionOffset works
+		consumer = createConsumerAndWaitForReady(client, group, fromTopic)
 
 		for {
 			select {
@@ -392,6 +381,22 @@ func AdminRereplicate(c *cli.Context) {
 			}
 		}
 	}
+}
+
+func createConsumerAndWaitForReady(client *cluster.Client, group, fromTopic string) *cluster.Consumer {
+	consumer, err := cluster.NewConsumerFromClient(client, group, []string{fromTopic})
+	if err != nil {
+		ErrorAndExit("", err)
+	}
+
+	for ntf := range consumer.Notifications() {
+		time.Sleep(time.Second)
+		if partitions := ntf.Current[fromTopic]; len(partitions) > 0 && ntf.Type == cluster.RebalanceOK {
+			break
+		}
+		fmt.Println("Waiting for consumer ready...")
+	}
+	return consumer
 }
 
 func parseReplicationTask(in string) (tasks []*replicator.ReplicationTask, err error) {
