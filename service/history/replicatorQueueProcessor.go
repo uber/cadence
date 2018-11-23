@@ -389,7 +389,9 @@ func GetAllHistory(historyMgr persistence.HistoryManager, historyV2Mgr persisten
 	}
 
 	// Emit metric and log for history size
-	metricsClient.RecordTimer(metrics.ReplicatorQueueProcessorScope, metrics.HistorySize, time.Duration(historySize))
+	if metricsClient != nil {
+		metricsClient.RecordTimer(metrics.ReplicatorQueueProcessorScope, metrics.HistorySize, time.Duration(historySize))
+	}
 	if historySize > common.GetHistoryWarnSizeLimit {
 		logger.WithFields(bark.Fields{
 			logging.TagWorkflowExecutionID: workflowID,

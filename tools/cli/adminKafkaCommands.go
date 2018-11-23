@@ -38,12 +38,10 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/bsm/sarama-cluster"
 	"github.com/uber-common/bark"
-	"github.com/uber-go/tally"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/messaging"
-	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/service/config"
@@ -363,8 +361,7 @@ func AdminRereplicate(c *cli.Context) {
 		BranchToken:         exeInfo.GetCurrentBranch(),
 	}
 
-	metricsClient := metrics.NewClient(tally.NoopScope, 0)
-	_, historyBatches, err := history.GetAllHistory(historyMgr, historyV2Mgr, metricsClient, bark.NewNopLogger(), true,
+	_, historyBatches, err := history.GetAllHistory(historyMgr, historyV2Mgr, nil, bark.NewNopLogger(), true,
 		domainID, wid, rid, minID, maxID, exeInfo.EventStoreVersion, exeInfo.GetCurrentBranch())
 
 	if err != nil {
@@ -391,7 +388,7 @@ func AdminRereplicate(c *cli.Context) {
 			taskTemplate.NewRunBranchToken = resp.State.ExecutionInfo.GetCurrentBranch()
 		}
 
-		task, err := history.GenerateReplicationTask(targets, taskTemplate, historyMgr, historyV2Mgr, metricsClient, bark.NewNopLogger())
+		task, err := history.GenerateReplicationTask(targets, taskTemplate, historyMgr, historyV2Mgr, nil, bark.NewNopLogger())
 		if err != nil {
 			ErrorAndExit("GenerateReplicationTask error", err)
 		}
