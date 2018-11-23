@@ -309,17 +309,17 @@ func AdminRereplicate(c *cli.Context) {
 
 	session := connectToCassandra(c)
 
-	histV1 := cassandra.NewHistoryPersistenceFromSession(session)
+	histV1 := cassandra.NewHistoryPersistenceFromSession(session, bark.NewNopLogger())
 	historyMgr := persistence.NewHistoryManagerImpl(histV1, bark.NewNopLogger())
 
-	histV2 := cassandra.NewHistoryV2PersistenceFromSession(session)
+	histV2 := cassandra.NewHistoryV2PersistenceFromSession(session, bark.NewNopLogger())
 	historyV2Mgr := persistence.NewHistoryV2ManagerImpl(histV2, bark.NewNopLogger())
 
 	if !c.IsSet(FlagShardID) {
 		ErrorAndExit("shardID is required", nil)
 	}
 	shardID := c.Int(FlagShardID)
-	exeM := cassandra.NewWorkflowExecutionPersistenceFromSession(session, shardID)
+	exeM := cassandra.NewWorkflowExecutionPersistenceFromSession(session, shardID, bark.NewNopLogger())
 	exeMgr := persistence.NewExecutionManagerImpl(exeM, bark.NewNopLogger())
 
 	domainID := getRequiredOption(c, FlagDomainID)

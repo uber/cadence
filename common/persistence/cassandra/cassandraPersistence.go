@@ -869,8 +869,8 @@ type (
 	}
 )
 
-func NewWorkflowExecutionPersistenceFromSession(session *gocql.Session, shardID int) p.ExecutionStore {
-	return &cassandraPersistence{cassandraStore: cassandraStore{session: session, logger: bark.NewNopLogger()}, shardID: shardID}
+func NewWorkflowExecutionPersistenceFromSession(session *gocql.Session, shardID int, logger bark.Logger) p.ExecutionStore {
+	return &cassandraPersistence{cassandraStore: cassandraStore{session: session, logger: logger}, shardID: shardID}
 }
 
 // newShardPersistence is used to create an instance of ShardManager implementation
