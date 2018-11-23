@@ -387,10 +387,10 @@ func AdminRereplicate(c *cli.Context) {
 			}
 			taskTemplate.NewRunEventStoreVersion = resp.State.ExecutionInfo.EventStoreVersion
 			taskTemplate.NewRunBranchToken = resp.State.ExecutionInfo.GetCurrentBranch()
-			taskTemplate.FirstEventID = firstEvent.GetEventId()
-			taskTemplate.NextEventID = lastEvent.GetEventId() + 1
 		}
 
+		taskTemplate.FirstEventID = firstEvent.GetEventId()
+		taskTemplate.NextEventID = lastEvent.GetEventId() + 1
 		task, err := history.GenerateReplicationTask(targets, taskTemplate, historyMgr, historyV2Mgr, nil, bark.NewNopLogger())
 		if err != nil {
 			ErrorAndExit("GenerateReplicationTask error", err)
