@@ -60,6 +60,7 @@ type (
 	}
 )
 
+// NewHistoryV2PersistenceFromSession returns new HistoryV2Store
 func NewHistoryV2PersistenceFromSession(session *gocql.Session, logger bark.Logger) p.HistoryV2Store {
 	return &cassandraHistoryV2Persistence{cassandraStore: cassandraStore{session: session, logger: logger}}
 }

@@ -869,6 +869,7 @@ type (
 	}
 )
 
+//NewWorkflowExecutionPersistenceFromSession returns new ExecutionStore
 func NewWorkflowExecutionPersistenceFromSession(session *gocql.Session, shardID int, logger bark.Logger) p.ExecutionStore {
 	return &cassandraPersistence{cassandraStore: cassandraStore{session: session, logger: logger}, shardID: shardID}
 }
