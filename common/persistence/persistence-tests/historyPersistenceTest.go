@@ -267,7 +267,7 @@ func (s *HistoryPersistenceSuite) TestAppendAndGetByBatch() {
 
 		for j, h := range history {
 			s.Equal(2, len(h.Events))
-			s.Equal(int64(j*2+1), h.Events[1].EventId)
+			s.Equal(int64(j*2+1), h.Events[0].GetEventId())
 		}
 	}
 }
