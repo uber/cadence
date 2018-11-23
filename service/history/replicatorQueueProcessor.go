@@ -25,8 +25,6 @@ import (
 	"sync"
 	"time"
 
-	"fmt"
-
 	"github.com/uber-common/bark"
 	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/replicator"
@@ -374,7 +372,6 @@ func GetAllHistory(historyMgr persistence.HistoryManager, historyV2Mgr persisten
 				PageSize:      defaultHistoryPageSize,
 				NextPageToken: nextPageToken,
 			}
-			fmt.Printf("debug GetWorkflowExecutionHistoryByBatch : %+v \n", req)
 			if byBatch {
 				response, err := historyMgr.GetWorkflowExecutionHistoryByBatch(req)
 				if err != nil {

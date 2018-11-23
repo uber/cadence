@@ -280,14 +280,25 @@ clusters:
 					Name:  FlagTargetCluster,
 					Usage: "Name of targetCluster to receive the replication task",
 				},
+				cli.IntFlag{
+					Name:  FlagNumberOfShards,
+					Usage: "NumberOfShards is required to calculate shardID. (see server config for numHistoryShards)",
+				},
 
+				// for multiple workflow
+				cli.StringFlag{
+					Name:  FlagInputFile,
+					Usage: "Input file to read multiple workflow line by line. For each line: domainID,workflowID,runID,minEventID,maxEventID (minEventID/maxEventID are optional.)",
+				},
+
+				// for one workflow
 				cli.Int64Flag{
 					Name:  FlagMinEventID,
-					Usage: "MinEventID",
+					Usage: "MinEventID. Optional, default to all events",
 				},
 				cli.Int64Flag{
 					Name:  FlagMaxEventID,
-					Usage: "MaxEventID",
+					Usage: "MaxEventID Optional, default to all events",
 				},
 				cli.StringFlag{
 					Name:  FlagWorkflowIDWithAlias,
@@ -300,10 +311,6 @@ clusters:
 				cli.StringFlag{
 					Name:  FlagDomainID,
 					Usage: "DomainID",
-				},
-				cli.IntFlag{
-					Name:  FlagShardID,
-					Usage: "ShardID",
 				},
 
 				// for cassandra connection
