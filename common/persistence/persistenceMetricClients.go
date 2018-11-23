@@ -961,6 +961,18 @@ func (p *historyV2PersistenceClient) ReadHistoryBranch(request *ReadHistoryBranc
 	return response, err
 }
 
+// ReadHistoryBranchByBatch returns history node data for a branch ByBatch
+func (p *historyV2PersistenceClient) ReadHistoryBranchByBatch(request *ReadHistoryBranchRequest) (*ReadHistoryBranchByBatchResponse, error) {
+	p.metricClient.IncCounter(metrics.PersistenceReadHistoryBranchScope, metrics.PersistenceRequests)
+	sw := p.metricClient.StartTimer(metrics.PersistenceReadHistoryBranchScope, metrics.PersistenceLatency)
+	response, err := p.persistence.ReadHistoryBranchByBatch(request)
+	sw.Stop()
+	if err != nil {
+		p.updateErrorMetric(metrics.PersistenceReadHistoryBranchScope, err)
+	}
+	return response, err
+}
+
 // ForkHistoryBranch forks a new branch from a old branch
 func (p *historyV2PersistenceClient) ForkHistoryBranch(request *ForkHistoryBranchRequest) (*ForkHistoryBranchResponse, error) {
 	p.metricClient.IncCounter(metrics.PersistenceForkHistoryBranchScope, metrics.PersistenceRequests)

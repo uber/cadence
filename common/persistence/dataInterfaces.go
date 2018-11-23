@@ -1157,6 +1157,20 @@ type (
 		LastFirstEventID int64
 	}
 
+	// ReadHistoryBranchByBatchResponse is the response to ReadHistoryBranchRequest
+	ReadHistoryBranchByBatchResponse struct {
+		// History events by batch
+		History []*workflow.History
+		// Token to read next page if there are more events beyond page size.
+		// Use this to set NextPageToken on ReadHistoryBranchRequest to read the next page.
+		// Empty means we have reached the last page, not need to continue
+		NextPageToken []byte
+		// Size of history read from store
+		Size int
+		// the first_event_id of last loaded batch
+		LastFirstEventID int64
+	}
+
 	// ForkHistoryBranchRequest is used to fork a history branch
 	ForkHistoryBranchRequest struct {
 		// The branch to be fork
@@ -1286,6 +1300,8 @@ type (
 		AppendHistoryNodes(request *AppendHistoryNodesRequest) (*AppendHistoryNodesResponse, error)
 		// ReadHistoryBranch returns history node data for a branch
 		ReadHistoryBranch(request *ReadHistoryBranchRequest) (*ReadHistoryBranchResponse, error)
+		// ReadHistoryBranchByBatch returns history node data for a branch ByBatch
+		ReadHistoryBranchByBatch(request *ReadHistoryBranchRequest) (*ReadHistoryBranchByBatchResponse, error)
 		// ForkHistoryBranch forks a new branch from a old branch
 		ForkHistoryBranch(request *ForkHistoryBranchRequest) (*ForkHistoryBranchResponse, error)
 		// DeleteHistoryBranch removes a branch
