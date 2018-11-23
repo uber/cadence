@@ -61,6 +61,10 @@ type (
 	}
 )
 
+func NewHistoryPersistenceFromSession(session *gocql.Session) p.HistoryStore {
+	return &cassandraHistoryPersistence{cassandraStore: cassandraStore{session: session, logger: bark.NewNopLogger()}}
+}
+
 // newHistoryPersistence is used to create an instance of HistoryManager implementation
 func newHistoryPersistence(cfg config.Cassandra, logger bark.Logger) (p.HistoryStore,
 	error) {

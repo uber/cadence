@@ -308,26 +308,20 @@ type ClustersConfig struct {
 // AdminRereplicate parses will re-publish replication tasks to topic
 func AdminRereplicate(c *cli.Context) {
 	producer := newKafkaProducer(c)
-	cFactory := createCassandraFactory(c)
-	histV1, err := cFactory.NewHistoryStore()
-	if err != nil {
-		ErrorAndExit("connect to cassandra error", err)
-	}
+
+	session := connectToCassandra(c)
+
+	histV1 := cassandra.NewHistoryPersistenceFromSession(session)
 	historyMgr := persistence.NewHistoryManagerImpl(histV1, bark.NewNopLogger())
-	histV2, err := cFactory.NewHistoryV2Store()
-	if err != nil {
-		ErrorAndExit("connect to cassandra error", err)
-	}
+
+	histV2 := cassandra.NewHistoryV2PersistenceFromSession(session)
 	historyV2Mgr := persistence.NewHistoryV2ManagerImpl(histV2, bark.NewNopLogger())
 
 	if !c.IsSet(FlagShardID) {
 		ErrorAndExit("shardID is required", nil)
 	}
 	shardID := c.Int(FlagShardID)
-	exeM, err := cFactory.NewExecutionStore(shardID)
-	if err != nil {
-		ErrorAndExit("connect to cassandra error", err)
-	}
+	exeM := cassandra.NewWorkflowExecutionPersistenceFromSession(session, shardID)
 	exeMgr := persistence.NewExecutionManagerImpl(exeM, bark.NewNopLogger())
 
 	domainID := getRequiredOption(c, FlagDomainID)
