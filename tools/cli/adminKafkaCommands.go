@@ -35,6 +35,8 @@ import (
 
 	"time"
 
+	"strconv"
+
 	"github.com/Shopify/sarama"
 	"github.com/bsm/sarama-cluster"
 	"github.com/gocql/gocql"
@@ -421,15 +423,61 @@ func AdminRereplicate(c *cli.Context) {
 	session := connectToCassandra(c)
 
 	if c.IsSet(FlagInputFile) {
+		inFile := c.String(FlagInputFile)
+		// parse domainID,workflowID,runID,minEventID,maxEventID
+		file, err := os.Open(inFile)
+		if err != nil {
+			ErrorAndExit("Open failed", err)
+		}
+		defer file.Close()
 
+		scanner := bufio.NewScanner(file)
+		idx := 0
+		for scanner.Scan() {
+			idx++
+			line := strings.TrimSpace(scanner.Text())
+			if len(line) == 0 {
+				fmt.Printf("line %v is empty, skipped\n", idx)
+				continue
+			}
+			cols := strings.Split(line, ",")
+			if len(cols) < 3 {
+				ErrorAndExit("Split failed", fmt.Errorf("line %v has less than 3 cols separated by comma, only %v ", idx, len(cols)))
+			}
+			fmt.Printf("Processing line %v ...\n", idx)
+			domainID := strings.TrimSpace(cols[0])
+			wid := strings.TrimSpace(cols[1])
+			rid := strings.TrimSpace(cols[2])
+			var minID, maxID int64
+			if len(cols) >= 4 {
+				i, err := strconv.Atoi(strings.TrimSpace(cols[3]))
+				if err != nil {
+					ErrorAndExit(fmt.Sprintf("Atoi failed at lne %v", idx), err)
+				}
+				minID = int64(i)
+			}
+			if len(cols) >= 5 {
+				i, err := strconv.Atoi(strings.TrimSpace(cols[4]))
+				if err != nil {
+					ErrorAndExit(fmt.Sprintf("Atoi failed at lne %v", idx), err)
+				}
+				maxID = int64(i)
+			}
+
+			shardID := common.WorkflowIDToHistoryShard(wid, numberOfShards)
+			doRereplicate(shardID, domainID, wid, rid, minID, maxID, targets, producer, session)
+		}
+		if err := scanner.Err(); err != nil {
+			ErrorAndExit("scanner failed", err)
+		}
 	} else {
 		domainID := getRequiredOption(c, FlagDomainID)
 		wid := getRequiredOption(c, FlagWorkflowID)
 		rid := getRequiredOption(c, FlagRunID)
 		minID := c.Int64(FlagMinEventID)
 		maxID := c.Int64(FlagMaxEventID)
-		shardID := common.WorkflowIDToHistoryShard(wid, numberOfShards)
 
+		shardID := common.WorkflowIDToHistoryShard(wid, numberOfShards)
 		doRereplicate(shardID, domainID, wid, rid, minID, maxID, targets, producer, session)
 	}
 }

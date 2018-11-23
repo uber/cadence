@@ -287,7 +287,7 @@ clusters:
 
 				// for multiple workflow
 				cli.StringFlag{
-					Name:  FlagInputFile,
+					Name:  FlagInputFileWithAlias,
 					Usage: "Input file to read multiple workflow line by line. For each line: domainID,workflowID,runID,minEventID,maxEventID (minEventID/maxEventID are optional.)",
 				},
 
