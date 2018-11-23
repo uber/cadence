@@ -361,7 +361,17 @@ func GetAllHistory(historyMgr persistence.HistoryManager, historyV2Mgr persisten
 				NextPageToken: nextPageToken,
 			}
 			if byBatch {
-				panic("not implemented yet")
+				response, err := historyMgr.GetWorkflowExecutionHistoryByBatch(req)
+				if err != nil {
+					return nil, nil, err
+				}
+
+				// Keep track of total history size
+				historySize += response.Size
+
+				historyBatches = append(historyBatches, response.History...)
+				nextPageToken = response.NextPageToken
+
 			} else {
 				response, err := historyMgr.GetWorkflowExecutionHistory(req)
 
