@@ -32,7 +32,6 @@ import (
 	"github.com/uber/cadence/common"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/config"
-	"github.com/uber/cadence/tools/cassandra"
 )
 
 // Guidelines for creating new special UUID constants
@@ -876,13 +875,10 @@ func NewWorkflowExecutionPersistenceFromSession(session *gocql.Session, shardID 
 
 // newShardPersistence is used to create an instance of ShardManager implementation
 func newShardPersistence(cfg config.Cassandra, clusterName string, logger bark.Logger) (p.ShardStore, error) {
-	cluster, err := cassandra.NewCassandraCluster(cfg.Hosts, cfg.Port, cfg.User, cfg.Password, cfg.Keyspace, 10)
-	if err != nil {
-		return nil, err
-	}
+	cluster := NewCassandraCluster(cfg.Hosts, cfg.Port, cfg.User, cfg.Password, cfg.Datacenter)
 	cluster.Keyspace = cfg.Keyspace
 	cluster.ProtoVersion = cassandraProtoVersion
-	cluster.Consistency = gocql.All
+	cluster.Consistency = gocql.LocalQuorum
 	cluster.SerialConsistency = gocql.LocalSerial
 	cluster.Timeout = defaultSessionTimeout
 

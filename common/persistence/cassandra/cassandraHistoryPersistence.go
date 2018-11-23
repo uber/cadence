@@ -29,7 +29,6 @@ import (
 	"github.com/uber/cadence/common"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/config"
-	"github.com/uber/cadence/tools/cassandra"
 )
 
 const (
@@ -68,14 +67,10 @@ func NewHistoryPersistenceFromSession(session *gocql.Session) p.HistoryStore {
 // newHistoryPersistence is used to create an instance of HistoryManager implementation
 func newHistoryPersistence(cfg config.Cassandra, logger bark.Logger) (p.HistoryStore,
 	error) {
-	//cluster := NewCassandraCluster(cfg.Hosts, cfg.Port, cfg.User, cfg.Password, cfg.Datacenter)
-	cluster, err := cassandra.NewCassandraCluster(cfg.Hosts, cfg.Port, cfg.User, cfg.Password, cfg.Keyspace, 10)
-	if err != nil {
-		return nil, err
-	}
+	cluster := NewCassandraCluster(cfg.Hosts, cfg.Port, cfg.User, cfg.Password, cfg.Datacenter)
 	cluster.Keyspace = cfg.Keyspace
 	cluster.ProtoVersion = cassandraProtoVersion
-	cluster.Consistency = gocql.All
+	cluster.Consistency = gocql.LocalQuorum
 	cluster.SerialConsistency = gocql.LocalSerial
 	cluster.Timeout = defaultSessionTimeout
 	if cfg.MaxConns > 0 {
