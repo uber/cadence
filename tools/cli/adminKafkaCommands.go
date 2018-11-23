@@ -44,7 +44,6 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/cassandra"
-	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/service/history"
 	"github.com/urfave/cli"
 	"go.uber.org/thriftrw/protocol"
@@ -403,26 +402,6 @@ func AdminRereplicate(c *cli.Context) {
 	}
 }
 
-func createCassandraFactory(c *cli.Context) *cassandra.Factory {
-	host := getRequiredOption(c, FlagAddress)
-	if !c.IsSet(FlagPort) {
-		ErrorAndExit("port is required", nil)
-	}
-	port := c.Int(FlagPort)
-	user := c.String(FlagUsername)
-	pw := c.String(FlagPassword)
-	ksp := getRequiredOption(c, FlagKeyspace)
-
-	config := config.Cassandra{
-		Hosts:    host,
-		Port:     port,
-		User:     user,
-		Password: pw,
-		Keyspace: ksp,
-	}
-	factory := cassandra.NewFactory(config, "cass", bark.NewNopLogger())
-	return factory
-}
 func newKafkaProducer(c *cli.Context) messaging.Producer {
 	hostFile := getRequiredOption(c, FlagHostFile)
 	destCluster := getRequiredOption(c, FlagCluster)

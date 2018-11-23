@@ -224,6 +224,7 @@ func (p *replicatorQueueProcessorImpl) processHistoryReplicationTask(task *persi
 	return err
 }
 
+// GenerateReplicationTask generate replication task
 func GenerateReplicationTask(targetClusters []string, task *persistence.ReplicationTaskInfo,
 	historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager,
 	metricsClient metrics.Client, logger bark.Logger,
@@ -317,6 +318,7 @@ func (p *replicatorQueueProcessorImpl) updateAckLevel(ackLevel int64) error {
 	return err
 }
 
+// GetAllHistory return history
 func GetAllHistory(historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager,
 	metricsClient metrics.Client, logger bark.Logger, byBatch bool,
 	domainID, workflowID, runID string, firstEventID,
@@ -336,7 +338,17 @@ func GetAllHistory(historyMgr persistence.HistoryManager, historyV2Mgr persisten
 				NextPageToken: nextPageToken,
 			}
 			if byBatch {
-				panic("not implemented yet")
+				response, err := historyV2Mgr.ReadHistoryBranchByBatch(req)
+
+				if err != nil {
+					return nil, nil, err
+				}
+
+				// Keep track of total history size
+				historySize += response.Size
+
+				historyBatches = append(historyBatches, response.History...)
+				nextPageToken = response.NextPageToken
 			} else {
 				response, err := historyV2Mgr.ReadHistoryBranch(req)
 
