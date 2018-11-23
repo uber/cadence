@@ -878,7 +878,7 @@ func newShardPersistence(cfg config.Cassandra, clusterName string, logger bark.L
 	}
 	cluster.Keyspace = cfg.Keyspace
 	cluster.ProtoVersion = cassandraProtoVersion
-	cluster.Consistency = gocql.LocalQuorum
+	cluster.Consistency = gocql.All
 	cluster.SerialConsistency = gocql.LocalSerial
 	cluster.Timeout = defaultSessionTimeout
 

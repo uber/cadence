@@ -70,7 +70,7 @@ func newHistoryV2Persistence(cfg config.Cassandra, logger bark.Logger) (p.Histor
 	}
 	cluster.Keyspace = cfg.Keyspace
 	cluster.ProtoVersion = cassandraProtoVersion
-	cluster.Consistency = gocql.LocalQuorum
+	cluster.Consistency = gocql.All
 	cluster.SerialConsistency = gocql.LocalSerial
 	cluster.Timeout = defaultSessionTimeout
 	if cfg.MaxConns > 0 {
