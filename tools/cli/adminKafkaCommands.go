@@ -371,6 +371,7 @@ func AdminRereplicate(c *cli.Context) {
 	for _, batch := range historyBatches {
 
 		events := batch.Events
+		firstEvent := events[0]
 		lastEvent := events[len(events)-1]
 		if lastEvent.GetEventType() == shared.EventTypeWorkflowExecutionContinuedAsNew {
 			newRunID := lastEvent.WorkflowExecutionContinuedAsNewEventAttributes.GetNewExecutionRunId()
@@ -386,6 +387,8 @@ func AdminRereplicate(c *cli.Context) {
 			}
 			taskTemplate.NewRunEventStoreVersion = resp.State.ExecutionInfo.EventStoreVersion
 			taskTemplate.NewRunBranchToken = resp.State.ExecutionInfo.GetCurrentBranch()
+			taskTemplate.FirstEventID = firstEvent.GetEventId()
+			taskTemplate.NextEventID = lastEvent.GetEventId() + 1
 		}
 
 		task, err := history.GenerateReplicationTask(targets, taskTemplate, historyMgr, historyV2Mgr, nil, bark.NewNopLogger())
@@ -396,7 +399,7 @@ func AdminRereplicate(c *cli.Context) {
 		if err != nil {
 			ErrorAndExit("Publish task error", err)
 		}
-		fmt.Printf("publish task successfully firstID %v, lastID %v \n", events[0].GetEventId(), lastEvent.GetEventId())
+		fmt.Printf("publish task successfully firstID %v, lastID %v \n", firstEvent.GetEventId(), lastEvent.GetEventId())
 	}
 }
 
