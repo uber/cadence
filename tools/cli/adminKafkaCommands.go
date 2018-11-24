@@ -448,7 +448,7 @@ func AdminRereplicate(c *cli.Context) {
 			if len(cols) < 3 {
 				ErrorAndExit("Split failed", fmt.Errorf("line %v has less than 3 cols separated by comma, only %v ", idx, len(cols)))
 			}
-			fmt.Printf("Processing line %v ...\n", idx)
+			fmt.Printf("Start processing line %v ...\n", idx)
 			domainID := strings.TrimSpace(cols[0])
 			wid := strings.TrimSpace(cols[1])
 			rid := strings.TrimSpace(cols[2])
@@ -470,6 +470,7 @@ func AdminRereplicate(c *cli.Context) {
 
 			shardID := common.WorkflowIDToHistoryShard(wid, numberOfShards)
 			doRereplicate(shardID, domainID, wid, rid, minID, maxID, targets, producer, session)
+			fmt.Printf("Done processing line %v ...\n", idx)
 		}
 		if err := scanner.Err(); err != nil {
 			ErrorAndExit("scanner failed", err)
