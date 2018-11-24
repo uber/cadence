@@ -37,6 +37,8 @@ import (
 
 	"strconv"
 
+	"runtime"
+
 	"github.com/Shopify/sarama"
 	"github.com/bsm/sarama-cluster"
 	"github.com/gocql/gocql"
@@ -399,6 +401,8 @@ func doRereplicate(shardID int, domainID, wid, rid string, minID, maxID int64, t
 			fmt.Printf("publish task successfully firstEventID %v, lastEventID %v \n", firstEvent.GetEventId(), lastEvent.GetEventId())
 		}
 
+		fmt.Printf("Done rereplicate for wid: %v, rid:%v \n", wid, rid)
+		runtime.GC()
 		if continueAsNew {
 			rid = newRunID
 			minID = 1
