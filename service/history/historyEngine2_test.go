@@ -1489,5 +1489,5 @@ func (s *engine2Suite) getBuilder(domainID string, we workflow.WorkflowExecution
 	}
 	defer release(nil)
 
-	return context.msBuilder
+	return context.(*workflowExecutionContextImpl).msBuilder
 }

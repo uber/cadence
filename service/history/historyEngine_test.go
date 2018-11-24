@@ -4419,7 +4419,7 @@ func (s *engineSuite) getBuilder(domainID string, we workflow.WorkflowExecution)
 	}
 	defer release(nil)
 
-	return context.msBuilder
+	return context.(*workflowExecutionContextImpl).msBuilder
 }
 
 func (s *engineSuite) getActivityScheduledEvent(msBuilder mutableState,

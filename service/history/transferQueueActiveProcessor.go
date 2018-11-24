@@ -422,7 +422,7 @@ func (t *transferQueueActiveProcessorImpl) processCancelExecution(task *persiste
 		RunId:      common.StringPtr(task.RunID),
 	}
 
-	var context *workflowExecutionContext
+	var context workflowExecutionContext
 	var release releaseWorkflowExecutionFunc
 	context, release, err = t.cache.getOrCreateWorkflowExecution(domainID, execution)
 	if err != nil {
@@ -540,7 +540,7 @@ func (t *transferQueueActiveProcessorImpl) processSignalExecution(task *persiste
 	execution := workflow.WorkflowExecution{WorkflowId: common.StringPtr(task.WorkflowID),
 		RunId: common.StringPtr(task.RunID)}
 
-	var context *workflowExecutionContext
+	var context workflowExecutionContext
 	var release releaseWorkflowExecutionFunc
 	context, release, err = t.cache.getOrCreateWorkflowExecution(domainID, execution)
 	if err != nil {
@@ -669,7 +669,7 @@ func (t *transferQueueActiveProcessorImpl) processStartChildExecution(task *pers
 	execution := workflow.WorkflowExecution{WorkflowId: common.StringPtr(task.WorkflowID),
 		RunId: common.StringPtr(task.RunID)}
 
-	var context *workflowExecutionContext
+	var context workflowExecutionContext
 	var release releaseWorkflowExecutionFunc
 	context, release, err = t.cache.getOrCreateWorkflowExecution(domainID, execution)
 	if err != nil {
@@ -794,7 +794,7 @@ func (t *transferQueueActiveProcessorImpl) processStartChildExecution(task *pers
 }
 
 func (t *transferQueueActiveProcessorImpl) recordChildExecutionStarted(task *persistence.TransferTaskInfo,
-	context *workflowExecutionContext, initiatedAttributes *workflow.StartChildWorkflowExecutionInitiatedEventAttributes,
+	context workflowExecutionContext, initiatedAttributes *workflow.StartChildWorkflowExecutionInitiatedEventAttributes,
 	runID string) error {
 
 	return t.updateWorkflowExecution(task.DomainID, context, true,
@@ -821,7 +821,7 @@ func (t *transferQueueActiveProcessorImpl) recordChildExecutionStarted(task *per
 }
 
 func (t *transferQueueActiveProcessorImpl) recordStartChildExecutionFailed(task *persistence.TransferTaskInfo,
-	context *workflowExecutionContext,
+	context workflowExecutionContext,
 	initiatedAttributes *workflow.StartChildWorkflowExecutionInitiatedEventAttributes) error {
 
 	return t.updateWorkflowExecution(task.DomainID, context, true,
@@ -864,7 +864,7 @@ func (t *transferQueueActiveProcessorImpl) createFirstDecisionTask(domainID stri
 }
 
 func (t *transferQueueActiveProcessorImpl) requestCancelCompleted(task *persistence.TransferTaskInfo,
-	context *workflowExecutionContext, request *h.RequestCancelWorkflowExecutionRequest) error {
+	context workflowExecutionContext, request *h.RequestCancelWorkflowExecutionRequest) error {
 
 	return t.updateWorkflowExecution(task.DomainID, context, true,
 		func(msBuilder mutableState) error {
@@ -890,7 +890,7 @@ func (t *transferQueueActiveProcessorImpl) requestCancelCompleted(task *persiste
 }
 
 func (t *transferQueueActiveProcessorImpl) requestSignalCompleted(task *persistence.TransferTaskInfo,
-	context *workflowExecutionContext,
+	context workflowExecutionContext,
 	request *h.SignalWorkflowExecutionRequest) error {
 
 	return t.updateWorkflowExecution(task.DomainID, context, true,
@@ -917,7 +917,7 @@ func (t *transferQueueActiveProcessorImpl) requestSignalCompleted(task *persiste
 }
 
 func (t *transferQueueActiveProcessorImpl) requestCancelFailed(task *persistence.TransferTaskInfo,
-	context *workflowExecutionContext, request *h.RequestCancelWorkflowExecutionRequest) error {
+	context workflowExecutionContext, request *h.RequestCancelWorkflowExecutionRequest) error {
 
 	return t.updateWorkflowExecution(task.DomainID, context, true,
 		func(msBuilder mutableState) error {
@@ -944,7 +944,7 @@ func (t *transferQueueActiveProcessorImpl) requestCancelFailed(task *persistence
 }
 
 func (t *transferQueueActiveProcessorImpl) requestSignalFailed(task *persistence.TransferTaskInfo,
-	context *workflowExecutionContext,
+	context workflowExecutionContext,
 	request *h.SignalWorkflowExecutionRequest) error {
 
 	return t.updateWorkflowExecution(task.DomainID, context, true,
@@ -972,7 +972,7 @@ func (t *transferQueueActiveProcessorImpl) requestSignalFailed(task *persistence
 		})
 }
 
-func (t *transferQueueActiveProcessorImpl) updateWorkflowExecution(domainID string, context *workflowExecutionContext,
+func (t *transferQueueActiveProcessorImpl) updateWorkflowExecution(domainID string, context workflowExecutionContext,
 	createDecisionTask bool, action func(builder mutableState) error) error {
 Update_History_Loop:
 	for attempt := 0; attempt < conditionalRetryCount; attempt++ {

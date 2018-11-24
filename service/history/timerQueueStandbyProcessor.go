@@ -173,7 +173,7 @@ func (t *timerQueueStandbyProcessorImpl) process(timerTask *persistence.TimerTas
 
 func (t *timerQueueStandbyProcessorImpl) processExpiredUserTimer(timerTask *persistence.TimerTaskInfo) error {
 
-	return t.processTimer(timerTask, func(context *workflowExecutionContext, msBuilder mutableState) error {
+	return t.processTimer(timerTask, func(context workflowExecutionContext, msBuilder mutableState) error {
 		tBuilder := t.getTimerBuilder()
 
 	ExpireUserTimers:
@@ -221,7 +221,7 @@ func (t *timerQueueStandbyProcessorImpl) processActivityTimeout(timerTask *persi
 	// the overall solution is to attampt to generate a new activity timer task whenever the
 	// task passed in is safe to be throw away.
 
-	return t.processTimer(timerTask, func(context *workflowExecutionContext, msBuilder mutableState) error {
+	return t.processTimer(timerTask, func(context workflowExecutionContext, msBuilder mutableState) error {
 		tBuilder := t.getTimerBuilder()
 
 	ExpireActivityTimers:
@@ -289,7 +289,7 @@ func (t *timerQueueStandbyProcessorImpl) processActivityTimeout(timerTask *persi
 
 func (t *timerQueueStandbyProcessorImpl) processDecisionTimeout(timerTask *persistence.TimerTaskInfo) error {
 
-	return t.processTimer(timerTask, func(context *workflowExecutionContext, msBuilder mutableState) error {
+	return t.processTimer(timerTask, func(context workflowExecutionContext, msBuilder mutableState) error {
 		di, isPending := msBuilder.GetPendingDecision(timerTask.EventID)
 
 		if !isPending {
@@ -320,7 +320,7 @@ func (t *timerQueueStandbyProcessorImpl) processDecisionTimeout(timerTask *persi
 
 func (t *timerQueueStandbyProcessorImpl) processWorkflowRetryTimerTask(timerTask *persistence.TimerTaskInfo) error {
 
-	return t.processTimer(timerTask, func(context *workflowExecutionContext, msBuilder mutableState) error {
+	return t.processTimer(timerTask, func(context workflowExecutionContext, msBuilder mutableState) error {
 
 		nextEventID := msBuilder.GetNextEventID()
 
@@ -353,7 +353,7 @@ func (t *timerQueueStandbyProcessorImpl) processWorkflowRetryTimerTask(timerTask
 
 func (t *timerQueueStandbyProcessorImpl) processWorkflowTimeout(timerTask *persistence.TimerTaskInfo) error {
 
-	return t.processTimer(timerTask, func(context *workflowExecutionContext, msBuilder mutableState) error {
+	return t.processTimer(timerTask, func(context workflowExecutionContext, msBuilder mutableState) error {
 		// we do not need to notity new timer to base, since if there is no new event being replicated
 		// checking again if the timer can be completed is meaningless
 
@@ -386,7 +386,7 @@ func (t *timerQueueStandbyProcessorImpl) getTimerBuilder() *timerBuilder {
 }
 
 func (t *timerQueueStandbyProcessorImpl) processTimer(timerTask *persistence.TimerTaskInfo,
-	fn func(*workflowExecutionContext, mutableState) error) (retError error) {
+	fn func(workflowExecutionContext, mutableState) error) (retError error) {
 	context, release, err := t.cache.getOrCreateWorkflowExecution(t.timerQueueProcessorBase.getDomainIDAndWorkflowExecution(timerTask))
 	if err != nil {
 		return err
