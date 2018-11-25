@@ -208,7 +208,7 @@ func (p *replicatorQueueProcessorImpl) processHistoryReplicationTask(task *persi
 		targetClusters = append(targetClusters, cluster.ClusterName)
 	}
 
-	replicationTask, err := GenerateReplicationTask(targetClusters, task, p.historyMgr, p.historyV2Mgr, p.metricsClient, p.logger)
+	replicationTask, err := GenerateReplicationTask(targetClusters, task, p.historyMgr, p.historyV2Mgr, p.metricsClient, p.logger, nil)
 	if err != nil {
 		return err
 	}
@@ -225,12 +225,15 @@ func (p *replicatorQueueProcessorImpl) processHistoryReplicationTask(task *persi
 // GenerateReplicationTask generate replication task
 func GenerateReplicationTask(targetClusters []string, task *persistence.ReplicationTaskInfo,
 	historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager,
-	metricsClient metrics.Client, logger bark.Logger,
+	metricsClient metrics.Client, logger bark.Logger, history *shared.History,
 ) (*replicator.ReplicationTask, error) {
-	history, _, err := GetAllHistory(historyMgr, historyV2Mgr, metricsClient, logger, false,
-		task.DomainID, task.WorkflowID, task.RunID, task.FirstEventID, task.NextEventID, task.EventStoreVersion, task.BranchToken)
-	if err != nil {
-		return nil, err
+	var err error
+	if history == nil {
+		history, _, err = GetAllHistory(historyMgr, historyV2Mgr, metricsClient, logger, false,
+			task.DomainID, task.WorkflowID, task.RunID, task.FirstEventID, task.NextEventID, task.EventStoreVersion, task.BranchToken)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Check if this is replication task for ContinueAsNew event, then retrieve the history for new execution
