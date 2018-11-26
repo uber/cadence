@@ -411,6 +411,8 @@ Loop:
 			WorkflowId: attr.WorkflowId,
 			RunId:      attr.RunId,
 		},
+		PrevRunId:               attr.PrevRunId,
+		PrevVersion:             attr.PrevVersion,
 		FirstEventId:            attr.FirstEventId,
 		NextEventId:             attr.NextEventId,
 		Version:                 attr.Version,

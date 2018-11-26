@@ -27,7 +27,6 @@ import (
 
 	"github.com/gocql/gocql"
 	"github.com/uber-common/bark"
-
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	p "github.com/uber/cadence/common/persistence"
@@ -198,6 +197,8 @@ const (
 		`version: ?,` +
 		`last_replication_info: ?, ` +
 		`scheduled_id: ?, ` +
+		`prev_run_id: ?, ` +
+		`prev_version: ?, ` +
 		`event_store_version: ?, ` +
 		`branch_token: ?, ` +
 		`new_run_event_store_version: ?, ` +
@@ -344,10 +345,10 @@ const (
 		`IF range_id = ?`
 
 	templateUpdateCurrentWorkflowExecutionQuery = `UPDATE executions USING TTL 0 ` +
-		`SET current_run_id = ?, 
-execution = {run_id: ?, create_request_id: ?, state: ?, close_status: ?}, 
-replication_state = {start_version: ?, last_write_version: ?}, 
-workflow_last_write_version = ?, 
+		`SET current_run_id = ?,
+execution = {run_id: ?, create_request_id: ?, state: ?, close_status: ?},
+replication_state = {start_version: ?, last_write_version: ?},
+workflow_last_write_version = ?,
 workflow_state = ? ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
@@ -2826,26 +2827,33 @@ func (d *cassandraPersistence) createReplicationTasks(batch *gocql.Batch, replic
 		nextEventID := common.EmptyEventID
 		version := common.EmptyVersion
 		var lastReplicationInfo map[string]map[string]interface{}
-		activityScheduleID := common.EmptyEventID
+		scheduleID := common.EmptyEventID
+		prevRunID := emptyRunID
+		prevVersion := common.EmptyVersion
 		var eventStoreVersion, newRunEventStoreVersion int32
 		var branchToken, newRunBranchToken []byte
+
 		switch task.GetType() {
 		case p.ReplicationTaskTypeHistory:
-			histTask := task.(*p.HistoryReplicationTask)
-			eventStoreVersion = histTask.EventStoreVersion
-			newRunEventStoreVersion = histTask.NewRunEventStoreVersion
-			branchToken = histTask.BranchToken
-			newRunBranchToken = histTask.NewRunBranchToken
-			firstEventID = histTask.FirstEventID
-			nextEventID = histTask.NextEventID
+			historyTask := task.(*p.HistoryReplicationTask)
+			eventStoreVersion = historyTask.EventStoreVersion
+			newRunEventStoreVersion = historyTask.NewRunEventStoreVersion
+			branchToken = historyTask.BranchToken
+			newRunBranchToken = historyTask.NewRunBranchToken
+			firstEventID = historyTask.FirstEventID
+			nextEventID = historyTask.NextEventID
 			version = task.GetVersion()
 			lastReplicationInfo = make(map[string]map[string]interface{})
-			for k, v := range histTask.LastReplicationInfo {
+			for k, v := range historyTask.LastReplicationInfo {
 				lastReplicationInfo[k] = createReplicationInfoMap(v)
+			}
+			if len(historyTask.PrevRunID) > 0 {
+				prevRunID = historyTask.PrevRunID
+				prevVersion = historyTask.PrevVersion
 			}
 		case p.ReplicationTaskTypeSyncActivity:
 			version = task.GetVersion()
-			activityScheduleID = task.(*p.SyncActivityTask).ScheduledID
+			scheduleID = task.(*p.SyncActivityTask).ScheduledID
 			// cassandra does not like null
 			lastReplicationInfo = make(map[string]map[string]interface{})
 		default:
@@ -2867,7 +2875,9 @@ func (d *cassandraPersistence) createReplicationTasks(batch *gocql.Batch, replic
 			nextEventID,
 			version,
 			lastReplicationInfo,
-			activityScheduleID,
+			scheduleID,
+			prevRunID,
+			prevVersion,
 			eventStoreVersion,
 			branchToken,
 			newRunEventStoreVersion,
@@ -3668,6 +3678,13 @@ func createReplicationTaskInfo(result map[string]interface{}) *p.ReplicationTask
 			}
 		case "scheduled_id":
 			info.ScheduledID = v.(int64)
+		case "prev_run_id":
+			info.PrevRunID = v.(gocql.UUID).String()
+			if info.PrevRunID == emptyRunID {
+				info.PrevRunID = ""
+			}
+		case "prev_version":
+			info.PrevVersion = v.(int64)
 		case "event_store_version":
 			info.EventStoreVersion = int32(v.(int))
 		case "branch_token":

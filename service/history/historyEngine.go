@@ -22,13 +22,10 @@ package history
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
-
-	"encoding/json"
-
-	"go.uber.org/yarpc"
 
 	"github.com/pborman/uuid"
 	"github.com/uber-common/bark"
@@ -46,6 +43,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/worker/sysworkflow"
+	"go.uber.org/yarpc"
 )
 
 const (
@@ -398,6 +396,10 @@ func (e *historyEngineImpl) createWorkflow(startRequest *h.StartWorkflowExecutio
 		initiatedID = *parentInfo.InitiatedId
 	}
 
+	for _, replicationTask := range replicationTasks {
+		replicationTask.(*persistence.HistoryReplicationTask).PrevRunID = prevRunID
+		replicationTask.(*persistence.HistoryReplicationTask).PrevVersion = prevLastWriteVersion
+	}
 	createRequest := &persistence.CreateWorkflowExecutionRequest{
 		RequestID:                   common.StringDefault(request.RequestId),
 		DomainID:                    currExeInfo.DomainID,
@@ -2108,7 +2110,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 	}
 
 	if prevMutableState != nil {
-		if prevMutableState.GetLastWriteVersion() > msBuilder.GetLastWriteVersion() {
+		if prevMutableState.GetLastWriteVersion() > msBuilder.GetCurrentVersion() {
 			return nil, ce.NewDomainNotActiveError(
 				domainEntry.GetInfo().Name,
 				clusterMetadata.GetCurrentClusterName(),

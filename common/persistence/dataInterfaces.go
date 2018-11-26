@@ -307,6 +307,8 @@ type (
 		Version                 int64
 		LastReplicationInfo     map[string]*ReplicationInfo
 		ScheduledID             int64
+		PrevRunID               string
+		PrevVersion             int64
 		EventStoreVersion       int32
 		BranchToken             []byte
 		NewRunEventStoreVersion int32
@@ -486,6 +488,8 @@ type (
 		NextEventID             int64
 		Version                 int64
 		LastReplicationInfo     map[string]*ReplicationInfo
+		PrevRunID               string
+		PrevVersion             int64
 		EventStoreVersion       int32
 		BranchToken             []byte
 		NewRunEventStoreVersion int32

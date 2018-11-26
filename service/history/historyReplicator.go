@@ -74,6 +74,8 @@ var (
 	ErrRetryExistingWorkflow = &shared.RetryTaskError{Message: "workflow with same version is running"}
 	// ErrRetryBufferEvents is returned when events are arriving out of order, should retry, or specify force apply
 	ErrRetryBufferEvents = &shared.RetryTaskError{Message: "retry on applying buffer events"}
+	// ErrRetryOutOfOrderWorkflow is returned when workflows are replicated out or order
+	ErrRetryOutOfOrderWorkflow = &shared.RetryTaskError{Message: "retry on out of order workflows"}
 	// ErrRetrySyncActivity is returned when sync activity replication tasks are arriving out of order, should retry
 	ErrRetrySyncActivity = &shared.RetryTaskError{Message: "retry on applying sync activity"}
 	// ErrRetryExecutionAlreadyStarted is returned to indicate another workflow execution already started,
@@ -596,7 +598,7 @@ func (r *historyReplicator) ApplyReplicationTask(ctx context.Context, context *w
 	switch firstEvent.GetEventType() {
 	case shared.EventTypeWorkflowExecutionStarted:
 		err = r.replicateWorkflowStarted(ctx, context, msBuilder, di, request.GetSourceCluster(), request.History, sBuilder,
-			logger)
+			request.GetPrevRunId(), request.GetPrevVersion(), logger)
 	default:
 		// Generate a transaction ID for appending events to history
 		transactionID, err2 := r.shard.GetNextTransferTaskID()
@@ -678,8 +680,8 @@ func (r *historyReplicator) FlushBuffer(ctx context.Context, context *workflowEx
 }
 
 func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, context *workflowExecutionContext,
-	msBuilder mutableState, di *decisionInfo,
-	sourceCluster string, history *shared.History, sBuilder stateBuilder, logger bark.Logger) error {
+	msBuilder mutableState, di *decisionInfo, sourceCluster string, history *shared.History, sBuilder stateBuilder,
+	incomingPrevRunID string, incomingPrevVersion int64, logger bark.Logger) error {
 	executionInfo := msBuilder.GetExecutionInfo()
 	domainID := executionInfo.DomainID
 	execution := shared.WorkflowExecution{
@@ -831,6 +833,26 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 		return nil
 	}
 
+	checkOutOfOrder := func() error {
+		// no prev run exists
+		if len(incomingPrevRunID) == 0 {
+			return nil
+		}
+
+		// incoming version must >= prev version
+		if incomingPrevVersion < incomingVersion {
+			return nil
+		}
+
+		// prev version == incoming version
+		// check if the expected prev run ID is the current run ID
+		if incomingPrevRunID != currentRunID {
+			return ErrRetryOutOfOrderWorkflow
+		}
+
+		return nil
+	}
+
 	// current workflow is completed
 	if currentState == persistence.WorkflowStateCompleted {
 		if currentLastWriteVersion > incomingVersion {
@@ -840,6 +862,11 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 			return nil
 		}
 		// proceed to create workflow
+		err = checkOutOfOrder()
+		if err != nil {
+			return err
+		}
+
 		isBrandNew = false
 		return createWorkflow(isBrandNew, currentRunID, currentLastWriteVersion)
 	}
@@ -864,6 +891,11 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 	// whether the remote active cluster is aware of the current running workflow,
 	// the only thing we can do is to terminate the current workflow and
 	// start the new workflow from the request
+
+	err = checkOutOfOrder()
+	if err != nil {
+		return err
+	}
 
 	// same workflow ID, same shard
 	incomingTimestamp := lastEvent.GetTimestamp()

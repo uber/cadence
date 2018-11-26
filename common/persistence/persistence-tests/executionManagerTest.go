@@ -31,7 +31,6 @@ import (
 	"github.com/pborman/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
-
 	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
@@ -1097,6 +1096,8 @@ func (s *ExecutionManagerSuite) TestReplicationTasks() {
 					LastEventID: int64(1),
 				},
 			},
+			PrevRunID:   uuid.New(),
+			PrevVersion: int64(999),
 		},
 		&p.HistoryReplicationTask{
 			TaskID:       s.GetNextSequenceNumber(),
@@ -1127,7 +1128,21 @@ func (s *ExecutionManagerSuite) TestReplicationTasks() {
 		s.Equal(replicationTasks[index].GetTaskID(), repTasks[index].GetTaskID())
 		s.Equal(replicationTasks[index].GetType(), repTasks[index].GetTaskType())
 		s.Equal(replicationTasks[index].GetVersion(), repTasks[index].GetVersion())
+	}
 
+	s.Equal(replicationTasks[0].(*p.HistoryReplicationTask).FirstEventID, repTasks[0].FirstEventID)
+	s.Equal(replicationTasks[0].(*p.HistoryReplicationTask).NextEventID, repTasks[0].NextEventID)
+	s.Equal(replicationTasks[0].(*p.HistoryReplicationTask).LastReplicationInfo, repTasks[0].LastReplicationInfo)
+	s.Equal(replicationTasks[0].(*p.HistoryReplicationTask).PrevRunID, repTasks[0].PrevRunID)
+	s.Equal(replicationTasks[0].(*p.HistoryReplicationTask).PrevVersion, repTasks[0].PrevVersion)
+
+	s.Equal(replicationTasks[1].(*p.HistoryReplicationTask).FirstEventID, repTasks[1].FirstEventID)
+	s.Equal(replicationTasks[1].(*p.HistoryReplicationTask).NextEventID, repTasks[1].NextEventID)
+	s.Equal(replicationTasks[1].(*p.HistoryReplicationTask).LastReplicationInfo, repTasks[1].LastReplicationInfo)
+
+	s.Equal(replicationTasks[2].(*p.SyncActivityTask).ScheduledID, repTasks[2].ScheduledID)
+
+	for index := range replicationTasks {
 		err = s.CompleteReplicationTask(repTasks[index].GetTaskID())
 		s.NoError(err)
 	}

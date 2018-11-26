@@ -213,6 +213,11 @@ func (p *replicatorQueueProcessorImpl) processHistoryReplicationTask(task *persi
 		return err
 	}
 
+	if !p.shard.GetConfig().EnableWorkflowReplicationOrderProtection() {
+		replicationTask.HistoryTaskAttributes.PrevRunId = nil
+		replicationTask.HistoryTaskAttributes.PrevVersion = nil
+	}
+
 	err = p.replicator.Publish(replicationTask)
 	if err == nil {
 		p.Lock()
@@ -258,6 +263,8 @@ func GenerateReplicationTask(targetClusters []string, task *persistence.Replicat
 			DomainId:                common.StringPtr(task.DomainID),
 			WorkflowId:              common.StringPtr(task.WorkflowID),
 			RunId:                   common.StringPtr(task.RunID),
+			PrevRunId:               common.StringPtr(task.PrevRunID),
+			PrevVersion:             common.Int64Ptr(task.PrevVersion),
 			FirstEventId:            common.Int64Ptr(task.FirstEventID),
 			NextEventId:             common.Int64Ptr(task.NextEventID),
 			Version:                 common.Int64Ptr(task.Version),
@@ -268,6 +275,7 @@ func GenerateReplicationTask(targetClusters []string, task *persistence.Replicat
 			NewRunEventStoreVersion: common.Int32Ptr(task.NewRunEventStoreVersion),
 		},
 	}
+
 	return ret, nil
 }
 func (p *replicatorQueueProcessorImpl) readTasks(readLevel int64) ([]queueTaskInfo, bool, error) {

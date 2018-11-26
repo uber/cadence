@@ -174,6 +174,8 @@ CREATE TABLE replication_tasks (
 	version BIGINT NOT NULL,
   last_replication_info BLOB NOT NULL,
 	scheduled_id BIGINT NOT NULL,
+	prev_run_id VARCHAR(64) NOT NULL,
+	prev_version BIGINT NOT NULL,
 	PRIMARY KEY (shard_id, task_id)
 );
 

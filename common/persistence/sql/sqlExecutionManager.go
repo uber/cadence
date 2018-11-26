@@ -135,6 +135,8 @@ type (
 		Version             int64
 		LastReplicationInfo []byte
 		ScheduledID         int64
+		PrevRunID           string
+		PrevVersion         int64
 		ShardID             int
 	}
 
@@ -432,7 +434,9 @@ first_event_id,
 next_event_id,
 version,
 last_replication_info,
-scheduled_id`
+scheduled_id,
+prev_run_id,
+prev_version`
 
 	replicationTaskInfoColumnsTags = `:task_id,
 :domain_id,
@@ -443,7 +447,9 @@ scheduled_id`
 :next_event_id,
 :version,
 :last_replication_info,
-:scheduled_id`
+:scheduled_id,
+:prev_run_id,
+:prev_version`
 
 	replicationTasksColumns     = `shard_id, ` + replicationTaskInfoColumns
 	replicationTasksColumnsTags = `:shard_id, ` + replicationTaskInfoColumnsTags
@@ -1383,6 +1389,9 @@ func (m *sqlExecutionManager) GetReplicationTasks(request *p.GetReplicationTasks
 			NextEventID:         row.NextEventID,
 			Version:             row.Version,
 			LastReplicationInfo: lastReplicationInfo,
+			ScheduledID:         row.ScheduledID,
+			PrevRunID:           row.PrevRunID,
+			PrevVersion:         row.PrevVersion,
 		}
 	}
 	var nextPageToken []byte
@@ -1782,7 +1791,9 @@ func createReplicationTasks(tx *sqlx.Tx, replicationTasks []p.Task, shardID int,
 		firstEventID := common.EmptyEventID
 		nextEventID := common.EmptyEventID
 		version := common.EmptyVersion
-		activityScheduleID := common.EmptyEventID
+		scheduleID := common.EmptyEventID
+		prevRunID := ""
+		prevVersion := common.EmptyVersion
 		var lastReplicationInfo []byte
 		var err error
 
@@ -1804,10 +1815,13 @@ func createReplicationTasks(tx *sqlx.Tx, replicationTasks []p.Task, shardID int,
 					Message: fmt.Sprintf("Failed to serialize LastReplicationInfo. Task: %v", task),
 				}
 			}
-
+			if len(historyReplicationTask.PrevRunID) > 0 {
+				prevRunID = historyReplicationTask.PrevRunID
+				prevVersion = historyReplicationTask.PrevVersion
+			}
 		case p.ReplicationTaskTypeSyncActivity:
 			version = task.GetVersion()
-			activityScheduleID = task.(*p.SyncActivityTask).ScheduledID
+			scheduleID = task.(*p.SyncActivityTask).ScheduledID
 			lastReplicationInfo = []byte{}
 
 		default:
@@ -1820,7 +1834,9 @@ func createReplicationTasks(tx *sqlx.Tx, replicationTasks []p.Task, shardID int,
 		replicationTasksRows[i].NextEventID = nextEventID
 		replicationTasksRows[i].Version = version
 		replicationTasksRows[i].LastReplicationInfo = lastReplicationInfo
-		replicationTasksRows[i].ScheduledID = activityScheduleID
+		replicationTasksRows[i].ScheduledID = scheduleID
+		replicationTasksRows[i].PrevRunID = prevRunID
+		replicationTasksRows[i].PrevVersion = prevVersion
 	}
 
 	query, args, err := tx.BindNamed(createReplicationTasksSQLQuery, replicationTasksRows)

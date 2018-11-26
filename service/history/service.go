@@ -34,13 +34,14 @@ import (
 type Config struct {
 	NumberOfShards int
 
-	EnableSyncActivityHeartbeat dynamicconfig.BoolPropertyFn
-	RPS                         dynamicconfig.IntPropertyFn
-	PersistenceMaxQPS           dynamicconfig.IntPropertyFn
-	EnableVisibilitySampling    dynamicconfig.BoolPropertyFn
-	VisibilityOpenMaxQPS        dynamicconfig.IntPropertyFnWithDomainFilter
-	VisibilityClosedMaxQPS      dynamicconfig.IntPropertyFnWithDomainFilter
-	EnableVisibilityToKafka     dynamicconfig.BoolPropertyFn
+	EnableSyncActivityHeartbeat              dynamicconfig.BoolPropertyFn
+	EnableWorkflowReplicationOrderProtection dynamicconfig.BoolPropertyFn
+	RPS                                      dynamicconfig.IntPropertyFn
+	PersistenceMaxQPS                        dynamicconfig.IntPropertyFn
+	EnableVisibilitySampling                 dynamicconfig.BoolPropertyFn
+	VisibilityOpenMaxQPS                     dynamicconfig.IntPropertyFnWithDomainFilter
+	VisibilityClosedMaxQPS                   dynamicconfig.IntPropertyFnWithDomainFilter
+	EnableVisibilityToKafka                  dynamicconfig.BoolPropertyFn
 
 	// HistoryCache settings
 	// Change of these configs require shard restart
@@ -128,6 +129,7 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int) *Config {
 	return &Config{
 		NumberOfShards:                                        numberOfShards,
 		EnableSyncActivityHeartbeat:                           dc.GetBoolProperty(dynamicconfig.EnableSyncActivityHeartbeat, false),
+		EnableWorkflowReplicationOrderProtection:              dc.GetBoolProperty(dynamicconfig.EnableWorkflowReplicationOrderProtection, false),
 		RPS:                                                   dc.GetIntProperty(dynamicconfig.HistoryRPS, 3000),
 		PersistenceMaxQPS:                                     dc.GetIntProperty(dynamicconfig.HistoryPersistenceMaxQPS, 9000),
 		EnableVisibilitySampling:                              dc.GetBoolProperty(dynamicconfig.EnableVisibilitySampling, true),

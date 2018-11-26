@@ -21,17 +21,15 @@
 package persistencetests
 
 import (
+	"fmt"
 	"math"
 	"math/rand"
 	"sync/atomic"
 	"time"
 
-	"github.com/stretchr/testify/suite"
-
-	"fmt"
-
 	"github.com/pborman/uuid"
 	log "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/suite"
 	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -204,6 +202,7 @@ func (s *TestBase) Setup() {
 		TimerAckLevel:           time.Time{},
 		ClusterTimerAckLevel:    map[string]time.Time{clusterName: time.Time{}},
 		ClusterTransferAckLevel: map[string]int64{clusterName: 0},
+		UpdatedAt:               time.Now(),
 	}
 
 	s.TaskIDGenerator = &TestTransferTaskIDGenerator{}

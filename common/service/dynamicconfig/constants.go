@@ -77,6 +77,7 @@ var keys = map[Key]string{
 
 	// history settings
 	EnableSyncActivityHeartbeat:                           "history.enableSyncActivityHeartbeat",
+	EnableWorkflowReplicationOrderProtection:              "history.enableWorkflowReplicationOrderProtection",
 	HistoryRPS:                                            "history.rps",
 	HistoryPersistenceMaxQPS:                              "history.persistenceMaxQPS",
 	HistoryVisibilityOpenMaxQPS:                           "history.historyVisibilityOpenMaxQPS",
@@ -214,6 +215,8 @@ const (
 
 	// EnableSyncActivityHeartbeat whether enable sending out sync activity heartbeat replication task
 	EnableSyncActivityHeartbeat
+	// EnableWorkflowReplicationOrderProtection whether enable workflow replication order protection
+	EnableWorkflowReplicationOrderProtection
 	// HistoryRPS is request rate per second for each history host
 	HistoryRPS
 	// HistoryPersistenceMaxQPS is the max qps history host can query DB

@@ -25,9 +25,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/uber-common/bark"
-
 	"github.com/jmoiron/sqlx"
+	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/config"
@@ -55,9 +54,9 @@ type (
 )
 
 const (
-	createShardSQLQuery = `INSERT INTO shards 
-(shard_id, 
-owner, 
+	createShardSQLQuery = `INSERT INTO shards
+(shard_id,
+owner,
 range_id,
 stolen_since_renew,
 updated_at,
@@ -68,8 +67,8 @@ cluster_transfer_ack_level,
 cluster_timer_ack_level,
 domain_notification_version)
 VALUES
-(:shard_id, 
-:owner, 
+(:shard_id,
+:owner,
 :range_id,
 :stolen_since_renew,
 :updated_at,
@@ -97,7 +96,7 @@ shard_id = ?
 `
 
 	updateShardSQLQuery = `UPDATE
-shards 
+shards
 SET
 shard_id = :shard_id,
 owner = :owner,
