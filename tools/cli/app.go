@@ -25,7 +25,7 @@ import "github.com/urfave/cli"
 const (
 	// Version is the controlled version string. It should be updated every time
 	// before we release a new version.
-	Version = "0.5.5"
+	Version = "0.5.6"
 )
 
 // NewCliApp instantiates a new instance of the CLI application.
@@ -88,6 +88,12 @@ func NewCliApp() *cli.App {
 					Aliases:     []string{"ka"},
 					Usage:       "Run admin operation on kafka messages",
 					Subcommands: newAdminKafkaCommands(),
+				},
+				{
+					Name:        "domain",
+					Aliases:     []string{"d"},
+					Usage:       "Run admin operation on domain",
+					Subcommands: newAdminDomainCommands(),
 				},
 			},
 		},

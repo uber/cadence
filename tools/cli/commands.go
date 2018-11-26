@@ -49,10 +49,15 @@ import (
 Flags used to specify cli command line arguments
 */
 const (
+	FlagPort                       = "port"
+	FlagUsername                   = "username"
+	FlagPassword                   = "password"
+	FlagKeyspace                   = "keyspace"
 	FlagAddress                    = "address"
 	FlagAddressWithAlias           = FlagAddress + ", ad"
 	FlagHistoryAddress             = "history_address"
 	FlagHistoryAddressWithAlias    = FlagHistoryAddress + ", had"
+	FlagDomainID                   = "domain_id"
 	FlagDomain                     = "domain"
 	FlagDomainWithAlias            = FlagDomain + ", do"
 	FlagShardID                    = "shard_id"
@@ -60,7 +65,11 @@ const (
 	FlagWorkflowID                 = "workflow_id"
 	FlagWorkflowIDWithAlias        = FlagWorkflowID + ", wid, w"
 	FlagRunID                      = "run_id"
+	FlagNumberOfShards             = "number_of_shards"
 	FlagRunIDWithAlias             = FlagRunID + ", rid, r"
+	FlagTargetCluster              = "target_cluster"
+	FlagMinEventID                 = "min_event_id"
+	FlagMaxEventID                 = "max_event_id"
 	FlagTaskList                   = "tasklist"
 	FlagTaskListWithAlias          = FlagTaskList + ", tl"
 	FlagTaskListType               = "tasklisttype"
@@ -79,6 +88,14 @@ const (
 	FlagInputWithAlias             = FlagInput + ", i"
 	FlagInputFile                  = "input_file"
 	FlagInputFileWithAlias         = FlagInputFile + ", if"
+	FlagInputTopic                 = "input_topic"
+	FlagInputTopicWithAlias        = FlagInputTopic + ", it"
+	FlagHostFile                   = "host_file"
+	FlagCluster                    = "cluster"
+	FlagInputCluster               = "input_cluster"
+	FlagStartOffset                = "start_offset"
+	FlagTopic                      = "topic"
+	FlagGroup                      = "group"
 	FlagReason                     = "reason"
 	FlagReasonWithAlias            = FlagReason + ", re"
 	FlagOpen                       = "open"
@@ -129,6 +146,8 @@ const (
 	FlagSecurityTokenWithAlias     = FlagSecurityToken + ", st"
 	FlagSkipErrorMode              = "skip_errors"
 	FlagSkipErrorModeWithAlias     = FlagSkipErrorMode + ", serr"
+	FlagHeadersMode                = "headers"
+	FlagHeadersModeWithAlias       = FlagHeadersMode + ", he"
 )
 
 const (

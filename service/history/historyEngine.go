@@ -31,6 +31,7 @@ import (
 	"github.com/uber-common/bark"
 	h "github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client/frontend"
 	hc "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
@@ -41,6 +42,7 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/worker/sysworkflow"
 	"go.uber.org/yarpc"
 )
 
@@ -71,6 +73,7 @@ type (
 		metricsClient        metrics.Client
 		logger               bark.Logger
 		config               *Config
+		initiator            sysworkflow.Initiator
 	}
 
 	// shardContextWrapper wraps ShardContext to notify transferQueueProcessor on new tasks.
@@ -124,8 +127,17 @@ var (
 )
 
 // NewEngineWithShardContext creates an instance of history engine
-func NewEngineWithShardContext(shard ShardContext, visibilityMgr persistence.VisibilityManager,
-	matching matching.Client, historyClient hc.Client, historyEventNotifier historyEventNotifier, publisher messaging.Producer, config *Config) Engine {
+func NewEngineWithShardContext(
+	shard ShardContext,
+	visibilityMgr persistence.VisibilityManager,
+	matching matching.Client,
+	historyClient hc.Client,
+	frontendClient frontend.Client,
+	historyEventNotifier historyEventNotifier,
+	publisher messaging.Producer,
+	messagingClient messaging.Client,
+	config *Config,
+) Engine {
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 	shardWrapper := &shardContextWrapper{
 		currentClusterName:   currentClusterName,
@@ -151,9 +163,14 @@ func NewEngineWithShardContext(shard ShardContext, visibilityMgr persistence.Vis
 		}),
 		metricsClient:        shard.GetMetricsClient(),
 		historyEventNotifier: historyEventNotifier,
+		initiator:            sysworkflow.NewInitiator(frontendClient, shard.GetConfig().NumSysWorkflows),
 		config:               config,
 	}
-	txProcessor := newTransferQueueProcessor(shard, historyEngImpl, visibilityMgr, matching, historyClient, logger)
+	var visibilityProducer messaging.Producer
+	if config.EnableVisibilityToKafka() {
+		visibilityProducer = getVisibilityProducer(messagingClient)
+	}
+	txProcessor := newTransferQueueProcessor(shard, historyEngImpl, visibilityMgr, visibilityProducer, matching, historyClient, logger)
 	historyEngImpl.timerProcessor = newTimerQueueProcessor(shard, historyEngImpl, matching, logger)
 	historyEngImpl.txProcessor = txProcessor
 	shardWrapper.txProcessor = txProcessor
@@ -772,24 +789,26 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(ctx context.Context,
 	}
 
 	if len(msBuilder.GetPendingActivityInfos()) > 0 {
-		for _, pi := range msBuilder.GetPendingActivityInfos() {
-			ai := &workflow.PendingActivityInfo{
-				ActivityID: common.StringPtr(pi.ActivityID),
+		for _, ai := range msBuilder.GetPendingActivityInfos() {
+			p := &workflow.PendingActivityInfo{
+				ActivityID: common.StringPtr(ai.ActivityID),
 			}
 			state := workflow.PendingActivityStateScheduled
-			if pi.CancelRequested {
+			if ai.CancelRequested {
 				state = workflow.PendingActivityStateCancelRequested
-			} else if pi.StartedID != common.EmptyEventID {
+			} else if ai.StartedID != common.EmptyEventID {
 				state = workflow.PendingActivityStateStarted
 			}
-			ai.State = &state
-			lastHeartbeatUnixNano := pi.LastHeartBeatUpdatedTime.UnixNano()
+			p.State = &state
+			lastHeartbeatUnixNano := ai.LastHeartBeatUpdatedTime.UnixNano()
 			if lastHeartbeatUnixNano > 0 {
-				ai.LastHeartbeatTimestamp = common.Int64Ptr(lastHeartbeatUnixNano)
-				ai.HeartbeatDetails = pi.Details
+				p.LastHeartbeatTimestamp = common.Int64Ptr(lastHeartbeatUnixNano)
+				p.HeartbeatDetails = ai.Details
 			}
-			ai.ActivityType = pi.ScheduledEvent.ActivityTaskScheduledEventAttributes.ActivityType
-			result.PendingActivities = append(result.PendingActivities, ai)
+			p.ActivityType = ai.ScheduledEvent.ActivityTaskScheduledEventAttributes.ActivityType
+			p.LastStartedTimestamp = common.Int64Ptr(ai.StartedTime.UnixNano())
+			p.Attempt = common.Int32Ptr(ai.Attempt)
+			result.PendingActivities = append(result.PendingActivities, p)
 		}
 	}
 
@@ -1520,6 +1539,13 @@ Update_History_Loop:
 			}
 			transferTasks = append(transferTasks, tranT)
 			timerTasks = append(timerTasks, timerT)
+
+			request := &sysworkflow.ArchiveRequest{
+				Domain:         domainEntry.GetInfo().Name,
+				UserWorkflowID: workflowExecution.GetWorkflowId(),
+				UserRunID:      workflowExecution.GetRunId(),
+			}
+			e.initiator.Archive(request)
 		}
 
 		// Generate a transaction ID for appending events to history
@@ -3047,4 +3073,15 @@ func getWorkflowAlreadyStartedError(errMsg string, createRequestID string, workf
 		StartRequestId: common.StringPtr(fmt.Sprintf("%v", createRequestID)),
 		RunId:          common.StringPtr(fmt.Sprintf("%v", runID)),
 	}
+}
+
+func getVisibilityProducer(messagingClient messaging.Client) messaging.Producer {
+	if messagingClient == nil {
+		return nil
+	}
+	visibilityProducer, err := messagingClient.NewProducer(messaging.VisibilityTopicName)
+	if err != nil {
+		panic(err)
+	}
+	return visibilityProducer
 }

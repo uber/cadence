@@ -40,6 +40,7 @@ type Config struct {
 	EnableVisibilitySampling    dynamicconfig.BoolPropertyFn
 	VisibilityOpenMaxQPS        dynamicconfig.IntPropertyFnWithDomainFilter
 	VisibilityClosedMaxQPS      dynamicconfig.IntPropertyFnWithDomainFilter
+	EnableVisibilityToKafka     dynamicconfig.BoolPropertyFn
 
 	// HistoryCache settings
 	// Change of these configs require shard restart
@@ -117,6 +118,9 @@ type Config struct {
 	EventEncodingType dynamicconfig.StringPropertyFnWithDomainFilter
 	// whether or not using eventsV2
 	EnableEventsV2 dynamicconfig.BoolPropertyFnWithDomainFilter
+
+	EnableArchival  dynamicconfig.BoolPropertyFnWithDomainFilter
+	NumSysWorkflows dynamicconfig.IntPropertyFn
 }
 
 // NewConfig returns new service config with default values
@@ -129,6 +133,7 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int) *Config {
 		EnableVisibilitySampling:                              dc.GetBoolProperty(dynamicconfig.EnableVisibilitySampling, true),
 		VisibilityOpenMaxQPS:                                  dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryVisibilityOpenMaxQPS, 300),
 		VisibilityClosedMaxQPS:                                dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryVisibilityClosedMaxQPS, 300),
+		EnableVisibilityToKafka:                               dc.GetBoolProperty(dynamicconfig.EnableVisibilityToKafka, dynamicconfig.DefaultEnableVisibilityToKafka),
 		HistoryCacheInitialSize:                               dc.GetIntProperty(dynamicconfig.HistoryCacheInitialSize, 128),
 		HistoryCacheMaxSize:                                   dc.GetIntProperty(dynamicconfig.HistoryCacheMaxSize, 512),
 		HistoryCacheTTL:                                       dc.GetDurationProperty(dynamicconfig.HistoryCacheTTL, time.Hour),
@@ -182,6 +187,9 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int) *Config {
 		LongPollExpirationInterval: dc.GetDurationPropertyFilteredByDomain(dynamicconfig.HistoryLongPollExpirationInterval, time.Second*20),
 		EventEncodingType:          dc.GetStringPropertyFnWithDomainFilter(dynamicconfig.DefaultEventEncoding, string(common.EncodingTypeJSON)),
 		EnableEventsV2:             dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableEventsV2, false),
+
+		EnableArchival:  dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableArchival, false),
+		NumSysWorkflows: dc.GetIntProperty(dynamicconfig.NumSystemWorkflows, 1000),
 	}
 }
 

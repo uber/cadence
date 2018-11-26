@@ -51,6 +51,7 @@ var keys = map[Key]string{
 	EnableGlobalDomain:       "system.enableGlobalDomain",
 	EnableNewKafkaClient:     "system.enableNewKafkaClient",
 	EnableVisibilitySampling: "system.enableVisibilitySampling",
+	EnableVisibilityToKafka:  "system.enableVisibilityToKafka",
 
 	// frontend settings
 	FrontendPersistenceMaxQPS:      "frontend.persistenceMaxQPS",
@@ -135,6 +136,8 @@ var keys = map[Key]string{
 	EnableAdminProtection:                                 "history.enableAdminProtection",
 	AdminOperationToken:                                   "history.adminOperationToken",
 	EnableEventsV2:                                        "history.enableEventsV2",
+	EnableArchival:                                        "history.enableArchival",
+	NumSystemWorkflows:                                    "history.numSystemWorkflows",
 
 	WorkerPersistenceMaxQPS:       "worker.persistenceMaxQPS",
 	WorkerReplicatorConcurrency:   "worker.replicatorConcurrency",
@@ -162,6 +165,8 @@ const (
 	EnableNewKafkaClient
 	// EnableVisibilitySampling is key for enable visibility sampling
 	EnableVisibilitySampling
+	// EnableVisibilityToKafka is key for enable kafka
+	EnableVisibilityToKafka
 
 	// key for frontend
 
@@ -321,6 +326,10 @@ const (
 	ShardSyncMinInterval
 	// DefaultEventEncoding is the encoding type for history events
 	DefaultEventEncoding
+	// EnableArchival is key for enable archival of workflows in a domain
+	EnableArchival
+	// NumSystemWorkflows is key for number of system workflows running in total
+	NumSystemWorkflows
 
 	// EnableAdminProtection is whether to enable admin checking
 	EnableAdminProtection
@@ -395,3 +404,6 @@ func TaskTypeFilter(taskType int) FilterOption {
 		filterMap[TaskType] = taskType
 	}
 }
+
+// DefaultEnableVisibilityToKafka default value for config EnableVisibilityToKafka
+const DefaultEnableVisibilityToKafka = false

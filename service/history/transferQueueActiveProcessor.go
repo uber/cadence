@@ -32,6 +32,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/logging"
+	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 )
@@ -56,7 +57,7 @@ type (
 	}
 )
 
-func newTransferQueueActiveProcessor(shard ShardContext, historyService *historyEngineImpl, visibilityMgr persistence.VisibilityManager,
+func newTransferQueueActiveProcessor(shard ShardContext, historyService *historyEngineImpl, visibilityMgr persistence.VisibilityManager, visibilityProducer messaging.Producer,
 	matchingClient matching.Client, historyClient history.Client, taskAllocator taskAllocator, logger bark.Logger) *transferQueueActiveProcessorImpl {
 	config := shard.GetConfig()
 	options := &QueueProcessorOptions{
@@ -100,7 +101,7 @@ func newTransferQueueActiveProcessor(shard ShardContext, historyService *history
 		cache:              historyService.historyCache,
 		transferTaskFilter: transferTaskFilter,
 		transferQueueProcessorBase: newTransferQueueProcessorBase(
-			shard, options, visibilityMgr, matchingClient, maxReadAckLevel, updateTransferAckLevel, transferQueueShutdown, logger,
+			shard, options, visibilityMgr, visibilityProducer, matchingClient, maxReadAckLevel, updateTransferAckLevel, transferQueueShutdown, logger,
 		),
 	}
 
@@ -112,7 +113,8 @@ func newTransferQueueActiveProcessor(shard ShardContext, historyService *history
 	return processor
 }
 
-func newTransferQueueFailoverProcessor(shard ShardContext, historyService *historyEngineImpl, visibilityMgr persistence.VisibilityManager,
+func newTransferQueueFailoverProcessor(shard ShardContext, historyService *historyEngineImpl,
+	visibilityMgr persistence.VisibilityManager, visibilityProducer messaging.Producer,
 	matchingClient matching.Client, historyClient history.Client, domainIDs map[string]struct{}, standbyClusterName string,
 	minLevel int64, maxLevel int64, taskAllocator taskAllocator, logger bark.Logger) (func(ackLevel int64) error, *transferQueueActiveProcessorImpl) {
 	config := shard.GetConfig()
@@ -169,7 +171,8 @@ func newTransferQueueFailoverProcessor(shard ShardContext, historyService *histo
 		cache:              historyService.historyCache,
 		transferTaskFilter: transferTaskFilter,
 		transferQueueProcessorBase: newTransferQueueProcessorBase(
-			shard, options, visibilityMgr, matchingClient, maxReadAckLevel, updateTransferAckLevel, transferQueueShutdown, logger,
+			shard, options, visibilityMgr, visibilityProducer, matchingClient,
+			maxReadAckLevel, updateTransferAckLevel, transferQueueShutdown, logger,
 		),
 	}
 
