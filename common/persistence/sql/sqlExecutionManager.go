@@ -217,6 +217,7 @@ completion_event_encoding`
 :client_library_version,
 :client_feature_version,
 :client_impl,
+:signal_count,
 :completion_event_encoding`
 
 	executionsBlobColumns = `completion_event,
