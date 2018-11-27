@@ -150,7 +150,8 @@ This test simulates the execution of the activity `SimpleActivity` that is invok
 for the `SimpleActivity` that returns an error.
 
 ```go
-s.env.OnActivity(SimpleActivity, mock.Anything, mock.Anything).Return("", errors.New("SimpleActivityFailure"))
+s.env.OnActivity(SimpleActivity, mock.Anything, mock.Anything).Return(
+  "", errors.New("SimpleActivityFailure"))
 ```
 With the mock set up we can now execute the workflow via the s.env.ExecuteWorkflow(...) method and
 assert that the workflow completed successfully and returned the expected error.
