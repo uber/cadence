@@ -824,6 +824,12 @@ func (b *historyBuilder) newWorkflowExecutionContinuedAsNewEvent(decisionTaskCom
 	attributes.TaskStartToCloseTimeoutSeconds = common.Int32Ptr(*request.TaskStartToCloseTimeoutSeconds)
 	attributes.DecisionTaskCompletedEventId = common.Int64Ptr(decisionTaskCompletedEventID)
 	attributes.BackoffStartIntervalInSeconds = common.Int32Ptr(request.GetBackoffStartIntervalInSeconds())
+	attributes.Initiator = request.Initiator
+	if attributes.Initiator == nil {
+		attributes.Initiator = workflow.ContinueAsNewInitiatorDecider.Ptr()
+	}
+	attributes.Reason = request.Reason
+	attributes.Details = request.Details
 	historyEvent.WorkflowExecutionContinuedAsNewEventAttributes = attributes
 
 	return historyEvent

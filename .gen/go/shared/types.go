@@ -5778,14 +5778,188 @@ func (v *CompleteWorkflowExecutionDecisionAttributes) GetResult() (o []byte) {
 	return
 }
 
+type ContinueAsNewInitiator int32
+
+const (
+	ContinueAsNewInitiatorDecider     ContinueAsNewInitiator = 0
+	ContinueAsNewInitiatorRetryPolicy ContinueAsNewInitiator = 1
+)
+
+// ContinueAsNewInitiator_Values returns all recognized values of ContinueAsNewInitiator.
+func ContinueAsNewInitiator_Values() []ContinueAsNewInitiator {
+	return []ContinueAsNewInitiator{
+		ContinueAsNewInitiatorDecider,
+		ContinueAsNewInitiatorRetryPolicy,
+	}
+}
+
+// UnmarshalText tries to decode ContinueAsNewInitiator from a byte slice
+// containing its name.
+//
+//   var v ContinueAsNewInitiator
+//   err := v.UnmarshalText([]byte("Decider"))
+func (v *ContinueAsNewInitiator) UnmarshalText(value []byte) error {
+	switch s := string(value); s {
+	case "Decider":
+		*v = ContinueAsNewInitiatorDecider
+		return nil
+	case "RetryPolicy":
+		*v = ContinueAsNewInitiatorRetryPolicy
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "ContinueAsNewInitiator", err)
+		}
+		*v = ContinueAsNewInitiator(val)
+		return nil
+	}
+}
+
+// MarshalText encodes ContinueAsNewInitiator to text.
+//
+// If the enum value is recognized, its name is returned. Otherwise,
+// its integer value is returned.
+//
+// This implements the TextMarshaler interface.
+func (v ContinueAsNewInitiator) MarshalText() ([]byte, error) {
+	switch int32(v) {
+	case 0:
+		return []byte("Decider"), nil
+	case 1:
+		return []byte("RetryPolicy"), nil
+	}
+	return []byte(strconv.FormatInt(int64(v), 10)), nil
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of ContinueAsNewInitiator.
+// Enums are logged as objects, where the value is logged with key "value", and
+// if this value's name is known, the name is logged with key "name".
+func (v ContinueAsNewInitiator) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddInt32("value", int32(v))
+	switch int32(v) {
+	case 0:
+		enc.AddString("name", "Decider")
+	case 1:
+		enc.AddString("name", "RetryPolicy")
+	}
+	return nil
+}
+
+// Ptr returns a pointer to this enum value.
+func (v ContinueAsNewInitiator) Ptr() *ContinueAsNewInitiator {
+	return &v
+}
+
+// ToWire translates ContinueAsNewInitiator into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// Enums are represented as 32-bit integers over the wire.
+func (v ContinueAsNewInitiator) ToWire() (wire.Value, error) {
+	return wire.NewValueI32(int32(v)), nil
+}
+
+// FromWire deserializes ContinueAsNewInitiator from its Thrift-level
+// representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TI32)
+//   if err != nil {
+//     return ContinueAsNewInitiator(0), err
+//   }
+//
+//   var v ContinueAsNewInitiator
+//   if err := v.FromWire(x); err != nil {
+//     return ContinueAsNewInitiator(0), err
+//   }
+//   return v, nil
+func (v *ContinueAsNewInitiator) FromWire(w wire.Value) error {
+	*v = (ContinueAsNewInitiator)(w.GetI32())
+	return nil
+}
+
+// String returns a readable string representation of ContinueAsNewInitiator.
+func (v ContinueAsNewInitiator) String() string {
+	w := int32(v)
+	switch w {
+	case 0:
+		return "Decider"
+	case 1:
+		return "RetryPolicy"
+	}
+	return fmt.Sprintf("ContinueAsNewInitiator(%d)", w)
+}
+
+// Equals returns true if this ContinueAsNewInitiator value matches the provided
+// value.
+func (v ContinueAsNewInitiator) Equals(rhs ContinueAsNewInitiator) bool {
+	return v == rhs
+}
+
+// MarshalJSON serializes ContinueAsNewInitiator into JSON.
+//
+// If the enum value is recognized, its name is returned. Otherwise,
+// its integer value is returned.
+//
+// This implements json.Marshaler.
+func (v ContinueAsNewInitiator) MarshalJSON() ([]byte, error) {
+	switch int32(v) {
+	case 0:
+		return ([]byte)("\"Decider\""), nil
+	case 1:
+		return ([]byte)("\"RetryPolicy\""), nil
+	}
+	return ([]byte)(strconv.FormatInt(int64(v), 10)), nil
+}
+
+// UnmarshalJSON attempts to decode ContinueAsNewInitiator from its JSON
+// representation.
+//
+// This implementation supports both, numeric and string inputs. If a
+// string is provided, it must be a known enum name.
+//
+// This implements json.Unmarshaler.
+func (v *ContinueAsNewInitiator) UnmarshalJSON(text []byte) error {
+	d := json.NewDecoder(bytes.NewReader(text))
+	d.UseNumber()
+	t, err := d.Token()
+	if err != nil {
+		return err
+	}
+
+	switch w := t.(type) {
+	case json.Number:
+		x, err := w.Int64()
+		if err != nil {
+			return err
+		}
+		if x > math.MaxInt32 {
+			return fmt.Errorf("enum overflow from JSON %q for %q", text, "ContinueAsNewInitiator")
+		}
+		if x < math.MinInt32 {
+			return fmt.Errorf("enum underflow from JSON %q for %q", text, "ContinueAsNewInitiator")
+		}
+		*v = (ContinueAsNewInitiator)(x)
+		return nil
+	case string:
+		return v.UnmarshalText([]byte(w))
+	default:
+		return fmt.Errorf("invalid JSON value %q (%T) to unmarshal into %q", t, t, "ContinueAsNewInitiator")
+	}
+}
+
 type ContinueAsNewWorkflowExecutionDecisionAttributes struct {
-	WorkflowType                        *WorkflowType `json:"workflowType,omitempty"`
-	TaskList                            *TaskList     `json:"taskList,omitempty"`
-	Input                               []byte        `json:"input,omitempty"`
-	ExecutionStartToCloseTimeoutSeconds *int32        `json:"executionStartToCloseTimeoutSeconds,omitempty"`
-	TaskStartToCloseTimeoutSeconds      *int32        `json:"taskStartToCloseTimeoutSeconds,omitempty"`
-	BackoffStartIntervalInSeconds       *int32        `json:"backoffStartIntervalInSeconds,omitempty"`
-	RetryPolicy                         *RetryPolicy  `json:"retryPolicy,omitempty"`
+	WorkflowType                        *WorkflowType           `json:"workflowType,omitempty"`
+	TaskList                            *TaskList               `json:"taskList,omitempty"`
+	Input                               []byte                  `json:"input,omitempty"`
+	ExecutionStartToCloseTimeoutSeconds *int32                  `json:"executionStartToCloseTimeoutSeconds,omitempty"`
+	TaskStartToCloseTimeoutSeconds      *int32                  `json:"taskStartToCloseTimeoutSeconds,omitempty"`
+	BackoffStartIntervalInSeconds       *int32                  `json:"backoffStartIntervalInSeconds,omitempty"`
+	RetryPolicy                         *RetryPolicy            `json:"retryPolicy,omitempty"`
+	Initiator                           *ContinueAsNewInitiator `json:"initiator,omitempty"`
+	Reason                              *string                 `json:"reason,omitempty"`
+	Details                             []byte                  `json:"details,omitempty"`
 }
 
 // ToWire translates a ContinueAsNewWorkflowExecutionDecisionAttributes struct into a Thrift-level intermediate
@@ -5805,7 +5979,7 @@ type ContinueAsNewWorkflowExecutionDecisionAttributes struct {
 //   }
 func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [7]wire.Field
+		fields [10]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -5867,8 +6041,38 @@ func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) ToWire() (wire.Value,
 		fields[i] = wire.Field{ID: 70, Value: w}
 		i++
 	}
+	if v.Initiator != nil {
+		w, err = v.Initiator.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 80, Value: w}
+		i++
+	}
+	if v.Reason != nil {
+		w, err = wire.NewValueString(*(v.Reason)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 90, Value: w}
+		i++
+	}
+	if v.Details != nil {
+		w, err = wire.NewValueBinary(v.Details), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 100, Value: w}
+		i++
+	}
 
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _ContinueAsNewInitiator_Read(w wire.Value) (ContinueAsNewInitiator, error) {
+	var v ContinueAsNewInitiator
+	err := v.FromWire(w)
+	return v, err
 }
 
 // FromWire deserializes a ContinueAsNewWorkflowExecutionDecisionAttributes struct from its Thrift-level
@@ -5955,6 +6159,34 @@ func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) FromWire(w wire.Value
 				}
 
 			}
+		case 80:
+			if field.Value.Type() == wire.TI32 {
+				var x ContinueAsNewInitiator
+				x, err = _ContinueAsNewInitiator_Read(field.Value)
+				v.Initiator = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 90:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.Reason = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 100:
+			if field.Value.Type() == wire.TBinary {
+				v.Details, err = field.Value.GetBinary(), error(nil)
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -5968,7 +6200,7 @@ func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [7]string
+	var fields [10]string
 	i := 0
 	if v.WorkflowType != nil {
 		fields[i] = fmt.Sprintf("WorkflowType: %v", v.WorkflowType)
@@ -5998,8 +6230,30 @@ func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) String() string {
 		fields[i] = fmt.Sprintf("RetryPolicy: %v", v.RetryPolicy)
 		i++
 	}
+	if v.Initiator != nil {
+		fields[i] = fmt.Sprintf("Initiator: %v", *(v.Initiator))
+		i++
+	}
+	if v.Reason != nil {
+		fields[i] = fmt.Sprintf("Reason: %v", *(v.Reason))
+		i++
+	}
+	if v.Details != nil {
+		fields[i] = fmt.Sprintf("Details: %v", v.Details)
+		i++
+	}
 
 	return fmt.Sprintf("ContinueAsNewWorkflowExecutionDecisionAttributes{%v}", strings.Join(fields[:i], ", "))
+}
+
+func _ContinueAsNewInitiator_EqualsPtr(lhs, rhs *ContinueAsNewInitiator) bool {
+	if lhs != nil && rhs != nil {
+
+		x := *lhs
+		y := *rhs
+		return x.Equals(y)
+	}
+	return lhs == nil && rhs == nil
 }
 
 // Equals returns true if all the fields of this ContinueAsNewWorkflowExecutionDecisionAttributes match the
@@ -6033,6 +6287,15 @@ func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) Equals(rhs *ContinueA
 	if !((v.RetryPolicy == nil && rhs.RetryPolicy == nil) || (v.RetryPolicy != nil && rhs.RetryPolicy != nil && v.RetryPolicy.Equals(rhs.RetryPolicy))) {
 		return false
 	}
+	if !_ContinueAsNewInitiator_EqualsPtr(v.Initiator, rhs.Initiator) {
+		return false
+	}
+	if !_String_EqualsPtr(v.Reason, rhs.Reason) {
+		return false
+	}
+	if !((v.Details == nil && rhs.Details == nil) || (v.Details != nil && rhs.Details != nil && bytes.Equal(v.Details, rhs.Details))) {
+		return false
+	}
 
 	return true
 }
@@ -6063,6 +6326,15 @@ func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) MarshalLogObject(enc 
 	}
 	if v.RetryPolicy != nil {
 		err = multierr.Append(err, enc.AddObject("retryPolicy", v.RetryPolicy))
+	}
+	if v.Initiator != nil {
+		err = multierr.Append(err, enc.AddObject("initiator", *v.Initiator))
+	}
+	if v.Reason != nil {
+		enc.AddString("reason", *v.Reason)
+	}
+	if v.Details != nil {
+		enc.AddString("details", base64.StdEncoding.EncodeToString(v.Details))
 	}
 	return err
 }
@@ -6132,6 +6404,36 @@ func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) GetBackoffStartInterv
 func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) GetRetryPolicy() (o *RetryPolicy) {
 	if v.RetryPolicy != nil {
 		return v.RetryPolicy
+	}
+
+	return
+}
+
+// GetInitiator returns the value of Initiator if it is set or its
+// zero value if it is unset.
+func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) GetInitiator() (o ContinueAsNewInitiator) {
+	if v.Initiator != nil {
+		return *v.Initiator
+	}
+
+	return
+}
+
+// GetReason returns the value of Reason if it is set or its
+// zero value if it is unset.
+func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) GetReason() (o string) {
+	if v.Reason != nil {
+		return *v.Reason
+	}
+
+	return
+}
+
+// GetDetails returns the value of Details if it is set or its
+// zero value if it is unset.
+func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) GetDetails() (o []byte) {
+	if v.Details != nil {
+		return v.Details
 	}
 
 	return
@@ -38514,14 +38816,17 @@ func (v *WorkflowExecutionConfiguration) GetChildPolicy() (o ChildPolicy) {
 }
 
 type WorkflowExecutionContinuedAsNewEventAttributes struct {
-	NewExecutionRunId                   *string       `json:"newExecutionRunId,omitempty"`
-	WorkflowType                        *WorkflowType `json:"workflowType,omitempty"`
-	TaskList                            *TaskList     `json:"taskList,omitempty"`
-	Input                               []byte        `json:"input,omitempty"`
-	ExecutionStartToCloseTimeoutSeconds *int32        `json:"executionStartToCloseTimeoutSeconds,omitempty"`
-	TaskStartToCloseTimeoutSeconds      *int32        `json:"taskStartToCloseTimeoutSeconds,omitempty"`
-	DecisionTaskCompletedEventId        *int64        `json:"decisionTaskCompletedEventId,omitempty"`
-	BackoffStartIntervalInSeconds       *int32        `json:"backoffStartIntervalInSeconds,omitempty"`
+	NewExecutionRunId                   *string                 `json:"newExecutionRunId,omitempty"`
+	WorkflowType                        *WorkflowType           `json:"workflowType,omitempty"`
+	TaskList                            *TaskList               `json:"taskList,omitempty"`
+	Input                               []byte                  `json:"input,omitempty"`
+	ExecutionStartToCloseTimeoutSeconds *int32                  `json:"executionStartToCloseTimeoutSeconds,omitempty"`
+	TaskStartToCloseTimeoutSeconds      *int32                  `json:"taskStartToCloseTimeoutSeconds,omitempty"`
+	DecisionTaskCompletedEventId        *int64                  `json:"decisionTaskCompletedEventId,omitempty"`
+	BackoffStartIntervalInSeconds       *int32                  `json:"backoffStartIntervalInSeconds,omitempty"`
+	Initiator                           *ContinueAsNewInitiator `json:"initiator,omitempty"`
+	Reason                              *string                 `json:"reason,omitempty"`
+	Details                             []byte                  `json:"details,omitempty"`
 }
 
 // ToWire translates a WorkflowExecutionContinuedAsNewEventAttributes struct into a Thrift-level intermediate
@@ -38541,7 +38846,7 @@ type WorkflowExecutionContinuedAsNewEventAttributes struct {
 //   }
 func (v *WorkflowExecutionContinuedAsNewEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [8]wire.Field
+		fields [11]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -38609,6 +38914,30 @@ func (v *WorkflowExecutionContinuedAsNewEventAttributes) ToWire() (wire.Value, e
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 80, Value: w}
+		i++
+	}
+	if v.Initiator != nil {
+		w, err = v.Initiator.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 90, Value: w}
+		i++
+	}
+	if v.Reason != nil {
+		w, err = wire.NewValueString(*(v.Reason)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 100, Value: w}
+		i++
+	}
+	if v.Details != nil {
+		w, err = wire.NewValueBinary(v.Details), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 110, Value: w}
 		i++
 	}
 
@@ -38711,6 +39040,34 @@ func (v *WorkflowExecutionContinuedAsNewEventAttributes) FromWire(w wire.Value) 
 				}
 
 			}
+		case 90:
+			if field.Value.Type() == wire.TI32 {
+				var x ContinueAsNewInitiator
+				x, err = _ContinueAsNewInitiator_Read(field.Value)
+				v.Initiator = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 100:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.Reason = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 110:
+			if field.Value.Type() == wire.TBinary {
+				v.Details, err = field.Value.GetBinary(), error(nil)
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -38724,7 +39081,7 @@ func (v *WorkflowExecutionContinuedAsNewEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [8]string
+	var fields [11]string
 	i := 0
 	if v.NewExecutionRunId != nil {
 		fields[i] = fmt.Sprintf("NewExecutionRunId: %v", *(v.NewExecutionRunId))
@@ -38756,6 +39113,18 @@ func (v *WorkflowExecutionContinuedAsNewEventAttributes) String() string {
 	}
 	if v.BackoffStartIntervalInSeconds != nil {
 		fields[i] = fmt.Sprintf("BackoffStartIntervalInSeconds: %v", *(v.BackoffStartIntervalInSeconds))
+		i++
+	}
+	if v.Initiator != nil {
+		fields[i] = fmt.Sprintf("Initiator: %v", *(v.Initiator))
+		i++
+	}
+	if v.Reason != nil {
+		fields[i] = fmt.Sprintf("Reason: %v", *(v.Reason))
+		i++
+	}
+	if v.Details != nil {
+		fields[i] = fmt.Sprintf("Details: %v", v.Details)
 		i++
 	}
 
@@ -38796,6 +39165,15 @@ func (v *WorkflowExecutionContinuedAsNewEventAttributes) Equals(rhs *WorkflowExe
 	if !_I32_EqualsPtr(v.BackoffStartIntervalInSeconds, rhs.BackoffStartIntervalInSeconds) {
 		return false
 	}
+	if !_ContinueAsNewInitiator_EqualsPtr(v.Initiator, rhs.Initiator) {
+		return false
+	}
+	if !_String_EqualsPtr(v.Reason, rhs.Reason) {
+		return false
+	}
+	if !((v.Details == nil && rhs.Details == nil) || (v.Details != nil && rhs.Details != nil && bytes.Equal(v.Details, rhs.Details))) {
+		return false
+	}
 
 	return true
 }
@@ -38829,6 +39207,15 @@ func (v *WorkflowExecutionContinuedAsNewEventAttributes) MarshalLogObject(enc za
 	}
 	if v.BackoffStartIntervalInSeconds != nil {
 		enc.AddInt32("backoffStartIntervalInSeconds", *v.BackoffStartIntervalInSeconds)
+	}
+	if v.Initiator != nil {
+		err = multierr.Append(err, enc.AddObject("initiator", *v.Initiator))
+	}
+	if v.Reason != nil {
+		enc.AddString("reason", *v.Reason)
+	}
+	if v.Details != nil {
+		enc.AddString("details", base64.StdEncoding.EncodeToString(v.Details))
 	}
 	return err
 }
@@ -38908,6 +39295,36 @@ func (v *WorkflowExecutionContinuedAsNewEventAttributes) GetDecisionTaskComplete
 func (v *WorkflowExecutionContinuedAsNewEventAttributes) GetBackoffStartIntervalInSeconds() (o int32) {
 	if v.BackoffStartIntervalInSeconds != nil {
 		return *v.BackoffStartIntervalInSeconds
+	}
+
+	return
+}
+
+// GetInitiator returns the value of Initiator if it is set or its
+// zero value if it is unset.
+func (v *WorkflowExecutionContinuedAsNewEventAttributes) GetInitiator() (o ContinueAsNewInitiator) {
+	if v.Initiator != nil {
+		return *v.Initiator
+	}
+
+	return
+}
+
+// GetReason returns the value of Reason if it is set or its
+// zero value if it is unset.
+func (v *WorkflowExecutionContinuedAsNewEventAttributes) GetReason() (o string) {
+	if v.Reason != nil {
+		return *v.Reason
+	}
+
+	return
+}
+
+// GetDetails returns the value of Details if it is set or its
+// zero value if it is unset.
+func (v *WorkflowExecutionContinuedAsNewEventAttributes) GetDetails() (o []byte) {
+	if v.Details != nil {
+		return v.Details
 	}
 
 	return
