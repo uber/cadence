@@ -32,7 +32,14 @@ import (
 )
 
 type (
-	eventsCache struct {
+	eventsCache interface {
+		getEvent(domainID, workflowID, runID string, eventID int64, eventStoreVersion int32,
+			branchToken []byte) (*shared.HistoryEvent, error)
+		putEvent(domainID, workflowID, runID string, eventID int64, event *shared.HistoryEvent)
+		deleteEvent(domainID, workflowID, runID string, eventID int64)
+	}
+
+	eventsCacheImpl struct {
 		cache.Cache
 		eventsMgr     persistence.HistoryManager
 		eventsV2Mgr   persistence.HistoryV2Manager
@@ -48,13 +55,15 @@ type (
 	}
 )
 
-func newEventsCache(shardCtx ShardContext) *eventsCache {
+var _ eventsCache = (*eventsCacheImpl)(nil)
+
+func newEventsCache(shardCtx ShardContext) eventsCache {
 	opts := &cache.Options{}
 	config := shardCtx.GetConfig()
 	opts.InitialCapacity = config.EventsCacheInitialSize()
 	opts.TTL = config.EventsCacheTTL()
 
-	return &eventsCache{
+	return &eventsCacheImpl{
 		Cache:       cache.New(config.EventsCacheMaxSize(), opts),
 		eventsMgr:   shardCtx.GetHistoryManager(),
 		eventsV2Mgr: shardCtx.GetHistoryV2Manager(),
@@ -74,34 +83,34 @@ func newEventKey(domainID, workflowID, runID string, eventID int64) eventKey {
 	}
 }
 
-func (e *eventsCache) getEvent(domainID, workflowID, runID string, eventID int64, eventStoreVersion int32,
+func (e *eventsCacheImpl) getEvent(domainID, workflowID, runID string, eventID int64, eventStoreVersion int32,
 	branchToken []byte) (*shared.HistoryEvent, error) {
-		key := newEventKey(domainID, workflowID, runID, eventID)
-		event, cacheHit := e.Cache.Get(key).(*shared.HistoryEvent)
-		if cacheHit {
-			return event, nil
-		}
-
-		event, err := e.getHistoryEventFromStore(domainID, workflowID, runID, eventID, eventStoreVersion, branchToken)
-		if err != nil {
-			return nil, err
-		}
-
-		e.Put(key, event)
+	key := newEventKey(domainID, workflowID, runID, eventID)
+	event, cacheHit := e.Cache.Get(key).(*shared.HistoryEvent)
+	if cacheHit {
 		return event, nil
+	}
+
+	event, err := e.getHistoryEventFromStore(domainID, workflowID, runID, eventID, eventStoreVersion, branchToken)
+	if err != nil {
+		return nil, err
+	}
+
+	e.Put(key, event)
+	return event, nil
 }
 
-func (e *eventsCache) putEvent(domainID, workflowID, runID string, eventID int64, event *shared.HistoryEvent) {
+func (e *eventsCacheImpl) putEvent(domainID, workflowID, runID string, eventID int64, event *shared.HistoryEvent) {
 	key := newEventKey(domainID, workflowID, runID, eventID)
 	e.Put(key, event)
 }
 
-func (e *eventsCache) deleteEvent(domainID, workflowID, runID string, eventID int64) {
+func (e *eventsCacheImpl) deleteEvent(domainID, workflowID, runID string, eventID int64) {
 	key := newEventKey(domainID, workflowID, runID, eventID)
 	e.Delete(key)
 }
 
-func (e *eventsCache) getHistoryEventFromStore(domainID, workflowID, runID string, eventID int64,
+func (e *eventsCacheImpl) getHistoryEventFromStore(domainID, workflowID, runID string, eventID int64,
 	eventStoreVersion int32, branchToken []byte) (*shared.HistoryEvent, error) {
 
 	var historyEvent *shared.HistoryEvent

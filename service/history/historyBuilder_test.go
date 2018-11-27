@@ -60,7 +60,8 @@ func (s *historyBuilderSuite) SetupTest() {
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
 	s.domainID = "history-builder-test-domain"
-	s.msBuilder = newMutableStateBuilder(cluster.TestCurrentClusterName, NewDynamicConfigForTest(), s.logger)
+	s.msBuilder = newMutableStateBuilder(cluster.TestCurrentClusterName, NewDynamicConfigForTest(), &MockEventsCache{},
+	s.logger)
 	s.builder = newHistoryBuilder(s.msBuilder, s.logger)
 }
 

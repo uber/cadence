@@ -81,7 +81,7 @@ type (
 		hBuilder         *historyBuilder
 		currentCluster   string
 		historySize      int
-		eventsCache      *eventsCache
+		eventsCache      eventsCache
 		config           *Config
 		logger           bark.Logger
 	}
@@ -89,7 +89,7 @@ type (
 
 var _ mutableState = (*mutableStateBuilder)(nil)
 
-func newMutableStateBuilder(currentCluster string, config *Config, eventsCache *eventsCache,
+func newMutableStateBuilder(currentCluster string, config *Config, eventsCache eventsCache,
 	logger bark.Logger) *mutableStateBuilder {
 	s := &mutableStateBuilder{
 		updateActivityInfos:             make(map[*persistence.ActivityInfo]struct{}),
@@ -134,8 +134,9 @@ func newMutableStateBuilder(currentCluster string, config *Config, eventsCache *
 	return s
 }
 
-func newMutableStateBuilderWithReplicationState(currentCluster string, config *Config, logger bark.Logger, version int64) *mutableStateBuilder {
-	s := newMutableStateBuilder(currentCluster, config, logger)
+func newMutableStateBuilderWithReplicationState(currentCluster string, config *Config, eventsCache eventsCache,
+	logger bark.Logger, version int64) *mutableStateBuilder {
+	s := newMutableStateBuilder(currentCluster, config, eventsCache, logger)
 	s.replicationState = &persistence.ReplicationState{
 		StartVersion:        version,
 		CurrentVersion:      version,
@@ -2238,9 +2239,10 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(decisionCompletedEventID int
 	if domainEntry.IsGlobalDomain() {
 		// all workflows within a global domain should have replication state, no matter whether it will be replicated to multiple
 		// target clusters or not
-		newStateBuilder = newMutableStateBuilderWithReplicationState(e.currentCluster, e.config, e.logger, domainEntry.GetFailoverVersion())
+		newStateBuilder = newMutableStateBuilderWithReplicationState(e.currentCluster, e.config, e.eventsCache, e.logger,
+			domainEntry.GetFailoverVersion())
 	} else {
-		newStateBuilder = newMutableStateBuilder(e.currentCluster, e.config, e.logger)
+		newStateBuilder = newMutableStateBuilder(e.currentCluster, e.config, e.eventsCache, e.logger)
 	}
 	domainID := domainEntry.GetInfo().ID
 	startedEvent := newStateBuilder.addWorkflowExecutionStartedEventForContinueAsNew(domainID, parentInfo, newExecution, e, attributes)
