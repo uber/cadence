@@ -4448,17 +4448,6 @@ func (s *engineSuite) getActivityScheduledEvent(msBuilder mutableState,
 	return ai.ScheduledEvent
 }
 
-func (s *engineSuite) getActivityStartedEvent(msBuilder mutableState,
-	scheduleID int64) *workflow.HistoryEvent {
-
-	ai, ok := msBuilder.GetActivityInfo(scheduleID)
-	if !ok {
-		return nil
-	}
-
-	return ai.StartedEvent
-}
-
 func (s *engineSuite) printHistory(builder mutableState) string {
 	return builder.GetHistoryBuilder().GetHistory().String()
 }

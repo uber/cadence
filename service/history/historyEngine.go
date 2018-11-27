@@ -301,6 +301,7 @@ func (e *historyEngineImpl) createMutableState(clusterMetadata cluster.Metadata,
 		msBuilder = newMutableStateBuilder(
 			clusterMetadata.GetCurrentClusterName(),
 			e.shard.GetConfig(),
+			e.eventsCache,
 			e.logger,
 		)
 	}

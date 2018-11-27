@@ -110,7 +110,6 @@ type (
 		GetActivityByActivityID(string) (*persistence.ActivityInfo, bool)
 		GetActivityInfo(int64) (*persistence.ActivityInfo, bool)
 		GetActivityScheduledEvent(int64) (*workflow.HistoryEvent, bool)
-		GetActivityStartedEvent(int64) (*workflow.HistoryEvent, bool)
 		GetAllBufferedReplicationTasks() map[int64]*persistence.BufferedReplicationTask
 		GetChildExecutionInfo(int64) (*persistence.ChildExecutionInfo, bool)
 		GetChildExecutionInitiatedEvent(int64) (*workflow.HistoryEvent, bool)

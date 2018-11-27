@@ -81,7 +81,7 @@ type (
 		hBuilder         *historyBuilder
 		currentCluster   string
 		historySize      int
-		eventsCache      eventsCache
+		eventsCache      *eventsCache
 		config           *Config
 		logger           bark.Logger
 	}
@@ -89,7 +89,8 @@ type (
 
 var _ mutableState = (*mutableStateBuilder)(nil)
 
-func newMutableStateBuilder(currentCluster string, config *Config, logger bark.Logger) *mutableStateBuilder {
+func newMutableStateBuilder(currentCluster string, config *Config, eventsCache *eventsCache,
+	logger bark.Logger) *mutableStateBuilder {
 	s := &mutableStateBuilder{
 		updateActivityInfos:             make(map[*persistence.ActivityInfo]struct{}),
 		pendingActivityInfoIDs:          make(map[int64]*persistence.ActivityInfo),
@@ -760,16 +761,12 @@ func (e *mutableStateBuilder) GetActivityScheduledEvent(scheduleEventID int64) (
 		return nil, false
 	}
 
-	return ai.ScheduledEvent, true
-}
-
-func (e *mutableStateBuilder) GetActivityStartedEvent(scheduleEventID int64) (*workflow.HistoryEvent, bool) {
-	ai, ok := e.pendingActivityInfoIDs[scheduleEventID]
-	if !ok {
+	scheduledEvent, err := e.eventsCache.getEvent(e.executionInfo.DomainID, e.executionInfo.WorkflowID,
+		e.executionInfo.RunID, ai.ScheduleID, e.executionInfo.EventStoreVersion, e.executionInfo.GetCurrentBranch())
+	if err != nil {
 		return nil, false
 	}
-
-	return ai.StartedEvent, true
+	return scheduledEvent, true
 }
 
 // GetActivityInfo gives details about an activity that is currently in progress.
@@ -1585,6 +1582,8 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(decisionCompletedEve
 	}
 
 	event := e.hBuilder.AddActivityTaskScheduledEvent(decisionCompletedEventID, attributes)
+
+	// Cache ActivityTaskScheduled event to prevent loading it again when activity is started or retried
 	e.eventsCache.putEvent(e.executionInfo.DomainID, e.executionInfo.WorkflowID, e.executionInfo.RunID,
 		event.GetEventId(), event)
 
@@ -1602,7 +1601,6 @@ func (e *mutableStateBuilder) ReplicateActivityTaskScheduledEvent(
 	ai := &persistence.ActivityInfo{
 		Version:                  event.GetVersion(),
 		ScheduleID:               scheduleEventID,
-		ScheduledEvent:           event,
 		ScheduledTime:            time.Unix(0, *event.Timestamp),
 		StartedID:                common.EmptyEventID,
 		StartedTime:              time.Time{},
