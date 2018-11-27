@@ -303,8 +303,8 @@ start_version = :start_version,
 current_version = :current_version,
 last_write_version = :last_write_version,
 last_write_event_id = :last_write_event_id,
-last_replication_info = :last_replication_info
-signal_count = :signal_count,
+last_replication_info = :last_replication_info,
+signal_count = :signal_count
 WHERE
 shard_id = :shard_id AND
 domain_id = :domain_id AND
