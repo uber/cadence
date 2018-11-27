@@ -588,7 +588,7 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 	s.Equal(updatedInfo.ClientLibraryVersion, info1.ClientLibraryVersion)
 	s.Equal(updatedInfo.ClientFeatureVersion, info1.ClientFeatureVersion)
 	s.Equal(updatedInfo.ClientImpl, info1.ClientImpl)
-	s.Equal(updatedInfo.SignalCount, info1.ClientImpl)
+	s.Equal(updatedInfo.SignalCount, info1.SignalCount)
 
 	log.Infof("Workflow execution last updated: %v", info1.LastUpdatedTimestamp)
 
