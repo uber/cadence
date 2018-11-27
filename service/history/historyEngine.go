@@ -70,6 +70,7 @@ type (
 		historyEventNotifier historyEventNotifier
 		tokenSerializer      common.TaskTokenSerializer
 		historyCache         *historyCache
+		eventsCache          *eventsCache
 		metricsClient        metrics.Client
 		logger               bark.Logger
 		config               *Config
@@ -153,6 +154,7 @@ func NewEngineWithShardContext(
 	historyManager := shard.GetHistoryManager()
 	historyV2Manager := shard.GetHistoryV2Manager()
 	historyCache := newHistoryCache(shard)
+	eventsCache := newEventsCache(shard)
 	historyEngImpl := &historyEngineImpl{
 		currentClusterName: currentClusterName,
 		shard:              shard,
@@ -161,6 +163,7 @@ func NewEngineWithShardContext(
 		executionManager:   executionManager,
 		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
 		historyCache:       historyCache,
+		eventsCache:        eventsCache,
 		logger: logger.WithFields(bark.Fields{
 			logging.TagWorkflowComponent: logging.TagValueHistoryEngineComponent,
 		}),

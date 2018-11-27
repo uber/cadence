@@ -53,7 +53,6 @@ func newEventsCache(shardCtx ShardContext) *eventsCache {
 	config := shardCtx.GetConfig()
 	opts.InitialCapacity = config.EventsCacheInitialSize()
 	opts.TTL = config.EventsCacheTTL()
-	opts.Pin = true
 
 	return &eventsCache{
 		Cache:       cache.New(config.EventsCacheMaxSize(), opts),
@@ -79,9 +78,27 @@ func (e *eventsCache) getEvent(domainID, workflowID, runID string, eventID int64
 	branchToken []byte) (*shared.HistoryEvent, error) {
 		key := newEventKey(domainID, workflowID, runID, eventID)
 		event, cacheHit := e.Cache.Get(key).(*shared.HistoryEvent)
-		if !cacheHit {
-
+		if cacheHit {
+			return event, nil
 		}
+
+		event, err := e.getHistoryEventFromStore(domainID, workflowID, runID, eventID, eventStoreVersion, branchToken)
+		if err != nil {
+			return nil, err
+		}
+
+		e.Put(key, event)
+		return event, nil
+}
+
+func (e *eventsCache) putEvent(domainID, workflowID, runID string, eventID int64, event *shared.HistoryEvent) {
+	key := newEventKey(domainID, workflowID, runID, eventID)
+	e.Put(key, event)
+}
+
+func (e *eventsCache) deleteEvent(domainID, workflowID, runID string, eventID int64) {
+	key := newEventKey(domainID, workflowID, runID, eventID)
+	e.Delete(key)
 }
 
 func (e *eventsCache) getHistoryEventFromStore(domainID, workflowID, runID string, eventID int64,

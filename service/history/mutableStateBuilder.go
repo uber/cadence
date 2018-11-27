@@ -81,6 +81,7 @@ type (
 		hBuilder         *historyBuilder
 		currentCluster   string
 		historySize      int
+		eventsCache      eventsCache
 		config           *Config
 		logger           bark.Logger
 	}
@@ -117,6 +118,7 @@ func newMutableStateBuilder(currentCluster string, config *Config, logger bark.L
 		deleteSignalRequestedID:   "",
 
 		currentCluster: currentCluster,
+		eventsCache:    eventsCache,
 		config:         config,
 		logger:         logger,
 	}
@@ -1583,6 +1585,8 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(decisionCompletedEve
 	}
 
 	event := e.hBuilder.AddActivityTaskScheduledEvent(decisionCompletedEventID, attributes)
+	e.eventsCache.putEvent(e.executionInfo.DomainID, e.executionInfo.WorkflowID, e.executionInfo.RunID,
+		event.GetEventId(), event)
 
 	ai := e.ReplicateActivityTaskScheduledEvent(event)
 	return event, ai
