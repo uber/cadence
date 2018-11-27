@@ -49,7 +49,8 @@ func (s *UnitTestSuite) Test_SimpleWorkflow_Success() {
 }
 
 func (s *UnitTestSuite) Test_SimpleWorkflow_ActivityParamCorrect() {
-        s.env.OnActivity(SimpleActivity, mock.Anything, mock.Anything).Return(func(ctx context.Context, value string) (string, error) {
+        s.env.OnActivity(SimpleActivity, mock.Anything, mock.Anything).Return(
+          func(ctx context.Context, value string) (string, error) {
                 s.Equal("test_success", value)
                 return value, nil
         })
@@ -60,7 +61,8 @@ func (s *UnitTestSuite) Test_SimpleWorkflow_ActivityParamCorrect() {
 }
 
 func (s *UnitTestSuite) Test_SimpleWorkflow_ActivityFails() {
-        s.env.OnActivity(SimpleActivity, mock.Anything, mock.Anything).Return("", errors.New("SimpleActivityFailure"))
+        s.env.OnActivity(SimpleActivity, mock.Anything, mock.Anything).Return(
+          "", errors.New("SimpleActivityFailure"))
         s.env.ExecuteWorkflow(SimpleWorkflow, "test_failure")
 
         s.True(s.env.IsWorkflowCompleted())
@@ -131,7 +133,8 @@ Let's take a look at a test that simulates a test that fails via the "activity m
 
 ```go
 func (s *UnitTestSuite) Test_SimpleWorkflow_ActivityFails() {
-        s.env.OnActivity(SimpleActivity, mock.Anything, mock.Anything).Return("", errors.New("SimpleActivityFailure"))
+        s.env.OnActivity(SimpleActivity, mock.Anything, mock.Anything).Return(
+          "", errors.New("SimpleActivityFailure"))
         s.env.ExecuteWorkflow(SimpleWorkflow, "test_failure")
 
         s.True(s.env.IsWorkflowCompleted())
@@ -159,7 +162,8 @@ with the correct parameters.
 
 ```go
 func (s *UnitTestSuite) Test_SimpleWorkflow_ActivityParamCorrect() {
-        s.env.OnActivity(SimpleActivity, mock.Anything, mock.Anything).Return(func(ctx context.Context, value string) (string, error) {
+        s.env.OnActivity(SimpleActivity, mock.Anything, mock.Anything).Return(
+          func(ctx context.Context, value string) (string, error) {
                 s.Equal("test_success", value)
                 return value, nil
         })
