@@ -111,9 +111,9 @@ test process. The first parameter of `s.env.ExecuteWorkflow(...)` contains the w
 and any subsequent parameters contain values for custom input parameters declared by the workflow
 function.
 
-<p class ="callout info">Note that unless the activity invocations are mocked or activity implementation
-replaced (see [Activity mocking and overriding](#activity-mocking-and-overriding)), the test environment
-will execute the actual activity code including any calls to outside services.</p>
+> Note that unless the activity invocations are mocked or activity implementation
+> replaced (see [Activity mocking and overriding](#activity-mocking-and-overriding)), the test environment
+> will execute the actual activity code including any calls to outside services.
 
 After executing the workflow in the above example, we assert that the workflow ran through completion
 via the call to `s.env.IsWorkflowComplete()`. We also asser that no errors were returned by asserting
