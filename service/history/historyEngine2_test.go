@@ -121,6 +121,8 @@ func (s *engine2Suite) SetupTest() {
 	s.mockDomainCache = &cache.DomainCacheMock{}
 	s.mockDomainCache.On("GetDomainByID", mock.Anything).Return(cache.NewDomainCacheEntryForTest(&p.DomainInfo{ID: validDomainID}, nil), nil)
 	s.mockEventsCache = &MockEventsCache{}
+	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything,
+		mock.Anything).Return()
 
 	mockShard := &shardContextImpl{
 		service:                   s.mockService,
@@ -803,6 +805,8 @@ func (s *engine2Suite) TestRecordActivityTaskStartedSuccess() {
 		nil,
 	)
 
+	s.mockEventsCache.On("getEvent", domainID, workflowExecution.GetWorkflowId(), workflowExecution.GetRunId(),
+		scheduledEvent.GetEventId(), mock.Anything, mock.Anything).Return(scheduledEvent, nil)
 	response, err := s.historyEngine.RecordActivityTaskStarted(context.Background(), &h.RecordActivityTaskStartedRequest{
 		DomainUUID:        common.StringPtr(domainID),
 		WorkflowExecution: &workflowExecution,

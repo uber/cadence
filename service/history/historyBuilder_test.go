@@ -21,6 +21,7 @@
 package history
 
 import (
+	"github.com/stretchr/testify/mock"
 	"testing"
 
 	log "github.com/sirupsen/logrus"
@@ -43,10 +44,11 @@ type (
 		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
 		// not merely log an error
 		*require.Assertions
-		domainID  string
-		msBuilder mutableState
-		builder   *historyBuilder
-		logger    bark.Logger
+		domainID        string
+		msBuilder       mutableState
+		builder         *historyBuilder
+		mockEventsCache *MockEventsCache
+		logger          bark.Logger
 	}
 )
 
@@ -60,8 +62,9 @@ func (s *historyBuilderSuite) SetupTest() {
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
 	s.domainID = "history-builder-test-domain"
-	s.msBuilder = newMutableStateBuilder(cluster.TestCurrentClusterName, NewDynamicConfigForTest(), &MockEventsCache{},
-	s.logger)
+	s.mockEventsCache = &MockEventsCache{}
+	s.msBuilder = newMutableStateBuilder(cluster.TestCurrentClusterName, NewDynamicConfigForTest(), s.mockEventsCache,
+		s.logger)
 	s.builder = newHistoryBuilder(s.msBuilder, s.logger)
 }
 
@@ -653,7 +656,7 @@ func (s *historyBuilderSuite) getPreviousDecisionStartedEventID() int64 {
 }
 
 func (s *historyBuilderSuite) addWorkflowExecutionStartedEvent(we workflow.WorkflowExecution, workflowType,
-	taskList string, input []byte, executionStartToCloseTimeout, taskStartToCloseTimeout int32,
+taskList string, input []byte, executionStartToCloseTimeout, taskStartToCloseTimeout int32,
 	identity string) *workflow.HistoryEvent {
 
 	request := &workflow.StartWorkflowExecutionRequest{
@@ -699,8 +702,10 @@ func (s *historyBuilderSuite) addDecisionTaskCompletedEvent(scheduleID, startedI
 }
 
 func (s *historyBuilderSuite) addActivityTaskScheduledEvent(decisionCompletedID int64, activityID, activityType,
-	taskList string, input []byte, timeout, queueTimeout, hearbeatTimeout int32) (*workflow.HistoryEvent,
+taskList string, input []byte, timeout, queueTimeout, hearbeatTimeout int32) (*workflow.HistoryEvent,
 	*persistence.ActivityInfo) {
+	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything,
+		mock.Anything).Return()
 	return s.msBuilder.AddActivityTaskScheduledEvent(decisionCompletedID,
 		&workflow.ScheduleActivityTaskDecisionAttributes{
 			ActivityId:                    common.StringPtr(activityID),
@@ -715,7 +720,7 @@ func (s *historyBuilderSuite) addActivityTaskScheduledEvent(decisionCompletedID 
 }
 
 func (s *historyBuilderSuite) addActivityTaskStartedEvent(scheduleID int64, taskList,
-	identity string) *workflow.HistoryEvent {
+identity string) *workflow.HistoryEvent {
 	ai, _ := s.msBuilder.GetActivityInfo(scheduleID)
 	e := s.msBuilder.AddActivityTaskStartedEvent(ai, scheduleID, uuid.New(), identity)
 
@@ -796,7 +801,7 @@ func (s *historyBuilderSuite) addRequestCancelExternalWorkflowExecutionFailedEve
 }
 
 func (s *historyBuilderSuite) validateWorkflowExecutionStartedEvent(event *workflow.HistoryEvent, workflowType,
-	taskList string, input []byte, executionStartToCloseTimeout, taskStartToCloseTimeout int32, identity string) {
+taskList string, input []byte, executionStartToCloseTimeout, taskStartToCloseTimeout int32, identity string) {
 	s.NotNil(event)
 	s.Equal(workflow.EventTypeWorkflowExecutionStarted, *event.EventType)
 	s.Equal(common.FirstEventID, *event.EventId)
@@ -829,7 +834,7 @@ func (s *historyBuilderSuite) validateDecisionTaskStartedEvent(event *workflow.H
 }
 
 func (s *historyBuilderSuite) validateDecisionTaskCompletedEvent(event *workflow.HistoryEvent, eventID,
-	scheduleID, startedID int64, context []byte, identity string) {
+scheduleID, startedID int64, context []byte, identity string) {
 	s.NotNil(event)
 	s.Equal(workflow.EventTypeDecisionTaskCompleted, *event.EventType)
 	s.Equal(eventID, *event.EventId)
@@ -870,7 +875,7 @@ func (s *historyBuilderSuite) validateActivityTaskStartedEvent(event *workflow.H
 }
 
 func (s *historyBuilderSuite) validateActivityTaskCompletedEvent(event *workflow.HistoryEvent, eventID,
-	scheduleID, startedID int64, result []byte, identity string) {
+scheduleID, startedID int64, result []byte, identity string) {
 	s.NotNil(event)
 	s.Equal(workflow.EventTypeActivityTaskCompleted, *event.EventType)
 	s.Equal(eventID, *event.EventId)
@@ -883,7 +888,7 @@ func (s *historyBuilderSuite) validateActivityTaskCompletedEvent(event *workflow
 }
 
 func (s *historyBuilderSuite) validateActivityTaskFailedEvent(event *workflow.HistoryEvent, eventID,
-	scheduleID, startedID int64, reason string, details []byte, identity string) {
+scheduleID, startedID int64, reason string, details []byte, identity string) {
 	s.NotNil(event)
 	s.Equal(workflow.EventTypeActivityTaskFailed, *event.EventType)
 	s.Equal(eventID, *event.EventId)

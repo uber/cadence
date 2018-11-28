@@ -403,6 +403,7 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 			newRunStateBuilder = newMutableStateBuilderWithReplicationState(
 				b.clusterMetadata.GetCurrentClusterName(),
 				b.shard.GetConfig(),
+				b.shard.GetEventsCache(),
 				b.logger,
 				startedEvent.GetVersion(),
 			)

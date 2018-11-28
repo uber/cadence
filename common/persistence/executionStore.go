@@ -394,9 +394,6 @@ func (m *executionManagerImpl) SerializeUpsertChildExecutionInfos(infos []*Child
 func (m *executionManagerImpl) SerializeUpsertActivityInfos(infos []*ActivityInfo, encoding common.EncodingType) ([]*InternalActivityInfo, error) {
 	newInfos := make([]*InternalActivityInfo, 0)
 	for _, v := range infos {
-		if v.ScheduledEvent == nil {
-			m.logger.Fatal("SerializeUpsertActivityInfos ScheduledEvent is required")
-		}
 		scheduledEvent, err := m.serializer.SerializeEvent(v.ScheduledEvent, encoding)
 		if err != nil {
 			return nil, err

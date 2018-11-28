@@ -74,6 +74,8 @@ type (
 		historyV2Mgr              persistence.HistoryV2Manager
 		executionMgr              persistence.ExecutionManager
 		domainCache               cache.DomainCache
+		eventsCache               eventsCache
+
 		config                    *Config
 		logger                    bark.Logger
 		metricsClient             metrics.Client
@@ -114,7 +116,7 @@ func newTestShardContext(shardInfo *persistence.ShardInfo, transferSequenceNumbe
 		}
 	}
 
-	return &TestShardContext{
+	shardCtx := &TestShardContext{
 		shardID:                   0,
 		service:                   service.NewTestService(clusterMetadata, nil, metricsClient, clientBean, logger),
 		shardInfo:                 shardInfo,
@@ -129,6 +131,9 @@ func newTestShardContext(shardInfo *persistence.ShardInfo, transferSequenceNumbe
 		standbyClusterCurrentTime: standbyClusterCurrentTime,
 		timerMaxReadLevelMap:      timerMaxReadLevelMap,
 	}
+
+	shardCtx.eventsCache = newEventsCache(shardCtx)
+	return shardCtx
 }
 
 // GetShardID test implementation
@@ -159,6 +164,10 @@ func (s *TestShardContext) GetHistoryV2Manager() persistence.HistoryV2Manager {
 // GetDomainCache test implementation
 func (s *TestShardContext) GetDomainCache() cache.DomainCache {
 	return s.domainCache
+}
+
+func (s *TestShardContext) GetEventsCache() eventsCache {
+	return s.eventsCache
 }
 
 // GetNextTransferTaskID test implementation
