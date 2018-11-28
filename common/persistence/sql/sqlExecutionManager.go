@@ -691,6 +691,7 @@ func (m *sqlExecutionManager) GetWorkflowExecution(request *p.GetWorkflowExecuti
 		ClientLibraryVersion:         execution.ClientLibraryVersion,
 		ClientFeatureVersion:         execution.ClientFeatureVersion,
 		ClientImpl:                   execution.ClientImpl,
+		SignalCount:                  int32(execution.SignalCount),
 	}
 
 	if execution.ExecutionContext != nil && len(*execution.ExecutionContext) > 0 {
