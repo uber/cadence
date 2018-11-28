@@ -2676,11 +2676,7 @@ func validateActivityScheduleAttributes(attributes *workflow.ScheduleActivityTas
 	if p != nil {
 		expiration := p.GetExpirationIntervalInSeconds()
 		if expiration == 0 {
-			if p.GetMaximumIntervalInSeconds() > 0 {
-				expiration = p.GetMaximumAttempts() * p.GetMaximumIntervalInSeconds()
-			} else {
-				expiration = attributes.GetScheduleToCloseTimeoutSeconds() * p.GetMaximumAttempts()
-			}
+			expiration = wfTimeout
 		}
 		if attributes.GetScheduleToStartTimeoutSeconds() < expiration {
 			attributes.ScheduleToStartTimeoutSeconds = common.Int32Ptr(expiration)
