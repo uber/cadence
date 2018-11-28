@@ -63,5 +63,3 @@ func (_m *MockEventsCache) putEvent(domainID, workflowID, runID string, eventID 
 func (_m *MockEventsCache) deleteEvent(domainID, workflowID, runID string, eventID int64) {
 	_m.Called(domainID, workflowID, runID, eventID)
 }
-
-

@@ -143,7 +143,6 @@ func (s *transferQueueStandbyProcessorSuite) SetupTest() {
 	shardContext.eventsCache = newEventsCache(shardContext)
 	s.mockShard = shardContext
 
-
 	historyCache := newHistoryCache(s.mockShard)
 	h := &historyEngineImpl{
 		currentClusterName: s.mockShard.GetService().GetClusterMetadata().GetCurrentClusterName(),

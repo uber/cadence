@@ -656,7 +656,7 @@ func (s *historyBuilderSuite) getPreviousDecisionStartedEventID() int64 {
 }
 
 func (s *historyBuilderSuite) addWorkflowExecutionStartedEvent(we workflow.WorkflowExecution, workflowType,
-taskList string, input []byte, executionStartToCloseTimeout, taskStartToCloseTimeout int32,
+	taskList string, input []byte, executionStartToCloseTimeout, taskStartToCloseTimeout int32,
 	identity string) *workflow.HistoryEvent {
 
 	request := &workflow.StartWorkflowExecutionRequest{
@@ -702,7 +702,7 @@ func (s *historyBuilderSuite) addDecisionTaskCompletedEvent(scheduleID, startedI
 }
 
 func (s *historyBuilderSuite) addActivityTaskScheduledEvent(decisionCompletedID int64, activityID, activityType,
-taskList string, input []byte, timeout, queueTimeout, hearbeatTimeout int32) (*workflow.HistoryEvent,
+	taskList string, input []byte, timeout, queueTimeout, hearbeatTimeout int32) (*workflow.HistoryEvent,
 	*persistence.ActivityInfo) {
 	s.mockEventsCache.On("putEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything,
 		mock.Anything).Return()
@@ -720,7 +720,7 @@ taskList string, input []byte, timeout, queueTimeout, hearbeatTimeout int32) (*w
 }
 
 func (s *historyBuilderSuite) addActivityTaskStartedEvent(scheduleID int64, taskList,
-identity string) *workflow.HistoryEvent {
+	identity string) *workflow.HistoryEvent {
 	ai, _ := s.msBuilder.GetActivityInfo(scheduleID)
 	e := s.msBuilder.AddActivityTaskStartedEvent(ai, scheduleID, uuid.New(), identity)
 
@@ -801,7 +801,7 @@ func (s *historyBuilderSuite) addRequestCancelExternalWorkflowExecutionFailedEve
 }
 
 func (s *historyBuilderSuite) validateWorkflowExecutionStartedEvent(event *workflow.HistoryEvent, workflowType,
-taskList string, input []byte, executionStartToCloseTimeout, taskStartToCloseTimeout int32, identity string) {
+	taskList string, input []byte, executionStartToCloseTimeout, taskStartToCloseTimeout int32, identity string) {
 	s.NotNil(event)
 	s.Equal(workflow.EventTypeWorkflowExecutionStarted, *event.EventType)
 	s.Equal(common.FirstEventID, *event.EventId)
@@ -834,7 +834,7 @@ func (s *historyBuilderSuite) validateDecisionTaskStartedEvent(event *workflow.H
 }
 
 func (s *historyBuilderSuite) validateDecisionTaskCompletedEvent(event *workflow.HistoryEvent, eventID,
-scheduleID, startedID int64, context []byte, identity string) {
+	scheduleID, startedID int64, context []byte, identity string) {
 	s.NotNil(event)
 	s.Equal(workflow.EventTypeDecisionTaskCompleted, *event.EventType)
 	s.Equal(eventID, *event.EventId)
@@ -875,7 +875,7 @@ func (s *historyBuilderSuite) validateActivityTaskStartedEvent(event *workflow.H
 }
 
 func (s *historyBuilderSuite) validateActivityTaskCompletedEvent(event *workflow.HistoryEvent, eventID,
-scheduleID, startedID int64, result []byte, identity string) {
+	scheduleID, startedID int64, result []byte, identity string) {
 	s.NotNil(event)
 	s.Equal(workflow.EventTypeActivityTaskCompleted, *event.EventType)
 	s.Equal(eventID, *event.EventId)
@@ -888,7 +888,7 @@ scheduleID, startedID int64, result []byte, identity string) {
 }
 
 func (s *historyBuilderSuite) validateActivityTaskFailedEvent(event *workflow.HistoryEvent, eventID,
-scheduleID, startedID int64, reason string, details []byte, identity string) {
+	scheduleID, startedID int64, reason string, details []byte, identity string) {
 	s.NotNil(event)
 	s.Equal(workflow.EventTypeActivityTaskFailed, *event.EventType)
 	s.Equal(eventID, *event.EventId)

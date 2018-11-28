@@ -67,14 +67,14 @@ type (
 	TestShardContext struct {
 		shardID int
 		sync.RWMutex
-		service                   service.Service
-		shardInfo                 *persistence.ShardInfo
-		transferSequenceNumber    int64
-		historyMgr                persistence.HistoryManager
-		historyV2Mgr              persistence.HistoryV2Manager
-		executionMgr              persistence.ExecutionManager
-		domainCache               cache.DomainCache
-		eventsCache               eventsCache
+		service                service.Service
+		shardInfo              *persistence.ShardInfo
+		transferSequenceNumber int64
+		historyMgr             persistence.HistoryManager
+		historyV2Mgr           persistence.HistoryV2Manager
+		executionMgr           persistence.ExecutionManager
+		domainCache            cache.DomainCache
+		eventsCache            eventsCache
 
 		config                    *Config
 		logger                    bark.Logger
