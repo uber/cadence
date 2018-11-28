@@ -92,9 +92,8 @@ const (
 )
 
 const (
-	taskListTaskID      = -12345
-	initialRangeID      = 1 // Id of the first range of a new task list
-	initialResetVersion = 0
+	taskListTaskID = -12345
+	initialRangeID = 1 // Id of the first range of a new task list
 )
 
 const (
@@ -1301,16 +1300,6 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Cre
 		d.logger.Panic(fmt.Sprintf("Unknown CreateWorkflowMode: %v", request.CreateWorkflowMode))
 	}
 
-	historyBranches := map[int32]map[string]interface{}{}
-	if request.EventStoreVersion == p.EventStoreVersionV2 {
-		firstBranch := map[string]interface{}{}
-		firstBranch["branch_token"] = request.BranchToken
-		firstBranch["next_event_id"] = request.NextEventID
-		firstBranch["last_first_event_id"] = common.FirstEventID
-		firstBranch["history_size"] = request.HistorySize
-		historyBranches[initialResetVersion] = firstBranch
-	}
-
 	if request.ReplicationState == nil {
 		// Cross DC feature is currently disabled so we will be creating workflow executions without replication state
 		batch.Query(templateCreateWorkflowExecutionQuery,
@@ -1366,8 +1355,7 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Cre
 			request.MaximumAttempts,
 			request.NonRetriableErrors,
 			request.EventStoreVersion,
-			initialResetVersion,
-			historyBranches,
+			request.BranchToken,
 			request.NextEventID,
 			defaultVisibilityTimestamp,
 			rowTypeExecutionTaskID)
@@ -1430,8 +1418,7 @@ func (d *cassandraPersistence) CreateWorkflowExecutionWithinBatch(request *p.Cre
 			request.MaximumAttempts,
 			request.NonRetriableErrors,
 			request.EventStoreVersion,
-			initialResetVersion,
-			historyBranches,
+			request.BranchToken,
 			request.ReplicationState.CurrentVersion,
 			request.ReplicationState.StartVersion,
 			request.ReplicationState.LastWriteVersion,
