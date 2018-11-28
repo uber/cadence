@@ -160,8 +160,7 @@ const (
 		`max_attempts: ?, ` +
 		`non_retriable_errors: ?, ` +
 		`event_store_version: ?, ` +
-		`current_reset_version: ?, ` +
-		`history_branches: ? ` +
+		`branch_token: ? ` +
 		`}`
 
 	templateReplicationStateType = `{` +
@@ -1547,26 +1546,12 @@ func (d *cassandraPersistence) GetWorkflowExecution(request *p.GetWorkflowExecut
 	return &p.InternalGetWorkflowExecutionResponse{State: state}, nil
 }
 
-func serializeHistoryBranches(bs map[int32]*p.HistoryBranch) map[int32]map[string]interface{} {
-	out := map[int32]map[string]interface{}{}
-	for k, v := range bs {
-		b := map[string]interface{}{}
-		b["branch_token"] = v.BranchToken
-		b["next_event_id"] = v.NextEventID
-		b["last_first_event_id"] = v.LastFirstEventID
-		b["history_size"] = v.HistorySize
-		out[k] = b
-	}
-	return out
-}
-
 func (d *cassandraPersistence) UpdateWorkflowExecution(request *p.InternalUpdateWorkflowExecutionRequest) error {
 	batch := d.session.NewBatch(gocql.LoggedBatch)
 	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
 	executionInfo := request.ExecutionInfo
 	replicationState := request.ReplicationState
 
-	historyBranches := serializeHistoryBranches(executionInfo.HistoryBranches)
 	completionData, completionEncoding := p.FromDataBlob(executionInfo.CompletionEvent)
 	if replicationState == nil {
 		// Updates will be called with null ReplicationState while the feature is disabled
@@ -1618,8 +1603,7 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *p.InternalUpdate
 			executionInfo.MaximumAttempts,
 			executionInfo.NonRetriableErrors,
 			executionInfo.EventStoreVersion,
-			executionInfo.CurrentResetVersion,
-			historyBranches,
+			executionInfo.BranchToken,
 			executionInfo.NextEventID,
 			d.shardID,
 			rowTypeExecution,
@@ -1683,8 +1667,7 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *p.InternalUpdate
 			executionInfo.MaximumAttempts,
 			executionInfo.NonRetriableErrors,
 			executionInfo.EventStoreVersion,
-			executionInfo.CurrentResetVersion,
-			historyBranches,
+			executionInfo.BranchToken,
 			replicationState.CurrentVersion,
 			replicationState.StartVersion,
 			replicationState.LastWriteVersion,
@@ -1885,7 +1868,6 @@ func (d *cassandraPersistence) ResetMutableState(request *p.InternalResetMutable
 		request.PrevRunID,
 	)
 
-	historyBranches := serializeHistoryBranches(executionInfo.HistoryBranches)
 	completionEvent := executionInfo.CompletionEvent
 	var completionEventData []byte
 	var completionEventEncoding common.EncodingType
@@ -1941,8 +1923,7 @@ func (d *cassandraPersistence) ResetMutableState(request *p.InternalResetMutable
 		executionInfo.MaximumAttempts,
 		executionInfo.NonRetriableErrors,
 		executionInfo.EventStoreVersion,
-		executionInfo.CurrentResetVersion,
-		historyBranches,
+		executionInfo.BranchToken,
 		replicationState.CurrentVersion,
 		replicationState.StartVersion,
 		replicationState.LastWriteVersion,
@@ -3550,35 +3531,12 @@ func createWorkflowExecutionInfo(result map[string]interface{}) *p.InternalWorkf
 			info.NonRetriableErrors = v.([]string)
 		case "event_store_version":
 			info.EventStoreVersion = int32(v.(int))
-		case "current_reset_version":
-			info.CurrentResetVersion = int32(v.(int))
-		case "history_branches":
-			info.HistoryBranches = deserializeHistoryBranch(v.(map[int]map[string]interface{}))
+		case "branch_token":
+			info.BranchToken = v.([]byte)
 		}
 	}
 	info.CompletionEvent = p.NewDataBlob(completionEventData, completionEventEncoding)
 	return info
-}
-
-func deserializeHistoryBranch(result map[int]map[string]interface{}) map[int32]*p.HistoryBranch {
-	out := map[int32]*p.HistoryBranch{}
-	for idx, bi := range result {
-		b := &p.HistoryBranch{}
-		for f, fv := range bi {
-			switch f {
-			case "branch_token":
-				b.BranchToken = fv.([]byte)
-			case "next_event_id":
-				b.NextEventID = fv.(int64)
-			case "last_first_event_id":
-				b.LastFirstEventID = fv.(int64)
-			case "history_size":
-				b.HistorySize = fv.(int64)
-			}
-		}
-		out[int32(idx)] = b
-	}
-	return out
 }
 
 func createReplicationState(result map[string]interface{}) *p.ReplicationState {
