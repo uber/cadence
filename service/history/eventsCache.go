@@ -85,14 +85,20 @@ func newEventKey(domainID, workflowID, runID string, eventID int64) eventKey {
 
 func (e *eventsCacheImpl) getEvent(domainID, workflowID, runID string, eventID int64, eventStoreVersion int32,
 	branchToken []byte) (*shared.HistoryEvent, error) {
+	e.metricsClient.IncCounter(metrics.EventsCacheGetEventScope, metrics.CacheRequests)
+	sw := e.metricsClient.StartTimer(metrics.EventsCacheGetEventScope, metrics.CacheLatency)
+	defer sw.Stop()
+
 	key := newEventKey(domainID, workflowID, runID, eventID)
 	event, cacheHit := e.Cache.Get(key).(*shared.HistoryEvent)
 	if cacheHit {
 		return event, nil
 	}
 
+	e.metricsClient.IncCounter(metrics.EventsCacheGetEventScope, metrics.CacheMissCounter)
 	event, err := e.getHistoryEventFromStore(domainID, workflowID, runID, eventID, eventStoreVersion, branchToken)
 	if err != nil {
+		e.metricsClient.IncCounter(metrics.EventsCacheGetEventScope, metrics.CacheFailures)
 		return nil, err
 	}
 
@@ -101,17 +107,28 @@ func (e *eventsCacheImpl) getEvent(domainID, workflowID, runID string, eventID i
 }
 
 func (e *eventsCacheImpl) putEvent(domainID, workflowID, runID string, eventID int64, event *shared.HistoryEvent) {
+	e.metricsClient.IncCounter(metrics.EventsCachePutEventScope, metrics.CacheRequests)
+	sw := e.metricsClient.StartTimer(metrics.EventsCachePutEventScope, metrics.CacheLatency)
+	defer sw.Stop()
+
 	key := newEventKey(domainID, workflowID, runID, eventID)
 	e.Put(key, event)
 }
 
 func (e *eventsCacheImpl) deleteEvent(domainID, workflowID, runID string, eventID int64) {
+	e.metricsClient.IncCounter(metrics.EventsCacheDeleteEventScope, metrics.CacheRequests)
+	sw := e.metricsClient.StartTimer(metrics.EventsCacheDeleteEventScope, metrics.CacheLatency)
+	defer sw.Stop()
+
 	key := newEventKey(domainID, workflowID, runID, eventID)
 	e.Delete(key)
 }
 
 func (e *eventsCacheImpl) getHistoryEventFromStore(domainID, workflowID, runID string, eventID int64,
 	eventStoreVersion int32, branchToken []byte) (*shared.HistoryEvent, error) {
+	e.metricsClient.IncCounter(metrics.EventsCacheGetFromStoreScope, metrics.CacheRequests)
+	sw := e.metricsClient.StartTimer(metrics.EventsCacheGetFromStoreScope, metrics.CacheLatency)
+	defer sw.Stop()
 
 	var historyEvent *shared.HistoryEvent
 	if eventStoreVersion == persistence.EventStoreVersionV2 {
@@ -124,6 +141,7 @@ func (e *eventsCacheImpl) getHistoryEventFromStore(domainID, workflowID, runID s
 		})
 
 		if err != nil {
+			e.metricsClient.IncCounter(metrics.EventsCacheGetFromStoreScope, metrics.CacheFailures)
 			return nil, err
 		}
 
@@ -144,6 +162,7 @@ func (e *eventsCacheImpl) getHistoryEventFromStore(domainID, workflowID, runID s
 		})
 
 		if err != nil {
+			e.metricsClient.IncCounter(metrics.EventsCacheGetFromStoreScope, metrics.CacheFailures)
 			return nil, err
 		}
 
