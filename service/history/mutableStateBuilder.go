@@ -860,7 +860,19 @@ func (e *mutableStateBuilder) GetAllRequestCancels() map[int64]*persistence.Requ
 
 // GetCompletionEvent retrieves the workflow completion event from mutable state
 func (e *mutableStateBuilder) GetCompletionEvent() (*workflow.HistoryEvent, bool) {
-	return e.executionInfo.CompletionEvent, true
+	if e.executionInfo.State != persistence.WorkflowStateCompleted {
+		return nil, false
+	}
+
+	// Completion EventID is always one less than NextEventID after workflow is completed
+	completionEventID := e.executionInfo.NextEventID - 1
+	completionEvent, err := e.eventsCache.getEvent(e.executionInfo.DomainID, e.executionInfo.WorkflowID,
+		e.executionInfo.RunID, completionEventID, e.executionInfo.EventStoreVersion, e.executionInfo.GetCurrentBranch())
+	if err != nil {
+		return nil, false
+	}
+
+	return completionEvent, true
 }
 
 // DeletePendingChildExecution deletes details about a ChildExecutionInfo.
@@ -881,12 +893,13 @@ func (e *mutableStateBuilder) DeletePendingSignal(initiatedEventID int64) {
 	e.deleteSignalInfo = common.Int64Ptr(initiatedEventID)
 }
 
-func (e *mutableStateBuilder) writeCompletionEventToMutableState(completionEvent *workflow.HistoryEvent) error {
+func (e *mutableStateBuilder) writeCompletionEventToCache(completionEvent *workflow.HistoryEvent) error {
 	// First check to see if this is a Child Workflow
 	if e.HasParentExecution() {
-		// Store the completion result within mutable state so we can communicate the result to parent execution
-		// during the processing of DeleteTransferTask
-		e.executionInfo.CompletionEvent = completionEvent
+		// Store the completion result within events cache so we can communicate the result to parent execution
+		// during the processing of DeleteTransferTask without loading this event from database
+		e.eventsCache.putEvent(e.executionInfo.DomainID, e.executionInfo.WorkflowID, e.executionInfo.RunID,
+			completionEvent.GetEventId(), completionEvent)
 	}
 
 	return nil
@@ -1584,7 +1597,7 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(decisionCompletedEve
 
 	event := e.hBuilder.AddActivityTaskScheduledEvent(decisionCompletedEventID, attributes)
 
-	// Cache ActivityTaskScheduled event to prevent loading it again when activity is started or retried
+	// Write the event to cache only on active cluster for processing on activity started or retried
 	e.eventsCache.putEvent(e.executionInfo.DomainID, e.executionInfo.WorkflowID, e.executionInfo.RunID,
 		event.GetEventId(), event)
 
@@ -1836,6 +1849,9 @@ func (e *mutableStateBuilder) AddCompletedWorkflowEvent(decisionCompletedEventID
 	}
 
 	event := e.hBuilder.AddCompletedWorkflowEvent(decisionCompletedEventID, attributes)
+	// Write the event to cache only on active cluster
+	e.writeCompletionEventToCache(event)
+
 	e.ReplicateWorkflowExecutionCompletedEvent(event)
 	return event
 }
@@ -1843,7 +1859,6 @@ func (e *mutableStateBuilder) AddCompletedWorkflowEvent(decisionCompletedEventID
 func (e *mutableStateBuilder) ReplicateWorkflowExecutionCompletedEvent(event *workflow.HistoryEvent) {
 	e.executionInfo.State = persistence.WorkflowStateCompleted
 	e.executionInfo.CloseStatus = persistence.WorkflowCloseStatusCompleted
-	e.writeCompletionEventToMutableState(event)
 }
 
 func (e *mutableStateBuilder) AddFailWorkflowEvent(decisionCompletedEventID int64,
@@ -1855,6 +1870,9 @@ func (e *mutableStateBuilder) AddFailWorkflowEvent(decisionCompletedEventID int6
 	}
 
 	event := e.hBuilder.AddFailWorkflowEvent(decisionCompletedEventID, attributes)
+	// Write the event to cache only on active cluster
+	e.writeCompletionEventToCache(event)
+
 	e.ReplicateWorkflowExecutionFailedEvent(event)
 
 	return event
@@ -1863,7 +1881,6 @@ func (e *mutableStateBuilder) AddFailWorkflowEvent(decisionCompletedEventID int6
 func (e *mutableStateBuilder) ReplicateWorkflowExecutionFailedEvent(event *workflow.HistoryEvent) {
 	e.executionInfo.State = persistence.WorkflowStateCompleted
 	e.executionInfo.CloseStatus = persistence.WorkflowCloseStatusFailed
-	e.writeCompletionEventToMutableState(event)
 }
 
 func (e *mutableStateBuilder) AddTimeoutWorkflowEvent() *workflow.HistoryEvent {
@@ -1874,6 +1891,9 @@ func (e *mutableStateBuilder) AddTimeoutWorkflowEvent() *workflow.HistoryEvent {
 	}
 
 	event := e.hBuilder.AddTimeoutWorkflowEvent()
+	// Write the event to cache only on active cluster
+	e.writeCompletionEventToCache(event)
+
 	e.ReplicateWorkflowExecutionTimedoutEvent(event)
 
 	return event
@@ -1882,7 +1902,6 @@ func (e *mutableStateBuilder) AddTimeoutWorkflowEvent() *workflow.HistoryEvent {
 func (e *mutableStateBuilder) ReplicateWorkflowExecutionTimedoutEvent(event *workflow.HistoryEvent) {
 	e.executionInfo.State = persistence.WorkflowStateCompleted
 	e.executionInfo.CloseStatus = persistence.WorkflowCloseStatusTimedOut
-	e.writeCompletionEventToMutableState(event)
 }
 
 func (e *mutableStateBuilder) AddWorkflowExecutionCancelRequestedEvent(cause string,
@@ -1915,6 +1934,8 @@ func (e *mutableStateBuilder) AddWorkflowExecutionCanceledEvent(decisionTaskComp
 	}
 
 	event := e.hBuilder.AddWorkflowExecutionCanceledEvent(decisionTaskCompletedEventID, attributes)
+	// Write the event to cache only on active cluster
+	e.writeCompletionEventToCache(event)
 	e.ReplicateWorkflowExecutionCanceledEvent(event)
 
 	return event
@@ -1923,7 +1944,6 @@ func (e *mutableStateBuilder) AddWorkflowExecutionCanceledEvent(decisionTaskComp
 func (e *mutableStateBuilder) ReplicateWorkflowExecutionCanceledEvent(event *workflow.HistoryEvent) {
 	e.executionInfo.State = persistence.WorkflowStateCompleted
 	e.executionInfo.CloseStatus = persistence.WorkflowCloseStatusCanceled
-	e.writeCompletionEventToMutableState(event)
 }
 
 func (e *mutableStateBuilder) AddRequestCancelExternalWorkflowExecutionInitiatedEvent(
@@ -2180,6 +2200,9 @@ func (e *mutableStateBuilder) AddWorkflowExecutionTerminatedEvent(
 	}
 
 	event := e.hBuilder.AddWorkflowExecutionTerminatedEvent(request)
+	// Write the event to cache only on active cluster
+	e.writeCompletionEventToCache(event)
+
 	e.ReplicateWorkflowExecutionTerminatedEvent(event)
 
 	return event
@@ -2188,7 +2211,6 @@ func (e *mutableStateBuilder) AddWorkflowExecutionTerminatedEvent(
 func (e *mutableStateBuilder) ReplicateWorkflowExecutionTerminatedEvent(event *workflow.HistoryEvent) {
 	e.executionInfo.State = persistence.WorkflowStateCompleted
 	e.executionInfo.CloseStatus = persistence.WorkflowCloseStatusTerminated
-	e.writeCompletionEventToMutableState(event)
 }
 
 func (e *mutableStateBuilder) AddWorkflowExecutionSignaled(
