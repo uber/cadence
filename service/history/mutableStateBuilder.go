@@ -193,14 +193,7 @@ func (e *mutableStateBuilder) SetHistoryTree(treeID string) error {
 	}
 	exeInfo := e.GetExecutionInfo()
 	exeInfo.EventStoreVersion = persistence.EventStoreVersionV2
-	exeInfo.CurrentResetVersion = 0
-	exeInfo.HistoryBranches = map[int32]*persistence.HistoryBranch{}
-	exeInfo.HistoryBranches[exeInfo.CurrentResetVersion] = &persistence.HistoryBranch{
-		BranchToken:      initialBranchToken,
-		NextEventID:      common.FirstEventID,
-		LastFirstEventID: common.FirstEventID,
-		HistorySize:      int64(0),
-	}
+	exeInfo.BranchToken = initialBranchToken
 	return nil
 }
 
@@ -2156,8 +2149,14 @@ func (e *mutableStateBuilder) AddWorkflowExecutionSignaled(
 		return nil
 	}
 
-	// No MutableState operation needed for signal
-	return e.hBuilder.AddWorkflowExecutionSignaledEvent(request)
+	event := e.hBuilder.AddWorkflowExecutionSignaledEvent(request)
+	e.ReplicateWorkflowExecutionSignaled(event)
+	return event
+}
+
+func (e *mutableStateBuilder) ReplicateWorkflowExecutionSignaled(event *workflow.HistoryEvent) {
+	// Increment signal count in mutable state for this workflow execution
+	e.executionInfo.SignalCount += 1
 }
 
 func (e *mutableStateBuilder) AddContinueAsNewEvent(decisionCompletedEventID int64, domainEntry *cache.DomainCacheEntry,

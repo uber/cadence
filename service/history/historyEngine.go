@@ -45,7 +45,6 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/service/worker/sysworkflow"
 )
 
 const (
@@ -74,7 +73,6 @@ type (
 		metricsClient        metrics.Client
 		logger               bark.Logger
 		config               *Config
-		initiator            sysworkflow.Initiator
 	}
 
 	// shardContextWrapper wraps ShardContext to notify transferQueueProcessor on new tasks.
@@ -117,6 +115,8 @@ var (
 	ErrCancellationAlreadyRequested = &workflow.CancellationAlreadyRequestedError{Message: "Cancellation already requested for this workflow execution."}
 	// ErrBufferedEventsLimitExceeded is the error indicating limit reached for maximum number of buffered events
 	ErrBufferedEventsLimitExceeded = &workflow.LimitExceededError{Message: "Exceeded workflow execution limit for buffered events"}
+	// ErrSignalsLimitExceeded is the error indicating limit reached for maximum number of signal events
+	ErrSignalsLimitExceeded = &workflow.LimitExceededError{Message: "Exceeded workflow execution limit for signal events"}
 	// FailedWorkflowCloseState is a set of failed workflow close states, used for start workflow policy
 	// for start workflow execution API
 	FailedWorkflowCloseState = map[int]bool{
@@ -164,7 +164,6 @@ func NewEngineWithShardContext(
 		}),
 		metricsClient:        shard.GetMetricsClient(),
 		historyEventNotifier: historyEventNotifier,
-		initiator:            sysworkflow.NewInitiator(frontendClient, shard.GetConfig().NumSysWorkflows),
 		config:               config,
 	}
 	var visibilityProducer messaging.Producer
@@ -1531,13 +1530,6 @@ Update_History_Loop:
 			}
 			transferTasks = append(transferTasks, tranT)
 			timerTasks = append(timerTasks, timerT)
-
-			request := &sysworkflow.ArchiveRequest{
-				Domain:         domainEntry.GetInfo().Name,
-				UserWorkflowID: workflowExecution.GetWorkflowId(),
-				UserRunID:      workflowExecution.GetRunId(),
-			}
-			e.initiator.Archive(request)
 		}
 
 		// Generate a transaction ID for appending events to history
@@ -1965,6 +1957,17 @@ func (e *historyEngineImpl) SignalWorkflowExecution(ctx context.Context, signalR
 			}
 
 			executionInfo := msBuilder.GetExecutionInfo()
+			maxAllowedSignals := e.config.MaximumSignalsPerExecution(domainEntry.GetInfo().Name)
+			if maxAllowedSignals > 0 && int(executionInfo.SignalCount) >= maxAllowedSignals {
+				e.logger.WithFields(bark.Fields{
+					logging.TagDomainID:            domainID,
+					logging.TagWorkflowExecutionID: execution.GetWorkflowId(),
+					logging.TagWorkflowRunID:       execution.GetRunId(),
+					logging.TagSignalCount:         executionInfo.SignalCount,
+				}).Info("Execution limit reached for maximum signals")
+				return nil, ErrSignalsLimitExceeded
+			}
+
 			if childWorkflowOnly {
 				parentWorkflowID := executionInfo.ParentWorkflowID
 				parentRunID := executionInfo.ParentRunID
@@ -2031,7 +2034,18 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 				prevMutableState = msBuilder
 				break
 			}
+
 			executionInfo := msBuilder.GetExecutionInfo()
+			maxAllowedSignals := e.config.MaximumSignalsPerExecution(domainEntry.GetInfo().Name)
+			if maxAllowedSignals > 0 && int(executionInfo.SignalCount) >= maxAllowedSignals {
+				e.logger.WithFields(bark.Fields{
+					logging.TagDomainID:            domainID,
+					logging.TagWorkflowExecutionID: execution.GetWorkflowId(),
+					logging.TagWorkflowRunID:       execution.GetRunId(),
+					logging.TagSignalCount:         executionInfo.SignalCount,
+				}).Info("Execution limit reached for maximum signals")
+				return nil, ErrSignalsLimitExceeded
+			}
 
 			if msBuilder.AddWorkflowExecutionSignaled(getSignalRequest(sRequest)) == nil {
 				return nil, &workflow.InternalServiceError{Message: "Unable to signal workflow execution."}
