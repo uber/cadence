@@ -97,6 +97,9 @@ func AdminShowWorkflow(c *cli.Context) {
 		ErrorAndExit("need to specify either WorkflowId/RunID for v1, or TreeID/BranchID for v2", nil)
 	}
 
+	if len(history) == 0 {
+		ErrorAndExit("no events", nil)
+	}
 	for idx, b := range history {
 		fmt.Printf("batch %v, blob len: %v \n", idx, len(b.Data))
 		historyBatch, err := serializer.DeserializeBatchEvents(b)
