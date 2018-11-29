@@ -1335,7 +1335,7 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Succe
 	persistenceMutableState := createMutableState(msBuilder)
 	s.mockHistoryMgr.On("GetWorkflowExecutionHistory", mock.Anything).Return(&persistence.GetWorkflowExecutionHistoryResponse{
 		History: &workflow.History{
-			Events:[]*workflow.HistoryEvent{event},
+			Events: []*workflow.HistoryEvent{event},
 		},
 	}, nil)
 	s.mockMetadataMgr.ExpectedCalls = nil
