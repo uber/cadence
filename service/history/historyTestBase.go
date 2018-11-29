@@ -166,6 +166,7 @@ func (s *TestShardContext) GetDomainCache() cache.DomainCache {
 	return s.domainCache
 }
 
+// GetEventsCache test implementation
 func (s *TestShardContext) GetEventsCache() eventsCache {
 	return s.eventsCache
 }
