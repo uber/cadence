@@ -230,7 +230,7 @@ type (
 	InternalChildExecutionInfo struct {
 		Version         int64
 		InitiatedID     int64
-		InitiatedEvent  DataBlob
+		InitiatedEvent  *DataBlob
 		StartedID       int64
 		StartedEvent    *DataBlob
 		CreateRequestID string

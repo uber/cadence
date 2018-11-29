@@ -716,10 +716,9 @@ func getChildExecutionInfoMap(tx *sqlx.Tx,
 			Version:         v.Version,
 			StartedID:       v.StartedID,
 			CreateRequestID: v.CreateRequestID,
-			InitiatedEvent: persistence.DataBlob{
-				Data:     *v.InitiatedEvent,
-				Encoding: common.EncodingType(v.InitiatedEventEncoding),
-			},
+		}
+		if v.InitiatedEvent != nil {
+			info.InitiatedEvent = persistence.NewDataBlob(*v.InitiatedEvent, common.EncodingType(v.InitiatedEventEncoding))
 		}
 		if v.StartedEvent != nil {
 			info.StartedEvent = persistence.NewDataBlob(*v.StartedEvent, common.EncodingType(v.InitiatedEventEncoding))

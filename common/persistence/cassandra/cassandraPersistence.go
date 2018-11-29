@@ -3230,11 +3230,12 @@ func (d *cassandraPersistence) updateChildExecutionInfos(batch *gocql.Batch, chi
 	deleteInfo *int64, domainID, workflowID, runID string, condition int64, rangeID int64) error {
 
 	for _, c := range childExecutionInfos {
-		encoding := c.InitiatedEvent.GetEncoding()
+		initiatedEventData, encoding := p.FromDataBlob(c.InitiatedEvent)
+
 		var startedEventData []byte
 		if c.StartedEvent != nil {
 			startedEventData = c.StartedEvent.Data
-			if c.StartedEvent.GetEncoding() != encoding {
+			if string(c.StartedEvent.GetEncoding()) != encoding {
 				return p.NewHistorySerializationError(fmt.Sprintf("expect to have the same encoding, but %v != %v", encoding, c.StartedEvent.GetEncoding()))
 			}
 		}
@@ -3242,7 +3243,7 @@ func (d *cassandraPersistence) updateChildExecutionInfos(batch *gocql.Batch, chi
 			c.InitiatedID,
 			c.Version,
 			c.InitiatedID,
-			c.InitiatedEvent.Data,
+			initiatedEventData,
 			c.StartedID,
 			startedEventData,
 			c.CreateRequestID,

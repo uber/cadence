@@ -1333,6 +1333,11 @@ func (s *transferQueueActiveProcessorSuite) TestProcessStartChildExecution_Succe
 	msBuilder.UpdateReplicationStateLastEventID(s.mockClusterMetadata.GetCurrentClusterName(), s.version, event.GetEventId())
 
 	persistenceMutableState := createMutableState(msBuilder)
+	s.mockHistoryMgr.On("GetWorkflowExecutionHistory", mock.Anything).Return(&persistence.GetWorkflowExecutionHistoryResponse{
+		History: &workflow.History{
+			Events:[]*workflow.HistoryEvent{event},
+		},
+	}, nil)
 	s.mockMetadataMgr.ExpectedCalls = nil
 	s.mockMetadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: domainID}).Return(&persistence.GetDomainResponse{
 		Info:              &persistence.DomainInfo{Name: domainName},

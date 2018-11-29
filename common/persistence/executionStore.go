@@ -200,7 +200,7 @@ func (m *executionManagerImpl) DeserializeBufferedEvents(blobs []*DataBlob) ([]*
 func (m *executionManagerImpl) DeserializeChildExecutionInfos(infos map[int64]*InternalChildExecutionInfo) (map[int64]*ChildExecutionInfo, error) {
 	newInfos := make(map[int64]*ChildExecutionInfo, 0)
 	for k, v := range infos {
-		initiatedEvent, err := m.serializer.DeserializeEvent(&v.InitiatedEvent)
+		initiatedEvent, err := m.serializer.DeserializeEvent(v.InitiatedEvent)
 		if err != nil {
 			return nil, err
 		}
@@ -366,9 +366,6 @@ func (m *executionManagerImpl) SerializeNewBufferedReplicationTask(task *Buffere
 func (m *executionManagerImpl) SerializeUpsertChildExecutionInfos(infos []*ChildExecutionInfo, encoding common.EncodingType) ([]*InternalChildExecutionInfo, error) {
 	newInfos := make([]*InternalChildExecutionInfo, 0)
 	for _, v := range infos {
-		if v.InitiatedEvent == nil {
-			m.logger.Fatalf("nil InitiatedEvent for %v", v.InitiatedID)
-		}
 		initiatedEvent, err := m.serializer.SerializeEvent(v.InitiatedEvent, encoding)
 		if err != nil {
 			return nil, err
@@ -378,7 +375,7 @@ func (m *executionManagerImpl) SerializeUpsertChildExecutionInfos(infos []*Child
 			return nil, err
 		}
 		i := &InternalChildExecutionInfo{
-			InitiatedEvent: *initiatedEvent,
+			InitiatedEvent: initiatedEvent,
 			StartedEvent:   startedEvent,
 
 			Version:         v.Version,
