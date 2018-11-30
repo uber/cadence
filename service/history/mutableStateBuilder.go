@@ -2160,7 +2160,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionSignaled(event *workflow
 }
 
 func (e *mutableStateBuilder) AddContinueAsNewEvent(decisionCompletedEventID int64, domainEntry *cache.DomainCacheEntry,
-	parentDomainName string, attributes *workflow.ContinueAsNewWorkflowExecutionDecisionAttributes) (*workflow.HistoryEvent, mutableState,
+	parentDomainName string, attributes *workflow.ContinueAsNewWorkflowExecutionDecisionAttributes, useEventsV2 bool) (*workflow.HistoryEvent, mutableState,
 	error) {
 
 	newRunID := uuid.New()
@@ -2208,6 +2208,11 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(decisionCompletedEventID int
 		}
 	}
 
+	if useEventsV2 {
+		if err := newStateBuilder.SetHistoryTree(newRunID); err != nil {
+			return nil, nil, err
+		}
+	}
 	e.ReplicateWorkflowExecutionContinuedAsNewEvent("", domainID, continueAsNewEvent, startedEvent, di, newStateBuilder)
 	return continueAsNewEvent, newStateBuilder, nil
 }
@@ -2268,6 +2273,8 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(sour
 		ExpirationTime:       e.executionInfo.ExpirationTime,
 		MaximumAttempts:      e.executionInfo.MaximumAttempts,
 		NonRetriableErrors:   e.executionInfo.NonRetriableErrors,
+		EventStoreVersion:    newStateBuilder.GetEventStoreVersion(),
+		BranchToken:          newStateBuilder.GetCurrentBranch(),
 	}
 	if continueAsNewAttributes.GetBackoffStartIntervalInSeconds() > 0 {
 		// this is a retry
