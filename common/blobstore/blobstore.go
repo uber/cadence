@@ -21,8 +21,8 @@
 package blobstore
 
 import (
-	"code.uber.internal/devexp/cadence-server/go-build/.go/src/gb2/src/github.com/pkg/errors"
 	"context"
+	"errors"
 	"io"
 	"time"
 )
@@ -34,6 +34,17 @@ const (
 
 	// NoCompression indicates that blob was not compressed
 	NoCompression CompressionType = iota
+)
+
+type ItemType int
+
+const (
+
+	// BlobType an entity represented by a complete path
+	BlobType ItemType = iota
+
+	// PrefixType an entity represented by a path prefix
+	PrefixType
 )
 
 // BucketPolicy defines the policies that can be applied at bucket level
@@ -53,6 +64,7 @@ type BlobMetadata struct {
 	Owner           *string
 	Size            *int64
 	Tags            map[string]string
+	RetentionDays   *int32
 	CompressionType CompressionType
 }
 
@@ -63,9 +75,9 @@ type Blob struct {
 	CompressionType CompressionType
 }
 
-// ListItem is a listing of a single blob
+// ListItem is a listing of a single entity
 type ListItem struct {
-	IsBlob       *bool
+	ItemType     ItemType
 	Name         *string
 	BlobMetadata BlobMetadata
 }
