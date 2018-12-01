@@ -21,25 +21,49 @@
 package blobstore
 
 import (
+	"code.uber.internal/devexp/cadence-server/go-build/.go/src/gb2/src/github.com/pkg/errors"
 	"context"
-	"errors"
 	"io"
 	"time"
 )
 
+// CompressionType defines the type of compression used for a blob
+type CompressionType int
+
+const (
+
+	// NoCompression indicates that blob was not compressed
+	NoCompression CompressionType = iota
+)
+
+// BucketPolicy defines the policies that can be applied at bucket level
+type BucketPolicy struct {
+	Prefix        *string
+	Owner         *string
+	ReadACL       []string
+	CreateACL     []string
+	DeleteACL     []string
+	AdminACL      []string
+	RetentionDays *int32
+}
+
+// BlobMetadata defines metadata for a blob
 type BlobMetadata struct {
-	CreatedAt *time.Time
-	Owner     *string
-	Size      *int64
-	Tags      map[string]string
+	CreatedAt       *time.Time
+	Owner           *string
+	Size            *int64
+	Tags            map[string]string
+	CompressionType CompressionType
 }
 
+// Blob defines a blob
 type Blob struct {
-	Size *int64 // optional
-	Body io.Reader
+	Size            *int64 // optional
+	Body            io.Reader
+	CompressionType CompressionType
 }
 
-// ListItem is a single listing in ListByPrefixResponse
+// ListItem is a listing of a single blob
 type ListItem struct {
 	IsBlob       *bool
 	Name         *string
@@ -50,23 +74,8 @@ type ListItem struct {
 type UploadBlobRequest struct {
 	Path  *string
 	Index *bool
-	Blob  Blob
+	Blob  *Blob
 	Tags  map[string]string
-}
-
-// DownloadBlobRequest is request for DownloadBlob
-type DownloadBlobRequest struct {
-	Path *string
-}
-
-// GetBlobMetadataRequest is request for GetBlobMetadata
-type GetBlobMetadataRequest struct {
-	Path *string
-}
-
-// GetBlobMetadataResponse is response from GetBlobMetadata
-type GetBlobMetadataResponse struct {
-	BlobMetadata BlobMetadata
 }
 
 // ListByPrefixRequest is request for ListByPrefix
@@ -77,35 +86,46 @@ type ListByPrefixRequest struct {
 	Limit    *int
 }
 
-// ListByPrefixResponse is response from ListByPrefix
-type ListByPrefixResponse struct {
-	ListItems []*ListItem
-}
-
 // Client is the interface to interact with archival store
 type Client interface {
+	CreateBucket(ctx context.Context, request *BucketPolicy) error
+	UpdateBucket(ctx context.Context, request *BucketPolicy) error
+	GetBucketPolicy(ctx context.Context, prefix *string) (*BucketPolicy, error)
+
 	UploadBlob(ctx context.Context, request *UploadBlobRequest) error
-	DownloadBlob(ctx context.Context, request *DownloadBlobRequest) (Blob, error)
-	GetBlobMetadata(ctx context.Context, request *GetBlobMetadataRequest) (*GetBlobMetadataResponse, error)
-	ListByPrefix(ctx context.Context, request *ListByPrefixRequest) (*ListByPrefixResponse, error)
+	DownloadBlob(ctx context.Context, path *string) (*Blob, error)
+	GetBlobMetadata(ctx context.Context, path *string) (*BlobMetadata, error)
+	ListByPrefix(ctx context.Context, request *ListByPrefixRequest) ([]*ListItem, error)
 }
 
 type nopClient struct{}
 
-func (mc *nopClient) UploadBlob(ctx context.Context, request *UploadBlobRequest) error {
-	return errors.New("method not supported")
+func (c *nopClient) CreateBucket(ctx context.Context, request *BucketPolicy) error {
+	return errors.New("not implemented")
 }
 
-func (mc *nopClient) DownloadBlob(ctx context.Context, request *DownloadBlobRequest) (Blob, error) {
-	return Blob{}, errors.New("method not supported")
+func (c *nopClient) UpdateBucket(ctx context.Context, request *BucketPolicy) error {
+	return errors.New("not implemented")
 }
 
-func (mc *nopClient) GetBlobMetadata(ctx context.Context, request *GetBlobMetadataRequest) (*GetBlobMetadataResponse, error) {
-	return nil, errors.New("method not supported")
+func (c *nopClient) GetBucketPolicy(ctx context.Context, prefix *string) (*BucketPolicy, error) {
+	return nil, errors.New("not implemented")
 }
 
-func (mc *nopClient) ListByPrefix(ctx context.Context, request *ListByPrefixRequest) (*ListByPrefixResponse, error) {
-	return nil, errors.New("method not supported")
+func (c *nopClient) UploadBlob(ctx context.Context, request *UploadBlobRequest) error {
+	return errors.New("not implemented")
+}
+
+func (c *nopClient) DownloadBlob(ctx context.Context, path *string) (*Blob, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (c *nopClient) GetBlobMetadata(ctx context.Context, path *string) (*BlobMetadata, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (c *nopClient) ListByPrefix(ctx context.Context, request *ListByPrefixRequest) ([]*ListItem, error) {
+	return nil, errors.New("not implemented")
 }
 
 // NewNopClient creates a nop client
