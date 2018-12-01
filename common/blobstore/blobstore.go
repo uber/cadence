@@ -71,7 +71,7 @@ type GetBlobMetadataResponse struct {
 
 // ListByPrefixRequest is request for ListByPrefix
 type ListByPrefixRequest struct {
-	Path     *string
+	Prefix   *string
 	ListFrom *string
 	Detailed *bool
 	Limit    *int
