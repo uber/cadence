@@ -35,28 +35,28 @@ type BlobMetadata struct {
 }
 
 type Blob struct {
-	Size  *int64 // optional
+	Size *int64 // optional
 	Body io.Reader
 }
 
 // ListItem is a single listing in ListByPrefixResponse
 type ListItem struct {
-	IsBlob      *bool
-	Name      *string
+	IsBlob       *bool
+	Name         *string
 	BlobMetadata BlobMetadata
 }
 
 // UploadBlobRequest is request for UploadBlob
 type UploadBlobRequest struct {
-	Path       *string
+	Path  *string
 	Index *bool
-	Blob Blob
-	Tags       map[string]string
+	Blob  Blob
+	Tags  map[string]string
 }
 
 // DownloadBlobRequest is request for DownloadBlob
 type DownloadBlobRequest struct {
-	Path        *string
+	Path *string
 }
 
 // GetBlobMetadataRequest is request for GetBlobMetadata
