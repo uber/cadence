@@ -32,24 +32,23 @@ type CompressionType int
 
 const (
 
-	// NoCompression indicates that blob was not compressed
+	// NoCompression indicates that blob is not compressed
 	NoCompression CompressionType = iota
 )
 
-type ItemType int
+type (
+	// BucketName defines the name of a bucket
+	BucketName *string
 
-const (
+	// PrefixPath defines a path to a common prefix under which multiple blobs are stored
+	PrefixPath *string
 
-	// BlobType an entity represented by a complete path
-	BlobType ItemType = iota
-
-	// PrefixType an entity represented by a path prefix
-	PrefixType
+	// BlobPath defines a path to a blob
+	BlobPath *string
 )
 
-// BucketPolicy defines the policies that can be applied at bucket level
+// BucketPolicy defines the policies that can be applied to a bucket
 type BucketPolicy struct {
-	Prefix        *string
 	Owner         *string
 	ReadACL       []string
 	CreateACL     []string
@@ -58,13 +57,20 @@ type BucketPolicy struct {
 	RetentionDays *int32
 }
 
+// PrefixMetadata defines metadata on a common prefix under which multiple blobs are stored
+type PrefixMetadata struct {
+	CreatedAt     *time.Time
+	Owner         *string
+	RetentionDays *int32
+	Listable      *bool
+}
+
 // BlobMetadata defines metadata for a blob
 type BlobMetadata struct {
 	CreatedAt       *time.Time
 	Owner           *string
 	Size            *int64
 	Tags            map[string]string
-	RetentionDays   *int32
 	CompressionType CompressionType
 }
 
@@ -73,70 +79,66 @@ type Blob struct {
 	Size            *int64 // optional
 	Body            io.Reader
 	CompressionType CompressionType
-}
-
-// ListItem is a listing of a single entity
-type ListItem struct {
-	ItemType     ItemType
-	Name         *string
-	BlobMetadata BlobMetadata
+	Tags            map[string]string
 }
 
 // UploadBlobRequest is request for UploadBlob
 type UploadBlobRequest struct {
-	Path  *string
-	Index *bool
-	Blob  *Blob
-	Tags  map[string]string
+	PrefixesListable *bool
+	Blob             *Blob
 }
 
 // ListByPrefixRequest is request for ListByPrefix
 type ListByPrefixRequest struct {
-	Prefix   *string
-	ListFrom *string
+	ListFrom PrefixPath
 	Detailed *bool
 	Limit    *int
 }
 
+type ListByPrefixResult struct {
+	Prefixes map[PrefixPath]*PrefixMetadata
+	Blobs    map[BlobPath]*BlobMetadata
+}
+
 // Client is the interface to interact with archival store
 type Client interface {
-	CreateBucket(ctx context.Context, request *BucketPolicy) error
-	UpdateBucket(ctx context.Context, request *BucketPolicy) error
-	GetBucketPolicy(ctx context.Context, prefix *string) (*BucketPolicy, error)
+	BucketExists(context.Context, BucketName) (bool, error)
+	CreateBucket(context.Context, BucketName, *BucketPolicy) error
+	GetBucketPolicy(context.Context, BucketName) (*BucketPolicy, error)
 
-	UploadBlob(ctx context.Context, request *UploadBlobRequest) error
-	DownloadBlob(ctx context.Context, path *string) (*Blob, error)
-	GetBlobMetadata(ctx context.Context, path *string) (*BlobMetadata, error)
-	ListByPrefix(ctx context.Context, request *ListByPrefixRequest) ([]*ListItem, error)
+	UploadBlob(context.Context, BucketName, BlobPath, *UploadBlobRequest) error
+	DownloadBlob(context.Context, BucketName, BlobPath) (*Blob, error)
+	GetBlobMetadata(context.Context, BucketName, BlobPath) (*BlobMetadata, error)
+	ListByPrefix(context.Context, BucketName, PrefixPath, *ListByPrefixRequest) (*ListByPrefixResult, error)
 }
 
 type nopClient struct{}
 
-func (c *nopClient) CreateBucket(ctx context.Context, request *BucketPolicy) error {
+func (c *nopClient) BucketExists(context.Context, BucketName) (bool, error) {
+	return false, errors.New("not implemented")
+}
+
+func (c *nopClient) CreateBucket(context.Context, BucketName, *BucketPolicy) error {
 	return errors.New("not implemented")
 }
 
-func (c *nopClient) UpdateBucket(ctx context.Context, request *BucketPolicy) error {
+func (c *nopClient) GetBucketPolicy(context.Context, BucketName) (*BucketPolicy, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (c *nopClient) UploadBlob(context.Context, BucketName, BlobPath, *UploadBlobRequest) error {
 	return errors.New("not implemented")
 }
 
-func (c *nopClient) GetBucketPolicy(ctx context.Context, prefix *string) (*BucketPolicy, error) {
+func (c *nopClient) DownloadBlob(context.Context, BucketName, BlobPath) (*Blob, error) {
 	return nil, errors.New("not implemented")
 }
 
-func (c *nopClient) UploadBlob(ctx context.Context, request *UploadBlobRequest) error {
-	return errors.New("not implemented")
-}
-
-func (c *nopClient) DownloadBlob(ctx context.Context, path *string) (*Blob, error) {
+func (c *nopClient) GetBlobMetadata(context.Context, BucketName, BlobPath) (*BlobMetadata, error) {
 	return nil, errors.New("not implemented")
 }
 
-func (c *nopClient) GetBlobMetadata(ctx context.Context, path *string) (*BlobMetadata, error) {
-	return nil, errors.New("not implemented")
-}
-
-func (c *nopClient) ListByPrefix(ctx context.Context, request *ListByPrefixRequest) ([]*ListItem, error) {
+func (c *nopClient) ListByPrefix(context.Context, BucketName, PrefixPath, *ListByPrefixRequest) (*ListByPrefixResult, error) {
 	return nil, errors.New("not implemented")
 }
 
