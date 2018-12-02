@@ -126,3 +126,34 @@ func ArchivalActivity(ctx context.Context, userWorkflowID string, userRunID stri
 		zap.String(logging.TagUserRunID, userRunID))
 	return nil
 }
+
+//
+//func (c *client) getHistory(ctx context.Context, domain, workflowId, runId string) ([]*shared.HistoryEvent, error) {
+//	execution := &shared.WorkflowExecution{
+//		WorkflowId: common.StringPtr(workflowId),
+//		RunId:      common.StringPtr(runId),
+//	}
+//	historyResponse, err := c.fClient.GetWorkflowExecutionHistory(ctx, &shared.GetWorkflowExecutionHistoryRequest{
+//		Domain:          common.StringPtr(domain),
+//		Execution:       execution,
+//		MaximumPageSize: common.Int32Ptr(defaultHistoryPageSize),
+//	})
+//
+//	if err != nil {
+//		return nil, err
+//	}
+//	events := historyResponse.History.Events
+//	for historyResponse.NextPageToken != nil {
+//		historyResponse, err = c.fClient.GetWorkflowExecutionHistory(ctx, &shared.GetWorkflowExecutionHistoryRequest{
+//			Domain:        common.StringPtr(domain),
+//			Execution:     execution,
+//			NextPageToken: historyResponse.NextPageToken,
+//		})
+//		if err != nil {
+//			return nil, err
+//		}
+//		events = append(events, historyResponse.History.Events...)
+//	}
+//
+//	return events, nil
+//}

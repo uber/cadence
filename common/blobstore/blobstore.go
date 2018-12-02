@@ -24,6 +24,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"strings"
 	"time"
 )
 
@@ -31,6 +32,8 @@ import (
 type CompressionType int
 
 const (
+	// Separator is used to delimitate parts of a path
+	Separator = "/"
 
 	// NoCompression indicates that blob is not compressed
 	NoCompression CompressionType = iota
@@ -38,45 +41,45 @@ const (
 
 type (
 	// BucketName defines the name of a bucket
-	BucketName *string
+	BucketName string
 
 	// PrefixPath defines a path to a common prefix under which multiple blobs are stored
-	PrefixPath *string
+	PrefixPath string
 
 	// BlobPath defines a path to a blob
-	BlobPath *string
+	BlobPath string
 )
 
 // BucketPolicy defines the policies that can be applied to a bucket
 type BucketPolicy struct {
-	Owner         *string
+	Owner         string
 	ReadACL       []string
 	CreateACL     []string
 	DeleteACL     []string
 	AdminACL      []string
-	RetentionDays *int32
+	RetentionDays int32
 }
 
 // PrefixMetadata defines metadata on a common prefix under which multiple blobs are stored
 type PrefixMetadata struct {
-	CreatedAt     *time.Time
-	Owner         *string
-	RetentionDays *int32
-	Listable      *bool
+	CreatedAt     time.Time
+	Owner         string
+	RetentionDays int32
+	Listable      bool
 }
 
 // BlobMetadata defines metadata for a blob
 type BlobMetadata struct {
-	CreatedAt       *time.Time
-	Owner           *string
-	Size            *int64
+	CreatedAt       time.Time
+	Owner           string
+	Size            int64
 	Tags            map[string]string
 	CompressionType CompressionType
 }
 
 // Blob defines a blob
 type Blob struct {
-	Size            *int64 // optional
+	Size            int64 // optional
 	Body            io.Reader
 	CompressionType CompressionType
 	Tags            map[string]string
@@ -84,15 +87,15 @@ type Blob struct {
 
 // UploadBlobRequest is request for UploadBlob
 type UploadBlobRequest struct {
-	PrefixesListable *bool
+	PrefixesListable bool
 	Blob             *Blob
 }
 
 // ListByPrefixRequest is request for ListByPrefix
 type ListByPrefixRequest struct {
 	ListFrom PrefixPath
-	Detailed *bool
-	Limit    *int
+	Detailed bool
+	Limit    int
 }
 
 type ListByPrefixResult struct {
@@ -102,14 +105,24 @@ type ListByPrefixResult struct {
 
 // Client is the interface to interact with archival store
 type Client interface {
+	// BucketExists returns true if bucket already exists, false otherwise
 	BucketExists(context.Context, BucketName) (bool, error)
+	// CreateBucket creates a new bucket with BucketPolicy
 	CreateBucket(context.Context, BucketName, *BucketPolicy) error
+	// GetBucketPolicy returns the BucketPolicy for bucket
 	GetBucketPolicy(context.Context, BucketName) (*BucketPolicy, error)
 
-	UploadBlob(context.Context, BucketName, BlobPath, *UploadBlobRequest) error
-	DownloadBlob(context.Context, BucketName, BlobPath) (*Blob, error)
-	GetBlobMetadata(context.Context, BucketName, BlobPath) (*BlobMetadata, error)
+	// ListByPrefix returns all blobs and common prefixes under PrefixPath
 	ListByPrefix(context.Context, BucketName, PrefixPath, *ListByPrefixRequest) (*ListByPrefixResult, error)
+	// CountByPrefix returns count of all blobs and common prefixes under PrefixPath
+	CountUnderPrefix(context.Context, BucketName, PrefixPath) (int64, error)
+
+	// UploadBlob uploads a blob to BucketName at location BlobPath
+	UploadBlob(context.Context, BucketName, BlobPath, *UploadBlobRequest) error
+	// DownloadBlob downloads a blob from BucketName at location BlobPath
+	DownloadBlob(context.Context, BucketName, BlobPath) (*Blob, error)
+	// GetBlobMetadata gets the metadata for blob from BucketName at location BlobPath
+	GetBlobMetadata(context.Context, BucketName, BlobPath) (*BlobMetadata, error)
 }
 
 type nopClient struct{}
@@ -142,7 +155,21 @@ func (c *nopClient) ListByPrefix(context.Context, BucketName, PrefixPath, *ListB
 	return nil, errors.New("not implemented")
 }
 
+func (c *nopClient) CountUnderPrefix(context.Context, BucketName, PrefixPath) (int64, error) {
+	return 0, errors.New("not implemented")
+}
+
 // NewNopClient creates a nop client
 func NewNopClient() Client {
 	return &nopClient{}
+}
+
+// ConstructBlobPath constructs a blob path from given parts
+func ConstructBlobPath(parts ...string) BlobPath {
+	return BlobPath(strings.Join(parts, Separator))
+}
+
+// ConstructBucketName constructs a bucket name from given parts
+func ConstructBucketName(parts ...string) BucketName {
+	return BucketName(strings.Join(parts, Separator))
 }
