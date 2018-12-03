@@ -114,7 +114,7 @@ func NewCadence(clusterMetadata cluster.Metadata, dispatcherProvider client.Disp
 	metadataMgrV2 persistence.MetadataManager, shardMgr persistence.ShardManager, historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager,
 	executionMgrFactory persistence.ExecutionManagerFactory, taskMgr persistence.TaskManager,
 	visibilityMgr persistence.VisibilityManager, numberOfHistoryShards, numberOfHistoryHosts int,
-	logger bark.Logger, clusterNo int, enableWorker bool) Cadence {
+	logger bark.Logger, clusterNo int, enableWorker, enableEventsV2 bool) Cadence {
 
 	return &cadenceImpl{
 		numberOfHistoryShards: numberOfHistoryShards,
@@ -134,6 +134,7 @@ func NewCadence(clusterMetadata cluster.Metadata, dispatcherProvider client.Disp
 		shutdownCh:            make(chan struct{}),
 		clusterNo:             clusterNo,
 		enableWorkerService:   enableWorker,
+		enableEventsV2:        enableEventsV2,
 	}
 }
 

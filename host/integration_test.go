@@ -48,6 +48,20 @@ import (
 	"github.com/uber/cadence/service/matching"
 )
 
+type (
+	integrationSuite struct {
+		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
+		// not merely log an error
+		*require.Assertions
+		suite.Suite
+		IntegrationBase
+		domainName        string
+		domainID          string
+		foreignDomainName string
+		enableEventsV2    bool
+	}
+)
+
 func (s *IntegrationBase) setupShards() {
 	// shard 0 is always created, we create additional shards if needed
 	for shardID := 1; shardID < testNumberOfHistoryShards; shardID++ {
@@ -62,6 +76,17 @@ func TestIntegrationSuite(t *testing.T) {
 	flag.Parse()
 	if *integration {
 		s := new(integrationSuite)
+		suite.Run(t, s)
+	} else {
+		t.Skip()
+	}
+}
+
+func TestIntegrationSuiteEventsV2(t *testing.T) {
+	flag.Parse()
+	if *integration {
+		s := new(integrationSuite)
+		s.enableEventsV2 = true
 		suite.Run(t, s)
 	} else {
 		t.Skip()
@@ -112,7 +137,7 @@ func (s *integrationSuite) setupSuite(enableGlobalDomain bool, isMasterCluster b
 	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
 
 	s.host = NewCadence(s.ClusterMetadata, client.NewIPYarpcDispatcherProvider(), s.mockMessagingClient, s.MetadataProxy, s.MetadataManagerV2, s.ShardMgr, s.HistoryMgr, s.HistoryV2Mgr, s.ExecutionMgrFactory, s.TaskMgr,
-		s.VisibilityMgr, testNumberOfHistoryShards, testNumberOfHistoryHosts, s.logger, 0, false)
+		s.VisibilityMgr, testNumberOfHistoryShards, testNumberOfHistoryHosts, s.logger, 0, false, s.enableEventsV2)
 	s.host.Start()
 
 	s.engine = s.host.GetFrontendClient()
