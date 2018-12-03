@@ -795,10 +795,7 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 		return nil, nil
 	}
 
-	useEventsV2 := false
-	if matchingResp.GetEventStoreVersion() == persistence.EventStoreVersionV2 {
-		useEventsV2 = true
-	}
+	useEventsV2 := matchingResp.GetEventStoreVersion() == persistence.EventStoreVersionV2
 	resp, err := wh.createPollForDecisionTaskResponse(ctx, scope, domainID, matchingResp, useEventsV2, matchingResp.GetBranchToken())
 	if err != nil {
 		return nil, wh.error(err, scope)
@@ -1281,10 +1278,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 		}
 		matchingResp := common.CreateMatchingPollForDecisionTaskResponse(histResp.StartedResponse, workflowExecution, token)
 
-		useEventsV2 := false
-		if matchingResp.GetEventStoreVersion() == persistence.EventStoreVersionV2 {
-			useEventsV2 = true
-		}
+		useEventsV2 := matchingResp.GetEventStoreVersion() == persistence.EventStoreVersionV2
 		newDecisionTask, err := wh.createPollForDecisionTaskResponse(ctx, scope, taskToken.DomainID, matchingResp, useEventsV2, matchingResp.GetBranchToken())
 		if err != nil {
 			return nil, wh.error(err, scope)
