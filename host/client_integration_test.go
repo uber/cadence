@@ -74,6 +74,13 @@ type (
 	}
 )
 
+func init() {
+	workflow.Register(testDataConverterWorkflow)
+	activity.Register(testActivity)
+	workflow.Register(testParentWorkflow)
+	workflow.Register(testChildWorkflow)
+}
+
 func TestClientIntegrationSuite(t *testing.T) {
 	flag.Parse()
 	if *integration {
@@ -202,11 +209,6 @@ func (s *clientIntegrationSuite) setupSuite(enableGlobalDomain bool, isMasterClu
 		},
 		ReplicationConfig: &persistence.DomainReplicationConfig{},
 	})
-
-	workflow.Register(testDataConverterWorkflow)
-	activity.Register(testActivity)
-	workflow.Register(testParentWorkflow)
-	workflow.Register(testChildWorkflow)
 }
 
 // testDataConverter implements encoded.DataConverter using gob
