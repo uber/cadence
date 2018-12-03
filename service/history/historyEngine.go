@@ -42,7 +42,6 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/service/worker/sysworkflow"
 	"go.uber.org/yarpc"
 )
 
@@ -73,7 +72,6 @@ type (
 		metricsClient        metrics.Client
 		logger               bark.Logger
 		config               *Config
-		initiator            sysworkflow.Initiator
 	}
 
 	// shardContextWrapper wraps ShardContext to notify transferQueueProcessor on new tasks.
@@ -116,6 +114,8 @@ var (
 	ErrCancellationAlreadyRequested = &workflow.CancellationAlreadyRequestedError{Message: "Cancellation already requested for this workflow execution."}
 	// ErrBufferedEventsLimitExceeded is the error indicating limit reached for maximum number of buffered events
 	ErrBufferedEventsLimitExceeded = &workflow.LimitExceededError{Message: "Exceeded workflow execution limit for buffered events"}
+	// ErrSignalsLimitExceeded is the error indicating limit reached for maximum number of signal events
+	ErrSignalsLimitExceeded = &workflow.LimitExceededError{Message: "Exceeded workflow execution limit for signal events"}
 	// FailedWorkflowCloseState is a set of failed workflow close states, used for start workflow policy
 	// for start workflow execution API
 	FailedWorkflowCloseState = map[int]bool{
@@ -163,7 +163,6 @@ func NewEngineWithShardContext(
 		}),
 		metricsClient:        shard.GetMetricsClient(),
 		historyEventNotifier: historyEventNotifier,
-		initiator:            sysworkflow.NewInitiator(frontendClient, shard.GetConfig().NumSysWorkflows),
 		config:               config,
 	}
 	var visibilityProducer messaging.Producer
@@ -1539,13 +1538,6 @@ Update_History_Loop:
 			}
 			transferTasks = append(transferTasks, tranT)
 			timerTasks = append(timerTasks, timerT)
-
-			request := &sysworkflow.ArchiveRequest{
-				Domain:         domainEntry.GetInfo().Name,
-				UserWorkflowID: workflowExecution.GetWorkflowId(),
-				UserRunID:      workflowExecution.GetRunId(),
-			}
-			e.initiator.Archive(request)
 		}
 
 		// Generate a transaction ID for appending events to history
@@ -1973,6 +1965,17 @@ func (e *historyEngineImpl) SignalWorkflowExecution(ctx context.Context, signalR
 			}
 
 			executionInfo := msBuilder.GetExecutionInfo()
+			maxAllowedSignals := e.config.MaximumSignalsPerExecution(domainEntry.GetInfo().Name)
+			if maxAllowedSignals > 0 && int(executionInfo.SignalCount) >= maxAllowedSignals {
+				e.logger.WithFields(bark.Fields{
+					logging.TagDomainID:            domainID,
+					logging.TagWorkflowExecutionID: execution.GetWorkflowId(),
+					logging.TagWorkflowRunID:       execution.GetRunId(),
+					logging.TagSignalCount:         executionInfo.SignalCount,
+				}).Info("Execution limit reached for maximum signals")
+				return nil, ErrSignalsLimitExceeded
+			}
+
 			if childWorkflowOnly {
 				parentWorkflowID := executionInfo.ParentWorkflowID
 				parentRunID := executionInfo.ParentRunID
@@ -2039,7 +2042,18 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(ctx context.Context
 				prevMutableState = msBuilder
 				break
 			}
+
 			executionInfo := msBuilder.GetExecutionInfo()
+			maxAllowedSignals := e.config.MaximumSignalsPerExecution(domainEntry.GetInfo().Name)
+			if maxAllowedSignals > 0 && int(executionInfo.SignalCount) >= maxAllowedSignals {
+				e.logger.WithFields(bark.Fields{
+					logging.TagDomainID:            domainID,
+					logging.TagWorkflowExecutionID: execution.GetWorkflowId(),
+					logging.TagWorkflowRunID:       execution.GetRunId(),
+					logging.TagSignalCount:         executionInfo.SignalCount,
+				}).Info("Execution limit reached for maximum signals")
+				return nil, ErrSignalsLimitExceeded
+			}
 
 			if msBuilder.AddWorkflowExecutionSignaled(getSignalRequest(sRequest)) == nil {
 				return nil, &workflow.InternalServiceError{Message: "Unable to signal workflow execution."}
@@ -2631,17 +2645,6 @@ func validateActivityScheduleAttributes(attributes *workflow.ScheduleActivityTas
 		return &workflow.BadRequestError{Message: "A valid timeout may not be negative."}
 	}
 
-	// ensure activity's SCHEDULE_TO_START and SCHEDULE_TO_CLOSE is as long as expiration on retry policy
-	p := attributes.RetryPolicy
-	if p != nil {
-		if attributes.GetScheduleToStartTimeoutSeconds() < p.GetExpirationIntervalInSeconds() {
-			attributes.ScheduleToStartTimeoutSeconds = common.Int32Ptr(p.GetExpirationIntervalInSeconds())
-		}
-		if attributes.GetScheduleToCloseTimeoutSeconds() < p.GetExpirationIntervalInSeconds() {
-			attributes.ScheduleToCloseTimeoutSeconds = common.Int32Ptr(p.GetExpirationIntervalInSeconds())
-		}
-	}
-
 	// ensure activity timeout never larger than workflow timeout
 	if attributes.GetScheduleToCloseTimeoutSeconds() > wfTimeout {
 		attributes.ScheduleToCloseTimeoutSeconds = common.Int32Ptr(wfTimeout)
@@ -2676,7 +2679,20 @@ func validateActivityScheduleAttributes(attributes *workflow.ScheduleActivityTas
 		// Deduction failed as there's not enough information to fill in missing timeouts.
 		return &workflow.BadRequestError{Message: "A valid ScheduleToCloseTimeout is not set on decision."}
 	}
-
+	// ensure activity's SCHEDULE_TO_START and SCHEDULE_TO_CLOSE is as long as expiration on retry policy
+	p := attributes.RetryPolicy
+	if p != nil {
+		expiration := p.GetExpirationIntervalInSeconds()
+		if expiration == 0 {
+			expiration = wfTimeout
+		}
+		if attributes.GetScheduleToStartTimeoutSeconds() < expiration {
+			attributes.ScheduleToStartTimeoutSeconds = common.Int32Ptr(expiration)
+		}
+		if attributes.GetScheduleToCloseTimeoutSeconds() < expiration {
+			attributes.ScheduleToCloseTimeoutSeconds = common.Int32Ptr(expiration)
+		}
+	}
 	return nil
 }
 

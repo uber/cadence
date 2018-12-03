@@ -61,6 +61,7 @@ var keys = map[Key]string{
 	FrontendRPS:                    "frontend.rps",
 	FrontendHistoryMgrNumConns:     "frontend.historyMgrNumConns",
 	MaxDecisionStartToCloseTimeout: "frontend.maxDecisionStartToCloseTimeout",
+	DisableListVisibilityByFilter:  "frontend.disableListVisibilityByFilter",
 
 	// matching settings
 	MatchingRPS:                             "matching.rps",
@@ -130,6 +131,7 @@ var keys = map[Key]string{
 	ExecutionMgrNumConns:                                  "history.executionMgrNumConns",
 	HistoryMgrNumConns:                                    "history.historyMgrNumConns",
 	MaximumBufferedEventsBatch:                            "history.maximumBufferedEventsBatch",
+	MaximumSignalsPerExecution:                            "history.maximumSignalsPerExecution",
 	ShardUpdateMinInterval:                                "history.shardUpdateMinInterval",
 	ShardSyncMinInterval:                                  "history.shardSyncMinInterval",
 	DefaultEventEncoding:                                  "history.defaultEventEncoding",
@@ -167,6 +169,8 @@ const (
 	EnableVisibilitySampling
 	// EnableVisibilityToKafka is key for enable kafka
 	EnableVisibilityToKafka
+	// DisableListVisibilityByFilter is config to disable list open/close workflow using filter
+	DisableListVisibilityByFilter
 
 	// key for frontend
 
@@ -320,6 +324,8 @@ const (
 	HistoryMgrNumConns
 	// MaximumBufferedEventsBatch is max number of buffer event in mutable state
 	MaximumBufferedEventsBatch
+	// MaximumSignalsPerExecution is max number of signals supported by single execution
+	MaximumSignalsPerExecution
 	// ShardUpdateMinInterval is the minimal time interval which the shard info can be updated
 	ShardUpdateMinInterval
 	// ShardSyncMinInterval is the minimal time interval which the shard info should be sync to remote

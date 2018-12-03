@@ -39,6 +39,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
@@ -110,7 +111,7 @@ func (s *integrationSuite) setupSuite(enableGlobalDomain bool, isMasterCluster b
 	s.mockProducer = &mocks.KafkaProducer{}
 	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
 
-	s.host = NewCadence(s.ClusterMetadata, s.mockMessagingClient, s.MetadataProxy, s.MetadataManagerV2, s.ShardMgr, s.HistoryMgr, s.HistoryV2Mgr, s.ExecutionMgrFactory, s.TaskMgr,
+	s.host = NewCadence(s.ClusterMetadata, client.NewIPYarpcDispatcherProvider(), s.mockMessagingClient, s.MetadataProxy, s.MetadataManagerV2, s.ShardMgr, s.HistoryMgr, s.HistoryV2Mgr, s.ExecutionMgrFactory, s.TaskMgr,
 		s.VisibilityMgr, testNumberOfHistoryShards, testNumberOfHistoryHosts, s.logger, 0, false)
 	s.host.Start()
 
@@ -3228,13 +3229,20 @@ func (s *integrationSuite) TestVisibility() {
 	closedCount := 0
 	openCount := 0
 
-	resp, err3 := s.engine.ListClosedWorkflowExecutions(createContext(), &workflow.ListClosedWorkflowExecutionsRequest{
-		Domain:          common.StringPtr(s.domainName),
-		MaximumPageSize: common.Int32Ptr(100),
-		StartTimeFilter: startFilter,
-	})
-	s.Nil(err3)
-	closedCount = len(resp.Executions)
+	for i := 0; i < 10; i++ {
+		resp, err3 := s.engine.ListClosedWorkflowExecutions(createContext(), &workflow.ListClosedWorkflowExecutionsRequest{
+			Domain:          common.StringPtr(s.domainName),
+			MaximumPageSize: common.Int32Ptr(100),
+			StartTimeFilter: startFilter,
+		})
+		s.Nil(err3)
+		closedCount = len(resp.Executions)
+		if closedCount == 1 {
+			break
+		}
+		s.logger.Info("Closed WorkflowExecution is not yet visible")
+		time.Sleep(100 * time.Millisecond)
+	}
 	s.Equal(1, closedCount)
 
 	for i := 0; i < 10; i++ {
