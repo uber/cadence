@@ -4,27 +4,33 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
+	"github.com/dgryski/go-farm"
 	"github.com/uber/cadence/common/blobstore"
 	"go.uber.org/cadence/.gen/go/shared"
 	"strconv"
+	"time"
 )
 
-const (
-	workflowIdTag     = "workflowId"
-	runIdTag          = "runId"
-	workflowTypeTag   = "workflowType"
-	workflowStatusTag = "workflowStatus"
-	domainNameTag     = "domainName"
-	domainIdTag       = "domainId"
-	closeTimeTag      = "closeTime"
-	startTimeTag      = "startTime"
-	historyLengthTag  = "historyLength"
-
-	defaultHistoryPageSize = 1000
-)
-
+// Client is used to store and retrieve blobs
 type Client interface {
-	// define methods needed for archival
+	Archive(
+		ctx context.Context,
+		domainName string,
+		domainId string,
+		workflowInfo *shared.WorkflowExecutionInfo,
+		history *shared.History,
+	) error
+
+	GetWorkflowExecutionHistory(
+		ctx context.Context,
+		request *shared.GetWorkflowExecutionHistoryRequest,
+	) (*shared.GetWorkflowExecutionHistoryResponse, error)
+
+	ListClosedWorkflowExecutions(
+		ctx context.Context,
+		ListRequest *shared.ListClosedWorkflowExecutionsRequest,
+	) (*shared.ListClosedWorkflowExecutionsResponse, error)
 }
 
 type client struct {
@@ -62,8 +68,7 @@ func (c *client) Archive(
 	if err != nil {
 		return err
 	}
-
-	return nil
+	return c.uploadBlobs(ctx, domainName, domainId, data, bucketName, workflowInfo)
 }
 
 func (c *client) GetWorkflowExecutionHistory(
@@ -127,10 +132,55 @@ func (c *client) uploadBlobs(
 		return err
 	}
 
+	indexBlobPaths := c.constructIndexBlobPaths(workflowInfo)
+	visBlobReq := &blobstore.UploadBlobRequest{
+		PrefixesListable: true,
+		Blob: &blobstore.Blob{
+			Size:            int64(0),
+			Body:            bytes.NewReader([]byte),
+			CompressionType: blobstore.NoCompression,
+			Tags:            tags,
+		},
+	}
+	for _, path := range indexBlobPaths {
+		if err := c.bClient.UploadBlob(ctx, bucketName, path, visBlobReq); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
-//dayYear/minute/workflowID/runID
-//shardDir/shardDir/workflowID/dayYear/minute/runID
-//workflowType/dayYear/minute/workflowID/runID
-//status/dayYear/minute/workflowID/runID
+func (c *client) constructIndexBlobPaths(workflowInfo *shared.WorkflowExecutionInfo) map[IndexBlobPath]blobstore.BlobPath {
+	workflowId := *workflowInfo.Execution.WorkflowId
+	runId := *workflowInfo.Execution.RunId
+	dayYear, second := parse(time.Now())
+
+	paths := make(map[IndexBlobPath]blobstore.BlobPath)
+	paths[WorkflowByTimePath] = blobstore.ConstructBlobPath(dayYear, second, workflowId, runId)
+	paths[WorkflowPath] = blobstore.ConstructBlobPath(shardDir(workflowId), shardDir(reverse(workflowId)),
+		workflowId, dayYear, second, runId)
+	paths[WorkflowTypePath] = blobstore.ConstructBlobPath(workflowInfo.Type.String(), dayYear, second, workflowId, runId)
+	paths[WorkflowStatusPath] = blobstore.ConstructBlobPath(workflowInfo.CloseStatus.String(), dayYear, second, workflowId, runId)
+	return paths
+}
+
+func parse(t time.Time) (string, string) {
+	year := t.Year()
+	day := time.Now().YearDay()
+	return fmt.Sprintf("%v%v%v", day, separator, year), strconv.Itoa(t.Second())
+}
+
+func reverse(s string) string {
+	runes := []rune(s)
+	for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
+		runes[i], runes[j] = runes[j], runes[i]
+	}
+	return string(runes)
+}
+
+func shardDir(input string) string {
+	bytes := []byte(input)
+	dirNum := int(farm.Hash32(bytes)) % indexedDirSizeLimit
+	return fmt.Sprintf("%v%v%v", shardDirPrefix, separator, dirNum)
+}
