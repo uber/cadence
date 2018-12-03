@@ -227,6 +227,7 @@ func (c *domainCache) UnregisterDomainChangeCallback(shard int) {
 	c.Lock()
 	defer c.Unlock()
 
+	delete(c.prepareCallbacks, shard)
 	delete(c.callbacks, shard)
 }
 
