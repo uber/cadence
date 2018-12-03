@@ -186,7 +186,7 @@ type (
 		ReplicateWorkflowExecutionCancelRequestedEvent(*workflow.HistoryEvent)
 		ReplicateWorkflowExecutionCanceledEvent(*workflow.HistoryEvent)
 		ReplicateWorkflowExecutionCompletedEvent(*workflow.HistoryEvent)
-		ReplicateWorkflowExecutionContinuedAsNewEvent(string, string, *workflow.HistoryEvent, *workflow.HistoryEvent, *decisionInfo, mutableState)
+		ReplicateWorkflowExecutionContinuedAsNewEvent(string, string, *workflow.HistoryEvent, *workflow.HistoryEvent, *decisionInfo, mutableState, bool) error
 		ReplicateWorkflowExecutionFailedEvent(*workflow.HistoryEvent)
 		ReplicateWorkflowExecutionSignaled(*workflow.HistoryEvent)
 		ReplicateWorkflowExecutionStartedEvent(string, *string, workflow.WorkflowExecution, string, *workflow.WorkflowExecutionStartedEventAttributes)

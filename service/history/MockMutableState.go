@@ -2095,8 +2095,16 @@ func (_m *mockMutableState) ReplicateWorkflowExecutionCompletedEvent(_a0 *shared
 }
 
 // ReplicateWorkflowExecutionContinuedAsNewEvent provides a mock function with given fields: _a0, _a1, _a2, _a3, _a4, _a5
-func (_m *mockMutableState) ReplicateWorkflowExecutionContinuedAsNewEvent(_a0 string, _a1 string, _a2 *shared.HistoryEvent, _a3 *shared.HistoryEvent, _a4 *decisionInfo, _a5 mutableState) {
-	_m.Called(_a0, _a1, _a2, _a3, _a4, _a5)
+func (_m *mockMutableState) ReplicateWorkflowExecutionContinuedAsNewEvent(_a0 string, _a1 string, _a2 *shared.HistoryEvent, _a3 *shared.HistoryEvent, _a4 *decisionInfo, _a5 mutableState, _a6 bool) error {
+	ret := _m.Called(_a0, _a1, _a2, _a3, _a4, _a5, _a6)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string, *shared.HistoryEvent, *shared.HistoryEvent, *decisionInfo, mutableState, bool) error); ok {
+		r0 = rf(_a0, _a1, _a2, _a3, _a4, _a5, _a6)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
 }
 
 // ReplicateWorkflowExecutionFailedEvent provides a mock function with given fields: _a0

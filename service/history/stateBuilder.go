@@ -111,7 +111,10 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 
 			b.timerTasks = append(b.timerTasks, b.scheduleWorkflowTimerTask(event, b.msBuilder))
 			if eventStoreVersion == persistence.EventStoreVersionV2 {
-				b.msBuilder.SetHistoryTree(*execution.RunId)
+				err := b.msBuilder.SetHistoryTree(execution.GetRunId())
+				if err != nil {
+					return nil, nil, nil, err
+				}
 			}
 
 		case shared.EventTypeDecisionTaskScheduled:
@@ -433,11 +436,12 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 			}
 			b.newRunTimerTasks = append(b.newRunTimerTasks, b.scheduleWorkflowTimerTask(event, newRunStateBuilder))
 
-			if newRunEventStoreVersion == persistence.EventStoreVersionV2 {
-				newRunStateBuilder.SetHistoryTree(*newExecution.RunId)
+			useEventsV2 := newRunEventStoreVersion == persistence.EventStoreVersionV2
+			err := b.msBuilder.ReplicateWorkflowExecutionContinuedAsNewEvent(sourceClusterName, domainID, event,
+				startedEvent, di, newRunStateBuilder, useEventsV2)
+			if err != nil {
+				return nil, nil, nil, err
 			}
-			b.msBuilder.ReplicateWorkflowExecutionContinuedAsNewEvent(sourceClusterName, domainID, event,
-				startedEvent, di, newRunStateBuilder)
 
 			// TODO the continue as new logic (task generation) is broken (including the active / existing code)
 			// we should merge all task generation & persistence into one place
