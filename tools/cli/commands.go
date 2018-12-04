@@ -304,7 +304,7 @@ func RegisterDomain(c *cli.Context) {
 			ErrorAndExit(fmt.Sprintf("Domain %s already registered.\n", domain), err)
 		}
 	} else {
-		fmt.Printf("Domain %s succeesfully registered.\n", domain)
+		fmt.Printf("Domain %s successfully registered.\n", domain)
 	}
 }
 
@@ -409,7 +409,7 @@ func UpdateDomain(c *cli.Context) {
 			ErrorAndExit(fmt.Sprintf("Domain %s does not exist.\n", domain), err)
 		}
 	} else {
-		fmt.Printf("Domain %s succeesfully updated.\n", domain)
+		fmt.Printf("Domain %s successfully updated.\n", domain)
 	}
 }
 
@@ -718,7 +718,7 @@ func TerminateWorkflow(c *cli.Context) {
 	if err != nil {
 		ErrorAndExit("Terminate workflow failed.", err)
 	} else {
-		fmt.Println("Terminate workflow succeed.")
+		fmt.Println("Terminate workflow succeeded.")
 	}
 }
 
@@ -736,7 +736,7 @@ func CancelWorkflow(c *cli.Context) {
 	if err != nil {
 		ErrorAndExit("Cancel workflow failed.", err)
 	} else {
-		fmt.Println("Cancel workflow succeed.")
+		fmt.Println("Cancel workflow succeeded.")
 	}
 }
 
@@ -767,7 +767,7 @@ func SignalWorkflow(c *cli.Context) {
 	if err != nil {
 		ErrorAndExit("Signal workflow failed.", err)
 	} else {
-		fmt.Println("Signal workflow succeed.")
+		fmt.Println("Signal workflow succeeded.")
 	}
 }
 
