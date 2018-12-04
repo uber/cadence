@@ -116,7 +116,7 @@ type Interface interface {
 
 	ResetWorkflowExecution(
 		ctx context.Context,
-		TerminateRequest *shared.TerminateWorkflowExecutionRequest,
+		ResetRequest *shared.ResetWorkflowExecutionRequest,
 	) error
 
 	RespondActivityTaskCanceled(
@@ -181,7 +181,7 @@ type Interface interface {
 
 	TerminateWorkflowExecution(
 		ctx context.Context,
-		ResetRequest *shared.ResetWorkflowExecutionRequest,
+		TerminateRequest *shared.TerminateWorkflowExecutionRequest,
 	) error
 
 	UpdateDomain(
@@ -384,7 +384,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.ResetWorkflowExecution),
 				},
-				Signature:    "ResetWorkflowExecution(TerminateRequest *shared.TerminateWorkflowExecutionRequest)",
+				Signature:    "ResetWorkflowExecution(ResetRequest *shared.ResetWorkflowExecutionRequest)",
 				ThriftModule: cadence.ThriftModule,
 			},
 
@@ -527,7 +527,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TerminateWorkflowExecution),
 				},
-				Signature:    "TerminateWorkflowExecution(ResetRequest *shared.ResetWorkflowExecutionRequest)",
+				Signature:    "TerminateWorkflowExecution(TerminateRequest *shared.TerminateWorkflowExecutionRequest)",
 				ThriftModule: cadence.ThriftModule,
 			},
 
@@ -861,7 +861,7 @@ func (h handler) ResetWorkflowExecution(ctx context.Context, body wire.Value) (t
 		return thrift.Response{}, err
 	}
 
-	err := h.impl.ResetWorkflowExecution(ctx, args.TerminateRequest)
+	err := h.impl.ResetWorkflowExecution(ctx, args.ResetRequest)
 
 	hadError := err != nil
 	result, err := cadence.WorkflowService_ResetWorkflowExecution_Helper.WrapResponse(err)
@@ -1108,7 +1108,7 @@ func (h handler) TerminateWorkflowExecution(ctx context.Context, body wire.Value
 		return thrift.Response{}, err
 	}
 
-	err := h.impl.TerminateWorkflowExecution(ctx, args.ResetRequest)
+	err := h.impl.TerminateWorkflowExecution(ctx, args.TerminateRequest)
 
 	hadError := err != nil
 	result, err := cadence.WorkflowService_TerminateWorkflowExecution_Helper.WrapResponse(err)

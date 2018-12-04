@@ -134,7 +134,7 @@ type Interface interface {
 
 	ResetWorkflowExecution(
 		ctx context.Context,
-		TerminateRequest *shared.TerminateWorkflowExecutionRequest,
+		ResetRequest *shared.ResetWorkflowExecutionRequest,
 		opts ...yarpc.CallOption,
 	) error
 
@@ -212,7 +212,7 @@ type Interface interface {
 
 	TerminateWorkflowExecution(
 		ctx context.Context,
-		ResetRequest *shared.ResetWorkflowExecutionRequest,
+		TerminateRequest *shared.TerminateWorkflowExecutionRequest,
 		opts ...yarpc.CallOption,
 	) error
 
@@ -617,11 +617,11 @@ func (c client) ResetStickyTaskList(
 
 func (c client) ResetWorkflowExecution(
 	ctx context.Context,
-	_TerminateRequest *shared.TerminateWorkflowExecutionRequest,
+	_ResetRequest *shared.ResetWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
 ) (err error) {
 
-	args := cadence.WorkflowService_ResetWorkflowExecution_Helper.Args(_TerminateRequest)
+	args := cadence.WorkflowService_ResetWorkflowExecution_Helper.Args(_ResetRequest)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)
@@ -916,11 +916,11 @@ func (c client) StartWorkflowExecution(
 
 func (c client) TerminateWorkflowExecution(
 	ctx context.Context,
-	_ResetRequest *shared.ResetWorkflowExecutionRequest,
+	_TerminateRequest *shared.TerminateWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
 ) (err error) {
 
-	args := cadence.WorkflowService_TerminateWorkflowExecution_Helper.Args(_ResetRequest)
+	args := cadence.WorkflowService_TerminateWorkflowExecution_Helper.Args(_TerminateRequest)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)

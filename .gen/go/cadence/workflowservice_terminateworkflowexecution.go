@@ -37,7 +37,7 @@ import (
 //
 // The arguments for TerminateWorkflowExecution are sent and received over the wire as this struct.
 type WorkflowService_TerminateWorkflowExecution_Args struct {
-	ResetRequest *shared.ResetWorkflowExecutionRequest `json:"resetRequest,omitempty"`
+	TerminateRequest *shared.TerminateWorkflowExecutionRequest `json:"terminateRequest,omitempty"`
 }
 
 // ToWire translates a WorkflowService_TerminateWorkflowExecution_Args struct into a Thrift-level intermediate
@@ -63,8 +63,8 @@ func (v *WorkflowService_TerminateWorkflowExecution_Args) ToWire() (wire.Value, 
 		err    error
 	)
 
-	if v.ResetRequest != nil {
-		w, err = v.ResetRequest.ToWire()
+	if v.TerminateRequest != nil {
+		w, err = v.TerminateRequest.ToWire()
 		if err != nil {
 			return w, err
 		}
@@ -75,8 +75,8 @@ func (v *WorkflowService_TerminateWorkflowExecution_Args) ToWire() (wire.Value, 
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _ResetWorkflowExecutionRequest_Read(w wire.Value) (*shared.ResetWorkflowExecutionRequest, error) {
-	var v shared.ResetWorkflowExecutionRequest
+func _TerminateWorkflowExecutionRequest_Read(w wire.Value) (*shared.TerminateWorkflowExecutionRequest, error) {
+	var v shared.TerminateWorkflowExecutionRequest
 	err := v.FromWire(w)
 	return &v, err
 }
@@ -105,7 +105,7 @@ func (v *WorkflowService_TerminateWorkflowExecution_Args) FromWire(w wire.Value)
 		switch field.ID {
 		case 1:
 			if field.Value.Type() == wire.TStruct {
-				v.ResetRequest, err = _ResetWorkflowExecutionRequest_Read(field.Value)
+				v.TerminateRequest, err = _TerminateWorkflowExecutionRequest_Read(field.Value)
 				if err != nil {
 					return err
 				}
@@ -126,8 +126,8 @@ func (v *WorkflowService_TerminateWorkflowExecution_Args) String() string {
 
 	var fields [1]string
 	i := 0
-	if v.ResetRequest != nil {
-		fields[i] = fmt.Sprintf("ResetRequest: %v", v.ResetRequest)
+	if v.TerminateRequest != nil {
+		fields[i] = fmt.Sprintf("TerminateRequest: %v", v.TerminateRequest)
 		i++
 	}
 
@@ -144,7 +144,7 @@ func (v *WorkflowService_TerminateWorkflowExecution_Args) Equals(rhs *WorkflowSe
 	} else if rhs == nil {
 		return false
 	}
-	if !((v.ResetRequest == nil && rhs.ResetRequest == nil) || (v.ResetRequest != nil && rhs.ResetRequest != nil && v.ResetRequest.Equals(rhs.ResetRequest))) {
+	if !((v.TerminateRequest == nil && rhs.TerminateRequest == nil) || (v.TerminateRequest != nil && rhs.TerminateRequest != nil && v.TerminateRequest.Equals(rhs.TerminateRequest))) {
 		return false
 	}
 
@@ -157,17 +157,17 @@ func (v *WorkflowService_TerminateWorkflowExecution_Args) MarshalLogObject(enc z
 	if v == nil {
 		return nil
 	}
-	if v.ResetRequest != nil {
-		err = multierr.Append(err, enc.AddObject("resetRequest", v.ResetRequest))
+	if v.TerminateRequest != nil {
+		err = multierr.Append(err, enc.AddObject("terminateRequest", v.TerminateRequest))
 	}
 	return err
 }
 
-// GetResetRequest returns the value of ResetRequest if it is set or its
+// GetTerminateRequest returns the value of TerminateRequest if it is set or its
 // zero value if it is unset.
-func (v *WorkflowService_TerminateWorkflowExecution_Args) GetResetRequest() (o *shared.ResetWorkflowExecutionRequest) {
-	if v.ResetRequest != nil {
-		return v.ResetRequest
+func (v *WorkflowService_TerminateWorkflowExecution_Args) GetTerminateRequest() (o *shared.TerminateWorkflowExecutionRequest) {
+	if v.TerminateRequest != nil {
+		return v.TerminateRequest
 	}
 
 	return
@@ -195,7 +195,7 @@ var WorkflowService_TerminateWorkflowExecution_Helper = struct {
 	// Args accepts the parameters of TerminateWorkflowExecution in-order and returns
 	// the arguments struct for the function.
 	Args func(
-		resetRequest *shared.ResetWorkflowExecutionRequest,
+		terminateRequest *shared.TerminateWorkflowExecutionRequest,
 	) *WorkflowService_TerminateWorkflowExecution_Args
 
 	// IsException returns true if the given error can be thrown
@@ -236,10 +236,10 @@ var WorkflowService_TerminateWorkflowExecution_Helper = struct {
 
 func init() {
 	WorkflowService_TerminateWorkflowExecution_Helper.Args = func(
-		resetRequest *shared.ResetWorkflowExecutionRequest,
+		terminateRequest *shared.TerminateWorkflowExecutionRequest,
 	) *WorkflowService_TerminateWorkflowExecution_Args {
 		return &WorkflowService_TerminateWorkflowExecution_Args{
-			ResetRequest: resetRequest,
+			TerminateRequest: terminateRequest,
 		}
 	}
 

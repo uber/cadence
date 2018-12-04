@@ -592,11 +592,11 @@ func (mr *_MockClientRecorder) ResetStickyTaskList(
 // 	... := client.ResetWorkflowExecution(...)
 func (m *MockClient) ResetWorkflowExecution(
 	ctx context.Context,
-	_TerminateRequest *shared.TerminateWorkflowExecutionRequest,
+	_ResetRequest *shared.ResetWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
 ) (err error) {
 
-	args := []interface{}{ctx, _TerminateRequest}
+	args := []interface{}{ctx, _ResetRequest}
 	for _, o := range opts {
 		args = append(args, o)
 	}
@@ -608,10 +608,10 @@ func (m *MockClient) ResetWorkflowExecution(
 
 func (mr *_MockClientRecorder) ResetWorkflowExecution(
 	ctx interface{},
-	_TerminateRequest interface{},
+	_ResetRequest interface{},
 	opts ...interface{},
 ) *gomock.Call {
-	args := append([]interface{}{ctx, _TerminateRequest}, opts...)
+	args := append([]interface{}{ctx, _ResetRequest}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "ResetWorkflowExecution", args...)
 }
 
@@ -1001,11 +1001,11 @@ func (mr *_MockClientRecorder) StartWorkflowExecution(
 // 	... := client.TerminateWorkflowExecution(...)
 func (m *MockClient) TerminateWorkflowExecution(
 	ctx context.Context,
-	_ResetRequest *shared.ResetWorkflowExecutionRequest,
+	_TerminateRequest *shared.TerminateWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
 ) (err error) {
 
-	args := []interface{}{ctx, _ResetRequest}
+	args := []interface{}{ctx, _TerminateRequest}
 	for _, o := range opts {
 		args = append(args, o)
 	}
@@ -1017,10 +1017,10 @@ func (m *MockClient) TerminateWorkflowExecution(
 
 func (mr *_MockClientRecorder) TerminateWorkflowExecution(
 	ctx interface{},
-	_ResetRequest interface{},
+	_TerminateRequest interface{},
 	opts ...interface{},
 ) *gomock.Call {
-	args := append([]interface{}{ctx, _ResetRequest}, opts...)
+	args := append([]interface{}{ctx, _TerminateRequest}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "TerminateWorkflowExecution", args...)
 }
 
