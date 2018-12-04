@@ -109,6 +109,7 @@ test_eventsV2: dep-ensured bins
     		go test -timeout 20m -coverprofile=$@ "$$dir" -v -eventsV2=true | tee -a test.log; \
     done;
 
+test_eventsV2_xdc: dep-ensured bins
     @echo Running integration test for cross dc:
 	@for dir in $(INTEG_TEST_XDC_ROOT); do \
 		go test -timeout 20m -coverprofile=$@ "$$dir" -v -eventsV2xdc=true | tee -a test.log; \
