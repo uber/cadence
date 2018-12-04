@@ -83,7 +83,7 @@ func init() {
 
 func TestClientIntegrationSuite(t *testing.T) {
 	flag.Parse()
-	if *integration {
+	if *integration && !*testEventsV2 {
 		s := new(clientIntegrationSuite)
 		suite.Run(t, s)
 	} else {
@@ -93,7 +93,7 @@ func TestClientIntegrationSuite(t *testing.T) {
 
 func TestClientIntegrationSuiteEventsV2(t *testing.T) {
 	flag.Parse()
-	if *integration {
+	if *integration && *testEventsV2 {
 		s := new(clientIntegrationSuite)
 		s.enableEventsV2 = true
 		suite.Run(t, s)

@@ -20,7 +20,7 @@ THRIFTRW_SRCS = \
   idl/github.com/uber/cadence/admin.thrift \
 
 PROGS = cadence
-TEST_ARG ?= -race -v -timeout 50m
+TEST_ARG ?= -race -v -timeout 30m
 BUILD := ./build
 TOOLS_CMD_ROOT=./cmd/tools
 INTEG_TEST_ROOT=./host
@@ -97,15 +97,28 @@ test: dep-ensured bins
 	@rm -f test
 	@rm -f test.log
 	@for dir in $(TEST_DIRS); do \
-		go test -timeout 40m -race -coverprofile=$@ "$$dir" | tee -a test.log; \
+		go test -timeout 20m -race -coverprofile=$@ "$$dir" | tee -a test.log; \
 	done;
 
 # need to run xdc tests with race detector off because of ringpop bug causing data race issue
+test_eventsV2: dep-ensured bins
+	@rm -f test
+	@rm -f test.log
+	@echo Running integration test
+	@for dir in $(INTEG_TEST_ROOT); do \
+    		go test -timeout 20m -coverprofile=$@ "$$dir" -v -eventsV2=true | tee -a test.log; \
+    done;
+
+    @echo Running integration test for cross dc:
+	@for dir in $(INTEG_TEST_XDC_ROOT); do \
+		go test -timeout 20m -coverprofile=$@ "$$dir" -v -eventsV2xdc=true | tee -a test.log; \
+	done;
+
 test_xdc: dep-ensured bins
 	@rm -f test
 	@rm -f test.log
 	@for dir in $(INTEG_TEST_XDC_ROOT); do \
-		go test -timeout 40m -coverprofile=$@ "$$dir" | tee -a test.log; \
+		go test -timeout 20m -coverprofile=$@ "$$dir" | tee -a test.log; \
 	done;
 
 cover_profile: clean bins_nothrift
@@ -119,7 +132,7 @@ cover_profile: clean bins_nothrift
 
 	@echo Running integration test for cross dc
 	@mkdir -p $(BUILD)/$(INTEG_TEST_XDC_DIR)
-	@time go test $(INTEG_TEST_XDC_ROOT) $(TEST_ARG) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_XDC_DIR)/coverage.out || exit 1;
+	@time go test $(INTEG_TEST_XDC_ROOT) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_XDC_DIR)/coverage.out || exit 1;
 	@cat $(BUILD)/$(INTEG_TEST_XDC_DIR)/coverage.out | grep -v "mode: atomic" >> $(BUILD)/cover.out
 
 	@echo Running package tests:

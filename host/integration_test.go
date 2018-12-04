@@ -74,7 +74,7 @@ func (s *IntegrationBase) setupShards() {
 
 func TestIntegrationSuite(t *testing.T) {
 	flag.Parse()
-	if *integration {
+	if *integration && !*testEventsV2 {
 		s := new(integrationSuite)
 		suite.Run(t, s)
 	} else {
@@ -84,7 +84,7 @@ func TestIntegrationSuite(t *testing.T) {
 
 func TestIntegrationSuiteEventsV2(t *testing.T) {
 	flag.Parse()
-	if *integration {
+	if *integration && *testEventsV2 {
 		s := new(integrationSuite)
 		s.enableEventsV2 = true
 		suite.Run(t, s)

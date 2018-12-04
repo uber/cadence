@@ -54,7 +54,7 @@ type (
 
 func TestIntegrationCrossDCSuite(t *testing.T) {
 	flag.Parse()
-	if *integration {
+	if *integration && !*testEventsV2 {
 		s := new(integrationCrossDCSuite)
 		suite.Run(t, s)
 	} else {
@@ -64,7 +64,7 @@ func TestIntegrationCrossDCSuite(t *testing.T) {
 
 func TestIntegrationCrossDCSuiteEventsV2(t *testing.T) {
 	flag.Parse()
-	if *integration {
+	if *integration && *testEventsV2 {
 		s := new(integrationCrossDCSuite)
 		s.enableEventsV2 = true
 		suite.Run(t, s)

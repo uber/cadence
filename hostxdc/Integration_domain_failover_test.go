@@ -82,7 +82,9 @@ const (
 )
 
 var (
-	integration    = flag.Bool("integration2", true, "run integration tests")
+	integration     = flag.Bool("integration2", true, "run integration tests")
+	testEventsV2Xdc = flag.Bool("eventsV2xdc", false, "run integration tests with eventsV2 for XDC suite")
+
 	domainName     = "integration-cross-dc-test-domain"
 	clusterName    = []string{"active", "standby"}
 	topicName      = []string{"active", "standby"}
@@ -208,8 +210,7 @@ func createContext() context.Context {
 }
 
 func TestIntegrationClustersTestSuite(t *testing.T) {
-	flag.Parse()
-	if *integration {
+	if *integration && !*testEventsV2Xdc {
 		s := new(integrationClustersTestSuite)
 		suite.Run(t, s)
 	} else {
@@ -219,7 +220,7 @@ func TestIntegrationClustersTestSuite(t *testing.T) {
 
 func TestIntegrationClustersTestSuiteEventsV2(t *testing.T) {
 	flag.Parse()
-	if *integration {
+	if *integration && *testEventsV2Xdc {
 		s := new(integrationClustersTestSuite)
 		s.enableEventsV2 = true
 		suite.Run(t, s)

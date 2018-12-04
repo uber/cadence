@@ -58,8 +58,9 @@ const rpAppNamePrefix string = "cadence"
 const maxRpJoinTimeout = 30 * time.Second
 
 var (
-	integration = flag.Bool("integration", true, "run integration tests")
-	topicName   = []string{"active", "standby"}
+	integration  = flag.Bool("integration", true, "run integration tests")
+	testEventsV2 = flag.Bool("eventsV2", false, "run integration tests with eventsV2")
+	topicName    = []string{"active", "standby"}
 )
 
 const (
