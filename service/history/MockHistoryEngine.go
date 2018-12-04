@@ -387,11 +387,11 @@ func (_m *MockHistoryEngine) TerminateWorkflowExecution(ctx context.Context, req
 }
 
 // ResetWorkflowExecution is mock implementation for TerminateWorkflowExecution of HistoryEngine
-func (_m *MockHistoryEngine) ResetWorkflowExecution(ctx context.Context, request *gohistory.TerminateWorkflowExecutionRequest) error {
+func (_m *MockHistoryEngine) ResetWorkflowExecution(ctx context.Context, request *gohistory.ResetWorkflowExecutionRequest) error {
 	ret := _m.Called(request)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*gohistory.TerminateWorkflowExecutionRequest) error); ok {
+	if rf, ok := ret.Get(0).(func(*gohistory.ResetWorkflowExecutionRequest) error); ok {
 		r0 = rf(request)
 	} else {
 		r0 = ret.Error(0)

@@ -2371,6 +2371,38 @@ func (e *historyEngineImpl) SyncActivity(ctx context.Context, request *h.SyncAct
 	return e.replicator.SyncActivity(ctx, request)
 }
 
+func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetRequest *h.ResetWorkflowExecutionRequest) (retError error) {
+
+	domainEntry, err := e.getActiveDomainEntry(resetRequest.DomainUUID)
+	if err != nil {
+		return err
+	}
+	domainID := domainEntry.GetInfo().ID
+
+	request := resetRequest.ResetRequest
+	execution := workflow.WorkflowExecution{
+		WorkflowId: request.WorkflowExecution.WorkflowId,
+		RunId:      request.WorkflowExecution.RunId,
+	}
+
+	context, release, retError := e.historyCache.getOrCreateWorkflowExecutionWithTimeout(ctx, domainID, execution)
+	if retError != nil {
+		return retError
+	}
+	defer func() { release(retError) }()
+	msBuilder, retError := context.loadWorkflowExecution()
+	if retError != nil {
+		return retError
+	}
+	if msBuilder.GetEventStoreVersion() != persistence.EventStoreVersionV2 {
+		return &workflow.BadRequestError{
+			Message: fmt.Sprintf("reset API is not supported for V1 history events"),
+		}
+	}
+
+	return nil
+}
+
 type updateWorkflowAction struct {
 	deleteWorkflow bool
 	createDecision bool
