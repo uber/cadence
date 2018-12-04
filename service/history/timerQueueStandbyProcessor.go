@@ -49,7 +49,8 @@ type (
 	}
 )
 
-func newTimerQueueStandbyProcessor(shard ShardContext, historyService *historyEngineImpl, clusterName string, logger bark.Logger) *timerQueueStandbyProcessorImpl {
+func newTimerQueueStandbyProcessor(shard ShardContext, historyService *historyEngineImpl, clusterName string,
+	taskAllocator taskAllocator, logger bark.Logger) *timerQueueStandbyProcessorImpl {
 	timeNow := func() time.Time {
 		return shard.GetCurrentTime(clusterName)
 	}
@@ -60,7 +61,7 @@ func newTimerQueueStandbyProcessor(shard ShardContext, historyService *historyEn
 		logging.TagWorkflowCluster: clusterName,
 	})
 	timerTaskFilter := func(timer *persistence.TimerTaskInfo) (bool, error) {
-		return verifyStandbyTask(shard, logger, clusterName, timer.DomainID, timer)
+		return taskAllocator.verifyStandbyTask(clusterName, timer.DomainID, timer)
 	}
 
 	timerGate := NewRemoteTimerGate()
@@ -90,6 +91,7 @@ func newTimerQueueStandbyProcessor(shard ShardContext, historyService *historyEn
 			shard,
 			historyService,
 			timerQueueAckMgr,
+			timerGate,
 			shard.GetConfig().TimerProcessorMaxPollRPS,
 			shard.GetConfig().TimerProcessorStartDelay,
 			logger,
@@ -110,10 +112,6 @@ func (t *timerQueueStandbyProcessorImpl) Stop() {
 
 func (t *timerQueueStandbyProcessorImpl) getTimerFiredCount() uint64 {
 	return t.timerQueueProcessorBase.getTimerFiredCount()
-}
-
-func (t *timerQueueStandbyProcessorImpl) getTimerGate() TimerGate {
-	return t.timerGate
 }
 
 func (t *timerQueueStandbyProcessorImpl) setCurrentTime(currentTime time.Time) {
