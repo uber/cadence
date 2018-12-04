@@ -33,14 +33,14 @@ import (
 	"strings"
 )
 
-// WorkflowService_TerminateWorkflowExecution_Args represents the arguments for the WorkflowService.TerminateWorkflowExecution function.
+// WorkflowService_ResetWorkflowExecution_Args represents the arguments for the WorkflowService.ResetWorkflowExecution function.
 //
-// The arguments for TerminateWorkflowExecution are sent and received over the wire as this struct.
-type WorkflowService_TerminateWorkflowExecution_Args struct {
-	ResetRequest *shared.ResetWorkflowExecutionRequest `json:"resetRequest,omitempty"`
+// The arguments for ResetWorkflowExecution are sent and received over the wire as this struct.
+type WorkflowService_ResetWorkflowExecution_Args struct {
+	TerminateRequest *shared.TerminateWorkflowExecutionRequest `json:"terminateRequest,omitempty"`
 }
 
-// ToWire translates a WorkflowService_TerminateWorkflowExecution_Args struct into a Thrift-level intermediate
+// ToWire translates a WorkflowService_ResetWorkflowExecution_Args struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
 // into bytes using a ThriftRW protocol implementation.
 //
@@ -55,7 +55,7 @@ type WorkflowService_TerminateWorkflowExecution_Args struct {
 //   if err := binaryProtocol.Encode(x, writer); err != nil {
 //     return err
 //   }
-func (v *WorkflowService_TerminateWorkflowExecution_Args) ToWire() (wire.Value, error) {
+func (v *WorkflowService_ResetWorkflowExecution_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
 		i      int = 0
@@ -63,8 +63,8 @@ func (v *WorkflowService_TerminateWorkflowExecution_Args) ToWire() (wire.Value, 
 		err    error
 	)
 
-	if v.ResetRequest != nil {
-		w, err = v.ResetRequest.ToWire()
+	if v.TerminateRequest != nil {
+		w, err = v.TerminateRequest.ToWire()
 		if err != nil {
 			return w, err
 		}
@@ -75,17 +75,17 @@ func (v *WorkflowService_TerminateWorkflowExecution_Args) ToWire() (wire.Value, 
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _ResetWorkflowExecutionRequest_Read(w wire.Value) (*shared.ResetWorkflowExecutionRequest, error) {
-	var v shared.ResetWorkflowExecutionRequest
+func _TerminateWorkflowExecutionRequest_Read(w wire.Value) (*shared.TerminateWorkflowExecutionRequest, error) {
+	var v shared.TerminateWorkflowExecutionRequest
 	err := v.FromWire(w)
 	return &v, err
 }
 
-// FromWire deserializes a WorkflowService_TerminateWorkflowExecution_Args struct from its Thrift-level
+// FromWire deserializes a WorkflowService_ResetWorkflowExecution_Args struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.
 //
-// An error is returned if we were unable to build a WorkflowService_TerminateWorkflowExecution_Args struct
+// An error is returned if we were unable to build a WorkflowService_ResetWorkflowExecution_Args struct
 // from the provided intermediate representation.
 //
 //   x, err := binaryProtocol.Decode(reader, wire.TStruct)
@@ -93,19 +93,19 @@ func _ResetWorkflowExecutionRequest_Read(w wire.Value) (*shared.ResetWorkflowExe
 //     return nil, err
 //   }
 //
-//   var v WorkflowService_TerminateWorkflowExecution_Args
+//   var v WorkflowService_ResetWorkflowExecution_Args
 //   if err := v.FromWire(x); err != nil {
 //     return nil, err
 //   }
 //   return &v, nil
-func (v *WorkflowService_TerminateWorkflowExecution_Args) FromWire(w wire.Value) error {
+func (v *WorkflowService_ResetWorkflowExecution_Args) FromWire(w wire.Value) error {
 	var err error
 
 	for _, field := range w.GetStruct().Fields {
 		switch field.ID {
 		case 1:
 			if field.Value.Type() == wire.TStruct {
-				v.ResetRequest, err = _ResetWorkflowExecutionRequest_Read(field.Value)
+				v.TerminateRequest, err = _TerminateWorkflowExecutionRequest_Read(field.Value)
 				if err != nil {
 					return err
 				}
@@ -117,34 +117,34 @@ func (v *WorkflowService_TerminateWorkflowExecution_Args) FromWire(w wire.Value)
 	return nil
 }
 
-// String returns a readable string representation of a WorkflowService_TerminateWorkflowExecution_Args
+// String returns a readable string representation of a WorkflowService_ResetWorkflowExecution_Args
 // struct.
-func (v *WorkflowService_TerminateWorkflowExecution_Args) String() string {
+func (v *WorkflowService_ResetWorkflowExecution_Args) String() string {
 	if v == nil {
 		return "<nil>"
 	}
 
 	var fields [1]string
 	i := 0
-	if v.ResetRequest != nil {
-		fields[i] = fmt.Sprintf("ResetRequest: %v", v.ResetRequest)
+	if v.TerminateRequest != nil {
+		fields[i] = fmt.Sprintf("TerminateRequest: %v", v.TerminateRequest)
 		i++
 	}
 
-	return fmt.Sprintf("WorkflowService_TerminateWorkflowExecution_Args{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("WorkflowService_ResetWorkflowExecution_Args{%v}", strings.Join(fields[:i], ", "))
 }
 
-// Equals returns true if all the fields of this WorkflowService_TerminateWorkflowExecution_Args match the
-// provided WorkflowService_TerminateWorkflowExecution_Args.
+// Equals returns true if all the fields of this WorkflowService_ResetWorkflowExecution_Args match the
+// provided WorkflowService_ResetWorkflowExecution_Args.
 //
 // This function performs a deep comparison.
-func (v *WorkflowService_TerminateWorkflowExecution_Args) Equals(rhs *WorkflowService_TerminateWorkflowExecution_Args) bool {
+func (v *WorkflowService_ResetWorkflowExecution_Args) Equals(rhs *WorkflowService_ResetWorkflowExecution_Args) bool {
 	if v == nil {
 		return rhs == nil
 	} else if rhs == nil {
 		return false
 	}
-	if !((v.ResetRequest == nil && rhs.ResetRequest == nil) || (v.ResetRequest != nil && rhs.ResetRequest != nil && v.ResetRequest.Equals(rhs.ResetRequest))) {
+	if !((v.TerminateRequest == nil && rhs.TerminateRequest == nil) || (v.TerminateRequest != nil && rhs.TerminateRequest != nil && v.TerminateRequest.Equals(rhs.TerminateRequest))) {
 		return false
 	}
 
@@ -152,22 +152,22 @@ func (v *WorkflowService_TerminateWorkflowExecution_Args) Equals(rhs *WorkflowSe
 }
 
 // MarshalLogObject implements zapcore.ObjectMarshaler, enabling
-// fast logging of WorkflowService_TerminateWorkflowExecution_Args.
-func (v *WorkflowService_TerminateWorkflowExecution_Args) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+// fast logging of WorkflowService_ResetWorkflowExecution_Args.
+func (v *WorkflowService_ResetWorkflowExecution_Args) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
 	if v == nil {
 		return nil
 	}
-	if v.ResetRequest != nil {
-		err = multierr.Append(err, enc.AddObject("resetRequest", v.ResetRequest))
+	if v.TerminateRequest != nil {
+		err = multierr.Append(err, enc.AddObject("terminateRequest", v.TerminateRequest))
 	}
 	return err
 }
 
-// GetResetRequest returns the value of ResetRequest if it is set or its
+// GetTerminateRequest returns the value of TerminateRequest if it is set or its
 // zero value if it is unset.
-func (v *WorkflowService_TerminateWorkflowExecution_Args) GetResetRequest() (o *shared.ResetWorkflowExecutionRequest) {
-	if v.ResetRequest != nil {
-		return v.ResetRequest
+func (v *WorkflowService_ResetWorkflowExecution_Args) GetTerminateRequest() (o *shared.TerminateWorkflowExecutionRequest) {
+	if v.TerminateRequest != nil {
+		return v.TerminateRequest
 	}
 
 	return
@@ -176,74 +176,74 @@ func (v *WorkflowService_TerminateWorkflowExecution_Args) GetResetRequest() (o *
 // MethodName returns the name of the Thrift function as specified in
 // the IDL, for which this struct represent the arguments.
 //
-// This will always be "TerminateWorkflowExecution" for this struct.
-func (v *WorkflowService_TerminateWorkflowExecution_Args) MethodName() string {
-	return "TerminateWorkflowExecution"
+// This will always be "ResetWorkflowExecution" for this struct.
+func (v *WorkflowService_ResetWorkflowExecution_Args) MethodName() string {
+	return "ResetWorkflowExecution"
 }
 
 // EnvelopeType returns the kind of value inside this struct.
 //
 // This will always be Call for this struct.
-func (v *WorkflowService_TerminateWorkflowExecution_Args) EnvelopeType() wire.EnvelopeType {
+func (v *WorkflowService_ResetWorkflowExecution_Args) EnvelopeType() wire.EnvelopeType {
 	return wire.Call
 }
 
-// WorkflowService_TerminateWorkflowExecution_Helper provides functions that aid in handling the
-// parameters and return values of the WorkflowService.TerminateWorkflowExecution
+// WorkflowService_ResetWorkflowExecution_Helper provides functions that aid in handling the
+// parameters and return values of the WorkflowService.ResetWorkflowExecution
 // function.
-var WorkflowService_TerminateWorkflowExecution_Helper = struct {
-	// Args accepts the parameters of TerminateWorkflowExecution in-order and returns
+var WorkflowService_ResetWorkflowExecution_Helper = struct {
+	// Args accepts the parameters of ResetWorkflowExecution in-order and returns
 	// the arguments struct for the function.
 	Args func(
-		resetRequest *shared.ResetWorkflowExecutionRequest,
-	) *WorkflowService_TerminateWorkflowExecution_Args
+		terminateRequest *shared.TerminateWorkflowExecutionRequest,
+	) *WorkflowService_ResetWorkflowExecution_Args
 
 	// IsException returns true if the given error can be thrown
-	// by TerminateWorkflowExecution.
+	// by ResetWorkflowExecution.
 	//
-	// An error can be thrown by TerminateWorkflowExecution only if the
+	// An error can be thrown by ResetWorkflowExecution only if the
 	// corresponding exception type was mentioned in the 'throws'
 	// section for it in the Thrift file.
 	IsException func(error) bool
 
-	// WrapResponse returns the result struct for TerminateWorkflowExecution
+	// WrapResponse returns the result struct for ResetWorkflowExecution
 	// given the error returned by it. The provided error may
-	// be nil if TerminateWorkflowExecution did not fail.
+	// be nil if ResetWorkflowExecution did not fail.
 	//
-	// This allows mapping errors returned by TerminateWorkflowExecution into a
+	// This allows mapping errors returned by ResetWorkflowExecution into a
 	// serializable result struct. WrapResponse returns a
 	// non-nil error if the provided error cannot be thrown by
-	// TerminateWorkflowExecution
+	// ResetWorkflowExecution
 	//
-	//   err := TerminateWorkflowExecution(args)
-	//   result, err := WorkflowService_TerminateWorkflowExecution_Helper.WrapResponse(err)
+	//   err := ResetWorkflowExecution(args)
+	//   result, err := WorkflowService_ResetWorkflowExecution_Helper.WrapResponse(err)
 	//   if err != nil {
-	//     return fmt.Errorf("unexpected error from TerminateWorkflowExecution: %v", err)
+	//     return fmt.Errorf("unexpected error from ResetWorkflowExecution: %v", err)
 	//   }
 	//   serialize(result)
-	WrapResponse func(error) (*WorkflowService_TerminateWorkflowExecution_Result, error)
+	WrapResponse func(error) (*WorkflowService_ResetWorkflowExecution_Result, error)
 
-	// UnwrapResponse takes the result struct for TerminateWorkflowExecution
+	// UnwrapResponse takes the result struct for ResetWorkflowExecution
 	// and returns the erorr returned by it (if any).
 	//
-	// The error is non-nil only if TerminateWorkflowExecution threw an
+	// The error is non-nil only if ResetWorkflowExecution threw an
 	// exception.
 	//
 	//   result := deserialize(bytes)
-	//   err := WorkflowService_TerminateWorkflowExecution_Helper.UnwrapResponse(result)
-	UnwrapResponse func(*WorkflowService_TerminateWorkflowExecution_Result) error
+	//   err := WorkflowService_ResetWorkflowExecution_Helper.UnwrapResponse(result)
+	UnwrapResponse func(*WorkflowService_ResetWorkflowExecution_Result) error
 }{}
 
 func init() {
-	WorkflowService_TerminateWorkflowExecution_Helper.Args = func(
-		resetRequest *shared.ResetWorkflowExecutionRequest,
-	) *WorkflowService_TerminateWorkflowExecution_Args {
-		return &WorkflowService_TerminateWorkflowExecution_Args{
-			ResetRequest: resetRequest,
+	WorkflowService_ResetWorkflowExecution_Helper.Args = func(
+		terminateRequest *shared.TerminateWorkflowExecutionRequest,
+	) *WorkflowService_ResetWorkflowExecution_Args {
+		return &WorkflowService_ResetWorkflowExecution_Args{
+			TerminateRequest: terminateRequest,
 		}
 	}
 
-	WorkflowService_TerminateWorkflowExecution_Helper.IsException = func(err error) bool {
+	WorkflowService_ResetWorkflowExecution_Helper.IsException = func(err error) bool {
 		switch err.(type) {
 		case *shared.BadRequestError:
 			return true
@@ -262,47 +262,47 @@ func init() {
 		}
 	}
 
-	WorkflowService_TerminateWorkflowExecution_Helper.WrapResponse = func(err error) (*WorkflowService_TerminateWorkflowExecution_Result, error) {
+	WorkflowService_ResetWorkflowExecution_Helper.WrapResponse = func(err error) (*WorkflowService_ResetWorkflowExecution_Result, error) {
 		if err == nil {
-			return &WorkflowService_TerminateWorkflowExecution_Result{}, nil
+			return &WorkflowService_ResetWorkflowExecution_Result{}, nil
 		}
 
 		switch e := err.(type) {
 		case *shared.BadRequestError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_TerminateWorkflowExecution_Result.BadRequestError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_ResetWorkflowExecution_Result.BadRequestError")
 			}
-			return &WorkflowService_TerminateWorkflowExecution_Result{BadRequestError: e}, nil
+			return &WorkflowService_ResetWorkflowExecution_Result{BadRequestError: e}, nil
 		case *shared.InternalServiceError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_TerminateWorkflowExecution_Result.InternalServiceError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_ResetWorkflowExecution_Result.InternalServiceError")
 			}
-			return &WorkflowService_TerminateWorkflowExecution_Result{InternalServiceError: e}, nil
+			return &WorkflowService_ResetWorkflowExecution_Result{InternalServiceError: e}, nil
 		case *shared.EntityNotExistsError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_TerminateWorkflowExecution_Result.EntityNotExistError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_ResetWorkflowExecution_Result.EntityNotExistError")
 			}
-			return &WorkflowService_TerminateWorkflowExecution_Result{EntityNotExistError: e}, nil
+			return &WorkflowService_ResetWorkflowExecution_Result{EntityNotExistError: e}, nil
 		case *shared.ServiceBusyError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_TerminateWorkflowExecution_Result.ServiceBusyError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_ResetWorkflowExecution_Result.ServiceBusyError")
 			}
-			return &WorkflowService_TerminateWorkflowExecution_Result{ServiceBusyError: e}, nil
+			return &WorkflowService_ResetWorkflowExecution_Result{ServiceBusyError: e}, nil
 		case *shared.DomainNotActiveError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_TerminateWorkflowExecution_Result.DomainNotActiveError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_ResetWorkflowExecution_Result.DomainNotActiveError")
 			}
-			return &WorkflowService_TerminateWorkflowExecution_Result{DomainNotActiveError: e}, nil
+			return &WorkflowService_ResetWorkflowExecution_Result{DomainNotActiveError: e}, nil
 		case *shared.LimitExceededError:
 			if e == nil {
-				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_TerminateWorkflowExecution_Result.LimitExceededError")
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for WorkflowService_ResetWorkflowExecution_Result.LimitExceededError")
 			}
-			return &WorkflowService_TerminateWorkflowExecution_Result{LimitExceededError: e}, nil
+			return &WorkflowService_ResetWorkflowExecution_Result{LimitExceededError: e}, nil
 		}
 
 		return nil, err
 	}
-	WorkflowService_TerminateWorkflowExecution_Helper.UnwrapResponse = func(result *WorkflowService_TerminateWorkflowExecution_Result) (err error) {
+	WorkflowService_ResetWorkflowExecution_Helper.UnwrapResponse = func(result *WorkflowService_ResetWorkflowExecution_Result) (err error) {
 		if result.BadRequestError != nil {
 			err = result.BadRequestError
 			return
@@ -332,10 +332,10 @@ func init() {
 
 }
 
-// WorkflowService_TerminateWorkflowExecution_Result represents the result of a WorkflowService.TerminateWorkflowExecution function call.
+// WorkflowService_ResetWorkflowExecution_Result represents the result of a WorkflowService.ResetWorkflowExecution function call.
 //
-// The result of a TerminateWorkflowExecution execution is sent and received over the wire as this struct.
-type WorkflowService_TerminateWorkflowExecution_Result struct {
+// The result of a ResetWorkflowExecution execution is sent and received over the wire as this struct.
+type WorkflowService_ResetWorkflowExecution_Result struct {
 	BadRequestError      *shared.BadRequestError      `json:"badRequestError,omitempty"`
 	InternalServiceError *shared.InternalServiceError `json:"internalServiceError,omitempty"`
 	EntityNotExistError  *shared.EntityNotExistsError `json:"entityNotExistError,omitempty"`
@@ -344,7 +344,7 @@ type WorkflowService_TerminateWorkflowExecution_Result struct {
 	LimitExceededError   *shared.LimitExceededError   `json:"limitExceededError,omitempty"`
 }
 
-// ToWire translates a WorkflowService_TerminateWorkflowExecution_Result struct into a Thrift-level intermediate
+// ToWire translates a WorkflowService_ResetWorkflowExecution_Result struct into a Thrift-level intermediate
 // representation. This intermediate representation may be serialized
 // into bytes using a ThriftRW protocol implementation.
 //
@@ -359,7 +359,7 @@ type WorkflowService_TerminateWorkflowExecution_Result struct {
 //   if err := binaryProtocol.Encode(x, writer); err != nil {
 //     return err
 //   }
-func (v *WorkflowService_TerminateWorkflowExecution_Result) ToWire() (wire.Value, error) {
+func (v *WorkflowService_ResetWorkflowExecution_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [6]wire.Field
 		i      int = 0
@@ -417,17 +417,17 @@ func (v *WorkflowService_TerminateWorkflowExecution_Result) ToWire() (wire.Value
 	}
 
 	if i > 1 {
-		return wire.Value{}, fmt.Errorf("WorkflowService_TerminateWorkflowExecution_Result should have at most one field: got %v fields", i)
+		return wire.Value{}, fmt.Errorf("WorkflowService_ResetWorkflowExecution_Result should have at most one field: got %v fields", i)
 	}
 
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-// FromWire deserializes a WorkflowService_TerminateWorkflowExecution_Result struct from its Thrift-level
+// FromWire deserializes a WorkflowService_ResetWorkflowExecution_Result struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.
 //
-// An error is returned if we were unable to build a WorkflowService_TerminateWorkflowExecution_Result struct
+// An error is returned if we were unable to build a WorkflowService_ResetWorkflowExecution_Result struct
 // from the provided intermediate representation.
 //
 //   x, err := binaryProtocol.Decode(reader, wire.TStruct)
@@ -435,12 +435,12 @@ func (v *WorkflowService_TerminateWorkflowExecution_Result) ToWire() (wire.Value
 //     return nil, err
 //   }
 //
-//   var v WorkflowService_TerminateWorkflowExecution_Result
+//   var v WorkflowService_ResetWorkflowExecution_Result
 //   if err := v.FromWire(x); err != nil {
 //     return nil, err
 //   }
 //   return &v, nil
-func (v *WorkflowService_TerminateWorkflowExecution_Result) FromWire(w wire.Value) error {
+func (v *WorkflowService_ResetWorkflowExecution_Result) FromWire(w wire.Value) error {
 	var err error
 
 	for _, field := range w.GetStruct().Fields {
@@ -516,15 +516,15 @@ func (v *WorkflowService_TerminateWorkflowExecution_Result) FromWire(w wire.Valu
 		count++
 	}
 	if count > 1 {
-		return fmt.Errorf("WorkflowService_TerminateWorkflowExecution_Result should have at most one field: got %v fields", count)
+		return fmt.Errorf("WorkflowService_ResetWorkflowExecution_Result should have at most one field: got %v fields", count)
 	}
 
 	return nil
 }
 
-// String returns a readable string representation of a WorkflowService_TerminateWorkflowExecution_Result
+// String returns a readable string representation of a WorkflowService_ResetWorkflowExecution_Result
 // struct.
-func (v *WorkflowService_TerminateWorkflowExecution_Result) String() string {
+func (v *WorkflowService_ResetWorkflowExecution_Result) String() string {
 	if v == nil {
 		return "<nil>"
 	}
@@ -556,14 +556,14 @@ func (v *WorkflowService_TerminateWorkflowExecution_Result) String() string {
 		i++
 	}
 
-	return fmt.Sprintf("WorkflowService_TerminateWorkflowExecution_Result{%v}", strings.Join(fields[:i], ", "))
+	return fmt.Sprintf("WorkflowService_ResetWorkflowExecution_Result{%v}", strings.Join(fields[:i], ", "))
 }
 
-// Equals returns true if all the fields of this WorkflowService_TerminateWorkflowExecution_Result match the
-// provided WorkflowService_TerminateWorkflowExecution_Result.
+// Equals returns true if all the fields of this WorkflowService_ResetWorkflowExecution_Result match the
+// provided WorkflowService_ResetWorkflowExecution_Result.
 //
 // This function performs a deep comparison.
-func (v *WorkflowService_TerminateWorkflowExecution_Result) Equals(rhs *WorkflowService_TerminateWorkflowExecution_Result) bool {
+func (v *WorkflowService_ResetWorkflowExecution_Result) Equals(rhs *WorkflowService_ResetWorkflowExecution_Result) bool {
 	if v == nil {
 		return rhs == nil
 	} else if rhs == nil {
@@ -592,8 +592,8 @@ func (v *WorkflowService_TerminateWorkflowExecution_Result) Equals(rhs *Workflow
 }
 
 // MarshalLogObject implements zapcore.ObjectMarshaler, enabling
-// fast logging of WorkflowService_TerminateWorkflowExecution_Result.
-func (v *WorkflowService_TerminateWorkflowExecution_Result) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+// fast logging of WorkflowService_ResetWorkflowExecution_Result.
+func (v *WorkflowService_ResetWorkflowExecution_Result) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
 	if v == nil {
 		return nil
 	}
@@ -620,7 +620,7 @@ func (v *WorkflowService_TerminateWorkflowExecution_Result) MarshalLogObject(enc
 
 // GetBadRequestError returns the value of BadRequestError if it is set or its
 // zero value if it is unset.
-func (v *WorkflowService_TerminateWorkflowExecution_Result) GetBadRequestError() (o *shared.BadRequestError) {
+func (v *WorkflowService_ResetWorkflowExecution_Result) GetBadRequestError() (o *shared.BadRequestError) {
 	if v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -630,7 +630,7 @@ func (v *WorkflowService_TerminateWorkflowExecution_Result) GetBadRequestError()
 
 // GetInternalServiceError returns the value of InternalServiceError if it is set or its
 // zero value if it is unset.
-func (v *WorkflowService_TerminateWorkflowExecution_Result) GetInternalServiceError() (o *shared.InternalServiceError) {
+func (v *WorkflowService_ResetWorkflowExecution_Result) GetInternalServiceError() (o *shared.InternalServiceError) {
 	if v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -640,7 +640,7 @@ func (v *WorkflowService_TerminateWorkflowExecution_Result) GetInternalServiceEr
 
 // GetEntityNotExistError returns the value of EntityNotExistError if it is set or its
 // zero value if it is unset.
-func (v *WorkflowService_TerminateWorkflowExecution_Result) GetEntityNotExistError() (o *shared.EntityNotExistsError) {
+func (v *WorkflowService_ResetWorkflowExecution_Result) GetEntityNotExistError() (o *shared.EntityNotExistsError) {
 	if v.EntityNotExistError != nil {
 		return v.EntityNotExistError
 	}
@@ -650,7 +650,7 @@ func (v *WorkflowService_TerminateWorkflowExecution_Result) GetEntityNotExistErr
 
 // GetServiceBusyError returns the value of ServiceBusyError if it is set or its
 // zero value if it is unset.
-func (v *WorkflowService_TerminateWorkflowExecution_Result) GetServiceBusyError() (o *shared.ServiceBusyError) {
+func (v *WorkflowService_ResetWorkflowExecution_Result) GetServiceBusyError() (o *shared.ServiceBusyError) {
 	if v.ServiceBusyError != nil {
 		return v.ServiceBusyError
 	}
@@ -660,7 +660,7 @@ func (v *WorkflowService_TerminateWorkflowExecution_Result) GetServiceBusyError(
 
 // GetDomainNotActiveError returns the value of DomainNotActiveError if it is set or its
 // zero value if it is unset.
-func (v *WorkflowService_TerminateWorkflowExecution_Result) GetDomainNotActiveError() (o *shared.DomainNotActiveError) {
+func (v *WorkflowService_ResetWorkflowExecution_Result) GetDomainNotActiveError() (o *shared.DomainNotActiveError) {
 	if v.DomainNotActiveError != nil {
 		return v.DomainNotActiveError
 	}
@@ -670,7 +670,7 @@ func (v *WorkflowService_TerminateWorkflowExecution_Result) GetDomainNotActiveEr
 
 // GetLimitExceededError returns the value of LimitExceededError if it is set or its
 // zero value if it is unset.
-func (v *WorkflowService_TerminateWorkflowExecution_Result) GetLimitExceededError() (o *shared.LimitExceededError) {
+func (v *WorkflowService_ResetWorkflowExecution_Result) GetLimitExceededError() (o *shared.LimitExceededError) {
 	if v.LimitExceededError != nil {
 		return v.LimitExceededError
 	}
@@ -681,14 +681,14 @@ func (v *WorkflowService_TerminateWorkflowExecution_Result) GetLimitExceededErro
 // MethodName returns the name of the Thrift function as specified in
 // the IDL, for which this struct represent the result.
 //
-// This will always be "TerminateWorkflowExecution" for this struct.
-func (v *WorkflowService_TerminateWorkflowExecution_Result) MethodName() string {
-	return "TerminateWorkflowExecution"
+// This will always be "ResetWorkflowExecution" for this struct.
+func (v *WorkflowService_ResetWorkflowExecution_Result) MethodName() string {
+	return "ResetWorkflowExecution"
 }
 
 // EnvelopeType returns the kind of value inside this struct.
 //
 // This will always be Reply for this struct.
-func (v *WorkflowService_TerminateWorkflowExecution_Result) EnvelopeType() wire.EnvelopeType {
+func (v *WorkflowService_ResetWorkflowExecution_Result) EnvelopeType() wire.EnvelopeType {
 	return wire.Reply
 }

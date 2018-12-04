@@ -114,6 +114,11 @@ type Interface interface {
 		ResetRequest *shared.ResetStickyTaskListRequest,
 	) (*shared.ResetStickyTaskListResponse, error)
 
+	ResetWorkflowExecution(
+		ctx context.Context,
+		TerminateRequest *shared.TerminateWorkflowExecutionRequest,
+	) error
+
 	RespondActivityTaskCanceled(
 		ctx context.Context,
 		CanceledRequest *shared.RespondActivityTaskCanceledRequest,
@@ -176,7 +181,7 @@ type Interface interface {
 
 	TerminateWorkflowExecution(
 		ctx context.Context,
-		TerminateRequest *shared.TerminateWorkflowExecutionRequest,
+		ResetRequest *shared.ResetWorkflowExecutionRequest,
 	) error
 
 	UpdateDomain(
@@ -373,6 +378,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
+				Name: "ResetWorkflowExecution",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.ResetWorkflowExecution),
+				},
+				Signature:    "ResetWorkflowExecution(TerminateRequest *shared.TerminateWorkflowExecutionRequest)",
+				ThriftModule: cadence.ThriftModule,
+			},
+
+			thrift.Method{
 				Name: "RespondActivityTaskCanceled",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -511,7 +527,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Type:  transport.Unary,
 					Unary: thrift.UnaryHandler(h.TerminateWorkflowExecution),
 				},
-				Signature:    "TerminateWorkflowExecution(TerminateRequest *shared.TerminateWorkflowExecutionRequest)",
+				Signature:    "TerminateWorkflowExecution(ResetRequest *shared.ResetWorkflowExecutionRequest)",
 				ThriftModule: cadence.ThriftModule,
 			},
 
@@ -528,7 +544,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 30)
+	procedures := make([]transport.Procedure, 0, 31)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
@@ -839,6 +855,25 @@ func (h handler) ResetStickyTaskList(ctx context.Context, body wire.Value) (thri
 	return response, err
 }
 
+func (h handler) ResetWorkflowExecution(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args cadence.WorkflowService_ResetWorkflowExecution_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	err := h.impl.ResetWorkflowExecution(ctx, args.TerminateRequest)
+
+	hadError := err != nil
+	result, err := cadence.WorkflowService_ResetWorkflowExecution_Helper.WrapResponse(err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
 func (h handler) RespondActivityTaskCanceled(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args cadence.WorkflowService_RespondActivityTaskCanceled_Args
 	if err := args.FromWire(body); err != nil {
@@ -1073,7 +1108,7 @@ func (h handler) TerminateWorkflowExecution(ctx context.Context, body wire.Value
 		return thrift.Response{}, err
 	}
 
-	err := h.impl.TerminateWorkflowExecution(ctx, args.TerminateRequest)
+	err := h.impl.TerminateWorkflowExecution(ctx, args.ResetRequest)
 
 	hadError := err != nil
 	result, err := cadence.WorkflowService_TerminateWorkflowExecution_Helper.WrapResponse(err)

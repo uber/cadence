@@ -378,10 +378,25 @@ service WorkflowService {
     )
 
   /**
-  * TerminateWorkflowExecution terminates an existing workflow execution by recording WorkflowExecutionTerminated event
+    * ResetWorkflowExecution reset an existing workflow execution by a firstEventID of a existing event batch
+    * in the history and immediately terminating the current execution instance.
+    * After reset, the history will grow from nextFirstEventID.
+    **/
+  void TerminateWorkflowExecution(1: shared.ResetWorkflowExecutionRequest resetRequest)
+    throws (
+      1: shared.BadRequestError badRequestError,
+      2: shared.InternalServiceError internalServiceError,
+      3: shared.EntityNotExistsError entityNotExistError,
+      4: shared.ServiceBusyError serviceBusyError,
+      5: shared.DomainNotActiveError domainNotActiveError,
+      6: shared.LimitExceededError limitExceededError,
+    )
+
+  /**
+  * ResetWorkflowExecution terminates an existing workflow execution by recording WorkflowExecutionTerminated event
   * in the history and immediately terminating the execution instance.
   **/
-  void TerminateWorkflowExecution(1: shared.TerminateWorkflowExecutionRequest terminateRequest)
+  void ResetWorkflowExecution(1: shared.TerminateWorkflowExecutionRequest terminateRequest)
     throws (
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,

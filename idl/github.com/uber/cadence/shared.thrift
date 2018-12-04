@@ -1071,6 +1071,13 @@ struct TerminateWorkflowExecutionRequest {
   50: optional string identity
 }
 
+struct ResetWorkflowExecutionRequest {
+  10: optional string domain
+  20: optional WorkflowExecution workflowExecution
+  30: optional string reason
+  40: optional i64 (js.type = "Long") nextFirstEventId
+}
+
 struct ListOpenWorkflowExecutionsRequest {
   10: optional string domain
   20: optional i32 maximumPageSize

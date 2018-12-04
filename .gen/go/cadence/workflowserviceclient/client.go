@@ -132,6 +132,12 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*shared.ResetStickyTaskListResponse, error)
 
+	ResetWorkflowExecution(
+		ctx context.Context,
+		TerminateRequest *shared.TerminateWorkflowExecutionRequest,
+		opts ...yarpc.CallOption,
+	) error
+
 	RespondActivityTaskCanceled(
 		ctx context.Context,
 		CanceledRequest *shared.RespondActivityTaskCanceledRequest,
@@ -206,7 +212,7 @@ type Interface interface {
 
 	TerminateWorkflowExecution(
 		ctx context.Context,
-		TerminateRequest *shared.TerminateWorkflowExecutionRequest,
+		ResetRequest *shared.ResetWorkflowExecutionRequest,
 		opts ...yarpc.CallOption,
 	) error
 
@@ -609,6 +615,29 @@ func (c client) ResetStickyTaskList(
 	return
 }
 
+func (c client) ResetWorkflowExecution(
+	ctx context.Context,
+	_TerminateRequest *shared.TerminateWorkflowExecutionRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := cadence.WorkflowService_ResetWorkflowExecution_Helper.Args(_TerminateRequest)
+
+	var body wire.Value
+	body, err = c.c.Call(ctx, args, opts...)
+	if err != nil {
+		return
+	}
+
+	var result cadence.WorkflowService_ResetWorkflowExecution_Result
+	if err = result.FromWire(body); err != nil {
+		return
+	}
+
+	err = cadence.WorkflowService_ResetWorkflowExecution_Helper.UnwrapResponse(&result)
+	return
+}
+
 func (c client) RespondActivityTaskCanceled(
 	ctx context.Context,
 	_CanceledRequest *shared.RespondActivityTaskCanceledRequest,
@@ -887,11 +916,11 @@ func (c client) StartWorkflowExecution(
 
 func (c client) TerminateWorkflowExecution(
 	ctx context.Context,
-	_TerminateRequest *shared.TerminateWorkflowExecutionRequest,
+	_ResetRequest *shared.ResetWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
 ) (err error) {
 
-	args := cadence.WorkflowService_TerminateWorkflowExecution_Helper.Args(_TerminateRequest)
+	args := cadence.WorkflowService_TerminateWorkflowExecution_Helper.Args(_ResetRequest)
 
 	var body wire.Value
 	body, err = c.c.Call(ctx, args, opts...)

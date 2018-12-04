@@ -187,6 +187,11 @@ struct TerminateWorkflowExecutionRequest {
   20: optional shared.TerminateWorkflowExecutionRequest terminateRequest
 }
 
+struct ResetWorkflowExecutionRequest {
+  10: optional string domainUUID
+  20: optional shared.ResetWorkflowExecutionRequest resetRequest
+}
+
 struct RequestCancelWorkflowExecutionRequest {
   10: optional string domainUUID
   20: optional shared.RequestCancelWorkflowExecutionRequest cancelRequest
@@ -509,6 +514,22 @@ service HistoryService {
   * in the history and immediately terminating the execution instance.
   **/
   void TerminateWorkflowExecution(1: TerminateWorkflowExecutionRequest terminateRequest)
+    throws (
+      1: shared.BadRequestError badRequestError,
+      2: shared.InternalServiceError internalServiceError,
+      3: shared.EntityNotExistsError entityNotExistError,
+      4: ShardOwnershipLostError shardOwnershipLostError,
+      5: shared.DomainNotActiveError domainNotActiveError,
+      6: shared.LimitExceededError limitExceededError,
+      7: shared.ServiceBusyError serviceBusyError,
+    )
+
+  /**
+  * ResetWorkflowExecution reset an existing workflow execution by a firstEventID of a existing event batch
+  * in the history and immediately terminating the current execution instance.
+  * After reset, the history will grow from nextFirstEventID.
+  **/
+  void ResetWorkflowExecution(1: ResetWorkflowExecutionRequest resetRequest)
     throws (
       1: shared.BadRequestError badRequestError,
       2: shared.InternalServiceError internalServiceError,
