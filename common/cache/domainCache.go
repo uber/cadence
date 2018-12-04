@@ -83,15 +83,15 @@ type (
 	domainCache struct {
 		status          int32
 		shutdownChan    chan struct{}
-		cacheNameToID   Cache
-		cacheByID       Cache
+		cacheNameToID   *atomic.Value
+		cacheByID       *atomic.Value
 		metadataMgr     persistence.MetadataManager
 		clusterMetadata cluster.Metadata
 		timeSource      common.TimeSource
 		metricsClient   metrics.Client
 		logger          bark.Logger
 
-		sync.RWMutex
+		callbackLock     sync.Mutex
 		prepareCallbacks map[int]PrepareCallbackFn
 		callbacks        map[int]CallbackFn
 	}
@@ -117,15 +117,11 @@ type (
 
 // NewDomainCache creates a new instance of cache for holding onto domain information to reduce the load on persistence
 func NewDomainCache(metadataMgr persistence.MetadataManager, clusterMetadata cluster.Metadata, metricsClient metrics.Client, logger bark.Logger) DomainCache {
-	opts := &Options{}
-	opts.InitialCapacity = domainCacheInitialSize
-	opts.TTL = domainCacheTTL
-
-	return &domainCache{
+	cache := &domainCache{
 		status:           domainCacheInitialized,
 		shutdownChan:     make(chan struct{}),
-		cacheNameToID:    New(domainCacheMaxSize, opts),
-		cacheByID:        New(domainCacheMaxSize, opts),
+		cacheNameToID:    &atomic.Value{},
+		cacheByID:        &atomic.Value{},
 		metadataMgr:      metadataMgr,
 		clusterMetadata:  clusterMetadata,
 		timeSource:       common.NewRealTimeSource(),
@@ -134,6 +130,17 @@ func NewDomainCache(metadataMgr persistence.MetadataManager, clusterMetadata clu
 		prepareCallbacks: make(map[int]PrepareCallbackFn),
 		callbacks:        make(map[int]CallbackFn),
 	}
+	cache.cacheNameToID.Store(newDomainCache())
+	cache.cacheByID.Store(newDomainCache())
+
+	return cache
+}
+
+func newDomainCache() Cache {
+	opts := &Options{}
+	opts.InitialCapacity = domainCacheInitialSize
+	opts.TTL = domainCacheTTL
+	return New(domainCacheMaxSize, opts)
 }
 
 func newDomainCacheEntry(clusterMetadata cluster.Metadata) *DomainCacheEntry {
@@ -148,7 +155,7 @@ func NewDomainCacheEntryWithInfo(info *persistence.DomainInfo) *DomainCacheEntry
 }
 
 func (c *domainCache) GetCacheSize() (sizeOfCacheByName int64, sizeOfCacheByID int64) {
-	return int64(c.cacheByID.Size()), int64(c.cacheNameToID.Size())
+	return int64(c.cacheByID.Load().(Cache).Size()), int64(c.cacheNameToID.Load().(Cache).Size())
 }
 
 // Start start the background refresh of domain
@@ -172,7 +179,7 @@ func (c *domainCache) Stop() {
 
 func (c *domainCache) GetAllDomain() map[string]*DomainCacheEntry {
 	result := make(map[string]*DomainCacheEntry)
-	ite := c.cacheByID.Iterator()
+	ite := c.cacheByID.Load().(Cache).Iterator()
 	defer ite.Close()
 
 	for ite.HasNext() {
@@ -193,10 +200,10 @@ func (c *domainCache) GetAllDomain() map[string]*DomainCacheEntry {
 // afterCallback will be invoked when NOT holding the domain cache lock.
 func (c *domainCache) RegisterDomainChangeCallback(shard int, initialNotificationVersion int64,
 	prepareCallback PrepareCallbackFn, callback CallbackFn) {
-	c.Lock()
+	c.callbackLock.Lock()
 	c.prepareCallbacks[shard] = prepareCallback
 	c.callbacks[shard] = callback
-	c.Unlock()
+	c.callbackLock.Unlock()
 
 	// this section is trying to make the shard catch up with domain changes
 	domains := DomainCacheEntries{}
@@ -224,8 +231,8 @@ func (c *domainCache) RegisterDomainChangeCallback(shard int, initialNotificatio
 
 // UnregisterDomainChangeCallback delete a domain failover callback
 func (c *domainCache) UnregisterDomainChangeCallback(shard int) {
-	c.Lock()
-	defer c.Unlock()
+	c.callbackLock.Lock()
+	defer c.callbackLock.Unlock()
 
 	delete(c.prepareCallbacks, shard)
 	delete(c.callbacks, shard)
@@ -312,9 +319,14 @@ func (c *domainCache) refreshDomains() error {
 	prevEntries := []*DomainCacheEntry{}
 	nextEntries := []*DomainCacheEntry{}
 
-	c.RLock()
-	defer c.RUnlock()
-	c.triggerDomainChangePrepareCallback()
+	// make a copy of the existing domain cache, so we can calaulate diff and do compare and swap
+	newCacheNameToID := newDomainCache()
+	newCacheByID := newDomainCache()
+	for _, domain := range c.GetAllDomain() {
+		newCacheNameToID.Put(domain.info.Name, domain.info.ID)
+		newCacheByID.Put(domain.info.ID, domain)
+	}
+
 UpdateLoop:
 	for _, domain := range domains {
 		if domain.notificationVersion >= domainNotificationVersion {
@@ -325,18 +337,24 @@ UpdateLoop:
 			// will be loaded into cache in the next refresh
 			break UpdateLoop
 		}
-		prevEntry, nextEntry, err := c.updateIDToDomainCache(domain.info.ID, domain)
+		prevEntry, nextEntry, err := c.updateIDToDomainCache(newCacheByID, domain.info.ID, domain)
 		if err != nil {
-			return nil
+			return err
 		}
-		c.updateNameToIDCache(nextEntry.info.Name, nextEntry.info.ID)
+		c.updateNameToIDCache(newCacheNameToID, nextEntry.info.Name, nextEntry.info.ID)
 		if prevEntry != nil {
+
 			prevEntries = append(prevEntries, prevEntry)
 			nextEntries = append(nextEntries, nextEntry)
 		}
 	}
-	c.triggerDomainChangeCallback(prevEntries, nextEntries)
 
+	c.callbackLock.Lock()
+	defer c.callbackLock.Unlock()
+	c.triggerDomainChangePrepareCallbackLocked()
+	c.cacheByID.Store(newCacheByID)
+	c.cacheNameToID.Store(newCacheNameToID)
+	c.triggerDomainChangeCallbackLocked(prevEntries, nextEntries)
 	return nil
 }
 
@@ -363,12 +381,12 @@ func (c *domainCache) loadDomain(name string, id string) (*persistence.GetDomain
 	return resp, err
 }
 
-func (c *domainCache) updateNameToIDCache(name string, id string) {
-	c.cacheNameToID.Put(name, id)
+func (c *domainCache) updateNameToIDCache(cacheNameToID Cache, name string, id string) {
+	cacheNameToID.Put(name, id)
 }
 
-func (c *domainCache) updateIDToDomainCache(id string, record *DomainCacheEntry) (*DomainCacheEntry, *DomainCacheEntry, error) {
-	elem, err := c.cacheByID.PutIfNotExist(id, newDomainCacheEntry(c.clusterMetadata))
+func (c *domainCache) updateIDToDomainCache(cacheByID Cache, id string, record *DomainCacheEntry) (*DomainCacheEntry, *DomainCacheEntry, error) {
+	elem, err := cacheByID.PutIfNotExist(id, newDomainCacheEntry(c.clusterMetadata))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -405,7 +423,7 @@ func (c *domainCache) updateIDToDomainCache(id string, record *DomainCacheEntry)
 // getDomain retrieves the information from the cache if it exists, otherwise retrieves the information from metadata
 // store and writes it to the cache with an expiry before returning back
 func (c *domainCache) getDomain(name string) (*DomainCacheEntry, error) {
-	id, cacheHit := c.cacheNameToID.Get(name).(string)
+	id, cacheHit := c.cacheNameToID.Load().(Cache).Get(name).(string)
 	if cacheHit {
 		return c.getDomainByID(id)
 	}
@@ -415,11 +433,11 @@ func (c *domainCache) getDomain(name string) (*DomainCacheEntry, error) {
 		return nil, err
 	}
 	id = record.Info.ID
-	_, newEntry, err := c.updateIDToDomainCache(id, c.buildEntryFromRecord(record))
+	_, newEntry, err := c.updateIDToDomainCache(c.cacheByID.Load().(Cache), id, c.buildEntryFromRecord(record))
 	if err != nil {
 		return nil, err
 	}
-	c.updateNameToIDCache(name, id)
+	c.updateNameToIDCache(c.cacheNameToID.Load().(Cache), name, id)
 	return newEntry, nil
 }
 
@@ -429,7 +447,7 @@ func (c *domainCache) getDomainByID(id string) (*DomainCacheEntry, error) {
 	now := c.timeSource.Now()
 	var result *DomainCacheEntry
 
-	entry, cacheHit := c.cacheByID.Get(id).(*DomainCacheEntry)
+	entry, cacheHit := c.cacheByID.Load().(Cache).Get(id).(*DomainCacheEntry)
 	if cacheHit {
 		// Found the information in the cache, lets check if it needs to be refreshed before returning back
 		entry.RLock()
@@ -456,7 +474,7 @@ func (c *domainCache) getDomainByID(id string) (*DomainCacheEntry, error) {
 		return nil, err
 	}
 
-	_, newEntry, err := c.updateIDToDomainCache(id, c.buildEntryFromRecord(record))
+	_, newEntry, err := c.updateIDToDomainCache(c.cacheByID.Load().(Cache), id, c.buildEntryFromRecord(record))
 	if err != nil {
 		// err updating, use the existing record if record is valid
 		// i.e. expiry is set
@@ -469,11 +487,11 @@ func (c *domainCache) getDomainByID(id string) (*DomainCacheEntry, error) {
 		}
 		return nil, err
 	}
-	c.updateNameToIDCache(newEntry.GetInfo().Name, id)
+	c.updateNameToIDCache(c.cacheNameToID.Load().(Cache), newEntry.GetInfo().Name, id)
 	return newEntry, nil
 }
 
-func (c *domainCache) triggerDomainChangePrepareCallback() {
+func (c *domainCache) triggerDomainChangePrepareCallbackLocked() {
 	sw := c.metricsClient.StartTimer(metrics.DomainCacheScope, metrics.DomainCachePrepareCallbacksLatency)
 	defer sw.Stop()
 
@@ -482,7 +500,7 @@ func (c *domainCache) triggerDomainChangePrepareCallback() {
 	}
 }
 
-func (c *domainCache) triggerDomainChangeCallback(prevDomains []*DomainCacheEntry, nextDomains []*DomainCacheEntry) {
+func (c *domainCache) triggerDomainChangeCallbackLocked(prevDomains []*DomainCacheEntry, nextDomains []*DomainCacheEntry) {
 	sw := c.metricsClient.StartTimer(metrics.DomainCacheScope, metrics.DomainCacheCallbacksLatency)
 	defer sw.Stop()
 
@@ -535,6 +553,7 @@ func (entry *DomainCacheEntry) duplicate() *DomainCacheEntry {
 	result.isGlobalDomain = entry.isGlobalDomain
 	result.failoverNotificationVersion = entry.failoverNotificationVersion
 	result.notificationVersion = entry.notificationVersion
+	result.expiry = entry.expiry
 	return result
 }
 

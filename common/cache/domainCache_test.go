@@ -24,6 +24,7 @@ import (
 	"os"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/pborman/uuid"
 	log "github.com/sirupsen/logrus"
@@ -157,22 +158,26 @@ func (s *domainCacheSuite) TestListDomain() {
 
 	entryByName1, err := s.domainCache.GetDomain(domainRecord1.Info.Name)
 	s.Nil(err)
-	s.Equal(entry1, entryByName1)
+	s.Equal(entry1, s.clearExpiry(entryByName1))
 	entryByID1, err := s.domainCache.GetDomainByID(domainRecord1.Info.ID)
 	s.Nil(err)
-	s.Equal(entry1, entryByID1)
+	s.Equal(entry1, s.clearExpiry(entryByID1))
 
 	entryByName2, err := s.domainCache.GetDomain(domainRecord2.Info.Name)
 	s.Nil(err)
-	s.Equal(entry2, entryByName2)
+	s.Equal(entry2, s.clearExpiry(entryByName2))
 	entryByID2, err := s.domainCache.GetDomainByID(domainRecord2.Info.ID)
 	s.Nil(err)
-	s.Equal(entry2, entryByID2)
+	s.Equal(entry2, s.clearExpiry(entryByID2))
 
+	allDomains := s.domainCache.GetAllDomain()
+	for _, domain := range allDomains {
+		s.clearExpiry(domain)
+	}
 	s.Equal(map[string]*DomainCacheEntry{
 		entry1.GetInfo().ID: entry1,
 		entry2.GetInfo().ID: entry2,
-	}, s.domainCache.GetAllDomain())
+	}, allDomains)
 }
 
 func (s *domainCacheSuite) TestGetDomain_NonLoaded_GetByName() {
@@ -195,10 +200,10 @@ func (s *domainCacheSuite) TestGetDomain_NonLoaded_GetByName() {
 
 	entryByName, err := s.domainCache.GetDomain(domainRecord.Info.Name)
 	s.Nil(err)
-	s.Equal(entry, entryByName)
+	s.Equal(entry, s.clearExpiry(entryByName))
 	entryByName, err = s.domainCache.GetDomain(domainRecord.Info.Name)
 	s.Nil(err)
-	s.Equal(entry, entryByName)
+	s.Equal(entry, s.clearExpiry(entryByName))
 }
 
 func (s *domainCacheSuite) TestGetDomain_NonLoaded_GetByID() {
@@ -221,10 +226,10 @@ func (s *domainCacheSuite) TestGetDomain_NonLoaded_GetByID() {
 
 	entryByID, err := s.domainCache.GetDomainByID(domainRecord.Info.ID)
 	s.Nil(err)
-	s.Equal(entry, entryByID)
+	s.Equal(entry, s.clearExpiry(entryByID))
 	entryByID, err = s.domainCache.GetDomainByID(domainRecord.Info.ID)
 	s.Nil(err)
-	s.Equal(entry, entryByID)
+	s.Equal(entry, s.clearExpiry(entryByID))
 }
 
 func (s *domainCacheSuite) TestRegisterCallback_CatchUp() {
@@ -299,6 +304,9 @@ func (s *domainCacheSuite) TestRegisterCallback_CatchUp() {
 
 	// the order matters here, should be ordered by notification version
 	s.True(prepareCallbacckInvoked)
+	for _, domain := range entriesNotification {
+		s.clearExpiry(domain)
+	}
 	s.Equal([]*DomainCacheEntry{entry1, entry2}, entriesNotification)
 }
 
@@ -424,6 +432,12 @@ func (s *domainCacheSuite) TestUpdateCache_ListTrigger() {
 	// making sure notifying from lower to higher version helps the shard to keep track the
 	// domain change events
 	s.True(prepareCallbacckInvoked)
+	for _, domain := range entriesOld {
+		s.clearExpiry(domain)
+	}
+	for _, domain := range entriesNew {
+		s.clearExpiry(domain)
+	}
 	s.Equal([]*DomainCacheEntry{entry2Old, entry1Old}, entriesOld)
 	s.Equal([]*DomainCacheEntry{entry2New, entry1New}, entriesNew)
 }
@@ -462,7 +476,7 @@ func (s *domainCacheSuite) TestUpdateCache_GetNotTrigger() {
 	s.metadataMgr.On("GetDomain", &persistence.GetDomainRequest{ID: entryOld.info.ID}).Return(domainRecordOld, nil).Once()
 	entry, err := s.domainCache.GetDomainByID(entryOld.info.ID)
 	s.Nil(err)
-	s.Equal(entryOld, entry)
+	s.Equal(entryOld, s.clearExpiry(entry))
 
 	prepareCallbackInvoked := false
 	callbackInvoked := false
@@ -479,10 +493,10 @@ func (s *domainCacheSuite) TestUpdateCache_GetNotTrigger() {
 		},
 	)
 
-	prevEntry, nextEntry, err := s.domainCache.updateIDToDomainCache(domainRecordNew.Info.ID, entryNew)
+	prevEntry, nextEntry, err := s.domainCache.updateIDToDomainCache(s.domainCache.cacheByID.Load().(Cache), domainRecordNew.Info.ID, entryNew)
 	s.Nil(err)
 	s.Nil(prevEntry)
-	s.Equal(entryNew, nextEntry)
+	s.Equal(entryNew, s.clearExpiry(nextEntry))
 	s.False(prepareCallbackInvoked)
 	s.False(callbackInvoked)
 }
@@ -520,7 +534,7 @@ func (s *domainCacheSuite) TestGetUpdateCache_ConcurrentAccess() {
 		// make the config version the same so we can easily compare those
 		entryNew.configVersion = 0
 		entryNew.failoverVersion = 0
-		s.Equal(entryOld, entryNew)
+		s.Equal(entryOld, s.clearExpiry(entryNew))
 		waitGroup.Done()
 	}
 
@@ -530,7 +544,7 @@ func (s *domainCacheSuite) TestGetUpdateCache_ConcurrentAccess() {
 		s.Nil(err)
 		entryNew.configVersion = entryNew.configVersion + 1
 		entryNew.failoverVersion = entryNew.failoverVersion + 1
-		s.domainCache.updateIDToDomainCache(id, entryNew)
+		s.domainCache.updateIDToDomainCache(s.domainCache.cacheNameToID.Load().(Cache), id, entryNew)
 		waitGroup.Done()
 	}
 
@@ -562,6 +576,11 @@ func (s *domainCacheSuite) buildEntryFromRecord(record *persistence.GetDomainRes
 	newEntry.failoverNotificationVersion = record.FailoverNotificationVersion
 	newEntry.notificationVersion = record.NotificationVersion
 	return newEntry
+}
+
+func (s *domainCacheSuite) clearExpiry(entry *DomainCacheEntry) *DomainCacheEntry {
+	entry.expiry = time.Time{}
+	return entry
 }
 
 func Test_GetRetentionDays(t *testing.T) {
