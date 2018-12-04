@@ -98,6 +98,7 @@ type ListByPrefixRequest struct {
 	Limit    int
 }
 
+// ListByPrefixResult is result of ListByPrefix
 type ListByPrefixResult struct {
 	Prefixes map[PrefixPath]*PrefixMetadata
 	Blobs    map[BlobPath]*BlobMetadata

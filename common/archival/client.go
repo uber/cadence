@@ -1,3 +1,23 @@
+// Copyright (c) 2017 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
 package archival
 
 import (
@@ -17,7 +37,7 @@ type Client interface {
 	Archive(
 		ctx context.Context,
 		domainName string,
-		domainId string,
+		domainID string,
 		workflowInfo *shared.WorkflowExecutionInfo,
 		history *shared.History,
 	) error
@@ -38,6 +58,7 @@ type client struct {
 	bClient         blobstore.Client
 }
 
+// NewClient returns a new archival client
 func NewClient(deploymentGroup string, bClient blobstore.Client) Client {
 	return &client{
 		deploymentGroup: deploymentGroup,
@@ -48,11 +69,11 @@ func NewClient(deploymentGroup string, bClient blobstore.Client) Client {
 func (c *client) Archive(
 	ctx context.Context,
 	domainName string,
-	domainId string,
+	domainID string,
 	workflowInfo *shared.WorkflowExecutionInfo,
 	history *shared.History,
 ) error {
-	bucketName := blobstore.ConstructBucketName(c.deploymentGroup, domainId)
+	bucketName := blobstore.ConstructBucketName(c.deploymentGroup, domainID)
 	ok, err := c.bClient.BucketExists(ctx, bucketName)
 	if err != nil {
 		return err
@@ -68,7 +89,7 @@ func (c *client) Archive(
 	if err != nil {
 		return err
 	}
-	return c.uploadBlobs(ctx, domainName, domainId, data, bucketName, workflowInfo)
+	return c.uploadBlobs(ctx, domainName, domainID, data, bucketName, workflowInfo)
 }
 
 func (c *client) GetWorkflowExecutionHistory(
@@ -97,28 +118,28 @@ func (c *client) serializeHistory(*shared.History) ([]byte, error) {
 func (c *client) uploadBlobs(
 	ctx context.Context,
 	domainName string,
-	domainId string,
+	domainID string,
 	data []byte,
 	bucketName blobstore.BucketName,
 	workflowInfo *shared.WorkflowExecutionInfo,
 ) error {
 
-	workflowId := *workflowInfo.Execution.WorkflowId
-	runId := *workflowInfo.Execution.RunId
+	workflowID := *workflowInfo.Execution.WorkflowId
+	runID := *workflowInfo.Execution.RunId
 
 	tags := map[string]string{
-		workflowIdTag:     workflowId,
-		runIdTag:          runId,
+		workflowIDTag:     workflowID,
+		runIDTag:          runID,
 		workflowTypeTag:   *workflowInfo.Type.Name,
 		workflowStatusTag: workflowInfo.CloseStatus.String(),
 		domainNameTag:     domainName,
-		domainIdTag:       domainId,
+		domainIDTag:       domainID,
 		closeTimeTag:      strconv.FormatInt(*workflowInfo.CloseTime, 10),
 		startTimeTag:      strconv.FormatInt(*workflowInfo.StartTime, 10),
 		historyLengthTag:  strconv.FormatInt(*workflowInfo.HistoryLength, 10),
 	}
 
-	historyBlobPath := blobstore.ConstructBlobPath(workflowId, runId)
+	historyBlobPath := blobstore.ConstructBlobPath(workflowID, runID)
 	historyBlobReq := &blobstore.UploadBlobRequest{
 		PrefixesListable: false,
 		Blob: &blobstore.Blob{
@@ -151,17 +172,17 @@ func (c *client) uploadBlobs(
 	return nil
 }
 
-func (c *client) constructIndexBlobPaths(workflowInfo *shared.WorkflowExecutionInfo) map[IndexBlobPath]blobstore.BlobPath {
-	workflowId := *workflowInfo.Execution.WorkflowId
-	runId := *workflowInfo.Execution.RunId
+func (c *client) constructIndexBlobPaths(workflowInfo *shared.WorkflowExecutionInfo) map[indexBlobPath]blobstore.BlobPath {
+	workflowID := *workflowInfo.Execution.WorkflowId
+	runID := *workflowInfo.Execution.RunId
 	dayYear, second := parse(time.Now())
 
-	paths := make(map[IndexBlobPath]blobstore.BlobPath)
-	paths[WorkflowByTimePath] = blobstore.ConstructBlobPath(dayYear, second, workflowId, runId)
-	paths[WorkflowPath] = blobstore.ConstructBlobPath(shardDir(workflowId), shardDir(reverse(workflowId)),
-		workflowId, dayYear, second, runId)
-	paths[WorkflowTypePath] = blobstore.ConstructBlobPath(workflowInfo.Type.String(), dayYear, second, workflowId, runId)
-	paths[WorkflowStatusPath] = blobstore.ConstructBlobPath(workflowInfo.CloseStatus.String(), dayYear, second, workflowId, runId)
+	paths := make(map[indexBlobPath]blobstore.BlobPath)
+	paths[workflowByTimePath] = blobstore.ConstructBlobPath(dayYear, second, workflowID, runID)
+	paths[workflowPath] = blobstore.ConstructBlobPath(shardDir(workflowID), shardDir(reverse(workflowID)),
+		workflowID, dayYear, second, runID)
+	paths[workflowTypePath] = blobstore.ConstructBlobPath(workflowInfo.Type.String(), dayYear, second, workflowID, runID)
+	paths[workflowStatusPath] = blobstore.ConstructBlobPath(workflowInfo.CloseStatus.String(), dayYear, second, workflowID, runID)
 	return paths
 }
 
