@@ -1813,6 +1813,47 @@ func (wh *WorkflowHandler) TerminateWorkflowExecution(ctx context.Context,
 	return nil
 }
 
+// ResetWorkflowExecution reset an existing workflow execution to the nextFirstEventID
+// in the history and immediately terminating the current execution instance.
+func (wh *WorkflowHandler) ResetWorkflowExecution(ctx context.Context,
+	resetRequest *gen.ResetWorkflowExecutionRequest) error {
+
+	scope := metrics.FrontendResetWorkflowExecutionScope
+	sw := wh.startRequestProfile(scope)
+	defer sw.Stop()
+
+	if resetRequest == nil {
+		return wh.error(errRequestNotSet, scope)
+	}
+
+	if ok, _ := wh.rateLimiter.TryConsume(1); !ok {
+		return wh.error(createServiceBusyError(), scope)
+	}
+
+	if resetRequest.GetDomain() == "" {
+		return wh.error(errDomainNotSet, scope)
+	}
+
+	if err := wh.validateExecutionAndEmitMetrics(resetRequest.WorkflowExecution, scope); err != nil {
+		return err
+	}
+
+	domainID, err := wh.domainCache.GetDomainID(resetRequest.GetDomain())
+	if err != nil {
+		return wh.error(err, scope)
+	}
+
+	err = wh.history.ResetWorkflowExecution(ctx, &h.ResetWorkflowExecutionRequest{
+		DomainUUID:   common.StringPtr(domainID),
+		ResetRequest: resetRequest,
+	})
+	if err != nil {
+		return wh.error(err, scope)
+	}
+
+	return nil
+}
+
 // RequestCancelWorkflowExecution - requests to cancel a workflow execution
 func (wh *WorkflowHandler) RequestCancelWorkflowExecution(
 	ctx context.Context,

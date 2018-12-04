@@ -404,7 +404,8 @@ const (
 	FrontendResetStickyTaskListScope
 	// FrontendListDomainsScope is the metric scope for frontend.ListDomain
 	FrontendListDomainsScope
-
+	// FrontendResetWorkflowExecutionScope is the metric scope for frontend.ResetWorkflowExecution
+	FrontendResetWorkflowExecutionScope
 	NumFrontendScopes
 )
 
@@ -550,7 +551,8 @@ const (
 	SessionSizeStatsScope
 	// SessionCountStatsScope is the scope used for emiting session update count related stats
 	SessionCountStatsScope
-
+	// HistoryResetWorkflowExecutionScope tracks ResetWorkflowExecution API calls received by service
+	HistoryResetWorkflowExecutionScope
 	NumHistoryScopes
 )
 
@@ -728,6 +730,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FrontendSignalWorkflowExecutionScope:          {operation: "SignalWorkflowExecution"},
 		FrontendSignalWithStartWorkflowExecutionScope: {operation: "SignalWithStartWorkflowExecution"},
 		FrontendTerminateWorkflowExecutionScope:       {operation: "TerminateWorkflowExecution"},
+		FrontendResetWorkflowExecutionScope:           {operation: "ResetWorkflowExecution"},
 		FrontendRequestCancelWorkflowExecutionScope:   {operation: "RequestCancelWorkflowExecution"},
 		FrontendListOpenWorkflowExecutionsScope:       {operation: "ListOpenWorkflowExecutions"},
 		FrontendListClosedWorkflowExecutionsScope:     {operation: "ListClosedWorkflowExecutions"},
@@ -759,6 +762,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistorySignalWithStartWorkflowExecutionScope: {operation: "SignalWithStartWorkflowExecution"},
 		HistoryRemoveSignalMutableStateScope:         {operation: "RemoveSignalMutableState"},
 		HistoryTerminateWorkflowExecutionScope:       {operation: "TerminateWorkflowExecution"},
+		HistoryResetWorkflowExecutionScope:           {operation: "ResetWorkflowExecution"},
 		HistoryScheduleDecisionTaskScope:             {operation: "ScheduleDecisionTask"},
 		HistoryRecordChildExecutionCompletedScope:    {operation: "RecordChildExecutionCompleted"},
 		HistoryRequestCancelWorkflowExecutionScope:   {operation: "RequestCancelWorkflowExecution"},

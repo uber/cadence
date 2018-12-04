@@ -23,9 +23,10 @@ package history
 import (
 	"context"
 	"fmt"
+	"sync"
+
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/common/logging"
-	"sync"
 
 	"github.com/pborman/uuid"
 	"github.com/uber/cadence/.gen/go/health"
@@ -897,6 +898,41 @@ func (h *Handler) TerminateWorkflowExecution(ctx context.Context,
 	}
 
 	err2 := engine.TerminateWorkflowExecution(ctx, wrappedRequest)
+	if err2 != nil {
+		return h.error(err2, scope, domainID, workflowID)
+	}
+
+	return nil
+}
+
+// ResetWorkflowExecution reset an existing workflow execution
+// in the history and immediately terminating the execution instance.
+func (h *Handler) ResetWorkflowExecution(ctx context.Context,
+	wrappedRequest *hist.ResetWorkflowExecutionRequest) error {
+	h.startWG.Wait()
+
+	scope := metrics.HistoryResetWorkflowExecutionScope
+	h.metricsClient.IncCounter(scope, metrics.CadenceRequests)
+	sw := h.metricsClient.StartTimer(scope, metrics.CadenceLatency)
+	defer sw.Stop()
+
+	domainID := wrappedRequest.GetDomainUUID()
+	if domainID == "" {
+		return h.error(errDomainNotSet, scope, domainID, "")
+	}
+
+	if ok, _ := h.rateLimiter.TryConsume(1); !ok {
+		return h.error(errHistoryHostThrottle, scope, domainID, "")
+	}
+
+	workflowExecution := wrappedRequest.ResetRequest.WorkflowExecution
+	workflowID := workflowExecution.GetWorkflowId()
+	engine, err1 := h.controller.GetEngine(workflowID)
+	if err1 != nil {
+		return h.error(err1, scope, domainID, workflowID)
+	}
+
+	err2 := engine.ResetWorkflowExecution(ctx, wrappedRequest)
 	if err2 != nil {
 		return h.error(err2, scope, domainID, workflowID)
 	}

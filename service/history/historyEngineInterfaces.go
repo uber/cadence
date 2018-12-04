@@ -70,6 +70,7 @@ type (
 			*workflow.StartWorkflowExecutionResponse, error)
 		RemoveSignalMutableState(ctx context.Context, request *h.RemoveSignalMutableStateRequest) error
 		TerminateWorkflowExecution(ctx context.Context, request *h.TerminateWorkflowExecutionRequest) error
+		ResetWorkflowExecution(ctx context.Context, request *h.ResetWorkflowExecutionRequest) error
 		ScheduleDecisionTask(ctx context.Context, request *h.ScheduleDecisionTaskRequest) error
 		RecordChildExecutionCompleted(ctx context.Context, request *h.RecordChildExecutionCompletedRequest) error
 		ReplicateEvents(ctx context.Context, request *h.ReplicateEventsRequest) error
