@@ -71,5 +71,5 @@ const (
 	// GetHistoryWarnSizeLimit is the threshold for emitting warn log
 	GetHistoryWarnSizeLimit = 500 * 1024 // Warn when size goes over 500KB
 	// GetHistoryMaxPageSize is the max page size for get history
-	GetHistoryMaxPageSize = 1000 // Warn when page size bigger than 1000
+	GetHistoryMaxPageSize = 1000
 )
