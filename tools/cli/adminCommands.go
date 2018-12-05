@@ -103,7 +103,7 @@ func AdminShowWorkflow(c *cli.Context) {
 		ErrorAndExit("no events", nil)
 	}
 	for idx, b := range history {
-		fmt.Printf("batch %v, blob len: %v \n", idx, len(b.Data))
+		fmt.Printf("======== batch %v, blob len: %v ======\n", idx+1, len(b.Data))
 		historyBatch, err := serializer.DeserializeBatchEvents(b)
 		if err != nil {
 			ErrorAndExit("DeserializeBatchEvents err", err)
