@@ -23,7 +23,8 @@ package cli
 import (
 	"fmt"
 
-	"code.uber.internal/devexp/cadence-tools/.tmp/.go/goroot/src/encoding/json"
+	"encoding/json"
+
 	"github.com/gocql/gocql"
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/shared"
