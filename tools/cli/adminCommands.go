@@ -63,7 +63,8 @@ func AdminShowWorkflow(c *cli.Context) {
 	if len(wid) != 0 {
 		histV1 := cassp.NewHistoryPersistenceFromSession(session, bark.NewNopLogger())
 		resp, err := histV1.GetWorkflowExecutionHistory(&persistence.InternalGetWorkflowExecutionHistoryRequest{
-			DomainID: domainID,
+			LastEventBatchVersion: common.EmptyVersion,
+			DomainID:              domainID,
 			Execution: shared.WorkflowExecution{
 				WorkflowId: common.StringPtr(wid),
 				RunId:      common.StringPtr(rid),
