@@ -23,12 +23,12 @@ package archival
 import (
 	"context"
 	"errors"
-	"go.uber.org/cadence/.gen/go/shared"
+	"github.com/uber/cadence/.gen/go/shared"
 	"time"
 )
 
-// ArchiveRequest is request for Archive
-type ArchiveRequest struct {
+// PutRequest is request for Archive
+type PutRequest struct {
 	DomainName   string
 	DomainID     string
 	WorkflowID   string
@@ -41,7 +41,7 @@ type ArchiveRequest struct {
 
 // Client is used to store and retrieve blobs
 type Client interface {
-	Archive(ctx context.Context, request *ArchiveRequest) error
+	PutWorkflow(ctx context.Context, request *PutRequest) error
 
 	GetWorkflowExecutionHistory(
 		ctx context.Context,
@@ -56,7 +56,7 @@ type Client interface {
 
 type nopClient struct{}
 
-func (c *nopClient) Archive(ctx context.Context, request *ArchiveRequest) error {
+func (c *nopClient) PutWorkflow(ctx context.Context, request *PutRequest) error {
 	return errors.New("not implemented")
 }
 
