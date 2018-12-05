@@ -1,7 +1,7 @@
 ---
 layout: doc
 title: Glossary
-weight: 3
+weight: 100
 ---
 
 # Cadence glossary
