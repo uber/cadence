@@ -1076,6 +1076,7 @@ struct ResetWorkflowExecutionRequest {
   20: optional WorkflowExecution workflowExecution
   30: optional string reason
   40: optional i64 (js.type = "Long") nextFirstEventId
+  50: optional string requestId
 }
 
 struct ListOpenWorkflowExecutionsRequest {

@@ -74,28 +74,6 @@ func (m *historyV2ManagerImpl) ForkHistoryBranch(request *ForkHistoryBranchReque
 		return nil, err
 	}
 
-	// We read the forking node to validate the forking point.
-	// This is mostly correctly. But in some very rarely corner case, it can be incorrect because of corrupted history:
-	//		It is possible that the node we read exists, but it is a stale batch of events. Forking incorrectly can cause corrupted history.
-	// Therefore the safest way is to read from very beginning to validate the forking point. But it will be very complex and inefficient.
-	// Talking to team we can start with this implementation.
-	// If a customer run into this bug, we can do another reset(fork) to correct it.
-	readReq := &ReadHistoryBranchRequest{
-		BranchToken: request.ForkBranchToken,
-		MinEventID:  request.ForkNodeID,
-		MaxEventID:  request.ForkNodeID + 1,
-		PageSize:    1,
-	}
-	readResp, err := m.ReadHistoryBranch(readReq)
-	if err != nil {
-		return nil, err
-	}
-	if len(readResp.History) != 1 {
-		return nil, &InvalidPersistenceRequestError{
-			Msg: fmt.Sprintf("ForkNodeID is invalid: %v for %+v", request.ForkNodeID, forkBranch),
-		}
-	}
-
 	req := &InternalForkHistoryBranchRequest{
 		ForkBranchInfo: forkBranch,
 		ForkNodeID:     request.ForkNodeID,

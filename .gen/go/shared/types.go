@@ -25553,6 +25553,7 @@ type ResetWorkflowExecutionRequest struct {
 	WorkflowExecution *WorkflowExecution `json:"workflowExecution,omitempty"`
 	Reason            *string            `json:"reason,omitempty"`
 	NextFirstEventId  *int64             `json:"nextFirstEventId,omitempty"`
+	RequestId         *string            `json:"requestId,omitempty"`
 }
 
 // ToWire translates a ResetWorkflowExecutionRequest struct into a Thrift-level intermediate
@@ -25572,7 +25573,7 @@ type ResetWorkflowExecutionRequest struct {
 //   }
 func (v *ResetWorkflowExecutionRequest) ToWire() (wire.Value, error) {
 	var (
-		fields [4]wire.Field
+		fields [5]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -25608,6 +25609,14 @@ func (v *ResetWorkflowExecutionRequest) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 40, Value: w}
+		i++
+	}
+	if v.RequestId != nil {
+		w, err = wire.NewValueString(*(v.RequestId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 50, Value: w}
 		i++
 	}
 
@@ -25674,6 +25683,16 @@ func (v *ResetWorkflowExecutionRequest) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 50:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.RequestId = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -25687,7 +25706,7 @@ func (v *ResetWorkflowExecutionRequest) String() string {
 		return "<nil>"
 	}
 
-	var fields [4]string
+	var fields [5]string
 	i := 0
 	if v.Domain != nil {
 		fields[i] = fmt.Sprintf("Domain: %v", *(v.Domain))
@@ -25703,6 +25722,10 @@ func (v *ResetWorkflowExecutionRequest) String() string {
 	}
 	if v.NextFirstEventId != nil {
 		fields[i] = fmt.Sprintf("NextFirstEventId: %v", *(v.NextFirstEventId))
+		i++
+	}
+	if v.RequestId != nil {
+		fields[i] = fmt.Sprintf("RequestId: %v", *(v.RequestId))
 		i++
 	}
 
@@ -25731,6 +25754,9 @@ func (v *ResetWorkflowExecutionRequest) Equals(rhs *ResetWorkflowExecutionReques
 	if !_I64_EqualsPtr(v.NextFirstEventId, rhs.NextFirstEventId) {
 		return false
 	}
+	if !_String_EqualsPtr(v.RequestId, rhs.RequestId) {
+		return false
+	}
 
 	return true
 }
@@ -25752,6 +25778,9 @@ func (v *ResetWorkflowExecutionRequest) MarshalLogObject(enc zapcore.ObjectEncod
 	}
 	if v.NextFirstEventId != nil {
 		enc.AddInt64("nextFirstEventId", *v.NextFirstEventId)
+	}
+	if v.RequestId != nil {
+		enc.AddString("requestId", *v.RequestId)
 	}
 	return err
 }
@@ -25791,6 +25820,16 @@ func (v *ResetWorkflowExecutionRequest) GetReason() (o string) {
 func (v *ResetWorkflowExecutionRequest) GetNextFirstEventId() (o int64) {
 	if v.NextFirstEventId != nil {
 		return *v.NextFirstEventId
+	}
+
+	return
+}
+
+// GetRequestId returns the value of RequestId if it is set or its
+// zero value if it is unset.
+func (v *ResetWorkflowExecutionRequest) GetRequestId() (o string) {
+	if v.RequestId != nil {
+		return *v.RequestId
 	}
 
 	return
