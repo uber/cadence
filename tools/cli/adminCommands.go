@@ -23,6 +23,7 @@ package cli
 import (
 	"fmt"
 
+	"code.uber.internal/devexp/cadence-tools/.tmp/.go/goroot/src/encoding/json"
 	"github.com/gocql/gocql"
 	"github.com/uber-common/bark"
 	"github.com/uber/cadence/.gen/go/shared"
@@ -108,7 +109,11 @@ func AdminShowWorkflow(c *cli.Context) {
 			ErrorAndExit("DeserializeBatchEvents err", err)
 		}
 		for _, e := range historyBatch {
-			fmt.Println(e.String())
+			jsonstr, err := json.Marshal(e)
+			if err != nil {
+				ErrorAndExit("json.Marshal err", err)
+			}
+			fmt.Println(jsonstr)
 		}
 	}
 }
