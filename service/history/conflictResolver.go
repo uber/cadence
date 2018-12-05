@@ -119,7 +119,7 @@ func (r *conflictResolverImpl) reset(prevRunID string, requestID string, replayE
 		resetMutableStateBuilder.IncrementHistorySize(size)
 	}
 
-	// reset branchToken to the original one(they will be set to a wrong version in applyEvents for startEvent
+	// reset branchToken to the original one(it has been set to a wrong branchToken in applyEvents for startEvent)
 	resetMutableStateBuilder.executionInfo.BranchToken = branchToken
 	// Applying events to mutableState does not move the nextEventID.  Explicitly set nextEventID to new value
 	resetMutableStateBuilder.executionInfo.SetNextEventID(replayNextEventID)

@@ -2463,9 +2463,8 @@ func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetReq
 			if retError != nil {
 				return
 			}
+			resetMutableStateBuilder.executionInfo.SetLastFirstEventID(firstEvent.GetEventId())
 		}
-
-		resetMutableStateBuilder.executionInfo.SetLastFirstEventID(readResp.LastFirstEventID)
 		resetMutableStateBuilder.IncrementHistorySize(readResp.Size)
 	}
 
