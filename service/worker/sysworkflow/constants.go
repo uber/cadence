@@ -61,8 +61,7 @@ const (
 	// ArchivalActivityFnName name of archival activity function
 	ArchivalActivityFnName = "ArchivalActivity"
 
-	// SystemWorkflowFnName nservice/worker/sysworkflow/system_workflow.go
-	// ame of system workflow function
+	// SystemWorkflowFnName name of system workflow function
 	SystemWorkflowFnName = "SystemWorkflow"
 
 	// WorkflowStartToCloseTimeout is the time for the workflow to finish
@@ -77,7 +76,7 @@ type RequestType int
 
 const (
 	// ArchivalRequest is the archive signal identifier
-	ArchivalRequest = iota
+	ArchivalRequest RequestType = iota
 )
 
 type contextKey int
