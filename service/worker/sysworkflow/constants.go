@@ -24,9 +24,6 @@ import (
 	"time"
 )
 
-// RequestType is the type for signals that can be sent to system workflows
-type RequestType int
-
 const (
 	// Domain is the cadence system workflows domain
 	Domain = "cadence-system"
@@ -64,7 +61,8 @@ const (
 	// ArchivalActivityFnName name of archival activity function
 	ArchivalActivityFnName = "ArchivalActivity"
 
-	// SystemWorkflowFnName name of system workflow function
+	// SystemWorkflowFnName nservice/worker/sysworkflow/system_workflow.go
+	// ame of system workflow function
 	SystemWorkflowFnName = "SystemWorkflow"
 
 	// WorkflowStartToCloseTimeout is the time for the workflow to finish
@@ -72,7 +70,19 @@ const (
 
 	// DecisionTaskStartToCloseTimeout is the time for decision to finish
 	DecisionTaskStartToCloseTimeout = time.Minute
+)
 
+// RequestType is the type for signals that can be sent to system workflows
+type RequestType int
+
+const (
 	// ArchivalRequest is the archive signal identifier
 	ArchivalRequest = iota
+)
+
+type contextKey int
+
+const (
+	archivalClientKey contextKey = iota
+	frontendClientKey
 )
