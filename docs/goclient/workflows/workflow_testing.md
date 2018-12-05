@@ -1,6 +1,6 @@
 ---
 layout: doc
-itle: Testing workflows
+title: Testing workflows
 weight: 27
 ---
 
@@ -49,7 +49,8 @@ func (s *UnitTestSuite) Test_SimpleWorkflow_Success() {
 }
 
 func (s *UnitTestSuite) Test_SimpleWorkflow_ActivityParamCorrect() {
-        s.env.OnActivity(SimpleActivity, mock.Anything, mock.Anything).Return(func(ctx context.Context, value string) (string, error) {
+        s.env.OnActivity(SimpleActivity, mock.Anything, mock.Anything).Return(
+          func(ctx context.Context, value string) (string, error) {
                 s.Equal("test_success", value)
                 return value, nil
         })
@@ -60,7 +61,8 @@ func (s *UnitTestSuite) Test_SimpleWorkflow_ActivityParamCorrect() {
 }
 
 func (s *UnitTestSuite) Test_SimpleWorkflow_ActivityFails() {
-        s.env.OnActivity(SimpleActivity, mock.Anything, mock.Anything).Return("", errors.New("SimpleActivityFailure"))
+        s.env.OnActivity(SimpleActivity, mock.Anything, mock.Anything).Return(
+          "", errors.New("SimpleActivityFailure"))
         s.env.ExecuteWorkflow(SimpleWorkflow, "test_failure")
 
         s.True(s.env.IsWorkflowCompleted())
@@ -105,13 +107,13 @@ func (s *UnitTestSuite) Test_SimpleWorkflow_Success() {
 }
 ```
 Calling `s.env.ExecuteWorkflow(...)` executes the workflow logic and any invoked activities inside the
-test process. The first parameter of `s.env.ExecuteWorkflow(...)` contains the workfflow functions,
+test process. The first parameter of `s.env.ExecuteWorkflow(...)` contains the workflow functions,
 and any subsequent parameters contain values for custom input parameters declared by the workflow
 function.
 
-<p class ="callout info">Note that unless the activity invocations are mocked or activity implementation
-replaced (see [Activity mocking and overriding](#Activity-mocking-and-overriding)), the test environment
-will execute the actual activity code including any calls to outside services.</p>
+> Note that unless the activity invocations are mocked or activity implementation
+> replaced (see [Activity mocking and overriding](#activity-mocking-and-overriding)), the test environment
+> will execute the actual activity code including any calls to outside services.
 
 After executing the workflow in the above example, we assert that the workflow ran through completion
 via the call to `s.env.IsWorkflowComplete()`. We also asser that no errors were returned by asserting
@@ -131,7 +133,8 @@ Let's take a look at a test that simulates a test that fails via the "activity m
 
 ```go
 func (s *UnitTestSuite) Test_SimpleWorkflow_ActivityFails() {
-        s.env.OnActivity(SimpleActivity, mock.Anything, mock.Anything).Return("", errors.New("SimpleActivityFailure"))
+        s.env.OnActivity(SimpleActivity, mock.Anything, mock.Anything).Return(
+          "", errors.New("SimpleActivityFailure"))
         s.env.ExecuteWorkflow(SimpleWorkflow, "test_failure")
 
         s.True(s.env.IsWorkflowCompleted())
@@ -147,7 +150,8 @@ This test simulates the execution of the activity `SimpleActivity` that is invok
 for the `SimpleActivity` that returns an error.
 
 ```go
-s.env.OnActivity(SimpleActivity, mock.Anything, mock.Anything).Return("", errors.New("SimpleActivityFailure"))
+s.env.OnActivity(SimpleActivity, mock.Anything, mock.Anything).Return(
+  "", errors.New("SimpleActivityFailure"))
 ```
 With the mock set up we can now execute the workflow via the s.env.ExecuteWorkflow(...) method and
 assert that the workflow completed successfully and returned the expected error.
@@ -159,7 +163,8 @@ with the correct parameters.
 
 ```go
 func (s *UnitTestSuite) Test_SimpleWorkflow_ActivityParamCorrect() {
-        s.env.OnActivity(SimpleActivity, mock.Anything, mock.Anything).Return(func(ctx context.Context, value string) (string, error) {
+        s.env.OnActivity(SimpleActivity, mock.Anything, mock.Anything).Return(
+          func(ctx context.Context, value string) (string, error) {
                 s.Equal("test_success", value)
                 return value, nil
         })

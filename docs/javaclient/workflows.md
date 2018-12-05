@@ -125,6 +125,7 @@ public class FileProcessingWorkflowImpl implements FileProcessingWorkflow {
 If different activities need different options, like timeouts or a task list, multiple client-side stubs can be created
 with different options.
 
+```java
     public FileProcessingWorkflowImpl() {
         ActivityOptions options1 = new ActivityOptions.Builder()
                  .setTaskList("taskList1")
@@ -136,6 +137,7 @@ with different options.
                  .build();
         this.store2 = Workflow.newActivityStub(FileProcessingActivities.class, options2);
     }
+```
 
 ### Calling Activities Asynchronously
 
