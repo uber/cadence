@@ -220,7 +220,7 @@ func ErrorAndExit(msg string, err error) {
 	if err != nil {
 		fmt.Printf("%s %s\n%s %+v\n", colorRed("Error:"), msg, colorMagenta("Error Details:"), err)
 		if os.Getenv(showErrorStackEnv) != `` {
-			fmt.Print(colorMagenta("Stack trace:"))
+			fmt.Printf("Stack trace:\n")
 			debug.PrintStack()
 		} else {
 			fmt.Printf("('export %s=1' to see stack traces)\n", showErrorStackEnv)
