@@ -448,8 +448,19 @@ Update_History_Loop:
 					msBuilder.UpdateActivity(ai)
 					updateState = true
 
-					t.logger.Debugf("%s: Adding Activity Timeout: with timeout: %v sec, ExpiryTime: %s, TimeoutType: %v, EventID: %v",
-						time.Now(), td.TimeoutSec, at.VisibilityTimestamp, td.TimeoutType.String(), at.EventID)
+					// Emit log if timer is created within a second
+					if t.now().Add(time.Second).After(td.TimerSequenceID.VisibilityTimestamp) {
+						t.logger.WithFields(bark.Fields{
+							logging.TagDomainID:            msBuilder.GetExecutionInfo().DomainID,
+							logging.TagWorkflowExecutionID: msBuilder.GetExecutionInfo().WorkflowID,
+							logging.TagWorkflowRunID:       msBuilder.GetExecutionInfo().RunID,
+							logging.TagScheduleID:          ai.ScheduleID,
+							logging.TagAttempt:             ai.Attempt,
+							logging.TagVersion:             ai.Version,
+							logging.TagTimerTaskStatus:     ai.TimerTaskStatus,
+							logging.TagTimeoutType:         td.TimeoutType,
+						}).Info("Next timer is created to fire within one second")
+					}
 				}
 
 				// Done!

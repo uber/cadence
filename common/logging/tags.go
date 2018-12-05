@@ -75,8 +75,8 @@ const (
 	TagSize                       = "size"
 	TagSignalCount                = "signal-count"
 	TagTimerTaskStatus            = "timer-task-status"
-	TagTimeoutType                = "timeout-type"
 	TagScheduleAttempt            = "schedule-attempt"
+	TagCursorTimestamp            = "cursor-timestamp"
 
 	// workflow logging tag values
 	// TagWorkflowComponent Values
