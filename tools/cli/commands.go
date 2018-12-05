@@ -218,7 +218,7 @@ func SetBuilder(builder WorkflowClientBuilderInterface) {
 // ErrorAndExit print easy to understand error msg first then error detail in a new line
 func ErrorAndExit(msg string, err error) {
 	if err != nil {
-		fmt.Printf("%s %s\n%s %+v\n", colorRsed("Error:"), msg, colorMagenta("Error Details:"), err)
+		fmt.Printf("%s %s\n%s %+v\n", colorRed("Error:"), msg, colorMagenta("Error Details:"), err)
 		if os.Getenv(showErrorStackEnv) != `` {
 			fmt.Print(colorMagenta("Stack trace:"))
 			debug.PrintStack()
@@ -249,7 +249,7 @@ func RegisterDomain(c *cli.Context) {
 	if c.IsSet(FlagEmitMetric) {
 		emitMetric, err = strconv.ParseBool(c.String(FlagEmitMetric))
 		if err != nil {
-			ErrorAndExit(FlagEmitMetric+" format is invalid.", err)
+			ErrorAndExit(fmt.Sprintf("Option %s format is invalid.", FlagEmitMetric), err)
 		}
 	}
 
@@ -258,7 +258,7 @@ func RegisterDomain(c *cli.Context) {
 		domainDataStr := getRequiredOption(c, FlagDomainData)
 		domainData, err = parseDomainDataKVs(domainDataStr)
 		if err != nil {
-			ErrorAndExit(FlagDomainData+" format is invalid.", err)
+			ErrorAndExit(fmt.Sprintf("Option %s format is invalid.", FlagDomainData), err)
 		}
 	}
 	if len(requiredDomainDataKeys) > 0 {
@@ -367,7 +367,7 @@ func UpdateDomain(c *cli.Context) {
 		if c.IsSet(FlagEmitMetric) {
 			emitMetric, err = strconv.ParseBool(c.String(FlagEmitMetric))
 			if err != nil {
-				ErrorAndExit(FlagEmitMetric+"format is invalid.", err)
+				ErrorAndExit(fmt.Sprintf("Option %s format is invalid.", FlagEmitMetric), err)
 			}
 		}
 		if c.IsSet(FlagClusters) {
@@ -541,7 +541,7 @@ func StartWorkflow(c *cli.Context) {
 	workflowType := getRequiredOption(c, FlagWorkflowType)
 	et := c.Int(FlagExecutionTimeout)
 	if et == 0 {
-		ErrorAndExit("Argument"+FlagExecutionTimeout+"is required", nil)
+		ErrorAndExit(fmt.Sprintf("Option %s format is invalid.", FlagExecutionTimeout), nil)
 	}
 	dt := c.Int(FlagDecisionTimeout)
 	wid := c.String(FlagWorkflowID)
@@ -587,7 +587,7 @@ func RunWorkflow(c *cli.Context) {
 	workflowType := getRequiredOption(c, FlagWorkflowType)
 	et := c.Int(FlagExecutionTimeout)
 	if et == 0 {
-		ErrorAndExit("Argument"+FlagExecutionTimeout+" is required", nil)
+		ErrorAndExit(fmt.Sprintf("Option %s format is invalid.", FlagExecutionTimeout), nil)
 	}
 	dt := c.Int(FlagDecisionTimeout)
 	wid := c.String(FlagWorkflowID)
