@@ -31,11 +31,11 @@ type Initiator struct {
 }
 
 // Archive provides a mock function with given fields: request
-func (_m *Initiator) Archive(request *archival.ArchiveRequest) error {
+func (_m *Initiator) Archive(request *archival.PutRequest) error {
 	ret := _m.Called(request)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*archival.ArchiveRequest) error); ok {
+	if rf, ok := ret.Get(0).(func(*archival.PutRequest) error); ok {
 		r0 = rf(request)
 	} else {
 		r0 = ret.Error(0)

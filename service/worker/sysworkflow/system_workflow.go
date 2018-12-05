@@ -109,7 +109,7 @@ func selectSystemTask(scope tally.Scope, signal Signal, ctx workflow.Context, lo
 // ArchivalActivity is the archival activity code
 func ArchivalActivity(
 	ctx context.Context,
-	request archival.ArchiveRequest,
+	request archival.PutRequest,
 ) error {
 	userWorkflowID := request.WorkflowID
 	userRunID := request.RunID
@@ -127,7 +127,7 @@ func ArchivalActivity(
 	//}
 
 	archivalClient := ctx.Value(archivalClientKey).(archival.Client)
-	err := archivalClient.Archive(ctx, &request)
+	err := archivalClient.PutWorkflow(ctx, &request)
 	logger.Info("called archive", zap.Error(err))
 
 	for i := 0; i < 20; i++ {
