@@ -2400,6 +2400,12 @@ func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetReq
 		}
 	}
 
+	batches, err := e.historyV2Mgr.ReadHistoryBranch(&persistence.ReadHistoryBranchRequest{
+		BranchToken: msBuilder.GetCurrentBranch(),
+		MinEventID:  common.FirstEventID,
+		MaxEventID:  request.GetNextFirstEventId(),
+		PageSize:    defaultHistoryPageSize,
+	})
 	return nil
 }
 
