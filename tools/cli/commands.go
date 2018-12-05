@@ -218,9 +218,9 @@ func SetBuilder(builder WorkflowClientBuilderInterface) {
 // ErrorAndExit print easy to understand error msg first then error detail in a new line
 func ErrorAndExit(msg string, err error) {
 	if err != nil {
-		fmt.Printf("%s %s\n%s %+v\n", colorRed("Error:"), msg, colorMagenta("Error Details:"), err)
+		fmt.Printf("%s %s\n%s %+v\n", colorRsed("Error:"), msg, colorMagenta("Error Details:"), err)
 		if os.Getenv(showErrorStackEnv) != `` {
-			fmt.Print(colorMagenta("Stacktrace:"))
+			fmt.Print(colorMagenta("Stack trace:"))
 			debug.PrintStack()
 		} else {
 			fmt.Printf("('export %s=1' to see stack traces)\n", showErrorStackEnv)
