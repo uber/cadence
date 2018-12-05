@@ -59,6 +59,7 @@ const (
 	TagVersion                    = "version"
 	TagCurrentVersion             = "current-version"
 	TagIncomingVersion            = "incoming-version"
+	TagScheduleID                 = "schedule-id"
 	TagFirstEventID               = "first-event-id"
 	TagNextEventID                = "next-event-id"
 	TagResetNextEventID           = "reset-next-event-id"
@@ -73,6 +74,9 @@ const (
 	TagAttemptEnd                 = "attempt-end"
 	TagSize                       = "size"
 	TagSignalCount                = "signal-count"
+	TagTimerTaskStatus            = "timer-task-status"
+	TagTimeoutType                = "timeout-type"
+	TagScheduleAttempt            = "schedule-attempt"
 
 	// workflow logging tag values
 	// TagWorkflowComponent Values
