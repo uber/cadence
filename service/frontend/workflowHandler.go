@@ -1502,7 +1502,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 			logging.TagWorkflowRunID:       getRequest.Execution.GetRunId(),
 			logging.TagDomainID:            domainID,
 			logging.TagSize:                getRequest.GetMaximumPageSize(),
-		}).Warn(fmt.Sprintf("GetHistory page size is larger than threshold %d", common.GetHistoryMaxPageSize))
+		}).Warn("GetHistory page size is larger than threshold")
 
 		getRequest.MaximumPageSize = common.Int32Ptr(common.GetHistoryMaxPageSize)
 	}
