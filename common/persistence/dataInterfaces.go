@@ -1181,6 +1181,14 @@ type (
 	}
 
 	// DeleteHistoryBranchRequest is used to remove a history branch
+	CompleteForkBranchRequest struct {
+		// the new branch returned from ForkHistoryBranchRequest
+		BranchToken []byte
+		// true means the fork is success, will update the flag, otherwise will delete the new branch
+		Success bool
+	}
+
+	// DeleteHistoryBranchRequest is used to remove a history branch
 	DeleteHistoryBranchRequest struct {
 		// branch to be deleted
 		BranchToken []byte
@@ -1297,6 +1305,8 @@ type (
 		ReadHistoryBranchByBatch(request *ReadHistoryBranchRequest) (*ReadHistoryBranchByBatchResponse, error)
 		// ForkHistoryBranch forks a new branch from a old branch
 		ForkHistoryBranch(request *ForkHistoryBranchRequest) (*ForkHistoryBranchResponse, error)
+		// CompleteForkBranch will complete the forking process after update mutableState, this is to help preventing data leakage
+		CompleteForkBranch(request *CompleteForkBranchRequest) error
 		// DeleteHistoryBranch removes a branch
 		// If this is the last branch to delete, it will also remove the root node
 		DeleteHistoryBranch(request *DeleteHistoryBranchRequest) error

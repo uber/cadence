@@ -154,6 +154,7 @@ enum EventType {
   WorkflowExecutionSignaled,
   WorkflowExecutionTerminated,
   WorkflowExecutionContinuedAsNew,
+  WorkflowExecutionReset,
   StartChildWorkflowExecutionInitiated,
   StartChildWorkflowExecutionFailed,
   ChildWorkflowExecutionStarted,
@@ -579,6 +580,12 @@ struct WorkflowExecutionTerminatedEventAttributes {
   10: optional string reason
   20: optional binary details
   30: optional string identity
+  40: optional string newExecutionRunId
+  50: optional i64 (js.type = "Long") resetNextFirstEventId
+}
+
+struct WorkflowExecutionResetEventAttributes {
+  10: optional string prevExecutionRunId
 }
 
 struct RequestCancelExternalWorkflowExecutionInitiatedEventAttributes {

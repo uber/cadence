@@ -639,6 +639,15 @@ func (p *historyV2RateLimitedPersistenceClient) DeleteHistoryBranch(request *Del
 	return err
 }
 
+// CompleteForkBranch complete forking process
+func (p *historyV2RateLimitedPersistenceClient) CompleteForkBranch(request *CompleteForkBranchRequest) error {
+	if ok, _ := p.rateLimiter.TryConsume(1); !ok {
+		return ErrPersistenceLimitExceeded
+	}
+	err := p.persistence.CompleteForkBranch(request)
+	return err
+}
+
 // GetHistoryTree returns all branch information of a tree
 func (p *historyV2RateLimitedPersistenceClient) GetHistoryTree(request *GetHistoryTreeRequest) (*GetHistoryTreeResponse, error) {
 	if ok, _ := p.rateLimiter.TryConsume(1); !ok {

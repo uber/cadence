@@ -110,6 +110,29 @@ func (m *historyV2ManagerImpl) DeleteHistoryBranch(request *DeleteHistoryBranchR
 	return m.persistence.DeleteHistoryBranch(req)
 }
 
+// CompleteForkBranch complete the forking process
+func (m *historyV2ManagerImpl) CompleteForkBranch(request *CompleteForkBranchRequest) error {
+	var branch workflow.HistoryBranch
+	err := m.thrifteEncoder.Decode(request.BranchToken, &branch)
+	if err != nil {
+		return err
+	}
+
+	if !request.Success {
+		req := &InternalDeleteHistoryBranchRequest{
+			BranchInfo: branch,
+		}
+		m.persistence.DeleteHistoryBranch(req)
+	}
+
+	req := &InternalUpdateHistoryBranchRequest{
+		BranchInfo: branch,
+		InProgress: false,
+	}
+
+	return m.persistence.UpdateHistoryBranch(req)
+}
+
 // GetHistoryTree returns all branch information of a tree
 func (m *historyV2ManagerImpl) GetHistoryTree(request *GetHistoryTreeRequest) (*GetHistoryTreeResponse, error) {
 	return m.persistence.GetHistoryTree(request)

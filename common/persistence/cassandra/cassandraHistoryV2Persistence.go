@@ -51,6 +51,8 @@ const (
 	v2templateReadAllBranches = `SELECT branch_id, ancestors, in_progress FROM history_tree WHERE tree_id = ? `
 
 	v2templateDeleteBranch = `DELETE FROM history_tree WHERE tree_id = ? AND branch_id = ? `
+
+	v2templateUpdateBranch = `UPDATE history_tree set in_progress = ? WHERE tree_id = ? AND branch_id = ? `
 )
 
 type (
@@ -285,9 +287,25 @@ func (h *cassandraHistoryV2Persistence) ForkHistoryBranch(request *p.InternalFor
 
 	err := query.Exec()
 	if err != nil {
-		convertCommonErrors("ForkHistoryBranch", err)
+		return nil, convertCommonErrors("ForkHistoryBranch", err)
 	}
 	return resp, nil
+}
+
+// UpdateHistoryBranch update a branch
+func (h *cassandraHistoryV2Persistence) UpdateHistoryBranch(request *p.InternalUpdateHistoryBranchRequest) error {
+	branch := request.BranchInfo
+	treeID := *branch.TreeID
+	branchID := *branch.BranchID
+
+	query := h.session.Query(v2templateUpdateBranch,
+		request.InProgress, treeID, branchID)
+
+	err := query.Exec()
+	if err != nil {
+		return convertCommonErrors("UpdateHistoryBranch", err)
+	}
+	return nil
 }
 
 // DeleteHistoryBranch removes a branch

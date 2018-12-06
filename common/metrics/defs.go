@@ -336,6 +336,8 @@ const (
 	PersistenceForkHistoryBranchScope
 	// PersistenceDeleteHistoryBranchScope tracks DeleteHistoryBranch calls made by service to persistence layer
 	PersistenceDeleteHistoryBranchScope
+	// PersistenceCompleteForkBranchScope tracks CompleteForkBranch calls made by service to persistence layer
+	PersistenceCompleteForkBranchScope
 	// PersistenceGetHistoryTreeScope tracks GetHistoryTree calls made by service to persistence layer
 	PersistenceGetHistoryTreeScope
 
@@ -646,6 +648,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceReadHistoryBranchScope:                        {operation: "ReadHistoryBranch", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 		PersistenceForkHistoryBranchScope:                        {operation: "ForkHistoryBranch", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 		PersistenceDeleteHistoryBranchScope:                      {operation: "DeleteHistoryBranch", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
+		PersistenceCompleteForkBranchScope:                       {operation: "CompleteForkBranch", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 		PersistenceGetHistoryTreeScope:                           {operation: "GetHistoryTree", tags: map[string]string{ShardTagName: NoneShardsTagValue}},
 
 		HistoryClientStartWorkflowExecutionScope:            {operation: "HistoryClientStartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},

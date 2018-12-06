@@ -264,11 +264,6 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyForkAndAppendBranches() {
 	s.Equal(1, len(branches))
 	mbrID := *branches[0].BranchID
 
-	// cannot fork on un-existing node
-	_, err = s.fork(masterBr, int64(concurrency)+2)
-	_, ok := err.(*p.InvalidPersistenceRequestError)
-	s.Equal(true, ok)
-
 	level1ID := sync.Map{}
 	level1Br := sync.Map{}
 	// test forking from master branch and append nodes
@@ -501,10 +496,6 @@ func (s *HistoryV2PersistenceSuite) readWithError(branch []byte, minID, maxID in
 }
 
 func (s *HistoryV2PersistenceSuite) appendOneByOne(branch []byte, events []*workflow.HistoryEvent, txnID int64) error {
-	err := s.append(branch, []*workflow.HistoryEvent{events[0]}, txnID, true)
-	if err != nil {
-		return err
-	}
 	for _, e := range events {
 		err := s.append(branch, []*workflow.HistoryEvent{e}, txnID, false)
 		if err != nil {

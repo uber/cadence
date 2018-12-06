@@ -2425,7 +2425,7 @@ func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetReq
 	}
 
 	var nextPageToken []byte
-	readReq := &persistence.ReadHistoryBranchRequest{
+	readReq = &persistence.ReadHistoryBranchRequest{
 		BranchToken:   msBuilder.GetCurrentBranch(),
 		MinEventID:    common.FirstEventID,
 		MaxEventID:    request.GetNextFirstEventId(),
@@ -2435,7 +2435,6 @@ func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetReq
 	var resetMutableStateBuilder *mutableStateBuilder
 	var sBuilder stateBuilder
 	var lastEvent *workflow.HistoryEvent
-	var lastDecision *decisionInfo
 
 	for {
 		readResp, retError := e.historyV2Mgr.ReadHistoryBranchByBatch(readReq)
@@ -2456,10 +2455,11 @@ func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetReq
 				)
 
 				resetMutableStateBuilder.executionInfo.EventStoreVersion = persistence.EventStoreVersionV2
+
 				sBuilder = newStateBuilder(e.shard, resetMutableStateBuilder, e.logger)
 			}
 
-			_, lastDecision, _, retError = sBuilder.applyEvents(domainID, request.GetRequestId(), execution, history, nil, persistence.EventStoreVersionV2, persistence.EventStoreVersionV2)
+			_, _, _, retError = sBuilder.applyEvents(domainID, request.GetRequestId(), execution, history, nil, persistence.EventStoreVersionV2, persistence.EventStoreVersionV2)
 			if retError != nil {
 				return
 			}
@@ -2468,16 +2468,15 @@ func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetReq
 		resetMutableStateBuilder.IncrementHistorySize(readResp.Size)
 	}
 
-	// reset branchToken to the original one(they will be set to a wrong version in applyEvents for startEvent
-	resetMutableStateBuilder.executionInfo.BranchToken = branchToken
-	// Applying events to mutableState does not move the nextEventID.  Explicitly set nextEventID to new value
-	resetMutableStateBuilder.executionInfo.SetNextEventID(replayNextEventID)
+	startTime := time.Now()
 	resetMutableStateBuilder.executionInfo.StartTimestamp = startTime
-	// the last updated time is not important here, since this should be updated with event time afterwards
 	resetMutableStateBuilder.executionInfo.LastUpdatedTimestamp = startTime
 
 	sourceCluster := clusterMetadata.ClusterNameForFailoverVersion(lastEvent.GetVersion())
-	resetMutableStateBuilder.UpdateReplicationStateLastEventID(sourceCluster, lastEvent.GetVersion(), replayEventID)
+	resetMutableStateBuilder.UpdateReplicationStateLastEventID(sourceCluster, lastEvent.GetVersion(), lastEvent.GetEventId())
+	resetMutableStateBuilder.executionInfo.SetNextEventID(request.GetNextFirstEventId())
+	// TODO
+	resetMutableStateBuilder.executionInfo.BranchToken = nil
 
 	return nil
 }
