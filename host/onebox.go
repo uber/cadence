@@ -34,6 +34,7 @@ import (
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/mocks"
@@ -404,10 +405,12 @@ func (c *cadenceImpl) startWorker(rpHosts []string, startWG *sync.WaitGroup) {
 		c.logger.WithField("error", err).Fatal("Failed to create history service client when start worker")
 	}
 	metadataManager := persistence.NewMetadataPersistenceMetricsClient(c.metadataMgrV2, service.GetMetricsClient(), c.logger)
+	domainCache := cache.NewDomainCache(metadataManager, params.ClusterMetadata, service.GetMetricsClient(), service.GetLogger())
+	domainCache.Start()
 
 	workerConfig := worker.NewConfig(dynamicconfig.NewNopCollection())
 	workerConfig.ReplicationCfg.ReplicatorConcurrency = dynamicconfig.GetIntPropertyFn(10)
-	c.replicator = replicator.NewReplicator(c.clusterMetadata, metadataManager, historyClient,
+	c.replicator = replicator.NewReplicator(c.clusterMetadata, metadataManager, domainCache, service.GetClientBean(), historyClient,
 		workerConfig.ReplicationCfg, c.messagingClient, c.logger, service.GetMetricsClient())
 	if err := c.replicator.Start(); err != nil {
 		c.replicator.Stop()
@@ -415,6 +418,7 @@ func (c *cadenceImpl) startWorker(rpHosts []string, startWG *sync.WaitGroup) {
 	}
 	startWG.Done()
 	<-c.shutdownCh
+	domainCache.Stop()
 	c.shutdownWG.Done()
 }
 

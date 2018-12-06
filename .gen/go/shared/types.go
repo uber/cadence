@@ -6137,6 +6137,192 @@ func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) GetRetryPolicy() (o *
 	return
 }
 
+type DataBlob struct {
+	EncodingType *EncodingType `json:"EncodingType,omitempty"`
+	Data         []byte        `json:"Data,omitempty"`
+}
+
+// ToWire translates a DataBlob struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *DataBlob) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.EncodingType != nil {
+		w, err = v.EncodingType.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.Data != nil {
+		w, err = wire.NewValueBinary(v.Data), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _EncodingType_Read(w wire.Value) (EncodingType, error) {
+	var v EncodingType
+	err := v.FromWire(w)
+	return v, err
+}
+
+// FromWire deserializes a DataBlob struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a DataBlob struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v DataBlob
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *DataBlob) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TI32 {
+				var x EncodingType
+				x, err = _EncodingType_Read(field.Value)
+				v.EncodingType = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TBinary {
+				v.Data, err = field.Value.GetBinary(), error(nil)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a DataBlob
+// struct.
+func (v *DataBlob) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [2]string
+	i := 0
+	if v.EncodingType != nil {
+		fields[i] = fmt.Sprintf("EncodingType: %v", *(v.EncodingType))
+		i++
+	}
+	if v.Data != nil {
+		fields[i] = fmt.Sprintf("Data: %v", v.Data)
+		i++
+	}
+
+	return fmt.Sprintf("DataBlob{%v}", strings.Join(fields[:i], ", "))
+}
+
+func _EncodingType_EqualsPtr(lhs, rhs *EncodingType) bool {
+	if lhs != nil && rhs != nil {
+
+		x := *lhs
+		y := *rhs
+		return x.Equals(y)
+	}
+	return lhs == nil && rhs == nil
+}
+
+// Equals returns true if all the fields of this DataBlob match the
+// provided DataBlob.
+//
+// This function performs a deep comparison.
+func (v *DataBlob) Equals(rhs *DataBlob) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_EncodingType_EqualsPtr(v.EncodingType, rhs.EncodingType) {
+		return false
+	}
+	if !((v.Data == nil && rhs.Data == nil) || (v.Data != nil && rhs.Data != nil && bytes.Equal(v.Data, rhs.Data))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of DataBlob.
+func (v *DataBlob) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.EncodingType != nil {
+		err = multierr.Append(err, enc.AddObject("EncodingType", *v.EncodingType))
+	}
+	if v.Data != nil {
+		enc.AddString("Data", base64.StdEncoding.EncodeToString(v.Data))
+	}
+	return err
+}
+
+// GetEncodingType returns the value of EncodingType if it is set or its
+// zero value if it is unset.
+func (v *DataBlob) GetEncodingType() (o EncodingType) {
+	if v.EncodingType != nil {
+		return *v.EncodingType
+	}
+
+	return
+}
+
+// GetData returns the value of Data if it is set or its
+// zero value if it is unset.
+func (v *DataBlob) GetData() (o []byte) {
+	if v.Data != nil {
+		return v.Data
+	}
+
+	return
+}
+
 type Decision struct {
 	DecisionType                                             *DecisionType                                             `json:"decisionType,omitempty"`
 	ScheduleActivityTaskDecisionAttributes                   *ScheduleActivityTaskDecisionAttributes                   `json:"scheduleActivityTaskDecisionAttributes,omitempty"`
@@ -12325,6 +12511,164 @@ func (v *DomainStatus) UnmarshalJSON(text []byte) error {
 	}
 }
 
+type EncodingType int32
+
+const (
+	EncodingTypeThriftRW EncodingType = 0
+)
+
+// EncodingType_Values returns all recognized values of EncodingType.
+func EncodingType_Values() []EncodingType {
+	return []EncodingType{
+		EncodingTypeThriftRW,
+	}
+}
+
+// UnmarshalText tries to decode EncodingType from a byte slice
+// containing its name.
+//
+//   var v EncodingType
+//   err := v.UnmarshalText([]byte("ThriftRW"))
+func (v *EncodingType) UnmarshalText(value []byte) error {
+	switch s := string(value); s {
+	case "ThriftRW":
+		*v = EncodingTypeThriftRW
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "EncodingType", err)
+		}
+		*v = EncodingType(val)
+		return nil
+	}
+}
+
+// MarshalText encodes EncodingType to text.
+//
+// If the enum value is recognized, its name is returned. Otherwise,
+// its integer value is returned.
+//
+// This implements the TextMarshaler interface.
+func (v EncodingType) MarshalText() ([]byte, error) {
+	switch int32(v) {
+	case 0:
+		return []byte("ThriftRW"), nil
+	}
+	return []byte(strconv.FormatInt(int64(v), 10)), nil
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of EncodingType.
+// Enums are logged as objects, where the value is logged with key "value", and
+// if this value's name is known, the name is logged with key "name".
+func (v EncodingType) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddInt32("value", int32(v))
+	switch int32(v) {
+	case 0:
+		enc.AddString("name", "ThriftRW")
+	}
+	return nil
+}
+
+// Ptr returns a pointer to this enum value.
+func (v EncodingType) Ptr() *EncodingType {
+	return &v
+}
+
+// ToWire translates EncodingType into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// Enums are represented as 32-bit integers over the wire.
+func (v EncodingType) ToWire() (wire.Value, error) {
+	return wire.NewValueI32(int32(v)), nil
+}
+
+// FromWire deserializes EncodingType from its Thrift-level
+// representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TI32)
+//   if err != nil {
+//     return EncodingType(0), err
+//   }
+//
+//   var v EncodingType
+//   if err := v.FromWire(x); err != nil {
+//     return EncodingType(0), err
+//   }
+//   return v, nil
+func (v *EncodingType) FromWire(w wire.Value) error {
+	*v = (EncodingType)(w.GetI32())
+	return nil
+}
+
+// String returns a readable string representation of EncodingType.
+func (v EncodingType) String() string {
+	w := int32(v)
+	switch w {
+	case 0:
+		return "ThriftRW"
+	}
+	return fmt.Sprintf("EncodingType(%d)", w)
+}
+
+// Equals returns true if this EncodingType value matches the provided
+// value.
+func (v EncodingType) Equals(rhs EncodingType) bool {
+	return v == rhs
+}
+
+// MarshalJSON serializes EncodingType into JSON.
+//
+// If the enum value is recognized, its name is returned. Otherwise,
+// its integer value is returned.
+//
+// This implements json.Marshaler.
+func (v EncodingType) MarshalJSON() ([]byte, error) {
+	switch int32(v) {
+	case 0:
+		return ([]byte)("\"ThriftRW\""), nil
+	}
+	return ([]byte)(strconv.FormatInt(int64(v), 10)), nil
+}
+
+// UnmarshalJSON attempts to decode EncodingType from its JSON
+// representation.
+//
+// This implementation supports both, numeric and string inputs. If a
+// string is provided, it must be a known enum name.
+//
+// This implements json.Unmarshaler.
+func (v *EncodingType) UnmarshalJSON(text []byte) error {
+	d := json.NewDecoder(bytes.NewReader(text))
+	d.UseNumber()
+	t, err := d.Token()
+	if err != nil {
+		return err
+	}
+
+	switch w := t.(type) {
+	case json.Number:
+		x, err := w.Int64()
+		if err != nil {
+			return err
+		}
+		if x > math.MaxInt32 {
+			return fmt.Errorf("enum overflow from JSON %q for %q", text, "EncodingType")
+		}
+		if x < math.MinInt32 {
+			return fmt.Errorf("enum underflow from JSON %q for %q", text, "EncodingType")
+		}
+		*v = (EncodingType)(x)
+		return nil
+	case string:
+		return v.UnmarshalText([]byte(w))
+	default:
+		return fmt.Errorf("invalid JSON value %q (%T) to unmarshal into %q", t, t, "EncodingType")
+	}
+}
+
 type EntityNotExistsError struct {
 	Message string `json:"message,required"`
 }
@@ -14266,6 +14610,827 @@ func (v *GetWorkflowExecutionHistoryResponse) GetHistory() (o *History) {
 func (v *GetWorkflowExecutionHistoryResponse) GetNextPageToken() (o []byte) {
 	if v.NextPageToken != nil {
 		return v.NextPageToken
+	}
+
+	return
+}
+
+type GetWorkflowExecutionRawHistoryRequest struct {
+	Domain          *string            `json:"domain,omitempty"`
+	Execution       *WorkflowExecution `json:"execution,omitempty"`
+	BranchToken     []byte             `json:"branchToken,omitempty"`
+	FirstEventId    *int64             `json:"firstEventId,omitempty"`
+	NextEventId     *int64             `json:"nextEventId,omitempty"`
+	MaximumPageSize *int32             `json:"maximumPageSize,omitempty"`
+	NextPageToken   []byte             `json:"nextPageToken,omitempty"`
+}
+
+// ToWire translates a GetWorkflowExecutionRawHistoryRequest struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *GetWorkflowExecutionRawHistoryRequest) ToWire() (wire.Value, error) {
+	var (
+		fields [7]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Domain != nil {
+		w, err = wire.NewValueString(*(v.Domain)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.Execution != nil {
+		w, err = v.Execution.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	if v.BranchToken != nil {
+		w, err = wire.NewValueBinary(v.BranchToken), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 30, Value: w}
+		i++
+	}
+	if v.FirstEventId != nil {
+		w, err = wire.NewValueI64(*(v.FirstEventId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 40, Value: w}
+		i++
+	}
+	if v.NextEventId != nil {
+		w, err = wire.NewValueI64(*(v.NextEventId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 50, Value: w}
+		i++
+	}
+	if v.MaximumPageSize != nil {
+		w, err = wire.NewValueI32(*(v.MaximumPageSize)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 60, Value: w}
+		i++
+	}
+	if v.NextPageToken != nil {
+		w, err = wire.NewValueBinary(v.NextPageToken), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 70, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a GetWorkflowExecutionRawHistoryRequest struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a GetWorkflowExecutionRawHistoryRequest struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v GetWorkflowExecutionRawHistoryRequest
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *GetWorkflowExecutionRawHistoryRequest) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.Domain = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TStruct {
+				v.Execution, err = _WorkflowExecution_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 30:
+			if field.Value.Type() == wire.TBinary {
+				v.BranchToken, err = field.Value.GetBinary(), error(nil)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 40:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.FirstEventId = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 50:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.NextEventId = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 60:
+			if field.Value.Type() == wire.TI32 {
+				var x int32
+				x, err = field.Value.GetI32(), error(nil)
+				v.MaximumPageSize = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 70:
+			if field.Value.Type() == wire.TBinary {
+				v.NextPageToken, err = field.Value.GetBinary(), error(nil)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a GetWorkflowExecutionRawHistoryRequest
+// struct.
+func (v *GetWorkflowExecutionRawHistoryRequest) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [7]string
+	i := 0
+	if v.Domain != nil {
+		fields[i] = fmt.Sprintf("Domain: %v", *(v.Domain))
+		i++
+	}
+	if v.Execution != nil {
+		fields[i] = fmt.Sprintf("Execution: %v", v.Execution)
+		i++
+	}
+	if v.BranchToken != nil {
+		fields[i] = fmt.Sprintf("BranchToken: %v", v.BranchToken)
+		i++
+	}
+	if v.FirstEventId != nil {
+		fields[i] = fmt.Sprintf("FirstEventId: %v", *(v.FirstEventId))
+		i++
+	}
+	if v.NextEventId != nil {
+		fields[i] = fmt.Sprintf("NextEventId: %v", *(v.NextEventId))
+		i++
+	}
+	if v.MaximumPageSize != nil {
+		fields[i] = fmt.Sprintf("MaximumPageSize: %v", *(v.MaximumPageSize))
+		i++
+	}
+	if v.NextPageToken != nil {
+		fields[i] = fmt.Sprintf("NextPageToken: %v", v.NextPageToken)
+		i++
+	}
+
+	return fmt.Sprintf("GetWorkflowExecutionRawHistoryRequest{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this GetWorkflowExecutionRawHistoryRequest match the
+// provided GetWorkflowExecutionRawHistoryRequest.
+//
+// This function performs a deep comparison.
+func (v *GetWorkflowExecutionRawHistoryRequest) Equals(rhs *GetWorkflowExecutionRawHistoryRequest) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_String_EqualsPtr(v.Domain, rhs.Domain) {
+		return false
+	}
+	if !((v.Execution == nil && rhs.Execution == nil) || (v.Execution != nil && rhs.Execution != nil && v.Execution.Equals(rhs.Execution))) {
+		return false
+	}
+	if !((v.BranchToken == nil && rhs.BranchToken == nil) || (v.BranchToken != nil && rhs.BranchToken != nil && bytes.Equal(v.BranchToken, rhs.BranchToken))) {
+		return false
+	}
+	if !_I64_EqualsPtr(v.FirstEventId, rhs.FirstEventId) {
+		return false
+	}
+	if !_I64_EqualsPtr(v.NextEventId, rhs.NextEventId) {
+		return false
+	}
+	if !_I32_EqualsPtr(v.MaximumPageSize, rhs.MaximumPageSize) {
+		return false
+	}
+	if !((v.NextPageToken == nil && rhs.NextPageToken == nil) || (v.NextPageToken != nil && rhs.NextPageToken != nil && bytes.Equal(v.NextPageToken, rhs.NextPageToken))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of GetWorkflowExecutionRawHistoryRequest.
+func (v *GetWorkflowExecutionRawHistoryRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Domain != nil {
+		enc.AddString("domain", *v.Domain)
+	}
+	if v.Execution != nil {
+		err = multierr.Append(err, enc.AddObject("execution", v.Execution))
+	}
+	if v.BranchToken != nil {
+		enc.AddString("branchToken", base64.StdEncoding.EncodeToString(v.BranchToken))
+	}
+	if v.FirstEventId != nil {
+		enc.AddInt64("firstEventId", *v.FirstEventId)
+	}
+	if v.NextEventId != nil {
+		enc.AddInt64("nextEventId", *v.NextEventId)
+	}
+	if v.MaximumPageSize != nil {
+		enc.AddInt32("maximumPageSize", *v.MaximumPageSize)
+	}
+	if v.NextPageToken != nil {
+		enc.AddString("nextPageToken", base64.StdEncoding.EncodeToString(v.NextPageToken))
+	}
+	return err
+}
+
+// GetDomain returns the value of Domain if it is set or its
+// zero value if it is unset.
+func (v *GetWorkflowExecutionRawHistoryRequest) GetDomain() (o string) {
+	if v.Domain != nil {
+		return *v.Domain
+	}
+
+	return
+}
+
+// GetExecution returns the value of Execution if it is set or its
+// zero value if it is unset.
+func (v *GetWorkflowExecutionRawHistoryRequest) GetExecution() (o *WorkflowExecution) {
+	if v.Execution != nil {
+		return v.Execution
+	}
+
+	return
+}
+
+// GetBranchToken returns the value of BranchToken if it is set or its
+// zero value if it is unset.
+func (v *GetWorkflowExecutionRawHistoryRequest) GetBranchToken() (o []byte) {
+	if v.BranchToken != nil {
+		return v.BranchToken
+	}
+
+	return
+}
+
+// GetFirstEventId returns the value of FirstEventId if it is set or its
+// zero value if it is unset.
+func (v *GetWorkflowExecutionRawHistoryRequest) GetFirstEventId() (o int64) {
+	if v.FirstEventId != nil {
+		return *v.FirstEventId
+	}
+
+	return
+}
+
+// GetNextEventId returns the value of NextEventId if it is set or its
+// zero value if it is unset.
+func (v *GetWorkflowExecutionRawHistoryRequest) GetNextEventId() (o int64) {
+	if v.NextEventId != nil {
+		return *v.NextEventId
+	}
+
+	return
+}
+
+// GetMaximumPageSize returns the value of MaximumPageSize if it is set or its
+// zero value if it is unset.
+func (v *GetWorkflowExecutionRawHistoryRequest) GetMaximumPageSize() (o int32) {
+	if v.MaximumPageSize != nil {
+		return *v.MaximumPageSize
+	}
+
+	return
+}
+
+// GetNextPageToken returns the value of NextPageToken if it is set or its
+// zero value if it is unset.
+func (v *GetWorkflowExecutionRawHistoryRequest) GetNextPageToken() (o []byte) {
+	if v.NextPageToken != nil {
+		return v.NextPageToken
+	}
+
+	return
+}
+
+type GetWorkflowExecutionRawHistoryResponse struct {
+	BranchToken       []byte                      `json:"branchToken,omitempty"`
+	NextPageToken     []byte                      `json:"nextPageToken,omitempty"`
+	HistoryBatches    []*DataBlob                 `json:"historyBatches,omitempty"`
+	ReplicationInfo   map[string]*ReplicationInfo `json:"replicationInfo,omitempty"`
+	EventStoreVersion *int32                      `json:"eventStoreVersion,omitempty"`
+}
+
+type _List_DataBlob_ValueList []*DataBlob
+
+func (v _List_DataBlob_ValueList) ForEach(f func(wire.Value) error) error {
+	for i, x := range v {
+		if x == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", i)
+		}
+		w, err := x.ToWire()
+		if err != nil {
+			return err
+		}
+		err = f(w)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (v _List_DataBlob_ValueList) Size() int {
+	return len(v)
+}
+
+func (_List_DataBlob_ValueList) ValueType() wire.Type {
+	return wire.TStruct
+}
+
+func (_List_DataBlob_ValueList) Close() {}
+
+type _Map_String_ReplicationInfo_MapItemList map[string]*ReplicationInfo
+
+func (m _Map_String_ReplicationInfo_MapItemList) ForEach(f func(wire.MapItem) error) error {
+	for k, v := range m {
+		if v == nil {
+			return fmt.Errorf("invalid [%v]: value is nil", k)
+		}
+		kw, err := wire.NewValueString(k), error(nil)
+		if err != nil {
+			return err
+		}
+
+		vw, err := v.ToWire()
+		if err != nil {
+			return err
+		}
+		err = f(wire.MapItem{Key: kw, Value: vw})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (m _Map_String_ReplicationInfo_MapItemList) Size() int {
+	return len(m)
+}
+
+func (_Map_String_ReplicationInfo_MapItemList) KeyType() wire.Type {
+	return wire.TBinary
+}
+
+func (_Map_String_ReplicationInfo_MapItemList) ValueType() wire.Type {
+	return wire.TStruct
+}
+
+func (_Map_String_ReplicationInfo_MapItemList) Close() {}
+
+// ToWire translates a GetWorkflowExecutionRawHistoryResponse struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *GetWorkflowExecutionRawHistoryResponse) ToWire() (wire.Value, error) {
+	var (
+		fields [5]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.BranchToken != nil {
+		w, err = wire.NewValueBinary(v.BranchToken), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.NextPageToken != nil {
+		w, err = wire.NewValueBinary(v.NextPageToken), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	if v.HistoryBatches != nil {
+		w, err = wire.NewValueList(_List_DataBlob_ValueList(v.HistoryBatches)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 30, Value: w}
+		i++
+	}
+	if v.ReplicationInfo != nil {
+		w, err = wire.NewValueMap(_Map_String_ReplicationInfo_MapItemList(v.ReplicationInfo)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 40, Value: w}
+		i++
+	}
+	if v.EventStoreVersion != nil {
+		w, err = wire.NewValueI32(*(v.EventStoreVersion)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 50, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _DataBlob_Read(w wire.Value) (*DataBlob, error) {
+	var v DataBlob
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _List_DataBlob_Read(l wire.ValueList) ([]*DataBlob, error) {
+	if l.ValueType() != wire.TStruct {
+		return nil, nil
+	}
+
+	o := make([]*DataBlob, 0, l.Size())
+	err := l.ForEach(func(x wire.Value) error {
+		i, err := _DataBlob_Read(x)
+		if err != nil {
+			return err
+		}
+		o = append(o, i)
+		return nil
+	})
+	l.Close()
+	return o, err
+}
+
+func _ReplicationInfo_Read(w wire.Value) (*ReplicationInfo, error) {
+	var v ReplicationInfo
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _Map_String_ReplicationInfo_Read(m wire.MapItemList) (map[string]*ReplicationInfo, error) {
+	if m.KeyType() != wire.TBinary {
+		return nil, nil
+	}
+
+	if m.ValueType() != wire.TStruct {
+		return nil, nil
+	}
+
+	o := make(map[string]*ReplicationInfo, m.Size())
+	err := m.ForEach(func(x wire.MapItem) error {
+		k, err := x.Key.GetString(), error(nil)
+		if err != nil {
+			return err
+		}
+
+		v, err := _ReplicationInfo_Read(x.Value)
+		if err != nil {
+			return err
+		}
+
+		o[k] = v
+		return nil
+	})
+	m.Close()
+	return o, err
+}
+
+// FromWire deserializes a GetWorkflowExecutionRawHistoryResponse struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a GetWorkflowExecutionRawHistoryResponse struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v GetWorkflowExecutionRawHistoryResponse
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *GetWorkflowExecutionRawHistoryResponse) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TBinary {
+				v.BranchToken, err = field.Value.GetBinary(), error(nil)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TBinary {
+				v.NextPageToken, err = field.Value.GetBinary(), error(nil)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 30:
+			if field.Value.Type() == wire.TList {
+				v.HistoryBatches, err = _List_DataBlob_Read(field.Value.GetList())
+				if err != nil {
+					return err
+				}
+
+			}
+		case 40:
+			if field.Value.Type() == wire.TMap {
+				v.ReplicationInfo, err = _Map_String_ReplicationInfo_Read(field.Value.GetMap())
+				if err != nil {
+					return err
+				}
+
+			}
+		case 50:
+			if field.Value.Type() == wire.TI32 {
+				var x int32
+				x, err = field.Value.GetI32(), error(nil)
+				v.EventStoreVersion = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a GetWorkflowExecutionRawHistoryResponse
+// struct.
+func (v *GetWorkflowExecutionRawHistoryResponse) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [5]string
+	i := 0
+	if v.BranchToken != nil {
+		fields[i] = fmt.Sprintf("BranchToken: %v", v.BranchToken)
+		i++
+	}
+	if v.NextPageToken != nil {
+		fields[i] = fmt.Sprintf("NextPageToken: %v", v.NextPageToken)
+		i++
+	}
+	if v.HistoryBatches != nil {
+		fields[i] = fmt.Sprintf("HistoryBatches: %v", v.HistoryBatches)
+		i++
+	}
+	if v.ReplicationInfo != nil {
+		fields[i] = fmt.Sprintf("ReplicationInfo: %v", v.ReplicationInfo)
+		i++
+	}
+	if v.EventStoreVersion != nil {
+		fields[i] = fmt.Sprintf("EventStoreVersion: %v", *(v.EventStoreVersion))
+		i++
+	}
+
+	return fmt.Sprintf("GetWorkflowExecutionRawHistoryResponse{%v}", strings.Join(fields[:i], ", "))
+}
+
+func _List_DataBlob_Equals(lhs, rhs []*DataBlob) bool {
+	if len(lhs) != len(rhs) {
+		return false
+	}
+
+	for i, lv := range lhs {
+		rv := rhs[i]
+		if !lv.Equals(rv) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func _Map_String_ReplicationInfo_Equals(lhs, rhs map[string]*ReplicationInfo) bool {
+	if len(lhs) != len(rhs) {
+		return false
+	}
+
+	for lk, lv := range lhs {
+		rv, ok := rhs[lk]
+		if !ok {
+			return false
+		}
+		if !lv.Equals(rv) {
+			return false
+		}
+	}
+	return true
+}
+
+// Equals returns true if all the fields of this GetWorkflowExecutionRawHistoryResponse match the
+// provided GetWorkflowExecutionRawHistoryResponse.
+//
+// This function performs a deep comparison.
+func (v *GetWorkflowExecutionRawHistoryResponse) Equals(rhs *GetWorkflowExecutionRawHistoryResponse) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.BranchToken == nil && rhs.BranchToken == nil) || (v.BranchToken != nil && rhs.BranchToken != nil && bytes.Equal(v.BranchToken, rhs.BranchToken))) {
+		return false
+	}
+	if !((v.NextPageToken == nil && rhs.NextPageToken == nil) || (v.NextPageToken != nil && rhs.NextPageToken != nil && bytes.Equal(v.NextPageToken, rhs.NextPageToken))) {
+		return false
+	}
+	if !((v.HistoryBatches == nil && rhs.HistoryBatches == nil) || (v.HistoryBatches != nil && rhs.HistoryBatches != nil && _List_DataBlob_Equals(v.HistoryBatches, rhs.HistoryBatches))) {
+		return false
+	}
+	if !((v.ReplicationInfo == nil && rhs.ReplicationInfo == nil) || (v.ReplicationInfo != nil && rhs.ReplicationInfo != nil && _Map_String_ReplicationInfo_Equals(v.ReplicationInfo, rhs.ReplicationInfo))) {
+		return false
+	}
+	if !_I32_EqualsPtr(v.EventStoreVersion, rhs.EventStoreVersion) {
+		return false
+	}
+
+	return true
+}
+
+type _List_DataBlob_Zapper []*DataBlob
+
+// MarshalLogArray implements zapcore.ArrayMarshaler, enabling
+// fast logging of _List_DataBlob_Zapper.
+func (l _List_DataBlob_Zapper) MarshalLogArray(enc zapcore.ArrayEncoder) (err error) {
+	for _, v := range l {
+		err = multierr.Append(err, enc.AppendObject(v))
+	}
+	return err
+}
+
+type _Map_String_ReplicationInfo_Zapper map[string]*ReplicationInfo
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of _Map_String_ReplicationInfo_Zapper.
+func (m _Map_String_ReplicationInfo_Zapper) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	for k, v := range m {
+		err = multierr.Append(err, enc.AddObject((string)(k), v))
+	}
+	return err
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of GetWorkflowExecutionRawHistoryResponse.
+func (v *GetWorkflowExecutionRawHistoryResponse) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.BranchToken != nil {
+		enc.AddString("branchToken", base64.StdEncoding.EncodeToString(v.BranchToken))
+	}
+	if v.NextPageToken != nil {
+		enc.AddString("nextPageToken", base64.StdEncoding.EncodeToString(v.NextPageToken))
+	}
+	if v.HistoryBatches != nil {
+		err = multierr.Append(err, enc.AddArray("historyBatches", (_List_DataBlob_Zapper)(v.HistoryBatches)))
+	}
+	if v.ReplicationInfo != nil {
+		err = multierr.Append(err, enc.AddObject("replicationInfo", (_Map_String_ReplicationInfo_Zapper)(v.ReplicationInfo)))
+	}
+	if v.EventStoreVersion != nil {
+		enc.AddInt32("eventStoreVersion", *v.EventStoreVersion)
+	}
+	return err
+}
+
+// GetBranchToken returns the value of BranchToken if it is set or its
+// zero value if it is unset.
+func (v *GetWorkflowExecutionRawHistoryResponse) GetBranchToken() (o []byte) {
+	if v.BranchToken != nil {
+		return v.BranchToken
+	}
+
+	return
+}
+
+// GetNextPageToken returns the value of NextPageToken if it is set or its
+// zero value if it is unset.
+func (v *GetWorkflowExecutionRawHistoryResponse) GetNextPageToken() (o []byte) {
+	if v.NextPageToken != nil {
+		return v.NextPageToken
+	}
+
+	return
+}
+
+// GetHistoryBatches returns the value of HistoryBatches if it is set or its
+// zero value if it is unset.
+func (v *GetWorkflowExecutionRawHistoryResponse) GetHistoryBatches() (o []*DataBlob) {
+	if v.HistoryBatches != nil {
+		return v.HistoryBatches
+	}
+
+	return
+}
+
+// GetReplicationInfo returns the value of ReplicationInfo if it is set or its
+// zero value if it is unset.
+func (v *GetWorkflowExecutionRawHistoryResponse) GetReplicationInfo() (o map[string]*ReplicationInfo) {
+	if v.ReplicationInfo != nil {
+		return v.ReplicationInfo
+	}
+
+	return
+}
+
+// GetEventStoreVersion returns the value of EventStoreVersion if it is set or its
+// zero value if it is unset.
+func (v *GetWorkflowExecutionRawHistoryResponse) GetEventStoreVersion() (o int32) {
+	if v.EventStoreVersion != nil {
+		return *v.EventStoreVersion
 	}
 
 	return
@@ -23784,6 +24949,178 @@ func (v *RegisterDomainRequest) GetSecurityToken() (o string) {
 	return
 }
 
+type ReplicationInfo struct {
+	Version     *int64 `json:"version,omitempty"`
+	LastEventId *int64 `json:"lastEventId,omitempty"`
+}
+
+// ToWire translates a ReplicationInfo struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *ReplicationInfo) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Version != nil {
+		w, err = wire.NewValueI64(*(v.Version)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.LastEventId != nil {
+		w, err = wire.NewValueI64(*(v.LastEventId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a ReplicationInfo struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a ReplicationInfo struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v ReplicationInfo
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *ReplicationInfo) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.Version = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.LastEventId = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a ReplicationInfo
+// struct.
+func (v *ReplicationInfo) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [2]string
+	i := 0
+	if v.Version != nil {
+		fields[i] = fmt.Sprintf("Version: %v", *(v.Version))
+		i++
+	}
+	if v.LastEventId != nil {
+		fields[i] = fmt.Sprintf("LastEventId: %v", *(v.LastEventId))
+		i++
+	}
+
+	return fmt.Sprintf("ReplicationInfo{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this ReplicationInfo match the
+// provided ReplicationInfo.
+//
+// This function performs a deep comparison.
+func (v *ReplicationInfo) Equals(rhs *ReplicationInfo) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_I64_EqualsPtr(v.Version, rhs.Version) {
+		return false
+	}
+	if !_I64_EqualsPtr(v.LastEventId, rhs.LastEventId) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of ReplicationInfo.
+func (v *ReplicationInfo) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Version != nil {
+		enc.AddInt64("version", *v.Version)
+	}
+	if v.LastEventId != nil {
+		enc.AddInt64("lastEventId", *v.LastEventId)
+	}
+	return err
+}
+
+// GetVersion returns the value of Version if it is set or its
+// zero value if it is unset.
+func (v *ReplicationInfo) GetVersion() (o int64) {
+	if v.Version != nil {
+		return *v.Version
+	}
+
+	return
+}
+
+// GetLastEventId returns the value of LastEventId if it is set or its
+// zero value if it is unset.
+func (v *ReplicationInfo) GetLastEventId() (o int64) {
+	if v.LastEventId != nil {
+		return *v.LastEventId
+	}
+
+	return
+}
+
 type RequestCancelActivityTaskDecisionAttributes struct {
 	ActivityId *string `json:"activityId,omitempty"`
 }
@@ -28760,7 +30097,11 @@ func (v *RetryPolicy) GetExpirationIntervalInSeconds() (o int32) {
 }
 
 type RetryTaskError struct {
-	Message string `json:"message,required"`
+	Message     string  `json:"message,required"`
+	DomainId    *string `json:"domainId,omitempty"`
+	WorkflowId  *string `json:"workflowId,omitempty"`
+	RunId       *string `json:"runId,omitempty"`
+	NextEventId *int64  `json:"nextEventId,omitempty"`
 }
 
 // ToWire translates a RetryTaskError struct into a Thrift-level intermediate
@@ -28780,7 +30121,7 @@ type RetryTaskError struct {
 //   }
 func (v *RetryTaskError) ToWire() (wire.Value, error) {
 	var (
-		fields [1]wire.Field
+		fields [5]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -28792,6 +30133,38 @@ func (v *RetryTaskError) ToWire() (wire.Value, error) {
 	}
 	fields[i] = wire.Field{ID: 1, Value: w}
 	i++
+	if v.DomainId != nil {
+		w, err = wire.NewValueString(*(v.DomainId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 2, Value: w}
+		i++
+	}
+	if v.WorkflowId != nil {
+		w, err = wire.NewValueString(*(v.WorkflowId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 3, Value: w}
+		i++
+	}
+	if v.RunId != nil {
+		w, err = wire.NewValueString(*(v.RunId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 4, Value: w}
+		i++
+	}
+	if v.NextEventId != nil {
+		w, err = wire.NewValueI64(*(v.NextEventId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 5, Value: w}
+		i++
+	}
 
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
@@ -28828,6 +30201,46 @@ func (v *RetryTaskError) FromWire(w wire.Value) error {
 				}
 				messageIsSet = true
 			}
+		case 2:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.DomainId = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 3:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.WorkflowId = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 4:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.RunId = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 5:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.NextEventId = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -28845,10 +30258,26 @@ func (v *RetryTaskError) String() string {
 		return "<nil>"
 	}
 
-	var fields [1]string
+	var fields [5]string
 	i := 0
 	fields[i] = fmt.Sprintf("Message: %v", v.Message)
 	i++
+	if v.DomainId != nil {
+		fields[i] = fmt.Sprintf("DomainId: %v", *(v.DomainId))
+		i++
+	}
+	if v.WorkflowId != nil {
+		fields[i] = fmt.Sprintf("WorkflowId: %v", *(v.WorkflowId))
+		i++
+	}
+	if v.RunId != nil {
+		fields[i] = fmt.Sprintf("RunId: %v", *(v.RunId))
+		i++
+	}
+	if v.NextEventId != nil {
+		fields[i] = fmt.Sprintf("NextEventId: %v", *(v.NextEventId))
+		i++
+	}
 
 	return fmt.Sprintf("RetryTaskError{%v}", strings.Join(fields[:i], ", "))
 }
@@ -28866,6 +30295,18 @@ func (v *RetryTaskError) Equals(rhs *RetryTaskError) bool {
 	if !(v.Message == rhs.Message) {
 		return false
 	}
+	if !_String_EqualsPtr(v.DomainId, rhs.DomainId) {
+		return false
+	}
+	if !_String_EqualsPtr(v.WorkflowId, rhs.WorkflowId) {
+		return false
+	}
+	if !_String_EqualsPtr(v.RunId, rhs.RunId) {
+		return false
+	}
+	if !_I64_EqualsPtr(v.NextEventId, rhs.NextEventId) {
+		return false
+	}
 
 	return true
 }
@@ -28877,12 +30318,64 @@ func (v *RetryTaskError) MarshalLogObject(enc zapcore.ObjectEncoder) (err error)
 		return nil
 	}
 	enc.AddString("message", v.Message)
+	if v.DomainId != nil {
+		enc.AddString("domainId", *v.DomainId)
+	}
+	if v.WorkflowId != nil {
+		enc.AddString("workflowId", *v.WorkflowId)
+	}
+	if v.RunId != nil {
+		enc.AddString("runId", *v.RunId)
+	}
+	if v.NextEventId != nil {
+		enc.AddInt64("nextEventId", *v.NextEventId)
+	}
 	return err
 }
 
 // GetMessage returns the value of Message if it is set or its
 // zero value if it is unset.
 func (v *RetryTaskError) GetMessage() (o string) { return v.Message }
+
+// GetDomainId returns the value of DomainId if it is set or its
+// zero value if it is unset.
+func (v *RetryTaskError) GetDomainId() (o string) {
+	if v.DomainId != nil {
+		return *v.DomainId
+	}
+
+	return
+}
+
+// GetWorkflowId returns the value of WorkflowId if it is set or its
+// zero value if it is unset.
+func (v *RetryTaskError) GetWorkflowId() (o string) {
+	if v.WorkflowId != nil {
+		return *v.WorkflowId
+	}
+
+	return
+}
+
+// GetRunId returns the value of RunId if it is set or its
+// zero value if it is unset.
+func (v *RetryTaskError) GetRunId() (o string) {
+	if v.RunId != nil {
+		return *v.RunId
+	}
+
+	return
+}
+
+// GetNextEventId returns the value of NextEventId if it is set or its
+// zero value if it is unset.
+func (v *RetryTaskError) GetNextEventId() (o int64) {
+	if v.NextEventId != nil {
+		return *v.NextEventId
+	}
+
+	return
+}
 
 func (v *RetryTaskError) Error() string {
 	return v.String()

@@ -123,6 +123,18 @@ service WorkflowService {
     )
 
   /**
+  * Returns the raw history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow
+  * execution in unknown to the service.
+  **/
+  shared.GetWorkflowExecutionRawHistoryResponse GetWorkflowExecutionRawHistory(1: shared.GetWorkflowExecutionRawHistoryRequest getRequest)
+    throws (
+      1: shared.BadRequestError badRequestError,
+      2: shared.InternalServiceError internalServiceError,
+      3: shared.EntityNotExistsError entityNotExistError,
+      4: shared.ServiceBusyError serviceBusyError,
+    )
+
+  /**
   * PollForDecisionTask is called by application worker to process DecisionTask from a specific taskList.  A
   * DecisionTask is dispatched to callers for active workflow executions, with pending decisions.
   * Application is then expected to call 'RespondDecisionTaskCompleted' API when it is done processing the DecisionTask.

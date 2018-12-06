@@ -245,6 +245,8 @@ const (
 	HistoryClientRecordChildExecutionCompletedScope
 	// HistoryClientReplicateEventsScope tracks RPC calls to history service
 	HistoryClientReplicateEventsScope
+	// HistoryClientReplicateRawEventsScope tracks RPC calls to history service
+	HistoryClientReplicateRawEventsScope
 	// HistoryClientSyncShardStatusScope tracks RPC calls to history service
 	HistoryClientSyncShardStatusScope
 	// HistoryClientSyncActivityScope tracks RPC calls to history service
@@ -275,6 +277,8 @@ const (
 	FrontendClientDescribeWorkflowExecutionScope
 	// FrontendClientGetWorkflowExecutionHistoryScope tracks RPC calls to frontend service
 	FrontendClientGetWorkflowExecutionHistoryScope
+	// FrontendClientGetWorkflowExecutionRawHistoryScope tracks RPC calls to frontend service
+	FrontendClientGetWorkflowExecutionRawHistoryScope
 	// FrontendClientListClosedWorkflowExecutionsScope tracks RPC calls to frontend service
 	FrontendClientListClosedWorkflowExecutionsScope
 	// FrontendClientListDomainsScope tracks RPC calls to frontend service
@@ -374,6 +378,8 @@ const (
 	FrontendRespondActivityTaskCanceledByIDScope
 	// FrontendGetWorkflowExecutionHistoryScope is the metric scope for frontend.GetWorkflowExecutionHistory
 	FrontendGetWorkflowExecutionHistoryScope
+	// FrontendGetWorkflowExecutionRawHistoryScope is the metric scope for frontend.GetWorkflowExecutionRawHistoryScope
+	FrontendGetWorkflowExecutionRawHistoryScope
 	// FrontendSignalWorkflowExecutionScope is the metric scope for frontend.SignalWorkflowExecution
 	FrontendSignalWorkflowExecutionScope
 	// FrontendSignalWithStartWorkflowExecutionScope is the metric scope for frontend.SignalWithStartWorkflowExecution
@@ -450,6 +456,8 @@ const (
 	HistoryRequestCancelWorkflowExecutionScope
 	// HistoryReplicateEventsScope tracks ReplicateEvents API calls received by service
 	HistoryReplicateEventsScope
+	// HistoryReplicateRawEventsScope tracks ReplicateEvents API calls received by service
+	HistoryReplicateRawEventsScope
 	// HistorySyncShardStatusScope tracks HistorySyncShardStatus API calls received by service
 	HistorySyncShardStatusScope
 	// HistorySyncActivityScope tracks HistoryActivity API calls received by service
@@ -666,6 +674,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryClientScheduleDecisionTaskScope:              {operation: "HistoryClientScheduleDecisionTask", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
 		HistoryClientRecordChildExecutionCompletedScope:     {operation: "HistoryClientRecordChildExecutionCompleted", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
 		HistoryClientReplicateEventsScope:                   {operation: "HistoryClientReplicateEvents", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
+		HistoryClientReplicateRawEventsScope:                {operation: "HistoryClientReplicateRawEvents", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
 		HistoryClientSyncShardStatusScope:                   {operation: "HistoryClientSyncShardStatusScope", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
 		HistoryClientSyncActivityScope:                      {operation: "HistoryClientSyncActivityScope", tags: map[string]string{CadenceRoleTagName: HistoryRoleTagValue}},
 		MatchingClientPollForDecisionTaskScope:              {operation: "MatchingClientPollForDecisionTask", tags: map[string]string{CadenceRoleTagName: MatchingRoleTagValue}},
@@ -681,6 +690,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FrontendClientDescribeTaskListScope:                 {operation: "FrontendClientDescribeTaskList", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
 		FrontendClientDescribeWorkflowExecutionScope:        {operation: "FrontendClientDescribeWorkflowExecution", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
 		FrontendClientGetWorkflowExecutionHistoryScope:      {operation: "FrontendClientGetWorkflowExecutionHistory", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
+		FrontendClientGetWorkflowExecutionRawHistoryScope:   {operation: "FrontendClientGetWorkflowExecutionRawHistory", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
 		FrontendClientListClosedWorkflowExecutionsScope:     {operation: "FrontendClientListClosedWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
 		FrontendClientListDomainsScope:                      {operation: "FrontendClientListDomains", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
 		FrontendClientListOpenWorkflowExecutionsScope:       {operation: "FrontendClientListOpenWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: FrontendRoleTagValue}},
@@ -725,6 +735,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FrontendRespondActivityTaskFailedByIDScope:    {operation: "RespondActivityTaskFailedByID"},
 		FrontendRespondActivityTaskCanceledByIDScope:  {operation: "RespondActivityTaskCanceledByID"},
 		FrontendGetWorkflowExecutionHistoryScope:      {operation: "GetWorkflowExecutionHistory"},
+		FrontendGetWorkflowExecutionRawHistoryScope:   {operation: "GetWorkflowExecutionRawHistory"},
 		FrontendSignalWorkflowExecutionScope:          {operation: "SignalWorkflowExecution"},
 		FrontendSignalWithStartWorkflowExecutionScope: {operation: "SignalWithStartWorkflowExecution"},
 		FrontendTerminateWorkflowExecutionScope:       {operation: "TerminateWorkflowExecution"},
@@ -763,6 +774,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryRecordChildExecutionCompletedScope:    {operation: "RecordChildExecutionCompleted"},
 		HistoryRequestCancelWorkflowExecutionScope:   {operation: "RequestCancelWorkflowExecution"},
 		HistoryReplicateEventsScope:                  {operation: "ReplicateEvents"},
+		HistoryReplicateRawEventsScope:               {operation: "ReplicateRawEvents"},
 		HistorySyncShardStatusScope:                  {operation: "SyncShardStatus"},
 		HistorySyncActivityScope:                     {operation: "SyncActivity"},
 		HistoryDescribeMutableStateScope:             {operation: "DescribeMutableState"},

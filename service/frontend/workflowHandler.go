@@ -21,6 +21,7 @@
 package frontend
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -49,6 +50,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
+	historyService "github.com/uber/cadence/service/history"
 	"go.uber.org/yarpc/yarpcerrors"
 )
 
@@ -83,6 +85,7 @@ type (
 		TransientDecision *gen.TransientDecisionInfo
 		EventStoreVersion int32
 		BranchToken       []byte
+		ReplicationInfo   map[string]*gen.ReplicationInfo
 	}
 )
 
@@ -1620,6 +1623,166 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	return createGetWorkflowExecutionHistoryResponse(history, nextToken), nil
 }
 
+// GetWorkflowExecutionRawHistory - retrieves the history of workflow execution
+func (wh *WorkflowHandler) GetWorkflowExecutionRawHistory(
+	ctx context.Context, request *gen.GetWorkflowExecutionRawHistoryRequest) (*gen.GetWorkflowExecutionRawHistoryResponse, error) {
+
+	scope := metrics.FrontendGetWorkflowExecutionRawHistoryScope
+	sw := wh.startRequestProfile(scope)
+	defer sw.Stop()
+	var err error
+
+	domainID, err := wh.domainCache.GetDomainID(request.GetDomain())
+	if err != nil {
+		return nil, wh.error(err, scope)
+	}
+
+	execution := request.Execution
+	if len(execution.GetWorkflowId()) == 0 {
+		return nil, &gen.BadRequestError{Message: "Invalid WorkflowID."}
+	}
+	// TODO currently, this API is only going to be used by re-send history events
+	// to remote cluster if kafka is lossy again, in the future, this API can be used
+	// by CLI and client, then empty runID (meaning the current workflow) should be allowed
+	if len(execution.GetRunId()) == 0 || uuid.Parse(execution.GetRunId()) == nil {
+		return nil, &gen.BadRequestError{Message: "Invalid RunID."}
+	}
+
+	pageSize := int(request.GetMaximumPageSize())
+	if pageSize < 0 {
+		return nil, &gen.BadRequestError{Message: "Invalid PageSize."}
+	}
+
+	var token *getHistoryContinuationToken
+	// initialize or validate the token
+	// token will be used as a source of truth
+	if request.NextPageToken != nil {
+		token, err = deserializeHistoryToken(request.NextPageToken)
+		if err != nil {
+			return nil, err
+		}
+
+		if execution.GetRunId() != token.RunID ||
+			// during the pagination, branch token should not change
+			bytes.Compare(request.BranchToken, token.BranchToken) != 0 ||
+			// we guarantee to use the first event ID provided in the request
+			request.GetFirstEventId() != token.FirstEventID ||
+			// the next event ID in the request must be <= next event ID from mutable state, when initialized
+			// so as long as customer do not change next event ID during pagination,
+			// next event ID in the token <= next event ID in the request.
+			request.GetNextEventId() < token.NextEventID {
+			return nil, &gen.BadRequestError{Message: "Invalid pagination token."}
+		}
+
+		// for the rest variables in the token, since we do not do hmac,
+		// the only thing can be done is to trust the token:
+		// IsWorkflowRunning: not used
+		// TransientDecision: not used
+		// PersistenceToken: trust
+		// EventStoreVersion: trust
+		// ReplicationInfo: trust
+
+	} else {
+		firstEventID := request.GetFirstEventId()
+		nextEventID := request.GetNextEventId()
+		if firstEventID < 0 || firstEventID > nextEventID {
+			return nil, &gen.BadRequestError{Message: "Invalid FirstEventID && NextEventID combination."}
+		}
+
+		response, err := wh.history.GetMutableState(ctx, &h.GetMutableStateRequest{
+			DomainUUID:          common.StringPtr(domainID),
+			Execution:           execution,
+			ExpectedNextEventId: common.Int64Ptr(common.FirstEventID), // common.FirstEventID means no long poll
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		// branch token is provided as part of request, makeing sure that no branching has happened yet
+		// otherwise, caller need to do a reload of history from the begining
+		if request.BranchToken != nil && bytes.Compare(request.BranchToken, response.BranchToken) != 0 {
+			return nil, &gen.BadRequestError{Message: "History has encounter branching event, should reload history from begining."}
+		}
+
+		// check if the input next event ID is > actual next event ID in the mutable state
+		// since we should not leak invalid events
+		if nextEventID > response.GetNextEventId() {
+			nextEventID = response.GetNextEventId()
+		}
+		token = &getHistoryContinuationToken{
+			RunID:             execution.GetRunId(),
+			BranchToken:       response.BranchToken,
+			FirstEventID:      firstEventID,
+			NextEventID:       nextEventID,
+			PersistenceToken:  nil, // this is the initialized value
+			EventStoreVersion: response.GetEventStoreVersion(),
+			ReplicationInfo:   response.ReplicationInfo,
+		}
+	}
+
+	if token.FirstEventID >= token.NextEventID {
+		return &gen.GetWorkflowExecutionRawHistoryResponse{
+			BranchToken:       token.BranchToken,
+			HistoryBatches:    []*gen.DataBlob{},
+			ReplicationInfo:   token.ReplicationInfo,
+			EventStoreVersion: common.Int32Ptr(token.EventStoreVersion),
+			NextPageToken:     nil, // no further pagination
+		}, nil
+	}
+
+	// TODO need to deal with transient decision if to be used by client getting history
+	var historyBatches []*gen.History
+	_, historyBatches, token.PersistenceToken, _, err = historyService.PaginateHistory(
+		wh.historyMgr,
+		wh.historyV2Mgr,
+		wh.metricsClient,
+		wh.GetLogger(),
+		true, // this means that we are getting history by batch
+		domainID,
+		execution.GetWorkflowId(),
+		token.RunID,
+		token.FirstEventID,
+		token.NextEventID,
+		token.PersistenceToken,
+		token.EventStoreVersion,
+		token.BranchToken,
+		pageSize,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	serializer := persistence.NewHistorySerializer()
+	blobs := []*gen.DataBlob{}
+	for _, historyBatch := range historyBatches {
+		blob, err := serializer.SerializeBatchEvents(historyBatch.Events, common.EncodingTypeThriftRW)
+		if err != nil {
+			return nil, err
+		}
+		blobs = append(blobs, &gen.DataBlob{
+			EncodingType: gen.EncodingTypeThriftRW.Ptr(),
+			Data:         blob.Data,
+		})
+	}
+
+	result := &gen.GetWorkflowExecutionRawHistoryResponse{
+		BranchToken:       token.BranchToken,
+		HistoryBatches:    blobs,
+		ReplicationInfo:   token.ReplicationInfo,
+		EventStoreVersion: common.Int32Ptr(token.EventStoreVersion),
+	}
+	if len(token.PersistenceToken) == 0 {
+		result.NextPageToken = nil
+	} else {
+		result.NextPageToken, err = serializeHistoryToken(token)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return result, nil
+}
+
 // SignalWorkflowExecution is used to send a signal event to running workflow execution.  This results in
 // WorkflowExecutionSignaled event recorded in the history and a decision task being created for the execution.
 func (wh *WorkflowHandler) SignalWorkflowExecution(ctx context.Context,
@@ -2163,11 +2326,12 @@ func (wh *WorkflowHandler) QueryWorkflow(ctx context.Context,
 		}
 		// this means sticky timeout, should try using the normal tasklist
 		// we should clear the stickyness of this workflow
-		resetContext, _ := context.WithTimeout(context.Background(), 5*time.Second)
+		resetContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		_, err = wh.history.ResetStickyTaskList(resetContext, &h.ResetStickyTaskListRequest{
 			DomainUUID: common.StringPtr(domainID),
 			Execution:  queryRequest.Execution,
 		})
+		cancel()
 		if err != nil {
 			return nil, wh.error(err, scope)
 		}
@@ -2294,7 +2458,7 @@ func (wh *WorkflowHandler) getHistory(scope int, domainID string, execution gen.
 		if err != nil {
 			return nil, nil, err
 		}
-		historyEvents = append(historyEvents, response.History...)
+		historyEvents = append(historyEvents, response.HistoryEvents...)
 		nextPageToken = response.NextPageToken
 		size = response.Size
 	} else {

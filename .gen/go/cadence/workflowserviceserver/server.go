@@ -59,6 +59,11 @@ type Interface interface {
 		GetRequest *shared.GetWorkflowExecutionHistoryRequest,
 	) (*shared.GetWorkflowExecutionHistoryResponse, error)
 
+	GetWorkflowExecutionRawHistory(
+		ctx context.Context,
+		GetRequest *shared.GetWorkflowExecutionRawHistoryRequest,
+	) (*shared.GetWorkflowExecutionRawHistoryResponse, error)
+
 	ListClosedWorkflowExecutions(
 		ctx context.Context,
 		ListRequest *shared.ListClosedWorkflowExecutionsRequest,
@@ -248,6 +253,17 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary: thrift.UnaryHandler(h.GetWorkflowExecutionHistory),
 				},
 				Signature:    "GetWorkflowExecutionHistory(GetRequest *shared.GetWorkflowExecutionHistoryRequest) (*shared.GetWorkflowExecutionHistoryResponse)",
+				ThriftModule: cadence.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "GetWorkflowExecutionRawHistory",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:  transport.Unary,
+					Unary: thrift.UnaryHandler(h.GetWorkflowExecutionRawHistory),
+				},
+				Signature:    "GetWorkflowExecutionRawHistory(GetRequest *shared.GetWorkflowExecutionRawHistoryRequest) (*shared.GetWorkflowExecutionRawHistoryResponse)",
 				ThriftModule: cadence.ThriftModule,
 			},
 
@@ -528,7 +544,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 30)
+	procedures := make([]transport.Procedure, 0, 31)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
@@ -621,6 +637,25 @@ func (h handler) GetWorkflowExecutionHistory(ctx context.Context, body wire.Valu
 
 	hadError := err != nil
 	result, err := cadence.WorkflowService_GetWorkflowExecutionHistory_Helper.WrapResponse(success, err)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+	}
+	return response, err
+}
+
+func (h handler) GetWorkflowExecutionRawHistory(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args cadence.WorkflowService_GetWorkflowExecutionRawHistory_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, err
+	}
+
+	success, err := h.impl.GetWorkflowExecutionRawHistory(ctx, args.GetRequest)
+
+	hadError := err != nil
+	result, err := cadence.WorkflowService_GetWorkflowExecutionRawHistory_Helper.WrapResponse(success, err)
 
 	var response thrift.Response
 	if err == nil {

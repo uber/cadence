@@ -51,14 +51,15 @@ type (
 	mutableStateProvider     func(version int64, logger bark.Logger) mutableState
 
 	historyReplicator struct {
-		shard           ShardContext
-		historyEngine   *historyEngineImpl
-		historyCache    *historyCache
-		domainCache     cache.DomainCache
-		historyMgr      persistence.HistoryManager
-		clusterMetadata cluster.Metadata
-		metricsClient   metrics.Client
-		logger          bark.Logger
+		shard             ShardContext
+		historyEngine     *historyEngineImpl
+		historyCache      *historyCache
+		domainCache       cache.DomainCache
+		historySerializer persistence.HistorySerializer
+		historyMgr        persistence.HistoryManager
+		clusterMetadata   cluster.Metadata
+		metricsClient     metrics.Client
+		logger            bark.Logger
 
 		getNewConflictResolver conflictResolverProvider
 		getNewStateBuilder     stateBuilderProvider
@@ -69,13 +70,15 @@ type (
 var (
 	// ErrRetryEntityNotExists is returned to indicate workflow execution is not created yet and replicator should
 	// try this task again after a small delay.
-	ErrRetryEntityNotExists = &shared.RetryTaskError{Message: "workflow execution not found"}
-	// ErrRetryExistingWorkflow is returned when events are arriving out of order, and there is another workflow with same version running
-	ErrRetryExistingWorkflow = &shared.RetryTaskError{Message: "workflow with same version is running"}
-	// ErrRetryBufferEvents is returned when events are arriving out of order, should retry, or specify force apply
-	ErrRetryBufferEvents = &shared.RetryTaskError{Message: "retry on applying buffer events"}
+	ErrRetryEntityNotExists = &shared.RetryTaskError{Message: "entity not exists"}
 	// ErrRetrySyncActivity is returned when sync activity replication tasks are arriving out of order, should retry
 	ErrRetrySyncActivity = &shared.RetryTaskError{Message: "retry on applying sync activity"}
+	// ErrRetryBufferEventsMsg is returned when events are arriving out of order, should retry, or specify force apply
+	ErrRetryBufferEventsMsg = "retry on applying buffer events"
+	// ErrWorkflowNotFoundMsg is returned when workflow not found
+	ErrWorkflowNotFoundMsg = "retry on workflow not found"
+	// ErrRetryExistingWorkflowMsg is returned when events are arriving out of order, and there is another workflow with same version running
+	ErrRetryExistingWorkflowMsg = "workflow with same version is running"
 	// ErrRetryExecutionAlreadyStarted is returned to indicate another workflow execution already started,
 	// this error can be return if we encounter race condition, i.e. terminating the target workflow while
 	// the target workflow has done continue as new.
@@ -91,19 +94,24 @@ var (
 	ErrImpossibleRemoteClaimSeenHigherVersion = &shared.BadRequestError{Message: "replication info contains higher version then this cluster ever emitted"}
 	// ErrInternalFailure is returned when encounter code bug
 	ErrInternalFailure = &shared.BadRequestError{Message: "fail to apply history events due bug"}
+	// ErrEmptyHistoryRawEventBatch indicate that one single batch of history raw events is of size 0
+	ErrEmptyHistoryRawEventBatch = &shared.BadRequestError{Message: "encounter empty history batch"}
+	// ErrUnknownEncodingType indicate that the encoding type is unknown
+	ErrUnknownEncodingType = &shared.BadRequestError{Message: "unknown encoding type"}
 )
 
 func newHistoryReplicator(shard ShardContext, historyEngine *historyEngineImpl, historyCache *historyCache, domainCache cache.DomainCache,
 	historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager, logger bark.Logger) *historyReplicator {
 	replicator := &historyReplicator{
-		shard:           shard,
-		historyEngine:   historyEngine,
-		historyCache:    historyCache,
-		domainCache:     domainCache,
-		historyMgr:      historyMgr,
-		clusterMetadata: shard.GetService().GetClusterMetadata(),
-		metricsClient:   shard.GetMetricsClient(),
-		logger:          logger.WithField(logging.TagWorkflowComponent, logging.TagValueHistoryReplicatorComponent),
+		shard:             shard,
+		historyEngine:     historyEngine,
+		historyCache:      historyCache,
+		domainCache:       domainCache,
+		historySerializer: persistence.NewHistorySerializer(),
+		historyMgr:        historyMgr,
+		clusterMetadata:   shard.GetService().GetClusterMetadata(),
+		metricsClient:     shard.GetMetricsClient(),
+		logger:            logger.WithField(logging.TagWorkflowComponent, logging.TagValueHistoryReplicatorComponent),
 
 		getNewConflictResolver: func(context *workflowExecutionContext, logger bark.Logger) conflictResolver {
 			return newConflictResolver(shard, context, historyMgr, historyV2Mgr, logger)
@@ -243,6 +251,48 @@ func (r *historyReplicator) SyncActivity(ctx context.Context, request *h.SyncAct
 	return r.updateMutableStateWithTimer(context, msBuilder, now, timerTasks)
 }
 
+func (r *historyReplicator) ApplyRawEvents(ctx context.Context, requestIn *h.ReplicateRawEventsRequest) (retError error) {
+	var err error
+	var events []*workflow.HistoryEvent
+	var newRunEvents []*workflow.HistoryEvent
+
+	events, err = r.deserializeBlob(requestIn.History)
+	if err != nil {
+		return err
+	}
+
+	version := events[0].GetVersion()
+	firstEventID := events[0].GetEventId()
+	nextEventID := events[len(events)-1].GetEventId() + 1
+	sourceCluster := r.clusterMetadata.ClusterNameForFailoverVersion(version)
+
+	requestOut := &h.ReplicateEventsRequest{
+		SourceCluster:           common.StringPtr(sourceCluster),
+		DomainUUID:              requestIn.DomainUUID,
+		WorkflowExecution:       requestIn.WorkflowExecution,
+		FirstEventId:            common.Int64Ptr(firstEventID),
+		NextEventId:             common.Int64Ptr(nextEventID),
+		Version:                 common.Int64Ptr(version),
+		ReplicationInfo:         requestIn.ReplicationInfo,
+		History:                 &shared.History{Events: events},
+		EventStoreVersion:       requestIn.EventStoreVersion,
+		NewRunHistory:           nil,
+		NewRunEventStoreVersion: nil,
+		ForceBufferEvents:       common.BoolPtr(true),
+	}
+
+	if requestIn.NewRunHistory != nil {
+		newRunEvents, err = r.deserializeBlob(requestIn.NewRunHistory)
+		if err != nil {
+			return err
+		}
+		requestOut.NewRunHistory = &shared.History{Events: newRunEvents}
+		requestOut.NewRunEventStoreVersion = requestIn.NewRunEventStoreVersion
+	}
+
+	return r.ApplyEvents(ctx, requestOut)
+}
+
 func (r *historyReplicator) ApplyEvents(ctx context.Context, request *h.ReplicateEventsRequest) (retError error) {
 	logger := r.logger.WithFields(bark.Fields{
 		logging.TagWorkflowExecutionID: request.WorkflowExecution.GetWorkflowId(),
@@ -295,13 +345,7 @@ func (r *historyReplicator) ApplyEvents(ctx context.Context, request *h.Replicat
 		// err will not be of type EntityNotExistsError
 		return err
 	}
-	defer func() {
-		if retError == ErrRetryBufferEvents {
-			release(nil)
-		} else {
-			release(retError)
-		}
-	}()
+	defer func() { release(retError) }()
 
 	firstEvent := request.History.Events[0]
 	switch firstEvent.GetEventType() {
@@ -331,7 +375,7 @@ func (r *historyReplicator) ApplyEvents(ctx context.Context, request *h.Replicat
 			// we need to check the existing workflow ID
 			release(err)
 			return r.ApplyOtherEventsMissingMutableState(ctx, domainID, request.WorkflowExecution.GetWorkflowId(),
-				firstEvent.GetVersion(), logger)
+				request.WorkflowExecution.GetRunId(), firstEvent.GetVersion(), logger)
 		}
 
 		logger.WithField(logging.TagCurrentVersion, msBuilder.GetReplicationState().LastWriteVersion)
@@ -357,7 +401,7 @@ func (r *historyReplicator) ApplyStartEvent(ctx context.Context, context *workfl
 }
 
 func (r *historyReplicator) ApplyOtherEventsMissingMutableState(ctx context.Context, domainID string, workflowID string,
-	incomingVersion int64, logger bark.Logger) error {
+	runID string, incomingVersion int64, logger bark.Logger) error {
 	// we need to check the current workflow execution
 	_, currentMutableState, currentRelease, err := r.getCurrentWorkflowMutableState(ctx, domainID, workflowID)
 	if err != nil {
@@ -367,7 +411,6 @@ func (r *historyReplicator) ApplyOtherEventsMissingMutableState(ctx context.Cont
 	currentLastWriteVersion := currentMutableState.GetLastWriteVersion()
 	currentRelease(nil)
 
-	// we can also use the start version
 	if currentLastWriteVersion > incomingVersion {
 		logger.Info("Dropping replication task.")
 		r.metricsClient.IncCounter(metrics.ReplicateHistoryEventsScope, metrics.StaleReplicationEventsCounter)
@@ -378,11 +421,15 @@ func (r *historyReplicator) ApplyOtherEventsMissingMutableState(ctx context.Cont
 		currentRunID, currentLastWriteVersion, incomingVersion)
 
 	// try flush the current workflow buffer
-	err = r.flushCurrentWorkflowBuffer(ctx, domainID, workflowID, logger)
+	currentRunID, currentNextEventID, currentStillRunning, err := r.flushCurrentWorkflowBuffer(ctx, domainID, workflowID, logger)
 	if err != nil {
 		return err
 	}
-	return ErrRetryEntityNotExists
+
+	if currentStillRunning {
+		return newRetryTaskErrorWithHint(ErrWorkflowNotFoundMsg, domainID, workflowID, currentRunID, currentNextEventID)
+	}
+	return newRetryTaskErrorWithHint(ErrWorkflowNotFoundMsg, domainID, workflowID, runID, common.FirstEventID)
 }
 
 func (r *historyReplicator) ApplyOtherEventsVersionChecking(ctx context.Context, context *workflowExecutionContext,
@@ -511,7 +558,13 @@ func (r *historyReplicator) ApplyOtherEvents(ctx context.Context, context *workf
 			msBuilder.GetNextEventID(), firstEventID)
 
 		if !request.GetForceBufferEvents() {
-			return ErrRetryBufferEvents
+			return newRetryTaskErrorWithHint(
+				ErrRetryBufferEventsMsg,
+				context.domainID,
+				context.workflowExecution.GetWorkflowId(),
+				context.workflowExecution.GetRunId(),
+				msBuilder.GetNextEventID(),
+			)
 		}
 
 		r.metricsClient.RecordTimer(
@@ -852,11 +905,11 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 		return nil
 	}
 	if currentLastWriteVersion == incomingVersion {
-		err = r.flushCurrentWorkflowBuffer(ctx, domainID, execution.GetWorkflowId(), logger)
+		currentRunID, currentNextEventID, _, err := r.flushCurrentWorkflowBuffer(ctx, domainID, execution.GetWorkflowId(), logger)
 		if err != nil {
 			return err
 		}
-		return ErrRetryExistingWorkflow
+		return newRetryTaskErrorWithHint(ErrRetryExistingWorkflowMsg, domainID, execution.GetWorkflowId(), currentRunID, currentNextEventID)
 	}
 
 	// currentStartVersion < incomingVersion && current workflow still running
@@ -882,11 +935,11 @@ func (r *historyReplicator) replicateWorkflowStarted(ctx context.Context, contex
 }
 
 func (r *historyReplicator) flushCurrentWorkflowBuffer(ctx context.Context, domainID string, workflowID string,
-	logger bark.Logger) error {
+	logger bark.Logger) (string, int64, bool, error) {
 	currentContext, currentMutableState, currentRelease, err := r.getCurrentWorkflowMutableState(ctx, domainID,
 		workflowID)
 	if err != nil {
-		return err
+		return "", 0, false, err
 	}
 	// since this new workflow cannot make progress due to existing workflow being open
 	// try flush the existing workflow's buffer see if we can make it move forward
@@ -895,9 +948,9 @@ func (r *historyReplicator) flushCurrentWorkflowBuffer(ctx context.Context, doma
 	currentRelease(err)
 	if err != nil {
 		logError(logger, "Fail to flush buffer for current workflow.", err)
-		return err
+		return "", 0, false, err
 	}
-	return nil
+	return currentContext.workflowExecution.GetRunId(), currentMutableState.GetNextEventID(), currentMutableState.IsWorkflowExecutionRunning(), nil
 }
 
 func (r *historyReplicator) conflictResolutionTerminateCurrentRunningIfNotSelf(ctx context.Context,
@@ -1013,7 +1066,7 @@ func (r *historyReplicator) terminateWorkflow(ctx context.Context, domainID stri
 	return r.ApplyReplicationTask(ctx, context, msBuilder, req, logger)
 }
 
-func (r *historyReplicator) getLatestCheckpoint(replicationInfoRemote map[string]*h.ReplicationInfo,
+func (r *historyReplicator) getLatestCheckpoint(replicationInfoRemote map[string]*workflow.ReplicationInfo,
 	replicationInfoLocal map[string]*persistence.ReplicationInfo) (int64, int64) {
 
 	// this only applies to 2 data center case
@@ -1085,8 +1138,36 @@ func (r *historyReplicator) notify(clusterName string, now time.Time, transferTa
 	r.historyEngine.timerProcessor.NotifyNewTimers(clusterName, now, timerTasks)
 }
 
+func (r *historyReplicator) deserializeBlob(blob *workflow.DataBlob) ([]*workflow.HistoryEvent, error) {
+
+	if blob.GetEncodingType() != workflow.EncodingTypeThriftRW {
+		return nil, ErrUnknownEncodingType
+	}
+	historyEvents, err := r.historySerializer.DeserializeBatchEvents(&persistence.DataBlob{
+		Encoding: common.EncodingTypeThriftRW,
+		Data:     blob.Data,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if len(historyEvents) == 0 {
+		return nil, ErrEmptyHistoryRawEventBatch
+	}
+	return historyEvents, nil
+}
+
 func logError(logger bark.Logger, msg string, err error) {
 	logger.WithFields(bark.Fields{
 		logging.TagErr: err,
 	}).Error(msg)
+}
+
+func newRetryTaskErrorWithHint(msg string, domainID string, workflowID string, runID string, nextEventID int64) *shared.RetryTaskError {
+	return &shared.RetryTaskError{
+		Message:     msg,
+		DomainId:    common.StringPtr(domainID),
+		WorkflowId:  common.StringPtr(workflowID),
+		RunId:       common.StringPtr(runID),
+		NextEventId: common.Int64Ptr(nextEventID),
+	}
 }

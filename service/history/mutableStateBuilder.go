@@ -2156,7 +2156,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionSignaled(
 
 func (e *mutableStateBuilder) ReplicateWorkflowExecutionSignaled(event *workflow.HistoryEvent) {
 	// Increment signal count in mutable state for this workflow execution
-	e.executionInfo.SignalCount += 1
+	e.executionInfo.SignalCount++
 }
 
 func (e *mutableStateBuilder) AddContinueAsNewEvent(decisionCompletedEventID int64, domainEntry *cache.DomainCacheEntry,

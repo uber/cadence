@@ -152,10 +152,15 @@ func (p *ipDispatcherProvider) Get(address string) (*yarpc.Dispatcher, error) {
 		return nil, err
 	}
 
-	return yarpc.NewDispatcher(yarpc.Config{
+	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: crossDCCaller,
 		Outbounds: yarpc.Outbounds{
 			common.FrontendServiceName: {Unary: channel.NewSingleOutbound(address)},
 		},
-	}), nil
+	})
+	err = dispatcher.Start()
+	if err != nil {
+		return nil, err
+	}
+	return dispatcher, nil
 }

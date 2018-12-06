@@ -71,6 +71,10 @@ exception AccessDeniedError {
 
 exception RetryTaskError {
   1: required string message
+  2: optional string domainId
+  3: optional string workflowId
+  4: optional string runId
+  5: optional i64 (js.type = "Long") nextEventId
 }
 
 enum WorkflowIdReusePolicy {
@@ -252,6 +256,20 @@ struct ActivityType {
 struct TaskList {
   10: optional string name
   20: optional TaskListKind kind
+}
+
+enum EncodingType {
+  ThriftRW,
+}
+
+struct DataBlob {
+  10: optional EncodingType EncodingType
+	20: optional binary Data
+}
+
+struct ReplicationInfo {
+  10: optional i64 (js.type = "Long") version
+  20: optional i64 (js.type = "Long") lastEventId
 }
 
 struct TaskListMetadata {
@@ -1034,6 +1052,24 @@ struct GetWorkflowExecutionHistoryRequest {
 struct GetWorkflowExecutionHistoryResponse {
   10: optional History history
   20: optional binary nextPageToken
+}
+
+struct GetWorkflowExecutionRawHistoryRequest {
+  10: optional string domain
+  20: optional WorkflowExecution execution
+  30: optional binary branchToken
+  40: optional i64 (js.type = "Long") firstEventId
+  50: optional i64 (js.type = "Long") nextEventId
+  60: optional i32 maximumPageSize
+  70: optional binary nextPageToken
+}
+
+struct GetWorkflowExecutionRawHistoryResponse {
+  10: optional binary branchToken
+  20: optional binary nextPageToken
+  30: optional list<DataBlob> historyBatches
+  40: optional map<string, ReplicationInfo> replicationInfo
+  50: optional i32 eventStoreVersion
 }
 
 struct SignalWorkflowExecutionRequest {
