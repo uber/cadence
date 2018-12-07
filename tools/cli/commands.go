@@ -171,7 +171,6 @@ const (
 )
 
 var (
-	// cFactory is a global factory that is used everywhere
 	cFactory ClientFactory
 
 	colorRed     = color.New(color.FgRed).SprintFunc()

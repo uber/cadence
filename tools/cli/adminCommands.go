@@ -21,12 +21,12 @@
 package cli
 
 import (
-	"fmt"
-	"github.com/uber/cadence/.gen/go/admin"
-	"github.com/uber/cadence/.gen/go/shared"
 	"encoding/json"
+	"fmt"
 	"github.com/gocql/gocql"
 	"github.com/uber-common/bark"
+	"github.com/uber/cadence/.gen/go/admin"
+	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	cassp "github.com/uber/cadence/common/persistence/cassandra"
