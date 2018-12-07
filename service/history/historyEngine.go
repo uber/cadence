@@ -1024,7 +1024,7 @@ type decisionBlobSizeChecker struct {
 	completedID    int64
 }
 
-func (c *decisionBlobSizeChecker) failWorkflowIfBlobSizeExceedsLimit(blob []byte) (bool, error) {
+func (c *decisionBlobSizeChecker) failWorkflowIfBlobSizeExceedsLimit(blob []byte, message string) (bool, error) {
 
 	err := common.CheckEventBlobSizeLimit(len(blob), c.sizeLimitWarn, c.sizeLimitError,
 		c.domainID, c.workflowID, c.runID, c.metricsClient, metrics.HistoryRespondDecisionTaskCompletedScope, c.logger)
@@ -1035,7 +1035,7 @@ func (c *decisionBlobSizeChecker) failWorkflowIfBlobSizeExceedsLimit(blob []byte
 
 	attributes := &workflow.FailWorkflowExecutionDecisionAttributes{
 		Reason:  common.StringPtr(common.FailureReasonDecisionBlobSizeExceedsLimit),
-		Details: blob[0:c.sizeLimitError],
+		Details: []byte(message),
 	}
 
 	if evt := c.msBuilder.AddFailWorkflowEvent(c.completedID, attributes); evt == nil {
@@ -1183,7 +1183,7 @@ Update_History_Loop:
 					break Process_Decision_Loop
 				}
 
-				failWorkflow, err := sizeChecker.failWorkflowIfBlobSizeExceedsLimit(attributes.Input)
+				failWorkflow, err := sizeChecker.failWorkflowIfBlobSizeExceedsLimit(attributes.Input, "ScheduleActivityTaskDecisionAttributes.Input exceeds size limit.")
 				if err != nil {
 					return nil, err
 				}
@@ -1222,7 +1222,7 @@ Update_History_Loop:
 					failMessage = err.Error()
 					break Process_Decision_Loop
 				}
-				failWorkflow, err := sizeChecker.failWorkflowIfBlobSizeExceedsLimit(attributes.Result)
+				failWorkflow, err := sizeChecker.failWorkflowIfBlobSizeExceedsLimit(attributes.Result, "CompleteWorkflowExecutionDecisionAttributes.Result exceeds size limit.")
 				if err != nil {
 					return nil, err
 				}
@@ -1259,7 +1259,7 @@ Update_History_Loop:
 					break Process_Decision_Loop
 				}
 
-				failWorkflow, err := sizeChecker.failWorkflowIfBlobSizeExceedsLimit(failedAttributes.Details)
+				failWorkflow, err := sizeChecker.failWorkflowIfBlobSizeExceedsLimit(failedAttributes.Details, "FailWorkflowExecutionDecisionAttributes.Details exceeds size limit.")
 				if err != nil {
 					return nil, err
 				}
@@ -1397,7 +1397,7 @@ Update_History_Loop:
 					failMessage = err.Error()
 					break Process_Decision_Loop
 				}
-				failWorkflow, err := sizeChecker.failWorkflowIfBlobSizeExceedsLimit(attributes.Details)
+				failWorkflow, err := sizeChecker.failWorkflowIfBlobSizeExceedsLimit(attributes.Details, "RecordMarkerDecisionAttributes.Details exceeds size limit.")
 				if err != nil {
 					return nil, err
 				}
@@ -1456,7 +1456,7 @@ Update_History_Loop:
 					failMessage = err.Error()
 					break Process_Decision_Loop
 				}
-				failWorkflow, err := sizeChecker.failWorkflowIfBlobSizeExceedsLimit(attributes.Input)
+				failWorkflow, err := sizeChecker.failWorkflowIfBlobSizeExceedsLimit(attributes.Input, "SignalExternalWorkflowExecutionDecisionAttributes.Input exceeds size limit.")
 				if err != nil {
 					return nil, err
 				}
@@ -1514,7 +1514,7 @@ Update_History_Loop:
 					failMessage = err.Error()
 					break Process_Decision_Loop
 				}
-				failWorkflow, err := sizeChecker.failWorkflowIfBlobSizeExceedsLimit(attributes.Input)
+				failWorkflow, err := sizeChecker.failWorkflowIfBlobSizeExceedsLimit(attributes.Input, "ContinueAsNewWorkflowExecutionDecisionAttributes.Input exceeds size limit.")
 				if err != nil {
 					return nil, err
 				}
@@ -1552,7 +1552,7 @@ Update_History_Loop:
 					failMessage = err.Error()
 					break Process_Decision_Loop
 				}
-				failWorkflow, err := sizeChecker.failWorkflowIfBlobSizeExceedsLimit(attributes.Input)
+				failWorkflow, err := sizeChecker.failWorkflowIfBlobSizeExceedsLimit(attributes.Input, "StartChildWorkflowExecutionDecisionAttributes.Input exceeds size limit.")
 				if err != nil {
 					return nil, err
 				}

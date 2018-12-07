@@ -1185,7 +1185,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailed(
 		taskToken.DomainID, taskToken.WorkflowID, taskToken.RunID,
 		wh.metricsClient, scope, wh.GetLogger()); err != nil {
 		// details exceeds blob size limit, we would truncate the details and put a specific error reason
-		failedRequest.Reason = common.StringPtr(common.FailureReasonCompleteResultExceedsLimit)
+		failedRequest.Reason = common.StringPtr(common.FailureReasonFailureDetailsExceedsLimit)
 		failedRequest.Details = failedRequest.Details[0:sizeLimitError]
 	}
 
