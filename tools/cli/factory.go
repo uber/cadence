@@ -24,7 +24,6 @@ import (
 	serverAdmin "github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 	serverFrontend "github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	"github.com/urfave/cli"
-	clientAdmin "go.uber.org/cadence/.gen/go/admin/adminserviceclient"
 	clientFrontend "go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/tchannel"
@@ -36,13 +35,11 @@ const (
 	cadenceFrontendService = "cadence-frontend"
 )
 
-// ClientBuilder is used to construct rpc clients
+// ClientFactory is used to construct rpc clients
 type ClientFactory interface {
 	ClientFrontendClient(c *cli.Context) clientFrontend.Interface
-	ClientAdminClient(c *cli.Context) clientAdmin.Interface
-
-	//ServerFrontendClient(c *cli.Context) serverFrontend.Interface
-	//ServerAdminClient(c *cli.Context) serverAdmin.Interface
+	ServerFrontendClient(c *cli.Context) serverFrontend.Interface
+	ServerAdminClient(c *cli.Context) serverAdmin.Interface
 }
 
 type clientFactory struct {
@@ -67,12 +64,6 @@ func NewClientFactory() ClientFactory {
 func (b *clientFactory) ClientFrontendClient(c *cli.Context) clientFrontend.Interface {
 	b.ensureDispatcher(c)
 	return clientFrontend.New(b.dispatcher.ClientConfig(cadenceFrontendService))
-}
-
-// ClientAdminServiceClient builds an admin client
-func (b *clientFactory) ClientAdminClient(c *cli.Context) clientAdmin.Interface {
-	b.ensureDispatcher(c)
-	return clientAdmin.New(b.dispatcher.ClientConfig(cadenceFrontendService))
 }
 
 // ServerFrontendClient builds a frontend client (based on server side thrift interface)

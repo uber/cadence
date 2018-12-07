@@ -25,14 +25,14 @@ import (
 	"encoding/json"
 	"github.com/gocql/gocql"
 	"github.com/uber-common/bark"
+	"github.com/uber/cadence/.gen/go/admin"
+	"github.com/uber/cadence/.gen/go/shared"
+	s "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	cassp "github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/tools/cassandra"
 	"github.com/urfave/cli"
-	"go.uber.org/cadence/.gen/go/admin"
-	"go.uber.org/cadence/.gen/go/shared"
-	s "github.com/uber/cadence/.gen/go/shared"
 )
 
 const maxEventID = 9999
@@ -115,7 +115,7 @@ func AdminShowWorkflow(c *cli.Context) {
 
 // AdminDescribeWorkflow describe a new workflow execution for admin
 func AdminDescribeWorkflow(c *cli.Context) {
-	adminClient := cFactory.ClientAdminClient(c)
+	adminClient := cFactory.ServerAdminClient(c)
 
 	domain := getRequiredGlobalOption(c, FlagDomain)
 	wid := getRequiredOption(c, FlagWorkflowID)
@@ -273,7 +273,7 @@ func AdminGetShardID(c *cli.Context) {
 
 // AdminDescribeHistoryHost describes history host
 func AdminDescribeHistoryHost(c *cli.Context) {
-	adminClient := cFactory.ClientAdminClient(c)
+	adminClient := cFactory.ServerAdminClient(c)
 
 	wid := c.String(FlagWorkflowID)
 	sid := c.Int(FlagShardID)

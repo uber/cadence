@@ -170,49 +170,37 @@ const (
 	showErrorStackEnv    = `CADENCE_CLI_SHOW_STACKS`
 )
 
-// For color output to terminal
 var (
+	// cFactory is a global factory that is used everywhere
+	cFactory ClientFactory
+
 	colorRed     = color.New(color.FgRed).SprintFunc()
 	colorMagenta = color.New(color.FgMagenta).SprintFunc()
 	colorGreen   = color.New(color.FgGreen).SprintFunc()
 
-	tableHeaderBlue = tablewriter.Colors{tablewriter.FgHiBlueColor}
-
-	optionErr = "there is something wrong with your command options"
+	tableHeaderBlue         = tablewriter.Colors{tablewriter.FgHiBlueColor}
+	optionErr               = "there is something wrong with your command options"
+	osExit                  = os.Exit
+	workflowClosedStatusMap = map[string]s.WorkflowExecutionCloseStatus{
+		"completed":      s.WorkflowExecutionCloseStatusCompleted,
+		"failed":         s.WorkflowExecutionCloseStatusFailed,
+		"canceled":       s.WorkflowExecutionCloseStatusCanceled,
+		"terminated":     s.WorkflowExecutionCloseStatusTerminated,
+		"continuedasnew": s.WorkflowExecutionCloseStatusContinuedAsNew,
+		"timedout":       s.WorkflowExecutionCloseStatusTimedOut,
+		// below are some alias
+		"c":         s.WorkflowExecutionCloseStatusCompleted,
+		"complete":  s.WorkflowExecutionCloseStatusCompleted,
+		"f":         s.WorkflowExecutionCloseStatusFailed,
+		"fail":      s.WorkflowExecutionCloseStatusFailed,
+		"cancel":    s.WorkflowExecutionCloseStatusCanceled,
+		"terminate": s.WorkflowExecutionCloseStatusTerminated,
+		"term":      s.WorkflowExecutionCloseStatusTerminated,
+		"continue":  s.WorkflowExecutionCloseStatusContinuedAsNew,
+		"cont":      s.WorkflowExecutionCloseStatusContinuedAsNew,
+		"timeout":   s.WorkflowExecutionCloseStatusTimedOut,
+	}
 )
-
-var workflowClosedStatusMap = map[string]s.WorkflowExecutionCloseStatus{
-	"completed":      s.WorkflowExecutionCloseStatusCompleted,
-	"failed":         s.WorkflowExecutionCloseStatusFailed,
-	"canceled":       s.WorkflowExecutionCloseStatusCanceled,
-	"terminated":     s.WorkflowExecutionCloseStatusTerminated,
-	"continuedasnew": s.WorkflowExecutionCloseStatusContinuedAsNew,
-	"timedout":       s.WorkflowExecutionCloseStatusTimedOut,
-	// below are some alias
-	"c":         s.WorkflowExecutionCloseStatusCompleted,
-	"complete":  s.WorkflowExecutionCloseStatusCompleted,
-	"f":         s.WorkflowExecutionCloseStatusFailed,
-	"fail":      s.WorkflowExecutionCloseStatusFailed,
-	"cancel":    s.WorkflowExecutionCloseStatusCanceled,
-	"terminate": s.WorkflowExecutionCloseStatusTerminated,
-	"term":      s.WorkflowExecutionCloseStatusTerminated,
-	"continue":  s.WorkflowExecutionCloseStatusContinuedAsNew,
-	"cont":      s.WorkflowExecutionCloseStatusContinuedAsNew,
-	"timeout":   s.WorkflowExecutionCloseStatusTimedOut,
-}
-
-// cBuilder is used to create cadence clients
-// To provide customized builder, call SetBuilder() before call NewCliApp()
-var cFactory ClientFactory
-
-// osExit is used when CLI hits an error and exit
-// The purpose of this is to test CLI exit scenario
-var osExit = os.Exit
-
-// SetBuilder can be used to inject customized builder of cadence clients
-func SetBuilder(builder ClientFactory) {
-	cFactory = builder
-}
 
 // ErrorAndExit print easy to understand error msg first then error detail in a new line
 func ErrorAndExit(msg string, err error) {
