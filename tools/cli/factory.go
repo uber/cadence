@@ -41,8 +41,8 @@ type ClientFactory interface {
 	ClientFrontendClient(c *cli.Context) clientFrontend.Interface
 	ClientAdminClient(c *cli.Context) clientAdmin.Interface
 
-	ServerFrontendClient(c *cli.Context) serverFrontend.Interface
-	ServerAdminClient(c *cli.Context) serverAdmin.Interface
+	//ServerFrontendClient(c *cli.Context) serverFrontend.Interface
+	//ServerAdminClient(c *cli.Context) serverAdmin.Interface
 }
 
 type clientFactory struct {

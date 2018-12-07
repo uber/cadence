@@ -28,24 +28,15 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/suite"
-	serverAdmin "github.com/uber/cadence/.gen/go/admin/adminserviceclient"
-	serverFrontend "github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	"github.com/uber/cadence/common"
 	"github.com/urfave/cli"
+	"go.uber.org/cadence/.gen/go/admin"
 	"go.uber.org/cadence/.gen/go/admin/adminserviceclient"
 	"go.uber.org/cadence/.gen/go/admin/adminservicetest"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/.gen/go/cadence/workflowservicetest"
 	"go.uber.org/cadence/.gen/go/shared"
 	"strings"
-
-	/**
-	serverAdmin "github.com/uber/cadence/.gen/go/admin/adminserviceclient"
-	serverFrontend "github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
-	"github.com/urfave/cli"
-	clientAdmin "go.uber.org/cadence/.gen/go/admin/adminserviceclient"
-	clientFrontend "go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
-	 */
 )
 
 type cliAppSuite struct {
@@ -61,20 +52,12 @@ type workflowClientBuilderMock struct {
 	adminService adminserviceclient.Interface
 }
 
-func (mock *workflowClientBuilderMock) ClientFrontendClient(c *cli.Context) workflowserviceclient.Interface {
+func (mock *workflowClientBuilderMock) ClientFrontendClient(c *cli.Context) workflowserviceclient.Interface{
 	return mock.service
 }
 
 func (mock *workflowClientBuilderMock) ClientAdminClient(c *cli.Context) adminserviceclient.Interface {
 	return mock.adminService
-}
-
-func (mock *workflowClientBuilderMock) ServerFrontendClient(c *cli.Context) serverFrontend.Interface {
-	return nil
-}
-
-func (mock *workflowClientBuilderMock) ServerAdminClient(c *cli.Context) serverAdmin.Interface {
-	return nil
 }
 
 // this is the mock for yarpcCallOptions, make sure length are the same
@@ -101,10 +84,7 @@ func (s *cliAppSuite) SetupTest() {
 	s.mockCtrl = gomock.NewController(s.T())
 	s.service = workflowservicetest.NewMockClient(s.mockCtrl)
 	s.adminService = adminservicetest.NewMockClient(s.mockCtrl)
-	cFactory = &workflowClientBuilderMock{
-		service: s.service,
-		adminService: s.adminService,
-	}
+	SetBuilder(&workflowClientBuilderMock{service: s.service, adminService: s.adminService})
 }
 
 func (s *cliAppSuite) TearDownTest() {
@@ -482,22 +462,21 @@ var describeTaskListResponse = &shared.DescribeTaskListResponse{
 	},
 }
 
-//func (s *cliAppSuite) TestAdminDescribeWorkflow() {
-//	resp := &admin.DescribeWorkflowExecutionResponse{
-//		ShardId:     common.StringPtr("test-shard-id"),
-//		HistoryAddr: common.StringPtr("ip:port"),
-//	}
-//
-//	s.adminService.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(resp, nil)
-//	err := s.app.Run([]string{"", "--do", domainName, "admin", "wf", "describe", "-w", "test-wf-id"})
-//	s.Nil(err)
-//}
+func (s *cliAppSuite) TestAdminDescribeWorkflow() {
+	resp := &admin.DescribeWorkflowExecutionResponse{
+		ShardId:     common.StringPtr("test-shard-id"),
+		HistoryAddr: common.StringPtr("ip:port"),
+	}
+
+	s.adminService.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(resp, nil)
+	err := s.app.Run([]string{"", "--do", domainName, "admin", "wf", "describe", "-w", "test-wf-id"})
+	s.Nil(err)
+}
 
 func (s *cliAppSuite) TestAdminDescribeWorkflow_Failed() {
-	s.adminService.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, nil)
-	s.True(true)
-	//errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "admin", "wf", "describe", "-w", "test-wf-id"})
-	//s.Equal(1, errorCode)
+	s.adminService.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, &shared.BadRequestError{"faked error"})
+	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "admin", "wf", "describe", "-w", "test-wf-id"})
+	s.Equal(1, errorCode)
 }
 
 func (s *cliAppSuite) TestDescribeTaskList() {

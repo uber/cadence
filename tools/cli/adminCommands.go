@@ -25,13 +25,14 @@ import (
 	"encoding/json"
 	"github.com/gocql/gocql"
 	"github.com/uber-common/bark"
-	"github.com/uber/cadence/.gen/go/admin"
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	cassp "github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/tools/cassandra"
 	"github.com/urfave/cli"
+	"go.uber.org/cadence/.gen/go/admin"
+	"go.uber.org/cadence/.gen/go/shared"
+	s "github.com/uber/cadence/.gen/go/shared"
 )
 
 const maxEventID = 9999
@@ -50,9 +51,14 @@ func AdminShowWorkflow(c *cli.Context) {
 	if len(wid) != 0 {
 		histV1 := cassp.NewHistoryPersistenceFromSession(session, bark.NewNopLogger())
 		resp, err := histV1.GetWorkflowExecutionHistory(&persistence.InternalGetWorkflowExecutionHistoryRequest{
+<<<<<<< HEAD
 			LastEventBatchVersion: common.EmptyVersion,
 			DomainID:              domainID,
 			Execution: shared.WorkflowExecution{
+=======
+			DomainID: domainID,
+			Execution: s.WorkflowExecution{
+>>>>>>> test pass
 				WorkflowId: common.StringPtr(wid),
 				RunId:      common.StringPtr(rid),
 			},
@@ -109,7 +115,7 @@ func AdminShowWorkflow(c *cli.Context) {
 
 // AdminDescribeWorkflow describe a new workflow execution for admin
 func AdminDescribeWorkflow(c *cli.Context) {
-	adminClient := cFactory.ServerAdminClient(c)
+	adminClient := cFactory.ClientAdminClient(c)
 
 	domain := getRequiredGlobalOption(c, FlagDomain)
 	wid := getRequiredOption(c, FlagWorkflowID)
@@ -267,7 +273,7 @@ func AdminGetShardID(c *cli.Context) {
 
 // AdminDescribeHistoryHost describes history host
 func AdminDescribeHistoryHost(c *cli.Context) {
-	adminClient := cFactory.ServerAdminClient(c)
+	adminClient := cFactory.ClientAdminClient(c)
 
 	wid := c.String(FlagWorkflowID)
 	sid := c.Int(FlagShardID)

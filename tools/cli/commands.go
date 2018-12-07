@@ -178,9 +178,6 @@ var (
 
 	tableHeaderBlue = tablewriter.Colors{tablewriter.FgHiBlueColor}
 
-	cFactory ClientFactory
-	osExit   = os.Exit
-
 	optionErr = "there is something wrong with your command options"
 )
 
@@ -202,6 +199,19 @@ var workflowClosedStatusMap = map[string]s.WorkflowExecutionCloseStatus{
 	"continue":  s.WorkflowExecutionCloseStatusContinuedAsNew,
 	"cont":      s.WorkflowExecutionCloseStatusContinuedAsNew,
 	"timeout":   s.WorkflowExecutionCloseStatusTimedOut,
+}
+
+// cBuilder is used to create cadence clients
+// To provide customized builder, call SetBuilder() before call NewCliApp()
+var cFactory ClientFactory
+
+// osExit is used when CLI hits an error and exit
+// The purpose of this is to test CLI exit scenario
+var osExit = os.Exit
+
+// SetBuilder can be used to inject customized builder of cadence clients
+func SetBuilder(builder ClientFactory) {
+	cFactory = builder
 }
 
 // ErrorAndExit print easy to understand error msg first then error detail in a new line
