@@ -22,12 +22,11 @@ package cli
 
 import (
 	"fmt"
+	"github.com/uber/cadence/.gen/go/admin"
+	"github.com/uber/cadence/.gen/go/shared"
 	"encoding/json"
 	"github.com/gocql/gocql"
 	"github.com/uber-common/bark"
-	"github.com/uber/cadence/.gen/go/admin"
-	"github.com/uber/cadence/.gen/go/shared"
-	s "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	cassp "github.com/uber/cadence/common/persistence/cassandra"
@@ -51,14 +50,9 @@ func AdminShowWorkflow(c *cli.Context) {
 	if len(wid) != 0 {
 		histV1 := cassp.NewHistoryPersistenceFromSession(session, bark.NewNopLogger())
 		resp, err := histV1.GetWorkflowExecutionHistory(&persistence.InternalGetWorkflowExecutionHistoryRequest{
-<<<<<<< HEAD
 			LastEventBatchVersion: common.EmptyVersion,
 			DomainID:              domainID,
 			Execution: shared.WorkflowExecution{
-=======
-			DomainID: domainID,
-			Execution: s.WorkflowExecution{
->>>>>>> test pass
 				WorkflowId: common.StringPtr(wid),
 				RunId:      common.StringPtr(rid),
 			},
