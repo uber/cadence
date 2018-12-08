@@ -443,7 +443,7 @@ RetryLoop:
 		endEventID := attr.GetFirstEventId()
 
 		// history service will return RetryTaskError, we can use it as an hint
-		errResend := p.historyRereplicator.sendMultiWorkflowHistory(
+		errResend := p.historyRereplicator.SendMultiWorkflowHistory(
 			attr.GetDomainId(), attr.GetWorkflowId(),
 			beginRunID, beginEventID, endRunID, endEventID,
 		)

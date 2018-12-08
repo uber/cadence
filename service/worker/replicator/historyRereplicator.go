@@ -53,7 +53,8 @@ var (
 type (
 	// HistoryRereplicator is the interface for resending history events to remote
 	HistoryRereplicator interface {
-		sendMultiWorkflowHistory(domainID string, workflowID string,
+		// SendMultiWorkflowHistory sends multiple run IDs's history events to remote
+		SendMultiWorkflowHistory(domainID string, workflowID string,
 			beginingRunID string, beginingFirstEventID int64, endingRunID string, endingNextEventID int64) error
 	}
 
@@ -80,45 +81,18 @@ func NewHistoryRereplicator(domainCache cache.DomainCache, frontendClient fronte
 	}
 }
 
-func (h *HistoryRereplicatorImpl) sendMultiWorkflowHistory(domainID string, workflowID string,
+// SendMultiWorkflowHistory sends multiple run IDs's history events to remote
+func (h *HistoryRereplicatorImpl) SendMultiWorkflowHistory(domainID string, workflowID string,
 	beginingRunID string, beginingFirstEventID int64, endingRunID string, endingNextEventID int64) (err error) {
 	// NOTE: begining run ID and ending run ID can be different
 	// the logic will try to grab events from begining run ID, first event ID to ending run ID, ending next event ID
 
-	if beginingRunID == endingRunID {
-		_, err = h.sendSingleWorkflowHistory(domainID, workflowID, beginingRunID, beginingFirstEventID, endingNextEventID)
-		return err
-	}
+	// beginingRunID can be empty, if there is no workflow in DB
+	// endingRunID must not be empty, since this function is trigger messing events of endingRunID
 
-	// beginingRunID != endingRunID
-	// this can be caused by continue as new, or simply just workflow ID reuse
-	eventIDRange := func(currentRunID string, beginingRunID string, beginingFirstEventID int64,
-		endingRunID string, endingNextEventID int64) (int64, int64) {
-
-		if beginingRunID == endingRunID {
-			return beginingFirstEventID, endingNextEventID
-		}
-
-		// beginingRunID != endingRunID
-
-		if currentRunID == beginingRunID {
-			// return all events from beginingFirstEventID to the end
-			return beginingFirstEventID, common.EndEventID
-		}
-
-		if currentRunID == endingRunID {
-			// return all events from the begining to endingNextEventID
-			return common.FirstEventID, endingNextEventID
-		}
-
-		// for everything else, just dump the emtire history
-		return common.FirstEventID, common.EndEventID
-	}
-
-	// the beginingRunID can be empty, if there is no workflow in DB
 	runID := beginingRunID
 	for len(runID) != 0 && runID != endingRunID {
-		firstEventID, nextEventID := eventIDRange(runID, beginingRunID, beginingFirstEventID, endingRunID, endingNextEventID)
+		firstEventID, nextEventID := h.eventIDRange(runID, beginingRunID, beginingFirstEventID, endingRunID, endingNextEventID)
 		runID, err = h.sendSingleWorkflowHistory(domainID, workflowID, runID, firstEventID, nextEventID)
 		if err != nil {
 			return err
@@ -126,7 +100,8 @@ func (h *HistoryRereplicatorImpl) sendMultiWorkflowHistory(domainID string, work
 	}
 
 	if runID == endingRunID {
-		_, err = h.sendSingleWorkflowHistory(domainID, workflowID, runID, common.FirstEventID, endingNextEventID)
+		firstEventID, nextEventID := h.eventIDRange(runID, beginingRunID, beginingFirstEventID, endingRunID, endingNextEventID)
+		_, err = h.sendSingleWorkflowHistory(domainID, workflowID, runID, firstEventID, nextEventID)
 		return err
 	}
 
@@ -151,7 +126,7 @@ func (h *HistoryRereplicatorImpl) sendMultiWorkflowHistory(domainID string, work
 	// for all the runIDs, send the history
 	for index := len(runIDs) - 2; index > -1; index-- {
 		runID = runIDs[index]
-		firstEventID, nextEventID := eventIDRange(runID, beginingRunID, beginingFirstEventID, endingRunID, endingNextEventID)
+		firstEventID, nextEventID := h.eventIDRange(runID, beginingRunID, beginingFirstEventID, endingRunID, endingNextEventID)
 		_, err = h.sendSingleWorkflowHistory(domainID, workflowID, runID, firstEventID, nextEventID)
 		if err != nil {
 			return err
@@ -187,6 +162,7 @@ func (h *HistoryRereplicatorImpl) sendSingleWorkflowHistory(domainID string, wor
 		branchToken = response.BranchToken
 		eventStoreVersion = response.GetEventStoreVersion()
 		replicationInfo = h.replicationInfoFromPublic(response.ReplicationInfo)
+		token = response.NextPageToken
 
 		for _, externalBatch := range response.HistoryBatches {
 			err := h.sendReplicationRawRequest(request)
@@ -200,7 +176,7 @@ func (h *HistoryRereplicatorImpl) sendSingleWorkflowHistory(domainID string, wor
 			request = h.createReplicationRawRequest(domainID, workflowID, runID, internalBatch, eventStoreVersion, replicationInfo)
 		}
 	}
-	// after this for loop, where shall be one request not sent yet
+	// after this for loop, there shall be one request not sent yet
 	// this request contains the last event, possible continue as new event
 	lastBatch := request.History
 	nextRunID, err := h.getNextRunID(lastBatch)
@@ -229,6 +205,30 @@ func (h *HistoryRereplicatorImpl) sendSingleWorkflowHistory(domainID string, wor
 	}
 
 	return nextRunID, h.sendReplicationRawRequest(request)
+}
+
+func (h *HistoryRereplicatorImpl) eventIDRange(currentRunID string,
+	beginingRunID string, beginingFirstEventID int64,
+	endingRunID string, endingNextEventID int64) (int64, int64) {
+
+	if beginingRunID == endingRunID {
+		return beginingFirstEventID, endingNextEventID
+	}
+
+	// beginingRunID != endingRunID
+
+	if currentRunID == beginingRunID {
+		// return all events from beginingFirstEventID to the end
+		return beginingFirstEventID, common.EndEventID
+	}
+
+	if currentRunID == endingRunID {
+		// return all events from the begining to endingNextEventID
+		return common.FirstEventID, endingNextEventID
+	}
+
+	// for everything else, just dump the emtire history
+	return common.FirstEventID, common.EndEventID
 }
 
 func (h *HistoryRereplicatorImpl) createReplicationRawRequest(
@@ -365,16 +365,22 @@ func (h *HistoryRereplicatorImpl) getNextRunID(blob *internal.DataBlob) (string,
 
 func (h *HistoryRereplicatorImpl) deserializeBlob(blob *internal.DataBlob) ([]*internal.HistoryEvent, error) {
 
-	if blob.GetEncodingType() != internal.EncodingTypeThriftRW {
+	var err error
+	var historyEvents []*internal.HistoryEvent
+
+	switch blob.GetEncodingType() {
+	case internal.EncodingTypeThriftRW:
+		historyEvents, err = h.serializer.DeserializeBatchEvents(&persistence.DataBlob{
+			Encoding: common.EncodingTypeThriftRW,
+			Data:     blob.Data,
+		})
+		if err != nil {
+			return nil, err
+		}
+	default:
 		return nil, ErrUnknownEncodingType
 	}
-	historyEvents, err := h.serializer.DeserializeBatchEvents(&persistence.DataBlob{
-		Encoding: common.EncodingTypeThriftRW,
-		Data:     blob.Data,
-	})
-	if err != nil {
-		return nil, err
-	}
+
 	if len(historyEvents) == 0 {
 		return nil, ErrEmptyHistoryRawEventBatch
 	}
