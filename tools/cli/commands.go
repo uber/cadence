@@ -75,6 +75,8 @@ const (
 	FlagTaskListWithAlias          = FlagTaskList + ", tl"
 	FlagTaskListType               = "tasklisttype"
 	FlagTaskListTypeWithAlias      = FlagTaskListType + ", tlt"
+	FlagWorkflowIdReusePolicy      = "workflowidreusepolicy"
+	FlagWorkflowIdReusePolicyAlias = FlagWorkflowIdReusePolicy + ", wrp"
 	FlagWorkflowType               = "workflow_type"
 	FlagWorkflowTypeWithAlias      = FlagWorkflowType + ", wt"
 	FlagWorkflowStatus             = "status"
@@ -522,7 +524,7 @@ func StartWorkflow(c *cli.Context) {
 	serviceClient := cFactory.ClientFrontendClient(c)
 
 	domain := getRequiredGlobalOption(c, FlagDomain)
-	tasklist := getRequiredOption(c, FlagTaskList)
+	taskList := getRequiredOption(c, FlagTaskList)
 	workflowType := getRequiredOption(c, FlagWorkflowType)
 	et := c.Int(FlagExecutionTimeout)
 	if et == 0 {
@@ -533,7 +535,7 @@ func StartWorkflow(c *cli.Context) {
 	if len(wid) == 0 {
 		wid = uuid.New()
 	}
-
+	reusePolicy := getWorkflowIdReusePolicy(c.String(FlagWorkflowIdReusePolicy))
 	input := processJSONInput(c)
 
 	tcCtx, cancel := newContext()
@@ -547,12 +549,13 @@ func StartWorkflow(c *cli.Context) {
 			Name: common.StringPtr(workflowType),
 		},
 		TaskList: &s.TaskList{
-			Name: common.StringPtr(tasklist),
+			Name: common.StringPtr(taskList),
 		},
 		Input:                               []byte(input),
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(int32(et)),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(int32(dt)),
 		Identity:                            common.StringPtr(getCliIdentity()),
+		WorkflowIdReusePolicy:               reusePolicy,
 	})
 
 	if err != nil {
@@ -567,7 +570,7 @@ func RunWorkflow(c *cli.Context) {
 	serviceClient := cFactory.ClientFrontendClient(c)
 
 	domain := getRequiredGlobalOption(c, FlagDomain)
-	tasklist := getRequiredOption(c, FlagTaskList)
+	taskList := getRequiredOption(c, FlagTaskList)
 	workflowType := getRequiredOption(c, FlagWorkflowType)
 	et := c.Int(FlagExecutionTimeout)
 	if et == 0 {
@@ -578,7 +581,7 @@ func RunWorkflow(c *cli.Context) {
 	if len(wid) == 0 {
 		wid = uuid.New()
 	}
-
+	reusePolicy := getWorkflowIdReusePolicy(c.String(FlagWorkflowIdReusePolicy))
 	input := processJSONInput(c)
 
 	contextTimeout := defaultContextTimeoutForLongPoll
@@ -596,12 +599,13 @@ func RunWorkflow(c *cli.Context) {
 			Name: common.StringPtr(workflowType),
 		},
 		TaskList: &s.TaskList{
-			Name: common.StringPtr(tasklist),
+			Name: common.StringPtr(taskList),
 		},
 		Input:                               []byte(input),
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(int32(et)),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(int32(dt)),
 		Identity:                            common.StringPtr(getCliIdentity()),
+		WorkflowIdReusePolicy:               reusePolicy,
 	})
 
 	if err != nil {
@@ -616,7 +620,7 @@ func RunWorkflow(c *cli.Context) {
 		{"Run Id", resp.GetRunId()},
 		{"Type", workflowType},
 		{"Domain", domain},
-		{"Task List", tasklist},
+		{"Task List", taskList},
 		{"Args", truncate(input)}, // in case of large input
 	}
 	table.SetBorder(false)
@@ -1335,4 +1339,24 @@ func getWorkflowStatus(statusStr string) s.WorkflowExecutionCloseStatus {
 	ErrorAndExit(optionErr, errors.New("option status is not one of allowed values "+
 		"[completed, failed, canceled, terminated, continueasnew, timedout]"))
 	return 0
+}
+
+func getWorkflowIdReusePolicy(definedPolicy string) *s.WorkflowIdReusePolicy {
+	if definedPolicy != "" {
+		value, err := strconv.Atoi(definedPolicy)
+		if err != nil {
+			ErrorAndExit(fmt.Sprintf("Option %v format is not supported.", FlagWorkflowIdReusePolicy), err)
+			return nil
+		}
+		policy := s.WorkflowIdReusePolicy(value)
+		for _, p := range s.WorkflowIdReusePolicy_Values() {
+			if p.Equals(policy) {
+				return policy.Ptr()
+			}
+		}
+		// At this point, the policy should return if the value is valid
+		ErrorAndExit(fmt.Sprintf("Option %v value is not in supported range.", FlagWorkflowIdReusePolicy), err)
+	}
+	//Return default if the policy is not defined
+	return nil
 }
