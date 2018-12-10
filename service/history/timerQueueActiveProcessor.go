@@ -331,7 +331,7 @@ Update_History_Loop:
 			// NOTE: When record activity HB comes in we only update last heartbeat timestamp, this is the place
 			// where we create next timer task based on that new updated timestamp.
 			isHeartBeatTask := timerTask.TimeoutType == int(workflow.TimeoutTypeHeartbeat)
-			if isHeartBeatTask && ai.LastTimeoutVisibility <= timerTask.VisibilityTimestamp.Unix() {
+			if isHeartBeatTask && ai.LastHeartbeatTimeoutVisibility <= timerTask.VisibilityTimestamp.Unix() {
 				ai.TimerTaskStatus = ai.TimerTaskStatus &^ TimerTaskStatusCreatedHeartbeat
 				msBuilder.UpdateActivity(ai)
 				updateState = true
@@ -350,7 +350,9 @@ Update_History_Loop:
 				continue ExpireActivityTimers
 			}
 
-			if isExpired := tBuilder.IsTimerExpired(td, referenceTime); isExpired {
+			if isExpired := tBuilder.IsTimerExpired(td, referenceTime); !isExpired {
+				break ExpireActivityTimers
+			} else {
 				timeoutType := td.TimeoutType
 				t.logger.Debugf("Activity TimeoutType: %v, scheduledID: %v, startedId: %v. \n",
 					timeoutType, ai.ScheduleID, ai.StartedID)
@@ -434,38 +436,13 @@ Update_History_Loop:
 						}
 					}
 				}
-			} else {
-				// See if we have next timer in list to be created.
-				// Create next timer task if we don't have one
-				if !td.TaskCreated {
-					nextTask := tBuilder.createNewTask(td)
-					timerTasks = append(timerTasks, nextTask)
-					at := nextTask.(*persistence.ActivityTimeoutTask)
-
-					ai.TimerTaskStatus = ai.TimerTaskStatus | getActivityTimerStatus(workflow.TimeoutType(at.TimeoutType))
-					// Use second resolution for setting LastTimeoutVisibility, which is used for deduping heartbeat timer creation
-					ai.LastTimeoutVisibility = td.TimerSequenceID.VisibilityTimestamp.Unix()
-					msBuilder.UpdateActivity(ai)
-					updateState = true
-
-					// Emit log if timer is created within a second
-					if t.now().Add(time.Second).After(td.TimerSequenceID.VisibilityTimestamp) {
-						t.logger.WithFields(bark.Fields{
-							logging.TagDomainID:            msBuilder.GetExecutionInfo().DomainID,
-							logging.TagWorkflowExecutionID: msBuilder.GetExecutionInfo().WorkflowID,
-							logging.TagWorkflowRunID:       msBuilder.GetExecutionInfo().RunID,
-							logging.TagScheduleID:          ai.ScheduleID,
-							logging.TagAttempt:             ai.Attempt,
-							logging.TagVersion:             ai.Version,
-							logging.TagTimerTaskStatus:     ai.TimerTaskStatus,
-							logging.TagTimeoutType:         td.TimeoutType,
-						}).Info("Next timer is created to fire within one second")
-					}
-				}
-
-				// Done!
-				break ExpireActivityTimers
 			}
+		}
+
+		// use a new timer builder, since during the above for loop, the some timer definitions can be invalid
+		if tt := t.historyService.getTimerBuilder(&context.workflowExecution).GetActivityTimerTaskIfNeeded(msBuilder); tt != nil {
+			updateState = true
+			timerTasks = append(timerTasks, tt)
 		}
 
 		if updateHistory || updateState {
