@@ -42,6 +42,7 @@ import (
 	"github.com/uber-go/tally"
 	wsc "github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
@@ -59,9 +60,10 @@ type (
 		// not merely log an error
 		*require.Assertions
 		suite.Suite
-		cluster1 *testCluster
-		cluster2 *testCluster
-		logger   bark.Logger
+		cluster1       *testCluster
+		cluster2       *testCluster
+		logger         bark.Logger
+		enableEventsV2 bool
 	}
 
 	testCluster struct {
@@ -80,17 +82,21 @@ const (
 )
 
 var (
-	integration  = flag.Bool("integration2", true, "run integration tests")
-	domainName   = "integration-cross-dc-test-domain"
-	clusterName  = []string{"active", "standby"}
-	topicName    = []string{"active", "standby"}
-	clustersInfo = []*config.ClustersInfo{
+	integration     = flag.Bool("integration2", true, "run integration tests")
+	testEventsV2Xdc = flag.Bool("eventsV2xdc", false, "run integration tests with eventsV2 for XDC suite")
+
+	domainName     = "integration-cross-dc-test-domain"
+	clusterName    = []string{"active", "standby"}
+	topicName      = []string{"active", "standby"}
+	clusterAddress = []string{cluster.TestCurrentClusterFrontendAddress, cluster.TestAlternativeClusterFrontendAddress}
+	clustersInfo   = []*config.ClustersInfo{
 		{
 			EnableGlobalDomain:             true,
 			FailoverVersionIncrement:       10,
 			MasterClusterName:              clusterName[0],
 			CurrentClusterName:             clusterName[0],
 			ClusterInitialFailoverVersions: map[string]int64{clusterName[0]: 0, clusterName[1]: 1},
+			ClusterAddress:                 map[string]string{clusterName[0]: clusterAddress[0], clusterName[1]: clusterAddress[1]},
 		},
 		{
 			EnableGlobalDomain:             true,
@@ -98,6 +104,7 @@ var (
 			MasterClusterName:              clusterName[0],
 			CurrentClusterName:             clusterName[1],
 			ClusterInitialFailoverVersions: map[string]int64{clusterName[0]: 0, clusterName[1]: 1},
+			ClusterAddress:                 map[string]string{clusterName[0]: clusterAddress[0], clusterName[1]: clusterAddress[1]},
 		},
 	}
 	clusterReplicationConfig = []*workflow.ClusterReplicationConfiguration{
@@ -112,11 +119,11 @@ var (
 
 func (s *integrationClustersTestSuite) newTestCluster(no int) *testCluster {
 	c := &testCluster{logger: s.logger.WithField("Cluster", clusterName[no])}
-	c.setupCluster(no)
+	c.setupCluster(no, s.enableEventsV2)
 	return c
 }
 
-func (s *testCluster) setupCluster(no int) {
+func (s *testCluster) setupCluster(no int, enableEventsV2 bool) {
 	options := persistencetests.TestBaseOptions{}
 	options.DBName = "integration_" + clusterName[no]
 	clusterInfo := clustersInfo[no]
@@ -126,14 +133,15 @@ func (s *testCluster) setupCluster(no int) {
 		clusterInfo.MasterClusterName,
 		clusterInfo.CurrentClusterName,
 		clusterInfo.ClusterInitialFailoverVersions,
+		clusterInfo.ClusterAddress,
 	)
 	s.TestBase = persistencetests.NewTestBaseWithCassandra(&options)
 	s.TestBase.Setup()
 	s.setupShards()
 	messagingClient := s.createMessagingClient()
 	testNumberOfHistoryShards := 1 // use 1 shard so we can be sure when failover completed in standby cluster
-	s.host = host.NewCadence(s.ClusterMetadata, messagingClient, s.MetadataProxy, s.MetadataManagerV2, s.ShardMgr, s.HistoryMgr, s.HistoryV2Mgr, s.ExecutionMgrFactory, s.TaskMgr,
-		s.VisibilityMgr, testNumberOfHistoryShards, testNumberOfHistoryHosts, s.logger, no, true)
+	s.host = host.NewCadence(s.ClusterMetadata, client.NewIPYarpcDispatcherProvider(), messagingClient, s.MetadataProxy, s.MetadataManagerV2, s.ShardMgr, s.HistoryMgr, s.HistoryV2Mgr, s.ExecutionMgrFactory, s.TaskMgr,
+		s.VisibilityMgr, testNumberOfHistoryShards, testNumberOfHistoryHosts, s.logger, no, true, enableEventsV2)
 	s.host.Start()
 }
 
@@ -202,9 +210,19 @@ func createContext() context.Context {
 }
 
 func TestIntegrationClustersTestSuite(t *testing.T) {
-	flag.Parse()
-	if *integration {
+	if *integration && !*testEventsV2Xdc {
 		s := new(integrationClustersTestSuite)
+		suite.Run(t, s)
+	} else {
+		t.Skip()
+	}
+}
+
+func TestIntegrationClustersTestSuiteEventsV2(t *testing.T) {
+	flag.Parse()
+	if *integration && *testEventsV2Xdc {
+		s := new(integrationClustersTestSuite)
+		s.enableEventsV2 = true
 		suite.Run(t, s)
 	} else {
 		t.Skip()

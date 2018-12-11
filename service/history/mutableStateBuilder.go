@@ -193,14 +193,7 @@ func (e *mutableStateBuilder) SetHistoryTree(treeID string) error {
 	}
 	exeInfo := e.GetExecutionInfo()
 	exeInfo.EventStoreVersion = persistence.EventStoreVersionV2
-	exeInfo.CurrentResetVersion = 0
-	exeInfo.HistoryBranches = map[int32]*persistence.HistoryBranch{}
-	exeInfo.HistoryBranches[exeInfo.CurrentResetVersion] = &persistence.HistoryBranch{
-		BranchToken:      initialBranchToken,
-		NextEventID:      common.FirstEventID,
-		LastFirstEventID: common.FirstEventID,
-		HistorySize:      int64(0),
-	}
+	exeInfo.BranchToken = initialBranchToken
 	return nil
 }
 
@@ -465,9 +458,11 @@ func (e *mutableStateBuilder) CloseUpdateSession() (*mutableStateSessionUpdates,
 func (e *mutableStateBuilder) BufferReplicationTask(
 	request *h.ReplicateEventsRequest) error {
 	bt := &persistence.BufferedReplicationTask{
-		FirstEventID: request.GetFirstEventId(),
-		NextEventID:  request.GetNextEventId(),
-		Version:      request.GetVersion(),
+		FirstEventID:            request.GetFirstEventId(),
+		NextEventID:             request.GetNextEventId(),
+		Version:                 request.GetVersion(),
+		EventStoreVersion:       request.GetEventStoreVersion(),
+		NewRunEventStoreVersion: request.GetNewRunEventStoreVersion(),
 	}
 
 	if request.History != nil {
@@ -1105,6 +1100,11 @@ func (e *mutableStateBuilder) GetLastFirstEventID() int64 {
 // GetNextEventID returns next event ID
 func (e *mutableStateBuilder) GetNextEventID() int64 {
 	return e.executionInfo.NextEventID
+}
+
+// GetPreviousStartedEventID returns last started decision task event ID
+func (e *mutableStateBuilder) GetPreviousStartedEventID() int64 {
+	return e.executionInfo.LastProcessedEvent
 }
 
 func (e *mutableStateBuilder) IsWorkflowExecutionRunning() bool {
@@ -2154,12 +2154,18 @@ func (e *mutableStateBuilder) AddWorkflowExecutionSignaled(
 		return nil
 	}
 
-	// No MutableState operation needed for signal
-	return e.hBuilder.AddWorkflowExecutionSignaledEvent(signalName, input, identity)
+	event := e.hBuilder.AddWorkflowExecutionSignaledEvent(signalName, input, identity)
+	e.ReplicateWorkflowExecutionSignaled(event)
+	return event
+}
+
+func (e *mutableStateBuilder) ReplicateWorkflowExecutionSignaled(event *workflow.HistoryEvent) {
+	// Increment signal count in mutable state for this workflow execution
+	e.executionInfo.SignalCount++
 }
 
 func (e *mutableStateBuilder) AddContinueAsNewEvent(decisionCompletedEventID int64, domainEntry *cache.DomainCacheEntry,
-	parentDomainName string, attributes *workflow.ContinueAsNewWorkflowExecutionDecisionAttributes) (*workflow.HistoryEvent, mutableState,
+	parentDomainName string, attributes *workflow.ContinueAsNewWorkflowExecutionDecisionAttributes, eventStoreVersion int32) (*workflow.HistoryEvent, mutableState,
 	error) {
 
 	newRunID := uuid.New()
@@ -2207,13 +2213,16 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(decisionCompletedEventID int
 		}
 	}
 
-	e.ReplicateWorkflowExecutionContinuedAsNewEvent("", domainID, continueAsNewEvent, startedEvent, di, newStateBuilder)
+	err := e.ReplicateWorkflowExecutionContinuedAsNewEvent("", domainID, continueAsNewEvent, startedEvent, di, newStateBuilder, eventStoreVersion)
+	if err != nil {
+		return nil, nil, err
+	}
 	return continueAsNewEvent, newStateBuilder, nil
 }
 
 func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(sourceClusterName string, domainID string,
 	continueAsNewEvent *workflow.HistoryEvent, startedEvent *workflow.HistoryEvent, di *decisionInfo,
-	newStateBuilder mutableState) {
+	newStateBuilder mutableState, eventStoreVersion int32) error {
 	continueAsNewAttributes := continueAsNewEvent.WorkflowExecutionContinuedAsNewEventAttributes
 	startedAttributes := startedEvent.WorkflowExecutionStartedEventAttributes
 	newRunID := continueAsNewAttributes.GetNewExecutionRunId()
@@ -2221,6 +2230,12 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(sour
 	newExecution := workflow.WorkflowExecution{
 		WorkflowId: common.StringPtr(e.executionInfo.WorkflowID),
 		RunId:      common.StringPtr(newRunID),
+	}
+
+	if eventStoreVersion == persistence.EventStoreVersionV2 {
+		if err := newStateBuilder.SetHistoryTree(newRunID); err != nil {
+			return err
+		}
 	}
 
 	e.executionInfo.State = persistence.WorkflowStateCompleted
@@ -2267,6 +2282,8 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(sour
 		ExpirationTime:       e.executionInfo.ExpirationTime,
 		MaximumAttempts:      e.executionInfo.MaximumAttempts,
 		NonRetriableErrors:   e.executionInfo.NonRetriableErrors,
+		EventStoreVersion:    newStateBuilder.GetEventStoreVersion(),
+		BranchToken:          newStateBuilder.GetCurrentBranch(),
 	}
 	if continueAsNewAttributes.GetBackoffStartIntervalInSeconds() > 0 {
 		// this is a retry
@@ -2326,6 +2343,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(sour
 		continueAsNew.TimerTasks,
 	)
 	e.continueAsNew = continueAsNew
+	return nil
 }
 
 func (e *mutableStateBuilder) AddStartChildWorkflowExecutionInitiatedEvent(decisionCompletedEventID int64,

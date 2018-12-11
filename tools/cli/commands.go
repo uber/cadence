@@ -40,7 +40,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/urfave/cli"
 
-	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	s "go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/client"
 )
@@ -65,6 +64,8 @@ const (
 	FlagWorkflowID                 = "workflow_id"
 	FlagWorkflowIDWithAlias        = FlagWorkflowID + ", wid, w"
 	FlagRunID                      = "run_id"
+	FlagTreeID                     = "tree_id"
+	FlagBranchID                   = "branch_id"
 	FlagNumberOfShards             = "number_of_shards"
 	FlagRunIDWithAlias             = FlagRunID + ", rid, r"
 	FlagTargetCluster              = "target_cluster"
@@ -166,66 +167,54 @@ const (
 	defaultPageSizeForList           = 500
 
 	workflowStatusNotSet = -1
+	showErrorStackEnv    = `CADENCE_CLI_SHOW_STACKS`
 )
 
-// For color output to terminal
 var (
+	cFactory ClientFactory
+
 	colorRed     = color.New(color.FgRed).SprintFunc()
 	colorMagenta = color.New(color.FgMagenta).SprintFunc()
 	colorGreen   = color.New(color.FgGreen).SprintFunc()
 
-	tableHeaderBlue = tablewriter.Colors{tablewriter.FgHiBlueColor}
+	tableHeaderBlue         = tablewriter.Colors{tablewriter.FgHiBlueColor}
+	optionErr               = "there is something wrong with your command options"
+	osExit                  = os.Exit
+	workflowClosedStatusMap = map[string]s.WorkflowExecutionCloseStatus{
+		"completed":      s.WorkflowExecutionCloseStatusCompleted,
+		"failed":         s.WorkflowExecutionCloseStatusFailed,
+		"canceled":       s.WorkflowExecutionCloseStatusCanceled,
+		"terminated":     s.WorkflowExecutionCloseStatusTerminated,
+		"continuedasnew": s.WorkflowExecutionCloseStatusContinuedAsNew,
+		"timedout":       s.WorkflowExecutionCloseStatusTimedOut,
+		// below are some alias
+		"c":         s.WorkflowExecutionCloseStatusCompleted,
+		"complete":  s.WorkflowExecutionCloseStatusCompleted,
+		"f":         s.WorkflowExecutionCloseStatusFailed,
+		"fail":      s.WorkflowExecutionCloseStatusFailed,
+		"cancel":    s.WorkflowExecutionCloseStatusCanceled,
+		"terminate": s.WorkflowExecutionCloseStatusTerminated,
+		"term":      s.WorkflowExecutionCloseStatusTerminated,
+		"continue":  s.WorkflowExecutionCloseStatusContinuedAsNew,
+		"cont":      s.WorkflowExecutionCloseStatusContinuedAsNew,
+		"timeout":   s.WorkflowExecutionCloseStatusTimedOut,
+	}
 )
-
-var optionErr = "there is something wrong with your command options"
-
-var workflowClosedStatusMap = map[string]s.WorkflowExecutionCloseStatus{
-	"completed":      s.WorkflowExecutionCloseStatusCompleted,
-	"failed":         s.WorkflowExecutionCloseStatusFailed,
-	"canceled":       s.WorkflowExecutionCloseStatusCanceled,
-	"terminated":     s.WorkflowExecutionCloseStatusTerminated,
-	"continuedasnew": s.WorkflowExecutionCloseStatusContinuedAsNew,
-	"timedout":       s.WorkflowExecutionCloseStatusTimedOut,
-	// below are some alias
-	"c":         s.WorkflowExecutionCloseStatusCompleted,
-	"complete":  s.WorkflowExecutionCloseStatusCompleted,
-	"f":         s.WorkflowExecutionCloseStatusFailed,
-	"fail":      s.WorkflowExecutionCloseStatusFailed,
-	"cancel":    s.WorkflowExecutionCloseStatusCanceled,
-	"terminate": s.WorkflowExecutionCloseStatusTerminated,
-	"term":      s.WorkflowExecutionCloseStatusTerminated,
-	"continue":  s.WorkflowExecutionCloseStatusContinuedAsNew,
-	"cont":      s.WorkflowExecutionCloseStatusContinuedAsNew,
-	"timeout":   s.WorkflowExecutionCloseStatusTimedOut,
-}
-
-// cBuilder is used to create cadence clients
-// To provide customized builder, call SetBuilder() before call NewCliApp()
-var cBuilder WorkflowClientBuilderInterface
-
-// SetBuilder can be used to inject customized builder of cadence clients
-func SetBuilder(builder WorkflowClientBuilderInterface) {
-	cBuilder = builder
-}
 
 // ErrorAndExit print easy to understand error msg first then error detail in a new line
 func ErrorAndExit(msg string, err error) {
-	fmt.Printf("%s %s\n%s %+v\n", colorRed("Error:"), msg, colorMagenta("Error Details:"), err)
-	os.Exit(1)
-}
-
-// ExitIfError exit while err is not nil and print the calling stack also
-func ExitIfError(err error) {
-	const stacksEnv = `CADENCE_CLI_SHOW_STACKS`
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
-		if os.Getenv(stacksEnv) != `` {
+		fmt.Printf("%s %s\n%s %+v\n", colorRed("Error:"), msg, colorMagenta("Error Details:"), err)
+		if os.Getenv(showErrorStackEnv) != `` {
+			fmt.Printf("Stack trace:\n")
 			debug.PrintStack()
 		} else {
-			fmt.Fprintf(os.Stderr, "('export %s=1' to see stack traces)\n", stacksEnv)
+			fmt.Printf("('export %s=1' to see stack traces)\n", showErrorStackEnv)
 		}
-		os.Exit(1)
+	} else {
+		fmt.Printf("%s %s\n", colorRed("Error:"), msg)
 	}
+	osExit(1)
 }
 
 // RegisterDomain register a domain
@@ -246,8 +235,7 @@ func RegisterDomain(c *cli.Context) {
 	if c.IsSet(FlagEmitMetric) {
 		emitMetric, err = strconv.ParseBool(c.String(FlagEmitMetric))
 		if err != nil {
-			fmt.Printf("Register Domain failed: %v.\n", err.Error())
-			return
+			ErrorAndExit(fmt.Sprintf("Option %s format is invalid.", FlagEmitMetric), err)
 		}
 	}
 
@@ -256,15 +244,13 @@ func RegisterDomain(c *cli.Context) {
 		domainDataStr := getRequiredOption(c, FlagDomainData)
 		domainData, err = parseDomainDataKVs(domainDataStr)
 		if err != nil {
-			fmt.Printf("Register Domain failed: %v.\n", err.Error())
-			return
+			ErrorAndExit(fmt.Sprintf("Option %s format is invalid.", FlagDomainData), err)
 		}
 	}
 	if len(requiredDomainDataKeys) > 0 {
 		err = checkRequiredDomainDataKVs(domainData)
 		if err != nil {
-			fmt.Printf("Register Domain failed: %v.\n", err.Error())
-			return
+			ErrorAndExit("Domain data missed required data.", err)
 		}
 	}
 
@@ -302,12 +288,12 @@ func RegisterDomain(c *cli.Context) {
 	err = domainClient.Register(ctx, request)
 	if err != nil {
 		if _, ok := err.(*s.DomainAlreadyExistsError); !ok {
-			fmt.Printf("Operation failed: %v.\n", err.Error())
+			ErrorAndExit("Register Domain operation failed.", err)
 		} else {
-			fmt.Printf("Domain %s already registered.\n", domain)
+			ErrorAndExit(fmt.Sprintf("Domain %s already registered.", domain), err)
 		}
 	} else {
-		fmt.Printf("Domain %s succeesfully registered.\n", domain)
+		fmt.Printf("Domain %s successfully registered.\n", domain)
 	}
 }
 
@@ -334,9 +320,9 @@ func UpdateDomain(c *cli.Context) {
 		resp, err := domainClient.Describe(ctx, domain)
 		if err != nil {
 			if _, ok := err.(*s.EntityNotExistsError); !ok {
-				fmt.Printf("Operation failed: %v.\n", err.Error())
+				ErrorAndExit("Operation UpdateDomain failed.", err)
 			} else {
-				fmt.Printf("Domain %s does not exist.\n", domain)
+				ErrorAndExit(fmt.Sprintf("Domain %s does not exist.", domain), err)
 			}
 			return
 		}
@@ -358,7 +344,7 @@ func UpdateDomain(c *cli.Context) {
 			domainDataStr := c.String(FlagDomainData)
 			domainData, err = parseDomainDataKVs(domainDataStr)
 			if err != nil {
-				ErrorAndExit("Update Domain failed", err)
+				ErrorAndExit("Domain data format is invalid.", err)
 			}
 		}
 		if c.IsSet(FlagRetentionDays) {
@@ -367,7 +353,7 @@ func UpdateDomain(c *cli.Context) {
 		if c.IsSet(FlagEmitMetric) {
 			emitMetric, err = strconv.ParseBool(c.String(FlagEmitMetric))
 			if err != nil {
-				ErrorAndExit("Update Domain failed", err)
+				ErrorAndExit(fmt.Sprintf("Option %s format is invalid.", FlagEmitMetric), err)
 			}
 		}
 		if c.IsSet(FlagClusters) {
@@ -407,12 +393,12 @@ func UpdateDomain(c *cli.Context) {
 	err := domainClient.Update(ctx, updateRequest)
 	if err != nil {
 		if _, ok := err.(*s.EntityNotExistsError); !ok {
-			fmt.Printf("Operation failed: %v.\n", err.Error())
+			ErrorAndExit("Operation UpdateDomain failed.", err)
 		} else {
-			fmt.Printf("Domain %s does not exist.\n", domain)
+			ErrorAndExit(fmt.Sprintf("Domain %s does not exist.", domain), err)
 		}
 	} else {
-		fmt.Printf("Domain %s succeesfully updated.\n", domain)
+		fmt.Printf("Domain %s successfully updated.\n", domain)
 	}
 }
 
@@ -426,9 +412,9 @@ func DescribeDomain(c *cli.Context) {
 	resp, err := domainClient.Describe(ctx, domain)
 	if err != nil {
 		if _, ok := err.(*s.EntityNotExistsError); !ok {
-			fmt.Printf("Operation failed: %v.\n", err.Error())
+			ErrorAndExit("Operation DescribeDomain failed.", err)
 		} else {
-			fmt.Printf("Domain %s does not exist.\n", domain)
+			ErrorAndExit(fmt.Sprintf("Domain %s does not exist.", domain), err)
 		}
 	} else {
 		fmt.Printf("Name: %v\nDescription: %v\nOwnerEmail: %v\nDomainData: %v\nStatus: %v\nRetentionInDays: %v\n"+
@@ -455,7 +441,7 @@ func ShowHistory(c *cli.Context) {
 // ShowHistoryWithWID shows the history of given workflow with workflow_id
 func ShowHistoryWithWID(c *cli.Context) {
 	if !c.Args().Present() {
-		ExitIfError(errors.New("workflow_id is required"))
+		ErrorAndExit("Argument workflow_id is required.", nil)
 	}
 	wid := c.Args().First()
 	rid := ""
@@ -482,7 +468,7 @@ func showHistoryHelper(c *cli.Context, wid, rid string) {
 	defer cancel()
 	history, err := GetHistory(ctx, wfClient, wid, rid)
 	if err != nil {
-		ExitIfError(err)
+		ErrorAndExit(fmt.Sprintf("Failed to get history on workflow id: %s, run id: %s.", wid, rid), err)
 	}
 
 	if printFully { // dump everything
@@ -523,25 +509,24 @@ func showHistoryHelper(c *cli.Context, wid, rid string) {
 		serializer := &JSONHistorySerializer{}
 		data, err := serializer.Serialize(history)
 		if err != nil {
-			ExitIfError(err)
+			ErrorAndExit("Failed to serialize history data.", err)
 		}
 		if err := ioutil.WriteFile(outputFileName, data, 0777); err != nil {
-			ExitIfError(err)
+			ErrorAndExit("Failed to export history data file.", err)
 		}
 	}
 }
 
 // StartWorkflow starts a new workflow execution
 func StartWorkflow(c *cli.Context) {
-	// using service client instead of cadence.Client because we need to directly pass the json blob as input.
-	serviceClient := getWorkflowServiceClient(c)
+	serviceClient := cFactory.ClientFrontendClient(c)
 
 	domain := getRequiredGlobalOption(c, FlagDomain)
 	tasklist := getRequiredOption(c, FlagTaskList)
 	workflowType := getRequiredOption(c, FlagWorkflowType)
 	et := c.Int(FlagExecutionTimeout)
 	if et == 0 {
-		ExitIfError(errors.New(FlagExecutionTimeout + " is required"))
+		ErrorAndExit(fmt.Sprintf("Option %s format is invalid.", FlagExecutionTimeout), nil)
 	}
 	dt := c.Int(FlagDecisionTimeout)
 	wid := c.String(FlagWorkflowID)
@@ -571,7 +556,7 @@ func StartWorkflow(c *cli.Context) {
 	})
 
 	if err != nil {
-		ErrorAndExit("Failed to create workflow", err)
+		ErrorAndExit("Failed to create workflow.", err)
 	} else {
 		fmt.Printf("Started Workflow Id: %s, run Id: %s\n", wid, resp.GetRunId())
 	}
@@ -579,15 +564,14 @@ func StartWorkflow(c *cli.Context) {
 
 // RunWorkflow starts a new workflow execution and print workflow progress and result
 func RunWorkflow(c *cli.Context) {
-	// using service client instead of cadence.Client because we need to directly pass the json blob as input.
-	serviceClient := getWorkflowServiceClient(c)
+	serviceClient := cFactory.ClientFrontendClient(c)
 
 	domain := getRequiredGlobalOption(c, FlagDomain)
 	tasklist := getRequiredOption(c, FlagTaskList)
 	workflowType := getRequiredOption(c, FlagWorkflowType)
 	et := c.Int(FlagExecutionTimeout)
 	if et == 0 {
-		ExitIfError(errors.New(FlagExecutionTimeout + " is required"))
+		ErrorAndExit(fmt.Sprintf("Option %s format is invalid.", FlagExecutionTimeout), nil)
 	}
 	dt := c.Int(FlagDecisionTimeout)
 	wid := c.String(FlagWorkflowID)
@@ -621,7 +605,7 @@ func RunWorkflow(c *cli.Context) {
 	})
 
 	if err != nil {
-		ErrorAndExit("Failed to create workflow", err)
+		ErrorAndExit("Failed to run workflow.", err)
 	}
 
 	// print execution summary
@@ -672,7 +656,7 @@ func printWorkflowProgress(c *cli.Context, wid, rid string) {
 		for iter.HasNext() {
 			event, err := iter.Next()
 			if err != nil {
-				ErrorAndExit("Unable to read event", err)
+				ErrorAndExit("Unable to read event.", err)
 			}
 			if isTimeElapseExist {
 				removePrevious2LinesFromTerminal()
@@ -719,9 +703,9 @@ func TerminateWorkflow(c *cli.Context) {
 	err := wfClient.TerminateWorkflow(ctx, wid, rid, reason, nil)
 
 	if err != nil {
-		ErrorAndExit("Terminate workflow failed", err)
+		ErrorAndExit("Terminate workflow failed.", err)
 	} else {
-		fmt.Println("Terminate workflow succeed.")
+		fmt.Println("Terminate workflow succeeded.")
 	}
 }
 
@@ -737,16 +721,15 @@ func CancelWorkflow(c *cli.Context) {
 	err := wfClient.CancelWorkflow(ctx, wid, rid)
 
 	if err != nil {
-		ErrorAndExit("Cancel workflow failed", err)
+		ErrorAndExit("Cancel workflow failed.", err)
 	} else {
-		fmt.Println("Cancel workflow succeed.")
+		fmt.Println("Cancel workflow succeeded.")
 	}
 }
 
 // SignalWorkflow signals a workflow execution
 func SignalWorkflow(c *cli.Context) {
-	// using service client instead of cadence.Client because we need to directly pass the json blob as input.
-	serviceClient := getWorkflowServiceClient(c)
+	serviceClient := cFactory.ClientFrontendClient(c)
 
 	domain := getRequiredGlobalOption(c, FlagDomain)
 	wid := getRequiredOption(c, FlagWorkflowID)
@@ -768,9 +751,9 @@ func SignalWorkflow(c *cli.Context) {
 	})
 
 	if err != nil {
-		ErrorAndExit("Signal workflow failed", err)
+		ErrorAndExit("Signal workflow failed.", err)
 	} else {
-		fmt.Println("Signal workflow succeed.")
+		fmt.Println("Signal workflow succeeded.")
 	}
 }
 
@@ -789,8 +772,7 @@ func QueryWorkflowUsingStackTrace(c *cli.Context) {
 }
 
 func queryWorkflowHelper(c *cli.Context, queryType string) {
-	// using service client instead of cadence.Client because we need to directly pass the json blob as input.
-	serviceClient := getWorkflowServiceClient(c)
+	serviceClient := cFactory.ClientFrontendClient(c)
 
 	domain := getRequiredGlobalOption(c, FlagDomain)
 	wid := getRequiredOption(c, FlagWorkflowID)
@@ -814,7 +796,7 @@ func queryWorkflowHelper(c *cli.Context, queryType string) {
 	}
 	queryResponse, err := serviceClient.QueryWorkflow(tcCtx, queryRequest)
 	if err != nil {
-		ErrorAndExit("Query failed", err)
+		ErrorAndExit("Query workflow failed.", err)
 		return
 	}
 
@@ -884,7 +866,7 @@ func DescribeWorkflow(c *cli.Context) {
 // DescribeWorkflowWithID show information about the specified workflow execution
 func DescribeWorkflowWithID(c *cli.Context) {
 	if !c.Args().Present() {
-		ExitIfError(errors.New("workflow_id is required"))
+		ErrorAndExit("Argument workflow_id is required.", nil)
 	}
 	wid := c.Args().First()
 	rid := ""
@@ -1072,7 +1054,7 @@ func listOpenWorkflow(client client.Client, pageSize int, earliestTime, latestTi
 	defer cancel()
 	response, err := client.ListOpenWorkflow(ctx, request)
 	if err != nil {
-		ExitIfError(err)
+		ErrorAndExit("Failed to list open workflow.", err)
 	}
 	return response.Executions, response.NextPageToken
 }
@@ -1102,7 +1084,7 @@ func listClosedWorkflow(client client.Client, pageSize int, earliestTime, latest
 	defer cancel()
 	response, err := client.ListClosedWorkflow(ctx, request)
 	if err != nil {
-		ExitIfError(err)
+		ErrorAndExit("Failed to list closed workflow.", err)
 	}
 	return response.Executions, response.NextPageToken
 }
@@ -1117,13 +1099,12 @@ func DescribeTaskList(c *cli.Context) {
 	defer cancel()
 	response, err := wfClient.DescribeTaskList(ctx, taskList, taskListType)
 	if err != nil {
-		ErrorAndExit("DescribeTaskList failed", err)
+		ErrorAndExit("Operation DescribeTaskList failed.", err)
 	}
 
 	pollers := response.Pollers
 	if len(pollers) == 0 {
-		fmt.Println(colorMagenta("No poller for tasklist: " + taskList))
-		return
+		ErrorAndExit(colorMagenta("No poller for tasklist: "+taskList), nil)
 	}
 
 	table := tablewriter.NewWriter(os.Stdout)
@@ -1153,7 +1134,7 @@ func ObserveHistory(c *cli.Context) {
 // ObserveHistoryWithID show the process of running workflow
 func ObserveHistoryWithID(c *cli.Context) {
 	if !c.Args().Present() {
-		ExitIfError(errors.New("workflow_id is required"))
+		ErrorAndExit("Argument workflow_id is required.", nil)
 	}
 	wid := c.Args().First()
 	rid := ""
@@ -1165,47 +1146,18 @@ func ObserveHistoryWithID(c *cli.Context) {
 }
 
 func getDomainClient(c *cli.Context) client.DomainClient {
-	service, err := cBuilder.BuildServiceClient(c)
-	if err != nil {
-		ExitIfError(err)
-	}
-
-	domainClient, err := client.NewDomainClient(service, &client.Options{}), nil
-	if err != nil {
-		ExitIfError(err)
-	}
-	return domainClient
+	return client.NewDomainClient(cFactory.ClientFrontendClient(c), &client.Options{})
 }
 
 func getWorkflowClient(c *cli.Context) client.Client {
 	domain := getRequiredGlobalOption(c, FlagDomain)
-
-	service, err := cBuilder.BuildServiceClient(c)
-	if err != nil {
-		ExitIfError(err)
-	}
-
-	wfClient, err := client.NewClient(service, domain, &client.Options{}), nil
-	if err != nil {
-		ExitIfError(err)
-	}
-
-	return wfClient
-}
-
-func getWorkflowServiceClient(c *cli.Context) workflowserviceclient.Interface {
-	client, err := cBuilder.BuildServiceClient(c)
-	if err != nil {
-		ExitIfError(err)
-	}
-
-	return client
+	return client.NewClient(cFactory.ClientFrontendClient(c), domain, &client.Options{})
 }
 
 func getRequiredOption(c *cli.Context, optionName string) string {
 	value := c.String(optionName)
 	if len(value) == 0 {
-		ExitIfError(fmt.Errorf("%s is required", optionName))
+		ErrorAndExit(fmt.Sprintf("Option %s is required", optionName), nil)
 	}
 	return value
 }
@@ -1213,7 +1165,7 @@ func getRequiredOption(c *cli.Context, optionName string) string {
 func getRequiredGlobalOption(c *cli.Context, optionName string) string {
 	value := c.GlobalString(optionName)
 	if len(value) == 0 {
-		ExitIfError(fmt.Errorf("%s is required", optionName))
+		ErrorAndExit(fmt.Sprintf("Global option %s is required", optionName), nil)
 	}
 	return value
 }
@@ -1243,7 +1195,7 @@ func parseTime(timeStr string, defaultValue int64) int64 {
 	// treat as raw time
 	resultValue, err := strconv.ParseInt(timeStr, 10, 64)
 	if err != nil {
-		ExitIfError(fmt.Errorf("cannot parse time '%s', use UTC format '2006-01-02T15:04:05Z' or raw UnixNano directly. Error: %v", timeStr, err))
+		ErrorAndExit(fmt.Sprintf("Cannot parse time '%s', use UTC format '2006-01-02T15:04:05Z' or raw UnixNano directly.", timeStr), err)
 	}
 
 	return resultValue

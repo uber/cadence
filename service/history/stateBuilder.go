@@ -111,7 +111,10 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 
 			b.timerTasks = append(b.timerTasks, b.scheduleWorkflowTimerTask(event, b.msBuilder))
 			if eventStoreVersion == persistence.EventStoreVersionV2 {
-				b.msBuilder.SetHistoryTree(*execution.RunId)
+				err := b.msBuilder.SetHistoryTree(execution.GetRunId())
+				if err != nil {
+					return nil, nil, nil, err
+				}
 			}
 
 		case shared.EventTypeDecisionTaskScheduled:
@@ -325,7 +328,7 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 			// No mutable state action is needed
 
 		case shared.EventTypeWorkflowExecutionSignaled:
-			// No mutable state action is needed
+			b.msBuilder.ReplicateWorkflowExecutionSignaled(event)
 
 		case shared.EventTypeWorkflowExecutionCancelRequested:
 			b.msBuilder.ReplicateWorkflowExecutionCancelRequestedEvent(event)
@@ -433,8 +436,11 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 			}
 			b.newRunTimerTasks = append(b.newRunTimerTasks, b.scheduleWorkflowTimerTask(event, newRunStateBuilder))
 
-			b.msBuilder.ReplicateWorkflowExecutionContinuedAsNewEvent(sourceClusterName, domainID, event,
-				startedEvent, di, newRunStateBuilder)
+			err := b.msBuilder.ReplicateWorkflowExecutionContinuedAsNewEvent(sourceClusterName, domainID, event,
+				startedEvent, di, newRunStateBuilder, newRunEventStoreVersion)
+			if err != nil {
+				return nil, nil, nil, err
+			}
 
 			// TODO the continue as new logic (task generation) is broken (including the active / existing code)
 			// we should merge all task generation & persistence into one place
@@ -446,10 +452,6 @@ func (b *stateBuilderImpl) applyEvents(domainID, requestID string, execution sha
 				return nil, nil, nil, err
 			}
 			b.timerTasks = append(b.timerTasks, timerTask)
-
-			if newRunEventStoreVersion == persistence.EventStoreVersionV2 {
-				newRunStateBuilder.SetHistoryTree(*newExecution.RunId)
-			}
 		}
 	}
 

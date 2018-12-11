@@ -104,6 +104,7 @@ type Config struct {
 
 	// System Limits
 	MaximumBufferedEventsBatch dynamicconfig.IntPropertyFn
+	MaximumSignalsPerExecution dynamicconfig.IntPropertyFnWithDomainFilter
 
 	// ShardUpdateMinInterval the minimal time interval which the shard info can be updated
 	ShardUpdateMinInterval dynamicconfig.DurationPropertyFn
@@ -121,6 +122,9 @@ type Config struct {
 
 	EnableArchival  dynamicconfig.BoolPropertyFnWithDomainFilter
 	NumSysWorkflows dynamicconfig.IntPropertyFn
+
+	BlobSizeLimitError dynamicconfig.IntPropertyFnWithDomainFilter
+	BlobSizeLimitWarn  dynamicconfig.IntPropertyFnWithDomainFilter
 }
 
 // NewConfig returns new service config with default values
@@ -180,6 +184,7 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int) *Config {
 		ExecutionMgrNumConns:                                  dc.GetIntProperty(dynamicconfig.ExecutionMgrNumConns, 50),
 		HistoryMgrNumConns:                                    dc.GetIntProperty(dynamicconfig.HistoryMgrNumConns, 50),
 		MaximumBufferedEventsBatch:                            dc.GetIntProperty(dynamicconfig.MaximumBufferedEventsBatch, 100),
+		MaximumSignalsPerExecution:                            dc.GetIntPropertyFilteredByDomain(dynamicconfig.MaximumSignalsPerExecution, 0),
 		ShardUpdateMinInterval:                                dc.GetDurationProperty(dynamicconfig.ShardUpdateMinInterval, 5*time.Minute),
 		ShardSyncMinInterval:                                  dc.GetDurationProperty(dynamicconfig.ShardSyncMinInterval, 5*time.Minute),
 
@@ -190,6 +195,9 @@ func NewConfig(dc *dynamicconfig.Collection, numberOfShards int) *Config {
 
 		EnableArchival:  dc.GetBoolPropertyFnWithDomainFilter(dynamicconfig.EnableArchival, false),
 		NumSysWorkflows: dc.GetIntProperty(dynamicconfig.NumSystemWorkflows, 1000),
+
+		BlobSizeLimitError: dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitError, 2*1024*1024),
+		BlobSizeLimitWarn:  dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitWarn, 256*1024),
 	}
 }
 

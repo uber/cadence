@@ -267,7 +267,7 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecutionWithNewRun(transfe
 	}
 
 	now := time.Now()
-	return c.updateHelperWithNewRun(transferTasks, timerTasks, transactionID, now, c.createReplicationTask, nil, "", newStateBuilder)
+	return c.update(transferTasks, timerTasks, transactionID, now, c.createReplicationTask, nil, "", newStateBuilder)
 }
 
 func (c *workflowExecutionContextImpl) updateWorkflowExecution(transferTasks []persistence.Task,
@@ -278,10 +278,10 @@ func (c *workflowExecutionContextImpl) updateWorkflowExecution(transferTasks []p
 func (c *workflowExecutionContextImpl) updateHelper(transferTasks []persistence.Task, timerTasks []persistence.Task,
 	transactionID int64, now time.Time,
 	createReplicationTask bool, standbyHistoryBuilder *historyBuilder, sourceCluster string) (errRet error) {
-	return c.updateHelperWithNewRun(transferTasks, timerTasks, transactionID, now, createReplicationTask, standbyHistoryBuilder, sourceCluster, nil)
+	return c.update(transferTasks, timerTasks, transactionID, now, createReplicationTask, standbyHistoryBuilder, sourceCluster, nil)
 }
 
-func (c *workflowExecutionContextImpl) updateHelperWithNewRun(transferTasks []persistence.Task, timerTasks []persistence.Task,
+func (c *workflowExecutionContextImpl) update(transferTasks []persistence.Task, timerTasks []persistence.Task,
 	transactionID int64, now time.Time,
 	createReplicationTask bool, standbyHistoryBuilder *historyBuilder, sourceCluster string, newStateBuilder mutableState) (errRet error) {
 
@@ -464,6 +464,7 @@ func (c *workflowExecutionContextImpl) updateHelperWithNewRun(transferTasks []pe
 		&c.workflowExecution,
 		c.msBuilder.GetLastFirstEventID(),
 		c.msBuilder.GetNextEventID(),
+		c.msBuilder.GetPreviousStartedEventID(),
 		c.msBuilder.IsWorkflowExecutionRunning(),
 	))
 

@@ -676,14 +676,16 @@ func (r *historyReplicator) flushReplicationBuffer(ctx context.Context, context 
 		msBuilder.DeleteBufferedReplicationTask(nextEventID)
 		sourceCluster := r.clusterMetadata.ClusterNameForFailoverVersion(bt.Version)
 		req := &h.ReplicateEventsRequest{
-			SourceCluster:     common.StringPtr(sourceCluster),
-			DomainUUID:        common.StringPtr(domainID),
-			WorkflowExecution: &execution,
-			FirstEventId:      common.Int64Ptr(bt.FirstEventID),
-			NextEventId:       common.Int64Ptr(bt.NextEventID),
-			Version:           common.Int64Ptr(bt.Version),
-			History:           &workflow.History{Events: bt.History},
-			NewRunHistory:     &workflow.History{Events: bt.NewRunHistory},
+			SourceCluster:           common.StringPtr(sourceCluster),
+			DomainUUID:              common.StringPtr(domainID),
+			WorkflowExecution:       &execution,
+			FirstEventId:            common.Int64Ptr(bt.FirstEventID),
+			NextEventId:             common.Int64Ptr(bt.NextEventID),
+			Version:                 common.Int64Ptr(bt.Version),
+			History:                 &workflow.History{Events: bt.History},
+			NewRunHistory:           &workflow.History{Events: bt.NewRunHistory},
+			EventStoreVersion:       &bt.EventStoreVersion,
+			NewRunEventStoreVersion: &bt.NewRunEventStoreVersion,
 		}
 
 		// Apply replication task to workflow execution

@@ -32,6 +32,7 @@ import (
 	"github.com/uber-common/bark"
 	"github.com/uber-go/tally"
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
+	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/messaging"
@@ -57,8 +58,9 @@ const rpAppNamePrefix string = "cadence"
 const maxRpJoinTimeout = 30 * time.Second
 
 var (
-	integration = flag.Bool("integration", true, "run integration tests")
-	topicName   = []string{"active", "standby"}
+	integration  = flag.Bool("integration", true, "run integration tests")
+	testEventsV2 = flag.Bool("eventsV2", false, "run integration tests with eventsV2")
+	topicName    = []string{"active", "standby"}
 )
 
 const (
@@ -84,6 +86,7 @@ type (
 		numberOfHistoryHosts  int
 		logger                bark.Logger
 		clusterMetadata       cluster.Metadata
+		dispatcherProvider    client.DispatcherProvider
 		messagingClient       messaging.Client
 		metadataMgr           persistence.MetadataManager
 		metadataMgrV2         persistence.MetadataManager
@@ -99,6 +102,7 @@ type (
 		clusterNo             int // cluster number
 		replicator            *replicator.Replicator
 		enableWorkerService   bool // tmp flag used to tell if onbox should create worker service
+		enableEventsV2        bool
 	}
 
 	ringpopFactoryImpl struct {
@@ -107,17 +111,18 @@ type (
 )
 
 // NewCadence returns an instance that hosts full cadence in one process
-func NewCadence(clusterMetadata cluster.Metadata, messagingClient messaging.Client, metadataMgr persistence.MetadataManager,
+func NewCadence(clusterMetadata cluster.Metadata, dispatcherProvider client.DispatcherProvider, messagingClient messaging.Client, metadataMgr persistence.MetadataManager,
 	metadataMgrV2 persistence.MetadataManager, shardMgr persistence.ShardManager, historyMgr persistence.HistoryManager, historyV2Mgr persistence.HistoryV2Manager,
 	executionMgrFactory persistence.ExecutionManagerFactory, taskMgr persistence.TaskManager,
 	visibilityMgr persistence.VisibilityManager, numberOfHistoryShards, numberOfHistoryHosts int,
-	logger bark.Logger, clusterNo int, enableWorker bool) Cadence {
+	logger bark.Logger, clusterNo int, enableWorker, enableEventsV2 bool) Cadence {
 
 	return &cadenceImpl{
 		numberOfHistoryShards: numberOfHistoryShards,
 		numberOfHistoryHosts:  numberOfHistoryHosts,
 		logger:                logger,
 		clusterMetadata:       clusterMetadata,
+		dispatcherProvider:    dispatcherProvider,
 		messagingClient:       messagingClient,
 		metadataMgr:           metadataMgr,
 		metadataMgrV2:         metadataMgrV2,
@@ -130,6 +135,7 @@ func NewCadence(clusterMetadata cluster.Metadata, messagingClient messaging.Clie
 		shutdownCh:            make(chan struct{}),
 		clusterNo:             clusterNo,
 		enableWorkerService:   enableWorker,
+		enableEventsV2:        enableEventsV2,
 	}
 }
 
@@ -148,7 +154,7 @@ func (c *cadenceImpl) Start() error {
 
 	var startWG sync.WaitGroup
 	startWG.Add(2)
-	go c.startHistory(rpHosts, &startWG)
+	go c.startHistory(rpHosts, &startWG, c.enableEventsV2)
 	go c.startMatching(rpHosts, &startWG)
 	startWG.Wait()
 
@@ -184,9 +190,9 @@ func (c *cadenceImpl) Stop() {
 
 func (c *cadenceImpl) FrontendAddress() string {
 	if c.clusterNo != 0 {
-		return "127.0.0.1:8104"
+		return cluster.TestAlternativeClusterFrontendAddress
 	}
-	return "127.0.0.1:7104"
+	return cluster.TestCurrentClusterFrontendAddress
 }
 
 func (c *cadenceImpl) FrontendPProfPort() int {
@@ -272,6 +278,7 @@ func (c *cadenceImpl) startFrontend(rpHosts []string, startWG *sync.WaitGroup) {
 	params.MetricScope = tally.NewTestScope(common.FrontendServiceName, make(map[string]string))
 	params.RingpopFactory = newRingpopFactory(rpHosts)
 	params.ClusterMetadata = c.clusterMetadata
+	params.DispatcherProvider = c.dispatcherProvider
 	params.MessagingClient = c.messagingClient
 	cassandraConfig := config.Cassandra{Hosts: "127.0.0.1"}
 	params.PersistenceConfig = config.Persistence{
@@ -308,7 +315,7 @@ func (c *cadenceImpl) startFrontend(rpHosts []string, startWG *sync.WaitGroup) {
 	c.shutdownWG.Done()
 }
 
-func (c *cadenceImpl) startHistory(rpHosts []string, startWG *sync.WaitGroup) {
+func (c *cadenceImpl) startHistory(rpHosts []string, startWG *sync.WaitGroup, enableEventsV2 bool) {
 
 	pprofPorts := c.HistoryPProfPort()
 	for i, hostport := range c.HistoryServiceAddress() {
@@ -320,6 +327,7 @@ func (c *cadenceImpl) startHistory(rpHosts []string, startWG *sync.WaitGroup) {
 		params.MetricScope = tally.NewTestScope(common.HistoryServiceName, make(map[string]string))
 		params.RingpopFactory = newRingpopFactory(rpHosts)
 		params.ClusterMetadata = c.clusterMetadata
+		params.DispatcherProvider = c.dispatcherProvider
 		params.MessagingClient = c.messagingClient
 		cassandraConfig := config.Cassandra{Hosts: "127.0.0.1"}
 		params.PersistenceConfig = config.Persistence{
@@ -332,6 +340,7 @@ func (c *cadenceImpl) startHistory(rpHosts []string, startWG *sync.WaitGroup) {
 		historyConfig := history.NewConfig(dynamicconfig.NewNopCollection(), c.numberOfHistoryShards)
 		historyConfig.HistoryMgrNumConns = dynamicconfig.GetIntPropertyFn(c.numberOfHistoryShards)
 		historyConfig.ExecutionMgrNumConns = dynamicconfig.GetIntPropertyFn(c.numberOfHistoryShards)
+		historyConfig.EnableEventsV2 = dynamicconfig.GetBoolPropertyFnFilteredByDomain(enableEventsV2)
 		handler := history.NewHandler(service, historyConfig, c.shardMgr, c.metadataMgr,
 			c.visibilityMgr, c.historyMgr, c.historyV2Mgr, c.executionMgrFactory)
 		handler.Start()
@@ -352,6 +361,7 @@ func (c *cadenceImpl) startMatching(rpHosts []string, startWG *sync.WaitGroup) {
 	params.MetricScope = tally.NewTestScope(common.MatchingServiceName, make(map[string]string))
 	params.RingpopFactory = newRingpopFactory(rpHosts)
 	params.ClusterMetadata = c.clusterMetadata
+	params.DispatcherProvider = c.dispatcherProvider
 	cassandraConfig := config.Cassandra{Hosts: "127.0.0.1"}
 	params.PersistenceConfig = config.Persistence{
 		NumHistoryShards: c.numberOfHistoryShards,
@@ -378,6 +388,7 @@ func (c *cadenceImpl) startWorker(rpHosts []string, startWG *sync.WaitGroup) {
 	params.MetricScope = tally.NewTestScope(common.WorkerServiceName, make(map[string]string))
 	params.RingpopFactory = newRingpopFactory(rpHosts)
 	params.ClusterMetadata = c.clusterMetadata
+	params.DispatcherProvider = c.dispatcherProvider
 	cassandraConfig := config.Cassandra{Hosts: "127.0.0.1"}
 	params.PersistenceConfig = config.Persistence{
 		NumHistoryShards: c.numberOfHistoryShards,

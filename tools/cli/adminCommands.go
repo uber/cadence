@@ -21,30 +21,95 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
-
 	"github.com/gocql/gocql"
+	"github.com/uber-common/bark"
+	"github.com/uber/cadence/.gen/go/admin"
+	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/persistence"
+	cassp "github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/tools/cassandra"
 	"github.com/urfave/cli"
-	"go.uber.org/cadence/.gen/go/admin"
-	"go.uber.org/cadence/.gen/go/admin/adminserviceclient"
-	s "go.uber.org/cadence/.gen/go/shared"
 )
 
-func getAdminServiceClient(c *cli.Context) adminserviceclient.Interface {
-	client, err := cBuilder.BuildAdminServiceClient(c)
-	if err != nil {
-		ExitIfError(err)
+const maxEventID = 9999
+
+// AdminShowWorkflow shows history
+func AdminShowWorkflow(c *cli.Context) {
+	domainID := c.String(FlagDomainID)
+	wid := c.String(FlagWorkflowID)
+	rid := c.String(FlagRunID)
+	tid := c.String(FlagTreeID)
+	bid := c.String(FlagBranchID)
+
+	session := connectToCassandra(c)
+	serializer := persistence.NewHistorySerializer()
+	var history []*persistence.DataBlob
+	if len(wid) != 0 {
+		histV1 := cassp.NewHistoryPersistenceFromSession(session, bark.NewNopLogger())
+		resp, err := histV1.GetWorkflowExecutionHistory(&persistence.InternalGetWorkflowExecutionHistoryRequest{
+			LastEventBatchVersion: common.EmptyVersion,
+			DomainID:              domainID,
+			Execution: shared.WorkflowExecution{
+				WorkflowId: common.StringPtr(wid),
+				RunId:      common.StringPtr(rid),
+			},
+			FirstEventID: 1,
+			NextEventID:  maxEventID,
+			PageSize:     maxEventID,
+		})
+		if err != nil {
+			ErrorAndExit("GetWorkflowExecutionHistory err", err)
+		}
+
+		history = resp.History
+
+	} else if len(tid) != 0 {
+		histV2 := cassp.NewHistoryV2PersistenceFromSession(session, bark.NewNopLogger())
+
+		resp, err := histV2.ReadHistoryBranch(&persistence.InternalReadHistoryBranchRequest{
+			TreeID:    tid,
+			BranchID:  bid,
+			MinNodeID: 1,
+			MaxNodeID: maxEventID,
+			PageSize:  maxEventID,
+		})
+		if err != nil {
+			ErrorAndExit("ReadHistoryBranch err", err)
+		}
+
+		history = resp.History
+	} else {
+		ErrorAndExit("need to specify either WorkflowId/RunID for v1, or TreeID/BranchID for v2", nil)
 	}
 
-	return client
+	if len(history) == 0 {
+		ErrorAndExit("no events", nil)
+	}
+	totalSize := 0
+	for idx, b := range history {
+		totalSize += len(b.Data)
+		fmt.Printf("======== batch %v, blob len: %v ======\n", idx+1, len(b.Data))
+		historyBatch, err := serializer.DeserializeBatchEvents(b)
+		if err != nil {
+			ErrorAndExit("DeserializeBatchEvents err", err)
+		}
+		for _, e := range historyBatch {
+			jsonstr, err := json.Marshal(e)
+			if err != nil {
+				ErrorAndExit("json.Marshal err", err)
+			}
+			fmt.Println(string(jsonstr))
+		}
+	}
+	fmt.Printf("======== total batches %v, total blob len: %v ======\n", len(history), totalSize)
 }
 
 // AdminDescribeWorkflow describe a new workflow execution for admin
 func AdminDescribeWorkflow(c *cli.Context) {
-	// using service client instead of cadence.Client because we need to directly pass the json blob as input.
-	serviceClient := getAdminServiceClient(c)
+	adminClient := cFactory.ServerAdminClient(c)
 
 	domain := getRequiredGlobalOption(c, FlagDomain)
 	wid := getRequiredOption(c, FlagWorkflowID)
@@ -53,9 +118,9 @@ func AdminDescribeWorkflow(c *cli.Context) {
 	ctx, cancel := newContext()
 	defer cancel()
 
-	resp, err := serviceClient.DescribeWorkflowExecution(ctx, &admin.DescribeWorkflowExecutionRequest{
+	resp, err := adminClient.DescribeWorkflowExecution(ctx, &admin.DescribeWorkflowExecutionRequest{
 		Domain: common.StringPtr(domain),
-		Execution: &s.WorkflowExecution{
+		Execution: &shared.WorkflowExecution{
 			WorkflowId: common.StringPtr(wid),
 			RunId:      common.StringPtr(rid),
 		},
@@ -202,8 +267,7 @@ func AdminGetShardID(c *cli.Context) {
 
 // AdminDescribeHistoryHost describes history host
 func AdminDescribeHistoryHost(c *cli.Context) {
-	// using service client instead of cadence.Client because we need to directly pass the json blob as input.
-	serviceClient := getAdminServiceClient(c)
+	adminClient := cFactory.ServerAdminClient(c)
 
 	wid := c.String(FlagWorkflowID)
 	sid := c.Int(FlagShardID)
@@ -218,9 +282,9 @@ func AdminDescribeHistoryHost(c *cli.Context) {
 	ctx, cancel := newContext()
 	defer cancel()
 
-	req := &s.DescribeHistoryHostRequest{}
+	req := &shared.DescribeHistoryHostRequest{}
 	if len(wid) > 0 {
-		req.ExecutionForHost = &s.WorkflowExecution{WorkflowId: common.StringPtr(wid)}
+		req.ExecutionForHost = &shared.WorkflowExecution{WorkflowId: common.StringPtr(wid)}
 	}
 	if c.IsSet(FlagShardID) {
 		req.ShardIdForHost = common.Int32Ptr(int32(sid))
@@ -229,7 +293,7 @@ func AdminDescribeHistoryHost(c *cli.Context) {
 		req.HostAddress = common.StringPtr(addr)
 	}
 
-	resp, err := serviceClient.DescribeHistoryHost(ctx, req)
+	resp, err := adminClient.DescribeHistoryHost(ctx, req)
 	if err != nil {
 		ErrorAndExit("Describe history host failed", err)
 	}

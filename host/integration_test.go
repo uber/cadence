@@ -39,12 +39,27 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/service/history"
 	"github.com/uber/cadence/service/matching"
+)
+
+type (
+	integrationSuite struct {
+		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
+		// not merely log an error
+		*require.Assertions
+		suite.Suite
+		IntegrationBase
+		domainName        string
+		domainID          string
+		foreignDomainName string
+		enableEventsV2    bool
+	}
 )
 
 func (s *IntegrationBase) setupShards() {
@@ -59,8 +74,19 @@ func (s *IntegrationBase) setupShards() {
 
 func TestIntegrationSuite(t *testing.T) {
 	flag.Parse()
-	if *integration {
+	if *integration && !*testEventsV2 {
 		s := new(integrationSuite)
+		suite.Run(t, s)
+	} else {
+		t.Skip()
+	}
+}
+
+func TestIntegrationSuiteEventsV2(t *testing.T) {
+	flag.Parse()
+	if *integration && *testEventsV2 {
+		s := new(integrationSuite)
+		s.enableEventsV2 = true
 		suite.Run(t, s)
 	} else {
 		t.Skip()
@@ -110,8 +136,8 @@ func (s *integrationSuite) setupSuite(enableGlobalDomain bool, isMasterCluster b
 	s.mockProducer = &mocks.KafkaProducer{}
 	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
 
-	s.host = NewCadence(s.ClusterMetadata, s.mockMessagingClient, s.MetadataProxy, s.MetadataManagerV2, s.ShardMgr, s.HistoryMgr, s.HistoryV2Mgr, s.ExecutionMgrFactory, s.TaskMgr,
-		s.VisibilityMgr, testNumberOfHistoryShards, testNumberOfHistoryHosts, s.logger, 0, false)
+	s.host = NewCadence(s.ClusterMetadata, client.NewIPYarpcDispatcherProvider(), s.mockMessagingClient, s.MetadataProxy, s.MetadataManagerV2, s.ShardMgr, s.HistoryMgr, s.HistoryV2Mgr, s.ExecutionMgrFactory, s.TaskMgr,
+		s.VisibilityMgr, testNumberOfHistoryShards, testNumberOfHistoryHosts, s.logger, 0, false, s.enableEventsV2)
 	s.host.Start()
 
 	s.engine = s.host.GetFrontendClient()
@@ -2812,6 +2838,139 @@ func (s *integrationSuite) TestQueryWorkflow_NonSticky() {
 	s.Equal("unknown-query-type", queryFailError.Message)
 }
 
+func (s *integrationSuite) TestQueryWorkflow_BeforeFirstDecision() {
+	id := "interation-test-query-workflow-before-first-decision"
+	wt := "interation-test-query-workflow-before-first-decision-type"
+	tl := "interation-test-query-workflow-before-first-decision-tasklist"
+	identity := "worker1"
+	activityName := "activity_type1"
+	queryType := "test-query"
+
+	workflowType := &workflow.WorkflowType{}
+	workflowType.Name = common.StringPtr(wt)
+
+	taskList := &workflow.TaskList{}
+	taskList.Name = common.StringPtr(tl)
+
+	// Start workflow execution
+	request := &workflow.StartWorkflowExecutionRequest{
+		RequestId:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowId:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		Identity:                            common.StringPtr(identity),
+	}
+
+	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
+	s.Nil(err0)
+
+	//decider logic
+	activityScheduled := false
+	activityData := int32(1)
+	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
+		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
+
+		if !activityScheduled {
+			activityScheduled = true
+			buf := new(bytes.Buffer)
+			s.Nil(binary.Write(buf, binary.LittleEndian, activityData))
+
+			return nil, []*workflow.Decision{{
+				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeScheduleActivityTask),
+				ScheduleActivityTaskDecisionAttributes: &workflow.ScheduleActivityTaskDecisionAttributes{
+					ActivityId:                    common.StringPtr(strconv.Itoa(int(1))),
+					ActivityType:                  &workflow.ActivityType{Name: common.StringPtr(activityName)},
+					TaskList:                      &workflow.TaskList{Name: &tl},
+					Input:                         buf.Bytes(),
+					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
+					ScheduleToStartTimeoutSeconds: common.Int32Ptr(2),
+					StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
+					HeartbeatTimeoutSeconds:       common.Int32Ptr(5),
+				},
+			}}, nil
+		}
+
+		return nil, []*workflow.Decision{{
+			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
+			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
+				Result: []byte("Done."),
+			},
+		}}, nil
+	}
+
+	queryTaskHandled := false
+	queryHandler := func(task *workflow.PollForDecisionTaskResponse) ([]byte, error) {
+		s.NotNil(task.Query)
+		s.NotNil(task.Query.QueryType)
+		s.True(task.GetPreviousStartedEventId() > 0)
+		queryTaskHandled = true
+		if *task.Query.QueryType == queryType {
+			return []byte("query-result"), nil
+		}
+
+		return nil, errors.New("unknown-query-type")
+	}
+
+	poller := &TaskPoller{
+		Engine:          s.engine,
+		Domain:          s.domainName,
+		TaskList:        taskList,
+		Identity:        identity,
+		DecisionHandler: dtHandler,
+		QueryHandler:    queryHandler,
+		Logger:          s.logger,
+		T:               s.T(),
+	}
+
+	workflowExecution := &workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr(id),
+		RunId:      common.StringPtr(*we.RunId),
+	}
+
+	type QueryResult struct {
+		Resp *workflow.QueryWorkflowResponse
+		Err  error
+	}
+	queryResultCh := make(chan QueryResult)
+	queryWorkflowFn := func(queryType string) {
+		queryResp, err := s.engine.QueryWorkflow(createContext(), &workflow.QueryWorkflowRequest{
+			Domain:    common.StringPtr(s.domainName),
+			Execution: workflowExecution,
+			Query: &workflow.WorkflowQuery{
+				QueryType: common.StringPtr(queryType),
+			},
+		})
+		queryResultCh <- QueryResult{Resp: queryResp, Err: err}
+	}
+
+	// drop first decision task
+	poller.PollAndProcessDecisionTask(false, true /* drop first decision task */)
+
+	// call QueryWorkflow before first decision task completed
+	go queryWorkflowFn(queryType)
+
+	for {
+		// loop until process the query task
+		isQueryTask, errInner := poller.PollAndProcessDecisionTask(false, false)
+		s.Nil(errInner)
+		if isQueryTask {
+			break
+		}
+	} // wait until query result is ready
+	s.True(queryTaskHandled)
+
+	queryResult := <-queryResultCh
+	s.NoError(queryResult.Err)
+	s.NotNil(queryResult.Resp)
+	s.NotNil(queryResult.Resp.QueryResult)
+	queryResultString := string(queryResult.Resp.QueryResult)
+	s.Equal("query-result", queryResultString)
+}
+
 func (s *integrationSuite) TestDescribeWorkflowExecution() {
 	id := "interation-describe-wfe-test"
 	wt := "interation-describe-wfe-test-type"
@@ -3228,13 +3387,20 @@ func (s *integrationSuite) TestVisibility() {
 	closedCount := 0
 	openCount := 0
 
-	resp, err3 := s.engine.ListClosedWorkflowExecutions(createContext(), &workflow.ListClosedWorkflowExecutionsRequest{
-		Domain:          common.StringPtr(s.domainName),
-		MaximumPageSize: common.Int32Ptr(100),
-		StartTimeFilter: startFilter,
-	})
-	s.Nil(err3)
-	closedCount = len(resp.Executions)
+	for i := 0; i < 10; i++ {
+		resp, err3 := s.engine.ListClosedWorkflowExecutions(createContext(), &workflow.ListClosedWorkflowExecutionsRequest{
+			Domain:          common.StringPtr(s.domainName),
+			MaximumPageSize: common.Int32Ptr(100),
+			StartTimeFilter: startFilter,
+		})
+		s.Nil(err3)
+		closedCount = len(resp.Executions)
+		if closedCount == 1 {
+			break
+		}
+		s.logger.Info("Closed WorkflowExecution is not yet visible")
+		time.Sleep(100 * time.Millisecond)
+	}
 	s.Equal(1, closedCount)
 
 	for i := 0; i < 10; i++ {
@@ -4362,9 +4528,11 @@ func (s *integrationSuite) TestDecisionTaskFailed() {
 	events := s.getHistory(s.domainName, workflowExecution)
 	var lastEvent *workflow.HistoryEvent
 	var lastDecisionStartedEvent *workflow.HistoryEvent
-	for _, e := range events {
+	lastIdx := 0
+	for i, e := range events {
 		if e.GetEventType() == workflow.EventTypeDecisionTaskStarted {
 			lastDecisionStartedEvent = e
+			lastIdx = i
 		}
 		lastEvent = e
 	}
@@ -4375,13 +4543,11 @@ func (s *integrationSuite) TestDecisionTaskFailed() {
 	s.Equal(lastDecisionTimestamp, lastDecisionStartedEvent.GetTimestamp())
 	s.True(time.Duration(lastEvent.GetTimestamp()-lastDecisionTimestamp) >= time.Second)
 
-	partialHistory, err := s.getHistoryFrom(s.domainID, *workflowExecution, lastDecisionStartedEvent.GetEventId()+1,
-		lastEvent.GetEventId()+1)
-	s.Nil(err)
-	s.Equal(2, len(partialHistory))
-	decisionCompletedEvent := partialHistory[0]
+	s.Equal(2, len(events)-lastIdx-1)
+	decisionCompletedEvent := events[lastIdx+1]
+	workflowCompletedEvent := events[lastIdx+2]
 	s.Equal(workflow.EventTypeDecisionTaskCompleted, decisionCompletedEvent.GetEventType())
-	s.Equal(lastDecisionStartedEvent.GetEventId()+1, decisionCompletedEvent.GetEventId())
+	s.Equal(workflow.EventTypeWorkflowExecutionCompleted, workflowCompletedEvent.GetEventType())
 }
 
 func (s *integrationSuite) TestGetWorkflowExecutionHistory_All() {
@@ -6689,24 +6855,6 @@ func (s *integrationSuite) getHistory(domain string, execution *workflow.Workflo
 	}
 
 	return events
-}
-
-func (s *integrationSuite) getHistoryFrom(domainID string, execution workflow.WorkflowExecution,
-	firstEventID, nextEventID int64) ([]*workflow.HistoryEvent, error) {
-
-	getRequest := &persistence.GetWorkflowExecutionHistoryRequest{
-		DomainID:     domainID,
-		Execution:    execution,
-		FirstEventID: firstEventID,
-		NextEventID:  nextEventID,
-		PageSize:     100,
-	}
-	resp, err := s.HistoryMgr.GetWorkflowExecutionHistory(getRequest)
-	if err != nil {
-		return nil, err
-	}
-
-	return resp.History.Events, nil
 }
 
 func (s *integrationSuite) sendSignal(domainName string, execution *workflow.WorkflowExecution, signalName string,

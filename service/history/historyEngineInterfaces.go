@@ -39,10 +39,11 @@ type (
 
 	historyEventNotification struct {
 		workflowIdentifier
-		lastFirstEventID  int64
-		nextEventID       int64
-		isWorkflowRunning bool
-		timestamp         time.Time
+		lastFirstEventID       int64
+		nextEventID            int64
+		previousStartedEventID int64
+		isWorkflowRunning      bool
+		timestamp              time.Time
 	}
 
 	// Engine represents an interface for managing workflow execution history.
@@ -112,8 +113,10 @@ type (
 
 	transferQueueProcessor interface {
 		common.Daemon
-		FailoverDomain(domainID string)
+		FailoverDomain(domainIDs map[string]struct{})
 		NotifyNewTask(clusterName string, transferTasks []persistence.Task)
+		LockTaskPrrocessing()
+		UnlockTaskPrrocessing()
 	}
 
 	// TODO the timer queue processor and the one below, timer processor
@@ -121,14 +124,15 @@ type (
 	// convention, or at least come with a better name for this case.
 	timerQueueProcessor interface {
 		common.Daemon
-		FailoverDomain(domainID string)
+		FailoverDomain(domainIDs map[string]struct{})
 		NotifyNewTimers(clusterName string, currentTime time.Time, timerTask []persistence.Task)
+		LockTaskPrrocessing()
+		UnlockTaskPrrocessing()
 	}
 
 	timerProcessor interface {
 		notifyNewTimers(timerTask []persistence.Task)
 		process(task *persistence.TimerTaskInfo) (int, error)
-		getTimerGate() TimerGate
 	}
 
 	timerQueueAckMgr interface {

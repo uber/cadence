@@ -141,6 +141,7 @@ type (
 		StartTimestamp               time.Time
 		LastUpdatedTimestamp         time.Time
 		CreateRequestID              string
+		SignalCount                  int32
 		HistorySize                  int64
 		DecisionVersion              int64
 		DecisionScheduleID           int64
@@ -166,9 +167,8 @@ type (
 		MaximumAttempts    int32
 		NonRetriableErrors []string
 		// events V2 related
-		EventStoreVersion   int32
-		CurrentResetVersion int32
-		HistoryBranches     map[int32]*HistoryBranch // map from each resetVersion to the associated branch
+		EventStoreVersion int32
+		BranchToken       []byte
 	}
 
 	// InternalWorkflowMutableState indicates workflow related state for Persistence Interface
@@ -233,11 +233,13 @@ type (
 
 	// InternalBufferedReplicationTask has details to handle out of order receive of history events  for Persistence Interface
 	InternalBufferedReplicationTask struct {
-		FirstEventID  int64
-		NextEventID   int64
-		Version       int64
-		History       *DataBlob
-		NewRunHistory *DataBlob
+		FirstEventID            int64
+		NextEventID             int64
+		Version                 int64
+		History                 *DataBlob
+		NewRunHistory           *DataBlob
+		EventStoreVersion       int32
+		NewRunEventStoreVersion int32
 	}
 
 	// InternalUpdateWorkflowExecutionRequest is used to update a workflow execution  for Persistence Interface

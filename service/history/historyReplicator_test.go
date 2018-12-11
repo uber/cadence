@@ -1357,12 +1357,15 @@ func (s *historyReplicatorSuite) TestApplyOtherEvents_IncomingGreaterThanCurrent
 	defer msBuilder.AssertExpectations(s.T())
 
 	request := &h.ReplicateEventsRequest{
-		SourceCluster:     common.StringPtr(incomingSourceCluster),
-		Version:           common.Int64Ptr(incomingVersion),
-		FirstEventId:      common.Int64Ptr(incomingFirstEventID),
-		NextEventId:       common.Int64Ptr(incomingNextEventID),
-		ForceBufferEvents: common.BoolPtr(true),
-		History:           &shared.History{Events: []*shared.HistoryEvent{&shared.HistoryEvent{}}},
+		SourceCluster:           common.StringPtr(incomingSourceCluster),
+		Version:                 common.Int64Ptr(incomingVersion),
+		FirstEventId:            common.Int64Ptr(incomingFirstEventID),
+		NextEventId:             common.Int64Ptr(incomingNextEventID),
+		ForceBufferEvents:       common.BoolPtr(true),
+		History:                 &shared.History{Events: []*shared.HistoryEvent{&shared.HistoryEvent{}}},
+		NewRunHistory:           &shared.History{Events: []*shared.HistoryEvent{&shared.HistoryEvent{}}},
+		EventStoreVersion:       common.Int32Ptr(233),
+		NewRunEventStoreVersion: common.Int32Ptr(2333),
 	}
 
 	s.mockClusterMetadata.On("ClusterNameForFailoverVersion", currentVersion).Return(currentSourceCluster)

@@ -21,6 +21,7 @@
 package service
 
 import (
+	"github.com/uber/cadence/common/archival"
 	"math/rand"
 	"os"
 	"time"
@@ -52,17 +53,19 @@ type (
 	// BootstrapParams holds the set of parameters
 	// needed to bootstrap a service
 	BootstrapParams struct {
-		Name              string
-		Logger            bark.Logger
-		MetricScope       tally.Scope
-		RingpopFactory    RingpopFactory
-		RPCFactory        common.RPCFactory
-		PProfInitializer  common.PProfInitializer
-		PersistenceConfig config.Persistence
-		ClusterMetadata   cluster.Metadata
-		ReplicatorConfig  config.Replicator
-		MessagingClient   messaging.Client
-		DynamicConfig     dynamicconfig.Client
+		Name               string
+		Logger             bark.Logger
+		MetricScope        tally.Scope
+		RingpopFactory     RingpopFactory
+		RPCFactory         common.RPCFactory
+		PProfInitializer   common.PProfInitializer
+		PersistenceConfig  config.Persistence
+		ClusterMetadata    cluster.Metadata
+		ReplicatorConfig   config.Replicator
+		MessagingClient    messaging.Client
+		DynamicConfig      dynamicconfig.Client
+		DispatcherProvider client.DispatcherProvider
+		ArchivalClient     archival.Client
 	}
 
 	// RingpopFactory provides a bootstrapped ringpop
@@ -83,6 +86,7 @@ type (
 		rpcFactory             common.RPCFactory
 		pprofInitializer       common.PProfInitializer
 		clientFactory          client.Factory
+		clientBean             client.Bean
 		numberOfHistoryShards  int
 		logger                 bark.Logger
 		metricsScope           tally.Scope
@@ -91,6 +95,7 @@ type (
 		clusterMetadata        cluster.Metadata
 		messagingClient        messaging.Client
 		dynamicCollection      *dynamicconfig.Collection
+		dispatcherProvider     client.DispatcherProvider
 	}
 )
 
@@ -107,6 +112,7 @@ func New(params *BootstrapParams) Service {
 		numberOfHistoryShards: params.PersistenceConfig.NumHistoryShards,
 		clusterMetadata:       params.ClusterMetadata,
 		messagingClient:       params.MessagingClient,
+		dispatcherProvider:    params.DispatcherProvider,
 		dynamicCollection:     dynamicconfig.NewCollection(params.DynamicConfig, params.Logger),
 	}
 	sVice.runtimeMetricsReporter = metrics.NewRuntimeMetricsReporter(params.MetricScope, time.Minute, sVice.logger)
@@ -180,6 +186,11 @@ func (h *serviceImpl) Start() {
 	h.clientFactory = client.NewRPCClientFactory(h.rpcFactory, h.membershipMonitor, h.metricsClient,
 		h.numberOfHistoryShards)
 
+	h.clientBean, err = client.NewClientBean(h.clientFactory, h.dispatcherProvider, h.clusterMetadata)
+	if err != nil {
+		h.logger.WithFields(bark.Fields{logging.TagErr: err}).Fatal("fail to initialize client bean")
+	}
+
 	// The service is now started up
 	h.logger.Info("service started")
 
@@ -215,6 +226,10 @@ func (h *serviceImpl) GetMetricsClient() metrics.Client {
 
 func (h *serviceImpl) GetClientFactory() client.Factory {
 	return h.clientFactory
+}
+
+func (h *serviceImpl) GetClientBean() client.Bean {
+	return h.clientBean
 }
 
 func (h *serviceImpl) GetMembershipMonitor() membership.Monitor {

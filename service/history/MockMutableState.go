@@ -303,12 +303,12 @@ func (_m *mockMutableState) AddCompletedWorkflowEvent(_a0 int64, _a1 *shared.Com
 }
 
 // AddContinueAsNewEvent provides a mock function with given fields: _a0, _a1, _a2, _a3, _a4
-func (_m *mockMutableState) AddContinueAsNewEvent(_a0 int64, _a1 *cache.DomainCacheEntry, _a2 string, _a3 *shared.ContinueAsNewWorkflowExecutionDecisionAttributes) (*shared.HistoryEvent, mutableState, error) {
-	ret := _m.Called(_a0, _a1, _a2, _a3)
+func (_m *mockMutableState) AddContinueAsNewEvent(_a0 int64, _a1 *cache.DomainCacheEntry, _a2 string, _a3 *shared.ContinueAsNewWorkflowExecutionDecisionAttributes, _a4 int32) (*shared.HistoryEvent, mutableState, error) {
+	ret := _m.Called(_a0, _a1, _a2, _a3, _a4)
 
 	var r0 *shared.HistoryEvent
-	if rf, ok := ret.Get(0).(func(int64, *cache.DomainCacheEntry, string, *shared.ContinueAsNewWorkflowExecutionDecisionAttributes) *shared.HistoryEvent); ok {
-		r0 = rf(_a0, _a1, _a2, _a3)
+	if rf, ok := ret.Get(0).(func(int64, *cache.DomainCacheEntry, string, *shared.ContinueAsNewWorkflowExecutionDecisionAttributes, int32) *shared.HistoryEvent); ok {
+		r0 = rf(_a0, _a1, _a2, _a3, _a4)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*shared.HistoryEvent)
@@ -316,8 +316,8 @@ func (_m *mockMutableState) AddContinueAsNewEvent(_a0 int64, _a1 *cache.DomainCa
 	}
 
 	var r1 mutableState
-	if rf, ok := ret.Get(1).(func(int64, *cache.DomainCacheEntry, string, *shared.ContinueAsNewWorkflowExecutionDecisionAttributes) mutableState); ok {
-		r1 = rf(_a0, _a1, _a2, _a3)
+	if rf, ok := ret.Get(1).(func(int64, *cache.DomainCacheEntry, string, *shared.ContinueAsNewWorkflowExecutionDecisionAttributes, int32) mutableState); ok {
+		r1 = rf(_a0, _a1, _a2, _a3, _a4)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).(mutableState)
@@ -325,8 +325,8 @@ func (_m *mockMutableState) AddContinueAsNewEvent(_a0 int64, _a1 *cache.DomainCa
 	}
 
 	var r2 error
-	if rf, ok := ret.Get(2).(func(int64, *cache.DomainCacheEntry, string, *shared.ContinueAsNewWorkflowExecutionDecisionAttributes) error); ok {
-		r2 = rf(_a0, _a1, _a2, _a3)
+	if rf, ok := ret.Get(2).(func(int64, *cache.DomainCacheEntry, string, *shared.ContinueAsNewWorkflowExecutionDecisionAttributes, int32) error); ok {
+		r2 = rf(_a0, _a1, _a2, _a3, _a4)
 	} else {
 		r2 = ret.Error(2)
 	}
@@ -1409,6 +1409,20 @@ func (_m *mockMutableState) GetNextEventID() int64 {
 	return r0
 }
 
+// GetPreviousStartedEventID returns last started decision task event ID
+func (_m *mockMutableState) GetPreviousStartedEventID() int64 {
+	ret := _m.Called()
+
+	var r0 int64
+	if rf, ok := ret.Get(0).(func() int64); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	return r0
+}
+
 // GetPendingActivityInfos provides a mock function with given fields:
 func (_m *mockMutableState) GetPendingActivityInfos() map[int64]*persistence.ActivityInfo {
 	ret := _m.Called()
@@ -2088,12 +2102,25 @@ func (_m *mockMutableState) ReplicateWorkflowExecutionCompletedEvent(_a0 *shared
 }
 
 // ReplicateWorkflowExecutionContinuedAsNewEvent provides a mock function with given fields: _a0, _a1, _a2, _a3, _a4, _a5
-func (_m *mockMutableState) ReplicateWorkflowExecutionContinuedAsNewEvent(_a0 string, _a1 string, _a2 *shared.HistoryEvent, _a3 *shared.HistoryEvent, _a4 *decisionInfo, _a5 mutableState) {
-	_m.Called(_a0, _a1, _a2, _a3, _a4, _a5)
+func (_m *mockMutableState) ReplicateWorkflowExecutionContinuedAsNewEvent(_a0 string, _a1 string, _a2 *shared.HistoryEvent, _a3 *shared.HistoryEvent, _a4 *decisionInfo, _a5 mutableState, _a6 int32) error {
+	ret := _m.Called(_a0, _a1, _a2, _a3, _a4, _a5, _a6)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string, *shared.HistoryEvent, *shared.HistoryEvent, *decisionInfo, mutableState, int32) error); ok {
+		r0 = rf(_a0, _a1, _a2, _a3, _a4, _a5, _a6)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
 }
 
 // ReplicateWorkflowExecutionFailedEvent provides a mock function with given fields: _a0
 func (_m *mockMutableState) ReplicateWorkflowExecutionFailedEvent(_a0 *shared.HistoryEvent) {
+	_m.Called(_a0)
+}
+
+// ReplicateWorkflowExecutionSignaled provides a mock function with given fields: _a0
+func (_m *mockMutableState) ReplicateWorkflowExecutionSignaled(_a0 *shared.HistoryEvent) {
 	_m.Called(_a0)
 }
 
