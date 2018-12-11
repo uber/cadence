@@ -2403,38 +2403,20 @@ func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetReq
 		return
 	}
 
-	// We read the forking node to validate the forking point, we should get a batch of events.
-	// This is mostly correctly. But in some very rarely corner case, it can be incorrect because of corrupted history:
-	// It is possible that the node we read exists, but it is a stale batch of events. Forking incorrectly can cause corrupted history.
-	// But that e will check it again when reading events from the beginning.
-	// Because reading all events from beginning is expensive, with having a check here we can return error earlier to customer.
-	readReq := &persistence.ReadHistoryBranchRequest{
-		BranchToken: msBuilder.GetCurrentBranch(),
-		MinEventID:  request.GetNextFirstEventId(),
-		MaxEventID:  request.GetNextFirstEventId() + 1,
-		PageSize:    1,
-	}
-	readResp, retError := e.historyV2Mgr.ReadHistoryBranchByBatch(readReq)
-	if retError != nil {
-		return
-	}
-	if len(readResp.History) != 1 {
-		return &workflow.BadRequestError{
-			Message: fmt.Sprintf("nextFirstEventId is invalid: %v for workflowID: %v, runID: %v, see len of batches: %v ", request.GetNextFirstEventId(), execution.GetWorkflowId(), execution.GetRunId(), len(readResp.History)),
-		}
-	}
-
 	var nextPageToken []byte
-	readReq = &persistence.ReadHistoryBranchRequest{
+	readReq := &persistence.ReadHistoryBranchRequest{
 		BranchToken:   msBuilder.GetCurrentBranch(),
 		MinEventID:    common.FirstEventID,
-		MaxEventID:    request.GetNextFirstEventId(),
+		MaxEventID:    msBuilder.GetNextEventID(),
 		PageSize:      defaultHistoryPageSize,
 		NextPageToken: nextPageToken,
 	}
 	var resetMutableStateBuilder *mutableStateBuilder
 	var sBuilder stateBuilder
-	var lastEvent *workflow.HistoryEvent
+	var lastEvent, lastFirstEvent *workflow.HistoryEvent
+
+	// NOTE: read through history to the end so that we can keep the received signals
+	receivedSignalsAfterReset := make([]*workflow.HistoryEvent, 0)
 
 	for {
 		readResp, retError := e.historyV2Mgr.ReadHistoryBranchByBatch(readReq)
@@ -2446,6 +2428,17 @@ func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetReq
 			firstEvent := history[0]
 			lastEvent = history[len(history)-1]
 
+			// for saving received signals only
+			if firstEvent.GetEventId() > request.GetDecisionTaskCompletedEventId() {
+				for _, e := range batch.Events {
+					if e.GetEventType() == workflow.EventTypeWorkflowExecutionSignaled {
+						receivedSignalsAfterReset = append(receivedSignalsAfterReset, e)
+					}
+				}
+				continue
+			}
+
+			lastFirstEvent = firstEvent
 			if firstEvent.GetEventId() == common.FirstEventID {
 				resetMutableStateBuilder = newMutableStateBuilderWithReplicationState(
 					clusterMetadata.GetCurrentClusterName(),
@@ -2463,21 +2456,41 @@ func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetReq
 			if retError != nil {
 				return
 			}
-			resetMutableStateBuilder.executionInfo.SetLastFirstEventID(firstEvent.GetEventId())
 		}
 		resetMutableStateBuilder.IncrementHistorySize(readResp.Size)
+	}
+
+	if lastFirstEvent.GetEventType() != workflow.EventTypeDecisionTaskCompleted {
+		return &workflow.BadRequestError{
+			Message: fmt.Sprintf("wrong DecisionTaskCompletedEventId, not DecisionTaskCompletedEvent, eventId: %v", lastFirstEvent.GetEventId()),
+		}
 	}
 
 	startTime := time.Now()
 	resetMutableStateBuilder.executionInfo.StartTimestamp = startTime
 	resetMutableStateBuilder.executionInfo.LastUpdatedTimestamp = startTime
 
+	resetMutableStateBuilder.executionInfo.SetLastFirstEventID(lastFirstEvent.GetEventId())
 	sourceCluster := clusterMetadata.ClusterNameForFailoverVersion(lastEvent.GetVersion())
 	resetMutableStateBuilder.UpdateReplicationStateLastEventID(sourceCluster, lastEvent.GetVersion(), lastEvent.GetEventId())
-	resetMutableStateBuilder.executionInfo.SetNextEventID(request.GetNextFirstEventId())
-	// TODO
-	resetMutableStateBuilder.executionInfo.BranchToken = nil
+	resetMutableStateBuilder.executionInfo.SetNextEventID(lastEvent.GetEventId() + 1)
 
+	// add signals
+	// filter timer tasks
+	// filter transfer tasks
+	// generate replication task
+
+	// fork a new history branch
+	forkResp, retError := e.historyV2Mgr.ForkHistoryBranch(&persistence.ForkHistoryBranchRequest{
+		ForkBranchToken: msBuilder.GetCurrentBranch(),
+		ForkNodeID:      lastEvent.GetEventId() + 1,
+	})
+	if retError != nil {
+		return
+	}
+	resetMutableStateBuilder.executionInfo.BranchToken = forkResp.NewBranchToken
+
+	//
 	return nil
 }
 

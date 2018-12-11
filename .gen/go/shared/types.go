@@ -25562,11 +25562,11 @@ func (v *ResetStickyTaskListResponse) MarshalLogObject(enc zapcore.ObjectEncoder
 }
 
 type ResetWorkflowExecutionRequest struct {
-	Domain            *string            `json:"domain,omitempty"`
-	WorkflowExecution *WorkflowExecution `json:"workflowExecution,omitempty"`
-	Reason            *string            `json:"reason,omitempty"`
-	NextFirstEventId  *int64             `json:"nextFirstEventId,omitempty"`
-	RequestId         *string            `json:"requestId,omitempty"`
+	Domain                       *string            `json:"domain,omitempty"`
+	WorkflowExecution            *WorkflowExecution `json:"workflowExecution,omitempty"`
+	Reason                       *string            `json:"reason,omitempty"`
+	DecisionTaskCompletedEventId *int64             `json:"decisionTaskCompletedEventId,omitempty"`
+	RequestId                    *string            `json:"requestId,omitempty"`
 }
 
 // ToWire translates a ResetWorkflowExecutionRequest struct into a Thrift-level intermediate
@@ -25616,8 +25616,8 @@ func (v *ResetWorkflowExecutionRequest) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 30, Value: w}
 		i++
 	}
-	if v.NextFirstEventId != nil {
-		w, err = wire.NewValueI64(*(v.NextFirstEventId)), error(nil)
+	if v.DecisionTaskCompletedEventId != nil {
+		w, err = wire.NewValueI64(*(v.DecisionTaskCompletedEventId)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -25690,7 +25690,7 @@ func (v *ResetWorkflowExecutionRequest) FromWire(w wire.Value) error {
 			if field.Value.Type() == wire.TI64 {
 				var x int64
 				x, err = field.Value.GetI64(), error(nil)
-				v.NextFirstEventId = &x
+				v.DecisionTaskCompletedEventId = &x
 				if err != nil {
 					return err
 				}
@@ -25733,8 +25733,8 @@ func (v *ResetWorkflowExecutionRequest) String() string {
 		fields[i] = fmt.Sprintf("Reason: %v", *(v.Reason))
 		i++
 	}
-	if v.NextFirstEventId != nil {
-		fields[i] = fmt.Sprintf("NextFirstEventId: %v", *(v.NextFirstEventId))
+	if v.DecisionTaskCompletedEventId != nil {
+		fields[i] = fmt.Sprintf("DecisionTaskCompletedEventId: %v", *(v.DecisionTaskCompletedEventId))
 		i++
 	}
 	if v.RequestId != nil {
@@ -25764,7 +25764,7 @@ func (v *ResetWorkflowExecutionRequest) Equals(rhs *ResetWorkflowExecutionReques
 	if !_String_EqualsPtr(v.Reason, rhs.Reason) {
 		return false
 	}
-	if !_I64_EqualsPtr(v.NextFirstEventId, rhs.NextFirstEventId) {
+	if !_I64_EqualsPtr(v.DecisionTaskCompletedEventId, rhs.DecisionTaskCompletedEventId) {
 		return false
 	}
 	if !_String_EqualsPtr(v.RequestId, rhs.RequestId) {
@@ -25789,8 +25789,8 @@ func (v *ResetWorkflowExecutionRequest) MarshalLogObject(enc zapcore.ObjectEncod
 	if v.Reason != nil {
 		enc.AddString("reason", *v.Reason)
 	}
-	if v.NextFirstEventId != nil {
-		enc.AddInt64("nextFirstEventId", *v.NextFirstEventId)
+	if v.DecisionTaskCompletedEventId != nil {
+		enc.AddInt64("decisionTaskCompletedEventId", *v.DecisionTaskCompletedEventId)
 	}
 	if v.RequestId != nil {
 		enc.AddString("requestId", *v.RequestId)
@@ -25828,11 +25828,11 @@ func (v *ResetWorkflowExecutionRequest) GetReason() (o string) {
 	return
 }
 
-// GetNextFirstEventId returns the value of NextFirstEventId if it is set or its
+// GetDecisionTaskCompletedEventId returns the value of DecisionTaskCompletedEventId if it is set or its
 // zero value if it is unset.
-func (v *ResetWorkflowExecutionRequest) GetNextFirstEventId() (o int64) {
-	if v.NextFirstEventId != nil {
-		return *v.NextFirstEventId
+func (v *ResetWorkflowExecutionRequest) GetDecisionTaskCompletedEventId() (o int64) {
+	if v.DecisionTaskCompletedEventId != nil {
+		return *v.DecisionTaskCompletedEventId
 	}
 
 	return
@@ -39880,7 +39880,9 @@ func (v *WorkflowExecutionInfo) GetHistoryLength() (o int64) {
 }
 
 type WorkflowExecutionResetEventAttributes struct {
-	PrevExecutionRunId *string `json:"prevExecutionRunId,omitempty"`
+	ForkExecutionRunId *string `json:"forkExecutionRunId,omitempty"`
+	NewExecutionRunId  *string `json:"newExecutionRunId,omitempty"`
+	ResetEventId       *int64  `json:"resetEventId,omitempty"`
 }
 
 // ToWire translates a WorkflowExecutionResetEventAttributes struct into a Thrift-level intermediate
@@ -39900,18 +39902,34 @@ type WorkflowExecutionResetEventAttributes struct {
 //   }
 func (v *WorkflowExecutionResetEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [1]wire.Field
+		fields [3]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
 	)
 
-	if v.PrevExecutionRunId != nil {
-		w, err = wire.NewValueString(*(v.PrevExecutionRunId)), error(nil)
+	if v.ForkExecutionRunId != nil {
+		w, err = wire.NewValueString(*(v.ForkExecutionRunId)), error(nil)
 		if err != nil {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.NewExecutionRunId != nil {
+		w, err = wire.NewValueString(*(v.NewExecutionRunId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	if v.ResetEventId != nil {
+		w, err = wire.NewValueI64(*(v.ResetEventId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 30, Value: w}
 		i++
 	}
 
@@ -39944,7 +39962,27 @@ func (v *WorkflowExecutionResetEventAttributes) FromWire(w wire.Value) error {
 			if field.Value.Type() == wire.TBinary {
 				var x string
 				x, err = field.Value.GetString(), error(nil)
-				v.PrevExecutionRunId = &x
+				v.ForkExecutionRunId = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.NewExecutionRunId = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 30:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.ResetEventId = &x
 				if err != nil {
 					return err
 				}
@@ -39963,10 +40001,18 @@ func (v *WorkflowExecutionResetEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [1]string
+	var fields [3]string
 	i := 0
-	if v.PrevExecutionRunId != nil {
-		fields[i] = fmt.Sprintf("PrevExecutionRunId: %v", *(v.PrevExecutionRunId))
+	if v.ForkExecutionRunId != nil {
+		fields[i] = fmt.Sprintf("ForkExecutionRunId: %v", *(v.ForkExecutionRunId))
+		i++
+	}
+	if v.NewExecutionRunId != nil {
+		fields[i] = fmt.Sprintf("NewExecutionRunId: %v", *(v.NewExecutionRunId))
+		i++
+	}
+	if v.ResetEventId != nil {
+		fields[i] = fmt.Sprintf("ResetEventId: %v", *(v.ResetEventId))
 		i++
 	}
 
@@ -39983,7 +40029,13 @@ func (v *WorkflowExecutionResetEventAttributes) Equals(rhs *WorkflowExecutionRes
 	} else if rhs == nil {
 		return false
 	}
-	if !_String_EqualsPtr(v.PrevExecutionRunId, rhs.PrevExecutionRunId) {
+	if !_String_EqualsPtr(v.ForkExecutionRunId, rhs.ForkExecutionRunId) {
+		return false
+	}
+	if !_String_EqualsPtr(v.NewExecutionRunId, rhs.NewExecutionRunId) {
+		return false
+	}
+	if !_I64_EqualsPtr(v.ResetEventId, rhs.ResetEventId) {
 		return false
 	}
 
@@ -39996,17 +40048,43 @@ func (v *WorkflowExecutionResetEventAttributes) MarshalLogObject(enc zapcore.Obj
 	if v == nil {
 		return nil
 	}
-	if v.PrevExecutionRunId != nil {
-		enc.AddString("prevExecutionRunId", *v.PrevExecutionRunId)
+	if v.ForkExecutionRunId != nil {
+		enc.AddString("forkExecutionRunId", *v.ForkExecutionRunId)
+	}
+	if v.NewExecutionRunId != nil {
+		enc.AddString("newExecutionRunId", *v.NewExecutionRunId)
+	}
+	if v.ResetEventId != nil {
+		enc.AddInt64("resetEventId", *v.ResetEventId)
 	}
 	return err
 }
 
-// GetPrevExecutionRunId returns the value of PrevExecutionRunId if it is set or its
+// GetForkExecutionRunId returns the value of ForkExecutionRunId if it is set or its
 // zero value if it is unset.
-func (v *WorkflowExecutionResetEventAttributes) GetPrevExecutionRunId() (o string) {
-	if v.PrevExecutionRunId != nil {
-		return *v.PrevExecutionRunId
+func (v *WorkflowExecutionResetEventAttributes) GetForkExecutionRunId() (o string) {
+	if v.ForkExecutionRunId != nil {
+		return *v.ForkExecutionRunId
+	}
+
+	return
+}
+
+// GetNewExecutionRunId returns the value of NewExecutionRunId if it is set or its
+// zero value if it is unset.
+func (v *WorkflowExecutionResetEventAttributes) GetNewExecutionRunId() (o string) {
+	if v.NewExecutionRunId != nil {
+		return *v.NewExecutionRunId
+	}
+
+	return
+}
+
+// GetResetEventId returns the value of ResetEventId if it is set or its
+// zero value if it is unset.
+func (v *WorkflowExecutionResetEventAttributes) GetResetEventId() (o int64) {
+	if v.ResetEventId != nil {
+		return *v.ResetEventId
 	}
 
 	return
@@ -40852,11 +40930,11 @@ func (v *WorkflowExecutionStartedEventAttributes) GetExpirationTimestamp() (o in
 }
 
 type WorkflowExecutionTerminatedEventAttributes struct {
-	Reason                *string `json:"reason,omitempty"`
-	Details               []byte  `json:"details,omitempty"`
-	Identity              *string `json:"identity,omitempty"`
-	NewExecutionRunId     *string `json:"newExecutionRunId,omitempty"`
-	ResetNextFirstEventId *int64  `json:"resetNextFirstEventId,omitempty"`
+	Reason                 *string `json:"reason,omitempty"`
+	Details                []byte  `json:"details,omitempty"`
+	Identity               *string `json:"identity,omitempty"`
+	ResetNewExecutionRunId *string `json:"resetNewExecutionRunId,omitempty"`
+	ResetEventId           *int64  `json:"resetEventId,omitempty"`
 }
 
 // ToWire translates a WorkflowExecutionTerminatedEventAttributes struct into a Thrift-level intermediate
@@ -40906,16 +40984,16 @@ func (v *WorkflowExecutionTerminatedEventAttributes) ToWire() (wire.Value, error
 		fields[i] = wire.Field{ID: 30, Value: w}
 		i++
 	}
-	if v.NewExecutionRunId != nil {
-		w, err = wire.NewValueString(*(v.NewExecutionRunId)), error(nil)
+	if v.ResetNewExecutionRunId != nil {
+		w, err = wire.NewValueString(*(v.ResetNewExecutionRunId)), error(nil)
 		if err != nil {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 40, Value: w}
 		i++
 	}
-	if v.ResetNextFirstEventId != nil {
-		w, err = wire.NewValueI64(*(v.ResetNextFirstEventId)), error(nil)
+	if v.ResetEventId != nil {
+		w, err = wire.NewValueI64(*(v.ResetEventId)), error(nil)
 		if err != nil {
 			return w, err
 		}
@@ -40980,7 +41058,7 @@ func (v *WorkflowExecutionTerminatedEventAttributes) FromWire(w wire.Value) erro
 			if field.Value.Type() == wire.TBinary {
 				var x string
 				x, err = field.Value.GetString(), error(nil)
-				v.NewExecutionRunId = &x
+				v.ResetNewExecutionRunId = &x
 				if err != nil {
 					return err
 				}
@@ -40990,7 +41068,7 @@ func (v *WorkflowExecutionTerminatedEventAttributes) FromWire(w wire.Value) erro
 			if field.Value.Type() == wire.TI64 {
 				var x int64
 				x, err = field.Value.GetI64(), error(nil)
-				v.ResetNextFirstEventId = &x
+				v.ResetEventId = &x
 				if err != nil {
 					return err
 				}
@@ -41023,12 +41101,12 @@ func (v *WorkflowExecutionTerminatedEventAttributes) String() string {
 		fields[i] = fmt.Sprintf("Identity: %v", *(v.Identity))
 		i++
 	}
-	if v.NewExecutionRunId != nil {
-		fields[i] = fmt.Sprintf("NewExecutionRunId: %v", *(v.NewExecutionRunId))
+	if v.ResetNewExecutionRunId != nil {
+		fields[i] = fmt.Sprintf("ResetNewExecutionRunId: %v", *(v.ResetNewExecutionRunId))
 		i++
 	}
-	if v.ResetNextFirstEventId != nil {
-		fields[i] = fmt.Sprintf("ResetNextFirstEventId: %v", *(v.ResetNextFirstEventId))
+	if v.ResetEventId != nil {
+		fields[i] = fmt.Sprintf("ResetEventId: %v", *(v.ResetEventId))
 		i++
 	}
 
@@ -41054,10 +41132,10 @@ func (v *WorkflowExecutionTerminatedEventAttributes) Equals(rhs *WorkflowExecuti
 	if !_String_EqualsPtr(v.Identity, rhs.Identity) {
 		return false
 	}
-	if !_String_EqualsPtr(v.NewExecutionRunId, rhs.NewExecutionRunId) {
+	if !_String_EqualsPtr(v.ResetNewExecutionRunId, rhs.ResetNewExecutionRunId) {
 		return false
 	}
-	if !_I64_EqualsPtr(v.ResetNextFirstEventId, rhs.ResetNextFirstEventId) {
+	if !_I64_EqualsPtr(v.ResetEventId, rhs.ResetEventId) {
 		return false
 	}
 
@@ -41079,11 +41157,11 @@ func (v *WorkflowExecutionTerminatedEventAttributes) MarshalLogObject(enc zapcor
 	if v.Identity != nil {
 		enc.AddString("identity", *v.Identity)
 	}
-	if v.NewExecutionRunId != nil {
-		enc.AddString("newExecutionRunId", *v.NewExecutionRunId)
+	if v.ResetNewExecutionRunId != nil {
+		enc.AddString("resetNewExecutionRunId", *v.ResetNewExecutionRunId)
 	}
-	if v.ResetNextFirstEventId != nil {
-		enc.AddInt64("resetNextFirstEventId", *v.ResetNextFirstEventId)
+	if v.ResetEventId != nil {
+		enc.AddInt64("resetEventId", *v.ResetEventId)
 	}
 	return err
 }
@@ -41118,21 +41196,21 @@ func (v *WorkflowExecutionTerminatedEventAttributes) GetIdentity() (o string) {
 	return
 }
 
-// GetNewExecutionRunId returns the value of NewExecutionRunId if it is set or its
+// GetResetNewExecutionRunId returns the value of ResetNewExecutionRunId if it is set or its
 // zero value if it is unset.
-func (v *WorkflowExecutionTerminatedEventAttributes) GetNewExecutionRunId() (o string) {
-	if v.NewExecutionRunId != nil {
-		return *v.NewExecutionRunId
+func (v *WorkflowExecutionTerminatedEventAttributes) GetResetNewExecutionRunId() (o string) {
+	if v.ResetNewExecutionRunId != nil {
+		return *v.ResetNewExecutionRunId
 	}
 
 	return
 }
 
-// GetResetNextFirstEventId returns the value of ResetNextFirstEventId if it is set or its
+// GetResetEventId returns the value of ResetEventId if it is set or its
 // zero value if it is unset.
-func (v *WorkflowExecutionTerminatedEventAttributes) GetResetNextFirstEventId() (o int64) {
-	if v.ResetNextFirstEventId != nil {
-		return *v.ResetNextFirstEventId
+func (v *WorkflowExecutionTerminatedEventAttributes) GetResetEventId() (o int64) {
+	if v.ResetEventId != nil {
+		return *v.ResetEventId
 	}
 
 	return

@@ -580,12 +580,14 @@ struct WorkflowExecutionTerminatedEventAttributes {
   10: optional string reason
   20: optional binary details
   30: optional string identity
-  40: optional string newExecutionRunId
-  50: optional i64 (js.type = "Long") resetNextFirstEventId
+  40: optional string resetNewExecutionRunId
+  50: optional i64 (js.type = "Long") resetEventId
 }
 
 struct WorkflowExecutionResetEventAttributes {
-  10: optional string prevExecutionRunId
+  10: optional string forkExecutionRunId
+  20: optional string newExecutionRunId
+  30: optional i64 (js.type = "Long") resetEventId
 }
 
 struct RequestCancelExternalWorkflowExecutionInitiatedEventAttributes {
@@ -1082,7 +1084,7 @@ struct ResetWorkflowExecutionRequest {
   10: optional string domain
   20: optional WorkflowExecution workflowExecution
   30: optional string reason
-  40: optional i64 (js.type = "Long") nextFirstEventId
+  40: optional i64 (js.type = "Long") decisionTaskCompletedEventId
   50: optional string requestId
 }
 
