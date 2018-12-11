@@ -405,6 +405,20 @@ func (_m *HistoryClient) TerminateWorkflowExecution(ctx context.Context, termina
 	return r0
 }
 
+// ResetWorkflowExecution provides a mock function with given fields: ctx, terminateRequest
+func (_m *HistoryClient) ResetWorkflowExecution(ctx context.Context, resetRequest *history.ResetWorkflowExecutionRequest, opts ...yarpc.CallOption) error {
+	ret := _m.Called(ctx, resetRequest)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *history.ResetWorkflowExecutionRequest) error); ok {
+		r0 = rf(ctx, resetRequest)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // ScheduleDecisionTask provides a mock function with given fields: ctx, request
 func (_m *HistoryClient) ScheduleDecisionTask(ctx context.Context, request *history.ScheduleDecisionTaskRequest, opts ...yarpc.CallOption) error {
 	ret := _m.Called(ctx, request)

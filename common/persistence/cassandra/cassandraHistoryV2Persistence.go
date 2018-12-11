@@ -280,10 +280,16 @@ func (h *cassandraHistoryV2Persistence) ForkHistoryBranch(request *p.InternalFor
 			Ancestors: newAncestors,
 		}}
 
+	ancs := []map[string]interface{}{}
+	for _, an := range newAncestors {
+		value := make(map[string]interface{})
+		value["end_node_id"] = *an.EndNodeID
+		value["branch_id"] = an.BranchID
+		ancs = append(ancs, value)
+	}
 	// NOTE: To prevent leaking event data caused by forking, we introduce this in_progress flag.
-	// Insert nil as ancestor here, we assume append will insert the actual ancestors along with setting in_progress to false
 	query := h.session.Query(v2templateInsertTree,
-		treeID, request.NewBranchID, nil, true)
+		treeID, request.NewBranchID, ancs, true)
 
 	err := query.Exec()
 	if err != nil {
@@ -293,18 +299,30 @@ func (h *cassandraHistoryV2Persistence) ForkHistoryBranch(request *p.InternalFor
 }
 
 // UpdateHistoryBranch update a branch
-func (h *cassandraHistoryV2Persistence) UpdateHistoryBranch(request *p.InternalUpdateHistoryBranchRequest) error {
+func (h *cassandraHistoryV2Persistence) CompleteForkBranch(request *p.InternalCompleteForkBranchRequest) error {
 	branch := request.BranchInfo
 	treeID := *branch.TreeID
 	branchID := *branch.BranchID
 
-	query := h.session.Query(v2templateUpdateBranch,
-		request.InProgress, treeID, branchID)
-
-	err := query.Exec()
-	if err != nil {
-		return convertCommonErrors("UpdateHistoryBranch", err)
+	var query *gocql.Query
+	if request.Success {
+		query = h.session.Query(v2templateUpdateBranch,
+			false, treeID, branchID)
+		err := query.Exec()
+		if err != nil {
+			return convertCommonErrors("CompleteForkBranch", err)
+		}
+	} else {
+		batch := h.session.NewBatch(gocql.LoggedBatch)
+		batch.Query(v2templateDeleteBranch, treeID, branchID)
+		batch.Query(v2templateRangeDeleteData,
+			treeID, branchID, 1)
+		err := h.session.ExecuteBatch(batch)
+		if err != nil {
+			return convertCommonErrors("CompleteForkBranch", err)
+		}
 	}
+
 	return nil
 }
 
@@ -397,7 +415,7 @@ func (h *cassandraHistoryV2Persistence) GetHistoryTree(request *p.GetHistoryTree
 		for iter.Scan(&branchUUID, &ancsResult, &forkingInProgress) {
 			if forkingInProgress {
 				return nil, &p.ConditionFailedError{
-					Msg: " a branch is forking in progress, retry later",
+					Msg: fmt.Sprintf(" a branch is forking in progress, retry later: %v", branchUUID),
 				}
 			}
 			ancs := h.parseBranchAncestors(ancsResult)

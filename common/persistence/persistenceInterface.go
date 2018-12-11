@@ -107,7 +107,7 @@ type (
 		// DeleteHistoryBranch removes a branch
 		DeleteHistoryBranch(request *InternalDeleteHistoryBranchRequest) error
 		// UpdateHistoryBranch update a branch
-		UpdateHistoryBranch(request *InternalUpdateHistoryBranchRequest) error
+		CompleteForkBranch(request *InternalCompleteForkBranchRequest) error
 		// GetHistoryTree returns all branch information of a tree
 		GetHistoryTree(request *GetHistoryTreeRequest) (*GetHistoryTreeResponse, error)
 	}
@@ -373,11 +373,11 @@ type (
 	}
 
 	// InternalDeleteHistoryBranchRequest is used to update some tree/branch meta data
-	InternalUpdateHistoryBranchRequest struct {
+	InternalCompleteForkBranchRequest struct {
 		// branch to be updated
 		BranchInfo workflow.HistoryBranch
-		// Update the in_progress attribute
-		InProgress bool
+		// whether fork is successful
+		Success bool
 	}
 
 	// InternalReadHistoryBranchRequest is used to read a history branch

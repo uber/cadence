@@ -118,19 +118,12 @@ func (m *historyV2ManagerImpl) CompleteForkBranch(request *CompleteForkBranchReq
 		return err
 	}
 
-	if !request.Success {
-		req := &InternalDeleteHistoryBranchRequest{
-			BranchInfo: branch,
-		}
-		m.persistence.DeleteHistoryBranch(req)
-	}
-
-	req := &InternalUpdateHistoryBranchRequest{
+	req := &InternalCompleteForkBranchRequest{
 		BranchInfo: branch,
-		InProgress: false,
+		Success:    request.Success,
 	}
 
-	return m.persistence.UpdateHistoryBranch(req)
+	return m.persistence.CompleteForkBranch(req)
 }
 
 // GetHistoryTree returns all branch information of a tree
