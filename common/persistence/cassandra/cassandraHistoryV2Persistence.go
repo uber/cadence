@@ -24,6 +24,8 @@ import (
 	"fmt"
 	"sort"
 
+	"time"
+
 	"github.com/gocql/gocql"
 	"github.com/uber-common/bark"
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -45,10 +47,10 @@ const (
 
 	// below are templates for history_tree table
 	v2templateInsertTree = `INSERT INTO history_tree (` +
-		`tree_id, branch_id, ancestors, in_progress) ` +
-		`VALUES (?, ?, ?, ?) `
+		`tree_id, branch_id, ancestors, in_progress, fork_time) ` +
+		`VALUES (?, ?, ?, ?, ?) `
 
-	v2templateReadAllBranches = `SELECT branch_id, ancestors, in_progress FROM history_tree WHERE tree_id = ? `
+	v2templateReadAllBranches = `SELECT branch_id, ancestors, in_progress, fork_time FROM history_tree WHERE tree_id = ? `
 
 	v2templateDeleteBranch = `DELETE FROM history_tree WHERE tree_id = ? AND branch_id = ? `
 
@@ -127,7 +129,7 @@ func (h *cassandraHistoryV2Persistence) AppendHistoryNodes(request *p.InternalAp
 
 		batch := h.session.NewBatch(gocql.LoggedBatch)
 		batch.Query(v2templateInsertTree,
-			branchInfo.TreeID, branchInfo.BranchID, ancs, false)
+			branchInfo.TreeID, branchInfo.BranchID, ancs, false, defaultVisibilityTimestamp)
 		batch.Query(v2templateUpsertData,
 			branchInfo.TreeID, branchInfo.BranchID, request.NodeID, request.TransactionID, request.Events.Data, request.Events.Encoding)
 		err = h.session.ExecuteBatch(batch)
@@ -287,9 +289,11 @@ func (h *cassandraHistoryV2Persistence) ForkHistoryBranch(request *p.InternalFor
 		value["branch_id"] = an.BranchID
 		ancs = append(ancs, value)
 	}
+	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
+
 	// NOTE: To prevent leaking event data caused by forking, we introduce this in_progress flag.
 	query := h.session.Query(v2templateInsertTree,
-		treeID, request.NewBranchID, ancs, true)
+		treeID, request.NewBranchID, ancs, true, cqlNowTimestamp)
 
 	err := query.Exec()
 	if err != nil {
@@ -340,12 +344,18 @@ func (h *cassandraHistoryV2Persistence) DeleteHistoryBranch(request *p.InternalD
 	rsp, err := h.GetHistoryTree(&p.GetHistoryTreeRequest{
 		TreeID: treeID,
 	})
-	// We won't delete the branch if there is any branch forking in progress. It will return error in GetHistoryTree call.
-	// If there is no branch forking in progress we see here, it means that we are safe to calculate the deleting ranges based on the current result,
-	// because all the forking branches in the future would fail.
 	if err != nil {
 		return err
 	}
+	// We won't delete the branch if there is any branch forking in progress. We will return error.
+	if len(rsp.ForkingInProgressBranches) > 0 {
+		return &p.ConditionFailedError{
+			Msg: fmt.Sprintf("Some branch is in progress of forking"),
+		}
+	}
+
+	// If there is no branch forking in progress we see here, it means that we are safe to calculate the deleting ranges based on the current result,
+	// because all the forking branches in the future would fail.
 
 	batch := h.session.NewBatch(gocql.LoggedBatch)
 	batch.Query(v2templateDeleteBranch, treeID, branch.BranchID)
@@ -397,6 +407,7 @@ func (h *cassandraHistoryV2Persistence) GetHistoryTree(request *p.GetHistoryTree
 
 	pagingToken := []byte{}
 	branches := make([]*workflow.HistoryBranch, 0)
+	forkingBranches := make([]p.ForkingInProgressBranch, 0)
 
 	var iter *gocql.Iter
 	for {
@@ -411,12 +422,15 @@ func (h *cassandraHistoryV2Persistence) GetHistoryTree(request *p.GetHistoryTree
 		branchUUID := gocql.UUID{}
 		ancsResult := []map[string]interface{}{}
 		forkingInProgress := false
+		forkTime := time.Time{}
 
-		for iter.Scan(&branchUUID, &ancsResult, &forkingInProgress) {
+		for iter.Scan(&branchUUID, &ancsResult, &forkingInProgress, &forkTime) {
 			if forkingInProgress {
-				return nil, &p.ConditionFailedError{
-					Msg: fmt.Sprintf(" a branch is forking in progress, retry later: %v", branchUUID),
+				br := p.ForkingInProgressBranch{
+					BranchID: branchUUID.String(),
+					ForkTime: forkTime,
 				}
+				forkingBranches = append(forkingBranches, br)
 			}
 			ancs := h.parseBranchAncestors(ancsResult)
 			br := &workflow.HistoryBranch{
@@ -443,7 +457,8 @@ func (h *cassandraHistoryV2Persistence) GetHistoryTree(request *p.GetHistoryTree
 	}
 
 	return &p.GetHistoryTreeResponse{
-		Branches: branches,
+		Branches:                  branches,
+		ForkingInProgressBranches: forkingBranches,
 	}, nil
 }
 
