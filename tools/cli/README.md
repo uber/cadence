@@ -81,8 +81,7 @@ User need to run `show` to view workflow history/progress.
 
 **Re-use the same workflow id when starting/running workflow**
 
-The default re-run policy does not allow a workflow execution using the same workflow ID at all.  
-Use option `--workflowidreusepolicy` or `--wrp` to change default policy.  
+Use option `--workflowidreusepolicy` or `--wrp` to configure workflow id re-use policy.  
 **Option 0 AllowDuplicateFailedOnly:** Allow start a workflow execution using the same workflow ID when workflow not running, and the last execution close state is in *[terminated, cancelled, timeouted, failed]*.  
 **Option 1 AllowDuplicate:** Allow start a workflow execution using the same workflow ID when workflow not running.  
 **Option 2 RejectDuplicate:** Do not allow start a workflow execution using the same workflow ID at all.  
