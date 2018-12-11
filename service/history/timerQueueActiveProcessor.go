@@ -252,7 +252,7 @@ Update_History_Loop:
 		} else if msBuilder == nil || !msBuilder.IsWorkflowExecutionRunning() {
 			return nil
 		}
-		tBuilder := t.historyService.getTimerBuilder(&context.workflowExecution)
+		tBuilder := t.historyService.getTimerBuilder(context.getExecution())
 
 		var timerTasks []persistence.Task
 		scheduleNewDecision := false
@@ -319,7 +319,7 @@ Update_History_Loop:
 		} else if msBuilder == nil || !msBuilder.IsWorkflowExecutionRunning() {
 			return nil
 		}
-		tBuilder := t.historyService.getTimerBuilder(&context.workflowExecution)
+		tBuilder := t.historyService.getTimerBuilder(context.getExecution())
 
 		var timerTasks []persistence.Task
 		updateHistory := false
@@ -734,7 +734,7 @@ Update_History_Loop:
 			return err
 		}
 
-		tBuilder := t.historyService.getTimerBuilder(&context.workflowExecution)
+		tBuilder := t.historyService.getTimerBuilder(context.getExecution())
 		var transferTasks, timerTasks []persistence.Task
 		tranT, timerT, err := getDeleteWorkflowTasksFromShard(t.shard, domainID, workflowExecution.GetWorkflowId(), tBuilder)
 		if err != nil {
@@ -764,7 +764,7 @@ Update_History_Loop:
 }
 
 func (t *timerQueueActiveProcessorImpl) updateWorkflowExecution(
-	context *workflowExecutionContext,
+	context workflowExecutionContext,
 	msBuilder mutableState,
 	scheduleNewDecision bool,
 	createDeletionTask bool,
@@ -783,7 +783,7 @@ func (t *timerQueueActiveProcessorImpl) updateWorkflowExecution(
 	}
 
 	if createDeletionTask {
-		tBuilder := t.historyService.getTimerBuilder(&context.workflowExecution)
+		tBuilder := t.historyService.getTimerBuilder(context.getExecution())
 		tranT, timerT, err := t.historyService.getDeleteWorkflowTasks(executionInfo.DomainID, executionInfo.WorkflowID, tBuilder)
 		if err != nil {
 			return nil
