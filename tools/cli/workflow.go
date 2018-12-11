@@ -134,6 +134,11 @@ func newWorkflowCommands() []cli.Command {
 					Value: defaultDecisionTimeoutInSeconds,
 					Usage: "Decision task start to close timeout in seconds",
 				},
+				cli.IntFlag{
+					Name: FlagWorkflowIdReusePolicyAlias,
+					Usage: "Optional input to configure if the same workflow ID is allow to use for new workflow execution. " +
+						"Available options: 0: AllowDuplicateFailedOnly, 1: AllowDuplicate, 2: RejectDuplicate",
+				},
 				cli.StringFlag{
 					Name:  FlagInputWithAlias,
 					Usage: "Optional input for the workflow, in JSON format. If there are multiple parameters, concatenate them and separate by space.",
@@ -142,11 +147,6 @@ func newWorkflowCommands() []cli.Command {
 					Name: FlagInputFileWithAlias,
 					Usage: "Optional input for the workflow from JSON file. If there are multiple JSON, concatenate them and separate by space or newline. " +
 						"Input from file will be overwrite by input from command line",
-				},
-				cli.StringFlag{
-					Name: FlagWorkflowIdReusePolicyAlias,
-					Usage: "Optional input to configure if the same workflow ID is allow to use for new workflow execution (choose from 0 to 2). " +
-						"See: https://github.com/uber/cadence/blob/master/tools/cli/README.md",
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -182,6 +182,11 @@ func newWorkflowCommands() []cli.Command {
 					Name:  FlagContextTimeoutWithAlias,
 					Usage: "Optional timeout for start command context in seconds, default value is 120",
 				},
+				cli.IntFlag{
+					Name: FlagWorkflowIdReusePolicyAlias,
+					Usage: "Optional input to configure if the same workflow ID is allow to use for new workflow execution. " +
+						"Available options: 0: AllowDuplicateFailedOnly, 1: AllowDuplicate, 2: RejectDuplicate",
+				},
 				cli.StringFlag{
 					Name:  FlagInputWithAlias,
 					Usage: "Optional input for the workflow, in JSON format. If there are multiple parameters, concatenate them and separate by space.",
@@ -190,11 +195,6 @@ func newWorkflowCommands() []cli.Command {
 					Name: FlagInputFileWithAlias,
 					Usage: "Optional input for the workflow from JSON file. If there are multiple JSON, concatenate them and separate by space or newline. " +
 						"Input from file will be overwrite by input from command line",
-				},
-				cli.StringFlag{
-					Name: FlagWorkflowIdReusePolicyAlias,
-					Usage: "Optional input to configure if the same workflow ID is allow to use for new workflow execution (choose from 0 to 2). " +
-						"See: https://github.com/uber/cadence/blob/master/tools/cli/README.md",
 				},
 				cli.BoolFlag{
 					Name:  FlagShowDetailWithAlias,

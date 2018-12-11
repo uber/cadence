@@ -563,25 +563,9 @@ func (s *cliAppSuite) TestIsAttributeName() {
 	s.False(isAttributeName("workflowExecutionStartedEventAttributes"))
 }
 
-func (s *cliAppSuite) TestGetWorkflowIdReusePolicy_EmptyOption() {
-	res := getWorkflowIdReusePolicy("")
-	s.Nil(res)
-}
-
 func (s *cliAppSuite) TestGetWorkflowIdReusePolicy() {
-	res := getWorkflowIdReusePolicy("2")
+	res := getWorkflowIdReusePolicy(2)
 	s.Equal(res.String(), shared.WorkflowIdReusePolicyRejectDuplicate.String())
-}
-
-func (s *cliAppSuite) TestGetWorkflowIdReusePolicy_Failed_InvalidValue() {
-	oldOsExit := osExit
-	defer func() { osExit = oldOsExit }()
-	var errorCode int
-	osExit = func(code int) {
-		errorCode = code
-	}
-	getWorkflowIdReusePolicy("letters")
-	s.Equal(1, errorCode)
 }
 
 func (s *cliAppSuite) TestGetWorkflowIdReusePolicy_Failed_ExceedRange() {
@@ -591,7 +575,7 @@ func (s *cliAppSuite) TestGetWorkflowIdReusePolicy_Failed_ExceedRange() {
 	osExit = func(code int) {
 		errorCode = code
 	}
-	getWorkflowIdReusePolicy("2147483647")
+	getWorkflowIdReusePolicy(2147483647)
 	s.Equal(1, errorCode)
 }
 
@@ -602,6 +586,6 @@ func (s *cliAppSuite) TestGetWorkflowIdReusePolicy_Failed_Negative() {
 	osExit = func(code int) {
 		errorCode = code
 	}
-	getWorkflowIdReusePolicy("-1")
+	getWorkflowIdReusePolicy(-1)
 	s.Equal(1, errorCode)
 }

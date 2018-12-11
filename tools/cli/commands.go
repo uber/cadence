@@ -167,6 +167,7 @@ const (
 	defaultContextTimeoutForLongPoll = 2 * time.Minute
 	defaultDecisionTimeoutInSeconds  = 10
 	defaultPageSizeForList           = 500
+	defaultWorkflowIdReusePolicy     = s.WorkflowIdReusePolicyAllowDuplicateFailedOnly
 
 	workflowStatusNotSet = -1
 	showErrorStackEnv    = `CADENCE_CLI_SHOW_STACKS`
@@ -535,7 +536,11 @@ func StartWorkflow(c *cli.Context) {
 	if len(wid) == 0 {
 		wid = uuid.New()
 	}
-	reusePolicy := getWorkflowIdReusePolicy(c.String(FlagWorkflowIdReusePolicy))
+	reusePolicy := defaultWorkflowIdReusePolicy.Ptr()
+	if c.IsSet(FlagWorkflowIdReusePolicy) {
+		reusePolicy = getWorkflowIdReusePolicy(c.Int(FlagWorkflowIdReusePolicy))
+	}
+
 	input := processJSONInput(c)
 
 	tcCtx, cancel := newContext()
@@ -581,7 +586,11 @@ func RunWorkflow(c *cli.Context) {
 	if len(wid) == 0 {
 		wid = uuid.New()
 	}
-	reusePolicy := getWorkflowIdReusePolicy(c.String(FlagWorkflowIdReusePolicy))
+	reusePolicy := defaultWorkflowIdReusePolicy.Ptr()
+	if c.IsSet(FlagWorkflowIdReusePolicy) {
+		reusePolicy = getWorkflowIdReusePolicy(c.Int(FlagWorkflowIdReusePolicy))
+	}
+
 	input := processJSONInput(c)
 
 	contextTimeout := defaultContextTimeoutForLongPoll
@@ -1341,22 +1350,11 @@ func getWorkflowStatus(statusStr string) s.WorkflowExecutionCloseStatus {
 	return 0
 }
 
-func getWorkflowIdReusePolicy(definedPolicy string) *s.WorkflowIdReusePolicy {
-	if definedPolicy != "" {
-		value, err := strconv.Atoi(definedPolicy)
-		if err != nil {
-			ErrorAndExit(fmt.Sprintf("Option %v format is not supported.", FlagWorkflowIdReusePolicy), err)
-			return nil
-		}
-		policy := s.WorkflowIdReusePolicy(value)
-		for _, p := range s.WorkflowIdReusePolicy_Values() {
-			if p.Equals(policy) {
-				return policy.Ptr()
-			}
-		}
-		// At this point, the policy should return if the value is valid
-		ErrorAndExit(fmt.Sprintf("Option %v value is not in supported range.", FlagWorkflowIdReusePolicy), err)
+func getWorkflowIdReusePolicy(value int) *s.WorkflowIdReusePolicy {
+	if value >= 0 && value <= len(s.WorkflowIdReusePolicy_Values()) {
+		return s.WorkflowIdReusePolicy(value).Ptr()
 	}
-	//Return default if the policy is not defined
+	// At this point, the policy should return if the value is valid
+	ErrorAndExit(fmt.Sprintf("Option %v value is not in supported range.", FlagWorkflowIdReusePolicy), nil)
 	return nil
 }
