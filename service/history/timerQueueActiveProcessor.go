@@ -440,7 +440,7 @@ Update_History_Loop:
 		}
 
 		// use a new timer builder, since during the above for loop, the some timer definitions can be invalid
-		if tt := t.historyService.getTimerBuilder(&context.workflowExecution).GetActivityTimerTaskIfNeeded(msBuilder); tt != nil {
+		if tt := t.historyService.getTimerBuilder(context.getExecution()).GetActivityTimerTaskIfNeeded(msBuilder); tt != nil {
 			updateState = true
 			timerTasks = append(timerTasks, tt)
 		}
