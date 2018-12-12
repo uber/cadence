@@ -53,6 +53,8 @@ type (
 	}
 )
 
+var defaultVisibilityTimestamp = p.UnixNanoToDBTimestamp(time.Now().UnixNano()) - 1
+
 var historyTestRetryPolicy = createHistoryTestRetryPolicy()
 
 func createHistoryTestRetryPolicy() backoff.RetryPolicy {
@@ -483,8 +485,6 @@ func (s *HistoryV2PersistenceSuite) descInProgress(treeID string) {
 	})
 	s.Nil(err)
 	s.True(len(resp.ForkingInProgressBranches) > 0)
-	defaultDateTime := time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)
-	defaultVisibilityTimestamp := p.UnixNanoToDBTimestamp(defaultDateTime.UnixNano())
 	forkTime := p.UnixNanoToDBTimestamp(resp.ForkingInProgressBranches[0].ForkTime.UnixNano())
 	s.True(forkTime > defaultVisibilityTimestamp)
 }
