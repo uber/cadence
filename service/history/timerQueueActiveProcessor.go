@@ -745,7 +745,7 @@ Update_History_Loop:
 			TaskStartToCloseTimeoutSeconds:      startAttributes.TaskStartToCloseTimeoutSeconds,
 			BackoffStartIntervalInSeconds:       common.Int32Ptr(int32(retryBackoffInterval.Seconds())),
 			Initiator:                           workflow.ContinueAsNewInitiatorRetryPolicy.Ptr(),
-			Reason:                              common.StringPtr(timeoutReason),
+			FailureReason:                       common.StringPtr(timeoutReason),
 		}
 		domainEntry, err := getActiveDomainEntryFromShard(t.shard, &domainID)
 		if err != nil {

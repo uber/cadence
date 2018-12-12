@@ -5781,8 +5781,9 @@ func (v *CompleteWorkflowExecutionDecisionAttributes) GetResult() (o []byte) {
 type ContinueAsNewInitiator int32
 
 const (
-	ContinueAsNewInitiatorDecider     ContinueAsNewInitiator = 0
-	ContinueAsNewInitiatorRetryPolicy ContinueAsNewInitiator = 1
+	ContinueAsNewInitiatorDecider      ContinueAsNewInitiator = 0
+	ContinueAsNewInitiatorRetryPolicy  ContinueAsNewInitiator = 1
+	ContinueAsNewInitiatorCronSchedule ContinueAsNewInitiator = 2
 )
 
 // ContinueAsNewInitiator_Values returns all recognized values of ContinueAsNewInitiator.
@@ -5790,6 +5791,7 @@ func ContinueAsNewInitiator_Values() []ContinueAsNewInitiator {
 	return []ContinueAsNewInitiator{
 		ContinueAsNewInitiatorDecider,
 		ContinueAsNewInitiatorRetryPolicy,
+		ContinueAsNewInitiatorCronSchedule,
 	}
 }
 
@@ -5805,6 +5807,9 @@ func (v *ContinueAsNewInitiator) UnmarshalText(value []byte) error {
 		return nil
 	case "RetryPolicy":
 		*v = ContinueAsNewInitiatorRetryPolicy
+		return nil
+	case "CronSchedule":
+		*v = ContinueAsNewInitiatorCronSchedule
 		return nil
 	default:
 		val, err := strconv.ParseInt(s, 10, 32)
@@ -5828,6 +5833,8 @@ func (v ContinueAsNewInitiator) MarshalText() ([]byte, error) {
 		return []byte("Decider"), nil
 	case 1:
 		return []byte("RetryPolicy"), nil
+	case 2:
+		return []byte("CronSchedule"), nil
 	}
 	return []byte(strconv.FormatInt(int64(v), 10)), nil
 }
@@ -5843,6 +5850,8 @@ func (v ContinueAsNewInitiator) MarshalLogObject(enc zapcore.ObjectEncoder) erro
 		enc.AddString("name", "Decider")
 	case 1:
 		enc.AddString("name", "RetryPolicy")
+	case 2:
+		enc.AddString("name", "CronSchedule")
 	}
 	return nil
 }
@@ -5887,6 +5896,8 @@ func (v ContinueAsNewInitiator) String() string {
 		return "Decider"
 	case 1:
 		return "RetryPolicy"
+	case 2:
+		return "CronSchedule"
 	}
 	return fmt.Sprintf("ContinueAsNewInitiator(%d)", w)
 }
@@ -5909,6 +5920,8 @@ func (v ContinueAsNewInitiator) MarshalJSON() ([]byte, error) {
 		return ([]byte)("\"Decider\""), nil
 	case 1:
 		return ([]byte)("\"RetryPolicy\""), nil
+	case 2:
+		return ([]byte)("\"CronSchedule\""), nil
 	}
 	return ([]byte)(strconv.FormatInt(int64(v), 10)), nil
 }
@@ -5958,8 +5971,9 @@ type ContinueAsNewWorkflowExecutionDecisionAttributes struct {
 	BackoffStartIntervalInSeconds       *int32                  `json:"backoffStartIntervalInSeconds,omitempty"`
 	RetryPolicy                         *RetryPolicy            `json:"retryPolicy,omitempty"`
 	Initiator                           *ContinueAsNewInitiator `json:"initiator,omitempty"`
-	Reason                              *string                 `json:"reason,omitempty"`
-	Details                             []byte                  `json:"details,omitempty"`
+	FailureReason                       *string                 `json:"failureReason,omitempty"`
+	FailureDetails                      []byte                  `json:"failureDetails,omitempty"`
+	LastCompletionResult                []byte                  `json:"lastCompletionResult,omitempty"`
 }
 
 // ToWire translates a ContinueAsNewWorkflowExecutionDecisionAttributes struct into a Thrift-level intermediate
@@ -5979,7 +5993,7 @@ type ContinueAsNewWorkflowExecutionDecisionAttributes struct {
 //   }
 func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [10]wire.Field
+		fields [11]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -6049,20 +6063,28 @@ func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) ToWire() (wire.Value,
 		fields[i] = wire.Field{ID: 80, Value: w}
 		i++
 	}
-	if v.Reason != nil {
-		w, err = wire.NewValueString(*(v.Reason)), error(nil)
+	if v.FailureReason != nil {
+		w, err = wire.NewValueString(*(v.FailureReason)), error(nil)
 		if err != nil {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 90, Value: w}
 		i++
 	}
-	if v.Details != nil {
-		w, err = wire.NewValueBinary(v.Details), error(nil)
+	if v.FailureDetails != nil {
+		w, err = wire.NewValueBinary(v.FailureDetails), error(nil)
 		if err != nil {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 100, Value: w}
+		i++
+	}
+	if v.LastCompletionResult != nil {
+		w, err = wire.NewValueBinary(v.LastCompletionResult), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 110, Value: w}
 		i++
 	}
 
@@ -6173,7 +6195,7 @@ func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) FromWire(w wire.Value
 			if field.Value.Type() == wire.TBinary {
 				var x string
 				x, err = field.Value.GetString(), error(nil)
-				v.Reason = &x
+				v.FailureReason = &x
 				if err != nil {
 					return err
 				}
@@ -6181,7 +6203,15 @@ func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) FromWire(w wire.Value
 			}
 		case 100:
 			if field.Value.Type() == wire.TBinary {
-				v.Details, err = field.Value.GetBinary(), error(nil)
+				v.FailureDetails, err = field.Value.GetBinary(), error(nil)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 110:
+			if field.Value.Type() == wire.TBinary {
+				v.LastCompletionResult, err = field.Value.GetBinary(), error(nil)
 				if err != nil {
 					return err
 				}
@@ -6200,7 +6230,7 @@ func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [10]string
+	var fields [11]string
 	i := 0
 	if v.WorkflowType != nil {
 		fields[i] = fmt.Sprintf("WorkflowType: %v", v.WorkflowType)
@@ -6234,12 +6264,16 @@ func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) String() string {
 		fields[i] = fmt.Sprintf("Initiator: %v", *(v.Initiator))
 		i++
 	}
-	if v.Reason != nil {
-		fields[i] = fmt.Sprintf("Reason: %v", *(v.Reason))
+	if v.FailureReason != nil {
+		fields[i] = fmt.Sprintf("FailureReason: %v", *(v.FailureReason))
 		i++
 	}
-	if v.Details != nil {
-		fields[i] = fmt.Sprintf("Details: %v", v.Details)
+	if v.FailureDetails != nil {
+		fields[i] = fmt.Sprintf("FailureDetails: %v", v.FailureDetails)
+		i++
+	}
+	if v.LastCompletionResult != nil {
+		fields[i] = fmt.Sprintf("LastCompletionResult: %v", v.LastCompletionResult)
 		i++
 	}
 
@@ -6290,10 +6324,13 @@ func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) Equals(rhs *ContinueA
 	if !_ContinueAsNewInitiator_EqualsPtr(v.Initiator, rhs.Initiator) {
 		return false
 	}
-	if !_String_EqualsPtr(v.Reason, rhs.Reason) {
+	if !_String_EqualsPtr(v.FailureReason, rhs.FailureReason) {
 		return false
 	}
-	if !((v.Details == nil && rhs.Details == nil) || (v.Details != nil && rhs.Details != nil && bytes.Equal(v.Details, rhs.Details))) {
+	if !((v.FailureDetails == nil && rhs.FailureDetails == nil) || (v.FailureDetails != nil && rhs.FailureDetails != nil && bytes.Equal(v.FailureDetails, rhs.FailureDetails))) {
+		return false
+	}
+	if !((v.LastCompletionResult == nil && rhs.LastCompletionResult == nil) || (v.LastCompletionResult != nil && rhs.LastCompletionResult != nil && bytes.Equal(v.LastCompletionResult, rhs.LastCompletionResult))) {
 		return false
 	}
 
@@ -6330,11 +6367,14 @@ func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) MarshalLogObject(enc 
 	if v.Initiator != nil {
 		err = multierr.Append(err, enc.AddObject("initiator", *v.Initiator))
 	}
-	if v.Reason != nil {
-		enc.AddString("reason", *v.Reason)
+	if v.FailureReason != nil {
+		enc.AddString("failureReason", *v.FailureReason)
 	}
-	if v.Details != nil {
-		enc.AddString("details", base64.StdEncoding.EncodeToString(v.Details))
+	if v.FailureDetails != nil {
+		enc.AddString("failureDetails", base64.StdEncoding.EncodeToString(v.FailureDetails))
+	}
+	if v.LastCompletionResult != nil {
+		enc.AddString("lastCompletionResult", base64.StdEncoding.EncodeToString(v.LastCompletionResult))
 	}
 	return err
 }
@@ -6419,21 +6459,31 @@ func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) GetInitiator() (o Con
 	return
 }
 
-// GetReason returns the value of Reason if it is set or its
+// GetFailureReason returns the value of FailureReason if it is set or its
 // zero value if it is unset.
-func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) GetReason() (o string) {
-	if v.Reason != nil {
-		return *v.Reason
+func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) GetFailureReason() (o string) {
+	if v.FailureReason != nil {
+		return *v.FailureReason
 	}
 
 	return
 }
 
-// GetDetails returns the value of Details if it is set or its
+// GetFailureDetails returns the value of FailureDetails if it is set or its
 // zero value if it is unset.
-func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) GetDetails() (o []byte) {
-	if v.Details != nil {
-		return v.Details
+func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) GetFailureDetails() (o []byte) {
+	if v.FailureDetails != nil {
+		return v.FailureDetails
+	}
+
+	return
+}
+
+// GetLastCompletionResult returns the value of LastCompletionResult if it is set or its
+// zero value if it is unset.
+func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) GetLastCompletionResult() (o []byte) {
+	if v.LastCompletionResult != nil {
+		return v.LastCompletionResult
 	}
 
 	return
@@ -38825,8 +38875,9 @@ type WorkflowExecutionContinuedAsNewEventAttributes struct {
 	DecisionTaskCompletedEventId        *int64                  `json:"decisionTaskCompletedEventId,omitempty"`
 	BackoffStartIntervalInSeconds       *int32                  `json:"backoffStartIntervalInSeconds,omitempty"`
 	Initiator                           *ContinueAsNewInitiator `json:"initiator,omitempty"`
-	Reason                              *string                 `json:"reason,omitempty"`
-	Details                             []byte                  `json:"details,omitempty"`
+	FailureReason                       *string                 `json:"failureReason,omitempty"`
+	FailureDetails                      []byte                  `json:"failureDetails,omitempty"`
+	LastCompletionResult                []byte                  `json:"lastCompletionResult,omitempty"`
 }
 
 // ToWire translates a WorkflowExecutionContinuedAsNewEventAttributes struct into a Thrift-level intermediate
@@ -38846,7 +38897,7 @@ type WorkflowExecutionContinuedAsNewEventAttributes struct {
 //   }
 func (v *WorkflowExecutionContinuedAsNewEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [11]wire.Field
+		fields [12]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -38924,20 +38975,28 @@ func (v *WorkflowExecutionContinuedAsNewEventAttributes) ToWire() (wire.Value, e
 		fields[i] = wire.Field{ID: 90, Value: w}
 		i++
 	}
-	if v.Reason != nil {
-		w, err = wire.NewValueString(*(v.Reason)), error(nil)
+	if v.FailureReason != nil {
+		w, err = wire.NewValueString(*(v.FailureReason)), error(nil)
 		if err != nil {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 100, Value: w}
 		i++
 	}
-	if v.Details != nil {
-		w, err = wire.NewValueBinary(v.Details), error(nil)
+	if v.FailureDetails != nil {
+		w, err = wire.NewValueBinary(v.FailureDetails), error(nil)
 		if err != nil {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 110, Value: w}
+		i++
+	}
+	if v.LastCompletionResult != nil {
+		w, err = wire.NewValueBinary(v.LastCompletionResult), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 120, Value: w}
 		i++
 	}
 
@@ -39054,7 +39113,7 @@ func (v *WorkflowExecutionContinuedAsNewEventAttributes) FromWire(w wire.Value) 
 			if field.Value.Type() == wire.TBinary {
 				var x string
 				x, err = field.Value.GetString(), error(nil)
-				v.Reason = &x
+				v.FailureReason = &x
 				if err != nil {
 					return err
 				}
@@ -39062,7 +39121,15 @@ func (v *WorkflowExecutionContinuedAsNewEventAttributes) FromWire(w wire.Value) 
 			}
 		case 110:
 			if field.Value.Type() == wire.TBinary {
-				v.Details, err = field.Value.GetBinary(), error(nil)
+				v.FailureDetails, err = field.Value.GetBinary(), error(nil)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 120:
+			if field.Value.Type() == wire.TBinary {
+				v.LastCompletionResult, err = field.Value.GetBinary(), error(nil)
 				if err != nil {
 					return err
 				}
@@ -39081,7 +39148,7 @@ func (v *WorkflowExecutionContinuedAsNewEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [11]string
+	var fields [12]string
 	i := 0
 	if v.NewExecutionRunId != nil {
 		fields[i] = fmt.Sprintf("NewExecutionRunId: %v", *(v.NewExecutionRunId))
@@ -39119,12 +39186,16 @@ func (v *WorkflowExecutionContinuedAsNewEventAttributes) String() string {
 		fields[i] = fmt.Sprintf("Initiator: %v", *(v.Initiator))
 		i++
 	}
-	if v.Reason != nil {
-		fields[i] = fmt.Sprintf("Reason: %v", *(v.Reason))
+	if v.FailureReason != nil {
+		fields[i] = fmt.Sprintf("FailureReason: %v", *(v.FailureReason))
 		i++
 	}
-	if v.Details != nil {
-		fields[i] = fmt.Sprintf("Details: %v", v.Details)
+	if v.FailureDetails != nil {
+		fields[i] = fmt.Sprintf("FailureDetails: %v", v.FailureDetails)
+		i++
+	}
+	if v.LastCompletionResult != nil {
+		fields[i] = fmt.Sprintf("LastCompletionResult: %v", v.LastCompletionResult)
 		i++
 	}
 
@@ -39168,10 +39239,13 @@ func (v *WorkflowExecutionContinuedAsNewEventAttributes) Equals(rhs *WorkflowExe
 	if !_ContinueAsNewInitiator_EqualsPtr(v.Initiator, rhs.Initiator) {
 		return false
 	}
-	if !_String_EqualsPtr(v.Reason, rhs.Reason) {
+	if !_String_EqualsPtr(v.FailureReason, rhs.FailureReason) {
 		return false
 	}
-	if !((v.Details == nil && rhs.Details == nil) || (v.Details != nil && rhs.Details != nil && bytes.Equal(v.Details, rhs.Details))) {
+	if !((v.FailureDetails == nil && rhs.FailureDetails == nil) || (v.FailureDetails != nil && rhs.FailureDetails != nil && bytes.Equal(v.FailureDetails, rhs.FailureDetails))) {
+		return false
+	}
+	if !((v.LastCompletionResult == nil && rhs.LastCompletionResult == nil) || (v.LastCompletionResult != nil && rhs.LastCompletionResult != nil && bytes.Equal(v.LastCompletionResult, rhs.LastCompletionResult))) {
 		return false
 	}
 
@@ -39211,11 +39285,14 @@ func (v *WorkflowExecutionContinuedAsNewEventAttributes) MarshalLogObject(enc za
 	if v.Initiator != nil {
 		err = multierr.Append(err, enc.AddObject("initiator", *v.Initiator))
 	}
-	if v.Reason != nil {
-		enc.AddString("reason", *v.Reason)
+	if v.FailureReason != nil {
+		enc.AddString("failureReason", *v.FailureReason)
 	}
-	if v.Details != nil {
-		enc.AddString("details", base64.StdEncoding.EncodeToString(v.Details))
+	if v.FailureDetails != nil {
+		enc.AddString("failureDetails", base64.StdEncoding.EncodeToString(v.FailureDetails))
+	}
+	if v.LastCompletionResult != nil {
+		enc.AddString("lastCompletionResult", base64.StdEncoding.EncodeToString(v.LastCompletionResult))
 	}
 	return err
 }
@@ -39310,21 +39387,31 @@ func (v *WorkflowExecutionContinuedAsNewEventAttributes) GetInitiator() (o Conti
 	return
 }
 
-// GetReason returns the value of Reason if it is set or its
+// GetFailureReason returns the value of FailureReason if it is set or its
 // zero value if it is unset.
-func (v *WorkflowExecutionContinuedAsNewEventAttributes) GetReason() (o string) {
-	if v.Reason != nil {
-		return *v.Reason
+func (v *WorkflowExecutionContinuedAsNewEventAttributes) GetFailureReason() (o string) {
+	if v.FailureReason != nil {
+		return *v.FailureReason
 	}
 
 	return
 }
 
-// GetDetails returns the value of Details if it is set or its
+// GetFailureDetails returns the value of FailureDetails if it is set or its
 // zero value if it is unset.
-func (v *WorkflowExecutionContinuedAsNewEventAttributes) GetDetails() (o []byte) {
-	if v.Details != nil {
-		return v.Details
+func (v *WorkflowExecutionContinuedAsNewEventAttributes) GetFailureDetails() (o []byte) {
+	if v.FailureDetails != nil {
+		return v.FailureDetails
+	}
+
+	return
+}
+
+// GetLastCompletionResult returns the value of LastCompletionResult if it is set or its
+// zero value if it is unset.
+func (v *WorkflowExecutionContinuedAsNewEventAttributes) GetLastCompletionResult() (o []byte) {
+	if v.LastCompletionResult != nil {
+		return v.LastCompletionResult
 	}
 
 	return

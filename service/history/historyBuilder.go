@@ -828,8 +828,8 @@ func (b *historyBuilder) newWorkflowExecutionContinuedAsNewEvent(decisionTaskCom
 	if attributes.Initiator == nil {
 		attributes.Initiator = workflow.ContinueAsNewInitiatorDecider.Ptr()
 	}
-	attributes.Reason = request.Reason
-	attributes.Details = request.Details
+	attributes.FailureReason = request.FailureReason
+	attributes.FailureDetails = request.FailureDetails
 	historyEvent.WorkflowExecutionContinuedAsNewEventAttributes = attributes
 
 	return historyEvent
