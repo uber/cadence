@@ -78,6 +78,7 @@ func (m *historyV2ManagerImpl) ForkHistoryBranch(request *ForkHistoryBranchReque
 		ForkBranchInfo: forkBranch,
 		ForkNodeID:     request.ForkNodeID,
 		NewBranchID:    uuid.New(),
+		RunID:          request.RunID,
 	}
 
 	resp, err := m.persistence.ForkHistoryBranch(req)

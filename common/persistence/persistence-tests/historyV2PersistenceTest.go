@@ -53,6 +53,8 @@ type (
 	}
 )
 
+const testForkRunID = "11220000-0000-f000-f000-000000000000"
+
 var defaultVisibilityTimestamp = p.UnixNanoToDBTimestamp(time.Now().UnixNano()) - 1
 
 var historyTestRetryPolicy = createHistoryTestRetryPolicy()
@@ -487,6 +489,7 @@ func (s *HistoryV2PersistenceSuite) descInProgress(treeID string) {
 	s.True(len(resp.ForkingInProgressBranches) > 0)
 	forkTime := p.UnixNanoToDBTimestamp(resp.ForkingInProgressBranches[0].ForkTime.UnixNano())
 	s.True(forkTime > defaultVisibilityTimestamp)
+	s.Equal(testForkRunID, resp.ForkingInProgressBranches[0].RunID)
 }
 
 // persistence helper
@@ -576,6 +579,7 @@ func (s *HistoryV2PersistenceSuite) fork(forkBranch []byte, forkNodeID int64) ([
 		resp, err := s.HistoryV2Mgr.ForkHistoryBranch(&p.ForkHistoryBranchRequest{
 			ForkBranchToken: forkBranch,
 			ForkNodeID:      forkNodeID,
+			RunID:           testForkRunID,
 		})
 		if resp != nil {
 			bi = resp.NewBranchToken

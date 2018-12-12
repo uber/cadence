@@ -358,6 +358,8 @@ type (
 		ForkNodeID int64
 		// branchID of the new branch
 		NewBranchID string
+		// the runID for clean up data
+		RunID string
 	}
 
 	// InternalForkHistoryBranchResponse is the response to ForkHistoryBranchRequest

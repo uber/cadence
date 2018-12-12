@@ -1172,6 +1172,8 @@ type (
 		// Application must provide a void forking nodeID, it must be a valid nodeID in that branch. A valid nodeID is the firstEventID of a valid batch of events.
 		// And ForkNodeID > 1 because forking from 1 doesn't make any sense.
 		ForkNodeID int64
+		// the runID for clean up data
+		RunID string
 	}
 
 	// ForkHistoryBranchResponse is the response to ForkHistoryBranchRequest
@@ -1204,6 +1206,7 @@ type (
 	ForkingInProgressBranch struct {
 		BranchID string
 		ForkTime time.Time
+		RunID    string
 	}
 
 	// GetHistoryTreeResponse is a response to GetHistoryTreeRequest
