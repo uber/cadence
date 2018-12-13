@@ -2372,9 +2372,6 @@ func (e *historyEngineImpl) SyncActivity(ctx context.Context, request *h.SyncAct
 }
 
 func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetRequest *h.ResetWorkflowExecutionRequest) (retError error) {
-
-	clusterMetadata := e.shard.GetService().GetClusterMetadata()
-
 	domainEntry, retError := e.getActiveDomainEntry(resetRequest.DomainUUID)
 	if retError != nil {
 		return
@@ -2386,37 +2383,102 @@ func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetReq
 		WorkflowId: request.WorkflowExecution.WorkflowId,
 		RunId:      request.WorkflowExecution.RunId,
 	}
+	newRunId := uuid.New()
 
 	context, release, retError := e.historyCache.getOrCreateWorkflowExecutionWithTimeout(ctx, domainID, execution)
 	if retError != nil {
 		return
 	}
 	defer func() { release(retError) }()
-	msBuilder, retError := context.loadWorkflowExecution()
+	forkMutableState, retError := context.loadWorkflowExecution()
 	if retError != nil {
 		return
 	}
-	if msBuilder.GetEventStoreVersion() != persistence.EventStoreVersionV2 {
+	if forkMutableState.GetEventStoreVersion() != persistence.EventStoreVersionV2 {
 		retError = &workflow.BadRequestError{
 			Message: fmt.Sprintf("reset API is not supported for V1 history events"),
 		}
 		return
 	}
 
+	// replay history
+	wfTimeoutSecs, receivedSignals, newStateBuilder, retError := e.replayHistoryEvents(request, forkMutableState)
+	if retError != nil {
+		return
+	}
+	newMutableState := newStateBuilder.getMutableState()
+
+	// generate new timer tasks: we only need 3 timers: user timers, WF timeout, activity timeout
+	timerTasks := e.generateTimerTask(&execution, newMutableState, wfTimeoutSecs)
+
+	// generate new transfer tasks: re-schedule pending activities
+
+	// generate replication task:
+
+	// add signals to mutableState/history:
+
+	// fork a new history branch
+	forkResp, retError := e.historyV2Mgr.ForkHistoryBranch(&persistence.ForkHistoryBranchRequest{
+		ForkBranchToken: forkMutableState.GetCurrentBranch(),
+		ForkNodeID:      newMutableState.GetNextEventID(),
+		RunID:           newRunId,
+	})
+	if retError != nil {
+		return
+	}
+	newMutableState.GetExecutionInfo().BranchToken = forkResp.NewBranchToken
+	// complete the fork process at the end, it is OK even if this defer fails, because our timer task can still clean up correctly( based on fork_time and new_run_id)
+	defer func() {
+		e.historyV2Mgr.CompleteForkBranch(&persistence.CompleteForkBranchRequest{
+			BranchToken: forkResp.NewBranchToken,
+			Success:     retError == nil,
+		})
+	}()
+
+	// append history to new run
+	// append history to current run if current run is not closed
+
+	// update mutableState and create new run
+
+	return nil
+}
+
+func (e *historyEngineImpl) generateTimerTask(execution *workflow.WorkflowExecution, msBuilder mutableState, wfTimeoutSecs int64) []persistence.Task {
+	timerTasks := []persistence.Task{}
+	tBuilder := e.getTimerBuilder(execution)
+	if tt := tBuilder.GetUserTimerTaskIfNeeded(msBuilder); tt != nil {
+		timerTasks = append(timerTasks, tt)
+	}
+	if tt := tBuilder.GetActivityTimerTaskIfNeeded(msBuilder); tt != nil {
+		timerTasks = append(timerTasks, tt)
+	}
+	duration := time.Duration(wfTimeoutSecs) * time.Second
+	wfTimeoutTask := &persistence.WorkflowTimeoutTask{
+		VisibilityTimestamp: e.shard.GetTimeSource().Now().Add(duration),
+	}
+	timerTasks = append(timerTasks, wfTimeoutTask)
+	return timerTasks
+}
+
+func (e *historyEngineImpl) replayHistoryEvents(request *workflow.ResetWorkflowExecutionRequest, prevMutableState mutableState) (wfTimeoutSecs int64, receivedSignalsAfterReset []*workflow.HistoryEvent, sBuilder stateBuilder, retError error) {
+	clusterMetadata := e.shard.GetService().GetClusterMetadata()
+
+	prevExecution := workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr(prevMutableState.GetExecutionInfo().WorkflowID),
+		RunId:      common.StringPtr(prevMutableState.GetExecutionInfo().RunID),
+	}
+	domainID := prevMutableState.GetExecutionInfo().DomainID
 	var nextPageToken []byte
 	readReq := &persistence.ReadHistoryBranchRequest{
-		BranchToken:   msBuilder.GetCurrentBranch(),
-		MinEventID:    common.FirstEventID,
-		MaxEventID:    msBuilder.GetNextEventID(),
+		BranchToken: prevMutableState.GetCurrentBranch(),
+		MinEventID:  common.FirstEventID,
+		// NOTE: read through history to the end so that we can keep the received signals
+		MaxEventID:    prevMutableState.GetNextEventID(),
 		PageSize:      defaultHistoryPageSize,
 		NextPageToken: nextPageToken,
 	}
-	var resetMutableStateBuilder *mutableStateBuilder
-	var sBuilder stateBuilder
+	var resetMutableState *mutableStateBuilder
 	var lastEvent, lastFirstEvent *workflow.HistoryEvent
-
-	// NOTE: read through history to the end so that we can keep the received signals
-	receivedSignalsAfterReset := make([]*workflow.HistoryEvent, 0)
 
 	for {
 		readResp, retError := e.historyV2Mgr.ReadHistoryBranchByBatch(readReq)
@@ -2440,58 +2502,50 @@ func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetReq
 
 			lastFirstEvent = firstEvent
 			if firstEvent.GetEventId() == common.FirstEventID {
-				resetMutableStateBuilder = newMutableStateBuilderWithReplicationState(
+				if firstEvent.GetEventType() != workflow.EventTypeWorkflowExecutionStarted {
+					retError = &workflow.InternalServiceError{
+						Message: fmt.Sprintf("first event type is not EventTypeWorkflowExecutionStarted: %v", firstEvent.GetEventType()),
+					}
+					return
+				}
+				wfTimeoutSecs = int64(firstEvent.GetWorkflowExecutionStartedEventAttributes().GetExecutionStartToCloseTimeoutSeconds())
+				resetMutableState = newMutableStateBuilderWithReplicationState(
 					clusterMetadata.GetCurrentClusterName(),
 					e.shard.GetConfig(),
 					e.logger,
 					firstEvent.GetVersion(),
 				)
 
-				resetMutableStateBuilder.executionInfo.EventStoreVersion = persistence.EventStoreVersionV2
+				resetMutableState.executionInfo.EventStoreVersion = persistence.EventStoreVersionV2
 
-				sBuilder = newStateBuilder(e.shard, resetMutableStateBuilder, e.logger)
+				sBuilder = newStateBuilder(e.shard, resetMutableState, e.logger)
 			}
 
-			_, _, _, retError = sBuilder.applyEvents(domainID, request.GetRequestId(), execution, history, nil, persistence.EventStoreVersionV2, persistence.EventStoreVersionV2)
+			_, _, _, retError = sBuilder.applyEvents(domainID, request.GetRequestId(), prevExecution, history, nil, persistence.EventStoreVersionV2, persistence.EventStoreVersionV2)
 			if retError != nil {
 				return
 			}
 		}
-		resetMutableStateBuilder.IncrementHistorySize(readResp.Size)
+		resetMutableState.IncrementHistorySize(readResp.Size)
 	}
 
 	if lastFirstEvent.GetEventType() != workflow.EventTypeDecisionTaskCompleted {
-		return &workflow.BadRequestError{
+		retError = &workflow.BadRequestError{
 			Message: fmt.Sprintf("wrong DecisionTaskCompletedEventId, not DecisionTaskCompletedEvent, eventId: %v", lastFirstEvent.GetEventId()),
 		}
+		return
 	}
 
 	startTime := time.Now()
-	resetMutableStateBuilder.executionInfo.StartTimestamp = startTime
-	resetMutableStateBuilder.executionInfo.LastUpdatedTimestamp = startTime
+	resetMutableState.executionInfo.StartTimestamp = startTime
+	resetMutableState.executionInfo.LastUpdatedTimestamp = startTime
 
-	resetMutableStateBuilder.executionInfo.SetLastFirstEventID(lastFirstEvent.GetEventId())
+	resetMutableState.executionInfo.SetLastFirstEventID(lastFirstEvent.GetEventId())
 	sourceCluster := clusterMetadata.ClusterNameForFailoverVersion(lastEvent.GetVersion())
-	resetMutableStateBuilder.UpdateReplicationStateLastEventID(sourceCluster, lastEvent.GetVersion(), lastEvent.GetEventId())
-	resetMutableStateBuilder.executionInfo.SetNextEventID(lastEvent.GetEventId() + 1)
+	resetMutableState.UpdateReplicationStateLastEventID(sourceCluster, lastEvent.GetVersion(), lastEvent.GetEventId())
+	resetMutableState.executionInfo.SetNextEventID(lastEvent.GetEventId() + 1)
 
-	// add signals
-	// filter timer tasks
-	// filter transfer tasks
-	// generate replication task
-
-	// fork a new history branch
-	forkResp, retError := e.historyV2Mgr.ForkHistoryBranch(&persistence.ForkHistoryBranchRequest{
-		ForkBranchToken: msBuilder.GetCurrentBranch(),
-		ForkNodeID:      lastEvent.GetEventId() + 1,
-	})
-	if retError != nil {
-		return
-	}
-	resetMutableStateBuilder.executionInfo.BranchToken = forkResp.NewBranchToken
-
-	//
-	return nil
+	return
 }
 
 type updateWorkflowAction struct {

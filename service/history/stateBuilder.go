@@ -41,6 +41,7 @@ type (
 		getTimerTasks() []persistence.Task
 		getNewRunTransferTasks() []persistence.Task
 		getNewRunTimerTasks() []persistence.Task
+		getMutableState() mutableState
 	}
 
 	stateBuilderImpl struct {
@@ -68,6 +69,10 @@ func newStateBuilder(shard ShardContext, msBuilder mutableState, logger bark.Log
 		domainCache:     shard.GetDomainCache(),
 		logger:          logger,
 	}
+}
+
+func (b *stateBuilderImpl) getMutableState() mutableState {
+	return b.msBuilder
 }
 
 func (b *stateBuilderImpl) getTransferTasks() []persistence.Task {
