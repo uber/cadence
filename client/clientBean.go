@@ -31,7 +31,6 @@ import (
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
 )
 
@@ -50,7 +49,7 @@ type (
 
 	// DispatcherProvider provides a diapatcher to a given address
 	DispatcherProvider interface {
-		Get(address string) (*yarpc.Dispatcher, error)
+		Get(name string, address string) (*yarpc.Dispatcher, error)
 	}
 
 	clientBeanImpl struct {
@@ -84,7 +83,7 @@ func NewClientBean(factory Factory, dispatcherProvider DispatcherProvider, clust
 
 	remoteFrontendClients := map[string]frontend.Client{}
 	for cluster, address := range clusterMetadata.GetAllClientAddress() {
-		dispatcher, err := dispatcherProvider.Get(address)
+		dispatcher, err := dispatcherProvider.Get(address.RPCName, address.RPCAddress)
 		if err != nil {
 			return nil, err
 		}
@@ -138,7 +137,7 @@ func NewIPYarpcDispatcherProvider() DispatcherProvider {
 	return &ipDispatcherProvider{}
 }
 
-func (p *ipDispatcherProvider) Get(address string) (*yarpc.Dispatcher, error) {
+func (p *ipDispatcherProvider) Get(name string, address string) (*yarpc.Dispatcher, error) {
 	match, err := regexp.MatchString(ipPortRegex, address)
 	if err != nil {
 		return nil, err
@@ -155,7 +154,7 @@ func (p *ipDispatcherProvider) Get(address string) (*yarpc.Dispatcher, error) {
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: crossDCCaller,
 		Outbounds: yarpc.Outbounds{
-			common.FrontendServiceName: {Unary: channel.NewSingleOutbound(address)},
+			name: {Unary: channel.NewSingleOutbound(address)},
 		},
 	})
 	err = dispatcher.Start()

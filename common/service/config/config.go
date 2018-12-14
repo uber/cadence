@@ -198,7 +198,15 @@ type (
 		// ClusterInitialFailoverVersions contains all cluster names to corresponding initial failover version
 		ClusterInitialFailoverVersions map[string]int64 `yaml:"clusterInitialFailoverVersion"`
 		// ClusterAddress contains all cluster names to corresponding address
-		ClusterAddress map[string]string `yaml:"clusterAddress"`
+		ClusterAddress map[string]Address `yaml:"clusterAddress"`
+	}
+
+	// Address indicate the remote cluster's service name and address
+	Address struct {
+		// RPCName indicate the remote service name
+		RPCName string `yaml:"rpcName"`
+		// Address indicate the remote service IP address
+		RPCAddress string `yaml:"rpcAddress"`
 	}
 
 	// Metrics contains the config items for metrics subsystem

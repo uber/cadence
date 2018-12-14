@@ -47,7 +47,7 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/messaging"
-	"github.com/uber/cadence/common/persistence/persistence-tests"
+	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/host"
@@ -96,7 +96,10 @@ var (
 			MasterClusterName:              clusterName[0],
 			CurrentClusterName:             clusterName[0],
 			ClusterInitialFailoverVersions: map[string]int64{clusterName[0]: 0, clusterName[1]: 1},
-			ClusterAddress:                 map[string]string{clusterName[0]: clusterAddress[0], clusterName[1]: clusterAddress[1]},
+			ClusterAddress: map[string]string{
+				clusterName[0]: config.Address{RPCName: common.FrontendServiceName, RPCAddress: clusterAddress[0]},
+				clusterName[1]: config.Address{RPCName: common.FrontendServiceName, RPCAddress: clusterAddress[1]},
+			},
 		},
 		{
 			EnableGlobalDomain:             true,
@@ -104,7 +107,10 @@ var (
 			MasterClusterName:              clusterName[0],
 			CurrentClusterName:             clusterName[1],
 			ClusterInitialFailoverVersions: map[string]int64{clusterName[0]: 0, clusterName[1]: 1},
-			ClusterAddress:                 map[string]string{clusterName[0]: clusterAddress[0], clusterName[1]: clusterAddress[1]},
+			ClusterAddress: map[string]string{
+				clusterName[0]: config.Address{RPCName: common.FrontendServiceName, RPCAddress: clusterAddress[0]},
+				clusterName[1]: config.Address{RPCName: common.FrontendServiceName, IRPCAddressP: clusterAddress[1]},
+			},
 		},
 	}
 	clusterReplicationConfig = []*workflow.ClusterReplicationConfiguration{
