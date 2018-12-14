@@ -1,0 +1,84 @@
+log:
+  stdout: true
+  level: "${LOG_LEVEL}"
+
+persistence:
+  defaultStore: cass-default
+  visibilityStore: cass-visibility
+  numHistoryShards: ${NUM_HISTORY_SHARDS}
+  datastores:
+    cass-default:
+      cassandra:
+        hosts: "${CASSANDRA_SEEDS}"
+        keyspace: "${KEYSPACE}"
+        consistency: "${CASSANDRA_CONSISTENCY}"
+    cass-visibility:
+      cassandra:
+        hosts: "${CASSANDRA_SEEDS}"
+        keyspace: "${VISIBILITY_KEYSPACE}"
+        consistency: "${CASSANDRA_CONSISTENCY}"
+
+ringpop:
+  name: cadence
+  bootstrapMode: hosts
+  bootstrapHosts: ${RINGPOP_SEEDS_JSON_ARRAY}
+  maxJoinDuration: 30s
+
+services:
+  frontend:
+    rpc:
+      port: 7933
+      bindOnIP: ${BIND_ON_IP}
+    metrics:
+      prometheus:
+        prefix: "cadence_frontend"
+        reporter:
+          onError: "panic"
+          timerType: "histogram"
+          listenAddress: "127.0.0.1:8000"
+
+  matching:
+    rpc:
+      port: 7935
+      bindOnIP: ${BIND_ON_IP}
+    metrics:
+      prometheus:
+        prefix: "cadence_matching"
+        reporter:
+          onError: "panic"
+          timerType: "histogram"
+          listenAddress: "127.0.0.1:8001"
+
+  history:
+    rpc:
+      port: 7934
+      bindOnIP: ${BIND_ON_IP}
+    metrics:
+      prometheus:
+        prefix: "cadence_history"
+        reporter:
+          onError: "panic"
+          timerType: "histogram"
+          listenAddress: "127.0.0.1:8002"
+
+  worker:
+    rpc:
+      port: 7939
+      bindOnIP: ${BIND_ON_IP}
+    metrics:
+      prometheus:
+        prefix: "cadence_worker"
+        reporter:
+          onError: "panic"
+          timerType: "histogram"
+          listenAddress: "127.0.0.1:8003"
+
+clustersInfo:
+  enableGlobalDomain: false
+  failoverVersionIncrement: 10
+  masterClusterName: "active"
+  currentClusterName: "active"
+  clusterInitialFailoverVersion:
+    active: 0
+  clusterAddress:
+    active: "127.0.0.1:7933"

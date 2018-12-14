@@ -299,6 +299,17 @@
   version = "v1.0.2"
 
 [[projects]]
+  digest = "1:4142d94383572e74b42352273652c62afec5b23f325222ed09198f46009022d1"
+  name = "github.com/m3db/prometheus_client_golang"
+  packages = [
+    "prometheus",
+    "prometheus/promhttp",
+  ]
+  pruneopts = ""
+  revision = "c5b7fccd204277076155f10851dad72b76a49317"
+  version = "v0.8.0"
+
+[[projects]]
   branch = "master"
   digest = "1:b7ac1ad7d98781c0168803a258d7bf8b3544fd59f356a0e2dd65c43312cf6aac"
   name = "github.com/mailru/easyjson"
@@ -560,6 +571,7 @@
     "m3/customtransports",
     "m3/thrift",
     "m3/thriftudp",
+    "prometheus",
     "statsd",
   ]
   pruneopts = ""
@@ -942,6 +954,7 @@
     "github.com/uber-go/kafka-client/kafka",
     "github.com/uber-go/tally",
     "github.com/uber-go/tally/m3",
+    "github.com/uber-go/tally/prometheus",
     "github.com/uber-go/tally/statsd",
     "github.com/uber/ringpop-go",
     "github.com/uber/ringpop-go/discovery",

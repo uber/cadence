@@ -22,6 +22,7 @@ package config
 
 import (
 	"encoding/json"
+	"github.com/uber-go/tally/prometheus"
 	"time"
 
 	"github.com/uber/cadence/common/blobstore/filestore"
@@ -242,9 +243,19 @@ type (
 		M3 *m3.Configuration `yaml:"m3"`
 		// Statsd is the configuration for statsd reporter
 		Statsd *Statsd `yaml:"statsd"`
+		// Reporter is the configuration for Reporter metrics reporter
+		Prometheus *Prometheus `yaml:"prometheus"`
 		// Tags is the set of key-value pairs to be reported
 		// as part of every metric
 		Tags map[string]string `yaml:"tags"`
+	}
+
+	// Prometheus contains the config items for prometheus metrics reporter
+	Prometheus struct {
+		// The prefix to use in reporting to prometheus metrics
+		Prefix string `yaml:"prefix" validate:"nonzero"`
+		// Reporter is the configuration for Prometheus metrics reporter
+		Reporter *prometheus.Configuration `yaml:"reporter"`
 	}
 
 	// Statsd contains the config items for statsd metrics reporter

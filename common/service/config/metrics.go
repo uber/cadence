@@ -23,6 +23,7 @@ package config
 import (
 	"github.com/cactus/go-statsd-client/statsd"
 	"github.com/uber-go/tally"
+	"github.com/uber-go/tally/prometheus"
 	tallystatsdreporter "github.com/uber-go/tally/statsd"
 	statsdreporter "github.com/uber/cadence/common/metrics/tally/statsd"
 	"log"
@@ -43,6 +44,9 @@ func (c *Metrics) NewScope() tally.Scope {
 	}
 	if c.Statsd != nil {
 		return c.newStatsdScope()
+	}
+	if c.Prometheus != nil {
+		return c.newPrometheusScope()
 	}
 	return tally.NoopScope
 }
@@ -73,12 +77,29 @@ func (c *Metrics) newStatsdScope() tally.Scope {
 	if err != nil {
 		log.Fatalf("error creating statsd client, err=%v", err)
 	}
-	//NOTE: according to ( https://github.com/uber-go/tally )Tally's statsd implementation doesn't support tagging.
+	// NOTE: according to ( https://github.com/uber-go/tally )Tally's statsd implementation doesn't support tagging.
 	// Therefore, we implement Tally interface to have a statsd reporter that can support tagging
 	reporter := statsdreporter.NewReporter(statter, tallystatsdreporter.Options{})
 	scopeOpts := tally.ScopeOptions{
 		Tags:     c.Tags,
 		Reporter: reporter,
+	}
+	scope, _ := tally.NewRootScope(scopeOpts, time.Second)
+	return scope
+}
+
+// newPrometheusScope returns a new prometheusScope scope with
+// a default reporting interval of a second
+func (c *Metrics) newPrometheusScope() tally.Scope {
+	reporter, err := c.Prometheus.Reporter.NewReporter(prometheus.ConfigurationOptions{})
+	if err != nil {
+		log.Fatalf("error creating prometheus reporter, err=%v", err)
+	}
+	scopeOpts := tally.ScopeOptions{
+		Prefix:         c.Prometheus.Prefix,
+		Tags:           c.Tags,
+		CachedReporter: reporter,
+		Separator:      prometheus.DefaultSeparator,
 	}
 	scope, _ := tally.NewRootScope(scopeOpts, time.Second)
 	return scope
