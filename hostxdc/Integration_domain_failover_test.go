@@ -96,7 +96,7 @@ var (
 			MasterClusterName:              clusterName[0],
 			CurrentClusterName:             clusterName[0],
 			ClusterInitialFailoverVersions: map[string]int64{clusterName[0]: 0, clusterName[1]: 1},
-			ClusterAddress: map[string]string{
+			ClusterAddress: map[string]config.Address{
 				clusterName[0]: config.Address{RPCName: common.FrontendServiceName, RPCAddress: clusterAddress[0]},
 				clusterName[1]: config.Address{RPCName: common.FrontendServiceName, RPCAddress: clusterAddress[1]},
 			},
@@ -107,9 +107,9 @@ var (
 			MasterClusterName:              clusterName[0],
 			CurrentClusterName:             clusterName[1],
 			ClusterInitialFailoverVersions: map[string]int64{clusterName[0]: 0, clusterName[1]: 1},
-			ClusterAddress: map[string]string{
+			ClusterAddress: map[string]config.Address{
 				clusterName[0]: config.Address{RPCName: common.FrontendServiceName, RPCAddress: clusterAddress[0]},
-				clusterName[1]: config.Address{RPCName: common.FrontendServiceName, IRPCAddressP: clusterAddress[1]},
+				clusterName[1]: config.Address{RPCName: common.FrontendServiceName, RPCAddress: clusterAddress[1]},
 			},
 		},
 	}

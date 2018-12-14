@@ -57,7 +57,7 @@ type Factory interface {
 	NewMatchingClientWithTimeout(timeout time.Duration, longPollTimeout time.Duration) (matching.Client, error)
 	NewFrontendClientWithTimeout(timeout time.Duration, longPollTimeout time.Duration) (frontend.Client, error)
 
-	NewFrontendClientWithTimeoutAndDispatcher(timeout time.Duration, longPollTimeout time.Duration, dispatcher *yarpc.Dispatcher) (frontend.Client, error)
+	NewFrontendClientWithTimeoutAndDispatcher(rpcName string, timeout time.Duration, longPollTimeout time.Duration, dispatcher *yarpc.Dispatcher) (frontend.Client, error)
 }
 
 type rpcClientFactory struct {
@@ -177,6 +177,7 @@ func (cf *rpcClientFactory) NewFrontendClientWithTimeout(
 }
 
 func (cf *rpcClientFactory) NewFrontendClientWithTimeoutAndDispatcher(
+	rpcName string,
 	timeout time.Duration,
 	longPollTimeout time.Duration,
 	dispatcher *yarpc.Dispatcher,
@@ -186,7 +187,7 @@ func (cf *rpcClientFactory) NewFrontendClientWithTimeoutAndDispatcher(
 	}
 
 	clientProvider := func(clientKey string) (interface{}, error) {
-		return workflowserviceclient.New(dispatcher.ClientConfig(common.FrontendServiceName)), nil
+		return workflowserviceclient.New(dispatcher.ClientConfig(rpcName)), nil
 	}
 
 	client := frontend.NewClient(timeout, longPollTimeout, common.NewClientCache(keyResolver, clientProvider))

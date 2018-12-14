@@ -89,6 +89,7 @@ func NewClientBean(factory Factory, dispatcherProvider DispatcherProvider, clust
 		}
 
 		client, err := factory.NewFrontendClientWithTimeoutAndDispatcher(
+			address.RPCName,
 			frontend.DefaultTimeout,
 			frontend.DefaultLongPollTimeout,
 			dispatcher,
