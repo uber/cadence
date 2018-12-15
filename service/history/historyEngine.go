@@ -2403,6 +2403,33 @@ func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetReq
 		return
 	}
 
+	// also load the current run of the workflow, it can be different from the forking runID
+	resp, retError := e.shard.GetExecutionManager().GetCurrentExecution(&persistence.GetCurrentExecutionRequest{
+		DomainID:   domainID,
+		WorkflowID: request.WorkflowExecution.GetWorkflowId(),
+	})
+	if retError != nil {
+		return
+	}
+	var currMutableState mutableState
+	if resp.RunID == execution.GetRunId() {
+		currMutableState = forkMutableState
+	} else {
+		currExecution := workflow.WorkflowExecution{
+			WorkflowId: request.WorkflowExecution.WorkflowId,
+			RunId:      common.StringPtr(resp.RunID),
+		}
+		currContext, currRelease, retError := e.historyCache.getOrCreateWorkflowExecutionWithTimeout(ctx, domainID, currExecution)
+		if retError != nil {
+			return
+		}
+		defer func() { currRelease(retError) }()
+		currMutableState, retError = currContext.loadWorkflowExecution()
+		if retError != nil {
+			return
+		}
+	}
+
 	// replay history to reset point(exclusive) to rebuild mutableState, then continue to replay to collect received signals
 	wfTimeoutSecs, receivedSignals, newStateBuilder, retError := e.replayHistoryEvents(request, forkMutableState, newRunId)
 	if retError != nil {
@@ -2412,9 +2439,9 @@ func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetReq
 
 	// generate new transfer tasks to
 	//  1. re-schedule task for scheduled(not started) activities/childWF.
-	//  2. reschedule task to resend sigals/requestCancel if initiated but not delivered
+	//  2. re-schedule task to resend sigals/requestCancel if initiated but not delivered
 	//  3. add a new decision
-	startedActivityIDs, transferTasks, retError := e.generateTransferTasksForReset(newStateBuilder.getTransferTasks(), newMutableState, request.TaskList.GetName())
+	startedActivityIDs, transferTasks, retError := e.filterTransferTasksForReset(newStateBuilder.getTransferTasks(), newMutableState)
 
 	// generate new timer tasks: we need 4 timers: user timers, WF timeout, activity timeout and activity retry timer
 	timerTasks, retError := e.generateTimerTasksAndFailStartedActivities(&execution, newMutableState, wfTimeoutSecs, startedActivityIDs)
@@ -2422,17 +2449,24 @@ func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetReq
 		return
 	}
 
-	// add received signals back to mutableState/history:
+	// failed the last decision(started)
+	di, hasPending := newMutableState.GetInFlightDecisionTask()
+	if !hasPending {
+		retError = &workflow.BadRequestError{
+			Message: fmt.Sprintf("can't find the last started decision"),
+		}
+		return
+	}
+	// TODO does it have anything related to transient decision??
+	newMutableState.AddDecisionTaskFailedEvent(di.ScheduleID, di.StartedID, workflow.DecisionTaskFailedCauseResetWorkflow, []byte(request.GetReason()), request.GetRequestId())
 
-	// append history to new run
-	// append history to current run if current run is not closed
+	// replay received signals back to mutableState/history:
+	e.replayReceivedSignals(receivedSignals, newMutableState)
 
-	// update mutableState(terminate current run) and create new run
-
-	// update replication and generate replication task
-	if newMutableState.GetReplicationState() != nil {
-		clusterMetadata := e.shard.GetService().GetClusterMetadata()
-		newMutableState.UpdateReplicationStateLastEventID(clusterMetadata.GetCurrentClusterName(), lastEvent.GetVersion(), lastEvent.GetEventId())
+	// we always schedule a new decision after reset
+	transferTasks, timerTasks, retError = context.scheduleNewDecision(transferTasks, timerTasks)
+	if retError != nil {
+		return
 	}
 
 	/////////////////////////////////////////////////////////////////////////
@@ -2457,39 +2491,40 @@ func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetReq
 		})
 	}()
 
+	newHistory := newMutableState.GetHistoryBuilder().GetHistory().Events
+	// update replication and generate replication task
+	if newMutableState.GetReplicationState() != nil {
+		lastEvent := newHistory[len(newHistory)-1]
+		clusterMetadata := e.shard.GetService().GetClusterMetadata()
+		newMutableState.UpdateReplicationStateLastEventID(clusterMetadata.GetCurrentClusterName(), lastEvent.GetVersion(), lastEvent.GetEventId())
+		// replication task is generated based on current run instead of forking run
+		currMutableState.CreateReplicationTask(persistence.EventStoreVersionV2, forkResp.NewBranchToken)
+	}
+
+	// append history to new run
+	// append history to current run if current run is not closed
+
+	// update mutableState(terminate current run) and create new run
+
 	return nil
 }
 
-func (e *historyEngineImpl) generateResetReplicationTask(msBuilder mutableState, clusterMetadata cluster.Metadata, domainEntry *cache.DomainCacheEntry) []persistence.Task {
-	var replicationTasks []persistence.Task
-	if msBuilder.GetReplicationState() != nil {
-		msBuilder.UpdateReplicationStateLastEventID(
-			clusterMetadata.GetCurrentClusterName(),
-			msBuilder.GetCurrentVersion(),
-			msBuilder.GetNextEventID()-1,
-		)
-		// this is a hack, only create replication task if have # target cluster > 1, for more see #868
-		if domainEntry.CanReplicateEvent() {
-			replicationTask := &persistence.HistoryReplicationTask{
-				FirstEventID:        common.FirstEventID,
-				NextEventID:         msBuilder.GetNextEventID(),
-				Version:             msBuilder.GetCurrentVersion(),
-				LastReplicationInfo: nil,
-				EventStoreVersion:   msBuilder.GetEventStoreVersion(),
-				BranchToken:         msBuilder.GetCurrentBranch(),
-			}
-
-			replicationTasks = append(replicationTasks, replicationTask)
+func (e *historyEngineImpl) replayReceivedSignals(receivedSignals []*workflow.HistoryEvent, msBuilder mutableState) {
+	for _, se := range receivedSignals {
+		sigReq := &workflow.SignalWorkflowExecutionRequest{
+			SignalName: se.GetWorkflowExecutionSignaledEventAttributes().SignalName,
+			Identity:   se.GetWorkflowExecutionSignaledEventAttributes().Identity,
+			Input:      se.GetWorkflowExecutionSignaledEventAttributes().Input,
 		}
+		msBuilder.AddWorkflowExecutionSignaled(sigReq)
 	}
-	return replicationTasks
 }
 
-func (e *historyEngineImpl) generateTransferTasksForReset(allTasks []persistence.Task, msBuilder mutableState, taskListName string) ([]int64, []persistence.Task, error) {
-	retTasks := []persistence.Task{}
+func (e *historyEngineImpl) filterTransferTasksForReset(prevTansferTasks []persistence.Task, msBuilder mutableState) ([]int64, []persistence.Task, error) {
+	transTasks := []persistence.Task{}
 	startedActivityIDs := []int64{}
 
-	for _, t := range allTasks {
+	for _, t := range prevTansferTasks {
 		switch t.GetType() {
 		case persistence.TransferTaskTypeActivityTask:
 			task, ok := t.(*persistence.ActivityTask)
@@ -2549,17 +2584,10 @@ func (e *historyEngineImpl) generateTransferTasksForReset(allTasks []persistence
 			}
 		}
 
-		retTasks = append(retTasks, t)
+		transTasks = append(transTasks, t)
 	}
-	di := msBuilder.AddDecisionTaskScheduledEvent()
-	if di == nil {
-		return nil, nil, &workflow.InternalServiceError{Message: "Failed to add decision scheduled event."}
-	}
-	retTasks = append(retTasks, &persistence.DecisionTask{
-		DomainID: msBuilder.GetExecutionInfo().DomainID, TaskList: taskListName, ScheduleID: di.ScheduleID,
-	})
 
-	return startedActivityIDs, retTasks, nil
+	return startedActivityIDs, transTasks, nil
 }
 
 func (e *historyEngineImpl) generateTimerTasksAndFailStartedActivities(execution *workflow.WorkflowExecution, msBuilder mutableState, wfTimeoutSecs int64, startedActivityIDs []int64) ([]persistence.Task, error) {

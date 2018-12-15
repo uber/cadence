@@ -1082,7 +1082,6 @@ struct ResetWorkflowExecutionRequest {
   30: optional string reason
   40: optional i64 (js.type = "Long") decisionTaskCompletedEventId
   50: optional string requestId
-  60: optional TaskList taskList
 }
 
 struct ListOpenWorkflowExecutionsRequest {

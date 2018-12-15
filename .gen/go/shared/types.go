@@ -25645,7 +25645,6 @@ type ResetWorkflowExecutionRequest struct {
 	Reason                       *string            `json:"reason,omitempty"`
 	DecisionTaskCompletedEventId *int64             `json:"decisionTaskCompletedEventId,omitempty"`
 	RequestId                    *string            `json:"requestId,omitempty"`
-	TaskList                     *TaskList          `json:"taskList,omitempty"`
 }
 
 // ToWire translates a ResetWorkflowExecutionRequest struct into a Thrift-level intermediate
@@ -25665,7 +25664,7 @@ type ResetWorkflowExecutionRequest struct {
 //   }
 func (v *ResetWorkflowExecutionRequest) ToWire() (wire.Value, error) {
 	var (
-		fields [6]wire.Field
+		fields [5]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -25709,14 +25708,6 @@ func (v *ResetWorkflowExecutionRequest) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 50, Value: w}
-		i++
-	}
-	if v.TaskList != nil {
-		w, err = v.TaskList.ToWire()
-		if err != nil {
-			return w, err
-		}
-		fields[i] = wire.Field{ID: 60, Value: w}
 		i++
 	}
 
@@ -25793,14 +25784,6 @@ func (v *ResetWorkflowExecutionRequest) FromWire(w wire.Value) error {
 				}
 
 			}
-		case 60:
-			if field.Value.Type() == wire.TStruct {
-				v.TaskList, err = _TaskList_Read(field.Value)
-				if err != nil {
-					return err
-				}
-
-			}
 		}
 	}
 
@@ -25814,7 +25797,7 @@ func (v *ResetWorkflowExecutionRequest) String() string {
 		return "<nil>"
 	}
 
-	var fields [6]string
+	var fields [5]string
 	i := 0
 	if v.Domain != nil {
 		fields[i] = fmt.Sprintf("Domain: %v", *(v.Domain))
@@ -25834,10 +25817,6 @@ func (v *ResetWorkflowExecutionRequest) String() string {
 	}
 	if v.RequestId != nil {
 		fields[i] = fmt.Sprintf("RequestId: %v", *(v.RequestId))
-		i++
-	}
-	if v.TaskList != nil {
-		fields[i] = fmt.Sprintf("TaskList: %v", v.TaskList)
 		i++
 	}
 
@@ -25869,9 +25848,6 @@ func (v *ResetWorkflowExecutionRequest) Equals(rhs *ResetWorkflowExecutionReques
 	if !_String_EqualsPtr(v.RequestId, rhs.RequestId) {
 		return false
 	}
-	if !((v.TaskList == nil && rhs.TaskList == nil) || (v.TaskList != nil && rhs.TaskList != nil && v.TaskList.Equals(rhs.TaskList))) {
-		return false
-	}
 
 	return true
 }
@@ -25896,9 +25872,6 @@ func (v *ResetWorkflowExecutionRequest) MarshalLogObject(enc zapcore.ObjectEncod
 	}
 	if v.RequestId != nil {
 		enc.AddString("requestId", *v.RequestId)
-	}
-	if v.TaskList != nil {
-		err = multierr.Append(err, enc.AddObject("taskList", v.TaskList))
 	}
 	return err
 }
@@ -25948,16 +25921,6 @@ func (v *ResetWorkflowExecutionRequest) GetDecisionTaskCompletedEventId() (o int
 func (v *ResetWorkflowExecutionRequest) GetRequestId() (o string) {
 	if v.RequestId != nil {
 		return *v.RequestId
-	}
-
-	return
-}
-
-// GetTaskList returns the value of TaskList if it is set or its
-// zero value if it is unset.
-func (v *ResetWorkflowExecutionRequest) GetTaskList() (o *TaskList) {
-	if v.TaskList != nil {
-		return v.TaskList
 	}
 
 	return
