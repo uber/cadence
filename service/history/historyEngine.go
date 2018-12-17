@@ -2431,12 +2431,28 @@ func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetReq
 		}
 	}
 
+	if len(forkMutableState.GetPendingChildExecutionInfos()) > 0 {
+		return &workflow.BadRequestError{
+			Message: fmt.Sprintf("reset is not allowed when workflow has pending child workflow. RunID: %v", forkMutableState.GetExecutionInfo().RunID),
+		}
+	}
+	if len(currMutableState.GetPendingChildExecutionInfos()) > 0 {
+		return &workflow.BadRequestError{
+			Message: fmt.Sprintf("reset is not allowed when workflow has pending child workflow. RunID: %v", currMutableState.GetExecutionInfo().RunID),
+		}
+	}
+
 	// replay history to reset point(exclusive) to rebuild mutableState, then continue to replay to collect received signals
 	wfTimeoutSecs, receivedSignals, newStateBuilder, retError := e.replayHistoryEvents(request, forkMutableState, newRunId)
 	if retError != nil {
 		return
 	}
 	newMutableState := newStateBuilder.getMutableState()
+	if len(newMutableState.GetPendingChildExecutionInfos()) > 0 {
+		return &workflow.BadRequestError{
+			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending child workflow "),
+		}
+	}
 
 	// generate new transfer tasks to
 	//  1. re-schedule task for scheduled(not started) activities/childWF.
@@ -2507,8 +2523,8 @@ func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetReq
 		lastEvent := newHistory[len(newHistory)-1]
 		clusterMetadata := e.shard.GetService().GetClusterMetadata()
 		newMutableState.UpdateReplicationStateLastEventID(clusterMetadata.GetCurrentClusterName(), lastEvent.GetVersion(), lastEvent.GetEventId())
-		// replication task is generated based on current run instead of forking run
-		newMutableState.CreateReplicationTask(persistence.EventStoreVersionV2, forkResp.NewBranchToken)
+		// replication task is generated with reset event(decision task failed)
+		newMutableState.CreateReplicationTask(0, nil)
 	}
 
 	// append history to new run
@@ -2552,19 +2568,8 @@ func (e *historyEngineImpl) filterTransferTasksForReset(prevTansferTasks []persi
 				continue
 			}
 		case persistence.TransferTaskTypeStartChildExecution:
-			task, ok := t.(*persistence.StartChildExecutionTask)
-			if !ok {
-				return nil, nil, errUnknownTransferTask
-			}
-			ci, isPending := msBuilder.GetChildExecutionInfo(task.InitiatedID)
-			if !isPending {
-				continue
-			}
-			// we don't want to schedule childWF again if it already started by the reset point
-			// TODO need to discuss with team
-			if ci.StartedID != common.EmptyEventID {
-				continue
-			}
+			// skip all transferTasks for childWF for first version
+			continue
 		case persistence.TransferTaskTypeDecisionTask:
 			// skip all transferTasks for decision since we only reset to decisionTaskCompleted
 			continue
