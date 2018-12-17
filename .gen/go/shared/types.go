@@ -7495,13 +7495,14 @@ func (v *DecisionTaskFailedCause) UnmarshalJSON(text []byte) error {
 }
 
 type DecisionTaskFailedEventAttributes struct {
-	ScheduledEventId           *int64                   `json:"scheduledEventId,omitempty"`
-	StartedEventId             *int64                   `json:"startedEventId,omitempty"`
-	Cause                      *DecisionTaskFailedCause `json:"cause,omitempty"`
-	Details                    []byte                   `json:"details,omitempty"`
-	Identity                   *string                  `json:"identity,omitempty"`
-	ForkExecutionRunIdForReset *string                  `json:"forkExecutionRunIdForReset,omitempty"`
-	NewExecutionRunIdForReset  *string                  `json:"newExecutionRunIdForReset,omitempty"`
+	ScheduledEventId   *int64                   `json:"scheduledEventId,omitempty"`
+	StartedEventId     *int64                   `json:"startedEventId,omitempty"`
+	Cause              *DecisionTaskFailedCause `json:"cause,omitempty"`
+	Details            []byte                   `json:"details,omitempty"`
+	Identity           *string                  `json:"identity,omitempty"`
+	ForkRunId          *string                  `json:"forkRunId,omitempty"`
+	CurrRunId          *string                  `json:"currRunId,omitempty"`
+	CurrRunNextEventId *int64                   `json:"currRunNextEventId,omitempty"`
 }
 
 // ToWire translates a DecisionTaskFailedEventAttributes struct into a Thrift-level intermediate
@@ -7521,7 +7522,7 @@ type DecisionTaskFailedEventAttributes struct {
 //   }
 func (v *DecisionTaskFailedEventAttributes) ToWire() (wire.Value, error) {
 	var (
-		fields [7]wire.Field
+		fields [8]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -7567,20 +7568,28 @@ func (v *DecisionTaskFailedEventAttributes) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 40, Value: w}
 		i++
 	}
-	if v.ForkExecutionRunIdForReset != nil {
-		w, err = wire.NewValueString(*(v.ForkExecutionRunIdForReset)), error(nil)
+	if v.ForkRunId != nil {
+		w, err = wire.NewValueString(*(v.ForkRunId)), error(nil)
 		if err != nil {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 50, Value: w}
 		i++
 	}
-	if v.NewExecutionRunIdForReset != nil {
-		w, err = wire.NewValueString(*(v.NewExecutionRunIdForReset)), error(nil)
+	if v.CurrRunId != nil {
+		w, err = wire.NewValueString(*(v.CurrRunId)), error(nil)
 		if err != nil {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 60, Value: w}
+		i++
+	}
+	if v.CurrRunNextEventId != nil {
+		w, err = wire.NewValueI64(*(v.CurrRunNextEventId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 70, Value: w}
 		i++
 	}
 
@@ -7667,7 +7676,7 @@ func (v *DecisionTaskFailedEventAttributes) FromWire(w wire.Value) error {
 			if field.Value.Type() == wire.TBinary {
 				var x string
 				x, err = field.Value.GetString(), error(nil)
-				v.ForkExecutionRunIdForReset = &x
+				v.ForkRunId = &x
 				if err != nil {
 					return err
 				}
@@ -7677,7 +7686,17 @@ func (v *DecisionTaskFailedEventAttributes) FromWire(w wire.Value) error {
 			if field.Value.Type() == wire.TBinary {
 				var x string
 				x, err = field.Value.GetString(), error(nil)
-				v.NewExecutionRunIdForReset = &x
+				v.CurrRunId = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 70:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.CurrRunNextEventId = &x
 				if err != nil {
 					return err
 				}
@@ -7696,7 +7715,7 @@ func (v *DecisionTaskFailedEventAttributes) String() string {
 		return "<nil>"
 	}
 
-	var fields [7]string
+	var fields [8]string
 	i := 0
 	if v.ScheduledEventId != nil {
 		fields[i] = fmt.Sprintf("ScheduledEventId: %v", *(v.ScheduledEventId))
@@ -7718,12 +7737,16 @@ func (v *DecisionTaskFailedEventAttributes) String() string {
 		fields[i] = fmt.Sprintf("Identity: %v", *(v.Identity))
 		i++
 	}
-	if v.ForkExecutionRunIdForReset != nil {
-		fields[i] = fmt.Sprintf("ForkExecutionRunIdForReset: %v", *(v.ForkExecutionRunIdForReset))
+	if v.ForkRunId != nil {
+		fields[i] = fmt.Sprintf("ForkRunId: %v", *(v.ForkRunId))
 		i++
 	}
-	if v.NewExecutionRunIdForReset != nil {
-		fields[i] = fmt.Sprintf("NewExecutionRunIdForReset: %v", *(v.NewExecutionRunIdForReset))
+	if v.CurrRunId != nil {
+		fields[i] = fmt.Sprintf("CurrRunId: %v", *(v.CurrRunId))
+		i++
+	}
+	if v.CurrRunNextEventId != nil {
+		fields[i] = fmt.Sprintf("CurrRunNextEventId: %v", *(v.CurrRunNextEventId))
 		i++
 	}
 
@@ -7765,10 +7788,13 @@ func (v *DecisionTaskFailedEventAttributes) Equals(rhs *DecisionTaskFailedEventA
 	if !_String_EqualsPtr(v.Identity, rhs.Identity) {
 		return false
 	}
-	if !_String_EqualsPtr(v.ForkExecutionRunIdForReset, rhs.ForkExecutionRunIdForReset) {
+	if !_String_EqualsPtr(v.ForkRunId, rhs.ForkRunId) {
 		return false
 	}
-	if !_String_EqualsPtr(v.NewExecutionRunIdForReset, rhs.NewExecutionRunIdForReset) {
+	if !_String_EqualsPtr(v.CurrRunId, rhs.CurrRunId) {
+		return false
+	}
+	if !_I64_EqualsPtr(v.CurrRunNextEventId, rhs.CurrRunNextEventId) {
 		return false
 	}
 
@@ -7796,11 +7822,14 @@ func (v *DecisionTaskFailedEventAttributes) MarshalLogObject(enc zapcore.ObjectE
 	if v.Identity != nil {
 		enc.AddString("identity", *v.Identity)
 	}
-	if v.ForkExecutionRunIdForReset != nil {
-		enc.AddString("forkExecutionRunIdForReset", *v.ForkExecutionRunIdForReset)
+	if v.ForkRunId != nil {
+		enc.AddString("forkRunId", *v.ForkRunId)
 	}
-	if v.NewExecutionRunIdForReset != nil {
-		enc.AddString("newExecutionRunIdForReset", *v.NewExecutionRunIdForReset)
+	if v.CurrRunId != nil {
+		enc.AddString("currRunId", *v.CurrRunId)
+	}
+	if v.CurrRunNextEventId != nil {
+		enc.AddInt64("currRunNextEventId", *v.CurrRunNextEventId)
 	}
 	return err
 }
@@ -7855,21 +7884,31 @@ func (v *DecisionTaskFailedEventAttributes) GetIdentity() (o string) {
 	return
 }
 
-// GetForkExecutionRunIdForReset returns the value of ForkExecutionRunIdForReset if it is set or its
+// GetForkRunId returns the value of ForkRunId if it is set or its
 // zero value if it is unset.
-func (v *DecisionTaskFailedEventAttributes) GetForkExecutionRunIdForReset() (o string) {
-	if v.ForkExecutionRunIdForReset != nil {
-		return *v.ForkExecutionRunIdForReset
+func (v *DecisionTaskFailedEventAttributes) GetForkRunId() (o string) {
+	if v.ForkRunId != nil {
+		return *v.ForkRunId
 	}
 
 	return
 }
 
-// GetNewExecutionRunIdForReset returns the value of NewExecutionRunIdForReset if it is set or its
+// GetCurrRunId returns the value of CurrRunId if it is set or its
 // zero value if it is unset.
-func (v *DecisionTaskFailedEventAttributes) GetNewExecutionRunIdForReset() (o string) {
-	if v.NewExecutionRunIdForReset != nil {
-		return *v.NewExecutionRunIdForReset
+func (v *DecisionTaskFailedEventAttributes) GetCurrRunId() (o string) {
+	if v.CurrRunId != nil {
+		return *v.CurrRunId
+	}
+
+	return
+}
+
+// GetCurrRunNextEventId returns the value of CurrRunNextEventId if it is set or its
+// zero value if it is unset.
+func (v *DecisionTaskFailedEventAttributes) GetCurrRunNextEventId() (o int64) {
+	if v.CurrRunNextEventId != nil {
+		return *v.CurrRunNextEventId
 	}
 
 	return

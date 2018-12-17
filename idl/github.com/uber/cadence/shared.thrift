@@ -462,8 +462,10 @@ struct DecisionTaskFailedEventAttributes {
   30: optional DecisionTaskFailedCause cause
   35: optional binary details
   40: optional string identity
-  50: optional string forkExecutionRunIdForReset
-  60: optional string newExecutionRunIdForReset
+  // for reset workflow
+  50: optional string forkRunId
+  60: optional string currRunId
+  70: optional i64 (js.type = "Long") currRunNextEventId
 }
 
 struct ActivityTaskScheduledEventAttributes {
