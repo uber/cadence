@@ -1024,8 +1024,9 @@ Update_History_Loop:
 				}
 
 				if di, ok := msBuilder.GetInFlightDecisionTask(); ok {
-					msBuilder.AddDecisionTaskFailedEvent(di.ScheduleID, di.StartedID,
-						workflow.DecisionTaskFailedCauseForceCloseDecision, nil, identityHistoryService)
+					msBuilder.AddDecisionTaskFailedEvent(
+						makeDecisionTaskFailedEventAttributes(di.ScheduleID, di.StartedID,
+							workflow.DecisionTaskFailedCauseForceCloseDecision, nil, identityHistoryService))
 
 					var transT, timerT []persistence.Task
 					transT, timerT, err1 = context.scheduleNewDecision(transT, timerT)

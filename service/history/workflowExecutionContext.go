@@ -186,6 +186,16 @@ func (c *workflowExecutionContext) updateVersion() error {
 	return nil
 }
 
+func makeDecisionTaskFailedEventAttributes(schID, startedID int64, cause workflow.DecisionTaskFailedCause, details []byte, identity string) workflow.DecisionTaskFailedEventAttributes {
+	return workflow.DecisionTaskFailedEventAttributes{
+		ScheduledEventId: common.Int64Ptr(schID),
+		StartedEventId:   common.Int64Ptr(startedID),
+		Cause:            common.DecisionTaskFailedCausePtr(cause),
+		Details:          details,
+		Identity:         common.StringPtr(identity),
+	}
+}
+
 func (c *workflowExecutionContext) updateWorkflowExecutionWithNewRun(transferTasks []persistence.Task,
 	timerTasks []persistence.Task, transactionID int64, newStateBuilder mutableState) error {
 	if c.msBuilder.GetReplicationState() != nil {
@@ -203,8 +213,9 @@ func (c *workflowExecutionContext) updateWorkflowExecutionWithNewRun(transferTas
 		if di, ok := c.msBuilder.GetInFlightDecisionTask(); ok && c.msBuilder.IsWorkflowExecutionRunning() {
 			if di.Version < currentVersion {
 				// we have a decision on the fly with a lower version, fail it
-				c.msBuilder.AddDecisionTaskFailedEvent(di.ScheduleID, di.StartedID,
-					workflow.DecisionTaskFailedCauseFailoverCloseDecision, nil, identityHistoryService)
+				c.msBuilder.AddDecisionTaskFailedEvent(
+					makeDecisionTaskFailedEventAttributes(di.ScheduleID, di.StartedID,
+						workflow.DecisionTaskFailedCauseFailoverCloseDecision, nil, identityHistoryService))
 
 				var transT, timerT []persistence.Task
 				transT, timerT, err := c.scheduleNewDecision(transT, timerT)

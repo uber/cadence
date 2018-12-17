@@ -1618,8 +1618,9 @@ func (e *historyEngineImpl) RespondDecisionTaskFailed(ctx context.Context, req *
 				return nil, &workflow.EntityNotExistsError{Message: "Decision task not found."}
 			}
 
-			msBuilder.AddDecisionTaskFailedEvent(di.ScheduleID, di.StartedID, request.GetCause(), request.Details,
-				request.GetIdentity())
+			msBuilder.AddDecisionTaskFailedEvent(
+				makeDecisionTaskFailedEventAttributes(di.ScheduleID, di.StartedID, request.GetCause(), request.Details,
+					request.GetIdentity()))
 
 			return nil, nil
 		})
@@ -2458,12 +2459,21 @@ func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetReq
 		return
 	}
 	// TODO does it have anything related to transient decision??
-	newMutableState.AddDecisionTaskFailedEvent(di.ScheduleID, di.StartedID, workflow.DecisionTaskFailedCauseResetWorkflow, []byte(request.GetReason()), request.GetRequestId())
+	newMutableState.AddDecisionTaskFailedEvent(workflow.DecisionTaskFailedEventAttributes{
+		ScheduledEventId:   common.Int64Ptr(di.ScheduleID),
+		StartedEventId:     common.Int64Ptr(di.StartedID),
+		Cause:              common.DecisionTaskFailedCausePtr(workflow.DecisionTaskFailedCauseResetWorkflow),
+		Details:            []byte(request.GetReason()),
+		Identity:           common.StringPtr(identityHistoryService),
+		ForkRunId:          common.StringPtr(execution.GetRunId()),
+		CurrRunId:          common.StringPtr(currMutableState.GetExecutionInfo().RunID),
+		CurrRunNextEventId: common.Int64Ptr(currMutableState.GetNextEventID()),
+	})
 
 	// replay received signals back to mutableState/history:
 	e.replayReceivedSignals(receivedSignals, newMutableState)
 
-	// we always schedule a new decision after reset
+	// we always schedule a new decision after reset TODO check with yimin
 	transferTasks, timerTasks, retError = context.scheduleNewDecision(transferTasks, timerTasks)
 	if retError != nil {
 		return
@@ -2498,7 +2508,7 @@ func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetReq
 		clusterMetadata := e.shard.GetService().GetClusterMetadata()
 		newMutableState.UpdateReplicationStateLastEventID(clusterMetadata.GetCurrentClusterName(), lastEvent.GetVersion(), lastEvent.GetEventId())
 		// replication task is generated based on current run instead of forking run
-		currMutableState.CreateReplicationTask(persistence.EventStoreVersionV2, forkResp.NewBranchToken)
+		newMutableState.CreateReplicationTask(persistence.EventStoreVersionV2, forkResp.NewBranchToken)
 	}
 
 	// append history to new run
@@ -2929,7 +2939,8 @@ func (e *historyEngineImpl) failDecision(context *workflowExecutionContext, sche
 		return nil, err
 	}
 
-	msBuilder.AddDecisionTaskFailedEvent(scheduleID, startedID, cause, nil, request.GetIdentity())
+	msBuilder.AddDecisionTaskFailedEvent(
+		makeDecisionTaskFailedEventAttributes(scheduleID, startedID, cause, nil, request.GetIdentity()))
 
 	// Return new builder back to the caller for further updates
 	return msBuilder, nil
