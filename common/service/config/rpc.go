@@ -97,7 +97,7 @@ func (d *RPCFactory) getListenIP() net.IP {
 	if len(d.config.BindOnIP) > 0 {
 		ip = net.ParseIP(d.config.BindOnIP)
 		if ip != nil && ip.To4() != nil {
-			return ip.To4
+			return ip.To4()
 		}
 		d.logger.Fatalf("ListenIP failed, unable to parse %q or it is not IPv4 address", d.config.BindOnIP)
 	}
