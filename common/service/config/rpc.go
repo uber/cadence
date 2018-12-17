@@ -95,7 +95,7 @@ func (d *RPCFactory) getListenIP() net.IP {
 	}
 
 	if len(d.config.BindOnIP) > 0 {
-		ip = net.ParseIP(d.config.BindOnIP)
+		ip := net.ParseIP(d.config.BindOnIP)
 		if ip != nil && ip.To4() != nil {
 			return ip.To4()
 		}
