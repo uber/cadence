@@ -138,12 +138,53 @@ func (c *workflowExecutionContext) resetMutableState(prevRunID string, resetBuil
 	return c.loadWorkflowExecution()
 }
 
-// this reset is more complex than "resetMutableState", it involes currentMutableState and newMutableState, and also append new history
-// append history to new run
-// append history to current run if current run is not closed
-// update mutableState(terminate current run) and create new run
-func (c *workflowExecutionContext) resetWorkflowExecution(currMutableState, newMutableState mutableState, transferTasks, timerTasks, replicationTasks []persistence.Task) error {
+// this reset is more complex than "resetMutableState", it involes currentMutableState and newMutableState:
+// 1. append history to new run
+// 2. append history to current run if current run is not closed
+// 3. update mutableState(terminate current run if not closed) and create new run
+func (c *workflowExecutionContext) resetWorkflowExecution(currMutableState, newMutableState mutableState, transferTasks, timerTasks, replicationTasks []persistence.Task, reason string) (retError error) {
 
+	transactionID, retError := c.shard.GetNextTransferTaskID()
+	if retError != nil {
+		return
+	}
+
+	terminateCurr := false
+	if currMutableState.IsWorkflowExecutionRunning() {
+		defer func() {
+			if retError != nil {
+				c.clear()
+			}
+		}()
+
+		terminateCurr = true
+		currMutableState.AddWorkflowExecutionTerminatedEvent(&workflow.TerminateWorkflowExecutionRequest{
+			Reason:   common.StringPtr(reason),
+			Details:  nil,
+			Identity: common.StringPtr(identityHistoryService),
+		})
+		hBuilder := currMutableState.GetHistoryBuilder()
+		size, retError := c.appendHistoryEvents(hBuilder, hBuilder.GetHistory().GetEvents(), transactionID)
+		if retError != nil {
+			return
+		}
+		currMutableState.IncrementHistorySize(size)
+	}
+
+	// Note: we already made sure that newMutableState is using eventsV2
+	hBuilder := newMutableState.GetHistoryBuilder()
+	size, retError := c.shard.AppendHistoryV2Events(&persistence.AppendHistoryNodesRequest{
+		IsNewBranch:   false,
+		BranchToken:   newMutableState.GetCurrentBranch(),
+		Events:        hBuilder.GetHistory().GetEvents(),
+		TransactionID: transactionID,
+	}, c.domainID)
+	if retError != nil {
+		return
+	}
+	newMutableState.IncrementHistorySize(size)
+
+	return nil
 }
 
 func (c *workflowExecutionContext) updateWorkflowExecutionWithContext(context []byte, transferTasks []persistence.Task,

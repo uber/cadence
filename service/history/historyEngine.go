@@ -2481,7 +2481,8 @@ func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetReq
 		ScheduledEventId:   common.Int64Ptr(di.ScheduleID),
 		StartedEventId:     common.Int64Ptr(di.StartedID),
 		Cause:              common.DecisionTaskFailedCausePtr(workflow.DecisionTaskFailedCauseResetWorkflow),
-		Details:            []byte(request.GetReason()),
+		Details:            nil,
+		Reason:             common.StringPtr(request.GetReason()),
 		Identity:           common.StringPtr(identityHistoryService),
 		ForkRunId:          common.StringPtr(execution.GetRunId()),
 		CurrRunId:          common.StringPtr(currMutableState.GetExecutionInfo().RunID),
@@ -2519,7 +2520,7 @@ func (e *historyEngineImpl) ResetWorkflowExecution(ctx context.Context, resetReq
 	replicationTasks := e.generateReplicationTasksForReset(newMutableState, domainEntry)
 
 	// finally, write to persistence
-	retError = currContext.resetWorkflowExecution(currMutableState, newMutableState, transferTasks, timerTasks, replicationTasks)
+	retError = currContext.resetWorkflowExecution(currMutableState, newMutableState, transferTasks, timerTasks, replicationTasks, request.GetReason())
 	return
 }
 

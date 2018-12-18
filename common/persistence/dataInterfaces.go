@@ -722,8 +722,27 @@ type (
 		Encoding common.EncodingType
 	}
 
-	// ResetMutableStateRequest is used to reset workflow execution state
+	// ResetMutableStateRequest is used to reset workflow execution state for a single run
 	ResetMutableStateRequest struct {
+		PrevRunID        string
+		ExecutionInfo    *WorkflowExecutionInfo
+		ReplicationState *ReplicationState
+		Condition        int64
+		RangeID          int64
+
+		// Mutable state
+		InsertActivityInfos       []*ActivityInfo
+		InsertTimerInfos          []*TimerInfo
+		InsertChildExecutionInfos []*ChildExecutionInfo
+		InsertRequestCancelInfos  []*RequestCancelInfo
+		InsertSignalInfos         []*SignalInfo
+		InsertSignalRequestedIDs  []string
+		//Optional. It is to suggest a binary encoding type to serialize history events
+		Encoding common.EncodingType
+	}
+
+	// ResetWorkflowExecutionRequest is used to reset workflow execution state for current run and create new run
+	ResetWorkflowExecutionRequest struct {
 		PrevRunID        string
 		ExecutionInfo    *WorkflowExecutionInfo
 		ReplicationState *ReplicationState

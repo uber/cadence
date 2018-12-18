@@ -585,8 +585,6 @@ struct WorkflowExecutionTerminatedEventAttributes {
   10: optional string reason
   20: optional binary details
   30: optional string identity
-  40: optional string resetNewExecutionRunId
-  50: optional i64 (js.type = "Long") resetEventId
 }
 
 struct RequestCancelExternalWorkflowExecutionInitiatedEventAttributes {
