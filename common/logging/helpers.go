@@ -525,7 +525,7 @@ func LogIndexProcessorShutDownEvent(logger bark.Logger) {
 }
 
 // LogIndexProcessorShutDownTimedoutEvent is used to log index processing shutting down
-func LogIndexProcessorShutingDownTimedoutEvent(logger bark.Logger) {
+func LogIndexProcessorShutDownTimedoutEvent(logger bark.Logger) {
 	logger.WithFields(bark.Fields{
 		TagWorkflowEventID: IndexProcessorShuttingDownTimedout,
 	}).Info("Index processor shut down timedout.")

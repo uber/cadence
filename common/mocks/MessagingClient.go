@@ -43,7 +43,7 @@ func NewMockMessagingClient(publisher messaging.Producer, consumer messaging.Con
 }
 
 // NewConsumer generates a dummy implementation of kafka consumer
-func (c *MessagingClient) NewConsumer(topic, consumerName string, concurrency int) (messaging.Consumer, error) {
+func (c *MessagingClient) NewConsumer(appName, consumerName string, concurrency int) (messaging.Consumer, error) {
 	return c.consumerMock, nil
 }
 
@@ -53,7 +53,7 @@ func (c *MessagingClient) NewConsumerWithClusterName(currentCluster, sourceClust
 }
 
 // NewProducer generates a dummy implementation of kafka producer
-func (c *MessagingClient) NewProducer(topic string) (messaging.Producer, error) {
+func (c *MessagingClient) NewProducer(appName string) (messaging.Producer, error) {
 	return c.publisherMock, nil
 }
 

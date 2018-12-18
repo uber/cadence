@@ -35,7 +35,7 @@ import (
 )
 
 type indexProcessor struct {
-	topicName       string
+	appName         string
 	consumerName    string
 	kafkaClient     messaging.Client
 	consumer        messaging.Consumer
@@ -62,10 +62,10 @@ const (
 	versionForDelete      = 30
 )
 
-func newIndexProcessor(topicName, consumerName string, kafkaClient messaging.Client, esClient *elastic.Client, esProcessorName string,
+func newIndexProcessor(appName, consumerName string, kafkaClient messaging.Client, esClient *elastic.Client, esProcessorName string,
 	config *Config, logger bark.Logger, metricsClient metrics.Client) *indexProcessor {
 	return &indexProcessor{
-		topicName:       topicName,
+		appName:         appName,
 		consumerName:    consumerName,
 		kafkaClient:     kafkaClient,
 		esClient:        esClient,
@@ -86,7 +86,7 @@ func (p *indexProcessor) Start() error {
 	}
 
 	logging.LogIndexProcessorStartingEvent(p.logger)
-	consumer, err := p.kafkaClient.NewConsumer(p.topicName, p.consumerName, p.config.IndexerConcurrency())
+	consumer, err := p.kafkaClient.NewConsumer(p.appName, p.consumerName, p.config.IndexerConcurrency())
 	if err != nil {
 		logging.LogIndexProcessorStartFailedEvent(p.logger, err)
 		return err
@@ -125,7 +125,7 @@ func (p *indexProcessor) Stop() {
 	}
 
 	if success := common.AwaitWaitGroup(&p.shutdownWG, time.Minute); !success {
-		logging.LogIndexProcessorShutingDownTimedoutEvent(p.logger)
+		logging.LogIndexProcessorShutDownTimedoutEvent(p.logger)
 	}
 }
 

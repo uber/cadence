@@ -99,8 +99,14 @@ kafka:
       brokers:
         - 127.0.0.1:9092
   topics:
-    cadence-visibility-topic:
+    cadence-visibility:
       cluster: test
+    cadence-visibility-dlq:
+      cluster: test
+  applications:
+    visibility:
+      topic: cadence-visibility
+      dlq-topic: cadence-visibility-dlq
 
 elasticsearch:
   url:

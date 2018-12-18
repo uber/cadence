@@ -134,11 +134,11 @@ func (s *server) startService() common.Daemon {
 	// TODO: We need to switch Cadence to use zap logger, until then just pass zap.NewNop
 
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
-	enableVisibilityToKafka := dc.GetBoolProperty(dynamicconfig.EnableVisibilityToKafka, dynamicconfig.DefaultEnableVisibilityToKafka)
+	enableVisibilityToKafka := dc.GetBoolProperty(dynamicconfig.EnableVisibilityToKafka, dynamicconfig.DefaultEnableVisibilityToKafka)()
 	if params.ClusterMetadata.IsGlobalDomainEnabled() {
-		params.MessagingClient = messaging.NewKafkaClient(&s.cfg.Kafka, params.MetricsClient, zap.NewNop(), params.Logger, params.MetricScope, true)
-	} else if enableVisibilityToKafka() {
-		params.MessagingClient = messaging.NewKafkaClient(&s.cfg.Kafka, params.MetricsClient, zap.NewNop(), params.Logger, params.MetricScope, false)
+		params.MessagingClient = messaging.NewKafkaClient(&s.cfg.Kafka, params.MetricsClient, zap.NewNop(), params.Logger, params.MetricScope, true, enableVisibilityToKafka)
+	} else if enableVisibilityToKafka {
+		params.MessagingClient = messaging.NewKafkaClient(&s.cfg.Kafka, params.MetricsClient, zap.NewNop(), params.Logger, params.MetricScope, false, enableVisibilityToKafka)
 	} else {
 		params.MessagingClient = nil
 	}
@@ -151,7 +151,7 @@ func (s *server) startService() common.Daemon {
 	}
 
 	// enable visibility to kafka and enable visibility to elastic search are using one config
-	if enableVisibilityToKafka() {
+	if enableVisibilityToKafka {
 		esFactory := elasticsearch.NewFactory(&s.cfg.ElasticSearch)
 		esClient, err := esFactory.NewClient()
 		if err != nil {

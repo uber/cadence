@@ -31,8 +31,10 @@ type clientFactory struct {
 	Config *Config
 }
 
+var _ Factory = (*clientFactory)(nil)
+
 // NewFactory create a new ElasticSearch client
-func NewFactory(config *Config) *clientFactory {
+func NewFactory(config *Config) Factory {
 	return &clientFactory{Config: config}
 }
 

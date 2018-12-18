@@ -73,9 +73,9 @@ func NewIndexer(config *Config, client messaging.Client, esClient *elastic.Clien
 
 // Start indexer
 func (x Indexer) Start() error {
-	visTopic := messaging.VisibilityTopicName // TODO: need to be configurable
-	visConsumerName := getConsumerName(visTopic)
-	x.visibilityProcessor = newIndexProcessor(visTopic, visConsumerName, x.kafkaClient, x.esClient, visibilityProcessorName, x.config, x.logger, x.metricsClient)
+	visibilityApp := messaging.VisibilityAppName
+	visConsumerName := getConsumerName(visibilityApp)
+	x.visibilityProcessor = newIndexProcessor(visibilityApp, visConsumerName, x.kafkaClient, x.esClient, visibilityProcessorName, x.config, x.logger, x.metricsClient)
 	return x.visibilityProcessor.Start()
 }
 

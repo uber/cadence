@@ -3318,7 +3318,7 @@ func getVisibilityProducer(messagingClient messaging.Client) messaging.Producer 
 	if messagingClient == nil {
 		return nil
 	}
-	visibilityProducer, err := messagingClient.NewProducer(messaging.VisibilityTopicName)
+	visibilityProducer, err := messagingClient.NewProducer(messaging.VisibilityAppName)
 	if err != nil {
 		panic(err)
 	}

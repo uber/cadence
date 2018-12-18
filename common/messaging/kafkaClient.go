@@ -45,8 +45,9 @@ type (
 var _ Client = (*kafkaClient)(nil)
 
 // NewKafkaClient is used to create an instance of KafkaClient
-func NewKafkaClient(kc *KafkaConfig, metricsClient metrics.Client, zLogger *zap.Logger, logger bark.Logger, metricScope tally.Scope, checkCluster bool) Client {
-	kc.Validate(checkCluster)
+func NewKafkaClient(kc *KafkaConfig, metricsClient metrics.Client, zLogger *zap.Logger, logger bark.Logger, metricScope tally.Scope,
+	checkCluster, checkApp bool) Client {
+	kc.Validate(checkCluster, checkApp)
 
 	// mapping from cluster name to list of broker ip addresses
 	brokers := map[string][]string{}
@@ -76,13 +77,19 @@ func NewKafkaClient(kc *KafkaConfig, metricsClient metrics.Client, zLogger *zap.
 }
 
 // NewConsumer is used to create a Kafka consumer
-func (c *kafkaClient) NewConsumer(topic, consumerName string, concurrency int) (Consumer, error) {
-	kafkaClusterName := c.config.getKafkaClusterForTopic(topic)
+func (c *kafkaClient) NewConsumer(app, consumerName string, concurrency int) (Consumer, error) {
+	topics := c.config.getTopicsForApplication(app)
+	kafkaClusterNameForTopic := c.config.getKafkaClusterForTopic(topics.Topic)
+	kafkaClusterNameForDLQTopic := c.config.getKafkaClusterForTopic(topics.DLQTopic)
 	topicList := uberKafka.ConsumerTopicList{
 		uberKafka.ConsumerTopic{
 			Topic: uberKafka.Topic{
-				Name:    topic,
-				Cluster: kafkaClusterName,
+				Name:    topics.Topic,
+				Cluster: kafkaClusterNameForTopic,
+			},
+			DLQ: uberKafka.Topic{
+				Name:    topics.DLQTopic,
+				Cluster: kafkaClusterNameForDLQTopic,
 			},
 		},
 	}
@@ -131,8 +138,9 @@ func (c *kafkaClient) NewConsumerWithClusterName(currentCluster, sourceCluster, 
 }
 
 // NewProducer is used to create a Kafka producer
-func (c *kafkaClient) NewProducer(topic string) (Producer, error) {
-	kafkaClusterName := c.config.getKafkaClusterForTopic(topic)
+func (c *kafkaClient) NewProducer(app string) (Producer, error) {
+	topics := c.config.getTopicsForApplication(app)
+	kafkaClusterName := c.config.getKafkaClusterForTopic(topics.Topic)
 	brokers := c.config.getBrokersForKafkaCluster(kafkaClusterName)
 
 	producer, err := sarama.NewSyncProducer(brokers, nil)
@@ -141,9 +149,9 @@ func (c *kafkaClient) NewProducer(topic string) (Producer, error) {
 	}
 
 	if c.metricsClient != nil {
-		return NewMetricProducer(NewKafkaProducer(topic, producer, c.logger), c.metricsClient), nil
+		return NewMetricProducer(NewKafkaProducer(topics.Topic, producer, c.logger), c.metricsClient), nil
 	}
-	return NewKafkaProducer(topic, producer, c.logger), nil
+	return NewKafkaProducer(topics.Topic, producer, c.logger), nil
 }
 
 // NewProducerWithClusterName is used to create a Kafka producer for shipping replication tasks
