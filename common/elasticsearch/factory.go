@@ -18,24 +18,26 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package messaging
+package elasticsearch
 
-//// OpenWorkflowMsg is visibility data for open workflow
-//type OpenWorkflowMsg struct {
-//	Domain     string
-//	WorkflowID string
-//	RunID      string
-//	StartTime  int64
-//}
-//
-//// WorkflowVisibilityMsg is
-//type WorkflowVisibilityMsg struct {
-//	DomainID      string
-//	WorkflowID    string
-//	RunID         string
-//	WorkflowType  string
-//	StartTime     int64
-//	CloseTime     int64
-//	Status        int
-//	HistoryLength int64
-//}
+import "github.com/olivere/elastic"
+
+// Factory is interface to create ElasticSearch client
+type Factory interface {
+	NewClient() (*elastic.Client, error)
+}
+
+type clientFactory struct {
+	Config *Config
+}
+
+// NewFactory create a new ElasticSearch client
+func NewFactory(config *Config) *clientFactory {
+	return &clientFactory{Config: config}
+}
+
+func (f *clientFactory) NewClient() (*elastic.Client, error) {
+	return elastic.NewClient(
+		elastic.SetURL(f.Config.URL.String()),
+	)
+}

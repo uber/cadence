@@ -37,6 +37,7 @@ import (
 	"github.com/uber/cadence/service/matching"
 	"github.com/uber/cadence/service/worker"
 
+	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/messaging"
 	"go.uber.org/zap"
 )
@@ -147,6 +148,16 @@ func (s *server) startService() common.Daemon {
 		if err != nil {
 			log.Fatalf("error creating blobstore: %v", err)
 		}
+	}
+
+	// enable visibility to kafka and enable visibility to elastic search are using one config
+	if enableVisibilityToKafka() {
+		esFactory := elasticsearch.NewFactory(&s.cfg.ElasticSearch)
+		esClient, err := esFactory.NewClient()
+		if err != nil {
+			log.Fatalf("error creating elastic search client: %v", err)
+		}
+		params.ESClient = esClient
 	}
 
 	params.Logger.Info("Starting service " + s.name)

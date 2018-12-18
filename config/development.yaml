@@ -99,5 +99,10 @@ kafka:
       brokers:
         - 127.0.0.1:9092
   topics:
-    visibility-topic:
+    cadence-visibility-topic:
       cluster: test
+
+elasticsearch:
+  url:
+    scheme: "http"
+    host: "127.0.0.1:9200"

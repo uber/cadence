@@ -51,7 +51,7 @@ type (
 )
 
 // VisibilityTopicName for visibility data to kafka
-const VisibilityTopicName = "visibility-topic"
+const VisibilityTopicName = "cadence-visibility-topic"
 
 // Validate will validate config for kafka
 func (k *KafkaConfig) Validate(checkCluster bool) {

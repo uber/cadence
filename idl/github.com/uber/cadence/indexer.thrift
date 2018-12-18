@@ -18,24 +18,24 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package messaging
+namespace java com.uber.cadence.indexer
 
-//// OpenWorkflowMsg is visibility data for open workflow
-//type OpenWorkflowMsg struct {
-//	Domain     string
-//	WorkflowID string
-//	RunID      string
-//	StartTime  int64
-//}
-//
-//// WorkflowVisibilityMsg is
-//type WorkflowVisibilityMsg struct {
-//	DomainID      string
-//	WorkflowID    string
-//	RunID         string
-//	WorkflowType  string
-//	StartTime     int64
-//	CloseTime     int64
-//	Status        int
-//	HistoryLength int64
-//}
+include "shared.thrift"
+
+enum VisibilityMsgType {
+  Open
+  Closed
+  Delete
+}
+
+struct VisibilityMsg {
+  10: optional VisibilityMsgType msgType
+  20: optional string domainID
+  30: optional string workflowID
+  40: optional string runID
+  50: optional string workflowType
+  60: optional i64 (js.type = "Long") startTime
+  70: optional i64 (js.type = "Long") closeTime
+  80: optional shared.WorkflowExecutionCloseStatus closeStatus
+  90: optional i64 (js.type = "Long") historyLength
+}

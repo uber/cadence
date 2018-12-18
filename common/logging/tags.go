@@ -93,6 +93,9 @@ const (
 	TagValueReplicatorComponent               = "replicator"
 	TagValueReplicationTaskProcessorComponent = "replication-task-processor"
 	TagValueHistoryReplicatorComponent        = "history-replicator"
+	TagValueIndexerComponent                  = "indexer"
+	TagValueIndexerProcessorComponent         = "indexer-processor"
+	TagValueIndexerESProcessorComponent       = "indexer-es-processor"
 
 	// TagHistoryBuilderAction values
 	TagValueActionWorkflowStarted                 = "add-workflowexecution-started-event"

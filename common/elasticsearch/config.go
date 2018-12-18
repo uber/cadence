@@ -18,24 +18,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package messaging
+package elasticsearch
 
-//// OpenWorkflowMsg is visibility data for open workflow
-//type OpenWorkflowMsg struct {
-//	Domain     string
-//	WorkflowID string
-//	RunID      string
-//	StartTime  int64
-//}
-//
-//// WorkflowVisibilityMsg is
-//type WorkflowVisibilityMsg struct {
-//	DomainID      string
-//	WorkflowID    string
-//	RunID         string
-//	WorkflowType  string
-//	StartTime     int64
-//	CloseTime     int64
-//	Status        int
-//	HistoryLength int64
-//}
+import (
+	"net/url"
+)
+
+// Config for connecting to ElasticSearch
+type Config struct {
+	URL url.URL `yaml:url`
+}

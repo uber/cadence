@@ -22,6 +22,7 @@ package history
 
 import (
 	"github.com/uber-common/bark"
+	"github.com/uber/cadence/.gen/go/indexer"
 	m "github.com/uber/cadence/.gen/go/matching"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/matching"
@@ -143,7 +144,6 @@ func (t *transferQueueProcessorBase) recordWorkflowStarted(
 	domain := defaultDomainName
 	isSampledEnabled := false
 	wid := execution.GetWorkflowId()
-	rid := execution.GetRunId()
 
 	domainEntry, err := t.shard.GetDomainCache().GetDomainByID(domainID)
 	if err != nil {
@@ -162,11 +162,14 @@ func (t *transferQueueProcessorBase) recordWorkflowStarted(
 
 	// publish to kafka
 	if t.visibilityProducer != nil {
-		msg := &messaging.OpenWorkflowMsg{
-			Domain:     domain,
-			WorkflowID: wid,
-			RunID:      rid,
-			StartTime:  startTimeUnixNano,
+		msgType := indexer.VisibilityMsgTypeOpen
+		msg := &indexer.VisibilityMsg{
+			MsgType:      &msgType,
+			DomainID:     common.StringPtr(domainID),
+			WorkflowID:   common.StringPtr(wid),
+			RunID:        common.StringPtr(execution.GetRunId()),
+			WorkflowType: common.StringPtr(workflowTypeName),
+			StartTime:    common.Int64Ptr(startTimeUnixNano),
 		}
 		err := t.visibilityProducer.Publish(msg)
 		if err != nil {
@@ -210,6 +213,26 @@ func (t *transferQueueProcessorBase) recordWorkflowClosed(
 	// if sampled for longer retention is enabled, only record those sampled events
 	if isSampledEnabled && !domainEntry.IsSampledForLongerRetention(wid) {
 		return nil
+	}
+
+	// publish to kafka
+	if t.visibilityProducer != nil {
+		msgType := indexer.VisibilityMsgTypeClosed
+		msg := &indexer.VisibilityMsg{
+			MsgType:       &msgType,
+			DomainID:      common.StringPtr(domainID),
+			WorkflowID:    common.StringPtr(wid),
+			RunID:         common.StringPtr(execution.GetRunId()),
+			WorkflowType:  common.StringPtr(workflowTypeName),
+			StartTime:     common.Int64Ptr(startTimeUnixNano),
+			CloseTime:     common.Int64Ptr(endTimeUnixNano),
+			CloseStatus:   &closeStatus,
+			HistoryLength: common.Int64Ptr(historyLength),
+		}
+		err := t.visibilityProducer.Publish(msg)
+		if err != nil {
+			return err
+		}
 	}
 
 	return t.visibilityMgr.RecordWorkflowExecutionClosed(&persistence.RecordWorkflowExecutionClosedRequest{

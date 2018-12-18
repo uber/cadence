@@ -23,7 +23,8 @@ package messaging
 type (
 	// Client is the interface used to abstract out interaction with messaging system for replication
 	Client interface {
-		NewConsumer(currentCluster, sourceCluster, consumerName string, concurrency int) (Consumer, error)
+		NewConsumer(topic, consumerName string, concurrency int) (Consumer, error)
+		NewConsumerWithClusterName(currentCluster, sourceCluster, consumerName string, concurrency int) (Consumer, error)
 		NewProducer(topic string) (Producer, error)
 		NewProducerWithClusterName(sourceCluster string) (Producer, error)
 	}

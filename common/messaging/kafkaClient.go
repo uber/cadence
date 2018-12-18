@@ -76,7 +76,30 @@ func NewKafkaClient(kc *KafkaConfig, metricsClient metrics.Client, zLogger *zap.
 }
 
 // NewConsumer is used to create a Kafka consumer
-func (c *kafkaClient) NewConsumer(currentCluster, sourceCluster, consumerName string, concurrency int) (Consumer, error) {
+func (c *kafkaClient) NewConsumer(topic, consumerName string, concurrency int) (Consumer, error) {
+	kafkaClusterName := c.config.getKafkaClusterForTopic(topic)
+	topicList := uberKafka.ConsumerTopicList{
+		uberKafka.ConsumerTopic{
+			Topic: uberKafka.Topic{
+				Name:    topic,
+				Cluster: kafkaClusterName,
+			},
+		},
+	}
+
+	consumerConfig := uberKafka.NewConsumerConfig(consumerName, topicList)
+	consumerConfig.Concurrency = concurrency
+	consumerConfig.Offsets.Initial.Offset = uberKafka.OffsetOldest
+
+	uConsumer, err := c.client.NewConsumer(consumerConfig)
+	if err != nil {
+		return nil, err
+	}
+	return newKafkaConsumer(uConsumer, c.logger), nil
+}
+
+// NewConsumerWithClusterName is used to create a Kafka consumer for consuming replication tasks
+func (c *kafkaClient) NewConsumerWithClusterName(currentCluster, sourceCluster, consumerName string, concurrency int) (Consumer, error) {
 	currentTopics := c.config.getTopicsForCadenceCluster(currentCluster)
 	sourceTopics := c.config.getTopicsForCadenceCluster(sourceCluster)
 
