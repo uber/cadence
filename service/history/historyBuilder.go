@@ -463,6 +463,10 @@ func (b *historyBuilder) newWorkflowExecutionStartedEvent(
 	attributes.Attempt = common.Int32Ptr(startRequest.GetAttempt())
 	attributes.ExpirationTimestamp = startRequest.ExpirationTimestamp
 	attributes.CronSchedule = request.CronSchedule
+	attributes.LastCompletionResult = startRequest.LastCompletionResult
+	attributes.ContinuedFailureReason = startRequest.ContinuedFailureReason
+	attributes.ContinuedFailureDetails = startRequest.ContinuedFailureDetails
+	attributes.Initiator = startRequest.ContinueAsNewInitiator
 
 	parentInfo := startRequest.ParentExecutionInfo
 	if parentInfo != nil {

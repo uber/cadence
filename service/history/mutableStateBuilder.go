@@ -1186,10 +1186,14 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(d
 	}
 
 	req := &h.StartWorkflowExecutionRequest{
-		DomainUUID:          common.StringPtr(domainID),
-		StartRequest:        createRequest,
-		ParentExecutionInfo: parentExecutionInfo,
-		Attempt:             common.Int32Ptr(previousExecutionState.GetExecutionInfo().Attempt),
+		DomainUUID:              common.StringPtr(domainID),
+		StartRequest:            createRequest,
+		ParentExecutionInfo:     parentExecutionInfo,
+		Attempt:                 common.Int32Ptr(previousExecutionState.GetExecutionInfo().Attempt),
+		LastCompletionResult:    attributes.LastCompletionResult,
+		ContinuedFailureReason:  attributes.FailureReason,
+		ContinuedFailureDetails: attributes.FailureDetails,
+		ContinueAsNewInitiator:  attributes.Initiator,
 	}
 	if attributes.GetInitiator() == workflow.ContinueAsNewInitiatorRetryPolicy {
 		req.Attempt = common.Int32Ptr(previousExecutionState.GetExecutionInfo().Attempt + 1)
