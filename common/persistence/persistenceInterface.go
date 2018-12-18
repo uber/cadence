@@ -55,6 +55,7 @@ type (
 		GetWorkflowExecution(request *GetWorkflowExecutionRequest) (*InternalGetWorkflowExecutionResponse, error)
 		UpdateWorkflowExecution(request *InternalUpdateWorkflowExecutionRequest) error
 		ResetMutableState(request *InternalResetMutableStateRequest) error
+		ResetWorkflowExecution(request *InternalResetWorkflowExecutionRequest) error
 
 		CreateWorkflowExecution(request *CreateWorkflowExecutionRequest) (*CreateWorkflowExecutionResponse, error)
 		DeleteWorkflowExecution(request *DeleteWorkflowExecutionRequest) error
@@ -284,6 +285,28 @@ type (
 		RangeID          int64
 
 		// Mutable state
+		InsertActivityInfos       []*InternalActivityInfo
+		InsertTimerInfos          []*TimerInfo
+		InsertChildExecutionInfos []*InternalChildExecutionInfo
+		InsertRequestCancelInfos  []*RequestCancelInfo
+		InsertSignalInfos         []*SignalInfo
+		InsertSignalRequestedIDs  []string
+	}
+
+	// // InternalResetWorkflowExecutionRequest is used to reset workflow execution state  for Persistence Interface
+	InternalResetWorkflowExecutionRequest struct {
+		PrevRunID string
+		Condition int64
+		RangeID   int64
+
+		// for current mutable state
+		UpdateCurr           bool
+		CurrExecutionInfo    *InternalWorkflowExecutionInfo
+		CurrReplicationState *ReplicationState
+
+		// For new mutable state
+		ExecutionInfo             *InternalWorkflowExecutionInfo
+		ReplicationState          *ReplicationState
 		InsertActivityInfos       []*InternalActivityInfo
 		InsertTimerInfos          []*TimerInfo
 		InsertChildExecutionInfos []*InternalChildExecutionInfo

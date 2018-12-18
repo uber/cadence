@@ -1815,6 +1815,180 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(request *p.InternalUpdate
 	return nil
 }
 
+func (d *cassandraPersistence) ResetWorkflowExecution(request *p.InternalResetWorkflowExecutionRequest) error {
+	batch := d.session.NewBatch(gocql.LoggedBatch)
+	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
+	executionInfo := request.ExecutionInfo
+	replicationState := request.ReplicationState
+
+	lastReplicationInfo := make(map[string]map[string]interface{})
+	for k, v := range replicationState.LastReplicationInfo {
+		lastReplicationInfo[k] = createReplicationInfoMap(v)
+	}
+
+	parentDomainID := emptyDomainID
+	if executionInfo.ParentDomainID != "" {
+		parentDomainID = executionInfo.ParentDomainID
+	}
+	parentRunID := emptyRunID
+	if executionInfo.ParentRunID != "" {
+		parentRunID = executionInfo.ParentRunID
+	}
+
+	batch.Query(templateUpdateCurrentWorkflowExecutionQuery,
+		executionInfo.RunID,
+		executionInfo.RunID,
+		executionInfo.CreateRequestID,
+		executionInfo.State,
+		executionInfo.CloseStatus,
+		replicationState.StartVersion,
+		replicationState.LastWriteVersion,
+		replicationState.LastWriteVersion,
+		executionInfo.State,
+		d.shardID,
+		rowTypeExecution,
+		executionInfo.DomainID,
+		executionInfo.WorkflowID,
+		permanentRunID,
+		defaultVisibilityTimestamp,
+		rowTypeExecutionTaskID,
+		request.PrevRunID,
+	)
+
+	completionEvent := executionInfo.CompletionEvent
+	var completionEventData []byte
+	var completionEventEncoding common.EncodingType
+	if completionEvent != nil {
+		completionEventData = completionEvent.Data
+		completionEventEncoding = completionEvent.Encoding
+	}
+	batch.Query(templateUpdateWorkflowExecutionWithReplicationQuery,
+		executionInfo.DomainID,
+		executionInfo.WorkflowID,
+		executionInfo.RunID,
+		parentDomainID,
+		executionInfo.ParentWorkflowID,
+		parentRunID,
+		executionInfo.InitiatedID,
+		completionEventData,
+		completionEventEncoding,
+		executionInfo.TaskList,
+		executionInfo.WorkflowTypeName,
+		executionInfo.WorkflowTimeout,
+		executionInfo.DecisionTimeoutValue,
+		executionInfo.ExecutionContext,
+		executionInfo.State,
+		executionInfo.CloseStatus,
+		executionInfo.LastFirstEventID,
+		executionInfo.NextEventID,
+		executionInfo.LastProcessedEvent,
+		executionInfo.StartTimestamp,
+		cqlNowTimestamp,
+		executionInfo.CreateRequestID,
+		executionInfo.SignalCount,
+		executionInfo.HistorySize,
+		executionInfo.DecisionVersion,
+		executionInfo.DecisionScheduleID,
+		executionInfo.DecisionStartedID,
+		executionInfo.DecisionRequestID,
+		executionInfo.DecisionTimeout,
+		executionInfo.DecisionAttempt,
+		executionInfo.DecisionTimestamp,
+		executionInfo.CancelRequested,
+		executionInfo.CancelRequestID,
+		executionInfo.StickyTaskList,
+		executionInfo.StickyScheduleToStartTimeout,
+		executionInfo.ClientLibraryVersion,
+		executionInfo.ClientFeatureVersion,
+		executionInfo.ClientImpl,
+		executionInfo.Attempt,
+		executionInfo.HasRetryPolicy,
+		executionInfo.InitialInterval,
+		executionInfo.BackoffCoefficient,
+		executionInfo.MaximumInterval,
+		executionInfo.ExpirationTime,
+		executionInfo.MaximumAttempts,
+		executionInfo.NonRetriableErrors,
+		executionInfo.EventStoreVersion,
+		executionInfo.BranchToken,
+		replicationState.CurrentVersion,
+		replicationState.StartVersion,
+		replicationState.LastWriteVersion,
+		replicationState.LastWriteEventID,
+		lastReplicationInfo,
+		executionInfo.NextEventID,
+		d.shardID,
+		rowTypeExecution,
+		executionInfo.DomainID,
+		executionInfo.WorkflowID,
+		executionInfo.RunID,
+		defaultVisibilityTimestamp,
+		rowTypeExecutionTaskID,
+		request.Condition)
+
+	d.resetActivityInfos(batch, request.InsertActivityInfos, executionInfo.DomainID, executionInfo.WorkflowID,
+		executionInfo.RunID, request.Condition)
+
+	d.resetTimerInfos(batch, request.InsertTimerInfos, executionInfo.DomainID, executionInfo.WorkflowID,
+		executionInfo.RunID, request.Condition)
+
+	d.resetChildExecutionInfos(batch, request.InsertChildExecutionInfos, executionInfo.DomainID, executionInfo.WorkflowID,
+		executionInfo.RunID, request.Condition)
+
+	d.resetRequestCancelInfos(batch, request.InsertRequestCancelInfos, executionInfo.DomainID, executionInfo.WorkflowID,
+		executionInfo.RunID, request.Condition)
+
+	d.resetSignalInfos(batch, request.InsertSignalInfos, executionInfo.DomainID, executionInfo.WorkflowID,
+		executionInfo.RunID, request.Condition)
+
+	d.resetSignalRequested(batch, request.InsertSignalRequestedIDs, executionInfo.DomainID, executionInfo.WorkflowID,
+		executionInfo.RunID, request.Condition)
+
+	d.resetBufferedEvents(batch, executionInfo.DomainID, executionInfo.WorkflowID, executionInfo.RunID, request.Condition)
+
+	// Verifies that the RangeID has not changed
+	batch.Query(templateUpdateLeaseQuery,
+		request.RangeID,
+		d.shardID,
+		rowTypeShard,
+		rowTypeShardDomainID,
+		rowTypeShardWorkflowID,
+		rowTypeShardRunID,
+		defaultVisibilityTimestamp,
+		rowTypeShardTaskID,
+		request.RangeID,
+	)
+
+	previous := make(map[string]interface{})
+	applied, iter, err := d.session.MapExecuteBatchCAS(batch, previous)
+	defer func() {
+		if iter != nil {
+			iter.Close()
+		}
+	}()
+
+	if err != nil {
+		if isTimeoutError(err) {
+			// Write may have succeeded, but we don't know
+			// return this info to the caller so they have the option of trying to find out by executing a read
+			return &p.TimeoutError{Msg: fmt.Sprintf("ResetMutableState timed out. Error: %v", err)}
+		} else if isThrottlingError(err) {
+			return &workflow.ServiceBusyError{
+				Message: fmt.Sprintf("ResetMutableState operation failed. Error: %v", err),
+			}
+		}
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("ResetMutableState operation failed. Error: %v", err),
+		}
+	}
+
+	if !applied {
+		return d.getExecutionConditionalUpdateFailure(previous, iter, executionInfo.RunID, request.Condition, request.RangeID, request.PrevRunID)
+	}
+
+	return nil
+}
+
 func (d *cassandraPersistence) ResetMutableState(request *p.InternalResetMutableStateRequest) error {
 	batch := d.session.NewBatch(gocql.LoggedBatch)
 	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())

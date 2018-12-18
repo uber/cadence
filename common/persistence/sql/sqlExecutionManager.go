@@ -1077,6 +1077,11 @@ func (m *sqlExecutionManager) ResetMutableState(request *p.InternalResetMutableS
 	})
 }
 
+func (m *sqlExecutionManager) ResetWorkflowExecution(request *p.InternalResetWorkflowExecutionRequest) error {
+	// TODO need to implement with history eventsV2 API
+	return fmt.Errorf("Not implemented")
+}
+
 func (m *sqlExecutionManager) resetMutableStateTx(tx *sqlx.Tx, request *p.InternalResetMutableStateRequest) error {
 	info := request.ExecutionInfo
 	replicationState := request.ReplicationState

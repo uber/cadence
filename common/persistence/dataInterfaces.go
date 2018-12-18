@@ -743,13 +743,18 @@ type (
 
 	// ResetWorkflowExecutionRequest is used to reset workflow execution state for current run and create new run
 	ResetWorkflowExecutionRequest struct {
-		PrevRunID        string
-		ExecutionInfo    *WorkflowExecutionInfo
-		ReplicationState *ReplicationState
-		Condition        int64
-		RangeID          int64
+		PrevRunID string
+		Condition int64
+		RangeID   int64
 
-		// Mutable state
+		// for current mutable state
+		UpdateCurr           bool
+		CurrExecutionInfo    *WorkflowExecutionInfo
+		CurrReplicationState *ReplicationState
+
+		// For new mutable state
+		ExecutionInfo             *WorkflowExecutionInfo
+		ReplicationState          *ReplicationState
 		InsertActivityInfos       []*ActivityInfo
 		InsertTimerInfos          []*TimerInfo
 		InsertChildExecutionInfos []*ChildExecutionInfo
@@ -1265,6 +1270,7 @@ type (
 		GetWorkflowExecution(request *GetWorkflowExecutionRequest) (*GetWorkflowExecutionResponse, error)
 		UpdateWorkflowExecution(request *UpdateWorkflowExecutionRequest) (*UpdateWorkflowExecutionResponse, error)
 		ResetMutableState(request *ResetMutableStateRequest) error
+		ResetWorkflowExecution(request *ResetWorkflowExecutionRequest) error
 		DeleteWorkflowExecution(request *DeleteWorkflowExecutionRequest) error
 		GetCurrentExecution(request *GetCurrentExecutionRequest) (*GetCurrentExecutionResponse, error)
 
